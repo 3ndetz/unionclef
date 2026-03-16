@@ -135,7 +135,7 @@ public class SkyPvpTask extends Task {
         }
 
         if (best == null) {
-            Debug.logInternal("[SkyPvP] No target. Players: " + totalPlayers
+            Debug.logWarning("[SkyPvP] No target. Players: " + totalPlayers
                     + " (self:" + skippedSelf + " invalid:" + skippedInvalid + " spawn:" + skippedSpawn + ")");
         }
         return Optional.ofNullable(best);
@@ -145,19 +145,19 @@ public class SkyPvpTask extends Task {
         if (player == null || player == mod.getPlayer()) return false;
         String name = player.getName().getString();
         if (player.isDead() || !player.isAlive()) {
-            Debug.logInternal("[SkyPvP] Skip " + name + ": dead/not alive");
+            Debug.logWarning("[SkyPvP] Skip " + name + ": dead/not alive");
             return false;
         }
         if (player.isCreative() || player.isSpectator()) {
-            Debug.logInternal("[SkyPvP] Skip " + name + ": creative/spectator");
+            Debug.logWarning("[SkyPvP] Skip " + name + ": creative/spectator");
             return false;
         }
         if (player.isInvisible()) {
-            Debug.logInternal("[SkyPvP] Skip " + name + ": invisible");
+            Debug.logWarning("[SkyPvP] Skip " + name + ": invisible");
             return false;
         }
         if (mod.getButler().isUserAuthorized(name)) {
-            Debug.logInternal("[SkyPvP] Skip " + name + ": authorized");
+            Debug.logWarning("[SkyPvP] Skip " + name + ": authorized");
             return false;
         }
         return true;
