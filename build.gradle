@@ -82,6 +82,7 @@ dependencies {
     include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:0.3.5")))
 
     modImplementation("net.fabricmc.fabric-api:fabric-api:${fabricApiVersions[mcVersion]}")
+    modRuntimeOnly("net.fabricmc:fabric-language-kotlin:1.13.2+kotlin.2.1.20")
 
     // Jackson JSON
     implementation 'com.fasterxml.jackson.core:jackson-core:2.16.0'
