@@ -1,0 +1,176 @@
+buildscript {
+    def (major, minor, patch) = project.name.split("-")[0].tokenize('.')
+    project.ext.mcVersion = "${major}${minor.padLeft(2, '0')}${(patch ?: '').padLeft(2, '0')}" as int
+
+    dependencies {
+        classpath 'fabric-loom:fabric-loom.gradle.plugin:1.0-SNAPSHOT'
+        classpath 'com.github.breadmoirai:github-release:2.5.2'
+    }
+}
+
+plugins {
+    id "maven-publish"
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+apply plugin: 'fabric-loom'
+apply plugin: 'com.replaymod.preprocess'
+
+loom {
+    runs {
+        client { client() }
+        server { server() }
+    }
+}
+
+preprocess {
+    patternAnnotation.set("adris.altoclef.multiversion.Pattern")
+}
+
+sourceCompatibility = JavaVersion.VERSION_21
+targetCompatibility = sourceCompatibility
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = "UTF-8"
+}
+
+archivesBaseName = project.archives_base_name
+version = "${project.name}-${project.mod_version}"
+group = project.maven_group
+
+// ── Per-version mappings ────────────────────────────────────────────────────
+
+def mappingsVersions = [
+        12100: "1.21+build.9",
+        12101: "1.21.1+build.3",
+]
+
+def fabricApiVersions = [
+        12100: "0.100.7+1.21",
+        12101: "0.110.0+1.21.1",
+]
+
+// ── Repositories ────────────────────────────────────────────────────────────
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'babbaj-repo'
+        url = 'https://babbaj.github.io/maven/'
+    }
+    maven {
+        name = 'maxhenkel-repo'
+        url = 'https://maven.maxhenkel.de/repository/public'
+    }
+}
+
+// ── Dependencies ────────────────────────────────────────────────────────────
+
+dependencies {
+    minecraft("com.mojang:minecraft:${project.name}")
+    mappings("net.fabricmc:yarn:${mappingsVersions[mcVersion]}:v2")
+    modImplementation("net.fabricmc:fabric-loader:${project.loader_version}")
+    include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:0.3.5")))
+
+    modImplementation("net.fabricmc.fabric-api:fabric-api:${fabricApiVersions[mcVersion]}")
+
+    // Jackson JSON
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.16.0'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.16.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.0'
+
+    // Nether pathfinder
+    implementation 'dev.babbaj:nether-pathfinder:1.5'
+    include 'dev.babbaj:nether-pathfinder:1.5'
+
+    // Voice chat API (compile-time only)
+    compileOnly 'de.maxhenkel.voicechat:voicechat-api:2.6.0'
+
+    // Py4j (Python bridge)
+    implementation 'net.sf.py4j:py4j:0.10.9.7'
+    shadow('net.sf.py4j:py4j:0.10.9.7')
+    shadow('com.fasterxml.jackson.core:jackson-core:2.16.0')
+    shadow('com.fasterxml.jackson.core:jackson-annotations:2.16.0')
+    shadow('com.fasterxml.jackson.core:jackson-databind:2.16.0')
+
+    // Baritone — source subproject (compiled once, shared across versions)
+    compileOnly project(path: ":baritone", configuration: "namedElements")
+
+    // Tungsten — source subproject (1.21+ only)
+    if (mcVersion >= 12100) {
+        compileOnly project(path: ":tungsten", configuration: "namedElements")
+    }
+}
+
+// ── Build pipeline ──────────────────────────────────────────────────────────
+
+shadowJar {
+    configurations = [project.configurations.shadow]
+}
+
+remapJar {
+    dependsOn("shadowJar")
+    input.set(shadowJar.archiveFile)
+}
+
+processResources {
+    inputs.property("version", project.version)
+    inputs.property("mcVersion", project.name)
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+                "mcVersion": project.name
+    }
+
+    from(sourceSets.main.resources.srcDirs) {
+        duplicatesStrategy DuplicatesStrategy.EXCLUDE
+        exclude "fabric.mod.json"
+    }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    from sourceSets.main.allSource
+}
+
+jar {
+    from "LICENSE"
+}
+
+// ── Publishing ──────────────────────────────────────────────────────────────
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact(remapJar) { builtBy remapJar }
+            artifact(sourcesJar) { builtBy remapSourcesJar }
+        }
+    }
+}
+
+// ── GitHub Release (primary version only) ───────────────────────────────────
+
+if (project.name == "1.21") {
+    apply plugin: 'com.github.breadmoirai.github-release'
+
+    if (!project.hasProperty('github.token')) {
+        logger.warn('github.token not set — GitHub releases will not work.')
+        logger.warn('Add  github.token=YOUR_TOKEN  to  ~/.gradle/gradle.properties')
+    }
+
+    githubRelease {
+        token = project.hasProperty('github.token') ? project.getProperty('github.token') : ""
+        owner = "3ndetz"
+        repo = "unionclef"
+        tagName = "v${project.mod_version}"
+        releaseName = "UnionClef v${project.mod_version} (MC ${project.name})"
+        releaseAssets = files({ remapJar.archiveFile })
+        targetCommitish = "main"
+        generateReleaseNotes = true
+        body = ""
+        draft = false
+        prerelease = false
+        overwrite = false
+        dryRun = false
+    }
+}
