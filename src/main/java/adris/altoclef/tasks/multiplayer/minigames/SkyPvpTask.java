@@ -31,7 +31,7 @@ import java.util.Optional;
 public class SkyPvpTask extends Task {
 
     private static final Vec3d SPAWN = new Vec3d(827.5, 45, -791.5);
-    private static final double SPAWN_SAFE_RADIUS = 17.0;
+    private static final double SPAWN_SAFE_RADIUS = 18.0;
     private Task _currentKillTask;
     private Task _armorTask;
     private Task _pickupTask;
@@ -125,7 +125,10 @@ public class SkyPvpTask extends Task {
             Vec3d enemyPos = player.getPos();
 
             // Don't target players inside spawn zone (they're protected)
-            if (enemyPos.distanceTo(SPAWN) < SPAWN_SAFE_RADIUS) { skippedSpawn++; continue; }
+            // Check spawn zone: XZ circle only, ignore Y
+            double dx = enemyPos.x - SPAWN.x;
+            double dz = enemyPos.z - SPAWN.z;
+            if (Math.sqrt(dx * dx + dz * dz) < SPAWN_SAFE_RADIUS) { skippedSpawn++; continue; }
 
             double dist = mod.getPlayer().getPos().distanceTo(enemyPos);
             if (dist < bestDist) {
