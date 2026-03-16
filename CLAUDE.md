@@ -2,7 +2,7 @@
 
 RE-READ THIS FULLY IF THE CONVERSATION WAS SUMMARIZED! Always read this file at the start of every conversation before doing anything else.
 
-> VARIOUS!! Every time when you read it, especially after the chat summarization, say "I READ THE RULES" to confirm you understand the project context and rules.
+> При первом прочтении или после суммаризации диалога — скажи кратко (5-10 слов) выжимку правил. Не повторяй каждый раз.
 
 ## What is this
 
@@ -48,8 +48,26 @@ When referencing Minecraft classes, always use yarn names:
 - `net.minecraft.util.math.BlockPos` not `net.minecraft.core.BlockPos`
 - `net.minecraft.block.*` not `net.minecraft.world.level.block.*`
 
+## Введение в проект (план для AI)
+
+1. Прочитать `CLAUDE.md` (этот файл)
+2. Прочитать `docs/ai/progress.md` — **обязательно**
+3. Прочитать `TODOS.md` — текущие задачи
+4. Если нужен контекст — изучить код по задаче
+
+## Документация сессий
+
+- `TODOS.md` — верхнеуровневые задачи (пишет юзер, AI отмечает выполнение)
+- `docs/ai/progress.md` — детальный прогресс по структуре **IPI** (Investigate → Plan → Implement)
+- `docs/ai/archive/` — архив прогресса (при >500 строк или завершении крупного блока)
+- `docs/ai/readme.md` — формат и правила ведения progress-файлов
+
+Формат архивов: `DD-MM-YYYY-task-name.md`
+
 ## Important files
 
 - `README.md` — project overview, fork history, credits
 - `docs/DEVELOP.md` — how to build and run from scratch
 - `CLAUDE.md` — this file (AI assistant rules)
+- `TODOS.md` — текущие задачи
+- `docs/ai/progress.md` — прогресс AI по задачам
