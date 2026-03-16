@@ -26,21 +26,21 @@
             {
                 "label": "unionclef: compileJava",
                 "type": "shell",
-                "command": "gradlew 1.21.1:compileJava",
+                "command": "gradlew compileJava",
                 "group": "build",
                 "problemMatcher": []
             },
             {
                 "label": "unionclef: runClient",
                 "type": "shell",
-                "command": "gradlew 1.21.1:runClient",
+                "command": "gradlew runClient",
                 "group": "build",
                 "problemMatcher": []
             },
             {
                 "label": "unionclef: runClient (debug)",
                 "type": "shell",
-                "command": "gradlew 1.21.1:runClient --debug-jvm",
+                "command": "gradlew runClient --debug-jvm",
                 "group": "build",
                 "problemMatcher": [],
                 "isBackground": true
@@ -48,7 +48,7 @@
             {
                 "label": "unionclef: build",
                 "type": "shell",
-                "command": "gradlew 1.21.1:build",
+                "command": "gradlew build",
                 "group": "build",
                 "problemMatcher": []
             }

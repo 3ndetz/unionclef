@@ -14,6 +14,15 @@ subprojects {
     }
 }
 
+// Default MC version — root tasks (runClient, build, etc.) delegate here
+val defaultVersion = "1.21.1"
+
+listOf("compileJava", "runClient", "build", "remapJar", "processResources").forEach { taskName ->
+    tasks.register(taskName) {
+        dependsOn(":$defaultVersion:$taskName")
+    }
+}
+
 preprocess {
     val mc12101 = createNode("1.21.1", 12101, "yarn")
     val mc12100 = createNode("1.21", 12100, "yarn")
