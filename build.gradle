@@ -18,8 +18,12 @@ apply plugin: 'com.replaymod.preprocess'
 
 loom {
     runs {
-        client { client() }
-        server { server() }
+        client {
+            environment = "client"
+        }
+        server {
+            environment = "server"
+        }
     }
 }
 
