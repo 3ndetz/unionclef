@@ -95,11 +95,11 @@ dependencies {
     shadow('com.fasterxml.jackson.core:jackson-databind:2.16.0')
 
     // Baritone — source subproject (compiled once, shared across versions)
-    compileOnly project(path: ":baritone", configuration: "namedElements")
+    implementation project(path: ":baritone", configuration: "namedElements")
 
     // Tungsten — source subproject (1.21+ only)
     if (mcVersion >= 12100) {
-        compileOnly project(path: ":tungsten", configuration: "namedElements")
+        implementation project(path: ":tungsten", configuration: "namedElements")
     }
 }
 
