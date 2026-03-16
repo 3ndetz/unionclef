@@ -1,6 +1,6 @@
 # Progress
 
-## Shredder — новый pathfinder (baritone + tungsten)
+## Shredder — pathfinder v2 (baritone + tungsten)
 
 ### Investigate
 
