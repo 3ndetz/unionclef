@@ -2,10 +2,14 @@ plugins {
     id 'fabric-loom' version '1.7-SNAPSHOT'
 }
 
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
 
-archivesBaseName = "shredder"
+base {
+    archivesName = "shredder"
+}
 version = "0.1.0"
 group = "shredder"
 
