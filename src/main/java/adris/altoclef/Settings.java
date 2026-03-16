@@ -549,6 +549,20 @@ public class Settings implements IFailableConfigFile {
         return pythonGatewayPort;
     }
 
+    /**
+     * Last known good nickname. If we log in as PlayerNNN,
+     * this nick is restored automatically.
+     */
+    private String lastNickname = "";
+
+    public String getLastNickname() {
+        return lastNickname;
+    }
+
+    public void setLastNickname(String name) {
+        this.lastNickname = name;
+    }
+
     public boolean isAutoRespawn() {
         return autoRespawn;
     }

@@ -38,8 +38,11 @@ import baritone.api.BaritoneAPI;
 import baritone.api.Settings;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import adris.altoclef.mixins.MinecraftClientSessionMixin;
+import adris.altoclef.util.helpers.ConfigHelper;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.session.Session;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.item.Item;
@@ -198,6 +201,64 @@ public class AltoClef implements ModInitializer {
         return "";
     }
 
+    /**
+     * Replaces the client session with a new one bearing a different username.
+     * Only works before connecting to a server.
+     */
+    public static boolean changePlayerName(String newUsername) {
+        if (newUsername == null || newUsername.isBlank()) {
+            Debug.logWarning("Cannot change username: empty");
+            return false;
+        }
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.getSession() == null) {
+            Debug.logWarning("Cannot change username: no session");
+            return false;
+        }
+        try {
+            Session cur = client.getSession();
+            Session next = new Session(
+                    newUsername,
+                    cur.getUuidOrNull(),
+                    cur.getAccessToken(),
+                    cur.getXuid(),
+                    cur.getClientId(),
+                    cur.getAccountType()
+            );
+            ((MinecraftClientSessionMixin) client).setSession(next);
+            Debug.logMessage("Username changed to: " + newUsername);
+            return true;
+        } catch (Exception e) {
+            Debug.logError("Failed to change username: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private static boolean looksLikeDefaultNick(String name) {
+        return name != null && name.matches("(?i)player\\d+");
+    }
+
+    private void tryRestoreNickname() {
+        String currentName = getSelfName();
+        if (settings == null) return;
+
+        if (!looksLikeDefaultNick(currentName)) {
+            // Good nick — remember it
+            if (!currentName.equals(settings.getLastNickname())) {
+                settings.setLastNickname(currentName);
+                ConfigHelper.saveConfig(adris.altoclef.Settings.SETTINGS_PATH, settings);
+                Debug.logMessage("Saved nickname: " + currentName);
+            }
+            return;
+        }
+        // Current nick is PlayerNNN — restore saved one
+        String last = settings.getLastNickname();
+        if (last != null && !last.isBlank() && !looksLikeDefaultNick(last)) {
+            Debug.logMessage("Detected default nick '" + currentName + "', restoring to: " + last);
+            changePlayerName(last);
+        }
+    }
+
     // Are we in game (playing in a server/world)
     public static boolean inGame() {
         return MinecraftClient.getInstance().player != null && MinecraftClient.getInstance().getNetworkHandler() != null;
@@ -287,6 +348,9 @@ public class AltoClef implements ModInitializer {
             getExtraBaritoneSettings().avoidBlockBreak(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
             getExtraBaritoneSettings().avoidBlockPlace(blockPos -> settings.isPositionExplicitlyProtected(blockPos));
             getExtraBaritoneSettings().getForceSaveToolPredicates().add((state, item) -> StorageHelper.shouldSaveStack(this, state.getBlock(), item));
+
+            // Auto-restore nickname if current name looks like PlayerNNN
+            tryRestoreNickname();
 
             // Initialize Python sender after settings are loaded (needs getPythonGatewayPort())
             initializePythonSender();
