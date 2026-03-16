@@ -30,14 +30,14 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin(LootContext.Builder.class)
 public abstract class MixinLootContextBuilder {
 
-    @Shadow public abstract ServerWorld getLevel();
+    @Shadow public abstract ServerWorld getWorld();
 
-    @Redirect(method = "create", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/MinecraftServer;reloadableRegistries()Lnet/minecraft/server/ReloadableServerRegistries$Holder;"))
+    @Redirect(method = "create", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/MinecraftServer;getReloadableRegistries()Lnet/minecraft/registry/ReloadableRegistries$Lookup;"))
     private ReloadableRegistries.Lookup create(MinecraftServer instance) {
         if (instance != null) {
             return instance.getReloadableRegistries();
         }
-        if (getLevel() instanceof BlockOptionalMeta.ServerLevelStub sls) {
+        if (getWorld() instanceof BlockOptionalMeta.ServerLevelStub sls) {
             return sls.holder();
         }
         return null;

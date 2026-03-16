@@ -55,36 +55,12 @@ import java.util.List;
 @Mixin(ClientPlayNetworkHandler.class)
 public abstract class MixinClientPlayNetHandler extends ClientCommonNetworkHandler {
 
-    // unused lol
-    /*@Inject(
-            method = "handleChunkData",
-            at = @At(
-                    value = "INVOKE",
-                    target = "net/minecraft/client/multiplayer/ChunkProviderClient.func_212474_a(IILnet/minecraft/network/PacketBuffer;IZ)Lnet/minecraft/world/chunk/Chunk;"
-            )
-    )
-    private void preRead(SPacketChunkData packetIn, CallbackInfo ci) {
-        for (IBaritone ibaritone : BaritoneAPI.getProvider().getAllBaritones()) {
-            ClientPlayerEntity player = ibaritone.getPlayerContext().player();
-            if (player != null && player.connection == (ClientPlayNetHandler) (Object) this) {
-                ibaritone.getGameEventHandler().onChunkEvent(
-                        new ChunkEvent(
-                                EventState.PRE,
-                                packetIn.isFullChunk() ? ChunkEvent.Type.POPULATE_FULL : ChunkEvent.Type.POPULATE_PARTIAL,
-                                packetIn.getChunkX(),
-                                packetIn.getChunkZ()
-                        )
-                );
-            }
-        }
-    }*/
-
     protected MixinClientPlayNetHandler(final MinecraftClient arg, final ClientConnection arg2, final ClientConnectionState arg3) {
         super(arg, arg2, arg3);
     }
 
     @Inject(
-            method = "sendChat(Ljava/lang/String;)V",
+            method = "sendChatMessage(Ljava/lang/String;)V",
             at = @At("HEAD"),
             cancellable = true
     )
@@ -101,7 +77,7 @@ public abstract class MixinClientPlayNetHandler extends ClientCommonNetworkHandl
     }
 
     @Inject(
-            method = "handleLevelChunkWithLight",
+            method = "onChunkData",
             at = @At("RETURN")
     )
     private void postHandleChunkData(ChunkDataS2CPacket packetIn, CallbackInfo ci) {
@@ -121,7 +97,7 @@ public abstract class MixinClientPlayNetHandler extends ClientCommonNetworkHandl
     }
 
     @Inject(
-            method = "handleForgetLevelChunk",
+            method = "onUnloadChunk",
             at = @At("HEAD")
     )
     private void preChunkUnload(UnloadChunkS2CPacket packet, CallbackInfo ci) {
@@ -136,7 +112,7 @@ public abstract class MixinClientPlayNetHandler extends ClientCommonNetworkHandl
     }
 
     @Inject(
-            method = "handleForgetLevelChunk",
+            method = "onUnloadChunk",
             at = @At("RETURN")
     )
     private void postChunkUnload(UnloadChunkS2CPacket packet, CallbackInfo ci) {
@@ -151,7 +127,7 @@ public abstract class MixinClientPlayNetHandler extends ClientCommonNetworkHandl
     }
 
     @Inject(
-            method = "handleBlockUpdate",
+            method = "onBlockUpdate",
             at = @At("RETURN")
     )
     private void postHandleBlockChange(BlockUpdateS2CPacket packetIn, CallbackInfo ci) {
@@ -177,7 +153,7 @@ public abstract class MixinClientPlayNetHandler extends ClientCommonNetworkHandl
     }
 
     @Inject(
-            method = "handleChunkBlocksUpdate",
+            method = "onChunkDeltaUpdate",
             at = @At("RETURN")
     )
     private void postHandleMultiBlockChange(ChunkDeltaUpdateS2CPacket packetIn, CallbackInfo ci) {
@@ -200,10 +176,10 @@ public abstract class MixinClientPlayNetHandler extends ClientCommonNetworkHandl
     }
 
     @Inject(
-            method = "handlePlayerCombatKill",
+            method = "onDeathMessage",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/player/LocalPlayer;shouldShowDeathScreen()Z"
+                    target = "Lnet/minecraft/client/network/ClientPlayerEntity;showsDeathScreen()Z"
             )
     )
     private void onPlayerDeath(DeathMessageS2CPacket packetIn, CallbackInfo ci) {
@@ -214,71 +190,4 @@ public abstract class MixinClientPlayNetHandler extends ClientCommonNetworkHandl
             }
         }
     }
-
-    /*
-    @Inject(
-            method = "handleChunkData",
-            at = @At(
-                    value = "INVOKE",
-                    target = "net/minecraft/world/chunk/Chunk.read(Lnet/minecraft/network/PacketBuffer;IZ)V"
-            )
-    )
-    private void preRead(SPacketChunkData packetIn, CallbackInfo ci) {
-        IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForConnection((NetHandlerPlayClient) (Object) this);
-        if (baritone == null) {
-            return;
-        }
-        baritone.getGameEventHandler().onChunkEvent(
-                new ChunkEvent(
-                        EventState.PRE,
-                        packetIn.isFullChunk() ? ChunkEvent.Type.POPULATE_FULL : ChunkEvent.Type.POPULATE_PARTIAL,
-                        packetIn.getChunkX(),
-                        packetIn.getChunkZ()
-                )
-        );
-    }
-
-    @Inject(
-            method = "handleChunkData",
-            at = @At("RETURN")
-    )
-    private void postHandleChunkData(SPacketChunkData packetIn, CallbackInfo ci) {
-        IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForConnection((NetHandlerPlayClient) (Object) this);
-        if (baritone == null) {
-            return;
-        }
-        baritone.getGameEventHandler().onChunkEvent(
-                new ChunkEvent(
-                        EventState.POST,
-                        packetIn.isFullChunk() ? ChunkEvent.Type.POPULATE_FULL : ChunkEvent.Type.POPULATE_PARTIAL,
-                        packetIn.getChunkX(),
-                        packetIn.getChunkZ()
-                )
-        );
-    }
-
-    @Inject(
-            method = "handleBlockChange",
-            at = @At("RETURN")
-    )
-    private void postHandleBlockChange(SPacketBlockChange packetIn, CallbackInfo ci) {
-        IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForConnection((NetHandlerPlayClient) (Object) this);
-        if (baritone == null) {
-            return;
-        }
-
-        final ChunkPos pos = new ChunkPos(packetIn.getBlockPosition().getX() >> 4, packetIn.getBlockPosition().getZ() >> 4);
-        final Pair<BlockPos, IBlockState> changed = new Pair<>(packetIn.getBlockPosition(), packetIn.getBlockState());
-        baritone.getGameEventHandler().onBlockChange(new BlockChangeEvent(pos, Collections.singletonList(changed)));
-    }
-
-    @Inject(
-            method = "handleMultiBlockChange",
-            at = @At("RETURN")
-    )
-    private void postHandleMultiBlockChange(SPacketMultiBlockChange packetIn, CallbackInfo ci) {
-
-    }
-
-     */
 }

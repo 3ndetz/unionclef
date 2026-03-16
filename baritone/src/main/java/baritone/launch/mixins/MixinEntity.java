@@ -32,16 +32,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class MixinEntity {
 
     @Shadow
-    private float yRot;
+    private float yaw;
 
     @Shadow
-    private float xRot;
+    private float pitch;
 
     @Unique
     private RotationMoveEvent motionUpdateRotationEvent;
 
     @Inject(
-            method = "moveRelative",
+            method = "updateVelocity",
             at = @At("HEAD")
     )
     private void moveRelativeHead(CallbackInfo info) {
@@ -49,20 +49,20 @@ public class MixinEntity {
         if (!ClientPlayerEntity.class.isInstance(this) || BaritoneAPI.getProvider().getBaritoneForPlayer((ClientPlayerEntity) (Object) this) == null) {
             return;
         }
-        this.motionUpdateRotationEvent = new RotationMoveEvent(RotationMoveEvent.Type.MOTION_UPDATE, this.yRot, this.xRot);
+        this.motionUpdateRotationEvent = new RotationMoveEvent(RotationMoveEvent.Type.MOTION_UPDATE, this.yaw, this.pitch);
         BaritoneAPI.getProvider().getBaritoneForPlayer((ClientPlayerEntity) (Object) this).getGameEventHandler().onPlayerRotationMove(motionUpdateRotationEvent);
-        this.yRot = this.motionUpdateRotationEvent.getYaw();
-        this.xRot = this.motionUpdateRotationEvent.getPitch();
+        this.yaw = this.motionUpdateRotationEvent.getYaw();
+        this.pitch = this.motionUpdateRotationEvent.getPitch();
     }
 
     @Inject(
-            method = "moveRelative",
+            method = "updateVelocity",
             at = @At("RETURN")
     )
     private void moveRelativeReturn(CallbackInfo info) {
         if (this.motionUpdateRotationEvent != null) {
-            this.yRot = this.motionUpdateRotationEvent.getOriginal().getYaw();
-            this.xRot = this.motionUpdateRotationEvent.getOriginal().getPitch();
+            this.yaw = this.motionUpdateRotationEvent.getOriginal().getYaw();
+            this.pitch = this.motionUpdateRotationEvent.getOriginal().getPitch();
             this.motionUpdateRotationEvent = null;
         }
     }

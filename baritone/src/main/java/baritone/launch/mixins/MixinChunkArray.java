@@ -33,40 +33,40 @@ public abstract class MixinChunkArray implements IChunkArray {
     AtomicReferenceArray<WorldChunk> chunks;
     @Final
     @Shadow
-    int chunkRadius;
+    int radius;
 
     @Final
     @Shadow
-    private int viewRange;
+    private int diameter;
     @Shadow
-    int viewCenterX;
+    volatile int centerChunkX;
     @Shadow
-    int viewCenterZ;
+    volatile int centerChunkZ;
     @Shadow
-    int chunkCount;
+    int loadedChunkCount;
 
     @Shadow
-    abstract boolean inRange(int x, int z);
+    abstract boolean isInRadius(int x, int z);
 
     @Shadow
     abstract int getIndex(int x, int z);
 
     @Shadow
-    protected abstract void replace(int index, WorldChunk chunk);
+    protected abstract void set(int index, WorldChunk chunk);
 
     @Override
     public int centerX() {
-        return viewCenterX;
+        return centerChunkX;
     }
 
     @Override
     public int centerZ() {
-        return viewCenterZ;
+        return centerChunkZ;
     }
 
     @Override
     public int viewDistance() {
-        return chunkRadius;
+        return radius;
     }
 
     @Override
@@ -76,20 +76,20 @@ public abstract class MixinChunkArray implements IChunkArray {
 
     @Override
     public void copyFrom(IChunkArray other) {
-        viewCenterX = other.centerX();
-        viewCenterZ = other.centerZ();
+        centerChunkX = other.centerX();
+        centerChunkZ = other.centerZ();
 
         AtomicReferenceArray<WorldChunk> copyingFrom = other.getChunks();
         for (int k = 0; k < copyingFrom.length(); ++k) {
             WorldChunk chunk = copyingFrom.get(k);
             if (chunk != null) {
                 ChunkPos chunkpos = chunk.getPos();
-                if (inRange(chunkpos.x, chunkpos.z)) {
+                if (isInRadius(chunkpos.x, chunkpos.z)) {
                     int index = getIndex(chunkpos.x, chunkpos.z);
                     if (chunks.get(index) != null) {
                         throw new IllegalStateException("Doing this would mutate the client's REAL loaded chunks?!");
                     }
-                    replace(index, chunk);
+                    set(index, chunk);
                 }
             }
         }

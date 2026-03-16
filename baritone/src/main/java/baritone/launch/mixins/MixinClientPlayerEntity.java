@@ -64,7 +64,7 @@ public class MixinClientPlayerEntity {
             method = "tick",
             at = @At(
                     value = "INVOKE",
-                    target = "net/minecraft/client/player/AbstractClientPlayer.tick()V",
+                    target = "net/minecraft/client/network/AbstractClientPlayerEntity.tick()V",
                     shift = At.Shift.AFTER
             )
     )
@@ -76,10 +76,10 @@ public class MixinClientPlayerEntity {
     }
 
     @Redirect(
-            method = "aiStep",
+            method = "tickMovement",
             at = @At(
                     value = "FIELD",
-                    target = "net/minecraft/world/entity/player/Abilities.mayfly:Z"
+                    target = "net/minecraft/entity/player/PlayerAbilities.allowFlying:Z"
             )
     )
     @Group(name = "mayFly", min = 1, max = 1)
@@ -92,10 +92,10 @@ public class MixinClientPlayerEntity {
     }
 
     @Redirect(
-        method = "aiStep",
+        method = "tickMovement",
         at = @At(
             value = "INVOKE",
-            target = "Lnet/minecraft/client/player/LocalPlayer;mayFly()Z"
+            target = "Lnet/minecraft/client/network/ClientPlayerEntity;mayFly()Z"
         )
     )
     @Group(name = "mayFly", min = 1, max = 1)
@@ -108,10 +108,10 @@ public class MixinClientPlayerEntity {
     }
 
     @Redirect(
-            method = "aiStep",
+            method = "tickMovement",
             at = @At(
                     value = "INVOKE",
-                    target = "net/minecraft/client/KeyMapping.isDown()Z"
+                    target = "net/minecraft/client/option/KeyBinding.isPressed()Z"
             )
     )
     private boolean isKeyDown(KeyBinding keyBinding) {
@@ -132,7 +132,7 @@ public class MixinClientPlayerEntity {
     }
 
     @Inject(
-            method = "rideTick",
+            method = "tickRiding",
             at = @At(
                     value = "HEAD"
             )
@@ -145,10 +145,10 @@ public class MixinClientPlayerEntity {
     }
 
     @Redirect(
-            method = "aiStep",
+            method = "tickMovement",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/player/LocalPlayer;tryToStartFallFlying()Z"
+                    target = "Lnet/minecraft/client/network/ClientPlayerEntity;checkFallFlying()Z"
             )
     )
     private boolean tryToStartFallFlying(final ClientPlayerEntity instance) {

@@ -56,7 +56,7 @@ public abstract class MixinLivingEntity extends Entity {
     }
 
     @Inject(
-            method = "jumpFromGround",
+            method = "jump",
             at = @At("HEAD")
     )
     private void preMoveRelative(CallbackInfo ci) {
@@ -67,10 +67,10 @@ public abstract class MixinLivingEntity extends Entity {
     }
 
     @Redirect(
-            method = "jumpFromGround",
+            method = "jump",
             at = @At(
                     value = "INVOKE",
-                    target = "net/minecraft/world/entity/LivingEntity.getYRot()F"
+                    target = "net/minecraft/entity/LivingEntity.getYaw()F"
             )
     )
     private float overrideYaw(LivingEntity self) {
@@ -84,7 +84,7 @@ public abstract class MixinLivingEntity extends Entity {
             method = "travel",
             at = @At(
                     value = "INVOKE",
-                    target = "net/minecraft/world/entity/LivingEntity.getLookAngle()Lnet/minecraft/world/phys/Vec3;"
+                    target = "net/minecraft/entity/LivingEntity.getRotationVector()Lnet/minecraft/util/math/Vec3d;"
             )
     )
     private void onPreElytraMove(Vec3d direction, CallbackInfo ci) {
@@ -100,7 +100,7 @@ public abstract class MixinLivingEntity extends Entity {
             method = "travel",
             at = @At(
                     value = "INVOKE",
-                    target = "net/minecraft/world/entity/LivingEntity.move(Lnet/minecraft/world/entity/MoverType;Lnet/minecraft/world/phys/Vec3;)V",
+                    target = "net/minecraft/entity/LivingEntity.move(Lnet/minecraft/entity/MovementType;Lnet/minecraft/util/math/Vec3d;)V",
                     shift = At.Shift.AFTER
             )
     )

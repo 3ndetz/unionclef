@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.client.gui.screen.ChatInputSuggestor;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.text.OrderedText;
 
 /**
  * @author Brady
@@ -46,32 +47,32 @@ public class MixinCommandSuggestionHelper {
 
     @Shadow
     @Final
-    TextFieldWidget input;
+    TextFieldWidget textField;
 
     @Shadow
     @Final
-    private List<String> commandUsage;
+    private List<OrderedText> messages;
 
     @Shadow
-    private ParseResults currentParse;
+    private ParseResults parse;
 
     @Shadow
     private CompletableFuture<Suggestions> pendingSuggestions;
 
     @Shadow
-    private ChatInputSuggestor.SuggestionWindow suggestions;
+    private ChatInputSuggestor.SuggestionWindow window;
 
     @Shadow
-    boolean keepSuggestions;
+    boolean completingSuggestions;
 
     @Inject(
-            method = "updateCommandInfo",
+            method = "refresh",
             at = @At("HEAD"),
             cancellable = true
     )
     private void preUpdateSuggestion(CallbackInfo ci) {
         // Anything that is present in the input text before the cursor position
-        String prefix = this.input.getText().substring(0, Math.min(this.input.getText().length(), this.input.getCursor()));
+        String prefix = this.textField.getText().substring(0, Math.min(this.textField.getText().length(), this.textField.getCursor()));
 
         TabCompleteEvent event = new TabCompleteEvent(prefix);
         BaritoneAPI.getProvider().getPrimaryBaritone().getGameEventHandler().onPreTabComplete(event);
@@ -84,16 +85,16 @@ public class MixinCommandSuggestionHelper {
         if (event.completions != null) {
             ci.cancel();
 
-            this.currentParse = null; // stop coloring
+            this.parse = null; // stop coloring
 
-            if (this.keepSuggestions) { // Supress suggestions update when cycling suggestions.
+            if (this.completingSuggestions) { // Suppress suggestions update when cycling suggestions.
                 return;
             }
 
-            this.input.setSuggestion(null); // clear old suggestions
-            this.suggestions = null;
+            this.textField.setSuggestion(null); // clear old suggestions
+            this.window = null;
             // TODO: Support populating the command usage
-            this.commandUsage.clear();
+            this.messages.clear();
 
             if (event.completions.length == 0) {
                 this.pendingSuggestions = Suggestions.empty();

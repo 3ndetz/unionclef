@@ -46,14 +46,14 @@ public class MixinNetworkManager {
 
     @Shadow
     @Final
-    private NetworkSide receiving;
+    private NetworkSide side;
 
     @Inject(
-            method = "sendPacket",
+            method = "send(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/PacketCallbacks;Z)V",
             at = @At("HEAD")
     )
     private void preDispatchPacket(Packet<?> packet, PacketCallbacks packetSendListener, boolean flush, CallbackInfo ci) {
-        if (this.receiving != NetworkSide.CLIENTBOUND) {
+        if (this.side != NetworkSide.CLIENTBOUND) {
             return;
         }
 
@@ -65,11 +65,11 @@ public class MixinNetworkManager {
     }
 
     @Inject(
-            method = "sendPacket",
+            method = "send(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/PacketCallbacks;Z)V",
             at = @At("RETURN")
     )
     private void postDispatchPacket(Packet<?> packet, PacketCallbacks packetSendListener, boolean flush, CallbackInfo ci) {
-        if (this.receiving != NetworkSide.CLIENTBOUND) {
+        if (this.side != NetworkSide.CLIENTBOUND) {
             return;
         }
 
@@ -84,11 +84,11 @@ public class MixinNetworkManager {
             method = "channelRead0",
             at = @At(
                     value = "INVOKE",
-                    target = "net/minecraft/network/Connection.genericsFtw(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;)V"
+                    target = "net/minecraft/network/ClientConnection.handlePacket(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;)V"
             )
     )
     private void preProcessPacket(ChannelHandlerContext context, Packet<?> packet, CallbackInfo ci) {
-        if (this.receiving != NetworkSide.CLIENTBOUND) {
+        if (this.side != NetworkSide.CLIENTBOUND) {
             return;
         }
         for (IBaritone ibaritone : BaritoneAPI.getProvider().getAllBaritones()) {
@@ -103,7 +103,7 @@ public class MixinNetworkManager {
             at = @At("RETURN")
     )
     private void postProcessPacket(ChannelHandlerContext context, Packet<?> packet, CallbackInfo ci) {
-        if (!this.channel.isOpen() || this.receiving != NetworkSide.CLIENTBOUND) {
+        if (!this.channel.isOpen() || this.side != NetworkSide.CLIENTBOUND) {
             return;
         }
         for (IBaritone ibaritone : BaritoneAPI.getProvider().getAllBaritones()) {

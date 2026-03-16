@@ -41,7 +41,7 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 public class MixinWorldRenderer {
 
     @Inject(
-            method = "renderLevel",
+            method = "render",
             at = @At("RETURN")
     )
     private void onStartHand(final RenderTickCounter deltaTracker, final boolean bl, final Camera camera, final GameRenderer gameRenderer, final LightmapTextureManager lightTexture, final Matrix4f matrix4f, final Matrix4f matrix4f2, final CallbackInfo ci) {

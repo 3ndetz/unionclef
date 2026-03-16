@@ -35,13 +35,13 @@ public abstract class MixinFireworkRocketEntity extends Entity implements IFirew
 
     @Shadow
     @Final
-    private static TrackedData<OptionalInt> DATA_ATTACHED_TO_TARGET;
+    private static TrackedData<OptionalInt> SHOOTER_ENTITY_ID;
 
     @Shadow
-    private LivingEntity attachedToEntity;
+    private LivingEntity shooter;
 
     @Shadow
-    public abstract boolean isAttachedToEntity();
+    public abstract boolean wasShotByEntity();
 
     private MixinFireworkRocketEntity(World level) {
         super(EntityType.FIREWORK_ROCKET, level);
@@ -49,12 +49,12 @@ public abstract class MixinFireworkRocketEntity extends Entity implements IFirew
 
     @Override
     public LivingEntity getBoostedEntity() {
-        if (this.isAttachedToEntity() && this.attachedToEntity == null) { // isAttachedToEntity checks if the optional is present
-            final Entity entity = this.getWorld().getEntityById(this.dataTracker.get(DATA_ATTACHED_TO_TARGET).getAsInt());
+        if (this.wasShotByEntity() && this.shooter == null) {
+            final Entity entity = this.getWorld().getEntityById(this.dataTracker.get(SHOOTER_ENTITY_ID).getAsInt());
             if (entity instanceof LivingEntity) {
-                this.attachedToEntity = (LivingEntity) entity;
+                this.shooter = (LivingEntity) entity;
             }
         }
-        return this.attachedToEntity;
+        return this.shooter;
     }
 }

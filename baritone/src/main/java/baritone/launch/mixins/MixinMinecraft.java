@@ -50,7 +50,7 @@ public class MixinMinecraft {
     @Shadow
     public ClientPlayerEntity player;
     @Shadow
-    public ClientWorld level;
+    public ClientWorld world;
 
     @Unique
     private BiFunction<EventState, TickEvent.Type, TickEvent> tickProvider;
@@ -68,7 +68,7 @@ public class MixinMinecraft {
             at = @At(
                     value = "FIELD",
                     opcode = Opcodes.GETFIELD,
-                    target = "net/minecraft/client/Minecraft.screen:Lnet/minecraft/client/gui/screens/Screen;",
+                    target = "net/minecraft/client/MinecraftClient.currentScreen:Lnet/minecraft/client/gui/screen/Screen;",
                     ordinal = 0,
                     shift = At.Shift.BEFORE
             ),
@@ -76,7 +76,7 @@ public class MixinMinecraft {
                     from = @At(
                             value = "FIELD",
                             opcode = Opcodes.PUTFIELD,
-                            target = "net/minecraft/client/Minecraft.missTime:I"
+                            target = "net/minecraft/client/MinecraftClient.attackCooldown:I"
                     )
             )
     )
@@ -114,7 +114,7 @@ public class MixinMinecraft {
             method = "tick",
             at = @At(
                     value = "INVOKE",
-                    target = "net/minecraft/client/multiplayer/ClientLevel.tickEntities()V",
+                    target = "net/minecraft/client/world/ClientWorld.tickEntities()V",
                     shift = At.Shift.AFTER
             )
     )
@@ -128,12 +128,12 @@ public class MixinMinecraft {
     }
 
     @Inject(
-            method = "setLevel",
+            method = "joinWorld",
             at = @At("HEAD")
     )
     private void preLoadWorld(ClientWorld world, DownloadingTerrainScreen.WorldEntryReason arg2, CallbackInfo ci) {
         // If we're unloading the world but one doesn't exist, ignore it
-        if (this.level == null && world == null) {
+        if (this.world == null && world == null) {
             return;
         }
 
@@ -148,7 +148,7 @@ public class MixinMinecraft {
     }
 
     @Inject(
-            method = "setLevel",
+            method = "joinWorld",
             at = @At("RETURN")
     )
     private void postLoadWorld(ClientWorld world, DownloadingTerrainScreen.WorldEntryReason arg2, CallbackInfo ci) {
@@ -168,12 +168,12 @@ public class MixinMinecraft {
             at = @At(
                     value = "FIELD",
                     opcode = Opcodes.GETFIELD,
-                    target = "Lnet/minecraft/client/Minecraft;screen:Lnet/minecraft/client/gui/screens/Screen;"
+                    target = "Lnet/minecraft/client/MinecraftClient;currentScreen:Lnet/minecraft/client/gui/screen/Screen;"
             ),
             slice = @Slice(
                     from = @At(
                             value = "INVOKE",
-                            target = "Lnet/minecraft/client/gui/components/DebugScreenOverlay;showDebugScreen()Z"
+                            target = "Lnet/minecraft/client/gui/hud/DebugHud;shouldShowDebugHud()Z"
                     ),
                     to = @At(
                             value = "CONSTANT",
