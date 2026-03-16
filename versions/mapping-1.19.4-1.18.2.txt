@@ -1,0 +1,4 @@
+org.joml.Matrix4f net.minecraft.util.math.Matrix4f
+net.minecraft.registry.Registries net.minecraft.util.registry.Registry
+net.minecraft.world.dimension.DimensionType ultrawarm() isUltrawarm()
+net.minecraft.world.dimension.DimensionType natural() isNatural()

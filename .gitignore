@@ -1,0 +1,23 @@
+# Gradle
+.gradle/
+build/
+versions/*/build/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Java
+*.class
+*.jar
+*.war
+
+# Runtime
+run/
+logs/

@@ -1,0 +1,43 @@
+plugins {
+    id 'fabric-loom' version '1.7-SNAPSHOT'
+}
+
+sourceCompatibility = JavaVersion.VERSION_21
+targetCompatibility = JavaVersion.VERSION_21
+
+archivesBaseName = "baritone"
+version = "1.11.0"
+group = "baritone"
+
+dependencies {
+    minecraft "com.mojang:minecraft:1.21"
+    mappings "net.fabricmc:yarn:1.21+build.9:v2"
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+
+    // Baritone dependencies
+    compileOnly "org.spongepowered:mixin:0.8"
+    implementation "dev.babbaj:nether-pathfinder:1.4.1"
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+}
+
+repositories {
+    maven {
+        name = 'babbaj-repo'
+        url = 'https://babbaj.github.io/maven/'
+    }
+    maven {
+        name = 'spongepowered-repo'
+        url = 'https://repo.spongepowered.org/repository/maven-public/'
+    }
+    mavenCentral()
+}
+
+// All source sets merged into main for unified yarn mappings
+jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = 21
+}

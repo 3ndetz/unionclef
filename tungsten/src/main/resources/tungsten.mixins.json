@@ -1,0 +1,28 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "kaptainwutax.tungsten.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AccessorEntity",
+    "AccessorLivingEntity"
+  ],
+  "client": [
+    "MixinMinecraftClient",
+    "MixinClientPlayerEntity",
+    "MixinDebugRenderer",
+    "MixinShapeContext",
+    "MixinClientPlayNetworkHandler",
+    "MixinWorldChunk",
+    "MixinMinecraftClient",
+    "MixinClientCommandSource",
+    "AccessorChatInputSuggestor",
+    "MixinChatInputSuggestor",
+    "MixinSuggestionWindow",
+    "MixinChatHud",
+    "MixinInGameHud"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
