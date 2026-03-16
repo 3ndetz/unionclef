@@ -20,7 +20,7 @@ rootProject.name = "unionclef"
 rootProject.buildFileName = "root.gradle.kts"
 
 // ── Library subprojects (built once, shared across MC versions) ──────────────
-include(":baritone")
+// include(":baritone")  // kept as source reference, not compiled
 include(":tungsten")
 include(":shredder")
 
