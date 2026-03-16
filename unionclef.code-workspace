@@ -12,7 +12,13 @@
         "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx4G -Xms100m -Xlog:disable",
         "gradle.nestedProjects": true,
         "gradle.autoDetect": "on",
-        "java.compile.nullAnalysis.mode": "automatic"
+        "java.compile.nullAnalysis.mode": "automatic",
+        "files.exclude": {
+            "**/*.rpyc": true,
+            "**/*.rpa": true,
+            "**/*.rpymc": true,
+            "**/cache/": true
+        }
     },
     "tasks": {
         "version": "2.0.0",
