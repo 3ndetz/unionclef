@@ -20,7 +20,7 @@ Built by merging **altoclef**, **baritone**, and **tungsten** into a single code
 
 **Minecraft 1.21** / **Fabric** / **Java 21**
 
-> **[How to build & run →](docs/DEVELOP.md)** | **[How to release →](docs/RELEASE.md)**
+> **[How to build & run →](docs/DEVELOP.md)** | **[How to release →](docs/RELEASE.md)** | **[Multi-version →](docs/MULTIVERSIONING.md)**
 
 ## Quick start
 
