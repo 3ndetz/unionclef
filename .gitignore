@@ -6,8 +6,6 @@ versions/*/build/
 # IDE
 .idea/
 *.iml
-.vscode/
-*.code-workspace
 
 # OS
 .DS_Store

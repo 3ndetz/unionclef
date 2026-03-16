@@ -1,0 +1,69 @@
+{
+    "folders": [
+        {
+            "path": ".",
+            "name": "unionclef"
+        }
+    ],
+    "settings": {
+        "java.autobuild.enabled": false,
+        "java.server.launchMode": "LightWeight",
+        "java.configuration.updateBuildConfiguration": "interactive",
+        "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx4G -Xms100m -Xlog:disable",
+        "gradle.nestedProjects": true,
+        "gradle.autoDetect": "on"
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "unionclef: compileJava",
+                "type": "shell",
+                "command": "gradlew compileJava",
+                "group": "build",
+                "problemMatcher": []
+            },
+            {
+                "label": "unionclef: runClient",
+                "type": "shell",
+                "command": "gradlew runClient",
+                "group": "build",
+                "problemMatcher": []
+            },
+            {
+                "label": "unionclef: runClient (debug)",
+                "type": "shell",
+                "command": "gradlew runClient --debug-jvm",
+                "group": "build",
+                "problemMatcher": [],
+                "isBackground": true
+            },
+            {
+                "label": "unionclef: build",
+                "type": "shell",
+                "command": "gradlew build",
+                "group": "build",
+                "problemMatcher": []
+            }
+        ]
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "type": "java",
+                "name": "Attach to Minecraft (debug)",
+                "request": "attach",
+                "hostName": "localhost",
+                "port": 5005
+            }
+        ],
+        "compounds": [
+            {
+                "name": "unionclef: Debug Client",
+                "configurations": ["Attach to Minecraft (debug)"],
+                "preLaunchTask": "unionclef: runClient (debug)"
+            }
+        ]
+    }
+}
