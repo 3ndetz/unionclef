@@ -4,6 +4,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasks.entity.KillPlayerTask;
 import adris.altoclef.tasks.misc.EquipArmorTask;
+import adris.altoclef.tasks.movement.GetToXZTask;
 import adris.altoclef.tasks.movement.PickupDroppedItemTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
@@ -33,11 +34,13 @@ public class SkyPvpTask extends Task {
     private static final Vec3d SPAWN = new Vec3d(827.5, 45, -791.5);
     private static final double SPAWN_SAFE_RADIUS = 17.0;
     private static final double TARGET_RANGE = 30.0;
+    private static final double SCAN_RANGE = 80.0; // range to spot faraway players and walk toward them
     private static final double CAUTIOUS_RANGE = 15.0; // avoid armored players within this range when naked
 
     private Task _currentKillTask;
     private Task _armorTask;
     private Task _pickupTask;
+    private Task _approachTask;
     private String _lastTargetName;
 
     @Override
@@ -92,8 +95,18 @@ public class SkyPvpTask extends Task {
             return _currentKillTask;
         }
 
-        // No target — idle
-        setDebugState(weAreInSpawn ? "In spawn zone, waiting..." : "Searching for targets...");
+        // No close target — look for faraway players to approach
+        Optional<PlayerEntity> farTarget = findFarTarget(mod, weHaveArmor);
+        if (farTarget.isPresent()) {
+            PlayerEntity enemy = farTarget.get();
+            Vec3d enemyPos = enemy.getPos();
+            setDebugState("Approaching: " + enemy.getName().getString());
+            _approachTask = new GetToXZTask((int) enemyPos.x, (int) enemyPos.z);
+            return _approachTask;
+        }
+
+        // Nobody around at all
+        setDebugState(weAreInSpawn ? "In spawn, scanning..." : "Searching...");
         _lastTargetName = null;
         return null;
     }
@@ -169,6 +182,31 @@ public class SkyPvpTask extends Task {
         if (player.isCreative() || player.isSpectator()) return false;
         if (player.isInvisible()) return false;
         return !mod.getButler().isUserAuthorized(player.getName().getString());
+    }
+
+    private Optional<PlayerEntity> findFarTarget(AltoClef mod, boolean weHaveArmor) {
+        PlayerEntity best = null;
+        double bestDist = Double.MAX_VALUE;
+
+        for (PlayerEntity player : mod.getWorld().getPlayers()) {
+            if (!isValidEnemy(mod, player)) continue;
+
+            Vec3d enemyPos = player.getPos();
+            double dist = mod.getPlayer().getPos().distanceTo(enemyPos);
+            if (dist > SCAN_RANGE || dist <= TARGET_RANGE) continue;
+
+            // Skip players inside spawn
+            if (enemyPos.distanceTo(SPAWN) < SPAWN_SAFE_RADIUS) continue;
+
+            // If naked, skip armored targets far away
+            if (!weHaveArmor && hasAnyArmorEntity(player)) continue;
+
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = player;
+            }
+        }
+        return Optional.ofNullable(best);
     }
 
     // ── armor checks ─────────────────────────────────────────────────────────
