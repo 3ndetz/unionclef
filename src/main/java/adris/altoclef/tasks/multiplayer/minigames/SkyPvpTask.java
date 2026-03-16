@@ -32,8 +32,6 @@ public class SkyPvpTask extends Task {
 
     private static final Vec3d SPAWN = new Vec3d(827.5, 45, -791.5);
     private static final double SPAWN_SAFE_RADIUS = 17.0;
-    private static final double CAUTIOUS_RANGE = 15.0; // avoid armored players within this range when naked
-
     private Task _currentKillTask;
     private Task _armorTask;
     private Task _pickupTask;
@@ -51,8 +49,6 @@ public class SkyPvpTask extends Task {
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
         if (mod.getPlayer() == null || mod.getPlayer().isDead()) return null;
-
-        boolean weHaveArmor = hasAnyArmor(mod);
 
         // Equip best armor first (if not in combat)
         if (_currentKillTask == null || !_currentKillTask.isActive()) {
@@ -72,7 +68,7 @@ public class SkyPvpTask extends Task {
         }
 
         // Find target (can target enemies outside spawn even if we're in spawn)
-        Optional<Entity> target = findTarget(mod, weHaveArmor);
+        Optional<Entity> target = findTarget(mod);
 
         if (target.isPresent()) {
             PlayerEntity enemy = (PlayerEntity) target.get();
@@ -114,49 +110,35 @@ public class SkyPvpTask extends Task {
 
     // ── target selection ─────────────────────────────────────────────────────
 
-    private Optional<Entity> findTarget(AltoClef mod, boolean weHaveArmor) {
-        Optional<Entity> bestUnarmored = Optional.empty();
-        Optional<Entity> bestArmored = Optional.empty();
-        double bestUnarmoredDist = Double.MAX_VALUE;
-        double bestArmoredDist = Double.MAX_VALUE;
+    private Optional<Entity> findTarget(AltoClef mod) {
+        Entity best = null;
+        double bestDist = Double.MAX_VALUE;
+
+        int totalPlayers = 0;
+        int skippedSelf = 0, skippedInvalid = 0, skippedSpawn = 0;
 
         for (PlayerEntity player : mod.getWorld().getPlayers()) {
-            if (!isValidEnemy(mod, player)) continue;
+            totalPlayers++;
+            if (player == mod.getPlayer()) { skippedSelf++; continue; }
+            if (!isValidEnemy(mod, player)) { skippedInvalid++; continue; }
 
             Vec3d enemyPos = player.getPos();
-            double dist = mod.getPlayer().getPos().distanceTo(enemyPos);
 
             // Don't target players inside spawn zone (they're protected)
-            if (enemyPos.distanceTo(SPAWN) < SPAWN_SAFE_RADIUS) continue;
+            if (enemyPos.distanceTo(SPAWN) < SPAWN_SAFE_RADIUS) { skippedSpawn++; continue; }
 
-            boolean enemyArmored = hasAnyArmorEntity(player);
-
-            if (enemyArmored) {
-                if (dist < bestArmoredDist) {
-                    bestArmoredDist = dist;
-                    bestArmored = Optional.of(player);
-                }
-            } else {
-                if (dist < bestUnarmoredDist) {
-                    bestUnarmoredDist = dist;
-                    bestUnarmored = Optional.of(player);
-                }
+            double dist = mod.getPlayer().getPos().distanceTo(enemyPos);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = player;
             }
         }
 
-        // If we have no armor — prefer unarmored targets, avoid armored unless no choice
-        if (!weHaveArmor) {
-            if (bestUnarmored.isPresent()) return bestUnarmored;
-            // Only attack armored if they're close (aggressive self-defense)
-            if (bestArmored.isPresent() && bestArmoredDist < CAUTIOUS_RANGE) return bestArmored;
-            return Optional.empty();
+        if (best == null) {
+            Debug.logMessage("[SkyPvP] No target. Players: " + totalPlayers
+                    + " (self:" + skippedSelf + " invalid:" + skippedInvalid + " spawn:" + skippedSpawn + ")");
         }
-
-        // If we have armor — attack closest regardless
-        if (bestUnarmoredDist <= bestArmoredDist) {
-            return bestUnarmored.isPresent() ? bestUnarmored : bestArmored;
-        }
-        return bestArmored.isPresent() ? bestArmored : bestUnarmored;
+        return Optional.ofNullable(best);
     }
 
     private boolean isValidEnemy(AltoClef mod, PlayerEntity player) {
