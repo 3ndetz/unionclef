@@ -7,11 +7,12 @@
     ],
     "settings": {
         "java.autobuild.enabled": false,
-        "java.server.launchMode": "LightWeight",
+        "java.server.launchMode": "Standard",
         "java.configuration.updateBuildConfiguration": "interactive",
         "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx4G -Xms100m -Xlog:disable",
         "gradle.nestedProjects": true,
-        "gradle.autoDetect": "on"
+        "gradle.autoDetect": "on",
+        "java.compile.nullAnalysis.mode": "automatic"
     },
     "tasks": {
         "version": "2.0.0",
