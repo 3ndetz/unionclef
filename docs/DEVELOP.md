@@ -117,3 +117,7 @@ Baritone source has been remapped from mojmap to yarn. If you pull upstream bari
 # 5. Fix ~10-15 stale imports (java.awt.*, mojmap wildcards, mixin annotations)
 # 6. Switch mappings back to yarn
 ```
+
+## Releasing
+
+See **[docs/RELEASE.md](RELEASE.md)** for tagging, building release JARs, and publishing to GitHub Releases.
