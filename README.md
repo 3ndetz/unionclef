@@ -2,13 +2,14 @@
 
 Letting agents loose in block game.
 
-An open platform for building AI agents that play Minecraft — pathfinding, combat, survival, multiplayer. The goal is to make it easy for researchers, developers, and tinkerers to plug their agents into the game and see what happens.
-
-Built by merging **altoclef**, **baritone**, and **tungsten** into a single codebase. No submodules, no pre-built JARs, no tears.
-
 ![Kill&loot](https://github.com/3ndetz/autoclef/assets/30196290/7377ec79-1c3d-493b-9a1d-5d701f19d9c9)
 
+
+An open platform for building AI agents that play Minecraft — pathfinding, combat, survival, multiplayer. The goal is to make it easy for researchers, developers, and tinkerers to plug their agents into the game and see what happens.
+
 ![qwenie](https://github.com/user-attachments/assets/64b98492-ceca-410f-b3bc-efbd8ea09dcb)
+
+Built by merging **altoclef**, **baritone**, and **tungsten** into a single codebase. No submodules, no pre-built JARs, no tears.
 
 ## What's inside
 
