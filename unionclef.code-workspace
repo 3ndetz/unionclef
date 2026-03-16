@@ -6,7 +6,8 @@
         }
     ],
     "settings": {
-        "java.autobuild.enabled": false,
+        "java.autobuild.enabled": true,
+        "java.project.outputPath": "build/classes/java/main",
         "java.server.launchMode": "Standard",
         "java.configuration.updateBuildConfiguration": "automatic",
         "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx4G -Xms100m -Xlog:disable",
@@ -26,21 +27,21 @@
             {
                 "label": "unionclef: compileJava",
                 "type": "shell",
-                "command": "gradlew compileJava",
+                "command": "gradlew :1.21.1:compileJava",
                 "group": "build",
                 "problemMatcher": []
             },
             {
                 "label": "unionclef: runClient",
                 "type": "shell",
-                "command": "gradlew runClient",
+                "command": "gradlew :1.21.1:runClient",
                 "group": "build",
                 "problemMatcher": []
             },
             {
                 "label": "unionclef: runClient (debug)",
                 "type": "shell",
-                "command": "gradlew runClient --debug-jvm",
+                "command": "gradlew :1.21.1:runClient --debug-jvm",
                 "group": "build",
                 "problemMatcher": [],
                 "isBackground": true
@@ -48,7 +49,7 @@
             {
                 "label": "unionclef: build",
                 "type": "shell",
-                "command": "gradlew build",
+                "command": "gradlew :1.21.1:build",
                 "group": "build",
                 "problemMatcher": []
             }
