@@ -250,7 +250,7 @@ public class Butler {
         GameMenuTaskChain._needToStopTasksOnReconnect = true;
     }
 
-    // --- Teammates ---
+    // --- Teammates (runtime only, never persisted) ---
     public void AddNearestPlayerToFriends(AltoClef mod, double radius) {
         List<PlayerEntity> players = mod.getEntityTracker().getTrackedEntities(PlayerEntity.class);
         try {
@@ -259,12 +259,9 @@ public class Butler {
                         && mod.getPlayer().getPos().isInRange(entity.getPos(), radius)
                         && !entity.equals(mod.getPlayer())) {
                     String name = entity.getName().getString();
-                    if (!isUserAuthorized(name)) {
-                        boolean added = AddUserToWhitelist(name);
-                        if (added) {
-                            _teammates.add(name);
-                            Debug.logMessage("[КЕНТЫ] +игрок " + name);
-                        }
+                    if (!_teammates.contains(name)) {
+                        _teammates.add(name);
+                        Debug.logMessage("[КЕНТЫ] +игрок " + name);
                     }
                 }
             }
@@ -274,9 +271,8 @@ public class Butler {
     }
 
     public void ClearTeammates() {
-        for (String name : _teammates) {
-            boolean removed = RemoveUserFromWhitelist(name);
-            if (removed) Debug.logMessage("[КЕНТЫ] -игрок " + name);
+        if (!_teammates.isEmpty()) {
+            Debug.logMessage("[КЕНТЫ] очистка: " + _teammates.size() + " игроков");
         }
         _teammates.clear();
     }
@@ -284,6 +280,7 @@ public class Butler {
     // --- Auth ---
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isUserAuthorized(String username) {
+        if (_teammates.contains(username)) return true;
         return _userAuth.isUserAuthorized(username);
     }
 
