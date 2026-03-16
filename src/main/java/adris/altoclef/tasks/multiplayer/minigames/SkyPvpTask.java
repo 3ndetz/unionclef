@@ -135,7 +135,7 @@ public class SkyPvpTask extends Task {
         }
 
         if (best == null) {
-            Debug.logWarning("[SkyPvP] No target. Players: " + totalPlayers
+            Debug.logInternal("[SkyPvP] No target. Players: " + totalPlayers
                     + " (self:" + skippedSelf + " invalid:" + skippedInvalid + " spawn:" + skippedSpawn + ")");
         }
         return Optional.ofNullable(best);
@@ -143,23 +143,9 @@ public class SkyPvpTask extends Task {
 
     private boolean isValidEnemy(AltoClef mod, PlayerEntity player) {
         if (player == null || player == mod.getPlayer()) return false;
-        String name = player.getName().getString();
-        if (player.isDead() || !player.isAlive()) {
-            Debug.logWarning("[SkyPvP] Skip " + name + ": dead/not alive");
-            return false;
-        }
-        if (player.isCreative() || player.isSpectator()) {
-            Debug.logWarning("[SkyPvP] Skip " + name + ": creative/spectator");
-            return false;
-        }
-        if (player.isInvisible()) {
-            Debug.logWarning("[SkyPvP] Skip " + name + ": invisible");
-            return false;
-        }
-        if (mod.getButler().isUserAuthorized(name)) {
-            Debug.logWarning("[SkyPvP] Skip " + name + ": authorized");
-            return false;
-        }
+        if (player.isDead() || !player.isAlive()) return false;
+        if (player.isCreative() || player.isSpectator()) return false;
+        // No butler check — in PvP everyone is an enemy
         return true;
     }
 
