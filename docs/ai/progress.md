@@ -14,21 +14,20 @@
 ### Plan
 
 - [x] Выбрать имя → **Shredder**
-- [x] Скопировать baritone → shredder, переименовать пакеты
-- [x] Настроить build.gradle, fabric.mod.json, mixins.shredder.json
+- [x] Скопировать baritone → shredder (пакеты `baritone.*` сохранены)
+- [x] Настроить metadata: build.gradle, fabric.mod.json, mixins.shredder.json
 - [x] Зарегистрировать в settings.gradle.kts и build.gradle
-- [ ] TODO 2.3: Заменить вызовы baritone в altoclef на shredder
+- [x] TODO 2.3: Переключить altoclef с `:baritone` на `:shredder`
 - [ ] TODO 2.4: Реализовать windMouse / AI smooth camera movement
 - [ ] TODO 2.5: Интегрировать tungsten в shredder
 
 ### Implement
 
-- [x] Скопирован baritone → shredder/ (341 файлов)
-- [x] Пакеты переименованы: `baritone.*` → `shredder.*` (package, import, static import)
-- [x] Строковые ссылки на пакеты обновлены (Class.forName и т.д.)
-- [x] shredder/build.gradle — версия 0.1.0, group "shredder"
-- [x] fabric.mod.json — id "shredder", автор "3ndetz"
-- [x] mixins.shredder.json — package "shredder.launch.mixins"
+- [x] Скопирован baritone → shredder/ (341 файлов, пакеты `baritone.*` оставлены как есть)
+- [x] shredder/build.gradle — archivesBaseName "shredder", version 0.1.0, group "shredder"
+- [x] fabric.mod.json — id "shredder", name "Shredder", автор "3ndetz", GPL-3.0
+- [x] mixins.baritone.json → mixins.shredder.json (содержимое без изменений)
+- [x] BaritoneMixinConnector → ссылается на `mixins.shredder.json`
 - [x] settings.gradle.kts — добавлен `include(":shredder")`
-- [x] build.gradle — добавлена зависимость на `:shredder`
-- Имена классов (IBaritone, BaritoneAPI и т.д.) пока оставлены — будут переименованы при рефакторинге
+- [x] build.gradle — заменено `:baritone` → `:shredder`, baritone dep убрана
+- [x] Altoclef импорты не изменены — `import baritone.*` работает, т.к. shredder экспортирует те же пакеты

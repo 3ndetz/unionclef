@@ -14,7 +14,7 @@ dependencies {
     mappings "net.fabricmc:yarn:1.21+build.9:v2"
     modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
 
-    // Shredder dependencies (inherited from baritone)
+    // Baritone dependencies
     compileOnly "org.spongepowered:mixin:0.8"
     implementation "dev.babbaj:nether-pathfinder:1.4.1"
     implementation 'com.google.code.findbugs:jsr305:3.0.2'

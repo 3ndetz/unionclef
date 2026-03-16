@@ -4,7 +4,7 @@
   "version": "${version}",
 
   "name": "Shredder",
-  "description": "Elite pathfinder combining baritone and tungsten",
+  "description": "Contour Maps for Blockgame",
   "authors": [
     "3ndetz"
   ],
@@ -14,6 +14,7 @@
   },
 
   "license": "GPL-3.0",
+  "icon": "assets/baritone/icon.png",
 
   "environment": "*",
   "entrypoints": {

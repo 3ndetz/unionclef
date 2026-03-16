@@ -94,16 +94,13 @@ dependencies {
     shadow('com.fasterxml.jackson.core:jackson-annotations:2.16.0')
     shadow('com.fasterxml.jackson.core:jackson-databind:2.16.0')
 
-    // Baritone — source subproject (compiled once, shared across versions)
-    implementation project(path: ":baritone", configuration: "namedElements")
+    // Shredder — new pathfinder (replaces baritone, same package names)
+    implementation project(path: ":shredder", configuration: "namedElements")
 
     // Tungsten — source subproject (1.21+ only)
     if (mcVersion >= 12100) {
         implementation project(path: ":tungsten", configuration: "namedElements")
     }
-
-    // Shredder — new pathfinder (baritone + tungsten elite combination)
-    implementation project(path: ":shredder", configuration: "namedElements")
 }
 
 // ── Build pipeline ──────────────────────────────────────────────────────────
