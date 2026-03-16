@@ -22,6 +22,7 @@ rootProject.buildFileName = "root.gradle.kts"
 // ── Library subprojects (built once, shared across MC versions) ──────────────
 include(":baritone")
 include(":tungsten")
+include(":shredder")
 
 // ── MC version subprojects (altoclef core, preprocessed per version) ─────────
 listOf(

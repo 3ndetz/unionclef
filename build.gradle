@@ -101,6 +101,9 @@ dependencies {
     if (mcVersion >= 12100) {
         implementation project(path: ":tungsten", configuration: "namedElements")
     }
+
+    // Shredder — new pathfinder (baritone + tungsten elite combination)
+    implementation project(path: ":shredder", configuration: "namedElements")
 }
 
 // ── Build pipeline ──────────────────────────────────────────────────────────

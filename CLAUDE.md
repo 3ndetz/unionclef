@@ -6,7 +6,7 @@ RE-READ THIS FULLY IF THE CONVERSATION WAS SUMMARIZED! Always read this file at 
 
 ## What is this
 
-Unified monorepo: altoclef (bot) + baritone (pathfinding) + tungsten (A* movement).
+Unified monorepo: altoclef (bot) + baritone (pathfinding) + tungsten (A* movement) + shredder (new elite pathfinder).
 Single Gradle project, no submodules, all source compiled together.
 
 ## Project structure
@@ -14,9 +14,11 @@ Single Gradle project, no submodules, all source compiled together.
 - `src/main/java/` — altoclef source (bot logic, tasks, commands)
 - `baritone/src/main/java/` — baritone source (pathfinding, remapped to yarn)
 - `tungsten/src/main/java/` — tungsten source (A* movement)
+- `shredder/src/main/java/` — shredder source (new elite pathfinder, fork of baritone)
 - `root.gradle.kts` — root build config (MC 1.21, yarn mappings)
 - `baritone/build.gradle` — baritone subproject (yarn mappings)
 - `tungsten/build.gradle` — tungsten subproject (yarn mappings)
+- `shredder/build.gradle` — shredder subproject (yarn mappings)
 - `docs/DEVELOP.md` — build & run instructions
 
 ## STRICT Rules
@@ -26,6 +28,7 @@ Single Gradle project, no submodules, all source compiled together.
 - Auto-commit and push your changes (if not explained otherwise).
 - **Do NOT add `Co-Authored-By` lines to commit messages.** Ever.
 - **All three modules use yarn mappings.** Baritone was migrated from mojmap to yarn. Do NOT switch back to mojmap.
+- **Автономность:** делай только то, что помечено как TODO в `TODOS.md`. Не забегай вперёд, не делай лишнего.
 
 ## Build commands (only when user asks)
 
