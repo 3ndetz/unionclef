@@ -43,7 +43,16 @@
                 "type": "shell",
                 "command": "gradlew :1.21.1:runClient --debug-jvm",
                 "group": "build",
-                "problemMatcher": [],
+                "problemMatcher": [
+                    {
+                        "pattern": { "regexp": "^$", "file": 1, "line": 2, "message": 3 },
+                        "background": {
+                            "activeOnStart": true,
+                            "beginsPattern": "^.*Listening for transport.*$",
+                            "endsPattern": "^.*Listening for transport.*$"
+                        }
+                    }
+                ],
                 "isBackground": true
             },
             {
