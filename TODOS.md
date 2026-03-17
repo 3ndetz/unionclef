@@ -16,9 +16,10 @@
   - [x] 2.3 Implement into project and replace altoclef's baritone calls with this new pathfinder TODO
   - [ ] 2.4 Improve baritone features in shredder
     - [x] Fix stupid debug spam and spam "failed"
-    - [ ] 2.4.1 Implement ACCELERATION for simple safe paths
-      - [ ] 2.4.1.1 Implement acceleration for straight line running to run and jump when applicable
+    - [x] 2.4.1 Implement ACCELERATION for simple safe paths
+      - [x] 2.4.1.1 Implement acceleration for straight line running to run and jump when applicable
       - [ ] 2.4.1.2 Implement diagonal moving acceleration and make diagonal movement instead of horizontal stairs-like movement
+        - [ ] 2.4.1.2.1 remove stupid mega-multi-change view path nodes when path is clear and simple without danger and complexity
   - [ ] 2.5 Implement advanced windMouse / AI camera smooth movement to the actino executor of the new pathfinder
   - [ ] 2.6 Implement tungsten into this pathfinder
 <!-- Верхнеуровневые задачи. Пишет юзер, AI отмечает выполнение. -->
