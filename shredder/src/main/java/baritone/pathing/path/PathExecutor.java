@@ -928,8 +928,6 @@ public class PathExecutor implements IPathExecutor, Helper {
 
         // Yaw that points in the movement direction (world-space)
         float forwardYaw = (float) Math.toDegrees(Math.atan2(-jumpBridgeDirX, jumpBridgeDirZ));
-        // Opposite direction for looking backward
-        float backwardYaw = forwardYaw + 180.0f;
 
         switch (jumpBridgePhase) {
             case SPRINT: {
@@ -954,7 +952,7 @@ public class PathExecutor implements IPathExecutor, Helper {
                 if (!ctx.player().isOnGround() && jumpBridgeTicksInPhase > 1) {
                     jumpBridgePhase = JumpBridgePhase.AIRBORNE;
                     jumpBridgeTicksInPhase = 0;
-                    jumpBridgeNextClickTick = 1; // first click on tick 1
+                    jumpBridgeNextClickTick = 0; // will be gated by position check
                 }
 
                 // Safety: abort if sprinting too long without leaving ground
@@ -969,15 +967,27 @@ public class PathExecutor implements IPathExecutor, Helper {
                 // DON'T press movement keys — inertia from sprint-jump carries us forward.
                 // Pressing MOVE_FORWARD while facing backward would kill momentum.
 
-                // Look BACKWARD at the side face of the last solid block.
-                // The side face center: lastSolid offset by +dir on the relevant axis, at mid-height.
+                // +dir face center of lastSolid — the face we right-click to place the next block.
                 Vec3d faceCenterPoint = new Vec3d(
                         jumpBridgeLastSolid.getX() + 0.5 + jumpBridgeDirX * 0.5,
                         jumpBridgeLastSolid.getY() + 0.5,
                         jumpBridgeLastSolid.getZ() + 0.5 + jumpBridgeDirZ * 0.5);
-                Rotation backLook = RotationUtils.calcRotationFromVec3d(
-                        ctx.playerHead(), faceCenterPoint, ctx.playerRotations());
-                behavior.baritone.getLookBehavior().updateTarget(backLook, true);
+                Vec3d head = ctx.playerHead();
+
+                // Positive = player has passed the face in the movement direction.
+                // Only then can we look backward at it and right-click the correct face.
+                // While behind the face, calcRotationFromVec3d gives a forward look, which
+                // hits the TOP face of lastSolid instead of the +dir face → wrong block placed.
+                double pastFace = (head.x - faceCenterPoint.x) * jumpBridgeDirX
+                                + (head.z - faceCenterPoint.z) * jumpBridgeDirZ;
+
+                if (pastFace > 0.2) {
+                    Rotation backLook = RotationUtils.calcRotationFromVec3d(head, faceCenterPoint, ctx.playerRotations());
+                    behavior.baritone.getLookBehavior().updateTarget(backLook, true);
+                } else {
+                    // Not yet past — look mildly forward-down, don't commit to block-interact mode
+                    behavior.baritone.getLookBehavior().updateTarget(new Rotation(forwardYaw, 10.0f), false);
+                }
 
                 // Landed?
                 if (ctx.player().isOnGround() && jumpBridgeTicksInPhase > 2) {
@@ -1001,18 +1011,15 @@ public class PathExecutor implements IPathExecutor, Helper {
                     return false;
                 }
 
-                // Place blocks with timed clicks
-                if (jumpBridgeTicksInPhase >= jumpBridgeNextClickTick) {
+                // Place block only once past the face — otherwise we'd click the wrong face
+                if (jumpBridgeTicksInPhase >= jumpBridgeNextClickTick && pastFace > 0.2) {
                     behavior.baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
 
-                    // After placing, the new block becomes the last solid.
-                    // It's at lastSolid + dir (the block we just placed against the face of).
+                    // Placed block is at lastSolid + dir. That's now the new lastSolid.
                     jumpBridgeLastSolid = jumpBridgeLastSolid.add(jumpBridgeDirX, 0, jumpBridgeDirZ);
-
-                    // Advance move index
                     jumpBridgeMoveIndex++;
 
-                    // Next click: 2-4 ticks later (need time to rotate to new face)
+                    // Next click: 2-4 ticks later (time to rotate to new face)
                     jumpBridgeNextClickTick = jumpBridgeTicksInPhase + 2 + jumpBridgeRandom.nextInt(2);
                 }
                 return false;
