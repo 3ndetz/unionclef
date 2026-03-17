@@ -81,13 +81,14 @@ public class PathExecutor implements IPathExecutor, Helper {
     private final baritone.tungsten.TungstenBridge tungstenBridge = new baritone.tungsten.TungstenBridge();
 
     // Jump bridging state
-    private enum JumpBridgePhase { NONE, PRE_ROTATE, JUMPING, AIRBORNE }
+    private enum JumpBridgePhase { NONE, SPRINT, AIRBORNE }
     private JumpBridgePhase jumpBridgePhase = JumpBridgePhase.NONE;
     private boolean jumpBridging;
     private int jumpBridgeTicksInPhase;
     private int jumpBridgeNextClickTick;
-    private BlockPos jumpBridgePlaceTarget;
-    private int jumpBridgeMoveIndex; // which bridge movement we're currently placing for
+    private int jumpBridgeMoveIndex;
+    private int jumpBridgeDirX, jumpBridgeDirZ; // world-space movement direction
+    private BlockPos jumpBridgeLastSolid; // last existing/placed block to click against
     private static final java.util.Random jumpBridgeRandom = new java.util.Random();
 
     public PathExecutor(PathingBehavior behavior, IPath path) {
@@ -879,93 +880,104 @@ public class PathExecutor implements IPathExecutor, Helper {
         BlockStateInterface bsi = new BlockStateInterface(ctx);
         if (current.toPlace(bsi).isEmpty()) return false;
 
+        // Need consistent direction (straight line bridge)
+        Vec3i dir = current.getDirection();
+        if (dir.getY() != 0) return false;
+
         int bridgeCount = 1;
         for (int i = pathPosition + 1; i < path.movements().size() && i <= pathPosition + 6; i++) {
             IMovement m = path.movements().get(i);
             if (!(m instanceof MovementTraverse)) break;
-            if (m.getDirection().getY() != 0) break;
+            if (!m.getDirection().equals(dir)) break;
             if (((Movement) m).toPlace(bsi).isEmpty()) break;
             bridgeCount++;
         }
         if (bridgeCount < 3) return false;
         if (!behavior.baritone.getInventoryBehavior().hasGenericThrowaway()) return false;
 
+        // Select throwaway block
+        BlockPos firstPlace = current.getDest().down();
+        if (!behavior.baritone.getInventoryBehavior().selectThrowawayForLocation(true, firstPlace.getX(), firstPlace.getY(), firstPlace.getZ())) {
+            return false;
+        }
+
         jumpBridging = true;
-        jumpBridgePhase = JumpBridgePhase.PRE_ROTATE;
+        jumpBridgePhase = JumpBridgePhase.SPRINT;
         jumpBridgeTicksInPhase = 0;
         jumpBridgeMoveIndex = pathPosition;
-        jumpBridgePlaceTarget = current.getDest().down();
+        jumpBridgeDirX = dir.getX();
+        jumpBridgeDirZ = dir.getZ();
+        // The last solid block is the one we're standing on (src of current movement, one down)
+        jumpBridgeLastSolid = current.getSrc().down();
         jumpBridgeNextClickTick = 0;
 
         behavior.baritone.getInputOverrideHandler().clearAllKeys();
-        behavior.baritone.getInputOverrideHandler().setInputForceState(Input.SNEAK, true);
         return true;
     }
 
     /**
      * Tick the jump bridge state machine.
+     *
+     * SPRINT: look forward (movement dir), sprint toward edge, jump when close.
+     * AIRBORNE: inertia carries forward, look BACKWARD at side face of last solid block,
+     *           right-click to place blocks, advance placement target after each click.
      */
     private boolean tickJumpBridge() {
         jumpBridgeTicksInPhase++;
         behavior.baritone.getInputOverrideHandler().clearAllKeys();
 
+        // Yaw that points in the movement direction (world-space)
+        float forwardYaw = (float) Math.toDegrees(Math.atan2(-jumpBridgeDirX, jumpBridgeDirZ));
+        // Opposite direction for looking backward
+        float backwardYaw = forwardYaw + 180.0f;
+
         switch (jumpBridgePhase) {
-            case PRE_ROTATE: {
-                // Sneak on edge, rotate to look at the block face we'll place against
-                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.SNEAK, true);
-
-                // Look backward-down at the edge of the block we're standing on
-                Vec3d facePoint = new Vec3d(
-                        jumpBridgePlaceTarget.getX() + 0.5,
-                        jumpBridgePlaceTarget.getY() + 1.0, // top face
-                        jumpBridgePlaceTarget.getZ() + 0.5);
-                Rotation placeLook = RotationUtils.calcRotationFromVec3d(
-                        ctx.playerHead(), facePoint, ctx.playerRotations());
-                behavior.baritone.getLookBehavior().updateTarget(placeLook, true);
-
-                // Walk forward to edge while rotating
-                double distToEdge = Math.max(
-                        Math.abs(ctx.player().getPos().x - (path.movements().get(jumpBridgeMoveIndex).getDest().getX() + 0.5)),
-                        Math.abs(ctx.player().getPos().z - (path.movements().get(jumpBridgeMoveIndex).getDest().getZ() + 0.5)));
-                if (distToEdge > 0.7) {
-                    behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
-                }
-
-                // After 3 ticks of pre-rotation (enough to turn), jump
-                if (jumpBridgeTicksInPhase >= 3) {
-                    jumpBridgePhase = JumpBridgePhase.JUMPING;
-                    jumpBridgeTicksInPhase = 0;
-                }
-                return false;
-            }
-
-            case JUMPING: {
-                // Jump forward off the edge
-                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
-                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
-
-                // Keep looking at place target
-                Vec3d facePoint = new Vec3d(
-                        jumpBridgePlaceTarget.getX() + 0.5,
-                        jumpBridgePlaceTarget.getY() + 1.0,
-                        jumpBridgePlaceTarget.getZ() + 0.5);
+            case SPRINT: {
+                // Look forward and sprint toward the edge
                 behavior.baritone.getLookBehavior().updateTarget(
-                        RotationUtils.calcRotationFromVec3d(ctx.playerHead(), facePoint, ctx.playerRotations()), true);
+                        new Rotation(forwardYaw, 0.0f), true);
+                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
+                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.SPRINT, true);
 
-                // Immediately try to place (we're already rotated from PRE_ROTATE)
-                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
+                // Check if we're near the edge (close to the first gap block)
+                BlockPos firstDest = path.movements().get(jumpBridgeMoveIndex).getDest();
+                double distToDest = Math.max(
+                        Math.abs(ctx.player().getPos().x - (firstDest.getX() + 0.5)),
+                        Math.abs(ctx.player().getPos().z - (firstDest.getZ() + 0.5)));
 
-                if (!ctx.player().isOnGround() || jumpBridgeTicksInPhase >= 2) {
+                // Jump when within 1 block of the edge
+                if (distToDest < 1.2) {
+                    behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
+                }
+
+                // Transition to airborne once off ground (or after 10 ticks safety)
+                if (!ctx.player().isOnGround() && jumpBridgeTicksInPhase > 1) {
                     jumpBridgePhase = JumpBridgePhase.AIRBORNE;
                     jumpBridgeTicksInPhase = 0;
-                    jumpBridgeNextClickTick = 1 + jumpBridgeRandom.nextInt(2); // next click in 1-2 ticks
+                    jumpBridgeNextClickTick = 1; // first click on tick 1
+                }
+
+                // Safety: abort if sprinting too long without leaving ground
+                if (jumpBridgeTicksInPhase > 20) {
+                    jumpBridging = false;
+                    jumpBridgePhase = JumpBridgePhase.NONE;
                 }
                 return false;
             }
 
             case AIRBORNE: {
-                // Keep forward momentum
-                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
+                // DON'T press movement keys — inertia from sprint-jump carries us forward.
+                // Pressing MOVE_FORWARD while facing backward would kill momentum.
+
+                // Look BACKWARD at the side face of the last solid block.
+                // The side face center: lastSolid offset by +dir on the relevant axis, at mid-height.
+                Vec3d faceCenterPoint = new Vec3d(
+                        jumpBridgeLastSolid.getX() + 0.5 + jumpBridgeDirX * 0.5,
+                        jumpBridgeLastSolid.getY() + 0.5,
+                        jumpBridgeLastSolid.getZ() + 0.5 + jumpBridgeDirZ * 0.5);
+                Rotation backLook = RotationUtils.calcRotationFromVec3d(
+                        ctx.playerHead(), faceCenterPoint, ctx.playerRotations());
+                behavior.baritone.getLookBehavior().updateTarget(backLook, true);
 
                 // Landed?
                 if (ctx.player().isOnGround() && jumpBridgeTicksInPhase > 2) {
@@ -990,24 +1002,19 @@ public class PathExecutor implements IPathExecutor, Helper {
                     return false;
                 }
 
-                // Look at current place target (updates as we advance)
-                Vec3d placePoint = new Vec3d(
-                        jumpBridgePlaceTarget.getX() + 0.5,
-                        jumpBridgePlaceTarget.getY() + 1.0,
-                        jumpBridgePlaceTarget.getZ() + 0.5);
-                behavior.baritone.getLookBehavior().updateTarget(
-                        RotationUtils.calcRotationFromVec3d(ctx.playerHead(), placePoint, ctx.playerRotations()), true);
-
-                // Human-like randomized click timing
+                // Place blocks with timed clicks
                 if (jumpBridgeTicksInPhase >= jumpBridgeNextClickTick) {
                     behavior.baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
-                    // Advance place target to next bridge block
+
+                    // After placing, the new block becomes the last solid.
+                    // It's at lastSolid + dir (the block we just placed against the face of).
+                    jumpBridgeLastSolid = jumpBridgeLastSolid.add(jumpBridgeDirX, 0, jumpBridgeDirZ);
+
+                    // Advance move index
                     jumpBridgeMoveIndex++;
-                    if (jumpBridgeMoveIndex < path.movements().size()) {
-                        jumpBridgePlaceTarget = path.movements().get(jumpBridgeMoveIndex).getDest().down();
-                    }
-                    // Next click: 1-3 ticks later (irregular, human-like)
-                    jumpBridgeNextClickTick = jumpBridgeTicksInPhase + 1 + jumpBridgeRandom.nextInt(3);
+
+                    // Next click: 2-4 ticks later (need time to rotate to new face)
+                    jumpBridgeNextClickTick = jumpBridgeTicksInPhase + 2 + jumpBridgeRandom.nextInt(2);
                 }
                 return false;
             }
