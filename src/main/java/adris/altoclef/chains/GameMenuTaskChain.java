@@ -140,7 +140,8 @@ public class GameMenuTaskChain extends SingleTaskChain {
                     String t = title.getString().toLowerCase();
 
                     // Check if this is an autojoin menu (server select, minigames, mode select)
-                    boolean isAutoJoinMenu = t.contains("выбор сервера") || t.contains("мини-игры") || t.contains("выбор режима");
+                    boolean isAutoJoinMenu = t.contains("выбор сервера") || t.contains("мини-игры")
+                            || t.contains("выбор режима") || t.contains("выбери режим");
 
                     if (isAutoJoinMenu) {
                         String[] MinigamesTitles = new String[]{"мини-игры", "МИНИ-ИГРЫ", "МИНИИГРЫ"};
