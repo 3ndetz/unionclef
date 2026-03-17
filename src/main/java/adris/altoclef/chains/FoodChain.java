@@ -59,7 +59,13 @@ public class FoodChain extends SingleTaskChain {
 
         isTryingToEat = true;
         requestFillup = true;
-        mod.getSlotHandler().forceEquipItem(new Item[]{food}, true); //"true" because it's food
+        // Only equip if we're not already holding this food.
+        // Changing the selected slot/item mid-animation cancels eating — calling
+        // forceEquipItem every tick was causing an infinite restart loop.
+        ItemStack held = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot());
+        if (held.getItem() != food) {
+            mod.getSlotHandler().forceEquipItem(new Item[]{food}, true); // "true" because it's food
+        }
         mod.getInputControls().hold(Input.CLICK_RIGHT);
         mod.getExtraBaritoneSettings().setInteractionPaused(true);
     }
