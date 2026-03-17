@@ -19,6 +19,7 @@ import net.minecraft.item.SwordItem;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import adris.altoclef.tasks.movement.GetToEntityTask;
+import adris.altoclef.tasks.movement.TimeoutWanderTask;
 
 import java.util.List;
 
@@ -198,29 +199,21 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         double yDelta = player.getY() - mod.getPlayer().getY();
 
         // ── No-damage reposition: if we've swung N times and target HP hasn't changed,
-        // walk to a perpendicular position and re-engage ──
+        // wander for a bit to change angle, then re-engage ──
         if (_repositioning && _repositionEntityId == player.getId()) {
-            // Repositioning: run perpendicular to target for ~4 blocks
-            Vec3d toTarget = player.getPos().subtract(mod.getPlayer().getPos()).normalize();
-            // Perpendicular direction (rotate 90°)
-            Vec3d perpendicular = new Vec3d(-toTarget.z, 0, toTarget.x);
-            Vec3d repositionGoal = mod.getPlayer().getPos().add(perpendicular.multiply(4.0));
-            BlockPos repositionBlock = new BlockPos((int) repositionGoal.x, (int) mod.getPlayer().getY(), (int) repositionGoal.z);
-
-            double dx = mod.getPlayer().getPos().x - repositionGoal.x;
-            double dz = mod.getPlayer().getPos().z - repositionGoal.z;
-            double distToRepos = Math.sqrt(dx * dx + dz * dz);
-            if (distToRepos < 2.0 || _repositionCooldown.elapsed()) {
-                // Arrived or timeout — stop repositioning, reset counters
+            // Cancel immediately if damage went through
+            if (player.getHealth() < _targetHealthAtFirstSwing) {
+                _repositioning = false;
+                _swingCount = 0;
+                _targetHealthAtFirstSwing = player.getHealth();
+            } else if (_repositionCooldown.elapsed()) {
+                // Timeout — give up and retry
                 _repositioning = false;
                 _swingCount = 0;
                 _targetHealthAtFirstSwing = player.getHealth();
             } else {
-                KillAuraHelper.stopCombatMovement(mod);
-                setDebugState("Repositioning — " + _swingCount + " hits, no damage");
-                mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(
-                        new baritone.api.pathing.goals.GoalBlock(repositionBlock));
-                return null;
+                setDebugState("Wandering — " + _swingCount + " hits, no damage");
+                return new TimeoutWanderTask(5f);
             }
         }
 
