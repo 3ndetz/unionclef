@@ -5,15 +5,22 @@ import baritone.api.pathing.movement.IMovement;
 import baritone.api.utils.IPlayerContext;
 import baritone.api.utils.VecUtils;
 import baritone.pathing.movement.Movement;
+import baritone.pathing.movement.movements.MovementAscend;
+import baritone.pathing.movement.movements.MovementDescend;
 import baritone.pathing.movement.movements.MovementDiagonal;
 import baritone.pathing.movement.movements.MovementTraverse;
 import baritone.utils.BlockStateInterface;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.path.PathFinder;
+import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
+import kaptainwutax.tungsten.path.blockSpaceSearchAssist.Goal;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Coordinates shredder pathfinding with tungsten's physics-based movement.
@@ -106,6 +113,20 @@ public class TungstenBridge {
      * @param ctx             player context
      */
     public void delegate(BlockPos target, int resumePosition, IPlayerContext ctx) {
+        delegate(target, resumePosition, ctx, Optional.empty());
+    }
+
+    /**
+     * Start tungsten delegation with a baritone block-path hint.
+     * Tungsten uses the waypoints to guide its physics search instead of computing
+     * block-space A* from scratch.
+     *
+     * @param target          the far end of the segment
+     * @param resumePosition  path index to resume shredder at when tungsten finishes
+     * @param ctx             player context
+     * @param blockPathHint   baritone waypoints converted to tungsten BlockNodes
+     */
+    public void delegate(BlockPos target, int resumePosition, IPlayerContext ctx, Optional<List<BlockNode>> blockPathHint) {
         this.tungstenTarget = target;
         this.shredderResumePosition = resumePosition;
         this.stallTicks = 0;
@@ -114,11 +135,73 @@ public class TungstenBridge {
 
         Vec3d targetVec = VecUtils.getBlockPosCenter(target);
 
-        // Configure tungsten for fast short-range search
         PathFinder pf = TungstenModDataContainer.PATHFINDER;
-        pf.searchTimeoutMs = 3000L; // 3 seconds max for a short segment
-        pf.minPathSizeForTimeout = 3;
-        pf.find(ctx.world(), targetVec, ctx.player());
+        if (blockPathHint.isPresent()) {
+            // Experimental: guided search with baritone waypoints
+            pf.searchTimeoutMs = 5000L;
+            pf.minPathSizeForTimeout = 5;
+            pf.find(ctx.world(), targetVec, ctx.player(), blockPathHint);
+        } else {
+            // Standard: tungsten finds its own block-space path
+            pf.searchTimeoutMs = 3000L;
+            pf.minPathSizeForTimeout = 3;
+            pf.find(ctx.world(), targetVec, ctx.player());
+        }
+    }
+
+    /**
+     * Evaluate if the current segment can be delegated to tungsten in experimental mode.
+     * More permissive than {@link #evaluateSegment}: allows Y changes (ascend/descend),
+     * but still requires no block breaking or placing.
+     *
+     * @return number of qualifying movements ahead (0 = don't delegate)
+     */
+    public int evaluateExperimentalSegment(List<? extends IMovement> movements, int position, IPlayerContext ctx) {
+        if (!Baritone.settings().experimentalPathfinding.value) return 0;
+        if (state != State.INACTIVE) return 0;
+        if (TungstenModDataContainer.PATHFINDER.active.get() || TungstenModDataContainer.EXECUTOR.isRunning()) return 0;
+
+        IMovement current = movements.get(position);
+        if (!isExperimentalCompatible(current)) return 0;
+
+        BlockStateInterface bsi = new BlockStateInterface(ctx);
+        int count = 0;
+
+        for (int i = position; i < movements.size() && i <= position + 25; i++) {
+            IMovement m = movements.get(i);
+            if (!isExperimentalCompatible(m)) break;
+            Movement mm = (Movement) m;
+            if (!mm.toBreak(bsi).isEmpty() || !mm.toPlace(bsi).isEmpty()) break;
+            count++;
+        }
+
+        if (count < Math.max(3, Baritone.settings().tungstenMinSegment.value / 2)) return 0;
+        return count;
+    }
+
+    private static boolean isExperimentalCompatible(IMovement m) {
+        return m instanceof MovementTraverse
+            || m instanceof MovementDiagonal
+            || m instanceof MovementAscend
+            || m instanceof MovementDescend;
+    }
+
+    /**
+     * Build a list of tungsten BlockNodes from a slice of baritone movements.
+     * Includes the src of the first movement and dest of each movement.
+     */
+    public static List<BlockNode> buildBlockPath(List<? extends IMovement> movements, int from, int count, BlockPos finalDest, PlayerEntity player) {
+        Goal goal = new Goal(finalDest.getX(), finalDest.getY(), finalDest.getZ());
+        List<BlockNode> nodes = new ArrayList<>();
+
+        BlockPos src = movements.get(from).getSrc();
+        nodes.add(new BlockNode(src.getX(), src.getY(), src.getZ(), goal, player));
+
+        for (int i = from; i < from + count && i < movements.size(); i++) {
+            BlockPos dest = movements.get(i).getDest();
+            nodes.add(new BlockNode(dest.getX(), dest.getY(), dest.getZ(), goal, player));
+        }
+        return nodes;
     }
 
     /**

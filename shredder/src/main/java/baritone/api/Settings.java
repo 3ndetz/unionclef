@@ -844,6 +844,14 @@ public final class Settings {
     public final Setting<Integer> tungstenMinSegment = new Setting<>(8);
 
     /**
+     * Experimental: feed baritone's path as block-space waypoints into tungsten's physics search.
+     * Tungsten uses those waypoints as hints and computes tick-precise sprint/jump sequences along them.
+     * Allows Y changes (ascend/descend) unlike the flat-only useTungsten mode.
+     * Falls back to shredder if tungsten can't find a path.
+     */
+    public final Setting<Boolean> experimentalPathfinding = new Setting<>(false);
+
+    /**
      * When true, the player will remain with its existing look direction as often as possible.
      * Although, in some cases this can get it stuck, hence this setting to disable that behavior.
      */

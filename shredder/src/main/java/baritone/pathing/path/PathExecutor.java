@@ -32,8 +32,11 @@ import baritone.pathing.movement.CalculationContext;
 import baritone.pathing.movement.Movement;
 import baritone.pathing.movement.MovementHelper;
 import baritone.pathing.movement.movements.*;
+import baritone.tungsten.TungstenBridge;
 import baritone.utils.BlockStateInterface;
 import java.util.*;
+import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -130,6 +133,19 @@ public class PathExecutor implements IPathExecutor, Helper {
 
         // Tungsten bridge: evaluate if current segment should be delegated
         if (!tungstenBridge.isActive() && !sprintJumping && pathPosition < path.movements().size()) {
+            // Experimental: feed baritone waypoints as hints to tungsten's physics search
+            int expAhead = tungstenBridge.evaluateExperimentalSegment(path.movements(), pathPosition, ctx);
+            if (expAhead > 0) {
+                BlockPos target = path.movements().get(pathPosition + expAhead - 1).getDest();
+                int resumeAt = Math.min(pathPosition + expAhead, path.movements().size() - 1);
+                List<BlockNode> hint = TungstenBridge.buildBlockPath(
+                        path.movements(), pathPosition, expAhead, target, (PlayerEntity) ctx.player());
+                tungstenBridge.delegate(target, resumeAt, ctx, Optional.of(hint));
+                clearKeys();
+                return false;
+            }
+
+            // Standard: flat/clear segments only
             int simpleAhead = tungstenBridge.evaluateSegment(path.movements(), pathPosition, ctx);
             if (simpleAhead > 0) {
                 BlockPos target = path.movements().get(pathPosition + simpleAhead - 1).getDest();
