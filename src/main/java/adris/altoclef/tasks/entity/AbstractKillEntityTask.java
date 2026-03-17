@@ -19,7 +19,6 @@ import net.minecraft.item.SwordItem;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import adris.altoclef.tasks.movement.GetToEntityTask;
-import adris.altoclef.tasks.movement.TimeoutWanderTask;
 
 import java.util.List;
 
@@ -208,12 +207,17 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         }
 
         if (_repositioning && _repositionEntityId == player.getId()) {
-            if (_repositionCooldown.elapsed()) {
+            // Cancel when far enough away (repositioned successfully) or timed out
+            if (dist > 7.0 || _repositionCooldown.elapsed()) {
                 _repositioning = false;
                 _swingCount = 0;
             } else {
-                setDebugState("Wandering — " + _swingCount + " hits, no damage");
-                return new TimeoutWanderTask(5f);
+                // Strafe sideways to change angle — no subtask, no loop
+                KillAuraHelper.stopCombatMovement(mod);
+                mod.getInputControls().hold(Input.MOVE_LEFT);
+                mod.getInputControls().hold(Input.SPRINT);
+                setDebugState("Repositioning — " + _swingCount + " hits, no damage");
+                return null;
             }
         }
 
