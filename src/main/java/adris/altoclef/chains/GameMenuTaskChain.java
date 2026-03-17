@@ -80,7 +80,8 @@ public class GameMenuTaskChain extends SingleTaskChain {
     public static boolean isMinigamePipeline(Pipeline pipeline) {
         return pipeline.equals(Pipeline.SkyWars)
                 || pipeline.equals(Pipeline.MurderMystery)
-                || pipeline.equals(Pipeline.BedWars);
+                || pipeline.equals(Pipeline.BedWars)
+                || pipeline.equals(Pipeline.SkyPvP);
     }
 
     private boolean _clicked = false;
@@ -174,13 +175,24 @@ public class GameMenuTaskChain extends SingleTaskChain {
                             }
                         }
                     }
+
+                    // SkyPvP on MineLegacy: compass "Выбор режима (ПКМ)" opens this chest menu
+                    if (AltoClef.getPipeline() == Pipeline.SkyPvP && _worldJoinTimer.elapsed()) {
+                        Slot slot = ItemHelper.getCustomItemSlot(mod, "SkyPvP", "skypvp", "Sky PvP");
+                        if (slot != null && _slotClickTimer.elapsed()) {
+                            mod.getSlotHandler().clickSlot(slot, 0, SlotActionType.PICKUP);
+                            _slotClickTimer.reset();
+                            _clicked = true;
+                            return 90;
+                        }
+                    }
                 }
             }
 
             boolean isMinigame = isMinigamePipeline(AltoClef.getPipeline());
             if (isMinigame) {
                 if (clickTimer.elapsed() && _worldJoinTimer.elapsed()) {
-                    if (_lobbyButtonTimer.elapsed() && ItemHelper.clickCustomItem(mod, "Выбор сервера", "Выбор лобби")) {
+                    if (_lobbyButtonTimer.elapsed() && ItemHelper.clickCustomItem(mod, "Выбор сервера", "Выбор лобби", "Выбор режима")) {
                         clickTimer.reset();
                         _lobbyButtonTimer.reset();
                     }

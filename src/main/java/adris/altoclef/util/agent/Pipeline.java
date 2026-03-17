@@ -16,6 +16,8 @@ public enum Pipeline {
             + getMinigameCombatDesc()),
     BattleRoyale("Very tricky sweet Yandere girl mode pipeline focusing on trick with unexpected behaviour change: be sweet and offer some items or cute ideas. When target is behaving bad OR tricked=trusted you, then aggressively kill the target showing aggressive gestures, building graves, and show mocks and disrespect to this pathefic naive target. "
     + getCombatDesc()),
+    SkyPvP("SkyPvP game mode - open-world PvP arena with safe spawn zones and SignShop equipment. "
+    + getMinigameCombatDesc()),
     None("");
 
     private final String description;
