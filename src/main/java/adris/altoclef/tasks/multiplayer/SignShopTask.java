@@ -2,11 +2,14 @@ package adris.altoclef.tasks.multiplayer;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
-import adris.altoclef.tasks.InteractWithBlockTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.ItemHelper;
+import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.ChestSlot;
+import baritone.api.pathing.goals.GoalNear;
+import baritone.api.process.ICustomGoalProcess;
+import baritone.api.utils.input.Input;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.block.entity.SignText;
@@ -33,7 +36,6 @@ import java.util.Optional;
 public class SignShopTask extends Task {
 
     private final BlockPos signPos;
-    private InteractWithBlockTask interactTask;
 
     /** State machine for the shop interaction. */
     private enum State {
@@ -46,7 +48,9 @@ public class SignShopTask extends Task {
 
     private State state = State.CLICK_SIGN;
     private int waitTicks = 0;
-    private static final int MAX_WAIT_TICKS = 60; // 3 seconds
+    private int retryDelay = 0;
+    private static final int MAX_WAIT_TICKS = 100; // 5 seconds
+    private static final int RETRY_DELAY_TICKS = 20; // 1 second between retries
 
     public SignShopTask(BlockPos signPos) {
         this.signPos = signPos;
@@ -56,7 +60,7 @@ public class SignShopTask extends Task {
     protected void onStart() {
         state = State.CLICK_SIGN;
         waitTicks = 0;
-        interactTask = null;
+        retryDelay = 0;
         Debug.logMessage("[SignShop] Starting at " + signPos.toShortString());
     }
 
@@ -66,21 +70,45 @@ public class SignShopTask extends Task {
 
         switch (state) {
             case CLICK_SIGN -> {
-                setDebugState("Right-clicking sign");
-                if (interactTask == null) {
-                    interactTask = new InteractWithBlockTask(signPos);
-                }
-                // Once click is attempted, move to waiting for chest
-                if (interactTask.getClickStatus() == InteractWithBlockTask.ClickResponse.CLICK_ATTEMPTED) {
-                    state = State.WAIT_CHEST;
-                    waitTicks = 0;
-                    Debug.logMessage("[SignShop] Clicked sign, waiting for chest...");
+                if (StorageHelper.isChestOpen()) {
+                    state = State.TAKE_ITEM;
                     return null;
                 }
-                return interactTask;
+                if (retryDelay > 0) {
+                    retryDelay--;
+                    setDebugState("Waiting before retry: " + retryDelay);
+                    return null;
+                }
+                // Walk close enough to reach the sign
+                if (!LookHelper.getReach(signPos).isPresent()) {
+                    ICustomGoalProcess proc = mod.getClientBaritone().getCustomGoalProcess();
+                    if (!proc.isActive()) {
+                        proc.setGoalAndPath(new GoalNear(signPos, 2));
+                    }
+                    setDebugState("Walking to sign");
+                    return null;
+                }
+                // Stop pathing — we're in reach
+                mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+                // Look at the sign first
+                if (!LookHelper.isLookingAt(mod, signPos)) {
+                    LookHelper.lookAt(mod, signPos);
+                    setDebugState("Looking at sign");
+                    return null;
+                }
+                // Click the sign and immediately wait for the chest.
+                // We do NOT use InteractWithBlockTask here because its rightClick() logic
+                // calls closeScreen() on any open non-inventory screen, which would
+                // close the chest the sign just opened.
+                setDebugState("Clicking sign");
+                mod.getSlotHandler().forceDeequipRightClickableItem();
+                mod.getInputControls().tryPress(Input.CLICK_RIGHT);
+                state = State.WAIT_CHEST;
+                waitTicks = 0;
+                return null;
             }
             case WAIT_CHEST -> {
-                setDebugState("Waiting for chest to open");
+                setDebugState("Waiting for chest (" + waitTicks + "/" + MAX_WAIT_TICKS + ")");
                 if (StorageHelper.isChestOpen()) {
                     state = State.TAKE_ITEM;
                     Debug.logMessage("[SignShop] Chest opened, taking item...");
@@ -88,9 +116,9 @@ public class SignShopTask extends Task {
                 }
                 waitTicks++;
                 if (waitTicks > MAX_WAIT_TICKS) {
-                    Debug.logWarning("[SignShop] Chest didn't open after " + MAX_WAIT_TICKS + " ticks, retrying click...");
+                    Debug.logWarning("[SignShop] Chest didn't open, retrying...");
                     state = State.CLICK_SIGN;
-                    interactTask = null;
+                    retryDelay = RETRY_DELAY_TICKS;
                     waitTicks = 0;
                 }
                 return null;
