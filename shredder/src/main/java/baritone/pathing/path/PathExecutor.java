@@ -236,6 +236,9 @@ public class PathExecutor implements IPathExecutor, Helper {
             return true;
         } else {
             sprintNextTick = shouldSprintNextTick();
+            if (sprintNextTick && canSprintJump()) {
+                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
+            }
             if (!sprintNextTick) {
                 ctx.player().setSprinting(false); // letting go of control doesn't make you stop sprinting actually
             }
@@ -578,6 +581,44 @@ public class PathExecutor implements IPathExecutor, Helper {
             return true;
         }
         return next instanceof MovementDiagonal && Baritone.settings().allowOvershootDiagonalDescend.value;
+    }
+
+    private boolean canSprintJump() {
+        if (!Baritone.settings().sprintJumpOnFlatStraights.value) {
+            return false;
+        }
+        if (!ctx.player().isOnGround()) {
+            return false;
+        }
+        IMovement current = path.movements().get(pathPosition);
+        if (!(current instanceof MovementTraverse)) {
+            return false;
+        }
+        Vec3i direction = current.getDirection();
+        // must be flat (no Y change)
+        if (direction.getY() != 0) {
+            return false;
+        }
+        int lookahead = Baritone.settings().sprintJumpLookahead.value;
+        int straightCount = 0;
+        for (int i = pathPosition + 1; i < path.movements().size() && straightCount < lookahead; i++) {
+            IMovement next = path.movements().get(i);
+            if (!(next instanceof MovementTraverse)) {
+                break;
+            }
+            if (!next.getDirection().equals(direction)) {
+                break;
+            }
+            // check the path ahead is walkable and clear
+            if (!MovementHelper.canWalkOn(ctx, next.getDest().down())) {
+                break;
+            }
+            if (!MovementHelper.canWalkThrough(ctx, next.getDest()) || !MovementHelper.canWalkThrough(ctx, next.getDest().up())) {
+                break;
+            }
+            straightCount++;
+        }
+        return straightCount >= lookahead;
     }
 
     private void onChangeInPathPosition() {

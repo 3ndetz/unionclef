@@ -12,9 +12,14 @@
     - autobots theme: Optimus, Bumblebee, Megatron, Starscream, Soundwave, Ironhide, Ratchet, Jazz, Grimlock, Shockwave?
     - ninja turtle theme: Leonardo, Michelangelo, Donatello, Raphael?
     - Solved: "shredder"
-  - [ ] 2.2 Copy the codebase of baritone TODO
-  - [ ] 2.3 Implement into project and replace altoclef's baritone calls with this new pathfinder TODO
-  - [ ] 2.4 Implement advanced windMouse / AI camera smooth movement to the actino executor of the new pathfinder
-  - [ ] 2.5 Implement tungsten into this pathfinder
+  - [x] 2.2 Copy the codebase of baritone TODO
+  - [x] 2.3 Implement into project and replace altoclef's baritone calls with this new pathfinder TODO
+  - [ ] 2.4 Improve baritone features in shredder
+    - [x] Fix stupid debug spam and spam "failed"
+    - [ ] 2.4.1 Implement ACCELERATION for simple safe paths
+      - [ ] 2.4.1.1 Implement acceleration for straight line running to run and jump when applicable
+      - [ ] 2.4.1.2 Implement diagonal moving acceleration and make diagonal movement instead of horizontal stairs-like movement
+  - [ ] 2.5 Implement advanced windMouse / AI camera smooth movement to the actino executor of the new pathfinder
+  - [ ] 2.6 Implement tungsten into this pathfinder
 <!-- Верхнеуровневые задачи. Пишет юзер, AI отмечает выполнение. -->
 <!-- Формат: - [ ] задача / - [x] задача -->

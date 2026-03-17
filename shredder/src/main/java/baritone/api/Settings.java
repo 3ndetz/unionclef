@@ -358,6 +358,17 @@ public final class Settings {
     public final Setting<Boolean> sprintAscends = new Setting<>(true);
 
     /**
+     * Sprint-jump on straight flat paths (3+ blocks in the same direction).
+     * ~27% faster than regular sprinting (7.1 b/s vs 5.6 b/s).
+     */
+    public final Setting<Boolean> sprintJumpOnFlatStraights = new Setting<>(true);
+
+    /**
+     * Minimum number of straight flat MovementTraverse ahead to trigger sprint-jumping.
+     */
+    public final Setting<Integer> sprintJumpLookahead = new Setting<>(3);
+
+    /**
      * If we overshoot a traverse and end up one block beyond the destination, mark it as successful anyway.
      * <p>
      * This helps with speed exceeding 20m/s
