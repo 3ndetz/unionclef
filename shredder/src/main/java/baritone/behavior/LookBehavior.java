@@ -73,7 +73,7 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
 
     @Override
     public void updateTarget(Rotation rotation, boolean blockInteract) {
-        this.target = new Target(rotation, Target.Mode.resolve(ctx, blockInteract));
+        this.target = new Target(rotation, Target.Mode.resolve(ctx, blockInteract), blockInteract);
     }
 
     @Override
@@ -123,6 +123,14 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
                     this.lastSmoothNanos = System.nanoTime();
                     this.smoothActive = true;
                     // Reset WindMouse physics so we don't carry stale velocity
+                    this.wmVeloYaw = 0; this.wmVeloPitch = 0;
+                    this.wmWindYaw = 0; this.wmWindPitch = 0;
+                } else if (this.target.blockInteract) {
+                    // Block interaction needs objectMouseOver to see the correct face immediately.
+                    // getYaw() mixin returns smoothYaw, which lags behind actual — snap it so
+                    // the raycast hits the right face on this tick, not several ticks later.
+                    this.smoothYaw = actual.getYaw();
+                    this.smoothPitch = actual.getPitch();
                     this.wmVeloYaw = 0; this.wmVeloPitch = 0;
                     this.wmWindYaw = 0; this.wmWindPitch = 0;
                 }
@@ -439,10 +447,12 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
 
         public final Rotation rotation;
         public final Mode mode;
+        public final boolean blockInteract;
 
-        public Target(Rotation rotation, Mode mode) {
+        public Target(Rotation rotation, Mode mode, boolean blockInteract) {
             this.rotation = rotation;
             this.mode = mode;
+            this.blockInteract = blockInteract;
         }
 
         enum Mode {
