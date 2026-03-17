@@ -4,17 +4,17 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasks.InteractWithBlockTask;
 import adris.altoclef.tasksystem.Task;
+import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.ChestSlot;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.block.entity.SignText;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+
+import java.util.Optional;
 
 /**
  * Interacts with a SignShop sign (common multiplayer shop plugin).
@@ -181,5 +181,34 @@ public class SignShopTask extends Task {
         String[] lines = readSignLines(world, pos);
         if (lines == null) return false;
         return lines[0].equalsIgnoreCase("[Sell]");
+    }
+
+    /**
+     * Returns the item id from a [Free] sign.
+     * For [Free] signs, item id is on line 2 (index 1).
+     * Returns null if not a [Free] sign.
+     */
+    public static String getFreeSignItemId(World world, BlockPos pos) {
+        String[] lines = readSignLines(world, pos);
+        if (lines == null) return null;
+        if (!lines[0].equalsIgnoreCase("[Free]")) return null;
+        return lines[1].trim();
+    }
+
+    /**
+     * Finds the nearest [Free] sign with the given item id.
+     * Scans all loaded sign block entities.
+     */
+    public static Optional<BlockPos> findNearestFreeSign(AltoClef mod, String itemId) {
+        World world = mod.getWorld();
+        // Use block scanner to find signs nearby
+        return mod.getBlockScanner().getNearestBlock(
+                mod.getPlayer().getPos(),
+                pos -> {
+                    String id = getFreeSignItemId(world, pos);
+                    return id != null && id.equals(itemId);
+                },
+                ItemHelper.WOOD_SIGNS_ALL
+        );
     }
 }

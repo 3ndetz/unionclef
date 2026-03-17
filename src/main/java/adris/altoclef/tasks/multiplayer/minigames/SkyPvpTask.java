@@ -5,6 +5,7 @@ import adris.altoclef.Debug;
 import adris.altoclef.tasks.entity.KillPlayerTask;
 import adris.altoclef.tasks.misc.EquipArmorTask;
 import adris.altoclef.tasks.movement.PickupDroppedItemTask;
+import adris.altoclef.tasks.multiplayer.SignShopTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.ItemHelper;
@@ -14,6 +15,7 @@ import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.Arrays;
@@ -32,9 +34,15 @@ public class SkyPvpTask extends Task {
 
     private static final Vec3d SPAWN = new Vec3d(827.5, 45, -791.5);
     private static final double SPAWN_SAFE_RADIUS = 18.0;
+
+    /** SignShop item IDs for free equipment. */
+    private static final String SIGN_ITEM_SWORD = "268";
+    private static final String SIGN_ITEM_APPLE = "260";
+
     private Task _currentKillTask;
     private Task _armorTask;
     private Task _pickupTask;
+    private Task _equipmentTask;
     private String _lastTargetName;
 
     @Override
@@ -42,7 +50,7 @@ public class SkyPvpTask extends Task {
         AltoClef mod = AltoClef.getInstance();
         mod.getBehaviour().push();
         mod.getBehaviour().setForceFieldPlayers(true);
-        Debug.logMessage("[SkyPvP] Started. Spawn safe zone: 17 blocks around spawn.");
+        Debug.logMessage("[SkyPvP] Started.");
     }
 
     @Override
@@ -50,7 +58,28 @@ public class SkyPvpTask extends Task {
         AltoClef mod = AltoClef.getInstance();
         if (mod.getPlayer() == null || mod.getPlayer().isDead()) return null;
 
-        // Equip best armor first (if not in combat)
+        // ── Get equipment from SignShop if missing ───────────────────────────
+        if (shouldForce(_equipmentTask)) return _equipmentTask;
+
+        if (!hasSword(mod)) {
+            Task swordTask = tryGetFromSignShop(mod, SIGN_ITEM_SWORD);
+            if (swordTask != null) {
+                _equipmentTask = swordTask;
+                setDebugState("Getting sword from SignShop");
+                return _equipmentTask;
+            }
+        }
+
+        if (!hasApples(mod)) {
+            Task appleTask = tryGetFromSignShop(mod, SIGN_ITEM_APPLE);
+            if (appleTask != null) {
+                _equipmentTask = appleTask;
+                setDebugState("Getting apples from SignShop");
+                return _equipmentTask;
+            }
+        }
+
+        // ── Equip best armor (if not in combat) ─────────────────────────────
         if (_currentKillTask == null || !_currentKillTask.isActive()) {
             Task armorEquip = tryEquipArmor(mod);
             if (armorEquip != null) {
@@ -79,7 +108,6 @@ public class SkyPvpTask extends Task {
                     || _currentKillTask.isFinished() || !name.equals(_lastTargetName)) {
                 _lastTargetName = name;
                 _currentKillTask = new KillPlayerTask(name);
-                Debug.logMessage("[SkyPvP] Target: " + name);
             }
             setDebugState("Attacking: " + name);
             return _currentKillTask;
@@ -108,27 +136,45 @@ public class SkyPvpTask extends Task {
         return "SkyPvP (MineLegacy)";
     }
 
+    // ── equipment from SignShop ────────────────────────────────────────────────
+
+    private boolean hasSword(AltoClef mod) {
+        return mod.getItemStorage().hasItem(
+                Items.WOODEN_SWORD, Items.STONE_SWORD, Items.IRON_SWORD,
+                Items.DIAMOND_SWORD, Items.NETHERITE_SWORD,
+                Items.WOODEN_AXE, Items.STONE_AXE, Items.IRON_AXE,
+                Items.DIAMOND_AXE, Items.NETHERITE_AXE
+        );
+    }
+
+    private boolean hasApples(AltoClef mod) {
+        return mod.getItemStorage().hasItem(Items.APPLE, Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE);
+    }
+
+    private Task tryGetFromSignShop(AltoClef mod, String signItemId) {
+        Optional<BlockPos> signPos = SignShopTask.findNearestFreeSign(mod, signItemId);
+        if (signPos.isPresent()) {
+            return new SignShopTask(signPos.get());
+        }
+        return null;
+    }
+
     // ── target selection ─────────────────────────────────────────────────────
 
     private Optional<Entity> findTarget(AltoClef mod) {
         Entity best = null;
         double bestDist = Double.MAX_VALUE;
 
-        int totalPlayers = 0;
-        int skippedSelf = 0, skippedInvalid = 0, skippedSpawn = 0;
-
         for (PlayerEntity player : mod.getWorld().getPlayers()) {
-            totalPlayers++;
-            if (player == mod.getPlayer()) { skippedSelf++; continue; }
-            if (!isValidEnemy(mod, player)) { skippedInvalid++; continue; }
+            if (player == mod.getPlayer()) continue;
+            if (!isValidEnemy(mod, player)) continue;
 
             Vec3d enemyPos = player.getPos();
 
-            // Don't target players inside spawn zone (they're protected)
-            // Check spawn zone: XZ circle only, ignore Y
+            // Don't target players inside spawn zone (XZ circle only)
             double dx = enemyPos.x - SPAWN.x;
             double dz = enemyPos.z - SPAWN.z;
-            if (Math.sqrt(dx * dx + dz * dz) < SPAWN_SAFE_RADIUS) { skippedSpawn++; continue; }
+            if (Math.sqrt(dx * dx + dz * dz) < SPAWN_SAFE_RADIUS) continue;
 
             double dist = mod.getPlayer().getPos().distanceTo(enemyPos);
             if (dist < bestDist) {
@@ -137,10 +183,7 @@ public class SkyPvpTask extends Task {
             }
         }
 
-        if (best == null) {
-            Debug.logInternal("[SkyPvP] No target. Players: " + totalPlayers
-                    + " (self:" + skippedSelf + " invalid:" + skippedInvalid + " spawn:" + skippedSpawn + ")");
-        }
+        // No spam logging for "no target" — happens every tick
         return Optional.ofNullable(best);
     }
 

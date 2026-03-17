@@ -23,6 +23,7 @@ import adris.altoclef.tasks.misc.RavageDesertTemplesTask;
 import adris.altoclef.tasks.misc.RavageRuinedPortalsTask;
 import adris.altoclef.tasks.movement.*;
 import adris.altoclef.tasks.multiplayer.LobbyTask;
+import adris.altoclef.tasks.multiplayer.SignShopTask;
 import adris.altoclef.tasks.multiplayer.minigames.BattleRoyaleTask;
 import adris.altoclef.tasks.multiplayer.minigames.KitPVPTask;
 import adris.altoclef.tasks.multiplayer.minigames.MurderMysteryTask;
@@ -77,6 +78,24 @@ import static adris.altoclef.util.helpers.StringHelper.removeMCFormatCodes;
  */
 @SuppressWarnings("EnhancedSwitchMigration")
 public class Playground {
+
+    /** Test names for tab-completion in @test command. Keep in sync with switch cases below. */
+    public static final List<String> TEST_NAMES = List.of(
+            "inv", "stuckdebug", "cb_reload", "cb_stop", "task_info",
+            "captmax", "captdata", "chatparsedebug", "chatparseddebug_cancel",
+            "captcha_dataset", "savemap", "groundblock",
+            "cam 0", "cam 1", "cam 2",
+            "sign", "sign2", "signshop", "pickup", "chunk", "structure", "place",
+            "deadmeme", "stacked", "stacked2", "ravage", "temples", "outer",
+            "smelt", "iron", "avoid", "portal", "kill", "kill2", "craft",
+            "food", "temple", "blaze", "flint", "unobtainable", "piglin",
+            "stronghold", "terminate", "stoprot", "startrot",
+            "t", "tt", "sw", "swt", "mm", "kpvp", "thepit",
+            "networktest", "threats", "lobby", "strategy", "shift",
+            "nearestinfo", "chat", "cmd", "grave", "mega", "bow", "mace",
+            "itemthreat", "replace", "bed", "dragon", "dragon-pearl", "dragon-old",
+            "chest", "173", "example", "netherite", "arrow", "whisper", "cursor", "drop"
+    );
 
     public static void IDLE_TEST_INIT_FUNCTION(AltoClef mod) {
         // Test code here
@@ -140,7 +159,7 @@ public class Playground {
     public static void TEMP_TEST_FUNCTION(AltoClef mod, String arg) {
         //mod.runUserTask();
         Debug.logMessage("Running test...");
-        String all_cases = "inv, stuckdebug, cb_reload, cb_stop, task_info, captmax, captdata, chatparsedebug, chatparseddebug_cancel, captcha_dataset, savemap, groundblock, cam 0/1/2, sign, sign2, pickup, chunk, structure, place, deadmeme, stacked, stacked2, ravage, temples, outer, smelt, iron, avoid, portal, kill, kill2, craft, food, temple, blaze, flint, unobtainable, piglin, stronghold, terminate, stoprot, startrot, t, tt, sw, swt, mm, kpvp, thepit, networktest, threats, lobby, strategy, shift, nearestinfo, chat, cmd, grave, mega, bow, mace, itemthreat, replace, bed, dragon, dragon-pearl, dragon-old, chest, 173, example, netherite, arrow, whisper, cursor, drop";
+        String all_cases = String.join(", ", TEST_NAMES);
         // Parse sub-arg (for cases like "mm 1" or "shift 2")
         String[] argParts = arg.split(" ", 2);
         String subArg = argParts.length > 1 ? argParts[1] : "";
@@ -545,6 +564,17 @@ public class Playground {
             case "drop":
                 AgentActionButtons.handleNativeKeyDropTest(mod);
                 break;
+            case "signshop": {
+                // Test: grab a free wooden sword (id 268) from nearest [Free] sign shop
+                Optional<BlockPos> signPos = SignShopTask.findNearestFreeSign(mod, "268");
+                if (signPos.isPresent()) {
+                    Debug.logMessage("[SignShop Test] Found sign at " + signPos.get().toShortString());
+                    mod.runUserTask(new SignShopTask(signPos.get()));
+                } else {
+                    Debug.logWarning("[SignShop Test] No [Free] sign with item 268 found nearby.");
+                }
+                break;
+            }
             default:
                 mod.logWarning("Test not found: \"" + arg + "\".");
                 break;
