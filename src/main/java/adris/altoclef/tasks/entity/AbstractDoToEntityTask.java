@@ -9,7 +9,6 @@ import adris.altoclef.tasksystem.ITaskRequiresGrounded;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.KillAuraHelper;
-import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import adris.altoclef.util.slots.Slot;
@@ -18,8 +17,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
 
 import java.util.Optional;
 
@@ -93,9 +90,6 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
 
             double playerReach = mod.getModSettings().getEntityReachRange();
 
-            // TODO: This is basically useless.
-            EntityHitResult result = LookHelper.raycast(mod.getPlayer(), entity, playerReach);
-
             double sqDist = entity.squaredDistanceTo(mod.getPlayer());
 
             if (sqDist < combatGuardLowerRange * combatGuardLowerRange) {
@@ -104,8 +98,10 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
                 mod.getMobDefenseChain().resetForceField();
             }
 
-            // If we don't specify a maintain distance, default to within 1 block of our reach.
-            double maintainDistance = this.maintainDistance >= 0 ? this.maintainDistance : playerReach - 1;
+            // maintainDistance: how close the pathfinder should bring us.
+            // For combat entities (maintainDistance < 0), approach to within 2 blocks — NOT playerReach-1.
+            // playerReach-1 was too far (3.0) and left the bot staring.
+            double maintainDistance = this.maintainDistance >= 0 ? this.maintainDistance : 2.0;
 
             boolean tooClose = sqDist < maintainDistance * maintainDistance;
 
@@ -116,25 +112,23 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
 
             boolean inRange = mod.getControllerExtras().inRange(entity);
 
-            // Interact when in range. isOnGround() intentionally NOT required — matches autoclef behaviour
-            // (allows attacking while jumping, which is normal sprint-crit PvP).
-            if (inRange && result != null &&
-                    result.getType() == HitResult.Type.ENTITY && !mod.getFoodChain().needsToEat() &&
+            // Interact when in range. Only gate on inRange (canHitEntity) — the old raycast check
+            // was "basically useless" and blocked interaction most of the time.
+            if (inRange && !mod.getFoodChain().needsToEat() &&
                     !mod.getMLGBucketChain().isFalling(mod) && mod.getMLGBucketChain().doneMLG() &&
                     !mod.getMLGBucketChain().isChorusFruiting() &&
                     mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
                 progress.reset();
                 return onEntityInteract(mod, entity);
             } else if (!tooClose) {
-                // Close but can't hit (target airborne, angled, etc.) — use tight approach distance
-                double approachDist = (sqDist < playerReach * playerReach * 1.5) ? 0.5 : maintainDistance;
                 setDebugState("Approaching target");
                 if (!progress.check(mod)) {
                     progress.reset();
                     Debug.logMessage("Failed to get to target, blacklisting.");
                     mod.getEntityTracker().requestEntityUnreachable(entity);
                 }
-                // Move to target
+                // Approach tightly — 1 block for close range, maintainDistance for far
+                double approachDist = (sqDist < playerReach * playerReach * 2.0) ? 1.0 : maintainDistance;
                 return new GetToEntityTask(entity, approachDist);
             }
         }
