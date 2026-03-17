@@ -76,6 +76,7 @@ public class PathExecutor implements IPathExecutor, Helper {
     private final IPlayerContext ctx;
 
     private boolean sprintNextTick;
+    private boolean sprintJumping;
 
     public PathExecutor(PathingBehavior behavior, IPath path) {
         this.behavior = behavior;
@@ -99,6 +100,37 @@ public class PathExecutor implements IPathExecutor, Helper {
         }
         Movement movement = (Movement) path.movements().get(pathPosition);
         BetterBlockPos whereAmI = ctx.playerFeet();
+
+        // Sprint-jump airborne handling: skip backtrack, keep aiming forward, snap on landing
+        if (sprintJumping) {
+            if (!ctx.player().isOnGround()) {
+                // still airborne — maintain sprint, aim at look-ahead target, skip position checks
+                behavior.baritone.getInputOverrideHandler().clearAllKeys();
+                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
+                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.SPRINT, true);
+                sprintNextTick = true;
+                // aim at furthest safe point ahead
+                BlockPos lookTarget = getSprintJumpLookAhead();
+                if (lookTarget != null) {
+                    behavior.baritone.getLookBehavior().updateTarget(
+                            RotationUtils.calcRotationFromVec3d(ctx.playerHead(),
+                                    VecUtils.getBlockPosCenter(lookTarget),
+                                    ctx.playerRotations()).withPitch(ctx.playerRotations().getPitch()),
+                            false);
+                }
+                return false;
+            }
+            // landed — snap forward to furthest matching position
+            sprintJumping = false;
+            for (int i = Math.min(path.length() - 2, pathPosition + 10); i > pathPosition; i--) {
+                if (((Movement) path.movements().get(i)).getValidPositions().contains(whereAmI)) {
+                    pathPosition = i;
+                    onChangeInPathPosition();
+                    break;
+                }
+            }
+        }
+
         if (!movement.getValidPositions().contains(whereAmI)) {
             for (int i = 0; i < pathPosition && i < path.length(); i++) {//this happens for example when you lag out and get teleported back a couple blocks
                 if (((Movement) path.movements().get(i)).getValidPositions().contains(whereAmI)) {
@@ -238,6 +270,7 @@ public class PathExecutor implements IPathExecutor, Helper {
             sprintNextTick = shouldSprintNextTick();
             if (sprintNextTick && canSprintJump()) {
                 behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
+                sprintJumping = true;
             }
             if (!sprintNextTick) {
                 ctx.player().setSprinting(false); // letting go of control doesn't make you stop sprinting actually
@@ -583,6 +616,23 @@ public class PathExecutor implements IPathExecutor, Helper {
         return next instanceof MovementDiagonal && Baritone.settings().allowOvershootDiagonalDescend.value;
     }
 
+    /**
+     * Find a look-ahead target for sprint-jumping: the furthest safe destination
+     * on the path within a reasonable range.
+     */
+    private BlockPos getSprintJumpLookAhead() {
+        int maxLook = Math.min(pathPosition + 8, path.movements().size() - 1);
+        BlockPos best = null;
+        for (int i = pathPosition; i <= maxLook; i++) {
+            IMovement m = path.movements().get(i);
+            if (m.getDirection().getY() != 0) {
+                break;
+            }
+            best = m.getDest();
+        }
+        return best;
+    }
+
     private boolean canSprintJump() {
         if (!Baritone.settings().sprintJumpOnFlatStraights.value) {
             return false;
@@ -701,6 +751,7 @@ public class PathExecutor implements IPathExecutor, Helper {
 
     private void cancel() {
         clearKeys();
+        sprintJumping = false;
         behavior.baritone.getInputOverrideHandler().getBlockBreakHelper().stopBreakingBlock();
         pathPosition = path.length() + 3;
         failed = true;
