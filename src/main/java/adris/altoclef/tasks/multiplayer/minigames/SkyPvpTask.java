@@ -66,10 +66,13 @@ public class SkyPvpTask extends Task {
         if (mod.getPlayer() == null || mod.getPlayer().isDead()) return null;
 
         // ── Lobby detection: compass "Выбор режима" means we're in hub ──────
-        // GameMenuTaskChain handles the actual compass click + menu navigation.
-        // SkyPvpTask just idles here so it doesn't attack lobby NPCs.
         if (isInLobby(mod)) {
-            setDebugState("In lobby, waiting for auto-join...");
+            // Click compass to open mode selection menu (like SkyWarsTask clicks "новая игра")
+            if (ItemHelper.clickCustomItem(mod, "Выбор режима", "выбор режима")) {
+                setDebugState("Lobby: opening mode menu...");
+            } else {
+                setDebugState("In lobby, waiting...");
+            }
             return null;
         }
 

@@ -133,7 +133,6 @@ public class GameMenuTaskChain extends SingleTaskChain {
 
         if (ButlerConfig.getInstance().autoJoin) {
             if (ContainerType.screenHandlerMatches(ContainerType.CHEST)) {
-                Debug.logInternal("[AutoJoin] Chest is open!");
                 Text title = MinecraftClient.getInstance().currentScreen != null
                         ? MinecraftClient.getInstance().currentScreen.getTitle() : null;
 
@@ -211,11 +210,6 @@ public class GameMenuTaskChain extends SingleTaskChain {
             }
 
             boolean isMinigame = isMinigamePipeline(AltoClef.getPipeline());
-            Debug.logInternal("[AutoJoin] autoJoin=true, isMinigame=" + isMinigame
-                    + ", pipeline=" + AltoClef.getPipeline()
-                    + ", clickTimer=" + clickTimer.elapsed()
-                    + ", worldJoin=" + _worldJoinTimer.elapsed()
-                    + ", lobbyBtn=" + _lobbyButtonTimer.elapsed());
             if (isMinigame) {
                 if (clickTimer.elapsed() && _worldJoinTimer.elapsed()) {
                     if (_lobbyButtonTimer.elapsed() && ItemHelper.clickCustomItem(mod, "Выбор сервера", "Выбор лобби", "Выбор режима")) {
