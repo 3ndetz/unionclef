@@ -590,8 +590,13 @@ public class PathExecutor implements IPathExecutor, Helper {
         if (!ctx.player().isOnGround()) {
             return false;
         }
-        IMovement current = path.movements().get(pathPosition);
-        if (!(current instanceof MovementTraverse)) {
+        Movement current = (Movement) path.movements().get(pathPosition);
+        if (!(current instanceof MovementTraverse) && !(current instanceof MovementDiagonal)) {
+            return false;
+        }
+        // don't jump while breaking blocks
+        BlockStateInterface bsi = new BlockStateInterface(ctx);
+        if (!current.toBreak(bsi).isEmpty()) {
             return false;
         }
         Vec3i direction = current.getDirection();
@@ -599,14 +604,19 @@ public class PathExecutor implements IPathExecutor, Helper {
         if (direction.getY() != 0) {
             return false;
         }
+        Class<? extends IMovement> movementType = current.getClass();
         int lookahead = Baritone.settings().sprintJumpLookahead.value;
         int straightCount = 0;
         for (int i = pathPosition + 1; i < path.movements().size() && straightCount < lookahead; i++) {
             IMovement next = path.movements().get(i);
-            if (!(next instanceof MovementTraverse)) {
+            if (!movementType.isInstance(next)) {
                 break;
             }
             if (!next.getDirection().equals(direction)) {
+                break;
+            }
+            // don't jump into blocks that need breaking
+            if (!((Movement) next).toBreak(bsi).isEmpty()) {
                 break;
             }
             // check the path ahead is walkable and clear
@@ -618,7 +628,65 @@ public class PathExecutor implements IPathExecutor, Helper {
             }
             straightCount++;
         }
-        return straightCount >= lookahead;
+        if (straightCount >= lookahead) {
+            return true;
+        }
+        // staircase optimization: alternating perpendicular Traverses form a diagonal
+        if (current instanceof MovementTraverse) {
+            return canSprintJumpStaircase();
+        }
+        return false;
+    }
+
+    /**
+     * Detect staircase patterns (alternating perpendicular Traverse moves that form a diagonal)
+     * and allow sprint-jumping through them.
+     */
+    private boolean canSprintJumpStaircase() {
+        int lookahead = Baritone.settings().sprintJumpLookahead.value;
+        // need at least 2*lookahead alternating moves to justify sprint-jumping
+        int required = lookahead * 2;
+        if (pathPosition + required >= path.movements().size()) {
+            return false;
+        }
+        IMovement first = path.movements().get(pathPosition);
+        if (!(first instanceof MovementTraverse)) {
+            return false;
+        }
+        Vec3i dir1 = first.getDirection();
+        if (dir1.getY() != 0) {
+            return false;
+        }
+        IMovement second = path.movements().get(pathPosition + 1);
+        if (!(second instanceof MovementTraverse)) {
+            return false;
+        }
+        Vec3i dir2 = second.getDirection();
+        if (dir2.getY() != 0) {
+            return false;
+        }
+        // must be perpendicular: dot product = 0 and not same direction
+        if (dir1.equals(dir2) || dir1.getX() * dir2.getX() + dir1.getZ() * dir2.getZ() != 0) {
+            return false;
+        }
+        // check the alternating pattern continues
+        for (int i = pathPosition; i < pathPosition + required; i++) {
+            IMovement m = path.movements().get(i);
+            if (!(m instanceof MovementTraverse)) {
+                return false;
+            }
+            Vec3i expected = (i - pathPosition) % 2 == 0 ? dir1 : dir2;
+            if (!m.getDirection().equals(expected)) {
+                return false;
+            }
+            if (!MovementHelper.canWalkOn(ctx, m.getDest().down())) {
+                return false;
+            }
+            if (!MovementHelper.canWalkThrough(ctx, m.getDest()) || !MovementHelper.canWalkThrough(ctx, m.getDest().up())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void onChangeInPathPosition() {
