@@ -226,8 +226,12 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
             return;
         }
 
+        // smoothLookTicks controls overall speed: 5 = baseline, higher = slower, lower = faster
+        int ticks = Math.max(Baritone.settings().smoothLookTicks.value, 1);
+        double speedFactor = 5.0 / ticks; // ticks=5 → 1.0, ticks=10 → 0.5, ticks=3 → 1.67
+
         // Scale physics by frame time relative to 60 FPS baseline
-        double frameScale = dt * 60.0;
+        double frameScale = dt * 60.0 * speedFactor;
 
         double gravity = Baritone.settings().windMouseGravity.value;
         double windMag = Math.min(Baritone.settings().windMouseWind.value, dist);
@@ -245,6 +249,11 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
         // Accumulate velocity: wind + gravity pull toward target
         wmVeloYaw   += (wmWindYaw   + gravity * dYaw   / dist) * frameScale;
         wmVeloPitch += (wmWindPitch + gravity * dPitch / dist) * frameScale;
+
+        // Velocity damping — prevents snappy convergence, makes movement more human
+        double damping = Math.pow(0.85, frameScale);
+        wmVeloYaw   *= damping;
+        wmVeloPitch *= damping;
 
         // Clamp velocity magnitude; scale max step with distance (human-like fast flick for large angles)
         double veloMag = Math.sqrt(wmVeloYaw * wmVeloYaw + wmVeloPitch * wmVeloPitch);

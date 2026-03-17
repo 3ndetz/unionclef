@@ -114,9 +114,11 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
                 mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(new GoalRunAway(maintainDistance, entity.getBlockPos()));
             }
 
+            boolean inRange = mod.getControllerExtras().inRange(entity);
+
             // Interact when in range. isOnGround() intentionally NOT required — matches autoclef behaviour
             // (allows attacking while jumping, which is normal sprint-crit PvP).
-            if (mod.getControllerExtras().inRange(entity) && result != null &&
+            if (inRange && result != null &&
                     result.getType() == HitResult.Type.ENTITY && !mod.getFoodChain().needsToEat() &&
                     !mod.getMLGBucketChain().isFalling(mod) && mod.getMLGBucketChain().doneMLG() &&
                     !mod.getMLGBucketChain().isChorusFruiting() &&
@@ -124,6 +126,8 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
                 progress.reset();
                 return onEntityInteract(mod, entity);
             } else if (!tooClose) {
+                // Close but can't hit (target airborne, angled, etc.) — use tight approach distance
+                double approachDist = (sqDist < playerReach * playerReach * 1.5) ? 0.5 : maintainDistance;
                 setDebugState("Approaching target");
                 if (!progress.check(mod)) {
                     progress.reset();
@@ -131,7 +135,7 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
                     mod.getEntityTracker().requestEntityUnreachable(entity);
                 }
                 // Move to target
-                return new GetToEntityTask(entity, maintainDistance);
+                return new GetToEntityTask(entity, approachDist);
             }
         }
         if (BeatMinecraftTask.isTaskRunning(mod,wanderTask)) {

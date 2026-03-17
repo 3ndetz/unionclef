@@ -216,11 +216,20 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                     setDebugState("Waiting for cooldown (PvP)");
                 }
             }
+        } else if (nearEdge) {
+            // Near dangerous edge and can't hit — pathfind carefully, never leap blindly
+            KillAuraHelper.stopCombatMovement(mod);
+            setDebugState("Edge: pathfinding closer");
+            return new GetToEntityTask(player, 1);
+        } else if (dist < 5.0) {
+            // Close but can't hit (target airborne, slight angle off, etc.) — keep rushing
+            KillAuraHelper.GoJump(mod, true, true);
+            setDebugState("Closing gap — can't hit yet");
         } else if (!directViewing || !_aggressiveAttackStrategy) {
             // Can't see target — fall back to pathfinding
             KillAuraHelper.stopCombatMovement(mod);
             setDebugState("Cannot hit player, getting closer");
-            return new GetToEntityTask(player, nearEdge ? 3 : 1);
+            return new GetToEntityTask(player, 1);
         } else {
             setDebugState("Leaping at player!");
         }

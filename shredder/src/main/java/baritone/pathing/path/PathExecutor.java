@@ -298,15 +298,19 @@ public class PathExecutor implements IPathExecutor, Helper {
             onTick();
             return true;
         } else {
+            boolean complexTerrain = isNearComplexTerrain();
             sprintNextTick = shouldSprintNextTick();
-            if (sprintNextTick && canSprintJump()) {
+            if (!complexTerrain && sprintNextTick && canSprintJump()) {
                 behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
                 sprintJumping = true;
             }
             if (!sprintNextTick) {
                 ctx.player().setSprinting(false); // letting go of control doesn't make you stop sprinting actually
             }
-            overrideLookAheadIfSafe();
+            if (!complexTerrain) {
+                overrideLookAheadIfSafe();
+                applyEntropyDeviation();
+            }
             ticksOnCurrent++;
             if (ticksOnCurrent > currentMovementOriginalCostEstimate + Baritone.settings().movementTimeoutTicks.value) {
                 // only cancel if the total time has exceeded the initial estimate
@@ -843,6 +847,62 @@ public class PathExecutor implements IPathExecutor, Helper {
     private void clearKeys() {
         // i'm just sick and tired of this snippet being everywhere lol
         behavior.baritone.getInputOverrideHandler().clearAllKeys();
+    }
+
+    /**
+     * Check if the player is near complex terrain that should disable all movement optimizations.
+     * Liquids, ladders, vines, flowing water, scaffolding, etc.
+     */
+    private boolean isNearComplexTerrain() {
+        BlockPos feet = ctx.playerFeet();
+        BlockStateInterface bsi = new BlockStateInterface(ctx);
+        // Check a 3x3x3 area around player feet
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                for (int dy = -1; dy <= 2; dy++) {
+                    net.minecraft.block.BlockState state = bsi.get0(feet.getX() + dx, feet.getY() + dy, feet.getZ() + dz);
+                    if (state == null) continue;
+                    net.minecraft.block.Block block = state.getBlock();
+                    if (!state.getFluidState().isEmpty()) return true; // any liquid
+                    if (block == net.minecraft.block.Blocks.LADDER) return true;
+                    if (block == net.minecraft.block.Blocks.VINE) return true;
+                    if (block == net.minecraft.block.Blocks.SCAFFOLDING) return true;
+                    if (block == net.minecraft.block.Blocks.COBWEB) return true;
+                    if (block == net.minecraft.block.Blocks.SWEET_BERRY_BUSH) return true;
+                    if (block instanceof net.minecraft.block.TrapdoorBlock) return true;
+                }
+            }
+        }
+        // Also check upcoming movements for break/place
+        if (pathPosition < path.movements().size()) {
+            Movement m = (Movement) path.movements().get(pathPosition);
+            if (!m.toBreak(bsi).isEmpty() || !m.toPlace(bsi).isEmpty()) return true;
+        }
+        return false;
+    }
+
+    private static final java.util.Random entropyRandom = new java.util.Random();
+
+    /**
+     * On safe flat paths, apply small random yaw deviations to look more human.
+     * The deviation is tiny (±1.5°) and only on traverse/diagonal with no Y change.
+     */
+    private void applyEntropyDeviation() {
+        if (!Baritone.settings().pathLookAhead.value) return; // only when look-ahead is on
+        if (pathPosition >= path.movements().size()) return;
+
+        IMovement current = path.movements().get(pathPosition);
+        if (!(current instanceof MovementTraverse) && !(current instanceof MovementDiagonal)) return;
+        if (current.getDirection().getY() != 0) return;
+
+        // Small random yaw offset ±1.5°, applied with 30% probability per tick
+        if (entropyRandom.nextFloat() < 0.3f) {
+            float deviation = (entropyRandom.nextFloat() - 0.5f) * 3.0f; // ±1.5°
+            Rotation current_rot = ctx.playerRotations();
+            behavior.baritone.getLookBehavior().updateTarget(
+                    new Rotation(current_rot.getYaw() + deviation, current_rot.getPitch()),
+                    false);
+        }
     }
 
     private void cancel() {

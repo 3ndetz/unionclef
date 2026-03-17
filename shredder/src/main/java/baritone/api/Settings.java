@@ -801,20 +801,21 @@ public final class Settings {
     /**
      * WindMouse gravity — how strongly the camera pulls toward the target each render frame.
      * Higher = faster convergence, lower = more floaty/lazy.
+     * Speed also scales with {@link #smoothLookTicks}: ticks=5 is baseline, higher = slower.
      */
-    public final Setting<Double> windMouseGravity = new Setting<>(3.5d);
+    public final Setting<Double> windMouseGravity = new Setting<>(2.0d);
 
     /**
      * WindMouse wind magnitude — random perturbation per frame.
      * Higher = more natural wobble, lower = more robotic.
      */
-    public final Setting<Double> windMouseWind = new Setting<>(1.2d);
+    public final Setting<Double> windMouseWind = new Setting<>(0.8d);
 
     /**
      * WindMouse max step — maximum degrees the camera can move per render frame.
      * Prevents teleporting across large angles in a single frame.
      */
-    public final Setting<Double> windMouseMaxStep = new Setting<>(5.0d);
+    public final Setting<Double> windMouseMaxStep = new Setting<>(3.5d);
 
     /**
      * Delegate simple flat path segments to tungsten's physics-based movement system.
