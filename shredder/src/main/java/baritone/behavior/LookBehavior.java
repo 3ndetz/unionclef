@@ -51,6 +51,14 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
 
     private final AimProcessor processor;
 
+    // Render-frame smooth rotation state
+    private float smoothYaw;
+    private float smoothPitch;
+    private float renderTargetYaw;
+    private float renderTargetPitch;
+    private long lastSmoothNanos;
+    private boolean smoothActive;
+
     public LookBehavior(Baritone baritone) {
         super(baritone);
         this.processor = new AimProcessor(baritone.getPlayerContext());
@@ -91,36 +99,29 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
                 final Rotation actual = this.processor.peekRotation(this.target.rotation);
                 ctx.player().setYaw(actual.getYaw());
                 ctx.player().setPitch(actual.getPitch());
+
+                // Update render-frame smooth target
+                this.renderTargetYaw = this.target.rotation.getYaw();
+                this.renderTargetPitch = this.target.rotation.getPitch();
+                if (!this.smoothActive) {
+                    // First frame: snap to target
+                    this.smoothYaw = this.renderTargetYaw;
+                    this.smoothPitch = this.renderTargetPitch;
+                    this.lastSmoothNanos = System.nanoTime();
+                    this.smoothActive = true;
+                }
                 break;
             }
             case POST: {
                 if (this.prevRotation != null) {
                     if (this.target.mode == Target.Mode.SERVER) {
+                        // freeLook: restore original yaw so player's visual doesn't snap.
+                        // Render-frame mixin handles smooth display via getSmoothedYaw.
                         ctx.player().setYaw(this.prevRotation.getYaw());
                         ctx.player().setPitch(this.prevRotation.getPitch());
-                    } else if (ctx.player().isFallFlying() ? Baritone.settings().elytraSmoothLook.value : Baritone.settings().smoothLook.value) {
-                        // Exponential interpolation: move a fraction toward target each tick.
-                        // MC's render-frame lerp(tickDelta, prevYaw, yaw) then smoothly
-                        // interpolates between ticks at display framerate.
-                        float speed = 2.0f / Math.max(Baritone.settings().smoothLookTicks.value, 1);
-                        speed = Math.min(speed, 1.0f);
-
-                        float currentYaw = this.prevRotation.getYaw();
-                        float targetYaw = this.target.rotation.getYaw();
-                        float deltaYaw = MathHelper.wrapDegrees(targetYaw - currentYaw);
-                        float newYaw = currentYaw + deltaYaw * speed;
-
-                        ctx.player().prevYaw = currentYaw;
-                        ctx.player().setYaw(newYaw);
-
-                        if (ctx.player().isFallFlying()) {
-                            float currentPitch = this.prevRotation.getPitch();
-                            float targetPitch = this.target.rotation.getPitch();
-                            float newPitch = currentPitch + (targetPitch - currentPitch) * speed;
-                            ctx.player().prevPitch = currentPitch;
-                            ctx.player().setPitch(newPitch);
-                        }
                     }
+                    // CLIENT mode: PRE already set yaw to peekRotation for packets.
+                    // Render-frame mixin overrides getYaw(tickDelta) with smooth value.
                     this.prevRotation = null;
                 }
                 this.target = null;
@@ -147,6 +148,51 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
     public void onWorldEvent(WorldEvent event) {
         this.serverRotation = null;
         this.target = null;
+        this.smoothActive = false;
+        this.lastSmoothNanos = 0;
+    }
+
+    /**
+     * Called every render frame from mixin. Returns smoothly interpolated yaw.
+     */
+    public float getSmoothedYaw(float defaultYaw) {
+        if (!smoothActive) {
+            return defaultYaw;
+        }
+        updateSmoothRotation();
+        return smoothYaw;
+    }
+
+    /**
+     * Called every render frame from mixin. Returns smoothly interpolated pitch.
+     */
+    public float getSmoothedPitch(float defaultPitch) {
+        if (!smoothActive) {
+            return defaultPitch;
+        }
+        return smoothPitch;
+    }
+
+    private void updateSmoothRotation() {
+        long now = System.nanoTime();
+        if (lastSmoothNanos == 0) {
+            lastSmoothNanos = now;
+            return;
+        }
+        float dtSeconds = (now - lastSmoothNanos) / 1_000_000_000f;
+        lastSmoothNanos = now;
+        // clamp to avoid huge jumps on lag spikes
+        dtSeconds = Math.min(dtSeconds, 0.1f);
+
+        // Convert per-tick speed to per-frame: 1 - (1-speed)^(dt*20)
+        float tickSpeed = 2.0f / Math.max(Baritone.settings().smoothLookTicks.value, 1);
+        tickSpeed = Math.min(tickSpeed, 1.0f);
+        float frameSpeed = 1.0f - (float) Math.pow(1.0f - tickSpeed, dtSeconds * 20.0f);
+
+        float deltaYaw = MathHelper.wrapDegrees(renderTargetYaw - smoothYaw);
+        smoothYaw += deltaYaw * frameSpeed;
+        float deltaPitch = renderTargetPitch - smoothPitch;
+        smoothPitch += deltaPitch * frameSpeed;
     }
 
     public void pig() {

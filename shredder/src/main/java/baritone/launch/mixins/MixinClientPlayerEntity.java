@@ -17,6 +17,7 @@
 
 package baritone.launch.mixins;
 
+import baritone.Baritone;
 import baritone.api.BaritoneAPI;
 import baritone.api.IBaritone;
 import baritone.api.event.events.PlayerUpdateEvent;
@@ -30,6 +31,7 @@ import org.spongepowered.asm.mixin.injection.Group;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -157,5 +159,37 @@ public class MixinClientPlayerEntity {
             return false;
         }
         return instance.checkFallFlying();
+    }
+
+    @Inject(
+            method = "getYaw",
+            at = @At("RETURN"),
+            cancellable = true
+    )
+    private void onGetYaw(float tickDelta, CallbackInfoReturnable<Float> cir) {
+        if (!Baritone.settings().smoothLook.value) {
+            return;
+        }
+        IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForPlayer((ClientPlayerEntity) (Object) this);
+        if (baritone != null) {
+            LookBehavior look = (LookBehavior) baritone.getLookBehavior();
+            cir.setReturnValue(look.getSmoothedYaw(cir.getReturnValue()));
+        }
+    }
+
+    @Inject(
+            method = "getPitch",
+            at = @At("RETURN"),
+            cancellable = true
+    )
+    private void onGetPitch(float tickDelta, CallbackInfoReturnable<Float> cir) {
+        if (!Baritone.settings().smoothLook.value) {
+            return;
+        }
+        IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForPlayer((ClientPlayerEntity) (Object) this);
+        if (baritone != null) {
+            LookBehavior look = (LookBehavior) baritone.getLookBehavior();
+            cir.setReturnValue(look.getSmoothedPitch(cir.getReturnValue()));
+        }
     }
 }
