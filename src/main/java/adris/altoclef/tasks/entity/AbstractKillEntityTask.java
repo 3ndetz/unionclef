@@ -168,6 +168,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         boolean canHit = LookHelper.canHitEntity(mod, player);
         boolean directViewing = LookHelper.cleanLineOfSight(player.getBoundingBox().getCenter(), 50.0);
         double dist = player.distanceTo(mod.getPlayer());
+        double yDelta = player.getY() - mod.getPlayer().getY();
 
         // Always smooth-aim at player during PvP
         LookHelper.smoothLook(mod, player);
@@ -212,20 +213,27 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         }
 
         // PRIORITY 2: Can't hit — movement to close the gap
-        if (nearEdge) {
+        // When target is elevated (>1 block above), the bot needs to be directly underneath
+        // to have any chance of hitting. Pathfind very close instead of spinning in place.
+        boolean targetElevated = yDelta > 1.0;
+
+        if (targetElevated) {
+            // Target above us — must get directly below, sprint-jumping won't help
+            KillAuraHelper.stopCombatMovement(mod);
+            setDebugState("Target above — pathfinding underneath");
+            return new GetToEntityTask(player, 0.5);
+        } else if (nearEdge) {
             if (dist < 5.0) {
-                // Near edge, can't hit but close — pathfind carefully instead of blindly strafing
                 KillAuraHelper.stopCombatMovement(mod);
                 setDebugState("Edge: pathfinding closer (can't hit)");
                 return new GetToEntityTask(player, 0.5);
             } else {
-                // Too far and edge ahead — walk carefully via pathfinding
                 KillAuraHelper.stopCombatMovement(mod);
                 setDebugState("Edge: pathfinding to target");
                 return new GetToEntityTask(player, 2);
             }
         } else if (dist < 5.0) {
-            // Close but can't hit (target airborne, slight angle off, etc.) — keep rushing
+            // Close but can't hit — keep rushing
             KillAuraHelper.GoJump(mod, true, true);
             setDebugState("Closing gap — can't hit yet");
         } else if (!directViewing || !_aggressiveAttackStrategy) {

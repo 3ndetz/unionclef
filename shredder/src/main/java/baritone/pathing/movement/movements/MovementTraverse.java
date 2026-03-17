@@ -364,38 +364,43 @@ public class MovementTraverse extends Movement {
     }
 
     /**
-     * Slow-mode bridging: sneak to edge, look down at a stable angle, place calmly.
-     * No rapid head-jerking — the bot stays crouched and rotates gently.
+     * Slow-mode bridging: sneak to edge, place from edge looking backward, then walk forward.
+     * Never walks forward until the bridge block is confirmed placed.
      */
     private MovementState updateSlowBridge(MovementState state, BlockPos feet) {
-        // Always sneak during slow bridge
+        // Always sneak during slow bridge — non-negotiable
         state.setInput(Input.SNEAK, true);
 
-        double distToEdge = Math.max(
-                Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)),
-                Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
-
-        // Try normal placement first (side-place against adjacent blocks)
-        PlaceResult p = MovementHelper.attemptToPlaceABlock(state, baritone, dest.down(), false, true);
-        switch (p) {
-            case READY_TO_PLACE: {
-                state.setInput(Input.CLICK_RIGHT, true);
-                return state;
-            }
-            case ATTEMPTING: {
-                // Still rotating to face — walk forward slowly if far from edge
-                if (distToEdge > 0.83) {
-                    state.setInput(Input.MOVE_FORWARD, true);
-                }
-                return state;
-            }
-            default:
-                break;
+        // If the bridge block appeared (placed by us or someone else), walk forward
+        boolean bridgePlaced = MovementHelper.canWalkOn(ctx, dest.down());
+        if (bridgePlaced) {
+            MovementHelper.moveTowards(ctx, state, dest);
+            return state;
         }
 
-        // No side place found — need to edge-place (backplace from edge)
+        // Try normal placement (side-place against adjacent blocks)
+        PlaceResult p = MovementHelper.attemptToPlaceABlock(state, baritone, dest.down(), false, true);
+        if (p == PlaceResult.READY_TO_PLACE) {
+            // Rotation is good — click to place, do NOT walk forward yet
+            if (ctx.player().isInSneakingPose()) {
+                state.setInput(Input.CLICK_RIGHT, true);
+            }
+            return state;
+        }
+        if (p == PlaceResult.ATTEMPTING) {
+            // Still rotating to face the placement target — sneak toward edge if far
+            double distToEdge = Math.max(
+                    Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)),
+                    Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
+            if (distToEdge > 0.83) {
+                state.setInput(Input.MOVE_FORWARD, true);
+            }
+            return state;
+        }
+
+        // NO_OPTION: no side place found — need to backplace from edge
         if (feet.equals(dest)) {
-            // Already over the edge — look back at src.down() face and place
+            // Over the edge already — look back at src.down() and place against it
             double faceX = (dest.getX() + src.getX() + 1.0D) * 0.5D;
             double faceY = (dest.getY() + src.getY() - 1.0D) * 0.5D;
             double faceZ = (dest.getZ() + src.getZ() + 1.0D) * 0.5D;
@@ -411,11 +416,13 @@ public class MovementTraverse extends Movement {
             return state;
         }
 
-        // Not at edge yet — sneak forward toward dest
-        // Look down ahead at a stable angle (toward dest block center, ~70° pitch)
-        Vec3d destCenter = VecUtils.getBlockPosCenter(dest);
-        Vec3d lookTarget = new Vec3d(destCenter.x, dest.getY() - 0.5, destCenter.z);
-        Rotation stableLook = RotationUtils.calcRotationFromVec3d(ctx.playerHead(), lookTarget, ctx.playerRotations());
+        // Not at edge yet — sneak forward toward edge, look at the placement face
+        // Target: face between src and dest at block-below level
+        double faceX = (dest.getX() + src.getX() + 1.0D) * 0.5D;
+        double faceY = (dest.getY() + src.getY() - 1.0D) * 0.5D;
+        double faceZ = (dest.getZ() + src.getZ() + 1.0D) * 0.5D;
+        Rotation stableLook = RotationUtils.calcRotationFromVec3d(
+                ctx.playerHead(), new Vec3d(faceX, faceY, faceZ), ctx.playerRotations());
         state.setTarget(new MovementState.MovementTarget(stableLook, true));
         state.setInput(Input.MOVE_FORWARD, true);
         return state;
