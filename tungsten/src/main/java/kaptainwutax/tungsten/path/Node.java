@@ -183,8 +183,10 @@ public class Node {
 	    	if (!world.getBlockState(agent.getBlockPos().up(2)).isAir() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 3) {
 	//    		nodes.add(TurnACornerMove.generateMove(this, nextBlockNode, false));
 	//    		nodes.add(TurnACornerMove.generateMove(this, nextBlockNode, true)); 		
-	    		nodes.add(CornerJump.generateMove(this, nextBlockNode, false));		
-	    		nodes.add(CornerJump.generateMove(this, nextBlockNode, true));
+	    		Node cj1 = CornerJump.generateMove(this, nextBlockNode, false);
+	    		Node cj2 = CornerJump.generateMove(this, nextBlockNode, true);
+	    		if (cj1 != null) nodes.add(cj1);
+	    		if (cj2 != null) nodes.add(cj2);
 	    	}
 	    }
 	    if (agent.touchingWater && BlockShapeChecker.getShapeVolume(nextBlockNode.getBlockPos(), world) == 0) {

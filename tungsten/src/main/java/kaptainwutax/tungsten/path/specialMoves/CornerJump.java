@@ -66,6 +66,7 @@ public class CornerJump {
         
 
         limit = 0;
+        if (nextBlockNode.previous == null) return null;
         Direction dir = DirectionHelper.getHorizontalDirectionFromPos(nextBlockNode.previous.getPos(), nextBlockNode.getPos());
         Vec3d offsetVec = new Vec3d(0, 0, 0).offset(dir, 0.5);
         while (limit < 40 && newNode.agent.getPos().y > nextBlockNode.getBlockPos().getY()-1) {
