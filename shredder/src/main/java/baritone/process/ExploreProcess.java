@@ -81,7 +81,7 @@ public final class ExploreProcess extends BaritoneProcessHelper implements IExpl
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
         if (calcFailed) {
-            logDirect("Failed");
+            logDebug("Explore calc failed");
             if (Baritone.settings().notificationOnExploreFinished.value) {
                 logNotification("Exploration failed", true);
             }
