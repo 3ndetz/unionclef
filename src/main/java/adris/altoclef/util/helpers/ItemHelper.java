@@ -536,7 +536,16 @@ public class ItemHelper {
     /**
      * Clicks a custom-named item in the current screen by name match.
      */
+    /**
+     * Finds an item with matching custom name in player inventory, equips it, and right-clicks.
+     * Only works when no container screen is open (to avoid corrupting open chest handlers).
+     */
     public static boolean clickCustomItem(AltoClef mod, String... joinItems) {
+        // Don't equip/click while a container screen is open — forceEquipSlot would
+        // do a SWAP through the chest handler, corrupting the GUI and closing it.
+        if (!(mod.getPlayer().currentScreenHandler instanceof net.minecraft.screen.PlayerScreenHandler)) {
+            return false;
+        }
         Slot newGameSlot = getCustomItemSlot(mod, joinItems);
         if (newGameSlot != null) {
             mod.getSlotHandler().forceEquipSlot(newGameSlot);
