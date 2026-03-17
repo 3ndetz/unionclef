@@ -548,7 +548,15 @@ public class ItemHelper {
         }
         Slot newGameSlot = getCustomItemSlot(mod, joinItems);
         if (newGameSlot != null) {
-            mod.getSlotHandler().forceEquipSlot(newGameSlot);
+            // If the item is in the hotbar, just switch selected slot instead of SWAP.
+            // Server menu items are often immovable, so SWAP would fail.
+            int invSlot = newGameSlot.getInventorySlot();
+            if (invSlot >= 36 && invSlot <= 44) {
+                // Hotbar slots: inventory slot 36-44 → hotbar index 0-8
+                mod.getPlayer().getInventory().selectedSlot = invSlot - 36;
+            } else {
+                mod.getSlotHandler().forceEquipSlot(newGameSlot);
+            }
             LookHelper.tryAvoidingInteractable(mod);
             mod.getInputControls().tryPress(Input.CLICK_RIGHT);
             return true;
