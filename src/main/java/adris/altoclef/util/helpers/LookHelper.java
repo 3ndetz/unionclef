@@ -430,33 +430,9 @@ public interface LookHelper {
      * @return True if the player is colliding with an interactable object, false otherwise.
      */
     private static boolean isCollidingInteractable(AltoClef mod) {
-        // Check if the player is in a screen other than the player screen
+        // If a container/GUI screen is open, report as "colliding" but do NOT close it.
+        // Closing screens here is a side effect that breaks SignShop, autojoin menus, etc.
         if (!(mod.getPlayer().currentScreenHandler instanceof PlayerScreenHandler)) {
-            // Get the item stack in the cursor slot
-            ItemStack cursorStack = StorageHelper.getItemStackInCursorSlot();
-
-            // Check if the cursor stack is not empty
-            if (!cursorStack.isEmpty()) {
-                // Find a slot in the player's inventory to move the cursor stack to
-                Optional<Slot> moveTo = mod.getItemStorage().getSlotThatCanFitInPlayerInventory(cursorStack, false);
-                moveTo.ifPresent(slot -> mod.getSlotHandler().clickSlot(slot, 0, SlotActionType.PICKUP));
-
-                // Check if the cursor stack can be thrown away
-                if (ItemHelper.canThrowAwayStack(mod, cursorStack)) {
-                    mod.getSlotHandler().clickSlot(Slot.UNDEFINED, 0, SlotActionType.PICKUP);
-                }
-
-                // Find the garbage slot and move the cursor stack to it
-                Optional<Slot> garbage = StorageHelper.getGarbageSlot(mod);
-                garbage.ifPresent(slot -> mod.getSlotHandler().clickSlot(slot, 0, SlotActionType.PICKUP));
-
-                // Move the cursor stack to an undefined slot
-                mod.getSlotHandler().clickSlot(Slot.UNDEFINED, 0, SlotActionType.PICKUP);
-            } else {
-                // Close the screen if the cursor stack is empty
-                StorageHelper.closeScreen();
-            }
-
             return true;
         }
 
