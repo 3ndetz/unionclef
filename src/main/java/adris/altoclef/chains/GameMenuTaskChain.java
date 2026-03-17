@@ -190,9 +190,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
             }
 
             boolean isMinigame = isMinigamePipeline(AltoClef.getPipeline());
-            // Only click lobby/minigame items when no container screen is open,
-            // otherwise forceEquipSlot corrupts the open chest handler
-            if (isMinigame && !ContainerType.screenHandlerMatches(ContainerType.CHEST)) {
+            if (isMinigame) {
                 if (clickTimer.elapsed() && _worldJoinTimer.elapsed()) {
                     if (_lobbyButtonTimer.elapsed() && ItemHelper.clickCustomItem(mod, "Выбор сервера", "Выбор лобби", "Выбор режима")) {
                         clickTimer.reset();
