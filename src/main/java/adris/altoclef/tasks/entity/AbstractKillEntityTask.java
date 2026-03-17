@@ -1,6 +1,7 @@
 package adris.altoclef.tasks.entity;
 
 import adris.altoclef.AltoClef;
+import adris.altoclef.Debug;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.KillAuraHelper;
 import adris.altoclef.util.helpers.LookHelper;
@@ -169,9 +170,9 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                         _swingCount = 0;
                         _targetHealthAtFirstSwing = living.getHealth();
                     } else if (_swingCount >= HITS_BEFORE_REPOSITION && _repositionCooldown.elapsed()) {
-                        // Mob attacks not landing — request reposition via unreachable
                         _swingCount = 0;
                         _repositionCooldown.reset();
+                        Debug.logMessage("Target " + entity.getType().getName().getString() + " has immunity to attack, we can't hit it, maybe invulnerable, try change target");
                         mod.getEntityTracker().requestEntityUnreachable(entity);
                     }
                 }
@@ -265,6 +266,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                                     && _repositionCooldown.elapsed()) {
                                 _repositioning = true;
                                 _repositionCooldown.reset();
+                                Debug.logMessage("Target " + player.getName().getString() + " has immunity to attack, we can't hit it, maybe invulnerable, try change target");
                             }
                         }
                     }
