@@ -146,6 +146,13 @@ jar {
     from "LICENSE"
 }
 
+// ── Chat parser test (no MC runtime needed) ─────────────────────────────────
+task testChatParser(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'adris.altoclef.butler.ChatParserTest'
+    jvmArgs '-Dlog4j2.disable.jmx=true'
+}
+
 // ── Publishing ──────────────────────────────────────────────────────────────
 
 publishing {
