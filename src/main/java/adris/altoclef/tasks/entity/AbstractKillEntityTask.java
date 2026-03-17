@@ -39,7 +39,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
     private static boolean _aggressiveAttackStrategy = true;
 
     // No-damage detection: reposition when attacks aren't connecting
-    private static final int HITS_BEFORE_REPOSITION = 3;
+    private static final int HITS_BEFORE_REPOSITION = 15;
     private static int _swingCount = 0;
     private static float _targetHealthAtFirstSwing = -1;
     private static int _repositionEntityId = -1; // which entity we're repositioning against
@@ -200,17 +200,17 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
 
         // ── No-damage reposition: if we've swung N times and target HP hasn't changed,
         // wander for a bit to change angle, then re-engage ──
+        // Sync baseline HP whenever it drops (DamageTracker-equivalent: real-time health check)
+        if (_repositionEntityId == player.getId() && player.getHealth() < _targetHealthAtFirstSwing) {
+            _swingCount = 0;
+            _targetHealthAtFirstSwing = player.getHealth();
+            _repositioning = false;
+        }
+
         if (_repositioning && _repositionEntityId == player.getId()) {
-            // Cancel immediately if damage went through
-            if (player.getHealth() < _targetHealthAtFirstSwing) {
+            if (_repositionCooldown.elapsed()) {
                 _repositioning = false;
                 _swingCount = 0;
-                _targetHealthAtFirstSwing = player.getHealth();
-            } else if (_repositionCooldown.elapsed()) {
-                // Timeout — give up and retry
-                _repositioning = false;
-                _swingCount = 0;
-                _targetHealthAtFirstSwing = player.getHealth();
             } else {
                 setDebugState("Wandering — " + _swingCount + " hits, no damage");
                 return new TimeoutWanderTask(5f);
@@ -248,20 +248,23 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                 float hitProg = mod.getPlayer().getAttackCooldownProgress(0);
                 if (hitProg >= 0.99 && player.hurtTime <= 0) {
                     boolean didHit = mod.getControllerExtras().attack(player);
-                    // Track no-damage swings
-                    _swingCount++;
-                    float currentHP = player.getHealth();
-                    if (currentHP < _targetHealthAtFirstSwing) {
-                        // Damage went through — reset
-                        _swingCount = 0;
-                        _targetHealthAtFirstSwing = currentHP;
-                    } else if (_swingCount >= HITS_BEFORE_REPOSITION && !_repositioning
-                            && _repositionCooldown.elapsed()) {
-                        // N swings, no HP change — trigger reposition
-                        _repositioning = true;
-                        _repositionCooldown.reset();
+                    // Count only confirmed hits (crosshair actually connected)
+                    if (didHit) {
+                        float currentHP = player.getHealth();
+                        if (currentHP < _targetHealthAtFirstSwing) {
+                            // Damage went through — reset
+                            _swingCount = 0;
+                            _targetHealthAtFirstSwing = currentHP;
+                        } else {
+                            _swingCount++;
+                            if (_swingCount >= HITS_BEFORE_REPOSITION && !_repositioning
+                                    && _repositionCooldown.elapsed()) {
+                                _repositioning = true;
+                                _repositionCooldown.reset();
+                            }
+                        }
                     }
-                    setDebugState(didHit ? "ATTACKING PLAYER" : "Swinging — crosshair missed");
+                    setDebugState(didHit ? "ATTACKING PLAYER (" + _swingCount + " no-dmg hits)" : "Swinging — crosshair missed");
                 } else {
                     setDebugState("Waiting for cooldown (PvP)");
                 }
