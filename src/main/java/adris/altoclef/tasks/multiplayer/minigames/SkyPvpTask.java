@@ -11,6 +11,8 @@ import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.StorageHelper;
+import adris.altoclef.util.slots.Slot;
+import baritone.api.utils.input.Input;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -50,6 +52,9 @@ public class SkyPvpTask extends Task {
     private Task _equipmentTask;
     private String _lastTargetName;
 
+    /** Lobby compass click state: 0=equip, 1=look up, 2=click */
+    private int _lobbyClickState = 0;
+
     @Override
     protected void onStart() {
         AltoClef mod = AltoClef.getInstance();
@@ -68,12 +73,33 @@ public class SkyPvpTask extends Task {
 
         // ── Lobby detection: compass "Выбор режима" means we're in hub ──────
         if (isInLobby(mod)) {
-            setDebugState("In lobby, waiting for auto-join...");
-            // Try clicking the compass to open mode selection
-            if (ButlerConfig.getInstance().autoJoin) {
-                ItemHelper.clickCustomItem(mod, "Выбор режима", "выбор режима");
+            if (!ButlerConfig.getInstance().autoJoin) {
+                setDebugState("In lobby (autoJoin disabled)");
+                return null;
             }
-            return null;
+            // Multi-tick compass click: equip → look up → right click
+            // This avoids clicking on NPCs/signs in the lobby
+            Slot compassSlot = ItemHelper.getCustomItemSlot(mod, "Выбор режима", "выбор режима");
+            if (compassSlot == null) return null;
+            switch (_lobbyClickState) {
+                case 0:
+                    setDebugState("Lobby: equipping compass...");
+                    mod.getSlotHandler().forceEquipSlot(compassSlot);
+                    _lobbyClickState = 1;
+                    return null;
+                case 1:
+                    setDebugState("Lobby: looking up...");
+                    mod.getPlayer().setPitch(-90f); // look straight up to avoid clicking NPCs/signs
+                    _lobbyClickState = 2;
+                    return null;
+                default:
+                    setDebugState("Lobby: clicking compass...");
+                    mod.getInputControls().tryPress(Input.CLICK_RIGHT);
+                    _lobbyClickState = 0;
+                    return null;
+            }
+        } else {
+            _lobbyClickState = 0;
         }
 
         // ── Get equipment from SignShop if missing ───────────────────────────
