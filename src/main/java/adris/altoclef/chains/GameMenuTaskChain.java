@@ -144,16 +144,6 @@ public class GameMenuTaskChain extends SingleTaskChain {
                             || t.contains("выбор режима") || t.contains("выбери режим");
 
                     if (isAutoJoinMenu) {
-                        // DEBUG: log all slot names in the autojoin chest menu
-                        Debug.logInternal("[AutoJoin] Chest title: \"" + t + "\", pipeline: " + AltoClef.getPipeline());
-                        for (Slot s : Slot.getCurrentScreenSlots()) {
-                            net.minecraft.item.ItemStack stack = StorageHelper.getItemStackInSlot(s);
-                            if (stack != null && !stack.isEmpty()) {
-                                String name = stack.getName().getString();
-                                Debug.logInternal("[AutoJoin]   slot " + s.getInventorySlot() + ": \"" + name + "\"");
-                            }
-                        }
-
                         String[] MinigamesTitles = new String[]{"мини-игры", "МИНИ-ИГРЫ", "МИНИИГРЫ"};
 
                         String[] ClickTitles;
@@ -187,24 +177,11 @@ public class GameMenuTaskChain extends SingleTaskChain {
                                     return 90;
                                 }
                             }
+                            // Keep high priority while autojoin menu is open (SW/BW/MM),
+                            // prevents PlayerInteractionFixChain from closing the screen
+                            return 90;
                         }
-
-                        // SkyPvP on MineLegacy: compass "Выбор режима (ПКМ)" opens this chest menu
-                        if (AltoClef.getPipeline() == Pipeline.SkyPvP && _worldJoinTimer.elapsed()) {
-                            Slot slot = ItemHelper.getCustomItemSlot(mod, "SkyPvP", "skypvp", "Sky PvP");
-                            if (slot != null && _slotClickTimer.elapsed()) {
-                                mod.getSlotHandler().clickSlot(slot, 0, SlotActionType.PICKUP);
-                                _slotClickTimer.reset();
-                                _clicked = true;
-                                return 90;
-                            }
-                        }
-
-                        // Keep high priority while autojoin menu is open,
-                        // even if we haven't clicked a slot yet (waiting for timer).
-                        // This prevents PlayerInteractionFixChain from closing the screen
-                        // due to rotation changes from other systems (baritone, combat, etc.)
-                        return 90;
+                        // SkyPvP handles its own menu in SkyPvpTask — don't block it with priority 90
                     }
                 }
             }
