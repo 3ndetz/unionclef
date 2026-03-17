@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Random;
 
 public abstract class MouseMoveHelper {
-    public static boolean RotationEnabled = true;
+    public static boolean RotationEnabled = false;
     public static double sqrt3 = Math.sqrt(3);
     public static double sqrt5 = Math.sqrt(5);
     public static List<Integer> PointsListX = new ArrayList<>();

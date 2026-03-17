@@ -773,7 +773,7 @@ public final class Settings {
     /**
      * Forces the client-sided yaw rotation to an average of the last {@link #smoothLookTicks} of server-sided rotations.
      */
-    public final Setting<Boolean> smoothLook = new Setting<>(false);
+    public final Setting<Boolean> smoothLook = new Setting<>(true);
 
     /**
      * Same as {@link #smoothLook} but for elytra flying.

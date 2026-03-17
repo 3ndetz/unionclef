@@ -114,13 +114,16 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
                         ctx.player().setYaw(this.prevRotation.getYaw());
                         ctx.player().setPitch(this.prevRotation.getPitch());
                     } else if (ctx.player().isFallFlying() ? Baritone.settings().elytraSmoothLook.value : Baritone.settings().smoothLook.value) {
-                        ctx.player().setYaw((float) this.smoothYawBuffer.stream().mapToDouble(d -> d).average().orElse(this.prevRotation.getYaw()));
+                        float smoothedYaw = (float) this.smoothYawBuffer.stream().mapToDouble(d -> d).average().orElse(this.prevRotation.getYaw());
+                        float smoothedPitch = (float) this.smoothPitchBuffer.stream().mapToDouble(d -> d).average().orElse(this.prevRotation.getPitch());
+                        // set prevYaw/prevPitch so Minecraft's render-frame lerp interpolates smoothly
+                        ctx.player().prevYaw = ctx.player().getYaw();
+                        ctx.player().prevPitch = ctx.player().getPitch();
+                        ctx.player().setYaw(smoothedYaw);
                         if (ctx.player().isFallFlying()) {
-                            ctx.player().setPitch((float) this.smoothPitchBuffer.stream().mapToDouble(d -> d).average().orElse(this.prevRotation.getPitch()));
+                            ctx.player().setPitch(smoothedPitch);
                         }
                     }
-                    //ctx.player().xRotO = prevRotation.getPitch();
-                    //ctx.player().yRotO = prevRotation.getYaw();
                     this.prevRotation = null;
                 }
                 // The target is done being used for this game tick, so it can be invalidated
