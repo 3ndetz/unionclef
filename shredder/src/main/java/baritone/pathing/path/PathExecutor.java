@@ -78,6 +78,8 @@ public class PathExecutor implements IPathExecutor, Helper {
     private boolean sprintNextTick;
     private boolean sprintJumping;
 
+    private final baritone.tungsten.TungstenBridge tungstenBridge = new baritone.tungsten.TungstenBridge();
+
     public PathExecutor(PathingBehavior behavior, IPath path) {
         this.behavior = behavior;
         this.ctx = behavior.ctx;
@@ -98,6 +100,35 @@ public class PathExecutor implements IPathExecutor, Helper {
         if (pathPosition >= path.length()) {
             return true; // stop bugging me, I'm done
         }
+
+        // Tungsten bridge: if active, let tungsten drive and skip shredder movement logic
+        if (tungstenBridge.isActive()) {
+            boolean tungstenDriving = tungstenBridge.tick(ctx);
+            if (tungstenDriving) {
+                // Tungsten is handling movement — clear shredder keys and yield
+                clearKeys();
+                return false;
+            }
+            // Tungsten finished — snap pathPosition forward to resume point
+            int resume = tungstenBridge.getShredderResumePosition();
+            if (resume > pathPosition && resume < path.length()) {
+                pathPosition = resume;
+                onChangeInPathPosition();
+            }
+        }
+
+        // Tungsten bridge: evaluate if current segment should be delegated
+        if (!tungstenBridge.isActive() && !sprintJumping && pathPosition < path.movements().size()) {
+            int simpleAhead = tungstenBridge.evaluateSegment(path.movements(), pathPosition, ctx);
+            if (simpleAhead > 0) {
+                BlockPos target = path.movements().get(pathPosition + simpleAhead - 1).getDest();
+                int resumeAt = Math.min(pathPosition + simpleAhead, path.movements().size() - 1);
+                tungstenBridge.delegate(target, resumeAt, ctx);
+                clearKeys();
+                return false;
+            }
+        }
+
         Movement movement = (Movement) path.movements().get(pathPosition);
         BetterBlockPos whereAmI = ctx.playerFeet();
 
@@ -817,6 +848,7 @@ public class PathExecutor implements IPathExecutor, Helper {
     private void cancel() {
         clearKeys();
         sprintJumping = false;
+        tungstenBridge.reset();
         behavior.baritone.getInputOverrideHandler().getBlockBreakHelper().stopBreakingBlock();
         pathPosition = path.length() + 3;
         failed = true;

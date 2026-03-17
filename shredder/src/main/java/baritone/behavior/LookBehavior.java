@@ -27,6 +27,7 @@ import baritone.api.utils.IPlayerContext;
 import baritone.api.utils.Rotation;
 import baritone.behavior.look.ForkableRandom;
 import java.util.Optional;
+import java.util.Random;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.util.math.MathHelper;
 
@@ -59,6 +60,11 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
     private long lastSmoothNanos;
     private boolean smoothActive;
     private boolean hadTargetThisTick;
+
+    // WindMouse state (render-frame physics)
+    private final Random wmRandom = new Random();
+    private double wmVeloYaw, wmVeloPitch;
+    private double wmWindYaw, wmWindPitch;
 
     public LookBehavior(Baritone baritone) {
         super(baritone);
@@ -116,6 +122,9 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
                     this.smoothPitch = this.renderTargetPitch;
                     this.lastSmoothNanos = System.nanoTime();
                     this.smoothActive = true;
+                    // Reset WindMouse physics so we don't carry stale velocity
+                    this.wmVeloYaw = 0; this.wmVeloPitch = 0;
+                    this.wmWindYaw = 0; this.wmWindPitch = 0;
                 }
                 break;
             }
@@ -157,6 +166,8 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
         this.target = null;
         this.smoothActive = false;
         this.lastSmoothNanos = 0;
+        this.wmVeloYaw = 0; this.wmVeloPitch = 0;
+        this.wmWindYaw = 0; this.wmWindPitch = 0;
     }
 
     /**
@@ -180,6 +191,11 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
         return smoothPitch;
     }
 
+    private static final double WM_SQRT3 = Math.sqrt(3.0);
+    private static final double WM_SQRT5 = Math.sqrt(5.0);
+    private static final double WM_DONE_THRESHOLD = 0.3;
+    private static final double WM_WIND_DIST = 20.0;
+
     private void updateSmoothRotation() {
         long now = System.nanoTime();
         if (lastSmoothNanos == 0) {
@@ -188,10 +204,62 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
         }
         float dtSeconds = (now - lastSmoothNanos) / 1_000_000_000f;
         lastSmoothNanos = now;
-        // clamp to avoid huge jumps on lag spikes
         dtSeconds = Math.min(dtSeconds, 0.1f);
 
-        // Convert per-tick speed to per-frame: 1 - (1-speed)^(dt*20)
+        if (Baritone.settings().windMouseLook.value) {
+            updateWindMouse(dtSeconds);
+        } else {
+            updateExpDecay(dtSeconds);
+        }
+    }
+
+    private void updateWindMouse(float dt) {
+        double dYaw = MathHelper.wrapDegrees(renderTargetYaw - smoothYaw);
+        double dPitch = (double) renderTargetPitch - smoothPitch;
+        double dist = Math.sqrt(dYaw * dYaw + dPitch * dPitch);
+
+        if (dist < WM_DONE_THRESHOLD) {
+            smoothYaw = renderTargetYaw;
+            smoothPitch = renderTargetPitch;
+            wmVeloYaw = 0; wmVeloPitch = 0;
+            wmWindYaw = 0; wmWindPitch = 0;
+            return;
+        }
+
+        // Scale physics by frame time relative to 60 FPS baseline
+        double frameScale = dt * 60.0;
+
+        double gravity = Baritone.settings().windMouseGravity.value;
+        double windMag = Math.min(Baritone.settings().windMouseWind.value, dist);
+        double maxStep = Baritone.settings().windMouseMaxStep.value;
+
+        // Wind: random perturbation, decays when close to target
+        if (dist >= WM_WIND_DIST) {
+            wmWindYaw   = wmWindYaw   / WM_SQRT3 + (wmRandom.nextDouble() * 2.0 - 1.0) * windMag / WM_SQRT5;
+            wmWindPitch = wmWindPitch / WM_SQRT3 + (wmRandom.nextDouble() * 2.0 - 1.0) * windMag / WM_SQRT5;
+        } else {
+            wmWindYaw   /= WM_SQRT3;
+            wmWindPitch /= WM_SQRT3;
+        }
+
+        // Accumulate velocity: wind + gravity pull toward target
+        wmVeloYaw   += (wmWindYaw   + gravity * dYaw   / dist) * frameScale;
+        wmVeloPitch += (wmWindPitch + gravity * dPitch / dist) * frameScale;
+
+        // Clamp velocity magnitude; scale max step with distance (human-like fast flick for large angles)
+        double veloMag = Math.sqrt(wmVeloYaw * wmVeloYaw + wmVeloPitch * wmVeloPitch);
+        double effectiveMaxStep = maxStep * Math.max(1.0, Math.min(4.0, dist / 15.0)) * frameScale;
+        if (veloMag > effectiveMaxStep) {
+            double scale = effectiveMaxStep * (0.5 + wmRandom.nextDouble() * 0.5) / veloMag;
+            wmVeloYaw   *= scale;
+            wmVeloPitch *= scale;
+        }
+
+        smoothYaw  += (float) wmVeloYaw;
+        smoothPitch = (float) Math.max(-90.0, Math.min(90.0, smoothPitch + wmVeloPitch));
+    }
+
+    private void updateExpDecay(float dtSeconds) {
         float tickSpeed = 2.0f / Math.max(Baritone.settings().smoothLookTicks.value, 1);
         tickSpeed = Math.min(tickSpeed, 1.0f);
         float frameSpeed = 1.0f - (float) Math.pow(1.0f - tickSpeed, dtSeconds * 20.0f);

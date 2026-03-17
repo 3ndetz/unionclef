@@ -792,6 +792,43 @@ public final class Settings {
     public final Setting<Integer> smoothLookTicks = new Setting<>(5);
 
     /**
+     * Use WindMouse algorithm for render-frame camera smoothing instead of exponential decay.
+     * Produces human-like camera movement with natural acceleration, overshoot and micro-jitter.
+     * Only affects the visual (client-side) rotation — server packets still use quantized mouse steps.
+     */
+    public final Setting<Boolean> windMouseLook = new Setting<>(true);
+
+    /**
+     * WindMouse gravity — how strongly the camera pulls toward the target each render frame.
+     * Higher = faster convergence, lower = more floaty/lazy.
+     */
+    public final Setting<Double> windMouseGravity = new Setting<>(3.5d);
+
+    /**
+     * WindMouse wind magnitude — random perturbation per frame.
+     * Higher = more natural wobble, lower = more robotic.
+     */
+    public final Setting<Double> windMouseWind = new Setting<>(1.2d);
+
+    /**
+     * WindMouse max step — maximum degrees the camera can move per render frame.
+     * Prevents teleporting across large angles in a single frame.
+     */
+    public final Setting<Double> windMouseMaxStep = new Setting<>(5.0d);
+
+    /**
+     * Delegate simple flat path segments to tungsten's physics-based movement system.
+     * Tungsten pre-computes tick-precise key presses and yaw/pitch for more natural-looking movement.
+     * Only activates on long (8+ block) flat stretches with no block breaking/placing.
+     */
+    public final Setting<Boolean> useTungsten = new Setting<>(false);
+
+    /**
+     * Minimum consecutive simple movements before tungsten delegation kicks in.
+     */
+    public final Setting<Integer> tungstenMinSegment = new Setting<>(8);
+
+    /**
      * When true, the player will remain with its existing look direction as often as possible.
      * Although, in some cases this can get it stuck, hence this setting to disable that behavior.
      */

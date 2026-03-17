@@ -21,9 +21,9 @@
       - [ ] 2.4.1.2 Implement diagonal moving acceleration and make diagonal movement instead of horizontal stairs-like movement
         - [ ] 2.4.1.2.1 remove stupid mega-multi-change view path nodes when path is clear and simple without danger and complexity
         - [ ] FAR TODO - unrealizeable. Complex. Can't do normally.
-  - [ ] 2.5 add safe ENTROPY: HUMAN-like movements
-    - [ ] 2.5.1 Implement advanced windMouse / AI camera smooth movement to the actino executor of the new pathfinder, add safe moves to unneded entropy locations
-    - [ ] 2.5.2 Implement unneded entropy move curves (maybe with tungsten here already)...
-  - [ ] 2.6 Implement tungsten into this pathfinder
+  - [x] 2.5 add safe ENTROPY: HUMAN-like movements
+    - [x] 2.5.1 WindMouse camera smoothing in LookBehavior (render-frame, settings: windMouseLook/Gravity/Wind/MaxStep)
+    - [x] 2.5.2 TungstenBridge — smart delegation of simple flat segments to tungsten (settings: useTungsten, tungstenMinSegment)
+  - [ ] 2.6 Implement tungsten into this pathfinder (deeper integration beyond flat segments)
 <!-- Верхнеуровневые задачи. Пишет юзер, AI отмечает выполнение. -->
 <!-- Формат: - [ ] задача / - [x] задача -->
