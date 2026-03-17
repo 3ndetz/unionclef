@@ -655,7 +655,8 @@ public class PathExecutor implements IPathExecutor, Helper {
             return false;
         }
         Class<? extends IMovement> movementType = current.getClass();
-        int lookahead = Baritone.settings().sprintJumpLookahead.value;
+        // need lookahead + 2 straight blocks: lookahead to trigger, +2 margin for jump arc before turn
+        int lookahead = Baritone.settings().sprintJumpLookahead.value + 2;
         int straightCount = 0;
         for (int i = pathPosition + 1; i < path.movements().size() && straightCount < lookahead; i++) {
             IMovement next = path.movements().get(i);
@@ -693,8 +694,8 @@ public class PathExecutor implements IPathExecutor, Helper {
      * and allow sprint-jumping through them.
      */
     private boolean canSprintJumpStaircase() {
-        int lookahead = Baritone.settings().sprintJumpLookahead.value;
-        // need at least 2*lookahead alternating moves to justify sprint-jumping
+        int lookahead = Baritone.settings().sprintJumpLookahead.value + 2;
+        // need at least 2*lookahead alternating moves (pairs of perpendicular traverses)
         int required = lookahead * 2;
         if (pathPosition + required >= path.movements().size()) {
             return false;
