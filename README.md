@@ -17,7 +17,7 @@ Built by merging **altoclef**, **shredder**, and **tungsten** into a single code
 |--------|-------------|
 | **altoclef** (root) | Autonomous bot — speedruns, PvP, SkyWars, Python scripting via Py4J |
 | **shredder/** | Pathfinder v2 — fork of baritone with WindMouse camera, tungsten integration, human-like movement |
-| **tungsten/** | A* pathfinder that doesn't break blocks — follows players, PvP movement |
+| **tungsten/** | A* pathfinder that doesn't break blocks — complex parkour, follows players, PvP movement |
 | ~~baritone/~~ | Legacy pathfinding code, kept as reference. Replaced by shredder |
 
 **Minecraft 1.21** / **Fabric** / **Java 21**
@@ -93,7 +93,7 @@ unionclef/
 
 ### shredder
 
-Fork of baritone, rebuilt as the primary pathfinder. Keeps `baritone.*` packages for API compatibility but adds WindMouse camera smoothing, human-like movement entropy, and a tungsten bridge that delegates simple flat segments to tungsten's A* executor.
+Fork of baritone, rebuilt as the primary pathfinder. Keeps `baritone.*` packages for API compatibility but adds WindMouse camera smoothing, human-like movement entropy, and a tungsten bridge that delegates complex parkour segments (no block breaking/placing) to tungsten's A* executor.
 
 1. Origin: **[cabaletta/baritone](https://github.com/cabaletta/baritone)** (by leijurv & Brady) →
 2. Patched by altoclef maintainers (GauchoMatrero → MiranCZ → 3ndetz) →
