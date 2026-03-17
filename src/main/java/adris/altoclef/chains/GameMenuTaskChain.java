@@ -144,6 +144,16 @@ public class GameMenuTaskChain extends SingleTaskChain {
                             || t.contains("выбор режима") || t.contains("выбери режим");
 
                     if (isAutoJoinMenu) {
+                        // DEBUG: log all slot names in the autojoin chest menu
+                        Debug.logInternal("[AutoJoin] Chest title: \"" + t + "\", pipeline: " + AltoClef.getPipeline());
+                        for (Slot s : Slot.getCurrentScreenSlots()) {
+                            net.minecraft.item.ItemStack stack = StorageHelper.getItemStackInSlot(s);
+                            if (stack != null && !stack.isEmpty()) {
+                                String name = stack.getName().getString();
+                                Debug.logInternal("[AutoJoin]   slot " + s.getInventorySlot() + ": \"" + name + "\"");
+                            }
+                        }
+
                         String[] MinigamesTitles = new String[]{"мини-игры", "МИНИ-ИГРЫ", "МИНИИГРЫ"};
 
                         String[] ClickTitles;
