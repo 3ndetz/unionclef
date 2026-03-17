@@ -58,6 +58,7 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
     private float renderTargetPitch;
     private long lastSmoothNanos;
     private boolean smoothActive;
+    private boolean hadTargetThisTick;
 
     public LookBehavior(Baritone baritone) {
         super(baritone);
@@ -78,6 +79,11 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
     public void onTick(TickEvent event) {
         if (event.getType() == TickEvent.Type.IN) {
             this.processor.tick();
+            // If baritone had no target last tick, stop overriding player rotation
+            if (!hadTargetThisTick && smoothActive) {
+                smoothActive = false;
+            }
+            hadTargetThisTick = false;
         }
     }
 
@@ -101,6 +107,7 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
                 ctx.player().setPitch(actual.getPitch());
 
                 // Update render-frame smooth target
+                this.hadTargetThisTick = true;
                 this.renderTargetYaw = this.target.rotation.getYaw();
                 this.renderTargetPitch = this.target.rotation.getPitch();
                 if (!this.smoothActive) {
