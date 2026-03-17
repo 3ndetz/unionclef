@@ -549,6 +549,10 @@ public class Settings implements IFailableConfigFile {
         return pythonGatewayPort;
     }
 
+    public void setPythonGatewayPort(int port) {
+        this.pythonGatewayPort = port;
+    }
+
     /**
      * Last known good nickname. If we log in as PlayerNNN,
      * this nick is restored automatically.

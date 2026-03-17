@@ -49,6 +49,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import org.lwjgl.glfw.GLFW;
 import py4j.GatewayServer;
+import py4j.Py4JNetworkException;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -168,19 +169,40 @@ public class AltoClef implements ModInitializer {
             return;
         }
         _py4jEntryPoint = new Py4jEntryPoint(this);
-        final int JAVA_GATEWAY_PORT = getModSettings().getPythonGatewayPort();
-        final int PYTHON_CALLBACK_PORT = getModSettings().getPythonGatewayPort() + 1;
-        _gatewayServer = new GatewayServer(
-                _py4jEntryPoint,
-                JAVA_GATEWAY_PORT,
-                PYTHON_CALLBACK_PORT,
-                GatewayServer.DEFAULT_CONNECT_TIMEOUT,
-                GatewayServer.DEFAULT_READ_TIMEOUT,
-                null
-        );
-        _gatewayServer.start();
-        _py4jEntryPoint.InitPythonCallback();
-        Debug.logMessage("Py4j gateway started on port " + JAVA_GATEWAY_PORT);
+        int port = getModSettings().getPythonGatewayPort();
+        final int originalPort = port;
+        final int MAX_ATTEMPTS = 20;
+        for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            _gatewayServer = new GatewayServer(
+                    _py4jEntryPoint,
+                    port,
+                    port + 1,
+                    GatewayServer.DEFAULT_CONNECT_TIMEOUT,
+                    GatewayServer.DEFAULT_READ_TIMEOUT,
+                    null
+            );
+            try {
+                _gatewayServer.start();
+                // Port changed — save to settings so next launch uses the same port
+                if (port != originalPort) {
+                    getModSettings().setPythonGatewayPort(port);
+                    ConfigHelper.saveConfig(adris.altoclef.Settings.SETTINGS_PATH, getModSettings());
+                    Debug.logMessage("Py4j port conflict — bound to " + port + " (saved to settings)");
+                }
+                _py4jEntryPoint.InitPythonCallback();
+                Debug.logMessage("Py4j gateway started on port " + port);
+                return;
+            } catch (Py4JNetworkException e) {
+                if (e.getCause() instanceof java.net.BindException) {
+                    _gatewayServer = null;
+                    Debug.logWarning("Py4j port " + port + " in use, trying " + (port + 2) + "...");
+                    port += 2;
+                } else {
+                    throw e;
+                }
+            }
+        }
+        Debug.logError("Py4j: failed to bind after " + MAX_ATTEMPTS + " attempts, giving up");
     }
 
     public void stopPythonSender() {
