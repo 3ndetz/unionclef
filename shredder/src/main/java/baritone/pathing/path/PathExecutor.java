@@ -275,6 +275,7 @@ public class PathExecutor implements IPathExecutor, Helper {
             if (!sprintNextTick) {
                 ctx.player().setSprinting(false); // letting go of control doesn't make you stop sprinting actually
             }
+            overrideLookAheadIfSafe();
             ticksOnCurrent++;
             if (ticksOnCurrent > currentMovementOriginalCostEstimate + Baritone.settings().movementTimeoutTicks.value) {
                 // only cancel if the total time has exceeded the initial estimate
@@ -614,6 +615,60 @@ public class PathExecutor implements IPathExecutor, Helper {
             return true;
         }
         return next instanceof MovementDiagonal && Baritone.settings().allowOvershootDiagonalDescend.value;
+    }
+
+    /**
+     * On simple safe paths with clear line of sight, override look target to a far
+     * point ahead. Requires: all movements flat traverse/diagonal, no block breaking,
+     * no block placing, clear headroom, and minimum 4 safe moves ahead to avoid
+     * flickering between near/far targets at boundaries.
+     */
+    private void overrideLookAheadIfSafe() {
+        IMovement current = path.movements().get(pathPosition);
+        if (!(current instanceof MovementTraverse) && !(current instanceof MovementDiagonal)) {
+            return;
+        }
+        if (current.getDirection().getY() != 0) {
+            return;
+        }
+        BlockStateInterface bsi = new BlockStateInterface(ctx);
+        Movement currentM = (Movement) current;
+        if (!currentM.toBreak(bsi).isEmpty() || !currentM.toPlace(bsi).isEmpty()) {
+            return;
+        }
+        // scan ahead — every movement must be flat, simple, no breaking/placing, fully clear
+        int safeCount = 0;
+        BlockPos bestTarget = null;
+        for (int i = pathPosition + 1; i < path.movements().size() && i <= pathPosition + 12; i++) {
+            IMovement m = path.movements().get(i);
+            if (!(m instanceof MovementTraverse) && !(m instanceof MovementDiagonal)) {
+                break;
+            }
+            if (m.getDirection().getY() != 0) {
+                break;
+            }
+            Movement mm = (Movement) m;
+            if (!mm.toBreak(bsi).isEmpty() || !mm.toPlace(bsi).isEmpty()) {
+                break;
+            }
+            if (!MovementHelper.canWalkOn(ctx, m.getDest().down())) {
+                break;
+            }
+            if (!MovementHelper.canWalkThrough(ctx, m.getDest()) || !MovementHelper.canWalkThrough(ctx, m.getDest().up())) {
+                break;
+            }
+            safeCount++;
+            bestTarget = m.getDest();
+        }
+        // need at least 4 safe moves ahead to commit — avoids flickering at boundaries
+        if (safeCount < 4 || bestTarget == null) {
+            return;
+        }
+        behavior.baritone.getLookBehavior().updateTarget(
+                RotationUtils.calcRotationFromVec3d(ctx.playerHead(),
+                        VecUtils.getBlockPosCenter(bestTarget),
+                        ctx.playerRotations()).withPitch(ctx.playerRotations().getPitch()),
+                false);
     }
 
     /**
