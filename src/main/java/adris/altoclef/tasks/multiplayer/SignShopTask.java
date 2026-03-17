@@ -3,13 +3,10 @@ package adris.altoclef.tasks.multiplayer;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasksystem.Task;
-import adris.altoclef.util.baritone.GoalAnd;
-import adris.altoclef.util.baritone.GoalBlockSide;
 import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.ChestSlot;
-import baritone.api.pathing.goals.Goal;
 import baritone.api.pathing.goals.GoalNear;
 import baritone.api.process.ICustomGoalProcess;
 import baritone.api.utils.input.Input;
@@ -55,8 +52,12 @@ public class SignShopTask extends Task {
     private State state = State.CLICK_SIGN;
     private int waitTicks = 0;
     private int retryDelay = 0;
-    private static final int MAX_WAIT_TICKS = 100; // 5 seconds
-    private static final int RETRY_DELAY_TICKS = 20; // 1 second between retries
+    private int retryCount = 0;
+    private int approachTicks = 0;
+    private static final int MAX_WAIT_TICKS = 100;      // 5 seconds for chest to open
+    private static final int MAX_APPROACH_TICKS = 200;  // 10 seconds to reach the sign
+    private static final int MAX_RETRIES = 5;
+    private static final int RETRY_DELAY_TICKS = 20;
 
     public SignShopTask(BlockPos signPos) {
         this.signPos = signPos;
@@ -67,6 +68,8 @@ public class SignShopTask extends Task {
         state = State.CLICK_SIGN;
         waitTicks = 0;
         retryDelay = 0;
+        retryCount = 0;
+        approachTicks = 0;
         Debug.logMessage("[SignShop] Starting at " + signPos.toShortString());
     }
 
@@ -86,21 +89,36 @@ public class SignShopTask extends Task {
                     return null;
                 }
                 Direction facing = getSignFacing(mod);
-                // Approach from the front face of the sign so the click registers correctly.
                 // We do NOT use InteractWithBlockTask — its rightClick() calls closeScreen() on
                 // any open non-player-inventory screen, which closes the chest the sign just opened.
                 if (!LookHelper.getReach(signPos, facing).isPresent()) {
+                    approachTicks++;
+                    if (approachTicks > MAX_APPROACH_TICKS) {
+                        // Spent too long trying to reach — count as a failed attempt
+                        approachTicks = 0;
+                        retryCount++;
+                        if (retryCount >= MAX_RETRIES) {
+                            Debug.logWarning("[SignShop] Can't reach " + signPos.toShortString() + ", blacklisting.");
+                            mod.getBlockScanner().requestBlockUnreachable(signPos);
+                            state = State.DONE;
+                            return null;
+                        }
+                        mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+                        retryDelay = RETRY_DELAY_TICKS;
+                        return null;
+                    }
+                    // Simple GoalNear — don't try to path to a specific side, just get close.
+                    // The facing direction is used only for the reach/look check, not pathfinding,
+                    // so the bot won't try to walk into an unreachable block in front of the sign.
                     ICustomGoalProcess proc = mod.getClientBaritone().getCustomGoalProcess();
                     if (!proc.isActive()) {
-                        Goal approachGoal = (facing != null)
-                                ? new GoalAnd(new GoalBlockSide(signPos, facing, 1), new GoalNear(signPos, 2))
-                                : new GoalNear(signPos, 2);
-                        proc.setGoalAndPath(approachGoal);
+                        proc.setGoalAndPath(new GoalNear(signPos, 2));
                     }
-                    setDebugState("Walking to sign front");
+                    setDebugState("Walking to sign (" + approachTicks + "/" + MAX_APPROACH_TICKS + ")");
                     return null;
                 }
                 // In reach — stop pathing, look at the sign face
+                approachTicks = 0;
                 mod.getClientBaritone().getCustomGoalProcess().onLostControl();
                 if (!LookHelper.isLookingAt(mod, signPos)) {
                     if (facing != null) LookHelper.lookAt(mod, signPos, facing);
@@ -124,10 +142,18 @@ public class SignShopTask extends Task {
                 }
                 waitTicks++;
                 if (waitTicks > MAX_WAIT_TICKS) {
-                    Debug.logWarning("[SignShop] Chest didn't open, retrying...");
-                    state = State.CLICK_SIGN;
-                    retryDelay = RETRY_DELAY_TICKS;
+                    retryCount++;
                     waitTicks = 0;
+                    if (retryCount >= MAX_RETRIES) {
+                        Debug.logWarning("[SignShop] Chest never opened after " + MAX_RETRIES + " clicks, blacklisting " + signPos.toShortString());
+                        mod.getBlockScanner().requestBlockUnreachable(signPos);
+                        state = State.DONE;
+                        return null;
+                    }
+                    Debug.logWarning("[SignShop] Chest didn't open, retry " + retryCount + "/" + MAX_RETRIES);
+                    state = State.CLICK_SIGN;
+                    approachTicks = 0;
+                    retryDelay = RETRY_DELAY_TICKS;
                 }
                 return null;
             }
