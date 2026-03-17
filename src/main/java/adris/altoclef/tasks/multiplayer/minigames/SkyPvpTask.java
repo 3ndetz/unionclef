@@ -10,7 +10,12 @@ import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.StorageHelper;
+import adris.altoclef.util.slots.Slot;
+import adris.altoclef.trackers.storage.ContainerType;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
+import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.text.Text;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
@@ -65,9 +70,28 @@ public class SkyPvpTask extends Task {
         AltoClef mod = AltoClef.getInstance();
         if (mod.getPlayer() == null || mod.getPlayer().isDead()) return null;
 
+        // ── Handle open mode selection menu: click "SkyPvP" slot ─────────
+        if (ContainerType.screenHandlerMatches(ContainerType.CHEST)) {
+            Text title = MinecraftClient.getInstance().currentScreen != null
+                    ? MinecraftClient.getInstance().currentScreen.getTitle() : null;
+            if (title != null) {
+                String t = title.getString().toLowerCase();
+                if (t.contains("выбери режим") || t.contains("выбор режима")) {
+                    Slot slot = ItemHelper.getCustomItemSlot(mod, "SkyPvP", "skypvp", "Sky PvP");
+                    if (slot != null) {
+                        mod.getSlotHandler().clickSlot(slot, 0, SlotActionType.PICKUP);
+                        setDebugState("Lobby: clicking SkyPvP...");
+                    } else {
+                        setDebugState("Lobby: menu open, SkyPvP slot not found");
+                    }
+                    return null;
+                }
+            }
+        }
+
         // ── Lobby detection: compass "Выбор режима" means we're in hub ──────
         if (isInLobby(mod)) {
-            // Click compass to open mode selection menu (like SkyWarsTask clicks "новая игра")
+            // Click compass to open mode selection menu
             if (ItemHelper.clickCustomItem(mod, "Выбор режима", "выбор режима")) {
                 setDebugState("Lobby: opening mode menu...");
             } else {

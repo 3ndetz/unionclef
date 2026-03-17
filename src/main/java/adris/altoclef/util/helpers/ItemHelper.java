@@ -551,11 +551,9 @@ public class ItemHelper {
             // If the item is in the hotbar, just switch selected slot instead of SWAP.
             // Server menu items are often immovable, so SWAP would fail.
             int invSlot = newGameSlot.getInventorySlot();
-            adris.altoclef.Debug.logInternal("[clickCustomItem] Found slot invSlot=" + invSlot
-                    + " for " + java.util.Arrays.toString(joinItems));
-            if (invSlot >= 36 && invSlot <= 44) {
-                // Hotbar slots: inventory slot 36-44 → hotbar index 0-8
-                mod.getPlayer().getInventory().selectedSlot = invSlot - 36;
+            if (invSlot >= 0 && invSlot <= 8) {
+                // Hotbar slot — just switch selected slot, don't SWAP (server menu items are immovable)
+                mod.getPlayer().getInventory().selectedSlot = invSlot;
             } else {
                 mod.getSlotHandler().forceEquipSlot(newGameSlot);
             }
@@ -563,7 +561,6 @@ public class ItemHelper {
             mod.getInputControls().tryPress(Input.CLICK_RIGHT);
             return true;
         }
-        adris.altoclef.Debug.logInternal("[clickCustomItem] NOT found for " + java.util.Arrays.toString(joinItems));
         return false;
     }
 
