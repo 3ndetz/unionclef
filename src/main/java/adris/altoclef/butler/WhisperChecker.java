@@ -88,7 +88,7 @@ public class WhisperChecker {
         String serverName = chatFormatMas[0];
         String serverMode = chatFormatMas[2];
         String chatFormatNew = new String(chatFormatMas[1]);
-        message = message.replace("\\", "");
+        message = message.strip().replace("\\", "");
         // Normalize arrows
         List<String> arrows = new ArrayList<>(Arrays.asList("➥", "->", "➡", "➥", "➯", "➨", "›", "►", "⋙", "»", "⪼", "⇨"));
         for (String arrow : arrows) {
@@ -112,6 +112,8 @@ public class WhisperChecker {
         if (regexFormat.endsWith("\\E")) {
             regexFormat = regexFormat.substring(0, regexFormat.length() - "\\E".length());
         }
+        // Normalize whitespace: replace literal spaces with \s+ so variable spacing matches
+        regexFormat = regexFormat.replaceAll(" +", "\\\\s+");
         Pattern p = Pattern.compile(regexFormat);
         Matcher m = p.matcher(message);
         Map<String, String> values = new HashMap<>();
