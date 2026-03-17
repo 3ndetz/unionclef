@@ -564,7 +564,8 @@ public class ItemHelper {
                 if (hasCustomName) {
                     String itemCustomName = removeMCFormatCodes(item.getName().getString().toLowerCase());
                     for (String check : checkItemName) {
-                        if (check.toLowerCase().equals(itemCustomName) || check.toLowerCase().contains(itemCustomName)) {
+                        String checkLower = check.toLowerCase();
+                        if (checkLower.equals(itemCustomName) || itemCustomName.contains(checkLower)) {
                             return slot;
                         }
                     }

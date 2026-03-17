@@ -139,7 +139,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 if (title != null && title.getString() != null) {
                     String t = title.getString().toLowerCase();
 
-                    if (t.contains("выбор сервера") || t.contains("мини-игры")) {
+                    if (t.contains("выбор сервера") || t.contains("мини-игры") || t.contains("выбор режима")) {
                         String[] MinigamesTitles = new String[]{"мини-игры", "МИНИ-ИГРЫ", "МИНИИГРЫ"};
 
                         String[] ClickTitles;
