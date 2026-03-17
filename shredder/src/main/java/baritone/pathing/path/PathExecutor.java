@@ -275,9 +275,6 @@ public class PathExecutor implements IPathExecutor, Helper {
             if (!sprintNextTick) {
                 ctx.player().setSprinting(false); // letting go of control doesn't make you stop sprinting actually
             }
-            // On simple safe paths, look at a point far ahead instead of the next block.
-            // This prevents constant micro-yaw adjustments from looking at a 1-block-away target.
-            overrideLookAheadIfSafe();
             ticksOnCurrent++;
             if (ticksOnCurrent > currentMovementOriginalCostEstimate + Baritone.settings().movementTimeoutTicks.value) {
                 // only cancel if the total time has exceeded the initial estimate
@@ -617,49 +614,6 @@ public class PathExecutor implements IPathExecutor, Helper {
             return true;
         }
         return next instanceof MovementDiagonal && Baritone.settings().allowOvershootDiagonalDescend.value;
-    }
-
-    /**
-     * On simple safe flat paths (traverse/diagonal, no block breaking, no Y change),
-     * override the look target to a point far ahead. Looking at a distant point
-     * eliminates micro-yaw jitter from targeting a 1-block-away destination.
-     */
-    private void overrideLookAheadIfSafe() {
-        IMovement current = path.movements().get(pathPosition);
-        if (!(current instanceof MovementTraverse) && !(current instanceof MovementDiagonal)) {
-            return;
-        }
-        if (current.getDirection().getY() != 0) {
-            return;
-        }
-        BlockStateInterface bsi = new BlockStateInterface(ctx);
-        if (!((Movement) current).toBreak(bsi).isEmpty()) {
-            return;
-        }
-        // scan ahead for safe flat movements
-        BlockPos bestTarget = null;
-        for (int i = pathPosition + 1; i < path.movements().size() && i <= pathPosition + 12; i++) {
-            IMovement m = path.movements().get(i);
-            if (!(m instanceof MovementTraverse) && !(m instanceof MovementDiagonal)) {
-                break;
-            }
-            if (m.getDirection().getY() != 0) {
-                break;
-            }
-            if (!((Movement) m).toBreak(bsi).isEmpty()) {
-                break;
-            }
-            bestTarget = m.getDest();
-        }
-        if (bestTarget == null) {
-            return; // less than 2 simple moves ahead, not worth overriding
-        }
-        // override look target to the far point — yaw only, keep current pitch
-        behavior.baritone.getLookBehavior().updateTarget(
-                RotationUtils.calcRotationFromVec3d(ctx.playerHead(),
-                        VecUtils.getBlockPosCenter(bestTarget),
-                        ctx.playerRotations()).withPitch(ctx.playerRotations().getPitch()),
-                false);
     }
 
     /**
