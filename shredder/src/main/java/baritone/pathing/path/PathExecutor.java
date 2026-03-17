@@ -80,6 +80,13 @@ public class PathExecutor implements IPathExecutor, Helper {
 
     private final baritone.tungsten.TungstenBridge tungstenBridge = new baritone.tungsten.TungstenBridge();
 
+    // Jump bridging state
+    private boolean jumpBridging;
+    private int jumpBridgeTicksAirborne;
+    private int jumpBridgeNextClickTick; // randomized tick for next right-click
+    private BlockPos jumpBridgePlaceTarget; // block to place under
+    private static final java.util.Random jumpBridgeRandom = new java.util.Random();
+
     public PathExecutor(PathingBehavior behavior, IPath path) {
         this.behavior = behavior;
         this.ctx = behavior.ctx;
@@ -127,6 +134,11 @@ public class PathExecutor implements IPathExecutor, Helper {
                 clearKeys();
                 return false;
             }
+        }
+
+        // Jump bridging: airborne block placement
+        if (jumpBridging) {
+            return tickJumpBridge();
         }
 
         Movement movement = (Movement) path.movements().get(pathPosition);
@@ -285,6 +297,12 @@ public class PathExecutor implements IPathExecutor, Helper {
             clearKeys();
             return true;
         }
+        // Jump bridging: detect consecutive bridge movements and start jump-place sequence
+        if (Baritone.settings().jumpBridging.value && !jumpBridging
+                && ctx.player().isOnGround() && tryStartJumpBridge(movement)) {
+            return false;
+        }
+
         MovementStatus movementStatus = movement.update();
         if (movementStatus == UNREACHABLE || movementStatus == FAILED) {
             logDebug("Movement returns status " + movementStatus);
@@ -844,6 +862,104 @@ public class PathExecutor implements IPathExecutor, Helper {
         ticksOnCurrent = 0;
     }
 
+    // ── Jump bridging ────────────────────────────────────────────────────────
+
+    /**
+     * Check if current position has ≥3 consecutive bridge movements (block placement needed)
+     * and start jump bridge if so.
+     */
+    private boolean tryStartJumpBridge(Movement current) {
+        if (!(current instanceof MovementTraverse)) return false;
+
+        BlockStateInterface bsi = new BlockStateInterface(ctx);
+        // Check that current movement needs block placement
+        if (current.toPlace(bsi).isEmpty()) return false;
+
+        // Count consecutive bridge movements ahead
+        int bridgeCount = 1;
+        for (int i = pathPosition + 1; i < path.movements().size() && i <= pathPosition + 6; i++) {
+            IMovement m = path.movements().get(i);
+            if (!(m instanceof MovementTraverse)) break;
+            if (m.getDirection().getY() != 0) break;
+            Movement mm = (Movement) m;
+            if (mm.toPlace(bsi).isEmpty()) break; // this one doesn't need placement
+            bridgeCount++;
+        }
+
+        if (bridgeCount < 3) return false;
+
+        // Check we have blocks to place
+        if (!behavior.baritone.getInventoryBehavior().hasGenericThrowaway()) return false;
+
+        // Start jump bridge
+        jumpBridging = true;
+        jumpBridgeTicksAirborne = 0;
+        jumpBridgeNextClickTick = 2 + jumpBridgeRandom.nextInt(3); // first click at tick 2-4
+        jumpBridgePlaceTarget = current.getDest().down();
+
+        // Jump forward
+        behavior.baritone.getInputOverrideHandler().clearAllKeys();
+        behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
+        behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
+        return true;
+    }
+
+    /**
+     * Tick the jump bridge state: airborne rotation + block placement with human-like CPS.
+     */
+    private boolean tickJumpBridge() {
+        jumpBridgeTicksAirborne++;
+        behavior.baritone.getInputOverrideHandler().clearAllKeys();
+
+        if (ctx.player().isOnGround() && jumpBridgeTicksAirborne > 3) {
+            // Landed — end jump bridge, snap path position forward
+            jumpBridging = false;
+            BetterBlockPos whereAmI = ctx.playerFeet();
+            for (int i = Math.min(path.length() - 2, pathPosition + 8); i > pathPosition; i--) {
+                if (((Movement) path.movements().get(i)).getValidPositions().contains(whereAmI)) {
+                    pathPosition = i;
+                    onChangeInPathPosition();
+                    break;
+                }
+            }
+            return false;
+        }
+
+        // Abort if airborne too long (something went wrong)
+        if (jumpBridgeTicksAirborne > 20) {
+            jumpBridging = false;
+            return false;
+        }
+
+        // Keep forward momentum
+        behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
+
+        if (!ctx.player().isOnGround()) {
+            // Airborne: rotate backward to look at the block face behind/below us
+            // Target: the top face of the block we're flying over (place target)
+            Vec3d placePoint = new Vec3d(
+                    jumpBridgePlaceTarget.getX() + 0.5,
+                    jumpBridgePlaceTarget.getY() + 1.0,
+                    jumpBridgePlaceTarget.getZ() + 0.5);
+            Rotation placeLook = RotationUtils.calcRotationFromVec3d(
+                    ctx.playerHead(), placePoint, ctx.playerRotations());
+            behavior.baritone.getLookBehavior().updateTarget(placeLook, true);
+
+            // Human-like click timing: place at randomized intervals
+            if (jumpBridgeTicksAirborne >= jumpBridgeNextClickTick) {
+                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
+                // Advance place target to next block
+                if (pathPosition + 1 < path.movements().size()) {
+                    jumpBridgePlaceTarget = path.movements().get(pathPosition + 1).getDest().down();
+                }
+                // Next click: 2-4 ticks later (human-like irregular CPS)
+                jumpBridgeNextClickTick = jumpBridgeTicksAirborne + 2 + jumpBridgeRandom.nextInt(3);
+            }
+        }
+
+        return false;
+    }
+
     private void clearKeys() {
         // i'm just sick and tired of this snippet being everywhere lol
         behavior.baritone.getInputOverrideHandler().clearAllKeys();
@@ -908,6 +1024,7 @@ public class PathExecutor implements IPathExecutor, Helper {
     private void cancel() {
         clearKeys();
         sprintJumping = false;
+        jumpBridging = false;
         tungstenBridge.reset();
         behavior.baritone.getInputOverrideHandler().getBlockBreakHelper().stopBreakingBlock();
         pathPosition = path.length() + 3;

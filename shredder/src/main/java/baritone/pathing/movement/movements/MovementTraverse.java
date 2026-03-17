@@ -298,6 +298,12 @@ public class MovementTraverse extends Movement {
                             .setInput(Input.MOVE_BACK, true);
                 }
             }
+
+            // ── Slow mode bridging: sneak to edge, look down at stable angle, place calmly ──
+            if (Baritone.settings().slowModeStraightBridging.value) {
+                return updateSlowBridge(state, feet);
+            }
+
             double dist1 = Math.max(Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)), Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
             PlaceResult p = MovementHelper.attemptToPlaceABlock(state, baritone, dest.down(), false, true);
             if ((p == PlaceResult.READY_TO_PLACE || dist1 < 0.6) && !Baritone.settings().assumeSafeWalk.value) {
@@ -329,17 +335,15 @@ public class MovementTraverse extends Movement {
             }
             if (feet.equals(dest)) {
                 // If we are in the block that we are trying to get to, we are sneaking over air and we need to place a block beneath us against the one we just walked off of
-                // Out.log(from + " " + to + " " + faceX + "," + faceY + "," + faceZ + " " + whereAmI);
                 double faceX = (dest.getX() + src.getX() + 1.0D) * 0.5D;
                 double faceY = (dest.getY() + src.getY() - 1.0D) * 0.5D;
                 double faceZ = (dest.getZ() + src.getZ() + 1.0D) * 0.5D;
-                // faceX, faceY, faceZ is the middle of the face between from and to
-                BlockPos goalLook = src.down(); // this is the block we were just standing on, and the one we want to place against
+                BlockPos goalLook = src.down();
 
                 Rotation backToFace = RotationUtils.calcRotationFromVec3d(ctx.playerHead(), new Vec3d(faceX, faceY, faceZ), ctx.playerRotations());
                 float pitch = backToFace.getPitch();
                 double dist2 = Math.max(Math.abs(ctx.player().getPos().x - faceX), Math.abs(ctx.player().getPos().z - faceZ));
-                if (dist2 < 0.29) { // see issue #208
+                if (dist2 < 0.29) {
                     float yaw = RotationUtils.calcRotationFromVec3d(VecUtils.getBlockPosCenter(dest), ctx.playerHead(), ctx.playerRotations()).getYaw();
                     state.setTarget(new MovementState.MovementTarget(new Rotation(yaw, pitch), true));
                     state.setInput(Input.MOVE_BACK, true);
@@ -347,9 +351,8 @@ public class MovementTraverse extends Movement {
                     state.setTarget(new MovementState.MovementTarget(backToFace, true));
                 }
                 if (ctx.isLookingAt(goalLook)) {
-                    return state.setInput(Input.CLICK_RIGHT, true); // wait to right click until we are able to place
+                    return state.setInput(Input.CLICK_RIGHT, true);
                 }
-                // Out.log("Trying to look at " + goalLook + ", actually looking at" + Baritone.whatAreYouLookingAt());
                 if (ctx.playerRotations().isReallyCloseTo(state.getTarget().rotation)) {
                     state.setInput(Input.CLICK_LEFT, true);
                 }
@@ -357,8 +360,65 @@ public class MovementTraverse extends Movement {
             }
             MovementHelper.moveTowards(ctx, state, positionsToBreak[0]);
             return state;
-            // TODO MovementManager.moveTowardsBlock(to); // move towards not look at because if we are bridging for a couple blocks in a row, it is faster if we dont spin around and walk forwards then spin around and place backwards for every block
         }
+    }
+
+    /**
+     * Slow-mode bridging: sneak to edge, look down at a stable angle, place calmly.
+     * No rapid head-jerking — the bot stays crouched and rotates gently.
+     */
+    private MovementState updateSlowBridge(MovementState state, BlockPos feet) {
+        // Always sneak during slow bridge
+        state.setInput(Input.SNEAK, true);
+
+        double distToEdge = Math.max(
+                Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)),
+                Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
+
+        // Try normal placement first (side-place against adjacent blocks)
+        PlaceResult p = MovementHelper.attemptToPlaceABlock(state, baritone, dest.down(), false, true);
+        switch (p) {
+            case READY_TO_PLACE: {
+                state.setInput(Input.CLICK_RIGHT, true);
+                return state;
+            }
+            case ATTEMPTING: {
+                // Still rotating to face — walk forward slowly if far from edge
+                if (distToEdge > 0.83) {
+                    state.setInput(Input.MOVE_FORWARD, true);
+                }
+                return state;
+            }
+            default:
+                break;
+        }
+
+        // No side place found — need to edge-place (backplace from edge)
+        if (feet.equals(dest)) {
+            // Already over the edge — look back at src.down() face and place
+            double faceX = (dest.getX() + src.getX() + 1.0D) * 0.5D;
+            double faceY = (dest.getY() + src.getY() - 1.0D) * 0.5D;
+            double faceZ = (dest.getZ() + src.getZ() + 1.0D) * 0.5D;
+            BlockPos goalLook = src.down();
+
+            Rotation backToFace = RotationUtils.calcRotationFromVec3d(
+                    ctx.playerHead(), new Vec3d(faceX, faceY, faceZ), ctx.playerRotations());
+            state.setTarget(new MovementState.MovementTarget(backToFace, true));
+
+            if (ctx.isLookingAt(goalLook)) {
+                state.setInput(Input.CLICK_RIGHT, true);
+            }
+            return state;
+        }
+
+        // Not at edge yet — sneak forward toward dest
+        // Look down ahead at a stable angle (toward dest block center, ~70° pitch)
+        Vec3d destCenter = VecUtils.getBlockPosCenter(dest);
+        Vec3d lookTarget = new Vec3d(destCenter.x, dest.getY() - 0.5, destCenter.z);
+        Rotation stableLook = RotationUtils.calcRotationFromVec3d(ctx.playerHead(), lookTarget, ctx.playerRotations());
+        state.setTarget(new MovementState.MovementTarget(stableLook, true));
+        state.setInput(Input.MOVE_FORWARD, true);
+        return state;
     }
 
     @Override

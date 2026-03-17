@@ -186,41 +186,44 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         // Edge-aware combat: don't sprint-jump into the void
         boolean nearEdge = isNearDangerousDrop(mod, player);
 
-        if (nearEdge) {
-            // Dangerous terrain — hold position, strafe, don't rush forward
-            if (dist > 0.5 && dist < 5.0) {
-                // Close enough to fight — strafe but don't charge
-                KillAuraHelper.GoJump(mod, true, false);
-                mod.getInputControls().release(Input.MOVE_FORWARD);
-                setDebugState("Edge caution — holding distance");
-            } else if (dist >= 5.0) {
-                // Too far and edge ahead — walk carefully via pathfinding
-                KillAuraHelper.stopCombatMovement(mod);
-                return new GetToEntityTask(player, 3);
-            }
-        } else {
-            // Safe terrain — sprint-jump as usual
-            if (dist > 0.5) {
-                KillAuraHelper.GoJump(mod, dist < 4.4, true);
-            }
-        }
-
+        // PRIORITY 1: If we can hit, attack immediately — edge caution is for MOVEMENT only
         if (canHit) {
-            // Attack when cooldown ready and target not already flashing (hurtTime)
             if (!equipWeapon(mod, preferAxe)) {
                 float hitProg = mod.getPlayer().getAttackCooldownProgress(0);
                 if (hitProg >= 0.99 && player.hurtTime <= 0) {
-                    mod.getControllerExtras().attack(player);
-                    setDebugState("ATTACKING PLAYER");
+                    boolean didHit = mod.getControllerExtras().attack(player);
+                    setDebugState(didHit ? "ATTACKING PLAYER" : "Swinging — crosshair missed");
                 } else {
                     setDebugState("Waiting for cooldown (PvP)");
                 }
             }
-        } else if (nearEdge) {
-            // Near dangerous edge and can't hit — pathfind carefully, never leap blindly
-            KillAuraHelper.stopCombatMovement(mod);
-            setDebugState("Edge: pathfinding closer");
-            return new GetToEntityTask(player, 1);
+            // Movement while attacking: strafe near edge, sprint-jump if safe
+            if (nearEdge) {
+                // Light strafe only, no forward rush, no jumping off edge
+                if (dist > 1.5) {
+                    // Close enough to swing but drifting — shuffle forward carefully
+                    mod.getInputControls().hold(Input.SNEAK);
+                    mod.getInputControls().hold(Input.MOVE_FORWARD);
+                }
+            } else if (dist > 0.5) {
+                KillAuraHelper.GoJump(mod, dist < 4.4, true);
+            }
+            return null;
+        }
+
+        // PRIORITY 2: Can't hit — movement to close the gap
+        if (nearEdge) {
+            if (dist < 5.0) {
+                // Near edge, can't hit but close — pathfind carefully instead of blindly strafing
+                KillAuraHelper.stopCombatMovement(mod);
+                setDebugState("Edge: pathfinding closer (can't hit)");
+                return new GetToEntityTask(player, 0.5);
+            } else {
+                // Too far and edge ahead — walk carefully via pathfinding
+                KillAuraHelper.stopCombatMovement(mod);
+                setDebugState("Edge: pathfinding to target");
+                return new GetToEntityTask(player, 2);
+            }
         } else if (dist < 5.0) {
             // Close but can't hit (target airborne, slight angle off, etc.) — keep rushing
             KillAuraHelper.GoJump(mod, true, true);
@@ -231,6 +234,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             setDebugState("Cannot hit player, getting closer");
             return new GetToEntityTask(player, 1);
         } else {
+            KillAuraHelper.GoJump(mod, false, true);
             setDebugState("Leaping at player!");
         }
         return null;
