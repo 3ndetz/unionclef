@@ -37,6 +37,14 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
     private static final TimerGame _attackStrategyTimer = new TimerGame(15);
     private static boolean _aggressiveAttackStrategy = true;
 
+    // No-damage detection: reposition when attacks aren't connecting
+    private static final int HITS_BEFORE_REPOSITION = 3;
+    private static int _swingCount = 0;
+    private static float _targetHealthAtFirstSwing = -1;
+    private static int _repositionEntityId = -1; // which entity we're repositioning against
+    private static boolean _repositioning = false;
+    private static final TimerGame _repositionCooldown = new TimerGame(8); // don't reposition too often
+
     protected AbstractKillEntityTask() {
         this(CONSIDER_COMBAT_RANGE, OTHER_FORCE_FIELD_RANGE);
     }
@@ -148,6 +156,25 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                     || mod.getPlayer().isTouchingWater())) {
                 LookHelper.lookAt(mod, entity.getEyePos());
                 mod.getControllerExtras().attack(entity);
+
+                // No-damage tracking for mobs too
+                if (entity instanceof net.minecraft.entity.LivingEntity living) {
+                    if (_repositionEntityId != entity.getId()) {
+                        _repositionEntityId = entity.getId();
+                        _swingCount = 0;
+                        _targetHealthAtFirstSwing = living.getHealth();
+                    }
+                    _swingCount++;
+                    if (living.getHealth() < _targetHealthAtFirstSwing) {
+                        _swingCount = 0;
+                        _targetHealthAtFirstSwing = living.getHealth();
+                    } else if (_swingCount >= HITS_BEFORE_REPOSITION && _repositionCooldown.elapsed()) {
+                        // Mob attacks not landing — request reposition via unreachable
+                        _swingCount = 0;
+                        _repositionCooldown.reset();
+                        mod.getEntityTracker().requestEntityUnreachable(entity);
+                    }
+                }
             }
         }
         return null;
@@ -169,6 +196,41 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         boolean directViewing = LookHelper.cleanLineOfSight(player.getBoundingBox().getCenter(), 50.0);
         double dist = player.distanceTo(mod.getPlayer());
         double yDelta = player.getY() - mod.getPlayer().getY();
+
+        // ── No-damage reposition: if we've swung N times and target HP hasn't changed,
+        // walk to a perpendicular position and re-engage ──
+        if (_repositioning && _repositionEntityId == player.getId()) {
+            // Repositioning: run perpendicular to target for ~4 blocks
+            Vec3d toTarget = player.getPos().subtract(mod.getPlayer().getPos()).normalize();
+            // Perpendicular direction (rotate 90°)
+            Vec3d perpendicular = new Vec3d(-toTarget.z, 0, toTarget.x);
+            Vec3d repositionGoal = mod.getPlayer().getPos().add(perpendicular.multiply(4.0));
+            BlockPos repositionBlock = new BlockPos((int) repositionGoal.x, (int) mod.getPlayer().getY(), (int) repositionGoal.z);
+
+            double dx = mod.getPlayer().getPos().x - repositionGoal.x;
+            double dz = mod.getPlayer().getPos().z - repositionGoal.z;
+            double distToRepos = Math.sqrt(dx * dx + dz * dz);
+            if (distToRepos < 2.0 || _repositionCooldown.elapsed()) {
+                // Arrived or timeout — stop repositioning, reset counters
+                _repositioning = false;
+                _swingCount = 0;
+                _targetHealthAtFirstSwing = player.getHealth();
+            } else {
+                KillAuraHelper.stopCombatMovement(mod);
+                setDebugState("Repositioning — " + _swingCount + " hits, no damage");
+                mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(
+                        new baritone.api.pathing.goals.GoalBlock(repositionBlock));
+                return null;
+            }
+        }
+
+        // Track target entity changes — reset counters on new target
+        if (_repositionEntityId != player.getId()) {
+            _repositionEntityId = player.getId();
+            _swingCount = 0;
+            _targetHealthAtFirstSwing = player.getHealth();
+            _repositioning = false;
+        }
 
         // Always smooth-aim at player during PvP
         LookHelper.smoothLook(mod, player);
@@ -193,6 +255,19 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                 float hitProg = mod.getPlayer().getAttackCooldownProgress(0);
                 if (hitProg >= 0.99 && player.hurtTime <= 0) {
                     boolean didHit = mod.getControllerExtras().attack(player);
+                    // Track no-damage swings
+                    _swingCount++;
+                    float currentHP = player.getHealth();
+                    if (currentHP < _targetHealthAtFirstSwing) {
+                        // Damage went through — reset
+                        _swingCount = 0;
+                        _targetHealthAtFirstSwing = currentHP;
+                    } else if (_swingCount >= HITS_BEFORE_REPOSITION && !_repositioning
+                            && _repositionCooldown.elapsed()) {
+                        // N swings, no HP change — trigger reposition
+                        _repositioning = true;
+                        _repositionCooldown.reset();
+                    }
                     setDebugState(didHit ? "ATTACKING PLAYER" : "Swinging — crosshair missed");
                 } else {
                     setDebugState("Waiting for cooldown (PvP)");
