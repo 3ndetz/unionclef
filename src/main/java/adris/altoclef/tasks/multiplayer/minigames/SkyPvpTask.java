@@ -2,6 +2,7 @@ package adris.altoclef.tasks.multiplayer.minigames;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
+import adris.altoclef.butler.ButlerConfig;
 import adris.altoclef.tasks.entity.KillPlayerTask;
 import adris.altoclef.tasks.misc.EquipArmorTask;
 import adris.altoclef.tasks.movement.PickupDroppedItemTask;
@@ -64,6 +65,16 @@ public class SkyPvpTask extends Task {
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
         if (mod.getPlayer() == null || mod.getPlayer().isDead()) return null;
+
+        // ── Lobby detection: compass "Выбор режима" means we're in hub ──────
+        if (isInLobby(mod)) {
+            setDebugState("In lobby, waiting for auto-join...");
+            // Try clicking the compass to open mode selection
+            if (ButlerConfig.getInstance().autoJoin) {
+                ItemHelper.clickCustomItem(mod, "Выбор режима", "выбор режима");
+            }
+            return null;
+        }
 
         // ── Get equipment from SignShop if missing ───────────────────────────
         if (shouldForce(_equipmentTask)) return _equipmentTask;
@@ -164,6 +175,13 @@ public class SkyPvpTask extends Task {
             return new SignShopTask(signPos.get());
         }
         return null;
+    }
+
+    // ── lobby detection ────────────────────────────────────────────────────────
+
+    /** If the player has a compass named "Выбор режима" in inventory, we're in the hub lobby. */
+    private boolean isInLobby(AltoClef mod) {
+        return ItemHelper.getCustomItemSlot(mod, "Выбор режима", "выбор режима") != null;
     }
 
     // ── safe zones ────────────────────────────────────────────────────────────
