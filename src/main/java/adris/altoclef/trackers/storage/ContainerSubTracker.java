@@ -92,9 +92,22 @@ public class ContainerSubTracker extends Tracker {
         // If we haven't registered interacting with a block, try the currently "looking at" block
         if (containerOpen && lastBlockPosInteraction == null && lastBlockInteraction == null) {
             if (MinecraftClient.getInstance().crosshairTarget instanceof BlockHitResult bhit) {
-                Debug.logWarning("Screen open but no block interaction detected, using the block we're currently looking at.");
-                lastBlockPosInteraction = bhit.getBlockPos();
-                lastBlockInteraction = mod.getWorld().getBlockState(lastBlockPosInteraction).getBlock();
+                BlockPos hitPos = bhit.getBlockPos();
+                Block hitBlock = mod.getWorld().getBlockState(hitPos).getBlock();
+                // Only use crosshair fallback for actual container blocks, not signs etc.
+                if (hitBlock instanceof AbstractFurnaceBlock ||
+                        hitBlock instanceof ChestBlock ||
+                        hitBlock.equals(Blocks.ENDER_CHEST) ||
+                        hitBlock instanceof HopperBlock ||
+                        hitBlock instanceof ShulkerBoxBlock ||
+                        hitBlock instanceof DispenserBlock ||
+                        hitBlock instanceof BarrelBlock) {
+                    Debug.logInternal("Screen open but no block interaction detected, using the block we're currently looking at.");
+                    lastBlockPosInteraction = hitPos;
+                    lastBlockInteraction = hitBlock;
+                }
+                // For non-container blocks (signs, etc.) that open server-side GUIs,
+                // silently ignore — don't spam warnings or track mismatched containers
             }
         }
         if (containerOpen && lastBlockPosInteraction != null && lastBlockInteraction != null) {
