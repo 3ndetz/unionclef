@@ -26,10 +26,9 @@ import baritone.api.event.events.*;
 import baritone.api.utils.IPlayerContext;
 import baritone.api.utils.Rotation;
 import baritone.behavior.look.ForkableRandom;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Optional;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.util.math.MathHelper;
 
 public final class LookBehavior extends Behavior implements ILookBehavior {
 
@@ -52,14 +51,9 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
 
     private final AimProcessor processor;
 
-    private final Deque<Float> smoothYawBuffer;
-    private final Deque<Float> smoothPitchBuffer;
-
     public LookBehavior(Baritone baritone) {
         super(baritone);
         this.processor = new AimProcessor(baritone.getPlayerContext());
-        this.smoothYawBuffer = new ArrayDeque<>();
-        this.smoothPitchBuffer = new ArrayDeque<>();
     }
 
     @Override
@@ -100,33 +94,35 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
                 break;
             }
             case POST: {
-                // Reset the player's rotations back to their original values
                 if (this.prevRotation != null) {
-                    this.smoothYawBuffer.addLast(this.target.rotation.getYaw());
-                    while (this.smoothYawBuffer.size() > Baritone.settings().smoothLookTicks.value) {
-                        this.smoothYawBuffer.removeFirst();
-                    }
-                    this.smoothPitchBuffer.addLast(this.target.rotation.getPitch());
-                    while (this.smoothPitchBuffer.size() > Baritone.settings().smoothLookTicks.value) {
-                        this.smoothPitchBuffer.removeFirst();
-                    }
                     if (this.target.mode == Target.Mode.SERVER) {
                         ctx.player().setYaw(this.prevRotation.getYaw());
                         ctx.player().setPitch(this.prevRotation.getPitch());
                     } else if (ctx.player().isFallFlying() ? Baritone.settings().elytraSmoothLook.value : Baritone.settings().smoothLook.value) {
-                        float smoothedYaw = (float) this.smoothYawBuffer.stream().mapToDouble(d -> d).average().orElse(this.prevRotation.getYaw());
-                        float smoothedPitch = (float) this.smoothPitchBuffer.stream().mapToDouble(d -> d).average().orElse(this.prevRotation.getPitch());
-                        // set prevYaw/prevPitch so Minecraft's render-frame lerp interpolates smoothly
-                        ctx.player().prevYaw = ctx.player().getYaw();
-                        ctx.player().prevPitch = ctx.player().getPitch();
-                        ctx.player().setYaw(smoothedYaw);
+                        // Exponential interpolation: move a fraction toward target each tick.
+                        // MC's render-frame lerp(tickDelta, prevYaw, yaw) then smoothly
+                        // interpolates between ticks at display framerate.
+                        float speed = 2.0f / Math.max(Baritone.settings().smoothLookTicks.value, 1);
+                        speed = Math.min(speed, 1.0f);
+
+                        float currentYaw = this.prevRotation.getYaw();
+                        float targetYaw = this.target.rotation.getYaw();
+                        float deltaYaw = MathHelper.wrapDegrees(targetYaw - currentYaw);
+                        float newYaw = currentYaw + deltaYaw * speed;
+
+                        ctx.player().prevYaw = currentYaw;
+                        ctx.player().setYaw(newYaw);
+
                         if (ctx.player().isFallFlying()) {
-                            ctx.player().setPitch(smoothedPitch);
+                            float currentPitch = this.prevRotation.getPitch();
+                            float targetPitch = this.target.rotation.getPitch();
+                            float newPitch = currentPitch + (targetPitch - currentPitch) * speed;
+                            ctx.player().prevPitch = currentPitch;
+                            ctx.player().setPitch(newPitch);
                         }
                     }
                     this.prevRotation = null;
                 }
-                // The target is done being used for this game tick, so it can be invalidated
                 this.target = null;
                 break;
             }
