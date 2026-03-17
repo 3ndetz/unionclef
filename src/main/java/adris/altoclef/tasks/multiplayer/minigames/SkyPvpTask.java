@@ -52,8 +52,9 @@ public class SkyPvpTask extends Task {
     private Task _equipmentTask;
     private String _lastTargetName;
 
-    /** Lobby compass click state: 0=equip, 1=look up, 2=click */
+    /** Lobby compass click state: 0=equip, 1=look up, 2=click, 3=wait for GUI */
     private int _lobbyClickState = 0;
+    private int _lobbyWaitTicks = 0;
 
     @Override
     protected void onStart() {
@@ -89,13 +90,29 @@ public class SkyPvpTask extends Task {
                     return null;
                 case 1:
                     setDebugState("Lobby: looking up...");
-                    mod.getPlayer().setPitch(-90f); // look straight up to avoid clicking NPCs/signs
+                    mod.getPlayer().setPitch(-90f);
                     _lobbyClickState = 2;
                     return null;
-                default:
+                case 2:
                     setDebugState("Lobby: clicking compass...");
                     mod.getInputControls().tryPress(Input.CLICK_RIGHT);
-                    _lobbyClickState = 0;
+                    _lobbyClickState = 3;
+                    _lobbyWaitTicks = 0;
+                    return null;
+                default:
+                    // Wait up to 40 ticks (2s) for the chest GUI to open
+                    _lobbyWaitTicks++;
+                    setDebugState("Lobby: waiting for menu... (" + _lobbyWaitTicks + ")");
+                    if (mod.getPlayer().currentScreenHandler != null
+                            && !(mod.getPlayer().currentScreenHandler instanceof net.minecraft.screen.PlayerScreenHandler)) {
+                        // GUI opened — GameMenuTaskChain will handle clicking "SkyPvP"
+                        _lobbyClickState = 0;
+                        _lobbyWaitTicks = 0;
+                    } else if (_lobbyWaitTicks > 40) {
+                        // Timeout — retry the whole sequence
+                        _lobbyClickState = 0;
+                        _lobbyWaitTicks = 0;
+                    }
                     return null;
             }
         } else {
