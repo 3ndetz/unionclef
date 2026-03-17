@@ -3,18 +3,24 @@ package adris.altoclef.tasks.multiplayer;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasksystem.Task;
+import adris.altoclef.util.baritone.GoalAnd;
+import adris.altoclef.util.baritone.GoalBlockSide;
 import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.ChestSlot;
+import baritone.api.pathing.goals.Goal;
 import baritone.api.pathing.goals.GoalNear;
 import baritone.api.process.ICustomGoalProcess;
 import baritone.api.utils.input.Input;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
 import net.minecraft.block.entity.SignText;
+import net.minecraft.block.BlockState;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 
 import java.util.Optional;
@@ -79,27 +85,29 @@ public class SignShopTask extends Task {
                     setDebugState("Waiting before retry: " + retryDelay);
                     return null;
                 }
-                // Walk close enough to reach the sign
-                if (!LookHelper.getReach(signPos).isPresent()) {
+                Direction facing = getSignFacing(mod);
+                // Approach from the front face of the sign so the click registers correctly.
+                // We do NOT use InteractWithBlockTask — its rightClick() calls closeScreen() on
+                // any open non-player-inventory screen, which closes the chest the sign just opened.
+                if (!LookHelper.getReach(signPos, facing).isPresent()) {
                     ICustomGoalProcess proc = mod.getClientBaritone().getCustomGoalProcess();
                     if (!proc.isActive()) {
-                        proc.setGoalAndPath(new GoalNear(signPos, 2));
+                        Goal approachGoal = (facing != null)
+                                ? new GoalAnd(new GoalBlockSide(signPos, facing, 1), new GoalNear(signPos, 2))
+                                : new GoalNear(signPos, 2);
+                        proc.setGoalAndPath(approachGoal);
                     }
-                    setDebugState("Walking to sign");
+                    setDebugState("Walking to sign front");
                     return null;
                 }
-                // Stop pathing — we're in reach
+                // In reach — stop pathing, look at the sign face
                 mod.getClientBaritone().getCustomGoalProcess().onLostControl();
-                // Look at the sign first
                 if (!LookHelper.isLookingAt(mod, signPos)) {
-                    LookHelper.lookAt(mod, signPos);
+                    if (facing != null) LookHelper.lookAt(mod, signPos, facing);
+                    else LookHelper.lookAt(mod, signPos);
                     setDebugState("Looking at sign");
                     return null;
                 }
-                // Click the sign and immediately wait for the chest.
-                // We do NOT use InteractWithBlockTask here because its rightClick() logic
-                // calls closeScreen() on any open non-inventory screen, which would
-                // close the chest the sign just opened.
                 setDebugState("Clicking sign");
                 mod.getSlotHandler().forceDeequipRightClickableItem();
                 mod.getInputControls().tryPress(Input.CLICK_RIGHT);
@@ -171,6 +179,29 @@ public class SignShopTask extends Task {
     @Override
     protected String toDebugString() {
         return "SignShop at " + signPos.toShortString();
+    }
+
+    /**
+     * Returns the direction the sign's face is pointing.
+     * Wall signs use HORIZONTAL_FACING; floor signs convert ROTATION (0-15) to a cardinal direction.
+     * Returns null if the block has neither property (e.g. unknown sign type).
+     */
+    private Direction getSignFacing(AltoClef mod) {
+        BlockState state = mod.getWorld().getBlockState(signPos);
+        if (state.contains(Properties.HORIZONTAL_FACING)) {
+            return state.get(Properties.HORIZONTAL_FACING);
+        }
+        if (state.contains(Properties.ROTATION)) {
+            int rot = state.get(Properties.ROTATION);
+            // 0=south, 4=west, 8=north, 12=east (each unit = 22.5°); round to nearest quarter
+            return switch (((rot + 2) / 4) % 4) {
+                case 1 -> Direction.WEST;
+                case 2 -> Direction.NORTH;
+                case 3 -> Direction.EAST;
+                default -> Direction.SOUTH;
+            };
+        }
+        return null;
     }
 
     // ── static helpers for reading sign text ────────────────────────────────
