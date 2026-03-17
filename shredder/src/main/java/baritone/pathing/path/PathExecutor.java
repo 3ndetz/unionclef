@@ -275,6 +275,7 @@ public class PathExecutor implements IPathExecutor, Helper {
             if (!sprintNextTick) {
                 ctx.player().setSprinting(false); // letting go of control doesn't make you stop sprinting actually
             }
+            overrideLookAheadIfSafe();
             ticksOnCurrent++;
             if (ticksOnCurrent > currentMovementOriginalCostEstimate + Baritone.settings().movementTimeoutTicks.value) {
                 // only cancel if the total time has exceeded the initial estimate
@@ -614,6 +615,66 @@ public class PathExecutor implements IPathExecutor, Helper {
             return true;
         }
         return next instanceof MovementDiagonal && Baritone.settings().allowOvershootDiagonalDescend.value;
+    }
+
+    /**
+     * On perfectly clear paths, override look target to a far point.
+     * Uses world raycast to verify actual line of sight — if anything
+     * blocks the view between eyes and target, bail out entirely.
+     */
+    private void overrideLookAheadIfSafe() {
+        IMovement current = path.movements().get(pathPosition);
+        if (!(current instanceof MovementTraverse) && !(current instanceof MovementDiagonal)) {
+            return;
+        }
+        if (current.getDirection().getY() != 0) {
+            return;
+        }
+        BlockStateInterface bsi = new BlockStateInterface(ctx);
+        Movement currentM = (Movement) current;
+        if (!currentM.toBreak(bsi).isEmpty() || !currentM.toPlace(bsi).isEmpty()) {
+            return;
+        }
+        // scan ahead — every movement must be flat, simple, same Y, no breaking/placing
+        int baseY = current.getSrc().getY();
+        int safeCount = 0;
+        BlockPos bestTarget = null;
+        for (int i = pathPosition + 1; i < path.movements().size() && i <= pathPosition + 12; i++) {
+            IMovement m = path.movements().get(i);
+            if (!(m instanceof MovementTraverse) && !(m instanceof MovementDiagonal)) {
+                break;
+            }
+            if (m.getDest().getY() != baseY) {
+                break;
+            }
+            Movement mm = (Movement) m;
+            if (!mm.toBreak(bsi).isEmpty() || !mm.toPlace(bsi).isEmpty()) {
+                break;
+            }
+            safeCount++;
+            bestTarget = m.getDest();
+        }
+        if (safeCount < 4 || bestTarget == null) {
+            return;
+        }
+        // world raycast: verify clear line of sight from eyes to target center
+        Vec3d eyes = ctx.player().getCameraPosVec(1.0f);
+        Vec3d targetCenter = VecUtils.getBlockPosCenter(bestTarget);
+        net.minecraft.util.hit.HitResult hit = ctx.world().raycast(
+                new net.minecraft.world.RaycastContext(
+                        eyes, targetCenter,
+                        net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
+                        net.minecraft.world.RaycastContext.FluidHandling.NONE,
+                        ctx.player()));
+        if (hit.getType() != net.minecraft.util.hit.HitResult.Type.MISS) {
+            // something blocks the view — don't override
+            return;
+        }
+        behavior.baritone.getLookBehavior().updateTarget(
+                RotationUtils.calcRotationFromVec3d(ctx.playerHead(),
+                        targetCenter,
+                        ctx.playerRotations()).withPitch(ctx.playerRotations().getPitch()),
+                false);
     }
 
     /**
