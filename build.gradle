@@ -179,7 +179,7 @@ if (project.name == "1.21.1") {
         body = ""
         draft = false
         prerelease = false
-        overwrite = false
+        overwrite = true
         dryRun = false
     }
 }
