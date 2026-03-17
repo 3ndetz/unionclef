@@ -105,10 +105,12 @@ dependencies {
 
     // Shredder — new pathfinder (replaces baritone, same package names)
     implementation project(path: ":shredder", configuration: "namedElements")
+    include project(":shredder")
 
     // Tungsten — source subproject (1.21+ only)
     if (mcVersion >= 12100) {
         implementation project(path: ":tungsten", configuration: "namedElements")
+        include project(":tungsten")
     }
 }
 
