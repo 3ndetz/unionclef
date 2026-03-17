@@ -5,16 +5,19 @@ import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.KillAuraHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
+import adris.altoclef.util.helpers.WorldHelper;
+import baritone.api.utils.input.Input;
 import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.time.TimerGame;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.SwordItem;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import adris.altoclef.tasks.movement.GetToEntityTask;
 
 import java.util.List;
@@ -180,9 +183,26 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             }
         }
 
-        // Always sprint-jump toward target during PvP (tick-based, no delays)
-        if (dist > 0.5) {
-            KillAuraHelper.GoJump(mod, dist < 4.4, true);
+        // Edge-aware combat: don't sprint-jump into the void
+        boolean nearEdge = isNearDangerousDrop(mod, player);
+
+        if (nearEdge) {
+            // Dangerous terrain — hold position, strafe, don't rush forward
+            if (dist > 0.5 && dist < 5.0) {
+                // Close enough to fight — strafe but don't charge
+                KillAuraHelper.GoJump(mod, true, false);
+                mod.getInputControls().release(Input.MOVE_FORWARD);
+                setDebugState("Edge caution — holding distance");
+            } else if (dist >= 5.0) {
+                // Too far and edge ahead — walk carefully via pathfinding
+                KillAuraHelper.stopCombatMovement(mod);
+                return new GetToEntityTask(player, 3);
+            }
+        } else {
+            // Safe terrain — sprint-jump as usual
+            if (dist > 0.5) {
+                KillAuraHelper.GoJump(mod, dist < 4.4, true);
+            }
         }
 
         if (canHit) {
@@ -200,10 +220,45 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             // Can't see target — fall back to pathfinding
             KillAuraHelper.stopCombatMovement(mod);
             setDebugState("Cannot hit player, getting closer");
-            return new GetToEntityTask(player);
+            return new GetToEntityTask(player, nearEdge ? 3 : 1);
         } else {
             setDebugState("Leaping at player!");
         }
         return null;
+    }
+
+    // ── Edge / void detection ────────────────────────────────────────────────
+
+    private static final int DANGEROUS_DROP = 5;
+
+    /**
+     * Returns true if the bot or the path toward the target has a dangerous drop (>5 blocks).
+     * Checks: blocks under the bot (2-block forward strip toward target) and under the target.
+     */
+    private boolean isNearDangerousDrop(AltoClef mod, Entity target) {
+        BlockPos botFeet = mod.getPlayer().getBlockPos();
+
+        // Check under the bot itself
+        if (getDropBelow(botFeet) > DANGEROUS_DROP) return true;
+
+        // Check under the target
+        BlockPos targetFeet = target.getBlockPos();
+        if (getDropBelow(targetFeet) > DANGEROUS_DROP) return true;
+
+        // Check 1-2 blocks ahead toward the target
+        Vec3d dir = target.getPos().subtract(mod.getPlayer().getPos()).normalize();
+        for (int i = 1; i <= 2; i++) {
+            BlockPos ahead = botFeet.add((int) Math.round(dir.x * i), 0, (int) Math.round(dir.z * i));
+            if (getDropBelow(ahead) > DANGEROUS_DROP) return true;
+        }
+        return false;
+    }
+
+    /** How many air blocks are below this position before hitting solid ground. */
+    private int getDropBelow(BlockPos pos) {
+        for (int dy = 1; dy <= DANGEROUS_DROP + 1; dy++) {
+            if (WorldHelper.isSolidBlock(pos.down(dy))) return dy - 1;
+        }
+        return DANGEROUS_DROP + 1;
     }
 }
