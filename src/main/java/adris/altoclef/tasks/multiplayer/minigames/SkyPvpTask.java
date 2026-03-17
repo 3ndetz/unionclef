@@ -35,6 +35,10 @@ public class SkyPvpTask extends Task {
     private static final Vec3d SPAWN = new Vec3d(827.5, 45, -791.5);
     private static final double SPAWN_SAFE_RADIUS = 18.0;
 
+    /** Second no-PvP zone (shop area). XZ-only check, full Y column. */
+    private static final Vec3d SAFE_ZONE_2 = new Vec3d(854, 44, -807);
+    private static final double SAFE_ZONE_2_RADIUS = 18.0;
+
     /** SignShop item IDs for free equipment. */
     private static final String SIGN_ITEM_SWORD = "268";
     private static final String SIGN_ITEM_APPLE = "260";
@@ -159,6 +163,19 @@ public class SkyPvpTask extends Task {
         return null;
     }
 
+    // ── safe zones ────────────────────────────────────────────────────────────
+
+    private static boolean isInSafeZone(Vec3d pos) {
+        return distXZ(pos, SPAWN) < SPAWN_SAFE_RADIUS
+                || distXZ(pos, SAFE_ZONE_2) < SAFE_ZONE_2_RADIUS;
+    }
+
+    private static double distXZ(Vec3d a, Vec3d center) {
+        double dx = a.x - center.x;
+        double dz = a.z - center.z;
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
     // ── target selection ─────────────────────────────────────────────────────
 
     private Optional<Entity> findTarget(AltoClef mod) {
@@ -171,10 +188,8 @@ public class SkyPvpTask extends Task {
 
             Vec3d enemyPos = player.getPos();
 
-            // Don't target players inside spawn zone (XZ circle only)
-            double dx = enemyPos.x - SPAWN.x;
-            double dz = enemyPos.z - SPAWN.z;
-            if (Math.sqrt(dx * dx + dz * dz) < SPAWN_SAFE_RADIUS) continue;
+            // Don't target players inside safe zones (XZ circle only)
+            if (isInSafeZone(enemyPos)) continue;
 
             double dist = mod.getPlayer().getPos().distanceTo(enemyPos);
             if (dist < bestDist) {
