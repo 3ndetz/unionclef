@@ -54,6 +54,9 @@ public class SkyPvpTask extends Task {
         AltoClef mod = AltoClef.getInstance();
         mod.getBehaviour().push();
         mod.getBehaviour().setForceFieldPlayers(true);
+        // Exclude players in safe zones from attack/forcefield
+        mod.getBehaviour().addAttackExclusion(entity -> isInSafeZone(entity.getPos()));
+        mod.getBehaviour().addForceFieldExclusion(entity -> isInSafeZone(entity.getPos()));
         Debug.logMessage("[SkyPvP] Started.");
     }
 

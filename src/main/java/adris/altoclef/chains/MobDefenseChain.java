@@ -688,6 +688,7 @@ public class MobDefenseChain extends SingleTaskChain {
             return mod.getEntityTracker().getClosestEntity(mod.getPlayer().getPos(),
                     entity -> {
                         if (entity == null) return false;
+                        if (mod.getBehaviour().shouldExcludeFromAttack(entity)) return false;
                         if (mod.getPlayer() != null
                                 && entity.distanceTo(mod.getPlayer()) > SAFE_KEEP_DISTANCE) return false;
                         if (targetEntity != null && entity == targetEntity) return false;
@@ -708,6 +709,7 @@ public class MobDefenseChain extends SingleTaskChain {
             return mod.getEntityTracker().getClosestEntity(mod.getPlayer().getPos(),
                     entity -> entity != null
                             && entity.getName() != null
+                            && !mod.getBehaviour().shouldExcludeFromAttack(entity)
                             && entity.distanceTo(mod.getPlayer()) < DANGER_KEEP_DISTANCE
                             && mod.getEntityTracker().isEntityReachable(entity)
                             && mod.getEntityTracker().isPlayerLoaded(entity.getName().getString())

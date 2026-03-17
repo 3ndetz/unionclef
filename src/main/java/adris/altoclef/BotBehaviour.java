@@ -211,6 +211,25 @@ public class BotBehaviour {
         // current.applyState()
     }
 
+    /**
+     * Adds a predicate that prevents attacking/targeting an entity.
+     * If any predicate returns true for an entity, it will NOT be attacked
+     * by MobDefenseChain or force field. Useful for no-PvP zones.
+     */
+    public void addAttackExclusion(Predicate<Entity> pred) {
+        current().attackExclusions.add(pred);
+    }
+
+    /**
+     * Returns true if the entity should NOT be attacked (is in a no-PvP zone, etc.)
+     */
+    public boolean shouldExcludeFromAttack(Entity entity) {
+        for (Predicate<Entity> pred : current().attackExclusions) {
+            if (pred.test(entity)) return true;
+        }
+        return false;
+    }
+
     // --- Camera modifiers (EpicCamera integration) ---
     public void setCameraRotationModifer(Rotation rotation) { AltoClef._cameraRotationModifer = rotation; }
     public void setCameraRotationModifer(float pitch) {
@@ -325,6 +344,7 @@ public class BotBehaviour {
         public boolean forceFieldPlayers;
         public List<Predicate<Entity>> avoidDodgingProjectile = new ArrayList<>();
         public List<Predicate<Entity>> excludeFromForceField = new ArrayList<>();
+        public List<Predicate<Entity>> attackExclusions = new ArrayList<>();
         public List<Pair<Slot, Predicate<ItemStack>>> conversionSlots = new ArrayList<>();
 
         // Extra Baritone Settings
@@ -363,6 +383,7 @@ public class BotBehaviour {
                 exclusivelyMineLogs = toCopy.exclusivelyMineLogs;
                 avoidDodgingProjectile.addAll(toCopy.avoidDodgingProjectile);
                 excludeFromForceField.addAll(toCopy.excludeFromForceField);
+                attackExclusions.addAll(toCopy.attackExclusions);
                 conversionSlots.addAll(toCopy.conversionSlots);
                 forceFieldPlayers = toCopy.forceFieldPlayers;
                 escapeLava = toCopy.escapeLava;
