@@ -159,7 +159,7 @@ publishing {
 
 // ── GitHub Release (primary version only) ───────────────────────────────────
 
-if (project.name == "1.21") {
+if (project.name == "1.21.1") {
     apply plugin: 'com.github.breadmoirai.github-release'
 
     if (!project.hasProperty('github.token')) {
