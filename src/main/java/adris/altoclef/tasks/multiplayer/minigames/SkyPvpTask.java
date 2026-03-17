@@ -2,7 +2,6 @@ package adris.altoclef.tasks.multiplayer.minigames;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
-import adris.altoclef.butler.ButlerConfig;
 import adris.altoclef.tasks.entity.KillPlayerTask;
 import adris.altoclef.tasks.misc.EquipArmorTask;
 import adris.altoclef.tasks.movement.PickupDroppedItemTask;
@@ -11,8 +10,6 @@ import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.StorageHelper;
-import adris.altoclef.util.slots.Slot;
-import baritone.api.utils.input.Input;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -52,10 +49,6 @@ public class SkyPvpTask extends Task {
     private Task _equipmentTask;
     private String _lastTargetName;
 
-    /** Lobby compass click state: 0=equip, 1=look up, 2=click, 3=wait for GUI */
-    private int _lobbyClickState = 0;
-    private int _lobbyWaitTicks = 0;
-
     @Override
     protected void onStart() {
         AltoClef mod = AltoClef.getInstance();
@@ -73,50 +66,11 @@ public class SkyPvpTask extends Task {
         if (mod.getPlayer() == null || mod.getPlayer().isDead()) return null;
 
         // ── Lobby detection: compass "Выбор режима" means we're in hub ──────
+        // GameMenuTaskChain handles the actual compass click + menu navigation.
+        // SkyPvpTask just idles here so it doesn't attack lobby NPCs.
         if (isInLobby(mod)) {
-            if (!ButlerConfig.getInstance().autoJoin) {
-                setDebugState("In lobby (autoJoin disabled)");
-                return null;
-            }
-            // Multi-tick compass click: equip → look up → right click
-            // This avoids clicking on NPCs/signs in the lobby
-            Slot compassSlot = ItemHelper.getCustomItemSlot(mod, "Выбор режима", "выбор режима");
-            if (compassSlot == null) return null;
-            switch (_lobbyClickState) {
-                case 0:
-                    setDebugState("Lobby: equipping compass...");
-                    mod.getSlotHandler().forceEquipSlot(compassSlot);
-                    _lobbyClickState = 1;
-                    return null;
-                case 1:
-                    setDebugState("Lobby: looking up...");
-                    mod.getPlayer().setPitch(-90f);
-                    _lobbyClickState = 2;
-                    return null;
-                case 2:
-                    setDebugState("Lobby: clicking compass...");
-                    mod.getInputControls().tryPress(Input.CLICK_RIGHT);
-                    _lobbyClickState = 3;
-                    _lobbyWaitTicks = 0;
-                    return null;
-                default:
-                    // Wait up to 40 ticks (2s) for the chest GUI to open
-                    _lobbyWaitTicks++;
-                    setDebugState("Lobby: waiting for menu... (" + _lobbyWaitTicks + ")");
-                    if (mod.getPlayer().currentScreenHandler != null
-                            && !(mod.getPlayer().currentScreenHandler instanceof net.minecraft.screen.PlayerScreenHandler)) {
-                        // GUI opened — GameMenuTaskChain will handle clicking "SkyPvP"
-                        _lobbyClickState = 0;
-                        _lobbyWaitTicks = 0;
-                    } else if (_lobbyWaitTicks > 40) {
-                        // Timeout — retry the whole sequence
-                        _lobbyClickState = 0;
-                        _lobbyWaitTicks = 0;
-                    }
-                    return null;
-            }
-        } else {
-            _lobbyClickState = 0;
+            setDebugState("In lobby, waiting for auto-join...");
+            return null;
         }
 
         // ── Get equipment from SignShop if missing ───────────────────────────
