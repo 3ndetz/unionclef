@@ -623,6 +623,9 @@ public class PathExecutor implements IPathExecutor, Helper {
      * blocks the view between eyes and target, bail out entirely.
      */
     private void overrideLookAheadIfSafe() {
+        if (!Baritone.settings().pathLookAhead.value) {
+            return;
+        }
         IMovement current = path.movements().get(pathPosition);
         if (!(current instanceof MovementTraverse) && !(current instanceof MovementDiagonal)) {
             return;

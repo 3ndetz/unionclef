@@ -369,6 +369,12 @@ public final class Settings {
     public final Setting<Integer> sprintJumpLookahead = new Setting<>(3);
 
     /**
+     * On clear flat paths, look at a far point ahead instead of the next block.
+     * Reduces camera jitter but experimental — can cause issues on uneven terrain.
+     */
+    public final Setting<Boolean> pathLookAhead = new Setting<>(false);
+
+    /**
      * If we overshoot a traverse and end up one block beyond the destination, mark it as successful anyway.
      * <p>
      * This helps with speed exceeding 20m/s
