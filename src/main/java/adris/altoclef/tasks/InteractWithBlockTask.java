@@ -23,6 +23,7 @@ import baritone.api.process.ICustomGoalProcess;
 import baritone.api.utils.Rotation;
 import baritone.api.utils.input.Input;
 import net.minecraft.block.*;
+import net.minecraft.client.MinecraftClient;
 import adris.altoclef.multiversion.versionedfields.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -68,6 +69,7 @@ public class InteractWithBlockTask extends Task {
     private Task unstuckTask = null;
     private ClickResponse cachedClickStatus = ClickResponse.CANT_REACH;
     private int waitingForClickTicks = 0;
+    private int entityBlockingTicks = 0;
 
     public InteractWithBlockTask(ItemTarget toUse, Direction direction, BlockPos target, Input interactInput, boolean walkInto, Vec3i interactOffset, boolean shiftClick) {
         this.toUse = toUse;
@@ -416,6 +418,19 @@ public class InteractWithBlockTask extends Task {
 
         Optional<Rotation> reachable = getCurrentReach();
         if (reachable.isPresent()) {
+            // Check if an entity (hologram, armor stand, etc.) is blocking our click
+            if (MinecraftClient.getInstance().targetedEntity != null) {
+                // Entity in the way — need to get closer or find another angle
+                entityBlockingTicks++;
+                if (entityBlockingTicks > 20) {
+                    // Stuck for >1 second with entity blocking — try approaching from closer
+                    entityBlockingTicks = 0;
+                    return ClickResponse.CANT_REACH;
+                }
+                return ClickResponse.WAIT_FOR_CLICK;
+            }
+            entityBlockingTicks = 0;
+
             if (LookHelper.isLookingAt(mod, target)) {
                 if (toUse != null) {
                     mod.getSlotHandler().forceEquipItem(toUse, false);
@@ -429,7 +444,6 @@ public class InteractWithBlockTask extends Task {
                     }
                     return ClickResponse.CLICK_ATTEMPTED;
                 }
-                //mod.getClientBaritone().getInputOverrideHandler().setInputForceState(_interactInput, true);
             } else {
                 LookHelper.lookAt(reachable.get());
             }
