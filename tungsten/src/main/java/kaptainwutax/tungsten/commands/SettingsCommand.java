@@ -52,6 +52,19 @@ public class SettingsCommand extends Command {
 				return SINGLE_SUCCESS;
 			})));
 
+		// ;settings debugTime [true/false]
+		builder.then(literal("debugTime")
+			.executes(context -> {
+				Debug.logMessage("debugTime = " + TungstenConfig.get().debugTime);
+				return SINGLE_SUCCESS;
+			})
+			.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
+				TungstenConfig.get().debugTime = BoolArgumentType.getBool(context, "enabled");
+				TungstenConfig.save();
+				Debug.logMessage("debugTime = " + TungstenConfig.get().debugTime);
+				return SINGLE_SUCCESS;
+			})));
+
 		// ;settings verboseDebug [true/false]
 		builder.then(literal("verboseDebug")
 			.executes(context -> {
