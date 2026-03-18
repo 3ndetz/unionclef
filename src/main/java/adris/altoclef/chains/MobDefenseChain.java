@@ -7,6 +7,7 @@ import adris.altoclef.multiversion.versionedfields.Entities;
 import adris.altoclef.multiversion.item.ItemVer;
 import adris.altoclef.tasks.construction.ProjectileProtectionWallTask;
 import adris.altoclef.tasksystem.Task;
+import adris.altoclef.tasks.entity.AbstractKillEntityTask;
 import adris.altoclef.tasks.entity.CombatTask;
 import adris.altoclef.tasks.entity.KillEntitiesTask;
 import adris.altoclef.tasks.movement.CustomBaritoneGoalTask;
@@ -191,6 +192,14 @@ public class MobDefenseChain extends SingleTaskChain {
             needsChangeOnAttack = false;
         }
 
+        // Tick immunity wakeups: clear immunity if HP dropped / entity got hurt
+        AbstractKillEntityTask.tickImmunityWakeups(mod.getEntityTracker().getCloseEntities());
+        // If something immune attacks us, clear its immunity immediately
+        Entity attacker = mod.getPlayer().getAttacker();
+        if (attacker != null && AbstractKillEntityTask.hasImmunity(attacker)) {
+            AbstractKillEntityTask.clearImmunity(attacker);
+        }
+
         // Put out fire if we're standing on one like an idiot
         BlockPos fireBlock = isInsideFireAndOnFire(mod);
         if (fireBlock != null) {
@@ -340,6 +349,9 @@ public class MobDefenseChain extends SingleTaskChain {
 
                     // Give each hostile a timer, if they're close for too long deal with them.
                     if (hostile.isInRange(mod.getPlayer(), annoyingRange) && LookHelper.seesPlayer(hostile, mod.getPlayer(), annoyingRange)) {
+
+                        // Skip entities with combat immunity (20 hits, no damage → 5 min ignore)
+                        if (AbstractKillEntityTask.hasImmunity(hostile)) continue;
 
                         boolean isIgnored = false;
                         for (Class<? extends Entity> ignored : ignoredMobs) {
@@ -511,6 +523,7 @@ public class MobDefenseChain extends SingleTaskChain {
             for (Entity entity : entities) {
                 boolean shouldForce = false;
                 if (mod.getBehaviour().shouldExcludeFromForcefield(entity)) continue;
+                if (AbstractKillEntityTask.hasImmunity(entity)) continue;
                 if (entity instanceof MobEntity) {
                     if (EntityHelper.isProbablyHostileToPlayer(mod, entity)) {
                         if (LookHelper.seesPlayer(entity, mod.getPlayer(), 10)) {
