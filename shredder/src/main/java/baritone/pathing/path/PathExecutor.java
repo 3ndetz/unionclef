@@ -934,19 +934,9 @@ public class PathExecutor implements IPathExecutor, Helper {
         // Pick starting phase based on mode
         String mode = Baritone.settings().bridgingMode.value;
         if ("jump".equals(mode)) {
-            // Require sprint runway: 3 solid blocks behind in -dir.
-            // If no runway, return false → slow/standard bridging places first blocks,
-            // then jump bridge activates next tick when runway exists.
-            BlockPos feet = current.getSrc();
-            boolean hasRunway = true;
-            for (int step = 1; step <= 3; step++) {
-                BlockPos back = feet.add(-dir.getX() * step, -1, -dir.getZ() * step);
-                if (!MovementHelper.canWalkOn(bsi, back.getX(), back.getY(), back.getZ())) {
-                    hasRunway = false;
-                    break;
-                }
-            }
-            if (!hasRunway) return false;
+            // No runway check — jump from wherever we are. Walking-jump (2.5 blocks)
+            // is enough to place 2 blocks. If player was already sprinting from normal
+            // pathing, sprint momentum carries over → sprint-jump (4.5 blocks).
             jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
         } else {
             jumpBridgePhase = JumpBridgePhase.BJ_SPRINT;
@@ -1149,15 +1139,11 @@ public class PathExecutor implements IPathExecutor, Helper {
                         Math.abs(ctx.player().getPos().x - (firstDest.getX() + 0.5)),
                         Math.abs(ctx.player().getPos().z - (firstDest.getZ() + 0.5)));
 
-                // Jump early — at sprint speed (0.28 blocks/tick) the player crosses
-                // the edge in just a few ticks. Jump from 1.8 blocks out for safety.
-                if (distToDest < 1.8 && ctx.player().isSprinting()) {
+                // Jump when near edge — no sprint requirement. Walking-jump (2.5 blocks)
+                // is enough to place 2 blocks. Sprint momentum from normal pathing
+                // carries over automatically if available.
+                if (distToDest < 1.2) {
                     behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
-                }
-                // If near edge but NOT sprinting, abort — let normal bridging handle it
-                if (distToDest < 0.8 && !ctx.player().isSprinting()) {
-                    exitJumpBridge();
-                    return false;
                 }
 
                 // Transition to airborne once off ground
