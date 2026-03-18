@@ -979,29 +979,27 @@ public class PathExecutor implements IPathExecutor, Helper {
     /** Shared: airborne block placement with verification. Returns true if placed this tick. */
     private boolean jumpBridgeAirbornePlace(BlockStateInterface bsi, double pastFace,
                                              Vec3d head, Vec3d faceCenterPoint, float backwardYaw) {
-        // ── Rotation: ALWAYS track the face from the moment we're airborne ──
-        // Aim at the NEAREST point on the face (top edge, clamped X/Z) for
-        // minimal rotation change. The camera smoothly transitions from
-        // forward-looking (approaching face) to backward-looking (past face).
-        double nearY = Math.min(head.y - 0.5, jumpBridgeLastSolid.getY() + 0.99);
-        double nearX = Math.max(jumpBridgeLastSolid.getX(),
-                       Math.min(head.x, jumpBridgeLastSolid.getX() + 1.0));
-        double nearZ = Math.max(jumpBridgeLastSolid.getZ(),
-                       Math.min(head.z, jumpBridgeLastSolid.getZ() + 1.0));
-        // Face position: shift by dir to get the +dir face surface
-        Vec3d nearestFacePoint = new Vec3d(
-                nearX + jumpBridgeDirX * (jumpBridgeDirX != 0 ? (0.5 + 0.5 * jumpBridgeDirX - (nearX - jumpBridgeLastSolid.getX())) : 0),
-                nearY,
-                nearZ + jumpBridgeDirZ * (jumpBridgeDirZ != 0 ? (0.5 + 0.5 * jumpBridgeDirZ - (nearZ - jumpBridgeLastSolid.getZ())) : 0));
-        // Simpler: just use the face center X/Z but top Y
-        nearestFacePoint = new Vec3d(faceCenterPoint.x, nearY, faceCenterPoint.z);
+        // ── Rotation: track top edge of +dir face (nearest point to eyes) ──
+        // Y = lastSolid.Y + 0.93: upper part of the +dir face, close to eyes → minimal pitch.
+        // Below the face/top edge (1.0) so raycast hits the +dir face, not the top face.
+        double aimY = jumpBridgeLastSolid.getY() + 0.93;
+        Vec3d aimPoint = new Vec3d(faceCenterPoint.x, aimY, faceCenterPoint.z);
+        Rotation faceLook = RotationUtils.calcRotationFromVec3d(head, aimPoint, ctx.playerRotations());
 
-        Rotation faceLook = RotationUtils.calcRotationFromVec3d(head, nearestFacePoint, ctx.playerRotations());
-        behavior.baritone.getLookBehavior().updateTarget(faceLook, true);
-
-        // clickReady: set on first tick we aim at the face. Click allowed from NEXT tick.
-        if (!jumpBridgeClickReady) {
-            jumpBridgeClickReady = true;
+        if (pastFace > 0.1) {
+            // Past/at the face — snap rotation for accurate objectMouseOver (blockInteract=true).
+            behavior.baritone.getLookBehavior().updateTarget(faceLook, true);
+            if (!jumpBridgeClickReady) {
+                // First snap tick. objectMouseOver updates next render frame. Click on NEXT tick.
+                jumpBridgeClickReady = true;
+                return false;
+            }
+        } else {
+            // Approaching the face — SMOOTH rotation via WindMouse (blockInteract=false).
+            // Camera gradually tilts toward the face instead of jerking down.
+            // By the time we reach the face, rotation is mostly settled.
+            behavior.baritone.getLookBehavior().updateTarget(faceLook, false);
+            // Don't reset clickReady here — we might have set it from a previous block
             return false;
         }
 
