@@ -5,6 +5,7 @@ import adris.altoclef.Debug;
 import adris.altoclef.tasks.entity.KillPlayerTask;
 import adris.altoclef.tasks.misc.EquipArmorTask;
 import adris.altoclef.tasks.movement.PickupDroppedItemTask;
+import adris.altoclef.tasks.movement.TimeoutWanderTask;
 import adris.altoclef.tasks.multiplayer.SignShopTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
@@ -24,7 +25,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -48,10 +51,20 @@ public class SkyPvpTask extends Task {
     private static final String SIGN_ITEM_SWORD = "268";
     private static final String SIGN_ITEM_APPLE = "260";
 
+    /** Free leather armor sign IDs → expected MC item (for "already have it" check). */
+    private static final Map<String, Item> FREE_LEATHER_ARMOR = new LinkedHashMap<>(Map.of(
+            "298", Items.LEATHER_HELMET,
+            "299", Items.LEATHER_CHESTPLATE,
+            "300", Items.LEATHER_LEGGINGS,
+            "301", Items.LEATHER_BOOTS,
+            "302", Items.LEATHER_BOOTS  // 302 = leather boots on some sign NPCs
+    ));
+
     private Task _currentKillTask;
     private Task _armorTask;
     private Task _pickupTask;
     private Task _equipmentTask;
+    private Task _wanderTask;
     private String _lastTargetName;
 
     @Override
@@ -155,10 +168,21 @@ public class SkyPvpTask extends Task {
             return _currentKillTask;
         }
 
-        // Nobody around
-        setDebugState("Searching...");
+        // Nobody around — explore and opportunistically collect free armor from signs
         _lastTargetName = null;
-        return null;
+
+        Task freeArmor = tryGetFreeArmorFromSign(mod);
+        if (freeArmor != null) {
+            _equipmentTask = freeArmor;
+            setDebugState("Grabbing free armor from sign");
+            return _equipmentTask;
+        }
+
+        setDebugState("Exploring...");
+        if (_wanderTask == null || _wanderTask.isFinished()) {
+            _wanderTask = new TimeoutWanderTask(true);
+        }
+        return _wanderTask;
     }
 
     @Override
@@ -325,6 +349,19 @@ public class SkyPvpTask extends Task {
                 if (drop.isPresent()) {
                     return new PickupDroppedItemTask(new ItemTarget(item, 1), true);
                 }
+            }
+        }
+        return null;
+    }
+
+    /** Finds a visible free sign for any leather armor piece we're missing. */
+    private Task tryGetFreeArmorFromSign(AltoClef mod) {
+        for (Map.Entry<String, Item> entry : FREE_LEATHER_ARMOR.entrySet()) {
+            if (StorageHelper.isArmorEquipped(entry.getValue())
+                    || mod.getItemStorage().hasItem(entry.getValue())) continue;
+            Optional<BlockPos> sign = SignShopTask.findNearestFreeSign(mod, entry.getKey());
+            if (sign.isPresent()) {
+                return new SignShopTask(sign.get());
             }
         }
         return null;
