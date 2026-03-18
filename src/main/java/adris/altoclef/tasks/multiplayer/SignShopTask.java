@@ -62,8 +62,6 @@ public class SignShopTask extends Task {
     private static final int RETRY_DELAY_TICKS = 20;
     private static final int LOOK_JIGGLE_TICKS = 30;    // 1.5s — start jiggling + clicking
     private static final int LOOK_GIVEUP_TICKS = 50;    // 2.5s — force click, move to WAIT_CHEST
-    /** Offset towards the wall so the look target hits the thin sign hitbox. */
-    private static final double SIGN_WALL_OFFSET = 0.2;
 
     public SignShopTask(BlockPos signPos) {
         this.signPos = signPos;
@@ -133,29 +131,21 @@ public class SignShopTask extends Task {
                 boolean looking = LookHelper.isLookingAt(mod, signPos);
 
                 if (!looking && lookTicks <= LOOK_GIVEUP_TICKS) {
-                    // Compute look target: block center offset towards the wall
-                    Vec3d target = signPos.toCenterPos();
-                    if (facing != null) {
-                        // Sign face points outward; wall is opposite — shift into the hitbox
-                        Direction wall = facing.getOpposite();
-                        target = target.add(
-                                wall.getOffsetX() * SIGN_WALL_OFFSET,
-                                wall.getOffsetY() * SIGN_WALL_OFFSET,
-                                wall.getOffsetZ() * SIGN_WALL_OFFSET);
-                    }
-
                     if (lookTicks > LOOK_JIGGLE_TICKS) {
                         // Jiggle around the sign face + try clicking every 5 ticks
+                        Vec3d center = signPos.toCenterPos();
                         double jx = (Math.random() - 0.5) * 0.4;
                         double jy = (Math.random() - 0.5) * 0.4;
                         double jz = (Math.random() - 0.5) * 0.4;
-                        LookHelper.lookAt(mod, target.add(jx, jy, jz));
+                        LookHelper.lookAt(mod, center.add(jx, jy, jz));
                         if (lookTicks % 5 == 0) {
                             mod.getSlotHandler().forceDeequipRightClickableItem();
                             mod.getInputControls().tryPress(Input.CLICK_RIGHT);
                         }
+                    } else if (facing != null && LookHelper.getReach(signPos, facing).isPresent()) {
+                        LookHelper.lookAt(mod, signPos, facing);
                     } else {
-                        LookHelper.lookAt(mod, target);
+                        LookHelper.lookAt(mod, signPos);
                     }
                     setDebugState("Looking at sign (" + lookTicks + "/" + LOOK_GIVEUP_TICKS + ")");
                     return null;
