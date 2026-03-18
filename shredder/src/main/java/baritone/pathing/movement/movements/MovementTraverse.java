@@ -300,7 +300,10 @@ public class MovementTraverse extends Movement {
             }
 
             // ── Slow mode bridging: sneak to edge, look down at stable angle, place calmly ──
-            if ("slow".equals(Baritone.settings().bridgingMode.value)) {
+            if (!"standard".equals(Baritone.settings().bridgingMode.value)) {
+                // All modes except "standard" use slow bridging as fallback.
+                // "jump"/"back_jump" modes fall here when jump bridge can't activate
+                // (not enough runway). "slow" mode always uses this.
                 return updateSlowBridge(state, feet);
             }
 
