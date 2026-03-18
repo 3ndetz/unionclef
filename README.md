@@ -24,7 +24,33 @@ Built by merging **altoclef**, **shredder**, and **tungsten** into a single code
 
 > **[How to build & run →](docs/DEVELOP.md)** | **[How to release →](docs/RELEASE.md)** | **[Multi-version →](docs/MULTIVERSIONING.md)**
 
+## Features
+
+(table is not ready yet, TODO. Functions more than this presented. Find more organic, suitable and sexy form for this features table)
+| Features | Description | Ready |
+|---|---|---|
+| **Pathfinding** | 
+| Human-like moveset | Bypass baritone detecting ACs. | 2/3 ⚠️ |
+| `#slowBridge true` | Slow shift bridge to work where baritone is blocked. | 3/3 ✅ |
+ `#experimentalPathfinding true`| Use tungsten and shredder's baritone simulateously | 2/5 ⚠️ |
+| `#jumpBridging true` | Super-fast bridging | 1/3 ❌ |
+| **PvP** |
+| Attacking bot `@punk` | Handles close target battle | 3/3 ✅ |
+| Pursuing bot | Pursue parkouring targets. Slow for now. | 2/3 ⚠️ |
+| **Minigames** |
+| Skywars `@game sw` | SkyWars | 3/3 ✅ |
+
 ## Quick start
+
+1. Drop the latest JAR from [Releases](https://github.com/3ndetz/unionclef/releases) into your Minecraft `mods/` folder and launch with Fabric
+
+    > Ensure you have the correct Minecraft version for the release you download
+
+2. Type `@help` in chat for the list of commands
+
+## Development
+
+Quick start for development — clone the repo, build, and run:
 
 ```bash
 git clone https://github.com/3ndetz/unionclef
