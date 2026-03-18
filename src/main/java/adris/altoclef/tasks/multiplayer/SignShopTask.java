@@ -18,6 +18,7 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 import java.util.Optional;
@@ -54,10 +55,15 @@ public class SignShopTask extends Task {
     private int retryDelay = 0;
     private int retryCount = 0;
     private int approachTicks = 0;
+    private int lookTicks = 0;
     private static final int MAX_WAIT_TICKS = 100;      // 5 seconds for chest to open
     private static final int MAX_APPROACH_TICKS = 200;  // 10 seconds to reach the sign
     private static final int MAX_RETRIES = 5;
     private static final int RETRY_DELAY_TICKS = 20;
+    private static final int LOOK_JIGGLE_TICKS = 30;    // 1.5s — start jiggling + clicking
+    private static final int LOOK_GIVEUP_TICKS = 50;    // 2.5s — force click, move to WAIT_CHEST
+    /** Offset towards the wall so the look target hits the thin sign hitbox. */
+    private static final double SIGN_WALL_OFFSET = 0.2;
 
     public SignShopTask(BlockPos signPos) {
         this.signPos = signPos;
@@ -70,6 +76,7 @@ public class SignShopTask extends Task {
         retryDelay = 0;
         retryCount = 0;
         approachTicks = 0;
+        lookTicks = 0;
         Debug.logMessage("[SignShop] Starting at " + signPos.toShortString());
     }
 
@@ -121,21 +128,46 @@ public class SignShopTask extends Task {
                 // In reach — stop pathing, look at the sign and click
                 approachTicks = 0;
                 mod.getClientBaritone().getCustomGoalProcess().onLostControl();
-                if (!LookHelper.isLookingAt(mod, signPos)) {
-                    // Prefer looking at the sign face, but any reachable face works
-                    if (facing != null && LookHelper.getReach(signPos, facing).isPresent()) {
-                        LookHelper.lookAt(mod, signPos, facing);
-                    } else {
-                        LookHelper.lookAt(mod, signPos);
+                lookTicks++;
+
+                boolean looking = LookHelper.isLookingAt(mod, signPos);
+
+                if (!looking && lookTicks <= LOOK_GIVEUP_TICKS) {
+                    // Compute look target: block center offset towards the wall
+                    Vec3d target = signPos.toCenterPos();
+                    if (facing != null) {
+                        // Sign face points outward; wall is opposite — shift into the hitbox
+                        Direction wall = facing.getOpposite();
+                        target = target.add(
+                                wall.getOffsetX() * SIGN_WALL_OFFSET,
+                                wall.getOffsetY() * SIGN_WALL_OFFSET,
+                                wall.getOffsetZ() * SIGN_WALL_OFFSET);
                     }
-                    setDebugState("Looking at sign");
+
+                    if (lookTicks > LOOK_JIGGLE_TICKS) {
+                        // Jiggle around the sign face + try clicking every 5 ticks
+                        double jx = (Math.random() - 0.5) * 0.4;
+                        double jy = (Math.random() - 0.5) * 0.4;
+                        double jz = (Math.random() - 0.5) * 0.4;
+                        LookHelper.lookAt(mod, target.add(jx, jy, jz));
+                        if (lookTicks % 5 == 0) {
+                            mod.getSlotHandler().forceDeequipRightClickableItem();
+                            mod.getInputControls().tryPress(Input.CLICK_RIGHT);
+                        }
+                    } else {
+                        LookHelper.lookAt(mod, target);
+                    }
+                    setDebugState("Looking at sign (" + lookTicks + "/" + LOOK_GIVEUP_TICKS + ")");
                     return null;
                 }
+
+                // Either looking at sign or gave up waiting — click and move on
                 setDebugState("Clicking sign");
                 mod.getSlotHandler().forceDeequipRightClickableItem();
                 mod.getInputControls().tryPress(Input.CLICK_RIGHT);
                 state = State.WAIT_CHEST;
                 waitTicks = 0;
+                lookTicks = 0;
                 return null;
             }
             case WAIT_CHEST -> {
