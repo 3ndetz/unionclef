@@ -933,7 +933,24 @@ public class PathExecutor implements IPathExecutor, Helper {
 
         // Pick starting phase based on mode
         String mode = Baritone.settings().bridgingMode.value;
-        jumpBridgePhase = "jump".equals(mode) ? JumpBridgePhase.FJ_SPRINT : JumpBridgePhase.BJ_SPRINT;
+        if ("jump".equals(mode)) {
+            // Require sprint runway: 3 solid blocks behind in -dir.
+            // If no runway, return false → slow/standard bridging places first blocks,
+            // then jump bridge activates next tick when runway exists.
+            BlockPos feet = current.getSrc();
+            boolean hasRunway = true;
+            for (int step = 1; step <= 3; step++) {
+                BlockPos back = feet.add(-dir.getX() * step, -1, -dir.getZ() * step);
+                if (!MovementHelper.canWalkOn(bsi, back.getX(), back.getY(), back.getZ())) {
+                    hasRunway = false;
+                    break;
+                }
+            }
+            if (!hasRunway) return false;
+            jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
+        } else {
+            jumpBridgePhase = JumpBridgePhase.BJ_SPRINT;
+        }
 
         // Fast clicks: override rightClickSpeed for rapid placement while airborne
         jumpBridgeSavedClickSpeed = Baritone.settings().rightClickSpeed.value;
@@ -1164,17 +1181,11 @@ public class PathExecutor implements IPathExecutor, Helper {
                 BlockStateInterface bsi = new BlockStateInterface(ctx);
                 jumpBridgeAirbornePlace(bsi, pastFace, head, faceCenterPoint, backwardYaw);
 
-                // Landed?
+                // Landed? ALWAYS exit. Pathfinder will re-enter jump bridge
+                // on the next tick if there's more bridge + runway ahead.
                 if (ctx.player().isOnGround() && jumpBridgeAirborneTicks > 2) {
                     jumpBridgeSnapPath();
-                    // Start next sprint-jump cycle if more bridge ahead
-                    if (jumpBridgeCanContinue(bsi)) {
-                        jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
-                        jumpBridgeTicksInPhase = 0;
-                        jumpBridgeClickReady = false;
-                    } else {
-                        exitJumpBridge();
-                    }
+                    exitJumpBridge();
                     return false;
                 }
 
