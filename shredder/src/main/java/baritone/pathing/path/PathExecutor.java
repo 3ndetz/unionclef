@@ -934,14 +934,23 @@ public class PathExecutor implements IPathExecutor, Helper {
         // Pick starting phase based on mode
         String mode = Baritone.settings().bridgingMode.value;
         if ("jump".equals(mode)) {
-            // Need runway: 3 solid blocks behind for sprint approach.
-            // If not enough → return false → slow bridging places first blocks.
+            // Need runway: 3 solid blocks behind, each with foundation (2 blocks tall).
+            // Floor at Y-1 from feet, foundation at Y-2.
             BlockPos feet = current.getSrc();
             for (int step = 1; step <= 3; step++) {
-                BlockPos back = feet.add(-dir.getX() * step, -1, -dir.getZ() * step);
-                if (!MovementHelper.canWalkOn(bsi, back.getX(), back.getY(), back.getZ())) {
+                BlockPos backFloor = feet.add(-dir.getX() * step, -1, -dir.getZ() * step);
+                BlockPos backFoundation = backFloor.down();
+                if (!MovementHelper.canWalkOn(bsi, backFloor.getX(), backFloor.getY(), backFloor.getZ())) {
                     return false; // fallback to slow bridging
                 }
+                if (!MovementHelper.canWalkOn(bsi, backFoundation.getX(), backFoundation.getY(), backFoundation.getZ())) {
+                    return false; // need 2-block height platform
+                }
+            }
+            // Also check foundation at lastSolid position (the edge block)
+            BlockPos lastSolidFoundation = current.getSrc().down().down();
+            if (!MovementHelper.canWalkOn(bsi, lastSolidFoundation.getX(), lastSolidFoundation.getY(), lastSolidFoundation.getZ())) {
+                return false;
             }
             jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
         } else {
@@ -989,41 +998,63 @@ public class PathExecutor implements IPathExecutor, Helper {
                 true, nextPlace.getX(), nextPlace.getY(), nextPlace.getZ());
     }
 
-    /** Shared: airborne block placement with verification. Returns true if placed this tick. */
+    /**
+     * Shared: airborne block placement with 2-block-high targeting.
+     *
+     * lastSolid is 2 blocks tall (floor Y + foundation Y-1).
+     * Combined +dir face spans 2 blocks — much larger target area.
+     * Aim between the two blocks (Y boundary) so the ray hits either side face.
+     * Foundation placement is bonus; floor placement advances the bridge.
+     */
     private boolean jumpBridgeAirbornePlace(BlockStateInterface bsi, double pastFace,
                                              Vec3d head, Vec3d faceCenterPoint, float backwardYaw) {
-        // ── Rotation: aim at CENTER of the +dir face ──
-        // Y = lastSolid.Y + 0.5: center of face. NOT higher — a ray from above
-        // toward the top of the face (Y+0.93) hits the TOP face of the block first,
-        // placing blocks BEHIND the player instead of across the gap.
-        double aimY = jumpBridgeLastSolid.getY() + 0.5;
+        // ── Aim at the boundary between floor and foundation faces ──
+        // lastSolid.Y is the floor block. lastSolid.Y-1 is foundation.
+        // Aim at Y = lastSolid.Y (the boundary) — ray hits either face:
+        //   - slightly above → floor's +dir face → places floor at next pos
+        //   - slightly below → foundation's +dir face → places foundation at next pos
+        // Both are useful. The combined target area is 2 blocks tall (Y-1 to Y+1).
+        double aimY = jumpBridgeLastSolid.getY(); // boundary between foundation and floor
         Vec3d aimPoint = new Vec3d(faceCenterPoint.x, aimY, faceCenterPoint.z);
         Rotation faceLook = RotationUtils.calcRotationFromVec3d(head, aimPoint, ctx.playerRotations());
 
         if (pastFace > 0.3) {
-            // Well past the face — snap rotation for accurate objectMouseOver.
-            // pastFace > 0.3 (not 0.1) so the ray has enough horizontal angle
-            // to clearly miss the top face and hit the +dir side face.
             behavior.baritone.getLookBehavior().updateTarget(faceLook, true);
             if (!jumpBridgeClickReady) {
                 jumpBridgeClickReady = true;
                 return false;
             }
         } else {
-            // Approaching or barely past — smooth rotation, no clicking yet.
             behavior.baritone.getLookBehavior().updateTarget(faceLook, false);
             return false;
         }
 
         // ── Verify + place ──
-        BlockPos expectedPlace = jumpBridgeLastSolid.add(jumpBridgeDirX, 0, jumpBridgeDirZ);
-        if (MovementHelper.canWalkOn(bsi, expectedPlace.getX(), expectedPlace.getY(), expectedPlace.getZ())) {
-            jumpBridgeLastSolid = expectedPlace;
+        BlockPos expectedFloor = jumpBridgeLastSolid.add(jumpBridgeDirX, 0, jumpBridgeDirZ);
+        BlockPos expectedFoundation = expectedFloor.down();
+
+        boolean floorDone = MovementHelper.canWalkOn(bsi, expectedFloor.getX(), expectedFloor.getY(), expectedFloor.getZ());
+
+        if (floorDone) {
+            // Floor placed — advance to next position.
+            // Try placing foundation too (bonus click, not blocking).
+            boolean foundationDone = MovementHelper.canWalkOn(bsi, expectedFoundation.getX(), expectedFoundation.getY(), expectedFoundation.getZ());
+            if (!foundationDone && pastFace > 0.4) {
+                // Aim lower for foundation and click
+                double foundAimY = jumpBridgeLastSolid.getY() - 0.5;
+                Vec3d foundAim = new Vec3d(faceCenterPoint.x, foundAimY, faceCenterPoint.z);
+                Rotation foundLook = RotationUtils.calcRotationFromVec3d(head, foundAim, ctx.playerRotations());
+                behavior.baritone.getLookBehavior().updateTarget(foundLook, true);
+                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
+                // Don't return true yet — try foundation on this tick, advance on next
+                return false;
+            }
+            jumpBridgeLastSolid = expectedFloor;
             jumpBridgeMoveIndex++;
             jumpBridgeClickReady = false;
             return true;
         } else if (pastFace > 0.4) {
-            // Click only when clearly past — ray must hit side face, not top face.
+            // Click to place (floor or foundation, whichever the ray hits)
             behavior.baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
         }
         return false;
