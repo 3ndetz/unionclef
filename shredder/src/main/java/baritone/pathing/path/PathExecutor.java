@@ -979,30 +979,40 @@ public class PathExecutor implements IPathExecutor, Helper {
     /** Shared: airborne block placement with verification. Returns true if placed this tick. */
     private boolean jumpBridgeAirbornePlace(BlockStateInterface bsi, double pastFace,
                                              Vec3d head, Vec3d faceCenterPoint, float backwardYaw) {
-        // Rotation: track the +dir face of lastSolid
-        if (pastFace > 0.1) {
-            Rotation backLook = RotationUtils.calcRotationFromVec3d(head, faceCenterPoint, ctx.playerRotations());
-            behavior.baritone.getLookBehavior().updateTarget(backLook, true);
-            if (!jumpBridgeClickReady) {
-                // First tick targeting face. objectMouseOver needs 1 render frame to update.
-                jumpBridgeClickReady = true;
-                return false;
-            }
-        } else {
-            behavior.baritone.getLookBehavior().updateTarget(
-                    new Rotation(backwardYaw, 75.0f), false);
-            jumpBridgeClickReady = false;
+        // ── Rotation: ALWAYS track the face from the moment we're airborne ──
+        // Aim at the NEAREST point on the face (top edge, clamped X/Z) for
+        // minimal rotation change. The camera smoothly transitions from
+        // forward-looking (approaching face) to backward-looking (past face).
+        double nearY = Math.min(head.y - 0.5, jumpBridgeLastSolid.getY() + 0.99);
+        double nearX = Math.max(jumpBridgeLastSolid.getX(),
+                       Math.min(head.x, jumpBridgeLastSolid.getX() + 1.0));
+        double nearZ = Math.max(jumpBridgeLastSolid.getZ(),
+                       Math.min(head.z, jumpBridgeLastSolid.getZ() + 1.0));
+        // Face position: shift by dir to get the +dir face surface
+        Vec3d nearestFacePoint = new Vec3d(
+                nearX + jumpBridgeDirX * (jumpBridgeDirX != 0 ? (0.5 + 0.5 * jumpBridgeDirX - (nearX - jumpBridgeLastSolid.getX())) : 0),
+                nearY,
+                nearZ + jumpBridgeDirZ * (jumpBridgeDirZ != 0 ? (0.5 + 0.5 * jumpBridgeDirZ - (nearZ - jumpBridgeLastSolid.getZ())) : 0));
+        // Simpler: just use the face center X/Z but top Y
+        nearestFacePoint = new Vec3d(faceCenterPoint.x, nearY, faceCenterPoint.z);
+
+        Rotation faceLook = RotationUtils.calcRotationFromVec3d(head, nearestFacePoint, ctx.playerRotations());
+        behavior.baritone.getLookBehavior().updateTarget(faceLook, true);
+
+        // clickReady: set on first tick we aim at the face. Click allowed from NEXT tick.
+        if (!jumpBridgeClickReady) {
+            jumpBridgeClickReady = true;
             return false;
         }
 
-        // Verify + place
+        // ── Verify + place (only click when actually past the face) ──
         BlockPos expectedPlace = jumpBridgeLastSolid.add(jumpBridgeDirX, 0, jumpBridgeDirZ);
         if (MovementHelper.canWalkOn(bsi, expectedPlace.getX(), expectedPlace.getY(), expectedPlace.getZ())) {
             jumpBridgeLastSolid = expectedPlace;
             jumpBridgeMoveIndex++;
             jumpBridgeClickReady = false; // re-target new face next tick
             return true;
-        } else if (pastFace > 0.2) {
+        } else if (pastFace > 0.15) {
             behavior.baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
         }
         return false;
