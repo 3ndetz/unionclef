@@ -21,7 +21,12 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import adris.altoclef.tasks.movement.GetToEntityTask;
 
+import net.minecraft.entity.LivingEntity;
+
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Attacks an entity, but the target entity must be specified.
@@ -40,11 +45,81 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
 
     // No-damage detection: reposition when attacks aren't connecting
     private static final int HITS_BEFORE_REPOSITION = 15;
+    private static final int HITS_FOR_IMMUNITY = 20;
+    private static final long IMMUNITY_DURATION_MS = 5 * 60 * 1000; // 5 minutes
     private static int _swingCount = 0;
     private static float _targetHealthAtFirstSwing = -1;
     private static int _repositionEntityId = -1; // which entity we're repositioning against
     private static boolean _repositioning = false;
     private static final TimerGame _repositionCooldown = new TimerGame(8); // don't reposition too often
+
+    // ── Combat immunity: entities that took 20+ hits without damage are ignored for 5 min ──
+    private static final Map<Integer, ImmunityRecord> immuneEntities = new HashMap<>();
+
+    private static class ImmunityRecord {
+        final long expiresAt;
+        float lastKnownHealth;
+        ImmunityRecord(float health) {
+            this.expiresAt = System.currentTimeMillis() + IMMUNITY_DURATION_MS;
+            this.lastKnownHealth = health;
+        }
+        boolean isExpired() { return System.currentTimeMillis() > expiresAt; }
+    }
+
+    /** Returns true if an entity has combat immunity (20 hits without damage → 5 min ignore). */
+    public static boolean hasImmunity(Entity entity) {
+        if (entity == null) return false;
+        ImmunityRecord rec = immuneEntities.get(entity.getId());
+        if (rec == null) return false;
+        if (rec.isExpired()) {
+            immuneEntities.remove(entity.getId());
+            return false;
+        }
+        return true;
+    }
+
+    /** Grant 5-minute combat immunity after confirmed invulnerability. */
+    private static void grantImmunity(Entity entity, float health) {
+        immuneEntities.put(entity.getId(), new ImmunityRecord(health));
+        Debug.logMessage("[Combat] " + entity.getType().getName().getString()
+                + " granted 5 min immunity (20 hits, no damage)");
+    }
+
+    /** Clear immunity for a specific entity (e.g. it attacked us or its HP dropped). */
+    public static void clearImmunity(Entity entity) {
+        if (entity == null) return;
+        if (immuneEntities.remove(entity.getId()) != null) {
+            Debug.logMessage("[Combat] " + entity.getType().getName().getString() + " immunity cleared");
+        }
+    }
+
+    /**
+     * Call once per tick from MobDefenseChain.
+     * Clears immunity if: expired, HP dropped, entity got hurt by someone.
+     */
+    public static void tickImmunityWakeups(List<Entity> nearbyEntities) {
+        if (immuneEntities.isEmpty()) return;
+        Iterator<Map.Entry<Integer, ImmunityRecord>> it = immuneEntities.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<Integer, ImmunityRecord> entry = it.next();
+            ImmunityRecord rec = entry.getValue();
+            if (rec.isExpired()) {
+                it.remove();
+                continue;
+            }
+            // Check if the immune entity is still nearby and its HP dropped
+            for (Entity e : nearbyEntities) {
+                if (e.getId() == entry.getKey() && e instanceof LivingEntity living) {
+                    if (living.getHealth() < rec.lastKnownHealth || living.hurtTime > 0) {
+                        Debug.logMessage("[Combat] " + e.getType().getName().getString()
+                                + " immunity cleared (took damage)");
+                        it.remove();
+                    }
+                    break;
+                }
+            }
+        }
+    }
 
     protected AbstractKillEntityTask() {
         this(CONSIDER_COMBAT_RANGE, OTHER_FORCE_FIELD_RANGE);
@@ -159,7 +234,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                 mod.getControllerExtras().attack(entity);
 
                 // No-damage tracking for mobs too
-                if (entity instanceof net.minecraft.entity.LivingEntity living) {
+                if (entity instanceof LivingEntity living) {
                     if (_repositionEntityId != entity.getId()) {
                         _repositionEntityId = entity.getId();
                         _swingCount = 0;
@@ -169,10 +244,14 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                     if (living.getHealth() < _targetHealthAtFirstSwing) {
                         _swingCount = 0;
                         _targetHealthAtFirstSwing = living.getHealth();
-                    } else if (_swingCount >= HITS_BEFORE_REPOSITION && _repositionCooldown.elapsed()) {
+                    } else if (_swingCount >= HITS_FOR_IMMUNITY) {
+                        // 20 hits without damage → 5 min immunity
                         _swingCount = 0;
+                        grantImmunity(entity, living.getHealth());
+                        mod.getEntityTracker().requestEntityUnreachable(entity);
+                    } else if (_swingCount >= HITS_BEFORE_REPOSITION && _repositionCooldown.elapsed()) {
+                        // 15 hits → reposition (don't reset count, let it accumulate to 20)
                         _repositionCooldown.reset();
-                        Debug.logMessage("Target " + entity.getType().getName().getString() + " has immunity to attack, we can't hit it, maybe invulnerable, try change target");
                         mod.getEntityTracker().requestEntityUnreachable(entity);
                     }
                 }
@@ -257,16 +336,19 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                     if (didHit) {
                         float currentHP = player.getHealth();
                         if (currentHP < _targetHealthAtFirstSwing) {
-                            // Damage went through — reset
                             _swingCount = 0;
                             _targetHealthAtFirstSwing = currentHP;
                         } else {
                             _swingCount++;
-                            if (_swingCount >= HITS_BEFORE_REPOSITION && !_repositioning
+                            if (_swingCount >= HITS_FOR_IMMUNITY) {
+                                // 20 hits without damage → 5 min immunity
+                                _swingCount = 0;
+                                grantImmunity(player, currentHP);
+                                mod.getEntityTracker().requestEntityUnreachable(player);
+                            } else if (_swingCount >= HITS_BEFORE_REPOSITION && !_repositioning
                                     && _repositionCooldown.elapsed()) {
                                 _repositioning = true;
                                 _repositionCooldown.reset();
-                                Debug.logMessage("Target " + player.getName().getString() + " has immunity to attack, we can't hit it, maybe invulnerable, try change target");
                             }
                         }
                     }
