@@ -42,11 +42,6 @@ public class TestBridgingCommand extends Command {
         }
         args.requireMax(0);
 
-        // Use jump bridging mode if not already set to a jump mode
-        String mode = Baritone.settings().bridgingMode.value;
-        if (!"jump".equals(mode) && !"back_jump".equals(mode)) {
-            Baritone.settings().bridgingMode.value = "jump";
-        }
         logDirect("Bridging mode: " + Baritone.settings().bridgingMode.value);
 
         // Go forward in the direction the player is looking

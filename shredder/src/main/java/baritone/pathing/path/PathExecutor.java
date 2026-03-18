@@ -1124,9 +1124,15 @@ public class PathExecutor implements IPathExecutor, Helper {
                         Math.abs(ctx.player().getPos().x - (firstDest.getX() + 0.5)),
                         Math.abs(ctx.player().getPos().z - (firstDest.getZ() + 0.5)));
 
-                // Jump when close to edge — sprint-jump gives ~4.5 blocks of flight
-                if (distToDest < 1.2) {
+                // Jump when close to edge AND actually sprinting.
+                // Without sprint speed the jump is too short to place enough blocks.
+                if (distToDest < 1.2 && ctx.player().isSprinting()) {
                     behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
+                }
+                // If near edge but NOT sprinting, abort — let normal bridging handle it
+                if (distToDest < 0.5 && !ctx.player().isSprinting()) {
+                    exitJumpBridge();
+                    return false;
                 }
 
                 // Transition to airborne once off ground
