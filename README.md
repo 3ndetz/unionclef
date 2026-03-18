@@ -26,19 +26,35 @@ Built by merging **altoclef**, **shredder**, and **tungsten** into a single code
 
 ## Features
 
-(table is not ready yet, TODO. Functions more than this presented. Find more organic, suitable and sexy form for this features table)
+> (table is not ready yet, TODO. Functions more than this presented. TODO find more organic, suitable and sexy form for this features table)
+
+
 | Features | Description | Ready |
 |---|---|---|
 | **Pathfinding** | 
 | Human-like moveset | Bypass baritone detecting ACs. | 2/3 ⚠️ |
+| Faster baritone | Speeding up with jumps on straight paths | 4/5 ✅ |
 | `#slowBridge true` | Slow shift bridge to work where baritone is blocked. | 3/3 ✅ |
  `#experimentalPathfinding true`| Use tungsten and shredder's baritone simulateously | 2/5 ⚠️ |
-| `#jumpBridging true` | Super-fast bridging | 1/3 ❌ |
+| `#jumpBridging true` | Super-fast bridging | 1/3 ❌ TODO |
 | **PvP** |
 | Attacking bot `@punk` | Handles close target battle | 3/3 ✅ |
 | Pursuing bot | Pursue parkouring targets. Slow for now. | 2/3 ⚠️ |
 | **Minigames** |
-| Skywars `@game sw` | SkyWars | 3/3 ✅ |
+| Skywars `@game sw` | SkyWars (fails exploration, buggy) | 3/5 ⚠️ |
+| Skywars `@game bw` | BedWars (only bed protect) | 3/5 ⚠️ |
+| Skywars `@game skypvp` | SkyPvP (on one server, but non-redactable spawn) | 4/5 ✅ |
+| Skywars `@game mm` | MurderMystery | 5/5 ✅ |
+| **Building** |
+| `@grave <text>`, `@sign <text>` | New structures to build | 2/2 ✅ |
+| Privated regions support | Temporal block placement and removal locks | 4/5 ✅ |
+| `@schematic <schematic>` | Schematic integration | 0/3 ❌ TODO |
+| **Multiplayer** |
+| Attacking bot `@punk` | Handles close target battle | 3/3 ✅ |
+| **Other** |
+| Comfort | All command suggestions. Removed naughty prints from baritone. Multi-versioned repo structured. Mono-repo with easy-to-work with any of integrated mod. | 3/3 ✅ |
+
+> Vote for the new features, report for bugs in the [issues](https://github.com/3ndetz/unionclef/issues).
 
 ## Quick start
 
