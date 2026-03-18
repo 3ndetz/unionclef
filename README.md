@@ -5,7 +5,7 @@ Letting agents loose in block game.
 ![Kill&loot](https://github.com/3ndetz/autoclef/assets/30196290/7377ec79-1c3d-493b-9a1d-5d701f19d9c9)
 
 
-An open platform for building AI agents that play Minecraft — pathfinding, combat, survival, multiplayer. The goal is to make it easy for researchers, developers, and tinkerers to plug their agents into the game and see what happens.
+An open platform for building AI agents that play Minecraft — pathfinding, combat, survival, multiplayer. The goal is to make it easy for researchers, Development-Guideers, and tinkerers to plug their agents into the game and see what happens.
 
 ![qwenie](https://github.com/user-attachments/assets/64b98492-ceca-410f-b3bc-efbd8ea09dcb)
 
@@ -22,7 +22,7 @@ Built by merging **altoclef**, **shredder**, and **tungsten** into a single code
 
 **Minecraft 1.21** / **Fabric** / **Java 21**
 
-> **[How to build & run →](docs/DEVELOP.md)** | **[How to release →](docs/RELEASE.md)** | **[Multi-version →](docs/MULTIVERSIONING.md)**
+> **[How to build & run →](docs/Development-Guide.md)** | **[How to Release-Guide →](docs/Release-Guide.md)** | **[Multi-version →](docs/Multi-versioning-Guide.md)**
 
 ## Features
 
@@ -69,15 +69,15 @@ Built by merging **altoclef**, **shredder**, and **tungsten** into a single code
 
 ## Quick start
 
-1. Drop the latest JAR from [Releases](https://github.com/3ndetz/unionclef/releases) into your Minecraft `mods/` folder and launch with Fabric
+1. Drop the latest JAR from [Release-Guides](https://github.com/3ndetz/unionclef/Release-Guides) into your Minecraft `mods/` folder and launch with Fabric
 
-    > Ensure you have the correct Minecraft version for the release you download
+    > Ensure you have the correct Minecraft version for the Release-Guide you download
 
 2. Type `@help` in chat for the list of commands
 
-## Development
+## Development-Guidement
 
-Quick start for development — clone the repo, build, and run:
+Quick start for Development-Guidement — clone the repo, build, and run:
 
 ```bash
 git clone https://github.com/3ndetz/unionclef
@@ -86,7 +86,7 @@ gradlew compileJava     # compiles everything
 gradlew runClient       # launches Minecraft
 ```
 
-See **[docs/DEVELOP.md](docs/DEVELOP.md)** for debug setup, hot-swap, and troubleshooting.
+See **[docs/Development-Guide.md](docs/Development-Guide.md)** for debug setup, hot-swap, and troubleshooting.
 
 ## Demo
 
@@ -129,7 +129,7 @@ unionclef/
 ├── root.gradle.kts         root build config
 ├── gradle.properties       versions & settings
 └── docs/
-    └── DEVELOP.md          build & run instructions
+    └── Development-Guide.md          build & run instructions
 ├── README.md               you are here
 └── TODOS.md                project TODOs and roadmap
 ```
