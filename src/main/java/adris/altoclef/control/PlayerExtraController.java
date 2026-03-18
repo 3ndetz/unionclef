@@ -66,7 +66,11 @@ public class PlayerExtraController {
             attackable = false;
         }
         if (attackable) {
-            mod.getInputControls().release(Input.CLICK_RIGHT);
+            // Don't release RMB while eating — slot/key changes during eating
+            // generate suspicious packets that trigger server anti-cheat.
+            if (!mod.getFoodChain().isTryingToEat()) {
+                mod.getInputControls().release(Input.CLICK_RIGHT);
+            }
             mod.getInputControls().tryPress(Input.CLICK_LEFT);
             mod.getDamageTracker().onClientMeleeAttack(entity);
             _succesfulHit = true;
