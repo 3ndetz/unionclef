@@ -91,10 +91,14 @@ public class SignShopTask extends Task {
                 Direction facing = getSignFacing(mod);
                 // We do NOT use InteractWithBlockTask — its rightClick() calls closeScreen() on
                 // any open non-player-inventory screen, which closes the chest the sign just opened.
-                if (!LookHelper.getReach(signPos, facing).isPresent()) {
+
+                // Try reach with specific facing first, then fallback to any face
+                boolean inReach = LookHelper.getReach(signPos, facing).isPresent()
+                        || LookHelper.getReach(signPos).isPresent();
+
+                if (!inReach) {
                     approachTicks++;
                     if (approachTicks > MAX_APPROACH_TICKS) {
-                        // Spent too long trying to reach — count as a failed attempt
                         approachTicks = 0;
                         retryCount++;
                         if (retryCount >= MAX_RETRIES) {
@@ -107,9 +111,6 @@ public class SignShopTask extends Task {
                         retryDelay = RETRY_DELAY_TICKS;
                         return null;
                     }
-                    // Simple GoalNear — don't try to path to a specific side, just get close.
-                    // The facing direction is used only for the reach/look check, not pathfinding,
-                    // so the bot won't try to walk into an unreachable block in front of the sign.
                     ICustomGoalProcess proc = mod.getClientBaritone().getCustomGoalProcess();
                     if (!proc.isActive()) {
                         proc.setGoalAndPath(new GoalNear(signPos, 2));
@@ -117,12 +118,16 @@ public class SignShopTask extends Task {
                     setDebugState("Walking to sign (" + approachTicks + "/" + MAX_APPROACH_TICKS + ")");
                     return null;
                 }
-                // In reach — stop pathing, look at the sign face
+                // In reach — stop pathing, look at the sign and click
                 approachTicks = 0;
                 mod.getClientBaritone().getCustomGoalProcess().onLostControl();
                 if (!LookHelper.isLookingAt(mod, signPos)) {
-                    if (facing != null) LookHelper.lookAt(mod, signPos, facing);
-                    else LookHelper.lookAt(mod, signPos);
+                    // Prefer looking at the sign face, but any reachable face works
+                    if (facing != null && LookHelper.getReach(signPos, facing).isPresent()) {
+                        LookHelper.lookAt(mod, signPos, facing);
+                    } else {
+                        LookHelper.lookAt(mod, signPos);
+                    }
                     setDebugState("Looking at sign");
                     return null;
                 }
