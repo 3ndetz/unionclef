@@ -86,10 +86,10 @@ public class PathExecutor implements IPathExecutor, Helper {
     // Jump bridging state
     private enum JumpBridgePhase {
         NONE,
-        // back_jump mode
+        // back_jump mode: face backward, walk backward + jump, place while airborne
         BJ_SPRINT, BJ_PRE_ROTATE, BJ_BRIDGE,
-        // jump mode: backup → sprint → jump → place → land → backup → ...
-        FJ_BACKUP, FJ_SPRINT, FJ_AIRBORNE, FJ_LAND
+        // jump mode: sprint-jump forward, snap rotation backward mid-air, place at speed
+        FJ_SPRINT, FJ_AIRBORNE
     }
     private JumpBridgePhase jumpBridgePhase = JumpBridgePhase.NONE;
     private boolean jumpBridging;
@@ -100,8 +100,6 @@ public class PathExecutor implements IPathExecutor, Helper {
     private int jumpBridgeAirborneTicks; // ticks since leaving ground in current jump
     private int jumpBridgeSavedClickSpeed; // saved rightClickSpeed to restore on exit
     private boolean jumpBridgeClickReady; // true after rotation has been stable for ≥1 tick
-    private int jumpBridgeBlocksPlaced; // blocks placed in current jump
-    private double jumpBridgeBackupStartPos; // position along dir axis when backup started
 
 
     public PathExecutor(PathingBehavior behavior, IPath path) {
@@ -933,19 +931,9 @@ public class PathExecutor implements IPathExecutor, Helper {
         jumpBridgeAirborneTicks = 0;
         jumpBridgeClickReady = false;
 
-        jumpBridgeBlocksPlaced = 0;
-
         // Pick starting phase based on mode
         String mode = Baritone.settings().bridgingMode.value;
-        if ("jump".equals(mode)) {
-            // Require runway — if no 2+ blocks behind, DON'T start jump bridge.
-            // Let slow/standard bridging place the first blocks, then jump bridge
-            // will activate on the next check when runway exists.
-            if (!hasRunway(bsi)) return false;
-            jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
-        } else {
-            jumpBridgePhase = JumpBridgePhase.BJ_SPRINT;
-        }
+        jumpBridgePhase = "jump".equals(mode) ? JumpBridgePhase.FJ_SPRINT : JumpBridgePhase.BJ_SPRINT;
 
         // Fast clicks: override rightClickSpeed for rapid placement while airborne
         jumpBridgeSavedClickSpeed = Baritone.settings().rightClickSpeed.value;
@@ -953,15 +941,6 @@ public class PathExecutor implements IPathExecutor, Helper {
 
         behavior.baritone.getInputOverrideHandler().clearAllKeys();
         return true;
-    }
-
-    /** Check if there are ≥2 solid blocks behind the player (runway for sprint). */
-    private boolean hasRunway(BlockStateInterface bsi) {
-        BlockPos feet = ctx.playerFeet();
-        BlockPos back1 = feet.add(-jumpBridgeDirX, -1, -jumpBridgeDirZ);
-        BlockPos back2 = back1.add(-jumpBridgeDirX, 0, -jumpBridgeDirZ);
-        return MovementHelper.canWalkOn(bsi, back1.getX(), back1.getY(), back1.getZ())
-            && MovementHelper.canWalkOn(bsi, back2.getX(), back2.getY(), back2.getZ());
     }
 
     /** Exit jump bridging and restore settings. */
@@ -1138,45 +1117,11 @@ public class PathExecutor implements IPathExecutor, Helper {
             }
 
             // ═══════════════════════════════════════════════════════════════
-            // FORWARD JUMP MODE
-            // Cycle: FJ_BACKUP → FJ_SPRINT → FJ_AIRBORNE → FJ_LAND → FJ_BACKUP
+            // FORWARD JUMP MODE (sprint-jump forward, snap rotate mid-air)
             // ═══════════════════════════════════════════════════════════════
 
-            case FJ_BACKUP: {
-                // Walk backward on placed blocks to create sprint runway.
-                // Face forward so sprint starts instantly when we reverse.
-                behavior.baritone.getLookBehavior().updateTarget(
-                        new Rotation(forwardYaw, 0.0f), false);
-
-                // Check ground behind before stepping — don't walk off the edge
-                BlockPos feet = ctx.playerFeet();
-                BlockPos behindFeet = feet.add(-jumpBridgeDirX, -1, -jumpBridgeDirZ);
-                BlockStateInterface bsi = new BlockStateInterface(ctx);
-                boolean groundBehind = MovementHelper.canWalkOn(bsi, behindFeet.getX(), behindFeet.getY(), behindFeet.getZ());
-
-                if (!groundBehind) {
-                    // No more ground behind — start sprinting from here
-                    jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
-                    jumpBridgeTicksInPhase = 0;
-                    return false;
-                }
-
-                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, true);
-
-                // Measure distance backed up
-                double currentPos = ctx.player().getPos().x * jumpBridgeDirX
-                                  + ctx.player().getPos().z * jumpBridgeDirZ;
-                double backedUp = jumpBridgeBackupStartPos - currentPos;
-
-                if (backedUp >= 2.5 || jumpBridgeTicksInPhase > 30) {
-                    jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
-                    jumpBridgeTicksInPhase = 0;
-                }
-                return false;
-            }
-
             case FJ_SPRINT: {
-                // Sprint forward toward the edge
+                // Sprint forward toward the edge, looking in movement direction
                 behavior.baritone.getLookBehavior().updateTarget(
                         new Rotation(forwardYaw, 0.0f), false);
                 behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
@@ -1187,17 +1132,14 @@ public class PathExecutor implements IPathExecutor, Helper {
                         Math.abs(ctx.player().getPos().x - (firstDest.getX() + 0.5)),
                         Math.abs(ctx.player().getPos().z - (firstDest.getZ() + 0.5)));
 
-                // Jump early while sprinting (sprint speed crosses edge fast)
+                // Jump early — at sprint speed (0.28 blocks/tick) the player crosses
+                // the edge in just a few ticks. Jump from 1.8 blocks out for safety.
                 if (distToDest < 1.8 && ctx.player().isSprinting()) {
                     behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
                 }
-                // Near edge without sprint — back up for runway instead of falling
+                // If near edge but NOT sprinting, abort — let normal bridging handle it
                 if (distToDest < 0.8 && !ctx.player().isSprinting()) {
-                    jumpBridgePhase = JumpBridgePhase.FJ_BACKUP;
-                    jumpBridgeTicksInPhase = 0;
-                    double px = ctx.player().getPos().x * jumpBridgeDirX
-                              + ctx.player().getPos().z * jumpBridgeDirZ;
-                    jumpBridgeBackupStartPos = px;
+                    exitJumpBridge();
                     return false;
                 }
 
@@ -1207,29 +1149,29 @@ public class PathExecutor implements IPathExecutor, Helper {
                     jumpBridgeTicksInPhase = 0;
                     jumpBridgeAirborneTicks = 0;
                     jumpBridgeClickReady = false;
-                    jumpBridgeBlocksPlaced = 0;
                 }
 
-                if (jumpBridgeTicksInPhase > 25) exitJumpBridge();
+                if (jumpBridgeTicksInPhase > 20) exitJumpBridge();
                 return false;
             }
 
             case FJ_AIRBORNE: {
                 jumpBridgeAirborneTicks++;
-                // No movement keys — pure inertia keeps trajectory straight
+                // DON'T press any movement keys — inertia from sprint-jump carries
+                // the player straight forward. Pressing keys while facing backward
+                // would alter the trajectory and cause sideways drift.
 
                 BlockStateInterface bsi = new BlockStateInterface(ctx);
-                if (jumpBridgeAirbornePlace(bsi, pastFace, head, faceCenterPoint, backwardYaw)) {
-                    jumpBridgeBlocksPlaced++;
-                }
+                jumpBridgeAirbornePlace(bsi, pastFace, head, faceCenterPoint, backwardYaw);
 
                 // Landed?
                 if (ctx.player().isOnGround() && jumpBridgeAirborneTicks > 2) {
                     jumpBridgeSnapPath();
+                    // Start next sprint-jump cycle if more bridge ahead
                     if (jumpBridgeCanContinue(bsi)) {
-                        // Land → sneak to not fall off, then back up for next jump
-                        jumpBridgePhase = JumpBridgePhase.FJ_LAND;
+                        jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
                         jumpBridgeTicksInPhase = 0;
+                        jumpBridgeClickReady = false;
                     } else {
                         exitJumpBridge();
                     }
@@ -1237,29 +1179,6 @@ public class PathExecutor implements IPathExecutor, Helper {
                 }
 
                 if (jumpBridgeAirborneTicks > 25) { exitJumpBridge(); return false; }
-                return false;
-            }
-
-            case FJ_LAND: {
-                // Sneak immediately so we don't slide off the last placed block
-                behavior.baritone.getLookBehavior().updateTarget(
-                        new Rotation(forwardYaw, 0.0f), false);
-                behavior.baritone.getInputOverrideHandler().setInputForceState(Input.SNEAK, true);
-
-                // Wait 3 ticks (~0.15 sec) to fully stop
-                if (jumpBridgeTicksInPhase > 3) {
-                    BlockStateInterface bsi = new BlockStateInterface(ctx);
-                    if (jumpBridgeCanContinue(bsi)) {
-                        // Back up for next sprint-jump cycle
-                        jumpBridgePhase = JumpBridgePhase.FJ_BACKUP;
-                        jumpBridgeTicksInPhase = 0;
-                        double px = ctx.player().getPos().x * jumpBridgeDirX
-                                  + ctx.player().getPos().z * jumpBridgeDirZ;
-                        jumpBridgeBackupStartPos = px;
-                    } else {
-                        exitJumpBridge();
-                    }
-                }
                 return false;
             }
 
