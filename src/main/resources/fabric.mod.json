@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "altoclef",
   "version": "${version}",
-  "name": "Union Clef",
+  "name": "UnionClef",
   "description": "Plays block game. Type @help in chat.",
   "authors": [
     "TacoTechnica",
@@ -12,8 +12,8 @@
     "3ndetz"
   ],
   "contact": {
-    "homepage": "https://github.com/MiranCZ/altoclef",
-    "sources": "https://github.com/MiranCZ/altoclef"
+    "homepage": "https://github.com/3ndetz/unionclef",
+    "sources": "https://github.com/3ndetz/unionclef"
   },
   "license": "MIT",
   "icon": "assets/altoclef/icon.png",
