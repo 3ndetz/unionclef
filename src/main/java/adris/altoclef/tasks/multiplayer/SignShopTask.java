@@ -2,11 +2,13 @@ package adris.altoclef.tasks.multiplayer;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
+import adris.altoclef.tasks.movement.SafeRandomShimmyTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.ChestSlot;
+import adris.altoclef.util.time.TimerGame;
 import baritone.api.pathing.goals.GoalNear;
 import baritone.api.process.ICustomGoalProcess;
 import baritone.api.utils.input.Input;
@@ -49,6 +51,7 @@ public class SignShopTask extends Task {
         DONE
     }
 
+    private TimerGame signLookTimer = new TimerGame(7); // 1 second cooldown for looking at sign
     private State state = State.CLICK_SIGN;
     private int waitTicks = 0;
     private int retryDelay = 0;
@@ -121,15 +124,21 @@ public class SignShopTask extends Task {
                 // In reach — stop pathing, look at the sign and click
                 approachTicks = 0;
                 mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+                
                 if (!LookHelper.isLookingAt(mod, signPos)) {
-                    // Prefer looking at the sign face, but any reachable face works
-                    if (facing != null && LookHelper.getReach(signPos, facing).isPresent()) {
-                        LookHelper.lookAt(mod, signPos, facing);
+                    if (signLookTimer.elapsed()){
+                        signLookTimer.reset();
+                        // Prefer looking at the sign face, but any reachable face works
+                        if (facing != null && LookHelper.getReach(signPos, facing).isPresent()) {
+                            LookHelper.lookAt(mod, signPos, facing);
+                        } else {
+                            LookHelper.lookAt(mod, signPos);
+                        }
+                        setDebugState("Looking at sign");
+                        return null;
                     } else {
-                        LookHelper.lookAt(mod, signPos);
+                        return new SafeRandomShimmyTask();
                     }
-                    setDebugState("Looking at sign");
-                    return null;
                 }
                 setDebugState("Clicking sign");
                 mod.getSlotHandler().forceDeequipRightClickableItem();
