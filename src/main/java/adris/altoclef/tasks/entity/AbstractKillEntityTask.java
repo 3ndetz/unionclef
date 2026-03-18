@@ -45,13 +45,15 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
 
     // No-damage detection: reposition when attacks aren't connecting
     private static final int HITS_BEFORE_REPOSITION = 15;
-    private static final int HITS_FOR_IMMUNITY = 20;
+    private static final int REPOSITION_CYCLES_FOR_IMMUNITY = 5; // 5 × 15 = 75 total hits
     private static final long IMMUNITY_DURATION_MS = 5 * 60 * 1000; // 5 minutes
     private static int _swingCount = 0;
     private static float _targetHealthAtFirstSwing = -1;
     private static int _repositionEntityId = -1; // which entity we're repositioning against
     private static boolean _repositioning = false;
     private static final TimerGame _repositionCooldown = new TimerGame(8); // don't reposition too often
+    // Per-entity reposition cycle counter (entityId → how many times we repositioned without dealing damage)
+    private static final Map<Integer, Integer> _repositionCycles = new HashMap<>();
 
     // ── Combat immunity: entities that took 20+ hits without damage are ignored for 5 min ──
     private static final Map<Integer, ImmunityRecord> immuneEntities = new HashMap<>();
@@ -82,7 +84,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
     private static void grantImmunity(Entity entity, float health) {
         immuneEntities.put(entity.getId(), new ImmunityRecord(health));
         Debug.logMessage("[Combat] " + entity.getType().getName().getString()
-                + " granted 5 min immunity (20 hits, no damage)");
+                + " granted 5 min immunity (" + REPOSITION_CYCLES_FOR_IMMUNITY + " reposition cycles, no damage)");
     }
 
     /** Clear immunity for a specific entity (e.g. it attacked us or its HP dropped). */
@@ -244,14 +246,16 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                     if (living.getHealth() < _targetHealthAtFirstSwing) {
                         _swingCount = 0;
                         _targetHealthAtFirstSwing = living.getHealth();
-                    } else if (_swingCount >= HITS_FOR_IMMUNITY) {
-                        // 20 hits without damage → 5 min immunity
-                        _swingCount = 0;
-                        grantImmunity(entity, living.getHealth());
-                        mod.getEntityTracker().requestEntityUnreachable(entity);
+                        _repositionCycles.remove(entity.getId()); // damage dealt, reset cycles
                     } else if (_swingCount >= HITS_BEFORE_REPOSITION && _repositionCooldown.elapsed()) {
-                        // 15 hits → reposition (don't reset count, let it accumulate to 20)
+                        _swingCount = 0;
                         _repositionCooldown.reset();
+                        int cycles = _repositionCycles.merge(entity.getId(), 1, Integer::sum);
+                        if (cycles >= REPOSITION_CYCLES_FOR_IMMUNITY) {
+                            // 20 reposition cycles (20×15 = 300 hits) without damage → 5 min immunity
+                            _repositionCycles.remove(entity.getId());
+                            grantImmunity(entity, living.getHealth());
+                        }
                         mod.getEntityTracker().requestEntityUnreachable(entity);
                     }
                 }
@@ -338,17 +342,20 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                         if (currentHP < _targetHealthAtFirstSwing) {
                             _swingCount = 0;
                             _targetHealthAtFirstSwing = currentHP;
+                            _repositionCycles.remove(player.getId());
                         } else {
                             _swingCount++;
-                            if (_swingCount >= HITS_FOR_IMMUNITY) {
-                                // 20 hits without damage → 5 min immunity
-                                _swingCount = 0;
-                                grantImmunity(player, currentHP);
-                                mod.getEntityTracker().requestEntityUnreachable(player);
-                            } else if (_swingCount >= HITS_BEFORE_REPOSITION && !_repositioning
+                            if (_swingCount >= HITS_BEFORE_REPOSITION && !_repositioning
                                     && _repositionCooldown.elapsed()) {
                                 _repositioning = true;
                                 _repositionCooldown.reset();
+                                _swingCount = 0;
+                                int cycles = _repositionCycles.merge(player.getId(), 1, Integer::sum);
+                                if (cycles >= REPOSITION_CYCLES_FOR_IMMUNITY) {
+                                    _repositionCycles.remove(player.getId());
+                                    grantImmunity(player, currentHP);
+                                    mod.getEntityTracker().requestEntityUnreachable(player);
+                                }
                             }
                         }
                     }
