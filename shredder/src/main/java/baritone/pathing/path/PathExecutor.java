@@ -938,14 +938,11 @@ public class PathExecutor implements IPathExecutor, Helper {
         // Pick starting phase based on mode
         String mode = Baritone.settings().bridgingMode.value;
         if ("jump".equals(mode)) {
-            // Check if we have runway (2+ solid blocks behind in -dir direction)
-            if (hasRunway(bsi)) {
-                jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
-            } else {
-                jumpBridgePhase = JumpBridgePhase.FJ_BACKUP;
-                double px = ctx.player().getPos().x * jumpBridgeDirX + ctx.player().getPos().z * jumpBridgeDirZ;
-                jumpBridgeBackupStartPos = px;
-            }
+            // Require runway — if no 2+ blocks behind, DON'T start jump bridge.
+            // Let slow/standard bridging place the first blocks, then jump bridge
+            // will activate on the next check when runway exists.
+            if (!hasRunway(bsi)) return false;
+            jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
         } else {
             jumpBridgePhase = JumpBridgePhase.BJ_SPRINT;
         }
@@ -1146,13 +1143,27 @@ public class PathExecutor implements IPathExecutor, Helper {
             // ═══════════════════════════════════════════════════════════════
 
             case FJ_BACKUP: {
-                // Walk backward to create sprint runway (~2.5 blocks).
+                // Walk backward on placed blocks to create sprint runway.
                 // Face forward so sprint starts instantly when we reverse.
                 behavior.baritone.getLookBehavior().updateTarget(
                         new Rotation(forwardYaw, 0.0f), false);
+
+                // Check ground behind before stepping — don't walk off the edge
+                BlockPos feet = ctx.playerFeet();
+                BlockPos behindFeet = feet.add(-jumpBridgeDirX, -1, -jumpBridgeDirZ);
+                BlockStateInterface bsi = new BlockStateInterface(ctx);
+                boolean groundBehind = MovementHelper.canWalkOn(bsi, behindFeet.getX(), behindFeet.getY(), behindFeet.getZ());
+
+                if (!groundBehind) {
+                    // No more ground behind — start sprinting from here
+                    jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
+                    jumpBridgeTicksInPhase = 0;
+                    return false;
+                }
+
                 behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, true);
 
-                // Measure how far we've backed up along the movement axis
+                // Measure distance backed up
                 double currentPos = ctx.player().getPos().x * jumpBridgeDirX
                                   + ctx.player().getPos().z * jumpBridgeDirZ;
                 double backedUp = jumpBridgeBackupStartPos - currentPos;
