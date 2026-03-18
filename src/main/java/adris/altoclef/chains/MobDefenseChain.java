@@ -350,7 +350,7 @@ public class MobDefenseChain extends SingleTaskChain {
                     // Give each hostile a timer, if they're close for too long deal with them.
                     if (hostile.isInRange(mod.getPlayer(), annoyingRange) && LookHelper.seesPlayer(hostile, mod.getPlayer(), annoyingRange)) {
 
-                        // Skip entities with combat immunity (20 hits, no damage → 5 min ignore)
+                        // Skip entities with combat immunity (5 reposition cycles, no damage → 5 min ignore)
                         if (AbstractKillEntityTask.hasImmunity(hostile)) continue;
 
                         boolean isIgnored = false;

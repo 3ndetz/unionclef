@@ -52,10 +52,12 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
     private static int _repositionEntityId = -1; // which entity we're repositioning against
     private static boolean _repositioning = false;
     private static final TimerGame _repositionCooldown = new TimerGame(8); // don't reposition too often
+    private static long _lastSwingCountedMs = 0; // min interval between counted swings
+    private static final long MIN_SWING_INTERVAL_MS = 500; // 0.5 sec — don't count spam clicks
     // Per-entity reposition cycle counter (entityId → how many times we repositioned without dealing damage)
     private static final Map<Integer, Integer> _repositionCycles = new HashMap<>();
 
-    // ── Combat immunity: entities that took 20+ hits without damage are ignored for 5 min ──
+    // ── Combat immunity: 5 reposition cycles without damage → 5 min ignore ──
     private static final Map<Integer, ImmunityRecord> immuneEntities = new HashMap<>();
 
     private static class ImmunityRecord {
@@ -68,7 +70,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         boolean isExpired() { return System.currentTimeMillis() > expiresAt; }
     }
 
-    /** Returns true if an entity has combat immunity (20 hits without damage → 5 min ignore). */
+    /** Returns true if entity has combat immunity (5 reposition cycles without damage → 5 min ignore). */
     public static boolean hasImmunity(Entity entity) {
         if (entity == null) return false;
         ImmunityRecord rec = immuneEntities.get(entity.getId());
@@ -242,7 +244,14 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                         _swingCount = 0;
                         _targetHealthAtFirstSwing = living.getHealth();
                     }
-                    _swingCount++;
+                    // Only count hits toward immunity at ≥0.5s intervals (don't let CPS spam inflate the counter)
+                    long now = System.currentTimeMillis();
+                    if (now - _lastSwingCountedMs < MIN_SWING_INTERVAL_MS) {
+                        // Too fast — still attack, just don't count for immunity detection
+                    } else {
+                        _lastSwingCountedMs = now;
+                        _swingCount++;
+                    }
                     if (living.getHealth() < _targetHealthAtFirstSwing) {
                         _swingCount = 0;
                         _targetHealthAtFirstSwing = living.getHealth();
@@ -252,7 +261,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                         _repositionCooldown.reset();
                         int cycles = _repositionCycles.merge(entity.getId(), 1, Integer::sum);
                         if (cycles >= REPOSITION_CYCLES_FOR_IMMUNITY) {
-                            // 20 reposition cycles (20×15 = 300 hits) without damage → 5 min immunity
+                            // 5 reposition cycles without damage → 5 min immunity
                             _repositionCycles.remove(entity.getId());
                             grantImmunity(entity, living.getHealth());
                         }
@@ -344,7 +353,12 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                             _targetHealthAtFirstSwing = currentHP;
                             _repositionCycles.remove(player.getId());
                         } else {
-                            _swingCount++;
+                            // Only count at ≥0.5s intervals
+                            long now = System.currentTimeMillis();
+                            if (now - _lastSwingCountedMs >= MIN_SWING_INTERVAL_MS) {
+                                _lastSwingCountedMs = now;
+                                _swingCount++;
+                            }
                             if (_swingCount >= HITS_BEFORE_REPOSITION && !_repositioning
                                     && _repositionCooldown.elapsed()) {
                                 _repositioning = true;
