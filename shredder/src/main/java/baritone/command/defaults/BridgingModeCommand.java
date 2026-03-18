@@ -22,62 +22,66 @@ import baritone.api.IBaritone;
 import baritone.api.command.Command;
 import baritone.api.command.argument.IArgConsumer;
 import baritone.api.command.exception.CommandException;
-import baritone.api.pathing.goals.GoalXZ;
+import baritone.api.command.exception.CommandInvalidTypeException;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
-public class TestBridgingCommand extends Command {
+public class BridgingModeCommand extends Command {
 
-    protected TestBridgingCommand(IBaritone baritone) {
-        super(baritone, "testbridging", "testbridge", "tb");
+    private static final Set<String> MODES = Set.of("slow", "standard", "back_jump", "jump");
+
+    protected BridgingModeCommand(IBaritone baritone) {
+        super(baritone, "bridgingmode", "bridgemode", "bm");
     }
 
     @Override
     public void execute(String label, IArgConsumer args) throws CommandException {
-        double distance = 30;
-        if (args.hasAny()) {
-            distance = args.getAs(Double.class);
+        if (!args.hasAny()) {
+            // No args — show current mode
+            logDirect("Bridging mode: " + Baritone.settings().bridgingMode.value);
+            return;
         }
+        String mode = args.getString().toLowerCase();
         args.requireMax(0);
 
-        // Use jump bridging mode if not already set to a jump mode
-        String mode = Baritone.settings().bridgingMode.value;
-        if (!"jump".equals(mode) && !"back_jump".equals(mode)) {
-            Baritone.settings().bridgingMode.value = "jump";
+        if (!MODES.contains(mode)) {
+            throw new CommandInvalidTypeException(args.consumed(), "one of: slow, standard, back_jump, jump");
         }
-        logDirect("Bridging mode: " + Baritone.settings().bridgingMode.value);
 
-        // Go forward in the direction the player is looking
-        GoalXZ goal = GoalXZ.fromDirection(
-                ctx.playerFeetAsVec(),
-                ctx.player().getHeadYaw(),
-                distance
-        );
-        baritone.getCustomGoalProcess().setGoalAndPath(goal);
-        logDirect(String.format("Bridging toward %s (%.0f blocks)", goal, distance));
+        Baritone.settings().bridgingMode.value = mode;
+        logDirect("Bridging mode set to: " + mode);
     }
 
     @Override
     public Stream<String> tabComplete(String label, IArgConsumer args) {
+        if (args.hasExactlyOne()) {
+            return MODES.stream().sorted();
+        }
         return Stream.empty();
     }
 
     @Override
     public String getShortDesc() {
-        return "Test jump bridging forward";
+        return "Set bridging mode";
     }
 
     @Override
     public List<String> getLongDesc() {
         return Arrays.asList(
-                "Enables jump bridging and paths forward in the direction you're looking.",
-                "Stand at the edge of a gap, look in the bridging direction, and run this.",
+                "Sets how the bot bridges across gaps.",
+                "",
+                "Modes:",
+                "  slow      — (default) sneak to edge, place calmly",
+                "  standard  — original baritone bridging",
+                "  back_jump — face backward, walk backward + jump, place airborne",
+                "  jump      — sprint-jump forward, snap rotation backward, place at speed",
                 "",
                 "Usage:",
-                "> testbridging - bridge 30 blocks forward",
-                "> testbridging <distance> - bridge N blocks forward"
+                "> bridgingMode        — show current mode",
+                "> bridgingMode <mode> — set mode"
         );
     }
 }
