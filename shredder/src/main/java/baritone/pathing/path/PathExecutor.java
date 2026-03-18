@@ -1124,13 +1124,13 @@ public class PathExecutor implements IPathExecutor, Helper {
                         Math.abs(ctx.player().getPos().x - (firstDest.getX() + 0.5)),
                         Math.abs(ctx.player().getPos().z - (firstDest.getZ() + 0.5)));
 
-                // Jump when close to edge AND actually sprinting.
-                // Without sprint speed the jump is too short to place enough blocks.
-                if (distToDest < 1.2 && ctx.player().isSprinting()) {
+                // Jump early — at sprint speed (0.28 blocks/tick) the player crosses
+                // the edge in just a few ticks. Jump from 1.8 blocks out for safety.
+                if (distToDest < 1.8 && ctx.player().isSprinting()) {
                     behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
                 }
                 // If near edge but NOT sprinting, abort — let normal bridging handle it
-                if (distToDest < 0.5 && !ctx.player().isSprinting()) {
+                if (distToDest < 0.8 && !ctx.player().isSprinting()) {
                     exitJumpBridge();
                     return false;
                 }
