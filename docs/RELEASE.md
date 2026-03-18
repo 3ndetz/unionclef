@@ -1,4 +1,4 @@
-# Release Guide
+# Release-Guide Guide
 
 ## How versioning works
 
@@ -8,7 +8,7 @@ No tag? Falls back to `mod_version` in `gradle.properties`.
 
 ## One-time setup: GitHub token
 
-GitHub releases need a personal access token. Create one at [github.com/settings/tokens](https://github.com/settings/tokens) with `repo` scope.
+GitHub Release-Guides need a personal access token. Create one at [github.com/settings/tokens](https://github.com/settings/tokens) with `repo` scope.
 
 Add it to your **global** Gradle properties (NOT the project file):
 
@@ -17,7 +17,7 @@ Add it to your **global** Gradle properties (NOT the project file):
 github.token=ghp_your_token_here
 ```
 
-## Release workflow
+## Release-Guide workflow
 
 ### 1. Tag
 
@@ -34,24 +34,24 @@ gradlew build
 
 Output JAR: `build/libs/unionclef-0.20.0-1.21.jar`
 
-### 3. Publish to GitHub Releases
+### 3. Publish to GitHub Release-Guides
 
 ```bash
-gradlew githubRelease
+gradlew githubRelease-Guide
 ```
 
-This uploads the JAR to [github.com/3ndetz/unionclef/releases](https://github.com/3ndetz/unionclef/releases) with auto-generated release notes.
+This uploads the JAR to [github.com/3ndetz/unionclef/Release-Guides](https://github.com/3ndetz/unionclef/Release-Guides) with auto-generated Release-Guide notes.
 
 ### All in one
 
 ```bash
 git tag v0.20.0 && git push origin v0.20.0
-gradlew build githubRelease
+gradlew build githubRelease-Guide
 ```
 
 ## What gets bundled in the JAR
 
-The release JAR includes everything needed to run:
+The Release-Guide JAR includes everything needed to run:
 
 - UnionClef (altoclef) classes
 - Baritone classes (remapped to intermediary)
@@ -65,4 +65,4 @@ Users just drop the JAR into their `mods/` folder. No separate baritone install 
 
 ## Version bumping
 
-Edit `mod_version` in `gradle.properties` for the fallback version. But the actual release version always comes from the git tag.
+Edit `mod_version` in `gradle.properties` for the fallback version. But the actual Release-Guide version always comes from the git tag.

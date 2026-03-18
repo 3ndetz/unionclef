@@ -37,7 +37,7 @@
 
 Примеры:
 - `03-03-2026-baritone-yarn-migration.md`
-- `15-03-2026-multiversioning-setup.md`
+- `15-03-2026-Multi-versioning-Guide-setup.md`
 
 ## Связь с TODOS.md
 

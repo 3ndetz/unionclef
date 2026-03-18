@@ -51,13 +51,13 @@ preprocess {
 
 ```groovy
 def mappingsVersions = [
-        12104: "1.21.4+build.X",  // ← check https://fabricmc.net/develop/
+        12104: "1.21.4+build.X",  // ← check https://fabricmc.net/Development-Guide/
         12101: "1.21.1+build.3",
         12100: "1.21+build.9",
 ]
 
 def fabricApiVersions = [
-        12104: "0.XXX.X+1.21.4",  // ← check https://fabricmc.net/develop/
+        12104: "0.XXX.X+1.21.4",  // ← check https://fabricmc.net/Development-Guide/
         12101: "0.110.0+1.21.1",
         12100: "0.100.7+1.21",
 ]
