@@ -986,38 +986,38 @@ public class PathExecutor implements IPathExecutor, Helper {
     /** Shared: airborne block placement with verification. Returns true if placed this tick. */
     private boolean jumpBridgeAirbornePlace(BlockStateInterface bsi, double pastFace,
                                              Vec3d head, Vec3d faceCenterPoint, float backwardYaw) {
-        // ── Rotation: track top edge of +dir face (nearest point to eyes) ──
-        // Y = lastSolid.Y + 0.93: upper part of the +dir face, close to eyes → minimal pitch.
-        // Below the face/top edge (1.0) so raycast hits the +dir face, not the top face.
-        double aimY = jumpBridgeLastSolid.getY() + 0.93;
+        // ── Rotation: aim at CENTER of the +dir face ──
+        // Y = lastSolid.Y + 0.5: center of face. NOT higher — a ray from above
+        // toward the top of the face (Y+0.93) hits the TOP face of the block first,
+        // placing blocks BEHIND the player instead of across the gap.
+        double aimY = jumpBridgeLastSolid.getY() + 0.5;
         Vec3d aimPoint = new Vec3d(faceCenterPoint.x, aimY, faceCenterPoint.z);
         Rotation faceLook = RotationUtils.calcRotationFromVec3d(head, aimPoint, ctx.playerRotations());
 
-        if (pastFace > 0.1) {
-            // Past/at the face — snap rotation for accurate objectMouseOver (blockInteract=true).
+        if (pastFace > 0.3) {
+            // Well past the face — snap rotation for accurate objectMouseOver.
+            // pastFace > 0.3 (not 0.1) so the ray has enough horizontal angle
+            // to clearly miss the top face and hit the +dir side face.
             behavior.baritone.getLookBehavior().updateTarget(faceLook, true);
             if (!jumpBridgeClickReady) {
-                // First snap tick. objectMouseOver updates next render frame. Click on NEXT tick.
                 jumpBridgeClickReady = true;
                 return false;
             }
         } else {
-            // Approaching the face — SMOOTH rotation via WindMouse (blockInteract=false).
-            // Camera gradually tilts toward the face instead of jerking down.
-            // By the time we reach the face, rotation is mostly settled.
+            // Approaching or barely past — smooth rotation, no clicking yet.
             behavior.baritone.getLookBehavior().updateTarget(faceLook, false);
-            // Don't reset clickReady here — we might have set it from a previous block
             return false;
         }
 
-        // ── Verify + place (only click when actually past the face) ──
+        // ── Verify + place ──
         BlockPos expectedPlace = jumpBridgeLastSolid.add(jumpBridgeDirX, 0, jumpBridgeDirZ);
         if (MovementHelper.canWalkOn(bsi, expectedPlace.getX(), expectedPlace.getY(), expectedPlace.getZ())) {
             jumpBridgeLastSolid = expectedPlace;
             jumpBridgeMoveIndex++;
-            jumpBridgeClickReady = false; // re-target new face next tick
+            jumpBridgeClickReady = false;
             return true;
-        } else if (pastFace > 0.15) {
+        } else if (pastFace > 0.4) {
+            // Click only when clearly past — ray must hit side face, not top face.
             behavior.baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
         }
         return false;
