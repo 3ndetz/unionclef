@@ -934,9 +934,15 @@ public class PathExecutor implements IPathExecutor, Helper {
         // Pick starting phase based on mode
         String mode = Baritone.settings().bridgingMode.value;
         if ("jump".equals(mode)) {
-            // No runway check — jump from wherever we are. Walking-jump (2.5 blocks)
-            // is enough to place 2 blocks. If player was already sprinting from normal
-            // pathing, sprint momentum carries over → sprint-jump (4.5 blocks).
+            // Need runway: 3 solid blocks behind for sprint approach.
+            // If not enough → return false → slow bridging places first blocks.
+            BlockPos feet = current.getSrc();
+            for (int step = 1; step <= 3; step++) {
+                BlockPos back = feet.add(-dir.getX() * step, -1, -dir.getZ() * step);
+                if (!MovementHelper.canWalkOn(bsi, back.getX(), back.getY(), back.getZ())) {
+                    return false; // fallback to slow bridging
+                }
+            }
             jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
         } else {
             jumpBridgePhase = JumpBridgePhase.BJ_SPRINT;
