@@ -29,16 +29,21 @@ Built by merging **altoclef**, **shredder**, and **tungsten** into a single code
 > (table is not ready yet, TODO. Functions more than this presented. TODO find more organic, suitable and sexy form for this features table)
 
 
-| Features | Description | Ready |
+| Feature | Description | Ready |
 |---|---|---|
+| **MLG** | 
+| Enderpearl clutch | TP with enderpearl when pursue target. Save self with enderpearl when dropped from edge. | 3/3 ✅ |
+| Arrow dodger | Epic incoming arrow dodging. If has shielf - uses it. | 1/1 ✅ |
+| `@test mace` | 😎 | 1/1 ✅ |
+| `#jumpBridging true` | Super-fast bridging | 1/3 ❌ TODO |
 | **Pathfinding** | 
 | Human-like moveset | Bypass baritone detecting ACs. | 2/3 ⚠️ |
 | Faster baritone | Speeding up with jumps on straight paths | 4/5 ✅ |
 | `#slowBridge true` | Slow shift bridge to work where baritone is blocked. | 3/3 ✅ |
  `#experimentalPathfinding true`| Use tungsten and shredder's baritone simulateously | 2/5 ⚠️ |
-| `#jumpBridging true` | Super-fast bridging | 1/3 ❌ TODO |
 | **PvP** |
-| Attacking bot `@punk` | Handles close target battle | 3/3 ✅ |
+| Attacking bot `@punk` | Handles close target battle. Brokes shields (axe). Uses own shield. Combines ranging and melee attacks automatically, pursues targets. Using mace from the height | 3/3 ✅ |
+| Shooting bot `@shoot` | Handles ranged target battle with 2 types of angle (rapid-fire, sniper, artillery) | 3/3 ✅ |
 | Pursuing bot | Pursue parkouring targets. Slow for now. | 2/3 ⚠️ |
 | **Minigames** |
 | Skywars `@game sw` | SkyWars (fails exploration, buggy) | 3/5 ⚠️ |
@@ -50,9 +55,15 @@ Built by merging **altoclef**, **shredder**, and **tungsten** into a single code
 | Privated regions support | Temporal block placement and removal locks | 4/5 ✅ |
 | `@schematic <schematic>` | Schematic integration | 0/3 ❌ TODO |
 | **Multiplayer** |
-| Attacking bot `@punk` | Handles close target battle | 3/3 ✅ |
-| **Other** |
-| Comfort | All command suggestions. Removed naughty prints from baritone. Multi-versioned repo structured. Mono-repo with easy-to-work with any of integrated mod. | 3/3 ✅ |
+| Autologin (`@set multiplayer_password <password>`) | Autologin and autoregister | 3/3 ✅ |
+| **Agentic** |
+| Python integration | Py4J configurable two-way interface. Port configures via `@set pythonGatewayPort <port>`. Supports multi-instance launching. Rich contextual and method base (see `adris.altoclef.Py4JEntryPoint` class) for agents, including live-screenshot support. | 3/3 ✅ |
+| Agentic commands | `@check_block`, `@check_player` | 3/3 ✅ |
+| Agentic MCP server | MCP for AI agents endpoint on java-side | 0/3 ❌ TODO |
+| **Comfort** |
+| Command suggestions | Rich chat commands suggestions `@help` | 1/1 ✅ |
+| Monorepo structure | Multi-versioned structured mono-repo with easy-to-work with any of integrated mod | 1/1 ✅ |
+| Removed naughty prints from baritone | | 1/1 ✅ |
 
 > Vote for the new features, report for bugs in the [issues](https://github.com/3ndetz/unionclef/issues).
 
