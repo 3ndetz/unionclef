@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "altoclef",
   "version": "${version}",
-  "name": "Alto Clef",
-  "description": "PRO Plays Block Game, type @help in chat",
+  "name": "Union Clef",
+  "description": "Plays block game. Type @help in chat.",
   "authors": [
     "TacoTechnica",
     "James Green",
