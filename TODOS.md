@@ -25,5 +25,9 @@
     - [x] 2.5.1 WindMouse camera smoothing in LookBehavior (render-frame, settings: windMouseLook/Gravity/Wind/MaxStep)
     - [x] 2.5.2 TungstenBridge — smart delegation of simple flat segments to tungsten (settings: useTungsten, tungstenMinSegment)
   - [ ] 2.6 Implement tungsten into this pathfinder (deeper integration beyond flat segments)
+  - [ ] 2.7 Fix jump bridging (jumpBridging setting)
+    - [ ] 2.7.1 Rewrite state machine: PRE_ROTATE before jumping, backward-facing BRIDGE
+    - [ ] 2.7.2 Fix placement verification (don't advance lastSolid without confirming block placed)
+    - [ ] 2.7.3 Fix rotation/objectMouseOver timing (1-tick delay between rotation and click)
 <!-- Верхнеуровневые задачи. Пишет юзер, AI отмечает выполнение. -->
 <!-- Формат: - [ ] задача / - [x] задача -->
