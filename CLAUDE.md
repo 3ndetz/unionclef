@@ -25,9 +25,10 @@ Single Gradle project, no submodules, all source compiled together.
 
 - **NEVER run Gradle** (`gradlew build`, `runClient`, `compileJava`, etc.) without the user explicitly asking. Running build recompiles JARs and breaks active hot swap / debug sessions, costing ~10 min to restart.
 - After editing code, just describe changes. Do NOT "verify" by building.
-- Auto-commit and push your changes (if not explained otherwise).
+- Auto-commit and PUSH!! your changes (if not explained otherwise).
   - **Do NOT add `Co-Authored-By` lines to commit messages.** Ever.
   - Add upperleveled module name to commit message if relevant (e.g. "tungsten: implement ...").
+  - Do not forget periodically do pulls to keep up with parallel workers.
 - **All three modules use yarn mappings.** Baritone was migrated from mojmap to yarn. Do NOT switch back to mojmap.
 - **Автономность:** делай только то, что помечено как TODO в `TODOS.md`. Не забегай вперёд, не делай лишнего.
 
