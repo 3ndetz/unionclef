@@ -245,7 +245,8 @@ public class MobDefenseChain extends SingleTaskChain {
                 return 50 + blowingUp.getClientFuseTime(1) * 50;
             }
         }
-        if (mod.getFoodChain().needsToEat() || mod.getMLGBucketChain().isFalling(mod)
+        if (mod.getFoodChain().needsToEat() || mod.getFoodChain().isTryingToEat()
+                || mod.getMLGBucketChain().isFalling(mod)
                 || !mod.getMLGBucketChain().doneMLG() || mod.getMLGBucketChain().isChorusFruiting()) {
             killAura.stopShielding(mod);
             stopShielding(mod);
