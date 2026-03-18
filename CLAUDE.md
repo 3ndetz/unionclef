@@ -19,7 +19,7 @@ Single Gradle project, no submodules, all source compiled together.
 - `baritone/build.gradle` — baritone subproject (yarn mappings)
 - `tungsten/build.gradle` — tungsten subproject (yarn mappings)
 - `shredder/build.gradle` — shredder subproject (yarn mappings)
-- `docs/Development-Guide.md` — build & run instructions
+- `docs/DEVELOP.md` — build & run instructions
 
 ## STRICT Rules
 
@@ -76,7 +76,7 @@ When referencing Minecraft classes, always use yarn names:
 ## Important files
 
 - `README.md` — project overview, fork history, credits
-- `docs/Development-Guide.md` — how to build and run from scratch
+- `docs/DEVELOP.md` — how to build and run from scratch
 - `CLAUDE.md` — this file (AI assistant rules)
 - `TODOS.md` — текущие задачи
 - `docs/ai/progress.md` — прогресс AI по задачам

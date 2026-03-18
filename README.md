@@ -22,7 +22,7 @@ Built by merging **altoclef**, **shredder**, and **tungsten** into a single code
 
 **Minecraft 1.21** / **Fabric** / **Java 21**
 
-> **[How to build & run →](docs/Development-Guide.md)** | **[How to Release-Guide →](docs/Release-Guide.md)** | **[Multi-version →](docs/Multi-versioning-Guide.md)**
+> **[How to build & run →](docs/DEVELOP.md)** | **[How to release →](docs/RELEASE.md)** | **[Multi-version →](docs/MULTIVERSIONING.md)**
 
 ## Features
 
@@ -86,7 +86,7 @@ gradlew compileJava     # compiles everything
 gradlew runClient       # launches Minecraft
 ```
 
-See **[docs/Development-Guide.md](docs/Development-Guide.md)** for debug setup, hot-swap, and troubleshooting.
+See **[docs/DEVELOP.md](docs/DEVELOP.md)** for debug setup, hot-swap, and troubleshooting.
 
 ## Demo
 
@@ -129,7 +129,7 @@ unionclef/
 ├── root.gradle.kts         root build config
 ├── gradle.properties       versions & settings
 └── docs/
-    └── Development-Guide.md          build & run instructions
+    └── DEVELOP.md                   build & run instructions
 ├── README.md               you are here
 └── TODOS.md                project TODOs and roadmap
 ```

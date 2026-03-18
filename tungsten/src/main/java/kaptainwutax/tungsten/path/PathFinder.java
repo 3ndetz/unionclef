@@ -710,10 +710,10 @@ public class PathFinder {
         };
         if (TungstenModDataContainer.EXECUTOR.isRunning()) {
             TungstenModDataContainer.EXECUTOR.addPath(path);
-            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
+            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElse(null);
         } else {        	
         	TungstenModDataContainer.EXECUTOR.setPath(path);
-            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
+            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElse(null);
         }
 		long endTime = System.currentTimeMillis();
 		long elapsedTime = endTime - startTime;
@@ -740,7 +740,7 @@ public class PathFinder {
         if (blockPath.isPresent()) {
             List<Node> path = constructPath(next);
             TungstenModDataContainer.EXECUTOR.setPath(path);
-            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
+            TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElse(null);
             NEXT_CLOSEST_BLOCKNODE_IDX.set(1);
         	RenderHelper.renderBlockPath(blockPath.get(), NEXT_CLOSEST_BLOCKNODE_IDX.get());
         	return blockPath;
@@ -791,7 +791,7 @@ public class PathFinder {
 //        if (TungstenModDataContainer.EXECUTOR.getPath() != null && TungstenModDataContainer.EXECUTOR.getPath().getLast().hashCode(1, true) == result.get().getLast().hashCode(1, true)) return false;
 //        if (TungstenModDataContainer.EXECUTOR.getPath() != null && TungstenModDataContainer.EXECUTOR.getPath().getFirst().hashCode(1, true) == result.get().getFirst().hashCode(1, true)) return false;
         TungstenModDataContainer.EXECUTOR.addPath(result.get());
-        TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
+        TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElse(null);
 //        RenderHelper.renderPathCurrentlyExecuted();
         for (int i = 0; i < COEFFICIENTS.length; i++) {
 	        TungstenModDataContainer.PATHFINDER.bestSoFar.set(i, null);

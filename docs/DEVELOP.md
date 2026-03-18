@@ -1,4 +1,4 @@
-# Development-Guidement Guide
+# Development Guide
 
 ## Prerequisites
 
@@ -6,7 +6,7 @@
 
 | JDK | Hot-swap | Download |
 |-----|----------|----------|
-| **JetBrains Runtime (JBR)** with JCEF | Methods, fields, classes — no restart | [JBR Release-Guides](https://github.com/JetBrains/JetBrainsRuntime/Release-Guides) — grab `jbr_jcef-21.*` for your OS |
+| **JetBrains Runtime (JBR)** with JCEF | Methods, fields, classes — no restart | [JBR releases](https://github.com/JetBrains/JetBrainsRuntime/Release-Guides) — grab `jbr_jcef-21.*` for your OS |
 | OpenJDK 21 | Method bodies only | [Adoptium](https://adoptium.net/) |
 
 JBR is strongly recommended — you can add new methods and fields on the fly while debugging, which saves ~10 min per restart.
@@ -18,16 +18,16 @@ git clone https://github.com/3ndetz/unionclef
 cd unionclef
 ```
 
-Set JAVA_UnionClef-Wiki:
+Set JAVA_HOME:
 ```bash
 # Windows
-set JAVA_UnionClef-Wiki=C:\Components\jbr_jcef-21.0.10-windows-x64-b1163.110
+set JAVA_HOME=C:\Components\jbr_jcef-21.0.10-windows-x64-b1163.110
 
 # macOS
-export JAVA_UnionClef-Wiki=/Library/Java/JavaVirtualMachines/jbr_jcef-21.jdk/Contents/UnionClef-Wiki
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jbr_jcef-21.jdk/Contents/Home
 
 # Linux
-export JAVA_UnionClef-Wiki=/opt/jbr_jcef-21
+export JAVA_HOME=/opt/jbr_jcef-21
 ```
 
 Compile everything:
@@ -120,4 +120,4 @@ Baritone source has been remapped from mojmap to yarn. If you pull upstream bari
 
 ## Releasing
 
-See **[docs/Release-Guide.md](Release-Guide.md)** for tagging, building Release-Guide JARs, and publishing to GitHub Release-Guides.
+See **[docs/RELEASE.md](RELEASE.md)** for tagging, building Release-Guide JARs, and publishing to GitHub Release-Guides.
