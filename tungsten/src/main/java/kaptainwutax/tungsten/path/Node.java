@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.collect.Streams;
@@ -224,27 +226,36 @@ public class Node {
 	    return false;
 	}
 
+	/** Parameter tuple for deferred parallel node creation. */
+	private record ChildGenParams(boolean forward, boolean right, boolean left, boolean sneak,
+	                               boolean sprint, boolean jump, float yaw) {}
+
 	private void generateGroundOrWaterNodes(WorldView world, Vec3d target, BlockNode nextBlockNode, List<Node> nodes) {
 	    boolean isDoingLongJump = nextBlockNode.isDoingLongJump(world) || nextBlockNode.isDoingNeo();
 	    boolean isCloseToBlockNode = DistanceCalculator.getHorizontalEuclideanDistance(agent.getPos(), nextBlockNode.getPos(true)) < 1;
 //	    boolean needToJump = agent.blockY < nextBlockNode.y;
     	BlockState state = world.getBlockState(nextBlockNode.getBlockPos());
-	    
-	    if (agent.isClimbing(world) 
+
+	    if (agent.isClimbing(world)
 	    		&& state.getBlock() instanceof LadderBlock
-	    		&& nextBlockNode.getBlockPos().getX() == agent.blockX 
+	    		&& nextBlockNode.getBlockPos().getX() == agent.blockX
 	    		&& nextBlockNode.getBlockPos().getZ() == agent.blockZ) {
 	    	Direction dir = state.get(Properties.HORIZONTAL_FACING);
 	    	double desiredYaw = DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true).offset(dir.getOpposite(), 1)) + MathHelper.roundToPrecision(Math.random(), 2) / 1000000;
 	    	if (nextBlockNode.getBlockPos().getY() > agent.blockY) {
-		    	createAndAddNode(world, nextBlockNode, nodes, true, false, false, false, false, true, (float) desiredYaw, isDoingLongJump, isCloseToBlockNode);
+		    	Node n = createNode(world, nextBlockNode, true, false, false, false, false, true, (float) desiredYaw, isDoingLongJump, isCloseToBlockNode);
+		    	if (n != null) nodes.add(n);
 		    	return;
 	    	}
 	    	if (nextBlockNode.getBlockPos().getY() < agent.blockY) {
-	    		createAndAddNode(world, nextBlockNode, nodes, true, false, false, false, false, false, (float) desiredYaw, isDoingLongJump, isCloseToBlockNode);
+	    		Node n = createNode(world, nextBlockNode, true, false, false, false, false, false, (float) desiredYaw, isDoingLongJump, isCloseToBlockNode);
+	    		if (n != null) nodes.add(n);
 	    		return;
 	    	}
 	    }
+
+	    // 1) Collect parameter combinations (cheap — no physics)
+	    List<ChildGenParams> params = new ArrayList<>();
 	    float desiredYaw = (float) DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true));
 	    float a = 134.4f;
 	    float fromYaw = desiredYaw-a<-180.0f ? -180f: desiredYaw-a;
@@ -252,35 +263,38 @@ public class Node {
 	    for (boolean forward : new boolean[]{true, false}) {
 	        for (boolean right : new boolean[]{true, false}) {
 	            for (boolean left : new boolean[]{true, false}) {
-//	                for (boolean sneak : new boolean[]{false, true}) {
 	                    for (float yaw = fromYaw; yaw < toYaw; yaw += 22.5 + Math.random()) {
 	                        for (boolean sprint : new boolean[]{true, false}) {
 	                        	if (!this.agent.canSprint() && sprint) continue;
 	                            if (( ((right || left) && !forward)) && sprint) continue;
 
 	                            for (boolean jump : new boolean[]{true, false}) {
-//	                            	if (!needToJump && jump) continue;
-//	                            	if (isCloseToBlockNode && jump && nextBlockNode.getBlockPos().getY() == agent.blockY) continue;
-	                                createAndAddNode(world, nextBlockNode, nodes, forward, right, left, false, sprint, jump, yaw, isDoingLongJump, isCloseToBlockNode);
+	                                params.add(new ChildGenParams(forward, right, left, false, sprint, jump, yaw));
 	                            }
 	                        }
 	                    }
-//	                }
 	            }
 	        }
 	    }
+
+	    // 2) Create nodes in parallel (expensive — Agent.tick per child)
+	    List<Node> created = params.parallelStream()
+	        .map(p -> createNode(world, nextBlockNode, p.forward, p.right, p.left, p.sneak, p.sprint, p.jump, p.yaw, isDoingLongJump, isCloseToBlockNode))
+	        .filter(Objects::nonNull)
+	        .collect(Collectors.toList());
+	    nodes.addAll(created);
 	}
 
-	private void createAndAddNode(WorldView world, BlockNode nextBlockNode, List<Node> nodes,
-	                              boolean forward, boolean right, boolean left, boolean sneak, boolean sprint, boolean jump,
-	                              float yaw, boolean isDoingLongJump, boolean isCloseToBlockNode) {
+	private Node createNode(WorldView world, BlockNode nextBlockNode,
+	                        boolean forward, boolean right, boolean left, boolean sneak, boolean sprint, boolean jump,
+	                        float yaw, boolean isDoingLongJump, boolean isCloseToBlockNode) {
 	    try {
 
-            if (jump && sneak) return;
+            if (jump && sneak) return null;
 	        Node newNode = new Node(this, world, new PathInput(forward, false, right, left, jump, sneak, sprint, agent.pitch, yaw),
 	                new Color(sneak ? 220 : 0, 255, sneak ? 50 : 0), this.cost);
 	        double addNodeCost = calculateNodeCost(forward, sprint, jump, sneak, isCloseToBlockNode, isDoingLongJump, newNode.agent);
-	        if (newNode.agent.getPos().isWithinRangeOf(nextBlockNode.getPos(true), 0.1, 0.4)) return;
+	        if (newNode.agent.getPos().isWithinRangeOf(nextBlockNode.getPos(true), 0.1, 0.4)) return null;
 //	        double newNodeDistanceToBlockNode = Math.ceil(newNode.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e5);
 //	        double parentNodeDistanceToBlockNode = Math.ceil(newNode.parent.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e5);
 	        
@@ -289,13 +303,13 @@ public class Node {
 	        boolean isMoving = (forward || right || left);
 	        if (newNode.agent.isClimbing(world)) jump = this.agent.getBlockPos().getY() < nextBlockNode.getBlockPos().getY();
 
-	            if (!newNode.agent.touchingWater && !newNode.agent.onGround && sneak) return;
-	            if (!newNode.agent.touchingWater && sneak && jump) return;
-	            if (!newNode.agent.touchingWater && (sneak && sprint)) return;
-	            if (!newNode.agent.touchingWater && sneak && (right || left) && forward) return;
-	            if (!newNode.agent.touchingWater && sneak && Math.abs(newNode.parent.agent.yaw - newNode.agent.yaw) > 80) return;
-	            if (newNode.agent.touchingWater && (sneak || jump) && newNode.agent.getBlockPos().getY() == nextBlockNode.getBlockPos().getY()) return;
-	            if (newNode.agent.touchingWater && jump && newNode.agent.getBlockPos().getY() > nextBlockNode.getBlockPos().getY()) return;
+	            if (!newNode.agent.touchingWater && !newNode.agent.onGround && sneak) return null;
+	            if (!newNode.agent.touchingWater && sneak && jump) return null;
+	            if (!newNode.agent.touchingWater && (sneak && sprint)) return null;
+	            if (!newNode.agent.touchingWater && sneak && (right || left) && forward) return null;
+	            if (!newNode.agent.touchingWater && sneak && Math.abs(newNode.parent.agent.yaw - newNode.agent.yaw) > 80) return null;
+	            if (newNode.agent.touchingWater && (sneak || jump) && newNode.agent.getBlockPos().getY() == nextBlockNode.getBlockPos().getY()) return null;
+	            if (newNode.agent.touchingWater && jump && newNode.agent.getBlockPos().getY() > nextBlockNode.getBlockPos().getY()) return null;
 	            if (!sneak) {
 	            	boolean isBelowClosedTrapDoor = BlockStateChecker.isClosedBottomTrapdoor(world.getBlockState(nextBlockNode.getBlockPos().down()));
 	        	    boolean shouldAllowWalkingOnLowerBlock = !world.getBlockState(agent.getBlockPos().up(2)).isAir() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 3;
@@ -312,11 +326,9 @@ public class Node {
 		            }
 	            }
 
-	        nodes.add(newNode);
+	        return newNode;
 	    } catch (ConcurrentModificationException e) {
-//	        try {
-//	            Thread.sleep(2);
-//	        } catch (InterruptedException ignored) {}
+	        return null;
 	    }
 	}
 
