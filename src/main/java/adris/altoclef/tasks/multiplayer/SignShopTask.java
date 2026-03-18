@@ -56,12 +56,12 @@ public class SignShopTask extends Task {
     private int retryCount = 0;
     private int approachTicks = 0;
     private int lookTicks = 0;
-    private static final int MAX_WAIT_TICKS = 100;      // 5 seconds for chest to open
-    private static final int MAX_APPROACH_TICKS = 200;  // 10 seconds to reach the sign
-    private static final int MAX_RETRIES = 5;
-    private static final int RETRY_DELAY_TICKS = 20;
-    private static final int LOOK_JIGGLE_TICKS = 30;    // 1.5s — start jiggling + clicking
-    private static final int LOOK_GIVEUP_TICKS = 50;    // 2.5s — force click, move to WAIT_CHEST
+    private static final int MAX_WAIT_TICKS = 40;       // 2s for chest to open
+    private static final int MAX_APPROACH_TICKS = 200;  // 10s to reach the sign
+    private static final int MAX_RETRIES = 3;
+    private static final int RETRY_DELAY_TICKS = 10;
+    private static final int LOOK_JIGGLE_TICKS = 10;    // 0.5s — start jiggling + clicking
+    private static final int LOOK_GIVEUP_TICKS = 30;    // 1.5s — force click, move to WAIT_CHEST
 
     public SignShopTask(BlockPos signPos) {
         this.signPos = signPos;
@@ -132,22 +132,24 @@ public class SignShopTask extends Task {
 
                 if (!looking && lookTicks <= LOOK_GIVEUP_TICKS) {
                     if (lookTicks > LOOK_JIGGLE_TICKS) {
-                        // Jiggle around the sign face + try clicking every 5 ticks
+                        // Jiggle around the sign block + spam RMB every 3 ticks
                         Vec3d center = signPos.toCenterPos();
-                        double jx = (Math.random() - 0.5) * 0.4;
-                        double jy = (Math.random() - 0.5) * 0.4;
-                        double jz = (Math.random() - 0.5) * 0.4;
+                        double jx = (Math.random() - 0.5) * 0.6;
+                        double jy = (Math.random() - 0.5) * 0.6;
+                        double jz = (Math.random() - 0.5) * 0.6;
                         LookHelper.lookAt(mod, center.add(jx, jy, jz));
-                        if (lookTicks % 5 == 0) {
+                        if (lookTicks % 3 == 0) {
                             mod.getSlotHandler().forceDeequipRightClickableItem();
                             mod.getInputControls().tryPress(Input.CLICK_RIGHT);
                         }
+                        setDebugState("Jiggling at sign (" + lookTicks + "/" + LOOK_GIVEUP_TICKS + ")");
                     } else if (facing != null && LookHelper.getReach(signPos, facing).isPresent()) {
                         LookHelper.lookAt(mod, signPos, facing);
+                        setDebugState("Looking at sign (" + lookTicks + "/" + LOOK_GIVEUP_TICKS + ")");
                     } else {
                         LookHelper.lookAt(mod, signPos);
+                        setDebugState("Looking at sign (" + lookTicks + "/" + LOOK_GIVEUP_TICKS + ")");
                     }
-                    setDebugState("Looking at sign (" + lookTicks + "/" + LOOK_GIVEUP_TICKS + ")");
                     return null;
                 }
 
@@ -180,6 +182,7 @@ public class SignShopTask extends Task {
                     Debug.logWarning("[SignShop] Chest didn't open, retry " + retryCount + "/" + MAX_RETRIES);
                     state = State.CLICK_SIGN;
                     approachTicks = 0;
+                    lookTicks = 0;
                     retryDelay = RETRY_DELAY_TICKS;
                 }
                 return null;
