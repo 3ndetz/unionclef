@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import com.google.common.util.concurrent.AtomicDoubleArray;
 
 import kaptainwutax.tungsten.Debug;
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
@@ -194,6 +195,7 @@ public class PathFinder {
 		    	this.start = start;
 	    }
 	    if (blockPath.isEmpty()) {
+		    long tBlock0 = TungstenConfig.get().debugTime ? System.nanoTime() : 0;
 		    Optional<List<BlockNode>> blockPath = findBlockPath(world, target, player);
 		    if (blockPath.isPresent()) {
 	        	RenderHelper.renderBlockPath(blockPath.get(), NEXT_CLOSEST_BLOCKNODE_IDX.get());
@@ -201,6 +203,12 @@ public class PathFinder {
 	    	    NEXT_CLOSEST_BLOCKNODE_IDX.set(1);
 
 				Debug.logMessage("Serching for inputs!");
+	        }
+	        if (TungstenConfig.get().debugTime) {
+	            System.out.printf("Tungsten [blockSearch] %.1fms | found=%b | nodes=%d%n",
+	                (System.nanoTime() - tBlock0) / 1_000_000.0,
+	                blockPath.isPresent(),
+	                blockPath.isPresent() ? blockPath.get().size() : 0);
 	        }
 	    }
 	    if (blockPath.isEmpty() || blockPath.get().size() < 1) {
@@ -366,6 +374,11 @@ public class PathFinder {
 	        } else {
 	            TungstenMod.LOG.info("[PathFinder] No usable partial path found.");
 	        }
+	    }
+	    if (TungstenConfig.get().debugTime) {
+	        long elapsed = System.currentTimeMillis() - startTime;
+	        System.out.printf("Tungsten [search done] %dms total | %d nodes explored | openSet empty=%b | stopped=%b%n",
+	            elapsed, numNodesConsidered.get(), openSet.isEmpty(), stop.get());
 	    }
 	    RenderHelper.clearRenderers();
 		closed.clear();
@@ -831,10 +844,15 @@ public class PathFinder {
 
     private boolean processNodeChildren(WorldView world, Node parent, Vec3d target, Optional<List<BlockNode>> blockPath,
             BinaryHeapOpenSet openSet, Set<Vec3d> closed) {
+			boolean timing = TungstenConfig.get().debugTime;
+			long t0 = timing ? System.nanoTime() : 0;
+
 			AtomicBoolean failing = new AtomicBoolean(true);
 			if (blockPath.isEmpty()) return false;
 			List<Node> children = parent.getChildren(world, target, blockPath.get().get(NEXT_CLOSEST_BLOCKNODE_IDX.get()));
 			if (children.isEmpty()) return false;
+
+			long tChildren = timing ? System.nanoTime() : 0;
 			
 //			Debug.logMessage("All children");
 //			for (Node node : children) {
@@ -944,7 +962,9 @@ public class PathFinder {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			
+
+			long tFiltered = timing ? System.nanoTime() : 0;
+
 			Object openSetLock = new Object();  // if openSet is not thread-safe
 			
 			List<Callable<Void>> processingTasks = new ArrayList<>();
@@ -1068,6 +1088,16 @@ public class PathFinder {
 //				// TODO Auto-generated catch block
 //				e.printStackTrace();
 //			}
+			if (timing) {
+				long tDone = System.nanoTime();
+				double msGetChildren = (tChildren - t0) / 1_000_000.0;
+				double msFilter = (tFiltered - tChildren) / 1_000_000.0;
+				double msOpenSet = (tDone - tFiltered) / 1_000_000.0;
+				double msTotal = (tDone - t0) / 1_000_000.0;
+				System.out.printf("Tungsten [node#%d] %.1fms total | getChildren=%.1fms (%d raw) | filter=%.1fms (%d valid) | openSet+update=%.1fms%n",
+					numNodesConsidered.get(), msTotal, msGetChildren, children.size(), msFilter, validChildren.size(), msOpenSet);
+			}
+
 			return failing.get();
 		}
     

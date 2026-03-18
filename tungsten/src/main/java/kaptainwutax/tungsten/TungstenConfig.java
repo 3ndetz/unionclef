@@ -34,6 +34,11 @@ public class TungstenConfig {
      *  Keep false in normal use to reduce noise. */
     public boolean verboseDebugLogging = false;
 
+    /** If true: log per-node timing breakdown to stdout.
+     *  Shows where PathFinder spends time: child generation, filtering,
+     *  openSet ops, heuristic updates, block-space search, etc. */
+    public boolean debugTime = false;
+
     // ----------------------------------------
 
     public static TungstenConfig get() {
