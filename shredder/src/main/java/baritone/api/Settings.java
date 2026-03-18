@@ -167,18 +167,14 @@ public final class Settings {
     public final Setting<Boolean> assumeSafeWalk = new Setting<>(false);
 
     /**
-     * Slow mode for straight bridging: sneak to edge and place calmly, instead of rapid head-jerking.
-     * The bot stays crouched, looks down at a stable angle, and places blocks from the edge
-     * without snapping the camera backward.
+     * Bridging mode for placing blocks while crossing gaps.
+     * <p>
+     * "slow"      — (default) sneak to edge, look down at stable angle, place calmly.
+     * "standard"  — original baritone bridging (fast but jerky head movement).
+     * "back_jump" — face backward, walk backward + jump, place while airborne.
+     * "jump"      — sprint-jump forward, snap rotation backward mid-air, place at speed.
      */
-    public final Setting<Boolean> slowModeStraightBridging = new Setting<>(true);
-
-    /**
-     * Jump bridging: when multiple horizontal blocks need placing in a row (for movement, not building),
-     * jump forward, rotate backward mid-air, and place blocks under yourself with human-like click timing.
-     * Much faster than sneak-bridging but requires practice-level precision.
-     */
-    public final Setting<Boolean> jumpBridging = new Setting<>(false);
+    public final Setting<String> bridgingMode = new Setting<>("slow");
 
     /**
      * If true, parkour is allowed to make jumps when standing on blocks at the maximum height, so player feet is y=256

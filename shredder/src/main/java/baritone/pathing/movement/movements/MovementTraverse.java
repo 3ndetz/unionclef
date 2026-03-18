@@ -300,7 +300,7 @@ public class MovementTraverse extends Movement {
             }
 
             // ── Slow mode bridging: sneak to edge, look down at stable angle, place calmly ──
-            if (Baritone.settings().slowModeStraightBridging.value) {
+            if ("slow".equals(Baritone.settings().bridgingMode.value)) {
                 return updateSlowBridge(state, feet);
             }
 
