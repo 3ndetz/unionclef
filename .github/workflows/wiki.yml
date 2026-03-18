@@ -1,0 +1,24 @@
+name: Sync docs to Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+
+  workflow_dispatch:
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync docs to wiki
+        uses: cmbrose/github-docs-to-wiki@v0.20
+        with:
+          githubToken: ${{ secrets.WIKI_TOKEN }}
+          rootDocsFolder: docs
+          useHeaderForWikiName: true
+          customWikiFileHeaderFormat: "> Source: [{sourceFileLink}]({sourceFileLink})"
+          customCommitMessageFormat: "wiki: sync from {shaShort} — {commitMessage}"
