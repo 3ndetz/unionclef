@@ -894,31 +894,17 @@ public class PathExecutor implements IPathExecutor, Helper {
     // ── Jump bridging ────────────────────────────────────────────────────────
 
     /**
-     * Detect bridge segment and start jump bridge.
-     *
-     * For "back_jump" mode: triggers on the first bridge movement (player at edge).
-     * For "jump" mode: scans AHEAD from current walk movement to find upcoming bridge.
-     *   Triggers while player is still 3+ blocks from edge so sprint can build speed.
+     * Detect ≥3 consecutive bridge movements and start jump bridge.
+     * Mode selected by bridgingMode setting: "back_jump" or "jump".
      */
     private boolean tryStartJumpBridge(Movement current) {
         if (!(current instanceof MovementTraverse)) return false;
-        Vec3i dir = current.getDirection();
-        if (dir.getY() != 0) return false;
 
         BlockStateInterface bsi = new BlockStateInterface(ctx);
-        String mode = Baritone.settings().bridgingMode.value;
-
-        if ("jump".equals(mode)) {
-            return tryStartForwardJumpBridge(current, dir, bsi);
-        } else if ("back_jump".equals(mode)) {
-            return tryStartBackJumpBridge(current, dir, bsi);
-        }
-        return false;
-    }
-
-    /** back_jump: triggers at edge (current movement is a bridge). */
-    private boolean tryStartBackJumpBridge(Movement current, Vec3i dir, BlockStateInterface bsi) {
         if (current.toPlace(bsi).isEmpty()) return false;
+
+        Vec3i dir = current.getDirection();
+        if (dir.getY() != 0) return false;
 
         int bridgeCount = 1;
         for (int i = pathPosition + 1; i < path.movements().size() && i <= pathPosition + 6; i++) {
@@ -929,73 +915,44 @@ public class PathExecutor implements IPathExecutor, Helper {
             bridgeCount++;
         }
         if (bridgeCount < 3) return false;
-
-        return initJumpBridge(dir, bsi, pathPosition, current.getSrc().down(), JumpBridgePhase.BJ_SPRINT);
-    }
-
-    /**
-     * jump mode: scans ahead from current WALK movement to find upcoming bridge.
-     * Starts sprint while player is 3+ blocks from the edge.
-     */
-    private boolean tryStartForwardJumpBridge(Movement current, Vec3i dir, BlockStateInterface bsi) {
-        // Scan forward: find where the bridge starts (first movement that needs placement)
-        int bridgeStart = -1;
-        for (int i = pathPosition; i < path.movements().size() && i <= pathPosition + 5; i++) {
-            IMovement m = path.movements().get(i);
-            if (!(m instanceof MovementTraverse)) return false;
-            if (!m.getDirection().equals(dir)) return false;
-            if (m.getDirection().getY() != 0) return false;
-            if (!((Movement) m).toPlace(bsi).isEmpty()) {
-                bridgeStart = i;
-                break;
-            }
-        }
-        if (bridgeStart == -1) return false;
-
-        // Count bridge movements from bridgeStart
-        int bridgeCount = 0;
-        for (int i = bridgeStart; i < path.movements().size() && i <= bridgeStart + 6; i++) {
-            IMovement m = path.movements().get(i);
-            if (!(m instanceof MovementTraverse)) break;
-            if (!m.getDirection().equals(dir)) break;
-            if (((Movement) m).toPlace(bsi).isEmpty()) break;
-            bridgeCount++;
-        }
-        if (bridgeCount < 3) return false;
-
-        // Check distance from player to the edge (first bridge dest)
-        BlockPos edgeDest = path.movements().get(bridgeStart).getDest();
-        double distToEdge = Math.max(
-                Math.abs(ctx.player().getPos().x - (edgeDest.getX() + 0.5)),
-                Math.abs(ctx.player().getPos().z - (edgeDest.getZ() + 0.5)));
-        // Need at least 3 blocks to build sprint speed
-        if (distToEdge < 3.0) return false;
-
-        BlockPos lastSolid = path.movements().get(bridgeStart).getSrc().down();
-        return initJumpBridge(dir, bsi, bridgeStart, lastSolid, JumpBridgePhase.FJ_SPRINT);
-    }
-
-    /** Shared init for both modes. */
-    private boolean initJumpBridge(Vec3i dir, BlockStateInterface bsi,
-                                    int moveIndex, BlockPos lastSolid, JumpBridgePhase startPhase) {
         if (!behavior.baritone.getInventoryBehavior().hasGenericThrowaway()) return false;
 
-        BlockPos firstPlace = path.movements().get(moveIndex).getDest().down();
-        if (!behavior.baritone.getInventoryBehavior().selectThrowawayForLocation(
-                true, firstPlace.getX(), firstPlace.getY(), firstPlace.getZ())) {
+        BlockPos firstPlace = current.getDest().down();
+        if (!behavior.baritone.getInventoryBehavior().selectThrowawayForLocation(true, firstPlace.getX(), firstPlace.getY(), firstPlace.getZ())) {
             return false;
         }
 
         jumpBridging = true;
-        jumpBridgePhase = startPhase;
         jumpBridgeTicksInPhase = 0;
-        jumpBridgeMoveIndex = moveIndex;
+        jumpBridgeMoveIndex = pathPosition;
         jumpBridgeDirX = dir.getX();
         jumpBridgeDirZ = dir.getZ();
-        jumpBridgeLastSolid = lastSolid;
+        jumpBridgeLastSolid = current.getSrc().down();
         jumpBridgeAirborneTicks = 0;
         jumpBridgeClickReady = false;
 
+        // Pick starting phase based on mode
+        String mode = Baritone.settings().bridgingMode.value;
+        if ("jump".equals(mode)) {
+            // Require sprint runway: 3 solid blocks behind in -dir.
+            // If no runway, return false → slow/standard bridging places first blocks,
+            // then jump bridge activates next tick when runway exists.
+            BlockPos feet = current.getSrc();
+            boolean hasRunway = true;
+            for (int step = 1; step <= 3; step++) {
+                BlockPos back = feet.add(-dir.getX() * step, -1, -dir.getZ() * step);
+                if (!MovementHelper.canWalkOn(bsi, back.getX(), back.getY(), back.getZ())) {
+                    hasRunway = false;
+                    break;
+                }
+            }
+            if (!hasRunway) return false;
+            jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
+        } else {
+            jumpBridgePhase = JumpBridgePhase.BJ_SPRINT;
+        }
+
+        // Fast clicks: override rightClickSpeed for rapid placement while airborne
         jumpBridgeSavedClickSpeed = Baritone.settings().rightClickSpeed.value;
         Baritone.settings().rightClickSpeed.value = 1;
 
@@ -1211,8 +1168,7 @@ public class PathExecutor implements IPathExecutor, Helper {
                     jumpBridgeClickReady = false;
                 }
 
-                // Safety: 40 ticks max (enough for 3-5 block sprint approach)
-                if (jumpBridgeTicksInPhase > 40) exitJumpBridge();
+                if (jumpBridgeTicksInPhase > 20) exitJumpBridge();
                 return false;
             }
 
