@@ -3,7 +3,7 @@
   "id": "altoclef",
   "version": "${version}",
   "name": "Alto Clef",
-  "description": "PRO Plays Block Game",
+  "description": "PRO Plays Block Game, type @help in chat",
   "authors": [
     "TacoTechnica",
     "James Green",
