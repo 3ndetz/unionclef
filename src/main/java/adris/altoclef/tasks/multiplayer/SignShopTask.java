@@ -8,7 +8,6 @@ import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.ChestSlot;
-import adris.altoclef.util.time.TimerGame;
 import baritone.api.pathing.goals.GoalNear;
 import baritone.api.process.ICustomGoalProcess;
 import baritone.api.utils.input.Input;
@@ -20,6 +19,7 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 import java.util.Optional;
@@ -51,16 +51,18 @@ public class SignShopTask extends Task {
         DONE
     }
 
-    private TimerGame signLookTimer = new TimerGame(7); // 1 second cooldown for looking at sign
     private State state = State.CLICK_SIGN;
     private int waitTicks = 0;
     private int retryDelay = 0;
     private int retryCount = 0;
     private int approachTicks = 0;
-    private static final int MAX_WAIT_TICKS = 100;      // 5 seconds for chest to open
-    private static final int MAX_APPROACH_TICKS = 200;  // 10 seconds to reach the sign
-    private static final int MAX_RETRIES = 5;
-    private static final int RETRY_DELAY_TICKS = 20;
+    private int lookTicks = 0;
+    private static final int MAX_WAIT_TICKS = 40;       // 2s for chest to open
+    private static final int MAX_APPROACH_TICKS = 200;  // 10s to reach the sign
+    private static final int MAX_RETRIES = 3;
+    private static final int RETRY_DELAY_TICKS = 10;
+    private static final int LOOK_JIGGLE_TICKS = 10;    // 0.5s — start jiggling + clicking
+    private static final int LOOK_GIVEUP_TICKS = 30;    // 1.5s — try shimmy to reposition
 
     public SignShopTask(BlockPos signPos) {
         this.signPos = signPos;
@@ -73,6 +75,7 @@ public class SignShopTask extends Task {
         retryDelay = 0;
         retryCount = 0;
         approachTicks = 0;
+        lookTicks = 0;
         Debug.logMessage("[SignShop] Starting at " + signPos.toShortString());
     }
 
@@ -124,27 +127,46 @@ public class SignShopTask extends Task {
                 // In reach — stop pathing, look at the sign and click
                 approachTicks = 0;
                 mod.getClientBaritone().getCustomGoalProcess().onLostControl();
-                
-                if (!LookHelper.isLookingAt(mod, signPos)) {
-                    if (signLookTimer.elapsed()){
-                        signLookTimer.reset();
-                        // Prefer looking at the sign face, but any reachable face works
-                        if (facing != null && LookHelper.getReach(signPos, facing).isPresent()) {
-                            LookHelper.lookAt(mod, signPos, facing);
-                        } else {
-                            LookHelper.lookAt(mod, signPos);
+                lookTicks++;
+
+                boolean looking = LookHelper.isLookingAt(mod, signPos);
+
+                if (!looking && lookTicks <= LOOK_GIVEUP_TICKS) {
+                    if (lookTicks > LOOK_JIGGLE_TICKS) {
+                        // Jiggle around the sign block + spam RMB every 3 ticks
+                        Vec3d center = signPos.toCenterPos();
+                        double jx = (Math.random() - 0.5) * 0.6;
+                        double jy = (Math.random() - 0.5) * 0.6;
+                        double jz = (Math.random() - 0.5) * 0.6;
+                        LookHelper.lookAt(mod, center.add(jx, jy, jz));
+                        if (lookTicks % 3 == 0) {
+                            mod.getSlotHandler().forceDeequipRightClickableItem();
+                            mod.getInputControls().tryPress(Input.CLICK_RIGHT);
                         }
-                        setDebugState("Looking at sign");
-                        return null;
+                        setDebugState("Jiggling at sign (" + lookTicks + "/" + LOOK_GIVEUP_TICKS + ")");
+                    } else if (facing != null && LookHelper.getReach(signPos, facing).isPresent()) {
+                        LookHelper.lookAt(mod, signPos, facing);
+                        setDebugState("Looking at sign (" + lookTicks + "/" + LOOK_GIVEUP_TICKS + ")");
                     } else {
-                        return new SafeRandomShimmyTask();
+                        LookHelper.lookAt(mod, signPos);
+                        setDebugState("Looking at sign (" + lookTicks + "/" + LOOK_GIVEUP_TICKS + ")");
                     }
+                    return null;
                 }
+
+                // Jiggle failed — shimmy to reposition, then force-click next tick
+                if (!looking && lookTicks == LOOK_GIVEUP_TICKS + 1) {
+                    setDebugState("Shimmy to reposition");
+                    return new SafeRandomShimmyTask();
+                }
+
+                // Either looking at sign or gave up waiting — click and move on
                 setDebugState("Clicking sign");
                 mod.getSlotHandler().forceDeequipRightClickableItem();
                 mod.getInputControls().tryPress(Input.CLICK_RIGHT);
                 state = State.WAIT_CHEST;
                 waitTicks = 0;
+                lookTicks = 0;
                 return null;
             }
             case WAIT_CHEST -> {
@@ -167,6 +189,7 @@ public class SignShopTask extends Task {
                     Debug.logWarning("[SignShop] Chest didn't open, retry " + retryCount + "/" + MAX_RETRIES);
                     state = State.CLICK_SIGN;
                     approachTicks = 0;
+                    lookTicks = 0;
                     retryDelay = RETRY_DELAY_TICKS;
                 }
                 return null;
