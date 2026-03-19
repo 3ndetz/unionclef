@@ -46,6 +46,12 @@ public class Settings implements IFailableConfigFile {
     //////////////////////////////////////////////////////////////////////////////////////////
 
     /**
+     * If true, F5 third-person view uses EpicCamera (smooth orbit + shoulder offset).
+     * If false, vanilla third-person camera.
+     */
+    private boolean epicCameraEnabled = true;
+
+    /**
      * If true, shows a debug bar displaying how much milliseconds is spend on altoclefs tick function
      */
     private boolean showDebugTickMs = false;
@@ -463,6 +469,10 @@ public class Settings implements IFailableConfigFile {
 
     public static void load(Consumer<Settings> onReload) {
         ConfigHelper.loadConfig(SETTINGS_PATH, Settings::new, Settings.class, onReload);
+    }
+
+    public boolean isEpicCameraEnabled() {
+        return epicCameraEnabled;
     }
 
     public boolean shouldShowTaskChain() {
