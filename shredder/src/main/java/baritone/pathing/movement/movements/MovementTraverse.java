@@ -367,67 +367,52 @@ public class MovementTraverse extends Movement {
     }
 
     /**
-     * Slow-mode bridging: sneak to edge, place from edge looking backward, then walk forward.
-     * Never walks forward until the bridge block is confirmed placed.
+     * Slow-mode bridging: butt-first, no camera jerking.
+     *
+     * Two phases:
+     * 1. WALK: look backward (-dir, pitch 80°), MOVE_BACK (= moves toward dest).
+     *    Sneak prevents falling off edge.
+     * 2. PLACE: at the edge (distToEdge < 0.4), face is now behind us.
+     *    Aim precisely at the +dir face of src.down(), click when raycast hits.
      */
     private MovementState updateSlowBridge(MovementState state, BlockPos feet) {
-        // Always sneak during slow bridge — non-negotiable
         state.setInput(Input.SNEAK, true);
 
-        // If the bridge block appeared (placed by us or someone else), walk forward
-        boolean bridgePlaced = MovementHelper.canWalkOn(ctx, dest.down());
-        if (bridgePlaced) {
+        // Bridge block placed — walk to dest (movement completes naturally)
+        if (MovementHelper.canWalkOn(ctx, dest.down())) {
             MovementHelper.moveTowards(ctx, state, dest);
             return state;
         }
 
-        // Try normal placement (side-place against adjacent blocks)
-        PlaceResult p = MovementHelper.attemptToPlaceABlock(state, baritone, dest.down(), false, true);
-        if (p == PlaceResult.READY_TO_PLACE) {
-            // Rotation is good — click to place, do NOT walk forward yet
-            if (ctx.player().isInSneakingPose()) {
-                state.setInput(Input.CLICK_RIGHT, true);
-            }
-            return state;
-        }
-        if (p == PlaceResult.ATTEMPTING) {
-            // Still rotating to face the placement target — sneak toward edge if far
-            double distToEdge = Math.max(
-                    Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)),
-                    Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
-            if (distToEdge > 0.83) {
-                state.setInput(Input.MOVE_FORWARD, true);
-            }
-            return state;
-        }
+        // Backward yaw: opposite of movement direction
+        int dirX = dest.getX() - src.getX();
+        int dirZ = dest.getZ() - src.getZ();
+        float backwardYaw = (float) Math.toDegrees(Math.atan2(-dirX, dirZ)) + 180.0f;
 
-        // NO_OPTION: no side place found — need to backplace from edge
-        if (feet.equals(dest)) {
-            // Over the edge already — look back at src.down() and place against it
+        double distToEdge = Math.max(
+                Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)),
+                Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
+
+        if (distToEdge < 0.4) {
+            // PLACE: at/past edge — the +dir face of src.down() is behind us.
             double faceX = (dest.getX() + src.getX() + 1.0D) * 0.5D;
             double faceY = (dest.getY() + src.getY() - 1.0D) * 0.5D;
             double faceZ = (dest.getZ() + src.getZ() + 1.0D) * 0.5D;
-            BlockPos goalLook = src.down();
-
-            Rotation backToFace = RotationUtils.calcRotationFromVec3d(
+            Rotation faceLook = RotationUtils.calcRotationFromVec3d(
                     ctx.playerHead(), new Vec3d(faceX, faceY, faceZ), ctx.playerRotations());
-            state.setTarget(new MovementState.MovementTarget(backToFace, true));
+            state.setTarget(new MovementState.MovementTarget(faceLook, true));
 
-            if (ctx.isLookingAt(goalLook)) {
+            if (ctx.isLookingAt(src.down())) {
                 state.setInput(Input.CLICK_RIGHT, true);
             }
             return state;
         }
 
-        // Not at edge yet — sneak forward toward edge, look at the placement face
-        // Target: face between src and dest at block-below level
-        double faceX = (dest.getX() + src.getX() + 1.0D) * 0.5D;
-        double faceY = (dest.getY() + src.getY() - 1.0D) * 0.5D;
-        double faceZ = (dest.getZ() + src.getZ() + 1.0D) * 0.5D;
-        Rotation stableLook = RotationUtils.calcRotationFromVec3d(
-                ctx.playerHead(), new Vec3d(faceX, faceY, faceZ), ctx.playerRotations());
-        state.setTarget(new MovementState.MovementTarget(stableLook, true));
-        state.setInput(Input.MOVE_FORWARD, true);
+        // WALK: look backward + down (fixed angle), walk backward toward dest.
+        // MOVE_BACK with backward yaw = movement in +dir (toward dest).
+        state.setTarget(new MovementState.MovementTarget(
+                new Rotation(backwardYaw, 80.0f), false));
+        state.setInput(Input.MOVE_BACK, true);
         return state;
     }
 
