@@ -605,6 +605,9 @@ public class MobDefenseChain extends SingleTaskChain {
                     double horizontalDistanceSq = delta.x * delta.x + delta.z * delta.z;
                     double verticalDistance = Math.abs(delta.y);
 
+                    // Skip stale projectiles with near-zero velocity (despawned/ground-stuck)
+                    if (projectile.velocity.lengthSquared() < 0.001) continue;
+
                     // Use getLookingProbability + wide detection (from autoclef)
                     double lookProb = LookHelper.getLookingProbability(projectile.position, plyPos, projectile.velocity.normalize());
                     if (lookProb > 0.7 && horizontalDistanceSq < ARROW_DETECT_HORIZONTAL_SQ
