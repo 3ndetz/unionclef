@@ -25,7 +25,7 @@ public class MixinClientCommandSource {
 	/**
 	 * In order to fetch all possible suggestions the last argument needs to be empty.
 	 */
-	@Redirect(method = "getCompletions", at = @At(target = "Lcom/mojang/brigadier/context/CommandContext;getInput()Ljava/lang/String;", value = "INVOKE"))
+	@Redirect(method = "getCompletions", at = @At(target = "Lcom/mojang/brigadier/context/CommandContext;getInput()Ljava/lang/String;", value = "INVOKE", remap = false))
 	private String processInput(CommandContext<?> context) {
 		String input = context.getInput();
 		
