@@ -35,9 +35,9 @@ Built by merging **altoclef**, **shredder**, and **tungsten** into a single code
 | Enderpearl clutch ![alt text](assets/README/EnderClutch.gif) | TP with enderpearl when pursue target. Save self with enderpearl when dropped from edge. | 3/3 ✅ |
 | Arrow dodger ![alt text](assets/README/AutoclefDodging.gif) | Epic incoming arrow dodging. If has shielf - uses it. | 1/1 ✅ |
 | `@test mace` ![alt text](assets/README/MaceClutch.gif) | 😎 | 1/1 ✅ |
-| `#jumpBridging true` ![alt text](assets/README/ShredderBridging256.gif) | Super-fast bridging | 1/3 ❌ TODO |
+| `#bridgingMode jump` ![alt text](assets/README/ShredderBridging256.gif) | Super-fast bridging. (To cancel, you can change mode to `slow`, `standart` or `back-jump`) | 1/3 ❌ TODO |
 | **PvP** |
-| Attacking bot `@punk` | Handles close target battle. Brokes shields (axe). Uses own shield. Combines ranging and melee attacks automatically, pursues targets. Using mace from the height | 3/3 ✅ |
+| Attacking bot `@punk` | Handles close target battle. [Wind-mouse](https://github.com/arevi/wind-mouse) based rotations. Brokes shields (axe). Uses own shield. Combines ranging and melee attacks automatically, pursues targets. Using mace from the height | 3/3 ✅ |
 | Shooting bot `@shoot` | Handles ranged target battle with 2 types of angle (rapid-fire, sniper, artillery) | 3/3 ✅ |
 | Pursuing bot | Pursue parkouring targets. Slow for now. | 2/3 ⚠️ |
 | **Minigames** |
