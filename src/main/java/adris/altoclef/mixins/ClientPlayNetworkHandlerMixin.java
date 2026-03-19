@@ -1,5 +1,6 @@
 package adris.altoclef.mixins;
 
+import adris.altoclef.AltoClef;
 import adris.altoclef.eventbus.EventBus;
 import adris.altoclef.eventbus.events.AnimEvent;
 import adris.altoclef.eventbus.events.DamageEvent;
@@ -12,14 +13,19 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.network.packet.s2c.play.EntityAnimationS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityDamageS2CPacket;
 import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
+import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
+import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.List;
 
 @Environment(EnvType.CLIENT)
 @Mixin(ClientPlayNetworkHandler.class)
@@ -66,6 +72,33 @@ public class ClientPlayNetworkHandlerMixin {
         Entity entity = world != null ? world.getEntityById(packet.getEntityId()) : null;
         if (entity != null) {
             EventBus.publish(new AnimEvent(entity, packet.getAnimationId()));
+        }
+    }
+
+    @Inject(method = "onScreenHandlerSlotUpdate", at = @At("TAIL"))
+    private void onScreenHandlerSlotUpdate(ScreenHandlerSlotUpdateS2CPacket packet, CallbackInfo ci) {
+        try {
+            AltoClef mod = AltoClef.getInstance();
+            if (mod != null && AltoClef.inGame()) {
+                mod.getSlotHandler().onServerSlotUpdate(packet.getSyncId(), packet.getSlot(), packet.getStack());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Inject(method = "onInventory", at = @At("TAIL"))
+    private void onInventory(InventoryS2CPacket packet, CallbackInfo ci) {
+        try {
+            AltoClef mod = AltoClef.getInstance();
+            if (mod != null && AltoClef.inGame()) {
+                List<ItemStack> contents = packet.getContents();
+                for (int i = 0; i < contents.size(); i++) {
+                    mod.getSlotHandler().onServerSlotUpdate(packet.getSyncId(), i, contents.get(i));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }

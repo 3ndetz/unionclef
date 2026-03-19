@@ -14,6 +14,10 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.*;
 import net.minecraft.screen.slot.SlotActionType;
 
+import net.minecraft.item.ItemStack;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -26,6 +30,9 @@ public class SlotHandler {
 
     private final TimerGame slotActionTimer = new TimerGame(0);
     private boolean overrideTimerOnce = false;
+
+    private record PendingSlotAction(long timeMs, int syncId, int windowSlot, ItemStack before) {}
+    private final Deque<PendingSlotAction> _pendingSlotActions = new ArrayDeque<>();
 
     public SlotHandler(AltoClef mod) {
         this.mod = mod;
@@ -76,11 +83,35 @@ public class SlotHandler {
         registerSlotAction();
         int syncId = player.currentScreenHandler.syncId;
 
+        // Snapshot slot state before click for server-cancellation detection
+        try {
+            if (windowSlot >= 0 && windowSlot < player.currentScreenHandler.slots.size()) {
+                ItemStack before = player.currentScreenHandler.getSlot(windowSlot).getStack().copy();
+                long now = System.currentTimeMillis();
+                _pendingSlotActions.removeIf(a -> now - a.timeMs() > 600);
+                _pendingSlotActions.add(new PendingSlotAction(now, syncId, windowSlot, before));
+            }
+        } catch (Exception ignored) {}
+
         try {
             mod.getController().clickSlot(syncId, windowSlot, mouseButton, type, player);
         } catch (Exception e) {
             Debug.logWarning("Slot Click Error (ignored)");
             e.printStackTrace();
+        }
+    }
+
+    public void onServerSlotUpdate(int syncId, int slot, ItemStack serverStack) {
+        long now = System.currentTimeMillis();
+        for (PendingSlotAction action : _pendingSlotActions) {
+            if (now - action.timeMs() > 600) continue;
+            if (action.syncId() == syncId && action.windowSlot() == slot
+                    && !action.before().isEmpty()
+                    && ItemStack.areEqual(serverStack, action.before())) {
+                Debug.logMessage("[WARN] Server cancelled slot action: window slot " + slot
+                        + " reverted to " + serverStack.getItem().getTranslationKey()
+                        + " x" + serverStack.getCount());
+            }
         }
     }
 
