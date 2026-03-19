@@ -473,6 +473,9 @@ public class PathExecutor implements IPathExecutor, Helper {
         if (!new CalculationContext(behavior.baritone, false).canSprint) {
             return false;
         }
+        if (pathPosition >= path.movements().size()) {
+            return false;
+        }
         IMovement current = path.movements().get(pathPosition);
 
         // traverse requests sprinting, so we need to do this check first
@@ -710,6 +713,9 @@ public class PathExecutor implements IPathExecutor, Helper {
         if (!Baritone.settings().pathLookAhead.value) {
             return;
         }
+        if (pathPosition >= path.movements().size()) {
+            return;
+        }
         IMovement current = path.movements().get(pathPosition);
         if (!(current instanceof MovementTraverse) && !(current instanceof MovementDiagonal)) {
             return;
@@ -783,6 +789,9 @@ public class PathExecutor implements IPathExecutor, Helper {
 
     private boolean canSprintJump() {
         if (!Baritone.settings().sprintJumpOnFlatStraights.value) {
+            return false;
+        }
+        if (pathPosition >= path.movements().size()) {
             return false;
         }
         if (!ctx.player().isOnGround()) {
