@@ -121,10 +121,12 @@ unionclef/
 │   └── src/main/java/      tungsten code
 ├── baritone/               legacy pathfinding (kept as reference, not used)
 │   └── src/main/java/      original baritone code (remapped to yarn)
+├── scripts/                python scripting via Py4J (uv project)
 ├── root.gradle.kts         root build config
 ├── gradle.properties       versions & settings
 └── docs/
-    └── DEVELOP.md            build & run instructions
+    ├── DEVELOP.md          build & run instructions
+    └── SCRIPTS.md          python scripting guide
 ├── README.md               you are here
 └── TODOS.md                project TODOs and roadmap
 ```

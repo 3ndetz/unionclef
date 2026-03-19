@@ -374,6 +374,18 @@ public class AltoClef implements ModInitializer {
             // Auto-restore nickname if current name looks like PlayerNNN
             tryRestoreNickname();
 
+            // Auto-connect to server if configured
+            if (settings.shouldAutoConnect() && !inGame()) {
+                String server = settings.getAutoConnectServer();
+                Debug.logMessage("Auto-connecting to server: " + server);
+                // Delay slightly to let the title screen settle
+                _postInitQueue.add(mod -> {
+                    if (taskRunner != null && taskRunner.gameMenuTaskChain != null) {
+                        taskRunner.gameMenuTaskChain.connectToServer(server);
+                    }
+                });
+            }
+
             // Initialize Python sender after settings are loaded (needs getPythonGatewayPort())
             initializePythonSender();
         });

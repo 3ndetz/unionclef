@@ -1,0 +1,13 @@
+[project]
+name = "unionclef-scripts"
+version = "0.1.0"
+description = "Python scripts for controlling UnionClef bot via Py4J"
+requires-python = ">=3.10"
+dependencies = [
+    "py4j>=0.10.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+]

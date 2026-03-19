@@ -467,6 +467,12 @@ public class Py4jEntryPoint {
         });
     }
 
+    public void ConnectToServer(String ip) {
+        MinecraftClient.getInstance().execute(() -> {
+            _mod.getTaskRunner().gameMenuTaskChain.connectToServer(ip);
+        });
+    }
+
     public Map<String, String> CentralGameInfoDict = new HashMap<>();
 
     public Map<String, String> getServerInfoDict() {

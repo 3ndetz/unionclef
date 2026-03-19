@@ -301,6 +301,12 @@ public class Settings implements IFailableConfigFile {
     private int netherFastTravelWalkingRange = 600;
 
     /**
+     * If set, will automatically connect to this server on game launch.
+     * Format: "mc.example.com" or "mc.example.com:25565"
+     */
+    private String autoConnectServer = "";
+
+    /**
      * If set, will run this command by default when no other commands are running.
      * <p>
      * For example, try setting this to "idle" to make the bot continue surviving/eating/escaping mobs.
@@ -581,6 +587,14 @@ public class Settings implements IFailableConfigFile {
 
     public KillAura.Strategy getForceFieldStrategy() {
         return forceFieldStrategy;
+    }
+
+    public String getAutoConnectServer() {
+        return autoConnectServer;
+    }
+
+    public boolean shouldAutoConnect() {
+        return autoConnectServer != null && !autoConnectServer.isBlank();
     }
 
     public String getIdleCommand() {
