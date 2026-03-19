@@ -97,7 +97,19 @@ public class EntityHelper {
                 damageAmount = 0.0;
             } else {
                 //#if MC >= 12100
-                k = EnchantmentHelper.getProtectionAmount(null, player, src);
+                // getProtectionAmount requires ServerWorld for LootContext, but we're on the client.
+                // Try to get the integrated server's world; if unavailable, skip enchantment protection calc.
+                try {
+                    var server = net.minecraft.client.MinecraftClient.getInstance().getServer();
+                    if (server != null) {
+                        var serverWorld = server.getWorld(player.getWorld().getRegistryKey());
+                        k = EnchantmentHelper.getProtectionAmount(serverWorld, player, src);
+                    } else {
+                        k = 0;
+                    }
+                } catch (Exception e) {
+                    k = 0;
+                }
                 //#else
                 //$$ k = EnchantmentHelper.getProtectionAmount(player.getArmorItems(), src);
                 //#endif
