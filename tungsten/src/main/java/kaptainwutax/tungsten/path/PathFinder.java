@@ -247,7 +247,7 @@ public class PathFinder {
 	        }
 
 	
-	        if (isPathComplete(next, target, failing, world)) {
+	        if (isPathComplete(next, target, world)) {
 	            if (tryExecutePath(next, target, minVelocity)) {
 	            	TungstenModRenderContainer.RENDERERS.clear();
 	            	TungstenModRenderContainer.TEST.clear();
@@ -662,7 +662,7 @@ public class PathFinder {
         return bestHeuristicSoFar;
     }
     
-    private boolean isPathComplete(Node node, Vec3d target, boolean failing, WorldView world) {
+    private boolean isPathComplete(Node node, Vec3d target, WorldView world) {
     	if (BlockStateChecker.isAnyWater(world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ()))))
     		return node.agent.getPos().squaredDistanceTo(target) <= 0.9D;
     	if (world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ())).getBlock() instanceof LadderBlock)
@@ -1212,7 +1212,6 @@ public class PathFinder {
         	if (setCurrentPath(TARGET, this.start, TungstenModDataContainer.player)) {
 				NEXT_CLOSEST_BLOCKNODE_IDX.set(closestPosIDX+1);
 	        	RenderHelper.renderBlockPath(blockPath, NEXT_CLOSEST_BLOCKNODE_IDX.get());
-				closed.clear();
 				return true;
 			}
         } else if (closestPosIDX+1 > NEXT_CLOSEST_BLOCKNODE_IDX.get()+1 && heightDiff <= 1) {

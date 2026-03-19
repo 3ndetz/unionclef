@@ -362,15 +362,17 @@ public class Node {
 	}
 
 	private void createAirborneNodes(WorldView world, BlockNode nextBlockNode, List<Node> nodes, boolean forward, boolean right, float yaw) {
-	    Node newNode = new Node(this, world, new PathInput(forward, false, right, false, false, false, true, agent.pitch, yaw),
+	    boolean canSprint = this.agent.canSprint();
+	    Node newNode = new Node(this, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
 	            new Color(0, 255, 255), this.cost + 1);
 
         
         if (newNode.agent.getPos().isWithinRangeOf(nextBlockNode.getPos(true), 0.9, 0.4)) return;
         double newNodeDistanceToBlockNode = Math.ceil(newNode.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e4);
         double parentNodeDistanceToBlockNode = Math.ceil(newNode.parent.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e4);
-        
-        if (newNodeDistanceToBlockNode >= parentNodeDistanceToBlockNode) return;
+
+        // Allow slight divergence on first tick — needed for yaw correction mid-air
+        if (newNodeDistanceToBlockNode > parentNodeDistanceToBlockNode * 1.1) return;
 	    int i = 0;
 	    boolean isBelowClosedTrapDoor = BlockStateChecker.isClosedBottomTrapdoor(world.getBlockState(nextBlockNode.getBlockPos().down()));
 	    boolean shouldAllowWalkingOnLowerBlock = !world.getBlockState(agent.getBlockPos().up(2)).isAir() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 3;
@@ -378,11 +380,11 @@ public class Node {
 	    while (!newNode.agent.onGround && !newNode.agent.isClimbing(world) && newNode.agent.getPos().y >= minY) {
 	    	if (i > 60) break;
 	    	i++;
-	        newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, true, agent.pitch, yaw),
-	                new Color(0, 255, 255), this.cost + (this.agent.canSprint() ? 1 : 8));
+	        newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
+	                new Color(0, 255, 255), this.cost + (canSprint ? 1 : 8));
 	    }
-        newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, true, agent.pitch, yaw),
-                new Color(0, 255, 255), this.cost + (this.agent.canSprint() ? 1 : 8));
+        newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
+                new Color(0, 255, 255), this.cost + (canSprint ? 1 : 8));
 
 	    nodes.add(newNode);
 	}
