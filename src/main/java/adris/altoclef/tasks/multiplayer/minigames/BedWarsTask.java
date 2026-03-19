@@ -118,6 +118,12 @@ public class BedWarsTask extends Task {
         BEDWARS_COLORS.put("light_blue", 0x00BFFF);
         BEDWARS_COLORS.put("pink", 0xF70AA0);
         BEDWARS_COLORS.put("white", 0xFFFFFF);
+        BEDWARS_COLORS.put("black", 0x1D1D21);
+        BEDWARS_COLORS.put("brown", 0x835432);
+        BEDWARS_COLORS.put("lime", 0x80FF00);
+        BEDWARS_COLORS.put("magenta", 0xC74EBD);
+        BEDWARS_COLORS.put("light_gray", 0x9D9D97);
+        BEDWARS_COLORS.put("purple", 0x8932B8);
     }
 
     public static final Map<String, Block> BEDWARS_BED_COLORS = new HashMap<>();
@@ -132,6 +138,12 @@ public class BedWarsTask extends Task {
         BEDWARS_BED_COLORS.put("light_blue", Blocks.LIGHT_BLUE_BED);
         BEDWARS_BED_COLORS.put("pink", Blocks.PINK_BED);
         BEDWARS_BED_COLORS.put("white", Blocks.WHITE_BED);
+        BEDWARS_BED_COLORS.put("black", Blocks.BLACK_BED);
+        BEDWARS_BED_COLORS.put("brown", Blocks.BROWN_BED);
+        BEDWARS_BED_COLORS.put("lime", Blocks.LIME_BED);
+        BEDWARS_BED_COLORS.put("magenta", Blocks.MAGENTA_BED);
+        BEDWARS_BED_COLORS.put("light_gray", Blocks.LIGHT_GRAY_BED);
+        BEDWARS_BED_COLORS.put("purple", Blocks.PURPLE_BED);
     }
 
     public String getClosestColorName(int rgb) {
