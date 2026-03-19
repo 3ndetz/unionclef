@@ -19,5 +19,9 @@
       "Bash(gh *)"
     ],
     "deny": []
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
   }
 }

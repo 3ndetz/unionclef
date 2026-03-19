@@ -27,6 +27,7 @@ Single Gradle project, no submodules, all source compiled together.
 - After editing code, just describe changes. Do NOT "verify" by building.
 - Auto-commit and PUSH!! your changes (if not explained otherwise).
   - **Do NOT add `Co-Authored-By` lines to commit messages.** Ever.
+  - **All commits MUST use author name and email, not ai's.** Never use Anthropic/Claude credentials. Use owner's creds if git config differs.
   - Add upperleveled module name to commit message if relevant (e.g. "tungsten: implement ...").
   - Do not forget periodically do pulls to keep up with parallel workers.
 - **All three modules use yarn mappings.** Baritone was migrated from mojmap to yarn. Do NOT switch back to mojmap.
