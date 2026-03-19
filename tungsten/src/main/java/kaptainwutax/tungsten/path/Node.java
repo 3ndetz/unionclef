@@ -371,8 +371,7 @@ public class Node {
         double newNodeDistanceToBlockNode = Math.ceil(newNode.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e4);
         double parentNodeDistanceToBlockNode = Math.ceil(newNode.parent.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e4);
 
-        // Allow slight divergence on first tick — needed for yaw correction mid-air
-        if (newNodeDistanceToBlockNode > parentNodeDistanceToBlockNode * 1.1) return;
+        if (newNodeDistanceToBlockNode >= parentNodeDistanceToBlockNode) return;
 	    int i = 0;
 	    boolean isBelowClosedTrapDoor = BlockStateChecker.isClosedBottomTrapdoor(world.getBlockState(nextBlockNode.getBlockPos().down()));
 	    boolean shouldAllowWalkingOnLowerBlock = !world.getBlockState(agent.getBlockPos().up(2)).isAir() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 3;
