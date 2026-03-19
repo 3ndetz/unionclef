@@ -73,6 +73,14 @@ When referencing Minecraft classes, always use yarn names:
 
 Формат архивов: `DD-MM-YYYY-task-name.md`
 
+## Release notes
+
+When making changes that affect user-facing behavior, update
+`docs/releases/<mod_version>.md` (version from `gradle.properties`).
+Keep it short: test results if available, known bugs, and most importantly —
+how to test new features (which commands to run). `docs/releases/base.md`
+has general install/command info and is prepended by gradle automatically.
+
 ## Important files
 
 - `README.md` — project overview, fork history, credits

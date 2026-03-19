@@ -186,12 +186,18 @@ if (project.name == "1.21.1") {
         targetCommitish = "main"
         generateReleaseNotes = true
         body = {
-            // Look for versioned release notes: docs/releases/0.20.3.md
+            def parts = []
+            // Base info (install, commands) — always included
+            def baseFile = rootProject.file("docs/releases/base.md")
+            if (baseFile.exists()) parts.add(baseFile.text)
+            // Versioned release notes: docs/releases/0.20.3.md
             def versionedFile = rootProject.file("docs/releases/${project.mod_version}.md")
-            if (versionedFile.exists()) return versionedFile.text
-            // Fallback to latest.md
-            def latestFile = rootProject.file("docs/releases/latest.md")
-            latestFile.exists() ? latestFile.text : ""
+            if (versionedFile.exists()) parts.add(versionedFile.text)
+            else {
+                def latestFile = rootProject.file("docs/releases/latest.md")
+                if (latestFile.exists()) parts.add(latestFile.text)
+            }
+            parts.join("\n---\n\n")
         }
         draft = false
         prerelease = false
