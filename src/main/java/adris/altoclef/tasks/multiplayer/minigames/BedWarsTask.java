@@ -44,7 +44,8 @@ public class BedWarsTask extends Task {
     private static final int BED_PROTECT_RADIUS = 15;
     private static final int TEAMMATE_FOLLOW_RADIUS = 20;
     private static final double AGGRO_MODE_CHANCE = 0.20;
-    private static final int AGGRO_MIN_BLOCKS = 32;
+    private static final int AGGRO_MIN_BLOCKS = 48;
+    private static final int MIN_BLOCKS_FOR_ACTIONS = 48;
     private static final int RESOURCE_SPAWN_CONFIRM_COUNT = 3;
     private static final double RESOURCE_SPAWN_MERGE_RADIUS = 2.0;
     private static final double RESOURCE_SPAWN_IDLE_RADIUS = 3.0;
@@ -213,7 +214,7 @@ public class BedWarsTask extends Task {
         // --- Track resource spawns ---
         trackResourceSpawns(mod);
 
-        // --- Own bed tracking & protection ---
+        // --- Own bed tracking ---
         if (ourBedBlock != null) {
             if (bedPos == null) {
                 Optional<BlockPos> bedPosOpt = mod.getBlockScanner().getNearestBlock(ourBedBlock);
@@ -221,40 +222,43 @@ public class BedWarsTask extends Task {
                     Debug.logMessage("Found our bed at " + bedPosOpt.get().toShortString());
                     bedPos = bedPosOpt.get();
                 }
-            } else {
-                if (!ownBedDestroyed) {
-                    Optional<BlockPos> bedPosOpt = mod.getBlockScanner().getNearestBlock(ourBedBlock);
-                    if (bedPosOpt.isEmpty() && mod.getPlayer().getPos().distanceTo(bedPos.toCenterPos()) < 25) {
-                        ownBedDestroyed = true;
-                    }
-                    Optional<Entity> closestEnemyNearBed = mod.getEntityTracker().getClosestEntity(
-                            bedPos.toCenterPos(),
-                            toPunk -> isValidEnemy(toPunk)
-                                    && toPunk.getPos().isInRange(bedPos.toCenterPos(), BED_PROTECT_RADIUS),
-                            PlayerEntity.class);
-                    if (closestEnemyNearBed.isPresent()) {
-                        Entity enemyBed = closestEnemyNearBed.get();
-                        setDebugState("PROTECTING BED FROM " + enemyBed.getName().getString());
-                        return new KillPlayerTask(enemyBed.getName().getString());
-                    }
+            } else if (!ownBedDestroyed) {
+                Optional<BlockPos> bedPosOpt = mod.getBlockScanner().getNearestBlock(ourBedBlock);
+                if (bedPosOpt.isEmpty() && mod.getPlayer().getPos().distanceTo(bedPos.toCenterPos()) < 25) {
+                    ownBedDestroyed = true;
                 }
             }
         }
 
-        // --- Enemy bed destruction (expanded radius) ---
-        if (teamDetermined) {
-            Optional<BlockPos> enemyBedPosOpt = mod.getBlockScanner().getNearestBlock(
-                    mod.getPlayer().getPos(),
-                    to -> to.isWithinDistance(mod.getPlayer().getBlockPos(), ENEMY_BED_SEARCH_RADIUS),
-                    enemyBedBlocks != null ? enemyBedBlocks.toArray(Block[]::new) : new Block[0]);
-            if (enemyBedPosOpt.isPresent()) {
-                BlockPos enemyBedPos = enemyBedPosOpt.get();
-                setDebugState("Destroying enemy bed at " + enemyBedPos.toShortString());
-                return new DestroyBlockTask(enemyBedPos);
+        // --- ALWAYS allowed: bed protection (enemy near our bed) ---
+        if (bedPos != null && !ownBedDestroyed) {
+            Optional<Entity> closestEnemyNearBed = mod.getEntityTracker().getClosestEntity(
+                    bedPos.toCenterPos(),
+                    toPunk -> isValidEnemy(toPunk)
+                            && toPunk.getPos().isInRange(bedPos.toCenterPos(), BED_PROTECT_RADIUS),
+                    PlayerEntity.class);
+            if (closestEnemyNearBed.isPresent()) {
+                Entity enemy = closestEnemyNearBed.get();
+                setDebugState("PROTECTING BED FROM " + enemy.getName().getString());
+                return new KillPlayerTask(enemy.getName().getString());
             }
         }
 
-        // --- Shopping ---
+        // --- ALWAYS allowed: self-defense (enemy within 5 blocks) ---
+        Optional<Entity> closestEnemy = mod.getEntityTracker().getClosestEntity(
+                mod.getPlayer().getPos(),
+                toPunk -> isValidEnemy(toPunk),
+                PlayerEntity.class);
+        if (closestEnemy.isPresent()) {
+            Entity enemy = closestEnemy.get();
+            double range = mod.getPlayer().getPos().distanceTo(enemy.getPos());
+            if (range <= 5) {
+                setDebugState("Self-defense: " + enemy.getName().getString());
+                return new KillPlayerTask(enemy.getName().getString());
+            }
+        }
+
+        // --- ALWAYS allowed: shopping (if already in chest UI) ---
         if (inChest) {
             setDebugState("shopping");
             if (!inShop && !preShopTimer.elapsed()) {
@@ -281,11 +285,65 @@ public class BedWarsTask extends Task {
             }
         }
 
-        // --- Combat ---
-        Optional<Entity> closestEnemy = mod.getEntityTracker().getClosestEntity(
-                mod.getPlayer().getPos(),
-                toPunk -> isValidEnemy(toPunk),
-                PlayerEntity.class);
+        // ============================================================
+        // GEAR GATE: until we have MIN_BLOCKS_FOR_ACTIONS, only farm.
+        // Allowed above: bed protection, self-defense, active shopping.
+        // Below this gate: everything offensive / strategic.
+        // ============================================================
+        boolean hasMinGear = getBlockCount(mod) >= MIN_BLOCKS_FOR_ACTIONS;
+
+        // --- ALWAYS allowed: loot pickup & resource farming ---
+        for (Item check : lootableItems(mod)) {
+            if (mod.getEntityTracker().itemDropped(check)) {
+                Optional<ItemEntity> closestEnt = mod.getEntityTracker().getClosestItemDrop(
+                        ent -> mod.getEntityTracker().isEntityReachable(ent)
+                                && mod.getPlayer().getPos().isInRange(ent.getEyePos(), 400),
+                        check);
+                if (closestEnt.isPresent()) {
+                    setDebugState("Resource collecting");
+                    _pickupTask = new PickupDroppedItemTask(new ItemTarget(check, 1), false);
+                    return _pickupTask;
+                }
+            }
+        }
+
+        // --- ALWAYS allowed: go to shop to buy gear ---
+        if (!inChest && shopCooldown.elapsed()) {
+            // Go shop if we need gear OR if we have enough balance
+            boolean needsGear = !hasMinGear || getBalance(mod) >= 350;
+            if (needsGear) {
+                return goToShop(mod);
+            }
+        }
+
+        // --- ALWAYS allowed: idle at resource spawn while farming ---
+        if (!hasMinGear) {
+            Task idleResourceTask = tryIdleAtResourceSpawn(mod);
+            if (idleResourceTask != null) {
+                return idleResourceTask;
+            }
+            setDebugState("Farming: need " + MIN_BLOCKS_FOR_ACTIONS + " blocks (have " + getBlockCount(mod) + ")");
+            return null; // Hard stop — no offensive actions
+        }
+
+        // ============================================================
+        // Below here: only runs when hasMinGear == true
+        // ============================================================
+
+        // --- Enemy bed destruction (expanded radius) ---
+        if (teamDetermined) {
+            Optional<BlockPos> enemyBedPosOpt = mod.getBlockScanner().getNearestBlock(
+                    mod.getPlayer().getPos(),
+                    to -> to.isWithinDistance(mod.getPlayer().getBlockPos(), ENEMY_BED_SEARCH_RADIUS),
+                    enemyBedBlocks != null ? enemyBedBlocks.toArray(Block[]::new) : new Block[0]);
+            if (enemyBedPosOpt.isPresent()) {
+                BlockPos enemyBedPos = enemyBedPosOpt.get();
+                setDebugState("Destroying enemy bed at " + enemyBedPos.toShortString());
+                return new DestroyBlockTask(enemyBedPos);
+            }
+        }
+
+        // --- Combat (full range) ---
         if (closestEnemy.isPresent()) {
             Entity enemy = closestEnemy.get();
             double range = mod.getPlayer().getPos().distanceTo(enemy.getPos());
@@ -302,11 +360,10 @@ public class BedWarsTask extends Task {
             }
         }
 
-        // --- Aggro mode: go raid enemy beds if we have enough blocks ---
+        // --- Aggro mode: go raid enemy beds ---
         if (aggroMode && teamDetermined) {
             int blockCount = getBlockCount(mod);
             if (blockCount >= AGGRO_MIN_BLOCKS) {
-                // Find any enemy bed (no distance limit — baritone will bridge there)
                 Optional<BlockPos> anyEnemyBed = mod.getBlockScanner().getNearestBlock(
                         enemyBedBlocks != null ? enemyBedBlocks.toArray(Block[]::new) : new Block[0]);
                 if (anyEnemyBed.isPresent()) {
@@ -320,45 +377,6 @@ public class BedWarsTask extends Task {
         Task bedCoverTask = tryBedCovering(mod);
         if (bedCoverTask != null) {
             return bedCoverTask;
-        }
-
-        // --- Shopping trip ---
-        if (!inChest && getBalance(mod) >= 350 && shopCooldown.elapsed()) {
-            return new DoToClosestEntityTask(
-                    entity -> {
-                        if (entity.isInRange(mod.getPlayer(), 3)) {
-                            if (LookHelper.canHitEntity(mod, entity)) {
-                                setDebugState("Found villager: " + entity.getName().getString());
-                                LookHelper.smoothLookAt(mod, entity);
-                                mod.getController().interactEntity(mod.getPlayer(), entity, Hand.MAIN_HAND);
-                                preShopTimer.reset();
-                                inShop = false;
-                                return null;
-                            } else {
-                                return new GetCloseToBlockTask(entity.getBlockPos());
-                            }
-                        } else {
-                            return new GetToEntityTask(entity, 2);
-                        }
-                    },
-                    entity -> isValidTrader(entity, mod),
-                    VillagerEntity.class
-            );
-        }
-
-        // --- Loot pickup ---
-        for (Item check : lootableItems(mod)) {
-            if (mod.getEntityTracker().itemDropped(check)) {
-                Optional<ItemEntity> closestEnt = mod.getEntityTracker().getClosestItemDrop(
-                        ent -> mod.getEntityTracker().isEntityReachable(ent)
-                                && mod.getPlayer().getPos().isInRange(ent.getEyePos(), 400),
-                        check);
-                if (closestEnt.isPresent()) {
-                    setDebugState("Resource collecting");
-                    _pickupTask = new PickupDroppedItemTask(new ItemTarget(check, 1), false);
-                    return _pickupTask;
-                }
-            }
         }
 
         // --- Idle: sit at resource spawn point ---
@@ -469,6 +487,31 @@ public class BedWarsTask extends Task {
         // Has some blocks
         boolean hasBlocks = getBlockCount(mod) >= 16;
         return hasWeapon && hasBlocks;
+    }
+
+    // ========== Go to shop ==========
+
+    private Task goToShop(AltoClef mod) {
+        return new DoToClosestEntityTask(
+                entity -> {
+                    if (entity.isInRange(mod.getPlayer(), 3)) {
+                        if (LookHelper.canHitEntity(mod, entity)) {
+                            setDebugState("Found villager: " + entity.getName().getString());
+                            LookHelper.smoothLookAt(mod, entity);
+                            mod.getController().interactEntity(mod.getPlayer(), entity, Hand.MAIN_HAND);
+                            preShopTimer.reset();
+                            inShop = false;
+                            return null;
+                        } else {
+                            return new GetCloseToBlockTask(entity.getBlockPos());
+                        }
+                    } else {
+                        return new GetToEntityTask(entity, 2);
+                    }
+                },
+                entity -> isValidTrader(entity, mod),
+                VillagerEntity.class
+        );
     }
 
     // ========== Bed covering ==========
