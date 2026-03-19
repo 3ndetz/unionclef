@@ -32,7 +32,7 @@ public class TungstenConfig {
 
     /** If true: enable trail-following when target escapes (dist>20).
      *  If false: always pathfind directly to target position. */
-    public boolean enableTrailing = true;
+    public boolean enableTrailing = false;
 
     /** If true: log verbose tick/drift/position messages to console.
      *  Keep false in normal use to reduce noise. */
