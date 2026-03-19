@@ -31,16 +31,11 @@ Built by merging **altoclef**, **shredder**, and **tungsten** into a single code
 
 | Feature | Description | Ready |
 |---|---|---|
-| **MLG** | 
-| Enderpearl clutch | TP with enderpearl when pursue target. Save self with enderpearl when dropped from edge. | 3/3 ✅ |
-| Arrow dodger | Epic incoming arrow dodging. If has shielf - uses it. | 1/1 ✅ |
-| `@test mace` | 😎 | 1/1 ✅ |
-| `#jumpBridging true` | Super-fast bridging | 1/3 ❌ TODO |
-| **Pathfinding** | 
-| Human-like moveset | Bypass baritone detecting ACs. | 2/3 ⚠️ |
-| Faster baritone | Speeding up with jumps on straight paths | 4/5 ✅ |
-| `#slowBridge true` | Slow shift bridge to work where baritone is blocked. | 3/3 ✅ |
- `#experimentalPathfinding true`| Use tungsten and shredder's baritone simulateously | 2/5 ⚠️ |
+| **MLG** |
+| Enderpearl clutch ![alt text](assets/README/EnderClutch.gif) | TP with enderpearl when pursue target. Save self with enderpearl when dropped from edge. | 3/3 ✅ |
+| Arrow dodger ![alt text](assets/README/AutoclefDodging.gif) | Epic incoming arrow dodging. If has shielf - uses it. | 1/1 ✅ |
+| `@test mace` ![alt text](assets/README/MaceClutch.gif) | 😎 | 1/1 ✅ |
+| `#jumpBridging true` ![alt text](assets/README/ShredderBridging256.gif) | Super-fast bridging | 1/3 ❌ TODO |
 | **PvP** |
 | Attacking bot `@punk` | Handles close target battle. Brokes shields (axe). Uses own shield. Combines ranging and melee attacks automatically, pursues targets. Using mace from the height | 3/3 ✅ |
 | Shooting bot `@shoot` | Handles ranged target battle with 2 types of angle (rapid-fire, sniper, artillery) | 3/3 ✅ |
