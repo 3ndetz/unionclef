@@ -901,6 +901,9 @@ public class PathExecutor implements IPathExecutor, Helper {
     private boolean tryStartJumpBridge(Movement current) {
         if (!(current instanceof MovementTraverse)) return false;
 
+        // Player must be at the correct Y level (not fallen into a gap)
+        if (ctx.playerFeet().getY() != current.getSrc().getY()) return false;
+
         BlockStateInterface bsi = new BlockStateInterface(ctx);
         if (current.toPlace(bsi).isEmpty()) return false;
 
@@ -1208,9 +1211,15 @@ public class PathExecutor implements IPathExecutor, Helper {
                 BlockStateInterface bsi = new BlockStateInterface(ctx);
                 jumpBridgeAirbornePlace(bsi, pastFace, head, faceCenterPoint, backwardYaw);
 
-                // Landed → sneak stop, then back up for next cycle
+                // Landed → check Y level, then sneak stop
                 if (ctx.player().isOnGround() && jumpBridgeAirborneTicks > 2) {
                     jumpBridgeSnapPath();
+                    // If we fell below bridge level, bail out immediately
+                    int expectedY = jumpBridgeLastSolid.getY() + 1; // floor Y + 1 = feet Y
+                    if (Math.abs(ctx.playerFeet().getY() - expectedY) > 1) {
+                        exitJumpBridge();
+                        return false;
+                    }
                     if (jumpBridgeCanContinue(bsi)) {
                         jumpBridgePhase = JumpBridgePhase.FJ_LAND;
                         jumpBridgeTicksInPhase = 0;
