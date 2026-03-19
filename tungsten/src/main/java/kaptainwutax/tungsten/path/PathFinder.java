@@ -529,8 +529,7 @@ public class PathFinder {
 	    }
 	    double dz = (position.z - target.z)*xzMultiplier;
 	    return (Math.sqrt(dx * dx + dy * dy + dz * dz) * 2.8
-	    		 + (((blockPath.isPresent() ? blockPath.get().size() - NEXT_CLOSEST_BLOCKNODE_IDX.get() : 0)) * 40)
-	    		+ (DistanceCalculator.getEuclideanDistance(position, realTarget) * 0.2)
+	    		+ (DistanceCalculator.getEuclideanDistance(position, realTarget) * 1.5)
 	    		);
 	}
 	

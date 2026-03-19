@@ -51,6 +51,10 @@ public class GotoCommand extends Command {
 		}
 		if (TungstenModDataContainer.PATHFINDER.stop.get()) return;
 
+		// Reset pathfinder params to defaults (may have been overridden by followPlayer)
+		TungstenModDataContainer.PATHFINDER.searchTimeoutMs       = 15000L;
+		TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 15;
+		TungstenModDataContainer.PATHFINDER.minDistPath           = 1.8;
 		TungstenModDataContainer.PATHFINDER.find(TungstenMod.mc.world, target, TungstenMod.mc.player);
 
 		// Set callback: when pathfinder+executor finish, retry if not at target

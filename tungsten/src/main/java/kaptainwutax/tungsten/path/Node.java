@@ -91,7 +91,7 @@ public class Node {
 		    result = result + 17 * Boolean.hashCode(this.input.sneak);
 		    result = result + 19 * Boolean.hashCode(this.input.sprint);
 //		    result = result + (Math.round(this.input.pitch));
-		    if (shouldAddYaw) result = result + (Math.round(this.input.yaw));
+		    if (shouldAddYaw) result = result + (Math.round(this.input.yaw / 45f));
 		    result = result + (Math.round(this.agent.velX*10));
 		    result = result + (Math.round(this.agent.velZ*10));
 		 }
