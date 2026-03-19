@@ -418,7 +418,7 @@ public class StorageHelper {
 
         for (Item item : any) {
             if (item instanceof ArmorItem armor) {
-                ItemStack equippedStack = player.getInventory().getArmorStack(armor.getSlotType().getEntitySlotId());
+                ItemStack equippedStack = player.getEquippedStack(armor.getSlotType());
                 if (equippedStack.getItem().equals(item))
                     return true;
             }
