@@ -302,22 +302,25 @@ public class BedWarsTask extends Task {
             }
         }
 
-        // --- ALWAYS allowed: loot pickup & resource farming ---
+        // --- Loot pickup ---
+        // No gear yet: pick up everything within big radius (farming mode)
+        // Has gear: only pick up stuff nearby (within 8 blocks), don't derail from tasks
+        double lootRadius = hasMinGear ? 8 : 400;
         for (Item check : lootableItems(mod)) {
             if (mod.getEntityTracker().itemDropped(check)) {
                 Optional<ItemEntity> closestEnt = mod.getEntityTracker().getClosestItemDrop(
                         ent -> mod.getEntityTracker().isEntityReachable(ent)
-                                && mod.getPlayer().getPos().isInRange(ent.getEyePos(), 400),
+                                && mod.getPlayer().getPos().isInRange(ent.getEyePos(), lootRadius),
                         check);
                 if (closestEnt.isPresent()) {
-                    setDebugState("Resource collecting");
+                    setDebugState("Resource collecting" + (hasMinGear ? " (nearby)" : ""));
                     _pickupTask = new PickupDroppedItemTask(new ItemTarget(check, 1), false);
                     return _pickupTask;
                 }
             }
         }
 
-        // --- ALWAYS allowed: idle at resource spawn while farming ---
+        // --- Farming mode: idle at resource spawn ---
         if (!hasMinGear) {
             Task idleResourceTask = tryIdleAtResourceSpawn(mod);
             if (idleResourceTask != null) {
