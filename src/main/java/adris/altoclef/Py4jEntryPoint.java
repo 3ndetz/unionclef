@@ -123,13 +123,23 @@ public class Py4jEntryPoint {
             return false;
         Task task = _mod.getUserTaskChain().getCurrentTask();
 
-        if (task instanceof AbstractKillEntityTask || hasBaritoneGoal())
+        if (task instanceof AbstractKillEntityTask || hasBaritoneGoal() || isTungstenActive())
             return true;
 
         return !(task instanceof IdleTask || task instanceof GestureTask
                 || task instanceof WaitForDragonAndPearlTask
                 || (task != null && (task.toString() != null && !task.toString().isBlank() &&
                         task.toString().toLowerCase().contains("wait"))));
+    }
+
+    public boolean isTungstenActive() {
+        try {
+            return kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
+                    || (kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR != null
+                        && kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.isRunning());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public byte[] getScreenshot() {
