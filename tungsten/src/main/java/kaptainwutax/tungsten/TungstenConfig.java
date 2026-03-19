@@ -30,6 +30,10 @@ public class TungstenConfig {
     /** Blocks of drift before triggering correction or executor stop. */
     public double driftThreshold = 0.8;
 
+    /** If true: enable trail-following when target escapes (dist>20).
+     *  If false: always pathfind directly to target position. */
+    public boolean enableTrailing = true;
+
     /** If true: log verbose tick/drift/position messages to console.
      *  Keep false in normal use to reduce noise. */
     public boolean verboseDebugLogging = false;

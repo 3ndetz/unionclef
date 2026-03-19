@@ -256,7 +256,7 @@ public class Node {
 	    // 1) Collect parameter combinations (cheap — no physics)
 	    List<ChildGenParams> params = new ArrayList<>();
 	    float desiredYaw = (float) DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true));
-	    float a = 134.4f;
+	    float a = 90f;
 	    float fromYaw = desiredYaw-a<-180.0f ? -180f: desiredYaw-a;
 	    float toYaw = desiredYaw+a > 180f ? 180f : desiredYaw+a;
 	    for (boolean forward : new boolean[]{true, false}) {
@@ -348,7 +348,7 @@ public class Node {
 //        }
 
 
-        return addNodeCost + Math.abs(agent.yaw- this.agent.yaw) * 5;
+        return addNodeCost + Math.abs(agent.yaw - this.agent.yaw) * 8;
 	}
 
 	private void generateAirborneNodes(WorldView world, BlockNode nextBlockNode, List<Node> nodes) {

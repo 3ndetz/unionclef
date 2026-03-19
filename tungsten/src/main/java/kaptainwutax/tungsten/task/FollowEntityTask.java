@@ -167,7 +167,7 @@ public class FollowEntityTask {
 
         // ── Resolve effective target: waypoint when TRAILING, else real target ─
         Vec3d effectiveTarget = targetPos;
-        if (trail.isTrailing()) {
+        if (kaptainwutax.tungsten.TungstenConfig.get().enableTrailing && trail.isTrailing()) {
             Vec3d wp = trail.getWaypoint(player.getPos());
             if (wp != null) {
                 effectiveTarget = wp;

@@ -52,6 +52,19 @@ public class SettingsCommand extends Command {
 				return SINGLE_SUCCESS;
 			})));
 
+		// ;settings enableTrailing [true/false]
+		builder.then(literal("enableTrailing")
+			.executes(context -> {
+				Debug.logMessage("enableTrailing = " + TungstenConfig.get().enableTrailing);
+				return SINGLE_SUCCESS;
+			})
+			.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
+				TungstenConfig.get().enableTrailing = BoolArgumentType.getBool(context, "enabled");
+				TungstenConfig.save();
+				Debug.logMessage("enableTrailing = " + TungstenConfig.get().enableTrailing);
+				return SINGLE_SUCCESS;
+			})));
+
 		// ;settings debugTime [true/false]
 		builder.then(literal("debugTime")
 			.executes(context -> {
