@@ -29,3 +29,7 @@ venv/
 *.egg-info/
 dist/
 .python-version
+
+# Script output
+scripts/result.txt
+scripts/custom/result.txt

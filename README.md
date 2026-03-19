@@ -22,7 +22,7 @@ Built by merging **altoclef**, **shredder**, and **tungsten** into a single code
 
 **Minecraft 1.21** / **Fabric** / **Java 21**
 
-> **[How to build & run →](docs/DEVELOP.md)** | **[How to release →](docs/RELEASE.md)** | **[Multi-version →](docs/MULTIVERSIONING.md)**
+> **[How to build & run →](docs/DEVELOP.md)** | **[How to release →](docs/RELEASE.md)** | **[Multi-version →](docs/MULTIVERSIONING.md)** | **[Python scripting →](docs/SCRIPTS.md)**
 
 ## Features
 
