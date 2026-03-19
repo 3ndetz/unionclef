@@ -202,7 +202,7 @@ public class BlockSpacePathFinder {
 	}
 	
 	private static boolean updateBestSoFar(BlockNode child, double[] bestHeuristicSoFar, Vec3d target) {
-		boolean failing = true;
+		boolean failing = false;
 		if (child.previous == null) return false;
 	    for (int i = 0; i < COEFFICIENTS.length; i++) {
 	        double heuristic = child.combinedCost / COEFFICIENTS[i];

@@ -17,7 +17,7 @@ import kaptainwutax.tungsten.helpers.BlockShapeChecker;
 import kaptainwutax.tungsten.helpers.BlockStateChecker;
 import kaptainwutax.tungsten.helpers.DirectionHelper;
 import kaptainwutax.tungsten.helpers.DistanceCalculator;
-
+import kaptainwutax.tungsten.helpers.MathHelper;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
 import kaptainwutax.tungsten.path.specialMoves.ClimbALadderMove;
 import kaptainwutax.tungsten.path.specialMoves.CornerJump;
@@ -241,7 +241,7 @@ public class Node {
 	    		&& nextBlockNode.getBlockPos().getX() == agent.blockX
 	    		&& nextBlockNode.getBlockPos().getZ() == agent.blockZ) {
 	    	Direction dir = state.get(Properties.HORIZONTAL_FACING);
-	    	double desiredYaw = DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true).offset(dir.getOpposite(), 1));
+	    	double desiredYaw = DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true).offset(dir.getOpposite(), 1)) + MathHelper.roundToPrecision(Math.random(), 2) / 1000000;
 	    	if (nextBlockNode.getBlockPos().getY() > agent.blockY) {
 		    	Node n = createNode(world, nextBlockNode, true, false, false, false, false, true, (float) desiredYaw, isDoingLongJump, isCloseToBlockNode);
 		    	if (n != null) nodes.add(n);
@@ -263,7 +263,7 @@ public class Node {
 	    for (boolean forward : new boolean[]{true, false}) {
 	        for (boolean right : new boolean[]{true, false}) {
 	            for (boolean left : new boolean[]{true, false}) {
-	                    for (float yaw = fromYaw; yaw < toYaw; yaw += 22.5f) {
+	                    for (float yaw = fromYaw; yaw < toYaw; yaw += 22.5 + Math.random()) {
 	                        for (boolean sprint : new boolean[]{true, false}) {
 	                        	if (!this.agent.canSprint() && sprint) continue;
 	                            if (( ((right || left) && !forward)) && sprint) continue;
@@ -354,11 +354,17 @@ public class Node {
 
 	private void generateAirborneNodes(WorldView world, BlockNode nextBlockNode, List<Node> nodes) {
 	    try {
-	        float targetYaw = (float) kaptainwutax.tungsten.helpers.DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true));
-	        for (float yaw : new float[]{agent.yaw, targetYaw, targetYaw - 22.5f, targetYaw + 22.5f, targetYaw - 45f}) {
-	            createAirborneNodes(world, nextBlockNode, nodes, true, false, yaw);
-	        }
+//	        for (float yaw = agent.yaw - 45; yaw < 180.0f; yaw += 22.5 + Math.random()) {
+//	            for (boolean forward : new boolean[]{true, false}) {
+//	                for (boolean right : new boolean[]{false, true}) {
+	                    createAirborneNodes(world, nextBlockNode, nodes, true, false, agent.yaw);
+//	                }
+//	            }
+//	        }
 	    } catch (ConcurrentModificationException e) {
+//	        try {
+//	            Thread.sleep(2);
+//	        } catch (InterruptedException ignored) {}
 	    }
 	}
 

@@ -393,11 +393,11 @@ public class PathFinder {
             if (bestSoFar.get(i) == null || bestSoFar.get(i).parent == null) {
                 continue;
             }
-            double dist = startNode.agent.getPos().squaredDistanceTo(bestSoFar.get(i).agent.getPos());
+            double dist = computeHeuristic(startNode.agent.getPos(), startNode.agent.onGround || startNode.agent.slimeBounce, bestSoFar.get(i).agent.getPos(), realTarget);
             if (dist > bestDist) {
                 bestDist = dist;
             }
-            if (bestDist > TungstenModDataContainer.PATHFINDER.minDistPath * TungstenModDataContainer.PATHFINDER.minDistPath) {
+            if (bestDist > TungstenModDataContainer.PATHFINDER.minDistPath * TungstenModDataContainer.PATHFINDER.minDistPath) { // square the comparison since distFromStartSq is squared
 //                if (logInfo) {
 //                    if (COEFFICIENTS[i] >= 3) {
 //                        System.out.println("Warning: cost coefficient is greater than three! Probably means that");
@@ -506,7 +506,7 @@ public class PathFinder {
 	
 	private static Vec3d computeScaledPosition(Vec3d pos, int hashCode, double xScale, double yScale, double zScale) {
 	    return new Vec3d(
-	        Math.round(pos.x * xScale),
+	        Math.round(pos.x * xScale + hashCode),
 	        Math.round(pos.y * yScale),
 	        Math.round(pos.z * zScale)
 	    );
@@ -573,7 +573,7 @@ public class PathFinder {
 	    	estimatedCostToGoal +=  computeHeuristic(childPos, child.agent.onGround || child.agent.slimeBounce, posToGetTo, realTarget);
 	    }
 
-	    child.parent = current;
+//	    child.parent = current;
 	    child.cost = tentativeCost;
 	    child.estimatedCostToGoal = estimatedCostToGoal;
 	    child.combinedCost = tentativeCost + estimatedCostToGoal;
@@ -667,7 +667,7 @@ public class PathFinder {
     		return node.agent.getPos().squaredDistanceTo(target) <= 0.9D;
     	if (world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ())).getBlock() instanceof LadderBlock)
     		return node.agent.getPos().squaredDistanceTo(target) <= 0.9D;
-        return node.agent.getPos().squaredDistanceTo(target) <= 0.2D;
+        return node.agent.getPos().squaredDistanceTo(target) <= 0.2D && !failing;
     }
 
     private boolean tryExecutePath(Node node, Vec3d target, double minVelocity) {
@@ -1212,13 +1212,17 @@ public class PathFinder {
         	if (setCurrentPath(TARGET, this.start, TungstenModDataContainer.player)) {
 				NEXT_CLOSEST_BLOCKNODE_IDX.set(closestPosIDX+1);
 	        	RenderHelper.renderBlockPath(blockPath, NEXT_CLOSEST_BLOCKNODE_IDX.get());
+				closed.clear();
 				return true;
 			}
         } else if (closestPosIDX+1 > NEXT_CLOSEST_BLOCKNODE_IDX.get()+1 && heightDiff <= 1) {
 
+//			if (setCurrentPath(TARGET, this.start, TungstenModDataContainer.player)) {
 				NEXT_CLOSEST_BLOCKNODE_IDX.set(closestPosIDX+1);
 	        	RenderHelper.renderBlockPath(blockPath, NEXT_CLOSEST_BLOCKNODE_IDX.get());
+				closed.clear();
 				return true;
+//			}
         }
     	if (closestPosIDX+1 > NEXT_CLOSEST_BLOCKNODE_IDX.get() && closestPosIDX +1 < blockPath.size()
     			&&  heightDiff <= 1
@@ -1242,6 +1246,7 @@ public class PathFinder {
     			if (!isNeo || setCurrentPath(TARGET, this.start, TungstenModDataContainer.player)) {
     				NEXT_CLOSEST_BLOCKNODE_IDX.set(closestPosIDX+1);
     	        	RenderHelper.renderBlockPath(blockPath, NEXT_CLOSEST_BLOCKNODE_IDX.get());
+    				closed.clear();
     				return true;
     			}
 //	    		try {
