@@ -185,7 +185,10 @@ if (project.name == "1.21.1") {
         releaseAssets = files({ remapJar.archiveFile })
         targetCommitish = "main"
         generateReleaseNotes = true
-        body = ""
+        body = {
+            def notesFile = rootProject.file("docs/releases/latest.md")
+            notesFile.exists() ? notesFile.text : ""
+        }
         draft = false
         prerelease = false
         overwrite = true

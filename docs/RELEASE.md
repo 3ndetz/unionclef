@@ -19,6 +19,11 @@ github.token=ghp_your_token_here
 
 ## Release-Guide workflow
 
+### 0. Write release notes
+
+Edit `docs/releases/latest.md` — this file is automatically included as the
+GitHub release body. Benchmarks, tables, whatever you want.
+
 ### 1. Tag
 
 ```bash
