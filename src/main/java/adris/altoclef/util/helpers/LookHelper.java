@@ -774,6 +774,8 @@ public interface LookHelper {
         public static long lastUpdateTime = System.currentTimeMillis();
         public static long lastUpdateTimeInternal = System.currentTimeMillis();
         public static final long ROTATION_TIMEOUT = 1000;
+        // Flick state: for large angle changes, do a single fast burst then settle
+        public static boolean flickInjected = false;
     }
 
     public static boolean isCloseRotations(Rotation startRot, Rotation newRot) {
@@ -799,6 +801,7 @@ public interface LookHelper {
             WindMouseState.isRotating = true;
             WindMouseState.targetEntity = targetEntity;
             WindMouseState.startRotation = getLookRotation(mod.getPlayer());
+            WindMouseState.flickInjected = false;
         }
         WindMouseState.targetEntity = targetEntity;
         WindMouseState.isRotating = true;
@@ -822,6 +825,7 @@ public interface LookHelper {
             WindMouseState.currentX = 0; WindMouseState.currentY = 0;
             WindMouseState.windX = 0; WindMouseState.windY = 0;
             WindMouseState.veloX = 0; WindMouseState.veloY = 0;
+            WindMouseState.flickInjected = false;
             return true;
         }
 
@@ -840,6 +844,27 @@ public interface LookHelper {
         double deltaPitch = WindMouseState.targetRotation.getPitch() - currentRotation.getPitch();
         double distanceToTarget = Math.sqrt(deltaYaw * deltaYaw + deltaPitch * deltaPitch);
         if (distanceToTarget < 0.01) { WindMouseState.isRotating = false; return true; }
+
+        // FLICK: for large angle changes, apply a single fast burst (human mouse flick) then settle normally.
+        // Covers 70–85 % of the distance in one tick with a tiny lateral deviation — no magnitude jitter,
+        // just the slight directional imprecision of a real mouse flick.
+        if (!WindMouseState.flickInjected && distanceToTarget > 30.0) {
+            WindMouseState.flickInjected = true;
+            double coverFraction = 0.70 + (Math.random() * 0.15); // 70–85 %
+            double flickDist = distanceToTarget * coverFraction;
+            // Small perpendicular noise: ±3 % of distance — makes trajectory slightly curved, not a laser line
+            double lateralFraction = (Math.random() - 0.5) * 0.06;
+            double nYaw   = deltaYaw   / distanceToTarget * flickDist + (-deltaPitch / distanceToTarget) * lateralFraction * flickDist;
+            double nPitch = deltaPitch / distanceToTarget * flickDist + ( deltaYaw   / distanceToTarget) * lateralFraction * flickDist;
+            lookAtForced(mod, new Rotation(
+                normalizeAngle(currentRotation.getYaw()   + (float) nYaw),
+                clamp((float)(currentRotation.getPitch() + nPitch), -90f, 90f)
+            ));
+            // Reset velocity so the settle phase starts from zero
+            WindMouseState.veloX = 0; WindMouseState.veloY = 0;
+            WindMouseState.windX = 0; WindMouseState.windY = 0;
+            return false;
+        }
 
         double baseWind = 1000, baseGravity = 8000, baseMaxStep = 1000000;
         double actualWind = baseWind * timeDelta, actualGravity = baseGravity * timeDelta, actualMaxStep = baseMaxStep * timeDelta;

@@ -65,6 +65,8 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
     private final Random wmRandom = new Random();
     private double wmVeloYaw, wmVeloPitch;
     private double wmWindYaw, wmWindPitch;
+    // Flick state: large-angle changes get an initial velocity boost, not a gradual ramp-up
+    private boolean wmFlickInjected;
 
     public LookBehavior(Baritone baritone) {
         super(baritone);
@@ -114,8 +116,18 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
 
                 // Update render-frame smooth target
                 this.hadTargetThisTick = true;
-                this.renderTargetYaw = this.target.rotation.getYaw();
-                this.renderTargetPitch = this.target.rotation.getPitch();
+                float newTargetYaw   = this.target.rotation.getYaw();
+                float newTargetPitch = this.target.rotation.getPitch();
+                // If the target jumped significantly while already tracking, re-arm the flick
+                if (this.smoothActive && this.wmFlickInjected) {
+                    double dy = MathHelper.wrapDegrees(newTargetYaw - this.renderTargetYaw);
+                    double dp = newTargetPitch - this.renderTargetPitch;
+                    if (Math.sqrt(dy * dy + dp * dp) > 30.0) {
+                        this.wmFlickInjected = false;
+                    }
+                }
+                this.renderTargetYaw   = newTargetYaw;
+                this.renderTargetPitch = newTargetPitch;
                 if (!this.smoothActive) {
                     // First frame: snap to target
                     this.smoothYaw = this.renderTargetYaw;
@@ -125,6 +137,7 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
                     // Reset WindMouse physics so we don't carry stale velocity
                     this.wmVeloYaw = 0; this.wmVeloPitch = 0;
                     this.wmWindYaw = 0; this.wmWindPitch = 0;
+                    this.wmFlickInjected = false;
                 } else if (this.target.blockInteract) {
                     // Block interaction needs objectMouseOver to see the correct face immediately.
                     // getYaw() mixin returns smoothYaw, which lags behind actual — snap it so
@@ -133,6 +146,7 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
                     this.smoothPitch = actual.getPitch();
                     this.wmVeloYaw = 0; this.wmVeloPitch = 0;
                     this.wmWindYaw = 0; this.wmWindPitch = 0;
+                    this.wmFlickInjected = false;
                 }
                 break;
             }
@@ -176,6 +190,7 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
         this.lastSmoothNanos = 0;
         this.wmVeloYaw = 0; this.wmVeloPitch = 0;
         this.wmWindYaw = 0; this.wmWindPitch = 0;
+        this.wmFlickInjected = false;
     }
 
     /**
@@ -232,6 +247,24 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
             wmVeloYaw = 0; wmVeloPitch = 0;
             wmWindYaw = 0; wmWindPitch = 0;
             return;
+        }
+
+        // FLICK: large-angle target change → inject a fast initial velocity burst instead of ramping from zero.
+        // Covers 70–85 % of the distance in the first few render frames with a tiny lateral wobble.
+        // After the flick, normal WindMouse physics handle the remaining settle.
+        if (!wmFlickInjected && dist > 30.0) {
+            wmFlickInjected = true;
+            double coverFraction = 0.70 + (wmRandom.nextDouble() * 0.15); // 70–85 %
+            double flickDist = dist * coverFraction;
+            // Lateral noise: ±3 % of distance (slight curve, not jitter)
+            double lateral = (wmRandom.nextDouble() - 0.5) * 0.06;
+            double flickVeloYaw   = dYaw   / dist * flickDist + (-dPitch / dist) * lateral * flickDist;
+            double flickVeloPitch = dPitch / dist * flickDist + ( dYaw   / dist) * lateral * flickDist;
+            // Convert to angular velocity (deg/s) so the normal integration picks it up this frame
+            float safedt = Math.max(dt, 0.001f);
+            wmVeloYaw   = flickVeloYaw   / safedt;
+            wmVeloPitch = flickVeloPitch / safedt;
+            wmWindYaw = 0; wmWindPitch = 0;
         }
 
         // smoothLookTicks controls overall speed: 5 = baseline, higher = slower, lower = faster
