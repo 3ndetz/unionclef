@@ -629,18 +629,27 @@ public class Py4jEntryPoint {
     public Vec3d getCurrentGoal() {
         Vec3d result = null;
         if (AltoClef.inGame()) {
+            // Try baritone path endpoint first
             Optional<IPath> pathq = _mod.getClientBaritone().getPathingBehavior().getPath();
-            BetterBlockPos goalpos = null;
-
             if (pathq.isPresent()) {
                 List<BetterBlockPos> pathlist = pathq.get().positions();
-                if (pathlist.size() > 0) {
-                    goalpos = pathlist.get(pathlist.size() - 1);
+                if (!pathlist.isEmpty()) {
+                    BetterBlockPos goalpos = pathlist.get(pathlist.size() - 1);
                     result = new Vec3d(goalpos.getX(), goalpos.getY(), goalpos.getZ());
                 }
             }
+            // Fallback to tungsten target
+            if (result == null && isTungstenActive()) {
+                result = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.TARGET;
+            }
         }
         return result;
+    }
+
+    public String getCurrentGoalString() {
+        Vec3d goal = getCurrentGoal();
+        if (goal == null) return "";
+        return String.format("%.1f %.1f %.1f", goal.x, goal.y, goal.z);
     }
 
     public void callPythonMethod() {
