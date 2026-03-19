@@ -101,6 +101,7 @@ public class PathExecutor implements IPathExecutor, Helper {
     private int jumpBridgeSavedClickSpeed; // saved rightClickSpeed to restore on exit
     private boolean jumpBridgeClickReady; // true after rotation has been stable for ≥1 tick
     private double jumpBridgeBackupStartPos; // position along dir axis when backup started
+    private int jumpBridgeCooldown; // ticks until jump bridge can activate again after failure
 
 
     public PathExecutor(PathingBehavior behavior, IPath path) {
@@ -901,6 +902,9 @@ public class PathExecutor implements IPathExecutor, Helper {
     private boolean tryStartJumpBridge(Movement current) {
         if (!(current instanceof MovementTraverse)) return false;
 
+        // Cooldown after failed jump bridge — let slow bridge handle it
+        if (jumpBridgeCooldown > 0) { jumpBridgeCooldown--; return false; }
+
         // Player must be at the correct Y level (not fallen into a gap)
         if (ctx.playerFeet().getY() != current.getSrc().getY()) return false;
 
@@ -970,6 +974,9 @@ public class PathExecutor implements IPathExecutor, Helper {
         jumpBridging = false;
         jumpBridgePhase = JumpBridgePhase.NONE;
         Baritone.settings().rightClickSpeed.value = jumpBridgeSavedClickSpeed;
+        // Cooldown: 100 ticks (5 sec). Prevents re-entry loop after failure.
+        // On success (no more bridge), pathfinder won't try anyway.
+        jumpBridgeCooldown = 100;
     }
 
     /** Shared: snap pathPosition to current player location. */
