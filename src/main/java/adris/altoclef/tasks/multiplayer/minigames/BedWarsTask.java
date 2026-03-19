@@ -292,6 +292,16 @@ public class BedWarsTask extends Task {
         // ============================================================
         boolean hasMinGear = getBlockCount(mod) >= MIN_BLOCKS_FOR_ACTIONS;
 
+        // --- ALWAYS allowed: go to shop to buy gear ---
+        // PRIORITY: if we have currency but no blocks, shop FIRST before looting
+        if (!inChest && shopCooldown.elapsed()) {
+            boolean needsGear = !hasMinGear || getBalance(mod) >= 350;
+            if (needsGear && getBalance(mod) > 0) {
+                setDebugState("Going to shop (balance: " + getBalance(mod) + ")");
+                return goToShop(mod);
+            }
+        }
+
         // --- ALWAYS allowed: loot pickup & resource farming ---
         for (Item check : lootableItems(mod)) {
             if (mod.getEntityTracker().itemDropped(check)) {
@@ -304,15 +314,6 @@ public class BedWarsTask extends Task {
                     _pickupTask = new PickupDroppedItemTask(new ItemTarget(check, 1), false);
                     return _pickupTask;
                 }
-            }
-        }
-
-        // --- ALWAYS allowed: go to shop to buy gear ---
-        if (!inChest && shopCooldown.elapsed()) {
-            // Go shop if we need gear OR if we have enough balance
-            boolean needsGear = !hasMinGear || getBalance(mod) >= 350;
-            if (needsGear) {
-                return goToShop(mod);
             }
         }
 
