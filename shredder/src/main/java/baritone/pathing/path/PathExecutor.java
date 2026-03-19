@@ -1214,7 +1214,7 @@ public class PathExecutor implements IPathExecutor, Helper {
                 // Landed → check Y FIRST (before snapPath), then decide
                 if (ctx.player().isOnGround() && jumpBridgeAirborneTicks > 2) {
                     int expectedY = jumpBridgeLastSolid.getY() + 1;
-                    if (Math.abs(ctx.playerFeet().getY() - expectedY) > 1) {
+                    if (ctx.playerFeet().getY() != expectedY) {
                         // Fell below bridge level — exit without snapping path
                         exitJumpBridge();
                         return true;
