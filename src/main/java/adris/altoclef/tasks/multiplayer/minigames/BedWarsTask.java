@@ -117,6 +117,7 @@ public class BedWarsTask extends Task {
         BEDWARS_COLORS.put("blue", 0x004DFF);
         BEDWARS_COLORS.put("light_blue", 0x00BFFF);
         BEDWARS_COLORS.put("pink", 0xF70AA0);
+        BEDWARS_COLORS.put("white", 0xFFFFFF);
     }
 
     public static final Map<String, Block> BEDWARS_BED_COLORS = new HashMap<>();
@@ -130,6 +131,7 @@ public class BedWarsTask extends Task {
         BEDWARS_BED_COLORS.put("blue", Blocks.BLUE_BED);
         BEDWARS_BED_COLORS.put("light_blue", Blocks.LIGHT_BLUE_BED);
         BEDWARS_BED_COLORS.put("pink", Blocks.PINK_BED);
+        BEDWARS_BED_COLORS.put("white", Blocks.WHITE_BED);
     }
 
     public String getClosestColorName(int rgb) {
