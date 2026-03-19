@@ -18,7 +18,9 @@ import net.minecraft.item.ItemStack;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -33,6 +35,10 @@ public class SlotHandler {
 
     private record PendingSlotAction(long timeMs, int syncId, int windowSlot, ItemStack before) {}
     private final Deque<PendingSlotAction> _pendingSlotActions = new ArrayDeque<>();
+
+    private record BlacklistKey(int syncId, int windowSlot) {}
+    private final Map<BlacklistKey, Long> _slotBlacklist = new HashMap<>();
+    private static final long SLOT_BLACKLIST_MS = 4000;
 
     public SlotHandler(AltoClef mod) {
         this.mod = mod;
@@ -83,6 +89,13 @@ public class SlotHandler {
         registerSlotAction();
         int syncId = player.currentScreenHandler.syncId;
 
+        // Check blacklist before clicking
+        BlacklistKey blKey = new BlacklistKey(syncId, windowSlot);
+        Long blExpiry = _slotBlacklist.get(blKey);
+        if (blExpiry != null && System.currentTimeMillis() < blExpiry) {
+            return;
+        }
+
         // Snapshot slot state before click for server-cancellation detection
         try {
             if (windowSlot >= 0 && windowSlot < player.currentScreenHandler.slots.size()) {
@@ -108,9 +121,16 @@ public class SlotHandler {
             if (action.syncId() == syncId && action.windowSlot() == slot
                     && !action.before().isEmpty()
                     && ItemStack.areEqual(serverStack, action.before())) {
-                Debug.logMessage("[WARN] Server cancelled slot action: window slot " + slot
-                        + " reverted to " + serverStack.getItem().getTranslationKey()
-                        + " x" + serverStack.getCount());
+                BlacklistKey key = new BlacklistKey(syncId, slot);
+                boolean alreadyBlocked = _slotBlacklist.containsKey(key)
+                        && now < _slotBlacklist.get(key);
+                _slotBlacklist.put(key, now + SLOT_BLACKLIST_MS);
+                if (!alreadyBlocked) {
+                    Debug.logMessage("[WARN] Server cancelled slot action: window slot " + slot
+                            + " (" + serverStack.getItem().getTranslationKey()
+                            + " x" + serverStack.getCount()
+                            + ") — blacklisting for " + (SLOT_BLACKLIST_MS / 1000) + "s");
+                }
             }
         }
     }
