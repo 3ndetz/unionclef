@@ -100,6 +100,32 @@ public class UnstuckChain extends SingleTaskChain {
         }
     }
 
+    private void checkGenerallyStuck() {
+        if (posHistory.size() < 200) return; // ~10 seconds of ticks
+
+        AltoClef mod = AltoClef.getInstance();
+
+        // Don't interfere with eating or mining
+        if (mod.getFoodChain().isTryingToEat()) return;
+        if (mod.getControllerExtras().isBreakingBlock()) return;
+        // Only trigger when there's an active user task
+        if (!mod.getUserTaskChain().isActive()) return;
+
+        Vec3d current = posHistory.getFirst();
+        Vec3d old = posHistory.get(199);
+
+        double dx = Math.abs(current.getX() - old.getX());
+        double dz = Math.abs(current.getZ() - old.getZ());
+        double dy = Math.abs(current.getY() - old.getY());
+
+        if (dx < 1.5 && dz < 1.5 && dy < 1.5) {
+            Debug.logMessage("Bot appears generally stuck (no movement for ~10s), triggering shimmy");
+            startedShimmying = true;
+            shimmyTaskTimer.reset();
+            posHistory.clear();
+        }
+    }
+
     private void checkStuckOnEndPortalFrame(AltoClef mod) {
         BlockState state = mod.getWorld().getBlockState(mod.getPlayer().getSteppingPos());
 
@@ -165,6 +191,7 @@ public class UnstuckChain extends SingleTaskChain {
         checkStuckInPowderedSnow();
         checkEatingGlitch();
         checkStuckOnEndPortalFrame(mod);
+        checkGenerallyStuck();
 
 
         if (isProbablyStuck) {
