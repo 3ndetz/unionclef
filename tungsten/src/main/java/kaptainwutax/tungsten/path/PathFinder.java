@@ -72,10 +72,10 @@ public class PathFinder {
 	
 	/** Max search time before emitting bestSoFar and continuing. Default: 112s (normal goto).
 	 *  Set lower (e.g. 2000) for follow-entity to get fast partial paths. */
-	public long searchTimeoutMs = 112000L;
+	public long searchTimeoutMs = 15000L;
 	/** Minimum path length (nodes) required before a timeout partial-path can be emitted.
 	 *  Default: 46 (~2.3s). Set lower (e.g. 5) for follow-entity close-range. */
-	public int minPathSizeForTimeout = 46;
+	public int minPathSizeForTimeout = 15;
 
 	/** Minimum path progress distance before bestSoFar can be accepted.
 	 *  Default: MIN_DIST_PATH (1.8). Set near 0 for snap/dash mode (accept any path immediately). */
@@ -393,11 +393,11 @@ public class PathFinder {
             if (bestSoFar.get(i) == null || bestSoFar.get(i).parent == null) {
                 continue;
             }
-            double dist = computeHeuristic(startNode.agent.getPos(), startNode.agent.onGround || startNode.agent.slimeBounce, bestSoFar.get(i).agent.getPos(), realTarget);
+            double dist = startNode.agent.getPos().squaredDistanceTo(bestSoFar.get(i).agent.getPos());
             if (dist > bestDist) {
                 bestDist = dist;
             }
-            if (bestDist > TungstenModDataContainer.PATHFINDER.minDistPath * TungstenModDataContainer.PATHFINDER.minDistPath) { // square the comparison since distFromStartSq is squared
+            if (bestDist > TungstenModDataContainer.PATHFINDER.minDistPath * TungstenModDataContainer.PATHFINDER.minDistPath) {
 //                if (logInfo) {
 //                    if (COEFFICIENTS[i] >= 3) {
 //                        System.out.println("Warning: cost coefficient is greater than three! Probably means that");
@@ -763,7 +763,7 @@ public class PathFinder {
 	      		|| (!aggressive && (
 	      		    (!result.get().getLast().agent.onGround && !result.get().getLast().agent.touchingWater)
 	      		    || result.get().getLast().agent.isClimbing(TungstenModDataContainer.world)))
-	      		|| result.get().getLast().agent.getPos().distanceTo(result.get().getFirst().agent.getPos()) < TungstenModDataContainer.PATHFINDER.minDistPath * 2.0) {
+	      		|| result.get().getLast().agent.getPos().distanceTo(result.get().getFirst().agent.getPos()) < TungstenModDataContainer.PATHFINDER.minDistPath) {
 	          return false;
 	      }
 //        if (player.getPos().distanceTo(result.get().getFirst().agent.getPos()) < 1 && next.agent.getPos().distanceTo(target) > 1) {
