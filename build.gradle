@@ -185,12 +185,10 @@ if (project.name == "1.21.1") {
         releaseAssets = files({ remapJar.archiveFile })
         targetCommitish = "main"
         generateReleaseNotes = true
-        body = {
+        body = provider {
             def parts = []
-            // Base info (install, commands) — always included
             def baseFile = rootProject.file("docs/releases/base.md")
             if (baseFile.exists()) parts.add(baseFile.text)
-            // Versioned release notes: docs/releases/0.20.3.md
             def versionedFile = rootProject.file("docs/releases/${project.mod_version}.md")
             if (versionedFile.exists()) parts.add(versionedFile.text)
             else {
