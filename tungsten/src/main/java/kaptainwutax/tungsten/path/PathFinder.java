@@ -329,6 +329,13 @@ public class PathFinder {
 	            	primaryTimeoutTime = System.currentTimeMillis() + 1120L;
 	                continue;
 	            }
+	            // Proactive emit: if executor is idle and we have a decent partial path, emit it now
+	            if (!TungstenModDataContainer.EXECUTOR.isRunning() && !failing) {
+	                if (tryProactiveEmit(target, start, player)) {
+	                    primaryTimeoutTime = System.currentTimeMillis() + 1120L;
+	                    continue;
+	                }
+	            }
 	        }
 	        
 	        if (numNodesConsidered.get() % 20 == 0) {
@@ -748,6 +755,20 @@ public class PathFinder {
         Debug.logWarning("Failed!");
         stop.set(true);
         return Optional.empty();
+    }
+
+    /**
+     * Proactive emit: if executor is idle and we have a good partial path,
+     * emit it immediately so the bot starts moving while we keep searching.
+     */
+    private boolean tryProactiveEmit(Vec3d target, Node start, PlayerEntity player) {
+        Optional<List<Node>> result = PathFinder.bestSoFar(false, 0, start, TungstenModDataContainer.PATHFINDER.TARGET);
+        if (!result.isPresent() || result.get().size() < minPathSizeForTimeout) return false;
+        Node last = result.get().getLast();
+        if (!last.agent.onGround && !last.agent.touchingWater) return false;
+        if (last.agent.isClimbing(TungstenModDataContainer.world)) return false;
+        if (last.agent.getPos().distanceTo(result.get().getFirst().agent.getPos()) < minDistPath) return false;
+        return setCurrentPath(target, start, player);
     }
 
     private boolean handleTimeout(long startTime, long primaryTimeoutTime, Node next, Vec3d target, Node start, PlayerEntity player, Set<Vec3d> closed) {

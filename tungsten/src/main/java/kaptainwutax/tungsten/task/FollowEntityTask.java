@@ -190,6 +190,8 @@ public class FollowEntityTask {
         } else if (!stopRequested && tickCounter >= RECALC_TICKS
                 && lastTargetPos != null
                 && effectiveTarget.distanceTo(lastTargetPos) > MIN_MOVE_DIST) {
+            // Stop pathfinder but keep executor running — bot continues along
+            // current path while we recalculate a new one for the moved target
             TungstenModDataContainer.PATHFINDER.stop.set(true);
             stopRequested = true;
             tickCounter   = 0;

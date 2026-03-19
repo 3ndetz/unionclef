@@ -8,44 +8,66 @@ import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.commands.arguments.GotoTargetArgumentType;
 import kaptainwutax.tungsten.commandsystem.Command;
 import kaptainwutax.tungsten.commandsystem.CommandException;
-import kaptainwutax.tungsten.path.PathFinder;
 import kaptainwutax.tungsten.path.targets.BlockTarget;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.command.CommandSource;
+import net.minecraft.util.math.Vec3d;
 
 public class GotoCommand extends Command {
-	
+
+	private static final int    MAX_RETRIES     = 10;
+	private static final double ARRIVAL_DIST_SQ = 2.0 * 2.0;
+
 	public GotoCommand(TungstenMod mod) throws CommandException {
-        // x z
-        // x y z
-        // x y z dimension
-        // (dimension)
-        // (x z dimension)
-        super("goto", "Tell bot to travel to a set of coordinates", mod
-                /*new Arg(GotoTarget.class, "[x y z dimension]/[x z dimension]/[y dimension]/[dimension]/[x y z]/[x z]/[y]")*/
-        );
+        super("goto", "Tell bot to travel to a set of coordinates", mod);
     }
 
 	@Override
 	public void build(LiteralArgumentBuilder<CommandSource> builder) {
-		
+
 		builder.then(argument("gotoTarget", GotoTargetArgumentType.create()).executes(context -> {
 	        try {
-				
+
 	        	BlockTarget target = GotoTargetArgumentType.get(context);
 	        	if(!TungstenModDataContainer.PATHFINDER.active.get() && !TungstenModDataContainer.EXECUTOR.isRunning()) {
-	        		TungstenMod.TARGET = target.getVec3d().add(0.5, 0, 0.5);
-	        		TungstenModDataContainer.PATHFINDER.find(TungstenMod.mc.world, target.getVec3d().add(0.5, 0, 0.5), TungstenMod.mc.player);
+	        		Vec3d targetVec = target.getVec3d().add(0.5, 0, 0.5);
+	        		TungstenMod.TARGET = targetVec;
+	        		startWithRetry(targetVec, 0);
 	    		} else {
 	    			Debug.logWarning("Already running!");
 	    		}
 
 			} catch (Exception e) {
-				// TODO: handle exception
+				e.printStackTrace();
 			}
-			
+
 			return SINGLE_SUCCESS;
 		}));
 	}
 
+	private static void startWithRetry(Vec3d target, int attempt) {
+		if (attempt >= MAX_RETRIES) {
+			Debug.logWarning("Gave up after " + MAX_RETRIES + " attempts.");
+			return;
+		}
+		if (TungstenModDataContainer.PATHFINDER.stop.get()) return;
+
+		TungstenModDataContainer.PATHFINDER.find(TungstenMod.mc.world, target, TungstenMod.mc.player);
+
+		// Set callback: when pathfinder+executor finish, retry if not at target
+		TungstenModDataContainer.EXECUTOR.cb = () -> {
+			if (TungstenModDataContainer.PATHFINDER.stop.get()) return;
+			if (TungstenMod.mc.player == null) return;
+			double distSq = TungstenMod.mc.player.getPos().squaredDistanceTo(target);
+			if (distSq > ARRIVAL_DIST_SQ) {
+				Debug.logMessage("Retrying (" + (attempt + 1) + "/" + MAX_RETRIES + ")...");
+				// Small delay to let player land
+				new Thread(() -> {
+					try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+					if (!TungstenModDataContainer.PATHFINDER.stop.get()) {
+						startWithRetry(target, attempt + 1);
+					}
+				}).start();
+			}
+		};
+	}
 }

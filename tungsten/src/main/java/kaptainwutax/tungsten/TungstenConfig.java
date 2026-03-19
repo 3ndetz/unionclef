@@ -28,7 +28,7 @@ public class TungstenConfig {
     public boolean driftCorrectionEnabled = false;
 
     /** Blocks of drift before triggering correction or executor stop. */
-    public double driftThreshold = 0.5;
+    public double driftThreshold = 0.8;
 
     /** If true: log verbose tick/drift/position messages to console.
      *  Keep false in normal use to reduce noise. */
