@@ -242,6 +242,19 @@ public class BedWarsTask extends Task {
             if (_teamDetermineCooldown.elapsed()) {
                 determineSelfColor(mod);
                 _teamDetermineCooldown.reset();
+                // Once team is determined, rebuild enemy bed list with our bed excluded
+                if (teamDetermined) {
+                    ourBedBlock = BEDWARS_BED_COLORS.get(ourColorName);
+                    enemyBedBlocks = new ArrayList<>(Arrays.stream(ItemHelper.itemsToBlocks(ItemHelper.BED)).toList());
+                    if (ourBedBlock != null) enemyBedBlocks.remove(ourBedBlock);
+                }
+            }
+        } else {
+            // Detect new game: team color changed → reset
+            int currentColor = getHelmetColor(mod.getPlayer());
+            if (currentColor != ourColor) {
+                Debug.logMessage("BedWars: team color changed, resetting for new game.");
+                initializeNewGame(mod);
             }
         }
 
@@ -279,14 +292,16 @@ public class BedWarsTask extends Task {
             }
         }
 
-        Optional<BlockPos> enemyBedPosOpt = mod.getBlockScanner().getNearestBlock(
-                mod.getPlayer().getPos(),
-                to -> to.isWithinDistance(mod.getPlayer().getBlockPos(), 10),
-                enemyBedBlocks != null ? enemyBedBlocks.toArray(Block[]::new) : new Block[0]);
-        if (enemyBedPosOpt.isPresent()) {
-            BlockPos enemyBedPos = enemyBedPosOpt.get();
-            setDebugState("Destroying enemy bed at " + enemyBedPos.toShortString());
-            return new DestroyBlockTask(enemyBedPos);
+        if (teamDetermined) {
+            Optional<BlockPos> enemyBedPosOpt = mod.getBlockScanner().getNearestBlock(
+                    mod.getPlayer().getPos(),
+                    to -> to.isWithinDistance(mod.getPlayer().getBlockPos(), 10),
+                    enemyBedBlocks != null ? enemyBedBlocks.toArray(Block[]::new) : new Block[0]);
+            if (enemyBedPosOpt.isPresent()) {
+                BlockPos enemyBedPos = enemyBedPosOpt.get();
+                setDebugState("Destroying enemy bed at " + enemyBedPos.toShortString());
+                return new DestroyBlockTask(enemyBedPos);
+            }
         }
 
         if (inChest) {

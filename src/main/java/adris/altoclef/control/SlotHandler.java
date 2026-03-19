@@ -12,6 +12,7 @@ import adris.altoclef.util.time.TimerGame;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.*;
+import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.screen.slot.SlotActionType;
 
 import net.minecraft.item.ItemStack;
@@ -97,8 +98,10 @@ public class SlotHandler {
         }
 
         // Snapshot slot state before click for server-cancellation detection
+        // Skip tracking in chest/GUI screens — server cancels are expected there (shop menus etc.)
+        boolean isPlayerInventory = player.currentScreenHandler instanceof PlayerScreenHandler;
         try {
-            if (windowSlot >= 0 && windowSlot < player.currentScreenHandler.slots.size()) {
+            if (isPlayerInventory && windowSlot >= 0 && windowSlot < player.currentScreenHandler.slots.size()) {
                 ItemStack before = player.currentScreenHandler.getSlot(windowSlot).getStack().copy();
                 long now = System.currentTimeMillis();
                 _pendingSlotActions.removeIf(a -> now - a.timeMs() > 600);
