@@ -22,6 +22,7 @@ logs/
 
 # Python
 __pycache__/
+.lock
 *.pyc
 *.pyo
 .venv/
