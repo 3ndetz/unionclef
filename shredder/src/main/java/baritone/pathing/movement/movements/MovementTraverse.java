@@ -403,7 +403,9 @@ public class MovementTraverse extends Movement {
             state.setTarget(new MovementState.MovementTarget(faceLook, true));
 
             if (ctx.isLookingAt(src.down())) {
-                state.setInput(Input.CLICK_RIGHT, true);
+                if (((Baritone) baritone).getInventoryBehavior().selectThrowawayForLocation(true, dest.getX(), dest.getY() - 1, dest.getZ())) {
+                    state.setInput(Input.CLICK_RIGHT, true);
+                }
             }
             return state;
         }
