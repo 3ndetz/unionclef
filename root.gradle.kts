@@ -17,7 +17,7 @@ subprojects {
 // Default MC version — root tasks (runClient, build, etc.) delegate here
 val defaultVersion = "1.21.1"
 
-listOf("compileJava", "runClient", "build", "remapJar", "processResources").forEach { taskName ->
+listOf("compileJava", "runClient", "build", "remapJar", "processResources", "githubRelease").forEach { taskName ->
     tasks.register(taskName) {
         dependsOn(":$defaultVersion:$taskName")
     }
