@@ -667,7 +667,7 @@ public class PathFinder {
     		return node.agent.getPos().squaredDistanceTo(target) <= 0.9D;
     	if (world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ())).getBlock() instanceof LadderBlock)
     		return node.agent.getPos().squaredDistanceTo(target) <= 0.9D;
-        return node.agent.getPos().squaredDistanceTo(target) <= 0.2D && !failing;
+        return node.agent.getPos().squaredDistanceTo(target) <= 0.2D;
     }
 
     private boolean tryExecutePath(Node node, Vec3d target, double minVelocity) {
