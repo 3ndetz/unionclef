@@ -219,7 +219,16 @@ public class SettingsUtil {
         FLOAT(Float.class, Float::parseFloat),
         LONG(Long.class, Long::parseLong),
         STRING(String.class, String::new),
-        DIRECTION(Direction.class, Direction::byName),
+        DIRECTION(
+                Direction.class,
+                str -> {
+                    Direction direction = Direction.byName(str);
+                    if (direction == null) {
+                        throw new IllegalArgumentException("no direction found by that name");
+                    }
+                    return direction;
+                }
+        ),
         COLOR(
                 Color.class,
                 str -> new Color(Integer.parseInt(str.split(",")[0]), Integer.parseInt(str.split(",")[1]), Integer.parseInt(str.split(",")[2])),
@@ -237,7 +246,8 @@ public class SettingsUtil {
         ),
         ITEM(
                 Item.class,
-                str -> Registries.ITEM.get(Identifier.of(str.trim())), // TODO this now returns AIR on failure instead of null, is that an issue?
+                str -> Registries.ITEM.getOrEmpty(Identifier.of(str.trim()))
+                        .orElseThrow(() -> new IllegalArgumentException("no item found by that id")),
                 item -> Registries.ITEM.getId(item).toString()
         ),
         LIST() {

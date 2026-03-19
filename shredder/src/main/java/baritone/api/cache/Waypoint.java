@@ -90,13 +90,13 @@ public class Waypoint implements IWaypoint {
 
     @Override
     public boolean equals(Object o) {
-        if (o == null) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof IWaypoint w)) {
             return false;
         }
-        if (!(o instanceof IWaypoint)) {
-            return false;
-        }
-        IWaypoint w = (IWaypoint) o;
-        return name.equals(w.getName()) && tag == w.getTag() && location.equals(w.getLocation());
+        return creationTimestamp == w.getCreationTimestamp()
+                && name.equals(w.getName()) && tag == w.getTag() && location.equals(w.getLocation());
     }
 }
