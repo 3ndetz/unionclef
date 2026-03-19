@@ -922,7 +922,36 @@ public class PathExecutor implements IPathExecutor, Helper {
             return false;
         }
 
+        // ── Mode-specific checks BEFORE committing any state ──
+        // ALL validation must happen before jumpBridging=true, otherwise early
+        // returns leave jumpBridging=true and tickJumpBridge hijacks next tick.
+        JumpBridgePhase startPhase;
+        String mode = Baritone.settings().bridgingMode.value;
+        if ("jump".equals(mode)) {
+            // Need runway: 3 solid blocks behind, each with foundation (2 blocks tall).
+            BlockPos feet = current.getSrc();
+            for (int step = 1; step <= 3; step++) {
+                BlockPos backFloor = feet.add(-dir.getX() * step, -1, -dir.getZ() * step);
+                BlockPos backFoundation = backFloor.down();
+                if (!MovementHelper.canWalkOn(bsi, backFloor.getX(), backFloor.getY(), backFloor.getZ())) {
+                    return false;
+                }
+                if (!MovementHelper.canWalkOn(bsi, backFoundation.getX(), backFoundation.getY(), backFoundation.getZ())) {
+                    return false;
+                }
+            }
+            BlockPos lastSolidFoundation = current.getSrc().down().down();
+            if (!MovementHelper.canWalkOn(bsi, lastSolidFoundation.getX(), lastSolidFoundation.getY(), lastSolidFoundation.getZ())) {
+                return false;
+            }
+            startPhase = JumpBridgePhase.FJ_SPRINT;
+        } else {
+            startPhase = JumpBridgePhase.BJ_SPRINT;
+        }
+
+        // ── All checks passed — NOW commit state ──
         jumpBridging = true;
+        jumpBridgePhase = startPhase;
         jumpBridgeTicksInPhase = 0;
         jumpBridgeMoveIndex = pathPosition;
         jumpBridgeDirX = dir.getX();
@@ -930,32 +959,6 @@ public class PathExecutor implements IPathExecutor, Helper {
         jumpBridgeLastSolid = current.getSrc().down();
         jumpBridgeAirborneTicks = 0;
         jumpBridgeClickReady = false;
-
-        // Pick starting phase based on mode
-        String mode = Baritone.settings().bridgingMode.value;
-        if ("jump".equals(mode)) {
-            // Need runway: 3 solid blocks behind, each with foundation (2 blocks tall).
-            // Floor at Y-1 from feet, foundation at Y-2.
-            BlockPos feet = current.getSrc();
-            for (int step = 1; step <= 3; step++) {
-                BlockPos backFloor = feet.add(-dir.getX() * step, -1, -dir.getZ() * step);
-                BlockPos backFoundation = backFloor.down();
-                if (!MovementHelper.canWalkOn(bsi, backFloor.getX(), backFloor.getY(), backFloor.getZ())) {
-                    return false; // fallback to slow bridging
-                }
-                if (!MovementHelper.canWalkOn(bsi, backFoundation.getX(), backFoundation.getY(), backFoundation.getZ())) {
-                    return false; // need 2-block height platform
-                }
-            }
-            // Also check foundation at lastSolid position (the edge block)
-            BlockPos lastSolidFoundation = current.getSrc().down().down();
-            if (!MovementHelper.canWalkOn(bsi, lastSolidFoundation.getX(), lastSolidFoundation.getY(), lastSolidFoundation.getZ())) {
-                return false;
-            }
-            jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
-        } else {
-            jumpBridgePhase = JumpBridgePhase.BJ_SPRINT;
-        }
 
         // Fast clicks: override rightClickSpeed for rapid placement while airborne
         jumpBridgeSavedClickSpeed = Baritone.settings().rightClickSpeed.value;
