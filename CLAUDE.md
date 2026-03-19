@@ -74,13 +74,31 @@ When referencing Minecraft classes, always use yarn names:
 
 Формат архивов: `DD-MM-YYYY-task-name.md`
 
-## Release notes
+## Releasing
 
-When making changes that affect user-facing behavior, update
-`docs/releases/<mod_version>.md` (version from `gradle.properties`).
+Full guide: **[docs/RELEASE.md](docs/RELEASE.md)**. Summary below:
+
+### 1. Write release notes
+
+Update `docs/releases/<mod_version>.md` (version from `gradle.properties`).
 Keep it short: test results if available, known bugs, and most importantly —
-how to test new features (which commands to run). `docs/releases/base.md`
-has general install/command info and is prepended by gradle automatically.
+how to test new features (which commands to run).
+
+### 2. Bump version
+
+Set `mod_version` in `gradle.properties` to the new version.
+
+### 3. Publish to GitHub
+
+```bash
+gradlew githubRelease   # builds JAR, creates GitHub release with notes
+```
+
+This is the **only** way to release. Do NOT use `gh release create` manually.
+The gradle task automatically:
+- attaches the remapped JAR
+- prepends `docs/releases/base.md` (install/commands info) to the version notes
+- tags, names, and publishes the release
 
 ## Important files
 
