@@ -21,8 +21,9 @@ github.token=ghp_your_token_here
 
 ### 0. Write release notes
 
-Edit `docs/releases/latest.md` — this file is automatically included as the
-GitHub release body. Benchmarks, tables, whatever you want.
+Create `docs/releases/<version>.md` (e.g. `docs/releases/0.20.3.md`) —
+gradle reads it as the GitHub release body based on `mod_version` from
+`gradle.properties`. Falls back to `latest.md` if no versioned file found.
 
 ### 1. Tag
 
