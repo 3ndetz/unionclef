@@ -1108,7 +1108,7 @@ public class PathExecutor implements IPathExecutor, Helper {
                     jumpBridgeTicksInPhase = 0;
                 }
                 if (jumpBridgeTicksInPhase > 20) exitJumpBridge();
-                return false;
+                return true; // safe to cancel on ground
             }
 
             case BJ_PRE_ROTATE: {
@@ -1124,7 +1124,7 @@ public class PathExecutor implements IPathExecutor, Helper {
                     jumpBridgeClickReady = false;
                 }
                 if (jumpBridgeTicksInPhase > 30) exitJumpBridge();
-                return false;
+                return true; // safe to cancel on ground
             }
 
             case BJ_BRIDGE: {
@@ -1135,7 +1135,7 @@ public class PathExecutor implements IPathExecutor, Helper {
                     jumpBridgeClickReady = false;
                     jumpBridgeSnapPath();
 
-                    if (!jumpBridgeCanContinue(bsi)) { exitJumpBridge(); return false; }
+                    if (!jumpBridgeCanContinue(bsi)) { exitJumpBridge(); return true; }
 
                     // Keep backward-down rotation (we're behind the face on ground)
                     behavior.baritone.getLookBehavior().updateTarget(
@@ -1150,14 +1150,14 @@ public class PathExecutor implements IPathExecutor, Helper {
                         behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
                     }
                     if (jumpBridgeTicksInPhase > 60) exitJumpBridge();
+                    return true; // safe to cancel on ground
                 } else {
                     jumpBridgeAirborneTicks++;
-                    // MOVE_BACK while facing backward = forward momentum in world
                     behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, true);
                     jumpBridgeAirbornePlace(bsi, pastFace, head, faceCenterPoint, backwardYaw);
-                    if (jumpBridgeAirborneTicks > 25) { exitJumpBridge(); return false; }
+                    if (jumpBridgeAirborneTicks > 25) { exitJumpBridge(); return true; }
+                    return false; // NOT safe mid-air
                 }
-                return false;
             }
 
             // ═══════════════════════════════════════════════════════════════
@@ -1200,8 +1200,8 @@ public class PathExecutor implements IPathExecutor, Helper {
                     jumpBridgeClickReady = false;
                 }
 
-                if (jumpBridgeTicksInPhase > 40) exitJumpBridge();
-                return false;
+                if (jumpBridgeTicksInPhase > 40) { exitJumpBridge(); return true; }
+                return true; // safe to cancel on ground
             }
 
             case FJ_AIRBORNE: {
@@ -1211,26 +1211,26 @@ public class PathExecutor implements IPathExecutor, Helper {
                 BlockStateInterface bsi = new BlockStateInterface(ctx);
                 jumpBridgeAirbornePlace(bsi, pastFace, head, faceCenterPoint, backwardYaw);
 
-                // Landed → check Y level, then sneak stop
+                // Landed → check Y FIRST (before snapPath), then decide
                 if (ctx.player().isOnGround() && jumpBridgeAirborneTicks > 2) {
-                    jumpBridgeSnapPath();
-                    // If we fell below bridge level, bail out immediately
-                    int expectedY = jumpBridgeLastSolid.getY() + 1; // floor Y + 1 = feet Y
+                    int expectedY = jumpBridgeLastSolid.getY() + 1;
                     if (Math.abs(ctx.playerFeet().getY() - expectedY) > 1) {
+                        // Fell below bridge level — exit without snapping path
                         exitJumpBridge();
-                        return false;
+                        return true;
                     }
+                    jumpBridgeSnapPath();
                     if (jumpBridgeCanContinue(bsi)) {
                         jumpBridgePhase = JumpBridgePhase.FJ_LAND;
                         jumpBridgeTicksInPhase = 0;
                     } else {
                         exitJumpBridge();
                     }
-                    return false;
+                    return true;
                 }
 
-                if (jumpBridgeAirborneTicks > 25) { exitJumpBridge(); return false; }
-                return false;
+                if (jumpBridgeAirborneTicks > 25) { exitJumpBridge(); return true; }
+                return false; // NOT safe to cancel mid-air
             }
 
             case FJ_LAND: {
@@ -1249,7 +1249,7 @@ public class PathExecutor implements IPathExecutor, Helper {
                 }
 
                 if (jumpBridgeTicksInPhase > 10) exitJumpBridge();
-                return false;
+                return true; // safe to cancel on ground
             }
 
             case FJ_BACKUP: {
@@ -1266,7 +1266,7 @@ public class PathExecutor implements IPathExecutor, Helper {
                     // No ground behind — sprint from here (whatever distance we have)
                     jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
                     jumpBridgeTicksInPhase = 0;
-                    return false;
+                    return true;
                 }
 
                 behavior.baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, true);
@@ -1280,7 +1280,7 @@ public class PathExecutor implements IPathExecutor, Helper {
                     jumpBridgePhase = JumpBridgePhase.FJ_SPRINT;
                     jumpBridgeTicksInPhase = 0;
                 }
-                return false;
+                return true; // safe to cancel on ground
             }
 
             default: {
