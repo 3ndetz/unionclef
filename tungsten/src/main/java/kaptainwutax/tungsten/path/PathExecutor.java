@@ -127,7 +127,6 @@ public class PathExecutor {
 		    stop = false;
 		    TungstenModRenderContainer.RUNNING_PATH_RENDERER.clear();
 		    TungstenModRenderContainer.BLOCK_PATH_RENDERER.clear();
-			player.setVelocity(0, 0, 0);
 		    if (cb != null) {
 		    	cb.run();
 		    	cb = null;
