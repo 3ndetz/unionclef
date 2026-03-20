@@ -1302,11 +1302,15 @@ public class Agent {
 	}
 
 	private boolean shouldStopSprinting() {
-		
+		// Note: horizontalCollision check removed intentionally.
+		// Agent collision detection has subtle differences from the real client
+		// (especially around step-up on fences/slabs). A single false-positive
+		// collision kills sprint → movementSpeed drops → position diverges →
+		// entire path is abandoned. Since this is a simulation, it's safer to
+		// keep sprinting and let the real client handle collision-based sprint stop.
 		return this.forwardSpeed == 0
 			|| !this.keyForward
 			|| !this.canSprint()
-			|| this.horizontalCollision && !this.collidedSoftly
 			|| this.touchingWater && !this.isSubmergedInWater;
 	}
 
