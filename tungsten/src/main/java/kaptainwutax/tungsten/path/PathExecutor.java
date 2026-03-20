@@ -112,26 +112,17 @@ public class PathExecutor {
     		long minutes = (elapsedTime / 1000) / 60;
             long seconds = (elapsedTime / 1000) % 60;
             long milliseconds = elapsedTime % 1000;
-
+            
             Debug.logMessage("Time taken to execute: " + minutes + " minutes, " + seconds + " seconds, " + milliseconds + " milliseconds");
-
+    		
 		    options.forwardKey.setPressed(false);
 		    options.backKey.setPressed(false);
 		    options.leftKey.setPressed(false);
 		    options.rightKey.setPressed(false);
 		    options.jumpKey.setPressed(false);
+		    options.sneakKey.setPressed(false);
 		    options.sprintKey.setPressed(false);
 		    player.getAbilities().allowFlying = allowedFlying;
-
-		    // Safe stop: hold sneak on dangerous surfaces to prevent falling
-		    net.minecraft.util.math.BlockPos below = player.getBlockPos().down();
-		    net.minecraft.block.BlockState belowState = player.getWorld().getBlockState(below);
-		    boolean onDangerousSurface = belowState.getBlock() instanceof net.minecraft.block.LadderBlock
-		        || belowState.isIn(net.minecraft.registry.tag.BlockTags.FENCES)
-		        || belowState.isIn(net.minecraft.registry.tag.BlockTags.WALLS)
-		        || player.getWorld().getBlockState(player.getBlockPos()).getBlock() instanceof net.minecraft.block.LadderBlock;
-		    options.sneakKey.setPressed(onDangerousSurface);
-
 		    this.path = null;
 		    stop = false;
 		    TungstenModRenderContainer.RUNNING_PATH_RENDERER.clear();
