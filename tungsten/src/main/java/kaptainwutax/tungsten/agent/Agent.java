@@ -632,7 +632,7 @@ public class Agent {
                 this.fallFlying = false;
             }
         } else {
-            BlockPos pos = new BlockPos(MathHelper.floor(this.posX), MathHelper.floor(this.box.minY - 0.5000001D), MathHelper.floor(this.posZ));
+            BlockPos pos = this.getVelocityAffectingPos(world);
             float slipperiness = world.getBlockState(pos).getBlock().getSlipperiness();
             float xzDrag = this.onGround ? slipperiness * 0.91F : 0.91F;
             double ajuVelY = this.applyMovementInput(world, slipperiness);
@@ -1224,6 +1224,33 @@ public class Agent {
 			return new Vec3d(vec3d.x * g - vec3d.z * f, vec3d.y, vec3d.z * g + vec3d.x * f);
 		}
 	}
+
+    /**
+     * Matches vanilla Entity.getPosWithYOffset(0.500001f) logic.
+     * Vanilla uses cached supportingBlockPos with fence/wall special case.
+     * We don't cache, but we replicate the fence/wall/gate check so that
+     * friction is calculated from the correct block when standing on fences.
+     */
+    public BlockPos getVelocityAffectingPos(WorldView world) {
+        BlockPos pos = new BlockPos(MathHelper.floor(this.posX),
+            MathHelper.floor(this.posY - 0.5000001D), MathHelper.floor(this.posZ));
+        BlockState state = world.getBlockState(pos);
+        // Vanilla: if the block at supportingBlockPos is fence/wall/gate,
+        // return it without Y correction. We approximate by checking
+        // if the block below feet is a fence-like block.
+        if (state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS)
+                || state.getBlock() instanceof FenceGateBlock) {
+            return pos;
+        }
+        // For non-fence blocks, check one block lower (same as vanilla fallback)
+        BlockPos below = pos.down();
+        BlockState belowState = world.getBlockState(below);
+        if (belowState.isIn(BlockTags.FENCES) || belowState.isIn(BlockTags.WALLS)
+                || belowState.getBlock() instanceof FenceGateBlock) {
+            return below;
+        }
+        return pos;
+    }
 
     public BlockPos getLandingPos(WorldView world) {
         BlockPos pos = new BlockPos(this.blockX, MathHelper.floor(this.posY - (double)0.2F), this.blockZ);
