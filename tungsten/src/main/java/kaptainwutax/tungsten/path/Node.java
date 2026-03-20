@@ -348,7 +348,7 @@ public class Node {
 //        }
 
 
-        return addNodeCost + Math.abs(agent.yaw - this.agent.yaw) * 8;
+        return addNodeCost + Math.abs(agent.yaw - this.agent.yaw) * 5;
 	}
 
 	private void generateAirborneNodes(WorldView world, BlockNode nextBlockNode, List<Node> nodes) {
@@ -380,10 +380,10 @@ public class Node {
 	    	if (i > 60) break;
 	    	i++;
 	        newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
-	                new Color(0, 255, 255), this.cost + (canSprint ? 1 : 8));
+	                new Color(0, 255, 255), newNode.cost + (canSprint ? 1 : 8));
 	    }
         newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
-                new Color(0, 255, 255), this.cost + (canSprint ? 1 : 8));
+                new Color(0, 255, 255), newNode.cost + (canSprint ? 1 : 8));
 
 	    nodes.add(newNode);
 	}

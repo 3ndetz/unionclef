@@ -547,14 +547,6 @@ public class PathFinder {
 	    	if (BlockStateChecker.isAnyWater(world.getBlockState(blockPath.get(NEXT_CLOSEST_BLOCKNODE_IDX.get()).getBlockPos()))) collisionScore -= 20;
 //	    	else collisionScore += 2000;
 	    	
-	    } else {
-	    	float forwardSpeedScore = 0.98f - Math.abs(child.agent.forwardSpeed);
-	    	float sidewaysSpeedScore = 0.98f - Math.abs(child.agent.sidewaysSpeed);
-	    	collisionScore += 
-//	    			(sidewaysSpeedScore > 1e-8 || sidewaysSpeedScore < -1e-8 ? 5 : 0 ) 
-	    			 (forwardSpeedScore > 1e-8 || forwardSpeedScore < -1e-8 ? 15 : 0 )
-	    			 + (forwardSpeedScore );
-//	        collisionScore += (Math.abs(0.3 - child.agent.velZ) + Math.abs(0.3 - child.agent.velX)) * (child.agent.blockY <= blockPath.get(NEXT_CLOSEST_BLOCKNODE_IDX.get()).getBlockPos().getY() ? 4 : 3);
 	    }
 //	    if (child.agent.isClimbing(world)) {
 ////	    	collisionScore *= 20000;
