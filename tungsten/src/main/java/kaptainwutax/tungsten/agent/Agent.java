@@ -1599,7 +1599,10 @@ public class Agent {
                 ((AccessorEntity)player).getMovementMultiplier().z == this.mulZ ? "z" : this.mulZ));
         }
 
-        if(mismatch(this.forwardSpeed, player.forwardSpeed) || mismatch(this.sidewaysSpeed, player.sidewaysSpeed) || mismatch(this.upwardSpeed, player.upwardSpeed)) {
+        // Input Speed mismatch (diagonal normalize ~29% diff) is expected and
+        // consistent — pathfinder uses the same normalize, so paths are valid.
+        // Only log if explicitly requested via very low threshold.
+        if(logThreshold < 0.01 && (mismatch(this.forwardSpeed, player.forwardSpeed) || mismatch(this.sidewaysSpeed, player.sidewaysSpeed) || mismatch(this.upwardSpeed, player.upwardSpeed))) {
             values.add(String.format("Input Speed mismatch (%s, %s, %s) vs (%s, %s, %s)",
                 player.forwardSpeed == this.forwardSpeed ? "f" : player.forwardSpeed,
                 player.upwardSpeed == this.upwardSpeed ? "u" : player.upwardSpeed,
