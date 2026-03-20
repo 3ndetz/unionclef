@@ -340,6 +340,8 @@ public class BlockScanner {
     }
 
     private void rescan(int maxCount, int cutOffRadius) {
+        if (mod.getWorld() == null || mod.getPlayer() == null) return;
+
         long ms = System.currentTimeMillis();
 
         ChunkPos playerChunkPos = mod.getPlayer().getChunkPos();
@@ -352,6 +354,7 @@ public class BlockScanner {
         while (!queue.isEmpty() && visited.size() < maxCount && !forceStop) {
             Node node = queue.poll();
 
+            if (mod.getWorld() == null) return;
             if (node.distance > cutOffRadius || visited.contains(node.pos) || !mod.getWorld().getChunkManager().isChunkLoaded(node.pos.x, node.pos.z))
                 continue;
 
