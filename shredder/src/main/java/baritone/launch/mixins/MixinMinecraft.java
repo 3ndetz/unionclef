@@ -23,6 +23,7 @@ import baritone.api.event.events.PlayerUpdateEvent;
 import baritone.api.event.events.TickEvent;
 import baritone.api.event.events.WorldEvent;
 import baritone.api.event.events.type.EventState;
+import baritone.utils.GodBridgeClickHelper;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -187,6 +188,14 @@ public class MixinMinecraft {
             return null;
         }
         return instance.currentScreen;
+    }
+
+    @Inject(
+            method = "render",
+            at = @At("HEAD")
+    )
+    private void onRenderFrame(boolean tick, CallbackInfo ci) {
+        GodBridgeClickHelper.onRenderFrame();
     }
 
     // TODO

@@ -31,6 +31,7 @@ import baritone.pathing.movement.Movement;
 import baritone.pathing.movement.MovementHelper;
 import baritone.pathing.movement.MovementState;
 import baritone.utils.BlockStateInterface;
+import baritone.utils.GodBridgeClickHelper;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.Set;
@@ -54,17 +55,6 @@ public class MovementTraverse extends Movement {
      */
     private boolean wasTheBridgeBlockAlwaysThere = true;
 
-    /** God bridge: saved rightClickSpeed before override, -1 = not overridden. */
-    private int godBridgeSavedClickSpeed = -1;
-
-    /** God bridge jitter click: ticks until next click allowed. */
-    private int godJitterCooldown = 0;
-
-    /** God bridge jitter click: clicks remaining in current burst. */
-    private int godJitterBurst = 0;
-
-    private static final java.util.concurrent.ThreadLocalRandom JITTER_RNG = java.util.concurrent.ThreadLocalRandom.current();
-
     public MovementTraverse(IBaritone baritone, BetterBlockPos from, BetterBlockPos to) {
         super(baritone, from, to, new BetterBlockPos[]{to.up(), to}, to.down());
     }
@@ -73,9 +63,7 @@ public class MovementTraverse extends Movement {
     public void reset() {
         super.reset();
         wasTheBridgeBlockAlwaysThere = true;
-        restoreGodClickSpeed();
-        godJitterCooldown = 0;
-        godJitterBurst = 0;
+        stopGodBridge();
     }
 
     @Override
@@ -392,9 +380,9 @@ public class MovementTraverse extends Movement {
     private MovementState updateSlowBridge(MovementState state, BlockPos feet) {
         boolean godMode = "god".equals(Baritone.settings().bridgingMode.value);
 
-        // Bridge block placed — walk to dest, restore click speed
+        // Bridge block placed — walk to dest, stop god bridge clicking
         if (MovementHelper.canWalkOn(ctx, dest.down())) {
-            restoreGodClickSpeed();
+            stopGodBridge();
             MovementHelper.moveTowards(ctx, state, dest);
             return state;
         }
@@ -416,12 +404,6 @@ public class MovementTraverse extends Movement {
                 ctx.playerHead(), new Vec3d(faceX, faceY, faceZ), ctx.playerRotations());
 
         if (godMode) {
-            // Override click speed to fastest (1 tick) so BlockPlaceHelper doesn't gate us
-            if (godBridgeSavedClickSpeed == -1) {
-                godBridgeSavedClickSpeed = Baritone.settings().rightClickSpeed.value;
-                Baritone.settings().rightClickSpeed.value = 1;
-            }
-
             double distToEdge = Math.max(
                     Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)),
                     Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
@@ -436,29 +418,14 @@ public class MovementTraverse extends Movement {
                     new Rotation(backwardYaw, 80.0f), true));
             state.setInput(Input.MOVE_BACK, true);
 
-            // Jitter click: burst of fast clicks near edge, silence when far
-            boolean inClickZone = distToEdge < 0.7;
-            if (inClickZone) {
-                if (godJitterCooldown > 0) {
-                    godJitterCooldown--;
-                } else if (godJitterBurst > 0) {
-                    // Mid-burst: click this tick, maybe micro-pause next
-                    godJitterBurst--;
-                    if (((Baritone) baritone).getInventoryBehavior().selectThrowawayForLocation(true, dest.getX(), dest.getY() - 1, dest.getZ())) {
-                        state.setInput(Input.CLICK_RIGHT, true);
-                    }
-                    // Random micro-pause between clicks: 30% chance of 1-2 tick gap
-                    if (JITTER_RNG.nextInt(10) < 3) {
-                        godJitterCooldown = JITTER_RNG.nextInt(1, 3); // 1-2 ticks
-                    }
-                } else {
-                    // Start new burst: 2-5 rapid clicks
-                    godJitterBurst = JITTER_RNG.nextInt(2, 6);
+            // Render-frame jitter clicks: activate when in click zone, deactivate when far
+            if (distToEdge < 0.7) {
+                ((Baritone) baritone).getInventoryBehavior().selectThrowawayForLocation(true, dest.getX(), dest.getY() - 1, dest.getZ());
+                if (!GodBridgeClickHelper.isActive()) {
+                    GodBridgeClickHelper.activate(ctx);
                 }
             } else {
-                // Outside click zone — reset jitter state
-                godJitterBurst = 0;
-                godJitterCooldown = 0;
+                GodBridgeClickHelper.deactivate();
             }
             return state;
         }
@@ -487,11 +454,8 @@ public class MovementTraverse extends Movement {
         return state;
     }
 
-    private void restoreGodClickSpeed() {
-        if (godBridgeSavedClickSpeed != -1) {
-            Baritone.settings().rightClickSpeed.value = godBridgeSavedClickSpeed;
-            godBridgeSavedClickSpeed = -1;
-        }
+    private void stopGodBridge() {
+        GodBridgeClickHelper.deactivate();
     }
 
     @Override
