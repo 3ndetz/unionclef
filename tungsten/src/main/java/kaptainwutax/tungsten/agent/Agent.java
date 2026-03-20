@@ -254,7 +254,7 @@ public class Agent {
         this.submergedFluids.clear();
         double d = this.getEyeY();
 
-        BlockPos blockPos = new BlockPos((int) this.posX, (int) d, (int) this.posZ);
+        BlockPos blockPos = new BlockPos(MathHelper.floor(this.posX), MathHelper.floor(d), MathHelper.floor(this.posZ));
         FluidState fluidState = world.getFluidState(blockPos);
         double e = (float)blockPos.getY() + fluidState.getHeight(world, blockPos);
 
@@ -421,9 +421,9 @@ public class Agent {
         this.jumping = this.input.playerInput.jump();
 
         
-        if(Math.abs(this.velX) < 1e-5) this.velX = 0.0;
+        if(Math.abs(this.velX) < 0.003) this.velX = 0.0;
         if(Math.abs(this.velY) < 0.003) this.velY = 0.0;
-        if(Math.abs(this.velZ) < 1e-5) this.velZ = 0.0;
+        if(Math.abs(this.velZ) < 0.003) this.velZ = 0.0;
 
         if(this.jumping) {
             double k = this.isInLava() ? this.getFluidHeight(FluidTags.LAVA) : this.getFluidHeight(FluidTags.WATER);
@@ -478,7 +478,7 @@ public class Agent {
 
     public float getJumpVelocityMultiplier(WorldView world) {
         BlockPos pos1 = new BlockPos(this.blockX, this.blockY, this.blockZ);
-        BlockPos pos2 = new BlockPos((int) this.blockX, (int) (this.box.minY - 0.500001D), (int) this.blockZ);
+        BlockPos pos2 = new BlockPos(this.blockX, MathHelper.floor(this.box.minY - 0.500001D), this.blockZ);
         float f = world.getBlockState(pos1).getBlock().getJumpVelocityMultiplier();
         float g = world.getBlockState(pos2).getBlock().getJumpVelocityMultiplier();
         return (double)f == 1.0D ? g : f;
@@ -632,7 +632,7 @@ public class Agent {
                 this.fallFlying = false;
             }
         } else {
-            BlockPos pos = new BlockPos((int) this.posX, (int) (this.box.minY - 0.5000001D), (int) this.posZ);
+            BlockPos pos = new BlockPos(MathHelper.floor(this.posX), MathHelper.floor(this.box.minY - 0.5000001D), MathHelper.floor(this.posZ));
             float slipperiness = world.getBlockState(pos).getBlock().getSlipperiness();
             float xzDrag = this.onGround ? slipperiness * 0.91F : 0.91F;
             double ajuVelY = this.applyMovementInput(world, slipperiness);
@@ -1127,8 +1127,8 @@ public class Agent {
     public void checkBlockCollision(WorldView world) {
     	double minOffset = 0.001; // default 0.001
     	double maxOffset = 0.001; // default 0.001
-        BlockPos blockPos = new BlockPos((int) (this.box.minX + minOffset), (int) (this.box.minY + minOffset), (int) (this.box.minZ + minOffset));
-        BlockPos blockPos2 = new BlockPos((int) (this.box.maxX - maxOffset), (int) (this.box.maxY - maxOffset), (int) (this.box.maxZ - maxOffset));
+        BlockPos blockPos = new BlockPos(MathHelper.floor(this.box.minX + minOffset), MathHelper.floor(this.box.minY + minOffset), MathHelper.floor(this.box.minZ + minOffset));
+        BlockPos blockPos2 = new BlockPos(MathHelper.floor(this.box.maxX - maxOffset), MathHelper.floor(this.box.maxY - maxOffset), MathHelper.floor(this.box.maxZ - maxOffset));
         BlockPos.Mutable pos = new BlockPos.Mutable();
 
         if(world.isRegionLoaded(blockPos, blockPos2)) {
@@ -1343,7 +1343,7 @@ public class Agent {
 
     private void pushOutOfBlocks(WorldView world, double x, double d) {
         Direction[] directions = new Direction[] { Direction.WEST, Direction.EAST, Direction.NORTH, Direction.SOUTH };
-        BlockPos blockPos = new BlockPos((int) x, (int) this.posY, (int) d);
+        BlockPos blockPos = new BlockPos(MathHelper.floor(x), MathHelper.floor(this.posY), MathHelper.floor(d));
         if (!this.wouldCollideAt(world, blockPos)) {
             return;
         }
