@@ -108,3 +108,41 @@
 - [x] Removed unused `jumpBridgeRandom` field
 - [x] Added `jumpBridgeAirborne` + `jumpBridgeAirborneTicks` sub-state tracking
 - [x] Added `wrapDegrees()` helper for rotation comparison
+
+##### Rewrite — Sprint-Speed Telly Bridge (2025-03-20)
+
+Complete rewrite of the jump bridge state machine. Key breakthroughs:
+
+- [x] **TestBridgingCommand GoalBlock fix**: GoalXZ → GoalBlock at player Y level (prevents pathfinder descending to ground)
+- [x] **processRightClickBlock bypass**: objectMouseOver raycast misses at 86°+ pitch. Direct `ctx.playerController().processRightClickBlock()` with calculated BlockHitResult bypasses crosshair entirely.
+- [x] **setSprinting(true) force**: `Input.SPRINT` override alone doesn't re-trigger sprint. `ctx.player().setSprinting(true)` forces sprint at entity level.
+- [x] **5-phase telly cycle**:
+  1. FJ_SPRINT: face forward, W+Sprint, jump at edge (setSprinting on ground)
+  2. FJ_AIRBORNE (placement): face backward (dynamic aim), no movement keys (pure inertia)
+  3. FJ_AIRBORNE (recovery): snap forward + W+Sprint when nearing ground
+  4. Landing: face forward, W+Sprint, setSprinting(true) → sprint preserved
+  5. Continuous cycle back to FJ_SPRINT
+- [x] **Y-level safety**: exits immediately if player drops 0.8 blocks below bridge
+- [x] **Sneak on path end**: sneaks when jumpBridgeCanContinue fails
+- [x] **bridgeCount ≥ 6**: prevents overshoot near goal, slow bridge handles last 5 blocks
+- [x] **Cooldown 20 ticks**: fast re-activation after path transitions
+- [x] **Scan-ahead 15**: finds longer consecutive bridge segments
+
+Result: sprint=true on every jump, 2-3 blocks/jump, 30+ blocks without falling.
+
+##### Optimizations
+
+- [x] Debug logging behind `JB_DEBUG` flag (default false)
+- [x] itemUseCooldown reset via reflection before each processRightClickBlock
+- [x] Lateral drift correction in FJ_SPRINT (sign was inverted, fixed)
+- [x] bridgeCount threshold tuned (4 minimum, scan-ahead 15)
+- [x] Cooldown reduced to 10 ticks for faster re-activation between path segments
+- [x] Graceful exit when <3 bridge moves remain (prevents overshoot at path end)
+- [x] Dead FJ_LAND/FJ_BACKUP phases removed (continuous telly doesn't stop)
+
+###### Remaining
+
+- [ ] itemUseCooldown: replace reflection with @Accessor mixin
+- [ ] Pre-sprint during slow bridge runway (first jump is walk-speed)
+- [ ] A/D strafing during camera flick
+- [ ] Anticheat-friendly rotation (WindMouse for the backward flick)
