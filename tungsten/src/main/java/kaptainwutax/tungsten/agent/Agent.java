@@ -697,7 +697,9 @@ public class Agent {
             }
         }
 
-        return world.getEntityCollisions(null, box).isEmpty();
+        // Skip entity collisions — not thread-safe (ConcurrentModificationException
+        // from pathfinder thread) and unpredictable for future ticks anyway.
+        return true;
     }
 
     private boolean doesNotCollide(WorldView world, double offsetX, double offsetY, double offsetZ) {
@@ -859,7 +861,9 @@ public class Agent {
 
     private Vec3d adjustMovementForCollisions(WorldView world, Vec3d movement) {
         Box box = this.box;
-        List<VoxelShape> list = world.getEntityCollisions(null, box.stretch(movement));
+        // Skip entity collisions — not thread-safe from pathfinder thread
+        // and entities are unpredictable for pathfinding anyway.
+        List<VoxelShape> list = List.of();
         Vec3d vec3d = movement.lengthSquared() == 0.0 ? movement : this.adjustMovementForCollisions(movement, box, world, list);
         boolean bl = movement.x != vec3d.x;
         boolean bl2 = movement.y != vec3d.y;
