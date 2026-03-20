@@ -178,6 +178,12 @@ public final class Settings {
     public final Setting<String> bridgingMode = new Setting<>("slow");
 
     /**
+     * God bridge: distance to edge at which emergency sneak + slow fallback activates.
+     * Lower = more aggressive (closer to edge before braking), higher = safer.
+     */
+    public final Setting<Double> godBridgeEdgeDistance = new Setting<>(0.3d);
+
+    /**
      * If true, parkour is allowed to make jumps when standing on blocks at the maximum height, so player feet is y=256
      * <p>
      * Defaults to false because this fails on constantiam. Please let me know if this is ever disabled. Please.

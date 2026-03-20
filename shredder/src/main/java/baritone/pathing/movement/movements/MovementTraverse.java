@@ -436,12 +436,21 @@ public class MovementTraverse extends Movement {
                 ctx.playerHead(), new Vec3d(faceX, faceY, faceZ), ctx.playerRotations());
 
         if (godMode) {
+            // Fell off — abort god bridge state immediately so PathExecutor can handle it
+            if (ctx.player().getPos().y < src.getY() - 0.5) {
+                stopGodBridge();
+                godSneakFallbackTicks = 0;
+                godVerifyTicks = 0;
+                return state.setStatus(MovementStatus.UNREACHABLE);
+            }
+
             double distToEdge = Math.max(
                     Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)),
                     Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
 
+            double edgeDist = Baritone.settings().godBridgeEdgeDistance.value;
             // Emergency sneak triggered — fallback to slow mode for 8 ticks to bleed off momentum
-            if (distToEdge < 0.3) {
+            if (distToEdge < edgeDist) {
                 godSneakFallbackTicks = 8;
             }
 
