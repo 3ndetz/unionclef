@@ -1231,24 +1231,21 @@ public class Agent {
      * We don't cache, but we replicate the fence/wall/gate check so that
      * friction is calculated from the correct block when standing on fences.
      */
+    private static boolean isFenceLike(BlockState state) {
+        return state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS)
+                || state.getBlock() instanceof FenceGateBlock;
+    }
+
     public BlockPos getVelocityAffectingPos(WorldView world) {
         BlockPos pos = new BlockPos(MathHelper.floor(this.posX),
             MathHelper.floor(this.posY - 0.5000001D), MathHelper.floor(this.posZ));
+        // Only do the fence check when on ground — in air, friction doesn't
+        // matter and we save 2 getBlockState calls per tick per node.
+        if (!this.onGround) return pos;
         BlockState state = world.getBlockState(pos);
-        // Vanilla: if the block at supportingBlockPos is fence/wall/gate,
-        // return it without Y correction. We approximate by checking
-        // if the block below feet is a fence-like block.
-        if (state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS)
-                || state.getBlock() instanceof FenceGateBlock) {
-            return pos;
-        }
-        // For non-fence blocks, check one block lower (same as vanilla fallback)
+        if (isFenceLike(state)) return pos;
         BlockPos below = pos.down();
-        BlockState belowState = world.getBlockState(below);
-        if (belowState.isIn(BlockTags.FENCES) || belowState.isIn(BlockTags.WALLS)
-                || belowState.getBlock() instanceof FenceGateBlock) {
-            return below;
-        }
+        if (isFenceLike(world.getBlockState(below))) return below;
         return pos;
     }
 
