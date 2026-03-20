@@ -55,6 +55,9 @@ public class MovementTraverse extends Movement {
      */
     private boolean wasTheBridgeBlockAlwaysThere = true;
 
+    /** God bridge: ticks remaining in slow-mode fallback after emergency sneak. */
+    private int godSneakFallbackTicks = 0;
+
     public MovementTraverse(IBaritone baritone, BetterBlockPos from, BetterBlockPos to) {
         super(baritone, from, to, new BetterBlockPos[]{to.up(), to}, to.down());
     }
@@ -63,6 +66,7 @@ public class MovementTraverse extends Movement {
     public void reset() {
         super.reset();
         wasTheBridgeBlockAlwaysThere = true;
+        godSneakFallbackTicks = 0;
         stopGodBridge();
     }
 
@@ -408,9 +412,23 @@ public class MovementTraverse extends Movement {
                     Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)),
                     Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
 
-            // Emergency sneak: close to edge and block still not placed — last resort
+            // Emergency sneak triggered — fallback to slow mode for 8 ticks to bleed off momentum
             if (distToEdge < 0.3) {
+                godSneakFallbackTicks = 8;
+            }
+
+            if (godSneakFallbackTicks > 0) {
+                godSneakFallbackTicks--;
+                GodBridgeClickHelper.deactivate();
+                // Slow-mode fallback: sneak, aim at face, click when raycast hits
                 state.setInput(Input.SNEAK, true);
+                state.setTarget(new MovementState.MovementTarget(faceLook, true));
+                if (ctx.isLookingAt(src.down())) {
+                    if (((Baritone) baritone).getInventoryBehavior().selectThrowawayForLocation(true, dest.getX(), dest.getY() - 1, dest.getZ())) {
+                        state.setInput(Input.CLICK_RIGHT, true);
+                    }
+                }
+                return state;
             }
 
             // Fixed backward yaw + steep pitch, walk backward
