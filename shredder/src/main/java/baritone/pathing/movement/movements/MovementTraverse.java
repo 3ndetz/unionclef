@@ -401,8 +401,10 @@ public class MovementTraverse extends Movement {
                 ctx.playerHead(), new Vec3d(faceX, faceY, faceZ), ctx.playerRotations());
 
         if (godMode) {
-            // GOD: always look at the place target, walk backward, spam right-click non-stop
-            state.setTarget(new MovementState.MovementTarget(faceLook, true));
+            // GOD: fixed backward yaw + steep pitch, walk backward, spam right-click.
+            // Fixed rotation keeps MOVE_BACK direction stable (dynamic faceLook causes oscillation).
+            state.setTarget(new MovementState.MovementTarget(
+                    new Rotation(backwardYaw, 80.0f), true));
             state.setInput(Input.MOVE_BACK, true);
             if (((Baritone) baritone).getInventoryBehavior().selectThrowawayForLocation(true, dest.getX(), dest.getY() - 1, dest.getZ())) {
                 state.setInput(Input.CLICK_RIGHT, true);
