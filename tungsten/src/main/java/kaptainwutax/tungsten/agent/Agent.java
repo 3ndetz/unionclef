@@ -1264,8 +1264,17 @@ public class Agent {
 				vec2f = vec2f.multiply(f);
 			}
 			
-			vec2f = applyDirectionalMovementSpeedFactors(vec2f);
-			
+			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			// !! VERSIONING: applyDirectionalMovementSpeedFactors (diagonal  !!
+			// !! movement normalization, MC-271065) was added in MC 1.21.4+. !!
+			// !! In 1.21.1 and below, diagonal input is NOT normalized —     !!
+			// !! enabling this causes simulation drift on diagonal movement.  !!
+			// !! When tungsten gets preprocessor support, gate this with:     !!
+			// !!   //#if MC >= 12104                                          !!
+			// !!   vec2f = applyDirectionalMovementSpeedFactors(vec2f);       !!
+			// !!   //#endif                                                   !!
+			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			// vec2f = applyDirectionalMovementSpeedFactors(vec2f);
 
 			return vec2f;
 		}

@@ -113,6 +113,24 @@ Fix the code in `tungsten/src/main/java/`. Tungsten is only included for `mcVers
 | 1.20.x     | add node + mappings + directives | may need fixes | may need fixes |
 | 1.19.x     | heavy directives | needs separate build or preprocessor | not supported |
 
+## TODO: Tungsten & Shredder preprocessor support
+
+**Neither tungsten nor shredder use the preprocessor.** They compile once against MC 1.21 and are shared across all versions. This works for 1.21.x minor bumps but **breaks** when physics/simulation logic differs between versions.
+
+**Known version-dependent code in tungsten:**
+
+- `Agent.applyDirectionalMovementSpeedFactors()` — diagonal movement normalization (MC-271065), added in **MC 1.21.4+**. Currently commented out for 1.21.1 compat. Needs `//#if MC >= 12104` gate.
+
+**What needs to happen:**
+
+1. Add `com.replaymod.preprocess` plugin to `tungsten/build.gradle` and `shredder/build.gradle`
+2. Add tungsten and shredder nodes to `root.gradle.kts` preprocessor config
+3. Define per-version mappings in their build files (like altoclef does)
+4. Gate version-dependent code with `//#if MC >= XXXXX` directives
+5. Shredder depends on tungsten, so both must be versioned together
+
+Until this is done, any simulation logic that changed between MC versions must be manually commented/uncommented.
+
 ## Quick reference
 
 ```bash
