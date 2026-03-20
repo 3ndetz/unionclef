@@ -157,6 +157,8 @@ public class Agent {
     public double health;
     public float movementSpeed;
     public float airStrafingSpeed;
+    /** True when agent was created from another agent (pathfinding), not from real player. */
+    public boolean isPathfindingAgent = false;
     public int jumpingCooldown;
     public int ticksToNextAutojump;
     private List<String> extra = new ArrayList<>();
@@ -409,11 +411,23 @@ public class Agent {
             this.airStrafingSpeed += 0.006F * TungstenConfig.get().airStrafeMultiplier;
         }
 
-        // Vanilla recalculates movementSpeed from attributes here.
-        // For per-tick validation: Agent.of(player) already captured the
-        // correct value, so we don't touch it — setSprinting() handles
-        // updates when sprint state changes during the tick.
-        // For pathfinding: setSprinting() recalculates from base + modifiers.
+        // Vanilla: PlayerEntity.tickMovement() calls setMovementSpeed(getAttributeValue())
+        // AFTER travel, updating movementSpeed for the NEXT tick.
+        // For per-tick validation: Agent.of(player) captured the correct value and
+        // compare() will see the real player's updated value — no recalc needed.
+        // For pathfinding: we don't have attributes, so recalc from base + modifiers.
+        if (this.isPathfindingAgent) {
+            this.movementSpeed = 0.1F;
+            if (this.sprinting) {
+                this.movementSpeed *= 1.3F;
+            }
+            if (this.speed >= 0) {
+                this.movementSpeed = 0.1F + 0.02F * (this.speed + 1);
+                if (this.sprinting) {
+                    this.movementSpeed *= 1.3F;
+                }
+            }
+        }
     }
 
     public void tickMovementLiving(WorldView world) {
@@ -1435,21 +1449,10 @@ public class Agent {
 
     public void setSprinting(boolean sprinting) {
         this.sprinting = sprinting;
-        // Recalculate movementSpeed when sprint changes.
-        // Vanilla does this via attribute modifiers; we approximate.
-        // For per-tick validation: Agent.of(player) captured the correct
-        // value, and sprint doesn't change during validation ticks.
-        // For pathfinding: this keeps movementSpeed in sync across nodes.
-        this.movementSpeed = 0.1F;
-        if(sprinting) {
-            this.movementSpeed *= 1.3F;
-        }
-        if(this.speed >= 0) {
-            this.movementSpeed = 0.1F + 0.02F * (this.speed + 1);
-            if(sprinting) {
-                this.movementSpeed *= 1.3F;
-            }
-        }
+        // Vanilla setSprinting() only adds/removes an attribute modifier —
+        // the movementSpeed FIELD is not updated until end of
+        // PlayerEntity.tickMovement(). So we don't touch movementSpeed here.
+        // It gets recalculated at end of tickMovementPlayer() for the next tick.
     }
 
     public double getFluidHeight(TagKey<Fluid> fluid) {
@@ -1996,6 +1999,7 @@ public class Agent {
 
     public static Agent of(Agent other, boolean forward, boolean back, boolean left, boolean right, boolean jump, boolean sneak, boolean sprint, float pitch, float yaw) {
         Agent agent = new Agent();
+        agent.isPathfindingAgent = true;
         agent.keyForward = forward;
         agent.keyBack = back;
         agent.keyLeft = left;
