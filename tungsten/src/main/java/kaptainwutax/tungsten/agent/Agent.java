@@ -157,8 +157,8 @@ public class Agent {
     public double health;
     public float movementSpeed;
     public float airStrafingSpeed;
-    /** True when agent was created from another agent (pathfinding), not from real player. */
-    public boolean isPathfindingAgent = false;
+    /** Sprint state when movementSpeed was last set (by Agent.of or end-of-tick recalc). */
+    private boolean sprintingWhenSpeedCaptured = false;
     public int jumpingCooldown;
     public int ticksToNextAutojump;
     private List<String> extra = new ArrayList<>();
@@ -411,22 +411,17 @@ public class Agent {
             this.airStrafingSpeed += 0.006F * TungstenConfig.get().airStrafeMultiplier;
         }
 
-        // Vanilla: PlayerEntity.tickMovement() calls setMovementSpeed(getAttributeValue())
-        // AFTER travel, updating movementSpeed for the NEXT tick.
-        // For per-tick validation: Agent.of(player) captured the correct value and
-        // compare() will see the real player's updated value — no recalc needed.
-        // For pathfinding: we don't have attributes, so recalc from base + modifiers.
-        if (this.isPathfindingAgent) {
-            this.movementSpeed = 0.1F;
+        // Vanilla: PlayerEntity.tickMovement() recalculates movementSpeed from
+        // attributes AFTER travel. We don't have attributes, so we toggle the
+        // sprint multiplier (1.3) relative to the captured/inherited value.
+        // This preserves any modifiers (Speed effect, etc.) without knowing them.
+        if (this.sprinting != this.sprintingWhenSpeedCaptured) {
             if (this.sprinting) {
                 this.movementSpeed *= 1.3F;
+            } else {
+                this.movementSpeed /= 1.3F;
             }
-            if (this.speed >= 0) {
-                this.movementSpeed = 0.1F + 0.02F * (this.speed + 1);
-                if (this.sprinting) {
-                    this.movementSpeed *= 1.3F;
-                }
-            }
+            this.sprintingWhenSpeedCaptured = this.sprinting;
         }
     }
 
@@ -1851,6 +1846,7 @@ public class Agent {
         agent.dolphinsGrace = player.hasStatusEffect(StatusEffects.DOLPHINS_GRACE) ? player.getStatusEffect(StatusEffects.DOLPHINS_GRACE).getAmplifier() : -1;
         agent.levitation = player.hasStatusEffect(StatusEffects.LEVITATION) ? player.getStatusEffect(StatusEffects.LEVITATION).getAmplifier() : -1;
         agent.movementSpeed = player.getMovementSpeed();
+        agent.sprintingWhenSpeedCaptured = player.isSprinting();
         agent.airStrafingSpeed = (agent.sprinting ? 0.026F : 0.02F) * TungstenConfig.get().airStrafeMultiplier;
         agent.jumpingCooldown = ((AccessorLivingEntity)player).getJumpingCooldown();
         agent.hunger.setFoodLevel(player.getHungerManager().getFoodLevel());
@@ -1920,6 +1916,7 @@ public class Agent {
         agent.dolphinsGrace = player.hasStatusEffect(StatusEffects.DOLPHINS_GRACE) ? player.getStatusEffect(StatusEffects.DOLPHINS_GRACE).getAmplifier() : -1;
         agent.levitation = player.hasStatusEffect(StatusEffects.LEVITATION) ? player.getStatusEffect(StatusEffects.LEVITATION).getAmplifier() : -1;
         agent.movementSpeed = player.getMovementSpeed();
+        agent.sprintingWhenSpeedCaptured = player.isSprinting();
         agent.airStrafingSpeed = (agent.sprinting ? 0.026F : 0.02F) * TungstenConfig.get().airStrafeMultiplier;
         agent.jumpingCooldown = ((AccessorLivingEntity)player).getJumpingCooldown();
         agent.hunger.setFoodLevel(player.getHungerManager().getFoodLevel());
@@ -1989,6 +1986,7 @@ public class Agent {
         agent.dolphinsGrace = player.hasStatusEffect(StatusEffects.DOLPHINS_GRACE) ? player.getStatusEffect(StatusEffects.DOLPHINS_GRACE).getAmplifier() : -1;
         agent.levitation = player.hasStatusEffect(StatusEffects.LEVITATION) ? player.getStatusEffect(StatusEffects.LEVITATION).getAmplifier() : -1;
         agent.movementSpeed = player.getMovementSpeed();
+        agent.sprintingWhenSpeedCaptured = player.isSprinting();
         agent.airStrafingSpeed = (agent.sprinting ? 0.026F : 0.02F) * TungstenConfig.get().airStrafeMultiplier;
         agent.jumpingCooldown = ((AccessorLivingEntity)player).getJumpingCooldown();
         agent.hunger.setFoodLevel(player.getHungerManager().getFoodLevel());
@@ -1999,7 +1997,6 @@ public class Agent {
 
     public static Agent of(Agent other, boolean forward, boolean back, boolean left, boolean right, boolean jump, boolean sneak, boolean sprint, float pitch, float yaw) {
         Agent agent = new Agent();
-        agent.isPathfindingAgent = true;
         agent.keyForward = forward;
         agent.keyBack = back;
         agent.keyLeft = left;
@@ -2059,6 +2056,7 @@ public class Agent {
         agent.levitation = other.levitation;
         agent.depthStrider = other.depthStrider;
         agent.movementSpeed = other.movementSpeed;
+        agent.sprintingWhenSpeedCaptured = other.sprintingWhenSpeedCaptured;
         agent.airStrafingSpeed = other.airStrafingSpeed;
         agent.jumpingCooldown = other.jumpingCooldown;
         //TODO: frame.ticksToNextAutojump
