@@ -550,7 +550,11 @@ public class BlockNode {
 
 		if (BlockStateChecker.isBottomSlab(childState) && isAboveChildSolid2)
 			child.cost += 20;
-		
+
+		// Prefer routes that avoid fences/walls — simulation is less accurate on 1.5-block surfaces
+		if (childBelowBlock instanceof FenceBlock || childBelowState.isIn(net.minecraft.registry.tag.BlockTags.WALLS))
+			child.cost += 30;
+
 		return false;
 	}
 	
