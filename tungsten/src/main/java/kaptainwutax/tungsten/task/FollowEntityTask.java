@@ -123,8 +123,7 @@ public class FollowEntityTask {
         boolean hasEntity;
 
         if (targetEntity != null && !targetEntity.isRemoved()) {
-            BlockPos bp = targetEntity.getBlockPos();
-            targetPos    = new Vec3d(bp.getX() + 0.5, targetEntity.getY(), bp.getZ() + 0.5);
+            targetPos    = snapToGround(world, targetEntity);
             lastKnownPos = targetPos;
             hasEntity    = true;
         } else if (managed && lastKnownPos != null) {
@@ -303,6 +302,35 @@ public class FollowEntityTask {
             if (world.getBlockState(check.up()).isSolidBlock(world, check.up())) return false;
         }
         return true;
+    }
+
+    /**
+     * Snap entity position to the nearest solid block below its feet.
+     * Handles: sneaking on block edges (getBlockPos() returns air),
+     * standing on fences/slabs, or any case where feet Y is above ground.
+     */
+    private static Vec3d snapToGround(WorldView world, Entity entity) {
+        double x = entity.getX();
+        double z = entity.getZ();
+        int blockX = (int) Math.floor(x);
+        int blockZ = (int) Math.floor(z);
+        int startY = (int) Math.floor(entity.getY());
+
+        // Scan down up to 5 blocks to find solid ground
+        for (int dy = 0; dy <= 5; dy++) {
+            BlockPos check = new BlockPos(blockX, startY - dy, blockZ);
+            BlockState state = world.getBlockState(check);
+            if (!state.isAir() && state.isSolidBlock(world, check)) {
+                // Target is on top of this block
+                return new Vec3d(blockX + 0.5, check.getY() + 1.0, blockZ + 0.5);
+            }
+            // Also check for non-full blocks (fences, slabs) that have collision
+            if (!state.getCollisionShape(world, check).isEmpty()) {
+                return new Vec3d(blockX + 0.5, entity.getY(), blockZ + 0.5);
+            }
+        }
+        // Fallback: use entity position as-is
+        return new Vec3d(blockX + 0.5, entity.getY(), blockZ + 0.5);
     }
 
     /** True if no solid block obstructs the line from player eyes to targetPos. */
