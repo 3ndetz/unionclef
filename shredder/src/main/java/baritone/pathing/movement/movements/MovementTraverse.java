@@ -54,6 +54,9 @@ public class MovementTraverse extends Movement {
      */
     private boolean wasTheBridgeBlockAlwaysThere = true;
 
+    /** God bridge: saved rightClickSpeed before override, -1 = not overridden. */
+    private int godBridgeSavedClickSpeed = -1;
+
     public MovementTraverse(IBaritone baritone, BetterBlockPos from, BetterBlockPos to) {
         super(baritone, from, to, new BetterBlockPos[]{to.up(), to}, to.down());
     }
@@ -62,6 +65,7 @@ public class MovementTraverse extends Movement {
     public void reset() {
         super.reset();
         wasTheBridgeBlockAlwaysThere = true;
+        restoreGodClickSpeed();
     }
 
     @Override
@@ -378,14 +382,15 @@ public class MovementTraverse extends Movement {
     private MovementState updateSlowBridge(MovementState state, BlockPos feet) {
         boolean godMode = "god".equals(Baritone.settings().bridgingMode.value);
 
-        if (!godMode) {
-            state.setInput(Input.SNEAK, true);
-        }
-
-        // Bridge block placed — walk to dest (movement completes naturally)
+        // Bridge block placed — walk to dest, restore click speed
         if (MovementHelper.canWalkOn(ctx, dest.down())) {
+            restoreGodClickSpeed();
             MovementHelper.moveTowards(ctx, state, dest);
             return state;
+        }
+
+        if (!godMode) {
+            state.setInput(Input.SNEAK, true);
         }
 
         // Backward yaw: opposite of movement direction
@@ -401,8 +406,22 @@ public class MovementTraverse extends Movement {
                 ctx.playerHead(), new Vec3d(faceX, faceY, faceZ), ctx.playerRotations());
 
         if (godMode) {
-            // GOD: fixed backward yaw + steep pitch, walk backward, spam right-click.
-            // Fixed rotation keeps MOVE_BACK direction stable (dynamic faceLook causes oscillation).
+            // Override click speed to fastest (1 tick) for spam clicking
+            if (godBridgeSavedClickSpeed == -1) {
+                godBridgeSavedClickSpeed = Baritone.settings().rightClickSpeed.value;
+                Baritone.settings().rightClickSpeed.value = 1;
+            }
+
+            double distToEdge = Math.max(
+                    Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)),
+                    Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
+
+            // Safety sneak: near edge with no block below — sneak to not fall off
+            if (distToEdge < 0.4) {
+                state.setInput(Input.SNEAK, true);
+            }
+
+            // Fixed backward yaw + steep pitch, walk backward, spam right-click
             state.setTarget(new MovementState.MovementTarget(
                     new Rotation(backwardYaw, 80.0f), true));
             state.setInput(Input.MOVE_BACK, true);
@@ -434,6 +453,13 @@ public class MovementTraverse extends Movement {
                 new Rotation(backwardYaw, 80.0f), false));
         state.setInput(Input.MOVE_BACK, true);
         return state;
+    }
+
+    private void restoreGodClickSpeed() {
+        if (godBridgeSavedClickSpeed != -1) {
+            Baritone.settings().rightClickSpeed.value = godBridgeSavedClickSpeed;
+            godBridgeSavedClickSpeed = -1;
+        }
     }
 
     @Override
