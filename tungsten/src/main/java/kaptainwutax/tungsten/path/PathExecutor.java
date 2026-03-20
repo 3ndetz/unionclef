@@ -1,16 +1,13 @@
 package kaptainwutax.tungsten.path;
 
 import kaptainwutax.tungsten.Debug;
-import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
-import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
 import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.GameOptions;
 import kaptainwutax.tungsten.agent.TungstenPlayerInput;
-import net.minecraft.util.math.Vec3d;
 
 import java.util.List;
 
@@ -136,20 +133,9 @@ public class PathExecutor {
 	    } else {
 		    Node node = this.path.get(this.tick);
 
-		    // Check position drift against expected node position.
-		    // On early ticks the path may have been computed from a stale position
-		    // (pathfinder runs async), so the player could already be somewhere else.
-		    Vec3d expected = node.agent.getPos();
-		    Vec3d actual = player.getPos();
-		    double drift = expected.distanceTo(actual);
-		    if (drift > TungstenConfig.get().driftThreshold) {
-		        Debug.logMessage(String.format(
-		            "Drift %.2f blocks at tick %d (threshold %.2f) — stopping executor",
-		            drift, this.tick, TungstenConfig.get().driftThreshold));
-		        stop = true;
-		        TungstenModDataContainer.PATHFINDER.stop.set(true);
-		        return;
-		    }
+		    // Drift detection is handled post-tick in MixinClientPlayerEntity.end()
+		    // via Agent.compare() — it correctly compares AFTER vanilla processes
+		    // the inputs, so the positions are comparable.
 
 		    if(node.input != null) {
 			    player.setYaw(node.input.yaw);
