@@ -33,7 +33,6 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.CarpetBlock;
 import net.minecraft.block.CropBlock;
 import net.minecraft.block.DaylightDetectorBlock;
-import net.minecraft.block.FenceBlock;
 import net.minecraft.block.LadderBlock;
 import net.minecraft.block.LanternBlock;
 import net.minecraft.block.LilyPadBlock;
@@ -550,10 +549,6 @@ public class BlockNode {
 
 		if (BlockStateChecker.isBottomSlab(childState) && isAboveChildSolid2)
 			child.cost += 20;
-
-		// Prefer routes that avoid fences/walls — simulation is less accurate on 1.5-block surfaces
-		if (childBelowBlock instanceof FenceBlock || childBelowState.isIn(net.minecraft.registry.tag.BlockTags.WALLS))
-			child.cost += 30;
 
 		return false;
 	}
