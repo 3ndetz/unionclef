@@ -409,24 +409,11 @@ public class Agent {
             this.airStrafingSpeed += 0.006F;
         }
 
-        // Vanilla updates movementSpeed from GENERIC_MOVEMENT_SPEED attribute
-        // AFTER travel() (at end of PlayerEntity.tickMovement). We approximate
-        // with base + known modifiers. This value will be used by NEXT tick's
-        // travel(), matching vanilla timing.
-        this.movementSpeed = 0.1F;
-        if(this.sprinting) {
-            this.movementSpeed *= 1.3F;
-        }
-        if(this.speed >= 0) {
-            // Speed effect: attribute modifier ADD_VALUE 0.02 per level,
-            // applied before sprint's MULTIPLY_TOTAL 1.3.
-            // Vanilla: (base + 0.02*(amp+1)) * sprintMul
-            // Since we already applied sprint, recalculate properly.
-            this.movementSpeed = 0.1F + 0.02F * (this.speed + 1);
-            if(this.sprinting) {
-                this.movementSpeed *= 1.3F;
-            }
-        }
+        // Vanilla recalculates movementSpeed from attributes here.
+        // For per-tick validation: Agent.of(player) already captured the
+        // correct value, so we don't touch it — setSprinting() handles
+        // updates when sprint state changes during the tick.
+        // For pathfinding: setSprinting() recalculates from base + modifiers.
     }
 
     public void tickMovementLiving(WorldView world) {
@@ -1448,8 +1435,21 @@ public class Agent {
 
     public void setSprinting(boolean sprinting) {
         this.sprinting = sprinting;
-        // movementSpeed is updated at end of tickMovementPlayer(), matching
-        // vanilla timing (after travel, not before).
+        // Recalculate movementSpeed when sprint changes.
+        // Vanilla does this via attribute modifiers; we approximate.
+        // For per-tick validation: Agent.of(player) captured the correct
+        // value, and sprint doesn't change during validation ticks.
+        // For pathfinding: this keeps movementSpeed in sync across nodes.
+        this.movementSpeed = 0.1F;
+        if(sprinting) {
+            this.movementSpeed *= 1.3F;
+        }
+        if(this.speed >= 0) {
+            this.movementSpeed = 0.1F + 0.02F * (this.speed + 1);
+            if(sprinting) {
+                this.movementSpeed *= 1.3F;
+            }
+        }
     }
 
     public double getFluidHeight(TagKey<Fluid> fluid) {
