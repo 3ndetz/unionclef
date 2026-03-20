@@ -143,8 +143,10 @@ public class FollowEntityTask {
         boolean outsideRadius = closeEnough <= 0 || dist >= closeEnough;
 
         // ── Trail recording + TRAILING state ───────────────────────────────────
-        if (hasEntity) trail.recordPosition(targetPos);
-        trail.update(player.getPos(), targetPos);
+        if (kaptainwutax.tungsten.TungstenConfig.get().enableTrailing) {
+            if (hasEntity) trail.recordPosition(targetPos);
+            trail.update(player.getPos(), targetPos);
+        }
 
         // ── LEAP: PvP close-range sprint+jump (no camera — altoclef handles aim+attacks)
         if (kaptainwutax.tungsten.TungstenConfig.get().enableLeap) {

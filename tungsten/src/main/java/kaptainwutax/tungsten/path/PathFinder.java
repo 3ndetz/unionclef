@@ -794,35 +794,13 @@ public class PathFinder {
             return false;
         }
 
-        // Trajectory stitching: simulate forward from last node to maintain momentum
-        // while A* recalculates. Appends inertia nodes to the path so the bot keeps
-        // moving instead of stopping between partial paths.
-        Node lastNode = result.get().getLast();
-        Node stitchEnd = lastNode;
-        if (lastNode.input != null && !lastNode.agent.isClimbing(TungstenModDataContainer.world)) {
-            List<Node> inertiaNodes = new ArrayList<>();
-            Node prev = lastNode;
-            for (int i = 0; i < 10; i++) {
-                Node inertia = new Node(prev, TungstenModDataContainer.world,
-                    prev.input, new Color(180, 180, 0), prev.cost + 1);
-                inertiaNodes.add(inertia);
-                // Stop extending if we hit ground from air, or go airborne from ground
-                if (inertia.agent.onGround && !prev.agent.onGround) break;
-                if (inertia.agent.horizontalCollision) break;
-                prev = inertia;
-            }
-            if (!inertiaNodes.isEmpty()) {
-                result.get().addAll(inertiaNodes);
-                stitchEnd = inertiaNodes.get(inertiaNodes.size() - 1);
-            }
+        Node newStart = null;
+        if (result.get().getLast() != null) {
+        	newStart = TungstenModDataContainer.PATHFINDER.initializeStartNode(result.get().getLast(), target);
+        } else if (result.get().get(result.get().size()-2) != null) {
+        	newStart = TungstenModDataContainer.PATHFINDER.initializeStartNode(result.get().get(result.get().size()-2), target);
         }
-
-        Node newStart = TungstenModDataContainer.PATHFINDER.initializeStartNode(stitchEnd, target);
-        if (newStart == null || !newStart.agent.onGround && !newStart.agent.touchingWater && !newStart.agent.isClimbing(TungstenModDataContainer.world)) {
-            // Fallback: use original last node if predicted position is unsafe
-            newStart = TungstenModDataContainer.PATHFINDER.initializeStartNode(lastNode, target);
-            if (newStart == null || !newStart.agent.onGround && !newStart.agent.touchingWater && !newStart.agent.isClimbing(TungstenModDataContainer.world)) return false;
-        }
+        if (newStart == null || !newStart.agent.onGround && !newStart.agent.touchingWater && !newStart.agent.isClimbing(TungstenModDataContainer.world)) return false;
         TungstenModDataContainer.EXECUTOR.addPath(result.get());
         TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
 //        RenderHelper.renderPathCurrentlyExecuted();
