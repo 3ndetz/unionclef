@@ -52,6 +52,12 @@ public class TungstenConfig {
      *  Set to 0 to log everything. */
     public double mismatchLogThreshold = 1e-6;
 
+    /** Air strafe speed multiplier. Vanilla uses 0.02 (walk) / 0.026 (sprint).
+     *  Higher values = more air control = pathfinder finds longer jumps.
+     *  Set to 1.0 for vanilla-accurate simulation.
+     *  Set to 3.0 for the old tungsten behavior (more aggressive jumps). */
+    public float airStrafeMultiplier = 1.0F;
+
     // ----------------------------------------
 
     public static TungstenConfig get() {

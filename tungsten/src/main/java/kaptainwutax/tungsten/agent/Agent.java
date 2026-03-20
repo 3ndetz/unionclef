@@ -403,10 +403,10 @@ public class Agent {
     public void tickMovementPlayer(WorldView world) {
         this.tickMovementLiving(world);
 
-        this.airStrafingSpeed = 0.02F;
+        this.airStrafingSpeed = 0.02F * TungstenConfig.get().airStrafeMultiplier;
 
         if(this.sprinting) {
-            this.airStrafingSpeed += 0.006F;
+            this.airStrafingSpeed += 0.006F * TungstenConfig.get().airStrafeMultiplier;
         }
 
         // Vanilla recalculates movementSpeed from attributes here.
@@ -1848,7 +1848,7 @@ public class Agent {
         agent.dolphinsGrace = player.hasStatusEffect(StatusEffects.DOLPHINS_GRACE) ? player.getStatusEffect(StatusEffects.DOLPHINS_GRACE).getAmplifier() : -1;
         agent.levitation = player.hasStatusEffect(StatusEffects.LEVITATION) ? player.getStatusEffect(StatusEffects.LEVITATION).getAmplifier() : -1;
         agent.movementSpeed = player.getMovementSpeed();
-        agent.airStrafingSpeed = agent.sprinting ? 0.026F : 0.02F;
+        agent.airStrafingSpeed = (agent.sprinting ? 0.026F : 0.02F) * TungstenConfig.get().airStrafeMultiplier;
         agent.jumpingCooldown = ((AccessorLivingEntity)player).getJumpingCooldown();
         agent.hunger.setFoodLevel(player.getHungerManager().getFoodLevel());
         agent.hunger.setSaturationLevel(player.getHungerManager().getSaturationLevel());
@@ -1917,7 +1917,7 @@ public class Agent {
         agent.dolphinsGrace = player.hasStatusEffect(StatusEffects.DOLPHINS_GRACE) ? player.getStatusEffect(StatusEffects.DOLPHINS_GRACE).getAmplifier() : -1;
         agent.levitation = player.hasStatusEffect(StatusEffects.LEVITATION) ? player.getStatusEffect(StatusEffects.LEVITATION).getAmplifier() : -1;
         agent.movementSpeed = player.getMovementSpeed();
-        agent.airStrafingSpeed = agent.sprinting ? 0.026F : 0.02F;
+        agent.airStrafingSpeed = (agent.sprinting ? 0.026F : 0.02F) * TungstenConfig.get().airStrafeMultiplier;
         agent.jumpingCooldown = ((AccessorLivingEntity)player).getJumpingCooldown();
         agent.hunger.setFoodLevel(player.getHungerManager().getFoodLevel());
         agent.hunger.setSaturationLevel(player.getHungerManager().getSaturationLevel());
@@ -1986,7 +1986,7 @@ public class Agent {
         agent.dolphinsGrace = player.hasStatusEffect(StatusEffects.DOLPHINS_GRACE) ? player.getStatusEffect(StatusEffects.DOLPHINS_GRACE).getAmplifier() : -1;
         agent.levitation = player.hasStatusEffect(StatusEffects.LEVITATION) ? player.getStatusEffect(StatusEffects.LEVITATION).getAmplifier() : -1;
         agent.movementSpeed = player.getMovementSpeed();
-        agent.airStrafingSpeed = agent.sprinting ? 0.026F : 0.02F;
+        agent.airStrafingSpeed = (agent.sprinting ? 0.026F : 0.02F) * TungstenConfig.get().airStrafeMultiplier;
         agent.jumpingCooldown = ((AccessorLivingEntity)player).getJumpingCooldown();
         agent.hunger.setFoodLevel(player.getHungerManager().getFoodLevel());
         agent.hunger.setSaturationLevel(player.getHungerManager().getSaturationLevel());
