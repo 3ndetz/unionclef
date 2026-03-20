@@ -284,6 +284,12 @@ public class Settings implements IFailableConfigFile {
     private boolean autoReconnect = true;
 
     /**
+     * How many seconds to stay on the kick/disconnect screen before reconnecting.
+     * Gives you time to read the kick reason.
+     */
+    private double reconnectDelaySec = 7.0;
+
+    /**
      * If true, will automatically respawn instantly if you die.
      * <p>
      * If disabled, the bot will stop running when you die.
@@ -549,6 +555,10 @@ public class Settings implements IFailableConfigFile {
 
     public boolean isAutoReconnect() {
         return autoReconnect;
+    }
+
+    public double getReconnectDelaySec() {
+        return reconnectDelaySec;
     }
 
     public boolean shouldReloadInfoSender() {

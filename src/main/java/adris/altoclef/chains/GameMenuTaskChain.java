@@ -39,6 +39,8 @@ import org.apache.commons.lang3.ArrayUtils;
 public class GameMenuTaskChain extends SingleTaskChain {
 
     private final TimerReal _reconnectTimer = new TimerReal(10);
+    private final TimerReal _kickScreenTimer = new TimerReal(7);
+    private boolean _waitingOnKickScreen = false;
     private ServerInfo _prevServerEntry = null;
     public ServerInfo _connectOverrideServerEntry = null;
     private boolean _reconnecting = false;
@@ -214,6 +216,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
 
         if (AltoClef.inGame()) {
             reconnectAttemps = 0;
+            _waitingOnKickScreen = false;
             _prevServerEntry = MinecraftClient.getInstance().getCurrentServerEntry();
             if (_prevServerEntry != null) {
                 ServerIp = _prevServerEntry.address.toString();
@@ -234,19 +237,28 @@ public class GameMenuTaskChain extends SingleTaskChain {
         }
 
         if (screen instanceof DisconnectedScreen disconnectedScreen) {
-            Text reason = disconnectedScreen.getTitle();
-            String kickMessage = reason != null ? reason.getString() : "UNKNOWN REASON";
-            if (kickMessage == null) kickMessage = "UNKNOWN REASON";
+            if (!_waitingOnKickScreen) {
+                Text reason = disconnectedScreen.getTitle();
+                String kickMessage = reason != null ? reason.getString() : "UNKNOWN REASON";
+                if (kickMessage == null) kickMessage = "UNKNOWN REASON";
 
-            Debug.logMessage("Kicked from server with reason: " + kickMessage);
+                Debug.logMessage("Kicked from server with reason: " + kickMessage);
 
-            if (shouldAutoReconnect()) {
+                if (shouldAutoReconnect()) {
+                    double delay = mod.getModSettings().getReconnectDelaySec();
+                    Debug.logMessage("RECONNECTING: Waiting " + delay + "s on kick screen...");
+                    _kickScreenTimer.setInterval(delay);
+                    _kickScreenTimer.reset();
+                    _waitingOnKickScreen = true;
+                } else {
+                    mod.cancelUserTask();
+                }
+            } else if (_kickScreenTimer.elapsed()) {
                 Debug.logMessage("RECONNECTING: Going to Multiplayer Screen");
+                _waitingOnKickScreen = false;
                 _reconnecting = true;
                 _reconnectTimer.reset();
                 MinecraftClient.getInstance().setScreen(new MultiplayerScreen(new TitleScreen()));
-            } else {
-                mod.cancelUserTask();
             }
         } else if (_needUnStuckFix) {
             if (AltoClef.inGame()) {

@@ -21,6 +21,8 @@ public class DeathMenuChain extends TaskChain {
     // Sometimes we fuck up, so we might want to retry considering the death screen.
     private final TimerReal deathRetryTimer = new TimerReal(8);
     private final TimerGame reconnectTimer = new TimerGame(1);
+    private final TimerReal kickScreenTimer = new TimerReal(7);
+    private boolean waitingOnKickScreen = false;
     private final TimerGame waitOnDeathScreenBeforeRespawnTimer = new TimerGame(2);
     private ServerInfo prevServerEntry = null;
     private boolean reconnecting = false;
@@ -112,15 +114,25 @@ public class DeathMenuChain extends TaskChain {
         } else {
             if (AltoClef.inGame()) {
                 waitOnDeathScreenBeforeRespawnTimer.reset();
+                waitingOnKickScreen = false;
             }
             if (screen instanceof DisconnectedScreen) {
-                if (shouldAutoReconnect()) {
+                if (!waitingOnKickScreen) {
+                    if (shouldAutoReconnect()) {
+                        double delay = AltoClef.getInstance().getModSettings().getReconnectDelaySec();
+                        Debug.logMessage("RECONNECTING: Waiting " + delay + "s on kick screen...");
+                        kickScreenTimer.setInterval(delay);
+                        kickScreenTimer.reset();
+                        waitingOnKickScreen = true;
+                    } else {
+                        // Cancel if we disconnect and are not auto-reconnecting.
+                        AltoClef.getInstance().cancelUserTask();
+                    }
+                } else if (kickScreenTimer.elapsed()) {
                     Debug.logMessage("RECONNECTING: Going to Multiplayer Screen");
+                    waitingOnKickScreen = false;
                     reconnecting = true;
                     MinecraftClient.getInstance().setScreen(new MultiplayerScreen(new TitleScreen()));
-                } else {
-                    // Cancel if we disconnect and are not auto-reconnecting.
-                    AltoClef.getInstance().cancelUserTask();
                 }
             } else if (screen instanceof MultiplayerScreen && reconnecting && reconnectTimer.elapsed()) {
                 reconnectTimer.reset();
