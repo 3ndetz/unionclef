@@ -47,6 +47,11 @@ public class TungstenConfig {
      *  openSet ops, heuristic updates, block-space search, etc. */
     public boolean debugTime = false;
 
+    /** Minimum mismatch magnitude to log in verbose debug mode.
+     *  Hides float/double precision noise (typically ~1e-10).
+     *  Set to 0 to log everything. */
+    public double mismatchLogThreshold = 1e-6;
+
     // ----------------------------------------
 
     public static TungstenConfig get() {

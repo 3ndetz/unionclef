@@ -1532,17 +1532,23 @@ public class Agent {
     }
     */
 
+    /** Check if two doubles differ by more than the logging threshold. */
+    private static boolean mismatch(double a, double b) {
+        return Math.abs(a - b) > TungstenConfig.get().mismatchLogThreshold;
+    }
+
     public void compare(PlayerEntity player, TungstenPlayerInput playerInput, boolean executor) {
         List<String> values = new ArrayList<>();
-        
-        if(this.posX != player.getX() || this.posY != player.getY() || this.posZ != player.getZ()) {
-            values.add(String.format("Position mismatch (%s, %s, %s) vs (%s, %s, %s)",
-                player.getPos().x == this.posX ? "x" : player.getPos().x,
-                player.getPos().y == this.posY ? "y" : player.getPos().y,
-                player.getPos().z == this.posZ ? "z" : player.getPos().z,
-                player.getPos().x == this.posX ? "x" : this.posX,
-                player.getPos().y == this.posY ? "y" : this.posY,
-                player.getPos().z == this.posZ ? "z" : this.posZ));
+        double logThreshold = TungstenConfig.get().mismatchLogThreshold;
+
+        double posDrift = Math.abs(this.posX - player.getX())
+                        + Math.abs(this.posY - player.getY())
+                        + Math.abs(this.posZ - player.getZ());
+        if(posDrift > logThreshold) {
+            values.add(String.format("Position mismatch (drift=%.2e)\n  real: %20.12f %20.12f %20.12f\n  sim:  %20.12f %20.12f %20.12f",
+                posDrift,
+                player.getX(), player.getY(), player.getZ(),
+                this.posX, this.posY, this.posZ));
             if (TungstenModDataContainer.EXECUTOR.isRunning()) {
                 double drift = player.getPos().distanceTo(new Vec3d(this.posX, this.posY, this.posZ));
                 if (drift > kaptainwutax.tungsten.TungstenConfig.get().driftThreshold) {
@@ -1564,14 +1570,14 @@ public class Agent {
             }
         }
         
-        if(this.velX != player.getVelocity().x || this.velY != player.getVelocity().y || this.velZ != player.getVelocity().z) {
-            values.add(String.format("Velocity mismatch (%s, %s, %s) vs (%s, %s, %s)",
-                player.getVelocity().x,
-                player.getVelocity().y,
-                player.getVelocity().z,
-                player.getVelocity().x == this.velX ? "x" : this.velX,
-                player.getVelocity().y == this.velY ? "y" : this.velY,
-                player.getVelocity().z == this.velZ ? "z" : this.velZ));
+        double velDrift = Math.abs(this.velX - player.getVelocity().x)
+                        + Math.abs(this.velY - player.getVelocity().y)
+                        + Math.abs(this.velZ - player.getVelocity().z);
+        if(velDrift > logThreshold) {
+            values.add(String.format("Velocity mismatch (drift=%.2e)\n  real: %20.12f %20.12f %20.12f\n  sim:  %20.12f %20.12f %20.12f",
+                velDrift,
+                player.getVelocity().x, player.getVelocity().y, player.getVelocity().z,
+                this.velX, this.velY, this.velZ));
             // Do not call setVelocity() — that overrides server-authoritative velocity and
             // causes position divergence leading to rubber-band teleports.
             // Log the mismatch only; path will self-correct on next recalc if needed.
@@ -1600,7 +1606,7 @@ public class Agent {
                 ((AccessorEntity)player).getMovementMultiplier().z == this.mulZ ? "z" : this.mulZ));
         }
 
-        if(this.forwardSpeed != player.forwardSpeed || this.sidewaysSpeed != player.sidewaysSpeed || this.upwardSpeed != player.upwardSpeed) {
+        if(mismatch(this.forwardSpeed, player.forwardSpeed) || mismatch(this.sidewaysSpeed, player.sidewaysSpeed) || mismatch(this.upwardSpeed, player.upwardSpeed)) {
             values.add(String.format("Input Speed mismatch (%s, %s, %s) vs (%s, %s, %s)",
                 player.forwardSpeed == this.forwardSpeed ? "f" : player.forwardSpeed,
                 player.upwardSpeed == this.upwardSpeed ? "u" : player.upwardSpeed,
@@ -1610,7 +1616,7 @@ public class Agent {
                 player.sidewaysSpeed == this.sidewaysSpeed ? "s" : this.sidewaysSpeed));
         }
 
-        if(this.movementSpeed != player.getMovementSpeed()) {
+        if(mismatch(this.movementSpeed, player.getMovementSpeed())) {
 
         	if (TungstenModDataContainer.LOG_DEBUG_DATA) {
         		Node node = TungstenModDataContainer.EXECUTOR.getCurrentNode();
@@ -1702,7 +1708,7 @@ public class Agent {
             	}	
         	}
         	
-            values.add(String.format("Movement Speed mismatch %f vs %f", player.getMovementSpeed(), this.movementSpeed));
+            values.add(String.format("Movement Speed mismatch\n  real: %.10f\n  sim:  %.10f", player.getMovementSpeed(), this.movementSpeed));
         }
 
         if(this.pose != player.getPose()) {
@@ -1733,7 +1739,7 @@ public class Agent {
             values.add(String.format("Eye height mismatch %s vs %s", player.getStandingEyeHeight(), this.standingEyeHeight));
         }
 
-        if(this.fallDistance != player.fallDistance) {
+        if(mismatch(this.fallDistance, player.fallDistance)) {
             values.add(String.format("Fall distance mismatch %s vs %s", player.fallDistance, this.fallDistance));
         }
 
