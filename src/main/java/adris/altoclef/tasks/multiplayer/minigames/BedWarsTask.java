@@ -686,6 +686,8 @@ public class BedWarsTask extends Task {
         if (AltoClef.inGame() && mod.getPlayer() != null && slots != null) {
             for (Slot slot : slots) {
                 int windowSlot = slot.getWindowSlot();
+                // Skip player inventory slots — only look at shop container slots
+                if (!chooseCategories && slot.isSlotInPlayerInventory()) continue;
                 boolean check = chooseCategories
                         ? (windowSlot >= 0 && windowSlot < 9)
                         : (windowSlot >= 9);
