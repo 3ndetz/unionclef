@@ -401,12 +401,32 @@ public class Agent {
     }
 
     public void tickMovementPlayer(WorldView world) {
+        // Vanilla PlayerEntity.tickMovement() recalculates movementSpeed
+        // every tick from GENERIC_MOVEMENT_SPEED attribute. We don't have
+        // access to attributes, so recalculate from base + known modifiers.
+        this.recalcMovementSpeed();
+
         this.tickMovementLiving(world);
 
         this.airStrafingSpeed = 0.02F;
 
         if(this.sprinting) {
             this.airStrafingSpeed += 0.006F;
+        }
+    }
+
+    /**
+     * Recalculate movementSpeed from base value + sprint/speed modifiers.
+     * Vanilla does this via attribute system every tick in PlayerEntity.tickMovement().
+     */
+    private void recalcMovementSpeed() {
+        this.movementSpeed = 0.1F;
+        if(this.sprinting) {
+            this.movementSpeed *= (1.0F + 0.3F);
+        }
+        if(this.speed >= 0) {
+            double amplifier = 0.20000000298023224D * (double)(this.speed + 1);
+            this.movementSpeed *= (float)(1.0D + amplifier);
         }
     }
 
@@ -1429,16 +1449,7 @@ public class Agent {
 
     public void setSprinting(boolean sprinting) {
         this.sprinting = sprinting;
-        this.movementSpeed = 0.1F;
-
-        if(sprinting) {
-            this.movementSpeed *= (1.0D + (double)0.3F);
-        }
-
-        if(this.speed >= 0) {
-            double amplifier = 0.20000000298023224D * (double)(this.speed + 1);
-            this.movementSpeed *= (1.0D + amplifier);
-        }
+        // movementSpeed is recalculated every tick in recalcMovementSpeed()
     }
 
     public double getFluidHeight(TagKey<Fluid> fluid) {

@@ -860,7 +860,8 @@ public class PathFinder {
 
 			AtomicBoolean failing = new AtomicBoolean(true);
 			if (blockPath.isEmpty()) return false;
-			List<Node> children = parent.getChildren(world, target, blockPath.get().get(NEXT_CLOSEST_BLOCKNODE_IDX.get()));
+			int blockIdx = Math.min(NEXT_CLOSEST_BLOCKNODE_IDX.get(), blockPath.get().size() - 1);
+			List<Node> children = parent.getChildren(world, target, blockPath.get().get(blockIdx));
 			if (children.isEmpty()) return false;
 
 			long tChildren = timing ? System.nanoTime() : 0;
@@ -880,8 +881,8 @@ public class PathFinder {
 			
 			Queue<Node> validChildren = new ConcurrentLinkedQueue<>();
 
-			BlockNode lastBlockNode = blockPath.get().get(NEXT_CLOSEST_BLOCKNODE_IDX.get()-1);
-			BlockNode nextBlockNode = blockPath.get().get(NEXT_CLOSEST_BLOCKNODE_IDX.get());
+			BlockNode lastBlockNode = blockPath.get().get(Math.max(blockIdx - 1, 0));
+			BlockNode nextBlockNode = blockPath.get().get(blockIdx);
 	        double closestBlockVolume = BlockShapeChecker.getShapeVolume(nextBlockNode.getBlockPos().down(), world);
 	        boolean isSmallBlock = closestBlockVolume > 0 && closestBlockVolume < 1;
 			
