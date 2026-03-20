@@ -52,6 +52,19 @@ public class SettingsCommand extends Command {
 				return SINGLE_SUCCESS;
 			})));
 
+		// ;settings enableLeap [true/false]
+		builder.then(literal("enableLeap")
+			.executes(context -> {
+				Debug.logMessage("enableLeap = " + TungstenConfig.get().enableLeap);
+				return SINGLE_SUCCESS;
+			})
+			.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
+				TungstenConfig.get().enableLeap = BoolArgumentType.getBool(context, "enabled");
+				TungstenConfig.save();
+				Debug.logMessage("enableLeap = " + TungstenConfig.get().enableLeap);
+				return SINGLE_SUCCESS;
+			})));
+
 		// ;settings enableTrailing [true/false]
 		builder.then(literal("enableTrailing")
 			.executes(context -> {

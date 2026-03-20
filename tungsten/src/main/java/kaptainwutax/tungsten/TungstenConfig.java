@@ -34,6 +34,10 @@ public class TungstenConfig {
      *  If false: always pathfind directly to target position. */
     public boolean enableTrailing = false;
 
+    /** If true: enable LEAP mode (sprint+jump without A* at close range).
+     *  If false: always use A* pathfinding even at short distances. */
+    public boolean enableLeap = false;
+
     /** If true: log verbose tick/drift/position messages to console.
      *  Keep false in normal use to reduce noise. */
     public boolean verboseDebugLogging = false;

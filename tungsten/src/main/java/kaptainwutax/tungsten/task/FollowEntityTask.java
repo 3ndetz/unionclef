@@ -147,13 +147,18 @@ public class FollowEntityTask {
         trail.update(player.getPos(), targetPos);
 
         // ── LEAP: PvP close-range sprint+jump (no camera — altoclef handles aim+attacks)
-        boolean canLeap = dist < LEAP_DIST && outsideRadius
-                && hasEntity && hasLineOfSight(player, targetPos)
-                && isFlatGround(player, targetPos);
+        if (kaptainwutax.tungsten.TungstenConfig.get().enableLeap) {
+            boolean canLeap = dist < LEAP_DIST && outsideRadius
+                    && hasEntity && hasLineOfSight(player, targetPos)
+                    && isFlatGround(player, targetPos);
 
-        if (canLeap && !TungstenModDataContainer.EXECUTOR.isRunning()) {
-            doLeap(player);
-            leapActive = true;
+            if (canLeap && !TungstenModDataContainer.EXECUTOR.isRunning()) {
+                doLeap(player);
+                leapActive = true;
+            } else if (leapActive) {
+                releaseLeapKeys();
+                leapActive = false;
+            }
         } else if (leapActive) {
             releaseLeapKeys();
             leapActive = false;
