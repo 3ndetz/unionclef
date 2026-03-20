@@ -408,8 +408,8 @@ public class MovementTraverse extends Movement {
                     Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)),
                     Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
 
-            // Emergency sneak: very close to edge and block still not placed — last resort
-            if (distToEdge < 0.2) {
+            // Emergency sneak: close to edge and block still not placed — last resort
+            if (distToEdge < 0.3) {
                 state.setInput(Input.SNEAK, true);
             }
 

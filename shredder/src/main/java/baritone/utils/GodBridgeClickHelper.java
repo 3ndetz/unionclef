@@ -40,12 +40,12 @@ public class GodBridgeClickHelper {
     private static long nextClickNanos = 0;
 
     // Jitter timing constants (nanoseconds)
-    private static final long CLICK_INTERVAL_MIN = 12_000_000L;  // 12ms between clicks (~83 CPS burst peak)
-    private static final long CLICK_INTERVAL_MAX = 35_000_000L;  // 35ms (~28 CPS burst low)
-    private static final long PAUSE_MIN = 30_000_000L;           // 30ms pause between bursts
-    private static final long PAUSE_MAX = 70_000_000L;           // 70ms pause between bursts
-    private static final int BURST_MIN = 3;
-    private static final int BURST_MAX = 8;
+    private static final long CLICK_INTERVAL_MIN = 8_000_000L;   // 8ms between clicks in burst
+    private static final long CLICK_INTERVAL_MAX = 25_000_000L;  // 25ms between clicks in burst
+    private static final long PAUSE_MIN = 15_000_000L;           // 15ms pause between bursts
+    private static final long PAUSE_MAX = 40_000_000L;           // 40ms pause between bursts
+    private static final int BURST_MIN = 20;
+    private static final int BURST_MAX = 40;
 
     public static void activate(IPlayerContext playerContext) {
         ctx = playerContext;
@@ -91,11 +91,9 @@ public class GodBridgeClickHelper {
 
         ThreadLocalRandom rng = ThreadLocalRandom.current();
 
+        // Refill burst if depleted — no wasted frames, click immediately
         if (burstRemaining <= 0) {
-            // Start new burst after a pause
             burstRemaining = rng.nextInt(BURST_MIN, BURST_MAX + 1);
-            nextClickNanos = now + rng.nextLong(PAUSE_MIN, PAUSE_MAX);
-            return;
         }
 
         // Right-click through same path as BlockPlaceHelper
@@ -117,7 +115,12 @@ public class GodBridgeClickHelper {
         }
 
         burstRemaining--;
-        // Micro-pause between clicks in burst
-        nextClickNanos = now + rng.nextLong(CLICK_INTERVAL_MIN, CLICK_INTERVAL_MAX);
+        if (burstRemaining <= 0) {
+            // End of burst — short inter-burst pause
+            nextClickNanos = now + rng.nextLong(PAUSE_MIN, PAUSE_MAX);
+        } else {
+            // Mid-burst — micro-pause between clicks
+            nextClickNanos = now + rng.nextLong(CLICK_INTERVAL_MIN, CLICK_INTERVAL_MAX);
+        }
     }
 }
