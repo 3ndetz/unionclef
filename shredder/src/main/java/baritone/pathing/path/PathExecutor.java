@@ -34,6 +34,7 @@ import baritone.pathing.movement.MovementHelper;
 import baritone.pathing.movement.movements.*;
 import baritone.tungsten.TungstenBridge;
 import baritone.utils.BlockStateInterface;
+import baritone.utils.GodBridgeClickHelper;
 import java.util.*;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
 import net.minecraft.entity.player.PlayerEntity;
@@ -899,6 +900,7 @@ public class PathExecutor implements IPathExecutor, Helper {
 
     private void onChangeInPathPosition() {
         clearKeys();
+        GodBridgeClickHelper.deactivate();
         ticksOnCurrent = 0;
     }
 
@@ -1377,6 +1379,7 @@ public class PathExecutor implements IPathExecutor, Helper {
 
     private void cancel() {
         clearKeys();
+        GodBridgeClickHelper.deactivate();
         sprintJumping = false;
         if (jumpBridging) exitJumpBridge();
         tungstenBridge.reset();

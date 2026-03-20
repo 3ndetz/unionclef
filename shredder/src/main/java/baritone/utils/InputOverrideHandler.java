@@ -80,7 +80,6 @@ public final class InputOverrideHandler extends Behavior implements IInputOverri
     @Override
     public final void clearAllKeys() {
         this.inputForceStateMap.clear();
-        GodBridgeClickHelper.deactivate();
     }
 
     @Override
