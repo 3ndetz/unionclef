@@ -186,6 +186,11 @@ public class ExampleBaritoneControl extends Behavior implements Helper {
                             helper.append("false", "true");
                         }
                         return helper.filterPrefix(argc.getString()).stream();
+                    } else if (setting.getName().equals("bridgingMode")) {
+                        return new TabCompleteHelper()
+                                .append("slow", "standard", "back_jump", "jump")
+                                .filterPrefix(argc.getString())
+                                .stream();
                     } else {
                         return Stream.of(SettingsUtil.settingValueToString(setting));
                     }
