@@ -21,7 +21,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientCommonNetworkHandler;
 import net.minecraft.client.network.ClientConnectionState;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
@@ -71,29 +70,23 @@ public abstract class MixinClientPlayNetworkHandler extends ClientCommonNetworkH
     }
 
     @Inject(method = "onEntityTrackerUpdate", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/NetworkThreadUtils;forceMainThread(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/util/thread/ThreadExecutor;)V",
-        shift = At.Shift.AFTER), cancellable = true)
+        shift = At.Shift.AFTER), cancellable = false)
     public void onEntityTrackerUpdate(EntityTrackerUpdateS2CPacket packet, CallbackInfo ci) {
-        if(TungstenModDataContainer.EXECUTOR.isRunning()) {
-            ClientPlayerEntity player = TungstenMod.mc.player;
-
-            if(player != null && packet.id() == player.getId()) {
-                ci.cancel();
-            }
-        }
+        // Previously cancelled tracker updates for our player during execution,
+        // which could desync pose/metadata. Now let vanilla handle them normally.
     }
 
     @Inject(method = "onPlayerPositionLook", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/NetworkThreadUtils;forceMainThread(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/util/thread/ThreadExecutor;)V",
-        shift = At.Shift.AFTER), cancellable = true)
+        shift = At.Shift.AFTER), cancellable = false)
     public void onPlayerPositionLook(PlayerPositionLookS2CPacket packet, CallbackInfo ci) {
         if(TungstenModDataContainer.EXECUTOR.isRunning()) {
-            ClientPlayerEntity player = TungstenMod.mc.player;
-
-//            if(player != null) {
-//                this.connection.send(new TeleportConfirmC2SPacket(packet.getTeleportId()));
-//                this.connection.send(new PlayerMoveC2SPacket.Full(player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch(), player.isOnGround()));
-//            }
-
-            ci.cancel();
+            // Server teleported us — stop executor and let vanilla handle the teleport.
+            // Previously this ci.cancel()'d the packet, which caused a deadlock:
+            // server waits for TeleportConfirmC2SPacket, client never sends it,
+            // server ignores all subsequent movement packets → player stuck.
+            Debug.logMessage("Server teleport received during execution — stopping executor");
+            TungstenModDataContainer.EXECUTOR.stop = true;
+            TungstenModDataContainer.PATHFINDER.stop.set(true);
         }
     }
 
