@@ -266,7 +266,7 @@ public class BlockNode {
 
 	public List<BlockNode> getChildren(WorldView world, Goal goal, boolean generateDeep) {
 
-		List<BlockNode> nodes = getNodesIn3DCircule(generateDeep ? 8 : 5, this, goal, generateDeep);
+		List<BlockNode> nodes = getNodesIn3DCircule(8, this, goal, generateDeep);
 //		nodes.removeIf((child) -> {
 //			return shouldRemoveNode(world, child);
 //		});
