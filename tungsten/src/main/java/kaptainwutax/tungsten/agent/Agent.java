@@ -868,17 +868,34 @@ public class Agent {
         boolean bl5 = this.onGround || bl4;
 
         if(this.stepHeight > 0.0f && bl5 && (bl || bl3)) {
-            Vec3d vec3d2 = this.adjustMovementForCollisions(new Vec3d(movement.x, this.stepHeight, movement.z), box, world, list);
-            Vec3d vec3d3 = this.adjustMovementForCollisions(new Vec3d(0.0, this.stepHeight, 0.0), box.stretch(movement.x, 0.0, movement.z), world, list);
-            Vec3d vec3d4 = this.adjustMovementForCollisions(new Vec3d(movement.x, 0.0, movement.z), box.offset(vec3d3), world, list).add(vec3d3);
+//            Vec3d vec3d2 = this.adjustMovementForCollisions(new Vec3d(movement.x, this.stepHeight, movement.z), box, world, list);
+//            Vec3d vec3d3 = this.adjustMovementForCollisions(new Vec3d(0.0, this.stepHeight, 0.0), box.stretch(movement.x, 0.0, movement.z), world, list);
+//            Vec3d vec3d4 = this.adjustMovementForCollisions(new Vec3d(movement.x, 0.0, movement.z), box.offset(vec3d3), world, list).add(vec3d3);
+//
+//            if(vec3d3.y < (double)this.stepHeight && vec3d4.horizontalLengthSquared() > vec3d2.horizontalLengthSquared()) {
+//                vec3d2 = vec3d4;
+//            }
+//
+//            if(vec3d2.horizontalLengthSquared() > vec3d.horizontalLengthSquared()) {
+//                return vec3d2.add(this.adjustMovementForCollisions(new Vec3d(0.0, -vec3d2.y + movement.y, 0.0), box.offset(vec3d2), world, list));
+//            }
+        	Box box2 = bl4 ? box.offset(0.0, vec3d.y, 0.0) : box;
+			Box box3 = box2.stretch(movement.x, (double)this.stepHeight, movement.z);
+			if (!bl4) {
+				box3 = box3.stretch(0.0, -1.0E-5F, 0.0);
+			}
 
-            if(vec3d3.y < (double)this.stepHeight && vec3d4.horizontalLengthSquared() > vec3d2.horizontalLengthSquared()) {
-                vec3d2 = vec3d4;
-            }
+			List<VoxelShape> list2 = this.findCollisionsForMovement(world, list, box3);
+			float f = (float)vec3d.y;
+			float[] fs = collectStepHeights(box2, list2, this.stepHeight, f);
 
-            if(vec3d2.horizontalLengthSquared() > vec3d.horizontalLengthSquared()) {
-                return vec3d2.add(this.adjustMovementForCollisions(new Vec3d(0.0, -vec3d2.y + movement.y, 0.0), box.offset(vec3d2), world, list));
-            }
+			for (float g : fs) {
+				Vec3d vec3d2 = adjustMovementForCollisions(new Vec3d(movement.x, (double)g, movement.z), box2, list2);
+				if (vec3d2.horizontalLengthSquared() > vec3d.horizontalLengthSquared()) {
+					double d = box.minY - box2.minY;
+					return vec3d2.add(0.0, -d, 0.0);
+				}
+			}
         }
 
         return vec3d;
