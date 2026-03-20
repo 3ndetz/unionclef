@@ -1,13 +1,16 @@
 package kaptainwutax.tungsten.path;
 
 import kaptainwutax.tungsten.Debug;
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
+import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
 import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.GameOptions;
 import kaptainwutax.tungsten.agent.TungstenPlayerInput;
+import net.minecraft.util.math.Vec3d;
 
 import java.util.List;
 
@@ -168,6 +171,51 @@ public class PathExecutor {
     }
     
     
+    /**
+     * Try to reconnect to the path by scanning ahead for a node whose
+     * parent state is close to the player's current position.
+     * Called from Agent.compare() when drift exceeds threshold.
+     *
+     * @return true if reconnected (tick advanced), false if no suitable node found
+     */
+    public boolean tryReconnect(Vec3d playerPos) {
+        if (this.path == null || this.tick >= this.path.size()) return false;
+
+        double bestDist = Double.MAX_VALUE;
+        int bestIdx = -1;
+        // Scan ahead up to 20 nodes (don't search the whole path — too expensive
+        // and distant nodes make no sense for reconnection)
+        int scanLimit = Math.min(this.tick + 20, this.path.size());
+
+        for (int i = this.tick; i < scanLimit; i++) {
+            Node node = this.path.get(i);
+            // node.agent is the position AFTER this tick's input.
+            // The player needs to match the pre-input state, which is
+            // the parent's post-state. For the path list, that's path[i-1].agent.
+            // For i == tick (current), we use node.agent as rough approximation
+            // since we're already past where we should be.
+            Vec3d nodePos = node.agent.getPos();
+            double dist = playerPos.distanceTo(nodePos);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestIdx = i;
+            }
+        }
+
+        // Only reconnect if the closest node is within a reasonable range
+        if (bestIdx >= 0 && bestDist < TungstenConfig.get().driftThreshold) {
+            int skipped = bestIdx - this.tick + 1;
+            // Advance past the matched node — next tick will execute from bestIdx+1
+            this.tick = bestIdx + 1;
+            Debug.logMessage(String.format(
+                "Reconnected to path at node %d (skipped %d, dist %.3f)",
+                bestIdx, skipped, bestDist));
+            return true;
+        }
+
+        return false;
+    }
+
     public static TungstenPlayerInput optionsToPlayerInput(GameOptions options) {
     	return new TungstenPlayerInput(options.forwardKey.isPressed(), options.backKey.isPressed(), options.leftKey.isPressed(), options.rightKey.isPressed(), options.jumpKey.isPressed(), options.sneakKey.isPressed(), options.sprintKey.isPressed());
     }

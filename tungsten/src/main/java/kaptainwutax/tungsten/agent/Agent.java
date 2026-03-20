@@ -1511,11 +1511,9 @@ public class Agent {
             if (TungstenModDataContainer.EXECUTOR.isRunning()) {
                 double drift = player.getPos().distanceTo(new Vec3d(this.posX, this.posY, this.posZ));
                 if (drift > kaptainwutax.tungsten.TungstenConfig.get().driftThreshold) {
-                    if (kaptainwutax.tungsten.TungstenConfig.get().driftCorrectionEnabled) {
-                        // Snap client position to simulation value (may cause rubber-banding on servers)
-                        player.setPosition(this.posX, this.posY, this.posZ);
-                    } else {
-                        // Stop executor so path recalculates from real server position
+                    // Try to reconnect to a nearby node on the path first.
+                    // Only stop executor if reconnection fails.
+                    if (!TungstenModDataContainer.EXECUTOR.tryReconnect(player.getPos())) {
                         TungstenModDataContainer.EXECUTOR.stop = true;
                         TungstenModDataContainer.PATHFINDER.stop.set(true);
                     }
