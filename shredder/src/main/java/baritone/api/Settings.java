@@ -173,6 +173,7 @@ public final class Settings {
      * "standard"  — original baritone bridging (fast but jerky head movement).
      * "back_jump" — face backward, walk backward + jump, place while airborne.
      * "jump"      — sprint-jump forward, snap rotation backward mid-air, place at speed.
+     * "god"       — like slow but no sneaking, just walk backward and spam right-click.
      */
     public final Setting<String> bridgingMode = new Setting<>("slow");
 

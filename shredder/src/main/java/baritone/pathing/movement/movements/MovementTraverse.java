@@ -376,7 +376,11 @@ public class MovementTraverse extends Movement {
      *    Aim precisely at the +dir face of src.down(), click when raycast hits.
      */
     private MovementState updateSlowBridge(MovementState state, BlockPos feet) {
-        state.setInput(Input.SNEAK, true);
+        boolean godMode = "god".equals(Baritone.settings().bridgingMode.value);
+
+        if (!godMode) {
+            state.setInput(Input.SNEAK, true);
+        }
 
         // Bridge block placed — walk to dest (movement completes naturally)
         if (MovementHelper.canWalkOn(ctx, dest.down())) {
@@ -389,17 +393,29 @@ public class MovementTraverse extends Movement {
         int dirZ = dest.getZ() - src.getZ();
         float backwardYaw = (float) Math.toDegrees(Math.atan2(-dirX, dirZ)) + 180.0f;
 
+        // Face behind us: the +dir face of src.down()
+        double faceX = (dest.getX() + src.getX() + 1.0D) * 0.5D;
+        double faceY = (dest.getY() + src.getY() - 1.0D) * 0.5D;
+        double faceZ = (dest.getZ() + src.getZ() + 1.0D) * 0.5D;
+        Rotation faceLook = RotationUtils.calcRotationFromVec3d(
+                ctx.playerHead(), new Vec3d(faceX, faceY, faceZ), ctx.playerRotations());
+
+        if (godMode) {
+            // GOD: always look at the place target, walk backward, spam right-click non-stop
+            state.setTarget(new MovementState.MovementTarget(faceLook, true));
+            state.setInput(Input.MOVE_BACK, true);
+            if (((Baritone) baritone).getInventoryBehavior().selectThrowawayForLocation(true, dest.getX(), dest.getY() - 1, dest.getZ())) {
+                state.setInput(Input.CLICK_RIGHT, true);
+            }
+            return state;
+        }
+
         double distToEdge = Math.max(
                 Math.abs(ctx.player().getPos().x - (dest.getX() + 0.5D)),
                 Math.abs(ctx.player().getPos().z - (dest.getZ() + 0.5D)));
 
         if (distToEdge < 0.4) {
             // PLACE: at/past edge — the +dir face of src.down() is behind us.
-            double faceX = (dest.getX() + src.getX() + 1.0D) * 0.5D;
-            double faceY = (dest.getY() + src.getY() - 1.0D) * 0.5D;
-            double faceZ = (dest.getZ() + src.getZ() + 1.0D) * 0.5D;
-            Rotation faceLook = RotationUtils.calcRotationFromVec3d(
-                    ctx.playerHead(), new Vec3d(faceX, faceY, faceZ), ctx.playerRotations());
             state.setTarget(new MovementState.MovementTarget(faceLook, true));
 
             if (ctx.isLookingAt(src.down())) {

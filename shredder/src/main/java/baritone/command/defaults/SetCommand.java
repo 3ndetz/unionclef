@@ -238,7 +238,7 @@ public class SetCommand extends Command {
                         return helper.filterPrefix(args.getString()).stream();
                     } else if (setting.getName().equals("bridgingMode")) {
                         return new TabCompleteHelper()
-                                .append("slow", "standard", "back_jump", "jump")
+                                .append("slow", "standard", "back_jump", "jump", "god")
                                 .filterPrefix(args.getString())
                                 .stream();
                     } else {
