@@ -34,7 +34,7 @@ public class BridgingModeCommand extends Command {
     private static final Set<String> MODES = Set.of("slow", "standard", "back_jump", "jump");
 
     protected BridgingModeCommand(IBaritone baritone) {
-        super(baritone, "bridgingmode", "bridgemode", "bm");
+        super(baritone, "bridgingmode");
     }
 
     @Override
