@@ -58,6 +58,9 @@ public class MovementTraverse extends Movement {
     /** God bridge: ticks remaining in slow-mode fallback after emergency sneak. */
     private int godSneakFallbackTicks = 0;
 
+    /** God bridge: ticks remaining to verify server confirmed the placed block. */
+    private int godVerifyTicks = 0;
+
     public MovementTraverse(IBaritone baritone, BetterBlockPos from, BetterBlockPos to) {
         super(baritone, from, to, new BetterBlockPos[]{to.up(), to}, to.down());
     }
@@ -67,6 +70,7 @@ public class MovementTraverse extends Movement {
         super.reset();
         wasTheBridgeBlockAlwaysThere = true;
         godSneakFallbackTicks = 0;
+        godVerifyTicks = 0;
         stopGodBridge();
     }
 
@@ -384,11 +388,35 @@ public class MovementTraverse extends Movement {
     private MovementState updateSlowBridge(MovementState state, BlockPos feet) {
         boolean godMode = "god".equals(Baritone.settings().bridgingMode.value);
 
-        // Bridge block placed — walk to dest, stop god bridge clicking
-        if (MovementHelper.canWalkOn(ctx, dest.down())) {
+        boolean blockPlaced = MovementHelper.canWalkOn(ctx, dest.down());
+
+        // Bridge block placed
+        if (blockPlaced) {
+            if (godMode && godVerifyTicks == 0) {
+                // First tick we see the block — start verification (sneak while waiting for server confirm)
+                godVerifyTicks = 5;
+                GodBridgeClickHelper.deactivate();
+            }
+
+            if (godMode && godVerifyTicks > 0) {
+                // Verify: sneak in place, wait for server to confirm block is real
+                godVerifyTicks--;
+                state.setInput(Input.SNEAK, true);
+                // Don't walk forward yet — if block disappears, we'll catch it
+                return state;
+            }
+
+            // Verified (or non-god mode) — walk to dest
             stopGodBridge();
+            godVerifyTicks = 0;
             MovementHelper.moveTowards(ctx, state, dest);
             return state;
+        }
+
+        // Block disappeared during verify — server rejected it, back to bridging
+        if (godMode && godVerifyTicks > 0) {
+            godVerifyTicks = 0;
+            godSneakFallbackTicks = 8; // slow fallback to recover safely
         }
 
         if (!godMode) {

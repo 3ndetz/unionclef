@@ -40,12 +40,14 @@ public class GodBridgeClickHelper {
     private static long nextClickNanos = 0;
 
     // Jitter timing constants (nanoseconds)
-    private static final long CLICK_INTERVAL_MIN = 8_000_000L;   // 8ms between clicks in burst
-    private static final long CLICK_INTERVAL_MAX = 25_000_000L;  // 25ms between clicks in burst
-    private static final long PAUSE_MIN = 15_000_000L;           // 15ms pause between bursts
-    private static final long PAUSE_MAX = 40_000_000L;           // 40ms pause between bursts
-    private static final int BURST_MIN = 20;
-    private static final int BURST_MAX = 40;
+    // Server accepts ~5 placements/sec (4-tick vanilla cooldown). We click ~10-20 CPS
+    // to ensure at least one lands per server tick without flooding.
+    private static final long CLICK_INTERVAL_MIN = 50_000_000L;  // 50ms between clicks (~20 CPS)
+    private static final long CLICK_INTERVAL_MAX = 100_000_000L; // 100ms between clicks (~10 CPS)
+    private static final long PAUSE_MIN = 20_000_000L;           // 20ms pause between bursts
+    private static final long PAUSE_MAX = 50_000_000L;           // 50ms pause between bursts
+    private static final int BURST_MIN = 8;
+    private static final int BURST_MAX = 15;
 
     public static void activate(IPlayerContext playerContext) {
         ctx = playerContext;
