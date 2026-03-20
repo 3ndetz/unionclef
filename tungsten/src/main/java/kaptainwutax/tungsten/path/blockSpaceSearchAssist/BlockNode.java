@@ -266,7 +266,7 @@ public class BlockNode {
 
 	public List<BlockNode> getChildren(WorldView world, Goal goal, boolean generateDeep) {
 
-		List<BlockNode> nodes = getNodesIn3DCircule(8, this, goal, generateDeep);
+		List<BlockNode> nodes = getNodesIn3DCircule(generateDeep ? 8 : 5, this, goal, generateDeep);
 //		nodes.removeIf((child) -> {
 //			return shouldRemoveNode(world, child);
 //		});
@@ -629,7 +629,8 @@ public class BlockNode {
 			if (distance <= 4) return false;
 		}
 
-		if (isBlockBelowTall && heightDiff > 0.5) return true;
+		// Allow stepping DOWN from tall blocks (fences/walls) but not jumping UP onto higher ones
+		if (isBlockBelowTall && heightDiff > 0.5 && heightDiff > 0) return true;
 								
 		// VoxelShape-based checks
 		if (!Double.isInfinite(blockHeightDiff) && !Double.isNaN(blockHeightDiff)) {

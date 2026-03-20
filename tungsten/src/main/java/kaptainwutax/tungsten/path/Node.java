@@ -241,14 +241,22 @@ public class Node {
 	    		&& nextBlockNode.getBlockPos().getZ() == agent.blockZ) {
 	    	Direction dir = state.get(Properties.HORIZONTAL_FACING);
 	    	double desiredYaw = DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true).offset(dir.getOpposite(), 1));
-	    	if (nextBlockNode.getBlockPos().getY() > agent.blockY) {
-		    	Node n = createNode(world, nextBlockNode, true, false, false, false, false, true, (float) desiredYaw, isDoingLongJump, isCloseToBlockNode);
-		    	if (n != null) nodes.add(n);
-		    	return;
-	    	}
-	    	if (nextBlockNode.getBlockPos().getY() < agent.blockY) {
-	    		Node n = createNode(world, nextBlockNode, true, false, false, false, false, false, (float) desiredYaw, isDoingLongJump, isCloseToBlockNode);
-	    		if (n != null) nodes.add(n);
+	    	boolean goingUp = nextBlockNode.getBlockPos().getY() > agent.blockY;
+	    	boolean goingDown = nextBlockNode.getBlockPos().getY() < agent.blockY;
+	    	if (goingUp || goingDown) {
+	    		// Simulate multiple climb ticks at once to avoid 1-node-per-tick bottleneck
+	    		Node n = createNode(world, nextBlockNode, true, false, false, false, false, goingUp, (float) desiredYaw, isDoingLongJump, isCloseToBlockNode);
+	    		if (n != null) {
+	    			for (int ct = 0; ct < 9; ct++) {
+	    				if (goingUp && n.agent.getPos().y >= nextBlockNode.getPos(true).y) break;
+	    				if (goingDown && n.agent.getPos().y <= nextBlockNode.getPos(true).y) break;
+	    				if (!n.agent.isClimbing(world)) break;
+	    				Node next = new Node(n, world, new PathInput(true, false, false, false, goingUp, false, false, agent.pitch, (float) desiredYaw),
+	    						new Color(0, 200, 200), n.cost + 1);
+	    				n = next;
+	    			}
+	    			nodes.add(n);
+	    		}
 	    		return;
 	    	}
 	    }
