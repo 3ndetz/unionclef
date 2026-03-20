@@ -2,6 +2,7 @@ package kaptainwutax.tungsten.commands;
 
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import kaptainwutax.tungsten.Debug;
@@ -20,22 +21,38 @@ public class SettingsCommand extends Command {
 	@Override
 	public void build(LiteralArgumentBuilder<CommandSource> builder) {
 
-		builder.then(argument("ignoreFallDamage", BoolArgumentType.bool()).executes(context -> {
-			TungstenModDataContainer.ignoreFallDamage = BoolArgumentType.getBool(context, "ignoreFallDamage");
-			TungstenConfig.save();
+		// ;settings — show all current values
+		builder.executes(context -> {
+			TungstenConfig c = TungstenConfig.get();
+			Debug.logMessage("§e--- Tungsten Settings ---");
+			Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
+			Debug.logMessage("driftThreshold = " + c.driftThreshold);
+			Debug.logMessage("airStrafeMultiplier = " + c.airStrafeMultiplier);
+			Debug.logMessage("mismatchLogThreshold = " + c.mismatchLogThreshold);
+			Debug.logMessage("enableLeap = " + c.enableLeap);
+			Debug.logMessage("enableTrailing = " + c.enableTrailing);
+			Debug.logMessage("verboseDebug = " + c.verboseDebugLogging);
+			Debug.logMessage("debugTime = " + c.debugTime);
+			return SINGLE_SUCCESS;
+		});
+
+		// ;settings reload
+		builder.then(literal("reload").executes(context -> {
+			TungstenConfig.load();
+			Debug.logMessage("§aConfig reloaded from tungsten.json");
 			return SINGLE_SUCCESS;
 		}));
 
-		// ;settings driftCorrection [true/false]
-		builder.then(literal("driftCorrection")
+		// ;settings ignoreFallDamage [true/false]
+		builder.then(literal("ignoreFallDamage")
 			.executes(context -> {
-				Debug.logMessage("driftCorrectionEnabled = " + TungstenConfig.get().driftCorrectionEnabled);
+				Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
 				return SINGLE_SUCCESS;
 			})
 			.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
-				TungstenConfig.get().driftCorrectionEnabled = BoolArgumentType.getBool(context, "enabled");
+				TungstenModDataContainer.ignoreFallDamage = BoolArgumentType.getBool(context, "enabled");
 				TungstenConfig.save();
-				Debug.logMessage("driftCorrectionEnabled = " + TungstenConfig.get().driftCorrectionEnabled);
+				Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
 				return SINGLE_SUCCESS;
 			})));
 
@@ -49,6 +66,32 @@ public class SettingsCommand extends Command {
 				TungstenConfig.get().driftThreshold = DoubleArgumentType.getDouble(context, "blocks");
 				TungstenConfig.save();
 				Debug.logMessage("driftThreshold = " + TungstenConfig.get().driftThreshold);
+				return SINGLE_SUCCESS;
+			})));
+
+		// ;settings airStrafe [1.0]
+		builder.then(literal("airStrafe")
+			.executes(context -> {
+				Debug.logMessage("airStrafeMultiplier = " + TungstenConfig.get().airStrafeMultiplier);
+				return SINGLE_SUCCESS;
+			})
+			.then(argument("multiplier", FloatArgumentType.floatArg(0.1F, 10.0F)).executes(context -> {
+				TungstenConfig.get().airStrafeMultiplier = FloatArgumentType.getFloat(context, "multiplier");
+				TungstenConfig.save();
+				Debug.logMessage("airStrafeMultiplier = " + TungstenConfig.get().airStrafeMultiplier);
+				return SINGLE_SUCCESS;
+			})));
+
+		// ;settings mismatchThreshold [0.000001]
+		builder.then(literal("mismatchThreshold")
+			.executes(context -> {
+				Debug.logMessage("mismatchLogThreshold = " + TungstenConfig.get().mismatchLogThreshold);
+				return SINGLE_SUCCESS;
+			})
+			.then(argument("value", DoubleArgumentType.doubleArg(0.0, 1.0)).executes(context -> {
+				TungstenConfig.get().mismatchLogThreshold = DoubleArgumentType.getDouble(context, "value");
+				TungstenConfig.save();
+				Debug.logMessage("mismatchLogThreshold = " + TungstenConfig.get().mismatchLogThreshold);
 				return SINGLE_SUCCESS;
 			})));
 
