@@ -1545,19 +1545,15 @@ public class Agent {
             if (TungstenModDataContainer.EXECUTOR.isRunning()) {
                 double drift = player.getPos().distanceTo(new Vec3d(this.posX, this.posY, this.posZ));
                 if (drift > kaptainwutax.tungsten.TungstenConfig.get().driftThreshold) {
-                    // Try to reconnect to a nearby node on the path first.
-                    // Only stop executor if reconnection fails.
-                    if (!TungstenModDataContainer.EXECUTOR.tryReconnect(player.getPos())) {
-                        Debug.logMessage(String.format(
-                            "§c[Tungsten] Path stopped: drift %.3f blocks (threshold %.1f) at tick %d. " +
-                            "Expected (%.2f, %.2f, %.2f), actual (%.2f, %.2f, %.2f). Reconnect failed — recalculating.",
-                            drift, kaptainwutax.tungsten.TungstenConfig.get().driftThreshold,
-                            TungstenModDataContainer.EXECUTOR.getCurrentTick(),
-                            this.posX, this.posY, this.posZ,
-                            player.getX(), player.getY(), player.getZ()));
-                        TungstenModDataContainer.EXECUTOR.stop = true;
-                        TungstenModDataContainer.PATHFINDER.stop.set(true);
-                    }
+                    Debug.logMessage(String.format(
+                        "§c[Tungsten] Path stopped: drift %.3f blocks (threshold %.1f) at tick %d. " +
+                        "Expected (%.2f, %.2f, %.2f), actual (%.2f, %.2f, %.2f)",
+                        drift, kaptainwutax.tungsten.TungstenConfig.get().driftThreshold,
+                        TungstenModDataContainer.EXECUTOR.getCurrentTick(),
+                        this.posX, this.posY, this.posZ,
+                        player.getX(), player.getY(), player.getZ()));
+                    TungstenModDataContainer.EXECUTOR.stop = true;
+                    TungstenModDataContainer.PATHFINDER.stop.set(true);
                 }
                 if (TungstenModRenderContainer.ERROR.size() > 1000) TungstenModRenderContainer.ERROR.clear();
             }
