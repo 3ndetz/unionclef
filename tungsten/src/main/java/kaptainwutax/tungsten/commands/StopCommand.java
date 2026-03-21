@@ -9,6 +9,7 @@ import kaptainwutax.tungsten.commandsystem.Command;
 import kaptainwutax.tungsten.path.PathFinder;
 import kaptainwutax.tungsten.task.FollowEntityTask;
 import kaptainwutax.tungsten.task.FollowPlayerTask;
+import kaptainwutax.tungsten.task.PunkPlayerTask;
 import net.minecraft.command.CommandSource;
 
 public class StopCommand extends Command {
@@ -23,8 +24,14 @@ public class StopCommand extends Command {
 	        try {
 				boolean hadSomething = FollowPlayerTask.isActive()
 						|| FollowEntityTask.isActive()
+						|| PunkPlayerTask.isActive()
 						|| TungstenModDataContainer.PATHFINDER.active.get()
 						|| TungstenModDataContainer.EXECUTOR.isRunning();
+
+				// Stop punk task first (it manages its own follow internally)
+				if (PunkPlayerTask.isActive()) {
+					PunkPlayerTask.stop();
+				}
 
 				// Stop follow tasks (cascades to pathfinder + executor)
 				if (FollowPlayerTask.isActive()) {

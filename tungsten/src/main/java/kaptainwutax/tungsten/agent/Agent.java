@@ -192,6 +192,54 @@ public class Agent {
 		return this.dimensions.getBoxAt(this.getPos());
 	}
 
+    /** Shallow copy of this agent's state — enough for MPC forward simulation. */
+    public Agent copy() {
+        Agent a = new Agent();
+        a.keyForward = this.keyForward; a.keyBack = this.keyBack;
+        a.keyLeft = this.keyLeft;       a.keyRight = this.keyRight;
+        a.keyJump = this.keyJump;       a.keySneak = this.keySneak;
+        a.keySprint = this.keySprint;
+        a.input = new AgentInput(a);
+        a.input.playerInput = new TungstenPlayerInput(
+            a.keyForward, a.keyBack, a.keyLeft, a.keyRight,
+            a.keyJump, a.keySneak, a.keySprint);
+
+        a.pose = this.pose; a.inSneakingPose = this.inSneakingPose;
+        a.isDamaged = this.isDamaged; a.usingItem = this.usingItem;
+        a.sidewaysSpeed = this.sidewaysSpeed; a.upwardSpeed = this.upwardSpeed;
+        a.forwardSpeed = this.forwardSpeed;
+        a.yaw = this.yaw; a.pitch = this.pitch;
+        a.posX = this.posX; a.posY = this.posY; a.posZ = this.posZ;
+        a.blockX = this.blockX; a.blockY = this.blockY; a.blockZ = this.blockZ;
+        a.velX = this.velX; a.velY = this.velY; a.velZ = this.velZ;
+        a.mulX = this.mulX; a.mulY = this.mulY; a.mulZ = this.mulZ;
+        a.fluidHeight.putAll(this.fluidHeight);
+        a.firstUpdate = this.firstUpdate;
+        a.dimensions = this.dimensions; a.box = this.box;
+        a.standingEyeHeight = this.standingEyeHeight;
+        a.onGround = this.onGround; a.sleeping = this.sleeping;
+        a.sneaking = this.sneaking; a.sprinting = this.sprinting;
+        a.swimming = this.swimming; a.fallFlying = this.fallFlying;
+        a.stepHeight = this.stepHeight; a.fallDistance = this.fallDistance;
+        a.touchingWater = this.touchingWater;
+        a.isSubmergedInWater = this.isSubmergedInWater;
+        a.horizontalCollision = this.horizontalCollision;
+        a.verticalCollision = this.verticalCollision;
+        a.collidedSoftly = this.collidedSoftly;
+        a.slimeBounce = this.slimeBounce; a.jumping = this.jumping;
+        a.speed = this.speed; a.blindness = this.blindness;
+        a.jumpBoost = this.jumpBoost; a.slowFalling = this.slowFalling;
+        a.dolphinsGrace = this.dolphinsGrace; a.levitation = this.levitation;
+        a.depthStrider = this.depthStrider;
+        a.hunger.setFoodLevel(this.hunger.getFoodLevel());
+        a.hunger.setSaturationLevel(this.hunger.getSaturationLevel());
+        a.health = this.health; a.movementSpeed = this.movementSpeed;
+        a.airStrafingSpeed = this.airStrafingSpeed;
+        a.jumpingCooldown = this.jumpingCooldown;
+        a.ticksToNextAutojump = this.ticksToNextAutojump;
+        return a;
+    }
+
     public Agent tick(WorldView world) {
         this.tickPlayer(world);
         return this;
