@@ -10,7 +10,6 @@ import kaptainwutax.tungsten.render.Line;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
-import net.minecraft.util.Hand;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldView;
@@ -55,6 +54,9 @@ public class CombatController {
     private int wtapCooldown = 0;
     private static final int WTAP_INTERVAL = 12;
 
+    // attack key release (press 1 tick, release next)
+    private boolean attackKeyPressed = false;
+
     // target tracking
     private Vec3d prevTargetPos = null;
 
@@ -78,6 +80,12 @@ public class CombatController {
         if (target == null || target.isRemoved() || !target.isAlive()) return false;
 
         MinecraftClient mc = MinecraftClient.getInstance();
+
+        // release attack key from previous tick (1-tick click)
+        if (attackKeyPressed) {
+            mc.options.attackKey.setPressed(false);
+            attackKeyPressed = false;
+        }
         Vec3d playerPos = player.getPos();
         Vec3d targetPos = target.getPos();
         double dist = playerPos.distanceTo(targetPos);
@@ -369,12 +377,14 @@ public class CombatController {
         float cooldown = player.getAttackCooldownProgress(0.5f);
         boolean isCrit = AttackTiming.isCritState(player);
 
+        // real LKM click — minecraft does its own raycast from camera,
+        // finds entity under crosshair, sends legit attack packet
         if (isCrit || cooldown >= 1.0f) {
             MinecraftClient mc = MinecraftClient.getInstance();
-            mc.interactionManager.attackEntity(player, target);
-            player.swingHand(Hand.MAIN_HAND);
+            mc.options.attackKey.setPressed(true);
+            attackKeyPressed = true;
             didHitThisJump = true;
-            aimOffset = newAimOffset(); // new random point for next attack
+            aimOffset = newAimOffset();
         }
     }
 
@@ -449,6 +459,8 @@ public class CombatController {
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
+        mc.options.attackKey.setPressed(false);
+        attackKeyPressed = false;
         tactic = Tactic.ENGAGE;
         wasOnGround = true;
         airTicks = 0;
