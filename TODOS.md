@@ -24,7 +24,30 @@
   - [x] 2.5 add safe ENTROPY: HUMAN-like movements
     - [x] 2.5.1 WindMouse camera smoothing in LookBehavior (render-frame, settings: windMouseLook/Gravity/Wind/MaxStep)
     - [x] 2.5.2 TungstenBridge — smart delegation of simple flat segments to tungsten (settings: useTungsten, tungstenMinSegment)
-  - [ ] 2.6 Implement tungsten into this pathfinder (deeper integration beyond flat segments)
+  - [ ] 2.6 Tungsten deep integration — improve pathfinding + reduce drift
+    - [ ] 2.6.1 BlockSpace: заменить примитивный BlockSpacePathFinder на baritone-level эвристики
+      - BlockNode.getChildren сейчас просто сканирует 3D круг radius=8 — тупой перебор
+      - Нужно: адаптировать baritone Movements (Traverse, Ascend, Descend, Parkour, Pillar) для BlockNode
+      - Это даст: знание про step-up высоты, gap distance, fence collision, slope — до запуска physics A*
+      - Результат: physics A* получает 2-3 умных направления вместо 100+ слепых
+    - [ ] 2.6.2 Macro-actions в physics A*: sprint-jump как одна нода вместо 12 тиков
+      - Сейчас: каждый тик = нода с 100 вариантами input. 12 тиков прыжка = 12 нод
+      - Нужно: "sprint-jump к blocknode X" = одна нода, внутри 12 Agent.tick() без ветвления
+      - Результат: дерево A* мельче на порядок, timeout хватает на 20+ прыжков
+    - [ ] 2.6.3 Simulation fixes (поштучно, с перетестом pathfinder после каждого)
+      - [ ] velocity threshold 1e-5 → 0.003 (vanilla correct) + перетест
+      - [ ] AgentInput.normalize → убрать, нормализация в updateVelocity + перетест
+      - [ ] airStrafingSpeed 0.06 → 0.02/0.026 + перетест
+      - [ ] setSprinting movementSpeed → attribute-like toggle + перетест
+      - [ ] fallDistance double → float + перетест
+      - Каждый фикс отдельно. Если pathfinder ломается — подстроить costs/heuristic ДО следующего фикса
+    - [ ] 2.6.4 Closed-loop executor: yaw-коррекция на основе реальной позиции
+      - Сейчас: open-loop, слепо воспроизводит pre-computed input
+      - Нужно: каждый тик вычислять posError, корректировать yaw на delta к ожидаемой позиции
+      - Результат: drift не накапливается, пути не abort'ятся
+    - [ ] 2.6.5 Idle movement: circular path пока pathfinder считает
+      - Генератор idle-маршрута от текущей позиции (круг/восьмёрка)
+      - Seamless switch idle→real path когда pathfinder досчитал
   - [ ] 2.7 Fix jump bridging (jumpBridging setting)
     - [ ] 2.7.1 Rewrite state machine: PRE_ROTATE before jumping, backward-facing BRIDGE
     - [ ] 2.7.2 Fix placement verification (don't advance lastSolid without confirming block placed)
