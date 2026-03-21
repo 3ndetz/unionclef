@@ -27,6 +27,7 @@ public class SettingsCommand extends Command {
 			Debug.logMessage("§e--- Tungsten Settings ---");
 			Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
 			Debug.logMessage("driftThreshold = " + c.driftThreshold);
+			Debug.logMessage("closedLoopStrength = " + c.closedLoopStrength);
 			Debug.logMessage("airStrafeMultiplier = " + c.airStrafeMultiplier);
 			Debug.logMessage("mismatchLogThreshold = " + c.mismatchLogThreshold);
 			Debug.logMessage("enableLeap = " + c.enableLeap);
@@ -79,6 +80,19 @@ public class SettingsCommand extends Command {
 				TungstenConfig.get().airStrafeMultiplier = FloatArgumentType.getFloat(context, "multiplier");
 				TungstenConfig.save();
 				Debug.logMessage("airStrafeMultiplier = " + TungstenConfig.get().airStrafeMultiplier);
+				return SINGLE_SUCCESS;
+			})));
+
+		// ;settings closedLoop [0.4]
+		builder.then(literal("closedLoop")
+			.executes(context -> {
+				Debug.logMessage("closedLoopStrength = " + TungstenConfig.get().closedLoopStrength);
+				return SINGLE_SUCCESS;
+			})
+			.then(argument("strength", FloatArgumentType.floatArg(0.0F, 1.0F)).executes(context -> {
+				TungstenConfig.get().closedLoopStrength = FloatArgumentType.getFloat(context, "strength");
+				TungstenConfig.save();
+				Debug.logMessage("closedLoopStrength = " + TungstenConfig.get().closedLoopStrength);
 				return SINGLE_SUCCESS;
 			})));
 

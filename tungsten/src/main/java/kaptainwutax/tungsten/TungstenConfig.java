@@ -52,6 +52,11 @@ public class TungstenConfig {
      *  Set to 0 to log everything. */
     public double mismatchLogThreshold = 1e-6;
 
+    /** Closed-loop yaw correction strength. 0 = off (open-loop), 1.0 = full correction.
+     *  Blends between pre-computed yaw and corrected yaw based on position drift.
+     *  Recommended: 0.3-0.6. Higher = more aggressive correction but less smooth. */
+    public float closedLoopStrength = 0.4F;
+
     /** Air strafe speed multiplier. Vanilla uses 0.02 (walk) / 0.026 (sprint).
      *  Higher values = more air control = pathfinder finds longer jumps.
      *  Set to 1.0 for vanilla-accurate simulation.

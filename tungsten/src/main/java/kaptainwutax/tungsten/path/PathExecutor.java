@@ -141,7 +141,31 @@ public class PathExecutor {
 		    // the inputs, so the positions are comparable.
 
 		    if(node.input != null) {
-			    player.setYaw(node.input.yaw);
+			    float yaw = node.input.yaw;
+
+			    // Closed-loop yaw correction: blend pre-computed yaw toward
+			    // the direction that compensates for accumulated position drift.
+			    float strength = TungstenConfig.get().closedLoopStrength;
+			    if (strength > 0 && this.tick > 0) {
+			        Vec3d expected = node.agent.getPos();
+			        Vec3d actual = player.getPos();
+			        double dx = expected.x - actual.x;
+			        double dz = expected.z - actual.z;
+			        double horizDrift = Math.sqrt(dx * dx + dz * dz);
+
+			        if (horizDrift > 0.01) {
+			            // Yaw that points from actual toward expected position
+			            float correctionYaw = (float)(-Math.toDegrees(Math.atan2(dx, dz)));
+			            // Wrap difference to [-180, 180]
+			            float diff = correctionYaw - yaw;
+			            diff = ((diff + 180) % 360 + 360) % 360 - 180;
+			            // Blend: small drift = small correction, large drift = stronger
+			            float blendFactor = (float) Math.min(horizDrift * 2.0, 1.0) * strength;
+			            yaw = yaw + diff * blendFactor;
+			        }
+			    }
+
+			    player.setYaw(yaw);
 			    player.setPitch(node.input.pitch);
 			    // player.stopGliding() removed in MC 1.21
 	    		options.forwardKey.setPressed(node.input.forward);
