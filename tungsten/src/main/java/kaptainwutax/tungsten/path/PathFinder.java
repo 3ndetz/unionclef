@@ -260,24 +260,7 @@ public class PathFinder {
 	        	if (setCurrentPath(TARGET, next, TungstenModDataContainer.player)) {
 	        		TungstenModRenderContainer.RENDERERS.clear();
 	        		TungstenModRenderContainer.TEST.clear();
-	    			closed.clear();
-					try {
-						Thread.sleep(500);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-	    			while (TungstenModDataContainer.EXECUTOR.isRunning()) {
-	    				if (stop.get()) return;
-	    				if (TungstenModDataContainer.EXECUTOR.getPath().size() - TungstenModDataContainer.EXECUTOR.getCurrentTick() < 50) break;
-						try {
-							Thread.sleep(500);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-					}
-
+	        		// Don't sleep or wait for executor — continue computing next segment.
 	    		    primaryTimeoutTime = System.currentTimeMillis() + 1120L;
 	        		if (blockPath.get().getLast().getPos(true, world).distanceTo(player.getPos()) < 20) {
 		    			int attempt = 0;
@@ -309,18 +292,9 @@ public class PathFinder {
 	        	TungstenModDataContainer.EXECUTOR.cb = () -> {
 		        	blockPath = resetSearch(next, world, blockPath, target, player);
 	        	};
-	            openSet = new BinaryHeapOpenSet();
+	            // Continue searching from current best — don't wait for executor.
 	            this.start = initializeStartNode(next, target);
 	            openSet.insert(this.start);
-	            while (TungstenModDataContainer.EXECUTOR.isRunning()) {
-                    if (stop.get()) break;
-					try {
-						Thread.sleep(500);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
 	            continue;
 	        }
 
@@ -803,14 +777,17 @@ public class PathFinder {
         if (newStart == null || !newStart.agent.onGround && !newStart.agent.touchingWater && !newStart.agent.isClimbing(TungstenModDataContainer.world)) return false;
         TungstenModDataContainer.EXECUTOR.addPath(result.get());
         TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
-//        RenderHelper.renderPathCurrentlyExecuted();
+        // Continue A* from the last node of the emitted path — don't reset the
+        // entire search. This allows pathfinder to keep computing while executor
+        // runs the partial path, appending new nodes via addPath().
         for (int i = 0; i < COEFFICIENTS.length; i++) {
 	        TungstenModDataContainer.PATHFINDER.bestSoFar.set(i, null);
 		}
         TungstenModDataContainer.PATHFINDER.clearParentsForBestSoFar(newStart);
-        TungstenModDataContainer.PATHFINDER.closed.clear();
         TungstenModDataContainer.PATHFINDER.bestHeuristicSoFar = TungstenModDataContainer.PATHFINDER.initializeBestHeuristics(newStart);
-        TungstenModDataContainer.PATHFINDER.openSet = new BinaryHeapOpenSet();
+        // Don't clear closed set — keep explored nodes to avoid revisiting.
+        // Don't reset openSet — keep unexplored frontier.
+        // Just update start for heuristic reference and insert newStart.
         TungstenModDataContainer.PATHFINDER.openSet.insert(newStart);
         TungstenModDataContainer.PATHFINDER.start = newStart;
         numNodesConsidered.set(0);
