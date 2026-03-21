@@ -106,6 +106,14 @@ public class WindMouseRotation {
 
     public boolean hasTarget() { return hasTarget; }
 
+    /** Angular distance (degrees) from player's current facing to target. */
+    public double distanceToTarget(ClientPlayerEntity player) {
+        if (!hasTarget || player == null) return 999;
+        double dYaw   = wrapDelta(targetYaw - player.getYaw());
+        double dPitch = targetPitch - player.getPitch();
+        return Math.sqrt(dYaw * dYaw + dPitch * dPitch);
+    }
+
     private void resetVelocity() {
         veloYaw = 0; veloPitch = 0;
         windYaw = 0; windPitch = 0;
