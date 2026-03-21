@@ -271,7 +271,10 @@ public class BlockNode {
 //		});
 		
 		 List<BlockNode> filtered = nodes.parallelStream()
-			        .filter(node -> !shouldRemoveNode(world, node))
+			        .filter(node -> {
+			            try { return !shouldRemoveNode(world, node); }
+			            catch (NullPointerException e) { return false; }
+			        })
 			        .collect(Collectors.toList());
 
 		TungstenModRenderContainer.TEST.clear();
