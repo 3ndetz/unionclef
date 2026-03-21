@@ -37,11 +37,11 @@ public class CombatController {
     private static final int JUMP_SIM_TICKS   = 20;
     private static final int MAX_SAFE_FALL    = 4;
     private static final double CLOSE_RANGE   = 3.5;
-    private static final double AIM_CLOSE_DEG = 8.0;
+    private static final double AIM_CLOSE_DEG = 12.0; // generous — MC hitboxes are big
 
     // aim timing (in air ticks, 20tps)
-    private static final int DRIFT_TICKS      = 3;   // no aiming after jump
-    private static final int AIM_START_TICK    = 4;   // WindMouse starts here
+    private static final int DRIFT_TICKS      = 1;   // 1 tick drift (natural)
+    private static final int AIM_START_TICK    = 2;   // WindMouse starts early
 
     // ── tactical state ────────────────────────────────────────────────────────
     private enum Tactic { ENGAGE, STRAFE, CHASE }
@@ -135,8 +135,8 @@ public class CombatController {
                 aimOffset = newAimOffset();
                 // random spread: don't aim perfectly at target each jump
                 jumpSpread = (rng.nextFloat() - 0.5f) * 30f; // ±15°
-                // random delay before next attack (1-4 ticks after aim starts)
-                attackDelay = 1 + rng.nextInt(4);
+                // random delay before next attack (0-2 ticks after aim starts)
+                attackDelay = rng.nextInt(3);
             }
             groundTicks++;
 
