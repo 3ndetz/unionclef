@@ -20,19 +20,16 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Fighter-style PvP combat controller.
+ * Fighter PvP with human-like aiming.
  *
- * Rotation model:
- *   GROUND (1 tick): setYaw() directly for jump direction.
- *     WindMouse cleared — no conflict.
- *   AIR: WindMouse smoothly rotates toward aim point on render tick (60fps).
- *     DO NOT touch player yaw/pitch in game tick.
- *     Attack only when WindMouse arrived (crosshair on target).
+ * Aim cycle per jump:
+ *   1. JUMP (ground) — snap yaw approximately toward target (±15° spread)
+ *   2. DRIFT (air, first ticks) — no aim correction, crosshair drifts naturally
+ *   3. AIM (air, mid-flight) — WindMouse starts moving toward target
+ *   4. ATTACK (air, WindMouse close enough) — LKM click with random delay
+ *   5. RELEASE (after hit) — WindMouse cleared, crosshair drifts away
  *
- * This means anti-cheat sees:
- *   - 1 instant yaw snap on landing (direction change, normal for mouse flick)
- *   - Smooth human-like rotation toward target during flight
- *   - Click happens when crosshair is genuinely on target
+ * Not aiming at target 100% of the time. Approximate, with gaps.
  */
 public class CombatController {
 
@@ -40,7 +37,11 @@ public class CombatController {
     private static final int JUMP_SIM_TICKS   = 20;
     private static final int MAX_SAFE_FALL    = 4;
     private static final double CLOSE_RANGE   = 3.5;
-    private static final double AIM_CLOSE_DEG = 6.0;  // degrees: WindMouse "arrived"
+    private static final double AIM_CLOSE_DEG = 8.0;
+
+    // aim timing (in air ticks, 20tps)
+    private static final int DRIFT_TICKS      = 3;   // no aiming after jump
+    private static final int AIM_START_TICK    = 4;   // WindMouse starts here
 
     // ── tactical state ────────────────────────────────────────────────────────
     private enum Tactic { ENGAGE, STRAFE, CHASE }
@@ -56,15 +57,17 @@ public class CombatController {
     private int wtapCooldown = 0;
     private static final int WTAP_INTERVAL = 12;
 
-    // attack key (1-tick press)
+    // attack
     private boolean attackKeyPressed = false;
+    private int attackDelay = 0; // random delay before clicking
 
     // target tracking
     private Vec3d prevTargetPos = null;
 
-    // aim randomization
+    // aim
     private final Random rng = new Random();
     private Vec3d aimOffset = newAimOffset();
+    private float jumpSpread = 0; // random yaw offset for this jump
 
     // ── viz colors ────────────────────────────────────────────────────────────
     private static final Color COL_SAFE    = new Color(0, 220, 100);
@@ -95,7 +98,7 @@ public class CombatController {
         float toTargetYaw = AttackTiming.yawTo(playerPos, targetPos);
         boolean onGround = player.isOnGround();
 
-        // random aim point on hitbox
+        // aim point on hitbox (randomized per jump)
         Vec3d aimPoint = targetPos.add(
             aimOffset.x * target.getWidth() * 0.4,
             aimOffset.y * target.getHeight(),
@@ -104,6 +107,7 @@ public class CombatController {
         float aimPitch = AttackTiming.pitchTo(player.getEyePos(), aimPoint);
 
         if (wtapCooldown > 0) wtapCooldown--;
+        if (attackDelay > 0) attackDelay--;
 
         // ── detect target behavior ────────────────────────────────────────────
         boolean targetRunningAway = false;
@@ -122,41 +126,54 @@ public class CombatController {
 
         boolean hasLOS = hasLineOfSight(player, targetPos);
 
-        // ── GROUND: decision point ────────────────────────────────────────────
+        // ── GROUND ────────────────────────────────────────────────────────────
         if (onGround) {
             if (!wasOnGround) {
+                // just landed
                 groundTicks = 0;
                 decideTactic(dist, targetRunningAway, targetApproaching, hasLOS);
                 aimOffset = newAimOffset();
+                // random spread: don't aim perfectly at target each jump
+                jumpSpread = (rng.nextFloat() - 0.5f) * 30f; // ±15°
+                // random delay before next attack (1-4 ticks after aim starts)
+                attackDelay = 1 + rng.nextInt(4);
             }
             groundTicks++;
 
-            // GROUND: clear WindMouse, set yaw directly for jump direction
+            // GROUND: WindMouse released (drift between jumps)
             WindMouseRotation.INSTANCE.clearTarget();
 
             switch (tactic) {
-                case ENGAGE, CHASE -> tickGroundEngage(player, mc, world, toTargetYaw, aimPitch, targetPos);
-                case STRAFE -> tickGroundStrafe(player, mc, world, toTargetYaw, aimYaw, aimPitch, targetPos);
+                case ENGAGE, CHASE -> tickGroundEngage(player, mc, world,
+                    toTargetYaw, aimPitch, targetPos);
+                case STRAFE -> tickGroundStrafe(player, mc, world,
+                    toTargetYaw, aimYaw, aimPitch, targetPos);
             }
 
             didHitThisJump = false;
             airTicks = 0;
 
         } else {
-            // ── AIR: WindMouse controls rotation ──────────────────────────────
+            // ── AIR ───────────────────────────────────────────────────────────
             airTicks++;
 
-            // set WindMouse target — it will smoothly rotate on render tick
-            WindMouseRotation.INSTANCE.setTarget(aimYaw, aimPitch);
+            // aim phases:
+            if (airTicks <= DRIFT_TICKS) {
+                // DRIFT: no aim correction, crosshair naturally moves with momentum
+                // WindMouse stays cleared from ground phase
+            } else if (!didHitThisJump) {
+                // AIM: WindMouse starts targeting
+                WindMouseRotation.INSTANCE.setTarget(aimYaw, aimPitch);
+            } else {
+                // RELEASE: after hit, stop aiming — crosshair drifts
+                WindMouseRotation.INSTANCE.clearTarget();
+            }
 
-            // DO NOT set player.setYaw/setPitch — WindMouse handles it on render tick
-
-            // movement keys
+            // movement
             mc.options.forwardKey.setPressed(true);
             mc.options.sprintKey.setPressed(true);
             mc.options.jumpKey.setPressed(false);
 
-            // strafe keys during initial air phase
             if (tactic == Tactic.STRAFE && airTicks <= 5) {
                 mc.options.leftKey.setPressed(strafeDir > 0);
                 mc.options.rightKey.setPressed(strafeDir < 0);
@@ -167,8 +184,8 @@ public class CombatController {
             mc.options.backKey.setPressed(false);
             mc.options.sneakKey.setPressed(false);
 
-            // ── ATTACK: only when WindMouse has aimed close enough ────────────
-            if (airTicks >= 3) { // give WindMouse a few frames to start aiming
+            // ATTACK: only after aim phase started + delay expired + close enough
+            if (airTicks >= AIM_START_TICK && attackDelay <= 0 && !didHitThisJump) {
                 tryAttack(player, target);
             }
         }
@@ -182,16 +199,25 @@ public class CombatController {
     private void tickGroundEngage(ClientPlayerEntity player, MinecraftClient mc,
                                   WorldView world, float toTargetYaw,
                                   float aimPitch, Vec3d targetPos) {
-        JumpResult jump = simulateJump(player, world, toTargetYaw, true, false);
+        // approximate jump direction: target ± spread
+        float jumpYaw = toTargetYaw + jumpSpread;
+
+        JumpResult jump = simulateJump(player, world, jumpYaw, true, false);
         float safeYaw;
 
         if (jump.safe && !jump.hitWall) {
-            safeYaw = toTargetYaw;
+            safeYaw = jumpYaw;
         } else {
-            safeYaw = findSafeJumpYaw(player, world, toTargetYaw);
+            // spread direction unsafe, try exact target direction
+            jump = simulateJump(player, world, toTargetYaw, true, false);
+            if (jump.safe && !jump.hitWall) {
+                safeYaw = toTargetYaw;
+            } else {
+                safeYaw = findSafeJumpYaw(player, world, toTargetYaw);
+            }
         }
 
-        // w-tap on landing after hit
+        // w-tap
         boolean doWtap = wtapCooldown <= 0 && didHitThisJump && groundTicks == 1;
         if (doWtap) {
             mc.options.sprintKey.setPressed(false);
@@ -204,7 +230,6 @@ public class CombatController {
             mc.options.jumpKey.setPressed(true);
         }
 
-        // direct yaw for jump direction (1 tick, then WindMouse takes over in air)
         player.setYaw(safeYaw);
         player.setPitch(aimPitch);
 
@@ -219,7 +244,6 @@ public class CombatController {
     private void tickGroundStrafe(ClientPlayerEntity player, MinecraftClient mc,
                                   WorldView world, float toTargetYaw,
                                   float aimYaw, float aimPitch, Vec3d targetPos) {
-        // strafe: look at target + strafe keys
         JumpResult jump = simulateJump(player, world, toTargetYaw, true, strafeDir > 0);
 
         boolean canStrafe = jump.safe && !jump.hitWall;
@@ -235,8 +259,7 @@ public class CombatController {
             return;
         }
 
-        // look at target (for attack), strafe with keys
-        player.setYaw(aimYaw);
+        player.setYaw(aimYaw + jumpSpread * 0.5f); // approximate look
         player.setPitch(aimPitch);
 
         mc.options.forwardKey.setPressed(true);
@@ -250,7 +273,7 @@ public class CombatController {
         renderJumpArc(player, toTargetYaw, world, targetPos, true, strafeDir > 0);
     }
 
-    // ── tactic decision ───────────────────────────────────────────────────────
+    // ── tactic ────────────────────────────────────────────────────────────────
 
     private void decideTactic(double dist, boolean targetRunning,
                               boolean targetApproaching, boolean hasLOS) {
@@ -271,14 +294,13 @@ public class CombatController {
     private void tryAttack(ClientPlayerEntity player, Entity target) {
         if (!AttackTiming.canAttack(player, target)) return;
 
-        // only attack when WindMouse has aimed close to target
+        // only when aimed close enough
         double aimDist = WindMouseRotation.INSTANCE.distanceToTarget(player);
         if (aimDist > AIM_CLOSE_DEG) return;
 
         float cooldown = player.getAttackCooldownProgress(0.5f);
         boolean isCrit = AttackTiming.isCritState(player);
 
-        // real LKM click
         if (isCrit || cooldown >= 1.0f) {
             MinecraftClient mc = MinecraftClient.getInstance();
             mc.options.attackKey.setPressed(true);
@@ -292,6 +314,7 @@ public class CombatController {
 
     private JumpResult simulateJump(ClientPlayerEntity player, WorldView world,
                                     float yaw, boolean forward, boolean strafeLeft) {
+        // Agent.of(player) captures real velocity — including knockback
         Agent sim = Agent.of(player);
         sim.yaw = yaw;
         sim.keyForward = forward;
@@ -309,6 +332,7 @@ public class CombatController {
         double startY = sim.posY;
         boolean passedApex = false;
         boolean hitWall = false;
+        int wallHitTick = -1;
 
         for (int t = 0; t < JUMP_SIM_TICKS; t++) {
             sim.tick(world);
@@ -320,7 +344,17 @@ public class CombatController {
                     sim.keyForward, false, sim.keyLeft, sim.keyRight, false, false, true);
             }
 
-            if (sim.horizontalCollision) hitWall = true;
+            // wall: mark first collision tick
+            if (sim.horizontalCollision && !hitWall) {
+                hitWall = true;
+                wallHitTick = t;
+            }
+
+            // early bail: hit wall in first 3 ticks = blocked path
+            if (hitWall && wallHitTick <= 3) {
+                return new JumpResult(false, arc, sim.getPos(), 0, true);
+            }
+
             if (sim.velY < 0) passedApex = true;
 
             if (passedApex && sim.onGround && t > 2) {
@@ -330,11 +364,13 @@ public class CombatController {
                 return new JumpResult(safe, arc, sim.getPos(), fallH, hitWall);
             }
 
+            // void during arc
             if (passedApex && !VoidDetector.isSafe(sim.getPos(), world)) {
                 return new JumpResult(false, arc, sim.getPos(), MAX_SAFE_FALL + 1, hitWall);
             }
         }
 
+        // didn't land
         int fallH = VoidDetector.fallHeight(sim.getPos(), world);
         double totalDrop = startY - sim.posY + fallH;
         boolean safe = totalDrop <= MAX_SAFE_FALL && fallH < 30;
@@ -357,6 +393,7 @@ public class CombatController {
             if (r.safe) return testYaw;
         }
 
+        // nothing safe — don't jump
         MinecraftClient.getInstance().options.jumpKey.setPressed(false);
         return toTargetYaw;
     }
@@ -437,6 +474,7 @@ public class CombatController {
         airTicks = 0;
         groundTicks = 0;
         wtapCooldown = 0;
+        attackDelay = 0;
         didHitThisJump = false;
         prevTargetPos = null;
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
