@@ -4,13 +4,16 @@ import kaptainwutax.tungsten.Debug;
 import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
+import kaptainwutax.tungsten.agent.Agent;
 import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.GameOptions;
 import kaptainwutax.tungsten.agent.TungstenPlayerInput;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.WorldView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class PathExecutor {
@@ -41,7 +44,7 @@ public class PathExecutor {
 		if (isClient)
 			this.allowedFlying = TungstenMod.mc.player.getAbilities().allowFlying;
 	    stop = false;
-    	this.path = path;
+    	this.path = resimulateFromRealPosition(path);
     	this.tick = 0;
     	RenderHelper.renderPathCurrentlyExecuted();
 	}
@@ -170,6 +173,66 @@ public class PathExecutor {
     }
     
     
+    /**
+     * Re-simulate path inputs from the real player position instead of the
+     * stale position the pathfinder used. Same inputs (yaw, forward, sprint,
+     * jump), but starting from where the player actually is.
+     * This fixes stale start drift without changing the path's logic.
+     */
+    private List<Node> resimulateFromRealPosition(List<Node> path) {
+        if (!isClient || path == null || path.isEmpty()) return path;
+        ClientPlayerEntity player = TungstenMod.mc.player;
+        if (player == null) return path;
+
+        Vec3d realPos = player.getPos();
+        Vec3d pathStart = path.get(0).agent.getPos();
+        double startDrift = realPos.distanceTo(pathStart);
+
+        // If start is close enough, no correction needed
+        if (startDrift < 0.2) return path;
+
+        WorldView world = TungstenMod.mc.world;
+        if (world == null) return path;
+
+        // Re-simulate from real player state with same inputs
+        Agent agent = Agent.of(player);
+        List<Node> corrected = new ArrayList<>(path.size());
+
+        for (int i = 0; i < path.size(); i++) {
+            Node original = path.get(i);
+            if (original.input == null) {
+                corrected.add(original);
+                continue;
+            }
+
+            agent = Agent.of(agent, original.input).tick(world);
+            Node newNode = new Node(
+                i > 0 ? corrected.get(i - 1) : null,
+                agent, original.color, original.cost
+            );
+            newNode.input = original.input;
+            newNode.estimatedCostToGoal = original.estimatedCostToGoal;
+            corrected.add(newNode);
+
+            // Once the corrected trajectory converges with original,
+            // keep the rest of the original path as-is (saves computation)
+            double convergeDist = agent.getPos().distanceTo(original.agent.getPos());
+            if (convergeDist < 0.05 && i > 5) {
+                for (int j = i + 1; j < path.size(); j++) {
+                    corrected.add(path.get(j));
+                }
+                break;
+            }
+        }
+
+        if (TungstenConfig.get().verboseDebugLogging) {
+            Debug.logMessage(String.format("Resimulated %d/%d nodes from real pos (startDrift=%.3f)",
+                Math.min(corrected.size(), path.size()), path.size(), startDrift));
+        }
+
+        return corrected;
+    }
+
     /**
      * Try to reconnect to the path by scanning ahead for a node whose
      * parent state is close to the player's current position.
