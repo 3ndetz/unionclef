@@ -57,7 +57,11 @@ public class AgentInput {
 		float f = getMovementMultiplier(this.playerInput.forward(), this.playerInput.backward());
 		float g = getMovementMultiplier(this.playerInput.left(), this.playerInput.right());
 		
-		this.movementVector = new Vec2f(g, f).normalize();
+		// No normalize here — vanilla normalizes later in updateVelocity
+		// when magnitude > 1.0. Normalizing here causes ~29% diagonal speed
+		// difference (0.693 vs 0.707) because the 0.98 multiply in
+		// applyMovementSpeedFactors interacts differently.
+		this.movementVector = new Vec2f(g, f);
 	}
 	
 	public PathInput toPathInput() {
