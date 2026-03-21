@@ -7,7 +7,6 @@ import kaptainwutax.tungsten.agent.TungstenPlayerInput;
 import kaptainwutax.tungsten.render.Color;
 import kaptainwutax.tungsten.render.Cuboid;
 import kaptainwutax.tungsten.render.Line;
-import kaptainwutax.tungsten.util.WindMouseRotation;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
@@ -20,44 +19,47 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * State-machine PvP combat controller.
+ * Jump-based PvP combat controller.
  *
- * Phases:
- *   CHASE      — sprint toward target, close distance
- *   JUMP_IN    — sprint-jump toward target for crit attack
- *   AIRBORNE   — in air after jump, aim at target, wait for hit timing
- *   COOLDOWN   — landed after hit, wait for attack cooldown to reset
+ * Core principle: sprint-jump IS the movement. Bot is always jumping.
+ * Hits happen mid-flight when target is in reach.
  *
- * Rotation: WindMouse (render-tick smooth, human-like flicks).
- * Movement yaw: direct toward target (game tick).
- * Attack: only when in reach + cooldown ready. Prefer crit (falling).
+ * Each game tick:
+ *   1. Pick yaw: toward target (or safe direction if void ahead)
+ *   2. Always sprint + forward
+ *   3. Jump on every ground contact (sprint-jump chain)
+ *   4. Attack when: in reach + cooldown ready (prefer crit = falling)
+ *   5. Yaw is set directly (movement direction), no WindMouse needed —
+ *      the constant jumping justifies any rotation between jumps.
  *
- * MPC safety: forward-sim current trajectory to detect void → emergency strafe.
+ * Landing = new jump = natural moment for direction change.
+ * In air = committed to trajectory = no weird spinning.
  */
 public class CombatController {
 
     // ── distances ─────────────────────────────────────────────────────────────
-    private static final double JUMP_RANGE     = 4.5;  // start jump attack within this
-    private static final double REACH          = 3.0;  // attack reach
-    private static final double TOO_CLOSE      = 1.2;  // back off below this
+    private static final double REACH = 3.0;
 
-    // ── sim for void check ────────────────────────────────────────────────────
-    private static final int VOID_SIM_TICKS    = 15;
-
-    // ── state machine ─────────────────────────────────────────────────────────
-    private enum Phase { CHASE, JUMP_IN, AIRBORNE, COOLDOWN }
-    private Phase phase = Phase.CHASE;
-    private int phaseTicks = 0;
+    // ── void sim ──────────────────────────────────────────────────────────────
+    private static final int VOID_SIM_TICKS = 15;
 
     // ── w-tap ─────────────────────────────────────────────────────────────────
     private int wtapCooldown = 0;
-    private static final int WTAP_INTERVAL = 15;
+    private static final int WTAP_INTERVAL = 12;
+    private boolean didAttackThisJump = false;
 
-    // ── viz colors ────────────────────────────────────────────────────────────
+    // ── state ─────────────────────────────────────────────────────────────────
+    private boolean wasOnGround = true;
+    private float jumpYaw = 0; // yaw locked at takeoff, committed during flight
+    private int airTicks = 0;
+
+    // ── viz ────────────────────────────────────────────────────────────────────
     private static final Color TRAJ_SAFE   = new Color(0, 220, 100);
     private static final Color TRAJ_DANGER = new Color(220, 60, 30);
-    private static final Color TRAJ_BEST   = new Color(255, 200, 0);
+    private static final Color TRAJ_END    = new Color(255, 200, 0);
     private static final Color TARGET_BOX  = new Color(255, 50, 50);
+    private static final Color GROUND_COL  = new Color(80, 180, 255);
+    private static final Color AIR_COL     = new Color(255, 140, 0);
 
     // ───────────────────────────────────────────────────────────────────────────
 
@@ -71,186 +73,141 @@ public class CombatController {
         double dist = playerPos.distanceTo(targetPos);
         float toTargetYaw = AttackTiming.yawTo(playerPos, targetPos);
 
-        phaseTicks++;
         if (wtapCooldown > 0) wtapCooldown--;
 
-        // ── void safety check: forward-sim current velocity ───────────────────
-        boolean voidAhead = isVoidAhead(player, world);
+        boolean onGround = player.isOnGround();
 
-        // ── emergency: void ahead → strafe away ──────────────────────────────
-        if (voidAhead) {
-            float safeYaw = findSafeYaw(player, world, toTargetYaw);
-            player.setYaw(safeYaw);
+        // ── GROUND CONTACT: pick direction for next jump ──────────────────────
+        if (onGround) {
+            airTicks = 0;
+
+            // pick yaw: toward target, but check void safety
+            float chosenYaw = pickSafeYaw(player, world, toTargetYaw, targetPos, dist);
+
+            // w-tap: release sprint for 1 tick on landing before re-jumping
+            // (resets sprint → next hit does more knockback)
+            boolean doWtap = wtapCooldown <= 0 && dist < 5.0 && didAttackThisJump;
+            if (doWtap) {
+                mc.options.sprintKey.setPressed(false);
+                mc.options.forwardKey.setPressed(false);
+                wtapCooldown = WTAP_INTERVAL;
+            } else {
+                mc.options.forwardKey.setPressed(true);
+                mc.options.sprintKey.setPressed(true);
+            }
+
+            // ALWAYS jump on ground contact → sprint-jump chain
+            mc.options.jumpKey.setPressed(true);
+
+            // set yaw for the jump (direction chosen on ground)
+            player.setYaw(chosenYaw);
+            jumpYaw = chosenYaw;
+
+            // pitch toward target (for attack registration)
+            float desiredPitch = AttackTiming.pitchTo(player.getEyePos(), targetEyes);
+            player.setPitch(desiredPitch);
+
+            if (!wasOnGround) {
+                // just landed → reset per-jump state
+                didAttackThisJump = false;
+            }
+
+            renderTrajectory(player, chosenYaw, world, targetPos);
+
+        } else {
+            // ── IN AIR: committed to jump trajectory ──────────────────────────
+            airTicks++;
+
             mc.options.forwardKey.setPressed(true);
             mc.options.sprintKey.setPressed(true);
-            mc.options.jumpKey.setPressed(false);
-            mc.options.backKey.setPressed(false);
-            // still aim at target for potential attacks
-            WindMouseRotation.INSTANCE.setTarget(toTargetYaw,
-                AttackTiming.pitchTo(player.getEyePos(), targetEyes));
-            tryAttack(player, target, targetEyes);
-            renderTrajectory(playerPos, safeYaw, world, targetPos);
-            return true;
+            mc.options.jumpKey.setPressed(false); // already airborne
+
+            // keep movement yaw locked to jump direction (committed trajectory)
+            // but allow gradual steering toward target for air control
+            float airYaw;
+            if (airTicks <= 3) {
+                // first few ticks: committed to jump direction
+                airYaw = jumpYaw;
+            } else {
+                // after that: blend toward target (air strafing, subtle)
+                float blend = Math.min(1.0f, (airTicks - 3) / 8.0f);
+                airYaw = lerpAngle(jumpYaw, toTargetYaw, blend * 0.4f);
+            }
+            player.setYaw(airYaw);
+
+            // pitch tracks target smoothly during flight
+            float desiredPitch = AttackTiming.pitchTo(player.getEyePos(), targetEyes);
+            // smooth pitch: blend toward target
+            float currentPitch = player.getPitch();
+            float pitchBlend = Math.min(1.0f, airTicks / 5.0f);
+            player.setPitch(lerpAngle(currentPitch, desiredPitch, pitchBlend * 0.6f));
         }
 
-        // ── state machine ─────────────────────────────────────────────────────
-        switch (phase) {
-            case CHASE:
-                tickChase(player, target, mc, dist, toTargetYaw, targetEyes, world, targetPos);
-                break;
-            case JUMP_IN:
-                tickJumpIn(player, target, mc, dist, toTargetYaw, targetEyes, world, targetPos);
-                break;
-            case AIRBORNE:
-                tickAirborne(player, target, mc, dist, toTargetYaw, targetEyes, world, targetPos);
-                break;
-            case COOLDOWN:
-                tickCooldown(player, target, mc, dist, toTargetYaw, targetEyes, world, targetPos);
-                break;
-        }
+        mc.options.backKey.setPressed(false);
+        mc.options.leftKey.setPressed(false);
+        mc.options.rightKey.setPressed(false);
+        mc.options.sneakKey.setPressed(false);
+
+        wasOnGround = onGround;
+
+        // ── ATTACK: hit when in reach + cooldown ready ────────────────────────
+        tryAttack(player, target, targetEyes);
 
         return true;
     }
 
-    // ── CHASE: sprint toward target, transition to JUMP_IN when close ─────────
+    // ── yaw selection with void safety ─────────────────────────────────────────
 
-    private void tickChase(ClientPlayerEntity player, Entity target, MinecraftClient mc,
-                           double dist, float toTargetYaw, Vec3d targetEyes,
-                           WorldView world, Vec3d targetPos) {
-        // movement: straight at target
-        player.setYaw(toTargetYaw);
-        mc.options.forwardKey.setPressed(true);
-        mc.options.sprintKey.setPressed(true);
-        mc.options.jumpKey.setPressed(false);
-        mc.options.backKey.setPressed(false);
-
-        // aim at target via WindMouse
-        WindMouseRotation.INSTANCE.setTarget(toTargetYaw,
-            AttackTiming.pitchTo(player.getEyePos(), targetEyes));
-
-        // transition: close enough + on ground → jump attack
-        if (dist < JUMP_RANGE && player.isOnGround()) {
-            setPhase(Phase.JUMP_IN);
+    private float pickSafeYaw(ClientPlayerEntity player, WorldView world,
+                              float toTargetYaw, Vec3d targetPos, double dist) {
+        // first check: is direct path to target safe?
+        if (isYawSafe(player, world, toTargetYaw, true)) {
+            return toTargetYaw;
         }
 
-        // if somehow already in reach, still attack
-        tryAttack(player, target, targetEyes);
-        renderTrajectory(player.getPos(), toTargetYaw, world, targetPos);
-    }
+        // target direction has void → find safest yaw that still approaches target
+        float bestYaw = toTargetYaw + 180f; // fallback: away from target
+        double bestScore = Double.NEGATIVE_INFINITY;
 
-    // ── JUMP_IN: sprint-jump toward target ────────────────────────────────────
-
-    private void tickJumpIn(ClientPlayerEntity player, Entity target, MinecraftClient mc,
-                            double dist, float toTargetYaw, Vec3d targetEyes,
-                            WorldView world, Vec3d targetPos) {
-        // movement: sprint + jump at target
-        player.setYaw(toTargetYaw);
-        mc.options.forwardKey.setPressed(true);
-        mc.options.sprintKey.setPressed(true);
-        mc.options.jumpKey.setPressed(player.isOnGround());
-        mc.options.backKey.setPressed(false);
-
-        // aim at target
-        WindMouseRotation.INSTANCE.setTarget(toTargetYaw,
-            AttackTiming.pitchTo(player.getEyePos(), targetEyes));
-
-        // w-tap: release sprint for 1 tick right before jumping for extra KB
-        if (phaseTicks == 1 && wtapCooldown <= 0) {
-            mc.options.sprintKey.setPressed(false);
-            mc.options.forwardKey.setPressed(false);
-            wtapCooldown = WTAP_INTERVAL;
-        }
-
-        // transition: left ground → airborne
-        if (!player.isOnGround() && phaseTicks > 1) {
-            setPhase(Phase.AIRBORNE);
-        }
-
-        // timeout: if we can't jump for some reason
-        if (phaseTicks > 5) {
-            setPhase(Phase.CHASE);
-        }
-
-        renderTrajectory(player.getPos(), toTargetYaw, world, targetPos);
-    }
-
-    // ── AIRBORNE: in air, aim at target, hit when falling + in reach ──────────
-
-    private void tickAirborne(ClientPlayerEntity player, Entity target, MinecraftClient mc,
-                              double dist, float toTargetYaw, Vec3d targetEyes,
-                              WorldView world, Vec3d targetPos) {
-        // movement: keep sprinting forward toward target
-        player.setYaw(toTargetYaw);
-        mc.options.forwardKey.setPressed(true);
-        mc.options.sprintKey.setPressed(true);
-        mc.options.jumpKey.setPressed(false);
-        mc.options.backKey.setPressed(false);
-
-        // aim: WindMouse toward target
-        WindMouseRotation.INSTANCE.setTarget(toTargetYaw,
-            AttackTiming.pitchTo(player.getEyePos(), targetEyes));
-
-        // attack: try to hit (crit if falling)
-        tryAttack(player, target, targetEyes);
-
-        // transition: landed → cooldown
-        if (player.isOnGround() && phaseTicks > 2) {
-            setPhase(Phase.COOLDOWN);
-        }
-
-        // timeout: been airborne too long (launched off edge?)
-        if (phaseTicks > 30) {
-            setPhase(Phase.CHASE);
-        }
-
-        renderTrajectory(player.getPos(), toTargetYaw, world, targetPos);
-    }
-
-    // ── COOLDOWN: landed, wait for attack cooldown, reposition ────────────────
-
-    private void tickCooldown(ClientPlayerEntity player, Entity target, MinecraftClient mc,
-                              double dist, float toTargetYaw, Vec3d targetEyes,
-                              WorldView world, Vec3d targetPos) {
-        // if too close, back off slightly (strafe)
-        if (dist < TOO_CLOSE) {
-            player.setYaw(toTargetYaw + 180f);
-            mc.options.forwardKey.setPressed(true);
-            mc.options.sprintKey.setPressed(true);
-        } else {
-            // keep approaching if target is moving away
-            player.setYaw(toTargetYaw);
-            mc.options.forwardKey.setPressed(dist > REACH);
-            mc.options.sprintKey.setPressed(dist > REACH);
-        }
-        mc.options.jumpKey.setPressed(false);
-        mc.options.backKey.setPressed(false);
-
-        // aim at target
-        WindMouseRotation.INSTANCE.setTarget(toTargetYaw,
-            AttackTiming.pitchTo(player.getEyePos(), targetEyes));
-
-        // still attack if in range + cooldown ready (non-crit hits while grounded)
-        tryAttack(player, target, targetEyes);
-
-        // transition: cooldown ready + on ground → jump again
-        float cooldown = player.getAttackCooldownProgress(0.5f);
-        if (cooldown >= 0.9f && player.isOnGround() && phaseTicks > 3) {
-            if (dist < JUMP_RANGE) {
-                setPhase(Phase.JUMP_IN);
-            } else {
-                setPhase(Phase.CHASE);
+        float[] offsets = {30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180};
+        for (float off : offsets) {
+            float testYaw = toTargetYaw + off;
+            if (isYawSafe(player, world, testYaw, true)) {
+                // score: prefer yaws closer to target direction
+                double score = -Math.abs(off);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestYaw = testYaw;
+                }
             }
         }
-
-        // timeout
-        if (phaseTicks > 20) {
-            setPhase(Phase.CHASE);
-        }
-
-        renderTrajectory(player.getPos(), player.getYaw(), world, targetPos);
+        return bestYaw;
     }
 
-    // ── attack logic ──────────────────────────────────────────────────────────
+    private boolean isYawSafe(ClientPlayerEntity player, WorldView world,
+                              float yaw, boolean withJump) {
+        Agent sim = Agent.of(player);
+        sim.yaw = yaw;
+        sim.keyForward = true;
+        sim.keySprint = true;
+        sim.keyJump = withJump && player.isOnGround();
+        sim.keyBack = false;
+        sim.keyLeft = false;
+        sim.keyRight = false;
+        sim.input = new AgentInput(sim);
+        sim.input.playerInput = new TungstenPlayerInput(
+            true, false, false, false, sim.keyJump, false, true);
+
+        for (int t = 0; t < VOID_SIM_TICKS; t++) {
+            sim.tick(world);
+            if (!VoidDetector.isSafe(sim.getPos(), world)) return false;
+            // also check: did we fall too far? (off an edge)
+            if (sim.fallDistance > 4.0) return false;
+        }
+        return true;
+    }
+
+    // ── attack ────────────────────────────────────────────────────────────────
 
     private void tryAttack(ClientPlayerEntity player, Entity target, Vec3d targetEyes) {
         if (!AttackTiming.canAttack(player, target)) return;
@@ -258,125 +215,72 @@ public class CombatController {
         float cooldown = player.getAttackCooldownProgress(0.5f);
         boolean isCrit = AttackTiming.isCritState(player);
 
-        // attack if full cooldown, or crit opportunity (even if slightly early)
-        if (cooldown >= 1.0f || (isCrit && cooldown >= 0.9f)) {
+        // attack: crit (falling) or full cooldown
+        if (isCrit || cooldown >= 1.0f) {
             MinecraftClient mc = MinecraftClient.getInstance();
             mc.interactionManager.attackEntity(player, target);
             player.swingHand(Hand.MAIN_HAND);
+            didAttackThisJump = true;
         }
-    }
-
-    // ── void safety ───────────────────────────────────────────────────────────
-
-    private boolean isVoidAhead(ClientPlayerEntity player, WorldView world) {
-        Agent sim = Agent.of(player);
-        sim.keyForward = true;
-        sim.keySprint = true;
-        sim.keyJump = false;
-        sim.input = new AgentInput(sim);
-        sim.input.playerInput = new TungstenPlayerInput(
-            true, false, false, false, false, false, true);
-
-        for (int t = 0; t < VOID_SIM_TICKS; t++) {
-            sim.tick(world);
-            if (!VoidDetector.isSafe(sim.getPos(), world)) return true;
-        }
-        return false;
-    }
-
-    private float findSafeYaw(ClientPlayerEntity player, WorldView world, float targetYaw) {
-        // try yaws fanning out from target direction, pick first safe one
-        float[] offsets = {0, 45, -45, 90, -90, 135, -135, 180};
-        for (float off : offsets) {
-            float testYaw = targetYaw + off;
-            Agent sim = Agent.of(player);
-            sim.yaw = testYaw;
-            sim.keyForward = true;
-            sim.keySprint = true;
-            sim.input = new AgentInput(sim);
-            sim.input.playerInput = new TungstenPlayerInput(
-                true, false, false, false, false, false, true);
-
-            boolean safe = true;
-            for (int t = 0; t < VOID_SIM_TICKS; t++) {
-                sim.tick(world);
-                if (!VoidDetector.isSafe(sim.getPos(), world)) { safe = false; break; }
-            }
-            if (safe) return testYaw;
-        }
-        // no safe direction found, back away from target
-        return targetYaw + 180f;
     }
 
     // ── visualization ─────────────────────────────────────────────────────────
 
-    private void renderTrajectory(Vec3d startPos, float yaw, WorldView world, Vec3d targetPos) {
+    private void renderTrajectory(ClientPlayerEntity player, float yaw,
+                                  WorldView world, Vec3d targetPos) {
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
 
-        // forward-sim current direction to show predicted path
-        Agent sim = new Agent();
-        // minimal init for viz
-        sim.posX = startPos.x; sim.posY = startPos.y; sim.posZ = startPos.z;
-        sim.blockX = MathHelper.floor(startPos.x);
-        sim.blockY = MathHelper.floor(startPos.y);
-        sim.blockZ = MathHelper.floor(startPos.z);
-        sim.box = Agent.STANDING_DIMENSIONS.getBoxAt(startPos);
-        sim.dimensions = Agent.STANDING_DIMENSIONS;
-        sim.standingEyeHeight = 1.62f;
-        sim.onGround = true;
+        // simulate sprint-jump trajectory
+        Agent sim = Agent.of(player);
         sim.yaw = yaw;
         sim.keyForward = true;
         sim.keySprint = true;
-        sim.movementSpeed = 0.1f;
-        sim.airStrafingSpeed = 0.026f;
-        sim.stepHeight = 0.6f;
+        sim.keyJump = player.isOnGround();
+        sim.keyBack = false;
         sim.input = new AgentInput(sim);
         sim.input.playerInput = new TungstenPlayerInput(
-            true, false, false, false, false, false, true);
+            true, false, false, false, sim.keyJump, false, true);
 
         List<Vec3d> points = new ArrayList<>();
-        points.add(startPos);
-        for (int t = 0; t < 20; t++) {
+        points.add(sim.getPos());
+
+        for (int t = 0; t < 25; t++) {
             sim.tick(world);
             points.add(sim.getPos());
+            // after first tick, stop jumping (already airborne)
+            if (t == 0) {
+                sim.keyJump = false;
+                sim.input.playerInput = new TungstenPlayerInput(
+                    true, false, false, false, false, false, true);
+            }
         }
 
-        // draw lines
+        // draw trajectory lines with safety coloring
         for (int i = 0; i < points.size() - 1; i++) {
-            float t = (float) i / (points.size() - 1);
-            int r = (int) (TRAJ_SAFE.getRed()   + t * (TRAJ_DANGER.getRed()   - TRAJ_SAFE.getRed()));
-            int g = (int) (TRAJ_SAFE.getGreen() + t * (TRAJ_DANGER.getGreen() - TRAJ_SAFE.getGreen()));
-            int b = (int) (TRAJ_SAFE.getBlue()  + t * (TRAJ_DANGER.getBlue()  - TRAJ_SAFE.getBlue()));
-            TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
-                new Line(points.get(i), points.get(i + 1), new Color(r, g, b)));
+            Vec3d a = points.get(i);
+            Vec3d b = points.get(i + 1);
+            boolean safe = VoidDetector.isSafe(b, world);
+            Color col = safe ? TRAJ_SAFE : TRAJ_DANGER;
+            TungstenModRenderContainer.COMBAT_TRAJECTORY.add(new Line(a, b, col));
         }
 
-        // endpoint
+        // endpoint cube
         Vec3d end = points.get(points.size() - 1);
         TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
-            new Cuboid(end.subtract(0.1, 0.1, 0.1), new Vec3d(0.2, 0.2, 0.2), TRAJ_BEST));
+            new Cuboid(end.subtract(0.1, 0.1, 0.1), new Vec3d(0.2, 0.2, 0.2), TRAJ_END));
 
-        // target box
+        // target marker
         TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
             new Cuboid(targetPos.subtract(0.3, 0, 0.3), new Vec3d(0.6, 1.8, 0.6), TARGET_BOX));
 
-        // phase indicator: small cube at player pos, color = phase
-        Color phaseColor = switch (phase) {
-            case CHASE -> new Color(100, 100, 255);    // blue
-            case JUMP_IN -> new Color(255, 255, 0);    // yellow
-            case AIRBORNE -> new Color(255, 100, 0);   // orange
-            case COOLDOWN -> new Color(150, 150, 150); // gray
-        };
+        // state indicator above player
+        Color stateCol = player.isOnGround() ? GROUND_COL : AIR_COL;
+        Vec3d head = player.getPos().add(-0.15, 2.0, -0.15);
         TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
-            new Cuboid(startPos.add(-0.15, 1.9, -0.15), new Vec3d(0.3, 0.3, 0.3), phaseColor));
+            new Cuboid(head, new Vec3d(0.3, 0.3, 0.3), stateCol));
     }
 
-    // ── phase management ──────────────────────────────────────────────────────
-
-    private void setPhase(Phase newPhase) {
-        this.phase = newPhase;
-        this.phaseTicks = 0;
-    }
+    // ── cleanup ───────────────────────────────────────────────────────────────
 
     public void releaseKeys() {
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -387,10 +291,17 @@ public class CombatController {
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
-        WindMouseRotation.INSTANCE.clearTarget();
-        phase = Phase.CHASE;
-        phaseTicks = 0;
+        wasOnGround = true;
+        airTicks = 0;
         wtapCooldown = 0;
+        didAttackThisJump = false;
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
+    }
+
+    // ── math helpers ──────────────────────────────────────────────────────────
+
+    private static float lerpAngle(float from, float to, float t) {
+        float diff = MathHelper.wrapDegrees(to - from);
+        return from + diff * t;
     }
 }
