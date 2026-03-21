@@ -52,6 +52,10 @@ public class TungstenConfig {
      *  Set to 0 to log everything. */
     public double mismatchLogThreshold = 1e-6;
 
+    /** If true: pathfinder continues computing while executor runs partial path.
+     *  If false: pathfinder waits for executor to finish before resuming (original behavior). */
+    public boolean parallelPathfinding = false;
+
     /** Closed-loop yaw correction strength. 0 = off (open-loop), 1.0 = full correction.
      *  Blends between pre-computed yaw and corrected yaw based on position drift.
      *  Recommended: 0.3-0.6. Higher = more aggressive correction but less smooth. */

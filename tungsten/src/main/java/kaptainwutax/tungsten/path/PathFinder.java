@@ -260,7 +260,15 @@ public class PathFinder {
 	        	if (setCurrentPath(TARGET, next, TungstenModDataContainer.player)) {
 	        		TungstenModRenderContainer.RENDERERS.clear();
 	        		TungstenModRenderContainer.TEST.clear();
-	        		// Don't sleep or wait for executor — continue computing next segment.
+	        		if (!TungstenConfig.get().parallelPathfinding) {
+	        			closed.clear();
+						try { Thread.sleep(500); } catch (InterruptedException e) { e.printStackTrace(); }
+						while (TungstenModDataContainer.EXECUTOR.isRunning()) {
+							if (stop.get()) return;
+							if (TungstenModDataContainer.EXECUTOR.getPath().size() - TungstenModDataContainer.EXECUTOR.getCurrentTick() < 50) break;
+							try { Thread.sleep(500); } catch (InterruptedException e) { e.printStackTrace(); }
+						}
+	        		}
 	    		    primaryTimeoutTime = System.currentTimeMillis() + 1120L;
 	        		if (blockPath.get().getLast().getPos(true, world).distanceTo(player.getPos()) < 20) {
 		    			int attempt = 0;
@@ -292,9 +300,17 @@ public class PathFinder {
 	        	TungstenModDataContainer.EXECUTOR.cb = () -> {
 		        	blockPath = resetSearch(next, world, blockPath, target, player);
 	        	};
-	            // Continue searching from current best — don't wait for executor.
 	            this.start = initializeStartNode(next, target);
-	            openSet.insert(this.start);
+	            if (TungstenConfig.get().parallelPathfinding) {
+	                openSet.insert(this.start);
+	            } else {
+	                openSet = new BinaryHeapOpenSet();
+	                openSet.insert(this.start);
+	                while (TungstenModDataContainer.EXECUTOR.isRunning()) {
+	                    if (stop.get()) break;
+	                    try { Thread.sleep(500); } catch (InterruptedException e) { e.printStackTrace(); }
+	                }
+	            }
 	            continue;
 	        }
 
@@ -785,10 +801,15 @@ public class PathFinder {
 		}
         TungstenModDataContainer.PATHFINDER.clearParentsForBestSoFar(newStart);
         TungstenModDataContainer.PATHFINDER.bestHeuristicSoFar = TungstenModDataContainer.PATHFINDER.initializeBestHeuristics(newStart);
-        // Don't clear closed set — keep explored nodes to avoid revisiting.
-        // Don't reset openSet — keep unexplored frontier.
-        // Just update start for heuristic reference and insert newStart.
-        TungstenModDataContainer.PATHFINDER.openSet.insert(newStart);
+        if (TungstenConfig.get().parallelPathfinding) {
+            // Keep closed set and openSet frontier — continue A* from where we left off.
+            TungstenModDataContainer.PATHFINDER.openSet.insert(newStart);
+        } else {
+            // Original behavior: reset search state for fresh start.
+            TungstenModDataContainer.PATHFINDER.closed.clear();
+            TungstenModDataContainer.PATHFINDER.openSet = new BinaryHeapOpenSet();
+            TungstenModDataContainer.PATHFINDER.openSet.insert(newStart);
+        }
         TungstenModDataContainer.PATHFINDER.start = newStart;
         numNodesConsidered.set(0);
 //        try {

@@ -27,6 +27,7 @@ public class SettingsCommand extends Command {
 			Debug.logMessage("§e--- Tungsten Settings ---");
 			Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
 			Debug.logMessage("driftThreshold = " + c.driftThreshold);
+			Debug.logMessage("parallelPathfinding = " + c.parallelPathfinding);
 			Debug.logMessage("closedLoopStrength = " + c.closedLoopStrength);
 			Debug.logMessage("airStrafeMultiplier = " + c.airStrafeMultiplier);
 			Debug.logMessage("mismatchLogThreshold = " + c.mismatchLogThreshold);
@@ -80,6 +81,19 @@ public class SettingsCommand extends Command {
 				TungstenConfig.get().airStrafeMultiplier = FloatArgumentType.getFloat(context, "multiplier");
 				TungstenConfig.save();
 				Debug.logMessage("airStrafeMultiplier = " + TungstenConfig.get().airStrafeMultiplier);
+				return SINGLE_SUCCESS;
+			})));
+
+		// ;settings parallelPath [true/false]
+		builder.then(literal("parallelPath")
+			.executes(context -> {
+				Debug.logMessage("parallelPathfinding = " + TungstenConfig.get().parallelPathfinding);
+				return SINGLE_SUCCESS;
+			})
+			.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
+				TungstenConfig.get().parallelPathfinding = BoolArgumentType.getBool(context, "enabled");
+				TungstenConfig.save();
+				Debug.logMessage("parallelPathfinding = " + TungstenConfig.get().parallelPathfinding);
 				return SINGLE_SUCCESS;
 			})));
 
