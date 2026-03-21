@@ -1,4 +1,4 @@
-package kaptainwutax.tungsten.agent;
+package kaptainwutax.tungsten.agent;dw
 
 import java.util.*;
 
@@ -134,7 +134,7 @@ public class Agent {
     public boolean swimming; //flag 4
     public boolean fallFlying; //flag 7
     public float stepHeight = 0.6F;
-    public double fallDistance;
+    public float fallDistance;
     public boolean touchingWater;
     public boolean isSubmergedInWater;
     public boolean horizontalCollision;
