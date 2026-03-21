@@ -184,10 +184,15 @@ public class CombatController {
             mc.options.backKey.setPressed(false);
             mc.options.sneakKey.setPressed(false);
 
-            // ATTACK: only after aim phase started + delay expired + close enough
+            // ATTACK: after aim phase + delay expired
             if (airTicks >= AIM_START_TICK && attackDelay <= 0 && !didHitThisJump) {
-                tryAttack(player, target);
+                tryAttack(player, target, aimYaw, aimPitch);
             }
+        }
+
+        // also attack on ground if close and aimed (non-crit but still hits)
+        if (onGround && !didHitThisJump) {
+            tryAttack(player, target, aimYaw, aimPitch);
         }
 
         wasOnGround = onGround;
@@ -291,11 +296,14 @@ public class CombatController {
 
     // ── attack ────────────────────────────────────────────────────────────────
 
-    private void tryAttack(ClientPlayerEntity player, Entity target) {
+    private void tryAttack(ClientPlayerEntity player, Entity target,
+                           float aimYaw, float aimPitch) {
         if (!AttackTiming.canAttack(player, target)) return;
 
-        // only when aimed close enough
-        double aimDist = WindMouseRotation.INSTANCE.distanceToTarget(player);
+        // check actual player facing vs target (not WindMouse state)
+        float yawDiff = Math.abs(MathHelper.wrapDegrees(player.getYaw() - aimYaw));
+        float pitchDiff = Math.abs(player.getPitch() - aimPitch);
+        double aimDist = Math.sqrt(yawDiff * yawDiff + pitchDiff * pitchDiff);
         if (aimDist > AIM_CLOSE_DEG) return;
 
         float cooldown = player.getAttackCooldownProgress(0.5f);
