@@ -13,4 +13,5 @@ public class TungstenModRenderContainer {
 	public static Collection<Renderer> RENDERERS = Collections.synchronizedCollection(new ArrayList<>());
 	public static Collection<Renderer> ERROR = Collections.synchronizedCollection(new ArrayList<>());
 	public static Collection<Renderer> TEST = Collections.synchronizedCollection(new ArrayList<>());
+	public static Collection<Renderer> COMBAT_TRAJECTORY = Collections.synchronizedCollection(new ArrayList<>());
 }

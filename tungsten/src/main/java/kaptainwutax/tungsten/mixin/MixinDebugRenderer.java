@@ -86,6 +86,9 @@ import net.minecraft.client.render.Tessellator;
 			
 			if (!TungstenModRenderContainer.ERROR.isEmpty())
 				renderCollection(TungstenModRenderContainer.ERROR, tessellator, frustum, cameraX, cameraY, cameraZ);
+
+			if (!TungstenModRenderContainer.COMBAT_TRAJECTORY.isEmpty())
+				renderCollection(TungstenModRenderContainer.COMBAT_TRAJECTORY, tessellator, frustum, cameraX, cameraY, cameraZ);
 	
 		    glEnable(GL_BLEND);
 		    glEnable(GL_DEPTH_TEST);
