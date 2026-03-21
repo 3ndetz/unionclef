@@ -1,4 +1,4 @@
-package kaptainwutax.tungsten.agent;dw
+package kaptainwutax.tungsten.agent;
 
 import java.util.*;
 
