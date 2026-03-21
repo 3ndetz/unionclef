@@ -7,17 +7,24 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldView;
 
 /**
- * Checks whether a position is safe from void falls and edges.
- * Used by CombatController to penalize trajectories that lead off platforms.
+ * Checks terrain safety: void, edges, fall height.
  */
 public final class VoidDetector {
 
-    private static final int MAX_SCAN_DEPTH = 25;
+    private static final int MAX_SCAN_DEPTH = 30;
 
     private VoidDetector() {}
 
     /** True if there is at least one solid block below pos within scan depth. */
     public static boolean isSafe(Vec3d pos, WorldView world) {
+        return fallHeight(pos, world) < MAX_SCAN_DEPTH;
+    }
+
+    /**
+     * How many blocks would you fall from this position before hitting ground?
+     * Returns MAX_SCAN_DEPTH if void (no ground found).
+     */
+    public static int fallHeight(Vec3d pos, WorldView world) {
         int x = MathHelper.floor(pos.x);
         int z = MathHelper.floor(pos.z);
         int startY = MathHelper.floor(pos.y);
@@ -25,21 +32,21 @@ public final class VoidDetector {
 
         for (int dy = 0; dy < MAX_SCAN_DEPTH; dy++) {
             int y = startY - dy;
-            if (y < bottomY) return false;
+            if (y < bottomY) return MAX_SCAN_DEPTH; // void
             BlockPos bp = new BlockPos(x, y, z);
             BlockState state = world.getBlockState(bp);
-            if (!state.getCollisionShape(world, bp).isEmpty()) return true;
+            if (!state.getCollisionShape(world, bp).isEmpty()) return dy;
         }
-        return false;
+        return MAX_SCAN_DEPTH;
     }
 
     /**
      * Returns a 0-1 edge proximity score. 0 = safe (solid all around), 1 = surrounded by void.
-     * Checks 4 cardinal + 4 diagonal neighbors at feet level.
+     * Checks 8 neighbors at feet level.
      */
     public static double edgeScore(Vec3d pos, WorldView world) {
         int x = MathHelper.floor(pos.x);
-        int y = MathHelper.floor(pos.y) - 1; // block below feet
+        int y = MathHelper.floor(pos.y) - 1;
         int z = MathHelper.floor(pos.z);
         int bottomY = world.getBottomY();
 

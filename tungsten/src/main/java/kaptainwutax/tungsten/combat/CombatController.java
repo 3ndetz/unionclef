@@ -19,47 +19,56 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Jump-based PvP combat controller.
+ * Fighter-style PvP combat controller.
  *
- * Core principle: sprint-jump IS the movement. Bot is always jumping.
- * Hits happen mid-flight when target is in reach.
+ * Tactics:
+ *   ENGAGE  — sprint-jump toward target, attack in flight
+ *   STRAFE  — after hit or if target is close/stationary, jump sideways
+ *             to reposition for next attack run
+ *   CHASE   — target is running away, sprint-jump directly after them
  *
- * Each game tick:
- *   1. Pick yaw: toward target (or safe direction if void ahead)
- *   2. Always sprint + forward
- *   3. Jump on every ground contact (sprint-jump chain)
- *   4. Attack when: in reach + cooldown ready (prefer crit = falling)
- *   5. Yaw is set directly (movement direction), no WindMouse needed —
- *      the constant jumping justifies any rotation between jumps.
+ * Safety:
+ *   Before every jump, simulate the full arc. Check:
+ *   - Is there ground under the landing point?
+ *   - How far would we fall? (>4 blocks = refuse)
+ *   - If no safe direction toward target, pick safest alternative.
  *
- * Landing = new jump = natural moment for direction change.
- * In air = committed to trajectory = no weird spinning.
+ * Ground = decision point. Air = committed to trajectory.
  */
 public class CombatController {
 
-    // ── distances ─────────────────────────────────────────────────────────────
-    private static final double REACH = 3.0;
+    // ── constants ─────────────────────────────────────────────────────────────
+    private static final int JUMP_SIM_TICKS   = 20;  // simulate jump arc this many ticks
+    private static final int MAX_SAFE_FALL    = 4;   // max acceptable fall height in blocks
+    private static final double ATTACK_RANGE  = 3.0;
+    private static final double CLOSE_RANGE   = 3.5; // target is "close" → strafe instead of charge
 
-    // ── void sim ──────────────────────────────────────────────────────────────
-    private static final int VOID_SIM_TICKS = 15;
+    // ── tactical state ────────────────────────────────────────────────────────
+    private enum Tactic { ENGAGE, STRAFE, CHASE }
+    private Tactic tactic = Tactic.ENGAGE;
 
-    // ── w-tap ─────────────────────────────────────────────────────────────────
+    private boolean didHitThisJump = false;
+    private boolean wasOnGround = true;
+    private float jumpYaw = 0;
+    private int airTicks = 0;
+    private int strafeDir = 1; // +1 or -1, alternates for varied angles
+    private int groundTicks = 0;
+
+    // w-tap
     private int wtapCooldown = 0;
     private static final int WTAP_INTERVAL = 12;
-    private boolean didAttackThisJump = false;
 
-    // ── state ─────────────────────────────────────────────────────────────────
-    private boolean wasOnGround = true;
-    private float jumpYaw = 0; // yaw locked at takeoff, committed during flight
-    private int airTicks = 0;
+    // target tracking
+    private Vec3d prevTargetPos = null;
 
-    // ── viz ────────────────────────────────────────────────────────────────────
-    private static final Color TRAJ_SAFE   = new Color(0, 220, 100);
-    private static final Color TRAJ_DANGER = new Color(220, 60, 30);
-    private static final Color TRAJ_END    = new Color(255, 200, 0);
-    private static final Color TARGET_BOX  = new Color(255, 50, 50);
-    private static final Color GROUND_COL  = new Color(80, 180, 255);
-    private static final Color AIR_COL     = new Color(255, 140, 0);
+    // ── viz colors ────────────────────────────────────────────────────────────
+    private static final Color COL_SAFE    = new Color(0, 220, 100);
+    private static final Color COL_DANGER  = new Color(220, 60, 30);
+    private static final Color COL_LANDING = new Color(255, 200, 0);
+    private static final Color COL_TARGET  = new Color(255, 50, 50);
+    private static final Color COL_ENGAGE  = new Color(255, 80, 80);
+    private static final Color COL_STRAFE  = new Color(80, 180, 255);
+    private static final Color COL_CHASE   = new Color(255, 220, 0);
 
     // ───────────────────────────────────────────────────────────────────────────
 
@@ -72,75 +81,91 @@ public class CombatController {
         Vec3d targetEyes = target.getPos().add(0, target.getHeight() * 0.7, 0);
         double dist = playerPos.distanceTo(targetPos);
         float toTargetYaw = AttackTiming.yawTo(playerPos, targetPos);
+        boolean onGround = player.isOnGround();
 
         if (wtapCooldown > 0) wtapCooldown--;
 
-        boolean onGround = player.isOnGround();
+        // ── detect target behavior ────────────────────────────────────────────
+        boolean targetRunningAway = false;
+        boolean targetApproaching = false;
+        if (prevTargetPos != null) {
+            Vec3d targetVel = targetPos.subtract(prevTargetPos);
+            Vec3d toTarget = targetPos.subtract(playerPos).normalize();
+            double dot = targetVel.dotProduct(toTarget);
+            targetRunningAway = dot > 0.05;   // moving away from us
+            targetApproaching = dot < -0.05;  // moving toward us
+        }
+        prevTargetPos = targetPos;
 
-        // ── GROUND CONTACT: pick direction for next jump ──────────────────────
+        // ── GROUND: decision point ────────────────────────────────────────────
         if (onGround) {
-            airTicks = 0;
+            if (!wasOnGround) {
+                // just landed — decide next tactic
+                groundTicks = 0;
+                decideTactic(dist, targetRunningAway, targetApproaching);
+            }
+            groundTicks++;
 
-            // pick yaw: toward target, but check void safety
-            float chosenYaw = pickSafeYaw(player, world, toTargetYaw, targetPos, dist);
+            // pick yaw based on tactic
+            float desiredYaw = computeTacticalYaw(toTargetYaw, dist);
 
-            // w-tap: release sprint for 1 tick on landing before re-jumping
-            // (resets sprint → next hit does more knockback)
-            boolean doWtap = wtapCooldown <= 0 && dist < 5.0 && didAttackThisJump;
-            if (doWtap) {
+            // find safe yaw (simulate jump arc, check landing)
+            JumpResult jump = simulateJump(player, world, desiredYaw);
+            float safeYaw;
+
+            if (jump.safe) {
+                safeYaw = desiredYaw;
+            } else {
+                // desired direction unsafe → search for safe alternative
+                safeYaw = findSafeJumpYaw(player, world, toTargetYaw, desiredYaw);
+            }
+
+            // w-tap: release sprint for 1 tick after hitting (sprint reset for KB)
+            boolean doWtap = wtapCooldown <= 0 && didHitThisJump;
+            if (doWtap && groundTicks == 1) {
                 mc.options.sprintKey.setPressed(false);
                 mc.options.forwardKey.setPressed(false);
+                mc.options.jumpKey.setPressed(false);
                 wtapCooldown = WTAP_INTERVAL;
             } else {
                 mc.options.forwardKey.setPressed(true);
                 mc.options.sprintKey.setPressed(true);
+                mc.options.jumpKey.setPressed(true); // jump!
             }
 
-            // ALWAYS jump on ground contact → sprint-jump chain
-            mc.options.jumpKey.setPressed(true);
+            player.setYaw(safeYaw);
+            jumpYaw = safeYaw;
 
-            // set yaw for the jump (direction chosen on ground)
-            player.setYaw(chosenYaw);
-            jumpYaw = chosenYaw;
+            // pitch: toward target for attack
+            player.setPitch(AttackTiming.pitchTo(player.getEyePos(), targetEyes));
 
-            // pitch toward target (for attack registration)
-            float desiredPitch = AttackTiming.pitchTo(player.getEyePos(), targetEyes);
-            player.setPitch(desiredPitch);
+            didHitThisJump = false;
+            airTicks = 0;
 
-            if (!wasOnGround) {
-                // just landed → reset per-jump state
-                didAttackThisJump = false;
-            }
-
-            renderTrajectory(player, chosenYaw, world, targetPos);
+            renderJumpArc(player, safeYaw, world, targetPos);
 
         } else {
-            // ── IN AIR: committed to jump trajectory ──────────────────────────
+            // ── AIR: committed to trajectory ──────────────────────────────────
             airTicks++;
 
             mc.options.forwardKey.setPressed(true);
             mc.options.sprintKey.setPressed(true);
-            mc.options.jumpKey.setPressed(false); // already airborne
+            mc.options.jumpKey.setPressed(false);
 
-            // keep movement yaw locked to jump direction (committed trajectory)
-            // but allow gradual steering toward target for air control
+            // movement yaw: mostly committed, slight air-strafing toward target
             float airYaw;
-            if (airTicks <= 3) {
-                // first few ticks: committed to jump direction
+            if (airTicks <= 2) {
                 airYaw = jumpYaw;
             } else {
-                // after that: blend toward target (air strafing, subtle)
-                float blend = Math.min(1.0f, (airTicks - 3) / 8.0f);
-                airYaw = lerpAngle(jumpYaw, toTargetYaw, blend * 0.4f);
+                float blend = Math.min(0.3f, (airTicks - 2) / 10.0f);
+                airYaw = lerpAngle(jumpYaw, toTargetYaw, blend);
             }
             player.setYaw(airYaw);
 
-            // pitch tracks target smoothly during flight
+            // pitch: smooth blend toward target
             float desiredPitch = AttackTiming.pitchTo(player.getEyePos(), targetEyes);
-            // smooth pitch: blend toward target
-            float currentPitch = player.getPitch();
-            float pitchBlend = Math.min(1.0f, airTicks / 5.0f);
-            player.setPitch(lerpAngle(currentPitch, desiredPitch, pitchBlend * 0.6f));
+            float pitchBlend = Math.min(0.5f, airTicks / 6.0f);
+            player.setPitch(lerpAngle(player.getPitch(), desiredPitch, pitchBlend));
         }
 
         mc.options.backKey.setPressed(false);
@@ -150,134 +175,176 @@ public class CombatController {
 
         wasOnGround = onGround;
 
-        // ── ATTACK: hit when in reach + cooldown ready ────────────────────────
-        tryAttack(player, target, targetEyes);
+        // ── ATTACK ────────────────────────────────────────────────────────────
+        tryAttack(player, target);
 
         return true;
     }
 
-    // ── yaw selection with void safety ─────────────────────────────────────────
+    // ── tactic decision ───────────────────────────────────────────────────────
 
-    private float pickSafeYaw(ClientPlayerEntity player, WorldView world,
-                              float toTargetYaw, Vec3d targetPos, double dist) {
-        // first check: is direct path to target safe?
-        if (isYawSafe(player, world, toTargetYaw, true)) {
-            return toTargetYaw;
+    private void decideTactic(double dist, boolean targetRunning, boolean targetApproaching) {
+        if (targetRunning) {
+            // target fleeing → chase directly
+            tactic = Tactic.CHASE;
+        } else if (dist < CLOSE_RANGE || targetApproaching || didHitThisJump) {
+            // close combat or just hit → strafe to reposition
+            tactic = Tactic.STRAFE;
+            strafeDir = -strafeDir; // alternate sides
+        } else {
+            // default: engage (jump at target)
+            tactic = Tactic.ENGAGE;
         }
-
-        // target direction has void → find safest yaw that still approaches target
-        float bestYaw = toTargetYaw + 180f; // fallback: away from target
-        double bestScore = Double.NEGATIVE_INFINITY;
-
-        float[] offsets = {30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180};
-        for (float off : offsets) {
-            float testYaw = toTargetYaw + off;
-            if (isYawSafe(player, world, testYaw, true)) {
-                // score: prefer yaws closer to target direction
-                double score = -Math.abs(off);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestYaw = testYaw;
-                }
-            }
-        }
-        return bestYaw;
     }
 
-    private boolean isYawSafe(ClientPlayerEntity player, WorldView world,
-                              float yaw, boolean withJump) {
+    private float computeTacticalYaw(float toTargetYaw, double dist) {
+        return switch (tactic) {
+            case ENGAGE -> toTargetYaw;
+            case CHASE  -> toTargetYaw;
+            case STRAFE -> {
+                // jump sideways: 60-100° off target direction
+                float strafeAngle = 70 + (float)(Math.random() * 30);
+                yield toTargetYaw + strafeAngle * strafeDir;
+            }
+        };
+    }
+
+    // ── jump simulation & safety ──────────────────────────────────────────────
+
+    private JumpResult simulateJump(ClientPlayerEntity player, WorldView world, float yaw) {
         Agent sim = Agent.of(player);
         sim.yaw = yaw;
         sim.keyForward = true;
         sim.keySprint = true;
-        sim.keyJump = withJump && player.isOnGround();
+        sim.keyJump = true;
         sim.keyBack = false;
         sim.keyLeft = false;
         sim.keyRight = false;
         sim.input = new AgentInput(sim);
         sim.input.playerInput = new TungstenPlayerInput(
-            true, false, false, false, sim.keyJump, false, true);
+            true, false, false, false, true, false, true);
 
-        for (int t = 0; t < VOID_SIM_TICKS; t++) {
+        List<Vec3d> arc = new ArrayList<>();
+        arc.add(sim.getPos());
+        double startY = sim.posY;
+        boolean passedApex = false;
+
+        for (int t = 0; t < JUMP_SIM_TICKS; t++) {
             sim.tick(world);
-            if (!VoidDetector.isSafe(sim.getPos(), world)) return false;
-            // also check: did we fall too far? (off an edge)
-            if (sim.fallDistance > 4.0) return false;
-        }
-        return true;
-    }
+            arc.add(sim.getPos());
 
-    // ── attack ────────────────────────────────────────────────────────────────
-
-    private void tryAttack(ClientPlayerEntity player, Entity target, Vec3d targetEyes) {
-        if (!AttackTiming.canAttack(player, target)) return;
-
-        float cooldown = player.getAttackCooldownProgress(0.5f);
-        boolean isCrit = AttackTiming.isCritState(player);
-
-        // attack: crit (falling) or full cooldown
-        if (isCrit || cooldown >= 1.0f) {
-            MinecraftClient mc = MinecraftClient.getInstance();
-            mc.interactionManager.attackEntity(player, target);
-            player.swingHand(Hand.MAIN_HAND);
-            didAttackThisJump = true;
-        }
-    }
-
-    // ── visualization ─────────────────────────────────────────────────────────
-
-    private void renderTrajectory(ClientPlayerEntity player, float yaw,
-                                  WorldView world, Vec3d targetPos) {
-        TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
-
-        // simulate sprint-jump trajectory
-        Agent sim = Agent.of(player);
-        sim.yaw = yaw;
-        sim.keyForward = true;
-        sim.keySprint = true;
-        sim.keyJump = player.isOnGround();
-        sim.keyBack = false;
-        sim.input = new AgentInput(sim);
-        sim.input.playerInput = new TungstenPlayerInput(
-            true, false, false, false, sim.keyJump, false, true);
-
-        List<Vec3d> points = new ArrayList<>();
-        points.add(sim.getPos());
-
-        for (int t = 0; t < 25; t++) {
-            sim.tick(world);
-            points.add(sim.getPos());
-            // after first tick, stop jumping (already airborne)
+            // after first tick, release jump
             if (t == 0) {
                 sim.keyJump = false;
                 sim.input.playerInput = new TungstenPlayerInput(
                     true, false, false, false, false, false, true);
             }
+
+            if (sim.velY < 0) passedApex = true;
+
+            // check: did we land?
+            if (passedApex && sim.onGround && t > 2) {
+                int fallH = (int) Math.max(0, startY - sim.posY);
+                boolean safe = fallH <= MAX_SAFE_FALL
+                    && VoidDetector.isSafe(sim.getPos(), world);
+                return new JumpResult(safe, arc, sim.getPos(), fallH);
+            }
+
+            // check: falling into void during arc
+            if (passedApex && !VoidDetector.isSafe(sim.getPos(), world)) {
+                return new JumpResult(false, arc, sim.getPos(), MAX_SAFE_FALL + 1);
+            }
         }
 
-        // draw trajectory lines with safety coloring
-        for (int i = 0; i < points.size() - 1; i++) {
-            Vec3d a = points.get(i);
-            Vec3d b = points.get(i + 1);
-            boolean safe = VoidDetector.isSafe(b, world);
-            Color col = safe ? TRAJ_SAFE : TRAJ_DANGER;
-            TungstenModRenderContainer.COMBAT_TRAJECTORY.add(new Line(a, b, col));
+        // didn't land in sim window — check landing zone
+        int fallH = VoidDetector.fallHeight(sim.getPos(), world);
+        double totalDrop = startY - sim.posY + fallH;
+        boolean safe = totalDrop <= MAX_SAFE_FALL && fallH < 30;
+        return new JumpResult(safe, arc, sim.getPos(), (int) totalDrop);
+    }
+
+    private float findSafeJumpYaw(ClientPlayerEntity player, WorldView world,
+                                   float toTargetYaw, float preferredYaw) {
+        // test angles fanning from preferred, then from target, then opposites
+        float[] offsets = {
+            0, 30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180
+        };
+
+        // first pass: near preferred direction
+        for (float off : offsets) {
+            float testYaw = preferredYaw + off;
+            JumpResult r = simulateJump(player, world, testYaw);
+            if (r.safe) return testYaw;
         }
 
-        // endpoint cube
-        Vec3d end = points.get(points.size() - 1);
-        TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
-            new Cuboid(end.subtract(0.1, 0.1, 0.1), new Vec3d(0.2, 0.2, 0.2), TRAJ_END));
+        // second pass: near target direction (if different)
+        if (Math.abs(MathHelper.wrapDegrees(preferredYaw - toTargetYaw)) > 30) {
+            for (float off : offsets) {
+                float testYaw = toTargetYaw + off;
+                JumpResult r = simulateJump(player, world, testYaw);
+                if (r.safe) return testYaw;
+            }
+        }
 
-        // target marker
-        TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
-            new Cuboid(targetPos.subtract(0.3, 0, 0.3), new Vec3d(0.6, 1.8, 0.6), TARGET_BOX));
+        // nothing safe: don't jump, stay put
+        MinecraftClient.getInstance().options.jumpKey.setPressed(false);
+        return toTargetYaw; // face target, don't jump
+    }
 
-        // state indicator above player
-        Color stateCol = player.isOnGround() ? GROUND_COL : AIR_COL;
-        Vec3d head = player.getPos().add(-0.15, 2.0, -0.15);
+    // ── attack ────────────────────────────────────────────────────────────────
+
+    private void tryAttack(ClientPlayerEntity player, Entity target) {
+        if (!AttackTiming.canAttack(player, target)) return;
+
+        float cooldown = player.getAttackCooldownProgress(0.5f);
+        boolean isCrit = AttackTiming.isCritState(player);
+
+        if (isCrit || cooldown >= 1.0f) {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            mc.interactionManager.attackEntity(player, target);
+            player.swingHand(Hand.MAIN_HAND);
+            didHitThisJump = true;
+        }
+    }
+
+    // ── visualization ─────────────────────────────────────────────────────────
+
+    private void renderJumpArc(ClientPlayerEntity player, float yaw,
+                               WorldView world, Vec3d targetPos) {
+        TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
+
+        JumpResult result = simulateJump(player, world, yaw);
+
+        // draw arc
+        for (int i = 0; i < result.arc.size() - 1; i++) {
+            Vec3d a = result.arc.get(i);
+            Vec3d b = result.arc.get(i + 1);
+            boolean segSafe = VoidDetector.fallHeight(b, world) <= MAX_SAFE_FALL;
+            TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
+                new Line(a, b, segSafe ? COL_SAFE : COL_DANGER));
+        }
+
+        // landing point
+        if (!result.arc.isEmpty()) {
+            Vec3d end = result.arc.get(result.arc.size() - 1);
+            Color landCol = result.safe ? COL_LANDING : COL_DANGER;
+            TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
+                new Cuboid(end.subtract(0.15, 0.15, 0.15), new Vec3d(0.3, 0.3, 0.3), landCol));
+        }
+
+        // target
         TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
-            new Cuboid(head, new Vec3d(0.3, 0.3, 0.3), stateCol));
+            new Cuboid(targetPos.subtract(0.3, 0, 0.3), new Vec3d(0.6, 1.8, 0.6), COL_TARGET));
+
+        // tactic indicator above head
+        Color tacCol = switch (tactic) {
+            case ENGAGE -> COL_ENGAGE;
+            case STRAFE -> COL_STRAFE;
+            case CHASE  -> COL_CHASE;
+        };
+        TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
+            new Cuboid(player.getPos().add(-0.15, 2.0, -0.15),
+                new Vec3d(0.3, 0.3, 0.3), tacCol));
     }
 
     // ── cleanup ───────────────────────────────────────────────────────────────
@@ -291,17 +358,22 @@ public class CombatController {
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
+        tactic = Tactic.ENGAGE;
         wasOnGround = true;
         airTicks = 0;
+        groundTicks = 0;
         wtapCooldown = 0;
-        didAttackThisJump = false;
+        didHitThisJump = false;
+        prevTargetPos = null;
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
     }
 
-    // ── math helpers ──────────────────────────────────────────────────────────
+    // ── internals ─────────────────────────────────────────────────────────────
 
     private static float lerpAngle(float from, float to, float t) {
         float diff = MathHelper.wrapDegrees(to - from);
         return from + diff * t;
     }
+
+    private record JumpResult(boolean safe, List<Vec3d> arc, Vec3d landingPos, int fallHeight) {}
 }
