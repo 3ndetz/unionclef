@@ -122,14 +122,15 @@ public class BlockSpacePathFinder {
 			
 			for(BlockNode child : next.getChildren(world, goal, generateDeep)) {
 				if (TungstenModDataContainer.PATHFINDER.stop.get()) return Optional.empty();
-				if (closed.contains(child)) continue;
+//				if (closed.contains(child)) continue;
+				
 
 				updateNode(next, child, target, world);
-
+				
                 if (child.isOpen()) {
                     openSet.update(child);
                 } else {
-                    openSet.insert(child);
+                    openSet.insert(child);//dont double count, dont insert into open set if it's already there
                 }
 			}
             
