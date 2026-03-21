@@ -421,9 +421,9 @@ public class Agent {
         this.jumping = this.input.playerInput.jump();
 
         
-        if(Math.abs(this.velX) < 1e-5) this.velX = 0.0;
+        if(Math.abs(this.velX) < 0.003) this.velX = 0.0;
         if(Math.abs(this.velY) < 0.003) this.velY = 0.0;
-        if(Math.abs(this.velZ) < 1e-5) this.velZ = 0.0;
+        if(Math.abs(this.velZ) < 0.003) this.velZ = 0.0;
 
         if(this.jumping) {
             double k = this.isInLava() ? this.getFluidHeight(FluidTags.LAVA) : this.getFluidHeight(FluidTags.WATER);
