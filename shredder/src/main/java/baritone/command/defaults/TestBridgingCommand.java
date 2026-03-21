@@ -22,6 +22,7 @@ import baritone.api.IBaritone;
 import baritone.api.command.Command;
 import baritone.api.command.argument.IArgConsumer;
 import baritone.api.command.exception.CommandException;
+import baritone.api.pathing.goals.GoalBlock;
 import baritone.api.pathing.goals.GoalXZ;
 
 import java.util.Arrays;
@@ -44,14 +45,18 @@ public class TestBridgingCommand extends Command {
 
         logDirect("Bridging mode: " + Baritone.settings().bridgingMode.value);
 
-        // Go forward in the direction the player is looking
-        GoalXZ goal = GoalXZ.fromDirection(
+        // Go forward in the direction the player is looking, at the SAME Y level.
+        // GoalXZ allows any Y, so the pathfinder would descend instead of bridge.
+        // GoalBlock forces horizontal bridging at the current height.
+        GoalXZ xzGoal = GoalXZ.fromDirection(
                 ctx.playerFeetAsVec(),
                 ctx.player().getHeadYaw(),
                 distance
         );
+        int playerY = ctx.playerFeet().getY();
+        GoalBlock goal = new GoalBlock(xzGoal.getX(), playerY, xzGoal.getZ());
         baritone.getCustomGoalProcess().setGoalAndPath(goal);
-        logDirect(String.format("Bridging toward %s (%.0f blocks)", goal, distance));
+        logDirect(String.format("Bridging toward %s (%.0f blocks, Y=%d)", goal, distance, playerY));
     }
 
     @Override

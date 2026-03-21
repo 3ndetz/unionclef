@@ -7,50 +7,52 @@
   - [x] change baritone mojmap to altoclef yarn
     - [x] fix mixins
   - [x] 1.21 runs successfully and working
-- [ ] 1. Create a new pathfinder: elite combination of baritone and Tunsten
+- [ ] 1. Create a new pathfinder: combination of baritone and Tungsten
   - [x] 1.1 Find a suitable name for the new pathfinder
     - autobots theme: Optimus, Bumblebee, Megatron, Starscream, Soundwave, Ironhide, Ratchet, Jazz, Grimlock, Shockwave?
     - ninja turtle theme: Leonardo, Michelangelo, Donatello, Raphael?
     - Solved: "shredder"
-  - [x] 2.2 Copy the codebase of baritone TODO
-  - [x] 2.3 Implement into project and replace altoclef's baritone calls with this new pathfinder TODO
-  - [ ] 2.4 Improve baritone features in shredder
+  - [x] 1.2 Copy the codebase of baritone
+  - [x] 1.3 Implement into project and replace altoclef's baritone calls with shredder
+  - [ ] 1.4 Improve baritone features in shredder
     - [x] Fix stupid debug spam and spam "failed"
-    - [x] 2.4.1 Implement ACCELERATION for simple safe paths
-      - [x] 2.4.1.1 Implement acceleration for straight line running to run and jump when applicable
-      - [ ] 2.4.1.2 Implement diagonal moving acceleration and make diagonal movement instead of horizontal stairs-like movement
-        - [ ] 2.4.1.2.1 remove stupid mega-multi-change view path nodes when path is clear and simple without danger and complexity
+    - [x] 1.4.1 Implement ACCELERATION for simple safe paths
+      - [x] 1.4.1.1 Implement acceleration for straight line running to run and jump when applicable
+      - [ ] 1.4.1.2 Implement diagonal moving acceleration and make diagonal movement instead of horizontal stairs-like movement
+        - [ ] 1.4.1.2.1 remove stupid mega-multi-change view path nodes when path is clear and simple without danger and complexity
         - [ ] FAR TODO - unrealizeable. Complex. Can't do normally.
-  - [x] 2.5 add safe ENTROPY: HUMAN-like movements
-    - [x] 2.5.1 WindMouse camera smoothing in LookBehavior (render-frame, settings: windMouseLook/Gravity/Wind/MaxStep)
-    - [x] 2.5.2 TungstenBridge — smart delegation of simple flat segments to tungsten (settings: useTungsten, tungstenMinSegment)
-  - [ ] 2.6 Tungsten deep integration — improve pathfinding + reduce drift
-    - [ ] 2.6.1 BlockSpace: заменить примитивный BlockSpacePathFinder на baritone-level эвристики
+  - [x] 1.5 add safe ENTROPY: HUMAN-like movements
+    - [x] 1.5.1 WindMouse camera smoothing in LookBehavior (render-frame, settings: windMouseLook/Gravity/Wind/MaxStep)
+    - [x] 1.5.2 TungstenBridge — smart delegation of simple flat segments to tungsten (settings: useTungsten, tungstenMinSegment)
+  - [ ] 1.6 Tungsten deep integration — improve pathfinding + reduce drift
+    - [ ] 1.6.1 BlockSpace: заменить примитивный BlockSpacePathFinder на baritone-level эвристики
       - BlockNode.getChildren сейчас просто сканирует 3D круг radius=8 — тупой перебор
       - Нужно: адаптировать baritone Movements (Traverse, Ascend, Descend, Parkour, Pillar) для BlockNode
       - Это даст: знание про step-up высоты, gap distance, fence collision, slope — до запуска physics A*
       - Результат: physics A* получает 2-3 умных направления вместо 100+ слепых
-    - [ ] 2.6.2 Macro-actions в physics A*: sprint-jump как одна нода вместо 12 тиков
+    - [ ] 1.6.2 Macro-actions в physics A*: sprint-jump как одна нода вместо 12 тиков
       - Сейчас: каждый тик = нода с 100 вариантами input. 12 тиков прыжка = 12 нод
       - Нужно: "sprint-jump к blocknode X" = одна нода, внутри 12 Agent.tick() без ветвления
       - Результат: дерево A* мельче на порядок, timeout хватает на 20+ прыжков
-    - [ ] 2.6.3 Simulation fixes (поштучно, с перетестом pathfinder после каждого)
+    - [ ] 1.6.3 Simulation fixes (поштучно, с перетестом pathfinder после каждого)
       - [ ] velocity threshold 1e-5 → 0.003 (vanilla correct) + перетест
       - [ ] AgentInput.normalize → убрать, нормализация в updateVelocity + перетест
       - [ ] airStrafingSpeed 0.06 → 0.02/0.026 + перетест
       - [ ] setSprinting movementSpeed → attribute-like toggle + перетест
       - [ ] fallDistance double → float + перетест
       - Каждый фикс отдельно. Если pathfinder ломается — подстроить costs/heuristic ДО следующего фикса
-    - [ ] 2.6.4 Closed-loop executor: yaw-коррекция на основе реальной позиции
+    - [ ] 1.6.4 Closed-loop executor: yaw-коррекция на основе реальной позиции
       - Сейчас: open-loop, слепо воспроизводит pre-computed input
       - Нужно: каждый тик вычислять posError, корректировать yaw на delta к ожидаемой позиции
       - Результат: drift не накапливается, пути не abort'ятся
-    - [ ] 2.6.5 Idle movement: circular path пока pathfinder считает
+    - [ ] 1.6.5 Idle movement: circular path пока pathfinder считает
       - Генератор idle-маршрута от текущей позиции (круг/восьмёрка)
       - Seamless switch idle→real path когда pathfinder досчитал
-  - [ ] 2.7 Fix jump bridging (jumpBridging setting)
-    - [ ] 2.7.1 Rewrite state machine: PRE_ROTATE before jumping, backward-facing BRIDGE
-    - [ ] 2.7.2 Fix placement verification (don't advance lastSolid without confirming block placed)
-    - [ ] 2.7.3 Fix rotation/objectMouseOver timing (1-tick delay between rotation and click)
+  - [x] 1.7 Fix jump bridging (jumpBridging setting)
+    - [x] 1.7.1 Rewrite state machine: sprint-speed telly bridge (FJ_SPRINT → FJ_AIRBORNE continuous)
+    - [x] 1.7.2 Fix placement: processRightClickBlock bypasses crosshair (objectMouseOver MISS at 86°+)
+    - [x] 1.7.3 Fix sprint: setSprinting(true) forces sprint at entity level
+    - [x] 1.7.4 Fix TestBridgingCommand: GoalBlock at player Y (was GoalXZ → pathfinder descended)
+    - [x] 1.7.5 Optimize: debug flag, drift correction, cooldown, path-end graceful exit
 <!-- Верхнеуровневые задачи. Пишет юзер, AI отмечает выполнение. -->
 <!-- Формат: - [ ] задача / - [x] задача -->
