@@ -19,6 +19,7 @@ public class PathExecutor {
     protected List<Node> path;
     protected int tick = 0;
     protected boolean allowedFlying = false;
+    private boolean startupCorrectionDone = false;
     public boolean stop = false;
     public Runnable cb = null;
     public long startTime;
@@ -42,6 +43,7 @@ public class PathExecutor {
 		if (isClient)
 			this.allowedFlying = TungstenMod.mc.player.getAbilities().allowFlying;
 	    stop = false;
+	    startupCorrectionDone = false;
     	this.path = path;
     	this.tick = 0;
     	RenderHelper.renderPathCurrentlyExecuted();
@@ -143,25 +145,23 @@ public class PathExecutor {
 		    if(node.input != null) {
 			    float yaw = node.input.yaw;
 
-			    // Closed-loop yaw correction: blend pre-computed yaw toward
-			    // the direction that compensates for accumulated position drift.
-			    float strength = TungstenConfig.get().closedLoopStrength;
-			    if (strength > 0 && this.tick > 0) {
+			    // Startup correction: on first ticks, the path may have been
+			    // computed from a stale position. Correct yaw to point from
+			    // real position toward expected position. Once drift is small
+			    // enough, switch to pre-computed yaw (startupCorrectionDone).
+			    if (!startupCorrectionDone) {
 			        Vec3d expected = node.agent.getPos();
 			        Vec3d actual = player.getPos();
 			        double dx = expected.x - actual.x;
 			        double dz = expected.z - actual.z;
 			        double horizDrift = Math.sqrt(dx * dx + dz * dz);
 
-			        if (horizDrift > 0.01) {
-			            // Yaw that points from actual toward expected position
-			            float correctionYaw = (float)(-Math.toDegrees(Math.atan2(dx, dz)));
-			            // Wrap difference to [-180, 180]
-			            float diff = correctionYaw - yaw;
-			            diff = ((diff + 180) % 360 + 360) % 360 - 180;
-			            // Blend: small drift = small correction, large drift = stronger
-			            float blendFactor = (float) Math.min(horizDrift * 2.0, 1.0) * strength;
-			            yaw = yaw + diff * blendFactor;
+			        if (horizDrift < 0.15 || this.tick > 20) {
+			            // Drift is small enough or we've been correcting too long
+			            startupCorrectionDone = true;
+			        } else {
+			            // Point from actual toward expected
+			            yaw = (float)(-Math.toDegrees(Math.atan2(dx, dz)));
 			        }
 			    }
 
