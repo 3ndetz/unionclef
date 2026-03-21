@@ -61,35 +61,10 @@ public class BlockSpacePathFinder {
 	}
 	
 	private static Optional<List<BlockNode>> search(WorldView world, Vec3d target, boolean generateDeep, PlayerEntity player) {
-		Goal goal = new Goal((int) target.x, (int) target.y, (int) target.z);
-		BlockPos playerBlock = player.getBlockPos();
-		BlockState stateAtFeet = world.getBlockState(playerBlock);
-
-		// Find the right start position:
-		// 1. If standing in a solid block (fence, slab) → start from above
-		// 2. If in air → scan down to find what we're standing ON, start from above that
-		// 3. Normal case → start from blockPos
-		BlockPos startPos;
-		if (!stateAtFeet.isAir() && BlockShapeChecker.getShapeVolume(playerBlock, world) != 0
-				&& BlockShapeChecker.getBlockHeight(playerBlock, world) > 0.5) {
-			// Player's feet are inside a solid block (fence, wall, slab)
-			startPos = playerBlock.up();
-		} else if (stateAtFeet.isAir() && world.getBlockState(playerBlock.down()).isAir()) {
-			// Player is in air — find ground below
-			BlockPos ground = playerBlock;
-			for (int dy = 1; dy <= 5; dy++) {
-				BlockPos check = playerBlock.down(dy);
-				if (!world.getBlockState(check).isAir()) {
-					ground = check.up();
-					break;
-				}
-			}
-			startPos = ground;
-		} else {
-			startPos = playerBlock;
+		if (!world.getBlockState(player.getBlockPos()).isAir() && BlockShapeChecker.getShapeVolume(player.getBlockPos(), world) != 0 && BlockShapeChecker.getBlockHeight(player.getBlockPos(), world) > 0.5) {
+			return search(world, new BlockNode(player.getBlockPos().up(), new Goal((int) target.x, (int) target.y, (int) target.z), player, world), target, player);
 		}
-
-		return search(world, new BlockNode(startPos, goal, player, world), target, player);
+		return search(world, new BlockNode(player.getBlockPos(), new Goal((int) target.x, (int) target.y, (int) target.z), player, world), target, player);
 	}
 	
 	private static Optional<List<BlockNode>> search(WorldView world, BlockNode start, Vec3d target, boolean generateDeep, PlayerEntity player) {

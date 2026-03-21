@@ -402,9 +402,8 @@ public class BlockNode {
 			return true;
 		if (childBelowBlock instanceof LilyPadBlock)
 			return true;
-		// Carpet is walkable — don't reject it. Carpet on blocks/fences is
-		// a valid parkour surface.
-		// if (childBelowBlock instanceof CarpetBlock) return true;
+		if (childBelowBlock instanceof CarpetBlock)
+			return true;
 		if (childBelowBlock instanceof DaylightDetectorBlock)
 			return true;
 		if (childBlock instanceof StairsBlock)
