@@ -48,7 +48,7 @@
     - [ ] 1.6.5 Idle movement: circular path пока pathfinder считает
       - Генератор idle-маршрута от текущей позиции (круг/восьмёрка)
       - Seamless switch idle→real path когда pathfinder досчитал
-  - [x] 1.7 Fix jump bridging (jumpBridging setting)
+  - [x] 1.7 Fix jump bridging (bridgingMode jump/back_jump)
     - [x] 1.7.1 Rewrite state machine: sprint-speed telly bridge (FJ_SPRINT → FJ_AIRBORNE continuous)
     - [x] 1.7.2 Fix placement: processRightClickBlock bypasses crosshair (objectMouseOver MISS at 86°+)
     - [x] 1.7.3 Fix sprint: setSprinting(true) forces sprint at entity level
