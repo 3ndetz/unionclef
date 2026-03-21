@@ -11,7 +11,6 @@ import kaptainwutax.tungsten.util.WindMouseRotation;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldView;
 
@@ -20,11 +19,21 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Simple fighter PvP.
+ * Two independent cycles:
  *
- * Ground: set jump direction directly (NO WindMouse, no tracking).
- * Air: WindMouse sweeps PAST target. Click when crosshair crosses hitbox.
- * Between jumps: no rotation at all (pause).
+ * LEGS CYCLE (sprint-jump chain):
+ *   On ground → W + A/D + sprint + jump → airborne → land → repeat.
+ *   Jump direction set by yaw on ground tick. Own rhythm.
+ *
+ * MOUSE CYCLE (aim pattern, runs in parallel):
+ *   1. FLICK: fast turn roughly toward target (overshoot 20-40°). Few ticks.
+ *   2. CORRECT: WindMouse corrects back, sweeping through target hitbox.
+ *      If crosshair actually touches target (MC crosshairTarget) → click.
+ *   3. PAUSE: brief rest (2-5 ticks). No rotation.
+ *   4. Back to FLICK in opposite direction.
+ *
+ * Click: only when mc.crosshairTarget IS the target entity.
+ * This is the actual client raycast, same as manual mouse click.
  */
 public class CombatController {
 
@@ -32,28 +41,26 @@ public class CombatController {
     private static final int MAX_SAFE_FALL  = 4;
     private static final double CLOSE_RANGE = 3.5;
 
-    // ── state ─────────────────────────────────────────────────────────────────
+    // ── legs state ────────────────────────────────────────────────────────────
+    private boolean wasOnGround = true;
+    private int strafeDir = 1;
+    private int wtapCooldown = 0;
+    private boolean didHitThisJump = false;
+    private Vec3d prevTargetPos = null;
+
     private enum Tactic { ENGAGE, STRAFE, CHASE }
     private Tactic tactic = Tactic.ENGAGE;
 
-    private boolean didHitThisJump = false;
-    private boolean wasOnGround = true;
-    private int airTicks = 0;
-    private int strafeDir = 1;
-    private int groundTicks = 0;
-
-    private int wtapCooldown = 0;
+    // ── mouse state ───────────────────────────────────────────────────────────
+    private enum MousePhase { FLICK, CORRECT, PAUSE }
+    private MousePhase mousePhase = MousePhase.FLICK;
+    private int mousePhaseTicks = 0;
+    private float flickDirection = 1; // +1 or -1, alternates
     private boolean attackKeyPressed = false;
-    private Vec3d prevTargetPos = null;
+
     private final Random rng = new Random();
 
-    // sweep: one point PAST target that WindMouse aims at
-    private float sweepTargetYaw = 0;
-    private float sweepTargetPitch = 0;
-    private boolean hasCrossedTarget = false; // crosshair passed through target zone
-    private int ticksSinceCross = 0;
-
-    // viz
+    // ── viz ────────────────────────────────────────────────────────────────────
     private static final Color COL_SAFE    = new Color(0, 220, 100);
     private static final Color COL_DANGER  = new Color(220, 60, 30);
     private static final Color COL_WALL    = new Color(200, 100, 0);
@@ -70,6 +77,7 @@ public class CombatController {
 
         MinecraftClient mc = MinecraftClient.getInstance();
 
+        // release attack key from previous tick
         if (attackKeyPressed) {
             mc.options.attackKey.setPressed(false);
             attackKeyPressed = false;
@@ -90,7 +98,7 @@ public class CombatController {
         boolean targetApproaching = false;
         if (prevTargetPos != null) {
             Vec3d targetVel = targetPos.subtract(prevTargetPos);
-            double len = targetPos.subtract(playerPos).length();
+            double len = dist;
             if (len > 0.1) {
                 double dot = targetVel.dotProduct(targetPos.subtract(playerPos).multiply(1.0 / len));
                 targetRunningAway = dot > 0.05;
@@ -101,35 +109,41 @@ public class CombatController {
 
         boolean hasLOS = hasLineOfSight(player, targetPos);
 
-        // ── GROUND ────────────────────────────────────────────────────────────
+        // ══════════════════════════════════════════════════════════════════════
+        // LEGS CYCLE — independent from mouse
+        // ══════════════════════════════════════════════════════════════════════
+        tickLegs(player, mc, world, toTargetYaw, onGround,
+            dist, targetRunningAway, targetApproaching, hasLOS, targetPos);
+
+        // ══════════════════════════════════════════════════════════════════════
+        // MOUSE CYCLE — independent from legs
+        // ══════════════════════════════════════════════════════════════════════
+        tickMouse(player, mc, target, toTargetYaw, toTargetPitch, dist);
+
+        wasOnGround = onGround;
+        return true;
+    }
+
+    // ── LEGS ──────────────────────────────────────────────────────────────────
+
+    private void tickLegs(ClientPlayerEntity player, MinecraftClient mc,
+                          WorldView world, float toTargetYaw, boolean onGround,
+                          double dist, boolean targetRunning, boolean targetApproaching,
+                          boolean hasLOS, Vec3d targetPos) {
         if (onGround) {
             if (!wasOnGround) {
-                groundTicks = 0;
-                decideTactic(dist, targetRunningAway, targetApproaching, hasLOS);
+                // just landed
+                decideTactic(dist, targetRunning, targetApproaching, hasLOS);
+                didHitThisJump = false;
             }
-            groundTicks++;
 
-            // NO WindMouse on ground — no constant tracking
-            WindMouseRotation.INSTANCE.clearTarget();
-
-            // set jump direction directly
             float jumpYaw = computeGroundYaw(player, world, toTargetYaw);
-            player.setYaw(jumpYaw);
-            // pitch: roughly toward target (not precise)
-            player.setPitch(toTargetPitch + (rng.nextFloat() - 0.5f) * 10f);
 
-            // compute sweep target for the upcoming air phase:
-            // a point 15-30° PAST target (WindMouse will sweep through target toward it)
-            float overshoot = 15f + rng.nextFloat() * 15f;
-            int side = rng.nextBoolean() ? 1 : -1;
-            sweepTargetYaw = toTargetYaw + overshoot * side;
-            sweepTargetPitch = toTargetPitch + (rng.nextFloat() - 0.5f) * 8f;
-            hasCrossedTarget = false;
-            ticksSinceCross = 0;
+            // DON'T set player.setYaw here — mouse cycle controls yaw
+            // Instead, we use forward + strafe keys relative to current facing
 
-            // w-tap
-            boolean doWtap = wtapCooldown <= 0 && didHitThisJump && groundTicks == 1;
-            if (doWtap) {
+            // w-tap on first ground tick after hit
+            if (wtapCooldown <= 0 && didHitThisJump && !wasOnGround) {
                 mc.options.sprintKey.setPressed(false);
                 mc.options.forwardKey.setPressed(false);
                 mc.options.jumpKey.setPressed(false);
@@ -140,33 +154,14 @@ public class CombatController {
                 mc.options.jumpKey.setPressed(true);
             }
 
-            // A/D strafe with W
             mc.options.leftKey.setPressed(strafeDir > 0);
             mc.options.rightKey.setPressed(strafeDir < 0);
             mc.options.backKey.setPressed(false);
             mc.options.sneakKey.setPressed(false);
 
-            didHitThisJump = false;
-            airTicks = 0;
-
             renderJumpArc(player, jumpYaw, world, targetPos);
-
         } else {
-            // ── AIR ───────────────────────────────────────────────────────────
-            airTicks++;
-
-            if (airTicks <= 2) {
-                // first 2 ticks: no rotation, natural drift from jump
-                WindMouseRotation.INSTANCE.clearTarget();
-            } else if (!didHitThisJump) {
-                // WindMouse sweeps toward the OVERSHOOT point (past target)
-                // crosshair will naturally pass through target on the way
-                WindMouseRotation.INSTANCE.setTarget(sweepTargetYaw, sweepTargetPitch);
-            } else {
-                // after hit: stop aiming, let crosshair drift
-                WindMouseRotation.INSTANCE.clearTarget();
-            }
-
+            // airborne — keep movement going
             mc.options.forwardKey.setPressed(true);
             mc.options.sprintKey.setPressed(true);
             mc.options.jumpKey.setPressed(false);
@@ -174,38 +169,73 @@ public class CombatController {
             mc.options.rightKey.setPressed(strafeDir < 0);
             mc.options.backKey.setPressed(false);
             mc.options.sneakKey.setPressed(false);
+        }
+    }
 
-            // ── click detection: did crosshair pass through target? ───────────
-            if (!didHitThisJump && airTicks > 2) {
-                double crosshairToTarget = angleDist(
-                    player.getYaw(), player.getPitch(),
-                    toTargetYaw, toTargetPitch);
+    // ── MOUSE ─────────────────────────────────────────────────────────────────
 
-                if (crosshairToTarget < 18.0) {
-                    if (!hasCrossedTarget) {
-                        hasCrossedTarget = true;
-                        ticksSinceCross = 0;
-                    }
+    private void tickMouse(ClientPlayerEntity player, MinecraftClient mc,
+                           Entity target, float toTargetYaw, float toTargetPitch,
+                           double dist) {
+        mousePhaseTicks++;
+
+        switch (mousePhase) {
+            case FLICK -> {
+                // fast turn: set a point 20-40° past target
+                float overshoot = 20f + rng.nextFloat() * 20f;
+                float flickYaw = toTargetYaw + overshoot * flickDirection;
+                float flickPitch = toTargetPitch + (rng.nextFloat() - 0.5f) * 10f;
+                WindMouseRotation.INSTANCE.setTarget(flickYaw, flickPitch);
+
+                // transition when we're roughly past target (or time limit)
+                if (mousePhaseTicks >= 2 + rng.nextInt(3)) {
+                    enterMousePhase(MousePhase.CORRECT);
+                }
+            }
+            case CORRECT -> {
+                // WindMouse corrects back through target toward opposite side
+                float correction = 5f + rng.nextFloat() * 10f;
+                float correctYaw = toTargetYaw - correction * flickDirection;
+                float correctPitch = toTargetPitch + (rng.nextFloat() - 0.5f) * 5f;
+                WindMouseRotation.INSTANCE.setTarget(correctYaw, correctPitch);
+
+                // CLICK: check MC's own crosshair raycast
+                if (isLookingAtEntity(mc, target) && AttackTiming.canAttack(player, target)) {
+                    mc.options.attackKey.setPressed(true);
+                    attackKeyPressed = true;
+                    didHitThisJump = true;
                 }
 
-                if (hasCrossedTarget) {
-                    ticksSinceCross++;
+                if (mousePhaseTicks >= 3 + rng.nextInt(3)) {
+                    enterMousePhase(MousePhase.PAUSE);
+                }
+            }
+            case PAUSE -> {
+                // no rotation — human rests between mouse movements
+                WindMouseRotation.INSTANCE.clearTarget();
 
-                    // click 1-2 ticks after entering target zone (reaction time)
-                    // NOT immediately — that's suspicious
-                    if (ticksSinceCross >= 1 + rng.nextInt(2)) {
-                        if (AttackTiming.canAttack(player, target)) {
-                            mc.options.attackKey.setPressed(true);
-                            attackKeyPressed = true;
-                            didHitThisJump = true;
-                        }
-                    }
+                if (mousePhaseTicks >= 2 + rng.nextInt(4)) {
+                    flickDirection = -flickDirection; // alternate sides
+                    enterMousePhase(MousePhase.FLICK);
                 }
             }
         }
+    }
 
-        wasOnGround = onGround;
-        return true;
+    private void enterMousePhase(MousePhase phase) {
+        mousePhase = phase;
+        mousePhaseTicks = 0;
+    }
+
+    /**
+     * Check if MC's own crosshair raycast is targeting this entity.
+     * This is the SAME check that a real mouse click uses.
+     */
+    private static boolean isLookingAtEntity(MinecraftClient mc, Entity target) {
+        if (mc.crosshairTarget == null) return false;
+        if (mc.crosshairTarget.getType() != net.minecraft.util.hit.HitResult.Type.ENTITY) return false;
+        net.minecraft.util.hit.EntityHitResult ehr = (net.minecraft.util.hit.EntityHitResult) mc.crosshairTarget;
+        return ehr.getEntity() == target;
     }
 
     // ── ground yaw with safety ────────────────────────────────────────────────
@@ -219,19 +249,15 @@ public class CombatController {
 
     private void decideTactic(double dist, boolean targetRunning,
                               boolean targetApproaching, boolean hasLOS) {
-        if (!hasLOS) {
-            tactic = Tactic.ENGAGE;
-        } else if (targetRunning) {
-            tactic = Tactic.CHASE;
-        } else if (dist < CLOSE_RANGE || targetApproaching || didHitThisJump) {
+        if (!hasLOS) tactic = Tactic.ENGAGE;
+        else if (targetRunning) tactic = Tactic.CHASE;
+        else if (dist < CLOSE_RANGE || targetApproaching || didHitThisJump) {
             tactic = Tactic.STRAFE;
             strafeDir = -strafeDir;
-        } else {
-            tactic = Tactic.ENGAGE;
-        }
+        } else tactic = Tactic.ENGAGE;
     }
 
-    // ── jump simulation ───────────────────────────────────────────────────────
+    // ── jump sim ──────────────────────────────────────────────────────────────
 
     private JumpResult simulateJump(ClientPlayerEntity player, WorldView world, float yaw) {
         Agent sim = Agent.of(player);
@@ -255,26 +281,21 @@ public class CombatController {
         for (int t = 0; t < JUMP_SIM_TICKS; t++) {
             sim.tick(world);
             arc.add(sim.getPos());
-
             if (t == 0) {
                 sim.keyJump = false;
                 sim.input.playerInput = new TungstenPlayerInput(
                     true, false, sim.keyLeft, sim.keyRight, false, false, true);
             }
-
             if (sim.horizontalCollision && !hitWall) {
                 hitWall = true;
                 if (t <= 3) return new JumpResult(false, arc, sim.getPos(), 0, true);
             }
-
             if (sim.velY < 0) passedApex = true;
-
             if (passedApex && sim.onGround && t > 2) {
                 int fallH = (int) Math.max(0, startY - sim.posY);
                 boolean safe = fallH <= MAX_SAFE_FALL && VoidDetector.isSafe(sim.getPos(), world);
                 return new JumpResult(safe, arc, sim.getPos(), fallH, hitWall);
             }
-
             if (passedApex && !VoidDetector.isSafe(sim.getPos(), world)) {
                 return new JumpResult(false, arc, sim.getPos(), MAX_SAFE_FALL + 1, hitWall);
             }
@@ -301,12 +322,6 @@ public class CombatController {
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
-
-    private static double angleDist(float yaw1, float pitch1, float yaw2, float pitch2) {
-        float dy = Math.abs(MathHelper.wrapDegrees(yaw1 - yaw2));
-        float dp = Math.abs(pitch1 - pitch2);
-        return Math.sqrt(dy * dy + dp * dp);
-    }
 
     private static boolean hasLineOfSight(ClientPlayerEntity player, Vec3d targetPos) {
         net.minecraft.util.hit.HitResult hit = player.getWorld().raycast(
@@ -363,14 +378,12 @@ public class CombatController {
         mc.options.attackKey.setPressed(false);
         attackKeyPressed = false;
         WindMouseRotation.INSTANCE.clearTarget();
+        mousePhase = MousePhase.FLICK;
+        mousePhaseTicks = 0;
         tactic = Tactic.ENGAGE;
         wasOnGround = true;
-        airTicks = 0;
-        groundTicks = 0;
         wtapCooldown = 0;
         didHitThisJump = false;
-        hasCrossedTarget = false;
-        ticksSinceCross = 0;
         prevTargetPos = null;
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
     }
