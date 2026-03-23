@@ -241,13 +241,8 @@ public class SafetySystem {
 
     private CombatStage evaluateStage(ClientPlayerEntity player, Vec3d playerVel,
                                        double horizSpeed, DangerLevel dangerPredicted, DangerLevel dangerCurrent) {
-        // DANGER_IMMINENT: predicted death fall — always emergency, no extra conditions
-        if (dangerPredicted == DangerLevel.HEIGHT_DEATH && horizSpeed > 0.02) {
-            return CombatStage.DANGER_IMMINENT;
-        }
-        // Predicted serious fall (4-9) — require current pos also not perfectly safe
-        if (dangerPredicted == DangerLevel.HEIGHT_HIGH && horizSpeed > 0.05
-                && dangerCurrent != DangerLevel.NONE) {
+        // DANGER_IMMINENT: any serious fall (4+ blocks) predicted — always emergency
+        if (dangerPredicted.isSerious() && horizSpeed > 0.02) {
             return CombatStage.DANGER_IMMINENT;
         }
         // Already falling into serious danger
