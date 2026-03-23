@@ -162,16 +162,34 @@ public class SafetySystem {
                     mc.options.rightKey.setPressed(false);
                 }
                 case DANGER_BATTLE -> {
-                    // no key override yet
+                    // no key override yet — future: reposition
                 }
                 case PURSUE, ESCAPE, DELICATE_BATTLE -> {
-                    // no key override
+                    // no key override from saver
                 }
             }
         }
 
-        // release keys when braking ended THIS frame
-        if (!braking && wasBrakingLastFrame) {
+        // ── movement: sprint-jump toward target (if enabled + not braking) ──
+        boolean movementsEnabled = kaptainwutax.tungsten.TungstenConfig.get().combatMovementsEnabled;
+        if (movementsEnabled && !braking) {
+            // sprint + W + jump when on ground
+            mc.options.forwardKey.setPressed(true);
+            mc.options.sprintKey.setPressed(true);
+            mc.options.backKey.setPressed(false);
+            mc.options.leftKey.setPressed(false);
+            mc.options.rightKey.setPressed(false);
+            mc.options.sneakKey.setPressed(false);
+            if (player.isOnGround()) {
+                mc.options.jumpKey.setPressed(true);
+            } else {
+                mc.options.jumpKey.setPressed(false);
+            }
+        }
+
+        // release keys when braking ended THIS frame (and movements not taking over)
+        if (!braking && wasBrakingLastFrame
+                && !kaptainwutax.tungsten.TungstenConfig.get().combatMovementsEnabled) {
             mc.options.forwardKey.setPressed(false);
             mc.options.backKey.setPressed(false);
             mc.options.leftKey.setPressed(false);
@@ -223,16 +241,18 @@ public class SafetySystem {
 
     private CombatStage evaluateStage(ClientPlayerEntity player, Vec3d playerVel,
                                        double horizSpeed, DangerLevel dangerPredicted, DangerLevel dangerCurrent) {
-        // DANGER_IMMINENT: only on serious falls (4+ blocks)
-        // Require: predicted pos is dangerous AND current pos is also not perfectly safe
-        // This prevents false triggers from normal jumps near 1-block drops
-        if (dangerPredicted.isSerious() && horizSpeed > 0.05
+        // DANGER_IMMINENT: predicted death fall — always emergency, no extra conditions
+        if (dangerPredicted == DangerLevel.HEIGHT_DEATH && horizSpeed > 0.02) {
+            return CombatStage.DANGER_IMMINENT;
+        }
+        // Predicted serious fall (4-9) — require current pos also not perfectly safe
+        if (dangerPredicted == DangerLevel.HEIGHT_HIGH && horizSpeed > 0.05
                 && dangerCurrent != DangerLevel.NONE) {
             return CombatStage.DANGER_IMMINENT;
         }
         // Already falling into serious danger
         if (dangerCurrent.isSerious() && !player.isOnGround()
-                && playerVel.y < -0.1 && horizSpeed > 0.05) {
+                && playerVel.y < -0.1) {
             return CombatStage.DANGER_IMMINENT;
         }
 
