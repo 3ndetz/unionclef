@@ -11,20 +11,54 @@ import net.minecraft.world.WorldView;
 /**
  * PvP combat controller.
  *
- * Current subsystems:
- *   MOUSE — WindMouse rotation toward target center
+ * Subsystems:
+ *   SAFETY  — velocity viz, edge detection, anti-fall braking (overrides legs+mouse)
+ *   MOUSE   — WindMouse rotation toward target center
  *   TRIGGER — auto-click when crosshair lands on target
  *
- * TODO: LEGS — movement (sprint-jump, strafe, edge avoidance)
+ * TODO: LEGS — movement (sprint-jump, strafe)
  */
 public class CombatController {
 
     private final TriggerBot triggerBot = new TriggerBot();
+    private final SafetySystem safety = new SafetySystem();
 
     public boolean tick(ClientPlayerEntity player, Entity target, WorldView world) {
         if (target == null || target.isRemoved() || !target.isAlive()) return false;
 
+        MinecraftClient mc = MinecraftClient.getInstance();
         TungstenConfig cfg = TungstenConfig.get();
+
+        // ── safety: analyze + visualize + decide braking ─────────────────
+        safety.tick(player, target, world);
+
+        if (safety.isBraking()) {
+            // safety overrides: face brake direction, press movement keys
+            float brakePitch = 0; // look horizontal while braking
+            WindMouseRotation.INSTANCE.setParams(
+                    cfg.combatWindMouseGravity * 2, // faster convergence when braking
+                    cfg.combatWindMouseWind * 0.5,
+                    cfg.combatWindMouseMaxStep * 2,
+                    cfg.combatWindMouseWindDist,
+                    cfg.combatWindMouseDoneThreshold,
+                    cfg.combatWindMouseFlickScale
+            );
+            WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), brakePitch);
+
+            mc.options.forwardKey.setPressed(safety.wantsForward());
+            mc.options.backKey.setPressed(safety.wantsBack());
+            mc.options.leftKey.setPressed(safety.wantsLeft());
+            mc.options.rightKey.setPressed(safety.wantsRight());
+            mc.options.sprintKey.setPressed(safety.wantsSprint());
+            mc.options.sneakKey.setPressed(safety.wantsSneak());
+            mc.options.jumpKey.setPressed(false);
+
+            // still allow trigger bot during braking (might hit target while turning)
+            if (cfg.combatTriggerBotEnabled) {
+                triggerBot.tick(player, target);
+            }
+            return true;
+        }
 
         // ── mouse: aim at target ─────────────────────────────────────────
         Vec3d targetCenter = target.getPos().add(0, target.getHeight() * 0.5, 0);
@@ -60,6 +94,7 @@ public class CombatController {
         mc.options.sneakKey.setPressed(false);
         mc.options.attackKey.setPressed(false);
         triggerBot.reset();
+        safety.reset();
         WindMouseRotation.INSTANCE.clearTarget();
     }
 }
