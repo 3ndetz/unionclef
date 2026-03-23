@@ -312,19 +312,23 @@ public class SafetySystem {
                 DangerLevel wpDanger = DangerLevel.fromFallHeight(wpFall);
 
                 if (!wpDanger.isSerious()) {
-                    // face toward waypoint for movement (legs direction)
-                    // WindMouse handles mouse aim separately — W goes where player faces
-                    // So we set a movement yaw that CombatController can use
                     movementYaw = AttackTiming.yawTo(playerPosTick, Vec3d.ofBottomCenter(nextWp));
                     movementActive = true;
 
+                    // check path to waypoint for holes: scan blocks between us and wp
+                    boolean pathHasHoles = hasHolesOnPath(playerPosTick, nextWp, player.getWorld());
+                    double localEdge = VoidDetector.edgeScoreWithFallThreshold(playerPosTick, player.getWorld(), 3);
+
+                    // if holes nearby or on path: walk carefully, no jump, no sprint
+                    boolean careful = pathHasHoles || localEdge > 0.3;
+
                     mc.options.forwardKey.setPressed(true);
-                    mc.options.sprintKey.setPressed(true);
+                    mc.options.sprintKey.setPressed(!careful);
                     mc.options.backKey.setPressed(false);
                     mc.options.leftKey.setPressed(false);
                     mc.options.rightKey.setPressed(false);
                     mc.options.sneakKey.setPressed(false);
-                    if (player.isOnGround()) {
+                    if (player.isOnGround() && !careful) {
                         mc.options.jumpKey.setPressed(true);
                     } else {
                         mc.options.jumpKey.setPressed(false);
@@ -481,6 +485,30 @@ public class SafetySystem {
 
         aimYaw = AttackTiming.yawTo(player.getPos(), aimPoint);
         aimPitch = AttackTiming.pitchTo(eyePos, aimPoint);
+    }
+
+    /** Check if there are holes (fall 3+ blocks) on the straight line between player and waypoint. */
+    private static boolean hasHolesOnPath(Vec3d from, net.minecraft.util.math.BlockPos to, net.minecraft.world.WorldView world) {
+        double dx = to.getX() + 0.5 - from.x;
+        double dz = to.getZ() + 0.5 - from.z;
+        double dist = Math.sqrt(dx * dx + dz * dz);
+        int steps = (int) Math.ceil(dist * 2);
+        if (steps <= 0) return false;
+
+        int fromY = net.minecraft.util.math.MathHelper.floor(from.y);
+        for (int s = 1; s < steps; s++) {
+            double t = (double) s / steps;
+            int x = net.minecraft.util.math.MathHelper.floor(from.x + dx * t);
+            int z = net.minecraft.util.math.MathHelper.floor(from.z + dz * t);
+            // check if block below feet is air (hole)
+            net.minecraft.util.math.BlockPos below = new net.minecraft.util.math.BlockPos(x, fromY - 1, z);
+            if (world.getBlockState(below).getCollisionShape(world, below).isEmpty()) {
+                // no solid below → check fall depth
+                int fall = VoidDetector.fallHeight(new Vec3d(x + 0.5, fromY, z + 0.5), world);
+                if (fall >= 3) return true;
+            }
+        }
+        return false;
     }
 
     /**
