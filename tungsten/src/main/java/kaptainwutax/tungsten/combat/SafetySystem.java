@@ -163,10 +163,11 @@ public class SafetySystem {
                 dangerPredicted, dangerCurrent, currentEdgeScore);
         if (newStage != stage) {
             stage = newStage;
-            if (prevStage != stage) {
+            if (prevStage != stage && logCooldown <= 0) {
                 final String msg = stage.chatColor() + "COMBAT: → " + stage.name();
                 mc.execute(() -> Debug.logMessage(msg));
                 prevStage = stage;
+                logCooldown = 60; // ~1 sec between stage change logs
             }
         }
 
