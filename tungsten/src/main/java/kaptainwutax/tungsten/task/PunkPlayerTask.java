@@ -73,7 +73,9 @@ public class PunkPlayerTask {
         // ── mode switching ───────────────────────────────────────────────
         if (mode == Mode.APPROACH && dist < COMBAT_RANGE && hasLOS) {
             enterCombat();
-        } else if (mode == Mode.COMBAT && dist > APPROACH_RESUME) {
+        } else if (mode == Mode.COMBAT && (dist > APPROACH_RESUME
+                || CombatController.triggerBot.hasNoProgress(100))) {
+            // too far OR no hits for 5 sec → re-approach with A* pathfinding
             enterApproach();
         }
 
