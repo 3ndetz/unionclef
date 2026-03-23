@@ -22,9 +22,12 @@ public class TriggerBot {
     public void tick(ClientPlayerEntity player, Entity target) {
         MinecraftClient mc = MinecraftClient.getInstance();
 
-        // release from previous tick's click
+        // always release from previous tick's click
         if (needsRelease) {
-            mc.options.attackKey.setPressed(false);
+            // only release if player isn't manually holding attack
+            if (!mc.options.attackKey.isPressed() || clickedThisCycle) {
+                mc.options.attackKey.setPressed(false);
+            }
             needsRelease = false;
         }
 
@@ -48,5 +51,9 @@ public class TriggerBot {
 
     public void reset() {
         clickedThisCycle = false;
+        if (needsRelease) {
+            MinecraftClient.getInstance().options.attackKey.setPressed(false);
+        }
+        needsRelease = false;
     }
 }
