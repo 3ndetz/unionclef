@@ -80,6 +80,36 @@ ESCAPE ←→ DELICATE_BATTLE        |
 - **Knockback prediction** — defensive (us getting hit) + offensive (enemy getting hit)
 - **Configurable** — all params via tungsten.json / `;settings`
 
+## Danger Levels (DangerLevel enum)
+
+| Level | Fall blocks | Effect | DANGER_IMMINENT? |
+|-------|-----------|--------|-----------------|
+| NONE | 0-1 | safe | no |
+| HEIGHT_RELIEF | 1-3 | height loss, no damage | no (ignored during ESCAPE) |
+| HEIGHT_HIGH | 4-9 | fall damage | YES — brake + escape jump |
+| HEIGHT_DEATH | 10+ | lethal | YES — maximum priority |
+
+DANGER_IMMINENT only triggers on `isSerious()` (HEIGHT_HIGH or HEIGHT_DEATH).
+ESCAPE stage can safely drop 1-3 blocks without panicking.
+
+## Attack Timing Design (planned)
+
+Sprint-jump approach path is pre-computed (CombatPathfinder attack waypoints).
+Bot follows the jump route, then:
+
+1. **During jumps**: follow waypoint path, maintain sprint momentum
+2. **When LOS to target**: begin WindMouse turn toward target (aim prediction)
+3. **When crosshair reaches target**: TriggerBot clicks automatically
+4. **After hit**: path is immediately invalidated (KB changes vectors),
+   recalculate from current position
+
+Key insight: attack doesn't interrupt the path — the PATH brings us into range,
+and the MOUSE system independently sweeps toward target whenever LOS exists.
+The path only needs recalculation after KB events change positions.
+
+Future: predict when LOS will exist along the path and pre-start the turn
+N ticks before the LOS window opens (WindMouse needs convergence time).
+
 ## TODO
 
 - [ ] **DANGER_BATTLE legs** — reposition away from edge while fighting
@@ -90,11 +120,7 @@ ESCAPE ←→ DELICATE_BATTLE        |
 - [ ] **Jump waypoints** — precompute advantageous positions to jump to (high ground, safe landing)
 - [ ] **WASD passthrough polish** — allow player manual input in safe situations
 - [ ] **Legs system** — sprint-jump, strafe patterns, knockback recovery
-- [ ] **Danger classification** — distinguish fall types:
-  - Height loss (2-3 blocks, no damage, just positional disadvantage)
-  - Damage fall (4+ blocks, takes fall damage)
-  - Death fall (23+ blocks, lethal without feather falling)
-  - Void (below world bottom, instant death)
+- [x] **Danger classification** — DangerLevel enum: NONE / HEIGHT_RELIEF / HEIGHT_HIGH / HEIGHT_DEATH
 - [ ] **Environmental hazards in pathfinding** — currently BFS avoids:
   lava, fire, magma, campfire, cactus, wither rose, berry bush, water,
   cobweb, soul sand, honey, powder snow.
@@ -103,8 +129,9 @@ ESCAPE ←→ DELICATE_BATTLE        |
   - TNT / moving entities (dynamic threats)
   - Hostile mobs near path (creepers, skeletons)
   - Fall damage at step-downs (BFS allows 1-block drops but doesn't account for sprint speed → overshoot)
-- [ ] **Unfocused window rotation** — WindMouse deltas don't apply when MC window is inactive
-  (Mouse.updateMouse not called). Need alternative injection point or forced focus.
+- [x] **Unfocused window rotation** — fixed: UnfocusedMouseHelper applies deltas via changeLookDirection
+- [ ] **Attack timing pipeline** — integrate attacks into jump path execution:
+  - Follow waypoints → LOS detected → pre-turn → hit → recalc path
 
 ## Settings (tungsten.json)
 

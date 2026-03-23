@@ -33,8 +33,6 @@ public class SafetySystem {
 
     // ── constants ───────────────────────────────────────────────────────────
     private static final int PREDICT_TICKS = 10;
-    private static final int FALL_WARN = 2;
-    private static final int FALL_DANGER = 5;
 
     private static final double KB_BASE = 0.4;
     private static final double KB_SPRINT_BONUS = 0.4;
@@ -120,13 +118,15 @@ public class SafetySystem {
         Vec3d playerPredictedTick = playerPosTick.add(playerVel.multiply(PREDICT_TICKS));
         int fallAtPredicted = VoidDetector.fallHeight(playerPredictedTick, player.getWorld());
         int fallAtCurrent = VoidDetector.fallHeight(playerPosTick, player.getWorld());
+        DangerLevel dangerPredicted = DangerLevel.fromFallHeight(fallAtPredicted);
+        DangerLevel dangerCurrent = DangerLevel.fromFallHeight(fallAtCurrent);
 
         // KB analysis uses tick positions
         analyzeKnockback(playerPosTick, playerVel, targetPosTick, player.getWorld());
 
         // ── evaluate stage ───────────────────────────────────────────────
         CombatStage newStage = evaluateStage(player, playerVel, horizSpeed,
-                fallAtPredicted, fallAtCurrent);
+                dangerPredicted, dangerCurrent);
         if (newStage != stage) {
             stage = newStage;
             if (prevStage != stage) {
@@ -183,8 +183,8 @@ public class SafetySystem {
         renderVelocity(targetPos, enemyVelocity, enemyPredicted, COL_ENEMY_VEL);
 
         // fall danger marker
-        if (fallAtPredicted >= FALL_WARN) {
-            Color dangerCol = fallAtPredicted >= FALL_DANGER ? COL_VOID : COL_DANGER;
+        if (dangerPredicted != DangerLevel.NONE) {
+            Color dangerCol = dangerPredicted.isSerious() ? COL_VOID : COL_DANGER;
             TungstenModRenderContainer.COMBAT_TRAJECTORY.add(new Cuboid(
                     playerPredicted.subtract(0.4, 0, 0.4), new Vec3d(0.8, 0.1, 0.8), dangerCol));
         } else {
@@ -219,11 +219,13 @@ public class SafetySystem {
     // ── stage evaluation ─────────────────────────────────────────────────────
 
     private CombatStage evaluateStage(ClientPlayerEntity player, Vec3d playerVel,
-                                       double horizSpeed, int fallAtPredicted, int fallAtCurrent) {
-        // DANGER_IMMINENT: our velocity leads into a fall, or already falling
-        if ((fallAtPredicted >= FALL_WARN && horizSpeed > 0.01)
-                || (fallAtCurrent >= FALL_DANGER && !player.isOnGround()
-                    && playerVel.y < -0.1 && horizSpeed > 0.01)) {
+                                       double horizSpeed, DangerLevel dangerPredicted, DangerLevel dangerCurrent) {
+        // DANGER_IMMINENT: only on serious falls (4+ blocks)
+        if (dangerPredicted.isSerious() && horizSpeed > 0.01) {
+            return CombatStage.DANGER_IMMINENT;
+        }
+        if (dangerCurrent.isSerious() && !player.isOnGround()
+                && playerVel.y < -0.1 && horizSpeed > 0.01) {
             return CombatStage.DANGER_IMMINENT;
         }
 
