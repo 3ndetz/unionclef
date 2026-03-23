@@ -17,7 +17,7 @@ import net.minecraft.world.WorldView;
  */
 public class CombatController {
 
-    private final TriggerBot triggerBot = new TriggerBot();
+    public static final TriggerBot triggerBot = new TriggerBot();
     public static final SafetySystem safety = new SafetySystem();
 
     public boolean tick(ClientPlayerEntity player, Entity target, WorldView world) {

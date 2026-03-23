@@ -208,7 +208,9 @@ public class SafetySystem {
 
         // ── movement: follow BFS attack path (if enabled + not braking/repositioning/cooldown) ──
         boolean movementsEnabled = kaptainwutax.tungsten.TungstenConfig.get().combatMovementsEnabled;
-        if (movementsEnabled && !braking && !repositioning && postImminentCooldown <= 0) {
+        // don't move toward target if we're in danger zone (DANGER_BATTLE = KB would kill us)
+        if (movementsEnabled && !braking && !repositioning && postImminentCooldown <= 0
+                && stage != CombatStage.DANGER_BATTLE) {
             java.util.List<net.minecraft.util.math.BlockPos> attackPath = pathfinder.getAttackPath();
             if (attackPath.size() >= 2) {
                 // find next waypoint we haven't reached yet
@@ -221,11 +223,13 @@ public class SafetySystem {
                 }
                 if (nextWp == null) nextWp = attackPath.get(attackPath.size() - 1);
 
-                // check if next waypoint is safe
+                // check if next waypoint is safe — block itself AND surroundings
                 int wpFall = VoidDetector.fallHeight(Vec3d.ofBottomCenter(nextWp), player.getWorld());
+                double wpEdge = VoidDetector.edgeScore(Vec3d.ofBottomCenter(nextWp), player.getWorld());
                 DangerLevel wpDanger = DangerLevel.fromFallHeight(wpFall);
 
-                if (!wpDanger.isSerious()) {
+                // skip waypoints near edges (edgeScore > 0.3 = some neighbors are void)
+                if (!wpDanger.isSerious() && wpEdge < 0.3) {
                     // face toward waypoint for movement (legs direction)
                     // WindMouse handles mouse aim separately — W goes where player faces
                     // So we set a movement yaw that CombatController can use
@@ -248,9 +252,10 @@ public class SafetySystem {
             }
         }
 
-        // release keys when braking/repositioning ended THIS frame
-        if ((!braking && wasBrakingLastFrame || !repositioning && wasRepositioningLastFrame)
-                && !kaptainwutax.tungsten.TungstenConfig.get().combatMovementsEnabled) {
+        // release keys when nothing is controlling them
+        // (braking ended, repositioning ended, movement not active or in cooldown)
+        boolean anythingControlling = braking || repositioning || movementActive;
+        if (!anythingControlling && (wasBrakingLastFrame || wasRepositioningLastFrame)) {
             mc.options.forwardKey.setPressed(false);
             mc.options.backKey.setPressed(false);
             mc.options.leftKey.setPressed(false);
@@ -318,6 +323,15 @@ public class SafetySystem {
         // DANGER_BATTLE: next enemy hit would knock us off
         if (lastFallIfHit >= KB_FALL_THRESHOLD) {
             return CombatStage.DANGER_BATTLE;
+        }
+
+        // No progress: no hits for 5 seconds → need to close distance
+        if (CombatController.triggerBot.hasNoProgress(100)) { // 100 ticks = 5 sec
+            if (logCooldown <= 0) {
+                Debug.logMessage("§eCOMBAT: no hits — need closer approach");
+                logCooldown = 120;
+            }
+            // TODO: switch to FOLLOW mode using tungsten pathfinder for closer approach
         }
 
         // TODO: ESCAPE — target just hit (immunity frames), or mutual edge danger, or low HP

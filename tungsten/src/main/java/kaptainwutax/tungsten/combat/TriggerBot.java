@@ -18,6 +18,10 @@ public class TriggerBot {
     private boolean clickedThisCycle = false;
     // release the key on the tick after pressing
     private boolean needsRelease = false;
+    // hit tracking for progress detection
+    private int totalHits = 0;
+    private int lastCheckHits = 0;
+    private int ticksSinceLastHit = 0;
 
     public void tick(ClientPlayerEntity player, Entity target) {
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -39,6 +43,8 @@ public class TriggerBot {
             clickedThisCycle = false;
         }
 
+        ticksSinceLastHit++;
+
         if (underCrosshair == target
                 && cooldown >= COOLDOWN_THRESHOLD
                 && !clickedThisCycle) {
@@ -46,8 +52,18 @@ public class TriggerBot {
             KeyBinding.onKeyPressed(mc.options.attackKey.getDefaultKey());
             clickedThisCycle = true;
             needsRelease = true;
+            totalHits++;
+            ticksSinceLastHit = 0;
         }
     }
+
+    /** True if no hits landed in the last N ticks. */
+    public boolean hasNoProgress(int tickThreshold) {
+        return ticksSinceLastHit > tickThreshold;
+    }
+
+    public int getTotalHits() { return totalHits; }
+    public int getTicksSinceLastHit() { return ticksSinceLastHit; }
 
     public void reset() {
         clickedThisCycle = false;
@@ -55,5 +71,8 @@ public class TriggerBot {
             MinecraftClient.getInstance().options.attackKey.setPressed(false);
         }
         needsRelease = false;
+        totalHits = 0;
+        lastCheckHits = 0;
+        ticksSinceLastHit = 0;
     }
 }
