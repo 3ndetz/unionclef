@@ -17,9 +17,17 @@ public class TriggerBot {
 
     // prevent double-clicking on same cooldown cycle
     private boolean clickedThisCycle = false;
+    // release the key on the tick after pressing
+    private boolean needsRelease = false;
 
     public void tick(ClientPlayerEntity player, Entity target) {
         MinecraftClient mc = MinecraftClient.getInstance();
+
+        // release from previous tick's click
+        if (needsRelease) {
+            mc.options.attackKey.setPressed(false);
+            needsRelease = false;
+        }
 
         Entity underCrosshair = mc.targetedEntity;
         float cooldown = player.getAttackCooldownProgress(0.5f);
@@ -32,10 +40,10 @@ public class TriggerBot {
         if (underCrosshair == target
                 && cooldown >= COOLDOWN_THRESHOLD
                 && !clickedThisCycle) {
-            // same as altoclef InputControls.tryPress: setPressed + onKeyPressed
             mc.options.attackKey.setPressed(true);
             KeyBinding.onKeyPressed(mc.options.attackKey.getDefaultKey());
             clickedThisCycle = true;
+            needsRelease = true;
             Debug.logMessage("TRIGGER: hit " + target.getName().getString());
         }
     }
