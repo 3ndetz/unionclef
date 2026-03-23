@@ -63,6 +63,7 @@ public class SafetySystem {
     // braking output
     private float brakeYaw = 0;
     private boolean braking = false;
+    private boolean wasBrakingLastFrame = false;
     private boolean wantsJump = false;
 
     private boolean active = false;
@@ -90,6 +91,7 @@ public class SafetySystem {
         ClientPlayerEntity player = mc.player;
         if (player == null || target == null || target.isRemoved()) return;
 
+        wasBrakingLastFrame = braking;
         braking = false;
         wantsJump = false;
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
@@ -160,8 +162,8 @@ public class SafetySystem {
             }
         }
 
-        // release keys when leaving braking stages
-        if (!braking && (prevStage == CombatStage.DANGER_IMMINENT)) {
+        // release keys when braking ended THIS frame
+        if (!braking && wasBrakingLastFrame) {
             mc.options.forwardKey.setPressed(false);
             mc.options.backKey.setPressed(false);
             mc.options.leftKey.setPressed(false);
