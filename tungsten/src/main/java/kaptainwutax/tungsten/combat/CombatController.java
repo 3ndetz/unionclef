@@ -51,20 +51,8 @@ public class CombatController {
                         cfg.combatWindMouseFlickScale
                 );
                 WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), 0);
-            } else if (safety.isMovementActive() && player.squaredDistanceTo(target) > 9.0) {
-                // moving along BFS path — face path direction (W goes where we look)
-                // only when far from target; close range = aim at target for hits
-                WindMouseRotation.INSTANCE.setParams(
-                        cfg.combatWindMouseGravity,
-                        cfg.combatWindMouseWind,
-                        cfg.combatWindMouseMaxStep,
-                        cfg.combatWindMouseWindDist,
-                        cfg.combatWindMouseDoneThreshold,
-                        cfg.combatWindMouseFlickScale
-                );
-                WindMouseRotation.INSTANCE.setTarget(safety.getMovementYaw(), 0);
-            } else {
-                // close range or no movement: aim at predicted target position
+            } else if (safety.hasLOS()) {
+                // LOS to target: aim at predicted target position for hits
                 WindMouseRotation.INSTANCE.setParams(
                         cfg.combatWindMouseGravity,
                         cfg.combatWindMouseWind,
@@ -74,6 +62,17 @@ public class CombatController {
                         cfg.combatWindMouseFlickScale
                 );
                 WindMouseRotation.INSTANCE.setTarget(safety.getAimYaw(), safety.getAimPitch());
+            } else if (safety.isMovementActive()) {
+                // no LOS: face BFS path direction to navigate around walls
+                WindMouseRotation.INSTANCE.setParams(
+                        cfg.combatWindMouseGravity,
+                        cfg.combatWindMouseWind,
+                        cfg.combatWindMouseMaxStep,
+                        cfg.combatWindMouseWindDist,
+                        cfg.combatWindMouseDoneThreshold,
+                        cfg.combatWindMouseFlickScale
+                );
+                WindMouseRotation.INSTANCE.setTarget(safety.getMovementYaw(), 0);
             }
         }
 
