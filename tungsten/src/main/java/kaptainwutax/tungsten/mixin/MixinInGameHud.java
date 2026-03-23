@@ -29,7 +29,7 @@ public class MixinInGameHud {
 
             // when unfocused, updateMouse() never runs — apply deltas ourselves
             if (!mc.isWindowFocused()) {
-                MixinMouse.applyPendingUnfocused();
+                kaptainwutax.tungsten.util.UnfocusedMouseHelper.applyPendingDeltas();
             }
 
             CombatController.safety.renderUpdate(tickCounter.getTickDelta(true));
