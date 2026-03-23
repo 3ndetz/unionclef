@@ -14,6 +14,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Hooks into InGameHud.render() — called every rendered frame (~60 FPS).
  * Drives render-frequency systems: WindMouse rotation + SafetySystem visualization.
+ *
+ * When window is unfocused, Mouse.updateMouse() doesn't run, so we
+ * apply pending rotation deltas directly via MixinMouse.applyPendingUnfocused().
  */
 @Mixin(InGameHud.class)
 public class MixinInGameHud {
@@ -23,6 +26,12 @@ public class MixinInGameHud {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player != null) {
             WindMouseRotation.INSTANCE.applyRenderStep(mc.player);
+
+            // when unfocused, updateMouse() never runs — apply deltas ourselves
+            if (!mc.isWindowFocused()) {
+                MixinMouse.applyPendingUnfocused();
+            }
+
             CombatController.safety.renderUpdate(tickCounter.getTickDelta(true));
         }
     }
