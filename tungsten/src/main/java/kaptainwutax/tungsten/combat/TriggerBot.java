@@ -1,47 +1,46 @@
 package kaptainwutax.tungsten.combat;
 
+import kaptainwutax.tungsten.Debug;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.option.KeyBinding;
 import net.minecraft.entity.Entity;
 
 /**
  * Trigger bot — if our target is under crosshair and cooldown ready, click.
- * Uses attackKey press/release cycle: MC needs a false→true transition
- * (wasPressed) to register as a click.
+ * Uses KeyBinding.onKeyPressed() to register a real key event that MC sees
+ * via wasPressed() in handleInputEvents().
  */
 public class TriggerBot {
 
     private static final float COOLDOWN_THRESHOLD = 0.9f;
 
-    // true = we pressed attack last tick, need to release this tick
-    private boolean pressedLastTick = false;
+    // prevent double-clicking on same cooldown cycle
+    private boolean clickedThisCycle = false;
 
     public void tick(ClientPlayerEntity player, Entity target) {
         MinecraftClient mc = MinecraftClient.getInstance();
-        boolean alreadyPressed = mc.options.attackKey.isPressed();
-
-        // after a press, release for one tick so MC sees the full click cycle
-        if (pressedLastTick) {
-            if (!alreadyPressed) {
-                mc.options.attackKey.setPressed(false);
-            }
-            pressedLastTick = false;
-            return;
-        }
-
-        // if player is already holding attack, don't interfere
-        if (alreadyPressed) return;
 
         Entity underCrosshair = mc.targetedEntity;
+        float cooldown = player.getAttackCooldownProgress(0.5f);
+
+        // reset click lock when cooldown resets (new cycle)
+        if (cooldown < COOLDOWN_THRESHOLD) {
+            clickedThisCycle = false;
+        }
 
         if (underCrosshair == target
-                && player.getAttackCooldownProgress(0.5f) >= COOLDOWN_THRESHOLD) {
+                && cooldown >= COOLDOWN_THRESHOLD
+                && !clickedThisCycle) {
+            // same as altoclef InputControls.tryPress: setPressed + onKeyPressed
             mc.options.attackKey.setPressed(true);
-            pressedLastTick = true;
+            KeyBinding.onKeyPressed(mc.options.attackKey.getDefaultKey());
+            clickedThisCycle = true;
+            Debug.logMessage("TRIGGER: hit " + target.getName().getString());
         }
     }
 
     public void reset() {
-        pressedLastTick = false;
+        clickedThisCycle = false;
     }
 }
