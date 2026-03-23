@@ -30,6 +30,8 @@ public class SafetySystem {
     private static final Color COL_DANGER       = new Color(255, 160, 0);
     private static final Color COL_VOID         = new Color(255, 0, 0);
     private static final Color COL_SAFE         = new Color(50, 200, 100);
+    private static final Color COL_KB_DANGER    = new Color(255, 80, 200);  // incoming KB → us falling
+    private static final Color COL_KB_OPPORTUNITY = new Color(0, 255, 255); // our KB → enemy falling
 
     // how many ticks ahead to predict position
     private static final int PREDICT_TICKS = 10;
@@ -38,6 +40,12 @@ public class SafetySystem {
     private static final int FALL_DANGER = 5; // aggressive braking
     // velocity magnitude threshold for "strong" knockback
     private static final double STRONG_VEL = 0.4;
+    // vanilla knockback simulation
+    private static final double KB_BASE = 0.4;      // base horizontal KB per hit
+    private static final double KB_SPRINT_BONUS = 0.4; // extra from sprint hit
+    private static final double KB_UP = 0.4;         // vertical impulse
+    private static final int KB_PREDICT_TICKS = 15;  // ticks to simulate after KB
+    private static final int KB_FALL_THRESHOLD = 2;  // fall blocks to flag as dangerous/opportunity
 
     private Vec3d prevEnemyPos = null;
     private Vec3d enemyVelocity = Vec3d.ZERO;
@@ -94,6 +102,9 @@ public class SafetySystem {
                     playerPredicted.subtract(0.2, 0, 0.2), new Vec3d(0.4, 0.1, 0.4), COL_SAFE));
         }
 
+        // ── knockback trajectory analysis (viz + log only) ──
+        analyzeKnockback(player, target, playerPos, playerVel, targetPos, world);
+
         // ── anti-fall braking ──
         double horizSpeed = Math.sqrt(playerVel.x * playerVel.x + playerVel.z * playerVel.z);
 
@@ -126,6 +137,81 @@ public class SafetySystem {
             wantsForward = true;
             wantsSprint = true;
             Debug.logMessage("SAFETY: recovery (falling, fall=" + fallAtCurrent + ")");
+        }
+    }
+
+    // ── knockback trajectory analysis ─────────────────────────────────────
+
+    /**
+     * Simulate where a hit would send the victim.
+     * Knockback direction: attacker → victim (horizontal), plus upward impulse.
+     * Returns predicted landing position after KB_PREDICT_TICKS with simple gravity.
+     */
+    private Vec3d simulateKnockback(Vec3d victimPos, Vec3d victimVel,
+                                     Vec3d attackerPos, boolean sprintHit) {
+        // KB direction: horizontal from attacker to victim
+        double dx = victimPos.x - attackerPos.x;
+        double dz = victimPos.z - attackerPos.z;
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 0.001) return victimPos; // on top of each other
+
+        double nx = dx / len;
+        double nz = dz / len;
+
+        double kbStrength = KB_BASE + (sprintHit ? KB_SPRINT_BONUS : 0);
+
+        // apply KB to current velocity
+        double vx = victimVel.x * 0.5 + nx * kbStrength; // vanilla: halve current vel first
+        double vy = KB_UP;
+        double vz = victimVel.z * 0.5 + nz * kbStrength;
+
+        // simulate ticks with simple gravity (no collision, just trajectory)
+        double px = victimPos.x;
+        double py = victimPos.y;
+        double pz = victimPos.z;
+        for (int t = 0; t < KB_PREDICT_TICKS; t++) {
+            px += vx;
+            py += vy;
+            pz += vz;
+            vx *= 0.91; // air drag
+            vy = (vy - 0.08) * 0.98; // gravity + drag
+            vz *= 0.91;
+        }
+        return new Vec3d(px, py, pz);
+    }
+
+    /**
+     * Analyze knockback scenarios and render/log results.
+     * 1. DEFENSIVE: if enemy hits us → do we fall?
+     * 2. OFFENSIVE: if we hit enemy → do they fall?
+     */
+    private void analyzeKnockback(ClientPlayerEntity player, Entity target,
+                                   Vec3d playerPos, Vec3d playerVel,
+                                   Vec3d targetPos, WorldView world) {
+        // DEFENSIVE: enemy hits us (assume sprint hit = worst case)
+        Vec3d usAfterKB = simulateKnockback(playerPos, playerVel, targetPos, true);
+        int fallIfHit = VoidDetector.fallHeight(usAfterKB, world);
+
+        if (fallIfHit >= KB_FALL_THRESHOLD) {
+            // render KB trajectory line + landing danger cube
+            TungstenModRenderContainer.COMBAT_TRAJECTORY.add(new Line(
+                    playerPos.add(0, 1, 0), usAfterKB.add(0, 1, 0), COL_KB_DANGER));
+            TungstenModRenderContainer.COMBAT_TRAJECTORY.add(new Cuboid(
+                    usAfterKB.subtract(0.3, 0, 0.3), new Vec3d(0.6, 0.1, 0.6), COL_KB_DANGER));
+            Debug.logMessage("§cSAFETY: incoming hit → fall " + fallIfHit + " blocks!");
+        }
+
+        // OFFENSIVE: we hit enemy (assume sprint hit)
+        Vec3d enemyAfterKB = simulateKnockback(targetPos, enemyVelocity, playerPos, true);
+        int enemyFallIfHit = VoidDetector.fallHeight(enemyAfterKB, world);
+
+        if (enemyFallIfHit >= KB_FALL_THRESHOLD) {
+            // render opportunity: cyan line + cube
+            TungstenModRenderContainer.COMBAT_TRAJECTORY.add(new Line(
+                    targetPos.add(0, 1, 0), enemyAfterKB.add(0, 1, 0), COL_KB_OPPORTUNITY));
+            TungstenModRenderContainer.COMBAT_TRAJECTORY.add(new Cuboid(
+                    enemyAfterKB.subtract(0.3, 0, 0.3), new Vec3d(0.6, 0.1, 0.6), COL_KB_OPPORTUNITY));
+            Debug.logMessage("§bSAFETY: hit now → enemy falls " + enemyFallIfHit + " blocks!");
         }
     }
 
