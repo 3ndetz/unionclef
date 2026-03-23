@@ -71,7 +71,9 @@ public class BlockPathWalker {
         BlockPos wp = path.get(waypointIdx);
         Vec3d wpPos = Vec3d.ofBottomCenter(wp);
         Vec3d playerPos = player.getPos();
-        double dist = playerPos.horizontalDistanceTo(wpPos);
+        double dx = playerPos.x - wpPos.x;
+        double dz = playerPos.z - wpPos.z;
+        double dist = Math.sqrt(dx * dx + dz * dz);
 
         // advance waypoint when close enough
         if (dist < 1.5) {
