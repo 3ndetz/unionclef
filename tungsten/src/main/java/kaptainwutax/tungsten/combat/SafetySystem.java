@@ -47,6 +47,8 @@ public class SafetySystem {
     private Vec3d enemyVelocity = Vec3d.ZERO;
     private Entity target = null;
 
+    private final CombatPathfinder pathfinder = new CombatPathfinder();
+
     private CombatStage stage = CombatStage.PURSUE;
     private CombatStage prevStage = null;
 
@@ -80,6 +82,9 @@ public class SafetySystem {
             enemyVelocity = targetPos.subtract(prevEnemyPos);
         }
         prevEnemyPos = targetPos;
+
+        // pathfinder updates every N ticks
+        pathfinder.tick(player.getBlockPos(), target.getBlockPos(), world);
     }
 
     // ── render update (~60 FPS): stage + decisions + viz ─────────────────────
@@ -206,6 +211,9 @@ public class SafetySystem {
                 .add(enemyVelocity.multiply(getAimLeadTicks()));
         TungstenModRenderContainer.COMBAT_TRAJECTORY.add(new Cuboid(
                 aimTarget.subtract(0.1, 0.1, 0.1), new Vec3d(0.2, 0.2, 0.2), COL_AIM_PREDICT));
+
+        // combat paths visualization
+        pathfinder.renderUpdate(tickDelta);
     }
 
     // ── stage evaluation ─────────────────────────────────────────────────────
@@ -323,6 +331,7 @@ public class SafetySystem {
         stage = CombatStage.PURSUE;
         prevStage = null;
         braking = false;
+        pathfinder.reset();
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
     }
 }
