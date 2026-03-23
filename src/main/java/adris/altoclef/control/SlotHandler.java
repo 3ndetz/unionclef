@@ -87,6 +87,10 @@ public class SlotHandler {
         if (player == null) {
             return;
         }
+        // Bounds check — prevent CrashException from ScreenHandler.onSlotClick
+        if (windowSlot >= 0 && windowSlot >= player.currentScreenHandler.slots.size()) {
+            return;
+        }
         registerSlotAction();
         int syncId = player.currentScreenHandler.syncId;
 
@@ -288,9 +292,12 @@ public class SlotHandler {
     }
 
     public void refreshInventory() {
-        if (MinecraftClient.getInstance().player == null)
-            return;
-        for (int i = 0; i < MinecraftClient.getInstance().player.getInventory().main.size(); ++i) {
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (player == null) return;
+        // Only refresh when player inventory is active — clicking slots in
+        // other screen handlers (chests, crafting tables, etc.) crashes.
+        if (!(player.currentScreenHandler instanceof PlayerScreenHandler)) return;
+        for (int i = 0; i < player.getInventory().main.size(); ++i) {
             Slot slot = Slot.getFromCurrentScreenInventory(i);
             clickSlotForce(slot, 0, SlotActionType.PICKUP);
             clickSlotForce(slot, 0, SlotActionType.PICKUP);
