@@ -29,10 +29,8 @@ public class CombatController {
         safety.tick(player, target, world);
 
         if (cfg.combatRotatesEnabled) {
-            CombatStage stage = safety.getStage();
-
-            if (cfg.combatSaverEnabled && stage == CombatStage.DANGER_IMMINENT && safety.isBraking()) {
-                // emergency: face opposite velocity
+            if (cfg.combatSaverEnabled && safety.isBraking()) {
+                // DANGER_IMMINENT: face opposite velocity
                 WindMouseRotation.INSTANCE.setParams(
                         cfg.combatWindMouseGravity * 2,
                         cfg.combatWindMouseWind * 0.3,
@@ -42,8 +40,19 @@ public class CombatController {
                         cfg.combatWindMouseFlickScale
                 );
                 WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), 0);
+            } else if (cfg.combatSaverEnabled && safety.isRepositioning()) {
+                // DANGER_BATTLE: face retreat waypoint (faster turn, still fighting)
+                WindMouseRotation.INSTANCE.setParams(
+                        cfg.combatWindMouseGravity * 1.5,
+                        cfg.combatWindMouseWind * 0.5,
+                        cfg.combatWindMouseMaxStep * 1.5,
+                        cfg.combatWindMouseWindDist,
+                        cfg.combatWindMouseDoneThreshold,
+                        cfg.combatWindMouseFlickScale
+                );
+                WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), 0);
             } else {
-                // normal / danger_battle / pursue: aim at predicted target position
+                // normal / pursue: aim at predicted target position
                 WindMouseRotation.INSTANCE.setParams(
                         cfg.combatWindMouseGravity,
                         cfg.combatWindMouseWind,

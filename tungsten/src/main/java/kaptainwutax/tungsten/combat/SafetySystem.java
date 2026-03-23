@@ -60,10 +60,12 @@ public class SafetySystem {
     private float aimYaw = 0;
     private float aimPitch = 0;
 
-    // braking output
+    // braking/repositioning output
     private float brakeYaw = 0;
     private boolean braking = false;
+    private boolean repositioning = false; // DANGER_BATTLE: moving to safer ground
     private boolean wasBrakingLastFrame = false;
+    private boolean wasRepositioningLastFrame = false;
     private boolean wantsJump = false;
 
     private boolean active = false;
@@ -95,7 +97,9 @@ public class SafetySystem {
         if (player == null || target == null || target.isRemoved()) return;
 
         wasBrakingLastFrame = braking;
+        wasRepositioningLastFrame = repositioning;
         braking = false;
+        repositioning = false;
         wantsJump = false;
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
         if (logCooldown > 0) logCooldown--;
@@ -162,7 +166,26 @@ public class SafetySystem {
                     mc.options.rightKey.setPressed(false);
                 }
                 case DANGER_BATTLE -> {
-                    // no key override yet — future: reposition
+                    // reposition toward retreat path if KB fall is serious
+                    DangerLevel kbDanger = DangerLevel.fromFallHeight(lastFallIfHit);
+                    java.util.List<net.minecraft.util.math.BlockPos> retreat = pathfinder.getRetreatPath();
+                    if (kbDanger.isSerious() && retreat.size() >= 2) {
+                        repositioning = true;
+                        // aim legs toward first retreat waypoint (not first = our pos)
+                        net.minecraft.util.math.BlockPos waypoint = retreat.get(Math.min(2, retreat.size() - 1));
+                        Vec3d wpPos = Vec3d.ofBottomCenter(waypoint);
+                        brakeYaw = AttackTiming.yawTo(playerPosTick, wpPos);
+
+                        // walk (no jump — risky near edges), sprint
+                        mc.options.forwardKey.setPressed(true);
+                        mc.options.sprintKey.setPressed(true);
+                        mc.options.jumpKey.setPressed(false);
+                        mc.options.backKey.setPressed(false);
+                        mc.options.leftKey.setPressed(false);
+                        mc.options.rightKey.setPressed(false);
+                        mc.options.sneakKey.setPressed(false);
+                    }
+                    // if no retreat path — stay and fight, don't panic
                 }
                 case PURSUE, ESCAPE, DELICATE_BATTLE -> {
                     // no key override from saver
@@ -187,8 +210,8 @@ public class SafetySystem {
             }
         }
 
-        // release keys when braking ended THIS frame (and movements not taking over)
-        if (!braking && wasBrakingLastFrame
+        // release keys when braking/repositioning ended THIS frame
+        if ((!braking && wasBrakingLastFrame || !repositioning && wasRepositioningLastFrame)
                 && !kaptainwutax.tungsten.TungstenConfig.get().combatMovementsEnabled) {
             mc.options.forwardKey.setPressed(false);
             mc.options.backKey.setPressed(false);
@@ -427,7 +450,8 @@ public class SafetySystem {
     // ── getters ──────────────────────────────────────────────────────────────
 
     public CombatStage getStage()   { return stage; }
-    public boolean isBraking()      { return braking; }
+    public boolean isBraking()         { return braking; }
+    public boolean isRepositioning()   { return repositioning; }
     public float getBrakeYaw()      { return brakeYaw; }
     public float getAimYaw()        { return aimYaw; }
     public float getAimPitch()      { return aimPitch; }
