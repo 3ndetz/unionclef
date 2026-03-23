@@ -164,7 +164,8 @@ public class SafetySystem {
         if (newStage != stage) {
             stage = newStage;
             if (prevStage != stage) {
-                Debug.logMessage(stage.chatColor() + "COMBAT: → " + stage.name());
+                final String msg = stage.chatColor() + "COMBAT: → " + stage.name();
+                mc.execute(() -> Debug.logMessage(msg));
                 prevStage = stage;
             }
         }
@@ -407,7 +408,7 @@ public class SafetySystem {
                     forcedNarrowTimer = FORCED_NARROW_FRAMES;
                     imminentCount = 0;
                     if (logCooldown <= 0) {
-                        Debug.logMessage("§9COMBAT: imminent spam → forced NARROW_BATTLE");
+                        MinecraftClient.getInstance().execute(() -> Debug.logMessage("§9COMBAT: imminent spam → forced NARROW_BATTLE"));
                         logCooldown = 120;
                     }
                     return CombatStage.NARROW_BATTLE;
@@ -433,7 +434,7 @@ public class SafetySystem {
         // No progress: no hits for 5 seconds
         if (CombatController.triggerBot.hasNoProgress(100)) {
             if (logCooldown <= 0) {
-                Debug.logMessage("§eCOMBAT: no hits — need closer approach");
+                MinecraftClient.getInstance().execute(() -> Debug.logMessage("§eCOMBAT: no hits — need closer approach"));
                 logCooldown = 120;
             }
         }
