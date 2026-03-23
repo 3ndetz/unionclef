@@ -21,8 +21,12 @@ public class Debug {
             if (prefix) {
                 message = "\u00A72\u00A7l\u00A7o" + getLogPrefix() + "\u00A7r" + message;
             }
-            TungstenModDataContainer.player.sendMessage(Text.of(message), false);
-            //MinecraftClient.getInstance().player.sendChatMessage(msg);
+            try {
+                TungstenModDataContainer.player.sendMessage(Text.of(message), false);
+            } catch (Exception e) {
+                // MC ChatHud can crash with IndexOutOfBoundsException on message overflow
+                logInternal("Chat overflow, message dropped: " + message);
+            }
         } else {
             logInternal(message);
         }
@@ -39,7 +43,11 @@ public class Debug {
     public static void logWarning(String message) {
         if (TungstenModDataContainer.player != null) {
             message = "\u00A72\u00A7l\u00A7oWARNING:\u00A7r" + message;
-            TungstenModDataContainer.player.sendMessage(Text.of(message), false);
+            try {
+                TungstenModDataContainer.player.sendMessage(Text.of(message), false);
+            } catch (Exception e) {
+                logInternal("Chat overflow, warning dropped: " + message);
+            }
         } else {
             logInternal("WARNING: " + message);
         }
