@@ -8,32 +8,32 @@ import java.util.Random;
 /**
  * WindMouse-based rotation smoother for human-like yaw/pitch movement.
  *
- * Architecture (two-phase):
- *   1. Game tick  — setTarget(yaw, pitch): store desired facing, do NOT touch player.
- *   2. Render frame — applyRenderStep(player): one WindMouse step via changeLookDirection().
+ * Architecture:
+ *   1. Game tick — setTarget(yaw, pitch): store desired facing.
+ *   2. Render frame — applyRenderStep(player): compute WindMouse delta, convert to
+ *      raw pixel deltas, accumulate in pendingPixelDX/DY.
+ *   3. MixinMouse.updateMouse(HEAD) — consume pixel deltas, add to cursorDeltaX/Y.
+ *      Vanilla pipeline does the rest: sensitivity scaling → changeLookDirection.
  *
- * Anti-cheat safe: rotation deltas are quantized to mouse pixel grid at current
- * sensitivity and applied through changeLookDirection() — the same vanilla path
- * that real mouse input uses. Server sees rotation steps identical to a physical mouse.
+ * Result: rotation goes through the full vanilla mouse pipeline.
+ * Server sees rotation steps identical to a physical mouse.
  *
  * TODO: large-angle mouse lift pauses — when a big turn requires "picking up the mouse",
  *       add a brief pause + reduced precision to simulate repositioning.
  *
- * Singleton: WindMouseRotation.INSTANCE — shared across all follow tasks.
+ * Singleton: WindMouseRotation.INSTANCE — shared across all tasks.
  */
 public class WindMouseRotation {
 
-    /** Shared singleton used by follow tasks and the render mixin. */
     public static final WindMouseRotation INSTANCE = new WindMouseRotation();
 
-    // WindMouse tuning — per render frame at ~60 FPS
-    // These are defaults; can be overridden per-instance via setParams()
-    private double gravity      = 3.5;   // pull toward target per frame
-    private double wind         = 1.2;   // max wind magnitude per frame
-    private double maxStep      = 5.0;   // max degrees moved per frame
-    private double windDist     = 20.0;  // degrees distance below which wind decays
-    private double doneThreshold = 0.3;  // snap when this close
-    private double flickScale   = 4.0;   // max multiplier for far-angle flicks
+    // WindMouse tuning — per render frame
+    private double gravity      = 3.5;
+    private double wind         = 1.2;
+    private double maxStep      = 5.0;
+    private double windDist     = 20.0;
+    private double doneThreshold = 0.3;
+    private double flickScale   = 4.0;
 
     private static final double SQRT3 = Math.sqrt(3.0);
     private static final double SQRT5 = Math.sqrt(5.0);
@@ -47,9 +47,12 @@ public class WindMouseRotation {
     private float   targetPitch = 0;
     private boolean hasTarget   = false;
 
+    // accumulated raw pixel deltas for MixinMouse to consume
+    private double pendingPixelDX = 0;
+    private double pendingPixelDY = 0;
+
     // -------------------------------------------------------------------------
 
-    /** Override WindMouse parameters. Call before setTarget if needed. */
     public void setParams(double gravity, double wind, double maxStep,
                           double windDist, double doneThreshold, double flickScale) {
         this.gravity = gravity;
@@ -60,10 +63,6 @@ public class WindMouseRotation {
         this.flickScale = flickScale;
     }
 
-    /**
-     * Set the desired rotation. Call once per game tick.
-     * Does NOT immediately move the player.
-     */
     public void setTarget(float yaw, float pitch) {
         this.targetYaw   = yaw;
         this.targetPitch = pitch;
@@ -71,8 +70,9 @@ public class WindMouseRotation {
     }
 
     /**
-     * Apply one WindMouse step toward target. Call once per render frame from MixinInGameHud.
-     * Rotation goes through changeLookDirection() with pixel-quantized deltas.
+     * Compute one WindMouse step and accumulate as raw pixel deltas.
+     * Called per render frame from MixinInGameHud.
+     * MixinMouse will inject these into cursorDeltaX/Y on next updateMouse().
      */
     public void applyRenderStep(ClientPlayerEntity player) {
         if (!hasTarget || player == null) return;
@@ -85,10 +85,7 @@ public class WindMouseRotation {
         double dist   = Math.sqrt(dYaw * dYaw + dPitch * dPitch);
 
         if (dist < doneThreshold) {
-            // final snap — quantize the last tiny delta too
-            double snapYaw = wrapDelta(targetYaw - currentYaw);
-            double snapPitch = targetPitch - currentPitch;
-            applyQuantized(player, snapYaw, snapPitch);
+            accumulatePixels(dYaw, dPitch);
             resetVelocity();
             return;
         }
@@ -113,40 +110,36 @@ public class WindMouseRotation {
             veloPitch *= scale;
         }
 
-        applyQuantized(player, veloYaw, veloPitch);
+        accumulatePixels(veloYaw, veloPitch);
     }
 
     /**
-     * Quantize degree deltas to mouse pixel grid and apply via changeLookDirection.
-     *
-     * MC mouse pipeline: raw_pixels * (f³ * 8) → changeLookDirection → * 0.15 → degrees.
-     * So 1 pixel = degreesPerPixel = (f³ * 8) * 0.15.
-     * We round our desired delta to nearest pixel count, then feed through changeLookDirection.
+     * Convert degree deltas to raw pixel deltas and accumulate.
+     * MC pipeline: raw_pixels → * (f³*8) → changeLookDirection → * 0.15 → degrees.
+     * Inverse: degrees / 0.15 / (f³*8) = raw_pixels.
+     * Round to integer pixels for realism.
      */
-    private void applyQuantized(ClientPlayerEntity player, double deltaYawDeg, double deltaPitchDeg) {
-        double degreesPerPixel = getDegreesPerPixel();
-
-        // round to nearest integer pixel count
-        long pixelsYaw   = Math.round(deltaYawDeg / degreesPerPixel);
-        long pixelsPitch = Math.round(deltaPitchDeg / degreesPerPixel);
-
-        if (pixelsYaw == 0 && pixelsPitch == 0) return;
-
-        // convert pixels back to changeLookDirection units (pixels * f³ * 8)
+    private void accumulatePixels(double deltaYawDeg, double deltaPitchDeg) {
         double sensScale = getSensitivityScale();
-        double dx = pixelsYaw * sensScale;
-        double dy = pixelsPitch * sensScale;
+        double degreesPerPixel = sensScale * 0.15;
 
-        player.changeLookDirection(dx, dy);
+        long pixelsX = Math.round(deltaYawDeg / degreesPerPixel);
+        long pixelsY = Math.round(deltaPitchDeg / degreesPerPixel);
+
+        pendingPixelDX += pixelsX;
+        pendingPixelDY += pixelsY;
     }
 
     /**
-     * MC sensitivity formula: f = slider * 0.6 + 0.2; scale = f³ * 8.
-     * changeLookDirection multiplies by 0.15 to get degrees.
-     * So degreesPerPixel = scale * 0.15 = f³ * 8 * 0.15.
+     * Called by MixinMouse at updateMouse(HEAD).
+     * Returns accumulated raw pixel deltas and resets.
      */
-    private static double getDegreesPerPixel() {
-        return getSensitivityScale() * 0.15;
+    public double[] consumeRawPixelDeltas() {
+        double dx = pendingPixelDX;
+        double dy = pendingPixelDY;
+        pendingPixelDX = 0;
+        pendingPixelDY = 0;
+        return new double[]{dx, dy};
     }
 
     private static double getSensitivityScale() {
@@ -155,15 +148,15 @@ public class WindMouseRotation {
         return f * f * f * 8.0;
     }
 
-    /** Clear target and reset velocity/wind state. Call from releaseKeys(). */
     public void clearTarget() {
         hasTarget = false;
         resetVelocity();
+        pendingPixelDX = 0;
+        pendingPixelDY = 0;
     }
 
     public boolean hasTarget() { return hasTarget; }
 
-    /** Angular distance (degrees) from player's current facing to target. */
     public double distanceToTarget(ClientPlayerEntity player) {
         if (!hasTarget || player == null) return 999;
         double dYaw   = wrapDelta(targetYaw - player.getYaw());
