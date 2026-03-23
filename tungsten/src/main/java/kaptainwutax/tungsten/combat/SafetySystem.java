@@ -34,9 +34,6 @@ public class SafetySystem {
     // ── constants ───────────────────────────────────────────────────────────
     private static final int PREDICT_TICKS = 10;
 
-    private static final double KB_BASE = 0.4;
-    private static final double KB_SPRINT_BONUS = 0.4;
-    private static final double KB_UP = 0.4;
     private static final int KB_PREDICT_TICKS = 15;
     private static final int KB_FALL_THRESHOLD = 2;
 
@@ -46,6 +43,7 @@ public class SafetySystem {
     private Entity target = null;
 
     private final CombatPathfinder pathfinder = new CombatPathfinder();
+    private final KnockbackEstimator kbEstimator = new KnockbackEstimator();
 
     private CombatStage stage = CombatStage.PURSUE;
     private CombatStage prevStage = null;
@@ -82,6 +80,9 @@ public class SafetySystem {
             enemyVelocity = targetPos.subtract(prevEnemyPos);
         }
         prevEnemyPos = targetPos;
+
+        // KB estimator: track enemy sprint state + enchants
+        kbEstimator.tick(target, enemyVelocity);
 
         // pathfinder updates every N ticks
         pathfinder.tick(player.getBlockPos(), target.getBlockPos(), world);
@@ -403,8 +404,13 @@ public class SafetySystem {
 
     // ── knockback simulation ─────────────────────────────────────────────────
 
+    /**
+     * Simulate KB using current kbEstimator values for enemy hitting us,
+     * or fixed base values for us hitting enemy.
+     * @param asEnemy true = simulate enemy hitting victim (use estimator), false = us hitting
+     */
     private Vec3d simulateKnockback(Vec3d victimPos, Vec3d victimVel,
-                                     Vec3d attackerPos, boolean sprintHit) {
+                                     Vec3d attackerPos, boolean asEnemy) {
         double dx = victimPos.x - attackerPos.x;
         double dz = victimPos.z - attackerPos.z;
         double len = Math.sqrt(dx * dx + dz * dz);
@@ -412,10 +418,11 @@ public class SafetySystem {
 
         double nx = dx / len;
         double nz = dz / len;
-        double kbStrength = KB_BASE + (sprintHit ? KB_SPRINT_BONUS : 0);
+        double kbStrength = asEnemy ? kbEstimator.getHorizontalStrength() : 0.8; // us: assume sprint hit
+        double kbUp = asEnemy ? kbEstimator.getVerticalStrength() : 0.4;
 
         double vx = victimVel.x * 0.5 + nx * kbStrength;
-        double vy = KB_UP;
+        double vy = kbUp;
         double vz = victimVel.z * 0.5 + nz * kbStrength;
 
         double px = victimPos.x, py = victimPos.y, pz = victimPos.z;
@@ -433,7 +440,7 @@ public class SafetySystem {
         lastUsAfterKB = simulateKnockback(playerPos, playerVel, targetPos, true);
         lastFallIfHit = VoidDetector.fallHeight(lastUsAfterKB, world);
 
-        lastEnemyAfterKB = simulateKnockback(targetPos, enemyVelocity, playerPos, true);
+        lastEnemyAfterKB = simulateKnockback(targetPos, enemyVelocity, playerPos, false);
         lastEnemyFallIfHit = VoidDetector.fallHeight(lastEnemyAfterKB, world);
     }
 
@@ -466,6 +473,7 @@ public class SafetySystem {
         prevStage = null;
         braking = false;
         pathfinder.reset();
+        kbEstimator.reset();
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
     }
 }
