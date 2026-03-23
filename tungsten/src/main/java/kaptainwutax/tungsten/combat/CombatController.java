@@ -12,9 +12,9 @@ import net.minecraft.world.WorldView;
  * PvP combat controller.
  *
  * Subsystems:
- *   SAFETY  — velocity viz, edge detection, anti-fall braking (overrides legs+mouse)
- *   MOUSE   — WindMouse rotation toward target center
- *   TRIGGER — auto-click when crosshair lands on target
+ *   SAFETY  — render-frequency: viz, edge detection, braking (manages own keys)
+ *   MOUSE   — render-frequency via WindMouse: rotation toward target
+ *   TRIGGER — tick-frequency: auto-click when crosshair lands on target
  *
  * TODO: LEGS — movement (sprint-jump, strafe)
  */
@@ -26,44 +26,24 @@ public class CombatController {
     public boolean tick(ClientPlayerEntity player, Entity target, WorldView world) {
         if (target == null || target.isRemoved() || !target.isAlive()) return false;
 
-        MinecraftClient mc = MinecraftClient.getInstance();
         TungstenConfig cfg = TungstenConfig.get();
 
-        // ── safety: analyze + visualize + decide braking ─────────────────
+        // safety tick: enemy velocity tracking (needs fixed dt)
         safety.tick(player, target, world);
 
-        // release movement keys when braking just ended
-        if (!safety.isBraking() && safety.wasBraking()) {
-            mc.options.forwardKey.setPressed(false);
-            mc.options.backKey.setPressed(false);
-            mc.options.leftKey.setPressed(false);
-            mc.options.rightKey.setPressed(false);
-            mc.options.sprintKey.setPressed(false);
-            mc.options.sneakKey.setPressed(false);
-        }
-
+        // safety braking overrides aim — renderUpdate handles keys + viz at frame rate
         if (safety.isBraking()) {
-            // safety overrides: face brake direction, press movement keys
-            float brakePitch = 0; // look horizontal while braking
+            // aim toward brake direction (WindMouse handles at render freq)
             WindMouseRotation.INSTANCE.setParams(
-                    cfg.combatWindMouseGravity * 2, // faster convergence when braking
+                    cfg.combatWindMouseGravity * 2,
                     cfg.combatWindMouseWind * 0.5,
                     cfg.combatWindMouseMaxStep * 2,
                     cfg.combatWindMouseWindDist,
                     cfg.combatWindMouseDoneThreshold,
                     cfg.combatWindMouseFlickScale
             );
-            WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), brakePitch);
+            WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), 0);
 
-            mc.options.forwardKey.setPressed(safety.wantsForward());
-            mc.options.backKey.setPressed(safety.wantsBack());
-            mc.options.leftKey.setPressed(safety.wantsLeft());
-            mc.options.rightKey.setPressed(safety.wantsRight());
-            mc.options.sprintKey.setPressed(safety.wantsSprint());
-            mc.options.sneakKey.setPressed(safety.wantsSneak());
-            mc.options.jumpKey.setPressed(false);
-
-            // still allow trigger bot during braking (might hit target while turning)
             if (cfg.combatTriggerBotEnabled) {
                 triggerBot.tick(player, target);
             }
