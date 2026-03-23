@@ -61,10 +61,14 @@ public class SafetySystem {
     // braking/repositioning output
     private float brakeYaw = 0;
     private boolean braking = false;
-    private boolean repositioning = false; // DANGER_BATTLE: moving to safer ground
+    private boolean repositioning = false;
     private boolean wasBrakingLastFrame = false;
     private boolean wasRepositioningLastFrame = false;
     private boolean wantsJump = false;
+
+    // movement output — legs direction from BFS path
+    private float movementYaw = 0;
+    private boolean movementActive = false;
 
     private boolean active = false;
     private int logCooldown = 0;
@@ -100,6 +104,7 @@ public class SafetySystem {
         wasBrakingLastFrame = braking;
         wasRepositioningLastFrame = repositioning;
         braking = false;
+        movementActive = false;
         repositioning = false;
         wantsJump = false;
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
@@ -194,20 +199,45 @@ public class SafetySystem {
             }
         }
 
-        // ── movement: sprint-jump toward target (if enabled + not braking) ──
+        // ── movement: follow BFS attack path (if enabled + not braking/repositioning) ──
         boolean movementsEnabled = kaptainwutax.tungsten.TungstenConfig.get().combatMovementsEnabled;
-        if (movementsEnabled && !braking) {
-            // sprint + W + jump when on ground
-            mc.options.forwardKey.setPressed(true);
-            mc.options.sprintKey.setPressed(true);
-            mc.options.backKey.setPressed(false);
-            mc.options.leftKey.setPressed(false);
-            mc.options.rightKey.setPressed(false);
-            mc.options.sneakKey.setPressed(false);
-            if (player.isOnGround()) {
-                mc.options.jumpKey.setPressed(true);
-            } else {
-                mc.options.jumpKey.setPressed(false);
+        if (movementsEnabled && !braking && !repositioning) {
+            java.util.List<net.minecraft.util.math.BlockPos> attackPath = pathfinder.getAttackPath();
+            if (attackPath.size() >= 2) {
+                // find next waypoint we haven't reached yet
+                net.minecraft.util.math.BlockPos nextWp = null;
+                for (int i = 1; i < attackPath.size(); i++) {
+                    if (playerPosTick.squaredDistanceTo(Vec3d.ofBottomCenter(attackPath.get(i))) > 1.5) {
+                        nextWp = attackPath.get(i);
+                        break;
+                    }
+                }
+                if (nextWp == null) nextWp = attackPath.get(attackPath.size() - 1);
+
+                // check if next waypoint is safe
+                int wpFall = VoidDetector.fallHeight(Vec3d.ofBottomCenter(nextWp), player.getWorld());
+                DangerLevel wpDanger = DangerLevel.fromFallHeight(wpFall);
+
+                if (!wpDanger.isSerious()) {
+                    // face toward waypoint for movement (legs direction)
+                    // WindMouse handles mouse aim separately — W goes where player faces
+                    // So we set a movement yaw that CombatController can use
+                    movementYaw = AttackTiming.yawTo(playerPosTick, Vec3d.ofBottomCenter(nextWp));
+                    movementActive = true;
+
+                    mc.options.forwardKey.setPressed(true);
+                    mc.options.sprintKey.setPressed(true);
+                    mc.options.backKey.setPressed(false);
+                    mc.options.leftKey.setPressed(false);
+                    mc.options.rightKey.setPressed(false);
+                    mc.options.sneakKey.setPressed(false);
+                    if (player.isOnGround()) {
+                        mc.options.jumpKey.setPressed(true);
+                    } else {
+                        mc.options.jumpKey.setPressed(false);
+                    }
+                }
+                // if waypoint is dangerous, don't move — stay and fight
             }
         }
 
@@ -265,13 +295,16 @@ public class SafetySystem {
 
     private CombatStage evaluateStage(ClientPlayerEntity player, Vec3d playerVel,
                                        double horizSpeed, DangerLevel dangerPredicted, DangerLevel dangerCurrent) {
-        // DANGER_IMMINENT: any serious fall (4+ blocks) predicted — always emergency
-        if (dangerPredicted.isSerious() && horizSpeed > 0.02) {
+        // DANGER_IMMINENT: predicted serious fall, BUT only if we're actually
+        // in danger — not during a normal jump that will land safely.
+        // Require: current pos also not safe, OR we're falling hard (velY < -0.3)
+        if (dangerPredicted.isSerious() && horizSpeed > 0.02
+                && (dangerCurrent != DangerLevel.NONE || playerVel.y < -0.3)) {
             return CombatStage.DANGER_IMMINENT;
         }
-        // Already falling into serious danger
+        // Already falling into serious danger (velY < -0.3 = past jump apex, actually falling)
         if (dangerCurrent.isSerious() && !player.isOnGround()
-                && playerVel.y < -0.1) {
+                && playerVel.y < -0.3) {
             return CombatStage.DANGER_IMMINENT;
         }
 
@@ -459,6 +492,8 @@ public class SafetySystem {
     public CombatStage getStage()   { return stage; }
     public boolean isBraking()         { return braking; }
     public boolean isRepositioning()   { return repositioning; }
+    public boolean isMovementActive()  { return movementActive; }
+    public float getMovementYaw()      { return movementYaw; }
     public float getBrakeYaw()      { return brakeYaw; }
     public float getAimYaw()        { return aimYaw; }
     public float getAimPitch()      { return aimPitch; }
