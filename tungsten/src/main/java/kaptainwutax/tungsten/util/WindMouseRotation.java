@@ -1,5 +1,6 @@
 package kaptainwutax.tungsten.util;
 
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 
 import java.util.Random;
@@ -9,10 +10,14 @@ import java.util.Random;
  *
  * Architecture (two-phase):
  *   1. Game tick  — setTarget(yaw, pitch): store desired facing, do NOT touch player.
- *   2. Render frame — applyRenderStep(player): one WindMouse step → player.setYaw/setPitch.
+ *   2. Render frame — applyRenderStep(player): one WindMouse step via changeLookDirection().
  *
- * Running at render frequency (~60 FPS vs 20 TPS) makes the rotation look genuinely
- * smooth instead of snapping every 50 ms, which anti-cheats detect.
+ * Anti-cheat safe: rotation deltas are quantized to mouse pixel grid at current
+ * sensitivity and applied through changeLookDirection() — the same vanilla path
+ * that real mouse input uses. Server sees rotation steps identical to a physical mouse.
+ *
+ * TODO: large-angle mouse lift pauses — when a big turn requires "picking up the mouse",
+ *       add a brief pause + reduced precision to simulate repositioning.
  *
  * Singleton: WindMouseRotation.INSTANCE — shared across all follow tasks.
  */
@@ -67,7 +72,7 @@ public class WindMouseRotation {
 
     /**
      * Apply one WindMouse step toward target. Call once per render frame from MixinInGameHud.
-     * Does nothing if no target is set.
+     * Rotation goes through changeLookDirection() with pixel-quantized deltas.
      */
     public void applyRenderStep(ClientPlayerEntity player) {
         if (!hasTarget || player == null) return;
@@ -80,8 +85,10 @@ public class WindMouseRotation {
         double dist   = Math.sqrt(dYaw * dYaw + dPitch * dPitch);
 
         if (dist < doneThreshold) {
-            player.setYaw(targetYaw);
-            player.setPitch(targetPitch);
+            // final snap — quantize the last tiny delta too
+            double snapYaw = wrapDelta(targetYaw - currentYaw);
+            double snapPitch = targetPitch - currentPitch;
+            applyQuantized(player, snapYaw, snapPitch);
             resetVelocity();
             return;
         }
@@ -106,8 +113,46 @@ public class WindMouseRotation {
             veloPitch *= scale;
         }
 
-        player.setYaw((float) (currentYaw + veloYaw));
-        player.setPitch((float) Math.max(-90.0, Math.min(90.0, currentPitch + veloPitch)));
+        applyQuantized(player, veloYaw, veloPitch);
+    }
+
+    /**
+     * Quantize degree deltas to mouse pixel grid and apply via changeLookDirection.
+     *
+     * MC mouse pipeline: raw_pixels * (f³ * 8) → changeLookDirection → * 0.15 → degrees.
+     * So 1 pixel = degreesPerPixel = (f³ * 8) * 0.15.
+     * We round our desired delta to nearest pixel count, then feed through changeLookDirection.
+     */
+    private void applyQuantized(ClientPlayerEntity player, double deltaYawDeg, double deltaPitchDeg) {
+        double degreesPerPixel = getDegreesPerPixel();
+
+        // round to nearest integer pixel count
+        long pixelsYaw   = Math.round(deltaYawDeg / degreesPerPixel);
+        long pixelsPitch = Math.round(deltaPitchDeg / degreesPerPixel);
+
+        if (pixelsYaw == 0 && pixelsPitch == 0) return;
+
+        // convert pixels back to changeLookDirection units (pixels * f³ * 8)
+        double sensScale = getSensitivityScale();
+        double dx = pixelsYaw * sensScale;
+        double dy = pixelsPitch * sensScale;
+
+        player.changeLookDirection(dx, dy);
+    }
+
+    /**
+     * MC sensitivity formula: f = slider * 0.6 + 0.2; scale = f³ * 8.
+     * changeLookDirection multiplies by 0.15 to get degrees.
+     * So degreesPerPixel = scale * 0.15 = f³ * 8 * 0.15.
+     */
+    private static double getDegreesPerPixel() {
+        return getSensitivityScale() * 0.15;
+    }
+
+    private static double getSensitivityScale() {
+        double sens = MinecraftClient.getInstance().options.getMouseSensitivity().getValue();
+        double f = sens * 0.6 + 0.2;
+        return f * f * f * 8.0;
     }
 
     /** Clear target and reset velocity/wind state. Call from releaseKeys(). */
