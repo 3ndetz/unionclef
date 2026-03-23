@@ -74,6 +74,18 @@ public class SafetySystem {
     private int postImminentCooldown = 0;
     private static final int POST_IMMINENT_COOLDOWN_FRAMES = 40; // ~0.7 sec
 
+    // edge sneak: hold sneak briefly when landing near block edge with momentum
+    private int edgeSneakTicks = 0;
+    private static final int EDGE_SNEAK_DURATION = 10;
+
+    // imminent spam detection → force NARROW_BATTLE mode
+    private int imminentCount = 0;       // how many times IMMINENT triggered recently
+    private int imminentDecayTimer = 0;  // frames until count decays
+    private static final int IMMINENT_SPAM_THRESHOLD = 3;  // 3 times in window → narrow mode
+    private static final int IMMINENT_DECAY_FRAMES = 120;  // ~2 sec window
+    private static final int FORCED_NARROW_FRAMES = 200;   // ~3.3 sec forced narrow
+    private int forcedNarrowTimer = 0;
+
     private boolean active = false;
     private int logCooldown = 0;
 
@@ -112,6 +124,9 @@ public class SafetySystem {
         repositioning = false;
         wantsJump = false;
         if (postImminentCooldown > 0) postImminentCooldown--;
+        if (edgeSneakTicks > 0) edgeSneakTicks--;
+        if (forcedNarrowTimer > 0) forcedNarrowTimer--;
+        if (imminentDecayTimer > 0) { imminentDecayTimer--; } else { imminentCount = 0; }
         TungstenModRenderContainer.COMBAT_TRAJECTORY =
                 java.util.Collections.synchronizedCollection(new java.util.ArrayList<>());
         if (logCooldown > 0) logCooldown--;
@@ -234,10 +249,44 @@ public class SafetySystem {
                         mc.options.sneakKey.setPressed(false);
                     }
                 }
-                case PURSUE, ESCAPE, DELICATE_BATTLE -> {
+                case ESCAPE -> {
+                    // disengage: run along retreat path, sprint-jump away
+                    java.util.List<net.minecraft.util.math.BlockPos> retreatEsc = pathfinder.getRetreatPath();
+                    if (retreatEsc.size() >= 2) {
+                        net.minecraft.util.math.BlockPos wp = retreatEsc.get(Math.min(2, retreatEsc.size() - 1));
+                        movementYaw = AttackTiming.yawTo(playerPosTick, Vec3d.ofBottomCenter(wp));
+                        movementActive = true;
+                        repositioning = true; // use movementYaw for camera via brakeYaw
+                        brakeYaw = movementYaw;
+
+                        mc.options.forwardKey.setPressed(true);
+                        mc.options.sprintKey.setPressed(true);
+                        mc.options.backKey.setPressed(false);
+                        mc.options.leftKey.setPressed(false);
+                        mc.options.rightKey.setPressed(false);
+                        mc.options.sneakKey.setPressed(false);
+                        // jump if on ground and not on narrow terrain
+                        mc.options.jumpKey.setPressed(player.isOnGround() && currentEdgeScore < 0.4);
+                    }
+                }
+                case PURSUE, DELICATE_BATTLE -> {
                     // no key override from saver
                 }
             }
+        }
+
+        // ── edge sneak: hold sneak when on block edge with momentum ──────
+        if (player.isOnGround() && horizSpeed > 0.03 && currentEdgeScore > 0.2) {
+            // check sub-block position: how close to edge of current block
+            double fracX = playerPosTick.x - Math.floor(playerPosTick.x);
+            double fracZ = playerPosTick.z - Math.floor(playerPosTick.z);
+            double edgeDist = Math.min(Math.min(fracX, 1 - fracX), Math.min(fracZ, 1 - fracZ));
+            if (edgeDist < 0.3) {
+                edgeSneakTicks = EDGE_SNEAK_DURATION;
+            }
+        }
+        if (edgeSneakTicks > 0 && !braking) {
+            mc.options.sneakKey.setPressed(true);
         }
 
         // ── movement: follow BFS attack path (if enabled + not braking/repositioning/cooldown) ──
@@ -259,11 +308,9 @@ public class SafetySystem {
 
                 // check if next waypoint is safe — block itself AND surroundings
                 int wpFall = VoidDetector.fallHeight(Vec3d.ofBottomCenter(nextWp), player.getWorld());
-                double wpEdge = VoidDetector.edgeScore(Vec3d.ofBottomCenter(nextWp), player.getWorld());
                 DangerLevel wpDanger = DangerLevel.fromFallHeight(wpFall);
 
-                // skip waypoints near edges (edgeScore > 0.3 = some neighbors are void)
-                if (!wpDanger.isSerious() && wpEdge < 0.3) {
+                if (!wpDanger.isSerious()) {
                     // face toward waypoint for movement (legs direction)
                     // WindMouse handles mouse aim separately — W goes where player faces
                     // So we set a movement yaw that CombatController can use
@@ -342,15 +389,29 @@ public class SafetySystem {
     private CombatStage evaluateStage(ClientPlayerEntity player, Vec3d playerVel,
                                        double horizSpeed, DangerLevel dangerPredicted,
                                        DangerLevel dangerCurrent, double edgeScore) {
-        // NARROW_BATTLE: on bridge/narrow terrain (high edge score = void on most sides)
-        // On narrow terrain, only trigger IMMINENT if actually falling off (velY < -0.3)
-        boolean onNarrowTerrain = edgeScore >= 0.5 && player.isOnGround();
+        boolean onNarrowTerrain = edgeScore >= 0.4 && player.isOnGround();
+
+        // forced NARROW from imminent spam
+        if (forcedNarrowTimer > 0) {
+            onNarrowTerrain = true;
+        }
 
         // DANGER_IMMINENT: actually falling or about to fall off
         if (!onNarrowTerrain) {
-            // normal terrain: predicted fall + current not safe
             if (dangerPredicted.isSerious() && horizSpeed > 0.02
                     && (dangerCurrent != DangerLevel.NONE || playerVel.y < -0.3)) {
+                imminentCount++;
+                imminentDecayTimer = IMMINENT_DECAY_FRAMES;
+                if (imminentCount >= IMMINENT_SPAM_THRESHOLD) {
+                    // too many imminents → force narrow mode
+                    forcedNarrowTimer = FORCED_NARROW_FRAMES;
+                    imminentCount = 0;
+                    if (logCooldown <= 0) {
+                        Debug.logMessage("§9COMBAT: imminent spam → forced NARROW_BATTLE");
+                        logCooldown = 120;
+                    }
+                    return CombatStage.NARROW_BATTLE;
+                }
                 return CombatStage.DANGER_IMMINENT;
             }
         }
@@ -359,7 +420,7 @@ public class SafetySystem {
             return CombatStage.DANGER_IMMINENT;
         }
 
-        // NARROW_BATTLE: fight carefully on bridge, walk only
+        // NARROW_BATTLE: bridge, dyrjavy floor, or forced after imminent spam
         if (onNarrowTerrain) {
             return CombatStage.NARROW_BATTLE;
         }
@@ -377,7 +438,11 @@ public class SafetySystem {
             }
         }
 
-        // TODO: ESCAPE — target just hit (immunity frames), or mutual edge danger, or low HP
+        // ESCAPE: weapon on cooldown (>10 ticks remaining) → disengage, run retreat path
+        if (player.getAttackCooldownProgress(0.5f) < 0.5f) {
+            return CombatStage.ESCAPE;
+        }
+
         // TODO: DELICATE_BATTLE — low HP careful play
 
         return CombatStage.PURSUE;
