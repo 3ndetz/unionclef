@@ -96,21 +96,27 @@ public class SafetySystem {
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
         if (logCooldown > 0) logCooldown--;
 
-        Vec3d playerPos = player.getPos();
+        // tick-accurate positions for logic (block grid checks)
         Vec3d playerVel = player.getVelocity();
-        Vec3d targetPos = target.getPos();
+        Vec3d playerPosTick = player.getPos();
+        Vec3d targetPosTick = target.getPos();
         double horizSpeed = Math.sqrt(playerVel.x * playerVel.x + playerVel.z * playerVel.z);
 
-        // predicted positions
+        // interpolated positions for smooth visualization
+        Vec3d playerPos = playerPosTick.add(playerVel.multiply(tickDelta));
+        Vec3d targetPos = targetPosTick.add(enemyVelocity.multiply(tickDelta));
+
+        // predicted positions (from interpolated for smooth viz)
         Vec3d playerPredicted = playerPos.add(playerVel.multiply(PREDICT_TICKS));
         Vec3d enemyPredicted = targetPos.add(enemyVelocity.multiply(PREDICT_TICKS));
 
-        // terrain
-        int fallAtPredicted = VoidDetector.fallHeight(playerPredicted, player.getWorld());
-        int fallAtCurrent = VoidDetector.fallHeight(playerPos, player.getWorld());
+        // terrain checks use tick positions (block grid)
+        Vec3d playerPredictedTick = playerPosTick.add(playerVel.multiply(PREDICT_TICKS));
+        int fallAtPredicted = VoidDetector.fallHeight(playerPredictedTick, player.getWorld());
+        int fallAtCurrent = VoidDetector.fallHeight(playerPosTick, player.getWorld());
 
-        // KB analysis
-        analyzeKnockback(playerPos, playerVel, targetPos, player.getWorld());
+        // KB analysis uses tick positions
+        analyzeKnockback(playerPosTick, playerVel, targetPosTick, player.getWorld());
 
         // ── evaluate stage ───────────────────────────────────────────────
         CombatStage newStage = evaluateStage(player, playerVel, horizSpeed,
