@@ -181,7 +181,24 @@ public class CombatPathfinder {
             double distFromTarget = Math.sqrt(current.getSquaredDistance(targetPos));
             double heightBonus = (current.getY() - targetPos.getY()) * 2.0;
             double edgePenalty = VoidDetector.edgeScore(Vec3d.ofBottomCenter(current), world) * -10.0;
-            double score = distFromTarget + heightBonus + edgePenalty;
+
+            // direction bonus: prefer points in the hemisphere AWAY from target
+            double awayDirX = playerPos.getX() - targetPos.getX();
+            double awayDirZ = playerPos.getZ() - targetPos.getZ();
+            double awayLen = Math.sqrt(awayDirX * awayDirX + awayDirZ * awayDirZ);
+            double directionBonus = 0;
+            if (awayLen > 0.1) {
+                double toCandidateX = current.getX() - playerPos.getX();
+                double toCandidateZ = current.getZ() - playerPos.getZ();
+                double candidateLen = Math.sqrt(toCandidateX * toCandidateX + toCandidateZ * toCandidateZ);
+                if (candidateLen > 0.1) {
+                    // dot product: +1 = same direction as away, -1 = toward target
+                    double dot = (awayDirX * toCandidateX + awayDirZ * toCandidateZ) / (awayLen * candidateLen);
+                    directionBonus = dot * 5.0; // strong preference for away direction
+                }
+            }
+
+            double score = distFromTarget + heightBonus + edgePenalty + directionBonus;
 
             if (score > bestScore && !current.equals(playerPos)) {
                 bestScore = score;
