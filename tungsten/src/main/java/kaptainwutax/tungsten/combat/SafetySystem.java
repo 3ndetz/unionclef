@@ -168,32 +168,58 @@ public class SafetySystem {
                     float velYaw = (float) Math.toDegrees(-Math.atan2(playerVel.x, playerVel.z));
                     brakeYaw = velYaw + 180f;
 
-                    // sprint + W + jump opposite to velocity
-                    if (horizSpeed > 0.05 && player.isOnGround()) {
-                        wantsJump = true;
-                    }
+                    // use strafe-based braking relative to look direction
+                    // (safe on bridges — won't walk sideways off edge)
+                    float lookYaw = player.getYaw();
+                    float deltaYaw = brakeYaw - lookYaw;
+                    deltaYaw = ((deltaYaw % 360) + 540) % 360 - 180;
 
-                    mc.options.forwardKey.setPressed(true);
+                    boolean w = deltaYaw > -70 && deltaYaw < 70;
+                    boolean s = deltaYaw > 110 || deltaYaw < -110;
+                    boolean a = deltaYaw > 20 && deltaYaw < 160;
+                    boolean d = deltaYaw < -20 && deltaYaw > -160;
+
+                    mc.options.forwardKey.setPressed(w);
+                    mc.options.backKey.setPressed(s);
+                    mc.options.leftKey.setPressed(a);
+                    mc.options.rightKey.setPressed(d);
                     mc.options.sprintKey.setPressed(true);
                     mc.options.sneakKey.setPressed(false);
+
+                    if (horizSpeed > 0.05 && player.isOnGround() && currentEdgeScore < 0.5) {
+                        // only jump to brake if not on narrow terrain
+                        wantsJump = true;
+                    }
                     mc.options.jumpKey.setPressed(wantsJump);
-                    mc.options.backKey.setPressed(false);
-                    mc.options.leftKey.setPressed(false);
-                    mc.options.rightKey.setPressed(false);
                 }
                 case NARROW_BATTLE -> {
-                    // bridge/narrow: walk toward target along path, NO JUMPS
+                    // bridge/narrow: move along BFS path using strafe relative to where we're looking
+                    // camera aims at target (for hits), movement via WASD relative to camera
                     java.util.List<net.minecraft.util.math.BlockPos> atkPath = pathfinder.getAttackPath();
                     if (atkPath.size() >= 2) {
                         net.minecraft.util.math.BlockPos nextWp = atkPath.get(Math.min(1, atkPath.size() - 1));
                         movementYaw = AttackTiming.yawTo(playerPosTick, Vec3d.ofBottomCenter(nextWp));
                         movementActive = true;
-                        mc.options.forwardKey.setPressed(true);
-                        mc.options.sprintKey.setPressed(false); // no sprint on narrow
-                        mc.options.jumpKey.setPressed(false);   // NO JUMPS
-                        mc.options.backKey.setPressed(false);
-                        mc.options.leftKey.setPressed(false);
-                        mc.options.rightKey.setPressed(false);
+
+                        // compute WASD relative to current look direction
+                        float lookYaw = player.getYaw();
+                        float deltaYaw = movementYaw - lookYaw;
+                        // normalize to [-180, 180]
+                        deltaYaw = ((deltaYaw % 360) + 540) % 360 - 180;
+
+                        // map angle difference to WASD
+                        // -45..45 = W, 45..135 = A, 135..-135 = S, -135..-45 = D
+                        boolean w = deltaYaw > -70 && deltaYaw < 70;
+                        boolean s = deltaYaw > 110 || deltaYaw < -110;
+                        boolean a = deltaYaw > 20 && deltaYaw < 160;
+                        boolean d = deltaYaw < -20 && deltaYaw > -160;
+
+                        mc.options.forwardKey.setPressed(w);
+                        mc.options.backKey.setPressed(s);
+                        mc.options.leftKey.setPressed(a);
+                        mc.options.rightKey.setPressed(d);
+                        mc.options.sprintKey.setPressed(false);
+                        mc.options.jumpKey.setPressed(false);
                         mc.options.sneakKey.setPressed(false);
                     }
                 }
