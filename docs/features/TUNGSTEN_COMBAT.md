@@ -14,77 +14,82 @@ All inputs are legit (key presses + mouse pipeline), no direct API calls.
 
 Stage changes are logged to chat. Stage is re-evaluated every frame.
 
-### Stage 1: PURSUE
+### PURSUE
 
-**When:** target is moving away from us (velocity dot product positive) or is about
-to become unreachable, or target is standing on edge (opportunity to push off).
+**When:** default stage, or target moving away / standing on edge.
 
-**Mouse:** aim at target's PREDICTED position. Prediction = target_pos + target_vel * N ticks.
-N is based on how long our WindMouse will take to reach the target angle — if convergence
-takes ~2 ticks, predict 2 ticks ahead. This is AIMING lead, not leg lead.
+**Mouse:** aim at target's PREDICTED position. Lead = WindMouse convergence time (1-5 ticks).
 
-**Legs:** run toward target's far-future predicted position (target_pos + target_vel * ~20 ticks).
-Legs prediction is longer because running needs more planning horizon than aiming.
+**Legs:** run toward target's far-future predicted position (~20 ticks ahead).
 
-**TriggerBot:** active, clicks when crosshair sweeps over target.
+### DANGER_BATTLE
 
-### Stage 2: DANGER_BATTLE
+**When:** KB analysis shows next enemy hit would knock us into a fall (2+ blocks).
+We haven't been hit yet, but we're in a vulnerable position.
 
-**When:** knockback analysis shows that the NEXT enemy hit would send us into a fall
-(2+ blocks). We haven't been hit yet, but we're in a vulnerable position.
+**Mouse:** normal combat aim with prediction.
 
-**Mouse:** aim at target (normal combat aim with prediction).
+**Legs:** reposition away from edge. Strafe parallel to edge. Still fighting.
 
-**Legs:** reposition away from edge. Don't sprint-jump toward danger direction.
-Prefer strafing parallel to edge rather than toward/away from target.
-Still fighting, just picking safer ground.
+### DANGER_IMMINENT
 
-### Stage 3: DANGER_IMMINENT
+**When:** our velocity vector leads into a fall, or already falling into danger.
 
-**When:** we've been hit or our current velocity vector leads into a fall (detected by
-SafetySystem predicted position check). This is the emergency brake.
+**Mouse:** face OPPOSITE to velocity vector. Override combat aim.
 
-**Mouse:** face OPPOSITE to velocity vector (brake direction). Override combat aim.
+**Legs:** full counter-thrust.
+- Sprint + W + jump opposite to velocity (escape jump when on ground)
+- Low speed: sneak + W
+- High speed / deep fall: sprint + W
 
-**Legs:** full brake.
-- Low speed: sneak + W opposite to velocity
-- High speed / deep fall: sprint + W opposite to velocity (full counter-thrust)
+### ESCAPE (future)
 
-**TriggerBot:** still active (might land a hit while turning).
+**When:**
+- Target just hit → damage immunity window → our attacks useless, disengage
+- Mutual edge danger → hit-and-run tactic needed
+- Low HP → retreat and regroup
+
+**Behavior:** disengage, create distance, re-engage when advantageous.
+
+### DELICATE_BATTLE (future)
+
+**When:** low HP, need careful play. No reckless sprint-jumps.
 
 ### Stage transitions
 
 ```
 PURSUE ←→ DANGER_BATTLE ←→ DANGER_IMMINENT
-  ↑                              |
-  └──────────────────────────────┘
+  ↑              ↑                |
+  |              |                |
+  ↓              ↓                ↓
+ESCAPE ←→ DELICATE_BATTLE        |
+  ↑                               |
+  └───────────────────────────────┘
        (velocity stabilized, safe ground)
 ```
 
-## What's implemented now (as of this writing)
+## Implemented
 
-### Working:
-- **TriggerBot** — clicks via KeyBinding.onKeyPressed, cooldown-aware, release cycle
-- **WindMouse rotation** — via synthetic raw pixel deltas injected into Mouse.cursorDeltaX/Y
-  through MixinMouse. Full vanilla pipeline: sensitivity scaling → changeLookDirection.
-  Pixel-quantized to match real mouse. Anti-cheat safe.
-- **SafetySystem visualization** — velocity vectors + predicted positions for both players,
-  fall danger markers, knockback trajectory prediction (defensive + offensive)
-- **SafetySystem braking** — detects fall at predicted position, faces opposite velocity,
-  soft brake (sneak) or hard brake (sprint reverse)
-- **Configurable** — all WindMouse params + toggles via tungsten.json / `;settings` command
+- **TriggerBot** — KeyBinding.onKeyPressed, cooldown-aware, release cycle
+- **WindMouse rotation** — synthetic raw pixel deltas → Mouse.cursorDeltaX/Y
+  via MixinMouse. Full vanilla pipeline. Anti-cheat safe.
+- **Combat stages** — PURSUE / DANGER_BATTLE / DANGER_IMMINENT with chat logging
+- **Aim prediction** — target_pos + target_vel * lead_ticks. Lead = angular distance / WindMouse speed, clamped [1,5] ticks
+- **DANGER_IMMINENT braking** — face opposite velocity, sprint/sneak + W, escape jump on ground
+- **SafetySystem visualization** — velocity vectors, predicted positions, KB trajectories, aim prediction marker
+- **Knockback prediction** — defensive (us getting hit) + offensive (enemy getting hit)
+- **Configurable** — all params via tungsten.json / `;settings`
 
-### NOT implemented yet:
-- **Combat stages** (PURSUE / DANGER_BATTLE / DANGER_IMMINENT) — currently no stage machine,
-  just binary: braking or not braking
-- **Aim prediction** — currently aims at target's current position, not predicted.
-  Need: short-horizon prediction for mouse (based on WindMouse convergence time),
-  long-horizon prediction for legs
-- **WASD passthrough** — currently braking overrides ALL player input including our own
-  jumps and movement. Need: only override when actually dangerous, pass through safe inputs
-- **Legs system** — no sprint-jump, strafe, or movement control beyond braking
-- **DANGER_BATTLE stage** — no repositioning away from edges while fighting
-- **PURSUE stage** — no chase logic, no target-running-away detection
+## TODO
+
+- [ ] **DANGER_BATTLE legs** — reposition away from edge while fighting
+- [ ] **PURSUE legs** — sprint-jump chase with far-future prediction (~20 ticks)
+- [ ] **ESCAPE logic** — disengage on immunity frames, hit-and-run near edges
+- [ ] **DELICATE_BATTLE** — low HP conservative play
+- [ ] **Movement zone mapping** — scan terrain for safe zones, jump waypoints
+- [ ] **Jump waypoints** — precompute advantageous positions to jump to (high ground, safe landing)
+- [ ] **WASD passthrough polish** — allow player manual input in safe situations
+- [ ] **Legs system** — sprint-jump, strafe patterns, knockback recovery
 
 ## Settings (tungsten.json)
 

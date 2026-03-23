@@ -5,6 +5,7 @@ import kaptainwutax.tungsten.TungstenModRenderContainer;
 import kaptainwutax.tungsten.render.Color;
 import kaptainwutax.tungsten.render.Cuboid;
 import kaptainwutax.tungsten.render.Line;
+import kaptainwutax.tungsten.util.WindMouseRotation;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
@@ -12,17 +13,15 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldView;
 
 /**
- * Velocity analysis + edge detection + anti-fall braking + knockback prediction.
+ * Combat safety + stage machine + aim prediction.
  *
- * Runs at RENDER FREQUENCY (~60 FPS) — reads live player/entity state each frame.
- * Client physics processes inputs continuously between ticks, so reacting at
- * render rate gives smoother braking curves than tick-rate decisions.
- *
- * tick() — called from game tick, only for enemy velocity tracking (needs fixed dt).
- * renderUpdate() — called every frame: full analysis, braking decisions, key outputs, viz.
+ * Runs at RENDER FREQUENCY (~60 FPS).
+ * tick() — enemy velocity tracking (fixed dt).
+ * renderUpdate() — stage evaluation, braking, viz, aim prediction output.
  */
 public class SafetySystem {
 
+    // ── colors ──────────────────────────────────────────────────────────────
     private static final Color COL_PLAYER_VEL     = new Color(50, 220, 50);
     private static final Color COL_ENEMY_VEL      = new Color(220, 50, 50);
     private static final Color COL_DANGER          = new Color(255, 160, 0);
@@ -30,48 +29,47 @@ public class SafetySystem {
     private static final Color COL_SAFE            = new Color(50, 200, 100);
     private static final Color COL_KB_DANGER       = new Color(255, 80, 200);
     private static final Color COL_KB_OPPORTUNITY  = new Color(0, 255, 255);
+    private static final Color COL_AIM_PREDICT     = new Color(255, 255, 100);
 
+    // ── constants ───────────────────────────────────────────────────────────
     private static final int PREDICT_TICKS = 10;
     private static final int FALL_WARN = 2;
     private static final int FALL_DANGER = 5;
     private static final double STRONG_VEL = 0.4;
 
-    // vanilla knockback
     private static final double KB_BASE = 0.4;
     private static final double KB_SPRINT_BONUS = 0.4;
     private static final double KB_UP = 0.4;
     private static final int KB_PREDICT_TICKS = 15;
     private static final int KB_FALL_THRESHOLD = 2;
 
-    // enemy velocity — tracked per tick (fixed dt)
+    // ── state ───────────────────────────────────────────────────────────────
     private Vec3d prevEnemyPos = null;
     private Vec3d enemyVelocity = Vec3d.ZERO;
-
-    // target entity reference (set by tick, read by renderUpdate)
     private Entity target = null;
 
-    // KB analysis results (computed per frame)
+    private CombatStage stage = CombatStage.PURSUE;
+    private CombatStage prevStage = null;
+
+    // KB analysis
     private Vec3d lastUsAfterKB = null;
     private int lastFallIfHit = 0;
     private Vec3d lastEnemyAfterKB = null;
     private int lastEnemyFallIfHit = 0;
 
-    // output keys — updated every render frame
-    private boolean wantsForward = false;
-    private boolean wantsBack = false;
-    private boolean wantsLeft = false;
-    private boolean wantsRight = false;
-    private boolean wantsSprint = false;
-    private boolean wantsSneak = false;
+    // aim prediction output — read by CombatController
+    private float aimYaw = 0;
+    private float aimPitch = 0;
+
+    // braking output
     private float brakeYaw = 0;
     private boolean braking = false;
-    private boolean wasBraking = false;
+    private boolean wantsJump = false;
 
     private boolean active = false;
-    // throttle debug logs to once per 20 frames (~1/sec)
     private int logCooldown = 0;
 
-    // ── tick (20 TPS): enemy velocity tracking only ─────────────────────────
+    // ── tick (20 TPS): enemy velocity tracking ──────────────────────────────
 
     public void tick(ClientPlayerEntity player, Entity target, WorldView world) {
         this.target = target;
@@ -84,7 +82,7 @@ public class SafetySystem {
         prevEnemyPos = targetPos;
     }
 
-    // ── render update (every frame): analysis + decisions + viz ──────────────
+    // ── render update (~60 FPS): stage + decisions + viz ─────────────────────
 
     public void renderUpdate(float tickDelta) {
         if (!active) return;
@@ -93,24 +91,83 @@ public class SafetySystem {
         ClientPlayerEntity player = mc.player;
         if (player == null || target == null || target.isRemoved()) return;
 
-        wasBraking = braking;
-        resetOutputs();
+        braking = false;
+        wantsJump = false;
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
         if (logCooldown > 0) logCooldown--;
 
         Vec3d playerPos = player.getPos();
         Vec3d playerVel = player.getVelocity();
         Vec3d targetPos = target.getPos();
+        double horizSpeed = Math.sqrt(playerVel.x * playerVel.x + playerVel.z * playerVel.z);
 
         // predicted positions
         Vec3d playerPredicted = playerPos.add(playerVel.multiply(PREDICT_TICKS));
         Vec3d enemyPredicted = targetPos.add(enemyVelocity.multiply(PREDICT_TICKS));
 
-        // terrain check (uses block grid — not affected by sub-tick precision)
+        // terrain
         int fallAtPredicted = VoidDetector.fallHeight(playerPredicted, player.getWorld());
         int fallAtCurrent = VoidDetector.fallHeight(playerPos, player.getWorld());
 
-        // ── render: velocity vectors + predicted positions ──
+        // KB analysis
+        analyzeKnockback(playerPos, playerVel, targetPos, player.getWorld());
+
+        // ── evaluate stage ───────────────────────────────────────────────
+        CombatStage newStage = evaluateStage(player, playerVel, horizSpeed,
+                fallAtPredicted, fallAtCurrent);
+        if (newStage != stage) {
+            stage = newStage;
+            if (prevStage != stage) {
+                Debug.logMessage(stage.chatColor() + "COMBAT: → " + stage.name());
+                prevStage = stage;
+            }
+        }
+
+        // ── aim prediction (for mouse subsystem) ────────────────────────
+        computeAimPrediction(player, targetPos);
+
+        // ── stage-specific behavior ─────────────────────────────────────
+        switch (stage) {
+            case DANGER_IMMINENT -> {
+                braking = true;
+                float velYaw = (float) Math.toDegrees(-Math.atan2(playerVel.x, playerVel.z));
+                brakeYaw = velYaw + 180f;
+
+                // escape jump: sprint + W + jump opposite to velocity
+                if (horizSpeed > 0.05 && player.isOnGround()) {
+                    wantsJump = true;
+                }
+
+                // apply keys
+                mc.options.forwardKey.setPressed(true);
+                mc.options.sprintKey.setPressed(horizSpeed > STRONG_VEL || fallAtPredicted >= FALL_DANGER);
+                mc.options.sneakKey.setPressed(horizSpeed <= STRONG_VEL && fallAtPredicted < FALL_DANGER);
+                mc.options.jumpKey.setPressed(wantsJump);
+                mc.options.backKey.setPressed(false);
+                mc.options.leftKey.setPressed(false);
+                mc.options.rightKey.setPressed(false);
+            }
+            case DANGER_BATTLE -> {
+                // no key override yet — just awareness stage
+                // future: reposition away from edge while fighting
+            }
+            case PURSUE, ESCAPE, DELICATE_BATTLE -> {
+                // no key override — normal combat
+            }
+        }
+
+        // release keys when leaving braking stages
+        if (!braking && (prevStage == CombatStage.DANGER_IMMINENT)) {
+            mc.options.forwardKey.setPressed(false);
+            mc.options.backKey.setPressed(false);
+            mc.options.leftKey.setPressed(false);
+            mc.options.rightKey.setPressed(false);
+            mc.options.sprintKey.setPressed(false);
+            mc.options.sneakKey.setPressed(false);
+            mc.options.jumpKey.setPressed(false);
+        }
+
+        // ── visualization ────────────────────────────────────────────────
         renderVelocity(playerPos, playerVel, playerPredicted, COL_PLAYER_VEL);
         renderVelocity(targetPos, enemyVelocity, enemyPredicted, COL_ENEMY_VEL);
 
@@ -124,9 +181,7 @@ public class SafetySystem {
                     playerPredicted.subtract(0.2, 0, 0.2), new Vec3d(0.4, 0.1, 0.4), COL_SAFE));
         }
 
-        // ── knockback analysis + viz ──
-        analyzeKnockback(playerPos, playerVel, targetPos, player.getWorld());
-
+        // KB viz
         if (lastUsAfterKB != null && lastFallIfHit >= KB_FALL_THRESHOLD) {
             TungstenModRenderContainer.COMBAT_TRAJECTORY.add(new Line(
                     playerPos.add(0, 1, 0), lastUsAfterKB.add(0, 1, 0), COL_KB_DANGER));
@@ -140,62 +195,64 @@ public class SafetySystem {
                     lastEnemyAfterKB.subtract(0.3, 0, 0.3), new Vec3d(0.6, 0.1, 0.6), COL_KB_OPPORTUNITY));
         }
 
-        // ── anti-fall braking decisions ──
-        double horizSpeed = Math.sqrt(playerVel.x * playerVel.x + playerVel.z * playerVel.z);
+        // aim prediction marker
+        Vec3d aimTarget = targetPos.add(0, target.getHeight() * 0.5, 0)
+                .add(enemyVelocity.multiply(getAimLeadTicks()));
+        TungstenModRenderContainer.COMBAT_TRAJECTORY.add(new Cuboid(
+                aimTarget.subtract(0.1, 0.1, 0.1), new Vec3d(0.2, 0.2, 0.2), COL_AIM_PREDICT));
+    }
 
-        if (fallAtPredicted >= FALL_WARN && horizSpeed > 0.01) {
-            braking = true;
-            float velYaw = (float) Math.toDegrees(-Math.atan2(playerVel.x, playerVel.z));
-            brakeYaw = velYaw + 180f;
+    // ── stage evaluation ─────────────────────────────────────────────────────
 
-            if (horizSpeed > STRONG_VEL || fallAtPredicted >= FALL_DANGER) {
-                wantsForward = true;
-                wantsSprint = true;
-                if (logCooldown <= 0) {
-                    Debug.logMessage("SAFETY: HARD BRAKE (fall=" + fallAtPredicted
-                            + " vel=" + String.format("%.2f", horizSpeed) + ")");
-                    logCooldown = 120;
-                }
-            } else {
-                wantsSneak = true;
-                wantsForward = true;
-                if (logCooldown <= 0) {
-                    Debug.logMessage("SAFETY: soft brake (fall=" + fallAtPredicted
-                            + " vel=" + String.format("%.2f", horizSpeed) + ")");
-                    logCooldown = 120;
-                }
-            }
-        } else if (fallAtCurrent >= FALL_DANGER && !player.isOnGround()
-                && playerVel.y < -0.1 && horizSpeed > 0.01) {
-            braking = true;
-            float velYaw = (float) Math.toDegrees(-Math.atan2(playerVel.x, playerVel.z));
-            brakeYaw = velYaw + 180f;
-            wantsForward = true;
-            wantsSprint = true;
-            if (logCooldown <= 0) {
-                Debug.logMessage("SAFETY: recovery (falling, fall=" + fallAtCurrent + ")");
-                logCooldown = 120;
-            }
+    private CombatStage evaluateStage(ClientPlayerEntity player, Vec3d playerVel,
+                                       double horizSpeed, int fallAtPredicted, int fallAtCurrent) {
+        // DANGER_IMMINENT: our velocity leads into a fall, or already falling
+        if ((fallAtPredicted >= FALL_WARN && horizSpeed > 0.01)
+                || (fallAtCurrent >= FALL_DANGER && !player.isOnGround()
+                    && playerVel.y < -0.1 && horizSpeed > 0.01)) {
+            return CombatStage.DANGER_IMMINENT;
         }
 
-        // apply keys immediately — client physics will process before next server sync
-        if (braking) {
-            mc.options.forwardKey.setPressed(wantsForward);
-            mc.options.backKey.setPressed(wantsBack);
-            mc.options.leftKey.setPressed(wantsLeft);
-            mc.options.rightKey.setPressed(wantsRight);
-            mc.options.sprintKey.setPressed(wantsSprint);
-            mc.options.sneakKey.setPressed(wantsSneak);
-            mc.options.jumpKey.setPressed(false);
-        } else if (wasBraking) {
-            // just stopped braking — release keys
-            mc.options.forwardKey.setPressed(false);
-            mc.options.backKey.setPressed(false);
-            mc.options.leftKey.setPressed(false);
-            mc.options.rightKey.setPressed(false);
-            mc.options.sprintKey.setPressed(false);
-            mc.options.sneakKey.setPressed(false);
+        // DANGER_BATTLE: next enemy hit would knock us off
+        if (lastFallIfHit >= KB_FALL_THRESHOLD) {
+            return CombatStage.DANGER_BATTLE;
         }
+
+        // TODO: ESCAPE — target just hit (immunity frames), or mutual edge danger, or low HP
+        // TODO: DELICATE_BATTLE — low HP careful play
+
+        return CombatStage.PURSUE;
+    }
+
+    // ── aim prediction ───────────────────────────────────────────────────────
+
+    /**
+     * Compute predicted aim point: target center + velocity * lead ticks.
+     * Lead ticks = how long WindMouse needs to converge to target angle.
+     */
+    private void computeAimPrediction(ClientPlayerEntity player, Vec3d targetPos) {
+        int leadTicks = getAimLeadTicks();
+        Vec3d predictedCenter = targetPos.add(0, target.getHeight() * 0.5, 0)
+                .add(enemyVelocity.multiply(leadTicks));
+
+        aimYaw = AttackTiming.yawTo(player.getPos(), predictedCenter);
+        aimPitch = AttackTiming.pitchTo(player.getEyePos(), predictedCenter);
+    }
+
+    /**
+     * Estimate how many ticks WindMouse needs to reach target.
+     * Based on current angular distance / effective step rate.
+     * Clamped to [1, 5] — we don't predict further than 5 ticks for aiming.
+     */
+    private int getAimLeadTicks() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc.player == null) return 2;
+
+        double angDist = WindMouseRotation.INSTANCE.distanceToTarget(mc.player);
+        // rough: WindMouse moves ~maxStep degrees per frame, ~3 frames per tick
+        double degreesPerTick = 4.0 * 3.0; // default maxStep * ~frames/tick
+        int ticks = (int) Math.ceil(angDist / degreesPerTick);
+        return Math.max(1, Math.min(5, ticks));
     }
 
     // ── knockback simulation ─────────────────────────────────────────────────
@@ -244,28 +301,22 @@ public class SafetySystem {
                 predicted.subtract(0.15, 0, 0.15), new Vec3d(0.3, 1.8, 0.3), col));
     }
 
-    private void resetOutputs() {
-        wantsForward = false;
-        wantsBack = false;
-        wantsLeft = false;
-        wantsRight = false;
-        wantsSprint = false;
-        wantsSneak = false;
-        braking = false;
-    }
-
     // ── getters ──────────────────────────────────────────────────────────────
 
+    public CombatStage getStage()   { return stage; }
     public boolean isBraking()      { return braking; }
-    public boolean wasBraking()     { return wasBraking; }
     public float getBrakeYaw()      { return brakeYaw; }
+    public float getAimYaw()        { return aimYaw; }
+    public float getAimPitch()      { return aimPitch; }
 
     public void reset() {
         prevEnemyPos = null;
         enemyVelocity = Vec3d.ZERO;
         target = null;
         active = false;
-        resetOutputs();
+        stage = CombatStage.PURSUE;
+        prevStage = null;
+        braking = false;
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
     }
 }

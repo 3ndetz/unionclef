@@ -5,18 +5,15 @@ import kaptainwutax.tungsten.util.WindMouseRotation;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldView;
 
 /**
  * PvP combat controller.
  *
  * Subsystems:
- *   SAFETY  — render-frequency: viz, edge detection, braking (manages own keys)
- *   MOUSE   — render-frequency via WindMouse: rotation toward target
- *   TRIGGER — tick-frequency: auto-click when crosshair lands on target
- *
- * TODO: LEGS — movement (sprint-jump, strafe)
+ *   SAFETY  — render-freq: stage machine, viz, braking, aim prediction
+ *   MOUSE   — render-freq via WindMouse: rotation toward predicted aim point
+ *   TRIGGER — tick-freq: auto-click when crosshair lands on target
  */
 public class CombatController {
 
@@ -28,45 +25,37 @@ public class CombatController {
 
         TungstenConfig cfg = TungstenConfig.get();
 
-        // safety tick: enemy velocity tracking (needs fixed dt)
+        // enemy velocity tracking (fixed dt)
         safety.tick(player, target, world);
 
         if (cfg.combatRotatesEnabled) {
-            // safety braking overrides aim
-            if (safety.isBraking()) {
+            CombatStage stage = safety.getStage();
+
+            if (stage == CombatStage.DANGER_IMMINENT && safety.isBraking()) {
+                // emergency: face opposite velocity
                 WindMouseRotation.INSTANCE.setParams(
                         cfg.combatWindMouseGravity * 2,
-                        cfg.combatWindMouseWind * 0.5,
-                        cfg.combatWindMouseMaxStep * 2,
+                        cfg.combatWindMouseWind * 0.3,
+                        cfg.combatWindMouseMaxStep * 2.5,
                         cfg.combatWindMouseWindDist,
                         cfg.combatWindMouseDoneThreshold,
                         cfg.combatWindMouseFlickScale
                 );
                 WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), 0);
-
-                if (cfg.combatTriggerBotEnabled) {
-                    triggerBot.tick(player, target);
-                }
-                return true;
+            } else {
+                // normal / danger_battle / pursue: aim at predicted target position
+                WindMouseRotation.INSTANCE.setParams(
+                        cfg.combatWindMouseGravity,
+                        cfg.combatWindMouseWind,
+                        cfg.combatWindMouseMaxStep,
+                        cfg.combatWindMouseWindDist,
+                        cfg.combatWindMouseDoneThreshold,
+                        cfg.combatWindMouseFlickScale
+                );
+                WindMouseRotation.INSTANCE.setTarget(safety.getAimYaw(), safety.getAimPitch());
             }
-
-            // ── mouse: aim at target ─────────────────────────────────────
-            Vec3d targetCenter = target.getPos().add(0, target.getHeight() * 0.5, 0);
-            float yaw = AttackTiming.yawTo(player.getPos(), target.getPos());
-            float pitch = AttackTiming.pitchTo(player.getEyePos(), targetCenter);
-
-            WindMouseRotation.INSTANCE.setParams(
-                    cfg.combatWindMouseGravity,
-                    cfg.combatWindMouseWind,
-                    cfg.combatWindMouseMaxStep,
-                    cfg.combatWindMouseWindDist,
-                    cfg.combatWindMouseDoneThreshold,
-                    cfg.combatWindMouseFlickScale
-            );
-            WindMouseRotation.INSTANCE.setTarget(yaw, pitch);
         }
 
-        // ── trigger bot ──────────────────────────────────────────────────
         if (cfg.combatTriggerBotEnabled) {
             triggerBot.tick(player, target);
         }
