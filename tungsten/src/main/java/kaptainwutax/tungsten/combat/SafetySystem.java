@@ -322,8 +322,11 @@ public class SafetySystem {
                     mc.options.leftKey.setPressed(false);
                     mc.options.rightKey.setPressed(false);
                     mc.options.sneakKey.setPressed(false);
-                    // always allow jump — helps escape pits
-                    mc.options.jumpKey.setPressed(player.isOnGround());
+
+                    // jump only if landing zone is safe
+                    // check 3-4 blocks ahead in velocity direction for drops
+                    boolean safeToJump = isJumpLandingSafe(playerPosTick, playerVel, player.getWorld());
+                    mc.options.jumpKey.setPressed(player.isOnGround() && safeToJump);
                 }
                 // if waypoint is dangerous, don't move — stay and fight
             }
@@ -476,6 +479,29 @@ public class SafetySystem {
 
         aimYaw = AttackTiming.yawTo(player.getPos(), aimPoint);
         aimPitch = AttackTiming.pitchTo(eyePos, aimPoint);
+    }
+
+    /**
+     * Check if sprint-jump landing zone is safe.
+     * Scans blocks 1-4 ahead in velocity direction for serious drops.
+     * If any landing spot has fall 4+, don't jump.
+     */
+    private static boolean isJumpLandingSafe(Vec3d pos, Vec3d vel, net.minecraft.world.WorldView world) {
+        double horizSpeed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+        if (horizSpeed < 0.01) return true; // standing still, jump is safe
+
+        double nx = vel.x / horizSpeed;
+        double nz = vel.z / horizSpeed;
+        int y = net.minecraft.util.math.MathHelper.floor(pos.y);
+
+        // check blocks 1, 2, 3, 4 ahead in velocity direction
+        for (int dist = 1; dist <= 4; dist++) {
+            int x = net.minecraft.util.math.MathHelper.floor(pos.x + nx * dist);
+            int z = net.minecraft.util.math.MathHelper.floor(pos.z + nz * dist);
+            int fall = VoidDetector.fallHeight(new Vec3d(x + 0.5, y, z + 0.5), world);
+            if (fall >= 4) return false;
+        }
+        return true;
     }
 
     /** Check if there are holes (fall 3+ blocks) on the straight line between player and waypoint. */
