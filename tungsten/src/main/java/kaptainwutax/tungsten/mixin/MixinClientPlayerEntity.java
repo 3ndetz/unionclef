@@ -14,6 +14,7 @@ import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.agent.Agent;
 import kaptainwutax.tungsten.agent.TungstenPlayerInput;
+import kaptainwutax.tungsten.task.BlockPathWalker;
 import kaptainwutax.tungsten.task.FollowEntityTask;
 import kaptainwutax.tungsten.task.FollowPlayerTask;
 import kaptainwutax.tungsten.task.PunkPlayerTask;
@@ -38,6 +39,9 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		FollowEntityTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
 		FollowPlayerTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
 		PunkPlayerTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
+
+		// BFS walker: immediate movement while physics A* computes
+		BlockPathWalker.tick((ClientPlayerEntity)(Object)this);
 
 		if(TungstenModDataContainer.EXECUTOR.isRunning()) {
 			TungstenModDataContainer.EXECUTOR.tick((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);

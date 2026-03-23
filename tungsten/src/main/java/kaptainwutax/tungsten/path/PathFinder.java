@@ -81,6 +81,11 @@ public class PathFinder {
 	 *  Default: MIN_DIST_PATH (1.8). Set near 0 for snap/dash mode (accept any path immediately). */
 	public double minDistPath = MIN_DIST_PATH;
 
+	/** If set, physics A* starts from this position instead of player's current position.
+	 *  Used by BlockPathWalker: BFS covers immediate blocks, A* starts from BFS endpoint.
+	 *  Consumed (set to null) after use. */
+	public Vec3d overrideStartPos = null;
+
 	private long startTime;
 	private Node start;
 
@@ -102,8 +107,9 @@ public class PathFinder {
 
         thread = new Thread(() -> {
             try {
-                // Skip startup delays in aggressive close-range mode
-                if (searchTimeoutMs > 500) {
+                // Skip startup delays when using override start (BFS walker active)
+                // or in aggressive close-range mode
+                if (overrideStartPos == null && searchTimeoutMs > 500) {
                     while (!player.isOnGround() && !player.isTouchingWater()) {
                         if (stop.get()) break;
                         try {
@@ -128,6 +134,7 @@ public class PathFinder {
             closed.clear();
             PathFinder.blockPath = Optional.empty();
             NEXT_CLOSEST_BLOCKNODE_IDX.set(1);
+            overrideStartPos = null;
 
         });
         thread.setName("PathFinder");
@@ -191,7 +198,12 @@ public class PathFinder {
 	        return;
 	    }
 	    if (start == null) {
-		    	start = initializeStartNode(player, target);
+		    	if (overrideStartPos != null) {
+		    		start = initializeStartNodeFromPos(player, overrideStartPos, target);
+		    		overrideStartPos = null; // consumed
+		    	} else {
+		    		start = initializeStartNode(player, target);
+		    	}
 		    	this.start = start;
 	    }
 	    if (blockPath.isEmpty()) {
@@ -629,6 +641,31 @@ public class PathFinder {
 	
 	private Node initializeStartNode(PlayerEntity player, Vec3d target) {
         Node start = new Node(null, Agent.of(player), new Color(255, 255, 255), 0);
+        start.combinedCost = computeHeuristic(start.agent.getPos(), start.agent.onGround, target, TARGET);
+        return start;
+    }
+
+	/** Create start node at a custom position (BFS endpoint).
+	 *  Copies player state (effects, dimensions, hunger) but overrides position.
+	 *  Velocity zeroed, onGround=true, yaw facing target. */
+	private Node initializeStartNodeFromPos(PlayerEntity player, Vec3d pos, Vec3d target) {
+        Agent agent = Agent.of(player);
+        agent.posX = pos.x;
+        agent.posY = pos.y;
+        agent.posZ = pos.z;
+        agent.blockX = (int) Math.floor(pos.x);
+        agent.blockY = (int) Math.floor(pos.y);
+        agent.blockZ = (int) Math.floor(pos.z);
+        agent.velX = 0;
+        agent.velY = 0;
+        agent.velZ = 0;
+        agent.onGround = true;
+        // face toward target
+        double dx = target.x - pos.x;
+        double dz = target.z - pos.z;
+        agent.yaw = (float) Math.toDegrees(-Math.atan2(dx, dz));
+        agent.pitch = 0;
+        Node start = new Node(null, agent, new Color(255, 255, 255), 0);
         start.combinedCost = computeHeuristic(start.agent.getPos(), start.agent.onGround, target, TARGET);
         return start;
     }

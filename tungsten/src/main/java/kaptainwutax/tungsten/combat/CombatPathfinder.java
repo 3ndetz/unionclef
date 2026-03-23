@@ -352,6 +352,17 @@ public class CombatPathfinder {
         return path;
     }
 
+    // ── public static BFS ─────────────────────────────────────────────────────
+
+    /**
+     * Instant BFS path on block grid. Used by FollowEntityTask for
+     * immediate movement while physics A* computes.
+     */
+    public static List<BlockPos> findPath(BlockPos start, BlockPos goal, WorldView world) {
+        CombatPathfinder pf = new CombatPathfinder();
+        return pf.bfsPath(start, goal, world);
+    }
+
     // ── getters ──────────────────────────────────────────────────────────────
 
     public List<BlockPos> getAttackPath()  { return attackPath; }

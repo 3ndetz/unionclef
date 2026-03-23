@@ -95,6 +95,7 @@ public class FollowEntityTask {
         stopRequested      = false;
         stuckTicks         = 0;
         trail.reset();
+        BlockPathWalker.stop();
         releaseKeys();
         TungstenModDataContainer.PATHFINDER.stop.set(true);
         TungstenModDataContainer.EXECUTOR.stop = true;
@@ -217,6 +218,24 @@ public class FollowEntityTask {
         tickCounter   = 0;
         lastTargetPos = target;
         TungstenMod.TARGET = target;
+
+        // ── Instant BFS for immediate movement while physics A* computes ──
+        if (dist > 6) {
+            java.util.List<net.minecraft.util.math.BlockPos> bfsPath =
+                    kaptainwutax.tungsten.combat.CombatPathfinder.findPath(
+                            player.getBlockPos(),
+                            net.minecraft.util.math.BlockPos.ofFloored(target),
+                            world);
+            if (bfsPath.size() >= 2) {
+                BlockPathWalker.start(bfsPath);
+                // Physics A* starts from BFS endpoint — saves computing the segment
+                // the walker already covers
+                Vec3d bfsEnd = BlockPathWalker.getEndpoint();
+                if (bfsEnd != null) {
+                    TungstenModDataContainer.PATHFINDER.overrideStartPos = bfsEnd;
+                }
+            }
+        }
 
         if (dist < 6 && hasLineOfSight(player, target)) {
             TungstenModDataContainer.PATHFINDER.searchTimeoutMs      = 120L;
