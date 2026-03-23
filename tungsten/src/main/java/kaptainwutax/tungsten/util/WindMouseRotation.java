@@ -22,11 +22,13 @@ public class WindMouseRotation {
     public static final WindMouseRotation INSTANCE = new WindMouseRotation();
 
     // WindMouse tuning — per render frame at ~60 FPS
-    private static final double GRAVITY   = 3.5;   // pull toward target per frame
-    private static final double WIND      = 1.2;   // max wind magnitude per frame
-    private static final double MAX_STEP  = 5.0;   // max degrees moved per frame
-    private static final double WIND_DIST = 20.0;  // degrees distance below which wind decays
-    private static final double DONE_THRESHOLD = 0.3; // snap when this close
+    // These are defaults; can be overridden per-instance via setParams()
+    private double gravity      = 3.5;   // pull toward target per frame
+    private double wind         = 1.2;   // max wind magnitude per frame
+    private double maxStep      = 5.0;   // max degrees moved per frame
+    private double windDist     = 20.0;  // degrees distance below which wind decays
+    private double doneThreshold = 0.3;  // snap when this close
+    private double flickScale   = 4.0;   // max multiplier for far-angle flicks
 
     private static final double SQRT3 = Math.sqrt(3.0);
     private static final double SQRT5 = Math.sqrt(5.0);
@@ -42,8 +44,19 @@ public class WindMouseRotation {
 
     // -------------------------------------------------------------------------
 
+    /** Override WindMouse parameters. Call before setTarget if needed. */
+    public void setParams(double gravity, double wind, double maxStep,
+                          double windDist, double doneThreshold, double flickScale) {
+        this.gravity = gravity;
+        this.wind = wind;
+        this.maxStep = maxStep;
+        this.windDist = windDist;
+        this.doneThreshold = doneThreshold;
+        this.flickScale = flickScale;
+    }
+
     /**
-     * Set the desired rotation. Call once per game tick from doDirectSprint().
+     * Set the desired rotation. Call once per game tick.
      * Does NOT immediately move the player.
      */
     public void setTarget(float yaw, float pitch) {
@@ -66,15 +79,15 @@ public class WindMouseRotation {
         double dPitch = targetPitch - currentPitch;
         double dist   = Math.sqrt(dYaw * dYaw + dPitch * dPitch);
 
-        if (dist < DONE_THRESHOLD) {
+        if (dist < doneThreshold) {
             player.setYaw(targetYaw);
             player.setPitch(targetPitch);
             resetVelocity();
             return;
         }
 
-        double W = Math.min(WIND, dist);
-        if (dist >= WIND_DIST) {
+        double W = Math.min(wind, dist);
+        if (dist >= windDist) {
             windYaw   = windYaw   / SQRT3 + (random.nextDouble() * 2.0 - 1.0) * W / SQRT5;
             windPitch = windPitch / SQRT3 + (random.nextDouble() * 2.0 - 1.0) * W / SQRT5;
         } else {
@@ -82,12 +95,11 @@ public class WindMouseRotation {
             windPitch /= SQRT3;
         }
 
-        veloYaw   += windYaw   + GRAVITY * dYaw   / dist;
-        veloPitch += windPitch + GRAVITY * dPitch / dist;
+        veloYaw   += windYaw   + gravity * dYaw   / dist;
+        veloPitch += windPitch + gravity * dPitch / dist;
 
         double veloMag = Math.sqrt(veloYaw * veloYaw + veloPitch * veloPitch);
-        // Scale max step with distance: large angles turn faster (human-like fast flick)
-        double effectiveMaxStep = MAX_STEP * Math.max(1.0, Math.min(4.0, dist / 15.0));
+        double effectiveMaxStep = maxStep * Math.max(1.0, Math.min(flickScale, dist / 15.0));
         if (veloMag > effectiveMaxStep) {
             double scale = effectiveMaxStep * (0.5 + random.nextDouble() * 0.5) / veloMag;
             veloYaw   *= scale;

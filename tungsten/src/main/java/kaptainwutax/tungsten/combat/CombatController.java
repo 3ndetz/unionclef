@@ -1,49 +1,54 @@
 package kaptainwutax.tungsten.combat;
 
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.util.WindMouseRotation;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldView;
 
 /**
- * PvP combat controller — clean skeleton.
+ * PvP combat controller.
  *
- * Two independent loops (to be implemented):
- *   LEGS  — movement: sprint-jump, strafe, edge avoidance, knockback recovery
- *   MOUSE — aiming: WindMouse rotation toward target, attack on crosshair hit
+ * Current subsystems:
+ *   MOUSE — WindMouse rotation toward target center
+ *   TRIGGER — auto-click when crosshair lands on target
  *
- * Design principles:
- *   - Legit inputs only (WASD/Space/Click), no packet manipulation
- *   - Attack timing respects vanilla cooldown
- *   - Rotation via WindMouse (human-like, not instant snap)
- *   - Each subsystem (legs/mouse) is independently tickable
+ * TODO: LEGS — movement (sprint-jump, strafe, edge avoidance)
  */
 public class CombatController {
 
     private final TriggerBot triggerBot = new TriggerBot();
 
-    // ── tick ─────────────────────────────────────────────────────────────────
-
-    /**
-     * Main combat tick. Called every game tick while in combat mode.
-     *
-     * @return true if target is valid and combat is running, false if target lost
-     */
     public boolean tick(ClientPlayerEntity player, Entity target, WorldView world) {
         if (target == null || target.isRemoved() || !target.isAlive()) return false;
 
-        // TODO: tickLegs(player, target, world)
-        // TODO: tickMouse(player, target)
+        TungstenConfig cfg = TungstenConfig.get();
 
-        triggerBot.tick(player, target);
+        // ── mouse: aim at target ─────────────────────────────────────────
+        Vec3d targetCenter = target.getPos().add(0, target.getHeight() * 0.5, 0);
+        float yaw = AttackTiming.yawTo(player.getPos(), target.getPos());
+        float pitch = AttackTiming.pitchTo(player.getEyePos(), targetCenter);
+
+        WindMouseRotation.INSTANCE.setParams(
+                cfg.combatWindMouseGravity,
+                cfg.combatWindMouseWind,
+                cfg.combatWindMouseMaxStep,
+                cfg.combatWindMouseWindDist,
+                cfg.combatWindMouseDoneThreshold,
+                cfg.combatWindMouseFlickScale
+        );
+        WindMouseRotation.INSTANCE.setTarget(yaw, pitch);
+
+        // ── trigger bot ──────────────────────────────────────────────────
+        if (cfg.combatTriggerBotEnabled) {
+            triggerBot.tick(player, target);
+        }
 
         return true;
     }
 
-    // ── cleanup ──────────────────────────────────────────────────────────────
-
-    /** Release all keys and reset state. Call when exiting combat. */
     public void releaseKeys() {
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(false);

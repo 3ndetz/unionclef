@@ -69,6 +69,34 @@ public class TungstenConfig {
      *  Set to 3.0 for the old tungsten behavior (more aggressive jumps). */
     public float airStrafeMultiplier = 1.0F;
 
+    // ---- combat settings ----
+
+    /** Enable trigger bot (auto-click when crosshair is on target). */
+    public boolean combatTriggerBotEnabled = true;
+
+    /** WindMouse gravity — pull toward target per render frame.
+     *  Higher = faster convergence, lower = more human wobble. */
+    public double combatWindMouseGravity = 2.0;
+
+    /** WindMouse wind — random perturbation magnitude per frame.
+     *  Higher = more jitter/overshoot. */
+    public double combatWindMouseWind = 0.8;
+
+    /** WindMouse max step — max degrees per render frame.
+     *  Caps rotation speed. Lower = slower, more human-like. */
+    public double combatWindMouseMaxStep = 4.0;
+
+    /** Distance (degrees) below which wind noise decays.
+     *  Below this angle the mouse "settles" toward target. */
+    public double combatWindMouseWindDist = 15.0;
+
+    /** Snap threshold — degrees. Below this, snap to target exactly. */
+    public double combatWindMouseDoneThreshold = 0.5;
+
+    /** Distance scaling for max step. At far angles, maxStep is multiplied
+     *  by up to this factor for fast flick. 1.0 = no scaling. */
+    public double combatWindMouseFlickScale = 3.0;
+
     // ----------------------------------------
 
     public static TungstenConfig get() {
