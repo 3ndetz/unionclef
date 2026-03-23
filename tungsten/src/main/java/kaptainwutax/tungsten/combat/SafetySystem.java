@@ -5,7 +5,6 @@ import kaptainwutax.tungsten.TungstenModRenderContainer;
 import kaptainwutax.tungsten.render.Color;
 import kaptainwutax.tungsten.render.Cuboid;
 import kaptainwutax.tungsten.render.Line;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
@@ -52,14 +51,15 @@ public class SafetySystem {
     private boolean wantsSneak = false;
     private float brakeYaw = 0;
     private boolean braking = false;
+    private boolean wasBraking = false; // track previous tick for key release
 
     /**
      * Tick: analyze velocities, check terrain, decide braking, render.
      * Call before legs/mouse in CombatController.
      */
     public void tick(ClientPlayerEntity player, Entity target, WorldView world) {
-        MinecraftClient mc = MinecraftClient.getInstance();
         TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
+        wasBraking = braking;
         resetOutputs();
 
         Vec3d playerPos = player.getPos();
@@ -117,10 +117,10 @@ public class SafetySystem {
                 Debug.logMessage("SAFETY: soft brake (fall=" + fallAtPredicted
                         + " vel=" + String.format("%.2f", horizSpeed) + ")");
             }
-        } else if (fallAtCurrent >= FALL_WARN && !player.isOnGround()) {
-            // already falling — try to move back onto solid ground
+        } else if (fallAtCurrent >= FALL_DANGER && !player.isOnGround()
+                && playerVel.y < -0.1 && horizSpeed > 0.01) {
+            // actually falling (not just jumping) — try to move back onto solid ground
             braking = true;
-            // find direction to nearest safe ground (opposite of how we got here)
             float velYaw = (float) Math.toDegrees(-Math.atan2(playerVel.x, playerVel.z));
             brakeYaw = velYaw + 180f;
             wantsForward = true;
@@ -152,6 +152,7 @@ public class SafetySystem {
     // ── getters for CombatController ─────────────────────────────────────────
 
     public boolean isBraking()      { return braking; }
+    public boolean wasBraking()     { return wasBraking; }
     public float getBrakeYaw()      { return brakeYaw; }
     public boolean wantsForward()   { return wantsForward; }
     public boolean wantsBack()      { return wantsBack; }

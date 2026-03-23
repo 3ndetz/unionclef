@@ -32,6 +32,16 @@ public class CombatController {
         // ── safety: analyze + visualize + decide braking ─────────────────
         safety.tick(player, target, world);
 
+        // release movement keys when braking just ended
+        if (!safety.isBraking() && safety.wasBraking()) {
+            mc.options.forwardKey.setPressed(false);
+            mc.options.backKey.setPressed(false);
+            mc.options.leftKey.setPressed(false);
+            mc.options.rightKey.setPressed(false);
+            mc.options.sprintKey.setPressed(false);
+            mc.options.sneakKey.setPressed(false);
+        }
+
         if (safety.isBraking()) {
             // safety overrides: face brake direction, press movement keys
             float brakePitch = 0; // look horizontal while braking
