@@ -38,17 +38,24 @@ public class CombatPathfinder {
 
     private List<BlockPos> attackPath = Collections.emptyList();
     private List<BlockPos> retreatPath = Collections.emptyList();
+    private WorldView lastWorld = null;
     private int tickCounter = 0;
     private static final int UPDATE_INTERVAL = 10;
 
     // ── tick ─────────────────────────────────────────────────────────────────
 
-    public void tick(BlockPos playerPos, BlockPos targetPos, WorldView world) {
+    public void tick(BlockPos playerPos, BlockPos targetPos, Vec3d enemyVelocity, WorldView world) {
         tickCounter++;
         if (tickCounter < UPDATE_INTERVAL) return;
         tickCounter = 0;
 
-        attackPath = bfsPath(playerPos, targetPos, world);
+        // attack path targets predicted position (~20 ticks ahead based on enemy avg speed)
+        Vec3d predicted = Vec3d.ofBottomCenter(targetPos).add(enemyVelocity.multiply(20));
+        BlockPos predictedTarget = BlockPos.ofFloored(predicted);
+        lastWorld = world;
+        attackPath = bfsPath(playerPos, predictedTarget, world);
+
+        // retreat path uses current target pos for "away from" scoring
         retreatPath = findRetreatPath(playerPos, targetPos, world);
     }
 
@@ -64,7 +71,9 @@ public class CombatPathfinder {
 
         // find jump waypoints: points where a sprint-jump would land
         // skip intermediate blocks that fall within one jump distance
-        List<BlockPos> jumpPoints = computeJumpWaypoints(path);
+        List<BlockPos> jumpPoints = lastWorld != null
+                ? computeJumpWaypoints(path, lastWorld)
+                : computeJumpWaypointsSimple(path);
 
         // render waypoint cubes
         for (BlockPos bp : jumpPoints) {
@@ -83,13 +92,16 @@ public class CombatPathfinder {
 
     /**
      * From a dense block path, pick waypoints a sprint-jump apart.
-     * Walk along path, accumulate distance. When distance >= JUMP_HORIZ, mark waypoint.
+     * Verify LOS between consecutive waypoints — if blocked by wall,
+     * insert intermediate point so jump arcs don't clip through blocks.
      */
-    private List<BlockPos> computeJumpWaypoints(List<BlockPos> path) {
+    private List<BlockPos> computeJumpWaypoints(List<BlockPos> path, WorldView world) {
         List<BlockPos> waypoints = new ArrayList<>();
         waypoints.add(path.get(0));
 
         double accumulated = 0;
+        int lastWpIndex = 0;
+
         for (int i = 1; i < path.size(); i++) {
             BlockPos prev = path.get(i - 1);
             BlockPos curr = path.get(i);
@@ -97,7 +109,55 @@ public class CombatPathfinder {
             accumulated += step;
 
             if (accumulated >= JUMP_HORIZ || i == path.size() - 1) {
-                waypoints.add(curr);
+                // check LOS from last waypoint to candidate
+                BlockPos lastWp = waypoints.get(waypoints.size() - 1);
+                if (hasBlockLOS(lastWp, curr, world)) {
+                    waypoints.add(curr);
+                } else {
+                    // LOS blocked — use midpoint from dense path
+                    int midIndex = (lastWpIndex + i) / 2;
+                    if (midIndex > lastWpIndex && midIndex < path.size()) {
+                        waypoints.add(path.get(midIndex));
+                    }
+                    waypoints.add(curr);
+                }
+                lastWpIndex = i;
+                accumulated = 0;
+            }
+        }
+        return waypoints;
+    }
+
+    /** Simple LOS check between two block positions at eye height (+1.5). */
+    private static boolean hasBlockLOS(BlockPos from, BlockPos to, WorldView world) {
+        Vec3d start = Vec3d.ofBottomCenter(from).add(0, 1.5, 0);
+        Vec3d end = Vec3d.ofBottomCenter(to).add(0, 1.5, 0);
+        // manual raycast: step along line, check for solid blocks
+        double dist = start.distanceTo(end);
+        int steps = (int) Math.ceil(dist * 2);
+        for (int s = 1; s < steps; s++) {
+            double t = (double) s / steps;
+            int x = (int) Math.floor(start.x + (end.x - start.x) * t);
+            int y = (int) Math.floor(start.y + (end.y - start.y) * t);
+            int z = (int) Math.floor(start.z + (end.z - start.z) * t);
+            BlockPos check = new BlockPos(x, y, z);
+            if (!check.equals(from) && !check.equals(to)
+                    && !world.getBlockState(check).getCollisionShape(world, check).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Fallback: distance-only waypoints, no LOS check. */
+    private List<BlockPos> computeJumpWaypointsSimple(List<BlockPos> path) {
+        List<BlockPos> waypoints = new ArrayList<>();
+        waypoints.add(path.get(0));
+        double accumulated = 0;
+        for (int i = 1; i < path.size(); i++) {
+            accumulated += Math.sqrt(path.get(i - 1).getSquaredDistance(path.get(i)));
+            if (accumulated >= JUMP_HORIZ || i == path.size() - 1) {
+                waypoints.add(path.get(i));
                 accumulated = 0;
             }
         }

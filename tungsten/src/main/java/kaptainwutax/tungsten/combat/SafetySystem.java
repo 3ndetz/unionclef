@@ -70,6 +70,10 @@ public class SafetySystem {
     private float movementYaw = 0;
     private boolean movementActive = false;
 
+    // post-imminent cooldown: block movement for N frames after braking ends
+    private int postImminentCooldown = 0;
+    private static final int POST_IMMINENT_COOLDOWN_FRAMES = 40; // ~0.7 sec
+
     private boolean active = false;
     private int logCooldown = 0;
 
@@ -89,7 +93,7 @@ public class SafetySystem {
         kbEstimator.tick(target, enemyVelocity);
 
         // pathfinder updates every N ticks
-        pathfinder.tick(player.getBlockPos(), target.getBlockPos(), world);
+        pathfinder.tick(player.getBlockPos(), target.getBlockPos(), enemyVelocity, world);
     }
 
     // ── render update (~60 FPS): stage + decisions + viz ─────────────────────
@@ -107,7 +111,9 @@ public class SafetySystem {
         movementActive = false;
         repositioning = false;
         wantsJump = false;
-        TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
+        if (postImminentCooldown > 0) postImminentCooldown--;
+        TungstenModRenderContainer.COMBAT_TRAJECTORY =
+                java.util.Collections.synchronizedCollection(new java.util.ArrayList<>());
         if (logCooldown > 0) logCooldown--;
 
         // tick-accurate positions for logic (block grid checks)
@@ -155,6 +161,7 @@ public class SafetySystem {
             switch (stage) {
                 case DANGER_IMMINENT -> {
                     braking = true;
+                    postImminentCooldown = POST_IMMINENT_COOLDOWN_FRAMES;
                     float velYaw = (float) Math.toDegrees(-Math.atan2(playerVel.x, playerVel.z));
                     brakeYaw = velYaw + 180f;
 
@@ -199,9 +206,9 @@ public class SafetySystem {
             }
         }
 
-        // ── movement: follow BFS attack path (if enabled + not braking/repositioning) ──
+        // ── movement: follow BFS attack path (if enabled + not braking/repositioning/cooldown) ──
         boolean movementsEnabled = kaptainwutax.tungsten.TungstenConfig.get().combatMovementsEnabled;
-        if (movementsEnabled && !braking && !repositioning) {
+        if (movementsEnabled && !braking && !repositioning && postImminentCooldown <= 0) {
             java.util.List<net.minecraft.util.math.BlockPos> attackPath = pathfinder.getAttackPath();
             if (attackPath.size() >= 2) {
                 // find next waypoint we haven't reached yet
@@ -509,6 +516,7 @@ public class SafetySystem {
         braking = false;
         pathfinder.reset();
         kbEstimator.reset();
-        TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
+        TungstenModRenderContainer.COMBAT_TRAJECTORY =
+                java.util.Collections.synchronizedCollection(new java.util.ArrayList<>());
     }
 }
