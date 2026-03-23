@@ -1,5 +1,6 @@
 package kaptainwutax.tungsten.mixin;
 
+import kaptainwutax.tungsten.combat.CombatController;
 import kaptainwutax.tungsten.util.WindMouseRotation;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -11,11 +12,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Hooks into InGameHud.render() which is called every rendered frame (~60 FPS).
- * Applies WindMouse rotation steps at render frequency so player turning
- * looks smooth rather than snapping every game tick (50 ms).
- *
- * Pattern mirrors altoclef's ClientUIMixin.
+ * Hooks into InGameHud.render() — called every rendered frame (~60 FPS).
+ * Drives render-frequency systems: WindMouse rotation + SafetySystem visualization.
  */
 @Mixin(InGameHud.class)
 public class MixinInGameHud {
@@ -25,6 +23,7 @@ public class MixinInGameHud {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.player != null) {
             WindMouseRotation.INSTANCE.applyRenderStep(mc.player);
+            CombatController.safety.renderUpdate(tickCounter.getTickDelta(true));
         }
     }
 }

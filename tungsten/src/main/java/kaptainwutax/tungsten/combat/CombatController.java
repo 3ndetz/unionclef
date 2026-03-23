@@ -21,7 +21,7 @@ import net.minecraft.world.WorldView;
 public class CombatController {
 
     private final TriggerBot triggerBot = new TriggerBot();
-    private final SafetySystem safety = new SafetySystem();
+    public static final SafetySystem safety = new SafetySystem();
 
     public boolean tick(ClientPlayerEntity player, Entity target, WorldView world) {
         if (target == null || target.isRemoved() || !target.isAlive()) return false;
