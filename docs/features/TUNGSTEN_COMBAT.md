@@ -90,6 +90,21 @@ ESCAPE ←→ DELICATE_BATTLE        |
 - [ ] **Jump waypoints** — precompute advantageous positions to jump to (high ground, safe landing)
 - [ ] **WASD passthrough polish** — allow player manual input in safe situations
 - [ ] **Legs system** — sprint-jump, strafe patterns, knockback recovery
+- [ ] **Danger classification** — distinguish fall types:
+  - Height loss (2-3 blocks, no damage, just positional disadvantage)
+  - Damage fall (4+ blocks, takes fall damage)
+  - Death fall (23+ blocks, lethal without feather falling)
+  - Void (below world bottom, instant death)
+- [ ] **Environmental hazards in pathfinding** — currently BFS avoids:
+  lava, fire, magma, campfire, cactus, wither rose, berry bush, water,
+  cobweb, soul sand, honey, powder snow.
+  Still needed:
+  - Lava pools (multi-block, detect even if adjacent blocks are safe)
+  - TNT / moving entities (dynamic threats)
+  - Hostile mobs near path (creepers, skeletons)
+  - Fall damage at step-downs (BFS allows 1-block drops but doesn't account for sprint speed → overshoot)
+- [ ] **Unfocused window rotation** — WindMouse deltas don't apply when MC window is inactive
+  (Mouse.updateMouse not called). Need alternative injection point or forced focus.
 
 ## Settings (tungsten.json)
 
