@@ -137,8 +137,8 @@ public class SafetySystem {
         DangerLevel dangerPredicted = DangerLevel.fromFallHeight(fallAtPredicted);
         DangerLevel dangerCurrent = DangerLevel.fromFallHeight(fallAtCurrent);
 
-        // edge score: how surrounded by void we are (0=safe, 1=all void)
-        double currentEdgeScore = VoidDetector.edgeScore(playerPosTick, player.getWorld());
+        // edge score: how surrounded by dangerous drops (5+ blocks) we are
+        double currentEdgeScore = VoidDetector.edgeScoreWithFallThreshold(playerPosTick, player.getWorld(), 5);
 
         // KB analysis uses tick positions
         analyzeKnockback(playerPosTick, playerVel, targetPosTick, player.getWorld());

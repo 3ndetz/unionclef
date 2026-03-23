@@ -71,4 +71,24 @@ public final class VoidDetector {
         }
         return false;
     }
+
+    /**
+     * Like edgeScore but counts neighbor as unsafe if fall > maxSafeFall blocks.
+     * Used for NARROW_BATTLE detection where 5+ block drops are dangerous, not just void.
+     */
+    public static double edgeScoreWithFallThreshold(Vec3d pos, WorldView world, int maxSafeFall) {
+        int x = MathHelper.floor(pos.x);
+        int y = MathHelper.floor(pos.y);
+        int z = MathHelper.floor(pos.z);
+
+        int unsafeCount = 0;
+        int[][] offsets = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
+        for (int[] off : offsets) {
+            int fall = fallHeight(new Vec3d(x + off[0] + 0.5, y, z + off[1] + 0.5), world);
+            if (fall > maxSafeFall) {
+                unsafeCount++;
+            }
+        }
+        return unsafeCount / 8.0;
+    }
 }
