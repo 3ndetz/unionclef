@@ -137,12 +137,15 @@ public class SafetySystem {
         DangerLevel dangerPredicted = DangerLevel.fromFallHeight(fallAtPredicted);
         DangerLevel dangerCurrent = DangerLevel.fromFallHeight(fallAtCurrent);
 
+        // edge score: how surrounded by void we are (0=safe, 1=all void)
+        double currentEdgeScore = VoidDetector.edgeScore(playerPosTick, player.getWorld());
+
         // KB analysis uses tick positions
         analyzeKnockback(playerPosTick, playerVel, targetPosTick, player.getWorld());
 
         // ── evaluate stage ───────────────────────────────────────────────
         CombatStage newStage = evaluateStage(player, playerVel, horizSpeed,
-                dangerPredicted, dangerCurrent);
+                dangerPredicted, dangerCurrent, currentEdgeScore);
         if (newStage != stage) {
             stage = newStage;
             if (prevStage != stage) {
@@ -178,27 +181,42 @@ public class SafetySystem {
                     mc.options.leftKey.setPressed(false);
                     mc.options.rightKey.setPressed(false);
                 }
+                case NARROW_BATTLE -> {
+                    // bridge/narrow: walk toward target along path, NO JUMPS
+                    java.util.List<net.minecraft.util.math.BlockPos> atkPath = pathfinder.getAttackPath();
+                    if (atkPath.size() >= 2) {
+                        net.minecraft.util.math.BlockPos nextWp = atkPath.get(Math.min(1, atkPath.size() - 1));
+                        movementYaw = AttackTiming.yawTo(playerPosTick, Vec3d.ofBottomCenter(nextWp));
+                        movementActive = true;
+                        mc.options.forwardKey.setPressed(true);
+                        mc.options.sprintKey.setPressed(false); // no sprint on narrow
+                        mc.options.jumpKey.setPressed(false);   // NO JUMPS
+                        mc.options.backKey.setPressed(false);
+                        mc.options.leftKey.setPressed(false);
+                        mc.options.rightKey.setPressed(false);
+                        mc.options.sneakKey.setPressed(false);
+                    }
+                }
                 case DANGER_BATTLE -> {
                     // reposition toward retreat path if KB fall is serious
                     DangerLevel kbDanger = DangerLevel.fromFallHeight(lastFallIfHit);
                     java.util.List<net.minecraft.util.math.BlockPos> retreat = pathfinder.getRetreatPath();
                     if (kbDanger.isSerious() && retreat.size() >= 2) {
                         repositioning = true;
-                        // aim legs toward first retreat waypoint (not first = our pos)
                         net.minecraft.util.math.BlockPos waypoint = retreat.get(Math.min(2, retreat.size() - 1));
                         Vec3d wpPos = Vec3d.ofBottomCenter(waypoint);
                         brakeYaw = AttackTiming.yawTo(playerPosTick, wpPos);
 
-                        // walk (no jump — risky near edges), sprint
+                        // walk, no jump, allow jump ONLY if stuck (below waypoint Y)
                         mc.options.forwardKey.setPressed(true);
                         mc.options.sprintKey.setPressed(true);
-                        mc.options.jumpKey.setPressed(false);
+                        boolean needJumpUp = waypoint.getY() > playerPosTick.y + 0.5 && player.isOnGround();
+                        mc.options.jumpKey.setPressed(needJumpUp);
                         mc.options.backKey.setPressed(false);
                         mc.options.leftKey.setPressed(false);
                         mc.options.rightKey.setPressed(false);
                         mc.options.sneakKey.setPressed(false);
                     }
-                    // if no retreat path — stay and fight, don't panic
                 }
                 case PURSUE, ESCAPE, DELICATE_BATTLE -> {
                     // no key override from saver
@@ -306,18 +324,28 @@ public class SafetySystem {
     // ── stage evaluation ─────────────────────────────────────────────────────
 
     private CombatStage evaluateStage(ClientPlayerEntity player, Vec3d playerVel,
-                                       double horizSpeed, DangerLevel dangerPredicted, DangerLevel dangerCurrent) {
-        // DANGER_IMMINENT: predicted serious fall, BUT only if we're actually
-        // in danger — not during a normal jump that will land safely.
-        // Require: current pos also not safe, OR we're falling hard (velY < -0.3)
-        if (dangerPredicted.isSerious() && horizSpeed > 0.02
-                && (dangerCurrent != DangerLevel.NONE || playerVel.y < -0.3)) {
+                                       double horizSpeed, DangerLevel dangerPredicted,
+                                       DangerLevel dangerCurrent, double edgeScore) {
+        // NARROW_BATTLE: on bridge/narrow terrain (high edge score = void on most sides)
+        // On narrow terrain, only trigger IMMINENT if actually falling off (velY < -0.3)
+        boolean onNarrowTerrain = edgeScore >= 0.5 && player.isOnGround();
+
+        // DANGER_IMMINENT: actually falling or about to fall off
+        if (!onNarrowTerrain) {
+            // normal terrain: predicted fall + current not safe
+            if (dangerPredicted.isSerious() && horizSpeed > 0.02
+                    && (dangerCurrent != DangerLevel.NONE || playerVel.y < -0.3)) {
+                return CombatStage.DANGER_IMMINENT;
+            }
+        }
+        // always: already falling hard into serious danger
+        if (dangerCurrent.isSerious() && !player.isOnGround() && playerVel.y < -0.3) {
             return CombatStage.DANGER_IMMINENT;
         }
-        // Already falling into serious danger (velY < -0.3 = past jump apex, actually falling)
-        if (dangerCurrent.isSerious() && !player.isOnGround()
-                && playerVel.y < -0.3) {
-            return CombatStage.DANGER_IMMINENT;
+
+        // NARROW_BATTLE: fight carefully on bridge, walk only
+        if (onNarrowTerrain) {
+            return CombatStage.NARROW_BATTLE;
         }
 
         // DANGER_BATTLE: next enemy hit would knock us off
@@ -325,13 +353,12 @@ public class SafetySystem {
             return CombatStage.DANGER_BATTLE;
         }
 
-        // No progress: no hits for 5 seconds → need to close distance
-        if (CombatController.triggerBot.hasNoProgress(100)) { // 100 ticks = 5 sec
+        // No progress: no hits for 5 seconds
+        if (CombatController.triggerBot.hasNoProgress(100)) {
             if (logCooldown <= 0) {
                 Debug.logMessage("§eCOMBAT: no hits — need closer approach");
                 logCooldown = 120;
             }
-            // TODO: switch to FOLLOW mode using tungsten pathfinder for closer approach
         }
 
         // TODO: ESCAPE — target just hit (immunity frames), or mutual edge danger, or low HP
