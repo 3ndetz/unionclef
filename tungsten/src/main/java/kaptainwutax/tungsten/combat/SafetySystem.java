@@ -315,24 +315,14 @@ public class SafetySystem {
                     movementYaw = AttackTiming.yawTo(playerPosTick, Vec3d.ofBottomCenter(nextWp));
                     movementActive = true;
 
-                    // check path to waypoint for holes: scan blocks between us and wp
-                    boolean pathHasHoles = hasHolesOnPath(playerPosTick, nextWp, player.getWorld());
-                    double localEdge = VoidDetector.edgeScoreWithFallThreshold(playerPosTick, player.getWorld(), 3);
-
-                    // if holes nearby or on path: walk carefully, no jump, no sprint
-                    boolean careful = pathHasHoles || localEdge > 0.3;
-
                     mc.options.forwardKey.setPressed(true);
-                    mc.options.sprintKey.setPressed(!careful);
+                    mc.options.sprintKey.setPressed(true);
                     mc.options.backKey.setPressed(false);
                     mc.options.leftKey.setPressed(false);
                     mc.options.rightKey.setPressed(false);
                     mc.options.sneakKey.setPressed(false);
-                    if (player.isOnGround() && !careful) {
-                        mc.options.jumpKey.setPressed(true);
-                    } else {
-                        mc.options.jumpKey.setPressed(false);
-                    }
+                    // always allow jump — helps escape pits
+                    mc.options.jumpKey.setPressed(player.isOnGround());
                 }
                 // if waypoint is dangerous, don't move — stay and fight
             }
