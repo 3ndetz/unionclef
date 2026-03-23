@@ -31,39 +31,40 @@ public class CombatController {
         // safety tick: enemy velocity tracking (needs fixed dt)
         safety.tick(player, target, world);
 
-        // safety braking overrides aim — renderUpdate handles keys + viz at frame rate
-        if (safety.isBraking()) {
-            // aim toward brake direction (WindMouse handles at render freq)
+        if (cfg.combatRotatesEnabled) {
+            // safety braking overrides aim
+            if (safety.isBraking()) {
+                WindMouseRotation.INSTANCE.setParams(
+                        cfg.combatWindMouseGravity * 2,
+                        cfg.combatWindMouseWind * 0.5,
+                        cfg.combatWindMouseMaxStep * 2,
+                        cfg.combatWindMouseWindDist,
+                        cfg.combatWindMouseDoneThreshold,
+                        cfg.combatWindMouseFlickScale
+                );
+                WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), 0);
+
+                if (cfg.combatTriggerBotEnabled) {
+                    triggerBot.tick(player, target);
+                }
+                return true;
+            }
+
+            // ── mouse: aim at target ─────────────────────────────────────
+            Vec3d targetCenter = target.getPos().add(0, target.getHeight() * 0.5, 0);
+            float yaw = AttackTiming.yawTo(player.getPos(), target.getPos());
+            float pitch = AttackTiming.pitchTo(player.getEyePos(), targetCenter);
+
             WindMouseRotation.INSTANCE.setParams(
-                    cfg.combatWindMouseGravity * 2,
-                    cfg.combatWindMouseWind * 0.5,
-                    cfg.combatWindMouseMaxStep * 2,
+                    cfg.combatWindMouseGravity,
+                    cfg.combatWindMouseWind,
+                    cfg.combatWindMouseMaxStep,
                     cfg.combatWindMouseWindDist,
                     cfg.combatWindMouseDoneThreshold,
                     cfg.combatWindMouseFlickScale
             );
-            WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), 0);
-
-            if (cfg.combatTriggerBotEnabled) {
-                triggerBot.tick(player, target);
-            }
-            return true;
+            WindMouseRotation.INSTANCE.setTarget(yaw, pitch);
         }
-
-        // ── mouse: aim at target ─────────────────────────────────────────
-        Vec3d targetCenter = target.getPos().add(0, target.getHeight() * 0.5, 0);
-        float yaw = AttackTiming.yawTo(player.getPos(), target.getPos());
-        float pitch = AttackTiming.pitchTo(player.getEyePos(), targetCenter);
-
-        WindMouseRotation.INSTANCE.setParams(
-                cfg.combatWindMouseGravity,
-                cfg.combatWindMouseWind,
-                cfg.combatWindMouseMaxStep,
-                cfg.combatWindMouseWindDist,
-                cfg.combatWindMouseDoneThreshold,
-                cfg.combatWindMouseFlickScale
-        );
-        WindMouseRotation.INSTANCE.setTarget(yaw, pitch);
 
         // ── trigger bot ──────────────────────────────────────────────────
         if (cfg.combatTriggerBotEnabled) {

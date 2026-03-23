@@ -1,6 +1,5 @@
 package kaptainwutax.tungsten.combat;
 
-import kaptainwutax.tungsten.Debug;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.KeyBinding;
@@ -44,7 +43,6 @@ public class TriggerBot {
             KeyBinding.onKeyPressed(mc.options.attackKey.getDefaultKey());
             clickedThisCycle = true;
             needsRelease = true;
-            Debug.logMessage("TRIGGER: hit " + target.getName().getString());
         }
     }
 

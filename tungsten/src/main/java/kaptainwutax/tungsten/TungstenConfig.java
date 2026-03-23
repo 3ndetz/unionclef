@@ -74,6 +74,9 @@ public class TungstenConfig {
     /** Enable trigger bot (auto-click when crosshair is on target). */
     public boolean combatTriggerBotEnabled = true;
 
+    /** Enable auto-rotation toward target in combat. */
+    public boolean combatRotatesEnabled = true;
+
     /** WindMouse gravity — pull toward target per render frame.
      *  Higher = faster convergence, lower = more human wobble. */
     public double combatWindMouseGravity = 2.0;

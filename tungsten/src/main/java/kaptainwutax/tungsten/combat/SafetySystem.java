@@ -154,7 +154,7 @@ public class SafetySystem {
                 if (logCooldown <= 0) {
                     Debug.logMessage("SAFETY: HARD BRAKE (fall=" + fallAtPredicted
                             + " vel=" + String.format("%.2f", horizSpeed) + ")");
-                    logCooldown = 20;
+                    logCooldown = 120;
                 }
             } else {
                 wantsSneak = true;
@@ -162,7 +162,7 @@ public class SafetySystem {
                 if (logCooldown <= 0) {
                     Debug.logMessage("SAFETY: soft brake (fall=" + fallAtPredicted
                             + " vel=" + String.format("%.2f", horizSpeed) + ")");
-                    logCooldown = 20;
+                    logCooldown = 120;
                 }
             }
         } else if (fallAtCurrent >= FALL_DANGER && !player.isOnGround()
@@ -174,7 +174,7 @@ public class SafetySystem {
             wantsSprint = true;
             if (logCooldown <= 0) {
                 Debug.logMessage("SAFETY: recovery (falling, fall=" + fallAtCurrent + ")");
-                logCooldown = 20;
+                logCooldown = 120;
             }
         }
 
@@ -229,15 +229,9 @@ public class SafetySystem {
                                    Vec3d targetPos, WorldView world) {
         lastUsAfterKB = simulateKnockback(playerPos, playerVel, targetPos, true);
         lastFallIfHit = VoidDetector.fallHeight(lastUsAfterKB, world);
-        if (lastFallIfHit >= KB_FALL_THRESHOLD && logCooldown <= 0) {
-            Debug.logMessage("§cSAFETY: incoming hit → fall " + lastFallIfHit + " blocks!");
-        }
 
         lastEnemyAfterKB = simulateKnockback(targetPos, enemyVelocity, playerPos, true);
         lastEnemyFallIfHit = VoidDetector.fallHeight(lastEnemyAfterKB, world);
-        if (lastEnemyFallIfHit >= KB_FALL_THRESHOLD && logCooldown <= 0) {
-            Debug.logMessage("§bSAFETY: hit now → enemy falls " + lastEnemyFallIfHit + " blocks!");
-        }
     }
 
     // ── render helpers ───────────────────────────────────────────────────────
