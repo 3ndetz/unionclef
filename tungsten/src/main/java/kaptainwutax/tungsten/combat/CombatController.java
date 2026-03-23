@@ -21,6 +21,8 @@ import net.minecraft.world.WorldView;
  */
 public class CombatController {
 
+    private final TriggerBot triggerBot = new TriggerBot();
+
     // ── tick ─────────────────────────────────────────────────────────────────
 
     /**
@@ -33,6 +35,8 @@ public class CombatController {
 
         // TODO: tickLegs(player, target, world)
         // TODO: tickMouse(player, target)
+
+        triggerBot.tick(player, target);
 
         return true;
     }
@@ -50,6 +54,7 @@ public class CombatController {
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
         mc.options.attackKey.setPressed(false);
+        triggerBot.reset();
         WindMouseRotation.INSTANCE.clearTarget();
     }
 }
