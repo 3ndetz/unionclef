@@ -25,13 +25,13 @@ public class CombatController {
 
         TungstenConfig cfg = TungstenConfig.get();
 
-        // enemy velocity tracking (fixed dt)
+        // safety: velocity tracking always, braking/viz only if enabled
         safety.tick(player, target, world);
 
         if (cfg.combatRotatesEnabled) {
             CombatStage stage = safety.getStage();
 
-            if (stage == CombatStage.DANGER_IMMINENT && safety.isBraking()) {
+            if (cfg.combatSaverEnabled && stage == CombatStage.DANGER_IMMINENT && safety.isBraking()) {
                 // emergency: face opposite velocity
                 WindMouseRotation.INSTANCE.setParams(
                         cfg.combatWindMouseGravity * 2,

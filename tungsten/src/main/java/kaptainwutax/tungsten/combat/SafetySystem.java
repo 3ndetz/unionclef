@@ -138,32 +138,35 @@ public class SafetySystem {
         // ── aim prediction (for mouse subsystem) ────────────────────────
         computeAimPrediction(player, targetPos);
 
-        // ── stage-specific behavior ─────────────────────────────────────
-        switch (stage) {
-            case DANGER_IMMINENT -> {
-                braking = true;
-                float velYaw = (float) Math.toDegrees(-Math.atan2(playerVel.x, playerVel.z));
-                brakeYaw = velYaw + 180f;
+        // ── stage-specific behavior (only if saver enabled) ──────────────
+        boolean saverEnabled = kaptainwutax.tungsten.TungstenConfig.get().combatSaverEnabled;
 
-                // sprint + W + jump opposite to velocity
-                if (horizSpeed > 0.05 && player.isOnGround()) {
-                    wantsJump = true;
+        if (saverEnabled) {
+            switch (stage) {
+                case DANGER_IMMINENT -> {
+                    braking = true;
+                    float velYaw = (float) Math.toDegrees(-Math.atan2(playerVel.x, playerVel.z));
+                    brakeYaw = velYaw + 180f;
+
+                    // sprint + W + jump opposite to velocity
+                    if (horizSpeed > 0.05 && player.isOnGround()) {
+                        wantsJump = true;
+                    }
+
+                    mc.options.forwardKey.setPressed(true);
+                    mc.options.sprintKey.setPressed(true);
+                    mc.options.sneakKey.setPressed(false);
+                    mc.options.jumpKey.setPressed(wantsJump);
+                    mc.options.backKey.setPressed(false);
+                    mc.options.leftKey.setPressed(false);
+                    mc.options.rightKey.setPressed(false);
                 }
-
-                mc.options.forwardKey.setPressed(true);
-                mc.options.sprintKey.setPressed(true);
-                mc.options.sneakKey.setPressed(false);
-                mc.options.jumpKey.setPressed(wantsJump);
-                mc.options.backKey.setPressed(false);
-                mc.options.leftKey.setPressed(false);
-                mc.options.rightKey.setPressed(false);
-            }
-            case DANGER_BATTLE -> {
-                // no key override yet — just awareness stage
-                // future: reposition away from edge while fighting
-            }
-            case PURSUE, ESCAPE, DELICATE_BATTLE -> {
-                // no key override — normal combat
+                case DANGER_BATTLE -> {
+                    // no key override yet
+                }
+                case PURSUE, ESCAPE, DELICATE_BATTLE -> {
+                    // no key override
+                }
             }
         }
 
@@ -221,11 +224,15 @@ public class SafetySystem {
     private CombatStage evaluateStage(ClientPlayerEntity player, Vec3d playerVel,
                                        double horizSpeed, DangerLevel dangerPredicted, DangerLevel dangerCurrent) {
         // DANGER_IMMINENT: only on serious falls (4+ blocks)
-        if (dangerPredicted.isSerious() && horizSpeed > 0.01) {
+        // Require: predicted pos is dangerous AND current pos is also not perfectly safe
+        // This prevents false triggers from normal jumps near 1-block drops
+        if (dangerPredicted.isSerious() && horizSpeed > 0.05
+                && dangerCurrent != DangerLevel.NONE) {
             return CombatStage.DANGER_IMMINENT;
         }
+        // Already falling into serious danger
         if (dangerCurrent.isSerious() && !player.isOnGround()
-                && playerVel.y < -0.1 && horizSpeed > 0.01) {
+                && playerVel.y < -0.1 && horizSpeed > 0.05) {
             return CombatStage.DANGER_IMMINENT;
         }
 

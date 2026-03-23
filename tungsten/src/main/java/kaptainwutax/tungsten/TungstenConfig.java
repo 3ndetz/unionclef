@@ -77,6 +77,12 @@ public class TungstenConfig {
     /** Enable auto-rotation toward target in combat. */
     public boolean combatRotatesEnabled = true;
 
+    /** Enable combat movement (legs: sprint-jump, chase, strafe). */
+    public boolean combatMovementsEnabled = false;
+
+    /** Enable safety system (edge detection, anti-fall braking, escape jump). */
+    public boolean combatSaverEnabled = true;
+
     /** WindMouse gravity — pull toward target per render frame.
      *  Higher = faster convergence, lower = more human wobble. */
     public double combatWindMouseGravity = 2.0;
