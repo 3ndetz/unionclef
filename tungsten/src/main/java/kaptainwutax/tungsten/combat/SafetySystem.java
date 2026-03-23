@@ -242,17 +242,102 @@ public class SafetySystem {
 
     // ── aim prediction ───────────────────────────────────────────────────────
 
+    // LOS check result — public for CombatController to know if we have LOS
+    private boolean hasLOS = false;
+
     /**
-     * Compute predicted aim point: target center + velocity * lead ticks.
-     * Lead ticks = how long WindMouse needs to converge to target angle.
+     * Compute predicted aim point with smart hitbox targeting.
+     *
+     * 1. Predict target position N ticks ahead (N = WindMouse convergence time)
+     * 2. Build predicted bounding box at that position
+     * 3. Find closest point on predicted hitbox to our eye pos
+     * 4. Raycast to that point — if blocked, sample hitbox corners for any visible point
+     * 5. Aim at the best visible point, or predicted center as fallback
      */
     private void computeAimPrediction(ClientPlayerEntity player, Vec3d targetPos) {
         int leadTicks = getAimLeadTicks();
-        Vec3d predictedCenter = targetPos.add(0, target.getHeight() * 0.5, 0)
-                .add(enemyVelocity.multiply(leadTicks));
+        Vec3d eyePos = player.getEyePos();
 
-        aimYaw = AttackTiming.yawTo(player.getPos(), predictedCenter);
-        aimPitch = AttackTiming.pitchTo(player.getEyePos(), predictedCenter);
+        // predicted target position
+        Vec3d predictedPos = targetPos.add(enemyVelocity.multiply(leadTicks));
+        // build predicted bounding box
+        double hw = target.getWidth() / 2.0;
+        double h = target.getHeight();
+        net.minecraft.util.math.Box predictedBox = new net.minecraft.util.math.Box(
+                predictedPos.x - hw, predictedPos.y, predictedPos.z - hw,
+                predictedPos.x + hw, predictedPos.y + h, predictedPos.z + hw);
+
+        // find best aim point on hitbox
+        Vec3d aimPoint = findBestAimPoint(player, eyePos, predictedBox, predictedPos, h);
+
+        aimYaw = AttackTiming.yawTo(player.getPos(), aimPoint);
+        aimPitch = AttackTiming.pitchTo(eyePos, aimPoint);
+    }
+
+    /**
+     * Find best visible point on target hitbox.
+     * Priority: closest point on box → if blocked, try hitbox sample points.
+     */
+    private Vec3d findBestAimPoint(ClientPlayerEntity player, Vec3d eyePos,
+                                    net.minecraft.util.math.Box box, Vec3d targetPos, double height) {
+        // closest point on bounding box to our eyes
+        Vec3d closest = closestPointOnBox(eyePos, box);
+
+        if (hasCleanLOS(player, eyePos, closest)) {
+            hasLOS = true;
+            return closest;
+        }
+
+        // sample hitbox points: center, top, bottom, corners
+        Vec3d center = targetPos.add(0, height * 0.5, 0);
+        double hw = (box.maxX - box.minX) / 2.0;
+        Vec3d[] samples = {
+            center,
+            targetPos.add(0, height * 0.85, 0),   // head
+            targetPos.add(0, height * 0.15, 0),    // feet
+            targetPos.add(hw, height * 0.5, 0),    // sides
+            targetPos.add(-hw, height * 0.5, 0),
+            targetPos.add(0, height * 0.5, hw),
+            targetPos.add(0, height * 0.5, -hw),
+        };
+
+        Vec3d bestVisible = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Vec3d sample : samples) {
+            if (hasCleanLOS(player, eyePos, sample)) {
+                double dist = eyePos.squaredDistanceTo(sample);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestVisible = sample;
+                }
+            }
+        }
+
+        if (bestVisible != null) {
+            hasLOS = true;
+            return bestVisible;
+        }
+
+        // no visible point — aim at predicted center anyway (WindMouse will track)
+        hasLOS = false;
+        return center;
+    }
+
+    private static Vec3d closestPointOnBox(Vec3d point, net.minecraft.util.math.Box box) {
+        return new Vec3d(
+                Math.max(box.minX, Math.min(box.maxX, point.x)),
+                Math.max(box.minY, Math.min(box.maxY, point.y)),
+                Math.max(box.minZ, Math.min(box.maxZ, point.z))
+        );
+    }
+
+    private static boolean hasCleanLOS(ClientPlayerEntity player, Vec3d from, Vec3d to) {
+        net.minecraft.util.hit.HitResult hit = player.getWorld().raycast(
+                new net.minecraft.world.RaycastContext(from, to,
+                        net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
+                        net.minecraft.world.RaycastContext.FluidHandling.NONE, player));
+        return hit.getType() == net.minecraft.util.hit.HitResult.Type.MISS
+                || from.squaredDistanceTo(hit.getPos()) >= from.squaredDistanceTo(to) * 0.95;
     }
 
     /**
@@ -324,6 +409,7 @@ public class SafetySystem {
     public float getBrakeYaw()      { return brakeYaw; }
     public float getAimYaw()        { return aimYaw; }
     public float getAimPitch()      { return aimPitch; }
+    public boolean hasLOS()         { return hasLOS; }
 
     public void reset() {
         prevEnemyPos = null;
