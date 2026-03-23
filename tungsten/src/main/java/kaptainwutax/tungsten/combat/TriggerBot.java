@@ -18,13 +18,19 @@ public class TriggerBot {
 
     public void tick(ClientPlayerEntity player, Entity target) {
         MinecraftClient mc = MinecraftClient.getInstance();
+        boolean alreadyPressed = mc.options.attackKey.isPressed();
 
         // after a press, release for one tick so MC sees the full click cycle
         if (pressedLastTick) {
-            mc.options.attackKey.setPressed(false);
+            if (!alreadyPressed) {
+                mc.options.attackKey.setPressed(false);
+            }
             pressedLastTick = false;
             return;
         }
+
+        // if player is already holding attack, don't interfere
+        if (alreadyPressed) return;
 
         Entity underCrosshair = mc.targetedEntity;
 
@@ -33,7 +39,6 @@ public class TriggerBot {
             mc.options.attackKey.setPressed(true);
             pressedLastTick = true;
         }
-        // don't touch attackKey otherwise — leave manual input alone
     }
 
     public void reset() {
