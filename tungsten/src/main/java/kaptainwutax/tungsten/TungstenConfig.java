@@ -69,6 +69,16 @@ public class TungstenConfig {
      *  Set to 3.0 for the old tungsten behavior (more aggressive jumps). */
     public float airStrafeMultiplier = 1.0F;
 
+    // ---- follow settings ----
+
+    /** Use BFS block-path walker for immediate movement while A* computes.
+     *  Experimental — may cause drift/path conflicts. */
+    public boolean followBlockPathFinderEnabled = false;
+
+    /** Allow sprint-jumping during follow (BFS walker + direct sprint).
+     *  If false, only walks (no jumps) — safer but slower. */
+    public boolean followJumpingEnabled = true;
+
     // ---- combat settings ----
 
     /** Enable trigger bot (auto-click when crosshair is on target). */

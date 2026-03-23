@@ -486,7 +486,7 @@ public class SafetySystem {
      * Scans blocks 1-4 ahead in velocity direction for serious drops.
      * If any landing spot has fall 4+, don't jump.
      */
-    private static boolean isJumpLandingSafe(Vec3d pos, Vec3d vel, net.minecraft.world.WorldView world) {
+    public static boolean isJumpLandingSafe(Vec3d pos, Vec3d vel, net.minecraft.world.WorldView world) {
         double horizSpeed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
         if (horizSpeed < 0.01) return true; // standing still, jump is safe
 
@@ -505,7 +505,7 @@ public class SafetySystem {
     }
 
     /** Check if there are holes (fall 3+ blocks) on the straight line between player and waypoint. */
-    private static boolean hasHolesOnPath(Vec3d from, net.minecraft.util.math.BlockPos to, net.minecraft.world.WorldView world) {
+    public static boolean hasHolesOnPath(Vec3d from, net.minecraft.util.math.BlockPos to, net.minecraft.world.WorldView world) {
         double dx = to.getX() + 0.5 - from.x;
         double dz = to.getZ() + 0.5 - from.z;
         double dist = Math.sqrt(dx * dx + dz * dz);

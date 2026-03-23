@@ -1,37 +1,76 @@
 package kaptainwutax.tungsten.task;
 
 import kaptainwutax.tungsten.Debug;
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.combat.AttackTiming;
-import kaptainwutax.tungsten.combat.VoidDetector;
+import kaptainwutax.tungsten.combat.CombatPathfinder;
+import kaptainwutax.tungsten.combat.SafetySystem;
 import kaptainwutax.tungsten.util.WindMouseRotation;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.WorldView;
 
 import java.util.List;
 
 /**
- * Simple sprint walker for BFS block paths.
- * Provides immediate movement while physics A* computes.
+ * Immediate movement while physics A* computes.
  *
- * Controls: look at waypoint (WindMouse), W + sprint + jump when needed.
- * Auto-stops when PathExecutor takes over or path exhausted.
+ * Priority chain:
+ *   1. DIRECT — LOS + distance shrinking + safe → sprint straight at target
+ *   2. BFS    — no LOS or danger detected → follow BFS waypoints
+ *   3. (stop) — executor ready or path exhausted → hand off to A*
+ *
+ * Auto-stops when PathExecutor takes over.
  */
 public class BlockPathWalker {
+
+    private enum Mode { DIRECT, BFS }
 
     private static List<BlockPos> path = null;
     private static int waypointIdx = 0;
     private static boolean active = false;
+    private static Mode mode = Mode.DIRECT;
 
-    public static void start(List<BlockPos> blockPath) {
-        if (blockPath == null || blockPath.size() < 2) return;
-        stop(); // clean previous
+    // progress tracking for direct-sprint
+    private static double lastDistToTarget = Double.MAX_VALUE;
+    private static int noProgressTicks = 0;
+    private static final int NO_PROGRESS_LIMIT = 15; // ~0.75s without getting closer → switch to BFS
+    private static final double MIN_APPROACH_SPEED = 0.03; // ~walk speed per tick
+
+    private static Vec3d directTarget = null;
+
+    // ── public API ──────────────────────────────────────────────────────────
+
+    /**
+     * Start with direct-sprint toward target. BFS path is fallback.
+     * @param target      the actual target position
+     * @param blockPath   BFS path (fallback if direct fails), may be null
+     */
+    public static void start(Vec3d target, List<BlockPos> blockPath) {
+        stop();
+        directTarget = target;
         path = blockPath;
-        waypointIdx = 1; // skip [0] = player position
+        waypointIdx = (blockPath != null && blockPath.size() > 1) ? 1 : 0;
+        lastDistToTarget = Double.MAX_VALUE;
+        noProgressTicks = 0;
+        mode = Mode.DIRECT;
         active = true;
-        Debug.logMessage("BFS walker: " + blockPath.size() + " waypoints");
+        Debug.logMessage("Walker: direct→target" +
+                (blockPath != null ? " (BFS fallback: " + blockPath.size() + " wp)" : ""));
+    }
+
+    /** Start BFS-only (no direct sprint). */
+    public static void startBFS(List<BlockPos> blockPath) {
+        if (blockPath == null || blockPath.size() < 2) return;
+        stop();
+        path = blockPath;
+        waypointIdx = 1;
+        mode = Mode.BFS;
+        active = true;
+        Debug.logMessage("Walker: BFS " + blockPath.size() + " wp");
     }
 
     public static void stop() {
@@ -40,22 +79,26 @@ public class BlockPathWalker {
         }
         active = false;
         path = null;
+        directTarget = null;
         waypointIdx = 0;
+        noProgressTicks = 0;
+        lastDistToTarget = Double.MAX_VALUE;
     }
 
     public static boolean isRunning() {
-        return active && path != null;
+        return active;
     }
 
-    /** Get the last waypoint position (BFS endpoint) for A* start. */
+    /** BFS endpoint for A* start position. */
     public static Vec3d getEndpoint() {
         if (path == null || path.isEmpty()) return null;
-        BlockPos end = path.get(path.size() - 1);
-        return Vec3d.ofBottomCenter(end);
+        return Vec3d.ofBottomCenter(path.get(path.size() - 1));
     }
 
+    // ── tick ─────────────────────────────────────────────────────────────────
+
     public static void tick(ClientPlayerEntity player) {
-        if (!active || path == null) return;
+        if (!active) return;
 
         // auto-stop when executor takes over
         if (TungstenModDataContainer.EXECUTOR.isRunning()) {
@@ -63,7 +106,85 @@ public class BlockPathWalker {
             return;
         }
 
-        if (waypointIdx >= path.size()) {
+        if (mode == Mode.DIRECT) {
+            tickDirect(player);
+        } else {
+            tickBFS(player);
+        }
+    }
+
+    // ── DIRECT: sprint straight at target ────────────────────────────────────
+
+    private static void tickDirect(ClientPlayerEntity player) {
+        if (directTarget == null) { switchToBFS(); return; }
+
+        Vec3d playerPos = player.getPos();
+        WorldView world = player.getWorld();
+        double dist = horizontalDist(playerPos, directTarget);
+
+        // check LOS
+        boolean hasLOS = FollowEntityTask.hasLineOfSight(player, directTarget);
+
+        // check progress — distance should be shrinking
+        double progress = lastDistToTarget - dist;
+        lastDistToTarget = dist;
+        if (progress < MIN_APPROACH_SPEED) {
+            noProgressTicks++;
+        } else {
+            noProgressTicks = 0;
+        }
+
+        // check safety: landing safe + no holes on path to target
+        BlockPos targetBlock = BlockPos.ofFloored(directTarget);
+        boolean landingSafe = SafetySystem.isJumpLandingSafe(playerPos, player.getVelocity(), world);
+        boolean pathSafe = !SafetySystem.hasHolesOnPath(playerPos, targetBlock, world);
+        boolean groundSafe = CombatPathfinder.isWalkable(player.getBlockPos(), world);
+
+        // bail to BFS if: no LOS, no progress, or danger
+        if (!hasLOS || noProgressTicks >= NO_PROGRESS_LIMIT || !pathSafe || !groundSafe) {
+            if (!hasLOS) Debug.logMessage("Walker: no LOS → BFS");
+            else if (noProgressTicks >= NO_PROGRESS_LIMIT) Debug.logMessage("Walker: no progress → BFS");
+            else Debug.logMessage("Walker: danger → BFS");
+            switchToBFS();
+            return;
+        }
+
+        // close enough — done
+        if (dist < 1.5) {
+            stop();
+            return;
+        }
+
+        // movement
+        float yaw = AttackTiming.yawTo(playerPos, directTarget);
+        WindMouseRotation.INSTANCE.setTarget(yaw, 0);
+
+        MinecraftClient mc = MinecraftClient.getInstance();
+        mc.options.forwardKey.setPressed(true);
+        mc.options.sprintKey.setPressed(true);
+        mc.options.backKey.setPressed(false);
+        mc.options.leftKey.setPressed(false);
+        mc.options.rightKey.setPressed(false);
+        mc.options.sneakKey.setPressed(false);
+
+        boolean canJump = TungstenConfig.get().followJumpingEnabled
+                && player.isOnGround() && landingSafe;
+        mc.options.jumpKey.setPressed(canJump);
+    }
+
+    private static void switchToBFS() {
+        if (path != null && path.size() >= 2) {
+            mode = Mode.BFS;
+            noProgressTicks = 0;
+        } else {
+            stop();
+        }
+    }
+
+    // ── BFS: follow waypoints ────────────────────────────────────────────────
+
+    private static void tickBFS(ClientPlayerEntity player) {
+        if (path == null || waypointIdx >= path.size()) {
             stop();
             return;
         }
@@ -71,11 +192,9 @@ public class BlockPathWalker {
         BlockPos wp = path.get(waypointIdx);
         Vec3d wpPos = Vec3d.ofBottomCenter(wp);
         Vec3d playerPos = player.getPos();
-        double dx = playerPos.x - wpPos.x;
-        double dz = playerPos.z - wpPos.z;
-        double dist = Math.sqrt(dx * dx + dz * dz);
+        double dist = horizontalDist(playerPos, wpPos);
 
-        // advance waypoint when close enough
+        // advance waypoint
         if (dist < 1.5) {
             waypointIdx++;
             if (waypointIdx >= path.size()) {
@@ -86,11 +205,9 @@ public class BlockPathWalker {
             wpPos = Vec3d.ofBottomCenter(wp);
         }
 
-        // look toward waypoint via WindMouse
         float yaw = AttackTiming.yawTo(playerPos, wpPos);
         WindMouseRotation.INSTANCE.setTarget(yaw, 0);
 
-        // sprint + forward
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(true);
         mc.options.sprintKey.setPressed(true);
@@ -99,28 +216,20 @@ public class BlockPathWalker {
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
 
-        // jump: if waypoint is higher, or sprint-jump for speed on flat
         boolean needJumpUp = wp.getY() > player.getBlockPos().getY();
-        boolean safeToJump = isLandingSafe(playerPos, player);
-        mc.options.jumpKey.setPressed(player.isOnGround() && (needJumpUp || safeToJump));
+        boolean canJump = TungstenConfig.get().followJumpingEnabled
+                && player.isOnGround()
+                && (needJumpUp || SafetySystem.isJumpLandingSafe(
+                        playerPos, player.getVelocity(), player.getWorld()));
+        mc.options.jumpKey.setPressed(canJump);
     }
 
-    private static boolean isLandingSafe(Vec3d pos, ClientPlayerEntity player) {
-        Vec3d vel = player.getVelocity();
-        double horizSpeed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
-        if (horizSpeed < 0.01) return true;
+    // ── helpers ──────────────────────────────────────────────────────────────
 
-        double nx = vel.x / horizSpeed;
-        double nz = vel.z / horizSpeed;
-        int y = (int) Math.floor(pos.y);
-
-        for (int d = 1; d <= 4; d++) {
-            int x = (int) Math.floor(pos.x + nx * d);
-            int z = (int) Math.floor(pos.z + nz * d);
-            int fall = VoidDetector.fallHeight(new Vec3d(x + 0.5, y, z + 0.5), player.getWorld());
-            if (fall >= 4) return false;
-        }
-        return true;
+    private static double horizontalDist(Vec3d a, Vec3d b) {
+        double dx = a.x - b.x;
+        double dz = a.z - b.z;
+        return Math.sqrt(dx * dx + dz * dz);
     }
 
     private static void releaseKeys() {

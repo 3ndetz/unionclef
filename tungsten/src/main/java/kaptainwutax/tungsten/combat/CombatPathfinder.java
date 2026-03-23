@@ -189,7 +189,7 @@ public class CombatPathfinder {
 
     // ── BFS ──────────────────────────────────────────────────────────────────
 
-    private List<BlockPos> bfsPath(BlockPos start, BlockPos goal, WorldView world) {
+    private static List<BlockPos> bfsPath(BlockPos start, BlockPos goal, WorldView world) {
         if (start.equals(goal)) return Collections.emptyList();
 
         Queue<BlockPos> queue = new ArrayDeque<>();
@@ -224,7 +224,7 @@ public class CombatPathfinder {
         return closest != null ? reconstructPath(cameFrom, closest) : Collections.emptyList();
     }
 
-    private List<BlockPos> findRetreatPath(BlockPos playerPos, BlockPos targetPos, WorldView world) {
+    private static List<BlockPos> findRetreatPath(BlockPos playerPos, BlockPos targetPos, WorldView world) {
         Queue<BlockPos> queue = new ArrayDeque<>();
         Map<BlockPos, BlockPos> cameFrom = new HashMap<>();
         queue.add(playerPos);
@@ -280,7 +280,7 @@ public class CombatPathfinder {
 
     private static final int[][] HORIZONTAL = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
 
-    private List<BlockPos> getWalkableNeighbors(BlockPos pos, WorldView world) {
+    private static List<BlockPos> getWalkableNeighbors(BlockPos pos, WorldView world) {
         List<BlockPos> result = new ArrayList<>();
 
         for (int[] off : HORIZONTAL) {
@@ -296,7 +296,7 @@ public class CombatPathfinder {
         return result;
     }
 
-    private boolean isWalkable(BlockPos feetPos, WorldView world) {
+    public static boolean isWalkable(BlockPos feetPos, WorldView world) {
         BlockPos below = feetPos.down();
         if (!isSolid(below, world)) return false;
         if (isHazard(below, world)) return false;           // standing ON hazard
@@ -307,16 +307,16 @@ public class CombatPathfinder {
         return true;
     }
 
-    private boolean isSolid(BlockPos pos, WorldView world) {
+    public static boolean isSolid(BlockPos pos, WorldView world) {
         return !world.getBlockState(pos).getCollisionShape(world, pos).isEmpty();
     }
 
-    private boolean canPassThrough(BlockPos pos, WorldView world) {
+    public static boolean canPassThrough(BlockPos pos, WorldView world) {
         return world.getBlockState(pos).getCollisionShape(world, pos).isEmpty();
     }
 
     /** Blocks that deal damage — never walk here. */
-    private boolean isHazard(BlockPos pos, WorldView world) {
+    public static boolean isHazard(BlockPos pos, WorldView world) {
         BlockState state = world.getBlockState(pos);
         Block block = state.getBlock();
         return block == Blocks.LAVA
@@ -329,7 +329,7 @@ public class CombatPathfinder {
     }
 
     /** Hazard OR slowdown — avoid in pathfinding. */
-    private boolean isHazardOrSlow(BlockPos pos, WorldView world) {
+    public static boolean isHazardOrSlow(BlockPos pos, WorldView world) {
         if (isHazard(pos, world)) return true;
         Block block = world.getBlockState(pos).getBlock();
         return block == Blocks.WATER
@@ -341,7 +341,7 @@ public class CombatPathfinder {
 
     // ── path reconstruction ──────────────────────────────────────────────────
 
-    private List<BlockPos> reconstructPath(Map<BlockPos, BlockPos> cameFrom, BlockPos end) {
+    private static List<BlockPos> reconstructPath(Map<BlockPos, BlockPos> cameFrom, BlockPos end) {
         List<BlockPos> path = new ArrayList<>();
         BlockPos current = end;
         while (current != null) {
@@ -359,8 +359,7 @@ public class CombatPathfinder {
      * immediate movement while physics A* computes.
      */
     public static List<BlockPos> findPath(BlockPos start, BlockPos goal, WorldView world) {
-        CombatPathfinder pf = new CombatPathfinder();
-        return pf.bfsPath(start, goal, world);
+        return bfsPath(start, goal, world);
     }
 
     // ── getters ──────────────────────────────────────────────────────────────

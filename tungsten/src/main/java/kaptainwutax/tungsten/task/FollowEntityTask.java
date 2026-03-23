@@ -183,11 +183,17 @@ public class FollowEntityTask {
         double effectiveDist = player.getPos().distanceTo(effectiveTarget);
 
         // ── Tungsten A*: always runs as primary pathfinder ───────────────────
+        // While BFS walker is running, suppress recalc — let it finish its segment.
+        // A* is already computing from BFS endpoint; recalc would restart everything.
+        boolean walkerRunning   = BlockPathWalker.isRunning();
         tickCounter++;
         boolean executorRunning  = TungstenModDataContainer.EXECUTOR.isRunning();
         boolean pathfinderActive = TungstenModDataContainer.PATHFINDER.active.get();
 
-        if (!pathfinderActive && !executorRunning && !stopRequested) {
+        if (walkerRunning) {
+            // walker active — don't touch pathfinder, just let it compute
+            stuckTicks = 0;
+        } else if (!pathfinderActive && !executorRunning && !stopRequested) {
             stuckTicks = 0;
             startFind(world, player, effectiveTarget, effectiveDist);
         } else if (stopRequested && !pathfinderActive) {
@@ -220,16 +226,17 @@ public class FollowEntityTask {
         TungstenMod.TARGET = target;
 
         // ── Instant BFS for immediate movement while physics A* computes ──
-        if (dist > 6) {
+        if (kaptainwutax.tungsten.TungstenConfig.get().followBlockPathFinderEnabled && dist > 6) {
             java.util.List<net.minecraft.util.math.BlockPos> bfsPath =
                     kaptainwutax.tungsten.combat.CombatPathfinder.findPath(
                             player.getBlockPos(),
                             net.minecraft.util.math.BlockPos.ofFloored(target),
                             world);
             if (bfsPath.size() >= 2) {
-                BlockPathWalker.start(bfsPath);
-                // Physics A* starts from BFS endpoint — saves computing the segment
-                // the walker already covers
+                // Direct sprint first, BFS as fallback
+                BlockPathWalker.start(target, bfsPath);
+                // Physics A* starts from BFS endpoint — don't waste time on
+                // the segment the walker already covers
                 Vec3d bfsEnd = BlockPathWalker.getEndpoint();
                 if (bfsEnd != null) {
                     TungstenModDataContainer.PATHFINDER.overrideStartPos = bfsEnd;
