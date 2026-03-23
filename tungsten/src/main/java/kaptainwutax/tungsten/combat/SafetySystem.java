@@ -35,7 +35,6 @@ public class SafetySystem {
     private static final int PREDICT_TICKS = 10;
     private static final int FALL_WARN = 2;
     private static final int FALL_DANGER = 5;
-    private static final double STRONG_VEL = 0.4;
 
     private static final double KB_BASE = 0.4;
     private static final double KB_SPRINT_BONUS = 0.4;
@@ -139,15 +138,14 @@ public class SafetySystem {
                 float velYaw = (float) Math.toDegrees(-Math.atan2(playerVel.x, playerVel.z));
                 brakeYaw = velYaw + 180f;
 
-                // escape jump: sprint + W + jump opposite to velocity
+                // sprint + W + jump opposite to velocity
                 if (horizSpeed > 0.05 && player.isOnGround()) {
                     wantsJump = true;
                 }
 
-                // apply keys
                 mc.options.forwardKey.setPressed(true);
-                mc.options.sprintKey.setPressed(horizSpeed > STRONG_VEL || fallAtPredicted >= FALL_DANGER);
-                mc.options.sneakKey.setPressed(horizSpeed <= STRONG_VEL && fallAtPredicted < FALL_DANGER);
+                mc.options.sprintKey.setPressed(true);
+                mc.options.sneakKey.setPressed(false);
                 mc.options.jumpKey.setPressed(wantsJump);
                 mc.options.backKey.setPressed(false);
                 mc.options.leftKey.setPressed(false);
