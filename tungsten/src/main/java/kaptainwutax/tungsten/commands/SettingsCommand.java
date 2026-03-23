@@ -1,9 +1,8 @@
 package kaptainwutax.tungsten.commands;
 
-import com.mojang.brigadier.arguments.BoolArgumentType;
-import com.mojang.brigadier.arguments.DoubleArgumentType;
-import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 
 import kaptainwutax.tungsten.Debug;
 import kaptainwutax.tungsten.TungstenConfig;
@@ -12,167 +11,134 @@ import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.commandsystem.Command;
 import net.minecraft.command.CommandSource;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Auto-generated settings commands from TungstenConfig public fields.
+ *
+ * ;settings           — list all values
+ * ;settings reload    — reload from tungsten.json
+ * ;settings <name>    — show current value
+ * ;settings <name> <value> — set value + save
+ *
+ * Also includes legacy: ;settings ignoreFallDamage (not in TungstenConfig).
+ */
 public class SettingsCommand extends Command {
 
-	public SettingsCommand(TungstenMod mod) {
-		super("settings", "Handles bot settings", mod);
-	}
+    public SettingsCommand(TungstenMod mod) {
+        super("settings", "Handles bot settings", mod);
+    }
 
-	@Override
-	public void build(LiteralArgumentBuilder<CommandSource> builder) {
+    @Override
+    public void build(LiteralArgumentBuilder<CommandSource> builder) {
+        List<Field> fields = getConfigFields();
 
-		// ;settings — show all current values
-		builder.executes(context -> {
-			TungstenConfig c = TungstenConfig.get();
-			Debug.logMessage("§e--- Tungsten Settings ---");
-			Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
-			Debug.logMessage("driftThreshold = " + c.driftThreshold);
-			Debug.logMessage("parallelPathfinding = " + c.parallelPathfinding);
-			Debug.logMessage("closedLoopStrength = " + c.closedLoopStrength);
-			Debug.logMessage("airStrafeMultiplier = " + c.airStrafeMultiplier);
-			Debug.logMessage("mismatchLogThreshold = " + c.mismatchLogThreshold);
-			Debug.logMessage("enableLeap = " + c.enableLeap);
-			Debug.logMessage("enableTrailing = " + c.enableTrailing);
-			Debug.logMessage("verboseDebug = " + c.verboseDebugLogging);
-			Debug.logMessage("debugTime = " + c.debugTime);
-			return SINGLE_SUCCESS;
-		});
+        // ;settings — show all
+        builder.executes(context -> {
+            TungstenConfig c = TungstenConfig.get();
+            Debug.logMessage("§e--- Tungsten Settings ---");
+            Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
+            for (Field f : fields) {
+                try {
+                    Debug.logMessage(f.getName() + " = " + f.get(c));
+                } catch (Exception ignored) {}
+            }
+            return SINGLE_SUCCESS;
+        });
 
-		// ;settings reload
-		builder.then(literal("reload").executes(context -> {
-			TungstenConfig.load();
-			Debug.logMessage("§aConfig reloaded from tungsten.json");
-			return SINGLE_SUCCESS;
-		}));
+        // ;settings reload
+        builder.then(literal("reload").executes(context -> {
+            TungstenConfig.load();
+            Debug.logMessage("§aConfig reloaded from tungsten.json");
+            return SINGLE_SUCCESS;
+        }));
 
-		// ;settings ignoreFallDamage [true/false]
-		builder.then(literal("ignoreFallDamage")
-			.executes(context -> {
-				Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
-				return SINGLE_SUCCESS;
-			})
-			.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
-				TungstenModDataContainer.ignoreFallDamage = BoolArgumentType.getBool(context, "enabled");
-				TungstenConfig.save();
-				Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
-				return SINGLE_SUCCESS;
-			})));
+        // ;settings ignoreFallDamage [true/false] — legacy, not in TungstenConfig
+        builder.then(literal("ignoreFallDamage")
+            .executes(context -> {
+                Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
+                return SINGLE_SUCCESS;
+            })
+            .then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
+                TungstenModDataContainer.ignoreFallDamage = BoolArgumentType.getBool(context, "enabled");
+                Debug.logMessage("ignoreFallDamage = " + TungstenModDataContainer.ignoreFallDamage);
+                return SINGLE_SUCCESS;
+            })));
 
-		// ;settings driftThreshold [0.5]
-		builder.then(literal("driftThreshold")
-			.executes(context -> {
-				Debug.logMessage("driftThreshold = " + TungstenConfig.get().driftThreshold);
-				return SINGLE_SUCCESS;
-			})
-			.then(argument("blocks", DoubleArgumentType.doubleArg(0.0, 10.0)).executes(context -> {
-				TungstenConfig.get().driftThreshold = DoubleArgumentType.getDouble(context, "blocks");
-				TungstenConfig.save();
-				Debug.logMessage("driftThreshold = " + TungstenConfig.get().driftThreshold);
-				return SINGLE_SUCCESS;
-			})));
+        // auto-generate commands for each TungstenConfig field
+        for (Field f : fields) {
+            registerField(builder, f);
+        }
+    }
 
-		// ;settings airStrafe [1.0]
-		builder.then(literal("airStrafe")
-			.executes(context -> {
-				Debug.logMessage("airStrafeMultiplier = " + TungstenConfig.get().airStrafeMultiplier);
-				return SINGLE_SUCCESS;
-			})
-			.then(argument("multiplier", FloatArgumentType.floatArg(0.1F, 10.0F)).executes(context -> {
-				TungstenConfig.get().airStrafeMultiplier = FloatArgumentType.getFloat(context, "multiplier");
-				TungstenConfig.save();
-				Debug.logMessage("airStrafeMultiplier = " + TungstenConfig.get().airStrafeMultiplier);
-				return SINGLE_SUCCESS;
-			})));
+    private void registerField(LiteralArgumentBuilder<CommandSource> builder, Field field) {
+        String name = field.getName();
+        Class<?> type = field.getType();
 
-		// ;settings parallelPath [true/false]
-		builder.then(literal("parallelPath")
-			.executes(context -> {
-				Debug.logMessage("parallelPathfinding = " + TungstenConfig.get().parallelPathfinding);
-				return SINGLE_SUCCESS;
-			})
-			.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
-				TungstenConfig.get().parallelPathfinding = BoolArgumentType.getBool(context, "enabled");
-				TungstenConfig.save();
-				Debug.logMessage("parallelPathfinding = " + TungstenConfig.get().parallelPathfinding);
-				return SINGLE_SUCCESS;
-			})));
+        // ;settings <name> — show value
+        var sub = literal(name).executes(context -> {
+            try {
+                Debug.logMessage(name + " = " + field.get(TungstenConfig.get()));
+            } catch (Exception e) {
+                Debug.logMessage("§cError reading " + name);
+            }
+            return SINGLE_SUCCESS;
+        });
 
-		// ;settings closedLoop [0.4]
-		builder.then(literal("closedLoop")
-			.executes(context -> {
-				Debug.logMessage("closedLoopStrength = " + TungstenConfig.get().closedLoopStrength);
-				return SINGLE_SUCCESS;
-			})
-			.then(argument("strength", FloatArgumentType.floatArg(0.0F, 1.0F)).executes(context -> {
-				TungstenConfig.get().closedLoopStrength = FloatArgumentType.getFloat(context, "strength");
-				TungstenConfig.save();
-				Debug.logMessage("closedLoopStrength = " + TungstenConfig.get().closedLoopStrength);
-				return SINGLE_SUCCESS;
-			})));
+        // ;settings <name> <value> — set value
+        RequiredArgumentBuilder<CommandSource, ?> arg = createArgument(type);
+        if (arg != null) {
+            sub.then(arg.executes(context -> {
+                try {
+                    Object value = getArgumentValue(context, "value", type);
+                    field.set(TungstenConfig.get(), value);
+                    TungstenConfig.save();
+                    Debug.logMessage(name + " = " + value);
+                } catch (Exception e) {
+                    Debug.logMessage("§cError setting " + name + ": " + e.getMessage());
+                }
+                return SINGLE_SUCCESS;
+            }));
+        }
 
-		// ;settings mismatchThreshold [0.000001]
-		builder.then(literal("mismatchThreshold")
-			.executes(context -> {
-				Debug.logMessage("mismatchLogThreshold = " + TungstenConfig.get().mismatchLogThreshold);
-				return SINGLE_SUCCESS;
-			})
-			.then(argument("value", DoubleArgumentType.doubleArg(0.0, 1.0)).executes(context -> {
-				TungstenConfig.get().mismatchLogThreshold = DoubleArgumentType.getDouble(context, "value");
-				TungstenConfig.save();
-				Debug.logMessage("mismatchLogThreshold = " + TungstenConfig.get().mismatchLogThreshold);
-				return SINGLE_SUCCESS;
-			})));
+        builder.then(sub);
+    }
 
-		// ;settings enableLeap [true/false]
-		builder.then(literal("enableLeap")
-			.executes(context -> {
-				Debug.logMessage("enableLeap = " + TungstenConfig.get().enableLeap);
-				return SINGLE_SUCCESS;
-			})
-			.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
-				TungstenConfig.get().enableLeap = BoolArgumentType.getBool(context, "enabled");
-				TungstenConfig.save();
-				Debug.logMessage("enableLeap = " + TungstenConfig.get().enableLeap);
-				return SINGLE_SUCCESS;
-			})));
+    private static RequiredArgumentBuilder<CommandSource, ?> createArgument(Class<?> type) {
+        if (type == boolean.class) {
+            return argument("value", BoolArgumentType.bool());
+        } else if (type == double.class) {
+            return argument("value", DoubleArgumentType.doubleArg());
+        } else if (type == float.class) {
+            return argument("value", FloatArgumentType.floatArg());
+        } else if (type == int.class) {
+            return argument("value", IntegerArgumentType.integer());
+        }
+        return null;
+    }
 
-		// ;settings enableTrailing [true/false]
-		builder.then(literal("enableTrailing")
-			.executes(context -> {
-				Debug.logMessage("enableTrailing = " + TungstenConfig.get().enableTrailing);
-				return SINGLE_SUCCESS;
-			})
-			.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
-				TungstenConfig.get().enableTrailing = BoolArgumentType.getBool(context, "enabled");
-				TungstenConfig.save();
-				Debug.logMessage("enableTrailing = " + TungstenConfig.get().enableTrailing);
-				return SINGLE_SUCCESS;
-			})));
+    private static Object getArgumentValue(
+            com.mojang.brigadier.context.CommandContext<CommandSource> context,
+            String name, Class<?> type) {
+        if (type == boolean.class) return BoolArgumentType.getBool(context, name);
+        if (type == double.class) return DoubleArgumentType.getDouble(context, name);
+        if (type == float.class) return FloatArgumentType.getFloat(context, name);
+        if (type == int.class) return IntegerArgumentType.getInteger(context, name);
+        throw new IllegalArgumentException("Unsupported type: " + type);
+    }
 
-		// ;settings debugTime [true/false]
-		builder.then(literal("debugTime")
-			.executes(context -> {
-				Debug.logMessage("debugTime = " + TungstenConfig.get().debugTime);
-				return SINGLE_SUCCESS;
-			})
-			.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
-				TungstenConfig.get().debugTime = BoolArgumentType.getBool(context, "enabled");
-				TungstenConfig.save();
-				Debug.logMessage("debugTime = " + TungstenConfig.get().debugTime);
-				return SINGLE_SUCCESS;
-			})));
-
-		// ;settings verboseDebug [true/false]
-		builder.then(literal("verboseDebug")
-			.executes(context -> {
-				Debug.logMessage("verboseDebugLogging = " + TungstenConfig.get().verboseDebugLogging);
-				return SINGLE_SUCCESS;
-			})
-			.then(argument("enabled", BoolArgumentType.bool()).executes(context -> {
-				TungstenConfig.get().verboseDebugLogging = BoolArgumentType.getBool(context, "enabled");
-				TungstenConfig.save();
-				Debug.logMessage("verboseDebugLogging = " + TungstenConfig.get().verboseDebugLogging);
-				return SINGLE_SUCCESS;
-			})));
-	}
+    private static List<Field> getConfigFields() {
+        List<Field> result = new ArrayList<>();
+        for (Field f : TungstenConfig.class.getDeclaredFields()) {
+            if (Modifier.isPublic(f.getModifiers())
+                    && !Modifier.isStatic(f.getModifiers())
+                    && !Modifier.isFinal(f.getModifiers())) {
+                result.add(f);
+            }
+        }
+        return result;
+    }
 }
