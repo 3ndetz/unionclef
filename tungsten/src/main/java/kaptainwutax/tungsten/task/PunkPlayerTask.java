@@ -74,7 +74,8 @@ public class PunkPlayerTask {
         if (mode == Mode.APPROACH && dist < COMBAT_RANGE && hasLOS) {
             enterCombat();
         } else if (mode == Mode.COMBAT && (dist > APPROACH_RESUME
-                || CombatController.triggerBot.hasNoProgress(100))) {
+                || (CombatController.triggerBot.hasNoProgress(100)
+                    && CombatController.safety.getStage() != kaptainwutax.tungsten.combat.CombatStage.ESCAPE))) {
             // too far OR no hits for 5 sec → re-approach with A* pathfinding
             enterApproach();
         }
