@@ -4,7 +4,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.butler.ButlerConfig;
 import adris.altoclef.tasks.container.LootContainerTask;
-import adris.altoclef.tasks.entity.KillPlayerTask;
+import adris.altoclef.tasks.entity.TungstenPunkTask;
 import adris.altoclef.tasks.entity.ShiftEntityTask;
 import adris.altoclef.tasks.entity.ShootArrowSimpleProjectileTask;
 import adris.altoclef.tasks.misc.EquipArmorTask;
@@ -270,7 +270,7 @@ public class SkyWarsTask extends Task {
         if (player.isInvulnerable() || player.isInCreativeMode() || player.isSneaking()) {
             return new ShiftEntityTask(player, ShiftEntityTask.ShiftType.Forward);
         } else {
-            return new KillPlayerTask(player.getName().getString());
+            return new TungstenPunkTask(player.getName().getString());
         }
     }
 

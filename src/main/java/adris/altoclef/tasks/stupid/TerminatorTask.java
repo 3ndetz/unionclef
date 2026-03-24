@@ -7,7 +7,7 @@ import adris.altoclef.tasks.construction.PlaceBlockTask;
 import adris.altoclef.tasks.construction.PlaceStructureBlockTask;
 import adris.altoclef.tasks.container.SmeltInFurnaceTask;
 import adris.altoclef.tasks.entity.DoToClosestEntityTask;
-import adris.altoclef.tasks.entity.KillPlayerTask;
+import adris.altoclef.tasks.entity.TungstenPunkTask;
 import adris.altoclef.tasks.misc.EquipArmorTask;
 import adris.altoclef.tasks.movement.RunAwayFromEntitiesTask;
 import adris.altoclef.tasks.movement.SearchChunksExploreTask;
@@ -140,7 +140,7 @@ public class TerminatorTask extends Task {
                         entity -> {
                             if (entity instanceof PlayerEntity) {
                                 tryDoFunnyMessageTo(mod, (PlayerEntity) entity);
-                                return new KillPlayerTask(entity.getName().getString());
+                                return new TungstenPunkTask(entity.getName().getString());
                             }
                             Debug.logWarning("This should never happen.");
                             return _scanTask;

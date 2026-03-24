@@ -2,7 +2,7 @@ package adris.altoclef.tasks.multiplayer.minigames;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.butler.ButlerConfig;
-import adris.altoclef.tasks.entity.KillPlayerTask;
+import adris.altoclef.tasks.entity.TungstenPunkTask;
 import adris.altoclef.tasks.entity.ShootArrowSimpleProjectileTask;
 import adris.altoclef.tasks.movement.*;
 import adris.altoclef.tasksystem.Task;
@@ -218,7 +218,7 @@ public class MurderMysteryTask extends Task {
                     mod.getSlotHandler().forceDeequip(stack -> stack.getItem() instanceof ShearsItem || stack.getItem() instanceof SwordItem);
                 }
                 if (_change_chain_priority) mod.getBehaviour().setUserTaskChainPriority(80);
-                return new KillPlayerTask(entity.getName().getString());
+                return new TungstenPunkTask(entity.getName().getString());
             }
 
             if (LookHelper.cleanLineOfSight(entity.getPos(), dist)) {

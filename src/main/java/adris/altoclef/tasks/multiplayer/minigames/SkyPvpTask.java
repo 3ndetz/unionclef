@@ -2,7 +2,7 @@ package adris.altoclef.tasks.multiplayer.minigames;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
-import adris.altoclef.tasks.entity.KillPlayerTask;
+import adris.altoclef.tasks.entity.TungstenPunkTask;
 import adris.altoclef.tasks.misc.EquipArmorTask;
 import adris.altoclef.tasks.movement.PickupDroppedItemTask;
 import adris.altoclef.tasks.movement.TimeoutWanderTask;
@@ -162,7 +162,7 @@ public class SkyPvpTask extends Task {
             if (_currentKillTask == null || !_currentKillTask.isActive()
                     || _currentKillTask.isFinished() || !name.equals(_lastTargetName)) {
                 _lastTargetName = name;
-                _currentKillTask = new KillPlayerTask(name);
+                _currentKillTask = new TungstenPunkTask(name);
             }
             setDebugState("Attacking: " + name);
             return _currentKillTask;

@@ -48,8 +48,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Difficulty;
 
 
-import kaptainwutax.tungsten.task.PunkPlayerTask;
-
 import java.util.*;
 
 
@@ -320,18 +318,11 @@ public class MobDefenseChain extends SingleTaskChain {
         }
 
         // Player threat: attack players marked for attack
-        // If tungsten's PunkPlayerTask is already handling this target, let it — don't conflict
         Optional<Entity> toAttackPlayer = getAttackPlayer(mod);
         if (toAttackPlayer.isPresent() && toAttackPlayer.get() instanceof PlayerEntity player) {
-            String threatName = player.getName().getString();
-            if (PunkPlayerTask.isActive() && threatName.equalsIgnoreCase(PunkPlayerTask.getTargetName())) {
-                // tungsten already fighting this player — skip altoclef combat
-                _killTask = null;
-            } else {
-                _killTask = new CombatTask(threatName, false, true);
-                setTask(_killTask);
-                return 65;
-            }
+            _killTask = new CombatTask(player.getName().getString(), false, true);
+            setTask(_killTask);
+            return 65;
         } else {
             _killTask = null;
         }

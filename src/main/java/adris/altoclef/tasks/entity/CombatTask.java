@@ -241,7 +241,7 @@ public class CombatTask extends Task {
                             _blacklistDuration.remove(name);
                         }
 
-                        return new KillPlayerTask(name);
+                        return new TungstenPunkTask(name);
                     }
                     return null;
                 },

@@ -8,7 +8,7 @@ import adris.altoclef.eventbus.events.multiplayer.RejoinEvent;
 import adris.altoclef.tasks.construction.DestroyBlockTask;
 import adris.altoclef.tasks.construction.PlaceBlockTask;
 import adris.altoclef.tasks.entity.DoToClosestEntityTask;
-import adris.altoclef.tasks.entity.KillPlayerTask;
+import adris.altoclef.tasks.entity.TungstenPunkTask;
 import adris.altoclef.tasks.entity.ShootArrowSimpleProjectileTask;
 import adris.altoclef.tasks.movement.GetCloseToBlockTask;
 import adris.altoclef.tasks.movement.GetToEntityTask;
@@ -240,7 +240,7 @@ public class BedWarsTask extends Task {
             if (closestEnemyNearBed.isPresent()) {
                 Entity enemy = closestEnemyNearBed.get();
                 setDebugState("PROTECTING BED FROM " + enemy.getName().getString());
-                return new KillPlayerTask(enemy.getName().getString());
+                return new TungstenPunkTask(enemy.getName().getString());
             }
         }
 
@@ -254,7 +254,7 @@ public class BedWarsTask extends Task {
             double range = mod.getPlayer().getPos().distanceTo(enemy.getPos());
             if (range <= 5) {
                 setDebugState("Self-defense: " + enemy.getName().getString());
-                return new KillPlayerTask(enemy.getName().getString());
+                return new TungstenPunkTask(enemy.getName().getString());
             }
         }
 
@@ -353,7 +353,7 @@ public class BedWarsTask extends Task {
             double range = mod.getPlayer().getPos().distanceTo(enemy.getPos());
             if (range <= 20) {
                 setDebugState("Attacking enemy: " + enemy.getName().getString());
-                return new KillPlayerTask(enemy.getName().getString());
+                return new TungstenPunkTask(enemy.getName().getString());
             } else {
                 boolean preferBow = ShootArrowSimpleProjectileTask.canUseRanged(mod, enemy)
                         && mod.getItemStorage().getItemCountInventoryOnly(ItemHelper.ARROWS) > 20;
