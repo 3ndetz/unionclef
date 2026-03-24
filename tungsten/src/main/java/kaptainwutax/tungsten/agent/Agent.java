@@ -491,7 +491,7 @@ public class Agent {
                 // which resyncs velocity and cancels any jump on the same tick.
                 // Suppress jump until hurtTicks expire (immunity frames).
                 boolean jumpSuppressed = TungstenConfig.get().predictDamageFromBlocks
-                        && this.hurtTicks > 0;
+                        && this.hurtTicks > 8;
                 if((this.onGround || bl) && this.jumpingCooldown == 0 && !jumpSuppressed) {
                     this.jump(world);
                     this.jumpingCooldown = 10;
