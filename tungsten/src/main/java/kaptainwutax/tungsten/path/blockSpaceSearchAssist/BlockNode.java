@@ -381,33 +381,31 @@ public class BlockNode {
             }
         });
 
-	    // Slime bounce shortcut: scan area below for slime blocks.
-	    // If found, generate nodes at bounce-reachable heights centered
-	    // on the slime position so A* can plan bounce routes in one step.
+	    // Slime bounce shortcut: find slime below, then scan for valid
+	    // landing platforms at bounce-reachable heights. Only adds nodes
+	    // where there's solid ground to stand on — no air nodes.
 	    if (!parent.wasOnSlime) {
-	        int[] slimeResult = findSlimeNearby(parent, player.getWorld(), 10, 3);
+	        int[] slimeResult = findSlimeNearby(parent, player.getWorld(), 10, 4);
 	        if (slimeResult != null) {
-	            int slimeX = slimeResult[0], slimeZ = slimeResult[1], fallDist = slimeResult[2];
+	            int fallDist = slimeResult[2];
 	            double bounceHeight = MovementHelper.getSlimeBounceHeight(fallDist);
-	            int bounceYMax = (int) Math.ceil(bounceHeight - fallDist);
-	            int bounceD = distanceWanted + 1;
-	            for (int py = 0; py <= bounceYMax; py++) {
-	                int nodeY = this.y + py;
-	                nodes.add(new BlockNode(slimeX, nodeY, slimeZ, goal, this,
-	                        ActionCosts.WALK_ONE_BLOCK_COST, this.player));
-	                for (int id = 1; id <= bounceD; id++) {
-	                    int bpx = id, bpz = 0;
-	                    int bdx = -1, bdz = 1;
-	                    int n = id * 4;
-	                    for (int i = 0; i < n; i++) {
-	                        if (bpx == id && bdx > 0) bdx = -1;
-	                        else if (bpx == -id && bdx < 0) bdx = 1;
-	                        if (bpz == id && bdz > 0) bdz = -1;
-	                        else if (bpz == -id && bdz < 0) bdz = 1;
-	                        bpx += bdx;
-	                        bpz += bdz;
-	                        nodes.add(new BlockNode(slimeX + bpx, nodeY, slimeZ + bpz, goal, this,
-	                                ActionCosts.WALK_ONE_BLOCK_COST, this.player));
+	            // horizontal reach: sprint speed ~5.8 b/s, bounce time ~sqrt(2*bounceHeight/g)*2
+	            int hReach = (int) Math.ceil(Math.sqrt(2.0 * bounceHeight / 32.656) * 5.8);
+	            int peakY = this.y - fallDist + (int) Math.ceil(bounceHeight);
+	            // scan for solid landing spots within reach at reachable heights
+	            for (int dy = -1; dy <= (peakY - this.y); dy++) {
+	                int checkY = this.y + dy;
+	                for (int dx = -hReach; dx <= hReach; dx++) {
+	                    for (int dz = -hReach; dz <= hReach; dz++) {
+	                        int nx = this.x + dx, nz = this.z + dz;
+	                        BlockPos belowPos = new BlockPos(nx, checkY - 1, nz);
+	                        BlockState belowState = player.getWorld().getBlockState(belowPos);
+	                        // must have solid ground below and air at feet
+	                        if (!belowState.isAir() && belowState.getFluidState().isEmpty()
+	                                && player.getWorld().getBlockState(new BlockPos(nx, checkY, nz)).isAir()) {
+	                            nodes.add(new BlockNode(nx, checkY, nz, goal, this,
+	                                    ActionCosts.WALK_ONE_BLOCK_COST, this.player));
+	                        }
 	                    }
 	                }
 	            }
