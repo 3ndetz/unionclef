@@ -26,6 +26,7 @@ import kaptainwutax.tungsten.path.specialMoves.ExitWaterMove;
 import kaptainwutax.tungsten.path.specialMoves.JumpToLadderMove;
 import kaptainwutax.tungsten.path.specialMoves.LongJump;
 import kaptainwutax.tungsten.path.specialMoves.RunToNode;
+import kaptainwutax.tungsten.path.specialMoves.SlimeBounceMove;
 import kaptainwutax.tungsten.path.specialMoves.SprintJumpMove;
 import kaptainwutax.tungsten.path.specialMoves.SwimmingMove;
 import kaptainwutax.tungsten.path.specialMoves.TurnACornerMove;
@@ -35,6 +36,7 @@ import kaptainwutax.tungsten.render.Color;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.IceBlock;
 import net.minecraft.block.LadderBlock;
+import net.minecraft.block.SlimeBlock;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
@@ -142,6 +144,10 @@ public class Node {
 		    if (nextBlockNode.isDoingLongJump(world) || world.getBlockState(nextBlockNode.getBlockPos()).getBlock() instanceof LadderBlock || nextBlockNode.previous != null && world.getBlockState(nextBlockNode.previous.getBlockPos()).getBlock() instanceof IceBlock) {
 		    	nodes.add(LongJump.generateMove(this, nextBlockNode));
 		    }
+	    }
+	    // Slime bounce: when on slime, generate a bounce trajectory toward target
+	    if (agent.onGround && world.getBlockState(agent.getBlockPos().down()).getBlock() instanceof SlimeBlock) {
+	    	nodes.add(SlimeBounceMove.generateMove(this, nextBlockNode));
 	    }
 	    if (!agent.touchingWater && BlockStateChecker.isAnyWater(nextBlockNode.getBlockState(world))) {
 	    	Node enterWaterAndSwimMove = EnterWaterAndSwimMove.generateMove(this, nextBlockNode);
