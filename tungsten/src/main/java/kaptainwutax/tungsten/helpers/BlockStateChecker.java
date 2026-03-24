@@ -6,6 +6,7 @@ import static kaptainwutax.tungsten.path.blockSpaceSearchAssist.Ternary.YES;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.Ternary;
 import net.minecraft.block.AirBlock;
+import net.minecraft.block.AnvilBlock;
 import net.minecraft.block.AzaleaBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -110,6 +111,10 @@ public class BlockStateChecker {
 	public static boolean isFenceOrWall(WorldView world, BlockPos pos) {
 	    Block block = world.getBlockState(pos).getBlock();
 	    return block instanceof FenceBlock || block instanceof WallBlock;
+	}
+
+	public static boolean isAnvil(WorldView world, BlockPos pos) {
+	    return world.getBlockState(pos).getBlock() instanceof AnvilBlock;
 	}
 
 	/**

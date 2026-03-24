@@ -102,6 +102,12 @@ public class TungstenConfig {
      *  collisions that the 1.21 client doesn't render. */
     public boolean avoidStuckFence = true;
 
+    /** Reject paths that approach anvils from the side.
+     *  On ViaVersion servers the anvil collision box may differ from
+     *  what the 1.21 client shows — side approach gets stuck.
+     *  Jumping on top of anvils is still allowed. */
+    public boolean avoidStuckAnvil = true;
+
     /** WindMouse gravity — pull toward target per render frame.
      *  Higher = faster convergence, lower = more human wobble. */
     public double combatWindMouseGravity = 2.0;

@@ -406,6 +406,11 @@ public class BlockNode {
 			return true;
 		}
 
+		// ViaVersion: reject nodes horizontally adjacent to anvils (collision differs on old servers)
+		if (TungstenConfig.get().avoidStuckAnvil && adjacentToAnvil(world, child)) {
+			return true;
+		}
+
 		// Specific block checks
 		if (childState.isOf(Blocks.LAVA))
 			return true;
@@ -562,6 +567,26 @@ public class BlockNode {
 		return false;
 	}
 	
+	/**
+	 * Checks if the child node is horizontally adjacent to an anvil at a Y level
+	 * where the anvil collision would block the player. Nodes directly above
+	 * the anvil (standing on top) are allowed.
+	 */
+	private static boolean adjacentToAnvil(WorldView world, BlockNode child) {
+		int cx = child.x, cy = child.y, cz = child.z;
+		// Check anvil at player body levels: cy (feet) and cy-1 (anvil below extends up)
+		for (int dy = -1; dy <= 0; dy++) {
+			int ay = cy + dy;
+			if (BlockStateChecker.isAnvil(world, new BlockPos(cx - 1, ay, cz))
+					|| BlockStateChecker.isAnvil(world, new BlockPos(cx + 1, ay, cz))
+					|| BlockStateChecker.isAnvil(world, new BlockPos(cx, ay, cz - 1))
+					|| BlockStateChecker.isAnvil(world, new BlockPos(cx, ay, cz + 1))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Checks if the path from this node to child crosses a connection bar
 	 * between two adjacent fence/wall blocks. On ViaVersion servers these bars
