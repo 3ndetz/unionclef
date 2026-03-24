@@ -90,6 +90,10 @@ public class TungstenConfig {
     /** Enable combat movement (legs: sprint-jump, chase, strafe). */
     public boolean combatMovementsEnabled = false;
 
+    /** Enable combat executor — pre-computes jump+turn+attack timeline via Agent sim.
+     *  Visualization only when false (shows planned arc). */
+    public boolean combatExecutorEnabled = false;
+
     /** Enable safety system (edge detection, anti-fall braking, escape jump). */
     public boolean combatSaverEnabled = true;
 

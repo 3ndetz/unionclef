@@ -44,6 +44,7 @@ public class SafetySystem {
 
     private final CombatPathfinder pathfinder = new CombatPathfinder();
     private final KnockbackEstimator kbEstimator = new KnockbackEstimator();
+    private final CombatExecutor executor = new CombatExecutor();
 
     private CombatStage stage = CombatStage.PURSUE;
     private CombatStage prevStage = null;
@@ -106,6 +107,9 @@ public class SafetySystem {
 
         // pathfinder updates every N ticks
         pathfinder.tick(player.getBlockPos(), target.getBlockPos(), enemyVelocity, world);
+
+        // combat executor: pre-compute jump+attack timeline
+        executor.tick(player, target, world);
     }
 
     // ── render update (~60 FPS): stage + decisions + viz ─────────────────────
@@ -381,6 +385,9 @@ public class SafetySystem {
 
         // combat paths visualization
         pathfinder.renderUpdate(tickDelta);
+
+        // executor: planned trajectory visualization
+        executor.renderUpdate();
     }
 
     // ── stage evaluation ─────────────────────────────────────────────────────
@@ -684,6 +691,7 @@ public class SafetySystem {
         braking = false;
         pathfinder.reset();
         kbEstimator.reset();
+        executor.reset();
         TungstenModRenderContainer.COMBAT_TRAJECTORY =
                 java.util.Collections.synchronizedCollection(new java.util.ArrayList<>());
     }
