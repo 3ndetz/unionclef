@@ -26,6 +26,7 @@ import net.minecraft.block.enums.BlockHalf;
 import net.minecraft.block.enums.SlabType;
 import net.minecraft.block.enums.WallShape;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.WorldView;
@@ -109,8 +110,8 @@ public class BlockStateChecker {
 	}
 
 	public static boolean isFenceOrWall(WorldView world, BlockPos pos) {
-	    Block block = world.getBlockState(pos).getBlock();
-	    return block instanceof FenceBlock || block instanceof WallBlock;
+	    BlockState state = world.getBlockState(pos);
+	    return state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS);
 	}
 
 	public static boolean isAnvil(WorldView world, BlockPos pos) {
