@@ -109,9 +109,12 @@ public class BlockStateChecker {
 	    return block instanceof FenceBlock;
 	}
 
+	/** Fence, wall, iron bars, glass pane — any block that forms
+	 *  thin connection bars to adjacent blocks of the same type. */
 	public static boolean isFenceOrWall(WorldView world, BlockPos pos) {
 	    BlockState state = world.getBlockState(pos);
-	    return state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS);
+	    return state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS)
+	            || state.getBlock() instanceof PaneBlock;
 	}
 
 	public static boolean isAnvil(WorldView world, BlockPos pos) {
