@@ -328,11 +328,11 @@ public class BlockNode {
 	    double g = 32.656;
 	    double v_sprint = 5.8;
 
-	    double yMax = (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y < 0)
+	    double yMax = (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y > 0)
 	        ? MovementHelper.getSlimeBounceHeight(parent.previous.y - parent.y) - 0.5
 	        : generateDeep ? 4 : 2;
 
-	    if (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y < 0) {
+	    if (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y > 0) {
 	    	TungstenModRenderContainer.BLOCK_PATH_RENDERER.add(new Cuboid(
 	                new Vec3d(parent.getBlockPos().getX(), parent.getBlockPos().getY(), parent.getBlockPos().getZ()),
 	                new Vec3d(0.2D, 0.2D, 0.2D), Color.GREEN));
@@ -715,7 +715,7 @@ public class BlockNode {
 			}
 		}
 
-		if (!wasOnSlime || this.previous == null || this.previous.y - this.y >= 0) {
+		if (!wasOnSlime || this.previous == null || this.previous.y - this.y <= 0) {
 			// Basic height and distance checks
 			if (heightDiff >= 2)
 				return true;
