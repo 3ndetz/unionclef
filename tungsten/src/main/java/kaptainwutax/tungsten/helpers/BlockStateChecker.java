@@ -3,6 +3,7 @@ package kaptainwutax.tungsten.helpers;
 import static kaptainwutax.tungsten.path.blockSpaceSearchAssist.Ternary.NO;
 import static kaptainwutax.tungsten.path.blockSpaceSearchAssist.Ternary.YES;
 
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.Ternary;
 import net.minecraft.block.AirBlock;
@@ -71,6 +72,14 @@ public class BlockStateChecker {
 	    BlockState state = world.getBlockState(pos);
 	    Block block = state.getBlock();
 
+	    // ViaVersion: any fence-like block with an adjacent fence-like neighbor
+	    // is considered connected regardless of client-side connection state.
+	    // The server may have connections the 1.21 client doesn't render.
+	    if (TungstenConfig.get().avoidStuckFence && isFenceLikeBlock(state)
+	            && hasFenceLikeNeighbor(world, pos)) {
+	        return true;
+	    }
+
 	    // Check for Fence connections
 	    if (block instanceof FenceBlock) {
 	        return isFenceConnected(state, world, pos);
@@ -87,6 +96,18 @@ public class BlockStateChecker {
 	    }
 
 	    return false;
+	}
+
+	private static boolean isFenceLikeBlock(BlockState state) {
+	    return state.isIn(BlockTags.FENCES) || state.isIn(BlockTags.WALLS)
+	            || state.getBlock() instanceof PaneBlock;
+	}
+
+	private static boolean hasFenceLikeNeighbor(WorldView world, BlockPos pos) {
+	    return isFenceLikeBlock(world.getBlockState(pos.north()))
+	        || isFenceLikeBlock(world.getBlockState(pos.south()))
+	        || isFenceLikeBlock(world.getBlockState(pos.east()))
+	        || isFenceLikeBlock(world.getBlockState(pos.west()));
 	}
 
 	/**
