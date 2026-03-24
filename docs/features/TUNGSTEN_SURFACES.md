@@ -110,6 +110,27 @@ Block-space has specific ladder distance/height rules.
 **Status:** ✅ Full swim physics: drag, fluid velocity, depth strider,
 dolphins grace. `SwimmingMove` handles pathfinding in water.
 
+### Scaffolding
+
+**Status:** ⚠️ Physics partial, block-space doesn't route through.
+
+**What works:**
+- Physics: scaffolding is in `BlockTags.CLIMBABLE` → climbing velocity
+  clamping works (Agent.java:1033). Sneak descent exception exists
+  (Agent.java:731 — velY not zeroed on scaffolding when sneaking).
+- `BlockShapeChecker` excludes scaffolding from "normal cube" so it's
+  not treated as a wall.
+
+**What doesn't work:**
+- Block-space has no scaffolding-specific node generation (unlike ladders
+  which have `ClimbALadderMove` and distance/height rules in `BlockNode`).
+- Bot won't plan routes UP or DOWN through scaffolding towers.
+
+**TODO:** Implement scaffolding pathfinding — needs block-space node
+generation similar to ladders, plus a ScaffoldingMove in physics pathfinder
+that handles the unique scaffolding mechanics (walk-in from the side,
+descend with sneak, horizontal walking on top).
+
 ### Lava
 
 **Status:** ❌ Physics exist (50% drag) but lava nodes are rejected
