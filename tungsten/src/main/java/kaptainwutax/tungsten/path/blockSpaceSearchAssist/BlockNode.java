@@ -401,11 +401,6 @@ public class BlockNode {
 		
 
 
-		// ViaVersion: reject paths crossing invisible fence/wall connection bars
-		if (TungstenConfig.get().avoidStuckFence && crossesFenceConnection(world, child)) {
-			return true;
-		}
-
 		// ViaVersion: reject nodes horizontally adjacent to anvils (collision differs on old servers)
 		if (TungstenConfig.get().avoidStuckAnvil && adjacentToAnvil(world, child)) {
 			return true;
@@ -585,93 +580,6 @@ public class BlockNode {
 			}
 		}
 		return false;
-	}
-
-	/**
-	 * Checks if the path from this node to child crosses a connection bar
-	 * between two adjacent fence/wall blocks. On ViaVersion servers these bars
-	 * may exist on the server but not render on the 1.21 client.
-	 */
-	private boolean crossesFenceConnection(WorldView world, BlockNode child) {
-		double p1x = this.x + 0.5, p1z = this.z + 0.5;
-		double p2x = child.x + 0.5, p2z = child.z + 0.5;
-
-		int minX = Math.min(this.x, child.x) - 1;
-		int maxX = Math.max(this.x, child.x) + 1;
-		int minZ = Math.min(this.z, child.z) - 1;
-		int maxZ = Math.max(this.z, child.z) + 1;
-		// fence collision is 1.5 blocks tall, player body is ~1.8
-		int minY = Math.min(this.y, child.y) - 1;
-		int maxY = Math.max(this.y, child.y) + 1;
-
-		for (int fy = minY; fy <= maxY; fy++) {
-			for (int fx = minX; fx <= maxX; fx++) {
-				for (int fz = minZ; fz <= maxZ; fz++) {
-					if (!BlockStateChecker.isFenceOrWall(world, new BlockPos(fx, fy, fz)))
-						continue;
-
-					// East neighbor → connection bar along X, blocks Z passage at Z=fz+0.5
-					if (BlockStateChecker.isFenceOrWall(world, new BlockPos(fx + 1, fy, fz))) {
-						if (segmentCrossesBar(p1x, p1z, p2x, p2z,
-								fz + 0.5, fx, fx + 2, true)) {
-							return true;
-						}
-					}
-					// South neighbor → connection bar along Z, blocks X passage at X=fx+0.5
-					if (BlockStateChecker.isFenceOrWall(world, new BlockPos(fx, fy, fz + 1))) {
-						if (segmentCrossesBar(p1x, p1z, p2x, p2z,
-								fx + 0.5, fz, fz + 2, false)) {
-							return true;
-						}
-					}
-				}
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Tests if a player-width line segment crosses a fence connection bar.
-	 *
-	 * @param x1, z1  segment start (player center)
-	 * @param x2, z2  segment end (player center)
-	 * @param barPos  bar position on the blocking axis (Z if zBar, X otherwise)
-	 * @param barMin  bar extent start on the other axis
-	 * @param barMax  bar extent end on the other axis
-	 * @param zBar    true → bar at Z=barPos blocking Z movement;
-	 *                false → bar at X=barPos blocking X movement
-	 */
-	private static boolean segmentCrossesBar(double x1, double z1, double x2, double z2,
-			double barPos, double barMin, double barMax, boolean zBar) {
-		// a-axis: the one the bar blocks, b-axis: along the bar
-		double a1 = zBar ? z1 : x1;
-		double a2 = zBar ? z2 : x2;
-		double b1 = zBar ? x1 : z1;
-		double b2 = zBar ? x2 : z2;
-
-		double margin = 0.3; // half player width
-
-		double diff1 = a1 - barPos;
-		double diff2 = a2 - barPos;
-
-		if (diff1 * diff2 > 0) return false; // both on same side, no crossing
-
-		if (Math.abs(a2 - a1) < 1e-9) {
-			// path parallel to bar — moving along it, not crossing
-			return false;
-		}
-
-		// find where the path crosses the bar line
-		double t = (barPos - a1) / (a2 - a1);
-
-		// allow approaching the bar (child lands on it, t≈1) so the node is
-		// reachable — from there only parallel moves are valid (handled above).
-		// Do NOT allow t≈0 (start on bar going through) — forces east/west escape.
-		if (t > 0.95) return false;
-
-		double crossB = b1 + t * (b2 - b1);
-
-		return crossB + margin >= barMin && crossB - margin <= barMax;
 	}
 
 	/**
