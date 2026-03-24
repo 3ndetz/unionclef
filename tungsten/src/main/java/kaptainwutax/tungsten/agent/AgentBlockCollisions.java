@@ -33,9 +33,10 @@ public class AgentBlockCollisions extends AbstractIterator<VoxelShape> {
     private long chunkPos;
     public int scannedBlocks;
 
-    /** Intersection of both anvil rotations — center square safe for standing. */
+    /** Intersection of both anvil rotations — narrow center, no edges.
+     *  0.5 wide is enough for 0.6-wide player to stand at center only. */
     private static final VoxelShape ANVIL_SAFE_SHAPE =
-            VoxelShapes.cuboid(0.125, 0, 0.125, 0.875, 1.0, 0.875);
+            VoxelShapes.cuboid(0.25, 0, 0.25, 0.75, 1.0, 0.75);
 
     public AgentBlockCollisions(CollisionView world, Agent agent, Box box) {
         this(world, agent, box, false);
