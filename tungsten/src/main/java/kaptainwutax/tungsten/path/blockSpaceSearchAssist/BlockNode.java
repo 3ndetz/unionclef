@@ -666,6 +666,11 @@ public class BlockNode {
 
 		// find where the path crosses the bar line
 		double t = (barPos - a1) / (a2 - a1);
+
+		// allow segments that start or end at the bar (player already there,
+		// moving away) — only reject true crossings through the interior
+		if (t < 0.05 || t > 0.95) return false;
+
 		double crossB = b1 + t * (b2 - b1);
 
 		return crossB + margin >= barMin && crossB - margin <= barMax;
