@@ -106,6 +106,7 @@ public class Agent {
     public EntityPose pose;
     public boolean inSneakingPose;
     public boolean isDamaged = false;
+    public int hurtTicks = 0;
     public boolean usingItem;
 
     public float sidewaysSpeed;
@@ -205,7 +206,7 @@ public class Agent {
             a.keyJump, a.keySneak, a.keySprint);
 
         a.pose = this.pose; a.inSneakingPose = this.inSneakingPose;
-        a.isDamaged = this.isDamaged; a.usingItem = this.usingItem;
+        a.isDamaged = this.isDamaged; a.hurtTicks = this.hurtTicks; a.usingItem = this.usingItem;
         a.sidewaysSpeed = this.sidewaysSpeed; a.upwardSpeed = this.upwardSpeed;
         a.forwardSpeed = this.forwardSpeed;
         a.yaw = this.yaw; a.pitch = this.pitch;
@@ -256,6 +257,11 @@ public class Agent {
     }
 
     private void tickLiving(WorldView world) {
+        // Track hurt ticks from block damage (cactus, fire, etc.)
+        if (this.hurtTicks > 0) {
+            this.hurtTicks--;
+        }
+
         this.baseTickLiving(world);
         //more sleep stuff
         this.tickMovementClientPlayer(world);
@@ -831,7 +837,9 @@ public class Agent {
 
         if(this.onGround && !this.input.playerInput.sneak()) {
             if(block instanceof MagmaBlock) {
-                //damage the entity
+                if (TungstenConfig.get().predictDamageFromBlocks) {
+                    this.hurtTicks = 10; this.isDamaged = true;
+                }
             } else if(block instanceof SlimeBlock) {
                 double d = Math.abs(this.velY);
 
@@ -1191,7 +1199,9 @@ public class Agent {
                         BlockState state = world.getBlockState(pos);
 
                         if(state.getBlock() instanceof AbstractFireBlock) {
-                            //damage the entity
+                            if (TungstenConfig.get().predictDamageFromBlocks) {
+                                this.hurtTicks = 10; this.isDamaged = true;
+                            }
                         } else if(state.getBlock() instanceof AbstractPressurePlateBlock) {
                             //change block state
                         } else if(state.getBlock() instanceof BubbleColumnBlock) {
@@ -1205,11 +1215,13 @@ public class Agent {
                                 this.fallDistance = 0.0F;
                             }
                         } else if(state.getBlock() instanceof CactusBlock) {
-                            //damage the entity
+                            if (TungstenConfig.get().predictDamageFromBlocks) {
+                                this.hurtTicks = 10; this.isDamaged = true;
+                            }
                         } else if(state.getBlock() instanceof CampfireBlock) {
-                            //damage the entity
-                        } else if(state.getBlock() instanceof CampfireBlock) {
-                            //damage the entity
+                            if (TungstenConfig.get().predictDamageFromBlocks) {
+                                this.hurtTicks = 10; this.isDamaged = true;
+                            }
                         } else if(state.getBlock() instanceof CauldronBlock) {
                             //extinguish the entity
                         } else if(state.getBlock() instanceof CobwebBlock) {
@@ -1232,11 +1244,15 @@ public class Agent {
                             //eh?
                         } else if(state.getBlock() instanceof SweetBerryBushBlock) {
                             this.mulX = 0.8f; this.mulY = 0.75D; this.mulZ = 0.8F;
-                            //damage the entity
+                            if (TungstenConfig.get().predictDamageFromBlocks) {
+                                this.hurtTicks = 10; this.isDamaged = true;
+                            }
                         } else if(state.getBlock() instanceof TripwireBlock) {
                             //change block state
                         } else if(state.getBlock() instanceof WitherRoseBlock) {
-                            //damage the entity
+                            if (TungstenConfig.get().predictDamageFromBlocks) {
+                                this.hurtTicks = 10; this.isDamaged = true;
+                            }
                         }
                     }
                 }

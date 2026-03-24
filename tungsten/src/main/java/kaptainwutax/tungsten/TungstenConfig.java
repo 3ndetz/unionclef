@@ -108,6 +108,11 @@ public class TungstenConfig {
      *  Jumping on top of anvils is still allowed. */
     public boolean avoidStuckAnvil = true;
 
+    /** Simulate velocity drag when touching damage blocks (cactus, fire,
+     *  berry bush, etc.). Vanilla applies hurtTicks=10 which drags XZ
+     *  velocity, affecting jump trajectories near these blocks. */
+    public boolean predictDamageFromBlocks = true;
+
     /** WindMouse gravity — pull toward target per render frame.
      *  Higher = faster convergence, lower = more human wobble. */
     public double combatWindMouseGravity = 2.0;
