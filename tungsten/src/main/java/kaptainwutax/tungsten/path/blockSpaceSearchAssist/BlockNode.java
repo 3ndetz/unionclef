@@ -664,9 +664,10 @@ public class BlockNode {
 		// find where the path crosses the bar line
 		double t = (barPos - a1) / (a2 - a1);
 
-		// allow segments that start or end at the bar (player already there,
-		// moving away) — only reject true crossings through the interior
-		if (t < 0.05 || t > 0.95) return false;
+		// allow approaching the bar (child lands on it, t≈1) so the node is
+		// reachable — from there only parallel moves are valid (handled above).
+		// Do NOT allow t≈0 (start on bar going through) — forces east/west escape.
+		if (t > 0.95) return false;
 
 		double crossB = b1 + t * (b2 - b1);
 
