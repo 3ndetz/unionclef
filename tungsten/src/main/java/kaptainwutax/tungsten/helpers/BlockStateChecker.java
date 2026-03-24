@@ -107,6 +107,11 @@ public class BlockStateChecker {
 	    return block instanceof FenceBlock;
 	}
 
+	public static boolean isFenceOrWall(WorldView world, BlockPos pos) {
+	    Block block = world.getBlockState(pos).getBlock();
+	    return block instanceof FenceBlock || block instanceof WallBlock;
+	}
+
 	/**
      * Checks if a wall block is connected to anything.
      * 
