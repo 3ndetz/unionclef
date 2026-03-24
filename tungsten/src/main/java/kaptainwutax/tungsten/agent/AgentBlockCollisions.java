@@ -22,6 +22,8 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.CollisionView;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayDeque;
+
 public class AgentBlockCollisions extends AbstractIterator<VoxelShape> {
 
     private final Box box;
@@ -36,11 +38,8 @@ public class AgentBlockCollisions extends AbstractIterator<VoxelShape> {
     private long chunkPos;
     public int scannedBlocks;
 
-    // Fence connection bar shapes (block-local coords, 1.5 blocks tall)
-    private static final VoxelShape CONN_NORTH = VoxelShapes.cuboid(0.375, 0, 0,     0.625, 1.5, 0.5);
-    private static final VoxelShape CONN_SOUTH = VoxelShapes.cuboid(0.375, 0, 0.5,   0.625, 1.5, 1.0);
-    private static final VoxelShape CONN_EAST  = VoxelShapes.cuboid(0.5,   0, 0.375, 1.0,   1.5, 0.625);
-    private static final VoxelShape CONN_WEST  = VoxelShapes.cuboid(0,     0, 0.375, 0.5,   1.5, 0.625);
+    /** Buffered virtual connection shapes to return before resuming iteration. */
+    private final ArrayDeque<VoxelShape> pendingShapes = new ArrayDeque<>(4);
 
     public AgentBlockCollisions(CollisionView world, Agent agent, Box box) {
         this(world, agent, box, false);
@@ -84,33 +83,91 @@ public class AgentBlockCollisions extends AbstractIterator<VoxelShape> {
     }
 
     /**
-     * For fence/wall/pane blocks, add connection bars to all adjacent
-     * fence-like neighbors regardless of client-side connection state.
-     * On ViaVersion servers the real connections may differ.
+     * Queue virtual connection bar shapes for a fence-like block.
+     * No VoxelShapes.union — just cheap cuboid creation + box intersection.
      */
-    private VoxelShape withFenceConnections(VoxelShape original, int x, int y, int z) {
-        VoxelShape result = original;
+    private void enqueueFenceConnections(int bx, int by, int bz) {
+        // North (Z-): bar from center to Z=0 edge
+        enqueueIfNeighborFence(bx, by, bz, 0.375, 0, 0.625, 0.5, 0, -1);
+        // South (Z+): bar from center to Z=1 edge
+        enqueueIfNeighborFence(bx, by, bz, 0.375, 0.5, 0.625, 1.0, 0, 1);
+        // East (X+): bar from center to X=1 edge
+        enqueueIfNeighborFence(bx, by, bz, 0.5, 0.375, 1.0, 0.625, 1, 0);
+        // West (X-): bar from center to X=0 edge
+        enqueueIfNeighborFence(bx, by, bz, 0, 0.375, 0.5, 0.625, -1, 0);
+    }
 
-        neighborPos.set(x, y, z - 1);
-        if (isFenceLike(world.getBlockState(neighborPos)))
-            result = VoxelShapes.union(result, CONN_NORTH);
+    private void enqueueIfNeighborFence(int bx, int by, int bz,
+            double lMinX, double lMinZ, double lMaxX, double lMaxZ,
+            int dx, int dz) {
+        neighborPos.set(bx + dx, by, bz + dz);
+        if (!isFenceLike(world.getBlockState(neighborPos))) return;
 
-        neighborPos.set(x, y, z + 1);
-        if (isFenceLike(world.getBlockState(neighborPos)))
-            result = VoxelShapes.union(result, CONN_SOUTH);
+        double minX = bx + lMinX, maxX = bx + lMaxX;
+        double minY = by, maxY = by + 1.5;
+        double minZ = bz + lMinZ, maxZ = bz + lMaxZ;
 
-        neighborPos.set(x + 1, y, z);
-        if (isFenceLike(world.getBlockState(neighborPos)))
-            result = VoxelShapes.union(result, CONN_EAST);
+        if (!this.box.intersects(minX, minY, minZ, maxX, maxY, maxZ)) return;
 
-        neighborPos.set(x - 1, y, z);
-        if (isFenceLike(world.getBlockState(neighborPos)))
-            result = VoxelShapes.union(result, CONN_WEST);
-
-        return result;
+        pendingShapes.add(VoxelShapes.cuboid(minX, minY, minZ, maxX, maxY, maxZ));
     }
 
     protected VoxelShape computeNext() {
+        // drain buffered virtual connection shapes first
+        if (!pendingShapes.isEmpty()) {
+            return pendingShapes.poll();
+        }
+
+//        while(true) {
+//            if (this.blockIterator.step()) {
+//                int i = this.blockIterator.getX();
+//                int j = this.blockIterator.getY();
+//                int k = this.blockIterator.getZ();
+//                int l = this.blockIterator.getEdgeCoordinatesCount();
+//
+//                if(l == 3) {
+//                    continue;
+//                }
+//
+//                /*
+//                BlockView blockView = this.getChunk(i, k);
+//
+//                if(blockView == null) {
+//                    continue;
+//                }*/
+//
+//                BlockView blockView = this.world;
+//
+//                this.pos.set(i, j, k);
+//                BlockState blockState = blockView.getBlockState(this.pos);
+//                this.scannedBlocks++;
+//
+//                if(this.forEntity && !blockState.shouldSuffocate(blockView, this.pos) || l == 1 && !blockState.exceedsCube()
+//                    || l == 2 && !blockState.isOf(Blocks.MOVING_PISTON)) {
+//                    continue;
+//                }
+//
+//                VoxelShape voxelShape = blockState.getCollisionShape(this.world, this.pos, this.context);
+//
+//                if(voxelShape == VoxelShapes.fullCube()) {
+//                    if(!this.box.intersects((double)i, (double)j, (double)k, (double)i + 1.0D, (double)j + 1.0D, (double)k + 1.0D)) {
+//                        continue;
+//                    }
+//
+//                    return voxelShape.offset((double)i, (double)j, (double)k);
+//                }
+//
+//                VoxelShape voxelShape2 = voxelShape.offset((double)i, (double)j, (double)k);
+//
+//                if(!VoxelShapes.matchesAnywhere(voxelShape2, this.boxShape, BooleanBiFunction.AND)) {
+//                    continue;
+//                }
+//
+//                return voxelShape2;
+//            }
+//
+//            return this.endOfData();
+//        }
     	while (this.blockIterator.step()) {
 			int i = this.blockIterator.getX();
 			int j = this.blockIterator.getY();
@@ -121,6 +178,14 @@ public class AgentBlockCollisions extends AbstractIterator<VoxelShape> {
 				if (blockView != null) {
 					this.pos.set(i, j, k);
 					BlockState blockState = blockView.getBlockState(this.pos);
+
+					// ViaVersion: queue virtual fence connections BEFORE the
+					// edge/suffocate filter — fences at scan edges (l==1,
+					// !exceedsCube) would otherwise be skipped entirely.
+					if (TungstenConfig.get().avoidStuckFence && isFenceLike(blockState)) {
+						enqueueFenceConnections(i, j, k);
+					}
+
 					if ((!this.forEntity || blockState.shouldSuffocate(blockView, this.pos))
 						&& (l != 1 || blockState.exceedsCube())
 						&& (l != 2 || blockState.isOf(Blocks.MOVING_PISTON))) {
@@ -130,11 +195,6 @@ public class AgentBlockCollisions extends AbstractIterator<VoxelShape> {
 						if (TungstenConfig.get().avoidStuckAnvil
 								&& blockState.getBlock() instanceof AnvilBlock) {
 							voxelShape = VoxelShapes.fullCube();
-						}
-
-						// ViaVersion: fence/wall/pane → add connection bars to all adjacent fence-like blocks
-						if (TungstenConfig.get().avoidStuckFence && isFenceLike(blockState)) {
-							voxelShape = withFenceConnections(voxelShape, i, j, k);
 						}
 
 						if (voxelShape == VoxelShapes.fullCube()) {
@@ -150,9 +210,15 @@ public class AgentBlockCollisions extends AbstractIterator<VoxelShape> {
 					}
 				}
 			}
+
+			// drain pending virtual shapes after each block
+			if (!pendingShapes.isEmpty()) {
+				return pendingShapes.poll();
+			}
 		}
 
 		return this.endOfData();
     }
 
 }
+

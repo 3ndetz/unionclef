@@ -657,11 +657,8 @@ public class BlockNode {
 		if (diff1 * diff2 > 0) return false; // both on same side, no crossing
 
 		if (Math.abs(a2 - a1) < 1e-9) {
-			// path parallel to bar — blocked only if right on it
-			if (Math.abs(diff1) > margin) return false;
-			double minB = Math.min(b1, b2) - margin;
-			double maxB = Math.max(b1, b2) + margin;
-			return maxB >= barMin && minB <= barMax;
+			// path parallel to bar — moving along it, not crossing
+			return false;
 		}
 
 		// find where the path crosses the bar line
