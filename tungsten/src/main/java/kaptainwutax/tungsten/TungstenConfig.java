@@ -97,6 +97,11 @@ public class TungstenConfig {
     /** Enable safety system (edge detection, anti-fall braking, escape jump). */
     public boolean combatSaverEnabled = true;
 
+    /** Reject pathfinding nodes between adjacent fences/walls.
+     *  Prevents getting stuck on ViaVersion servers where fence connections
+     *  differ from what the 1.21 client renders. */
+    public boolean avoidStuckFence = true;
+
     /** WindMouse gravity — pull toward target per render frame.
      *  Higher = faster convergence, lower = more human wobble. */
     public double combatWindMouseGravity = 2.0;

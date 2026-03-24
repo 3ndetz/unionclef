@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import kaptainwutax.tungsten.Debug;
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
@@ -399,6 +400,22 @@ public class BlockNode {
 		boolean isAboveChildSolid2 = BlockShapeChecker.getShapeVolume(child.getBlockPos().up(2), world) > 0;
 		
 
+
+		// ViaVersion safety: reject nodes squeezed between adjacent fences/walls
+		// (server may have connection bars the 1.21 client doesn't render)
+		if (TungstenConfig.get().avoidStuckFence) {
+			BlockPos cp = child.getBlockPos();
+			for (int dy = -1; dy <= 0; dy++) {
+				BlockPos checkY = cp.up(dy);
+				boolean fN = BlockStateChecker.isFenceOrWall(world, checkY.north());
+				boolean fS = BlockStateChecker.isFenceOrWall(world, checkY.south());
+				boolean fE = BlockStateChecker.isFenceOrWall(world, checkY.east());
+				boolean fW = BlockStateChecker.isFenceOrWall(world, checkY.west());
+				if ((fN && fS) || (fE && fW)) {
+					return true;
+				}
+			}
+		}
 
 		// Specific block checks
 		if (childState.isOf(Blocks.LAVA))
