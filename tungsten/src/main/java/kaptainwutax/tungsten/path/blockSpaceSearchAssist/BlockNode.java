@@ -715,7 +715,7 @@ public class BlockNode {
 			}
 		}
 
-		if (!wasOnSlime || this.previous.y - this.y >= 0) {
+		if (!wasOnSlime || this.previous == null || this.previous.y - this.y >= 0) {
 			// Basic height and distance checks
 			if (heightDiff >= 2)
 				return true;
