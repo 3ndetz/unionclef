@@ -381,32 +381,33 @@ public class BlockNode {
             }
         });
 
-	    // Slime bounce: if there's a slime block below within fall range,
-	    // generate nodes at bounce-reachable heights directly from this node.
-	    // This lets A* "see" the bounce route without going down first.
+	    // Slime bounce shortcut: scan area below for slime blocks.
+	    // If found, generate nodes at bounce-reachable heights centered
+	    // on the slime position so A* can plan bounce routes in one step.
 	    if (!parent.wasOnSlime) {
-	        int slimeFallDist = findSlimeBelow(parent, player.getWorld(), 10);
-	        if (slimeFallDist > 0) {
-	            double bounceHeight = MovementHelper.getSlimeBounceHeight(slimeFallDist);
-	            int bounceYMax = (int) Math.ceil(bounceHeight - slimeFallDist);
-	            // generate nodes from current Y up to bounce peak
-	            for (int py = 1; py <= bounceYMax; py++) {
-	                int bounceD = distanceWanted + 1;
-	                nodes.add(new BlockNode(this.x, this.y + py, this.z, goal, this,
-	                        ActionCosts.WALK_ONE_BLOCK_COST * 3, this.player));
+	        int[] slimeResult = findSlimeNearby(parent, player.getWorld(), 10, 3);
+	        if (slimeResult != null) {
+	            int slimeX = slimeResult[0], slimeZ = slimeResult[1], fallDist = slimeResult[2];
+	            double bounceHeight = MovementHelper.getSlimeBounceHeight(fallDist);
+	            int bounceYMax = (int) Math.ceil(bounceHeight - fallDist);
+	            int bounceD = distanceWanted + 1;
+	            for (int py = 0; py <= bounceYMax; py++) {
+	                int nodeY = this.y + py;
+	                nodes.add(new BlockNode(slimeX, nodeY, slimeZ, goal, this,
+	                        ActionCosts.WALK_ONE_BLOCK_COST, this.player));
 	                for (int id = 1; id <= bounceD; id++) {
-	                    int px = id, pz = 0;
+	                    int bpx = id, bpz = 0;
 	                    int bdx = -1, bdz = 1;
 	                    int n = id * 4;
 	                    for (int i = 0; i < n; i++) {
-	                        if (px == id && bdx > 0) bdx = -1;
-	                        else if (px == -id && bdx < 0) bdx = 1;
-	                        if (pz == id && bdz > 0) bdz = -1;
-	                        else if (pz == -id && bdz < 0) bdz = 1;
-	                        px += bdx;
-	                        pz += bdz;
-	                        nodes.add(new BlockNode(this.x + px, this.y + py, this.z + pz, goal, this,
-	                                ActionCosts.WALK_ONE_BLOCK_COST * 3, this.player));
+	                        if (bpx == id && bdx > 0) bdx = -1;
+	                        else if (bpx == -id && bdx < 0) bdx = 1;
+	                        if (bpz == id && bdz > 0) bdz = -1;
+	                        else if (bpz == -id && bdz < 0) bdz = 1;
+	                        bpx += bdx;
+	                        bpz += bdz;
+	                        nodes.add(new BlockNode(slimeX + bpx, nodeY, slimeZ + bpz, goal, this,
+	                                ActionCosts.WALK_ONE_BLOCK_COST, this.player));
 	                    }
 	                }
 	            }
@@ -615,18 +616,22 @@ public class BlockNode {
 	}
 
 	/**
-	 * Scans the column below the node for a slime block within maxDist.
-	 * Returns the fall distance (positive) if found, 0 if not.
+	 * Scans the area below and around the node for a slime block.
+	 * @return {slimeX, slimeZ, fallDist} or null if not found.
 	 */
-	private static int findSlimeBelow(BlockNode node, WorldView world, int maxDist) {
-		for (int dy = 1; dy <= maxDist; dy++) {
-			BlockPos pos = new BlockPos(node.x, node.y - dy, node.z);
-			BlockState state = world.getBlockState(pos);
-			if (state.getBlock() instanceof SlimeBlock) return dy;
-			// stop at first solid non-slime block
-			if (!state.isAir() && !(state.getBlock() instanceof SlimeBlock)) return 0;
+	private static int[] findSlimeNearby(BlockNode node, WorldView world, int maxDepth, int hRadius) {
+		for (int dy = 1; dy <= maxDepth; dy++) {
+			int checkY = node.y - dy;
+			for (int dx = -hRadius; dx <= hRadius; dx++) {
+				for (int dz = -hRadius; dz <= hRadius; dz++) {
+					if (world.getBlockState(new BlockPos(node.x + dx, checkY, node.z + dz))
+							.getBlock() instanceof SlimeBlock) {
+						return new int[]{node.x + dx, node.z + dz, dy};
+					}
+				}
+			}
 		}
-		return 0;
+		return null;
 	}
 
 	/**
