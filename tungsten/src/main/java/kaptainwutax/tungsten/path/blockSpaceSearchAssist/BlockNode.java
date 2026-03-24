@@ -280,34 +280,6 @@ public class BlockNode {
 
 		TungstenModRenderContainer.TEST.clear();
 
-		// Slime bounce: add landing platform nodes AFTER shouldRemoveNode
-		// filtering — bounce trajectories can't pass wasCleared/distance checks.
-		if (!this.wasOnSlime) {
-			int[] slimeResult = findSlimeNearby(this, player.getWorld(), 10, 4);
-			if (slimeResult != null) {
-				int fallDist = slimeResult[2];
-				double bounceHeight = MovementHelper.getSlimeBounceHeight(fallDist);
-				int hReach = (int) Math.ceil(Math.sqrt(2.0 * bounceHeight / 32.656) * 5.8);
-				int peakY = this.y - fallDist + (int) Math.ceil(bounceHeight);
-				for (int dy = -1; dy <= (peakY - this.y); dy++) {
-					int checkY = this.y + dy;
-					for (int dx = -hReach; dx <= hReach; dx++) {
-						for (int dz = -hReach; dz <= hReach; dz++) {
-							int nx = this.x + dx, nz = this.z + dz;
-							BlockPos belowPos = new BlockPos(nx, checkY - 1, nz);
-							BlockState belowState = player.getWorld().getBlockState(belowPos);
-							if (!belowState.isAir() && belowState.getFluidState().isEmpty()
-									&& player.getWorld().getBlockState(new BlockPos(nx, checkY, nz)).isAir()
-									&& player.getWorld().getBlockState(new BlockPos(nx, checkY + 1, nz)).isAir()) {
-								filtered.add(new BlockNode(nx, checkY, nz, goal, this,
-										ActionCosts.WALK_ONE_BLOCK_COST, this.player));
-							}
-						}
-					}
-				}
-			}
-		}
-
 		return filtered;
 
 	}
@@ -356,11 +328,11 @@ public class BlockNode {
 	    double g = 32.656;
 	    double v_sprint = 5.8;
 
-	    double yMax = (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y > 0)
+	    double yMax = (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y < 0)
 	        ? MovementHelper.getSlimeBounceHeight(parent.previous.y - parent.y) - 0.5
 	        : generateDeep ? 4 : 2;
 
-	    if (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y > 0) {
+	    if (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y < 0) {
 	    	TungstenModRenderContainer.BLOCK_PATH_RENDERER.add(new Cuboid(
 	                new Vec3d(parent.getBlockPos().getX(), parent.getBlockPos().getY(), parent.getBlockPos().getZ()),
 	                new Vec3d(0.2D, 0.2D, 0.2D), Color.GREEN));
@@ -611,25 +583,6 @@ public class BlockNode {
 	}
 
 	/**
-	 * Scans the area below and around the node for a slime block.
-	 * @return {slimeX, slimeZ, fallDist} or null if not found.
-	 */
-	private static int[] findSlimeNearby(BlockNode node, WorldView world, int maxDepth, int hRadius) {
-		for (int dy = 1; dy <= maxDepth; dy++) {
-			int checkY = node.y - dy;
-			for (int dx = -hRadius; dx <= hRadius; dx++) {
-				for (int dz = -hRadius; dz <= hRadius; dz++) {
-					if (world.getBlockState(new BlockPos(node.x + dx, checkY, node.z + dz))
-							.getBlock() instanceof SlimeBlock) {
-						return new int[]{node.x + dx, node.z + dz, dy};
-					}
-				}
-			}
-		}
-		return null;
-	}
-
-	/**
 	 * Returns jump height.
 	 *
 	 * @param from
@@ -762,7 +715,7 @@ public class BlockNode {
 			}
 		}
 
-		if (!wasOnSlime || this.previous == null || this.previous.y - this.y <= 0) {
+		if (!wasOnSlime || this.previous == null || this.previous.y - this.y >= 0) {
 			// Basic height and distance checks
 			if (heightDiff >= 2)
 				return true;
