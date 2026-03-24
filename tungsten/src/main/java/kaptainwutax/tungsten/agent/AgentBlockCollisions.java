@@ -33,6 +33,10 @@ public class AgentBlockCollisions extends AbstractIterator<VoxelShape> {
     private long chunkPos;
     public int scannedBlocks;
 
+    /** Intersection of both anvil rotations — center square safe for standing. */
+    private static final VoxelShape ANVIL_SAFE_SHAPE =
+            VoxelShapes.cuboid(0.125, 0, 0.125, 0.875, 1.0, 0.875);
+
     public AgentBlockCollisions(CollisionView world, Agent agent, Box box) {
         this(world, agent, box, false);
     }
@@ -135,10 +139,11 @@ public class AgentBlockCollisions extends AbstractIterator<VoxelShape> {
 						&& (l != 2 || blockState.isOf(Blocks.MOVING_PISTON))) {
 						VoxelShape voxelShape = blockState.getCollisionShape(this.world, this.pos, this.context);
 
-						// ViaVersion: anvil → treat as full block
+						// ViaVersion: anvil rotation may differ from client —
+						// use intersection of both rotations (center square)
 						if (TungstenConfig.get().avoidStuckAnvil
 								&& blockState.getBlock() instanceof AnvilBlock) {
-							voxelShape = VoxelShapes.fullCube();
+							voxelShape = ANVIL_SAFE_SHAPE;
 						}
 
 						if (voxelShape == VoxelShapes.fullCube()) {
