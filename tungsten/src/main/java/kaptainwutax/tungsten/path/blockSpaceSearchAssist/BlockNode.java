@@ -381,6 +381,38 @@ public class BlockNode {
             }
         });
 
+	    // Slime bounce: if there's a slime block below within fall range,
+	    // generate nodes at bounce-reachable heights directly from this node.
+	    // This lets A* "see" the bounce route without going down first.
+	    if (!parent.wasOnSlime) {
+	        int slimeFallDist = findSlimeBelow(parent, player.getWorld(), 10);
+	        if (slimeFallDist > 0) {
+	            double bounceHeight = MovementHelper.getSlimeBounceHeight(slimeFallDist);
+	            int bounceYMax = (int) Math.ceil(bounceHeight - slimeFallDist);
+	            // generate nodes from current Y up to bounce peak
+	            for (int py = 1; py <= bounceYMax; py++) {
+	                int bounceD = distanceWanted + 1;
+	                nodes.add(new BlockNode(this.x, this.y + py, this.z, goal, this,
+	                        ActionCosts.WALK_ONE_BLOCK_COST * 3, this.player));
+	                for (int id = 1; id <= bounceD; id++) {
+	                    int px = id, pz = 0;
+	                    int bdx = -1, bdz = 1;
+	                    int n = id * 4;
+	                    for (int i = 0; i < n; i++) {
+	                        if (px == id && bdx > 0) bdx = -1;
+	                        else if (px == -id && bdx < 0) bdx = 1;
+	                        if (pz == id && bdz > 0) bdz = -1;
+	                        else if (pz == -id && bdz < 0) bdz = 1;
+	                        px += bdx;
+	                        pz += bdz;
+	                        nodes.add(new BlockNode(this.x + px, this.y + py, this.z + pz, goal, this,
+	                                ActionCosts.WALK_ONE_BLOCK_COST * 3, this.player));
+	                    }
+	                }
+	            }
+	        }
+	    }
+
 	    return new ArrayList<>(nodes);
 	}
 
@@ -580,6 +612,21 @@ public class BlockNode {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Scans the column below the node for a slime block within maxDist.
+	 * Returns the fall distance (positive) if found, 0 if not.
+	 */
+	private static int findSlimeBelow(BlockNode node, WorldView world, int maxDist) {
+		for (int dy = 1; dy <= maxDist; dy++) {
+			BlockPos pos = new BlockPos(node.x, node.y - dy, node.z);
+			BlockState state = world.getBlockState(pos);
+			if (state.getBlock() instanceof SlimeBlock) return dy;
+			// stop at first solid non-slime block
+			if (!state.isAir() && !(state.getBlock() instanceof SlimeBlock)) return 0;
+		}
+		return 0;
 	}
 
 	/**
