@@ -75,25 +75,30 @@ honey or handles the slowdown.
 
 ### Slime Blocks
 
-**Status:** ❌ Bounce physics exist but pathfinding is broken.
+**Status:** ⚠️ Walking on slime works. Bounce routing doesn't.
 
-**Problems:**
-- Bot never routes through slime bounce jumps. The bounce height formula
-  (`MovementHelper.getSlimeBounceHeight`) and block-space Y expansion exist,
-  but the heuristic/cost doesn't allow planning routes through slime bounces.
-- If the bot IS on slime, it cannot find paths — spams
-  "run out of nodes, failed! no block path".
-- Likely cause: block-space neighbor generation expands Y range for slime
-  bounces, but the resulting nodes are too far/high and get rejected by
-  `shouldRemoveNode` distance/height checks, or the physics pathfinder
-  can't simulate the bounce trajectory.
+**What works:**
+- NPE fix: starting pathfind on slime no longer crashes (null check
+  for `this.previous` in `shouldRemoveNode` line 718).
+- Bounce condition: inverted to `> 0` (fell onto slime = expand yMax).
+- `SlimeBounceMove` physics move exists — jumps on slime, rides arc
+  toward target with sprint.
 
-**TODO:**
-- Fix "stuck on slime" — bot must be able to path FROM a slime block
-  (walk off, not just bounce).
-- Investigate why slime bounce routes are never generated — check
-  `shouldRemoveNode` height/distance limits vs actual bounce range.
-- May need a `SlimeBounceMove` special move in the physics pathfinder.
+**What doesn't work:**
+- Block-space A* never plans "fall on slime → bounce to target" routes.
+  The heuristic penalizes going DOWN (away from target in Y), so A*
+  always prefers falling sideways and walking under the target.
+- `SlimeBounceMove` fires toward the NEXT block-space waypoint, which
+  is already under the platform — bounce goes wrong direction.
+
+**Architectural limitation:** Standard A* with distance heuristic can't
+plan "go down to go up" routes. Attempted fixes (platform scan shortcut,
+heuristic modification) caused lag from scanning hundreds of blocks per
+node expansion. Needs a fundamentally different approach.
+
+**TODO (hard):** Pre-computed bounce edges (scan slime before pathfinding,
+add direct platform→platform connections) or two-phase pathfinding
+(normal A* fails → detect slime → plan bounce route separately).
 
 ### Vines
 
