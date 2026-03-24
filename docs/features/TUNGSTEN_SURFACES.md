@@ -186,8 +186,31 @@ standing, jumping, or routing.
 
 Pathfinder should avoid or cost-penalize blocks that deal damage.
 
-- **Lava** — currently rejected entirely by `shouldRemoveNode`
-- **Magma block** — only flagged for damage, no cost penalty or avoidance
-- **Cactus** — no handling
-- **Campfire** (lit) — no handling
+**Vanilla mechanic (verified in bytecode, MC 1.21.1 yarn):**
+Block contact damage (cactus, fire, campfire, etc.) does NOT apply
+knockback — `DamageSources.cactus()` has no source entity and no
+position, so the knockback code in `LivingEntity.damage()` is skipped.
+
+HOWEVER: `damage()` calls `scheduleVelocityUpdate()` for ALL damage
+(unless tagged NO_IMPACT). This makes the server send its current
+velocity to the client. If the server's velocity differs from the
+client's predicted velocity (it always does slightly), the client
+snaps to the server's version — **breaking jump trajectories**.
+
+This is NOT predictable in Agent sim — it depends on the server/client
+velocity difference at the moment of damage. The only fix is to
+**avoid damage blocks entirely** via cost penalty in pathfinding.
+
+Agent sim now sets `isDamaged=true` and `hurtTicks=10` when touching
+damage blocks (`predictDamageFromBlocks` setting). This can be used
+for cost penalties in block-space.
+
+**Status:**
+- **Lava** — rejected entirely by `shouldRemoveNode`
+- **Magma block** — `isDamaged` flag set, no cost penalty yet
+- **Cactus** — `isDamaged` flag set, no cost penalty yet
+- **Campfire** (lit) — `isDamaged` flag set, no cost penalty yet
+- **Fire** — `isDamaged` flag set, no cost penalty yet
+- **Sweet berry bush** — velocity multiplier (0.8) + `isDamaged` flag
+- **Wither rose** — `isDamaged` flag set, no cost penalty yet
 - **Pointed dripstone** — fall damage when landing from ≥1 block, no handling
