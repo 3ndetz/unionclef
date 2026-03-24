@@ -61,10 +61,48 @@ public class BlockSpacePathFinder {
 	}
 	
 	private static Optional<List<BlockNode>> search(WorldView world, Vec3d target, boolean generateDeep, PlayerEntity player) {
-		if (!world.getBlockState(player.getBlockPos()).isAir() && BlockShapeChecker.getShapeVolume(player.getBlockPos(), world) != 0 && BlockShapeChecker.getBlockHeight(player.getBlockPos(), world) > 0.5) {
-			return search(world, new BlockNode(player.getBlockPos().up(), new Goal((int) target.x, (int) target.y, (int) target.z), player, world), target, player);
+		BlockPos startPos = player.getBlockPos();
+		Goal goal = new Goal((int) target.x, (int) target.y, (int) target.z);
+
+		// If standing inside a non-air block (fence, pane, chain, etc.),
+		// find the nearest air block to start from — not just "up 1".
+		if (!world.getBlockState(startPos).isAir()
+				&& BlockShapeChecker.getShapeVolume(startPos, world) != 0
+				&& BlockShapeChecker.getBlockHeight(startPos, world) > 0.5) {
+			startPos = findNearestAirStart(world, startPos);
 		}
-		return search(world, new BlockNode(player.getBlockPos(), new Goal((int) target.x, (int) target.y, (int) target.z), player, world), target, player);
+
+		return search(world, new BlockNode(startPos, goal, player, world), target, player);
+	}
+
+	/**
+	 * Find the nearest passable start position by checking cardinal
+	 * directions first, then up/down. Returns original pos if nothing found.
+	 */
+	private static BlockPos findNearestAirStart(WorldView world, BlockPos pos) {
+		// Cardinal directions first (escape sideways from thin blocks)
+		BlockPos[] candidates = {
+			pos.north(), pos.south(), pos.east(), pos.west(),
+			pos.up(), pos.down()
+		};
+		for (BlockPos candidate : candidates) {
+			if (world.getBlockState(candidate).isAir()
+					|| BlockShapeChecker.getShapeVolume(candidate, world) == 0) {
+				return candidate;
+			}
+		}
+		// Second ring
+		for (int dx = -2; dx <= 2; dx++) {
+			for (int dz = -2; dz <= 2; dz++) {
+				if (dx == 0 && dz == 0) continue;
+				BlockPos candidate = pos.add(dx, 0, dz);
+				if (world.getBlockState(candidate).isAir()
+						|| BlockShapeChecker.getShapeVolume(candidate, world) == 0) {
+					return candidate;
+				}
+			}
+		}
+		return pos.up(); // fallback: original behavior
 	}
 	
 	private static Optional<List<BlockNode>> search(WorldView world, BlockNode start, Vec3d target, boolean generateDeep, PlayerEntity player) {
