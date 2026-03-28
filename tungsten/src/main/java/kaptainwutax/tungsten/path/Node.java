@@ -166,7 +166,7 @@ public class Node {
             if (this.agent.canSprint()) {
                 Node sprintJumpMove = SprintJumpMove.generateMove(this, nextBlockNode);
                 boolean isSprintJumpMoveClose = sprintJumpMove.agent.getPos().distanceTo(nextBlockNode.getPos(true)) < 0.85;
-                if (!isSprintJumpMoveClose) {
+                if (shouldGenerateFallbackNodes(isSprintJumpMoveClose, sprintJumpMove.agent.onGround)) {
                     if (agent.onGround || agent.touchingWater || agent.isClimbing(world)) {
                         generateGroundOrWaterNodes(world, target, nextBlockNode, nodes);
                     } else {
@@ -393,17 +393,26 @@ public class Node {
 	    boolean shouldAllowWalkingOnLowerBlock = !world.getBlockState(agent.getBlockPos().up(2)).isAir() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 3;
 	    double minY = isBelowClosedTrapDoor ? nextBlockNode.getPos(true).y - 1 : nextBlockNode.getBlockPos().getY() - (shouldAllowWalkingOnLowerBlock ? 1.4 : 0.4);
 	    while (!newNode.agent.onGround && !newNode.agent.isClimbing(world) && newNode.agent.getPos().y >= minY
-	    		&& (TungstenModDataContainer.ignoreFallDamage || DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY) > -3)) {
+	            && shouldAppendFinalAirborneTick(TungstenModDataContainer.ignoreFallDamage, DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY))) {
 	    	if (i > 60) break;
 	    	i++;
 	        newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
 	                new Color(0, 255, 255), newNode.cost + (canSprint ? 1 : 8));
 	    }
+	    if (!shouldAppendFinalAirborneTick(TungstenModDataContainer.ignoreFallDamage, DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY))) return;
         newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
                 new Color(0, 255, 255), newNode.cost + (canSprint ? 1 : 8));
         if (newNode.agent.getPos().distanceTo(this.agent.getPos()) < 1.05) return;
 
 	    nodes.add(newNode);
+	}
+
+	static boolean shouldGenerateFallbackNodes(boolean sprintJumpMoveClose, boolean sprintJumpMoveOnGround) {
+	    return !sprintJumpMoveOnGround || !sprintJumpMoveClose;
+	}
+
+	static boolean shouldAppendFinalAirborneTick(boolean ignoreFallDamage, double heightDiffFromAirborneStart) {
+	    return ignoreFallDamage || heightDiffFromAirborneStart > -3;
 	}
 	
 	private void sortNodesByYaw(List<Node> nodes, Vec3d target) {
