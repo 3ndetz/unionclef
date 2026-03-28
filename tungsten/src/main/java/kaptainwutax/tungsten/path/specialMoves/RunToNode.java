@@ -55,14 +55,16 @@ public class RunToNode {
         		break;
         	}
 
-			if (newNode.agent.onGround || lastHigheastNodeSinceGround != null && lastHigheastNodeSinceGround.agent.getPos().y < newNode.agent.getPos().y) {
+			if (newNode.agent.onGround || lastHigheastNodeSinceGround == null
+					|| lastHigheastNodeSinceGround.agent.getPos().y < newNode.agent.getPos().y) {
 				lastHigheastNodeSinceGround = newNode;
 			} else if (lastHigheastNodeSinceGround != null
 					&& (!TungstenModDataContainer.ignoreFallDamage
 					&& !BlockStateChecker.isAnyWater(world.getBlockState(newNode.agent.getLandingPos(world))))
-					&& DistanceCalculator.getJumpHeight(lastHigheastNodeSinceGround.agent.getPos().y, newNode.agent.getPos().y) < -3) {
+					&& DistanceCalculator.getJumpHeight(lastHigheastNodeSinceGround.agent.getPos().y, newNode.agent.getPos().y) < -3
+					|| !TungstenModDataContainer.ignoreFallDamage && newNode.agent.isDamaged) {
 				newNode = new Node(newNode, world, new PathInput(true, false, false, false, false, false, true, parent.agent.pitch, desiredYaw),
-	            		new Color(255, 0, 0), newNode.cost + 3);
+	            		new Color(24, 17, 222), newNode.cost + 3);
 				break;
 			}
 //			desiredYaw = (float) DirectionHelper.calcYawFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
@@ -82,7 +84,7 @@ public class RunToNode {
 			}
 			
 			newNode = new Node(newNode, world, new PathInput(true, false, false, false, jump, false, true, parent.agent.pitch, desiredYaw ),
-            		new Color(0, 255, 150), newNode.cost + 0.22D);
+	            		new Color(222, 17, 186), newNode.cost + 0.22D);
             if (newNode.agent.isClimbing(world)) newNode.cost += 1.8;
 			distance = DistanceCalculator.getHorizontalEuclideanDistance(newNode.agent.getPos(), nextBlockNode.getPos(true));
 

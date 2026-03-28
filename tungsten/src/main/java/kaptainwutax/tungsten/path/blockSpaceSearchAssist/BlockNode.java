@@ -100,6 +100,7 @@ public class BlockNode {
 	private boolean isDoingNeo = false;
 	private Direction neoSide;
 	private boolean isDoingCornerJump = false;
+	private boolean isDoingJump = false;
 
 	/**
 	 * Where is this node in the array flattenization of the binary heap? Needed for
@@ -244,6 +245,10 @@ public class BlockNode {
 		return this.isDoingCornerJump;
 	}
 
+	public boolean isDoingJump() {
+		return this.isDoingJump;
+	}
+
 	public BlockState getBlockState(WorldView world) {
 		if (chachedBlockState != null) return chachedBlockState;
 		chachedBlockState = world.getBlockState(getBlockPos());
@@ -374,8 +379,10 @@ public class BlockNode {
                     px += dx;
                     pz += dz;
 
+                    boolean isDoingJump = Math.abs(pz) > 1 || Math.abs(px) > 1;
                     BlockNode newNode = new BlockNode(this.x + px, this.y + py, this.z + pz, goal, this,
-                            ActionCosts.WALK_ONE_BLOCK_COST, this.player);
+                            isDoingJump ? ActionCosts.WALK_ONE_BLOCK_COST + 0.5 : ActionCosts.WALK_ONE_BLOCK_COST, this.player);
+                    newNode.isDoingJump = isDoingJump;
                     nodes.add(newNode);
                 }
             }

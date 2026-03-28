@@ -31,7 +31,8 @@ public class SprintJumpMove {
 //		TungstenMod.RENDERERS.clear();
 		desiredYaw = (float) DirectionHelper.calcYawFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
 		if (distance < 0.8) return newNode;
-		while (distance > 0.95 && limit < 500 && !newNode.agent.horizontalCollision && !newNode.agent.isInLava() || (distance <= 0.3 && !newNode.agent.onGround)) {
+		while ((distance > 0.95 && limit < 500 && !newNode.agent.horizontalCollision && !newNode.agent.isInLava())
+				|| (distance <= 0.3 && !newNode.agent.onGround && limit < 500)) {
 //        	RenderHelper.renderNode(newNode);
 //        	try {
 //				Thread.sleep(50);
@@ -41,21 +42,23 @@ public class SprintJumpMove {
 //			}
 //        	if (newNode.agent.blockY < nextBlockNode.getBlockPos().getY()-1) break;
 
-			if (newNode.agent.onGround || lastHigheastNodeSinceGround != null && lastHigheastNodeSinceGround.agent.getPos().y < newNode.agent.getPos().y) {
+			if (newNode.agent.onGround || lastHigheastNodeSinceGround == null
+					|| lastHigheastNodeSinceGround.agent.getPos().y < newNode.agent.getPos().y) {
 				lastHigheastNodeSinceGround = newNode;
 			} else if (lastHigheastNodeSinceGround != null
 					&& (!TungstenModDataContainer.ignoreFallDamage
 					&& !BlockStateChecker.isAnyWater(world.getBlockState(newNode.agent.getLandingPos(world))))
-					&& DistanceCalculator.getJumpHeight(lastHigheastNodeSinceGround.agent.getPos().y, newNode.agent.getPos().y) < -3) {
+					&& DistanceCalculator.getJumpHeight(lastHigheastNodeSinceGround.agent.getPos().y, newNode.agent.getPos().y) < -2.7
+					|| !TungstenModDataContainer.ignoreFallDamage && newNode.agent.isDamaged) {
 				newNode = new Node(newNode, world, new PathInput(true, false, false, false, true, false, true, parent.agent.pitch, desiredYaw),
-	            		new Color(255, 0, 0), newNode.cost + cost);
+	            		new Color(24, 17, 222), newNode.cost + cost * 200);
 				break;
 			}
 			
         	limit++;
     		distance = DistanceCalculator.getHorizontalEuclideanDistance(newNode.agent.getPos(), nextBlockNode.getPos(true));
             newNode = new Node(newNode, world, new PathInput(true, false, false, false, newNode.agent.onGround, false, true, parent.agent.pitch, desiredYaw),
-            		new Color(0, 255, 150), newNode.cost + cost);
+	            		new Color(147, 17, 222), newNode.cost + cost);
             if (newNode.agent.isClimbing(world)) newNode.cost += 12.8;
             float forwardSpeedScore = 0.98f - Math.abs(newNode.agent.forwardSpeed);
 //	    	float sidewaysSpeedScore = 0.98f - Math.abs(newNode.agent.sidewaysSpeed);
