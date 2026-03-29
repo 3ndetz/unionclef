@@ -113,6 +113,16 @@ public class TungstenConfig {
      *  velocity, affecting jump trajectories near these blocks. */
     public boolean predictDamageFromBlocks = true;
 
+    /** Adjust pitch (vertical look angle) while executing paths.
+     *  When true, the bot looks toward upcoming path nodes — more
+     *  human-like than staring at a fixed angle. Purely cosmetic:
+     *  pitch does not affect ground/air horizontal physics. */
+    public boolean enablePitchChange = true;
+
+    /** How many nodes ahead to look when computing pitch direction.
+     *  Higher = smoother pitch changes, lower = more reactive. */
+    public int pitchLookAheadNodes = 5;
+
     /** WindMouse gravity — pull toward target per render frame.
      *  Higher = faster convergence, lower = more human wobble. */
     public double combatWindMouseGravity = 2.0;

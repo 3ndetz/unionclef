@@ -5,6 +5,7 @@ import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
 import kaptainwutax.tungsten.agent.Agent;
+import kaptainwutax.tungsten.helpers.DirectionHelper;
 import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -144,7 +145,11 @@ public class PathExecutor {
 
 		    if(node.input != null) {
 			    player.setYaw(node.input.yaw);
-			    player.setPitch(node.input.pitch);
+			    if (TungstenConfig.get().enablePitchChange) {
+			        player.setPitch(calculateLookAheadPitch(node));
+			    } else {
+			        player.setPitch(node.input.pitch);
+			    }
 			    // player.stopGliding() removed in MC 1.21
 	    		options.forwardKey.setPressed(node.input.forward);
 			    options.backKey.setPressed(node.input.back);
@@ -276,6 +281,38 @@ public class PathExecutor {
         }
 
         return false;
+    }
+
+    /**
+     * Look a few nodes ahead in the path and compute the pitch angle
+     * from the current node toward that future position. Clamps to
+     * [-90, 90] like vanilla.
+     *
+     * Returns the node's original pitch when the move intentionally set it
+     * (swimming, climbing) — detected by checking whether the node's pitch
+     * differs from its parent's. In those cases overriding pitch would
+     * break the physics that depend on it.
+     */
+    private float calculateLookAheadPitch(Node currentNode) {
+        if (this.path == null) return currentNode.input.pitch;
+
+        // If the move explicitly changed pitch (swimming, climbing),
+        // respect the pathfinder's value — it affects physics.
+        if (currentNode.parent != null
+                && Math.abs(currentNode.input.pitch - currentNode.parent.agent.pitch) > 0.01F) {
+            return currentNode.input.pitch;
+        }
+
+        int ahead = TungstenConfig.get().pitchLookAheadNodes;
+        int targetIdx = Math.min(this.tick + ahead, this.path.size() - 1);
+
+        if (targetIdx <= this.tick) return currentNode.input.pitch;
+
+        Vec3d from = currentNode.agent.getPos().add(0, currentNode.agent.standingEyeHeight, 0);
+        Vec3d to = this.path.get(targetIdx).agent.getPos();
+
+        float pitch = (float) DirectionHelper.calcPitchFromVec3d(from, to);
+        return net.minecraft.util.math.MathHelper.clamp(pitch, -90.0F, 90.0F);
     }
 
     public static TungstenPlayerInput optionsToPlayerInput(GameOptions options) {
