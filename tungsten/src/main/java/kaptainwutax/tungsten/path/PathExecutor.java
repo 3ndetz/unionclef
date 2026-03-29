@@ -8,6 +8,7 @@ import kaptainwutax.tungsten.agent.Agent;
 import kaptainwutax.tungsten.helpers.DirectionHelper;
 import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.GameOptions;
 import kaptainwutax.tungsten.agent.TungstenPlayerInput;
@@ -144,11 +145,16 @@ public class PathExecutor {
 		    // the inputs, so the positions are comparable.
 
 		    if(node.input != null) {
-			    player.setYaw(node.input.yaw);
-			    if (TungstenConfig.get().enablePitchChange) {
-			        player.setPitch(calculateLookAheadPitch(node));
+			    float targetYaw = node.input.yaw;
+			    float targetPitch = TungstenConfig.get().enablePitchChange
+			            ? calculateLookAheadPitch(node)
+			            : node.input.pitch;
+
+			    if (TungstenConfig.get().enableNativeRotation) {
+			        applyNativeRotation(player, targetYaw, targetPitch);
 			    } else {
-			        player.setPitch(node.input.pitch);
+			        player.setYaw(targetYaw);
+			        player.setPitch(targetPitch);
 			    }
 			    // player.stopGliding() removed in MC 1.21
 	    		options.forwardKey.setPressed(node.input.forward);
@@ -281,6 +287,26 @@ public class PathExecutor {
         }
 
         return false;
+    }
+
+    /**
+     * Apply rotation via pixel-quantized changeLookDirection.
+     * Converts degree deltas to integer mouse pixels and back,
+     * making the rotation indistinguishable from a physical mouse.
+     */
+    private static void applyNativeRotation(ClientPlayerEntity player, float targetYaw, float targetPitch) {
+        double deltaYaw = targetYaw - player.getYaw();
+        double deltaPitch = targetPitch - player.getPitch();
+
+        double sens = MinecraftClient.getInstance().options.getMouseSensitivity().getValue();
+        double f = sens * 0.6 + 0.2;
+        double sensScale = f * f * f * 8.0;
+        double degreesPerPixel = sensScale * 0.15;
+
+        long pixelsX = Math.round(deltaYaw / degreesPerPixel);
+        long pixelsY = Math.round(deltaPitch / degreesPerPixel);
+
+        player.changeLookDirection(pixelsX * sensScale, pixelsY * sensScale);
     }
 
     /**

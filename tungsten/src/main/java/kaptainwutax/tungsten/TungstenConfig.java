@@ -113,6 +113,13 @@ public class TungstenConfig {
      *  velocity, affecting jump trajectories near these blocks. */
     public boolean predictDamageFromBlocks = true;
 
+    /** Use changeLookDirection (pixel-quantized) instead of setYaw/setPitch.
+     *  When true, rotation goes through vanilla's mouse math: delta is
+     *  rounded to integer mouse pixels, then applied via changeLookDirection.
+     *  This makes rotation indistinguishable from a real mouse for anti-cheat.
+     *  When false, uses direct setYaw/setPitch (legacy behavior). */
+    public boolean enableNativeRotation = true;
+
     /** Adjust pitch (vertical look angle) while executing paths.
      *  When true, the bot looks toward upcoming path nodes — more
      *  human-like than staring at a fixed angle. Purely cosmetic:
