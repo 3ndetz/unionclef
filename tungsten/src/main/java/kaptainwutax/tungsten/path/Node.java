@@ -12,6 +12,7 @@ import com.google.common.collect.Streams;
 
 import kaptainwutax.tungsten.Debug;
 import kaptainwutax.tungsten.TungstenMod;
+import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.agent.Agent;
 import kaptainwutax.tungsten.helpers.BlockShapeChecker;
 import kaptainwutax.tungsten.helpers.BlockStateChecker;
@@ -165,7 +166,7 @@ public class Node {
             if (this.agent.canSprint()) {
                 Node sprintJumpMove = SprintJumpMove.generateMove(this, nextBlockNode);
                 boolean isSprintJumpMoveClose = sprintJumpMove.agent.getPos().distanceTo(nextBlockNode.getPos(true)) < 0.85;
-                if (!sprintJumpMove.agent.onGround || !isSprintJumpMoveClose) {
+                if (shouldGenerateFallbackNodes(isSprintJumpMoveClose, sprintJumpMove.agent.onGround)) {
                     if (agent.onGround || agent.touchingWater || agent.isClimbing(world)) {
                         generateGroundOrWaterNodes(world, target, nextBlockNode, nodes);
                     } else {
@@ -210,7 +211,7 @@ public class Node {
 	    if (!agent.touchingWater && this.agent.canSprint() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 4) {
 	    	nodes.add(RunToNode.generateMove(this, nextBlockNode));
 	    }
-    	if (!agent.isClimbing(world) && world.getBlockState(agent.getBlockPos().down()).getBlock() instanceof LadderBlock) {	
+    	if (agent.onGround && !agent.isClimbing(world) && world.getBlockState(agent.getBlockPos().down()).getBlock() instanceof LadderBlock) {	
 	    	nodes.add(LongJump.generateMove(this, nextBlockNode));    		
 //    		nodes.add(CornerJump.generateMove(this, nextBlockNode));
     	}
@@ -334,8 +335,9 @@ public class Node {
 		                Stream<VoxelShape> blockCollisions = Streams.stream(agent.getBlockCollisions(world, adjustedBox));
 			            if (blockCollisions.findAny().isEmpty() && isDoingLongJump) jump = true;
 		                newNode = new Node(newNode, world, new PathInput(forward, false, right, left, jump, sneak, sprint, agent.pitch, yaw),
-		                        jump ? new Color(0, 255, 255) : new Color(sneak ? 220 : 0, 255, sneak ? 50 : 0), this.cost + addNodeCost);
+		                        jump ? new Color(150, 55, 85) : new Color(sneak ? 220 : 0, 255, sneak ? 50 : 0), this.cost + addNodeCost);
 		                if (!isDoingLongJump && jump && j > 1) break;
+                        if (!newNode.agent.onGround && !newNode.agent.isClimbing(world)) break;
 		            }
 	            }
 
@@ -390,16 +392,27 @@ public class Node {
 	    boolean isBelowClosedTrapDoor = BlockStateChecker.isClosedBottomTrapdoor(world.getBlockState(nextBlockNode.getBlockPos().down()));
 	    boolean shouldAllowWalkingOnLowerBlock = !world.getBlockState(agent.getBlockPos().up(2)).isAir() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 3;
 	    double minY = isBelowClosedTrapDoor ? nextBlockNode.getPos(true).y - 1 : nextBlockNode.getBlockPos().getY() - (shouldAllowWalkingOnLowerBlock ? 1.4 : 0.4);
-	    while (!newNode.agent.onGround && !newNode.agent.isClimbing(world) && newNode.agent.getPos().y >= minY) {
+	    while (!newNode.agent.onGround && !newNode.agent.isClimbing(world) && newNode.agent.getPos().y >= minY
+	            && shouldAppendFinalAirborneTick(TungstenModDataContainer.ignoreFallDamage, DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY))) {
 	    	if (i > 60) break;
 	    	i++;
 	        newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
 	                new Color(0, 255, 255), newNode.cost + (canSprint ? 1 : 8));
 	    }
+	    if (!shouldAppendFinalAirborneTick(TungstenModDataContainer.ignoreFallDamage, DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY))) return;
         newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
                 new Color(0, 255, 255), newNode.cost + (canSprint ? 1 : 8));
+        if (newNode.agent.getPos().distanceTo(this.agent.getPos()) < 1.05) return;
 
 	    nodes.add(newNode);
+	}
+
+	static boolean shouldGenerateFallbackNodes(boolean sprintJumpMoveClose, boolean sprintJumpMoveOnGround) {
+	    return !sprintJumpMoveOnGround || !sprintJumpMoveClose;
+	}
+
+	static boolean shouldAppendFinalAirborneTick(boolean ignoreFallDamage, double heightDiffFromAirborneStart) {
+	    return ignoreFallDamage || heightDiffFromAirborneStart > -3;
 	}
 	
 	private void sortNodesByYaw(List<Node> nodes, Vec3d target) {
