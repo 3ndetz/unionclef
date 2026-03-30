@@ -126,11 +126,15 @@ public class Butler {
                 captchaActionsPerform();
             } else if (msg.contains("/login")
                     || (msg.contains("/l") && (msg.contains("пароль") || msg.contains("pass")))) {
-                _mod.getMessageSender().enqueueChat(
-                        "/login " + ButlerConfig.getInstance().multiplayer_password, MessagePriority.TIMELY);
+                String password = ButlerConfig.getInstance().multiplayer_password;
+                if (ButlerConfig.getInstance().autoLogin && password != null && !password.isEmpty()) {
+                    _mod.getMessageSender().enqueueChat("/login " + password, MessagePriority.TIMELY);
+                }
             } else if (msg.contains("/reg")) {
-                _mod.getMessageSender().enqueueChat(
-                        "/register " + ButlerConfig.getInstance().multiplayer_password, MessagePriority.TIMELY);
+                String password = ButlerConfig.getInstance().multiplayer_password;
+                if (ButlerConfig.getInstance().autoLogin && password != null && !password.isEmpty()) {
+                    _mod.getMessageSender().enqueueChat("/register " + password, MessagePriority.TIMELY);
+                }
             } else if (msg.contains("[SkyWars] Добро пожаловать!") || msg.contains("[SkyWars] Вы покинули игру")) {
                 Debug.logMessage("Мы в хабе!");
                 _mod.getCommandExecutor().execute("@stop");
@@ -219,9 +223,11 @@ public class Butler {
         } else {
             if (debug) Debug.logMessage("Rejecting: User \"" + username + "\" is not authorized.");
             if (ButlerConfig.getInstance().sendAuthorizationResponse) {
-                sendWhisper(username,
-                        ButlerConfig.getInstance().failedAuthorizationResposne.replace("{from}", username),
-                        MessagePriority.UNAUTHORIZED);
+                String response = ButlerConfig.getInstance().failedAuthorizationResponse;
+                if (response != null && !response.isEmpty()) {
+                    sendWhisper(username, response.replace("{from}", username),
+                            MessagePriority.UNAUTHORIZED);
+                }
             }
         }
         return false;

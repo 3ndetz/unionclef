@@ -37,6 +37,11 @@ public class ButlerConfig {
      */
     public boolean autoJoin = true;
     /**
+     * If true, automatically logs in with multiplayer_password on server join.
+     * Ignored if multiplayer_password is empty.
+     */
+    public boolean autoLogin = true;
+    /**
      * Password for multiplayer command authentication.
      */
     public String multiplayer_password = "CHANGE_THIS_PASSWORD";
@@ -85,7 +90,7 @@ public class ButlerConfig {
      * The response sent in a failed execution due to non-authorization
      * {from}: the username of the player who triggered the failed authorization response
      */
-    public String failedAuthorizationResposne = "{from}, не пиши сюда, пожалуйста";
+    public String failedAuthorizationResponse = "{from}, не пиши сюда, пожалуйста";
     /**
      * Use this to choose if the prefix should be required in messages
      * <p>
