@@ -44,7 +44,7 @@ public class ButlerConfig {
     /**
      * Password for multiplayer command authentication.
      */
-    public String multiplayer_password = "CHANGE_THIS_PASSWORD";
+    public String multiplayer_password = "";
     /**
      * Servers have different messaging plugins that change the way messages are displayed.
      * Rather than attempt to implement all of them and introduce a big security risk,

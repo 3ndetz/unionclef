@@ -128,7 +128,12 @@ public class SettingsReflectionHelper {
         if (type == int.class || type == Integer.class) return Integer.parseInt(value);
         if (type == float.class || type == Float.class) return Float.parseFloat(value);
         if (type == double.class || type == Double.class) return Double.parseDouble(value);
-        if (type == String.class) return value;
+        if (type == String.class) {
+            if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+                return value.substring(1, value.length() - 1);
+            }
+            return value;
+        }
         throw new IllegalArgumentException("Unsupported type: " + type.getName());
     }
 
