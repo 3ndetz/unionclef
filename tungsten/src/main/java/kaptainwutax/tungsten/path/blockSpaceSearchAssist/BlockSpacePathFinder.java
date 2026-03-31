@@ -211,7 +211,7 @@ public class BlockSpacePathFinder {
     }
 	
 	private static double computeHeuristic(Vec3d position, Vec3d target, WorldView world) {
-		double xzMultiplier = 1.2;
+		double xzMultiplier = 1.0;
 	    double dx = (position.x - target.x)*xzMultiplier;
 	    double dy = 0;
 	    double dz = (position.z - target.z)*xzMultiplier;
@@ -222,7 +222,7 @@ public class BlockSpacePathFinder {
 	    } else {
 	    	dy = (position.y - target.y)*0.5;
 	    }
-	    return (Math.sqrt(dx * dx + dy * dy + dz * dz)) * 3;
+	    return Math.sqrt(dx * dx + dy * dy + dz * dz);
 	}
 	
 	private static void updateNode(BlockNode current, BlockNode child, Vec3d target, WorldView world) {
@@ -231,7 +231,7 @@ public class BlockSpacePathFinder {
 //	    double tentativeCost = (childBlock instanceof LadderBlock || childBlock instanceof VineBlock ? 12.2 : 0) + ActionCosts.WALK_ONE_BLOCK_COST; // Assuming uniform cost for each step
 //	    tentativeCost += BlockStateChecker.isAnyWater(TungstenMod.mc.world.getBlockState(child.getBlockPos())) ? 50 : 0; // Assuming uniform cost for each step
 
-	    double estimatedCostToGoal = computeHeuristic(childPos, target, world) + DistanceCalculator.getHorizontalEuclideanDistance(current.getPos(true), child.getPos(true)) * 8 + (current.getBlockPos().getY() != child.getBlockPos().getY() ? 2.8 : 0);
+	    double estimatedCostToGoal = computeHeuristic(childPos, target, world) + DistanceCalculator.getHorizontalEuclideanDistance(current.getPos(true), child.getPos(true));
 
 	    child.previous = current;
 //	    child.cost = tentativeCost;
@@ -325,39 +325,9 @@ public class BlockSpacePathFinder {
 
 //		path.add(n);
 		
-		List<BlockNode> path2 = new ArrayList<>();
-
-//    	path2.add(path.get(0));
-//		for (int i = 1; i < path.size(); i++) {
-//			BlockNode blockNode = path.get(i);
-//			BlockNode lastBlockNode = path.get(i-1);
-//	        boolean canGetFromLastNToCurrent = StreightMovementHelper.isPossible(world, lastBlockNode.getBlockPos(), blockNode.getBlockPos());
-//	        double distanceFromLastToCurrentNode = lastBlockNode.getPos(true).distanceTo(blockNode.getPos(true));
-//	        if (!canGetFromLastNToCurrent || BlockStateChecker.isAnyWater(world.getBlockState(lastBlockNode.getBlockPos()))) {
-//	        	if (!path2.contains(lastBlockNode)) path2.add(lastBlockNode);
-//	        	path2.add(blockNode);
-//	        } else if (distanceFromLastToCurrentNode > 1.44 || canGetFromLastNToCurrent || lastBlockNode.getBlockPos().getY() - blockNode.getBlockPos().getY() != 0) {
-//	        	path2.add(blockNode);
-//	        }
-//		}
-//    	path2.add(path.getFirst());
-		for (int i = 0; i < path.size(); i++) {
-			BlockNode blockNode = path.get(i);
-        	if (blockNode.previous != null) {
-            	path2.add(blockNode);
-    	        double heightDiff = DistanceCalculator.getJumpHeight(blockNode.previous.getPos(true).getY(), blockNode.getPos(true).getY());
-    	        if (heightDiff < 0 && !path2.contains(blockNode.previous)) {
-    	        	path2.add(blockNode.previous);
-    	        }
-        	} else {
-
-            	path2.add(blockNode);
-        	}
-		}
-		Collections.reverse(path2);
-		
-		
-		return path2;
+		stringPull(path);
+		Collections.reverse(path);
+		return path;
 	}
 	
 	
@@ -368,22 +338,13 @@ public class BlockSpacePathFinder {
 			BlockNode pj = path.get(j);
 			BlockNode p = path.get(j-1);
 	        boolean canGetFromLastNToCurrent = StreightMovementHelper.isPossible(TungstenModDataContainer.world, pi.getBlockPos(), pj.getBlockPos());
-//	        boolean canGetFromLastNToCurrent = StreightMovementHelper.isPossible(world, lastN.getBlockPos(), n.getBlockPos());
 	        double heightDiff = p.previous == null ? 0 : DistanceCalculator.getJumpHeight(p.previous.getPos(true).getY(), p.getPos(true).getY());
-//	        double distanceFromLastToCurrentNode = lastBlockNode.getPos(true).distanceTo(blockNode.getPos(true));
-	        if (canGetFromLastNToCurrent && heightDiff <= 0 && p.previous.getPos(true).distanceTo(p.getPos(true)) <= 1.44) {
-//	        	RenderHelper.renderBlockPath(path, j-1);
-//	        	try {
-//					Thread.sleep(500);
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
+	        if (canGetFromLastNToCurrent && heightDiff == 0 && !p.isDoingJump()) {
 	        	path.remove(j-1);
 	        } else {
 	        	i = j-1;
+				j++;
 	        }
-	        j++;
 		}
 		return path;
 	}
