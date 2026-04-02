@@ -39,8 +39,8 @@ java {
 // Tungsten source compiled together with altoclef — preprocessor handles //#if
 sourceSets {
     main {
-        java { srcDir 'tungsten/src/main/java' }
-        resources { srcDir 'tungsten/src/main/resources' }
+        java { srcDir rootProject.file('tungsten/src/main/java') }
+        resources { srcDir rootProject.file('tungsten/src/main/resources') }
     }
 }
 
