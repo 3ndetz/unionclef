@@ -23,8 +23,11 @@ rootProject.buildFileName = "root.gradle.kts"
 // include(":baritone")  // kept as source reference, not compiled
 include(":shredder")
 
-// tungsten — versioned via preprocessor (like altoclef)
-// Source lives in tungsten/src/, built per MC version
+// tungsten — container project with convenience tasks (like root for altoclef)
+include(":tungsten")
+project(":tungsten").buildFileName = "root.gradle"
+
+// tungsten version subprojects — actual builds, preprocessed per MC version
 listOf(
     "1.21.1",
     "1.21.11",

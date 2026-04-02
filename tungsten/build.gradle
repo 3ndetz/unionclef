@@ -15,6 +15,14 @@ buildscript {
 apply plugin: 'fabric-loom'
 apply plugin: 'com.replaymod.preprocess'
 
+loom {
+    runs {
+        client {
+            environment = "client"
+        }
+    }
+}
+
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
