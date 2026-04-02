@@ -24,22 +24,16 @@ listOf("compileJava", "runClient", "build", "remapJar", "processResources", "git
 }
 
 preprocess {
-    // altoclef chain
+    // Single connected graph — preprocessor requires all nodes reachable.
+    // Each module has its own versions/mainProject to identify on-disk source.
     val mc12101 = createNode("1.21.1", 12101, "yarn")
     val mc12100 = createNode("1.21", 12100, "yarn")
-    // val mc12006 = createNode("1.20.6", 12006, "yarn")
-    // val mc12004 = createNode("1.20.4", 12004, "yarn")
-    // val mc12001 = createNode("1.20.1", 12001, "yarn")
-    // val mc11904 = createNode("1.19.4", 11904, "yarn")
-
-    mc12101.link(mc12100)
-    // mc12100.link(mc12006)
-    // mc12006.link(mc12004)
-    // mc12004.link(mc12001)
-    // mc12001.link(mc11904)
-
-    // tungsten chain (1.21.1 = mainProject, code on disk is for 1.21.1)
     val t12101 = createNode("tungsten-1.21.1", 12101, "yarn")
     val t12111 = createNode("tungsten-1.21.11", 12111, "yarn")
+
+    // altoclef: 1.21.1 → 1.21
+    mc12101.link(mc12100)
+    // tungsten: bridge from altoclef 1.21.1 → tungsten-1.21.1 → tungsten-1.21.11
+    mc12101.link(t12101)
     t12101.link(t12111)
 }
