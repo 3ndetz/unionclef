@@ -74,11 +74,11 @@ public class RunToNode {
 			
 			if (newNode.agent.horizontalCollision && nextBlockNode.getBlockPos().getY() - newNode.agent.blockY >= 1) {
 				jump = true;
-				if (newNode.parent.agent.onGround && !newNode.agent.horizontalCollision) {
+				if (newNode.parent != null && newNode.parent.agent.onGround && !newNode.agent.horizontalCollision) {
 					newNode = newNode.parent;
 				}
 			} else if (newNode.agent.horizontalCollision) {
-				while (newNode.agent.horizontalCollision) {
+				while (newNode.agent.horizontalCollision && newNode.parent != null) {
 					newNode = newNode.parent;
 				}
 				break;
