@@ -1,17 +1,12 @@
-buildscript {
-    // Parse MC version from project name: "tungsten-1.21.1" -> 12101
-    def mcVersionStr = project.name.replace("tungsten-", "")
-    def parts = mcVersionStr.tokenize('.')
-    def major = parts[0]
-    def minor = parts.size() > 1 ? parts[1] : '0'
-    def patch = parts.size() > 2 ? parts[2] : '0'
-    project.ext.mcVersion = "${major}${minor.padLeft(2, '0')}${patch.padLeft(2, '0')}" as int
+// Parse MC version from project name: "tungsten-1.21.1" -> 12101
+def mcVersionStr = project.name.replace("tungsten-", "")
+def parts = mcVersionStr.tokenize('.')
+def major = parts[0]
+def minor = parts.size() > 1 ? parts[1] : '0'
+def patch = parts.size() > 2 ? parts[2] : '0'
+project.ext.mcVersion = "${major}${minor.padLeft(2, '0')}${patch.padLeft(2, '0')}" as int
 
-    dependencies {
-        classpath 'fabric-loom:fabric-loom.gradle.plugin:1.7.4'
-    }
-}
-
+// fabric-loom classpath inherited from root plugins { id("fabric-loom") apply false }
 apply plugin: 'fabric-loom'
 apply plugin: 'com.replaymod.preprocess'
 
@@ -45,9 +40,6 @@ def fabricApiVersions = [
         12101: "0.116.9+1.21.1",
         12111: "0.140.0+1.21.11",
 ]
-
-// MC version string for dependency resolution (e.g. "1.21.1")
-def mcVersionStr = project.name.replace("tungsten-", "")
 
 // ── Dependencies ────────────────────────────────────────────────────────────
 
