@@ -1018,10 +1018,10 @@ public class PathFinder {
 					
 			if (validChildren.size() > 25) {
 				Node[][] chunks = ArrayChunkSplitter.splitArrayIntoChunksOfX(validChildren.toArray(new Node[validChildren.size()]), children.size()/25);
-				
+
 				for (int i = 0; i < chunks.length; i++) {
 					Node[] nodes = chunks[i];
-					tasks.add(() -> {
+					processingTasks.add(() -> {
 						for (int j = 0; j < nodes.length; j++) {
 							Node child = nodes[j];
 							if (stop.get()) return null;
