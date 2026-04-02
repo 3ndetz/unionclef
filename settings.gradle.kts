@@ -28,12 +28,10 @@ include(":tungsten")
 project(":tungsten").buildFileName = "root.gradle"
 
 // tungsten version subprojects — built per MC version
-val tungstenVersions = mutableListOf("1.21.1")
-// 1.21.11 requires Loom 1.15 + Gradle 9.2 — enable with: -Ptungsten1211
-if (extra.has("tungsten1211")) {
-    tungstenVersions.add("1.21.11")
-}
-tungstenVersions.forEach { version ->
+listOf(
+    "1.21.1",
+    "1.21.11",
+).forEach { version ->
     include(":tungsten-$version")
     project(":tungsten-$version").apply {
         projectDir = file("tungsten/versions/$version")

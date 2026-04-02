@@ -3,29 +3,34 @@
 // Usage:
 //   gradlew :tungsten:compileJava          → compiles 1.21.1
 //   gradlew :tungsten:build                → builds 1.21.1
-//   gradlew :tungsten:run-1.21.1           → runs MC 1.21.1 client
-//
-// 1.21.11 requires Loom 1.15 + Gradle 9.2. Enable with -Ptungsten1211:
-//   gradlew :tungsten:compile-1.21.11 -Ptungsten1211
-//   gradlew :tungsten:run-1.21.11 -Ptungsten1211
+//   gradlew :tungsten:runClient            → runs MC 1.21.11 client
+//   gradlew :tungsten:compile-1.21.11      → compiles 1.21.11
+//   gradlew :tungsten:run-1.21.11          → runs MC 1.21.11 client
 
 def defaultVersion = "1.21.1"
+def versions = ["1.21.1", "1.21.11"]
 
-// Default tasks → 1.21.1
-["compileJava", "build", "processResources", "remapJar", "runClient"].each { taskName ->
+// Default tasks delegate to 1.21.1
+["compileJava", "build", "processResources", "remapJar"].each { taskName ->
     tasks.register(taskName) {
         dependsOn(":tungsten-${defaultVersion}:${taskName}")
     }
 }
 
-// Per-version explicit tasks
-tasks.register("compile-1.21.1") { dependsOn(":tungsten-1.21.1:compileJava") }
-tasks.register("build-1.21.1")   { dependsOn(":tungsten-1.21.1:build") }
-tasks.register("run-1.21.1")     { dependsOn(":tungsten-1.21.1:runClient") }
+// runClient defaults to 1.21.11 (the version we're testing)
+tasks.register("runClient") {
+    dependsOn(":tungsten-1.21.11:runClient")
+}
 
-// 1.21.11 — only available with -Ptungsten1211
-if (rootProject.hasProperty("tungsten1211")) {
-    tasks.register("compile-1.21.11") { dependsOn(":tungsten-1.21.11:compileJava") }
-    tasks.register("build-1.21.11")   { dependsOn(":tungsten-1.21.11:build") }
-    tasks.register("run-1.21.11")     { dependsOn(":tungsten-1.21.11:runClient") }
+// Per-version explicit tasks
+versions.each { ver ->
+    tasks.register("compile-${ver}") {
+        dependsOn(":tungsten-${ver}:compileJava")
+    }
+    tasks.register("build-${ver}") {
+        dependsOn(":tungsten-${ver}:build")
+    }
+    tasks.register("run-${ver}") {
+        dependsOn(":tungsten-${ver}:runClient")
+    }
 }
