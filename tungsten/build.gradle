@@ -7,6 +7,7 @@ def patch = parts.size() > 2 ? parts[2] : '0'
 project.ext.mcVersion = "${major}${minor.padLeft(2, '0')}${patch.padLeft(2, '0')}" as int
 
 apply plugin: 'fabric-loom'
+apply plugin: 'com.replaymod.preprocess'
 
 // projectDir is tungsten/versions/X.Y.Z/ — source lives two levels up
 sourceSets {
