@@ -396,9 +396,9 @@ public class Agent {
 
     public final float getEyeHeight(EntityPose pose, EntityDimensions dimensions) {
          return switch(pose) {
-            case SWIMMING, FALL_FLYING, SPIN_ATTACK -> 0.4F;
-            case CROUCHING -> 1.27F;
-            case SLEEPING -> 0.2F;
+            case EntityPose.SWIMMING, EntityPose.FALL_FLYING, EntityPose.SPIN_ATTACK -> 0.4F;
+            case EntityPose.CROUCHING -> 1.27F;
+            case EntityPose.SLEEPING -> 0.2F;
             default -> 1.62F;
         };
     }
