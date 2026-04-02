@@ -6,23 +6,7 @@ def minor = parts.size() > 1 ? parts[1] : '0'
 def patch = parts.size() > 2 ? parts[2] : '0'
 project.ext.mcVersion = "${major}${minor.padLeft(2, '0')}${patch.padLeft(2, '0')}" as int
 
-// Loom 1.7.4 (from root) doesn't support 1.21.11 yarn unpick format.
-// Load newer loom for 1.21.11+, keep root loom for 1.21.x.
-buildscript {
-    repositories {
-        maven { url = 'https://maven.fabricmc.net/' }
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-if (mcVersion >= 12111) {
-    buildscript {
-        dependencies {
-            classpath 'net.fabricmc:fabric-loom:1.15-SNAPSHOT'
-        }
-    }
-}
-
+// fabric-loom 1.15-SNAPSHOT from root — supports both 1.21.1 and 1.21.11 mappings
 apply plugin: 'fabric-loom'
 
 loom {

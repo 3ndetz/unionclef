@@ -3,7 +3,7 @@ buildscript {
     project.ext.mcVersion = "${major}${minor.padLeft(2, '0')}${(patch ?: '').padLeft(2, '0')}" as int
 
     dependencies {
-        classpath 'fabric-loom:fabric-loom.gradle.plugin:1.7.4'
+        classpath 'fabric-loom:fabric-loom.gradle.plugin:1.15-SNAPSHOT'
         classpath 'com.github.breadmoirai:github-release:2.5.2'
     }
 }
