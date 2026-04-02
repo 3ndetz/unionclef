@@ -87,6 +87,40 @@ When porting upstream changes, DO NOT bring in any position/velocity correction 
 | Teleport handling | `MixinClientPlayNetworkHandler` | Let vanilla handle teleports, stop executor |
 | Drift config | `TungstenConfig` | driftThreshold, driftCorrectionEnabled, etc. |
 
+## Ported changes (status)
+
+| Change | Status | Notes |
+|--------|--------|-------|
+| processingTasks bug (nodes never considered) | DONE | `tasks.add()` → `processingTasks.add()` |
+| Node hashCode (remove velocity) | DONE | Less closed-set pollution |
+| sortNodesByYaw removal | DONE | Unbiased search |
+| Jump node color (cyan → mauve) | DONE | `Color(150, 55, 85)` for jumps |
+| BlockNode isDoingJump +6.5 cost | DONE | Prefer ground paths |
+| DivingMove cost 0.00002 → 0.2 | DONE | Avoid diving |
+| RunToNode/SprintJumpMove water-break | DONE | Cost penalty when entering water |
+| SwimmingMove non-swimming penalty | DONE | Prefer staying in swim state |
+| SprintJumpMove horizontal collision cost | DONE | +0.00004 penalty |
+| ExitWater: skip if target is water | DONE | |
+| RunToNode NPE fix (parent chain) | DONE | Null-check in while loop |
+| Walk/Run distance conditions | **REVERTED** | Upstream thresholds (walk >12, run <14) tuned for 1.21.11 physics with diagonal normalization — broke short routes on 1.21.1 |
+| Retry system (resetSearch) | NOT PORTED | Adds complexity, test separately |
+| Water/swimming full rewrite | NOT PORTED | Major refactor, risk of regression |
+| Command system refactor | NOT PORTED | We have our own command handling |
+| Server-side PathExecutor | NOT PORTED | No server-side use |
+| DivingMove colors green→blue | NOT PORTED | Cosmetic only |
+
+## WARNING: upstream tuned for different physics
+
+Upstream targets MC 1.21.11 which has diagonal movement normalization
+(MC-271065, added in 1.21.4+). Our 1.21.1 does NOT have this. Numerical
+constants (costs, distance thresholds) from upstream may not work on 1.21.1.
+
+**Rule: test every ported numerical change on 1.21.1 before committing.**
+
+The diagonal normalization gate in `Agent.java:1364-1368` is correctly
+commented out for 1.21.1. When tungsten compiles for 1.21.11, it must
+be enabled (currently a `//#if` comment — needs manual toggle or preprocessor).
+
 ### Files NOT to port (upstream-only)
 
 - `fakeplayerapi` dependency -- server-side fake player, not needed for client bot
