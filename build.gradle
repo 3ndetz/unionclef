@@ -140,7 +140,7 @@ processResources {
     }
 
     from(sourceSets.main.resources.srcDirs) {
-        duplicatesStrategy DuplicatesStrategy.EXCLUDE
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         exclude "fabric.mod.json"
     }
 }
