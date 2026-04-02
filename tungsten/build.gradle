@@ -1,28 +1,5 @@
-// Parse MC version from project name: "tungsten-1.21.1" -> 12101
-def mcVersionStr = project.name.replace("tungsten-", "")
-def parts = mcVersionStr.tokenize('.')
-def major = parts[0]
-def minor = parts.size() > 1 ? parts[1] : '0'
-def patch = parts.size() > 2 ? parts[2] : '0'
-project.ext.mcVersion = "${major}${minor.padLeft(2, '0')}${patch.padLeft(2, '0')}" as int
-
-apply plugin: 'fabric-loom'
-apply plugin: 'com.replaymod.preprocess'
-
-// projectDir is tungsten/versions/X.Y.Z/ — source lives two levels up
-sourceSets {
-    main {
-        java { srcDir '../../src/main/java' }
-        resources { srcDir '../../src/main/resources' }
-    }
-}
-
-loom {
-    runs {
-        client {
-            environment = "client"
-        }
-    }
+plugins {
+    id 'fabric-loom' version '1.15.5'
 }
 
 java {
@@ -36,25 +13,11 @@ base {
 version = "ALPHA-1.6.0"
 group = "kaptainwutax"
 
-// ── Per-version mappings ────────────────────────────────────────────────────
-
-def mappingsVersions = [
-        12101: "1.21.1+build.3",
-        12111: "1.21.11+build.3",
-]
-
-def fabricApiVersions = [
-        12101: "0.116.9+1.21.1",
-        12111: "0.140.0+1.21.11",
-]
-
-// ── Dependencies ────────────────────────────────────────────────────────────
-
 dependencies {
-    minecraft "com.mojang:minecraft:${mcVersionStr}"
-    mappings "net.fabricmc:yarn:${mappingsVersions[mcVersion]}:v2"
+    minecraft "com.mojang:minecraft:1.21.1"
+    mappings "net.fabricmc:yarn:1.21.1+build.3:v2"
     modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabricApiVersions[mcVersion]}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.116.9+1.21.1"
 }
 
 processResources {

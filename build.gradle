@@ -36,6 +36,14 @@ java {
     targetCompatibility = JavaVersion.VERSION_21
 }
 
+// Tungsten source compiled together with altoclef — preprocessor handles //#if
+sourceSets {
+    main {
+        java { srcDir 'tungsten/src/main/java' }
+        resources { srcDir 'tungsten/src/main/resources' }
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.release = 21
     options.encoding = "UTF-8"
@@ -52,11 +60,13 @@ group = project.maven_group
 def mappingsVersions = [
         12100: "1.21+build.9",
         12101: "1.21.1+build.3",
+        12111: "1.21.11+build.3",
 ]
 
 def fabricApiVersions = [
         12100: "0.100.7+1.21",
         12101: "0.116.9+1.21.1",
+        12111: "0.140.0+1.21.11",
 ]
 
 // ── Repositories ────────────────────────────────────────────────────────────
@@ -107,16 +117,7 @@ dependencies {
     implementation project(path: ":shredder", configuration: "namedElements")
     include project(":shredder")
 
-    // Tungsten — versioned subproject
-    // Map altoclef MC version to nearest tungsten version
-    def tungstenVersions = [
-            12100: "1.21.1",    // 1.21 altoclef uses tungsten 1.21.1
-            12101: "1.21.1",
-            12111: "1.21.11",
-    ]
-    def tungstenVer = tungstenVersions[mcVersion] ?: "1.21.1"
-    implementation project(path: ":tungsten-${tungstenVer}", configuration: "namedElements")
-    include project(":tungsten-${tungstenVer}")
+    // Tungsten — source compiled inline (preprocessed together with altoclef)
 }
 
 // ── Build pipeline ──────────────────────────────────────────────────────────
