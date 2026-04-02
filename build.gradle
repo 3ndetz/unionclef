@@ -107,9 +107,16 @@ dependencies {
     implementation project(path: ":shredder", configuration: "namedElements")
     include project(":shredder")
 
-    // Tungsten — versioned subproject (matches MC version)
-    implementation project(path: ":tungsten-${project.name}", configuration: "namedElements")
-    include project(":tungsten-${project.name}")
+    // Tungsten — versioned subproject
+    // Map altoclef MC version to nearest tungsten version
+    def tungstenVersions = [
+            12100: "1.21.1",    // 1.21 altoclef uses tungsten 1.21.1
+            12101: "1.21.1",
+            12111: "1.21.11",
+    ]
+    def tungstenVer = tungstenVersions[mcVersion] ?: "1.21.1"
+    implementation project(path: ":tungsten-${tungstenVer}", configuration: "namedElements")
+    include project(":tungsten-${tungstenVer}")
 }
 
 // ── Build pipeline ──────────────────────────────────────────────────────────

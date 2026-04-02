@@ -39,7 +39,8 @@ preprocess {
     // mc12001.link(mc11904)
 
     // tungsten chain (1.21.1 is mainProject — code on disk targets 1.21.1)
-    val t12111 = createNode("tungsten-1.21.11", 12111, "yarn")
+    // link direction: parent.link(child) — child is derived from parent
     val t12101 = createNode("tungsten-1.21.1", 12101, "yarn")
-    t12111.link(t12101)
+    val t12111 = createNode("tungsten-1.21.11", 12111, "yarn")
+    t12101.link(t12111)
 }
