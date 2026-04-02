@@ -85,17 +85,17 @@ public class Node {
 	 public int hashCode(int round, boolean shouldAddYaw) {
 		 long result = 3241;
 		 if (this.input != null) {
-		 	result = 2 * Boolean.hashCode(this.input.forward);
-		    result = result + 3 * Boolean.hashCode(this.input.back);
-		    result = result + 5 * Boolean.hashCode(this.input.right);
-		    result = result + 11 * Boolean.hashCode(this.input.left);
-		    result = result + 13 * Boolean.hashCode(this.input.jump);
-		    result = result + 17 * Boolean.hashCode(this.input.sneak);
-		    result = result + 19 * Boolean.hashCode(this.input.sprint);
+			 if (this.input.forward) result += "forward".hashCode();
+			 if (this.input.back) result += "back".hashCode();
+			 if (this.input.right) result += "right".hashCode();
+			 if (this.input.left) result += "left".hashCode();
+			 if (this.input.jump) result += "jump".hashCode();
+			 if (this.input.sneak) result += "sneak".hashCode();
+			 if (this.input.sprint) result += "sprint".hashCode();
 //		    result = result + (Math.round(this.input.pitch));
 		    if (shouldAddYaw) result = result + (Math.round(this.input.yaw / 45f));
-		    result = result + (Math.round(this.agent.velX*10));
-		    result = result + (Math.round(this.agent.velZ*10));
+		    // velocity removed from hash — too many unique values caused
+		    // excessive hash collisions in the closed set
 		 }
 //	    if (round > 1) {
 //		    result = 34L * result + Double.hashCode(roundToPrecision(this.agent.getPos().x, round));
@@ -114,6 +114,8 @@ public class Node {
 		if (shouldSkipNodeGeneration(nextBlockNode)) {
 	        return Collections.emptyList();
 	    }
+
+		double distance = DistanceCalculator.getEuclideanDistance(this.agent.getPos(), nextBlockNode.getPos(true));
 
 	    List<Node> nodes = new ArrayList<>();
 
@@ -172,7 +174,6 @@ public class Node {
                         generateAirborneNodes(world, nextBlockNode, nodes);
                     }
 
-                    sortNodesByYaw(nodes, target);
                 }
                 nodes.add(sprintJumpMove);
 //	    	if (isSprintJumpMoveClose) return nodes;
@@ -182,8 +183,6 @@ public class Node {
                 } else {
                     generateAirborneNodes(world, nextBlockNode, nodes);
                 }
-
-                sortNodesByYaw(nodes, target);
             }
 	    
 	    if (agent.onGround) {
@@ -196,18 +195,18 @@ public class Node {
 	    		if (cj2 != null) nodes.add(cj2);
 	    	}
 	    }
-	    if (agent.touchingWater && BlockShapeChecker.getShapeVolume(nextBlockNode.getBlockPos(), world) == 0) {
+	    if (agent.touchingWater && BlockShapeChecker.getShapeVolume(nextBlockNode.getBlockPos(), world) == 0 && !BlockStateChecker.isAnyWater(nextBlockNode.getBlockState(world))) {
 	    	Node exitWaterMove = ExitWaterMove.generateMove(this, nextBlockNode);
 //	    	boolean isExitWaterMoveClose = exitWaterMove.agent.getPos().distanceTo(nextBlockNode.getPos(true)) < 1.5;
 	    	nodes.add(exitWaterMove);
 //	    	if (isExitWaterMoveClose) return nodes;
 	    }
-	    
-	    if (!agent.touchingWater && !this.agent.canSprint()) {
+
+	    if (!agent.touchingWater && !this.agent.canSprint() && distance > 12) {
 	    	nodes.add(WalkToNode.generateMove(this, nextBlockNode));
 	    }
-	    
-	    if (!agent.touchingWater && this.agent.canSprint() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 4) {
+
+	    if (!agent.touchingWater && this.agent.canSprint() && distance < 14) {
 	    	nodes.add(RunToNode.generateMove(this, nextBlockNode));
 	    }
     	if (!agent.isClimbing(world) && world.getBlockState(agent.getBlockPos().down()).getBlock() instanceof LadderBlock) {	
@@ -402,12 +401,4 @@ public class Node {
 	    nodes.add(newNode);
 	}
 	
-	private void sortNodesByYaw(List<Node> nodes, Vec3d target) {
-	    double desiredYaw = DirectionHelper.calcYawFromVec3d(agent.getPos(), target);
-	    nodes.sort((n1, n2) -> {
-	        double diff1 = Math.abs(n1.agent.yaw - desiredYaw);
-	        double diff2 = Math.abs(n2.agent.yaw - desiredYaw);
-	        return Double.compare(diff1, diff2);
-	    });
-	}
 }

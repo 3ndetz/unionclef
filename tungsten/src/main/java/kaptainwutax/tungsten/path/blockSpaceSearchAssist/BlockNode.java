@@ -72,6 +72,7 @@ public class BlockNode {
 	public BlockPos chachedBlockPos = null;
 	
 	public Boolean isDoingLongJump = null;
+	public boolean isDoingJump = false;
 
 	/**
 	 * Cached, should always be equal to goal.heuristic(pos)
@@ -374,8 +375,10 @@ public class BlockNode {
                     px += dx;
                     pz += dz;
 
+                    boolean isDoingJump = Math.abs(pz) > 1 || Math.abs(px) > 1;
                     BlockNode newNode = new BlockNode(this.x + px, this.y + py, this.z + pz, goal, this,
-                            ActionCosts.WALK_ONE_BLOCK_COST, this.player);
+                            isDoingJump ? ActionCosts.WALK_ONE_BLOCK_COST + 6.5 : ActionCosts.WALK_ONE_BLOCK_COST, this.player);
+                    newNode.isDoingJump = isDoingJump;
                     nodes.add(newNode);
                 }
             }
