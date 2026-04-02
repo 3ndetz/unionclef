@@ -30,7 +30,7 @@ public class SwimmingMove {
 		float desiredPitch = (float) DirectionHelper.calcPitchFromVec3d(agent.getPos(), nextBlockNode.getPos(true));
 		double distance = DistanceCalculator.getHorizontalEuclideanDistance(agent.getPos(), nextBlockNode.getPos(true));
 	    Node newNode = new Node(parent, world, new PathInput(false, false, false, false, false, false, false, desiredPitch, desiredYaw),
-	    				new Color(0, 255, 150), parent.cost + 0.0001);
+	    				new Color(0, 255, 150), parent.cost + (parent.agent.swimming ? 0 : 0.05) + 0.0001);
 		int limit = 0;
 		double closestDistance = Double.MAX_VALUE;
         // Run forward to the node

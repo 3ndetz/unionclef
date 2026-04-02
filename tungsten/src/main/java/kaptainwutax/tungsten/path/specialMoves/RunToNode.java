@@ -31,7 +31,12 @@ public class RunToNode {
 	    boolean jump = false;
         int limit = 0;
         while (limit < 200) {
+			if (newNode.agent.isInLava()) newNode.cost += 2e6;
         	limit++;
+			if (newNode.agent.touchingWater) {
+				newNode.cost += 0.2;
+				break;
+			}
 //        	RenderHelper.renderNode(newNode);
 //        	try {
 //				Thread.sleep(2);

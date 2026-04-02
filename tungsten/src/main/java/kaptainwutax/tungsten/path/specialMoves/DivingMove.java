@@ -22,7 +22,7 @@ import net.minecraft.world.WorldView;
 public class DivingMove {
 
 	public static Node generateMove(Node parent, BlockNode nextBlockNode) {
-		double cost = 0.00002;
+		double cost = 0.2;
 		WorldView world = TungstenModDataContainer.world;
 		Agent agent = parent.agent;
 		float desiredYaw = (float) DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true));
