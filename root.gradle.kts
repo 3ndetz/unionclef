@@ -24,6 +24,7 @@ listOf("compileJava", "runClient", "build", "remapJar", "processResources", "git
 }
 
 preprocess {
+    // altoclef chain
     val mc12101 = createNode("1.21.1", 12101, "yarn")
     val mc12100 = createNode("1.21", 12100, "yarn")
     // val mc12006 = createNode("1.20.6", 12006, "yarn")
@@ -36,4 +37,9 @@ preprocess {
     // mc12006.link(mc12004)
     // mc12004.link(mc12001)
     // mc12001.link(mc11904)
+
+    // tungsten chain (1.21.1 is mainProject — code on disk targets 1.21.1)
+    val t12111 = createNode("tungsten-1.21.11", 12111, "yarn")
+    val t12101 = createNode("tungsten-1.21.1", 12101, "yarn")
+    t12111.link(t12101)
 }

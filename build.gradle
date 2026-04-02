@@ -107,9 +107,9 @@ dependencies {
     implementation project(path: ":shredder", configuration: "namedElements")
     include project(":shredder")
 
-    // Tungsten — source subproject
-    implementation project(path: ":tungsten", configuration: "namedElements")
-    include project(":tungsten")
+    // Tungsten — versioned subproject (matches MC version)
+    implementation project(path: ":tungsten-${project.name}", configuration: "namedElements")
+    include project(":tungsten-${project.name}")
 }
 
 // ── Build pipeline ──────────────────────────────────────────────────────────

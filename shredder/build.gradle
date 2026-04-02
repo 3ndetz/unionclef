@@ -24,7 +24,8 @@ dependencies {
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
     // Tungsten — physics-based movement, used by TungstenBridge
-    implementation project(path: ":tungsten", configuration: "namedElements")
+    // TODO: version shredder too when adding altoclef 1.21.11
+    implementation project(path: ":tungsten-1.21.1", configuration: "namedElements")
 }
 
 repositories {
