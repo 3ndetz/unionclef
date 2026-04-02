@@ -37,10 +37,13 @@ java {
 }
 
 // Tungsten source compiled together with altoclef — preprocessor handles //#if
-// Only java, NOT resources (tungsten has its own fabric.mod.json/assets that conflict)
-sourceSets {
-    main {
-        java { srcDir rootProject.file('tungsten/src/main/java') }
+// Only add srcDir for mainProject; preprocessor copies/transforms for other versions
+def mainProjectVersion = rootProject.file("versions/mainProject").text.trim()
+if (project.name == mainProjectVersion) {
+    sourceSets {
+        main {
+            java { srcDir rootProject.file('tungsten/src/main/java') }
+        }
     }
 }
 
