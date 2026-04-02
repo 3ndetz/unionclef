@@ -8,7 +8,6 @@ project.ext.mcVersion = "${major}${minor.padLeft(2, '0')}${patch.padLeft(2, '0')
 
 // fabric-loom classpath inherited from root plugins { id("fabric-loom") apply false }
 apply plugin: 'fabric-loom'
-apply plugin: 'com.replaymod.preprocess'
 
 loom {
     runs {

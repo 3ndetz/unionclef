@@ -38,9 +38,7 @@ preprocess {
     // mc12004.link(mc12001)
     // mc12001.link(mc11904)
 
-    // tungsten chain (1.21.1 is mainProject — code on disk targets 1.21.1)
-    // link direction: parent.link(child) — child is derived from parent
-    val t12101 = createNode("tungsten-1.21.1", 12101, "yarn")
-    val t12111 = createNode("tungsten-1.21.11", 12111, "yarn")
-    t12101.link(t12111)
+    // tungsten: no preprocessor — both versions compile same source.
+    // Version differences are minimal (diagonal normalization gate etc.)
+    // and handled via runtime checks or manual #if comments.
 }
