@@ -6,8 +6,15 @@ def minor = parts.size() > 1 ? parts[1] : '0'
 def patch = parts.size() > 2 ? parts[2] : '0'
 project.ext.mcVersion = "${major}${minor.padLeft(2, '0')}${patch.padLeft(2, '0')}" as int
 
-// fabric-loom 1.15-SNAPSHOT from root — supports both 1.21.1 and 1.21.11 mappings
 apply plugin: 'fabric-loom'
+
+// projectDir is tungsten/versions/X.Y.Z/ — source lives two levels up
+sourceSets {
+    main {
+        java { srcDir '../../src/main/java' }
+        resources { srcDir '../../src/main/resources' }
+    }
+}
 
 loom {
     runs {
