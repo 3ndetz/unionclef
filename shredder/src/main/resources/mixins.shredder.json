@@ -8,6 +8,7 @@
     "defaultRequire": 0
   },
   "client": [
+    "MixinChunkArray",
     "MixinClientChunkProvider",
     "MixinClientPlayNetHandler",
     "MixinEntity",
