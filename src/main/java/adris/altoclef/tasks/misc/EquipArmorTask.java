@@ -90,7 +90,11 @@ public class EquipArmorTask extends Task {
                     }
                 }
             } else {
+                //#if MC < 12111
                 ArmorItem item = (ArmorItem) Objects.requireNonNull(targetArmor.getMatches())[0];
+                //#else
+                //$$ Item item = Objects.requireNonNull(targetArmor.getMatches())[0]; // TODO [1.21.11] ArmorItem deleted
+                //#endif
                 if (item == null) {
                     Debug.logWarning("Item " + targetArmor + " is not armor! Will not equip.");
                 } else {

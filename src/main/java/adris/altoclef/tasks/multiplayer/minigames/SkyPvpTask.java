@@ -282,14 +282,22 @@ public class SkyPvpTask extends Task {
     // ── armor checks ─────────────────────────────────────────────────────────
 
     private boolean hasAnyArmor(AltoClef mod) {
+        //#if MC < 12111
         for (var stack : mod.getPlayer().getArmorItems()) {
+        //#else
+        //$$ for (var stack : mod.getPlayer().getArmorItems()) { // TODO [1.21.11] getArmorItems() renamed
+        //#endif
             if (!stack.isEmpty()) return true;
         }
         return false;
     }
 
     private boolean hasAnyArmorEntity(PlayerEntity player) {
+        //#if MC < 12111
         for (var stack : player.getArmorItems()) {
+        //#else
+        //$$ for (var stack : player.getArmorItems()) { // TODO [1.21.11] getArmorItems() renamed
+        //#endif
             if (!stack.isEmpty()) return true;
         }
         return false;

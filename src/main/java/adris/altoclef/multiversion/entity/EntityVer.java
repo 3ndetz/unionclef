@@ -138,4 +138,22 @@ public class EntityVer {
         //#endif
     }
 
+    @Pattern
+    private static Iterable<net.minecraft.item.ItemStack> getHandItems(net.minecraft.entity.LivingEntity entity) {
+        //#if MC >= 12111
+        //$$ return entity.getHandItems(); // TODO verify 1.21.11 name
+        //#else
+        return entity.getHandItems();
+        //#endif
+    }
+
+    @Pattern
+    private static Iterable<net.minecraft.item.ItemStack> getArmorItems(net.minecraft.entity.LivingEntity entity) {
+        //#if MC >= 12111
+        //$$ return entity.getArmorItems(); // TODO verify 1.21.11 name
+        //#else
+        return entity.getArmorItems();
+        //#endif
+    }
+
 }

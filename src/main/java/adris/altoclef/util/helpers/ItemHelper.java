@@ -418,7 +418,11 @@ public class ItemHelper {
 
     private static Map<Item, Integer> getFuelTimeMap() {
         if (fuelTimeMap == null) {
+            //#if MC < 12111
             fuelTimeMap = AbstractFurnaceBlockEntity.createFuelTimeMap();
+            //#else
+            //$$ fuelTimeMap = new java.util.HashMap<>(); // TODO [1.21.11] createFuelTimeMap() removed
+            //#endif
         }
         return fuelTimeMap;
     }

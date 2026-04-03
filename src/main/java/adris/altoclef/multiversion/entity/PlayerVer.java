@@ -51,6 +51,21 @@ public class PlayerVer {
         //#endif
     }
 
+    @Pattern
+    private static int getSelectedSlot(net.minecraft.entity.player.PlayerInventory inv) {
+        //#if MC >= 12111
+        //$$ return inv.getSelectedSlot();
+        //#else
+        return inv.selectedSlot;
+        //#endif
+    }
 
+    public static void setSelectedSlot(net.minecraft.entity.player.PlayerInventory inv, int slot) {
+        //#if MC >= 12111
+        //$$ inv.setSelectedSlot(slot);
+        //#else
+        inv.selectedSlot = slot;
+        //#endif
+    }
 
 }

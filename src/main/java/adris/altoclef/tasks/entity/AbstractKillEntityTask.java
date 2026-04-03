@@ -344,7 +344,11 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         // Detect whether target is blocking with a shield → prefer axe to break it
         boolean preferAxe = false;
         if (player.isUsingItem()) {
+            //#if MC < 12111
             for (ItemStack stack : player.getHandItems()) {
+            //#else
+            //$$ for (ItemStack stack : List.of(player.getMainHandStack(), player.getOffHandStack())) { // TODO [1.21.11] getHandItems() renamed
+            //#endif
                 if (stack.isOf(Items.SHIELD)) {
                     preferAxe = true;
                     break;

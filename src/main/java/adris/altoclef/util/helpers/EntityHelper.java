@@ -53,8 +53,13 @@ public class EntityHelper {
 
     public static boolean isTradingPiglin(Entity entity) {
         if (entity instanceof PiglinEntity pig) {
+            //#if MC < 12111
             if (pig.getHandItems() != null) {
                 for (ItemStack stack : pig.getHandItems()) {
+            //#else
+            //$$ { // TODO [1.21.11] getHandItems() renamed
+            //$$     for (ItemStack stack : List.of(pig.getMainHandStack(), pig.getOffHandStack())) {
+            //#endif
                     if (stack.getItem().equals(Items.GOLD_INGOT)) {
                         // We're trading with this one, ignore it.
                         return true;
@@ -73,7 +78,11 @@ public class EntityHelper {
         // Copied logic from `PlayerEntity.applyDamage`
         DamageSourceWrapper source = DamageSourceWrapper.of(src);
 
+        //#if MC < 12111
         if (player.isInvulnerableTo(src))
+        //#else
+        //$$ if (false) // TODO [1.21.11] isInvulnerableTo(DamageSource) → isInvulnerableTo(ServerWorld, DamageSource)
+        //#endif
             return 0;
 
         // Armor Base
