@@ -1,37 +1,34 @@
 	package kaptainwutax.tungsten.mixin;
 
+//#if MC < 12111
 	import java.util.ArrayList;
 	import java.util.Collection;
 	import java.util.Collections;
 	import java.util.List;
+
+	import com.mojang.blaze3d.systems.RenderSystem;
+	import net.minecraft.client.render.VertexFormat.DrawMode;
+	import net.minecraft.client.render.RenderLayer;
+	import net.minecraft.client.render.VertexConsumerProvider;
+	import net.minecraft.client.util.math.MatrixStack;
+	import net.minecraft.util.math.Box;
+//#endif
 
 	import org.spongepowered.asm.mixin.Mixin;
 	import org.spongepowered.asm.mixin.injection.At;
 	import org.spongepowered.asm.mixin.injection.Inject;
 	import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-//#if MC >= 12111
-//$$ import com.mojang.blaze3d.vertex.VertexFormat.DrawMode;
-//$$ import net.minecraft.client.render.DrawStyle;
-//#else
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.render.VertexFormat.DrawMode;
-import net.minecraft.client.render.RenderLayer;
-//#endif
-
 	import kaptainwutax.tungsten.TungstenMod;
-import kaptainwutax.tungsten.TungstenModRenderContainer;
-import kaptainwutax.tungsten.render.Color;
+	import kaptainwutax.tungsten.TungstenModRenderContainer;
+	import kaptainwutax.tungsten.render.Color;
 	import kaptainwutax.tungsten.render.Cuboid;
 	import kaptainwutax.tungsten.render.Renderer;
-import net.minecraft.client.render.BufferBuilder;
+	import net.minecraft.client.render.BufferBuilder;
 	import net.minecraft.client.render.Frustum;
-import net.minecraft.client.render.Tessellator;
-	import net.minecraft.client.render.VertexConsumerProvider;
+	import net.minecraft.client.render.Tessellator;
 	import net.minecraft.client.render.VertexFormats;
 	import net.minecraft.client.render.debug.DebugRenderer;
-	import net.minecraft.client.util.math.MatrixStack;
-	import net.minecraft.util.math.Box;
 	import net.minecraft.util.math.Vec3d;
 	import static org.lwjgl.opengl.GL11.*;
 
@@ -43,11 +40,14 @@ import net.minecraft.client.render.Tessellator;
 		@Inject(method = "render", at = @At("RETURN"))
 		//#if MC >= 12111
 		//$$ public void render(Frustum frustum, double cameraX, double cameraY, double cameraZ, float tickProgress, CallbackInfo ci) {
+		//$$     // 1.21.11: debug line render API (RenderLayer.getDebugLineStrip) removed.
+		//$$     // Upstream tungsten also has this WIP — lines don't draw yet.
+		//$$     // No-op to prevent sky flickering from broken GL state.
+		//$$ }
 		//#else
 		public void render(MatrixStack matrices, VertexConsumerProvider.Immediate vertexConsumers,
 				double cameraX, double cameraY, double cameraZ, CallbackInfo ci) {
 			Frustum frustum = null;
-		//#endif
 
 			glDisable(GL_DEPTH_TEST);
 		    glDisable(GL_BLEND);
@@ -55,18 +55,12 @@ import net.minecraft.client.render.Tessellator;
 			Tessellator tessellator = Tessellator.getInstance();
 			BufferBuilder builder;
 
-			//#if MC >= 12111
-			//$$ DrawStyle drawStyle = new DrawStyle(-1, 2.0F, 0);
-			//#else
 			RenderSystem.lineWidth(2.0F);
-			//#endif
 
 			builder = tessellator.begin(DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
 			Cuboid goal = new Cuboid(TungstenMod.TARGET.subtract(0.5D, 0D, 0.5D), new Vec3d(1.0D, 2.0D, 1.0D), Color.GREEN);
 			goal.render(builder);
-			//#if MC < 12111
 			RenderLayer.getDebugLineStrip(2).draw(builder.end());
-			//#endif
 
 			if (!TungstenModRenderContainer.RUNNING_PATH_RENDERER.isEmpty())
 				renderCollection(TungstenModRenderContainer.RUNNING_PATH_RENDERER, tessellator, frustum, cameraX, cameraY, cameraZ);
@@ -84,7 +78,7 @@ import net.minecraft.client.render.Tessellator;
 				renderCollection(TungstenModRenderContainer.ERROR, tessellator, frustum, cameraX, cameraY, cameraZ);
 
 			if (!TungstenModRenderContainer.COMBAT_TRAJECTORY.isEmpty())
-				renderCollectionNoDepth(TungstenModRenderContainer.COMBAT_TRAJECTORY, tessellator, frustum, cameraX, cameraY, cameraZ);
+				renderCollectionNoDepth(TungstenModRenderContainer.COMBAT_TRAJECTORY, tessellator);
 
 		    glEnable(GL_BLEND);
 		    glEnable(GL_DEPTH_TEST);
@@ -107,9 +101,7 @@ import net.minecraft.client.render.Tessellator;
 						}
 						BufferBuilder builder = tessellator.begin(DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
 						r.render(builder);
-						//#if MC < 12111
 						RenderLayer.getDebugLineStrip(2).draw(builder.end());
-						//#endif
 						count++;
 					} catch (Exception e) {
 						TungstenMod.LOG.debug("Error rendering object: " + e.getMessage());
@@ -120,8 +112,7 @@ import net.minecraft.client.render.Tessellator;
 			}
 		}
 
-		private static void renderCollectionNoDepth(Collection<Renderer> renderers, Tessellator tessellator, Frustum frustum,
-				double cameraX, double cameraY, double cameraZ) {
+		private static void renderCollectionNoDepth(Collection<Renderer> renderers, Tessellator tessellator) {
 			int count = 0;
 			List<Renderer> sorted = new ArrayList<>(renderers);
 			Collections.reverse(sorted);
@@ -130,11 +121,10 @@ import net.minecraft.client.render.Tessellator;
 					if (count >= MAX_RENDERERS_PER_CATEGORY) break;
 					try {
 						glDisable(GL_DEPTH_TEST);
+						RenderSystem.lineWidth(3.0F);
 						BufferBuilder builder = tessellator.begin(DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
 						r.render(builder);
-						//#if MC < 12111
 						RenderLayer.getDebugLineStrip(2).draw(builder.end());
-						//#endif
 						glDisable(GL_DEPTH_TEST);
 						count++;
 					} catch (Exception e) {
@@ -144,5 +134,7 @@ import net.minecraft.client.render.Tessellator;
 			} catch (Exception e) {
 				TungstenMod.LOG.debug("Error rendering combat viz: " + e.getMessage());
 			}
+			RenderSystem.lineWidth(2.0F);
 		}
+		//#endif
 	}
