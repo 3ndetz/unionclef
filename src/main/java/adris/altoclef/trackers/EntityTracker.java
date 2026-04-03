@@ -88,7 +88,11 @@ public class EntityTracker extends Tracker {
     }
 
     public Optional<ItemEntity> getClosestItemDrop(Item... items) {
+        //#if MC >= 12111
+        //$$ return getClosestItemDrop(mod.getPlayer().getEntityPos(), items);
+        //#else
         return getClosestItemDrop(mod.getPlayer().getPos(), items);
+        //#endif
     }
 
     public Optional<ItemEntity> getClosestItemDrop(Vec3d position, Item... items) {
@@ -100,7 +104,11 @@ public class EntityTracker extends Tracker {
     }
 
     public Optional<ItemEntity> getClosestItemDrop(Predicate<ItemEntity> acceptPredicate, Item... items) {
+        //#if MC >= 12111
+        //$$ return getClosestItemDrop(mod.getPlayer().getEntityPos(), acceptPredicate, items);
+        //#else
         return getClosestItemDrop(mod.getPlayer().getPos(), acceptPredicate, items);
+        //#endif
     }
 
     public Optional<ItemEntity> getClosestItemDrop(Vec3d position, Predicate<ItemEntity> acceptPredicate, Item... items) {
@@ -132,7 +140,11 @@ public class EntityTracker extends Tracker {
                     if (!entity.getStack().getItem().equals(item)) continue;
                     if (!acceptPredicate.test(entity)) continue;
 
+                    //#if MC >= 12111
+                    //$$ float cost = (float) BaritoneHelper.calculateGenericHeuristic(position, entity.getEntityPos());
+                    //#else
                     float cost = (float) BaritoneHelper.calculateGenericHeuristic(position, entity.getPos());
+                    //#endif
                     if (cost < minCost) {
                         minCost = cost;
                         closestEntity = entity;
@@ -144,7 +156,11 @@ public class EntityTracker extends Tracker {
     }
 
     public Optional<Entity> getClosestEntity(Class... entityTypes) {
+        //#if MC >= 12111
+        //$$ return getClosestEntity(mod.getPlayer().getEntityPos(), entityTypes);
+        //#else
         return getClosestEntity(mod.getPlayer().getPos(), entityTypes);
+        //#endif
     }
 
     public Optional<Entity> getClosestEntity(Vec3d position, Class... entityTypes) {
@@ -152,7 +168,11 @@ public class EntityTracker extends Tracker {
     }
 
     public Optional<Entity> getClosestEntity(Predicate<Entity> acceptPredicate, Class... entityTypes) {
+        //#if MC >= 12111
+        //$$ return getClosestEntity(mod.getPlayer().getEntityPos(), acceptPredicate, entityTypes);
+        //#else
         return getClosestEntity(mod.getPlayer().getPos(), acceptPredicate, entityTypes);
+        //#endif
     }
 
     public Optional<Entity> getClosestEntity(Vec3d position, Predicate<Entity> acceptPredicate, Class... entityTypes) {
@@ -392,7 +412,11 @@ public class EntityTracker extends Tracker {
                             continue;
 
                         if (!inGround) {
-                            proj.position = projEntity.getPos();
+                            //#if MC >= 12111
+                        //$$ proj.position = projEntity.getEntityPos();
+                        //#else
+                        proj.position = projEntity.getPos();
+                        //#endif
                             proj.velocity = projEntity.getVelocity();
                             proj.gravity = ProjectileHelper.hasGravity(projEntity) ? ProjectileHelper.ARROW_GRAVITY_ACCEL : 0;
                             proj.projectileType = projEntity.getClass();
@@ -402,7 +426,11 @@ public class EntityTracker extends Tracker {
                 } else if (entity instanceof PlayerEntity player) {
                     String name = player.getName().getString();
                     playerMap.put(name, player);
+                    //#if MC >= 12111
+                    //$$ playerLastCoordinates.put(name, player.getEntityPos());
+                    //#else
                     playerLastCoordinates.put(name, player.getPos());
+                    //#endif
                 }
             }
         }
@@ -430,7 +458,11 @@ public class EntityTracker extends Tracker {
             return false;
 
         if (!inGround) {
+            //#if MC >= 12111
+            //$$ proj.position = projEntity.getEntityPos();
+            //#else
             proj.position = projEntity.getPos();
+            //#endif
             proj.velocity = projEntity.getVelocity();
             proj.gravity = ProjectileHelper.hasGravity(projEntity) ? ProjectileHelper.ARROW_GRAVITY_ACCEL : 0;
             proj.projectileType = projEntity.getClass();

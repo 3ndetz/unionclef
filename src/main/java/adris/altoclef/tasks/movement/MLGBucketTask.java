@@ -75,7 +75,11 @@ public class MLGBucketTask extends Task {
     private static boolean canTravelToInAir(BlockPos pos) {
         Entity player = MinecraftClient.getInstance().player;
         assert player != null;
+        //#if MC >= 12111
+        //$$ double verticalDist = player.getEntityPos().getY() - pos.getY() - 1;
+        //#else
         double verticalDist = player.getPos().getY() - pos.getY() - 1;
+        //#endif
         double verticalVelocity = -1 * player.getVelocity().y;
         double grav = EntityHelper.ENTITY_GRAVITY;
         double movementSpeedPerTick = _config.averageHorizontalMovementSpeedPerTick; // Calculated, but also somewhat conservative
@@ -83,7 +87,11 @@ public class MLGBucketTask extends Task {
         double ticksToTravelSq = (-verticalVelocity + Math.sqrt(verticalVelocity * verticalVelocity + 2 * grav * verticalDist)) / grav;
         double maxMoveDistanceSq = movementSpeedPerTick * movementSpeedPerTick * ticksToTravelSq * ticksToTravelSq;
         // We need to get within 1 block, so subtract a "radius" or something idk
+        //#if MC >= 12111
+        //$$ double horizontalDistance = WorldHelper.distanceXZ(player.getEntityPos(), WorldHelper.toVec3d(pos)) - 0.8;
+        //#else
         double horizontalDistance = WorldHelper.distanceXZ(player.getPos(), WorldHelper.toVec3d(pos)) - 0.8;
+        //#endif
         if (horizontalDistance < 0)
             horizontalDistance = 0;
         return maxMoveDistanceSq > horizontalDistance * horizontalDistance;
@@ -249,7 +257,11 @@ public class MLGBucketTask extends Task {
         Rotation look = LookHelper.getLookRotation();
         look = new Rotation(look.getYaw(), 0);
         Vec3d forwardFacing = LookHelper.toVec3d(look).multiply(1, 0, 1).normalize();
+        //#if MC >= 12111
+        //$$ Vec3d delta = WorldHelper.toVec3d(movingTorwards).subtract(mod.getPlayer().getEntityPos()).multiply(1, 0, 1);
+        //#else
         Vec3d delta = WorldHelper.toVec3d(movingTorwards).subtract(mod.getPlayer().getPos()).multiply(1, 0, 1);
+        //#endif
         Vec3d velocity = mod.getPlayer().getVelocity().multiply(1, 0, 1);
         Vec3d pd = delta.subtract(velocity.multiply(3f));
         double forwardStrength = pd.dotProduct(forwardFacing);
@@ -342,7 +354,11 @@ public class MLGBucketTask extends Task {
         }
         // Cancel our left/right velocity with respect to block
         Vec3d velocity = mod.getPlayer().getVelocity();
+        //#if MC >= 12111
+        //$$ Vec3d deltaTarget = WorldHelper.toVec3d(movingTorwards).subtract(mod.getPlayer().getEntityPos());
+        //#else
         Vec3d deltaTarget = WorldHelper.toVec3d(movingTorwards).subtract(mod.getPlayer().getPos());
+        //#endif
         // "right" velocity relative to delta
         Rotation look = LookHelper.getLookRotation();
         Vec3d forwardFacing = LookHelper.toVec3d(look).multiply(1, 0, 1).normalize();
@@ -389,7 +405,11 @@ public class MLGBucketTask extends Task {
 
         // Perform NEARBY sweep
         //int nearbySweepSize =
+        //#if MC >= 12111
+        //$$ Vec3d center = mod.getPlayer().getEntityPos();
+        //#else
         Vec3d center = mod.getPlayer().getPos();
+        //#endif
         for (int dx = -2; dx <= 2; ++dx) {
             for (int dz = -2; dz <= 2; ++dz) {
                 RaycastContext ctx = castDown(center.add(dx, 0, dz));
@@ -409,7 +429,11 @@ public class MLGBucketTask extends Task {
     private RaycastContext castCone(double yaw, double pitch) {
         Entity player = MinecraftClient.getInstance().player;
         assert player != null;
+        //#if MC >= 12111
+        //$$ Vec3d origin = player.getEntityPos();
+        //#else
         Vec3d origin = player.getPos();
+        //#endif
         double dy = _config.epicClutchConeCastHeight;
         double dH = dy * Math.sin(Math.toRadians(pitch)); // horizontal distance
         double yawRad = Math.toRadians(yaw);
@@ -509,7 +533,11 @@ public class MLGBucketTask extends Task {
             if (bestBlockIsSafe && !water)
                 return;
             double height = check.getY();
+            //#if MC >= 12111
+            //$$ double distSqXZ = WorldHelper.distanceXZSquared(WorldHelper.toVec3d(check), mod.getPlayer().getEntityPos());
+            //#else
             double distSqXZ = WorldHelper.distanceXZSquared(WorldHelper.toVec3d(check), mod.getPlayer().getPos());
+            //#endif
             boolean highestSoFar = height > highestY;
             boolean closestSoFar = distSqXZ < closestXZ;
             // We found a new contender

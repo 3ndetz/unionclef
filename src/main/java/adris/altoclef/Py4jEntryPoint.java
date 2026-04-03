@@ -740,7 +740,11 @@ public class Py4jEntryPoint {
         PlayerEntity self = _mod.getPlayer();
         ArrayList<PlayerThreat> nearsetPlayerThreats = new ArrayList<>();
         if (playerList != null && self != null && self.getName() != null && _mod.getWorld() != null) {
+            //#if MC >= 12111
+            //$$ Vec3d selfPos = self.getEntityPos();
+            //#else
             Vec3d selfPos = self.getPos();
+            //#endif
             if (selfPos != null) {
                 for (AbstractClientPlayerEntity player : playerList) {
                     if (player != null && player.getName() != null) {
@@ -816,7 +820,11 @@ public class Py4jEntryPoint {
         PlayerEntity self = _mod.getPlayer();
         List<Map<String, String>> list = new ArrayList<>();
         if (self != null) {
+            //#if MC >= 12111
+            //$$ Vec3d selfPos = self.getEntityPos();
+            //#else
             Vec3d selfPos = self.getPos();
+            //#endif
             if (selfPos != null) {
 
                 List<AbstractClientPlayerEntity> playerList = _mod.getDamageTracker().getPlayerList();
@@ -839,7 +847,11 @@ public class Py4jEntryPoint {
                         Map<String, String> playerInfoMap = new HashMap<>();
                         playerInfoMap.put("name", threat.name);
                         playerInfoMap.put("health", String.valueOf(threat.lastHealth));
+                        //#if MC >= 12111
+                        //$$ playerInfoMap.put("distance", String.valueOf(pos.distanceTo(self.getEntityPos())));
+                        //#else
                         playerInfoMap.put("distance", String.valueOf(pos.distanceTo(self.getPos())));
+                        //#endif
                         playerInfoMap.put("is_looking_at_you_prob", String.valueOf(getLookingProbability(player, self)));
                         Item item = player.getMainHandStack().getItem();
                         if (item != null) {

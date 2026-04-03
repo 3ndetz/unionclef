@@ -146,7 +146,11 @@ public class WorldSurvivalChain extends SingleTaskChain {
 
         // Movement stuck detection
         if (_lastPos == null) {
+            //#if MC >= 12111
+            //$$ _lastPos = mod.getPlayer().getEntityPos();
+            //#else
             _lastPos = mod.getPlayer().getPos();
+            //#endif
             _moveStuckTimer.reset();
         }
         if (_numTryingUnstuck > 3) {
@@ -157,7 +161,11 @@ public class WorldSurvivalChain extends SingleTaskChain {
         }
         if (_moveStuckTimer.elapsed() && mod.getInfoSender().hasActiveTask()) {
             _numTryingUnstuck++;
+            //#if MC >= 12111
+            //$$ Vec3d pos = mod.getPlayer().getEntityPos();
+            //#else
             Vec3d pos = mod.getPlayer().getPos();
+            //#endif
             if (_lastPos.isInRange(pos, 2.0D)) {
                 if (_moveStuckTimer.getDuration() < 15) {
                     setTask(new SafeRandomShimmyTask());
