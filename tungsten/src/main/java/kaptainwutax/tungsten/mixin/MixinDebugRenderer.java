@@ -10,11 +10,13 @@
 	import org.spongepowered.asm.mixin.injection.Inject;
 	import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-	import com.mojang.blaze3d.systems.RenderSystem;
 //#if MC >= 12111
 //$$ import com.mojang.blaze3d.vertex.VertexFormat.DrawMode;
+//$$ import net.minecraft.client.render.DrawStyle;
 //#else
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.render.VertexFormat.DrawMode;
+import net.minecraft.client.render.RenderLayer;
 //#endif
 
 	import kaptainwutax.tungsten.TungstenMod;
@@ -24,9 +26,6 @@ import kaptainwutax.tungsten.render.Color;
 	import kaptainwutax.tungsten.render.Renderer;
 import net.minecraft.client.render.BufferBuilder;
 	import net.minecraft.client.render.Frustum;
-//#if MC < 12111
-import net.minecraft.client.render.RenderLayer;
-//#endif
 import net.minecraft.client.render.Tessellator;
 	import net.minecraft.client.render.VertexConsumerProvider;
 	import net.minecraft.client.render.VertexFormats;
@@ -43,8 +42,7 @@ import net.minecraft.client.render.Tessellator;
 
 		@Inject(method = "render", at = @At("RETURN"))
 		//#if MC >= 12111
-		//$$ public void render(MatrixStack matrices, Frustum frustum, VertexConsumerProvider.Immediate vertexConsumers,
-		//$$			double cameraX, double cameraY, double cameraZ, CallbackInfo ci) {
+		//$$ public void render(Frustum frustum, double cameraX, double cameraY, double cameraZ, float tickProgress, CallbackInfo ci) {
 		//#else
 		public void render(MatrixStack matrices, VertexConsumerProvider.Immediate vertexConsumers,
 				double cameraX, double cameraY, double cameraZ, CallbackInfo ci) {
@@ -57,10 +55,18 @@ import net.minecraft.client.render.Tessellator;
 			Tessellator tessellator = Tessellator.getInstance();
 			BufferBuilder builder;
 
+			//#if MC >= 12111
+			//$$ DrawStyle drawStyle = new DrawStyle(-1, 2.0F, 0);
+			//#else
+			RenderSystem.lineWidth(2.0F);
+			//#endif
+
 			builder = tessellator.begin(DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
 			Cuboid goal = new Cuboid(TungstenMod.TARGET.subtract(0.5D, 0D, 0.5D), new Vec3d(1.0D, 2.0D, 1.0D), Color.GREEN);
 			goal.render(builder);
-			drawLines(builder);
+			//#if MC < 12111
+			RenderLayer.getDebugLineStrip(2).draw(builder.end());
+			//#endif
 
 			if (!TungstenModRenderContainer.RUNNING_PATH_RENDERER.isEmpty())
 				renderCollection(TungstenModRenderContainer.RUNNING_PATH_RENDERER, tessellator, frustum, cameraX, cameraY, cameraZ);
@@ -78,19 +84,10 @@ import net.minecraft.client.render.Tessellator;
 				renderCollection(TungstenModRenderContainer.ERROR, tessellator, frustum, cameraX, cameraY, cameraZ);
 
 			if (!TungstenModRenderContainer.COMBAT_TRAJECTORY.isEmpty())
-				renderCollectionNoDepth(TungstenModRenderContainer.COMBAT_TRAJECTORY, tessellator);
+				renderCollectionNoDepth(TungstenModRenderContainer.COMBAT_TRAJECTORY, tessellator, frustum, cameraX, cameraY, cameraZ);
 
 		    glEnable(GL_BLEND);
 		    glEnable(GL_DEPTH_TEST);
-		}
-
-		/** Draw line buffer — API differs between MC versions */
-		private static void drawLines(BufferBuilder builder) {
-			//#if MC >= 12111
-			//$$ try { builder.end(); } catch (Exception ignored) {}
-			//#else
-			try { RenderLayer.getDebugLineStrip(2).draw(builder.end()); } catch (Exception ignored) {}
-			//#endif
 		}
 
 		private static void renderCollection(Collection<Renderer> renderers, Tessellator tessellator, Frustum frustum,
@@ -110,7 +107,9 @@ import net.minecraft.client.render.Tessellator;
 						}
 						BufferBuilder builder = tessellator.begin(DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
 						r.render(builder);
-						drawLines(builder);
+						//#if MC < 12111
+						RenderLayer.getDebugLineStrip(2).draw(builder.end());
+						//#endif
 						count++;
 					} catch (Exception e) {
 						TungstenMod.LOG.debug("Error rendering object: " + e.getMessage());
@@ -121,7 +120,8 @@ import net.minecraft.client.render.Tessellator;
 			}
 		}
 
-		private static void renderCollectionNoDepth(Collection<Renderer> renderers, Tessellator tessellator) {
+		private static void renderCollectionNoDepth(Collection<Renderer> renderers, Tessellator tessellator, Frustum frustum,
+				double cameraX, double cameraY, double cameraZ) {
 			int count = 0;
 			List<Renderer> sorted = new ArrayList<>(renderers);
 			Collections.reverse(sorted);
@@ -132,7 +132,9 @@ import net.minecraft.client.render.Tessellator;
 						glDisable(GL_DEPTH_TEST);
 						BufferBuilder builder = tessellator.begin(DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
 						r.render(builder);
-						drawLines(builder);
+						//#if MC < 12111
+						RenderLayer.getDebugLineStrip(2).draw(builder.end());
+						//#endif
 						glDisable(GL_DEPTH_TEST);
 						count++;
 					} catch (Exception e) {
