@@ -102,7 +102,8 @@ public class MobDefenseChain extends SingleTaskChain {
 
     private static void startShielding(AltoClef mod) {
         shielding = true;
-        mod.getClientBaritone().getPathingBehavior().requestPause();
+        if (mod.getClientBaritone() != null)
+            mod.getClientBaritone().getPathingBehavior().requestPause();
         mod.getExtraBaritoneSettings().setInteractionPaused(true);
         if (!mod.getPlayer().isBlocking()) {
             ItemStack handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot());
@@ -212,7 +213,8 @@ public class MobDefenseChain extends SingleTaskChain {
             wasPuttingOutFire = true;
         } else {
             // Stop putting stuff out if we no longer need to put out a fire.
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, false);
+            if (mod.getClientBaritone() != null)
+                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, false);
             wasPuttingOutFire = false;
         }
 
@@ -238,7 +240,7 @@ public class MobDefenseChain extends SingleTaskChain {
                     //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
                     //#endif
-                    && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()
+                    && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())
                     && blowingUp.getClientFuseTime(blowingUp.getFuseSpeed()) > 0.5) {
                 LookHelper.lookAt(mod, blowingUp.getEyePos());
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);
@@ -274,7 +276,7 @@ public class MobDefenseChain extends SingleTaskChain {
                     //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
                     //#endif
-                    && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()
+                    && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())
                     && !mod.getEntityTracker().entityFound(PotionEntity.class) && projectileIsClose) {
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);
                 if (shieldSlot.getItem() != Items.SHIELD) {
@@ -542,8 +544,10 @@ public class MobDefenseChain extends SingleTaskChain {
         if (reach.isPresent()) {
             Baritone b = mod.getClientBaritone();
             if (LookHelper.isLookingAt(mod, pos)) {
-                b.getPathingBehavior().requestPause();
-                b.getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
+                if (b != null) {
+                    b.getPathingBehavior().requestPause();
+                    b.getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
+                }
                 return;
             }
             LookHelper.lookAt(reach.get());
@@ -619,8 +623,9 @@ public class MobDefenseChain extends SingleTaskChain {
                         Optional<Entity> ghastBall = mod.getEntityTracker().getClosestEntity(FireballEntity.class);
                         Optional<Entity> ghast = mod.getEntityTracker().getClosestEntity(GhastEntity.class);
                         if (ghastBall.isPresent() && ghast.isPresent() && runAwayTask == null
-                                && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
-                            mod.getClientBaritone().getPathingBehavior().requestPause();
+                                && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())) {
+                            if (mod.getClientBaritone() != null)
+                                mod.getClientBaritone().getPathingBehavior().requestPause();
                             LookHelper.lookAt(mod, ghast.get().getEyePos());
                         }
                         return false;
@@ -653,8 +658,9 @@ public class MobDefenseChain extends SingleTaskChain {
                         if (invertedYaw < 0) invertedYaw += 360;
                         suggestedProjectileRotation = new Rotation(invertedYaw, 0f);
 
-                        if (runAwayTask == null && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
-                            mod.getClientBaritone().getPathingBehavior().requestPause();
+                        if (runAwayTask == null && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())) {
+                            if (mod.getClientBaritone() != null)
+                                mod.getClientBaritone().getPathingBehavior().requestPause();
                         }
                         return true;
                     }

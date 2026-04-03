@@ -105,7 +105,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
                     BlockPos targetWaterPos = mod.getPlayer().getBlockPos();
                     if (WorldHelper.isSolidBlock(targetWaterPos.down()) && WorldHelper.canPlace(targetWaterPos)) {
                         Optional<Rotation> reach = LookHelper.getReach(targetWaterPos.down(), Direction.UP);
-                        if (reach.isPresent()) {
+                        if (reach.isPresent() && mod.getClientBaritone() != null) {
                             mod.getClientBaritone().getLookBehavior().updateTarget(reach.get(), true);
                             if (mod.getClientBaritone().getPlayerContext().isLookingAt(targetWaterPos.down())) {
                                 if (mod.getSlotHandler().forceEquipItem(Items.WATER_BUCKET)) {
@@ -181,7 +181,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
         // Swim
         boolean avoidedDrowning = false;
         if (mod.getModSettings().shouldAvoidDrowning()) {
-            if (!mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (mod.getClientBaritone() == null || !mod.getClientBaritone().getPathingBehavior().isPathing()) {
                 if (mod.getPlayer().isTouchingWater() && mod.getPlayer().getAir() < mod.getPlayer().getMaxAir()) {
                     // Swim up!
                     mod.getInputControls().hold(Input.JUMP);

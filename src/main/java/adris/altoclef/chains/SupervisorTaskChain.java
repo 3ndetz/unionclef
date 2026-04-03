@@ -27,7 +27,8 @@ public class SupervisorTaskChain extends SingleTaskChain {
     protected void onTaskFinish(AltoClef mod) {
         if (!mod.getUserTaskChain().isActive() && !this.isActive()) {
             mod.getTaskRunner().disable();
-            mod.getClientBaritone().getInputOverrideHandler().clearAllKeys();
+            if (mod.getClientBaritone() != null)
+                mod.getClientBaritone().getInputOverrideHandler().clearAllKeys();
         }
     }
 

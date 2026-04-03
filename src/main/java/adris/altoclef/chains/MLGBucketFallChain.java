@@ -102,7 +102,7 @@ public class MLGBucketFallChain extends SingleTaskChain implements ITaskOverride
                         mod.getBehaviour().push();
                         mod.getBehaviour().setRayTracingFluidHandling(RaycastContext.FluidHandling.SOURCE_ONLY);
                         Optional<Rotation> reach = LookHelper.getReach(toInteract, Direction.UP);
-                        if (reach.isPresent()) {
+                        if (reach.isPresent() && mod.getClientBaritone() != null) {
                             mod.getClientBaritone().getLookBehavior().updateTarget(reach.get(), true);
                             if (mod.getClientBaritone().getPlayerContext().isLookingAt(toInteract)) {
                                 if (mod.getSlotHandler().forceEquipItem(Items.BUCKET)) {
