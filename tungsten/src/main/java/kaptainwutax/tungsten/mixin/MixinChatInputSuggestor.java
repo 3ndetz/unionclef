@@ -112,6 +112,7 @@ public abstract class MixinChatInputSuggestor {
 	        cancellable = true,
 	        locals = LocalCapture.CAPTURE_FAILHARD)
     private void inject(CallbackInfo ci, String string, StringReader reader) {
+		if (TungstenMod.mc == null) return; // tungsten not initialized yet
 		String prefix = TungstenMod.getCommandPrefix();
         int length = prefix.length();
 
