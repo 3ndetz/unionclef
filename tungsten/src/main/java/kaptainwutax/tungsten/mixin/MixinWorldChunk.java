@@ -48,7 +48,11 @@ public abstract class MixinWorldChunk extends Chunk {
 	@Shadow public abstract FluidState getFluidState(BlockPos pos);
 
 	@Inject(method = "loadFromPacket", at = @At("RETURN"))
+	//#if MC >= 12111
+	//$$ private void loadFromPacket(PacketByteBuf buf, java.util.Map nbt, Consumer<ChunkData.BlockEntityVisitor> consumer, CallbackInfo ci) {
+	//#else
 	private void loadFromPacket(PacketByteBuf buf, NbtCompound nbt, Consumer<ChunkData.BlockEntityVisitor> consumer, CallbackInfo ci) {
+	//#endif
 		if(this.getWorld() != TungstenModDataContainer.world) {
 			TungstenModDataContainer.world = this.getWorld();
 		}

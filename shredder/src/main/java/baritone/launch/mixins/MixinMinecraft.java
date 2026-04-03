@@ -37,7 +37,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.function.BiFunction;
 import net.minecraft.client.MinecraftClient;
 
-import net.minecraft.client.gui.screen.DownloadingTerrainScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
@@ -129,39 +128,36 @@ public class MixinMinecraft {
         }
     }
 
-    @Inject(
-            method = "joinWorld",
-            at = @At("HEAD")
-    )
-    private void preLoadWorld(ClientWorld world, DownloadingTerrainScreen.WorldEntryReason arg2, CallbackInfo ci) {
-        // If we're unloading the world but one doesn't exist, ignore it
+    // --- joinWorld handlers: two pairs for cross-version compat ---
+    // 1.21.1: joinWorld(ClientWorld, WorldEntryReason) — 2-arg version
+    @Inject(method = "joinWorld", at = @At("HEAD"), require = 0)
+    private void preLoadWorld(ClientWorld world, @org.spongepowered.asm.mixin.injection.Coerce Object arg2, CallbackInfo ci) {
+        fireWorldEvent(world, EventState.PRE);
+    }
+
+    @Inject(method = "joinWorld", at = @At("RETURN"), require = 0)
+    private void postLoadWorld(ClientWorld world, @org.spongepowered.asm.mixin.injection.Coerce Object arg2, CallbackInfo ci) {
+        fireWorldEvent(world, EventState.POST);
+    }
+
+    // 1.21.11: joinWorld(ClientWorld) — 1-arg version
+    @Inject(method = "joinWorld", at = @At("HEAD"), require = 0)
+    private void preLoadWorldCompat(ClientWorld world, CallbackInfo ci) {
+        fireWorldEvent(world, EventState.PRE);
+    }
+
+    @Inject(method = "joinWorld", at = @At("RETURN"), require = 0)
+    private void postLoadWorldCompat(ClientWorld world, CallbackInfo ci) {
+        fireWorldEvent(world, EventState.POST);
+    }
+
+    @Unique
+    private void fireWorldEvent(ClientWorld world, EventState state) {
         if (this.world == null && world == null) {
             return;
         }
-
-        // mc.world changing is only the primary baritone
-
         BaritoneAPI.getProvider().getPrimaryBaritone().getGameEventHandler().onWorldEvent(
-                new WorldEvent(
-                        world,
-                        EventState.PRE
-                )
-        );
-    }
-
-    @Inject(
-            method = "joinWorld",
-            at = @At("RETURN")
-    )
-    private void postLoadWorld(ClientWorld world, DownloadingTerrainScreen.WorldEntryReason arg2, CallbackInfo ci) {
-        // still fire event for both null, as that means we've just finished exiting a world
-
-        // mc.world changing is only the primary baritone
-        BaritoneAPI.getProvider().getPrimaryBaritone().getGameEventHandler().onWorldEvent(
-                new WorldEvent(
-                        world,
-                        EventState.POST
-                )
+                new WorldEvent(world, state)
         );
     }
 
