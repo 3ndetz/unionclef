@@ -32,7 +32,11 @@ public class FollowPlayerCommand extends Command {
             if (mc.getNetworkHandler() != null) {
                 String input = sb.getRemaining().toLowerCase();
                 for (PlayerListEntry entry : mc.getNetworkHandler().getPlayerList()) {
+                    //#if MC >= 12111
+                    //$$ String name = entry.getProfile().name();
+                    //#else
                     String name = entry.getProfile().getName();
+                    //#endif
                     if (name.toLowerCase().startsWith(input)) {
                         sb.suggest(name);
                     }

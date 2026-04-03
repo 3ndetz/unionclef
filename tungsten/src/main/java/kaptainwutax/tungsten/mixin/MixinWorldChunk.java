@@ -31,10 +31,18 @@ import net.minecraft.world.gen.chunk.BlendingData;
 @Mixin(WorldChunk.class)
 public abstract class MixinWorldChunk extends Chunk {
 
+	//#if MC >= 12111
+	//$$ public MixinWorldChunk(ChunkPos pos, UpgradeData upgradeData, HeightLimitView heightLimitView, Registry<Biome> biome,
+	//$$                        long inhabitedTime, @Nullable ChunkSection[] sectionArrayInitializer, @Nullable BlendingData blendingData,
+	//$$                        @Nullable net.minecraft.world.chunk.ChunkGenerationStep generationStep) {
+	//$$     super(pos, upgradeData, heightLimitView, biome, inhabitedTime, sectionArrayInitializer, blendingData, generationStep);
+	//$$ }
+	//#else
 	public MixinWorldChunk(ChunkPos pos, UpgradeData upgradeData, HeightLimitView heightLimitView, Registry<Biome> biome,
 	                       long inhabitedTime, @Nullable ChunkSection[] sectionArrayInitializer, @Nullable BlendingData blendingData) {
 		super(pos, upgradeData, heightLimitView, biome, inhabitedTime, sectionArrayInitializer, blendingData);
 	}
+	//#endif
 
 	@Shadow public abstract World getWorld();
 	@Shadow public abstract BlockState getBlockState(BlockPos pos);

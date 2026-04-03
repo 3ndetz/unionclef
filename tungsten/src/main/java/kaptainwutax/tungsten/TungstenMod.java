@@ -69,6 +69,20 @@ public class TungstenMod implements ClientModInitializer {
 	public void onInitializeClient() {
 		TungstenConfig.load();
 		TungstenModDataContainer.EXECUTOR = new PathExecutor(true);
+		//#if MC >= 12111
+		//$$ pauseKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+		//$$     "key.tungsten.pause", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_P,
+		//$$     net.minecraft.client.option.KeyBinding.Category.MISC));
+		//$$ runKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+		//$$     "key.tungsten.run", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_G,
+		//$$     net.minecraft.client.option.KeyBinding.Category.MISC));
+		//$$ runBlockSearchKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+		//$$     "key.tungsten.run_block_search", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_J,
+		//$$     net.minecraft.client.option.KeyBinding.Category.MISC));
+		//$$ createGoalKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+		//$$     "key.tungsten.create_goal", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_H,
+		//$$     net.minecraft.client.option.KeyBinding.Category.MISC));
+		//#else
 		pauseKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
 	            "key.tungsten.pause", // The translation key of the keybinding's name
 	            InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
@@ -93,6 +107,7 @@ public class TungstenMod implements ClientModInitializer {
 	            GLFW.GLFW_KEY_H, // The keycode of the key
 	            "key.category.tungsten.test" // The translation key of the keybinding's category.
         ));
+		//#endif
         _commandExecutor = new CommandExecutor(this);
 
         // Global minecraft client accessor

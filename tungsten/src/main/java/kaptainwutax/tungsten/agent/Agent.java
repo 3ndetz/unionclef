@@ -1795,9 +1795,15 @@ public class Agent {
             values.add(String.format("Eye height mismatch %s vs %s", player.getStandingEyeHeight(), this.standingEyeHeight));
         }
 
+        //#if MC >= 12111
+        //$$ if(mismatch(this.fallDistance, (float) player.fallDistance)) {
+        //$$     values.add(String.format("Fall distance mismatch %s vs %s", (float) player.fallDistance, this.fallDistance));
+        //$$ }
+        //#else
         if(mismatch(this.fallDistance, player.fallDistance)) {
             values.add(String.format("Fall distance mismatch %s vs %s", player.fallDistance, this.fallDistance));
         }
+        //#endif
 
         if(this.horizontalCollision != player.horizontalCollision) {
             values.add(String.format("Horizontal Collision mismatch %s vs %s", player.horizontalCollision, this.horizontalCollision));
@@ -1890,7 +1896,11 @@ public class Agent {
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
         agent.stepHeight = player.getStepHeight();
+        //#if MC >= 12111
+        //$$ agent.fallDistance = (float) player.fallDistance;
+        //#else
         agent.fallDistance = player.fallDistance;
+        //#endif
         agent.touchingWater = player.isTouchingWater();
         agent.isSubmergedInWater = player.isSubmergedInWater();
         agent.horizontalCollision = player.horizontalCollision;
@@ -1959,7 +1969,11 @@ public class Agent {
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
         agent.stepHeight = player.getStepHeight();
+        //#if MC >= 12111
+        //$$ agent.fallDistance = (float) player.fallDistance;
+        //#else
         agent.fallDistance = player.fallDistance;
+        //#endif
         agent.touchingWater = player.isTouchingWater();
         agent.isSubmergedInWater = player.isSubmergedInWater();
         agent.horizontalCollision = player.horizontalCollision;
@@ -2028,7 +2042,11 @@ public class Agent {
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
         agent.stepHeight = player.getStepHeight();
+        //#if MC >= 12111
+        //$$ agent.fallDistance = (float) player.fallDistance;
+        //#else
         agent.fallDistance = player.fallDistance;
+        //#endif
         agent.touchingWater = player.isTouchingWater();
         agent.isSubmergedInWater = player.isSubmergedInWater();
         agent.horizontalCollision = player.horizontalCollision;

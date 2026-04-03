@@ -55,12 +55,18 @@ import net.minecraft.client.render.Tessellator;
 			Tessellator tessellator = Tessellator.getInstance();
 			BufferBuilder builder;
 
+			//#if MC < 12111
 			RenderSystem.lineWidth(2.0F);
+			//#endif
 
 			builder = tessellator.begin(DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
 			Cuboid goal = new Cuboid(TungstenMod.TARGET.subtract(0.5D, 0D, 0.5D), new Vec3d(1.0D, 2.0D, 1.0D), Color.GREEN);
 			goal.render(builder);
+			//#if MC >= 12111
+			//$$ builder.end(); // TODO [1.21.11] find new line render API
+			//#else
 			RenderLayer.getDebugLineStrip(2).draw(builder.end());
+			//#endif
 
 			// Batch render each collection with culling and limiting
 			if (!TungstenModRenderContainer.RUNNING_PATH_RENDERER.isEmpty())
@@ -108,7 +114,11 @@ import net.minecraft.client.render.Tessellator;
 						BufferBuilder builder = tessellator.begin(DrawMode.DEBUG_LINES,
 								VertexFormats.POSITION_COLOR);
 						r.render(builder);
+						//#if MC >= 12111
+						//$$ builder.end(); // TODO [1.21.11] find new line render API
+						//#else
 						RenderLayer.getDebugLineStrip(2).draw(builder.end());
+						//#endif
 						count++;
 					} catch (Exception e) {
 						TungstenMod.LOG.debug("Error rendering object: " + e.getMessage());
@@ -129,11 +139,17 @@ import net.minecraft.client.render.Tessellator;
 					if (count >= MAX_RENDERERS_PER_CATEGORY) break;
 					try {
 						glDisable(GL_DEPTH_TEST);
+						//#if MC < 12111
 						RenderSystem.lineWidth(3.0F);
+						//#endif
 						BufferBuilder builder = tessellator.begin(DrawMode.DEBUG_LINES,
 								VertexFormats.POSITION_COLOR);
 						r.render(builder);
+						//#if MC >= 12111
+						//$$ builder.end(); // TODO [1.21.11] find new line render API
+						//#else
 						RenderLayer.getDebugLineStrip(2).draw(builder.end());
+						//#endif
 						// RenderLayer re-enables depth test internally, disable again
 						glDisable(GL_DEPTH_TEST);
 						count++;
@@ -144,7 +160,9 @@ import net.minecraft.client.render.Tessellator;
 			} catch (Exception e) {
 				TungstenMod.LOG.debug("Error rendering combat viz: " + e.getMessage());
 			}
+			//#if MC < 12111
 			RenderSystem.lineWidth(2.0F);
+			//#endif
 		}
 
 		private static void render(Renderer r, Tessellator tessellator) {
@@ -152,7 +170,11 @@ import net.minecraft.client.render.Tessellator;
 				BufferBuilder builder = tessellator.begin(DrawMode.DEBUG_LINES,
 						VertexFormats.POSITION_COLOR);
 				r.render(builder);
+				//#if MC >= 12111
+				//$$ builder.end(); // TODO [1.21.11] find new line render API
+				//#else
 				RenderLayer.getDebugLineStrip(2).draw(builder.end());
+				//#endif
 			} catch (Exception e) {
 				// Ignored
 			}
