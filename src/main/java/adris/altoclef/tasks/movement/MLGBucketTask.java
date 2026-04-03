@@ -4,6 +4,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.control.InputControls;
 import adris.altoclef.multiversion.DamageSourceVer;
+import adris.altoclef.multiversion.DimensionVer;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.*;
 import adris.altoclef.util.serialization.ItemDeserializer;
@@ -195,11 +196,7 @@ public class MLGBucketTask extends Task {
             setDebugState("Performing MLG");
             LookHelper.lookAt(reachable.get());
             // Try water by default
-            //#if MC >= 12111
-        //$$ boolean hasClutch = (!false && mod.getSlotHandler().forceEquipItem(Items.WATER_BUCKET));
-        //#else
-        boolean hasClutch = (!mod.getWorld().getDimension().ultrawarm() && mod.getSlotHandler().forceEquipItem(Items.WATER_BUCKET));
-        //#endif
+        boolean hasClutch = (!DimensionVer.isUltrawarm(mod.getWorld().getDimension()) && mod.getSlotHandler().forceEquipItem(Items.WATER_BUCKET));
             if (!hasClutch) {
                 // Go through our "clutch" items and see if any fit
                 if (!_config.clutchItems.isEmpty()) {
@@ -438,11 +435,7 @@ public class MLGBucketTask extends Task {
     }
 
     private boolean hasClutchItem(AltoClef mod) {
-        //#if MC >= 12111
-        //$$ if (!false && mod.getItemStorage().hasItem(Items.WATER_BUCKET)) {
-        //#else
-        if (!mod.getWorld().getDimension().ultrawarm() && mod.getItemStorage().hasItem(Items.WATER_BUCKET)) {
-        //#endif
+        if (!DimensionVer.isUltrawarm(mod.getWorld().getDimension()) && mod.getItemStorage().hasItem(Items.WATER_BUCKET)) {
             return true;
         }
         return _config.clutchItems.stream().anyMatch(item -> mod.getItemStorage().hasItem(item));

@@ -8,6 +8,7 @@ import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.CursorSlot;
 import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.slots.Slot;
+import adris.altoclef.multiversion.entity.PlayerVer;
 import adris.altoclef.util.time.TimerGame;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -163,11 +164,7 @@ public class SlotHandler {
         if (StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem() == toEquip) return true;
 
         // Always equip to the second slot. First + last is occupied by baritone.
-        //#if MC >= 12111
-        //$$ mod.getPlayer().getInventory().setSelectedSlot(1);
-        //#else
-        mod.getPlayer().getInventory().selectedSlot = 1;
-        //#endif
+        PlayerVer.setSelectedSlot(mod.getPlayer().getInventory(), 1);
 
         // If our item is in our cursor, simply move it to the hotbar.
         boolean inCursor = StorageHelper.getItemStackInSlot(CursorSlot.SLOT).getItem() == toEquip;

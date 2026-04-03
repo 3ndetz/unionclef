@@ -5,6 +5,7 @@ import adris.altoclef.multiversion.BlockTagVer;
 import adris.altoclef.trackers.threats.WeaponThreat;
 import adris.altoclef.util.slots.Slot;
 import baritone.api.utils.input.Input;
+import adris.altoclef.multiversion.entity.PlayerVer;
 import adris.altoclef.multiversion.item.ItemVer;
 import adris.altoclef.multiversion.versionedfields.Blocks;
 import adris.altoclef.multiversion.versionedfields.Items;
@@ -553,7 +554,7 @@ public class ItemHelper {
             int invSlot = newGameSlot.getInventorySlot();
             if (invSlot >= 0 && invSlot <= 8) {
                 // Hotbar slot — just switch selected slot, don't SWAP (server menu items are immovable)
-                mod.getPlayer().getInventory().selectedSlot = invSlot;
+                PlayerVer.setSelectedSlot(mod.getPlayer().getInventory(), invSlot);
             } else {
                 mod.getSlotHandler().forceEquipSlot(newGameSlot);
             }
@@ -626,9 +627,13 @@ public class ItemHelper {
             if (holdWeapon(entity, RangedTopPriority)) return WeaponThreat.Ranged;
             net.minecraft.item.Item handItem = stack.getItem();
             float damage = (float) entity.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE);
+            //#if MC < 12111
             if (handItem instanceof ToolItem tool && (tool instanceof SwordItem || tool instanceof AxeItem)) {
                 damage += tool.getMaterial().getAttackDamage() + 3;
             }
+            //#else
+            //$$ // TODO [1.21.11] ToolItem/SwordItem deleted — get attack damage from Item.Settings component
+            //#endif
             //#if MC >= 12100
             if (handItem instanceof net.minecraft.item.TridentItem || handItem instanceof net.minecraft.item.MaceItem) {
                 damage += 7f;

@@ -6,6 +6,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.tasksystem.ITaskRequiresGrounded;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.EntityHelper;
+import adris.altoclef.multiversion.entity.PlayerVer;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.slots.PlayerSlot;
@@ -219,7 +220,7 @@ public class ProjectileProtectionWallTask extends Task implements ITaskRequiresG
         if (slot == PlayerSlot.OFFHAND_SLOT.getInventorySlot()) return true;
         if (slot < 0 || slot > 8) return false;
 
-        mod.getPlayer().getInventory().selectedSlot = slot;
+        PlayerVer.setSelectedSlot(mod.getPlayer().getInventory(), slot);
         return true;
     }
     

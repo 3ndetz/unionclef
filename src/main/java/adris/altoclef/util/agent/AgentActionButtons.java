@@ -1,6 +1,7 @@
 package adris.altoclef.util.agent;
 
 import adris.altoclef.AltoClef;
+import adris.altoclef.multiversion.entity.PlayerVer;
 
 import baritone.api.utils.input.Input;
 import net.minecraft.client.MinecraftClient;
@@ -66,7 +67,7 @@ public class AgentActionButtons {
             if (controlDict.containsKey(hotbarKey)) {
                 Object value = controlDict.get(hotbarKey);
                 if (isPressed(value)) {
-                    mod.getPlayer().getInventory().selectedSlot = i - 1;
+                    PlayerVer.setSelectedSlot(mod.getPlayer().getInventory(), i - 1);
                 }
             }
         }

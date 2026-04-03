@@ -16,6 +16,7 @@ import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
+import kaptainwutax.tungsten.helpers.DimensionVer;
 import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.mixin.AccessorEntity;
 import kaptainwutax.tungsten.mixin.AccessorLivingEntity;
@@ -298,7 +299,7 @@ public class Agent {
     public boolean updateWaterState(WorldView world) {
         this.fluidHeight.clear();
         this.checkWaterState(world);
-        double d = world.getDimension().ultrawarm() ? 0.007D : 0.0023333333333333335D;
+        double d = DimensionVer.isUltrawarm(world.getDimension()) ? 0.007D : 0.0023333333333333335D;
         boolean bl = this.updateMovementInFluid(world, FluidTags.LAVA, d);
         return this.touchingWater || bl;
     }
