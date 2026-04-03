@@ -46,15 +46,6 @@ if (project.name == mainProjectVersion) {
         }
     }
 }
-// Tungsten resources (mixins config etc.) — always include for all versions
-sourceSets {
-    main {
-        resources {
-            srcDir rootProject.file('tungsten/src/main/resources')
-            exclude 'fabric.mod.json'
-        }
-    }
-}
 
 tasks.withType(JavaCompile).configureEach {
     options.release = 21
@@ -166,6 +157,11 @@ processResources {
     from(sourceSets.main.resources.srcDirs) {
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         exclude "fabric.mod.json"
+    }
+
+    // Tungsten mixin config — include only the mixins json, not fabric.mod.json/assets
+    from(rootProject.file('tungsten/src/main/resources')) {
+        include 'tungsten.mixins.json'
     }
 }
 
