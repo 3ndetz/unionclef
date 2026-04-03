@@ -12,8 +12,11 @@
 	import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 	import com.mojang.blaze3d.systems.RenderSystem;
-	// MC 1.21.1: VertexFormat is in net.minecraft.client.render, not blaze3d
+//#if MC >= 12111
+//$$ import com.mojang.blaze3d.vertex.VertexFormat.DrawMode;
+//#else
 import net.minecraft.client.render.VertexFormat.DrawMode;
+//#endif
 
 	import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
