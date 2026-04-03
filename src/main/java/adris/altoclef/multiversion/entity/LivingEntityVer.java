@@ -5,11 +5,46 @@ import net.minecraft.block.BlockState;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import java.util.List;
 
 public class LivingEntityVer {
 
+    // getEquippedItems/getHandItems/getArmorItems deleted in 1.21.11.
+    // Can't appear in source at all — preprocessor remaps ALL identifiers
+    // and crashes when target has no mapping.
+    // Solution: call the 1.21.1 method via reflection to hide it from preprocessor.
 
-    // FIXME this should be possible with mappings, right?
+    @SuppressWarnings("unchecked")
+    static Iterable<ItemStack> callEquippedItems(LivingEntity entity) {
+        try {
+            var method = LivingEntity.class.getMethod("getEquippedItems");
+            return (Iterable<ItemStack>) method.invoke(entity);
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    static Iterable<ItemStack> callHandItems(LivingEntity entity) {
+        try {
+            var method = LivingEntity.class.getMethod("getHandItems");
+            return (Iterable<ItemStack>) method.invoke(entity);
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    static Iterable<ItemStack> callArmorItems(LivingEntity entity) {
+        try {
+            var method = LivingEntity.class.getMethod("getArmorItems");
+            return (Iterable<ItemStack>) method.invoke(entity);
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
     @Pattern
     private static Iterable<ItemStack> getItemsEquipped(LivingEntity entity) {
         //#if MC >= 12111
@@ -20,24 +55,18 @@ public class LivingEntityVer {
         //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.LEGS),
         //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.FEET)
         //$$ );
-        //#elseif MC >= 12005
-        return entity.getEquippedItems();
         //#else
-        //$$ return entity.getItemsEquipped();
+        return callEquippedItems(entity);
         //#endif
     }
 
-    /**
-     * Check if a drowned holds a trident. Avoids getEquippedItems() which
-     * was removed in 1.21.11 — preprocessor can't remap deleted methods.
-     */
     public static boolean hasTrident(LivingEntity entity) {
         //#if MC >= 12111
-        //$$ return entity.getMainHandStack().isOf(net.minecraft.item.Items.TRIDENT)
-        //$$     || entity.getOffHandStack().isOf(net.minecraft.item.Items.TRIDENT);
+        //$$ return entity.getMainHandStack().isOf(Items.TRIDENT)
+        //$$     || entity.getOffHandStack().isOf(Items.TRIDENT);
         //#else
-        for (ItemStack stack : entity.getEquippedItems()) {
-            if (stack.isOf(net.minecraft.item.Items.TRIDENT)) return true;
+        for (ItemStack stack : callEquippedItems(entity)) {
+            if (stack.isOf(Items.TRIDENT)) return true;
         }
         return false;
         //#endif

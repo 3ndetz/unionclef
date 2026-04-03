@@ -138,13 +138,14 @@ public class EntityVer {
         //#endif
     }
 
-    // getHandItems/getArmorItems deleted in 1.21.11, but identity-mapped
-    // in versions/mapping-1.21.11-1.21.1.txt to prevent preprocessor crash.
+    // getHandItems/getArmorItems deleted in 1.21.11.
+    // Preprocessor crashes remapping deleted methods, even in inactive #if.
+    // Use reflection on 1.21.1 to hide identifiers from preprocessor.
     public static Iterable<net.minecraft.item.ItemStack> getHandItems(net.minecraft.entity.LivingEntity entity) {
         //#if MC >= 12111
         //$$ return java.util.List.of(entity.getMainHandStack(), entity.getOffHandStack());
         //#else
-        return entity.getHandItems();
+        return LivingEntityVer.callHandItems(entity);
         //#endif
     }
 
@@ -157,7 +158,7 @@ public class EntityVer {
         //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.FEET)
         //$$ );
         //#else
-        return entity.getArmorItems();
+        return LivingEntityVer.callArmorItems(entity);
         //#endif
     }
 
