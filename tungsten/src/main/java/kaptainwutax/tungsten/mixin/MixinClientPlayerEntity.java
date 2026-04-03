@@ -36,6 +36,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 
 	@Inject(method = "tick", at = @At("HEAD"))
 	public void start(CallbackInfo ci) {
+		if (TungstenMod.runKeyBinding == null) return; // tungsten not initialized yet
 		//#if MC >= 12111
 		//$$ FollowEntityTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
 		//$$ FollowPlayerTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
