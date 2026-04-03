@@ -41,4 +41,8 @@ public class Color {
 		return this.getBlue() / 255.0F;
 	}
 
+	public int toARGB(int alpha) {
+		return (alpha << 24) | (this.red << 16) | (this.green << 8) | this.blue;
+	}
+
 }

@@ -1,23 +1,24 @@
 	package kaptainwutax.tungsten.mixin;
 
-//#if MC < 12111
 	import java.util.ArrayList;
 	import java.util.Collection;
 	import java.util.Collections;
 	import java.util.List;
 
+	import org.spongepowered.asm.mixin.Mixin;
+	import org.spongepowered.asm.mixin.injection.At;
+	import org.spongepowered.asm.mixin.injection.Inject;
+	import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+//#if MC < 12111
 	import com.mojang.blaze3d.systems.RenderSystem;
 	import net.minecraft.client.render.VertexFormat.DrawMode;
 	import net.minecraft.client.render.RenderLayer;
 	import net.minecraft.client.render.VertexConsumerProvider;
 	import net.minecraft.client.util.math.MatrixStack;
 	import net.minecraft.util.math.Box;
+	import static org.lwjgl.opengl.GL11.*;
 //#endif
-
-	import org.spongepowered.asm.mixin.Mixin;
-	import org.spongepowered.asm.mixin.injection.At;
-	import org.spongepowered.asm.mixin.injection.Inject;
-	import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 	import kaptainwutax.tungsten.TungstenMod;
 	import kaptainwutax.tungsten.TungstenModRenderContainer;
@@ -30,7 +31,6 @@
 	import net.minecraft.client.render.VertexFormats;
 	import net.minecraft.client.render.debug.DebugRenderer;
 	import net.minecraft.util.math.Vec3d;
-	import static org.lwjgl.opengl.GL11.*;
 
 	@Mixin(DebugRenderer.class)
 	public class MixinDebugRenderer {
@@ -40,9 +40,28 @@
 		@Inject(method = "render", at = @At("RETURN"))
 		//#if MC >= 12111
 		//$$ public void render(Frustum frustum, double cameraX, double cameraY, double cameraZ, float tickProgress, CallbackInfo ci) {
-		//$$     // 1.21.11: debug line render API (RenderLayer.getDebugLineStrip) removed.
-		//$$     // Upstream tungsten also has this WIP — lines don't draw yet.
-		//$$     // No-op to prevent sky flickering from broken GL state.
+		//$$     // 1.21.11: Line.render() uses GizmoDrawing — just iterate renderers
+		//$$     Cuboid goal = new Cuboid(TungstenMod.TARGET.subtract(0.5D, 0D, 0.5D), new Vec3d(1.0D, 2.0D, 1.0D), Color.GREEN);
+		//$$     goal.render(null);
+		//$$
+		//$$     renderAll(TungstenModRenderContainer.RUNNING_PATH_RENDERER);
+		//$$     renderAll(TungstenModRenderContainer.BLOCK_PATH_RENDERER);
+		//$$     renderAll(TungstenModRenderContainer.RENDERERS);
+		//$$     renderAll(TungstenModRenderContainer.TEST);
+		//$$     renderAll(TungstenModRenderContainer.ERROR);
+		//$$     renderAll(TungstenModRenderContainer.COMBAT_TRAJECTORY);
+		//$$ }
+		//$$
+		//$$ private static void renderAll(Collection<Renderer> renderers) {
+		//$$     int count = 0;
+		//$$     try {
+		//$$         for (Renderer r : new ArrayList<>(renderers)) {
+		//$$             if (count >= MAX_RENDERERS_PER_CATEGORY) break;
+		//$$             try { r.render(null); count++; } catch (Exception e) {
+		//$$                 TungstenMod.LOG.debug("Error rendering: " + e.getMessage());
+		//$$             }
+		//$$         }
+		//$$     } catch (Exception ignored) {}
 		//$$ }
 		//#else
 		public void render(MatrixStack matrices, VertexConsumerProvider.Immediate vertexConsumers,
