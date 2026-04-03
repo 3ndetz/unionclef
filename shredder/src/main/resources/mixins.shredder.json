@@ -5,27 +5,18 @@
   "verbose": false,
   "injectors": {
     "maxShiftBy": 2,
-    "defaultRequire": 1
+    "defaultRequire": 0
   },
   "client": [
-    "MixinChunkArray",
     "MixinClientChunkProvider",
     "MixinClientPlayerEntity",
     "MixinClientPlayNetHandler",
-    "MixinCommandSuggestionHelper",
     "MixinEntity",
-    "MixinEntityRenderManager",
     "MixinFireworkRocketEntity",
     "MixinItemStack",
     "MixinLivingEntity",
-    "MixinLootTable",
     "MixinMinecraft",
-    "MixinNetworkManager",
-    "MixinPalettedContainer",
-    "MixinPalettedContainer$Data",
-    "MixinPlayerController",
-    "MixinScreen",
-    "MixinWorldRenderer"
+    "MixinNetworkManager"
   ],
   "mixins": [
   ]

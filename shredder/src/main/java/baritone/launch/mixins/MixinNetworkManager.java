@@ -49,10 +49,11 @@ public class MixinNetworkManager {
     private NetworkSide side;
 
     @Inject(
-            method = "send(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/PacketCallbacks;Z)V",
-            at = @At("HEAD")
+            method = "send",
+            at = @At("HEAD"),
+            require = 0
     )
-    private void preDispatchPacket(Packet<?> packet, PacketCallbacks packetSendListener, boolean flush, CallbackInfo ci) {
+    private void preDispatchPacket(Packet<?> packet, CallbackInfo ci) {
         if (this.side != NetworkSide.CLIENTBOUND) {
             return;
         }
@@ -65,10 +66,11 @@ public class MixinNetworkManager {
     }
 
     @Inject(
-            method = "send(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/PacketCallbacks;Z)V",
-            at = @At("RETURN")
+            method = "send",
+            at = @At("RETURN"),
+            require = 0
     )
-    private void postDispatchPacket(Packet<?> packet, PacketCallbacks packetSendListener, boolean flush, CallbackInfo ci) {
+    private void postDispatchPacket(Packet<?> packet, CallbackInfo ci) {
         if (this.side != NetworkSide.CLIENTBOUND) {
             return;
         }

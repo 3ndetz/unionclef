@@ -4,7 +4,6 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.ui.EpicCamera;
 import net.minecraft.client.render.Camera;
 import net.minecraft.entity.Entity;
-import net.minecraft.world.BlockView;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -16,8 +15,13 @@ public abstract class CameraMixin {
     @Shadow protected abstract void setPos(double x, double y, double z);
     @Shadow protected abstract void setRotation(float yaw, float pitch);
 
+    //#if MC >= 12111
+    //$$ @Inject(at = @At("TAIL"), method = "update")
+    //$$ private void onUpdate(net.minecraft.world.World area, Entity focusedEntity, boolean thirdPerson, boolean inverseView, float tickDelta, CallbackInfo ci) {
+    //#else
     @Inject(at = @At("TAIL"), method = "update")
-    private void onUpdate(BlockView area, Entity focusedEntity, boolean thirdPerson, boolean inverseView, float tickDelta, CallbackInfo ci) {
+    private void onUpdate(net.minecraft.world.BlockView area, Entity focusedEntity, boolean thirdPerson, boolean inverseView, float tickDelta, CallbackInfo ci) {
+    //#endif
         if (thirdPerson && !inverseView
                 && AltoClef.getInstance() != null
                 && AltoClef.getInstance().getModSettings().isEpicCameraEnabled()) {

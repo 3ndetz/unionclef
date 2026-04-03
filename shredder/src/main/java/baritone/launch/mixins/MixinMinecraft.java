@@ -36,7 +36,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.function.BiFunction;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.DownloadingTerrainScreen;
+
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
@@ -132,7 +132,7 @@ public class MixinMinecraft {
             method = "joinWorld",
             at = @At("HEAD")
     )
-    private void preLoadWorld(ClientWorld world, DownloadingTerrainScreen.WorldEntryReason arg2, CallbackInfo ci) {
+    private void preLoadWorld(ClientWorld world, CallbackInfo ci) {
         // If we're unloading the world but one doesn't exist, ignore it
         if (this.world == null && world == null) {
             return;
@@ -152,7 +152,7 @@ public class MixinMinecraft {
             method = "joinWorld",
             at = @At("RETURN")
     )
-    private void postLoadWorld(ClientWorld world, DownloadingTerrainScreen.WorldEntryReason arg2, CallbackInfo ci) {
+    private void postLoadWorld(ClientWorld world, CallbackInfo ci) {
         // still fire event for both null, as that means we've just finished exiting a world
 
         // mc.world changing is only the primary baritone

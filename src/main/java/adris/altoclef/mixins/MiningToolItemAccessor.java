@@ -20,6 +20,6 @@ public interface MiningToolItemAccessor {
 
 }
 //#else
-//$$ // TODO [1.21.11] MiningToolItem deleted — this mixin is a no-op stub
+//$$ @Mixin(net.minecraft.item.Item.class) // no-op stub — MiningToolItem deleted in 1.21.11
 //$$ public interface MiningToolItemAccessor {}
 //#endif
