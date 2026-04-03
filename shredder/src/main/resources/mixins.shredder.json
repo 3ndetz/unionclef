@@ -11,6 +11,7 @@
     "MixinChunkArray",
     "MixinClientChunkProvider",
     "MixinClientPlayNetHandler",
+    "MixinCommandSuggestionHelper",
     "MixinEntity",
     "MixinFireworkRocketEntity",
     "MixinItemStack",

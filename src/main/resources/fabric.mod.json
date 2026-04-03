@@ -30,6 +30,7 @@
     "voicechat": ">=2.5.0"
   },
   "mixins": [
-    "altoclef.mixins.json"
+    "altoclef.mixins.json",
+    "tungsten.mixins.json"
   ]
 }

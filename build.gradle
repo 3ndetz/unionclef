@@ -43,6 +43,10 @@ if (project.name == mainProjectVersion) {
     sourceSets {
         main {
             java { srcDir rootProject.file('tungsten/src/main/java') }
+            resources {
+                srcDir rootProject.file('tungsten/src/main/resources')
+                exclude 'fabric.mod.json'
+            }
         }
     }
 }

@@ -303,7 +303,9 @@ public class TungstenBridge {
 
     private void stopTungsten() {
         TungstenModDataContainer.PATHFINDER.stop.set(true);
-        TungstenModDataContainer.EXECUTOR.stop = true;
+        if (TungstenModDataContainer.EXECUTOR != null) {
+            TungstenModDataContainer.EXECUTOR.stop = true;
+        }
     }
 
     /**
