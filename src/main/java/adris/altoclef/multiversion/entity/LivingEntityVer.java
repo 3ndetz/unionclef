@@ -27,6 +27,22 @@ public class LivingEntityVer {
         //#endif
     }
 
+    /**
+     * Check if a drowned holds a trident. Avoids getEquippedItems() which
+     * was removed in 1.21.11 — preprocessor can't remap deleted methods.
+     */
+    public static boolean hasTrident(LivingEntity entity) {
+        //#if MC >= 12111
+        //$$ return entity.getMainHandStack().isOf(net.minecraft.item.Items.TRIDENT)
+        //$$     || entity.getOffHandStack().isOf(net.minecraft.item.Items.TRIDENT);
+        //#else
+        for (ItemStack stack : entity.getEquippedItems()) {
+            if (stack.isOf(net.minecraft.item.Items.TRIDENT)) return true;
+        }
+        return false;
+        //#endif
+    }
+
     @Pattern
     private static boolean isSuitableFor(Item item, BlockState state) {
         //#if MC >= 12005

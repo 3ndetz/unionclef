@@ -3,6 +3,7 @@ package adris.altoclef.chains;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.control.KillAura;
+import adris.altoclef.multiversion.entity.LivingEntityVer;
 import adris.altoclef.multiversion.versionedfields.Entities;
 import adris.altoclef.multiversion.item.ItemVer;
 import adris.altoclef.tasks.construction.ProjectileProtectionWallTask;
@@ -128,9 +129,7 @@ public class MobDefenseChain extends SingleTaskChain {
 
                 numberOfProblematicEntities += 1;
             } else if (toDealWith instanceof DrownedEntity
-                    //#if MC < 12111
-                    && toDealWith.getEquippedItems() == Items.TRIDENT
-                    //#endif
+                    && LivingEntityVer.hasTrident(toDealWith)
             ) {
                 // Drowned with tridents are also REALLY dangerous, maybe we should increase this??
                 numberOfProblematicEntities += 5;
