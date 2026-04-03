@@ -143,6 +143,12 @@ public class Py4jEntryPoint {
     }
 
     public byte[] getScreenshot() {
+        //#if MC >= 12111
+        //$$ // TODO: takeScreenshot API changed to async Consumer<NativeImage> in 1.21.11
+        //$$ // and NativeImage.getBytes()/copyPixelsRgba() no longer exist.
+        //$$ // Needs rewrite to use the new async API.
+        //$$ return null;
+        //#else
         try {
             AtomicReference<NativeImage> screenshot = new AtomicReference<>();
             CompletableFuture<Void> future = new CompletableFuture<>();
@@ -150,11 +156,7 @@ public class Py4jEntryPoint {
             MinecraftClient.getInstance().execute(() -> {
                 try {
                     Framebuffer buffer = MinecraftClient.getInstance().getFramebuffer();
-                    //#if MC >= 12111
-                    //$$ screenshot.set(ScreenshotRecorder.takeScreenshot(buffer.textureWidth, buffer.textureHeight, buffer.fbo));
-                    //#else
                     screenshot.set(ScreenshotRecorder.takeScreenshot(buffer));
-                    //#endif
                     future.complete(null);
                 } catch (Exception e) {
                     future.completeExceptionally(e);
@@ -176,11 +178,7 @@ public class Py4jEntryPoint {
 
             NativeImage img = screenshot.get();
             try {
-                //#if MC >= 12111
-                //$$ return img.copyPixelsRgba();
-                //#else
                 return img.getBytes();
-                //#endif
             } finally {
                 img.close();
             }
@@ -188,6 +186,7 @@ public class Py4jEntryPoint {
             Debug.logInternal("Error taking screenshot: " + e.getMessage());
         }
         return null;
+        //#endif
     }
 
     public String getPipelineDescription() {

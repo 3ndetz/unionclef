@@ -279,6 +279,10 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 double x = worldScreen.width / 2.0 - 154;
                 double y = worldScreen.height - 52;
 
+                //#if MC >= 12111
+                //$$ // TODO: mouseClicked/mouseReleased signature changed to Click object in 1.21.11
+                //$$ // Auto-join world click needs rewrite for new input API
+                //#else
                 if (_mouseClickTimer.elapsed()) {
                     worldScreen.mouseClicked(x, y, 0);
                     worldScreen.mouseReleased(x, y, 0);
@@ -309,6 +313,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
                     }
                     _mouseClickTimer.reset();
                 }
+                //#endif
                 _needUnStuckFix = false;
             }
         } else if (_needDisconnect) {
@@ -370,7 +375,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
             if (client.world != null) {
                 boolean bl = client.isInSingleplayer();
                 //#if MC >= 12111
-                //$$ client.world.disconnect();
+                //$$ client.world.disconnect(Text.empty());
                 //#else
                 client.world.disconnect();
                 //#endif
@@ -402,7 +407,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
             //#endif
             if (bl) {
                 //#if MC >= 12111
-                //$$ client.disconnect(new DisconnectedScreen(client.currentScreen, Text.of("menu.savingLevel"), Text.of("DEATH")), Text.empty());
+                //$$ client.disconnect(Text.of("DEATH"));
                 //#else
                 client.disconnect(new DisconnectedScreen(client.currentScreen, Text.of("menu.savingLevel"), Text.of("DEATH")));
                 //#endif

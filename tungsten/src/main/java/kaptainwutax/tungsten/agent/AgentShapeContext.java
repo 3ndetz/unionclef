@@ -64,9 +64,11 @@ public class AgentShapeContext implements ShapeContext {
 
 	//#if MC >= 12111
 	//$$ @Override
-	//$$ public VoxelShape getCollisionShape(BlockState state, CollisionView world, BlockPos pos) {
+	//$$ public VoxelShape getCollisionShape(net.minecraft.block.BlockState state, net.minecraft.world.CollisionView world, BlockPos pos) {
 	//$$     return state.getCollisionShape(world, pos);
 	//$$ }
+	//$$ @Override
+	//$$ public boolean shouldTreatFluidAsCube() { return false; }
 	//#endif
 
 }

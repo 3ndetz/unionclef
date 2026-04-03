@@ -356,11 +356,11 @@ public class Playground {
                     FileWriter fw = new FileWriter(f);
                     for (Identifier id : Registries.ITEM.getIds()) {
                         //#if MC >= 12111
-                        //$$ Item item = Registries.ITEM.get(id).orElse(null);
-                        //$$ if (item == null) continue;
+                        //$$ Item item = Registries.ITEM.get(id).value();
                         //#else
                         Item item = Registries.ITEM.get(id);
                         //#endif
+                        if (item == null) continue;
                         if (!TaskCatalogue.isObtainable(item)) {
                             ++unobtainable;
                             fw.write(item.getTranslationKey() + "\n");

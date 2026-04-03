@@ -8,7 +8,11 @@ import net.minecraft.util.Identifier;
 
 public record WrappedRecipeEntry(Identifier id, Recipe<?> value) {
 
-    //#if MC>12001
+    //#if MC >= 12111
+    //$$ public RecipeEntry<?> asRecipe() {
+    //$$     return null; // TODO [1.21.11] RecipeEntry constructor takes RegistryKey now
+    //$$ }
+    //#elseif MC>12001
     public RecipeEntry<?> asRecipe() {
         return new RecipeEntry<Recipe<?>>(id, value);
     }

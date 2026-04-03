@@ -31,13 +31,8 @@ import net.minecraft.world.gen.chunk.BlendingData;
 @Mixin(WorldChunk.class)
 public abstract class MixinWorldChunk extends Chunk {
 
-	//#if MC >= 12111
-	//$$ public MixinWorldChunk(ChunkPos pos, UpgradeData upgradeData, HeightLimitView heightLimitView, Registry<Biome> biome,
-	//$$                        long inhabitedTime, @Nullable ChunkSection[] sectionArrayInitializer, @Nullable BlendingData blendingData,
-	//$$                        @Nullable net.minecraft.world.chunk.ChunkGenerationStep generationStep) {
-	//$$     super(pos, upgradeData, heightLimitView, biome, inhabitedTime, sectionArrayInitializer, blendingData, generationStep);
-	//$$ }
-	//#else
+	// Chunk constructor 4th param: Registry<Biome> in 1.21.1, PalettesFactory in 1.21.11
+	// Preprocessor remaps automatically — just use one version
 	public MixinWorldChunk(ChunkPos pos, UpgradeData upgradeData, HeightLimitView heightLimitView, Registry<Biome> biome,
 	                       long inhabitedTime, @Nullable ChunkSection[] sectionArrayInitializer, @Nullable BlendingData blendingData) {
 		super(pos, upgradeData, heightLimitView, biome, inhabitedTime, sectionArrayInitializer, blendingData);

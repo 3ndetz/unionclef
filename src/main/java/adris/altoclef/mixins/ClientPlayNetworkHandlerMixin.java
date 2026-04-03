@@ -80,11 +80,7 @@ public class ClientPlayNetworkHandlerMixin {
         try {
             AltoClef mod = AltoClef.getInstance();
             if (mod != null && AltoClef.inGame()) {
-                //#if MC >= 12111
-                //$$ mod.getSlotHandler().onServerSlotUpdate(packet.syncId(), packet.slot(), packet.stack());
-                //#else
                 mod.getSlotHandler().onServerSlotUpdate(packet.getSyncId(), packet.getSlot(), packet.getStack());
-                //#endif
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -100,12 +96,13 @@ public class ClientPlayNetworkHandlerMixin {
                 //$$ List<ItemStack> contents = packet.contents();
                 //$$ for (int i = 0; i < contents.size(); i++) {
                 //$$     mod.getSlotHandler().onServerSlotUpdate(packet.syncId(), i, contents.get(i));
+                //$$ }
                 //#else
                 List<ItemStack> contents = packet.getContents();
                 for (int i = 0; i < contents.size(); i++) {
                     mod.getSlotHandler().onServerSlotUpdate(packet.getSyncId(), i, contents.get(i));
-                //#endif
                 }
+                //#endif
             }
         } catch (Exception e) {
             e.printStackTrace();

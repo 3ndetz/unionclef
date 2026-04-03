@@ -85,15 +85,19 @@ public class DrawContextWrapper {
     }
 
 
+    //#if MC >= 12111
+    //$$ public org.joml.Matrix3x2fStack getMatrices() {
+    //$$     return context.getMatrices();
+    //$$ }
+    //#elseif MC >= 12001
     public MatrixStack getMatrices() {
-        //#if MC >= 12111
-        //$$ return context.getMatrices();
-        //#elseif MC >= 12001
         return context.getMatrices();
-        //#else
-        //$$ return matrices;
-        //#endif
     }
+    //#else
+    //$$ public MatrixStack getMatrices() {
+    //$$     return matrices;
+    //$$ }
+    //#endif
 
     public int getScaledWindowWidth() {
         //#if MC >= 12001

@@ -77,6 +77,11 @@ public class AltoClefTickChart {
 
 
     protected void drawBorderedText(DrawContextWrapper context, String string, int x, int y) {
+        //#if MC >= 12111
+        //$$ // TODO [1.21.11] MatrixStack replaced with Matrix3x2fStack — scale API different
+        //$$ context.fill(x, y, x + this.textRenderer.getWidth(string)/2 + 1, y + this.textRenderer.fontHeight/2+1, 0x90505050);
+        //$$ context.drawText(this.textRenderer, string, x + 1, y + 1, 0xE9E9E9, false);
+        //#else
         MatrixStack matrixStack = context.getMatrices();
         matrixStack.push();
         matrixStack.scale(0.5f,0.5f,1);
@@ -85,6 +90,7 @@ public class AltoClefTickChart {
         context.drawText(this.textRenderer, string, (x + 1)*2, (y + 1)*2, 0xE9E9E9, false);
 
         matrixStack.pop();
+        //#endif
     }
 
 

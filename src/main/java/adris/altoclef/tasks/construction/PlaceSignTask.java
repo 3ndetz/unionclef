@@ -122,9 +122,17 @@ public class PlaceSignTask extends Task {
                 }
 
                 // Add newline
+                //#if MC >= 12111
+                //$$ // TODO [1.21.11] keyPressed/charTyped signature changed to KeyInput/CharInput
+                //#else
                 screen.keyPressed(257, 36, 0);
+                //#endif
             }
+            //#if MC >= 12111
+            //$$ // TODO [1.21.11] charTyped signature changed
+            //#else
             screen.charTyped(c, -1);
+            //#endif
         }
         screen.close();
         _finished = true;

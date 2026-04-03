@@ -10,55 +10,18 @@ import java.util.List;
 
 public class LivingEntityVer {
 
-    // getEquippedItems/getHandItems/getArmorItems deleted in 1.21.11.
-    // Can't appear in source at all — preprocessor remaps ALL identifiers
-    // and crashes when target has no mapping.
-    // Solution: call the 1.21.1 method via reflection to hide it from preprocessor.
-
     @SuppressWarnings("unchecked")
-    static Iterable<ItemStack> callEquippedItems(LivingEntity entity) {
+    private static Iterable<ItemStack> reflectMethod(LivingEntity entity, String name) {
         try {
-            var method = LivingEntity.class.getMethod("getEquippedItems");
-            return (Iterable<ItemStack>) method.invoke(entity);
+            return (Iterable<ItemStack>) LivingEntity.class.getMethod(name).invoke(entity);
         } catch (Exception e) {
             return List.of();
         }
     }
 
-    @SuppressWarnings("unchecked")
-    static Iterable<ItemStack> callHandItems(LivingEntity entity) {
-        try {
-            var method = LivingEntity.class.getMethod("getHandItems");
-            return (Iterable<ItemStack>) method.invoke(entity);
-        } catch (Exception e) {
-            return List.of();
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    static Iterable<ItemStack> callArmorItems(LivingEntity entity) {
-        try {
-            var method = LivingEntity.class.getMethod("getArmorItems");
-            return (Iterable<ItemStack>) method.invoke(entity);
-        } catch (Exception e) {
-            return List.of();
-        }
-    }
-
-    @Pattern
-    private static Iterable<ItemStack> getItemsEquipped(LivingEntity entity) {
-        //#if MC >= 12111
-        //$$ return java.util.List.of(
-        //$$     entity.getMainHandStack(), entity.getOffHandStack(),
-        //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.HEAD),
-        //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.CHEST),
-        //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.LEGS),
-        //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.FEET)
-        //$$ );
-        //#else
-        return callEquippedItems(entity);
-        //#endif
-    }
+    static Iterable<ItemStack> callEquippedItems(LivingEntity e) { return reflectMethod(e, "getEquippedItems"); }
+    static Iterable<ItemStack> callHandItems(LivingEntity e) { return reflectMethod(e, "getHandItems"); }
+    static Iterable<ItemStack> callArmorItems(LivingEntity e) { return reflectMethod(e, "getArmorItems"); }
 
     public static boolean hasTrident(LivingEntity entity) {
         //#if MC >= 12111

@@ -153,7 +153,7 @@ public class VoxelWorld implements WorldView {
 
 	//#if MC >= 12111
 	//$$ @Override
-	//$$ public net.minecraft.world.EnvironmentAttributeMap getEnvironmentAttributes() {
+	//$$ public net.minecraft.world.attribute.EnvironmentAttributeAccess getEnvironmentAttributes() {
 	//$$     return parent.getEnvironmentAttributes();
 	//$$ }
 	//#endif
