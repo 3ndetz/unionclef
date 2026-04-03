@@ -123,8 +123,12 @@ dependencies {
     shadow('com.fasterxml.jackson.core:jackson-databind:2.16.0')
 
     // Shredder — new pathfinder (replaces baritone, same package names)
+    // Compile against shredder for all versions (altoclef imports baritone API)
+    // but only include JAR for compatible versions (shredder uses 1.21.1 MC names)
     implementation project(path: ":shredder", configuration: "namedElements")
-    include project(":shredder")
+    if (mcVersion < 12111) {
+        include project(":shredder")
+    }
 
     // Tungsten — source compiled inline (preprocessed together with altoclef)
 }
