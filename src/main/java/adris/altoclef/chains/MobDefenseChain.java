@@ -235,7 +235,7 @@ public class MobDefenseChain extends SingleTaskChain {
                     && hasShield(mod)
                     && !mod.getEntityTracker().entityFound(PotionEntity.class)
                     //#if MC >= 12111
-                    //$$ && !mod.getPlayer().getItemCooldownManager().isCoolingDown(new ItemStack(offhandItem))
+                    //$$ && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem.getDefaultStack())
                     //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
                     //#endif
@@ -271,7 +271,7 @@ public class MobDefenseChain extends SingleTaskChain {
                     && hasShield(mod)
                     && runAwayTask == null
                     //#if MC >= 12111
-                    //$$ && !mod.getPlayer().getItemCooldownManager().isCoolingDown(new ItemStack(offhandItem))
+                    //$$ && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem.getDefaultStack())
                     //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
                     //#endif
