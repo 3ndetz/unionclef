@@ -211,21 +211,12 @@ public class ThreatTable {
                 threat.sneak = entity.isSneaking();
             }
             if (threat.sneakRate > 0 && threat.shiftTimer.elapsed()) threat.sneakRate = 0;
-            //#if MC >= 12111
-            //$$ if (entity.getEntityPos() != null) {
-            //$$     if (threat.lastPos != null && threat.lastPos.distanceTo(entity.getEntityPos()) > 10) {
-            //$$         EventBus.publish(new TeleportEvent(entity, threat.lastPos, entity.getEntityPos()));
-            //$$     }
-            //$$     threat.lastPos = entity.getEntityPos();
-            //$$ }
-            //#else
             if (entity.getPos() != null) {
                 if (threat.lastPos != null && threat.lastPos.distanceTo(entity.getPos()) > 10) {
                     EventBus.publish(new TeleportEvent(entity, threat.lastPos, entity.getPos()));
                 }
                 threat.lastPos = entity.getPos();
             }
-            //#endif
             threat.weaponThreat = ItemHelper.getWeaponThreat(_mod, entity);
             threat.lastHealth = entity.getHealth();
             threat.lastRotationVec = entity.getRotationVec(0);

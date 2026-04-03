@@ -472,11 +472,7 @@ public class MobDefenseChain extends SingleTaskChain {
             double prob = LookHelper.getLookingProbability(player, mod.getPlayer());
 
             if (prob > 0.96) {
-                //#if MC >= 12111
-                //$$ Rotation targetRotation = LookHelper.getLookRotation(mod, player.getEntityPos());
-                //#else
                 Rotation targetRotation = LookHelper.getLookRotation(mod, player.getPos());
-                //#endif
                 float invertedYaw = (targetRotation.getYaw() - 90) % 360;
                 if (invertedYaw < 0) invertedYaw += 360;
                 suggestedProjectileRotation = new Rotation(invertedYaw, 0f);
@@ -600,11 +596,7 @@ public class MobDefenseChain extends SingleTaskChain {
 
                 // We want to pick the closest creeper, but FIRST pick creepers about to blow
                 // At max fuse, the cost goes to basically zero.
-                //#if MC >= 12111
-                //$$ double safety = getCreeperSafety(mod.getPlayer().getEntityPos(), creeper);
-                //#else
                 double safety = getCreeperSafety(mod.getPlayer().getPos(), creeper);
-                //#endif
                 if (safety < worstSafety) {
                     target = creeper;
                 }
@@ -620,11 +612,7 @@ public class MobDefenseChain extends SingleTaskChain {
 
     private boolean isProjectileClose(AltoClef mod) {
         List<CachedProjectile> projectiles = mod.getEntityTracker().getProjectiles();
-        //#if MC >= 12111
-        //$$ Vec3d plyPos = mod.getPlayer().getEntityPos();
-        //#else
         Vec3d plyPos = mod.getPlayer().getPos();
-        //#endif
         try {
             for (CachedProjectile projectile : projectiles) {
                 double sqDist = projectile.position.squaredDistanceTo(plyPos);
@@ -752,11 +740,7 @@ public class MobDefenseChain extends SingleTaskChain {
 
     public Optional<Entity> getAvoidTarget(AltoClef mod) {
         try {
-            //#if MC >= 12111
-            //$$ return mod.getEntityTracker().getClosestEntity(mod.getPlayer().getEntityPos(),
-            //#else
             return mod.getEntityTracker().getClosestEntity(mod.getPlayer().getPos(),
-            //#endif
                     entity -> {
                         if (entity == null) return false;
                         if (mod.getBehaviour().shouldExcludeFromAttack(entity)) return false;
@@ -777,11 +761,7 @@ public class MobDefenseChain extends SingleTaskChain {
 
     public Optional<Entity> getAttackPlayer(AltoClef mod) {
         try {
-            //#if MC >= 12111
-            //$$ return mod.getEntityTracker().getClosestEntity(mod.getPlayer().getEntityPos(),
-            //#else
             return mod.getEntityTracker().getClosestEntity(mod.getPlayer().getPos(),
-            //#endif
                     entity -> entity != null
                             && entity.getName() != null
                             && !mod.getBehaviour().shouldExcludeFromAttack(entity)

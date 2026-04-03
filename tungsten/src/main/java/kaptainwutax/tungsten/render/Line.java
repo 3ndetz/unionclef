@@ -28,11 +28,7 @@ public class Line extends Renderer {
     @Override
     public void render(BufferBuilder builder) {
         if(TungstenModDataContainer.gameRenderer == null || this.start == null || this.end == null || this.color == null)return;
-        //#if MC >= 12111
-        //$$ Vec3d camPos = TungstenModDataContainer.gameRenderer.getCamera().getCameraPos();
-        //#else
         Vec3d camPos = TungstenModDataContainer.gameRenderer.getCamera().getPos();
-        //#endif
         this.putVertex(builder, camPos, this.start);
         this.putVertex(builder, camPos, this.end);
     }

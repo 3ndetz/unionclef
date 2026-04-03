@@ -51,11 +51,7 @@ public class MovementProgressChecker {
             return !mineChecker.failed();
         } else {
             mineChecker.reset();
-            //#if MC >= 12111
-            //$$ distanceChecker.setProgress(mod.getPlayer().getEntityPos());
-            //#else
             distanceChecker.setProgress(mod.getPlayer().getPos());
-            //#endif
             return !distanceChecker.failed();
         }
     }

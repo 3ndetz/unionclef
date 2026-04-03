@@ -137,11 +137,7 @@ public class DefaultGoToDimensionTask extends Task {
     private boolean netherPortalIsClose(AltoClef mod) {
         if (mod.getBlockScanner().anyFound(Blocks.NETHER_PORTAL)) {
             Optional<BlockPos> closest = mod.getBlockScanner().getNearestBlock( Blocks.NETHER_PORTAL);
-            //#if MC >= 12111
-            //$$ return closest.isPresent() && closest.get().isWithinDistance(mod.getPlayer().getEntityPos(), 2000);
-            //#else
             return closest.isPresent() && closest.get().isWithinDistance(mod.getPlayer().getPos(), 2000);
-            //#endif
         }
         return false;
     }

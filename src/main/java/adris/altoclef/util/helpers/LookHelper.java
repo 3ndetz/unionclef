@@ -276,11 +276,7 @@ public interface LookHelper {
         }
 
         // Get the world of the entity
-        //#if MC >= 12111
-        //$$ World world = entity.getEntityWorld();
-        //#else
         World world = entity.getWorld();
-        //#endif
 
         // Create a raycast context with the start and end points, shape type, fluid handling, and entity performing the raycast
         RaycastContext context = new RaycastContext(start, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, entity);
@@ -729,11 +725,7 @@ public interface LookHelper {
 
     public static boolean canHitEntity(AltoClef mod, Entity entity, float range) {
         Vec3d closestPoint = getClosestPointOnEntityHitbox(mod, entity);
-        //#if MC >= 12111
-        //$$ double distance = mod.getPlayer().getEntityPos().distanceTo(entity.getEntityPos());
-        //#else
         double distance = mod.getPlayer().getPos().distanceTo(entity.getPos());
-        //#endif
         return cleanLineOfSight(closestPoint, distance) && distance < range;
     }
 

@@ -137,11 +137,7 @@ public class BlockScanner {
 
     public Optional<BlockPos> getNearestBlock(Block... blocks) {
         // Add juuust a little, to prevent digging down all the time/bias towards blocks BELOW the player
-        //#if MC >= 12111
-        //$$ return getNearestBlock(mod.getPlayer().getEntityPos().add(0, 0.6f, 0), blocks);
-        //#else
         return getNearestBlock(mod.getPlayer().getPos().add(0, 0.6f, 0), blocks);
-        //#endif
     }
 
     public Optional<BlockPos> getNearestBlock(Vec3d pos, Block... blocks) {
@@ -149,11 +145,7 @@ public class BlockScanner {
     }
 
     public Optional<BlockPos> getNearestBlock(Predicate<BlockPos> isValidTest, Block... blocks) {
-        //#if MC >= 12111
-        //$$ return getNearestBlock(mod.getPlayer().getEntityPos().add(0, 0.6f, 0), isValidTest, blocks);
-        //#else
         return getNearestBlock(mod.getPlayer().getPos().add(0, 0.6f, 0), isValidTest, blocks);
-        //#endif
     }
 
     public Optional<BlockPos> getNearestBlock(Vec3d pos, Predicate<BlockPos> isValidTest, Block... blocks) {
@@ -204,11 +196,7 @@ public class BlockScanner {
     }
 
     public boolean anyFoundWithinDistance(double distance, Block... blocks) {
-        //#if MC >= 12111
-        //$$ return anyFoundWithinDistance(mod.getPlayer().getEntityPos().add(0, 0.6f, 0), distance, blocks);
-        //#else
         return anyFoundWithinDistance(mod.getPlayer().getPos().add(0, 0.6f, 0), distance, blocks);
-        //#endif
     }
 
     public boolean anyFoundWithinDistance(Vec3d pos, double distance, Block... blocks) {
@@ -217,11 +205,7 @@ public class BlockScanner {
     }
 
     public double distanceToClosest(Block... blocks) {
-        //#if MC >= 12111
-        //$$ return distanceToClosest(mod.getPlayer().getEntityPos().add(0, 0.6f, 0), blocks);
-        //#else
         return distanceToClosest(mod.getPlayer().getPos().add(0, 0.6f, 0), blocks);
-        //#endif
     }
 
     public double distanceToClosest(Vec3d pos, Block... blocks) {
@@ -322,11 +306,7 @@ public class BlockScanner {
         HashMap<Block, HashSet<BlockPos>> map = new HashMap<>();
 
         BlockPos pos = mod.getPlayer().getBlockPos();
-        //#if MC >= 12111
-        //$$ World world = mod.getPlayer().getEntityWorld();
-        //#else
         World world = mod.getPlayer().getWorld();
-        //#endif
 
         for (int x = pos.getX() - 8; x <= pos.getX() + 8; x++) {
             for (int y = pos.getY() - 8; y < pos.getY() + 8; y++) {
@@ -349,11 +329,7 @@ public class BlockScanner {
         }
 
         for (Map.Entry<Block, HashSet<BlockPos>> entry : map.entrySet()) {
-            //#if MC >= 12111
-        //$$ getFirstFewPositions(entry.getValue(),mod.getPlayer().getEntityPos());
-        //#else
-        getFirstFewPositions(entry.getValue(),mod.getPlayer().getPos());
-        //#endif
+            getFirstFewPositions(entry.getValue(),mod.getPlayer().getPos());
 
             if (!trackedBlocks.containsKey(entry.getKey())) {
                 trackedBlocks.put(entry.getKey(), new HashSet<>());
@@ -369,11 +345,7 @@ public class BlockScanner {
         long ms = System.currentTimeMillis();
 
         ChunkPos playerChunkPos = mod.getPlayer().getChunkPos();
-        //#if MC >= 12111
-        //$$ Vec3d playerPos = mod.getPlayer().getEntityPos();
-        //#else
         Vec3d playerPos = mod.getPlayer().getPos();
-        //#endif
 
         HashSet<ChunkPos> visited = new HashSet<>();
         Queue<Node> queue = new ArrayDeque<>();

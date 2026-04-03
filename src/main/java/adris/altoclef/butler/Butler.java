@@ -262,11 +262,7 @@ public class Butler {
         try {
             for (Entity entity : players) {
                 if (entity instanceof PlayerEntity
-                        //#if MC >= 12111
-                        //$$ && mod.getPlayer().getEntityPos().isInRange(entity.getEntityPos(), radius)
-                        //#else
                         && mod.getPlayer().getPos().isInRange(entity.getPos(), radius)
-                        //#endif
                         && !entity.equals(mod.getPlayer())) {
                     String name = entity.getName().getString();
                     if (!_teammates.contains(name)) {

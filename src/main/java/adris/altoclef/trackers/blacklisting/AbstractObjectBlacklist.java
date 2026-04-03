@@ -27,11 +27,7 @@ public abstract class AbstractObjectBlacklist<T> {
             entries.put(item, entry);
         }
         BlacklistEntry entry = entries.get(item);
-        //#if MC >= 12111
-        //$$ double newDistance = getPos(item).squaredDistanceTo(mod.getPlayer().getEntityPos());
-        //#else
         double newDistance = getPos(item).squaredDistanceTo(mod.getPlayer().getPos());
-        //#endif
         MiningRequirement newTool = StorageHelper.getCurrentMiningRequirement();
         // For distance, add a slight threshold so it doesn't reset EVERY time we move a tiny bit closer.
         if (newTool.ordinal() > entry.bestTool.ordinal() || (newDistance < entry.bestDistanceSq - 1)) {

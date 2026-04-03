@@ -131,22 +131,13 @@ public class GestureTask extends Task {
         }
         if (!_started) _started = true;
 
-        //#if MC >= 12111
-        //$$ if (lookTarget == null || mod.getPlayer() == null || mod.getPlayer().getEntityPos() == null) {
-        //#else
         if (lookTarget == null || mod.getPlayer() == null || mod.getPlayer().getPos() == null) {
-        //#endif
             setDebugState("NULL TARGET / SELF");
             return null;
         }
         Rotation lookAtCamera = LookHelper.getLookRotation(mod, lookTarget);
-        //#if MC >= 12111
-        //$$ Vec3d targetVector = lookTarget.subtract(mod.getPlayer().getEntityPos()).normalize();
-        //$$ double targetDist = mod.getPlayer().getEntityPos().distanceTo(lookTarget);
-        //#else
         Vec3d targetVector = lookTarget.subtract(mod.getPlayer().getPos()).normalize();
         double targetDist = mod.getPlayer().getPos().distanceTo(lookTarget);
-        //#endif
         // Clamp camera distance to prevent teleporting ~100000 blocks away
         double maxCameraDist = 20.0;
         if (LookHelper.cleanLineOfSight(lookTarget, 100d) && targetDist <= maxCameraDist) {
@@ -165,13 +156,8 @@ public class GestureTask extends Task {
                             .add(targetVector.multiply(-1)));
             mod.getBehaviour().setCameraRotationModifer(lookAtCamera);
         }
-        //#if MC >= 12111
-        //$$ double yDiff = lookTarget.getY() - mod.getPlayer().getEntityPos().getY();
-        //$$ double dist = mod.getPlayer().getEntityPos().distanceTo(lookTarget);
-        //#else
         double yDiff = lookTarget.getY() - mod.getPlayer().getPos().getY();
         double dist = mod.getPlayer().getPos().distanceTo(lookTarget);
-        //#endif
         boolean tooClose = dist < _stopDistance;
         boolean shifting = !(_gesture.equals(Gesture.Fight) || _gesture.equals(Gesture.BrawlStars) || _gesture.equals(Gesture.Disagree) || _gesture.equals(Gesture.Agree));
         boolean moveLeftRight = _gesture.equals(Gesture.Fight);
@@ -283,11 +269,7 @@ public class GestureTask extends Task {
                 }
                 mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.SPRINT, false);
                 mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, false);
-            //#if MC >= 12111
-            //$$ } else if (!mod.getPlayer().getEntityPos().isInRange(lookTarget, _interactDistance)) {
-            //#else
             } else if (!mod.getPlayer().getPos().isInRange(lookTarget, _interactDistance)) {
-            //#endif
                 mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, false);
                 mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.SPRINT, true);
                 mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);

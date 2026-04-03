@@ -57,13 +57,8 @@ public class MLGBucketFallChain extends SingleTaskChain implements ITaskOverride
         } else if (isInHellHole(mod)) {
             if (mod.getItemStorage().hasItem(Items.ENDER_PEARL) && lastGroundBlockPos != null) {
                 if (voidFallTimer.elapsed()) {
-                    //#if MC >= 12111
-                    //$$ Optional<Entity> closestPlayer = mod.getEntityTracker().getClosestEntity(
-                    //$$         mod.getPlayer().getEntityPos(),
-                    //#else
                     Optional<Entity> closestPlayer = mod.getEntityTracker().getClosestEntity(
                             mod.getPlayer().getPos(),
-                    //#endif
                             p -> pearlAllowable(mod, (PlayerEntity) p),
                             PlayerEntity.class);
                     if (closestPlayer.isPresent()) {
@@ -101,11 +96,7 @@ public class MLGBucketFallChain extends SingleTaskChain implements ITaskOverride
                         isPlacedWater = false;
                     }
                     //Debug.logInternal("PLACED: " + placed);
-                    //#if MC >= 12111
-                    //$$ if (placed != null && placed.isWithinDistance(mod.getPlayer().getEntityPos(), 5.5) && isPlacedWater) {
-                    //#else
                     if (placed != null && placed.isWithinDistance(mod.getPlayer().getPos(), 5.5) && isPlacedWater) {
-                    //#endif
                         BlockPos toInteract = placed;
                         // Allow looking at fluids
                         mod.getBehaviour().push();
@@ -199,11 +190,7 @@ public class MLGBucketFallChain extends SingleTaskChain implements ITaskOverride
 
     private boolean pearlAllowable(AltoClef mod, PlayerEntity player) {
         if (player.equals(mod.getPlayer())) return false;
-        //#if MC >= 12111
-        //$$ return LookHelper.cleanLineOfSight(player.getEntityPos(), 100)
-        //#else
         return LookHelper.cleanLineOfSight(player.getPos(), 100)
-        //#endif
                 && !WorldHelper.isHellHole(mod, player.getBlockPos());
     }
 }
