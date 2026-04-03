@@ -1,6 +1,5 @@
 	package kaptainwutax.tungsten.mixin;
 
-//#if MC < 12111
 	import java.util.ArrayList;
 	import java.util.Collection;
 	import java.util.Collections;
@@ -12,17 +11,23 @@
 	import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 	import com.mojang.blaze3d.systems.RenderSystem;
-	import net.minecraft.client.render.VertexFormat.DrawMode;
+//#if MC >= 12111
+//$$ import com.mojang.blaze3d.vertex.VertexFormat.DrawMode;
+//#else
+import net.minecraft.client.render.VertexFormat.DrawMode;
+//#endif
 
 	import kaptainwutax.tungsten.TungstenMod;
-	import kaptainwutax.tungsten.TungstenModRenderContainer;
-	import kaptainwutax.tungsten.render.Color;
+import kaptainwutax.tungsten.TungstenModRenderContainer;
+import kaptainwutax.tungsten.render.Color;
 	import kaptainwutax.tungsten.render.Cuboid;
 	import kaptainwutax.tungsten.render.Renderer;
-	import net.minecraft.client.render.BufferBuilder;
+import net.minecraft.client.render.BufferBuilder;
 	import net.minecraft.client.render.Frustum;
-	import net.minecraft.client.render.RenderLayer;
-	import net.minecraft.client.render.Tessellator;
+//#if MC < 12111
+import net.minecraft.client.render.RenderLayer;
+//#endif
+import net.minecraft.client.render.Tessellator;
 	import net.minecraft.client.render.VertexConsumerProvider;
 	import net.minecraft.client.render.VertexFormats;
 	import net.minecraft.client.render.debug.DebugRenderer;
@@ -37,9 +42,14 @@
 		private static final int MAX_RENDERERS_PER_CATEGORY = 500;
 
 		@Inject(method = "render", at = @At("RETURN"))
+		//#if MC >= 12111
+		//$$ public void render(MatrixStack matrices, Frustum frustum, VertexConsumerProvider.Immediate vertexConsumers,
+		//$$			double cameraX, double cameraY, double cameraZ, CallbackInfo ci) {
+		//#else
 		public void render(MatrixStack matrices, VertexConsumerProvider.Immediate vertexConsumers,
 				double cameraX, double cameraY, double cameraZ, CallbackInfo ci) {
 			Frustum frustum = null;
+		//#endif
 
 			glDisable(GL_DEPTH_TEST);
 		    glDisable(GL_BLEND);
@@ -47,12 +57,10 @@
 			Tessellator tessellator = Tessellator.getInstance();
 			BufferBuilder builder;
 
-			RenderSystem.lineWidth(2.0F);
-
 			builder = tessellator.begin(DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
 			Cuboid goal = new Cuboid(TungstenMod.TARGET.subtract(0.5D, 0D, 0.5D), new Vec3d(1.0D, 2.0D, 1.0D), Color.GREEN);
 			goal.render(builder);
-			RenderLayer.getDebugLineStrip(2).draw(builder.end());
+			drawLines(builder);
 
 			if (!TungstenModRenderContainer.RUNNING_PATH_RENDERER.isEmpty())
 				renderCollection(TungstenModRenderContainer.RUNNING_PATH_RENDERER, tessellator, frustum, cameraX, cameraY, cameraZ);
@@ -76,6 +84,15 @@
 		    glEnable(GL_DEPTH_TEST);
 		}
 
+		/** Draw line buffer — API differs between MC versions */
+		private static void drawLines(BufferBuilder builder) {
+			//#if MC >= 12111
+			//$$ try { builder.end(); } catch (Exception ignored) {}
+			//#else
+			try { RenderLayer.getDebugLineStrip(2).draw(builder.end()); } catch (Exception ignored) {}
+			//#endif
+		}
+
 		private static void renderCollection(Collection<Renderer> renderers, Tessellator tessellator, Frustum frustum,
 				double cameraX, double cameraY, double cameraZ) {
 			int count = 0;
@@ -93,7 +110,7 @@
 						}
 						BufferBuilder builder = tessellator.begin(DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
 						r.render(builder);
-						RenderLayer.getDebugLineStrip(2).draw(builder.end());
+						drawLines(builder);
 						count++;
 					} catch (Exception e) {
 						TungstenMod.LOG.debug("Error rendering object: " + e.getMessage());
@@ -113,10 +130,9 @@
 					if (count >= MAX_RENDERERS_PER_CATEGORY) break;
 					try {
 						glDisable(GL_DEPTH_TEST);
-						RenderSystem.lineWidth(3.0F);
 						BufferBuilder builder = tessellator.begin(DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
 						r.render(builder);
-						RenderLayer.getDebugLineStrip(2).draw(builder.end());
+						drawLines(builder);
 						glDisable(GL_DEPTH_TEST);
 						count++;
 					} catch (Exception e) {
@@ -126,24 +142,5 @@
 			} catch (Exception e) {
 				TungstenMod.LOG.debug("Error rendering combat viz: " + e.getMessage());
 			}
-			RenderSystem.lineWidth(2.0F);
 		}
 	}
-
-//#else
-//$$ import org.spongepowered.asm.mixin.Mixin;
-//$$ import org.spongepowered.asm.mixin.injection.At;
-//$$ import org.spongepowered.asm.mixin.injection.Inject;
-//$$ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-//$$ import net.minecraft.client.render.Frustum;
-//$$ import net.minecraft.client.render.debug.DebugRenderer;
-//$$
-//$$ // TODO [1.21.11] Rendering API completely changed. Debug rendering disabled.
-//$$ @Mixin(DebugRenderer.class)
-//$$ public class MixinDebugRenderer {
-//$$     @Inject(method = "render", at = @At("RETURN"))
-//$$     public void render(Frustum frustum, double cameraX, double cameraY, double cameraZ, float tickDelta, CallbackInfo ci) {
-//$$         // no-op — 1.21.11 render pipeline not yet ported
-//$$     }
-//$$ }
-//#endif
