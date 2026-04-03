@@ -150,7 +150,7 @@ public class MineAndCollectTask extends ResourceTask {
                         }
                     }
                     //#else
-                    //$$ // TODO [1.21.11] MiningToolItem deleted — compare tool tiers via Item.Settings component
+                    //$$ // TODO [1.21.11] mining-tool-class deleted — compare tool tiers via Item.Settings component
                     //#endif
                 }
             }

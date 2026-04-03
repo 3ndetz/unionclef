@@ -636,7 +636,7 @@ public class ItemHelper {
                 damage += tool.getMaterial().getAttackDamage() + 3;
             }
             //#else
-            //$$ // TODO [1.21.11] ToolItem/SwordItem deleted — get attack damage from Item.Settings component
+            //$$ // TODO [1.21.11] tool-class/sword-class deleted — get attack damage from Item.Settings component
             //#endif
             //#if MC >= 12100
             if (handItem instanceof net.minecraft.item.TridentItem || handItem instanceof net.minecraft.item.MaceItem) {

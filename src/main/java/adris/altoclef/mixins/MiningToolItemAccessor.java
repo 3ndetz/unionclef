@@ -20,6 +20,6 @@ public interface MiningToolItemAccessor {
 
 }
 //#else
-//$$ // TODO [1.21.11] MiningToolItem deleted — this mixin is not needed
+//$$ // TODO [1.21.11] MiningToolItem deleted — this mixin is a no-op stub
 //$$ public interface MiningToolItemAccessor {}
 //#endif

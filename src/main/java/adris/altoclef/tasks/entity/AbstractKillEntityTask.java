@@ -146,7 +146,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         if (item instanceof SwordItem sword) return sword.getMaterial().getAttackDamage();
         if (item instanceof AxeItem axe) return axe.getMaterial().getAttackDamage();
         //#else
-        //$$ // TODO [1.21.11] SwordItem/AxeItem.getMaterial() removed — get attack damage from components
+        //$$ // TODO [1.21.11] sword-class/AxeItem.getMaterial() removed — get attack damage from components
         //#endif
         return 0;
     }
@@ -171,7 +171,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             }
         }
         //#else
-        //$$ // TODO [1.21.11] SwordItem deleted — use Item.Settings attack damage component
+        //$$ // TODO [1.21.11] sword-class deleted — use Item.Settings attack damage component
         //#endif
 
         return bestItem;
@@ -193,7 +193,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             //#if MC < 12111
             if (!(item instanceof SwordItem) && !(item instanceof AxeItem)) continue;
             //#else
-            //$$ // TODO [1.21.11] SwordItem deleted — check for sword items via other means
+            //$$ // TODO [1.21.11] sword-class deleted — check for sword items via other means
             //$$ if (!(item instanceof AxeItem)) continue;
             //#endif
 

@@ -37,7 +37,7 @@ public class DepositCommand extends Command {
                 //#if MC < 12111
                 return !(item instanceof ToolItem);
                 //#else
-                //$$ return true; // TODO [1.21.11] ToolItem deleted — filter tools via Item.Settings component
+                //$$ return true; // TODO [1.21.11] tool-class deleted — filter tools via Item.Settings component
                 //#endif
             }
             return false;

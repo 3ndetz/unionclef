@@ -60,7 +60,7 @@ public class KillAura {
                     }
                 }
                 //#else
-                //$$ // TODO [1.21.11] SwordItem deleted — use Item.Settings attack damage component
+                //$$ // TODO [1.21.11] sword-class deleted — use Item.Settings attack damage component
                 //#endif
             }
         }

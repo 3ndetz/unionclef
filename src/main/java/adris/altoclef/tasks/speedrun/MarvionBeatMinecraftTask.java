@@ -562,7 +562,7 @@ public class MarvionBeatMinecraftTask extends Task {
                     mod.getSlotHandler().forceEquipItem(item);
                 }
                 //#else
-                //$$ // TODO [1.21.11] SwordItem deleted — equip sword via item ID check
+                //$$ // TODO [1.21.11] sword-class deleted — equip sword via item ID check
                 //#endif
             }
         }

@@ -154,7 +154,7 @@ public class EquipArmorTask extends Task {
                 //$$                 StorageHelper.closeScreen();
                 //$$             }
                 //$$         }
-                //$$         // TODO [1.21.11] ArmorItem.getSlotType() removed — derive slot from item type
+                //$$         // TODO [1.21.11] armor-class.getSlotType() removed — derive slot from item type
                 //$$         Slot toMove = PlayerSlot.getEquipSlot(EquipmentSlot.CHEST); // placeholder
                 //$$         return new MoveItemToSlotFromInventoryTask(targetArmor, toMove);
                 //$$     }

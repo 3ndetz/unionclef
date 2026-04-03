@@ -397,7 +397,7 @@ public class MobDefenseChain extends SingleTaskChain {
                 //#if MC < 12111
                 SwordItem bestSword = getBestSword(mod);
                 //#else
-                //$$ Object bestSword = getBestSword(mod); // TODO [1.21.11] SwordItem deleted
+                //$$ var bestSword = getBestSword(mod);
                 //#endif
 
                 int armor = mod.getPlayer().getArmor();
@@ -501,7 +501,7 @@ public class MobDefenseChain extends SingleTaskChain {
         return bestSword;
     }
     //#else
-    //$$ // TODO [1.21.11] SwordItem deleted — return Item and get damage from component
+    //$$ // TODO [1.21.11] sword item class deleted — return Item and get damage from component
     //$$ private static Item getBestSword(AltoClef mod) {
     //$$     Item[] SWORDS = new Item[]{Items.NETHERITE_SWORD, Items.DIAMOND_SWORD, Items.IRON_SWORD, Items.GOLDEN_SWORD,
     //$$             Items.STONE_SWORD, Items.WOODEN_SWORD};

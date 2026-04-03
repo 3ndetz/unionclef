@@ -184,7 +184,7 @@ public class SlotHandler {
 
     public boolean forceDeequipHitTool() {
         //#if MC >= 12111
-        //$$ // TODO [1.21.11] ToolItem removed — check via item components or tags
+        //$$ // TODO [1.21.11] tool-class removed — check via item components or tags
         //$$ return forceDeequip(stack -> false);
         //#else
         return forceDeequip(stack -> stack.getItem() instanceof ToolItem);

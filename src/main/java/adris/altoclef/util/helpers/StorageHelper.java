@@ -173,7 +173,7 @@ public class StorageHelper {
             //#if MC < 12111
             if (stack.getItem() instanceof ToolItem) {
             //#else
-            //$$ if (stack.getItem().getDefaultStack().isSuitableFor(state)) { // TODO [1.21.11] ToolItem deleted — use isSuitableFor directly
+            //$$ if (stack.getItem().getDefaultStack().isSuitableFor(state)) { // TODO [1.21.11] tool-class deleted — use isSuitableFor directly
             //#endif
                 if (stack.getItem().getDefaultStack().isSuitableFor(state)) {
                     if (shouldSaveStack(mod,  state.getBlock(), stack)) continue;
@@ -282,7 +282,7 @@ public class StorageHelper {
                 return Optional.of(slot);
             }
             //#else
-            //$$ // TODO [1.21.11] ToolItem deleted — determine tool class and mining level via components
+            //$$ // TODO [1.21.11] tool-class deleted — determine tool class and mining level via components
             //#endif
         }
 
@@ -337,7 +337,7 @@ public class StorageHelper {
                         return left.getDamage() - right.getDamage();
                     }
                     //#else
-                    //$$ // TODO [1.21.11] ToolItem deleted — prioritize tools via components
+                    //$$ // TODO [1.21.11] tool-class deleted — prioritize tools via components
                     //#endif
 
                     // Prioritize food over other things if we lack food.
@@ -456,7 +456,7 @@ public class StorageHelper {
                     return true;
             }
             //#else
-            //$$ // TODO [1.21.11] ArmorItem deleted — check equipped armor via EquipmentSlot component
+            //$$ // TODO [1.21.11] armor-class deleted — check equipped armor via EquipmentSlot component
             //#endif
             if (item instanceof ShieldItem shield) {
                 ItemStack equippedStack = player.getInventory().getStack(OFF_HAND_SLOT);

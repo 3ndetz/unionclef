@@ -218,7 +218,7 @@ public class MurderMysteryTask extends Task {
                     //#if MC < 12111
                     mod.getSlotHandler().forceDeequip(stack -> stack.getItem() instanceof ShearsItem || stack.getItem() instanceof SwordItem);
                     //#else
-                    //$$ mod.getSlotHandler().forceDeequip(stack -> stack.getItem() instanceof ShearsItem); // TODO [1.21.11] SwordItem deleted
+                    //$$ mod.getSlotHandler().forceDeequip(stack -> stack.getItem() instanceof ShearsItem); // TODO [1.21.11] sword-class deleted
                     //#endif
                 }
                 if (_change_chain_priority) mod.getBehaviour().setUserTaskChainPriority(80);
