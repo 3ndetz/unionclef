@@ -120,4 +120,22 @@ public class EntityVer {
         //#endif
     }
 
+    @Pattern
+    private static Vec3d getPos(Entity entity) {
+        //#if MC >= 12111
+        //$$ return entity.getEntityPos();
+        //#else
+        return entity.getPos();
+        //#endif
+    }
+
+    @Pattern
+    private static net.minecraft.world.World getWorld(Entity entity) {
+        //#if MC >= 12111
+        //$$ return entity.getEntityWorld();
+        //#else
+        return entity.getWorld();
+        //#endif
+    }
+
 }
