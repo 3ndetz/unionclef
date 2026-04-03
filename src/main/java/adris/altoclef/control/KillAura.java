@@ -96,7 +96,11 @@ public class KillAura {
                     entities.get().getClass() != ZoglinEntity.class && entities.get().getClass() != Entities.WARDEN &&
                     entities.get().getClass() != WitherEntity.class
                     && (mod.getItemStorage().hasItem(Items.SHIELD) || mod.getItemStorage().hasItemInOffhand(Items.SHIELD))
+                    //#if MC >= 12111
+                    //$$ && !mod.getPlayer().getItemCooldownManager().isCoolingDown(new ItemStack(offhandItem))
+                    //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
+                    //#endif
                     && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
                 LookHelper.smoothLookAt(mod, entities.get().getEyePos());
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);

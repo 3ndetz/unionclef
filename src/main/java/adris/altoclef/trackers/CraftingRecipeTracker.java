@@ -101,6 +101,11 @@ public class CraftingRecipeTracker extends Tracker{
         ClientPlayNetworkHandler networkHandler =  MinecraftClient.getInstance().getNetworkHandler();
         if (networkHandler == null) return;
 
+        //#if MC >= 12111
+        //$$ // TODO [1.21.11] Recipe API changed — RecipeManager no longer exposes values() the same way
+        //$$ // Need to migrate to new recipe lookup API
+        //$$ shouldRebuild = false;
+        //#else
         RecipeManagerWrapper recipeManager = RecipeManagerWrapper.of(networkHandler.getRecipeManager());
 
         for (WrappedRecipeEntry recipe : recipeManager.values()) {
@@ -131,6 +136,7 @@ public class CraftingRecipeTracker extends Tracker{
         itemRecipeMap.replaceAll((k,v) -> Collections.unmodifiableList(v));
 
         shouldRebuild = false;
+        //#endif
     }
 
     // TODO adjust for small recipes

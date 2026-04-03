@@ -150,7 +150,12 @@ public class Py4jEntryPoint {
             MinecraftClient.getInstance().execute(() -> {
                 try {
                     Framebuffer buffer = MinecraftClient.getInstance().getFramebuffer();
+                    //#if MC >= 12111
+                    //$$ // TODO [1.21.11] takeScreenshot() signature changed
+                    //$$ screenshot.set(ScreenshotRecorder.takeScreenshot(buffer));
+                    //#else
                     screenshot.set(ScreenshotRecorder.takeScreenshot(buffer));
+                    //#endif
                     future.complete(null);
                 } catch (Exception e) {
                     future.completeExceptionally(e);
@@ -172,7 +177,12 @@ public class Py4jEntryPoint {
 
             NativeImage img = screenshot.get();
             try {
+                //#if MC >= 12111
+                //$$ // TODO [1.21.11] NativeImage.getBytes() removed — use alternative export
+                //$$ return img.getBytes();
+                //#else
                 return img.getBytes();
+                //#endif
             } finally {
                 img.close();
             }
@@ -266,8 +276,15 @@ public class Py4jEntryPoint {
     }
 
     public String getHeldItem() {
+        //#if MC >= 12111
+        //$$ // TODO [1.21.11] getHandItems() changed — use getMainHandStack()/getOffHandStack()
+        //$$ if (AltoClef.inGame() && _mod.getPlayer() != null) {
+        //$$     List<ItemStack> handItems = List.of(_mod.getPlayer().getMainHandStack(), _mod.getPlayer().getOffHandStack());
+        //$$     for (ItemStack item : handItems) {
+        //#else
         if (AltoClef.inGame() && _mod.getPlayer() != null && _mod.getPlayer().getHandItems() != null) {
             for (ItemStack item : _mod.getPlayer().getHandItems()) {
+        //#endif
                 if (item.getItem() != null) {
                     String itemName = item.getItem().getName().getString().toLowerCase();
                     if (!itemName.equals("air")) {

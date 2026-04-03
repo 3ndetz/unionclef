@@ -43,7 +43,10 @@ public class DrawContextWrapper {
     }
 
     public void fill(int x1, int y1, int x2, int y2, int color) {
-        //#if MC >= 12001
+        //#if MC >= 12111
+        //$$ // TODO [1.21.11] RenderLayer → RenderPipeline; fill() API changed
+        //$$ context.fill(x1, y1, x2, y2, color);
+        //#elseif MC >= 12001
         context.fill(renderLayer, x1, y1, x2, y2, color);
         //#else
         //$$  DrawableHelper.fill(matrices, x1, y1, x2, y2, color);
@@ -51,7 +54,10 @@ public class DrawContextWrapper {
     }
 
     public void drawHorizontalLine(int x1, int x2, int y, int color) {
-        //#if MC >= 12001
+        //#if MC >= 12111
+        //$$ // TODO [1.21.11] RenderLayer → RenderPipeline; drawHorizontalLine() API changed
+        //$$ context.drawHorizontalLine(x1, x2, y, color);
+        //#elseif MC >= 12001
         context.drawHorizontalLine(renderLayer, x1, x2, y, color);
         //#else
         //$$ ((DrawableHelperInvoker) helper).invokeDrawHorizontalLine(matrices, x1, x2, y, color);
@@ -59,7 +65,10 @@ public class DrawContextWrapper {
     }
 
     public void drawVerticalLine(int x, int y1, int y2, int color) {
-        //#if MC >= 12001
+        //#if MC >= 12111
+        //$$ // TODO [1.21.11] RenderLayer → RenderPipeline; drawVerticalLine() API changed
+        //$$ context.drawVerticalLine(x, y1, y2, color);
+        //#elseif MC >= 12001
         context.drawVerticalLine(renderLayer, x, y1, y2, color);
         //#else
         //$$ ((DrawableHelperInvoker) helper).invokeDrawVerticalLine(matrices, x, y1, y2, color);
@@ -80,7 +89,10 @@ public class DrawContextWrapper {
 
 
     public MatrixStack getMatrices() {
-        //#if MC >= 12001
+        //#if MC >= 12111
+        //$$ // TODO [1.21.11] getMatrices() return type changed — may need adaptation
+        //$$ return context.getMatrices();
+        //#elseif MC >= 12001
         return context.getMatrices();
         //#else
         //$$ return matrices;

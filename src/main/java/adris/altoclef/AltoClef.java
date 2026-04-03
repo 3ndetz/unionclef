@@ -239,6 +239,16 @@ public class AltoClef implements ModInitializer {
         }
         try {
             Session cur = client.getSession();
+            //#if MC >= 12111
+            //$$ // TODO [1.21.11] Session.getAccountType() removed — constructor changed
+            //$$ Session next = new Session(
+            //$$         newUsername,
+            //$$         cur.getUuidOrNull(),
+            //$$         cur.getAccessToken(),
+            //$$         cur.getXuid(),
+            //$$         cur.getClientId()
+            //$$ );
+            //#else
             Session next = new Session(
                     newUsername,
                     cur.getUuidOrNull(),
@@ -247,6 +257,7 @@ public class AltoClef implements ModInitializer {
                     cur.getClientId(),
                     cur.getAccountType()
             );
+            //#endif
             ((MinecraftClientSessionMixin) client).setSession(next);
             Debug.logMessage("Username changed to: " + newUsername);
             return true;

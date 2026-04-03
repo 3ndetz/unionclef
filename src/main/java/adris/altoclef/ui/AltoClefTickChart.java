@@ -113,11 +113,19 @@ public class AltoClefTickChart {
     }
 
     private static int lerp(float delta, int start, int end) {
+        //#if MC >= 12111
+        //$$ int i = (int) MathHelper.lerp(delta, ColorHelper.getAlpha(start), ColorHelper.getAlpha(end));
+        //$$ int j = (int) MathHelper.lerp(delta, ColorHelper.getRed(start), ColorHelper.getRed(end));
+        //$$ int k = (int) MathHelper.lerp(delta, ColorHelper.getGreen(start), ColorHelper.getGreen(end));
+        //$$ int l = (int) MathHelper.lerp(delta, ColorHelper.getBlue(start), ColorHelper.getBlue(end));
+        //$$ return ColorHelper.getArgb(i, j, k, l);
+        //#else
         int i = (int) MathHelper.lerp(delta, ColorHelper.Argb.getAlpha(start), ColorHelper.Argb.getAlpha(end));
         int j = (int) MathHelper.lerp(delta, ColorHelper.Argb.getRed(start), ColorHelper.Argb.getRed(end));
         int k = (int) MathHelper.lerp(delta, ColorHelper.Argb.getGreen(start), ColorHelper.Argb.getGreen(end));
         int l = (int) MathHelper.lerp(delta, ColorHelper.Argb.getBlue(start), ColorHelper.Argb.getBlue(end));
         return ColorHelper.Argb.getArgb(i, j, k, l);
+        //#endif
     }
 
     private static double nanosToMillis(double nanos) {
