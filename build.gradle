@@ -72,6 +72,12 @@ def fabricApiVersions = [
         12111: "0.140.0+1.21.11",
 ]
 
+def loaderVersions = [
+        12100: project.loader_version,
+        12101: project.loader_version,
+        12111: "0.18.3",
+]
+
 // ── Repositories ────────────────────────────────────────────────────────────
 
 repositories {
@@ -91,7 +97,7 @@ repositories {
 dependencies {
     minecraft("com.mojang:minecraft:${project.name}")
     mappings("net.fabricmc:yarn:${mappingsVersions[mcVersion]}:v2")
-    modImplementation("net.fabricmc:fabric-loader:${project.loader_version}")
+    modImplementation("net.fabricmc:fabric-loader:${loaderVersions[mcVersion] ?: project.loader_version}")
     include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:0.3.5")))
 
     modImplementation("net.fabricmc.fabric-api:fabric-api:${fabricApiVersions[mcVersion]}")
