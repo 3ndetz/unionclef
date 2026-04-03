@@ -356,7 +356,9 @@ public class Playground {
                     FileWriter fw = new FileWriter(f);
                     for (Identifier id : Registries.ITEM.getIds()) {
                         //#if MC >= 12111
-                        //$$ Item item = Registries.ITEM.get(id).value();
+                        //$$ var optItem = Registries.ITEM.getEntry(id);
+                        //$$ if (optItem.isEmpty()) continue;
+                        //$$ Item item = optItem.get().value();
                         //#else
                         Item item = Registries.ITEM.get(id);
                         //#endif
