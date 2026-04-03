@@ -127,13 +127,11 @@ public class MobDefenseChain extends SingleTaskChain {
             if (toDealWith instanceof EndermanEntity || toDealWith instanceof SlimeEntity || toDealWith instanceof BlazeEntity) {
 
                 numberOfProblematicEntities += 1;
-            //#if MC >= 12111
-        //$$ } else if (toDealWith instanceof DrownedEntity) {
-        //$$     // TODO [1.21.11] getEquippedItems() removed — check hand items via getMainHandStack/getOffHandStack
-        //$$     // For now just treat all drowned as dangerous
-        //#else
-        } else if (toDealWith instanceof DrownedEntity && toDealWith.getEquippedItems() == Items.TRIDENT) {
-        //#endif
+            } else if (toDealWith instanceof DrownedEntity
+                    //#if MC < 12111
+                    && toDealWith.getEquippedItems() == Items.TRIDENT
+                    //#endif
+            ) {
                 // Drowned with tridents are also REALLY dangerous, maybe we should increase this??
                 numberOfProblematicEntities += 5;
             }
