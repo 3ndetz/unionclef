@@ -43,10 +43,14 @@ import net.minecraft.client.render.Tessellator;
 		private static final int MAX_RENDERERS_PER_CATEGORY = 500;
 
 		@Inject(method = "render", at = @At("RETURN"))
+		//#if MC >= 12111
+		//$$ public void render(Frustum frustumArg, double cameraX, double cameraY, double cameraZ, float tickDelta, CallbackInfo ci) {
+		//$$ 	Frustum frustum = frustumArg;
+		//#else
 		public void render(MatrixStack matrices, VertexConsumerProvider.Immediate vertexConsumers,
 				double cameraX, double cameraY, double cameraZ, CallbackInfo ci) {
-			// MC 1.21: Frustum removed from render() parameters
 			Frustum frustum = null;
+		//#endif
 
 			glDisable(GL_DEPTH_TEST);
 		    glDisable(GL_BLEND);
