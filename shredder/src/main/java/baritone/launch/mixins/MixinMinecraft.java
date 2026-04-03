@@ -129,24 +129,27 @@ public class MixinMinecraft {
     }
 
     // --- joinWorld handlers: two pairs for cross-version compat ---
-    // 1.21.1: joinWorld(ClientWorld, WorldEntryReason) — 2-arg version
-    @Inject(method = "joinWorld", at = @At("HEAD"), require = 0)
+    // Use full method descriptors so the wrong version silently skips (require=0)
+    // instead of crashing with "Invalid descriptor" when method is found by name.
+
+    // 1.21.1: joinWorld(ClientWorld, WorldEntryReason)
+    @Inject(method = "joinWorld(Lnet/minecraft/client/world/ClientWorld;Lnet/minecraft/client/gui/screen/DownloadingTerrainScreen$WorldEntryReason;)V", at = @At("HEAD"), require = 0)
     private void preLoadWorld(ClientWorld world, @org.spongepowered.asm.mixin.injection.Coerce Object arg2, CallbackInfo ci) {
         fireWorldEvent(world, EventState.PRE);
     }
 
-    @Inject(method = "joinWorld", at = @At("RETURN"), require = 0)
+    @Inject(method = "joinWorld(Lnet/minecraft/client/world/ClientWorld;Lnet/minecraft/client/gui/screen/DownloadingTerrainScreen$WorldEntryReason;)V", at = @At("RETURN"), require = 0)
     private void postLoadWorld(ClientWorld world, @org.spongepowered.asm.mixin.injection.Coerce Object arg2, CallbackInfo ci) {
         fireWorldEvent(world, EventState.POST);
     }
 
-    // 1.21.11: joinWorld(ClientWorld) — 1-arg version
-    @Inject(method = "joinWorld", at = @At("HEAD"), require = 0)
+    // 1.21.11: joinWorld(ClientWorld)
+    @Inject(method = "joinWorld(Lnet/minecraft/client/world/ClientWorld;)V", at = @At("HEAD"), require = 0)
     private void preLoadWorldCompat(ClientWorld world, CallbackInfo ci) {
         fireWorldEvent(world, EventState.PRE);
     }
 
-    @Inject(method = "joinWorld", at = @At("RETURN"), require = 0)
+    @Inject(method = "joinWorld(Lnet/minecraft/client/world/ClientWorld;)V", at = @At("RETURN"), require = 0)
     private void postLoadWorldCompat(ClientWorld world, CallbackInfo ci) {
         fireWorldEvent(world, EventState.POST);
     }
