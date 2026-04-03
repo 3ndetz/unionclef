@@ -79,7 +79,7 @@ public abstract class MixinClientPlayNetworkHandler extends ClientCommonNetworkH
     @Inject(method = "onPlayerPositionLook", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/NetworkThreadUtils;forceMainThread(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/listener/PacketListener;Lnet/minecraft/util/thread/ThreadExecutor;)V",
         shift = At.Shift.AFTER), cancellable = false)
     public void onPlayerPositionLook(PlayerPositionLookS2CPacket packet, CallbackInfo ci) {
-        if(TungstenModDataContainer.EXECUTOR.isRunning()) {
+        if(TungstenModDataContainer.isExecutorRunning()) {
             // Server teleported us — stop executor and let vanilla handle the teleport.
             // Previously this ci.cancel()'d the packet, which caused a deadlock:
             // server waits for TeleportConfirmC2SPacket, client never sends it,

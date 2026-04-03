@@ -49,7 +49,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// BFS walker: immediate movement while physics A* computes
 		BlockPathWalker.tick((ClientPlayerEntity)(Object)this);
 
-		if(TungstenModDataContainer.EXECUTOR.isRunning()) {
+		if(TungstenModDataContainer.isExecutorRunning()) {
 			TungstenModDataContainer.EXECUTOR.tick((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);
 		}
 
@@ -62,7 +62,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 			//#endif
 		}
 
-		if(TungstenMod.runKeyBinding.isPressed() && !TungstenModDataContainer.PATHFINDER.active.get() && !TungstenModDataContainer.EXECUTOR.isRunning()) {
+		if(TungstenMod.runKeyBinding.isPressed() && !TungstenModDataContainer.PATHFINDER.active.get() && !TungstenModDataContainer.isExecutorRunning()) {
 			//#if MC >= 12111
 			//$$ TungstenModDataContainer.PATHFINDER.find(this.getEntityWorld(), TungstenMod.TARGET, TungstenMod.mc.player);
 			//#else
@@ -79,9 +79,9 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		if (TungstenMod.pauseKeyBinding.isPressed()) {
 			try {
 
-	        	if((TungstenModDataContainer.PATHFINDER.active.get() || TungstenModDataContainer.EXECUTOR.isRunning())) {
+	        	if((TungstenModDataContainer.PATHFINDER.active.get() || TungstenModDataContainer.isExecutorRunning())) {
 	        		TungstenModDataContainer.PATHFINDER.stop.set(true);
-	        		TungstenModDataContainer.EXECUTOR.stop = true;
+	        		if (TungstenModDataContainer.EXECUTOR != null) TungstenModDataContainer.EXECUTOR.stop = true;
 					Debug.logMessage("Stopped!");
 	    		} else {
 					Debug.logMessage("Nothing to stop.");
@@ -127,7 +127,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 			self.isSprinting()
 		);
 		//#endif
-		if (TungstenModDataContainer.EXECUTOR.isRunning() && TungstenModDataContainer.EXECUTOR.getCurrentTick() > 0) {
+		if (TungstenModDataContainer.isExecutorRunning() && TungstenModDataContainer.EXECUTOR.getCurrentTick() > 0) {
 			TungstenModDataContainer.EXECUTOR.getPath().get(TungstenModDataContainer.EXECUTOR.getCurrentTick() - 1).agent.compare(self, currentInput, true);
 		} else if(!this.getAbilities().flying && Agent.INSTANCE != null) {
 			Agent.INSTANCE.compare(self, currentInput, false);
@@ -136,14 +136,14 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 
 	@Inject(method="getPitch", at=@At("RETURN"), cancellable = true)
 	public void getPitch(float tickDelta, CallbackInfoReturnable<Float> ci) {
-		if(TungstenModDataContainer.EXECUTOR.isRunning()) {
+		if(TungstenModDataContainer.isExecutorRunning()) {
 			ci.setReturnValue(super.getPitch(tickDelta));
 		}
 	}
 
 	@Inject(method="getYaw", at=@At("RETURN"), cancellable = true)
 	public void getYaw(float tickDelta, CallbackInfoReturnable<Float> ci) {
-		if(TungstenModDataContainer.EXECUTOR.isRunning()) {
+		if(TungstenModDataContainer.isExecutorRunning()) {
 			ci.setReturnValue(super.getYaw(tickDelta));
 		}
 	}

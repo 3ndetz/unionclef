@@ -130,7 +130,7 @@ public class TungstenMod implements ClientModInitializer {
     
         ClientTickEvents.START_CLIENT_TICK.register((a) -> {
         	
-        	boolean isRunning = TungstenModDataContainer.PATHFINDER.active.get() || TungstenModDataContainer.EXECUTOR.isRunning();
+        	boolean isRunning = TungstenModDataContainer.PATHFINDER.active.get() || TungstenModDataContainer.isExecutorRunning();
         	if (!isRunning) {
 	        	if (!TungstenModRenderContainer.BLOCK_PATH_RENDERER.isEmpty()) {
 	        		TungstenModRenderContainer.BLOCK_PATH_RENDERER.clear();
