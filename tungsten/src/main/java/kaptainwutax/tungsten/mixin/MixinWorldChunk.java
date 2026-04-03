@@ -37,7 +37,6 @@ public abstract class MixinWorldChunk extends Chunk {
 	                       long inhabitedTime, @Nullable ChunkSection[] sectionArrayInitializer, @Nullable BlendingData blendingData) {
 		super(pos, upgradeData, heightLimitView, biome, inhabitedTime, sectionArrayInitializer, blendingData);
 	}
-	//#endif
 
 	@Shadow public abstract World getWorld();
 	@Shadow public abstract BlockState getBlockState(BlockPos pos);
