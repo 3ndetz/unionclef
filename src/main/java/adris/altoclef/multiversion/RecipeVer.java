@@ -11,7 +11,7 @@ public class RecipeVer {
 
     public static ItemStack getOutput(Recipe<?> recipe, World world) {
         //#if MC >= 12111
-        //$$ return ItemStack.EMPTY; // TODO [1.21.11] Recipe.getResult() API changed
+        //$$ return ItemStack.EMPTY; // Recipe.getResult() removed in 1.21.11 — needs new recipe lookup
         //#elseif MC >= 11904
         return recipe.getResult(world.getRegistryManager());
         //#else

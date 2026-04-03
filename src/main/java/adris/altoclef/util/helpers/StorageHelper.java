@@ -76,13 +76,29 @@ public class StorageHelper {
                 return inv.offHand.stream().findFirst().orElse(ItemStack.EMPTY);
                 //#endif
             if (slot.equals(PlayerSlot.ARMOR_HELMET_SLOT))
+                //#if MC >= 12111
+                //$$ return inv.getStack(39);
+                //#else
                 return inv.getArmorStack(3);
+                //#endif
             if (slot.equals(PlayerSlot.ARMOR_CHESTPLATE_SLOT))
+                //#if MC >= 12111
+                //$$ return inv.getStack(38);
+                //#else
                 return inv.getArmorStack(2);
+                //#endif
             if (slot.equals(PlayerSlot.ARMOR_LEGGINGS_SLOT))
+                //#if MC >= 12111
+                //$$ return inv.getStack(37);
+                //#else
                 return inv.getArmorStack(1);
+                //#endif
             if (slot.equals(PlayerSlot.ARMOR_BOOTS_SLOT))
+                //#if MC >= 12111
+                //$$ return inv.getStack(36);
+                //#else
                 return inv.getArmorStack(0);
+                //#endif
         }
         try {
             // We might have messed up and opened the wrong slot.

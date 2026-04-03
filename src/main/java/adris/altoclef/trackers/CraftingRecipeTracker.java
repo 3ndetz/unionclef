@@ -139,6 +139,7 @@ public class CraftingRecipeTracker extends Tracker{
         //#endif
     }
 
+    //#if MC < 12111
     // TODO adjust for small recipes
     // it is always shaped, but that doesn't matter for shapeless
     // the second dimension of the array is for different types of items (eq. logs)
@@ -172,6 +173,7 @@ public class CraftingRecipeTracker extends Tracker{
 
         return result;
     }
+    //#endif
 
     @Override
     protected void reset() {

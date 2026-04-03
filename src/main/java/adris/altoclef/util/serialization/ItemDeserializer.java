@@ -43,9 +43,15 @@ public class ItemDeserializer extends StdDeserializer<Object> {
                 String itemKey = p.getText();
                 itemKey = ItemHelper.trimItemName(itemKey);
                 Identifier identifier = Identifier.of(itemKey);
+                //#if MC >= 12111
+                //$$ if (Registries.ITEM.containsId(identifier)) {
+                //$$     item = Registries.ITEM.get(identifier).orElse(null);
+                //$$ } else {
+                //#else
                 if (Registries.ITEM.containsId(identifier)) {
                     item = Registries.ITEM.get(identifier);
                 } else {
+                //#endif
                     Debug.logWarning("Invalid item name:" + itemKey + " at " + p.getCurrentLocation().toString());
                 }
             }

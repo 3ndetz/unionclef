@@ -400,12 +400,16 @@ class DoCraftInTableTask extends DoStuffInContainerTask {
             ClientPlayerEntity player = MinecraftClient.getInstance().player;
 
             // If crafting book is enabled, the recipe to send exists, and the player has the recipe in their recipe book, return a CraftGenericWithRecipeBooksTask
+            //#if MC < 12111
             if (mod.getModSettings().shouldUseCraftingBookToCraft() && recipeToSend.isPresent()) {
                 assert player != null;
                 if (player.getRecipeBook().contains(recipeToSend.get().id())) {
                     return new CraftGenericWithRecipeBooksTask(target);
                 }
             }
+            //#else
+            //$$ // TODO [1.21.11] RecipeBook.contains() takes RegistryKey now — recipe book crafting disabled
+            //#endif
 
             // Return a CraftGenericManuallyTask by default
             return new CraftGenericManuallyTask(target);

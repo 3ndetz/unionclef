@@ -151,8 +151,7 @@ public class Py4jEntryPoint {
                 try {
                     Framebuffer buffer = MinecraftClient.getInstance().getFramebuffer();
                     //#if MC >= 12111
-                    //$$ // TODO [1.21.11] takeScreenshot() signature changed
-                    //$$ screenshot.set(ScreenshotRecorder.takeScreenshot(buffer));
+                    //$$ screenshot.set(ScreenshotRecorder.takeScreenshot(buffer.textureWidth, buffer.textureHeight, buffer.fbo));
                     //#else
                     screenshot.set(ScreenshotRecorder.takeScreenshot(buffer));
                     //#endif
@@ -178,8 +177,7 @@ public class Py4jEntryPoint {
             NativeImage img = screenshot.get();
             try {
                 //#if MC >= 12111
-                //$$ // TODO [1.21.11] NativeImage.getBytes() removed — use alternative export
-                //$$ return img.getBytes();
+                //$$ return img.copyPixelsRgba();
                 //#else
                 return img.getBytes();
                 //#endif
@@ -277,9 +275,8 @@ public class Py4jEntryPoint {
 
     public String getHeldItem() {
         //#if MC >= 12111
-        //$$ // TODO [1.21.11] getHandItems() changed — use getMainHandStack()/getOffHandStack()
         //$$ if (AltoClef.inGame() && _mod.getPlayer() != null) {
-        //$$     List<ItemStack> handItems = List.of(_mod.getPlayer().getMainHandStack(), _mod.getPlayer().getOffHandStack());
+        //$$     java.util.List<ItemStack> handItems = java.util.List.of(_mod.getPlayer().getMainHandStack(), _mod.getPlayer().getOffHandStack());
         //$$     for (ItemStack item : handItems) {
         //#else
         if (AltoClef.inGame() && _mod.getPlayer() != null && _mod.getPlayer().getHandItems() != null) {

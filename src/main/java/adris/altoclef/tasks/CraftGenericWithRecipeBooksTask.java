@@ -134,6 +134,7 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
             }
         }
 
+        //#if MC < 12111
         Optional<WrappedRecipeEntry> recipeToSend = JankCraftingRecipeMapping.getMinecraftMappedRecipe(target.getRecipe(), target.getOutputItem());
         if (recipeToSend.isPresent()) {
             if (mod.getSlotHandler().canDoSlotAction()) {
@@ -144,6 +145,9 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
                 mod.getSlotHandler().registerSlotAction();
             }
         }
+        //#else
+        //$$ // TODO [1.21.11] clickRecipe arg type changed — recipe book crafting disabled
+        //#endif
 
         return null;
     }

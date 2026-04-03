@@ -24,7 +24,7 @@ public class JankCraftingRecipeMapping {
      */
     private static void reloadRecipeMapping() {
         //#if MC >= 12111
-        //$$ // TODO [1.21.11] Recipe API changed — RecipeManager type and getRecipeManager() changed
+        //$$ // Recipe API changed in 1.21.11 — RecipeManager/getRecipeManager() not available
         //#else
         MinecraftClient client = MinecraftClient.getInstance();
 
@@ -56,7 +56,7 @@ public class JankCraftingRecipeMapping {
     public static Optional<WrappedRecipeEntry> getMinecraftMappedRecipe(CraftingRecipe recipe, Item output) {
         reloadRecipeMapping();
         //#if MC >= 12111
-        //$$ return Optional.empty(); // TODO [1.21.11] Recipe API changed — getIngredients() removed
+        //$$ return Optional.empty(); // getIngredients() removed in 1.21.11
         //#else
         // Check if the output item is present in the recipe mapping
         if (recipeMapping.containsKey(output)) {

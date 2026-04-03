@@ -146,8 +146,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         if (item instanceof SwordItem sword) return sword.getMaterial().getAttackDamage();
         if (item instanceof AxeItem axe) return axe.getMaterial().getAttackDamage();
         //#else
-        //$$ // TODO [1.21.11] SwordItem deleted — get attack damage from Item.Settings component
-        //$$ if (item instanceof AxeItem axe) return axe.getMaterial().getAttackDamage();
+        //$$ // TODO [1.21.11] SwordItem/AxeItem.getMaterial() removed — get attack damage from components
         //#endif
         return 0;
     }
@@ -344,10 +343,10 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         // Detect whether target is blocking with a shield → prefer axe to break it
         boolean preferAxe = false;
         if (player.isUsingItem()) {
-            //#if MC < 12111
-            for (ItemStack stack : player.getHandItems()) {
+            //#if MC >= 12111
+            //$$ for (ItemStack stack : java.util.List.of(player.getMainHandStack(), player.getOffHandStack())) {
             //#else
-            //$$ for (ItemStack stack : List.of(player.getMainHandStack(), player.getOffHandStack())) { // TODO [1.21.11] getHandItems() renamed
+            for (ItemStack stack : player.getHandItems()) {
             //#endif
                 if (stack.isOf(Items.SHIELD)) {
                     preferAxe = true;

@@ -92,9 +92,6 @@ public class EquipArmorTask extends Task {
             } else {
                 //#if MC < 12111
                 ArmorItem item = (ArmorItem) Objects.requireNonNull(targetArmor.getMatches())[0];
-                //#else
-                //$$ Item item = Objects.requireNonNull(targetArmor.getMatches())[0]; // TODO [1.21.11] ArmorItem deleted
-                //#endif
                 if (item == null) {
                     Debug.logWarning("Item " + targetArmor + " is not armor! Will not equip.");
                 } else {
@@ -129,6 +126,40 @@ public class EquipArmorTask extends Task {
                         return new MoveItemToSlotFromInventoryTask(targetArmor, toMove);
                     }
                 }
+                //#else
+                //$$ Item item = Objects.requireNonNull(targetArmor.getMatches())[0];
+                //$$ if (item == null) {
+                //$$     Debug.logWarning("Item " + targetArmor + " is not armor! Will not equip.");
+                //$$ } else {
+                //$$     if (!StorageHelper.isArmorEquipped(item)) {
+                //$$         if (!(mod.getPlayer().currentScreenHandler instanceof PlayerScreenHandler)) {
+                //$$             ItemStack cursorStack = StorageHelper.getItemStackInCursorSlot();
+                //$$             if (!cursorStack.isEmpty()) {
+                //$$                 Optional<Slot> moveTo = mod.getItemStorage().getSlotThatCanFitInPlayerInventory(cursorStack, false);
+                //$$                 if (moveTo.isPresent()) {
+                //$$                     mod.getSlotHandler().clickSlot(moveTo.get(), 0, SlotActionType.PICKUP);
+                //$$                     return null;
+                //$$                 }
+                //$$                 if (ItemHelper.canThrowAwayStack(mod, cursorStack)) {
+                //$$                     mod.getSlotHandler().clickSlot(Slot.UNDEFINED, 0, SlotActionType.PICKUP);
+                //$$                     return null;
+                //$$                 }
+                //$$                 Optional<Slot> garbage = StorageHelper.getGarbageSlot(mod);
+                //$$                 if (garbage.isPresent()) {
+                //$$                     mod.getSlotHandler().clickSlot(garbage.get(), 0, SlotActionType.PICKUP);
+                //$$                     return null;
+                //$$                 }
+                //$$                 mod.getSlotHandler().clickSlot(Slot.UNDEFINED, 0, SlotActionType.PICKUP);
+                //$$             } else {
+                //$$                 StorageHelper.closeScreen();
+                //$$             }
+                //$$         }
+                //$$         // TODO [1.21.11] ArmorItem.getSlotType() removed — derive slot from item type
+                //$$         Slot toMove = PlayerSlot.getEquipSlot(EquipmentSlot.CHEST); // placeholder
+                //$$         return new MoveItemToSlotFromInventoryTask(targetArmor, toMove);
+                //$$     }
+                //$$ }
+                //#endif
             }
         }
 

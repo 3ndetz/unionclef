@@ -773,10 +773,10 @@ public class BedWarsTask extends Task {
     }
 
     public int getHelmetColor(PlayerEntity player) {
-        //#if MC < 12111
-        for (ItemStack itemStack : player.getArmorItems()) {
+        //#if MC >= 12111
+        //$$ for (ItemStack itemStack : java.util.List.of(player.getEquippedStack(net.minecraft.entity.EquipmentSlot.HEAD), player.getEquippedStack(net.minecraft.entity.EquipmentSlot.CHEST), player.getEquippedStack(net.minecraft.entity.EquipmentSlot.LEGS), player.getEquippedStack(net.minecraft.entity.EquipmentSlot.FEET))) {
         //#else
-        //$$ for (ItemStack itemStack : player.getArmorItems()) { // TODO [1.21.11] getArmorItems() renamed
+        for (ItemStack itemStack : player.getArmorItems()) {
         //#endif
             if (itemStack.isOf(Items.LEATHER_HELMET)) {
                 return DyedColorComponent.getColor(itemStack, DyedColorComponent.DEFAULT_COLOR);

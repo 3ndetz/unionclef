@@ -280,21 +280,13 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 double y = worldScreen.height - 52;
 
                 if (_mouseClickTimer.elapsed()) {
-                    //#if MC >= 12111
-                    //$$ // TODO [1.21.11] mouseClicked/mouseReleased signature changed — disabled for now
-                    //#else
                     worldScreen.mouseClicked(x, y, 0);
                     worldScreen.mouseReleased(x, y, 0);
-                    //#endif
 
                     if (worldScreen.hoveredElement(x, y).isPresent()) {
                         Element hoveredElement = worldScreen.hoveredElement(x, y).get();
-                        //#if MC >= 12111
-                        //$$ // TODO [1.21.11] mouseClicked/mouseReleased signature changed — disabled for now
-                        //#else
                         hoveredElement.mouseClicked(0, 0, 0);
                         hoveredElement.mouseReleased(0, 0, 0);
-                        //#endif
                         mod.cancelUserTask();
                         ServerInfo finalSrv = srv;
                         Runnable doOnStuckFixFinish = new Thread(() -> {
@@ -378,13 +370,13 @@ public class GameMenuTaskChain extends SingleTaskChain {
             if (client.world != null) {
                 boolean bl = client.isInSingleplayer();
                 //#if MC >= 12111
-                //$$ client.world.disconnect(Text.empty());
+                //$$ client.world.disconnect();
                 //#else
                 client.world.disconnect();
                 //#endif
                 if (bl) {
                     //#if MC >= 12111
-                    //$$ client.disconnect(new DisconnectedScreen(client.currentScreen, Text.of("menu.savingLevel"), Text.of("DEATH")), Text.empty());
+                    //$$ client.disconnect(Text.empty());
                     //#else
                     client.disconnect(new DisconnectedScreen(client.currentScreen, Text.of("menu.savingLevel"), Text.of("DEATH")));
                     //#endif
