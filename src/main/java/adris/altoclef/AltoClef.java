@@ -456,7 +456,9 @@ public class AltoClef implements ModInitializer {
         // Tasks
         TaskCatalogue.init();
 
-        getClientBaritone().getGameEventHandler().registerEventListener(new TabCompleter());
+        if (getClientBaritone() != null) {
+            getClientBaritone().getGameEventHandler().registerEventListener(new TabCompleter());
+        }
 
         // External mod initialization
         runEnqueuedPostInits();
@@ -519,6 +521,7 @@ public class AltoClef implements ModInitializer {
     }
 
     private void initializeBaritoneSettings() {
+        if (getClientBaritone() == null) return; // baritone not available on this MC version
         getExtraBaritoneSettings().canWalkOnEndPortal(false);
         getClientBaritoneSettings().freeLook.value = false;
         getClientBaritoneSettings().overshootTraverse.value = false;
@@ -704,10 +707,15 @@ public class AltoClef implements ModInitializer {
      * Baritone access (could just be static honestly)
      */
     public Baritone getClientBaritone() {
-        if (getPlayer() == null) {
-            return (Baritone) BaritoneAPI.getProvider().getPrimaryBaritone();
+        try {
+            if (getPlayer() == null) {
+                return (Baritone) BaritoneAPI.getProvider().getPrimaryBaritone();
+            }
+            return (Baritone) BaritoneAPI.getProvider().getBaritoneForPlayer(getPlayer());
+        } catch (ClassCastException e) {
+            // Baritone not initialized (incompatible MC version) — proxy can't cast
+            return null;
         }
-        return (Baritone) BaritoneAPI.getProvider().getBaritoneForPlayer(getPlayer());
     }
 
     /**

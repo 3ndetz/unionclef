@@ -9,7 +9,6 @@
   },
   "client": [
     "MixinClientChunkProvider",
-    "MixinClientPlayerEntity",
     "MixinClientPlayNetHandler",
     "MixinEntity",
     "MixinFireworkRocketEntity",
