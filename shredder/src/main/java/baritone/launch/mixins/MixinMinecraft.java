@@ -21,7 +21,7 @@ import baritone.api.BaritoneAPI;
 import baritone.api.IBaritone;
 import baritone.api.event.events.PlayerUpdateEvent;
 import baritone.api.event.events.TickEvent;
-import baritone.api.event.events.WorldEvent;
+
 import baritone.api.event.events.type.EventState;
 import baritone.utils.GodBridgeClickHelper;
 import org.objectweb.asm.Opcodes;
@@ -128,41 +128,7 @@ public class MixinMinecraft {
         }
     }
 
-    // --- joinWorld handlers: two pairs for cross-version compat ---
-    // Use full method descriptors so the wrong version silently skips (require=0)
-    // instead of crashing with "Invalid descriptor" when method is found by name.
-
-    // 1.21.1: joinWorld(ClientWorld, WorldEntryReason)
-    @Inject(method = "joinWorld(Lnet/minecraft/client/world/ClientWorld;Lnet/minecraft/client/gui/screen/DownloadingTerrainScreen$WorldEntryReason;)V", at = @At("HEAD"), require = 0)
-    private void preLoadWorld(ClientWorld world, @org.spongepowered.asm.mixin.injection.Coerce Object arg2, CallbackInfo ci) {
-        fireWorldEvent(world, EventState.PRE);
-    }
-
-    @Inject(method = "joinWorld(Lnet/minecraft/client/world/ClientWorld;Lnet/minecraft/client/gui/screen/DownloadingTerrainScreen$WorldEntryReason;)V", at = @At("RETURN"), require = 0)
-    private void postLoadWorld(ClientWorld world, @org.spongepowered.asm.mixin.injection.Coerce Object arg2, CallbackInfo ci) {
-        fireWorldEvent(world, EventState.POST);
-    }
-
-    // 1.21.11: joinWorld(ClientWorld)
-    @Inject(method = "joinWorld(Lnet/minecraft/client/world/ClientWorld;)V", at = @At("HEAD"), require = 0)
-    private void preLoadWorldCompat(ClientWorld world, CallbackInfo ci) {
-        fireWorldEvent(world, EventState.PRE);
-    }
-
-    @Inject(method = "joinWorld(Lnet/minecraft/client/world/ClientWorld;)V", at = @At("RETURN"), require = 0)
-    private void postLoadWorldCompat(ClientWorld world, CallbackInfo ci) {
-        fireWorldEvent(world, EventState.POST);
-    }
-
-    @Unique
-    private void fireWorldEvent(ClientWorld world, EventState state) {
-        if (this.world == null && world == null) {
-            return;
-        }
-        BaritoneAPI.getProvider().getPrimaryBaritone().getGameEventHandler().onWorldEvent(
-                new WorldEvent(world, state)
-        );
-    }
+    // joinWorld handlers moved to altoclef's ClientTickMixin (preprocessed, cross-version safe)
 
     @Redirect(
             method = "tick",
