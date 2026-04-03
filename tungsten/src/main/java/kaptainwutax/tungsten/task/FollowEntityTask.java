@@ -98,7 +98,7 @@ public class FollowEntityTask {
         BlockPathWalker.stop();
         releaseKeys();
         TungstenModDataContainer.PATHFINDER.stop.set(true);
-        TungstenModDataContainer.EXECUTOR.stop = true;
+        if (TungstenModDataContainer.EXECUTOR != null) TungstenModDataContainer.EXECUTOR.stop = true;
         Debug.logMessage("Follow stopped.");
     }
 
@@ -154,7 +154,7 @@ public class FollowEntityTask {
                     && hasEntity && hasLineOfSight(player, targetPos)
                     && isFlatGround(player, targetPos);
 
-            if (canLeap && !TungstenModDataContainer.EXECUTOR.isRunning()) {
+            if (canLeap && !TungstenModDataContainer.isExecutorRunning()) {
                 doLeap(player);
                 leapActive = true;
             } else if (leapActive) {
@@ -187,7 +187,7 @@ public class FollowEntityTask {
         // A* is already computing from BFS endpoint; recalc would restart everything.
         boolean walkerRunning   = BlockPathWalker.isRunning();
         tickCounter++;
-        boolean executorRunning  = TungstenModDataContainer.EXECUTOR.isRunning();
+        boolean executorRunning  = TungstenModDataContainer.isExecutorRunning();
         boolean pathfinderActive = TungstenModDataContainer.PATHFINDER.active.get();
 
         if (walkerRunning) {

@@ -92,7 +92,7 @@ public class PunkPlayerTask {
     private static void enterCombat() {
         mode = Mode.COMBAT;
         TungstenModDataContainer.PATHFINDER.stop.set(true);
-        TungstenModDataContainer.EXECUTOR.stop = true;
+        if (TungstenModDataContainer.EXECUTOR != null) TungstenModDataContainer.EXECUTOR.stop = true;
         FollowEntityTask.stop();
         Debug.logMessage("PUNK: combat mode");
     }

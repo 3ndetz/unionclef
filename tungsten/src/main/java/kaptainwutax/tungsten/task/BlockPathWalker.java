@@ -101,7 +101,7 @@ public class BlockPathWalker {
         if (!active) return;
 
         // auto-stop when executor takes over
-        if (TungstenModDataContainer.EXECUTOR.isRunning()) {
+        if (TungstenModDataContainer.isExecutorRunning()) {
             stop();
             return;
         }

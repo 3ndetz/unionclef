@@ -22,6 +22,9 @@
     "main": [
       "adris.altoclef.AltoClef"
     ],
+    "client": [
+      "kaptainwutax.tungsten.TungstenMod"
+    ],
     "voicechat": [
       "adris.altoclef.AltoclefVoicechat"
     ]
