@@ -138,8 +138,9 @@ public class EntityVer {
         //#endif
     }
 
-    @Pattern
-    private static Iterable<net.minecraft.item.ItemStack> getHandItems(net.minecraft.entity.LivingEntity entity) {
+    // getHandItems/getArmorItems deleted in 1.21.11, but identity-mapped
+    // in versions/mapping-1.21.11-1.21.1.txt to prevent preprocessor crash.
+    public static Iterable<net.minecraft.item.ItemStack> getHandItems(net.minecraft.entity.LivingEntity entity) {
         //#if MC >= 12111
         //$$ return java.util.List.of(entity.getMainHandStack(), entity.getOffHandStack());
         //#else
@@ -147,8 +148,7 @@ public class EntityVer {
         //#endif
     }
 
-    @Pattern
-    private static Iterable<net.minecraft.item.ItemStack> getArmorItems(net.minecraft.entity.LivingEntity entity) {
+    public static Iterable<net.minecraft.item.ItemStack> getArmorItems(net.minecraft.entity.LivingEntity entity) {
         //#if MC >= 12111
         //$$ return java.util.List.of(
         //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.HEAD),
