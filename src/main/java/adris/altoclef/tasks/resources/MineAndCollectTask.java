@@ -137,7 +137,7 @@ public class MineAndCollectTask extends ResourceTask {
                     // Our cursor stack would help us mine our current block
                     Item currentlyEquipped = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
                     //#if MC < 12111
-                if (item instanceof MiningToolItem) {
+                    if (item instanceof MiningToolItem) {
                         if (currentlyEquipped instanceof MiningToolItem currentPick) {
                             MiningToolItem swapPick = (MiningToolItem) item;
                             if (ToolMaterialVer.getMiningLevel(swapPick) > ToolMaterialVer.getMiningLevel(currentPick)) {
@@ -149,9 +149,9 @@ public class MineAndCollectTask extends ResourceTask {
                             mod.getSlotHandler().forceEquipSlot(CursorSlot.SLOT);
                         }
                     }
-                //#else
-                //$$ // TODO [1.21.11] MiningToolItem deleted — compare tool tiers via Item.Settings component
-                //#endif
+                    //#else
+                    //$$ // TODO [1.21.11] MiningToolItem deleted — compare tool tiers via Item.Settings component
+                    //#endif
                 }
             }
             _cursorStackTimer.reset();
