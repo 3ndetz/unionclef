@@ -16,7 +16,9 @@ import net.minecraft.item.AxeItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+//#if MC < 12111
 import net.minecraft.item.SwordItem;
+//#endif
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import adris.altoclef.tasks.movement.GetToEntityTask;
@@ -140,8 +142,13 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
     // --- Weapon helpers ---
 
     public static float getAttackDamage(Item item) {
+        //#if MC < 12111
         if (item instanceof SwordItem sword) return sword.getMaterial().getAttackDamage();
         if (item instanceof AxeItem axe) return axe.getMaterial().getAttackDamage();
+        //#else
+        //$$ // TODO [1.21.11] SwordItem deleted — get attack damage from Item.Settings component
+        //$$ if (item instanceof AxeItem axe) return axe.getMaterial().getAttackDamage();
+        //#endif
         return 0;
     }
 
@@ -151,6 +158,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         Item bestItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
         float bestDamage = Float.NEGATIVE_INFINITY;
 
+        //#if MC < 12111
         if (bestItem instanceof SwordItem handToolItem) {
             bestDamage = handToolItem.getMaterial().getAttackDamage();
         }
@@ -163,6 +171,9 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                 bestDamage = itemDamage;
             }
         }
+        //#else
+        //$$ // TODO [1.21.11] SwordItem deleted — use Item.Settings attack damage component
+        //#endif
 
         return bestItem;
     }
@@ -180,7 +191,12 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
 
         for (ItemStack invStack : invStacks) {
             Item item = invStack.getItem();
+            //#if MC < 12111
             if (!(item instanceof SwordItem) && !(item instanceof AxeItem)) continue;
+            //#else
+            //$$ // TODO [1.21.11] SwordItem deleted — check for sword items via other means
+            //$$ if (!(item instanceof AxeItem)) continue;
+            //#endif
 
             if (item instanceof AxeItem) {
                 if (!hasAxe) {

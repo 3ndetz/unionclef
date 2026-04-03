@@ -23,7 +23,9 @@ import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+//#if MC < 12111
 import net.minecraft.item.MiningToolItem;
+//#endif
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -134,7 +136,8 @@ public class MineAndCollectTask extends ResourceTask {
                 if (item.getDefaultStack().isSuitableFor(mod.getWorld().getBlockState(_subtask.miningPos()))) {
                     // Our cursor stack would help us mine our current block
                     Item currentlyEquipped = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
-                    if (item instanceof MiningToolItem) {
+                    //#if MC < 12111
+                if (item instanceof MiningToolItem) {
                         if (currentlyEquipped instanceof MiningToolItem currentPick) {
                             MiningToolItem swapPick = (MiningToolItem) item;
                             if (ToolMaterialVer.getMiningLevel(swapPick) > ToolMaterialVer.getMiningLevel(currentPick)) {
@@ -146,6 +149,9 @@ public class MineAndCollectTask extends ResourceTask {
                             mod.getSlotHandler().forceEquipSlot(CursorSlot.SLOT);
                         }
                     }
+                //#else
+                //$$ // TODO [1.21.11] MiningToolItem deleted — compare tool tiers via Item.Settings component
+                //#endif
                 }
             }
             _cursorStackTimer.reset();

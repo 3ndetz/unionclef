@@ -10,7 +10,11 @@ import adris.altoclef.commandsystem.exception.RuntimeCommandException;
 import adris.altoclef.tasks.misc.EquipArmorTask;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.ItemHelper;
+//#if MC < 12111
 import net.minecraft.item.Equipment;
+//#else
+//$$ import net.minecraft.item.equipment.EquipmentType;
+//#endif
 import net.minecraft.item.Item;
 
 import java.util.Arrays;
@@ -36,7 +40,12 @@ public class EquipCommand extends Command {
 
         for (ItemTarget target : items) {
             for (Item item : target.getMatches()) {
+                //#if MC < 12111
                 if (!(item instanceof Equipment)) {
+                //#else
+                //$$ // TODO [1.21.11] Equipment deleted — use EquipmentType check
+                //$$ if (false) {
+                //#endif
                     throw new RuntimeCommandException("'"+item.toString().toUpperCase() + "' cannot be equipped!");
                 }
             }
@@ -84,7 +93,11 @@ public class EquipCommand extends Command {
         }
 
         private static boolean isEquipment(String cataloguedItem) {
+            //#if MC < 12111
             return Arrays.stream(new ItemTarget(cataloguedItem).getMatches()).anyMatch(i -> i instanceof Equipment);
+            //#else
+            //$$ return true; // TODO [1.21.11] Equipment deleted — use EquipmentType check
+            //#endif
         }
     }
 

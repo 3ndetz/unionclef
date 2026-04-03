@@ -41,7 +41,9 @@ import net.minecraft.entity.projectile.thrown.PotionEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+//#if MC < 12111
 import net.minecraft.item.SwordItem;
+//#endif
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -380,10 +382,18 @@ public class MobDefenseChain extends SingleTaskChain {
             if (!toDealWithList.isEmpty()) {
 
                 // Depending on our weapons/armor, we may choose to straight up kill hostiles if we're not dodging their arrows.
+                //#if MC < 12111
                 SwordItem bestSword = getBestSword(mod);
+                //#else
+                //$$ Object bestSword = getBestSword(mod); // TODO [1.21.11] SwordItem deleted
+                //#endif
 
                 int armor = mod.getPlayer().getArmor();
+                //#if MC < 12111
                 float damage = bestSword == null ? 0 : (bestSword.getMaterial().getAttackDamage()) + 1;
+                //#else
+                //$$ float damage = 0; // TODO [1.21.11] get attack damage from Item.Settings component
+                //#endif
 
                 int shield = hasShield(mod) && bestSword != null ? 3 : 0;
 
@@ -464,6 +474,7 @@ public class MobDefenseChain extends SingleTaskChain {
         return mod.getItemStorage().hasItem(Items.SHIELD) || mod.getItemStorage().hasItemInOffhand(Items.SHIELD);
     }
 
+    //#if MC < 12111
     private static SwordItem getBestSword(AltoClef mod) {
         Item[] SWORDS = new Item[]{Items.NETHERITE_SWORD, Items.DIAMOND_SWORD, Items.IRON_SWORD, Items.GOLDEN_SWORD,
                 Items.STONE_SWORD, Items.WOODEN_SWORD};
@@ -477,6 +488,19 @@ public class MobDefenseChain extends SingleTaskChain {
         }
         return bestSword;
     }
+    //#else
+    //$$ // TODO [1.21.11] SwordItem deleted — return Item and get damage from component
+    //$$ private static Item getBestSword(AltoClef mod) {
+    //$$     Item[] SWORDS = new Item[]{Items.NETHERITE_SWORD, Items.DIAMOND_SWORD, Items.IRON_SWORD, Items.GOLDEN_SWORD,
+    //$$             Items.STONE_SWORD, Items.WOODEN_SWORD};
+    //$$     for (Item item : SWORDS) {
+    //$$         if (mod.getItemStorage().hasItem(item)) {
+    //$$             return item;
+    //$$         }
+    //$$     }
+    //$$     return null;
+    //$$ }
+    //#endif
 
     private BlockPos isInsideFireAndOnFire(AltoClef mod) {
         boolean onFire = mod.getPlayer().isOnFire();

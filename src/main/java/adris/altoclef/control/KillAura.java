@@ -20,7 +20,9 @@ import net.minecraft.entity.projectile.thrown.PotionEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+//#if MC < 12111
 import net.minecraft.item.SwordItem;
+//#endif
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.Vec3d;
 
@@ -44,6 +46,7 @@ public class KillAura {
         if (!invStacks.isEmpty()) {
             float handDamage = Float.NEGATIVE_INFINITY;
             for (ItemStack invStack : invStacks) {
+                //#if MC < 12111
                 if (invStack.getItem() instanceof SwordItem item) {
                     float itemDamage = item.getMaterial().getAttackDamage();
                     Item handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
@@ -56,6 +59,9 @@ public class KillAura {
                         mod.getSlotHandler().forceEquipItem(handItem);
                     }
                 }
+                //#else
+                //$$ // TODO [1.21.11] SwordItem deleted — use Item.Settings attack damage component
+                //#endif
             }
         }
     }
