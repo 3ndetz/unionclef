@@ -49,7 +49,7 @@ public class MixinNetworkManager {
     private NetworkSide side;
 
     @Inject(
-            method = "send",
+            method = "send(Lnet/minecraft/network/packet/Packet;Lio/netty/channel/ChannelFutureListener;Z)V",
             at = @At("HEAD")
     )
     private void preDispatchPacket(final Packet<?> packet, final ChannelFutureListener channelFutureListener, final boolean flush, final CallbackInfo ci) {
@@ -65,7 +65,7 @@ public class MixinNetworkManager {
     }
 
     @Inject(
-            method = "send",
+            method = "send(Lnet/minecraft/network/packet/Packet;Lio/netty/channel/ChannelFutureListener;Z)V",
             at = @At("RETURN")
     )
     private void postDispatchPacket(Packet<?> packet, ChannelFutureListener channelFutureListener, boolean flush, CallbackInfo ci) {
