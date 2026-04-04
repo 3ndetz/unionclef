@@ -313,7 +313,7 @@ public class Node {
             if (jump && sneak) return null;
 	        Node newNode = new Node(this, world, new PathInput(forward, false, right, left, jump, sneak, sprint, agent.pitch, yaw),
 	                new Color(sneak ? 220 : 0, 255, sneak ? 50 : 0), this.cost);
-	        double addNodeCost = calculateNodeCost(forward, sprint, jump, sneak, isCloseToBlockNode, isDoingLongJump, newNode.agent);
+	        double addNodeCost = calculateNodeCost(forward, sprint, jump, sneak, newNode.agent);
 	        if (newNode.agent.getPos().isWithinRangeOf(nextBlockNode.getPos(true), 0.1, 0.4)) return null;
 //	        double newNodeDistanceToBlockNode = Math.ceil(newNode.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e5);
 //	        double parentNodeDistanceToBlockNode = Math.ceil(newNode.parent.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e5);
@@ -341,7 +341,7 @@ public class Node {
 		                Stream<VoxelShape> blockCollisions = Streams.stream(agent.getBlockCollisions(world, adjustedBox));
 			            if (blockCollisions.findAny().isEmpty() && isDoingLongJump) jump = true;
 		                newNode = new Node(newNode, world, new PathInput(forward, false, right, left, jump, sneak, sprint, agent.pitch, yaw),
-		                        jump ? new Color(150, 55, 85) : new Color(sneak ? 220 : 0, 255, sneak ? 50 : 0), this.cost + addNodeCost);
+		                        jump ? new Color(150, 55, 85) : new Color(sneak ? 220 : 0, 255, sneak ? 50 : 0), this.cost + addNodeCost + 2.4);
 		                if (!isDoingLongJump && jump && j > 1) break;
 		            }
 	            }
@@ -352,24 +352,27 @@ public class Node {
 	    }
 	}
 
-	private double calculateNodeCost(boolean forward, boolean sprint, boolean jump, boolean sneak, boolean isCloseToBlockNode,
-	                                 boolean isDoingLongJump, Agent agent) {
-	    double addNodeCost = 1;
+	private double calculateNodeCost(boolean forward, boolean sprint, boolean jump, boolean sneak, Agent agent) {
+	    double addNodeCost = 4.358;
 
-	    if (forward && sprint && jump && !sneak) {
-	        addNodeCost -= 0.2;
-	    }
+		if (agent.touchingWater) {
+			addNodeCost += 0.2;
+		}
+
+		if (Math.abs(agent.velX) < 0.01 && Math.abs(agent.velY) < 0.01 && Math.abs(agent.velZ) < 0.01) {
+			addNodeCost += 15;
+		}
+		if (agent.horizontalCollision) {
+			addNodeCost += 0.0004;
+		}
+
+		if (agent.isInLava()) addNodeCost += 2e6;
 
 	    if (sneak) {
 	        addNodeCost += 2000;
 	    }
 
-//        if (agent.touchingWater) {
-//            addNodeCost += 200;
-//        }
-
-
-        return addNodeCost + Math.abs(agent.yaw - this.agent.yaw) * 5;
+        return addNodeCost;
 	}
 
 	private void generateAirborneNodes(WorldView world, BlockNode nextBlockNode, List<Node> nodes) {
