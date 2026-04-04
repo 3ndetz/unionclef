@@ -15,7 +15,7 @@ subprojects {
 }
 
 // Default MC version — root tasks (runClient, build, etc.) delegate here
-val defaultVersion = "1.21.1"
+val defaultVersion = "1.21.11"
 
 listOf("compileJava", "runClient", "build", "remapJar", "processResources", "githubRelease").forEach { taskName ->
     tasks.register(taskName) {
