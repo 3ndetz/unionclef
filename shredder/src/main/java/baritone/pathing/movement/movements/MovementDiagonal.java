@@ -62,9 +62,9 @@ public class MovementDiagonal extends Movement {
         //return context.precomputedData.canWalkOn(ctx, ctx.playerFeet().down());
         ClientPlayerEntity player = ctx.player();
         double offset = 0.25;
-        double x = player.getPos().x;
-        double y = player.getPos().y - 1;
-        double z = player.getPos().z;
+        double x = player.getEntityPos().x;
+        double y = player.getEntityPos().y - 1;
+        double z = player.getEntityPos().z;
         //standard
         if (ctx.playerFeet().equals(src)) {
             return true;

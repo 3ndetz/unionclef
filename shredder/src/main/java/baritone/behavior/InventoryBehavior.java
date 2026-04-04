@@ -35,8 +35,8 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUsageContext;
-import net.minecraft.item.MiningToolItem;
-import net.minecraft.item.PickaxeItem;
+import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.collection.DefaultedList;
@@ -69,7 +69,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
         if (firstValidThrowaway() >= 9) { // aka there are none on the hotbar, but there are some in main inventory
             requestSwapWithHotBar(firstValidThrowaway(), 8);
         }
-        int pick = bestToolAgainst(Blocks.STONE, PickaxeItem.class);
+        int pick = bestToolAgainst(Blocks.STONE, ItemTags.PICKAXES);
         if (pick >= 9) {
             requestSwapWithHotBar(pick, 0);
         }
@@ -144,7 +144,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
         return -1;
     }
 
-    private int bestToolAgainst(Block against, Class<? extends MiningToolItem> cla$$) {
+    private int bestToolAgainst(Block against, TagKey<Item> toolTag) {
         DefaultedList<ItemStack> invy = ctx.player().getInventory().getMainStacks();
         int bestInd = -1;
         double bestSpeed = -1;
@@ -156,7 +156,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
             if (Baritone.settings().itemSaver.value && (stack.getDamage() + Baritone.settings().itemSaverThreshold.value) >= stack.getMaxDamage() && stack.getMaxDamage() > 1) {
                 continue;
             }
-            if (cla$$.isInstance(stack.getItem())) {
+            if (stack.isIn(toolTag)) {
                 double speed = ToolSet.calculateSpeedVsBlock(stack, against.getDefaultState()); // takes into account enchants
                 if (speed > bestSpeed) {
                     bestSpeed = speed;
@@ -230,7 +230,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
             // so not a shovel, not a hoe, not a block, etc
             for (int i = 0; i < 9; i++) {
                 ItemStack item = inv.get(i);
-                if (item.isEmpty() || item.getItem() instanceof PickaxeItem) {
+                if (item.isEmpty() || item.isIn(ItemTags.PICKAXES)) {
                     if (select) {
                         p.getInventory().setSelectedSlot(i);
                     }

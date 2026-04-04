@@ -51,7 +51,7 @@ public final class ChunkPacker {
         //long start = System.nanoTime() / 1000000L;
 
         Map<String, List<BlockPos>> specialBlocks = new HashMap<>();
-        final int height = chunk.getWorld().getDimension().height();
+        final int height = chunk.getHeight();
         BitSet bitSet = new BitSet(CachedChunk.size(height));
         try {
             ChunkSection[] chunkInternalStorageArray = chunk.getSectionArray();
@@ -124,7 +124,7 @@ public final class ChunkPacker {
             if (MovementHelper.possiblyFlowing(state)) {
                 return PathingBlockType.AVOID;
             }
-            int adjY = y - chunk.getWorld().getDimension().minY();
+            int adjY = y - chunk.getBottomY();
             if (
                     (x != 15 && MovementHelper.possiblyFlowing(getFromChunk(chunk, x + 1, adjY, z)))
                             || (x != 0 && MovementHelper.possiblyFlowing(getFromChunk(chunk, x - 1, adjY, z)))
@@ -134,7 +134,7 @@ public final class ChunkPacker {
                 return PathingBlockType.AVOID;
             }
             if (x == 0 || x == 15 || z == 0 || z == 15) {
-                Vec3d flow = state.getFluidState().getVelocity(chunk.getWorld(), new BlockPos(x + (chunk.getPos().x << 4), y, z + (chunk.getPos().z << 4)));
+                Vec3d flow = state.getFluidState().getVelocity(chunk, new BlockPos(x + (chunk.getPos().x << 4), y, z + (chunk.getPos().z << 4)));
                 if (flow.x != 0.0 || flow.z != 0.0) {
                     return PathingBlockType.WATER;
                 }

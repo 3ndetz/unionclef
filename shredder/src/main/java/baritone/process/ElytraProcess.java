@@ -321,7 +321,7 @@ public class ElytraProcess extends BaritoneProcessHelper implements IBaritonePro
     }
 
     private void pathTo0(BlockPos destination, boolean appendDestination) {
-        if (ctx.player() == null || ctx.player().getWorld().getRegistryKey() != World.NETHER) {
+        if (ctx.player() == null || ctx.player().getEntityWorld().getRegistryKey() != World.NETHER) {
             return;
         }
         this.onLostControl();

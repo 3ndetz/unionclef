@@ -18,7 +18,6 @@
     "MixinFireworkRocketEntity",
     "MixinItemStack",
     "MixinLivingEntity",
-    "MixinLootTable",
     "MixinMinecraft",
     "MixinNetworkManager",
     "MixinPalettedContainer",

@@ -17,7 +17,6 @@
 
 package baritone.api.utils.gui;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.toast.Toast;
