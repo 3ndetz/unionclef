@@ -222,7 +222,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
                 return true;
             }
         }
-        if (desired.test(p.getInventory().offHand.get(0))) {
+        if (desired.test(p.getInventory().getStack(net.minecraft.entity.player.PlayerInventory.OFF_HAND_SLOT))) {
             // main hand takes precedence over off hand
             // that means that if we have block A selected in main hand and block B in off hand, right clicking places block B
             // we've already checked above ^ and the main hand can't possible have an acceptablethrowawayitem

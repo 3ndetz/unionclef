@@ -125,6 +125,27 @@ public interface IRenderer {
         IRenderer.color[3] = alpha;
     }
 
+    // backward-compat overloads (old callers passed lineWidth/ignoreDepth here; now per-vertex/RenderLayer)
+    static BufferBuilder startLines(Color color, float alpha, float ignoredLineWidth, boolean ignoredDepth) {
+        return startLines(color, alpha);
+    }
+
+    static BufferBuilder startLines(Color color, float ignoredLineWidth, boolean ignoredDepth) {
+        return startLines(color);
+    }
+
+    static void emitAABB(BufferBuilder bufferBuilder, MatrixStack stack, Box aabb) {
+        emitAABB(bufferBuilder, stack, aabb, (float) BaritoneAPI.getSettings().pathRenderLineWidthPixels.value);
+    }
+
+    static void emitAABB(BufferBuilder bufferBuilder, MatrixStack stack, Box aabb, double expand) {
+        emitAABB(bufferBuilder, stack, aabb.expand(expand, expand, expand), (float) BaritoneAPI.getSettings().pathRenderLineWidthPixels.value);
+    }
+
+    static void emitLine(BufferBuilder bufferBuilder, MatrixStack stack, Vec3d start, Vec3d end) {
+        emitLine(bufferBuilder, stack, start, end, (float) BaritoneAPI.getSettings().pathRenderLineWidthPixels.value);
+    }
+
     static BufferBuilder startLines(Color color, float alpha) {
         glColor(color, alpha);
         return tessellator.begin(VertexFormat.DrawMode.LINES, VertexFormats.POSITION_COLOR_NORMAL_LINE_WIDTH);

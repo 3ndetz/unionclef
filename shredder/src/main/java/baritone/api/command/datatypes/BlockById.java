@@ -37,7 +37,7 @@ public enum BlockById implements IDatatypeFor<Block> {
     public Block get(IDatatypeContext ctx) throws CommandException {
         Identifier id = Identifier.of(ctx.getConsumer().getString());
         Block block;
-        if ((block = Registries.BLOCK.getOrEmpty(id).orElse(null)) == null) {
+        if ((block = Registries.BLOCK.getOptionalValue(id).orElse(null)) == null) {
             throw new IllegalArgumentException("no block found by that id");
         }
         return block;

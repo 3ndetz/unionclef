@@ -48,7 +48,7 @@ public class MixinWorldRenderer {
         for (IBaritone ibaritone : BaritoneAPI.getProvider().getAllBaritones()) {
             MatrixStack poseStack = new MatrixStack();
             poseStack.multiplyPositionMatrix(matrix4f);
-            ibaritone.getGameEventHandler().onRenderPass(new RenderEvent(deltaTracker.getTickDelta(false), poseStack, matrix4f2));
+            ibaritone.getGameEventHandler().onRenderPass(new RenderEvent(deltaTracker.getTickProgress(false), poseStack, matrix4f2));
         }
     }
 }

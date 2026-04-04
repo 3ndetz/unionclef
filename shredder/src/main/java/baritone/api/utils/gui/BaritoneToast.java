@@ -18,6 +18,8 @@
 package baritone.api.utils.gui;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.toast.Toast;
 import net.minecraft.client.toast.ToastManager;
@@ -30,6 +32,7 @@ public class BaritoneToast implements Toast {
     private long firstDrawTime;
     private boolean newDisplay;
     private long totalShowTime;
+    private Visibility visibility = Visibility.SHOW;
 
     public BaritoneToast(Text titleComponent, Text subtitleComponent, long totalShowTime) {
         this.title = titleComponent.getString();
@@ -37,24 +40,30 @@ public class BaritoneToast implements Toast {
         this.totalShowTime = totalShowTime;
     }
 
-    public Visibility draw(DrawContext gui, ToastManager toastGui, long delta) {
+    @Override
+    public void update(ToastManager toastGui, long delta) {
         if (this.newDisplay) {
             this.firstDrawTime = delta;
             this.newDisplay = false;
         }
+        this.visibility = (delta - this.firstDrawTime < totalShowTime) ? Visibility.SHOW : Visibility.HIDE;
+    }
 
-
-        //TODO: check
-        gui.drawTexture(Identifier.of("textures/gui/toasts.png"), 0, 0, 0, 32, 160, 32);
+    @Override
+    public void draw(DrawContext gui, TextRenderer textRenderer, long delta) {
+        gui.drawTexture(RenderPipelines.GUI_TEXTURED, Identifier.of("textures/gui/toasts.png"), 0, 0, 0.0f, 32.0f, 160, 32, 256, 256);
 
         if (this.subtitle == null) {
-            gui.drawTextWithShadow(toastGui.getClient().textRenderer, this.title, 18, 12, -11534256);
+            gui.drawTextWithShadow(textRenderer, this.title, 18, 12, -11534256);
         } else {
-            gui.drawTextWithShadow(toastGui.getClient().textRenderer, this.title, 18, 7, -11534256);
-            gui.drawTextWithShadow(toastGui.getClient().textRenderer, this.subtitle, 18, 18, -16777216);
+            gui.drawTextWithShadow(textRenderer, this.title, 18, 7, -11534256);
+            gui.drawTextWithShadow(textRenderer, this.subtitle, 18, 18, -16777216);
         }
+    }
 
-        return delta - this.firstDrawTime < totalShowTime ? Visibility.SHOW : Visibility.HIDE;
+    @Override
+    public Visibility getVisibility() {
+        return this.visibility;
     }
 
     public void setDisplayedText(Text titleComponent, Text subtitleComponent) {

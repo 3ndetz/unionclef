@@ -509,7 +509,7 @@ public final class LookBehavior extends Behavior implements ILookBehavior {
                 final boolean antiCheat = settings.antiCheatCompatibility.value;
                 final boolean blockFreeLook = settings.blockFreeLook.value;
 
-                if (ctx.player().isFallFlying()) {
+                if (ctx.player().isGliding()) {
                     // always need to set angles while flying
                     return settings.elytraFreeLook.value ? SERVER : CLIENT;
                 } else if (settings.freeLook.value) {

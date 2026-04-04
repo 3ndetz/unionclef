@@ -31,7 +31,7 @@ public enum EntityClassById implements IDatatypeFor<EntityType> {
     public EntityType get(IDatatypeContext ctx) throws CommandException {
         Identifier id = Identifier.of(ctx.getConsumer().getString());
         EntityType entity;
-        if ((entity = Registries.ENTITY_TYPE.getOrEmpty(id).orElse(null)) == null) {
+        if ((entity = Registries.ENTITY_TYPE.getOptionalValue(id).orElse(null)) == null) {
             throw new IllegalArgumentException("no entity found by that id");
         }
         return entity;

@@ -1061,7 +1061,7 @@ public class PathExecutor implements IPathExecutor, Helper {
         }
 
         // Direct block interaction — bypass objectMouseOver/crosshair raycast.
-        Direction placeFace = Direction.fromVector(jumpBridgeDirX, 0, jumpBridgeDirZ);
+        Direction placeFace = Direction.fromVector(jumpBridgeDirX, 0, jumpBridgeDirZ, Direction.NORTH);
         if (placeFace == null) return false;
 
         Vec3d hitPos = new Vec3d(

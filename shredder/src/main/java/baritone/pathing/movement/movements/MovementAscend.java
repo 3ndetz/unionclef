@@ -224,7 +224,7 @@ public class MovementAscend extends Movement {
     public boolean headBonkClear() {
         BetterBlockPos startUp = src.up(2);
         for (int i = 0; i < 4; i++) {
-            BetterBlockPos check = startUp.offset(Direction.fromHorizontal(i));
+            BetterBlockPos check = startUp.offset(Direction.fromHorizontalQuarterTurns(i));
             if (!MovementHelper.canWalkThrough(ctx, check)) {
                 // We might bonk our head
                 return false;
