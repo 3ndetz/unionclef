@@ -127,6 +127,74 @@ Version-dependent numerical constants (costs, distance thresholds) are
 gated with `//#if MC >= 12111` preprocessor directives where needed
 (e.g. walk/run distance thresholds in `Node.java`).
 
+## PathFinder structural divergence (why upstream costs don't work here)
+
+Investigated 2026-04-04. Upstream calculateNodeCost (4.358) + retry caused
+massive drift and broken fence routing. Root cause: **our PathFinder has
+6 structural differences from upstream** that change how costs propagate.
+These must be resolved BEFORE porting upstream cost tuning.
+
+### 1. Closed set: `Set<Vec3d>` vs `Set<Integer>`
+
+Upstream uses `Set<Integer>` (hash-based). Ours uses `Set<Vec3d>` (exact
+position). This changes duplicate detection — integer hashes have more
+collisions, which paradoxically makes upstream search MORE aggressive
+(fewer nodes pruned). Our Vec3d set prunes more precisely, so higher base
+costs starve the search faster.
+
+### 2. shouldNodeBeSkipped scaling factors differ
+
+| State | Upstream (x, y, z) | Ours (x, y, z) |
+|-------|-------|------|
+| Default | 100, 100, 100 | 1000, 100, 1000 |
+| Climbing | 10, 1e4, 10 | 1, 10000, 1 |
+| Close (<1) | 1e3, 1e3, 1e3 | 1000, 1000, 1000 |
+
+Default XZ resolution: upstream 100 (coarse) vs ours 1000 (10x finer).
+This means our closed set keeps many more unique positions. With high
+base costs (4.358) the A* runs out of budget before exploring enough nodes.
+
+### 3. `updateBestSoFar`: start vs target, failing flag
+
+- Upstream: `updateBestSoFar(child, start, ...)` — distance from **start**
+- Ours: `updateBestSoFar(child, target, ...)` — distance from **target**
+- Upstream: failing flag gated by `getDistFromStartSq(child, start) > MIN_DIST_PATH²`
+- Ours: failing flag **always set to false** (distance check commented out)
+
+This changes when `failing` transitions, which affects `isPathComplete`.
+
+### 4. `isPathComplete` doesn't use failing flag
+
+- Upstream: `isPathComplete(next, target, failing, world)`
+- Ours: `isPathComplete(next, target, world)` — ignores `failing`
+
+Upstream won't accept a path until `failing == false`. Ours accepts
+immediately. With upstream costs, paths that should still be "failing"
+get accepted prematurely.
+
+### 5. `processNodeChildren` signature: missing start position
+
+- Upstream: `processNodeChildren(world, next, target, start.agent.getPos(), blockPath, openSet, closed)`
+- Ours: `processNodeChildren(world, next, target, blockPath, openSet, closed)`
+
+Upstream passes start position to `updateBestSoFar` via processNodeChildren.
+Ours doesn't — this is why #3 uses target instead of start.
+
+### 6. `computeHeuristic` xzMultiplier
+
+- Upstream: `xzMultiplier = 1`
+- Ours: `xzMultiplier = 1.3`
+
+Our heuristic overestimates horizontal distance by 30%, making A* more
+greedy. With high base costs this exacerbates the "runs out of nodes" problem.
+
+### Conclusion
+
+Upstream costs (4.358 base) assume: coarse closed-set (100 resolution),
+hash-based dedup, start-distance-based failing, and tighter heuristic.
+Our PathFinder has finer pruning and different failing/heuristic logic.
+**Port path: sync these 6 items FIRST, then retry calculateNodeCost.**
+
 ### Files NOT to port (upstream-only)
 
 - `fakeplayerapi` dependency -- server-side fake player, not needed for client bot
