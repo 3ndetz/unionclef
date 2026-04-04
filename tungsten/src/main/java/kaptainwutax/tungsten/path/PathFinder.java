@@ -23,7 +23,6 @@ import com.google.common.util.concurrent.AtomicDoubleArray;
 
 import kaptainwutax.tungsten.Debug;
 import kaptainwutax.tungsten.TungstenConfig;
-import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
 import kaptainwutax.tungsten.agent.Agent;
@@ -144,6 +143,7 @@ public class PathFinder {
     }
 	
 	private boolean checkForFallDamage(Node n, WorldView world) {
+		if (this.stop.get()) return false;
 		if (TungstenModDataContainer.ignoreFallDamage) return false;
 		if (BlockStateChecker.isAnyWater(world.getBlockState(n.agent.getBlockPos()))) return false;
 		if (n.parent == null) return false;
@@ -158,32 +158,23 @@ public class PathFinder {
 				prev = prev.parent;
 			}
 			double currFallDist = DistanceCalculator.getJumpHeight(prev.agent.getPos().y, n.agent.getPos().y);
-			if (currFallDist < -3) {
+			if (currFallDist < -2.75 || prev.agent.isDamaged || n.agent.isDamaged) {
 				return true;
 			}
 		} while (!prev.agent.onGround && !prev.agent.touchingWater);
 
-		if (DistanceCalculator.getJumpHeight(prev.agent.getPos().y, n.agent.getPos().y) < -3) {
-//			RenderHelper.clearRenderers();
-//        	RenderHelper.renderNode(prev);
-//        	TungstenMod.RENDERERS.add(new Cuboid(prev.agent.getPos().subtract(0.05D, 0.05D, 0.05D), new Vec3d(0.3D, 0.8D, 0.3D), prev.color));
-//        	RenderHelper.renderNode(n);
-//        	try {
-// 				Thread.sleep(150);
-// 			} catch (InterruptedException e) {
-// 				// TODO Auto-generated catch block
-// 				e.printStackTrace();
-// 			}
-			return true;
-		}
-		return false;
+        return DistanceCalculator.getJumpHeight(prev.agent.getPos().y, n.agent.getPos().y) < -2.75 || prev.agent.isDamaged || n.agent.isDamaged;
 	}
 
 	private void search(WorldView world, Vec3d target, PlayerEntity player) {
 		search(world, null, target, player);
 	}
-	
+
 	private void search(WorldView world, Node start, Vec3d target, PlayerEntity player) {
+		search(world, start, target, player, 0);
+	}
+
+	private void search(WorldView world, Node start, Vec3d target, PlayerEntity player, int failedAttempts) {
 	    boolean failing = true;
 	    TungstenModRenderContainer.RENDERERS.clear();
 	
@@ -281,7 +272,7 @@ public class PathFinder {
 							try { Thread.sleep(500); } catch (InterruptedException e) { e.printStackTrace(); }
 						}
 	        		}
-	    		    primaryTimeoutTime = System.currentTimeMillis() + 1120L;
+	    		    primaryTimeoutTime = System.currentTimeMillis() + 220L;
 	        		if (blockPath.get().getLast().getPos(true, world).distanceTo(player.getPos()) < 20) {
 		    			int attempt = 0;
 		    			while (attempt < 3) {
@@ -328,7 +319,7 @@ public class PathFinder {
 
 	        if ((numNodesConsidered.get() & (timeCheckInterval - 1)) == 0) {
 	            if (handleTimeout(startTime, primaryTimeoutTime, next, target, start, player, closed)) {
-	            	primaryTimeoutTime = System.currentTimeMillis() + 1120L;
+	            	primaryTimeoutTime = System.currentTimeMillis() + 1020L;
 	                continue;
 	            }
 	            // Proactive emit: if executor is idle and we have a decent partial path, emit it now
@@ -349,6 +340,7 @@ public class PathFinder {
 	        numNodesConsidered.set(numNodesConsidered.get()+1);
 	        if (updateNextClosestBlockNodeIDX(blockPath.get(), next, closed, world)) {
 	        	primaryTimeoutTime = System.currentTimeMillis() + 1120L;
+				failedAttempts = 0;
 	        }
 //        	if (numNodesConsidered % 5 == 0 && updateNextClosestBlockNodeIDX(blockPath.get(), next, closed)) {
 //        		List<Node> path = constructPath(next);
@@ -374,15 +366,16 @@ public class PathFinder {
 	        if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) Debug.logMessage("stopped!");
 	        stop.set(false);
 	    } else if (openSet.isEmpty()) {
-	        TungstenMod.LOG.info("[PathFinder] Ran out of nodes, trying partial path...");
-	        // Instead of giving up, emit bestSoFar partial path
-	        Optional<List<Node>> partial = PathFinder.bestSoFar(false, 0, this.start, TARGET);
-	        if (partial.isPresent() && partial.get().size() >= 2) {
-	            executePath(partial.get());
-	            TungstenMod.LOG.info("[PathFinder] Emitted partial path: " + partial.get().size() + " nodes");
-	        } else {
-	            TungstenMod.LOG.info("[PathFinder] No usable partial path found.");
-	        }
+			if (failedAttempts < 2 && TungstenModDataContainer.EXECUTOR.path != null) {
+				RenderHelper.clearRenderers();
+				closed.clear();
+				PathFinder.blockPath = Optional.empty();
+				Node lastNode = TungstenModDataContainer.EXECUTOR.path.getLast();
+
+				search(world, lastNode, target, player, failedAttempts + 1);
+				return;
+			}
+			Debug.logMessage("Ran out of nodes!");
 	    }
 	    if (TungstenConfig.get().debugTime) {
 	        long elapsed = System.currentTimeMillis() - startTime;
