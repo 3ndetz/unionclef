@@ -191,6 +191,78 @@ git diff <1.21.1-branch>..<1.21.11-branch> -- src/main/java/ > upstream-diff.pat
 - God bridge на плоскости
 - TungstenBridge делегация на ровных участках
 
+## Разведка upstream diff (04.04.2026)
+
+### Ветки cabaletta/baritone
+
+Существуют ветки: `1.21`, `1.21.1`, `1.21.3`, `1.21.4`, `1.21.5`, `1.21.8`,
+`1.21.10`, `1.21.11`. Чистая линейная цепочка, без расхождений.
+Тегов для 1.21.x нет — diff только по веткам.
+
+### Общий diff `1.21.1...1.21.11`
+
+- **65 коммитов**, 0 behind
+- **76 файлов** изменено (из ~345 в baritone)
+- **+840 / -615 строк** (net +225)
+
+### Инкрементальные шаги
+
+| Шаг             | Коммиты | Файлов |
+| --------------- | ------- | ------ |
+| 1.21.1 → 1.21.3 | 8 | 29 |
+| 1.21.3 → 1.21.4 | 10 | 7 |
+| 1.21.4 → 1.21.5 | 15 | 38 |
+| 1.21.5 → 1.21.8 | 10 | 12 |
+| 1.21.8 → 1.21.10 | 8 | 13 |
+| 1.21.10 → 1.21.11 | 14 | 41 |
+
+Два крупных скачка: **1.21.4→1.21.5** (38 файлов) и **1.21.10→1.21.11** (41 файл).
+
+### Ключевые области изменений
+
+**Рендеринг (основной объём):**
+- `IRenderer.java` — +141/-57 (крупная переработка)
+- `PathRenderer.java` — +97/-62 (крупная переработка)
+- 4 новых файла: `MixinRenderPipelines`, `MixinRenderType`, `IRenderPipelines`, `IRenderType`
+- ⚠️ **Tungsten уже использует GizmoDrawing для рендеринга на 1.21.11.**
+  PathRenderer в shredder может быть не нужен — нужно проверить, используется ли он.
+
+**Player input/movement:**
+- `PlayerMovementInput.java` — +28/-17
+
+**Tools & inventory:**
+- `ToolSet.java` — +35/-18
+- `InventoryBehavior.java` — +15/-14
+
+**Block handling:**
+- `BlockOptionalMeta.java` — +33/-51
+- `ChunkPacker.java` — +10/-16
+- `BaritoneToast.java` — +4/-56 (упрощён)
+
+**Schematics:**
+- `LitematicaSchematic.java`, `MCEditSchematic.java`, `SpongeSchematic.java` — мелкие правки
+
+**Миксины:**
+- Обновлены: `MixinClientPlayerEntity`, `MixinLivingEntity`, `MixinScreen`,
+  `MixinWorldRenderer`, `MixinMinecraft`, `MixinNetworkManager`, `MixinEntityRenderManager`
+- 2 новых миксина в `mixins.baritone.json`
+
+**Build/config:**
+- `gradle.properties`, `build.gradle`, `fabric.mod.json` — обновления версий
+
+### Выводы из разведки
+
+1. **Объём умеренный.** 76 файлов, но реальная суть — 10-15 файлов. Остальные — мелкие
+   правки импортов, версий, API tweaks.
+2. **Стратегия A подтверждена** как оптимальная. Diff обозрим, архитектурных переломов нет.
+3. **Рендеринг — можно частично пропустить.** Tungsten уже решает рендеринг на 1.21.11
+   через GizmoDrawing. Shredder'овские IRenderer/PathRenderer нужно проверить —
+   возможно достаточно noop/redirect.
+4. **Preprocessor** стоит добавить в shredder для multi-version, инфраструктура
+   уже есть в проекте.
+5. **Все имена в upstream diff — mojmap.** Перед применением нужна таблица mojmap→yarn
+   для каждого изменённого символа.
+
 ## Заметки
 
 - Shredder build.gradle сейчас хардкодит `minecraft "com.mojang:minecraft:1.21.1"`.
