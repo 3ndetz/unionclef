@@ -14,8 +14,8 @@ version = "0.1.0"
 group = "shredder"
 
 dependencies {
-    minecraft "com.mojang:minecraft:1.21.1"
-    mappings "net.fabricmc:yarn:1.21.1+build.3:v2"
+    minecraft "com.mojang:minecraft:1.21.11"
+    mappings "net.fabricmc:yarn:1.21.11+build.4:v2"
     modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
 
     // Baritone dependencies

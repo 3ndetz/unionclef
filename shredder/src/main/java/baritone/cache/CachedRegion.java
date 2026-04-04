@@ -28,7 +28,9 @@ import java.util.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 import net.minecraft.block.BlockState;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import net.minecraft.world.dimension.DimensionType;
 
 /**
@@ -62,16 +64,19 @@ public final class CachedRegion implements ICachedRegion {
 
     private final DimensionType dimension;
 
+    private final RegistryKey<World> dimensionId;
+
     /**
      * Has this region been modified since its most recent load or save
      */
     private boolean hasUnsavedChanges;
 
-    CachedRegion(int x, int z, DimensionType dimension) {
+    CachedRegion(int x, int z, DimensionType dimension, RegistryKey<World> dimensionId) {
         this.x = x;
         this.z = z;
         this.hasUnsavedChanges = false;
         this.dimension = dimension;
+        this.dimensionId = dimensionId;
     }
 
     @Override
@@ -79,7 +84,7 @@ public final class CachedRegion implements ICachedRegion {
         int adjY = y - dimension.minY();
         CachedChunk chunk = chunks[x >> 4][z >> 4];
         if (chunk != null) {
-            return chunk.getBlock(x & 15, adjY, z & 15, dimension);
+            return chunk.getBlock(x & 15, adjY, z & 15, dimension, dimensionId);
         }
         return null;
     }

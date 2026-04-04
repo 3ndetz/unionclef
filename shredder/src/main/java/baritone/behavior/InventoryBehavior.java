@@ -95,7 +95,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
         // we're using 0 and 8 for pickaxe and throwaway
         ArrayList<Integer> candidates = new ArrayList<>();
         for (int i = 1; i < 8; i++) {
-            if (ctx.player().getInventory().main.get(i).isEmpty() && !disallowedHotbar.test(i)) {
+            if (ctx.player().getInventory().getMainStacks().get(i).isEmpty() && !disallowedHotbar.test(i)) {
                 candidates.add(i);
             }
         }
@@ -131,7 +131,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
     }
 
     private int firstValidThrowaway() { // TODO offhand idk
-        DefaultedList<ItemStack> invy = ctx.player().getInventory().main;
+        DefaultedList<ItemStack> invy = ctx.player().getInventory().getMainStacks();
         for (int i = 0; i < invy.size(); i++) {
             Item item = invy.get(i).getItem();
 
@@ -145,7 +145,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
     }
 
     private int bestToolAgainst(Block against, Class<? extends MiningToolItem> cla$$) {
-        DefaultedList<ItemStack> invy = ctx.player().getInventory().main;
+        DefaultedList<ItemStack> invy = ctx.player().getInventory().getMainStacks();
         int bestInd = -1;
         double bestSpeed = -1;
         for (int i = 0; i < invy.size(); i++) {
@@ -183,7 +183,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
         if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(x, y, z)) return false;
 
         BlockState maybe = baritone.getBuilderProcess().placeAt(x, y, z, baritone.bsi.get0(x, y, z));
-        if (maybe != null && throwaway(select, stack -> stack.getItem() instanceof BlockItem && maybe.equals(((BlockItem) stack.getItem()).getBlock().getPlacementState(new ItemPlacementContext(new ItemUsageContext(ctx.world(), ctx.player(), Hand.MAIN_HAND, stack, new BlockHitResult(new Vec3d(ctx.player().getPos().x, ctx.player().getPos().y, ctx.player().getPos().z), Direction.UP, ctx.playerFeet(), false)) {}))))) {
+        if (maybe != null && throwaway(select, stack -> stack.getItem() instanceof BlockItem && maybe.equals(((BlockItem) stack.getItem()).getBlock().getPlacementState(new ItemPlacementContext(new ItemUsageContext(ctx.world(), ctx.player(), Hand.MAIN_HAND, stack, new BlockHitResult(new Vec3d(ctx.player().getEntityPos().x, ctx.player().getEntityPos().y, ctx.player().getEntityPos().z), Direction.UP, ctx.playerFeet(), false)) {}))))) {
             return true; // gotem
         }
         if (maybe != null && throwaway(select, stack -> stack.getItem() instanceof BlockItem && ((BlockItem) stack.getItem()).getBlock().equals(maybe.getBlock()))) {
@@ -207,7 +207,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
         if (AltoClefSettings.getInstance().isInteractionPaused()) return false;
 
         ClientPlayerEntity p = ctx.player();
-        DefaultedList<ItemStack> inv = p.getInventory().main;
+        DefaultedList<ItemStack> inv = p.getInventory().getMainStacks();
         for (int i = 0; i < 9; i++) {
             ItemStack item = inv.get(i);
             // this usage of settings() is okay because it's only called once during pathing
@@ -217,7 +217,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
             // acceptableThrowawayItems to the CalculationContext
             if (desired.test(item)) {
                 if (select) {
-                    p.getInventory().selectedSlot = i;
+                    p.getInventory().setSelectedSlot(i);
                 }
                 return true;
             }
@@ -232,7 +232,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
                 ItemStack item = inv.get(i);
                 if (item.isEmpty() || item.getItem() instanceof PickaxeItem) {
                     if (select) {
-                        p.getInventory().selectedSlot = i;
+                        p.getInventory().setSelectedSlot(i);
                     }
                     return true;
                 }
@@ -244,7 +244,7 @@ public final class InventoryBehavior extends Behavior implements Helper {
                 if (desired.test(inv.get(i))) {
                     if (select) {
                         requestSwapWithHotBar(i, 7);
-                        p.getInventory().selectedSlot = 7;
+                        p.getInventory().setSelectedSlot(7);
                     }
                     return true;
                 }

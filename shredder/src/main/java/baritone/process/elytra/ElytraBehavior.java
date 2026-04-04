@@ -738,18 +738,18 @@ public final class ElytraBehavior implements Helper {
         if (this.landingMode) {
             return;
         }
-        final boolean useOnDescend = !Baritone.settings().elytraConserveFireworks.value || ctx.player().getPos().y < goingTo.y + 5;
+        final boolean useOnDescend = !Baritone.settings().elytraConserveFireworks.value || ctx.player().getEntityPos().y < goingTo.y + 5;
         final double currentSpeed = new Vec3d(
                 ctx.player().getVelocity().x,
                 // ignore y component if we are BOTH below where we want to be AND descending
-                ctx.player().getPos().y < goingTo.y ? Math.max(0, ctx.player().getVelocity().y) : ctx.player().getVelocity().y,
+                ctx.player().getEntityPos().y < goingTo.y ? Math.max(0, ctx.player().getVelocity().y) : ctx.player().getVelocity().y,
                 ctx.player().getVelocity().z
         ).lengthSquared();
 
         final double elytraFireworkSpeed = Baritone.settings().elytraFireworkSpeed.value;
         if (this.remainingFireworkTicks <= 0 && (forceUseFirework || (!isBoosted
                 && useOnDescend
-                && (ctx.player().getPos().y < goingTo.y - 5 || start.distanceTo(new Vec3d(goingTo.x + 0.5, ctx.player().getPos().y, goingTo.z + 0.5)) > 5) // UGH!!!!!!!
+                && (ctx.player().getEntityPos().y < goingTo.y - 5 || start.distanceTo(new Vec3d(goingTo.x + 0.5, ctx.player().getEntityPos().y, goingTo.z + 0.5)) > 5) // UGH!!!!!!!
                 && currentSpeed < elytraFireworkSpeed * elytraFireworkSpeed))
         ) {
             // Prioritize boosting fireworks over regular ones
@@ -1285,7 +1285,7 @@ public final class ElytraBehavior implements Helper {
     }
 
     private int findGoodElytra() {
-        DefaultedList<ItemStack> invy = ctx.player().getInventory().main;
+        DefaultedList<ItemStack> invy = ctx.player().getInventory().getMainStacks();
         for (int i = 0; i < invy.size(); i++) {
             ItemStack slot = invy.get(i);
             if (slot.getItem() == Items.ELYTRA && (slot.getMaxDamage() - slot.getDamage()) > Baritone.settings().elytraMinimumDurability.value) {

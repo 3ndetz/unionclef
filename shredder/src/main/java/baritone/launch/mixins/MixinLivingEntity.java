@@ -26,6 +26,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Optional;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -81,13 +82,13 @@ public abstract class MixinLivingEntity extends Entity {
     }
 
     @Inject(
-            method = "travel",
+            method = "calcGlidingVelocity",
             at = @At(
                     value = "INVOKE",
                     target = "net/minecraft/entity/LivingEntity.getRotationVector()Lnet/minecraft/util/math/Vec3d;"
             )
     )
-    private void onPreElytraMove(Vec3d direction, CallbackInfo ci) {
+    private void onPreElytraMove(Vec3d direction, final CallbackInfoReturnable<Vec3d> cir) {
         this.getBaritone().ifPresent(baritone -> {
             this.elytraRotationEvent = new RotationMoveEvent(RotationMoveEvent.Type.MOTION_UPDATE, this.getYaw(), this.getPitch());
             baritone.getGameEventHandler().onPlayerRotationMove(this.elytraRotationEvent);
@@ -97,14 +98,14 @@ public abstract class MixinLivingEntity extends Entity {
     }
 
     @Inject(
-            method = "travel",
+            method = "travelGliding",
             at = @At(
                     value = "INVOKE",
-                    target = "net/minecraft/entity/LivingEntity.move(Lnet/minecraft/entity/MovementType;Lnet/minecraft/util/math/Vec3d;)V",
+                    target = "Lnet/minecraft/entity/LivingEntity;move(Lnet/minecraft/entity/MovementType;Lnet/minecraft/util/math/Vec3d;)V",
                     shift = At.Shift.AFTER
             )
     )
-    private void onPostElytraMove(Vec3d direction, CallbackInfo ci) {
+    private void onPostElytraMove(final CallbackInfo ci) {
         if (this.elytraRotationEvent != null) {
             this.setYaw(this.elytraRotationEvent.getOriginal().getYaw());
             this.setPitch(this.elytraRotationEvent.getOriginal().getPitch());

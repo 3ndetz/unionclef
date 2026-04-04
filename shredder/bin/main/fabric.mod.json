@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "shredder",
+  "version": "${version}",
+
+  "name": "Shredder",
+  "description": "Contour Maps for Blockgame",
+  "authors": [
+    "3ndetz"
+  ],
+  "contact": {
+    "homepage": "https://github.com/3ndetz/unionclef",
+    "sources": "https://github.com/3ndetz/unionclef"
+  },
+
+  "license": "GPL-3.0",
+  "icon": "assets/shredder/icon.png",
+
+  "environment": "*",
+  "entrypoints": {
+  },
+  "mixins": [
+      "mixins.shredder.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=0.14.22",
+    "minecraft": ">=1.21"
+  }
+}

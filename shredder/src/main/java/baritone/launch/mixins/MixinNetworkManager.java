@@ -22,10 +22,10 @@ import baritone.api.IBaritone;
 import baritone.api.event.events.PacketEvent;
 import baritone.api.event.events.type.EventState;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkSide;
-import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.packet.Packet;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -50,10 +50,9 @@ public class MixinNetworkManager {
 
     @Inject(
             method = "send",
-            at = @At("HEAD"),
-            require = 0
+            at = @At("HEAD")
     )
-    private void preDispatchPacket(Packet<?> packet, CallbackInfo ci) {
+    private void preDispatchPacket(final Packet<?> packet, final ChannelFutureListener channelFutureListener, final boolean flush, final CallbackInfo ci) {
         if (this.side != NetworkSide.CLIENTBOUND) {
             return;
         }
@@ -67,10 +66,9 @@ public class MixinNetworkManager {
 
     @Inject(
             method = "send",
-            at = @At("RETURN"),
-            require = 0
+            at = @At("RETURN")
     )
-    private void postDispatchPacket(Packet<?> packet, CallbackInfo ci) {
+    private void postDispatchPacket(Packet<?> packet, ChannelFutureListener channelFutureListener, boolean flush, CallbackInfo ci) {
         if (this.side != NetworkSide.CLIENTBOUND) {
             return;
         }

@@ -18,6 +18,8 @@
 package baritone.utils;
 
 import baritone.api.utils.input.Input;
+import net.minecraft.util.PlayerInput;
+import net.minecraft.util.math.Vec2f;
 
 public class PlayerMovementInput extends net.minecraft.client.input.Input {
 
@@ -28,31 +30,40 @@ public class PlayerMovementInput extends net.minecraft.client.input.Input {
     }
 
     @Override
-    public void tick(boolean p_225607_1_, float f) {
-        this.movementSideways = 0.0F;
-        this.movementForward = 0.0F;
+    public void tick() {
+        float leftImpulse = 0.0F;
+        float forwardImpulse = 0.0F;
+        boolean jumping = handler.isInputForcedDown(Input.JUMP); // oppa gangnam style
 
-        this.jumping = handler.isInputForcedDown(Input.JUMP); // oppa gangnam style
-
-        if (this.pressingForward = handler.isInputForcedDown(Input.MOVE_FORWARD)) {
-            this.movementForward++;
+        boolean up = handler.isInputForcedDown(Input.MOVE_FORWARD);
+        if (up) {
+            forwardImpulse++;
         }
 
-        if (this.pressingBack = handler.isInputForcedDown(Input.MOVE_BACK)) {
-            this.movementForward--;
+        boolean down = handler.isInputForcedDown(Input.MOVE_BACK);
+        if (down) {
+            forwardImpulse--;
         }
 
-        if (this.pressingLeft = handler.isInputForcedDown(Input.MOVE_LEFT)) {
-            this.movementSideways++;
+        boolean left = handler.isInputForcedDown(Input.MOVE_LEFT);
+        if (left) {
+            leftImpulse++;
         }
 
-        if (this.pressingRight = handler.isInputForcedDown(Input.MOVE_RIGHT)) {
-            this.movementSideways--;
+        boolean right = handler.isInputForcedDown(Input.MOVE_RIGHT);
+        if (right) {
+            leftImpulse--;
         }
 
-        if (this.sneaking = handler.isInputForcedDown(Input.SNEAK)) {
-            this.movementSideways *= 0.3D;
-            this.movementForward *= 0.3D;
+        boolean sneaking = handler.isInputForcedDown(Input.SNEAK);
+        if (sneaking) {
+            leftImpulse *= 0.3D;
+            forwardImpulse *= 0.3D;
         }
+        this.movementVector = new Vec2f(leftImpulse, forwardImpulse);
+
+        boolean sprinting = handler.isInputForcedDown(Input.SPRINT);
+
+        this.playerInput = new PlayerInput(up, down, left, right, jumping, sneaking, sprinting);
     }
 }

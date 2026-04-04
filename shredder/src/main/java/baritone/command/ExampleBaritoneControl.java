@@ -82,12 +82,10 @@ public class ExampleBaritoneControl extends Behavior implements Helper {
             MutableText component = Text.literal(String.format("> %s", toDisplay));
             component.setStyle(component.getStyle()
                     .withColor(Formatting.WHITE)
-                    .withHoverEvent(new HoverEvent(
-                            HoverEvent.Action.SHOW_TEXT,
+                    .withHoverEvent(new HoverEvent.ShowText(
                             Text.literal("Click to rerun command")
                     ))
-                    .withClickEvent(new ClickEvent(
-                            ClickEvent.Action.RUN_COMMAND,
+                    .withClickEvent(new ClickEvent.RunCommand(
                             FORCE_COMMAND_PREFIX + msg
                     )));
             logDirect(component);

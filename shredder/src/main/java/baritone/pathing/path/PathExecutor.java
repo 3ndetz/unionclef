@@ -570,7 +570,7 @@ public class PathExecutor implements IPathExecutor, Helper {
                 // playerFeet adds 0.1251 to account for soul sand
                 // farmland is 0.9375
                 // 0.07 is to account for farmland
-                if (ctx.player().getPos().y >= center.getY() - 0.07) {
+                if (ctx.player().getEntityPos().y >= center.getY() - 0.07) {
                     behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, false);
                     return true;
                 }
@@ -641,7 +641,7 @@ public class PathExecutor implements IPathExecutor, Helper {
     }
 
     private static boolean skipNow(IPlayerContext ctx, IMovement current) {
-        double offTarget = Math.abs(current.getDirection().getX() * (current.getSrc().z + 0.5D - ctx.player().getPos().z)) + Math.abs(current.getDirection().getZ() * (current.getSrc().x + 0.5D - ctx.player().getPos().x));
+        double offTarget = Math.abs(current.getDirection().getX() * (current.getSrc().z + 0.5D - ctx.player().getEntityPos().z)) + Math.abs(current.getDirection().getZ() * (current.getSrc().x + 0.5D - ctx.player().getEntityPos().x));
         if (offTarget > 0.1) {
             return false;
         }
@@ -651,7 +651,7 @@ public class PathExecutor implements IPathExecutor, Helper {
             return true;
         }
         // wait 0.3
-        double flatDist = Math.abs(current.getDirection().getX() * (headBonk.getX() + 0.5D - ctx.player().getPos().x)) + Math.abs(current.getDirection().getZ() * (headBonk.getZ() + 0.5 - ctx.player().getPos().z));
+        double flatDist = Math.abs(current.getDirection().getX() * (headBonk.getX() + 0.5D - ctx.player().getEntityPos().x)) + Math.abs(current.getDirection().getZ() * (headBonk.getZ() + 0.5 - ctx.player().getEntityPos().z));
         return flatDist > 0.8;
     }
 
@@ -1084,7 +1084,7 @@ public class PathExecutor implements IPathExecutor, Helper {
         ctx.player().swingHand(Hand.MAIN_HAND);
 
         if (JB_DEBUG) System.out.println(String.format("JB_PLACE: INTERACT at pastFace=%.2f, face=%s of %s, target=%s, playerY=%.2f",
-                pastFace, placeFace, jumpBridgeLastSolid, expectedFloor, ctx.player().getPos().y));
+                pastFace, placeFace, jumpBridgeLastSolid, expectedFloor, ctx.player().getEntityPos().y));
         return false;
     }
 
@@ -1128,8 +1128,8 @@ public class PathExecutor implements IPathExecutor, Helper {
 
                 BlockPos firstDest = path.movements().get(jumpBridgeMoveIndex).getDest();
                 double distToDest = Math.max(
-                        Math.abs(ctx.player().getPos().x - (firstDest.getX() + 0.5)),
-                        Math.abs(ctx.player().getPos().z - (firstDest.getZ() + 0.5)));
+                        Math.abs(ctx.player().getEntityPos().x - (firstDest.getX() + 0.5)),
+                        Math.abs(ctx.player().getEntityPos().z - (firstDest.getZ() + 0.5)));
 
                 if (distToDest < 1.0) {
                     jumpBridgePhase = JumpBridgePhase.BJ_PRE_ROTATE;
@@ -1170,8 +1170,8 @@ public class PathExecutor implements IPathExecutor, Helper {
 
                     BlockPos nextDest = path.movements().get(jumpBridgeMoveIndex).getDest();
                     double distToEdge = Math.max(
-                            Math.abs(ctx.player().getPos().x - (nextDest.getX() + 0.5)),
-                            Math.abs(ctx.player().getPos().z - (nextDest.getZ() + 0.5)));
+                            Math.abs(ctx.player().getEntityPos().x - (nextDest.getX() + 0.5)),
+                            Math.abs(ctx.player().getEntityPos().z - (nextDest.getZ() + 0.5)));
                     if (distToEdge < 0.8) {
                         behavior.baritone.getInputOverrideHandler().setInputForceState(Input.JUMP, true);
                     }
@@ -1202,8 +1202,8 @@ public class PathExecutor implements IPathExecutor, Helper {
                 // Over long bridges, tiny velocity errors accumulate and the player drifts off the 1-wide path.
                 BlockPos dest = path.movements().get(jumpBridgeMoveIndex).getDest();
                 double lateralOffset = (jumpBridgeDirZ != 0)
-                        ? ctx.player().getPos().x - (dest.getX() + 0.5)  // bridge goes Z-axis, drift on X
-                        : ctx.player().getPos().z - (dest.getZ() + 0.5); // bridge goes X-axis, drift on Z
+                        ? ctx.player().getEntityPos().x - (dest.getX() + 0.5)  // bridge goes Z-axis, drift on X
+                        : ctx.player().getEntityPos().z - (dest.getZ() + 0.5); // bridge goes X-axis, drift on Z
                 if (Math.abs(lateralOffset) > 0.05) {
                     float correction = (float) Math.toDegrees(Math.atan2(lateralOffset * 0.3, 1.0));
                     // Sign: + steers AWAY from drift (- was inverted, steering INTO it)
@@ -1221,8 +1221,8 @@ public class PathExecutor implements IPathExecutor, Helper {
 
                 BlockPos firstDest = path.movements().get(jumpBridgeMoveIndex).getDest();
                 double distToDest = Math.max(
-                        Math.abs(ctx.player().getPos().x - (firstDest.getX() + 0.5)),
-                        Math.abs(ctx.player().getPos().z - (firstDest.getZ() + 0.5)));
+                        Math.abs(ctx.player().getEntityPos().x - (firstDest.getX() + 0.5)),
+                        Math.abs(ctx.player().getEntityPos().z - (firstDest.getZ() + 0.5)));
 
                 // Per-tick debug
                 if (JB_DEBUG) System.out.println(String.format("JB_SPRINT: tick=%d dist=%.2f sprint=%b onGround=%b velX=%.3f velZ=%.3f",
@@ -1282,7 +1282,7 @@ public class PathExecutor implements IPathExecutor, Helper {
                 int bridgeY = jumpBridgeLastSolid.getY() + 1;
 
                 // Phase 4 (Recovery Flick): snap forward BEFORE landing.
-                boolean nearingLanding = ctx.player().getPos().y < bridgeY + 0.5 && ctx.player().getVelocity().y < 0;
+                boolean nearingLanding = ctx.player().getEntityPos().y < bridgeY + 0.5 && ctx.player().getVelocity().y < 0;
                 if (nearingLanding || jumpBridgeAirborneTicks > 8) {
                     // Recovery: face forward + W + Sprint. Force sprint for instant re-activation.
                     behavior.baritone.getLookBehavior().updateTarget(
@@ -1305,9 +1305,9 @@ public class PathExecutor implements IPathExecutor, Helper {
                 jumpBridgeAirbornePlace(bsi, pastFace, head, faceCenterPoint, backwardYaw);
 
                 // Safety: if player drops below bridge level, exit immediately
-                if (ctx.player().getPos().y < bridgeY - 0.8) {
+                if (ctx.player().getEntityPos().y < bridgeY - 0.8) {
                     if (JB_DEBUG) System.out.println(String.format("JB: FALLING below bridge (playerY=%.1f, bridgeY=%d), exiting",
-                            ctx.player().getPos().y, bridgeY));
+                            ctx.player().getEntityPos().y, bridgeY));
                     exitJumpBridge();
                     return true;
                 }

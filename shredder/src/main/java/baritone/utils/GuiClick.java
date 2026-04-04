@@ -93,8 +93,7 @@ public class GuiClick extends Screen implements Helper {
                     MutableText component = Text.literal("Selection made! For usage: " + Baritone.settings().prefix.value + "help sel");
                     component.setStyle(component.getStyle()
                             .withColor(Formatting.WHITE)
-                            .withClickEvent(new ClickEvent(
-                                    ClickEvent.Action.RUN_COMMAND,
+                            .withClickEvent(new ClickEvent.RunCommand(
                                     FORCE_COMMAND_PREFIX + "help sel"
                             )));
                     Helper.HELPER.logDirect(component);
