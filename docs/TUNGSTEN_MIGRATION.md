@@ -102,24 +102,27 @@ When porting upstream changes, DO NOT bring in any position/velocity correction 
 | SprintJumpMove horizontal collision cost | DONE | +0.00004 penalty |
 | ExitWater: skip if target is water | DONE | |
 | RunToNode NPE fix (parent chain) | DONE | Null-check in while loop |
-| Walk/Run distance conditions | **REVERTED** | Upstream thresholds (walk >12, run <14) tuned for 1.21.11 physics with diagonal normalization — broke short routes on 1.21.1 |
+| Walk/Run distance conditions | DONE (gated) | Preprocessor gate: `MC >= 12111` uses upstream (walk >12, run <14), else no distance threshold. Was REVERTED before because upstream thresholds broke 1.21.1 |
+| SprintJumpMove loop colors → purple | DONE | `(0, 255, 150)` → `(147, 17, 222)` main loop, `(255, 0, 0)` → `(24, 17, 222)` fall damage |
+| RunToNode loop colors → pink | DONE | `(0, 255, 150)` → `(222, 17, 186)` main loop, `(255, 0, 0)` → `(24, 17, 222)` fall damage |
+| DivingMove colors → uniform blue | DONE | Mixed blues `(0, 25/85/125/105, 150)` → uniform `(0, 0, 150)` |
 | Retry system (resetSearch) | NOT PORTED | Adds complexity, test separately |
 | Water/swimming full rewrite | NOT PORTED | Major refactor, risk of regression |
 | Command system refactor | NOT PORTED | We have our own command handling |
 | Server-side PathExecutor | NOT PORTED | No server-side use |
-| DivingMove colors green→blue | NOT PORTED | Cosmetic only |
+| calculateNodeCost base 1→4.358 + penalties | NOT PORTED | Upstream has velocity stall +15, horizontalCollision +0.0004, water +0.2, lava +2e6, removed yaw penalty. Needs careful testing |
+| Node jump extra cost +2.4 | NOT PORTED | Upstream adds +2.4 to jump node cost in createNode(). Physics-dependent |
 
-## WARNING: upstream tuned for different physics
+## Physics version notes
 
-Upstream targets MC 1.21.11 which has diagonal movement normalization
-(MC-271065, added in 1.21.4+). Our 1.21.1 does NOT have this. Numerical
-constants (costs, distance thresholds) from upstream may not work on 1.21.1.
+We now target MC 1.21.11 (same as upstream), which has diagonal movement
+normalization (MC-271065, added in 1.21.4+). The preprocessor gate in
+`Agent.java:1364-1368` handles this: `//#if MC >= 12104` enables
+`applyDirectionalMovementSpeedFactors()`.
 
-**Rule: test every ported numerical change on 1.21.1 before committing.**
-
-The diagonal normalization gate in `Agent.java:1364-1368` is correctly
-commented out for 1.21.1. When tungsten compiles for 1.21.11, it must
-be enabled (currently a `//#if` comment — needs manual toggle or preprocessor).
+Version-dependent numerical constants (costs, distance thresholds) are
+gated with `//#if MC >= 12111` preprocessor directives where needed
+(e.g. walk/run distance thresholds in `Node.java`).
 
 ### Files NOT to port (upstream-only)
 

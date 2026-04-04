@@ -115,6 +115,8 @@ public class Node {
 	        return Collections.emptyList();
 	    }
 
+		double distance = DistanceCalculator.getEuclideanDistance(this.agent.getPos(), nextBlockNode.getPos(true));
+
 	    List<Node> nodes = new ArrayList<>();
 
 	    
@@ -200,11 +202,19 @@ public class Node {
 //	    	if (isExitWaterMoveClose) return nodes;
 	    }
 
+	    //#if MC >= 12111
+	    //$$ if (!agent.touchingWater && !this.agent.canSprint() && distance > 12) {
+	    //#else
 	    if (!agent.touchingWater && !this.agent.canSprint()) {
+	    //#endif
 	    	nodes.add(WalkToNode.generateMove(this, nextBlockNode));
 	    }
 
+	    //#if MC >= 12111
+	    //$$ if (!agent.touchingWater && this.agent.canSprint() && distance < 14) {
+	    //#else
 	    if (!agent.touchingWater && this.agent.canSprint() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 4) {
+	    //#endif
 	    	nodes.add(RunToNode.generateMove(this, nextBlockNode));
 	    }
     	if (!agent.isClimbing(world) && world.getBlockState(agent.getBlockPos().down()).getBlock() instanceof LadderBlock) {	
