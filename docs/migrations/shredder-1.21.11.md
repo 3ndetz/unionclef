@@ -224,8 +224,8 @@ git diff <1.21.1-branch>..<1.21.11-branch> -- src/main/java/ > upstream-diff.pat
 - `IRenderer.java` — +141/-57 (крупная переработка)
 - `PathRenderer.java` — +97/-62 (крупная переработка)
 - 4 новых файла: `MixinRenderPipelines`, `MixinRenderType`, `IRenderPipelines`, `IRenderType`
-- ⚠️ **Tungsten уже использует GizmoDrawing для рендеринга на 1.21.11.**
-  PathRenderer в shredder может быть не нужен — нужно проверить, используется ли он.
+- ⚠️ Render pipeline переработан в MC 1.21.11 — это самая трудоёмкая часть миграции.
+  Upstream добавил 4 новых файла (миксины + accessor'ы) специально для этого.
 
 **Player input/movement:**
 - `PlayerMovementInput.java` — +28/-17
@@ -255,9 +255,8 @@ git diff <1.21.1-branch>..<1.21.11-branch> -- src/main/java/ > upstream-diff.pat
 1. **Объём умеренный.** 76 файлов, но реальная суть — 10-15 файлов. Остальные — мелкие
    правки импортов, версий, API tweaks.
 2. **Стратегия A подтверждена** как оптимальная. Diff обозрим, архитектурных переломов нет.
-3. **Рендеринг — можно частично пропустить.** Tungsten уже решает рендеринг на 1.21.11
-   через GizmoDrawing. Shredder'овские IRenderer/PathRenderer нужно проверить —
-   возможно достаточно noop/redirect.
+3. **Рендеринг — самая трудоёмкая часть.** IRenderer/PathRenderer сильно переработаны,
+   плюс 4 новых файла. MC 1.21.11 изменил render pipeline.
 4. **Preprocessor** стоит добавить в shredder для multi-version, инфраструктура
    уже есть в проекте.
 5. **Все имена в upstream diff — mojmap.** Перед применением нужна таблица mojmap→yarn
