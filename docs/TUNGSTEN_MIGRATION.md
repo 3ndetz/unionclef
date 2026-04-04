@@ -106,12 +106,15 @@ When porting upstream changes, DO NOT bring in any position/velocity correction 
 | SprintJumpMove loop colors → purple | DONE | `(0, 255, 150)` → `(147, 17, 222)` main loop, `(255, 0, 0)` → `(24, 17, 222)` fall damage |
 | RunToNode loop colors → pink | DONE | `(0, 255, 150)` → `(222, 17, 186)` main loop, `(255, 0, 0)` → `(24, 17, 222)` fall damage |
 | DivingMove colors → uniform blue | DONE | Mixed blues `(0, 25/85/125/105, 150)` → uniform `(0, 0, 150)` |
-| Retry system (resetSearch) | NOT PORTED | Adds complexity, test separately |
-| Water/swimming full rewrite | NOT PORTED | Major refactor, risk of regression |
-| Command system refactor | NOT PORTED | We have our own command handling |
-| Server-side PathExecutor | NOT PORTED | No server-side use |
-| calculateNodeCost base 1→4.358 + penalties | NOT PORTED | Upstream has velocity stall +15, horizontalCollision +0.0004, water +0.2, lava +2e6, removed yaw penalty. Needs careful testing |
-| Node jump extra cost +2.4 | NOT PORTED | Upstream adds +2.4 to jump node cost in createNode(). Physics-dependent |
+| WalkToNode water break + lava penalty | DONE | Was missing touchingWater break that other moves had |
+| RunToNode cost 0.5→0.85 + isDamaged | DONE | Upstream tuning + fall damage also checks isDamaged flag |
+| RunToNode null-safety (lastHighest) | DONE | Null guard rewrite ensures lastHighest always set before else-if |
+| SwimmingMove rewrite | DONE (EXPERIMENTAL) | Single-loop, isSubmergedInWater, cost 0.0002→0.02, velY correction |
+| Retry system (resetSearch) | DONE (already present) | shouldResetSearch, resetSearch, tryProactiveEmit, handleTimeout all implemented. More sophisticated than upstream basic retry |
+| Command system refactor | DONE (already identical) | Our code matches upstream + null-check in dispatch() + extra commands (FollowPlayer, PunkPlayer) |
+| Server-side PathExecutor | NOT NEEDED | No server-side use |
+| calculateNodeCost base 1→4.358 + penalties | DONE (EXPERIMENTAL) | Base 4.358, velocity stall +15, collision +0.0004, water +0.2, lava +2e6, removed yaw penalty and sprint-jump discount |
+| Node jump extra cost +2.4 | DONE (EXPERIMENTAL) | +2.4 in createNode() to prefer ground paths |
 
 ## Physics version notes
 
