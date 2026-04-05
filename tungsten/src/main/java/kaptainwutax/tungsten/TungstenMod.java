@@ -74,7 +74,7 @@ public class TungstenMod implements ClientModInitializer {
 		//#else
 		LOG.info("[Tungsten] Preprocessor: MC < 12111 (1.21.1 fallback mode)");
 		//#endif
-		LOG.info("[Tungsten] Diagonal normalization: FORCE DISABLED (testing drift)");
+		LOG.info("[Tungsten] Diagonal normalization: " + (TungstenConfig.get().diagonalNormalization ? "ENABLED" : "DISABLED"));
 		//#if MC >= 12111
 		//$$ pauseKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
 		//$$     "key.tungsten.pause", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_P,

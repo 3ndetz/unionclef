@@ -1363,11 +1363,10 @@ public class Agent {
 			}
 			
 			// Diagonal movement normalization (MC-271065), added in MC 1.21.4+.
-			// DISABLED: testing whether this causes drift on 1.21.11.
-			// Upstream has it unconditionally, but our sim drifts with it on.
-			// //#if MC >= 12104
-			// //$$ vec2f = applyDirectionalMovementSpeedFactors(vec2f);
-			// //#endif
+			// Controlled by TungstenConfig.diagonalNormalization (default false).
+			if (TungstenConfig.get().diagonalNormalization) {
+				vec2f = applyDirectionalMovementSpeedFactors(vec2f);
+			}
 
 			return vec2f;
 		}
