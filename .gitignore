@@ -4,7 +4,8 @@ build/
 versions/*/build/
 versions/*/bin/
 */bin/
-*/.classpath/
+*/.classpath
+.classpath
 
 # IDE
 .idea/
@@ -37,3 +38,4 @@ dist/
 # Script output
 scripts/result.txt
 scripts/custom/result.txt
+shredder/.classpath
