@@ -183,7 +183,7 @@ publishing {
 
 // ── GitHub Release (primary version only) ───────────────────────────────────
 
-if (project.name == "1.21.1") {
+if (project.name == "1.21.1" || project.name == "1.21.11") {
     apply plugin: 'com.github.breadmoirai.github-release'
 
     if (!project.hasProperty('github.token')) {
@@ -191,14 +191,23 @@ if (project.name == "1.21.1") {
         logger.warn('Add  github.token=YOUR_TOKEN  to  ~/.gradle/gradle.properties')
     }
 
+    def isPreRelease = project.name == "1.21.11"
+    def branchName = isPreRelease ? "1.21.11" : "main"
+    def versionSuffix = isPreRelease ? "-pre" : ""
+    def tagPrefix = isPreRelease ? "v${project.mod_version}-mc${project.name}" : "v${project.mod_version}"
+
     githubRelease {
         token = project.hasProperty('github.token') ? project.getProperty('github.token') : ""
         owner = "3ndetz"
         repo = "unionclef"
-        tagName = "v${project.mod_version}"
-        releaseName = "UnionClef v${project.mod_version} (MC ${project.name})"
-        releaseAssets = files({ remapJar.archiveFile })
-        targetCommitish = "main"
+        tagName = tagPrefix
+        releaseName = "UnionClef v${project.mod_version}${versionSuffix} (MC ${project.name})"
+        releaseAssets = files(
+            { remapJar.archiveFile },                                          // unionclef all-in-one
+            { project(":shredder").tasks.findByName("remapJar")?.archiveFile }, // shredder standalone
+            { project(":tungsten").tasks.findByName("remapJar")?.archiveFile }, // tungsten standalone
+        )
+        targetCommitish = branchName
         generateReleaseNotes = true
         body = provider {
             def parts = []
@@ -213,7 +222,7 @@ if (project.name == "1.21.1") {
             parts.join("\n---\n\n")
         }
         draft = false
-        prerelease = false
+        prerelease = isPreRelease
         overwrite = true
         dryRun = false
     }
