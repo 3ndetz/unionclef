@@ -28,12 +28,12 @@ public class Line extends Renderer {
     @Override
     public void render(BufferBuilder builder) {
         if(TungstenModDataContainer.gameRenderer == null || this.start == null || this.end == null || this.color == null)return;
-        //#if MC >= 12111
-        //$$ net.minecraft.world.debug.gizmo.GizmoDrawing.line(this.start, this.end, this.color.toARGB(255)).ignoreOcclusion();
+        //#if MC < 12111
+        //$$ Vec3d camPos = TungstenModDataContainer.gameRenderer.getCamera().getPos();
+        //$$ this.putVertex(builder, camPos, this.start);
+        //$$ this.putVertex(builder, camPos, this.end);
         //#else
-        Vec3d camPos = TungstenModDataContainer.gameRenderer.getCamera().getPos();
-        this.putVertex(builder, camPos, this.start);
-        this.putVertex(builder, camPos, this.end);
+        net.minecraft.world.debug.gizmo.GizmoDrawing.line(this.start, this.end, this.color.toARGB(255)).ignoreOcclusion();
         //#endif
     }
 

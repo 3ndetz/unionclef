@@ -195,7 +195,7 @@ public class PathExecutor {
         ClientPlayerEntity player = TungstenMod.mc.player;
         if (player == null) return path;
 
-        Vec3d realPos = player.getPos();
+        Vec3d realPos = player.getEntityPos();
         Vec3d pathStart = path.get(0).agent.getPos();
         double startDrift = realPos.distanceTo(pathStart);
 

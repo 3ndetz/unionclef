@@ -22,9 +22,6 @@
     "main": [
       "adris.altoclef.AltoClef"
     ],
-    "client": [
-      "kaptainwutax.tungsten.TungstenMod"
-    ],
     "voicechat": [
       "adris.altoclef.AltoclefVoicechat"
     ]
@@ -33,7 +30,6 @@
     "voicechat": ">=2.5.0"
   },
   "mixins": [
-    "altoclef.mixins.json",
-    "tungsten.mixins.json"
+    "altoclef.mixins.json"
   ]
 }

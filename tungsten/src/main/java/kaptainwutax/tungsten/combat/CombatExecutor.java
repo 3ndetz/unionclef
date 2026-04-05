@@ -50,7 +50,7 @@ public class CombatExecutor {
 
         // create simulated agent from current player state
         Agent sim = Agent.of(player);
-        Vec3d targetPos = target.getPos();
+        Vec3d targetPos = target.getEntityPos();
         double targetHalfHeight = target.getHeight() * 0.5;
 
         // simulate forward

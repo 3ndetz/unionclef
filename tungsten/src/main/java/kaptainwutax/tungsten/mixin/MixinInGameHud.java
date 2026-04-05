@@ -32,7 +32,7 @@ public class MixinInGameHud {
                 kaptainwutax.tungsten.util.UnfocusedMouseHelper.applyPendingDeltas();
             }
 
-            CombatController.safety.renderUpdate(tickCounter.getTickDelta(true));
+            CombatController.safety.renderUpdate(tickCounter.getTickProgress(true));
         }
     }
 }

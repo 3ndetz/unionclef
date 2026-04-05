@@ -67,8 +67,8 @@ public class PunkPlayerTask {
             return;
         }
 
-        double dist = player.getPos().distanceTo(targetEntity.getPos());
-        boolean hasLOS = FollowEntityTask.hasLineOfSight(player, targetEntity.getPos());
+        double dist = player.getEntityPos().distanceTo(targetEntity.getEntityPos());
+        boolean hasLOS = FollowEntityTask.hasLineOfSight(player, targetEntity.getEntityPos());
 
         // ── mode switching ───────────────────────────────────────────────
         if (mode == Mode.APPROACH && dist < COMBAT_RANGE && hasLOS) {

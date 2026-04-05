@@ -31,15 +31,15 @@ import net.minecraft.world.gen.chunk.BlendingData;
 @Mixin(WorldChunk.class)
 public abstract class MixinWorldChunk extends Chunk {
 
-	//#if MC >= 12111
-	//$$ public MixinWorldChunk(ChunkPos pos, UpgradeData upgradeData, HeightLimitView heightLimitView, net.minecraft.world.chunk.PalettesFactory palettesFactory,
-	//$$                        long inhabitedTime, @Nullable ChunkSection[] sectionArrayInitializer, @Nullable BlendingData blendingData) {
-	//$$     super(pos, upgradeData, heightLimitView, palettesFactory, inhabitedTime, sectionArrayInitializer, blendingData);
+	//#if MC < 12111
+	//$$ public MixinWorldChunk(ChunkPos pos, UpgradeData upgradeData, HeightLimitView heightLimitView, Registry<Biome> biome,
+	                       //$$ long inhabitedTime, @Nullable ChunkSection[] sectionArrayInitializer, @Nullable BlendingData blendingData) {
+		//$$ super(pos, upgradeData, heightLimitView, biome, inhabitedTime, sectionArrayInitializer, blendingData);
 	//$$ }
 	//#else
-	public MixinWorldChunk(ChunkPos pos, UpgradeData upgradeData, HeightLimitView heightLimitView, Registry<Biome> biome,
+	public MixinWorldChunk(ChunkPos pos, UpgradeData upgradeData, HeightLimitView heightLimitView, net.minecraft.world.chunk.PalettesFactory palettesFactory,
 	                       long inhabitedTime, @Nullable ChunkSection[] sectionArrayInitializer, @Nullable BlendingData blendingData) {
-		super(pos, upgradeData, heightLimitView, biome, inhabitedTime, sectionArrayInitializer, blendingData);
+	    super(pos, upgradeData, heightLimitView, palettesFactory, inhabitedTime, sectionArrayInitializer, blendingData);
 	}
 	//#endif
 
@@ -48,10 +48,10 @@ public abstract class MixinWorldChunk extends Chunk {
 	@Shadow public abstract FluidState getFluidState(BlockPos pos);
 
 	@Inject(method = "loadFromPacket", at = @At("RETURN"))
-	//#if MC >= 12111
-	//$$ private void loadFromPacket(PacketByteBuf buf, java.util.Map nbt, Consumer<ChunkData.BlockEntityVisitor> consumer, CallbackInfo ci) {
+	//#if MC < 12111
+	//$$ private void loadFromPacket(PacketByteBuf buf, NbtCompound nbt, Consumer<ChunkData.BlockEntityVisitor> consumer, CallbackInfo ci) {
 	//#else
-	private void loadFromPacket(PacketByteBuf buf, NbtCompound nbt, Consumer<ChunkData.BlockEntityVisitor> consumer, CallbackInfo ci) {
+	private void loadFromPacket(PacketByteBuf buf, java.util.Map nbt, Consumer<ChunkData.BlockEntityVisitor> consumer, CallbackInfo ci) {
 	//#endif
 		if(this.getWorld() != TungstenModDataContainer.world) {
 			TungstenModDataContainer.world = this.getWorld();

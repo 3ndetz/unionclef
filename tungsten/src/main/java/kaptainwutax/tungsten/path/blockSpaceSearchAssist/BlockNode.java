@@ -136,17 +136,17 @@ public class BlockNode {
 		this.x = x;
 		this.y = y;
 		this.z = z;
-		this.wasOnSlime = player.getWorld().getBlockState(new BlockPos(x, y - 1, z))
+		this.wasOnSlime = player.getEntityWorld().getBlockState(new BlockPos(x, y - 1, z))
 				.getBlock() instanceof SlimeBlock;
-		this.wasOnLadder = player.getWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
+		this.wasOnLadder = player.getEntityWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
 	}
 
 	public BlockNode(int x, int y, int z, Goal goal, BlockNode parent, double cost, PlayerEntity player) {
 		this.player = player;
 		this.previous = parent;
-		this.wasOnSlime = player.getWorld().getBlockState(new BlockPos(x, y - 1, z))
+		this.wasOnSlime = player.getEntityWorld().getBlockState(new BlockPos(x, y - 1, z))
 				.getBlock() instanceof SlimeBlock;
-		this.wasOnLadder = player.getWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
+		this.wasOnLadder = player.getEntityWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
 		this.cost = parent != null ? 0 : ActionCosts.COST_INF;
 		this.estimatedCostToGoal = goal.heuristic(x, y, z);
 		if (Double.isNaN(estimatedCostToGoal)) {

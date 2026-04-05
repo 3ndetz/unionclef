@@ -25,10 +25,10 @@ public class PunkPlayerCommand extends Command {
             if (mc.getNetworkHandler() != null) {
                 String input = sb.getRemaining().toLowerCase();
                 for (PlayerListEntry entry : mc.getNetworkHandler().getPlayerList()) {
-                    //#if MC >= 12111
-                    //$$ String name = entry.getProfile().name();
+                    //#if MC < 12111
+                    //$$ String name = entry.getProfile().getName();
                     //#else
-                    String name = entry.getProfile().getName();
+                    String name = entry.getProfile().name();
                     //#endif
                     if (name.toLowerCase().startsWith(input)) {
                         sb.suggest(name);

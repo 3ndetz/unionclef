@@ -4,10 +4,10 @@ import net.minecraft.world.dimension.DimensionType;
 
 public class DimensionVer {
     public static boolean isUltrawarm(DimensionType dim) {
-        //#if MC >= 12111
-        //$$ return false; // TODO: use EnvironmentAttributes API
+        //#if MC < 12111
+        //$$ return dim.ultrawarm();
         //#else
-        return dim.ultrawarm();
+        return false; // TODO: use EnvironmentAttributes API
         //#endif
     }
 }

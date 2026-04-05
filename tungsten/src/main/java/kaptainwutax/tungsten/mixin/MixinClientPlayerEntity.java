@@ -37,14 +37,14 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 	@Inject(method = "tick", at = @At("HEAD"))
 	public void start(CallbackInfo ci) {
 		if (TungstenMod.runKeyBinding == null) return; // tungsten not initialized yet
-		//#if MC >= 12111
-		//$$ FollowEntityTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
-		//$$ FollowPlayerTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
-		//$$ PunkPlayerTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
+		//#if MC < 12111
+		//$$ FollowEntityTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
+		//$$ FollowPlayerTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
+		//$$ PunkPlayerTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
 		//#else
-		FollowEntityTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
-		FollowPlayerTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
-		PunkPlayerTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
+		FollowEntityTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
+		FollowPlayerTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
+		PunkPlayerTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
 		//#endif
 
 		// BFS walker: immediate movement while physics A* computes
@@ -56,25 +56,25 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 
 		if(!this.getAbilities().flying) {
 			Agent.INSTANCE = Agent.of((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);
-			//#if MC >= 12111
-			//$$ Agent.INSTANCE.tick(this.getEntityWorld());
+			//#if MC < 12111
+			//$$ Agent.INSTANCE.tick(this.getWorld());
 			//#else
-			Agent.INSTANCE.tick(this.getWorld());
+			Agent.INSTANCE.tick(this.getEntityWorld());
 			//#endif
 		}
 
 		if(TungstenMod.runKeyBinding.isPressed() && !TungstenModDataContainer.PATHFINDER.active.get() && !TungstenModDataContainer.isExecutorRunning()) {
-			//#if MC >= 12111
-			//$$ TungstenModDataContainer.PATHFINDER.find(this.getEntityWorld(), TungstenMod.TARGET, TungstenMod.mc.player);
+			//#if MC < 12111
+			//$$ TungstenModDataContainer.PATHFINDER.find(this.getWorld(), TungstenMod.TARGET, TungstenMod.mc.player);
 			//#else
-			TungstenModDataContainer.PATHFINDER.find(this.getWorld(), TungstenMod.TARGET, TungstenMod.mc.player);
+			TungstenModDataContainer.PATHFINDER.find(this.getEntityWorld(), TungstenMod.TARGET, TungstenMod.mc.player);
 			//#endif
 		}
 		if(TungstenMod.runBlockSearchKeyBinding.isPressed() && !TungstenModDataContainer.PATHFINDER.active.get()) {
-			//#if MC >= 12111
-			//$$ BlockSpacePathFinder.find(getEntityWorld(), TungstenMod.TARGET, TungstenMod.mc.player);
+			//#if MC < 12111
+			//$$ BlockSpacePathFinder.find(getWorld(), TungstenMod.TARGET, TungstenMod.mc.player);
 			//#else
-			BlockSpacePathFinder.find(getWorld(), TungstenMod.TARGET, TungstenMod.mc.player);
+			BlockSpacePathFinder.find(getEntityWorld(), TungstenMod.TARGET, TungstenMod.mc.player);
 			//#endif
 		}
 		if (TungstenMod.pauseKeyBinding.isPressed()) {
@@ -106,26 +106,26 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 	@Inject(method = "tick", at = @At(value = "RETURN"))
 	public void end(CallbackInfo ci) {
 		ClientPlayerEntity self = (ClientPlayerEntity)(Object)this;
-		//#if MC >= 12111
+		//#if MC < 12111
+		//$$ // MC 1.21: Input has no playerInput field; build TungstenPlayerInput from input fields
 		//$$ TungstenPlayerInput currentInput = new TungstenPlayerInput(
-		//$$     self.input.playerInput.forward(),
-		//$$     self.input.playerInput.backward(),
-		//$$     self.input.playerInput.left(),
-		//$$     self.input.playerInput.right(),
-		//$$     self.input.playerInput.jump(),
-		//$$     self.input.playerInput.sneak(),
-		//$$     self.input.playerInput.sprint()
+			//$$ self.input.movementForward > 0,
+			//$$ self.input.movementForward < 0,
+			//$$ self.input.movementSideways > 0,
+			//$$ self.input.movementSideways < 0,
+			//$$ self.input.jumping,
+			//$$ self.input.sneaking,
+			//$$ self.isSprinting()
 		//$$ );
 		//#else
-		// MC 1.21: Input has no playerInput field; build TungstenPlayerInput from input fields
 		TungstenPlayerInput currentInput = new TungstenPlayerInput(
-			self.input.movementForward > 0,
-			self.input.movementForward < 0,
-			self.input.movementSideways > 0,
-			self.input.movementSideways < 0,
-			self.input.jumping,
-			self.input.sneaking,
-			self.isSprinting()
+		    self.input.playerInput.forward(),
+		    self.input.playerInput.backward(),
+		    self.input.playerInput.left(),
+		    self.input.playerInput.right(),
+		    self.input.playerInput.jump(),
+		    self.input.playerInput.sneak(),
+		    self.input.playerInput.sprint()
 		);
 		//#endif
 		if (TungstenModDataContainer.isExecutorRunning() && TungstenModDataContainer.EXECUTOR.getCurrentTick() > 0) {

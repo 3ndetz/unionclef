@@ -36,16 +36,8 @@ java {
     targetCompatibility = JavaVersion.VERSION_21
 }
 
-// Tungsten source compiled together with altoclef — preprocessor handles //#if
-// Only add srcDir for mainProject; preprocessor copies/transforms for other versions
-def mainProjectVersion = rootProject.file("versions/mainProject").text.trim()
-if (project.name == mainProjectVersion) {
-    sourceSets {
-        main {
-            java { srcDir rootProject.file('tungsten/src/main/java') }
-        }
-    }
-}
+// Tungsten is now a standalone mod (1.21.11-primary source, own build.gradle).
+// No longer compiled inline via srcDir — imported as dependency instead.
 
 tasks.withType(JavaCompile).configureEach {
     options.release = 21
@@ -126,9 +118,9 @@ dependencies {
     implementation project(path: ":shredder", configuration: "namedElements")
     include project(":shredder")
 
-    // Tungsten — source compiled inline (preprocessed together with altoclef)
-    // Can't load as separate mod: standalone :tungsten has 1.21.1 mappings,
-    // its mixins crash on 1.21.11. Entrypoint + mixins in unionclef's fabric.mod.json.
+    // Tungsten — standalone mod (1.21.11 mappings, own mixins + entrypoint)
+    implementation project(path: ":tungsten", configuration: "namedElements")
+    include project(":tungsten")
 }
 
 // ── Build pipeline ──────────────────────────────────────────────────────────

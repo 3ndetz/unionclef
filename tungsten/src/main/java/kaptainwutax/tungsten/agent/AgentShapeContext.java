@@ -62,13 +62,11 @@ public class AgentShapeContext implements ShapeContext {
 	// getCollisionShape not in ShapeContext interface in MC 1.21 — removed @Override
 	// public VoxelShape getCollisionShape(BlockState state, CollisionView world, BlockPos pos) { return null; }
 
-	//#if MC >= 12111
-	//$$ @Override
-	//$$ public VoxelShape getCollisionShape(net.minecraft.block.BlockState state, net.minecraft.world.CollisionView world, BlockPos pos) {
-	//$$     return state.getCollisionShape(world, pos);
-	//$$ }
-	//$$ @Override
-	//$$ public boolean shouldTreatFluidAsCube() { return false; }
-	//#endif
+	@Override
+	public VoxelShape getCollisionShape(net.minecraft.block.BlockState state, net.minecraft.world.CollisionView world, BlockPos pos) {
+	    return state.getCollisionShape(world, pos);
+	}
+	@Override
+	public boolean shouldTreatFluidAsCube() { return false; }
 
 }

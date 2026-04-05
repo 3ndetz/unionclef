@@ -193,7 +193,7 @@ public class PathFinder {
 	    int timeCheckInterval = 1 << 3;
 	    double minVelocity = BlockStateChecker.isAnyWater(world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ()))) ? 0.2 :  0.07;
 	
-	    if (player.getPos().distanceTo(target) < 1.0 && minDistPath >= MIN_DIST_PATH) {
+	    if (player.getEntityPos().distanceTo(target) < 1.0 && minDistPath >= MIN_DIST_PATH) {
 	        Debug.logMessage("Already at target location!");
 	        return;
 	    }
@@ -282,7 +282,7 @@ public class PathFinder {
 						}
 	        		}
 	    		    primaryTimeoutTime = System.currentTimeMillis() + 1120L;
-	        		if (blockPath.get().getLast().getPos(true, world).distanceTo(player.getPos()) < 20) {
+	        		if (blockPath.get().getLast().getPos(true, world).distanceTo(player.getEntityPos()) < 20) {
 		    			int attempt = 0;
 		    			while (attempt < 3) {
                             if (stop.get()) break;

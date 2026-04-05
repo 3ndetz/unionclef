@@ -139,13 +139,13 @@ public class FollowEntityTask {
             return; // managed but no position known yet
         }
 
-        double dist          = player.getPos().distanceTo(targetPos);
+        double dist          = player.getEntityPos().distanceTo(targetPos);
         boolean outsideRadius = closeEnough <= 0 || dist >= closeEnough;
 
         // ── Trail recording + TRAILING state ───────────────────────────────────
         if (kaptainwutax.tungsten.TungstenConfig.get().enableTrailing) {
             if (hasEntity) trail.recordPosition(targetPos);
-            trail.update(player.getPos(), targetPos);
+            trail.update(player.getEntityPos(), targetPos);
         }
 
         // ── LEAP: PvP close-range sprint+jump (no camera — altoclef handles aim+attacks)
@@ -175,12 +175,12 @@ public class FollowEntityTask {
         // ── Resolve effective target: waypoint when TRAILING, else real target ─
         Vec3d effectiveTarget = targetPos;
         if (kaptainwutax.tungsten.TungstenConfig.get().enableTrailing && trail.isTrailing()) {
-            Vec3d wp = trail.getWaypoint(player.getPos());
+            Vec3d wp = trail.getWaypoint(player.getEntityPos());
             if (wp != null) {
                 effectiveTarget = wp;
             }
         }
-        double effectiveDist = player.getPos().distanceTo(effectiveTarget);
+        double effectiveDist = player.getEntityPos().distanceTo(effectiveTarget);
 
         // ── Tungsten A*: always runs as primary pathfinder ───────────────────
         // While BFS walker is running, suppress recalc — let it finish its segment.
@@ -302,7 +302,7 @@ public class FollowEntityTask {
         if (!player.isOnGround()) return false;
         if (Math.abs(targetPos.y - player.getY()) > 1.5) return false;
 
-        Vec3d pos = player.getPos();
+        Vec3d pos = player.getEntityPos();
         double dx = targetPos.x - pos.x;
         double dz = targetPos.z - pos.z;
         double len = Math.sqrt(dx * dx + dz * dz);

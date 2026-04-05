@@ -69,54 +69,54 @@ public class TungstenMod implements ClientModInitializer {
 	public void onInitializeClient() {
 		TungstenConfig.load();
 		TungstenModDataContainer.EXECUTOR = new PathExecutor(true);
-		//#if MC >= 12111
-		//$$ LOG.info("[Tungsten] Preprocessor: MC >= 12111 ACTIVE (1.21.11 mode)");
+		//#if MC < 12111
+		//$$ LOG.info("[Tungsten] Preprocessor: MC < 12111 (1.21.1 fallback mode)");
 		//#else
-		LOG.info("[Tungsten] Preprocessor: MC < 12111 (1.21.1 fallback mode)");
+		LOG.info("[Tungsten] Preprocessor: MC >= 12111 ACTIVE (1.21.11 mode)");
 		//#endif
-		//#if MC >= 12104
-		//$$ LOG.info("[Tungsten] Diagonal normalization: ENABLED (MC >= 1.21.4)");
+		//#if MC < 12104
+		//$$ LOG.info("[Tungsten] Diagonal normalization: DISABLED (MC < 1.21.4)");
 		//#else
-		LOG.info("[Tungsten] Diagonal normalization: DISABLED (MC < 1.21.4)");
+		LOG.info("[Tungsten] Diagonal normalization: ENABLED (MC >= 1.21.4)");
 		//#endif
-		//#if MC >= 12111
+		//#if MC < 12111
 		//$$ pauseKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-		//$$     "key.tungsten.pause", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_P,
-		//$$     net.minecraft.client.option.KeyBinding.Category.MISC));
+	            //$$ "key.tungsten.pause", // The translation key of the keybinding's name
+	            //$$ InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
+	            //$$ GLFW.GLFW_KEY_P, // The keycode of the key
+	            //$$ "key.category.tungsten.test" // The translation key of the keybinding's category.
+        //$$ ));
 		//$$ runKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-		//$$     "key.tungsten.run", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_G,
-		//$$     net.minecraft.client.option.KeyBinding.Category.MISC));
+	            //$$ "key.tungsten.run", // The translation key of the keybinding's name
+	            //$$ InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
+	            //$$ GLFW.GLFW_KEY_G, // The keycode of the key
+	            //$$ "key.category.tungsten.test" // The translation key of the keybinding's category.
+        //$$ ));
 		//$$ runBlockSearchKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-		//$$     "key.tungsten.run_block_search", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_J,
-		//$$     net.minecraft.client.option.KeyBinding.Category.MISC));
+	            //$$ "key.tungsten.run_block_search", // The translation key of the keybinding's name
+	            //$$ InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
+	            //$$ GLFW.GLFW_KEY_J, // The keycode of the key
+	            //$$ "key.category.tungsten.test.development" // The translation key of the keybinding's category.
+        //$$ ));
 		//$$ createGoalKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-		//$$     "key.tungsten.create_goal", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_H,
-		//$$     net.minecraft.client.option.KeyBinding.Category.MISC));
+	            //$$ "key.tungsten.create_goal", // The translation key of the keybinding's name
+	            //$$ InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
+	            //$$ GLFW.GLFW_KEY_H, // The keycode of the key
+	            //$$ "key.category.tungsten.test" // The translation key of the keybinding's category.
+        //$$ ));
 		//#else
 		pauseKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-	            "key.tungsten.pause", // The translation key of the keybinding's name
-	            InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
-	            GLFW.GLFW_KEY_P, // The keycode of the key
-	            "key.category.tungsten.test" // The translation key of the keybinding's category.
-        ));
+		    "key.tungsten.pause", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_P,
+		    net.minecraft.client.option.KeyBinding.Category.MISC));
 		runKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-	            "key.tungsten.run", // The translation key of the keybinding's name
-	            InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
-	            GLFW.GLFW_KEY_G, // The keycode of the key
-	            "key.category.tungsten.test" // The translation key of the keybinding's category.
-        ));
+		    "key.tungsten.run", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_G,
+		    net.minecraft.client.option.KeyBinding.Category.MISC));
 		runBlockSearchKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-	            "key.tungsten.run_block_search", // The translation key of the keybinding's name
-	            InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
-	            GLFW.GLFW_KEY_J, // The keycode of the key
-	            "key.category.tungsten.test.development" // The translation key of the keybinding's category.
-        ));
+		    "key.tungsten.run_block_search", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_J,
+		    net.minecraft.client.option.KeyBinding.Category.MISC));
 		createGoalKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-	            "key.tungsten.create_goal", // The translation key of the keybinding's name
-	            InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
-	            GLFW.GLFW_KEY_H, // The keycode of the key
-	            "key.category.tungsten.test" // The translation key of the keybinding's category.
-        ));
+		    "key.tungsten.create_goal", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_H,
+		    net.minecraft.client.option.KeyBinding.Category.MISC));
 		//#endif
         _commandExecutor = new CommandExecutor(this);
 
@@ -158,7 +158,7 @@ public class TungstenMod implements ClientModInitializer {
         	if (clickMode != clickModeEnum.OFF && mc.options.useKey.isPressed() && !isRunning) {
         		
         		 Camera camera = mc.gameRenderer.getCamera();
-                 Vec3d cameraPos = camera.getPos();
+                 Vec3d cameraPos = camera.getCameraPos();
 
                  // Calculate the direction the camera is looking based on its pitch and yaw, and extend this direction 210 units away from the camera position
                  // 210 is used here as the maximum distance of 200 blocks

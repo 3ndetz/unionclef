@@ -89,7 +89,7 @@ public class Agent {
         ImmutableMap.<EntityPose, EntityDimensions>builder()
         .put(EntityPose.STANDING, STANDING_DIMENSIONS)
         .put(EntityPose.SLEEPING, SLEEPING_DIMENSIONS)
-        .put(EntityPose.FALL_FLYING, EntityDimensions.changing(0.6f, 0.6f))
+        .put(EntityPose.GLIDING, EntityDimensions.changing(0.6f, 0.6f))
         .put(EntityPose.SWIMMING, EntityDimensions.changing(0.6f, 0.6f))
         .put(EntityPose.SPIN_ATTACK, EntityDimensions.changing(0.6f, 0.6f))
         .put(EntityPose.CROUCHING, EntityDimensions.changing(0.6f, 1.5f))
@@ -340,7 +340,7 @@ public class Agent {
         EntityPose newPose;
 
         if(this.fallFlying) {
-            newPose = EntityPose.FALL_FLYING;
+            newPose = EntityPose.GLIDING;
         } else {
             if(this.sleeping) {
                 newPose = EntityPose.SLEEPING;
@@ -397,7 +397,7 @@ public class Agent {
 
     public final float getEyeHeight(EntityPose pose, EntityDimensions dimensions) {
          return switch(pose) {
-            case EntityPose.SWIMMING, EntityPose.FALL_FLYING, EntityPose.SPIN_ATTACK -> 0.4F;
+            case EntityPose.SWIMMING, EntityPose.GLIDING, EntityPose.SPIN_ATTACK -> 0.4F;
             case EntityPose.CROUCHING -> 1.27F;
             case EntityPose.SLEEPING -> 0.2F;
             default -> 1.62F;
@@ -1363,9 +1363,7 @@ public class Agent {
 			}
 			
 			// Diagonal movement normalization (MC-271065), added in MC 1.21.4+.
-			//#if MC >= 12104
-			//$$ vec2f = applyDirectionalMovementSpeedFactors(vec2f);
-			//#endif
+			vec2f = applyDirectionalMovementSpeedFactors(vec2f);
 
 			return vec2f;
 		}
@@ -1606,7 +1604,7 @@ public class Agent {
                 player.getX(), player.getY(), player.getZ(),
                 this.posX, this.posY, this.posZ));
             if (TungstenModDataContainer.EXECUTOR.isRunning()) {
-                double drift = player.getPos().distanceTo(new Vec3d(this.posX, this.posY, this.posZ));
+                double drift = player.getEntityPos().distanceTo(new Vec3d(this.posX, this.posY, this.posZ));
                 if (drift > kaptainwutax.tungsten.TungstenConfig.get().driftThreshold) {
                     Debug.logMessage(String.format(
                         "§c[Tungsten] Path stopped: drift %.3f blocks (threshold %.1f) at tick %d. " +
@@ -1794,13 +1792,13 @@ public class Agent {
             values.add(String.format("Eye height mismatch %s vs %s", player.getStandingEyeHeight(), this.standingEyeHeight));
         }
 
-        //#if MC >= 12111
-        //$$ if(mismatch(this.fallDistance, (float) player.fallDistance)) {
-        //$$     values.add(String.format("Fall distance mismatch %s vs %s", (float) player.fallDistance, this.fallDistance));
+        //#if MC < 12111
+        //$$ if(mismatch(this.fallDistance, player.fallDistance)) {
+            //$$ values.add(String.format("Fall distance mismatch %s vs %s", player.fallDistance, this.fallDistance));
         //$$ }
         //#else
-        if(mismatch(this.fallDistance, player.fallDistance)) {
-            values.add(String.format("Fall distance mismatch %s vs %s", player.fallDistance, this.fallDistance));
+        if(mismatch(this.fallDistance, (float) player.fallDistance)) {
+            values.add(String.format("Fall distance mismatch %s vs %s", (float) player.fallDistance, this.fallDistance));
         }
         //#endif
 
@@ -1895,10 +1893,10 @@ public class Agent {
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
         agent.stepHeight = player.getStepHeight();
-        //#if MC >= 12111
-        //$$ agent.fallDistance = (float) player.fallDistance;
+        //#if MC < 12111
+        //$$ agent.fallDistance = player.fallDistance;
         //#else
-        agent.fallDistance = player.fallDistance;
+        agent.fallDistance = (float) player.fallDistance;
         //#endif
         agent.touchingWater = player.isTouchingWater();
         agent.isSubmergedInWater = player.isSubmergedInWater();
@@ -1968,10 +1966,10 @@ public class Agent {
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
         agent.stepHeight = player.getStepHeight();
-        //#if MC >= 12111
-        //$$ agent.fallDistance = (float) player.fallDistance;
+        //#if MC < 12111
+        //$$ agent.fallDistance = player.fallDistance;
         //#else
-        agent.fallDistance = player.fallDistance;
+        agent.fallDistance = (float) player.fallDistance;
         //#endif
         agent.touchingWater = player.isTouchingWater();
         agent.isSubmergedInWater = player.isSubmergedInWater();
@@ -2041,10 +2039,10 @@ public class Agent {
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
         agent.stepHeight = player.getStepHeight();
-        //#if MC >= 12111
-        //$$ agent.fallDistance = (float) player.fallDistance;
+        //#if MC < 12111
+        //$$ agent.fallDistance = player.fallDistance;
         //#else
-        agent.fallDistance = player.fallDistance;
+        agent.fallDistance = (float) player.fallDistance;
         //#endif
         agent.touchingWater = player.isTouchingWater();
         agent.isSubmergedInWater = player.isSubmergedInWater();
