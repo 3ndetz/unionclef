@@ -23,7 +23,7 @@ import baritone.api.IBaritone;
 import baritone.api.event.events.PlayerUpdateEvent;
 import baritone.api.event.events.SprintStateEvent;
 import baritone.api.event.events.type.EventState;
-import baritone.behavior.LookBehavior;
+import baritone.api.behavior.ILookBehavior;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -141,7 +141,7 @@ public class MixinClientPlayerEntity {
     private void updateRidden(CallbackInfo cb) {
         IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForPlayer((ClientPlayerEntity) (Object) this);
         if (baritone != null) {
-            ((LookBehavior) baritone.getLookBehavior()).pig();
+            baritone.getLookBehavior().pig();
         }
     }
 
@@ -171,7 +171,7 @@ public class MixinClientPlayerEntity {
         }
         IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForPlayer((ClientPlayerEntity) (Object) this);
         if (baritone != null) {
-            LookBehavior look = (LookBehavior) baritone.getLookBehavior();
+            ILookBehavior look = baritone.getLookBehavior();
             cir.setReturnValue(look.getSmoothedYaw(cir.getReturnValue()));
         }
     }
@@ -187,7 +187,7 @@ public class MixinClientPlayerEntity {
         }
         IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForPlayer((ClientPlayerEntity) (Object) this);
         if (baritone != null) {
-            LookBehavior look = (LookBehavior) baritone.getLookBehavior();
+            ILookBehavior look = baritone.getLookBehavior();
             cir.setReturnValue(look.getSmoothedPitch(cir.getReturnValue()));
         }
     }
