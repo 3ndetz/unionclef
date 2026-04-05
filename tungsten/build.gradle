@@ -1,6 +1,5 @@
 plugins {
     id 'fabric-loom' version '1.15.5'
-    id 'com.replaymod.preprocess'
 }
 
 java {
@@ -14,20 +13,11 @@ base {
 version = "ALPHA-1.6.0"
 group = "kaptainwutax"
 
-// Preprocessor: interpret //#if MC directives based on actual target version.
-// Tungsten source has blocks gated on MC >= 12104 (diagonal normalization)
-// and MC >= 12111 (1.21.11 API changes). This must match shredder's MC.
-int mcVersion = 12111
-
-preprocess {
-    vars.put("MC", mcVersion)
-}
-
 dependencies {
-    minecraft "com.mojang:minecraft:1.21.11"
-    mappings "net.fabricmc:yarn:1.21.11+build.4:v2"
+    minecraft "com.mojang:minecraft:1.21.1"
+    mappings "net.fabricmc:yarn:1.21.1+build.3:v2"
     modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:0.140.0+1.21.11"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.116.9+1.21.1"
 }
 
 processResources {
