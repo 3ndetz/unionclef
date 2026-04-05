@@ -183,6 +183,11 @@ publishing {
 
 // ── GitHub Release (primary version only) ───────────────────────────────────
 
+// ── GitHub Release (stable + pre-release) ──────────────────────────────────
+// gradlew githubRelease      → stable release (v0.21.0)
+// gradlew githubPreRelease   → pre-release    (v0.21.0-alpha)
+
+// Configure on both version subprojects so either can release
 if (project.name == "1.21.1" || project.name == "1.21.11") {
     apply plugin: 'com.github.breadmoirai.github-release'
 
@@ -191,39 +196,65 @@ if (project.name == "1.21.1" || project.name == "1.21.11") {
         logger.warn('Add  github.token=YOUR_TOKEN  to  ~/.gradle/gradle.properties')
     }
 
-    def isPreRelease = project.name == "1.21.11"
-    def branchName = isPreRelease ? "1.21.11" : "main"
-    def versionSuffix = isPreRelease ? "-pre" : ""
-    def tagPrefix = isPreRelease ? "v${project.mod_version}-mc${project.name}" : "v${project.mod_version}"
+    def releaseAssetFiles = files(
+        { remapJar.archiveFile },                                          // unionclef all-in-one
+        { project(":shredder").tasks.findByName("remapJar")?.archiveFile }, // shredder standalone
+        { project(":tungsten").tasks.findByName("remapJar")?.archiveFile }, // tungsten standalone
+    )
 
+    def releaseBodyProvider = provider {
+        def parts = []
+        def baseFile = rootProject.file("docs/releases/base.md")
+        if (baseFile.exists()) parts.add(baseFile.text)
+        def versionedFile = rootProject.file("docs/releases/${project.mod_version}.md")
+        if (versionedFile.exists()) parts.add(versionedFile.text)
+        else {
+            def latestFile = rootProject.file("docs/releases/latest.md")
+            if (latestFile.exists()) parts.add(latestFile.text)
+        }
+        parts.join("\n---\n\n")
+    }
+
+    // Stable release (default githubRelease task)
     githubRelease {
         token = project.hasProperty('github.token') ? project.getProperty('github.token') : ""
         owner = "3ndetz"
         repo = "unionclef"
-        tagName = tagPrefix
-        releaseName = "UnionClef v${project.mod_version}${versionSuffix} (MC ${project.name})"
-        releaseAssets = files(
-            { remapJar.archiveFile },                                          // unionclef all-in-one
-            { project(":shredder").tasks.findByName("remapJar")?.archiveFile }, // shredder standalone
-            { project(":tungsten").tasks.findByName("remapJar")?.archiveFile }, // tungsten standalone
-        )
-        targetCommitish = branchName
+        tagName = "v${project.mod_version}"
+        releaseName = "UnionClef v${project.mod_version} (MC ${project.name})"
+        releaseAssets = releaseAssetFiles
+        targetCommitish = "main"
         generateReleaseNotes = true
-        body = provider {
-            def parts = []
-            def baseFile = rootProject.file("docs/releases/base.md")
-            if (baseFile.exists()) parts.add(baseFile.text)
-            def versionedFile = rootProject.file("docs/releases/${project.mod_version}.md")
-            if (versionedFile.exists()) parts.add(versionedFile.text)
-            else {
-                def latestFile = rootProject.file("docs/releases/latest.md")
-                if (latestFile.exists()) parts.add(latestFile.text)
-            }
-            parts.join("\n---\n\n")
-        }
+        body = releaseBodyProvider
         draft = false
-        prerelease = isPreRelease
+        prerelease = false
         overwrite = true
         dryRun = false
+    }
+
+    // Pre-release task
+    task githubPreRelease {
+        dependsOn 'remapJar', ':shredder:remapJar', ':tungsten:remapJar'
+        doLast {
+            def tok = project.hasProperty('github.token') ? project.getProperty('github.token') : ""
+            def tag = "v${project.mod_version}-alpha"
+            def name = "UnionClef v${project.mod_version}-alpha (MC ${project.name})"
+            def assets = releaseAssetFiles.files.collect { "--asset=${it.absolutePath}" }
+
+            def cmd = ["gh", "release", "create", tag,
+                       "--title", name,
+                       "--prerelease",
+                       "--target", project.ext.has('releaseBranch') ? project.ext.releaseBranch : "HEAD",
+                       "--generate-notes"]
+            cmd.addAll(assets)
+
+            def proc = cmd.execute(null, rootProject.projectDir)
+            proc.waitFor()
+            println proc.text
+            if (proc.exitValue() != 0) {
+                println proc.err.text
+                throw new GradleException("gh release create failed with exit code ${proc.exitValue()}")
+            }
+        }
     }
 }
