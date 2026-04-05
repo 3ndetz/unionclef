@@ -67,9 +67,7 @@ public class PathFinder {
 	protected static AtomicInteger NEXT_CLOSEST_BLOCKNODE_IDX = new AtomicInteger(1);
 	protected static AtomicInteger numNodesConsidered = new AtomicInteger(0);
 	
-	/** Max search time before emitting bestSoFar and continuing. Default: 112s (normal goto).
-	 *  Set lower (e.g. 2000) for follow-entity to get fast partial paths. */
-	public long searchTimeoutMs = 15000L;
+	// searchTimeoutMs is now in TungstenConfig (tungsten.json)
 	/** Minimum path length (nodes) required before a timeout partial-path can be emitted.
 	 *  Default: 46 (~2.3s). Set lower (e.g. 5) for follow-entity close-range. */
 	public int minPathSizeForTimeout = 15;
@@ -106,7 +104,7 @@ public class PathFinder {
             try {
                 // Skip startup delays when using override start (BFS walker active)
                 // or in aggressive close-range mode
-                if (overrideStartPos == null && searchTimeoutMs > 500) {
+                if (overrideStartPos == null && TungstenConfig.get().searchTimeoutMs > 500) {
                     while (!player.isOnGround() && !player.isTouchingWater()) {
                         if (stop.get()) break;
                         try {
@@ -177,7 +175,7 @@ public class PathFinder {
 	    TungstenModRenderContainer.RENDERERS.clear();
 
 	    long startTime = System.currentTimeMillis();
-	    long primaryTimeoutTime = startTime + searchTimeoutMs;
+	    long primaryTimeoutTime = startTime + TungstenConfig.get().searchTimeoutMs;
 		numNodesConsidered.set(0);
 	    int timeCheckInterval = 1 << 3;
 	    double minVelocity = BlockStateChecker.isAnyWater(world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ()))) ? 0.2 :  0.07;

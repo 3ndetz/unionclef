@@ -42,6 +42,11 @@ public class TungstenConfig {
      *  Keep false in normal use to reduce noise. */
     public boolean verboseDebugLogging = false;
 
+    /** Max time (ms) for A* input search before emitting bestSoFar.
+     *  Higher = better routes on parkour, lower = faster response.
+     *  Upstream default: 1800. Our default: 15000 (parkour needs more time). */
+    public long searchTimeoutMs = 15000L;
+
     /** If true: log per-node timing breakdown to stdout.
      *  Shows where PathFinder spends time: child generation, filtering,
      *  openSet ops, heuristic updates, block-space search, etc. */
