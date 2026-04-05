@@ -177,7 +177,7 @@ public class PathFinder {
 	    TungstenModRenderContainer.RENDERERS.clear();
 
 	    long startTime = System.currentTimeMillis();
-	    long primaryTimeoutTime = startTime + 1800L;
+	    long primaryTimeoutTime = startTime + searchTimeoutMs;
 		numNodesConsidered.set(0);
 	    int timeCheckInterval = 1 << 3;
 	    double minVelocity = BlockStateChecker.isAnyWater(world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ()))) ? 0.2 :  0.07;
