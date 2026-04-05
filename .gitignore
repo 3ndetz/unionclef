@@ -3,6 +3,7 @@
 build/
 versions/*/build/
 versions/*/bin/
+*/bin/
 
 # IDE
 .idea/
