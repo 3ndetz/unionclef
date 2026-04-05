@@ -218,6 +218,10 @@ if (project.name == "1.21.1" || project.name == "1.21.11") {
     // Default: stable release. githubPreRelease flips to alpha mode.
     def isPreRelease = project.objects.property(Boolean).convention(false)
 
+    tasks.named('githubRelease') {
+        dependsOn 'remapJar', ':shredder:remapJar', ':tungsten:remapJar'
+    }
+
     githubRelease {
         token = project.hasProperty('github.token') ? project.getProperty('github.token') : ""
         owner = "3ndetz"
