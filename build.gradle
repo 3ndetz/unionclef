@@ -225,7 +225,7 @@ if (project.name == "1.21.1" || project.name == "1.21.11") {
         tagName = provider { isPreRelease.get() ? "v${project.mod_version}-alpha" : "v${project.mod_version}" }
         releaseName = provider { isPreRelease.get() ? "UnionClef v${project.mod_version}-alpha (MC ${project.name})" : "UnionClef v${project.mod_version} (MC ${project.name})" }
         releaseAssets = releaseAssetFiles
-        targetCommitish = provider { isPreRelease.get() ? "HEAD" : "main" }
+        targetCommitish = provider { isPreRelease.get() ? "1.21.11" : "main" }
         generateReleaseNotes = true
         body = releaseBodyProvider
         draft = false
