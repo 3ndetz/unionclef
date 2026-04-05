@@ -52,6 +52,11 @@ public class TungstenConfig {
      *  Set to 0 to log everything. */
     public double mismatchLogThreshold = 1e-6;
 
+    /** Use parallel threads for node creation in A* search.
+     *  Faster on multi-core CPUs but Agent.tick/WorldView may not be fully
+     *  thread-safe. Disable if you see rare ConcurrentModificationException. */
+    public boolean enableParallelStreaming = true;
+
     /** Air strafe speed multiplier. Vanilla uses 0.02 (walk) / 0.026 (sprint).
      *  Higher values = more air control = pathfinder finds longer jumps.
      *  Set to 1.0 for vanilla-accurate simulation.

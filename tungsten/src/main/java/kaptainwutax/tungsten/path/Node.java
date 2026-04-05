@@ -11,6 +11,7 @@ import java.util.stream.Stream;
 import com.google.common.collect.Streams;
 
 import kaptainwutax.tungsten.Debug;
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.agent.Agent;
@@ -279,8 +280,8 @@ public class Node {
 	        }
 	    }
 
-	    // 2) Create nodes in parallel (expensive — Agent.tick per child)
-	    List<Node> created = params.parallelStream()
+	    // 2) Create nodes (parallel if enabled, sequential otherwise)
+	    List<Node> created = (TungstenConfig.get().enableParallelStreaming ? params.parallelStream() : params.stream())
 	        .map(p -> createNode(world, nextBlockNode, p.forward, p.right, p.left, p.sneak, p.sprint, p.jump, p.yaw, isDoingLongJump, isCloseToBlockNode))
 	        .filter(Objects::nonNull)
 	        .collect(Collectors.toList());
