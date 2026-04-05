@@ -234,6 +234,8 @@ if (project.name == "1.21.1" || project.name == "1.21.11") {
 
     // Pre-release task
     task githubPreRelease {
+        group = 'publishing'
+        description = 'Create a GitHub pre-release (alpha) with all mod JARs'
         dependsOn 'remapJar', ':shredder:remapJar', ':tungsten:remapJar'
         doLast {
             def tok = project.hasProperty('github.token') ? project.getProperty('github.token') : ""
