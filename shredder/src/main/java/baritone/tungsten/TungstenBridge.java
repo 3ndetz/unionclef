@@ -10,6 +10,7 @@ import baritone.pathing.movement.movements.MovementDescend;
 import baritone.pathing.movement.movements.MovementDiagonal;
 import baritone.pathing.movement.movements.MovementTraverse;
 import baritone.utils.BlockStateInterface;
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.path.PathFinder;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
@@ -138,7 +139,7 @@ public class TungstenBridge {
         PathFinder pf = TungstenModDataContainer.PATHFINDER;
         if (blockPathHint.isPresent()) {
             // Experimental: guided search with baritone waypoints
-            pf.searchTimeoutMs = 5000L;
+            TungstenConfig.get().searchTimeoutMs = 5000L;
             pf.minPathSizeForTimeout = 5;
             pf.find(ctx.world(), targetVec, ctx.player(), blockPathHint);
         } else {
