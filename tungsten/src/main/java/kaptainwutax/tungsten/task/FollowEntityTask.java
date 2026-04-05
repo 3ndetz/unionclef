@@ -1,6 +1,7 @@
 package kaptainwutax.tungsten.task;
 
 import kaptainwutax.tungsten.Debug;
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.util.WindMouseRotation;
@@ -98,7 +99,7 @@ public class FollowEntityTask {
         BlockPathWalker.stop();
         releaseKeys();
         TungstenModDataContainer.PATHFINDER.stop.set(true);
-        TungstenModDataContainer.EXECUTOR.stop = true;
+        if (TungstenModDataContainer.EXECUTOR != null) TungstenModDataContainer.EXECUTOR.stop = true;
         Debug.logMessage("Follow stopped.");
     }
 
@@ -139,13 +140,13 @@ public class FollowEntityTask {
             return; // managed but no position known yet
         }
 
-        double dist          = player.getPos().distanceTo(targetPos);
+        double dist          = player.getEntityPos().distanceTo(targetPos);
         boolean outsideRadius = closeEnough <= 0 || dist >= closeEnough;
 
         // ── Trail recording + TRAILING state ───────────────────────────────────
         if (kaptainwutax.tungsten.TungstenConfig.get().enableTrailing) {
             if (hasEntity) trail.recordPosition(targetPos);
-            trail.update(player.getPos(), targetPos);
+            trail.update(player.getEntityPos(), targetPos);
         }
 
         // ── LEAP: PvP close-range sprint+jump (no camera — altoclef handles aim+attacks)
@@ -154,7 +155,7 @@ public class FollowEntityTask {
                     && hasEntity && hasLineOfSight(player, targetPos)
                     && isFlatGround(player, targetPos);
 
-            if (canLeap && !TungstenModDataContainer.EXECUTOR.isRunning()) {
+            if (canLeap && !TungstenModDataContainer.isExecutorRunning()) {
                 doLeap(player);
                 leapActive = true;
             } else if (leapActive) {
@@ -175,19 +176,19 @@ public class FollowEntityTask {
         // ── Resolve effective target: waypoint when TRAILING, else real target ─
         Vec3d effectiveTarget = targetPos;
         if (kaptainwutax.tungsten.TungstenConfig.get().enableTrailing && trail.isTrailing()) {
-            Vec3d wp = trail.getWaypoint(player.getPos());
+            Vec3d wp = trail.getWaypoint(player.getEntityPos());
             if (wp != null) {
                 effectiveTarget = wp;
             }
         }
-        double effectiveDist = player.getPos().distanceTo(effectiveTarget);
+        double effectiveDist = player.getEntityPos().distanceTo(effectiveTarget);
 
         // ── Tungsten A*: always runs as primary pathfinder ───────────────────
         // While BFS walker is running, suppress recalc — let it finish its segment.
         // A* is already computing from BFS endpoint; recalc would restart everything.
         boolean walkerRunning   = BlockPathWalker.isRunning();
         tickCounter++;
-        boolean executorRunning  = TungstenModDataContainer.EXECUTOR.isRunning();
+        boolean executorRunning  = TungstenModDataContainer.isExecutorRunning();
         boolean pathfinderActive = TungstenModDataContainer.PATHFINDER.active.get();
 
         if (walkerRunning) {
@@ -245,19 +246,19 @@ public class FollowEntityTask {
         }
 
         if (dist < 6 && hasLineOfSight(player, target)) {
-            TungstenModDataContainer.PATHFINDER.searchTimeoutMs      = 120L;
+            TungstenConfig.get().searchTimeoutMs      = 120L;
             TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 1;
             TungstenModDataContainer.PATHFINDER.minDistPath           = 0.1;
         } else if (dist < 12) {
-            TungstenModDataContainer.PATHFINDER.searchTimeoutMs      = 500L;
+            TungstenConfig.get().searchTimeoutMs      = 500L;
             TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 2;
             TungstenModDataContainer.PATHFINDER.minDistPath           = 0.3;
         } else if (dist < 25) {
-            TungstenModDataContainer.PATHFINDER.searchTimeoutMs      = 1500L;
+            TungstenConfig.get().searchTimeoutMs      = 1500L;
             TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 3;
             TungstenModDataContainer.PATHFINDER.minDistPath           = 0.5;
         } else {
-            TungstenModDataContainer.PATHFINDER.searchTimeoutMs      = 3000L;
+            TungstenConfig.get().searchTimeoutMs      = 3000L;
             TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 5;
             TungstenModDataContainer.PATHFINDER.minDistPath           = 0.8;
         }
@@ -302,7 +303,7 @@ public class FollowEntityTask {
         if (!player.isOnGround()) return false;
         if (Math.abs(targetPos.y - player.getY()) > 1.5) return false;
 
-        Vec3d pos = player.getPos();
+        Vec3d pos = player.getEntityPos();
         double dx = targetPos.x - pos.x;
         double dz = targetPos.z - pos.z;
         double len = Math.sqrt(dx * dx + dz * dz);

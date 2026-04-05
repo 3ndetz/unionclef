@@ -73,8 +73,8 @@ public class HelpCommand extends Command {
                         component.setStyle(component.getStyle().withColor(Formatting.GRAY));
                         component.append(shortDescComponent);
                         component.setStyle(component.getStyle()
-                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hoverComponent))
-                                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, clickCommand)));
+                                .withHoverEvent(new HoverEvent.ShowText(hoverComponent))
+                                .withClickEvent(new ClickEvent.RunCommand(clickCommand)));
                         return component;
                     },
                     FORCE_COMMAND_PREFIX + label
@@ -90,8 +90,7 @@ public class HelpCommand extends Command {
             command.getLongDesc().forEach(this::logDirect);
             logDirect("");
             MutableText returnComponent = Text.literal("Click to return to the help menu");
-            returnComponent.setStyle(returnComponent.getStyle().withClickEvent(new ClickEvent(
-                    ClickEvent.Action.RUN_COMMAND,
+            returnComponent.setStyle(returnComponent.getStyle().withClickEvent(new ClickEvent.RunCommand(
                     FORCE_COMMAND_PREFIX + label
             )));
             logDirect(returnComponent);

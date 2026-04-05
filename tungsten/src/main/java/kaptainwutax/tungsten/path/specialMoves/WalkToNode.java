@@ -31,15 +31,13 @@ public class WalkToNode {
 	    boolean jump = false;
         int limit = 0;
         while (limit < 200) {
+			if (newNode.agent.touchingWater) {
+				newNode.cost += 0.2;
+				break;
+			}
+			if (agent.isInLava()) newNode.cost = 2e6;
         	limit++;
-//        	RenderHelper.renderNode(newNode);
-//        	try {
-//				Thread.sleep(2);
-//			} catch (InterruptedException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-        	
+
         	if (lastHigheastNodeSinceGround != null && lastHigheastNodeSinceGround.agent.blockY - newNode.agent.blockY > 30) {
         		break;
         	}

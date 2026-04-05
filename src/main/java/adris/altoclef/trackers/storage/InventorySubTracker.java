@@ -110,9 +110,15 @@ public class InventorySubTracker extends Tracker {
         if (includeCursor) {
             result.add(StorageHelper.getItemStackInCursorSlot());
         }
+        //#if MC >= 12111
+        //$$ for (int i = 0; i < 36; ++i) result.add(inv.getStack(i));   // main slots 0-35
+        //$$ for (int i = 36; i < 40; ++i) result.add(inv.getStack(i));  // armor slots 36-39
+        //$$ result.add(inv.getStack(40));                                // offhand slot 40
+        //#else
         result.addAll(inv.main);
         result.addAll(inv.armor);
         result.addAll(inv.offHand);
+        //#endif
         return result;
     }
 

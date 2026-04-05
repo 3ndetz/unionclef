@@ -11,7 +11,9 @@ import java.util.stream.Stream;
 import com.google.common.collect.Streams;
 
 import kaptainwutax.tungsten.Debug;
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
+import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.agent.Agent;
 import kaptainwutax.tungsten.helpers.BlockShapeChecker;
 import kaptainwutax.tungsten.helpers.BlockStateChecker;
@@ -85,17 +87,17 @@ public class Node {
 	 public int hashCode(int round, boolean shouldAddYaw) {
 		 long result = 3241;
 		 if (this.input != null) {
-		 	result = 2 * Boolean.hashCode(this.input.forward);
-		    result = result + 3 * Boolean.hashCode(this.input.back);
-		    result = result + 5 * Boolean.hashCode(this.input.right);
-		    result = result + 11 * Boolean.hashCode(this.input.left);
-		    result = result + 13 * Boolean.hashCode(this.input.jump);
-		    result = result + 17 * Boolean.hashCode(this.input.sneak);
-		    result = result + 19 * Boolean.hashCode(this.input.sprint);
+			 if (this.input.forward) result += "forward".hashCode();
+			 if (this.input.back) result += "back".hashCode();
+			 if (this.input.right) result += "right".hashCode();
+			 if (this.input.left) result += "left".hashCode();
+			 if (this.input.jump) result += "jump".hashCode();
+			 if (this.input.sneak) result += "sneak".hashCode();
+			 if (this.input.sprint) result += "sprint".hashCode();
 //		    result = result + (Math.round(this.input.pitch));
 		    if (shouldAddYaw) result = result + (Math.round(this.input.yaw / 45f));
-		    result = result + (Math.round(this.agent.velX*10));
-		    result = result + (Math.round(this.agent.velZ*10));
+		    // velocity removed from hash — too many unique values caused
+		    // excessive hash collisions in the closed set
 		 }
 //	    if (round > 1) {
 //		    result = 34L * result + Double.hashCode(roundToPrecision(this.agent.getPos().x, round));
@@ -172,7 +174,6 @@ public class Node {
                         generateAirborneNodes(world, nextBlockNode, nodes);
                     }
 
-                    sortNodesByYaw(nodes, target);
                 }
                 nodes.add(sprintJumpMove);
 //	    	if (isSprintJumpMoveClose) return nodes;
@@ -182,8 +183,6 @@ public class Node {
                 } else {
                     generateAirborneNodes(world, nextBlockNode, nodes);
                 }
-
-                sortNodesByYaw(nodes, target);
             }
 	    
 	    if (agent.onGround) {
@@ -196,17 +195,17 @@ public class Node {
 	    		if (cj2 != null) nodes.add(cj2);
 	    	}
 	    }
-	    if (agent.touchingWater && BlockShapeChecker.getShapeVolume(nextBlockNode.getBlockPos(), world) == 0) {
+	    if (agent.touchingWater && BlockShapeChecker.getShapeVolume(nextBlockNode.getBlockPos(), world) == 0 && !BlockStateChecker.isAnyWater(nextBlockNode.getBlockState(world))) {
 	    	Node exitWaterMove = ExitWaterMove.generateMove(this, nextBlockNode);
 //	    	boolean isExitWaterMoveClose = exitWaterMove.agent.getPos().distanceTo(nextBlockNode.getPos(true)) < 1.5;
 	    	nodes.add(exitWaterMove);
 //	    	if (isExitWaterMoveClose) return nodes;
 	    }
-	    
+
 	    if (!agent.touchingWater && !this.agent.canSprint()) {
 	    	nodes.add(WalkToNode.generateMove(this, nextBlockNode));
 	    }
-	    
+
 	    if (!agent.touchingWater && this.agent.canSprint() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 4) {
 	    	nodes.add(RunToNode.generateMove(this, nextBlockNode));
 	    }
@@ -246,39 +245,30 @@ public class Node {
 	    		&& nextBlockNode.getBlockPos().getX() == agent.blockX
 	    		&& nextBlockNode.getBlockPos().getZ() == agent.blockZ) {
 	    	Direction dir = state.get(Properties.HORIZONTAL_FACING);
-	    	double desiredYaw = DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true).offset(dir.getOpposite(), 1));
-	    	boolean goingUp = nextBlockNode.getBlockPos().getY() > agent.blockY;
-	    	boolean goingDown = nextBlockNode.getBlockPos().getY() < agent.blockY;
-	    	if (goingUp || goingDown) {
-	    		// Simulate multiple climb ticks at once to avoid 1-node-per-tick bottleneck
-	    		Node n = createNode(world, nextBlockNode, true, false, false, false, false, goingUp, (float) desiredYaw, isDoingLongJump, isCloseToBlockNode);
-	    		if (n != null) {
-	    			for (int ct = 0; ct < 9; ct++) {
-	    				if (goingUp && n.agent.getPos().y >= nextBlockNode.getPos(true).y) break;
-	    				if (goingDown && n.agent.getPos().y <= nextBlockNode.getPos(true).y) break;
-	    				if (!n.agent.isClimbing(world)) break;
-	    				Node next = new Node(n, world, new PathInput(true, false, false, false, goingUp, false, false, agent.pitch, (float) desiredYaw),
-	    						new Color(0, 200, 200), n.cost + 1);
-	    				n = next;
-	    			}
-	    			nodes.add(n);
-	    		}
+	    	double desiredYaw = DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true).offset(dir.getOpposite(), 1)) /*+ MathHelper.roundToPrecision(Math.random(), 2) / 1000000*/;
+	    	if (nextBlockNode.getBlockPos().getY() > agent.blockY) {
+		    	{ Node n = createNode(world, nextBlockNode, true, false, false, false, false, true, (float) desiredYaw, isDoingLongJump, isCloseToBlockNode); if (n != null) nodes.add(n); }
+		    	return;
+	    	}
+	    	if (nextBlockNode.getBlockPos().getY() < agent.blockY) {
+	    		{ Node n = createNode(world, nextBlockNode, true, false, false, false, false, false, (float) desiredYaw, isDoingLongJump, isCloseToBlockNode); if (n != null) nodes.add(n); }
 	    		return;
 	    	}
 	    }
-
 	    // 1) Collect parameter combinations (cheap — no physics)
 	    List<ChildGenParams> params = new ArrayList<>();
 	    float desiredYaw = (float) DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true));
-	    float a = 90f;
-	    float fromYaw = desiredYaw-a<-180.0f ? -180f: desiredYaw-a;
-	    float toYaw = desiredYaw+a > 180f ? 180f : desiredYaw+a;
+	    float a = 134.4f;
+	    float fromYaw = Math.max(desiredYaw - a, -180.0f);
+	    float toYaw = Math.min(desiredYaw + a, 180f);
 	    for (boolean forward : new boolean[]{true, false}) {
 	        for (boolean right : new boolean[]{true, false}) {
 	            for (boolean left : new boolean[]{true, false}) {
 	                    for (float yaw = fromYaw; yaw < toYaw; yaw += 22.5f) {
 	                        for (boolean sprint : new boolean[]{true, false}) {
 	                        	if (!this.agent.canSprint() && sprint) continue;
+								if (!right && !left && !forward) continue;
+								if (right && left) continue;
 	                            if (( ((right || left) && !forward)) && sprint) continue;
 
 	                            for (boolean jump : new boolean[]{true, false}) {
@@ -290,8 +280,8 @@ public class Node {
 	        }
 	    }
 
-	    // 2) Create nodes in parallel (expensive — Agent.tick per child)
-	    List<Node> created = params.parallelStream()
+	    // 2) Create nodes (parallel if enabled, sequential otherwise)
+	    List<Node> created = (TungstenConfig.get().enableParallelStreaming ? params.parallelStream() : params.stream())
 	        .map(p -> createNode(world, nextBlockNode, p.forward, p.right, p.left, p.sneak, p.sprint, p.jump, p.yaw, isDoingLongJump, isCloseToBlockNode))
 	        .filter(Objects::nonNull)
 	        .collect(Collectors.toList());
@@ -306,13 +296,9 @@ public class Node {
             if (jump && sneak) return null;
 	        Node newNode = new Node(this, world, new PathInput(forward, false, right, left, jump, sneak, sprint, agent.pitch, yaw),
 	                new Color(sneak ? 220 : 0, 255, sneak ? 50 : 0), this.cost);
-	        double addNodeCost = calculateNodeCost(forward, sprint, jump, sneak, isCloseToBlockNode, isDoingLongJump, newNode.agent);
+	        double addNodeCost = calculateNodeCost(forward, sprint, jump, sneak, newNode.agent);
 	        if (newNode.agent.getPos().isWithinRangeOf(nextBlockNode.getPos(true), 0.1, 0.4)) return null;
-//	        double newNodeDistanceToBlockNode = Math.ceil(newNode.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e5);
-//	        double parentNodeDistanceToBlockNode = Math.ceil(newNode.parent.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e5);
-	        
-//	        if (newNodeDistanceToBlockNode >= parentNodeDistanceToBlockNode) return;
-	        
+
 	        boolean isMoving = (forward || right || left);
 	        if (newNode.agent.isClimbing(world)) jump = this.agent.getBlockPos().getY() < nextBlockNode.getBlockPos().getY();
 
@@ -326,16 +312,15 @@ public class Node {
 	            if (!sneak) {
 	            	boolean isBelowClosedTrapDoor = BlockStateChecker.isClosedBottomTrapdoor(world.getBlockState(nextBlockNode.getBlockPos().down()));
 	        	    boolean shouldAllowWalkingOnLowerBlock = !world.getBlockState(agent.getBlockPos().up(2)).isAir() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 3;
-//	        	    double minY = isBelowClosedTrapDoor ? nextBlockNode.getPos(true).y - 1 : nextBlockNode.getBlockPos().getY() - (shouldAllowWalkingOnLowerBlock ? 1.3 : 0.3);
 		            for (int j = 0; j < ((!jump) && !newNode.agent.isClimbing(world) ? 1 : 10); j++) {
-//		                if (newNode.agent.getPos().y <= minY && !newNode.agent.isClimbing(world) || !isMoving) break;
 		                if (!isMoving) break;
 		                Box adjustedBox = newNode.agent.box.offset(0, -0.5, 0).expand(-0.001, 0, -0.001);
 		                Stream<VoxelShape> blockCollisions = Streams.stream(agent.getBlockCollisions(world, adjustedBox));
 			            if (blockCollisions.findAny().isEmpty() && isDoingLongJump) jump = true;
 		                newNode = new Node(newNode, world, new PathInput(forward, false, right, left, jump, sneak, sprint, agent.pitch, yaw),
-		                        jump ? new Color(0, 255, 255) : new Color(sneak ? 220 : 0, 255, sneak ? 50 : 0), this.cost + addNodeCost);
+		                        jump ? new Color(150, 55, 85) : new Color(sneak ? 220 : 0, 255, sneak ? 50 : 0), this.cost + addNodeCost + 2.4);
 		                if (!isDoingLongJump && jump && j > 1) break;
+                        if (!newNode.agent.onGround && !newNode.agent.isClimbing(world)) break;
 		            }
 	            }
 
@@ -345,13 +330,24 @@ public class Node {
 	    }
 	}
 
-	private double calculateNodeCost(boolean forward, boolean sprint, boolean jump, boolean sneak, boolean isCloseToBlockNode,
-	                                 boolean isDoingLongJump, Agent agent) {
-	    double addNodeCost = 1;
+	private double calculateNodeCost(boolean forward, boolean sprint, boolean jump, boolean sneak, Agent agent) {
+	    double addNodeCost = 4.358; // Magic number makes pathfinder go FAST. DO NOT TOUCH
 
-	    if (forward && sprint && jump && !sneak) {
-	        addNodeCost -= 0.2;
-	    }
+//	    if (forward && sprint && jump && !sneak) {
+//	        addNodeCost -= 0.2;
+//	    }
+		if (agent.touchingWater) {
+			addNodeCost += 0.2;
+		}
+
+		if (Math.abs(agent.velX) < 0.01 && Math.abs(agent.velY) < 0.01 && Math.abs(agent.velZ) < 0.01) {
+			addNodeCost += 15;
+		}
+		if (agent.horizontalCollision) {
+			addNodeCost += 0.0004;
+		}
+
+		if (agent.isInLava()) addNodeCost += 2e6;
 
 	    if (sneak) {
 	        addNodeCost += 2000;
@@ -362,7 +358,7 @@ public class Node {
 //        }
 
 
-        return addNodeCost + Math.abs(agent.yaw - this.agent.yaw) * 5;
+        return addNodeCost; //+ Math.abs(agent.yaw- this.agent.yaw) * 5;
 	}
 
 	private void generateAirborneNodes(WorldView world, BlockNode nextBlockNode, List<Node> nodes) {
@@ -376,11 +372,10 @@ public class Node {
 	}
 
 	private void createAirborneNodes(WorldView world, BlockNode nextBlockNode, List<Node> nodes, boolean forward, boolean right, float yaw) {
-	    boolean canSprint = this.agent.canSprint();
-	    Node newNode = new Node(this, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
+	    Node newNode = new Node(this, world, new PathInput(forward, false, right, false, false, false, true, agent.pitch, yaw),
 	            new Color(0, 255, 255), this.cost + 1);
 
-        
+
         if (newNode.agent.getPos().isWithinRangeOf(nextBlockNode.getPos(true), 0.9, 0.4)) return;
         double newNodeDistanceToBlockNode = Math.ceil(newNode.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e4);
         double parentNodeDistanceToBlockNode = Math.ceil(newNode.parent.agent.getPos().distanceTo(nextBlockNode.getPos(true)) * 1e4);
@@ -390,24 +385,20 @@ public class Node {
 	    boolean isBelowClosedTrapDoor = BlockStateChecker.isClosedBottomTrapdoor(world.getBlockState(nextBlockNode.getBlockPos().down()));
 	    boolean shouldAllowWalkingOnLowerBlock = !world.getBlockState(agent.getBlockPos().up(2)).isAir() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 3;
 	    double minY = isBelowClosedTrapDoor ? nextBlockNode.getPos(true).y - 1 : nextBlockNode.getBlockPos().getY() - (shouldAllowWalkingOnLowerBlock ? 1.4 : 0.4);
-	    while (!newNode.agent.onGround && !newNode.agent.isClimbing(world) && newNode.agent.getPos().y >= minY) {
+	    while (!newNode.agent.onGround && !newNode.agent.isClimbing(world) && newNode.agent.getPos().y >= minY
+	    		&& (TungstenModDataContainer.ignoreFallDamage || DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY) > -3)) {
 	    	if (i > 60) break;
 	    	i++;
-	        newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
-	                new Color(0, 255, 255), newNode.cost + (canSprint ? 1 : 8));
+			double addNodeCost = calculateNodeCost(forward, true, false, false, newNode.agent);
+	        newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, true, agent.pitch, yaw),
+	                new Color(0, 255, 255), this.cost + addNodeCost + (this.agent.canSprint() ? 1 : 8));
 	    }
-        newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, canSprint, agent.pitch, yaw),
-                new Color(0, 255, 255), newNode.cost + (canSprint ? 1 : 8));
+		double addNodeCost = calculateNodeCost(forward, true, false, false, newNode.agent);
+        newNode = new Node(newNode, world, new PathInput(forward, false, right, false, false, false, true, agent.pitch, yaw),
+                new Color(0, 255, 255), this.cost + addNodeCost + (this.agent.canSprint() ? 1 : 8));
 
+        if (newNode.agent.getPos().distanceTo(this.agent.getPos()) < 1.05) return;
 	    nodes.add(newNode);
 	}
 	
-	private void sortNodesByYaw(List<Node> nodes, Vec3d target) {
-	    double desiredYaw = DirectionHelper.calcYawFromVec3d(agent.getPos(), target);
-	    nodes.sort((n1, n2) -> {
-	        double diff1 = Math.abs(n1.agent.yaw - desiredYaw);
-	        double diff2 = Math.abs(n2.agent.yaw - desiredYaw);
-	        return Double.compare(diff1, diff2);
-	    });
-	}
 }

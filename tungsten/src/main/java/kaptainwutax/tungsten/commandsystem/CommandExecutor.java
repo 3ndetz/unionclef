@@ -80,6 +80,7 @@ public class CommandExecutor {
     
     
     public static void dispatch(String message) throws CommandSyntaxException {
+        if (TungstenMod.mc == null || TungstenMod.mc.getNetworkHandler() == null) return;
         DISPATCHER.execute(message, TungstenMod.mc.getNetworkHandler().getCommandSource());
     }
 

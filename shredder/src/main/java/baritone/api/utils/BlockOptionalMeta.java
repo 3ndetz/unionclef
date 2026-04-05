@@ -18,21 +18,19 @@
 package baritone.api.utils;
 
 import baritone.api.utils.accessor.IItemStack;
-import baritone.api.utils.accessor.ILootTable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.command.permission.PermissionPredicate;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.loot.LootTable;
-import net.minecraft.loot.LootTables;
-import net.minecraft.loot.context.LootContext;
-import net.minecraft.loot.context.LootContextParameterSet;
 import net.minecraft.loot.context.LootContextParameters;
 import net.minecraft.loot.context.LootContextTypes;
+import net.minecraft.loot.context.LootWorldContext;
 import net.minecraft.registry.CombinedDynamicRegistries;
 import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.registry.RegistryKey;
@@ -50,11 +48,9 @@ import net.minecraft.resource.VanillaDataPackProvider;
 import net.minecraft.resource.featuretoggle.FeatureSet;
 import net.minecraft.server.DataPackContents;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.WorldGenerationProgressListener;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.Property;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.random.RandomSequencesState;
 import net.minecraft.world.World;
@@ -228,46 +224,43 @@ public final class BlockOptionalMeta {
 
     private static synchronized List<Item> drops(Block b) {
         return drops.computeIfAbsent(b, block -> {
-            Identifier lootTableLocation = block.getLootTableKey().getValue();
-            if (lootTableLocation.equals(LootTables.EMPTY.getValue())) {
+            Optional<RegistryKey<LootTable>> lootTableKey = block.getLootTableKey();
+            if (lootTableKey.isEmpty()) {
                 return Collections.emptyList();
-            } else {
-                List<Item> items = new ArrayList<>();
-                try {
-                    ServerWorld lv2 = ServerLevelStub.fastCreate();
-
-                    LootContextParameterSet.Builder lv5 = new LootContextParameterSet.Builder(lv2)
-                        .add(LootContextParameters.ORIGIN, Vec3d.ZERO)
-                        .add(LootContextParameters.BLOCK_STATE, b.getDefaultState())
-                        .add(LootContextParameters.TOOL, new ItemStack(Items.NETHERITE_PICKAXE, 1));
-                    getDrops(block, lv5).stream().map(ItemStack::getItem).forEach(items::add);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                return items;
             }
+            List<Item> items = new ArrayList<>();
+            try {
+                ServerLevelStub lv2 = ServerLevelStub.fastCreate();
+                LootWorldContext.Builder lv5 = new LootWorldContext.Builder(lv2)
+                    .add(LootContextParameters.ORIGIN, Vec3d.ZERO)
+                    .add(LootContextParameters.BLOCK_STATE, b.getDefaultState())
+                    .add(LootContextParameters.TOOL, new ItemStack(Items.NETHERITE_PICKAXE, 1));
+                getDrops(block, lv5).stream().map(ItemStack::getItem).forEach(items::add);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return items;
         });
     }
 
-    private static List<ItemStack> getDrops(Block state, LootContextParameterSet.Builder params) {
-        RegistryKey<LootTable> lv = state.getLootTableKey();
-        if (lv == LootTables.EMPTY) {
+    private static List<ItemStack> getDrops(Block state, LootWorldContext.Builder params) {
+        Optional<RegistryKey<LootTable>> lv = state.getLootTableKey();
+        if (lv.isEmpty()) {
             return Collections.emptyList();
-        } else {
-            LootContextParameterSet lv2 = params.add(LootContextParameters.BLOCK_STATE, state.getDefaultState()).build(LootContextTypes.BLOCK);
-            ServerLevelStub lv3 = (ServerLevelStub) lv2.getWorld();
-            LootTable lv4 = lv3.holder().getLootTable(lv);
-            return((ILootTable) lv4).invokeGenerateLoot(new LootContext.Builder(lv2).random(1).build(null));
         }
+        LootWorldContext lv2 = params.add(LootContextParameters.BLOCK_STATE, state.getDefaultState()).build(LootContextTypes.BLOCK);
+        ServerLevelStub lv3 = (ServerLevelStub) lv2.getWorld();
+        LootTable lv4 = lv3.holder().getLootTable(lv.get());
+        return lv4.generateLoot(lv2);
     }
 
     public static class ServerLevelStub extends ServerWorld {
         private static MinecraftClient client = MinecraftClient.getInstance();
         private static Unsafe unsafe = getUnsafe();
-        private static CompletableFuture<DynamicRegistryManager> registryAccess = load();
+        private static CompletableFuture<ReloadableRegistries.Lookup> registryLookup = load();
 
-        public ServerLevelStub(MinecraftServer $$0, Executor $$1, LevelStorage.Session $$2, ServerWorldProperties $$3, RegistryKey<World> $$4, DimensionOptions $$5, WorldGenerationProgressListener $$6, boolean $$7, long $$8, List<SpecialSpawner> $$9, boolean $$10, @Nullable RandomSequencesState $$11) {
-            super($$0, $$1, $$2, $$3, $$4, $$5, $$6, $$7, $$8, $$9, $$10, $$11);
+        public ServerLevelStub(MinecraftServer $$0, Executor $$1, LevelStorage.Session $$2, ServerWorldProperties $$3, RegistryKey<World> $$4, DimensionOptions $$5, boolean $$6, long $$7, List<SpecialSpawner> $$8, boolean $$9, @Nullable RandomSequencesState $$10) {
+            super($$0, $$1, $$2, $$3, $$4, $$5, $$6, $$7, $$8, $$9, $$10);
         }
 
         @Override
@@ -286,11 +279,11 @@ public final class BlockOptionalMeta {
 
         @Override
         public DynamicRegistryManager getRegistryManager() {
-            return registryAccess.join();
+            throw new UnsupportedOperationException("ServerLevelStub.getRegistryManager");
         }
 
         public ReloadableRegistries.Lookup holder() {
-            return new ReloadableRegistries.Lookup(getRegistryManager().toImmutable());
+            return registryLookup.join();
         }
 
         public static Unsafe getUnsafe() {
@@ -303,7 +296,7 @@ public final class BlockOptionalMeta {
             }
         }
 
-        public static CompletableFuture<DynamicRegistryManager> load() {
+        public static CompletableFuture<ReloadableRegistries.Lookup> load() {
             ResourcePackManager packRepository = MinecraftClient.getInstance().getResourcePackManager();
             LifecycledResourceManager closeableResourceManager = new LifecycledResourceManagerImpl(ResourceType.SERVER_DATA, packRepository.createResourcePacks());
             CombinedDynamicRegistries<ServerDynamicRegistryType> layeredRegistryAccess = loadAndReplaceLayer(
@@ -312,12 +305,13 @@ public final class BlockOptionalMeta {
             return DataPackContents.reload(
                 closeableResourceManager,
                 layeredRegistryAccess,
+                List.of(),
                 DataConfiguration.SAFE_MODE.enabledFeatures(),
                 CommandManager.RegistrationEnvironment.INTEGRATED,
-                2,
+                PermissionPredicate.ALL,
                 Runnable::run,
                 MinecraftClient.getInstance()
-            ).thenApply(reloadableServerResources -> reloadableServerResources.getReloadableRegistries().getRegistryManager());
+            ).thenApply(DataPackContents::getReloadableRegistries);
         }
 
         private static CombinedDynamicRegistries<ServerDynamicRegistryType> loadAndReplaceLayer(
@@ -337,7 +331,7 @@ public final class BlockOptionalMeta {
             List<RegistryLoader.Entry<?>> registryData
         ) {
             DynamicRegistryManager.Immutable frozen = registryAccess.getPrecedingRegistryManagers(registryLayer);
-            return RegistryLoader.loadFromResource(resourceManager, frozen, registryData);
+            return RegistryLoader.loadFromResource(resourceManager, frozen.stream().toList(), registryData);
         }
 
     }

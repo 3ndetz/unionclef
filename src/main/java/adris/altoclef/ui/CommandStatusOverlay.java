@@ -35,20 +35,25 @@ public class CommandStatusOverlay {
             paused = false;
         }
 
+        //#if MC >= 12111
+        //$$ // TODO [1.21.11] MatrixStack replaced — skip scaling for now
+        //$$ drawTaskChain(context, MinecraftClient.getInstance().textRenderer, 10, 10, 10, tasks, mod);
+        //#else
         MatrixStack matrixStack = context.getMatrices();
-
         matrixStack.push();
-
-        drawTaskChain(context,MinecraftClient.getInstance().textRenderer, 10, 10,
+        drawTaskChain(context, MinecraftClient.getInstance().textRenderer, 10, 10,
                 matrixStack, 10, tasks, mod);
-
         matrixStack.pop();
+        //#endif
     }
 
+    //#if MC >= 12111
+    //$$ private void drawTaskChain(DrawContextWrapper context, TextRenderer renderer, int x, int y, int maxLines, List<Task> tasks, AltoClef mod) {
+    //#else
     private void drawTaskChain(DrawContextWrapper context, TextRenderer renderer, int x, int y, MatrixStack matrices, int maxLines, List<Task> tasks, AltoClef mod) {
-        int whiteColor = 0xFFFFFFFF;
-
         matrices.scale(0.5f,0.5f,0.5f);
+    //#endif
+        int whiteColor = 0xFFFFFFFF;
 
         int fontHeight = renderer.fontHeight;
         int addX = 4;

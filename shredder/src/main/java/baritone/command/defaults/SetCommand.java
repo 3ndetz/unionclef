@@ -107,8 +107,8 @@ public class SetCommand extends Command {
                         component.setStyle(component.getStyle().withColor(Formatting.GRAY));
                         component.append(typeComponent);
                         component.setStyle(component.getStyle()
-                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hoverComponent))
-                                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, commandSuggestion)));
+                                .withHoverEvent(new HoverEvent.ShowText(hoverComponent))
+                                .withClickEvent(new ClickEvent.SuggestCommand(commandSuggestion)));
                         return component;
                     },
                     FORCE_COMMAND_PREFIX + "set " + arg + " " + search
@@ -187,12 +187,10 @@ public class SetCommand extends Command {
             MutableText oldValueComponent = Text.literal(String.format("Old value: %s", oldValue));
             oldValueComponent.setStyle(oldValueComponent.getStyle()
                     .withColor(Formatting.GRAY)
-                    .withHoverEvent(new HoverEvent(
-                            HoverEvent.Action.SHOW_TEXT,
+                    .withHoverEvent(new HoverEvent.ShowText(
                             Text.literal("Click to set the setting back to this value")
                     ))
-                    .withClickEvent(new ClickEvent(
-                            ClickEvent.Action.RUN_COMMAND,
+                    .withClickEvent(new ClickEvent.RunCommand(
                             FORCE_COMMAND_PREFIX + String.format("set %s %s", setting.getName(), oldValue)
                     )));
             logDirect(oldValueComponent);

@@ -282,14 +282,22 @@ public class SkyPvpTask extends Task {
     // ── armor checks ─────────────────────────────────────────────────────────
 
     private boolean hasAnyArmor(AltoClef mod) {
+        //#if MC >= 12111
+        //$$ for (var stack : java.util.List.of(mod.getPlayer().getEquippedStack(net.minecraft.entity.EquipmentSlot.HEAD), mod.getPlayer().getEquippedStack(net.minecraft.entity.EquipmentSlot.CHEST), mod.getPlayer().getEquippedStack(net.minecraft.entity.EquipmentSlot.LEGS), mod.getPlayer().getEquippedStack(net.minecraft.entity.EquipmentSlot.FEET))) {
+        //#else
         for (var stack : mod.getPlayer().getArmorItems()) {
+        //#endif
             if (!stack.isEmpty()) return true;
         }
         return false;
     }
 
     private boolean hasAnyArmorEntity(PlayerEntity player) {
+        //#if MC >= 12111
+        //$$ for (var stack : java.util.List.of(player.getEquippedStack(net.minecraft.entity.EquipmentSlot.HEAD), player.getEquippedStack(net.minecraft.entity.EquipmentSlot.CHEST), player.getEquippedStack(net.minecraft.entity.EquipmentSlot.LEGS), player.getEquippedStack(net.minecraft.entity.EquipmentSlot.FEET))) {
+        //#else
         for (var stack : player.getArmorItems()) {
+        //#endif
             if (!stack.isEmpty()) return true;
         }
         return false;

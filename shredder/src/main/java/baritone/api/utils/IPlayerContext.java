@@ -61,7 +61,7 @@ public interface IPlayerContext {
 
     default BetterBlockPos playerFeet() {
         // TODO find a better way to deal with soul sand!!!!!
-        BetterBlockPos feet = new BetterBlockPos(player().getPos().x, player().getPos().y + 0.1251, player().getPos().z);
+        BetterBlockPos feet = new BetterBlockPos(player().getEntityPos().x, player().getEntityPos().y + 0.1251, player().getEntityPos().z);
 
         // sometimes when calling this from another thread or while world is null, it'll throw a NullPointerException
         // that causes the game to immediately crash
@@ -81,11 +81,11 @@ public interface IPlayerContext {
     }
 
     default Vec3d playerFeetAsVec() {
-        return new Vec3d(player().getPos().x, player().getPos().y, player().getPos().z);
+        return new Vec3d(player().getEntityPos().x, player().getEntityPos().y, player().getEntityPos().z);
     }
 
     default Vec3d playerHead() {
-        return new Vec3d(player().getPos().x, player().getPos().y + player().getStandingEyeHeight(), player().getPos().z);
+        return new Vec3d(player().getEntityPos().x, player().getEntityPos().y + player().getStandingEyeHeight(), player().getEntityPos().z);
     }
 
     default Vec3d playerMotion() {

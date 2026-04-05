@@ -5,7 +5,7 @@ import adris.altoclef.multiversion.InGameHudVer;
 import adris.altoclef.multiversion.DrawContextWrapper;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.ColorHelper;
+import adris.altoclef.multiversion.ColorHelperVer;
 import net.minecraft.util.math.MathHelper;
 
 import java.util.ArrayList;
@@ -77,6 +77,11 @@ public class AltoClefTickChart {
 
 
     protected void drawBorderedText(DrawContextWrapper context, String string, int x, int y) {
+        //#if MC >= 12111
+        //$$ // TODO [1.21.11] MatrixStack replaced with Matrix3x2fStack — scale API different
+        //$$ context.fill(x, y, x + this.textRenderer.getWidth(string)/2 + 1, y + this.textRenderer.fontHeight/2+1, 0x90505050);
+        //$$ context.drawText(this.textRenderer, string, x + 1, y + 1, 0xE9E9E9, false);
+        //#else
         MatrixStack matrixStack = context.getMatrices();
         matrixStack.push();
         matrixStack.scale(0.5f,0.5f,1);
@@ -85,6 +90,7 @@ public class AltoClefTickChart {
         context.drawText(this.textRenderer, string, (x + 1)*2, (y + 1)*2, 0xE9E9E9, false);
 
         matrixStack.pop();
+        //#endif
     }
 
 
@@ -113,11 +119,11 @@ public class AltoClefTickChart {
     }
 
     private static int lerp(float delta, int start, int end) {
-        int i = (int) MathHelper.lerp(delta, ColorHelper.Argb.getAlpha(start), ColorHelper.Argb.getAlpha(end));
-        int j = (int) MathHelper.lerp(delta, ColorHelper.Argb.getRed(start), ColorHelper.Argb.getRed(end));
-        int k = (int) MathHelper.lerp(delta, ColorHelper.Argb.getGreen(start), ColorHelper.Argb.getGreen(end));
-        int l = (int) MathHelper.lerp(delta, ColorHelper.Argb.getBlue(start), ColorHelper.Argb.getBlue(end));
-        return ColorHelper.Argb.getArgb(i, j, k, l);
+        int i = (int) MathHelper.lerp(delta, ColorHelperVer.getAlpha(start), ColorHelperVer.getAlpha(end));
+        int j = (int) MathHelper.lerp(delta, ColorHelperVer.getRed(start), ColorHelperVer.getRed(end));
+        int k = (int) MathHelper.lerp(delta, ColorHelperVer.getGreen(start), ColorHelperVer.getGreen(end));
+        int l = (int) MathHelper.lerp(delta, ColorHelperVer.getBlue(start), ColorHelperVer.getBlue(end));
+        return ColorHelperVer.getArgb(i, j, k, l);
     }
 
     private static double nanosToMillis(double nanos) {

@@ -16,6 +16,7 @@ import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
+import kaptainwutax.tungsten.helpers.DimensionVer;
 import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.mixin.AccessorEntity;
 import kaptainwutax.tungsten.mixin.AccessorLivingEntity;
@@ -88,7 +89,7 @@ public class Agent {
         ImmutableMap.<EntityPose, EntityDimensions>builder()
         .put(EntityPose.STANDING, STANDING_DIMENSIONS)
         .put(EntityPose.SLEEPING, SLEEPING_DIMENSIONS)
-        .put(EntityPose.FALL_FLYING, EntityDimensions.changing(0.6f, 0.6f))
+        .put(EntityPose.GLIDING, EntityDimensions.changing(0.6f, 0.6f))
         .put(EntityPose.SWIMMING, EntityDimensions.changing(0.6f, 0.6f))
         .put(EntityPose.SPIN_ATTACK, EntityDimensions.changing(0.6f, 0.6f))
         .put(EntityPose.CROUCHING, EntityDimensions.changing(0.6f, 1.5f))
@@ -298,7 +299,7 @@ public class Agent {
     public boolean updateWaterState(WorldView world) {
         this.fluidHeight.clear();
         this.checkWaterState(world);
-        double d = world.getDimension().ultrawarm() ? 0.007D : 0.0023333333333333335D;
+        double d = DimensionVer.isUltrawarm(world.getDimension()) ? 0.007D : 0.0023333333333333335D;
         boolean bl = this.updateMovementInFluid(world, FluidTags.LAVA, d);
         return this.touchingWater || bl;
     }
@@ -339,7 +340,7 @@ public class Agent {
         EntityPose newPose;
 
         if(this.fallFlying) {
-            newPose = EntityPose.FALL_FLYING;
+            newPose = EntityPose.GLIDING;
         } else {
             if(this.sleeping) {
                 newPose = EntityPose.SLEEPING;
@@ -396,9 +397,9 @@ public class Agent {
 
     public final float getEyeHeight(EntityPose pose, EntityDimensions dimensions) {
          return switch(pose) {
-            case SWIMMING, FALL_FLYING, SPIN_ATTACK -> 0.4F;
-            case CROUCHING -> 1.27F;
-            case SLEEPING -> 0.2F;
+            case EntityPose.SWIMMING, EntityPose.GLIDING, EntityPose.SPIN_ATTACK -> 0.4F;
+            case EntityPose.CROUCHING -> 1.27F;
+            case EntityPose.SLEEPING -> 0.2F;
             default -> 1.62F;
         };
     }
@@ -1361,17 +1362,8 @@ public class Agent {
 				vec2f = vec2f.multiply(f);
 			}
 			
-			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			// !! VERSIONING: applyDirectionalMovementSpeedFactors (diagonal  !!
-			// !! movement normalization, MC-271065) was added in MC 1.21.4+. !!
-			// !! In 1.21.1 and below, diagonal input is NOT normalized —     !!
-			// !! enabling this causes simulation drift on diagonal movement.  !!
-			// !! When tungsten gets preprocessor support, gate this with:     !!
-			// !!   //#if MC >= 12104                                          !!
-			// !!   vec2f = applyDirectionalMovementSpeedFactors(vec2f);       !!
-			// !!   //#endif                                                   !!
-			// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			// vec2f = applyDirectionalMovementSpeedFactors(vec2f);
+			// Diagonal movement normalization (MC-271065), added in MC 1.21.4+.
+			vec2f = applyDirectionalMovementSpeedFactors(vec2f);
 
 			return vec2f;
 		}
@@ -1612,17 +1604,23 @@ public class Agent {
                 player.getX(), player.getY(), player.getZ(),
                 this.posX, this.posY, this.posZ));
             if (TungstenModDataContainer.EXECUTOR.isRunning()) {
-                double drift = player.getPos().distanceTo(new Vec3d(this.posX, this.posY, this.posZ));
-                if (drift > kaptainwutax.tungsten.TungstenConfig.get().driftThreshold) {
-                    Debug.logMessage(String.format(
-                        "§c[Tungsten] Path stopped: drift %.3f blocks (threshold %.1f) at tick %d. " +
-                        "Expected (%.2f, %.2f, %.2f), actual (%.2f, %.2f, %.2f)",
-                        drift, kaptainwutax.tungsten.TungstenConfig.get().driftThreshold,
-                        TungstenModDataContainer.EXECUTOR.getCurrentTick(),
-                        this.posX, this.posY, this.posZ,
-                        player.getX(), player.getY(), player.getZ()));
-                    TungstenModDataContainer.EXECUTOR.stop = true;
-                    TungstenModDataContainer.PATHFINDER.stop.set(true);
+                if (TungstenConfig.get().driftCorrectionEnabled) {
+                    // Upstream behavior: snap player to simulated position
+                    player.setPosition(this.posX, this.posY, this.posZ);
+                } else {
+                    // Our default behavior: log + stop path on large drift
+                    double drift = player.getEntityPos().distanceTo(new Vec3d(this.posX, this.posY, this.posZ));
+                    if (drift > kaptainwutax.tungsten.TungstenConfig.get().driftThreshold) {
+                        Debug.logMessage(String.format(
+                            "§c[Tungsten] Path stopped: drift %.3f blocks (threshold %.1f) at tick %d. " +
+                            "Expected (%.2f, %.2f, %.2f), actual (%.2f, %.2f, %.2f)",
+                            drift, kaptainwutax.tungsten.TungstenConfig.get().driftThreshold,
+                            TungstenModDataContainer.EXECUTOR.getCurrentTick(),
+                            this.posX, this.posY, this.posZ,
+                            player.getX(), player.getY(), player.getZ()));
+                        TungstenModDataContainer.EXECUTOR.stop = true;
+                        TungstenModDataContainer.PATHFINDER.stop.set(true);
+                    }
                 }
                 if (TungstenModRenderContainer.ERROR.size() > 1000) TungstenModRenderContainer.ERROR.clear();
             }
@@ -1636,14 +1634,15 @@ public class Agent {
                 velDrift,
                 player.getVelocity().x, player.getVelocity().y, player.getVelocity().z,
                 this.velX, this.velY, this.velZ));
-            // Do not call setVelocity() — that overrides server-authoritative velocity and
-            // causes position divergence leading to rubber-band teleports.
-            // Log the mismatch only; path will self-correct on next recalc if needed.
             if (TungstenModDataContainer.EXECUTOR.isRunning()) {
                 values.add(String.format("Velocity mismatch by (%s, %s, %s)",
                         player.getVelocity().x - this.velX,
                         player.getVelocity().y - this.velY,
                         player.getVelocity().z - this.velZ));
+                if (TungstenConfig.get().driftCorrectionEnabled) {
+                    // Upstream behavior: snap velocity to simulated velocity
+                    player.setVelocity(this.velX, this.velY, this.velZ);
+                }
                 Node node = TungstenModDataContainer.EXECUTOR.getCurrentNode();
                 if (TungstenModRenderContainer.ERROR.size() > 1000) TungstenModRenderContainer.ERROR.clear();
                 if (node != null) {
@@ -1800,9 +1799,15 @@ public class Agent {
             values.add(String.format("Eye height mismatch %s vs %s", player.getStandingEyeHeight(), this.standingEyeHeight));
         }
 
-        if(mismatch(this.fallDistance, player.fallDistance)) {
-            values.add(String.format("Fall distance mismatch %s vs %s", player.fallDistance, this.fallDistance));
+        //#if MC < 12111
+        //$$ if(mismatch(this.fallDistance, player.fallDistance)) {
+            //$$ values.add(String.format("Fall distance mismatch %s vs %s", player.fallDistance, this.fallDistance));
+        //$$ }
+        //#else
+        if(mismatch(this.fallDistance, (float) player.fallDistance)) {
+            values.add(String.format("Fall distance mismatch %s vs %s", (float) player.fallDistance, this.fallDistance));
         }
+        //#endif
 
         if(this.horizontalCollision != player.horizontalCollision) {
             values.add(String.format("Horizontal Collision mismatch %s vs %s", player.horizontalCollision, this.horizontalCollision));
@@ -1895,7 +1900,11 @@ public class Agent {
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
         agent.stepHeight = player.getStepHeight();
-        agent.fallDistance = player.fallDistance;
+        //#if MC < 12111
+        //$$ agent.fallDistance = player.fallDistance;
+        //#else
+        agent.fallDistance = (float) player.fallDistance;
+        //#endif
         agent.touchingWater = player.isTouchingWater();
         agent.isSubmergedInWater = player.isSubmergedInWater();
         agent.horizontalCollision = player.horizontalCollision;
@@ -1964,7 +1973,11 @@ public class Agent {
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
         agent.stepHeight = player.getStepHeight();
-        agent.fallDistance = player.fallDistance;
+        //#if MC < 12111
+        //$$ agent.fallDistance = player.fallDistance;
+        //#else
+        agent.fallDistance = (float) player.fallDistance;
+        //#endif
         agent.touchingWater = player.isTouchingWater();
         agent.isSubmergedInWater = player.isSubmergedInWater();
         agent.horizontalCollision = player.horizontalCollision;
@@ -2033,7 +2046,11 @@ public class Agent {
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
         agent.stepHeight = player.getStepHeight();
-        agent.fallDistance = player.fallDistance;
+        //#if MC < 12111
+        //$$ agent.fallDistance = player.fallDistance;
+        //#else
+        agent.fallDistance = (float) player.fallDistance;
+        //#endif
         agent.touchingWater = player.isTouchingWater();
         agent.isSubmergedInWater = player.isSubmergedInWater();
         agent.horizontalCollision = player.horizontalCollision;

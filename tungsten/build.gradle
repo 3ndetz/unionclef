@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.7.4'
+    id 'fabric-loom' version '1.15.5'
 }
 
 java {
@@ -10,14 +10,14 @@ java {
 base {
     archivesName = "tungsten"
 }
-version = "ALPHA-1.6.0"
+version = "BETA-1.0.0"
 group = "kaptainwutax"
 
 dependencies {
-    minecraft "com.mojang:minecraft:1.21"
-    mappings "net.fabricmc:yarn:1.21+build.9:v2"
+    minecraft "com.mojang:minecraft:1.21.11"
+    mappings "net.fabricmc:yarn:1.21.11+build.4:v2"
     modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:0.100.7+1.21"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.140.0+1.21.11"
 }
 
 processResources {

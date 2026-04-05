@@ -42,6 +42,11 @@ public class TungstenConfig {
      *  Keep false in normal use to reduce noise. */
     public boolean verboseDebugLogging = false;
 
+    /** Max time (ms) for A* input search before emitting bestSoFar.
+     *  Higher = better routes on parkour, lower = faster response.
+     *  Upstream default: 1800. Our default: 15000 (parkour needs more time). */
+    public long searchTimeoutMs = 15000L;
+
     /** If true: log per-node timing breakdown to stdout.
      *  Shows where PathFinder spends time: child generation, filtering,
      *  openSet ops, heuristic updates, block-space search, etc. */
@@ -52,16 +57,10 @@ public class TungstenConfig {
      *  Set to 0 to log everything. */
     public double mismatchLogThreshold = 1e-6;
 
-    /** EXPERIMENTAL — breaks pathfinding in current state. Needs proper A* state
-     *  merging (closed set, heuristics) before it can work. Keep false.
-     *  If true: pathfinder continues computing while executor runs partial path.
-     *  If false: pathfinder waits for executor to finish before resuming. */
-    public boolean parallelPathfinding = false;
-
-    /** EXPERIMENTAL — causes path failures on parkour. Needs pathfinder tuning.
-     *  Yaw correction strength. 0 = off (open-loop, recommended), 1.0 = full correction.
-     *  Blends pre-computed yaw toward drift-compensating direction. */
-    public float closedLoopStrength = 0.0F;
+    /** Use parallel threads for node creation in A* search.
+     *  Faster on multi-core CPUs but Agent.tick/WorldView may not be fully
+     *  thread-safe. Disable if you see rare ConcurrentModificationException. */
+    public boolean enableParallelStreaming = true;
 
     /** Air strafe speed multiplier. Vanilla uses 0.02 (walk) / 0.026 (sprint).
      *  Higher values = more air control = pathfinder finds longer jumps.

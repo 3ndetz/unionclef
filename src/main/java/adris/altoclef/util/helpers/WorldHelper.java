@@ -2,6 +2,7 @@ package adris.altoclef.util.helpers;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.mixins.ClientConnectionAccessor;
+import adris.altoclef.multiversion.DimensionVer;
 import adris.altoclef.multiversion.MethodWrapper;
 import adris.altoclef.multiversion.world.WorldVer;
 import adris.altoclef.util.Dimension;
@@ -113,8 +114,8 @@ public interface WorldHelper {
     static Dimension getCurrentDimension() {
         ClientWorld world = MinecraftClient.getInstance().world;
         if (world == null) return Dimension.OVERWORLD;
-        if (world.getDimension().ultrawarm()) return Dimension.NETHER;
-        if (world.getDimension().natural()) return Dimension.OVERWORLD;
+        if (DimensionVer.isUltrawarm(world.getDimension())) return Dimension.NETHER;
+        if (DimensionVer.isNatural(world.getDimension())) return Dimension.OVERWORLD;
         return Dimension.END;
     }
 

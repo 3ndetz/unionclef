@@ -154,7 +154,7 @@ public final class ElytraBehavior implements Helper {
             final int prevMaxNear = this.maxPlayerNear;
             this.maxPlayerNear = Math.max(this.maxPlayerNear, this.playerNear);
 
-            if (this.maxPlayerNear == prevMaxNear && ctx.player().isFallFlying()) {
+            if (this.maxPlayerNear == prevMaxNear && ctx.player().isGliding()) {
                 this.ticksNearUnchanged++;
             } else {
                 this.ticksNearUnchanged = 0;
@@ -371,7 +371,7 @@ public final class ElytraBehavior implements Helper {
             }
 
             final int last = this.path.size() - 1;
-            if (!this.completePath && ctx.world().canSetBlock(this.path.get(last))) {
+            if (!this.completePath && ctx.world().isInBuildLimit(this.path.get(last))) {
                 this.pathNextSegment(last);
             }
         }
@@ -423,14 +423,14 @@ public final class ElytraBehavior implements Helper {
         if (!this.clearLines.isEmpty() && settings.elytraRenderRaytraces.value) {
             BufferBuilder bufferBuilder = IRenderer.startLines(Color.GREEN, settings.pathRenderLineWidthPixels.value, settings.renderPathIgnoreDepth.value);
             for (Pair<Vec3d, Vec3d> line : this.clearLines) {
-                IRenderer.emitLine(bufferBuilder, event.getModelViewStack(), line.first(), line.second());
+                IRenderer.emitLine(bufferBuilder, event.getModelViewStack(), line.first(), line.second(), settings.pathRenderLineWidthPixels.value);
             }
             IRenderer.endLines(bufferBuilder, settings.renderPathIgnoreDepth.value);
         }
         if (!this.blockedLines.isEmpty() && Baritone.settings().elytraRenderRaytraces.value) {
             BufferBuilder bufferBuilder = IRenderer.startLines(Color.BLUE, settings.pathRenderLineWidthPixels.value, settings.renderPathIgnoreDepth.value);
             for (Pair<Vec3d, Vec3d> line : this.blockedLines) {
-                IRenderer.emitLine(bufferBuilder, event.getModelViewStack(), line.first(), line.second());
+                IRenderer.emitLine(bufferBuilder, event.getModelViewStack(), line.first(), line.second(), settings.pathRenderLineWidthPixels.value);
             }
             IRenderer.endLines(bufferBuilder, settings.renderPathIgnoreDepth.value);
         }
@@ -440,7 +440,7 @@ public final class ElytraBehavior implements Helper {
             for (int i = 0; i < this.simulationLine.size() - 1; i++) {
                 final Vec3d src = this.simulationLine.get(i).add(offset);
                 final Vec3d dst = this.simulationLine.get(i + 1).add(offset);
-                IRenderer.emitLine(bufferBuilder, event.getModelViewStack(), src, dst);
+                IRenderer.emitLine(bufferBuilder, event.getModelViewStack(), src, dst, settings.pathRenderLineWidthPixels.value);
             }
             IRenderer.endLines(bufferBuilder, settings.renderPathIgnoreDepth.value);
         }
@@ -466,7 +466,7 @@ public final class ElytraBehavior implements Helper {
     }
 
     public void pathTo() {
-        if (!Baritone.settings().elytraAutoJump.value || ctx.player().isFallFlying()) {
+        if (!Baritone.settings().elytraAutoJump.value || ctx.player().isGliding()) {
             this.pathManager.pathToDestination();
         }
     }
@@ -738,18 +738,18 @@ public final class ElytraBehavior implements Helper {
         if (this.landingMode) {
             return;
         }
-        final boolean useOnDescend = !Baritone.settings().elytraConserveFireworks.value || ctx.player().getPos().y < goingTo.y + 5;
+        final boolean useOnDescend = !Baritone.settings().elytraConserveFireworks.value || ctx.player().getEntityPos().y < goingTo.y + 5;
         final double currentSpeed = new Vec3d(
                 ctx.player().getVelocity().x,
                 // ignore y component if we are BOTH below where we want to be AND descending
-                ctx.player().getPos().y < goingTo.y ? Math.max(0, ctx.player().getVelocity().y) : ctx.player().getVelocity().y,
+                ctx.player().getEntityPos().y < goingTo.y ? Math.max(0, ctx.player().getVelocity().y) : ctx.player().getVelocity().y,
                 ctx.player().getVelocity().z
         ).lengthSquared();
 
         final double elytraFireworkSpeed = Baritone.settings().elytraFireworkSpeed.value;
         if (this.remainingFireworkTicks <= 0 && (forceUseFirework || (!isBoosted
                 && useOnDescend
-                && (ctx.player().getPos().y < goingTo.y - 5 || start.distanceTo(new Vec3d(goingTo.x + 0.5, ctx.player().getPos().y, goingTo.z + 0.5)) > 5) // UGH!!!!!!!
+                && (ctx.player().getEntityPos().y < goingTo.y - 5 || start.distanceTo(new Vec3d(goingTo.x + 0.5, ctx.player().getEntityPos().y, goingTo.z + 0.5)) > 5) // UGH!!!!!!!
                 && currentSpeed < elytraFireworkSpeed * elytraFireworkSpeed))
         ) {
             // Prioritize boosting fireworks over regular ones
@@ -1285,7 +1285,7 @@ public final class ElytraBehavior implements Helper {
     }
 
     private int findGoodElytra() {
-        DefaultedList<ItemStack> invy = ctx.player().getInventory().main;
+        DefaultedList<ItemStack> invy = ctx.player().getInventory().getMainStacks();
         for (int i = 0; i < invy.size(); i++) {
             ItemStack slot = invy.get(i);
             if (slot.getItem() == Items.ELYTRA && (slot.getMaxDamage() - slot.getDamage()) > Baritone.settings().elytraMinimumDurability.value) {

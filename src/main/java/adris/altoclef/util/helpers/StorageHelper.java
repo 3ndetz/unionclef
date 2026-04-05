@@ -70,15 +70,35 @@ public class StorageHelper {
         PlayerInventory inv = player.getInventory();
         if (inv != null) {
             if (slot.equals(PlayerSlot.OFFHAND_SLOT))
+                //#if MC >= 12111
+                //$$ return inv.getStack(40);
+                //#else
                 return inv.offHand.stream().findFirst().orElse(ItemStack.EMPTY);
+                //#endif
             if (slot.equals(PlayerSlot.ARMOR_HELMET_SLOT))
+                //#if MC >= 12111
+                //$$ return inv.getStack(39);
+                //#else
                 return inv.getArmorStack(3);
+                //#endif
             if (slot.equals(PlayerSlot.ARMOR_CHESTPLATE_SLOT))
+                //#if MC >= 12111
+                //$$ return inv.getStack(38);
+                //#else
                 return inv.getArmorStack(2);
+                //#endif
             if (slot.equals(PlayerSlot.ARMOR_LEGGINGS_SLOT))
+                //#if MC >= 12111
+                //$$ return inv.getStack(37);
+                //#else
                 return inv.getArmorStack(1);
+                //#endif
             if (slot.equals(PlayerSlot.ARMOR_BOOTS_SLOT))
+                //#if MC >= 12111
+                //$$ return inv.getStack(36);
+                //#else
                 return inv.getArmorStack(0);
+                //#endif
         }
         try {
             // We might have messed up and opened the wrong slot.
@@ -150,7 +170,11 @@ public class StorageHelper {
             if (!slot.isSlotInPlayerInventory())
                 continue;
             ItemStack stack = getItemStackInSlot(slot);
+            //#if MC < 12111
             if (stack.getItem() instanceof ToolItem) {
+            //#else
+            //$$ if (stack.getItem().getDefaultStack().isSuitableFor(state)) { // TODO [1.21.11] tool-class deleted — use isSuitableFor directly
+            //#endif
                 if (stack.getItem().getDefaultStack().isSuitableFor(state)) {
                     if (shouldSaveStack(mod,  state.getBlock(), stack)) continue;
 
@@ -237,6 +261,7 @@ public class StorageHelper {
 
             Item item = stack.getItem();
 
+            //#if MC < 12111
             if (!(item instanceof ToolItem tool)) continue;
 
             Class clazz = tool.getClass();
@@ -256,6 +281,9 @@ public class StorageHelper {
                 // We found something WORSE!
                 return Optional.of(slot);
             }
+            //#else
+            //$$ // TODO [1.21.11] tool-class deleted — determine tool class and mining level via components
+            //#endif
         }
 
         // Now we're getting desparate
@@ -290,6 +318,7 @@ public class StorageHelper {
                 return possibleSlots.stream().min((leftSlot, rightSlot) -> {
                     ItemStack left = StorageHelper.getItemStackInSlot(leftSlot),
                             right = StorageHelper.getItemStackInSlot(rightSlot);
+                    //#if MC < 12111
                     boolean leftIsTool = left.getItem() instanceof ToolItem;
                     boolean rightIsTool = right.getItem() instanceof ToolItem;
                     // Prioritize tools over materials.
@@ -307,6 +336,9 @@ public class StorageHelper {
                         // We want less damage.
                         return left.getDamage() - right.getDamage();
                     }
+                    //#else
+                    //$$ // TODO [1.21.11] tool-class deleted — prioritize tools via components
+                    //#endif
 
                     // Prioritize food over other things if we lack food.
                     boolean lacksFood = totalFoodScore < 8;
@@ -417,11 +449,15 @@ public class StorageHelper {
         ClientPlayerEntity player = AltoClef.getInstance().getPlayer();
 
         for (Item item : any) {
+            //#if MC < 12111
             if (item instanceof ArmorItem armor) {
                 ItemStack equippedStack = player.getEquippedStack(armor.getSlotType());
                 if (equippedStack.getItem().equals(item))
                     return true;
             }
+            //#else
+            //$$ // TODO [1.21.11] armor-class deleted — check equipped armor via EquipmentSlot component
+            //#endif
             if (item instanceof ShieldItem shield) {
                 ItemStack equippedStack = player.getInventory().getStack(OFF_HAND_SLOT);
                 if (equippedStack.getItem().equals(shield))

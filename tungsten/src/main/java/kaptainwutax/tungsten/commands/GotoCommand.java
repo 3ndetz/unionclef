@@ -3,6 +3,7 @@ package kaptainwutax.tungsten.commands;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import kaptainwutax.tungsten.Debug;
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.commands.arguments.GotoTargetArgumentType;
@@ -52,7 +53,7 @@ public class GotoCommand extends Command {
 		if (TungstenModDataContainer.PATHFINDER.stop.get()) return;
 
 		// Reset pathfinder params to defaults (may have been overridden by followPlayer)
-		TungstenModDataContainer.PATHFINDER.searchTimeoutMs       = 15000L;
+		TungstenConfig.get().searchTimeoutMs       = 15000L;
 		TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 15;
 		TungstenModDataContainer.PATHFINDER.minDistPath           = 1.8;
 		TungstenModDataContainer.PATHFINDER.find(TungstenMod.mc.world, target, TungstenMod.mc.player);
@@ -61,7 +62,7 @@ public class GotoCommand extends Command {
 		TungstenModDataContainer.EXECUTOR.cb = () -> {
 			if (TungstenModDataContainer.PATHFINDER.stop.get()) return;
 			if (TungstenMod.mc.player == null) return;
-			double distSq = TungstenMod.mc.player.getPos().squaredDistanceTo(target);
+			double distSq = TungstenMod.mc.player.getEntityPos().squaredDistanceTo(target);
 			if (distSq > ARRIVAL_DIST_SQ) {
 				Debug.logMessage("Retrying (" + (attempt + 1) + "/" + MAX_RETRIES + ")...");
 				// Small delay to let player land

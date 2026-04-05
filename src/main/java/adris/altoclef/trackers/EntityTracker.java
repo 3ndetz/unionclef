@@ -384,7 +384,9 @@ public class EntityTracker extends Tracker {
                         boolean inGround = false;
                         // Get projectile "inGround" variable
                         if (entity instanceof PersistentProjectileEntity) {
+                            //#if MC < 12111
                             inGround = ((PersistentProjectileEntityAccessor) entity).isInGround();
+                            //#endif
                         }
 
                         // Ignore some of the harlmess projectiles
@@ -417,7 +419,9 @@ public class EntityTracker extends Tracker {
 
         boolean inGround = false;
         if (projEntity instanceof PersistentProjectileEntity) {
+            //#if MC < 12111
             inGround = ((PersistentProjectileEntityAccessor) projEntity).isInGround();
+            //#endif
         }
 
         // Ignore harmless projectiles

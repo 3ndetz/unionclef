@@ -1,6 +1,6 @@
 plugins {
-    id("fabric-loom") version "1.7.4" apply false
-    id("com.replaymod.preprocess") version "c2041a3"
+    id("fabric-loom") version "1.15.5" apply false
+    id("com.replaymod.preprocess") version "1678b67"
 }
 
 subprojects {
@@ -15,25 +15,20 @@ subprojects {
 }
 
 // Default MC version — root tasks (runClient, build, etc.) delegate here
-val defaultVersion = "1.21.1"
+val defaultVersion = "1.21.11"
 
-listOf("compileJava", "runClient", "build", "remapJar", "processResources", "githubRelease").forEach { taskName ->
+listOf("compileJava", "runClient", "build", "remapJar", "processResources", "githubRelease", "githubPreRelease").forEach { taskName ->
     tasks.register(taskName) {
         dependsOn(":$defaultVersion:$taskName")
     }
 }
 
 preprocess {
+    // altoclef + tungsten source preprocessed together
+    val mc12111 = createNode("1.21.11", 12111, "yarn")
     val mc12101 = createNode("1.21.1", 12101, "yarn")
     val mc12100 = createNode("1.21", 12100, "yarn")
-    // val mc12006 = createNode("1.20.6", 12006, "yarn")
-    // val mc12004 = createNode("1.20.4", 12004, "yarn")
-    // val mc12001 = createNode("1.20.1", 12001, "yarn")
-    // val mc11904 = createNode("1.19.4", 11904, "yarn")
 
+    mc12111.link(mc12101)
     mc12101.link(mc12100)
-    // mc12100.link(mc12006)
-    // mc12006.link(mc12004)
-    // mc12004.link(mc12001)
-    // mc12001.link(mc11904)
 }

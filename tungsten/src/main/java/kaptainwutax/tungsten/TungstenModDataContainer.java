@@ -11,6 +11,11 @@ public class TungstenModDataContainer {
     public static final boolean LOG_DEBUG_DATA = false;
     public static PathExecutor EXECUTOR;
 	public static PathFinder PATHFINDER = new PathFinder();
+
+    /** Safe check — EXECUTOR may be null before TungstenMod.onInitializeClient */
+    public static boolean isExecutorRunning() {
+        return EXECUTOR != null && EXECUTOR.isRunning();
+    }
 	public static World world;
     public static boolean ignoreFallDamage = true;
     public static GameRenderer gameRenderer = null;

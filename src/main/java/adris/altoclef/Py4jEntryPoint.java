@@ -143,6 +143,12 @@ public class Py4jEntryPoint {
     }
 
     public byte[] getScreenshot() {
+        //#if MC >= 12111
+        //$$ // TODO: takeScreenshot API changed to async Consumer<NativeImage> in 1.21.11
+        //$$ // and NativeImage.getBytes()/copyPixelsRgba() no longer exist.
+        //$$ // Needs rewrite to use the new async API.
+        //$$ return null;
+        //#else
         try {
             AtomicReference<NativeImage> screenshot = new AtomicReference<>();
             CompletableFuture<Void> future = new CompletableFuture<>();
@@ -180,6 +186,7 @@ public class Py4jEntryPoint {
             Debug.logInternal("Error taking screenshot: " + e.getMessage());
         }
         return null;
+        //#endif
     }
 
     public String getPipelineDescription() {
@@ -266,8 +273,14 @@ public class Py4jEntryPoint {
     }
 
     public String getHeldItem() {
+        //#if MC >= 12111
+        //$$ if (AltoClef.inGame() && _mod.getPlayer() != null) {
+        //$$     java.util.List<ItemStack> handItems = java.util.List.of(_mod.getPlayer().getMainHandStack(), _mod.getPlayer().getOffHandStack());
+        //$$     for (ItemStack item : handItems) {
+        //#else
         if (AltoClef.inGame() && _mod.getPlayer() != null && _mod.getPlayer().getHandItems() != null) {
             for (ItemStack item : _mod.getPlayer().getHandItems()) {
+        //#endif
                 if (item.getItem() != null) {
                     String itemName = item.getItem().getName().getString().toLowerCase();
                     if (!itemName.equals("air")) {

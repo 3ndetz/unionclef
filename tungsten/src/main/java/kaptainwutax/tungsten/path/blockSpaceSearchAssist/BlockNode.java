@@ -72,6 +72,7 @@ public class BlockNode {
 	public BlockPos chachedBlockPos = null;
 	
 	public Boolean isDoingLongJump = null;
+	public boolean isDoingJump = false;
 
 	/**
 	 * Cached, should always be equal to goal.heuristic(pos)
@@ -135,17 +136,17 @@ public class BlockNode {
 		this.x = x;
 		this.y = y;
 		this.z = z;
-		this.wasOnSlime = player.getWorld().getBlockState(new BlockPos(x, y - 1, z))
+		this.wasOnSlime = player.getEntityWorld().getBlockState(new BlockPos(x, y - 1, z))
 				.getBlock() instanceof SlimeBlock;
-		this.wasOnLadder = player.getWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
+		this.wasOnLadder = player.getEntityWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
 	}
 
 	public BlockNode(int x, int y, int z, Goal goal, BlockNode parent, double cost, PlayerEntity player) {
 		this.player = player;
 		this.previous = parent;
-		this.wasOnSlime = player.getWorld().getBlockState(new BlockPos(x, y - 1, z))
+		this.wasOnSlime = player.getEntityWorld().getBlockState(new BlockPos(x, y - 1, z))
 				.getBlock() instanceof SlimeBlock;
-		this.wasOnLadder = player.getWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
+		this.wasOnLadder = player.getEntityWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
 		this.cost = parent != null ? 0 : ActionCosts.COST_INF;
 		this.estimatedCostToGoal = goal.heuristic(x, y, z);
 		if (Double.isNaN(estimatedCostToGoal)) {
@@ -374,8 +375,10 @@ public class BlockNode {
                     px += dx;
                     pz += dz;
 
+                    boolean isDoingJump = Math.abs(pz) > 1 || Math.abs(px) > 1;
                     BlockNode newNode = new BlockNode(this.x + px, this.y + py, this.z + pz, goal, this,
-                            ActionCosts.WALK_ONE_BLOCK_COST, this.player);
+                            isDoingJump ? ActionCosts.WALK_ONE_BLOCK_COST + 6.5 : ActionCosts.WALK_ONE_BLOCK_COST, this.player);
+                    newNode.isDoingJump = isDoingJump;
                     nodes.add(newNode);
                 }
             }

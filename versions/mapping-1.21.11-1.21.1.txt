@@ -1,0 +1,3 @@
+net.minecraft.entity.LivingEntity getHandItems() getHandItems()
+net.minecraft.entity.LivingEntity getArmorItems() getArmorItems()
+net.minecraft.entity.LivingEntity getEquippedItems() getEquippedItems()

@@ -26,12 +26,17 @@ public class RunToNode {
 		double distance = DistanceCalculator.getHorizontalEuclideanDistance(agent.getPos(), nextBlockNode.getPos(true));
 		double closestDistance = Double.MAX_VALUE;
 	    Node newNode = new Node(parent, world, new PathInput(false, false, false, false, false, false, true, agent.pitch, desiredYaw),
-	    				new Color(0, 255, 150), parent.cost + 0.5D);
+	    				new Color(0, 255, 150), parent.cost + 0.85D);
 	    Node lastHigheastNodeSinceGround = null;
 	    boolean jump = false;
         int limit = 0;
         while (limit < 200) {
+			if (newNode.agent.isInLava()) newNode.cost += 2e6;
         	limit++;
+			if (newNode.agent.touchingWater) {
+				newNode.cost += 0.2;
+				break;
+			}
 //        	RenderHelper.renderNode(newNode);
 //        	try {
 //				Thread.sleep(2);
@@ -55,25 +60,25 @@ public class RunToNode {
         		break;
         	}
 
-			if (newNode.agent.onGround || lastHigheastNodeSinceGround != null && lastHigheastNodeSinceGround.agent.getPos().y < newNode.agent.getPos().y) {
+			if (newNode.agent.onGround || lastHigheastNodeSinceGround == null || lastHigheastNodeSinceGround.agent.getPos().y < newNode.agent.getPos().y) {
 				lastHigheastNodeSinceGround = newNode;
-			} else if (lastHigheastNodeSinceGround != null
-					&& (!TungstenModDataContainer.ignoreFallDamage
+			} else if ((!TungstenModDataContainer.ignoreFallDamage
 					&& !BlockStateChecker.isAnyWater(world.getBlockState(newNode.agent.getLandingPos(world))))
-					&& DistanceCalculator.getJumpHeight(lastHigheastNodeSinceGround.agent.getPos().y, newNode.agent.getPos().y) < -3) {
+					&& DistanceCalculator.getJumpHeight(lastHigheastNodeSinceGround.agent.getPos().y, newNode.agent.getPos().y) < -3
+					|| !TungstenModDataContainer.ignoreFallDamage && newNode.agent.isDamaged) {
 				newNode = new Node(newNode, world, new PathInput(true, false, false, false, false, false, true, parent.agent.pitch, desiredYaw),
-	            		new Color(255, 0, 0), newNode.cost + 3);
+	            		new Color(24, 17, 222), newNode.cost + 3);
 				break;
 			}
 //			desiredYaw = (float) DirectionHelper.calcYawFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
 			
 			if (newNode.agent.horizontalCollision && nextBlockNode.getBlockPos().getY() - newNode.agent.blockY >= 1) {
 				jump = true;
-				if (newNode.parent.agent.onGround && !newNode.agent.horizontalCollision) {
+				if (newNode.parent != null && newNode.parent.agent.onGround && !newNode.agent.horizontalCollision) {
 					newNode = newNode.parent;
 				}
 			} else if (newNode.agent.horizontalCollision) {
-				while (newNode.agent.horizontalCollision) {
+				while (newNode.agent.horizontalCollision && newNode.parent != null) {
 					newNode = newNode.parent;
 				}
 				break;
@@ -82,7 +87,7 @@ public class RunToNode {
 			}
 			
 			newNode = new Node(newNode, world, new PathInput(true, false, false, false, jump, false, true, parent.agent.pitch, desiredYaw ),
-            		new Color(0, 255, 150), newNode.cost + 0.22D);
+            		new Color(222, 17, 186), newNode.cost + 0.22D);
             if (newNode.agent.isClimbing(world)) newNode.cost += 1.8;
 			distance = DistanceCalculator.getHorizontalEuclideanDistance(newNode.agent.getPos(), nextBlockNode.getPos(true));
 

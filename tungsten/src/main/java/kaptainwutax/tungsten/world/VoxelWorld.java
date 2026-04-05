@@ -151,4 +151,9 @@ public class VoxelWorld implements WorldView {
 		return null;
 	}
 
+	@Override
+	public net.minecraft.world.attribute.EnvironmentAttributeAccess getEnvironmentAttributes() {
+	    return parent.getEnvironmentAttributes();
+	}
+
 }

@@ -10,6 +10,7 @@ import baritone.pathing.movement.movements.MovementDescend;
 import baritone.pathing.movement.movements.MovementDiagonal;
 import baritone.pathing.movement.movements.MovementTraverse;
 import baritone.utils.BlockStateInterface;
+import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.path.PathFinder;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
@@ -130,7 +131,7 @@ public class TungstenBridge {
         this.tungstenTarget = target;
         this.shredderResumePosition = resumePosition;
         this.stallTicks = 0;
-        this.lastPlayerPos = ctx.player().getPos();
+        this.lastPlayerPos = ctx.player().getEntityPos();
         this.state = State.PATHFINDING;
 
         Vec3d targetVec = VecUtils.getBlockPosCenter(target);
@@ -138,12 +139,12 @@ public class TungstenBridge {
         PathFinder pf = TungstenModDataContainer.PATHFINDER;
         if (blockPathHint.isPresent()) {
             // Experimental: guided search with baritone waypoints
-            pf.searchTimeoutMs = 5000L;
+            TungstenConfig.get().searchTimeoutMs = 5000L;
             pf.minPathSizeForTimeout = 5;
             pf.find(ctx.world(), targetVec, ctx.player(), blockPathHint);
         } else {
             // Standard: tungsten finds its own block-space path
-            pf.searchTimeoutMs = 3000L;
+            TungstenConfig.get().searchTimeoutMs = 3000L;
             pf.minPathSizeForTimeout = 3;
             pf.find(ctx.world(), targetVec, ctx.player());
         }
@@ -243,7 +244,7 @@ public class TungstenBridge {
         if (TungstenModDataContainer.EXECUTOR.isRunning()) {
             state = State.EXECUTING;
             stallTicks = 0;
-            lastPlayerPos = ctx.player().getPos();
+            lastPlayerPos = ctx.player().getEntityPos();
 
             // Set callback for when tungsten finishes
             TungstenModDataContainer.EXECUTOR.cb = () -> {
@@ -265,7 +266,7 @@ public class TungstenBridge {
         }
 
         // Stall detection: check if player is actually making progress
-        Vec3d currentPos = ctx.player().getPos();
+        Vec3d currentPos = ctx.player().getEntityPos();
         if (lastPlayerPos != null && currentPos.squaredDistanceTo(lastPlayerPos) < 0.01) {
             stallTicks++;
         } else {
@@ -303,7 +304,9 @@ public class TungstenBridge {
 
     private void stopTungsten() {
         TungstenModDataContainer.PATHFINDER.stop.set(true);
-        TungstenModDataContainer.EXECUTOR.stop = true;
+        if (TungstenModDataContainer.EXECUTOR != null) {
+            TungstenModDataContainer.EXECUTOR.stop = true;
+        }
     }
 
     /**

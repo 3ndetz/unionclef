@@ -39,15 +39,15 @@ import net.minecraft.util.Identifier;
 public final class SpongeSchematic extends StaticSchematic {
 
     public SpongeSchematic(NbtCompound nbt) {
-        this.x = nbt.getInt("Width");
-        this.y = nbt.getInt("Height");
-        this.z = nbt.getInt("Length");
+        this.x = nbt.getInt("Width").orElse(0);
+        this.y = nbt.getInt("Height").orElse(0);
+        this.z = nbt.getInt("Length").orElse(0);
         this.states = new BlockState[this.x][this.z][this.y];
 
         Int2ObjectArrayMap<BlockState> palette = new Int2ObjectArrayMap<>();
-        NbtCompound paletteTag = nbt.getCompound("Palette");
+        NbtCompound paletteTag = nbt.getCompoundOrEmpty("Palette");
         for (String tag : paletteTag.getKeys()) {
-            int index = paletteTag.getInt(tag);
+            int index = paletteTag.getInt(tag).orElse(0);
 
             SerializedBlockState serializedState = SerializedBlockState.getFromString(tag);
             if (serializedState == null) {
@@ -63,7 +63,7 @@ public final class SpongeSchematic extends StaticSchematic {
         }
 
         // BlockData is stored as an NBT byte[], however, the actual data that is represented is a varint[]
-        byte[] rawBlockData = nbt.getByteArray("BlockData");
+        byte[] rawBlockData = nbt.getByteArray("BlockData").orElseThrow();
         int[] blockData = new int[this.x * this.y * this.z];
         int offset = 0;
         for (int i = 0; i < blockData.length; i++) {

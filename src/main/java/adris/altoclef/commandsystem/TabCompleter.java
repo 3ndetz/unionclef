@@ -12,6 +12,15 @@ import java.util.stream.Stream;
 // baritone already has that functionality, why bother creating the same mixin etc. again
 public class TabCompleter implements AbstractGameEventListener {
 
+    /**
+     * Direct tab-complete call (no baritone event system needed).
+     * Used by ChatInputSuggestorMixin when shredder is in noop mode.
+     */
+    public static String[] complete(String prefix) {
+        TabCompleteEvent event = new TabCompleteEvent(prefix);
+        new TabCompleter().onPreTabComplete(event);
+        return event.completions;
+    }
 
     private static int lastIndexOfChars(String s, char... chars) {
         int index = -1;

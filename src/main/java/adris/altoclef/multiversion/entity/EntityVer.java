@@ -120,4 +120,46 @@ public class EntityVer {
         //#endif
     }
 
+    @Pattern
+    private static Vec3d getPos(Entity entity) {
+        //#if MC >= 12111
+        //$$ return entity.getEntityPos();
+        //#else
+        return entity.getPos();
+        //#endif
+    }
+
+    @Pattern
+    private static net.minecraft.world.World getWorld(Entity entity) {
+        //#if MC >= 12111
+        //$$ return entity.getEntityWorld();
+        //#else
+        return entity.getWorld();
+        //#endif
+    }
+
+    // getHandItems/getArmorItems deleted in 1.21.11.
+    // Preprocessor crashes remapping deleted methods, even in inactive #if.
+    // Use reflection on 1.21.1 to hide identifiers from preprocessor.
+    public static Iterable<net.minecraft.item.ItemStack> getHandItems(net.minecraft.entity.LivingEntity entity) {
+        //#if MC >= 12111
+        //$$ return java.util.List.of(entity.getMainHandStack(), entity.getOffHandStack());
+        //#else
+        return LivingEntityVer.callHandItems(entity);
+        //#endif
+    }
+
+    public static Iterable<net.minecraft.item.ItemStack> getArmorItems(net.minecraft.entity.LivingEntity entity) {
+        //#if MC >= 12111
+        //$$ return java.util.List.of(
+        //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.HEAD),
+        //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.CHEST),
+        //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.LEGS),
+        //$$     entity.getEquippedStack(net.minecraft.entity.EquipmentSlot.FEET)
+        //$$ );
+        //#else
+        return LivingEntityVer.callArmorItems(entity);
+        //#endif
+    }
+
 }

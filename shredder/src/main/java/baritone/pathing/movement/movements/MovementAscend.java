@@ -199,8 +199,8 @@ public class MovementAscend extends Movement {
 
         int xAxis = Math.abs(src.getX() - dest.getX()); // either 0 or 1
         int zAxis = Math.abs(src.getZ() - dest.getZ()); // either 0 or 1
-        double flatDistToNext = xAxis * Math.abs((dest.getX() + 0.5D) - ctx.player().getPos().x) + zAxis * Math.abs((dest.getZ() + 0.5D) - ctx.player().getPos().z);
-        double sideDist = zAxis * Math.abs((dest.getX() + 0.5D) - ctx.player().getPos().x) + xAxis * Math.abs((dest.getZ() + 0.5D) - ctx.player().getPos().z);
+        double flatDistToNext = xAxis * Math.abs((dest.getX() + 0.5D) - ctx.player().getEntityPos().x) + zAxis * Math.abs((dest.getZ() + 0.5D) - ctx.player().getEntityPos().z);
+        double sideDist = zAxis * Math.abs((dest.getX() + 0.5D) - ctx.player().getEntityPos().x) + xAxis * Math.abs((dest.getZ() + 0.5D) - ctx.player().getEntityPos().z);
 
         double lateralMotion = xAxis * ctx.player().getVelocity().z + zAxis * ctx.player().getVelocity().x;
         if (Math.abs(lateralMotion) > 0.1) {
@@ -224,7 +224,7 @@ public class MovementAscend extends Movement {
     public boolean headBonkClear() {
         BetterBlockPos startUp = src.up(2);
         for (int i = 0; i < 4; i++) {
-            BetterBlockPos check = startUp.offset(Direction.fromHorizontal(i));
+            BetterBlockPos check = startUp.offset(Direction.fromHorizontalQuarterTurns(i));
             if (!MovementHelper.canWalkThrough(ctx, check)) {
                 // We might bonk our head
                 return false;

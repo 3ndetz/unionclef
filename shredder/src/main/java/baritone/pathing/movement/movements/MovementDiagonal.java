@@ -62,9 +62,9 @@ public class MovementDiagonal extends Movement {
         //return context.precomputedData.canWalkOn(ctx, ctx.playerFeet().down());
         ClientPlayerEntity player = ctx.player();
         double offset = 0.25;
-        double x = player.getPos().x;
-        double y = player.getPos().y - 1;
-        double z = player.getPos().z;
+        double x = player.getEntityPos().x;
+        double y = player.getEntityPos().y - 1;
+        double z = player.getEntityPos().z;
         //standard
         if (ctx.playerFeet().equals(src)) {
             return true;
@@ -264,7 +264,7 @@ public class MovementDiagonal extends Movement {
         } else if (!playerInValidPosition() && !(MovementHelper.isLiquid(ctx, src) && getValidPositions().contains(ctx.playerFeet().up()))) {
             return state.setStatus(MovementStatus.UNREACHABLE);
         }
-        if (dest.y > src.y && ctx.player().getPos().y < src.y + 0.1 && ctx.player().horizontalCollision) {
+        if (dest.y > src.y && ctx.player().getEntityPos().y < src.y + 0.1 && ctx.player().horizontalCollision) {
             state.setInput(Input.JUMP, true);
         }
         if (sprint()) {

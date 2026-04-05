@@ -28,7 +28,9 @@ import java.util.Map;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 import net.minecraft.world.dimension.DimensionType;
 
 /**
@@ -191,7 +193,7 @@ public final class CachedChunk {
         }
     }
 
-    public final BlockState getBlock(int x, int y, int z, DimensionType dimension) {
+    public final BlockState getBlock(int x, int y, int z, DimensionType dimension, RegistryKey<World> dimensionId) {
         int index = getPositionIndex(x, y, z);
         PathingBlockType type = getType(index);
         int internalPos = z << 4 | x;
@@ -217,14 +219,15 @@ public final class CachedChunk {
                 // nether roof is always unbreakable
                 return Blocks.BEDROCK.getDefaultState();
             }
-            if (y < -59 && dimension.natural()) {
+
+            if ((dimensionId == World.OVERWORLD || dimensionId == World.NETHER) && y < dimension.minY() + 5) {
                 // solid blocks below 5 are commonly bedrock
                 // however, returning bedrock always would be a little yikes
                 // discourage paths that include breaking blocks below 5 a little more heavily just so that it takes paths breaking what's known to be stone (at 5 or above) instead of what could maybe be bedrock (below 5)
                 return Blocks.OBSIDIAN.getDefaultState();
             }
         }
-        return ChunkPacker.pathingTypeToBlock(type, dimension);
+        return ChunkPacker.pathingTypeToBlock(type, dimension, dimensionId);
     }
 
     private PathingBlockType getType(int index) {

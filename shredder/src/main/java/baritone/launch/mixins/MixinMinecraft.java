@@ -21,7 +21,7 @@ import baritone.api.BaritoneAPI;
 import baritone.api.IBaritone;
 import baritone.api.event.events.PlayerUpdateEvent;
 import baritone.api.event.events.TickEvent;
-import baritone.api.event.events.WorldEvent;
+
 import baritone.api.event.events.type.EventState;
 import baritone.utils.GodBridgeClickHelper;
 import org.objectweb.asm.Opcodes;
@@ -36,7 +36,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.function.BiFunction;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.DownloadingTerrainScreen;
+
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
@@ -128,41 +128,7 @@ public class MixinMinecraft {
         }
     }
 
-    @Inject(
-            method = "joinWorld",
-            at = @At("HEAD")
-    )
-    private void preLoadWorld(ClientWorld world, DownloadingTerrainScreen.WorldEntryReason arg2, CallbackInfo ci) {
-        // If we're unloading the world but one doesn't exist, ignore it
-        if (this.world == null && world == null) {
-            return;
-        }
-
-        // mc.world changing is only the primary baritone
-
-        BaritoneAPI.getProvider().getPrimaryBaritone().getGameEventHandler().onWorldEvent(
-                new WorldEvent(
-                        world,
-                        EventState.PRE
-                )
-        );
-    }
-
-    @Inject(
-            method = "joinWorld",
-            at = @At("RETURN")
-    )
-    private void postLoadWorld(ClientWorld world, DownloadingTerrainScreen.WorldEntryReason arg2, CallbackInfo ci) {
-        // still fire event for both null, as that means we've just finished exiting a world
-
-        // mc.world changing is only the primary baritone
-        BaritoneAPI.getProvider().getPrimaryBaritone().getGameEventHandler().onWorldEvent(
-                new WorldEvent(
-                        world,
-                        EventState.POST
-                )
-        );
-    }
+    // joinWorld handlers moved to altoclef's ClientTickMixin (preprocessed, cross-version safe)
 
     @Redirect(
             method = "tick",

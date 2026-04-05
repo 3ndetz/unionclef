@@ -67,8 +67,8 @@ public class PunkPlayerTask {
             return;
         }
 
-        double dist = player.getPos().distanceTo(targetEntity.getPos());
-        boolean hasLOS = FollowEntityTask.hasLineOfSight(player, targetEntity.getPos());
+        double dist = player.getEntityPos().distanceTo(targetEntity.getEntityPos());
+        boolean hasLOS = FollowEntityTask.hasLineOfSight(player, targetEntity.getEntityPos());
 
         // ── mode switching ───────────────────────────────────────────────
         if (mode == Mode.APPROACH && dist < COMBAT_RANGE && hasLOS) {
@@ -92,7 +92,7 @@ public class PunkPlayerTask {
     private static void enterCombat() {
         mode = Mode.COMBAT;
         TungstenModDataContainer.PATHFINDER.stop.set(true);
-        TungstenModDataContainer.EXECUTOR.stop = true;
+        if (TungstenModDataContainer.EXECUTOR != null) TungstenModDataContainer.EXECUTOR.stop = true;
         FollowEntityTask.stop();
         Debug.logMessage("PUNK: combat mode");
     }

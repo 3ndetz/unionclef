@@ -72,6 +72,7 @@ public class ConstructNetherPortalSpeedrunTask extends adris.altoclef.tasksystem
     };
     // How the lava will be placed to make the portal. (place relative to origin AND what direction it is placed on)
     // !! Also represents the ORDER at which the lava will be placed.
+    //#if MC < 12111
     private static final LavaTarget[] PORTAL_FRAME_LAVA = new LavaTarget[]{
             // Left side
             new LavaTarget(0, 0, -1, Direction.fromVector(-1, 0, 0)),
@@ -88,6 +89,10 @@ public class ConstructNetherPortalSpeedrunTask extends adris.altoclef.tasksystem
             new LavaTarget(0, 3, 0, Direction.fromVector(0, 0, 1)),
             new LavaTarget(0, 3, 1, Direction.fromVector(0, 0, 1))
     };
+    //#else
+    //$$ // TODO [1.21.11] Direction.fromVector(int,int,int) signature changed — now needs 4th arg
+    //$$ private static final LavaTarget[] PORTAL_FRAME_LAVA = new LavaTarget[]{};
+    //#endif
     private static final Vec3i[] PORTAL_INTERIOR = new Vec3i[]{
             new Vec3i(0, 0, 0),
             new Vec3i(0, 1, 0),

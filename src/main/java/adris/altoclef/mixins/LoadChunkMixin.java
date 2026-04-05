@@ -38,7 +38,9 @@ public class LoadChunkMixin {
             method = "loadChunkFromPacket",
             at = @At("RETURN")
     )
-    //#if MC >= 11800
+    //#if MC >= 12111
+    //$$ private void onLoadChunk(int x, int z, PacketByteBuf buf, java.util.Map nbt, Consumer<net.minecraft.network.packet.s2c.play.ChunkData.BlockEntityVisitor> consumer, CallbackInfoReturnable<WorldChunk> cir) {
+    //#elseif MC >= 11800
     private void onLoadChunk(int x, int z, PacketByteBuf buf, NbtCompound nbt, Consumer<net.minecraft.network.packet.s2c.play.ChunkData.BlockEntityVisitor> consumer, CallbackInfoReturnable<WorldChunk> cir) {
     //#elseif MC >= 11701
     //$$ private void onLoadChunk(int x, int z, net.minecraft.world.biome.source.BiomeArray biomes, PacketByteBuf buf, NbtCompound nbt, BitSet bitSet, CallbackInfoReturnable<WorldChunk> cir) {

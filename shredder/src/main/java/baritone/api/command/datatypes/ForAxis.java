@@ -35,7 +35,7 @@ public enum ForAxis implements IDatatypeFor<Direction.Axis> {
     public Stream<String> tabComplete(IDatatypeContext ctx) throws CommandException {
         return new TabCompleteHelper()
                 .append(Stream.of(Direction.Axis.values())
-                        .map(Direction.Axis::getName).map(String::toLowerCase))
+                        .map(Direction.Axis::asString).map(String::toLowerCase))
                 .filterPrefix(ctx.getConsumer().getString())
                 .stream();
     }

@@ -3,14 +3,14 @@ buildscript {
     project.ext.mcVersion = "${major}${minor.padLeft(2, '0')}${(patch ?: '').padLeft(2, '0')}" as int
 
     dependencies {
-        classpath 'fabric-loom:fabric-loom.gradle.plugin:1.7.4'
+        classpath 'fabric-loom:fabric-loom.gradle.plugin:1.15.5'
         classpath 'com.github.breadmoirai:github-release:2.5.2'
     }
 }
 
 plugins {
     id "maven-publish"
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.gradleup.shadow' version '9.4.0'
 }
 
 apply plugin: 'fabric-loom'
@@ -36,6 +36,9 @@ java {
     targetCompatibility = JavaVersion.VERSION_21
 }
 
+// Tungsten is now a standalone mod (1.21.11-primary source, own build.gradle).
+// No longer compiled inline via srcDir — imported as dependency instead.
+
 tasks.withType(JavaCompile).configureEach {
     options.release = 21
     options.encoding = "UTF-8"
@@ -52,11 +55,19 @@ group = project.maven_group
 def mappingsVersions = [
         12100: "1.21+build.9",
         12101: "1.21.1+build.3",
+        12111: "1.21.11+build.3",
 ]
 
 def fabricApiVersions = [
         12100: "0.100.7+1.21",
         12101: "0.116.9+1.21.1",
+        12111: "0.140.0+1.21.11",
+]
+
+def loaderVersions = [
+        12100: project.loader_version,
+        12101: project.loader_version,
+        12111: "0.18.3",
 ]
 
 // ── Repositories ────────────────────────────────────────────────────────────
@@ -78,7 +89,7 @@ repositories {
 dependencies {
     minecraft("com.mojang:minecraft:${project.name}")
     mappings("net.fabricmc:yarn:${mappingsVersions[mcVersion]}:v2")
-    modImplementation("net.fabricmc:fabric-loader:${project.loader_version}")
+    modImplementation("net.fabricmc:fabric-loader:${loaderVersions[mcVersion] ?: project.loader_version}")
     include(implementation(annotationProcessor("io.github.llamalad7:mixinextras-fabric:0.3.5")))
 
     modImplementation("net.fabricmc.fabric-api:fabric-api:${fabricApiVersions[mcVersion]}")
@@ -107,7 +118,7 @@ dependencies {
     implementation project(path: ":shredder", configuration: "namedElements")
     include project(":shredder")
 
-    // Tungsten — source subproject
+    // Tungsten — standalone mod (1.21.11 mappings, own mixins + entrypoint)
     implementation project(path: ":tungsten", configuration: "namedElements")
     include project(":tungsten")
 }
@@ -124,6 +135,7 @@ remapJar {
 }
 
 processResources {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     inputs.property("version", project.version)
     inputs.property("mcVersion", project.name)
 
@@ -133,8 +145,13 @@ processResources {
     }
 
     from(sourceSets.main.resources.srcDirs) {
-        duplicatesStrategy DuplicatesStrategy.EXCLUDE
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         exclude "fabric.mod.json"
+    }
+
+    // Tungsten mixin config — include only the mixins json, not fabric.mod.json/assets
+    from(rootProject.file('tungsten/src/main/resources')) {
+        include 'tungsten.mixins.json'
     }
 }
 
@@ -166,7 +183,12 @@ publishing {
 
 // ── GitHub Release (primary version only) ───────────────────────────────────
 
-if (project.name == "1.21.1") {
+// ── GitHub Release (stable + pre-release) ──────────────────────────────────
+// gradlew githubRelease      → stable release (v0.21.0)
+// gradlew githubPreRelease   → pre-release    (v0.21.0-alpha)
+
+// Configure on both version subprojects so either can release
+if (project.name == "1.21.1" || project.name == "1.21.11") {
     apply plugin: 'com.github.breadmoirai.github-release'
 
     if (!project.hasProperty('github.token')) {
@@ -174,30 +196,50 @@ if (project.name == "1.21.1") {
         logger.warn('Add  github.token=YOUR_TOKEN  to  ~/.gradle/gradle.properties')
     }
 
+    def releaseAssetFiles = files(
+        { remapJar.archiveFile },                                          // unionclef all-in-one
+        { project(":shredder").tasks.findByName("remapJar")?.archiveFile }, // shredder standalone
+        { project(":tungsten").tasks.findByName("remapJar")?.archiveFile }, // tungsten standalone
+    )
+
+    def releaseBodyProvider = provider {
+        def parts = []
+        def baseFile = rootProject.file("docs/releases/base.md")
+        if (baseFile.exists()) parts.add(baseFile.text)
+        def versionedFile = rootProject.file("docs/releases/${project.mod_version}.md")
+        if (versionedFile.exists()) parts.add(versionedFile.text)
+        else {
+            def latestFile = rootProject.file("docs/releases/latest.md")
+            if (latestFile.exists()) parts.add(latestFile.text)
+        }
+        parts.join("\n---\n\n")
+    }
+
+    // Default: stable release. githubPreRelease flips to alpha mode.
+    def isPreRelease = project.objects.property(Boolean).convention(false)
+
     githubRelease {
         token = project.hasProperty('github.token') ? project.getProperty('github.token') : ""
         owner = "3ndetz"
         repo = "unionclef"
-        tagName = "v${project.mod_version}"
-        releaseName = "UnionClef v${project.mod_version} (MC ${project.name})"
-        releaseAssets = files({ remapJar.archiveFile })
-        targetCommitish = "main"
+        tagName = provider { isPreRelease.get() ? "v${project.mod_version}-alpha" : "v${project.mod_version}" }
+        releaseName = provider { isPreRelease.get() ? "UnionClef v${project.mod_version}-alpha (MC ${project.name})" : "UnionClef v${project.mod_version} (MC ${project.name})" }
+        releaseAssets = releaseAssetFiles
+        targetCommitish = provider { isPreRelease.get() ? "HEAD" : "main" }
         generateReleaseNotes = true
-        body = provider {
-            def parts = []
-            def baseFile = rootProject.file("docs/releases/base.md")
-            if (baseFile.exists()) parts.add(baseFile.text)
-            def versionedFile = rootProject.file("docs/releases/${project.mod_version}.md")
-            if (versionedFile.exists()) parts.add(versionedFile.text)
-            else {
-                def latestFile = rootProject.file("docs/releases/latest.md")
-                if (latestFile.exists()) parts.add(latestFile.text)
-            }
-            parts.join("\n---\n\n")
-        }
+        body = releaseBodyProvider
         draft = false
-        prerelease = false
+        prerelease = provider { isPreRelease.get() }
         overwrite = true
         dryRun = false
+    }
+
+    task githubPreRelease {
+        group = 'publishing'
+        description = 'Create a GitHub pre-release (alpha) with all mod JARs'
+        doFirst {
+            isPreRelease.set(true)
+        }
+        finalizedBy 'githubRelease'
     }
 }

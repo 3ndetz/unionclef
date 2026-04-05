@@ -96,7 +96,7 @@ public class SafetySystem {
         this.target = target;
         active = true;
 
-        Vec3d targetPos = target.getPos();
+        Vec3d targetPos = target.getEntityPos();
         if (prevEnemyPos != null) {
             enemyVelocity = targetPos.subtract(prevEnemyPos);
         }
@@ -137,8 +137,8 @@ public class SafetySystem {
 
         // tick-accurate positions for logic (block grid checks)
         Vec3d playerVel = player.getVelocity();
-        Vec3d playerPosTick = player.getPos();
-        Vec3d targetPosTick = target.getPos();
+        Vec3d playerPosTick = player.getEntityPos();
+        Vec3d targetPosTick = target.getEntityPos();
         double horizSpeed = Math.sqrt(playerVel.x * playerVel.x + playerVel.z * playerVel.z);
 
         // interpolated positions for smooth visualization
@@ -151,16 +151,16 @@ public class SafetySystem {
 
         // terrain checks use tick positions (block grid)
         Vec3d playerPredictedTick = playerPosTick.add(playerVel.multiply(PREDICT_TICKS));
-        int fallAtPredicted = VoidDetector.fallHeight(playerPredictedTick, player.getWorld());
-        int fallAtCurrent = VoidDetector.fallHeight(playerPosTick, player.getWorld());
+        int fallAtPredicted = VoidDetector.fallHeight(playerPredictedTick, player.getEntityWorld());
+        int fallAtCurrent = VoidDetector.fallHeight(playerPosTick, player.getEntityWorld());
         DangerLevel dangerPredicted = DangerLevel.fromFallHeight(fallAtPredicted);
         DangerLevel dangerCurrent = DangerLevel.fromFallHeight(fallAtCurrent);
 
         // edge score: how surrounded by dangerous drops (5+ blocks) we are
-        double currentEdgeScore = VoidDetector.edgeScoreWithFallThreshold(playerPosTick, player.getWorld(), 5);
+        double currentEdgeScore = VoidDetector.edgeScoreWithFallThreshold(playerPosTick, player.getEntityWorld(), 5);
 
         // KB analysis uses tick positions
-        analyzeKnockback(playerPosTick, playerVel, targetPosTick, player.getWorld());
+        analyzeKnockback(playerPosTick, playerVel, targetPosTick, player.getEntityWorld());
 
         // ── evaluate stage ───────────────────────────────────────────────
         CombatStage newStage = evaluateStage(player, playerVel, horizSpeed,
@@ -313,7 +313,7 @@ public class SafetySystem {
                 if (nextWp == null) nextWp = attackPath.get(attackPath.size() - 1);
 
                 // check if next waypoint is safe — block itself AND surroundings
-                int wpFall = VoidDetector.fallHeight(Vec3d.ofBottomCenter(nextWp), player.getWorld());
+                int wpFall = VoidDetector.fallHeight(Vec3d.ofBottomCenter(nextWp), player.getEntityWorld());
                 DangerLevel wpDanger = DangerLevel.fromFallHeight(wpFall);
 
                 if (!wpDanger.isSerious()) {
@@ -329,7 +329,7 @@ public class SafetySystem {
 
                     // jump only if landing zone is safe
                     // check 3-4 blocks ahead in velocity direction for drops
-                    boolean safeToJump = isJumpLandingSafe(playerPosTick, playerVel, player.getWorld());
+                    boolean safeToJump = isJumpLandingSafe(playerPosTick, playerVel, player.getEntityWorld());
                     mc.options.jumpKey.setPressed(player.isOnGround() && safeToJump);
                 }
                 // if waypoint is dangerous, don't move — stay and fight
@@ -484,7 +484,7 @@ public class SafetySystem {
         // find best aim point on hitbox
         Vec3d aimPoint = findBestAimPoint(player, eyePos, predictedBox, predictedPos, h);
 
-        aimYaw = AttackTiming.yawTo(player.getPos(), aimPoint);
+        aimYaw = AttackTiming.yawTo(player.getEntityPos(), aimPoint);
         aimPitch = AttackTiming.pitchTo(eyePos, aimPoint);
     }
 
@@ -593,7 +593,7 @@ public class SafetySystem {
     }
 
     private static boolean hasCleanLOS(ClientPlayerEntity player, Vec3d from, Vec3d to) {
-        net.minecraft.util.hit.HitResult hit = player.getWorld().raycast(
+        net.minecraft.util.hit.HitResult hit = player.getEntityWorld().raycast(
                 new net.minecraft.world.RaycastContext(from, to,
                         net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
                         net.minecraft.world.RaycastContext.FluidHandling.NONE, player));

@@ -356,6 +356,11 @@ public class BeatMinecraftTask extends Task {
     public static boolean hasItem(AltoClef mod, Item item) {
         ClientPlayerEntity player = mod.getPlayer();
         PlayerInventory inv = player.getInventory();
+        //#if MC >= 12111
+        //$$ for (int i = 0; i < 41; ++i) {
+        //$$     if (inv.getStack(i).getItem().equals(item)) return true;
+        //$$ }
+        //#else
         List<DefaultedList<ItemStack>> combinedInventory = List.of(inv.main, inv.armor, inv.offHand);
 
         for (List<ItemStack> list : combinedInventory) {
@@ -363,6 +368,7 @@ public class BeatMinecraftTask extends Task {
                 if (itemStack.getItem().equals(item)) return true;
             }
         }
+        //#endif
 
         return false;
     }
@@ -1197,9 +1203,13 @@ public class BeatMinecraftTask extends Task {
             List<ItemStack> itemStacks = itemStorage.getItemStacksPlayerInventory(true);
             for (ItemStack itemStack : itemStacks) {
                 Item item = itemStack.getItem();
+                //#if MC < 12111
                 if (item instanceof SwordItem) {
                     mod.getSlotHandler().forceEquipItem(item);
                 }
+                //#else
+                //$$ // TODO [1.21.11] sword-class deleted — equip sword via item ID check
+                //#endif
             }
         }
 
