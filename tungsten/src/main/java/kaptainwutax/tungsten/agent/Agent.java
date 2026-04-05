@@ -1604,17 +1604,23 @@ public class Agent {
                 player.getX(), player.getY(), player.getZ(),
                 this.posX, this.posY, this.posZ));
             if (TungstenModDataContainer.EXECUTOR.isRunning()) {
-                double drift = player.getEntityPos().distanceTo(new Vec3d(this.posX, this.posY, this.posZ));
-                if (drift > kaptainwutax.tungsten.TungstenConfig.get().driftThreshold) {
-                    Debug.logMessage(String.format(
-                        "§c[Tungsten] Path stopped: drift %.3f blocks (threshold %.1f) at tick %d. " +
-                        "Expected (%.2f, %.2f, %.2f), actual (%.2f, %.2f, %.2f)",
-                        drift, kaptainwutax.tungsten.TungstenConfig.get().driftThreshold,
-                        TungstenModDataContainer.EXECUTOR.getCurrentTick(),
-                        this.posX, this.posY, this.posZ,
-                        player.getX(), player.getY(), player.getZ()));
-                    TungstenModDataContainer.EXECUTOR.stop = true;
-                    TungstenModDataContainer.PATHFINDER.stop.set(true);
+                if (TungstenConfig.get().driftCorrectionEnabled) {
+                    // Upstream behavior: snap player to simulated position
+                    player.setPosition(this.posX, this.posY, this.posZ);
+                } else {
+                    // Our default behavior: log + stop path on large drift
+                    double drift = player.getEntityPos().distanceTo(new Vec3d(this.posX, this.posY, this.posZ));
+                    if (drift > kaptainwutax.tungsten.TungstenConfig.get().driftThreshold) {
+                        Debug.logMessage(String.format(
+                            "§c[Tungsten] Path stopped: drift %.3f blocks (threshold %.1f) at tick %d. " +
+                            "Expected (%.2f, %.2f, %.2f), actual (%.2f, %.2f, %.2f)",
+                            drift, kaptainwutax.tungsten.TungstenConfig.get().driftThreshold,
+                            TungstenModDataContainer.EXECUTOR.getCurrentTick(),
+                            this.posX, this.posY, this.posZ,
+                            player.getX(), player.getY(), player.getZ()));
+                        TungstenModDataContainer.EXECUTOR.stop = true;
+                        TungstenModDataContainer.PATHFINDER.stop.set(true);
+                    }
                 }
                 if (TungstenModRenderContainer.ERROR.size() > 1000) TungstenModRenderContainer.ERROR.clear();
             }
@@ -1628,14 +1634,15 @@ public class Agent {
                 velDrift,
                 player.getVelocity().x, player.getVelocity().y, player.getVelocity().z,
                 this.velX, this.velY, this.velZ));
-            // Do not call setVelocity() — that overrides server-authoritative velocity and
-            // causes position divergence leading to rubber-band teleports.
-            // Log the mismatch only; path will self-correct on next recalc if needed.
             if (TungstenModDataContainer.EXECUTOR.isRunning()) {
                 values.add(String.format("Velocity mismatch by (%s, %s, %s)",
                         player.getVelocity().x - this.velX,
                         player.getVelocity().y - this.velY,
                         player.getVelocity().z - this.velZ));
+                if (TungstenConfig.get().driftCorrectionEnabled) {
+                    // Upstream behavior: snap velocity to simulated velocity
+                    player.setVelocity(this.velX, this.velY, this.velZ);
+                }
                 Node node = TungstenModDataContainer.EXECUTOR.getCurrentNode();
                 if (TungstenModRenderContainer.ERROR.size() > 1000) TungstenModRenderContainer.ERROR.clear();
                 if (node != null) {
