@@ -127,6 +127,8 @@ dependencies {
     include project(":shredder")
 
     // Tungsten — source compiled inline (preprocessed together with altoclef)
+    // Include as nested mod so it appears in mod menu
+    include project(":tungsten")
 }
 
 // ── Build pipeline ──────────────────────────────────────────────────────────
