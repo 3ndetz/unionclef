@@ -197,9 +197,9 @@ if (project.name == "1.21.1" || project.name == "1.21.11") {
     }
 
     def releaseAssetFiles = files(
-        { remapJar.archiveFile },                                          // unionclef all-in-one
-        { project(":shredder").tasks.findByName("remapJar")?.archiveFile }, // shredder standalone
-        { project(":tungsten").tasks.findByName("remapJar")?.archiveFile }, // tungsten standalone
+        { remapJar.archiveFile.get().asFile },                                                  // unionclef all-in-one
+        { project(":shredder").tasks.named("remapJar").get().archiveFile.get().asFile },         // shredder standalone
+        { project(":tungsten").tasks.named("remapJar").get().archiveFile.get().asFile },         // tungsten standalone
     )
 
     def releaseBodyProvider = provider {
