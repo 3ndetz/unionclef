@@ -144,7 +144,7 @@ public class TungstenBridge {
             pf.find(ctx.world(), targetVec, ctx.player(), blockPathHint);
         } else {
             // Standard: tungsten finds its own block-space path
-            pf.searchTimeoutMs = 3000L;
+            TungstenConfig.get().searchTimeoutMs = 3000L;
             pf.minPathSizeForTimeout = 3;
             pf.find(ctx.world(), targetVec, ctx.player());
         }
