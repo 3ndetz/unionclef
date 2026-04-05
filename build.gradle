@@ -127,7 +127,9 @@ dependencies {
     include project(":shredder")
 
     // Tungsten — source compiled inline (preprocessed together with altoclef)
-    // Include as nested mod JAR so Fabric loader registers it separately in modmenu
+    // implementation: puts on runClient classpath so Fabric finds its fabric.mod.json
+    // include: nests JAR in production unionclef JAR
+    implementation project(path: ":tungsten", configuration: "namedElements")
     include project(":tungsten")
 }
 
