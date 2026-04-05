@@ -4,6 +4,7 @@ build/
 versions/*/build/
 versions/*/bin/
 */bin/
+*/.classpath/
 
 # IDE
 .idea/
