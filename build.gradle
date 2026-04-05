@@ -215,48 +215,31 @@ if (project.name == "1.21.1" || project.name == "1.21.11") {
         parts.join("\n---\n\n")
     }
 
-    // Stable release (default githubRelease task)
+    // Default: stable release. githubPreRelease flips to alpha mode.
+    def isPreRelease = project.objects.property(Boolean).convention(false)
+
     githubRelease {
         token = project.hasProperty('github.token') ? project.getProperty('github.token') : ""
         owner = "3ndetz"
         repo = "unionclef"
-        tagName = "v${project.mod_version}"
-        releaseName = "UnionClef v${project.mod_version} (MC ${project.name})"
+        tagName = provider { isPreRelease.get() ? "v${project.mod_version}-alpha" : "v${project.mod_version}" }
+        releaseName = provider { isPreRelease.get() ? "UnionClef v${project.mod_version}-alpha (MC ${project.name})" : "UnionClef v${project.mod_version} (MC ${project.name})" }
         releaseAssets = releaseAssetFiles
-        targetCommitish = "main"
+        targetCommitish = provider { isPreRelease.get() ? "HEAD" : "main" }
         generateReleaseNotes = true
         body = releaseBodyProvider
         draft = false
-        prerelease = false
+        prerelease = provider { isPreRelease.get() }
         overwrite = true
         dryRun = false
     }
 
-    // Pre-release task
     task githubPreRelease {
         group = 'publishing'
         description = 'Create a GitHub pre-release (alpha) with all mod JARs'
-        dependsOn 'remapJar', ':shredder:remapJar', ':tungsten:remapJar'
-        doLast {
-            def tok = project.hasProperty('github.token') ? project.getProperty('github.token') : ""
-            def tag = "v${project.mod_version}-alpha"
-            def name = "UnionClef v${project.mod_version}-alpha (MC ${project.name})"
-            def assets = releaseAssetFiles.files.collect { "--asset=${it.absolutePath}" }
-
-            def cmd = ["gh", "release", "create", tag,
-                       "--title", name,
-                       "--prerelease",
-                       "--target", project.ext.has('releaseBranch') ? project.ext.releaseBranch : "HEAD",
-                       "--generate-notes"]
-            cmd.addAll(assets)
-
-            def proc = cmd.execute(null, rootProject.projectDir)
-            proc.waitFor()
-            println proc.text
-            if (proc.exitValue() != 0) {
-                println proc.err.text
-                throw new GradleException("gh release create failed with exit code ${proc.exitValue()}")
-            }
+        doFirst {
+            isPreRelease.set(true)
         }
+        finalizedBy 'githubRelease'
     }
 }
