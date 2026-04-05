@@ -127,8 +127,8 @@ dependencies {
     include project(":shredder")
 
     // Tungsten — source compiled inline (preprocessed together with altoclef)
-    // Classes included via srcDir, no separate JAR needed for release.
-    // TODO: modmenu visibility requires nested mod JAR (needs :tungsten:remapJar)
+    // Include as nested mod JAR so Fabric loader registers it separately in modmenu
+    include project(":tungsten")
 }
 
 // ── Build pipeline ──────────────────────────────────────────────────────────
