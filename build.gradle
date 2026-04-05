@@ -198,8 +198,8 @@ if (project.name == "1.21.1" || project.name == "1.21.11") {
 
     def releaseAssetFiles = files(
         { remapJar.archiveFile.get().asFile },
-        { new File(project(":shredder").buildDir, "libs/shredder-${project(":shredder").version}.jar") },
-        { new File(project(":tungsten").buildDir, "libs/tungsten-${project(":tungsten").version}.jar") },
+        { new File(rootProject.projectDir, "shredder/build/libs/shredder-0.1.0.jar") },
+        { new File(rootProject.projectDir, "tungsten/build/libs/tungsten-BETA-1.0.0.jar") },
     )
 
     def releaseBodyProvider = provider {
