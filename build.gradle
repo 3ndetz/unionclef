@@ -127,10 +127,8 @@ dependencies {
     include project(":shredder")
 
     // Tungsten — source compiled inline (preprocessed together with altoclef)
-    // implementation: puts on runClient classpath so Fabric finds its fabric.mod.json
-    // include: nests JAR in production unionclef JAR
-    implementation project(path: ":tungsten", configuration: "namedElements")
-    include project(":tungsten")
+    // Can't load as separate mod: standalone :tungsten has 1.21.1 mappings,
+    // its mixins crash on 1.21.11. Entrypoint + mixins in unionclef's fabric.mod.json.
 }
 
 // ── Build pipeline ──────────────────────────────────────────────────────────
