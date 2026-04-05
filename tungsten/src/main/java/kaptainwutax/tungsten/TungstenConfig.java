@@ -120,12 +120,6 @@ public class TungstenConfig {
      *  When false, uses direct setYaw/setPitch (legacy behavior). */
     public boolean enableNativeRotation = true;
 
-    /** Enable diagonal movement normalization (MC-271065, added in 1.21.4+).
-     *  When true, diagonal input is normalized so diagonal speed matches cardinal.
-     *  Should be true for 1.21.4+ servers, false for 1.21.1 and below.
-     *  If you see position drift, try toggling this. */
-    public boolean diagonalNormalization = false;
-
     /** Adjust pitch (vertical look angle) while executing paths.
      *  When true, the bot looks toward upcoming path nodes — more
      *  human-like than staring at a fixed angle. Purely cosmetic:

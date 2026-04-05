@@ -1363,10 +1363,9 @@ public class Agent {
 			}
 			
 			// Diagonal movement normalization (MC-271065), added in MC 1.21.4+.
-			// Controlled by TungstenConfig.diagonalNormalization (default false).
-			if (TungstenConfig.get().diagonalNormalization) {
-				vec2f = applyDirectionalMovementSpeedFactors(vec2f);
-			}
+			//#if MC >= 12104
+			//$$ vec2f = applyDirectionalMovementSpeedFactors(vec2f);
+			//#endif
 
 			return vec2f;
 		}
