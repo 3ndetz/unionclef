@@ -70,6 +70,16 @@ public class TungstenMod implements ClientModInitializer {
 		TungstenConfig.load();
 		TungstenModDataContainer.EXECUTOR = new PathExecutor(true);
 		//#if MC >= 12111
+		//$$ LOG.info("[Tungsten] Preprocessor: MC >= 12111 ACTIVE (1.21.11 mode)");
+		//#else
+		LOG.info("[Tungsten] Preprocessor: MC < 12111 (1.21.1 fallback mode)");
+		//#endif
+		//#if MC >= 12104
+		//$$ LOG.info("[Tungsten] Diagonal normalization: ENABLED (MC >= 1.21.4)");
+		//#else
+		LOG.info("[Tungsten] Diagonal normalization: DISABLED (MC < 1.21.4)");
+		//#endif
+		//#if MC >= 12111
 		//$$ pauseKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
 		//$$     "key.tungsten.pause", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_P,
 		//$$     net.minecraft.client.option.KeyBinding.Category.MISC));
