@@ -52,17 +52,6 @@ public class TungstenConfig {
      *  Set to 0 to log everything. */
     public double mismatchLogThreshold = 1e-6;
 
-    /** EXPERIMENTAL — breaks pathfinding in current state. Needs proper A* state
-     *  merging (closed set, heuristics) before it can work. Keep false.
-     *  If true: pathfinder continues computing while executor runs partial path.
-     *  If false: pathfinder waits for executor to finish before resuming. */
-    public boolean parallelPathfinding = false;
-
-    /** EXPERIMENTAL — causes path failures on parkour. Needs pathfinder tuning.
-     *  Yaw correction strength. 0 = off (open-loop, recommended), 1.0 = full correction.
-     *  Blends pre-computed yaw toward drift-compensating direction. */
-    public float closedLoopStrength = 0.0F;
-
     /** Air strafe speed multiplier. Vanilla uses 0.02 (walk) / 0.026 (sprint).
      *  Higher values = more air control = pathfinder finds longer jumps.
      *  Set to 1.0 for vanilla-accurate simulation.
