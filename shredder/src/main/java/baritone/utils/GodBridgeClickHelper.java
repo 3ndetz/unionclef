@@ -62,7 +62,7 @@ public class GodBridgeClickHelper {
     }
 
     public static boolean isActive() {
-        return active;
+        return active && ctx != null;
     }
 
     /**

@@ -39,6 +39,9 @@ public abstract class CraftWithMatchingMaterialsTask extends ResourceTask {
             }
         }
         this.sameResourceTarget = sameResourceTarget;
+        if (sameResourceTarget == null) {
+            Debug.logError("CraftWithMatchingMaterialsTask: sameMask has no true entries, cannot determine same resource. Task will fail.");
+        }
 
         // cant this be just replaced with `Math.ceil((double) target.getTargetCount() / recipe.outputCount())` ?
         int craftsNeeded = (int) (1 + Math.floor((double) target.getTargetCount() / recipe.outputCount() - 0.001));
@@ -75,6 +78,13 @@ public abstract class CraftWithMatchingMaterialsTask extends ResourceTask {
          * 5) If the most frequent occurrence IS met, run CraftInTable with a custom recipe that only has the frequent material.`
          */
 
+        // Guard: if sameResourceTarget is null (all-mask false), this task is misconfigured
+        if (sameResourceTarget == null) {
+            Debug.logError("CraftWithMatchingMaterialsTask: sameResourceTarget is null. Task misconfigured.");
+            // Try to collect the target directly instead
+            return TaskCatalogue.getItemTask(target);
+        }
+
         // For each "same" item: How many items can we craft with it?
         // For instance, if we have 7 red wool, we can craft 2 beds
         // sameFullCraftsPermitted[Items.RED_WOOL] = 2;
@@ -87,6 +97,7 @@ public abstract class CraftWithMatchingMaterialsTask extends ResourceTask {
             Item sameCheck = matchList[idx];
             if (sameCheck == null) continue;
             int count = getExpectedTotalCountOfSameItem(mod, sameCheck);
+            if (sameResourcePerRecipe == 0) continue;
             int canCraft = (count / sameResourcePerRecipe) * recipe.outputCount();
             canCraftTotal += canCraft;
             // Prefer higher craft count; tiebreak by earlier position in priority list

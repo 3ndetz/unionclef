@@ -1015,6 +1015,7 @@ public class PathExecutor implements IPathExecutor, Helper {
         jumpBridging = false;
         jumpBridgePhase = JumpBridgePhase.NONE;
         Baritone.settings().rightClickSpeed.value = jumpBridgeSavedClickSpeed;
+        clearKeys();
         // Cooldown: 10 ticks (0.5 sec). Fast re-activation after path transitions.
         jumpBridgeCooldown = 10;
     }

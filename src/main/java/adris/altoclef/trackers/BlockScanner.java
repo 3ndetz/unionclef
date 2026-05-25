@@ -246,12 +246,16 @@ public class BlockScanner {
     }
 
     public void reset() {
-        trackedBlocks.clear();
-        scannedBlocks.clear();
-        scannedChunks.clear();
+        forceStop = true;
+        // Wait briefly for the background scan thread to exit
+        try { Thread.sleep(50); } catch (InterruptedException e) {}
+        synchronized (scannedBlocks) {
+            trackedBlocks.clear();
+            scannedBlocks.clear();
+            scannedChunks.clear();
+        }
         rescanTimer.forceElapse();
         blacklist.clear();
-        forceStop = true;
     }
 
     public void tick() {
@@ -344,6 +348,9 @@ public class BlockScanner {
 
         long ms = System.currentTimeMillis();
 
+        // Synchronize on scannedBlocks to prevent race with reset()
+        synchronized (scannedBlocks) {
+
         ChunkPos playerChunkPos = mod.getPlayer().getChunkPos();
         Vec3d playerPos = mod.getPlayer().getPos();
 
@@ -397,6 +404,7 @@ public class BlockScanner {
         if (LOG) {
             mod.log("Rescanned in: " + (System.currentTimeMillis() - ms) + " ms; visited: " + visited.size() + " chunks");
         }
+        } // end synchronized (scannedBlocks)
     }
 
     private int getChunkDist(ChunkPos pos1, ChunkPos pos2) {
