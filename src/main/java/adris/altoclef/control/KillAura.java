@@ -44,25 +44,32 @@ public class KillAura {
     public static void equipWeapon(AltoClef mod) {
         List<ItemStack> invStacks = mod.getItemStorage().getItemStacksPlayerInventory(true);
         if (!invStacks.isEmpty()) {
+            //#if MC < 12111
+            Item handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
             float handDamage = Float.NEGATIVE_INFINITY;
+            if (handItem instanceof SwordItem handToolItem) {
+                handDamage = handToolItem.getMaterial().getAttackDamage();
+            }
+            SwordItem bestSword = null;
+            float bestDamage = handDamage;
             for (ItemStack invStack : invStacks) {
-                //#if MC < 12111
                 if (invStack.getItem() instanceof SwordItem item) {
                     float itemDamage = item.getMaterial().getAttackDamage();
-                    Item handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
-                    if (handItem instanceof SwordItem handToolItem) {
-                        handDamage = handToolItem.getMaterial().getAttackDamage();
-                    }
-                    if (itemDamage > handDamage) {
-                        mod.getSlotHandler().forceEquipItem(item);
-                    } else {
-                        mod.getSlotHandler().forceEquipItem(handItem);
+                    if (itemDamage > bestDamage) {
+                        bestDamage = itemDamage;
+                        bestSword = item;
                     }
                 }
-                //#else
-                //$$ // TODO [1.21.11] sword-class deleted — use Item.Settings attack damage component
-                //#endif
             }
+            // Equip best sword found (or keep current if none better)
+            if (bestSword != null) {
+                mod.getSlotHandler().forceEquipItem(bestSword);
+            } else if (handItem instanceof SwordItem) {
+                mod.getSlotHandler().forceEquipItem(handItem);
+            }
+            //#else
+            //$$ // TODO [1.21.11] sword-class deleted — use Item.Settings attack damage component
+            //#endif
         }
     }
 

@@ -1,6 +1,7 @@
 package adris.altoclef.chains;
 
 import adris.altoclef.AltoClef;
+import adris.altoclef.Debug;
 import adris.altoclef.Settings;
 import adris.altoclef.multiversion.FoodComponentWrapper;
 import adris.altoclef.multiversion.item.ItemVer;
@@ -22,7 +23,6 @@ import net.minecraft.item.Items;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
 
-import java.util.Objects;
 import java.util.Optional;
 
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
@@ -190,21 +190,25 @@ public class FoodChain extends SingleTaskChain {
 
     private boolean areEnemiesNearby(AltoClef mod) {
         double dangerRange = isTryingToEat ? 14 : 7;
-        for (Entity entity : mod.getEntityTracker().getCloseEntities()) {
-            // Hostile mobs nearby — too dangerous to eat
-            if (entity instanceof HostileEntity hostile && hostile.distanceTo(mod.getPlayer()) < dangerRange) {
-                return true;
-            }
-            // Threatening players nearby (PvP) — too dangerous to eat
-            if (entity instanceof PlayerEntity player && player != mod.getPlayer()
-                    && player.distanceTo(mod.getPlayer()) < dangerRange
-                    && entity.getName() != null) {
-                String name = entity.getName().getString();
-                if (mod.getDamageTracker().getThreatTable().shouldAttack(name)
-                        || mod.getDamageTracker().getThreatTable().shouldAvoid(name)) {
+        try {
+            for (Entity entity : mod.getEntityTracker().getCloseEntities()) {
+                // Hostile mobs nearby — too dangerous to eat
+                if (entity instanceof HostileEntity hostile && hostile.distanceTo(mod.getPlayer()) < dangerRange) {
                     return true;
                 }
+                // Threatening players nearby (PvP) — too dangerous to eat
+                if (entity instanceof PlayerEntity player && player != mod.getPlayer()
+                        && player.distanceTo(mod.getPlayer()) < dangerRange
+                        && entity.getName() != null) {
+                    String name = entity.getName().getString();
+                    if (mod.getDamageTracker().getThreatTable().shouldAttack(name)
+                            || mod.getDamageTracker().getThreatTable().shouldAvoid(name)) {
+                        return true;
+                    }
+                }
             }
+        } catch (Exception e) {
+            Debug.logWarning("Exception in areEnemiesNearby: " + e.getMessage());
         }
 
         return false;
@@ -321,7 +325,10 @@ public class FoodChain extends SingleTaskChain {
                     bestFood = stack.getItem();
                 }
 
-                foodTotal += Objects.requireNonNull(ItemVer.getFoodComponent(stack.getItem())).getHunger() * stack.getCount();
+                FoodComponentWrapper foodComp = ItemVer.getFoodComponent(stack.getItem());
+                if (foodComp != null) {
+                    foodTotal += foodComp.getHunger() * stack.getCount();
+                }
             }
         }
 

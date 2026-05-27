@@ -673,13 +673,17 @@ public class MobDefenseChain extends SingleTaskChain {
         }
 
         // TODO refactor this into something more reliable for all mobs
-        for (SkeletonEntity skeleton : mod.getEntityTracker().getTrackedEntities(SkeletonEntity.class)) {
-            if (skeleton.distanceTo(mod.getPlayer()) > 10 || !skeleton.canSee(mod.getPlayer())) continue;
+        try {
+            for (SkeletonEntity skeleton : mod.getEntityTracker().getTrackedEntities(SkeletonEntity.class)) {
+                if (skeleton.distanceTo(mod.getPlayer()) > 10 || !skeleton.canSee(mod.getPlayer())) continue;
 
-            // when the skeleton is about to shoot (it takes 5 ticks to raise the shield)
-            if (skeleton.getItemUseTime() > 15) {
-                return true;
+                // when the skeleton is about to shoot (it takes 5 ticks to raise the shield)
+                if (skeleton.getItemUseTime() > 15) {
+                    return true;
+                }
             }
+        } catch (ConcurrentModificationException e) {
+            Debug.logWarning("ConcurrentModificationException while checking skeletons: " + e.getMessage());
         }
 
         return false;
