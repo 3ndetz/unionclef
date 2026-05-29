@@ -46,6 +46,8 @@ public class FollowEntityTask {
     private static Vec3d   lastTargetPos  = null;
     private static int     tickCounter    = 0;
     private static int     stuckTicks     = 0;
+    private static int     restartCount   = 0;
+    private static final int MAX_RESTARTS = 5;   // prevent infinite recalc loop
     private static boolean stopRequested  = false;
 
     // ── TRAILING ────────────────────────────────────────────────────────────────
@@ -82,6 +84,7 @@ public class FollowEntityTask {
         lastTargetPos      = null;
         tickCounter        = 0;
         stuckTicks         = 0;
+        restartCount       = 0;
         stopRequested      = false;
         leapActive         = false;
         trail.reset();
@@ -95,6 +98,7 @@ public class FollowEntityTask {
         leapActive         = false;
         stopRequested      = false;
         stuckTicks         = 0;
+        restartCount       = 0;
         trail.reset();
         BlockPathWalker.stop();
         releaseKeys();
@@ -200,6 +204,7 @@ public class FollowEntityTask {
         } else if (stopRequested && !pathfinderActive) {
             stopRequested = false;
             stuckTicks    = 0;
+            restartCount  = 0;
             startFind(world, player, effectiveTarget, effectiveDist);
         } else if (!stopRequested && tickCounter >= RECALC_TICKS
                 && lastTargetPos != null
@@ -211,6 +216,12 @@ public class FollowEntityTask {
             tickCounter   = 0;
         } else if (!executorRunning && !pathfinderActive) {
             if (++stuckTicks >= STUCK_TICKS) {
+                if (++restartCount > MAX_RESTARTS) {
+                    // Too many restarts — target is unreachable, stop.
+                    Debug.logMessage("Follow: target unreachable after " + MAX_RESTARTS + " attempts — stopping");
+                    stop();
+                    return;
+                }
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
                 stopRequested = true;
                 stuckTicks    = 0;

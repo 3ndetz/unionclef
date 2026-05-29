@@ -288,7 +288,7 @@ public class CombatPathfinder {
             if (isWalkable(candidate, world)) { result.add(candidate); continue; }
 
             BlockPos up = candidate.up();
-            if (isWalkable(up, world) && canPassThrough(pos.up().up(), world)) { result.add(up); continue; }
+            if (isWalkable(up, world) && canPassThrough(up.up(), world)) { result.add(up); continue; }
 
             BlockPos down = candidate.down();
             if (isWalkable(down, world) && canPassThrough(candidate, world)) { result.add(down); }

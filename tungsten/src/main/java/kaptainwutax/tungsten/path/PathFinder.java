@@ -612,8 +612,8 @@ public class PathFinder {
 
 	private static double getDistFromStartSq(Node n, Vec3d start) {
 		double xDiff = start.x - n.agent.getPos().x;
-		double yDiff = start.x - n.agent.getPos().y;
-		double zDiff = start.x - n.agent.getPos().z;
+		double yDiff = start.y - n.agent.getPos().y;
+		double zDiff = start.z - n.agent.getPos().z;
 		return xDiff * xDiff + yDiff * yDiff + zDiff * zDiff;
 	}
 	

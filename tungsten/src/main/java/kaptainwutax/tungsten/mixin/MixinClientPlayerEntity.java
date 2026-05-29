@@ -135,7 +135,10 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		);
 		//#endif
 		if (TungstenModDataContainer.isExecutorRunning() && TungstenModDataContainer.EXECUTOR.getCurrentTick() > 0) {
-			TungstenModDataContainer.EXECUTOR.getPath().get(TungstenModDataContainer.EXECUTOR.getCurrentTick() - 1).agent.compare(self, currentInput, true);
+			java.util.List<kaptainwutax.tungsten.path.Node> execPath = TungstenModDataContainer.EXECUTOR.getPath();
+			if (execPath != null && TungstenModDataContainer.EXECUTOR.getCurrentTick() - 1 < execPath.size()) {
+				execPath.get(TungstenModDataContainer.EXECUTOR.getCurrentTick() - 1).agent.compare(self, currentInput, true);
+			}
 		} else if(!this.getAbilities().flying && Agent.INSTANCE != null) {
 			Agent.INSTANCE.compare(self, currentInput, false);
 		}
