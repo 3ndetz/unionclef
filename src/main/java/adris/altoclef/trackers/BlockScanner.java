@@ -27,6 +27,7 @@ public class BlockScanner {
 
     private static final boolean LOG = false;
     private static final int RESCAN_TICK_DELAY = 4 * 20;
+    private static final int BLACKLIST_CLEANUP_INTERVAL = 200; // ~10 seconds
     private static final int CACHED_POSITIONS_PER_BLOCK = 40;
 
 
@@ -44,6 +45,7 @@ public class BlockScanner {
 
     private boolean scanning = false;
     private boolean forceStop = false;
+    private int _blacklistCleanupCounter = 0;
 
 
     public BlockScanner(AltoClef mod) {
@@ -260,6 +262,11 @@ public class BlockScanner {
 
     public void tick() {
         if (mod.getWorld() == null || mod.getPlayer() == null) return;
+        // Periodic blacklist cleanup to prevent memory leak from stale block entries
+        if (_blacklistCleanupCounter++ > BLACKLIST_CLEANUP_INTERVAL) {
+            _blacklistCleanupCounter = 0;
+            blacklist.cleanupStale();
+        }
         //be maximally aware of the closest blocks around you
         scanCloseBlocks();
         if (!rescanTimer.elapsed() || scanning) return;

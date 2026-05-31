@@ -203,8 +203,10 @@ public class KillAura {
                 canAttack = mod.getSlotHandler().forceDeequipHitTool();
             }
             if (canAttack) {
-                // isOnGround() intentionally removed — matches autoclef (allows sprint-crit attacks while jumping)
-                if (mod.getPlayer().getVelocity().getY() < 0 || mod.getPlayer().isTouchingWater()) {
+                // Allow attacking while on ground, falling (crit), or in water.
+                // isOnGround() is critical — on dry ground Y velocity is ~0 (not < 0),
+                // so the bot would never attack without this check.
+                if (mod.getPlayer().isOnGround() || mod.getPlayer().getVelocity().getY() < 0 || mod.getPlayer().isTouchingWater()) {
                     attackedLastTick = true;
                     mod.getControllerExtras().attack(entity);
                 }
