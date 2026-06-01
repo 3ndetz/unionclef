@@ -110,7 +110,7 @@ public class GestureTask extends Task {
     }
 
     public GestureTask(Entity target) {
-        this(target, Gesture.values()[new Random().nextInt(Gesture.values().length - 1)]); // random
+        this(target, Gesture.values()[new Random().nextInt(Gesture.values().length)]); // random
     }
 
     protected Vec3d getTargetPos(AltoClef mod) {

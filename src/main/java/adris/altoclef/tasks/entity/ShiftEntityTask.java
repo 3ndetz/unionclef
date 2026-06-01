@@ -49,11 +49,11 @@ public class ShiftEntityTask extends AbstractDoToEntityTask {
     }
 
     public ShiftEntityTask(String target) {
-        this(target, ShiftType.values()[new Random().nextInt(ShiftType.values().length - 1)]);
+        this(target, ShiftType.values()[new Random().nextInt(ShiftType.values().length)]);
     }
 
     public ShiftEntityTask(Entity target) {
-        this(target, ShiftType.values()[new Random().nextInt(ShiftType.values().length - 1)]);
+        this(target, ShiftType.values()[new Random().nextInt(ShiftType.values().length)]);
     }
 
     @Override
