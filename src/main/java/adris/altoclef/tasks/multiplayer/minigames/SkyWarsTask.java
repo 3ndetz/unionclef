@@ -13,6 +13,7 @@ import adris.altoclef.tasks.resources.GetBuildingMaterialsTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.*;
+import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.time.TimerGame;
 import baritone.api.utils.input.Input;
 import net.minecraft.block.Block;
@@ -21,10 +22,12 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.screen.slot.SlotActionType;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -55,6 +58,11 @@ public class SkyWarsTask extends Task {
     private Task _lootTask;
     private Task _structureMaterialsTask;
     private TimerGame _buildBlocksCollectTimer = new TimerGame(3);
+    private final TimerGame _inventoryCleanupTimer = new TimerGame(30);
+    // State machine for staggered junk throwing
+    private int _cleanIndex = -1;
+    private final List<Integer> _junkSlots = new ArrayList<>();
+    private final TimerGame _cleanThrowTimer = new TimerGame(0);
     private Block[] buildableBlocks = {Blocks.STONE, Blocks.COBBLESTONE, Blocks.DIRT, Blocks.GRASS_BLOCK};
     private List<Block> handBuildableBlocks = new ArrayList<>();
 
@@ -157,6 +165,23 @@ public class SkyWarsTask extends Task {
         if (mod.getFoodChain().needsToEat()) {
             setDebugState("Eat first.");
             return null;
+        }
+
+        // Periodic inventory cleanup — throw out junk not in lootable whitelist
+        if (_inventoryCleanupTimer.elapsed()) {
+            _inventoryCleanupTimer.reset();
+            startInventoryCleanup(mod);
+        }
+        if (_cleanIndex >= 0 && _cleanThrowTimer.elapsed()) {
+            mod.getSlotHandler().clickSlot(new PlayerSlot(_junkSlots.get(_cleanIndex)), 1, SlotActionType.THROW);
+            _cleanIndex++;
+            if (_cleanIndex >= _junkSlots.size()) {
+                _cleanIndex = -1;
+                _junkSlots.clear();
+            } else {
+                _cleanThrowTimer.setInterval(0.5 + Math.random() * 2.0);
+                _cleanThrowTimer.reset();
+            }
         }
 
         if (shouldForce(_armorTask)) {
@@ -407,6 +432,25 @@ public class SkyWarsTask extends Task {
                 && !player.isCreative()
                 && !player.isSpectator()
                 && !mod.getButler().isUserAuthorized(player.getName().getString());
+    }
+
+    private void startInventoryCleanup(AltoClef mod) {
+        List<Item> keepItems = lootableItems(mod);
+        _junkSlots.clear();
+        for (int i = 0; i < 36; i++) {
+            int windowSlot = i < 9 ? i + 36 : i;
+            ItemStack stack = StorageHelper.getItemStackInSlot(new PlayerSlot(windowSlot));
+            if (stack.isEmpty()) continue;
+            if (keepItems.contains(stack.getItem())) continue;
+            _junkSlots.add(windowSlot);
+        }
+        if (_junkSlots.isEmpty()) {
+            _cleanIndex = -1;
+        } else {
+            _cleanIndex = 0;
+            _cleanThrowTimer.setInterval(0.5 + Math.random() * 2.0);
+            _cleanThrowTimer.reset();
+        }
     }
 
     private static boolean shouldForce(Task task) {
