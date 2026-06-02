@@ -434,22 +434,182 @@ public class SkyWarsTask extends Task {
                 && !mod.getButler().isUserAuthorized(player.getName().getString());
     }
 
+    // Groups of items where we only keep the best one; extras are junk
+    private static final Item[][] DEDUPE_CATEGORIES = {
+            ItemHelper.SwordsTopPriority,
+            ItemHelper.AxesTopPriority,
+            ItemHelper.PickaxesTopPriority,
+            ItemHelper.ShovelsTopPriority,
+            ItemHelper.HoesTopPriority,
+            ItemHelper.HelmetsTopPriority,
+            ItemHelper.ChestplatesTopPriority,
+            ItemHelper.LeggingsTopPriority,
+            ItemHelper.BootsTopPriority,
+            ItemHelper.ShootWeapons, // bows + crossbows
+    };
+
+    // Base combat value for scoring: higher = hits harder / protects better.
+    // For weapons: Java Edition base attack damage.
+    // For armour: armour protection points (helmet/chestplate/leggings/boots).
+    // For bows / crossbows: fully-charged unenchanted damage.
+    // Only items that appear in DEDUPE_CATEGORIES arrays are included.
+    private static final Map<Item, Float> COMBAT_VALUES = new HashMap<>();
+    static {
+        // --- Swords (base attack damage) ---
+        COMBAT_VALUES.put(Items.NETHERITE_SWORD, 8f);
+        COMBAT_VALUES.put(Items.DIAMOND_SWORD,    7f);
+        COMBAT_VALUES.put(Items.IRON_SWORD,       6f);
+        COMBAT_VALUES.put(Items.STONE_SWORD,      5f);
+        COMBAT_VALUES.put(Items.GOLDEN_SWORD,     4f);
+        COMBAT_VALUES.put(Items.WOODEN_SWORD,     4f);
+
+        // --- Axes (base attack damage) ---
+        COMBAT_VALUES.put(Items.NETHERITE_AXE, 10f);
+        COMBAT_VALUES.put(Items.DIAMOND_AXE,    6f);
+        COMBAT_VALUES.put(Items.IRON_AXE,       5f);
+        COMBAT_VALUES.put(Items.STONE_AXE,      4f);
+        COMBAT_VALUES.put(Items.GOLDEN_AXE,     3f);
+        COMBAT_VALUES.put(Items.WOODEN_AXE,     3f);
+
+        // --- Pickaxes (base attack damage) ---
+        COMBAT_VALUES.put(Items.NETHERITE_PICKAXE, 6f);
+        COMBAT_VALUES.put(Items.DIAMOND_PICKAXE,   5f);
+        COMBAT_VALUES.put(Items.IRON_PICKAXE,      4f);
+        COMBAT_VALUES.put(Items.STONE_PICKAXE,     3f);
+        COMBAT_VALUES.put(Items.GOLDEN_PICKAXE,    2f);
+        COMBAT_VALUES.put(Items.WOODEN_PICKAXE,    2f);
+
+        // --- Shovels (base attack damage) ---
+        COMBAT_VALUES.put(Items.NETHERITE_SHOVEL, 6.5f);
+        COMBAT_VALUES.put(Items.DIAMOND_SHOVEL,   5.5f);
+        COMBAT_VALUES.put(Items.IRON_SHOVEL,      4.5f);
+        COMBAT_VALUES.put(Items.STONE_SHOVEL,     3.5f);
+        COMBAT_VALUES.put(Items.GOLDEN_SHOVEL,    2.5f);
+        COMBAT_VALUES.put(Items.WOODEN_SHOVEL,    2.5f);
+
+        // --- Hoes (base attack damage — all 1 in Java Ed.) ---
+        COMBAT_VALUES.put(Items.NETHERITE_HOE, 1f);
+        COMBAT_VALUES.put(Items.DIAMOND_HOE,   1f);
+        COMBAT_VALUES.put(Items.IRON_HOE,      1f);
+        COMBAT_VALUES.put(Items.STONE_HOE,     1f);
+        COMBAT_VALUES.put(Items.GOLDEN_HOE,    1f);
+        COMBAT_VALUES.put(Items.WOODEN_HOE,    1f);
+
+        // --- Helmet armour protection ---
+        COMBAT_VALUES.put(Items.NETHERITE_HELMET,  3f);
+        COMBAT_VALUES.put(Items.DIAMOND_HELMET,    3f);
+        COMBAT_VALUES.put(Items.IRON_HELMET,       2f);
+        COMBAT_VALUES.put(Items.CHAINMAIL_HELMET,  2f);
+        COMBAT_VALUES.put(Items.GOLDEN_HELMET,     2f);
+        COMBAT_VALUES.put(Items.LEATHER_HELMET,    1f);
+
+        // --- Chestplate armour protection ---
+        COMBAT_VALUES.put(Items.NETHERITE_CHESTPLATE,  8f);
+        COMBAT_VALUES.put(Items.DIAMOND_CHESTPLATE,    8f);
+        COMBAT_VALUES.put(Items.IRON_CHESTPLATE,       6f);
+        COMBAT_VALUES.put(Items.CHAINMAIL_CHESTPLATE,  5f);
+        COMBAT_VALUES.put(Items.GOLDEN_CHESTPLATE,     5f);
+        COMBAT_VALUES.put(Items.LEATHER_CHESTPLATE,    3f);
+
+        // --- Leggings armour protection ---
+        COMBAT_VALUES.put(Items.NETHERITE_LEGGINGS,  6f);
+        COMBAT_VALUES.put(Items.DIAMOND_LEGGINGS,    6f);
+        COMBAT_VALUES.put(Items.IRON_LEGGINGS,       5f);
+        COMBAT_VALUES.put(Items.CHAINMAIL_LEGGINGS,  4f);
+        COMBAT_VALUES.put(Items.GOLDEN_LEGGINGS,     3f);
+        COMBAT_VALUES.put(Items.LEATHER_LEGGINGS,    2f);
+
+        // --- Boots armour protection ---
+        COMBAT_VALUES.put(Items.NETHERITE_BOOTS,  3f);
+        COMBAT_VALUES.put(Items.DIAMOND_BOOTS,    3f);
+        COMBAT_VALUES.put(Items.IRON_BOOTS,       2f);
+        COMBAT_VALUES.put(Items.CHAINMAIL_BOOTS,  1f);
+        COMBAT_VALUES.put(Items.GOLDEN_BOOTS,     1f);
+        COMBAT_VALUES.put(Items.LEATHER_BOOTS,    1f);
+
+        // --- Bows / crossbows (fully charged unenchanted) ---
+        COMBAT_VALUES.put(Items.BOW,      9f);
+        COMBAT_VALUES.put(Items.CROSSBOW, 9f);
+    }
+
+    // Fraction of max durability below which the item is junked regardless of damage/enchants.
+    private static final float MIN_DURABILITY_FRACTION = 0.15f;
+
     private void startInventoryCleanup(AltoClef mod) {
         List<Item> keepItems = lootableItems(mod);
         _junkSlots.clear();
+
+        // Phase 1: For each equipment category, keep best 1, junk the rest.
+        //   Sub-15%-durability items are junked unconditionally before scoring.
+        for (Item[] category : DEDUPE_CATEGORIES) {
+            Set<Item> catSet = new HashSet<>(Arrays.asList(category));
+            List<SlotScore> candidates = new ArrayList<>();
+
+            for (int i = 0; i < 36; i++) {
+                int windowSlot = i < 9 ? i + 36 : i;
+                ItemStack stack = StorageHelper.getItemStackInSlot(new PlayerSlot(windowSlot));
+                if (stack.isEmpty()) continue;
+                if (!catSet.contains(stack.getItem())) continue;
+
+                int maxDur = stack.getMaxDamage();
+                if (maxDur > 0 && stack.getDamage() > maxDur * (1f - MIN_DURABILITY_FRACTION)) {
+                    // Worn-out tool: junk it
+                    _junkSlots.add(windowSlot);
+                    continue;
+                }
+                candidates.add(new SlotScore(windowSlot, scoreStack(stack)));
+            }
+
+            if (candidates.size() <= 1) continue;
+
+            // Sort descending by score, best first
+            candidates.sort((a, b) -> Integer.compare(b.score, a.score));
+            // Everything after the best is junk
+            for (int i = 1; i < candidates.size(); i++) {
+                _junkSlots.add(candidates.get(i).windowSlot);
+            }
+        }
+
+        // Phase 2: Also junk items not in the whitelist at all
         for (int i = 0; i < 36; i++) {
             int windowSlot = i < 9 ? i + 36 : i;
+            // Already marked as duplicate or worn-out junk
+            if (_junkSlots.contains(windowSlot)) continue;
             ItemStack stack = StorageHelper.getItemStackInSlot(new PlayerSlot(windowSlot));
             if (stack.isEmpty()) continue;
             if (keepItems.contains(stack.getItem())) continue;
             _junkSlots.add(windowSlot);
         }
+
         if (_junkSlots.isEmpty()) {
             _cleanIndex = -1;
         } else {
             _cleanIndex = 0;
             _cleanThrowTimer.setInterval(0.5 + Math.random() * 2.0);
             _cleanThrowTimer.reset();
+        }
+    }
+
+    // Score higher = better keep.
+    // Enchanted >> base damage >> durability.
+    private static int scoreStack(ItemStack stack) {
+        float baseDamage = COMBAT_VALUES.getOrDefault(stack.getItem(), 0f);
+        int score = (int) (baseDamage * 100f);
+        if (stack.hasEnchantments()) {
+            score += 2000;
+        }
+        int durability = stack.getMaxDamage() - stack.getDamage();
+        score += durability;
+        return score;
+    }
+
+    private static class SlotScore {
+        final int windowSlot;
+        final int score;
+
+        SlotScore(int windowSlot, int score) {
+            this.windowSlot = windowSlot;
+            this.score = score;
         }
     }
 
