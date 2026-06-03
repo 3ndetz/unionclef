@@ -214,7 +214,9 @@ public class SkyWarsTask extends Task {
                 Blocks.CHEST);
 
         Optional<ItemEntity> closestDrop = mod.getEntityTracker().getClosestItemDrop(
-                pos, toItemTargets(lootableItems(mod).toArray(new Item[0])));
+                pos,
+                entity -> shouldPickupDrop(mod, entity),
+                toItemTargets(lootableItems(mod).toArray(new Item[0])));
 
         boolean nonReachable = getCurrentCalculatedHeuristic(mod) == Double.POSITIVE_INFINITY;
 
@@ -601,6 +603,49 @@ public class SkyWarsTask extends Task {
         int durability = stack.getMaxDamage() - stack.getDamage();
         score += durability;
         return score;
+    }
+
+    // Only pick up equipment drops if they're better than what we already have.
+    // Non-equipment items (blocks, food, pearls, etc.) are always picked up.
+    private boolean shouldPickupDrop(AltoClef mod, ItemEntity entity) {
+        ItemStack stack = entity.getStack();
+        if (stack.isEmpty()) return false;
+        Item item = stack.getItem();
+
+        // Not a weapon/tool/armor — always pick up (food, blocks, pearls, etc.)
+        if (!COMBAT_VALUES.containsKey(item)) return true;
+
+        // Find which equipment category this item belongs to
+        Item[] category = null;
+        for (Item[] cat : DEDUPE_CATEGORIES) {
+            for (Item catItem : cat) {
+                if (catItem.equals(item)) {
+                    category = cat;
+                    break;
+                }
+            }
+            if (category != null) break;
+        }
+        if (category == null) return true;
+
+        int dropScore = scoreStack(stack);
+        Set<Item> catSet = new HashSet<>(Arrays.asList(category));
+
+        // Find the best score we already have for this category
+        int bestInventoryScore = Integer.MIN_VALUE;
+        for (int i = 0; i < 36; i++) {
+            int windowSlot = i < 9 ? i + 36 : i;
+            ItemStack invStack = StorageHelper.getItemStackInSlot(new PlayerSlot(windowSlot));
+            if (invStack.isEmpty()) continue;
+            if (!catSet.contains(invStack.getItem())) continue;
+            int invScore = scoreStack(invStack);
+            if (invScore > bestInventoryScore) {
+                bestInventoryScore = invScore;
+            }
+        }
+
+        // Only pick up if we have nothing in this category, or it's strictly better
+        return bestInventoryScore == Integer.MIN_VALUE || dropScore > bestInventoryScore;
     }
 
     private static class SlotScore {
