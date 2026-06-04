@@ -39,7 +39,6 @@ public class SkyWarsTask extends Task {
     private final ScanChunksInRadius _scanTask;
     private Vec3d _closestPlayerLastPos;
     private Vec3d _closestPlayerLastObservePos;
-    private boolean _forceWait = false;
     boolean _thePitTask = false;
     private BlockPos _startedPos;
     private boolean _finishOnKilled = false;
@@ -57,7 +56,6 @@ public class SkyWarsTask extends Task {
     private boolean _started = false;
     private Task _lootTask;
     private Task _structureMaterialsTask;
-    private TimerGame _buildBlocksCollectTimer = new TimerGame(3);
     private final TimerGame _inventoryCleanupTimer = new TimerGame(30);
     // State machine for staggered junk throwing
     private int _cleanIndex = -1;
@@ -66,7 +64,17 @@ public class SkyWarsTask extends Task {
     private Block[] buildableBlocks = {Blocks.STONE, Blocks.COBBLESTONE, Blocks.DIRT, Blocks.GRASS_BLOCK};
     private List<Block> handBuildableBlocks = new ArrayList<>();
 
+    // Cached lootable items — stable for game duration, computed once on first access
+    private List<Item> _cachedLootableItems;
+
     private List<Item> lootableItems(AltoClef mod) {
+        if (_cachedLootableItems == null) {
+            _cachedLootableItems = buildLootableItems(mod);
+        }
+        return _cachedLootableItems;
+    }
+
+    private List<Item> buildLootableItems(AltoClef mod) {
         List<Item> lootable = new ArrayList<>();
         lootable.addAll(armorAndToolsNeeded(mod));
         lootable.addAll(Arrays.stream(ItemHelper.PLANKS).toList());
@@ -83,9 +91,16 @@ public class SkyWarsTask extends Task {
         lootable.add(Items.GOLDEN_CARROT);
         lootable.add(Items.GUNPOWDER);
         lootable.add(Items.ENDER_PEARL);
-        if (!mod.getItemStorage().hasItemInventoryOnly(Items.WATER_BUCKET)) {
-            lootable.add(Items.WATER_BUCKET);
-        }
+        // Always keep water bucket — removing the conditional check that would
+        // cause the bucket to be junked after being looted (it was only added
+        // to the whitelist when we DIDN'T have one, which is backwards for keep logic)
+        lootable.add(Items.WATER_BUCKET);
+        // Additional utility items useful in SkyWars
+        lootable.add(Items.OBSIDIAN);
+        lootable.add(Items.LADDER);
+        lootable.add(Items.SNOWBALL);
+        lootable.add(Items.EGG);
+        lootable.add(Items.FISHING_ROD);
         return lootable;
     }
 
@@ -123,6 +138,8 @@ public class SkyWarsTask extends Task {
         AltoClef mod = AltoClef.getInstance();
         mod.getBehaviour().push();
         mod.getBehaviour().setForceFieldPlayers(true);
+        // Start inventory cleanup timer — TimerGame does NOT auto-start on construction
+        _inventoryCleanupTimer.reset();
         if (_thePitTask) {
             mod.getBehaviour().avoidBlockBreaking(this::avoidBlockBreak);
             mod.getBehaviour().avoidBlockPlacing(this::avoidBlockBreak);
@@ -132,8 +149,6 @@ public class SkyWarsTask extends Task {
     private boolean avoidBlockBreak(BlockPos pos) {
         return true;
     }
-
-    private BlockPos _lastLootPos;
 
     @Override
     protected Task onTick() {
@@ -267,8 +282,6 @@ public class SkyWarsTask extends Task {
             }
         }
 
-        _buildBlocksCollectTimer.reset();
-
         if (minCost != Float.POSITIVE_INFINITY) {
             if (minCost == costTarget && target.isPresent()
                     && target.get() instanceof PlayerEntity player) {
@@ -279,7 +292,6 @@ public class SkyWarsTask extends Task {
                         toItemTargets(lootableItems(mod).toArray(new Item[0])), true);
             } else if (minCost == costContainer) {
                 setDebugState("Поиск ресурсов -> контейнеры: дорога");
-                _lastLootPos = closestCont.get();
                 boolean startLoot = WorldHelper.canReach(closestCont.get());
                 if (!startLoot) {
                     _lootTask = new GetCloseToBlockTask(closestCont.get().up());
@@ -294,15 +306,20 @@ public class SkyWarsTask extends Task {
     }
 
     public Task swKillPlayerTask(PlayerEntity player) {
-        if (player.isInvulnerable() || player.isInCreativeMode() || player.isSneaking()) {
-            return new ShiftEntityTask(player, ShiftEntityTask.ShiftType.Forward);
-        } else {
-            return new TungstenPunkTask(player.getName().getString());
+        // Skip unkillable players entirely — don't waste time on invulnerable/creative
+        if (player.isInvulnerable() || player.isInCreativeMode()) {
+            return null;
         }
+        // Push sneaking players to break stealth before punk engagement
+        if (player.isSneaking()) {
+            return new ShiftEntityTask(player, ShiftEntityTask.ShiftType.Forward);
+        }
+        return new TungstenPunkTask(player.getName().getString());
     }
 
     private double getCurrentCalculatedHeuristic(AltoClef mod) {
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (mod.getClientBaritone() != null
+                && mod.getClientBaritone().getPathingBehavior().isPathing()) {
             Optional<Double> ticksRemainingOp = mod.getClientBaritone().getPathingBehavior().ticksRemainingInSegment();
             return ticksRemainingOp.orElse(Double.POSITIVE_INFINITY);
         }
@@ -322,7 +339,7 @@ public class SkyWarsTask extends Task {
     }
 
     public float getPathCost(AltoClef mod, Vec3d startPos, BlockPos goalPos) {
-        return getPathCost(mod, WorldHelper.toVec3d(goalPos), startPos);
+        return getPathCost(mod, startPos, WorldHelper.toVec3d(goalPos));
     }
 
     private boolean canUseRangedWeapon(AltoClef mod) {
@@ -631,7 +648,7 @@ public class SkyWarsTask extends Task {
         int dropScore = scoreStack(stack);
         Set<Item> catSet = new HashSet<>(Arrays.asList(category));
 
-        // Find the best score we already have for this category
+        // Find the best score we already have for this category (inventory + equipped)
         int bestInventoryScore = Integer.MIN_VALUE;
         for (int i = 0; i < 36; i++) {
             int windowSlot = i < 9 ? i + 36 : i;
@@ -641,6 +658,15 @@ public class SkyWarsTask extends Task {
             int invScore = scoreStack(invStack);
             if (invScore > bestInventoryScore) {
                 bestInventoryScore = invScore;
+            }
+        }
+        // Also check equipped armor — inventory scan above misses armor slots
+        for (ItemStack armorStack : mod.getPlayer().getInventory().armor) {
+            if (armorStack.isEmpty()) continue;
+            if (!catSet.contains(armorStack.getItem())) continue;
+            int armorScore = scoreStack(armorStack);
+            if (armorScore > bestInventoryScore) {
+                bestInventoryScore = armorScore;
             }
         }
 
@@ -660,14 +686,6 @@ public class SkyWarsTask extends Task {
 
     private static boolean shouldForce(Task task) {
         return task != null && task.isActive() && !task.isFinished();
-    }
-
-    private static void sleepSec(double seconds) {
-        try {
-            Thread.sleep((int) (1000 * seconds));
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
     }
 
     private class ScanChunksInRadius extends SearchChunksExploreTask {
@@ -691,7 +709,7 @@ public class SkyWarsTask extends Task {
 
         @Override
         protected ChunkPos getBestChunkOverride(AltoClef mod, List<ChunkPos> chunks) {
-            if (_closestPlayerLastPos != null) {
+            if (_closestPlayerLastPos != null && _closestPlayerLastObservePos != null) {
                 double lowestScore = Double.POSITIVE_INFINITY;
                 ChunkPos bestChunk = null;
                 for (ChunkPos toSearch : chunks) {
