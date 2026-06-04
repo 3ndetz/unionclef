@@ -24,6 +24,7 @@ public abstract class AbstractObjectBlacklist<T> {
             entry.numberOfFailures = 0;
             entry.bestDistanceSq = Double.POSITIVE_INFINITY;
             entry.bestTool = MiningRequirement.HAND;
+            entry.createdAt = System.currentTimeMillis();
             entries.put(item, entry);
         }
         BlacklistEntry entry = entries.get(item);
@@ -65,9 +66,13 @@ public abstract class AbstractObjectBlacklist<T> {
 
     /**
      * Default stale check — override for entity-specific cleanup.
-     * By default, checks if the object's position is far from origin (despawned).
+     * By default, expires entries older than MAX_ENTRY_AGE_MS.
      */
     protected boolean isStale(T item) {
+        BlacklistEntry entry = entries.get(item);
+        if (entry != null) {
+            return System.currentTimeMillis() - entry.createdAt > MAX_ENTRY_AGE_MS;
+        }
         return false;
     }
 
@@ -77,5 +82,13 @@ public abstract class AbstractObjectBlacklist<T> {
         public int numberOfFailures;
         public double bestDistanceSq;
         public MiningRequirement bestTool;
+        public long createdAt;
     }
+
+    /**
+     * Maximum lifetime of a blacklist entry before it is considered stale (60 seconds).
+     * Prevents unbounded growth over long sessions while keeping entries long enough
+     * to avoid re-trying truly unreachable targets.
+     */
+    private static final long MAX_ENTRY_AGE_MS = 60000;
 }

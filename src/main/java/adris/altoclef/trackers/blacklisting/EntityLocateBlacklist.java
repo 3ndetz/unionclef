@@ -15,6 +15,10 @@ public class EntityLocateBlacklist extends AbstractObjectBlacklist<Entity> {
 
     @Override
     protected boolean isStale(Entity entity) {
+        // Expire entries that have outlived their time-based maximum age
+        if (super.isStale(entity)) {
+            return true;
+        }
         if (!entity.isAlive() || entity.isRemoved()) {
             return true;
         }

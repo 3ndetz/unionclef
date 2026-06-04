@@ -9,6 +9,7 @@ import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.FurnaceSlot;
 import adris.altoclef.util.slots.Slot;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.FurnaceScreenHandler;
 import net.minecraft.screen.SmokerScreenHandler;
@@ -33,6 +34,64 @@ public class PickupFromContainerTask extends AbstractDoToStorageContainerTask {
         _targetContainer = targetContainer;
     }
 
+    /**
+     * Returns the tier rank of a tool/armor item (0 = best, higher = worse).
+     * Items not in any tier list get Integer.MAX_VALUE (lowest priority).
+     */
+    private static int getItemTierRank(Item item) {
+        Item[][] tierLists = {
+            ItemHelper.SwordsTopPriority,
+            ItemHelper.AxesTopPriority,
+            ItemHelper.PickaxesTopPriority,
+            ItemHelper.ShovelsTopPriority,
+            ItemHelper.HoesTopPriority,
+            ItemHelper.HelmetsTopPriority,
+            ItemHelper.ChestplatesTopPriority,
+            ItemHelper.LeggingsTopPriority,
+            ItemHelper.BootsTopPriority
+        };
+        for (Item[] tierList : tierLists) {
+            for (int i = 0; i < tierList.length; i++) {
+                if (tierList[i] == item) return i;
+            }
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    /**
+     * Compare two slots by stack quantity first, then by tool/armor tier.
+     * Returns true if {@code candidate} is better than {@code currentBest}.
+     */
+    private static boolean isBetterSlot(ItemStack candidate, ItemStack currentBest, int leftNeeded, Function<ItemStack, Boolean> canStackFit) {
+        int overshoot = candidate.getCount() - leftNeeded;
+        int currBestOvershoot = currentBest.getCount() - leftNeeded;
+        boolean canFit = canStackFit.apply(candidate);
+        boolean currBestCanFit = canStackFit.apply(currentBest);
+
+        // Priority 1: inventory fit
+        if (canFit != currBestCanFit) {
+            return canFit;
+        }
+
+        // Priority 2: quantity (closest to needed, non-negative preferred)
+        if (overshoot < 0 && currBestOvershoot < 0) {
+            // Both undershoot: pick the larger (closer to fulfilling)
+            if (overshoot != currBestOvershoot) return overshoot > currBestOvershoot;
+        } else if (overshoot >= 0 && currBestOvershoot >= 0) {
+            // Both overshoot or exact: pick the smaller overshoot
+            if (overshoot != currBestOvershoot) return overshoot < currBestOvershoot;
+        } else {
+            // One undershoots, one overshoots: prefer the one that meets the need (>= 0)
+            if (overshoot >= 0) return true;
+            if (currBestOvershoot >= 0) return false;
+        }
+
+        // Priority 3: tool/armor tier (lower rank = better tier)
+        int candidateTier = getItemTierRank(candidate.getItem());
+        int bestTier = getItemTierRank(currentBest.getItem());
+        return candidateTier < bestTier;
+    }
+
     public static Optional<Slot> getBestSlotToTransfer(AltoClef mod, ItemTarget itemToMove, int currentItemQuantity, List<Slot> grabPotentials, Function<ItemStack, Boolean> canStackFit) {
         Slot bestPotential = null;
         int leftNeeded = itemToMove.getTargetCount() - currentItemQuantity;
@@ -44,24 +103,8 @@ public class PickupFromContainerTask extends AbstractDoToStorageContainerTask {
                     continue;
                 }
                 ItemStack currBest = StorageHelper.getItemStackInSlot(bestPotential);
-                int overshoot = stack.getCount() - leftNeeded;
-                int currBestOverhoot = currBest.getCount() - leftNeeded;
-                boolean canFit = canStackFit.apply(stack);
-                boolean currBestCanFit = canStackFit.apply(currBest);
-                // Prioritize "fitting" in our inventory.
-                if (canFit || !currBestCanFit) {
-                    if (overshoot < 0) {
-                        // Prioritize highest that goes under, then lowest that goes over.
-                        if (currBestOverhoot > 0 || overshoot > currBestOverhoot)
-                            bestPotential = slot;
-                    } else if (overshoot > 0) {
-                        // Prioritize the smaller overshoot.
-                        if (overshoot < currBestOverhoot)
-                            bestPotential = slot;
-                    } else if (currBestOverhoot != 0) {
-                        // We have a "perfect" fit.
-                        bestPotential = slot;
-                    }
+                if (isBetterSlot(stack, currBest, leftNeeded, canStackFit)) {
+                    bestPotential = slot;
                 }
             }
         }

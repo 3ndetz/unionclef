@@ -100,9 +100,10 @@ public abstract class CraftWithMatchingMaterialsTask extends ResourceTask {
             if (sameResourcePerRecipe == 0) continue;
             int canCraft = (count / sameResourcePerRecipe) * recipe.outputCount();
             canCraftTotal += canCraft;
-            // Prefer higher craft count; tiebreak by earlier position in priority list
+            // Prefer higher craft count; tiebreak by later position in match list
+            // (higher-tier materials appear later, so prefer them when counts are equal)
             if (canCraft > majorityCraftCount
-                    || (canCraft == majorityCraftCount && idx < majorityCraftIndex)) {
+                    || (canCraft == majorityCraftCount && idx > majorityCraftIndex)) {
                 majorityCraftCount = canCraft;
                 majorityCraftItem = sameCheck;
                 majorityCraftIndex = idx;
