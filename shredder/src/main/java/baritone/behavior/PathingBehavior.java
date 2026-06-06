@@ -68,6 +68,9 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
     private static final int MAX_CONSECUTIVE_FAILURES = 5;
     private static final int BACKOFF_TICK_INCREMENT = 20;
     private int backoffTicksRemaining = 0;
+    // Track terrain-change cancellations separately — these happen faster than path failures
+    private int terrainMismatchCancels = 0;
+    private static final int MAX_TERRAIN_CANCELS = 3;
 
     private volatile AbstractNodeCostSearch inProgress;
     private final Object pathCalcLock = new Object();
@@ -168,6 +171,12 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
                     ) {
                         // when it was *just* started, currentBest will be empty so we need to also check calcFrom since that's always present
                         inProgress.cancel(); // cancellation doesn't dispatch any events
+                        terrainMismatchCancels++;
+                        if (terrainMismatchCancels > MAX_TERRAIN_CANCELS) {
+                            consecutivePathFailures++;
+                        }
+                    } else {
+                        terrainMismatchCancels = 0;
                     }
                 }
             }

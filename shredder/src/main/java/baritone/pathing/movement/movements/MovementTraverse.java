@@ -61,6 +61,10 @@ public class MovementTraverse extends Movement {
     /** God bridge: ticks remaining to verify server confirmed the placed block. */
     private int godVerifyTicks = 0;
 
+    /** God bridge: consecutive fallback cycles — aborts on overflow to break stuck-sneak loop. */
+    private int godConsecutiveFallbacks = 0;
+    private static final int MAX_GOD_FALLBACKS = 10;
+
     public MovementTraverse(IBaritone baritone, BetterBlockPos from, BetterBlockPos to) {
         super(baritone, from, to, new BetterBlockPos[]{to.up(), to}, to.down());
     }
@@ -71,6 +75,7 @@ public class MovementTraverse extends Movement {
         wasTheBridgeBlockAlwaysThere = true;
         godSneakFallbackTicks = 0;
         godVerifyTicks = 0;
+        godConsecutiveFallbacks = 0;
         stopGodBridge();
     }
 
@@ -417,6 +422,16 @@ public class MovementTraverse extends Movement {
         if (godMode && godVerifyTicks > 0) {
             godVerifyTicks = 0;
             godSneakFallbackTicks = 8; // slow fallback to recover safely
+            godConsecutiveFallbacks++;
+            if (godConsecutiveFallbacks > MAX_GOD_FALLBACKS) {
+                // Too many consecutive fallbacks — block placement keeps failing.
+                // Abort the bridge move so pathfinder can find an alternative route.
+                stopGodBridge();
+                godSneakFallbackTicks = 0;
+                godVerifyTicks = 0;
+                godConsecutiveFallbacks = 0;
+                return state.setStatus(MovementStatus.UNREACHABLE);
+            }
         }
 
         if (!godMode) {
@@ -467,6 +482,12 @@ public class MovementTraverse extends Movement {
                 }
                 // If fallback just expired, verify block was placed before continuing
                 if (godSneakFallbackTicks == 0 && !MovementHelper.canWalkOn(ctx, dest.down())) {
+                    godConsecutiveFallbacks++;
+                    if (godConsecutiveFallbacks > MAX_GOD_FALLBACKS) {
+                        stopGodBridge();
+                        godConsecutiveFallbacks = 0;
+                        return state.setStatus(MovementStatus.UNREACHABLE);
+                    }
                     return state.setStatus(MovementStatus.FAILED);
                 }
                 return state;

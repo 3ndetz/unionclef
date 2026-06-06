@@ -67,7 +67,7 @@ public class TungstenBridge {
             return 0; // already delegated
         }
         if (TungstenModDataContainer.PATHFINDER.active.get()
-                || TungstenModDataContainer.EXECUTOR.isRunning()) {
+                || TungstenModDataContainer.isExecutorRunning()) {
             return 0; // tungsten is busy with something else
         }
 
@@ -160,7 +160,7 @@ public class TungstenBridge {
     public int evaluateExperimentalSegment(List<? extends IMovement> movements, int position, IPlayerContext ctx) {
         if (!Baritone.settings().experimentalPathfinding.value) return 0;
         if (state != State.INACTIVE) return 0;
-        if (TungstenModDataContainer.PATHFINDER.active.get() || TungstenModDataContainer.EXECUTOR.isRunning()) return 0;
+        if (TungstenModDataContainer.PATHFINDER.active.get() || TungstenModDataContainer.isExecutorRunning()) return 0;
 
         IMovement current = movements.get(position);
         if (!isExperimentalCompatible(current)) return 0;
@@ -241,7 +241,7 @@ public class TungstenBridge {
         }
 
         // Pathfinder finished — check if executor got a path
-        if (TungstenModDataContainer.EXECUTOR.isRunning()) {
+        if (TungstenModDataContainer.isExecutorRunning()) {
             state = State.EXECUTING;
             stallTicks = 0;
             lastPlayerPos = ctx.player().getEntityPos();
@@ -259,7 +259,7 @@ public class TungstenBridge {
     }
 
     private boolean tickExecuting(IPlayerContext ctx) {
-        if (!TungstenModDataContainer.EXECUTOR.isRunning()) {
+        if (!TungstenModDataContainer.isExecutorRunning()) {
             // Executor finished
             state = State.RETURNING;
             return false;

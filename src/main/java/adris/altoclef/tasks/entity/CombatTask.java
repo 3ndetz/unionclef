@@ -209,45 +209,48 @@ public class CombatTask extends Task {
             return false;
         });
 
-        _targetingTask = new DoToClosestEntityTask(
-                entity -> {
-                    if (entity instanceof PlayerEntity player) {
-                        String name = player.getName().getString();
+        // Only create a fresh targeting task if the current one is absent or finished
+        if (_targetingTask == null || _targetingTask.isFinished()) {
+            _targetingTask = new DoToClosestEntityTask(
+                    entity -> {
+                        if (entity instanceof PlayerEntity player) {
+                            String name = player.getName().getString();
 
-                        // Check if this is a new target and show battle cry
-                        if (!_spottedTargets.contains(name) && player.distanceTo(mod.getPlayer()) > 15) {
-                            _spottedTargets.add(name);
-                            _battleCryTask = new GestureTask(player, GestureTask.Gesture.Fight);
-                            return _battleCryTask;
+                            // Check if this is a new target and show battle cry
+                            if (!_spottedTargets.contains(name) && player.distanceTo(mod.getPlayer()) > 15) {
+                                _spottedTargets.add(name);
+                                _battleCryTask = new GestureTask(player, GestureTask.Gesture.Fight);
+                                return _battleCryTask;
+                            }
+
+                            // Store target info for victory gestures
+                            _lastTargetName = name;
+                            _lastTargetPos = player.getPos();
+                            // Approximate ground position: use player's feet position
+                            _lastGroundPos = player.getPos();
+                            _killedLastTarget = false;
+
+                            // If target becomes unreachable
+                            BlockPos playerPos = player.getBlockPos();
+                            if (!WorldHelper.canReach(playerPos)) {
+                                blacklistTarget(name);
+                                return null;
+                            }
+
+                            // Clear blacklist entry if target becomes reachable again
+                            if (_blacklistedPlayers.contains(name)) {
+                                _blacklistedPlayers.remove(name);
+                                _blacklistDuration.remove(name);
+                            }
+
+                            return new TungstenPunkTask(name);
                         }
-
-                        // Store target info for victory gestures
-                        _lastTargetName = name;
-                        _lastTargetPos = player.getPos();
-                        // Approximate ground position: use player's feet position
-                        _lastGroundPos = player.getPos();
-                        _killedLastTarget = false;
-
-                        // If target becomes unreachable
-                        BlockPos playerPos = player.getBlockPos();
-                        if (!WorldHelper.canReach(playerPos)) {
-                            blacklistTarget(name);
-                            return null;
-                        }
-
-                        // Clear blacklist entry if target becomes reachable again
-                        if (_blacklistedPlayers.contains(name)) {
-                            _blacklistedPlayers.remove(name);
-                            _blacklistDuration.remove(name);
-                        }
-
-                        return new TungstenPunkTask(name);
-                    }
-                    return null;
-                },
-                entity -> isValidTarget((PlayerEntity) entity, mod),
-                PlayerEntity.class
-        );
+                        return null;
+                    },
+                    entity -> isValidTarget((PlayerEntity) entity, mod),
+                    PlayerEntity.class
+            );
+        }
         if (_targetPlayerName != null) {
             setDebugState("Searching for target " + _targetPlayerName);
         } else {
