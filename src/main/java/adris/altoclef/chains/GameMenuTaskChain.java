@@ -342,10 +342,12 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 client.setScreen(new GameMenuScreen(true));
                 screen = client.currentScreen;
                 client.getAbuseReportContext().tryShowDraftScreen(client, screen, _innerDisconnect(client), true);
-                MinecraftClient.getInstance().setScreen(new MultiplayerScreen(new TitleScreen()));
+                // 1.21.11: an altoclef-spawned MultiplayerScreen crashes when ticked
+                // before init (null server-list/lan fields). TitleScreen is safe.
+                MinecraftClient.getInstance().setScreen(new TitleScreen());
                 _needDisconnect = false;
             }
-        } else if (screen instanceof MultiplayerScreen) {
+        } else if (screen instanceof MultiplayerScreen || screen instanceof TitleScreen) {
             if (_reconnecting && _reconnectTimer.elapsed()) {
                 // 1.21.11: connecting before the MultiplayerScreen ran init() crashes
                 // the client (removed() NPEs on the null server list widget). Wait until
@@ -444,9 +446,9 @@ public class GameMenuTaskChain extends SingleTaskChain {
             _prevServerEntry = _connectOverrideServerEntry;
             Screen screen = MinecraftClient.getInstance().currentScreen;
             Debug.logMessage("RECONNECT CHAIN: Not in game; Connecting to server from menu: " + ip);
-            if (!(screen instanceof MultiplayerScreen)) {
-                Debug.logMessage("RECONNECT CHAIN: Setting to MultiplayerScreen " + ip);
-                MinecraftClient.getInstance().setScreen(new MultiplayerScreen(new TitleScreen()));
+            if (!(screen instanceof MultiplayerScreen || screen instanceof TitleScreen)) {
+                Debug.logMessage("RECONNECT CHAIN: Parking on TitleScreen before connect to " + ip);
+                MinecraftClient.getInstance().setScreen(new TitleScreen());
             }
             _needDisconnect = false;
             _reconnecting = true;
