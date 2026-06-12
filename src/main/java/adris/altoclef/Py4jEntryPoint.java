@@ -1066,15 +1066,56 @@ public class Py4jEntryPoint {
         }, false));
     }
 
-    /** Relative camera turn by degrees. */
-    public boolean rotateCamera(float dYaw, float dPitch) {
+    /** Relative camera turn by degrees. (doubles: py4j maps python numbers to double) */
+    public boolean rotateCamera(double dYaw, double dPitch) {
         return Boolean.TRUE.equals(onClientThread(() -> {
             var player = MinecraftClient.getInstance().player;
             if (player == null) return false;
-            _mod.getInputControls().forceLook(player.getYaw() + dYaw,
-                    Math.max(-90f, Math.min(90f, player.getPitch() + dPitch)));
+            _mod.getInputControls().forceLook((float) (player.getYaw() + dYaw),
+                    (float) Math.max(-90.0, Math.min(90.0, player.getPitch() + dPitch)));
             return true;
         }, false));
+    }
+
+    private static baritone.api.utils.input.Input inputByName(String name) {
+        switch (name.toLowerCase()) {
+            case "forward": return baritone.api.utils.input.Input.MOVE_FORWARD;
+            case "back": return baritone.api.utils.input.Input.MOVE_BACK;
+            case "left": return baritone.api.utils.input.Input.MOVE_LEFT;
+            case "right": return baritone.api.utils.input.Input.MOVE_RIGHT;
+            case "jump": return baritone.api.utils.input.Input.JUMP;
+            case "sneak": return baritone.api.utils.input.Input.SNEAK;
+            case "sprint": return baritone.api.utils.input.Input.SPRINT;
+            case "attack": return baritone.api.utils.input.Input.CLICK_LEFT;
+            case "use": return baritone.api.utils.input.Input.CLICK_RIGHT;
+            default: return null;
+        }
+    }
+
+    /** Tap a control once: forward/back/left/right/jump/sneak/sprint/attack/use. */
+    public boolean tapKey(String name) {
+        var input = inputByName(name);
+        if (input == null) return false;
+        return Boolean.TRUE.equals(onClientThread(() -> {
+            _mod.getInputControls().tryPress(input);
+            return true;
+        }, false));
+    }
+
+    /** Hold a control for ms milliseconds (released by a scheduled client task). */
+    public boolean holdKey(String name, int ms) {
+        var input = inputByName(name);
+        if (input == null) return false;
+        Boolean started = onClientThread(() -> {
+            _mod.getInputControls().hold(input);
+            return true;
+        }, false);
+        if (!Boolean.TRUE.equals(started)) return false;
+        new Thread(() -> {
+            try { Thread.sleep(Math.max(20, Math.min(ms, 10000))); } catch (InterruptedException ignored) {}
+            MinecraftClient.getInstance().execute(() -> _mod.getInputControls().release(input));
+        }, "holdKey-release").start();
+        return true;
     }
 
     /** Right-click (use=true) or left-click (use=false) an entity by name —
