@@ -49,9 +49,14 @@ public class AltoclefVoicechat implements VoicechatPlugin {
         Debug.logMessage("Voicechat API initialized! AltoClef=" + (AltoClef.getInstance() != null));
     }
 
+    /** True while the client is connected to a voice-chat-enabled server. */
+    public static volatile boolean VOICE_CONNECTED = false;
+
     @Override
     public void registerEvents(EventRegistration registration) {
         registration.registerEvent(ClientReceiveSoundEvent.EntitySound.class, this::onReceiveAudio);
+        registration.registerEvent(de.maxhenkel.voicechat.api.events.ClientVoicechatConnectionEvent.class,
+                e -> VOICE_CONNECTED = e.isConnected());
     }
 
     private void onReceiveAudio(ClientReceiveSoundEvent event) {

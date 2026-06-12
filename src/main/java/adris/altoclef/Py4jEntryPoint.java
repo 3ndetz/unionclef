@@ -1161,6 +1161,30 @@ public class Py4jEntryPoint {
         }, Map.of("exists", false, "error", "client thread timeout"));
     }
 
+    /** Right-click with the held item (use compass/menu items) — direct
+     *  interactionManager call, works headless where key emulation does not. */
+    public Map<String, Object> useHeldItem() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null || client.interactionManager == null) {
+                out.put("ok", false);
+                out.put("reason", "not in game");
+                return out;
+            }
+            var res = client.interactionManager.interactItem(client.player, net.minecraft.util.Hand.MAIN_HAND);
+            out.put("ok", true);
+            out.put("result", res.toString());
+            out.put("held", slotEntry(-1, client.player.getMainHandStack()));
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Is the in-game voice chat (Plasmo/SVC) connected on this server? */
+    public boolean isVoiceChatConnected() {
+        return AltoclefVoicechat.VOICE_CONNECTED;
+    }
+
     /** What is under my crosshair right now (block or entity). */
     public Map<String, Object> getCrosshairTarget() {
         return onClientThread(() -> {
