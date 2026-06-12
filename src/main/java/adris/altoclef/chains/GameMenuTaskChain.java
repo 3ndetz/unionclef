@@ -347,6 +347,12 @@ public class GameMenuTaskChain extends SingleTaskChain {
             }
         } else if (screen instanceof MultiplayerScreen) {
             if (_reconnecting && _reconnectTimer.elapsed()) {
+                // 1.21.11: connecting before the MultiplayerScreen ran init() crashes
+                // the client (removed() NPEs on the null server list widget). Wait until
+                // the screen is initialized (has children) before connecting.
+                if (screen.children().isEmpty()) {
+                    return;
+                }
                 reconnectAttemps += 1;
                 Debug.logMessage("RECONNECTING: Going to reconnect");
                 _reconnecting = false;
@@ -356,7 +362,13 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 } else {
                     Debug.logMessage("RECONNECTING: Connect to " + _prevServerEntry.address.toString());
                     MinecraftClient client = MinecraftClient.getInstance();
-                    ConnectScreenVer.connect(screen, client, ServerAddress.parse(_prevServerEntry.address), _prevServerEntry, false);
+                    try {
+                        ConnectScreenVer.connect(screen, client, ServerAddress.parse(_prevServerEntry.address), _prevServerEntry, false);
+                    } catch (Throwable t) {
+                        Debug.logWarning("Reconnect threw " + t.getClass().getSimpleName() + " — retry next cycle instead of crashing");
+                        _reconnecting = true;
+                        _reconnectTimer.reset();
+                    }
                     if (_needToStopTasksOnReconnect) {
                         mod.cancelUserTask();
                         _needToStopTasksOnReconnect = false;
