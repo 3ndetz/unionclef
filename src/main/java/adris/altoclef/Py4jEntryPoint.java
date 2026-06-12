@@ -933,4 +933,208 @@ public class Py4jEntryPoint {
             AgentActionButtons.executeActions(_mod, controlDict);
         });
     }
+
+    // ── Low-level orientation & control toolkit ─────────────────────────────────
+    // Generic primitives for the python agent: read the open screen / inventory as
+    // data, click any slot, select hotbar, look anywhere, use/attack entities,
+    // check reach. No game-specific logic here — the agent decides what to do.
+
+    private <T> T onClientThread(java.util.function.Supplier<T> sup, T fallback) {
+        try {
+            CompletableFuture<T> fut = new CompletableFuture<>();
+            MinecraftClient.getInstance().execute(() -> {
+                try { fut.complete(sup.get()); } catch (Exception e) { fut.completeExceptionally(e); }
+            });
+            return fut.get(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            Debug.logInternal("onClientThread error: " + e.getMessage());
+            return fallback;
+        }
+    }
+
+    private static Map<String, Object> slotEntry(int index, ItemStack st) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("index", index);
+        m.put("empty", st.isEmpty());
+        if (!st.isEmpty()) {
+            m.put("item", net.minecraft.registry.Registries.ITEM.getId(st.getItem()).toString());
+            m.put("name", st.getName().getString());
+            m.put("count", st.getCount());
+        }
+        return m;
+    }
+
+    /** Open screen (chest/server menu/inventory) as data: title + every slot with
+     *  item id, display name (server menus put their labels here) and count. */
+    public Map<String, Object> getOpenScreen() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null || client.currentScreen == null) {
+                out.put("open", false);
+                return out;
+            }
+            out.put("open", true);
+            out.put("screen", client.currentScreen.getClass().getSimpleName());
+            try { out.put("title", client.currentScreen.getTitle().getString()); } catch (Exception ignored) {}
+            List<Map<String, Object>> slots = new ArrayList<>();
+            net.minecraft.screen.ScreenHandler h = client.player.currentScreenHandler;
+            for (int i = 0; i < h.slots.size(); i++) {
+                slots.add(slotEntry(i, h.getSlot(i).getStack()));
+            }
+            out.put("slots", slots);
+            out.put("syncId", h.syncId);
+            return out;
+        }, Map.of("open", false, "error", "client thread timeout"));
+    }
+
+    /** Full player inventory: 36 main slots + armor + offhand + selected hotbar. */
+    public Map<String, Object> getInventoryFull() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            var player = MinecraftClient.getInstance().player;
+            if (player == null) { out.put("ok", false); return out; }
+            var inv = player.getInventory();
+            List<Map<String, Object>> main = new ArrayList<>();
+            for (int i = 0; i < inv.size(); i++) main.add(slotEntry(i, inv.getStack(i)));
+            out.put("slots", main);                       // 0-8 hotbar, 9-35 main, 36-39 armor, 40 offhand
+            int sel = adris.altoclef.multiversion.entity.PlayerVer.getSelectedSlot(inv);
+            out.put("selectedHotbar", sel);
+            out.put("heldItem", slotEntry(sel, player.getMainHandStack()));
+            out.put("ok", true);
+            return out;
+        }, Map.of("ok", false, "error", "client thread timeout"));
+    }
+
+    /** Click a slot of the CURRENT screen by window index.
+     *  button: 0=LMB 1=RMB; action: PICKUP | QUICK_MOVE (shift) | THROW | SWAP. */
+    public boolean clickUiSlot(int windowSlot, int button, String action) {
+        net.minecraft.screen.slot.SlotActionType type;
+        try {
+            type = net.minecraft.screen.slot.SlotActionType.valueOf(action.toUpperCase());
+        } catch (Exception e) {
+            type = net.minecraft.screen.slot.SlotActionType.PICKUP;
+        }
+        final var ftype = type;
+        return Boolean.TRUE.equals(onClientThread(() -> {
+            var slot = adris.altoclef.util.slots.Slot.getFromCurrentScreen(windowSlot);
+            _mod.getSlotHandler().forceAllowNextSlotAction();
+            _mod.getSlotHandler().clickSlot(slot, button, ftype);
+            return true;
+        }, false));
+    }
+
+    /** Select hotbar slot 0-8. */
+    public boolean selectHotbar(int slot) {
+        if (slot < 0 || slot > 8) return false;
+        return Boolean.TRUE.equals(onClientThread(() -> {
+            var player = MinecraftClient.getInstance().player;
+            if (player == null) return false;
+            adris.altoclef.multiversion.entity.PlayerVer.setSelectedSlot(player.getInventory(), slot);
+            return true;
+        }, false));
+    }
+
+    /** Close any open screen. */
+    public boolean closeOpenScreen() {
+        return Boolean.TRUE.equals(onClientThread(() -> {
+            adris.altoclef.util.helpers.StorageHelper.closeScreen();
+            return true;
+        }, false));
+    }
+
+    /** Absolute look at a world point (eyes follow x,y,z). */
+    public boolean lookAt(double x, double y, double z) {
+        return Boolean.TRUE.equals(onClientThread(() -> {
+            var player = MinecraftClient.getInstance().player;
+            if (player == null) return false;
+            Rotation rot = LookHelper.getLookRotation(_mod, new Vec3d(x, y, z));
+            _mod.getInputControls().forceLook(rot.getYaw(), rot.getPitch());
+            return true;
+        }, false));
+    }
+
+    /** Look straight at a player/entity by name. */
+    public boolean lookAtPlayer(String playerName) {
+        return Boolean.TRUE.equals(onClientThread(() -> {
+            PlayerEntity p = getEntity(playerName);
+            if (p == null) return false;
+            Vec3d aim = LookHelper.getOptimalAimPoint(_mod, p);
+            Rotation rot = LookHelper.getLookRotation(_mod, aim);
+            _mod.getInputControls().forceLook(rot.getYaw(), rot.getPitch());
+            return true;
+        }, false));
+    }
+
+    /** Relative camera turn by degrees. */
+    public boolean rotateCamera(float dYaw, float dPitch) {
+        return Boolean.TRUE.equals(onClientThread(() -> {
+            var player = MinecraftClient.getInstance().player;
+            if (player == null) return false;
+            _mod.getInputControls().forceLook(player.getYaw() + dYaw,
+                    Math.max(-90f, Math.min(90f, player.getPitch() + dPitch)));
+            return true;
+        }, false));
+    }
+
+    /** Right-click (use=true) or left-click (use=false) an entity by name —
+     *  looks at it first, fails honestly if out of reach. */
+    public Map<String, Object> interactEntity(String playerName, boolean use) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            PlayerEntity p = getEntity(playerName);
+            if (p == null) { out.put("ok", false); out.put("reason", "entity not found"); return out; }
+            if (!LookHelper.canHitEntity(_mod, p)) {
+                out.put("ok", false); out.put("reason", "out of reach");
+                out.put("distance", MinecraftClient.getInstance().player.distanceTo(p));
+                return out;
+            }
+            Vec3d aim = LookHelper.getOptimalAimPoint(_mod, p);
+            Rotation rot = LookHelper.getLookRotation(_mod, aim);
+            _mod.getInputControls().forceLook(rot.getYaw(), rot.getPitch());
+            if (use) {
+                var res = MinecraftClient.getInstance().interactionManager
+                        .interactEntity(MinecraftClient.getInstance().player, p, net.minecraft.util.Hand.MAIN_HAND);
+                out.put("result", res.toString());
+            } else {
+                _mod.getControllerExtras().attack(p, true);
+                out.put("result", "attacked");
+            }
+            out.put("ok", true);
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Can I reach/hit this entity from here? Distance + verdict. */
+    public Map<String, Object> reachability(String playerName) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            PlayerEntity p = getEntity(playerName);
+            var me = MinecraftClient.getInstance().player;
+            if (p == null || me == null) { out.put("exists", false); return out; }
+            out.put("exists", true);
+            out.put("distance", me.distanceTo(p));
+            out.put("canHit", LookHelper.canHitEntity(_mod, p));
+            out.put("inRange", _mod.getControllerExtras().inRange(p));
+            return out;
+        }, Map.of("exists", false, "error", "client thread timeout"));
+    }
+
+    /** What is under my crosshair right now (block or entity). */
+    public Map<String, Object> getCrosshairTarget() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            var hit = MinecraftClient.getInstance().crosshairTarget;
+            if (hit == null) { out.put("type", "none"); return out; }
+            out.put("type", hit.getType().toString());
+            if (hit instanceof net.minecraft.util.hit.BlockHitResult bhr) {
+                out.put("block", MinecraftClient.getInstance().world
+                        .getBlockState(bhr.getBlockPos()).getBlock().getName().getString());
+                out.put("pos", bhr.getBlockPos().toShortString());
+            } else if (hit instanceof net.minecraft.util.hit.EntityHitResult ehr) {
+                out.put("entity", ehr.getEntity().getName().getString());
+            }
+            return out;
+        }, Map.of("type", "error"));
+    }
 }

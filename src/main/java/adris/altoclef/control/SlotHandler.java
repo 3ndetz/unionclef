@@ -46,7 +46,7 @@ public class SlotHandler {
         this.mod = mod;
     }
 
-    private void forceAllowNextSlotAction() {
+    public void forceAllowNextSlotAction() {
         overrideTimerOnce = true;
     }
 

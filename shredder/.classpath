@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" output="bin/main" path="src/main/resources">
+	<classpathentry excluding="**" kind="src" output="bin/main" path="src/main/resources">
 		<attributes>
 			<attribute name="gradle_scope" value="main"/>
 			<attribute name="gradle_used_by_scope" value="main,test"/>
@@ -19,5 +19,6 @@
 			<attribute name="gradle.buildServer" value="true"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="C:/Repos/pet/unionclef/tungsten/build/devlibs/tungsten-BETA-1.0.0-dev.jar"/>
 	<classpathentry kind="output" path="bin/default"/>
 </classpath>
