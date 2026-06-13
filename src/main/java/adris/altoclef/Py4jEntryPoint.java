@@ -1342,6 +1342,41 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** PLACE the held block against the block face under the crosshair — a REAL block-place
+     *  interaction (interactionManager.interactBlock), NOT interactItem (useHeldItem). Aim at a
+     *  block face first (lookAt). Touches NO inventory, so it WORKS on anti-cheat servers that
+     *  cancel altoclef's inventory slot actions (where @place/PlaceBlockNearbyTask gets stuck).
+     *  The block must already be the HELD item (selectHotbar to its hotbar slot first).
+     *  Returns count_before/after (after = before-1 means a block was placed) + the ActionResult. */
+    public Map<String, Object> placeBlockLooking() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null || client.interactionManager == null) {
+                out.put("ok", false); out.put("reason", "not in game"); return out;
+            }
+            var hit = client.crosshairTarget;
+            if (!(hit instanceof net.minecraft.util.hit.BlockHitResult bhr)
+                    || hit.getType() != net.minecraft.util.hit.HitResult.Type.BLOCK) {
+                out.put("ok", false);
+                out.put("reason", "no block under crosshair — lookAt a block face first");
+                return out;
+            }
+            int before = client.player.getMainHandStack().getCount();
+            var res = client.interactionManager.interactBlock(
+                    client.player, net.minecraft.util.Hand.MAIN_HAND, bhr);
+            client.player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
+            out.put("ok", true);
+            out.put("result", res.toString());
+            out.put("target", bhr.getBlockPos().toShortString());
+            out.put("side", bhr.getSide().toString());
+            out.put("held", client.player.getMainHandStack().getItem().toString());
+            out.put("count_before", before);
+            out.put("count_after", client.player.getMainHandStack().getCount());
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Is the in-game voice chat (Plasmo/SVC) connected on this server? */
     public boolean isVoiceChatConnected() {
         return AltoclefVoicechat.VOICE_CONNECTED;
