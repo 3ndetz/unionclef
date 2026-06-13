@@ -236,7 +236,13 @@ public final class BlockOptionalMeta {
                     .add(LootContextParameters.BLOCK_STATE, b.getDefaultState())
                     .add(LootContextParameters.TOOL, new ItemStack(Items.NETHERITE_PICKAXE, 1));
                 getDrops(block, lv5).stream().map(ItemStack::getItem).forEach(items::add);
-            } catch (Exception e) {
+            } catch (Throwable e) {
+                // MUST be Throwable, not Exception: ServerLevelStub's static init rebuilds the
+                // server dynamic registries (enchantments) on first touch, and on heavily-modded
+                // servers (agicraft) that can throw ExceptionInInitializerError — an Error, not an
+                // Exception. Letting it escape crashed the render thread (black screen, py4j dead)
+                // the FIRST time the agent placed/built a block. Swallow it: this block just gets
+                // no known drops (matching falls back), the client stays alive, building works.
                 e.printStackTrace();
             }
             return items;
@@ -257,7 +263,12 @@ public final class BlockOptionalMeta {
     public static class ServerLevelStub extends ServerWorld {
         private static MinecraftClient client = MinecraftClient.getInstance();
         private static Unsafe unsafe = getUnsafe();
-        private static CompletableFuture<ReloadableRegistries.Lookup> registryLookup = load();
+        // Lazily built (was `= load()` at class-init). A failed registry build — e.g. on a
+        // heavily-modded server whose enchantment JSONs reference tags absent from the resource
+        // snapshot at join time — used to throw during static init and PERMANENTLY poison this
+        // class (every later touch → NoClassDefFoundError). Lazy + fail-soft (see holder()) lets
+        // it retry on a later join when the data IS present, instead of staying dead until restart.
+        private static CompletableFuture<ReloadableRegistries.Lookup> registryLookup;
 
         public ServerLevelStub(MinecraftServer $$0, Executor $$1, LevelStorage.Session $$2, ServerWorldProperties $$3, RegistryKey<World> $$4, DimensionOptions $$5, boolean $$6, long $$7, List<SpecialSpawner> $$8, boolean $$9, @Nullable RandomSequencesState $$10) {
             super($$0, $$1, $$2, $$3, $$4, $$5, $$6, $$7, $$8, $$9, $$10);
@@ -283,7 +294,20 @@ public final class BlockOptionalMeta {
         }
 
         public ReloadableRegistries.Lookup holder() {
-            return registryLookup.join();
+            // Lazy + fail-soft. Reached only via the synchronized drops() (which now catches
+            // Throwable), so a build failure is contained and NOT cached as a poison — we clear
+            // it and let the next join retry. Build once; reuse if it succeeded.
+            CompletableFuture<ReloadableRegistries.Lookup> lk = registryLookup;
+            if (lk == null || lk.isCompletedExceptionally()) {
+                lk = load();
+                registryLookup = lk;
+            }
+            try {
+                return lk.join();
+            } catch (Throwable e) {
+                registryLookup = null; // drop the failed future so a later join can retry
+                throw e;               // caught by drops() → empty drops, client stays alive
+            }
         }
 
         public static Unsafe getUnsafe() {

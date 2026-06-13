@@ -45,6 +45,20 @@ public class Py4jEntryPoint {
     Executor _executor;
     public static String last_talking_player = "";
 
+    // Bounded, drop-on-overflow executor for the VOICE hot path. Simple Voice Chat fires
+    // ~50 packets/sec PER speaking player (~150-200/sec with several speakers). The old path
+    // submitted each packet (holding its audio byte[]) to the UNBOUNDED main worker pool AND
+    // did a synchronous py4j round-trip per task → the producer outran the consumer, the queue
+    // + retained byte[]s grew without bound, the 1G heap OOM'd and the whole JVM (incl. the
+    // py4j gateway on 25333) died. A single-thread / 32-slot / DiscardOldest pool caps memory
+    // and simply drops stale audio under load — STT only needs a steady stream, not every frame.
+    private final java.util.concurrent.ThreadPoolExecutor _voiceExecutor =
+            new java.util.concurrent.ThreadPoolExecutor(
+                    1, 1, 0L, java.util.concurrent.TimeUnit.MILLISECONDS,
+                    new java.util.concurrent.ArrayBlockingQueue<>(32),
+                    r -> { Thread t = new Thread(r, "py4j-voice"); t.setDaemon(true); return t; },
+                    new java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy());
+
     public Py4jEntryPoint(AltoClef mod) {
         _mod = mod;
         resetValues();
@@ -52,12 +66,19 @@ public class Py4jEntryPoint {
     }
 
     public void onVoiceFeed(String playerName, byte[] audio) {
-        // Voice chat stub - Phase 4
-        executeInNetworkThread(() -> {
-            if (IsCallbackServerStarted()) {
-                _cb.onVoiceFeed(playerName, audio);
-            }
-        });
+        // Use the CACHED callback flag — NO py4j round-trip on the hot path (round-tripping
+        // IsCallbackServerStarted per packet halved throughput and fed the OOM). Bounded
+        // executor drops stale audio under load instead of growing the heap. The flag is kept
+        // fresh by the periodic callbacks (chat/server-info) that call IsCallbackServerStarted.
+        if (!callbackstarted) return;
+        try {
+            _voiceExecutor.execute(() -> {
+                try { _cb.onVoiceFeed(playerName, audio); }
+                catch (Throwable e) { /* never let one packet's failure kill the loop */ }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException ignored) {
+            // queue saturated → drop this packet (acceptable under heavy voice)
+        }
     }
 
     private void executeInNetworkThread(Runnable task) {
