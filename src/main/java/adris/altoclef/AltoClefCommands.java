@@ -67,6 +67,8 @@ public class AltoClefCommands {
                 new PearlCommand(),
                 new ForgetCommand(),
                 new BuildCommand(),
+                new PlaceCommand(),
+                new MineBlockCommand(),
                 new CheckBlockCommand()
         );
     }

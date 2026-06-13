@@ -880,6 +880,147 @@ public class Py4jEntryPoint {
         return list;
     }
 
+    /**
+     * NON-PLAYER entities near the bot (mobs + dropped items), nearest first. Players are in
+     * getPlayersInfo. Pure data exposure over the existing EntityTracker.getCloseEntities() —
+     * closes the TARGET.md Level-0/1 gap "знать ГДЕ мобы/дропы рядом" (agent decides what to do).
+     * py4j auto-converts List<Map> to a Python list of dicts. limit<=0 = no cap.
+     */
+    public List<Map<String, String>> getEntitiesInfo(int limit) {
+        List<Map<String, String>> list = new ArrayList<>();
+        PlayerEntity self = _mod.getPlayer();
+        if (self == null) return list;
+        Vec3d selfPos = self.getPos();
+        if (selfPos == null) return list;
+        List<net.minecraft.entity.Entity> close;
+        try {
+            close = _mod.getEntityTracker().getCloseEntities();
+        } catch (Exception e) {
+            return list;
+        }
+        List<net.minecraft.entity.Entity> ents = new ArrayList<>();
+        for (net.minecraft.entity.Entity e : close) {
+            if (e == null || e == self || e instanceof PlayerEntity) continue;
+            ents.add(e);
+        }
+        ents.sort((a, b) -> Double.compare(a.squaredDistanceTo(selfPos), b.squaredDistanceTo(selfPos)));
+        int n = 0;
+        for (net.minecraft.entity.Entity e : ents) {
+            if (limit > 0 && n >= limit) break;
+            Vec3d pos = e.getPos();
+            if (pos == null) continue;
+            Map<String, String> m = new HashMap<>();
+            try {
+                m.put("type", net.minecraft.registry.Registries.ENTITY_TYPE.getId(e.getType()).getPath());
+            } catch (Exception ex) {
+                m.put("type", "unknown");
+            }
+            m.put("distance", String.format("%.1f", pos.distanceTo(selfPos)));
+            m.put("position", String.format("%.0f, %.0f, %.0f", pos.x, pos.y, pos.z));
+            boolean isItem = e instanceof net.minecraft.entity.ItemEntity;
+            m.put("is_item", String.valueOf(isItem));
+            if (isItem) {
+                ItemStack st = ((net.minecraft.entity.ItemEntity) e).getStack();
+                m.put("item", st.getItem().toString());
+                m.put("count", String.valueOf(st.getCount()));
+            }
+            boolean living = e instanceof net.minecraft.entity.LivingEntity;
+            m.put("is_hostile", String.valueOf(e instanceof net.minecraft.entity.mob.HostileEntity));
+            m.put("is_mob", String.valueOf(living && !isItem));
+            if (living) m.put("health", String.format("%.0f", ((net.minecraft.entity.LivingEntity) e).getHealth()));
+            if (e.getName() != null) m.put("name", e.getName().getString());
+            list.add(m);
+            n++;
+        }
+        return list;
+    }
+
+    /**
+     * Block at an exact coordinate (TARGET.md Level 1 "проверить тип блока по координате").
+     * Mirrors getGroundBlock's world access. name+id+hardness+air+replaceable.
+     */
+    public Map<String, String> getBlockAt(int x, int y, int z) {
+        Map<String, String> m = new HashMap<>();
+        try {
+            if (_mod.getWorld() == null) { m.put("error", "no world"); return m; }
+            net.minecraft.util.math.BlockPos pos = new net.minecraft.util.math.BlockPos(x, y, z);
+            net.minecraft.block.BlockState bs = _mod.getWorld().getBlockState(pos);
+            m.put("position", x + ", " + y + ", " + z);
+            m.put("block", bs.getBlock().getName().getString().toLowerCase());
+            try { m.put("id", net.minecraft.registry.Registries.BLOCK.getId(bs.getBlock()).toString()); } catch (Exception e) {}
+            m.put("is_air", String.valueOf(bs.isAir()));
+            try { m.put("hardness", String.format("%.2f", bs.getHardness(_mod.getWorld(), pos))); } catch (Exception e) {}
+            try { m.put("replaceable", String.valueOf(bs.isReplaceable())); } catch (Exception e) {}
+        } catch (Exception e) {
+            m.put("error", String.valueOf(e));
+        }
+        return m;
+    }
+
+    /**
+     * Solid (non-air) blocks in a cube of the given radius around the bot, with hardness —
+     * a local terrain/hardness mini-map (TARGET.md Level 2). radius capped at 5 (payload + token
+     * economy: only non-air returned). The agent reasons over it; no hardcoded behavior.
+     */
+    public List<Map<String, String>> getBlocksAround(int radius) {
+        List<Map<String, String>> list = new ArrayList<>();
+        try {
+            if (_mod.getPlayer() == null || _mod.getWorld() == null) return list;
+            int r = Math.max(1, Math.min(radius, 5));
+            net.minecraft.util.math.BlockPos c = _mod.getPlayer().getBlockPos();
+            for (int dx = -r; dx <= r; dx++)
+                for (int dy = -r; dy <= r; dy++)
+                    for (int dz = -r; dz <= r; dz++) {
+                        net.minecraft.util.math.BlockPos p = c.add(dx, dy, dz);
+                        net.minecraft.block.BlockState bs = _mod.getWorld().getBlockState(p);
+                        if (bs.isAir()) continue;
+                        Map<String, String> m = new HashMap<>();
+                        m.put("position", p.getX() + ", " + p.getY() + ", " + p.getZ());
+                        m.put("block", bs.getBlock().getName().getString().toLowerCase());
+                        try { m.put("hardness", String.format("%.2f", bs.getHardness(_mod.getWorld(), p))); } catch (Exception e) {}
+                        list.add(m);
+                    }
+        } catch (Exception e) {}
+        return list;
+    }
+
+    /**
+     * Top-down SURFACE map around the bot (TARGET.md Level 2/3 — "карта поверхности").
+     * For each (dx,dz) column within radius, the HIGHEST non-air block, scanning from
+     * bot.y+8 down to bot.y-8. Gives a height + hardness grid: where the ground/roof is,
+     * how hard it is to dig, so the agent can walk/dig/build over it. radius capped at 6.
+     * Each row: {dx, dz, top_dy (height of surface relative to bot feet, "-" = nothing),
+     * block, hardness}. The agent renders/reasons over it; no hardcoded behavior.
+     */
+    public List<Map<String, String>> getSurfaceMap(int radius) {
+        List<Map<String, String>> list = new ArrayList<>();
+        try {
+            if (_mod.getPlayer() == null || _mod.getWorld() == null) return list;
+            int r = Math.max(1, Math.min(radius, 6));
+            net.minecraft.util.math.BlockPos c = _mod.getPlayer().getBlockPos();
+            for (int dx = -r; dx <= r; dx++)
+                for (int dz = -r; dz <= r; dz++) {
+                    Map<String, String> m = new HashMap<>();
+                    m.put("dx", String.valueOf(dx));
+                    m.put("dz", String.valueOf(dz));
+                    boolean found = false;
+                    for (int dy = 8; dy >= -8; dy--) {
+                        net.minecraft.util.math.BlockPos p = c.add(dx, dy, dz);
+                        net.minecraft.block.BlockState bs = _mod.getWorld().getBlockState(p);
+                        if (bs.isAir()) continue;
+                        m.put("top_dy", String.valueOf(dy));
+                        m.put("block", bs.getBlock().getName().getString().toLowerCase());
+                        try { m.put("hardness", String.format("%.2f", bs.getHardness(_mod.getWorld(), p))); } catch (Exception e) {}
+                        found = true;
+                        break;
+                    }
+                    if (!found) m.put("top_dy", "-");
+                    list.add(m);
+                }
+        } catch (Exception e) {}
+        return list;
+    }
+
     public LinkedHashMap<String, Map<String, String>> getPlayersInfo(int limit, boolean dictFormat) {
         LinkedHashMap<String, Map<String, String>> map = new LinkedHashMap<>();
         for (Map<String, String> playerInfo : getPlayersInfo(limit)) {
