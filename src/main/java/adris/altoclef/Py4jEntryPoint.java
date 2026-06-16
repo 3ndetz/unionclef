@@ -1126,6 +1126,11 @@ public class Py4jEntryPoint {
         return m;
     }
 
+    /** Current in-game NICK (offline session username) — for verifying @nick / nick changes. */
+    public String getUsername() {
+        return AltoClef.getSelfName();
+    }
+
     /** Open screen (chest/server menu/inventory) as data: title + every slot with
      *  item id, display name (server menus put their labels here) and count. */
     public Map<String, Object> getOpenScreen() {
