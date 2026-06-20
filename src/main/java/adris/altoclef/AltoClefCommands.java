@@ -22,6 +22,8 @@ public class AltoClefCommands {
                 new StashCommand(),
                 new GotoCommand(),
                 new IdleCommand(),
+                new WanderCommand(),
+                new MirrorCommand(),
                 new HeroCommand(),
                 new CoordsCommand(),
                 new StatusCommand(),
