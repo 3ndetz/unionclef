@@ -133,7 +133,12 @@ public class GameMenuTaskChain extends SingleTaskChain {
             _reloadInfoSenderTimer.reset();
         }
 
-        if (ButlerConfig.getInstance().autoJoin) {
+        // Don't touch autojoin chest-menus while a SERVER SWITCH is pending (@connect / reconnect):
+        // clicking a menu on the CURRENT server bounced the agent back into its lobby instead of
+        // actually switching servers ("@connect returns ok but client stays" bug). Let the
+        // disconnect+reconnect (onTickPost) run unobstructed.
+        boolean switchPending = _needDisconnect || _reconnecting || _connectOverrideServerEntry != null;
+        if (ButlerConfig.getInstance().autoJoin && !switchPending) {
             if (ContainerType.screenHandlerMatches(ContainerType.CHEST)) {
                 Text title = MinecraftClient.getInstance().currentScreen != null
                         ? MinecraftClient.getInstance().currentScreen.getTitle() : null;
