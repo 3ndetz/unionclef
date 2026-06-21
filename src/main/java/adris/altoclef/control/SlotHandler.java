@@ -40,6 +40,7 @@ public class SlotHandler {
 
     private record BlacklistKey(int syncId, int windowSlot) {}
     private final Map<BlacklistKey, Long> _slotBlacklist = new HashMap<>();
+    private final Map<BlacklistKey, Integer> _slotCancelCount = new HashMap<>();
     private static final long SLOT_BLACKLIST_MS = 4000;
 
     public SlotHandler(AltoClef mod) {
@@ -132,12 +133,20 @@ public class SlotHandler {
                 BlacklistKey key = new BlacklistKey(syncId, slot);
                 boolean alreadyBlocked = _slotBlacklist.containsKey(key)
                         && now < _slotBlacklist.get(key);
-                _slotBlacklist.put(key, now + SLOT_BLACKLIST_MS);
+                // ESCALATING blacklist (operator/dev 2026-06-21, fdmc.pw anti-cheat): a slot the server
+                // keeps REVERTING is protected/locked (e.g. hub "menu" hotbar items: compass/feather/dye
+                // on anti-cheat servers). Re-clicking it every 4s forever spams "Server cancelled slot
+                // action" and gets the bot anti-cheat-KICKED. So the more times it's cancelled, the LONGER
+                // we give up on it: 4s -> 30s -> 10min. Normal inventory slots are ~never cancelled, so
+                // they never escalate; this only muzzles slots the server actively refuses.
+                int cancels = _slotCancelCount.merge(key, 1, Integer::sum);
+                long blacklistMs = cancels >= 3 ? 600_000L : (cancels == 2 ? 30_000L : SLOT_BLACKLIST_MS);
+                _slotBlacklist.put(key, now + blacklistMs);
                 if (!alreadyBlocked) {
                     Debug.logMessage("[WARN] Server cancelled slot action: window slot " + slot
                             + " (" + serverStack.getItem().getTranslationKey()
                             + " x" + serverStack.getCount()
-                            + ") — blacklisting for " + (SLOT_BLACKLIST_MS / 1000) + "s");
+                            + ") — blacklisting for " + (blacklistMs / 1000) + "s (cancel #" + cancels + ")");
                 }
             }
         }

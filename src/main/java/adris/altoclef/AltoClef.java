@@ -450,6 +450,29 @@ public class AltoClef implements ModInitializer {
         EventBus.subscribe(adris.altoclef.eventbus.events.multiplayer.ItemUseEvent.class, evt ->
                 getMobDefenseChain().onPlayerItemUse(this, evt.entity, evt.released));
 
+        // AUTO-ACCEPT server resource-pack prompts (operator 2026-06-21): some servers (fdmc.pw) push a
+        // REQUIRED resource pack with a "this server requires a resource pack — decline = DISCONNECT" screen.
+        // A headless bot would sit on it / get kicked. When that ConfirmScreen opens, click YES automatically.
+        EventBus.subscribe(adris.altoclef.eventbus.events.ScreenOpenEvent.class, evt -> {
+            if (evt.preOpen) return;
+            net.minecraft.client.gui.screen.Screen s = evt.screen;
+            if (!(s instanceof net.minecraft.client.gui.screen.ConfirmScreen)) return;
+            String t = s.getTitle().getString().toLowerCase();
+            if (t.contains("resource pack") || t.contains("texture")
+                    || t.contains("ресурс") || t.contains("набор ресурс")) {
+                try {
+                    it.unimi.dsi.fastutil.booleans.BooleanConsumer cb =
+                            ((adris.altoclef.mixins.ConfirmScreenAccessor) s).getCallback();
+                    if (cb != null) {
+                        Debug.logMessage("Auto-accepting server resource-pack prompt.");
+                        cb.accept(true);
+                    }
+                } catch (Throwable e) {
+                    Debug.logWarning("RP auto-accept failed: " + e.getMessage());
+                }
+            }
+        });
+
         // Playground
         Playground.IDLE_TEST_INIT_FUNCTION(this);
 
