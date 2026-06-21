@@ -23,6 +23,7 @@ public class AltoClefCommands {
                 new GotoCommand(),
                 new IdleCommand(),
                 new WanderCommand(),
+                new AliveCommand(),
                 new MirrorCommand(),
                 new HeroCommand(),
                 new CoordsCommand(),

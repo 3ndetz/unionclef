@@ -5,6 +5,7 @@ import adris.altoclef.commandsystem.ArgParser;
 import adris.altoclef.commandsystem.Command;
 import adris.altoclef.commandsystem.args.StringArg;
 import adris.altoclef.commandsystem.exception.CommandException;
+import adris.altoclef.tasks.movement.AliveConfig;
 import adris.altoclef.tasks.movement.AliveTask;
 
 /**
@@ -29,6 +30,7 @@ public class WanderCommand extends Command {
         if (secArg != null && !secArg.isEmpty()) {
             try { secs = Double.parseDouble(secArg); } catch (NumberFormatException ignored) { }
         }
+        AliveConfig.set(AliveConfig.Mode.IDLE, null, AliveConfig.radius());   // @wander = @alive idle
         mod.runUserTask(new AliveTask(secs), this::finish);
     }
 }
