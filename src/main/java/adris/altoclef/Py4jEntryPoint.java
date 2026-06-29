@@ -42,6 +42,10 @@ import static adris.altoclef.util.helpers.LookHelper.getLookingProbability;
 public class Py4jEntryPoint {
     AltoClef _mod;
     PythonCallback _cb;
+    // Ring buffer of recent chat lines this client saw — lets external control (e.g. the Telegram
+    // `/switch local` bridge) PULL chat over py4j via getRecentChat(), with no log file needed.
+    private static final int CHAT_LOG_MAX = 300;
+    private final java.util.concurrent.ConcurrentLinkedDeque<String> _chatLog = new java.util.concurrent.ConcurrentLinkedDeque<>();
     Executor _executor;
     public static String last_talking_player = "";
 
@@ -547,11 +551,23 @@ public class Py4jEntryPoint {
     }
 
     public void onChatMessage(String msg) {
+        if (msg != null) {                       // buffer EVERY incoming line (works even with no callback, e.g. the local client)
+            _chatLog.addLast(msg);
+            while (_chatLog.size() > CHAT_LOG_MAX) _chatLog.pollFirst();
+        }
         executeInNetworkThread(() -> {
             if (IsCallbackServerStarted()) {
                 _cb.onChatMessage(msg);
             }
         });
+    }
+
+    /** Last `n` chat lines this client saw (oldest first, newest last). PULL access over py4j so
+     *  external control reads chat without the log file; returns a plain List for py4j auto-convert. */
+    public java.util.List<String> getRecentChat(int n) {
+        java.util.ArrayList<String> all = new java.util.ArrayList<>(_chatLog);
+        int from = Math.max(0, all.size() - Math.max(0, n));
+        return new java.util.ArrayList<>(all.subList(from, all.size()));
     }
 
     public void onDeath(String killer) {
