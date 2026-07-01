@@ -169,10 +169,35 @@ public class Py4jEntryPoint {
 
     public byte[] getScreenshot() {
         //#if MC >= 12111
-        //$$ // TODO: takeScreenshot API changed to async Consumer<NativeImage> in 1.21.11
-        //$$ // and NativeImage.getBytes()/copyPixelsRgba() no longer exist.
-        //$$ // Needs rewrite to use the new async API.
-        //$$ return null;
+        //$$ // 1.21.11: takeScreenshot is async (Consumer<NativeImage>) and NativeImage.getBytes() is gone.
+        //$$ // Encode PNG via NativeImage.writeTo(Path) (MC's native encoder) into a temp file, read it back, delete.
+        //$$ CompletableFuture<byte[]> future = new CompletableFuture<>();
+        //$$ MinecraftClient.getInstance().execute(() -> {
+        //$$     try {
+        //$$         Framebuffer buffer = MinecraftClient.getInstance().getFramebuffer();
+        //$$         ScreenshotRecorder.takeScreenshot(buffer, (img) -> {
+        //$$             try {
+        //$$                 java.nio.file.Path tmp = java.nio.file.Files.createTempFile("uclef_shot", ".png");
+        //$$                 img.writeTo(tmp);
+        //$$                 byte[] data = java.nio.file.Files.readAllBytes(tmp);
+        //$$                 java.nio.file.Files.deleteIfExists(tmp);
+        //$$                 future.complete(data);
+        //$$             } catch (Exception e) {
+        //$$                 future.completeExceptionally(e);
+        //$$             } finally {
+        //$$                 img.close();
+        //$$             }
+        //$$         });
+        //$$     } catch (Exception e) {
+        //$$         future.completeExceptionally(e);
+        //$$     }
+        //$$ });
+        //$$ try {
+        //$$     return future.get(5, TimeUnit.SECONDS);
+        //$$ } catch (Exception e) {
+        //$$     Debug.logInternal("Error taking screenshot: " + e.getMessage());
+        //$$     return null;
+        //$$ }
         //#else
         try {
             AtomicReference<NativeImage> screenshot = new AtomicReference<>();
