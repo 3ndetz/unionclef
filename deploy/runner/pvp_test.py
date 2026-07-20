@@ -119,6 +119,7 @@ ARENA_CMDS = [
     # no regen so damage accumulates (1.21.11 renamed gamerules to snake_case)
     "gamerule natural_health_regeneration false",
     "gamerule pvp true",
+    "gamerule immediate_respawn true",
     "time set day",
 ]
 
@@ -151,6 +152,12 @@ def main():
 
     print("[3/4] setup fight...")
     py4j(FIGHTER_CONTAINER, "chat", msg=";stop")
+    # full health reset — with regen off, leftovers from a previous fight
+    # (a 0.1 hp victim) turn the whole measurement into garbage
+    rcon(f"kill {FIGHTER}")
+    rcon(f"kill {VICTIM}")
+    wait_for("fighter respawned", lambda: entity_float(FIGHTER, "Health") >= 19.9, 60, 3)
+    wait_for("victim respawned", lambda: entity_float(VICTIM, "Health") >= 19.9, 60, 3)
     rcon(f"effect clear {FIGHTER}")
     rcon(f"effect clear {VICTIM}")
     rcon(f"clear {FIGHTER}")

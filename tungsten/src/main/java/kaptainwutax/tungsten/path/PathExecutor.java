@@ -223,9 +223,11 @@ public class PathExecutor {
         if (target == null) {
             if (settleTicks++ < 12) { // wait for sand/gravel to land
                 releaseMovementKeys(options);
+                options.attackKey.setPressed(false);
                 return true;
             }
             Debug.logMessage("Mining done — passage open");
+            options.attackKey.setPressed(false);
             breakQueue = null; breakingTicks = 0; settleTicks = 0;
             return false;
         }
@@ -235,23 +237,21 @@ public class PathExecutor {
         Vec3d center = Vec3d.ofCenter(target);
         if (breakingTicks++ > 300 || eye.squaredDistanceTo(center) > 4.5 * 4.5) {
             Debug.logMessage("Mining aborted (timeout or out of reach)");
+            options.attackKey.setPressed(false);
+            mc.interactionManager.cancelBlockBreaking();
             breakQueue = null; breakingTicks = 0; settleTicks = 0;
             return false;
         }
 
         releaseMovementKeys(options);
+        // Aim at the block and HOLD the attack key — vanilla handleBlockBreaking
+        // then drives the mining against crosshairTarget. Calling
+        // updateBlockBreakingProgress directly does not work: with the attack
+        // key up, vanilla cancels the breaking progress every tick.
         Vec3d d = center.subtract(eye);
         player.setYaw((float) Math.toDegrees(-Math.atan2(d.x, d.z)));
         player.setPitch((float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))));
-
-        net.minecraft.util.math.Direction side = net.minecraft.util.math.Direction.getFacing(
-                eye.x - center.x, eye.y - center.y, eye.z - center.z);
-        if (!mc.interactionManager.isBreakingBlock()) {
-            mc.interactionManager.attackBlock(target, side);
-        } else {
-            mc.interactionManager.updateBlockBreakingProgress(target, side);
-        }
-        player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
+        options.attackKey.setPressed(true);
         return true;
     }
 
