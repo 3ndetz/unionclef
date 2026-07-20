@@ -1,5 +1,17 @@
 # Progress
 
+## Need-fulfiller API, ступень 1: инструменты (2026-07-20) — СДЕЛАНО
+
+- Дизайн: docs/features/TUNGSTEN_ALTOCLEF_API.md (сплит tungsten=исполнение /
+  altoclef=инвентарь, для комбата и для майнинга/строительства).
+- Реализация: TungstenModDataContainer.equipToolHook ← altoclef
+  (getBestToolSlot + forceEquipItem), вызов из PathExecutor.tickBreaking.
+- Автотест: курс E_tool (deepslate-дверь, кирка вне хотбара) PASS вместе с
+  регрессией C/D. Коммит dcbb3a2.
+- Дальше: bestBreakTicks-хук (cost от лучшего инструмента), затем
+  формализация комбат-API (#10), траектории лука (#11), ступени 2-3
+  (количество блоков, установка).
+
 ## PVP rework + tungsten block breaking (2026-07-20, в работе)
 
 ### Investigate (аудиты завершены)

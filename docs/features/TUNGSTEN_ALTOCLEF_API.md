@@ -56,13 +56,16 @@ interface NeedFulfiller {
 }
 ```
 
-- **Ступень 1 — инструменты**: altoclef реализует `equipToolFor` — лучший
-  инструмент из хотбара, затем своп из инвентаря (у altoclef есть slot-механика).
-  Стоимость в block-space уже ваниль-честная (`calcBlockBreakingDelta` считает
-  ОТ ТЕКУЩЕЙ руки) — после экипировки cost сам станет правильным; следующий шаг:
-  считать cost от ЛУЧШЕГО доступного инструмента, а не от руки.
-  Автотест: коробка с каменной дверью — голыми руками 7.5с/блок (таймаут),
-  с киркой в инвентаре — проходит быстро.
+- **Ступень 1 — инструменты — СДЕЛАНА (2026-07-20)**: хук
+  `TungstenModDataContainer.equipToolHook` (BiConsumer<BlockPos, BlockState>),
+  tungsten зовёт его из `PathExecutor.tickBreaking` (клиент-тред, try-catch —
+  хук не может сломать майнинг); altoclef регистрирует в `onInitializeLoad`:
+  `StorageHelper.getBestToolSlot` → `SlotHandler.forceEquipItem`, с уважением
+  к еде (isTryingToEat). Автотест `E_tool` PASS: deepslate-дверь (голыми
+  руками 15с/блок — не влезает в бюджет), железная кирка в `container.9`
+  (вне хотбара) — курс прошёл в лимите.
+  Следующий шаг: cost в block-space от ЛУЧШЕГО доступного инструмента
+  (второй хук-supplier `bestBreakTicks(BlockState)`), не от текущей руки.
 - **Ступень 2 — количество**: `reserveScaffoldBlocks` — block-space, планируя
   мосты/установку, спрашивает лимит ДО построения плана: нельзя обещать мост из
   20 блоков при 10 в инвентаре. Мусорная классификация (земля/булыжник — трать,
