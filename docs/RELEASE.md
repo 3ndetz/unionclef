@@ -43,8 +43,13 @@ Output JAR: `build/libs/unionclef-0.20.0-1.21.jar`
 ### 3. Publish to GitHub releases
 
 ```bash
-gradlew githubRelease
+gradlew :1.21.11:githubRelease
 ```
+
+Target the version subproject explicitly. Bare `gradlew githubRelease` runs the
+task on BOTH version subprojects in parallel — they race to create the same tag
+and one fails with `422 already_exists` (seen on v0.24.0). If that happens,
+rerunning `:1.21.11:githubRelease` alone overwrites the half-made release.
 
 This uploads the JAR to [github.com/3ndetz/unionclef/releases](https://github.com/3ndetz/unionclef/releases) with auto-generated release notes.
 
