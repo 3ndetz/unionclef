@@ -142,6 +142,7 @@
 		    renderAll(TungstenModRenderContainer.TEST);
 		    renderAll(TungstenModRenderContainer.ERROR);
 		    renderAll(TungstenModRenderContainer.COMBAT_TRAJECTORY);
+		    renderAll(TungstenModRenderContainer.BREAK_PLAN);
 		}
 		
 		private static void renderAll(Collection<Renderer> renderers) {

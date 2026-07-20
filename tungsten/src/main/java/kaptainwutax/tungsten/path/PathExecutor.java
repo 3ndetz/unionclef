@@ -3,6 +3,7 @@ package kaptainwutax.tungsten.path;
 import kaptainwutax.tungsten.Debug;
 import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
+import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
 import kaptainwutax.tungsten.agent.Agent;
 import kaptainwutax.tungsten.helpers.DirectionHelper;
@@ -106,6 +107,7 @@ public class PathExecutor {
     	if(TungstenMod.pauseKeyBinding.isPressed() || stop) {
     		if (breakQueue != null) {
     			MinecraftClient.getInstance().interactionManager.cancelBlockBreaking();
+    			TungstenModRenderContainer.BREAK_PLAN.clear();
     			breakQueue = null; breakingTicks = 0; settleTicks = 0;
     		}
     		this.tick = this.path.size();
@@ -228,7 +230,9 @@ public class PathExecutor {
             }
             Debug.logMessage("Mining done — passage open");
             options.attackKey.setPressed(false);
+            TungstenModRenderContainer.BREAK_PLAN.clear();
             breakQueue = null; breakingTicks = 0; settleTicks = 0;
+            resumeGotoAfterMining(player);
             return false;
         }
         settleTicks = 0;
@@ -239,8 +243,20 @@ public class PathExecutor {
             Debug.logMessage("Mining aborted (timeout or out of reach)");
             options.attackKey.setPressed(false);
             mc.interactionManager.cancelBlockBreaking();
+            TungstenModRenderContainer.BREAK_PLAN.clear();
             breakQueue = null; breakingTicks = 0; settleTicks = 0;
             return false;
+        }
+
+        // Visualize the plan: queued blocks orange, the one being mined red.
+        TungstenModRenderContainer.BREAK_PLAN.clear();
+        for (net.minecraft.util.math.BlockPos pos : breakQueue) {
+            boolean current = pos.equals(target);
+            TungstenModRenderContainer.BREAK_PLAN.add(new kaptainwutax.tungsten.render.Cuboid(
+                    new Vec3d(pos.getX(), pos.getY(), pos.getZ()).add(current ? -0.02 : 0.05, current ? -0.02 : 0.05, current ? -0.02 : 0.05),
+                    current ? new Vec3d(1.04, 1.04, 1.04) : new Vec3d(0.9, 0.9, 0.9),
+                    current ? new kaptainwutax.tungsten.render.Color(255, 60, 40)
+                            : new kaptainwutax.tungsten.render.Color(255, 170, 40)));
         }
 
         releaseMovementKeys(options);
@@ -252,15 +268,43 @@ public class PathExecutor {
                         .accept(target, player.getEntityWorld().getBlockState(target));
             } catch (Throwable ignored) {}
         }
-        // Aim at the block and HOLD the attack key — vanilla handleBlockBreaking
-        // then drives the mining against crosshairTarget. Calling
-        // updateBlockBreakingProgress directly does not work: with the attack
-        // key up, vanilla cancels the breaking progress every tick.
+        // Turn toward the block smoothly (no gaze teleport) and HOLD the attack
+        // key only once the crosshair is actually on it — vanilla
+        // handleBlockBreaking then drives the mining against crosshairTarget.
+        // (Direct updateBlockBreakingProgress does not work: with the key up,
+        // vanilla cancels the breaking progress every tick.)
         Vec3d d = center.subtract(eye);
-        player.setYaw((float) Math.toDegrees(-Math.atan2(d.x, d.z)));
-        player.setPitch((float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))));
-        options.attackKey.setPressed(true);
+        float wantYaw = (float) Math.toDegrees(-Math.atan2(d.x, d.z));
+        float wantPitch = (float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)));
+        float dYaw = net.minecraft.util.math.MathHelper.wrapDegrees(wantYaw - player.getYaw());
+        float dPitch = net.minecraft.util.math.MathHelper.wrapDegrees(wantPitch - player.getPitch());
+        float step = 16.0f; // deg per tick — quick but human-ish
+        player.setYaw(player.getYaw() + net.minecraft.util.math.MathHelper.clamp(dYaw, -step, step));
+        player.setPitch(net.minecraft.util.math.MathHelper.clamp(
+                player.getPitch() + net.minecraft.util.math.MathHelper.clamp(dPitch, -step, step), -90f, 90f));
+        boolean aimed = Math.abs(dYaw) < 12f && Math.abs(dPitch) < 12f;
+        options.attackKey.setPressed(aimed);
         return true;
+    }
+
+    /**
+     * Seamless continuation: the wall is open, the goto target is still far —
+     * restart the search immediately instead of waiting on the retry chain
+     * (which sleeps and polls; the visible "task died after mining" gap).
+     */
+    private void resumeGotoAfterMining(ClientPlayerEntity player) {
+        Vec3d goal = TungstenMod.TARGET;
+        if (goal == null || player.getEntityPos().distanceTo(goal) < 2.0) return;
+        new Thread(() -> {
+            try {
+                TungstenModDataContainer.PATHFINDER.stop.set(true);
+                for (int i = 0; i < 20 && TungstenModDataContainer.PATHFINDER.thread != null; i++) {
+                    Thread.sleep(250);
+                }
+                TungstenModDataContainer.PATHFINDER.stop.set(false);
+                TungstenModDataContainer.PATHFINDER.find(player.getEntityWorld(), goal, player);
+            } catch (Throwable ignored) {}
+        }, "tungsten-mining-resume").start();
     }
 
     private static void releaseMovementKeys(GameOptions options) {
