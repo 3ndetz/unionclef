@@ -98,14 +98,16 @@ def wait_for(desc, fn, timeout_s, interval=3):
 COURSE_CMDS = [
     "forceload add -24 -24 40 60",
     # wipe both course areas
-    "fill -12 -60 12 24 -45 48 air",
-    # course C: dirt wall x=0, 2 high, 9 wide across the route
-    "fill 0 -60 16 0 -59 24 dirt",
-    # course D: dirt wall + 2 sand on top
-    "fill 0 -60 36 0 -59 44 dirt",
-    "fill 0 -58 38 0 -57 42 sand",
+    "fill -12 -60 6 24 -45 54 air",
+    # course C: dirt wall x=0, 2 high, WIDE (detours must lose to mining)
+    "fill 0 -60 8 0 -59 30 dirt",
+    # course D: wide dirt wall + sand on top above the route
+    "fill 0 -60 32 0 -59 52 dirt",
+    "fill 0 -58 36 0 -57 44 sand",
     "gamerule advance_time false",
+    "gamerule advance_weather false",
     "gamerule spawn_mobs false",
+    "weather clear",
     "time set day",
 ]
 
@@ -130,7 +132,7 @@ def snap(name):
         print(f"  (screenshot failed: {ex})")
 
 
-def run_course(name, tp_cmd, goto_cmd, box, timeout_s):
+def run_course(name, tp_cmd, goto_cmd, box, timeout_s, passage_check):
     xmin, xmax, ymin, zmin, zmax = box
     print(f"[course {name}]")
     rcon(tp_cmd)
@@ -154,7 +156,13 @@ def run_course(name, tp_cmd, goto_cmd, box, timeout_s):
 
     try:
         pos = wait_for(f"{name}: bot past the wall", arrived, timeout_s)
-        print(f"  PASS {name}: pos={pos}")
+        # arriving is not enough — the wall must actually be mined through
+        mined = "passed" in rcon(f"execute if block {passage_check} air").lower()
+        if not mined:
+            print(f"  FAIL {name}: reached the far side but the wall is intact "
+                  f"(detour, no mining) — passage {passage_check} still solid")
+            return False
+        print(f"  PASS {name}: pos={pos}, passage mined at {passage_check}")
         return True
     except TimeoutError as e:
         print(f"  FAIL {name}: {e}")
@@ -189,15 +197,17 @@ def main():
         "C_wall",
         f"tp {BOT} -5.5 -60 20.5 -90 0",
         ";goto 5 -60 20",
-        (3.5, 8.5, -60.3, 17.5, 23.5),
+        (3.5, 8.5, -60.3, 15.5, 25.5),
         120,
+        "0 -60 20 air",
     )
     results["D_sand"] = run_course(
         "D_sand",
         f"tp {BOT} -5.5 -60 40.5 -90 0",
         ";goto 5 -60 40",
-        (3.5, 8.5, -60.3, 37.5, 43.5),
+        (3.5, 8.5, -60.3, 35.5, 45.5),
         150,
+        "0 -60 40 air",
     )
 
     print("\n=== RESULTS ===")

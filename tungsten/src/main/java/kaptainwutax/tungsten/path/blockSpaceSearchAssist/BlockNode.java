@@ -612,7 +612,11 @@ public class BlockNode {
 		}
 
 		child.toBreak = plan;
-		child.cost += ticks * 0.5 * TungstenConfig.get().breakCostMultiplier;
+		// NOTE: this A* does NOT accumulate cost along the path (updateNode uses
+		// child.cost + 1), so a break penalty comparable to a couple of walk
+		// nodes is the most a break can carry and still ever be chosen over an
+		// unbounded-length detour. 0.15 ≈ one walk node per ~30 mining ticks.
+		child.cost += ticks * 0.15 * TungstenConfig.get().breakCostMultiplier;
 		return true;
 	}
 

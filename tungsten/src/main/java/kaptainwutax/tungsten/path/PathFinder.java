@@ -265,7 +265,9 @@ public class PathFinder {
 						if (TungstenModDataContainer.EXECUTOR.getPath().size() - TungstenModDataContainer.EXECUTOR.getCurrentTick() < 50) break;
 						try { Thread.sleep(500); } catch (InterruptedException e) { e.printStackTrace(); }
 					}
-	    		    primaryTimeoutTime = System.currentTimeMillis() + 220L;
+	    		    // 220ms starved the freshly re-rooted search — handleTimeout
+	    		    // fired before any real expansion happened past this point
+	    		    primaryTimeoutTime = System.currentTimeMillis() + 3000L;
 	        		if (blockPath.get().getLast().getPos(true, world).distanceTo(player.getEntityPos()) < 20) {
 		    			int attempt = 0;
 		    			while (attempt < 3) {
@@ -828,6 +830,16 @@ public class PathFinder {
         Optional<List<Node>> result = PathFinder.bestSoFar(true, 0, start, TungstenModDataContainer.PATHFINDER.TARGET);
 
         if (!result.isPresent()) {
+            return false;
+        }
+
+        // The executor replays inputs from the path's first node — a chain that
+        // does not start where the player actually stands is garbage (stale
+        // root from before a re-root) and drift-aborts on tick 1. Refuse it.
+        if (result.get().getFirst().agent.getPos().distanceTo(player.getEntityPos()) > 2.0) {
+            if (TungstenConfig.get().verboseDebugLogging) {
+                Debug.logMessage("Rejecting stale-rooted path emission (root far from player)");
+            }
             return false;
         }
 
