@@ -121,10 +121,10 @@ COURSE_CMDS = [
     "fill 11 -60 0 14 -60 1 slime_block",
     # course B: target platform +2 above slime feet (top -58, feet -57)
     "fill 16 -58 -1 18 -58 1 stone",
-    # keep things quiet and deterministic
-    "gamerule doDaylightCycle false",
-    "gamerule doWeatherCycle false",
-    "gamerule doMobSpawning false",
+    # keep things quiet and deterministic (1.21.11 snake_case gamerule ids)
+    "gamerule advance_time false",
+    "gamerule advance_weather false",
+    "gamerule spawn_mobs false",
     "time set day",
 ]
 

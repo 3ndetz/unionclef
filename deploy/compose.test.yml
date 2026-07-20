@@ -50,3 +50,23 @@ services:
     networks: [uctest]
     depends_on: [test-server]
     restart: unless-stopped
+
+  # Victim client for PVP tests (pvp_test.py). Same image/mods; just stands
+  # there and gets hit. Started with --profile pvp so slime tests stay light:
+  #   docker compose -f deploy/compose.test.yml --profile pvp up -d
+  mc-tester2:
+    image: mineswarm-mc:amd64
+    platform: linux/amd64
+    container_name: uctest-mc-tester2
+    profiles: [pvp]
+    environment:
+      MC_USERNAME: "tester2"
+      MC_MAX_MEM: "3G"
+    ports:
+      - "5821:5800"                 # noVNC (debug only)
+    volumes:
+      - ./run/data/tester2:/mc-data
+      - ./run/mods:/mc-data/mods:ro
+    networks: [uctest]
+    depends_on: [test-server]
+    restart: unless-stopped
