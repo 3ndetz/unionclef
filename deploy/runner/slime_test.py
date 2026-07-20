@@ -19,10 +19,13 @@ Courses (built with RCON in a flat world, ground: grass top y=-60):
 Exit code 0 = all courses passed.
 """
 
+import functools
 import json
 import subprocess
 import sys
 import time
+
+print = functools.partial(print, flush=True)
 
 CLIENT = "uctest-mc-tester1"
 SERVER = "uctest-server"
@@ -98,6 +101,10 @@ def wait_for(desc, fn, timeout_s, interval=3):
 
 
 COURSE_CMDS = [
+    # course chunks must be loaded for fill to work (spawn chunk radius is
+    # tiny in 1.21 and the client may not have joined yet)
+    "forceload add -24 -24 40 24",
+    "setworldspawn 0 -60 0",
     # wipe area
     "fill -12 -60 -8 20 -45 8 air",
     # course A: start platform (top -56, feet -55)
@@ -122,6 +129,12 @@ def build_course():
     for c in COURSE_CMDS:
         out = rcon(c)
         print(f"  rcon: {c} -> {out[:60]}")
+    for check in ("-5 -56 0 stone", "0 -60 0 slime_block", "5 -57 0 stone",
+                  "10 -60 0 slime_block", "14 -58 0 stone"):
+        out = rcon(f"execute if block {check}")
+        if "passed" not in out.lower():
+            raise RuntimeError(f"course build verification failed at {check}: {out}")
+    print("  course verified")
 
 
 def run_course(name, tp_cmd, goto_cmd, box, timeout_s):
