@@ -1,5 +1,63 @@
 # Progress
 
+## PVP rework + tungsten block breaking (2026-07-20, в работе)
+
+### Investigate (аудиты завершены)
+
+**Комбат — причины симптомов:**
+- «Боится бить»: триггер стреляет ТОЛЬКО при `mc.targetedEntity == target`
+  (ванильный OUTLINE-пик), а прицел ведёт цель с упреждением по COLLIDER →
+  крестик мимо текущего хитбокса → удар подавлен (TriggerBot.java:38,48).
+- «Зависает в траве»: OUTLINE-пик блокируется травой (у неё есть outline),
+  COLLIDER-прицел траву игнорит → вечный лок без ударов + осцилляция
+  COMBAT↔APPROACH через hasNoProgress(60) (PunkPlayerTask.java:76).
+- Пассивность: ESCAPE первую половину КАЖДОГО кулдаун-цикла
+  (SafetySystem.java:448: cooldown<0.5 → ESCAPE — убегает и отворачивается
+  после каждого удара); движение к цели выключено по умолчанию
+  (TungstenConfig.combatMovementsEnabled=false); DANGER_BATTLE при
+  предсказанном KB-падении ≥2 блоков — стопорит сближение на любом рельефе.
+- Микро-фризы: BFS до 2000 нод каждые 10 тиков на главном потоке
+  (CombatPathfinder.java:47,201,237).
+
+### Plan — комбат (фиксы)
+
+- [ ] TriggerBot: свой гейт (reach ≤3.0 до хитбокса + COLLIDER LOS + угол <40°
+  + cooldown ≥0.95 через getAttackCooldownProgress(0f)) и ПРЯМАЯ доставка
+  `interactionManager.attackEntity` + swingHand (обход crosshairTarget);
+  крит-окно: при падении бить с ≥0.85.
+- [ ] SafetySystem: убрать «ESCAPE при cooldown<0.5»; KB_FALL_THRESHOLD 2→4.
+- [ ] TungstenConfig: combatMovementsEnabled default true.
+- [ ] PunkPlayerTask: COMBAT_RANGE 3.5→4.5, hasNoProgress 60→100.
+- [ ] FollowEntityTask.hasLineOfSight: рейкаст в центр тела, не в feet.
+- [ ] CombatPathfinder: MAX_NODES 2000→800.
+- [ ] Тест: deploy/runner/pvp_test.py (fighter+victim, арена с травой,
+  метрики: first hit <15s, damage ≥8 за 60s, 0 freeze-окон).
+
+### Plan — block breaking (v1, прагматичный срез)
+
+Архитектура: НЕ оборачивать мир и не паузить replay. Сегментация через
+существующий retry-механизм GotoCommand (MAX_RETRIES):
+1. BlockNode.toBreak: block-space разрешает «пробить стенку» для СОСЕДНЕЙ
+   клетки, если feet/head-блоки ломаемы (calcBlockBreakingDelta>0, не
+   bedrock); cost += ticks_ломания (ваниль: 1/delta) + рекурсия по
+   FallingBlock сверху (baritone-паттерн). Config: allowBreak (def true),
+   breakCostMultiplier.
+2. PathFinder: усекать blockPath до первой break-ноды — физика ведёт бота
+   ДО стенки; breakQueue передаётся исполнителю.
+3. PathExecutor: после конца replay, если breakQueue непуста и блок в
+   reach 4.4 — BREAKING-хвост: aim на центр блока, attackBlock +
+   updateBlockBreakingProgress + swingHand каждый тик, пока клетки прохода
+   не проходимы (цикл покрывает упавший песок), потом cb → retry GotoCommand
+   → новый поиск в уже-чистом мире.
+4. Тесты: course C (dirt-стенка 2 высотой на пути), course D (песок сверху
+   → падает в проход → доламывание). deploy/runner/break_test.py.
+
+Ключевые точки кода (из аудита): BlockNode.shouldRemoveNode:421 (normal cube
+reject) и wasCleared:552; children cost BlockNode:373; исполнение брейка —
+baritone-паттерн interactionManager.attackBlock/updateBlockBreakingProgress
+(BaritonePlayerController.java:60-93, BlockBreakHelper.java:52); PathInput
+менять не нужно (брейк вне replay).
+
 ## Tungsten slime parkour + автотест фазы 0 (2026-07-20)
 
 ### Investigate
