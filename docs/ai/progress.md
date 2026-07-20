@@ -1,5 +1,32 @@
 # Progress
 
+## Autotesting — дизайн пайплайна автодеплой/автотест (2026-07-20)
+
+### Investigate
+
+- mineswarm (`../mineswarm`): headless MC-**клиенты** в Docker (PortableMC → Fabric 1.21.11,
+  llvmpipe, noVNC), py4j baked-in; мод деплоится копией jar в `game/minecraft/mods/` + restart.
+  Gateway ходит к py4j через `docker exec` (py4j слушает loopback внутри контейнера).
+- Мак (mactrindetz, M4 Max/48GB): Docker Desktop есть, mineswarm мини-стек уже крутится
+  (`docker-compose.mac.yml`, `mc-crossentropy` как linux/amd64 под Rosetta), клоны
+  unionclef/mineswarm лежат в `~/repos/pet`, Java 21 установлена.
+- В unionclef уже есть: `Py4jEntryPoint` (~100 методов), скелет e2e-теста
+  `scripts/custom/example_server_test.py`, autoConnectServer, мульти-версии (replaymod
+  preprocessor), ClefForge docker-сборка.
+- Прецеденты: agicraftmc (RCON тест-сервер + push-автодеплой), nettyan-toolkit
+  (self-hosted runner деплой).
+
+### Plan
+
+- [x] Написать `docs/AUTOTESTING.md`: архитектура (тест-сервер + N клиентов на образе
+  mineswarm-mc + python-раннер), раскладка `deploy/`, сценарии (@goto, ;goto паркур,
+  ;followPlayer, #goto bridge, nightly @gamer), триггер (self-hosted GH runner на маке),
+  фазы 0–3 с оценками, риски (Rosetta/llvmpipe FPS → флаки, arm64-образ как фикс).
+
+### Implement
+
+- [x] `docs/AUTOTESTING.md` — только дизайн, код пайплайна не писался (фазы — отдельные TODO).
+
 ## Shredder — pathfinder v2 (baritone + tungsten)
 
 ### Investigate
