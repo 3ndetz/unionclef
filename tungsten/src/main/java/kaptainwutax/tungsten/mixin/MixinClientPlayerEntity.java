@@ -50,6 +50,9 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// BFS walker: immediate movement while physics A* computes
 		BlockPathWalker.tick((ClientPlayerEntity)(Object)this);
 
+		// bow-shot primitive (aim + charge + release)
+		kaptainwutax.tungsten.task.BowShooter.tick((ClientPlayerEntity)(Object)this);
+
 		if(TungstenModDataContainer.isExecutorRunning()) {
 			try {
 				TungstenModDataContainer.EXECUTOR.tick((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);

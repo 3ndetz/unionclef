@@ -1001,6 +1001,51 @@ public class Py4jEntryPoint {
      * Block at an exact coordinate (TARGET.md Level 1 "проверить тип блока по координате").
      * Mirrors getGroundBlock's world access. name+id+hardness+air+replaceable.
      */
+    /** Bow-shot primitive: aim with the trajectory solver (moving-target lead),
+     *  charge and release at the named player. Needs a bow in hand and arrows.
+     *  Returns false if the player is not visible in the world. */
+    public boolean shootArrowAt(String playerName) {
+        try {
+            if (_mod.getWorld() == null) return false;
+            for (net.minecraft.entity.player.PlayerEntity p : _mod.getWorld().getPlayers()) {
+                if (p.getName().getString().equalsIgnoreCase(playerName)) {
+                    net.minecraft.entity.player.PlayerEntity target = p;
+                    net.minecraft.client.MinecraftClient.getInstance().execute(() ->
+                            kaptainwutax.tungsten.task.BowShooter.shootAt(target));
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Trajectory prediction only (no shot): yaw/pitch/flightTicks for hitting
+     *  the named player with a full-draw arrow, or empty map if unsolvable. */
+    public Map<String, String> solveArrowAim(String playerName) {
+        Map<String, String> m = new HashMap<>();
+        try {
+            if (_mod.getWorld() == null || _mod.getPlayer() == null) return m;
+            for (net.minecraft.entity.player.PlayerEntity p : _mod.getWorld().getPlayers()) {
+                if (p.getName().getString().equalsIgnoreCase(playerName)) {
+                    kaptainwutax.tungsten.combat.TrajectorySolver.Solution sol =
+                            kaptainwutax.tungsten.combat.TrajectorySolver.solve(
+                                    _mod.getPlayer().getEyePos(), p, 1.0);
+                    if (sol != null) {
+                        m.put("yaw", String.format("%.2f", sol.yaw));
+                        m.put("pitch", String.format("%.2f", sol.pitch));
+                        m.put("flightTicks", String.valueOf(sol.flightTicks));
+                    }
+                    return m;
+                }
+            }
+        } catch (Exception e) {
+            m.put("error", String.valueOf(e));
+        }
+        return m;
+    }
+
     /** Break-policy prediction: may the tungsten pathfinder mine this block?
      *  Consults BreakRules (config deny lists/zones, block entities,
      *  altoclef protection hook). */
