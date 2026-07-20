@@ -1,5 +1,15 @@
 # Progress
 
+## Комбат-примитивы: фасад + щит (2026-07-21) — СДЕЛАНО
+
+- CombatPrimitives (tungsten/combat): canHit-гейт, attack, shieldHold/Release,
+  solveArrow, shootArrow — исполнительная поверхность для мозга altoclef.
+- ShieldBlocker: держит use N тиков, уступает клавишу луку. py4j shieldBlock.
+- Тест shield_test.py PASS: дуэль примитивов — лучник (BowShooter tester2)
+  против щитоносца: контроль без щита 2/2 попадания, со щитом 0/3 урона.
+- Дальше по арсеналу: примитивы бросков (трезубец/снежок/пёрл), mace-удар;
+  мозговая часть (выбор оружия, ХП-логика, тайминги щита) — altoclef.
+
 ## Траекторный движок лука (2026-07-21) — СДЕЛАНО
 
 - TrajectorySolver (tungsten/combat): ваниль-баллистика (0.99 drag / 0.05 g),

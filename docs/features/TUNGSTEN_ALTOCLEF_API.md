@@ -23,15 +23,20 @@
 
 tungsten экспортирует (частично уже есть, довести до API):
 
+Фасад: `kaptainwutax.tungsten.combat.CombatPrimitives` (2026-07-21).
+
 | Примитив | Статус |
 |---|---|
-| `attack(Entity)` — гейт (reach/LOS/угол/кулдаун) + доставка | есть (TriggerBot) |
-| `aimAt(Vec3d/Entity)` — WindMouse-прицел | есть (SafetySystem/WindMouseRotation) |
-| `moveTo/strafe/charge` — ноги боя | есть (SafetySystem) |
-| `shieldBlock(bool)` — правый клик щитом с таймингом | нет |
-| `throwProjectile(yaw,pitch,charge)` — бросок/выстрел | нет |
-| `trajectorySolve(target, projectile)` — решение упреждения (задача #11) | нет |
+| `canHit(player, target, angle)` — гейт (reach/COLLIDER LOS/угол) | ЕСТЬ (фасад; TriggerBot использует ту же логику + кулдаун) |
+| `attack(player, target)` — прямая доставка (attackEntity + swing) | ЕСТЬ |
+| `aimAt(Vec3d/Entity)` — WindMouse-прицел | есть (SafetySystem/WindMouseRotation), в фасад не вынесен |
+| `shieldHold(ticks)/shieldRelease/isShieldBlocking` | ЕСТЬ (ShieldBlocker; уступает use-ключ луку). Тест: 0/3 урона от стрел при контроле 2/2 |
+| `solveArrow(player, target)` — баллистика с упреждением | ЕСТЬ (TrajectorySolver; 3/5 стоя, 2/5 по бегущей на 18 блоках) |
+| `shootArrow(target)` — выстрел (прицел→заряд→трекинг→relase) | ЕСТЬ (BowShooter) |
+| `throwProjectile` (трезубец/снежок/пёрл), mace-удар с высоты | нет — следующие примитивы |
 | Телеметрия: свой/чужой ХП, кулдаун, дистанция, danger-оценки | есть внутри, наружу не оформлено |
+
+py4j-обвязка: shootArrowAt, solveArrowAim, shieldBlock (для внешних тестов).
 
 altoclef поверх этого строит мозг: выбор оружия (меч/топор/лук/mace/трезубец/
 арбалет — реализация лука в altoclef уже отличная и остаётся там), расходники
