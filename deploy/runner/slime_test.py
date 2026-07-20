@@ -137,6 +137,15 @@ def build_course():
     print("  course verified")
 
 
+def snap(name):
+    try:
+        py4j("shot")
+        sh(["docker", "cp", f"{CLIENT}:/tmp/shot.png", f"/tmp/{name}.png"])
+        print(f"  screenshot: /tmp/{name}.png")
+    except Exception as ex:
+        print(f"  (screenshot failed: {ex})")
+
+
 def run_course(name, tp_cmd, goto_cmd, box, timeout_s):
     """box = (xmin, xmax, ymin, zmin, zmax) — success when bot inside."""
     print(f"[course {name}]")
@@ -150,8 +159,13 @@ def run_course(name, tp_cmd, goto_cmd, box, timeout_s):
     print(f"  sent: {goto_cmd}")
 
     xmin, xmax, ymin, zmin, zmax = box
+    t_start = time.time()
+    midshot = [False]
 
     def arrived():
+        if not midshot[0] and time.time() - t_start > 20:
+            midshot[0] = True
+            snap(f"{name}_mid")
         p = bot_pos()
         return (xmin <= p[0] <= xmax and p[1] >= ymin
                 and zmin <= p[2] <= zmax) and p or None
@@ -164,12 +178,7 @@ def run_course(name, tp_cmd, goto_cmd, box, timeout_s):
     except TimeoutError as e:
         print(f"  FAIL {name}: {e}")
         print(f"  final pos: {bot_pos()}")
-        try:
-            py4j("shot")
-            sh(["docker", "cp", f"{CLIENT}:/tmp/shot.png", f"/tmp/{name}_fail.png"])
-            print(f"  screenshot: /tmp/{name}_fail.png")
-        except Exception as ex:
-            print(f"  (screenshot failed: {ex})")
+        snap(f"{name}_fail")
         for line in py4j("recent", n=10).get("chat", []):
             print(f"  chat| {line}")
         return False
@@ -195,6 +204,8 @@ def main():
         time.sleep(5)
 
     print("[4/4] running courses...")
+    py4j("chat", msg=";settings verboseDebugLogging true")
+    time.sleep(1)
     results = {}
     # A: start on the high platform, goal on the +3 platform across the slime pit
     results["A_drop_bounce"] = run_course(

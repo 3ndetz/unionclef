@@ -25,6 +25,7 @@ services:
       VERSION: "1.21.11"
       ONLINE_MODE: "FALSE"
       LEVEL_TYPE: "minecraft:flat"
+      GENERATE_STRUCTURES: "false"   # villages on the course ruin determinism
       DIFFICULTY: "peaceful"
       MODE: "survival"
       ALLOW_FLIGHT: "TRUE"          # big slime bounces trip the vanilla flight kick
