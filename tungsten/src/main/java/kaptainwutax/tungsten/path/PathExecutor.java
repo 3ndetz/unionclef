@@ -237,6 +237,18 @@ public class PathExecutor {
         }
         settleTicks = 0;
 
+        // Re-check the policy against the LIVE world every tick — zones/hooks
+        // can change and the plan may be stale.
+        if (!BreakRules.canBreak(player.getEntityWorld(), target,
+                player.getEntityWorld().getBlockState(target))) {
+            Debug.logMessage("Mining aborted (denied by break rules)");
+            options.attackKey.setPressed(false);
+            mc.interactionManager.cancelBlockBreaking();
+            TungstenModRenderContainer.BREAK_PLAN.clear();
+            breakQueue = null; breakingTicks = 0; settleTicks = 0;
+            return false;
+        }
+
         Vec3d eye = player.getEyePos();
         Vec3d center = Vec3d.ofCenter(target);
         if (breakingTicks++ > 300 || eye.squaredDistanceTo(center) > 4.5 * 4.5) {

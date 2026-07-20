@@ -1001,6 +1001,66 @@ public class Py4jEntryPoint {
      * Block at an exact coordinate (TARGET.md Level 1 "проверить тип блока по координате").
      * Mirrors getGroundBlock's world access. name+id+hardness+air+replaceable.
      */
+    /** Break-policy prediction: may the tungsten pathfinder mine this block?
+     *  Consults BreakRules (config deny lists/zones, block entities,
+     *  altoclef protection hook). */
+    public boolean canBreakBlock(int x, int y, int z) {
+        try {
+            if (_mod.getWorld() == null) return false;
+            net.minecraft.util.math.BlockPos pos = new net.minecraft.util.math.BlockPos(x, y, z);
+            return kaptainwutax.tungsten.path.BreakRules.canBreak(
+                    _mod.getWorld(), pos, _mod.getWorld().getBlockState(pos));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Reachability prediction: can the block-space pathfinder find a route to
+     *  (x,y,z) — optionally with wall-breaking allowed? Returns found flag,
+     *  rough path size and how many blocks the plan would mine. Runs a real
+     *  block-space search (up to ~5s); returns busy=true if the pathfinder is
+     *  already searching. */
+    public Map<String, String> canReach(int x, int y, int z, boolean withBreaking) {
+        Map<String, String> m = new HashMap<>();
+        try {
+            if (_mod.getWorld() == null || _mod.getPlayer() == null) {
+                m.put("error", "no world/player");
+                return m;
+            }
+            if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()) {
+                m.put("busy", "true");
+                return m;
+            }
+            kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
+            boolean saved = cfg.allowBreak;
+            cfg.allowBreak = withBreaking;
+            try {
+                java.util.Optional<java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>> path =
+                        kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(
+                                _mod.getWorld(),
+                                new net.minecraft.util.math.Vec3d(x + 0.5, y, z + 0.5),
+                                _mod.getPlayer());
+                m.put("found", String.valueOf(path.isPresent()));
+                if (path.isPresent()) {
+                    m.put("pathSize", String.valueOf(path.get().size()));
+                    int breaks = 0;
+                    for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : path.get()) {
+                        if (n.hasBreaks()) breaks += n.toBreak.size();
+                    }
+                    m.put("breaks", String.valueOf(breaks));
+                    kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode last = path.get().get(path.get().size() - 1);
+                    m.put("endDistance", String.format("%.1f",
+                            last.getPos(_mod.getWorld()).distanceTo(new net.minecraft.util.math.Vec3d(x + 0.5, y, z + 0.5))));
+                }
+            } finally {
+                cfg.allowBreak = saved;
+            }
+        } catch (Exception e) {
+            m.put("error", String.valueOf(e));
+        }
+        return m;
+    }
+
     public Map<String, String> getBlockAt(int x, int y, int z) {
         Map<String, String> m = new HashMap<>();
         try {

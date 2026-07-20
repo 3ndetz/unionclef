@@ -502,6 +502,17 @@ public class AltoClef implements ModInitializer {
             }
         };
 
+        // Tungsten protection hook: altoclef's break-avoiders (bed protection,
+        // task-scoped avoid lists, protected zones) are the single source of
+        // truth for "may we mine this" — bridge them into tungsten BreakRules.
+        kaptainwutax.tungsten.TungstenModDataContainer.canBreakHook = pos -> {
+            try {
+                return !getExtraBaritoneSettings().shouldAvoidBreaking(pos);
+            } catch (Throwable t) {
+                return true; // protection lookup failure must not freeze pathing
+            }
+        };
+
         // External mod initialization
         runEnqueuedPostInits();
     }

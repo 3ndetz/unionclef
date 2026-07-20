@@ -27,4 +27,11 @@ public class TungstenModDataContainer {
      * itself never touches the inventory.
      */
     public static java.util.function.BiConsumer<net.minecraft.util.math.BlockPos, net.minecraft.block.BlockState> equipToolHook = null;
+
+    /**
+     * Protection hook: returns false when the inventory/brain side (altoclef)
+     * forbids mining a position — bridges its break-avoiders/protected zones
+     * into BreakRules. Registered at altoclef init.
+     */
+    public static java.util.function.Predicate<net.minecraft.util.math.BlockPos> canBreakHook = null;
 }

@@ -86,6 +86,13 @@ public class TungstenConfig {
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;
 
+    /** Block ids the pathfinder must NEVER mine (e.g. "minecraft:diamond_block").
+     *  Blocks with block entities (chests, spawners, furnaces) are always denied. */
+    public java.util.List<String> breakDenyBlocks = new java.util.ArrayList<>();
+
+    /** No-mining zones: [x1,y1,z1,x2,y2,z2] boxes (inclusive, any corner order). */
+    public java.util.List<int[]> breakDenyZones = new java.util.ArrayList<>();
+
     // ---- combat settings ----
 
     /** Enable trigger bot (auto-click when crosshair is on target). */

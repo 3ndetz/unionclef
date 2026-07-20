@@ -50,6 +50,10 @@ elif op == "shot":
     data = mc.getScreenshot()
     open("/tmp/shot.png", "wb").write(bytes(data) if data else b"")
     out = {"ok": bool(data)}
+elif op == "canbreak":
+    out = {"can": mc.canBreakBlock(int(req["x"]), int(req["y"]), int(req["z"]))}
+elif op == "canreach":
+    out = dict(mc.canReach(int(req["x"]), int(req["y"]), int(req["z"]), bool(req["breaking"])))
 print(json.dumps(out, default=str))
 gw.close()
 """
@@ -249,6 +253,34 @@ def main():
     if results["E_tool"] and time.time() - t_e > 45:
         print("  FAIL E_tool: passed but too slow — tool was probably not equipped")
         results["E_tool"] = False
+
+    # F: prediction API smoke. Rebuild the C door (dirt), bot is next to it.
+    print("[course F_api]")
+    rcon("fill 0 -60 19 0 -59 21 dirt")
+    api_ok = True
+    cb_dirt = py4j("canbreak", x=0, y=-60, z=20).get("can")
+    cb_bedrock = py4j("canbreak", x=0, y=-56, z=20).get("can")
+    print(f"  canBreakBlock(dirt door)={cb_dirt} (want True), (bedrock)={cb_bedrock} (want False)")
+    api_ok &= (cb_dirt is True) and (cb_bedrock is False)
+    reach_with = py4j("canreach", x=-5, y=-60, z=20, breaking=True, timeout=40)
+    reach_without = py4j("canreach", x=-5, y=-60, z=20, breaking=False, timeout=40)
+    print(f"  canReach(other side, breaking=True)={reach_with}")
+    print(f"  canReach(other side, breaking=False)={reach_without}")
+    # bot stands EAST of the rebuilt door (just passed E); the west half is
+    # only reachable through the dirt door: with breaking the plan must carry
+    # breaks and end near the goal; without breaking it must not get there
+    try:
+        with_ok = reach_with.get("found") == "True" and int(reach_with.get("breaks", "0")) > 0 \
+            and float(reach_with.get("endDistance", "99")) < 3.0
+        without_blocked = reach_without.get("found") != "True" \
+            or float(reach_without.get("endDistance", "0")) > 3.0
+        print(f"  with_ok={with_ok}, without_blocked={without_blocked}")
+        api_ok &= with_ok and without_blocked
+    except Exception as ex:
+        print(f"  api parse error: {ex}")
+        api_ok = False
+    results["F_api"] = api_ok
+    print(f"  {'PASS' if api_ok else 'FAIL'} F_api")
 
     print("\n=== RESULTS ===")
     ok = True

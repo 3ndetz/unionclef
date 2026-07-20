@@ -620,10 +620,11 @@ public class BlockNode {
 		return true;
 	}
 
-	/** Vanilla mining duration in ticks, or -1 if unbreakable/unsafe. */
+	/** Vanilla mining duration in ticks, or -1 if breaking is not allowed
+	 *  (BreakRules: unbreakable, fluids, block entities, deny lists/zones,
+	 *  altoclef protection hook). */
 	private double breakTicks(WorldView world, BlockPos pos, BlockState state) {
-		if (state.getHardness(world, pos) < 0) return -1;   // bedrock and friends
-		if (!world.getFluidState(pos).isEmpty()) return -1; // don't open fluids
+		if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, pos, state)) return -1;
 		float delta = state.calcBlockBreakingDelta(this.player, world, pos);
 		if (delta <= 0) return -1;
 		if (delta >= 1) return 1;
