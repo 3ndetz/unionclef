@@ -102,6 +102,14 @@ public class BlockNode {
 	private Direction neoSide;
 	private boolean isDoingCornerJump = false;
 
+	/** Blocks that must be mined to make this cell passable (top-down order).
+	 *  Set by tryPlanBreakThrough; consumed by PathFinder/PathExecutor. */
+	public java.util.List<BlockPos> toBreak = null;
+
+	public boolean hasBreaks() {
+		return toBreak != null && !toBreak.isEmpty();
+	}
+
 	/**
 	 * Where is this node in the array flattenization of the binary heap? Needed for
 	 * decrease-key operations.
@@ -403,6 +411,12 @@ public class BlockNode {
 			return true;
 		}
 
+		// Break-through: an adjacent cell blocked only by breakable blocks is
+		// accepted with a mining plan instead of being pruned as a wall.
+		if (tryPlanBreakThrough(world, child)) {
+			return false;
+		}
+
 		// Specific block checks
 		if (childState.isOf(Blocks.LAVA))
 			return true;
@@ -559,6 +573,59 @@ public class BlockNode {
 		return false;
 	}
 	
+	/**
+	 * Break-through planning: if the only thing between this node and an
+	 * adjacent same-Y child is breakable blocks, accept the child and record
+	 * what must be mined (top-down). Cost grows with vanilla mining ticks so
+	 * cheap detours still win over slow mining.
+	 */
+	private boolean tryPlanBreakThrough(WorldView world, BlockNode child) {
+		if (!TungstenConfig.get().allowBreak) return false;
+		int dx = child.x - this.x, dy = child.y - this.y, dz = child.z - this.z;
+		if (dy != 0 || Math.abs(dx) + Math.abs(dz) != 1) return false;
+		// needs solid footing on the other side of the wall
+		if (BlockShapeChecker.getShapeVolume(child.getBlockPos().down(), world) == 0) return false;
+
+		BlockPos feet = child.getBlockPos();
+		BlockPos head = feet.up();
+		double ticks = 0;
+		java.util.List<BlockPos> plan = new java.util.ArrayList<>();
+		for (BlockPos pos : new BlockPos[]{head, feet}) { // top first — break order matters
+			if (BlockShapeChecker.getShapeVolume(pos, world) == 0) continue; // already passable
+			double t = breakTicks(world, pos, world.getBlockState(pos));
+			if (t < 0) return false; // unbreakable wall — no plan
+			ticks += t;
+			plan.add(pos);
+		}
+		if (plan.isEmpty()) return false; // nothing blocking — normal pruning applies
+
+		// gravity blocks above the passage will fall into it — pay their cost
+		// up front (the executor re-mines whatever lands in the passage cells)
+		BlockPos above = head.up();
+		for (int i = 0; i < 5; i++) {
+			BlockState state = world.getBlockState(above);
+			if (!(state.getBlock() instanceof net.minecraft.block.FallingBlock)) break;
+			double t = breakTicks(world, above, state);
+			if (t < 0) return false;
+			ticks += t;
+			above = above.up();
+		}
+
+		child.toBreak = plan;
+		child.cost += ticks * 0.5 * TungstenConfig.get().breakCostMultiplier;
+		return true;
+	}
+
+	/** Vanilla mining duration in ticks, or -1 if unbreakable/unsafe. */
+	private double breakTicks(WorldView world, BlockPos pos, BlockState state) {
+		if (state.getHardness(world, pos) < 0) return -1;   // bedrock and friends
+		if (!world.getFluidState(pos).isEmpty()) return -1; // don't open fluids
+		float delta = state.calcBlockBreakingDelta(this.player, world, pos);
+		if (delta <= 0) return -1;
+		if (delta >= 1) return 1;
+		return Math.ceil(1f / delta);
+	}
+
 	/**
 	 * Checks if the child node is horizontally adjacent to an anvil at a Y level
 	 * where the anvil collision would block the player. Nodes directly above

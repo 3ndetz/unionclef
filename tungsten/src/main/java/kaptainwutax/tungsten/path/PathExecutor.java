@@ -29,6 +29,14 @@ public class PathExecutor {
     public List<BlockNode> blockPath = null;
     private boolean isClient;
 
+    /** Passage cells to mine open once the replay reaches the end of the
+     *  current path segment (set by PathFinder from the block path's break
+     *  plan). The path is held "unfinished" while mining so the search
+     *  thread's continuation machinery waits for the opened wall. */
+    public List<net.minecraft.util.math.BlockPos> breakQueue = null;
+    private int breakingTicks = 0;
+    private int settleTicks = 0;
+
     public PathExecutor(boolean isClient) {
     	this.isClient = isClient;
     	try {
@@ -96,6 +104,10 @@ public class PathExecutor {
     public void tick(ClientPlayerEntity player, GameOptions options) {
     	player.getAbilities().allowFlying = false;
     	if(TungstenMod.pauseKeyBinding.isPressed() || stop) {
+    		if (breakQueue != null) {
+    			MinecraftClient.getInstance().interactionManager.cancelBlockBreaking();
+    			breakQueue = null; breakingTicks = 0; settleTicks = 0;
+    		}
     		this.tick = this.path.size();
     		// player.input.playerInput = ... // MC 1.21: Input has no playerInput field
 		    options.forwardKey.setPressed(false);
@@ -113,6 +125,11 @@ public class PathExecutor {
     		return;
     	}
     	if(this.tick == this.path.size()) {
+    		// mine the planned wall before declaring the segment finished —
+    		// the continuation search / goto retry then sees the opened world
+    		if (tickBreaking(player, options)) {
+    			return;
+    		}
     		long endTime = System.currentTimeMillis();
     		long elapsedTime = endTime - startTime;
     		long minutes = (elapsedTime / 1000) / 60;
@@ -183,6 +200,70 @@ public class PathExecutor {
 	    this.tick++;
     }
 
+
+    /**
+     * Mine the queued passage cells open. Returns true while mining is in
+     * progress (the caller must not finish the path). Targets the first
+     * still-solid cell, so gravity blocks that fall into the passage get
+     * re-mined; after everything is passable it lingers a few ticks to let
+     * falling blocks settle before declaring done.
+     */
+    private boolean tickBreaking(ClientPlayerEntity player, GameOptions options) {
+        if (breakQueue == null || breakQueue.isEmpty()) return false;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        var world = player.getEntityWorld();
+
+        net.minecraft.util.math.BlockPos target = null;
+        for (net.minecraft.util.math.BlockPos pos : breakQueue) {
+            if (kaptainwutax.tungsten.helpers.BlockShapeChecker.getShapeVolume(pos, world) > 0) {
+                target = pos;
+                break;
+            }
+        }
+        if (target == null) {
+            if (settleTicks++ < 12) { // wait for sand/gravel to land
+                releaseMovementKeys(options);
+                return true;
+            }
+            Debug.logMessage("Mining done — passage open");
+            breakQueue = null; breakingTicks = 0; settleTicks = 0;
+            return false;
+        }
+        settleTicks = 0;
+
+        Vec3d eye = player.getEyePos();
+        Vec3d center = Vec3d.ofCenter(target);
+        if (breakingTicks++ > 300 || eye.squaredDistanceTo(center) > 4.5 * 4.5) {
+            Debug.logMessage("Mining aborted (timeout or out of reach)");
+            breakQueue = null; breakingTicks = 0; settleTicks = 0;
+            return false;
+        }
+
+        releaseMovementKeys(options);
+        Vec3d d = center.subtract(eye);
+        player.setYaw((float) Math.toDegrees(-Math.atan2(d.x, d.z)));
+        player.setPitch((float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))));
+
+        net.minecraft.util.math.Direction side = net.minecraft.util.math.Direction.getFacing(
+                eye.x - center.x, eye.y - center.y, eye.z - center.z);
+        if (!mc.interactionManager.isBreakingBlock()) {
+            mc.interactionManager.attackBlock(target, side);
+        } else {
+            mc.interactionManager.updateBlockBreakingProgress(target, side);
+        }
+        player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
+        return true;
+    }
+
+    private static void releaseMovementKeys(GameOptions options) {
+        options.forwardKey.setPressed(false);
+        options.backKey.setPressed(false);
+        options.leftKey.setPressed(false);
+        options.rightKey.setPressed(false);
+        options.jumpKey.setPressed(false);
+        options.sneakKey.setPressed(false);
+        options.sprintKey.setPressed(false);
+    }
 
     /**
      * Apply rotation via pixel-quantized changeLookDirection.

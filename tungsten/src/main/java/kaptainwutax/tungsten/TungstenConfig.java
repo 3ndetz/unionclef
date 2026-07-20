@@ -78,6 +78,14 @@ public class TungstenConfig {
      *  If false, only walks (no jumps) — safer but slower. */
     public boolean followJumpingEnabled = true;
 
+    // ---- block breaking ----
+
+    /** Allow the block-space pathfinder to plan breaking through breakable walls. */
+    public boolean allowBreak = true;
+
+    /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
+    public double breakCostMultiplier = 1.0;
+
     // ---- combat settings ----
 
     /** Enable trigger bot (auto-click when crosshair is on target). */

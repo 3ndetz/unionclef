@@ -668,11 +668,35 @@ public class PathFinder {
     }
 
     private Optional<List<BlockNode>> findBlockPath(WorldView world, Vec3d target, PlayerEntity player) {
-        return kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(world, target, player);
+        return truncateAtBreaks(kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(world, target, player));
     }
-    
+
     private Optional<List<BlockNode>> findBlockPath(WorldView world, BlockNode start, Vec3d target, PlayerEntity player) {
-        return kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(world, start, target, player);
+        return truncateAtBreaks(kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(world, start, target, player));
+    }
+
+    /** Planned mining positions for the wall right past the current block path
+     *  segment (null when the path has no breaks). Copied to the executor on
+     *  every emission; the executor mines them once the replay finishes, then
+     *  the goto retry / path-extension machinery re-searches the opened world. */
+    public static List<BlockPos> pendingBreaks = null;
+
+    /** Physics guidance must stop at the cell before the wall — the live world
+     *  still has the blocks, so simulating through them is impossible. */
+    private static Optional<List<BlockNode>> truncateAtBreaks(Optional<List<BlockNode>> path) {
+        if (path.isEmpty()) {
+            return path;
+        }
+        List<BlockNode> list = path.get();
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).hasBreaks()) {
+                pendingBreaks = new ArrayList<>(list.get(i).toBreak);
+                Debug.logMessage("Path needs mining: " + pendingBreaks.size() + " block(s) at segment end");
+                return Optional.of(new ArrayList<>(list.subList(0, Math.max(i, 1))));
+            }
+        }
+        pendingBreaks = null;
+        return path;
     }
 
     private AtomicDoubleArray initializeBestHeuristics(Node start) {
@@ -733,10 +757,11 @@ public class PathFinder {
         if (TungstenModDataContainer.EXECUTOR.isRunning()) {
             TungstenModDataContainer.EXECUTOR.addPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
-        } else {        	
+        } else {
         	TungstenModDataContainer.EXECUTOR.setPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
         }
+        TungstenModDataContainer.EXECUTOR.breakQueue = pendingBreaks == null ? null : new ArrayList<>(pendingBreaks);
 		long endTime = System.currentTimeMillis();
 		long elapsedTime = endTime - startTime;
 		long minutes = (elapsedTime / 1000) / 60;
@@ -763,6 +788,7 @@ public class PathFinder {
             List<Node> path = constructPath(next);
             TungstenModDataContainer.EXECUTOR.setPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
+            TungstenModDataContainer.EXECUTOR.breakQueue = pendingBreaks == null ? null : new ArrayList<>(pendingBreaks);
             NEXT_CLOSEST_BLOCKNODE_IDX.set(1);
         	RenderHelper.renderBlockPath(blockPath.get(), NEXT_CLOSEST_BLOCKNODE_IDX.get());
         	return blockPath;
@@ -809,6 +835,7 @@ public class PathFinder {
         if (newStart == null || !newStart.agent.onGround && !newStart.agent.touchingWater && !newStart.agent.isClimbing(TungstenModDataContainer.world)) return false;
         TungstenModDataContainer.EXECUTOR.addPath(result.get());
         TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
+        TungstenModDataContainer.EXECUTOR.breakQueue = pendingBreaks == null ? null : new ArrayList<>(pendingBreaks);
         // Continue A* from the last node of the emitted path — don't reset the
         // entire search. This allows pathfinder to keep computing while executor
         // runs the partial path, appending new nodes via addPath().

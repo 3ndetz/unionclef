@@ -73,6 +73,12 @@ public class GotoCommand extends Command {
 				// Small delay to let player land
 				new Thread(() -> {
 					try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+					// find() silently no-ops while the previous search thread is
+					// alive — wait for it to die (matters after mined-wall
+					// segments, where the retry drives the next leg)
+					for (int i = 0; i < 40 && TungstenModDataContainer.PATHFINDER.thread != null; i++) {
+						try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+					}
 					if (!TungstenModDataContainer.PATHFINDER.stop.get()) {
 						startWithRetry(target, attempt + 1);
 					}
