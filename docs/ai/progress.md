@@ -1,5 +1,34 @@
 # Progress
 
+## Tungsten slime parkour + автотест фазы 0 (2026-07-20)
+
+### Investigate
+
+- Слайм-механика в tungsten была частично начата и откачена (48dc410); статус в
+  `docs/features/TUNGSTEN_SURFACES.md`. Физика Agent.tick корректна (bounce,
+  no fall damage, onSteppedOn slowdown) — сломан был именно роутинг.
+- Найденные блокеры: `checkForFallDamage` (обрез любых падений >2.75),
+  `isJumpImpossible` (обрез детей выше +1.4 до slime-исключений),
+  airborne/midfall прунинг в Node, debug Thread.sleep(250) в слайм-ветке
+  block-space, off-by-one верхнего bounce-уровня, SlimeBounceMove жал прыжок
+  на тике приземления (jump() перезаписывает bounce velY на 0.42).
+
+### Plan
+
+- [x] Слайм-исключения во всех местах прунинга (isSlimeColumnBelow, скан 32)
+- [x] Bounce-высота детей block-space от кумулятивного падения (мин 1.25)
+- [x] Переписать SlimeBounceMove (initiate только из покоя)
+- [x] Стенд фазы 0 из AUTOTESTING.md на маке (deploy/compose.test.yml)
+- [ ] Прогнать slime_test.py (курсы A: drop-4 → +3, B: flat → +2) до PASS
+
+### Implement
+
+- [x] tungsten: bf48a82 — слайм-роутинг (6 файлов)
+- [x] deploy/: 549bf11 — compose (itzg vanilla 1.21.11 + mineswarm-mc:amd64),
+  runner slime_test.py (py4j через docker exec + rcon-cli), autotest.sh
+- [x] Сборка на маке: BUILD SUCCESSFUL 47s, jar задеплоен в deploy/run/mods
+- [ ] Тест: в процессе
+
 ## Autotesting — дизайн пайплайна автодеплой/автотест (2026-07-20)
 
 ### Investigate
