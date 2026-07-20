@@ -27,4 +27,4 @@ echo "deployed: $(basename "$JAR")"
 docker compose -f deploy/compose.test.yml up -d
 docker compose -f deploy/compose.test.yml restart mc-tester1
 
-python3 deploy/runner/slime_test.py
+python3 -u deploy/runner/slime_test.py

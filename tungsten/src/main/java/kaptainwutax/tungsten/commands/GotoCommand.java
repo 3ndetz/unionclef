@@ -30,6 +30,11 @@ public class GotoCommand extends Command {
 
 	        	BlockTarget target = GotoTargetArgumentType.get(context);
 	        	if(!TungstenModDataContainer.PATHFINDER.active.get() && !TungstenModDataContainer.EXECUTOR.isRunning()) {
+	        		// A prior ;stop leaves stop=true forever (find() would reset it,
+	        		// but startWithRetry bails on the stale flag before ever calling
+	        		// find()) — a fresh user command overrides the old stop.
+	        		TungstenModDataContainer.PATHFINDER.stop.set(false);
+	        		TungstenModDataContainer.EXECUTOR.stop = false;
 	        		Vec3d targetVec = target.getVec3d().add(0.5, 0, 0.5);
 	        		TungstenMod.TARGET = targetVec;
 	        		startWithRetry(targetVec, 0);
