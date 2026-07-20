@@ -329,23 +329,17 @@ public class BlockNode {
 	    double g = 32.656;
 	    double v_sprint = 5.8;
 
-	    double yMax = (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y > 0)
-	        ? MovementHelper.getSlimeBounceHeight(parent.previous.y - parent.y) - 0.5
+	    // On slime the bounce can carry the path upward. Fall height is cumulative
+	    // along the incoming block path (a jump in place feeds at least 1.25).
+	    double slimeFall = getFallOntoSlimeHeight(parent);
+	    double yMax = slimeFall > 0
+	        ? MovementHelper.getSlimeBounceHeight(slimeFall) - 0.2
 	        : generateDeep ? 4 : 2;
 
-	    if (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y > 0) {
-	    	TungstenModRenderContainer.BLOCK_PATH_RENDERER.add(new Cuboid(
-	                new Vec3d(parent.getBlockPos().getX(), parent.getBlockPos().getY(), parent.getBlockPos().getZ()),
-	                new Vec3d(0.2D, 0.2D, 0.2D), Color.GREEN));
-	        try {
-	            Thread.sleep(250); // Optional debug delay
-	        } catch (InterruptedException e) {
-	            e.printStackTrace();
-	        }
-	    }
-
 	    int distanceWanted = d;
-	    int finalYMax = (int) Math.ceil(yMax);
+	    // Bounce levels are inclusive (floor+1) so the top reachable platform is generated;
+	    // normal levels keep the old exclusive ceil bound.
+	    int finalYMax = slimeFall > 0 ? (int) Math.floor(yMax) + 1 : (int) Math.ceil(yMax);
 
         IntStream.range(generateDeep ? -64 : -4, finalYMax).parallel().forEach(py -> {
             int localD;
@@ -586,6 +580,29 @@ public class BlockNode {
 	}
 
 	/**
+	 * Effective fall height feeding a slime bounce from this node.
+	 * 0 when the node is not on slime. On slime it is the cumulative descent
+	 * along the incoming block path, but at least 1.25 — a jump in place on
+	 * slime feeds the bounce with the jump height.
+	 */
+	private static double getFallOntoSlimeHeight(BlockNode node) {
+		if (!node.wasOnSlime) return 0;
+		double drop = 0;
+		if (node.previous != null) {
+			int top = node.y;
+			BlockNode cur = node;
+			BlockNode p = node.previous;
+			while (p != null && p.y >= cur.y) {
+				top = Math.max(top, p.y);
+				cur = p;
+				p = p.previous;
+			}
+			drop = top - node.y;
+		}
+		return Math.max(drop, 1.25);
+	}
+
+	/**
 	 * Returns jump height.
 	 *
 	 * @param from
@@ -614,7 +631,12 @@ public class BlockNode {
 		Block belowChildBlock = belowChildBlockState.getBlock();
         double closestBlockBelowHeight = BlockShapeChecker.getBlockHeight(child.getBlockPos().down(), world);
 		boolean isBlockBelowTall = closestBlockBelowHeight > 1.3;
-		if (heightDiff > 1.4 && childBlock != Blocks.LADDER) return true;
+		// On slime the bounce reaches higher than a jump.
+		double slimeFall = getFallOntoSlimeHeight(this);
+		double maxUp = slimeFall > 0 ? MovementHelper.getSlimeBounceHeight(slimeFall) - 0.2 : 1.4;
+		if (heightDiff > maxUp && childBlock != Blocks.LADDER) return true;
+		// Bounce is mostly vertical — bounce-only children (above jump reach) must stay close.
+		if (slimeFall > 0 && heightDiff > 1.4 && distance > 4.0) return true;
 
 
 //    	if (world.getBlockState(child.getBlockPos().down()).getBlock() instanceof TrapdoorBlock) {
@@ -718,7 +740,7 @@ public class BlockNode {
 			}
 		}
 
-		if (!wasOnSlime || this.previous == null || this.previous.y - this.y <= 0) {
+		if (slimeFall <= 0) {
 			// Basic height and distance checks
 			if (heightDiff >= 2)
 				return true;

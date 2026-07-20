@@ -31,6 +31,7 @@ import kaptainwutax.tungsten.helpers.ArrayChunkSplitter;
 import kaptainwutax.tungsten.helpers.BlockShapeChecker;
 import kaptainwutax.tungsten.helpers.BlockStateChecker;
 import kaptainwutax.tungsten.helpers.DistanceCalculator;
+import kaptainwutax.tungsten.helpers.MovementHelper;
 import kaptainwutax.tungsten.helpers.blockPath.BlockPosShifter;
 import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
@@ -142,6 +143,8 @@ public class PathFinder {
 		if (this.stop.get()) return false;
 		if (TungstenModDataContainer.ignoreFallDamage) return false;
 		if (BlockStateChecker.isAnyWater(world.getBlockState(n.agent.getBlockPos()))) return false;
+		// Landing on slime bounces instead of hurting — any fall height is safe.
+		if (MovementHelper.isSlimeColumnBelow(world, n.agent.getBlockPos(), 32)) return false;
 		if (n.parent == null) return false;
 		if (Thread.currentThread().isInterrupted()) return false;
 		Node prev = null;

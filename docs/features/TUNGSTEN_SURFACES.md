@@ -75,30 +75,42 @@ honey or handles the slowdown.
 
 ### Slime Blocks
 
-**Status:** ⚠️ Walking on slime works. Bounce routing doesn't.
+**Status:** ⚠️ Full bounce routing implemented (2026-07-20), pending in-game test.
 
-**What works:**
-- NPE fix: starting pathfind on slime no longer crashes (null check
-  for `this.previous` in `shouldRemoveNode` line 718).
-- Bounce condition: inverted to `> 0` (fell onto slime = expand yMax).
-- `SlimeBounceMove` physics move exists — jumps on slime, rides arc
-  toward target with sprint.
+**Physics (Agent.tick, was already correct):**
+- Bounce: velY inverted on landing unless sneaking (Agent.java ~832).
+- No fall damage on slime landing (fall() multiplier 0 unless sneaking).
+- onSteppedOn slowdown: velX/velZ ×(0.4 + |velY|·0.2) when |velY| < 0.1.
 
-**What doesn't work:**
-- Block-space A* never plans "fall on slime → bounce to target" routes.
-  The heuristic penalizes going DOWN (away from target in Y), so A*
-  always prefers falling sideways and walking under the target.
-- `SlimeBounceMove` fires toward the NEXT block-space waypoint, which
-  is already under the platform — bounce goes wrong direction.
+**Pathfinding chain (fixed 2026-07-20):**
+- `PathFinder.checkForFallDamage` — falls of any height allowed when the
+  first collidable block straight below is slime
+  (`MovementHelper.isSlimeColumnBelow`, scan cap 32).
+- `Node.shouldSkipNodeGeneration` + `Node.createAirborneNodes` — same
+  slime-column exemption for mid-fall node pruning (was hard-capped ~3).
+- `BlockNode.isJumpImpossible` — on-slime nodes allow up-children to
+  bounce height (`getSlimeBounceHeight(fall) - 0.2`) instead of 1.4;
+  bounce-only children capped at horizontal distance 4. Basic
+  height/distance pruning skipped for on-slime nodes.
+- `BlockNode.getNodesIn3DCircule` — bounce yMax uses cumulative descent
+  along the block path (not just the last hop), at least 1.25 (jump in
+  place feeds the bounce); top bounce level now inclusive (off-by-one
+  cut the top platform before). Debug Thread.sleep(250) removed — it ate
+  half the 480ms block-search budget per slime expansion.
+- `SlimeBounceMove` — batches the whole arc into one macro-node. Presses
+  jump only when starting from rest (velY ≤ 0.1); when arriving with an
+  inverted bounce velocity jump is never pressed (jump() would replace
+  the bounce velY with 0.42 — this was the main executor-level bug).
 
-**Architectural limitation:** Standard A* with distance heuristic can't
-plan "go down to go up" routes. Attempted fixes (platform scan shortcut,
-heuristic modification) caused lag from scanning hundreds of blocks per
-node expansion. Needs a fundamentally different approach.
-
-**TODO (hard):** Pre-computed bounce edges (scan slime before pathfinding,
-add direct platform→platform connections) or two-phase pathfinding
-(normal A* fails → detect slime → plan bounce route separately).
+**Known limitations:**
+- The block-space heuristic still penalizes descending (dy×1.5), so
+  "go down to bounce up" routes are found late; deep slime pits may need
+  the generateDeep fallback pass (4800ms).
+- `getSlimeBounceHeight` is an empirical fit; the flat-slime (jump in
+  place) case may overestimate reach (+2) — physics A* is the ground
+  truth, unreachable block waypoints waste search time.
+- Waypoint index advances one expansion behind the landing node, so the
+  first bounce may aim at the slime itself and converge on the second.
 
 ### Vines
 

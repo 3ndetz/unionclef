@@ -894,5 +894,22 @@ public class MovementHelper {
 	    public static double getSlimeBounceHeight(double startHeight) {
 	    	return -0.0011 * Math.pow(startHeight, 2) + 0.43529 * startHeight + 1.7323;
 	    }
-	
+
+	    /**
+	     * Scans straight down from {@code feet} and returns true if the first
+	     * collidable block in the column is a slime block. Landing there is
+	     * fall-damage-free (bounce), so fall-height pruning must not apply.
+	     */
+	    public static boolean isSlimeColumnBelow(WorldView world, BlockPos feet, int maxScan) {
+	    	BlockPos pos = feet;
+	    	for (int i = 0; i < maxScan; i++) {
+	    		BlockState state = world.getBlockState(pos);
+	    		if (!state.isAir() && BlockShapeChecker.getShapeVolume(pos, world) > 0) {
+	    			return state.getBlock() instanceof net.minecraft.block.SlimeBlock;
+	    		}
+	    		pos = pos.down();
+	    	}
+	    	return false;
+	    }
+
 }

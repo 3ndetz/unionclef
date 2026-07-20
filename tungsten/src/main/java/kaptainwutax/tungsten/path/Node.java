@@ -19,6 +19,7 @@ import kaptainwutax.tungsten.helpers.BlockShapeChecker;
 import kaptainwutax.tungsten.helpers.BlockStateChecker;
 import kaptainwutax.tungsten.helpers.DirectionHelper;
 import kaptainwutax.tungsten.helpers.DistanceCalculator;
+import kaptainwutax.tungsten.helpers.MovementHelper;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
 import kaptainwutax.tungsten.path.specialMoves.ClimbALadderMove;
 import kaptainwutax.tungsten.path.specialMoves.CornerJump;
@@ -220,10 +221,11 @@ public class Node {
 	
 	private boolean shouldSkipNodeGeneration(BlockNode nextBlockNode) {
 	    Node n = this.parent;
-	    if (n != null && (n.agent.isInLava() || agent.isInLava() || (agent.fallDistance > 
+	    if (n != null && (n.agent.isInLava() || agent.isInLava() || (agent.fallDistance >
 	    this.agent.getPos().y - nextBlockNode.getBlockPos().getY()+2
-	    && !agent.slimeBounce 
+	    && !agent.slimeBounce
 	    && !agent.touchingWater
+	    && !MovementHelper.isSlimeColumnBelow(TungstenModDataContainer.world, agent.getBlockPos(), 32)
 	    ))) {
 	        return true;
 	    }
@@ -384,9 +386,10 @@ public class Node {
 	    int i = 0;
 	    boolean isBelowClosedTrapDoor = BlockStateChecker.isClosedBottomTrapdoor(world.getBlockState(nextBlockNode.getBlockPos().down()));
 	    boolean shouldAllowWalkingOnLowerBlock = !world.getBlockState(agent.getBlockPos().up(2)).isAir() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 3;
+	    boolean slimeBelow = MovementHelper.isSlimeColumnBelow(world, newNode.agent.getBlockPos(), 32);
 	    double minY = isBelowClosedTrapDoor ? nextBlockNode.getPos(true).y - 1 : nextBlockNode.getBlockPos().getY() - (shouldAllowWalkingOnLowerBlock ? 1.4 : 0.4);
 	    while (!newNode.agent.onGround && !newNode.agent.isClimbing(world) && newNode.agent.getPos().y >= minY
-	    		&& (TungstenModDataContainer.ignoreFallDamage || DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY) > -3)) {
+	    		&& (TungstenModDataContainer.ignoreFallDamage || slimeBelow || DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY) > -3)) {
 	    	if (i > 60) break;
 	    	i++;
 			double addNodeCost = calculateNodeCost(forward, true, false, false, newNode.agent);
