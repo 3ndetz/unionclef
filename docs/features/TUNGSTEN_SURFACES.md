@@ -75,7 +75,9 @@ honey or handles the slowdown.
 
 ### Slime Blocks
 
-**Status:** ⚠️ Full bounce routing implemented (2026-07-20), pending in-game test.
+**Status:** ✅ Drop-bounce routing works — autotested in-game (2026-07-20,
+`deploy/runner/slime_test.py` course A: sprint off a platform, fall 4 onto
+slime, bounce, land on a +3 platform; 6s, no damage).
 
 **Physics (Agent.tick, was already correct):**
 - Bounce: velY inverted on landing unless sneaking (Agent.java ~832).
@@ -106,11 +108,17 @@ honey or handles the slowdown.
 - The block-space heuristic still penalizes descending (dy×1.5), so
   "go down to bounce up" routes are found late; deep slime pits may need
   the generateDeep fallback pass (4800ms).
-- `getSlimeBounceHeight` is an empirical fit; the flat-slime (jump in
-  place) case may overestimate reach (+2) — physics A* is the ground
-  truth, unreachable block waypoints waste search time.
+- Flat-slime (jump in place) gives apex ~1.9 in vanilla — nothing a normal
+  jump can't land. Bounce children are generated only when the block path
+  DESCENDS onto the slime; every bounce course needs a drop-in.
 - Waypoint index advances one expansion behind the landing node, so the
   first bounce may aim at the slime itself and converge on the second.
+- Structures near the course confuse routing (the original test world
+  spawned a village on the course — the pathfinder tried to route through
+  it). Test worlds use GENERATE_STRUCTURES=false.
+- shouldResetSearch could re-root the physics search without emitting the
+  walked prefix when the executor was idle → instant drift abort
+  (fixed: prefix is emitted inline when the executor is not running).
 
 ### Vines
 

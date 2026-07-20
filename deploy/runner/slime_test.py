@@ -13,8 +13,10 @@ Courses (built with RCON in a flat world, ground: grass top y=-60):
     (feet -56). Requires the whole slime routing chain: fall-damage pruning
     exemptions, bounce-height block children, SlimeBounceMove.
 
-  B "flat bounce": walk onto a slime pad, jump-in-place bounce to a +2
-    platform (feet -57).
+  B "short bounce": walk off a low ledge (feet -56) -> fall 3 onto a slime
+    pad -> bounce ~2.7 -> land on a +2 platform (feet -57). A jump in place
+    on slime only reaches ~1.9 (vanilla), so flat-slime routes are not a
+    thing — every bounce course needs a drop-in.
 
 Exit code 0 = all courses passed.
 """
@@ -106,17 +108,19 @@ COURSE_CMDS = [
     "forceload add -24 -24 40 24",
     "setworldspawn 0 -60 0",
     # wipe area
-    "fill -12 -60 -8 20 -45 8 air",
+    "fill -12 -60 -8 24 -45 8 air",
     # course A: start platform (top -56, feet -55)
     "fill -6 -56 -1 -4 -56 1 stone",
     # course A: slime pad on the ground (top -59, feet on slime -59)
     "fill -2 -60 -1 2 -60 1 slime_block",
     # course A: target platform +3 above slime feet (top -57, feet -56)
     "fill 4 -57 -1 6 -57 1 stone",
-    # course B: slime pad
-    "fill 10 -60 0 11 -60 1 slime_block",
+    # course B: start ledge (top -56, feet -56... stands at -56)
+    "fill 9 -57 0 10 -57 1 stone",
+    # course B: slime pad, drop 3 from the ledge
+    "fill 11 -60 0 14 -60 1 slime_block",
     # course B: target platform +2 above slime feet (top -58, feet -57)
-    "fill 13 -58 -1 15 -58 1 stone",
+    "fill 16 -58 -1 18 -58 1 stone",
     # keep things quiet and deterministic
     "gamerule doDaylightCycle false",
     "gamerule doWeatherCycle false",
@@ -130,7 +134,7 @@ def build_course():
         out = rcon(c)
         print(f"  rcon: {c} -> {out[:60]}")
     for check in ("-5 -56 0 stone", "0 -60 0 slime_block", "5 -57 0 stone",
-                  "10 -60 0 slime_block", "14 -58 0 stone"):
+                  "9 -57 0 stone", "12 -60 0 slime_block", "17 -58 0 stone"):
         out = rcon(f"execute if block {check}")
         if "passed" not in out.lower():
             raise RuntimeError(f"course build verification failed at {check}: {out}")
@@ -215,12 +219,12 @@ def main():
         (3.5, 7.5, -56.3, -1.6, 1.6),
         150,
     )
-    # B: start on the ground before the slime pad, goal on the +2 platform
-    results["B_flat_bounce"] = run_course(
-        "B_flat_bounce",
-        f"tp {BOT} 8.5 -60 0.5 -90 0",
-        ";goto 14 -57 0",
-        (12.5, 16.5, -57.3, -1.6, 2.6),
+    # B: start on the low ledge, goal on the +2 platform past the slime pad
+    results["B_short_bounce"] = run_course(
+        "B_short_bounce",
+        f"tp {BOT} 9.5 -56 0.5 -90 0",
+        ";goto 17 -57 0",
+        (15.5, 19.5, -57.3, -1.6, 1.6),
         120,
     )
 

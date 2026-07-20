@@ -293,9 +293,17 @@ public class PathFinder {
 	        }
 	
 	        if (shouldResetSearch(numNodesConsidered.get(), blockPath, next, target)) {
-	        	TungstenModDataContainer.EXECUTOR.cb = () -> {
-		        	blockPath = resetSearch(next, world, blockPath, target, player);
-	        	};
+	        	if (TungstenModDataContainer.EXECUTOR.isRunning()) {
+	        		TungstenModDataContainer.EXECUTOR.cb = () -> {
+	        			blockPath = resetSearch(next, world, blockPath, target, player);
+	        		};
+	        	} else {
+	        		// Executor idle: nothing was emitted yet. The deferred callback
+	        		// would never fire, and re-rooting without emitting hands the
+	        		// executor a path that starts far from the player (instant
+	        		// drift abort). Emit the prefix and extend the block path now.
+	        		blockPath = resetSearch(next, world, blockPath, target, player);
+	        	}
 	            openSet = new BinaryHeapOpenSet();
 	            this.start = initializeStartNode(next, target);
 	            openSet.insert(this.start);

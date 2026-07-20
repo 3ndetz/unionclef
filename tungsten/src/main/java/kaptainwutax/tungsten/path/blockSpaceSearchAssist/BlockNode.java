@@ -330,7 +330,7 @@ public class BlockNode {
 	    double v_sprint = 5.8;
 
 	    // On slime the bounce can carry the path upward. Fall height is cumulative
-	    // along the incoming block path (a jump in place feeds at least 1.25).
+	    // along the incoming block path.
 	    double slimeFall = getFallOntoSlimeHeight(parent);
 	    double yMax = slimeFall > 0
 	        ? MovementHelper.getSlimeBounceHeight(slimeFall) - 0.2
@@ -580,26 +580,22 @@ public class BlockNode {
 	}
 
 	/**
-	 * Effective fall height feeding a slime bounce from this node.
-	 * 0 when the node is not on slime. On slime it is the cumulative descent
-	 * along the incoming block path, but at least 1.25 — a jump in place on
-	 * slime feeds the bounce with the jump height.
+	 * Cumulative descent onto this node along the incoming block path.
+	 * 0 unless the node stands on slime and the path arrived from above.
+	 * Note: a jump in place on slime is NOT a boost — vanilla bounce apex from
+	 * a 1.25 jump is ~1.9, which lands nothing a normal jump can't reach.
 	 */
 	private static double getFallOntoSlimeHeight(BlockNode node) {
-		if (!node.wasOnSlime) return 0;
-		double drop = 0;
-		if (node.previous != null) {
-			int top = node.y;
-			BlockNode cur = node;
-			BlockNode p = node.previous;
-			while (p != null && p.y >= cur.y) {
-				top = Math.max(top, p.y);
-				cur = p;
-				p = p.previous;
-			}
-			drop = top - node.y;
+		if (!node.wasOnSlime || node.previous == null) return 0;
+		int top = node.y;
+		BlockNode cur = node;
+		BlockNode p = node.previous;
+		while (p != null && p.y >= cur.y) {
+			top = Math.max(top, p.y);
+			cur = p;
+			p = p.previous;
 		}
-		return Math.max(drop, 1.25);
+		return top - node.y;
 	}
 
 	/**
