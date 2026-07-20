@@ -336,6 +336,28 @@ public class SafetySystem {
                 }
                 // if waypoint is dangerous, don't move — stay and fight
             }
+
+            // Close the last half-block: the BFS waypoint tolerance (1.5)
+            // leaves the bot hovering just outside the 3.0 attack reach
+            // (observed 3.06 — staring at the enemy, never swinging).
+            if (!movementActive && !braking && !repositioning) {
+                net.minecraft.util.math.Box tb = target.getBoundingBox();
+                Vec3d eye = player.getEyePos();
+                Vec3d closest = new Vec3d(
+                        net.minecraft.util.math.MathHelper.clamp(eye.x, tb.minX, tb.maxX),
+                        net.minecraft.util.math.MathHelper.clamp(eye.y, tb.minY, tb.maxY),
+                        net.minecraft.util.math.MathHelper.clamp(eye.z, tb.minZ, tb.maxZ));
+                if (eye.distanceTo(closest) > 2.4) {
+                    movementYaw = AttackTiming.yawTo(playerPosTick, target.getEntityPos());
+                    movementActive = true;
+                    mc.options.forwardKey.setPressed(true);
+                    mc.options.sprintKey.setPressed(true);
+                    mc.options.backKey.setPressed(false);
+                    mc.options.leftKey.setPressed(false);
+                    mc.options.rightKey.setPressed(false);
+                    mc.options.sneakKey.setPressed(false);
+                }
+            }
         }
 
         // release keys when nothing is controlling them

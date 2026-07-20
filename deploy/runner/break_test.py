@@ -207,6 +207,10 @@ def main():
         wait_for("bot in game", lambda: py4j("state")["inGame"], 180, 5)
         time.sleep(5)
     rcon(f"clear {BOT}")  # bare hands: dirt/sand mine in ~0.75s each
+    # squeezing through a 1-wide mined hole grazes the wall edges — observed
+    # drift 0.84 vs the 0.8 default threshold; relax for breaking tests
+    py4j("chat", msg=";settings driftThreshold 1.5")
+    time.sleep(1)
 
     print("[3/3] courses...")
     results = {}

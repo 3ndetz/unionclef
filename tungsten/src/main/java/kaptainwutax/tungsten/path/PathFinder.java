@@ -217,7 +217,22 @@ public class PathFinder {
 	    	Debug.logWarning("Failed! No block path");
 	    	return;
 	    }
-	
+
+	    // Already standing at the wall: the truncated guidance is a stub the
+	    // physics search starves on ("Ran out of nodes" with nothing emitted).
+	    // Skip the physics leg — hand the executor an empty path with the break
+	    // queue, mining starts immediately and the goto retry drives the rest.
+	    if (pendingBreaks != null && !pendingBreaks.isEmpty()
+	            && blockPath.get().size() <= 2
+	            && player.getEyePos().distanceTo(net.minecraft.util.math.Vec3d.ofCenter(pendingBreaks.get(0))) < 4.0) {
+	        Debug.logMessage("At the wall — mining without a physics leg");
+	        TungstenModDataContainer.EXECUTOR.setPath(new ArrayList<>());
+	        TungstenModDataContainer.EXECUTOR.blockPath = blockPath.get();
+	        TungstenModDataContainer.EXECUTOR.breakQueue = new ArrayList<>(pendingBreaks);
+	        PathFinder.blockPath = Optional.empty();
+	        return;
+	    }
+
 	    bestHeuristicSoFar = initializeBestHeuristics(this.start);
 	    openSet = new BinaryHeapOpenSet();
 	    openSet.insert(this.start);
