@@ -172,12 +172,14 @@ def run_course(name, tp_cmd, goto_cmd, box, timeout_s, passage_check):
     try:
         pos = wait_for(f"{name}: bot past the wall", arrived, timeout_s)
         # arriving is not enough — the wall must actually be mined through
-        mined = "passed" in rcon(f"execute if block {passage_check} air").lower()
+        # (any of the door columns counts, the bot picks one)
+        mined = [pc for pc in passage_check
+                 if "passed" in rcon(f"execute if block {pc} air").lower()]
         if not mined:
-            print(f"  FAIL {name}: reached the far side but the wall is intact "
-                  f"(detour, no mining) — passage {passage_check} still solid")
+            print(f"  FAIL {name}: reached the far side but the door is intact "
+                  f"(no mining) — checked {passage_check}")
             return False
-        print(f"  PASS {name}: pos={pos}, passage mined at {passage_check}")
+        print(f"  PASS {name}: pos={pos}, passage mined at {mined}")
         return True
     except TimeoutError as e:
         print(f"  FAIL {name}: {e}")
@@ -214,7 +216,7 @@ def main():
         ";goto 5 -60 20",
         (3.5, 8.5, -60.3, 15.5, 25.5),
         120,
-        "0 -60 20 air",
+        ["0 -60 19", "0 -60 20", "0 -60 21"],
     )
     results["D_sand"] = run_course(
         "D_sand",
@@ -222,7 +224,7 @@ def main():
         ";goto 5 -60 40",
         (3.5, 8.5, -60.3, 35.5, 45.5),
         150,
-        "0 -60 40 air",
+        ["0 -60 39", "0 -60 40", "0 -60 41"],
     )
 
     print("\n=== RESULTS ===")

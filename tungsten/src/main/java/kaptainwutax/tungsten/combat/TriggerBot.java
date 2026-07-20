@@ -36,6 +36,8 @@ public class TriggerBot {
     private int totalHits = 0;
     private int ticksSinceLastHit = 0;
 
+    private int traceCooldown = 0;
+
     public void tick(ClientPlayerEntity player, Entity target) {
         MinecraftClient mc = MinecraftClient.getInstance();
 
@@ -49,7 +51,6 @@ public class TriggerBot {
         boolean critWindow = !player.isOnGround() && player.fallDistance > 0.1f
                 && player.getVelocity().y < 0;
         float threshold = critWindow ? COOLDOWN_CRIT : COOLDOWN_FULL;
-        if (clickedThisCycle || cooldown < threshold) return;
 
         Vec3d eye = player.getEyePos();
         Box box = target.getBoundingBox();
@@ -59,7 +60,7 @@ public class TriggerBot {
                 MathHelper.clamp(eye.x, box.minX, box.maxX),
                 MathHelper.clamp(eye.y, box.minY, box.maxY),
                 MathHelper.clamp(eye.z, box.minZ, box.maxZ));
-        if (eye.squaredDistanceTo(closest) > REACH * REACH) return;
+        double distSq = eye.squaredDistanceTo(closest);
 
         // rough look-angle sanity: the aimer keeps us close anyway, this only
         // rejects wild misalignment — no exact crosshair-on-hitbox pick needed
@@ -67,14 +68,29 @@ public class TriggerBot {
         Vec3d look = player.getRotationVec(1.0f);
         double angle = Math.toDegrees(Math.acos(
                 MathHelper.clamp(look.dotProduct(toTarget), -1.0, 1.0)));
-        if (angle > MAX_LOOK_ANGLE_DEG) return;
 
         // line of sight through COLLIDERS only — tall grass has no collision
         // shape and must not block the swing
         HitResult hit = player.getEntityWorld().raycast(new RaycastContext(
                 eye, box.getCenter(), RaycastContext.ShapeType.COLLIDER,
                 RaycastContext.FluidHandling.NONE, player));
-        if (hit.getType() != HitResult.Type.MISS) return;
+
+        boolean gateClick = clickedThisCycle;
+        boolean gateCooldown = cooldown < threshold;
+        boolean gateReach = distSq > REACH * REACH;
+        boolean gateAngle = angle > MAX_LOOK_ANGLE_DEG;
+        boolean gateLos = hit.getType() != HitResult.Type.MISS;
+
+        if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging
+                && (gateClick || gateCooldown || gateReach || gateAngle || gateLos)
+                && ++traceCooldown >= 20) {
+            traceCooldown = 0;
+            kaptainwutax.tungsten.Debug.logMessage(String.format(
+                "trigger gate: click=%b cd=%.2f reach2=%.2f angle=%.0f los=%s",
+                gateClick, cooldown, distSq, angle, hit.getType()));
+        }
+
+        if (gateClick || gateCooldown || gateReach || gateAngle || gateLos) return;
 
         mc.interactionManager.attackEntity(player, target);
         player.swingHand(Hand.MAIN_HAND);
