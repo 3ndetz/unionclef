@@ -14,7 +14,9 @@ if [ "$1" != "--no-build" ]; then
     ./gradlew build -x check --console=plain
 fi
 
-JAR=$(ls "$JAR_DIR"/unionclef-1.21.11-*.jar | grep -v -- '-all\|-sources' | head -1)
+# -t: newest first — stale jars from older mod_versions linger in build/libs
+# and an alphabetical pick deployed a week-old build once. Never again.
+JAR=$(ls -t "$JAR_DIR"/unionclef-1.21.11-*.jar | grep -v -- '-all\|-sources' | head -1)
 [ -n "$JAR" ] || { echo "no jar in $JAR_DIR"; exit 1; }
 
 mkdir -p deploy/run/mods deploy/run/data/tester1

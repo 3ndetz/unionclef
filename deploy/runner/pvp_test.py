@@ -155,9 +155,11 @@ def main():
     rcon(f"effect clear {VICTIM}")
     rcon(f"clear {FIGHTER}")
     rcon(f"give {FIGHTER} iron_sword")
-    # fighter west of the grass, victim east of it — grass sits on the approach
+    # fighter west of the grass; victim INSIDE the tall-grass patch — the old
+    # combat passed an open-field fight, the freeze case is grass at the
+    # fight location itself
     rcon(f"tp {FIGHTER} -5.5 -60 0.5 -90 0")
-    rcon(f"tp {VICTIM} 14.5 -60 0.5 90 0")
+    rcon(f"tp {VICTIM} 9.5 -60 0.5 90 0")
     time.sleep(3)
     hp0 = entity_float(VICTIM, "Health")
     print(f"  victim hp: {hp0}, fighter pos {entity_pos(FIGHTER)}, victim pos {entity_pos(VICTIM)}")
