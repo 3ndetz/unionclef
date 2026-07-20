@@ -1,5 +1,17 @@
 # Progress
 
+## Пакет «BreakRules + prediction API + конфиг-справочник» (2026-07-21) — СДЕЛАНО
+
+- BreakRules (tungsten/path): единая политика ломания — allowBreak, deny-блоки,
+  deny-зоны, block entities, canBreakHook (altoclef break-avoiders через
+  AltoClefSettings.shouldAvoidBreaking). Планировщик и исполнитель (live-
+  перепроверка) ходят через неё.
+- py4j: canBreakBlock, canReach(withBreaking) — reached/breaks/endDistance.
+  Грабля: залипший stop-флаг мгновенно ломал поиск в canReach (2-нодный
+  огрызок) — сбрасывается перед пробой; «found» честно заменён на «reached».
+- docs/features/TUNGSTEN_CONFIG.md — полный справочник конфига.
+- Автотест F_api PASS вместе с регрессией C/D/E (цикл 13).
+
 ## Пакет «видимое ломание + погоня» (2026-07-21) — СДЕЛАНО
 
 - Визуализация майнинга: BREAK_PLAN-контейнер (план — оранжевые боксы,
