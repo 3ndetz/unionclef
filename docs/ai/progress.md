@@ -19,19 +19,20 @@
 - Микро-фризы: BFS до 2000 нод каждые 10 тиков на главном потоке
   (CombatPathfinder.java:47,201,237).
 
-### Plan — комбат (фиксы)
+### Plan — комбат (фиксы) — СДЕЛАНО, ТЕСТ PASS
 
-- [ ] TriggerBot: свой гейт (reach ≤3.0 до хитбокса + COLLIDER LOS + угол <40°
+- [x] TriggerBot: свой гейт (reach ≤3.0 до хитбокса + COLLIDER LOS + угол <40°
   + cooldown ≥0.95 через getAttackCooldownProgress(0f)) и ПРЯМАЯ доставка
   `interactionManager.attackEntity` + swingHand (обход crosshairTarget);
   крит-окно: при падении бить с ≥0.85.
-- [ ] SafetySystem: убрать «ESCAPE при cooldown<0.5»; KB_FALL_THRESHOLD 2→4.
-- [ ] TungstenConfig: combatMovementsEnabled default true.
-- [ ] PunkPlayerTask: COMBAT_RANGE 3.5→4.5, hasNoProgress 60→100.
-- [ ] FollowEntityTask.hasLineOfSight: рейкаст в центр тела, не в feet.
-- [ ] CombatPathfinder: MAX_NODES 2000→800.
-- [ ] Тест: deploy/runner/pvp_test.py (fighter+victim, арена с травой,
-  метрики: first hit <15s, damage ≥8 за 60s, 0 freeze-окон).
+- [x] SafetySystem: убрать «ESCAPE при cooldown<0.5»; KB_FALL_THRESHOLD 2→4.
+- [x] TungstenConfig: combatMovementsEnabled default true.
+- [x] PunkPlayerTask: COMBAT_RANGE 3.5→4.5, hasNoProgress 60→100.
+- [x] FollowEntityTask.hasLineOfSight: рейкаст в центр тела, не в feet.
+- [x] CombatPathfinder: MAX_NODES 2000→800.
+- [x] Тест pvp_test.py (dcd92f4): **PASS** — первый урон 6.6с (старт в 20
+  блоках через полосы short_grass/tall_grass), жертва убита (19.9 урона),
+  0 freeze-окон. Трава больше не блокирует удары.
 
 ### Plan — block breaking (v1, прагматичный срез)
 

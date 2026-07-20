@@ -121,6 +121,32 @@ in ~6s with full health).
   walked prefix when the executor was idle → instant drift abort
   (fixed: prefix is emitted inline when the executor is not running).
 
+### Block Breaking (break-through pathfinding)
+
+**Status:** ⚠️ v1 implemented (2026-07-20), pending autotest.
+
+**How it works:**
+- Block-space: `BlockNode.tryPlanBreakThrough` — an adjacent same-Y cell
+  blocked only by breakable blocks becomes a valid child with a `toBreak`
+  plan (top-down) and a cost of vanilla mining ticks
+  (`calcBlockBreakingDelta`) × `breakCostMultiplier`. Gravity blocks above
+  the passage add their mining cost up front.
+- `PathFinder.truncateAtBreaks` cuts the physics guidance at the cell before
+  the wall (the live world still has the blocks — simulating through them is
+  impossible) and hands `pendingBreaks` to the executor on every emission.
+- `PathExecutor.tickBreaking` at segment end: aims, `attackBlock` +
+  `updateBlockBreakingProgress` + swing per tick, re-mines whatever falls
+  into the passage cells (sand/gravel), waits 12 ticks for settling, then
+  finishes the segment — the goto retry / continuation search re-plans in
+  the opened world.
+- Settings: `allowBreak` (default true), `breakCostMultiplier` (1.0).
+
+**Limitations (v1):**
+- Only horizontal same-Y break-through (walls); no digging down/up stairs,
+  no block PLACING yet.
+- Each wall costs a re-search after mining (segmented execution).
+- Tool selection not implemented — mines with whatever is held.
+
 ### Vines
 
 **Status:** ⚠️ Climbing works via `BlockTags.CLIMBABLE` + block-space allows
