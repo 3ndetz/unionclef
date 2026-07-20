@@ -1,8 +1,10 @@
 # AUTOTESTING — автодеплой + автотест мода
 
-Статус: **дизайн, не реализовано**. Здесь описано, как собрать пайплайн полноценного
-автотеста unionclef (altoclef-таски, tungsten-паркур, shredder-навигация) с автодеплоем
-на маке. Прочитать перед тем, как что-то из этого делать.
+Статус: **фаза 0 реализована и работает** (2026-07-20): `deploy/compose.test.yml`
+(itzg vanilla 1.21.11 + mineswarm-mc клиент), `deploy/runner/slime_test.py`
+(слайм-паркур, оба курса PASS), вход — `deploy/autotest.sh` на маке.
+Ниже — общий дизайн пайплайна: altoclef-таски, tungsten-паркур,
+shredder-навигация, CI-триггер. Фазы 1+ ещё не делались.
 
 TL;DR: почти все кирпичи уже существуют — mineswarm даёт готовый headless-клиент с py4j,
 мод даёт командный интерфейс и `Py4jEntryPoint`, мак даёт железо и Docker. Осталось
@@ -184,7 +186,7 @@ Python + uv (как в `scripts/`). Цикл на каждый клиент:
 
 | Фаза | Содержимое | Оценка |
 |---|---|---|
-| 0 — смоук | compose.test.yml (сервер + 1 клиент), autotest.sh, runner со smoke + altoclef_goto, ручной запуск по ssh | 1–2 дня |
+| 0 — смоук | **сделано**: compose.test.yml (сервер + 1 клиент), autotest.sh, runner со слайм-паркуром (`;goto` через bounce), запуск по ssh на маке | — |
 | 1 — паркур | мир с курсами + courses.json, tungsten/shredder-сценарии, второй бот + follow, скриншоты при фейлах | 2–3 дня |
 | 2 — CI | self-hosted runner на маке, autotest.yml, junit + артефакты, TG-нотификация | ~1 день |
 | 3 — матрица | MC_VERSION build-arg в mineswarm-образе, прогон на 1.21.1, сравнение метрик билдов | 1–2 дня |

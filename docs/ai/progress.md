@@ -19,7 +19,7 @@
 - [x] Bounce-высота детей block-space от кумулятивного падения (мин 1.25)
 - [x] Переписать SlimeBounceMove (initiate только из покоя)
 - [x] Стенд фазы 0 из AUTOTESTING.md на маке (deploy/compose.test.yml)
-- [ ] Прогнать slime_test.py (курсы A: drop-4 → +3, B: flat → +2) до PASS
+- [x] Прогнать slime_test.py (курсы A: drop-4 → +3, B: drop-3 → +2) до PASS
 
 ### Implement
 
@@ -27,7 +27,19 @@
 - [x] deploy/: 549bf11 — compose (itzg vanilla 1.21.11 + mineswarm-mc:amd64),
   runner slime_test.py (py4j через docker exec + rcon-cli), autotest.sh
 - [x] Сборка на маке: BUILD SUCCESSFUL 47s, jar задеплоен в deploy/run/mods
-- [ ] Тест: в процессе
+- [x] Итерации по фейлам:
+  - `;goto` молча игнорировался после `;stop` — залипший `PATHFINDER.stop`
+    (fix e1647fd: сброс флагов в GotoCommand)
+  - fill до загрузки чанков — forceload + верификация постройки (c80018f)
+  - деревня на трассе (суперплоский генерит структуры) —
+    GENERATE_STRUCTURES=false + пересоздание мира (4fc7502)
+  - drift-abort 8.9 блоков: shouldResetSearch пере-рутил поиск без эмиссии
+    префикса при простаивающем executor (fix 8ec354e: inline resetSearch)
+  - курс B «flat bounce» невозможен по ванильной физике (апекс ~1.9) —
+    убран минимум 1.25 в block-space, курс переделан на drop-3 (8ec354e)
+- [x] **Итог: оба курса PASS** (A за 6с, B за 6с, health 20 — без урона).
+  Стенд остаётся поднятым на маке (noVNC http://192.168.1.20:5820,
+  повторный запуск: `sh deploy/autotest.sh [--no-build]`)
 
 ## Autotesting — дизайн пайплайна автодеплой/автотест (2026-07-20)
 

@@ -76,8 +76,9 @@ honey or handles the slowdown.
 ### Slime Blocks
 
 **Status:** ✅ Drop-bounce routing works — autotested in-game (2026-07-20,
-`deploy/runner/slime_test.py` course A: sprint off a platform, fall 4 onto
-slime, bounce, land on a +3 platform; 6s, no damage).
+`deploy/runner/slime_test.py`: course A — sprint off a platform, fall 4 onto
+slime, bounce to a +3 platform; course B — fall 3, bounce to +2. Both pass
+in ~6s with full health).
 
 **Physics (Agent.tick, was already correct):**
 - Bounce: velY inverted on landing unless sneaking (Agent.java ~832).

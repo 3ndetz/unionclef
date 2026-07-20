@@ -48,6 +48,9 @@
     - [ ] 1.6.5 Idle movement: circular path пока pathfinder считает
       - Генератор idle-маршрута от текущей позиции (круг/восьмёрка)
       - Seamless switch idle→real path когда pathfinder досчитал
+  - [x] 1.8 Tungsten слайм-паркур: автономное использование slime blocks (bounce routing)
+    - [x] физика/роутинг: падение на слайм без урона, bounce-дети в block-space, SlimeBounceMove
+    - [x] автотест-стенд фазы 0 (deploy/, мак): оба слайм-курса PASS
   - [x] 1.7 Fix jump bridging (bridgingMode jump/back_jump)
     - [x] 1.7.1 Rewrite state machine: sprint-speed telly bridge (FJ_SPRINT → FJ_AIRBORNE continuous)
     - [x] 1.7.2 Fix placement: processRightClickBlock bypasses crosshair (objectMouseOver MISS at 86°+)
