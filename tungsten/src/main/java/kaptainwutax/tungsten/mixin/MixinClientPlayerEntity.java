@@ -53,6 +53,9 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// bow-shot primitive (aim + charge + release)
 		kaptainwutax.tungsten.task.BowShooter.tick((ClientPlayerEntity)(Object)this);
 
+		// shield-block primitive (hold use for N ticks)
+		kaptainwutax.tungsten.task.ShieldBlocker.tick((ClientPlayerEntity)(Object)this);
+
 		if(TungstenModDataContainer.isExecutorRunning()) {
 			try {
 				TungstenModDataContainer.EXECUTOR.tick((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);

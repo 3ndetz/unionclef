@@ -1001,6 +1001,17 @@ public class Py4jEntryPoint {
      * Block at an exact coordinate (TARGET.md Level 1 "проверить тип блока по координате").
      * Mirrors getGroundBlock's world access. name+id+hardness+air+replaceable.
      */
+    /** Shield-block primitive: raise the shield (must be in a hand) for N ticks. */
+    public boolean shieldBlock(int ticks) {
+        try {
+            net.minecraft.client.MinecraftClient.getInstance().execute(() ->
+                    kaptainwutax.tungsten.task.ShieldBlocker.hold(ticks));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** Bow-shot primitive: aim with the trajectory solver (moving-target lead),
      *  charge and release at the named player. Needs a bow in hand and arrows.
      *  Returns false if the player is not visible in the world. */
