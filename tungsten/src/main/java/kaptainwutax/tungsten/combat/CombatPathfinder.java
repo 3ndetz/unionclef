@@ -27,7 +27,9 @@ import java.util.*;
 public class CombatPathfinder {
 
     private static final int MAX_RADIUS = 25;
-    private static final int MAX_NODES = 2000;
+    // 2000 nodes × deep block scans every 10 ticks on the client thread caused
+    // visible hitching; combat paths are short, 800 is plenty
+    private static final int MAX_NODES = 800;
     private static final Color COL_ATTACK    = new Color(255, 100, 50);  // orange
     private static final Color COL_RETREAT   = new Color(50, 150, 255);  // blue
     private static final Color COL_JUMP_ARC  = new Color(255, 220, 50);  // yellow arcs

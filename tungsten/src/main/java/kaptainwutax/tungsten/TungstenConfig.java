@@ -86,8 +86,10 @@ public class TungstenConfig {
     /** Enable auto-rotation toward target in combat. */
     public boolean combatRotatesEnabled = true;
 
-    /** Enable combat movement (legs: sprint-jump, chase, strafe). */
-    public boolean combatMovementsEnabled = false;
+    /** Enable combat movement (legs: sprint-jump, chase, strafe).
+     *  Off by default made the bot stand still in combat range and get kited —
+     *  the only approach-pressing code sits behind this flag. */
+    public boolean combatMovementsEnabled = true;
 
     /** Enable combat executor — pre-computes jump+turn+attack timeline via Agent sim.
      *  Visualization only when false (shows planned arc). */

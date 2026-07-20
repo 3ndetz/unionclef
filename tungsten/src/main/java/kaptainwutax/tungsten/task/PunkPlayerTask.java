@@ -20,8 +20,8 @@ import net.minecraft.world.WorldView;
  */
 public class PunkPlayerTask {
 
-    private static final double COMBAT_RANGE   = 3.5; // MC entity reach = 3.0
-    private static final double APPROACH_RESUME = 5.0;
+    private static final double COMBAT_RANGE   = 4.5; // MC entity reach = 3.0; enter combat early
+    private static final double APPROACH_RESUME = 6.0;
 
     private enum Mode { APPROACH, COMBAT }
 
@@ -68,13 +68,16 @@ public class PunkPlayerTask {
         }
 
         double dist = player.getEntityPos().distanceTo(targetEntity.getEntityPos());
-        boolean hasLOS = FollowEntityTask.hasLineOfSight(player, targetEntity.getEntityPos());
+        // raycast to body center — the feet point clips terrain right at the
+        // target's feet and spuriously blocked combat entry on flat ground
+        boolean hasLOS = FollowEntityTask.hasLineOfSight(player,
+                targetEntity.getEntityPos().add(0, targetEntity.getHeight() * 0.5, 0));
 
         // ── mode switching ───────────────────────────────────────────────
         if (mode == Mode.APPROACH && dist < COMBAT_RANGE && hasLOS) {
             enterCombat();
         } else if (mode == Mode.COMBAT && (dist > APPROACH_RESUME
-                || (CombatController.triggerBot.hasNoProgress(60)
+                || (CombatController.triggerBot.hasNoProgress(100)
                     && CombatController.safety.getStage() != kaptainwutax.tungsten.combat.CombatStage.ESCAPE))) {
             // too far OR no hits for 5 sec → re-approach with A* pathfinding
             enterApproach();

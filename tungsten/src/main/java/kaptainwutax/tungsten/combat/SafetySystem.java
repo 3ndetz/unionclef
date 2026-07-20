@@ -35,7 +35,9 @@ public class SafetySystem {
     private static final int PREDICT_TICKS = 10;
 
     private static final int KB_PREDICT_TICKS = 15;
-    private static final int KB_FALL_THRESHOLD = 2;
+    // 2 blocks tripped on any minor terrain step and stalled the approach;
+    // real knockback danger starts around fall-damage height
+    private static final int KB_FALL_THRESHOLD = 4;
 
     // ── state ───────────────────────────────────────────────────────────────
     private Vec3d prevEnemyPos = null;
@@ -444,10 +446,10 @@ public class SafetySystem {
             }
         }
 
-        // ESCAPE: weapon on cooldown (>10 ticks remaining) → disengage, run retreat path
-        if (player.getAttackCooldownProgress(0.5f) < 0.5f) {
-            return CombatStage.ESCAPE;
-        }
+        // NOTE: the old "ESCAPE while weapon on cooldown" rule fired for the
+        // first half of EVERY cooldown cycle — the bot sprinted away and looked
+        // away after every single hit. That was the main source of passivity.
+        // Disengage decisions belong to real danger stages above, not cooldown.
 
         // TODO: DELICATE_BATTLE — low HP careful play
 
