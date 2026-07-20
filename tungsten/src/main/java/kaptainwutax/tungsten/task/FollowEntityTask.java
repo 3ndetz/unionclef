@@ -28,8 +28,12 @@ public class FollowEntityTask {
 
     private static final double LEAP_DIST          = 6.0;
     private static final double DEFAULT_CLOSE_ENOUGH = 2.0;
-    private static final int    RECALC_TICKS       = 15;
-    private static final double MIN_MOVE_DIST      = 1.5;
+    // Re-plan hysteresis. The old values (recalc every 15 ticks when the target
+    // moved >1.5 blocks) killed the search every 0.75s — a sprinting target
+    // moves 4+ blocks in that window, so the pathfinder (budget 0.5-3s) was
+    // restarted forever and never emitted a path: the bot just stood there.
+    private static final int    RECALC_TICKS       = 40;   // min 2s between re-plans
+    private static final double MIN_MOVE_DIST      = 3.0;  // absolute floor for the threshold
     private static final int    STUCK_TICKS        = 30;
 
     // ── state ───────────────────────────────────────────────────────────────────
@@ -203,9 +207,12 @@ public class FollowEntityTask {
             startFind(world, player, effectiveTarget, effectiveDist);
         } else if (!stopRequested && tickCounter >= RECALC_TICKS
                 && lastTargetPos != null
-                && effectiveTarget.distanceTo(lastTargetPos) > MIN_MOVE_DIST) {
-            // Stop pathfinder but keep executor running — bot continues along
-            // current path while we recalculate a new one for the moved target
+                && effectiveTarget.distanceTo(lastTargetPos)
+                        > Math.max(MIN_MOVE_DIST, effectiveDist * 0.25)) {
+            // Re-plan only when the goal strayed by a meaningful fraction of the
+            // remaining distance — a far target drifting sideways does not
+            // invalidate the path start. Stop pathfinder but keep executor
+            // running: the bot continues along the current path meanwhile.
             TungstenModDataContainer.PATHFINDER.stop.set(true);
             stopRequested = true;
             tickCounter   = 0;
