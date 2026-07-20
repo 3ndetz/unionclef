@@ -483,6 +483,25 @@ public class AltoClef implements ModInitializer {
             getClientBaritone().getGameEventHandler().registerEventListener(new TabCompleter());
         }
 
+        // Tungsten need-fulfiller, stage 1 (docs/features/TUNGSTEN_ALTOCLEF_API.md):
+        // when the tungsten executor mines a block, equip the best tool for it.
+        // Runs on the client thread (tungsten calls it from its mining tick).
+        kaptainwutax.tungsten.TungstenModDataContainer.equipToolHook = (pos, state) -> {
+            try {
+                if (getFoodChain().isTryingToEat()) return;
+                java.util.Optional<adris.altoclef.util.slots.Slot> best =
+                        adris.altoclef.util.helpers.StorageHelper.getBestToolSlot(this, state);
+                if (best.isEmpty()) return;
+                adris.altoclef.util.slots.Slot current = adris.altoclef.util.slots.PlayerSlot.getEquipSlot();
+                net.minecraft.item.Item bestItem =
+                        adris.altoclef.util.helpers.StorageHelper.getItemStackInSlot(best.get()).getItem();
+                if (adris.altoclef.util.helpers.StorageHelper.getItemStackInSlot(current).getItem() == bestItem) return;
+                getSlotHandler().forceEquipItem(bestItem);
+            } catch (Throwable t) {
+                // the hook must never break mining
+            }
+        };
+
         // External mod initialization
         runEnqueuedPostInits();
     }

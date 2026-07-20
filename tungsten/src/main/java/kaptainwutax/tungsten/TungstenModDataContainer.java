@@ -19,4 +19,12 @@ public class TungstenModDataContainer {
 	public static World world;
     public static boolean ignoreFallDamage = true;
     public static GameRenderer gameRenderer = null;
+
+    /**
+     * Need-fulfiller hook (TUNGSTEN_ALTOCLEF_API stage 1): registered by
+     * altoclef at init. Called on the client thread while the executor mines
+     * a block so the inventory side can equip the best tool for it. Tungsten
+     * itself never touches the inventory.
+     */
+    public static java.util.function.BiConsumer<net.minecraft.util.math.BlockPos, net.minecraft.block.BlockState> equipToolHook = null;
 }

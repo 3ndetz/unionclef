@@ -231,6 +231,25 @@ def main():
         ["0 -60 39", "0 -60 40", "0 -60 41"],
     )
 
+    # E: tool selection (TUNGSTEN_ALTOCLEF_API stage 1). Deepslate door in the
+    # C box: bare hands = 15s/block (course would blow the budget), the iron
+    # pickaxe sits OUTSIDE the hotbar — altoclef must equip it via the hook.
+    rcon("fill 0 -60 19 0 -59 21 deepslate")
+    rcon(f"clear {BOT}")
+    rcon(f"item replace entity {BOT} container.9 with iron_pickaxe")
+    t_e = time.time()
+    results["E_tool"] = run_course(
+        "E_tool",
+        f"tp {BOT} -5.5 -60 20.5 -90 0",
+        ";goto 5 -60 20",
+        (3.5, 8.5, -60.3, 15.5, 25.5),
+        60,
+        ["0 -60 19", "0 -60 20", "0 -60 21"],
+    )
+    if results["E_tool"] and time.time() - t_e > 45:
+        print("  FAIL E_tool: passed but too slow — tool was probably not equipped")
+        results["E_tool"] = False
+
     print("\n=== RESULTS ===")
     ok = True
     for k, v in results.items():

@@ -244,6 +244,14 @@ public class PathExecutor {
         }
 
         releaseMovementKeys(options);
+        // Inventory side (altoclef) equips the best tool for this block; the
+        // hook must never be able to break mining.
+        if (kaptainwutax.tungsten.TungstenModDataContainer.equipToolHook != null) {
+            try {
+                kaptainwutax.tungsten.TungstenModDataContainer.equipToolHook
+                        .accept(target, player.getEntityWorld().getBlockState(target));
+            } catch (Throwable ignored) {}
+        }
         // Aim at the block and HOLD the attack key — vanilla handleBlockBreaking
         // then drives the mining against crosshairTarget. Calling
         // updateBlockBreakingProgress directly does not work: with the attack
