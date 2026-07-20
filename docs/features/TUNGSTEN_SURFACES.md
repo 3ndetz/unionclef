@@ -123,7 +123,9 @@ in ~6s with full health).
 
 ### Block Breaking (break-through pathfinding)
 
-**Status:** ⚠️ v1 implemented (2026-07-20), pending autotest.
+**Status:** ✅ v1 works — autotested (2026-07-20, `deploy/runner/break_test.py`:
+sealed bedrock box with a dirt door; course C — mine 2 blocks and pass;
+course D — sand falls into the mined doorway and gets re-mined. Both pass.)
 
 **How it works:**
 - Block-space: `BlockNode.tryPlanBreakThrough` — an adjacent same-Y cell
@@ -146,6 +148,14 @@ in ~6s with full health).
   no block PLACING yet.
 - Each wall costs a re-search after mining (segmented execution).
 - Tool selection not implemented — mines with whatever is held.
+- The block-space A* does NOT accumulate cost along the path, so mining
+  competes with detours only via the heuristic — in open terrain a detour
+  around any finite wall usually wins. Real cost accumulation is the
+  long-term fix.
+- Mining drives vanilla via aim + held attack key (direct
+  updateBlockBreakingProgress is cancelled by vanilla every tick while the
+  key is up). Squeezing through a 1-wide mined hole grazes walls — replay
+  drift up to ~0.9, needs driftThreshold ≥ 1.0 on break-heavy routes.
 
 ### Vines
 
