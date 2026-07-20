@@ -97,45 +97,44 @@ def ensure_in_game(container, label):
         time.sleep(3)
 
 
-def volley(shots, victim_mover=None):
-    """Fire `shots` arrows; return hit count (victim hp drops)."""
+def volley(shots, running=False):
+    """Fire `shots` arrows; return hit count. A respawn (hp jump up) counts
+    as a HIT — the arrow killed the victim."""
     hits = 0
+    run_dir = [1]
     for i in range(shots):
+        if running:
+            # victim genuinely RUNS with real velocity (its own ;goto) — a
+            # teleported target has zero velocity and lead cannot exist
+            z_to = 9 * run_dir[0]
+            run_dir[0] = -run_dir[0]
+            py4j(VICTIM_CONTAINER, "chat", msg=f";goto 18 -60 {z_to}")
+            time.sleep(1.5)  # let her accelerate mid-run
         hp_before = entity_float(VICTIM, "Health")
         r = py4j(SHOOTER_CONTAINER, "shoot", name=VICTIM)
         if not r.get("ok"):
             print(f"  shot {i+1}: shootArrowAt refused")
             continue
-        # aim+charge+release ≈ 1.5s, flight ≈ 0.5-1s
-        for _ in range(4):
-            if victim_mover:
-                victim_mover()
-            time.sleep(1.0)
+        time.sleep(4.0)  # aim+charge+release ≈ 1.5s, flight <1s
         hp_after = entity_float(VICTIM, "Health")
-        hit = hp_after < hp_before - 0.01
+        died = hp_after > hp_before + 5  # respawned at 20
+        hit = died or hp_after < hp_before - 0.01
         hits += 1 if hit else 0
-        print(f"  shot {i+1}: hp {hp_before:.1f} -> {hp_after:.1f} {'HIT' if hit else 'miss'}")
-        if hp_after < 6:
+        print(f"  shot {i+1}: hp {hp_before:.1f} -> {hp_after:.1f} "
+              f"{'HIT (killed)' if died else 'HIT' if hit else 'miss'}")
+        if running:
+            py4j(VICTIM_CONTAINER, "chat", msg=";stop")
+        if hp_after < 8 and not died:
             rcon(f"kill {VICTIM}")
             wait_for("victim respawn", lambda: entity_float(VICTIM, "Health") >= 19.9, 60, 2)
-            reset_positions()
+        reset_positions()
     return hits
-
-
-MOVE_STATE = {"z": -6, "dz": 3}
 
 
 def reset_positions():
     rcon(f"tp {SHOOTER} 0.5 -60 0.5 0 0")
     rcon(f"tp {VICTIM} 18.5 -60 0.5 90 0")
     time.sleep(1)
-
-
-def move_victim():
-    MOVE_STATE["z"] += MOVE_STATE["dz"]
-    if abs(MOVE_STATE["z"]) >= 9:
-        MOVE_STATE["dz"] = -MOVE_STATE["dz"]
-    rcon(f"tp {VICTIM} 18.5 -60 {MOVE_STATE['z'] + 0.5}")
 
 
 def main():
@@ -172,7 +171,7 @@ def main():
     hits_standing = volley(5)
     print(" running target:")
     reset_positions()
-    hits_running = volley(5, victim_mover=move_victim)
+    hits_running = volley(5, running=True)
 
     print(f"\n=== RESULTS ===")
     print(f"  standing: {hits_standing}/5 (need >=3)")
