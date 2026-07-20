@@ -95,15 +95,30 @@ def wait_for(desc, fn, timeout_s, interval=3):
     raise TimeoutError(f"{desc}: timed out after {timeout_s}s (last: {last})")
 
 
+# Closed bedrock boxes: the world is infinitely flat, so an open wall of ANY
+# width has a walkable detour and the (non-accumulating-cost) block A* will
+# happily take it. Inside a sealed box the ONLY route is through the dirt door.
 COURSE_CMDS = [
     "forceload add -24 -24 40 60",
     # wipe both course areas
-    "fill -12 -60 6 24 -45 54 air",
-    # course C: dirt wall x=0, 2 high, WIDE (detours must lose to mining)
-    "fill 0 -60 8 0 -59 30 dirt",
-    # course D: wide dirt wall + sand on top above the route
-    "fill 0 -60 32 0 -59 52 dirt",
-    "fill 0 -58 36 0 -57 44 sand",
+    "fill -12 -60 6 24 -40 54 air",
+    # ── course C: box x=-8..8, z=16..24, walls up to y=-56, dirt door at x=0 ──
+    "fill -8 -60 16 8 -56 16 bedrock",     # south wall
+    "fill -8 -60 24 8 -56 24 bedrock",     # north wall
+    "fill -8 -60 17 -8 -56 23 bedrock",    # west cap
+    "fill 8 -60 17 8 -56 23 bedrock",      # east cap
+    "fill -8 -55 16 8 -55 24 bedrock",     # lid (no hopping out)
+    "fill 0 -60 17 0 -56 23 bedrock",      # dividing wall
+    "fill 0 -60 19 0 -59 21 dirt",         # the door: 3 wide, 2 high, breakable
+    # ── course D: same box at z=36..44, door with sand pillars above it ──
+    "fill -8 -60 36 8 -56 36 bedrock",
+    "fill -8 -60 44 8 -56 44 bedrock",
+    "fill -8 -60 37 -8 -56 43 bedrock",
+    "fill 8 -60 37 8 -56 43 bedrock",
+    "fill -8 -55 36 8 -55 44 bedrock",
+    "fill 0 -60 37 0 -56 43 bedrock",
+    "fill 0 -60 39 0 -59 41 dirt",
+    "fill 0 -58 39 0 -57 41 sand",         # falls into the doorway when mined
     "gamerule advance_time false",
     "gamerule advance_weather false",
     "gamerule spawn_mobs false",

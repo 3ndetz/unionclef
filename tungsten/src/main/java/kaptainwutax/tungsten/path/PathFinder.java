@@ -703,6 +703,9 @@ public class PathFinder {
             }
         }
         pendingBreaks = null;
+        if (TungstenConfig.get().verboseDebugLogging) {
+            Debug.logMessage("block path: no breaks (size " + list.size() + ")");
+        }
         return path;
     }
 
@@ -761,6 +764,10 @@ public class PathFinder {
             Debug.logMessage("Finished!");
             RenderHelper.clearRenderers();
         };
+        if (TungstenConfig.get().verboseDebugLogging && !path.isEmpty()) {
+            Debug.logMessage(String.format("emit[executePath] root=%s size=%d",
+                path.get(0).agent.getPos().toString(), path.size()));
+        }
         if (TungstenModDataContainer.EXECUTOR.isRunning()) {
             TungstenModDataContainer.EXECUTOR.addPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
@@ -793,6 +800,10 @@ public class PathFinder {
         blockPath = findBlockPath(world, lastNode, target, player);
         if (blockPath.isPresent()) {
             List<Node> path = constructPath(next);
+            if (TungstenConfig.get().verboseDebugLogging && !path.isEmpty()) {
+                Debug.logMessage(String.format("emit[resetSearch] root=%s size=%d",
+                    path.get(0).agent.getPos().toString(), path.size()));
+            }
             TungstenModDataContainer.EXECUTOR.setPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
             TungstenModDataContainer.EXECUTOR.breakQueue = pendingBreaks == null ? null : new ArrayList<>(pendingBreaks);
@@ -850,6 +861,10 @@ public class PathFinder {
         	newStart = TungstenModDataContainer.PATHFINDER.initializeStartNode(result.get().get(result.get().size()-2), target);
         }
         if (newStart == null || !newStart.agent.onGround && !newStart.agent.touchingWater && !newStart.agent.isClimbing(TungstenModDataContainer.world)) return false;
+        if (TungstenConfig.get().verboseDebugLogging) {
+            Debug.logMessage(String.format("emit[setCurrentPath] root=%s size=%d",
+                result.get().get(0).agent.getPos().toString(), result.get().size()));
+        }
         TungstenModDataContainer.EXECUTOR.addPath(result.get());
         TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
         TungstenModDataContainer.EXECUTOR.breakQueue = pendingBreaks == null ? null : new ArrayList<>(pendingBreaks);
