@@ -152,6 +152,10 @@ def main():
 
     print("[3/4] setup fight...")
     py4j(FIGHTER_CONTAINER, "chat", msg=";stop")
+    # the client's persisted tungsten.json may carry old defaults
+    # (combatMovementsEnabled=false shipped for months) — pin what we test
+    py4j(FIGHTER_CONTAINER, "chat", msg=";settings combatMovementsEnabled true")
+    time.sleep(1)
     # full health reset — with regen off, leftovers from a previous fight
     # (a 0.1 hp victim) turn the whole measurement into garbage
     rcon(f"kill {FIGHTER}")
