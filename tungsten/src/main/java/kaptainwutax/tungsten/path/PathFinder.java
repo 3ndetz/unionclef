@@ -307,6 +307,11 @@ public class PathFinder {
 	            openSet = new BinaryHeapOpenSet();
 	            this.start = initializeStartNode(next, target);
 	            openSet.insert(this.start);
+	            // The re-rooted search MUST NOT emit chains from the old root:
+	            // stale bestSoFar entries made handleTimeout hand the executor a
+	            // path starting where the bot no longer is (drift abort at tick 1).
+	            bestHeuristicSoFar = initializeBestHeuristics(this.start);
+	            closed.clear();
 	            while (TungstenModDataContainer.EXECUTOR.isRunning()) {
 	                if (stop.get()) break;
 	                try { Thread.sleep(500); } catch (InterruptedException e) { e.printStackTrace(); }
