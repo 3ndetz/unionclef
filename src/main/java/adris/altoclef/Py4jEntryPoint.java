@@ -1034,6 +1034,9 @@ public class Py4jEntryPoint {
             kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
             boolean saved = cfg.allowBreak;
             cfg.allowBreak = withBreaking;
+            // a stale stop flag from a previous ;stop instantly kills the
+            // search loop and returns a 2-node stub — clear it for the probe
+            kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.stop.set(false);
             try {
                 java.util.Optional<java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>> path =
                         kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(
@@ -1049,8 +1052,11 @@ public class Py4jEntryPoint {
                     }
                     m.put("breaks", String.valueOf(breaks));
                     kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode last = path.get().get(path.get().size() - 1);
-                    m.put("endDistance", String.format("%.1f",
-                            last.getPos(_mod.getWorld()).distanceTo(new net.minecraft.util.math.Vec3d(x + 0.5, y, z + 0.5))));
+                    double endDist = last.getPos(_mod.getWorld()).distanceTo(new net.minecraft.util.math.Vec3d(x + 0.5, y, z + 0.5));
+                    m.put("endDistance", String.format("%.1f", endDist));
+                    // "found" is true even for partial best-so-far stubs — the
+                    // honest reachability verdict is whether the route ends at the goal
+                    m.put("reached", String.valueOf(endDist < 2.5));
                 }
             } finally {
                 cfg.allowBreak = saved;

@@ -270,10 +270,8 @@ def main():
     # only reachable through the dirt door: with breaking the plan must carry
     # breaks and end near the goal; without breaking it must not get there
     try:
-        with_ok = reach_with.get("found") == "True" and int(reach_with.get("breaks", "0")) > 0 \
-            and float(reach_with.get("endDistance", "99")) < 3.0
-        without_blocked = reach_without.get("found") != "True" \
-            or float(reach_without.get("endDistance", "0")) > 3.0
+        with_ok = reach_with.get("reached") == "true" and int(reach_with.get("breaks", "0")) > 0
+        without_blocked = reach_without.get("reached") != "true"
         print(f"  with_ok={with_ok}, without_blocked={without_blocked}")
         api_ok &= with_ok and without_blocked
     except Exception as ex:
