@@ -1525,13 +1525,44 @@ public class Py4jEntryPoint {
             }
             int btn = switch (button == null ? "left" : button.toLowerCase()) {
                 case "right" -> 1; case "middle" -> 2; default -> 0; };
-            s.mouseClicked(sx, sy, btn);
-            s.mouseReleased(sx, sy, btn);
+            // Screen.mouseClicked's signature churns across MC versions
+            // (1.21.11 wraps args in a Click record). Dispatch reflectively to
+            // the (double,double,int) overload where it exists; degrade cleanly
+            // otherwise (inventory GUIs should use clickUiSlot regardless).
+            try {
+                java.lang.reflect.Method mc2 = findMouse(s, "mouseClicked");
+                java.lang.reflect.Method mr = findMouse(s, "mouseReleased");
+                if (mc2 == null) {
+                    out.put("ok", false);
+                    out.put("reason", "screen click unsupported on this MC version — use clickUiSlot for inventory slots");
+                    out.put("screen", s.getClass().getSimpleName());
+                    return out;
+                }
+                mc2.setAccessible(true);
+                mc2.invoke(s, sx, sy, btn);
+                if (mr != null) { mr.setAccessible(true); mr.invoke(s, sx, sy, btn); }
+            } catch (Throwable t) {
+                out.put("ok", false); out.put("reason", "click failed: " + t); return out;
+            }
             out.put("ok", true);
             out.put("screen", s.getClass().getSimpleName());
             out.put("at", String.format("%.0f,%.0f", sx, sy));
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Find a Screen mouse method taking (double,double,int) regardless of
+     *  which MC version's signature it is. Null if this version uses the
+     *  Click-record form (wired later). */
+    private static java.lang.reflect.Method findMouse(Object screen, String name) {
+        for (java.lang.reflect.Method m : screen.getClass().getMethods()) {
+            if (!m.getName().equals(name)) continue;
+            Class<?>[] p = m.getParameterTypes();
+            if (p.length == 3 && p[0] == double.class && p[1] == double.class && p[2] == int.class) {
+                return m;
+            }
+        }
+        return null;
     }
 
     /** Right-click whatever ENTITY is currently under the crosshair (item
