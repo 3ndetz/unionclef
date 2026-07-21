@@ -31,7 +31,7 @@ req=json.loads(sys.argv[1])
 gw=JavaGateway(gateway_parameters=GatewayParameters(address="127.0.0.1",port=25333,auto_convert=True))
 mc=gw.entry_point
 os.makedirs(req["outdir"],exist_ok=True)
-try: mc.setPerspective(1)  # third-person: show the bot's body
+try: mc.setPerspective(req.get("persp",0))  # 0=first-person, 1=third-back, 2=third-front
 except Exception as e: print("persp",e)
 for cmd in req.get("chat",[]):
     mc.ChatMessage(cmd); time.sleep(req.get("chat_gap",0.1))
@@ -49,8 +49,8 @@ for i in range(n):
 print(json.dumps({"saved":saved}))
 gw.close()
 """
-def capture(container, outdir_ct, frames, gap, chat=None, chat_gap=0.1):
-    req={"outdir":outdir_ct,"frames":frames,"gap":gap,"chat":chat or [],"chat_gap":chat_gap}
+def capture(container, outdir_ct, frames, gap, chat=None, chat_gap=0.1, persp=0):
+    req={"outdir":outdir_ct,"frames":frames,"gap":gap,"chat":chat or [],"chat_gap":chat_gap,"persp":persp}
     r=subprocess.run(["docker","exec",container,"python3","-c",CAP,json.dumps(req)],
                      capture_output=True,text=True,timeout=frames*gap+60)
     print("  capture:",r.stdout.strip()[-200:], r.stderr.strip()[-200:] if r.returncode else "")
