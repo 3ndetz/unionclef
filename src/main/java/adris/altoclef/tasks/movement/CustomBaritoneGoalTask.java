@@ -246,16 +246,17 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
      *  onTick (e.g. GetToBlockTask's wander) MUST call this BEFORE their own
      *  stuck/wander logic, or the wander loop starves the swap. */
     protected boolean driveTungstenPrimary(AltoClef mod) {
-        if (!TungstenHelper.isPrimary()) return false;
+        boolean log = (_swapDiag++ % 20 == 0);
+        if (!TungstenHelper.isPrimary()) { if (log) Debug.logMessage("[swap] not primary"); return false; }
         if (cachedGoal == null) cachedGoal = newGoal(mod);
-        if (cachedGoal == null || isFinished()) return false;
+        if (cachedGoal == null || isFinished()) { if (log) Debug.logMessage("[swap] no goal / finished (cg=" + cachedGoal + ")"); return false; }
         net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
-        if (gp == null) return false;
+        if (gp == null) { if (log) Debug.logMessage("[swap] goalToVec null for " + cachedGoal.getClass().getSimpleName()); return false; }
         try {
             var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
             var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
             boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
-            if (_swapDiag++ % 20 == 0) {
+            if (log) {
                 Debug.logMessage("[swap] primary drive: goal=" + gp + " pfNull=" + (pf == null)
                         + " exNull=" + (ex == null) + " busy=" + busy);
             }
