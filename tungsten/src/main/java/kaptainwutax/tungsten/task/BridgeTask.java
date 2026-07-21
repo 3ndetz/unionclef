@@ -99,8 +99,9 @@ public class BridgeTask {
             return;
         }
 
-        BlockPos foot = BlockPos.ofFloored(player.getX(), player.getY() - 0.1, player.getZ());
-        BlockPos support = foot.down();            // block we stand on
+        // ofFloored(y-0.1) IS the block the player stands on (the support);
+        // do NOT go .down() again (that lands one row into the void).
+        BlockPos support = BlockPos.ofFloored(player.getX(), player.getY() - 0.1, player.getZ());
         BlockPos targetCell = support.offset(dir); // floating block goes here, becomes the next floor
 
         // sneak is ALWAYS held so we never walk off the edge into the void
@@ -137,8 +138,8 @@ public class BridgeTask {
         } else {
             // STEP phase: creep forward (sneaking) until standing on the new block
             opts.forwardKey.setPressed(true);
-            BlockPos newFoot = BlockPos.ofFloored(player.getX(), player.getY() - 0.1, player.getZ());
-            if (!newFoot.equals(foot) && newFoot.getSquaredDistance(support.offset(dir)) < 0.6) {
+            BlockPos newSupport = BlockPos.ofFloored(player.getX(), player.getY() - 0.1, player.getZ());
+            if (newSupport.equals(targetCell)) {
                 // moved onto the freshly placed floor cell — next block
                 stepping = false;
                 blocksLeft--;
