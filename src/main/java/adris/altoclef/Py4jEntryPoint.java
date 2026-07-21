@@ -1766,6 +1766,20 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** Epic sneak-bridge: extend a floor of placed blocks across a gap in a
+     *  cardinal direction ("north"/"south"/"east"/"west", or "" to infer from
+     *  facing) for `blocks` blocks. Needs a block item in hand/hotbar. Ticks
+     *  autonomously; poll bridgePlaced()/bridgeActive(). (TODO 7.2) */
+    public boolean bridgeForward(String direction, int blocks) {
+        try {
+            net.minecraft.client.MinecraftClient.getInstance().execute(() ->
+                    kaptainwutax.tungsten.task.BridgeTask.start(direction, blocks));
+            return true;
+        } catch (Exception e) { return false; }
+    }
+    public boolean bridgeActive() { return kaptainwutax.tungsten.task.BridgeTask.isActive(); }
+    public int bridgePlaced() { return kaptainwutax.tungsten.task.BridgeTask.getPlaced(); }
+
     /** Bed / point defense (TODO 6.4): wall up the target cell by placing
      *  blocks on its exposed sides + top (a protective shell), covering every
      *  cell currently in reach. Returns which cells were placed and which

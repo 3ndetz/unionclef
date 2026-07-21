@@ -56,6 +56,9 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// shield-block primitive (hold use for N ticks)
 		kaptainwutax.tungsten.task.ShieldBlocker.tick((ClientPlayerEntity)(Object)this);
 
+		// sneak-bridge primitive (epic parkour block placing)
+		kaptainwutax.tungsten.task.BridgeTask.tick((ClientPlayerEntity)(Object)this);
+
 		if(TungstenModDataContainer.isExecutorRunning()) {
 			try {
 				TungstenModDataContainer.EXECUTOR.tick((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);
