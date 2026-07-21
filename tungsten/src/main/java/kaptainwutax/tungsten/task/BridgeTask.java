@@ -99,66 +99,58 @@ public class BridgeTask {
             return;
         }
 
-        // ofFloored(y-0.1) IS the block the player stands on (the support);
-        // do NOT go .down() again (that lands one row into the void).
+        // ofFloored(y-0.1) IS the block the player stands on (the support).
         BlockPos support = BlockPos.ofFloored(player.getX(), player.getY() - 0.1, player.getZ());
-        BlockPos targetCell = support.offset(dir); // floating block goes here, becomes the next floor
-
-        // sneak is ALWAYS held so we never walk off the edge into the void
-        opts.sneakKey.setPressed(true);
-        opts.sprintKey.setPressed(false);
-
-        // face along the bridge and look down at the support's outward side face
-        Vec3d faceCenter = Vec3d.ofCenter(support).add(Vec3d.of(dir.getVector()).multiply(0.5));
+        // Continuous godbridge model: NO sneak, walk forward, and PAVE the floor
+        // ahead every tick so a flat block always exists before our feet reach
+        // the edge — targetCell is at the SAME level as support, so it's flat
+        // ground: nothing to fall off. Pace vs place-rate keeps us supported.
+        BlockPos targetCell = support.offset(dir);
         Vec3d eye = player.getEyePos();
-        Vec3d dv = faceCenter.subtract(eye);
-        player.setYaw((float) Math.toDegrees(-Math.atan2(dv.x, dv.z)));
-        player.setPitch((float) Math.toDegrees(-Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z))));
 
-        boolean targetSolid = !world.getBlockState(targetCell).getCollisionShape(world, targetCell).isEmpty();
+        // walk forward along the bridge; no sneak (that's the slow/broken way)
+        opts.sneakKey.setPressed(false);
+        opts.sprintKey.setPressed(false);
+        opts.forwardKey.setPressed(true);
 
-        if (!stepping) {
-            // PLACE phase: stand still and place the block ahead. Kill horizontal
-            // momentum every tick — residual velocity from the STEP phase slid
-            // the bot off the block's far edge into the gap before it could
-            // place the next block (sneak alone didn't hold it).
-            opts.forwardKey.setPressed(false);
-            Vec3d v = player.getVelocity();
-            player.setVelocity(0, Math.min(0, v.y), 0);
-            if (targetSolid) {
-                stepping = true; // already there — go step onto it
-            } else if (placeCd <= 0) {
-                BlockHitResult hit = new BlockHitResult(faceCenter, dir, support, false);
-                mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
-                player.swingHand(Hand.MAIN_HAND);
-                placeCd = 4;
-                if (!world.getBlockState(targetCell).getCollisionShape(world, targetCell).isEmpty()) {
-                    placed++;
-                    Debug.logMessage("Bridge placed " + placed + " (" + targetCell.toShortString() + ")");
-                    stepping = true;
-                }
-            } else {
-                placeCd--;
-            }
-        } else {
-            // STEP phase: creep forward (sneaking) until standing on the new block
-            opts.forwardKey.setPressed(true);
-            BlockPos newSupport = BlockPos.ofFloored(player.getX(), player.getY() - 0.1, player.getZ());
-            if (newSupport.equals(targetCell)) {
-                // moved onto the freshly placed floor cell — next block
-                stepping = false;
-                blocksLeft--;
-                lastProgress = dir.getAxis() == Direction.Axis.X ? player.getX() : player.getZ();
+        // aim: prefer paving the cell 2 ahead as well so a fast walk never
+        // outruns the floor. Place the nearest air cell in {targetCell, +2}.
+        BlockPos toPlace = null;
+        BlockPos against = null;
+        Direction side = dir;
+        if (isAir(world, targetCell)) {
+            toPlace = targetCell; against = support;           // side face of the block we're on
+        } else if (isAir(world, targetCell.offset(dir))) {
+            toPlace = targetCell.offset(dir); against = targetCell; // extend one more ahead
+        }
+
+        if (toPlace != null) {
+            Vec3d faceCenter = Vec3d.ofCenter(against).add(Vec3d.of(dir.getVector()).multiply(0.5));
+            Vec3d dv = faceCenter.subtract(eye);
+            player.setYaw((float) Math.toDegrees(-Math.atan2(dv.x, dv.z)));
+            player.setPitch((float) Math.toDegrees(-Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z))));
+            BlockHitResult hit = new BlockHitResult(faceCenter, side, against, false);
+            mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
+            player.swingHand(Hand.MAIN_HAND);
+            if (!isAir(world, toPlace) && toPlace.equals(targetCell)) {
+                // count a new floor cell laid directly ahead of us
+                placed++;
+                if (placed % 3 == 0) Debug.logMessage("Bridge paved " + placed);
+                if (--blocksLeft <= 0) { Debug.logMessage("Bridge done: " + placed); stop(); return; }
             }
         }
 
-        // stuck detection
+        // stuck detection along the bridge axis
         double progress = dir.getAxis() == Direction.Axis.X ? player.getX() : player.getZ();
         if (Math.abs(progress - lastProgress) < 0.02) {
-            if (++stuckTicks > 80) { Debug.logMessage("Bridge stuck"); stop(); return; }
+            if (++stuckTicks > 60) { Debug.logMessage("Bridge stuck at " + placed); stop(); return; }
         } else {
             stuckTicks = 0;
             lastProgress = progress;
         }
+    }
+
+    private static boolean isAir(net.minecraft.world.WorldView w, BlockPos p) {
+        return w.getBlockState(p).getCollisionShape(w, p).isEmpty();
     }
 }
