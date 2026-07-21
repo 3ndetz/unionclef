@@ -45,6 +45,7 @@ public class BowShooter {
         active = false;
         target = null;
         MinecraftClient.getInstance().options.useKey.setPressed(false);
+        kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
     }
 
     /** Called every game tick from MixinClientPlayerEntity. */
@@ -67,11 +68,12 @@ public class BowShooter {
             return;
         }
 
+        // Humanized aim via WindMouse (mouse-pipeline) — never setYaw/setPitch,
+        // anti-cheats flag instant rotation. WindMouse converges toward the
+        // ballistic solution over frames like a real hand.
+        kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(sol.yaw, sol.pitch);
         float dYaw = MathHelper.wrapDegrees(sol.yaw - player.getYaw());
         float dPitch = MathHelper.wrapDegrees(sol.pitch - player.getPitch());
-        player.setYaw(player.getYaw() + MathHelper.clamp(dYaw, -AIM_STEP, AIM_STEP));
-        player.setPitch(MathHelper.clamp(
-                player.getPitch() + MathHelper.clamp(dPitch, -AIM_STEP, AIM_STEP), -90f, 90f));
 
         // draw while tracking; release only at full charge AND on-solution aim
         mc.options.useKey.setPressed(true);

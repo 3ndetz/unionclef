@@ -58,6 +58,8 @@ public class BridgeTask {
         lastProgress = 0;
         startAlong = Double.NaN;
         active = true;
+        // fast-but-human WindMouse convergence for the fixed bridge aim
+        kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setParams(4.5, 0.8, 9.0, 20.0, 0.5, 3.0);
         Debug.logMessage("Bridging " + dir + " x" + blocksRequested);
         return true;
     }
@@ -85,7 +87,9 @@ public class BridgeTask {
             mc.options.sneakKey.setPressed(false);
             mc.options.forwardKey.setPressed(false);
             mc.options.useKey.setPressed(false);
+            mc.options.sprintKey.setPressed(false);
         }
+        kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
     }
 
     /** Called every game tick from MixinClientPlayerEntity. */
@@ -151,8 +155,13 @@ public class BridgeTask {
         if (toPlace != null) {
             Vec3d faceCenter = Vec3d.ofCenter(against).add(Vec3d.of(dir.getVector()).multiply(0.5));
             Vec3d dv = faceCenter.subtract(eye);
-            player.setYaw((float) Math.toDegrees(-Math.atan2(dv.x, dv.z)));
-            player.setPitch((float) Math.toDegrees(-Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z))));
+            // Humanized aim: never setYaw/setPitch (anti-cheat flags it instantly)
+            // — feed the target to WindMouse, which rotates via the vanilla mouse
+            // pipeline so the server sees physical-mouse steps. The placement
+            // itself uses the exact hit below (independent of camera lag).
+            float wantYaw = (float) Math.toDegrees(-Math.atan2(dv.x, dv.z));
+            float wantPitch = (float) Math.toDegrees(-Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z)));
+            kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
             BlockHitResult hit = new BlockHitResult(faceCenter, side, against, false);
             mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
             player.swingHand(Hand.MAIN_HAND);
