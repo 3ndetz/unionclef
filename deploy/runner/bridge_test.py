@@ -49,13 +49,16 @@ def is_block(c): return "passed" in rcon(f"execute if block {c}").lower()
 def main():
     print("[1/3] arena (platform + void)...")
     wait_for("rcon", lambda:"players" in rcon("list"),300,5)
-    rcon("forceload add 0 0 16 16")
-    # hard-reset the whole lane to air (clears leftover blocks from prior runs)
-    rcon("fill -2 -72 -2 16 -50 10 air")
+    rcon("forceload add 0 0 15 15")
+    # hard-reset the lane to air WITHIN the forceloaded region (0..15)
+    print("  clearing:", rcon("fill 0 -72 0 14 -50 8 air"))
     time.sleep(0.5)
+    # belt-and-suspenders: explicit air on the exact gap cells (any z the bot uses)
+    for x in range(3, 9):
+        for y in (-61, -60, -59):
+            rcon(f"setblock {x} {y} 4 air")
     rcon("fill 0 -61 2 2 -61 6 stone")      # start platform floor x=0..2 only
     rcon("gamerule advance_time false"); rcon("weather clear"); rcon("time set day")
-    # verify the gap really is void before we start
     void_ok = all(is_block(f"{x} -61 4 air") for x in (3,4,5,6,7))
     print(f"  arena ok, gap is void: {void_ok}")
     if not void_ok:
