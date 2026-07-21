@@ -1749,8 +1749,20 @@ public class Py4jEntryPoint {
                 if (eye.squaredDistanceTo(faceCenter) > 5.0 * 5.0) continue;
                 // aim there and place against the crosshair block
                 net.minecraft.util.math.Vec3d d = faceCenter.subtract(eye);
-                client.player.setYaw((float) Math.toDegrees(-Math.atan2(d.x, d.z)));
-                client.player.setPitch((float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))));
+                // Humanized aim via the vanilla mouse pipeline (changeLookDirection,
+                // pixel-quantized) — never setYaw/setPitch, which anti-cheats flag.
+                // One-shot call, so apply the delta immediately (mouse-like packet).
+                float wantYaw = (float) Math.toDegrees(-Math.atan2(d.x, d.z));
+                float wantPitch = (float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)));
+                double sens = client.options.getMouseSensitivity().getValue();
+                double f = sens * 0.6 + 0.2;
+                double sensScale = f * f * f * 8.0;
+                double degPerPixel = sensScale * 0.15;
+                double dPitchDeg = net.minecraft.util.math.MathHelper.wrapDegrees(wantPitch - client.player.getPitch());
+                double dYawDeg = net.minecraft.util.math.MathHelper.wrapDegrees(wantYaw - client.player.getYaw());
+                client.player.changeLookDirection(
+                        Math.round(dYawDeg / degPerPixel) * sensScale,
+                        Math.round(dPitchDeg / degPerPixel) * sensScale);
                 net.minecraft.util.hit.BlockHitResult hit = new net.minecraft.util.hit.BlockHitResult(faceCenter, side, support, false);
                 var res = client.interactionManager.interactBlock(client.player, net.minecraft.util.Hand.MAIN_HAND, hit);
                 client.player.swingHand(net.minecraft.util.Hand.MAIN_HAND);

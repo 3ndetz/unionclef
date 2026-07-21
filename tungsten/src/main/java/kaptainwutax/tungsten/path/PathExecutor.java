@@ -231,7 +231,7 @@ public class PathExecutor {
             Debug.logMessage("Mining done — passage open");
             options.attackKey.setPressed(false);
             TungstenModRenderContainer.BREAK_PLAN.clear();
-            breakQueue = null; breakingTicks = 0; settleTicks = 0;
+            breakQueue = null; breakingTicks = 0; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
             resumeGotoAfterMining(player);
             return false;
         }
@@ -245,7 +245,7 @@ public class PathExecutor {
             options.attackKey.setPressed(false);
             mc.interactionManager.cancelBlockBreaking();
             TungstenModRenderContainer.BREAK_PLAN.clear();
-            breakQueue = null; breakingTicks = 0; settleTicks = 0;
+            breakQueue = null; breakingTicks = 0; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
             return false;
         }
 
@@ -256,7 +256,7 @@ public class PathExecutor {
             options.attackKey.setPressed(false);
             mc.interactionManager.cancelBlockBreaking();
             TungstenModRenderContainer.BREAK_PLAN.clear();
-            breakQueue = null; breakingTicks = 0; settleTicks = 0;
+            breakQueue = null; breakingTicks = 0; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
             return false;
         }
 
@@ -288,12 +288,12 @@ public class PathExecutor {
         Vec3d d = center.subtract(eye);
         float wantYaw = (float) Math.toDegrees(-Math.atan2(d.x, d.z));
         float wantPitch = (float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)));
+        // Humanized aim via WindMouse (mouse pipeline) — no setYaw/setPitch that
+        // anti-cheats flag. Attack only once the crosshair has actually reached
+        // the block (read the real, WindMouse-converged rotation).
+        kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
         float dYaw = net.minecraft.util.math.MathHelper.wrapDegrees(wantYaw - player.getYaw());
         float dPitch = net.minecraft.util.math.MathHelper.wrapDegrees(wantPitch - player.getPitch());
-        float step = 16.0f; // deg per tick — quick but human-ish
-        player.setYaw(player.getYaw() + net.minecraft.util.math.MathHelper.clamp(dYaw, -step, step));
-        player.setPitch(net.minecraft.util.math.MathHelper.clamp(
-                player.getPitch() + net.minecraft.util.math.MathHelper.clamp(dPitch, -step, step), -90f, 90f));
         boolean aimed = Math.abs(dYaw) < 12f && Math.abs(dPitch) < 12f;
         options.attackKey.setPressed(aimed);
         return true;
