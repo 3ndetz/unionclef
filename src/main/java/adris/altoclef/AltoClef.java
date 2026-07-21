@@ -530,6 +530,16 @@ public class AltoClef implements ModInitializer {
                 return true; // protection lookup failure must not freeze pathing
             }
         };
+        // Symmetric place-protection: altoclef's place-avoiders / protected zones
+        // are the single source of truth for "may we build here" — bridge them
+        // into tungsten PlaceRules (bridge/fill/build/schematic all honour it).
+        kaptainwutax.tungsten.TungstenModDataContainer.canPlaceHook = pos -> {
+            try {
+                return !getExtraBaritoneSettings().shouldAvoidPlacingAt(pos);
+            } catch (Throwable t) {
+                return true; // protection lookup failure must not freeze building
+            }
+        };
 
         // External mod initialization
         runEnqueuedPostInits();

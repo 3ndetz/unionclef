@@ -34,4 +34,11 @@ public class TungstenModDataContainer {
      * into BreakRules. Registered at altoclef init.
      */
     public static java.util.function.Predicate<net.minecraft.util.math.BlockPos> canBreakHook = null;
+
+    /**
+     * Protection hook: returns false when altoclef forbids PLACING at a position
+     * — bridges its place-avoiders/protected zones into PlaceRules. Registered
+     * at altoclef init (symmetric to canBreakHook).
+     */
+    public static java.util.function.Predicate<net.minecraft.util.math.BlockPos> canPlaceHook = null;
 }

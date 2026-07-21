@@ -284,6 +284,24 @@ public class McpServer {
                 + "reposition for the rest.",
                 schema("x:int", "y:int", "z:int"),
                 a -> api.buildDefenseAround(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")));
+        tool("canBreakBlock",
+                "Predict whether the mod is allowed to mine a cell (protection policy: deny-list/zones, "
+                + "claims, altoclef break-avoiders). Check before mining.",
+                schema("x:int", "y:int", "z:int"),
+                a -> booleanMap(api.canBreakBlock(argInt(a, "x"), argInt(a, "y"), argInt(a, "z"))));
+        tool("canPlaceBlock",
+                "Predict whether the mod is allowed to place at a cell (protection policy + replaceable). "
+                + "Returns canPlace/policyAllows/replaceable. Check before building.",
+                schema("x:int", "y:int", "z:int"),
+                a -> api.canPlaceBlock(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")));
+        tool("markProtectedArea",
+                "Mark a claim/private the mod must NOT build or mine in — a cube of radius r around (x,y,z). "
+                + "The bot then routes and builds around it (baritone claim convention).",
+                schema("x:int", "y:int", "z:int", "r:int"),
+                a -> api.markProtectedArea(argInt(a, "x"), argInt(a, "y"), argInt(a, "z"), argInt(a, "r")));
+        tool("clearProtectedAreas",
+                "Clear all runtime protected areas (place + break deny zones).",
+                schema(), a -> api.clearProtectedAreas());
 
         // menus / shop / hotbar
         tool("selectHotbar", "Select hotbar slot 0-8.", schema("slot:int"),

@@ -160,6 +160,13 @@ public class BridgeTask {
                 new Vec3d(targetCell.getX() + 0.1, targetCell.getY() + 0.1, targetCell.getZ() + 0.1),
                 new Vec3d(0.8, 0.3, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 255)));
 
+        // honour protected areas / claims (same policy as the pathfinder)
+        if (toPlace != null && !kaptainwutax.tungsten.path.PlaceRules.canPlace(world, toPlace)) {
+            Debug.logMessage("Bridge stopped: protected area at " + toPlace.toShortString());
+            stop();
+            return;
+        }
+
         if (toPlace != null) {
             Vec3d faceCenter = Vec3d.ofCenter(against).add(Vec3d.of(dir.getVector()).multiply(0.5));
             Vec3d dv = faceCenter.subtract(eye);

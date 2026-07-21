@@ -1071,6 +1071,50 @@ public class Py4jEntryPoint {
         }
     }
 
+    /** Predict whether the mod is ALLOWED to place a block at a cell — the
+     *  protection policy (allowPlace, protected/claim zones, altoclef
+     *  place-avoiders via canPlaceHook). Complements canBreakBlock; the agent
+     *  checks this before building. canPlace also requires the cell replaceable;
+     *  policyAllows is the protection verdict alone (false = protected/claim). */
+    public Map<String, Object> canPlaceBlock(int x, int y, int z) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null || client.world == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            net.minecraft.util.math.BlockPos p = new net.minecraft.util.math.BlockPos(x, y, z);
+            out.put("ok", true);
+            out.put("canPlace", kaptainwutax.tungsten.path.PlaceRules.canPlace(client.world, p));
+            out.put("policyAllows", kaptainwutax.tungsten.path.PlaceRules.allowedByPolicy(p));
+            out.put("replaceable", client.world.getBlockState(p).isReplaceable());
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Mark a protected area (claim / private) the mod must NOT build or mine in
+     *  — a cube of radius r around (x,y,z). Mirrors the anti-cheat convention
+     *  "can't break here → treat the surrounding area as claimed". The agent
+     *  calls this for claims it knows about; the mod then routes/builds around
+     *  it. Adds to both tungsten placeDenyZones and breakDenyZones. */
+    public Map<String, Object> markProtectedArea(int x, int y, int z, int r) {
+        int[] zone = new int[]{x - r, y - r, z - r, x + r, y + r, z + r};
+        kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
+        cfg.placeDenyZones.add(zone);
+        cfg.breakDenyZones.add(zone);
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true);
+        out.put("zone", (x - r) + "," + (y - r) + "," + (z - r) + " .. " + (x + r) + "," + (y + r) + "," + (z + r));
+        out.put("protectedZones", cfg.placeDenyZones.size());
+        return out;
+    }
+
+    /** Clear all runtime protected areas (place + break deny zones). */
+    public Map<String, Object> clearProtectedAreas() {
+        kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
+        cfg.placeDenyZones.clear();
+        cfg.breakDenyZones.clear();
+        return Map.of("ok", true);
+    }
+
     /** Reachability prediction: can the block-space pathfinder find a route to
      *  (x,y,z) — optionally with wall-breaking allowed? Returns found flag,
      *  rough path size and how many blocks the plan would mine. Runs a real
@@ -1743,6 +1787,10 @@ public class Py4jEntryPoint {
             net.minecraft.util.math.BlockPos target = new net.minecraft.util.math.BlockPos(x, y, z);
             if (!world.getBlockState(target).isReplaceable()) {
                 out.put("ok", false); out.put("reason", "target not replaceable (already occupied)"); return out;
+            }
+            // protection policy (protected areas / claims / altoclef place-avoiders)
+            if (!kaptainwutax.tungsten.path.PlaceRules.canPlace(world, target)) {
+                out.put("ok", false); out.put("reason", "placing denied (protected area)"); return out;
             }
             // ensure a placeable block is held (else pick the first block item in the hotbar)
             if (!(client.player.getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem)) {
