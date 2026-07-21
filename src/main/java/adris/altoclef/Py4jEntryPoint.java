@@ -1725,7 +1725,15 @@ public class Py4jEntryPoint {
      *  to get in range is the physics-integration layer on top. Returns the
      *  supporting side + whether the target cell became non-air. */
     public Map<String, Object> placeBlockAt(int x, int y, int z) {
-        return onClientThread(() -> {
+        return onClientThread(() -> placeBlockAtRaw(x, y, z),
+                Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Placement core — MUST be called ON the client thread. Shared by
+     *  placeBlockAt() (wraps onClientThread) and fillSelection() (already on
+     *  the client thread), so the placing logic stays single-source and we
+     *  never nest onClientThread (nesting deadlocks the render thread). */
+    private Map<String, Object> placeBlockAtRaw(int x, int y, int z) {
             Map<String, Object> out = new HashMap<>();
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player == null || client.interactionManager == null) {
@@ -1784,7 +1792,6 @@ public class Py4jEntryPoint {
             }
             out.put("ok", false); out.put("reason", "no reachable supporting face");
             return out;
-        }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
     /** Epic sneak-bridge: extend a floor of placed blocks across a gap in a
@@ -1852,15 +1859,22 @@ public class Py4jEntryPoint {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
             if (_selMin == null) { out.put("ok", false); out.put("reason", "no selection — call select() first"); return out; }
+            // Cap placements per call so a big region never stalls the render
+            // thread inside one tick — the agent just calls again (remaining>0).
+            final int MAX_PLACEMENTS = 96;
             int filled = 0, remaining = 0, already = 0;
-            for (int y = _selMin[1]; y <= _selMax[1]; y++) {          // bottom-up
-                for (int x = _selMin[0]; x <= _selMax[0]; x++) {
+            boolean truncated = false;
+            for (int y = _selMin[1]; y <= _selMax[1] && !truncated; y++) {   // bottom-up
+                for (int x = _selMin[0]; x <= _selMax[0] && !truncated; x++) {
                     for (int z = _selMin[2]; z <= _selMax[2]; z++) {
                         net.minecraft.util.math.BlockPos p = new net.minecraft.util.math.BlockPos(x, y, z);
                         if (!client.world.getBlockState(p).isReplaceable()) { already++; continue; }
-                        Map<String, Object> r = placeBlockAt(x, y, z);
+                        // placeBlockAtRaw (not placeBlockAt) — we are already on
+                        // the client thread; nesting onClientThread would deadlock.
+                        Map<String, Object> r = placeBlockAtRaw(x, y, z);
                         if (Boolean.TRUE.equals(r.get("placed"))) filled++;
                         else remaining++;
+                        if (filled >= MAX_PLACEMENTS) { truncated = true; break; }
                     }
                 }
             }
@@ -1868,7 +1882,8 @@ public class Py4jEntryPoint {
             out.put("filled", filled);
             out.put("remaining", remaining);   // out of reach — reposition + call again
             out.put("already", already);
-            out.put("complete", remaining == 0);
+            out.put("truncated", truncated);   // hit per-call cap — call again to continue
+            out.put("complete", remaining == 0 && !truncated);
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
