@@ -18,8 +18,15 @@
   (client-thread timeout, 0 клеток). Вынес ядро в placeBlockAtRaw (assume
   on-thread, single source); placeBlockAt = обёртка, fillSelection зовёт Raw
   напрямую. Тест worldedit_test PASS (4/4 dirt, complete=true).
+- //walls: wallsSelection(block) — 4 вертикальные стены (x/z==min/max), пол/
+  потолок/центр открыты; плоский слой → кольцо. Общее ядро fillCells(predicate)
+  (//set=все, //walls=границы) — без дублей.
+- ЧЕСТНЫЙ blockName: equipHotbarBlock экипирует названный блок из хотбара (id-
+  матч с/без "minecraft:") — агент называет блок, мод его держит; не найден →
+  placeBlockAtRaw авто-выбирает любой. Тест: //set cobblestone держа dirt → 4/4
+  cobblestone (доказан equip), //walls → кольцо 8/8 + центр air (полый).
 - Осталось в block 9: //replace (нужен синхронный break-примитив),
-  //walls/hollow/cyl/sphere (генераторы позиций поверх fillSelection).
+  //hollow/cyl/sphere (генераторы позиций поверх fillCells).
 
 ## Восприятие когнитивного агента + виз-тумблеры (2026-07-21) — СДЕЛАНО
 
