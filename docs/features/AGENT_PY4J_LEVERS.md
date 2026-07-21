@@ -10,6 +10,11 @@
 
 Возвраты `Map` — это dict в Python. Координаты — мировые (server-agnostic).
 
+**Два транспорта, один набор рычагов:** py4j (порт 25333, для тестов-раннеров) и
+**MCP** — мод хостит его сам на `http://<lan-ip>:25350/mcp` (Streamable HTTP,
+Settings.mcpPort). MCP оборачивает ровно эти методы (single source), так что
+Клод рулит по LAN напрямую. Ниже — сами рычаги (имена совпадают с MCP-tools).
+
 ## Восприятие (что происходит)
 
 | Рычаг | Что даёт | Когда |
@@ -76,6 +81,10 @@ setYaw/setPitch (античиты палят).
 | `fillSelection(block)` | **//set** — залить регион блоком (снизу вверх, в досягаемости, кап 96/вызов). Экипирует названный блок из хотбара | filled/remaining/already/truncated/complete |
 | `wallsSelection(block)` | **//walls** — 4 вертикальные стены региона (полый центр) | как fillSelection |
 | `buildDefenseAround(x,y,z)` | защитный панцирь вокруг точки (стороны+крыша) — застроить кровать | placed/remaining |
+| `canBreakBlock(x,y,z)` | можно ли ломать (deny-список/зоны/приваты/altoclef) | bool |
+| `canPlaceBlock(x,y,z)` | можно ли ставить (политика + replaceable) | canPlace/policyAllows/replaceable |
+| `markProtectedArea(x,y,z,r)` | пометить приват/claim — куб r вокруг точки; мод не ломает и не строит там, обходит | zone/protectedZones |
+| `clearProtectedAreas()` | снять все runtime-приваты (place+break deny) | ok |
 
 `fillSelection`/`wallsSelection` возвращают `remaining`>0, если часть клеток вне
 досягаемости — агент делает `gotoXYZ` ближе и зовёт снова (агент оркестрирует).
