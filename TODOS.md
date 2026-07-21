@@ -10,7 +10,7 @@
 
 - [ ] 7. Block PLACING в tungsten (ФУНДАМЕНТ всего строительства):
   - [x] 7.1 примитив placeBlockAt(x,y,z) — авто-выбор блока, наведение на грань опоры, interactBlock. Тест place_test PASS (4/4 блока: линия+стек). tungsten-подвод в reach — след. шаг
-  - [ ] 7.2 бридж/скэффолд в physics A*: ставить блок под собой/вперёд чтобы пересечь пропасть (baritone MovementParkourPlace-аналог), sneak-бридж, jump-place — «эпично в паркуре» (КРУПНЫЙ tungsten-core, как майнинг)
+  - [~] 7.2 бридж/скэффолд: BridgeTask (sneak-бридж, машина состояний PLACE→STEP) — ЧАСТИЧНО (2026-07-21). Геометрия починена, блок СТАВИТСЯ и бот на него ШАГАЕТ (placed 1, advanced 1.8), но переход STEP→PLACE на 2-м блоке сносит бота за дальний край в пропасть (инерция+sneak-edge не держит в headless). NB: v6==v7 end pos побитово — проверить не стухший ли jar. Капризная механика (как jump-bridge в shredder ~8 циклов) — нужна отдельная фокус-сессия на тайминг шаг/установка и sneak-hold. Интеграция в A* как move — поверх. deploy/runner/bridge_test.py готов
   - [x] 7.3 inventorySpace() — свободные слоты + подсчёт блоков по типам (planner не обещает мост длиннее запаса). Тест PASS (free=35, blockCount=64)
   - [ ] 7.4 использование инструментов при ломании (equipToolHook уже есть) + расширить на выбор блока для установки
 - [ ] 8. Schematic-строительство (baritone BuilderProcess-аналог на tungsten):
