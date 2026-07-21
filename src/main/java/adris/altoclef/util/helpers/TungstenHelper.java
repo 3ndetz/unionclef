@@ -27,7 +27,7 @@ public class TungstenHelper {
     // Drop-in swap (TODO 13): when primary, altoclef goals route straight to
     // tungsten instead of waiting for baritone to fail. Baritone movement is
     // broken on some headless clients; tungsten always drives the player.
-    private static boolean primary = false;
+    private static volatile boolean primary = false;
     public static void setPrimary(boolean p) { primary = p; }
     public static boolean isPrimary() { return primary; }
 

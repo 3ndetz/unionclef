@@ -40,6 +40,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             Blocks.SWEET_BERRY_BUSH
     };
     private Task unstuckTask = null;
+    private static int _swapDiag = 0; // throttle for swap diagnostics
 
     // This happens all the time in mineshafts and swamps/jungles
 
@@ -254,12 +255,17 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
             var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
             boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
+            if (_swapDiag++ % 20 == 0) {
+                Debug.logMessage("[swap] primary drive: goal=" + gp + " pfNull=" + (pf == null)
+                        + " exNull=" + (ex == null) + " busy=" + busy);
+            }
             if (pf != null && !busy) {
                 if (ex != null) ex.stop = false;   // a prior ;stop leaves it stuck true
                 pf.find(mod.getWorld(), gp, mod.getPlayer());
+                Debug.logMessage("[swap] find() called -> " + gp);
             }
         } catch (Throwable t) {
-            Debug.logInternal("[swap] tungsten primary find failed: " + t);
+            Debug.logMessage("[swap] tungsten primary find failed: " + t);
         }
         mod.getClientBaritone().getPathingBehavior().forceCancel();
         checker.reset();
