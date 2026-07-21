@@ -1,5 +1,21 @@
 # Progress
 
+## Анти-чит гуманизация поворотов (2026-07-21) — СДЕЛАНО
+
+Поинт юзера: античиты палят прямой setYaw/setPitch — крутить надо через mouse-
+pipeline «как физическая мышь» (в боевой ауре WindMouseRotation уже настроено).
+Перевёл ВСЕ примитивы: BridgeTask+BowShooter+майнинг-прицел → WindMouse (тикаются,
+сходятся человеко-подобно через ванильный mouse pipeline); placeBlockAt →
+changeLookDirection (одношот, пиксельно-квантованно). Path-replay уже был на
+changeLookDirection. Тесты PASS: bridge с гуманизацией (естественный z-разброс),
+break+place регрессия зелёная. clearTarget при завершении майнинга (иначе
+конфликт с path-replay). Осталось: тоньше humanize (пауза «поднять мышь»), живой
+тест против анти-чита в bedwars.
+
+ПРИНЦИП (юзер): рядом исходник baritone — для A*-интеграции/схематик/WorldEdit
+смотреть их MovementParkourPlace/BuilderProcess/MovementHelper, внедрять
+проверенное, не повторять ошибок.
+
 ## ГОДБРИДЖ (2026-07-21) — СДЕЛАНО
 
 Переписал бридж на НЕПРЕРЫВНУЮ pave-ahead модель (по идее юзера «физика

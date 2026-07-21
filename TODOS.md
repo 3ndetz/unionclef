@@ -2,6 +2,15 @@
 
 ## МЕГА-ЦЕЛЬ: ПОРТ ПОЛНОГО BARITONE + WORLDEDIT В ФИЗ-МОДЕЛЬ TUNGSTEN — юзер 2026-07-21
 
+> ПРИНЦИП (напоминание юзера 2026-07-21): рядом ПОЛНЫЙ исходник baritone (baritone/,
+> и shredder/ — форк). Для КАЖДОЙ задачи ниже СНАЧАЛА смотреть их реализацию и
+> фиксы, внедрять проверенное, НЕ повторять их ошибок. Референсы:
+> - бридж/установка как A*-ход: baritone MovementParkourPlace / MovementTraverse (positionsToBreak/ToPlace)
+> - схематик-строительство: baritone.process.BuilderProcess (+ ISchematic, палитра, порядок)
+> - cost'ы break/place, падающие блоки: baritone.pathing.movement.MovementHelper
+> - WorldEdit-like: baritone `sel`/`#set` команды (SelCommand, BuilderProcess selection)
+> - A*: baritone.pathing.calc.AStarPathFinder (open set, эвристики) — сравнить с tungsten
+
 Идея: перенести ВЕСЬ функционал baritone (в т.ч. умное schematic-строительство)
 + WorldEdit-подобные команды (`//sel`, `//set`, `//pos1/2`, `//replace`, `//walls`
 и пр.) в tungsten и ВСТРОИТЬ в его мега-физдвижок — чтобы, например, в паркуре
@@ -15,9 +24,9 @@
     - [ ] след: диагональный годбридж; интеграция в A* как move (goto через пропасть авто-мостит — «физика-планировщик» по идее юзера)
 - [ ] 11. АНТИ-ЧИТ ГУМАНИЗАЦИЯ ПОВОРОТОВ (важный поинт юзера 2026-07-21):
   - НИКОГДА не setYaw/setPitch напрямую — античиты палят сразу. Все повороты через mouse-pipeline (changeLookDirection пиксельно-квантованно / WindMouse), «сервер видит как физическую мышь». В боевой ауре (WindMouseRotation) уже настроено грамотно — переиспользовать
-  - [ ] перевести ВСЕ мои новые примитивы с setYaw/setPitch на человеко-путь: BridgeTask, BowShooter, майнинг-прицел (PathExecutor.tickBreaking), placeBlockAt-наведение
-  - [ ] ограничивать резкие повороты (rate-limit °/тик), humanize-переменные (лёгкий разброс, пауза на большие углы «поднять мышь»)
-  - [ ] проверить бридж/бой в РЕАЛЬНОМ bedwars против анти-чита — если флагает, крутить humanize-параметры
+  - [x] перевёл ВСЕ мои примитивы с setYaw/setPitch на mouse-pipeline (2026-07-21): BridgeTask+BowShooter→WindMouse (тикаются, сходятся человеко-подобно), майнинг-прицел→WindMouse, placeBlockAt→changeLookDirection (одношот, пиксельно-квантованно). Тесты: bridge PASS с гуманизацией (z-разброс 4.49 естественный), break+place регрессия PASS. Path-replay уже был на changeLookDirection (enableNativeRotation)
+  - [ ] humanize-переменные тоньше: пауза на большие углы «поднять мышь», разброс по вкусу (WindMouse-параметры уже дают wind/gravity)
+  - [ ] проверить бридж/бой в РЕАЛЬНОМ bedwars против анти-чита — если флагает, крутить humanize-параметры (первая проверка живьём)
   - [x] 7.3 inventorySpace() — свободные слоты + подсчёт блоков по типам (planner не обещает мост длиннее запаса). Тест PASS (free=35, blockCount=64)
   - [ ] 7.4 использование инструментов при ломании (equipToolHook уже есть) + расширить на выбор блока для установки
 - [ ] 8. Schematic-строительство (baritone BuilderProcess-аналог на tungsten):
