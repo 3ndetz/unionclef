@@ -154,31 +154,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             cachedGoal = newGoal(mod);
         }
 
-        // ── Tungsten-PRIMARY (drop-in swap, TODO 13): drive movement via tungsten
-        //    directly — baritone movement doesn't execute on headless clients.
-        //    Call tungsten the same way ;goto does (PATHFINDER.find + clear the
-        //    stale EXECUTOR.stop). Bypass TungstenHelper's reflection (stale field
-        //    lookups); altoclef depends on tungsten, so call it directly. ──
-        if (TungstenHelper.isPrimary() && cachedGoal != null && !isFinished()) {
-            net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
-            if (gp != null) {
-                try {
-                    var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
-                    var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
-                    boolean busy = pf != null && pf.active.get() || (ex != null && ex.isRunning());
-                    if (pf != null && !busy) {
-                        if (ex != null) ex.stop = false;   // a prior ;stop leaves it stuck true
-                        pf.find(mod.getWorld(), gp, mod.getPlayer());
-                    }
-                } catch (Throwable t) {
-                    Debug.logInternal("[swap] tungsten primary find failed: " + t);
-                }
-                mod.getClientBaritone().getPathingBehavior().forceCancel();
-                checker.reset();
-                setDebugState("Tungsten (primary) pathfinding...");
-                return null;
-            }
-        }
+        // ── Tungsten-PRIMARY (drop-in swap, TODO 13) ──
+        if (driveTungstenPrimary(mod)) return null;
 
         // ── Tungsten lock: exclusive 30s control, Baritone stays off ──
         if (TungstenHelper.isLocked()) {
@@ -258,6 +235,36 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     protected abstract Goal newGoal(AltoClef mod);
 
     protected void onWander(AltoClef mod) {
+    }
+
+    /** Drop-in swap (TODO 13): when tungsten is PRIMARY, drive movement via
+     *  tungsten directly (the same call ;goto uses — baritone movement doesn't
+     *  execute on headless clients). Async: PATHFINDER.find kicks a background
+     *  search, so this never blocks. Returns true if it took control (caller
+     *  should return null to keep baritone off). Subclasses that override
+     *  onTick (e.g. GetToBlockTask's wander) MUST call this BEFORE their own
+     *  stuck/wander logic, or the wander loop starves the swap. */
+    protected boolean driveTungstenPrimary(AltoClef mod) {
+        if (!TungstenHelper.isPrimary()) return false;
+        if (cachedGoal == null) cachedGoal = newGoal(mod);
+        if (cachedGoal == null || isFinished()) return false;
+        net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
+        if (gp == null) return false;
+        try {
+            var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
+            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
+            if (pf != null && !busy) {
+                if (ex != null) ex.stop = false;   // a prior ;stop leaves it stuck true
+                pf.find(mod.getWorld(), gp, mod.getPlayer());
+            }
+        } catch (Throwable t) {
+            Debug.logInternal("[swap] tungsten primary find failed: " + t);
+        }
+        mod.getClientBaritone().getPathingBehavior().forceCancel();
+        checker.reset();
+        setDebugState("Tungsten (primary) pathfinding...");
+        return true;
     }
 
     /** Extract a target position from a baritone goal for tungsten (GoalBlock /
