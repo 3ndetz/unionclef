@@ -50,11 +50,16 @@ def main():
     print("[1/3] arena (platform + void)...")
     wait_for("rcon", lambda:"players" in rcon("list"),300,5)
     rcon("forceload add 0 0 16 16")
-    rcon("fill 0 -70 0 14 -55 8 air")       # big void
-    rcon("fill 0 -61 2 2 -61 6 stone")      # start platform floor x=0..2
-    rcon("fill 0 -60 2 2 -60 6 air")
+    # hard-reset the whole lane to air (clears leftover blocks from prior runs)
+    rcon("fill -2 -72 -2 16 -50 10 air")
+    time.sleep(0.5)
+    rcon("fill 0 -61 2 2 -61 6 stone")      # start platform floor x=0..2 only
     rcon("gamerule advance_time false"); rcon("weather clear"); rcon("time set day")
-    print("  arena ok")
+    # verify the gap really is void before we start
+    void_ok = all(is_block(f"{x} -61 4 air") for x in (3,4,5,6,7))
+    print(f"  arena ok, gap is void: {void_ok}")
+    if not void_ok:
+        print("  FAIL: could not clear the gap"); sys.exit(1)
 
     print("[2/3] client + gear...")
     wait_for("py4j", lambda: py4j("state") is not None,600,10)
