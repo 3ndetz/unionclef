@@ -41,11 +41,14 @@ public class BridgeTask {
             default -> null;
         };
         if (d == null) {
-            // infer from the player's facing (nearest cardinal)
+            // infer from the player's facing (nearest horizontal cardinal)
             ClientPlayerEntity p = MinecraftClient.getInstance().player;
             if (p == null) return false;
-            d = Direction.fromRotation(p.getYaw());
-            if (d.getAxis().isVertical()) d = Direction.NORTH;
+            float yaw = MathHelper.wrapDegrees(p.getYaw());
+            if (yaw >= -45 && yaw < 45) d = Direction.SOUTH;      // +z
+            else if (yaw >= 45 && yaw < 135) d = Direction.WEST;  // -x
+            else if (yaw >= -135 && yaw < -45) d = Direction.EAST; // +x
+            else d = Direction.NORTH;                              // -z
         }
         dir = d;
         blocksLeft = Math.max(1, blocks);
@@ -84,14 +87,12 @@ public class BridgeTask {
             return;
         }
 
-        // need a block in hand
+        // need a block in hand — the caller equips it (selectHotbar); tungsten
+        // must not depend on altoclef's inventory layer (dependency direction)
         if (!(player.getMainHandStack().getItem() instanceof BlockItem)) {
-            int found = -1;
-            for (int i = 0; i < 9; i++) {
-                if (player.getInventory().getStack(i).getItem() instanceof BlockItem) { found = i; break; }
-            }
-            if (found < 0) { Debug.logMessage("Bridge: no blocks"); stop(); return; }
-            adris.altoclef.multiversion.entity.PlayerVer.setSelectedSlot(player.getInventory(), found);
+            Debug.logMessage("Bridge: no block in hand — equip one first");
+            stop();
+            return;
         }
 
         BlockPos foot = BlockPos.ofFloored(player.getX(), player.getY() - 0.1, player.getZ());
@@ -112,7 +113,8 @@ public class BridgeTask {
 
         // place the floating block if the target is still air and we're near the edge
         BlockState targetState = world.getBlockState(targetCell);
-        double progress = player.getPos().offset(dir, 0).getComponentAlongAxis(dir.getAxis());
+        // progress measured along the bridge axis (x for E/W, z for N/S)
+        double progress = dir.getAxis() == Direction.Axis.X ? player.getX() : player.getZ();
         if (targetState.isAir()) {
             // only place when we're actually at/over the support edge (so the
             // side face is aimable and the new block lands one ahead)
