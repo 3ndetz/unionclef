@@ -9,9 +9,9 @@
 схемы. tungsten становится единым pathfinder+builder на физике.
 
 - [ ] 7. Block PLACING в tungsten (ФУНДАМЕНТ всего строительства):
-  - [ ] 7.1 примитив placeBlockAt(pos, faceHint): навестись на грань опорного блока + правый клик (interactBlock), tungsten подводит агента в reach; учитывать выбор блока в хотбаре (selectHotbar/equip)
-  - [ ] 7.2 бридж/скэффолд в physics A*: ставить блок под собой/вперёд чтобы пересечь пропасть (baritone MovementParkourPlace-аналог), sneak-бридж, jump-place — «эпично в паркуре»
-  - [ ] 7.3 расчёт свободного места в инвентаре + подсчёт материалов (сколько блоков есть, сколько влезет) — planner не обещает мост длиннее запаса
+  - [x] 7.1 примитив placeBlockAt(x,y,z) — авто-выбор блока, наведение на грань опоры, interactBlock. Тест place_test PASS (4/4 блока: линия+стек). tungsten-подвод в reach — след. шаг
+  - [ ] 7.2 бридж/скэффолд в physics A*: ставить блок под собой/вперёд чтобы пересечь пропасть (baritone MovementParkourPlace-аналог), sneak-бридж, jump-place — «эпично в паркуре» (КРУПНЫЙ tungsten-core, как майнинг)
+  - [x] 7.3 inventorySpace() — свободные слоты + подсчёт блоков по типам (planner не обещает мост длиннее запаса). Тест PASS (free=35, blockCount=64)
   - [ ] 7.4 использование инструментов при ломании (equipToolHook уже есть) + расширить на выбор блока для установки
 - [ ] 8. Schematic-строительство (baritone BuilderProcess-аналог на tungsten):
   - [ ] 8.1 загрузка схемы (.schem/.litematic/.nbt), парс палитры и блоков

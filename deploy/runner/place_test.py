@@ -27,6 +27,7 @@ elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="chat": mc.ChatMessage(req["msg"]); out={"ok":True}
 elif op=="place": out=dict(mc.placeBlockAt(int(req["x"]),int(req["y"]),int(req["z"])))
 elif op=="space": out=dict(mc.inventorySpace())
+elif op=="defend": out=dict(mc.buildDefenseAround(int(req["x"]),int(req["y"]),int(req["z"])))
 elif op=="selhot": out={"ok":mc.selectHotbar(int(req["s"]))}
 print(json.dumps(out,default=str)); gw.close()
 """
@@ -89,10 +90,27 @@ def main():
         placed.append(ok)
         print(f"  place ({x},{y},{z}): {r.get('ok')} {r.get('reason') or r.get('side')} -> block={ok}")
 
+    # ---- bed defense: wall up a "bed" cell, repositioning around it ----
+    print("[bed defense]")
+    rcon("fill 6 -60 4 6 -60 4 red_bed")  # the 'bed' to defend at (6,-60,4)
+    bx, by, bz = 6, -60, 4
+    # stand on each side and defend; the shell cells covered accumulate
+    for (sx, sz, yaw) in [(4, 4, -90), (8, 4, 90), (6, 2, 180), (6, 6, 0)]:
+        rcon(f"tp {BOT} {sx}.5 -60 {sz}.5 {yaw} 0")
+        time.sleep(2.5)
+        r = py4j("defend", x=bx, y=by, z=bz)
+        print(f"  from ({sx},{sz}): placed {len(r.get('placed',[]))}, remaining {len(r.get('remaining',[]))}")
+    # verify the horizontal ring around the bed at bed level is solid
+    ring = [f"{bx+1} {by} {bz}", f"{bx-1} {by} {bz}", f"{bx} {by} {bz+1}", f"{bx} {by} {bz-1}"]
+    ring_ok = sum(1 for c in ring if not is_block(f"{c} air"))
+    print(f"  bed ring solid: {ring_ok}/4")
+    defense_ok = ring_ok >= 4
+
     print("\n=== RESULTS ===")
     print(f"  inventorySpace ok: {space_ok}")
     print(f"  placed: {sum(placed)}/{len(targets)}")
-    ok = space_ok and all(placed)
+    print(f"  bed defense ring: {ring_ok}/4")
+    ok = space_ok and all(placed) and defense_ok
     print("  PLACE:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)
 

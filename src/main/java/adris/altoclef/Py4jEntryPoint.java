@@ -1766,6 +1766,44 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** Bed / point defense (TODO 6.4): wall up the target cell by placing
+     *  blocks on its exposed sides + top (a protective shell), covering every
+     *  cell currently in reach. Returns which cells were placed and which
+     *  remain (out of reach — reposition and call again, or the cognitive
+     *  agent / tungsten pathfinder walks around to finish the shell). Reuses
+     *  placeBlockAt so the placing logic stays single-source. */
+    public Map<String, Object> buildDefenseAround(int x, int y, int z) {
+        Map<String, Object> out = new HashMap<>();
+        // shell = 4 horizontal neighbours + top, at the bed cell and one above
+        // (beds are ~1 tall; covering y and y+1 sides blocks approach + top)
+        java.util.List<int[]> shell = new java.util.ArrayList<>();
+        for (int dy = 0; dy <= 1; dy++) {
+            shell.add(new int[]{x + 1, y + dy, z});
+            shell.add(new int[]{x - 1, y + dy, z});
+            shell.add(new int[]{x, y + dy, z + 1});
+            shell.add(new int[]{x, y + dy, z - 1});
+        }
+        shell.add(new int[]{x, y + 2, z}); // roof
+        java.util.List<String> placed = new java.util.ArrayList<>();
+        java.util.List<String> remaining = new java.util.ArrayList<>();
+        for (int[] c : shell) {
+            Map<String, Object> r = placeBlockAt(c[0], c[1], c[2]);
+            String tag = c[0] + "," + c[1] + "," + c[2];
+            if (Boolean.TRUE.equals(r.get("ok")) && Boolean.TRUE.equals(r.get("placed"))) {
+                placed.add(tag);
+            } else if ("target not replaceable (already occupied)".equals(r.get("reason"))) {
+                placed.add(tag); // already solid — counts as covered
+            } else {
+                remaining.add(tag);
+            }
+        }
+        out.put("ok", true);
+        out.put("placed", placed);
+        out.put("remaining", remaining);
+        out.put("complete", remaining.isEmpty());
+        return out;
+    }
+
     /** Inventory capacity + material accounting (TODO 7.3). free = empty main
      *  slots (0-35); blockCount = total placeable blocks; per-item counts of
      *  block stacks so a builder can plan without over-promising. */
