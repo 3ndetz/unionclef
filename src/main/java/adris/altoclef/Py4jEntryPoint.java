@@ -1708,6 +1708,93 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** Place a block AT world position (x,y,z) — the atomic building primitive
+     *  (TODO block 7). Auto-selects a placeable block from the hotbar (unless
+     *  one is already held), finds a solid neighbour to click against, aims at
+     *  the shared face and interactBlocks so the new block lands in the target
+     *  cell. Player must already be within reach (~4.5); tungsten pathfinding
+     *  to get in range is the physics-integration layer on top. Returns the
+     *  supporting side + whether the target cell became non-air. */
+    public Map<String, Object> placeBlockAt(int x, int y, int z) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null || client.interactionManager == null) {
+                out.put("ok", false); out.put("reason", "not in game"); return out;
+            }
+            var world = client.player.getEntityWorld();
+            net.minecraft.util.math.BlockPos target = new net.minecraft.util.math.BlockPos(x, y, z);
+            if (!world.getBlockState(target).isReplaceable()) {
+                out.put("ok", false); out.put("reason", "target not replaceable (already occupied)"); return out;
+            }
+            // ensure a placeable block is held (else pick the first block item in the hotbar)
+            if (!(client.player.getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem)) {
+                int found = -1;
+                for (int i = 0; i < 9; i++) {
+                    if (client.player.getInventory().getStack(i).getItem() instanceof net.minecraft.item.BlockItem) { found = i; break; }
+                }
+                if (found < 0) { out.put("ok", false); out.put("reason", "no block item in hotbar"); return out; }
+                adris.altoclef.multiversion.entity.PlayerVer.setSelectedSlot(client.player.getInventory(), found);
+            }
+            // find a solid neighbour to place against; aim at the shared face
+            net.minecraft.util.math.Vec3d eye = client.player.getEyePos();
+            for (net.minecraft.util.math.Direction dir : net.minecraft.util.math.Direction.values()) {
+                net.minecraft.util.math.BlockPos support = target.offset(dir);
+                if (world.getBlockState(support).isAir()
+                        || world.getBlockState(support).getCollisionShape(world, support).isEmpty()) continue;
+                // the face of `support` that borders target points opposite to dir
+                net.minecraft.util.math.Direction side = dir.getOpposite();
+                net.minecraft.util.math.Vec3d faceCenter = net.minecraft.util.math.Vec3d.ofCenter(support)
+                        .add(net.minecraft.util.math.Vec3d.of(side.getVector()).multiply(0.5));
+                if (eye.squaredDistanceTo(faceCenter) > 5.0 * 5.0) continue;
+                // aim there and place against the crosshair block
+                net.minecraft.util.math.Vec3d d = faceCenter.subtract(eye);
+                client.player.setYaw((float) Math.toDegrees(-Math.atan2(d.x, d.z)));
+                client.player.setPitch((float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z))));
+                net.minecraft.util.hit.BlockHitResult hit = new net.minecraft.util.hit.BlockHitResult(faceCenter, side, support, false);
+                var res = client.interactionManager.interactBlock(client.player, net.minecraft.util.Hand.MAIN_HAND, hit);
+                client.player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
+                out.put("ok", true);
+                out.put("result", res.toString());
+                out.put("support", support.toShortString());
+                out.put("side", side.toString());
+                out.put("placed", !world.getBlockState(target).isAir());
+                return out;
+            }
+            out.put("ok", false); out.put("reason", "no reachable supporting face");
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Inventory capacity + material accounting (TODO 7.3). free = empty main
+     *  slots (0-35); blockCount = total placeable blocks; per-item counts of
+     *  block stacks so a builder can plan without over-promising. */
+    public Map<String, Object> inventorySpace() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            var player = MinecraftClient.getInstance().player;
+            if (player == null) { out.put("ok", false); return out; }
+            var inv = player.getInventory();
+            int free = 0, blockTotal = 0;
+            Map<String, Integer> blocks = new HashMap<>();
+            for (int i = 0; i < 36; i++) {
+                ItemStack st = inv.getStack(i);
+                if (st.isEmpty()) { free++; continue; }
+                if (st.getItem() instanceof net.minecraft.item.BlockItem) {
+                    blockTotal += st.getCount();
+                    String id = net.minecraft.registry.Registries.ITEM.getId(st.getItem()).toString();
+                    blocks.merge(id, st.getCount(), Integer::sum);
+                }
+            }
+            out.put("ok", true);
+            out.put("freeSlots", free);
+            out.put("totalSlots", 36);
+            out.put("blockCount", blockTotal);
+            out.put("blocks", blocks);
+            return out;
+        }, Map.of("ok", false, "error", "client thread timeout"));
+    }
+
     /** Is the in-game voice chat (Plasmo/SVC) connected on this server? */
     public boolean isVoiceChatConnected() {
         return AltoclefVoicechat.VOICE_CONNECTED;
