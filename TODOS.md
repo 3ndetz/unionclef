@@ -26,9 +26,17 @@
     После фикса: swap_test PASS — @goto доходит (dist 0.6) и с tungsten-primary, И
     baritone (был просто заблокирован, не мёртв). Диагностика: [trtick]-лог чейнов
   - [x] 13.2 swap работает: setTungstenPathing(true) → GetToBlockTask.driveTungsten
-    Primary зовёт tungsten PATHFINDER.find напрямую (как ;goto). Тест swap_test PASS.
-    Осталось: полный прогон @gamer на нормальной сложности (survival-мир нужен)
-  - [ ] 13.3 фиксить всплывшие затыки/баги по ходу @gamer (после survival-мира)
+    Primary зовёт tungsten PATHFINDER.find напрямую (как ;goto). Тест swap_test PASS
+  - [~] 13.3 @gamer-СМОУК на survival-мире (добавлен gamer-server, профиль gamer,
+    normal/easy; gamer_smoke.py). НАХОДКИ: @gamer на BARITONE (primary OFF)
+    ПРОГРЕССИРУЕТ — бот двигался, спустился 137→132, набрал 2→22 блоков (нарубил
+    дерева) за ~70с. На TUNGSTEN-PRIMARY — ЗАМОРОЖЕН (drift-стоп на сложном
+    survival-рельефе; tungsten под flat/паркур). Вывод: swap-инфра готова, но
+    tungsten-пасфайндер НЕ готов как полный drop-in на произвольном рельефе —
+    нужна робастность (см. 1.6.3 velocity/airStrafe симуляция, 1.6.4 closed-loop
+    yaw-коррекция против drift). Для survival сейчас навигатор = baritone
+  - [ ] 13.4→ порядок: сначала tungsten terrain-робастность (block 1.6), потом
+    полный @gamer на tungsten-primary. Полный проход @gamer — nightly-масштаб
   - [ ] 13.4 ПОРТ BARITONE-ЭВРИСТИК в tungsten (напоминание юзера): у baritone куча
     важного (эвристики A*, стак-детект, wander, dimension-логика, cost'ы) — портить
     в tungsten по мере. ВАЖНО: делать КРАСИВО, в отдельных потоках, ничего не
@@ -83,8 +91,10 @@
     где может застрять — составить карту зависимостей перед подменой на tungsten
   - [ ] 18.2 tungsten_speedrun таск: спидранит игру на TUNGSTEN-механиках вместо
     baritone (punk на NPC, всё нужное поверх tungsten). Свой таск, не ломая @gamer
-  - [ ] 18.3 два критерия «крещения»: (a) PVP + строительство на bedwars живьём;
-    (b) полный проход @gamer/speedrun — там всплывёт что сломали по пути
+  - [~] 18.3 два критерия «крещения»: (a) PVP + строительство на bedwars живьём;
+    (b) @gamer/speedrun. ПРОГРЕСС: @gamer стартует на survival, baritone-версия
+    рубит дерево (2→22 блоков за 70с) — ранняя игра работает. tungsten-версия
+    застревает на рельефе (drift). Полный проход — nightly, после tungsten 1.6
   - [ ] 18.4 учёт ресурсов при стройке (мысль юзера): планировщик знает сколько
     блоков есть, докапывает недостающее (земля/булыжник) — не обещает мост/стену
     длиннее запаса; связка с inventorySpace + altoclef-инвентарём
