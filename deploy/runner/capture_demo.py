@@ -41,16 +41,15 @@ def ensure_ingame(container):
         time.sleep(3)
     print(f"  warn: {container} maybe not in game")
 
-def record(dur, chat_msgs, hud_off=True):
-    """Start x11grab (detached), fire the scenario, wait, then make the gif."""
+def record(dur, trigger_body):
+    """Start x11grab (detached), fire the scenario (py4j body), wait, make gif."""
     mp4=f"/mc-data/demo_{SCEN}.mp4"; gif=f"/mc-data/demo_{SCEN}.gif"
     py4j(CLIENT, f"mc.setPerspective({PERSP})")
     # start detached screen recording
     subprocess.run(["docker","exec","-d",CLIENT,"ffmpeg","-y","-f","x11grab","-framerate","15",
                     "-i",":0","-t",str(dur),"-pix_fmt","yuv420p",mp4])
     time.sleep(0.8)  # let the recorder spin up
-    body="import time\n"+"".join([f"mc.ChatMessage({json.dumps(m)}); time.sleep(0.15)\n" for m in chat_msgs])
-    py4j(CLIENT, body)
+    py4j(CLIENT, "import time\n"+trigger_body)
     time.sleep(dur+2)
     # mp4 -> gif (downscaled, 10fps)
     subprocess.run(["docker","exec",CLIENT,"ffmpeg","-y","-i",mp4,"-vf","fps=10,scale=600:-1:flags=lanczos",gif],
@@ -67,13 +66,15 @@ def setup_slime():
     rcon("time set day"); rcon("weather clear")
     rcon(f"tp {BOT} -5 -55 0 90 15"); time.sleep(2)
 
-def setup_breakplace():
+def setup_bridge():
+    # a starting platform, then a wide void the bot godbridges across (places blocks)
     rcon("forceload add 0 0 24 4")
-    rcon("fill 0 -61 -3 26 -61 3 stone"); rcon("fill 0 -60 -3 26 -55 3 air")
-    rcon("fill 7 -61 -3 10 -61 3 air")                 # a gap to bridge
-    rcon("fill 15 -60 -1 15 -58 1 stone")              # a wall to break through
-    rcon(f"clear {BOT}"); rcon(f"item replace entity {BOT} hotbar.0 with dirt 64")
-    rcon(f"tp {BOT} 2 -60 0 -90 5"); time.sleep(2)
+    rcon("fill -2 -61 -3 2 -61 3 stone")               # start pad
+    rcon("fill 3 -61 -3 24 -70 3 air")                 # the void ahead
+    rcon("fill -2 -60 -3 24 -55 3 air")
+    rcon(f"clear {BOT}"); rcon(f"item replace entity {BOT} hotbar.0 with cobblestone 64")
+    rcon("time set day"); rcon("weather clear")
+    rcon(f"tp {BOT} 0 -60 0 -90 0"); time.sleep(2)
 
 def setup_pvp():
     rcon("forceload add -8 -8 8 8"); rcon("fill -8 -61 -8 8 -61 8 stone"); rcon("fill -8 -60 -8 8 -55 8 air")
@@ -85,9 +86,9 @@ def setup_pvp():
 def main():
     wait_for("rcon", lambda:"players" in rcon("list"),300,5)
     ensure_ingame(CLIENT); time.sleep(2)
-    if SCEN=="slime":       setup_slime();      record(9,  [";goto 5 -56 0"])
-    elif SCEN=="breakplace":setup_breakplace(); record(16, [";goto 24 -60 0"])
-    elif SCEN=="pvp":       setup_pvp();        record(13, [";punk "+VICTIM])
+    if SCEN=="slime":     setup_slime();  record(9,  'mc.ChatMessage(";goto 5 -56 0")')
+    elif SCEN=="bridge":  setup_bridge(); record(14, 'mc.selectHotbar(0); mc.bridgeForward("east", 14)')
+    elif SCEN=="pvp":     setup_pvp();    record(13, 'mc.ChatMessage(";punk '+VICTIM+'")')
     else: print("unknown scenario"); sys.exit(2)
     print("DONE", SCEN)
 
