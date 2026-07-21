@@ -40,7 +40,7 @@
   - [~] 9.2 операции: //set + //walls ГОТОВЫ. fillSelection(block)=//set (все клетки), wallsSelection(block)=//walls (4 вертикальные стены, полый центр). Общее ядро fillCells(predicate) — без дублей. ЧЕСТНЫЙ blockName: equipHotbarBlock экипирует названный блок из хотбара (не молча ставит что в руке). Снизу вверх (опора у каждой), кап 96/вызов (truncated), возвращает filled/remaining/complete → агент репозиционируется для дальних. Тест PASS: //set cobblestone держа dirt (4/4, доказан equip), //walls кольцо 8/8 + центр air. Осталось: //replace (нужен синхронный break-примитив), //hollow/cyl/sphere (генераторы позиций поверх fillCells)
   - [x] 9.3 "sel set 0" и прочее WorldEdit-like — select+fillSelection как py4j-рычаги для агента (не хардкод сервера, чистые координаты)
   - [x] 9.4 в survival режиме операции идут через РЕАЛЬНУЮ установку (placeBlockAtRaw/interactBlock), НЕ команды сервера — работает в выживании. NB fillSelection де-нест: placeBlockAtRaw (single source, без вложенного onClientThread — тот дедлочил рендер-тред)
-- [ ] 10. Интеграция: единый tungsten = pathfind + break + place + build + WE-ops на одной физ-модели; baritone-фичи (mine, follow, goto, farm?) по мере переноса
+- [~] 10. Интеграция: единый tungsten = pathfind + break + place + build + WE-ops. Цикл агента see→move→build ВАЛИДИРОВАН (agent_loop_test PASS): getGameState→gotoXYZ→buildDefenseAround на bedwars-микросценарии, композиция работает как целое. Осталось: break/mine как рычаг, schematic (block 8), baritone-фичи по мере переноса
 
 ## КОГНИТИВНЫЙ АГЕНТ В PVP-ИГРАХ (bedwars и др.) — крупная задача юзера 2026-07-21
 
