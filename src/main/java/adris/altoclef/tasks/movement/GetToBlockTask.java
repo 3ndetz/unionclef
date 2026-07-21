@@ -17,7 +17,6 @@ public class GetToBlockTask extends CustomBaritoneGoalTask implements ITaskRequi
     private final boolean _preferStairs;
     private final Dimension _dimension;
     private int finishedTicks = 0;
-    private static int _gtbDiag = 0;
     private final TimerGame wanderTimer = new TimerGame(2);
 
     public GetToBlockTask(BlockPos position, boolean preferStairs) {
@@ -40,7 +39,6 @@ public class GetToBlockTask extends CustomBaritoneGoalTask implements ITaskRequi
 
     @Override
     protected Task onTick() {
-        if ((_gtbDiag++ % 20) == 0) Debug.logMessage("[swap] GTB.onTick ticking");
         if (_dimension != null && WorldHelper.getCurrentDimension() != _dimension) {
             return new DefaultGoToDimensionTask(_dimension);
         }

@@ -40,7 +40,6 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             Blocks.SWEET_BERRY_BUSH
     };
     private Task unstuckTask = null;
-    private static int _swapDiag = 0; // throttle for swap diagnostics
 
     // This happens all the time in mineshafts and swamps/jungles
 
@@ -246,27 +245,21 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
      *  onTick (e.g. GetToBlockTask's wander) MUST call this BEFORE their own
      *  stuck/wander logic, or the wander loop starves the swap. */
     protected boolean driveTungstenPrimary(AltoClef mod) {
-        boolean log = (_swapDiag++ % 20 == 0);
-        if (!TungstenHelper.isPrimary()) { if (log) Debug.logMessage("[swap] not primary"); return false; }
+        if (!TungstenHelper.isPrimary()) return false;
         if (cachedGoal == null) cachedGoal = newGoal(mod);
-        if (cachedGoal == null || isFinished()) { if (log) Debug.logMessage("[swap] no goal / finished (cg=" + cachedGoal + ")"); return false; }
+        if (cachedGoal == null || isFinished()) return false;
         net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
-        if (gp == null) { if (log) Debug.logMessage("[swap] goalToVec null for " + cachedGoal.getClass().getSimpleName()); return false; }
+        if (gp == null) return false;
         try {
             var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
             var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
             boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
-            if (log) {
-                Debug.logMessage("[swap] primary drive: goal=" + gp + " pfNull=" + (pf == null)
-                        + " exNull=" + (ex == null) + " busy=" + busy);
-            }
             if (pf != null && !busy) {
                 if (ex != null) ex.stop = false;   // a prior ;stop leaves it stuck true
                 pf.find(mod.getWorld(), gp, mod.getPlayer());
-                Debug.logMessage("[swap] find() called -> " + gp);
             }
         } catch (Throwable t) {
-            Debug.logMessage("[swap] tungsten primary find failed: " + t);
+            Debug.logInternal("[swap] tungsten primary find failed: " + t);
         }
         mod.getClientBaritone().getPathingBehavior().forceCancel();
         checker.reset();

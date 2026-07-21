@@ -18,13 +18,17 @@
     useTungsten + experimentalPathfinding (shredder делегирует tungsten плоские И
     ascend/descend сегменты через TungstenBridge). Flag-тест PASS (off→on→off).
     @goto/@get/@gamer с ним делегируют сегменты tungsten
-  - [ ] 13.1b БЛОКЕР для end-to-end: shredder @goto headless НЕ ведёт движение
-    (busy=true, pos не меняется — обнаружено в goto_test), поэтому проверить swap
-    через @goto на стенде нельзя. Диагностировать почему shredder-исполнение
-    движения не тикает headless (это же всплывёт в @gamer). tungsten ;goto работает
-  - [ ] 13.2 прогон altoclef @gamer на tungsten-пути (после 13.1b): затыки/крафт/где
-    ломается. Длинный — nightly-масштаб
-  - [ ] 13.3 фиксить всплывшие затыки/баги по ходу @gamer
+  - [x] 13.1b КОРЕНЬ НАЙДЕН И ПОФИКШЕН: НЕ shredder-движение — весь altoclef-task-
+    чейн глушился! MobDefenseChain выигрывал КАЖДЫЙ тик (prio 70, ложная run-away
+    на PEACEFUL — закомmenченная peaceful-проверка) → UserTaskChain (навигация)
+    никогда не тикался. Восстановил peaceful-шорткат MobDefense. Плюс UnstuckChain
+    +WorldSurvivalChain defer при tungsten-primary (их shimmy тоже преемптил).
+    После фикса: swap_test PASS — @goto доходит (dist 0.6) и с tungsten-primary, И
+    baritone (был просто заблокирован, не мёртв). Диагностика: [trtick]-лог чейнов
+  - [x] 13.2 swap работает: setTungstenPathing(true) → GetToBlockTask.driveTungsten
+    Primary зовёт tungsten PATHFINDER.find напрямую (как ;goto). Тест swap_test PASS.
+    Осталось: полный прогон @gamer на нормальной сложности (survival-мир нужен)
+  - [ ] 13.3 фиксить всплывшие затыки/баги по ходу @gamer (после survival-мира)
   - [ ] 13.4 ПОРТ BARITONE-ЭВРИСТИК в tungsten (напоминание юзера): у baritone куча
     важного (эвристики A*, стак-детект, wander, dimension-логика, cost'ы) — портить
     в tungsten по мере. ВАЖНО: делать КРАСИВО, в отдельных потоках, ничего не
