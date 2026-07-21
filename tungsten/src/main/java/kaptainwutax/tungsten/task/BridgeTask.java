@@ -27,12 +27,11 @@ public class BridgeTask {
 
     private static boolean active = false;
     private static Direction dir;
-    private static int blocksLeft;
+    private static int blocksRequested;
     private static int placed;
     private static int stuckTicks;
     private static double lastProgress;
-    private static boolean stepping;   // false = PLACE phase, true = STEP phase
-    private static int placeCd;        // ticks to wait between place attempts
+    private static double startAlong = Double.NaN; // position along bridge axis at start
 
     public static synchronized boolean start(String direction, int blocks) {
         Direction d = switch (direction == null ? "" : direction.toLowerCase()) {
@@ -53,14 +52,13 @@ public class BridgeTask {
             else d = Direction.NORTH;                              // -z
         }
         dir = d;
-        blocksLeft = Math.max(1, blocks);
+        blocksRequested = Math.max(1, blocks);
         placed = 0;
         stuckTicks = 0;
         lastProgress = 0;
-        stepping = false;
-        placeCd = 0;
+        startAlong = Double.NaN;
         active = true;
-        Debug.logMessage("Bridging " + dir + " x" + blocksLeft);
+        Debug.logMessage("Bridging " + dir + " x" + blocksRequested);
         return true;
     }
 
@@ -84,12 +82,22 @@ public class BridgeTask {
         var world = player.getEntityWorld();
         var opts = mc.options;
 
-        if (blocksLeft <= 0 || player.getVelocity().y < -0.5) { // done or falling
-            if (player.getVelocity().y < -0.5) Debug.logMessage("Bridge aborted (falling)");
-            else Debug.logMessage("Bridge done: " + placed + " blocks");
+        if (player.getVelocity().y < -0.5) { // falling — paving fell behind
+            Debug.logMessage("Bridge aborted (falling) after " + placed);
             stop();
             return;
         }
+        // stop once we've advanced the requested number of blocks
+        double along = dir.getAxis() == Direction.Axis.X ? player.getX() : player.getZ();
+        if (Double.isNaN(startAlong)) startAlong = along;
+        double advanced = dir.getDirection() == Direction.AxisDirection.POSITIVE
+                ? along - startAlong : startAlong - along;
+        if (advanced >= blocksRequested) {
+            Debug.logMessage("Bridge done: " + (int) advanced + " blocks");
+            stop();
+            return;
+        }
+        placed = (int) Math.max(0, advanced);
 
         // need a block in hand — the caller equips it (selectHotbar); tungsten
         // must not depend on altoclef's inventory layer (dependency direction)
@@ -108,10 +116,13 @@ public class BridgeTask {
         BlockPos targetCell = support.offset(dir);
         Vec3d eye = player.getEyePos();
 
-        // walk forward along the bridge; no sneak (that's the slow/broken way)
+        // SPRINT forward along the bridge — real godbridge speed. No sneak
+        // (that's the slow/broken way). Force sprint at the entity level so it
+        // actually engages (the key alone doesn't always re-trigger it).
         opts.sneakKey.setPressed(false);
-        opts.sprintKey.setPressed(false);
         opts.forwardKey.setPressed(true);
+        opts.sprintKey.setPressed(true);
+        player.setSprinting(true);
 
         // aim: prefer paving the cell 2 ahead as well so a fast walk never
         // outruns the floor. Place the nearest air cell in {targetCell, +2}.
@@ -132,12 +143,6 @@ public class BridgeTask {
             BlockHitResult hit = new BlockHitResult(faceCenter, side, against, false);
             mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
             player.swingHand(Hand.MAIN_HAND);
-            if (!isAir(world, toPlace) && toPlace.equals(targetCell)) {
-                // count a new floor cell laid directly ahead of us
-                placed++;
-                if (placed % 3 == 0) Debug.logMessage("Bridge paved " + placed);
-                if (--blocksLeft <= 0) { Debug.logMessage("Bridge done: " + placed); stop(); return; }
-            }
         }
 
         // stuck detection along the bridge axis
