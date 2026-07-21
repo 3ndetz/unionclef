@@ -31,6 +31,8 @@ public class BridgeTask {
     private static int placed;
     private static int stuckTicks;
     private static double lastProgress;
+    private static boolean stepping;   // false = PLACE phase, true = STEP phase
+    private static int placeCd;        // ticks to wait between place attempts
 
     public static synchronized boolean start(String direction, int blocks) {
         Direction d = switch (direction == null ? "" : direction.toLowerCase()) {
@@ -55,6 +57,8 @@ public class BridgeTask {
         placed = 0;
         stuckTicks = 0;
         lastProgress = 0;
+        stepping = false;
+        placeCd = 0;
         active = true;
         Debug.logMessage("Bridging " + dir + " x" + blocksLeft);
         return true;
@@ -96,41 +100,56 @@ public class BridgeTask {
         }
 
         BlockPos foot = BlockPos.ofFloored(player.getX(), player.getY() - 0.1, player.getZ());
-        BlockPos support = foot.down();          // block we stand on
-        BlockPos targetCell = support.offset(dir); // floating block goes here, then it becomes new floor ahead
+        BlockPos support = foot.down();            // block we stand on
+        BlockPos targetCell = support.offset(dir); // floating block goes here, becomes the next floor
 
-        // face along the bridge, look down at the support's side face
+        // sneak is ALWAYS held so we never walk off the edge into the void
+        opts.sneakKey.setPressed(true);
+        opts.sprintKey.setPressed(false);
+
+        // face along the bridge and look down at the support's outward side face
         Vec3d faceCenter = Vec3d.ofCenter(support).add(Vec3d.of(dir.getVector()).multiply(0.5));
         Vec3d eye = player.getEyePos();
         Vec3d dv = faceCenter.subtract(eye);
         player.setYaw((float) Math.toDegrees(-Math.atan2(dv.x, dv.z)));
         player.setPitch((float) Math.toDegrees(-Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z))));
 
-        // sneak so we can hang over the edge; nudge forward slowly toward the edge
-        opts.sneakKey.setPressed(true);
-        opts.forwardKey.setPressed(true);
-        opts.sprintKey.setPressed(false);
+        boolean targetSolid = !world.getBlockState(targetCell).getCollisionShape(world, targetCell).isEmpty();
 
-        // place the floating block if the target is still air and we're near the edge
-        BlockState targetState = world.getBlockState(targetCell);
-        // progress measured along the bridge axis (x for E/W, z for N/S)
-        double progress = dir.getAxis() == Direction.Axis.X ? player.getX() : player.getZ();
-        if (targetState.isAir()) {
-            // only place when we're actually at/over the support edge (so the
-            // side face is aimable and the new block lands one ahead)
-            BlockHitResult hit = new BlockHitResult(faceCenter, dir, support, false);
-            var res = mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
-            player.swingHand(Hand.MAIN_HAND);
-            if (!world.getBlockState(targetCell).isAir()) {
-                placed++;
+        if (!stepping) {
+            // PLACE phase: stand still (no forward), place the block ahead
+            opts.forwardKey.setPressed(false);
+            if (targetSolid) {
+                stepping = true; // already there — go step onto it
+            } else if (placeCd <= 0) {
+                BlockHitResult hit = new BlockHitResult(faceCenter, dir, support, false);
+                mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
+                player.swingHand(Hand.MAIN_HAND);
+                placeCd = 4;
+                if (!world.getBlockState(targetCell).getCollisionShape(world, targetCell).isEmpty()) {
+                    placed++;
+                    Debug.logMessage("Bridge placed " + placed + " (" + targetCell.toShortString() + ")");
+                    stepping = true;
+                }
+            } else {
+                placeCd--;
+            }
+        } else {
+            // STEP phase: creep forward (sneaking) until standing on the new block
+            opts.forwardKey.setPressed(true);
+            BlockPos newFoot = BlockPos.ofFloored(player.getX(), player.getY() - 0.1, player.getZ());
+            if (!newFoot.equals(foot) && newFoot.getSquaredDistance(support.offset(dir)) < 0.6) {
+                // moved onto the freshly placed floor cell — next block
+                stepping = false;
                 blocksLeft--;
-                Debug.logMessage("Bridge placed " + placed + " (" + targetCell.toShortString() + ")");
+                lastProgress = dir.getAxis() == Direction.Axis.X ? player.getX() : player.getZ();
             }
         }
 
-        // stuck detection: if not advancing for a while, bail
+        // stuck detection
+        double progress = dir.getAxis() == Direction.Axis.X ? player.getX() : player.getZ();
         if (Math.abs(progress - lastProgress) < 0.02) {
-            if (++stuckTicks > 60) { Debug.logMessage("Bridge stuck"); stop(); return; }
+            if (++stuckTicks > 80) { Debug.logMessage("Bridge stuck"); stop(); return; }
         } else {
             stuckTicks = 0;
             lastProgress = progress;
