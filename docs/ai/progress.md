@@ -1,5 +1,26 @@
 # Progress
 
+## WorldEdit-like //set: select + fillSelection (2026-07-21) — СДЕЛАНО
+
+Рычаги для агента (block 9), НЕ команды сервера — чистые координаты, работает в
+выживании через реальную установку блоков (physics-примитив placeBlockAtRaw).
+- select(x1,y1,z1,x2,y2,z2): хранит регион (_selMin/_selMax), рендерит жёлтую
+  подсветку (SELECTION-контейнер, гейтится renderVisualization), возвращает
+  min/max/volume. clearSelection() чистит.
+- fillSelection(block): //set — ставит блок в каждую replaceable-клетку выделения
+  В ДОСЯГАЕМОСТИ, снизу вверх (каждой клетке есть опора: пол или ранее
+  поставленный блок). Кап 96 установок/вызов (truncated-флаг) чтобы не морозить
+  рендер-тред; возвращает filled/remaining/already/complete → агент
+  репозиционируется (tungsten goto) и зовёт снова для дальних клеток. Философия:
+  примитив исполняет, агент оркестрирует достижимость.
+- БАГ + ФИКС: fillSelection крутился внутри onClientThread и звал placeBlockAt,
+  который ОБorачивал onClientThread снова → вложенность ДЕДЛОЧИТ рендер-тред
+  (client-thread timeout, 0 клеток). Вынес ядро в placeBlockAtRaw (assume
+  on-thread, single source); placeBlockAt = обёртка, fillSelection зовёт Raw
+  напрямую. Тест worldedit_test PASS (4/4 dirt, complete=true).
+- Осталось в block 9: //replace (нужен синхронный break-примитив),
+  //walls/hollow/cyl/sphere (генераторы позиций поверх fillSelection).
+
 ## Восприятие когнитивного агента + виз-тумблеры (2026-07-21) — СДЕЛАНО
 
 - getGameState() py4j: self(hp/maxHp/armor/pos/onGround/held/blocks) + players[]

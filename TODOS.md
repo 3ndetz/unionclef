@@ -36,10 +36,10 @@
   - [ ] 8.2 планировщик порядка постройки (снизу вверх, доступность позиций, не замуровать себя), tungsten ведёт к каждой позиции и ставит
   - [ ] 8.3 докупка/добыча недостающих материалов (связка с altoclef-инвентарём)
 - [ ] 9. WorldEdit-подобные команды в tungsten (`;` или свой префикс):
-  - [ ] 9.1 selection: //pos1 //pos2 (или ;sel), хранение региона, рендер-подсветка выделения
-  - [ ] 9.2 операции: //set <block>, //replace <from> <to>, //walls, //hollow, //cyl, //sphere — генерят список позиций, исполняются через placeBlockAt/ломание в физике
-  - [ ] 9.3 "sel set 0" и прочее WorldEdit-like — как просил юзер
-  - [ ] 9.4 в survival режиме операции идут через РЕАЛЬНУЮ установку/ломание (не команды сервера) — на физике tungsten
+  - [x] 9.1 selection: py4j select(x1,y1,z1,x2,y2,z2) — хранит регион, рендерит жёлтую подсветку (SELECTION-контейнер, гейтится renderVisualization), возвращает min/max/volume; clearSelection(). Тест worldedit_test PASS
+  - [~] 9.2 операции: //set ГОТОВ — fillSelection(block) ставит блок в каждую пустую клетку выделения В ДОСЯГАЕМОСТИ (снизу вверх, каждой клетке есть опора), кап 96 установок/вызов (truncated-флаг), возвращает filled/remaining/complete → агент репозиционируется и зовёт снова для дальних клеток. Тест PASS (4/4 dirt). Осталось: //replace (нужен синхронный break-примитив), //walls/hollow/cyl/sphere (генераторы позиций поверх fillSelection)
+  - [x] 9.3 "sel set 0" и прочее WorldEdit-like — select+fillSelection как py4j-рычаги для агента (не хардкод сервера, чистые координаты)
+  - [x] 9.4 в survival режиме операции идут через РЕАЛЬНУЮ установку (placeBlockAtRaw/interactBlock), НЕ команды сервера — работает в выживании. NB fillSelection де-нест: placeBlockAtRaw (single source, без вложенного onClientThread — тот дедлочил рендер-тред)
 - [ ] 10. Интеграция: единый tungsten = pathfind + break + place + build + WE-ops на одной физ-модели; baritone-фичи (mine, follow, goto, farm?) по мере переноса
 
 ## КОГНИТИВНЫЙ АГЕНТ В PVP-ИГРАХ (bedwars и др.) — крупная задача юзера 2026-07-21
