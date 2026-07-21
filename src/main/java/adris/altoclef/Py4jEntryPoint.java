@@ -1857,14 +1857,15 @@ public class Py4jEntryPoint {
         return fillCells(blockName, "//set", c -> true);
     }
 
-    /** WorldEdit-like //walls — fill only the boundary shell of the selection
-     *  (the 6 outer faces: 4 walls + floor + ceiling), leaving the interior
-     *  hollow. Good for boxing an area / a bed. Same reach + per-call cap
-     *  semantics as fillSelection; the agent repositions for out-of-reach faces. */
+    /** WorldEdit-like //walls — fill only the 4 VERTICAL walls of the selection
+     *  (x==min/max or z==min/max), leaving floor, ceiling and interior open.
+     *  A flat 1-high region becomes a perimeter ring. Good for fencing an area
+     *  or a wall segment. Same reach + per-call cap semantics as fillSelection;
+     *  the agent repositions for out-of-reach cells. (For a full 6-face shell,
+     *  wall it then fillSelection the top/bottom layers.) */
     public Map<String, Object> wallsSelection(String blockName) {
         return fillCells(blockName, "//walls", c ->
                 c[0] == _selMin[0] || c[0] == _selMax[0] ||
-                c[1] == _selMin[1] || c[1] == _selMax[1] ||
                 c[2] == _selMin[2] || c[2] == _selMax[2]);
     }
 
