@@ -1,5 +1,17 @@
 # Progress
 
+## Установка блоков + застройка кровати (2026-07-21) — СДЕЛАНО
+
+- placeBlockAt(x,y,z): авто-выбор блока из хотбара, наведение на грань опорного
+  соседа, interactBlock. inventorySpace(): свободные слоты + подсчёт блоков.
+  Тест place_test PASS: 4/4 блока (линия+стек), free=35/blockCount=64.
+- buildDefenseAround(x,y,z): защитный панцирь вокруг кровати (стороны+крыша),
+  переиспользует placeBlockAt. Тест PASS: кольцо вокруг кровати 4/4 solid при
+  обходе с 4 сторон. Это фундамент строительства (блоки 7-10: bridge/schematic/
+  WorldEdit) и bed-defense для BedWars.
+- Минор: buildDefenseAround возвращает завышенный placed-счётчик (88) — ground
+  truth по rcon верен, проверить лишние вызовы placeBlockAt.
+
 ## Живой заход musteryworld + диагноз меню-квирка (2026-07-21)
 
 Живьём на mc.musteryworld.top через тестового клиента (py4j):
