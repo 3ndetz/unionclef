@@ -145,6 +145,14 @@ public class WorldSurvivalChain extends SingleTaskChain {
             return 60;
         }
 
+        // Movement stuck detection — skip when tungsten is PRIMARY (it drives
+        // movement + handles its own stuck recovery; the shimmy would preempt
+        // the user task chain and starve the tungsten-primary hook).
+        if (adris.altoclef.util.helpers.TungstenHelper.isPrimary()) {
+            _numTryingUnstuck = 0;
+            _moveStuckTimer.reset();
+            return Float.NEGATIVE_INFINITY;
+        }
         // Movement stuck detection
         if (_lastPos == null) {
             _lastPos = mod.getPlayer().getPos();
