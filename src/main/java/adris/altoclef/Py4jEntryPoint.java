@@ -1354,6 +1354,52 @@ public class Py4jEntryPoint {
         }, false));
     }
 
+    /** Robust "click the menu item named X" — the fix for the intermittent
+     *  empty-slot reads on headless (the server re-sends the container and a
+     *  single getOpenScreen sample can land in an empty window, breaking
+     *  name-based navigation and autojoin). Retries the read across ticks
+     *  (up to ~timeoutMs) until a slot's display name contains any of the
+     *  given substrings (case-insensitive, color codes stripped), then clicks
+     *  it. Reuses the same read/click plumbing — one source of truth.
+     *  Returns the clicked slot index, or -1 if not found in time. */
+    public int clickMenuByName(java.util.List<String> names, int button, String action, int timeoutMs) {
+        long deadline = System.currentTimeMillis() + Math.max(500, timeoutMs);
+        net.minecraft.screen.slot.SlotActionType type;
+        try { type = net.minecraft.screen.slot.SlotActionType.valueOf(action.toUpperCase()); }
+        catch (Exception e) { type = net.minecraft.screen.slot.SlotActionType.PICKUP; }
+        final var ftype = type;
+        while (System.currentTimeMillis() < deadline) {
+            Integer idx = onClientThread(() -> {
+                MinecraftClient client = MinecraftClient.getInstance();
+                if (client.player == null || client.currentScreen == null) return null;
+                var h = client.player.currentScreenHandler;
+                for (int i = 0; i < h.slots.size(); i++) {
+                    var st = h.getSlot(i).getStack();
+                    if (st == null || st.isEmpty()) continue;
+                    String nm = st.getName().getString();
+                    if (nm == null) continue;
+                    String low = nm.toLowerCase();
+                    for (String want : names) {
+                        if (want != null && low.contains(want.toLowerCase())) return i;
+                    }
+                }
+                return null;
+            }, null);
+            if (idx != null) {
+                final int fi = idx;
+                Boolean ok = onClientThread(() -> {
+                    var slot = adris.altoclef.util.slots.Slot.getFromCurrentScreen(fi);
+                    _mod.getSlotHandler().forceAllowNextSlotAction();
+                    _mod.getSlotHandler().clickSlot(slot, button, ftype);
+                    return true;
+                }, false);
+                if (Boolean.TRUE.equals(ok)) return fi;
+            }
+            try { Thread.sleep(120); } catch (InterruptedException ie) { break; }
+        }
+        return -1;
+    }
+
     /** Select hotbar slot 0-8. */
     public boolean selectHotbar(int slot) {
         if (slot < 0 || slot > 8) return false;
