@@ -1823,14 +1823,16 @@ public class Py4jEntryPoint {
     // goto command through the configured prefix).
     private int[] _gotoGoal = null;
 
-    /** Navigate to a world coordinate via altoclef's general pathfinder
-     *  (baritone/shredder — handles arbitrary terrain, breaking, water). Returns
-     *  immediately; poll pathStatus() until arrived. For physics-parkour /
-     *  godbridge segments use the tungsten levers instead (ChatMessage(";goto
-     *  x y z"), bridgeTo). The agent picks the tool; the mod executes. */
+    /** Navigate to a world coordinate via the TUNGSTEN physics pathfinder (the
+     *  project's unified pather — walks/parkours/bridges on the movement model).
+     *  Returns immediately; poll pathStatus() until arrived. The agent can also
+     *  drive tungsten directly (ChatMessage(prefix+"goto x y z"), bridgeTo) or
+     *  use altoclef @goto for the baritone/shredder navigator — this lever is
+     *  the clean default. Server-agnostic (pure coords). */
     public Map<String, Object> gotoXYZ(int x, int y, int z) {
         _gotoGoal = new int[]{x, y, z};
-        executeInNetworkThread(() -> _mod.getCommandExecutor().executeWithPrefix("goto " + x + " " + y + " " + z));
+        String p = kaptainwutax.tungsten.TungstenMod.getCommandPrefix();
+        ChatMessage(p + "goto " + x + " " + y + " " + z);   // tungsten intercepts chat send
         Map<String, Object> out = new HashMap<>();
         out.put("ok", true);
         out.put("goal", x + "," + y + "," + z);
@@ -1859,9 +1861,12 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
-    /** Cancel the current navigation / task (agent aborts a goto or any task). */
+    /** Cancel current navigation / tasks — stops BOTH the tungsten pather
+     *  (;stop) and any altoclef task (@stop), so the agent's "stop" is total. */
     public Map<String, Object> stopPathing() {
-        executeInNetworkThread(() -> _mod.getCommandExecutor().executeWithPrefix("stop"));
+        String p = kaptainwutax.tungsten.TungstenMod.getCommandPrefix();
+        ChatMessage(p + "stop");                                                            // tungsten
+        executeInNetworkThread(() -> _mod.getCommandExecutor().executeWithPrefix("stop"));  // altoclef
         _gotoGoal = null;
         return Map.of("ok", true);
     }
