@@ -27,7 +27,11 @@ elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="chat": mc.ChatMessage(req["msg"]); out={"ok":True}
 elif op=="place": out=dict(mc.placeBlockAt(int(req["x"]),int(req["y"]),int(req["z"])))
 elif op=="space": out=dict(mc.inventorySpace())
-elif op=="defend": out=dict(mc.buildDefenseAround(int(req["x"]),int(req["y"]),int(req["z"])))
+elif op=="defend":
+    r=mc.buildDefenseAround(int(req["x"]),int(req["y"]),int(req["z"]))
+    out={"ok":r.get("ok"),"complete":r.get("complete"),
+         "placed":[str(x) for x in (r.get("placed") or [])],
+         "remaining":[str(x) for x in (r.get("remaining") or [])]}
 elif op=="selhot": out={"ok":mc.selectHotbar(int(req["s"]))}
 print(json.dumps(out,default=str)); gw.close()
 """
