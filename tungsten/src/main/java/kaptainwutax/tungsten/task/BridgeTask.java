@@ -90,6 +90,7 @@ public class BridgeTask {
             mc.options.sprintKey.setPressed(false);
         }
         kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+        kaptainwutax.tungsten.TungstenModRenderContainer.TEST.clear();
     }
 
     /** Called every game tick from MixinClientPlayerEntity. */
@@ -151,6 +152,13 @@ public class BridgeTask {
         } else if (isAir(world, targetCell.offset(dir))) {
             toPlace = targetCell.offset(dir); against = targetCell; // extend one more ahead
         }
+
+        // visualize the next paved cells (cyan) — gated by renderPathMoves via
+        // the RENDERERS container in MixinDebugRenderer
+        kaptainwutax.tungsten.TungstenModRenderContainer.TEST.clear();
+        kaptainwutax.tungsten.TungstenModRenderContainer.TEST.add(new kaptainwutax.tungsten.render.Cuboid(
+                new Vec3d(targetCell.getX() + 0.1, targetCell.getY() + 0.1, targetCell.getZ() + 0.1),
+                new Vec3d(0.8, 0.3, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 255)));
 
         if (toPlace != null) {
             Vec3d faceCenter = Vec3d.ofCenter(against).add(Vec3d.of(dir.getVector()).multiply(0.5));

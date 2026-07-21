@@ -42,6 +42,24 @@ public class TungstenConfig {
      *  Keep false in normal use to reduce noise. */
     public boolean verboseDebugLogging = false;
 
+    // ---- visualization (render toggles) ----
+
+    /** Master render toggle. false = draw NOTHING from tungsten (paths, goal,
+     *  parkour moves, combat trajectory, break plan). Turn off to keep the view
+     *  clean or shave render cost. Toggle live: ;settings renderVisualization false */
+    public boolean renderVisualization = true;
+
+    /** Draw the path / parkour-move renderers (block path, running path, node
+     *  search). false hides parkour-move visualization while keeping combat/
+     *  break overlays. Toggle: ;settings renderPathMoves false */
+    public boolean renderPathMoves = true;
+
+    /** Draw the mining break plan (queued=orange, current=red). */
+    public boolean renderBreakPlan = true;
+
+    /** Draw combat aim/trajectory overlays. */
+    public boolean renderCombat = true;
+
     /** Max time (ms) for A* input search before emitting bestSoFar.
      *  Higher = better routes on parkour, lower = faster response.
      *  Upstream default: 1800. Our default: 15000 (parkour needs more time). */

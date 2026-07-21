@@ -132,17 +132,22 @@
 		//$$ }
 		//#else
 		public void render(Frustum frustum, double cameraX, double cameraY, double cameraZ, float tickProgress, CallbackInfo ci) {
+		    // Master toggle — draw nothing when visualization is off.
+		    kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
+		    if (!cfg.renderVisualization) return;
+
 		    // 1.21.11: Line.render() uses GizmoDrawing — just iterate renderers
-		    Cuboid goal = new Cuboid(TungstenMod.TARGET.subtract(0.5D, 0D, 0.5D), new Vec3d(1.0D, 2.0D, 1.0D), Color.GREEN);
-		    goal.render(null);
-		
-		    renderAll(TungstenModRenderContainer.RUNNING_PATH_RENDERER);
-		    renderAll(TungstenModRenderContainer.BLOCK_PATH_RENDERER);
-		    renderAll(TungstenModRenderContainer.RENDERERS);
-		    renderAll(TungstenModRenderContainer.TEST);
-		    renderAll(TungstenModRenderContainer.ERROR);
-		    renderAll(TungstenModRenderContainer.COMBAT_TRAJECTORY);
-		    renderAll(TungstenModRenderContainer.BREAK_PLAN);
+		    if (cfg.renderPathMoves) {
+		        Cuboid goal = new Cuboid(TungstenMod.TARGET.subtract(0.5D, 0D, 0.5D), new Vec3d(1.0D, 2.0D, 1.0D), Color.GREEN);
+		        goal.render(null);
+		        renderAll(TungstenModRenderContainer.RUNNING_PATH_RENDERER);
+		        renderAll(TungstenModRenderContainer.BLOCK_PATH_RENDERER);
+		        renderAll(TungstenModRenderContainer.RENDERERS);
+		        renderAll(TungstenModRenderContainer.TEST);
+		        renderAll(TungstenModRenderContainer.ERROR);
+		    }
+		    if (cfg.renderCombat) renderAll(TungstenModRenderContainer.COMBAT_TRAJECTORY);
+		    if (cfg.renderBreakPlan) renderAll(TungstenModRenderContainer.BREAK_PLAN);
 		}
 		
 		private static void renderAll(Collection<Renderer> renderers) {
