@@ -1816,6 +1816,56 @@ public class Py4jEntryPoint {
     public boolean bridgeActive() { return kaptainwutax.tungsten.task.BridgeTask.isActive(); }
     public int bridgePlaced() { return kaptainwutax.tungsten.task.BridgeTask.getPlaced(); }
 
+    // Movement lever for the cognitive agent — the keystone that ties perception
+    // (getGameState) to action. Fire-and-poll: gotoXYZ() then pathStatus() until
+    // arrived. This is also how the agent repositions to reach far fillSelection
+    // cells. Server-agnostic (pure coords), single-source (wraps the existing
+    // goto command through the configured prefix).
+    private int[] _gotoGoal = null;
+
+    /** Navigate to a world coordinate via altoclef's general pathfinder
+     *  (baritone/shredder — handles arbitrary terrain, breaking, water). Returns
+     *  immediately; poll pathStatus() until arrived. For physics-parkour /
+     *  godbridge segments use the tungsten levers instead (ChatMessage(";goto
+     *  x y z"), bridgeTo). The agent picks the tool; the mod executes. */
+    public Map<String, Object> gotoXYZ(int x, int y, int z) {
+        _gotoGoal = new int[]{x, y, z};
+        executeInNetworkThread(() -> _mod.getCommandExecutor().executeWithPrefix("goto " + x + " " + y + " " + z));
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true);
+        out.put("goal", x + "," + y + "," + z);
+        return out;
+    }
+
+    /** Poll the current navigation: busy (still pathing/task running), current
+     *  pos, distance to the last gotoXYZ goal, and arrived (within 1.5). The
+     *  agent loops gotoXYZ → pathStatus until arrived, then acts. */
+    public Map<String, Object> pathStatus() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            var me = MinecraftClient.getInstance().player;
+            if (me == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            out.put("ok", true);
+            out.put("busy", hasActiveTask());
+            out.put("pos", String.format("%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
+            if (_gotoGoal != null) {
+                double dx = _gotoGoal[0] + 0.5 - me.getX(), dy = _gotoGoal[1] - me.getY(), dz = _gotoGoal[2] + 0.5 - me.getZ();
+                double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                out.put("goal", _gotoGoal[0] + "," + _gotoGoal[1] + "," + _gotoGoal[2]);
+                out.put("distance", String.format("%.1f", dist));
+                out.put("arrived", dist < 1.5);
+            }
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Cancel the current navigation / task (agent aborts a goto or any task). */
+    public Map<String, Object> stopPathing() {
+        executeInNetworkThread(() -> _mod.getCommandExecutor().executeWithPrefix("stop"));
+        _gotoGoal = null;
+        return Map.of("ok", true);
+    }
+
     // WorldEdit-like region selection + fill (TODO block 9). A lever for the
     // agent: select a region, then fill/clear it — the mod places/breaks via
     // the physics primitives; the agent repositions to reach far cells. No
