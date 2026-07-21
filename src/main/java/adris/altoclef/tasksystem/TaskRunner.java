@@ -11,6 +11,7 @@ public class TaskRunner {
     private final ArrayList<TaskChain> chains = new ArrayList<>();
     private final AltoClef mod;
     private boolean active;
+    private static int _diag = 0;
 
     private TaskChain cachedCurrentTaskChain = null;
     public GameMenuTaskChain gameMenuTaskChain = null;
@@ -54,6 +55,7 @@ public class TaskRunner {
         cachedCurrentTaskChain = maxChain;
         if (maxChain != null) {
             statusReport = "Chain: " + maxChain.getName() + ", priority: " + maxPriority;
+            if ((_diag++ % 40) == 0) adris.altoclef.Debug.logMessage("[trtick] win=" + maxChain.getName() + " prio=" + maxPriority);
             maxChain.tick();
         } else {
             statusReport = " (no chain running) ";
