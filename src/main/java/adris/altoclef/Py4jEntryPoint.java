@@ -1932,9 +1932,11 @@ public class Py4jEntryPoint {
             var s = _mod.getClientBaritoneSettings();
             s.useTungsten.value = on;
             s.experimentalPathfinding.value = on;
+            adris.altoclef.util.helpers.TungstenHelper.setPrimary(on); // route altoclef goals straight to tungsten
             out.put("ok", true);
             out.put("useTungsten", s.useTungsten.value);
             out.put("experimentalPathfinding", s.experimentalPathfinding.value);
+            out.put("tungstenPrimary", adris.altoclef.util.helpers.TungstenHelper.isPrimary());
             out.put("tungstenMinSegment", s.tungstenMinSegment.value);
         } catch (Exception e) { out.put("ok", false); out.put("reason", e.getMessage()); }
         return out;
@@ -1948,6 +1950,7 @@ public class Py4jEntryPoint {
             out.put("ok", true);
             out.put("useTungsten", s.useTungsten.value);
             out.put("experimentalPathfinding", s.experimentalPathfinding.value);
+            out.put("tungstenPrimary", adris.altoclef.util.helpers.TungstenHelper.isPrimary());
             out.put("tungstenMinSegment", s.tungstenMinSegment.value);
         } catch (Exception e) { out.put("ok", false); out.put("reason", e.getMessage()); }
         return out;

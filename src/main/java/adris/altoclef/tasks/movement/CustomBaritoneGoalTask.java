@@ -154,6 +154,20 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             cachedGoal = newGoal(mod);
         }
 
+        // ── Tungsten-PRIMARY (drop-in swap, TODO 13): route straight to tungsten
+        //    instead of waiting for baritone to fail. Baritone movement doesn't
+        //    execute on some headless clients; tungsten always drives the player. ──
+        if (TungstenHelper.isPrimary() && !TungstenHelper.isLocked() && !TungstenHelper.isActive()
+                && cachedGoal != null && !isFinished()) {
+            net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
+            if (gp != null && TungstenHelper.tryPathTo(gp)) {
+                mod.getClientBaritone().getPathingBehavior().forceCancel();
+                checker.reset();
+                setDebugState("Tungsten (primary) pathfinding...");
+                return null;
+            }
+        }
+
         // ── Tungsten lock: exclusive 30s control, Baritone stays off ──
         if (TungstenHelper.isLocked()) {
             TungstenHelper.tickLock();
@@ -232,5 +246,16 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     protected abstract Goal newGoal(AltoClef mod);
 
     protected void onWander(AltoClef mod) {
+    }
+
+    /** Extract a target position from a baritone goal for tungsten (GoalBlock /
+     *  GoalGetToBlock / GoalNear carry x,y,z). Null if the goal has no point. */
+    private static net.minecraft.util.math.Vec3d goalToVec(Goal goal, AltoClef mod) {
+        if (goal instanceof baritone.api.pathing.goals.GoalBlock gb) {
+            return new net.minecraft.util.math.Vec3d(gb.x, gb.y, gb.z);
+        } else if (goal instanceof baritone.api.pathing.goals.GoalGetToBlock gg) {
+            return new net.minecraft.util.math.Vec3d(gg.x, gg.y, gg.z);
+        }
+        return null;
     }
 }
