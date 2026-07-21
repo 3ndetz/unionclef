@@ -20,6 +20,7 @@ if op=="state": out={"inGame":mc.inGame(),"name":mc.getUsername()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="selhot": out={"ok":mc.selectHotbar(int(req["s"]))}
 elif op=="bridge": out={"ok":mc.bridgeForward(req["dir"],int(req["n"]))}
+elif op=="bridgeto": out={"ok":mc.bridgeTo(int(req["x"]),int(req["y"]),int(req["z"]))}
 elif op=="bstate": out={"active":mc.bridgeActive(),"placed":mc.bridgePlaced()}
 print(json.dumps(out,default=str)); gw.close()
 """
@@ -91,9 +92,23 @@ def main():
     gap_blocks=sum(1 for x in (3,4,5,6,7) if not is_block(f"{x} -61 4 air"))
     print(f"  end pos {p1}  advanced_x={advanced:.1f}  fell={fell}  placed={placed}  gap_floor={gap_blocks}/5")
 
+    # ---- bridgeTo a target across a further void ----
+    print("[bridge to target]")
+    rcon(f"tp {BOT} 2.5 -60 4.5 -90 0"); time.sleep(2)
+    p2=pos()
+    py4j("bridgeto",x=10,y=-60,z=4)
+    t0=time.time()
+    while time.time()-t0<30:
+        if not py4j("bstate")["active"]: break
+        time.sleep(2)
+    time.sleep(1)
+    p3=pos()
+    reached = p3[0]>=9.0 and p3[1]>=-60.5
+    print(f"  bridgeTo(10,-60,4): end {p3}  reached_x>=9={p3[0]>=9.0}  not_fell={p3[1]>=-60.5}")
+
     print("\n=== RESULTS ===")
-    ok = (not fell) and advanced>=3.0 and gap_blocks>=3
-    print(f"  advanced {advanced:.1f} (need >=3), not fell {not fell}, gap floor {gap_blocks}/5 (need >=3)")
+    ok = (not fell) and advanced>=3.0 and gap_blocks>=3 and reached
+    print(f"  fwd advanced {advanced:.1f} (>=3), not fell {not fell}, gap {gap_blocks}/5 (>=3), bridgeTo reached {reached}")
     print("  BRIDGE:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)
 

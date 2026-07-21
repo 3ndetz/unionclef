@@ -62,6 +62,19 @@ public class BridgeTask {
         return true;
     }
 
+    /** Bridge TOWARD a target position — picks the dominant horizontal cardinal
+     *  and bridges until the along-axis position reaches the target (for
+     *  bedwars: bridge to the enemy island/bed). */
+    public static boolean startTo(int tx, int ty, int tz) {
+        ClientPlayerEntity p = MinecraftClient.getInstance().player;
+        if (p == null) return false;
+        double dx = tx + 0.5 - p.getX(), dz = tz + 0.5 - p.getZ();
+        if (Math.abs(dx) >= Math.abs(dz)) {
+            return start(dx >= 0 ? "east" : "west", (int) Math.ceil(Math.abs(dx)));
+        }
+        return start(dz >= 0 ? "south" : "north", (int) Math.ceil(Math.abs(dz)));
+    }
+
     public static boolean isActive() { return active; }
     public static int getPlaced() { return placed; }
 

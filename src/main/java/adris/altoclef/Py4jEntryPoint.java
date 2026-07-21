@@ -1777,6 +1777,14 @@ public class Py4jEntryPoint {
             return true;
         } catch (Exception e) { return false; }
     }
+    /** Godbridge TOWARD a target position (bedwars: bridge to enemy island). */
+    public boolean bridgeTo(int x, int y, int z) {
+        try {
+            net.minecraft.client.MinecraftClient.getInstance().execute(() ->
+                    kaptainwutax.tungsten.task.BridgeTask.startTo(x, y, z));
+            return true;
+        } catch (Exception e) { return false; }
+    }
     public boolean bridgeActive() { return kaptainwutax.tungsten.task.BridgeTask.isActive(); }
     public int bridgePlaced() { return kaptainwutax.tungsten.task.BridgeTask.getPlaced(); }
 
