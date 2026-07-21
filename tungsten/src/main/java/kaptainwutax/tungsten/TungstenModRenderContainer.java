@@ -16,4 +16,6 @@ public class TungstenModRenderContainer {
 	public static Collection<Renderer> COMBAT_TRAJECTORY = Collections.synchronizedCollection(new ArrayList<>());
 	/** Mining plan: boxes around blocks queued for breaking + the one being mined. */
 	public static Collection<Renderer> BREAK_PLAN = Collections.synchronizedCollection(new ArrayList<>());
+	/** WorldEdit-like selection region highlight. */
+	public static Collection<Renderer> SELECTION = Collections.synchronizedCollection(new ArrayList<>());
 }

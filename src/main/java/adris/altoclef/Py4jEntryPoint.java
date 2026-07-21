@@ -1809,6 +1809,70 @@ public class Py4jEntryPoint {
     public boolean bridgeActive() { return kaptainwutax.tungsten.task.BridgeTask.isActive(); }
     public int bridgePlaced() { return kaptainwutax.tungsten.task.BridgeTask.getPlaced(); }
 
+    // WorldEdit-like region selection + fill (TODO block 9). A lever for the
+    // agent: select a region, then fill/clear it — the mod places/breaks via
+    // the physics primitives; the agent repositions to reach far cells. No
+    // server commands (works in survival). Server-agnostic (pure coordinates).
+    private int[] _selMin = null, _selMax = null;
+
+    /** Set the WorldEdit-like selection region (inclusive corners, any order). */
+    public Map<String, Object> select(int x1, int y1, int z1, int x2, int y2, int z2) {
+        _selMin = new int[]{Math.min(x1, x2), Math.min(y1, y2), Math.min(z1, z2)};
+        _selMax = new int[]{Math.max(x1, x2), Math.max(y1, y2), Math.max(z1, z2)};
+        // visualize the selection box (gated by renderVisualization)
+        try {
+            kaptainwutax.tungsten.TungstenModRenderContainer.SELECTION.clear();
+            kaptainwutax.tungsten.TungstenModRenderContainer.SELECTION.add(new kaptainwutax.tungsten.render.Cuboid(
+                    new net.minecraft.util.math.Vec3d(_selMin[0], _selMin[1], _selMin[2]),
+                    new net.minecraft.util.math.Vec3d(_selMax[0] - _selMin[0] + 1, _selMax[1] - _selMin[1] + 1, _selMax[2] - _selMin[2] + 1),
+                    new kaptainwutax.tungsten.render.Color(255, 230, 60)));
+        } catch (Exception ignored) {}
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true);
+        out.put("min", _selMin[0] + "," + _selMin[1] + "," + _selMin[2]);
+        out.put("max", _selMax[0] + "," + _selMax[1] + "," + _selMax[2]);
+        int vol = (_selMax[0] - _selMin[0] + 1) * (_selMax[1] - _selMin[1] + 1) * (_selMax[2] - _selMin[2] + 1);
+        out.put("volume", vol);
+        return out;
+    }
+
+    public Map<String, Object> clearSelection() {
+        _selMin = _selMax = null;
+        try { kaptainwutax.tungsten.TungstenModRenderContainer.SELECTION.clear(); } catch (Exception ignored) {}
+        return Map.of("ok", true);
+    }
+
+    /** WorldEdit-like //set — place `blockName` at every empty cell of the
+     *  selection currently within reach (bottom-up so each cell has support).
+     *  The block must be in the hotbar. Returns filled / remaining / total so
+     *  the agent knows to reposition and call again for out-of-reach cells. */
+    public Map<String, Object> fillSelection(String blockName) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            if (_selMin == null) { out.put("ok", false); out.put("reason", "no selection — call select() first"); return out; }
+            int filled = 0, remaining = 0, already = 0;
+            for (int y = _selMin[1]; y <= _selMax[1]; y++) {          // bottom-up
+                for (int x = _selMin[0]; x <= _selMax[0]; x++) {
+                    for (int z = _selMin[2]; z <= _selMax[2]; z++) {
+                        net.minecraft.util.math.BlockPos p = new net.minecraft.util.math.BlockPos(x, y, z);
+                        if (!client.world.getBlockState(p).isReplaceable()) { already++; continue; }
+                        Map<String, Object> r = placeBlockAt(x, y, z);
+                        if (Boolean.TRUE.equals(r.get("placed"))) filled++;
+                        else remaining++;
+                    }
+                }
+            }
+            out.put("ok", true);
+            out.put("filled", filled);
+            out.put("remaining", remaining);   // out of reach — reposition + call again
+            out.put("already", already);
+            out.put("complete", remaining == 0);
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Compact battle game-state for a cognitive agent (TODO 6.1) — one call
      *  that lets the agent "see" the fight without pixel screenshots: self
      *  (hp/pos/held/onGround/blocks), and nearby players (name/pos/distance/

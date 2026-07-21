@@ -148,6 +148,7 @@
 		    }
 		    if (cfg.renderCombat) renderAll(TungstenModRenderContainer.COMBAT_TRAJECTORY);
 		    if (cfg.renderBreakPlan) renderAll(TungstenModRenderContainer.BREAK_PLAN);
+		    renderAll(TungstenModRenderContainer.SELECTION);
 		}
 		
 		private static void renderAll(Collection<Renderer> renderers) {
