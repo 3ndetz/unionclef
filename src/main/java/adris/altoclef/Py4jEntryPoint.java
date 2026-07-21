@@ -1800,6 +1800,56 @@ public class Py4jEntryPoint {
     public boolean bridgeActive() { return kaptainwutax.tungsten.task.BridgeTask.isActive(); }
     public int bridgePlaced() { return kaptainwutax.tungsten.task.BridgeTask.getPlaced(); }
 
+    /** Compact battle game-state for a cognitive agent (TODO 6.1) — one call
+     *  that lets the agent "see" the fight without pixel screenshots: self
+     *  (hp/pos/held/onGround/blocks), and nearby players (name/pos/distance/
+     *  health-visible/hostile-facing). The agent uses this to pick tactics
+     *  (attack/retreat/bridge/buy) and drives the mod primitives. Read-only. */
+    public Map<String, Object> getGameState() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            var me = client.player;
+            if (me == null || client.world == null) { out.put("inGame", false); return out; }
+            out.put("inGame", true);
+
+            Map<String, Object> self = new HashMap<>();
+            self.put("hp", me.getHealth());
+            self.put("maxHp", me.getMaxHealth());
+            self.put("armor", me.getArmor());
+            self.put("pos", String.format("%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
+            self.put("onGround", me.isOnGround());
+            self.put("held", me.getMainHandStack().isEmpty() ? "empty"
+                    : net.minecraft.registry.Registries.ITEM.getId(me.getMainHandStack().getItem()).toString());
+            int blocks = 0;
+            for (int i = 0; i < 36; i++) {
+                var st = me.getInventory().getStack(i);
+                if (st.getItem() instanceof net.minecraft.item.BlockItem) blocks += st.getCount();
+            }
+            self.put("blocks", blocks);
+            out.put("self", self);
+
+            List<Map<String, Object>> players = new ArrayList<>();
+            Vec3d myPos = me.getEntityPos();
+            for (net.minecraft.entity.player.PlayerEntity p : client.world.getPlayers()) {
+                if (p == me) continue;
+                Map<String, Object> pm = new HashMap<>();
+                pm.put("name", p.getName().getString());
+                pm.put("pos", String.format("%.1f,%.1f,%.1f", p.getX(), p.getY(), p.getZ()));
+                pm.put("distance", String.format("%.1f", myPos.distanceTo(p.getEntityPos())));
+                pm.put("hp", p.getHealth());          // visible for tracked players
+                pm.put("sprinting", p.isSprinting());
+                players.add(pm);
+            }
+            players.sort((a, b) -> Double.compare(
+                    Double.parseDouble((String) a.get("distance")),
+                    Double.parseDouble((String) b.get("distance"))));
+            out.put("players", players);
+            out.put("playerCount", players.size());
+            return out;
+        }, Map.of("inGame", false, "error", "client thread timeout"));
+    }
+
     /** Bed / point defense (TODO 6.4): wall up the target cell by placing
      *  blocks on its exposed sides + top (a protective shell), covering every
      *  cell currently in reach. Returns which cells were placed and which
