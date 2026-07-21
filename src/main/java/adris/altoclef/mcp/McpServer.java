@@ -260,6 +260,20 @@ public class McpServer {
         tool("shieldBlock",
                 "Raise the shield for N ticks (blocks arrows/hits).",
                 schema("ticks:int"), a -> booleanMap(api.shieldBlock(argInt(a, "ticks"))));
+        tool("punk",
+                "Hunt one player by name via the tungsten combat engine (A* approach + melee aura).",
+                schema("name:string"), a -> api.punk(argStr(a, "name")));
+        tool("punkAny",
+                "Multi-target hunt: attack the NEAREST player in `allow` (empty = any player), never hitting "
+                + "anyone in `avoid`. Auto re-targets. You pick who to fight; the mod executes.",
+                schema("allow:strarray", "avoid:strarray"),
+                a -> api.punkAny(strList(a, "allow"), strList(a, "avoid")));
+        tool("punkAvoid",
+                "Update the avoid-list mid-fight (never hit these players).",
+                schema("avoid:strarray"), a -> api.punkAvoid(strList(a, "avoid")));
+        tool("punkStop", "Stop the tungsten combat engine.", schema(), a -> api.punkStop());
+        tool("punkStatus", "Combat status: active + the player currently being fought (null if none).",
+                schema(), a -> api.punkStatus());
 
         // building + WorldEdit
         tool("placeBlockAt",
@@ -351,6 +365,11 @@ public class McpServer {
     private static int argInt(JsonObject a, String k) { return a.get(k).getAsInt(); }
     private static String argStr(JsonObject a, String k) { return a.get(k).getAsString(); }
     private static boolean argBool(JsonObject a, String k) { return a.get(k).getAsBoolean(); }
+    private static List<String> strList(JsonObject a, String k) {
+        List<String> out = new ArrayList<>();
+        if (a.has(k) && a.get(k).isJsonArray()) for (JsonElement e : a.getAsJsonArray(k)) out.add(e.getAsString());
+        return out;
+    }
 
     /** Build a JSON-Schema object from "name:type" pairs (int/string/bool/strarray). */
     private static JsonObject schema(String... pairs) {

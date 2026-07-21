@@ -26,15 +26,21 @@ public class PunkPlayerTask {
     private enum Mode { APPROACH, COMBAT }
 
     // ── state ────────────────────────────────────────────────────────────────
-    private static String  targetName   = null;
+    private static String  targetName   = null;   // fixed single-target name (or null)
     private static Entity  targetEntity = null;
     private static boolean active       = false;
     private static Mode    mode         = Mode.APPROACH;
+    private static boolean anyMode      = false;   // hunt nearest ALLOWED target
+
+    // multi-target policy (the brain decides WHO; tungsten executes). Lowercased.
+    private static final java.util.Set<String> allowTargets = new java.util.HashSet<>(); // empty = any player
+    private static final java.util.Set<String> avoidTargets = new java.util.HashSet<>();
 
     private static final CombatController combat = new CombatController();
 
     // ── public API ───────────────────────────────────────────────────────────
 
+    /** Hunt one specific player by name (explicit target overrides allow/avoid). */
     public static void start(String name) {
         stop();
         targetName = name;
@@ -43,19 +49,62 @@ public class PunkPlayerTask {
         Debug.logMessage("Punking player: " + name);
     }
 
+    /** Hunt the NEAREST acceptable player: allow = candidate names (empty = any),
+     *  avoid = never-hit names. The agent's multi-target / avoid-target lever —
+     *  it decides the sets, the mod picks the closest valid one and re-targets
+     *  automatically as the fight evolves. */
+    public static void startAny(java.util.List<String> allow, java.util.List<String> avoid) {
+        stop();
+        setTargets(allow);
+        setAvoid(avoid);
+        anyMode = true;
+        active = true;
+        mode = Mode.APPROACH;
+        Debug.logMessage("Punk ANY allow=" + allowTargets + " avoid=" + avoidTargets);
+    }
+
+    public static void setTargets(java.util.List<String> allow) {
+        allowTargets.clear();
+        if (allow != null) for (String s : allow) if (s != null) allowTargets.add(s.toLowerCase());
+    }
+
+    public static void setAvoid(java.util.List<String> avoid) {
+        avoidTargets.clear();
+        if (avoid != null) for (String s : avoid) if (s != null) avoidTargets.add(s.toLowerCase());
+    }
+
     public static void stop() {
         if (active) {
             combat.releaseKeys();
             FollowEntityTask.stop();
         }
         active       = false;
+        anyMode      = false;
         targetName   = null;
         targetEntity = null;
         mode         = Mode.APPROACH;
+        allowTargets.clear();
+        avoidTargets.clear();
     }
 
     public static boolean isActive()      { return active; }
     public static String  getTargetName() { return targetName; }
+
+    /** Name of the player currently being fought (null if none acquired). */
+    public static String getCurrentTarget() {
+        if (targetEntity instanceof PlayerEntity && targetEntity.isAlive() && !targetEntity.isRemoved())
+            return ((PlayerEntity) targetEntity).getName().getString();
+        return null;
+    }
+
+    /** May we engage this entity under the current allow/avoid policy? */
+    private static boolean isAcceptable(Entity e) {
+        if (!(e instanceof PlayerEntity) || !e.isAlive() || e.isRemoved()) return false;
+        String n = ((PlayerEntity) e).getName().getString().toLowerCase();
+        if (avoidTargets.contains(n)) return false;
+        if (!allowTargets.isEmpty() && !allowTargets.contains(n)) return false;
+        return true;
+    }
 
     // ── tick ─────────────────────────────────────────────────────────────────
 
@@ -110,22 +159,37 @@ public class PunkPlayerTask {
     // ── target discovery ─────────────────────────────────────────────────────
 
     private static void tryRediscover() {
-        if (targetName == null) return;
-
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.world == null) return;
 
+        // keep the current target if it's still valid under the policy
         if (targetEntity != null && !targetEntity.isRemoved()
-                && mc.world.getEntityById(targetEntity.getId()) == targetEntity) {
+                && mc.world.getEntityById(targetEntity.getId()) == targetEntity
+                && (anyMode ? isAcceptable(targetEntity) : targetEntity.isAlive())) {
             return;
         }
 
+        if (anyMode) {
+            // pick the NEAREST acceptable player (allow/avoid policy)
+            PlayerEntity self = mc.player;
+            PlayerEntity best = null;
+            double bestD = Double.MAX_VALUE;
+            for (PlayerEntity p : mc.world.getPlayers()) {
+                if (p == self || !isAcceptable(p)) continue;
+                double d = self.getEntityPos().distanceTo(p.getEntityPos());
+                if (d < bestD) { bestD = d; best = p; }
+            }
+            targetEntity = best;
+            if (targetEntity != null && mode == Mode.APPROACH) FollowEntityTask.start(targetEntity, 1.0);
+            return;
+        }
+
+        // fixed single-name mode
+        if (targetName == null) { targetEntity = null; return; }
         for (PlayerEntity p : mc.world.getPlayers()) {
             if (p.getName().getString().equalsIgnoreCase(targetName)) {
                 targetEntity = p;
-                if (mode == Mode.APPROACH) {
-                    FollowEntityTask.start(targetEntity, 1.0);
-                }
+                if (mode == Mode.APPROACH) FollowEntityTask.start(targetEntity, 1.0);
                 return;
             }
         }

@@ -54,12 +54,15 @@ def main():
     py4j("selhot",s=0)
     py4j("clearprot")  # reset
 
-    inside=(6,-60,6); outside=(4,-60,5)
+    inside=(6,-60,6); outside=(4,-60,5); brk=(5,-60,5)
     mk=py4j("markprot", x=inside[0], y=inside[1], z=inside[2], r=1)
     print(f"  markProtectedArea: {mk}")
+    # a SOLID block inside the zone — break policy only applies to non-air
+    # (air is always "breakable": nothing to mine). brk is inside zone 5..7.
+    rcon(f"setblock {brk[0]} {brk[1]} {brk[2]} stone")
 
     cp_in=py4j("canplace", x=inside[0], y=inside[1], z=inside[2])
-    cb_in=py4j("canbreak", x=inside[0], y=inside[1], z=inside[2])   # same zone must block MINING too
+    cb_in=py4j("canbreak", x=brk[0], y=brk[1], z=brk[2])            # solid block in zone must be UN-mineable
     pl_in=py4j("place", x=inside[0], y=inside[1], z=inside[2])
     inside_air=is_air(*inside)
     print(f"  inside {inside}: canPlace={cp_in.get('canPlace')} canBreak={cb_in.get('canBreak')} policyAllows={cp_in.get('policyAllows')} place.ok={pl_in.get('ok')} reason={pl_in.get('reason')} still_air={inside_air}")

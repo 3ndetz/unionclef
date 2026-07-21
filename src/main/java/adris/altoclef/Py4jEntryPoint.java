@@ -1919,6 +1919,54 @@ public class Py4jEntryPoint {
         return Map.of("ok", true);
     }
 
+    // Combat targeting levers (tungsten PunkPlayerTask). The agent (brain) decides
+    // WHO to hit; tungsten executes approach A* + aura. Distinct from altoclef's
+    // threat-table (attackPlayer/avoidPlayer) — these drive the tungsten engine.
+
+    /** Hunt one player by name via the tungsten combat engine (approach + aura). */
+    public Map<String, Object> punk(String name) {
+        net.minecraft.client.MinecraftClient.getInstance().execute(() ->
+                kaptainwutax.tungsten.task.PunkPlayerTask.start(name));
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true); out.put("target", name);
+        return out;
+    }
+
+    /** Multi-target hunt: attack the NEAREST player in `allow` (empty = any),
+     *  never hitting anyone in `avoid`. Re-targets automatically as the fight
+     *  evolves. The agent picks the sets (brain); the mod executes. */
+    public Map<String, Object> punkAny(java.util.List<String> allow, java.util.List<String> avoid) {
+        net.minecraft.client.MinecraftClient.getInstance().execute(() ->
+                kaptainwutax.tungsten.task.PunkPlayerTask.startAny(allow, avoid));
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true);
+        out.put("allow", allow == null ? java.util.List.of() : allow);
+        out.put("avoid", avoid == null ? java.util.List.of() : avoid);
+        return out;
+    }
+
+    /** Update the avoid-list mid-fight (never hit these players). */
+    public Map<String, Object> punkAvoid(java.util.List<String> avoid) {
+        kaptainwutax.tungsten.task.PunkPlayerTask.setAvoid(avoid);
+        return Map.of("ok", true);
+    }
+
+    /** Stop the tungsten combat engine. */
+    public Map<String, Object> punkStop() {
+        net.minecraft.client.MinecraftClient.getInstance().execute(
+                kaptainwutax.tungsten.task.PunkPlayerTask::stop);
+        return Map.of("ok", true);
+    }
+
+    /** Combat status: active + the player currently being fought (null if none). */
+    public Map<String, Object> punkStatus() {
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true);
+        out.put("active", kaptainwutax.tungsten.task.PunkPlayerTask.isActive());
+        out.put("target", kaptainwutax.tungsten.task.PunkPlayerTask.getCurrentTarget());
+        return out;
+    }
+
     // WorldEdit-like region selection + fill (TODO block 9). A lever for the
     // agent: select a region, then fill/clear it — the mod places/breaks via
     // the physics primitives; the agent repositions to reach far cells. No
