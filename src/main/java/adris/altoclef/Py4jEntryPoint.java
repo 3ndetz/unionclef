@@ -1476,6 +1476,64 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** A physical mouse click via the KEY path (works headless, unlike the
+     *  interactionManager wrapper). "left"=attack/break, "right"=use/interact,
+     *  "middle"=pick block. One-frame press, auto-released by the altoclef tick.
+     *  Aim first (lookAt/rotateCamera); vanilla routes the click to whatever is
+     *  under the crosshair (block, entity, item frame…). Single source of truth
+     *  is InputControls — no duplicated press logic. */
+    public Map<String, Object> mouseClick(String button) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            String b = button == null ? "left" : button.toLowerCase();
+            switch (b) {
+                case "left" -> _mod.getInputControls().tryPress(baritone.api.utils.input.Input.CLICK_LEFT);
+                case "right" -> _mod.getInputControls().tryPress(baritone.api.utils.input.Input.CLICK_RIGHT);
+                case "middle" -> {
+                    var k = client.options.pickItemKey;
+                    k.setPressed(true);
+                    net.minecraft.client.option.KeyBinding.onKeyPressed(k.getDefaultKey());
+                    // released next tick by the client's own key handling
+                }
+                default -> { out.put("ok", false); out.put("reason", "button must be left/right/middle"); return out; }
+            }
+            out.put("ok", true);
+            out.put("button", b);
+            var t = client.crosshairTarget;
+            out.put("hit", t == null ? "NONE" : t.getType().toString());
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Click at pixel coordinates inside the currently OPEN GUI screen (menus,
+     *  sign editors, custom plugin GUIs) — Screen.mouseClicked/Released in the
+     *  scaled GUI space. For inventory SLOTS use clickUiSlot (don't duplicate).
+     *  x/y are scaled-GUI pixels; read them off getScreenshot then divide by
+     *  the GUI scale, or pass raw and set scaled=false to auto-convert. */
+    public Map<String, Object> screenClickAt(double x, double y, String button, boolean scaled) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            net.minecraft.client.gui.screen.Screen s = client.currentScreen;
+            if (s == null) { out.put("ok", false); out.put("reason", "no screen open"); return out; }
+            double sx = x, sy = y;
+            if (!scaled) {
+                double f = client.getWindow().getScaleFactor();
+                sx = x / f; sy = y / f;
+            }
+            int btn = switch (button == null ? "left" : button.toLowerCase()) {
+                case "right" -> 1; case "middle" -> 2; default -> 0; };
+            s.mouseClicked(sx, sy, btn);
+            s.mouseReleased(sx, sy, btn);
+            out.put("ok", true);
+            out.put("screen", s.getClass().getSimpleName());
+            out.put("at", String.format("%.0f,%.0f", sx, sy));
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Right-click whatever ENTITY is currently under the crosshair (item
      *  frames, armor stands, mobs, lobby menu entities) — an interactEntity
      *  packet, not interactItem. Aim with lookAt first. Rotating a captcha
