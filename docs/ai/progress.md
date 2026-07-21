@@ -1,5 +1,25 @@
 # Progress
 
+## DROP-IN SWAP baritone→tungsten + КОРЕНЬ headless-затыка (2026-07-21) — СДЕЛАНО
+
+Юзер: тщательно закрыть drop-in замену baritone на tungsten. Оказалось — глубокий
+pre-existing баг, не связанный с tungsten.
+- setTungstenPathing(true)/pathingMode (py4j+MCP): tungsten-primary. При нём
+  CustomBaritoneGoalTask.driveTungstenPrimary зовёт tungsten PATHFINDER.find
+  напрямую (как ;goto — clear EXECUTOR.stop + find, async). Хук в GetToBlockTask.
+  onTick ДО wander. TungstenHelper.setPrimary флаг (volatile). NB: TungstenHelper-
+  рефлексия была МЁРТВА (искала searchTimeoutMs на PathFinder, а он на
+  TungstenConfig) — обошёл прямым вызовом (altoclef зависит от tungsten).
+- КОРЕНЬ, почему @goto/@gamer НЕ двигались на стенде (диагностика [trtick]-логом
+  побеждающего чейна): **MobDefenseChain выигрывал КАЖДЫЙ тик prio 70** — на
+  PEACEFUL закомmenчена peaceful-проверка, залипала ложная run-away → UserTaskChain
+  (навигация) НИКОГДА не тикался. Восстановил peaceful-шорткат. Это глушило и
+  baritone, и tungsten (баритон был НЕ мёртв, а заблокирован). Плюс UnstuckChain+
+  WorldSurvivalChain shimmy тоже преемптили — defer при primary.
+- Побочно найден баг МОЕЙ диагностики: ConnectToServer в игре → altoclef DISCONNECT
+  CHAIN (self-inflicted вылеты клиента). Тесты коннектятся только если не в игре.
+- Тест swap_test PASS: @goto доходит (dist 0.6) и с tungsten-primary, и baritone.
+
 ## Baritone-совместимость: приваты + multi-target комбат (2026-07-21) — СДЕЛАНО
 
 Ответ на большой блок целей юзера (полная совместимость tungsten с baritone-
