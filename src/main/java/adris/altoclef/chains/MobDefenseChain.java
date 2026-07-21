@@ -192,7 +192,11 @@ public class MobDefenseChain extends SingleTaskChain {
             return Float.NEGATIVE_INFINITY;
         }
 
-        //if (mod.getWorld().getDifficulty() == Difficulty.PEACEFUL) return Float.NEGATIVE_INFINITY;
+        // On PEACEFUL there are no hostile mobs — MobDefense must stand down,
+        // otherwise a stale run-away task keeps it winning at prio 70 and
+        // starves the user task chain (navigation never ticks). Restored.
+        if (mod.getWorld().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL)
+            return Float.NEGATIVE_INFINITY;
 
         if (needsChangeOnAttack && (mod.getPlayer().getHealth() < prevHealth || killAura.attackedLastTick)) {
             needsChangeOnAttack = false;
