@@ -1094,25 +1094,34 @@ public class Py4jEntryPoint {
             // search loop and returns a 2-node stub — clear it for the probe
             kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.stop.set(false);
             try {
-                java.util.Optional<java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>> path =
-                        kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(
-                                _mod.getWorld(),
-                                new net.minecraft.util.math.Vec3d(x + 0.5, y, z + 0.5),
-                                _mod.getPlayer());
-                m.put("found", String.valueOf(path.isPresent()));
-                if (path.isPresent()) {
-                    m.put("pathSize", String.valueOf(path.get().size()));
+                net.minecraft.util.math.Vec3d goal = new net.minecraft.util.math.Vec3d(x + 0.5, y, z + 0.5);
+                // The block-space search occasionally returns a partial best-so-far
+                // stub instead of a full route — retry a few times and keep the
+                // best (a route that actually reaches the goal wins). Makes the
+                // prediction reliable for the cognitive agent.
+                java.util.Optional<java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>> best = java.util.Optional.empty();
+                double bestEnd = Double.MAX_VALUE;
+                for (int attempt = 0; attempt < 4; attempt++) {
+                    kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.stop.set(false);
+                    var path = kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(
+                            _mod.getWorld(), goal, _mod.getPlayer());
+                    if (path.isPresent() && !path.get().isEmpty()) {
+                        var lastN = path.get().get(path.get().size() - 1);
+                        double ed = lastN.getPos(_mod.getWorld()).distanceTo(goal);
+                        if (ed < bestEnd) { bestEnd = ed; best = path; }
+                        if (ed < 2.5) break; // reached — good enough
+                    }
+                }
+                m.put("found", String.valueOf(best.isPresent()));
+                if (best.isPresent()) {
+                    m.put("pathSize", String.valueOf(best.get().size()));
                     int breaks = 0;
-                    for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : path.get()) {
+                    for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : best.get()) {
                         if (n.hasBreaks()) breaks += n.toBreak.size();
                     }
                     m.put("breaks", String.valueOf(breaks));
-                    kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode last = path.get().get(path.get().size() - 1);
-                    double endDist = last.getPos(_mod.getWorld()).distanceTo(new net.minecraft.util.math.Vec3d(x + 0.5, y, z + 0.5));
-                    m.put("endDistance", String.format("%.1f", endDist));
-                    // "found" is true even for partial best-so-far stubs — the
-                    // honest reachability verdict is whether the route ends at the goal
-                    m.put("reached", String.valueOf(endDist < 2.5));
+                    m.put("endDistance", String.format("%.1f", bestEnd));
+                    m.put("reached", String.valueOf(bestEnd < 2.5));
                 }
             } finally {
                 cfg.allowBreak = saved;
