@@ -1830,13 +1830,14 @@ public class Py4jEntryPoint {
             out.put("self", self);
 
             List<Map<String, Object>> players = new ArrayList<>();
-            Vec3d myPos = me.getEntityPos();
             for (net.minecraft.entity.player.PlayerEntity p : client.world.getPlayers()) {
                 if (p == me) continue;
+                double dx = me.getX() - p.getX(), dy = me.getY() - p.getY(), dz = me.getZ() - p.getZ();
+                double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
                 Map<String, Object> pm = new HashMap<>();
                 pm.put("name", p.getName().getString());
                 pm.put("pos", String.format("%.1f,%.1f,%.1f", p.getX(), p.getY(), p.getZ()));
-                pm.put("distance", String.format("%.1f", myPos.distanceTo(p.getEntityPos())));
+                pm.put("distance", String.format("%.1f", dist));
                 pm.put("hp", p.getHealth());          // visible for tracked players
                 pm.put("sprinting", p.isSprinting());
                 players.add(pm);
