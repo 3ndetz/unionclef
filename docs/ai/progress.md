@@ -8,11 +8,16 @@
   .down() ставил в пустоту, placed=0) → машина состояний → kill horizontal
   velocity в PLACE. Результат: 1 блок СТАВИТСЯ + бот ШАГАЕТ (advanced 1.8), но
   на 2-м блоке инерция+sneak-edge сносит за дальний край в пропасть.
-- NB: v6 и v7 end pos побитово идентичны — проверить, не стухший ли деплой jar.
-- Вывод: капризная механика (jump-bridge shredder брал ~8 циклов) — нужна
-  отдельная фокус-сессия на step/place edge-тайминг и sneak-hold в headless.
-  bridge_test.py готов. Остальные примитивы установки (placeBlockAt/defense) —
-  PASS.
+- Чистая сборка (clean build) дала ПОБИТОВО тот же результат → стейлности нет,
+  momentum-kill скомпилирован но ЭФФЕКТА НЕТ. ТОЧНЫЙ БЛОКЕР: sneak НЕ удерживает
+  край в агентском контексте (options.sneakKey.setPressed не даёт isSneaking()-
+  edge-protection на реальном ClientPlayerEntity) → бот падает с 2-го блока;
+  гашение скорости в PLACE запаздывает (снос в STEP). Нужна фокус-сессия:
+  position-based edge-clamp в задаче (стоп forward ДО края, не полагаясь на
+  sneak) ИЛИ переиспользовать shredder jump-bridge (там backward-бридж решён).
+- Остальные примитивы установки (placeBlockAt/defense) — PASS. bridge_test готов.
+- ГОТЧА ДЛЯ БУДУЩЕГО: инкрементальная сборка иногда НЕ перекомпилирует изменения
+  tungsten-субпроекта → для tungsten-правок надёжнее ./gradlew clean build.
 
 ## Установка блоков + застройка кровати (2026-07-21) — СДЕЛАНО
 
