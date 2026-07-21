@@ -44,6 +44,7 @@ services:
       MC_MAX_MEM: "3G"
     ports:
       - "5820:5800"                 # noVNC (debug only)
+      - "25350:25350"               # in-mod MCP server (LAN control surface)
     volumes:
       - ./run/data/tester1:/mc-data
       - ./run/mods:/mc-data/mods:ro

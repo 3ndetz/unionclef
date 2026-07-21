@@ -586,6 +586,27 @@ public class Settings implements IFailableConfigFile {
     }
 
     /**
+     * MCP server (Model Context Protocol over Streamable HTTP) hosted directly
+     * by the mod, bound to 0.0.0.0 so a cognitive agent (Claude) can drive the
+     * bot over the LAN — http://&lt;lan-ip&gt;:mcpPort/mcp. Wraps the same
+     * Py4jEntryPoint levers (single source). Disable to close the LAN port.
+     */
+    private boolean mcpEnabled = true;
+    private int mcpPort = 25350;
+
+    public boolean isMcpEnabled() {
+        return mcpEnabled;
+    }
+
+    public int getMcpPort() {
+        return mcpPort;
+    }
+
+    public void setMcpPort(int port) {
+        this.mcpPort = port;
+    }
+
+    /**
      * Last known good nickname. If we log in as PlayerNNN,
      * this nick is restored automatically.
      */

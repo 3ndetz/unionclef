@@ -134,6 +134,8 @@ public class AltoClef implements ModInitializer {
     // Py4j bridge
     private Py4jEntryPoint _py4jEntryPoint = null;
     private GatewayServer _gatewayServer = null;
+    // MCP server (LAN-hosted control surface over the same levers)
+    private adris.altoclef.mcp.McpServer _mcpServer = null;
 
     public static adris.altoclef.util.agent.Pipeline getPipeline() {
         return _pipeline;
@@ -191,6 +193,7 @@ public class AltoClef implements ModInitializer {
                 }
                 _py4jEntryPoint.InitPythonCallback();
                 Debug.logMessage("Py4j gateway started on port " + port);
+                startMcpServer();
                 return;
             } catch (Py4JNetworkException e) {
                 if (e.getCause() instanceof java.net.BindException) {
@@ -203,6 +206,21 @@ public class AltoClef implements ModInitializer {
             }
         }
         Debug.logError("Py4j: failed to bind after " + MAX_ATTEMPTS + " attempts, giving up");
+    }
+
+    /** Start the in-mod MCP server (LAN-hosted, 0.0.0.0:mcpPort) so a cognitive
+     *  agent can drive the bot over the network through the same levers. */
+    private void startMcpServer() {
+        if (!getModSettings().isMcpEnabled() || _mcpServer != null || _py4jEntryPoint == null) return;
+        try {
+            _mcpServer = new adris.altoclef.mcp.McpServer(_py4jEntryPoint);
+            int mport = getModSettings().getMcpPort();
+            _mcpServer.start(mport);
+            Debug.logMessage("MCP server started on 0.0.0.0:" + mport + " (http://<lan-ip>:" + mport + "/mcp)");
+        } catch (Exception e) {
+            Debug.logWarning("MCP server failed to start: " + e.getMessage());
+            _mcpServer = null;
+        }
     }
 
     public void stopPythonSender() {
