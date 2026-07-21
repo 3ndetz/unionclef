@@ -13,12 +13,17 @@
   getGameState (чтение) + fillSelection (действие) через HTTP → 4/4. Клод рулит по
   http://<lan-ip>:25350/mcp. Осталось: подключить в мой Claude-конфиг, дописывать
   инструменты по мере роста рычагов
-- [ ] 13. TUNGSTEN как DROP-IN замена baritone (проверить что реально работает):
-  - [ ] 13.1 конфиг-тумблер «весь pathing через tungsten вместо baritone» (сейчас
-    частично: shredder useTungsten/TungstenBridge делегирует плоские сегменты).
-    Прокинуть tungsten в основной путь goto/mine/follow, чтобы гонять как замену
-  - [ ] 13.2 прогон altoclef @gamer (проход игры) на tungsten-пути: смотреть не
-    затыкается ли бот, нет ли багов крафта, где ломается. Длинный — nightly-масштаб
+- [~] 13. TUNGSTEN как DROP-IN замена baritone (проверить что реально работает):
+  - [x] 13.1 тумблер setTungstenPathing(on)/pathingMode (py4j+MCP) — включает
+    useTungsten + experimentalPathfinding (shredder делегирует tungsten плоские И
+    ascend/descend сегменты через TungstenBridge). Flag-тест PASS (off→on→off).
+    @goto/@get/@gamer с ним делегируют сегменты tungsten
+  - [ ] 13.1b БЛОКЕР для end-to-end: shredder @goto headless НЕ ведёт движение
+    (busy=true, pos не меняется — обнаружено в goto_test), поэтому проверить swap
+    через @goto на стенде нельзя. Диагностировать почему shredder-исполнение
+    движения не тикает headless (это же всплывёт в @gamer). tungsten ;goto работает
+  - [ ] 13.2 прогон altoclef @gamer на tungsten-пути (после 13.1b): затыки/крафт/где
+    ломается. Длинный — nightly-масштаб
   - [ ] 13.3 фиксить всплывшие затыки/баги по ходу @gamer
 - [~] 14. ПОЛНАЯ break/place-совместимость tungsten с ограничениями baritone/altoclef:
   - [x] 14.1 BREAK: BreakRules → canBreakHook → shouldAvoidBreaking бриджит (защита
