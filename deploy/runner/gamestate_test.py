@@ -21,6 +21,7 @@ elif op=="gs":
     gs=mc.getGameState()
     out={"self":dict(gs.get("self") or {}),
          "players":[dict(p) for p in (gs.get("players") or [])],
+         "beds":[dict(b) for b in (gs.get("beds") or [])],
          "inGame":gs.get("inGame"),"playerCount":gs.get("playerCount")}
 print(json.dumps(out,default=str)); gw.close()
 """
@@ -54,20 +55,24 @@ def main():
         py4j(VC,"connect",ip="test-server"); wait_for("victim ingame",lambda:py4j(VC,"state")["inGame"],180,5); time.sleep(4)
     rcon(f"clear {F}"); rcon(f"item replace entity {F} hotbar.0 with dirt 32")
     rcon(f"tp {F} 0.5 -60 0.5 0 0"); rcon(f"tp {V} 4.5 -60 0.5 0 0")
+    rcon("setblock 3 -60 3 red_bed")  # a bed to detect nearby
     time.sleep(3)
 
     gs = py4j(FC,"gs")
-    print("  gameState:", json.dumps(gs)[:400])
+    print("  gameState:", json.dumps(gs)[:500])
     self = gs.get("self",{})
     players = gs.get("players",[])
+    beds = gs.get("beds",[])
     ok = (gs.get("inGame")
           and float(self.get("hp",0))>0
           and int(self.get("blocks",0))>=30
           and self.get("held","").endswith("dirt")
-          and any(p.get("name")==V and float(p.get("distance",99))<6 for p in players))
+          and any(p.get("name")==V and float(p.get("distance",99))<6 for p in players)
+          and len(beds)>=1 and float(beds[0].get("distance",99))<10)
     print(f"\n=== RESULTS ===")
     print(f"  self hp={self.get('hp')} blocks={self.get('blocks')} held={self.get('held')}")
     print(f"  players={[(p.get('name'),p.get('distance')) for p in players]}")
+    print(f"  beds={[(b.get('pos'),b.get('distance')) for b in beds]}")
     print("  GAMESTATE:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)
 

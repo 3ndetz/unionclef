@@ -1856,6 +1856,32 @@ public class Py4jEntryPoint {
                     Double.parseDouble((String) b.get("distance"))));
             out.put("players", players);
             out.put("playerCount", players.size());
+
+            // bed scan (bedwars perception) — nearest bed blocks in a radius, so
+            // the agent knows where to attack (enemy bed) / defend (own bed)
+            List<Map<String, Object>> beds = new ArrayList<>();
+            net.minecraft.util.math.BlockPos base = me.getBlockPos();
+            int R = 40;
+            for (int dx = -R; dx <= R && beds.size() < 8; dx += 1) {
+                for (int dz = -R; dz <= R && beds.size() < 8; dz += 1) {
+                    for (int dy = -8; dy <= 8; dy++) {
+                        net.minecraft.util.math.BlockPos bp = base.add(dx, dy, dz);
+                        if (client.world.getBlockState(bp).getBlock() instanceof net.minecraft.block.BedBlock
+                                && client.world.getBlockState(bp).get(net.minecraft.block.BedBlock.PART)
+                                    == net.minecraft.block.enums.BedPart.HEAD) {
+                            Map<String, Object> bm = new HashMap<>();
+                            bm.put("pos", bp.getX() + "," + bp.getY() + "," + bp.getZ());
+                            bm.put("distance", String.format("%.1f", Math.sqrt(dx * dx + dy * dy + dz * dz)));
+                            beds.add(bm);
+                            break;
+                        }
+                    }
+                }
+            }
+            beds.sort((a, b) -> Double.compare(
+                    Double.parseDouble((String) a.get("distance")),
+                    Double.parseDouble((String) b.get("distance"))));
+            out.put("beds", beds);
             return out;
         }, Map.of("inGame", false, "error", "client thread timeout"));
     }

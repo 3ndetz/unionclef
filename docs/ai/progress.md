@@ -1,5 +1,20 @@
 # Progress
 
+## Восприятие когнитивного агента + виз-тумблеры (2026-07-21) — СДЕЛАНО
+
+- getGameState() py4j: self(hp/maxHp/armor/pos/onGround/held/blocks) + players[]
+  (name/pos/distance/hp/sprinting, сорт по дистанции) + beds[] (детект кроватей
+  в радиусе 40 для bedwars — куда атаковать/защищать). Тест gamestate_test PASS.
+  Read-only, ядро не трогает — база для когнитивного агента (block 6).
+- canReach захардил: ретрай block-space поиска до 4х, берём маршрут что дошёл до
+  цели (флак частичных стабов лечится) — F_api снова PASS reached=true/breaks=2.
+- Виз-тумблеры: renderVisualization (мастер) + renderPathMoves/renderBreakPlan/
+  renderCombat (;settings), подсветка клеток бриджа. Регрессия slime/bridge/break
+  PASS — рендер-гейтинг не сломал пасфайндинг.
+- Решение: глубокая A*-авто-интеграция бриджа ОТЛОЖЕНА (риск ядра) — годбридж есть
+  как примитив, агент сам решает когда мостить (философия block 6). Референс на
+  будущее: baritone MovementTraverse:122-168.
+
 ## Анти-чит гуманизация поворотов (2026-07-21) — СДЕЛАНО
 
 Поинт юзера: античиты палят прямой setYaw/setPitch — крутить надо через mouse-
