@@ -19,7 +19,12 @@ gw=JavaGateway(gateway_parameters=GatewayParameters(address="127.0.0.1",port=req
 mc=gw.entry_point; op=req["op"]; out={}
 if op=="state": out={"inGame":mc.inGame()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
-elif op=="gamestate": out=dict(mc.getGameState())
+elif op=="gamestate":
+    gs=mc.getGameState()
+    out={"inGame":gs.get("inGame"),
+         "self":dict(gs.get("self") or {}),
+         "beds":[dict(b) for b in (gs.get("beds") or [])],
+         "players":[dict(p) for p in (gs.get("players") or [])]}
 elif op=="goto": out=dict(mc.gotoXYZ(int(req["x"]),int(req["y"]),int(req["z"])))
 elif op=="status": out=dict(mc.pathStatus())
 elif op=="selhot": out={"ok":mc.selectHotbar(int(req["s"]))}
