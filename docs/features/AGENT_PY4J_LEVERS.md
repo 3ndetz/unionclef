@@ -39,6 +39,7 @@ Settings.mcpPort). MCP оборачивает ровно эти методы (si
 |---|---|---|
 | `gotoXYZ(x,y,z)` | навигация к координате через **tungsten**-пасфайндер (ходьба/паркур/бридж). Fire-and-poll | Основной рычаг «дойти». Им же репозиционироваться для дальних fillSelection-клеток |
 | `pathStatus()` | `busy`/`pos`/`distance`(до цели gotoXYZ)/`arrived`(<1.5) | Крутить после gotoXYZ до `arrived`, затем действовать |
+| `gotoFar(x,y,z,horizon)` | **дальняя цель** receding-horizon: один сегмент <=horizon к цели; крутить gotoFar→pathStatus→gotoFar до `finalSegment` | Очень далёкий путь без фриза пасфайндера |
 | `stopPathing()` | тотальный стоп (tungsten `;stop` + altoclef `@stop`) | Прервать навигацию/задачу |
 | `hasActiveTask()` | занят ли бот задачей (bool) | Общая проверка занятости |
 | `bridgeForward(dir, n)` / `bridgeTo(x,y,z)` | годбридж (непрерывное paving пола) в сторону/к цели | Мост через пропасть (bedwars — к чужому острову). Держать блок в руке |
