@@ -1,5 +1,21 @@
 # Progress
 
+## Movement-рычаг: gotoXYZ + pathStatus + stopPathing (2026-07-21) — СДЕЛАНО
+
+Keystone когнитивного агента — связка perception (getGameState) → action.
+- gotoXYZ(x,y,z): навигация к координате через ТUNGSTEN-пасфайндер (ChatMessage
+  с КОНФИГУРИРУЕМЫМ префиксом TungstenMod.getCommandPrefix(), не хардкод ';').
+  Fire-and-poll. Им же агент репозиционируется для дальних fillSelection-клеток.
+- pathStatus(): busy(hasActiveTask)/pos/distance-to-goal/arrived(<1.5). Агент
+  крутит gotoXYZ→pathStatus до arrived, затем действует.
+- stopPathing(): тотальный стоп — и ;stop (tungsten), и @stop (altoclef).
+- ДИАГНОЗ на стенде: сначала роутил через @goto (baritone/shredder) — цель
+  ставилась (busy=true), но бот НЕ двигался headless (pos застыл 70с). tungsten
+  ;goto повёл чисто (1.5→18.5, dist 0.6). Перевёл на tungsten (и по цели проекта
+  «единый tungsten-пасфайндер»). Тест goto_test PASS (dist 1.5, arrived).
+- retreat/chase намеренно НЕ примитивы — агент композит из goto+getGameState
+  (философия block 6: агент решает стратегию, мод исполняет).
+
 ## WorldEdit-like //set: select + fillSelection (2026-07-21) — СДЕЛАНО
 
 Рычаги для агента (block 9), НЕ команды сервера — чистые координаты, работает в
