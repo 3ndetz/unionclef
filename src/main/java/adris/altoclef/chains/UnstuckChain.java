@@ -107,6 +107,16 @@ public class UnstuckChain extends SingleTaskChain {
     private void checkGenerallyStuck() {
         if (posHistory.size() < 200) return; // ~10 seconds of ticks
 
+        // Tungsten-primary (drop-in swap): tungsten drives movement and handles
+        // its own stuck recovery (executor). The shimmy would preempt the user
+        // task chain every tick, starving the tungsten-primary hook — never fire.
+        if (adris.altoclef.util.helpers.TungstenHelper.isPrimary()) {
+            posHistory.clear();
+            startedShimmying = false;
+            consecutiveStuckDetections = 0;
+            return;
+        }
+
         AltoClef mod = AltoClef.getInstance();
 
         // Don't interfere with eating or mining
