@@ -242,6 +242,12 @@ public class McpServer {
         tool("pathStatus",
                 "Poll the current navigation: busy/pos/distance-to-goal/arrived(<1.5). Loop after gotoXYZ until arrived.",
                 schema(), a -> api.pathStatus());
+        tool("gotoFar",
+                "Navigate toward a FAR target with a receding horizon (huge goals freeze the pathfinder). "
+                + "Advances one segment (<= horizon blocks) toward the target. Loop: gotoFar -> pathStatus "
+                + "until arrived -> gotoFar, until finalSegment=true.",
+                schema("x:int", "y:int", "z:int", "horizon:int"),
+                a -> api.gotoFar(argInt(a, "x"), argInt(a, "y"), argInt(a, "z"), argInt(a, "horizon")));
         tool("stopPathing",
                 "Stop all navigation and tasks (tungsten ;stop + altoclef @stop).",
                 schema(), a -> api.stopPathing());

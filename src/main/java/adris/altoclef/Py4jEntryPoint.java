@@ -1887,6 +1887,41 @@ public class Py4jEntryPoint {
         return out;
     }
 
+    /** Navigate toward a FAR target with a RECEDING HORIZON — never asks the
+     *  pathfinder for the whole route (huge goals freeze the search). Picks a
+     *  waypoint at most `horizon` blocks toward the target and gotos it. The
+     *  agent loops: gotoFar → pathStatus (until arrived) → gotoFar … until
+     *  finalSegment=true. Each call advances one segment; the intermediate hops
+     *  keep the current Y (only the final segment aims at the real Y). This is
+     *  the "roughly get there, refine as you approach" lever (server-agnostic). */
+    public Map<String, Object> gotoFar(int x, int y, int z, int horizon) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            var me = MinecraftClient.getInstance().player;
+            if (me == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            int h = Math.max(4, horizon);
+            double dx = x + 0.5 - me.getX(), dz = z + 0.5 - me.getZ();
+            double horiz = Math.sqrt(dx * dx + dz * dz);
+            int wx, wy, wz;
+            boolean finalSeg;
+            if (horiz <= h) {
+                wx = x; wy = y; wz = z; finalSeg = true;                 // last hop → real target
+            } else {
+                double f = h / horiz;
+                wx = (int) Math.round(me.getX() + dx * f);
+                wz = (int) Math.round(me.getZ() + dz * f);
+                wy = (int) Math.round(me.getY());                        // stay near current Y mid-route
+                finalSeg = false;
+            }
+            gotoXYZ(wx, wy, wz);                                         // issue this segment via tungsten
+            out.put("ok", true);
+            out.put("waypoint", wx + "," + wy + "," + wz);
+            out.put("finalSegment", finalSeg);
+            out.put("remainingDist", String.format("%.1f", horiz));
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Poll the current navigation: busy (still pathing/task running), current
      *  pos, distance to the last gotoXYZ goal, and arrived (within 1.5). The
      *  agent loops gotoXYZ → pathStatus until arrived, then acts. */
