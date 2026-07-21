@@ -20,20 +20,22 @@
   - [ ] 13.2 прогон altoclef @gamer (проход игры) на tungsten-пути: смотреть не
     затыкается ли бот, нет ли багов крафта, где ломается. Длинный — nightly-масштаб
   - [ ] 13.3 фиксить всплывшие затыки/баги по ходу @gamer
-- [ ] 14. ПОЛНАЯ break/place-совместимость tungsten с ограничениями baritone/altoclef:
-  - [x] 14.1 BREAK: BreakRules → canBreakHook → shouldAvoidBreaking УЖЕ бриджит
-    (защита кроватей, avoid-листы задач, protected-зоны). Приват-детект «не могу
-    сломать → обхожу радиус вокруг» (WorldSurvivalChain.addTemporaryBreakAvoidance,
-    BREAK_AVOID_RADIUS) течёт через тот же хук → tungsten ЧТИТ приваты. НАДО:
-    автотест что реально обходит запретную зону (приват 10x10)
-  - [ ] 14.2 PLACE (ПРОБЕЛ): tungsten-установка (placeBlockAt/fillSelection/bridge)
-    НЕ консультирует altoclef avoidBlockPlacing. Сделать PlaceRules + canPlaceHook
-    (симметрично BreakRules), консультировать во ВСЕХ примитивах установки. Бридж
-    в altoclef: canPlaceHook → shouldAvoidPlacing/place-protection
-  - [ ] 14.3 предиктивы «что можно ломать/ставить а что нет» доступны АГЕНТУ (py4j/
-    MCP): canBreakBlock уже есть; добавить canPlaceBlock(x,y,z) поверх PlaceRules
-  - [ ] 14.4 приват-детект как РЫЧАГ агента: markProtectedArea(x,y,z,r)/clear —
-    агент сам может пометить приват (не только авто-детект по фейлу слома)
+- [~] 14. ПОЛНАЯ break/place-совместимость tungsten с ограничениями baritone/altoclef:
+  - [x] 14.1 BREAK: BreakRules → canBreakHook → shouldAvoidBreaking бриджит (защита
+    кроватей, avoid-листы, protected-зоны). Приват-детект «не могу сломать → обхожу
+    радиус» течёт через тот же хук. Тест protect_test PASS: приват-зона блокирует
+    ломание СОЛИДНОГО блока (canBreakBlock=false; воздух всегда «ломаем»)
+  - [x] 14.2 PLACE ГОТОВО: PlaceRules + canPlaceHook (симметрично BreakRules) →
+    shouldAvoidPlacingAt. Консультируется в placeBlockAtRaw (весь WorldEdit/build) и
+    BridgeTask (годбридж стопается на приватах). Config allowPlace/placeDenyZones.
+    Тест PASS: place denied внутри, allowed снаружи, re-enabled после clear
+  - [x] 14.3 canPlaceBlock(x,y,z) py4j+MCP (canPlace/policyAllows/replaceable);
+    canBreakBlock уже был. Оба как MCP-tools
+  - [x] 14.4 markProtectedArea(x,y,z,r)/clearProtectedAreas — агент помечает приват,
+    кладётся в ОБА deny-списка (place+break). py4j+MCP. Тест PASS
+  - [ ] 14.5 (осталось) авто-детект приватов В САМОМ tungsten при фейле слома (сейчас
+    авто-детект на стороне altoclef WorldSurvivalChain; прокинуть/подхватывать в
+    tungsten-исполнителе тоже, чтоб при живой игре само помечало)
 - [ ] 15. ОГРОМНЫЕ ДАЛЬНИЕ МАРШРУТЫ (progressive/receding-horizon pathing):
   - идея юзера: очень далёкий маршрут нельзя считать весь целиком — надо
     ПРИМЕРНО дойти, предполагать направление, достраивать по мере приближения
@@ -41,19 +43,21 @@
     ближайшие N блоков в сторону цели), досчитываем следующий сегмент на ходу
   - [ ] 15.2 idle/coarse-навигация пока считается точный сегмент (не стоять колом)
   - [ ] 15.3 API/конфиг: goto далёкой цели без фриза; горизонт настраиваемый
-- [ ] 16. ВИЗУАЛИЗАЦИЯ ПЛАНОВ (правило по умолчанию — всё визуализируем):
+- [~] 16. ВИЗУАЛИЗАЦИЯ ПЛАНОВ (правило по умолчанию — всё визуализируем):
   - [x] BREAK_PLAN контейнер есть (подсветка блоков к слому)
-  - [ ] 16.1 PLACE_PLAN контейнер: подсветка блоков, которые СОБИРАЕМСЯ поставить
-    (fillSelection/bridge/build/schematic) — цвет/бокс, гейт renderVisualization
-  - [ ] 16.2 убедиться что ВСЕ виз работают (пути/цели/бридж/бой/break/place/select)
-- [ ] 17. КОМБАТ-ДВИЖОК: multi-target / avoid-target (интеграция altoclef):
-  - идея юзера: бить КОНКРЕТНУЮ цель, знать кого бить; список целей; избегать
-    определённых. tungsten = примитивы (бить/целить по entity), altoclef = МОЗГ
-    (выбор цели, приоритеты, кого не трогать)
-  - [ ] 17.1 tungsten CombatPrimitives: attack(target)/aim(target) по конкретной
-    сущности (уже частично canHit/attack) + API выбора цели
-  - [ ] 17.2 altoclef-мозг: список целей, приоритет, avoid-list, передача в tungsten
-  - [ ] 17.3 py4j/MCP-рычаги: setTargets([names])/avoidTargets([names])/currentTarget
+  - [x] 16.1 PLACE_PLAN контейнер + гейт renderPlacePlan; годбридж рисует «сюда
+    поставим» (зелёный). Регрессия bridge PASS. Осталось: fillSelection/build тоже
+    в PLACE_PLAN (сейчас fill показывает через жёлтый SELECTION-бокс)
+  - [ ] 16.2 убедиться что ВСЕ виз работают вживую (пути/цели/бридж/бой/break/place/
+    select) — визуальная проверка на стенде/скриншотами
+- [~] 17. КОМБАТ-ДВИЖОК: multi-target / avoid-target (интеграция altoclef):
+  - [x] 17.1 PunkPlayerTask.startAny(allow, avoid) — бьёт БЛИЖАЙШЕГО из allow
+    (пусто=любой), не трогая avoid; tryRediscover авто-ретаргет по политике
+    (isAcceptable). Мозг решает кого, tungsten исполняет
+  - [x] 17.3 py4j/MCP-рычаги: punk/punkAny/punkAvoid/punkStop/punkStatus. Тест
+    multitarget_test PASS: avoid=[t2]→target None, allow=[t2]→target t2, stop→сброс
+  - [ ] 17.2 (осталось) altoclef-мозг: приоритизация целей (ХП/дистанция/угроза),
+    связка с threat-table (attackPlayer/avoidPlayer уже есть отдельно) — свести
 - [ ] 18. БОЕВОЕ КРЕЩЕНИЕ = ПОЛНЫЙ ПРОХОД ИГРЫ + tungsten_speedrun таск:
   - идея юзера: @gamer в altoclef юзает baritone по максимуму + куча умной логики
     (учёт СКОЛЬКО РЕСУРСОВ осталось, докопать земли если не хватает при стройке,

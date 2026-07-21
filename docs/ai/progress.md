@@ -1,5 +1,24 @@
 # Progress
 
+## Baritone-совместимость: приваты + multi-target комбат (2026-07-21) — СДЕЛАНО
+
+Ответ на большой блок целей юзера (полная совместимость tungsten с baritone-
+ограничениями + рычаги агенту).
+- PLACE-защита (симметрично BREAK): PlaceRules.canPlace → canPlaceHook →
+  altoclef shouldAvoidPlacingAt. Консультируется в placeBlockAtRaw (весь
+  WorldEdit/build) и BridgeTask (годбридж стопается на приватах). Config
+  allowPlace/placeDenyZones. Приват как РЫЧАГ: markProtectedArea(x,y,z,r)/
+  clearProtectedAreas кладёт в ОБА deny-списка (place+break) — конвенция «claim».
+  Предикты агенту: canPlaceBlock/canBreakBlock (py4j+MCP). Тест protect_test
+  PASS: и place, и break внутри приват-зоны запрещены, снаружи ок, clear снимает.
+- PLACE_PLAN виз (renderPlacePlan): годбридж рисует «сюда поставим» зелёным.
+- Multi-target комбат: PunkPlayerTask.startAny(allow, avoid) — ближайшая
+  допустимая цель, авто-ретаргет; punk/punkAny/punkAvoid/punkStop/punkStatus
+  (py4j+MCP). Мозг решает кого бить, tungsten исполняет. Тест multitarget_test
+  PASS: avoid→нет цели, allow→цель взята, stop→сброс.
+- Записаны/обновлены цели 12-18. Осталось крупное: 13 drop-in замена baritone,
+  15 дальние маршруты (receding-horizon), 18 tungsten_speedrun/@gamer.
+
 ## MCP-сервер В МОДЕ по LAN (2026-07-21) — СДЕЛАНО
 
 Юзер: «mcp не сможешь прямиком в java клиенте по порту и пробросить на LAN?» — да.
