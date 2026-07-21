@@ -118,8 +118,13 @@ public class BridgeTask {
         boolean targetSolid = !world.getBlockState(targetCell).getCollisionShape(world, targetCell).isEmpty();
 
         if (!stepping) {
-            // PLACE phase: stand still (no forward), place the block ahead
+            // PLACE phase: stand still and place the block ahead. Kill horizontal
+            // momentum every tick — residual velocity from the STEP phase slid
+            // the bot off the block's far edge into the gap before it could
+            // place the next block (sneak alone didn't hold it).
             opts.forwardKey.setPressed(false);
+            Vec3d v = player.getVelocity();
+            player.setVelocity(0, Math.min(0, v.y), 0);
             if (targetSolid) {
                 stepping = true; // already there — go step onto it
             } else if (placeCd <= 0) {
