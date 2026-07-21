@@ -218,6 +218,18 @@
     - [x] 1.5.1 WindMouse camera smoothing in LookBehavior (render-frame, settings: windMouseLook/Gravity/Wind/MaxStep)
     - [x] 1.5.2 TungstenBridge — smart delegation of simple flat segments to tungsten (settings: useTungsten, tungstenMinSegment)
   - [ ] 1.6 Tungsten deep integration — improve pathfinding + reduce drift
+    > НАХОДКИ 2026-07-21 (из @gamer-теста, головной старт для фокус-захода):
+    > tungsten-primary @gamer ЗАМЕРЗАЕТ на survival-рельефе. Проверено: НЕ drift-
+    > порог (frozen даже с driftThreshold=5.0). updateVelocity уже ВАНИЛЬНО-
+    > КОРРЕКТНА (порог 1e-7, normalize при mag>1), airStrafing уже 0.02/0.026 —
+    > симуляция на FLAT верна (slime PASS). Значит расхождение на рельефе =
+    > КОЛЛИЗИИ/step-up/склоны/тайминг (1.6.1 block-space Movements + 1.6.2 macro-
+    > actions), а НЕ пороги 1.6.3. Приоритет: 1.6.1 (baritone Movements для
+    > BlockNode: Traverse/Ascend/Descend/Parkour со step-up/gap/slope) — сейчас
+    > BlockNode.getChildren слепо сканит круг r=8, на рельефе не находит проход.
+    > Driftкоррекция driftCorrectionEnabled(false) снапит позицию (анти-чит-риск);
+    > правильный путь — 1.6.4 closed-loop yaw (анти-чит-safe). НЕ торопить —
+    > каждый фикс с перетестом slime, иначе ломается рабочий flat.
     - [ ] 1.6.1 BlockSpace: заменить примитивный BlockSpacePathFinder на baritone-level эвристики
       - BlockNode.getChildren сейчас просто сканирует 3D круг radius=8 — тупой перебор
       - Нужно: адаптировать baritone Movements (Traverse, Ascend, Descend, Parkour, Pillar) для BlockNode
