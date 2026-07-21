@@ -1,5 +1,21 @@
 # Progress
 
+## MCP-сервер В МОДЕ по LAN (2026-07-21) — СДЕЛАНО
+
+Юзер: «mcp не сможешь прямиком в java клиенте по порту и пробросить на LAN?» — да.
+- McpServer.java: `com.sun.net.httpserver` (JDK, без зависимостей) bind 0.0.0.0:
+  mcpPort. Streamable HTTP JSON-RPC 2.0: initialize/tools/list/tools/call/ping.
+  24 инструмента-рычага поверх Py4jEntryPoint (single source — те же методы, без
+  py4j-хопа и docker-exec). Каждый с описанием + JSON-схемой.
+- Настройки Settings.mcpEnabled(true)/mcpPort(25350). Старт после py4j-шлюза в
+  initializePythonSender. compose публикует 25350 (LAN).
+- Тест mcp_test PASS: initialize→serverInfo unionclef, tools/list=24, getGameState
+  (чтение) inGame=true, fillSelection (ДЕЙСТВИЕ) через HTTP → 4/4 dirt. Клод рулит
+  ботом по http://<lan-ip>:25350/mcp — заявленный control-surface живой.
+- Записаны новые МЕГА-ЦЕЛИ 2 (TODOS 12-17): drop-in замена baritone, полная
+  break/place-совместимость + приват-детект, дальние маршруты, viz планов,
+  multi-target комбат.
+
 ## Интеграция: цикл агента see→move→build (2026-07-21) — СДЕЛАНО
 
 Капстоун-валидация всего рабочего места. agent_loop_test гоняет РОВНО bedwars-

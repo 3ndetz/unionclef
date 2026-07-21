@@ -1,5 +1,60 @@
 # TODOs
 
+## МЕГА-ЦЕЛЬ 2: TUNGSTEN = ПОЛНОЦЕННАЯ ЗАМЕНА BARITONE + ИНТЕГРАЦИЯ — юзер 2026-07-21 (вечер)
+
+> Дословные идеи юзера (фиксирую чтобы не забыть). ПРИНЦИП прежний: удобный
+> ИНСТРУМЕНТАРИЙ, а не хардкод/скрипты; везде хорошие КОНФИГИ + API + ВИЗУАЛИЗАЦИЯ
+> по мере реализации. Тестировать грамотно во все стороны.
+
+- [x] 12. MCP-сервер В МОДЕ по LAN (реализовано 2026-07-21): `com.sun.net.httpserver`
+  bind 0.0.0.0:mcpPort, Streamable HTTP JSON-RPC (initialize/tools/list/tools/call),
+  24 инструмента-рычага поверх Py4jEntryPoint (single source). Настройки mcpEnabled/
+  mcpPort, compose публикует 25350. Тест mcp_test PASS: initialize→unionclef,
+  getGameState (чтение) + fillSelection (действие) через HTTP → 4/4. Клод рулит по
+  http://<lan-ip>:25350/mcp. Осталось: подключить в мой Claude-конфиг, дописывать
+  инструменты по мере роста рычагов
+- [ ] 13. TUNGSTEN как DROP-IN замена baritone (проверить что реально работает):
+  - [ ] 13.1 конфиг-тумблер «весь pathing через tungsten вместо baritone» (сейчас
+    частично: shredder useTungsten/TungstenBridge делегирует плоские сегменты).
+    Прокинуть tungsten в основной путь goto/mine/follow, чтобы гонять как замену
+  - [ ] 13.2 прогон altoclef @gamer (проход игры) на tungsten-пути: смотреть не
+    затыкается ли бот, нет ли багов крафта, где ломается. Длинный — nightly-масштаб
+  - [ ] 13.3 фиксить всплывшие затыки/баги по ходу @gamer
+- [ ] 14. ПОЛНАЯ break/place-совместимость tungsten с ограничениями baritone/altoclef:
+  - [x] 14.1 BREAK: BreakRules → canBreakHook → shouldAvoidBreaking УЖЕ бриджит
+    (защита кроватей, avoid-листы задач, protected-зоны). Приват-детект «не могу
+    сломать → обхожу радиус вокруг» (WorldSurvivalChain.addTemporaryBreakAvoidance,
+    BREAK_AVOID_RADIUS) течёт через тот же хук → tungsten ЧТИТ приваты. НАДО:
+    автотест что реально обходит запретную зону (приват 10x10)
+  - [ ] 14.2 PLACE (ПРОБЕЛ): tungsten-установка (placeBlockAt/fillSelection/bridge)
+    НЕ консультирует altoclef avoidBlockPlacing. Сделать PlaceRules + canPlaceHook
+    (симметрично BreakRules), консультировать во ВСЕХ примитивах установки. Бридж
+    в altoclef: canPlaceHook → shouldAvoidPlacing/place-protection
+  - [ ] 14.3 предиктивы «что можно ломать/ставить а что нет» доступны АГЕНТУ (py4j/
+    MCP): canBreakBlock уже есть; добавить canPlaceBlock(x,y,z) поверх PlaceRules
+  - [ ] 14.4 приват-детект как РЫЧАГ агента: markProtectedArea(x,y,z,r)/clear —
+    агент сам может пометить приват (не только авто-детект по фейлу слома)
+- [ ] 15. ОГРОМНЫЕ ДАЛЬНИЕ МАРШРУТЫ (progressive/receding-horizon pathing):
+  - идея юзера: очень далёкий маршрут нельзя считать весь целиком — надо
+    ПРИМЕРНО дойти, предполагать направление, достраивать по мере приближения
+  - [ ] 15.1 сегментированный планировщик: к далёкой цели идём горизонтом (напр.
+    ближайшие N блоков в сторону цели), досчитываем следующий сегмент на ходу
+  - [ ] 15.2 idle/coarse-навигация пока считается точный сегмент (не стоять колом)
+  - [ ] 15.3 API/конфиг: goto далёкой цели без фриза; горизонт настраиваемый
+- [ ] 16. ВИЗУАЛИЗАЦИЯ ПЛАНОВ (правило по умолчанию — всё визуализируем):
+  - [x] BREAK_PLAN контейнер есть (подсветка блоков к слому)
+  - [ ] 16.1 PLACE_PLAN контейнер: подсветка блоков, которые СОБИРАЕМСЯ поставить
+    (fillSelection/bridge/build/schematic) — цвет/бокс, гейт renderVisualization
+  - [ ] 16.2 убедиться что ВСЕ виз работают (пути/цели/бридж/бой/break/place/select)
+- [ ] 17. КОМБАТ-ДВИЖОК: multi-target / avoid-target (интеграция altoclef):
+  - идея юзера: бить КОНКРЕТНУЮ цель, знать кого бить; список целей; избегать
+    определённых. tungsten = примитивы (бить/целить по entity), altoclef = МОЗГ
+    (выбор цели, приоритеты, кого не трогать)
+  - [ ] 17.1 tungsten CombatPrimitives: attack(target)/aim(target) по конкретной
+    сущности (уже частично canHit/attack) + API выбора цели
+  - [ ] 17.2 altoclef-мозг: список целей, приоритет, avoid-list, передача в tungsten
+  - [ ] 17.3 py4j/MCP-рычаги: setTargets([names])/avoidTargets([names])/currentTarget
+
 ## МЕГА-ЦЕЛЬ: ПОРТ ПОЛНОГО BARITONE + WORLDEDIT В ФИЗ-МОДЕЛЬ TUNGSTEN — юзер 2026-07-21
 
 > ПРИНЦИП (напоминание юзера 2026-07-21): рядом ПОЛНЫЙ исходник baritone (baritone/,
