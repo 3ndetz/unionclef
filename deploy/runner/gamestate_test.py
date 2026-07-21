@@ -18,8 +18,10 @@ mc=gw.entry_point; op=req["op"]; out={}
 if op=="state": out={"inGame":mc.inGame()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="gs":
-    import json as J
-    out=J.loads(J.dumps(mc.getGameState(),default=str))
+    gs=mc.getGameState()
+    out={"self":dict(gs.get("self") or {}),
+         "players":[dict(p) for p in (gs.get("players") or [])],
+         "inGame":gs.get("inGame"),"playerCount":gs.get("playerCount")}
 print(json.dumps(out,default=str)); gw.close()
 """
 def sh(a,t=30): return subprocess.run(a,capture_output=True,text=True,timeout=t)
