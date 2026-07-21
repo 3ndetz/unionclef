@@ -52,7 +52,7 @@
 за агента». Не всё скриптовать — агент решает, мод исполняет.
 
 - [ ] 6. Поверхность управления PVP для когнитивного агента:
-  - [~] 6.1 ВОСПРИЯТИЕ: getGameState() py4j — self(hp/pos/blocks/held/armor/onGround) + players[](name/pos/distance/hp/sprinting, сорт по дистанции). Тест PASS. Осталось: своя/чужая кровать, магазин-меню (getOpenScreen уже читает), таймеры раунда
+  - [x] 6.1 ВОСПРИЯТИЕ: getGameState() py4j — self(hp/pos/blocks/held/armor/onGround) + players[](name/pos/distance/hp/sprinting) + beds[](детект в r=40). Тест PASS. Магазин читается getOpenScreen, покупка clickMenuByName (не дублируем). Осталось (по вкусу): таймеры раунда, свой/чужой цвет команды
   - [ ] 6.2 ТАКТИЧЕСКИЕ ПРИМИТИВЫ (мод исполняет, агент командует): attack/aim/shoot(с траекторией)/shield/retreat/chase/goto/placeBlock/buildDefense(застроить кровать)/mineTo — переиспользовать CombatPrimitives + tungsten
   - [ ] 6.3 МАГАЗИН: читать меню магазина (getOpenScreen), покупать по имени (clickUiSlot) — агент решает ЧТО купить, примитив «buy(itemName)» исполняет
   - [x] 6.4 ЗАСТРОЙКА КРОВАТИ: buildDefenseAround(x,y,z) — защитный панцирь (стороны+крыша), переиспользует placeBlockAt. Тест PASS: кольцо вокруг кровати замкнуто 4/4 при обходе с 4 сторон. TODO-минор: счётчик placed завышен (88) — проверить лишние установки; выбор материала/паттерна агентом — след.
