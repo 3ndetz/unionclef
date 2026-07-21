@@ -251,6 +251,11 @@ public class McpServer {
         tool("stopPathing",
                 "Stop all navigation and tasks (tungsten ;stop + altoclef @stop).",
                 schema(), a -> api.stopPathing());
+        tool("setTungstenPathing",
+                "Toggle routing altoclef/shredder navigation through tungsten's physics (useTungsten + "
+                + "experimentalPathfinding). On = @goto/@get/@gamer delegate qualifying segments to tungsten.",
+                schema("on:bool"), a -> api.setTungstenPathing(argBool(a, "on")));
+        tool("pathingMode", "Read the current pathing-delegation flags.", schema(), a -> api.pathingMode());
         tool("bridgeTo",
                 "Godbridge toward a target coordinate (continuous pave-ahead). Needs a block in hand (selectHotbar first).",
                 schema("x:int", "y:int", "z:int"),

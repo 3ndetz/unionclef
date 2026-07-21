@@ -1922,6 +1922,37 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** Drop-in-swap toggle (goal 13.1): route altoclef/shredder navigation through
+     *  tungsten's physics executor. On = useTungsten (delegate flat segments) +
+     *  experimentalPathfinding (also ascend/descend). With it on, @goto/@get/
+     *  @gamer paths hand qualifying segments to tungsten. Returns the flags. */
+    public Map<String, Object> setTungstenPathing(boolean on) {
+        Map<String, Object> out = new HashMap<>();
+        try {
+            var s = _mod.getClientBaritoneSettings();
+            s.useTungsten.value = on;
+            s.experimentalPathfinding.value = on;
+            out.put("ok", true);
+            out.put("useTungsten", s.useTungsten.value);
+            out.put("experimentalPathfinding", s.experimentalPathfinding.value);
+            out.put("tungstenMinSegment", s.tungstenMinSegment.value);
+        } catch (Exception e) { out.put("ok", false); out.put("reason", e.getMessage()); }
+        return out;
+    }
+
+    /** Read the current pathing-delegation mode (goal 13). */
+    public Map<String, Object> pathingMode() {
+        Map<String, Object> out = new HashMap<>();
+        try {
+            var s = _mod.getClientBaritoneSettings();
+            out.put("ok", true);
+            out.put("useTungsten", s.useTungsten.value);
+            out.put("experimentalPathfinding", s.experimentalPathfinding.value);
+            out.put("tungstenMinSegment", s.tungstenMinSegment.value);
+        } catch (Exception e) { out.put("ok", false); out.put("reason", e.getMessage()); }
+        return out;
+    }
+
     /** Poll the current navigation: busy (still pathing/task running), current
      *  pos, distance to the last gotoXYZ goal, and arrived (within 1.5). The
      *  agent loops gotoXYZ → pathStatus until arrived, then acts. */
