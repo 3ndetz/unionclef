@@ -154,13 +154,25 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             cachedGoal = newGoal(mod);
         }
 
-        // ── Tungsten-PRIMARY (drop-in swap, TODO 13): route straight to tungsten
-        //    instead of waiting for baritone to fail. Baritone movement doesn't
-        //    execute on some headless clients; tungsten always drives the player. ──
-        if (TungstenHelper.isPrimary() && !TungstenHelper.isLocked() && !TungstenHelper.isActive()
-                && cachedGoal != null && !isFinished()) {
+        // ── Tungsten-PRIMARY (drop-in swap, TODO 13): drive movement via tungsten
+        //    directly — baritone movement doesn't execute on headless clients.
+        //    Call tungsten the same way ;goto does (PATHFINDER.find + clear the
+        //    stale EXECUTOR.stop). Bypass TungstenHelper's reflection (stale field
+        //    lookups); altoclef depends on tungsten, so call it directly. ──
+        if (TungstenHelper.isPrimary() && cachedGoal != null && !isFinished()) {
             net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
-            if (gp != null && TungstenHelper.tryPathTo(gp)) {
+            if (gp != null) {
+                try {
+                    var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
+                    var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+                    boolean busy = pf != null && pf.active.get() || (ex != null && ex.isRunning());
+                    if (pf != null && !busy) {
+                        if (ex != null) ex.stop = false;   // a prior ;stop leaves it stuck true
+                        pf.find(mod.getWorld(), gp, mod.getPlayer());
+                    }
+                } catch (Throwable t) {
+                    Debug.logInternal("[swap] tungsten primary find failed: " + t);
+                }
                 mod.getClientBaritone().getPathingBehavior().forceCancel();
                 checker.reset();
                 setDebugState("Tungsten (primary) pathfinding...");
