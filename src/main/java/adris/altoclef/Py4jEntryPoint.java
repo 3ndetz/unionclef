@@ -1854,11 +1854,35 @@ public class Py4jEntryPoint {
      *  The block must be in the hotbar. Returns filled / remaining / total so
      *  the agent knows to reposition and call again for out-of-reach cells. */
     public Map<String, Object> fillSelection(String blockName) {
+        return fillCells(blockName, "//set", c -> true);
+    }
+
+    /** WorldEdit-like //walls — fill only the boundary shell of the selection
+     *  (the 6 outer faces: 4 walls + floor + ceiling), leaving the interior
+     *  hollow. Good for boxing an area / a bed. Same reach + per-call cap
+     *  semantics as fillSelection; the agent repositions for out-of-reach faces. */
+    public Map<String, Object> wallsSelection(String blockName) {
+        return fillCells(blockName, "//walls", c ->
+                c[0] == _selMin[0] || c[0] == _selMax[0] ||
+                c[1] == _selMin[1] || c[1] == _selMax[1] ||
+                c[2] == _selMin[2] || c[2] == _selMax[2]);
+    }
+
+    /** Shared fill core for //set and //walls. Places `blockName` at every
+     *  replaceable selection cell matching `include`, bottom-up (so each cell
+     *  has support: the floor or an already-placed block below), capped per
+     *  call so a big region never stalls a tick. Equips the named block from
+     *  the hotbar if present (else placeBlockAtRaw auto-picks any block item).
+     *  Returns filled / remaining (out of reach — reposition + call again) /
+     *  already (non-replaceable) / truncated (hit cap) / complete. */
+    private Map<String, Object> fillCells(String blockName, String op, java.util.function.Predicate<int[]> include) {
         return onClientThread(() -> {
             Map<String, Object> out = new HashMap<>();
+            out.put("op", op);
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
             if (_selMin == null) { out.put("ok", false); out.put("reason", "no selection — call select() first"); return out; }
+            equipHotbarBlock(client, blockName);   // honest lever: hold the named block
             // Cap placements per call so a big region never stalls the render
             // thread inside one tick — the agent just calls again (remaining>0).
             final int MAX_PLACEMENTS = 96;
@@ -1867,6 +1891,7 @@ public class Py4jEntryPoint {
             for (int y = _selMin[1]; y <= _selMax[1] && !truncated; y++) {   // bottom-up
                 for (int x = _selMin[0]; x <= _selMax[0] && !truncated; x++) {
                     for (int z = _selMin[2]; z <= _selMax[2]; z++) {
+                        if (!include.test(new int[]{x, y, z})) continue;
                         net.minecraft.util.math.BlockPos p = new net.minecraft.util.math.BlockPos(x, y, z);
                         if (!client.world.getBlockState(p).isReplaceable()) { already++; continue; }
                         // placeBlockAtRaw (not placeBlockAt) — we are already on
@@ -1886,6 +1911,22 @@ public class Py4jEntryPoint {
             out.put("complete", remaining == 0 && !truncated);
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Select the first hotbar slot (0-8) holding `blockName` (item-id match,
+     *  with or without the "minecraft:" namespace). No-op if blank or absent —
+     *  the caller then keeps whatever block is held. Must run on client thread. */
+    private void equipHotbarBlock(MinecraftClient client, String blockName) {
+        if (blockName == null || blockName.isEmpty()) return;
+        String want = blockName.contains(":") ? blockName : "minecraft:" + blockName;
+        for (int i = 0; i < 9; i++) {
+            ItemStack st = client.player.getInventory().getStack(i);
+            if (st.isEmpty()) continue;
+            if (net.minecraft.registry.Registries.ITEM.getId(st.getItem()).toString().equals(want)) {
+                adris.altoclef.multiversion.entity.PlayerVer.setSelectedSlot(client.player.getInventory(), i);
+                return;
+            }
+        }
     }
 
     /** Compact battle game-state for a cognitive agent (TODO 6.1) — one call
