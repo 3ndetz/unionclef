@@ -1476,6 +1476,34 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** Right-click whatever ENTITY is currently under the crosshair (item
+     *  frames, armor stands, mobs, lobby menu entities) — an interactEntity
+     *  packet, not interactItem. Aim with lookAt first. Rotating a captcha
+     *  item frame is exactly this. Returns the ActionResult + entity type. */
+    public Map<String, Object> interactCrosshairEntity() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null || client.interactionManager == null) {
+                out.put("ok", false); out.put("reason", "not in game"); return out;
+            }
+            var hit = client.crosshairTarget;
+            if (!(hit instanceof net.minecraft.util.hit.EntityHitResult ehr)) {
+                out.put("ok", false);
+                out.put("reason", "no entity under crosshair — lookAt it first");
+                return out;
+            }
+            net.minecraft.entity.Entity target = ehr.getEntity();
+            var res = client.interactionManager.interactEntity(
+                    client.player, target, net.minecraft.util.Hand.MAIN_HAND);
+            client.player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
+            out.put("ok", true);
+            out.put("result", res.toString());
+            out.put("entityType", target.getType().toString());
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Can I reach/hit this entity from here? Distance + verdict. */
     public Map<String, Object> reachability(String playerName) {
         return onClientThread(() -> {
