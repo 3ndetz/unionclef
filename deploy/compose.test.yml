@@ -35,6 +35,29 @@ services:
     networks: [uctest]
     restart: unless-stopped
 
+  # Survival world for @gamer / tungsten_speedrun testing (real terrain, trees,
+  # mobs, easy difficulty). Separate from the flat determinism stand. Start with
+  #   docker compose -f deploy/compose.test.yml --profile gamer up -d
+  gamer-server:
+    image: itzg/minecraft-server:latest
+    container_name: uctest-gamer-server
+    profiles: [gamer]
+    environment:
+      EULA: "TRUE"
+      TYPE: "VANILLA"
+      VERSION: "1.21.11"
+      ONLINE_MODE: "FALSE"
+      LEVEL_TYPE: "minecraft:normal"
+      SEED: "12345"                  # deterministic-ish start
+      GENERATE_STRUCTURES: "true"
+      DIFFICULTY: "easy"
+      MODE: "survival"
+      SPAWN_PROTECTION: "0"
+      RCON_PASSWORD: "uctest"
+      VIEW_DISTANCE: "8"
+    networks: [uctest]
+    restart: unless-stopped
+
   mc-tester1:
     image: mineswarm-mc:amd64
     platform: linux/amd64
