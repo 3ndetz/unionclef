@@ -153,12 +153,12 @@ public class BridgeTask {
             toPlace = targetCell.offset(dir); against = targetCell; // extend one more ahead
         }
 
-        // visualize the next paved cells (cyan) — gated by renderPathMoves via
-        // the RENDERERS container in MixinDebugRenderer
-        kaptainwutax.tungsten.TungstenModRenderContainer.TEST.clear();
-        kaptainwutax.tungsten.TungstenModRenderContainer.TEST.add(new kaptainwutax.tungsten.render.Cuboid(
+        // visualize the next cell we're about to place (green) — the PLACE_PLAN
+        // container, gated by renderPlacePlan in MixinDebugRenderer
+        kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.clear();
+        kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.add(new kaptainwutax.tungsten.render.Cuboid(
                 new Vec3d(targetCell.getX() + 0.1, targetCell.getY() + 0.1, targetCell.getZ() + 0.1),
-                new Vec3d(0.8, 0.3, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 255)));
+                new Vec3d(0.8, 0.3, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 120)));
 
         // honour protected areas / claims (same policy as the pathfinder)
         if (toPlace != null && !kaptainwutax.tungsten.path.PlaceRules.canPlace(world, toPlace)) {

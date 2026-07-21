@@ -20,6 +20,7 @@ elif op=="selhot": out={"ok":mc.selectHotbar(int(req["s"]))}
 elif op=="markprot": out=dict(mc.markProtectedArea(int(req["x"]),int(req["y"]),int(req["z"]),int(req["r"])))
 elif op=="clearprot": out=dict(mc.clearProtectedAreas())
 elif op=="canplace": out=dict(mc.canPlaceBlock(int(req["x"]),int(req["y"]),int(req["z"])))
+elif op=="canbreak": out={"canBreak":mc.canBreakBlock(int(req["x"]),int(req["y"]),int(req["z"]))}
 elif op=="place": out=dict(mc.placeBlockAt(int(req["x"]),int(req["y"]),int(req["z"])))
 print(json.dumps(out,default=str)); gw.close()
 """
@@ -58,9 +59,10 @@ def main():
     print(f"  markProtectedArea: {mk}")
 
     cp_in=py4j("canplace", x=inside[0], y=inside[1], z=inside[2])
+    cb_in=py4j("canbreak", x=inside[0], y=inside[1], z=inside[2])   # same zone must block MINING too
     pl_in=py4j("place", x=inside[0], y=inside[1], z=inside[2])
     inside_air=is_air(*inside)
-    print(f"  inside {inside}: canPlace={cp_in.get('canPlace')} policyAllows={cp_in.get('policyAllows')} place.ok={pl_in.get('ok')} reason={pl_in.get('reason')} still_air={inside_air}")
+    print(f"  inside {inside}: canPlace={cp_in.get('canPlace')} canBreak={cb_in.get('canBreak')} policyAllows={cp_in.get('policyAllows')} place.ok={pl_in.get('ok')} reason={pl_in.get('reason')} still_air={inside_air}")
 
     cp_out=py4j("canplace", x=outside[0], y=outside[1], z=outside[2])
     pl_out=py4j("place", x=outside[0], y=outside[1], z=outside[2])
@@ -75,12 +77,14 @@ def main():
     print("\n=== RESULTS ===")
     denied = (cp_in.get("policyAllows")==False and pl_in.get("ok")==False
               and "protected" in str(pl_in.get("reason","")) and inside_air)
+    break_denied = (cb_in.get("canBreak")==False)   # 14.1: zone blocks mining too
     allowed_out = (cp_out.get("canPlace")==True and outside_solid)
     reenabled = inside_solid_after
-    print(f"  protected inside denied: {denied}")
+    print(f"  protected inside denied (place): {denied}")
+    print(f"  protected inside denied (break): {break_denied}")
     print(f"  outside allowed: {allowed_out}")
     print(f"  re-enabled after clear: {reenabled}")
-    ok = denied and allowed_out and reenabled
+    ok = denied and break_denied and allowed_out and reenabled
     print("  PROTECT:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)
 

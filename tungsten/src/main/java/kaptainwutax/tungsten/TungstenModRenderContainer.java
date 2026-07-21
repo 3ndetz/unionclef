@@ -18,4 +18,6 @@ public class TungstenModRenderContainer {
 	public static Collection<Renderer> BREAK_PLAN = Collections.synchronizedCollection(new ArrayList<>());
 	/** WorldEdit-like selection region highlight. */
 	public static Collection<Renderer> SELECTION = Collections.synchronizedCollection(new ArrayList<>());
+	/** Placing plan: cells about to be placed (bridge/fill/build). */
+	public static Collection<Renderer> PLACE_PLAN = Collections.synchronizedCollection(new ArrayList<>());
 }
