@@ -30,6 +30,9 @@ public class CombatPathfinder {
     // 2000 nodes × deep block scans every 10 ticks on the client thread caused
     // visible hitching; combat paths are short, 800 is plenty
     private static final int MAX_NODES = 800;
+    // Max horizontal reach of a running parkour jump (goto pathing only). A
+    // sprint-jump clears ~4 flat / ~3 with a +1 rise.
+    private static final int MAX_PARKOUR = 4;
     private static final Color COL_ATTACK    = new Color(255, 100, 50);  // orange
     private static final Color COL_RETREAT   = new Color(50, 150, 255);  // blue
     private static final Color COL_JUMP_ARC  = new Color(255, 220, 50);  // yellow arcs
@@ -55,7 +58,7 @@ public class CombatPathfinder {
         Vec3d predicted = Vec3d.ofBottomCenter(targetPos).add(enemyVelocity.multiply(20));
         BlockPos predictedTarget = BlockPos.ofFloored(predicted);
         lastWorld = world;
-        attackPath = bfsPath(playerPos, predictedTarget, world);
+        attackPath = bfsPath(playerPos, predictedTarget, world, false);
 
         // retreat path uses current target pos for "away from" scoring
         retreatPath = findRetreatPath(playerPos, targetPos, world);
@@ -191,7 +194,7 @@ public class CombatPathfinder {
 
     // ── BFS ──────────────────────────────────────────────────────────────────
 
-    private static List<BlockPos> bfsPath(BlockPos start, BlockPos goal, WorldView world) {
+    private static List<BlockPos> bfsPath(BlockPos start, BlockPos goal, WorldView world, boolean allowParkour) {
         if (start.equals(goal)) return Collections.emptyList();
 
         Queue<BlockPos> queue = new ArrayDeque<>();
@@ -208,7 +211,7 @@ public class CombatPathfinder {
                 return reconstructPath(cameFrom, current);
             }
 
-            for (BlockPos neighbor : getWalkableNeighbors(current, world)) {
+            for (BlockPos neighbor : getWalkableNeighbors(current, world, allowParkour)) {
                 if (cameFrom.containsKey(neighbor)) continue;
                 if (!start.isWithinDistance(neighbor, MAX_RADIUS)) continue;
                 cameFrom.put(neighbor, current);
@@ -267,7 +270,7 @@ public class CombatPathfinder {
                 bestRetreat = current;
             }
 
-            for (BlockPos neighbor : getWalkableNeighbors(current, world)) {
+            for (BlockPos neighbor : getWalkableNeighbors(current, world, false)) {
                 if (cameFrom.containsKey(neighbor)) continue;
                 if (!playerPos.isWithinDistance(neighbor, MAX_RADIUS)) continue;
                 cameFrom.put(neighbor, current);
@@ -282,20 +285,50 @@ public class CombatPathfinder {
 
     private static final int[][] HORIZONTAL = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
 
-    private static List<BlockPos> getWalkableNeighbors(BlockPos pos, WorldView world) {
+    private static List<BlockPos> getWalkableNeighbors(BlockPos pos, WorldView world, boolean allowParkour) {
         List<BlockPos> result = new ArrayList<>();
 
         for (int[] off : HORIZONTAL) {
             BlockPos candidate = pos.add(off[0], 0, off[1]);
-            if (isWalkable(candidate, world)) { result.add(candidate); continue; }
-
-            BlockPos up = candidate.up();
-            if (isWalkable(up, world) && canPassThrough(pos.up().up(), world)) { result.add(up); continue; }
-
-            BlockPos down = candidate.down();
-            if (isWalkable(down, world) && canPassThrough(candidate, world)) { result.add(down); }
+            boolean flatWalk = isWalkable(candidate, world);
+            if (flatWalk) {
+                result.add(candidate);
+            } else {
+                BlockPos up = candidate.up();
+                if (isWalkable(up, world) && canPassThrough(pos.up().up(), world)) result.add(up);
+                BlockPos down = candidate.down();
+                if (isWalkable(down, world) && canPassThrough(candidate, world)) result.add(down);
+            }
+            // Parkour (goto only): a running jump across a gap to a same-level or +1
+            // landing — the pillar-to-pillar move a plain walk/step can't make (course
+            // B, natural gapped/stepped terrain). Only when NO flat walk exists in this
+            // direction (a real gap/pillar) and only in a cardinal direction, so flat
+            // terrain keeps a small branching factor and combat pathing is untouched.
+            if (allowParkour && !flatWalk && off[0] * off[1] == 0) {
+                addParkourNeighbors(result, pos, off, world);
+            }
         }
         return result;
+    }
+
+    /** Running-jump landings 2..MAX_PARKOUR away in {@code dir} (flat or +1 up), each
+     *  with the whole flight path (feet + head) clear so the arc doesn't clip a wall. */
+    private static void addParkourNeighbors(List<BlockPos> result, BlockPos pos, int[] dir, WorldView world) {
+        if (!canPassThrough(pos.up().up(), world)) return; // no head room to jump
+        for (int dist = 2; dist <= MAX_PARKOUR; dist++) {
+            boolean flightClear = true;
+            for (int s = 1; s < dist; s++) {
+                BlockPos mid = pos.add(dir[0] * s, 0, dir[1] * s);
+                if (!canPassThrough(mid, world) || !canPassThrough(mid.up(), world)) { flightClear = false; break; }
+            }
+            if (!flightClear) break;
+            BlockPos flat = pos.add(dir[0] * dist, 0, dir[1] * dist);
+            if (isWalkable(flat, world) && !result.contains(flat)) result.add(flat);
+            if (dist <= 3) { // a running jump reaches +1y over at most ~3 blocks
+                BlockPos upLand = flat.up();
+                if (isWalkable(upLand, world) && !result.contains(upLand)) result.add(upLand);
+            }
+        }
     }
 
     public static boolean isWalkable(BlockPos feetPos, WorldView world) {
@@ -361,7 +394,7 @@ public class CombatPathfinder {
      * immediate movement while physics A* computes.
      */
     public static List<BlockPos> findPath(BlockPos start, BlockPos goal, WorldView world) {
-        return bfsPath(start, goal, world);
+        return bfsPath(start, goal, world, true);   // goto: parkour on (climb gapped/stepped terrain)
     }
 
     // ── getters ──────────────────────────────────────────────────────────────
