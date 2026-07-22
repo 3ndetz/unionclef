@@ -41,6 +41,8 @@ elif op == "chat":
     mc.ChatMessage(req["msg"]); out = {"ok": True}
 elif op == "cmd":
     mc.ExecuteCommand(req["c"]); out = {"ok": True}
+elif op == "kin":
+    out = dict(mc.targetKinematics(req["name"]))
 elif op == "connect":
     mc.ConnectToServer(req["ip"]); out = {"ok": True}
 print(json.dumps(out, default=str))
@@ -140,11 +142,22 @@ def volley(shots, running=False):
         hp_before = entity_float(VICTIM, "Health")
         py4j(SHOOTER_CONTAINER, "cmd", c=f"@shoot {VICTIM}")
         if running:
-            time.sleep(2.5)  # around release time
-            spd = entity_speed(VICTIM)
-            p_rel = entity_pos(VICTIM)
-            time.sleep(2.5)
-            print(f"    (release: speed={spd:.3f} b/t, z={p_rel[2]:.1f})")
+            time.sleep(0.8)  # into the draw, before release
+            # what does the SHOOTER'S CLIENT see? getVelocity() vs a 2-sample delta
+            k1 = py4j(SHOOTER_CONTAINER, "kin", name=VICTIM)
+            time.sleep(0.2)
+            k2 = py4j(SHOOTER_CONTAINER, "kin", name=VICTIM)
+            obs = "?"
+            try:
+                dz = float(k2["z"]) - float(k1["z"])
+                dx = float(k2["x"]) - float(k1["x"])
+                obs = f"{(dx*dx+dz*dz)**0.5:.4f}"
+            except Exception:
+                pass
+            svr = entity_speed(VICTIM)
+            print(f"    (client getVel=({k2.get('vx','?')},{k2.get('vz','?')}) "
+                  f"obs_2sample={obs} onGround={k2.get('onGround','?')} | server_spd={svr:.3f})")
+            time.sleep(4.0)
         else:
             time.sleep(5.0)
         hp_after = entity_float(VICTIM, "Health")

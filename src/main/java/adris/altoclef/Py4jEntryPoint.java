@@ -1057,6 +1057,32 @@ public class Py4jEntryPoint {
         return m;
     }
 
+    /** Client-side kinematics of the named player as THIS bot sees them: position,
+     *  getVelocity(), and onGround. Diagnostic/agent primitive — note getVelocity()
+     *  is ~0 for a normally-walking remote player (only knockback sets it), so lead
+     *  logic should difference position across ticks rather than trust it. */
+    public Map<String, String> targetKinematics(String playerName) {
+        return onClientThread(() -> {
+            Map<String, String> m = new HashMap<>();
+            if (_mod.getWorld() == null) return m;
+            for (net.minecraft.entity.player.PlayerEntity p : _mod.getWorld().getPlayers()) {
+                if (p.getName().getString().equalsIgnoreCase(playerName)) {
+                    Vec3d pos = p.getPos();
+                    Vec3d v = p.getVelocity();
+                    m.put("x", String.format("%.4f", pos.x));
+                    m.put("y", String.format("%.4f", pos.y));
+                    m.put("z", String.format("%.4f", pos.z));
+                    m.put("vx", String.format("%.5f", v.x));
+                    m.put("vy", String.format("%.5f", v.y));
+                    m.put("vz", String.format("%.5f", v.z));
+                    m.put("onGround", String.valueOf(p.isOnGround()));
+                    return m;
+                }
+            }
+            return m;
+        }, new HashMap<>());
+    }
+
     /** Break-policy prediction: may the tungsten pathfinder mine this block?
      *  Consults BreakRules (config deny lists/zones, block entities,
      *  altoclef protection hook). */
