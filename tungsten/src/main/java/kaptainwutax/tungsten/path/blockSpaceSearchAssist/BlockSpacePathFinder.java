@@ -195,21 +195,22 @@ public class BlockSpacePathFinder {
         if (startNode == null) {
             return Optional.empty();
         }
-        double bestDist = 0;
+        BlockNode best = null;
+        double bestDist = -1;
         for (int i = 0; i < COEFFICIENTS.length; i++) {
-            if (bestSoFar[i] == null) {
-                continue;
-            }
+            if (bestSoFar[i] == null) continue;
             double dist = getDistFromStartSq(bestSoFar[i], startNode.getPos());
             if (dist > bestDist) {
                 bestDist = dist;
-                continue;
+                best = bestSoFar[i];
             }
-            if (dist > MIN_DIST_PATH * MIN_DIST_PATH) { // square the comparison since distFromStartSq is squared
-                BlockNode n = bestSoFar[i];
-				List<BlockNode> path = generatePath(n, world);
-				if (path.size() > 1) return Optional.of(path);
-            }
+        }
+        // Furthest-progressed heuristically-best node as a partial path (graceful
+        // degradation): any real forward progress beats standing still; the caller
+        // re-plans from the new position (receding horizon), so short partials advance.
+        if (best != null && bestDist > 1.0) {
+            List<BlockNode> path = generatePath(best, world);
+            if (path.size() > 1) return Optional.of(path);
         }
         return Optional.empty();
     }
