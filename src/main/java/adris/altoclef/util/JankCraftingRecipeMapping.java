@@ -23,6 +23,9 @@ public class JankCraftingRecipeMapping {
      * Reloads the recipe mapping.
      */
     private static void reloadRecipeMapping() {
+        //#if MC >= 12111
+        //$$ // Recipe API changed in 1.21.11 — RecipeManager/getRecipeManager() not available
+        //#else
         MinecraftClient client = MinecraftClient.getInstance();
 
         // Check if the network handler is available
@@ -40,6 +43,7 @@ public class JankCraftingRecipeMapping {
                 }
             }
         }
+        //#endif
     }
 
     /**
@@ -51,6 +55,9 @@ public class JankCraftingRecipeMapping {
      */
     public static Optional<WrappedRecipeEntry> getMinecraftMappedRecipe(CraftingRecipe recipe, Item output) {
         reloadRecipeMapping();
+        //#if MC >= 12111
+        //$$ return Optional.empty(); // getIngredients() removed in 1.21.11
+        //#else
         // Check if the output item is present in the recipe mapping
         if (recipeMapping.containsKey(output)) {
             // Iterate through all the recipes mapped to the output item
@@ -88,5 +95,6 @@ public class JankCraftingRecipeMapping {
             }
         }
         return Optional.empty();
+        //#endif
     }
 }

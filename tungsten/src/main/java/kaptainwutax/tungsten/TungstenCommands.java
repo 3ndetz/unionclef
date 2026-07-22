@@ -13,7 +13,9 @@ public class TungstenCommands {
 				new SettingsCommand(mod),
 				// new FollowCommand(mod), // disabled — not ready
 				new FollowPlayerCommand(mod),
-				new PunkPlayerCommand(mod)
+				new PunkPlayerCommand(mod),
+				new RunAwayCommand(mod),
+				new BridgeCommand(mod)
 		);
 	}
 }

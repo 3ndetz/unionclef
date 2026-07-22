@@ -39,6 +39,7 @@ public class PreEquipItemChain extends SingleTaskChain {
         if (currentChain == null) return;
 
         // we will need to place or break some blocks, do not pre-equip anything...
+        if (mod.getClientBaritone() == null) return;
         Optional<IPath> pathOptional = mod.getClientBaritone().getPathingBehavior().getPath();
         if (pathOptional.isEmpty()) return;
 

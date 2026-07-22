@@ -20,7 +20,9 @@ import net.minecraft.entity.projectile.thrown.PotionEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+//#if MC < 12111
 import net.minecraft.item.SwordItem;
+//#endif
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.Vec3d;
 
@@ -44,6 +46,7 @@ public class KillAura {
         if (!invStacks.isEmpty()) {
             float handDamage = Float.NEGATIVE_INFINITY;
             for (ItemStack invStack : invStacks) {
+                //#if MC < 12111
                 if (invStack.getItem() instanceof SwordItem item) {
                     float itemDamage = item.getMaterial().getAttackDamage();
                     Item handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
@@ -56,6 +59,9 @@ public class KillAura {
                         mod.getSlotHandler().forceEquipItem(handItem);
                     }
                 }
+                //#else
+                //$$ // TODO [1.21.11] sword-class deleted — use Item.Settings attack damage component
+                //#endif
             }
         }
     }
@@ -90,8 +96,12 @@ public class KillAura {
                     entities.get().getClass() != ZoglinEntity.class && entities.get().getClass() != Entities.WARDEN &&
                     entities.get().getClass() != WitherEntity.class
                     && (mod.getItemStorage().hasItem(Items.SHIELD) || mod.getItemStorage().hasItemInOffhand(Items.SHIELD))
+                    //#if MC >= 12111
+                    //$$ && !mod.getPlayer().getItemCooldownManager().isCoolingDown(new ItemStack(offhandItem))
+                    //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
-                    && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
+                    //#endif
+                    && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())) {
                 LookHelper.smoothLookAt(mod, entities.get().getEyePos());
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);
                 if (shieldSlot.getItem() != Items.SHIELD) {
@@ -197,7 +207,8 @@ public class KillAura {
 
     public void startShielding(AltoClef mod) {
         shielding = true;
-        mod.getClientBaritone().getPathingBehavior().requestPause();
+        if (mod.getClientBaritone() != null)
+            mod.getClientBaritone().getPathingBehavior().requestPause();
         mod.getExtraBaritoneSettings().setInteractionPaused(true);
         if (!mod.getPlayer().isBlocking()) {
             ItemStack handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot());

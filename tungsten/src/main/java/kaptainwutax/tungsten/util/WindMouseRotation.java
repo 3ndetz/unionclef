@@ -47,6 +47,15 @@ public class WindMouseRotation {
     private float   targetPitch = 0;
     private boolean hasTarget   = false;
 
+    // Wall-clock of the last setTarget(). Active consumers (executor break, combat,
+    // walker, bow, bridge, pillar) refresh the target every game tick (~50ms). If
+    // nothing refreshes it for STALE_MS, the driving task is dead/stuck and the aim
+    // auto-releases — otherwise a static singleton holding a stale target locks the
+    // camera forever (and survives reconnect). This is the #29 root fix: a frozen
+    // mine/combat aim can no longer persist just because a task forgot clearTarget().
+    private long lastRefreshMs = 0L;
+    private static final long STALE_MS = 600L;
+
     // accumulated raw pixel deltas for MixinMouse to consume
     private double pendingPixelDX = 0;
     private double pendingPixelDY = 0;
@@ -67,6 +76,7 @@ public class WindMouseRotation {
         this.targetYaw   = yaw;
         this.targetPitch = pitch;
         this.hasTarget   = true;
+        this.lastRefreshMs = System.currentTimeMillis();
     }
 
     /**
@@ -76,6 +86,14 @@ public class WindMouseRotation {
      */
     public void applyRenderStep(ClientPlayerEntity player) {
         if (!hasTarget || player == null) return;
+
+        // Auto-release a stale target: an active consumer refreshes setTarget every
+        // game tick, so anything older than STALE_MS means the driving task is gone.
+        // Releasing here is the #29 root fix — a frozen aim can never persist.
+        if (System.currentTimeMillis() - lastRefreshMs > STALE_MS) {
+            clearTarget();
+            return;
+        }
 
         float currentYaw   = player.getYaw();
         float currentPitch = player.getPitch();

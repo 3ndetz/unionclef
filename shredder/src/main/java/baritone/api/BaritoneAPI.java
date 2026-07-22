@@ -34,11 +34,14 @@ public final class BaritoneAPI {
         settings = new Settings();
         SettingsUtil.readAndApply(settings, SettingsUtil.SETTINGS_DEFAULT_NAME);
 
+        IBaritoneProvider tmp;
         try {
-            provider = (IBaritoneProvider) Class.forName("baritone.BaritoneProvider").newInstance();
-        } catch (ReflectiveOperationException ex) {
-            throw new RuntimeException(ex);
+            tmp = (IBaritoneProvider) Class.forName("baritone.BaritoneProvider").newInstance();
+        } catch (ReflectiveOperationException | NoClassDefFoundError ex) {
+            System.err.println("[Baritone] Failed to initialize — MC version incompatible: " + ex.getMessage());
+            tmp = baritone.api.noop.NoopBaritoneProvider.create();
         }
+        provider = tmp;
     }
 
     public static IBaritoneProvider getProvider() {

@@ -114,11 +114,11 @@ public class ElytraCommand extends Command {
         clippy.append("Within a few hundred blocks of spawn/axis/highways/etc, the terrain is too fragmented to be predictable. Baritone Elytra will still work, just with backtracking. ");
         clippy.append("However, once you get more than a few thousand blocks out, you should try ");
         MutableText olderSeed = Text.literal("the older seed (click here)");
-        olderSeed.setStyle(olderSeed.getStyle().withUnderline(true).withBold(true).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal(Baritone.settings().prefix.value + "set elytraNetherSeed " + OLD_2B2T_SEED))).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, FORCE_COMMAND_PREFIX + "set elytraNetherSeed " + OLD_2B2T_SEED)));
+        olderSeed.setStyle(olderSeed.getStyle().withUnderline(true).withBold(true).withHoverEvent(new HoverEvent.ShowText(Text.literal(Baritone.settings().prefix.value + "set elytraNetherSeed " + OLD_2B2T_SEED))).withClickEvent(new ClickEvent.RunCommand(FORCE_COMMAND_PREFIX + "set elytraNetherSeed " + OLD_2B2T_SEED)));
         clippy.append(olderSeed);
         clippy.append(". Once you're further out into newer terrain generation (this includes everything up through 1.12), you should try ");
         MutableText newerSeed = Text.literal("the newer seed (click here)");
-        newerSeed.setStyle(newerSeed.getStyle().withUnderline(true).withBold(true).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal(Baritone.settings().prefix.value + "set elytraNetherSeed " + NEW_2B2T_SEED))).withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, FORCE_COMMAND_PREFIX + "set elytraNetherSeed " + NEW_2B2T_SEED)));
+        newerSeed.setStyle(newerSeed.getStyle().withUnderline(true).withBold(true).withHoverEvent(new HoverEvent.ShowText(Text.literal(Baritone.settings().prefix.value + "set elytraNetherSeed " + NEW_2B2T_SEED))).withClickEvent(new ClickEvent.RunCommand(FORCE_COMMAND_PREFIX + "set elytraNetherSeed " + NEW_2B2T_SEED)));
         clippy.append(newerSeed);
         clippy.append(". Once you get into 1.19 terrain, the terrain becomes unpredictable again, due to custom non-vanilla generation, and you should set #elytraPredictTerrain to false. ");
         return clippy;
@@ -129,10 +129,10 @@ public class ElytraCommand extends Command {
         gatekeep.append("To disable this message, enable the setting elytraTermsAccepted\n");
         gatekeep.append("Baritone Elytra is an experimental feature. It is only intended for long distance travel in the Nether using fireworks for vanilla boost. It will not work with any other mods (\"hacks\") for non-vanilla boost. ");
         MutableText gatekeep2 = Text.literal("If you want Baritone to attempt to take off from the ground for you, you can enable the elytraAutoJump setting (not advisable on laggy servers!). ");
-        gatekeep2.setStyle(gatekeep2.getStyle().withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal(Baritone.settings().prefix.value + "set elytraAutoJump true"))));
+        gatekeep2.setStyle(gatekeep2.getStyle().withHoverEvent(new HoverEvent.ShowText(Text.literal(Baritone.settings().prefix.value + "set elytraAutoJump true"))));
         gatekeep.append(gatekeep2);
         MutableText gatekeep3 = Text.literal("If you want Baritone to go slower, enable the elytraConserveFireworks setting and/or decrease the elytraFireworkSpeed setting. ");
-        gatekeep3.setStyle(gatekeep3.getStyle().withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal(Baritone.settings().prefix.value + "set elytraConserveFireworks true\n" + Baritone.settings().prefix.value + "set elytraFireworkSpeed 0.6\n(the 0.6 number is just an example, tweak to your liking)"))));
+        gatekeep3.setStyle(gatekeep3.getStyle().withHoverEvent(new HoverEvent.ShowText(Text.literal(Baritone.settings().prefix.value + "set elytraConserveFireworks true\n" + Baritone.settings().prefix.value + "set elytraFireworkSpeed 0.6\n(the 0.6 number is just an example, tweak to your liking)"))));
         gatekeep.append(gatekeep3);
         MutableText gatekeep4 = Text.literal("Baritone Elytra ");
         MutableText red = Text.literal("wants to know the seed");

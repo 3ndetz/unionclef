@@ -49,14 +49,14 @@ public final class LitematicaSchematic extends StaticSchematic {
     public LitematicaSchematic(NbtCompound nbtTagCompound, boolean rotated) {
         this.nbt = nbtTagCompound;
         this.offsetMinCorner = new Vec3i(getMinOfSchematic("x"), getMinOfSchematic("y"), getMinOfSchematic("z"));
-        this.y = Math.abs(nbt.getCompound("Metadata").getCompound("EnclosingSize").getInt("y"));
+        this.y = Math.abs(nbt.getCompoundOrEmpty("Metadata").getCompoundOrEmpty("EnclosingSize").getInt("y").orElse(0));
 
         if (rotated) {
-            this.x = Math.abs(nbt.getCompound("Metadata").getCompound("EnclosingSize").getInt("z"));
-            this.z = Math.abs(nbt.getCompound("Metadata").getCompound("EnclosingSize").getInt("x"));
+            this.x = Math.abs(nbt.getCompoundOrEmpty("Metadata").getCompoundOrEmpty("EnclosingSize").getInt("z").orElse(0));
+            this.z = Math.abs(nbt.getCompoundOrEmpty("Metadata").getCompoundOrEmpty("EnclosingSize").getInt("x").orElse(0));
         } else {
-            this.x = Math.abs(nbt.getCompound("Metadata").getCompound("EnclosingSize").getInt("x"));
-            this.z = Math.abs(nbt.getCompound("Metadata").getCompound("EnclosingSize").getInt("z"));
+            this.x = Math.abs(nbt.getCompoundOrEmpty("Metadata").getCompoundOrEmpty("EnclosingSize").getInt("x").orElse(0));
+            this.z = Math.abs(nbt.getCompoundOrEmpty("Metadata").getCompoundOrEmpty("EnclosingSize").getInt("z").orElse(0));
         }
         this.states = new BlockState[this.x][this.z][this.y];
         fillInSchematic();
@@ -66,7 +66,7 @@ public final class LitematicaSchematic extends StaticSchematic {
      * @return Array of subregion names.
      */
     private static String[] getRegions(NbtCompound nbt) {
-        return nbt.getCompound("Regions").getKeys().toArray(new String[0]);
+        return nbt.getCompoundOrEmpty("Regions").getKeys().toArray(new String[0]);
     }
 
     /**
@@ -76,8 +76,8 @@ public final class LitematicaSchematic extends StaticSchematic {
      * @return the lower coord of the requested axis.
      */
     private static int getMinOfSubregion(NbtCompound nbt, String subReg, String s) {
-        int a = nbt.getCompound("Regions").getCompound(subReg).getCompound("Position").getInt(s);
-        int b = nbt.getCompound("Regions").getCompound(subReg).getCompound("Size").getInt(s);
+        int a = nbt.getCompoundOrEmpty("Regions").getCompoundOrEmpty(subReg).getCompoundOrEmpty("Position").getInt(s).orElse(0);
+        int b = nbt.getCompoundOrEmpty("Regions").getCompoundOrEmpty(subReg).getCompoundOrEmpty("Size").getInt(s).orElse(0);
         if (b < 0) {
             b++;
         }
@@ -93,8 +93,8 @@ public final class LitematicaSchematic extends StaticSchematic {
         BlockState[] blockList = new BlockState[blockStatePalette.size()];
 
         for (int i = 0; i < blockStatePalette.size(); i++) {
-            Block block = Registries.BLOCK.get(Identifier.of((((NbtCompound) blockStatePalette.get(i)).getString("Name"))));
-            NbtCompound properties = ((NbtCompound) blockStatePalette.get(i)).getCompound("Properties");
+            Block block = Registries.BLOCK.get(Identifier.of(((NbtCompound) blockStatePalette.get(i)).getString("Name").orElse("")));
+            NbtCompound properties = ((NbtCompound) blockStatePalette.get(i)).getCompoundOrEmpty("Properties");
 
             blockList[i] = getBlockState(block, properties);
         }
@@ -111,7 +111,7 @@ public final class LitematicaSchematic extends StaticSchematic {
 
         for (Object key : properties.getKeys().toArray()) {
             Property<?> property = block.getStateManager().getProperty((String) key);
-            String propertyValue = properties.getString((String) key);
+            String propertyValue = properties.getString((String) key).orElse(null);
             if (property != null) {
                 blockState = setPropertyValue(blockState, property, propertyValue);
             }
@@ -147,16 +147,16 @@ public final class LitematicaSchematic extends StaticSchematic {
      */
     private static long getVolume(NbtCompound nbt, String subReg) {
         return Math.abs(
-                nbt.getCompound("Regions").getCompound(subReg).getCompound("Size").getInt("x") *
-                        nbt.getCompound("Regions").getCompound(subReg).getCompound("Size").getInt("y") *
-                        nbt.getCompound("Regions").getCompound(subReg).getCompound("Size").getInt("z"));
+                nbt.getCompoundOrEmpty("Regions").getCompoundOrEmpty(subReg).getCompoundOrEmpty("Size").getInt("x").orElse(0) *
+                        nbt.getCompoundOrEmpty("Regions").getCompoundOrEmpty(subReg).getCompoundOrEmpty("Size").getInt("y").orElse(0) *
+                        nbt.getCompoundOrEmpty("Regions").getCompoundOrEmpty(subReg).getCompoundOrEmpty("Size").getInt("z").orElse(0));
     }
 
     /**
      * @return array of Long values.
      */
     private static long[] getBlockStates(NbtCompound nbt, String subReg) {
-        return nbt.getCompound("Regions").getCompound(subReg).getLongArray("BlockStates");
+        return nbt.getCompoundOrEmpty("Regions").getCompoundOrEmpty(subReg).getLongArray("BlockStates").orElse(new long[0]);
     }
 
     /**
@@ -169,9 +169,9 @@ public final class LitematicaSchematic extends StaticSchematic {
      */
     private static boolean inSubregion(NbtCompound nbt, String subReg, int x, int y, int z) {
         return x >= 0 && y >= 0 && z >= 0 &&
-                x < Math.abs(nbt.getCompound("Regions").getCompound(subReg).getCompound("Size").getInt("x")) &&
-                y < Math.abs(nbt.getCompound("Regions").getCompound(subReg).getCompound("Size").getInt("y")) &&
-                z < Math.abs(nbt.getCompound("Regions").getCompound(subReg).getCompound("Size").getInt("z"));
+                x < Math.abs(nbt.getCompoundOrEmpty("Regions").getCompoundOrEmpty(subReg).getCompoundOrEmpty("Size").getInt("x").orElse(0)) &&
+                y < Math.abs(nbt.getCompoundOrEmpty("Regions").getCompoundOrEmpty(subReg).getCompoundOrEmpty("Size").getInt("y").orElse(0)) &&
+                z < Math.abs(nbt.getCompoundOrEmpty("Regions").getCompoundOrEmpty(subReg).getCompoundOrEmpty("Size").getInt("z").orElse(0));
     }
 
     /**
@@ -191,7 +191,7 @@ public final class LitematicaSchematic extends StaticSchematic {
      */
     private void fillInSchematic() {
         for (String subReg : getRegions(nbt)) {
-            NbtList usedBlockTypes = nbt.getCompound("Regions").getCompound(subReg).getList("BlockStatePalette", 10);
+            NbtList usedBlockTypes = nbt.getCompoundOrEmpty("Regions").getCompoundOrEmpty(subReg).getListOrEmpty("BlockStatePalette");
             BlockState[] blockList = getBlockList(usedBlockTypes);
 
             int bitsPerBlock = getBitsPerBlock(usedBlockTypes.size());

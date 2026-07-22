@@ -134,6 +134,8 @@ public class AltoClef implements ModInitializer {
     // Py4j bridge
     private Py4jEntryPoint _py4jEntryPoint = null;
     private GatewayServer _gatewayServer = null;
+    // MCP server (LAN-hosted control surface over the same levers)
+    private adris.altoclef.mcp.McpServer _mcpServer = null;
 
     public static adris.altoclef.util.agent.Pipeline getPipeline() {
         return _pipeline;
@@ -191,6 +193,7 @@ public class AltoClef implements ModInitializer {
                 }
                 _py4jEntryPoint.InitPythonCallback();
                 Debug.logMessage("Py4j gateway started on port " + port);
+                startMcpServer();
                 return;
             } catch (Py4JNetworkException e) {
                 if (e.getCause() instanceof java.net.BindException) {
@@ -203,6 +206,21 @@ public class AltoClef implements ModInitializer {
             }
         }
         Debug.logError("Py4j: failed to bind after " + MAX_ATTEMPTS + " attempts, giving up");
+    }
+
+    /** Start the in-mod MCP server (LAN-hosted, 0.0.0.0:mcpPort) so a cognitive
+     *  agent can drive the bot over the network through the same levers. */
+    private void startMcpServer() {
+        if (!getModSettings().isMcpEnabled() || _mcpServer != null || _py4jEntryPoint == null) return;
+        try {
+            _mcpServer = new adris.altoclef.mcp.McpServer(_py4jEntryPoint);
+            int mport = getModSettings().getMcpPort();
+            _mcpServer.start(mport);
+            Debug.logMessage("MCP server started on 0.0.0.0:" + mport + " (http://<lan-ip>:" + mport + "/mcp)");
+        } catch (Exception e) {
+            Debug.logWarning("MCP server failed to start: " + e.getMessage());
+            _mcpServer = null;
+        }
     }
 
     public void stopPythonSender() {
@@ -239,6 +257,16 @@ public class AltoClef implements ModInitializer {
         }
         try {
             Session cur = client.getSession();
+            //#if MC >= 12111
+            //$$ // TODO [1.21.11] Session.getAccountType() removed — constructor changed
+            //$$ Session next = new Session(
+            //$$         newUsername,
+            //$$         cur.getUuidOrNull(),
+            //$$         cur.getAccessToken(),
+            //$$         cur.getXuid(),
+            //$$         cur.getClientId()
+            //$$ );
+            //#else
             Session next = new Session(
                     newUsername,
                     cur.getUuidOrNull(),
@@ -247,6 +275,7 @@ public class AltoClef implements ModInitializer {
                     cur.getClientId(),
                     cur.getAccountType()
             );
+            //#endif
             ((MinecraftClientSessionMixin) client).setSession(next);
             Debug.logMessage("Username changed to: " + newUsername);
             return true;
@@ -439,13 +468,78 @@ public class AltoClef implements ModInitializer {
         EventBus.subscribe(adris.altoclef.eventbus.events.multiplayer.ItemUseEvent.class, evt ->
                 getMobDefenseChain().onPlayerItemUse(this, evt.entity, evt.released));
 
+        // AUTO-ACCEPT server resource-pack prompts (operator 2026-06-21): some servers (fdmc.pw) push a
+        // REQUIRED resource pack with a "this server requires a resource pack — decline = DISCONNECT" screen.
+        // A headless bot would sit on it / get kicked. When that ConfirmScreen opens, click YES automatically.
+        EventBus.subscribe(adris.altoclef.eventbus.events.ScreenOpenEvent.class, evt -> {
+            if (evt.preOpen) return;
+            net.minecraft.client.gui.screen.Screen s = evt.screen;
+            if (!(s instanceof net.minecraft.client.gui.screen.ConfirmScreen)) return;
+            String t = s.getTitle().getString().toLowerCase();
+            if (t.contains("resource pack") || t.contains("texture")
+                    || t.contains("ресурс") || t.contains("набор ресурс")) {
+                try {
+                    it.unimi.dsi.fastutil.booleans.BooleanConsumer cb =
+                            ((adris.altoclef.mixins.ConfirmScreenAccessor) s).getCallback();
+                    if (cb != null) {
+                        Debug.logMessage("Auto-accepting server resource-pack prompt.");
+                        cb.accept(true);
+                    }
+                } catch (Throwable e) {
+                    Debug.logWarning("RP auto-accept failed: " + e.getMessage());
+                }
+            }
+        });
+
         // Playground
         Playground.IDLE_TEST_INIT_FUNCTION(this);
 
         // Tasks
         TaskCatalogue.init();
 
-        getClientBaritone().getGameEventHandler().registerEventListener(new TabCompleter());
+        if (getClientBaritone() != null) {
+            getClientBaritone().getGameEventHandler().registerEventListener(new TabCompleter());
+        }
+
+        // Tungsten need-fulfiller, stage 1 (docs/features/TUNGSTEN_ALTOCLEF_API.md):
+        // when the tungsten executor mines a block, equip the best tool for it.
+        // Runs on the client thread (tungsten calls it from its mining tick).
+        kaptainwutax.tungsten.TungstenModDataContainer.equipToolHook = (pos, state) -> {
+            try {
+                if (getFoodChain().isTryingToEat()) return;
+                java.util.Optional<adris.altoclef.util.slots.Slot> best =
+                        adris.altoclef.util.helpers.StorageHelper.getBestToolSlot(this, state);
+                if (best.isEmpty()) return;
+                adris.altoclef.util.slots.Slot current = adris.altoclef.util.slots.PlayerSlot.getEquipSlot();
+                net.minecraft.item.Item bestItem =
+                        adris.altoclef.util.helpers.StorageHelper.getItemStackInSlot(best.get()).getItem();
+                if (adris.altoclef.util.helpers.StorageHelper.getItemStackInSlot(current).getItem() == bestItem) return;
+                getSlotHandler().forceEquipItem(bestItem);
+            } catch (Throwable t) {
+                // the hook must never break mining
+            }
+        };
+
+        // Tungsten protection hook: altoclef's break-avoiders (bed protection,
+        // task-scoped avoid lists, protected zones) are the single source of
+        // truth for "may we mine this" — bridge them into tungsten BreakRules.
+        kaptainwutax.tungsten.TungstenModDataContainer.canBreakHook = pos -> {
+            try {
+                return !getExtraBaritoneSettings().shouldAvoidBreaking(pos);
+            } catch (Throwable t) {
+                return true; // protection lookup failure must not freeze pathing
+            }
+        };
+        // Symmetric place-protection: altoclef's place-avoiders / protected zones
+        // are the single source of truth for "may we build here" — bridge them
+        // into tungsten PlaceRules (bridge/fill/build/schematic all honour it).
+        kaptainwutax.tungsten.TungstenModDataContainer.canPlaceHook = pos -> {
+            try {
+                return !getExtraBaritoneSettings().shouldAvoidPlacingAt(pos);
+            } catch (Throwable t) {
+                return true; // protection lookup failure must not freeze building
+            }
+        };
 
         // External mod initialization
         runEnqueuedPostInits();
@@ -508,6 +602,7 @@ public class AltoClef implements ModInitializer {
     }
 
     private void initializeBaritoneSettings() {
+        if (getClientBaritone() == null) return; // baritone not available on this MC version
         getExtraBaritoneSettings().canWalkOnEndPortal(false);
         getClientBaritoneSettings().freeLook.value = false;
         getClientBaritoneSettings().overshootTraverse.value = false;
@@ -693,10 +788,15 @@ public class AltoClef implements ModInitializer {
      * Baritone access (could just be static honestly)
      */
     public Baritone getClientBaritone() {
-        if (getPlayer() == null) {
-            return (Baritone) BaritoneAPI.getProvider().getPrimaryBaritone();
+        try {
+            if (getPlayer() == null) {
+                return (Baritone) BaritoneAPI.getProvider().getPrimaryBaritone();
+            }
+            return (Baritone) BaritoneAPI.getProvider().getBaritoneForPlayer(getPlayer());
+        } catch (ClassCastException e) {
+            // Baritone not initialized (incompatible MC version) — proxy can't cast
+            return null;
         }
-        return (Baritone) BaritoneAPI.getProvider().getBaritoneForPlayer(getPlayer());
     }
 
     /**

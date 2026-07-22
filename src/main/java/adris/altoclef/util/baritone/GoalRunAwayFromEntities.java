@@ -61,12 +61,12 @@ public abstract class GoalRunAwayFromEntities implements Goal {
                     counter++;
                     if (entity == null || !entity.isAlive()) continue;
                     double cost = getCostOfEntity(entity, x, y, z);
-                    if (cost != 0) {
+                    if (cost > 0.001) {
                         // We want the CLOSER entities to have a bigger weight than the further ones.
-                        costSum += 1 / cost;
+                        costSum += 1.0 / cost;
                     } else {
-                        // Bad >:(
-                        costSum += 1000;
+                        // Entity is at our position or very close — heavy penalty
+                        costSum += 1000.0;
                     }
                     if (counter >= max) break;
                 }

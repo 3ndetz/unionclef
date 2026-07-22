@@ -10,7 +10,7 @@ import java.util.function.Function;
  */
 public interface StlHelper {
     static <T> Comparator<T> compareValues(Function<T, Double> getValue) {
-        return (left, right) -> (int) Math.signum(getValue.apply(left) - getValue.apply(right));
+        return (left, right) -> Double.compare(getValue.apply(left), getValue.apply(right));
     }
 
     static <T> String toString(Collection<T> thing, Function<T, String> toStringFunc) {

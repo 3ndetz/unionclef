@@ -277,6 +277,12 @@ public class Settings implements IFailableConfigFile {
     private boolean autoMLGBucket = true;
 
     /**
+     * Minimum fall distance (in blocks) before the bot will attempt
+     * an enderpearl clutch save. Set with @set minPearlDistance <value>
+     */
+    private double minPearlFallDistance = 3.0;
+
+    /**
      * If true, will automatically reconnect to the last open server if you get disconnected.
      * <p>
      * If disabled, the bot will stop running when you disconnect from a server.
@@ -580,6 +586,27 @@ public class Settings implements IFailableConfigFile {
     }
 
     /**
+     * MCP server (Model Context Protocol over Streamable HTTP) hosted directly
+     * by the mod, bound to 0.0.0.0 so a cognitive agent (Claude) can drive the
+     * bot over the LAN — http://&lt;lan-ip&gt;:mcpPort/mcp. Wraps the same
+     * Py4jEntryPoint levers (single source). Disable to close the LAN port.
+     */
+    private boolean mcpEnabled = true;
+    private int mcpPort = 25350;
+
+    public boolean isMcpEnabled() {
+        return mcpEnabled;
+    }
+
+    public int getMcpPort() {
+        return mcpPort;
+    }
+
+    public void setMcpPort(int port) {
+        this.mcpPort = port;
+    }
+
+    /**
      * Last known good nickname. If we log in as PlayerNNN,
      * this nick is restored automatically.
      */
@@ -631,6 +658,10 @@ public class Settings implements IFailableConfigFile {
 
     public boolean shouldAutoMLGBucket() {
         return autoMLGBucket;
+    }
+
+    public double getMinPearlFallDistance() {
+        return minPearlFallDistance;
     }
 
     public boolean shouldCollectPickaxeFirst() {

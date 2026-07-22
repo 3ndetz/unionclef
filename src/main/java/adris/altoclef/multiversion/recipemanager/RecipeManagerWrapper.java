@@ -24,7 +24,11 @@ public class RecipeManagerWrapper {
         this.recipeManager = recipeManager;
     }
 
-    //#if MC>12001
+    //#if MC >= 12111
+    //$$ public Collection<WrappedRecipeEntry> values() {
+    //$$     return java.util.Collections.emptySet(); // TODO [1.21.11] RecipeEntry.id() returns RegistryKey now
+    //$$ }
+    //#elseif MC>12001
     public Collection<WrappedRecipeEntry> values() {
         return recipeManager.values().stream().map(r -> new WrappedRecipeEntry(r.id(),r.value())).collect(Collectors.toSet());
     }

@@ -1,0 +1,71 @@
+# ╔══════════════════════════════════════════════════════════╗
+# ║  ClefForge Compose — unionclef CI/CD stack              ║
+# ╚══════════════════════════════════════════════════════════╝
+
+services:
+
+  # ── Build stage: one-shot compile, output to volume ─────
+  clefforge-build:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: clefforge-base
+    image: clefforge:builder
+    volumes:
+      - forge-artifacts:/out
+      - forge-cache:/root/.gradle
+    command: ["true"]
+
+  # ── Runtime stage: artifact server ──────────────────────
+  clefforge:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: clefforge
+    image: clefforge:latest
+    container_name: clefforge
+    ports:
+      - "8080:8080"
+    volumes:
+      - forge-artifacts:/forge/artifacts
+      - ../src:/forge/src:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ── Watch mode: live rebuild on src change ──────────────
+  clefforge-watch:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: clefforge-base
+    image: clefforge:builder
+    container_name: clefforge-watch
+    ports:
+      - "8081:8080"
+    volumes:
+      - ../src:/forge/src
+      - ../build.gradle:/forge/build.gradle
+      - ../settings.gradle.kts:/forge/settings.gradle.kts
+      - ../root.gradle.kts:/forge/root.gradle.kts
+      - ../gradle.properties:/forge/gradle.properties
+      - ../versions:/forge/versions
+      - forge-artifacts:/forge/out
+      - forge-cache:/root/.gradle
+    working_dir: /forge
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo "ClefForge watch — build on src changes"
+        find src -name "*.java" | entr -r ./gradlew build --no-daemon 2>&1
+
+volumes:
+  forge-artifacts:
+    name: clefforge-artifacts
+  forge-cache:
+    name: clefforge-gradle-cache

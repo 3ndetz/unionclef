@@ -28,12 +28,26 @@ public class Debug {
         return "[Alto Clef] ";
     }
 
+    // sendMessage bakes font glyphs, which MUST happen on the render thread. Commands invoked
+    // over py4j run on Worker-Main threads: a direct player.sendMessage there throws
+    // "Rendersystem called from wrong thread" and ABORTS the caller mid-command (@connect
+    // died on its own log line before reaching connectToServer, pon4ikyt ticket 1783254983).
+    // client.execute runs inline when already on the render thread, else queues for next tick.
+    private static void sendChatOnClientThread(String msg) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        client.execute(() -> {
+            if (client.player != null) {
+                client.player.sendMessage(Text.of(msg), false);
+            }
+        });
+    }
+
     public static void logMessage(String message, boolean prefix) {
         if (MinecraftClient.getInstance() != null && MinecraftClient.getInstance().player != null) {
             if (prefix) {
                 message = "\u00A72\u00A7l\u00A7o" + getLogPrefix() + "\u00A7r" + message;
             }
-            MinecraftClient.getInstance().player.sendMessage(Text.of(message), false);
+            sendChatOnClientThread(message);
 
         } else {
             logInternal(message);
@@ -57,7 +71,7 @@ public class Debug {
         if (altoClef != null && !altoClef.getModSettings().shouldHideAllWarningLogs()) {
             if (MinecraftClient.getInstance() != null && MinecraftClient.getInstance().player != null) {
                 String msg = "\u00A72\u00A7l\u00A7o" + getLogPrefix() + "\u00A7c" + message + "\u00A7r";
-                MinecraftClient.getInstance().player.sendMessage(Text.of(msg), false);
+                sendChatOnClientThread(msg);
 
             }
         }
@@ -78,7 +92,7 @@ public class Debug {
 
         if (MinecraftClient.getInstance() != null && MinecraftClient.getInstance().player != null) {
             String msg = "\u00A72\u00A7l\u00A7c" + getLogPrefix() + "[ERROR] " + message + "\nat:\n" + stacktrace + "\u00A7r";
-            MinecraftClient.getInstance().player.sendMessage(Text.of(msg), false);
+            sendChatOnClientThread(msg);
         }
     }
 

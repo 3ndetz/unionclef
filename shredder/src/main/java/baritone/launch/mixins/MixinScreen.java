@@ -21,32 +21,33 @@ import baritone.api.BaritoneAPI;
 import baritone.api.IBaritone;
 import baritone.api.event.events.ChatEvent;
 import baritone.utils.accessor.IGuiScreen;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.gen.Invoker;
-
-import java.net.URI;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.ClickEvent;
-import net.minecraft.text.Style;
+import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import static baritone.api.command.IBaritoneChatControl.FORCE_COMMAND_PREFIX;
 
 @Mixin(Screen.class)
 public abstract class MixinScreen implements IGuiScreen {
 
     //TODO: switch to enum extention with mixin 9.0 or whenever Mumfrey gets around to it
-    @Inject(at = @At(value = "INVOKE", target = "Lorg/slf4j/Logger;error(Ljava/lang/String;Ljava/lang/Object;)V", remap = false, ordinal = 1), method = "handleTextClick", cancellable = true)
-    public void handleCustomClickEvent(Style style, CallbackInfoReturnable<Boolean> cir) {
-        ClickEvent clickEvent = style.getClickEvent();
+    @Inject(method = "handleClickEvent", at = @At(value = "HEAD"), cancellable = true)
+    private static void handleCustomClickEvent(final ClickEvent clickEvent, final MinecraftClient minecraft, final Screen screen, final CallbackInfo ci) {
         if (clickEvent == null) {
+            return;
+        }
+        if (!(clickEvent instanceof ClickEvent.RunCommand(String command))) return;
+        if (!command.startsWith(FORCE_COMMAND_PREFIX)) {
             return;
         }
         IBaritone baritone = BaritoneAPI.getProvider().getPrimaryBaritone();
         if (baritone != null) {
-            baritone.getGameEventHandler().onSendChatMessage(new ChatEvent(clickEvent.getValue()));
+            baritone.getGameEventHandler().onSendChatMessage(new ChatEvent(command));
         }
-        cir.setReturnValue(true);
-        cir.cancel();
+        ci.cancel();
     }
 }

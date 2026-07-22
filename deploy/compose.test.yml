@@ -1,0 +1,96 @@
+# unionclef autotest stand (docs/AUTOTESTING.md, phase 0) — self-contained,
+# runs on the Mac (mactrindetz) next to the production mineswarm stack without
+# touching it: own network, own container names, own run/ dir.
+#
+# Client image is mineswarm's headless MC client (PortableMC -> Fabric 1.21.11,
+# py4j baked in) — built from ../mineswarm/game/minecraft/docker. The fresh
+# unionclef jar is placed into ./run/mods by deploy/autotest.sh.
+#
+#   docker compose -f deploy/compose.test.yml up -d
+#   docker compose -f deploy/compose.test.yml down
+#
+# noVNC debug view of the client: http://<mac>:5820
+
+networks:
+  uctest:
+    name: uctest
+
+services:
+  test-server:
+    image: itzg/minecraft-server:latest
+    container_name: uctest-server
+    environment:
+      EULA: "TRUE"
+      TYPE: "VANILLA"
+      VERSION: "1.21.11"
+      ONLINE_MODE: "FALSE"
+      LEVEL_TYPE: "minecraft:flat"
+      GENERATE_STRUCTURES: "false"   # villages on the course ruin determinism
+      DIFFICULTY: "peaceful"
+      MODE: "survival"
+      ALLOW_FLIGHT: "TRUE"          # big slime bounces trip the vanilla flight kick
+      SPAWN_PROTECTION: "0"
+      RCON_PASSWORD: "uctest"
+      VIEW_DISTANCE: "8"
+    networks: [uctest]
+    restart: unless-stopped
+
+  # Survival world for @gamer / tungsten_speedrun testing (real terrain, trees,
+  # mobs, easy difficulty). Separate from the flat determinism stand. Start with
+  #   docker compose -f deploy/compose.test.yml --profile gamer up -d
+  gamer-server:
+    image: itzg/minecraft-server:latest
+    container_name: uctest-gamer-server
+    profiles: [gamer]
+    environment:
+      EULA: "TRUE"
+      TYPE: "VANILLA"
+      VERSION: "1.21.11"
+      ONLINE_MODE: "FALSE"
+      LEVEL_TYPE: "minecraft:normal"
+      SEED: "12345"                  # deterministic-ish start
+      GENERATE_STRUCTURES: "true"
+      DIFFICULTY: "easy"
+      MODE: "survival"
+      SPAWN_PROTECTION: "0"
+      RCON_PASSWORD: "uctest"
+      VIEW_DISTANCE: "8"
+    networks: [uctest]
+    restart: unless-stopped
+
+  mc-tester1:
+    image: mineswarm-mc:amd64
+    platform: linux/amd64
+    container_name: uctest-mc-tester1
+    environment:
+      MC_USERNAME: "tester1"
+      MC_MAX_MEM: "3G"
+    ports:
+      - "5820:5800"                 # noVNC (debug only)
+      - "25350:25350"               # in-mod MCP server (LAN control surface)
+    volumes:
+      - ./run/data/tester1:/mc-data
+      - ./run/mods:/mc-data/mods:ro
+    networks: [uctest]
+    depends_on: [test-server]
+    restart: unless-stopped
+
+  # Victim client for PVP tests (pvp_test.py). Same image/mods; just stands
+  # there and gets hit. Started with --profile pvp so slime tests stay light:
+  #   docker compose -f deploy/compose.test.yml --profile pvp up -d
+  mc-tester2:
+    image: mineswarm-mc:amd64
+    platform: linux/amd64
+    container_name: uctest-mc-tester2
+    profiles: [pvp]
+    environment:
+      MC_USERNAME: "tester2"
+      MC_MAX_MEM: "3G"
+    ports:
+      - "5821:5800"                 # noVNC (debug only)
+    volumes:
+      - ./run/data/tester2:/mc-data
+      - ./run/mods:/mc-data/mods:ro
+    networks: [uctest]
+    depends_on: [test-server]
+    restart: unless-stopped

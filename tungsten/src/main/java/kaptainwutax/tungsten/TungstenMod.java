@@ -65,34 +65,101 @@ public class TungstenMod implements ClientModInitializer {
 		
 	}
 
+	/**
+	 * Reset ALL tungsten client-side state. Called on disconnect / world change so
+	 * nothing survives a re-join: a frozen mine/combat aim, a running task, a stuck
+	 * break, a live pathfinder/executor. Static singletons don't reset on world unload
+	 * on their own — this is the durable fix for #29 (camera frozen on a block that
+	 * persisted across reconnect). Also safe to call anytime as a hard reset.
+	 */
+	public static void resetAllState() {
+		try {
+			kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+			kaptainwutax.tungsten.task.BlockPathWalker.stop();
+			kaptainwutax.tungsten.task.BridgeTask.stop();
+			kaptainwutax.tungsten.task.PillarTask.stop();
+			kaptainwutax.tungsten.task.PunkPlayerTask.stop();
+			kaptainwutax.tungsten.task.RunAwayTask.stop();
+			kaptainwutax.tungsten.task.BowShooter.stop();
+			var pf = TungstenModDataContainer.PATHFINDER;
+			var ex = TungstenModDataContainer.EXECUTOR;
+			if (pf != null) pf.stop.set(true);
+			if (ex != null) { ex.stop = true; ex.breakQueue = null; }
+			MinecraftClient m = MinecraftClient.getInstance();
+			if (m.options != null) {
+				m.options.attackKey.setPressed(false);
+				m.options.useKey.setPressed(false);
+				m.options.forwardKey.setPressed(false);
+				m.options.backKey.setPressed(false);
+				m.options.leftKey.setPressed(false);
+				m.options.rightKey.setPressed(false);
+				m.options.sprintKey.setPressed(false);
+				m.options.jumpKey.setPressed(false);
+				m.options.sneakKey.setPressed(false);
+			}
+			if (m.interactionManager != null) m.interactionManager.cancelBlockBreaking();
+		} catch (Exception e) {
+			Debug.logMessage("resetAllState error: " + e.getMessage());
+		}
+	}
+
 	@Override
 	public void onInitializeClient() {
 		TungstenConfig.load();
+		// #29 durable fix: nothing tungsten must survive a reconnect (a frozen aim, a
+		// stuck mine, a running task). Static state doesn't reset on world unload itself.
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT
+				.register((handler, client) -> resetAllState());
 		TungstenModDataContainer.EXECUTOR = new PathExecutor(true);
+		//#if MC < 12111
+		//$$ LOG.info("[Tungsten] Preprocessor: MC < 12111 (1.21.1 fallback mode)");
+		//#else
+		LOG.info("[Tungsten] Preprocessor: MC >= 12111 ACTIVE (1.21.11 mode)");
+		//#endif
+		//#if MC < 12104
+		//$$ LOG.info("[Tungsten] Diagonal normalization: DISABLED (MC < 1.21.4)");
+		//#else
+		LOG.info("[Tungsten] Diagonal normalization: ENABLED (MC >= 1.21.4)");
+		//#endif
+		//#if MC < 12111
+		//$$ pauseKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+	            //$$ "key.tungsten.pause", // The translation key of the keybinding's name
+	            //$$ InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
+	            //$$ GLFW.GLFW_KEY_P, // The keycode of the key
+	            //$$ "key.category.tungsten.test" // The translation key of the keybinding's category.
+        //$$ ));
+		//$$ runKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+	            //$$ "key.tungsten.run", // The translation key of the keybinding's name
+	            //$$ InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
+	            //$$ GLFW.GLFW_KEY_G, // The keycode of the key
+	            //$$ "key.category.tungsten.test" // The translation key of the keybinding's category.
+        //$$ ));
+		//$$ runBlockSearchKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+	            //$$ "key.tungsten.run_block_search", // The translation key of the keybinding's name
+	            //$$ InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
+	            //$$ GLFW.GLFW_KEY_J, // The keycode of the key
+	            //$$ "key.category.tungsten.test.development" // The translation key of the keybinding's category.
+        //$$ ));
+		//$$ createGoalKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+	            //$$ "key.tungsten.create_goal", // The translation key of the keybinding's name
+	            //$$ InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
+	            //$$ GLFW.GLFW_KEY_H, // The keycode of the key
+	            //$$ "key.category.tungsten.test" // The translation key of the keybinding's category.
+        //$$ ));
+		//#else
 		pauseKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-	            "key.tungsten.pause", // The translation key of the keybinding's name
-	            InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
-	            GLFW.GLFW_KEY_P, // The keycode of the key
-	            "key.category.tungsten.test" // The translation key of the keybinding's category.
-        ));
+		    "key.tungsten.pause", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_P,
+		    net.minecraft.client.option.KeyBinding.Category.MISC));
 		runKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-	            "key.tungsten.run", // The translation key of the keybinding's name
-	            InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
-	            GLFW.GLFW_KEY_G, // The keycode of the key
-	            "key.category.tungsten.test" // The translation key of the keybinding's category.
-        ));
+		    "key.tungsten.run", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_G,
+		    net.minecraft.client.option.KeyBinding.Category.MISC));
 		runBlockSearchKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-	            "key.tungsten.run_block_search", // The translation key of the keybinding's name
-	            InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
-	            GLFW.GLFW_KEY_J, // The keycode of the key
-	            "key.category.tungsten.test.development" // The translation key of the keybinding's category.
-        ));
+		    "key.tungsten.run_block_search", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_J,
+		    net.minecraft.client.option.KeyBinding.Category.MISC));
 		createGoalKeyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-	            "key.tungsten.create_goal", // The translation key of the keybinding's name
-	            InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
-	            GLFW.GLFW_KEY_H, // The keycode of the key
-	            "key.category.tungsten.test" // The translation key of the keybinding's category.
-        ));
+		    "key.tungsten.create_goal", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_H,
+		    net.minecraft.client.option.KeyBinding.Category.MISC));
+		//#endif
         _commandExecutor = new CommandExecutor(this);
 
         // Global minecraft client accessor
@@ -115,7 +182,7 @@ public class TungstenMod implements ClientModInitializer {
     
         ClientTickEvents.START_CLIENT_TICK.register((a) -> {
         	
-        	boolean isRunning = TungstenModDataContainer.PATHFINDER.active.get() || TungstenModDataContainer.EXECUTOR.isRunning();
+        	boolean isRunning = TungstenModDataContainer.PATHFINDER.active.get() || TungstenModDataContainer.isExecutorRunning();
         	if (!isRunning) {
 	        	if (!TungstenModRenderContainer.BLOCK_PATH_RENDERER.isEmpty()) {
 	        		TungstenModRenderContainer.BLOCK_PATH_RENDERER.clear();
@@ -133,7 +200,7 @@ public class TungstenMod implements ClientModInitializer {
         	if (clickMode != clickModeEnum.OFF && mc.options.useKey.isPressed() && !isRunning) {
         		
         		 Camera camera = mc.gameRenderer.getCamera();
-                 Vec3d cameraPos = camera.getPos();
+                 Vec3d cameraPos = camera.getCameraPos();
 
                  // Calculate the direction the camera is looking based on its pitch and yaw, and extend this direction 210 units away from the camera position
                  // 210 is used here as the maximum distance of 200 blocks
@@ -163,8 +230,11 @@ public class TungstenMod implements ClientModInitializer {
 		                 double height = shape.isEmpty() ? 0 : shape.getMax(Direction.Axis.Y);
 		
 		                 Vec3d newPos = new Vec3d(pos.getX() + 0.5, pos.getY() + height, pos.getZ() + 0.5);
+		                 // Snap a non-standable click (air / tall grass / flowers) to the
+		                 // reachable ground so the search doesn't spin forever near it.
+		                 newPos = kaptainwutax.tungsten.path.GoalSnap.snap(newPos, mc.world);
 		         		TungstenMod.TARGET = newPos;
-		         		
+
 
 		        		if (clickMode == clickModeEnum.GOTO && !TungstenModDataContainer.PATHFINDER.active.get()) {
 		        			TungstenModDataContainer.PATHFINDER.find(TungstenMod.mc.world, TARGET, TungstenMod.mc.player);

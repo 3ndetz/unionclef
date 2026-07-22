@@ -8,6 +8,7 @@ import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.CursorSlot;
 import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.slots.Slot;
+import adris.altoclef.multiversion.entity.PlayerVer;
 import adris.altoclef.util.time.TimerGame;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -39,13 +40,14 @@ public class SlotHandler {
 
     private record BlacklistKey(int syncId, int windowSlot) {}
     private final Map<BlacklistKey, Long> _slotBlacklist = new HashMap<>();
+    private final Map<BlacklistKey, Integer> _slotCancelCount = new HashMap<>();
     private static final long SLOT_BLACKLIST_MS = 4000;
 
     public SlotHandler(AltoClef mod) {
         this.mod = mod;
     }
 
-    private void forceAllowNextSlotAction() {
+    public void forceAllowNextSlotAction() {
         overrideTimerOnce = true;
     }
 
@@ -131,12 +133,20 @@ public class SlotHandler {
                 BlacklistKey key = new BlacklistKey(syncId, slot);
                 boolean alreadyBlocked = _slotBlacklist.containsKey(key)
                         && now < _slotBlacklist.get(key);
-                _slotBlacklist.put(key, now + SLOT_BLACKLIST_MS);
+                // ESCALATING blacklist (operator/dev 2026-06-21, fdmc.pw anti-cheat): a slot the server
+                // keeps REVERTING is protected/locked (e.g. hub "menu" hotbar items: compass/feather/dye
+                // on anti-cheat servers). Re-clicking it every 4s forever spams "Server cancelled slot
+                // action" and gets the bot anti-cheat-KICKED. So the more times it's cancelled, the LONGER
+                // we give up on it: 4s -> 30s -> 10min. Normal inventory slots are ~never cancelled, so
+                // they never escalate; this only muzzles slots the server actively refuses.
+                int cancels = _slotCancelCount.merge(key, 1, Integer::sum);
+                long blacklistMs = cancels >= 3 ? 600_000L : (cancels == 2 ? 30_000L : SLOT_BLACKLIST_MS);
+                _slotBlacklist.put(key, now + blacklistMs);
                 if (!alreadyBlocked) {
                     Debug.logMessage("[WARN] Server cancelled slot action: window slot " + slot
                             + " (" + serverStack.getItem().getTranslationKey()
                             + " x" + serverStack.getCount()
-                            + ") — blacklisting for " + (SLOT_BLACKLIST_MS / 1000) + "s");
+                            + ") — blacklisting for " + (blacklistMs / 1000) + "s (cancel #" + cancels + ")");
                 }
             }
         }
@@ -163,7 +173,7 @@ public class SlotHandler {
         if (StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem() == toEquip) return true;
 
         // Always equip to the second slot. First + last is occupied by baritone.
-        mod.getPlayer().getInventory().selectedSlot = 1;
+        PlayerVer.setSelectedSlot(mod.getPlayer().getInventory(), 1);
 
         // If our item is in our cursor, simply move it to the hotbar.
         boolean inCursor = StorageHelper.getItemStackInSlot(CursorSlot.SLOT).getItem() == toEquip;
@@ -182,7 +192,12 @@ public class SlotHandler {
     }
 
     public boolean forceDeequipHitTool() {
+        //#if MC >= 12111
+        //$$ // TODO [1.21.11] tool-class removed — check via item components or tags
+        //$$ return forceDeequip(stack -> false);
+        //#else
         return forceDeequip(stack -> stack.getItem() instanceof ToolItem);
+        //#endif
     }
 
     public void forceDeequipRightClickableItem() {
@@ -206,7 +221,9 @@ public class SlotHandler {
                             || item instanceof OnAStickItem
                             || item == Items.COMPASS
                             || item instanceof EmptyMapItem
+                            //#if MC < 12111
                             || item instanceof Equipment
+                            //#endif
                             || item == Items.LEAD
                             || item == Items.SHIELD;
                 }
@@ -297,7 +314,11 @@ public class SlotHandler {
         // Only refresh when player inventory is active — clicking slots in
         // other screen handlers (chests, crafting tables, etc.) crashes.
         if (!(player.currentScreenHandler instanceof PlayerScreenHandler)) return;
+        //#if MC >= 12111
+        //$$ for (int i = 0; i < 36; ++i) {
+        //#else
         for (int i = 0; i < player.getInventory().main.size(); ++i) {
+        //#endif
             Slot slot = Slot.getFromCurrentScreenInventory(i);
             clickSlotForce(slot, 0, SlotActionType.PICKUP);
             clickSlotForce(slot, 0, SlotActionType.PICKUP);

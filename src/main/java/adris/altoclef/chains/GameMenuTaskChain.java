@@ -133,7 +133,12 @@ public class GameMenuTaskChain extends SingleTaskChain {
             _reloadInfoSenderTimer.reset();
         }
 
-        if (ButlerConfig.getInstance().autoJoin) {
+        // Don't touch autojoin chest-menus while a SERVER SWITCH is pending (@connect / reconnect):
+        // clicking a menu on the CURRENT server bounced the agent back into its lobby instead of
+        // actually switching servers ("@connect returns ok but client stays" bug). Let the
+        // disconnect+reconnect (onTickPost) run unobstructed.
+        boolean switchPending = _needDisconnect || _reconnecting || _connectOverrideServerEntry != null;
+        if (ButlerConfig.getInstance().autoJoin && !switchPending) {
             if (ContainerType.screenHandlerMatches(ContainerType.CHEST)) {
                 Text title = MinecraftClient.getInstance().currentScreen != null
                         ? MinecraftClient.getInstance().currentScreen.getTitle() : null;
@@ -279,6 +284,10 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 double x = worldScreen.width / 2.0 - 154;
                 double y = worldScreen.height - 52;
 
+                //#if MC >= 12111
+                //$$ // TODO: mouseClicked/mouseReleased signature changed to Click object in 1.21.11
+                //$$ // Auto-join world click needs rewrite for new input API
+                //#else
                 if (_mouseClickTimer.elapsed()) {
                     worldScreen.mouseClicked(x, y, 0);
                     worldScreen.mouseReleased(x, y, 0);
@@ -309,6 +318,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
                     }
                     _mouseClickTimer.reset();
                 }
+                //#endif
                 _needUnStuckFix = false;
             }
         } else if (_needDisconnect) {
@@ -337,11 +347,19 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 client.setScreen(new GameMenuScreen(true));
                 screen = client.currentScreen;
                 client.getAbuseReportContext().tryShowDraftScreen(client, screen, _innerDisconnect(client), true);
-                MinecraftClient.getInstance().setScreen(new MultiplayerScreen(new TitleScreen()));
+                // 1.21.11: an altoclef-spawned MultiplayerScreen crashes when ticked
+                // before init (null server-list/lan fields). TitleScreen is safe.
+                MinecraftClient.getInstance().setScreen(new TitleScreen());
                 _needDisconnect = false;
             }
-        } else if (screen instanceof MultiplayerScreen) {
+        } else if (screen instanceof MultiplayerScreen || screen instanceof TitleScreen) {
             if (_reconnecting && _reconnectTimer.elapsed()) {
+                // 1.21.11: connecting before the MultiplayerScreen ran init() crashes
+                // the client (removed() NPEs on the null server list widget). Wait until
+                // the screen is initialized (has children) before connecting.
+                if (screen.children().isEmpty()) {
+                    return;
+                }
                 reconnectAttemps += 1;
                 Debug.logMessage("RECONNECTING: Going to reconnect");
                 _reconnecting = false;
@@ -351,7 +369,13 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 } else {
                     Debug.logMessage("RECONNECTING: Connect to " + _prevServerEntry.address.toString());
                     MinecraftClient client = MinecraftClient.getInstance();
-                    ConnectScreenVer.connect(screen, client, ServerAddress.parse(_prevServerEntry.address), _prevServerEntry, false);
+                    try {
+                        ConnectScreenVer.connect(screen, client, ServerAddress.parse(_prevServerEntry.address), _prevServerEntry, false);
+                    } catch (Throwable t) {
+                        Debug.logWarning("Reconnect threw " + t.getClass().getSimpleName() + " — retry next cycle instead of crashing");
+                        _reconnecting = true;
+                        _reconnectTimer.reset();
+                    }
                     if (_needToStopTasksOnReconnect) {
                         mod.cancelUserTask();
                         _needToStopTasksOnReconnect = false;
@@ -369,11 +393,23 @@ public class GameMenuTaskChain extends SingleTaskChain {
         return () -> {
             if (client.world != null) {
                 boolean bl = client.isInSingleplayer();
+                //#if MC >= 12111
+                //$$ client.world.disconnect(Text.empty());
+                //#else
                 client.world.disconnect();
+                //#endif
                 if (bl) {
+                    //#if MC >= 12111
+                    //$$ client.disconnect(Text.empty());
+                    //#else
                     client.disconnect(new DisconnectedScreen(client.currentScreen, Text.of("menu.savingLevel"), Text.of("DEATH")));
+                    //#endif
                 } else {
+                    //#if MC >= 12111
+                    //$$ client.disconnect(Text.empty());
+                    //#else
                     client.disconnect();
+                    //#endif
                 }
             }
         };
@@ -383,11 +419,23 @@ public class GameMenuTaskChain extends SingleTaskChain {
         if (AltoClef.inGame() && client.world != null) {
             Debug.logMessage("DISCONNECT");
             boolean bl = client.isInSingleplayer();
+            //#if MC >= 12111
+            //$$ client.world.disconnect(Text.empty());
+            //#else
             client.world.disconnect();
+            //#endif
             if (bl) {
+                //#if MC >= 12111
+                //$$ client.disconnect(Text.of("DEATH"));
+                //#else
                 client.disconnect(new DisconnectedScreen(client.currentScreen, Text.of("menu.savingLevel"), Text.of("DEATH")));
+                //#endif
             } else {
+                //#if MC >= 12111
+                //$$ client.disconnect(Text.empty());
+                //#else
                 client.disconnect();
+                //#endif
             }
         } else {
             Debug.logMessage("Tried to disconnect >>> world is null or not in game");
@@ -403,9 +451,9 @@ public class GameMenuTaskChain extends SingleTaskChain {
             _prevServerEntry = _connectOverrideServerEntry;
             Screen screen = MinecraftClient.getInstance().currentScreen;
             Debug.logMessage("RECONNECT CHAIN: Not in game; Connecting to server from menu: " + ip);
-            if (!(screen instanceof MultiplayerScreen)) {
-                Debug.logMessage("RECONNECT CHAIN: Setting to MultiplayerScreen " + ip);
-                MinecraftClient.getInstance().setScreen(new MultiplayerScreen(new TitleScreen()));
+            if (!(screen instanceof MultiplayerScreen || screen instanceof TitleScreen)) {
+                Debug.logMessage("RECONNECT CHAIN: Parking on TitleScreen before connect to " + ip);
+                MinecraftClient.getInstance().setScreen(new TitleScreen());
             }
             _needDisconnect = false;
             _reconnecting = true;

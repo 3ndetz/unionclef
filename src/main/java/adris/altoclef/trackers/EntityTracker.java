@@ -46,6 +46,8 @@ public class EntityTracker extends Tracker {
     private final HashMap<String, Vec3d> playerLastCoordinates = new HashMap<>();
 
     private final EntityLocateBlacklist entityBlacklist = new EntityLocateBlacklist();
+    private int _blacklistCleanupCounter = 0;
+    private static final int BLACKLIST_CLEANUP_INTERVAL = 200; // ~10 seconds
 
     private final HashMap<PlayerEntity, List<Entity>> entitiesCollidingWithPlayerAccumulator = new HashMap<>();
     private final HashMap<PlayerEntity, HashSet<Entity>> entitiesCollidingWithPlayer = new HashMap<>();
@@ -316,6 +318,11 @@ public class EntityTracker extends Tracker {
 
     @Override
     protected synchronized void updateState() {
+        // Periodic blacklist cleanup to prevent memory leak from stale entries
+        if (_blacklistCleanupCounter++ > BLACKLIST_CLEANUP_INTERVAL) {
+            _blacklistCleanupCounter = 0;
+            entityBlacklist.cleanupStale();
+        }
         synchronized (BaritoneHelper.MINECRAFT_LOCK) {
             itemDropLocations.clear();
             entityMap.clear();
@@ -384,7 +391,9 @@ public class EntityTracker extends Tracker {
                         boolean inGround = false;
                         // Get projectile "inGround" variable
                         if (entity instanceof PersistentProjectileEntity) {
+                            //#if MC < 12111
                             inGround = ((PersistentProjectileEntityAccessor) entity).isInGround();
+                            //#endif
                         }
 
                         // Ignore some of the harlmess projectiles
@@ -417,7 +426,9 @@ public class EntityTracker extends Tracker {
 
         boolean inGround = false;
         if (projEntity instanceof PersistentProjectileEntity) {
+            //#if MC < 12111
             inGround = ((PersistentProjectileEntityAccessor) projEntity).isInGround();
+            //#endif
         }
 
         // Ignore harmless projectiles

@@ -655,7 +655,7 @@ public interface LookHelper {
      * @param toLook The coordinates to look at.
      * @return The rotation needed to look at the specified point.
      */
-    static Rotation getLookRotation(AltoClef mod, Vec3d toLook) {
+    public static Rotation getLookRotation(AltoClef mod, Vec3d toLook) {
         // Get the player's head position
         Vec3d playerHead = mod.getClientBaritone().getPlayerContext().playerHead();
 

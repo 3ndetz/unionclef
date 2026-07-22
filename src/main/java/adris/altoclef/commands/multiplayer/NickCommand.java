@@ -15,10 +15,12 @@ public class NickCommand extends Command {
     @Override
     protected void call(AltoClef mod, ArgParser parser) throws CommandException {
         String name = parser.get(String.class);
-        // AltoClef.changePlayerName is not available in this fork;
-        // send the /nick command via the server instead
-        mod.getMessageSender().enqueueChat("/nick " + name, MessagePriority.TIMELY);
-        mod.log("Requested nick change to: " + name);
+        // Swap the OFFLINE client session username directly (applies on the NEXT connect). The
+        // server-side /nick is region-blocked on the musteryworld network ("не разрешена в этом
+        // регионе"), so it never changed the auth nick — changePlayerName is what actually works.
+        boolean ok = AltoClef.changePlayerName(name);
+        mod.log(ok ? ("Nick set to '" + name + "' — reconnect to the server to apply it")
+                   : ("Nick change FAILED for '" + name + "'"));
         finish();
     }
 }

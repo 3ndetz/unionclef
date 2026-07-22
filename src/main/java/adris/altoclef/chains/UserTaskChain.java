@@ -119,7 +119,8 @@ public class UserTaskChain extends SingleTaskChain {
             // Stop.
             mod.getTaskRunner().disable();
             // Extra reset. Sometimes baritone is laggy and doesn't properly reset our press
-            mod.getClientBaritone().getInputOverrideHandler().clearAllKeys();
+            if (mod.getClientBaritone() != null)
+                mod.getClientBaritone().getInputOverrideHandler().clearAllKeys();
         }
         double seconds = taskStopwatch.time();
         Task oldTask = mainTask;

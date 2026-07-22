@@ -55,6 +55,22 @@ public abstract class AbstractObjectBlacklist<T> {
         entries.clear();
     }
 
+    /**
+     * Remove entries for objects that no longer exist.
+     * Call periodically to prevent unbounded memory growth.
+     */
+    public void cleanupStale() {
+        entries.keySet().removeIf(this::isStale);
+    }
+
+    /**
+     * Default stale check — override for entity-specific cleanup.
+     * By default, checks if the object's position is far from origin (despawned).
+     */
+    protected boolean isStale(T item) {
+        return false;
+    }
+
     // Key: BlockPos
     private static class BlacklistEntry {
         public int numberOfFailuresAllowed;

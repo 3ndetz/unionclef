@@ -24,6 +24,13 @@ public class TungstenHelper {
     private static int failCount = 0;
     private static long lastStartTime = 0;
 
+    // Drop-in swap (TODO 13): when primary, altoclef goals route straight to
+    // tungsten instead of waiting for baritone to fail. Baritone movement is
+    // broken on some headless clients; tungsten always drives the player.
+    private static volatile boolean primary = false;
+    public static void setPrimary(boolean p) { primary = p; }
+    public static boolean isPrimary() { return primary; }
+
     private static final int MAX_FAIL_COUNT = 5;
     private static final long COOLDOWN_MS = 1000;
     private static final long LOCK_DURATION_MS = 30_000; // 30 sec exclusive control

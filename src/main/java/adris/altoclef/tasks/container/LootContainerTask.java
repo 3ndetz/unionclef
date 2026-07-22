@@ -13,9 +13,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 
 
@@ -121,12 +119,51 @@ public class LootContainerTask extends Task {
 
     private Optional<Slot> getAMatchingSlot(AltoClef mod) {
         for (Item item : targets) {
+            // Skip items of lower tier than what we already have in inventory
+            if (shouldSkipLowerTierItem(mod, item)) continue;
             List<Slot> slots = mod.getItemStorage().getSlotsWithItemContainer(item);
             if (!slots.isEmpty()) for (Slot slot : slots) {
                 if (check.test(StorageHelper.getItemStackInSlot(slot))) return Optional.of(slot);
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * Skip container items that are a lower tier than what we already own.
+     * Prevents looting wooden pickaxe when we already have an iron one.
+     */
+    private static boolean shouldSkipLowerTierItem(AltoClef mod, Item item) {
+        Item[][] tierGroups = {
+            ItemHelper.PickaxesTopPriority,
+            ItemHelper.AxesTopPriority,
+            ItemHelper.SwordsTopPriority,
+            ItemHelper.ShovelsTopPriority,
+            ItemHelper.HoesTopPriority,
+            ItemHelper.HelmetsTopPriority,
+            ItemHelper.ChestplatesTopPriority,
+            ItemHelper.LeggingsTopPriority,
+            ItemHelper.BootsTopPriority,
+        };
+        for (Item[] priorityArr : tierGroups) {
+            int itemTier = indexOf(priorityArr, item);
+            if (itemTier < 0) continue;
+            // Check if we have a better-tier item (lower index = higher tier)
+            for (int i = 0; i < itemTier; i++) {
+                if (mod.getItemStorage().hasItemInventoryOnly(priorityArr[i])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return false;
+    }
+
+    private static int indexOf(Item[] arr, Item target) {
+        for (int i = 0; i < arr.length; i++) {
+            if (arr[i] == target) return i;
+        }
+        return -1;
     }
 
     @Override

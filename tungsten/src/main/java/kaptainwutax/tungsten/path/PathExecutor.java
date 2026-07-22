@@ -3,6 +3,7 @@ package kaptainwutax.tungsten.path;
 import kaptainwutax.tungsten.Debug;
 import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
+import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
 import kaptainwutax.tungsten.agent.Agent;
 import kaptainwutax.tungsten.helpers.DirectionHelper;
@@ -29,6 +30,14 @@ public class PathExecutor {
     public List<BlockNode> blockPath = null;
     private boolean isClient;
 
+    /** Passage cells to mine open once the replay reaches the end of the
+     *  current path segment (set by PathFinder from the block path's break
+     *  plan). The path is held "unfinished" while mining so the search
+     *  thread's continuation machinery waits for the opened wall. */
+    public List<net.minecraft.util.math.BlockPos> breakQueue = null;
+    private int breakingTicks = 0;
+    private int settleTicks = 0;
+
     public PathExecutor(boolean isClient) {
     	this.isClient = isClient;
     	try {
@@ -46,7 +55,7 @@ public class PathExecutor {
 		if (isClient)
 			this.allowedFlying = TungstenMod.mc.player.getAbilities().allowFlying;
 	    stop = false;
-    	this.path = resimulateFromRealPosition(path);
+    	this.path = path;
     	this.tick = 0;
     	RenderHelper.renderPathCurrentlyExecuted();
 	}
@@ -74,7 +83,10 @@ public class PathExecutor {
 	}
 	
 	public Node getCurrentNode() {
-		if (this.path == null) return null;
+		// EMPTY path (e.g. "mining without a physics leg" — a break with no movement
+		// nodes) must not index get(size-1)==get(-1) -> IndexOutOfBounds crashes the
+		// whole client tick. Return null; callers already null-check.
+		if (this.path == null || this.path.isEmpty()) return null;
 		if (this.tick >= this.path.size()) return this.path.get(this.path.size()-1);
 		return this.path.get(this.tick);
 	}
@@ -96,6 +108,16 @@ public class PathExecutor {
     public void tick(ClientPlayerEntity player, GameOptions options) {
     	player.getAbilities().allowFlying = false;
     	if(TungstenMod.pauseKeyBinding.isPressed() || stop) {
+    		if (breakQueue != null) {
+    			MinecraftClient.getInstance().interactionManager.cancelBlockBreaking();
+    			TungstenModRenderContainer.BREAK_PLAN.clear();
+    			breakQueue = null; breakingTicks = 0; settleTicks = 0;
+    		}
+    		// A stop mid-mine must release the attack key and the aim immediately —
+    		// otherwise the bot keeps swinging and the camera stays locked on the
+    		// block until the stale-aim timeout (part of the #29 frozen-camera fix).
+    		options.attackKey.setPressed(false);
+    		kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
     		this.tick = this.path.size();
     		// player.input.playerInput = ... // MC 1.21: Input has no playerInput field
 		    options.forwardKey.setPressed(false);
@@ -113,6 +135,11 @@ public class PathExecutor {
     		return;
     	}
     	if(this.tick == this.path.size()) {
+    		// mine the planned wall before declaring the segment finished —
+    		// the continuation search / goto retry then sees the opened world
+    		if (tickBreaking(player, options)) {
+    			return;
+    		}
     		long endTime = System.currentTimeMillis();
     		long elapsedTime = endTime - startTime;
     		long minutes = (elapsedTime / 1000) / 60;
@@ -182,111 +209,132 @@ public class PathExecutor {
 	    }
 	    this.tick++;
     }
-    
-    
+
+
     /**
-     * Re-simulate path inputs from the real player position instead of the
-     * stale position the pathfinder used. Same inputs (yaw, forward, sprint,
-     * jump), but starting from where the player actually is.
-     * This fixes stale start drift without changing the path's logic.
+     * Mine the queued passage cells open. Returns true while mining is in
+     * progress (the caller must not finish the path). Targets the first
+     * still-solid cell, so gravity blocks that fall into the passage get
+     * re-mined; after everything is passable it lingers a few ticks to let
+     * falling blocks settle before declaring done.
      */
-    private List<Node> resimulateFromRealPosition(List<Node> path) {
-        if (!isClient || path == null || path.isEmpty()) return path;
-        ClientPlayerEntity player = TungstenMod.mc.player;
-        if (player == null) return path;
+    private boolean tickBreaking(ClientPlayerEntity player, GameOptions options) {
+        if (breakQueue == null || breakQueue.isEmpty()) return false;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        var world = player.getEntityWorld();
 
-        Vec3d realPos = player.getPos();
-        Vec3d pathStart = path.get(0).agent.getPos();
-        double startDrift = realPos.distanceTo(pathStart);
-
-        // If start is close enough, no correction needed
-        if (startDrift < 0.2) return path;
-
-        WorldView world = TungstenMod.mc.world;
-        if (world == null) return path;
-
-        // Re-simulate from real player state with same inputs
-        Agent agent = Agent.of(player);
-        List<Node> corrected = new ArrayList<>(path.size());
-
-        for (int i = 0; i < path.size(); i++) {
-            Node original = path.get(i);
-            if (original.input == null) {
-                corrected.add(original);
-                continue;
-            }
-
-            agent = Agent.of(agent, original.input).tick(world);
-            Node newNode = new Node(
-                i > 0 ? corrected.get(i - 1) : null,
-                agent, original.color, original.cost
-            );
-            newNode.input = original.input;
-            newNode.estimatedCostToGoal = original.estimatedCostToGoal;
-            corrected.add(newNode);
-
-            // Once the corrected trajectory converges with original,
-            // keep the rest of the original path as-is (saves computation)
-            double convergeDist = agent.getPos().distanceTo(original.agent.getPos());
-            if (convergeDist < 0.05 && i > 5) {
-                for (int j = i + 1; j < path.size(); j++) {
-                    corrected.add(path.get(j));
-                }
+        net.minecraft.util.math.BlockPos target = null;
+        for (net.minecraft.util.math.BlockPos pos : breakQueue) {
+            if (kaptainwutax.tungsten.helpers.BlockShapeChecker.getShapeVolume(pos, world) > 0) {
+                target = pos;
                 break;
             }
         }
+        if (target == null) {
+            if (settleTicks++ < 12) { // wait for sand/gravel to land
+                releaseMovementKeys(options);
+                options.attackKey.setPressed(false);
+                return true;
+            }
+            Debug.logMessage("Mining done — passage open");
+            options.attackKey.setPressed(false);
+            TungstenModRenderContainer.BREAK_PLAN.clear();
+            breakQueue = null; breakingTicks = 0; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            resumeGotoAfterMining(player);
+            return false;
+        }
+        settleTicks = 0;
 
-        if (TungstenConfig.get().verboseDebugLogging) {
-            Debug.logMessage(String.format("Resimulated %d/%d nodes from real pos (startDrift=%.3f)",
-                Math.min(corrected.size(), path.size()), path.size(), startDrift));
+        // Re-check the policy against the LIVE world every tick — zones/hooks
+        // can change and the plan may be stale.
+        if (!BreakRules.canBreak(player.getEntityWorld(), target,
+                player.getEntityWorld().getBlockState(target))) {
+            Debug.logMessage("Mining aborted (denied by break rules)");
+            options.attackKey.setPressed(false);
+            mc.interactionManager.cancelBlockBreaking();
+            TungstenModRenderContainer.BREAK_PLAN.clear();
+            breakQueue = null; breakingTicks = 0; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            return false;
         }
 
-        return corrected;
+        Vec3d eye = player.getEyePos();
+        Vec3d center = Vec3d.ofCenter(target);
+        if (breakingTicks++ > 300 || eye.squaredDistanceTo(center) > 4.5 * 4.5) {
+            Debug.logMessage("Mining aborted (timeout or out of reach)");
+            options.attackKey.setPressed(false);
+            mc.interactionManager.cancelBlockBreaking();
+            TungstenModRenderContainer.BREAK_PLAN.clear();
+            breakQueue = null; breakingTicks = 0; settleTicks = 0; kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            return false;
+        }
+
+        // Visualize the plan: queued blocks orange, the one being mined red.
+        TungstenModRenderContainer.BREAK_PLAN.clear();
+        for (net.minecraft.util.math.BlockPos pos : breakQueue) {
+            boolean current = pos.equals(target);
+            TungstenModRenderContainer.BREAK_PLAN.add(new kaptainwutax.tungsten.render.Cuboid(
+                    new Vec3d(pos.getX(), pos.getY(), pos.getZ()).add(current ? -0.02 : 0.05, current ? -0.02 : 0.05, current ? -0.02 : 0.05),
+                    current ? new Vec3d(1.04, 1.04, 1.04) : new Vec3d(0.9, 0.9, 0.9),
+                    current ? new kaptainwutax.tungsten.render.Color(255, 60, 40)
+                            : new kaptainwutax.tungsten.render.Color(255, 170, 40)));
+        }
+
+        releaseMovementKeys(options);
+        // Inventory side (altoclef) equips the best tool for this block; the
+        // hook must never be able to break mining.
+        if (kaptainwutax.tungsten.TungstenModDataContainer.equipToolHook != null) {
+            try {
+                kaptainwutax.tungsten.TungstenModDataContainer.equipToolHook
+                        .accept(target, player.getEntityWorld().getBlockState(target));
+            } catch (Throwable ignored) {}
+        }
+        // Turn toward the block smoothly (no gaze teleport) and HOLD the attack
+        // key only once the crosshair is actually on it — vanilla
+        // handleBlockBreaking then drives the mining against crosshairTarget.
+        // (Direct updateBlockBreakingProgress does not work: with the key up,
+        // vanilla cancels the breaking progress every tick.)
+        Vec3d d = center.subtract(eye);
+        float wantYaw = (float) Math.toDegrees(-Math.atan2(d.x, d.z));
+        float wantPitch = (float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)));
+        // Humanized aim via WindMouse (mouse pipeline) — no setYaw/setPitch that
+        // anti-cheats flag. Attack only once the crosshair has actually reached
+        // the block (read the real, WindMouse-converged rotation).
+        kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
+        float dYaw = net.minecraft.util.math.MathHelper.wrapDegrees(wantYaw - player.getYaw());
+        float dPitch = net.minecraft.util.math.MathHelper.wrapDegrees(wantPitch - player.getPitch());
+        boolean aimed = Math.abs(dYaw) < 12f && Math.abs(dPitch) < 12f;
+        options.attackKey.setPressed(aimed);
+        return true;
     }
 
     /**
-     * Try to reconnect to the path by scanning ahead for a node whose
-     * parent state is close to the player's current position.
-     * Called from Agent.compare() when drift exceeds threshold.
-     *
-     * @return true if reconnected (tick advanced), false if no suitable node found
+     * Seamless continuation: the wall is open, the goto target is still far —
+     * restart the search immediately instead of waiting on the retry chain
+     * (which sleeps and polls; the visible "task died after mining" gap).
      */
-    public boolean tryReconnect(Vec3d playerPos) {
-        if (this.path == null || this.tick >= this.path.size()) return false;
+    private void resumeGotoAfterMining(ClientPlayerEntity player) {
+        Vec3d goal = TungstenMod.TARGET;
+        if (goal == null || player.getEntityPos().distanceTo(goal) < 2.0) return;
+        new Thread(() -> {
+            try {
+                TungstenModDataContainer.PATHFINDER.stop.set(true);
+                for (int i = 0; i < 20 && TungstenModDataContainer.PATHFINDER.thread != null; i++) {
+                    Thread.sleep(250);
+                }
+                TungstenModDataContainer.PATHFINDER.stop.set(false);
+                TungstenModDataContainer.PATHFINDER.find(player.getEntityWorld(), goal, player);
+            } catch (Throwable ignored) {}
+        }, "tungsten-mining-resume").start();
+    }
 
-        double bestDist = Double.MAX_VALUE;
-        int bestIdx = -1;
-        // Scan ahead up to 20 nodes (don't search the whole path — too expensive
-        // and distant nodes make no sense for reconnection)
-        int scanLimit = Math.min(this.tick + 20, this.path.size());
-
-        for (int i = this.tick; i < scanLimit; i++) {
-            Node node = this.path.get(i);
-            // node.agent is the position AFTER this tick's input.
-            // The player needs to match the pre-input state, which is
-            // the parent's post-state. For the path list, that's path[i-1].agent.
-            // For i == tick (current), we use node.agent as rough approximation
-            // since we're already past where we should be.
-            Vec3d nodePos = node.agent.getPos();
-            double dist = playerPos.distanceTo(nodePos);
-            if (dist < bestDist) {
-                bestDist = dist;
-                bestIdx = i;
-            }
-        }
-
-        // Only reconnect if the closest node is within a reasonable range
-        if (bestIdx >= 0 && bestDist < TungstenConfig.get().driftThreshold) {
-            int skipped = bestIdx - this.tick + 1;
-            // Advance past the matched node — next tick will execute from bestIdx+1
-            this.tick = bestIdx + 1;
-            Debug.logMessage(String.format(
-                "Reconnected to path at node %d (skipped %d, dist %.3f)",
-                bestIdx, skipped, bestDist));
-            return true;
-        }
-
-        return false;
+    private static void releaseMovementKeys(GameOptions options) {
+        options.forwardKey.setPressed(false);
+        options.backKey.setPressed(false);
+        options.leftKey.setPressed(false);
+        options.rightKey.setPressed(false);
+        options.jumpKey.setPressed(false);
+        options.sneakKey.setPressed(false);
+        options.sprintKey.setPressed(false);
     }
 
     /**

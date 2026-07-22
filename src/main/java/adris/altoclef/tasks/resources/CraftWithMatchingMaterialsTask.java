@@ -81,13 +81,20 @@ public abstract class CraftWithMatchingMaterialsTask extends ResourceTask {
         int canCraftTotal = 0;
         int majorityCraftCount = 0;
         Item majorityCraftItem = null;
-        for (Item sameCheck : sameResourceTarget.getMatches()) {
+        int majorityCraftIndex = Integer.MAX_VALUE;
+        Item[] matchList = sameResourceTarget.getMatches();
+        for (int idx = 0; idx < matchList.length; idx++) {
+            Item sameCheck = matchList[idx];
+            if (sameCheck == null) continue;
             int count = getExpectedTotalCountOfSameItem(mod, sameCheck);
             int canCraft = (count / sameResourcePerRecipe) * recipe.outputCount();
             canCraftTotal += canCraft;
-            if (canCraft > majorityCraftCount) {
+            // Prefer higher craft count; tiebreak by earlier position in priority list
+            if (canCraft > majorityCraftCount
+                    || (canCraft == majorityCraftCount && idx < majorityCraftIndex)) {
                 majorityCraftCount = canCraft;
                 majorityCraftItem = sameCheck;
+                majorityCraftIndex = idx;
             }
         }
 

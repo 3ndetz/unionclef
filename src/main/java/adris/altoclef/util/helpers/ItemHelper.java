@@ -5,6 +5,7 @@ import adris.altoclef.multiversion.BlockTagVer;
 import adris.altoclef.trackers.threats.WeaponThreat;
 import adris.altoclef.util.slots.Slot;
 import baritone.api.utils.input.Input;
+import adris.altoclef.multiversion.entity.PlayerVer;
 import adris.altoclef.multiversion.item.ItemVer;
 import adris.altoclef.multiversion.versionedfields.Blocks;
 import adris.altoclef.multiversion.versionedfields.Items;
@@ -417,7 +418,11 @@ public class ItemHelper {
 
     private static Map<Item, Integer> getFuelTimeMap() {
         if (fuelTimeMap == null) {
+            //#if MC < 12111
             fuelTimeMap = AbstractFurnaceBlockEntity.createFuelTimeMap();
+            //#else
+            //$$ fuelTimeMap = new java.util.HashMap<>(); // TODO [1.21.11] createFuelTimeMap() removed
+            //#endif
         }
         return fuelTimeMap;
     }
@@ -533,6 +538,12 @@ public class ItemHelper {
 
     // --- Multiplayer helpers (ported from autoclef) ---
 
+    // Throttle for server-menu join clicks: autojoin task loops call clickCustomItem EVERY tick,
+    // and the musteryworld cluster rate-limits rapid clicks ("Подождите, прежде чем снова щелкнуть").
+    // Pace the actual click to ~1 per 1.2s so autojoin does not spam-trip the server anti-double-click.
+    private static final adris.altoclef.util.time.TimerGame _customItemClickTimer =
+            new adris.altoclef.util.time.TimerGame(1.2);
+
     /**
      * Clicks a custom-named item in the current screen by name match.
      */
@@ -548,12 +559,16 @@ public class ItemHelper {
         }
         Slot newGameSlot = getCustomItemSlot(mod, joinItems);
         if (newGameSlot != null) {
+            // Rate-limit: called every tick by autojoin; the server rejects rapid clicks
+            // ("Подождите, прежде чем снова щелкнуть"). Act at most ~once per 1.2s.
+            if (!_customItemClickTimer.elapsed()) return false;
+            _customItemClickTimer.reset();
             // If the item is in the hotbar, just switch selected slot instead of SWAP.
             // Server menu items are often immovable, so SWAP would fail.
             int invSlot = newGameSlot.getInventorySlot();
             if (invSlot >= 0 && invSlot <= 8) {
                 // Hotbar slot — just switch selected slot, don't SWAP (server menu items are immovable)
-                mod.getPlayer().getInventory().selectedSlot = invSlot;
+                PlayerVer.setSelectedSlot(mod.getPlayer().getInventory(), invSlot);
             } else {
                 mod.getSlotHandler().forceEquipSlot(newGameSlot);
             }
@@ -626,9 +641,13 @@ public class ItemHelper {
             if (holdWeapon(entity, RangedTopPriority)) return WeaponThreat.Ranged;
             net.minecraft.item.Item handItem = stack.getItem();
             float damage = (float) entity.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE);
+            //#if MC < 12111
             if (handItem instanceof ToolItem tool && (tool instanceof SwordItem || tool instanceof AxeItem)) {
                 damage += tool.getMaterial().getAttackDamage() + 3;
             }
+            //#else
+            //$$ // TODO [1.21.11] tool-class/sword-class deleted — get attack damage from Item.Settings component
+            //#endif
             //#if MC >= 12100
             if (handItem instanceof net.minecraft.item.TridentItem || handItem instanceof net.minecraft.item.MaceItem) {
                 damage += 7f;

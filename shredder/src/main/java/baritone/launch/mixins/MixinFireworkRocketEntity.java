@@ -50,7 +50,7 @@ public abstract class MixinFireworkRocketEntity extends Entity implements IFirew
     @Override
     public LivingEntity getBoostedEntity() {
         if (this.wasShotByEntity() && this.shooter == null) {
-            final Entity entity = this.getWorld().getEntityById(this.dataTracker.get(SHOOTER_ENTITY_ID).getAsInt());
+            final Entity entity = this.getEntityWorld().getEntityById(this.dataTracker.get(SHOOTER_ENTITY_ID).getAsInt());
             if (entity instanceof LivingEntity) {
                 this.shooter = (LivingEntity) entity;
             }

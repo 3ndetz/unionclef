@@ -101,7 +101,7 @@ public class BlockPathWalker {
         if (!active) return;
 
         // auto-stop when executor takes over
-        if (TungstenModDataContainer.EXECUTOR.isRunning()) {
+        if (TungstenModDataContainer.isExecutorRunning()) {
             stop();
             return;
         }
@@ -118,8 +118,8 @@ public class BlockPathWalker {
     private static void tickDirect(ClientPlayerEntity player) {
         if (directTarget == null) { switchToBFS(); return; }
 
-        Vec3d playerPos = player.getPos();
-        WorldView world = player.getWorld();
+        Vec3d playerPos = player.getEntityPos();
+        WorldView world = player.getEntityWorld();
         double dist = horizontalDist(playerPos, directTarget);
 
         // check LOS
@@ -191,7 +191,7 @@ public class BlockPathWalker {
 
         BlockPos wp = path.get(waypointIdx);
         Vec3d wpPos = Vec3d.ofBottomCenter(wp);
-        Vec3d playerPos = player.getPos();
+        Vec3d playerPos = player.getEntityPos();
         double dist = horizontalDist(playerPos, wpPos);
 
         // advance waypoint
@@ -220,7 +220,7 @@ public class BlockPathWalker {
         boolean canJump = TungstenConfig.get().followJumpingEnabled
                 && player.isOnGround()
                 && (needJumpUp || SafetySystem.isJumpLandingSafe(
-                        playerPos, player.getVelocity(), player.getWorld()));
+                        playerPos, player.getVelocity(), player.getEntityWorld()));
         mc.options.jumpKey.setPressed(canJump);
     }
 

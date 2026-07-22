@@ -63,6 +63,12 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
     private boolean cancelRequested;
     private boolean calcFailedLastTick;
 
+    // Recalc loop prevention: track consecutive failures and apply backoff
+    private int consecutivePathFailures = 0;
+    private static final int MAX_CONSECUTIVE_FAILURES = 5;
+    private static final int BACKOFF_TICK_INCREMENT = 20;
+    private int backoffTicksRemaining = 0;
+
     private volatile AbstractNodeCostSearch inProgress;
     private final Object pathCalcLock = new Object();
 
@@ -131,6 +137,24 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
             cancelRequested = false;
             baritone.getInputOverrideHandler().clearAllKeys();
         }
+        // Recalc backoff: skip path work while backoff is active
+        if (backoffTicksRemaining > 0) {
+            backoffTicksRemaining--;
+            baritone.getInputOverrideHandler().clearAllKeys();
+            if (backoffTicksRemaining == 0) {
+                consecutivePathFailures = 0;
+                // trigger a fresh recalc after backoff expires
+                if (goal != null && !goal.isInGoal(ctx.playerFeet())) {
+                    synchronized (pathCalcLock) {
+                        if (inProgress == null) {
+                            queuePathEvent(PathEvent.CALC_STARTED);
+                            findPathInNewThread(expectedSegmentStart, true, context);
+                        }
+                    }
+                }
+            }
+            return;
+        }
         synchronized (pathPlanLock) {
             synchronized (pathCalcLock) {
                 if (inProgress != null) {
@@ -152,13 +176,15 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
             }
             safeToCancel = current.onTick();
             if (current.failed() || current.finished()) {
+                boolean didFail = current.failed();
                 current = null;
                 if (goal == null || goal.isInGoal(ctx.playerFeet())) {
                     logDebug("All done. At " + goal);
                     queuePathEvent(PathEvent.AT_GOAL);
+                    consecutivePathFailures = 0;
                     next = null;
                     if (Baritone.settings().disconnectOnArrival.value) {
-                        ctx.world().disconnect();
+                        ctx.minecraft().disconnect(net.minecraft.text.Text.empty());
                     }
                     return;
                 }
@@ -176,6 +202,7 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
                 if (next != null) {
                     logDebug("Continuing on to planned next path");
                     queuePathEvent(PathEvent.CONTINUING_ONTO_PLANNED_NEXT);
+                    consecutivePathFailures = Math.max(0, consecutivePathFailures - 1);
                     current = next;
                     next = null;
                     current.onTick(); // don't waste a tick doing nothing, get started right away
@@ -185,6 +212,18 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
                 synchronized (pathCalcLock) {
                     if (inProgress != null) {
                         queuePathEvent(PathEvent.PATH_FINISHED_NEXT_STILL_CALCULATING);
+                        return;
+                    }
+                    // Recalc loop prevention: only increment on failure, not normal completion
+                    if (didFail) {
+                        consecutivePathFailures++;
+                    } else {
+                        consecutivePathFailures = 0;
+                    }
+                    if (consecutivePathFailures > MAX_CONSECUTIVE_FAILURES) {
+                        backoffTicksRemaining = (consecutivePathFailures - MAX_CONSECUTIVE_FAILURES) * BACKOFF_TICK_INCREMENT;
+                        logDebug("Path recalc backoff: " + backoffTicksRemaining + " ticks (failure #" + consecutivePathFailures + ")");
+                        queuePathEvent(PathEvent.CALC_FAILED);
                         return;
                     }
                     // we aren't calculating
@@ -424,8 +463,8 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
         BetterBlockPos feet = ctx.playerFeet();
         if (!MovementHelper.canWalkOn(ctx, feet.down())) {
             if (ctx.player().isOnGround()) {
-                double playerX = ctx.player().getPos().x;
-                double playerZ = ctx.player().getPos().z;
+                double playerX = ctx.player().getEntityPos().x;
+                double playerZ = ctx.player().getEntityPos().z;
                 ArrayList<BetterBlockPos> closest = new ArrayList<>();
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dz = -1; dz <= 1; dz++) {

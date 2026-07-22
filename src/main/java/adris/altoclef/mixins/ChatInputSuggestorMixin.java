@@ -4,6 +4,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.commandsystem.Command;
 import adris.altoclef.commandsystem.CommandExecutor;
 import adris.altoclef.commandsystem.StringReader;
+import adris.altoclef.commandsystem.TabCompleter;
 import adris.altoclef.commandsystem.args.Arg;
 import adris.altoclef.commandsystem.args.ListArg;
 import adris.altoclef.commandsystem.exception.BadCommandSyntaxException;
@@ -11,6 +12,10 @@ import adris.altoclef.commandsystem.exception.CommandException;
 import adris.altoclef.commandsystem.exception.CommandNotFinishedException;
 import adris.altoclef.commandsystem.exception.RuntimeCommandException;
 import adris.altoclef.util.Pair;
+import com.mojang.brigadier.ParseResults;
+import com.mojang.brigadier.context.StringRange;
+import com.mojang.brigadier.suggestion.Suggestion;
+import com.mojang.brigadier.suggestion.Suggestions;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.screen.ChatInputSuggestor;
 import net.minecraft.client.gui.screen.Screen;
@@ -29,6 +34,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,6 +80,19 @@ public abstract class ChatInputSuggestorMixin {
     @Shadow
     @Final
     private TextRenderer textRenderer;
+
+    @Shadow
+    private ParseResults parse;
+
+    @Shadow
+    private CompletableFuture<Suggestions> pendingSuggestions;
+
+    @Shadow
+    private ChatInputSuggestor.SuggestionWindow window;
+
+    @Shadow
+    boolean completingSuggestions;
+
     @Unique
     private final HashMap<Pair<String, Integer>, Pair<MutableText, Optional<Pair<MutableText, Integer>>>> parseCache = new HashMap<>();
 
@@ -90,9 +112,45 @@ public abstract class ChatInputSuggestorMixin {
         return currentStr.substring(index);
     }
 
-    @Inject(method = "refresh", at = @At("HEAD"))
+    @Inject(method = "refresh", at = @At("HEAD"), cancellable = true)
     public void injectRefresh(CallbackInfo ci) {
         parseCache.clear();
+
+        // Direct tab-complete for altoclef commands (works even when shredder is noop)
+        String prefix = this.textField.getText().substring(0, Math.min(this.textField.getText().length(), this.textField.getCursor()));
+        CommandExecutor executor = AltoClef.getCommandExecutor();
+        if (executor == null || !executor.isClientCommand(prefix)) {
+            return;
+        }
+
+        String[] completions = TabCompleter.complete(prefix);
+        if (completions == null) {
+            return;
+        }
+
+        ci.cancel();
+        this.parse = null;
+
+        if (this.completingSuggestions) {
+            return;
+        }
+
+        this.textField.setSuggestion(null);
+        this.window = null;
+        this.messages.clear();
+
+        if (completions.length == 0) {
+            this.pendingSuggestions = Suggestions.empty();
+        } else {
+            StringRange range = StringRange.between(prefix.lastIndexOf(" ") + 1, prefix.length());
+            java.util.List<Suggestion> suggestionList = Stream.of(completions)
+                    .map(s -> new Suggestion(range, s))
+                    .collect(Collectors.toList());
+            Suggestions suggestions = new Suggestions(range, suggestionList);
+            this.pendingSuggestions = new CompletableFuture<>();
+            this.pendingSuggestions.complete(suggestions);
+        }
+        ((ChatInputSuggestor) (Object) this).show(true);
     }
 
     @Inject(method = "provideRenderText", at = @At("HEAD"), cancellable = true)

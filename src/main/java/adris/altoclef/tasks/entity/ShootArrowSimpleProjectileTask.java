@@ -12,6 +12,7 @@ import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.time.TimerGame;
 import baritone.api.utils.Rotation;
 import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.combat.TrajectorySolver;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.projectile.ProjectileEntity;
@@ -40,6 +41,11 @@ public class ShootArrowSimpleProjectileTask extends Task {
     // Rapid-fire mode: less charge time required when close to target
     private final double RAPID_FIRE_DISTANCE = 10.0;
     private boolean _rapidFireMode = false;
+    // Self-tracked target velocity for lead: a walking remote player reports ~0
+    // getVelocity() on the client, so we difference its (lerped) position across
+    // ticks ourselves. Light EMA smooths lerp jitter.
+    private Vec3d _prevTargetPos = null;
+    private Vec3d _targetVel = Vec3d.ZERO;
 
     public ShootArrowSimpleProjectileTask(Entity target) {
         this.target = target;
@@ -67,7 +73,59 @@ public class ShootArrowSimpleProjectileTask extends Task {
         return calculateThrowLook(mod, target, shouldUseHighAngRanged(target), rangedItem);
     }
 
+    /**
+     * Direct-fire aim now goes through tungsten's {@link TrajectorySolver}, which
+     * simulates real vanilla arrow physics (drag 0.99, gravity 0.05, speed 3.0/tick,
+     * pitch by bisection) instead of the old g=0.006 closed form.
+     *
+     * Lead uses the target's velocity, falling back to a per-tick position delta
+     * only when that velocity field is flat: a client-side running player reports
+     * real velocity (leads correctly), but a target driven purely by position
+     * packets — or one teleporting — reports ~0 velocity yet still moves, so the
+     * position delta recovers the lead there.
+     *
+     * High-angle (no line of sight / artillery over obstacles) stays on the legacy
+     * closed-form lob below: TrajectorySolver only solves the flat trajectory, so
+     * it also serves as the fallback when no flat solution exists (out of range).
+     */
     public static Rotation calculateThrowLook(AltoClef mod, Entity target, boolean highAng, Item rangedItem) {
+        // Best-effort velocity when the caller doesn't track it: getVelocity() with a
+        // position-delta fallback. Both read ~0 for a walking remote player, so a
+        // caller that leads moving targets should track velocity itself and use the
+        // overload below.
+        Vec3d vel = target.getVelocity();
+        if (vel.x * vel.x + vel.z * vel.z < 0.0025) {
+            vel = new Vec3d(
+                    target.getPos().getX() - target.prevX,
+                    target.getPos().getY() - target.prevY,
+                    target.getPos().getZ() - target.prevZ);
+        }
+        return calculateThrowLook(mod, target, highAng, rangedItem, vel);
+    }
+
+    public static Rotation calculateThrowLook(AltoClef mod, Entity target, boolean highAng, Item rangedItem, Vec3d targetVel) {
+        // Aim for the FULL-draw arc (charge 1.0), not the current partial charge.
+        // Recomputing charge from useTime every tick makes the pitch target swing
+        // ~18 deg over the draw, so WindMouse never settles before the timer-based
+        // release fires -> systematic miss. A fixed full-draw target is stable and
+        // matches the release point (requiredChargeTime hits full charge at range).
+        double charge = 1.0;
+
+        Vec3d vel = targetVel != null ? targetVel : Vec3d.ZERO;
+        if (target.isOnGround()) vel = new Vec3d(vel.x, 0, vel.z);
+        Vec3d aimPoint = target.getPos().add(0, target.getHeight() * 0.6, 0);
+        Vec3d eye = mod.getPlayer().getEyePos();
+
+        if (!highAng) {
+            TrajectorySolver.Solution sol = TrajectorySolver.solve(eye, aimPoint, vel, charge);
+            if (sol != null) return new Rotation(sol.yaw, sol.pitch);
+        }
+        return calculateThrowLookLegacy(mod, target, highAng, rangedItem);
+    }
+
+    /** Closed-form lob aim (g=0.006). Kept for high-angle artillery and as the
+     *  fallback when TrajectorySolver finds no flat solution. */
+    public static Rotation calculateThrowLookLegacy(AltoClef mod, Entity target, boolean highAng, Item rangedItem) {
         float velocity = 1;
         if (rangedItem != null && rangedItem.equals(Items.BOW)) {
             int useTime = mod.getPlayer().getItemUseTime();
@@ -149,6 +207,16 @@ public class ShootArrowSimpleProjectileTask extends Task {
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
+        // --- Track target velocity ourselves (per-tick lerped-position delta) ---
+        // getVelocity() is ~0 for a walking remote player on the client, so leading
+        // off it never works. Differencing the target's position each tick does.
+        Vec3d curTargetPos = target.getPos();
+        if (_prevTargetPos != null) {
+            Vec3d inst = curTargetPos.subtract(_prevTargetPos);
+            _targetVel = _targetVel.multiply(0.5).add(inst.multiply(0.5)); // 2-tick EMA
+        }
+        _prevTargetPos = curTargetPos;
+
         // --- Weapon selection ---
         if (hasArrows(mod)) {
             if (mod.getItemStorage().hasItemInventoryOnly(Items.BOW)) {
@@ -179,7 +247,7 @@ public class ShootArrowSimpleProjectileTask extends Task {
         // At useTime <= 1 we skip to avoid fighting Baritone during approach
         if (useTime > 1) {
             _highAng = shouldUseHighAngRanged(target);
-            Rotation lookTarget = calculateThrowLook(mod, target, _highAng, _rangedItem);
+            Rotation lookTarget = calculateThrowLook(mod, target, _highAng, _rangedItem, _targetVel);
             LookHelper.smoothLook(mod, lookTarget, 1.0f);
         }
 

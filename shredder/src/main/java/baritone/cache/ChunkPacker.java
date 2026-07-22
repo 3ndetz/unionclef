@@ -28,13 +28,14 @@ import net.minecraft.block.Blocks;
 import net.minecraft.block.FlowerBlock;
 import net.minecraft.block.ShortPlantBlock;
 import net.minecraft.block.TallPlantBlock;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.PalettedContainer;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.dimension.DimensionType;
-import net.minecraft.world.dimension.DimensionTypes;
 
 import static baritone.utils.BlockStateInterface.getFromChunk;
 
@@ -50,7 +51,7 @@ public final class ChunkPacker {
         //long start = System.nanoTime() / 1000000L;
 
         Map<String, List<BlockPos>> specialBlocks = new HashMap<>();
-        final int height = chunk.getWorld().getDimension().height();
+        final int height = chunk.getHeight();
         BitSet bitSet = new BitSet(CachedChunk.size(height));
         try {
             ChunkSection[] chunkInternalStorageArray = chunk.getSectionArray();
@@ -123,7 +124,7 @@ public final class ChunkPacker {
             if (MovementHelper.possiblyFlowing(state)) {
                 return PathingBlockType.AVOID;
             }
-            int adjY = y - chunk.getWorld().getDimension().minY();
+            int adjY = y - chunk.getBottomY();
             if (
                     (x != 15 && MovementHelper.possiblyFlowing(getFromChunk(chunk, x + 1, adjY, z)))
                             || (x != 0 && MovementHelper.possiblyFlowing(getFromChunk(chunk, x - 1, adjY, z)))
@@ -133,7 +134,7 @@ public final class ChunkPacker {
                 return PathingBlockType.AVOID;
             }
             if (x == 0 || x == 15 || z == 0 || z == 15) {
-                Vec3d flow = state.getFluidState().getVelocity(chunk.getWorld(), new BlockPos(x + (chunk.getPos().x << 4), y, z + (chunk.getPos().z << 4)));
+                Vec3d flow = state.getFluidState().getVelocity(chunk, new BlockPos(x + (chunk.getPos().x << 4), y, z + (chunk.getPos().z << 4)));
                 if (flow.x != 0.0 || flow.z != 0.0) {
                     return PathingBlockType.WATER;
                 }
@@ -156,7 +157,7 @@ public final class ChunkPacker {
         return PathingBlockType.SOLID;
     }
 
-    public static BlockState pathingTypeToBlock(PathingBlockType type, DimensionType dimension) {
+    public static BlockState pathingTypeToBlock(PathingBlockType type, DimensionType dimension, RegistryKey<World> dimensionId) {
         switch (type) {
             case AIR:
                 return Blocks.AIR.getDefaultState();
@@ -166,14 +167,12 @@ public final class ChunkPacker {
                 return Blocks.LAVA.getDefaultState();
             case SOLID:
                 // Dimension solid types
-                if (dimension.natural()) {
-                    return Blocks.STONE.getDefaultState();
-                }
-                if (dimension.ultrawarm()) {
+                if (dimensionId == World.NETHER) {
                     return Blocks.NETHERRACK.getDefaultState();
-                }
-                if (dimension.effects().equals(DimensionTypes.THE_END_ID)) {
+                } else if (dimensionId == World.END) {
                     return Blocks.END_STONE.getDefaultState();
+                } else { // overworld, or some custom dimension
+                    return Blocks.STONE.getDefaultState();
                 }
             default:
                 return null;

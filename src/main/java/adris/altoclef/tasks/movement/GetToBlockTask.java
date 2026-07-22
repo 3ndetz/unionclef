@@ -43,6 +43,11 @@ public class GetToBlockTask extends CustomBaritoneGoalTask implements ITaskRequi
             return new DefaultGoToDimensionTask(_dimension);
         }
 
+        // Tungsten-primary drop-in swap: drive tungsten BEFORE the stuck/wander
+        // logic — otherwise the wander loop (baritone can't move headless) starves
+        // the swap and the bot freezes.
+        if (driveTungstenPrimary(AltoClef.getInstance())) return null;
+
         if (isFinished()) {
             finishedTicks++;
         } else {

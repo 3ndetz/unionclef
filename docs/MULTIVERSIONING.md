@@ -16,7 +16,8 @@ return pos.getSquaredDistance(obj);
 
 The preprocessor strips inactive branches for each target version. Active code compiles normally, inactive code stays as comments (`//$$`).
 
-**Baritone** and **tungsten** are compiled once and shared across all MC versions. They don't use the preprocessor.
+**Baritone** is compiled once and shared across all MC versions.
+**Tungsten** uses the preprocessor (versioned subprojects: `tungsten-1.21.1`, `tungsten-1.21.11`).
 
 ## Adding a new version (e.g. 1.21.4)
 
@@ -95,41 +96,31 @@ Baritone is compiled once for 1.21 with yarn mappings. For minor versions (1.21.
 
 In practice, baritone works across 1.21.x without changes.
 
-### Step 3: tungsten (only if it breaks)
+### Step 3: tungsten
 
-Same as baritone — compiled once, shared across versions. Tungsten targets 1.21 and typically works on 1.21.x without modification.
+Tungsten now uses the preprocessor. Versioned subprojects: `tungsten-1.21.1`, `tungsten-1.21.11`.
+Source lives in `tungsten/src/`, `tungsten/versions/mainProject` = `1.21.1`.
 
-**If tungsten breaks:**
+To add a new tungsten version:
 
-Fix the code in `tungsten/src/main/java/`. Tungsten is only included for `mcVersion >= 12100` (see `build.gradle`), so older versions skip it entirely.
+1. Add to `settings.gradle.kts` tungsten version list
+2. Add node + link in `root.gradle.kts` tungsten chain
+3. Add mappings/fabric-api entry in `tungsten/build.gradle`
+4. Create `tungsten/versions/X.Y.Z/` directory
+5. Gate version-specific code with `//#if MC >= XXXXX`
 
 ## Version support matrix
 
-| MC Version | altoclef | baritone | tungsten |
-|------------|----------|----------|----------|
-| 1.21       | preprocessor | shared build | shared build |
-| 1.21.1     | preprocessor | shared build | shared build |
-| 1.21.4     | add node + mappings | likely works as-is | likely works as-is |
-| 1.20.x     | add node + mappings + directives | may need fixes | may need fixes |
-| 1.19.x     | heavy directives | needs separate build or preprocessor | not supported |
+| MC Version | altoclef     | baritone     | tungsten     |
+| ---------- | ------------ | ------------ | ------------ |
+| 1.21       | preprocessor | shared build | n/a          |
+| 1.21.1     | preprocessor | shared build | preprocessor |
+| 1.21.11    | not yet      | not yet      | preprocessor |
 
-## TODO: Tungsten & Shredder preprocessor support
+## Shredder preprocessor support (TODO)
 
-**Neither tungsten nor shredder use the preprocessor.** They compile once against MC 1.21 and are shared across all versions. This works for 1.21.x minor bumps but **breaks** when physics/simulation logic differs between versions.
-
-**Known version-dependent code in tungsten:**
-
-- `Agent.applyDirectionalMovementSpeedFactors()` — diagonal movement normalization (MC-271065), added in **MC 1.21.4+**. Currently commented out for 1.21.1 compat. Needs `//#if MC >= 12104` gate.
-
-**What needs to happen:**
-
-1. Add `com.replaymod.preprocess` plugin to `tungsten/build.gradle` and `shredder/build.gradle`
-2. Add tungsten and shredder nodes to `root.gradle.kts` preprocessor config
-3. Define per-version mappings in their build files (like altoclef does)
-4. Gate version-dependent code with `//#if MC >= XXXXX` directives
-5. Shredder depends on tungsten, so both must be versioned together
-
-Until this is done, any simulation logic that changed between MC versions must be manually commented/uncommented.
+Shredder currently compiles once against MC 1.21 and depends on `tungsten-1.21.1`.
+When altoclef adds 1.21.11, shredder will also need versioning (same approach as tungsten).
 
 ## Quick reference
 

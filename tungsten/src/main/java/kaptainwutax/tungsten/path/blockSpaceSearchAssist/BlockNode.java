@@ -72,6 +72,7 @@ public class BlockNode {
 	public BlockPos chachedBlockPos = null;
 	
 	public Boolean isDoingLongJump = null;
+	public boolean isDoingJump = false;
 
 	/**
 	 * Cached, should always be equal to goal.heuristic(pos)
@@ -100,6 +101,14 @@ public class BlockNode {
 	private boolean isDoingNeo = false;
 	private Direction neoSide;
 	private boolean isDoingCornerJump = false;
+
+	/** Blocks that must be mined to make this cell passable (top-down order).
+	 *  Set by tryPlanBreakThrough; consumed by PathFinder/PathExecutor. */
+	public java.util.List<BlockPos> toBreak = null;
+
+	public boolean hasBreaks() {
+		return toBreak != null && !toBreak.isEmpty();
+	}
 
 	/**
 	 * Where is this node in the array flattenization of the binary heap? Needed for
@@ -135,17 +144,17 @@ public class BlockNode {
 		this.x = x;
 		this.y = y;
 		this.z = z;
-		this.wasOnSlime = player.getWorld().getBlockState(new BlockPos(x, y - 1, z))
+		this.wasOnSlime = player.getEntityWorld().getBlockState(new BlockPos(x, y - 1, z))
 				.getBlock() instanceof SlimeBlock;
-		this.wasOnLadder = player.getWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
+		this.wasOnLadder = player.getEntityWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
 	}
 
 	public BlockNode(int x, int y, int z, Goal goal, BlockNode parent, double cost, PlayerEntity player) {
 		this.player = player;
 		this.previous = parent;
-		this.wasOnSlime = player.getWorld().getBlockState(new BlockPos(x, y - 1, z))
+		this.wasOnSlime = player.getEntityWorld().getBlockState(new BlockPos(x, y - 1, z))
 				.getBlock() instanceof SlimeBlock;
-		this.wasOnLadder = player.getWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
+		this.wasOnLadder = player.getEntityWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
 		this.cost = parent != null ? 0 : ActionCosts.COST_INF;
 		this.estimatedCostToGoal = goal.heuristic(x, y, z);
 		if (Double.isNaN(estimatedCostToGoal)) {
@@ -266,6 +275,21 @@ public class BlockNode {
 
 	public List<BlockNode> getChildren(WorldView world, Goal goal, boolean generateDeep) {
 
+		// EXPERIMENTAL (#1.6.1): tungsten-native smart move generation — a handful of
+		// pre-validated Traverse/Ascend/Descend/Parkour neighbours instead of the blind
+		// r=8 scan, so the search routes stepped/gap terrain within its node budget.
+		// Flag-gated (default off) so course A keeps the proven blind-scan path.
+		if (TungstenConfig.get().smartMoves) {
+			List<BlockNode> smart = new ArrayList<>();
+			for (SmartMoves.Move m : SmartMoves.generate(world, this.getBlockPos())) {
+				BlockNode n = new BlockNode(m.dest.getX(), m.dest.getY(), m.dest.getZ(),
+						goal, this, m.cost, this.player);
+				n.isDoingJump = m.jump;
+				smart.add(n);
+			}
+			return smart;
+		}
+
 		List<BlockNode> nodes = getNodesIn3DCircule(8, this, goal, generateDeep);
 //		nodes.removeIf((child) -> {
 //			return shouldRemoveNode(world, child);
@@ -328,23 +352,17 @@ public class BlockNode {
 	    double g = 32.656;
 	    double v_sprint = 5.8;
 
-	    double yMax = (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y > 0)
-	        ? MovementHelper.getSlimeBounceHeight(parent.previous.y - parent.y) - 0.5
+	    // On slime the bounce can carry the path upward. Fall height is cumulative
+	    // along the incoming block path.
+	    double slimeFall = getFallOntoSlimeHeight(parent);
+	    double yMax = slimeFall > 0
+	        ? MovementHelper.getSlimeBounceHeight(slimeFall) - 0.2
 	        : generateDeep ? 4 : 2;
 
-	    if (parent.wasOnSlime && parent.previous != null && parent.previous.y - parent.y > 0) {
-	    	TungstenModRenderContainer.BLOCK_PATH_RENDERER.add(new Cuboid(
-	                new Vec3d(parent.getBlockPos().getX(), parent.getBlockPos().getY(), parent.getBlockPos().getZ()),
-	                new Vec3d(0.2D, 0.2D, 0.2D), Color.GREEN));
-	        try {
-	            Thread.sleep(250); // Optional debug delay
-	        } catch (InterruptedException e) {
-	            e.printStackTrace();
-	        }
-	    }
-
 	    int distanceWanted = d;
-	    int finalYMax = (int) Math.ceil(yMax);
+	    // Bounce levels are inclusive (floor+1) so the top reachable platform is generated;
+	    // normal levels keep the old exclusive ceil bound.
+	    int finalYMax = slimeFall > 0 ? (int) Math.floor(yMax) + 1 : (int) Math.ceil(yMax);
 
         IntStream.range(generateDeep ? -64 : -4, finalYMax).parallel().forEach(py -> {
             int localD;
@@ -374,8 +392,10 @@ public class BlockNode {
                     px += dx;
                     pz += dz;
 
+                    boolean isDoingJump = Math.abs(pz) > 1 || Math.abs(px) > 1;
                     BlockNode newNode = new BlockNode(this.x + px, this.y + py, this.z + pz, goal, this,
-                            ActionCosts.WALK_ONE_BLOCK_COST, this.player);
+                            isDoingJump ? ActionCosts.WALK_ONE_BLOCK_COST + 6.5 : ActionCosts.WALK_ONE_BLOCK_COST, this.player);
+                    newNode.isDoingJump = isDoingJump;
                     nodes.add(newNode);
                 }
             }
@@ -404,6 +424,12 @@ public class BlockNode {
 		// ViaVersion: reject nodes horizontally adjacent to anvils (collision differs on old servers)
 		if (TungstenConfig.get().avoidStuckAnvil && adjacentToAnvil(world, child)) {
 			return true;
+		}
+
+		// Break-through: an adjacent cell blocked only by breakable blocks is
+		// accepted with a mining plan instead of being pruned as a wall.
+		if (tryPlanBreakThrough(world, child)) {
+			return false;
 		}
 
 		// Specific block checks
@@ -457,10 +483,25 @@ public class BlockNode {
 		}
 		if (BlockStateChecker.isAnyWater(childState)) {
 			if (distance > 1 || heightDiff > 1) return true;
+			// Swimming: when we're ALREADY in water, an adjacent water cell (up/
+			// down/around within 1) is traversable by swimming. The walk-based
+			// wasCleared (StreightMovementHelper) mishandles vertical/underwater
+			// moves (undefined horizontal direction) and rejected valid swim-up —
+			// leaving the bot stuck at the bottom to drown. In water, the cell
+			// being water is enough; the physics executor swims there.
+			if (BlockStateChecker.isAnyWater(currentBlockState)) return false;
+			// Entering water from land — keep the walk validity check.
 			if (!wasCleared(world, getBlockPos(), child.getBlockPos())) return true;
 			return false;
 		}
-		if (BlockStateChecker.isAnyWater(childState) && !childAboveState.isAir()) return true;
+		// Surfacing / climbing out: while submerged, an air cell within reach
+		// (the surface above the water or a land edge one up) is a valid swim
+		// target so the bot can reach the surface and step out.
+		if (BlockStateChecker.isAnyWater(currentBlockState) && childState.isAir()
+				&& distance <= 1 && heightDiff <= 1
+				&& BlockShapeChecker.getShapeVolume(child.getBlockPos(), world) == 0) {
+			return false;
+		}
 		
 		if (BlockStateChecker.isDoubleSlab(world, getBlockPos()) || childBelowBlock instanceof SnowBlock)
 			return true;
@@ -563,6 +604,64 @@ public class BlockNode {
 	}
 	
 	/**
+	 * Break-through planning: if the only thing between this node and an
+	 * adjacent same-Y child is breakable blocks, accept the child and record
+	 * what must be mined (top-down). Cost grows with vanilla mining ticks so
+	 * cheap detours still win over slow mining.
+	 */
+	private boolean tryPlanBreakThrough(WorldView world, BlockNode child) {
+		if (!TungstenConfig.get().allowBreak) return false;
+		int dx = child.x - this.x, dy = child.y - this.y, dz = child.z - this.z;
+		if (dy != 0 || Math.abs(dx) + Math.abs(dz) != 1) return false;
+		// needs solid footing on the other side of the wall
+		if (BlockShapeChecker.getShapeVolume(child.getBlockPos().down(), world) == 0) return false;
+
+		BlockPos feet = child.getBlockPos();
+		BlockPos head = feet.up();
+		double ticks = 0;
+		java.util.List<BlockPos> plan = new java.util.ArrayList<>();
+		for (BlockPos pos : new BlockPos[]{head, feet}) { // top first — break order matters
+			if (BlockShapeChecker.getShapeVolume(pos, world) == 0) continue; // already passable
+			double t = breakTicks(world, pos, world.getBlockState(pos));
+			if (t < 0) return false; // unbreakable wall — no plan
+			ticks += t;
+			plan.add(pos);
+		}
+		if (plan.isEmpty()) return false; // nothing blocking — normal pruning applies
+
+		// gravity blocks above the passage will fall into it — pay their cost
+		// up front (the executor re-mines whatever lands in the passage cells)
+		BlockPos above = head.up();
+		for (int i = 0; i < 5; i++) {
+			BlockState state = world.getBlockState(above);
+			if (!(state.getBlock() instanceof net.minecraft.block.FallingBlock)) break;
+			double t = breakTicks(world, above, state);
+			if (t < 0) return false;
+			ticks += t;
+			above = above.up();
+		}
+
+		child.toBreak = plan;
+		// NOTE: this A* does NOT accumulate cost along the path (updateNode uses
+		// child.cost + 1), so a break penalty comparable to a couple of walk
+		// nodes is the most a break can carry and still ever be chosen over an
+		// unbounded-length detour. 0.15 ≈ one walk node per ~30 mining ticks.
+		child.cost += ticks * 0.15 * TungstenConfig.get().breakCostMultiplier;
+		return true;
+	}
+
+	/** Vanilla mining duration in ticks, or -1 if breaking is not allowed
+	 *  (BreakRules: unbreakable, fluids, block entities, deny lists/zones,
+	 *  altoclef protection hook). */
+	private double breakTicks(WorldView world, BlockPos pos, BlockState state) {
+		if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, pos, state)) return -1;
+		float delta = state.calcBlockBreakingDelta(this.player, world, pos);
+		if (delta <= 0) return -1;
+		if (delta >= 1) return 1;
+		return Math.ceil(1f / delta);
+	}
+
+	/**
 	 * Checks if the child node is horizontally adjacent to an anvil at a Y level
 	 * where the anvil collision would block the player. Nodes directly above
 	 * the anvil (standing on top) are allowed.
@@ -580,6 +679,25 @@ public class BlockNode {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Cumulative descent onto this node along the incoming block path.
+	 * 0 unless the node stands on slime and the path arrived from above.
+	 * Note: a jump in place on slime is NOT a boost — vanilla bounce apex from
+	 * a 1.25 jump is ~1.9, which lands nothing a normal jump can't reach.
+	 */
+	private static double getFallOntoSlimeHeight(BlockNode node) {
+		if (!node.wasOnSlime || node.previous == null) return 0;
+		int top = node.y;
+		BlockNode cur = node;
+		BlockNode p = node.previous;
+		while (p != null && p.y >= cur.y) {
+			top = Math.max(top, p.y);
+			cur = p;
+			p = p.previous;
+		}
+		return top - node.y;
 	}
 
 	/**
@@ -611,7 +729,12 @@ public class BlockNode {
 		Block belowChildBlock = belowChildBlockState.getBlock();
         double closestBlockBelowHeight = BlockShapeChecker.getBlockHeight(child.getBlockPos().down(), world);
 		boolean isBlockBelowTall = closestBlockBelowHeight > 1.3;
-		if (heightDiff > 1.4 && childBlock != Blocks.LADDER) return true;
+		// On slime the bounce reaches higher than a jump.
+		double slimeFall = getFallOntoSlimeHeight(this);
+		double maxUp = slimeFall > 0 ? MovementHelper.getSlimeBounceHeight(slimeFall) - 0.2 : 1.4;
+		if (heightDiff > maxUp && childBlock != Blocks.LADDER) return true;
+		// Bounce is mostly vertical — bounce-only children (above jump reach) must stay close.
+		if (slimeFall > 0 && heightDiff > 1.4 && distance > 4.0) return true;
 
 
 //    	if (world.getBlockState(child.getBlockPos().down()).getBlock() instanceof TrapdoorBlock) {
@@ -715,7 +838,7 @@ public class BlockNode {
 			}
 		}
 
-		if (!wasOnSlime || this.previous == null || this.previous.y - this.y <= 0) {
+		if (slimeFall <= 0) {
 			// Basic height and distance checks
 			if (heightDiff >= 2)
 				return true;

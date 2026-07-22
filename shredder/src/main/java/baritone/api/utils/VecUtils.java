@@ -105,7 +105,7 @@ public final class VecUtils {
      * @see #getBlockPosCenter(BlockPos)
      */
     public static double entityDistanceToCenter(Entity entity, BlockPos pos) {
-        return distanceToCenter(pos, entity.getPos().x, entity.getPos().y, entity.getPos().z);
+        return distanceToCenter(pos, entity.getEntityPos().x, entity.getEntityPos().y, entity.getEntityPos().z);
     }
 
     /**
@@ -118,6 +118,6 @@ public final class VecUtils {
      * @see #getBlockPosCenter(BlockPos)
      */
     public static double entityFlatDistanceToCenter(Entity entity, BlockPos pos) {
-        return distanceToCenter(pos, entity.getPos().x, pos.getY() + 0.5, entity.getPos().z);
+        return distanceToCenter(pos, entity.getEntityPos().x, pos.getY() + 0.5, entity.getEntityPos().z);
     }
 }

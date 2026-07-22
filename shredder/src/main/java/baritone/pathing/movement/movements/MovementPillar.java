@@ -183,7 +183,7 @@ public class MovementPillar extends Movement {
             // stay centered while swimming up a water column
             state.setTarget(new MovementState.MovementTarget(RotationUtils.calcRotationFromVec3d(ctx.playerHead(), VecUtils.getBlockPosCenter(dest), ctx.playerRotations()), false));
             Vec3d destCenter = VecUtils.getBlockPosCenter(dest);
-            if (Math.abs(ctx.player().getPos().x - destCenter.x) > 0.2 || Math.abs(ctx.player().getPos().z - destCenter.z) > 0.2) {
+            if (Math.abs(ctx.player().getEntityPos().x - destCenter.x) > 0.2 || Math.abs(ctx.player().getEntityPos().z - destCenter.z) > 0.2) {
                 state.setInput(Input.MOVE_FORWARD, true);
             }
             if (ctx.playerFeet().equals(dest)) {
@@ -229,11 +229,11 @@ public class MovementPillar extends Movement {
             }
 
 
-            state.setInput(Input.SNEAK, ctx.player().getPos().y > dest.getY() || ctx.player().getPos().y < src.getY() + 0.2D); // delay placement by 1 tick for ncp compatibility
+            state.setInput(Input.SNEAK, ctx.player().getEntityPos().y > dest.getY() || ctx.player().getEntityPos().y < src.getY() + 0.2D); // delay placement by 1 tick for ncp compatibility
             // since (lower down) we only right click once player.isSneaking, and that happens the tick after we request to sneak
 
-            double diffX = ctx.player().getPos().x - (dest.getX() + 0.5);
-            double diffZ = ctx.player().getPos().z - (dest.getZ() + 0.5);
+            double diffX = ctx.player().getEntityPos().x - (dest.getX() + 0.5);
+            double diffZ = ctx.player().getEntityPos().z - (dest.getZ() + 0.5);
             double dist = Math.sqrt(diffX * diffX + diffZ * diffZ);
             double flatMotion = Math.sqrt(ctx.player().getVelocity().x * ctx.player().getVelocity().x + ctx.player().getVelocity().z * ctx.player().getVelocity().z);
             if (dist > 0.17) {//why 0.17? because it seemed like a good number, that's why
@@ -247,7 +247,7 @@ public class MovementPillar extends Movement {
                 state.setTarget(new MovementState.MovementTarget(rotation, true));
             } else if (flatMotion < 0.05) {
                 // If our Y coordinate is above our goal, stop jumping
-                state.setInput(Input.JUMP, ctx.player().getPos().y < dest.getY());
+                state.setInput(Input.JUMP, ctx.player().getEntityPos().y < dest.getY());
             }
 
 
@@ -262,7 +262,7 @@ public class MovementPillar extends Movement {
                     state.setInput(Input.JUMP, false); // breaking is like 5x slower when you're jumping
                     state.setInput(Input.CLICK_LEFT, true);
                     blockIsThere = false;
-                } else if (ctx.player().isInSneakingPose() && (ctx.isLookingAt(src.down()) || ctx.isLookingAt(src)) && ctx.player().getPos().y > dest.getY() + 0.1) {
+                } else if (ctx.player().isInSneakingPose() && (ctx.isLookingAt(src.down()) || ctx.isLookingAt(src)) && ctx.player().getEntityPos().y > dest.getY() + 0.1) {
                     state.setInput(Input.CLICK_RIGHT, true);
                 }
             }

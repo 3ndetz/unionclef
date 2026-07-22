@@ -22,6 +22,9 @@ public class AltoClefCommands {
                 new StashCommand(),
                 new GotoCommand(),
                 new IdleCommand(),
+                new WanderCommand(),
+                new AliveCommand(),
+                new MirrorCommand(),
                 new HeroCommand(),
                 new CoordsCommand(),
                 new StatusCommand(),
@@ -67,6 +70,8 @@ public class AltoClefCommands {
                 new PearlCommand(),
                 new ForgetCommand(),
                 new BuildCommand(),
+                new PlaceCommand(),
+                new MineBlockCommand(),
                 new CheckBlockCommand()
         );
     }

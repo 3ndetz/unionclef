@@ -72,7 +72,7 @@ public class PlayerInteractionFixChain extends TaskChain {
                 if (bestToolSlot.isPresent() && !bestToolSlot.get().equals(currentEquipped)) {
                     // ONLY equip if the item class is STRICTLY different (otherwise we swap around a lot)
                     if (StorageHelper.getItemStackInSlot(currentEquipped).getItem() != StorageHelper.getItemStackInSlot(bestToolSlot.get()).getItem()) {
-                        boolean isAllowedToManage = (!mod.getClientBaritone().getPathingBehavior().isPathing() ||
+                        boolean isAllowedToManage = (mod.getClientBaritone() == null || !mod.getClientBaritone().getPathingBehavior().isPathing() ||
                                 bestToolSlot.get().getInventorySlot() >= 9) && !mod.getFoodChain().isTryingToEat();
                         if (isAllowedToManage) {
                             Debug.logMessage("Found better tool in inventory, equipping.");

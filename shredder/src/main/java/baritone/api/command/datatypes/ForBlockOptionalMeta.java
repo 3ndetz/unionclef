@@ -76,7 +76,7 @@ public enum ForBlockOptionalMeta implements IDatatypeFor<BlockOptionalMeta> {
             properties = parts[1];
         }
 
-        Block block = Registries.BLOCK.getOrEmpty(Identifier.of(blockId)).orElse(null);
+        Block block = Registries.BLOCK.getOptionalValue(Identifier.of(blockId)).orElse(null);
         if (block == null) {
             // This block doesn't exist so there's no properties to complete.
             return Stream.empty();

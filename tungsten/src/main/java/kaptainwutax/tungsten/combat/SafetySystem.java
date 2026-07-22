@@ -35,7 +35,9 @@ public class SafetySystem {
     private static final int PREDICT_TICKS = 10;
 
     private static final int KB_PREDICT_TICKS = 15;
-    private static final int KB_FALL_THRESHOLD = 2;
+    // 2 blocks tripped on any minor terrain step and stalled the approach;
+    // real knockback danger starts around fall-damage height
+    private static final int KB_FALL_THRESHOLD = 4;
 
     // ── state ───────────────────────────────────────────────────────────────
     private Vec3d prevEnemyPos = null;
@@ -96,7 +98,7 @@ public class SafetySystem {
         this.target = target;
         active = true;
 
-        Vec3d targetPos = target.getPos();
+        Vec3d targetPos = target.getEntityPos();
         if (prevEnemyPos != null) {
             enemyVelocity = targetPos.subtract(prevEnemyPos);
         }
@@ -137,8 +139,8 @@ public class SafetySystem {
 
         // tick-accurate positions for logic (block grid checks)
         Vec3d playerVel = player.getVelocity();
-        Vec3d playerPosTick = player.getPos();
-        Vec3d targetPosTick = target.getPos();
+        Vec3d playerPosTick = player.getEntityPos();
+        Vec3d targetPosTick = target.getEntityPos();
         double horizSpeed = Math.sqrt(playerVel.x * playerVel.x + playerVel.z * playerVel.z);
 
         // interpolated positions for smooth visualization
@@ -151,16 +153,16 @@ public class SafetySystem {
 
         // terrain checks use tick positions (block grid)
         Vec3d playerPredictedTick = playerPosTick.add(playerVel.multiply(PREDICT_TICKS));
-        int fallAtPredicted = VoidDetector.fallHeight(playerPredictedTick, player.getWorld());
-        int fallAtCurrent = VoidDetector.fallHeight(playerPosTick, player.getWorld());
+        int fallAtPredicted = VoidDetector.fallHeight(playerPredictedTick, player.getEntityWorld());
+        int fallAtCurrent = VoidDetector.fallHeight(playerPosTick, player.getEntityWorld());
         DangerLevel dangerPredicted = DangerLevel.fromFallHeight(fallAtPredicted);
         DangerLevel dangerCurrent = DangerLevel.fromFallHeight(fallAtCurrent);
 
         // edge score: how surrounded by dangerous drops (5+ blocks) we are
-        double currentEdgeScore = VoidDetector.edgeScoreWithFallThreshold(playerPosTick, player.getWorld(), 5);
+        double currentEdgeScore = VoidDetector.edgeScoreWithFallThreshold(playerPosTick, player.getEntityWorld(), 5);
 
         // KB analysis uses tick positions
-        analyzeKnockback(playerPosTick, playerVel, targetPosTick, player.getWorld());
+        analyzeKnockback(playerPosTick, playerVel, targetPosTick, player.getEntityWorld());
 
         // ── evaluate stage ───────────────────────────────────────────────
         CombatStage newStage = evaluateStage(player, playerVel, horizSpeed,
@@ -300,6 +302,13 @@ public class SafetySystem {
         // don't move toward target if we're in danger zone (DANGER_BATTLE = KB would kill us)
         if (movementsEnabled && !braking && !repositioning && postImminentCooldown <= 0
                 && stage != CombatStage.DANGER_BATTLE) {
+            // Near the island rim: walk, never sprint or jump. Sprint momentum
+            // (~0.28/tick) and jump arcs overshoot the edge faster than the
+            // reactive edge-clamp can arrest them. A drop within 3 blocks means
+            // any sprint could carry us off before we stop — walk instead so the
+            // clamp/sneak plant us on solid ground. (On this void map fallHeight
+            // bottoms out ~4 blocks down, so the radius-3 scan is cheap.)
+            boolean nearEdge = VoidDetector.voidWithin(playerPosTick, player.getEntityWorld(), 3, 3);
             java.util.List<net.minecraft.util.math.BlockPos> attackPath = pathfinder.getAttackPath();
             if (attackPath.size() >= 2) {
                 // find next waypoint we haven't reached yet
@@ -313,7 +322,7 @@ public class SafetySystem {
                 if (nextWp == null) nextWp = attackPath.get(attackPath.size() - 1);
 
                 // check if next waypoint is safe — block itself AND surroundings
-                int wpFall = VoidDetector.fallHeight(Vec3d.ofBottomCenter(nextWp), player.getWorld());
+                int wpFall = VoidDetector.fallHeight(Vec3d.ofBottomCenter(nextWp), player.getEntityWorld());
                 DangerLevel wpDanger = DangerLevel.fromFallHeight(wpFall);
 
                 if (!wpDanger.isSerious()) {
@@ -321,18 +330,40 @@ public class SafetySystem {
                     movementActive = true;
 
                     mc.options.forwardKey.setPressed(true);
-                    mc.options.sprintKey.setPressed(true);
+                    mc.options.sprintKey.setPressed(!nearEdge);
                     mc.options.backKey.setPressed(false);
                     mc.options.leftKey.setPressed(false);
                     mc.options.rightKey.setPressed(false);
                     mc.options.sneakKey.setPressed(false);
 
-                    // jump only if landing zone is safe
+                    // jump only if landing zone is safe AND we're not on the rim
                     // check 3-4 blocks ahead in velocity direction for drops
-                    boolean safeToJump = isJumpLandingSafe(playerPosTick, playerVel, player.getWorld());
-                    mc.options.jumpKey.setPressed(player.isOnGround() && safeToJump);
+                    boolean safeToJump = isJumpLandingSafe(playerPosTick, playerVel, player.getEntityWorld());
+                    mc.options.jumpKey.setPressed(player.isOnGround() && safeToJump && !nearEdge);
                 }
                 // if waypoint is dangerous, don't move — stay and fight
+            }
+
+            // Close the last half-block: the BFS waypoint tolerance (1.5)
+            // leaves the bot hovering just outside the 3.0 attack reach
+            // (observed 3.06 — staring at the enemy, never swinging).
+            if (!movementActive && !braking && !repositioning) {
+                net.minecraft.util.math.Box tb = target.getBoundingBox();
+                Vec3d eye = player.getEyePos();
+                Vec3d closest = new Vec3d(
+                        net.minecraft.util.math.MathHelper.clamp(eye.x, tb.minX, tb.maxX),
+                        net.minecraft.util.math.MathHelper.clamp(eye.y, tb.minY, tb.maxY),
+                        net.minecraft.util.math.MathHelper.clamp(eye.z, tb.minZ, tb.maxZ));
+                if (eye.distanceTo(closest) > 2.4) {
+                    movementYaw = AttackTiming.yawTo(playerPosTick, target.getEntityPos());
+                    movementActive = true;
+                    mc.options.forwardKey.setPressed(true);
+                    mc.options.sprintKey.setPressed(!nearEdge);
+                    mc.options.backKey.setPressed(false);
+                    mc.options.leftKey.setPressed(false);
+                    mc.options.rightKey.setPressed(false);
+                    mc.options.sneakKey.setPressed(false);
+                }
             }
         }
 
@@ -348,6 +379,14 @@ public class SafetySystem {
             mc.options.sneakKey.setPressed(false);
             mc.options.jumpKey.setPressed(false);
         }
+
+        // ── VOID-SAFETY HARD CLAMP (applies to EVERY stage) ───────────────
+        // The stage machine (braking, repositioning, escape, pursue) all set
+        // movement keys independently, and near a rim several of them sprint and
+        // even JUMP — the DANGER_IMMINENT brake-jump is what launched the bot off
+        // the island. The shared VoidGuard is the final word on the keys (same
+        // clamp the flee task applies after the pathfinder executor).
+        VoidGuard.protect(player, playerPosTick, playerVel, player.getEntityWorld());
 
         // ── visualization ────────────────────────────────────────────────
         renderVelocity(playerPos, playerVel, playerPredicted, COL_PLAYER_VEL);
@@ -444,10 +483,10 @@ public class SafetySystem {
             }
         }
 
-        // ESCAPE: weapon on cooldown (>10 ticks remaining) → disengage, run retreat path
-        if (player.getAttackCooldownProgress(0.5f) < 0.5f) {
-            return CombatStage.ESCAPE;
-        }
+        // NOTE: the old "ESCAPE while weapon on cooldown" rule fired for the
+        // first half of EVERY cooldown cycle — the bot sprinted away and looked
+        // away after every single hit. That was the main source of passivity.
+        // Disengage decisions belong to real danger stages above, not cooldown.
 
         // TODO: DELICATE_BATTLE — low HP careful play
 
@@ -484,7 +523,7 @@ public class SafetySystem {
         // find best aim point on hitbox
         Vec3d aimPoint = findBestAimPoint(player, eyePos, predictedBox, predictedPos, h);
 
-        aimYaw = AttackTiming.yawTo(player.getPos(), aimPoint);
+        aimYaw = AttackTiming.yawTo(player.getEntityPos(), aimPoint);
         aimPitch = AttackTiming.pitchTo(eyePos, aimPoint);
     }
 
@@ -593,7 +632,7 @@ public class SafetySystem {
     }
 
     private static boolean hasCleanLOS(ClientPlayerEntity player, Vec3d from, Vec3d to) {
-        net.minecraft.util.hit.HitResult hit = player.getWorld().raycast(
+        net.minecraft.util.hit.HitResult hit = player.getEntityWorld().raycast(
                 new net.minecraft.world.RaycastContext(from, to,
                         net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
                         net.minecraft.world.RaycastContext.FluidHandling.NONE, player));
@@ -612,7 +651,7 @@ public class SafetySystem {
 
         double angDist = WindMouseRotation.INSTANCE.distanceToTarget(mc.player);
         // rough: WindMouse moves ~maxStep degrees per frame, ~3 frames per tick
-        double degreesPerTick = 4.0 * 3.0; // default maxStep * ~frames/tick
+        double degreesPerTick = kaptainwutax.tungsten.TungstenConfig.get().combatWindMouseMaxStep * 3.0;
         int ticks = (int) Math.ceil(angDist / degreesPerTick);
         return Math.max(1, Math.min(5, ticks));
     }

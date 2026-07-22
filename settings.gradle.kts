@@ -19,19 +19,16 @@ pluginManagement {
 rootProject.name = "unionclef"
 rootProject.buildFileName = "root.gradle.kts"
 
-// ── Library subprojects (built once, shared across MC versions) ──────────────
+// ── Library subprojects ──────────────────────────────────────────────────────
 // include(":baritone")  // kept as source reference, not compiled
-include(":tungsten")
 include(":shredder")
+include(":tungsten")   // single build for shredder dependency
 
-// ── MC version subprojects (altoclef core, preprocessed per version) ─────────
+// ── MC version subprojects (altoclef + tungsten source, preprocessed) ────────
 listOf(
+    "1.21.11",
     "1.21.1",
     "1.21",
-    // "1.20.6",
-    // "1.20.4",
-    // "1.20.1",
-    // "1.19.4",
 ).forEach { version ->
     include(":$version")
     project(":$version").apply {

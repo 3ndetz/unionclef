@@ -33,8 +33,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.world.World;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.dimension.DimensionType;
 
@@ -73,7 +75,9 @@ public final class CachedWorld implements ICachedWorld, Helper {
 
     private final DimensionType dimension;
 
-    CachedWorld(Path directory, DimensionType dimension) {
+    private final RegistryKey<World> dimensionId;
+
+    CachedWorld(Path directory, DimensionType dimension, RegistryKey<World> dimensionId) {
         if (!Files.exists(directory)) {
             try {
                 Files.createDirectories(directory);
@@ -82,6 +86,7 @@ public final class CachedWorld implements ICachedWorld, Helper {
         }
         this.directory = directory.toString();
         this.dimension = dimension;
+        this.dimensionId = dimensionId;
         System.out.println("Cached world directory: " + directory);
         Baritone.getExecutor().execute(new PackerThread());
         Baritone.getExecutor().execute(() -> {
@@ -261,7 +266,7 @@ public final class CachedWorld implements ICachedWorld, Helper {
      */
     private synchronized CachedRegion getOrCreateRegion(int regionX, int regionZ) {
         return cachedRegions.computeIfAbsent(getRegionID(regionX, regionZ), id -> {
-            CachedRegion newRegion = new CachedRegion(regionX, regionZ, dimension);
+            CachedRegion newRegion = new CachedRegion(regionX, regionZ, dimension, dimensionId);
             newRegion.load(this.directory);
             return newRegion;
         });

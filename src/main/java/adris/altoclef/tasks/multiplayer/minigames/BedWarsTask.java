@@ -34,7 +34,7 @@ import net.minecraft.item.Items;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ColorHelper;
+import adris.altoclef.multiversion.ColorHelperVer;
 import java.util.*;
 
 public class BedWarsTask extends Task {
@@ -750,18 +750,18 @@ public class BedWarsTask extends Task {
     public String getClosestColorName(int rgb) {
         if (rgb == -1) return "Unknown";
 
-        int r1 = ColorHelper.Argb.getRed(rgb);
-        int g1 = ColorHelper.Argb.getGreen(rgb);
-        int b1 = ColorHelper.Argb.getBlue(rgb);
+        int r1 = ColorHelperVer.getRed(rgb);
+        int g1 = ColorHelperVer.getGreen(rgb);
+        int b1 = ColorHelperVer.getBlue(rgb);
 
         String closestColorName = "Unknown";
         double minDistance = Double.MAX_VALUE;
 
         for (Map.Entry<String, Integer> entry : BEDWARS_COLORS.entrySet()) {
             int colorRgb = entry.getValue();
-            int r2 = ColorHelper.Argb.getRed(colorRgb);
-            int g2 = ColorHelper.Argb.getGreen(colorRgb);
-            int b2 = ColorHelper.Argb.getBlue(colorRgb);
+            int r2 = ColorHelperVer.getRed(colorRgb);
+            int g2 = ColorHelperVer.getGreen(colorRgb);
+            int b2 = ColorHelperVer.getBlue(colorRgb);
 
             double distance = Math.sqrt(Math.pow(r1 - r2, 2) + Math.pow(g1 - g2, 2) + Math.pow(b1 - b2, 2));
             if (distance < minDistance) {
@@ -773,7 +773,11 @@ public class BedWarsTask extends Task {
     }
 
     public int getHelmetColor(PlayerEntity player) {
+        //#if MC >= 12111
+        //$$ for (ItemStack itemStack : java.util.List.of(player.getEquippedStack(net.minecraft.entity.EquipmentSlot.HEAD), player.getEquippedStack(net.minecraft.entity.EquipmentSlot.CHEST), player.getEquippedStack(net.minecraft.entity.EquipmentSlot.LEGS), player.getEquippedStack(net.minecraft.entity.EquipmentSlot.FEET))) {
+        //#else
         for (ItemStack itemStack : player.getArmorItems()) {
+        //#endif
             if (itemStack.isOf(Items.LEATHER_HELMET)) {
                 return DyedColorComponent.getColor(itemStack, DyedColorComponent.DEFAULT_COLOR);
             }

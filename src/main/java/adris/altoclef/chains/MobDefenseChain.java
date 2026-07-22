@@ -3,6 +3,7 @@ package adris.altoclef.chains;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.control.KillAura;
+import adris.altoclef.multiversion.entity.LivingEntityVer;
 import adris.altoclef.multiversion.versionedfields.Entities;
 import adris.altoclef.multiversion.item.ItemVer;
 import adris.altoclef.tasks.construction.ProjectileProtectionWallTask;
@@ -41,7 +42,9 @@ import net.minecraft.entity.projectile.thrown.PotionEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+//#if MC < 12111
 import net.minecraft.item.SwordItem;
+//#endif
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -99,7 +102,8 @@ public class MobDefenseChain extends SingleTaskChain {
 
     private static void startShielding(AltoClef mod) {
         shielding = true;
-        mod.getClientBaritone().getPathingBehavior().requestPause();
+        if (mod.getClientBaritone() != null)
+            mod.getClientBaritone().getPathingBehavior().requestPause();
         mod.getExtraBaritoneSettings().setInteractionPaused(true);
         if (!mod.getPlayer().isBlocking()) {
             ItemStack handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot());
@@ -125,7 +129,9 @@ public class MobDefenseChain extends SingleTaskChain {
             if (toDealWith instanceof EndermanEntity || toDealWith instanceof SlimeEntity || toDealWith instanceof BlazeEntity) {
 
                 numberOfProblematicEntities += 1;
-            } else if (toDealWith instanceof DrownedEntity && toDealWith.getEquippedItems() == Items.TRIDENT) {
+            } else if (toDealWith instanceof DrownedEntity
+                    && LivingEntityVer.hasTrident(toDealWith)
+            ) {
                 // Drowned with tridents are also REALLY dangerous, maybe we should increase this??
                 numberOfProblematicEntities += 5;
             }
@@ -186,7 +192,11 @@ public class MobDefenseChain extends SingleTaskChain {
             return Float.NEGATIVE_INFINITY;
         }
 
-        //if (mod.getWorld().getDifficulty() == Difficulty.PEACEFUL) return Float.NEGATIVE_INFINITY;
+        // On PEACEFUL there are no hostile mobs — MobDefense must stand down,
+        // otherwise a stale run-away task keeps it winning at prio 70 and
+        // starves the user task chain (navigation never ticks). Restored.
+        if (mod.getWorld().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL)
+            return Float.NEGATIVE_INFINITY;
 
         if (needsChangeOnAttack && (mod.getPlayer().getHealth() < prevHealth || killAura.attackedLastTick)) {
             needsChangeOnAttack = false;
@@ -207,7 +217,8 @@ public class MobDefenseChain extends SingleTaskChain {
             wasPuttingOutFire = true;
         } else {
             // Stop putting stuff out if we no longer need to put out a fire.
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, false);
+            if (mod.getClientBaritone() != null)
+                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, false);
             wasPuttingOutFire = false;
         }
 
@@ -228,8 +239,12 @@ public class MobDefenseChain extends SingleTaskChain {
             if ((!mod.getFoodChain().needsToEat() || mod.getPlayer().getHealth() < 9)
                     && hasShield(mod)
                     && !mod.getEntityTracker().entityFound(PotionEntity.class)
+                    //#if MC >= 12111
+                    //$$ && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem.getDefaultStack())
+                    //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
-                    && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()
+                    //#endif
+                    && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())
                     && blowingUp.getClientFuseTime(blowingUp.getFuseSpeed()) > 0.5) {
                 LookHelper.lookAt(mod, blowingUp.getEyePos());
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);
@@ -260,8 +275,12 @@ public class MobDefenseChain extends SingleTaskChain {
             if (mod.getModSettings().isDodgeProjectiles()
                     && hasShield(mod)
                     && runAwayTask == null
+                    //#if MC >= 12111
+                    //$$ && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem.getDefaultStack())
+                    //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
-                    && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()
+                    //#endif
+                    && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())
                     && !mod.getEntityTracker().entityFound(PotionEntity.class) && projectileIsClose) {
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);
                 if (shieldSlot.getItem() != Items.SHIELD) {
@@ -380,10 +399,18 @@ public class MobDefenseChain extends SingleTaskChain {
             if (!toDealWithList.isEmpty()) {
 
                 // Depending on our weapons/armor, we may choose to straight up kill hostiles if we're not dodging their arrows.
+                //#if MC < 12111
                 SwordItem bestSword = getBestSword(mod);
+                //#else
+                //$$ var bestSword = getBestSword(mod);
+                //#endif
 
                 int armor = mod.getPlayer().getArmor();
+                //#if MC < 12111
                 float damage = bestSword == null ? 0 : (bestSword.getMaterial().getAttackDamage()) + 1;
+                //#else
+                //$$ float damage = 0; // TODO [1.21.11] get attack damage from Item.Settings component
+                //#endif
 
                 int shield = hasShield(mod) && bestSword != null ? 3 : 0;
 
@@ -464,6 +491,7 @@ public class MobDefenseChain extends SingleTaskChain {
         return mod.getItemStorage().hasItem(Items.SHIELD) || mod.getItemStorage().hasItemInOffhand(Items.SHIELD);
     }
 
+    //#if MC < 12111
     private static SwordItem getBestSword(AltoClef mod) {
         Item[] SWORDS = new Item[]{Items.NETHERITE_SWORD, Items.DIAMOND_SWORD, Items.IRON_SWORD, Items.GOLDEN_SWORD,
                 Items.STONE_SWORD, Items.WOODEN_SWORD};
@@ -477,6 +505,19 @@ public class MobDefenseChain extends SingleTaskChain {
         }
         return bestSword;
     }
+    //#else
+    //$$ // TODO [1.21.11] sword item class deleted — return Item and get damage from component
+    //$$ private static Item getBestSword(AltoClef mod) {
+    //$$     Item[] SWORDS = new Item[]{Items.NETHERITE_SWORD, Items.DIAMOND_SWORD, Items.IRON_SWORD, Items.GOLDEN_SWORD,
+    //$$             Items.STONE_SWORD, Items.WOODEN_SWORD};
+    //$$     for (Item item : SWORDS) {
+    //$$         if (mod.getItemStorage().hasItem(item)) {
+    //$$             return item;
+    //$$         }
+    //$$     }
+    //$$     return null;
+    //$$ }
+    //#endif
 
     private BlockPos isInsideFireAndOnFire(AltoClef mod) {
         boolean onFire = mod.getPlayer().isOnFire();
@@ -507,8 +548,10 @@ public class MobDefenseChain extends SingleTaskChain {
         if (reach.isPresent()) {
             Baritone b = mod.getClientBaritone();
             if (LookHelper.isLookingAt(mod, pos)) {
-                b.getPathingBehavior().requestPause();
-                b.getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
+                if (b != null) {
+                    b.getPathingBehavior().requestPause();
+                    b.getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
+                }
                 return;
             }
             LookHelper.lookAt(reach.get());
@@ -560,6 +603,7 @@ public class MobDefenseChain extends SingleTaskChain {
                 // At max fuse, the cost goes to basically zero.
                 double safety = getCreeperSafety(mod.getPlayer().getPos(), creeper);
                 if (safety < worstSafety) {
+                    worstSafety = safety;
                     target = creeper;
                 }
             }
@@ -584,8 +628,9 @@ public class MobDefenseChain extends SingleTaskChain {
                         Optional<Entity> ghastBall = mod.getEntityTracker().getClosestEntity(FireballEntity.class);
                         Optional<Entity> ghast = mod.getEntityTracker().getClosestEntity(GhastEntity.class);
                         if (ghastBall.isPresent() && ghast.isPresent() && runAwayTask == null
-                                && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
-                            mod.getClientBaritone().getPathingBehavior().requestPause();
+                                && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())) {
+                            if (mod.getClientBaritone() != null)
+                                mod.getClientBaritone().getPathingBehavior().requestPause();
                             LookHelper.lookAt(mod, ghast.get().getEyePos());
                         }
                         return false;
@@ -618,8 +663,9 @@ public class MobDefenseChain extends SingleTaskChain {
                         if (invertedYaw < 0) invertedYaw += 360;
                         suggestedProjectileRotation = new Rotation(invertedYaw, 0f);
 
-                        if (runAwayTask == null && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
-                            mod.getClientBaritone().getPathingBehavior().requestPause();
+                        if (runAwayTask == null && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())) {
+                            if (mod.getClientBaritone() != null)
+                                mod.getClientBaritone().getPathingBehavior().requestPause();
                         }
                         return true;
                     }

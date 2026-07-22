@@ -4,7 +4,7 @@
 2. Drop the release JAR into your `.minecraft/mods/` folder
 3. Launch Minecraft
 
-No separate baritone install needed — everything is bundled.
+No separate mods install needed — everything is bundled into the main UnionClef JARfile. But if you see another JARs like `tungsten-**.jar` or `shredder-**.jar`, you can use it separetely if you want to, but NOT with UnionClef because it combines them all!
 
 ## Modules
 

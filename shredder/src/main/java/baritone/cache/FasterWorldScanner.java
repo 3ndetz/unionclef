@@ -287,7 +287,7 @@ public enum FasterWorldScanner implements IWorldScanner {
             return PALETTE_REGISTRY_SENTINEL;
         } else {
             PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-            palette.writePacket(buf);
+            palette.writePacket(buf, Block.STATE_IDS);
             int size = buf.readVarInt();
             BlockState[] states = new BlockState[size];
             for (int i = 0; i < size; i++) {

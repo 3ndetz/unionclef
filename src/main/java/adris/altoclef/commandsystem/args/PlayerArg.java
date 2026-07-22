@@ -26,7 +26,11 @@ public class PlayerArg extends Arg<String> {
         if (mc.getNetworkHandler() == null) return Stream.empty();
         return mc.getNetworkHandler().getPlayerList().stream()
                 .map(PlayerListEntry::getProfile)
+                //#if MC >= 12111
+                //$$ .map(p -> p.name())
+                //#else
                 .map(p -> p.getName())
+                //#endif
                 .filter(name -> !name.isEmpty());
     }
 

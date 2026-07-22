@@ -34,6 +34,7 @@ public class MLGBucketFallChain extends SingleTaskChain implements ITaskOverride
     private boolean doingChorusFruit = false;
     private BlockPos lastGroundBlockPos = null;
     private final TimerGame voidFallTimer = new TimerGame(0.25);
+    private double _fallStartY = Double.MAX_VALUE;
 
     public MLGBucketFallChain(TaskRunner runner) {
         super(runner);
@@ -54,9 +55,16 @@ public class MLGBucketFallChain extends SingleTaskChain implements ITaskOverride
         if (mod.getPlayer().isOnGround()) {
             lastGroundBlockPos = mod.getPlayer().getBlockPos();
             voidFallTimer.reset();
+            _fallStartY = Double.MAX_VALUE;
         } else if (isInHellHole(mod)) {
+            // Track fall start for minimum distance check
+            if (_fallStartY == Double.MAX_VALUE) {
+                _fallStartY = mod.getPlayer().getY();
+            }
             if (mod.getItemStorage().hasItem(Items.ENDER_PEARL) && lastGroundBlockPos != null) {
-                if (voidFallTimer.elapsed()) {
+                if (voidFallTimer.elapsed()
+                        && _fallStartY != Double.MAX_VALUE
+                        && (_fallStartY - mod.getPlayer().getY()) >= mod.getModSettings().getMinPearlFallDistance()) {
                     Optional<Entity> closestPlayer = mod.getEntityTracker().getClosestEntity(
                             mod.getPlayer().getPos(),
                             p -> pearlAllowable(mod, (PlayerEntity) p),
@@ -102,7 +110,7 @@ public class MLGBucketFallChain extends SingleTaskChain implements ITaskOverride
                         mod.getBehaviour().push();
                         mod.getBehaviour().setRayTracingFluidHandling(RaycastContext.FluidHandling.SOURCE_ONLY);
                         Optional<Rotation> reach = LookHelper.getReach(toInteract, Direction.UP);
-                        if (reach.isPresent()) {
+                        if (reach.isPresent() && mod.getClientBaritone() != null) {
                             mod.getClientBaritone().getLookBehavior().updateTarget(reach.get(), true);
                             if (mod.getClientBaritone().getPlayerContext().isLookingAt(toInteract)) {
                                 if (mod.getSlotHandler().forceEquipItem(Items.BUCKET)) {
@@ -132,7 +140,11 @@ public class MLGBucketFallChain extends SingleTaskChain implements ITaskOverride
             lastMLG = null;
         }
         if (mod.getPlayer().hasStatusEffect(StatusEffects.LEVITATION) &&
+                //#if MC >= 12111
+                //$$ !mod.getPlayer().getItemCooldownManager().isCoolingDown(new net.minecraft.item.ItemStack(Items.CHORUS_FRUIT)) &&
+                //#else
                 !mod.getPlayer().getItemCooldownManager().isCoolingDown(Items.CHORUS_FRUIT) &&
+                //#endif
                 mod.getPlayer().getActiveStatusEffects().get(StatusEffects.LEVITATION).getDuration() <= 70 &&
                 mod.getItemStorage().hasItemInventoryOnly(Items.CHORUS_FRUIT) &&
                 !mod.getItemStorage().hasItemInventoryOnly(Items.WATER_BUCKET)) {

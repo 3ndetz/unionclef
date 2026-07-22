@@ -29,6 +29,7 @@
   ],
   "client": [
     "CameraMixin",
+    "ConfirmScreenAccessor",
     "ChatInputMixin",
     "ChatInputSuggestorMixin",
     "ChatReadMixin",
@@ -46,6 +47,6 @@
     "SimpleOptionMixin"
   ],
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   }
 }

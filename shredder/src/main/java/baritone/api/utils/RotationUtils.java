@@ -282,7 +282,7 @@ public final class RotationUtils {
             if (((BlockHitResult) result).getBlockPos().equals(pos)) {
                 return Optional.of(rotation);
             }
-            if (entity.getWorld().getBlockState(pos).getBlock() instanceof AbstractFireBlock && ((BlockHitResult) result).getBlockPos().equals(pos.down())) {
+            if (entity.getEntityWorld().getBlockState(pos).getBlock() instanceof AbstractFireBlock && ((BlockHitResult) result).getBlockPos().equals(pos.down())) {
                 return Optional.of(rotation);
             }
         }
@@ -291,6 +291,6 @@ public final class RotationUtils {
 
     @Deprecated
     public static Optional<Rotation> reachableCenter(Entity entity, BlockPos pos, double blockReachDistance, boolean wouldSneak) {
-        return reachableOffset(entity, pos, VecUtils.calculateBlockCenter(entity.getWorld(), pos), blockReachDistance, wouldSneak);
+        return reachableOffset(entity, pos, VecUtils.calculateBlockCenter(entity.getEntityWorld(), pos), blockReachDistance, wouldSneak);
     }
 }

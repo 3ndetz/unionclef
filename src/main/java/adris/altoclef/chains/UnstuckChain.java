@@ -32,6 +32,10 @@ public class UnstuckChain extends SingleTaskChain {
     private boolean interruptedEating = false;
     private TimerGame shimmyTaskTimer = new TimerGame(5);
     private boolean startedShimmying = false;
+    // Prevent rapid-fire shimmy loops (issue #13): cooldown grows with consecutive detections.
+    // Start elapsed (interval=0) so the first detection fires immediately.
+    private TimerGame stuckCooldown = new TimerGame(0);
+    private int consecutiveStuckDetections = 0;
 
     public UnstuckChain(TaskRunner runner) {
         super(runner);
@@ -103,6 +107,16 @@ public class UnstuckChain extends SingleTaskChain {
     private void checkGenerallyStuck() {
         if (posHistory.size() < 200) return; // ~10 seconds of ticks
 
+        // Tungsten-primary (drop-in swap): tungsten drives movement and handles
+        // its own stuck recovery (executor). The shimmy would preempt the user
+        // task chain every tick, starving the tungsten-primary hook — never fire.
+        if (adris.altoclef.util.helpers.TungstenHelper.isPrimary()) {
+            posHistory.clear();
+            startedShimmying = false;
+            consecutiveStuckDetections = 0;
+            return;
+        }
+
         AltoClef mod = AltoClef.getInstance();
 
         // Don't interfere with eating or mining
@@ -110,6 +124,25 @@ public class UnstuckChain extends SingleTaskChain {
         if (mod.getControllerExtras().isBreakingBlock()) return;
         // Only trigger when there's an active user task
         if (!mod.getUserTaskChain().isActive()) return;
+
+        // Don't trigger when baritone is actively pathfinding (calculating a path)
+        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            posHistory.clear();
+            return;
+        }
+
+        // Don't trigger when any GUI/container is open (bot is interacting with inventory, chest, etc.)
+        if (MinecraftClient.getInstance().currentScreen != null) {
+            posHistory.clear();
+            return;
+        }
+
+        // Don't trigger when interacting with a container (different from currentScreen in some contexts)
+        if (StorageHelper.isChestOpen() || StorageHelper.isBlastFurnaceOpen()
+                || StorageHelper.isSmokerOpen() || StorageHelper.isBigCraftingOpen()) {
+            posHistory.clear();
+            return;
+        }
 
         Vec3d current = posHistory.getFirst();
         Vec3d old = posHistory.get(199);
@@ -119,10 +152,24 @@ public class UnstuckChain extends SingleTaskChain {
         double dy = Math.abs(current.getY() - old.getY());
 
         if (dx < 1.5 && dz < 1.5 && dy < 1.5) {
-            Debug.logMessage("Bot appears generally stuck (no movement for ~10s), triggering shimmy");
+            // Cooldown check: don't re-trigger shimmy too frequently (issue #13)
+            if (!stuckCooldown.elapsed()) {
+                posHistory.clear();
+                return;
+            }
+            consecutiveStuckDetections++;
+            // Exponential backoff: 30s → 60s → 120s max 120s
+            int cooldownSec = Math.min(30 << (consecutiveStuckDetections - 1), 120);
+            stuckCooldown = new TimerGame(cooldownSec);
+            Debug.logMessage("Bot appears generally stuck (no movement for ~10s), triggering shimmy (cooldown=" + cooldownSec + "s, detection #" + consecutiveStuckDetections + ")");
             startedShimmying = true;
             shimmyTaskTimer.reset();
             posHistory.clear();
+        } else {
+            // Bot is moving — reset consecutive counter
+            if (consecutiveStuckDetections > 0) {
+                consecutiveStuckDetections = 0;
+            }
         }
     }
 

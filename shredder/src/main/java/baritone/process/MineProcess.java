@@ -76,7 +76,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
     @Override
     public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
         if (desiredQuantity > 0) {
-            int curr = ctx.player().getInventory().main.stream()
+            int curr = ctx.player().getInventory().getMainStacks().stream()
                     .filter(stack -> filter.has(stack))
                     .mapToInt(ItemStack::getCount).sum();
             System.out.println("Currently have " + curr + " valid items");

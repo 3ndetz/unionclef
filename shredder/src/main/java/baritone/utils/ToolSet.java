@@ -22,6 +22,7 @@ import baritone.altoclef.AltoClefSettings;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.EnchantmentEffectComponentTypes;
 import net.minecraft.component.type.ItemEnchantmentsComponent;
 import net.minecraft.enchantment.Enchantment;
@@ -29,10 +30,12 @@ import net.minecraft.enchantment.Enchantments;
 import net.minecraft.enchantment.effect.AttributeEnchantmentEffect;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.SwordItem;
-import net.minecraft.item.ToolItem;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.registry.tag.TagKey;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +61,19 @@ public class ToolSet {
 
     private final ClientPlayerEntity player;
 
+    /**
+     * Used for evaluating the material cost of a tool.
+     * Prefer tools with lower material cost (lower index in this list).
+     */
+    private static final List<TagKey<Item>> materialTagsPriorityList = List.of(
+        ItemTags.WOODEN_TOOL_MATERIALS,
+        ItemTags.STONE_TOOL_MATERIALS,
+        ItemTags.IRON_TOOL_MATERIALS,
+        ItemTags.GOLD_TOOL_MATERIALS,
+        ItemTags.DIAMOND_TOOL_MATERIALS,
+        ItemTags.NETHERITE_TOOL_MATERIALS
+    );
+
     public ToolSet(ClientPlayerEntity player) {
         breakStrengthCache = new HashMap<>();
         this.player = player;
@@ -82,20 +98,18 @@ public class ToolSet {
     }
 
     /**
-     * Evaluate the material cost of a possible tool. The priority matches the
-     * harvest level order; there is a chance for multiple at the same with modded tools
-     * but in that case we don't really care.
+     * Evaluate the material cost of a possible tool.
+     * If all else is equal, we want to prefer the tool with the lowest material cost.
      *
      * @param itemStack a possibly empty ItemStack
      * @return values from 0 up
      */
     private int getMaterialCost(ItemStack itemStack) {
-        if (itemStack.getItem() instanceof ToolItem) {
-            ToolItem tool = (ToolItem) itemStack.getItem();
-            return (int) tool.getMaterial().getAttackDamage();
-        } else {
-            return -1;
+        for (int i = 0; i < materialTagsPriorityList.size(); i++) {
+            final TagKey<Item> tag = materialTagsPriorityList.get(i);
+            if (itemStack.isIn(tag)) return i;
         }
+        return -1;
     }
 
     public boolean hasSilkTouch(ItemStack stack) {
@@ -128,10 +142,8 @@ public class ToolSet {
         If we actually want know what efficiency our held item has instead of the best one
         possible, this lets us make pathing depend on the actual tool to be used (if auto tool is disabled)
         */
-        if (b.getBlastResistance() == 0) return(player.getInventory().selectedSlot);
-
         if (!Baritone.settings().autoTool.value && pathingCalculation) {
-            return player.getInventory().selectedSlot;
+            return player.getInventory().getSelectedSlot();
         }
 
         int best = 0;
@@ -141,7 +153,7 @@ public class ToolSet {
         BlockState blockState = b.getDefaultState();
         for (int i = 0; i < 9; i++) {
             ItemStack itemStack = player.getInventory().getStack(i);
-            if (!Baritone.settings().useSwordToMine.value && itemStack.getItem() instanceof SwordItem) {
+            if (!Baritone.settings().useSwordToMine.value && itemStack.getItem().getComponents().contains(DataComponentTypes.WEAPON)) {
                 continue;
             }
             if (Baritone.settings().itemSaver.value && (itemStack.getDamage() + Baritone.settings().itemSaverThreshold.value) >= itemStack.getMaxDamage() && itemStack.getMaxDamage() > 1) {
@@ -212,7 +224,7 @@ public class ToolSet {
             OUTER: for (RegistryEntry<Enchantment> enchant : itemEnchantments.getEnchantments()) {
                 List<AttributeEnchantmentEffect> effects = enchant.value().getEffect(EnchantmentEffectComponentTypes.ATTRIBUTES);
                 for (AttributeEnchantmentEffect e : effects) {
-                    if (e.attribute().matchesKey(EntityAttributes.PLAYER_MINING_EFFICIENCY.getKey().get())) {
+                    if (e.attribute().matches(EntityAttributes.MINING_EFFICIENCY)) {
                         speed += e.amount().getValue(itemEnchantments.getLevel(enchant));
                         break OUTER;
                     }

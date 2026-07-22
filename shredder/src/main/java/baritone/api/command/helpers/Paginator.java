@@ -78,12 +78,10 @@ public class Paginator<E> implements Helper {
         MutableText prevPageComponent = Text.literal("<<");
         if (hasPrevPage) {
             prevPageComponent.setStyle(prevPageComponent.getStyle()
-                    .withClickEvent(new ClickEvent(
-                            ClickEvent.Action.RUN_COMMAND,
+                    .withClickEvent(new ClickEvent.RunCommand(
                             String.format("%s %d", commandPrefix, page - 1)
                     ))
-                    .withHoverEvent(new HoverEvent(
-                            HoverEvent.Action.SHOW_TEXT,
+                    .withHoverEvent(new HoverEvent.ShowText(
                             Text.literal("Click to view previous page")
                     )));
         } else {
@@ -92,9 +90,8 @@ public class Paginator<E> implements Helper {
         MutableText nextPageComponent = Text.literal(">>");
         if (hasNextPage) {
             nextPageComponent.setStyle(nextPageComponent.getStyle()
-                    .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, String.format("%s %d", commandPrefix, page + 1)))
-                    .withHoverEvent(new HoverEvent(
-                            HoverEvent.Action.SHOW_TEXT,
+                    .withClickEvent(new ClickEvent.RunCommand(String.format("%s %d", commandPrefix, page + 1)))
+                    .withHoverEvent(new HoverEvent.ShowText(
                             Text.literal("Click to view next page")
                     )));
         } else {

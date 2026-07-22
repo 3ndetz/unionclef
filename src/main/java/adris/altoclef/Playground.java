@@ -355,7 +355,14 @@ public class Playground {
                     File f = new File(fname);
                     FileWriter fw = new FileWriter(f);
                     for (Identifier id : Registries.ITEM.getIds()) {
+                        //#if MC >= 12111
+                        //$$ var optItem = Registries.ITEM.getEntry(id);
+                        //$$ if (optItem.isEmpty()) continue;
+                        //$$ Item item = optItem.get().value();
+                        //#else
                         Item item = Registries.ITEM.get(id);
+                        //#endif
+                        if (item == null) continue;
                         if (!TaskCatalogue.isObtainable(item)) {
                             ++unobtainable;
                             fw.write(item.getTranslationKey() + "\n");

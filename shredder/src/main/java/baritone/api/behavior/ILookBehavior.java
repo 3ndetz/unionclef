@@ -47,4 +47,23 @@ public interface ILookBehavior extends IBehavior {
      * @see IAimProcessor#fork
      */
     IAimProcessor getAimProcessor();
+
+    /**
+     * Returns the smoothed yaw for render interpolation.
+     * @param defaultYaw The default yaw if no target rotation is active
+     * @return The interpolated yaw value
+     */
+    float getSmoothedYaw(float defaultYaw);
+
+    /**
+     * Returns the smoothed pitch for render interpolation.
+     * @param defaultPitch The default pitch if no target rotation is active
+     * @return The interpolated pitch value
+     */
+    float getSmoothedPitch(float defaultPitch);
+
+    /**
+     * Handles mounted entity (pig/horse) rotation updates.
+     */
+    void pig();
 }

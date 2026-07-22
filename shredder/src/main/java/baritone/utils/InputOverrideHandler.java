@@ -111,6 +111,15 @@ public final class InputOverrideHandler extends Behavior implements IInputOverri
     }
 
     private boolean inControl() {
+        // Yield input control to tungsten while ITS executor is driving. Otherwise
+        // baritone installs PlayerMovementInput (whose forced keys are all zero
+        // when baritone isn't pathing), which nullifies tungsten's key presses —
+        // the bot freezes under altoclef tasks (@get/@gamer) even though tungsten's
+        // executor is simulating forward motion (drift blows up). When tungsten is
+        // executing, KeyboardInput is used instead, reading tungsten's setPressed.
+        if (kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
+            return false;
+        }
         for (Input input : new Input[]{Input.MOVE_FORWARD, Input.MOVE_BACK, Input.MOVE_LEFT, Input.MOVE_RIGHT, Input.SNEAK, Input.JUMP}) {
             if (isInputForcedDown(input)) {
                 return true;

@@ -16,7 +16,9 @@ import net.minecraft.item.AxeItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+//#if MC < 12111
 import net.minecraft.item.SwordItem;
+//#endif
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import adris.altoclef.tasks.movement.GetToEntityTask;
@@ -140,8 +142,12 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
     // --- Weapon helpers ---
 
     public static float getAttackDamage(Item item) {
+        //#if MC < 12111
         if (item instanceof SwordItem sword) return sword.getMaterial().getAttackDamage();
         if (item instanceof AxeItem axe) return axe.getMaterial().getAttackDamage();
+        //#else
+        //$$ // TODO [1.21.11] sword-class/AxeItem.getMaterial() removed — get attack damage from components
+        //#endif
         return 0;
     }
 
@@ -151,6 +157,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         Item bestItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
         float bestDamage = Float.NEGATIVE_INFINITY;
 
+        //#if MC < 12111
         if (bestItem instanceof SwordItem handToolItem) {
             bestDamage = handToolItem.getMaterial().getAttackDamage();
         }
@@ -163,6 +170,9 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
                 bestDamage = itemDamage;
             }
         }
+        //#else
+        //$$ // TODO [1.21.11] sword-class deleted — use Item.Settings attack damage component
+        //#endif
 
         return bestItem;
     }
@@ -180,7 +190,12 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
 
         for (ItemStack invStack : invStacks) {
             Item item = invStack.getItem();
+            //#if MC < 12111
             if (!(item instanceof SwordItem) && !(item instanceof AxeItem)) continue;
+            //#else
+            //$$ // TODO [1.21.11] sword-class deleted — check for sword items via other means
+            //$$ if (!(item instanceof AxeItem)) continue;
+            //#endif
 
             if (item instanceof AxeItem) {
                 if (!hasAxe) {
@@ -328,7 +343,11 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         // Detect whether target is blocking with a shield → prefer axe to break it
         boolean preferAxe = false;
         if (player.isUsingItem()) {
+            //#if MC >= 12111
+            //$$ for (ItemStack stack : java.util.List.of(player.getMainHandStack(), player.getOffHandStack())) {
+            //#else
             for (ItemStack stack : player.getHandItems()) {
+            //#endif
                 if (stack.isOf(Items.SHIELD)) {
                     preferAxe = true;
                     break;

@@ -145,7 +145,7 @@ public class CalculationContext {
                 List<AttributeEnchantmentEffect> effects = enchant.value()
                     .getEffect(EnchantmentEffectComponentTypes.ATTRIBUTES);
                 for (AttributeEnchantmentEffect effect : effects) {
-                    if (effect.attribute().matchesKey(EntityAttributes.GENERIC_WATER_MOVEMENT_EFFICIENCY.getKey().get())) {
+                    if (effect.attribute().matchesKey(EntityAttributes.WATER_MOVEMENT_EFFICIENCY.getKey().get())) {
                         waterSpeedMultiplier = effect.amount().getValue(itemEnchantments.getLevel(enchant));
                         break OUTER;
                     }

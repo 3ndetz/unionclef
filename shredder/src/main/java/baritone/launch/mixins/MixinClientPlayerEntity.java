@@ -23,7 +23,7 @@ import baritone.api.IBaritone;
 import baritone.api.event.events.PlayerUpdateEvent;
 import baritone.api.event.events.SprintStateEvent;
 import baritone.api.event.events.type.EventState;
-import baritone.behavior.LookBehavior;
+import baritone.api.behavior.ILookBehavior;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -35,11 +35,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.option.KeyBinding;
 import net.minecraft.entity.player.PlayerAbilities;
+import net.minecraft.util.PlayerInput;
 
 /**
  * @author Brady
@@ -113,13 +112,13 @@ public class MixinClientPlayerEntity {
             method = "tickMovement",
             at = @At(
                     value = "INVOKE",
-                    target = "net/minecraft/client/option/KeyBinding.isPressed()Z"
+                    target = "Lnet/minecraft/util/PlayerInput;sprint()Z"
             )
     )
-    private boolean isKeyDown(KeyBinding keyBinding) {
+    private boolean redirectSprintInput(final PlayerInput instance) {
         IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForPlayer((ClientPlayerEntity) (Object) this);
         if (baritone == null) {
-            return keyBinding.isPressed();
+            return instance.sprint();
         }
         SprintStateEvent event = new SprintStateEvent();
         baritone.getGameEventHandler().onPlayerSprintState(event);
@@ -130,7 +129,7 @@ public class MixinClientPlayerEntity {
             // hitting control shouldn't make all bots sprint
             return false;
         }
-        return keyBinding.isPressed();
+        return instance.sprint();
     }
 
     @Inject(
@@ -142,7 +141,7 @@ public class MixinClientPlayerEntity {
     private void updateRidden(CallbackInfo cb) {
         IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForPlayer((ClientPlayerEntity) (Object) this);
         if (baritone != null) {
-            ((LookBehavior) baritone.getLookBehavior()).pig();
+            baritone.getLookBehavior().pig();
         }
     }
 
@@ -150,7 +149,7 @@ public class MixinClientPlayerEntity {
             method = "tickMovement",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/network/ClientPlayerEntity;checkFallFlying()Z"
+                    target = "Lnet/minecraft/client/network/ClientPlayerEntity;checkGliding()Z"
             )
     )
     private boolean tryToStartFallFlying(final ClientPlayerEntity instance) {
@@ -158,7 +157,7 @@ public class MixinClientPlayerEntity {
         if (baritone != null && baritone.getPathingBehavior().isPathing()) {
             return false;
         }
-        return instance.checkFallFlying();
+        return instance.checkGliding();
     }
 
     @Inject(
@@ -172,7 +171,7 @@ public class MixinClientPlayerEntity {
         }
         IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForPlayer((ClientPlayerEntity) (Object) this);
         if (baritone != null) {
-            LookBehavior look = (LookBehavior) baritone.getLookBehavior();
+            ILookBehavior look = baritone.getLookBehavior();
             cir.setReturnValue(look.getSmoothedYaw(cir.getReturnValue()));
         }
     }
@@ -188,7 +187,7 @@ public class MixinClientPlayerEntity {
         }
         IBaritone baritone = BaritoneAPI.getProvider().getBaritoneForPlayer((ClientPlayerEntity) (Object) this);
         if (baritone != null) {
-            LookBehavior look = (LookBehavior) baritone.getLookBehavior();
+            ILookBehavior look = baritone.getLookBehavior();
             cir.setReturnValue(look.getSmoothedPitch(cir.getReturnValue()));
         }
     }

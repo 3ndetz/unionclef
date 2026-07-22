@@ -215,7 +215,11 @@ public class MurderMysteryTask extends Task {
                 if (tooClose) {
                     mod.getSlotHandler().forceEquipItem(Items.SHEARS, Items.IRON_SWORD);
                 } else {
+                    //#if MC < 12111
                     mod.getSlotHandler().forceDeequip(stack -> stack.getItem() instanceof ShearsItem || stack.getItem() instanceof SwordItem);
+                    //#else
+                    //$$ mod.getSlotHandler().forceDeequip(stack -> stack.getItem() instanceof ShearsItem); // TODO [1.21.11] sword-class deleted
+                    //#endif
                 }
                 if (_change_chain_priority) mod.getBehaviour().setUserTaskChainPriority(80);
                 return new TungstenPunkTask(entity.getName().getString());

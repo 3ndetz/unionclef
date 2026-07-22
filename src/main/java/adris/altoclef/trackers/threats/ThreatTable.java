@@ -169,12 +169,13 @@ public class ThreatTable {
             PlayerThreat threat = playerThreats.get(damagedName);
             if (threat != null && threat.id != -1 && threat.name != null) {
                 threat.lastDamageAmount = amount;
-                threat.combatEngagementTimer.reset();
-                if (!threat.combatEngagementTimer.elapsed()) {
-                    threat.cumulativeDamage += amount;
+                // Check timer BEFORE resetting to correctly detect new vs ongoing combat
+                if (threat.combatEngagementTimer.elapsed()) {
+                    threat.cumulativeDamage = amount;  // new combat engagement
                 } else {
-                    threat.cumulativeDamage = amount;
+                    threat.cumulativeDamage += amount;  // ongoing combat
                 }
+                threat.combatEngagementTimer.reset();
                 PlayerThreat attackerThreat = getLastAttacker(damagedName, true);
                 if (attackerThreat != null && attackerThreat.id != -1) {
                     if (attackerThreat.name != null && !attackerThreat.name.isBlank() &&

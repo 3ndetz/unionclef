@@ -11,7 +11,9 @@ import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.PlayerSlot;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+//#if MC < 12111
 import net.minecraft.item.ToolItem;
+//#endif
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.List;
@@ -32,7 +34,11 @@ public class DepositCommand extends Command {
             // Ignore tools
             if (!stack.isEmpty()) {
                 Item item = stack.getItem();
+                //#if MC < 12111
                 return !(item instanceof ToolItem);
+                //#else
+                //$$ return true; // TODO [1.21.11] tool-class deleted — filter tools via Item.Settings component
+                //#endif
             }
             return false;
         });

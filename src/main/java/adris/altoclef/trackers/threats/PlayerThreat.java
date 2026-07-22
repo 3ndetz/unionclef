@@ -53,10 +53,10 @@ public class PlayerThreat {
 
     public List<Integer> getRecentAttackers() {
         List<Integer> recent = new ArrayList<>();
+        // Clean up expired entries while iterating to prevent memory leak
+        potentialAttackers.entrySet().removeIf(entry -> entry.getValue().elapsed());
         for (Map.Entry<Integer, TimerReal> entry : potentialAttackers.entrySet()) {
-            if (!entry.getValue().elapsed()) {
-                recent.add(entry.getKey());
-            }
+            recent.add(entry.getKey());
         }
         return recent;
     }

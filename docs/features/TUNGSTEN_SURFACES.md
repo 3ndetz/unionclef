@@ -75,30 +75,87 @@ honey or handles the slowdown.
 
 ### Slime Blocks
 
-**Status:** ⚠️ Walking on slime works. Bounce routing doesn't.
+**Status:** ✅ Drop-bounce routing works — autotested in-game (2026-07-20,
+`deploy/runner/slime_test.py`: course A — sprint off a platform, fall 4 onto
+slime, bounce to a +3 platform; course B — fall 3, bounce to +2. Both pass
+in ~6s with full health).
 
-**What works:**
-- NPE fix: starting pathfind on slime no longer crashes (null check
-  for `this.previous` in `shouldRemoveNode` line 718).
-- Bounce condition: inverted to `> 0` (fell onto slime = expand yMax).
-- `SlimeBounceMove` physics move exists — jumps on slime, rides arc
-  toward target with sprint.
+**Physics (Agent.tick, was already correct):**
+- Bounce: velY inverted on landing unless sneaking (Agent.java ~832).
+- No fall damage on slime landing (fall() multiplier 0 unless sneaking).
+- onSteppedOn slowdown: velX/velZ ×(0.4 + |velY|·0.2) when |velY| < 0.1.
 
-**What doesn't work:**
-- Block-space A* never plans "fall on slime → bounce to target" routes.
-  The heuristic penalizes going DOWN (away from target in Y), so A*
-  always prefers falling sideways and walking under the target.
-- `SlimeBounceMove` fires toward the NEXT block-space waypoint, which
-  is already under the platform — bounce goes wrong direction.
+**Pathfinding chain (fixed 2026-07-20):**
+- `PathFinder.checkForFallDamage` — falls of any height allowed when the
+  first collidable block straight below is slime
+  (`MovementHelper.isSlimeColumnBelow`, scan cap 32).
+- `Node.shouldSkipNodeGeneration` + `Node.createAirborneNodes` — same
+  slime-column exemption for mid-fall node pruning (was hard-capped ~3).
+- `BlockNode.isJumpImpossible` — on-slime nodes allow up-children to
+  bounce height (`getSlimeBounceHeight(fall) - 0.2`) instead of 1.4;
+  bounce-only children capped at horizontal distance 4. Basic
+  height/distance pruning skipped for on-slime nodes.
+- `BlockNode.getNodesIn3DCircule` — bounce yMax uses cumulative descent
+  along the block path (not just the last hop), at least 1.25 (jump in
+  place feeds the bounce); top bounce level now inclusive (off-by-one
+  cut the top platform before). Debug Thread.sleep(250) removed — it ate
+  half the 480ms block-search budget per slime expansion.
+- `SlimeBounceMove` — batches the whole arc into one macro-node. Presses
+  jump only when starting from rest (velY ≤ 0.1); when arriving with an
+  inverted bounce velocity jump is never pressed (jump() would replace
+  the bounce velY with 0.42 — this was the main executor-level bug).
 
-**Architectural limitation:** Standard A* with distance heuristic can't
-plan "go down to go up" routes. Attempted fixes (platform scan shortcut,
-heuristic modification) caused lag from scanning hundreds of blocks per
-node expansion. Needs a fundamentally different approach.
+**Known limitations:**
+- The block-space heuristic still penalizes descending (dy×1.5), so
+  "go down to bounce up" routes are found late; deep slime pits may need
+  the generateDeep fallback pass (4800ms).
+- Flat-slime (jump in place) gives apex ~1.9 in vanilla — nothing a normal
+  jump can't land. Bounce children are generated only when the block path
+  DESCENDS onto the slime; every bounce course needs a drop-in.
+- Waypoint index advances one expansion behind the landing node, so the
+  first bounce may aim at the slime itself and converge on the second.
+- Structures near the course confuse routing (the original test world
+  spawned a village on the course — the pathfinder tried to route through
+  it). Test worlds use GENERATE_STRUCTURES=false.
+- shouldResetSearch could re-root the physics search without emitting the
+  walked prefix when the executor was idle → instant drift abort
+  (fixed: prefix is emitted inline when the executor is not running).
 
-**TODO (hard):** Pre-computed bounce edges (scan slime before pathfinding,
-add direct platform→platform connections) or two-phase pathfinding
-(normal A* fails → detect slime → plan bounce route separately).
+### Block Breaking (break-through pathfinding)
+
+**Status:** ✅ v1 works — autotested (2026-07-20, `deploy/runner/break_test.py`:
+sealed bedrock box with a dirt door; course C — mine 2 blocks and pass;
+course D — sand falls into the mined doorway and gets re-mined. Both pass.)
+
+**How it works:**
+- Block-space: `BlockNode.tryPlanBreakThrough` — an adjacent same-Y cell
+  blocked only by breakable blocks becomes a valid child with a `toBreak`
+  plan (top-down) and a cost of vanilla mining ticks
+  (`calcBlockBreakingDelta`) × `breakCostMultiplier`. Gravity blocks above
+  the passage add their mining cost up front.
+- `PathFinder.truncateAtBreaks` cuts the physics guidance at the cell before
+  the wall (the live world still has the blocks — simulating through them is
+  impossible) and hands `pendingBreaks` to the executor on every emission.
+- `PathExecutor.tickBreaking` at segment end: aims, `attackBlock` +
+  `updateBlockBreakingProgress` + swing per tick, re-mines whatever falls
+  into the passage cells (sand/gravel), waits 12 ticks for settling, then
+  finishes the segment — the goto retry / continuation search re-plans in
+  the opened world.
+- Settings: `allowBreak` (default true), `breakCostMultiplier` (1.0).
+
+**Limitations (v1):**
+- Only horizontal same-Y break-through (walls); no digging down/up stairs,
+  no block PLACING yet.
+- Each wall costs a re-search after mining (segmented execution).
+- Tool selection not implemented — mines with whatever is held.
+- The block-space A* does NOT accumulate cost along the path, so mining
+  competes with detours only via the heuristic — in open terrain a detour
+  around any finite wall usually wins. Real cost accumulation is the
+  long-term fix.
+- Mining drives vanilla via aim + held attack key (direct
+  updateBlockBreakingProgress is cancelled by vanilla every tick while the
+  key is up). Squeezing through a 1-wide mined hole grazes walls — replay
+  drift up to ~0.9, needs driftThreshold ≥ 1.0 on break-heavy routes.
 
 ### Vines
 

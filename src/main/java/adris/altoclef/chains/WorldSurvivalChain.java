@@ -13,6 +13,7 @@ import adris.altoclef.tasks.movement.SafeRandomShimmyTask;
 import adris.altoclef.tasksystem.TaskRunner;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.LookHelper;
+import adris.altoclef.multiversion.DimensionVer;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.time.TimerGame;
 import baritone.api.utils.Rotation;
@@ -98,13 +99,13 @@ public class WorldSurvivalChain extends SingleTaskChain {
 
         // Extinguish with water
         if (mod.getModSettings().shouldExtinguishSelfWithWater()) {
-            if (!(mainTask instanceof EscapeFromLavaTask && isCurrentlyRunning(mod)) && mod.getPlayer().isOnFire() && !mod.getPlayer().hasStatusEffect(StatusEffects.FIRE_RESISTANCE) && !mod.getWorld().getDimension().ultrawarm()) {
+            if (!(mainTask instanceof EscapeFromLavaTask && isCurrentlyRunning(mod)) && mod.getPlayer().isOnFire() && !mod.getPlayer().hasStatusEffect(StatusEffects.FIRE_RESISTANCE) && !DimensionVer.isUltrawarm(mod.getWorld().getDimension())) {
                 // Extinguish ourselves
                 if (mod.getItemStorage().hasItem(Items.WATER_BUCKET)) {
                     BlockPos targetWaterPos = mod.getPlayer().getBlockPos();
                     if (WorldHelper.isSolidBlock(targetWaterPos.down()) && WorldHelper.canPlace(targetWaterPos)) {
                         Optional<Rotation> reach = LookHelper.getReach(targetWaterPos.down(), Direction.UP);
-                        if (reach.isPresent()) {
+                        if (reach.isPresent() && mod.getClientBaritone() != null) {
                             mod.getClientBaritone().getLookBehavior().updateTarget(reach.get(), true);
                             if (mod.getClientBaritone().getPlayerContext().isLookingAt(targetWaterPos.down())) {
                                 if (mod.getSlotHandler().forceEquipItem(Items.WATER_BUCKET)) {
@@ -144,6 +145,14 @@ public class WorldSurvivalChain extends SingleTaskChain {
             return 60;
         }
 
+        // Movement stuck detection — skip when tungsten is PRIMARY (it drives
+        // movement + handles its own stuck recovery; the shimmy would preempt
+        // the user task chain and starve the tungsten-primary hook).
+        if (adris.altoclef.util.helpers.TungstenHelper.isPrimary()) {
+            _numTryingUnstuck = 0;
+            _moveStuckTimer.reset();
+            return Float.NEGATIVE_INFINITY;
+        }
         // Movement stuck detection
         if (_lastPos == null) {
             _lastPos = mod.getPlayer().getPos();
@@ -156,18 +165,13 @@ public class WorldSurvivalChain extends SingleTaskChain {
             setTask(new SafeRandomShimmyTask());
         }
         if (_moveStuckTimer.elapsed() && mod.getInfoSender().hasActiveTask()) {
-            _numTryingUnstuck++;
             Vec3d pos = mod.getPlayer().getPos();
             if (_lastPos.isInRange(pos, 2.0D)) {
-                if (_moveStuckTimer.getDuration() < 15) {
-                    setTask(new SafeRandomShimmyTask());
-                    return 60;
-                } else {
-                    Debug.logWarning("Maybe we stuck, change task may help");
-                    if (Butler.IsStuckFixAllow()) {
-                        _numTryingUnstuck++;
-                    }
-                }
+                _numTryingUnstuck++;
+                Debug.logWarning("Maybe we stuck, change task may help");
+            } else {
+                // Bot moved, reset stuck detection counter
+                _numTryingUnstuck = 0;
             }
             _lastPos = pos;
             _moveStuckTimer.reset();
@@ -180,7 +184,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
         // Swim
         boolean avoidedDrowning = false;
         if (mod.getModSettings().shouldAvoidDrowning()) {
-            if (!mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (mod.getClientBaritone() == null || !mod.getClientBaritone().getPathingBehavior().isPathing()) {
                 if (mod.getPlayer().isTouchingWater() && mod.getPlayer().getAir() < mod.getPlayer().getMaxAir()) {
                     // Swim up!
                     mod.getInputControls().hold(Input.JUMP);

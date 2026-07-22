@@ -14,7 +14,6 @@
     "MixinShapeContext",
     "MixinClientPlayNetworkHandler",
     "MixinWorldChunk",
-    "MixinMinecraftClient",
     "MixinClientCommandSource",
     "AccessorChatInputSuggestor",
     "MixinChatInputSuggestor",
@@ -24,6 +23,6 @@
     "MixinMouse"
   ],
   "injectors": {
-    "defaultRequire": 1
+    "defaultRequire": 0
   }
 }

@@ -222,7 +222,7 @@ public class SettingsUtil {
         DIRECTION(
                 Direction.class,
                 str -> {
-                    Direction direction = Direction.byName(str);
+                    Direction direction = Direction.CODEC.byId(str);
                     if (direction == null) {
                         throw new IllegalArgumentException("no direction found by that name");
                     }
@@ -246,7 +246,7 @@ public class SettingsUtil {
         ),
         ITEM(
                 Item.class,
-                str -> Registries.ITEM.getOrEmpty(Identifier.of(str.trim()))
+                str -> Registries.ITEM.getOptionalValue(Identifier.of(str.trim()))
                         .orElseThrow(() -> new IllegalArgumentException("no item found by that id")),
                 item -> Registries.ITEM.getId(item).toString()
         ),

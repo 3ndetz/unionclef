@@ -83,9 +83,11 @@ public class ButlerConfig {
     /**
      * Determines if failure messages should be sent to a non-authorized entity attempting to use butler
      * <p>
-     * Disable this if you need to stay undercover.
+     * DEFAULT false: do NOT auto-reply rude "не пиши сюда" to players who PM the bot — the
+     * private message still reaches the agent's LLM (onWeakChatMessage), so it answers IN
+     * CHARACTER instead of the butler bluntly rejecting. (operator: фикс навсегда)
      */
-    public boolean sendAuthorizationResponse = true;
+    public boolean sendAuthorizationResponse = false;
     /**
      * The response sent in a failed execution due to non-authorization
      * {from}: the username of the player who triggered the failed authorization response

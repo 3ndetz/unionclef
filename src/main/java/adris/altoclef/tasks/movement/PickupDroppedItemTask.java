@@ -36,6 +36,8 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
 
     // This happens all the time in mineshafts and swamps/jungles
     private final Set<ItemEntity> _blacklist = new HashSet<>();
+    // Prevent soft lock when there are too many items on the ground
+    private static final int MAX_BLACKLIST_SIZE = 50;
     private final boolean _freeInventoryIfFull;
     Block[] annoyingBlocks = new Block[]{
             Blocks.VINE,
@@ -146,6 +148,16 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
 
     @Override
     protected Task onTick() {
+        // Prevent soft lock: if we've blacklisted too many items, there are too many drops.
+        // Clear the blacklist and wander to let the area settle / items despawn.
+        if (_blacklist.size() > MAX_BLACKLIST_SIZE) {
+            Debug.logMessage("Too many blocked items (" + _blacklist.size() + "), clearing blacklist and wandering.");
+            _blacklist.clear();
+            wanderTask.reset();
+            setDebugState("Too many items, wandering.");
+            return wanderTask;
+        }
+
         if (wanderTask.isActive() && !wanderTask.isFinished()) {
             setDebugState("Wandering.");
             return wanderTask;

@@ -42,6 +42,32 @@ public class TungstenConfig {
      *  Keep false in normal use to reduce noise. */
     public boolean verboseDebugLogging = false;
 
+    // ---- visualization (render toggles) ----
+
+    /** Master render toggle. false = draw NOTHING from tungsten (paths, goal,
+     *  parkour moves, combat trajectory, break plan). Turn off to keep the view
+     *  clean or shave render cost. Toggle live: ;settings renderVisualization false */
+    public boolean renderVisualization = true;
+
+    /** Draw the path / parkour-move renderers (block path, running path, node
+     *  search). false hides parkour-move visualization while keeping combat/
+     *  break overlays. Toggle: ;settings renderPathMoves false */
+    public boolean renderPathMoves = true;
+
+    /** Draw the mining break plan (queued=orange, current=red). */
+    public boolean renderBreakPlan = true;
+
+    /** Draw the placing plan (cells about to be placed — bridge/fill/build). */
+    public boolean renderPlacePlan = true;
+
+    /** Draw combat aim/trajectory overlays. */
+    public boolean renderCombat = true;
+
+    /** Max time (ms) for A* input search before emitting bestSoFar.
+     *  Higher = better routes on parkour, lower = faster response.
+     *  Upstream default: 1800. Our default: 15000 (parkour needs more time). */
+    public long searchTimeoutMs = 15000L;
+
     /** If true: log per-node timing breakdown to stdout.
      *  Shows where PathFinder spends time: child generation, filtering,
      *  openSet ops, heuristic updates, block-space search, etc. */
@@ -52,16 +78,10 @@ public class TungstenConfig {
      *  Set to 0 to log everything. */
     public double mismatchLogThreshold = 1e-6;
 
-    /** EXPERIMENTAL — breaks pathfinding in current state. Needs proper A* state
-     *  merging (closed set, heuristics) before it can work. Keep false.
-     *  If true: pathfinder continues computing while executor runs partial path.
-     *  If false: pathfinder waits for executor to finish before resuming. */
-    public boolean parallelPathfinding = false;
-
-    /** EXPERIMENTAL — causes path failures on parkour. Needs pathfinder tuning.
-     *  Yaw correction strength. 0 = off (open-loop, recommended), 1.0 = full correction.
-     *  Blends pre-computed yaw toward drift-compensating direction. */
-    public float closedLoopStrength = 0.0F;
+    /** Use parallel threads for node creation in A* search.
+     *  Faster on multi-core CPUs but Agent.tick/WorldView may not be fully
+     *  thread-safe. Disable if you see rare ConcurrentModificationException. */
+    public boolean enableParallelStreaming = true;
 
     /** Air strafe speed multiplier. Vanilla uses 0.02 (walk) / 0.026 (sprint).
      *  Higher values = more air control = pathfinder finds longer jumps.
@@ -79,6 +99,36 @@ public class TungstenConfig {
      *  If false, only walks (no jumps) — safer but slower. */
     public boolean followJumpingEnabled = true;
 
+    /** EXPERIMENTAL (#1.6.1): generate block-space neighbours via the tungsten-native
+     *  SmartMoves (Traverse/Ascend/Descend/Parkour) instead of the blind r=8 scan.
+     *  Fewer, already-valid neighbours -> the search routes stepped/gap terrain within
+     *  its node budget. Default OFF so course A (staircase) keeps the proven blind-scan
+     *  path until SmartMoves is validated A-green. */
+    public boolean smartMoves = false;
+
+    // ---- block breaking ----
+
+    /** Allow the block-space pathfinder to plan breaking through breakable walls. */
+    public boolean allowBreak = true;
+
+    /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
+    public double breakCostMultiplier = 1.0;
+
+    /** Block ids the pathfinder must NEVER mine (e.g. "minecraft:diamond_block").
+     *  Blocks with block entities (chests, spawners, furnaces) are always denied. */
+    public java.util.List<String> breakDenyBlocks = new java.util.ArrayList<>();
+
+    /** No-mining zones: [x1,y1,z1,x2,y2,z2] boxes (inclusive, any corner order). */
+    public java.util.List<int[]> breakDenyZones = new java.util.ArrayList<>();
+
+    /** Allow the mod to place blocks at all (bridge/build/fill/schematic). */
+    public boolean allowPlace = true;
+
+    /** No-placing zones: [x1,y1,z1,x2,y2,z2] boxes (inclusive, any corner order).
+     *  Protected areas (claims/privates) — the mod never places here. Paired with
+     *  breakDenyZones so markProtectedArea can lock both mining and building. */
+    public java.util.List<int[]> placeDenyZones = new java.util.ArrayList<>();
+
     // ---- combat settings ----
 
     /** Enable trigger bot (auto-click when crosshair is on target). */
@@ -87,8 +137,10 @@ public class TungstenConfig {
     /** Enable auto-rotation toward target in combat. */
     public boolean combatRotatesEnabled = true;
 
-    /** Enable combat movement (legs: sprint-jump, chase, strafe). */
-    public boolean combatMovementsEnabled = false;
+    /** Enable combat movement (legs: sprint-jump, chase, strafe).
+     *  Off by default made the bot stand still in combat range and get kited —
+     *  the only approach-pressing code sits behind this flag. */
+    public boolean combatMovementsEnabled = true;
 
     /** Enable combat executor — pre-computes jump+turn+attack timeline via Agent sim.
      *  Visualization only when false (shows planned arc). */
@@ -131,23 +183,28 @@ public class TungstenConfig {
     public int pitchLookAheadNodes = 5;
 
     /** WindMouse gravity — pull toward target per render frame.
-     *  Higher = faster convergence, lower = more human wobble. */
-    public double combatWindMouseGravity = 2.0;
+     *  Higher = faster convergence, lower = more human wobble.
+     *  Bumped 2.0→3.2: the bot was reported "turning slowly" and its aim lagged
+     *  a strafing/knocked-back target (trigger gate angle hit 90°); faster ramp
+     *  closes the gap so swings actually land. */
+    public double combatWindMouseGravity = 3.2;
 
     /** WindMouse wind — random perturbation magnitude per frame.
      *  Higher = more jitter/overshoot. */
     public double combatWindMouseWind = 0.8;
 
     /** WindMouse max step — max degrees per render frame.
-     *  Caps rotation speed. Lower = slower, more human-like. */
-    public double combatWindMouseMaxStep = 4.0;
+     *  Caps rotation speed. Lower = slower, more human-like.
+     *  Bumped 4.0→7.0 for snappier close-range tracking (effective PvP over
+     *  human-like slowness — this is a combat aura, not a legit-look aimer). */
+    public double combatWindMouseMaxStep = 7.0;
 
     /** Distance (degrees) below which wind noise decays.
      *  Below this angle the mouse "settles" toward target. */
     public double combatWindMouseWindDist = 15.0;
 
     /** Snap threshold — degrees. Below this, snap to target exactly. */
-    public double combatWindMouseDoneThreshold = 0.5;
+    public double combatWindMouseDoneThreshold = 0.4;
 
     /** Distance scaling for max step. At far angles, maxStep is multiplied
      *  by up to this factor for fast flick. 1.0 = no scaling. */

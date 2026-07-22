@@ -22,7 +22,7 @@ import net.minecraft.world.WorldView;
 public class DivingMove {
 
 	public static Node generateMove(Node parent, BlockNode nextBlockNode) {
-		double cost = 0.00002;
+		double cost = 0.2;
 		WorldView world = TungstenModDataContainer.world;
 		Agent agent = parent.agent;
 		float desiredYaw = (float) DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true));
@@ -46,7 +46,7 @@ public class DivingMove {
 	    		desiredYaw = (float) DirectionHelper.calcYawFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
 				desiredPitch = (float) DirectionHelper.calcPitchFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
 	            newNode = new Node(newNode, world, new PathInput(true, false, false, false, false, false, true, desiredPitch, desiredYaw),
-	            		new Color(0, 25, 150), newNode.cost + cost);
+	            		new Color(0, 0, 150), newNode.cost + cost);
 	            limit++;
 			}
 			return newNode;
@@ -64,7 +64,7 @@ public class DivingMove {
 					}
 					heightDiff = DistanceCalculator.getJumpHeight(newNode.agent.getPos().y, nextBlockNode.getPos(true).y);
 		            newNode = new Node(newNode, world, new PathInput(false, false, false, false, true, false, false, desiredPitch, desiredYaw),
-		            		new Color(0, 85, 150), newNode.cost + cost);
+		            		new Color(0, 0, 150), newNode.cost + cost);
 		            limit++;
 				}
 			} else if (heightDiff < 0) {
@@ -79,7 +79,7 @@ public class DivingMove {
 					}
 					heightDiff = DistanceCalculator.getJumpHeight(newNode.agent.getPos().y, nextBlockNode.getPos(true).y);
 		            newNode = new Node(newNode, world, new PathInput(false, false, false, false, false, true, false, desiredPitch, desiredYaw),
-		            		new Color(0, 125, 150), newNode.cost + cost);
+		            		new Color(0, 0, 150), newNode.cost + cost);
 		            limit++;
 				}
 			}
@@ -99,7 +99,7 @@ public class DivingMove {
     		desiredYaw = (float) DirectionHelper.calcYawFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
     		desiredPitch = (float) DirectionHelper.calcPitchFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
             newNode = new Node(newNode, world, new PathInput(true, false, false, true, false, false, true, desiredPitch, desiredYaw + 45),
-            		new Color(0, 105, 150), newNode.cost + cost);
+            		new Color(0, 0, 150), newNode.cost + cost);
             
         }
             

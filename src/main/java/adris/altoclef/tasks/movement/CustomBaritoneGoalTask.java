@@ -23,6 +23,21 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     private final boolean wander;
     protected MovementProgressChecker checker = new MovementProgressChecker();
     protected Goal cachedGoal = null;
+    // Anti-permanent-stuck (tungsten-primary): if the bot hasn't moved for a while,
+    // the tungsten nav is trapped (unreachable sub-goal / stale-rooted reject loop) —
+    // reset its state so it re-plans fresh, then yield to wander if it stays stuck.
+    private net.minecraft.util.math.Vec3d twStuckPos = null;
+    private long twStuckSinceMs = 0L;
+    private int twStuckResets = 0;
+    // The walker can't parkour (gap jumps / wall climbs). When it stalls we hand the
+    // segment to the physics executor (which can) for a window, then re-try the walker.
+    private long twPreferExecutorUntilMs = 0L;
+    // Net-progress-toward-goal tracking, to give up on genuinely UNREACHABLE goals
+    // (e.g. a tree top needing place/break we don't plan yet) instead of searching
+    // forever. Keyed on distance to goal, not raw movement — a bot wandering in place
+    // near an unreachable goal makes no NET progress even though it "moves". #27.
+    private double twBestDistToGoal = -1;
+    private long twBestImproveMs = 0L;
     Block[] annoyingBlocks = new Block[]{
             Blocks.VINE,
             Blocks.NETHER_SPROUTS,
@@ -154,6 +169,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             cachedGoal = newGoal(mod);
         }
 
+        // ── Tungsten-PRIMARY (drop-in swap, TODO 13) ──
+        if (driveTungstenPrimary(mod)) return null;
+
         // ── Tungsten lock: exclusive 30s control, Baritone stays off ──
         if (TungstenHelper.isLocked()) {
             TungstenHelper.tickLock();
@@ -232,5 +250,284 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     protected abstract Goal newGoal(AltoClef mod);
 
     protected void onWander(AltoClef mod) {
+    }
+
+    /** Equip a throwaway building block for pillaring (#46). True if a BlockItem is
+     *  (now) in hand. Tries common cheap blocks the bot carries. Agent-provided
+     *  blocks in hand already count — this is the mod's autonomous fallback. */
+    private boolean equipBuildBlock(AltoClef mod) {
+        if (mod.getPlayer().getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem) return true;
+        net.minecraft.item.Item[] blocks = {
+            net.minecraft.item.Items.COBBLESTONE, net.minecraft.item.Items.DIRT,
+            net.minecraft.item.Items.STONE, net.minecraft.item.Items.NETHERRACK,
+            net.minecraft.item.Items.COBBLED_DEEPSLATE, net.minecraft.item.Items.OAK_PLANKS,
+            net.minecraft.item.Items.DEEPSLATE, net.minecraft.item.Items.ANDESITE
+        };
+        for (net.minecraft.item.Item b : blocks) {
+            if (mod.getItemStorage().hasItemInventoryOnly(b)) {
+                mod.getSlotHandler().forceEquipItem(b);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** True when the bot is stuck at the edge of a GAP (a real drop) in the goal's
+     *  horizontal direction — a "bridge here" signal, distinct from a wall (cell
+     *  ahead solid) or a step-down. Cell ahead toward the goal must be clear (not a
+     *  wall) with no floor for 2+ blocks below (a genuine gap a jump can't close). */
+    private boolean gapTowardGoal(AltoClef mod, net.minecraft.util.math.Vec3d gp) {
+        var p = mod.getPlayer();
+        var world = mod.getWorld();
+        double dx = gp.x - p.getX(), dz = gp.z - p.getZ();
+        net.minecraft.util.math.Direction dir = Math.abs(dx) >= Math.abs(dz)
+                ? (dx >= 0 ? net.minecraft.util.math.Direction.EAST : net.minecraft.util.math.Direction.WEST)
+                : (dz >= 0 ? net.minecraft.util.math.Direction.SOUTH : net.minecraft.util.math.Direction.NORTH);
+        net.minecraft.util.math.BlockPos ahead = p.getBlockPos().offset(dir);
+        boolean aheadClear = world.getBlockState(ahead).getCollisionShape(world, ahead).isEmpty();
+        boolean noFloor1 = world.getBlockState(ahead.down()).getCollisionShape(world, ahead.down()).isEmpty();
+        boolean noFloor2 = world.getBlockState(ahead.down(2)).getCollisionShape(world, ahead.down(2)).isEmpty();
+        return aheadClear && noFloor1 && noFloor2;
+    }
+
+    /** Drop-in swap (TODO 13): when tungsten is PRIMARY, drive movement via
+     *  tungsten directly (the same call ;goto uses — baritone movement doesn't
+     *  execute on headless clients). Async: PATHFINDER.find kicks a background
+     *  search, so this never blocks. Returns true if it took control (caller
+     *  should return null to keep baritone off). Subclasses that override
+     *  onTick (e.g. GetToBlockTask's wander) MUST call this BEFORE their own
+     *  stuck/wander logic, or the wander loop starves the swap. */
+    protected boolean driveTungstenPrimary(AltoClef mod) {
+        if (!TungstenHelper.isPrimary()) return false;
+        if (cachedGoal == null) cachedGoal = newGoal(mod);
+        if (cachedGoal == null || isFinished()) return false;
+        net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
+        if (gp == null) return false;
+
+        // ── Anti-permanent-stuck safety net ──────────────────────────────
+        long nowMs = System.currentTimeMillis();
+        net.minecraft.util.math.Vec3d plNow = new net.minecraft.util.math.Vec3d(
+                mod.getPlayer().getX(), mod.getPlayer().getY(), mod.getPlayer().getZ());
+
+        // ── Unreachable-goal give-up (net progress toward the goal) ────────
+        // If the closest we've gotten to the goal hasn't improved for a while, the goal
+        // is unreachable under the current move set (we can't place/pillar/bridge yet).
+        // Give up: stop tungsten and yield WITHOUT resetting the parent progress checker,
+        // so the task can fail cleanly instead of the pathfinder spinning forever. #27.
+        double distToGoalNow = plNow.distanceTo(gp);
+        if (twBestDistToGoal < 0 || distToGoalNow < twBestDistToGoal - 0.5) {
+            twBestDistToGoal = distToGoalNow;
+            twBestImproveMs = nowMs;
+        } else if (twBestImproveMs > 0 && nowMs - twBestImproveMs > 14000 && distToGoalNow > 2.0) {
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            var pfU = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
+            var exU = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (pfU != null) pfU.stop.set(true);
+            if (exU != null) exU.stop = true;
+            // #46 place-as-a-move: if the goal is directly above us and we have a block,
+            // PILLAR up to it instead of abandoning — the real fix for raised place-only
+            // goals (tree top / ledge) that walking or jumping can't reach.
+            // Only a CLEAR vertical reach (goal well above + nearly overhead) — not a
+            // transient stall near the top of a staircase where the goal is ~1 up.
+            double horizToGoal = Math.hypot(plNow.x - gp.x, plNow.z - gp.z);
+            if (gp.y > mod.getPlayer().getY() + 2.0 && horizToGoal < 1.5 && equipBuildBlock(mod)) {
+                kaptainwutax.tungsten.task.PillarTask.startTo((int) Math.ceil(gp.y));
+                twBestDistToGoal = -1; twBestImproveMs = 0L;
+                checker.reset();
+                setDebugState("Tungsten pillaring up to goal (#46)...");
+                return true;
+            }
+            // #46 bridge-as-a-move: stuck at the edge of a GAP with the goal across it
+            // (roughly level, not overhead) — pave a bridge toward the goal instead of
+            // abandoning. Parkour (v0.40.0) already clears gaps <=4; this handles wider
+            // ones a running jump can't. Mutually exclusive with the pillar case above.
+            if (Math.abs(gp.y - mod.getPlayer().getY()) <= 2.0 && horizToGoal > 2.0
+                    && gapTowardGoal(mod, gp) && equipBuildBlock(mod)) {
+                kaptainwutax.tungsten.task.BridgeTask.startTo(
+                        (int) Math.floor(gp.x), (int) Math.floor(gp.y), (int) Math.floor(gp.z));
+                twBestDistToGoal = -1; twBestImproveMs = 0L;
+                checker.reset();
+                setDebugState("Tungsten bridging across a gap to goal (#46)...");
+                return true;
+            }
+            twBestDistToGoal = -1; twBestImproveMs = 0L;   // re-measure on re-entry
+            kaptainwutax.tungsten.Debug.logMessage(
+                    "[nav] goal unreachable — no progress in 14s (dist " + String.format("%.1f", distToGoalNow) + "), yielding");
+            return false;   // NOTE: no checker.reset() here — let the task fail
+        }
+
+        // Mid-pillar (#46) — let the pillar finish before any other nav runs.
+        if (kaptainwutax.tungsten.task.PillarTask.isActive()) {
+            checker.reset();
+            setDebugState("Tungsten pillaring up to goal (#46)...");
+            return true;
+        }
+        // Mid-bridge (#46) — let the bridge finish crossing before any other nav runs.
+        if (kaptainwutax.tungsten.task.BridgeTask.isActive()) {
+            checker.reset();
+            setDebugState("Tungsten bridging across a gap (#46)...");
+            return true;
+        }
+
+        if (twStuckPos == null || plNow.distanceTo(twStuckPos) > 0.75) {
+            twStuckPos = plNow; twStuckSinceMs = nowMs; twStuckResets = 0;
+        } else if (kaptainwutax.tungsten.task.BlockPathWalker.isRunning() && nowMs - twStuckSinceMs > 2500) {
+            // The WALKER stalled — most likely a parkour move it can't do (gap jump /
+            // wall climb). Hand this segment to the physics executor (which parkours)
+            // for a window, then re-try the walker.
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            twPreferExecutorUntilMs = nowMs + 8000;
+            twStuckSinceMs = nowMs;
+        } else if (nowMs - twStuckSinceMs > 5000) {
+            // Even the executor is stuck — trapped (stale-rooted reject loop /
+            // unreachable sub-goal). Reset the nav to re-plan from the ACTUAL position;
+            // after a few fruitless resets, yield to the wander so we walk out of a
+            // local trap instead of freezing forever.
+            var pfR = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
+            var exR = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (pfR != null) { pfR.stop.set(true); pfR.overrideStartPos = null; }
+            if (exR != null) exR.stop = true;
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            twStuckSinceMs = nowMs;
+            if (++twStuckResets >= 3) { twStuckResets = 0; twStuckPos = null; return false; }
+        }
+
+        try {
+            var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
+            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            boolean walking = kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
+
+            // DRIFT-IMMUNE terrain nav gets PRIORITY (user's directive: @gamer must be
+            // extremely stable, never stuck). The physics executor replays a simulated
+            // trajectory that DRIFTS on steps/slopes; at drift>threshold it hard-stops
+            // AND the search rejects its own path ("root far from player") — so the
+            // pathfinder is perpetually busy, never yielding, and the bot stalls. The
+            // BlockPathWalker instead sprints from the bot's REAL position toward each
+            // block-path waypoint (CombatPathfinder's grid BFS already does step-up/down),
+            // so drift can't accumulate. When a walkable block path exists we FORCE the
+            // drift-prone pathfinder/executor off and let the walker own movement; the
+            // path is re-planned per ~25-block segment (rolling horizon). Water/parkour,
+            // where the block BFS returns nothing, fall through to the physics executor.
+            double dgx = mod.getPlayer().getX() - gp.x, dgy = mod.getPlayer().getY() - gp.y,
+                    dgz = mod.getPlayer().getZ() - gp.z;
+            double distToGoal = Math.sqrt(dgx * dgx + dgy * dgy + dgz * dgz);
+            // Walker owns the LONG haul (drift-immune); the physics executor does the
+            // final ~4-block precise approach (short range = negligible drift), which
+            // closes the last steps a short "within 1.5 of goal" BFS path stalls on.
+            // Close to the goal — stop the walker; the executor does the final <=4-block
+            // precise approach (short range = negligible drift).
+            if (walking && distToGoal <= 4.0) { kaptainwutax.tungsten.task.BlockPathWalker.stop(); walking = false; }
+            if (walking) {
+                mod.getClientBaritone().getPathingBehavior().forceCancel();
+                checker.reset();
+                setDebugState("Tungsten (primary) walking terrain...");
+                return true;
+            }
+            if (distToGoal > 4.0 && !mod.getPlayer().isTouchingWater()
+                    && nowMs >= twPreferExecutorUntilMs) {
+                // (1) cheap grid BFS — instant, good for near/clean terrain.
+                net.minecraft.util.math.BlockPos startB = mod.getPlayer().getBlockPos();
+                net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
+                java.util.List<net.minecraft.util.math.BlockPos> bfs =
+                        kaptainwutax.tungsten.combat.CombatPathfinder.findPath(startB, goalB, mod.getWorld());
+                boolean smart = kaptainwutax.tungsten.TungstenConfig.get().smartMoves;
+                // A degenerate 2-wp stub to a far goal = CombatPathfinder couldn't route the
+                // terrain (gapped/steep). With smartMoves the async SmartMoves search CAN
+                // route it, so skip the stub and fall through to the robust path (2)/(3).
+                boolean degenerateStub = smart && bfs.size() == 2 && distToGoal > 6.0
+                        && Math.sqrt(bfs.get(1).getSquaredDistance(goalB)) > distToGoal - 3.0;
+                if (bfs.size() >= 2 && !degenerateStub) {
+                    if (pf != null) pf.stop.set(true);
+                    if (ex != null) ex.stop = true;
+                    kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
+                    mod.getClientBaritone().getPathingBehavior().forceCancel();
+                    checker.reset();
+                    setDebugState("Tungsten (primary) walking terrain...");
+                    return true;
+                }
+                // (2) cheap BFS can't route this (natural terrain, >25 blocks) — follow the
+                // ROBUST elevation-aware block path the async search computes, drift-immune,
+                // instead of the drift-prone physics executor (user's directive).
+                java.util.Optional<java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>> bp =
+                        kaptainwutax.tungsten.path.PathFinder.getComputedBlockPath();
+                // Staleness guard (smartMoves): getComputedBlockPath is the LAST async
+                // result — may be for a previous goal. Only accept a path whose endpoint
+                // reaches near the current goal; else recompute. (Off by default so the
+                // legacy path selection is untouched.)
+                boolean fresh = !smart || (bp.isPresent() && !bp.get().isEmpty()
+                        && bp.get().get(bp.get().size() - 1).getBlockPos().getSquaredDistance(goalB) <= 36.0);
+                if (bp.isPresent() && bp.get().size() >= 2 && fresh) {
+                    java.util.List<net.minecraft.util.math.BlockPos> wps = new java.util.ArrayList<>();
+                    for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : bp.get()) wps.add(n.getBlockPos());
+                    if (ex != null) ex.stop = true;   // don't let the executor drift-replay
+                    kaptainwutax.tungsten.task.BlockPathWalker.startBFS(wps);
+                    mod.getClientBaritone().getPathingBehavior().forceCancel();
+                    checker.reset();
+                    setDebugState("Tungsten (primary) walking (robust path)...");
+                    return true;
+                }
+                // (3) no block path yet — kick the async search to compute one.
+                boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
+                if (!busy && pf != null) { if (ex != null) ex.stop = false; pf.find(mod.getWorld(), gp, mod.getPlayer()); }
+                mod.getClientBaritone().getPathingBehavior().forceCancel();
+                checker.reset();
+                setDebugState("Tungsten (primary) planning...");
+                return true;
+            }
+            // Final approach (<=4 blocks) or water → physics executor.
+            boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
+            if (!busy && pf != null) {
+                if (ex != null) ex.stop = false;   // a prior ;stop leaves it stuck true
+                pf.find(mod.getWorld(), gp, mod.getPlayer());
+            }
+        } catch (Throwable t) {
+            Debug.logInternal("[swap] tungsten primary drive failed: " + t);
+        }
+        mod.getClientBaritone().getPathingBehavior().forceCancel();
+        checker.reset();
+        setDebugState("Tungsten (primary) pathfinding...");
+        return true;
+    }
+
+    /** Extract a target position from a baritone goal for tungsten (GoalBlock /
+     *  GoalGetToBlock / GoalNear carry x,y,z). Null if the goal has no point. */
+    private static net.minecraft.util.math.Vec3d goalToVec(Goal goal, AltoClef mod) {
+        net.minecraft.util.math.Vec3d raw = null;
+        if (goal instanceof baritone.api.pathing.goals.GoalBlock gb) {
+            raw = new net.minecraft.util.math.Vec3d(gb.x, gb.y, gb.z);
+        } else if (goal instanceof baritone.api.pathing.goals.GoalGetToBlock gg) {
+            raw = new net.minecraft.util.math.Vec3d(gg.x, gg.y, gg.z);
+        }
+        return raw == null ? null : snapGoalToStandable(raw, mod);
+    }
+
+    /** A goal cell that isn't standable (inside a solid block, or floating in air
+     *  above the ground — e.g. a click on a grass block reports the cell ABOVE the
+     *  surface) can never be reached exactly, so the tungsten search stalls at it.
+     *  Snap it to the nearest standable cell (surface on top of a block / ground
+     *  below the air) so the bot actually approaches. Valid standable goals are
+     *  returned unchanged — normal navigation is untouched. */
+    private static net.minecraft.util.math.Vec3d snapGoalToStandable(net.minecraft.util.math.Vec3d gp, AltoClef mod) {
+        try {
+            net.minecraft.world.World w = mod.getWorld();
+            int gx = (int) Math.floor(gp.x), gy = (int) Math.floor(gp.y), gz = (int) Math.floor(gp.z);
+            if (standable(w, gx, gy, gz)) return gp;                 // already fine
+            if (isSolidAt(w, gx, gy, gz)) {                          // goal inside a block → stand on top
+                for (int y = gy + 1; y <= gy + 5; y++)
+                    if (standable(w, gx, y, gz)) return new net.minecraft.util.math.Vec3d(gx + 0.5, y, gz + 0.5);
+            }
+            for (int y = gy; y >= gy - 6; y--)                       // floating goal → drop to the ground
+                if (standable(w, gx, y, gz)) return new net.minecraft.util.math.Vec3d(gx + 0.5, y, gz + 0.5);
+        } catch (Throwable ignored) { }
+        return gp;
+    }
+
+    private static boolean standable(net.minecraft.world.World w, int x, int y, int z) {
+        return isSolidAt(w, x, y - 1, z) && !isSolidAt(w, x, y, z) && !isSolidAt(w, x, y + 1, z);
+    }
+
+    private static boolean isSolidAt(net.minecraft.world.World w, int x, int y, int z) {
+        net.minecraft.util.math.BlockPos p = new net.minecraft.util.math.BlockPos(x, y, z);
+        return !w.getBlockState(p).getCollisionShape(w, p).isEmpty();
     }
 }

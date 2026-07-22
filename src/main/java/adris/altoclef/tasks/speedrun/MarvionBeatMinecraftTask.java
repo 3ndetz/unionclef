@@ -557,9 +557,13 @@ public class MarvionBeatMinecraftTask extends Task {
             List<ItemStack> itemStacks = mod.getItemStorage().getItemStacksPlayerInventory(true);
             for (ItemStack itemStack : itemStacks) {
                 Item item = itemStack.getItem();
+                //#if MC < 12111
                 if (item instanceof SwordItem) {
                     mod.getSlotHandler().forceEquipItem(item);
                 }
+                //#else
+                //$$ // TODO [1.21.11] sword-class deleted — equip sword via item ID check
+                //#endif
             }
         }
         boolean eyeGearSatisfied = StorageHelper.isArmorEquippedAll(COLLECT_EYE_ARMOR);
