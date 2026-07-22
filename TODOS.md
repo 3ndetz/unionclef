@@ -279,6 +279,21 @@
       - Нужно: адаптировать baritone Movements (Traverse, Ascend, Descend, Parkour, Pillar) для BlockNode
       - Это даст: знание про step-up высоты, gap distance, fence collision, slope — до запуска physics A*
       - Результат: physics A* получает 2-3 умных направления вместо 100+ слепых
+      - > РАССЛЕДОВАНО (#34a, 2026-07-22, terrain_test): КОРЕНЬ провала курсов B/C — здесь.
+      >   B (диагональ +2x+1y через 1-блочные ямы): async BlockSpacePathFinder НЕ находит
+      >   маршрут к цели → driveTungstenPrimary получает вырожденный 2-wp stub от
+      >   CombatPathfinder → walker лимпит по 2-wp (stop/restart каждый шаг убивает
+      >   sprint-моментум для running-прыжка) → падает в яму. C ("Ran out of nodes!") —
+      >   вообще без пути. ВЫВОД: чинить НЕ в walker'е и НЕ в выборе пути (пробовал:
+      >   edge-timed gap-jump в walker + предпочтение robust-пути для вырожденного stub +
+      >   staleness-guard — всё ОТКАЧЕНО, т.к. A-нейтрально но B не решает; корень — SEARCH
+      >   не маршрутизирует рельеф). Нужен ЭТОТ пункт (baritone MovementAscend/Parkour в
+      >   BlockNode.getChildren) + 1.6.2 macro-actions. A (сплошная лестница) и flat —
+      >   работают (walker + executePath), их НЕ трогать.
+    - [ ] 1.6.1b (#34b) C-курс «2-блочная вертикальная стена» физически НЕпроходим прыжком
+      (ванильный sprint-jump apex ~1.25 блока). Нужен block-placing: пиллар-вверх (ставить
+      блок под себя в прыжке) или лестница из блоков. Это отдельная крупная фича (примитив
+      установки уже есть — placeBlockAtRaw; нужна pillar-parkour-логика в исполнении).
     - [ ] 1.6.2 Macro-actions в physics A*: sprint-jump как одна нода вместо 12 тиков
       - Сейчас: каждый тик = нода с 100 вариантами input. 12 тиков прыжка = 12 нод
       - Нужно: "sprint-jump к blocknode X" = одна нода, внутри 12 Agent.tick() без ветвления
