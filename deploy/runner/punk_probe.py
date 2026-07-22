@@ -33,12 +33,16 @@ def erot(n):
 
 rcon(f"tp {VICTIM} 2 -60 2 -90 0"); rcon(f"tp {BOT} -2 -60 -2 90 0"); time.sleep(1)
 print("=== punk tester2 ===")
-print(py4j("punk", t=VICTIM))
+print("PUNK_RESULT:", py4j("punk", t=VICTIM))
 for i in range(9):
     time.sleep(2)
-    print(f"t={i*2+2}s bot={epos(BOT)} rot={erot(BOT)} vic={epos(VICTIM)}")
+    try: print(f"t={i*2+2}s bot={epos(BOT)} rot={erot(BOT)} vic={epos(VICTIM)}")
+    except Exception as e: print(f"t={i*2+2}s POSE_ERR {e!r}")
 print("=== recent chat ===")
 try:
-    for line in py4j("chat", n=30)["chat"]: print("  ", line)
-except Exception as e: print("chat err", e)
+    ch=py4j("chat", n=30)["chat"]
+    if isinstance(ch,str): print("CHAT_STR:", repr(ch))
+    else:
+        for line in ch: print("  CH:", repr(line))
+except Exception as e: print("chat err", repr(e))
 py4j("stop")
