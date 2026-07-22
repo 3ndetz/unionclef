@@ -181,6 +181,8 @@ def main():
     first_hit = None
     freeze_windows = 0
     last_fighter_pos = entity_pos(FIGHTER)
+    prev_sample = last_fighter_pos
+    total_move = 0.0        # accumulated fighter displacement (dynamic-movement proxy)
     last_move_t = t0
     min_hp = hp0
 
@@ -196,6 +198,9 @@ def main():
                 first_hit = time.time() - t0
                 print(f"  first damage at {first_hit:.1f}s (hp {hp})")
         fp = entity_pos(FIGHTER)
+        if fp and prev_sample:
+            total_move += sum(abs(a - b) for a, b in zip(fp, prev_sample))
+        prev_sample = fp
         moved = sum(abs(a - b) for a, b in zip(fp, last_fighter_pos)) > 0.05
         if moved:
             last_move_t = time.time()
@@ -215,6 +220,7 @@ def main():
     print(f"  time to first damage: {ttfh} (deadline {FIRST_HIT_DEADLINE_S}s)")
     print(f"  damage dealt: {damage:.1f} (min {MIN_DAMAGE})")
     print(f"  freeze windows (>10s static, no damage): {freeze_windows}")
+    print(f"  total fighter movement: {total_move:.1f} blocks (dynamic combat: want >>0)")
 
     ok = (first_hit is not None and first_hit <= FIRST_HIT_DEADLINE_S
           and damage >= MIN_DAMAGE and freeze_windows == 0)
