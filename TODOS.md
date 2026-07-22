@@ -327,6 +327,20 @@
       >   loop (why "Ran out of nodes" mid-staircase; node count; why fixed bestSoFar stalls
       >   at 5-block failing threshold near goal), rework holistically with A green each step,
       >   then flip smartMoves default. Scaffolding is committed and dormant (safe).
+      - EXPERIMENT PLAN (#1.6.1 focused effort, smartMoves flag isolates all of it):
+        - [~] E1 near-goal completion: clear `failing` when goal within MIN_DIST_PATH so
+          the search completes standing next to the target (fixes (10.7,-51) "ran out of
+          nodes"). TESTING NOW.
+        - [ ] E2 cycle/budget: Descend moves let the search oscillate up/down; add proper
+          closed-set use for smart neighbours + cap/instrument node count; log why "ran out
+          of nodes" fires (numNodes at exit, openSet size).
+        - [ ] E3 heuristic admissibility with jump/parkour costs (computeHeuristic vs the
+          new ActionCosts) so A* is guided, not exhaustive.
+        - [ ] E4 walker execution of SmartMoves paths: jump timing for ascend/parkour
+          (baritone MovementAscend.updateState model: jump when flatDist<=1.2 && sideDist<=0.2).
+        - [ ] E5 diagonals + water/break/ladder parity in SmartMoves (blind scan has them).
+        - [ ] E6 once A green + B/C(where possible) route under smartMoves: flip default,
+          broad regression (slime/swap/goto/gamer smoke), release.
     - [ ] 1.6.1b (#34b) C-курс «2-блочная вертикальная стена» физически НЕпроходим прыжком
       (ванильный sprint-jump apex ~1.25 блока). Нужен block-placing: пиллар-вверх (ставить
       блок под себя в прыжке) или лестница из блоков. Это отдельная крупная фича (примитив

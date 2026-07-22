@@ -105,6 +105,14 @@ Full guide — **`docs/RELEASE.md`**. In short:
 9. **All instructions / docs / checklists / code comments in ENGLISH.**
 10. If a phase fails (red test) — **fix it or revert to stable**, don't leave it broken
     and don't build on top of a regression.
+11. **Discovering work mid-task = EXPAND the plan and do a full focused pass, never a
+    "tail".** If the work reveals that a task needs a deeper/focused effort, or uncovers a
+    NEW task or a needed experiment: IMMEDIATELY add the goal(s) + an experiment plan to
+    `TODOS.md`, assign the priority yourself, decompose it in your own TODO tool, and do a
+    proper THOROUGH pass on it — the full checklist (implement → test → audit → release).
+    There is no "marathon", no "tail", no "leftover for later", no shallow surface work.
+    Every discovered task gets the same complete treatment. "This needs a focused effort"
+    is an instruction to START that focused effort now, not to stop.
 
 ---
 
