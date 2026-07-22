@@ -253,13 +253,38 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         try {
             var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
             var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
-            boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
-            if (pf != null && !busy) {
-                if (ex != null) ex.stop = false;   // a prior ;stop leaves it stuck true
+            boolean walking = kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
+            boolean busy = walking
+                    || (pf != null && pf.active.get())
+                    || (ex != null && ex.isRunning());
+            if (!busy && pf != null && !mod.getPlayer().isTouchingWater()) {
+                // DRIFT-IMMUNE terrain nav (user's idea: correct from the REAL position).
+                // The physics executor replays a sim trajectory that DRIFTS on steps/
+                // slopes → hard-stops at drift>threshold → @gamer crawled/stalled. The
+                // BlockPathWalker instead sprints from the bot's ACTUAL position toward
+                // each block-path waypoint (jumps up steps — CombatPathfinder's grid BFS
+                // already generates step-up/down neighbors), so drift can't accumulate.
+                // Rolling ~25-block segments to the goal. Water/parkour fall through to
+                // the physics executor (walker skipped in water above; empty BFS below).
+                net.minecraft.util.math.BlockPos startB = mod.getPlayer().getBlockPos();
+                net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
+                java.util.List<net.minecraft.util.math.BlockPos> bfs =
+                        kaptainwutax.tungsten.combat.CombatPathfinder.findPath(startB, goalB, mod.getWorld());
+                kaptainwutax.tungsten.Debug.logMessage("[swap-walk] bfs=" + bfs.size()  // TEMP diag
+                        + " start=" + startB.toShortString() + " goal=" + goalB.toShortString());
+                if (bfs.size() >= 2) {
+                    if (ex != null) ex.stop = true;   // keep the drift-prone executor out of the walker's way
+                    kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
+                } else {
+                    if (ex != null) ex.stop = false;  // a prior ;stop leaves it stuck true
+                    pf.find(mod.getWorld(), gp, mod.getPlayer());
+                }
+            } else if (!busy && pf != null) {
+                if (ex != null) ex.stop = false;
                 pf.find(mod.getWorld(), gp, mod.getPlayer());
             }
         } catch (Throwable t) {
-            Debug.logInternal("[swap] tungsten primary find failed: " + t);
+            Debug.logInternal("[swap] tungsten primary drive failed: " + t);
         }
         mod.getClientBaritone().getPathingBehavior().forceCancel();
         checker.reset();
