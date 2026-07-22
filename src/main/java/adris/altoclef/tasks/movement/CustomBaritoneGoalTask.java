@@ -252,6 +252,26 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     protected void onWander(AltoClef mod) {
     }
 
+    /** Equip a throwaway building block for pillaring (#46). True if a BlockItem is
+     *  (now) in hand. Tries common cheap blocks the bot carries. Agent-provided
+     *  blocks in hand already count — this is the mod's autonomous fallback. */
+    private boolean equipBuildBlock(AltoClef mod) {
+        if (mod.getPlayer().getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem) return true;
+        net.minecraft.item.Item[] blocks = {
+            net.minecraft.item.Items.COBBLESTONE, net.minecraft.item.Items.DIRT,
+            net.minecraft.item.Items.STONE, net.minecraft.item.Items.NETHERRACK,
+            net.minecraft.item.Items.COBBLED_DEEPSLATE, net.minecraft.item.Items.OAK_PLANKS,
+            net.minecraft.item.Items.DEEPSLATE, net.minecraft.item.Items.ANDESITE
+        };
+        for (net.minecraft.item.Item b : blocks) {
+            if (mod.getItemStorage().hasItemInventoryOnly(b)) {
+                mod.getSlotHandler().forceEquipItem(b);
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Drop-in swap (TODO 13): when tungsten is PRIMARY, drive movement via
      *  tungsten directly (the same call ;goto uses — baritone movement doesn't
      *  execute on headless clients). Async: PATHFINDER.find kicks a background
@@ -286,10 +306,28 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             var exU = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
             if (pfU != null) pfU.stop.set(true);
             if (exU != null) exU.stop = true;
+            // #46 place-as-a-move: if the goal is directly above us and we have a block,
+            // PILLAR up to it instead of abandoning — the real fix for raised place-only
+            // goals (tree top / ledge) that walking or jumping can't reach.
+            double horizToGoal = Math.hypot(plNow.x - gp.x, plNow.z - gp.z);
+            if (gp.y > mod.getPlayer().getY() + 1.2 && horizToGoal < 1.8 && equipBuildBlock(mod)) {
+                kaptainwutax.tungsten.task.PillarTask.startTo((int) Math.ceil(gp.y));
+                twBestDistToGoal = -1; twBestImproveMs = 0L;
+                checker.reset();
+                setDebugState("Tungsten pillaring up to goal (#46)...");
+                return true;
+            }
             twBestDistToGoal = -1; twBestImproveMs = 0L;   // re-measure on re-entry
             kaptainwutax.tungsten.Debug.logMessage(
                     "[nav] goal unreachable — no progress in 14s (dist " + String.format("%.1f", distToGoalNow) + "), yielding");
             return false;   // NOTE: no checker.reset() here — let the task fail
+        }
+
+        // Mid-pillar (#46) — let the pillar finish before any other nav runs.
+        if (kaptainwutax.tungsten.task.PillarTask.isActive()) {
+            checker.reset();
+            setDebugState("Tungsten pillaring up to goal (#46)...");
+            return true;
         }
 
         if (twStuckPos == null || plNow.distanceTo(twStuckPos) > 0.75) {
