@@ -111,7 +111,19 @@ public class BlockSpacePathFinder {
         TungstenModRenderContainer.RENDERERS.clear();
 		if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) Debug.logMessage("Searchin...");
 		start = new BlockNode(start.getBlockPos(), goal, player, world);
-		
+
+		// Near-goal completion (smartMoves): the `failing` flag forces MIN_DIST_PATH
+		// progress from the start before isPathComplete may fire. But when the goal is
+		// ALREADY within MIN_DIST_PATH (a short receding-horizon re-plan next to the
+		// target), no node ever gets 5 blocks away, so `failing` stays true forever and
+		// the search "runs out of nodes" standing next to the goal. Reaching a close goal
+		// IS completion — clear failing up front. (The legacy buggy distances hid this by
+		// flipping failing instantly; gated so the legacy blind scan is untouched.)
+		if (kaptainwutax.tungsten.TungstenConfig.get().smartMoves
+				&& start.getPos().squaredDistanceTo(target) <= MIN_DIST_PATH * MIN_DIST_PATH) {
+			failing = false;
+		}
+
 		double[] bestHeuristicSoFar = new double[COEFFICIENTS.length];//keep track of the best node by the metric of (estimatedCostToGoal + cost / COEFFICIENTS[i])
 		for (int i = 0; i < COEFFICIENTS.length; i++) {
             bestHeuristicSoFar[i] = computeHeuristic(start.getPos(), target, world);
