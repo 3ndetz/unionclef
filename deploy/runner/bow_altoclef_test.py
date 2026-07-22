@@ -116,7 +116,9 @@ def ensure_in_game(container, label):
 
 def reset_positions():
     rcon(f"tp {SHOOTER} 0.5 -60 0.5 0 0")
-    rcon(f"tp {VICTIM} 18.5 -60 0.5 90 0")
+    # 24 blocks out: distanceTo/2 = 12 > RAPID_FIRE_DISTANCE(10) -> full charge
+    # (fast, flat, accurate arrow) instead of the spray-y partial-charge shot.
+    rcon(f"tp {VICTIM} 24.5 -60 0.5 90 0")
     time.sleep(1)
 
 
@@ -133,7 +135,7 @@ def volley(shots, running=False):
         if running:
             z_to = 30 * run_dir[0]
             run_dir[0] = -run_dir[0]
-            py4j(VICTIM_CONTAINER, "chat", msg=f";goto 18 -60 {z_to}")
+            py4j(VICTIM_CONTAINER, "chat", msg=f";goto 24 -60 {z_to}")
             time.sleep(1.0)  # let her accelerate; long run keeps her moving through the shot
         hp_before = entity_float(VICTIM, "Health")
         py4j(SHOOTER_CONTAINER, "cmd", c=f"@shoot {VICTIM}")
@@ -164,9 +166,10 @@ def volley(shots, running=False):
 def main():
     print("[1/3] arena...")
     wait_for("server rcon", lambda: "players" in rcon("list"), 300, 5)
-    for c in ["forceload add -16 -40 32 40",
-              "fill -8 -61 -36 28 -45 36 minecraft:stone",
-              "fill -8 -60 -36 28 -45 36 air",
+    for c in ["forceload add -16 -40 40 40",
+              # split fills: each must stay under the 32768-block /fill limit
+              "fill -8 -61 -34 34 -61 34 minecraft:stone",
+              "fill -8 -60 -34 34 -56 34 air",
               "gamerule natural_health_regeneration false",
               "gamerule pvp true", "gamerule immediate_respawn true",
               "gamerule advance_time false", "weather clear", "time set day"]:
