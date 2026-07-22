@@ -30,9 +30,9 @@ elif op=="stop": mc.ExecuteCommand("@stop"); mc.punkStop(); out={"ok":True}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",14)))]}
 print(json.dumps(out,default=str)); gw.close()
 """
-def sh(a,t=40): return subprocess.run(a,capture_output=True,text=True,timeout=t)
-def py4j(op,t=30,**kw):
-    r=sh(["docker","exec",C1,"python3","-c",SNIP,json.dumps({"op":op,**kw})],t)
+def sh(a,to=40): return subprocess.run(a,capture_output=True,text=True,timeout=to)
+def py4j(c,op,to=30,**kw):
+    r=sh(["docker","exec",c,"python3","-c",SNIP,json.dumps({"op":op,**kw})],to)
     if r.returncode!=0: raise RuntimeError(f"{op}: {r.stderr.strip()[-200:]}")
     return json.loads(r.stdout.strip().splitlines()[-1])
 def rcon(c): return sh(["docker","exec",SERVER,"rcon-cli",c]).stdout.strip()
