@@ -9,7 +9,7 @@ Usage: fall_trace.py [seconds]  (default 40)
 """
 import functools, json, re, subprocess, sys, time
 print = functools.partial(print, flush=True)
-SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"; VICTIM="tester2"
+SERVER="uctest-server"; C1="uctest-mc-tester1"; C2="uctest-mc-tester2"; BOT="tester1"; VICTIM="tester2"
 SECS=int(sys.argv[1]) if len(sys.argv)>1 else 40
 SNIP=r"""
 import json,sys
