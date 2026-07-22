@@ -588,3 +588,36 @@ Result: sprint=true on every jump, 2-3 blocks/jump, 30+ blocks without falling.
 - [ ] Pre-sprint during slow bridge runway (first jump is walk-speed)
 - [ ] A/D strafing during camera flick
 - [ ] Anticheat-friendly rotation (WindMouse for the backward flick)
+
+---
+
+## 2026-07-22 — Combat void-safety + runAwayPlayer flee (v0.28.0 → v0.29.0)
+
+**Investigate.** User: PVP bot on bedwars falls into the void "constantly" + rarely
+hits. Built `deploy/runner/bedwars_combat_test.py` (void islands: flat 13×13, and
+two 5×5 + a 1-wide bridge; scoreboard kills/deaths + botY falls). Baseline (bridge
+solo): 2–5 self-falls/min. Added a temp in-combat telemetry log — the falls came
+from the **combat stage machine**, NOT pursue movement: `DANGER_BATTLE` repositioning
+sprinted and `DANGER_IMMINENT` braking JUMPED; next to a rim that brake-jump launched
+the bot off. Reactive edge-check (fixed 1.35 lookahead) was overshot by sprint
+momentum. Residual post-kill falls traced further to the **punk APPROACH executor**
+(re-closing on the respawned victim) which had no void clamp at all.
+
+**Implement (tungsten).**
+- `VoidDetector.edgeAhead(...,maxDist)` (speed-scaled) + `voidWithin(radius)`.
+- `VoidGuard` — shared final movement clamp: near a rim never sprint; when heading
+  (keys OR momentum) points at a drop never jump toward it (longer jump lookahead)
+  and plant with vanilla sneak; cancel the drive only when actively steering off
+  (keep knockback recovery). Used by SafetySystem (combat) AND after the pathfinder
+  executor tick while punk/flee active.
+- `PunkPlayerTask`: don't chase a target into the void; release drive keys the instant
+  the target dies (kill-moment coast); universal tick sneak-guard.
+- Faster aim (WindMouse gravity 2→3.2, maxStep 4→7).
+- `RunAwayTask` + `;runAwayPlayer`/py4j/MCP: flee a player to the safest INTERIOR
+  point away, void-safe, keeps distance. Mirror of punk, mutually exclusive.
+
+**Result.** Bridge-solo ×3 back-to-back 80s: **0 self-falls each** (kills 1/7/6).
+Self-inflicted void fall eliminated. Flee keeps ~8 blocks (avg 8.0), own movement
+never self-falls. Mutual PvP still trades knockback-falls (airborne over void —
+positioning is future work). Nav regression (swap_test) PASS. Released v0.28.0
+(combat) and v0.29.0 (approach-guard completion + flee).
