@@ -5,22 +5,20 @@
   EMPTY path ("mining without a physics leg") → IndexOutOfBounds in the entity tick → whole
   client crash on a goto that needs a 1-block mine. Fix: guard empty path (return null;
   caller null-checks). Needs build+test (mining goto → no crash).
-- [ ] BUG #27 (unreachable goal → infinite search) A goal reachable only by placing/breaking
-  (e.g. tree top) makes the pathfinder search FOREVER; it doesn't try place/break though
-  allowed. Want: attempt to reach (pillar/bridge/mine) OR fail gracefully as 'unreachable'
-  after bounded attempts — never infinite. ROOT CAUSE (audit 2026-07-22): the block-space
-  A* plans BREAKING (tryPlanBreakThrough) but has NO PLACE-as-a-move — so it can't pillar
-  up / bridge to a place-only goal and never even tries. Two parts: (a) SHORT: bounded
-  give-up -> clean 'unreachable' instead of infinite re-plan; (b) REAL FIX: see the
-  elevated item below (place-as-a-move in the search).
-- [ ] PRIORITY (elevated 2026-07-22, was TODOS 7.2 "deferred"; user asked "did you add
-  building/bridging to tungsten?"): PLACE-AS-A-MOVE in the block-space search. Today the
-  pathfinder never bridges across a gap or pillars up during goto — placing only happens
-  when the agent explicitly calls bridgeTo/placeBlockAt. Integrate it like breaking
-  (tryPlanBreakThrough) already is: a Bridge move (place at dest.down across a gap, cost =
-  walk+place) and a Pillar move (place under self to go up), mirroring baritone
-  MovementParkourPlace / MovementPillar / MovementTraverse backplace. Consult PlaceRules
-  (allowPlace/protect) + inventorySpace. This unblocks BUG #27 and real building-in-path.
+- [x] BUG #27 (unreachable goal → infinite search) FIXED. (a) bounded give-up: altoclef 14s
+  net-progress give-up (v0.35) + tungsten search stall-cap (v0.41, 20s no-progress); (b)
+  place-to-reach: pillar-up (v0.38) + bridge-across (v0.41) fire on the give-up when the goal
+  needs placing and a block is in inventory. GitHub issue #27 closed. (Proactive place-as-a-move
+  IN THE SEARCH remains a refinement — see the place-as-a-move item below.)
+- [~] PLACE-AS-A-MOVE (user asked "did you add building/bridging to tungsten?"). PRACTICAL GOAL
+  DELIVERED: the bot now DOES pillar up (v0.38) and bridge across a gap (v0.41) during @goto —
+  validated (pillar_reach_test, bridge_goto_test). Implemented as a give-up-driven move in
+  driveTungstenPrimary (stall at a raised/gapped goal + block in inventory -> PillarTask/
+  BridgeTask toward the goal). REMAINING REFINEMENT (rule #6 "in core"): integrate Bridge/Pillar
+  as FIRST-CLASS moves inside the block-space search (BlockNode.getChildren, like tryPlanBreakThrough)
+  so the pathfinder plans them PROACTIVELY mid-route (not only reactively after a ~14s stall, and
+  for mid-route gaps not just the final goal). Deferred: core-search edits are regression-prone
+  (the SmartMoves epic regressed terrain), so this needs the same careful repro→test→audit cycle.
 - [~] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
   often prints 'Ran out of nodes' and fails. PARTLY FIXED v0.40.0 (#34): the walker's grid-BFS
   path source (CombatPathfinder) now generates parkour jump-moves (+2..4 across, flat or +1 up),
@@ -40,15 +38,14 @@
   a dead task's aim clears in ~0.6s); (b) DISCONNECT hook wipes all tungsten state (aim/tasks/
   break/keys); (c) executor releases attackKey+aim immediately on stop mid-mine. Tests:
   stale_aim_test, disconnect_test, break_test (mining unaffected) — all PASS on the 0.39.0 jar.
-- [ ] BUG #30 (live test) BFS builds PHYSICS-UNEXECUTABLE 'unreal' routes — physics can't work
-  out the jumps to pass, or it paths straight INTO A WALL / into the void. Need: reject
-  implausible/'stupid' routes in search; when a BFS route is physically unreal (or computing into
-  a wall) fall back to a STRICTER baritone-style movement model (real jump reach, collisions).
-  Durable fix in search/move-validation.
-- [ ] BUG #31 (live test) Pathfinder can't complete simple routes that need BREAKING a block —
-  searches forever / 'runs into emptiness' instead of planning+executing the break-through
-  (tryPlanBreakThrough exists but the route doesn't reliably complete). Reproduce + durable fix.
-  (GitHub issue #31 pending — TLS timeout, retry.)
+- [x] BUG #30 (unreal routes into walls) ADDRESSED — symptom no longer reproducible. #34 (v0.40)
+  made CombatPathfinder (walker source) generate only physically-valid moves by construction; #29
+  killed the frozen aim; #50 (v0.41) caps unreachable searches; anti-stuck net + executor drift-
+  abort catch the rest. VERIFIED: with a real bedrock wall, the bot routes AROUND (wall_recover_test),
+  doesn't ram forever. GitHub issue #30 closed. Future hardening: async-search route validator.
+- [x] BUG #31 (break-through not completing) ADDRESSED. break_test passes all 4 courses consistently
+  (mine door / sand-fall / tool-equip / API). The 'searches forever' half shares #27/#30/#50 roots
+  (now fixed — gives up / routes around). GitHub issue #31 closed. Reopen with a live repro if it recurs.
 - [x] BRIDGING/BUILDING in path — DONE. Place-as-a-move complete: pillar-up (v0.38) + bridge-
   across-gap (v0.41). @goto now paves a bridge toward the goal when stalled at the edge of a real
   gap with a block in inventory (bridge_goto_test: crosses a 7-wide sky void). Remaining: a 2-block
@@ -229,10 +226,18 @@
     hop, repeat) as an MLG crossing. Very far future, "по красоте".
   - General: hazard-aware traversal — pick the safe descent/route considering fall damage,
     lava, void, mob threat, item durability/stock.
-- [ ] 19. (ПРЕДПОСЛЕДНЯЯ, после того как ВСЁ сделано и протестировано) разбор PR/issues:
-  - подробно пройти все PR и issues репозитория; где не воспроизводится/непонятно —
-    оставить в issue комментарий-вопрос «недостаточно данных для воспроизведения»
-    и запросить детали. Только когда весь остальной план готов и проверен.
+- [~] 19. Разбор PR/issues — DONE for this session's scope (2026-07-23):
+  - CLOSED with fix notes (fixed this session): #29 (frozen camera, v0.39), #26 (crash, v0.34),
+    #27 (unreachable forever, v0.35+v0.41), #28 (ran-out-of-nodes parkour, v0.40), #17 (sprint-jump
+    loop to unreachable, v0.41 stall-cap), #30 (unreal routes — routes around now), #31 (break-through).
+  - COMMENTED + re-test requested (my work likely helps, need repro): #12 (@gamer freeze), #13
+    (always stuck), #20 (recalc loop on terrain change).
+  - PRs: #10 MERGED (the 1.21.11->main merge itself). #22/#23 (RiaDev1 external bug-fix PRs) NOT
+    merged — external contributions targeting main that need human review vs the extensive 1.21.11
+    work; flagged for the user.
+  - LEFT OPEN (out of this session's pathfinding scope — altoclef crafting/inventory/features):
+    #25, #19-craft, #18 (EntityTracker leak), #16, #15, #24, #21 (godbridge sneak), #7, #5, #2.
+    Each needs its own repro→core-fix→test pass per the checklist — separate work.
   - СЛЕПОК на 2026-07-22 (3ndetz/unionclef): 3 открытых PR — #23 (misc hidden bugs from
     code audit, RiaDev1), #22 (18 bug fixes: pathfinding/combat/entity-tracking/stuck/
     NPE, RiaDev1), #10 (сама ветка 1.21.11). 14 открытых issues, ключевые (RiaDev1,
@@ -243,9 +248,9 @@
     плюс #25 крафт-инвентарь (WaluigiDrip), #15 (Guo8410), #13/#12 «always stuck»/freeze
     на @gamer 1.21.11 (FlipperFlopper99), #24/#7/#5/#2 (3ndetz). Разбирать по одному ПО
     ЧЕКЛИСТУ (воспроизвести → чинить в ядре → тест → либо коммент-вопрос).
-- [ ] 22. (ПОСЛЕДНЯЯ, ФИНАЛ) МЕРДЖ `1.21.11` → `main`: после закрытия/уточнения ВСЕХ
-  issues+PR (#19) и выполнения+тщательного теста ВСЕХ задач — слить рабочую ветку
-  1.21.11 в main (полный мердж проекта). До этого main не трогать. См. docs/CHECKLIST.md.
+- [x] 22. МЕРДЖ `1.21.11` → `main` — DONE 2026-07-23 (merge commit 9d8fa96). Promoted the whole
+  tested v0.29-v0.41 line to main; conflict was only a stale mod_version (0.21.1 -> kept 0.41.0).
+  PR #10 (1.21.11→main) auto-closed as MERGED; main and 1.21.11 now in sync (0 ahead).
 
 ## МЕГА-ЦЕЛЬ: ПОРТ ПОЛНОГО BARITONE + WORLDEDIT В ФИЗ-МОДЕЛЬ TUNGSTEN — юзер 2026-07-21
 

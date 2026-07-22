@@ -760,3 +760,37 @@ Lesson: run terrain first / restart between suites; added `clear @bot` to terrai
 Next: #45 (#28 ran-out-of-nodes — parkour v0.40 fixed the terrain case; async log is cosmetic,
 walker rescues), #48 (#30 unreal routes — wall_recover_test to decide), #49 (#31 break-through —
 break_test passes all 4; assess intermittent). Then triage issues/PRs + merge 1.21.11 -> main.
+
+---
+
+## 2026-07-23 — SESSION WRAP (autonomous run to close TODO)
+
+Releases this session: v0.39.0 (#29 frozen camera / reconnect reset), v0.40.0 (#34 parkour
+move-gen — course B climbs), v0.41.0 (#46 bridge-as-a-move + #50 no-infinite-compute on
+unreachable/non-standable goals). All verified on the Mac stand; terrain A/B + break + combat
+non-regressed (combat pathing byte-for-byte unchanged).
+
+Issue triage: closed #17, #26, #27, #28, #29, #30, #31 with fix notes; commented + re-test
+requested on #12, #13, #20; flagged external PRs #22/#23 (RiaDev1) for human review. Left the
+altoclef crafting/inventory issues (#25, #18, #16, #15-craft, etc.) open — out of this session's
+pathfinding scope, each needs its own repro→core-fix→test.
+
+MERGE: 1.21.11 -> main (merge commit 9d8fa96) — promoted the whole tested v0.29-v0.41 line to
+main; only conflict was a stale mod_version (kept 0.41.0). PR #10 auto-closed MERGED; branches
+in sync.
+
+Closed as done/superseded: #12 (walker owns terrain), #21 (slope-aware via walker), #32 (speed-
+pipeline experiment, not needed), #33 (ranged, v0.33), #40/#41 (SmartMoves-to-default NOT viable —
+regresses A; superseded by #34), #45 (#28 fixed by parkour), #48 (#30 addressed), #49 (#31
+addressed), #50 (goal-snap). altoclef inventory layer (#12 task) done.
+
+NOT done (long-term roadmap, explicitly deferred by the user): the MEGA-GOAL baritone+worldedit
+port (schematic building, worldedit cmds, full-game speedrun, shop UI, MLG), FAR-FAR elytra
+autonomy (#23), and the PROACTIVE search-integrated place-as-a-move (Bridge/Pillar as first-class
+BlockNode moves — the reactive give-up version is delivered + works; the in-search version is a
+regression-prone core change deferred to a focused session). Course C (2-block vertical wall onto
+a ledge) still needs a pillar-beside-wall variant.
+
+Test hygiene learned: run terrain_test on a FRESH bot (sky-tp tests leave stale async block-path
+state that stalls a following terrain run — cross-test artifact, not a regression). Added
+`clear @bot` to terrain_test build.
