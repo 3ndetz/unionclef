@@ -104,11 +104,14 @@
     (isAcceptable). Мозг решает кого, tungsten исполняет
   - [x] 17.3 py4j/MCP-рычаги: punk/punkAny/punkAvoid/punkStop/punkStatus. Тест
     multitarget_test PASS: avoid=[t2]→target None, allow=[t2]→target t2, stop→сброс
-  - [ ] 17.4 УБЕГАНИЕ/AVOID-обход (юзер 2026-07-22, моя задача #26): avoid-цели в
-    смысле УБЕГАТЬ/держать дистанцию/обходить (не только «не бить»). ;runAwayPlayer
-    <name> + py4j/MCP — беги от сущности подальше, УМНО (tungsten-путь к дальней
-    безопасной точке / evasion), НЕ скриптом. Проверить есть ли tungsten-native,
-    иначе реализовать полноценно. Интеграция с PunkPlayerTask
+  - [x] 17.4 УБЕГАНИЕ (#26) — СДЕЛАНО (v0.29.0). RunAwayTask (tungsten-native,
+    зеркало PunkPlayerTask): вместо пути К цели — путь к безопасной ВНУТРЕННЕЙ точке
+    ПРОЧЬ от неё, ре-план по мере погони; void-aware (flee-точка только не у края) +
+    общий VoidGuard на executor (убегание не уносит в бездну своим движением).
+    Угловые фолбэки от стен/пропастей. Рычаги: ;runAwayPlayer <name> [dist],
+    py4j/MCP runAwayPlayer/runAwayStop/runAwayStatus. Взаимоисключение с punk. Тест
+    runaway_test: держит ~8 бл (avg 8.0) на 15x15, своё движение не роняет в void.
+    Остаётся avoid-ОБХОД (path around avoid-целей) — отдельная мелкая доработка.
   - [ ] 17.2 (осталось) altoclef-мозг: приоритизация целей (ХП/дистанция/угроза),
     связка с threat-table (attackPlayer/avoidPlayer уже есть отдельно) — свести
 - [ ] 18. БОЕВОЕ КРЕЩЕНИЕ = ПОЛНЫЙ ПРОХОД ИГРЫ + tungsten_speedrun таск:
