@@ -195,6 +195,23 @@ public class BlockSpacePathFinder {
         if (startNode == null) {
             return Optional.empty();
         }
+        if (kaptainwutax.tungsten.TungstenConfig.get().smartMoves) {
+            // SmartMoves rework: return the FURTHEST-progressed heuristically-best node
+            // as a partial path (graceful degradation) — correct, unlike the legacy
+            // inverted selection below which relies on the buggy distances.
+            BlockNode best = null;
+            double bd = -1;
+            for (int i = 0; i < COEFFICIENTS.length; i++) {
+                if (bestSoFar[i] == null) continue;
+                double dist = getDistFromStartSq(bestSoFar[i], startNode.getPos());
+                if (dist > bd) { bd = dist; best = bestSoFar[i]; }
+            }
+            if (best != null && bd > 1.0) {
+                List<BlockNode> path = generatePath(best, world);
+                if (path.size() > 1) return Optional.of(path);
+            }
+            return Optional.empty();
+        }
         double bestDist = 0;
         for (int i = 0; i < COEFFICIENTS.length; i++) {
             if (bestSoFar[i] == null) {
@@ -249,9 +266,15 @@ public class BlockSpacePathFinder {
 	}
 	
 	private static double getDistFromStartSq(BlockNode n, Vec3d start) {
+        // The original computed the Y and Z diffs from start.x (copy-paste bug) —
+        // garbage distances. Correcting it alone regresses the blind-scan search
+        // (course A depends on the garbage-driven partial paths), so the correct
+        // form is gated behind smartMoves: the SmartMoves rework uses correct
+        // distances, the legacy blind scan keeps the (buggy but working) behaviour.
+        boolean fix = kaptainwutax.tungsten.TungstenConfig.get().smartMoves;
         double xDiff = start.x - n.getPos().x;
-        double yDiff = start.x - n.getPos().y;
-        double zDiff = start.x - n.getPos().z;
+        double yDiff = (fix ? start.y : start.x) - n.getPos().y;
+        double zDiff = (fix ? start.z : start.x) - n.getPos().z;
         return xDiff * xDiff + yDiff * yDiff + zDiff * zDiff;
     }
 
