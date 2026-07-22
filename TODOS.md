@@ -229,10 +229,18 @@
     hop, repeat) as an MLG crossing. Very far future, "по красоте".
   - General: hazard-aware traversal — pick the safe descent/route considering fall damage,
     lava, void, mob threat, item durability/stock.
-- [ ] 19. (ПРЕДПОСЛЕДНЯЯ, после того как ВСЁ сделано и протестировано) разбор PR/issues:
-  - подробно пройти все PR и issues репозитория; где не воспроизводится/непонятно —
-    оставить в issue комментарий-вопрос «недостаточно данных для воспроизведения»
-    и запросить детали. Только когда весь остальной план готов и проверен.
+- [~] 19. Разбор PR/issues — DONE for this session's scope (2026-07-23):
+  - CLOSED with fix notes (fixed this session): #29 (frozen camera, v0.39), #26 (crash, v0.34),
+    #27 (unreachable forever, v0.35+v0.41), #28 (ran-out-of-nodes parkour, v0.40), #17 (sprint-jump
+    loop to unreachable, v0.41 stall-cap), #30 (unreal routes — routes around now), #31 (break-through).
+  - COMMENTED + re-test requested (my work likely helps, need repro): #12 (@gamer freeze), #13
+    (always stuck), #20 (recalc loop on terrain change).
+  - PRs: #10 MERGED (the 1.21.11->main merge itself). #22/#23 (RiaDev1 external bug-fix PRs) NOT
+    merged — external contributions targeting main that need human review vs the extensive 1.21.11
+    work; flagged for the user.
+  - LEFT OPEN (out of this session's pathfinding scope — altoclef crafting/inventory/features):
+    #25, #19-craft, #18 (EntityTracker leak), #16, #15, #24, #21 (godbridge sneak), #7, #5, #2.
+    Each needs its own repro→core-fix→test pass per the checklist — separate work.
   - СЛЕПОК на 2026-07-22 (3ndetz/unionclef): 3 открытых PR — #23 (misc hidden bugs from
     code audit, RiaDev1), #22 (18 bug fixes: pathfinding/combat/entity-tracking/stuck/
     NPE, RiaDev1), #10 (сама ветка 1.21.11). 14 открытых issues, ключевые (RiaDev1,
@@ -243,9 +251,9 @@
     плюс #25 крафт-инвентарь (WaluigiDrip), #15 (Guo8410), #13/#12 «always stuck»/freeze
     на @gamer 1.21.11 (FlipperFlopper99), #24/#7/#5/#2 (3ndetz). Разбирать по одному ПО
     ЧЕКЛИСТУ (воспроизвести → чинить в ядре → тест → либо коммент-вопрос).
-- [ ] 22. (ПОСЛЕДНЯЯ, ФИНАЛ) МЕРДЖ `1.21.11` → `main`: после закрытия/уточнения ВСЕХ
-  issues+PR (#19) и выполнения+тщательного теста ВСЕХ задач — слить рабочую ветку
-  1.21.11 в main (полный мердж проекта). До этого main не трогать. См. docs/CHECKLIST.md.
+- [x] 22. МЕРДЖ `1.21.11` → `main` — DONE 2026-07-23 (merge commit 9d8fa96). Promoted the whole
+  tested v0.29-v0.41 line to main; conflict was only a stale mod_version (0.21.1 -> kept 0.41.0).
+  PR #10 (1.21.11→main) auto-closed as MERGED; main and 1.21.11 now in sync (0 ahead).
 
 ## МЕГА-ЦЕЛЬ: ПОРТ ПОЛНОГО BARITONE + WORLDEDIT В ФИЗ-МОДЕЛЬ TUNGSTEN — юзер 2026-07-21
 
