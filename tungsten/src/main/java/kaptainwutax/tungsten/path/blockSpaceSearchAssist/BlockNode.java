@@ -468,10 +468,25 @@ public class BlockNode {
 		}
 		if (BlockStateChecker.isAnyWater(childState)) {
 			if (distance > 1 || heightDiff > 1) return true;
+			// Swimming: when we're ALREADY in water, an adjacent water cell (up/
+			// down/around within 1) is traversable by swimming. The walk-based
+			// wasCleared (StreightMovementHelper) mishandles vertical/underwater
+			// moves (undefined horizontal direction) and rejected valid swim-up —
+			// leaving the bot stuck at the bottom to drown. In water, the cell
+			// being water is enough; the physics executor swims there.
+			if (BlockStateChecker.isAnyWater(currentBlockState)) return false;
+			// Entering water from land — keep the walk validity check.
 			if (!wasCleared(world, getBlockPos(), child.getBlockPos())) return true;
 			return false;
 		}
-		if (BlockStateChecker.isAnyWater(childState) && !childAboveState.isAir()) return true;
+		// Surfacing / climbing out: while submerged, an air cell within reach
+		// (the surface above the water or a land edge one up) is a valid swim
+		// target so the bot can reach the surface and step out.
+		if (BlockStateChecker.isAnyWater(currentBlockState) && childState.isAir()
+				&& distance <= 1 && heightDiff <= 1
+				&& BlockShapeChecker.getShapeVolume(child.getBlockPos(), world) == 0) {
+			return false;
+		}
 		
 		if (BlockStateChecker.isDoubleSlab(world, getBlockPos()) || childBelowBlock instanceof SnowBlock)
 			return true;
