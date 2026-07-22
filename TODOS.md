@@ -177,6 +177,16 @@
   - связка: TrajectorySolver (баллистика с упреждением уже есть) + tungsten
     паркур/инерция игрока + bow/crossbow примитивы. Просчитывать позицию СТРЕЛКА
     (своя инерция/прыжок) а не только цели. «По красоте»
+- [ ] 23. FAR-FAR TODO (user 2026-07-22, AFTER everything — after issues/PRs + main merge):
+  make tungsten a FULL player — traversal/vehicle mastery, "по красоте":
+  - ELYTRA autonomy: descend mountains / cross gaps on elytra, tracking DURABILITY and
+    remaining flight; auto-boost with FIREWORKS (rocket count aware); land safely, avoid
+    hazards mid-flight.
+  - VEHICLES: use and (if needed) PLACE minecarts and boats autonomously as part of a route.
+  - MLG on vehicles: boat-in-lava tricks — jump across BURNING boats over lava (place boat,
+    hop, repeat) as an MLG crossing. Very far future, "по красоте".
+  - General: hazard-aware traversal — pick the safe descent/route considering fall damage,
+    lava, void, mob threat, item durability/stock.
 - [ ] 19. (ПРЕДПОСЛЕДНЯЯ, после того как ВСЁ сделано и протестировано) разбор PR/issues:
   - подробно пройти все PR и issues репозитория; где не воспроизводится/непонятно —
     оставить в issue комментарий-вопрос «недостаточно данных для воспроизведения»
