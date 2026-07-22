@@ -1890,6 +1890,17 @@ public class Py4jEntryPoint {
     public boolean bridgeActive() { return kaptainwutax.tungsten.task.BridgeTask.isActive(); }
     public int bridgePlaced() { return kaptainwutax.tungsten.task.BridgeTask.getPlaced(); }
 
+    /** Pillar up to Y by placing blocks under self (#46). Equip a block first. */
+    public boolean pillarTo(int y) {
+        try {
+            net.minecraft.client.MinecraftClient.getInstance().execute(() ->
+                    kaptainwutax.tungsten.task.PillarTask.startTo(y));
+            return true;
+        } catch (Exception e) { return false; }
+    }
+    public boolean pillarActive() { return kaptainwutax.tungsten.task.PillarTask.isActive(); }
+    public int pillarPlaced() { return kaptainwutax.tungsten.task.PillarTask.getPlaced(); }
+
     // Movement lever for the cognitive agent — the keystone that ties perception
     // (getGameState) to action. Fire-and-poll: gotoXYZ() then pathStatus() until
     // arrived. This is also how the agent repositions to reach far fillSelection

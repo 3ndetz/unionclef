@@ -61,6 +61,9 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// sneak-bridge primitive (epic parkour block placing)
 		kaptainwutax.tungsten.task.BridgeTask.tick((ClientPlayerEntity)(Object)this);
 
+		// pillar-up primitive (place under self + jump to reach a raised goal — #46)
+		kaptainwutax.tungsten.task.PillarTask.tick((ClientPlayerEntity)(Object)this);
+
 		if(TungstenModDataContainer.isExecutorRunning()) {
 			try {
 				TungstenModDataContainer.EXECUTOR.tick((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);
