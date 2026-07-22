@@ -71,10 +71,13 @@ public class ShootArrowSimpleProjectileTask extends Task {
     /**
      * Direct-fire aim now goes through tungsten's {@link TrajectorySolver}, which
      * simulates real vanilla arrow physics (drag 0.99, gravity 0.05, speed 3.0/tick,
-     * pitch by bisection) instead of the old g=0.006 closed form. Lead comes from
-     * the target's per-tick position delta — NOT getVelocity(), which is ~0 for
-     * other players (they move by position packets), so the solver would otherwise
-     * never lead a running target.
+     * pitch by bisection) instead of the old g=0.006 closed form.
+     *
+     * Lead uses the target's velocity, falling back to a per-tick position delta
+     * only when that velocity field is flat: a client-side running player reports
+     * real velocity (leads correctly), but a target driven purely by position
+     * packets — or one teleporting — reports ~0 velocity yet still moves, so the
+     * position delta recovers the lead there.
      *
      * High-angle (no line of sight / artillery over obstacles) stays on the legacy
      * closed-form lob below: TrajectorySolver only solves the flat trajectory, so
@@ -91,10 +94,13 @@ public class ShootArrowSimpleProjectileTask extends Task {
             }
         }
 
-        Vec3d vel = new Vec3d(
-                target.getPos().getX() - target.prevX,
-                target.getPos().getY() - target.prevY,
-                target.getPos().getZ() - target.prevZ);
+        Vec3d vel = target.getVelocity();
+        if (vel.x * vel.x + vel.z * vel.z < 0.0025) { // < 0.05 b/tick — flat velocity field
+            vel = new Vec3d(
+                    target.getPos().getX() - target.prevX,
+                    target.getPos().getY() - target.prevY,
+                    target.getPos().getZ() - target.prevZ);
+        }
         if (target.isOnGround()) vel = new Vec3d(vel.x, 0, vel.z);
         Vec3d aimPoint = target.getPos().add(0, target.getHeight() * 0.6, 0);
         Vec3d eye = mod.getPlayer().getEyePos();

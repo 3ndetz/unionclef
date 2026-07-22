@@ -72,6 +72,24 @@ def entity_float(name, path):
     return float(out.rsplit(":", 1)[-1].strip().rstrip("fd"))
 
 
+def entity_pos(name):
+    import re
+    out = rcon(f"data get entity {name} Pos")
+    m = re.search(r"\[([^\]]+)\]", out)
+    return [float(v.strip().rstrip("fd")) for v in m.group(1).split(",")] if m else None
+
+
+def entity_speed(name):
+    """Horizontal speed (blocks/tick) from server-side Motion."""
+    import re
+    out = rcon(f"data get entity {name} Motion")
+    m = re.search(r"\[([^\]]+)\]", out)
+    if not m:
+        return 0.0
+    mx, my, mz = [float(v.strip().rstrip("fd")) for v in m.group(1).split(",")]
+    return (mx * mx + mz * mz) ** 0.5
+
+
 def wait_for(desc, fn, timeout_s, interval=3):
     t0 = time.time()
     last = None
@@ -103,19 +121,30 @@ def reset_positions():
 
 
 def volley(shots, running=False):
-    """Fire `shots` via @shoot; return hit count. Respawn (hp jump) = kill."""
+    """Fire `shots` via @shoot; return hit count. Respawn (hp jump) = kill.
+
+    Running mode sends the victim on a LONG continuous run (to z=+-30 in the
+    widened arena) so she is still moving when the arrow releases (~3s in) —
+    that is what actually exercises target lead. Motion at release is logged.
+    """
     hits = 0
     run_dir = [1]
     for i in range(shots):
         if running:
-            z_to = 9 * run_dir[0]
+            z_to = 30 * run_dir[0]
             run_dir[0] = -run_dir[0]
             py4j(VICTIM_CONTAINER, "chat", msg=f";goto 18 -60 {z_to}")
-            time.sleep(1.5)
+            time.sleep(1.0)  # let her accelerate; long run keeps her moving through the shot
         hp_before = entity_float(VICTIM, "Health")
         py4j(SHOOTER_CONTAINER, "cmd", c=f"@shoot {VICTIM}")
-        # @shoot aims/charges/releases on its own timers; give it room + flight
-        time.sleep(5.0)
+        if running:
+            time.sleep(2.5)  # around release time
+            spd = entity_speed(VICTIM)
+            p_rel = entity_pos(VICTIM)
+            time.sleep(2.5)
+            print(f"    (release: speed={spd:.3f} b/t, z={p_rel[2]:.1f})")
+        else:
+            time.sleep(5.0)
         hp_after = entity_float(VICTIM, "Health")
         died = hp_after > hp_before + 5
         hit = died or hp_after < hp_before - 0.01
@@ -135,8 +164,9 @@ def volley(shots, running=False):
 def main():
     print("[1/3] arena...")
     wait_for("server rcon", lambda: "players" in rcon("list"), 300, 5)
-    for c in ["forceload add -16 -16 32 16",
-              "fill -8 -60 -12 28 -45 12 air",
+    for c in ["forceload add -16 -40 32 40",
+              "fill -8 -61 -36 28 -45 36 minecraft:stone",
+              "fill -8 -60 -36 28 -45 36 air",
               "gamerule natural_health_regeneration false",
               "gamerule pvp true", "gamerule immediate_respawn true",
               "gamerule advance_time false", "weather clear", "time set day"]:
