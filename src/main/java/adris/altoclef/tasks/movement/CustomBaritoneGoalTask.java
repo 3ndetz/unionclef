@@ -272,6 +272,24 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         return false;
     }
 
+    /** True when the bot is stuck at the edge of a GAP (a real drop) in the goal's
+     *  horizontal direction — a "bridge here" signal, distinct from a wall (cell
+     *  ahead solid) or a step-down. Cell ahead toward the goal must be clear (not a
+     *  wall) with no floor for 2+ blocks below (a genuine gap a jump can't close). */
+    private boolean gapTowardGoal(AltoClef mod, net.minecraft.util.math.Vec3d gp) {
+        var p = mod.getPlayer();
+        var world = mod.getWorld();
+        double dx = gp.x - p.getX(), dz = gp.z - p.getZ();
+        net.minecraft.util.math.Direction dir = Math.abs(dx) >= Math.abs(dz)
+                ? (dx >= 0 ? net.minecraft.util.math.Direction.EAST : net.minecraft.util.math.Direction.WEST)
+                : (dz >= 0 ? net.minecraft.util.math.Direction.SOUTH : net.minecraft.util.math.Direction.NORTH);
+        net.minecraft.util.math.BlockPos ahead = p.getBlockPos().offset(dir);
+        boolean aheadClear = world.getBlockState(ahead).getCollisionShape(world, ahead).isEmpty();
+        boolean noFloor1 = world.getBlockState(ahead.down()).getCollisionShape(world, ahead.down()).isEmpty();
+        boolean noFloor2 = world.getBlockState(ahead.down(2)).getCollisionShape(world, ahead.down(2)).isEmpty();
+        return aheadClear && noFloor1 && noFloor2;
+    }
+
     /** Drop-in swap (TODO 13): when tungsten is PRIMARY, drive movement via
      *  tungsten directly (the same call ;goto uses — baritone movement doesn't
      *  execute on headless clients). Async: PATHFINDER.find kicks a background
@@ -319,6 +337,19 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 setDebugState("Tungsten pillaring up to goal (#46)...");
                 return true;
             }
+            // #46 bridge-as-a-move: stuck at the edge of a GAP with the goal across it
+            // (roughly level, not overhead) — pave a bridge toward the goal instead of
+            // abandoning. Parkour (v0.40.0) already clears gaps <=4; this handles wider
+            // ones a running jump can't. Mutually exclusive with the pillar case above.
+            if (Math.abs(gp.y - mod.getPlayer().getY()) <= 2.0 && horizToGoal > 2.0
+                    && gapTowardGoal(mod, gp) && equipBuildBlock(mod)) {
+                kaptainwutax.tungsten.task.BridgeTask.startTo(
+                        (int) Math.floor(gp.x), (int) Math.floor(gp.y), (int) Math.floor(gp.z));
+                twBestDistToGoal = -1; twBestImproveMs = 0L;
+                checker.reset();
+                setDebugState("Tungsten bridging across a gap to goal (#46)...");
+                return true;
+            }
             twBestDistToGoal = -1; twBestImproveMs = 0L;   // re-measure on re-entry
             kaptainwutax.tungsten.Debug.logMessage(
                     "[nav] goal unreachable — no progress in 14s (dist " + String.format("%.1f", distToGoalNow) + "), yielding");
@@ -329,6 +360,12 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (kaptainwutax.tungsten.task.PillarTask.isActive()) {
             checker.reset();
             setDebugState("Tungsten pillaring up to goal (#46)...");
+            return true;
+        }
+        // Mid-bridge (#46) — let the bridge finish crossing before any other nav runs.
+        if (kaptainwutax.tungsten.task.BridgeTask.isActive()) {
+            checker.reset();
+            setDebugState("Tungsten bridging across a gap (#46)...");
             return true;
         }
 
