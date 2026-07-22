@@ -24,6 +24,25 @@
 - [ ] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
   often prints 'Ran out of nodes' and fails. Diagnose node-budget/heuristic/move-gen, fix the
   pipeline. Neither fail-on-simple-parkour NOR search-forever-for-nonexistent.
+- [ ] BUG #29 (CRITICAL, live test 2026-07-22) Camera FREEZES locked on a block forever, bot
+  hard-stuck in one spot; wanted to break a block but ran into something / looked at the target
+  THROUGH another block. NEVER recovers — even RECONNECT doesn't clear it (camera stays locked).
+  Root: break/mine aim (WindMouse/rotation) with no timeout/abort on unreachable/occluded target
+  + static state not reset on disconnect/world-unload (survives reconnect). DURABLE fix: (a)
+  abort/timeout break-aim when target unreachable or LOS blocked by another block; (b) reset all
+  aim/mine static state on disconnect/world change. Reproduce first. NO patch/hardcode.
+- [ ] BUG #30 (live test) BFS builds PHYSICS-UNEXECUTABLE 'unreal' routes — physics can't work
+  out the jumps to pass, or it paths straight INTO A WALL / into the void. Need: reject
+  implausible/'stupid' routes in search; when a BFS route is physically unreal (or computing into
+  a wall) fall back to a STRICTER baritone-style movement model (real jump reach, collisions).
+  Durable fix in search/move-validation.
+- [ ] BUG #31 (live test) Pathfinder can't complete simple routes that need BREAKING a block —
+  searches forever / 'runs into emptiness' instead of planning+executing the break-through
+  (tryPlanBreakThrough exists but the route doesn't reliably complete). Reproduce + durable fix.
+  (GitHub issue #31 pending — TLS timeout, retry.)
+- [~] BRIDGING/BUILDING in path (user: "вообще не заметил") — pillar landing now (#46, PillarTask
+  tested, @goto pillars up to raised goals). Bridge-across-gap as an A* move still NOT done — the
+  bot still never bridges/places during a normal goto across a gap. See #46 (bridge half of it).
 
 ## МЕГА-ЦЕЛЬ 2: TUNGSTEN = ПОЛНОЦЕННАЯ ЗАМЕНА BARITONE + ИНТЕГРАЦИЯ — юзер 2026-07-21 (вечер)
 
