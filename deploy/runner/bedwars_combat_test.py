@@ -26,12 +26,12 @@ elif op=="gs":
 elif op=="stop": mc.ExecuteCommand("@stop"); mc.ChatMessage(";stop"); out={"ok":True}
 print(json.dumps(out,default=str)); gw.close()
 """
-def sh(a,t=30): return subprocess.run(a,capture_output=True,text=True,timeout=t)
-def py4j(c,op,t=25,**kw):
-    r=sh(["docker","exec",c,"python3","-c",SNIP,json.dumps({"op":op,**kw})],t)
+def sh(a,to=30): return subprocess.run(a,capture_output=True,text=True,timeout=to)
+def py4j(c,op,to=25,**kw):
+    r=sh(["docker","exec",c,"python3","-c",SNIP,json.dumps({"op":op,**kw})],to)
     if r.returncode!=0: raise RuntimeError(f"{op}@{c}: {r.stderr.strip()[-200:]}")
     return json.loads(r.stdout.strip().splitlines()[-1])
-def rcon(c,t=20): return sh(["docker","exec",SERVER,"rcon-cli",c],t).stdout.strip()
+def rcon(c,to=20): return sh(["docker","exec",SERVER,"rcon-cli",c],to).stdout.strip()
 def efloat(name,path):
     o=rcon(f"data get entity {name} {path}")
     try: return float(o.split(":")[-1].strip().rstrip("dbfs"))
