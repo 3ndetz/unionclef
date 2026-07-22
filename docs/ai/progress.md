@@ -658,3 +658,40 @@ driveTungstenPrimary!). @gamer идёт через altoclef `@goto/@get` → dri
 (held spruce_log/dark_oak_log), hp 20, 0 падений — раньше стоял намертво. Остаётся: паркур
 (прыжки-гэпы/2-блочная стена), выживание против мобов (easy — еда/комбат/шелтер), редкие
 локальные ловушки (анти-стак смягчает). Speed-pipeline идея юзера — TODO #32.
+
+---
+
+## 2026-07-22 — BUG #29 CRITICAL (frozen camera / hard-stuck aim) — FIXED v0.39.0
+
+**Investigate.** Repro'd the class of the bug, not a one-off: `WindMouseRotation.INSTANCE`
+is a static singleton; `applyRenderStep` (called every render frame from
+`MixinInGameHud`) steers the mouse toward the stored `(targetYaw,targetPitch)` forever
+while `hasTarget`. Every consumer (executor break `tickBreaking`, combat, walker, bow,
+bridge, pillar) calls `setTarget` each tick but clears only on its own clean exit. A task
+that set a mine/combat aim and then DIED (occluded mine, abrupt combat end, force-stop)
+left `hasTarget=true` with no one to clear it → camera locked forever. Static → survived
+reconnect (the reported "still frozen after rejoining"). Movement-phase aim uses
+`applyNativeRotation` (direct changeLookDirection), so only these task aims can freeze.
+
+**Plan/Implement (durable, no band-aid).**
+1. Stale-aim auto-release: `setTarget` stamps `lastRefreshMs`; `applyRenderStep`
+   `clearTarget()`s if `now-lastRefreshMs > STALE_MS` (600ms). Live consumers refresh
+   every game tick (~50ms) so an active aim is untouched; a dead task's aim clears in
+   ~0.6s. No task can leave the camera frozen.
+2. `ClientPlayConnectionEvents.DISCONNECT` → `TungstenMod.resetAllState()` wipes aim,
+   all tasks (walker/bridge/pillar/punk/runaway/bow), in-progress break, held keys, and
+   pf/ex — nothing tungsten survives a re-join.
+3. `PathExecutor` stop-branch releases `attackKey` + `clearTarget()` immediately (not on
+   the 300-tick timeout) when force-stopped mid-mine.
+
+**Test (all PASS on the 0.39.0 release jar).** `stale_aim_test` (poke a one-shot aim →
+auto-releases within 2s), `disconnect_test` (a running punk task cleared after forced
+reconnect), `break_test` C_wall/D_sand/E_tool/F_api (mining unaffected — tickBreaking
+refreshes setTarget every tick so the aim never expires mid-mine). Bot needs ~90-120s to
+settle in-game after a container restart before tests are reliable.
+
+**Levers added:** py4j `pokeStaleAim(dyaw)` / `windMouseHasTarget()` (test the expiry).
+
+Next: block-space move-generation cluster (#28 ran-out-of-nodes, #30 unreal routes into
+walls, #31 break-through not completing) — all root in the legacy blind r=8 neighbor gen;
+the fix is hardening the flag-gated `SmartMoves` into a robust default.

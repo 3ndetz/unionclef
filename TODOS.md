@@ -24,13 +24,15 @@
 - [ ] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
   often prints 'Ran out of nodes' and fails. Diagnose node-budget/heuristic/move-gen, fix the
   pipeline. Neither fail-on-simple-parkour NOR search-forever-for-nonexistent.
-- [ ] BUG #29 (CRITICAL, live test 2026-07-22) Camera FREEZES locked on a block forever, bot
-  hard-stuck in one spot; wanted to break a block but ran into something / looked at the target
-  THROUGH another block. NEVER recovers — even RECONNECT doesn't clear it (camera stays locked).
-  Root: break/mine aim (WindMouse/rotation) with no timeout/abort on unreachable/occluded target
-  + static state not reset on disconnect/world-unload (survives reconnect). DURABLE fix: (a)
-  abort/timeout break-aim when target unreachable or LOS blocked by another block; (b) reset all
-  aim/mine static state on disconnect/world change. Reproduce first. NO patch/hardcode.
+- [x] BUG #29 (CRITICAL, live test 2026-07-22) Camera FREEZES locked on a block forever, bot
+  hard-stuck; never recovers, survives reconnect. FIXED v0.39.0. Root: WindMouseRotation is a
+  static singleton that steered the mouse toward its stored target every render frame — a task
+  that set a mine/combat aim and died without clearTarget() locked the camera forever (static →
+  survived reconnect). Durable fix: (a) stale-aim auto-release — setTarget stamps a timestamp,
+  applyRenderStep releases if nothing refreshed it for 600ms (live consumers refresh every tick,
+  a dead task's aim clears in ~0.6s); (b) DISCONNECT hook wipes all tungsten state (aim/tasks/
+  break/keys); (c) executor releases attackKey+aim immediately on stop mid-mine. Tests:
+  stale_aim_test, disconnect_test, break_test (mining unaffected) — all PASS on the 0.39.0 jar.
 - [ ] BUG #30 (live test) BFS builds PHYSICS-UNEXECUTABLE 'unreal' routes — physics can't work
   out the jumps to pass, or it paths straight INTO A WALL / into the void. Need: reject
   implausible/'stupid' routes in search; when a BFS route is physically unreal (or computing into
