@@ -98,9 +98,12 @@ public class RunAwayTask {
     }
 
     /**
-     * Best solid, void-safe standable point ~STEP blocks away from the threat.
-     * Straight-away first, then angled fallbacks so a wall/void doesn't trap the
-     * flee; picks the safe candidate furthest from the threat. Null if none safe.
+     * Best solid, void-safe standable point away from the threat. Scans several
+     * away-biased directions AND several distances (so on a bounded island the
+     * furthest reachable cell — e.g. the far corner — is picked instead of a
+     * fixed point 8 blocks out in the void), then keeps the safe candidate that
+     * sits furthest from the threat. Null if nothing safe (cornered — hold, don't
+     * flee off the edge).
      */
     private static Vec3d safeFleePoint(WorldView world, ClientPlayerEntity player) {
         Vec3d p = player.getEntityPos();
@@ -111,19 +114,21 @@ public class RunAwayTask {
 
         Vec3d best = null;
         double bestScore = -1;
-        double[] angles = {0, 30, -30, 60, -60, 90, -90};
+        double[] angles = {0, 25, -25, 50, -50, 80, -80};
+        double[] dists  = {STEP, STEP * 0.66, STEP * 0.4, 2.0};
         for (double a : angles) {
             double rad = Math.toRadians(a);
             double cos = Math.cos(rad), sin = Math.sin(rad);
             double dx = away.x * cos - away.z * sin;
             double dz = away.x * sin + away.z * cos;
-            // don't even consider a direction that steps off a drop right away
-            if (VoidDetector.edgeAhead(p, dx, dz, world, 3, 1.6)) continue;
-            Vec3d cand = new Vec3d(p.x + dx * STEP, p.y, p.z + dz * STEP);
-            Vec3d ground = snapGround(world, cand);
-            if (ground == null) continue;
-            double score = ground.distanceTo(threat.getEntityPos());
-            if (score > bestScore) { bestScore = score; best = ground; }
+            for (double step : dists) {
+                Vec3d cand = new Vec3d(p.x + dx * step, p.y, p.z + dz * step);
+                Vec3d ground = snapGround(world, cand);
+                if (ground == null) continue;
+                double score = ground.distanceTo(threat.getEntityPos());
+                if (score > bestScore) { bestScore = score; best = ground; }
+                break; // furthest reachable in this direction wins; stop shrinking
+            }
         }
         return best;
     }

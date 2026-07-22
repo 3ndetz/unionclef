@@ -24,7 +24,7 @@ mc=gw.entry_point; op=req["op"]; out={}
 if op=="state": out={"inGame":mc.inGame()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="punk": mc.ExecuteCommand("@stop"); mc.punkStop(); mc.punk(req["t"]); out={"ok":True}
-elif op=="flee": mc.ExecuteCommand("@stop"); mc.runAwayPlayer(req["t"], req.get("d",8)); out={"ok":True}
+elif op=="flee": mc.ExecuteCommand("@stop"); mc.runAwayPlayer(req["t"], float(req.get("d",8))); out={"ok":True}
 elif op=="fleestatus": out=dict(mc.runAwayStatus())
 elif op=="stop": mc.ExecuteCommand("@stop"); mc.punkStop(); mc.runAwayStop(); out={"ok":True}
 print(json.dumps(out,default=str)); gw.close()
