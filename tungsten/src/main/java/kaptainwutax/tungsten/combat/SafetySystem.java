@@ -304,9 +304,11 @@ public class SafetySystem {
                 && stage != CombatStage.DANGER_BATTLE) {
             // Near the island rim: walk, never sprint or jump. Sprint momentum
             // (~0.28/tick) and jump arcs overshoot the edge faster than the
-            // reactive edge-clamp can arrest them — the post-kill fall lived
-            // here. At walk speed the clamp stops us cleanly on solid ground.
-            boolean nearEdge = currentEdgeScore > 0.15;
+            // reactive edge-clamp can arrest them. A drop within 3 blocks means
+            // any sprint could carry us off before we stop — walk instead so the
+            // clamp/sneak plant us on solid ground. (On this void map fallHeight
+            // bottoms out ~4 blocks down, so the radius-3 scan is cheap.)
+            boolean nearEdge = VoidDetector.voidWithin(playerPosTick, player.getEntityWorld(), 3, 3);
             java.util.List<net.minecraft.util.math.BlockPos> attackPath = pathfinder.getAttackPath();
             if (attackPath.size() >= 2) {
                 // find next waypoint we haven't reached yet
@@ -379,23 +381,28 @@ public class SafetySystem {
         }
 
         // ── VOID-SAFETY HARD CLAMP ───────────────────────────────────────
-        // Whatever the stage/movement logic decided, never let a forward press
-        // walk us off a serious drop while we're on safe ground. We test the
-        // heading implied by the PRESSED KEYS (not raw velocity) so a braking
-        // maneuver — which pushes back toward the island — is never cancelled.
-        if (mc.options.forwardKey.isPressed() || mc.options.leftKey.isPressed()
-                || mc.options.rightKey.isPressed() || mc.options.backKey.isPressed()) {
-            double[] heading = pressedHeading(player, mc);
-            if (heading != null && VoidDetector.edgeAhead(
-                    playerPosTick, heading[0], heading[1], player.getEntityWorld(), 3)) {
-                mc.options.forwardKey.setPressed(false);
-                mc.options.backKey.setPressed(false);
-                mc.options.leftKey.setPressed(false);
-                mc.options.rightKey.setPressed(false);
-                mc.options.sprintKey.setPressed(false);
-                mc.options.jumpKey.setPressed(false);
-                mc.options.sneakKey.setPressed(true); // plant feet at the edge
-            }
+        // Never slide off a serious drop while on safe ground. Two headings are
+        // checked: the PRESSED-KEY direction (about to walk off) AND the actual
+        // horizontal VELOCITY (sprint overshooting PAST the target off the far
+        // rim — the stationary-victim falls lived here: the key heading points at
+        // the enemy on solid ground, but momentum carries us past it into void).
+        // A braking maneuver pushes back toward the island, so its velocity/keys
+        // point at safe ground and are never cancelled.
+        boolean anyMoveKey = mc.options.forwardKey.isPressed() || mc.options.leftKey.isPressed()
+                || mc.options.rightKey.isPressed() || mc.options.backKey.isPressed();
+        double[] keyHeading = pressedHeading(player, mc);
+        boolean edgeByKey = keyHeading != null && VoidDetector.edgeAhead(
+                playerPosTick, keyHeading[0], keyHeading[1], player.getEntityWorld(), 3);
+        boolean edgeByVel = horizSpeed > 0.08 && VoidDetector.edgeAhead(
+                playerPosTick, playerVel.x, playerVel.z, player.getEntityWorld(), 3);
+        if ((anyMoveKey || edgeByVel) && (edgeByKey || edgeByVel)) {
+            mc.options.forwardKey.setPressed(false);
+            mc.options.backKey.setPressed(false);
+            mc.options.leftKey.setPressed(false);
+            mc.options.rightKey.setPressed(false);
+            mc.options.sprintKey.setPressed(false);
+            mc.options.jumpKey.setPressed(false);
+            mc.options.sneakKey.setPressed(true); // vanilla edge-stop: plant feet
         }
 
         // ── visualization ────────────────────────────────────────────────

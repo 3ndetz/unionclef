@@ -87,6 +87,23 @@ public final class VoidDetector {
         return false;
     }
 
+    /** True if any cell within Chebyshev {@code radius} of pos (feet level) drops
+     *  more than {@code maxSafeFall} — a wider "am I near a ledge" test used to
+     *  cut sprint/jump before momentum builds toward the rim. */
+    public static boolean voidWithin(Vec3d pos, WorldView world, int radius, int maxSafeFall) {
+        int cx = MathHelper.floor(pos.x), cz = MathHelper.floor(pos.z);
+        int y = MathHelper.floor(pos.y);
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (dx == 0 && dz == 0) continue;
+                if (fallHeight(new Vec3d(cx + dx + 0.5, y, cz + dz + 0.5), world) > maxSafeFall) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static boolean hasGroundAt(int x, int startY, int z, WorldView world, int bottomY) {
         for (int dy = 0; dy <= 2; dy++) {
             int y = startY - dy;
