@@ -111,6 +111,22 @@ public class PunkPlayerTask {
     public static void tick(WorldView world, ClientPlayerEntity player) {
         if (!active) return;
 
+        // ── Universal edge-protection while punking ───────────────────────
+        // If we're on the ground and our HORIZONTAL VELOCITY points at a serious
+        // drop, hold sneak. Vanilla sneak won't step off a ledge, so no combat
+        // maneuver, post-kill coast, or knockback carry can slide us into the
+        // void — this covers the seams between combat/approach/disengage where
+        // per-frame key logic isn't running. Skipped while the void-aware
+        // pathfinder executor drives (it may descend on purpose).
+        if (!TungstenModDataContainer.isExecutorRunning()) {
+            double vx = player.getVelocity().x, vz = player.getVelocity().z;
+            if (player.isOnGround() && (vx * vx + vz * vz) > 0.0016
+                    && kaptainwutax.tungsten.combat.VoidDetector.edgeAhead(
+                            player.getEntityPos(), vx, vz, world, 3)) {
+                MinecraftClient.getInstance().options.sneakKey.setPressed(true);
+            }
+        }
+
         tryRediscover();
         if (targetEntity == null || targetEntity.isRemoved() || !targetEntity.isAlive()) {
             return;
@@ -127,6 +143,15 @@ public class PunkPlayerTask {
         if (targetDrop > 3.0 && targetFall > 6) {
             if (mode == Mode.COMBAT) combat.releaseKeys();
             if (FollowEntityTask.isActive()) FollowEntityTask.stop();
+            // Hold with SNEAK: vanilla sneak refuses to walk off a block edge, so
+            // our residual momentum from the knockback kill can't coast us into
+            // the void while we wait for the target to respawn. releaseKeys()
+            // just cleared sneak — re-assert it (and kill any forward carry).
+            net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+            mc.options.forwardKey.setPressed(false);
+            mc.options.sprintKey.setPressed(false);
+            mc.options.jumpKey.setPressed(false);
+            mc.options.sneakKey.setPressed(true);
             mode = Mode.APPROACH;
             return;
         }
