@@ -176,23 +176,28 @@ public class TungstenConfig {
     public int pitchLookAheadNodes = 5;
 
     /** WindMouse gravity — pull toward target per render frame.
-     *  Higher = faster convergence, lower = more human wobble. */
-    public double combatWindMouseGravity = 2.0;
+     *  Higher = faster convergence, lower = more human wobble.
+     *  Bumped 2.0→3.2: the bot was reported "turning slowly" and its aim lagged
+     *  a strafing/knocked-back target (trigger gate angle hit 90°); faster ramp
+     *  closes the gap so swings actually land. */
+    public double combatWindMouseGravity = 3.2;
 
     /** WindMouse wind — random perturbation magnitude per frame.
      *  Higher = more jitter/overshoot. */
     public double combatWindMouseWind = 0.8;
 
     /** WindMouse max step — max degrees per render frame.
-     *  Caps rotation speed. Lower = slower, more human-like. */
-    public double combatWindMouseMaxStep = 4.0;
+     *  Caps rotation speed. Lower = slower, more human-like.
+     *  Bumped 4.0→7.0 for snappier close-range tracking (effective PvP over
+     *  human-like slowness — this is a combat aura, not a legit-look aimer). */
+    public double combatWindMouseMaxStep = 7.0;
 
     /** Distance (degrees) below which wind noise decays.
      *  Below this angle the mouse "settles" toward target. */
     public double combatWindMouseWindDist = 15.0;
 
     /** Snap threshold — degrees. Below this, snap to target exactly. */
-    public double combatWindMouseDoneThreshold = 0.5;
+    public double combatWindMouseDoneThreshold = 0.4;
 
     /** Distance scaling for max step. At far angles, maxStep is multiplied
      *  by up to this factor for fast flick. 1.0 = no scaling. */
