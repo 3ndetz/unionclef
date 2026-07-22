@@ -376,6 +376,14 @@
   - [x] 2.2 Переделка по результатам аудита: агрессивность, точность, скорость решений
     - свой гейт (reach+COLLIDER LOS+угол+кулдаун) + прямой attackEntity; без ESCAPE-на-кулдауне; движение в бою включено + дожим последних полблока; крит-окно при падении
   - [x] 2.3 Боевой тест на стенде: PASS — первый удар 4.3с, жертва убита (20.0), 0 зависаний, бой в высокой траве (deploy/runner/pvp_test.py)
+  - [~] 2.10 (URGENT 2026-07-22, user PVP feedback on v0.31.0) DYNAMIC COMBAT MOVEMENT.
+    The bot was STATIC: `CombatController.tick` ran ONLY aim(WindMouse)+trigger — zero
+    legs — so it rooted, only rotated+clicked; no strafe/jump/kite; didn't handle a
+    target occluded by another entity; showed jump trajectories but never jumped.
+    (2.2's claim "движение в бою включено" had regressed / never lived in CombatController.)
+    FIX: `CombatController.combatMove()` — LOS+safe = circle-strafe + kite to melee reach
+    + randomised crit-jumps; no-LOS = walk the pathfinder route to flank the occluder;
+    danger = release legs (safety owns motion); every strafe/jump void-checked. Testing.
   - [ ] 2.4 Полноценный комбат-арсенал (мысли юзера, зафиксировано 2026-07-20):
     - выбор оружия по ситуации: топор/меч/лук; mace-булава с высоты; трезубец (бросок); арбалет; снежки для первой отдачи — примитивы бросков ещё не сделаны
     - расходники: эндер-пёрлы (гэп-клоуз/отступление), золотые яблоки по ХП — сторона altoclef, не начато
