@@ -41,6 +41,16 @@ public final class VoidGuard {
         if (nearVoid) {
             mc.options.sprintKey.setPressed(false);
         }
+        // Jump suppression uses a LONGER lookahead: a jump carries the bot ~4
+        // blocks, so a rim that's still 2-3 blocks ahead (invisible to the walk
+        // lookahead above) is exactly where a crit- or brake-jump launches us off.
+        double jumpLook = Math.max(3.2, horizSpeed * 16.0);
+        boolean jumpTowardEdge =
+                (keyHeading != null && VoidDetector.edgeAhead(pos, keyHeading[0], keyHeading[1], world, 3, jumpLook))
+                || (horizSpeed > 0.04 && VoidDetector.edgeAhead(pos, vel.x, vel.z, world, 3, jumpLook));
+        if (jumpTowardEdge) {
+            mc.options.jumpKey.setPressed(false);
+        }
         if (edgeByKey || edgeByVel) {
             mc.options.jumpKey.setPressed(false);
             mc.options.sneakKey.setPressed(true);
