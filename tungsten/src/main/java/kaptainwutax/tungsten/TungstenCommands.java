@@ -14,6 +14,7 @@ public class TungstenCommands {
 				// new FollowCommand(mod), // disabled — not ready
 				new FollowPlayerCommand(mod),
 				new PunkPlayerCommand(mod),
+				new RunAwayCommand(mod),
 				new BridgeCommand(mod)
 		);
 	}

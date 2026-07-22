@@ -285,6 +285,14 @@ public class McpServer {
         tool("punkStop", "Stop the tungsten combat engine.", schema(), a -> api.punkStop());
         tool("punkStatus", "Combat status: active + the player currently being fought (null if none).",
                 schema(), a -> api.punkStatus());
+        tool("runAwayPlayer",
+                "Flee a player, keeping at least `distance` blocks (min 3). Mirror of punk — tungsten paths to "
+                + "the safest reachable point AWAY from the threat and never backs off into the void. Stops any punk.",
+                schema("name:string", "distance:int"),
+                a -> api.runAwayPlayer(argStr(a, "name"), argInt(a, "distance")));
+        tool("runAwayStop", "Stop fleeing.", schema(), a -> api.runAwayStop());
+        tool("runAwayStatus", "Flee status: active + the threat currently tracked (null if none).",
+                schema(), a -> api.runAwayStatus());
 
         // building + WorldEdit
         tool("placeBlockAt",

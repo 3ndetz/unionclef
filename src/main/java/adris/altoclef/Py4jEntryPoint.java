@@ -2027,6 +2027,34 @@ public class Py4jEntryPoint {
         return Map.of("ok", true);
     }
 
+    /** Flee a player, keeping at least {@code distance} blocks (min 3). The mirror
+     *  of punk: tungsten paths to the safest reachable point AWAY from the threat,
+     *  re-planning as it chases, and never backs off into the void. Stops any punk
+     *  in progress. The agent decides when to run; the mod keeps the distance. */
+    public Map<String, Object> runAwayPlayer(String name, double distance) {
+        net.minecraft.client.MinecraftClient.getInstance().execute(() ->
+                kaptainwutax.tungsten.task.RunAwayTask.start(name, distance));
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true); out.put("threat", name); out.put("keepDistance", Math.max(3.0, distance));
+        return out;
+    }
+
+    /** Stop fleeing. */
+    public Map<String, Object> runAwayStop() {
+        net.minecraft.client.MinecraftClient.getInstance().execute(
+                kaptainwutax.tungsten.task.RunAwayTask::stop);
+        return Map.of("ok", true);
+    }
+
+    /** Flee status: active + the threat currently tracked (null if none). */
+    public Map<String, Object> runAwayStatus() {
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true);
+        out.put("active", kaptainwutax.tungsten.task.RunAwayTask.isActive());
+        out.put("threat", kaptainwutax.tungsten.task.RunAwayTask.getCurrentThreat());
+        return out;
+    }
+
     /** Combat status: active + the player currently being fought (null if none). */
     public Map<String, Object> punkStatus() {
         Map<String, Object> out = new HashMap<>();

@@ -41,10 +41,12 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		//$$ FollowEntityTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
 		//$$ FollowPlayerTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
 		//$$ PunkPlayerTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
+		//$$ kaptainwutax.tungsten.task.RunAwayTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
 		//#else
 		FollowEntityTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
 		FollowPlayerTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
 		PunkPlayerTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
+		kaptainwutax.tungsten.task.RunAwayTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
 		//#endif
 
 		// BFS walker: immediate movement while physics A* computes

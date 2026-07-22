@@ -43,6 +43,7 @@ public class PunkPlayerTask {
     /** Hunt one specific player by name (explicit target overrides allow/avoid). */
     public static void start(String name) {
         stop();
+        RunAwayTask.stop();   // can't hunt and flee at once
         targetName = name;
         active = true;
         mode = Mode.APPROACH;
@@ -55,6 +56,7 @@ public class PunkPlayerTask {
      *  automatically as the fight evolves. */
     public static void startAny(java.util.List<String> allow, java.util.List<String> avoid) {
         stop();
+        RunAwayTask.stop();   // can't hunt and flee at once
         setTargets(allow);
         setAvoid(avoid);
         anyMode = true;
