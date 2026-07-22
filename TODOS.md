@@ -182,6 +182,13 @@
   - ELYTRA autonomy: descend mountains / cross gaps on elytra, tracking DURABILITY and
     remaining flight; auto-boost with FIREWORKS (rocket count aware); land safely, avoid
     hazards mid-flight.
+    - REFERENCE (we already have it in-repo): baritone has full Nether elytra control —
+      `baritone/process/elytra/ElytraBehavior.java`, `baritone/process/ElytraProcess.java`,
+      `api/process/IElytraProcess.java`, `command/defaults/ElytraCommand.java`,
+      `launch/mixins/MixinFireworkRocketEntity.java`. COPY the mechanic / adapt into
+      tungsten, and study the hard problems they already solved (path solver over terrain
+      while flying, firework boost timing, pitch/aim control, durability/landing, chunk
+      loading ahead of the flight) instead of rediscovering them.
   - VEHICLES: use and (if needed) PLACE minecarts and boats autonomously as part of a route.
   - MLG on vehicles: boat-in-lava tricks — jump across BURNING boats over lava (place boat,
     hop, repeat) as an MLG crossing. Very far future, "по красоте".
