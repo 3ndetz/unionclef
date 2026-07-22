@@ -583,13 +583,15 @@ public class SafetySystem {
      *  movement keys relative to the player's yaw, or null if no movement key. */
     private static double[] pressedHeading(ClientPlayerEntity player, MinecraftClient mc) {
         double fwd = (mc.options.forwardKey.isPressed() ? 1 : 0) - (mc.options.backKey.isPressed() ? 1 : 0);
-        double strafe = (mc.options.rightKey.isPressed() ? 1 : 0) - (mc.options.leftKey.isPressed() ? 1 : 0);
+        // MC convention: movementSideways = +1 for LEFT (A), -1 for RIGHT (D).
+        double strafe = (mc.options.leftKey.isPressed() ? 1 : 0) - (mc.options.rightKey.isPressed() ? 1 : 0);
         if (fwd == 0 && strafe == 0) return null;
         double yawRad = Math.toRadians(player.getYaw());
         double sin = Math.sin(yawRad), cos = Math.cos(yawRad);
-        // MC input→world: forward = (-sin, cos), strafe-right = (cos, sin)
-        double dx = fwd * -sin + strafe * cos;
-        double dz = fwd *  cos + strafe * sin;
+        // MC input→world (movementInputToVelocity): worldX = sideways*cos - forward*sin,
+        //                                           worldZ = forward*cos  + sideways*sin
+        double dx = strafe * cos - fwd * sin;
+        double dz = fwd * cos + strafe * sin;
         return new double[]{dx, dz};
     }
 
