@@ -27,11 +27,14 @@ def py4j(op, to=30, **kw):
     return json.loads(r.stdout.strip().splitlines()[-1])
 def rcon(c): return sh(["docker","exec",SERVER,"rcon-cli",c]).stdout.strip()
 def pos():
-    o = rcon(f"data get entity {BOT} Pos")
-    try:
-        p = o.split("[")[1].split("]")[0].split(",")
-        return [round(float(v.strip().rstrip("d")),1) for v in p]
-    except Exception: return None
+    for _ in range(6):
+        o = rcon(f"data get entity {BOT} Pos")
+        try:
+            p = o.split("[")[1].split("]")[0].split(",")
+            return [round(float(v.strip().rstrip("d")),1) for v in p]
+        except Exception:
+            time.sleep(1)
+    return None
 
 def main():
     for _ in range(30):
@@ -47,7 +50,10 @@ def main():
     rcon(f"tp {BOT} 0 -60 0 0 0"); time.sleep(1)
     rcon(f"item replace entity {BOT} weapon.mainhand with minecraft:stone 64")
     time.sleep(1)
-    y0 = pos()[1]
+    p0 = pos()
+    if p0 is None:
+        print("FAIL: could not read bot position (not loaded?)"); import sys; sys.exit(1)
+    y0 = p0[1]
     print(f"start y={y0}, block in hand, pillar to {int(y0)+5}...")
     print("pillar:", py4j("pillar", y=int(y0)+5))
     best = y0; t0 = time.time()
