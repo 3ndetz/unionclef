@@ -229,7 +229,11 @@ if (project.name == "1.21.1" || project.name == "1.21.11") {
         tagName = provider { isPreRelease.get() ? "v${project.mod_version}-alpha" : "v${project.mod_version}" }
         releaseName = provider { isPreRelease.get() ? "UnionClef v${project.mod_version}-alpha (MC ${project.name})" : "UnionClef v${project.mod_version} (MC ${project.name})" }
         releaseAssets = releaseAssetFiles
-        targetCommitish = provider { isPreRelease.get() ? "1.21.11" : "main" }
+        // Anchor releases to the ACTIVE working branch (1.21.11), not `main`. `main` is
+        // stale (all work is on the unmerged 1.21.11 branch), so targeting it dated every
+        // release to main's old commit -> the releases sorted below older ones. Once
+        // 1.21.11 is merged to main (final goal #22) this can go back to `main`.
+        targetCommitish = "1.21.11"
         generateReleaseNotes = true
         body = releaseBodyProvider
         draft = false
