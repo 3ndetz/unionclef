@@ -21,9 +21,16 @@
   walk+place) and a Pillar move (place under self to go up), mirroring baritone
   MovementParkourPlace / MovementPillar / MovementTraverse backplace. Consult PlaceRules
   (allowPlace/protect) + inventorySpace. This unblocks BUG #27 and real building-in-path.
-- [ ] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
-  often prints 'Ran out of nodes' and fails. Diagnose node-budget/heuristic/move-gen, fix the
-  pipeline. Neither fail-on-simple-parkour NOR search-forever-for-nonexistent.
+- [~] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
+  often prints 'Ran out of nodes' and fails. PARTLY FIXED v0.40.0 (#34): the walker's grid-BFS
+  path source (CombatPathfinder) now generates parkour jump-moves (+2..4 across, flat or +1 up),
+  so stepped/gapped terrain (course B) climbs via the walker instead of flailing/stubbing —
+  terrain_test B now PASS. REMAINING: the async block-space physics pathfinder still can't route
+  parkour at all (diag_b: pure ;goto doesn't move on B), so a pure-;goto over a gap still fails —
+  port the parkour move into the async BlockNode move-gen too if we want ;goto parity.
+- [x] #34 Tungsten parkour move-gen (jump gaps) — DONE v0.40.0 for the walker path (course B
+  climbs, A/D no regression, break_test intact, combat unchanged). Course C (2-block vertical
+  wall) still needs place-to-climb (#46 second half), not parkour.
 - [x] BUG #29 (CRITICAL, live test 2026-07-22) Camera FREEZES locked on a block forever, bot
   hard-stuck; never recovers, survives reconnect. FIXED v0.39.0. Root: WindMouseRotation is a
   static singleton that steered the mouse toward its stored target every render frame — a task

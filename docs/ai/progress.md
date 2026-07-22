@@ -695,3 +695,37 @@ settle in-game after a container restart before tests are reliable.
 Next: block-space move-generation cluster (#28 ran-out-of-nodes, #30 unreal routes into
 walls, #31 break-through not completing) — all root in the legacy blind r=8 neighbor gen;
 the fix is hardening the flag-gated `SmartMoves` into a robust default.
+
+---
+
+## 2026-07-22 — #34 parkour move-gen (course B climbs) — v0.40.0
+
+**Investigate (terrain baseline on 0.39.0).** Default path: A staircase PASS, B steep FAIL,
+C wall FAIL, D snap PASS. SmartMoves ON is WORSE (A regresses to FAIL, C "no block path") —
+the SmartMoves-to-default epic is NOT tractable and regresses the proven default. Diagnostic
+`diag_b` (pure `;goto` = async physics pathfinder, bypasses driveTungstenPrimary): the async
+pathfinder does NOT move on B at all → it can't route the +2x+1y parkour-ascend chain. But the
+default `@goto` (walker via CombatPathfinder stub) climbed B to maxY -56.8 — so the WALKER is
+what climbs; the difference is A gets a 13-16 wp path (waypoint per step) while B got a 2-wp
+stub. Root: `CombatPathfinder.getWalkableNeighbors` only emits adjacent walk / +1 step-up / -1
+step-down — no jump-across move, so pillar-to-pillar (+2x+1y, gap between) has no neighbour and
+the BFS either stubs or descends to the floor and never climbs.
+
+**Implement (durable, core, isolated).** Added a parkour move to CombatPathfinder: a running
+jump 2..4 across, flat or +1 up, with the full flight path (feet+head) clear. Threaded an
+`allowParkour` flag: `findPath` (goto/follow) = true, combat attack (`bfsPath`) + retreat
+(`findRetreatPath`) = false → **combat pathing byte-for-byte unchanged**. Parkour only tried
+where no flat walk exists in a cardinal direction → flat-terrain branching + node budget
+untouched. The walker already jumps toward higher waypoints (`needJumpUp`), so proper
+per-landing waypoints = it climbs.
+
+**Test.** terrain_test: A PASS, **B PASS (reached top, maxY -56)**, C FAIL (expected — 2-block
+wall needs place-to-climb, #46), D PASS. break_test C_wall/D_sand/E_tool/F_api all PASS (goto
+findPath flow not regressed). Combat unchanged by construction. Released + verified v0.40.0.
+
+**Levers:** `diag_b.py` (isolates async-pathfinder vs walker climbing on B).
+
+Next: #30 walker BFS stuck-detection — tickBFS sprints toward a waypoint with no progress check,
+so an unreal route (waypoint behind a wall) drives the bot into the wall until the coarse 5s
+altoclef net fires. Mirror DIRECT mode's noProgressTicks: no progress toward a waypoint for
+~1.5s → the segment is unexecutable → stop + re-path (the user's "paths into walls" #30).
