@@ -32,6 +32,12 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     // The walker can't parkour (gap jumps / wall climbs). When it stalls we hand the
     // segment to the physics executor (which can) for a window, then re-try the walker.
     private long twPreferExecutorUntilMs = 0L;
+    // Net-progress-toward-goal tracking, to give up on genuinely UNREACHABLE goals
+    // (e.g. a tree top needing place/break we don't plan yet) instead of searching
+    // forever. Keyed on distance to goal, not raw movement — a bot wandering in place
+    // near an unreachable goal makes no NET progress even though it "moves". #27.
+    private double twBestDistToGoal = -1;
+    private long twBestImproveMs = 0L;
     Block[] annoyingBlocks = new Block[]{
             Blocks.VINE,
             Blocks.NETHER_SPROUTS,
@@ -264,6 +270,28 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         long nowMs = System.currentTimeMillis();
         net.minecraft.util.math.Vec3d plNow = new net.minecraft.util.math.Vec3d(
                 mod.getPlayer().getX(), mod.getPlayer().getY(), mod.getPlayer().getZ());
+
+        // ── Unreachable-goal give-up (net progress toward the goal) ────────
+        // If the closest we've gotten to the goal hasn't improved for a while, the goal
+        // is unreachable under the current move set (we can't place/pillar/bridge yet).
+        // Give up: stop tungsten and yield WITHOUT resetting the parent progress checker,
+        // so the task can fail cleanly instead of the pathfinder spinning forever. #27.
+        double distToGoalNow = plNow.distanceTo(gp);
+        if (twBestDistToGoal < 0 || distToGoalNow < twBestDistToGoal - 0.5) {
+            twBestDistToGoal = distToGoalNow;
+            twBestImproveMs = nowMs;
+        } else if (twBestImproveMs > 0 && nowMs - twBestImproveMs > 14000 && distToGoalNow > 2.0) {
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            var pfU = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
+            var exU = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (pfU != null) pfU.stop.set(true);
+            if (exU != null) exU.stop = true;
+            twBestDistToGoal = -1; twBestImproveMs = 0L;   // re-measure on re-entry
+            kaptainwutax.tungsten.Debug.logMessage(
+                    "[nav] goal unreachable — no progress in 14s (dist " + String.format("%.1f", distToGoalNow) + "), yielding");
+            return false;   // NOTE: no checker.reset() here — let the task fail
+        }
+
         if (twStuckPos == null || plNow.distanceTo(twStuckPos) > 0.75) {
             twStuckPos = plNow; twStuckSinceMs = nowMs; twStuckResets = 0;
         } else if (kaptainwutax.tungsten.task.BlockPathWalker.isRunning() && nowMs - twStuckSinceMs > 2500) {
