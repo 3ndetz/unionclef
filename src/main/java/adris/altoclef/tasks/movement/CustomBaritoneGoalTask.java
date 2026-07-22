@@ -29,6 +29,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     private net.minecraft.util.math.Vec3d twStuckPos = null;
     private long twStuckSinceMs = 0L;
     private int twStuckResets = 0;
+    // The walker can't parkour (gap jumps / wall climbs). When it stalls we hand the
+    // segment to the physics executor (which can) for a window, then re-try the walker.
+    private long twPreferExecutorUntilMs = 0L;
     Block[] annoyingBlocks = new Block[]{
             Blocks.VINE,
             Blocks.NETHER_SPROUTS,
@@ -263,11 +266,18 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 mod.getPlayer().getX(), mod.getPlayer().getY(), mod.getPlayer().getZ());
         if (twStuckPos == null || plNow.distanceTo(twStuckPos) > 0.75) {
             twStuckPos = plNow; twStuckSinceMs = nowMs; twStuckResets = 0;
+        } else if (kaptainwutax.tungsten.task.BlockPathWalker.isRunning() && nowMs - twStuckSinceMs > 2500) {
+            // The WALKER stalled — most likely a parkour move it can't do (gap jump /
+            // wall climb). Hand this segment to the physics executor (which parkours)
+            // for a window, then re-try the walker.
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            twPreferExecutorUntilMs = nowMs + 8000;
+            twStuckSinceMs = nowMs;
         } else if (nowMs - twStuckSinceMs > 5000) {
-            // No movement for 5s — the tungsten nav is trapped (stale-rooted reject
-            // loop / unreachable sub-goal). Reset it so it re-plans from the ACTUAL
-            // position; after a few fruitless resets, yield to the wander so we walk
-            // out of a local trap instead of freezing forever.
+            // Even the executor is stuck — trapped (stale-rooted reject loop /
+            // unreachable sub-goal). Reset the nav to re-plan from the ACTUAL position;
+            // after a few fruitless resets, yield to the wander so we walk out of a
+            // local trap instead of freezing forever.
             var pfR = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
             var exR = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
             if (pfR != null) { pfR.stop.set(true); pfR.overrideStartPos = null; }
@@ -308,7 +318,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 setDebugState("Tungsten (primary) walking terrain...");
                 return true;
             }
-            if (distToGoal > 4.0 && !mod.getPlayer().isTouchingWater()) {
+            if (distToGoal > 4.0 && !mod.getPlayer().isTouchingWater()
+                    && nowMs >= twPreferExecutorUntilMs) {
                 // (1) cheap grid BFS — instant, good for near/clean terrain.
                 net.minecraft.util.math.BlockPos startB = mod.getPlayer().getBlockPos();
                 net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
