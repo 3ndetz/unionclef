@@ -250,8 +250,8 @@ public class BlockSpacePathFinder {
 	
 	private static double getDistFromStartSq(BlockNode n, Vec3d start) {
         double xDiff = start.x - n.getPos().x;
-        double yDiff = start.x - n.getPos().y;
-        double zDiff = start.x - n.getPos().z;
+        double yDiff = start.y - n.getPos().y;
+        double zDiff = start.z - n.getPos().z;
         return xDiff * xDiff + yDiff * yDiff + zDiff * zDiff;
     }
 
