@@ -8,7 +8,19 @@
 - [ ] BUG #27 (unreachable goal → infinite search) A goal reachable only by placing/breaking
   (e.g. tree top) makes the pathfinder search FOREVER; it doesn't try place/break though
   allowed. Want: attempt to reach (pillar/bridge/mine) OR fail gracefully as 'unreachable'
-  after bounded attempts — never infinite.
+  after bounded attempts — never infinite. ROOT CAUSE (audit 2026-07-22): the block-space
+  A* plans BREAKING (tryPlanBreakThrough) but has NO PLACE-as-a-move — so it can't pillar
+  up / bridge to a place-only goal and never even tries. Two parts: (a) SHORT: bounded
+  give-up -> clean 'unreachable' instead of infinite re-plan; (b) REAL FIX: see the
+  elevated item below (place-as-a-move in the search).
+- [ ] PRIORITY (elevated 2026-07-22, was TODOS 7.2 "deferred"; user asked "did you add
+  building/bridging to tungsten?"): PLACE-AS-A-MOVE in the block-space search. Today the
+  pathfinder never bridges across a gap or pillars up during goto — placing only happens
+  when the agent explicitly calls bridgeTo/placeBlockAt. Integrate it like breaking
+  (tryPlanBreakThrough) already is: a Bridge move (place at dest.down across a gap, cost =
+  walk+place) and a Pillar move (place under self to go up), mirroring baritone
+  MovementParkourPlace / MovementPillar / MovementTraverse backplace. Consult PlaceRules
+  (allowPlace/protect) + inventorySpace. This unblocks BUG #27 and real building-in-path.
 - [ ] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
   often prints 'Ran out of nodes' and fails. Diagnose node-budget/heuristic/move-gen, fix the
   pipeline. Neither fail-on-simple-parkour NOR search-forever-for-nonexistent.
