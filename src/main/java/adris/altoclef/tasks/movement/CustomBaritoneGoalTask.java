@@ -23,6 +23,12 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     private final boolean wander;
     protected MovementProgressChecker checker = new MovementProgressChecker();
     protected Goal cachedGoal = null;
+    // Anti-permanent-stuck (tungsten-primary): if the bot hasn't moved for a while,
+    // the tungsten nav is trapped (unreachable sub-goal / stale-rooted reject loop) —
+    // reset its state so it re-plans fresh, then yield to wander if it stays stuck.
+    private net.minecraft.util.math.Vec3d twStuckPos = null;
+    private long twStuckSinceMs = 0L;
+    private int twStuckResets = 0;
     Block[] annoyingBlocks = new Block[]{
             Blocks.VINE,
             Blocks.NETHER_SPROUTS,
@@ -250,6 +256,27 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (cachedGoal == null || isFinished()) return false;
         net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
         if (gp == null) return false;
+
+        // ── Anti-permanent-stuck safety net ──────────────────────────────
+        long nowMs = System.currentTimeMillis();
+        net.minecraft.util.math.Vec3d plNow = new net.minecraft.util.math.Vec3d(
+                mod.getPlayer().getX(), mod.getPlayer().getY(), mod.getPlayer().getZ());
+        if (twStuckPos == null || plNow.distanceTo(twStuckPos) > 0.75) {
+            twStuckPos = plNow; twStuckSinceMs = nowMs; twStuckResets = 0;
+        } else if (nowMs - twStuckSinceMs > 5000) {
+            // No movement for 5s — the tungsten nav is trapped (stale-rooted reject
+            // loop / unreachable sub-goal). Reset it so it re-plans from the ACTUAL
+            // position; after a few fruitless resets, yield to the wander so we walk
+            // out of a local trap instead of freezing forever.
+            var pfR = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
+            var exR = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (pfR != null) { pfR.stop.set(true); pfR.overrideStartPos = null; }
+            if (exR != null) exR.stop = true;
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            twStuckSinceMs = nowMs;
+            if (++twStuckResets >= 3) { twStuckResets = 0; twStuckPos = null; return false; }
+        }
+
         try {
             var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
             var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
