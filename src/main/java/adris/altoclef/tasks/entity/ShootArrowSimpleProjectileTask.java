@@ -84,15 +84,12 @@ public class ShootArrowSimpleProjectileTask extends Task {
      * it also serves as the fallback when no flat solution exists (out of range).
      */
     public static Rotation calculateThrowLook(AltoClef mod, Entity target, boolean highAng, Item rangedItem) {
+        // Aim for the FULL-draw arc (charge 1.0), not the current partial charge.
+        // Recomputing charge from useTime every tick makes the pitch target swing
+        // ~18 deg over the draw, so WindMouse never settles before the timer-based
+        // release fires -> systematic miss. A fixed full-draw target is stable and
+        // matches the release point (requiredChargeTime hits full charge at range).
         double charge = 1.0;
-        if (rangedItem != null && rangedItem.equals(Items.BOW)) {
-            int useTime = mod.getPlayer().getItemUseTime();
-            if (useTime > 5) {
-                float v = useTime / 20f;
-                v = (v * v + v * 2) / 3f;
-                charge = MathHelper.clamp(v, 0.5f, 1f);
-            }
-        }
 
         Vec3d vel = target.getVelocity();
         if (vel.x * vel.x + vel.z * vel.z < 0.0025) { // < 0.05 b/tick — flat velocity field
