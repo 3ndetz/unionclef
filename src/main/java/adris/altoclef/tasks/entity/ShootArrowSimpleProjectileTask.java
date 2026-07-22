@@ -12,6 +12,7 @@ import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.time.TimerGame;
 import baritone.api.utils.Rotation;
 import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.combat.TrajectorySolver;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.projectile.ProjectileEntity;
@@ -67,7 +68,47 @@ public class ShootArrowSimpleProjectileTask extends Task {
         return calculateThrowLook(mod, target, shouldUseHighAngRanged(target), rangedItem);
     }
 
+    /**
+     * Direct-fire aim now goes through tungsten's {@link TrajectorySolver}, which
+     * simulates real vanilla arrow physics (drag 0.99, gravity 0.05, speed 3.0/tick,
+     * pitch by bisection) instead of the old g=0.006 closed form. Lead comes from
+     * the target's per-tick position delta — NOT getVelocity(), which is ~0 for
+     * other players (they move by position packets), so the solver would otherwise
+     * never lead a running target.
+     *
+     * High-angle (no line of sight / artillery over obstacles) stays on the legacy
+     * closed-form lob below: TrajectorySolver only solves the flat trajectory, so
+     * it also serves as the fallback when no flat solution exists (out of range).
+     */
     public static Rotation calculateThrowLook(AltoClef mod, Entity target, boolean highAng, Item rangedItem) {
+        double charge = 1.0;
+        if (rangedItem != null && rangedItem.equals(Items.BOW)) {
+            int useTime = mod.getPlayer().getItemUseTime();
+            if (useTime > 5) {
+                float v = useTime / 20f;
+                v = (v * v + v * 2) / 3f;
+                charge = MathHelper.clamp(v, 0.5f, 1f);
+            }
+        }
+
+        Vec3d vel = new Vec3d(
+                target.getPos().getX() - target.prevX,
+                target.getPos().getY() - target.prevY,
+                target.getPos().getZ() - target.prevZ);
+        if (target.isOnGround()) vel = new Vec3d(vel.x, 0, vel.z);
+        Vec3d aimPoint = target.getPos().add(0, target.getHeight() * 0.6, 0);
+        Vec3d eye = mod.getPlayer().getEyePos();
+
+        if (!highAng) {
+            TrajectorySolver.Solution sol = TrajectorySolver.solve(eye, aimPoint, vel, charge);
+            if (sol != null) return new Rotation(sol.yaw, sol.pitch);
+        }
+        return calculateThrowLookLegacy(mod, target, highAng, rangedItem);
+    }
+
+    /** Closed-form lob aim (g=0.006). Kept for high-angle artillery and as the
+     *  fallback when TrajectorySolver finds no flat solution. */
+    public static Rotation calculateThrowLookLegacy(AltoClef mod, Entity target, boolean highAng, Item rangedItem) {
         float velocity = 1;
         if (rangedItem != null && rangedItem.equals(Items.BOW)) {
             int useTime = mod.getPlayer().getItemUseTime();
