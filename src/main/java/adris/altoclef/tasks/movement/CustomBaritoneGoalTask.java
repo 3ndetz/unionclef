@@ -268,13 +268,19 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 // each time the walker stops (finished / stalled) — a rolling horizon to
                 // the goal. The physics executor stays the fallback for moves the block
                 // BFS can't express: water swim, slime bounce, parkour gaps.
-                net.minecraft.util.math.BlockPos startB = mod.getPlayer().getBlockPos();
-                net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
-                java.util.List<net.minecraft.util.math.BlockPos> bfs =
-                        kaptainwutax.tungsten.combat.CombatPathfinder.findPath(startB, goalB, mod.getWorld());
-                if (bfs.size() >= 2) {
+                // Elevation-aware block path (the same block-space search the executor
+                // uses, so it climbs steps/slopes — CombatPathfinder's grid BFS is flat
+                // only). Sync, but only on a re-plan (segment end / stall), not every tick.
+                java.util.Optional<java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>> bp =
+                        kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(
+                                mod.getWorld(), gp, mod.getPlayer());
+                if (bp.isPresent() && bp.get().size() >= 2) {
+                    java.util.List<net.minecraft.util.math.BlockPos> waypoints = new java.util.ArrayList<>();
+                    for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : bp.get()) {
+                        waypoints.add(n.getBlockPos());
+                    }
                     if (ex != null) ex.stop = true;   // keep the drift-prone executor out of the walker's way
-                    kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
+                    kaptainwutax.tungsten.task.BlockPathWalker.startBFS(waypoints);
                 } else {
                     if (ex != null) ex.stop = false;  // a prior ;stop leaves it stuck true
                     pf.find(mod.getWorld(), gp, mod.getPlayer());

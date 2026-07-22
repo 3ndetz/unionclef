@@ -56,8 +56,8 @@ def build():
     # clear a working area and lay a flat floor at y=-61 (top -60)
     rcon("fill 0 -60 -4 40 10 4 air")
     rcon("fill 0 -61 -4 40 -61 4 stone")
-    # A: staircase, 6 one-block steps ascending +x from x=2
-    for i in range(1,7):
+    # A: LONG staircase, 12 one-block steps ascending +x from x=2 (accumulate drift)
+    for i in range(1,13):
         rcon(f"setblock {1+i} {-61+i} 0 stone")
     # B: steep — 1-block step every other x from x=14 (jump-up each)
     for i in range(1,6):
@@ -92,7 +92,7 @@ def main():
     wait_for("rcon", lambda:"players" in rcon("list"),300,5)
     ensure(); build()
     print("swap:", py4j(C1,"swap",on=True))
-    a=trial("A staircase (1-blk steps)", [7,-54,0])
+    a=trial("A long staircase (12 1-blk steps)", [13,-48,0], 45)
     b=trial("B steep (jump-up each)",    [22,-56,0])
     c=trial("C 2-block wall ledge",      [29,-58,0])
     py4j(C1,"stop")
