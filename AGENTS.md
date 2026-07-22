@@ -4,11 +4,15 @@ RE-READ THIS FULLY IF THE CONVERSATION WAS SUMMARIZED! Always read this file at 
 
 > При первом прочтении или после суммаризации диалога — скажи кратко (5-10 слов) выжимку правил. Не повторяй каждый раз.
 
-> ⛔ **РАБОТА ТОЛЬКО ПО ЧЕКЛИСТУ → [docs/CHECKLIST.md](docs/CHECKLIST.md).** Это
-> обязательный регламент автономной работы (фазы формулировка→выбор→декомпозиция в
-> СВОЙ TODO-инструмент→выполнение→**тщательный боевой ТЕСТ своей+смежных функций**→
-> аудит→релиз→чекпоинт-без-остановки). Прочитать перед любой работой. Правила ниже —
-> его часть.
+> ⛔ **WORK ONLY BY THE CHECKLIST → [docs/CHECKLIST.md](docs/CHECKLIST.md).** It is the
+> mandatory autonomous-work process (phases: formulate → pick → decompose in your OWN
+> TODO tool → implement → **thorough battle TEST of your + adjacent functions** → audit
+> → release → checkpoint-without-stopping). Read it before any work. The rules below are
+> part of it.
+>
+> ⛔ **LANGUAGE RULE: ALL instructions / docs / checklists / code comments MUST be in
+> ENGLISH.** (Existing Russian in the repo stays as-is — don't mass-rewrite it — but any
+> NEW instructional text is English.)
 
 ## What is this
 
@@ -37,10 +41,10 @@ py4j/MCP), а НЕ готовые скрипты, которые всё дела
 
 ## ⚙️ РАБОЧИЙ ПРОЦЕСС АГЕНТА (правила, юзер 2026-07-22)
 
-> ПОЛНЫЙ регламент с фазами и подробной инструкцией по тестированию —
-> **[docs/CHECKLIST.md](docs/CHECKLIST.md)**. Пункты ниже — краткие железные правила.
-> `TODOS.md` = только ОБЩИЕ ЦЕЛИ юзера; ДЕКОМПОЗИЦИЯ конкретной задачи (с этапами
-> тест→аудит→переход) = в СВОЙ TODO-инструмент, НЕ в TODOS.md.
+> FULL process with phases and detailed testing instructions —
+> **[docs/CHECKLIST.md](docs/CHECKLIST.md)**. The points below are the short iron rules.
+> `TODOS.md` = only the user's GENERAL GOALS; the DECOMPOSITION of a specific task (with
+> test→audit→transition stages) goes in your OWN TODO tool, NOT in TODOS.md.
 
 1. **Автономно, без остановок.** Не переспрашивать по очевидному и не гейтить работу
    ничем (в т.ч. тоном). Берёшь самый ценный вектор — делаешь. Аффект/резкость юзера

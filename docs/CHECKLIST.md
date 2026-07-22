@@ -1,159 +1,167 @@
-# ЧЕКЛИСТ АВТОНОМНОЙ РАБОТЫ (обязательный регламент)
+# AUTONOMOUS WORK CHECKLIST (mandatory process)
 
-> Правило №0: **РАБОТА ТОЛЬКО ПО ЭТОМУ ЧЕКЛИСТУ.** Ни один шаг не пропускается.
-> Самая важная часть — **ТЕСТИРОВАНИЕ** (фаза 5): реальная боевая проверка ИМЕННО
-> твоей функции + смежных, а не «зелёный шум». Задача без теста = НЕ сделана.
+> Rule #0: **WORK ONLY BY THIS CHECKLIST.** No phase is skipped.
+> The most important phase is **TESTING** (phase 5): a real, battle-grade check of
+> YOUR function + adjacent functions — never "green noise". A task with no test is
+> NOT done.
+>
+> Rule #0.1 (language): **ALL instructions / docs / checklists / code comments are
+> written in ENGLISH.** (Existing Russian in the repo stays as-is; new instructional
+> text is English.) See AGENTS.md.
 
-Этот файл — единый источник правды по процессу. `AGENTS.md` ссылается сюда.
-Связанные документы: `AGENTS.md` (правила проекта), `TODOS.md` (глобальные цели),
-`docs/ai/progress.md` (детальный прогресс IPI), `docs/RELEASE.md` (как релизить),
-`docs/DEVELOP.md` (сборка/запуск).
-
----
-
-## Цикл одной задачи (фазы 1–8)
-
-### Фаза 1 — ФОРМУЛИРОВКА ЗАДАЧ (в TODOS.md)
-- В **`TODOS.md`** хранятся ТОЛЬКО **ОБЩИЕ ЦЕЛИ, поставленные юзером** — общий
-  список задач-целей. По возможности с **критериями приёмки** и разветвлениями.
-- **ЖЁСТКОЕ РАЗГРАНИЧЕНИЕ:** `TODOS.md` — НЕ для рабочего процесса, шагов, этапов
-  тестирования/аудита. Всё это — в **своём TODO-инструменте** (фаза 3). Не путать.
-- Ссылки на референсы (baritone/shredder исходники рядом) — уместны.
-
-### Фаза 2 — ВЫБОР ЗАДАЧИ
-- Приоритет задаёт юзер. **Если не задан — берёшь сам по порядку** из `TODOS.md`
-  (сверху вниз / ближайший незакрытый крупный вектор).
-- Одна задача за раз. Не распыляться, не забегать вперёд.
-
-### Фаза 3 — ПОДГОТОВКА (перед тем как писать код)
-- `git fetch` + `git pull --rebase` на рабочей ветке (синхрон с origin ДО правок).
-- **Оценить код и задачу**: прочитать релевантные модули, понять текущее устройство.
-- **ДЕКОМПОЗИРОВАТЬ** задачу на простые подзадачи.
-- Зафиксировать декомпозицию в **своём TODO-инструменте** (`TaskCreate`/Task*) —
-  это ОТДЕЛЬНО от `TODOS.md`. Декомпозиция КОНКРЕТНОЙ задачи **ОБЯЗАТЕЛЬНО**
-  содержит явными пунктами:
-  - шаги реализации (Investigate → Plan → Implement),
-  - **этап ТЕСТИРОВАНИЯ** (целевой тест + регрессия смежных — фаза 5),
-  - **этап АУДИТА** (фаза 6),
-  - **этап РЕЛИЗА** (фаза 7, если применимо),
-  - **этап ПЕРЕХОДА к следующей задаче** (чекпоинт — фаза 8).
-  Вести по нему прогресс (отмечать статусы). `docs/ai/progress.md` — детальный лог IPI.
-
-### Фаза 4 — ВЫПОЛНЕНИЕ
-- Решать **ПРАВИЛЬНО В ЯДРЕ** (пасфайндер/физика/эвристики), **БЕЗ** скриптов-
-  заплаток/костылей/фоллбеков. Нет фичи — добавить в ядро, а не обойти реактивно.
-- **Tungsten-first, без фоллбеков на baritone** (baritone/shredder не импортировать).
-- Гибкие, композируемые, переиспользуемые примитивы; один источник правды, без дублей.
-  **Примитивы, не политика**: мод исполняет, агент решает стратегию.
-- **НЕ «быстро»**. Медленно, но верно. «Быстрее» — не цель, этого никто не просил.
-- **Атомарные коммиты**: один коммит = одно логическое изменение. **НЕ сваливать
-  несвязанные side-задачи в один коммит.** Author = owner (не AI), без `Co-Authored-By`.
-- **Push после каждого атомарного коммита** (git-дисциплина, ниже). Периодически `pull`.
-
-### Фаза 5 — ТЕСТИРОВАНИЕ (ГЛАВНАЯ ФАЗА — детали в конце файла)
-Ни одно изменение не «сделано» без боевого теста на стенде `deploy/`. Кратко:
-1. **Свою функцию** — целевой тест, доказывающий что фича РЕАЛЬНО заработала.
-2. **Смежные функции** — регрессия: что рядом не сломалось.
-3. **Общая адекватность** — здравый смысл: результат осмыслен? (не «прошло, но по
-   странной причине»).
-4. **Реально, не шум** — боевой сценарий, а не мок/«зелёная галочка» ни о чём.
-5. **Отделять реальный провал от флака стенда** (тёплый бот, рестарт+ожидание py4j,
-   ретрай). Флак ≠ регресс.
-
-### Фаза 6 — АУДИТ ВЫПОЛНЕННОГО
-- Оценить работу целиком на адекватность: соответствует критериям приёмки? не
-  оставил ли регресс/полу-меру? код читается как окружающий? нет мусора/дублей?
-- Если фича НЕ достигнута — не выдавать за сделанное. Либо доделать, либо честно
-  откатить к стабильному и задокументировать причину и следующий шаг.
-
-### Фаза 7 — РЕЛИЗ (только протестированное стабильное)
-Полный гайд — **`docs/RELEASE.md`**. Кратко:
-1. Ноты `docs/releases/<mod_version>.md` (результаты тестов, известные баги, КАК
-   тестировать новые фичи — какие команды гонять).
-2. Bump `mod_version` в `gradle.properties`.
-3. `gradlew githubRelease` (единственный способ; тегает+публикует+прикладывает JAR).
-- Регулярно релизить накопленную СТАБИЛЬНУЮ работу. Не копить, не релизить сырое.
-
-### Фаза 8 — ЧЕКПОИНТ и СЛЕДУЮЩАЯ ЗАДАЧА
-- Зафиксировать прогресс: отметить в `TODOS.md`, детально в `docs/ai/progress.md`.
-- TG-уведомление (`PushNotification`) если это веха, которую юзер захочет знать сейчас.
-- **РАБОТУ НЕ ПРЕКРАЩАТЬ.** Взять следующую задачу (фаза 2) и идти по циклу заново.
+This file is the single source of truth for the process. `AGENTS.md` links here.
+Related docs: `AGENTS.md` (project rules), `TODOS.md` (global goals),
+`docs/ai/progress.md` (detailed IPI progress), `docs/RELEASE.md` (how to release),
+`docs/DEVELOP.md` (build/run/stand).
 
 ---
 
-## ⛔ ЖЕЛЕЗНЫЕ ПРАВИЛА (нарушать нельзя)
+## Single-task cycle (phases 1–8)
 
-1. **Работа ТОЛЬКО по этому чеклисту.** Все фазы, по порядку.
-2. **Стоп только при отказе hardware или завершении ВСЕХ задач.** Выбор приоритета
-   юзером, аффект/резкость юзера, «удобный чекпоинт» — **НЕ** причины остановиться.
-   Аффект юзера = усиление приоритета ошибки, а не повод встать.
-3. **ТЕСТ ОБЯЗАТЕЛЕН НА ВСЁ** — своя функция + смежные, боевой, не шум. Без теста
-   задача не закрыта и не релизится.
-4. **Каждая задача — полноценно и тщательно.** Не «быстро», не полу-мера, не костыль.
-5. **Не сваливать несвязанные изменения в один коммит.** Атомарность.
-6. **Решать в ядре, без скриптов/фоллбеков.** Tungsten-first, baritone не импортировать.
-7. **git-дисциплина:** перед работой `fetch`+`pull --rebase`; после каждого
-   атомарного коммита — `push`; в конце — чистый `git status -sb`, нет незапушенного.
-8. **Author = owner, без `Co-Authored-By`.** Никаких эмодзи в UI (только в текстах).
-9. Если фаза упала (тест красный) — **чинить или откатывать к стабильному**, не
-   оставлять сломанное и не идти дальше поверх регресса.
+### Phase 1 — FORMULATE GOALS (in TODOS.md)
+- `TODOS.md` holds ONLY **the user's GENERAL GOALS** — the high-level task list.
+  Where possible with **acceptance criteria** and branches.
+- **HARD SEPARATION:** `TODOS.md` is NOT for the working process, steps, or
+  test/audit stages. All of that goes in your **own TODO tool** (phase 3). Don't mix.
+- References to reference sources (baritone/shredder — sources sit alongside) are fine.
+
+### Phase 2 — PICK A TASK
+- The user sets priority. **If not set — you pick yourself, in order** from
+  `TODOS.md` (top-down / the nearest open large vector).
+- One task at a time. Don't scatter, don't run ahead.
+
+### Phase 3 — PREPARE (before writing any code)
+- `git fetch` + `git pull --rebase` on the working branch (sync with origin BEFORE edits).
+- **Assess the code and the task**: read the relevant modules, understand the current design.
+- **DECOMPOSE** the task into simple subtasks.
+- Record the decomposition in your **own TODO tool** (`TaskCreate`/Task*) — this is
+  SEPARATE from `TODOS.md`. The decomposition of a SPECIFIC task **MUST** include, as
+  explicit items:
+  - implementation steps (Investigate → Plan → Implement),
+  - a **TESTING stage** (targeted test + adjacent-function regression — phase 5),
+  - an **AUDIT stage** (phase 6),
+  - a **RELEASE stage** (phase 7, if applicable),
+  - a **TRANSITION-to-next-task stage** (checkpoint — phase 8).
+  Track progress on it (update statuses). `docs/ai/progress.md` is the detailed IPI log.
+
+### Phase 4 — IMPLEMENT
+- Solve it **CORRECTLY IN THE CORE** (pathfinder / physics / heuristics), with **NO**
+  patch-scripts / hacks / fallbacks. Missing feature → add it to the core, don't route
+  around it reactively.
+- **Tungsten-first, no baritone fallbacks** (do not import baritone/shredder).
+- Flexible, composable, reusable primitives; single source of truth, no duplication.
+  **Primitives, not policy**: the mod executes, the agent decides strategy.
+- **NOT "fast".** Slow but sure. "Faster" is not a goal — nobody asked for it.
+- **Atomic commits**: one commit = one logical change. **Do NOT dump unrelated
+  side-tasks into one commit.** Author = owner (not AI), no `Co-Authored-By`.
+- **Push after every atomic commit** (git discipline, below). Periodically `pull`.
+
+### Phase 5 — TESTING (the KEY phase — details at the end)
+Nothing is "done" without a battle test on the `deploy/` stand. In short:
+1. **Your function** — a targeted test proving the feature ACTUALLY works.
+2. **Adjacent functions** — regression: nothing next to it broke.
+3. **Overall sanity** — common sense: does the result make sense? (not "passed, but for
+   a weird reason").
+4. **Real, not noise** — a battle scenario, not a mock / a meaningless green tick.
+5. **Separate a real failure from stand flakiness** (warm bot, restart + wait for py4j,
+   retry). Flakiness ≠ regression.
+
+### Phase 6 — AUDIT THE RESULT
+- Assess the work as a whole for adequacy: does it meet the acceptance criteria? did it
+  leave a regression / half-measure? does the code read like its surroundings? no
+  garbage/duplication?
+- If the feature was NOT achieved — do not pass it off as done. Either finish it, or
+  honestly revert to stable and document the reason and next step.
+
+### Phase 7 — RELEASE (tested, stable work only)
+Full guide — **`docs/RELEASE.md`**. In short:
+1. Notes `docs/releases/<mod_version>.md` (test results, known bugs, HOW to test the new
+   features — which commands to run).
+2. Bump `mod_version` in `gradle.properties`.
+3. `gradlew githubRelease` (the only way; tags + publishes + attaches the JAR).
+- Release accumulated STABLE work regularly. Don't hoard, don't release raw work.
+
+### Phase 8 — CHECKPOINT and NEXT TASK
+- Record progress: tick it in `TODOS.md`, detail it in `docs/ai/progress.md`.
+- TG notification (`PushNotification`) if this is a milestone the user would want now.
+- **DO NOT STOP.** Take the next task (phase 2) and go through the cycle again.
 
 ---
 
-## 🎯 ФАЗА 5 ПОДРОБНО — КАК ТЕСТИРОВАТЬ (это важнее всего)
+## ⛔ IRON RULES (never break)
 
-Цель: доказать, что **именно твоя функция** работает в бою, и что **ты ничего не
-задел рядом**. Зелёная галочка ради галочки — запрещена.
-
-### 5.1 Целевой тест своей функции
-- Тест воспроизводит **реальный боевой сценарий** фичи (стенд `deploy/`, раннеры
-  `deploy/runner/*.py`), а не мок и не «оно не упало».
-- Порог прохождения осмысленный (напр. лук: стоячая ≥3/5 — с учётом ванильного
-  разброса стрел). Если порог подгоняется под «лишь бы прошло» — это не тест.
-- Смотреть НА ПРИЧИНУ, а не только на исход: если «0/5 — потому что цель
-  телепортируется/бот в воздухе» — это дефект СЦЕНАРИЯ, чинить сценарий, а не
-  принимать ложный результат. Инструментировать (диагностика/логи/py4j-примитив),
-  чтобы понять ПОЧЕМУ, а не гадать.
-
-### 5.2 Регрессия смежных функций
-- Перечислить, что рядом могло пострадать, и **прогнать их тесты**. Примеры связок:
-  - правка walker/пасфайндера → `swap_test`, `terrain_test` (лестница A!),
-    `far_test`, `goto_test`, `slime_test` (плоскость).
-  - правка tungsten-физики/движения → clean build + `slime_test` (плоская симуляция
-    верна) обязательно, иначе ломается рабочий flat.
-  - правка боя → `pvp_test`, `multitarget_test`, `runaway_test`, `shield_test`.
-  - правка break/place → `break_test`, `place_test`, `protect_test`, `worldedit_test`.
-- **Канарейка:** держать один заведомо рабочий кейс как индикатор регресса (для
-  навигации это курс A — сплошная лестница; если A упал — ты что-то сломал).
-
-### 5.3 Общая проверка на адекватность / здравый смысл
-- Результат осмыслен физически? (напр. «bestSoFar вернул путь» — путь ведёт К цели,
-  а не в стену/назад?). Проверять глазами логи/позиции, а не на веру.
-- Не сломал ли инвариант ядра (drift, «стоит на месте», уходит назад, зависает).
-
-### 5.4 Флак стенда ≠ регресс
-- Боты на стенде **флакают** (особенно cold после рестарта контейнера: чанки/
-  пасфайндер не прогреты → деградация путей). Признаки флака: бот бродит хаотично,
-  ВСЕ курсы деградировали разом, `py4j` не поднялся.
-- Прогон должен идти на **тёплом** боте: рестарт → **ждать `py4j`** (poll до
-  `inGame`) → пауза → тест. При подозрении на флак — перепрогнать чисто, сравнить
-  с известным baseline. Не путать флак с настоящим провалом кода.
-
-### 5.5 Фиксация результатов
-- Итоги теста (что PASS/FAIL, цифры, известные дыры, как повторить) — в ноты релиза
-  `docs/releases/<ver>.md` и в `docs/ai/progress.md`. Чтобы будущий Клод не гадал.
+1. **Work ONLY by this checklist.** All phases, in order.
+2. **Stop only on hardware failure or when ALL tasks are done.** A user's priority
+   choice, the user's harsh tone, a "convenient checkpoint" — are **NOT** reasons to
+   stop. User affect = amplify the error's priority, not a reason to halt.
+3. **TESTING IS MANDATORY FOR EVERYTHING** — your function + adjacent, battle-grade, not
+   noise. Without a test the task is not closed and is not released.
+4. **Every task — fully and thoroughly.** Not "fast", not a half-measure, not a hack.
+5. **Do not dump unrelated changes into one commit.** Atomicity.
+6. **Solve in the core, no scripts/fallbacks.** Tungsten-first, do not import baritone.
+7. **git discipline:** before work `fetch` + `pull --rebase`; after every atomic commit
+   `push`; at the end a clean `git status -sb`, nothing unpushed.
+8. **Author = owner, no `Co-Authored-By`.** No emoji in UIs (only in prose).
+9. **All instructions / docs / checklists / code comments in ENGLISH.**
+10. If a phase fails (red test) — **fix it or revert to stable**, don't leave it broken
+    and don't build on top of a regression.
 
 ---
 
-## 🏁 ФИНАЛЬНАЯ ЦЕЛЬ ВСЕГО ПЛАНА
-Когда ВСЕ задачи `TODOS.md` выполнены и **тщательно протестированы**, и все
-issues/PR репозитория разобраны (закрыты где возможно, либо уточнены запросом
-деталей) — **сливаем рабочую ветку `1.21.11` В `main`** (полный мердж проекта).
-Это последний пункт `TODOS.md`. До него — не мерджить.
+## 🎯 PHASE 5 IN DETAIL — HOW TO TEST (this matters most)
 
-## Быстрые ссылки
-- Правила проекта и tone: **`AGENTS.md`**
-- Глобальные цели: **`TODOS.md`**
-- Прогресс IPI / формат: **`docs/ai/progress.md`**, `docs/ai/readme.md`
-- Релиз: **`docs/RELEASE.md`**
-- Сборка/запуск/стенд: **`docs/DEVELOP.md`**, `deploy/`
+Goal: prove that **your exact function** works in battle, and that **you touched nothing
+next to it**. A green tick for its own sake is forbidden.
+
+### 5.1 Targeted test of your function
+- The test reproduces a **real battle scenario** of the feature (the `deploy/` stand,
+  runners `deploy/runner/*.py`), not a mock and not "it didn't crash".
+- A meaningful pass threshold (e.g. bow: standing ≥3/5 — accounting for vanilla arrow
+  spread). If the threshold is tuned to "just barely pass" — that's not a test.
+- Look at the CAUSE, not just the outcome: if "0/5 — because the target teleports / the
+  bot is airborne", that's a SCENARIO defect — fix the scenario, don't accept a false
+  result. Instrument it (diagnostics/logs/a py4j primitive) to understand WHY, don't guess.
+
+### 5.2 Regression of adjacent functions
+- List what nearby could have suffered and **run their tests**. Example couplings:
+  - walker/pathfinder change → `swap_test`, `terrain_test` (staircase A!), `far_test`,
+    `goto_test`, `slime_test` (flat).
+  - tungsten physics/movement change → clean build + `slime_test` (flat sim must stay
+    correct) is mandatory, otherwise working flat breaks.
+  - combat change → `pvp_test`, `multitarget_test`, `runaway_test`, `shield_test`.
+  - break/place change → `break_test`, `place_test`, `protect_test`, `worldedit_test`.
+- **Canary:** keep one known-good case as a regression indicator (for navigation that's
+  course A — the continuous staircase; if A breaks, you broke something).
+
+### 5.3 Overall sanity / common sense
+- Is the result physically sensible? (e.g. "bestSoFar returned a path" — does the path
+  lead TOWARD the goal, not into a wall / backwards?). Verify by looking at logs/positions,
+  not on faith.
+- Did you break a core invariant (drift, "stands still", walks backwards, freezes)?
+
+### 5.4 Stand flakiness ≠ regression
+- The stand bots **flake** (especially cold after a container restart: chunks/pathfinder
+  not warmed → path degradation). Flakiness signs: the bot wanders chaotically, ALL
+  courses degraded at once, `py4j` didn't come up.
+- Runs must be on a **warm** bot: restart → **wait for `py4j`** (poll until `inGame`) →
+  pause → test. If flakiness is suspected — rerun clean, compare to a known baseline.
+  Don't confuse flakiness with a real code failure.
+
+### 5.5 Record the results
+- Test outcomes (what PASS/FAIL, numbers, known gaps, how to reproduce) → release notes
+  `docs/releases/<ver>.md` and `docs/ai/progress.md`. So the next Claude doesn't guess.
+
+---
+
+## Quick links
+- Project rules and tone: **`AGENTS.md`**
+- Global goals: **`TODOS.md`**
+- IPI progress / format: **`docs/ai/progress.md`**, `docs/ai/readme.md`
+- Release: **`docs/RELEASE.md`**
+- Build/run/stand: **`docs/DEVELOP.md`**, `deploy/`
+
+## 🏁 FINAL GOAL OF THE WHOLE PLAN
+When ALL `TODOS.md` tasks are done and **thoroughly tested**, and all repo issues/PRs are
+triaged (closed where possible, or clarified by requesting details) — **merge the working
+branch `1.21.11` INTO `main`** (the full project merge). This is the last `TODOS.md` item.
+Do not merge before that.
