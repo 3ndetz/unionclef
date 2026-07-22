@@ -347,7 +347,13 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 // instead of the drift-prone physics executor (user's directive).
                 java.util.Optional<java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>> bp =
                         kaptainwutax.tungsten.path.PathFinder.getComputedBlockPath();
-                if (bp.isPresent() && bp.get().size() >= 2) {
+                // Staleness guard: getComputedBlockPath() is the LAST async result, which
+                // may be for a PREVIOUS goal. Using it would walk the bot the wrong way.
+                // Only accept a path whose endpoint actually reaches (near) the current
+                // goal; otherwise fall through to (3) and recompute for this goal.
+                boolean freshPath = bp.isPresent() && bp.get().size() >= 2
+                        && bp.get().get(bp.get().size() - 1).getBlockPos().getSquaredDistance(goalB) <= 36.0;
+                if (freshPath) {
                     java.util.List<net.minecraft.util.math.BlockPos> wps = new java.util.ArrayList<>();
                     for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : bp.get()) wps.add(n.getBlockPos());
                     if (ex != null) ex.stop = true;   // don't let the executor drift-replay
