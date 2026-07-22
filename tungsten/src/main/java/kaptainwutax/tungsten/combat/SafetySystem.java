@@ -91,7 +91,6 @@ public class SafetySystem {
 
     private boolean active = false;
     private int logCooldown = 0;
-    private int dbgEdgeCd = 0; // TEMP: throttle edge telemetry
 
     // ── tick (20 TPS): enemy velocity tracking ──────────────────────────────
 
@@ -396,34 +395,27 @@ public class SafetySystem {
         boolean edgeByVel = horizSpeed > 0.04 && VoidDetector.edgeAhead(
                 playerPosTick, playerVel.x, playerVel.z, player.getEntityWorld(), 3, look);
         if (nearVoid) {
-            // No stage may sprint or jump near the rim — sprint overshoots and a
-            // brake-jump LAUNCHES us into the void (sneak can't save an airborne bot).
+            // Never sprint near the rim — sprint momentum overshoots the edge.
             mc.options.sprintKey.setPressed(false);
-            mc.options.jumpKey.setPressed(false);
         }
         if (edgeByKey || edgeByVel) {
-            // heading (keys or momentum) points at a drop → plant with sneak.
-            mc.options.forwardKey.setPressed(false);
-            mc.options.backKey.setPressed(false);
-            mc.options.leftKey.setPressed(false);
-            mc.options.rightKey.setPressed(false);
-            mc.options.sprintKey.setPressed(false);
+            // Heading (keys or momentum) points at a drop → never jump toward it
+            // (the DANGER_IMMINENT brake-jump launched the bot off) and plant with
+            // vanilla sneak so we can't cross the edge on the ground.
             mc.options.jumpKey.setPressed(false);
-            mc.options.sneakKey.setPressed(true); // vanilla edge-stop: plant feet
-        }
-
-        // ── TEMP edge telemetry ──────────────────────────────────────────
-        if (VoidDetector.voidWithin(playerPosTick, player.getEntityWorld(), 3, 3)) {
-            if (++dbgEdgeCd >= 6) {
-                dbgEdgeCd = 0;
-                final String dbg = String.format(
-                    "§eEDGE p=%.1f,%.1f,%.1f og=%b v=%.2f,%.2f eK=%b eV=%b st=%s F=%b Sp=%b J=%b Sn=%b",
-                    playerPosTick.x, playerPosTick.y, playerPosTick.z, player.isOnGround(),
-                    playerVel.x, playerVel.z, edgeByKey, edgeByVel, stage,
-                    mc.options.forwardKey.isPressed(), mc.options.sprintKey.isPressed(),
-                    mc.options.jumpKey.isPressed(), mc.options.sneakKey.isPressed());
-                mc.execute(() -> Debug.logMessage(dbg));
+            mc.options.sneakKey.setPressed(true);
+            if (edgeByKey) {
+                // We are actively STEERING off (self-inflicted overshoot / chasing
+                // an enemy across the void) — cancel the drive entirely.
+                mc.options.forwardKey.setPressed(false);
+                mc.options.backKey.setPressed(false);
+                mc.options.leftKey.setPressed(false);
+                mc.options.rightKey.setPressed(false);
+                mc.options.sprintKey.setPressed(false);
             }
+            // else: only momentum points at the void (knockback) — keep whatever
+            // recovery input a brake stage is applying toward the island, just add
+            // the sneak edge-stop. Cancelling it would strand us sliding at the rim.
         }
 
         // ── visualization ────────────────────────────────────────────────
