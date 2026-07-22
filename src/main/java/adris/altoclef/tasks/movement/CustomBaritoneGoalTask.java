@@ -325,7 +325,15 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
                 java.util.List<net.minecraft.util.math.BlockPos> bfs =
                         kaptainwutax.tungsten.combat.CombatPathfinder.findPath(startB, goalB, mod.getWorld());
-                if (bfs.size() >= 2) {
+                // A degenerate 2-waypoint stub to a FAR goal means the cheap grid BFS
+                // couldn't route the terrain (e.g. gapped diagonal steps): its endpoint
+                // barely progresses toward the goal. Walking such a stub makes the walker
+                // stop/restart every step, which kills the sprint momentum a running jump
+                // needs. Fall through to the robust elevation-aware block path (2)/(3) —
+                // one continuous path the walker rides without stopping.
+                boolean degenerateStub = bfs.size() == 2 && distToGoal > 6.0
+                        && Math.sqrt(bfs.get(1).getSquaredDistance(goalB)) > distToGoal - 3.0;
+                if (bfs.size() >= 2 && !degenerateStub) {
                     if (pf != null) pf.stop.set(true);
                     if (ex != null) ex.stop = true;
                     kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
