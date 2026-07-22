@@ -16,8 +16,8 @@ gw=JavaGateway(gateway_parameters=GatewayParameters(address="127.0.0.1",port=253
 mc=gw.entry_point; op=req["op"]; out={}
 if op=="state": out={"inGame":mc.inGame()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
-elif op=="swap": out=dict(mc.setTungstenPathing(bool(req["on"])))
-elif op=="pstatus": out=dict(mc.pathStatus())
+elif op=="punk": out=dict(mc.punk(req["name"]))
+elif op=="punkstatus": out=dict(mc.punkStatus())
 elif op=="cmd": mc.ExecuteCommand(req["c"]); out={"ok":True}
 print(json.dumps(out,default=str)); gw.close()
 """
@@ -36,15 +36,12 @@ def main():
         try: py4j("connect", ip="test-server")
         except Exception: pass
         time.sleep(6)
-    rcon("forceload add -8 -8 40 8")
-    rcon("fill 0 -60 -4 40 5 4 air"); rcon("fill 0 -61 -4 40 -61 4 stone")
-    rcon(f"tp {BOT} 0 -60 0 90 0"); time.sleep(1.5)
-    print("swap:", py4j("swap", on=True))
-    print("start a far @goto (tungsten pathing stays active)...")
-    py4j("cmd", c="@goto 35 -60 0")
-    time.sleep(4)
-    busy_before = bool(py4j("pstatus").get("busy") in (True, "true", "True"))
-    print(f"  tungsten pathing busy before reconnect: {busy_before}")
+    def is_active(v): return v.get("active") in (True, "true", "True")
+    print("start a tungsten task (punk a ghost — stays active, altoclef won't re-drive)...")
+    py4j("punk", name="ghost_reset_probe")
+    time.sleep(3)
+    active_before = is_active(py4j("punkstatus"))
+    print(f"  punk active before reconnect: {active_before}")
     print("force reconnect (triggers DISCONNECT -> resetAllState)...")
     py4j("connect", ip="test-server")
     inGame = False
@@ -54,11 +51,11 @@ def main():
             if py4j("state")["inGame"]: inGame = True; break
         except Exception: pass
     time.sleep(3)
-    busy_after = bool(py4j("pstatus").get("busy") in (True, "true", "True")) if inGame else True
+    active_after = is_active(py4j("punkstatus")) if inGame else True
     print(f"  in game after reconnect: {inGame}")
-    print(f"  pathing busy after reconnect (should be False): {busy_after}")
+    print(f"  punk active after reconnect (should be False): {active_after}")
     print("\n=== RESULTS (#29 disconnect reset) ===")
-    ok = busy_before and inGame and (not busy_after)
+    ok = active_before and inGame and (not active_after)
     print(f"  task ran, reconnected, state cleared: {ok}")
     print("  DISCONNECT-RESET:", "PASS" if ok else "FAIL")
     import sys; sys.exit(0 if ok else 1)
