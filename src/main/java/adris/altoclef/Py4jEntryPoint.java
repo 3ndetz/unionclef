@@ -2114,6 +2114,31 @@ public class Py4jEntryPoint {
         return out;
     }
 
+    /** #29 test lever: simulate a task that set a mine/combat aim and then DIED
+     *  without clearing it (the root of the frozen-camera bug). Sets the WindMouse
+     *  target ONCE to current facing + dyaw and does not refresh it. The aim must
+     *  auto-release within STALE_MS; poll {@link #windMouseHasTarget()} to verify. */
+    public Map<String, Object> pokeStaleAim(double dyaw) {
+        net.minecraft.client.MinecraftClient.getInstance().execute(() -> {
+            var p = net.minecraft.client.MinecraftClient.getInstance().player;
+            if (p != null)
+                kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(
+                        p.getYaw() + (float) dyaw, p.getPitch());
+        });
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true);
+        return out;
+    }
+
+    /** Whether the WindMouse aim currently holds a target. Used to verify the
+     *  stale-aim auto-release (#29): a target left by a dead task must clear itself. */
+    public Map<String, Object> windMouseHasTarget() {
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true);
+        out.put("hasTarget", kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.hasTarget());
+        return out;
+    }
+
     // WorldEdit-like region selection + fill (TODO block 9). A lever for the
     // agent: select a region, then fill/clear it — the mod places/breaks via
     // the physics primitives; the agent repositions to reach far cells. No
