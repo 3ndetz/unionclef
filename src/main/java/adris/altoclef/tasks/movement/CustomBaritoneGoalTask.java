@@ -375,11 +375,42 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     /** Extract a target position from a baritone goal for tungsten (GoalBlock /
      *  GoalGetToBlock / GoalNear carry x,y,z). Null if the goal has no point. */
     private static net.minecraft.util.math.Vec3d goalToVec(Goal goal, AltoClef mod) {
+        net.minecraft.util.math.Vec3d raw = null;
         if (goal instanceof baritone.api.pathing.goals.GoalBlock gb) {
-            return new net.minecraft.util.math.Vec3d(gb.x, gb.y, gb.z);
+            raw = new net.minecraft.util.math.Vec3d(gb.x, gb.y, gb.z);
         } else if (goal instanceof baritone.api.pathing.goals.GoalGetToBlock gg) {
-            return new net.minecraft.util.math.Vec3d(gg.x, gg.y, gg.z);
+            raw = new net.minecraft.util.math.Vec3d(gg.x, gg.y, gg.z);
         }
-        return null;
+        return raw == null ? null : snapGoalToStandable(raw, mod);
+    }
+
+    /** A goal cell that isn't standable (inside a solid block, or floating in air
+     *  above the ground — e.g. a click on a grass block reports the cell ABOVE the
+     *  surface) can never be reached exactly, so the tungsten search stalls at it.
+     *  Snap it to the nearest standable cell (surface on top of a block / ground
+     *  below the air) so the bot actually approaches. Valid standable goals are
+     *  returned unchanged — normal navigation is untouched. */
+    private static net.minecraft.util.math.Vec3d snapGoalToStandable(net.minecraft.util.math.Vec3d gp, AltoClef mod) {
+        try {
+            net.minecraft.world.World w = mod.getWorld();
+            int gx = (int) Math.floor(gp.x), gy = (int) Math.floor(gp.y), gz = (int) Math.floor(gp.z);
+            if (standable(w, gx, gy, gz)) return gp;                 // already fine
+            if (isSolidAt(w, gx, gy, gz)) {                          // goal inside a block → stand on top
+                for (int y = gy + 1; y <= gy + 5; y++)
+                    if (standable(w, gx, y, gz)) return new net.minecraft.util.math.Vec3d(gx + 0.5, y, gz + 0.5);
+            }
+            for (int y = gy; y >= gy - 6; y--)                       // floating goal → drop to the ground
+                if (standable(w, gx, y, gz)) return new net.minecraft.util.math.Vec3d(gx + 0.5, y, gz + 0.5);
+        } catch (Throwable ignored) { }
+        return gp;
+    }
+
+    private static boolean standable(net.minecraft.world.World w, int x, int y, int z) {
+        return isSolidAt(w, x, y - 1, z) && !isSolidAt(w, x, y, z) && !isSolidAt(w, x, y + 1, z);
+    }
+
+    private static boolean isSolidAt(net.minecraft.world.World w, int x, int y, int z) {
+        net.minecraft.util.math.BlockPos p = new net.minecraft.util.math.BlockPos(x, y, z);
+        return !w.getBlockState(p).getCollisionShape(w, p).isEmpty();
     }
 }

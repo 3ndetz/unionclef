@@ -96,10 +96,22 @@ def main():
     a=trial("A long staircase (12 1-blk steps)", [13,-48,0], 45)
     b=trial("B steep (jump-up each)",    [22,-56,0])
     c=trial("C 2-block wall ledge",      [29,-58,0])
+    # D: invalid goal — a FLOATING air cell (5 blocks above the floor), the user's
+    # "click on grass → goal is the air above the surface" case. #25 snaps it to the
+    # standable ground below; success = the bot reaches ~(5,-60), not stalls in air.
+    print("--- D floating-air goal (5,-55,0) → should snap to ground ---")
+    py4j(C1,"stop"); time.sleep(1); rcon(f"tp {BOT} 0 -60 0 90 0"); time.sleep(1.5)
+    py4j(C1,"goto",x=5,y=-55,z=0)
+    d=False
+    for _ in range(12):
+        time.sleep(3); p=pos()
+        if p and abs(p[0]-5)<=1.6 and p[1]<=-59: d=True; break
+    print(f"  D finalPos={pos()} reached-ground={d}")
     py4j(C1,"stop")
     print("\n=== RESULTS (tungsten terrain gap) ===")
     print(f"  A staircase: {'PASS' if a else 'FAIL'}")
     print(f"  B steep    : {'PASS' if b else 'FAIL'}")
     print(f"  C wall     : {'PASS' if c else 'FAIL'}")
+    print(f"  D invalid-goal snap: {'PASS' if d else 'FAIL'}")
 
 if __name__=="__main__": main()
