@@ -64,6 +64,11 @@ public class PathFinder {
 	protected static final AtomicReferenceArray<Node> bestSoFar = new AtomicReferenceArray<Node>(COEFFICIENTS.length);
 	private static final double minimumImprovement = -500;
 	private static Optional<List<BlockNode>> blockPath = Optional.empty();
+	/** The robust elevation-aware block path from the last/current async search
+	 *  (BlockSpacePathFinder). Available while a search runs; the drift-immune
+	 *  BlockPathWalker follows this on natural terrain instead of the drift-prone
+	 *  physics executor. */
+	public static Optional<List<BlockNode>> getComputedBlockPath() { return blockPath; }
 	protected static final double MIN_DIST_PATH = 1.8;
 	protected static AtomicInteger NEXT_CLOSEST_BLOCKNODE_IDX = new AtomicInteger(1);
 	protected static AtomicInteger numNodesConsidered = new AtomicInteger(0);

@@ -272,31 +272,54 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // Walker owns the LONG haul (drift-immune); the physics executor does the
             // final ~4-block precise approach (short range = negligible drift), which
             // closes the last steps a short "within 1.5 of goal" BFS path stalls on.
-            if (!walking && distToGoal > 4.0 && !mod.getPlayer().isTouchingWater()) {
+            // Close to the goal — stop the walker; the executor does the final <=4-block
+            // precise approach (short range = negligible drift).
+            if (walking && distToGoal <= 4.0) { kaptainwutax.tungsten.task.BlockPathWalker.stop(); walking = false; }
+            if (walking) {
+                mod.getClientBaritone().getPathingBehavior().forceCancel();
+                checker.reset();
+                setDebugState("Tungsten (primary) walking terrain...");
+                return true;
+            }
+            if (distToGoal > 4.0 && !mod.getPlayer().isTouchingWater()) {
+                // (1) cheap grid BFS — instant, good for near/clean terrain.
                 net.minecraft.util.math.BlockPos startB = mod.getPlayer().getBlockPos();
                 net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
                 java.util.List<net.minecraft.util.math.BlockPos> bfs =
                         kaptainwutax.tungsten.combat.CombatPathfinder.findPath(startB, goalB, mod.getWorld());
                 if (bfs.size() >= 2) {
-                    if (pf != null) pf.stop.set(true);   // force the drifting pathfinder off
-                    if (ex != null) ex.stop = true;      // and its executor
+                    if (pf != null) pf.stop.set(true);
+                    if (ex != null) ex.stop = true;
                     kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
                     mod.getClientBaritone().getPathingBehavior().forceCancel();
                     checker.reset();
                     setDebugState("Tungsten (primary) walking terrain...");
                     return true;
                 }
-            }
-            // Close to the goal — stop the walker and let the executor finish precisely.
-            if (walking && distToGoal <= 4.0) kaptainwutax.tungsten.task.BlockPathWalker.stop();
-            if (walking) {
-                // walker owns movement this segment
+                // (2) cheap BFS can't route this (natural terrain, >25 blocks) — follow the
+                // ROBUST elevation-aware block path the async search computes, drift-immune,
+                // instead of the drift-prone physics executor (user's directive).
+                java.util.Optional<java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>> bp =
+                        kaptainwutax.tungsten.path.PathFinder.getComputedBlockPath();
+                if (bp.isPresent() && bp.get().size() >= 2) {
+                    java.util.List<net.minecraft.util.math.BlockPos> wps = new java.util.ArrayList<>();
+                    for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : bp.get()) wps.add(n.getBlockPos());
+                    if (ex != null) ex.stop = true;   // don't let the executor drift-replay
+                    kaptainwutax.tungsten.task.BlockPathWalker.startBFS(wps);
+                    mod.getClientBaritone().getPathingBehavior().forceCancel();
+                    checker.reset();
+                    setDebugState("Tungsten (primary) walking (robust path)...");
+                    return true;
+                }
+                // (3) no block path yet — kick the async search to compute one.
+                boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
+                if (!busy && pf != null) { if (ex != null) ex.stop = false; pf.find(mod.getWorld(), gp, mod.getPlayer()); }
                 mod.getClientBaritone().getPathingBehavior().forceCancel();
                 checker.reset();
-                setDebugState("Tungsten (primary) walking terrain...");
+                setDebugState("Tungsten (primary) planning...");
                 return true;
             }
-            // No walkable block path (water / slime / parkour) → physics executor.
+            // Final approach (<=4 blocks) or water → physics executor.
             boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
             if (!busy && pf != null) {
                 if (ex != null) ex.stop = false;   // a prior ;stop leaves it stuck true
