@@ -91,6 +91,7 @@ public class SafetySystem {
 
     private boolean active = false;
     private int logCooldown = 0;
+    private int dbgEdgeCd = 0; // TEMP: throttle edge telemetry
 
     // ── tick (20 TPS): enemy velocity tracking ──────────────────────────────
 
@@ -403,6 +404,20 @@ public class SafetySystem {
             mc.options.sprintKey.setPressed(false);
             mc.options.jumpKey.setPressed(false);
             mc.options.sneakKey.setPressed(true); // vanilla edge-stop: plant feet
+        }
+
+        // ── TEMP edge telemetry ──────────────────────────────────────────
+        if (VoidDetector.voidWithin(playerPosTick, player.getEntityWorld(), 3, 3)) {
+            if (++dbgEdgeCd >= 6) {
+                dbgEdgeCd = 0;
+                final String dbg = String.format(
+                    "§eEDGE p=%.1f,%.1f,%.1f og=%b v=%.2f,%.2f eK=%b eV=%b st=%s F=%b Sp=%b J=%b Sn=%b",
+                    playerPosTick.x, playerPosTick.y, playerPosTick.z, player.isOnGround(),
+                    playerVel.x, playerVel.z, edgeByKey, edgeByVel, stage,
+                    mc.options.forwardKey.isPressed(), mc.options.sprintKey.isPressed(),
+                    mc.options.jumpKey.isPressed(), mc.options.sneakKey.isPressed());
+                mc.execute(() -> Debug.logMessage(dbg));
+            }
         }
 
         // ── visualization ────────────────────────────────────────────────

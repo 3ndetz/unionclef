@@ -19,12 +19,14 @@ gw=JavaGateway(gateway_parameters=GatewayParameters(address="127.0.0.1",port=253
 mc=gw.entry_point; op=req["op"]; out={}
 if op=="punk": mc.ExecuteCommand("@stop"); mc.punkStop(); mc.punk(req["t"]); out={"ok":True}
 elif op=="stop": mc.ExecuteCommand("@stop"); mc.punkStop(); out={"ok":True}
+elif op=="chat": out={"chat":mc.getRecentChat(req.get("n",300))}
 print(json.dumps(out,default=str)); gw.close()
 """
 def sh(a,to=30): return subprocess.run(a,capture_output=True,text=True,timeout=to)
 def py4j(op,**kw):
     r=sh(["docker","exec",C1,"python3","-c",SNIP,json.dumps({"op":op,**kw})])
-    return r.stdout.strip()
+    try: return json.loads(r.stdout.strip().splitlines()[-1])
+    except Exception: return r.stdout.strip()
 def rcon(c): return sh(["docker","exec",SERVER,"rcon-cli",c]).stdout.strip()
 def nums(s):
     return [float(x) for x in re.findall(r'-?\d+\.?\d*(?:[eE]-?\d+)?',s)]
@@ -38,7 +40,19 @@ def snap(name):
     m=nums(mot.group(1)) if mot else [0,0,0]
     return {"x":p[0],"y":p[1],"z":p[2],"vx":m[0],"vy":m[1],"vz":m[2],"og":og.group(1) if og else "?"}
 
+def build_bridge():
+    rcon("forceload add -20 -20 20 20")
+    rcon("fill -18 -64 -18 18 -50 18 air")
+    rcon("fill -9 -61 -2 -5 -61 2 stone")   # island A (bot)
+    rcon("fill 5 -61 -2 9 -61 2 stone")     # island B (victim)
+    rcon("fill -4 -61 0 4 -61 0 stone")     # 1-wide bridge
+    rcon("gamerule pvp true"); rcon("gamerule immediate_respawn true")
+    rcon("time set day"); rcon("weather clear"); rcon("gamerule keepInventory true")
+    for n in (BOT,VICTIM):
+        rcon(f"item replace entity {n} weapon.mainhand with iron_sword")
+
 def main():
+    build_bridge()
     rcon(f"tp {VICTIM} 7 -60 0 90 0"); rcon(f"tp {BOT} -7 -60 0 -90 0"); time.sleep(1)
     print("punk:", py4j("punk", t=VICTIM))
     t0=time.time(); prevY=-60
@@ -54,6 +68,15 @@ def main():
                   f"v=({s['vx']:.2f},{s['vy']:.2f},{s['vz']:.2f}) og={s['og']}{tag}")
         prevY=y
         time.sleep(0.22)
+    print("\n=== EDGE telemetry (from bot chat log) ===")
+    ch=py4j("chat", n=300)
+    lines=ch.get("chat") if isinstance(ch,dict) else None
+    if isinstance(lines,str):
+        import ast
+        try: lines=ast.literal_eval(lines)
+        except Exception: lines=[lines]
+    for ln in (lines or []):
+        if "EDGE" in str(ln): print("  ", str(ln).replace("§e","").replace("§r",""))
     py4j("stop")
 
 if __name__=="__main__": main()
