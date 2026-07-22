@@ -25,6 +25,7 @@ mc=gw.entry_point; op=req["op"]; out={}
 if op=="state": out={"inGame":mc.inGame()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="swap": out=dict(mc.setTungstenPathing(bool(req["on"])))
+elif op=="smart": out=dict(mc.setTungstenSmartMoves(bool(req["on"])))
 elif op=="goto": mc.ExecuteCommand("@goto "+str(req["x"])+" "+str(req["y"])+" "+str(req["z"])); out={"ok":True}
 elif op=="stop": mc.ExecuteCommand("@stop"); mc.punkStop(); out={"ok":True}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",14)))]}
@@ -93,6 +94,9 @@ def main():
     wait_for("rcon", lambda:"players" in rcon("list"),300,5)
     ensure(); build()
     print("swap:", py4j(C1,"swap",on=True))
+    import os
+    if os.environ.get("SMART"):  # #1.6.1: exercise SmartMoves neighbour generation
+        print("smartMoves:", py4j(C1,"smart",on=True))
     a=trial("A long staircase (12 1-blk steps)", [13,-48,0], 45)
     b=trial("B steep (jump-up each)",    [22,-56,0])
     c=trial("C 2-block wall ledge",      [29,-58,0])

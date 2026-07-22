@@ -275,6 +275,21 @@ public class BlockNode {
 
 	public List<BlockNode> getChildren(WorldView world, Goal goal, boolean generateDeep) {
 
+		// EXPERIMENTAL (#1.6.1): tungsten-native smart move generation — a handful of
+		// pre-validated Traverse/Ascend/Descend/Parkour neighbours instead of the blind
+		// r=8 scan, so the search routes stepped/gap terrain within its node budget.
+		// Flag-gated (default off) so course A keeps the proven blind-scan path.
+		if (TungstenConfig.get().smartMoves) {
+			List<BlockNode> smart = new ArrayList<>();
+			for (SmartMoves.Move m : SmartMoves.generate(world, this.getBlockPos())) {
+				BlockNode n = new BlockNode(m.dest.getX(), m.dest.getY(), m.dest.getZ(),
+						goal, this, m.cost, this.player);
+				n.isDoingJump = m.jump;
+				smart.add(n);
+			}
+			return smart;
+		}
+
 		List<BlockNode> nodes = getNodesIn3DCircule(8, this, goal, generateDeep);
 //		nodes.removeIf((child) -> {
 //			return shouldRemoveNode(world, child);

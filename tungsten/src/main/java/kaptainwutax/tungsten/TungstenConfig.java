@@ -99,6 +99,13 @@ public class TungstenConfig {
      *  If false, only walks (no jumps) — safer but slower. */
     public boolean followJumpingEnabled = true;
 
+    /** EXPERIMENTAL (#1.6.1): generate block-space neighbours via the tungsten-native
+     *  SmartMoves (Traverse/Ascend/Descend/Parkour) instead of the blind r=8 scan.
+     *  Fewer, already-valid neighbours -> the search routes stepped/gap terrain within
+     *  its node budget. Default OFF so course A (staircase) keeps the proven blind-scan
+     *  path until SmartMoves is validated A-green. */
+    public boolean smartMoves = false;
+
     // ---- block breaking ----
 
     /** Allow the block-space pathfinder to plan breaking through breakable walls. */

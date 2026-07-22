@@ -1968,6 +1968,19 @@ public class Py4jEntryPoint {
         return out;
     }
 
+    /** EXPERIMENTAL (#1.6.1): toggle tungsten-native SmartMoves block-space neighbour
+     *  generation (Traverse/Ascend/Descend/Parkour) vs the blind r=8 scan. Returns the
+     *  new state. Default off — for terrain-routing tests / the search rework. */
+    public Map<String, Object> setTungstenSmartMoves(boolean on) {
+        Map<String, Object> out = new HashMap<>();
+        try {
+            kaptainwutax.tungsten.TungstenConfig.get().smartMoves = on;
+            out.put("ok", true);
+            out.put("smartMoves", kaptainwutax.tungsten.TungstenConfig.get().smartMoves);
+        } catch (Exception e) { out.put("ok", false); out.put("reason", e.getMessage()); }
+        return out;
+    }
+
     /** Read the current pathing-delegation mode (goal 13). */
     public Map<String, Object> pathingMode() {
         Map<String, Object> out = new HashMap<>();
