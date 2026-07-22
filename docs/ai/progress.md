@@ -634,3 +634,27 @@ drift>driftThreshold (стенд 5.0) `EXECUTOR.stop` (Agent.java:1613). Каж�
 combat-работы (VoidGuard гейтится на punk/flee). #20 развёрнут на реальную причину;
 фикс-кандидат №1 — drift-толерантный BlockPathWalker вместо жёсткого стопа. Отдельная
 фокус-задача.
+
+### 2026-07-22 (доп2) — @gamer terrain-затык ИСПРАВЛЕН (v0.30.0/v0.30.1)
+
+Корень (уточнён от «нет Movements»): ДРЕЙФ физ-executor'а. Sim расходится с реальной
+позицией на ступенях/склонах → drift>threshold hard-stop; плюс поиск отвергает свой
+путь (`PathFinder:870` «root far from player» >2 бл) → пасфайндер вечно busy → стоп.
+Фикс (директива юзера — робастный tungsten block-путь + drift-иммунное физ-следование,
+БЕЗ импорта baritone): altoclef `driveTungstenPrimary` для рельефа ведёт `BlockPathWalker`
+(спринт от РЕАЛЬНОЙ позиции по block-пути, прыжки на ступени → без sim → без дрейфа).
+Источник пути: cheap `CombatPathfinder` grid BFS (чистый/близкий рельеф) → иначе
+робастный elevation-aware путь из async-поиска (`PathFinder.getComputedBlockPath`).
+Executor только на финал <=4 бл + вода/паркур. Walker форс-стопит дрейфующий пасфайндер.
+Анти-стак-сеть (v0.30.1): 5с без движения → сброс tungsten-состояния (re-plan от факта),
+после 3 сбросов → yield на wander (ломает ловушки/stale-rooted-петли).
+
+ВАЖНО (методология): terrain_test сначала бил `gotoXYZ` = tungsten-`;goto` (минует
+driveTungstenPrimary!). @gamer идёт через altoclef `@goto/@get` → driveTungstenPrimary.
+Исправлено на `@goto`.
+
+Валидация: swap PASS, 12-ступенчатая лесенка @goto доходит доверха drift-free; на РЕАЛЬНОЙ
+горе (seed 12345) бот прошёл ~40-100 бл естественного рельефа, спустился, срубил ель/дуб
+(held spruce_log/dark_oak_log), hp 20, 0 падений — раньше стоял намертво. Остаётся: паркур
+(прыжки-гэпы/2-блочная стена), выживание против мобов (easy — еда/комбат/шелтер), редкие
+локальные ловушки (анти-стак смягчает). Speed-pipeline идея юзера — TODO #32.
