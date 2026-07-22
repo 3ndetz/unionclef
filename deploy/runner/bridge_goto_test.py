@@ -68,10 +68,13 @@ def main():
             if p[0]>maxx: maxx=p[0]
             if p[0]>=9 and p[1]>=-61 and abs(p[2])<=5: reached=True; break
     py4j("stop")
-    # bridge-proof: at least one block was placed in the gap (x=2..8, y-61)
-    placed=[gx for gx in range(2,9)
-            if "passed" in rcon(f"execute if block {gx} -61 0 #minecraft:base_stone_overworld").lower()
-            or "passed" in rcon(f"execute if block {gx} -61 0 cobblestone").lower()]
+    # bridge-proof: a cobblestone was placed somewhere in the gap (x=2..8, z=-4..4,
+    # y-61) — the bot paths along its own z, so scan the full channel width.
+    placed=[]
+    for gx in range(2,9):
+        for gz in range(-4,5):
+            if "passed" in rcon(f"execute if block {gx} -61 {gz} cobblestone").lower():
+                placed.append(f"{gx},{gz}"); break
     print(f"  finalPos={last} maxX={maxx:.1f} (far platform starts x=9)")
     print(f"  blocks placed in the gap (bridge proof): {placed}")
     print(f"  crossed the gap to the far platform: {reached}")
