@@ -230,8 +230,11 @@ public class TungstenMod implements ClientModInitializer {
 		                 double height = shape.isEmpty() ? 0 : shape.getMax(Direction.Axis.Y);
 		
 		                 Vec3d newPos = new Vec3d(pos.getX() + 0.5, pos.getY() + height, pos.getZ() + 0.5);
+		                 // Snap a non-standable click (air / tall grass / flowers) to the
+		                 // reachable ground so the search doesn't spin forever near it.
+		                 newPos = kaptainwutax.tungsten.path.GoalSnap.snap(newPos, mc.world);
 		         		TungstenMod.TARGET = newPos;
-		         		
+
 
 		        		if (clickMode == clickModeEnum.GOTO && !TungstenModDataContainer.PATHFINDER.active.get()) {
 		        			TungstenModDataContainer.PATHFINDER.find(TungstenMod.mc.world, TARGET, TungstenMod.mc.player);

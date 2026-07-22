@@ -35,7 +35,10 @@ public class GotoCommand extends Command {
 	        		// find()) — a fresh user command overrides the old stop.
 	        		TungstenModDataContainer.PATHFINDER.stop.set(false);
 	        		TungstenModDataContainer.EXECUTOR.stop = false;
-	        		Vec3d targetVec = target.getVec3d().add(0.5, 0, 0.5);
+	        		// Snap a non-standable target (air / tall grass / flowers) to the
+	        		// reachable ground — otherwise the search re-roots near it forever.
+	        		Vec3d targetVec = kaptainwutax.tungsten.path.GoalSnap.snap(
+	        				target.getVec3d().add(0.5, 0, 0.5), TungstenMod.mc.world);
 	        		TungstenMod.TARGET = targetVec;
 	        		startWithRetry(targetVec, 0);
 	    		} else {

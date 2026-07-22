@@ -63,6 +63,13 @@ public class PathFinder {
 	protected static final double[] COEFFICIENTS = {1.5, 2, 2.5, 3, 4, 5, 10};
 	protected static final AtomicReferenceArray<Node> bestSoFar = new AtomicReferenceArray<Node>(COEFFICIENTS.length);
 	private static final double minimumImprovement = -500;
+	/** Give up a search that has made no REAL progress (emit / block-path advance) for
+	 *  this long. The re-root machinery resets the primary timeout every time it
+	 *  re-plans, so a goal it can never reach (over the void, no blocks to place) would
+	 *  otherwise re-root forever — the bot "computes" endlessly without moving. A
+	 *  progressing search bumps lastProgressMs and never hits this; a stalled one gives
+	 *  up cleanly (#user-bug: air / tall-grass goal spun forever). */
+	private static final long HARD_SEARCH_CAP_MS = 20000L;
 	private static Optional<List<BlockNode>> blockPath = Optional.empty();
 	/** The robust elevation-aware block path from the last/current async search
 	 *  (BlockSpacePathFinder). Available while a search runs; the drift-immune
@@ -184,6 +191,11 @@ public class PathFinder {
 
 	    long startTime = System.currentTimeMillis();
 	    long primaryTimeoutTime = startTime + TungstenConfig.get().searchTimeoutMs;
+	    // Time of the last REAL progress (emitted a runnable partial, or advanced along
+	    // the block path). NOT bumped by re-roots — a re-root re-plans the same
+	    // unreachable partial and would otherwise mask a stall. If no real progress for
+	    // HARD_SEARCH_CAP_MS the goal is unreachable and the search gives up (#user-bug).
+	    long lastProgressMs = startTime;
 		numNodesConsidered.set(0);
 	    int timeCheckInterval = 1 << 3;
 	    double minVelocity = BlockStateChecker.isAnyWater(world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ()))) ? 0.2 :  0.07;
@@ -273,7 +285,7 @@ public class PathFinder {
 	    			PathFinder.blockPath = Optional.empty();
 	                return;
 	            }
-	        } else if ((numNodesConsidered.get() & (timeCheckInterval - 1)) == 0 && blockPath.isPresent() && NEXT_CLOSEST_BLOCKNODE_IDX.get() == (blockPath.get().size()-1) && blockPath.get().getLast().getPos(true, world).distanceTo(target) > 5) {
+	        } else if ((numNodesConsidered.get() & (timeCheckInterval - 1)) == 0 && blockPath.isPresent() && NEXT_CLOSEST_BLOCKNODE_IDX.get() == (blockPath.get().size()-1) && blockPath.get().getLast().getPos(true, world).distanceTo(target) > 5 && System.currentTimeMillis() - lastProgressMs < HARD_SEARCH_CAP_MS) {
     			BlockNode lastBlockNode = blockPath.get().getLast();
 	        	if (setCurrentPath(TARGET, next, TungstenModDataContainer.player)) {
 	        		TungstenModRenderContainer.RENDERERS.clear();
@@ -344,7 +356,16 @@ public class PathFinder {
 	        if ((numNodesConsidered.get() & (timeCheckInterval - 1)) == 0) {
 	            if (handleTimeout(startTime, primaryTimeoutTime, next, target, start, player, closed)) {
 	            	primaryTimeoutTime = System.currentTimeMillis() + 1020L;
+	            	lastProgressMs = System.currentTimeMillis();   // emitted a runnable partial = progress
 	                continue;
+	            }
+	            // Hard give-up: no real progress (no emit, no block-path advance) for the
+	            // cap. On open ground the physics openSet never empties, so without this
+	            // the search expands forever and the bot "computes" without moving. Stop.
+	            if (System.currentTimeMillis() - lastProgressMs > HARD_SEARCH_CAP_MS) {
+	                Debug.logWarning("Search gave up: goal unreachable after "
+	                        + (HARD_SEARCH_CAP_MS / 1000) + "s without progress");
+	                break;
 	            }
 	        }
 	        
@@ -357,6 +378,7 @@ public class PathFinder {
 	        numNodesConsidered.set(numNodesConsidered.get()+1);
 	        if (updateNextClosestBlockNodeIDX(blockPath.get(), next, closed, world)) {
 	        	primaryTimeoutTime = System.currentTimeMillis() + 1120L;
+	        	lastProgressMs = System.currentTimeMillis();   // advanced along the block path = progress
 				failedAttempts = 0;
 	        }
 //        	if (numNodesConsidered % 5 == 0 && updateNextClosestBlockNodeIDX(blockPath.get(), next, closed)) {

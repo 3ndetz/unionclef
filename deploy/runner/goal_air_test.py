@@ -34,28 +34,26 @@ def py4j(op,to=30,**kw):
 def rcon(c): return sh(["docker","exec",SERVER,"rcon-cli",c]).stdout.strip()
 
 def busy(v): return v.get("busy") in (True,"true","True") or v.get("active") in (True,"true","True")
+def arrived(v): return v.get("arrived") in (True,"true","True")
 
-def probe(name, tx, ty, tz):
+def probe(name, tx, ty, tz, secs=26):
     print(f"\n--- {name}: ;goto ({tx},{ty},{tz}) ---")
     py4j("stop"); time.sleep(1)
     rcon(f"tp {BOT} 5 -60 0 -90 0"); time.sleep(1)
     py4j("gotoxyz", x=tx, y=ty, z=tz)
-    busystreak=0
-    for k in range(11):   # ~22s
+    n=secs//2; busystreak=0; arr=False; laststatus=None
+    for k in range(n):
         time.sleep(2)
         try:
-            st=py4j("pstatus")
-            b=busy(st)
-            if b: busystreak+=1
-            if k in (2,6,10): print(f"  t={2*k+2}s pathStatus={st}")
+            st=py4j("pstatus"); laststatus=st
+            if busy(st): busystreak+=1
+            if arrived(st): arr=True
+            if k in (2, n-1): print(f"  t={2*k+2}s pathStatus={st}")
         except Exception as e:
             print("  pstatus err", e)
-    try:
-        cl=[l for l in py4j("chat",n=30).get("chat",[]) if any(w in l for w in ("Searchin","Ran out","No block","Failed","node","Path","emit","goto"))]
-        for l in cl[-6:]: print("  chat:", l)
-    except Exception as e: print("  chat err", e)
-    print(f"  busy in {busystreak}/11 polls (high = stuck computing)")
+    endbusy = busy(laststatus) if laststatus else True
     py4j("stop")
+    return {"busy_ratio": f"{busystreak}/{n}", "arrived": arr, "end_busy": endbusy}
 
 def main():
     for _ in range(30):
@@ -70,8 +68,21 @@ def main():
     rcon("setblock 0 -60 0 grass_block")
     rcon("setblock 0 -59 0 tall_grass[half=lower]")
     rcon("setblock 0 -58 0 tall_grass[half=upper]")
-    probe("air-4-up", 5, -56, 0)          # air, 4 above ground, over the bot's start
-    probe("tallgrass-upper", 0, -58, 0)   # the upper 2-tall-grass block
-    print("\n(diagnostic — read busy ratios + chat above)")
+    # a genuine over-void goal snap can't help: an island far across a cleared void
+    rcon("fill 14 -70 -4 40 6 4 air")                # void beyond x=14
+    rcon("fill 30 -61 -1 31 -61 1 stone")            # tiny unreachable island (no bridge blocks)
+    r_air  = probe("air-4-up", 5, -56, 0)            # snaps to ground under the bot -> arrive
+    r_grass= probe("tallgrass-upper", 0, -58, 0)     # snaps to ground below the grass -> arrive
+    r_void = probe("over-void-island", 30, -60, 0, secs=30)  # unreachable -> must GIVE UP (end not busy)
+
+    print("\n=== RESULTS (#user-bug: no infinite compute on unreachable goals) ===")
+    print(f"  air-4-up      : {r_air}")
+    print(f"  tallgrass     : {r_grass}")
+    print(f"  over-void     : {r_void}")
+    # snapped goals must ARRIVE (reachable ground), not spin; the truly-unreachable
+    # goal must GIVE UP (end_busy False) within the cap instead of computing forever.
+    ok = r_air["arrived"] and r_grass["arrived"] and (not r_void["end_busy"])
+    print("  GOAL-SNAP/GIVEUP:", "PASS" if ok else "FAIL")
+    import sys; sys.exit(0 if ok else 1)
 
 if __name__=="__main__": main()
