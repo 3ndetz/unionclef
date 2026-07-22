@@ -309,8 +309,10 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // #46 place-as-a-move: if the goal is directly above us and we have a block,
             // PILLAR up to it instead of abandoning — the real fix for raised place-only
             // goals (tree top / ledge) that walking or jumping can't reach.
+            // Only a CLEAR vertical reach (goal well above + nearly overhead) — not a
+            // transient stall near the top of a staircase where the goal is ~1 up.
             double horizToGoal = Math.hypot(plNow.x - gp.x, plNow.z - gp.z);
-            if (gp.y > mod.getPlayer().getY() + 1.2 && horizToGoal < 1.8 && equipBuildBlock(mod)) {
+            if (gp.y > mod.getPlayer().getY() + 2.0 && horizToGoal < 1.5 && equipBuildBlock(mod)) {
                 kaptainwutax.tungsten.task.PillarTask.startTo((int) Math.ceil(gp.y));
                 twBestDistToGoal = -1; twBestImproveMs = 0L;
                 checker.reset();
