@@ -85,7 +85,8 @@ def trial(name,target,secs=35):
             best=max(best,p[1])
             if abs(p[0]-target[0])<=1.5 and p[1]>=target[1]-0.5: reached=True; break
     print(f"  reached={reached} finalPos={pos()} maxY={best} (target y={target[1]})")
-    print("  chat:", [c.replace('§2§l§o','').replace('§r','') for c in py4j(C1,"chat",n=6)["chat"] if 'Tungsten' in c or 'nodes' in c or 'path' in c][:6])
+    keys=('swap-walk','Walker','drift','nodes','No block','executePath','Rejecting')
+    print("  chat:", [c.replace('§2§l§o','').replace('§r','').replace('§c','') for c in py4j(C1,"chat",n=30)["chat"] if any(k in c for k in keys)][-10:])
     return reached
 
 def main():
