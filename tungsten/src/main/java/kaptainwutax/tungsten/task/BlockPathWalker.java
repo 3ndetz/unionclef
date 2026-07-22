@@ -216,11 +216,35 @@ public class BlockPathWalker {
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
 
-        boolean needJumpUp = wp.getY() > player.getBlockPos().getY();
-        boolean canJump = TungstenConfig.get().followJumpingEnabled
-                && player.isOnGround()
-                && (needJumpUp || SafetySystem.isJumpLandingSafe(
-                        playerPos, player.getVelocity(), player.getEntityWorld()));
+        // Jump timing. A gap ahead (no floor at feet level directly in front — a
+        // dip between diagonal steps, or a hole) must be crossed with a sprint-jump
+        // taken off NEAR THE LEADING EDGE, or the arc lands short in the gap. A
+        // contiguous step-up (staircase: a solid step at feet level ahead) can jump
+        // early. Flat ground bunny-hops when the landing is void-safe (speed).
+        boolean canJump = false;
+        if (TungstenConfig.get().followJumpingEnabled && player.isOnGround()) {
+            WorldView world = player.getEntityWorld();
+            int dy = wp.getY() - player.getBlockPos().getY();
+            double ddx = wpPos.x - playerPos.x, ddz = wpPos.z - playerPos.z;
+            double h = Math.sqrt(ddx * ddx + ddz * ddz);
+            double nx = h > 0.01 ? ddx / h : 0.0, nz = h > 0.01 ? ddz / h : 0.0;
+            BlockPos aheadFeet = BlockPos.ofFloored(playerPos.x + nx, playerPos.y + 0.1, playerPos.z + nz);
+            boolean floorAhead =
+                    !world.getBlockState(aheadFeet).getCollisionShape(world, aheadFeet).isEmpty()
+                 || !world.getBlockState(aheadFeet.down()).getCollisionShape(world, aheadFeet.down()).isEmpty();
+            boolean gapAhead = h > 0.01 && !floorAhead;
+            if (gapAhead) {
+                // project the player's in-block offset onto the travel direction;
+                // > 0.1 means we're past centre, near the leading edge -> take off
+                double fx = playerPos.x - Math.floor(playerPos.x) - 0.5;
+                double fz = playerPos.z - Math.floor(playerPos.z) - 0.5;
+                canJump = (fx * nx + fz * nz) > 0.1;
+            } else if (dy >= 1) {
+                canJump = true; // contiguous step-up (staircase)
+            } else {
+                canJump = SafetySystem.isJumpLandingSafe(playerPos, player.getVelocity(), world);
+            }
+        }
         mc.options.jumpKey.setPressed(canJump);
     }
 
