@@ -113,6 +113,11 @@ public class PathExecutor {
     			TungstenModRenderContainer.BREAK_PLAN.clear();
     			breakQueue = null; breakingTicks = 0; settleTicks = 0;
     		}
+    		// A stop mid-mine must release the attack key and the aim immediately —
+    		// otherwise the bot keeps swinging and the camera stays locked on the
+    		// block until the stale-aim timeout (part of the #29 frozen-camera fix).
+    		options.attackKey.setPressed(false);
+    		kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
     		this.tick = this.path.size();
     		// player.input.playerInput = ... // MC 1.21: Input has no playerInput field
 		    options.forwardKey.setPressed(false);
