@@ -25,7 +25,7 @@ mc=gw.entry_point; op=req["op"]; out={}
 if op=="state": out={"inGame":mc.inGame()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="swap": out=dict(mc.setTungstenPathing(bool(req["on"])))
-elif op=="goto": out=dict(mc.gotoXYZ(int(req["x"]),int(req["y"]),int(req["z"])))
+elif op=="goto": mc.ExecuteCommand("@goto "+str(req["x"])+" "+str(req["y"])+" "+str(req["z"])); out={"ok":True}
 elif op=="stop": mc.ExecuteCommand("@stop"); mc.punkStop(); out={"ok":True}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",14)))]}
 print(json.dumps(out,default=str)); gw.close()
