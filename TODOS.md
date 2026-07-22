@@ -303,6 +303,18 @@
       >   не маршрутизирует рельеф). Нужен ЭТОТ пункт (baritone MovementAscend/Parkour в
       >   BlockNode.getChildren) + 1.6.2 macro-actions. A (сплошная лестница) и flat —
       >   работают (walker + executePath), их НЕ трогать.
+      - > INVESTIGATED further (2026-07-22): found two REAL bugs in BlockSpacePathFinder —
+      >   (1) getDistFromStartSq used start.x for the Y and Z diffs (garbage distances);
+      >   (2) bestSoFar had inverted selection logic returning the wrong node. BUT they are
+      >   LOAD-BEARING: course A routes via the async BlockSpacePathFinder (branch 2 —
+      >   CombatPathfinder returns <2 for the staircase), and the garbage distances made
+      >   bestSoFar emit partial paths A depends on mid-climb. Correcting either bug
+      >   REPRODUCIBLY stalls A at (10.7,-51) — two clean warm runs identical; reverting
+      >   restores A to (13,-48). CONCLUSION: the search cannot be fixed piecemeal — the
+      >   distance calc + failing-flag + bestSoFar + move generation must be reworked
+      >   TOGETHER, keeping A (the canary) green at every step. Reverted to v0.32.0-stable.
+      >   Interim positive signal to reuse in the rework: with the corrected search, course
+      >   C returned real "BFS 18/14 wp" paths instead of "Ran out of nodes".
     - [ ] 1.6.1b (#34b) C-курс «2-блочная вертикальная стена» физически НЕпроходим прыжком
       (ванильный sprint-jump apex ~1.25 блока). Нужен block-placing: пиллар-вверх (ставить
       блок под себя в прыжке) или лестница из блоков. Это отдельная крупная фича (примитив
