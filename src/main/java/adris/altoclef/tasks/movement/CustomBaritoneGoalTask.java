@@ -325,7 +325,13 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
                 java.util.List<net.minecraft.util.math.BlockPos> bfs =
                         kaptainwutax.tungsten.combat.CombatPathfinder.findPath(startB, goalB, mod.getWorld());
-                if (bfs.size() >= 2) {
+                boolean smart = kaptainwutax.tungsten.TungstenConfig.get().smartMoves;
+                // A degenerate 2-wp stub to a far goal = CombatPathfinder couldn't route the
+                // terrain (gapped/steep). With smartMoves the async SmartMoves search CAN
+                // route it, so skip the stub and fall through to the robust path (2)/(3).
+                boolean degenerateStub = smart && bfs.size() == 2 && distToGoal > 6.0
+                        && Math.sqrt(bfs.get(1).getSquaredDistance(goalB)) > distToGoal - 3.0;
+                if (bfs.size() >= 2 && !degenerateStub) {
                     if (pf != null) pf.stop.set(true);
                     if (ex != null) ex.stop = true;
                     kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
@@ -339,7 +345,13 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 // instead of the drift-prone physics executor (user's directive).
                 java.util.Optional<java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>> bp =
                         kaptainwutax.tungsten.path.PathFinder.getComputedBlockPath();
-                if (bp.isPresent() && bp.get().size() >= 2) {
+                // Staleness guard (smartMoves): getComputedBlockPath is the LAST async
+                // result — may be for a previous goal. Only accept a path whose endpoint
+                // reaches near the current goal; else recompute. (Off by default so the
+                // legacy path selection is untouched.)
+                boolean fresh = !smart || (bp.isPresent() && !bp.get().isEmpty()
+                        && bp.get().get(bp.get().size() - 1).getBlockPos().getSquaredDistance(goalB) <= 36.0);
+                if (bp.isPresent() && bp.get().size() >= 2 && fresh) {
                     java.util.List<net.minecraft.util.math.BlockPos> wps = new java.util.ArrayList<>();
                     for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : bp.get()) wps.add(n.getBlockPos());
                     if (ex != null) ex.stop = true;   // don't let the executor drift-replay
