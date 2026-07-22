@@ -65,9 +65,51 @@ public class TungstenMod implements ClientModInitializer {
 		
 	}
 
+	/**
+	 * Reset ALL tungsten client-side state. Called on disconnect / world change so
+	 * nothing survives a re-join: a frozen mine/combat aim, a running task, a stuck
+	 * break, a live pathfinder/executor. Static singletons don't reset on world unload
+	 * on their own — this is the durable fix for #29 (camera frozen on a block that
+	 * persisted across reconnect). Also safe to call anytime as a hard reset.
+	 */
+	public static void resetAllState() {
+		try {
+			kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+			kaptainwutax.tungsten.task.BlockPathWalker.stop();
+			kaptainwutax.tungsten.task.BridgeTask.stop();
+			kaptainwutax.tungsten.task.PillarTask.stop();
+			kaptainwutax.tungsten.task.PunkPlayerTask.stop();
+			kaptainwutax.tungsten.task.RunAwayTask.stop();
+			kaptainwutax.tungsten.task.BowShooter.stop();
+			var pf = TungstenModDataContainer.PATHFINDER;
+			var ex = TungstenModDataContainer.EXECUTOR;
+			if (pf != null) pf.stop.set(true);
+			if (ex != null) { ex.stop = true; ex.breakQueue = null; }
+			MinecraftClient m = MinecraftClient.getInstance();
+			if (m.options != null) {
+				m.options.attackKey.setPressed(false);
+				m.options.useKey.setPressed(false);
+				m.options.forwardKey.setPressed(false);
+				m.options.backKey.setPressed(false);
+				m.options.leftKey.setPressed(false);
+				m.options.rightKey.setPressed(false);
+				m.options.sprintKey.setPressed(false);
+				m.options.jumpKey.setPressed(false);
+				m.options.sneakKey.setPressed(false);
+			}
+			if (m.interactionManager != null) m.interactionManager.cancelBlockBreaking();
+		} catch (Exception e) {
+			Debug.logMessage("resetAllState error: " + e.getMessage());
+		}
+	}
+
 	@Override
 	public void onInitializeClient() {
 		TungstenConfig.load();
+		// #29 durable fix: nothing tungsten must survive a reconnect (a frozen aim, a
+		// stuck mine, a running task). Static state doesn't reset on world unload itself.
+		net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT
+				.register((handler, client) -> resetAllState());
 		TungstenModDataContainer.EXECUTOR = new PathExecutor(true);
 		//#if MC < 12111
 		//$$ LOG.info("[Tungsten] Preprocessor: MC < 12111 (1.21.1 fallback mode)");
