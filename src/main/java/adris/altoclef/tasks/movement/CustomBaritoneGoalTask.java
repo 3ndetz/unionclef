@@ -253,41 +253,13 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         try {
             var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
             var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
-            boolean walking = kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
-            boolean busy = walking
-                    || (pf != null && pf.active.get())
-                    || (ex != null && ex.isRunning());
-            if (!busy && pf != null) {
-                // DRIFT-IMMUNE terrain nav (rolling re-anchor). The physics executor
-                // replays a simulated trajectory and DRIFTS from the real position on
-                // steps/slopes — once drift > threshold it hard-stops, so @gamer crawled
-                // and stalled on terrain. The BlockPathWalker instead sprints from the
-                // bot's REAL position toward each block-path waypoint (jumping up steps),
-                // so drift can't accumulate: it always corrects from where the bot
-                // actually is. Follow a ~25-block BFS segment, and re-plan the next one
-                // each time the walker stops (finished / stalled) — a rolling horizon to
-                // the goal. The physics executor stays the fallback for moves the block
-                // BFS can't express: water swim, slime bounce, parkour gaps.
-                // Elevation-aware block path (the same block-space search the executor
-                // uses, so it climbs steps/slopes — CombatPathfinder's grid BFS is flat
-                // only). Sync, but only on a re-plan (segment end / stall), not every tick.
-                java.util.Optional<java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>> bp =
-                        kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(
-                                mod.getWorld(), gp, mod.getPlayer());
-                if (bp.isPresent() && bp.get().size() >= 2) {
-                    java.util.List<net.minecraft.util.math.BlockPos> waypoints = new java.util.ArrayList<>();
-                    for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : bp.get()) {
-                        waypoints.add(n.getBlockPos());
-                    }
-                    if (ex != null) ex.stop = true;   // keep the drift-prone executor out of the walker's way
-                    kaptainwutax.tungsten.task.BlockPathWalker.startBFS(waypoints);
-                } else {
-                    if (ex != null) ex.stop = false;  // a prior ;stop leaves it stuck true
-                    pf.find(mod.getWorld(), gp, mod.getPlayer());
-                }
+            boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
+            if (pf != null && !busy) {
+                if (ex != null) ex.stop = false;   // a prior ;stop leaves it stuck true
+                pf.find(mod.getWorld(), gp, mod.getPlayer());
             }
         } catch (Throwable t) {
-            Debug.logInternal("[swap] tungsten primary drive failed: " + t);
+            Debug.logInternal("[swap] tungsten primary find failed: " + t);
         }
         mod.getClientBaritone().getPathingBehavior().forceCancel();
         checker.reset();
