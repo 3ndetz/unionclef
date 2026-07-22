@@ -155,8 +155,17 @@ Set `mod_version` in `gradle.properties` to the new version.
 ### 3. Publish to GitHub
 
 ```bash
-gradlew githubRelease   # builds JAR, creates GitHub release with notes
+gradlew :1.21.11:githubRelease   # builds the 1.21.11 JAR, creates the GitHub release
 ```
+
+⛔ **ALWAYS scope the task to `:1.21.11:` — this branch's MC-version subproject.** This
+is a MULTI-VERSION mod (`versions/1.16.5` … `versions/1.21.11`) and all versions share
+ONE `vX.Y.Z` git-tag namespace. Running the un-scoped `gradlew githubRelease` runs OTHER
+versions' release tasks (e.g. it once attached the `1.21.1` jar to the tag and the
+`1.21.11` jar never got published). If a version tag is already taken (by another
+version line), BUMP to a free `mod_version` — the plugin will NOT overwrite an existing
+release. After releasing, VERIFY: `gh release view v<ver> --json assets` must list
+`unionclef-1.21.11-<ver>.jar`.
 
 This is the **only** way to release. Do NOT use `gh release create` manually.
 The gradle task automatically:
