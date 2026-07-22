@@ -16,8 +16,8 @@ gw=JavaGateway(gateway_parameters=GatewayParameters(address="127.0.0.1",port=253
 mc=gw.entry_point; op=req["op"]; out={}
 if op=="state": out={"inGame":mc.inGame()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
-elif op=="pillar": out={"ok":mc.pillarTo(int(req["y"])),"active":mc.pillarActive()}
-elif op=="pactive": out={"active":mc.pillarActive()}
+elif op=="swap": out=dict(mc.setTungstenPathing(bool(req["on"])))
+elif op=="pstatus": out=dict(mc.pathStatus())
 elif op=="cmd": mc.ExecuteCommand(req["c"]); out={"ok":True}
 print(json.dumps(out,default=str)); gw.close()
 """
@@ -36,31 +36,29 @@ def main():
         try: py4j("connect", ip="test-server")
         except Exception: pass
         time.sleep(6)
-    rcon("forceload add -8 -8 8 8")
-    rcon("fill -4 -60 -4 4 30 4 air"); rcon("fill -4 -61 -4 4 -61 4 stone")
-    rcon(f"tp {BOT} 0 -60 0 0 0"); time.sleep(1)
-    rcon(f"item replace entity {BOT} weapon.mainhand with minecraft:stone 64")
-    time.sleep(1)
-    print("start a long pillar (to y=-40, ~20 up)...")
-    r = py4j("pillar", y=-40)
-    time.sleep(3)
-    active_before = py4j("pactive")["active"]
-    print(f"  pillar active before reconnect: {active_before}")
+    rcon("forceload add -8 -8 40 8")
+    rcon("fill 0 -60 -4 40 5 4 air"); rcon("fill 0 -61 -4 40 -61 4 stone")
+    rcon(f"tp {BOT} 0 -60 0 90 0"); time.sleep(1.5)
+    print("swap:", py4j("swap", on=True))
+    print("start a far @goto (tungsten pathing stays active)...")
+    py4j("cmd", c="@goto 35 -60 0")
+    time.sleep(4)
+    busy_before = bool(py4j("pstatus").get("busy") in (True, "true", "True"))
+    print(f"  tungsten pathing busy before reconnect: {busy_before}")
     print("force reconnect (triggers DISCONNECT -> resetAllState)...")
     py4j("connect", ip="test-server")
-    # wait for re-join
     inGame = False
     for _ in range(20):
         time.sleep(3)
         try:
             if py4j("state")["inGame"]: inGame = True; break
         except Exception: pass
-    time.sleep(2)
-    active_after = py4j("pactive")["active"] if inGame else True
+    time.sleep(3)
+    busy_after = bool(py4j("pstatus").get("busy") in (True, "true", "True")) if inGame else True
     print(f"  in game after reconnect: {inGame}")
-    print(f"  pillar active after reconnect (should be False): {active_after}")
+    print(f"  pathing busy after reconnect (should be False): {busy_after}")
     print("\n=== RESULTS (#29 disconnect reset) ===")
-    ok = active_before and inGame and (not active_after)
+    ok = busy_before and inGame and (not busy_after)
     print(f"  task ran, reconnected, state cleared: {ok}")
     print("  DISCONNECT-RESET:", "PASS" if ok else "FAIL")
     import sys; sys.exit(0 if ok else 1)
