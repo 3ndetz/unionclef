@@ -27,16 +27,26 @@
     baritone (был просто заблокирован, не мёртв). Диагностика: [trtick]-лог чейнов
   - [x] 13.2 swap работает: setTungstenPathing(true) → GetToBlockTask.driveTungsten
     Primary зовёт tungsten PATHFINDER.find напрямую (как ;goto). Тест swap_test PASS
-  - [~] 13.3 @gamer-СМОУК на survival-мире (добавлен gamer-server, профиль gamer,
-    normal/easy; gamer_smoke.py). НАХОДКИ: @gamer на BARITONE (primary OFF)
-    ПРОГРЕССИРУЕТ — бот двигался, спустился 137→132, набрал 2→22 блоков (нарубил
-    дерева) за ~70с. На TUNGSTEN-PRIMARY — ЗАМОРОЖЕН (drift-стоп на сложном
-    survival-рельефе; tungsten под flat/паркур). Вывод: swap-инфра готова, но
-    tungsten-пасфайндер НЕ готов как полный drop-in на произвольном рельефе —
-    нужна робастность (см. 1.6.3 velocity/airStrafe симуляция, 1.6.4 closed-loop
-    yaw-коррекция против drift). Для survival сейчас навигатор = baritone
-  - [ ] 13.4→ порядок: сначала tungsten terrain-робастность (block 1.6), потом
-    полный @gamer на tungsten-primary. Полный проход @gamer — nightly-масштаб
+  - [x] 13.3 tungsten ВЕДЁТ реальные altoclef-таски (главный анблок, 2026-07-22).
+    ВАЖНО: ранний вывод «tungsten замерзает на рельефе/drift» был ПОСПЕШНЫМ и
+    ОПРОВЕРГНУТ тщательным диагнозом (задачи #19/#23):
+    · tungsten НОРМАЛЬНО ходит по рельефу — контр-курс step-up/step-down/gap PASS
+      (;goto за 4с, no drift). Не рельеф и не drift-порог (frozen при threshold=5).
+    · @gamer на gamer-server замерзал по ДВУМ причинам: (1) спавн в ОКЕАНЕ — бот
+      утонул; (2) КОНФЛИКТ ВВОДА: shredder InputOverrideHandler при inControl()=true
+      ставит PlayerMovementInput (форс-клавиши=0 когда baritone не пасится) →
+      обнуляет setPressed tungsten-executor'а → бот стоит, а sim уезжает (drift 5+
+      при неподвижном боте). Диагноз: чистый ;goto движет (нет altoclef-таска),
+      @get замерзал (таск активен).
+    · ФИКС: inControl() возвращает false при TungstenModDataContainer.isExecutor
+      Running() → KeyboardInput читает клавиши tungsten. Тест @get log 3 с деревьями
+      на tungsten-primary: бот доехал 0.5→8.4 И нарубил 3 лога (blocks 0→3). Регрессия
+      swap_test PASS. tungsten теперь ведёт навигацию+майнинг altoclef-тасков.
+  - [ ] 13.3b @gamer полный проход на tungsten-primary — нужен LAND-спавн (сменить
+    seed gamer-server, не океан). Nightly-масштаб. Ядро (навигация+майнинг) уже
+    работает (@get log PASS)
+  - [ ] 13.3c (бэклог, #20/#21) tungsten block-space «Ran out of nodes» в ВОДЕ/очень
+    сложном рельефе — водная навигация; отдельная доводка BlockNode. НЕ блокер ядра
   - [ ] 13.4 ПОРТ BARITONE-ЭВРИСТИК в tungsten (напоминание юзера): у baritone куча
     важного (эвристики A*, стак-детект, wander, dimension-логика, cost'ы) — портить
     в tungsten по мере. ВАЖНО: делать КРАСИВО, в отдельных потоках, ничего не
