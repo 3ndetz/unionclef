@@ -116,6 +116,21 @@ public class PunkPlayerTask {
             return;
         }
 
+        // ── Target fell off the map (knocked into the void / over a big drop) ──
+        // Do NOT chase it down: following an enemy over the edge is exactly how
+        // the bot ends up in the void too, and A* toward a void cell just spams
+        // "Ran out of nodes". Hold position — immediate-respawn (and most maps)
+        // put the target back up top within a second, and we re-engage then.
+        double targetDrop = player.getY() - targetEntity.getEntityPos().y;
+        int targetFall = kaptainwutax.tungsten.combat.VoidDetector.fallHeight(
+                targetEntity.getEntityPos(), world);
+        if (targetDrop > 3.0 && targetFall > 6) {
+            if (mode == Mode.COMBAT) combat.releaseKeys();
+            if (FollowEntityTask.isActive()) FollowEntityTask.stop();
+            mode = Mode.APPROACH;
+            return;
+        }
+
         double dist = player.getEntityPos().distanceTo(targetEntity.getEntityPos());
         // raycast to body center — the feet point clips terrain right at the
         // target's feet and spuriously blocked combat entry on flat ground
@@ -135,8 +150,12 @@ public class PunkPlayerTask {
         // ── execute ──────────────────────────────────────────────────────
         if (mode == Mode.COMBAT) {
             combat.tick(player, targetEntity, world);
+        } else if (!FollowEntityTask.isActive()) {
+            // APPROACH but follow isn't running (e.g. we just resumed after a
+            // void-wait) — (re)start it so the bot actually walks to the target.
+            FollowEntityTask.start(targetEntity, 1.0);
         }
-        // APPROACH is driven by FollowEntityTask (ticked separately in mixin)
+        // APPROACH is otherwise driven by FollowEntityTask (ticked in the mixin)
     }
 
     // ── mode transitions ─────────────────────────────────────────────────────

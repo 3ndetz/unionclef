@@ -373,6 +373,26 @@ public class SafetySystem {
             mc.options.jumpKey.setPressed(false);
         }
 
+        // ── VOID-SAFETY HARD CLAMP ───────────────────────────────────────
+        // Whatever the stage/movement logic decided, never let a forward press
+        // walk us off a serious drop while we're on safe ground. We test the
+        // heading implied by the PRESSED KEYS (not raw velocity) so a braking
+        // maneuver — which pushes back toward the island — is never cancelled.
+        if (mc.options.forwardKey.isPressed() || mc.options.leftKey.isPressed()
+                || mc.options.rightKey.isPressed() || mc.options.backKey.isPressed()) {
+            double[] heading = pressedHeading(player, mc);
+            if (heading != null && VoidDetector.edgeAhead(
+                    playerPosTick, heading[0], heading[1], player.getEntityWorld(), 3)) {
+                mc.options.forwardKey.setPressed(false);
+                mc.options.backKey.setPressed(false);
+                mc.options.leftKey.setPressed(false);
+                mc.options.rightKey.setPressed(false);
+                mc.options.sprintKey.setPressed(false);
+                mc.options.jumpKey.setPressed(false);
+                mc.options.sneakKey.setPressed(true); // plant feet at the edge
+            }
+        }
+
         // ── visualization ────────────────────────────────────────────────
         renderVelocity(playerPos, playerVel, playerPredicted, COL_PLAYER_VEL);
         renderVelocity(targetPos, enemyVelocity, enemyPredicted, COL_ENEMY_VEL);
@@ -559,6 +579,20 @@ public class SafetySystem {
         return false;
     }
 
+    /** World-space horizontal heading (dx,dz) implied by the currently pressed
+     *  movement keys relative to the player's yaw, or null if no movement key. */
+    private static double[] pressedHeading(ClientPlayerEntity player, MinecraftClient mc) {
+        double fwd = (mc.options.forwardKey.isPressed() ? 1 : 0) - (mc.options.backKey.isPressed() ? 1 : 0);
+        double strafe = (mc.options.rightKey.isPressed() ? 1 : 0) - (mc.options.leftKey.isPressed() ? 1 : 0);
+        if (fwd == 0 && strafe == 0) return null;
+        double yawRad = Math.toRadians(player.getYaw());
+        double sin = Math.sin(yawRad), cos = Math.cos(yawRad);
+        // MC input→world: forward = (-sin, cos), strafe-right = (cos, sin)
+        double dx = fwd * -sin + strafe * cos;
+        double dz = fwd *  cos + strafe * sin;
+        return new double[]{dx, dz};
+    }
+
     /**
      * Find best visible point on target hitbox.
      * Priority: closest point on box → if blocked, try hitbox sample points.
@@ -636,7 +670,7 @@ public class SafetySystem {
 
         double angDist = WindMouseRotation.INSTANCE.distanceToTarget(mc.player);
         // rough: WindMouse moves ~maxStep degrees per frame, ~3 frames per tick
-        double degreesPerTick = 4.0 * 3.0; // default maxStep * ~frames/tick
+        double degreesPerTick = kaptainwutax.tungsten.TungstenConfig.get().combatWindMouseMaxStep * 3.0;
         int ticks = (int) Math.ceil(angDist / degreesPerTick);
         return Math.max(1, Math.min(5, ticks));
     }

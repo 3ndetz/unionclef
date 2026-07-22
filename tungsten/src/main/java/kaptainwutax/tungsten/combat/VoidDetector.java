@@ -62,6 +62,31 @@ public final class VoidDetector {
         return unsafeCount / 8.0;
     }
 
+    /**
+     * Would advancing horizontally from {@code pos} in direction (dx,dz) step off
+     * a drop deeper than {@code maxSafeFall}, while {@code pos} itself is on safe
+     * ground? Samples a few short distances ahead at feet level.
+     *
+     * This is the core void-safety primitive for FREE-FORM movement (combat aura,
+     * LEAP) — it keeps the bot on bridges/islands by refusing forward motion that
+     * leaves solid ground. Pathfinder moves are NOT gated by this (the block-space
+     * search already routes over solid cells and may descend deliberately).
+     *
+     * @return true if a step ahead lands over a serious drop (caller should not advance)
+     */
+    public static boolean edgeAhead(Vec3d pos, double dx, double dz, WorldView world, int maxSafeFall) {
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 1e-4) return false;
+        dx /= len; dz /= len;
+        // If we're already over a drop (mid-parkour/descent), this guard doesn't apply.
+        if (fallHeight(pos, world) > maxSafeFall) return false;
+        for (double d : new double[]{0.55, 0.9, 1.35}) {
+            Vec3d ahead = new Vec3d(pos.x + dx * d, pos.y, pos.z + dz * d);
+            if (fallHeight(ahead, world) > maxSafeFall) return true;
+        }
+        return false;
+    }
+
     private static boolean hasGroundAt(int x, int startY, int z, WorldView world, int bottomY) {
         for (int dy = 0; dy <= 2; dy++) {
             int y = startY - dy;
