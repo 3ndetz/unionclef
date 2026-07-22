@@ -1,5 +1,18 @@
 # TODOs
 
+## 🐞 BUGS (from live user testing — each = its own GitHub issue, fix by priority, per checklist)
+- [x] BUG #26 (CRASH, DONE 2026-07-22) `PathExecutor.getCurrentNode` did `path.get(-1)` on an
+  EMPTY path ("mining without a physics leg") → IndexOutOfBounds in the entity tick → whole
+  client crash on a goto that needs a 1-block mine. Fix: guard empty path (return null;
+  caller null-checks). Needs build+test (mining goto → no crash).
+- [ ] BUG #27 (unreachable goal → infinite search) A goal reachable only by placing/breaking
+  (e.g. tree top) makes the pathfinder search FOREVER; it doesn't try place/break though
+  allowed. Want: attempt to reach (pillar/bridge/mine) OR fail gracefully as 'unreachable'
+  after bounded attempts — never infinite.
+- [ ] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
+  often prints 'Ran out of nodes' and fails. Diagnose node-budget/heuristic/move-gen, fix the
+  pipeline. Neither fail-on-simple-parkour NOR search-forever-for-nonexistent.
+
 ## МЕГА-ЦЕЛЬ 2: TUNGSTEN = ПОЛНОЦЕННАЯ ЗАМЕНА BARITONE + ИНТЕГРАЦИЯ — юзер 2026-07-21 (вечер)
 
 > Дословные идеи юзера (фиксирую чтобы не забыть). ПРИНЦИП прежний: удобный

@@ -70,6 +70,18 @@ Nothing is "done" without a battle test on the `deploy/` stand. In short:
 - Assess the work as a whole for adequacy: does it meet the acceptance criteria? did it
   leave a regression / half-measure? does the code read like its surroundings? no
   garbage/duplication?
+- **DEFENSIVE-ERROR REVIEW (mandatory — scan the changed code for the common crash
+  classes; one of these takes the WHOLE client tick down):**
+  - **NULL** — dereferences without a guard; `Optional`/map/`get()` results assumed
+    present; entity/world/target that can be null mid-tick.
+  - **INDEX / ARRAY BOUNDS** — `get(size-1)` / `[len-1]` on a possibly-EMPTY list or
+    array (→ index -1), off-by-one, negative or out-of-range index, `subList`, iteration
+    past the end. (This exact class crashed the client — issue #26.)
+  - **THREADING / CONCURRENCY** — shared mutable **static** state touched from several
+    threads (render + PathFinder + client tick), data races, `ConcurrentModification`
+    / iterator invalidation, non-atomic check-then-act. Marshal to the right thread.
+  If a value can be empty / null / out-of-range / concurrently mutated at runtime, guard
+  it before shipping. Prefer failing gracefully (log + no-op) over throwing in a tick.
 - If the feature was NOT achieved — do not pass it off as done. Either finish it, or
   honestly revert to stable and document the reason and next step.
 
