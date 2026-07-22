@@ -132,6 +132,18 @@ public class PunkPlayerTask {
 
         tryRediscover();
         if (targetEntity == null || targetEntity.isRemoved() || !targetEntity.isAlive()) {
+            // No valid target — most often the instant we KILLED it. The combat
+            // render frame stops refreshing keys (its target is gone), so a stale
+            // forward-toward-the-enemy press would coast us off the rim before we
+            // re-acquire. Release the drive keys now; the tick guard above keeps
+            // sneak on if we're still sliding toward a drop.
+            MinecraftClient mc = MinecraftClient.getInstance();
+            mc.options.forwardKey.setPressed(false);
+            mc.options.backKey.setPressed(false);
+            mc.options.leftKey.setPressed(false);
+            mc.options.rightKey.setPressed(false);
+            mc.options.sprintKey.setPressed(false);
+            mc.options.jumpKey.setPressed(false);
             return;
         }
 
