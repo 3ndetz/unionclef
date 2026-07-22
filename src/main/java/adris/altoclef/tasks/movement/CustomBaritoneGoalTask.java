@@ -254,18 +254,19 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
             var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
             boolean walking = kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
-            boolean busy = walking
-                    || (pf != null && pf.active.get())
-                    || (ex != null && ex.isRunning());
-            if (!busy && pf != null && !mod.getPlayer().isTouchingWater()) {
-                // DRIFT-IMMUNE terrain nav (user's idea: correct from the REAL position).
-                // The physics executor replays a sim trajectory that DRIFTS on steps/
-                // slopes → hard-stops at drift>threshold → @gamer crawled/stalled. The
-                // BlockPathWalker instead sprints from the bot's ACTUAL position toward
-                // each block-path waypoint (jumps up steps — CombatPathfinder's grid BFS
-                // already generates step-up/down neighbors), so drift can't accumulate.
-                // Rolling ~25-block segments to the goal. Water/parkour fall through to
-                // the physics executor (walker skipped in water above; empty BFS below).
+
+            // DRIFT-IMMUNE terrain nav gets PRIORITY (user's directive: @gamer must be
+            // extremely stable, never stuck). The physics executor replays a simulated
+            // trajectory that DRIFTS on steps/slopes; at drift>threshold it hard-stops
+            // AND the search rejects its own path ("root far from player") — so the
+            // pathfinder is perpetually busy, never yielding, and the bot stalls. The
+            // BlockPathWalker instead sprints from the bot's REAL position toward each
+            // block-path waypoint (CombatPathfinder's grid BFS already does step-up/down),
+            // so drift can't accumulate. When a walkable block path exists we FORCE the
+            // drift-prone pathfinder/executor off and let the walker own movement; the
+            // path is re-planned per ~25-block segment (rolling horizon). Water/parkour,
+            // where the block BFS returns nothing, fall through to the physics executor.
+            if (!walking && !mod.getPlayer().isTouchingWater()) {
                 net.minecraft.util.math.BlockPos startB = mod.getPlayer().getBlockPos();
                 net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
                 java.util.List<net.minecraft.util.math.BlockPos> bfs =
@@ -273,14 +274,26 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 kaptainwutax.tungsten.Debug.logMessage("[swap-walk] bfs=" + bfs.size()  // TEMP diag
                         + " start=" + startB.toShortString() + " goal=" + goalB.toShortString());
                 if (bfs.size() >= 2) {
-                    if (ex != null) ex.stop = true;   // keep the drift-prone executor out of the walker's way
+                    if (pf != null) pf.stop.set(true);   // force the drifting pathfinder off
+                    if (ex != null) ex.stop = true;      // and its executor
                     kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
-                } else {
-                    if (ex != null) ex.stop = false;  // a prior ;stop leaves it stuck true
-                    pf.find(mod.getWorld(), gp, mod.getPlayer());
+                    mod.getClientBaritone().getPathingBehavior().forceCancel();
+                    checker.reset();
+                    setDebugState("Tungsten (primary) walking terrain...");
+                    return true;
                 }
-            } else if (!busy && pf != null) {
-                if (ex != null) ex.stop = false;
+            }
+            if (walking) {
+                // walker owns movement this segment
+                mod.getClientBaritone().getPathingBehavior().forceCancel();
+                checker.reset();
+                setDebugState("Tungsten (primary) walking terrain...");
+                return true;
+            }
+            // No walkable block path (water / slime / parkour) → physics executor.
+            boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
+            if (!busy && pf != null) {
+                if (ex != null) ex.stop = false;   // a prior ;stop leaves it stuck true
                 pf.find(mod.getWorld(), gp, mod.getPlayer());
             }
         } catch (Throwable t) {
