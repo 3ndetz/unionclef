@@ -83,7 +83,10 @@ public class PathExecutor {
 	}
 	
 	public Node getCurrentNode() {
-		if (this.path == null) return null;
+		// EMPTY path (e.g. "mining without a physics leg" — a break with no movement
+		// nodes) must not index get(size-1)==get(-1) -> IndexOutOfBounds crashes the
+		// whole client tick. Return null; callers already null-check.
+		if (this.path == null || this.path.isEmpty()) return null;
 		if (this.tick >= this.path.size()) return this.path.get(this.path.size()-1);
 		return this.path.get(this.tick);
 	}
