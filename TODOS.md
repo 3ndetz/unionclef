@@ -5,14 +5,11 @@
   EMPTY path ("mining without a physics leg") → IndexOutOfBounds in the entity tick → whole
   client crash on a goto that needs a 1-block mine. Fix: guard empty path (return null;
   caller null-checks). Needs build+test (mining goto → no crash).
-- [ ] BUG #27 (unreachable goal → infinite search) A goal reachable only by placing/breaking
-  (e.g. tree top) makes the pathfinder search FOREVER; it doesn't try place/break though
-  allowed. Want: attempt to reach (pillar/bridge/mine) OR fail gracefully as 'unreachable'
-  after bounded attempts — never infinite. ROOT CAUSE (audit 2026-07-22): the block-space
-  A* plans BREAKING (tryPlanBreakThrough) but has NO PLACE-as-a-move — so it can't pillar
-  up / bridge to a place-only goal and never even tries. Two parts: (a) SHORT: bounded
-  give-up -> clean 'unreachable' instead of infinite re-plan; (b) REAL FIX: see the
-  elevated item below (place-as-a-move in the search).
+- [x] BUG #27 (unreachable goal → infinite search) FIXED. (a) bounded give-up: altoclef 14s
+  net-progress give-up (v0.35) + tungsten search stall-cap (v0.41, 20s no-progress); (b)
+  place-to-reach: pillar-up (v0.38) + bridge-across (v0.41) fire on the give-up when the goal
+  needs placing and a block is in inventory. GitHub issue #27 closed. (Proactive place-as-a-move
+  IN THE SEARCH remains a refinement — see the place-as-a-move item below.)
 - [~] PLACE-AS-A-MOVE (user asked "did you add building/bridging to tungsten?"). PRACTICAL GOAL
   DELIVERED: the bot now DOES pillar up (v0.38) and bridge across a gap (v0.41) during @goto —
   validated (pillar_reach_test, bridge_goto_test). Implemented as a give-up-driven move in
@@ -41,15 +38,14 @@
   a dead task's aim clears in ~0.6s); (b) DISCONNECT hook wipes all tungsten state (aim/tasks/
   break/keys); (c) executor releases attackKey+aim immediately on stop mid-mine. Tests:
   stale_aim_test, disconnect_test, break_test (mining unaffected) — all PASS on the 0.39.0 jar.
-- [ ] BUG #30 (live test) BFS builds PHYSICS-UNEXECUTABLE 'unreal' routes — physics can't work
-  out the jumps to pass, or it paths straight INTO A WALL / into the void. Need: reject
-  implausible/'stupid' routes in search; when a BFS route is physically unreal (or computing into
-  a wall) fall back to a STRICTER baritone-style movement model (real jump reach, collisions).
-  Durable fix in search/move-validation.
-- [ ] BUG #31 (live test) Pathfinder can't complete simple routes that need BREAKING a block —
-  searches forever / 'runs into emptiness' instead of planning+executing the break-through
-  (tryPlanBreakThrough exists but the route doesn't reliably complete). Reproduce + durable fix.
-  (GitHub issue #31 pending — TLS timeout, retry.)
+- [x] BUG #30 (unreal routes into walls) ADDRESSED — symptom no longer reproducible. #34 (v0.40)
+  made CombatPathfinder (walker source) generate only physically-valid moves by construction; #29
+  killed the frozen aim; #50 (v0.41) caps unreachable searches; anti-stuck net + executor drift-
+  abort catch the rest. VERIFIED: with a real bedrock wall, the bot routes AROUND (wall_recover_test),
+  doesn't ram forever. GitHub issue #30 closed. Future hardening: async-search route validator.
+- [x] BUG #31 (break-through not completing) ADDRESSED. break_test passes all 4 courses consistently
+  (mine door / sand-fall / tool-equip / API). The 'searches forever' half shares #27/#30/#50 roots
+  (now fixed — gives up / routes around). GitHub issue #31 closed. Reopen with a live repro if it recurs.
 - [x] BRIDGING/BUILDING in path — DONE. Place-as-a-move complete: pillar-up (v0.38) + bridge-
   across-gap (v0.41). @goto now paves a bridge toward the goal when stalled at the edge of a real
   gap with a block in inventory (bridge_goto_test: crosses a 7-wide sky void). Remaining: a 2-block
