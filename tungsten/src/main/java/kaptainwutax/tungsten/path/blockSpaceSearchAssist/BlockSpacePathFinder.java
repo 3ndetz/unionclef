@@ -109,7 +109,7 @@ public class BlockSpacePathFinder {
         long primaryTimeoutTime = startTime + (generateDeep ? 4800L : 480L);
 		
         TungstenModRenderContainer.RENDERERS.clear();
-		Debug.logMessage("Searchin...");
+		if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) Debug.logMessage("Searchin...");
 		start = new BlockNode(start.getBlockPos(), goal, player, world);
 		
 		double[] bestHeuristicSoFar = new double[COEFFICIENTS.length];//keep track of the best node by the metric of (estimatedCostToGoal + cost / COEFFICIENTS[i])

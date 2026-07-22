@@ -204,7 +204,7 @@ public class PathFinder {
 	        	PathFinder.blockPath = blockPath;
 	    	    NEXT_CLOSEST_BLOCKNODE_IDX.set(1);
 
-				Debug.logMessage("Serching for inputs!");
+				if (TungstenConfig.get().verboseDebugLogging) Debug.logMessage("Serching for inputs!");
 	        }
 	        if (TungstenConfig.get().debugTime) {
 	            System.out.printf("Tungsten [blockSearch] %.1fms | found=%b | nodes=%d%n",
