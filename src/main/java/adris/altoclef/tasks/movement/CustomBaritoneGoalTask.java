@@ -266,7 +266,11 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // drift-prone pathfinder/executor off and let the walker own movement; the
             // path is re-planned per ~25-block segment (rolling horizon). Water/parkour,
             // where the block BFS returns nothing, fall through to the physics executor.
-            if (!walking && !mod.getPlayer().isTouchingWater()) {
+            double distToGoal = mod.getPlayer().getEntityPos().distanceTo(gp);
+            // Walker owns the LONG haul (drift-immune); the physics executor does the
+            // final ~4-block precise approach (short range = negligible drift), which
+            // closes the last steps a short "within 1.5 of goal" BFS path stalls on.
+            if (!walking && distToGoal > 4.0 && !mod.getPlayer().isTouchingWater()) {
                 net.minecraft.util.math.BlockPos startB = mod.getPlayer().getBlockPos();
                 net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
                 java.util.List<net.minecraft.util.math.BlockPos> bfs =
@@ -274,16 +278,15 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 if (bfs.size() >= 2) {
                     if (pf != null) pf.stop.set(true);   // force the drifting pathfinder off
                     if (ex != null) ex.stop = true;      // and its executor
-                    // start() = DIRECT sprint toward the real goal (with LOS+safety) and
-                    // BFS-follow as fallback — DIRECT closes the final approach that a
-                    // short "within 1.5 of goal" BFS path would otherwise stall on.
-                    kaptainwutax.tungsten.task.BlockPathWalker.start(gp, bfs);
+                    kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
                     mod.getClientBaritone().getPathingBehavior().forceCancel();
                     checker.reset();
                     setDebugState("Tungsten (primary) walking terrain...");
                     return true;
                 }
             }
+            // Close to the goal — stop the walker and let the executor finish precisely.
+            if (walking && distToGoal <= 4.0) kaptainwutax.tungsten.task.BlockPathWalker.stop();
             if (walking) {
                 // walker owns movement this segment
                 mod.getClientBaritone().getPathingBehavior().forceCancel();
