@@ -384,39 +384,9 @@ public class SafetySystem {
         // The stage machine (braking, repositioning, escape, pursue) all set
         // movement keys independently, and near a rim several of them sprint and
         // even JUMP — the DANGER_IMMINENT brake-jump is what launched the bot off
-        // the island. So the final word on keys is a single void-aware clamp.
-        boolean nearVoid = VoidDetector.voidWithin(playerPosTick, player.getEntityWorld(), 3, 3);
-        // Speed-scaled lookahead so a sprinting bot (~0.28/tick) sees the rim
-        // with room for vanilla sneak to plant it before it crosses the edge.
-        double look = Math.max(1.4, horizSpeed * 10.0);
-        double[] keyHeading = pressedHeading(player, mc);
-        boolean edgeByKey = keyHeading != null && VoidDetector.edgeAhead(
-                playerPosTick, keyHeading[0], keyHeading[1], player.getEntityWorld(), 3, look);
-        boolean edgeByVel = horizSpeed > 0.04 && VoidDetector.edgeAhead(
-                playerPosTick, playerVel.x, playerVel.z, player.getEntityWorld(), 3, look);
-        if (nearVoid) {
-            // Never sprint near the rim — sprint momentum overshoots the edge.
-            mc.options.sprintKey.setPressed(false);
-        }
-        if (edgeByKey || edgeByVel) {
-            // Heading (keys or momentum) points at a drop → never jump toward it
-            // (the DANGER_IMMINENT brake-jump launched the bot off) and plant with
-            // vanilla sneak so we can't cross the edge on the ground.
-            mc.options.jumpKey.setPressed(false);
-            mc.options.sneakKey.setPressed(true);
-            if (edgeByKey) {
-                // We are actively STEERING off (self-inflicted overshoot / chasing
-                // an enemy across the void) — cancel the drive entirely.
-                mc.options.forwardKey.setPressed(false);
-                mc.options.backKey.setPressed(false);
-                mc.options.leftKey.setPressed(false);
-                mc.options.rightKey.setPressed(false);
-                mc.options.sprintKey.setPressed(false);
-            }
-            // else: only momentum points at the void (knockback) — keep whatever
-            // recovery input a brake stage is applying toward the island, just add
-            // the sneak edge-stop. Cancelling it would strand us sliding at the rim.
-        }
+        // the island. The shared VoidGuard is the final word on the keys (same
+        // clamp the flee task applies after the pathfinder executor).
+        VoidGuard.protect(player, playerPosTick, playerVel, player.getEntityWorld());
 
         // ── visualization ────────────────────────────────────────────────
         renderVelocity(playerPos, playerVel, playerPredicted, COL_PLAYER_VEL);
@@ -602,22 +572,6 @@ public class SafetySystem {
             }
         }
         return false;
-    }
-
-    /** World-space horizontal heading (dx,dz) implied by the currently pressed
-     *  movement keys relative to the player's yaw, or null if no movement key. */
-    private static double[] pressedHeading(ClientPlayerEntity player, MinecraftClient mc) {
-        double fwd = (mc.options.forwardKey.isPressed() ? 1 : 0) - (mc.options.backKey.isPressed() ? 1 : 0);
-        // MC convention: movementSideways = +1 for LEFT (A), -1 for RIGHT (D).
-        double strafe = (mc.options.leftKey.isPressed() ? 1 : 0) - (mc.options.rightKey.isPressed() ? 1 : 0);
-        if (fwd == 0 && strafe == 0) return null;
-        double yawRad = Math.toRadians(player.getYaw());
-        double sin = Math.sin(yawRad), cos = Math.cos(yawRad);
-        // MC input→world (movementInputToVelocity): worldX = sideways*cos - forward*sin,
-        //                                           worldZ = forward*cos  + sideways*sin
-        double dx = strafe * cos - fwd * sin;
-        double dz = fwd * cos + strafe * sin;
-        return new double[]{dx, dz};
     }
 
     /**
