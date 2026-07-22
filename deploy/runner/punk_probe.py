@@ -9,8 +9,9 @@ from py4j.java_gateway import JavaGateway,GatewayParameters
 req=json.loads(sys.argv[1])
 gw=JavaGateway(gateway_parameters=GatewayParameters(address="127.0.0.1",port=25333,auto_convert=True))
 mc=gw.entry_point; op=req["op"]; out={}
-if op=="punk": mc.ExecuteCommand("@stop"); mc.ChatMessage(";stop"); mc.ChatMessage(";punk "+req["t"]); out={"ok":True}
-elif op=="stop": mc.ExecuteCommand("@stop"); mc.ChatMessage(";stop"); out={"ok":True}
+if op=="punk": mc.ExecuteCommand("@stop"); mc.punkStop(); mc.punk(req["t"]); out={"ok":True}
+elif op=="stop": mc.ExecuteCommand("@stop"); mc.punkStop(); out={"ok":True}
+elif op=="status": out=dict(mc.punkStatus())
 elif op=="chat": out={"chat":mc.getRecentChat(req.get("n",25))}
 elif op=="pose":
     p=mc.getGameState(); s=dict(p.get("self") or {}); out={"self":s}
@@ -34,6 +35,7 @@ def erot(n):
 rcon(f"tp {VICTIM} 2 -60 2 -90 0"); rcon(f"tp {BOT} -2 -60 -2 90 0"); time.sleep(1)
 print("=== punk tester2 ===")
 print("PUNK_RESULT:", py4j("punk", t=VICTIM))
+time.sleep(1); print("STATUS:", py4j("status"))
 for i in range(9):
     time.sleep(2)
     try: print(f"t={i*2+2}s bot={epos(BOT)} rot={erot(BOT)} vic={epos(VICTIM)}")

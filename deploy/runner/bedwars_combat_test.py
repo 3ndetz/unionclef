@@ -20,10 +20,11 @@ gw=JavaGateway(gateway_parameters=GatewayParameters(address="127.0.0.1",port=253
 mc=gw.entry_point; op=req["op"]; out={}
 if op=="state": out={"inGame":mc.inGame()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
-elif op=="punk": mc.ExecuteCommand("@stop"); mc.ChatMessage(";stop"); mc.ChatMessage(";punk "+req["t"]); out={"ok":True}
+elif op=="punk": mc.ExecuteCommand("@stop"); mc.punkStop(); mc.punk(req["t"]); out={"ok":True}
+elif op=="status": out=dict(mc.punkStatus())
 elif op=="gs":
     gs=mc.getGameState(); out={"self":dict(gs.get("self") or {}), "players":[dict(p) for p in (gs.get("players") or [])]}
-elif op=="stop": mc.ExecuteCommand("@stop"); mc.ChatMessage(";stop"); out={"ok":True}
+elif op=="stop": mc.ExecuteCommand("@stop"); mc.punkStop(); out={"ok":True}
 print(json.dumps(out,default=str)); gw.close()
 """
 def sh(a,to=30): return subprocess.run(a,capture_output=True,text=True,timeout=to)
