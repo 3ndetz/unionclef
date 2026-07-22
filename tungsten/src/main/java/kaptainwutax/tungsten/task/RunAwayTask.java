@@ -133,8 +133,10 @@ public class RunAwayTask {
         return best;
     }
 
-    /** Nearest standable, not-over-a-drop cell around {@code pos} (scan a few
-     *  blocks up/down); null if none. */
+    /** Nearest standable INTERIOR cell around {@code pos} (scan a few blocks
+     *  up/down); null if none. Interior = solid, 2 air above, and no serious drop
+     *  within 2 blocks — fleeing to the very rim let the executor sprint-overshoot
+     *  off the edge, so a flee target must keep a safety margin from the void. */
     private static Vec3d snapGround(WorldView world, Vec3d pos) {
         int x = (int) Math.floor(pos.x), z = (int) Math.floor(pos.z), y0 = (int) Math.floor(pos.y);
         for (int dy = 2; dy >= -4; dy--) {
@@ -144,7 +146,9 @@ public class RunAwayTask {
                     && world.getBlockState(bp.up(2)).getCollisionShape(world, bp.up(2)).isEmpty();
             if (solid && airAbove) {
                 Vec3d stand = new Vec3d(x + 0.5, bp.getY() + 1.0, z + 0.5);
-                return VoidDetector.fallHeight(stand, world) <= 3 ? stand : null;
+                boolean safe = VoidDetector.fallHeight(stand, world) <= 3
+                        && !VoidDetector.voidWithin(stand, world, 2, 3);
+                return safe ? stand : null;
             }
         }
         return null;
