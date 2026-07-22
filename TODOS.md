@@ -13,14 +13,15 @@
   up / bridge to a place-only goal and never even tries. Two parts: (a) SHORT: bounded
   give-up -> clean 'unreachable' instead of infinite re-plan; (b) REAL FIX: see the
   elevated item below (place-as-a-move in the search).
-- [ ] PRIORITY (elevated 2026-07-22, was TODOS 7.2 "deferred"; user asked "did you add
-  building/bridging to tungsten?"): PLACE-AS-A-MOVE in the block-space search. Today the
-  pathfinder never bridges across a gap or pillars up during goto — placing only happens
-  when the agent explicitly calls bridgeTo/placeBlockAt. Integrate it like breaking
-  (tryPlanBreakThrough) already is: a Bridge move (place at dest.down across a gap, cost =
-  walk+place) and a Pillar move (place under self to go up), mirroring baritone
-  MovementParkourPlace / MovementPillar / MovementTraverse backplace. Consult PlaceRules
-  (allowPlace/protect) + inventorySpace. This unblocks BUG #27 and real building-in-path.
+- [~] PLACE-AS-A-MOVE (user asked "did you add building/bridging to tungsten?"). PRACTICAL GOAL
+  DELIVERED: the bot now DOES pillar up (v0.38) and bridge across a gap (v0.41) during @goto —
+  validated (pillar_reach_test, bridge_goto_test). Implemented as a give-up-driven move in
+  driveTungstenPrimary (stall at a raised/gapped goal + block in inventory -> PillarTask/
+  BridgeTask toward the goal). REMAINING REFINEMENT (rule #6 "in core"): integrate Bridge/Pillar
+  as FIRST-CLASS moves inside the block-space search (BlockNode.getChildren, like tryPlanBreakThrough)
+  so the pathfinder plans them PROACTIVELY mid-route (not only reactively after a ~14s stall, and
+  for mid-route gaps not just the final goal). Deferred: core-search edits are regression-prone
+  (the SmartMoves epic regressed terrain), so this needs the same careful repro→test→audit cycle.
 - [~] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
   often prints 'Ran out of nodes' and fails. PARTLY FIXED v0.40.0 (#34): the walker's grid-BFS
   path source (CombatPathfinder) now generates parkour jump-moves (+2..4 across, flat or +1 up),
