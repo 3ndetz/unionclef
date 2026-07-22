@@ -621,3 +621,16 @@ Self-inflicted void fall eliminated. Flee keeps ~8 blocks (avg 8.0), own movemen
 never self-falls. Mutual PvP still trades knockback-falls (airborne over void —
 positioning is future work). Nav regression (swap_test) PASS. Released v0.28.0
 (combat) and v0.29.0 (approach-guard completion + flee).
+
+### 2026-07-22 (доп) — @gamer проверка: корень НЕ «нет Movements», а ДРЕЙФ executor'а
+
+Юзер спросил «gamer работает?». Проверил на survival-стенде (seed 12345, спавн на
+горе y=148). @gamer стартует, срубает лог, ЕДЕТ (спуск 148→143), затем ползёт/встаёт.
+Детерминированный terrain_test поймал точную причину в чистом чате (после гашения
+Searchin-спама): **executor drift-abort**. Пасфайндер НАХОДИТ путь (size 133), но
+физ-реплей (Agent) расходится с реальностью на рельефе на 5+ блоков → при
+drift>driftThreshold (стенд 5.0) `EXECUTOR.stop` (Agent.java:1613). Каждые ~30-90
+тиков abort → re-search (пауза) → рывок. Не MobDefense, не punk-утечка, НЕ регрессия
+combat-работы (VoidGuard гейтится на punk/flee). #20 развёрнут на реальную причину;
+фикс-кандидат №1 — drift-толерантный BlockPathWalker вместо жёсткого стопа. Отдельная
+фокус-задача.
