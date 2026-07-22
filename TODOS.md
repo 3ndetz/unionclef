@@ -49,9 +49,16 @@
   searches forever / 'runs into emptiness' instead of planning+executing the break-through
   (tryPlanBreakThrough exists but the route doesn't reliably complete). Reproduce + durable fix.
   (GitHub issue #31 pending — TLS timeout, retry.)
-- [~] BRIDGING/BUILDING in path (user: "вообще не заметил") — pillar landing now (#46, PillarTask
-  tested, @goto pillars up to raised goals). Bridge-across-gap as an A* move still NOT done — the
-  bot still never bridges/places during a normal goto across a gap. See #46 (bridge half of it).
+- [x] BRIDGING/BUILDING in path — DONE. Place-as-a-move complete: pillar-up (v0.38) + bridge-
+  across-gap (v0.41). @goto now paves a bridge toward the goal when stalled at the edge of a real
+  gap with a block in inventory (bridge_goto_test: crosses a 7-wide sky void). Remaining: a 2-block
+  vertical WALL onto a ledge (terrain C) still needs a pillar-beside-wall variant — separate.
+- [x] USER BUG (2026-07-22) goal on air / upper 2-tall-grass block -> tungsten computes forever.
+  FIXED v0.41.0: (a) GoalSnap snaps non-standable ;goto/click targets to reachable ground; (b)
+  PathFinder stall-cap (20s no real progress -> give up, re-roots don't mask it); (c) ;goto stops
+  its search the instant the bot arrives. goal_air_test: tungsten goes inactive in 2-4s (was
+  forever). NOTE for testers: run terrain_test on a FRESH bot — sky-tp tests leave stale async
+  block-path state that makes a following terrain run stall (cross-test artifact, not a regression).
 
 ## МЕГА-ЦЕЛЬ 2: TUNGSTEN = ПОЛНОЦЕННАЯ ЗАМЕНА BARITONE + ИНТЕГРАЦИЯ — юзер 2026-07-21 (вечер)
 

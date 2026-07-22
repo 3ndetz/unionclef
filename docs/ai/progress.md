@@ -729,3 +729,34 @@ Next: #30 walker BFS stuck-detection — tickBFS sprints toward a waypoint with 
 so an unreal route (waypoint behind a wall) drives the bot into the wall until the coarse 5s
 altoclef net fires. Mirror DIRECT mode's noProgressTicks: no progress toward a waypoint for
 ~1.5s → the segment is unexecutable → stop + re-path (the user's "paths into walls" #30).
+
+---
+
+## 2026-07-23 — v0.41.0: bridge-as-a-move (#46) + no-infinite-compute (#50)
+
+**#46 bridge (second half of place-as-a-move).** BridgeTask.startTo(goal) godbridges across a
+gap when driveTungstenPrimary's give-up sees the bot at the edge of a real gap (cell ahead clear,
+no floor 2+ down), goal across at ~level, block in inventory. Mutually exclusive with the
+overhead-pillar case; nav gated to wait for the bridge. Test: bridge_goto_test on SKY ISLANDS
+(y=100, void all around — no walls to climb, no walk-around, a mis-step falls) — bot paved
+cobblestone across a 7-wide void and reached the far island (proof: blocks in the gap). Earlier
+wall-channel course was a false pass (bot climbed the bedrock walls); sky islands force bridging.
+
+**#50 no-infinite-compute on unreachable goals (user bug).** Root: click/;goto set a goal on a
+non-standable cell (air, upper tall-grass) and the physics search re-rooted near it forever
+(re-root reset the timeout every re-plan; on open ground the openSet never empties). Fixes:
+(1) GoalSnap in GotoCommand + click-to-goto snaps non-standable -> reachable ground; (2)
+PathFinder lastProgressMs stall-cap (bumped ONLY on a real emit / block-path advance, never on a
+bare re-root; 20s no-progress -> give up); (3) GotoCommand stops the search the instant the bot
+is within ARRIVAL_DIST. Validated with isTungstenActive() (NOT hasActiveTask, which is true
+whenever the altoclef task isn't idle): tungsten goes inactive in 2-4s for air/tall-grass/sky-
+unreachable, was forever.
+
+**Regression scare (resolved).** A/B/C failed when terrain ran AFTER the sky-tp tests — stale
+async block-path (z=20.5) + a jarred bot. On a FRESH restart, terrain first: A PASS, B PASS, C
+FAIL (expected), D PASS. My changes do NOT regress terrain; it was cross-test contamination.
+Lesson: run terrain first / restart between suites; added `clear @bot` to terrain_test build.
+
+Next: #45 (#28 ran-out-of-nodes — parkour v0.40 fixed the terrain case; async log is cosmetic,
+walker rescues), #48 (#30 unreal routes — wall_recover_test to decide), #49 (#31 break-through —
+break_test passes all 4; assess intermittent). Then triage issues/PRs + merge 1.21.11 -> main.
