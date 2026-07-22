@@ -271,12 +271,13 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
                 java.util.List<net.minecraft.util.math.BlockPos> bfs =
                         kaptainwutax.tungsten.combat.CombatPathfinder.findPath(startB, goalB, mod.getWorld());
-                kaptainwutax.tungsten.Debug.logMessage("[swap-walk] bfs=" + bfs.size()  // TEMP diag
-                        + " start=" + startB.toShortString() + " goal=" + goalB.toShortString());
                 if (bfs.size() >= 2) {
                     if (pf != null) pf.stop.set(true);   // force the drifting pathfinder off
                     if (ex != null) ex.stop = true;      // and its executor
-                    kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
+                    // start() = DIRECT sprint toward the real goal (with LOS+safety) and
+                    // BFS-follow as fallback — DIRECT closes the final approach that a
+                    // short "within 1.5 of goal" BFS path would otherwise stall on.
+                    kaptainwutax.tungsten.task.BlockPathWalker.start(gp, bfs);
                     mod.getClientBaritone().getPathingBehavior().forceCancel();
                     checker.reset();
                     setDebugState("Tungsten (primary) walking terrain...");
