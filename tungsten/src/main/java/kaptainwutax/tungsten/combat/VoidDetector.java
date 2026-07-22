@@ -75,12 +75,25 @@ public final class VoidDetector {
      * @return true if a step ahead lands over a serious drop (caller should not advance)
      */
     public static boolean edgeAhead(Vec3d pos, double dx, double dz, WorldView world, int maxSafeFall) {
+        return edgeAhead(pos, dx, dz, world, maxSafeFall, 1.35);
+    }
+
+    /**
+     * Like {@link #edgeAhead(Vec3d, double, double, WorldView, int)} but samples out
+     * to {@code maxDist} blocks — pass a speed-scaled distance so a sprinting bot
+     * sees the rim while it still has room to stop (fixed 1.35 was overshot by
+     * sprint momentum ~0.28/tick).
+     */
+    public static boolean edgeAhead(Vec3d pos, double dx, double dz, WorldView world,
+                                    int maxSafeFall, double maxDist) {
         double len = Math.sqrt(dx * dx + dz * dz);
         if (len < 1e-4) return false;
         dx /= len; dz /= len;
         // If we're already over a drop (mid-parkour/descent), this guard doesn't apply.
         if (fallHeight(pos, world) > maxSafeFall) return false;
-        for (double d : new double[]{0.55, 0.9, 1.35}) {
+        int steps = Math.max(2, (int) Math.ceil(maxDist / 0.45));
+        for (int i = 1; i <= steps; i++) {
+            double d = maxDist * i / steps;
             Vec3d ahead = new Vec3d(pos.x + dx * d, pos.y, pos.z + dz * d);
             if (fallHeight(ahead, world) > maxSafeFall) return true;
         }

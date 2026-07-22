@@ -120,9 +120,10 @@ public class PunkPlayerTask {
         // pathfinder executor drives (it may descend on purpose).
         if (!TungstenModDataContainer.isExecutorRunning()) {
             double vx = player.getVelocity().x, vz = player.getVelocity().z;
+            double look = Math.max(1.4, Math.sqrt(vx * vx + vz * vz) * 10.0);
             if (player.isOnGround() && (vx * vx + vz * vz) > 0.0016
                     && kaptainwutax.tungsten.combat.VoidDetector.edgeAhead(
-                            player.getEntityPos(), vx, vz, world, 3)) {
+                            player.getEntityPos(), vx, vz, world, 3, look)) {
                 MinecraftClient.getInstance().options.sneakKey.setPressed(true);
             }
         }

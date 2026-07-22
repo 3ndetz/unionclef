@@ -381,22 +381,28 @@ public class SafetySystem {
             mc.options.jumpKey.setPressed(false);
         }
 
-        // ── VOID-SAFETY HARD CLAMP ───────────────────────────────────────
-        // Never slide off a serious drop while on safe ground. Two headings are
-        // checked: the PRESSED-KEY direction (about to walk off) AND the actual
-        // horizontal VELOCITY (sprint overshooting PAST the target off the far
-        // rim — the stationary-victim falls lived here: the key heading points at
-        // the enemy on solid ground, but momentum carries us past it into void).
-        // A braking maneuver pushes back toward the island, so its velocity/keys
-        // point at safe ground and are never cancelled.
-        boolean anyMoveKey = mc.options.forwardKey.isPressed() || mc.options.leftKey.isPressed()
-                || mc.options.rightKey.isPressed() || mc.options.backKey.isPressed();
+        // ── VOID-SAFETY HARD CLAMP (applies to EVERY stage) ───────────────
+        // The stage machine (braking, repositioning, escape, pursue) all set
+        // movement keys independently, and near a rim several of them sprint and
+        // even JUMP — the DANGER_IMMINENT brake-jump is what launched the bot off
+        // the island. So the final word on keys is a single void-aware clamp.
+        boolean nearVoid = VoidDetector.voidWithin(playerPosTick, player.getEntityWorld(), 3, 3);
+        // Speed-scaled lookahead so a sprinting bot (~0.28/tick) sees the rim
+        // with room for vanilla sneak to plant it before it crosses the edge.
+        double look = Math.max(1.4, horizSpeed * 10.0);
         double[] keyHeading = pressedHeading(player, mc);
         boolean edgeByKey = keyHeading != null && VoidDetector.edgeAhead(
-                playerPosTick, keyHeading[0], keyHeading[1], player.getEntityWorld(), 3);
-        boolean edgeByVel = horizSpeed > 0.08 && VoidDetector.edgeAhead(
-                playerPosTick, playerVel.x, playerVel.z, player.getEntityWorld(), 3);
-        if ((anyMoveKey || edgeByVel) && (edgeByKey || edgeByVel)) {
+                playerPosTick, keyHeading[0], keyHeading[1], player.getEntityWorld(), 3, look);
+        boolean edgeByVel = horizSpeed > 0.04 && VoidDetector.edgeAhead(
+                playerPosTick, playerVel.x, playerVel.z, player.getEntityWorld(), 3, look);
+        if (nearVoid) {
+            // No stage may sprint or jump near the rim — sprint overshoots and a
+            // brake-jump LAUNCHES us into the void (sneak can't save an airborne bot).
+            mc.options.sprintKey.setPressed(false);
+            mc.options.jumpKey.setPressed(false);
+        }
+        if (edgeByKey || edgeByVel) {
+            // heading (keys or momentum) points at a drop → plant with sneak.
             mc.options.forwardKey.setPressed(false);
             mc.options.backKey.setPressed(false);
             mc.options.leftKey.setPressed(false);
