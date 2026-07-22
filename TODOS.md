@@ -315,6 +315,18 @@
       >   TOGETHER, keeping A (the canary) green at every step. Reverted to v0.32.0-stable.
       >   Interim positive signal to reuse in the rework: with the corrected search, course
       >   C returned real "BFS 18/14 wp" paths instead of "Ran out of nodes".
+      - > SmartMoves scaffolding BUILT (2026-07-22, flag-gated, DEFAULT OFF = v0.32.0, A safe):
+      >   SmartMoves.java (tungsten-native Traverse/Ascend/Descend/Parkour/parkour-ascend
+      >   neighbour gen), TungstenConfig.smartMoves, BlockNode.getChildren branch,
+      >   py4j setTungstenSmartMoves, terrain_test SMART=1. getDistFromStartSq/bestSoFar
+      >   fixes also gated on the flag. RESULT (SMART=1): still FAILS — A stalls at
+      >   (10.7,-51) "Ran out of nodes" with the FIXED search regardless of neighbour gen
+      >   (blind or SmartMoves) → the real entanglement is the failing-flag/bestSoFar/
+      >   isPathComplete/receding-horizon interaction + node budget + cycles from Descend
+      >   moves, NOT just neighbour generation. NEXT (focused effort): instrument the search
+      >   loop (why "Ran out of nodes" mid-staircase; node count; why fixed bestSoFar stalls
+      >   at 5-block failing threshold near goal), rework holistically with A green each step,
+      >   then flip smartMoves default. Scaffolding is committed and dormant (safe).
     - [ ] 1.6.1b (#34b) C-курс «2-блочная вертикальная стена» физически НЕпроходим прыжком
       (ванильный sprint-jump apex ~1.25 блока). Нужен block-placing: пиллар-вверх (ставить
       блок под себя в прыжке) или лестница из блоков. Это отдельная крупная фича (примитив
