@@ -74,8 +74,9 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// While FLEEING, the pathfinder executor sprint-jumps toward the flee point
 		// and can overshoot off a rim (no combat clamp runs). Apply the shared void
 		// guard as the final word so a flee never carries the bot into the void.
-		// Only for flee — normal goto/get keep the executor's decisions.
-		if (kaptainwutax.tungsten.task.RunAwayTask.isActive()) {
+		// Flee AND punk-approach — normal goto/get keep the executor's decisions.
+		if (kaptainwutax.tungsten.task.RunAwayTask.isActive()
+				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive()) {
 			kaptainwutax.tungsten.combat.VoidGuard.protect((ClientPlayerEntity)(Object)this, this.getEntityWorld());
 		}
 
