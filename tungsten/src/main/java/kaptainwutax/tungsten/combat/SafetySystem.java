@@ -302,6 +302,11 @@ public class SafetySystem {
         // don't move toward target if we're in danger zone (DANGER_BATTLE = KB would kill us)
         if (movementsEnabled && !braking && !repositioning && postImminentCooldown <= 0
                 && stage != CombatStage.DANGER_BATTLE) {
+            // Near the island rim: walk, never sprint or jump. Sprint momentum
+            // (~0.28/tick) and jump arcs overshoot the edge faster than the
+            // reactive edge-clamp can arrest them — the post-kill fall lived
+            // here. At walk speed the clamp stops us cleanly on solid ground.
+            boolean nearEdge = currentEdgeScore > 0.15;
             java.util.List<net.minecraft.util.math.BlockPos> attackPath = pathfinder.getAttackPath();
             if (attackPath.size() >= 2) {
                 // find next waypoint we haven't reached yet
@@ -323,16 +328,16 @@ public class SafetySystem {
                     movementActive = true;
 
                     mc.options.forwardKey.setPressed(true);
-                    mc.options.sprintKey.setPressed(true);
+                    mc.options.sprintKey.setPressed(!nearEdge);
                     mc.options.backKey.setPressed(false);
                     mc.options.leftKey.setPressed(false);
                     mc.options.rightKey.setPressed(false);
                     mc.options.sneakKey.setPressed(false);
 
-                    // jump only if landing zone is safe
+                    // jump only if landing zone is safe AND we're not on the rim
                     // check 3-4 blocks ahead in velocity direction for drops
                     boolean safeToJump = isJumpLandingSafe(playerPosTick, playerVel, player.getEntityWorld());
-                    mc.options.jumpKey.setPressed(player.isOnGround() && safeToJump);
+                    mc.options.jumpKey.setPressed(player.isOnGround() && safeToJump && !nearEdge);
                 }
                 // if waypoint is dangerous, don't move — stay and fight
             }
@@ -351,7 +356,7 @@ public class SafetySystem {
                     movementYaw = AttackTiming.yawTo(playerPosTick, target.getEntityPos());
                     movementActive = true;
                     mc.options.forwardKey.setPressed(true);
-                    mc.options.sprintKey.setPressed(true);
+                    mc.options.sprintKey.setPressed(!nearEdge);
                     mc.options.backKey.setPressed(false);
                     mc.options.leftKey.setPressed(false);
                     mc.options.rightKey.setPressed(false);
