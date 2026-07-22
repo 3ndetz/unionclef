@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Bridge-as-a-move test (#46 second half): @goto across a WIDE gap the bot can't
-jump (>4 blocks, beyond parkour). With blocks in the inventory the nav should, after
-it can't otherwise progress, pave a bridge toward the goal and cross.
+"""Bridge-as-a-move test (#46 second half): @goto across a gap the bot can ONLY cross
+by bridging. Two sky islands at y=100 with a 7-wide void between and void all around —
+no walls to climb, no way around, and a mis-step falls ~160 blocks to the ground. So
+reaching the far island proves the bot paved a bridge across.
 
-Course (flat world, floor y-61 => standing y-60):
-  near platform x=-4..1 | GAP x=2..8 (floor removed, void below) | far x=9..16
-  bot starts at (0,-60,0), goal (13,-60,0) across the 7-wide gap.
-PASS if the bot reaches the far platform (x>=9) at ground level. Exit 0.
+  near island x=-4..1 | GAP x=2..8 (void) | far island x=9..16   (all z=-4..4, y=100)
+  bot on near island, goal (13,101,0) on the far island, cobblestone in inventory.
+PASS if the bot reaches the far island (x>=9, y>=99) AND left blocks in the gap. Exit 0.
 """
 import functools, json, subprocess, time
 print = functools.partial(print, flush=True)
@@ -45,48 +45,40 @@ def main():
         try: py4j("connect",ip="test-server")
         except Exception: pass
         time.sleep(6)
-    # A WALL-CHANNELED gap the bot can't walk around: near/far floor slabs, void
-    # between, bedrock walls at z=+-5 so the only route to the goal is across the gap.
-    rcon("fill -6 -70 -6 18 8 6 air")            # clear a big box (void below)
-    rcon("fill -4 -61 -4 1 -61 4 stone")         # near platform
-    rcon("fill 9 -61 -4 16 -61 4 stone")         # far platform (goal side)
-    rcon("fill -4 -60 -5 16 -56 -5 bedrock")     # south wall
-    rcon("fill -4 -60 5 16 -56 5 bedrock")       # north wall
-    # gap x=2..8 stays void (no floor) — must be bridged
-    for gx in range(2, 9):                        # clear any stray block in the gap
-        rcon(f"fill {gx} -61 -4 {gx} -61 4 air")
+    # two sky islands at y=100, 7-wide void between, void all around
+    rcon("fill -6 96 -6 18 104 6 air")
+    rcon("fill -4 100 -4 1 100 4 stone")     # near island (top y=100 -> stand y=101)
+    rcon("fill 9 100 -4 16 100 4 stone")     # far island (goal side)
     py4j("stop"); time.sleep(1)
-    rcon(f"tp {BOT} 0 -60 0 90 0"); time.sleep(1)
+    rcon(f"tp {BOT} 0 101 0 90 0"); time.sleep(1)
     rcon(f"clear {BOT}"); rcon(f"give {BOT} cobblestone 64"); time.sleep(1)
-    print("@goto (13,-60,0) across a 7-wide wall-channeled void gap...")
-    py4j("goto", x=13, y=-60, z=0)
-    reached=False; last=None; maxx=-99; trace=[]
-    for k in range(45):   # bridge fires on the give-up (~14s) then paves across
+    print("@goto (13,101,0) across a 7-wide sky void — bridge or fall...")
+    py4j("goto", x=13, y=101, z=0)
+    reached=False; last=None; maxx=-99; fell=False; trace=[]
+    for k in range(45):
         time.sleep(1)
         p=pos()
         if p:
             last=p
-            if k % 3 == 0: trace.append(p)
+            if k % 4 == 0: trace.append(p)
             if p[0]>maxx: maxx=p[0]
-            if p[0]>=9 and p[1]>=-61 and abs(p[2])<=5: reached=True; break
+            if p[1] < 60: fell=True; break
+            if p[0]>=9 and p[1]>=99 and abs(p[2])<=5: reached=True; break
     try:
         for line in py4j("chat", n=25).get("chat", []):
-            if any(w in line for w in ("Bridg","Pillar","nav","node","Path","emit","Walker","unreach")):
-                print("  chat:", line)
-    except Exception as e: print("  chat err", e)
-    print("  trace:", trace)
-    py4j("stop")
-    # bridge-proof: a cobblestone was placed somewhere in the gap (x=2..8, z=-4..4,
-    # y-61) — the bot paths along its own z, so scan the full channel width.
+            if any(w in line for w in ("Bridg","Pillar","nav","unreach","gave up")): print("  chat:", line)
+    except Exception: pass
     placed=[]
     for gx in range(2,9):
         for gz in range(-4,5):
-            if "passed" in rcon(f"execute if block {gx} -61 {gz} cobblestone").lower():
+            if "passed" in rcon(f"execute if block {gx} 100 {gz} cobblestone").lower():
                 placed.append(f"{gx},{gz}"); break
-    print(f"  finalPos={last} maxX={maxx:.1f} (far platform starts x=9)")
-    print(f"  blocks placed in the gap (bridge proof): {placed}")
-    print(f"  crossed the gap to the far platform: {reached}")
-    ok = reached and len(placed) >= 1
+    py4j("stop")
+    print(f"  trace: {trace}")
+    print(f"  finalPos={last} maxX={maxx:.1f} fell={fell}")
+    print(f"  cobblestone in the gap (bridge proof): {placed}")
+    ok = reached and len(placed) >= 1 and not fell
+    print(f"  crossed by bridging: {ok}")
     print("  BRIDGE-GOTO:", "PASS" if ok else "FAIL")
     import sys; sys.exit(0 if ok else 1)
 
