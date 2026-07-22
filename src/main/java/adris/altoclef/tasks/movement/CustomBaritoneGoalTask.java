@@ -266,7 +266,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // drift-prone pathfinder/executor off and let the walker own movement; the
             // path is re-planned per ~25-block segment (rolling horizon). Water/parkour,
             // where the block BFS returns nothing, fall through to the physics executor.
-            double distToGoal = mod.getPlayer().getEntityPos().distanceTo(gp);
+            double dgx = mod.getPlayer().getX() - gp.x, dgy = mod.getPlayer().getY() - gp.y,
+                    dgz = mod.getPlayer().getZ() - gp.z;
+            double distToGoal = Math.sqrt(dgx * dgx + dgy * dgy + dgz * dgz);
             // Walker owns the LONG haul (drift-immune); the physics executor does the
             // final ~4-block precise approach (short range = negligible drift), which
             // closes the last steps a short "within 1.5 of goal" BFS path stalls on.
