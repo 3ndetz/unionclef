@@ -43,6 +43,8 @@ elif op == "cmd":
     mc.ExecuteCommand(req["c"]); out = {"ok": True}
 elif op == "kin":
     out = dict(mc.targetKinematics(req["name"]))
+elif op == "hold":
+    out = {"ok": mc.holdKey(req["key"], req["ms"])}
 elif op == "connect":
     mc.ConnectToServer(req["ip"]); out = {"ok": True}
 print(json.dumps(out, default=str))
@@ -135,10 +137,19 @@ def volley(shots, running=False):
     run_dir = [1]
     for i in range(shots):
         if running:
-            z_to = 30 * run_dir[0]
+            # Walk SMOOTHLY on the ground (held forward), NOT ;goto — tungsten
+            # pathing sprint-JUMPS (airborne, erratic lerp bursts) which no lead
+            # can predict. A steady ground walk is the fair lead test and matches
+            # a real running player.
+            sign = run_dir[0]
             run_dir[0] = -run_dir[0]
-            py4j(VICTIM_CONTAINER, "chat", msg=f";goto 24 -60 {z_to}")
-            time.sleep(1.0)  # let her accelerate; long run keeps her moving through the shot
+            yaw = 0 if sign > 0 else 180        # face +Z (yaw 0) or -Z (yaw 180)
+            z_start = -8 * sign                 # start off-center, walk through the middle
+            py4j(VICTIM_CONTAINER, "chat", msg=";stop")
+            rcon(f"tp {VICTIM} 24.5 -60 {z_start} {yaw} 0")
+            time.sleep(0.4)
+            py4j(VICTIM_CONTAINER, "hold", key="forward", ms=6000)
+            time.sleep(1.2)  # reach steady walk speed, clear of the start point
         hp_before = entity_float(VICTIM, "Health")
         py4j(SHOOTER_CONTAINER, "cmd", c=f"@shoot {VICTIM}")
         if running:
