@@ -71,6 +71,12 @@ public class GotoCommand extends Command {
 			if (TungstenModDataContainer.PATHFINDER.stop.get()) return;
 			if (TungstenMod.mc.player == null) return;
 			double distSq = TungstenMod.mc.player.getEntityPos().squaredDistanceTo(target);
+			if (distSq <= ARRIVAL_DIST_SQ) {
+				// Arrived. Stop any lingering search thread so it doesn't keep
+				// re-rooting near the goal and report "busy" long after we got there.
+				TungstenModDataContainer.PATHFINDER.stop.set(true);
+				return;
+			}
 			if (distSq > ARRIVAL_DIST_SQ) {
 				Debug.logMessage("Retrying (" + (attempt + 1) + "/" + MAX_RETRIES + ")...");
 				// Small delay to let player land

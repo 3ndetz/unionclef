@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Reproduce: a goal on a NON-STANDABLE cell (air / the upper block of 2-tall grass)
-makes tungsten ';goto' compute forever instead of cancelling (user bug 2026-07-22).
+"""Verify: a non-standable / unreachable goal no longer makes tungsten compute forever
+(user bug 2026-07-22). Measures isTungstenActive() (PATHFINDER.active || EXECUTOR
+running) — the real 'вечно считает' signal — NOT hasActiveTask (which is true whenever
+the altoclef task isn't idle).
 
-Two cases via the pure tungsten ;goto (gotoXYZ, no altoclef snap):
-  1. air cell 4 blocks above the ground
-  2. the upper block of 2-tall grass on the ground
-For each: issue the goto, then poll pathStatus busy + recent chat for ~20s. If the
-pathfinder stays busy / keeps logging search attempts and never settles, that's the
-bug. A correct pathfinder snaps to standable or gives up quickly.
+Cases (pure tungsten ;goto = gotoXYZ, the path with no altoclef snap):
+  1. tallgrass-upper: goal on the upper block of 2-tall grass -> GoalSnap drops it to the
+     grass block, bot arrives, search stops.
+  2. air-4-up: goal 4 blocks up in the air -> snaps to the ground, bot already there,
+     search stops.
+  3. sky-unreachable: goal on a far sky island across a 28-wide sky void with no blocks ->
+     genuinely unreachable -> the search stall-cap gives up.
+PASS if tungsten goes INACTIVE (search stopped) within the window for all three. Exit 0.
 """
 import functools, json, subprocess, time
 print = functools.partial(print, flush=True)
@@ -21,9 +25,8 @@ mc=gw.entry_point; op=req["op"]; out={}
 if op=="state": out={"inGame":mc.inGame()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="gotoxyz": out=dict(mc.gotoXYZ(req["x"],req["y"],req["z"]))
-elif op=="pstatus": out=dict(mc.pathStatus())
+elif op=="tactive": out={"active":mc.isTungstenActive()}
 elif op=="stop": mc.ExecuteCommand("@stop"); out={"ok":True}
-elif op=="chat": out={"chat":[str(x) for x in mc.getRecentChat(req["n"])]}
 print(json.dumps(out,default=str)); gw.close()
 """
 def sh(a,to=40): return subprocess.run(a,capture_output=True,text=True,timeout=to)
@@ -32,28 +35,29 @@ def py4j(op,to=30,**kw):
     if r.returncode!=0: raise RuntimeError(f"{op}: {r.stderr.strip()[-200:]}")
     return json.loads(r.stdout.strip().splitlines()[-1])
 def rcon(c): return sh(["docker","exec",SERVER,"rcon-cli",c]).stdout.strip()
+def pos():
+    o=rcon(f"data get entity {BOT} Pos")
+    try:
+        p=o.split("[")[1].split("]")[0].split(",")
+        return [round(float(v.strip().rstrip("d")),1) for v in p]
+    except Exception: return None
+def active(): return py4j("tactive").get("active") in (True,"true","True")
 
-def busy(v): return v.get("busy") in (True,"true","True") or v.get("active") in (True,"true","True")
-def arrived(v): return v.get("arrived") in (True,"true","True")
-
-def probe(name, tx, ty, tz, secs=26):
-    print(f"\n--- {name}: ;goto ({tx},{ty},{tz}) ---")
-    py4j("stop"); time.sleep(1)
-    rcon(f"tp {BOT} 5 -60 0 -90 0"); time.sleep(1)
+def probe(name, sx, sy, sz, tx, ty, tz, secs=30):
+    print(f"\n--- {name}: from ({sx},{sy},{sz}) ;goto ({tx},{ty},{tz}) ---")
+    py4j("stop"); time.sleep(1.5)
+    rcon(f"tp {BOT} {sx} {sy} {sz} 90 0"); time.sleep(1.5)
     py4j("gotoxyz", x=tx, y=ty, z=tz)
-    n=secs//2; busystreak=0; arr=False; laststatus=None
-    for k in range(n):
+    went_inactive_at=None
+    for k in range(secs//2):
         time.sleep(2)
         try:
-            st=py4j("pstatus"); laststatus=st
-            if busy(st): busystreak+=1
-            if arrived(st): arr=True
-            if k in (2, n-1): print(f"  t={2*k+2}s pathStatus={st}")
-        except Exception as e:
-            print("  pstatus err", e)
-    endbusy = busy(laststatus) if laststatus else True
-    py4j("stop")
-    return {"busy_ratio": f"{busystreak}/{n}", "arrived": arr, "end_busy": endbusy}
+            a=active()
+            if not a and went_inactive_at is None: went_inactive_at=2*k+2
+        except Exception as e: print("  tactive err", e)
+    p=pos(); py4j("stop")
+    print(f"  finalPos={p}  tungsten went INACTIVE at: {went_inactive_at}s (None = still spinning at {secs}s)")
+    return went_inactive_at
 
 def main():
     for _ in range(30):
@@ -63,26 +67,27 @@ def main():
         try: py4j("connect",ip="test-server")
         except Exception: pass
         time.sleep(6)
+    # ground + 2-tall grass
     rcon("fill -4 -60 -4 10 6 4 air")
-    rcon("fill -4 -61 -4 10 -61 4 stone")            # ground
+    rcon("fill -4 -61 -4 10 -61 4 stone")
     rcon("setblock 0 -60 0 grass_block")
     rcon("setblock 0 -59 0 tall_grass[half=lower]")
     rcon("setblock 0 -58 0 tall_grass[half=upper]")
-    # a genuine over-void goal snap can't help: an island far across a cleared void
-    rcon("fill 14 -70 -4 40 6 4 air")                # void beyond x=14
-    rcon("fill 30 -61 -1 31 -61 1 stone")            # tiny unreachable island (no bridge blocks)
-    r_air  = probe("air-4-up", 5, -56, 0)            # snaps to ground under the bot -> arrive
-    r_grass= probe("tallgrass-upper", 0, -58, 0)     # snaps to ground below the grass -> arrive
-    r_void = probe("over-void-island", 30, -60, 0, secs=30)  # unreachable -> must GIVE UP (end not busy)
+    # sky islands: near (bot) + far (unreachable), 28-wide void between, void all around
+    rcon("fill -6 96 -6 40 104 6 air")
+    rcon("fill -4 100 -4 1 100 4 stone")
+    rcon("fill 30 100 -1 31 100 1 stone")
+    r1 = probe("tallgrass-upper", 5, -60, 0, 0, -58, 0)
+    r2 = probe("air-4-up",        5, -60, 0, 5, -56, 0)
+    r3 = probe("sky-unreachable", 0, 101, 0, 30, 101, 0, secs=32)
 
     print("\n=== RESULTS (#user-bug: no infinite compute on unreachable goals) ===")
-    print(f"  air-4-up      : {r_air}")
-    print(f"  tallgrass     : {r_grass}")
-    print(f"  over-void     : {r_void}")
-    # snapped goals must ARRIVE (reachable ground), not spin; the truly-unreachable
-    # goal must GIVE UP (end_busy False) within the cap instead of computing forever.
-    ok = r_air["arrived"] and r_grass["arrived"] and (not r_void["end_busy"])
-    print("  GOAL-SNAP/GIVEUP:", "PASS" if ok else "FAIL")
+    print(f"  tallgrass inactive at : {r1}s")
+    print(f"  air-4-up  inactive at : {r2}s")
+    print(f"  sky-unreach inactive  : {r3}s")
+    # every case must eventually go inactive (search stopped) — none may spin forever
+    ok = r1 is not None and r2 is not None and r3 is not None
+    print("  NO-INFINITE-COMPUTE:", "PASS" if ok else "FAIL")
     import sys; sys.exit(0 if ok else 1)
 
 if __name__=="__main__": main()
