@@ -166,16 +166,26 @@ public class BlockPathWalker {
         float yaw = AttackTiming.yawTo(playerPos, directTarget);
         WindMouseRotation.INSTANCE.setTarget(yaw, 0);
 
+        // FACE-BEFORE-MOVE (same fix as tickBFS): the humanized WindMouse yaw takes a few
+        // frames to converge; pressing forward while it's still off makes the bot chase a
+        // moving aim target and SPIN in a circle instead of approaching (the v0.44.0 walker
+        // spin, in DIRECT mode). Gate movement on facing while onGround; keep momentum in
+        // the air (a jump/leap sets its direction at take-off). Without this, enabling the
+        // follow walker would make the combat approach circle the target.
+        double yawErr = Math.abs(WindMouseRotation.wrapDelta(yaw - player.getYaw()));
+        boolean onGround = player.isOnGround();
+        boolean move = (yawErr < 45.0) || !onGround;
+
         MinecraftClient mc = MinecraftClient.getInstance();
-        mc.options.forwardKey.setPressed(true);
-        mc.options.sprintKey.setPressed(true);
+        mc.options.forwardKey.setPressed(move);
+        mc.options.sprintKey.setPressed(move);
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
 
-        boolean canJump = TungstenConfig.get().followJumpingEnabled
-                && player.isOnGround() && landingSafe;
+        boolean canJump = (yawErr < 45.0) && TungstenConfig.get().followJumpingEnabled
+                && onGround && landingSafe;
         mc.options.jumpKey.setPressed(canJump);
     }
 

@@ -91,9 +91,12 @@ public class TungstenConfig {
 
     // ---- follow settings ----
 
-    /** Use BFS block-path walker for immediate movement while A* computes.
-     *  Experimental — may cause drift/path conflicts. */
-    public boolean followBlockPathFinderEnabled = false;
+    /** Use the BFS block-path walker for IMMEDIATE movement toward a follow/combat target
+     *  while the physics A* computes. ON by default (2026-07-23): without it, follow/punk
+     *  depended only on the physics pathfinder, which re-plans forever on a MOVING target
+     *  and the bot STANDS STILL (LIVE-A). The walker sprints from the real position toward
+     *  the target every tick (drift-immune) and now face-before-moves (no spin). */
+    public boolean followBlockPathFinderEnabled = true;
 
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
      *  If false, only walks (no jumps) — safer but slower. */
