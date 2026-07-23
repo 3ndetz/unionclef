@@ -100,7 +100,12 @@ public class SafetySystem {
 
         Vec3d targetPos = target.getEntityPos();
         if (prevEnemyPos != null) {
-            enemyVelocity = targetPos.subtract(prevEnemyPos);
+            // The raw per-tick position delta is NOISY for a packet-moving player (position
+            // packets arrive irregularly -> velocity spikes to big values then zero), which
+            // jitters the lead prediction and is a root cause of the aim SHAKE. Smooth it
+            // with an EMA so the lead (and therefore the aim) stays stable while tracking.
+            Vec3d rawVel = targetPos.subtract(prevEnemyPos);
+            enemyVelocity = enemyVelocity.multiply(0.6).add(rawVel.multiply(0.4));
         }
         prevEnemyPos = targetPos;
 
