@@ -250,6 +250,21 @@ public class PathFinder {
 	        return;
 	    }
 
+	    // At the gap: the guidance is a stub the physics search starves on (can't sim onto
+	    // a not-yet-placed floor). Skip the physics leg — hand the executor an empty path
+	    // with the place queue; bridging starts immediately and the goto retry drives the
+	    // rest of the now-bridged world. Mirror of the break handoff above.
+	    if (pendingPlaces != null && !pendingPlaces.isEmpty()
+	            && blockPath.get().size() <= 2
+	            && player.getEyePos().distanceTo(net.minecraft.util.math.Vec3d.ofCenter(pendingPlaces.get(0))) < 5.0) {
+	        Debug.logMessage("At the gap — bridging without a physics leg");
+	        TungstenModDataContainer.EXECUTOR.setPath(new ArrayList<>());
+	        TungstenModDataContainer.EXECUTOR.blockPath = blockPath.get();
+	        TungstenModDataContainer.EXECUTOR.placeQueue = new ArrayList<>(pendingPlaces);
+	        PathFinder.blockPath = Optional.empty();
+	        return;
+	    }
+
 	    bestHeuristicSoFar = initializeBestHeuristics(this.start);
 	    openSet = new BinaryHeapOpenSet();
 	    openSet.insert(this.start);
@@ -729,9 +744,12 @@ public class PathFinder {
      *  every emission; the executor mines them once the replay finishes, then
      *  the goto retry / path-extension machinery re-searches the opened world. */
     public static List<BlockPos> pendingBreaks = null;
+    /** Bridge floor blocks to PLACE at the segment end — the mirror of pendingBreaks. */
+    public static List<BlockPos> pendingPlaces = null;
 
-    /** Physics guidance must stop at the cell before the wall — the live world
-     *  still has the blocks, so simulating through them is impossible. */
+    /** Physics guidance must stop at the cell before a wall (break) OR a gap (place) —
+     *  the live world can't be simulated through the missing/extra blocks. Truncates at
+     *  whichever comes first and records the break/place plan for that segment. */
     private static Optional<List<BlockNode>> truncateAtBreaks(Optional<List<BlockNode>> path) {
         if (path.isEmpty()) {
             return path;
@@ -740,13 +758,21 @@ public class PathFinder {
         for (int i = 0; i < list.size(); i++) {
             if (list.get(i).hasBreaks()) {
                 pendingBreaks = new ArrayList<>(list.get(i).toBreak);
+                pendingPlaces = null;
                 Debug.logMessage("Path needs mining: " + pendingBreaks.size() + " block(s) at segment end");
+                return Optional.of(new ArrayList<>(list.subList(0, Math.max(i, 1))));
+            }
+            if (list.get(i).hasPlaces()) {
+                pendingPlaces = new ArrayList<>(list.get(i).toPlace);
+                pendingBreaks = null;
+                Debug.logMessage("Path needs bridging: " + pendingPlaces.size() + " block(s) at segment end");
                 return Optional.of(new ArrayList<>(list.subList(0, Math.max(i, 1))));
             }
         }
         pendingBreaks = null;
+        pendingPlaces = null;
         if (TungstenConfig.get().verboseDebugLogging) {
-            Debug.logMessage("block path: no breaks (size " + list.size() + ")");
+            Debug.logMessage("block path: no breaks/places (size " + list.size() + ")");
         }
         return path;
     }
@@ -818,6 +844,7 @@ public class PathFinder {
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
         }
         TungstenModDataContainer.EXECUTOR.breakQueue = pendingBreaks == null ? null : new ArrayList<>(pendingBreaks);
+        TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
 		long endTime = System.currentTimeMillis();
 		long elapsedTime = endTime - startTime;
 		long minutes = (elapsedTime / 1000) / 60;
@@ -849,6 +876,8 @@ public class PathFinder {
             TungstenModDataContainer.EXECUTOR.setPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
             TungstenModDataContainer.EXECUTOR.breakQueue = pendingBreaks == null ? null : new ArrayList<>(pendingBreaks);
+            TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
+        TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
             NEXT_CLOSEST_BLOCKNODE_IDX.set(1);
         	RenderHelper.renderBlockPath(blockPath.get(), NEXT_CLOSEST_BLOCKNODE_IDX.get());
         	return blockPath;
@@ -910,6 +939,7 @@ public class PathFinder {
         TungstenModDataContainer.EXECUTOR.addPath(result.get());
         TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
         TungstenModDataContainer.EXECUTOR.breakQueue = pendingBreaks == null ? null : new ArrayList<>(pendingBreaks);
+        TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
         // Continue A* from the last node of the emitted path — don't reset the
         // entire search. This allows pathfinder to keep computing while executor
         // runs the partial path, appending new nodes via addPath().

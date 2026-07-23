@@ -38,6 +38,11 @@ public class PathExecutor {
     private int breakingTicks = 0;
     private int settleTicks = 0;
 
+    /** Support cells to PLACE (bridge floor) once the replay reaches the segment end
+     *  (set by PathFinder from the block path's place plan) — the mirror of breakQueue. */
+    public List<net.minecraft.util.math.BlockPos> placeQueue = null;
+    private int placingTicks = 0;
+
     public PathExecutor(boolean isClient) {
     	this.isClient = isClient;
     	try {
@@ -113,6 +118,7 @@ public class PathExecutor {
     			TungstenModRenderContainer.BREAK_PLAN.clear();
     			breakQueue = null; breakingTicks = 0; settleTicks = 0;
     		}
+    		if (placeQueue != null) { placeQueue = null; placingTicks = 0; }
     		// A stop mid-mine must release the attack key and the aim immediately —
     		// otherwise the bot keeps swinging and the camera stays locked on the
     		// block until the stale-aim timeout (part of the #29 frozen-camera fix).
@@ -138,6 +144,11 @@ public class PathExecutor {
     		// mine the planned wall before declaring the segment finished —
     		// the continuation search / goto retry then sees the opened world
     		if (tickBreaking(player, options)) {
+    			return;
+    		}
+    		// pave the planned bridge floor before finishing the segment — the
+    		// continuation search then sees the now-bridged world (mirror of breaking)
+    		if (tickPlacing(player, options)) {
     			return;
     		}
     		long endTime = System.currentTimeMillis();
@@ -304,6 +315,88 @@ public class PathExecutor {
         float dPitch = net.minecraft.util.math.MathHelper.wrapDegrees(wantPitch - player.getPitch());
         boolean aimed = Math.abs(dYaw) < 12f && Math.abs(dPitch) < 12f;
         options.attackKey.setPressed(aimed);
+        return true;
+    }
+
+    /**
+     * Pave the queued bridge-floor supports — the mirror of tickBreaking. Returns true
+     * while placing is in progress (segment must not finish). Places the first still-air
+     * support against an adjacent solid face; once all are solid it resumes the goto so
+     * the continuation search sees the bridged world. The caller (altoclef) equips a
+     * block; tungsten does not depend on the inventory layer.
+     */
+    private boolean tickPlacing(ClientPlayerEntity player, GameOptions options) {
+        if (placeQueue == null || placeQueue.isEmpty()) return false;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        var world = player.getEntityWorld();
+
+        net.minecraft.util.math.BlockPos target = null;
+        for (net.minecraft.util.math.BlockPos pos : placeQueue) {
+            if (kaptainwutax.tungsten.helpers.BlockShapeChecker.getShapeVolume(pos, world) == 0) { target = pos; break; }
+        }
+        if (target == null) {                       // all placed — bridge floor is in
+            options.useKey.setPressed(false);
+            TungstenModRenderContainer.PLACE_PLAN.clear();
+            placeQueue = null; placingTicks = 0;
+            kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            resumeGotoAfterMining(player);
+            return false;
+        }
+        if (!(player.getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem)) {
+            Debug.logMessage("Bridge place aborted (no block in hand)");
+            options.useKey.setPressed(false);
+            placeQueue = null; placingTicks = 0;
+            kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            return false;
+        }
+        Vec3d eye = player.getEyePos();
+        Vec3d center = Vec3d.ofCenter(target);
+        if (placingTicks++ > 200 || eye.squaredDistanceTo(center) > 5.5 * 5.5) {
+            Debug.logMessage("Bridge place aborted (timeout or out of reach)");
+            options.useKey.setPressed(false);
+            TungstenModRenderContainer.PLACE_PLAN.clear();
+            placeQueue = null; placingTicks = 0;
+            kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            return false;
+        }
+        if (!kaptainwutax.tungsten.path.PlaceRules.canPlace(world, target)) {
+            Debug.logMessage("Bridge place aborted (denied by place rules)");
+            options.useKey.setPressed(false);
+            placeQueue = null; placingTicks = 0;
+            kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            return false;
+        }
+        // find a solid neighbour to place against (its face toward the target)
+        net.minecraft.util.math.BlockPos against = null;
+        net.minecraft.util.math.Direction side = null;
+        for (net.minecraft.util.math.Direction dir : net.minecraft.util.math.Direction.values()) {
+            net.minecraft.util.math.BlockPos n = target.offset(dir);
+            if (kaptainwutax.tungsten.helpers.BlockShapeChecker.getShapeVolume(n, world) > 0) {
+                against = n; side = dir.getOpposite(); break;
+            }
+        }
+        if (against == null) return true;           // no support yet — wait a tick
+
+        releaseMovementKeys(options);
+        options.attackKey.setPressed(false);
+        Vec3d faceCenter = Vec3d.ofCenter(against).add(Vec3d.of(side.getVector()).multiply(0.5));
+        Vec3d d = faceCenter.subtract(eye);
+        float wantYaw = (float) Math.toDegrees(-Math.atan2(d.x, d.z));
+        float wantPitch = (float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)));
+        kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
+        // visualize the cell being paved (green)
+        TungstenModRenderContainer.PLACE_PLAN.clear();
+        TungstenModRenderContainer.PLACE_PLAN.add(new kaptainwutax.tungsten.render.Cuboid(
+                new Vec3d(target.getX() + 0.1, target.getY() + 0.1, target.getZ() + 0.1),
+                new Vec3d(0.8, 0.8, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 120)));
+        float dYaw = net.minecraft.util.math.MathHelper.wrapDegrees(wantYaw - player.getYaw());
+        float dPitch = net.minecraft.util.math.MathHelper.wrapDegrees(wantPitch - player.getPitch());
+        if (Math.abs(dYaw) < 15f && Math.abs(dPitch) < 15f) {   // place only once aimed
+            net.minecraft.util.hit.BlockHitResult hit =
+                    new net.minecraft.util.hit.BlockHitResult(faceCenter, side, against, false);
+            mc.interactionManager.interactBlock(player, net.minecraft.util.Hand.MAIN_HAND, hit);
+            player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
+        }
         return true;
     }
 
