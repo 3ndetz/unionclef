@@ -205,21 +205,35 @@ public class BlockPathWalker {
             wpPos = Vec3d.ofBottomCenter(wp);
         }
 
+        // recompute after a possible waypoint advance above (dist was to the old wp)
+        dist = horizontalDist(playerPos, wpPos);
+
         float yaw = AttackTiming.yawTo(playerPos, wpPos);
         WindMouseRotation.INSTANCE.setTarget(yaw, 0);
 
+        // Distinguish a 1-block STEP-UP (adjacent, higher) from a GAP running-jump.
+        // A sprint-jump clears ~3-4 blocks horizontal but only ~1.25 up, so on a
+        // 1-block staircase it rams the FRONT of a higher step and bounces back /
+        // overshoots — measured ~60% climb, flaky. A step-up wants a WALK-jump: it
+        // rises 1 and moves ~1 forward, landing cleanly on the next step. Reserve the
+        // sprint-jump for real gaps (course B: +2..4 horizontal, missing floor), which
+        // genuinely need the horizontal reach. This makes staircase climbing determinstic.
+        int pby = player.getBlockPos().getY();
+        boolean stepUp = wp.getY() > pby && dist <= 1.8;   // 1-block step directly ahead
+        boolean gap    = dist >= 2.0;                       // running-jump distance
+
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(true);
-        mc.options.sprintKey.setPressed(true);
+        mc.options.sprintKey.setPressed(!stepUp);          // walk a step-up, sprint otherwise
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
 
-        boolean needJumpUp = wp.getY() > player.getBlockPos().getY();
+        boolean needJumpUp = wp.getY() > pby;
         boolean canJump = TungstenConfig.get().followJumpingEnabled
                 && player.isOnGround()
-                && (needJumpUp || SafetySystem.isJumpLandingSafe(
+                && (needJumpUp || gap || SafetySystem.isJumpLandingSafe(
                         playerPos, player.getVelocity(), player.getEntityWorld()));
         mc.options.jumpKey.setPressed(canJump);
     }
