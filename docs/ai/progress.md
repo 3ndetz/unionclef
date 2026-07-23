@@ -851,3 +851,22 @@ so they DO run. Two genuine stand issues remain from before and stand fixed: (1)
 verboseDebugLogging ON -> per-tick log flood chokes py4j (fixed); (2) — the sim itself is now
 gated too, so even if a test enables verbose the flood is smaller. Net: the sim gate is a real
 production improvement; the 'flapping' narrative was mostly my broken settle probe.
+
+**RELEASED v0.43.0** (jar verified attached, Latest). The sim gate above. Confirmed nav-safe
+by an A/B build compare (pre-fix HEAD~2 vs post-fix): terrain results FLIP between runs (pre:
+A FAIL/B PASS/C FAIL/D FAIL; post: A FAIL/B FAIL/C FAIL/D PASS) — B and D flipped in OPPOSITE
+directions, which is run-to-run FLAKINESS, not a consistent regression (a real regression breaks
+one way). So the gate is safe; the climbing courses are just non-deterministic.
+
+**NEXT CORE TASK — terrain climbing (#1.6.1), now the active focus.** Ground-truth findings:
+D (goal snapped to ground) PASSES -> basic nav intact; A/C (staircase / 2-block wall) FAIL, B
+(steep) flaky. Two coupled causes located in the code: (1) BlockPathWalker keeps `sprintKey` ON
+for EVERY move incl. step-ups (tickBFS/tickDirect) — a sprint-jump clears ~3-4 blocks horizontal
+but only ~1.25 up, so on a 1-block staircase the bot leaps into the SIDE of a higher step and
+can't climb cleanly (needs a WALK-jump for a step-up, SPRINT-jump only for a gap); (2)
+CombatPathfinder.bfsPath intermittently returns a degenerate 2-3 wp stub mid-climb (visible in
+the 'BFS 2 wp' chat) so the walker just sprints at the goal and overshoots. CombatPathfinder CAN
+route a staircase (getWalkableNeighbors emits the +1y step-up neighbour), so A is primarily an
+EXECUTION bug. Plan: trace course A for ground truth, then separate walk-jump (adjacent higher
+wp) from sprint-jump (far wp) in the walker + shore up path quality; test until A/B/C pass
+CONSISTENTLY across multiple fresh runs before releasing.
