@@ -13,12 +13,19 @@
 - [~] PLACE-AS-A-MOVE (user asked "did you add building/bridging to tungsten?"). PRACTICAL GOAL
   DELIVERED: the bot now DOES pillar up (v0.38) and bridge across a gap (v0.41) during @goto —
   validated (pillar_reach_test, bridge_goto_test). Implemented as a give-up-driven move in
-  driveTungstenPrimary (stall at a raised/gapped goal + block in inventory -> PillarTask/
-  BridgeTask toward the goal). REMAINING REFINEMENT (rule #6 "in core"): integrate Bridge/Pillar
-  as FIRST-CLASS moves inside the block-space search (BlockNode.getChildren, like tryPlanBreakThrough)
-  so the pathfinder plans them PROACTIVELY mid-route (not only reactively after a ~14s stall, and
-  for mid-route gaps not just the final goal). Deferred: core-search edits are regression-prone
-  (the SmartMoves epic regressed terrain), so this needs the same careful repro→test→audit cycle.
+  driveTungstenPrimary. CORE VERSION IN PROGRESS (2026-07-23, per user's no-band-aids directive):
+  BRIDGE is now a FIRST-CLASS block-space move, mirroring break-through exactly —
+  BlockNode.tryPlanPlaceThrough (toPlace) -> PathFinder.pendingPlaces (truncate + 'bridging
+  without a physics leg') -> PathExecutor.tickPlacing. Capability-aware + segmented: gated on
+  planPlaceMoves (altoclef enables only with a block -> parkour/walk WITHOUT blocks unaffected)
+  + per-cell PlaceRules.canPlace (protected zones). Goal-ward gate stops open-void search
+  explosion. STATUS: mechanism PROVEN (bot paved cobblestone across a 4-cell sky gap); compiles;
+  planPlaceMoves DEFAULT OFF so it is INERT/safe. NOT YET: (a) full validation on a healthy stand
+  (the Mac stand went flaky mid-session — bot flapping under load, blocking clean runs); (b)
+  altoclef integration (set planPlaceMoves + equipBlockHook when the bot has a block); (c) the
+  CORE PILLAR place-move (up) for raised goals / 2-block walls (course C); (d) wide-open-void
+  efficiency. The reactive give-up bridge/pillar (v0.41, released, tested) remains as the working
+  fallback; the reactive wall-climb band-aid was REVERTED. Finish on a stable stand.
 - [~] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
   often prints 'Ran out of nodes' and fails. PARTLY FIXED v0.40.0 (#34): the walker's grid-BFS
   path source (CombatPathfinder) now generates parkour jump-moves (+2..4 across, flat or +1 up),
