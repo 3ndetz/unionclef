@@ -19,6 +19,14 @@ RE-READ THIS FULLY IF THE CONVERSATION WAS SUMMARIZED! Always read this file at 
 Unified monorepo: altoclef (bot) + baritone (pathfinding) + tungsten (A* movement) + shredder (pathfinder v2).
 Single Gradle project, no submodules, all source compiled together.
 
+## РАБОЧАЯ ВЕТКА — `main` (юзер 2026-07-23)
+
+После мерджа `1.21.11 → main` рабочая ветка — **`main`** (канон). Коммить и пуш в `main`;
+стенд `deploy/` тоже пуллит `main`. Держи `main` и `1.21.11` синхронными (не давай снова
+разойтись — если работал в другой ветке, сразу мерджи/ff в main). Релиз по-прежнему
+`gradlew :1.21.11:githubRelease` — `:1.21.11:` это gradle-САБПРОЕКТ `versions/1.21.11`
+(не ветка), так что от смены ветки не зависит.
+
 ## ⭐ ГЛАВНЫЙ ПРИНЦИП ДИЗАЙНА — ИНСТРУМЕНТАРИЙ ДЛЯ АГЕНТА, НЕ СКРИПТЫ (юзер 2026-07-21)
 
 Мы строим **удобную ЭКОСИСТЕМУ / РАБОЧЕЕ МЕСТО** для когнитивного агента (Клод по
