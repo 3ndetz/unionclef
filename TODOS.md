@@ -111,7 +111,11 @@
   pure async ;goto (gotoXYZ, no walker) parkour parity is separate (#1.6.1 async move-gen).
 - [x] #34 Tungsten parkour move-gen (jump gaps) — DONE v0.40.0 for the walker path (course B
   climbs, A/D no regression, break_test intact, combat unchanged). Course C (2-block vertical
-  wall) still needs place-to-climb (#46 second half), not parkour.
+  wall) — NOW ALSO WORKS (verified 2026-07-23, diag_pillar_c.py 3/3): with a block in hand +
+  planPlaceMoves, the walker (v0.44 face-before-move) + the reactive place-as-a-move climb the
+  2-block wall onto the ledge. So the full terrain suite (A staircase 7-8/8, B parkour gaps 8/8,
+  C 2-block wall 3/3 w/blocks, D air-goal snap) works. Remaining terrain gaps: 1-block-WIDE
+  staircase precision (edge case) + pure async ;goto parkour parity (#1.6.1).
 - [x] BUG #29 (CRITICAL, live test 2026-07-22) Camera FREEZES locked on a block forever, bot
   hard-stuck; never recovers, survives reconnect. FIXED v0.39.0. Root: WindMouseRotation is a
   static singleton that steered the mouse toward its stored target every render frame — a task
