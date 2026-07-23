@@ -20,12 +20,18 @@
   planPlaceMoves (altoclef enables only with a block -> parkour/walk WITHOUT blocks unaffected)
   + per-cell PlaceRules.canPlace (protected zones). Goal-ward gate stops open-void search
   explosion. STATUS: mechanism PROVEN (bot paved cobblestone across a 4-cell sky gap); compiles;
-  planPlaceMoves DEFAULT OFF so it is INERT/safe. NOT YET: (a) full validation on a healthy stand
-  (the Mac stand went flaky mid-session — bot flapping under load, blocking clean runs); (b)
-  altoclef integration (set planPlaceMoves + equipBlockHook when the bot has a block); (c) the
-  CORE PILLAR place-move (up) for raised goals / 2-block walls (course C); (d) wide-open-void
-  efficiency. The reactive give-up bridge/pillar (v0.41, released, tested) remains as the working
-  fallback; the reactive wall-climb band-aid was REVERTED. Finish on a stable stand.
+  planPlaceMoves DEFAULT OFF so it is INERT/safe (parkour-without-blocks confirmed: terrain B PASS
+  with the flag off). KNOWN HARD PROBLEM found in testing: on a WIDE / open-void gap the search
+  SPINS to ~375% CPU and destabilises the bot. Root: one block-space search plans only ONE bridge
+  cell (tryPlanPlaceThrough needs this.down() SOLID to place from), so an N-cell gap needs N
+  segment re-searches, and the ;goto retry + resumeGoto loop compound on open void even with the
+  goal-ward gate. PROPER FIX (dedicated focused session): model PLANNED placements as SOLID inside
+  the search (treat toPlace cells as floor for subsequent children) so ONE search plans the whole
+  bridge, executed in a single godbridge pass — then cap/validate. NOT YET: that efficiency
+  redesign; altoclef integration (planPlaceMoves + equipBlockHook when the bot has a block); the
+  CORE PILLAR place-move (up) for raised goals / 2-block walls (course C). The reactive give-up
+  bridge/pillar (v0.41, released, tested) remains the working fallback; reactive wall-climb REVERTED.
+  Keep planPlaceMoves OFF until the efficiency redesign lands.
 - [~] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
   often prints 'Ran out of nodes' and fails. PARTLY FIXED v0.40.0 (#34): the walker's grid-BFS
   path source (CombatPathfinder) now generates parkour jump-moves (+2..4 across, flat or +1 up),

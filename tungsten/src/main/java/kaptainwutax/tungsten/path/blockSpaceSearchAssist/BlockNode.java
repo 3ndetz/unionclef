@@ -692,8 +692,15 @@ public class BlockNode {
 		if (BlockShapeChecker.getShapeVolume(feet, world) != 0) return false;        // cell blocked
 		if (BlockShapeChecker.getShapeVolume(feet.up(), world) != 0) return false;   // head blocked
 		if (BlockShapeChecker.getShapeVolume(support, world) != 0) return false;     // already floored -> normal move
-		// must stand on a real floor to place FROM (godbridge places against its side face)
-		if (BlockShapeChecker.getShapeVolume(this.getBlockPos().down(), world) == 0) return false;
+		// Must have a floor to place FROM (godbridge places against its side face). CHAINING:
+		// if THIS cell is itself a planned bridge cell, its floor (this.toPlace) will be paved,
+		// so the bot can stand on it and place the next — this lets ONE search plan a whole
+		// multi-cell bridge (without it the search explores endless 1-cell bridges and exhausts
+		// its node budget into a CPU spin on wide/open gaps).
+		BlockPos myFloor = this.getBlockPos().down();
+		boolean floorSolid = BlockShapeChecker.getShapeVolume(myFloor, world) != 0;
+		boolean floorPlanned = this.toPlace != null && this.toPlace.contains(myFloor);
+		if (!floorSolid && !floorPlanned) return false;
 		if (!kaptainwutax.tungsten.path.PlaceRules.canPlace(world, support)) return false;
 		child.toPlace = new java.util.ArrayList<>(java.util.List.of(support));
 		// place penalty ~ a slow action (same scaling as break): high enough to prefer a
