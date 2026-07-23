@@ -342,6 +342,10 @@ public class PathExecutor {
             resumeGotoAfterMining(player);
             return false;
         }
+        // ask altoclef to equip a build block (tungsten never touches the inventory)
+        if (kaptainwutax.tungsten.TungstenModDataContainer.equipBlockHook != null) {
+            try { kaptainwutax.tungsten.TungstenModDataContainer.equipBlockHook.run(); } catch (Throwable ignored) {}
+        }
         if (!(player.getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem)) {
             Debug.logMessage("Bridge place aborted (no block in hand)");
             options.useKey.setPressed(false);

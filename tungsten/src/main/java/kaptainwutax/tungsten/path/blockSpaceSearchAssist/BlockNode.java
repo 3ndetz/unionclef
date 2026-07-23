@@ -681,6 +681,10 @@ public class BlockNode {
 	 */
 	private boolean tryPlanPlaceThrough(WorldView world, BlockNode child) {
 		if (!TungstenConfig.get().planPlaceMoves || !TungstenConfig.get().allowPlace) return false;
+		// Only bridge TOWARD the goal. On open void every direction is a gap, so bridging
+		// everywhere explodes the search into node exhaustion — a place-move must make real
+		// progress (child strictly closer to the goal than the current cell).
+		if (child.estimatedCostToGoal >= this.estimatedCostToGoal) return false;
 		int dx = child.x - this.x, dy = child.y - this.y, dz = child.z - this.z;
 		if (dy != 0 || Math.abs(dx) + Math.abs(dz) != 1) return false;   // adjacent same-Y (bridge)
 		BlockPos feet = child.getBlockPos();
