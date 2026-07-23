@@ -870,3 +870,50 @@ route a staircase (getWalkableNeighbors emits the +1y step-up neighbour), so A i
 EXECUTION bug. Plan: trace course A for ground truth, then separate walk-jump (adjacent higher
 wp) from sprint-jump (far wp) in the walker + shore up path quality; test until A/B/C pass
 CONSISTENTLY across multiple fresh runs before releasing.
+
+## 2026-07-23 — terrain climbing DEEP DIVE (findings + reverted patches, for the rework)
+
+Spent a long focused block on course A (1-block staircase). Quantified with a new multi-run
+harness (`diag_climb_multi.py`: N fresh runs, per-run PASS/FAIL + x-progress signature + walker
+chat markers; COURSE=A|B, WIDTH param). **Verdict: the flakiness is a genuine multi-session CORE
+rework, not a one-line fix. Incremental patches did NOT help and were REVERTED to the v0.43.0
+baseline (no regression shipped).**
+
+GROUND TRUTH (per-0.4s rcon traces + x-signatures):
+- The bot CAN climb — a clean trace reached the goal (13,-48) and held. But baseline A is only
+  ~5/8 (flaky, non-deterministic — same code/course/start, different outcome).
+- Failure modes, all present: (1) sprint-jump OVERSHOOT — a sprint-jump clears ~3-4 blocks
+  horizontal but only ~1.25 up, so it rams the FRONT of a higher step, lands low/forward, bot
+  falls back; (2) LATERAL drift off the 1-wide steps onto the adjacent flat floor (final z far
+  from 0) then sprints around; (3) mid-climb STALL.
+- EXECUTOR drift-handoff churn: driveTungstenPrimary, on a 2.5s walker stall, STOPS the walker
+  and forces the physics executor for 8s (`twPreferExecutorUntilMs`). The executor DRIFTS ~8.8
+  blocks on a staircase (chat: `Path stopped: drift 8.801 blocks ... Expected (8.69,..) actual
+  (0.19,..)`) — the very reason the drift-immune walker exists — so it fights the walker
+  (climb -> executor drift-stop -> fall -> walker -> repeat), seen as the `BFS 16->6->13 wp`
+  re-plan churn.
+
+PATCHES TRIED, MEASURED, REVERTED (all as diag_climb_multi x8):
+- walk-jump 1-block step-ups (sprint off): 5/8 -> 4/8.
+- + lookahead deceleration before a staircase: -> 3/8.
+- + gap-aware walk-climb (walk staircase, sprint gaps for course B): 3/8 A.
+- + removed the executor drift-handoff (re-plan the walker on stall instead): 3/8 A, 4/8 B.
+- On WIDER (3-/5-wide, more realistic) staircases WITH these patches: **0/8** — walk-climbing a
+  wide staircase + diagonal BFS zigzag + 3s re-plan churn crawls and never finishes. Wider being
+  WORSE means my model was wrong; reverted the walker + driveTungstenPrimary to v0.43.0.
+  (Kept the diag harness upgrades: COURSE/WIDTH params, py4j retry, tp-verify, chat capture.)
+
+SUSPECTED DEEPER ROOTS for the rework (not yet fixed):
+1. WindMouseRotation yaw easing is humanized + RANDOMIZED; during a sprint the eased yaw LAGS, so
+   the bot (moves in its facing dir) goes off-axis -> lateral drift, and the random lag would
+   explain the run-to-run flakiness. Path-following likely wants PRECISE yaw (snap/fast), with
+   humanization reserved for combat anti-cheat.
+2. CombatPathfinder grid BFS: diagonal-zigzag paths on wide terrain + degenerate 1-2 wp stubs
+   when re-planning from an AIRBORNE position (bot's blockPos is an air cell).
+3. Multi-driver fight (walker <-> physics executor) with a fragile stall handoff.
+
+REWORK PLAN (focused future session, per user's 'one pathfinder / no band-aids / test harder'):
+consolidate to ONE terrain driver (walker), precise yaw for path-following, COMMIT-to-path (follow
+a good path to completion; re-plan only on a genuine stall, never from airborne; no executor
+handoff on terrain), straighten path quality (no diagonal zigzag / degenerate stubs). Validate
+across WIDTH and courses A/B/C/D until consistently green BEFORE any release.
