@@ -234,11 +234,9 @@ public class BlockPathWalker {
             return;
         }
 
-        // movement — FAST nav turn (snap the view toward the chase target) so the bot
-        // stays aligned and keeps sprinting instead of stopping to pivot; combat/mining/
-        // bow keep the slow humanized aim. tickBFS (terrain) also stays humanized.
+        // movement
         float yaw = AttackTiming.yawTo(playerPos, directTarget);
-        WindMouseRotation.INSTANCE.setTargetFast(yaw, 0);
+        WindMouseRotation.INSTANCE.setTarget(yaw, 0);
 
         // FACE-BEFORE-MOVE (same fix as tickBFS): the humanized WindMouse yaw takes a few
         // frames to converge; pressing forward while it's still off makes the bot chase a
@@ -264,6 +262,15 @@ public class BlockPathWalker {
         boolean canJump = (yawErr < 45.0) && TungstenConfig.get().followJumpingEnabled
                 && onGround && landingSafe;
         mc.options.jumpKey.setPressed(canJump);
+
+        if (DEBUG && (dbgN++ % 2 == 0)) {
+            Vec3d v = player.getVelocity();
+            double spd = Math.sqrt(v.x * v.x + v.z * v.z);
+            Debug.logMessage(String.format(
+                "dir live%d d%.1f yawErr%.0f move%d grnd%d stuck%d spd%.2f los%d",
+                liveMode ? 1 : 0, dist, yawErr, move ? 1 : 0, onGround ? 1 : 0,
+                liveStuckTicks, spd, hasLOS ? 1 : 0));
+        }
     }
 
     private static void switchToBFS() {
