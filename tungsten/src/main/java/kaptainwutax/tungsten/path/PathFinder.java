@@ -254,8 +254,18 @@ public class PathFinder {
 	    // a not-yet-placed floor). Skip the physics leg — hand the executor an empty path
 	    // with the place queue; bridging starts immediately and the goto retry drives the
 	    // rest of the now-bridged world. Mirror of the break handoff above.
+	    //
+	    // Anchor the handoff to the bot STANDING AT THE GAP EDGE — the last cell of the
+	    // TRUNCATED block path — not to the path's length. White-box: the old `size() <= 2`
+	    // gate was a flaky proxy for "at the edge"; when the search rooted the path one cell
+	    // further back (size 3), the handoff was skipped, and the physics leg then simulated
+	    // walking ACROSS the un-bridged gap and FALLING (drift ~159 blocks: expected y=-57
+	    // while the bot is at y=101 -> hard-stop -> bot derailed backward / into the void;
+	    // core_bridge was ~50% flaky). The edge cell is where the physics can actually stand.
+	    net.minecraft.util.math.Vec3d edgeCell = blockPath.get().getLast().getPos(true, world);
+	    double botToEdgeXZ = Math.hypot(player.getX() - edgeCell.x, player.getZ() - edgeCell.z);
 	    if (pendingPlaces != null && !pendingPlaces.isEmpty()
-	            && blockPath.get().size() <= 2
+	            && botToEdgeXZ < 1.8
 	            && player.getEyePos().distanceTo(net.minecraft.util.math.Vec3d.ofCenter(pendingPlaces.get(0))) < 5.0) {
 	        Debug.logMessage("At the gap — bridging without a physics leg");
 	        TungstenModDataContainer.EXECUTOR.setPath(new ArrayList<>());
