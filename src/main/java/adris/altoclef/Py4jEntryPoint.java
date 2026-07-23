@@ -2260,7 +2260,7 @@ public class Py4jEntryPoint {
      *  equip + gravity re-mine + BreakRules protection all apply. The bot must be within
      *  reach; out-of-reach blocks stay queued (reposition with gotoXYZ, poll mineStatus()).
      *  positions = list of [x,y,z]. Agent primitive for //replace, clearing, mineTo. */
-    public Map<String, Object> mineBlocks(java.util.List<java.util.List<Integer>> positions) {
+    public Map<String, Object> mineBlocks(java.util.List<?> positions) {
         return onClientThread(() -> {
             Map<String, Object> out = new HashMap<>();
             MinecraftClient mc = MinecraftClient.getInstance();
@@ -2268,9 +2268,14 @@ public class Py4jEntryPoint {
             var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
             if (ex == null) { out.put("ok", false); out.put("reason", "no executor"); return out; }
             java.util.List<net.minecraft.util.math.BlockPos> queue = new java.util.ArrayList<>();
-            if (positions != null) for (var p : positions) {
-                if (p != null && p.size() >= 3)
-                    queue.add(new net.minecraft.util.math.BlockPos(p.get(0), p.get(1), p.get(2)));
+            // py4j hands Python ints across as Java Long, so coerce via Number.intValue().
+            if (positions != null) for (Object po : positions) {
+                if (po instanceof java.util.List<?> p && p.size() >= 3) {
+                    queue.add(new net.minecraft.util.math.BlockPos(
+                            ((Number) p.get(0)).intValue(),
+                            ((Number) p.get(1)).intValue(),
+                            ((Number) p.get(2)).intValue()));
+                }
             }
             if (queue.isEmpty()) { out.put("ok", false); out.put("reason", "no positions"); return out; }
             // Point the mining-resume at the bot itself so it doesn't wander to a stale goal.
