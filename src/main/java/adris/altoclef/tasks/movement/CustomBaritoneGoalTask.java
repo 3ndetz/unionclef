@@ -388,24 +388,25 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
 
         if (twStuckPos == null || plNow.distanceTo(twStuckPos) > 0.75) {
             twStuckPos = plNow; twStuckSinceMs = nowMs; twStuckResets = 0;
-        } else if (nowMs - twStuckSinceMs > 3000) {
-            // No net progress for 3s. DO NOT hand a stalled terrain climb to the physics
-            // executor: it DRIFTS badly on stairs/slopes (measured 8.8-block drift on a
-            // staircase — the very reason the drift-immune walker exists), so the handoff
-            // just fights the walker (bot climbs, executor drift-hard-stops, bot falls,
-            // repeat — a flaky ~50% climb). Instead RE-PLAN the walker from the current
-            // position (keep the drift-prone executor OFF on terrain) and let it keep
-            // climbing. After a few fruitless resets, reset the async nav and yield to the
-            // wander to escape a genuine trap (e.g. a 2-block wall needing a pillar move).
+        } else if (kaptainwutax.tungsten.task.BlockPathWalker.isRunning() && nowMs - twStuckSinceMs > 2500) {
+            // The WALKER stalled — most likely a parkour move it can't do (gap jump /
+            // wall climb). Hand this segment to the physics executor (which parkours)
+            // for a window, then re-try the walker.
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            twPreferExecutorUntilMs = nowMs + 8000;
+            twStuckSinceMs = nowMs;
+        } else if (nowMs - twStuckSinceMs > 5000) {
+            // Even the executor is stuck — trapped (stale-rooted reject loop /
+            // unreachable sub-goal). Reset the nav to re-plan from the ACTUAL position;
+            // after a few fruitless resets, yield to the wander so we walk out of a
+            // local trap instead of freezing forever.
             var pfR = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
             var exR = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
-            if (exR != null) exR.stop = true;                          // executor stays off on terrain
-            kaptainwutax.tungsten.task.BlockPathWalker.stop();         // -> branch 1 re-plans a fresh path
+            if (pfR != null) { pfR.stop.set(true); pfR.overrideStartPos = null; }
+            if (exR != null) exR.stop = true;
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
             twStuckSinceMs = nowMs;
-            if (++twStuckResets >= 4) {
-                if (pfR != null) { pfR.stop.set(true); pfR.overrideStartPos = null; }
-                twStuckResets = 0; twStuckPos = null; return false;   // genuinely trapped — yield/wander
-            }
+            if (++twStuckResets >= 3) { twStuckResets = 0; twStuckPos = null; return false; }
         }
 
         try {

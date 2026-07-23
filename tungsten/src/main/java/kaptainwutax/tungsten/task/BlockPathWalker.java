@@ -205,53 +205,21 @@ public class BlockPathWalker {
             wpPos = Vec3d.ofBottomCenter(wp);
         }
 
-        // recompute after a possible waypoint advance above (dist was to the old wp)
-        dist = horizontalDist(playerPos, wpPos);
-
         float yaw = AttackTiming.yawTo(playerPos, wpPos);
         WindMouseRotation.INSTANCE.setTarget(yaw, 0);
 
-        int pby = player.getBlockPos().getY();
-        // Look ahead along the path: is a CONTIGUOUS step-up (1-block staircase) coming
-        // within ~3 blocks? If so, WALK now to shed sprint momentum BEFORE the step. A
-        // sprint-jump clears ~3-4 blocks horizontal but only ~1.25 up, so it rams the
-        // FRONT of a higher step and bounces back / overshoots (measured: the bot then
-        // falls, re-plans from the bottom, and oscillates — flaky ~50% climb). A walk-jump
-        // rises 1 and moves ~1 forward, landing cleanly on the next step. A GAP (waypoints
-        // >=2 apart, course B parkour) BREAKS the contiguity scan, so gaps keep sprinting —
-        // a running jump genuinely needs the horizontal reach. Deterministic staircase climb.
-        boolean walkClimb = false;
-        {
-            boolean sawStepUp = false, sawGap = false;
-            double acc = 0;
-            Vec3d prev = playerPos;
-            for (int i = waypointIdx; i < path.size() && acc <= 4.0; i++) {
-                Vec3d w = Vec3d.ofBottomCenter(path.get(i));
-                double d = horizontalDist(prev, w);
-                if (d > 1.8) { sawGap = true; break; }               // a gap -> parkour, keep sprinting
-                if (path.get(i).getY() > pby) sawStepUp = true;      // a contiguous step-up
-                acc += Math.max(d, 0.6);
-                prev = w;
-            }
-            // WALK only a PURE staircase (step-up with no gap in the window). If a gap sits
-            // in the lookahead (course B: step onto a pillar, then a +2 running jump), keep
-            // sprinting — decelerating there would kill the momentum the gap jump needs.
-            walkClimb = sawStepUp && !sawGap;
-        }
-        boolean gap = dist >= 2.0 && !walkClimb;        // running-jump distance (parkour)
-
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(true);
-        mc.options.sprintKey.setPressed(!walkClimb);    // walk a staircase, sprint flats/gaps
+        mc.options.sprintKey.setPressed(true);
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
 
-        boolean needJumpUp = wp.getY() > pby;
+        boolean needJumpUp = wp.getY() > player.getBlockPos().getY();
         boolean canJump = TungstenConfig.get().followJumpingEnabled
                 && player.isOnGround()
-                && (needJumpUp || gap || SafetySystem.isJumpLandingSafe(
+                && (needJumpUp || SafetySystem.isJumpLandingSafe(
                         playerPos, player.getVelocity(), player.getEntityWorld()));
         mc.options.jumpKey.setPressed(canJump);
     }
