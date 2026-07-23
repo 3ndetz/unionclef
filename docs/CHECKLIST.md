@@ -181,6 +181,16 @@ next to it**. A green tick for its own sake is forbidden.
   not on faith.
 - Did you break a core invariant (drift, "stands still", walks backwards, freezes)?
 
+### 5.3b STALE-JAR gotcha (verify the deploy actually has your change)
+- `gradlew build` can leave the `versions/<ver>/build/libs/*.jar` **CACHED** (up-to-date) so it
+  deploys the PREVIOUS jar without your latest source — the test then reflects OLD code and you
+  chase a ghost. Seen 2026-07-23: a py4j method (mineBlocks) "does not exist" for 3 build cycles
+  because the jar was stale (had the prior commit's methods, not the new one).
+- GUARD: after building, VERIFY the jar contains the change before testing, e.g.
+  `unzip -p <jar> adris/altoclef/Py4jEntryPoint.class | strings | grep <yourMethod>` (or check a
+  new string/renderer). If missing, force it: `gradlew clean :<ver>:build` (clean rebuild of the
+  version chain). Bumping mod_version alone does NOT force a source recompile.
+
 ### 5.4 Stand flakiness ≠ regression
 - The stand bots **flake** (especially cold after a container restart: chunks/pathfinder
   not warmed → path degradation). Flakiness signs: the bot wanders chaotically, ALL
