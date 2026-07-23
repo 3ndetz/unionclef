@@ -167,7 +167,8 @@ public class CombatController {
                 && SafetySystem.isJumpLandingSafe(player.getEntityPos(), player.getVelocity(), world)) {
             mc.options.jumpKey.setPressed(true);
             lastJump = now;
-            jumpInterval = 280 + (long) (Math.random() * 320);   // ~0.28-0.6s: bunny-hop rhythm
+            var jcfg = kaptainwutax.tungsten.TungstenConfig.get();
+            jumpInterval = jcfg.combatBunnyHopMinMs + (long) (Math.random() * jcfg.combatBunnyHopRandMs);
         } else if (!player.isOnGround()) {
             mc.options.jumpKey.setPressed(false); // don't hold jump airborne
         }

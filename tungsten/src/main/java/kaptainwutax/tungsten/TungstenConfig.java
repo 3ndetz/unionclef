@@ -219,6 +219,17 @@ public class TungstenConfig {
      *  by up to this factor for fast flick. 1.0 = no scaling. */
     public double combatWindMouseFlickScale = 3.0;
 
+    // ── combat anti-shake + bunny-hop (LIVE-tunable; the shake is a live-only symptom) ──
+    /** Aim low-pass blend toward the raw aim per tick (0..1). LOWER = smoother/less shake but
+     *  more lag; HIGHER = snappier but shakier. If the aim still shakes on a live target, lower
+     *  this (e.g. 0.35); if it lags behind a strafer, raise it (e.g. 0.7). */
+    public double combatAimSmoothing = 0.5;
+    /** Enemy-velocity EMA weight for the NEW sample (0..1). Lower = steadier lead (less shake). */
+    public double combatVelSmoothing = 0.4;
+    /** Bunny-hop cadence: min ms + random ms between combat jumps. Lower = hops more. */
+    public long combatBunnyHopMinMs = 280;
+    public long combatBunnyHopRandMs = 320;
+
     // ----------------------------------------
 
     public static TungstenConfig get() {

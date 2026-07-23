@@ -105,7 +105,8 @@ public class SafetySystem {
             // jitters the lead prediction and is a root cause of the aim SHAKE. Smooth it
             // with an EMA so the lead (and therefore the aim) stays stable while tracking.
             Vec3d rawVel = targetPos.subtract(prevEnemyPos);
-            enemyVelocity = enemyVelocity.multiply(0.6).add(rawVel.multiply(0.4));
+            double vs = kaptainwutax.tungsten.TungstenConfig.get().combatVelSmoothing;
+            enemyVelocity = enemyVelocity.multiply(1.0 - vs).add(rawVel.multiply(vs));
         }
         prevEnemyPos = targetPos;
 
@@ -536,12 +537,13 @@ public class SafetySystem {
         // aim / target teleport / target switch), else blend halfway toward the raw aim — kills
         // the high-frequency jitter while still tracking a moving target so the angle gate holds.
         float dYaw = net.minecraft.util.math.MathHelper.wrapDegrees(rawYaw - aimYaw);
+        float aimS = (float) kaptainwutax.tungsten.TungstenConfig.get().combatAimSmoothing;
         if (Math.abs(dYaw) > 55f) {
             aimYaw = rawYaw;
             aimPitch = rawPitch;
         } else {
-            aimYaw = net.minecraft.util.math.MathHelper.wrapDegrees(aimYaw + dYaw * 0.5f);
-            aimPitch = aimPitch + (rawPitch - aimPitch) * 0.5f;
+            aimYaw = net.minecraft.util.math.MathHelper.wrapDegrees(aimYaw + dYaw * aimS);
+            aimPitch = aimPitch + (rawPitch - aimPitch) * aimS;
         }
     }
 
