@@ -54,7 +54,9 @@ def wait_for(desc,fn,ts,iv=4):
 
 def build():
     rcon("forceload add -8 -8 40 8")
-    rcon(f"clear {BOT}")   # no leftover blocks — else a climb stall could fire pillar/bridge
+    # give ONLY cobblestone: course C (2-block wall) needs blocks to pillar-climb; A/B/D
+    # don't trigger pillar/bridge (no overhead goal / gap / 2-tall wall), so it's safe.
+    rcon(f"clear {BOT}"); rcon(f"give {BOT} cobblestone 64")
     # clear a working area and lay a flat floor at y=-61 (top -60)
     rcon("fill 0 -60 -4 40 10 4 air")
     rcon("fill 0 -61 -4 40 -61 4 stone")
