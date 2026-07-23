@@ -56,6 +56,11 @@ public class BlockPathWalker {
     private static boolean stoppedByBail = false;
     private static final int LIVE_STUCK_LIMIT = 20;    // ~1s of the bot not moving → BFS
     private static final double LIVE_STUCK_MOVE = 0.5; // min displacement to count as moving
+    // Live-steer at an EXTERNAL moving target has NO waypoint-feedback spin risk (the
+    // target is independent of the bot's motion), so it can keep closing on a CURVED
+    // approach at a wider gate while WindMouse finishes turning — instead of stopping to
+    // pivot on every bearing change (which halved the chase speed). Non-live keeps 45.
+    private static final double LIVE_MOVE_GATE = 65.0;
 
     // White-box climb instrumentation (off by default; toggled via py4j setWalkerDebug).
     // Logs the walker's per-tick decisions so a FAILING climb can be understood mechanism-
@@ -185,7 +190,16 @@ public class BlockPathWalker {
         lastDistToTarget = dist;
         boolean stalled;
         if (liveMode) {
-            if (liveStuckAnchor == null || playerPos.distanceTo(liveStuckAnchor) > LIVE_STUCK_MOVE) {
+            // Count a "stuck" tick ONLY when the bot is actually TRYING to move (facing
+            // the target / airborne) yet isn't displacing — i.e. pressed against a wall.
+            // While it merely PIVOTS to face a target that jumped (face-before-move gates
+            // forward), it is NOT stuck; counting that as stuck bails the chase to the 2s
+            // physics cooldown and halves the effective speed (bot fell behind a runner).
+            float yawNow = AttackTiming.yawTo(playerPos, directTarget);
+            boolean facingNow = Math.abs(WindMouseRotation.wrapDelta(yawNow - player.getYaw())) < LIVE_MOVE_GATE;
+            boolean tryingToMove = facingNow || !player.isOnGround();
+            if (!tryingToMove || liveStuckAnchor == null
+                    || playerPos.distanceTo(liveStuckAnchor) > LIVE_STUCK_MOVE) {
                 liveStuckAnchor = playerPos;
                 liveStuckTicks = 0;
             } else {
@@ -232,7 +246,11 @@ public class BlockPathWalker {
         // follow walker would make the combat approach circle the target.
         double yawErr = Math.abs(WindMouseRotation.wrapDelta(yaw - player.getYaw()));
         boolean onGround = player.isOnGround();
-        boolean move = (yawErr < 45.0) || !onGround;
+        // Non-live keeps the strict 45deg gate (waypoint-feedback spin risk). Live-steer
+        // uses the wider LIVE_MOVE_GATE: no spin risk (external target), and stopping to
+        // pivot on every bearing change halved the chase speed so the bot fell behind.
+        double moveGate = liveMode ? LIVE_MOVE_GATE : 45.0;
+        boolean move = (yawErr < moveGate) || !onGround;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(move);
