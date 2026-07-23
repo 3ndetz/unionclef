@@ -2005,6 +2005,19 @@ public class Py4jEntryPoint {
         return out;
     }
 
+    /** Toggle the BlockPathWalker's per-tick white-box debug log (waypoint, dist, onGround,
+     *  jump, playerYaw vs target yaw, velocity) to the chat buffer — used to understand a
+     *  FAILING terrain climb mechanism-first. Off by default. */
+    public Map<String, Object> setWalkerDebug(boolean on) {
+        Map<String, Object> out = new HashMap<>();
+        try {
+            kaptainwutax.tungsten.task.BlockPathWalker.DEBUG = on;
+            out.put("ok", true);
+            out.put("walkerDebug", on);
+        } catch (Exception e) { out.put("ok", false); out.put("reason", e.getMessage()); }
+        return out;
+    }
+
     /** Read the current pathing-delegation mode (goal 13). */
     public Map<String, Object> pathingMode() {
         Map<String, Object> out = new HashMap<>();

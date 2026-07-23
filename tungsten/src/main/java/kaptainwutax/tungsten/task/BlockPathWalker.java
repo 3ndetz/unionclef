@@ -42,6 +42,13 @@ public class BlockPathWalker {
 
     private static Vec3d directTarget = null;
 
+    // White-box climb instrumentation (off by default; toggled via py4j setWalkerDebug).
+    // Logs the walker's per-tick decisions so a FAILING climb can be understood mechanism-
+    // first instead of guessed from external position alone. Key signal: playerYaw vs the
+    // target yaw the walker set (tests whether WindMouse easing lags during a sprint).
+    public static volatile boolean DEBUG = false;
+    private static int dbgN = 0;
+
     // ── public API ──────────────────────────────────────────────────────────
 
     /**
@@ -222,6 +229,16 @@ public class BlockPathWalker {
                 && (needJumpUp || SafetySystem.isJumpLandingSafe(
                         playerPos, player.getVelocity(), player.getEntityWorld()));
         mc.options.jumpKey.setPressed(canJump);
+
+        if (DEBUG && (dbgN++ % 3 == 0)) {
+            Vec3d v = player.getVelocity();
+            Debug.logMessage(String.format(
+                "wlk i%d/%d d%.1f wp(%d,%d,%d) g%d j%d yaw%.0f>%.0f v(%.2f,%.2f,%.2f) p(%.1f,%.1f,%.1f)",
+                waypointIdx, path.size(), dist, wp.getX(), wp.getY(), wp.getZ(),
+                player.isOnGround() ? 1 : 0, canJump ? 1 : 0,
+                player.getYaw(), yaw, v.x, v.y, v.z,
+                playerPos.x, playerPos.y, playerPos.z));
+        }
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
