@@ -85,11 +85,18 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 
 		if(!this.getAbilities().flying) {
 			Agent.INSTANCE = Agent.of((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);
-			//#if MC < 12111
-			//$$ Agent.INSTANCE.tick(this.getWorld());
-			//#else
-			Agent.INSTANCE.tick(this.getEntityWorld());
-			//#endif
+			// This per-tick physics simulation exists ONLY to feed the verbose drift log
+			// (the non-executor compare below has no side effect). Running it every tick
+			// pegged the client at ~400% CPU for nothing when not debugging. The executor's
+			// OWN drift correction uses the precomputed path-node agents (Node.agent), not
+			// this INSTANCE, so gating it on the debug flag is safe.
+			if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) {
+				//#if MC < 12111
+				//$$ Agent.INSTANCE.tick(this.getWorld());
+				//#else
+				Agent.INSTANCE.tick(this.getEntityWorld());
+				//#endif
+			}
 		}
 
 		if(TungstenMod.runKeyBinding.isPressed() && !TungstenModDataContainer.PATHFINDER.active.get() && !TungstenModDataContainer.isExecutorRunning()) {
@@ -159,8 +166,9 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		//#endif
 		if (TungstenModDataContainer.isExecutorRunning() && TungstenModDataContainer.EXECUTOR.getCurrentTick() > 0) {
 			TungstenModDataContainer.EXECUTOR.getPath().get(TungstenModDataContainer.EXECUTOR.getCurrentTick() - 1).agent.compare(self, currentInput, true);
-		} else if(!this.getAbilities().flying && Agent.INSTANCE != null) {
-			Agent.INSTANCE.compare(self, currentInput, false);
+		} else if(!this.getAbilities().flying && Agent.INSTANCE != null
+				&& kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) {
+			Agent.INSTANCE.compare(self, currentInput, false);   // debug drift log only
 		}
 	}
 
