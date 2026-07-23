@@ -61,6 +61,10 @@ public final class VoidGuard {
                 mc.options.rightKey.setPressed(false);
                 mc.options.sprintKey.setPressed(false);
             }
+        } else {
+            // Clear of the rim — release the guard's edge-sneak so it can't persist (and
+            // stick over the player's control after the driving task ends).
+            mc.options.sneakKey.setPressed(false);
         }
     }
 

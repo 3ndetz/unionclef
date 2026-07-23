@@ -34,6 +34,12 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		super(world, profile);
 	}
 
+	// Was any tungsten driver active last tick? Used to release LEAKED input once on the
+	// driving->idle transition (a task can setPressed(true) and end without releasing —
+	// user report: SHIFT/sneak stuck ~5s after combat near a ledge).
+	@org.spongepowered.asm.mixin.Unique
+	private static boolean tungsten$wasDriving = false;
+
 	@Inject(method = "tick", at = @At("HEAD"))
 	public void start(CallbackInfo ci) {
 		if (TungstenMod.runKeyBinding == null) return; // tungsten not initialized yet
@@ -82,6 +88,34 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive()) {
 			kaptainwutax.tungsten.combat.VoidGuard.protect((ClientPlayerEntity)(Object)this, this.getEntityWorld());
 		}
+
+		// LEAKED-INPUT RELEASE: a task (VoidGuard edge-sneak during flee/punk, SafetySystem's
+		// combat edge-sneak) can setPressed(true) and end without releasing, leaving SHIFT /
+		// sprint / etc. STUCK over the human player's control (user: sneak sticks ~5s after
+		// combat near a ledge). Release the mod-controlled keys ONCE on the driving->idle
+		// transition, so we clear the leak without fighting the user's own held keys mid-play.
+		boolean tungsten$driving = TungstenModDataContainer.isExecutorRunning()
+				|| kaptainwutax.tungsten.task.BlockPathWalker.isRunning()
+				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive()
+				|| kaptainwutax.tungsten.task.RunAwayTask.isActive()
+				|| kaptainwutax.tungsten.task.FollowEntityTask.isActive()
+				|| kaptainwutax.tungsten.task.FollowPlayerTask.isActive()
+				|| kaptainwutax.tungsten.task.BridgeTask.isActive()
+				|| kaptainwutax.tungsten.task.PillarTask.isActive()
+				|| (TungstenModDataContainer.PATHFINDER != null && TungstenModDataContainer.PATHFINDER.active.get());
+		if (tungsten$wasDriving && !tungsten$driving) {
+			var opts = MinecraftClient.getInstance().options;
+			if (opts != null) {
+				// Release ONLY the keys a task forces that the human player won't be holding
+				// (sneak/attack/use). Leaving WASD/sprint/jump alone avoids clobbering the
+				// user's own held movement on this single transition tick — while still
+				// clearing the reported stuck SHIFT.
+				opts.sneakKey.setPressed(false);
+				opts.attackKey.setPressed(false);
+				opts.useKey.setPressed(false);
+			}
+		}
+		tungsten$wasDriving = tungsten$driving;
 
 		if(!this.getAbilities().flying) {
 			Agent.INSTANCE = Agent.of((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);
