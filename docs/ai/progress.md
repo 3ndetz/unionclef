@@ -825,3 +825,29 @@ updated (working branch + closed-loop + no-band-aids + TG-report + autonomous-PR
 **PRs.** All closed autonomously: #10 merged (1.21.11->main); #22, #23 (RiaDev1) closed as
 superseded — every fix already in main via the 1.21.11 work (verified line-by-line), and their
 old base would revert the current line.
+
+---
+
+## 2026-07-23 — per-tick physics-sim gate + CORRECTED stand diagnosis
+
+**Production CPU win (committed, unreleased).** MixinClientPlayerEntity ran a FULL physics
+simulation every client tick — `Agent.INSTANCE.tick(world)` (line ~97) + the non-executor
+`Agent.INSTANCE.compare(false)` (line ~171) — purely to feed the verbose drift log (the
+non-executor compare has NO side effect). The executor's own drift correction uses the
+PRECOMPUTED path-node agents (`Node.agent`), not `Agent.INSTANCE`, and `Agent.INSTANCE` is used
+NOWHERE else (grep-confirmed: only this mixin sets/reads it). Gated both on
+`verboseDebugLogging` (default off). Measured client CPU on the Mac stand: **400% -> ~240%**
+(steady). Safe: executor path untouched.
+
+**CORRECTION to the previous 'stand flakiness' story (earlier entry was partly wrong).** Direct
+container measurement: `docker inspect` shows NanoCpus=0 (NO CPU limit) on a 16-core host, client
+steady at ~240% = only ~2.4 cores. **CPU was NEVER the py4j-flapping / settle cause** — the mod
+is not CPU-starved. The real 'NOT_SETTLED' in my own probe was a PROBE BUG: it polled `inGame()`
+without ever connecting, using non-existent py4j methods (`mc.state()`, `mc.connect()` — the real
+ones are `mc.inGame()` / `mc.ConnectToServer(ip)`). The client boots to the MAIN MENU and waits
+for a connect command; `inGame()` = steady F F F F (not flapping) until `ConnectToServer` is
+called. The real tests (core_bridge_test, terrain_test) connect correctly via `ConnectToServer`,
+so they DO run. Two genuine stand issues remain from before and stand fixed: (1) slime_test left
+verboseDebugLogging ON -> per-tick log flood chokes py4j (fixed); (2) — the sim itself is now
+gated too, so even if a test enables verbose the flood is smaller. Net: the sim gate is a real
+production improvement; the 'flapping' narrative was mostly my broken settle probe.
