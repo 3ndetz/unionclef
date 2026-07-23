@@ -52,6 +52,7 @@ def pos():
 
 import os
 COURSE = os.environ.get("COURSE","A").upper()   # A = 1-block staircase, B = +2/+1 steep parkour
+WIDTH  = int(os.environ.get("WIDTH","0"))       # steps span z=-WIDTH..WIDTH (0 = pathological 1-wide)
 # (target_x, target_y) per course
 TGT = {"A": (13,-48), "B": (22,-56)}[COURSE]
 
@@ -62,10 +63,10 @@ def build():
     rcon("fill 0 -61 -4 40 -61 4 stone")
     if COURSE == "A":
         for i in range(1,13):                      # 1-block staircase x=2..13, y=-59..-48
-            rcon(f"setblock {1+i} {-61+i} 0 stone")
+            rcon(f"fill {1+i} {-61+i} {-WIDTH} {1+i} {-61+i} {WIDTH} stone")
     else:                                          # B: +2x/+1y steps x=14..22, y=-60..-56 (running jumps)
         for i in range(1,6):
-            rcon(f"setblock {12+2*i} {-61+i} 0 stone")
+            rcon(f"fill {12+2*i} {-61+i} {-WIDTH} {12+2*i} {-61+i} {WIDTH} stone")
     rcon("gamerule doDaylightCycle false"); rcon("time set day")
 
 def run_once(k):
