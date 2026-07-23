@@ -113,6 +113,14 @@ py4j/MCP), а НЕ готовые скрипты, которые всё дела
     МЕРЖ; если фиксы уже в main / база протухла / диф ревертит текущую работу — ЗАКРОЙ с внятным
     уважительным комментарием. НЕ «оставляй на ревью юзеру». Итог фиксируй в TODO. То же для issues
     (закрыл фикс → коммент+close; не воспроизводится → коммент-вопрос).
+    **STOP-HOOK ENFORCEMENT (autonomous mode).** A `Stop` hook (`.claude/hooks/autonomy_stop.py`,
+    wired in `.claude/settings.json`) enforces rule #11 mechanically: while `.claude/autonomy_active.flag`
+    exists it refuses to let a turn finalise and re-injects the checklist directive (audit -> next
+    focused pass). It is a no-op when the flag is absent (normal conversational turns end normally).
+    START a relentless run: create `.claude/autonomy_active.flag`. END it (ONLY when ALL TODO incl.
+    child/emergent is closed+tested, or hardware failure): create `.claude/autonomy_stop.flag` (or
+    remove the active flag) and send the final TG report. The flags are git-ignored (session state).
+    Hooks execute code, so wiring them into settings.json / creating the flag needs the user's consent.
 11. **MILESTONE IS NOT A STOP — AUDIT, THEN IMMEDIATELY START THE NEXT FOCUSED PASS (юзер 2026-07-23).**
     Reaching a milestone in a BIG run (a fix released + validated) is NOT a reason to stop or wait
     for the user. At every milestone: (a) run an AUDIT regression test of that milestone (guard against

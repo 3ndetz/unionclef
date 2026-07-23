@@ -39,3 +39,8 @@ dist/
 scripts/result.txt
 scripts/custom/result.txt
 shredder/.classpath
+
+# Autonomous-mode runtime state (Stop hook) — local session state, not repo content
+.claude/autonomy_active.flag
+.claude/autonomy_stop.flag
+.claude/.autonomy_block_count
