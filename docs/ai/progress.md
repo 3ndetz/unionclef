@@ -794,3 +794,34 @@ a ledge) still needs a pillar-beside-wall variant.
 Test hygiene learned: run terrain_test on a FRESH bot (sky-tp tests leave stale async block-path
 state that stalls a following terrain run — cross-test artifact, not a regression). Added
 `clear @bot` to terrain_test build.
+
+---
+
+## 2026-07-23 — v0.42.0: core place-as-a-move (bridge) + stand fix + branch consolidation
+
+**Core place-as-a-move BRIDGE (#46) — the proper in-core fix, released.** Bridging is now a
+first-class block-space move, the exact mirror of break-through: BlockNode.tryPlanPlaceThrough
+(toPlace) -> PathFinder.pendingPlaces (truncate + 'bridging without a physics leg') ->
+PathExecutor.tickPlacing. Capability-aware + segmented (planPlaceMoves + per-cell PlaceRules) —
+one pathfinder that breaks here / places there / walks elsewhere. The CPU-spin on wide gaps was
+the key bug: one search could plan only ONE bridge cell (needs a real floor to place from), so it
+exhausted its node budget. FIX: a bridge cell's PLANNED floor counts as solid for the next child
+-> one search plans the whole multi-cell bridge. VALIDATED: core_bridge_test PASS (;goto across a
+7-wide sky void, paves cobblestone, crosses, no spin). Default OFF -> existing nav untouched;
+exposed as an agent primitive via ;goto + setTungstenPlanPlaceMoves. Proactive @goto bridging
+(walker yields to executor) reverted for now -> @goto still bridges reactively (v0.41). Core
+PILLAR place-move is next.
+
+**Stand root-cause (hours of 'flakiness').** slime_test left verboseDebugLogging ON, which prints
+a per-tick physics dump that floods the log and chokes py4j -> the whole stand flaps. Fixed
+(slime_test disables it). Deeper: the Mac test client runs UNTHROTTLED (~400% CPU), so it takes a
+long time to settle after a restart -> post-restart NOT_SETTLED is flakiness, not a regression;
+validate on an already-settled bot.
+
+**Branch consolidation.** Merged 1.21.11 -> main and made main the canonical working branch
+(synced 1.21.11); stand pulls main; release stays :1.21.11: gradle subproject scope. AGENTS
+updated (working branch + closed-loop + no-band-aids + TG-report + autonomous-PR rules).
+
+**PRs.** All closed autonomously: #10 merged (1.21.11->main); #22, #23 (RiaDev1) closed as
+superseded — every fix already in main via the 1.21.11 work (verified line-by-line), and their
+old base would revert the current line.

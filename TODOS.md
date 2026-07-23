@@ -12,26 +12,22 @@
   IN THE SEARCH remains a refinement — see the place-as-a-move item below.)
 - [~] PLACE-AS-A-MOVE (user asked "did you add building/bridging to tungsten?"). PRACTICAL GOAL
   DELIVERED: the bot now DOES pillar up (v0.38) and bridge across a gap (v0.41) during @goto —
-  validated (pillar_reach_test, bridge_goto_test). Implemented as a give-up-driven move in
-  driveTungstenPrimary. CORE VERSION IN PROGRESS (2026-07-23, per user's no-band-aids directive):
-  BRIDGE is now a FIRST-CLASS block-space move, mirroring break-through exactly —
-  BlockNode.tryPlanPlaceThrough (toPlace) -> PathFinder.pendingPlaces (truncate + 'bridging
-  without a physics leg') -> PathExecutor.tickPlacing. Capability-aware + segmented: gated on
-  planPlaceMoves (altoclef enables only with a block -> parkour/walk WITHOUT blocks unaffected)
-  + per-cell PlaceRules.canPlace (protected zones). Goal-ward gate stops open-void search
-  explosion. STATUS: mechanism PROVEN (bot paved cobblestone across a 4-cell sky gap); compiles;
-  planPlaceMoves DEFAULT OFF so it is INERT/safe (parkour-without-blocks confirmed: terrain B PASS
-  with the flag off). KNOWN HARD PROBLEM found in testing: on a WIDE / open-void gap the search
-  SPINS to ~375% CPU and destabilises the bot. Root: one block-space search plans only ONE bridge
-  cell (tryPlanPlaceThrough needs this.down() SOLID to place from), so an N-cell gap needs N
-  segment re-searches, and the ;goto retry + resumeGoto loop compound on open void even with the
-  goal-ward gate. PROPER FIX (dedicated focused session): model PLANNED placements as SOLID inside
-  the search (treat toPlace cells as floor for subsequent children) so ONE search plans the whole
-  bridge, executed in a single godbridge pass — then cap/validate. NOT YET: that efficiency
-  redesign; altoclef integration (planPlaceMoves + equipBlockHook when the bot has a block); the
-  CORE PILLAR place-move (up) for raised goals / 2-block walls (course C). The reactive give-up
-  bridge/pillar (v0.41, released, tested) remains the working fallback; reactive wall-climb REVERTED.
-  Keep planPlaceMoves OFF until the efficiency redesign lands.
+  validated (pillar_reach_test, bridge_goto_test). CORE BRIDGE RELEASED v0.42.0 (the proper
+  in-core fix, per the no-band-aids directive): BRIDGE is now a FIRST-CLASS block-space move,
+  mirroring break-through exactly — BlockNode.tryPlanPlaceThrough (toPlace) ->
+  PathFinder.pendingPlaces (truncate + 'bridging without a physics leg') -> PathExecutor.tickPlacing.
+  Capability-aware + SEGMENTED: gated on planPlaceMoves + per-cell PlaceRules.canPlace (protected
+  zones) — one capability-aware pathfinder (break here / place there / walk elsewhere). The CPU-spin
+  on wide gaps was FIXED by chaining: a bridge cell's PLANNED floor counts as solid for the next
+  child, so ONE search plans the whole multi-cell bridge (no node-budget exhaustion). VALIDATED:
+  core_bridge_test PASS — ;goto across a 7-wide sky void plans the bridge, paves cobblestone
+  (x=2,3,4), crosses, no spin. DEFAULT OFF -> parkour/walk/existing nav untouched. Exposed as an
+  AGENT PRIMITIVE via ;goto + setTungstenPlanPlaceMoves (agent decides when to build).
+  NOT YET (next focused passes): (a) PROACTIVE @goto bridging — needs the walker to yield a gap
+  stub to the executor's place-planned leg (the auto-integration was reverted; @goto still bridges
+  REACTIVELY, v0.41); (b) CORE PILLAR place-move (up) for raised goals / 2-block walls (course C).
+  STAND NOTE: the Mac test client runs unthrottled (~400% CPU), so it flaps for a while after a
+  restart — validate on an ALREADY-SETTLED bot, and treat post-restart NOT_SETTLED as flakiness.
 - [~] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
   often prints 'Ran out of nodes' and fails. PARTLY FIXED v0.40.0 (#34): the walker's grid-BFS
   path source (CombatPathfinder) now generates parkour jump-moves (+2..4 across, flat or +1 up),
