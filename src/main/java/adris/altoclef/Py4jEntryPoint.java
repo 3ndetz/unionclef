@@ -2218,6 +2218,43 @@ public class Py4jEntryPoint {
                 c[2] == _selMin[2] || c[2] == _selMax[2]);
     }
 
+    /** WorldEdit-like //hollow — the 6-face SHELL of the selection box (walls + floor +
+     *  ceiling), interior left open. A cell is on the shell if it sits on any min/max face.
+     *  Same reach + per-call cap + reposition semantics as fillSelection. */
+    public Map<String, Object> hollowSelection(String blockName) {
+        return fillCells(blockName, "//hollow", c ->
+                c[0] == _selMin[0] || c[0] == _selMax[0] ||
+                c[1] == _selMin[1] || c[1] == _selMax[1] ||
+                c[2] == _selMin[2] || c[2] == _selMax[2]);
+    }
+
+    /** WorldEdit-like //cyl — the SOLID cylinder inscribed in the selection: every cell
+     *  whose XZ position is inside the ellipse that fits the box (all Y layers). Radii come
+     *  from the box half-extents, so a square selection gives a circle. */
+    public Map<String, Object> cylSelection(String blockName) {
+        return fillCells(blockName, "//cyl", c -> {
+            double cx = (_selMin[0] + _selMax[0]) / 2.0, cz = (_selMin[2] + _selMax[2]) / 2.0;
+            double rx = Math.max(0.5, (_selMax[0] - _selMin[0]) / 2.0 + 0.5);
+            double rz = Math.max(0.5, (_selMax[2] - _selMin[2]) / 2.0 + 0.5);
+            double dx = (c[0] - cx) / rx, dz = (c[2] - cz) / rz;
+            return dx * dx + dz * dz <= 1.0;
+        });
+    }
+
+    /** WorldEdit-like //sphere — the SOLID ellipsoid inscribed in the selection: every cell
+     *  within the box's inscribed sphere/ellipsoid (radii = the 3 half-extents). */
+    public Map<String, Object> sphereSelection(String blockName) {
+        return fillCells(blockName, "//sphere", c -> {
+            double cx = (_selMin[0] + _selMax[0]) / 2.0, cy = (_selMin[1] + _selMax[1]) / 2.0,
+                   cz = (_selMin[2] + _selMax[2]) / 2.0;
+            double rx = Math.max(0.5, (_selMax[0] - _selMin[0]) / 2.0 + 0.5);
+            double ry = Math.max(0.5, (_selMax[1] - _selMin[1]) / 2.0 + 0.5);
+            double rz = Math.max(0.5, (_selMax[2] - _selMin[2]) / 2.0 + 0.5);
+            double dx = (c[0] - cx) / rx, dy = (c[1] - cy) / ry, dz = (c[2] - cz) / rz;
+            return dx * dx + dy * dy + dz * dz <= 1.0;
+        });
+    }
+
     /** Shared fill core for //set and //walls. Places `blockName` at every
      *  replaceable selection cell matching `include`, bottom-up (so each cell
      *  has support: the floor or an already-placed block below), capped per

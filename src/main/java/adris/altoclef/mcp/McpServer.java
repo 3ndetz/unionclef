@@ -312,6 +312,15 @@ public class McpServer {
         tool("wallsSelection",
                 "//walls — fill only the 4 vertical walls of the selection (hollow interior).",
                 schema("block:string"), a -> api.wallsSelection(argStr(a, "block")));
+        tool("hollowSelection",
+                "//hollow — fill the 6-face SHELL of the selection (walls + floor + ceiling), interior open.",
+                schema("block:string"), a -> api.hollowSelection(argStr(a, "block")));
+        tool("cylSelection",
+                "//cyl — fill the solid cylinder inscribed in the selection (circle in XZ that fits the box, all Y).",
+                schema("block:string"), a -> api.cylSelection(argStr(a, "block")));
+        tool("sphereSelection",
+                "//sphere — fill the solid sphere/ellipsoid inscribed in the selection (radii = the 3 half-extents).",
+                schema("block:string"), a -> api.sphereSelection(argStr(a, "block")));
         tool("buildDefenseAround",
                 "Box a cell with a protective shell (sides + roof) — e.g. defend a bed. Covers reachable cells; "
                 + "reposition for the rest.",
