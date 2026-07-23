@@ -23,6 +23,15 @@
   core_bridge_test PASS — ;goto across a 7-wide sky void plans the bridge, paves cobblestone
   (x=2,3,4), crosses, no spin. DEFAULT OFF -> parkour/walk/existing nav untouched. Exposed as an
   AGENT PRIMITIVE via ;goto + setTungstenPlanPlaceMoves (agent decides when to build).
+  RELIABILITY (2026-07-23 focused pass): core_bridge is ~2/6 flaky. WHITE-BOXED (diag_bridge_white.py,
+  existing Debug msgs): the search plans the bridge on MOST find() calls; the failures are the physics
+  leg simulating walking ACROSS the un-bridged gap and FALLING (drift ~159 blocks, endpoint y=-57 while
+  the bot is at y=101) on the find() calls where the block search returns a fall-partial. Two handoff-
+  level fixes both regressed to 0/8 (the `blockPath.size()<=2` gate is LOAD-BEARING: alternates pave/
+  walk) -> reverted to stable 2/6. CORRECT FIX (next focused pass, #1.6.1-adjacent): when a place/break
+  is pending, the PHYSICS search must target the TRUNCATED block-path endpoint (the gap edge), not the
+  goal, so the physics leg stops at the edge instead of simming a fall. Invasive physics-search change;
+  regressed twice, do it FRESH with break_test (4/4) as the regression guard.
   NOT YET (next focused passes): (a) PROACTIVE @goto bridging — needs the walker to yield a gap
   stub to the executor's place-planned leg (the auto-integration was reverted; @goto still bridges
   REACTIVELY, v0.41); (b) CORE PILLAR place-move (up) for raised goals / 2-block walls (course C).

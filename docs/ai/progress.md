@@ -954,3 +954,26 @@ never planned/started) or falls into the gap (partial). NEXT (separate focused p
 white-box technique that cracked the walker spin to the executor/bridge path — log the search plan +
 executor decisions on a FAILING bridge. The walker face-before-move fix (v0.44.0) is this session's
 milestone.
+
+### core_bridge FOCUSED PASS (white-boxed via existing Debug msgs; diagnosed + reverted)
+
+Ran diag_bridge_white.py (dumps the pipeline's existing "Path needs bridging" / "At the gap —
+bridging" / "Path stopped: drift" messages) on PASS and FAIL runs. RESULT: the block-space search
+plans the bridge on MOST find() calls ("Path needs bridging" fires every run, many times). The
+failures are physics-executor DRIFT — e.g. `drift 159 blocks: Expected (14.25, -57.82, 0.09),
+actual (0.50, 101.00, 0.47)`: on a find() where the search returned a FALL-PARTIAL (no bridge that
+call) the physics leg simulated the bot walking ACROSS the un-bridged gap and FALLING (endpoint
+y=-57 while the bot is at y=101) -> hard-stop -> bot derailed backward / into the void. ~50% flaky.
+
+Two handoff-level fixes TRIED + both regressed to 0/8, REVERTED:
+1. Anchor the handoff to the bot standing at the gap edge via `getLast().getPos(true, world)` — that
+   pos is NEO-SHIFTED and the async find() reads a MOVING bot position, so it rarely matched -> 0/8.
+2. Fire the handoff on REACH alone (drop the `blockPath.size() <= 2` gate) -> 0/8: the size gate is
+   LOAD-BEARING — it fires the handoff only when the bot is AT the edge, so between paves the physics
+   leg walks the bot forward onto the just-placed floor. Without it the handoff monopolises with empty
+   paths and the bot never advances.
+Reverted to the stable size<=2 handoff (2/6). CORRECT FIX (deferred to a focused pass, #1.6.1-adjacent,
+regressed twice so not safe to poke a 3rd time in a long context): when a place/break is pending, the
+PHYSICS search must target the TRUNCATED block-path endpoint (the gap edge), not the goal, so the
+physics leg walks to the edge and stops (no sim across the gap) instead of simulating a fall. That is
+an invasive physics-search-target change; do it fresh with break_test (4/4) as the regression guard.
