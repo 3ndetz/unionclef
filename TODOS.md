@@ -3,6 +3,13 @@
 ## 🐞 BUGS (from live user testing — each = its own GitHub issue, fix by priority, per checklist)
 
 ### ⛔ URGENT LIVE BUGS (user live-tested v0.44.0, 2026-07-23 — combat/follow are NOT actually working; my earlier [x] on 2.1/2.2/2.3/2.8/2.10 was WRONG: stand pvp_test PASS != live. RE-OPENED.)
+> DELIVERED THIS SESSION (stand-verified; combat FEEL needs LIVE verification — the stand can't
+> reproduce a packet-jittery human): v0.45 SHIFT-stick fix; v0.46 movement (walker on + tickDirect
+> spin fix -> approaches a moving target); v0.47 aim yaw-smoothing + bunny-hop; v0.48 enemy-velocity
+> EMA (root anti-shake); v0.49 LIVE-tunable combat knobs (combatAimSmoothing/combatVelSmoothing/
+> combatBunnyHop* via ;settings). REMAINING: live-tune the feel on user feedback; blocking-entity on
+> the attack line (nuanced, needs a repro); @gamer-on-tungsten validation (LIVE-C); core_bridge stays
+> a #1.6.1 deferral (3 fix attempts, all reverted — flakiness root is the block-space search).
 - [ ] LIVE-A (URGENT) MOVING TARGET -> ETERNAL RE-PLAN -> STANDS STILL. FollowPlayer / any follow /
   punk: on a MOVING target the pathfinder re-plans forever and the bot STANDS instead of even
   trying to move. Works ONLY while the target is stationary. ROOT (found): FollowEntityTask.tick
