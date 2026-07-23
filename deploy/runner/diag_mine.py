@@ -6,16 +6,22 @@ import functools, json, subprocess, time
 print = functools.partial(print, flush=True)
 SERVER="uctest-server"; C1="uctest-mc-tester1"; BOT="tester1"
 SNIP=r"""
-import json,sys
+import json,sys,traceback
 from py4j.java_gateway import JavaGateway,GatewayParameters
+from py4j.protocol import Py4JJavaError
 req=json.loads(sys.argv[1])
 gw=JavaGateway(gateway_parameters=GatewayParameters(address="127.0.0.1",port=25333,auto_convert=True))
 mc=gw.entry_point; op=req["op"]; out={}
-if op=="state": out={"inGame":mc.inGame()}
-elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
-elif op=="mine": out=dict(mc.mineBlocks(req["pos"]))
-elif op=="minestat": out=dict(mc.mineStatus())
-elif op=="stop": mc.ExecuteCommand("@stop"); out={"ok":True}
+try:
+    if op=="state": out={"inGame":mc.inGame()}
+    elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
+    elif op=="mine": out=dict(mc.mineBlocks(req["pos"]))
+    elif op=="minestat": out=dict(mc.mineStatus())
+    elif op=="stop": mc.ExecuteCommand("@stop"); out={"ok":True}
+except Py4JJavaError as e:
+    sys.stderr.write("PY4J_JAVA_ERR: "+str(e.java_exception)+"\n"); sys.exit(3)
+except Exception as e:
+    sys.stderr.write("PY_ERR: "+repr(e)+"\n"); traceback.print_exc(); sys.exit(4)
 print(json.dumps(out,default=str)); gw.close()
 """
 def sh(a,to=40): return subprocess.run(a,capture_output=True,text=True,timeout=to)
@@ -25,8 +31,8 @@ def py4j(op,to=30,**kw):
         try:
             r=sh(["docker","exec",C1,"python3","-c",SNIP,json.dumps({"op":op,**kw})],to)
             if r.returncode==0 and r.stdout.strip(): return json.loads(r.stdout.strip().splitlines()[-1])
-            last=(r.stderr or r.stdout or "").strip()[-160:]
-        except Exception as e: last=repr(e)[-160:]
+            last=(r.stderr or r.stdout or "").strip()[-500:]
+        except Exception as e: last=repr(e)[-500:]
         time.sleep(2)
     raise RuntimeError(f"{op}: {last}")
 def rcon(c): return sh(["docker","exec",SERVER,"rcon-cli",c]).stdout.strip()
