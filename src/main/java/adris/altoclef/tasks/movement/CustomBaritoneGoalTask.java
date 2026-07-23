@@ -314,10 +314,12 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (cachedGoal == null || isFinished()) return false;
         net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
         if (gp == null) return false;
-        // Capability-aware: let the block-space search plan BRIDGING only when the bot
-        // actually has a placeable block. No block -> planPlaceMoves off -> parkour/walk
-        // routing is completely unaffected (the user's requirement).
-        kaptainwutax.tungsten.TungstenConfig.get().planPlaceMoves = hasBuildBlock(mod);
+        // NOTE: @goto keeps planPlaceMoves at its default (off) — the proactive @goto bridge
+        // needs a walker↔executor hand-off that isn't wired yet (the walker takes a gap stub
+        // and the executor's bridge never runs). @goto still bridges REACTIVELY (v0.41 give-up).
+        // The core place-as-a-move bridge is exposed as an agent primitive via ;goto +
+        // setTungstenPlanPlaceMoves (agent decides when to bridge). hasBuildBlock() stays for
+        // when that hand-off lands.
 
         // ── Anti-permanent-stuck safety net ──────────────────────────────
         long nowMs = System.currentTimeMillis();
@@ -446,13 +448,10 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 java.util.List<net.minecraft.util.math.BlockPos> bfs =
                         kaptainwutax.tungsten.combat.CombatPathfinder.findPath(startB, goalB, mod.getWorld());
                 boolean smart = kaptainwutax.tungsten.TungstenConfig.get().smartMoves;
-                boolean canBridge = kaptainwutax.tungsten.TungstenConfig.get().planPlaceMoves;
                 // A degenerate 2-wp stub to a far goal = CombatPathfinder couldn't route the
-                // terrain (gapped/steep). With smartMoves OR planPlaceMoves the async search
-                // CAN route it (place-planned bridge), so skip the stub and fall through to the
-                // async path (3) so the executor paves the bridge instead of the walker
-                // sprinting into the gap and stalling.
-                boolean degenerateStub = (smart || canBridge) && bfs.size() == 2 && distToGoal > 6.0
+                // terrain (gapped/steep). With smartMoves the async SmartMoves search CAN
+                // route it, so skip the stub and fall through to the robust path (2)/(3).
+                boolean degenerateStub = smart && bfs.size() == 2 && distToGoal > 6.0
                         && Math.sqrt(bfs.get(1).getSquaredDistance(goalB)) > distToGoal - 3.0;
                 if (bfs.size() >= 2 && !degenerateStub) {
                     if (pf != null) pf.stop.set(true);
