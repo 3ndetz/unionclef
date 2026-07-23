@@ -38,7 +38,18 @@ def py4j(op,to=40,**kw):
     raise RuntimeError(f"{op}: {last}")
 def rcon(c): return sh(["docker","exec",SERVER,"rcon-cli",c]).stdout.strip()
 
+def ensure_ingame():
+    for _ in range(30):
+        try:
+            if py4j("state")["inGame"]: return True
+        except Exception: pass
+        try: py4j("connect", ip="test-server")
+        except Exception: pass
+        time.sleep(5)
+    return False
+
 def prep(region):
+    ensure_ingame(); time.sleep(1)
     rcon("forceload add -8 -8 16 16")
     x1,y1,z1,x2,y2,z2=region
     rcon(f"fill {x1-2} {y1-1} {z1-2} {x2+2} {y2+2} {z2+2} air")
