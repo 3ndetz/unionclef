@@ -41,16 +41,17 @@ def pos():
     except Exception: return None
 
 def run(planplace, secs):
-    rcon("fill -6 96 -6 16 104 6 air")
+    # 7-wide gap (x=2..8): beyond a sprint-jump, so the ONLY way across is a bridge.
+    rcon("fill -6 96 -6 20 104 6 air")
     rcon("fill -4 100 -4 1 100 4 stone")
-    rcon("fill 6 100 -4 12 100 4 stone")
+    rcon("fill 9 100 -4 16 100 4 stone")
     py4j("stop"); time.sleep(1)
     rcon(f"tp {BOT} 0 101 0 90 0"); time.sleep(1)
     rcon(f"clear {BOT}")
     if planplace:
         rcon(f"item replace entity {BOT} weapon.mainhand with cobblestone 64")
     py4j("place", on=planplace); time.sleep(0.5)
-    py4j("gotoxyz", x=9, y=101, z=0)
+    py4j("gotoxyz", x=13, y=101, z=0)
     last=None; maxx=-99; fell=False
     for _ in range(secs):
         time.sleep(1)
@@ -59,10 +60,10 @@ def run(planplace, secs):
             last=p
             if p[0]>maxx: maxx=p[0]
             if p[1]<60: fell=True; break
-            if p[0]>=6 and p[1]>=99: break
-    py4j("stop")
+            if p[0]>=9 and p[1]>=99: break
+    py4j("stop"); py4j("place", on=False)   # reset the flag so a following test is clean
     placed=[]
-    for gx in range(2,6):
+    for gx in range(2,9):
         for gz in range(-4,5):
             if "passed" in rcon(f"execute if block {gx} 100 {gz} cobblestone").lower():
                 placed.append(f"{gx},{gz}"); break
@@ -77,9 +78,9 @@ def main():
         except Exception: pass
         time.sleep(6)
     print("=== CORE bridge: planPlaceMoves ON + block in hand, async ;goto across a sky gap ===")
-    on = run(True, 60)
+    on = run(True, 90)
     print(f"  {on}")
-    crossed = on["finalPos"] is not None and on["maxX"] >= 6 and not on["fell"]
+    crossed = on["finalPos"] is not None and on["maxX"] >= 9 and not on["fell"]
     ok = crossed and len(on["placed"]) >= 1
     print(f"  crossed by search-planned bridge: {ok}")
     print("  CORE-BRIDGE:", "PASS" if ok else "FAIL")
