@@ -1,5 +1,37 @@
 # Progress
 
+## SESSION 2026-07-23/24 — break primitive + follow LIVE-A fix + PvP ranged + tungsten-primary assessment
+
+RELEASED + VERIFIED (gh release asset confirmed):
+- **v0.51.0 BREAK primitive** (mineBlocks/mineStatus, py4j+MCP): mine arbitrary in-reach blocks via
+  the tungsten executor break queue (same as @goto's wall-clear). diag_mine PASS (3-block wall mined),
+  break_test 4/4. NB the "method does not exist" chase was NOT a stale cache — `getEntityPos()` is
+  1.21.11-only yarn and broke `:1.21.1:compileJava` (shared src compiles for every version), leaving
+  the 1.21.11 jar stale; fixed to version-safe `getPos()`. Checklist gained a stale-jar-verify note.
+- **v0.52.0 FOLLOW LIVE-A fix** (the user's URGENT item): @follow / any follow / combat approach now
+  CHASES a moving target instead of standing still / lagging ~30 blocks. Stand: follow_altoclef avg
+  dist 30->1.4, follow_test avg 2.2, pvp_moving PASS (combat approach shares the engine — first hit
+  6.7s, 20 dmg, improved). THREE layers, found by INSTRUMENTING (walker per-tick DEBUG) not guessing:
+  (1) @follow ran on baritone (routing) -> tungsten follow engine; (2) DIRECT aimed at a ~2s-STALE
+  snapshot -> BlockPathWalker.steerLive re-aims LIVE every tick; (3) THE KILLER — DIRECT bailed
+  "danger->BFS" every tick because hasHolesOnPath scanned the WHOLE line to the far target, so the
+  drift-prone physics executor did all the moving -> now guards only the immediate ~4 blocks (rolling,
+  void-safe). Plus bail cooldown, bot-displacement stall detection, floored test arenas. Contained:
+  tickDirect is follow+PunkPlayer-APPROACH only; terrain (@goto) uses tickBFS (untouched).
+
+VALIDATED (no release needed):
+- **Ranged/bow vs MOVING target**: bow_moving_test PASS (first arrow hit 3.4s, 19 dmg, TrajectorySolver
+  lead-aim via shootArrowAt/BowShooter). Was only standing-target validated before (#6.7).
+
+ASSESSED, NOT ready (documented for a FRESH pass):
+- **LIVE-C tungsten-primary flip**: terrain_test (smartMoves+primary ON) FAILS climb courses A/B/C,
+  only D snaps — @goto+PRIMARY (driveTungstenPrimary) doesn't climb while ;goto (direct walker) does.
+  Deep pathfinding gap in the altoclef->tungsten-primary wrapper (physics drift kills it). Do NOT flip
+  TungstenHelper.primary until terrain_test A/B/C + gamer_smoke pass. Precise lead in TODOS.md LIVE-C.
+
+Tooling added: follow_diag.py (walker per-tick decision dump), tickDirect DEBUG instrumentation,
+diag_mine.py error surfacing, floored follow arenas.
+
 ## DROP-IN SWAP baritone→tungsten + КОРЕНЬ headless-затыка (2026-07-21) — СДЕЛАНО
 
 Юзер: тщательно закрыть drop-in замену baritone на tungsten. Оказалось — глубокий
