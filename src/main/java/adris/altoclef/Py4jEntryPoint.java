@@ -1970,10 +1970,16 @@ public class Py4jEntryPoint {
             s.useTungsten.value = on;
             s.experimentalPathfinding.value = on;
             adris.altoclef.util.helpers.TungstenHelper.setPrimary(on); // route altoclef goals straight to tungsten
+            // Couple smartMoves: tungsten-primary NEEDS the SmartMoves neighbour generation
+            // (parkour/jump-up moves) to climb terrain. Without it, @goto+primary follows a
+            // grid-BFS stub that can't route staircases/steep climbs (terrain_test A/B FAIL
+            // -> PASS once smartMoves is on). They belong together for altoclef nav.
+            kaptainwutax.tungsten.TungstenConfig.get().smartMoves = on;
             out.put("ok", true);
             out.put("useTungsten", s.useTungsten.value);
             out.put("experimentalPathfinding", s.experimentalPathfinding.value);
             out.put("tungstenPrimary", adris.altoclef.util.helpers.TungstenHelper.isPrimary());
+            out.put("smartMoves", kaptainwutax.tungsten.TungstenConfig.get().smartMoves);
             out.put("tungstenMinSegment", s.tungstenMinSegment.value);
         } catch (Exception e) { out.put("ok", false); out.put("reason", e.getMessage()); }
         return out;
