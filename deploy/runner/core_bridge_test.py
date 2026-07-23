@@ -41,12 +41,16 @@ def pos():
     except Exception: return None
 
 def run(planplace, secs):
+    # Force-load the sky-island chunks: without this the block-space search can hit
+    # not-yet-loaded chunks intermittently and plan an erratic path (bot walks backward
+    # off the island / stalls) — a test artifact, not a bridge bug. Mirrors terrain_test.
+    rcon("forceload add -8 -8 24 8")
     # 7-wide gap (x=2..8): beyond a sprint-jump, so the ONLY way across is a bridge.
     rcon("fill -6 96 -6 20 104 6 air")
     rcon("fill -4 100 -4 1 100 4 stone")
     rcon("fill 9 100 -4 16 100 4 stone")
     py4j("stop"); time.sleep(1)
-    rcon(f"tp {BOT} 0 101 0 90 0"); time.sleep(1)
+    rcon(f"tp {BOT} 0 101 0 90 0"); time.sleep(1.5)
     rcon(f"clear {BOT}")
     if planplace:
         rcon(f"item replace entity {BOT} weapon.mainhand with cobblestone 64")
