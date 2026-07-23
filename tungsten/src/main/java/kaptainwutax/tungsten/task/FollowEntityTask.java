@@ -52,6 +52,14 @@ public class FollowEntityTask {
     private static int     stuckTicks     = 0;
     private static boolean stopRequested  = false;
 
+    // ── live direct-steer cooldown ────────────────────────────────────────────────
+    // After a live-steer attempt bails (stall against a wall / LOS lost / danger),
+    // don't re-steer straight into the same obstacle — yield to BFS + physics A* for
+    // a window so it can path AROUND before we try the straight line again.
+    private static int     steerCooldownTicks     = 0;
+    private static boolean steerRequestedLastTick = false;
+    private static final int STEER_COOLDOWN = 40;   // ~2s of BFS/physics after a bail
+
     // ── TRAILING ────────────────────────────────────────────────────────────────
     private static final TrailTracker trail = new TrailTracker("FollowEntity");
 
@@ -88,6 +96,8 @@ public class FollowEntityTask {
         stuckTicks         = 0;
         stopRequested      = false;
         leapActive         = false;
+        steerCooldownTicks = 0;
+        steerRequestedLastTick = false;
         trail.reset();
     }
 
@@ -186,6 +196,39 @@ public class FollowEntityTask {
             }
         }
         double effectiveDist = player.getEntityPos().distanceTo(effectiveTarget);
+
+        // ── LIVE DIRECT-STEER (moving target with a clear line) ───────────────
+        // If we can SEE the target, sprint STRAIGHT at its LIVE position instead of
+        // pathing to a ~2s-stale snapshot. The walker re-aims every tick from the
+        // bot's real position (drift-immune), so the bot cuts across and CLOSES on a
+        // runner — the physics executor traced the target's PAST path ~30 blocks
+        // behind and drift-stopped (churn, never caught up). tickDirect self-guards
+        // holes/ledges/landing and stall; on any of those the walker stops and we
+        // fall through to the BFS + physics A* flow below. Defer to LEAP if active.
+        // If a prior live-steer just bailed, the walker will have stopped — start a
+        // cooldown so we don't re-steer into the same wall before BFS can route around.
+        if (steerRequestedLastTick && !BlockPathWalker.isRunning()) {
+            steerCooldownTicks = STEER_COOLDOWN;
+        }
+        steerRequestedLastTick = false;
+        if (steerCooldownTicks > 0) steerCooldownTicks--;
+
+        if (hasEntity && !leapActive && steerCooldownTicks == 0
+                && effectiveDist > Math.max(closeEnough, 1.5)
+                && hasLineOfSight(player, effectiveTarget)) {
+            // keep the drift-prone physics path OFF so it can't seize the executor
+            if (TungstenModDataContainer.PATHFINDER.active.get())
+                TungstenModDataContainer.PATHFINDER.stop.set(true);
+            if (TungstenModDataContainer.EXECUTOR != null
+                    && TungstenModDataContainer.EXECUTOR.isRunning())
+                TungstenModDataContainer.EXECUTOR.stop = true;
+            BlockPathWalker.steerLive(effectiveTarget);
+            steerRequestedLastTick = true;
+            lastTargetPos = effectiveTarget;
+            tickCounter = 0;
+            stuckTicks = 0;
+            return;
+        }
 
         // ── Tungsten A*: always runs as primary pathfinder ───────────────────
         // While BFS walker is running, suppress recalc — let it finish its segment.

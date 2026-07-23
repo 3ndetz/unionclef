@@ -42,6 +42,17 @@ public class BlockPathWalker {
 
     private static Vec3d directTarget = null;
 
+    // LIVE-STEER: continuously re-aim the DIRECT sprint at a MOVING target's CURRENT
+    // position (fed each tick by FollowEntityTask). In this mode the "distance to
+    // target must shrink" progress check is the WRONG signal — the target itself
+    // moves — so a stall is detected by the BOT's own displacement instead (pressed
+    // against a wall / not physically advancing).
+    private static boolean liveMode = false;
+    private static Vec3d liveStuckAnchor = null;
+    private static int liveStuckTicks = 0;
+    private static final int LIVE_STUCK_LIMIT = 20;    // ~1s of the bot not moving → BFS
+    private static final double LIVE_STUCK_MOVE = 0.5; // min displacement to count as moving
+
     // White-box climb instrumentation (off by default; toggled via py4j setWalkerDebug).
     // Logs the walker's per-tick decisions so a FAILING climb can be understood mechanism-
     // first instead of guessed from external position alone. Key signal: playerYaw vs the
@@ -63,10 +74,31 @@ public class BlockPathWalker {
         waypointIdx = (blockPath != null && blockPath.size() > 1) ? 1 : 0;
         lastDistToTarget = Double.MAX_VALUE;
         noProgressTicks = 0;
+        liveMode = false;
+        liveStuckAnchor = null;
+        liveStuckTicks = 0;
         mode = Mode.DIRECT;
         active = true;
         Debug.logMessage("Walker: direct→target" +
                 (blockPath != null ? " (BFS fallback: " + blockPath.size() + " wp)" : ""));
+    }
+
+    /**
+     * Live DIRECT-steer at a MOVING target: re-aim the drift-immune sprint at the
+     * target's CURRENT position every tick, so the bot cuts across and CLOSES on a
+     * runner instead of tracing a stale path snapshot ~30 blocks behind. No BFS
+     * fallback stored here — if the straight line breaks (LOS / hole / ledge) or the
+     * bot stalls against a wall, the walker stops and the caller (FollowEntityTask)
+     * falls back to BFS + physics A*. Call every tick with the live target.
+     */
+    public static void steerLive(Vec3d target) {
+        if (target == null) return;
+        if (!active || mode != Mode.DIRECT) {
+            start(target, null);   // (re)start a DIRECT sprint (resets liveMode=false)
+        } else {
+            directTarget = target; // keep progress/mode, just re-aim
+        }
+        liveMode = true;
     }
 
     /** Start BFS-only (no direct sprint). */
@@ -90,6 +122,9 @@ public class BlockPathWalker {
         waypointIdx = 0;
         noProgressTicks = 0;
         lastDistToTarget = Double.MAX_VALUE;
+        liveMode = false;
+        liveStuckAnchor = null;
+        liveStuckTicks = 0;
     }
 
     public static boolean isRunning() {
@@ -132,13 +167,23 @@ public class BlockPathWalker {
         // check LOS
         boolean hasLOS = FollowEntityTask.hasLineOfSight(player, directTarget);
 
-        // check progress — distance should be shrinking
+        // check progress. STATIC target: distance to it should shrink. LIVE (moving)
+        // target: distance-shrink is the wrong signal — the target moves — so detect a
+        // stall by the BOT's own displacement (pressed against a wall, not advancing).
         double progress = lastDistToTarget - dist;
         lastDistToTarget = dist;
-        if (progress < MIN_APPROACH_SPEED) {
-            noProgressTicks++;
+        boolean stalled;
+        if (liveMode) {
+            if (liveStuckAnchor == null || playerPos.distanceTo(liveStuckAnchor) > LIVE_STUCK_MOVE) {
+                liveStuckAnchor = playerPos;
+                liveStuckTicks = 0;
+            } else {
+                liveStuckTicks++;
+            }
+            stalled = liveStuckTicks >= LIVE_STUCK_LIMIT;
         } else {
-            noProgressTicks = 0;
+            if (progress < MIN_APPROACH_SPEED) noProgressTicks++; else noProgressTicks = 0;
+            stalled = noProgressTicks >= NO_PROGRESS_LIMIT;
         }
 
         // check safety: landing safe + no holes on path to target
@@ -147,10 +192,10 @@ public class BlockPathWalker {
         boolean pathSafe = !SafetySystem.hasHolesOnPath(playerPos, targetBlock, world);
         boolean groundSafe = CombatPathfinder.isWalkable(player.getBlockPos(), world);
 
-        // bail to BFS if: no LOS, no progress, or danger
-        if (!hasLOS || noProgressTicks >= NO_PROGRESS_LIMIT || !pathSafe || !groundSafe) {
+        // bail to BFS if: no LOS, stalled, or danger
+        if (!hasLOS || stalled || !pathSafe || !groundSafe) {
             if (!hasLOS) Debug.logMessage("Walker: no LOS → BFS");
-            else if (noProgressTicks >= NO_PROGRESS_LIMIT) Debug.logMessage("Walker: no progress → BFS");
+            else if (stalled) Debug.logMessage("Walker: stalled → BFS");
             else Debug.logMessage("Walker: danger → BFS");
             switchToBFS();
             return;
