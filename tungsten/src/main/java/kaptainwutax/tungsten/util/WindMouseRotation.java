@@ -187,7 +187,9 @@ public class WindMouseRotation {
         windYaw = 0; windPitch = 0;
     }
 
-    private static double wrapDelta(double delta) {
+    /** Shortest signed angular difference in (-180,180]. Public so path-followers can
+     *  gate movement on facing (don't walk until roughly pointed at the waypoint). */
+    public static double wrapDelta(double delta) {
         delta = delta % 360.0;
         if (delta > 180.0)   delta -= 360.0;
         if (delta <= -180.0) delta += 360.0;
