@@ -446,10 +446,13 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 java.util.List<net.minecraft.util.math.BlockPos> bfs =
                         kaptainwutax.tungsten.combat.CombatPathfinder.findPath(startB, goalB, mod.getWorld());
                 boolean smart = kaptainwutax.tungsten.TungstenConfig.get().smartMoves;
+                boolean canBridge = kaptainwutax.tungsten.TungstenConfig.get().planPlaceMoves;
                 // A degenerate 2-wp stub to a far goal = CombatPathfinder couldn't route the
-                // terrain (gapped/steep). With smartMoves the async SmartMoves search CAN
-                // route it, so skip the stub and fall through to the robust path (2)/(3).
-                boolean degenerateStub = smart && bfs.size() == 2 && distToGoal > 6.0
+                // terrain (gapped/steep). With smartMoves OR planPlaceMoves the async search
+                // CAN route it (place-planned bridge), so skip the stub and fall through to the
+                // async path (3) so the executor paves the bridge instead of the walker
+                // sprinting into the gap and stalling.
+                boolean degenerateStub = (smart || canBridge) && bfs.size() == 2 && distToGoal > 6.0
                         && Math.sqrt(bfs.get(1).getSquaredDistance(goalB)) > distToGoal - 3.0;
                 if (bfs.size() >= 2 && !degenerateStub) {
                     if (pf != null) pf.stop.set(true);
