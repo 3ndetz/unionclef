@@ -215,18 +215,23 @@ public class BlockPathWalker {
         float yaw = AttackTiming.yawTo(playerPos, wpPos);
         WindMouseRotation.INSTANCE.setTarget(yaw, 0);
 
-        // FACE-BEFORE-MOVE. The camera turns via WindMouse (humanized, several frames to
-        // converge). Pressing forward while the yaw is still off makes the bot walk in the
-        // WRONG direction, which shifts the waypoint bearing, which moves the aim target —
-        // a feedback SPIN: the bot circles and never converges (white-box trace: yaw swept
-        // ~680 deg, position spiralled, climb failed ~40%). Gate movement on being roughly
-        // pointed at the waypoint: turn in place first, then walk straight. Breaks the loop.
+        // FACE-BEFORE-MOVE (on the ground only). The camera turns via WindMouse (humanized,
+        // several frames to converge). Pressing forward while the yaw is still off makes the
+        // bot walk in the WRONG direction, which shifts the waypoint bearing, which moves the
+        // aim target — a feedback SPIN: the bot circles and never converges (white-box trace:
+        // yaw swept ~680 deg, position spiralled, climb failed ~40%). So while ON THE GROUND,
+        // gate movement on being roughly pointed at the waypoint: pivot in place first, then
+        // walk straight. But NEVER cut movement while AIRBORNE — a gap jump / slime bounce
+        // sets its direction at take-off, and releasing forward mid-arc kills the momentum
+        // and drops the bot short (that killed parkour: course B, slime drop-bounce).
         double yawErr = Math.abs(WindMouseRotation.wrapDelta(yaw - player.getYaw()));
+        boolean onGround = player.isOnGround();
         boolean facing = yawErr < 45.0;
+        boolean move = facing || !onGround;     // face-before-move grounded; keep air momentum
 
         MinecraftClient mc = MinecraftClient.getInstance();
-        mc.options.forwardKey.setPressed(facing);
-        mc.options.sprintKey.setPressed(facing);
+        mc.options.forwardKey.setPressed(move);
+        mc.options.sprintKey.setPressed(move);
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
@@ -234,7 +239,7 @@ public class BlockPathWalker {
 
         boolean needJumpUp = wp.getY() > player.getBlockPos().getY();
         boolean canJump = facing && TungstenConfig.get().followJumpingEnabled
-                && player.isOnGround()
+                && onGround
                 && (needJumpUp || SafetySystem.isJumpLandingSafe(
                         playerPos, player.getVelocity(), player.getEntityWorld()));
         mc.options.jumpKey.setPressed(canJump);
