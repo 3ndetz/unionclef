@@ -2280,7 +2280,8 @@ public class Py4jEntryPoint {
             }
             if (queue.isEmpty()) { out.put("ok", false); out.put("reason", "no positions"); return out; }
             // Point the mining-resume at the bot itself so it doesn't wander to a stale goal.
-            kaptainwutax.tungsten.TungstenMod.TARGET = mc.player.getEntityPos();
+            // getPos() (not getEntityPos()) — version-safe across 1.21.1..1.21.11 shared src.
+            kaptainwutax.tungsten.TungstenMod.TARGET = mc.player.getPos();
             ex.setPath(new java.util.ArrayList<>());
             ex.breakQueue = new java.util.ArrayList<>(queue);
             ex.stop = false;
