@@ -255,17 +255,15 @@ public class PathFinder {
 	    // with the place queue; bridging starts immediately and the goto retry drives the
 	    // rest of the now-bridged world. Mirror of the break handoff above.
 	    //
-	    // Anchor the handoff to the bot STANDING AT THE GAP EDGE — the last cell of the
-	    // TRUNCATED block path — not to the path's length. White-box: the old `size() <= 2`
-	    // gate was a flaky proxy for "at the edge"; when the search rooted the path one cell
-	    // further back (size 3), the handoff was skipped, and the physics leg then simulated
-	    // walking ACROSS the un-bridged gap and FALLING (drift ~159 blocks: expected y=-57
-	    // while the bot is at y=101 -> hard-stop -> bot derailed backward / into the void;
-	    // core_bridge was ~50% flaky). The edge cell is where the physics can actually stand.
-	    net.minecraft.util.math.Vec3d edgeCell = blockPath.get().getLast().getPos(true, world);
-	    double botToEdgeXZ = Math.hypot(player.getX() - edgeCell.x, player.getZ() - edgeCell.z);
+	    // Fire whenever a bridge is planned and the support cell is within REACH — do NOT
+	    // gate on blockPath.size(). White-box: the search plans the bridge on most find()
+	    // calls, but the old `size() <= 2` gate skipped the handoff when the guidance rooted
+	    // a cell further back, so the drift-prone physics leg ran and simulated walking
+	    // ACROSS the un-bridged gap and FALLING (drift ~159 blocks -> hard-stop -> derail;
+	    // ~50% flaky). Reach + self-limiting tickPlacing (places only against a SOLID
+	    // neighbour; the first bridge cell borders the edge) make the size gate unnecessary,
+	    // and the subsequent approach is over the now-placed solid floor (no fall).
 	    if (pendingPlaces != null && !pendingPlaces.isEmpty()
-	            && botToEdgeXZ < 1.8
 	            && player.getEyePos().distanceTo(net.minecraft.util.math.Vec3d.ofCenter(pendingPlaces.get(0))) < 5.0) {
 	        Debug.logMessage("At the gap — bridging without a physics leg");
 	        TungstenModDataContainer.EXECUTOR.setPath(new ArrayList<>());
