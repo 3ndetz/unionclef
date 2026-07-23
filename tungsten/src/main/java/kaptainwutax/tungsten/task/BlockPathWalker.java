@@ -217,7 +217,7 @@ public class BlockPathWalker {
         // overshoots — measured ~60% climb, flaky. A step-up wants a WALK-jump: it
         // rises 1 and moves ~1 forward, landing cleanly on the next step. Reserve the
         // sprint-jump for real gaps (course B: +2..4 horizontal, missing floor), which
-        // genuinely need the horizontal reach. This makes staircase climbing determinstic.
+        // genuinely need the horizontal reach. This makes staircase climbing deterministic.
         int pby = player.getBlockPos().getY();
         boolean stepUp = wp.getY() > pby && dist <= 1.8;   // 1-block step directly ahead
         boolean gap    = dist >= 2.0;                       // running-jump distance
