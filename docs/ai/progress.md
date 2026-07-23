@@ -947,4 +947,10 @@ too, and it runs via gotoXYZ = the async pathfinder + EXECUTOR, NOT the walker, 
 can't touch it). Failure symptoms: bot walks BACKWARD off the near island (x=-4.5) or stalls at the
 gap edge without planning the bridge. Likely a distinct issue (sky-island chunk load — core_bridge
 lacks forceload, unlike terrain_test — and/or executor approach control). TRACKED as a separate item;
-does not block the v0.44.0 climbing/parkour win.
+does not block the v0.44.0 climbing/parkour win. UPDATE: added forceload to core_bridge_test -> 2/4
+(was 1/3), so chunk load was PART of it but not all. Remaining ~50% flakiness is in the SEARCH/
+EXECUTOR path (gotoXYZ): PASS = places x=2,3,4 and crosses; FAIL = stalls at the gap edge (bridge
+never planned/started) or falls into the gap (partial). NEXT (separate focused pass): apply the same
+white-box technique that cracked the walker spin to the executor/bridge path — log the search plan +
+executor decisions on a FAILING bridge. The walker face-before-move fix (v0.44.0) is this session's
+milestone.
