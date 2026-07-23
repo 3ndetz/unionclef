@@ -211,20 +211,33 @@ public class BlockPathWalker {
         float yaw = AttackTiming.yawTo(playerPos, wpPos);
         WindMouseRotation.INSTANCE.setTarget(yaw, 0);
 
-        // Distinguish a 1-block STEP-UP (adjacent, higher) from a GAP running-jump.
-        // A sprint-jump clears ~3-4 blocks horizontal but only ~1.25 up, so on a
-        // 1-block staircase it rams the FRONT of a higher step and bounces back /
-        // overshoots — measured ~60% climb, flaky. A step-up wants a WALK-jump: it
-        // rises 1 and moves ~1 forward, landing cleanly on the next step. Reserve the
-        // sprint-jump for real gaps (course B: +2..4 horizontal, missing floor), which
-        // genuinely need the horizontal reach. This makes staircase climbing deterministic.
         int pby = player.getBlockPos().getY();
-        boolean stepUp = wp.getY() > pby && dist <= 1.8;   // 1-block step directly ahead
-        boolean gap    = dist >= 2.0;                       // running-jump distance
+        // Look ahead along the path: is a CONTIGUOUS step-up (1-block staircase) coming
+        // within ~3 blocks? If so, WALK now to shed sprint momentum BEFORE the step. A
+        // sprint-jump clears ~3-4 blocks horizontal but only ~1.25 up, so it rams the
+        // FRONT of a higher step and bounces back / overshoots (measured: the bot then
+        // falls, re-plans from the bottom, and oscillates — flaky ~50% climb). A walk-jump
+        // rises 1 and moves ~1 forward, landing cleanly on the next step. A GAP (waypoints
+        // >=2 apart, course B parkour) BREAKS the contiguity scan, so gaps keep sprinting —
+        // a running jump genuinely needs the horizontal reach. Deterministic staircase climb.
+        boolean walkClimb = false;
+        {
+            double acc = 0;
+            Vec3d prev = playerPos;
+            for (int i = waypointIdx; i < path.size() && acc <= 3.2; i++) {
+                Vec3d w = Vec3d.ofBottomCenter(path.get(i));
+                double d = horizontalDist(prev, w);
+                if (d > 1.8) break;                     // a gap -> not a contiguous staircase
+                if (path.get(i).getY() > pby) { walkClimb = true; break; }   // step-up ahead
+                acc += Math.max(d, 0.6);
+                prev = w;
+            }
+        }
+        boolean gap = dist >= 2.0 && !walkClimb;        // running-jump distance (parkour)
 
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(true);
-        mc.options.sprintKey.setPressed(!stepUp);          // walk a step-up, sprint otherwise
+        mc.options.sprintKey.setPressed(!walkClimb);    // walk a staircase, sprint flats/gaps
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);

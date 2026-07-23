@@ -50,13 +50,22 @@ def pos():
         return [round(float(v.strip().rstrip("d")),2) for v in p]
     except Exception: return None
 
+import os
+COURSE = os.environ.get("COURSE","A").upper()   # A = 1-block staircase, B = +2/+1 steep parkour
+# (target_x, target_y) per course
+TGT = {"A": (13,-48), "B": (22,-56)}[COURSE]
+
 def build():
     rcon("forceload add -8 -8 40 8")
     rcon(f"clear {BOT}")
     rcon("fill 0 -60 -4 40 10 4 air")
     rcon("fill 0 -61 -4 40 -61 4 stone")
-    for i in range(1,13):
-        rcon(f"setblock {1+i} {-61+i} 0 stone")
+    if COURSE == "A":
+        for i in range(1,13):                      # 1-block staircase x=2..13, y=-59..-48
+            rcon(f"setblock {1+i} {-61+i} 0 stone")
+    else:                                          # B: +2x/+1y steps x=14..22, y=-60..-56 (running jumps)
+        for i in range(1,6):
+            rcon(f"setblock {12+2*i} {-61+i} 0 stone")
     rcon("gamerule doDaylightCycle false"); rcon("time set day")
 
 def run_once(k):
@@ -68,7 +77,7 @@ def run_once(k):
         rcon(f"tp {BOT} 0 -60 0 90 0"); time.sleep(1.2)
         p=pos()
         if p and p[0] < 2.0 and abs(p[1]+60) < 2: break
-    py4j("goto", x=13, y=-48, z=0)
+    py4j("goto", x=TGT[0], y=TGT[1], z=0)
     maxY=-999.0; reached=False; last=None; treach=None
     xs=[]
     for s in range(30):  # 15s
@@ -77,7 +86,7 @@ def run_once(k):
         if p:
             last=p; xs.append(round(p[0]))
             if p[1]>maxY: maxY=p[1]
-            if abs(p[0]-13)<=1.5 and p[1]>=-48.5 and not reached:
+            if abs(p[0]-TGT[0])<=1.5 and p[1]>=TGT[1]-0.5 and not reached:
                 reached=True; treach=round(s*0.5,1)
     # grab the walker/executor chat markers BEFORE @stop clears context
     chat=[]
@@ -109,7 +118,7 @@ def main():
         time.sleep(6)
     build()
     print("swap:", py4j("swap",on=True))
-    print(f"=== course A x{N_RUNS} (flakiness) ===")
+    print(f"=== course {COURSE} x{N_RUNS} (flakiness), target={TGT} ===")
     p=0
     for k in range(1,N_RUNS+1):
         if run_once(k): p+=1
