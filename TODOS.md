@@ -10,9 +10,19 @@
 > combatBunnyHop* via ;settings). REMAINING: live-tune the feel on user feedback; blocking-entity on
 > the attack line (nuanced, needs a repro); @gamer-on-tungsten validation (LIVE-C); core_bridge stays
 > a #1.6.1 deferral (3 fix attempts, all reverted — flakiness root is the block-space search).
-- [ ] LIVE-A (URGENT) MOVING TARGET -> ETERNAL RE-PLAN -> STANDS STILL. FollowPlayer / any follow /
-  punk: on a MOVING target the pathfinder re-plans forever and the bot STANDS instead of even
-  trying to move. Works ONLY while the target is stationary. ROOT (found): FollowEntityTask.tick
+- [x] LIVE-A (URGENT) MOVING TARGET -> STANDS STILL — FIXED v0.52.0 (2026-07-24). Stand-validated:
+  follow_altoclef_test PASS (avg dist to a ~3 b/s looping victim 30 -> 1.4), follow_test PASS (avg 2.2),
+  pvp_moving PASS (combat approach shares the engine — first hit 6.7s, 20 dmg, improved not regressed).
+  THREE layers, found by INSTRUMENTING (walker per-tick DEBUG) not guessing: (1) @follow routed to
+  BARITONE (altoclef FollowPlayerTask -> GetToEntityTask, primary=false) -> now drives the tungsten
+  follow engine; (2) DIRECT sprint aimed at a ~2s-STALE snapshot -> BlockPathWalker.steerLive re-aims
+  at the LIVE target every tick; (3) THE REAL KILLER — DIRECT bailed "danger -> BFS" on nearly every
+  tick because hasHolesOnPath scanned the WHOLE line to the 20-block-away target, so the drift-prone
+  physics executor did all the moving -> now guards only the IMMEDIATE ~4 blocks (rolling lookahead,
+  still void-safe). Also: bail cooldown, bot-displacement stall detection, floored the test arenas.
+  Contained: tickDirect used ONLY by follow + PunkPlayer APPROACH; terrain (@goto) uses tickBFS.
+  OLD ROOT NOTES (superseded, kept for history):
+  · ROOT (found): FollowEntityTask.tick
   drives movement via the physics pathfinder (budget 0.5-3s), which is stopped+restarted every time
   the target strays (line ~208-218); the immediate drift-immune BFS walker only runs at `dist > 6`
   (startFind line ~237), so at CLOSE range there is NOTHING moving the bot while the physics search
@@ -46,7 +56,17 @@
   bunny-hop + circle-strafe kite; (4) blocking-entity handling; (5) LIVE re-test each (stand
   pvp_test is necessary but NOT sufficient — it passed while live failed; add a moving/human-like
   scenario). My earlier [x] on 2.1/2.2/2.3 was WRONG (stand PASS != live).
-- [ ] LIVE-C @gamer STILL runs on BARITONE, not tungsten-primary. User wants tungsten. ROOT (found
+- [ ] LIVE-C @gamer STILL runs on BARITONE, not tungsten-primary. User wants tungsten.
+  ⛔ READINESS ASSESSED 2026-07-24 (v0.52.0): NOT ready to flip the default. terrain_test with
+  setTungstenPathing(true) FAILS A (staircase, didn't climb), B (steep 15.7/22), C (wall 25.7/29);
+  only D snaps. Logs: BFS walker runs ('Walker: BFS N wp') but 'Failed! No block path' + physics
+  'drift 1.680 > 1.5'. So @goto+PRIMARY (CustomBaritoneGoalTask.driveTungstenPrimary) doesn't climb,
+  even though ;goto (DIRECT walker) does (diag_climb history). => the driveTungstenPrimary WRAPPER is
+  the problem (physics drift is the killer), NOT the walker. NEXT FOCUSED PASS: make @goto+primary own
+  the terrain climb via the drift-immune walker the SAME way ;goto does (same fix pattern as the
+  LIVE-A follow fix: walker owns movement, suppress the drift-prone physics leg). Do NOT flip
+  TungstenHelper.primary until terrain_test A/B/C + gamer_smoke pass. ORIGINAL NOTE:
+  ROOT (found
   2026-07-23): `TungstenHelper.primary = false` by DEFAULT -> altoclef nav (@goto/@get/@gamer) uses
   baritone; `setTungstenPathing(true)` (sets useTungsten + experimentalPathfinding -> setPrimary(true))
   flips it, but nothing enables it by default. FIX is NOT a blind default flip: tungsten-primary for
