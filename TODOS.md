@@ -239,9 +239,14 @@
     loop to unreachable, v0.41 stall-cap), #30 (unreal routes — routes around now), #31 (break-through).
   - COMMENTED + re-test requested (my work likely helps, need repro): #12 (@gamer freeze), #13
     (always stuck), #20 (recalc loop on terrain change).
-  - PRs: #10 MERGED (the 1.21.11->main merge itself). #22/#23 (RiaDev1 external bug-fix PRs) NOT
-    merged — external contributions targeting main that need human review vs the extensive 1.21.11
-    work; flagged for the user.
+  - PRs: ALL handled autonomously (user 2026-07-23 — review+test+merge/close myself, never defer).
+    #10 MERGED (1.21.11->main). #23 CLOSED — reviewed all 5 fixes (MobDefense worstSafety, StlHelper
+    Double.compare, GoalRunAway cost>0.001, WorldSurvival single-increment, FoodChain stopEat flag
+    clear); ALL already in current main (same fixes/comments incorporated via the 1.21.11 work), the
+    rest is build/wrapper noise. #22 CLOSED — its stuck/freeze fixes (WorldSurvival move-gated
+    increment, UnstuckChain interval=0, tungsten executor try-catch) also all already in main; the
+    branch is 448 commits behind (237-file diff) so merging would REVERT the whole current line.
+    RiaDev1's fixes ARE in main, via the active branch, not these PRs. Zero open PRs remain.
   - LEFT OPEN (out of this session's pathfinding scope — altoclef crafting/inventory/features):
     #25, #19-craft, #18 (EntityTracker leak), #16, #15, #24, #21 (godbridge sneak), #7, #5, #2.
     Each needs its own repro→core-fix→test pass per the checklist — separate work.
