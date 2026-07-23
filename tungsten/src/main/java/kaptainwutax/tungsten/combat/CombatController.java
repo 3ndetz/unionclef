@@ -159,13 +159,15 @@ public class CombatController {
         mc.options.leftKey.setPressed(strafeSafe && strafeDir > 0);
         mc.options.rightKey.setPressed(strafeSafe && strafeDir < 0);
 
-        // Crit / juke jumps on a randomised cadence — only from the ground and only
-        // when the landing isn't a drop (so a jump can't launch us into the void).
+        // BUNNY-HOP: jump on a fast cadence (~every landing) so the bot is ALWAYS moving/
+        // juking around the target (user: "должен ВСЕГДА быть в движении, банихопить, прыгать
+        // вокруг таргет"), for crits + a harder-to-hit profile. Only from the ground and only
+        // when the landing isn't a drop (a jump can never launch us into the void).
         if (player.isOnGround() && now - lastJump > jumpInterval
                 && SafetySystem.isJumpLandingSafe(player.getEntityPos(), player.getVelocity(), world)) {
             mc.options.jumpKey.setPressed(true);
             lastJump = now;
-            jumpInterval = 650 + (long) (Math.random() * 700);
+            jumpInterval = 280 + (long) (Math.random() * 320);   // ~0.28-0.6s: bunny-hop rhythm
         } else if (!player.isOnGround()) {
             mc.options.jumpKey.setPressed(false); // don't hold jump airborne
         }

@@ -523,8 +523,21 @@ public class SafetySystem {
         // find best aim point on hitbox
         Vec3d aimPoint = findBestAimPoint(player, eyePos, predictedBox, predictedPos, h);
 
-        aimYaw = AttackTiming.yawTo(player.getEntityPos(), aimPoint);
-        aimPitch = AttackTiming.pitchTo(eyePos, aimPoint);
+        float rawYaw   = AttackTiming.yawTo(player.getEntityPos(), aimPoint);
+        float rawPitch = AttackTiming.pitchTo(eyePos, aimPoint);
+        // LOW-PASS the aim target so a packet-jittery enemy (velocity/lead noise, flipping
+        // best-aim-point) doesn't make the camera SHAKE (user: "прицел трясёт как не в себя")
+        // and stay outside the trigger's 40deg window -> never hits. Snap on a big jump (first
+        // aim / target teleport / target switch), else blend halfway toward the raw aim — kills
+        // the high-frequency jitter while still tracking a moving target so the angle gate holds.
+        float dYaw = net.minecraft.util.math.MathHelper.wrapDegrees(rawYaw - aimYaw);
+        if (Math.abs(dYaw) > 55f) {
+            aimYaw = rawYaw;
+            aimPitch = rawPitch;
+        } else {
+            aimYaw = net.minecraft.util.math.MathHelper.wrapDegrees(aimYaw + dYaw * 0.5f);
+            aimPitch = aimPitch + (rawPitch - aimPitch) * 0.5f;
+        }
     }
 
     /**
