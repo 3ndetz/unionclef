@@ -13,6 +13,12 @@
   movement toward the live target), physics executor only for precise/terrain legs — mirror the
   @goto walker-primary design. The 2.8 "hysteresis" fix was insufficient. TEST: pvp_moving_test +
   live human target.
+  ⭐ ALSO ROOT (found 2026-07-23): the IMMEDIATE MOVERS ARE DISABLED BY DEFAULT —
+  `followBlockPathFinderEnabled=false` (FollowEntityTask.startFind never runs the instant drift-immune
+  BFS walker; bot depends only on the physics pathfinder -> re-plans forever -> STANDS STILL) and
+  `enableLeap=false` (no close-range sprint-approach). combatMove (strafe/kite) is enabled but only
+  runs in the COMBAT state, which the broken approach never reaches. Rework: drive approach with the
+  immediate walker at ALL ranges + make it robust (no overshoot), physics executor only precise legs.
 - [ ] LIVE-B == ⭐ COMBAT FULL REWORK (user 2026-07-23: "combat нужен FULL REWORK, полноценный
   ОТДЕЛЬНЫЙ заход, а не полуфиксы"). Do NOT patch piecemeal — dedicated focused pass, likely a
   fresh context. Live symptoms + root diagnosis:
