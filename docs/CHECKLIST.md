@@ -96,6 +96,14 @@ Full guide — **`docs/RELEASE.md`**. In short:
 ### Phase 8 — CHECKPOINT and NEXT TASK
 - Record progress: tick it in `TODOS.md`, detail it in `docs/ai/progress.md`.
 - TG notification (`PushNotification`) if this is a milestone the user would want now.
+- **MILESTONE ≠ STOP (user 2026-07-23).** Reaching a milestone (a fix released + validated)
+  is NOT a stop and NOT "report and wait". At every milestone: (1) run an **AUDIT regression
+  test** of it (guard against regressions), then (2) IMMEDIATELY pick the next-priority task
+  and start a **fresh, thorough, full focused pass** — seamlessly. NEW tasks that emerged
+  mid-run (discovered bugs/flakiness/follow-ups) are reprioritised and taken into work
+  IMMEDIATELY too. You MAY use conversation **COMPACTING** to keep momentum across a long
+  run — a fresh compacted context is the tool for the next focused pass, not a reason to
+  finalise. Pausing "to be safe" at a milestone shames the closed-loop setup — don't.
 - **DO NOT STOP.** Take the next task (phase 2) and go through the cycle again.
 
 ### Phase 9 — FINAL STOP (only when ALL tasks closed or hardware fails)

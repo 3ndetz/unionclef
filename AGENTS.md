@@ -113,6 +113,17 @@ py4j/MCP), а НЕ готовые скрипты, которые всё дела
     МЕРЖ; если фиксы уже в main / база протухла / диф ревертит текущую работу — ЗАКРОЙ с внятным
     уважительным комментарием. НЕ «оставляй на ревью юзеру». Итог фиксируй в TODO. То же для issues
     (закрыл фикс → коммент+close; не воспроизводится → коммент-вопрос).
+11. **MILESTONE IS NOT A STOP — AUDIT, THEN IMMEDIATELY START THE NEXT FOCUSED PASS (юзер 2026-07-23).**
+    Reaching a milestone in a BIG run (a fix released + validated) is NOT a reason to stop or wait
+    for the user. At every milestone: (a) run an AUDIT regression test of that milestone (guard against
+    regressions — the checklist audit phase), (b) pick the NEXT-PRIORITY task and IMMEDIATELY start a
+    fresh, thorough, full focused pass on it — record it and continue, do not pause to "report and wait".
+    NEW tasks that emerged mid-run (discovered bugs, flakiness, follow-ups) are taken into work
+    IMMEDIATELY too — reprioritise and keep going. **There is NO stop here** (only the two valid final
+    stops from rule 8: hardware failure, or ALL TODO incl. child/emergent closed + tested). You MAY use
+    conversation COMPACTING to keep going across a long run — a fresh compacted context is the tool for
+    the next focused pass, not an excuse to finalise. Pausing at a milestone "to be safe" shames the
+    user's closed-loop setup — don't. Keep the momentum: milestone → audit → next pass, seamlessly.
 
 ## Project structure
 
