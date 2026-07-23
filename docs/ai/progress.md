@@ -977,3 +977,35 @@ regressed twice so not safe to poke a 3rd time in a long context): when a place/
 PHYSICS search must target the TRUNCATED block-path endpoint (the gap edge), not the goal, so the
 physics leg walks to the edge and stops (no sim across the gap) instead of simulating a fall. That is
 an invasive physics-search-target change; do it fresh with break_test (4/4) as the regression guard.
+
+## 2026-07-23 (evening) — LIVE-BUG BLITZ: combat rework + input fix + worldedit shapes + break primitive
+
+User live-tested and found combat/follow BROKEN despite my earlier [x] (stand-pass != live — the
+core lesson). Re-opened everything honestly and shipped, back-to-back (v0.44 -> v0.50):
+
+- v0.45 STUCK SHIFT/sneak: VoidGuard/SafetySystem edge-sneak setPressed(true) near a rim, never
+  released; on task-end it stuck over the player. Fix: mixin releases sneak/attack/use once on the
+  driving->idle transition + VoidGuard rim-clear release.
+- v0.46 MOVEMENT (root of "stands still / no hit"): the immediate BFS walker was OFF by default
+  (followBlockPathFinderEnabled=false) so follow/punk leaned on the physics pathfinder that re-plans
+  forever on a MOVING target. Enabled it + fixed the tickDirect SPIN (face-before-move, the v0.44 fix
+  only covered tickBFS). pvp_moving PASS (chases + hits a runner).
+- v0.47 aim yaw-smoothing + bunny-hop cadence. v0.48 enemy-velocity EMA (root anti-shake — raw
+  per-tick delta spikes for a packet-moving human). v0.49 all of it LIVE-TUNABLE via ;settings
+  (combatAimSmoothing/combatVelSmoothing/combatBunnyHop*) — the shake is a live-only symptom the
+  stand can't reproduce, so the user tunes instead of me guessing. Diagnosis: the attack gate is
+  CORRECT; "no hit" was no-approach + shaking-aim (angle>40).
+- COMBAT REMAINING: live-tune the feel (needs user feedback); blocking-entity (nuanced/needs repro);
+  @gamer-on-tungsten (LIVE-C: TungstenHelper.primary=false default; needs a validated survival run,
+  not a blind flip).
+
+Also this block (verifiable, non-combat):
+- TERRAIN suite CONFIRMED solid after the walker fixes: A staircase 7-8/8, B parkour 8/8, C 2-block
+  WALL 3/3 with a block in hand (diag_pillar_c — course C works now, was thought to need a pillar
+  feature), D air-goal snap PASS.
+- v0.50 WORLDEDIT shapes: //hollow (6-face shell) + //cyl (inscribed circle) + //sphere (ellipsoid)
+  on the fillCells core (py4j + MCP), worldedit_shapes_test 3/3.
+- BREAK primitive mineBlocks/mineStatus (py4j) + mineBlock/mineStatus (MCP): mine given blocks via
+  the executor break queue (the proven 'mine without a physics leg' path). Unblocks //replace + mineTo.
+- core_bridge: 3rd fix attempt (physics-target edge-completion) — break-safe (4/4) but still 3/8,
+  reverted. Definitively a #1.6.1 block-space-search rework (deferred).
