@@ -917,3 +917,26 @@ consolidate to ONE terrain driver (walker), precise yaw for path-following, COMM
 a good path to completion; re-plan only on a genuine stall, never from airborne; no executor
 handoff on terrain), straighten path quality (no diagonal zigzag / degenerate stubs). Validate
 across WIDTH and courses A/B/C/D until consistently green BEFORE any release.
+
+### RESOLVED (same session) — root cause found via white-box, FIXED, RELEASED v0.44.0
+
+Added gated per-tick walker logging (`setWalkerDebug`, `diag_climb_white.py`: waypoint, dist,
+onGround, jump, playerYaw vs target yaw, velocity). The FAILING-climb trace nailed it: the walker
+pressed forwardKey EVERY tick regardless of facing. While the humanized WindMouse yaw was still
+converging, the bot walked the WRONG way, which shifted the waypoint bearing, which moved the aim
+target -> a FEEDBACK SPIN (trace: playerYaw swept ~680deg -379..+298, position spiralled in a
+circle, never climbed). Convergence-before-destabilise = PASS; spin lock-in = FAIL -> the ~40%
+flakiness. NOT WindMouse lag, NOT the executor, NOT sprint-vs-walk — a control feedback loop.
+
+FIX (`BlockPathWalker.tickBFS`): FACE-BEFORE-MOVE, ground-only. Gate forward/sprint/jump on
+`|wrapDelta(targetYaw - playerYaw)| < 45` while onGround (pivot in place to face the waypoint,
+then walk straight — breaks the loop); but KEEP forward+sprint while AIRBORNE (`move = facing ||
+!onGround`) so a gap jump / slime bounce keeps its take-off momentum. First cut (gate always)
+fixed staircases but killed parkour (B 0/8) + slime drop-bounce by cutting air momentum; the
+ground-only refinement fixed that. `wrapDelta` made public.
+
+VALIDATED (diag_climb_multi/slime_test x8 fresh): A 3-wide staircase 6/8 -> 7-8/8; B parkour gaps
+4/8 -> 8/8; slime drop-bounce + flat PASS. Released v0.44.0. Remaining: 1-block-WIDE staircase
+still ~3/8 near the top (pathological lateral precision on a 1-block ledge; real terrain is wider)
+— tracked as an edge case, not shipped as fixed. Diag tooling (COURSE/WIDTH params, py4j retry,
+tp-verify, chat/white-box capture) kept for the future.

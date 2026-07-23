@@ -26,15 +26,20 @@
   NOT YET (next focused passes): (a) PROACTIVE @goto bridging — needs the walker to yield a gap
   stub to the executor's place-planned leg (the auto-integration was reverted; @goto still bridges
   REACTIVELY, v0.41); (b) CORE PILLAR place-move (up) for raised goals / 2-block walls (course C).
-  STAND NOTE: the Mac test client runs unthrottled (~400% CPU), so it flaps for a while after a
-  restart — validate on an ALREADY-SETTLED bot, and treat post-restart NOT_SETTLED as flakiness.
-- [~] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
-  often prints 'Ran out of nodes' and fails. PARTLY FIXED v0.40.0 (#34): the walker's grid-BFS
-  path source (CombatPathfinder) now generates parkour jump-moves (+2..4 across, flat or +1 up),
-  so stepped/gapped terrain (course B) climbs via the walker instead of flailing/stubbing —
-  terrain_test B now PASS. REMAINING: the async block-space physics pathfinder still can't route
-  parkour at all (diag_b: pure ;goto doesn't move on B), so a pure-;goto over a gap still fails —
-  port the parkour move into the async BlockNode move-gen too if we want ;goto parity.
+  STAND NOTE (corrected): the test container has NO CPU limit on a 16-core host (~2.4 cores used) —
+  CPU was NEVER the flapping cause. v0.43.0 gated the per-tick physics sim (400->240% CPU) anyway.
+  The client boots to the MAIN MENU; tests must call ConnectToServer (they do). Server persists bot
+  position across a CLIENT restart, so verify tp reset before a run.
+- [x] BUG #28 ('Ran out of nodes' on hard parkour / flaky terrain climb) FIXED v0.44.0. The flaky
+  ~40% climbing was NOT the search — it was a walker CONTROL-FEEDBACK SPIN: the walker pressed
+  forward every tick regardless of facing, so while the humanized WindMouse yaw was still turning,
+  the bot walked the wrong way, shifting the waypoint bearing, moving the aim target -> spiralled
+  in a circle (white-box trace: yaw swept ~680deg). FIX: face-before-move (gate forward/sprint/jump
+  on yaw within 45deg while onGround; keep momentum while airborne so gap jumps/bounces aren't cut).
+  VALIDATED x8 fresh: A 3-wide staircase 6/8->7-8/8, B parkour gaps 4/8->8/8, slime PASS. #34
+  (v0.40) parkour move-gen in CombatPathfinder was a prerequisite. REMAINING (minor): 1-block-WIDE
+  staircase still flaky at the very top (pathological lateral precision; real terrain is wider);
+  pure async ;goto (gotoXYZ, no walker) parkour parity is separate (#1.6.1 async move-gen).
 - [x] #34 Tungsten parkour move-gen (jump gaps) — DONE v0.40.0 for the walker path (course B
   climbs, A/D no regression, break_test intact, combat unchanged). Course C (2-block vertical
   wall) still needs place-to-climb (#46 second half), not parkour.
