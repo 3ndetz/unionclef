@@ -290,27 +290,6 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         return aheadClear && noFloor1 && noFloor2;
     }
 
-    /** True when the bot is stuck at the base of a 2-tall WALL in the goal's horizontal
-     *  direction — a "pillar up beside it" signal (goal is on a ledge behind the wall).
-     *  Cell immediately ahead toward the goal is solid at feet AND head level (a wall a
-     *  single jump can't climb). Distinct from a gap (cell ahead clear). */
-    private boolean wallAhead(AltoClef mod, net.minecraft.util.math.Vec3d gp) {
-        var p = mod.getPlayer();
-        var world = mod.getWorld();
-        double dx = gp.x - p.getX(), dz = gp.z - p.getZ();
-        net.minecraft.util.math.Direction dir = Math.abs(dx) >= Math.abs(dz)
-                ? (dx >= 0 ? net.minecraft.util.math.Direction.EAST : net.minecraft.util.math.Direction.WEST)
-                : (dz >= 0 ? net.minecraft.util.math.Direction.SOUTH : net.minecraft.util.math.Direction.NORTH);
-        // Scan 1-2 cells ahead — the walker often stalls a block short of the wall, and
-        // after pillaring up the walker's parkour clears the small gap onto the wall top.
-        for (int d = 1; d <= 2; d++) {
-            net.minecraft.util.math.BlockPos a = p.getBlockPos().offset(dir, d);
-            boolean feetSolid = !world.getBlockState(a).getCollisionShape(world, a).isEmpty();
-            boolean headSolid = !world.getBlockState(a.up()).getCollisionShape(world, a.up()).isEmpty();
-            if (feetSolid && headSolid) return true;
-        }
-        return false;
-    }
 
     /** Drop-in swap (TODO 13): when tungsten is PRIMARY, drive movement via
      *  tungsten directly (the same call ;goto uses — baritone movement doesn't
@@ -357,19 +336,6 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 twBestDistToGoal = -1; twBestImproveMs = 0L;
                 checker.reset();
                 setDebugState("Tungsten pillaring up to goal (#46)...");
-                return true;
-            }
-            // #46 wall-climb: stuck at the base of a 2-tall wall with the goal up and just
-            // beyond it (a ledge behind the wall — terrain course C). Pillar up BESIDE the
-            // wall to the goal's height, then the walker walks across the wall top onto the
-            // ledge. Between the overhead-pillar (horiz<1.5) and the gap-bridge cases; needs
-            // the wall immediately ahead so the bot is adjacent (pillar-then-walk lands right).
-            if (gp.y > mod.getPlayer().getY() + 1.5 && horizToGoal < 3.5
-                    && wallAhead(mod, gp) && equipBuildBlock(mod)) {
-                kaptainwutax.tungsten.task.PillarTask.startTo((int) Math.ceil(gp.y));
-                twBestDistToGoal = -1; twBestImproveMs = 0L;
-                checker.reset();
-                setDebugState("Tungsten pillaring up beside a wall to a ledge (#46)...");
                 return true;
             }
             // #46 bridge-as-a-move: stuck at the edge of a GAP with the goal across it
