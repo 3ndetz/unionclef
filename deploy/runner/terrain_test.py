@@ -28,6 +28,7 @@ elif op=="swap": out=dict(mc.setTungstenPathing(bool(req["on"])))
 elif op=="smart": out=dict(mc.setTungstenSmartMoves(bool(req["on"])))
 elif op=="goto": mc.ExecuteCommand("@goto "+str(req["x"])+" "+str(req["y"])+" "+str(req["z"])); out={"ok":True}
 elif op=="stop": mc.ExecuteCommand("@stop"); mc.punkStop(); out={"ok":True}
+elif op=="wdbg": out=dict(mc.setWalkerDebug(bool(req["on"])))
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",14)))]}
 print(json.dumps(out,default=str)); gw.close()
 """
@@ -96,8 +97,10 @@ def main():
     ensure(); build()
     print("swap:", py4j(C1,"swap",on=True))
     import os
-    if os.environ.get("SMART"):  # #1.6.1: exercise SmartMoves neighbour generation
+    if os.environ.get("SMART","1")!="0":  # #1.6.1: SmartMoves neighbour generation (default ON now)
         print("smartMoves:", py4j(C1,"smart",on=True))
+    if os.environ.get("WDBG"):
+        print("walkerDebug:", py4j(C1,"wdbg",on=True))
     a=trial("A long staircase (12 1-blk steps)", [13,-48,0], 45)
     b=trial("B steep (jump-up each)",    [22,-56,0])
     c=trial("C 2-block wall ledge",      [29,-58,0])
@@ -118,5 +121,10 @@ def main():
     print(f"  B steep    : {'PASS' if b else 'FAIL'}")
     print(f"  C wall     : {'PASS' if c else 'FAIL'}")
     print(f"  D invalid-goal snap: {'PASS' if d else 'FAIL'}")
+    if os.environ.get("WDBG"):
+        print("  --- primDrive / walker decisions (last 40) ---")
+        for l in py4j(C1,"chat",n=40).get("chat",[]):
+            if "primDrive" in l or "Walker:" in l or "drift" in l or "No block path" in l:
+                print("   ", l.split("[Tungsten]")[-1].strip())
 
 if __name__=="__main__": main()

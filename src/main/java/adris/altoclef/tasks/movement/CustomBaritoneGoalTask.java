@@ -453,6 +453,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 // route it, so skip the stub and fall through to the robust path (2)/(3).
                 boolean degenerateStub = smart && bfs.size() == 2 && distToGoal > 6.0
                         && Math.sqrt(bfs.get(1).getSquaredDistance(goalB)) > distToGoal - 3.0;
+                if (kaptainwutax.tungsten.task.BlockPathWalker.DEBUG)
+                    Debug.logMessage(String.format("primDrive gridBFS sz%d degen%b d%.1f dy%.1f",
+                            bfs.size(), degenerateStub, distToGoal, gp.y - mod.getPlayer().getY()));
                 if (bfs.size() >= 2 && !degenerateStub) {
                     if (pf != null) pf.stop.set(true);
                     if (ex != null) ex.stop = true;
@@ -473,6 +476,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 // legacy path selection is untouched.)
                 boolean fresh = !smart || (bp.isPresent() && !bp.get().isEmpty()
                         && bp.get().get(bp.get().size() - 1).getBlockPos().getSquaredDistance(goalB) <= 36.0);
+                if (kaptainwutax.tungsten.task.BlockPathWalker.DEBUG)
+                    Debug.logMessage(String.format("primDrive robustPath present%b sz%d fresh%b",
+                            bp.isPresent(), bp.map(java.util.List::size).orElse(0), fresh));
                 if (bp.isPresent() && bp.get().size() >= 2 && fresh) {
                     java.util.List<net.minecraft.util.math.BlockPos> wps = new java.util.ArrayList<>();
                     for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : bp.get()) wps.add(n.getBlockPos());
@@ -485,6 +491,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 }
                 // (3) no block path yet — kick the async search to compute one.
                 boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
+                if (kaptainwutax.tungsten.task.BlockPathWalker.DEBUG)
+                    Debug.logMessage("primDrive asyncKick busy" + busy);
                 if (!busy && pf != null) { if (ex != null) ex.stop = false; pf.find(mod.getWorld(), gp, mod.getPlayer()); }
                 mod.getClientBaritone().getPathingBehavior().forceCancel();
                 checker.reset();
