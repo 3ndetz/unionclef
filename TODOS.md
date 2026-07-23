@@ -13,12 +13,26 @@
   movement toward the live target), physics executor only for precise/terrain legs — mirror the
   @goto walker-primary design. The 2.8 "hysteresis" fix was insufficient. TEST: pvp_moving_test +
   live human target.
-- [ ] LIVE-B (URGENT) PUNK/COMBAT broken live: (a) aim SHAKES violently (WindMouse chasing a
-  position-packet target that jumps every tick — no smoothing/deadzone on a jittery lead); (b)
-  barely HITS (attack gate too strict / never settles because the aim never converges); (c) does
-  NOT approach when CLOSE (see LIVE-A — no mover at close range; LEAP needs flat+LOS+!executor and
-  often doesn't fire). These are the SAME live-vs-stand gap the TODO 2.x notes flagged but I wrongly
-  marked done. Fix aim smoothing + convergence + close-range approach together; re-test LIVE.
+- [ ] LIVE-B == ⭐ COMBAT FULL REWORK (user 2026-07-23: "combat нужен FULL REWORK, полноценный
+  ОТДЕЛЬНЫЙ заход, а не полуфиксы"). Do NOT patch piecemeal — dedicated focused pass, likely a
+  fresh context. Live symptoms + root diagnosis:
+  · DOESN'T CLICK to attack even with a clear line — just stares. ROOT: the attack gate
+    (TriggerBot.tick) is actually CORRECT (fires unless out of reach >3, aim >40deg off, on
+    cooldown, or block-LOS blocked). It doesn't fire because the PRECONDITIONS fail: gateReach
+    (bot never approaches to <=3 -> LIVE-A no-mover close-range) and gateAngle (aim SHAKES, never
+    within 40deg). So "no hit" is a SYMPTOM of the movement + aim bugs, not the gate.
+  · AIM SHAKES violently: WindMouse chases a position-packet target that jumps every tick, with
+    no smoothing/deadzone/velocity-lead stabilisation -> angle stays >40 -> no attack.
+  · Should ALWAYS BE MOVING: active bunny-hop / strafe / jump AROUND the target, never stand and
+    stare. Current combatMove is passive / gated off in too many stages.
+  · Blocking ENTITY on the attack line (another mob between bot and target) — also needs handling
+    (reposition / switch target / attack the blocker), secondary but in scope.
+  REWORK REQUIREMENTS: (1) reliable approach to melee reach at ALL ranges (immediate walker/direct,
+  not the re-planning physics search — see LIVE-A); (2) stable aim (smoothing + deadzone + proper
+  velocity lead for packet-moving players) so angle<40 holds -> the gate fires; (3) always-moving
+  bunny-hop + circle-strafe kite; (4) blocking-entity handling; (5) LIVE re-test each (stand
+  pvp_test is necessary but NOT sufficient — it passed while live failed; add a moving/human-like
+  scenario). My earlier [x] on 2.1/2.2/2.3 was WRONG (stand PASS != live).
 - [ ] LIVE-C @gamer STILL runs on BARITONE, not tungsten-primary. User wants tungsten. Audit
   @gamer's path delegation (13.3b) — the tungsten-primary swap exists but @gamer isn't using it by
   default. Make @gamer drive on tungsten (walker + executor), not baritone.
