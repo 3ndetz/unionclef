@@ -2255,6 +2255,47 @@ public class Py4jEntryPoint {
         });
     }
 
+    /** BREAK primitive: mine the given blocks (in reach) via the tungsten executor's break
+     *  queue — the same drift-immune "mine without a physics leg" path @goto uses, so tool
+     *  equip + gravity re-mine + BreakRules protection all apply. The bot must be within
+     *  reach; out-of-reach blocks stay queued (reposition with gotoXYZ, poll mineStatus()).
+     *  positions = list of [x,y,z]. Agent primitive for //replace, clearing, mineTo. */
+    public Map<String, Object> mineBlocks(java.util.List<java.util.List<Integer>> positions) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (ex == null) { out.put("ok", false); out.put("reason", "no executor"); return out; }
+            java.util.List<net.minecraft.util.math.BlockPos> queue = new java.util.ArrayList<>();
+            if (positions != null) for (var p : positions) {
+                if (p != null && p.size() >= 3)
+                    queue.add(new net.minecraft.util.math.BlockPos(p.get(0), p.get(1), p.get(2)));
+            }
+            if (queue.isEmpty()) { out.put("ok", false); out.put("reason", "no positions"); return out; }
+            // Point the mining-resume at the bot itself so it doesn't wander to a stale goal.
+            kaptainwutax.tungsten.TungstenMod.TARGET = mc.player.getEntityPos();
+            ex.setPath(new java.util.ArrayList<>());
+            ex.breakQueue = new java.util.ArrayList<>(queue);
+            ex.stop = false;
+            out.put("ok", true); out.put("queued", queue.size());
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Poll the break queue: {mining, remaining}. mining=false && remaining=0 -> done. */
+    public Map<String, Object> mineStatus() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            int rem = (ex != null && ex.breakQueue != null) ? ex.breakQueue.size() : 0;
+            out.put("ok", true);
+            out.put("mining", rem > 0);
+            out.put("remaining", rem);
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Shared fill core for //set and //walls. Places `blockName` at every
      *  replaceable selection cell matching `include`, bottom-up (so each cell
      *  has support: the floor or an already-placed block below), capped per

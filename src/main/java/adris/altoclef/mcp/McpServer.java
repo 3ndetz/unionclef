@@ -321,6 +321,14 @@ public class McpServer {
         tool("sphereSelection",
                 "//sphere — fill the solid sphere/ellipsoid inscribed in the selection (radii = the 3 half-extents).",
                 schema("block:string"), a -> api.sphereSelection(argStr(a, "block")));
+        tool("mineBlock",
+                "Mine the block at (x,y,z) if in reach (tungsten break queue: tool equip + protection "
+                + "+ gravity re-mine apply). Poll mineStatus; reposition (gotoXYZ) for out-of-reach.",
+                schema("x:int", "y:int", "z:int"),
+                a -> api.mineBlocks(java.util.List.of(java.util.List.of(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")))));
+        tool("mineStatus",
+                "Poll the break queue: {mining, remaining}. mining=false && remaining=0 -> done.",
+                schema(), a -> api.mineStatus());
         tool("buildDefenseAround",
                 "Box a cell with a protective shell (sides + roof) — e.g. defend a bed. Covers reachable cells; "
                 + "reposition for the rest.",
