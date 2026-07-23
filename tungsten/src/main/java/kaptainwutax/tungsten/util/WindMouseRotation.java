@@ -46,6 +46,13 @@ public class WindMouseRotation {
     private float   targetYaw   = 0;
     private float   targetPitch = 0;
     private boolean hasTarget   = false;
+    // FAST (navigation) turn: a human running SNAPS their view toward where they're going,
+    // far quicker than a careful combat micro-adjustment. Combat/bow/mining keep the slow
+    // humanized aim (anti-cheat surface); the walker's chase turn uses fast so the bot
+    // stays aligned and doesn't stop to pivot on every bearing change (which halved chase
+    // speed). Still pixel-quantized through the vanilla mouse pipeline — a quick flick, not
+    // a teleport. Refreshed every setTarget call so it can't stick on.
+    private boolean fastMode    = false;
 
     // Wall-clock of the last setTarget(). Active consumers (executor break, combat,
     // walker, bow, bridge, pillar) refresh the target every game tick (~50ms). If
@@ -73,9 +80,19 @@ public class WindMouseRotation {
     }
 
     public void setTarget(float yaw, float pitch) {
+        setTarget(yaw, pitch, false);
+    }
+
+    /** Navigation turn: snap toward the facing quickly (walker chase). See fastMode. */
+    public void setTargetFast(float yaw, float pitch) {
+        setTarget(yaw, pitch, true);
+    }
+
+    public void setTarget(float yaw, float pitch, boolean fast) {
         this.targetYaw   = yaw;
         this.targetPitch = pitch;
         this.hasTarget   = true;
+        this.fastMode    = fast;
         this.lastRefreshMs = System.currentTimeMillis();
     }
 
@@ -108,6 +125,12 @@ public class WindMouseRotation {
             return;
         }
 
+        // Fast (nav) turn converges quicker: stronger pull, bigger cap, less random
+        // slow-down — a running player's quick head-turn, not a careful combat micro-aim.
+        double g  = fastMode ? gravity * 2.2 : gravity;
+        double ms = fastMode ? maxStep * 2.6 : maxStep;
+        double stepLo = fastMode ? 0.85 : 0.5;
+
         double W = Math.min(wind, dist);
         if (dist >= windDist) {
             windYaw   = windYaw   / SQRT3 + (random.nextDouble() * 2.0 - 1.0) * W / SQRT5;
@@ -117,13 +140,13 @@ public class WindMouseRotation {
             windPitch /= SQRT3;
         }
 
-        veloYaw   += windYaw   + gravity * dYaw   / dist;
-        veloPitch += windPitch + gravity * dPitch / dist;
+        veloYaw   += windYaw   + g * dYaw   / dist;
+        veloPitch += windPitch + g * dPitch / dist;
 
         double veloMag = Math.sqrt(veloYaw * veloYaw + veloPitch * veloPitch);
-        double effectiveMaxStep = maxStep * Math.max(1.0, Math.min(flickScale, dist / 15.0));
+        double effectiveMaxStep = ms * Math.max(1.0, Math.min(flickScale, dist / 15.0));
         if (veloMag > effectiveMaxStep) {
-            double scale = effectiveMaxStep * (0.5 + random.nextDouble() * 0.5) / veloMag;
+            double scale = effectiveMaxStep * (stepLo + random.nextDouble() * (1.0 - stepLo)) / veloMag;
             veloYaw   *= scale;
             veloPitch *= scale;
         }

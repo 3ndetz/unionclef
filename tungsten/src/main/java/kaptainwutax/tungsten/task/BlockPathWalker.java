@@ -56,11 +56,11 @@ public class BlockPathWalker {
     private static boolean stoppedByBail = false;
     private static final int LIVE_STUCK_LIMIT = 20;    // ~1s of the bot not moving → BFS
     private static final double LIVE_STUCK_MOVE = 0.5; // min displacement to count as moving
-    // Live-steer at an EXTERNAL moving target has NO waypoint-feedback spin risk (the
-    // target is independent of the bot's motion), so it can keep closing on a CURVED
-    // approach at a wider gate while WindMouse finishes turning — instead of stopping to
-    // pivot on every bearing change (which halved the chase speed). Non-live keeps 45.
-    private static final double LIVE_MOVE_GATE = 65.0;
+    // Face-before-move gate (deg). Matches the movement gate so the stall detector's
+    // "trying to move" agrees with when the bot actually sprints. A wider gate was tried
+    // and reverted (the bot sprinted while mis-aimed and wandered off-course); the fast
+    // nav turn (WindMouseRotation.setTargetFast) is what keeps this gate open instead.
+    private static final double LIVE_MOVE_GATE = 45.0;
 
     // White-box climb instrumentation (off by default; toggled via py4j setWalkerDebug).
     // Logs the walker's per-tick decisions so a FAILING climb can be understood mechanism-
@@ -234,9 +234,11 @@ public class BlockPathWalker {
             return;
         }
 
-        // movement
+        // movement — FAST nav turn (snap the view toward the chase target) so the bot
+        // stays aligned and keeps sprinting instead of stopping to pivot; combat/mining/
+        // bow keep the slow humanized aim. tickBFS (terrain) also stays humanized.
         float yaw = AttackTiming.yawTo(playerPos, directTarget);
-        WindMouseRotation.INSTANCE.setTarget(yaw, 0);
+        WindMouseRotation.INSTANCE.setTargetFast(yaw, 0);
 
         // FACE-BEFORE-MOVE (same fix as tickBFS): the humanized WindMouse yaw takes a few
         // frames to converge; pressing forward while it's still off makes the bot chase a
@@ -246,11 +248,10 @@ public class BlockPathWalker {
         // follow walker would make the combat approach circle the target.
         double yawErr = Math.abs(WindMouseRotation.wrapDelta(yaw - player.getYaw()));
         boolean onGround = player.isOnGround();
-        // Non-live keeps the strict 45deg gate (waypoint-feedback spin risk). Live-steer
-        // uses the wider LIVE_MOVE_GATE: no spin risk (external target), and stopping to
-        // pivot on every bearing change halved the chase speed so the bot fell behind.
-        double moveGate = liveMode ? LIVE_MOVE_GATE : 45.0;
-        boolean move = (yawErr < moveGate) || !onGround;
+        // Keep the strict 45deg gate: a wider gate let the bot sprint while badly mis-aimed
+        // and it wandered off-course (even off a ledge). Aligned-only sprint; the turn speed
+        // (WindMouse) is what must be fast enough to keep the gate open — see setTargetFast.
+        boolean move = (yawErr < 45.0) || !onGround;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(move);
