@@ -24,6 +24,7 @@ elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="swap": out=dict(mc.setTungstenPathing(bool(req["on"])))
 elif op=="goto": mc.ExecuteCommand("@goto "+str(req["x"])+" "+str(req["y"])+" "+str(req["z"])); out={"ok":True}
 elif op=="stop": mc.ExecuteCommand("@stop"); mc.punkStop(); out={"ok":True}
+elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",40)))]}
 print(json.dumps(out,default=str)); gw.close()
 """
 def sh(a,to=40): return subprocess.run(a,capture_output=True,text=True,timeout=to)
@@ -78,11 +79,24 @@ def run_once(k):
             if p[1]>maxY: maxY=p[1]
             if abs(p[0]-13)<=1.5 and p[1]>=-48.5 and not reached:
                 reached=True; treach=round(s*0.5,1)
+    # grab the walker/executor chat markers BEFORE @stop clears context
+    chat=[]
+    try:
+        for c in py4j("chat",n=40)["chat"]:
+            cc=c.replace('§2§l§o','').replace('§r','').replace('§c','').replace('§a','').replace('§e','')
+            if any(m in cc for m in ('Walker','BFS','drift','nodes','executePath','Rejecting','stub','planning','robust','Stopped')):
+                chat.append(cc.strip())
+    except Exception: pass
     py4j("stop")
     # compact x-progress signature
     sig="".join(chr(65+min(25,max(0,int(x/2)))) if x is not None else "?" for x in xs[::2])
     tag="PASS" if reached else "FAIL"
     print(f"  run {k}: {tag}  final={last} maxY={maxY:.1f} reachedAt={treach}  xsig={sig}")
+    # dedup consecutive identical chat lines, show last ~8
+    ded=[]
+    for c in chat:
+        if not ded or ded[-1]!=c: ded.append(c)
+    if ded: print(f"       chat: {ded[-8:]}")
     return reached
 
 def main():
