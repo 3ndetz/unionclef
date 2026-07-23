@@ -794,6 +794,21 @@ public class PathFinder {
     }
     
     private boolean isPathComplete(Node node, Vec3d target, boolean failing, WorldView world) {
+    	// When the block path is truncated at a pending break/place, COMPLETE the physics leg
+    	// at the truncated EDGE (the last standable cell), not at the goal across the un-bridged
+    	// gap. Otherwise the sim walks onto the not-yet-placed floor, falls, and the executor
+    	// replays that fall (drift ~159 blocks -> hard-stop -> bot derails). This is the
+    	// core_bridge ~50% flakiness: on find() calls where the size<=2 handoff doesn't fire but
+    	// a bridge IS planned, the physics leg simmed across the gap. Stop it at the edge; the
+    	// goto retry then handoffs and paves. (Breaks are usually at-wall -> handoff, so this
+    	// rarely triggers for them; break_test is the regression guard.)
+    	if (pendingBreaks != null || pendingPlaces != null) {
+    		Optional<List<BlockNode>> bp = PathFinder.blockPath;
+    		if (bp != null && bp.isPresent() && !bp.get().isEmpty()) {
+    			Vec3d edge = bp.get().getLast().getPos(false, world);
+    			if (node.agent.getPos().squaredDistanceTo(edge) <= 0.75D) return true;
+    		}
+    	}
     	if (BlockStateChecker.isAnyWater(world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ()))))
     		return node.agent.getPos().squaredDistanceTo(target) <= 0.9D;
     	if (world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ())).getBlock() instanceof LadderBlock)
