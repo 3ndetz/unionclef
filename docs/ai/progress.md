@@ -940,3 +940,11 @@ VALIDATED (diag_climb_multi/slime_test x8 fresh): A 3-wide staircase 6/8 -> 7-8/
 still ~3/8 near the top (pathological lateral precision on a 1-block ledge; real terrain is wider)
 — tracked as an edge case, not shipped as fixed. Diag tooling (COURSE/WIDTH params, py4j retry,
 tp-verify, chat/white-box capture) kept for the future.
+
+POST-RELEASE REGRESSION SWEEP (v0.44.0): break_test 4/4 PASS (mining unaffected — walker change is
+orthogonal). core_bridge (v0.42.0 place-as-a-move) 1/3 — FLAKY, PRE-EXISTING (it failed at v0.42.0
+too, and it runs via gotoXYZ = the async pathfinder + EXECUTOR, NOT the walker, so face-before-move
+can't touch it). Failure symptoms: bot walks BACKWARD off the near island (x=-4.5) or stalls at the
+gap edge without planning the bridge. Likely a distinct issue (sky-island chunk load — core_bridge
+lacks forceload, unlike terrain_test — and/or executor approach control). TRACKED as a separate item;
+does not block the v0.44.0 climbing/parkour win.
