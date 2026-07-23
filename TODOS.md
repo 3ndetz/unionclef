@@ -57,15 +57,16 @@
   pvp_test is necessary but NOT sufficient — it passed while live failed; add a moving/human-like
   scenario). My earlier [x] on 2.1/2.2/2.3 was WRONG (stand PASS != live).
 - [ ] LIVE-C @gamer STILL runs on BARITONE, not tungsten-primary. User wants tungsten.
-  ⛔ READINESS ASSESSED 2026-07-24 (v0.52.0): NOT ready to flip the default. terrain_test with
-  setTungstenPathing(true) FAILS A (staircase, didn't climb), B (steep 15.7/22), C (wall 25.7/29);
-  only D snaps. Logs: BFS walker runs ('Walker: BFS N wp') but 'Failed! No block path' + physics
-  'drift 1.680 > 1.5'. So @goto+PRIMARY (CustomBaritoneGoalTask.driveTungstenPrimary) doesn't climb,
-  even though ;goto (DIRECT walker) does (diag_climb history). => the driveTungstenPrimary WRAPPER is
-  the problem (physics drift is the killer), NOT the walker. NEXT FOCUSED PASS: make @goto+primary own
-  the terrain climb via the drift-immune walker the SAME way ;goto does (same fix pattern as the
-  LIVE-A follow fix: walker owns movement, suppress the drift-prone physics leg). Do NOT flip
-  TungstenHelper.primary until terrain_test A/B/C + gamer_smoke pass. ORIGINAL NOTE:
+  ✅ PROGRESS v0.53.0 (2026-07-24): setTungstenPathing couples smartMoves ON -> tungsten-primary now
+  CLIMBS reachable terrain (terrain_test A staircase/B steep/D PASS; earlier A/B "fail" was smartMoves
+  OFF, not a wrapper bug). C (2-block wall) needs blocks = correct. ⛔ DEFAULT FLIP STILL BLOCKED:
+  gamer_smoke (tungsten-primary @gamer on gamer-server) = bot MOVES but 0 items, stalls ~60s with
+  'Ran out of nodes!'. Root: that fires when BlockSpacePathFinder.openSet EMPTIES (L195) — the search
+  explored ALL reachable nodes without reaching the goal => the @gamer goal is genuinely UNREACHABLE
+  via tungsten's move-set on hard/mountainous terrain (NOT a budget bump; it's move-gen/reachability).
+  NEXT FRESH PASS (deep): block-space move-gen/reachability on hard terrain (break/place-as-a-move in
+  the search, water/cliff handling, or receding-horizon sub-goal segmentation). Do NOT flip
+  TungstenHelper.primary until this + a clean gamer run (items>0). ORIGINAL NOTE:
   ROOT (found
   2026-07-23): `TungstenHelper.primary = false` by DEFAULT -> altoclef nav (@goto/@get/@gamer) uses
   baritone; `setTungstenPathing(true)` (sets useTungsten + experimentalPathfinding -> setPrimary(true))
