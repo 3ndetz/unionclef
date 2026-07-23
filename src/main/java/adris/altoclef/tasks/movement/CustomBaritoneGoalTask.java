@@ -255,20 +255,30 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     /** Equip a throwaway building block for pillaring (#46). True if a BlockItem is
      *  (now) in hand. Tries common cheap blocks the bot carries. Agent-provided
      *  blocks in hand already count — this is the mod's autonomous fallback. */
+    private static final net.minecraft.item.Item[] BUILD_BLOCKS = {
+        net.minecraft.item.Items.COBBLESTONE, net.minecraft.item.Items.DIRT,
+        net.minecraft.item.Items.STONE, net.minecraft.item.Items.NETHERRACK,
+        net.minecraft.item.Items.COBBLED_DEEPSLATE, net.minecraft.item.Items.OAK_PLANKS,
+        net.minecraft.item.Items.DEEPSLATE, net.minecraft.item.Items.ANDESITE
+    };
+
     private boolean equipBuildBlock(AltoClef mod) {
         if (mod.getPlayer().getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem) return true;
-        net.minecraft.item.Item[] blocks = {
-            net.minecraft.item.Items.COBBLESTONE, net.minecraft.item.Items.DIRT,
-            net.minecraft.item.Items.STONE, net.minecraft.item.Items.NETHERRACK,
-            net.minecraft.item.Items.COBBLED_DEEPSLATE, net.minecraft.item.Items.OAK_PLANKS,
-            net.minecraft.item.Items.DEEPSLATE, net.minecraft.item.Items.ANDESITE
-        };
-        for (net.minecraft.item.Item b : blocks) {
+        for (net.minecraft.item.Item b : BUILD_BLOCKS) {
             if (mod.getItemStorage().hasItemInventoryOnly(b)) {
                 mod.getSlotHandler().forceEquipItem(b);
                 return true;
             }
         }
+        return false;
+    }
+
+    /** The bot has a placeable block (does NOT equip). Gates the pathfinder's plan-bridging
+     *  so parkour/walk routing without blocks is unaffected. */
+    private boolean hasBuildBlock(AltoClef mod) {
+        if (mod.getPlayer().getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem) return true;
+        for (net.minecraft.item.Item b : BUILD_BLOCKS)
+            if (mod.getItemStorage().hasItemInventoryOnly(b)) return true;
         return false;
     }
 
@@ -304,6 +314,10 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (cachedGoal == null || isFinished()) return false;
         net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
         if (gp == null) return false;
+        // Capability-aware: let the block-space search plan BRIDGING only when the bot
+        // actually has a placeable block. No block -> planPlaceMoves off -> parkour/walk
+        // routing is completely unaffected (the user's requirement).
+        kaptainwutax.tungsten.TungstenConfig.get().planPlaceMoves = hasBuildBlock(mod);
 
         // ── Anti-permanent-stuck safety net ──────────────────────────────
         long nowMs = System.currentTimeMillis();

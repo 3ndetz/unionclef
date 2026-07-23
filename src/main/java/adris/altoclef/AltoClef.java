@@ -520,6 +520,27 @@ public class AltoClef implements ModInitializer {
             }
         };
 
+        // when the tungsten executor paves a planned bridge, equip a cheap build block
+        // into the main hand (mirror of equipToolHook for placing). Runs on the client
+        // thread from tickPlacing. Tungsten never touches the inventory itself.
+        kaptainwutax.tungsten.TungstenModDataContainer.equipBlockHook = () -> {
+            try {
+                if (getPlayer() == null) return;
+                if (getPlayer().getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem) return;
+                net.minecraft.item.Item[] blocks = {
+                    net.minecraft.item.Items.COBBLESTONE, net.minecraft.item.Items.DIRT,
+                    net.minecraft.item.Items.STONE, net.minecraft.item.Items.NETHERRACK,
+                    net.minecraft.item.Items.COBBLED_DEEPSLATE, net.minecraft.item.Items.OAK_PLANKS,
+                    net.minecraft.item.Items.DEEPSLATE, net.minecraft.item.Items.ANDESITE
+                };
+                for (net.minecraft.item.Item b : blocks) {
+                    if (getItemStorage().hasItemInventoryOnly(b)) { getSlotHandler().forceEquipItem(b); return; }
+                }
+            } catch (Throwable t) {
+                // the hook must never break placing
+            }
+        };
+
         // Tungsten protection hook: altoclef's break-avoiders (bed protection,
         // task-scoped avoid lists, protected zones) are the single source of
         // truth for "may we mine this" — bridge them into tungsten BreakRules.
