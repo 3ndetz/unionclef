@@ -1,6 +1,34 @@
 # TODOs
 
 ## 🐞 BUGS (from live user testing — each = its own GitHub issue, fix by priority, per checklist)
+
+### ⛔ URGENT LIVE BUGS (user live-tested v0.44.0, 2026-07-23 — combat/follow are NOT actually working; my earlier [x] on 2.1/2.2/2.3/2.8/2.10 was WRONG: stand pvp_test PASS != live. RE-OPENED.)
+- [ ] LIVE-A (URGENT) MOVING TARGET -> ETERNAL RE-PLAN -> STANDS STILL. FollowPlayer / any follow /
+  punk: on a MOVING target the pathfinder re-plans forever and the bot STANDS instead of even
+  trying to move. Works ONLY while the target is stationary. ROOT (found): FollowEntityTask.tick
+  drives movement via the physics pathfinder (budget 0.5-3s), which is stopped+restarted every time
+  the target strays (line ~208-218); the immediate drift-immune BFS walker only runs at `dist > 6`
+  (startFind line ~237), so at CLOSE range there is NOTHING moving the bot while the physics search
+  churns. FIX: the immediate walker / direct-sprint must drive the chase at ALL ranges (continuous
+  movement toward the live target), physics executor only for precise/terrain legs — mirror the
+  @goto walker-primary design. The 2.8 "hysteresis" fix was insufficient. TEST: pvp_moving_test +
+  live human target.
+- [ ] LIVE-B (URGENT) PUNK/COMBAT broken live: (a) aim SHAKES violently (WindMouse chasing a
+  position-packet target that jumps every tick — no smoothing/deadzone on a jittery lead); (b)
+  barely HITS (attack gate too strict / never settles because the aim never converges); (c) does
+  NOT approach when CLOSE (see LIVE-A — no mover at close range; LEAP needs flat+LOS+!executor and
+  often doesn't fire). These are the SAME live-vs-stand gap the TODO 2.x notes flagged but I wrongly
+  marked done. Fix aim smoothing + convergence + close-range approach together; re-test LIVE.
+- [ ] LIVE-C @gamer STILL runs on BARITONE, not tungsten-primary. User wants tungsten. Audit
+  @gamer's path delegation (13.3b) — the tungsten-primary swap exists but @gamer isn't using it by
+  default. Make @gamer drive on tungsten (walker + executor), not baritone.
+- [~] LIVE-D SHIFT/sneak STICKS ~5s randomly (esp. pressing sprint near an edge). ROOT FOUND:
+  VoidGuard.protect (combat/VoidGuard.java:56) and SafetySystem edge-sneak set `sneakKey.setPressed(true)`
+  near a void edge but NEVER release it; when the driving task (flee/punk/combat) ends the sneak is
+  left pressed over the human player's control. resetAllState() releases all keys but only fires on
+  DISCONNECT, not on task-end. FIX (in progress): VoidGuard releases sneak when not near an edge +
+  release mod-controlled keys once on the driving->idle transition.
+
 - [x] BUG #26 (CRASH, DONE 2026-07-22) `PathExecutor.getCurrentNode` did `path.get(-1)` on an
   EMPTY path ("mining without a physics leg") → IndexOutOfBounds in the entity tick → whole
   client crash on a goto that needs a 1-block mine. Fix: guard empty path (return null;
