@@ -222,16 +222,21 @@ public class BlockPathWalker {
         // a running jump genuinely needs the horizontal reach. Deterministic staircase climb.
         boolean walkClimb = false;
         {
+            boolean sawStepUp = false, sawGap = false;
             double acc = 0;
             Vec3d prev = playerPos;
-            for (int i = waypointIdx; i < path.size() && acc <= 3.2; i++) {
+            for (int i = waypointIdx; i < path.size() && acc <= 4.0; i++) {
                 Vec3d w = Vec3d.ofBottomCenter(path.get(i));
                 double d = horizontalDist(prev, w);
-                if (d > 1.8) break;                     // a gap -> not a contiguous staircase
-                if (path.get(i).getY() > pby) { walkClimb = true; break; }   // step-up ahead
+                if (d > 1.8) { sawGap = true; break; }               // a gap -> parkour, keep sprinting
+                if (path.get(i).getY() > pby) sawStepUp = true;      // a contiguous step-up
                 acc += Math.max(d, 0.6);
                 prev = w;
             }
+            // WALK only a PURE staircase (step-up with no gap in the window). If a gap sits
+            // in the lookahead (course B: step onto a pillar, then a +2 running jump), keep
+            // sprinting — decelerating there would kill the momentum the gap jump needs.
+            walkClimb = sawStepUp && !sawGap;
         }
         boolean gap = dist >= 2.0 && !walkClimb;        // running-jump distance (parkour)
 
