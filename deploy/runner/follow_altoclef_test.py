@@ -124,6 +124,7 @@ def main():
     wait_for("server rcon", lambda: "players" in rcon("list"), 300, 5)
     for c in ["forceload add -32 -16 32 16",
               "fill -26 -60 -12 26 -45 12 air",
+              "fill -26 -61 -12 26 -61 12 stone",   # FLOOR (bot can't fall into terrain holes)
               "gamerule advance_time false", "gamerule advance_weather false",
               "weather clear", "time set day"]:
         print(f"  rcon: {c} -> {rcon(c)[:50]}")
