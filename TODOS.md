@@ -39,9 +39,14 @@
   bunny-hop + circle-strafe kite; (4) blocking-entity handling; (5) LIVE re-test each (stand
   pvp_test is necessary but NOT sufficient — it passed while live failed; add a moving/human-like
   scenario). My earlier [x] on 2.1/2.2/2.3 was WRONG (stand PASS != live).
-- [ ] LIVE-C @gamer STILL runs on BARITONE, not tungsten-primary. User wants tungsten. Audit
-  @gamer's path delegation (13.3b) — the tungsten-primary swap exists but @gamer isn't using it by
-  default. Make @gamer drive on tungsten (walker + executor), not baritone.
+- [ ] LIVE-C @gamer STILL runs on BARITONE, not tungsten-primary. User wants tungsten. ROOT (found
+  2026-07-23): `TungstenHelper.primary = false` by DEFAULT -> altoclef nav (@goto/@get/@gamer) uses
+  baritone; `setTungstenPathing(true)` (sets useTungsten + experimentalPathfinding -> setPrimary(true))
+  flips it, but nothing enables it by default. FIX is NOT a blind default flip: tungsten-primary for
+  FULL @gamer survival is unvalidated (terrain-stuck history 13.3b; and combat is only now being
+  reworked). Do a validated @gamer-on-tungsten run first (the nightly full-game pass), THEN default
+  it on. Interim: the walker (v0.44.0 face-before-move) made terrain nav solid, so tungsten-primary
+  is closer to ready than before.
 - [~] LIVE-D SHIFT/sneak STICKS ~5s randomly (esp. pressing sprint near an edge). ROOT FOUND:
   VoidGuard.protect (combat/VoidGuard.java:56) and SafetySystem edge-sneak set `sneakKey.setPressed(true)`
   near a void edge but NEVER release it; when the driving task (flee/punk/combat) ends the sneak is
