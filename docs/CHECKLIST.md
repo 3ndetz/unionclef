@@ -98,6 +98,20 @@ Full guide — **`docs/RELEASE.md`**. In short:
 - TG notification (`PushNotification`) if this is a milestone the user would want now.
 - **DO NOT STOP.** Take the next task (phase 2) and go through the cycle again.
 
+### Phase 9 — FINAL STOP (only when ALL tasks closed or hardware fails)
+- **Closed-loop autonomy (user 2026-07-23):** you run a CLOSED LOOP — the user is not
+  needed for decisions or tests. Doubt on a hard task is NOT a reason to defer or stop —
+  it is a reason to **test MORE thoroughly** on the stand and finish. "Risky /
+  multi-session / regression-prone" are NOT reasons to leave a TODO item — decompose it,
+  do a focused pass, test to green, release. Only a truly-all-closed TODO (incl. child /
+  emerging tasks) or hardware failure ends the loop.
+- **Send the final report to Telegram** if a bot token exists:
+  `python C:/repos/pet/mineswarm/game/cristalix/tg_report.py <text_file>` (reads
+  `TG_BOT_TOKEN`/`OPERATOR_CHAT_ID` from `mineswarm/.env`; never print the token). The
+  report states: what was done + releases, the status of EVERY TODO item, and — if the
+  stop is NOT "everything closed" — EXACTLY why and what blocked a focused pass on the
+  next task.
+
 ---
 
 ## ⛔ IRON RULES (never break)

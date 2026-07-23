@@ -1992,6 +1992,19 @@ public class Py4jEntryPoint {
         return out;
     }
 
+    /** Toggle the block-space pathfinder's plan-bridging move (place-as-a-move in the
+     *  search — the mirror of break-through). Off by default; the executor still needs a
+     *  block in hand to actually pave. Test lever for #46 core place-as-a-move. */
+    public Map<String, Object> setTungstenPlanPlaceMoves(boolean on) {
+        Map<String, Object> out = new HashMap<>();
+        try {
+            kaptainwutax.tungsten.TungstenConfig.get().planPlaceMoves = on;
+            out.put("ok", true);
+            out.put("planPlaceMoves", kaptainwutax.tungsten.TungstenConfig.get().planPlaceMoves);
+        } catch (Exception e) { out.put("ok", false); out.put("reason", e.getMessage()); }
+        return out;
+    }
+
     /** Read the current pathing-delegation mode (goal 13). */
     public Map<String, Object> pathingMode() {
         Map<String, Object> out = new HashMap<>();

@@ -54,7 +54,7 @@ def wait_for(desc,fn,ts,iv=4):
 
 def build():
     rcon("forceload add -8 -8 40 8")
-    rcon(f"clear {BOT}")   # no leftover blocks — else a climb stall could fire pillar/bridge
+    rcon(f"clear {BOT}")   # pure parkour/walk, no blocks — no reactive place-trigger interference
     # clear a working area and lay a flat floor at y=-61 (top -60)
     rcon("fill 0 -60 -4 40 10 4 air")
     rcon("fill 0 -61 -4 40 -61 4 stone")

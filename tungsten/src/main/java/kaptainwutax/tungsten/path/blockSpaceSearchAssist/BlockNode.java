@@ -110,6 +110,16 @@ public class BlockNode {
 		return toBreak != null && !toBreak.isEmpty();
 	}
 
+	/** Support blocks that must be PLACED to make this cell reachable (a bridge floor
+	 *  under a gap cell). Set by tryPlanPlaceThrough; consumed by PathFinder/PathExecutor
+	 *  — the exact mirror of toBreak. This is place-as-a-move as a FIRST-CLASS search move
+	 *  (not a reactive give-up): the block-space A* plans placing as part of the route. */
+	public java.util.List<BlockPos> toPlace = null;
+
+	public boolean hasPlaces() {
+		return toPlace != null && !toPlace.isEmpty();
+	}
+
 	/**
 	 * Where is this node in the array flattenization of the binary heap? Needed for
 	 * decrease-key operations.
@@ -432,6 +442,12 @@ public class BlockNode {
 			return false;
 		}
 
+		// Place-through (bridge): an adjacent gap cell (body fits, no floor under it) is
+		// accepted with a place-plan instead of being pruned as a hole — place-as-a-move.
+		if (tryPlanPlaceThrough(world, child)) {
+			return false;
+		}
+
 		// Specific block checks
 		if (childState.isOf(Blocks.LAVA))
 			return true;
@@ -647,6 +663,49 @@ public class BlockNode {
 		// nodes is the most a break can carry and still ever be chosen over an
 		// unbounded-length detour. 0.15 ≈ one walk node per ~30 mining ticks.
 		child.cost += ticks * 0.15 * TungstenConfig.get().breakCostMultiplier;
+		return true;
+	}
+
+	/**
+	 * Place-through planning — the exact mirror of tryPlanBreakThrough, for BRIDGING.
+	 * If an adjacent same-Y child cell is a GAP (body fits: cell + head clear, but there
+	 * is NO floor under it), accept the child and record the support block to PLACE. This
+	 * makes place-as-a-move a FIRST-CLASS search move: the block-space A* plans bridging
+	 * as part of the route (not a reactive 14s-stall give-up). The physics leg is then
+	 * truncated at the gap edge (like a wall) and PathExecutor.tickPlacing paves it, after
+	 * which the goto continuation re-searches the now-bridged world.
+	 *
+	 * Gated on allowPlace (altoclef sets it only when the bot actually has a block, so no
+	 * block == no place-move == no behaviour change). High cost so the search prefers
+	 * walking/parkour and only bridges when there is no cheaper route.
+	 */
+	private boolean tryPlanPlaceThrough(WorldView world, BlockNode child) {
+		if (!TungstenConfig.get().planPlaceMoves || !TungstenConfig.get().allowPlace) return false;
+		// Only bridge TOWARD the goal. On open void every direction is a gap, so bridging
+		// everywhere explodes the search into node exhaustion — a place-move must make real
+		// progress (child strictly closer to the goal than the current cell).
+		if (child.estimatedCostToGoal >= this.estimatedCostToGoal) return false;
+		int dx = child.x - this.x, dy = child.y - this.y, dz = child.z - this.z;
+		if (dy != 0 || Math.abs(dx) + Math.abs(dz) != 1) return false;   // adjacent same-Y (bridge)
+		BlockPos feet = child.getBlockPos();
+		BlockPos support = feet.down();
+		if (BlockShapeChecker.getShapeVolume(feet, world) != 0) return false;        // cell blocked
+		if (BlockShapeChecker.getShapeVolume(feet.up(), world) != 0) return false;   // head blocked
+		if (BlockShapeChecker.getShapeVolume(support, world) != 0) return false;     // already floored -> normal move
+		// Must have a floor to place FROM (godbridge places against its side face). CHAINING:
+		// if THIS cell is itself a planned bridge cell, its floor (this.toPlace) will be paved,
+		// so the bot can stand on it and place the next — this lets ONE search plan a whole
+		// multi-cell bridge (without it the search explores endless 1-cell bridges and exhausts
+		// its node budget into a CPU spin on wide/open gaps).
+		BlockPos myFloor = this.getBlockPos().down();
+		boolean floorSolid = BlockShapeChecker.getShapeVolume(myFloor, world) != 0;
+		boolean floorPlanned = this.toPlace != null && this.toPlace.contains(myFloor);
+		if (!floorSolid && !floorPlanned) return false;
+		if (!kaptainwutax.tungsten.path.PlaceRules.canPlace(world, support)) return false;
+		child.toPlace = new java.util.ArrayList<>(java.util.List.of(support));
+		// place penalty ~ a slow action (same scaling as break): high enough to prefer a
+		// walk/parkour route, low enough to beat an unbounded detour.
+		child.cost += 20.0 * 0.15;
 		return true;
 	}
 

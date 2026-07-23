@@ -29,6 +29,13 @@ public class TungstenModDataContainer {
     public static java.util.function.BiConsumer<net.minecraft.util.math.BlockPos, net.minecraft.block.BlockState> equipToolHook = null;
 
     /**
+     * Equip-a-build-block hook: altoclef equips a cheap placeable block into the main
+     * hand when the tungsten executor is about to PAVE a planned bridge (mirror of
+     * equipToolHook for breaking). Tungsten never touches the inventory itself.
+     */
+    public static Runnable equipBlockHook = null;
+
+    /**
      * Protection hook: returns false when the inventory/brain side (altoclef)
      * forbids mining a position — bridges its break-avoiders/protected zones
      * into BreakRules. Registered at altoclef init.

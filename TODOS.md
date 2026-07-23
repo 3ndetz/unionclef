@@ -13,12 +13,25 @@
 - [~] PLACE-AS-A-MOVE (user asked "did you add building/bridging to tungsten?"). PRACTICAL GOAL
   DELIVERED: the bot now DOES pillar up (v0.38) and bridge across a gap (v0.41) during @goto —
   validated (pillar_reach_test, bridge_goto_test). Implemented as a give-up-driven move in
-  driveTungstenPrimary (stall at a raised/gapped goal + block in inventory -> PillarTask/
-  BridgeTask toward the goal). REMAINING REFINEMENT (rule #6 "in core"): integrate Bridge/Pillar
-  as FIRST-CLASS moves inside the block-space search (BlockNode.getChildren, like tryPlanBreakThrough)
-  so the pathfinder plans them PROACTIVELY mid-route (not only reactively after a ~14s stall, and
-  for mid-route gaps not just the final goal). Deferred: core-search edits are regression-prone
-  (the SmartMoves epic regressed terrain), so this needs the same careful repro→test→audit cycle.
+  driveTungstenPrimary. CORE VERSION IN PROGRESS (2026-07-23, per user's no-band-aids directive):
+  BRIDGE is now a FIRST-CLASS block-space move, mirroring break-through exactly —
+  BlockNode.tryPlanPlaceThrough (toPlace) -> PathFinder.pendingPlaces (truncate + 'bridging
+  without a physics leg') -> PathExecutor.tickPlacing. Capability-aware + segmented: gated on
+  planPlaceMoves (altoclef enables only with a block -> parkour/walk WITHOUT blocks unaffected)
+  + per-cell PlaceRules.canPlace (protected zones). Goal-ward gate stops open-void search
+  explosion. STATUS: mechanism PROVEN (bot paved cobblestone across a 4-cell sky gap); compiles;
+  planPlaceMoves DEFAULT OFF so it is INERT/safe (parkour-without-blocks confirmed: terrain B PASS
+  with the flag off). KNOWN HARD PROBLEM found in testing: on a WIDE / open-void gap the search
+  SPINS to ~375% CPU and destabilises the bot. Root: one block-space search plans only ONE bridge
+  cell (tryPlanPlaceThrough needs this.down() SOLID to place from), so an N-cell gap needs N
+  segment re-searches, and the ;goto retry + resumeGoto loop compound on open void even with the
+  goal-ward gate. PROPER FIX (dedicated focused session): model PLANNED placements as SOLID inside
+  the search (treat toPlace cells as floor for subsequent children) so ONE search plans the whole
+  bridge, executed in a single godbridge pass — then cap/validate. NOT YET: that efficiency
+  redesign; altoclef integration (planPlaceMoves + equipBlockHook when the bot has a block); the
+  CORE PILLAR place-move (up) for raised goals / 2-block walls (course C). The reactive give-up
+  bridge/pillar (v0.41, released, tested) remains the working fallback; reactive wall-climb REVERTED.
+  Keep planPlaceMoves OFF until the efficiency redesign lands.
 - [~] BUG #28 ('Ran out of nodes' on hard parkour) Single goto to a reachable parkour target
   often prints 'Ran out of nodes' and fails. PARTLY FIXED v0.40.0 (#34): the walker's grid-BFS
   path source (CombatPathfinder) now generates parkour jump-moves (+2..4 across, flat or +1 up),
@@ -232,9 +245,14 @@
     loop to unreachable, v0.41 stall-cap), #30 (unreal routes — routes around now), #31 (break-through).
   - COMMENTED + re-test requested (my work likely helps, need repro): #12 (@gamer freeze), #13
     (always stuck), #20 (recalc loop on terrain change).
-  - PRs: #10 MERGED (the 1.21.11->main merge itself). #22/#23 (RiaDev1 external bug-fix PRs) NOT
-    merged — external contributions targeting main that need human review vs the extensive 1.21.11
-    work; flagged for the user.
+  - PRs: ALL handled autonomously (user 2026-07-23 — review+test+merge/close myself, never defer).
+    #10 MERGED (1.21.11->main). #23 CLOSED — reviewed all 5 fixes (MobDefense worstSafety, StlHelper
+    Double.compare, GoalRunAway cost>0.001, WorldSurvival single-increment, FoodChain stopEat flag
+    clear); ALL already in current main (same fixes/comments incorporated via the 1.21.11 work), the
+    rest is build/wrapper noise. #22 CLOSED — its stuck/freeze fixes (WorldSurvival move-gated
+    increment, UnstuckChain interval=0, tungsten executor try-catch) also all already in main; the
+    branch is 448 commits behind (237-file diff) so merging would REVERT the whole current line.
+    RiaDev1's fixes ARE in main, via the active branch, not these PRs. Zero open PRs remain.
   - LEFT OPEN (out of this session's pathfinding scope — altoclef crafting/inventory/features):
     #25, #19-craft, #18 (EntityTracker leak), #16, #15, #24, #21 (godbridge sneak), #7, #5, #2.
     Each needs its own repro→core-fix→test pass per the checklist — separate work.

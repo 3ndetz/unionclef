@@ -124,6 +124,12 @@ public class TungstenConfig {
     /** Allow the mod to place blocks at all (bridge/build/fill/schematic). */
     public boolean allowPlace = true;
 
+    /** Let the block-space pathfinder plan BRIDGING as a first-class move (place a floor
+     *  across a gap as part of the route — the mirror of allowBreak's break-through).
+     *  Default OFF: opt-in, and altoclef enables it only when the bot has a placeable
+     *  block, so parkour/walk routing without blocks is completely unaffected. */
+    public boolean planPlaceMoves = false;
+
     /** No-placing zones: [x1,y1,z1,x2,y2,z2] boxes (inclusive, any corner order).
      *  Protected areas (claims/privates) — the mod never places here. Paired with
      *  breakDenyZones so markProtectedArea can lock both mining and building. */
