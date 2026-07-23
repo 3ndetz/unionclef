@@ -68,20 +68,22 @@ def main():
     chat=py4j(FC,"recent",n=300).get("chat",[])
     py4j(FC,"wdbg",on=False)
     # parse "dir live%d d%.1f yawErr%.0f move%d grnd%d stuck%d spd%.2f los%d"
+    def field(toks, pre):
+        for t in toks:
+            if t.startswith(pre):
+                rest = t[len(pre):]
+                if rest.replace(".","",1).replace("-","",1).isdigit():
+                    return float(rest)
+        return None
     rows=[]
     for line in chat:
         k=line.find("dir live")
         if k<0: continue
-        s=line[k:]
-        try:
-            d=float(s.split("d",1)[1].split(" ")[0])
-            ye=float(s.split("yawErr")[1].split(" ")[0])
-            mv=int(s.split("move")[1][0])
-            st=int(s.split("stuck")[1].split(" ")[0])
-            sp=float(s.split("spd")[1].split(" ")[0])
-            lo=int(s.split("los")[1][0])
-            rows.append((d,ye,mv,st,sp,lo))
-        except Exception: continue
+        toks=line[k:].split()   # dir live1 d5.0 yawErr30 move1 grnd1 stuck0 spd0.28 los1
+        d=field(toks,"d"); ye=field(toks,"yawErr"); mv=field(toks,"move")
+        st=field(toks,"stuck"); sp=field(toks,"spd"); lo=field(toks,"los")
+        if None in (d,ye,mv,st,sp,lo): continue
+        rows.append((d,ye,int(mv),int(st),sp,int(lo)))
     print(f"\n=== WALKER tickDirect samples: {len(rows)} ===")
     if rows:
         n=len(rows)
