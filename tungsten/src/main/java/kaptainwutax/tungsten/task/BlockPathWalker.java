@@ -50,6 +50,10 @@ public class BlockPathWalker {
     private static boolean liveMode = false;
     private static Vec3d liveStuckAnchor = null;
     private static int liveStuckTicks = 0;
+    // true when the last DIRECT stop was a BAIL (no LOS / stall / danger) rather than a
+    // success (reached the target). FollowEntityTask reads this so its live-steer cooldown
+    // only fires on a real obstacle, not on close-success or an executor hand-off.
+    private static boolean stoppedByBail = false;
     private static final int LIVE_STUCK_LIMIT = 20;    // ~1s of the bot not moving → BFS
     private static final double LIVE_STUCK_MOVE = 0.5; // min displacement to count as moving
 
@@ -131,6 +135,11 @@ public class BlockPathWalker {
         return active;
     }
 
+    /** True if the last DIRECT stop was a bail (no LOS / stall / danger), not a success. */
+    public static boolean wasStoppedByBail() {
+        return stoppedByBail;
+    }
+
     /** BFS endpoint for A* start position. */
     public static Vec3d getEndpoint() {
         if (path == null || path.isEmpty()) return null;
@@ -142,8 +151,10 @@ public class BlockPathWalker {
     public static void tick(ClientPlayerEntity player) {
         if (!active) return;
 
-        // auto-stop when executor takes over
-        if (TungstenModDataContainer.isExecutorRunning()) {
+        // auto-stop when executor takes over (NON-live only). In live-steer the walker
+        // OWNS movement — FollowEntityTask has explicitly stopped the executor — so a
+        // 1-tick transient "executor still running" must not yank the walker off.
+        if (!liveMode && TungstenModDataContainer.isExecutorRunning()) {
             stop();
             return;
         }
@@ -197,12 +208,14 @@ public class BlockPathWalker {
             if (!hasLOS) Debug.logMessage("Walker: no LOS → BFS");
             else if (stalled) Debug.logMessage("Walker: stalled → BFS");
             else Debug.logMessage("Walker: danger → BFS");
+            stoppedByBail = true;
             switchToBFS();
             return;
         }
 
-        // close enough — done
+        // close enough — done (success, not a bail)
         if (dist < 1.5) {
+            stoppedByBail = false;
             stop();
             return;
         }

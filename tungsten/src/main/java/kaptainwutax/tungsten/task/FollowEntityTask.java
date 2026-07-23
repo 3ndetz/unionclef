@@ -207,7 +207,8 @@ public class FollowEntityTask {
         // fall through to the BFS + physics A* flow below. Defer to LEAP if active.
         // If a prior live-steer just bailed, the walker will have stopped — start a
         // cooldown so we don't re-steer into the same wall before BFS can route around.
-        if (steerRequestedLastTick && !BlockPathWalker.isRunning()) {
+        if (steerRequestedLastTick && !BlockPathWalker.isRunning()
+                && BlockPathWalker.wasStoppedByBail()) {
             steerCooldownTicks = STEER_COOLDOWN;
         }
         steerRequestedLastTick = false;
