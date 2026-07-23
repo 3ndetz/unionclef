@@ -211,14 +211,28 @@ public class BlockPathWalker {
             stalled = noProgressTicks >= NO_PROGRESS_LIMIT;
         }
 
-        // check safety: landing safe + no holes on path to target
-        BlockPos targetBlock = BlockPos.ofFloored(directTarget);
+        // check safety. For a LIVE chase we only guard the IMMEDIATE ground ahead (a few
+        // blocks) — far hole/void avoidance is the BFS/physics job. Scanning the WHOLE line
+        // to a 20-block-away target made DIRECT bail "danger" on nearly every tick, so the
+        // drift-prone physics executor did all the moving (slow, never closed on a runner).
+        double toX = directTarget.x - playerPos.x, toZ = directTarget.z - playerPos.z;
+        double horiz = Math.sqrt(toX * toX + toZ * toZ);
+        double aheadDist = Math.min(horiz, 4.0);
+        BlockPos aheadCheck = (horiz < 0.5)
+                ? BlockPos.ofFloored(directTarget)
+                : BlockPos.ofFloored(new Vec3d(
+                        playerPos.x + toX / horiz * aheadDist,
+                        directTarget.y,
+                        playerPos.z + toZ / horiz * aheadDist));
         boolean landingSafe = SafetySystem.isJumpLandingSafe(playerPos, player.getVelocity(), world);
-        boolean pathSafe = !SafetySystem.hasHolesOnPath(playerPos, targetBlock, world);
+        boolean pathSafe = !SafetySystem.hasHolesOnPath(playerPos, aheadCheck, world);
         boolean groundSafe = CombatPathfinder.isWalkable(player.getBlockPos(), world);
 
-        // bail to BFS if: no LOS, stalled, or danger
+        // bail to BFS if: no LOS, stalled, or IMMEDIATE danger
         if (!hasLOS || stalled || !pathSafe || !groundSafe) {
+            if (DEBUG) Debug.logMessage(String.format(
+                    "dirBAIL los%d stall%d path%d grnd%d d%.1f", hasLOS ? 1 : 0,
+                    stalled ? 1 : 0, pathSafe ? 1 : 0, groundSafe ? 1 : 0, dist));
             if (!hasLOS) Debug.logMessage("Walker: no LOS → BFS");
             else if (stalled) Debug.logMessage("Walker: stalled → BFS");
             else Debug.logMessage("Walker: danger → BFS");
