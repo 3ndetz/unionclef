@@ -208,7 +208,10 @@ def main():
         time.sleep(5)
 
     print("[4/4] running courses...")
-    py4j("chat", msg=";settings verboseDebugLogging true")
+    # Keep verbose drift logging OFF: it prints a per-tick physics-sim dump to STDOUT that
+    # floods the log, chokes the py4j gateway, and makes the whole stand flap. The test is
+    # position-based and doesn't need it. (Persisted config — leaving it on breaks later runs.)
+    py4j("chat", msg=";settings verboseDebugLogging false")
     time.sleep(1)
     results = {}
     # A: start on the high platform, goal on the +3 platform across the slime pit
