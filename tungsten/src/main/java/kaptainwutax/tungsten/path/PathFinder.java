@@ -254,16 +254,15 @@ public class PathFinder {
 	    // a not-yet-placed floor). Skip the physics leg — hand the executor an empty path
 	    // with the place queue; bridging starts immediately and the goto retry drives the
 	    // rest of the now-bridged world. Mirror of the break handoff above.
-	    //
-	    // Fire whenever a bridge is planned and the support cell is within REACH — do NOT
-	    // gate on blockPath.size(). White-box: the search plans the bridge on most find()
-	    // calls, but the old `size() <= 2` gate skipped the handoff when the guidance rooted
-	    // a cell further back, so the drift-prone physics leg ran and simulated walking
-	    // ACROSS the un-bridged gap and FALLING (drift ~159 blocks -> hard-stop -> derail;
-	    // ~50% flaky). Reach + self-limiting tickPlacing (places only against a SOLID
-	    // neighbour; the first bridge cell borders the edge) make the size gate unnecessary,
-	    // and the subsequent approach is over the now-placed solid floor (no fall).
+	    // NOTE: the `size() <= 2` gate is LOAD-BEARING — it fires the handoff only when the
+	    // bot is AT the edge, so between paves the physics leg walks the bot forward onto the
+	    // just-placed floor. Dropping it (fire on reach alone) made the handoff monopolise
+	    // with empty paths and the bot never advanced -> 0/8. The residual ~50% flakiness is
+	    // NOT here: it's the block-space search occasionally returning a fall-partial (no
+	    // bridge planned that find()) so the physics leg sims ACROSS the gap and falls — a
+	    // #1.6.1 search-reliability problem, tracked separately.
 	    if (pendingPlaces != null && !pendingPlaces.isEmpty()
+	            && blockPath.get().size() <= 2
 	            && player.getEyePos().distanceTo(net.minecraft.util.math.Vec3d.ofCenter(pendingPlaces.get(0))) < 5.0) {
 	        Debug.logMessage("At the gap — bridging without a physics leg");
 	        TungstenModDataContainer.EXECUTOR.setPath(new ArrayList<>());
