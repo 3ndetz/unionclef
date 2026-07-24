@@ -1,5 +1,65 @@
 # TODOs
 
+## ⛔⛔ URGENT REWORK BACKLOG (user live-tested the demo videos, 2026-07-24 round 2 — RECORD ONLY, do NOT fix; user will take each as its own focused pass)
+
+> Overarching verdict (user): the current build / godbridge / combat mechanisms look CHEATY and
+> UNNATURAL — "как будто читерский", "БРЕД". They must be REWORKED to be PHYSICALLY SIMULATED,
+> SLOWER (baritone-like), with VISIBLE physics/jumps/approach, and every change MUST be tested on a
+> REAL SERVER and checked it is NOT anti-cheat-flagged. "каждый такой ПУК надо тестировать на
+> сервере и смотреть, что не будут это флагать." These are MY screwups to fix, recorded now.
+
+- [ ] **RW-1 — PvP combat still bad / not a speedrunner.** Live symptoms (user):
+  - Still spins slowly ("всё ещё медленно крутится"), moves slowly and badly ("медленно и плохо
+    двигается"), and STANDS doing a long-look ("стоит смотрит долговид") OFTEN DURING the attack.
+  - Requirement: must attack WITHOUT breaks, like a professional speedrunner ("должен атаковать
+    без перерывов как профессиональный спидранер") — never pause/stare mid-fight.
+  - TEST INFRA to build: a proper COMBAT, MOVING target that fights back ("найти и создать
+    полноценную боевую двигающуюся цель"). Run PvP sessions on DANGEROUS EDGE/BORDER zones
+    ("на опасных пограничных зонах") where BOTH bots hit each other AND competently keep footing
+    1 block from the drop ("оба бота должны бить друг друга и грамотно устоять на 1 блоке от
+    падения"). i.e. edge-aware combat + a live sparring partner, not a static dummy.
+  - Related existing item: LIVE-B COMBAT FULL REWORK (below) — same theme; fold in.
+- [ ] **RW-2 — Building: approach + break-order not visible; placement looks instant/cheaty.**
+  - Breaking a block IS visible, but the bot's APPROACH to the block it must break is NOT
+    ("не видно как он ПОДХОДИТ к нужному блоку"), and it's NOT visible how it CHOOSES which block
+    to break first ("не видно как он выбирает какой блок ломать первым") — need a real, visible
+    walk-to-target + break-order.
+  - Placement is BROKEN/absurd: in the //replace clip all 6 glass appeared INSTANTLY at once, "как
+    будто ЗАМЕНИЛИСЬ КОМАНДОЙ" ("БРЕД!!!"). The build mechanism looks broken or cheaty. MUST be
+    tested on a REAL SERVER, not just the stand ("надо тестировать это на реальном сервере").
+  - Requirement: building must be SLOW and physical like baritone ("просто строительство медленное
+    как в baritone") — walk to each cell, aim, place ONE block at a time, real timing.
+- [ ] **RW-3 — Godbridge is cheaty (no-look, no physics).**
+  - The bot places blocks under itself "cheatily" without even looking where it puts them ("както
+    читерски ставит под себя блоки не видя даже куда он их ставит — это бред"). No physics visible,
+    no jumps visible.
+  - Requirement: a REWORK OF THE MODES ("нужен rework режимов") toward physically-simulated
+    acceleration + deliberate JUMPS with in-flight block-adjustment-under-self ("физически-
+    симулированные ускорения, продуманные джампы с подстройкой блоков под себя в полёте"). Slower,
+    natural, real aim at the placement.
+- [ ] **RW-4 (cross-cutting) — REAL-SERVER + ANTI-CHEAT validation for every mechanic change.**
+  Every build/bridge/combat rework "ПУК" must be tested on a real server and visually checked it is
+  not flagged by anti-cheat. Ties to item 11 (anti-cheat humanization) and task #64 (live bedwars).
+- [ ] **RW-5 — Build ONE CLEAR, GOOD test pipeline for everything (current tests are a mess).**
+  User: "сейчас везде мусор." Unify the ad-hoc per-feature scripts (deploy/runner/*.py) into a clear,
+  documented, repeatable pipeline: one entrypoint, named suites (nav/parkour/combat/build/bridge/
+  ranged), consistent PASS/FAIL reporting, fresh-bot handling, frame+log verification baked in (the
+  new verify-with-eyes rule). It must be OBVIOUS what each test checks and how to run it.
+- [ ] **RW-6 — RANGED/bow demo video from tungsten is MISSING and must exist.**
+  No clip shows tungsten ranged shooting; there should be one (bow aim + trajectory + hit). Build a
+  clean ranged demo (bow_moving_test already validates the mechanic on the stand) once the capture
+  pipeline is solid. Part of the demo set alongside bridge/worldedit/pvp.
+- [ ] **RW-7 — Test polygons/ranges need to be better designed and clearer.**
+  User: "Полигоны тестов нужно лучше проработать и сделать более понятными." The current arenas are
+  ad-hoc and visually ambiguous (see the demo-video saga). Design clean, purpose-built, self-evident
+  test polygons (labelled, minimal clutter, deterministic geometry) for each capability.
+- [ ] **RW-8 — Prepare SEVERAL PARKOUR regression stands of varying difficulty.**
+  User: "паркуры он всегда мог проходить раньше" — parkour USED TO always pass; changing logic must
+  not silently break it. Build a graded parkour suite (easy → hard: flat gaps, ascending steps, slime
+  bounces, mixed) as a REGRESSION GATE run on every pathfinder/physics change, so a regression is
+  caught immediately. (Directly relevant: terrain_test A/B currently FAIL on physics drift — this
+  suite would tell us whether that is a regression or long-standing, which we currently can't prove.)
+
 ## 🐞 BUGS (from live user testing — each = its own GitHub issue, fix by priority, per checklist)
 
 ### ⛔ URGENT LIVE BUGS (user live-tested v0.44.0, 2026-07-23 — combat/follow are NOT actually working; my earlier [x] on 2.1/2.2/2.3/2.8/2.10 was WRONG: stand pvp_test PASS != live. RE-OPENED.)
