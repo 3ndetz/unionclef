@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
 """Record a demo clip of the bot on the autotest stand via x11grab.
 
-Records the client's real rendered screen (no getScreenshot render-thread load) while a
-scenario runs, makes an mp4 + gif in /mc-data (host: deploy/run/data/tester1), and extracts
-verification FRAMES so the footage is LOOKED AT before it's ever sent (checklist rule
-2026-07-24 — never ship an unwatched clip).
+Two capture modes:
+  - EXTERNAL cam (single-bot scenarios: bridge/slime/worldedit): tester2 is put in spectator
+    mode at a fixed vantage and its screen is recorded while tester1 acts. This gives a clean,
+    well-framed shot with NO acting-bot body occlusion and NO debug overlays/chat (tester2
+    doesn't run tungsten, so tester1's path/place wireframes + chat never render on it).
+  - OWN cam (two-bot scenarios: pvp/bedwars): tester1's own third-person view (tester2 is the
+    opponent, so it can't also be the camera).
 
-Each scenario: (1) wipes a CLEAN arena (no leftover cruft that makes a void ambiguous),
-(2) builds unambiguous geometry (deep void, wall, enemy in frame), (3) picks a camera
-perspective that keeps the SUBJECT visible, (4) sizes the record duration to the op so it's
-never truncated. Usage: capture_demo.py <slime|bridge|worldedit|pvp|bedwars>
+Each scenario wipes a CLEAN arena, builds unambiguous geometry, and sizes the record duration
+to the op (never truncated). Verification FRAMES are extracted so footage is LOOKED AT before
+it's ever sent (checklist rule 2026-07-24 — never ship an unwatched clip).
+Usage: capture_demo.py <slime|bridge|worldedit|pvp|bedwars>
 """
-import functools, json, subprocess, sys, time, os
+import functools, json, subprocess, sys, time
 print = functools.partial(print, flush=True)
 CLIENT="uctest-mc-tester1"; SERVER="uctest-server"; C2="uctest-mc-tester2"; BOT="tester1"; VICTIM="tester2"
 SCEN = sys.argv[1] if len(sys.argv)>1 else "slime"
 
 def rcon(c,t=20): return subprocess.run(["docker","exec",SERVER,"rcon-cli",c],capture_output=True,text=True,timeout=t).stdout.strip()
-def clean(x1,z1,x2,z2,ytop=20,ybot=-80):
-    """Wipe a big box to air so leftover blocks from prior scenarios never clutter the shot."""
+def clean(x1,z1,x2,z2,ytop=25,ybot=-95):
     rcon(f"forceload add {x1} {z1} {x2} {z2}")
     rcon(f"fill {x1} {ybot} {z1} {x2} {ytop} {z2} air")
 def wait_for(desc,fn,ts,iv=3):
@@ -37,43 +39,51 @@ def py4j(container, body, t=60):
           "mc=gw.entry_point\n"+body+"\ngw.close()")
     return subprocess.run(["docker","exec",container,"python3","-c",snip],capture_output=True,text=True,timeout=t)
 
-def disable_debug():
-    """Turn OFF tungsten's debug render overlays (search-node / path / break / place / combat
-    wireframe boxes) — they buried every demo in dev clutter. Persist in the running client;
-    then wait for the settings-confirmation chat to fade before we start recording."""
-    for s in ["renderVisualization","renderPathMoves","renderBreakPlan","renderPlacePlan","renderCombat"]:
-        py4j(CLIENT, f'mc.ChatMessage(";settings {s} false")'); time.sleep(0.3)
-    time.sleep(11)  # let the confirmation chat lines fade out of frame
-
 def ensure_ingame(container):
-    py4j(container,"import time\n"
-         "if not mc.inGame():\n"
-         "    mc.ConnectToServer('test-server'); time.sleep(3)\n")
+    py4j(container,"import time\nif not mc.inGame():\n    mc.ConnectToServer('test-server'); time.sleep(3)\n")
     for _ in range(30):
         if py4j(container,"print(mc.inGame())").stdout.strip().endswith("True"): return
         time.sleep(3)
     print(f"  warn: {container} maybe not in game")
 
-def record(dur, trigger_body, persp=1):
-    """Start x11grab (detached), fire the scenario (py4j body), wait, make gif + frames."""
+def _frames_and_gif(rec_container, dur):
     mp4=f"/mc-data/demo_{SCEN}.mp4"; gif=f"/mc-data/demo_{SCEN}.gif"
+    subprocess.run(["docker","exec",rec_container,"ffmpeg","-y","-i",mp4,"-vf","fps=10,scale=640:-1:flags=lanczos",gif],
+                   capture_output=True,text=True)
+    for tag,frac in [("a",0.25),("b",0.40),("c",0.55),("d",0.70),("e",0.85)]:
+        ts=max(0.5, dur*frac)
+        subprocess.run(["docker","exec",rec_container,"ffmpeg","-y","-ss",f"{ts:.1f}","-i",mp4,
+                        "-frames:v","1","-vf","scale=640:-1",f"/mc-data/frame_{SCEN}_{tag}.png"],
+                       capture_output=True,text=True)
+    r=subprocess.run(["docker","exec",rec_container,"sh","-c",f"ls -la {mp4} {gif}"],capture_output=True,text=True)
+    print("  outputs:",r.stdout.strip().replace("\n"," | "))
+
+def record_own(dur, trigger_body, persp=1):
+    """Record tester1's OWN screen (two-bot scenarios)."""
     py4j(CLIENT, f"mc.setPerspective({persp})")
     subprocess.run(["docker","exec","-d",CLIENT,"ffmpeg","-y","-f","x11grab","-framerate","15",
-                    "-i",":0","-t",str(dur),"-pix_fmt","yuv420p",mp4])
+                    "-i",":0","-t",str(dur),"-pix_fmt","yuv420p",f"/mc-data/demo_{SCEN}.mp4"])
     time.sleep(0.8)
     py4j(CLIENT, "import time\n"+trigger_body, t=dur+40)
     time.sleep(dur+2)
-    subprocess.run(["docker","exec",CLIENT,"ffmpeg","-y","-i",mp4,"-vf","fps=10,scale=640:-1:flags=lanczos",gif],
-                   capture_output=True,text=True)
-    # 5 verification frames spread across the clip so the actual behaviour is captured, not
-    # just the before/after (a fast op can finish between two sparse frames).
-    for tag,frac in [("a",0.25),("b",0.40),("c",0.55),("d",0.70),("e",0.85)]:
-        ts=max(0.5, dur*frac)
-        subprocess.run(["docker","exec",CLIENT,"ffmpeg","-y","-ss",f"{ts:.1f}","-i",mp4,
-                        "-frames:v","1","-vf","scale=640:-1",f"/mc-data/frame_{SCEN}_{tag}.png"],
-                       capture_output=True,text=True)
-    r=subprocess.run(["docker","exec",CLIENT,"sh","-c",f"ls -la {mp4} {gif}"],capture_output=True,text=True)
-    print("  outputs:",r.stdout.strip().replace("\n"," | "))
+    _frames_and_gif(CLIENT, dur)
+
+def record_ext(dur, cam, look, trigger_body):
+    """Record tester2 as a fixed SPECTATOR cam at `cam`=(x,y,z) looking at `look`=(x,y,z),
+    while tester1 runs trigger_body. Clean external view — no acting-bot occlusion/overlays."""
+    ensure_ingame(C2)
+    rcon(f"gamemode spectator {VICTIM}")
+    rcon(f"tp {VICTIM} {cam[0]} {cam[1]} {cam[2]} facing {look[0]} {look[1]} {look[2]}")
+    time.sleep(1.0)
+    # tester2's data dir is /mc-data too (its own volume); record ITS screen
+    subprocess.run(["docker","exec","-d",C2,"ffmpeg","-y","-f","x11grab","-framerate","15",
+                    "-i",":0","-t",str(dur),"-pix_fmt","yuv420p",f"/mc-data/demo_{SCEN}.mp4"])
+    time.sleep(0.8)
+    # re-assert the cam right before the action (in case the spectator drifted/loaded)
+    rcon(f"tp {VICTIM} {cam[0]} {cam[1]} {cam[2]} facing {look[0]} {look[1]} {look[2]}")
+    py4j(CLIENT, "import time\n"+trigger_body, t=dur+40)
+    time.sleep(dur+2)
+    _frames_and_gif(C2, dur)
 
 # -------- scenarios --------
 
@@ -87,30 +97,22 @@ def setup_slime():
 
 BRIDGE_N = 18
 def setup_bridge():
-    # WIDE + DEEP clean void (no flanking terrain — so it reads unmistakably as a void), a
-    # small pad at its west edge and a destination platform on the far side. Bot on the pad
-    # edge; camera behind (persp 1) looks EAST along the 1-wide bridge as blocks drop into the
-    # void ahead. Wide clean is the fix — the old z=-4..4 clean left stone flanking the gap.
     clean(-6,-30,40,30,ytop=30,ybot=-95)
     rcon("fill -3 -61 -2 1 -61 2 stone")               # start pad, east edge at x=1
-    rcon("fill 20 -61 -3 26 -61 3 stone")              # destination platform on the far side
+    rcon("fill 20 -61 -3 26 -61 3 stone")              # destination platform
     rcon(f"clear {BOT}"); rcon(f"item replace entity {BOT} hotbar.0 with cobblestone 64")
     rcon("time set day"); rcon("weather clear")
     rcon(f"tp {BOT} 1 -60 0 -90 0"); time.sleep(2)     # pad edge, facing east(+x); void x=2..19
 
 def setup_we():
-    clean(-10,-8,10,10)
-    rcon("fill -8 -61 -8 8 -61 8 stone")               # a clean floor to stand on / build against
+    clean(-12,-10,12,10)
+    rcon("fill -8 -61 -8 8 -61 8 grass_block")         # GRASS floor so a STONE wall stands out
     rcon("time set day"); rcon("weather clear")
     rcon(f"item replace entity {BOT} hotbar.1 with stone 64")
     rcon(f"item replace entity {BOT} hotbar.2 with glass 64")
     rcon(f"item replace entity {BOT} hotbar.3 with diamond_pickaxe")
-    rcon(f"tp {BOT} 0 -60 2 180 8"); time.sleep(2)     # 2 blocks south of the wall plane (z=0), facing north at it
+    rcon(f"tp {BOT} 0 -60 3 180 8"); time.sleep(2)     # 3 blocks south of the wall plane (z=0) — the distance where //set builds the 2-tall wall
 
-# first-person: the 3x2 wall APPEARS in stone (@@set) then turns to GLASS (@@replace),
-# directly in view, no bot body in the way. The REPLACE place-phase is DRIVEN by polling
-# restat (replaceStatus sorts bottom-up + places) — sleeping alone leaves it broken (only
-# the break ran). Record dur must cover the full poll loop so nothing is truncated.
 WE_DUR = 44
 WE_BODY = (
     'mc.ExecuteCommand("@stop")\n'
@@ -118,9 +120,9 @@ WE_BODY = (
     'mc.select(-1,-60,0, 1,-59,0)\n'
     'time.sleep(1.5)\n'
     'mc.we("set stone")\n'
-    'time.sleep(9)\n'                       # //set places the 6 stone
+    'time.sleep(9)\n'
     'mc.we("replace stone glass")\n'
-    'for _ in range(22):\n'                 # POLL drives break -> place (bottom-up)
+    'for _ in range(22):\n'
     '    st=dict(mc.we("restat"))\n'
     '    if str(st.get("phase"))=="done": break\n'
     '    time.sleep(1.2)\n'
@@ -129,19 +131,19 @@ WE_BODY = (
 
 def setup_pvp():
     clean(-12,-10,12,10)
-    rcon("fill -12 -61 -10 12 -61 10 stone")           # arena floor
+    rcon("fill -12 -61 -10 12 -61 10 stone")
+    rcon(f"gamemode survival {VICTIM}")
     rcon("gamerule pvp true"); rcon("gamerule immediate_respawn true"); rcon("time set day")
     rcon(f"item replace entity {BOT} weapon.mainhand with iron_sword")
     ensure_ingame(C2)
-    rcon(f"tp {VICTIM} 4 -60 0 -90 0"); rcon(f"tp {BOT} -4 -60 0 -90 0"); time.sleep(2)  # enemy ahead, in frame
+    rcon(f"tp {VICTIM} 4 -60 0 -90 0"); rcon(f"tp {BOT} -4 -60 0 -90 0"); time.sleep(2)
 
 def setup_bedwars():
-    # two islands over a CLEAN DEEP void; bot at the near-island east edge, enemy on the far
-    # island. bridge the gap, then fight — the whole thing in one clip.
     clean(-6,-8,24,8)
-    rcon("fill -3 -61 -4 1 -61 4 stone")               # near island, east edge x=1
-    rcon("fill 9 -61 -4 15 -61 4 stone")               # far island (enemy)
+    rcon("fill -3 -61 -4 1 -61 4 stone")
+    rcon("fill 9 -61 -4 15 -61 4 stone")
     rcon("setblock 12 -60 0 red_bed")
+    rcon(f"gamemode survival {VICTIM}")
     rcon("gamerule pvp true"); rcon("gamerule immediate_respawn true")
     rcon("time set day"); rcon("weather clear")
     rcon(f"clear {BOT}")
@@ -149,12 +151,12 @@ def setup_bedwars():
     rcon(f"item replace entity {BOT} hotbar.1 with iron_sword")
     ensure_ingame(C2)
     rcon(f"tp {VICTIM} 12 -60 0 90 0")
-    rcon(f"tp {BOT} 1 -60 0 -90 0"); time.sleep(2)     # near-island edge; void x=2..8
+    rcon(f"tp {BOT} 1 -60 0 -90 0"); time.sleep(2)
 
 BEDWARS_BODY = (
     'mc.selectHotbar(0)\n'
-    'time.sleep(0.6)\n'                 # let the slot select land before the bridge checks the hand
-    'mc.bridgeTo(9, -60, 0)\n'          # godbridge across the void to the far island
+    'time.sleep(0.6)\n'
+    'mc.bridgeTo(9, -60, 0)\n'
     'time.sleep(11)\n'
     'mc.selectHotbar(1)\n'
     'mc.ChatMessage(";punkPlayer '+VICTIM+'")\n'
@@ -164,12 +166,19 @@ BEDWARS_BODY = (
 def main():
     wait_for("rcon", lambda:"players" in rcon("list"),300,5)
     ensure_ingame(CLIENT); time.sleep(2)
-    disable_debug()   # clean shot — no dev wireframe clutter
-    if SCEN=="slime":       setup_slime();  record(9,  'mc.ChatMessage(";goto 5 -56 0")', persp=1)
-    elif SCEN=="bridge":    setup_bridge(); record(10, f'mc.selectHotbar(0); time.sleep(0.6); mc.bridgeForward("east", {BRIDGE_N})', persp=1)
-    elif SCEN=="worldedit": setup_we();     record(WE_DUR, WE_BODY, persp=0)
-    elif SCEN=="pvp":       setup_pvp();    record(14, 'mc.ChatMessage(";punkPlayer '+VICTIM+'")', persp=1)
-    elif SCEN=="bedwars":   setup_bedwars(); record(28, BEDWARS_BODY, persp=1)
+    if SCEN=="slime":
+        setup_slime()
+        record_ext(9, (6,-49,14),(6,-57,0), 'mc.ChatMessage(";goto 5 -56 0")')
+    elif SCEN=="bridge":
+        setup_bridge()
+        record_ext(10, (10,-53,16),(10,-60,0), f'mc.selectHotbar(0); time.sleep(0.6); mc.bridgeForward("east", {BRIDGE_N})')
+    elif SCEN=="worldedit":
+        setup_we()
+        record_ext(WE_DUR, (6,-56,7),(0,-59,0), WE_BODY)
+    elif SCEN=="pvp":
+        setup_pvp(); record_own(14, 'mc.ChatMessage(";punkPlayer '+VICTIM+'")', persp=1)
+    elif SCEN=="bedwars":
+        setup_bedwars(); record_own(28, BEDWARS_BODY, persp=1)
     else: print("unknown scenario"); sys.exit(2)
     print("DONE", SCEN)
 
