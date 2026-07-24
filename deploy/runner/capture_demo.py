@@ -20,9 +20,17 @@ CLIENT="uctest-mc-tester1"; SERVER="uctest-server"; C2="uctest-mc-tester2"; BOT=
 SCEN = sys.argv[1] if len(sys.argv)>1 else "slime"
 
 def rcon(c,t=20): return subprocess.run(["docker","exec",SERVER,"rcon-cli",c],capture_output=True,text=True,timeout=t).stdout.strip()
-def clean(x1,z1,x2,z2,ytop=25,ybot=-95):
+def clean(x1,z1,x2,z2,ytop=25,ybot=-70):
+    """Wipe a box to air. /fill caps at 32768 blocks, so slice into y-bands that stay under
+    the cap — a single big fill SILENTLY FAILS (the bug that left every arena cluttered)."""
     rcon(f"forceload add {x1} {z1} {x2} {z2}")
-    rcon(f"fill {x1} {ybot} {z1} {x2} {ytop} {z2} air")
+    dx=abs(x2-x1)+1; dz=abs(z2-z1)+1
+    per=max(1, 30000//(dx*dz))     # y-levels per fill, under the 32768 cap
+    y=ybot
+    while y<=ytop:
+        y2=min(ytop, y+per-1)
+        rcon(f"fill {x1} {y} {z1} {x2} {y2} {z2} air")
+        y=y2+1
 def wait_for(desc,fn,ts,iv=3):
     t0=time.time(); last=None
     while time.time()-t0<ts:
@@ -97,7 +105,7 @@ def setup_slime():
 
 BRIDGE_N = 18
 def setup_bridge():
-    clean(-6,-30,40,30,ytop=30,ybot=-95)
+    clean(-6,-18,40,18,ytop=10,ybot=-75)               # wide+deep enough for a clear void + cam sightline
     rcon("fill -3 -61 -2 1 -61 2 stone")               # start pad, east edge at x=1
     rcon("fill 20 -61 -3 26 -61 3 stone")              # destination platform
     rcon(f"clear {BOT}"); rcon(f"item replace entity {BOT} hotbar.0 with cobblestone 64")
