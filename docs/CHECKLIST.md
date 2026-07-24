@@ -113,6 +113,14 @@ Full guide — **`docs/RELEASE.md`**. In short:
   multi-session / regression-prone" are NOT reasons to leave a TODO item — decompose it,
   do a focused pass, test to green, release. Only a truly-all-closed TODO (incl. child /
   emerging tasks) or hardware failure ends the loop.
+- ⛔⛔ **VERIFY WITH EYES (SCREENSHOT/FRAMES) + LOGS BEFORE CLAIMING OR SENDING — MANDATORY
+  (user 2026-07-24, after I sent broken videos unwatched).** NEVER claim a demo/test works, and
+  NEVER send a video, on the strength of an assumption. Before sending a clip: (a) grab a
+  screenshot / sample a frame and LOOK at it, AND (b) read the run LOGS (getRecentChat for
+  'command not found'/errors, bridgePlaced/damage/kills counters, the actual block/entity state
+  via rcon). A passing unit test does NOT prove the DEMO scenario is correct (wrong command name,
+  wrong setup). If the footage doesn't visibly show the claimed behaviour, DO NOT SEND IT — fix
+  the scenario and re-verify. Sending unverified footage is a позор. This applies to every claim.
 - **REPORT SUCCESSFUL TESTS AS VIDEO TO TG — STANDING RULE (user 2026-07-24).** A TG bot token
   exists, so after a notable test passes (esp. PvP / combat / worldedit / bridging), RECORD it and
   send the clip to TG. Send OFTEN + VARIED (different PvP scenarios). Tooling: `deploy/runner/

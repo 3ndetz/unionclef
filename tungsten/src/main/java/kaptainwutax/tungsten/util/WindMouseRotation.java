@@ -30,13 +30,24 @@ public class WindMouseRotation {
     // WindMouse tuning — per render frame. Gravity = direct pull to target, wind = the
     // random orbit/spiral, maxStep = speed cap. Raised gravity + step and cut wind so the
     // aim converges FASTER and more DIRECTLY instead of slowly circling the target (user
-    // live 2026-07-24). Still pixel-quantized + some wind -> humanized, not a robotic snap.
-    private double gravity      = 5.0;
-    private double wind         = 0.8;
-    private double maxStep      = 7.0;
+    // live 2026-07-24, complained TWICE). Still pixel-quantized -> humanized, not a teleport.
+    private double gravity      = 6.5;
+    private double wind         = 0.30;
+    private double maxStep      = 9.0;
     private double windDist     = 20.0;
-    private double doneThreshold = 0.3;
+    private double doneThreshold = 0.5;
     private double flickScale   = 4.0;
+
+    // Close-range direct settle: within this many degrees of the target we DROP the
+    // WindMouse momentum + wind entirely and move a fixed fraction of the remaining angle
+    // straight at the target each frame. The slow "circling" the user saw is the classic
+    // WindMouse orbit — accumulated velocity + wind carries the aim PAST the target and it
+    // spirals in. Killing both inside the close zone makes the camera LAND sharply instead
+    // of orbiting. (user 2026-07-24, twice). Far-range approach still uses WindMouse (with
+    // velocity damping) so long turns stay smooth/humanized.
+    private static final double CLOSE_DEG   = 7.0;
+    private double closeFrac     = 0.55;   // combat/careful: fraction of remaining per frame
+    private static final double VELO_DAMP = 0.72; // far-range momentum damping (anti-orbit)
 
     private static final double SQRT3 = Math.sqrt(3.0);
     private static final double SQRT5 = Math.sqrt(5.0);
@@ -128,11 +139,30 @@ public class WindMouseRotation {
             return;
         }
 
+        // --- Close-range DIRECT settle: no wind, no momentum — kills the orbit. ---
+        // Move a large fraction of the remaining angle straight at the target. At render
+        // FPS this converges in a few frames = a sharp, crisp land, not a slow spiral.
+        if (dist < CLOSE_DEG) {
+            double frac = fastMode ? 0.9 : closeFrac;
+            double stepYaw   = dYaw   * frac;
+            double stepPitch = dPitch * frac;
+            // clamp so an extreme sensitivity can't overshoot in one frame
+            double stepMag = Math.sqrt(stepYaw * stepYaw + stepPitch * stepPitch);
+            double capClose = (fastMode ? maxStep * 2.6 : maxStep);
+            if (stepMag > capClose) {
+                double s = capClose / stepMag;
+                stepYaw *= s; stepPitch *= s;
+            }
+            resetVelocity();
+            accumulatePixels(stepYaw, stepPitch);
+            return;
+        }
+
         // Fast (nav) turn converges quicker: stronger pull, bigger cap, less random
         // slow-down — a running player's quick head-turn, not a careful combat micro-aim.
         double g  = fastMode ? gravity * 2.2 : gravity;
         double ms = fastMode ? maxStep * 2.6 : maxStep;
-        double stepLo = fastMode ? 0.85 : 0.5;
+        double stepLo = fastMode ? 0.85 : 0.6;
 
         double W = Math.min(wind, dist);
         if (dist >= windDist) {
@@ -143,8 +173,11 @@ public class WindMouseRotation {
             windPitch /= SQRT3;
         }
 
-        veloYaw   += windYaw   + g * dYaw   / dist;
-        veloPitch += windPitch + g * dPitch / dist;
+        // Damp accumulated momentum BEFORE adding this frame's pull — a plain WindMouse
+        // integrator lets velocity build up and overshoot (the orbit). Damping keeps the
+        // approach smooth but converging, not spiralling.
+        veloYaw   = veloYaw   * VELO_DAMP + windYaw   + g * dYaw   / dist;
+        veloPitch = veloPitch * VELO_DAMP + windPitch + g * dPitch / dist;
 
         double veloMag = Math.sqrt(veloYaw * veloYaw + veloPitch * veloPitch);
         double effectiveMaxStep = ms * Math.max(1.0, Math.min(flickScale, dist / 15.0));

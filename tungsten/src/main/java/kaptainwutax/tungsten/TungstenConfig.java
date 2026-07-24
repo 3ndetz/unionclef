@@ -196,17 +196,17 @@ public class TungstenConfig {
      *  Bumped 2.0→3.2: the bot was reported "turning slowly" and its aim lagged
      *  a strafing/knocked-back target (trigger gate angle hit 90°); faster ramp
      *  closes the gap so swings actually land. */
-    public double combatWindMouseGravity = 4.3;   // x2 in CombatController -> 8.6 (was 6.4): faster pull, no slow orbit, moderated so it doesn't overshoot (user 2026-07-24)
+    public double combatWindMouseGravity = 5.5;   // x2 in CombatController -> 11 (brake) / 5.5 (aim): STRONG pull. Overshoot is now prevented by the close-range direct-settle zone in WindMouseRotation, not by keeping gravity low (user 2026-07-24, sharper camera)
 
     /** WindMouse wind — random perturbation magnitude per frame.
      *  Higher = more jitter/overshoot. */
-    public double combatWindMouseWind = 0.8;
+    public double combatWindMouseWind = 0.35;   // cut from 0.8: the wind is the "circling" the user hated. Low wind + velocity damping = a sharp aim, not a spiral (2026-07-24)
 
     /** WindMouse max step — max degrees per render frame.
      *  Caps rotation speed. Lower = slower, more human-like.
      *  Bumped 4.0→7.0 for snappier close-range tracking (effective PvP over
      *  human-like slowness — this is a combat aura, not a legit-look aimer). */
-    public double combatWindMouseMaxStep = 7.0;
+    public double combatWindMouseMaxStep = 10.0;   // 7->10: faster close-range tracking; close-settle zone keeps it crisp, not overshooting (2026-07-24)
 
     /** Distance (degrees) below which wind noise decays.
      *  Below this angle the mouse "settles" toward target. */
