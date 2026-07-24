@@ -196,6 +196,20 @@ public class BlockSpacePathFinder {
 			if (!generateDeep) {
 				return search(world, start, target, true, player);
 			}
+			// openSet exhausted — NO move sequence reaches the goal (a move-generation
+			// reachability gap: the terrain needs a move type SmartMoves doesn't emit, e.g.
+			// a slime bounce or a jump wider than parkour). Rather than return empty and let
+			// the bot STAND STILL ("Ran out of nodes"), hand back the FURTHEST-progressed
+			// partial path so it advances toward the goal and re-searches from there
+			// (graceful degradation). bestSoFar only returns a path when there's real
+			// forward progress (>1 block / >MIN_DIST_PATH), so a zero-progress search still
+			// gives up cleanly here — no oscillation in place. (#67, user 2026-07-24)
+			Optional<List<BlockNode>> partial = bestSoFar(true, numNodes, start, world);
+			if (partial.isPresent()) {
+				Debug.logMessage("Partial path (goal unreachable via move-gen) — advancing "
+						+ partial.get().size() + " nodes toward goal");
+				return partial;
+			}
 			Debug.logWarning("Ran out of nodes");
 			return Optional.empty();
 		}
