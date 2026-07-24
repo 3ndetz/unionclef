@@ -351,17 +351,21 @@ class AllRound(Scenario):
     id = "allround"
     duration = 120
     settings = {"combatMovementsEnabled": "true"}
-    bot_kit = KIT_SWORD + ["give {name} bow 1", "give {name} arrow 64"]
+    # slot 0 = bow (shootArrowAt needs it IN HAND), slot 1 = sword, + arrows
+    bot_kit = ["item replace entity {name} hotbar.0 with bow",
+               "item replace entity {name} hotbar.1 with iron_sword",
+               "give {name} arrow 64"]
     victim_kit = KIT_SWORD
 
     def build(self, arena, ctx):
-        arena.flat_field(half=20)
-        ctx.geo["bot_spawn"] = f"-13.5 {STAND_Y} 0.5 -90 0"
-        ctx.geo["victim_spawn"] = f"13.5 {STAND_Y} 0.5 90 0"
+        arena.flat_field(half=24)
+        ctx.geo["bot_spawn"] = f"-19.5 {STAND_Y} 0.5 -90 0"
+        ctx.geo["victim_spawn"] = f"19.5 {STAND_Y} 0.5 90 0"
         ctx.geo["melee_started"] = False
         ctx.geo["last_shot"] = -10.0
 
     def drive_start(self, ctx):
+        ctx.bot.py.call("selectHotbar", 0)  # bow in hand for the ranged phase
         ctx.victim.py.call("punk", ctx.bot.name)
 
     def drive_tick(self, ctx, t):
@@ -371,11 +375,12 @@ class AllRound(Scenario):
         if dist is None:
             return
         if dist > 10:
-            if t - ctx.geo["last_shot"] >= 4.0:
+            if t - ctx.geo["last_shot"] >= 2.5:
                 ctx.geo["last_shot"] = t
                 ctx.bot.py.try_call("shootArrowAt", ctx.victim.name)
         else:
             ctx.geo["melee_started"] = True
+            ctx.bot.py.call("selectHotbar", 1)  # sword for melee (punk swings the held item)
             ctx.bot.py.call("punk", ctx.victim.name)
 
     def early_stop(self, ctx):

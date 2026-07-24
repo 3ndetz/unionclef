@@ -55,7 +55,13 @@ def _rec_start(scn_id, dur, persp=0):
     # unplayable "moov atom not found").
     subprocess.Popen(["docker", "exec", "-d", BOT_CONTAINER, "ffmpeg", "-y",
                       "-f", "x11grab", "-framerate", "15", "-i", ":0",
-                      "-t", str(dur + 8), "-pix_fmt", "yuv420p",
+                      "-t", str(dur + 8),
+                      # x264 + bitrate cap: a raw yuv420p grab of a 90-120s
+                      # scenario hit 60 MB (> Telegram's 50 MB sendVideo limit,
+                      # 413). ultrafast keeps CPU off the software renderer.
+                      "-c:v", "libx264", "-preset", "ultrafast",
+                      "-b:v", "1100k", "-maxrate", "1400k", "-bufsize", "2M",
+                      "-pix_fmt", "yuv420p",
                       "-movflags", "+frag_keyframe+empty_moov+default_base_moof",
                       mp4])
     time.sleep(1.0)
