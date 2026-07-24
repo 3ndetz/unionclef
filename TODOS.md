@@ -11,6 +11,9 @@
 - [ ] **RW-1 — PvP combat still bad / not a speedrunner.** Live symptoms (user):
   - Still spins slowly ("всё ещё медленно крутится"), moves slowly and badly ("медленно и плохо
     двигается"), and STANDS doing a long-look ("стоит смотрит долговид") OFTEN DURING the attack.
+  - MOSTLY STANDS / barely moves WHEN THE TARGET IS NEARBY ("бот большую часть времени стоит, почти
+    не двигается когда цель рядом") — at close range it should be constantly moving (strafe/hop),
+    not frozen. This is the dominant symptom in close combat.
   - Requirement: must attack WITHOUT breaks, like a professional speedrunner ("должен атаковать
     без перерывов как профессиональный спидранер") — never pause/stare mid-fight.
   - TEST INFRA to build: a proper COMBAT, MOVING target that fights back ("найти и создать
@@ -59,6 +62,17 @@
   bounces, mixed) as a REGRESSION GATE run on every pathfinder/physics change, so a regression is
   caught immediately. (Directly relevant: terrain_test A/B currently FAIL on physics drift — this
   suite would tell us whether that is a regression or long-standing, which we currently can't prove.)
+- [ ] **RW-9 — Follow-player NEVER catches a moving target (constant re-route). OLD bug, still live.**
+  User: when the target moves, the bot CONSTANTLY rebuilds the route and NEVER catches it ("постоянно
+  перестраивает маршрут, и НИКОГДА не может догнать цель. Это старый косяк ещё"). NOTE: LIVE-A was
+  marked FIXED v0.52.0 on the STAND (follow_altoclef_test avg 1.4), but the user still sees it fail
+  LIVE — stand PASS != live, RE-OPEN. Root is likely the same re-plan churn (physics re-search
+  restarts every time the target strays) that LIVE-A/LIVE-B describe; the fix must make the chase a
+  CONTINUOUS pursuit of the live target, not a stop-and-re-plan loop.
+  - BENCH TO BUILD (the essence, user): run TWO pipelines simultaneously — bot #1 RUNS AWAY on
+    BARITONE, bot #2 CHASES on TUNGSTEN, over COMPLEX/HARD terrain. Tungsten MUST CATCH UP
+    ("Tungsten ДОЛЖЕН ДОГНАТЬ — вот суть бенча"). Pass = closes distance to melee/contact within a
+    bound; fail = never catches. This is a real moving-target chase over terrain, not a flat loop.
 
 ## 🐞 BUGS (from live user testing — each = its own GitHub issue, fix by priority, per checklist)
 
