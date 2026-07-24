@@ -1,5 +1,11 @@
 # AUTOTESTING — автодеплой + автотест мода
 
+> **UPDATE 2026-07-24: unified suite pipeline (RW-5) — `deploy/runner/run_suite.py`.**
+> New PvP/ranged/chase/bridge scenarios live in the `uctest` library
+> (`deploy/runner/uctest/`), one entrypoint, consistent PASS/FAIL + artifacts.
+> Design + scenario catalogue: **[features/PVP_SUITE.md](features/PVP_SUITE.md)**.
+> Legacy per-feature `deploy/runner/*_test.py` scripts remain until migrated.
+
 Статус: **фаза 0 реализована и работает** (2026-07-20): `deploy/compose.test.yml`
 (itzg vanilla 1.21.11 + mineswarm-mc клиент), `deploy/runner/slime_test.py`
 (слайм-паркур, оба курса PASS), вход — `deploy/autotest.sh` на маке.

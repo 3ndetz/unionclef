@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""uctest suite runner — ONE entrypoint for the stand autotests (RW-5).
+
+  python3 deploy/runner/run_suite.py pvp                  # whole suite
+  python3 deploy/runner/run_suite.py pvp --only bow_flee  # one scenario
+  python3 deploy/runner/run_suite.py pvp --repeat 3       # flake analysis
+  python3 deploy/runner/run_suite.py --list
+
+Requires the stand with BOTH clients:
+  docker compose -f deploy/compose.test.yml --profile pvp up -d
+
+Exit code 0 = every selected GATE scenario passed. Artifacts (timeline.jsonl,
+chat, screenshots, verdict.json) in deploy/runner/artifacts/<run>/<scenario>/.
+"""
+import argparse
+import datetime
+import functools
+import os
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+print = functools.partial(print, flush=True)  # noqa: A001 - stand logs stream
+
+from uctest.actors import Bot                       # noqa: E402
+from uctest.arena import ArenaBuilder               # noqa: E402
+from uctest.harness import Artifacts, Rcon, wait_for  # noqa: E402
+from uctest.scenario import Ctx, is_flake           # noqa: E402
+from uctest.scenarios_pvp import SCENARIOS as PVP   # noqa: E402
+
+SUITES = {"pvp": PVP}
+BOT_CONTAINER = "uctest-mc-tester1"
+VICTIM_CONTAINER = "uctest-mc-tester2"
+BOT, VICTIM = "tester1", "tester2"
+HOLDING_PEN = "0.5 200 0.5"  # parked between scenarios (rebuilt arena below)
+
+
+def run_scenario(cls, rcon, bot, victim, art_root):
+    scn = cls()
+    art = Artifacts(art_root, scn.id)
+    ctx = Ctx(bot, victim if scn.needs_victim else None, rcon, art)
+    print(f"\n--- {scn.id} ({scn.tier}, {scn.duration}s) ---")
+    try:
+        arena = ArenaBuilder(rcon)
+        arena.prepare(half=scn.arena_half, regen=scn.regen)
+        scn.build(arena, ctx)
+        bot.fresh_reset(ctx.geo["bot_spawn"], scn.bot_kit)
+        if scn.needs_victim:
+            victim.fresh_reset(ctx.geo["victim_spawn"], scn.victim_kit)
+        rcon.reset_kd([BOT, VICTIM])
+        if scn.settings:
+            bot.pin_settings(scn.settings)
+        crits = scn.run(ctx)
+    except Exception as e:  # noqa: BLE001 - report, classify, maybe retry
+        art.write_json("verdict.json", {"error": str(e)})
+        art.close()
+        return {"id": scn.id, "tier": scn.tier, "passed": False,
+                "error": str(e), "flake_suspect": is_flake(e), "criteria": []}
+    finally:
+        for b in (bot, victim):
+            try:
+                b.stop_all()
+            except Exception:  # noqa: BLE001 - teardown must not mask results
+                pass
+
+    passed = all(c.ok for c in crits if c.gate)
+    if not passed:
+        bot.py.screenshot(art.path("fail.png"))
+    art.write_text("chat.txt", "\n".join(bot.recent_chat(40)))
+    verdict = {"id": scn.id, "tier": scn.tier, "passed": passed,
+               "criteria": [c.as_dict() for c in crits]}
+    art.write_json("verdict.json", verdict)
+    art.close()
+    for c in crits:
+        mark = "PASS" if c.ok else ("FAIL" if c.gate else "flag")
+        print(f"  [{mark}] {c.name}  {c.detail}")
+    print(f"  => {scn.id}: {'PASS' if passed else 'FAIL'}")
+    verdict["flake_suspect"] = False
+    return verdict
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("suite", nargs="?", help="suite name (pvp)")
+    ap.add_argument("--only", help="run one scenario id")
+    ap.add_argument("--repeat", type=int, default=1)
+    ap.add_argument("--list", action="store_true")
+    args = ap.parse_args()
+
+    if args.list or not args.suite:
+        for name, scns in SUITES.items():
+            print(f"suite {name}:")
+            for c in scns:
+                doc = ((c.__doc__ or "").strip().splitlines() or [""])[0]
+                print(f"  {c.id:28s} [{c.tier}] {doc}")
+        return 0
+    scenarios = SUITES[args.suite]
+    if args.only:
+        scenarios = [c for c in scenarios if c.id == args.only]
+        if not scenarios:
+            print(f"no scenario '{args.only}' in suite {args.suite}")
+            return 2
+
+    stamp = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    art_root = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "artifacts", stamp)
+    os.makedirs(art_root, exist_ok=True)
+    print(f"artifacts: {art_root}")
+
+    rcon = Rcon()
+    wait_for("server rcon", lambda: "players" in rcon.cmd("list"), 300, 5)
+    bot = Bot(BOT_CONTAINER, BOT, rcon)
+    victim = Bot(VICTIM_CONTAINER, VICTIM, rcon)
+    bot.ensure_in_game()
+    victim.ensure_in_game()
+
+    results = []
+    for cls in scenarios:
+        for rep in range(args.repeat):
+            res = run_scenario(cls, rcon, bot, victim, art_root)
+            if not res["passed"] and res.get("flake_suspect") and args.repeat == 1:
+                print(f"  flake suspected ({res.get('error', '')[:80]}) — one retry")
+                time.sleep(10)
+                res = run_scenario(cls, rcon, bot, victim, art_root)
+                res["retried"] = True
+            results.append(res)
+
+    print("\n================ SUMMARY ================")
+    gate_fail = 0
+    for r in results:
+        status = "PASS" if r["passed"] else ("info-fail" if r["tier"] == "info"
+                                             else "FAIL")
+        if not r["passed"] and r["tier"] == "gate":
+            gate_fail += 1
+        extra = f"  ({r['error'][:60]})" if r.get("error") else ""
+        print(f"  {r['id']:28s} {status}{extra}")
+    import json
+    with open(os.path.join(art_root, "summary.json"), "w") as f:
+        json.dump(results, f, indent=1, default=str)
+    print(f"\n{len(results) - gate_fail}/{len(results)} ok, "
+          f"gate failures: {gate_fail}")
+    return 1 if gate_fail else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
