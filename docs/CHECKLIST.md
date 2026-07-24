@@ -113,7 +113,8 @@ Full guide — **`docs/RELEASE.md`**. In short:
   multi-session / regression-prone" are NOT reasons to leave a TODO item — decompose it,
   do a focused pass, test to green, release. Only a truly-all-closed TODO (incl. child /
   emerging tasks) or hardware failure ends the loop.
-- **Send the final report to Telegram** if a bot token exists:
+- **Send the final report to Telegram** if a bot token exists — **IN RUSSIAN** (the operator
+  reads Russian; TG reports are always Russian, user 2026-07-24):
   `python C:/repos/pet/mineswarm/game/cristalix/tg_report.py <text_file>` (reads
   `TG_BOT_TOKEN`/`OPERATOR_CHAT_ID` from `mineswarm/.env`; never print the token). The
   report states: what was done + releases, the status of EVERY TODO item, and — if the
