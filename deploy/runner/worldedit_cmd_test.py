@@ -72,9 +72,10 @@ def main():
     set_ok=all(is_block(*c,"stone") for c in cells)
     print(f"  after ;;set: stone={[is_block(*c,'stone') for c in cells]} -> {'OK' if set_ok else 'FAIL'}")
     print("  replace stone cobblestone:", py4j("we",cmd="replace stone cobblestone"))
-    for _ in range(20):
+    for _ in range(25):
         time.sleep(1.5)
-        if all(is_block(*c,"cobblestone") for c in cells): break
+        st=py4j("we",cmd="restat")               # poll replaceStatus: advances break->place
+        if st.get("phase")=="done" or all(is_block(*c,"cobblestone") for c in cells): break
     rep_ok=all(is_block(*c,"cobblestone") for c in cells)
     print(f"  after ;;replace: cobble={[is_block(*c,'cobblestone') for c in cells]} -> {'OK' if rep_ok else 'FAIL'}")
     ok=set_ok and rep_ok
