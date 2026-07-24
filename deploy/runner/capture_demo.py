@@ -106,6 +106,33 @@ WE_BODY = (
     'time.sleep(9)\n'
 )
 
+def setup_bedwars():
+    # two islands over a void: near (bot) + far (victim), bridge the gap then fight
+    rcon("forceload add -8 -8 24 8")
+    rcon("fill -8 -60 -8 24 -50 8 air")                 # clear the arena
+    rcon("fill -8 -70 -8 24 -61 8 air")                 # void below
+    rcon("fill -4 -61 -4 2 -61 4 stone")               # near island (bot)
+    rcon("fill 10 -61 -4 16 -61 4 stone")              # far island (victim + bed)
+    rcon("setblock 13 -60 0 red_bed")                  # the 'bed' on the far island
+    rcon("gamerule pvp true"); rcon("gamerule immediate_respawn true")
+    rcon("time set day"); rcon("weather clear")
+    rcon(f"clear {BOT}")
+    rcon(f"item replace entity {BOT} hotbar.0 with cobblestone 64")
+    rcon(f"item replace entity {BOT} hotbar.1 with iron_sword")
+    ensure_ingame(C2)
+    rcon(f"tp {VICTIM} 13 -60 0 90 0")
+    rcon(f"tp {BOT} -1 -60 0 -90 0"); time.sleep(2)
+
+# comprehensive bedwars: BRIDGE across the void to the enemy island, then FIGHT — all on tungsten
+BEDWARS_BODY = (
+    'mc.selectHotbar(0)\n'
+    'mc.bridgeTo(10, -60, 0)\n'      # godbridge across the void to the far island
+    'time.sleep(11)\n'
+    'mc.selectHotbar(1)\n'
+    'mc.ChatMessage(";punk '+VICTIM+'")\n'   # fight on the enemy island
+    'time.sleep(11)\n'
+)
+
 def main():
     wait_for("rcon", lambda:"players" in rcon("list"),300,5)
     ensure_ingame(CLIENT); time.sleep(2)
@@ -113,6 +140,7 @@ def main():
     elif SCEN=="bridge":  setup_bridge(); record(14, 'mc.selectHotbar(0); mc.bridgeForward("east", 14)')
     elif SCEN=="pvp":     setup_pvp();    record(13, 'mc.ChatMessage(";punk '+VICTIM+'")')
     elif SCEN=="worldedit": setup_we();   record(22, WE_BODY)
+    elif SCEN=="bedwars": setup_bedwars(); record(24, BEDWARS_BODY)
     else: print("unknown scenario"); sys.exit(2)
     print("DONE", SCEN)
 

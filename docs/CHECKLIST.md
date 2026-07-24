@@ -113,6 +113,12 @@ Full guide — **`docs/RELEASE.md`**. In short:
   multi-session / regression-prone" are NOT reasons to leave a TODO item — decompose it,
   do a focused pass, test to green, release. Only a truly-all-closed TODO (incl. child /
   emerging tasks) or hardware failure ends the loop.
+- **REPORT SUCCESSFUL TESTS AS VIDEO TO TG — STANDING RULE (user 2026-07-24).** A TG bot token
+  exists, so after a notable test passes (esp. PvP / combat / worldedit / bridging), RECORD it and
+  send the clip to TG. Send OFTEN + VARIED (different PvP scenarios). Tooling: `deploy/runner/
+  capture_demo.py <scenario>` records an mp4/gif on the stand, then `scratchpad/send_video.py
+  <remote_mp4> <local> "<caption RU>"` SFTPs it + `sendVideo`s to TG. ⛔ Do NOT keep videos on the
+  computer — the sender DELETES the local + stand file after upload (disk hygiene). Captions in Russian.
 - **Send the final report to Telegram** if a bot token exists — **IN RUSSIAN** (the operator
   reads Russian; TG reports are always Russian, user 2026-07-24):
   `python C:/repos/pet/mineswarm/game/cristalix/tg_report.py <text_file>` (reads
