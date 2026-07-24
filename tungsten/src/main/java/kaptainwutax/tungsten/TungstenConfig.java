@@ -196,7 +196,7 @@ public class TungstenConfig {
      *  Bumped 2.0→3.2: the bot was reported "turning slowly" and its aim lagged
      *  a strafing/knocked-back target (trigger gate angle hit 90°); faster ramp
      *  closes the gap so swings actually land. */
-    public double combatWindMouseGravity = 5.5;   // x2 in CombatController -> 11: aim tracks a strafing target, no slow orbit (user 2026-07-24)
+    public double combatWindMouseGravity = 4.3;   // x2 in CombatController -> 8.6 (was 6.4): faster pull, no slow orbit, moderated so it doesn't overshoot (user 2026-07-24)
 
     /** WindMouse wind — random perturbation magnitude per frame.
      *  Higher = more jitter/overshoot. */

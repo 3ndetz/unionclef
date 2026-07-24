@@ -31,9 +31,9 @@ public class WindMouseRotation {
     // random orbit/spiral, maxStep = speed cap. Raised gravity + step and cut wind so the
     // aim converges FASTER and more DIRECTLY instead of slowly circling the target (user
     // live 2026-07-24). Still pixel-quantized + some wind -> humanized, not a robotic snap.
-    private double gravity      = 6.0;
-    private double wind         = 0.7;
-    private double maxStep      = 8.5;
+    private double gravity      = 5.0;
+    private double wind         = 0.8;
+    private double maxStep      = 7.0;
     private double windDist     = 20.0;
     private double doneThreshold = 0.3;
     private double flickScale   = 4.0;
