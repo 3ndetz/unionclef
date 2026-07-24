@@ -338,6 +338,26 @@ public class McpServer {
         tool("replaceStatus",
                 "Poll //replace: phase = breaking -> placing -> done, with placed/remaining counts.",
                 schema(), a -> api.replaceStatus());
+        tool("buildBlocks",
+                "Schematic placement: blocks = JSON array of [x,y,z,name] (world coords), placed bottom-up "
+                + "in reach. Reposition (gotoXYZ) for `remaining`, call again. Parse a schematic into this "
+                + "list; build-order + material sourcing are the agent's job.",
+                schema("blocks:string"),
+                a -> {
+                    try {
+                        com.google.gson.JsonArray arr = com.google.gson.JsonParser
+                                .parseString(argStr(a, "blocks")).getAsJsonArray();
+                        java.util.List<Object> blocks = new java.util.ArrayList<>();
+                        for (com.google.gson.JsonElement e : arr) {
+                            com.google.gson.JsonArray b = e.getAsJsonArray();
+                            blocks.add(java.util.List.of(b.get(0).getAsInt(), b.get(1).getAsInt(),
+                                    b.get(2).getAsInt(), b.get(3).getAsString()));
+                        }
+                        return api.buildBlocks(blocks);
+                    } catch (Exception ex) {
+                        return java.util.Map.of("ok", false, "reason", "bad blocks JSON: " + ex.getMessage());
+                    }
+                });
         tool("buildDefenseAround",
                 "Box a cell with a protective shell (sides + roof) — e.g. defend a bed. Covers reachable cells; "
                 + "reposition for the rest.",

@@ -2395,6 +2395,57 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** SCHEMATIC placement core: place a batch of TYPED blocks — a list of
+     *  [x, y, z, blockName] (absolute world coords) — bottom-up so each cell has support,
+     *  in reach, capped per call. The cognitive agent parses a .schem/.litematic/.nbt into
+     *  this block list (anchored at a chosen origin) and drives the build: buildBlocks ->
+     *  reposition (gotoXYZ) for `remaining` (out of reach / no support yet) -> buildBlocks
+     *  again. Real survival placement (placeBlockAtRaw, protection rules apply). Equips each
+     *  named block from the hotbar (skips re-equip when the type is unchanged). The
+     *  build-order PLANNING (which origin, layering, don't-wall-yourself-in) and material
+     *  sourcing stay the agent's job — this is the executor primitive. */
+    public Map<String, Object> buildBlocks(Object blocksObj) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            java.util.List<int[]> pos = new java.util.ArrayList<>();
+            java.util.List<String> names = new java.util.ArrayList<>();
+            if (blocksObj instanceof java.util.List<?> list) for (Object o : list) {
+                if (o instanceof java.util.List<?> b && b.size() >= 4) {
+                    pos.add(new int[]{((Number) b.get(0)).intValue(), ((Number) b.get(1)).intValue(),
+                            ((Number) b.get(2)).intValue()});
+                    names.add(String.valueOf(b.get(3)));
+                }
+            }
+            if (pos.isEmpty()) { out.put("ok", false); out.put("reason", "no blocks (expect [[x,y,z,name],...])"); return out; }
+            // place bottom-up so a cell's support (floor / already-placed block below) exists
+            Integer[] order = new Integer[pos.size()];
+            for (int i = 0; i < order.length; i++) order[i] = i;
+            java.util.Arrays.sort(order, (a, b) -> Integer.compare(pos.get(a)[1], pos.get(b)[1]));
+            final int CAP = 64;
+            int placed = 0, remaining = 0, already = 0;
+            String lastEquipped = null;
+            for (int oi : order) {
+                int[] p = pos.get(oi);
+                String name = names.get(oi);
+                net.minecraft.util.math.BlockPos bp = new net.minecraft.util.math.BlockPos(p[0], p[1], p[2]);
+                if (!client.world.getBlockState(bp).isReplaceable()) { already++; continue; }
+                if (placed >= CAP) { remaining++; continue; }
+                if (!name.equals(lastEquipped)) { equipHotbarBlock(client, name); lastEquipped = name; }
+                Map<String, Object> r = placeBlockAtRaw(p[0], p[1], p[2]);
+                if (Boolean.TRUE.equals(r.get("placed"))) placed++;
+                else remaining++;   // out of reach / no support yet — reposition + call again
+            }
+            out.put("ok", true);
+            out.put("placed", placed);
+            out.put("remaining", remaining);     // reposition (gotoXYZ) + call again
+            out.put("already", already);         // already occupied (skipped)
+            out.put("complete", remaining == 0);
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Shared fill core for //set and //walls. Places `blockName` at every
      *  replaceable selection cell matching `include`, bottom-up (so each cell
      *  has support: the floor or an already-placed block below), capped per
