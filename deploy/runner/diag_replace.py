@@ -53,15 +53,15 @@ def main():
     rcon("forceload add -8 -8 16 16")
     rcon("fill 0 -61 -4 12 5 4 air")
     rcon("fill 0 -61 -4 12 -61 4 stone")          # floor
-    # 3x3 stone patch at y=-60, x in 4..6, z in -1..1
-    rcon("fill 4 -60 -1 6 -60 1 stone")
-    rcon(f"tp {BOT} 2 -60 0 90 0"); time.sleep(1.5)
+    # vertical 3-cell stone column at x=5, y=-60..-58, z=0 (close + in reach, like diag_mine)
+    rcon("fill 5 -60 0 5 -58 0 stone")
+    rcon(f"tp {BOT} 3 -60 0 90 0"); time.sleep(1.5)
     rcon(f"item replace entity {BOT} weapon.mainhand with diamond_pickaxe")
     rcon(f"item replace entity {BOT} hotbar.1 with cobblestone 64")
-    patch=[(x,-60,z) for x in range(4,7) for z in range(-1,2)]
-    print("=== //replace: 3x3 stone -> cobblestone at y=-60 ===")
+    patch=[(5,-60,0),(5,-59,0),(5,-58,0)]
+    print("=== //replace: 3-cell stone column -> cobblestone at x=5 ===")
     print("  before cobble?:", [block_at(*p) for p in patch])
-    print("  select:", py4j("select", a=[4,-60,-1], b=[6,-60,1]))
+    print("  select:", py4j("select", a=[5,-60,0], b=[5,-58,0]))
     print("  replace:", py4j("replace", **{"from":"stone","to":"cobblestone"}))
     last=None
     for _ in range(40):
