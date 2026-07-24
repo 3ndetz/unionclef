@@ -44,11 +44,19 @@ def main():
         try: py4j("connect",ip="test-server")
         except Exception: pass
         time.sleep(6)
+    # hard-confirm in-game before setup (a restart-fresh bot connects late)
+    for _ in range(40):
+        try:
+            if py4j("state")["inGame"]: break
+        except Exception: pass
+        try: py4j("connect",ip="test-server")
+        except Exception: pass
+        time.sleep(5)
     py4j("stop"); time.sleep(1)
     rcon("forceload add -8 -8 16 16")
     rcon("fill 0 -61 -4 12 5 4 air")
     rcon("fill 0 -61 -4 12 -61 4 stone")          # floor
-    rcon(f"tp {BOT} 3 -60 0 90 0"); time.sleep(1.5)
+    rcon(f"tp {BOT} 3 -60 0 90 0"); time.sleep(2)
     rcon(f"item replace entity {BOT} hotbar.1 with stone 64")
     rcon(f"item replace entity {BOT} hotbar.2 with cobblestone 64")
     # structure: stone column (5,-60/-59) + cobblestone cap (5,-58) + a stone step (6,-60)
