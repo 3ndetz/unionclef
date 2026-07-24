@@ -32,6 +32,24 @@ ASSESSED, NOT ready (documented for a FRESH pass):
 Tooling added: follow_diag.py (walker per-tick decision dump), tickDirect DEBUG instrumentation,
 diag_mine.py error surfacing, floored follow arenas.
 
+MORE RELEASES this session:
+- **v0.53.0** — setTungstenPathing couples smartMoves -> tungsten-primary CLIMBS terrain
+  (terrain_test A/B/D PASS). Default flip still blocked by 'Ran out of nodes' reachability on
+  hard terrain (openSet empties = goal unreachable via current moves; deep, LIVE-C).
+- **v0.54.0** — //replace (replaceSelection/replaceStatus, break-then-place). diag_replace PASS.
+- **v0.55.0** — buildBlocks (schematic placement core, typed list bottom-up) + aim-jitter telemetry
+  (AimSampler/getAimSamples; aim_jitter_test 0.7 reversals/s = smooth, validates v0.48 shake fix).
+- **v0.56.0** — @@ WorldEdit command handler + scaffolding cleanup. @@ prefix (user 2026-07-24;
+  distances from main @, dodges @set clash): @@pos1/pos2/hpos1/hpos2/sel/size/set/replace/walls/
+  hollow/cyl/sphere/copy/paste/cleanup/restat/minestat, SendChatEvent intercept -> WorldEditCommands
+  (off-thread, primitives marshal). ScaffoldRegistry + cleanupScaffold: mines nav pillar/bridge
+  garbage top-down, finite, CAN'T LOOP. worldedit_cmd_test PASS + diag_scaffold PASS. Remaining:
+  @@undo (op history), @@schem load as a client file op (agent parses -> buildBlocks).
+
+BEDWARS #64 core mechanics validated on 0.56.0 (void island): PvP bedwars_combat SUCCESS (2 kills,
+0 falls), bridging bridge_test PASS (godbridge + bridgeTo), ranged bow_moving PASS. Shop-buy needs
+a bedwars/villager shop GUI (primitives exist; no bedwars profile on the stand).
+
 ## DROP-IN SWAP baritone→tungsten + КОРЕНЬ headless-затыка (2026-07-21) — СДЕЛАНО
 
 Юзер: тщательно закрыть drop-in замену baritone на tungsten. Оказалось — глубокий
