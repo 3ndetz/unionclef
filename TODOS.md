@@ -8,6 +8,13 @@
 > REAL SERVER and checked it is NOT anti-cheat-flagged. "каждый такой ПУК надо тестировать на
 > сервере и смотреть, что не будут это флагать." These are MY screwups to fix, recorded now.
 
+> PROGRESS 2026-07-24 (live mac-stand run via the new `pvp` suite): 7/8 gate scenarios PASS after
+> F4+F6. RW-9 chase: F4 landed (chase_flat never-catches -> reliable PASS; chase_terrain catches but
+> flaky -> needs F10 move-gen). RW-6 ranged: F6 landed (bow lead from position deltas; ranged_moving
+> 1/6->2-4/6, allround 0->2 ranged hits). RW-1 combat: melee/edge/narrow-bridge scenarios PASS on the
+> stand (0 freezes/standstill) — the live "stands still" feel did NOT reproduce as a gate fail, so
+> the combat rework (F1-F3) needs a harder human-jitter scenario. See docs/ai/audit-2026-07-24-pvp.md.
+
 - [ ] **RW-1 — PvP combat still bad / not a speedrunner.** Live symptoms (user):
   - Still spins slowly ("всё ещё медленно крутится"), moves slowly and badly ("медленно и плохо
     двигается"), and STANDS doing a long-look ("стоит смотрит долговид") OFTEN DURING the attack.
