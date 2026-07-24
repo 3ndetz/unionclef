@@ -329,6 +329,15 @@ public class McpServer {
         tool("mineStatus",
                 "Poll the break queue: {mining, remaining}. mining=false && remaining=0 -> done.",
                 schema(), a -> api.mineStatus());
+        tool("replaceSelection",
+                "//replace — swap every selection cell that is `from` (or \"*\"/\"any\" = any non-air) for "
+                + "`to`. Two phases: breaks the matching cells, then poll replaceStatus which places `to`. "
+                + "Real survival placement. Reposition (gotoXYZ) if remaining stalls out of reach.",
+                schema("from:string", "to:string"),
+                a -> api.replaceSelection(argStr(a, "from"), argStr(a, "to")));
+        tool("replaceStatus",
+                "Poll //replace: phase = breaking -> placing -> done, with placed/remaining counts.",
+                schema(), a -> api.replaceStatus());
         tool("buildDefenseAround",
                 "Box a cell with a protective shell (sides + roof) — e.g. defend a bed. Covers reachable cells; "
                 + "reposition for the rest.",

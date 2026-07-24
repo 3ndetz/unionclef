@@ -2309,6 +2309,83 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    // ── //replace — stateful break-then-place over the selection ──────────────
+    private java.util.List<net.minecraft.util.math.BlockPos> _replaceCells = null;
+    private String _replaceToName = null;
+
+    private boolean blockNameMatches(net.minecraft.block.BlockState st, String name) {
+        if (name == null || name.isEmpty() || name.equals("*") || name.equalsIgnoreCase("any"))
+            return !st.isAir();   // "any"/"*" = replace any non-air block
+        String want = name.contains(":") ? name : "minecraft:" + name;
+        return net.minecraft.registry.Registries.BLOCK.getId(st.getBlock()).toString().equals(want);
+    }
+
+    /** //replace: swap every selection cell whose block is `fromName` (or "*"/"any" =
+     *  any non-air) for `toName`. TWO phases via the executor: BREAK the matching cells
+     *  (in reach; same drift-immune break queue as mineBlocks), then poll replaceStatus()
+     *  which PLACES `toName` once the breaks drain. Real survival placement (not a server
+     *  fill). Reposition (gotoXYZ) if remaining stalls out of reach. Agent primitive. */
+    public Map<String, Object> replaceSelection(String fromName, String toName) {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            if (_selMin == null) { out.put("ok", false); out.put("reason", "no selection — call select() first"); return out; }
+            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (ex == null) { out.put("ok", false); out.put("reason", "no executor"); return out; }
+            java.util.List<net.minecraft.util.math.BlockPos> cells = new java.util.ArrayList<>();
+            for (int y = _selMin[1]; y <= _selMax[1]; y++)
+                for (int x = _selMin[0]; x <= _selMax[0]; x++)
+                    for (int z = _selMin[2]; z <= _selMax[2]; z++) {
+                        net.minecraft.util.math.BlockPos p = new net.minecraft.util.math.BlockPos(x, y, z);
+                        if (blockNameMatches(client.world.getBlockState(p), fromName)) cells.add(p);
+                    }
+            if (cells.isEmpty()) { out.put("ok", true); out.put("matched", 0); out.put("phase", "done");
+                out.put("reason", "no cells match " + fromName); return out; }
+            _replaceCells = cells;
+            _replaceToName = toName;
+            // point mining-resume at the bot so it doesn't wander to a stale goal
+            kaptainwutax.tungsten.TungstenMod.TARGET = client.player.getPos();
+            ex.setPath(new java.util.ArrayList<>());
+            ex.breakQueue = new java.util.ArrayList<>(cells);
+            ex.stop = false;
+            out.put("ok", true); out.put("matched", cells.size()); out.put("phase", "breaking");
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Poll //replace: phase = breaking (breaks draining; reposition if remaining stalls) ->
+     *  placing (fills toName bottom-up, in reach, capped per call) -> done. */
+    public Map<String, Object> replaceStatus() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            int breaking = (ex != null && ex.breakQueue != null) ? ex.breakQueue.size() : 0;
+            if (breaking > 0) { out.put("ok", true); out.put("phase", "breaking"); out.put("remaining", breaking); return out; }
+            if (_replaceCells == null) { out.put("ok", true); out.put("phase", "idle"); return out; }
+            // breaks drained -> place toName at the matched cells (bottom-up, in reach)
+            equipHotbarBlock(client, _replaceToName);
+            _replaceCells.sort(java.util.Comparator.comparingInt(net.minecraft.util.math.BlockPos::getY));
+            int placed = 0;
+            java.util.List<net.minecraft.util.math.BlockPos> still = new java.util.ArrayList<>();
+            for (net.minecraft.util.math.BlockPos p : _replaceCells) {
+                if (!client.world.getBlockState(p).isReplaceable()) continue;   // already filled -> done for this cell
+                if (placed >= 64) { still.add(p); continue; }                    // per-call cap
+                Map<String, Object> r = placeBlockAtRaw(p.getX(), p.getY(), p.getZ());
+                if (Boolean.TRUE.equals(r.get("placed"))) placed++;
+                else still.add(p);   // out of reach — reposition + poll again
+            }
+            _replaceCells = still.isEmpty() ? null : still;
+            boolean done = still.isEmpty();
+            if (done) _replaceToName = null;
+            out.put("ok", true); out.put("phase", done ? "done" : "placing");
+            out.put("placed", placed); out.put("remaining", still.size());
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
     /** Shared fill core for //set and //walls. Places `blockName` at every
      *  replaceable selection cell matching `include`, bottom-up (so each cell
      *  has support: the floor or an already-placed block below), capped per
