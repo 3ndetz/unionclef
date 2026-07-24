@@ -440,6 +440,28 @@ public class AltoClef implements ModInitializer {
         // Receive + cancel chat
         EventBus.subscribe(SendChatEvent.class, evt -> {
             String line = evt.message;
+            // `;;` WorldEdit command handler (user 2026-07-24). Read the player / crosshair
+            // block HERE on the client thread (safe), then run the handler OFF-thread so the
+            // worldedit primitives' onClientThread marshalling doesn't deadlock the client.
+            if (line.startsWith(";;")) {
+                evt.cancel();
+                final String weCmd = line.substring(2).strip();
+                net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+                int[] pb = null, cb = null;
+                if (mc.player != null) {
+                    net.minecraft.util.math.BlockPos p = mc.player.getBlockPos();
+                    pb = new int[]{p.getX(), p.getY(), p.getZ()};
+                }
+                if (mc.crosshairTarget instanceof net.minecraft.util.hit.BlockHitResult bhr
+                        && mc.crosshairTarget.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
+                    net.minecraft.util.math.BlockPos p = bhr.getBlockPos();
+                    cb = new int[]{p.getX(), p.getY(), p.getZ()};
+                }
+                final int[] fpb = pb, fcb = cb;
+                new Thread(() -> adris.altoclef.commands.worldedit.WorldEditCommands.handle(this, weCmd, fpb, fcb),
+                        "we-cmd").start();
+                return;
+            }
             if (getCommandExecutor().isClientCommand(line)) {
                 evt.cancel();
                 getCommandExecutor().execute(line);

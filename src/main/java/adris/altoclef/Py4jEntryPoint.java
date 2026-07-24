@@ -2446,6 +2446,29 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** Test / agent entry for the `;;` WorldEdit command handler (the in-game chat path
+     *  fires the same handler from SendChatEvent). Reads the player + crosshair block on
+     *  the client thread, then runs the handler. E.g. we("pos1"), we("set stone"),
+     *  we("replace stone cobblestone"), we("cyl glass"). */
+    public Map<String, Object> we(String cmd) {
+        int[][] pos = onClientThread(() -> {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            int[] pb = null, cb = null;
+            if (mc.player != null) {
+                net.minecraft.util.math.BlockPos p = mc.player.getBlockPos();
+                pb = new int[]{p.getX(), p.getY(), p.getZ()};
+            }
+            if (mc.crosshairTarget instanceof net.minecraft.util.hit.BlockHitResult bhr
+                    && mc.crosshairTarget.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
+                net.minecraft.util.math.BlockPos p = bhr.getBlockPos();
+                cb = new int[]{p.getX(), p.getY(), p.getZ()};
+            }
+            return new int[][]{pb, cb};
+        }, new int[][]{null, null});
+        adris.altoclef.commands.worldedit.WorldEditCommands.handle(_mod, cmd, pos[0], pos[1]);
+        return Map.of("ok", true, "cmd", cmd);
+    }
+
     /** Shared fill core for //set and //walls. Places `blockName` at every
      *  replaceable selection cell matching `include`, bottom-up (so each cell
      *  has support: the floor or an already-placed block below), capped per
