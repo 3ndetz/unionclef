@@ -20,9 +20,11 @@ CLIENT="uctest-mc-tester1"; SERVER="uctest-server"; C2="uctest-mc-tester2"; BOT=
 SCEN = sys.argv[1] if len(sys.argv)>1 else "slime"
 
 def rcon(c,t=20): return subprocess.run(["docker","exec",SERVER,"rcon-cli",c],capture_output=True,text=True,timeout=t).stdout.strip()
-def clean(x1,z1,x2,z2,ytop=25,ybot=-70):
-    """Wipe a box to air. /fill caps at 32768 blocks, so slice into y-bands that stay under
-    the cap — a single big fill SILENTLY FAILS (the bug that left every arena cluttered)."""
+WORLD_MIN=-64   # overworld floor; a fill that dips below it errors "out of this world" and the WHOLE fill fails (silent no-op — the real reason arenas stayed cluttered)
+def clean(x1,z1,x2,z2,ytop=25,ybot=WORLD_MIN):
+    """Wipe a box to air. Two gotchas that made this a silent no-op: (1) /fill caps at 32768
+    blocks -> slice into y-bands; (2) y must stay >= WORLD_MIN or the fill errors entirely."""
+    ybot=max(WORLD_MIN, ybot)
     rcon(f"forceload add {x1} {z1} {x2} {z2}")
     dx=abs(x2-x1)+1; dz=abs(z2-z1)+1
     per=max(1, 30000//(dx*dz))     # y-levels per fill, under the 32768 cap
@@ -105,16 +107,19 @@ def setup_slime():
 
 BRIDGE_N = 18
 def setup_bridge():
-    clean(-6,-18,40,18,ytop=10,ybot=-75)               # wide+deep enough for a clear void + cam sightline
-    rcon("fill -3 -61 -2 1 -61 2 stone")               # start pad, east edge at x=1
-    rcon("fill 20 -61 -3 26 -61 3 stone")              # destination platform
+    # bridge RAISED to y=-54 so the void below (down to the world floor -64) is ~10 deep and
+    # reads unmistakably as a void from the side cam (at y=-60 the floor is only 4 below).
+    clean(-6,-18,40,18,ytop=20)
+    rcon("fill -3 -54 -2 1 -54 2 stone")               # start pad (top y=-54), east edge x=1
+    rcon("fill 20 -54 -3 26 -54 3 stone")              # destination platform
     rcon(f"clear {BOT}"); rcon(f"item replace entity {BOT} hotbar.0 with cobblestone 64")
     rcon("time set day"); rcon("weather clear")
-    rcon(f"tp {BOT} 1 -60 0 -90 0"); time.sleep(2)     # pad edge, facing east(+x); void x=2..19
+    rcon(f"tp {BOT} 1 -53 0 -90 0"); time.sleep(2)     # pad edge, facing east(+x); void x=2..19 below y=-54
 
 def setup_we():
     clean(-12,-10,12,10)
     rcon("fill -8 -61 -8 8 -61 8 grass_block")         # GRASS floor so a STONE wall stands out
+    rcon("fill -1 -60 -1 1 -59 -1 stone")              # backing 1 block behind: every wall cell (incl. the top row) gets a clickable side face -> reliable full replace
     rcon("time set day"); rcon("weather clear")
     rcon(f"item replace entity {BOT} hotbar.1 with stone 64")
     rcon(f"item replace entity {BOT} hotbar.2 with glass 64")
@@ -179,7 +184,7 @@ def main():
         record_ext(9, (6,-49,14),(6,-57,0), 'mc.ChatMessage(";goto 5 -56 0")')
     elif SCEN=="bridge":
         setup_bridge()
-        record_ext(10, (10,-53,16),(10,-60,0), f'mc.selectHotbar(0); time.sleep(0.6); mc.bridgeForward("east", {BRIDGE_N})')
+        record_ext(10, (10,-46,15),(10,-54,0), f'mc.selectHotbar(0); time.sleep(0.6); mc.bridgeForward("east", {BRIDGE_N})')
     elif SCEN=="worldedit":
         setup_we()
         record_ext(WE_DUR, (6,-56,7),(0,-59,0), WE_BODY)
