@@ -16,6 +16,7 @@ import argparse
 import datetime
 import functools
 import os
+import subprocess
 import sys
 import time
 
@@ -35,7 +36,44 @@ BOT, VICTIM = "tester1", "tester2"
 HOLDING_PEN = "0.5 200 0.5"  # parked between scenarios (rebuilt arena below)
 
 
-def run_scenario(cls, rcon, bot, victim, art_root):
+def _rec_start(scn_id, dur, persp=0):
+    """Record tester1's own screen for the scenario window (x11grab on the
+    container's :0). First-person + the tungsten combat overlay (Walker/Punk
+    state, freeze behaviour) — reliable and diagnostic; the combat aim forces
+    first-person anyway, so third-person doesn't hold during a fight. Returns
+    the in-container mp4 path."""
+    mp4 = f"/mc-data/rec_{scn_id}.mp4"
+    try:
+        Py4jClient(BOT_CONTAINER).call("setPerspective", persp)
+    except Exception:
+        pass
+    subprocess.run(["docker", "exec", BOT_CONTAINER, "sh", "-c",
+                    "pkill -INT ffmpeg 2>/dev/null; sleep 0.3; true"],
+                   capture_output=True)
+    # fragmented mp4: stays valid even when ffmpeg is stopped mid-write (a plain
+    # mp4 writes its moov index only on clean exit -> a killed capture is
+    # unplayable "moov atom not found").
+    subprocess.Popen(["docker", "exec", "-d", BOT_CONTAINER, "ffmpeg", "-y",
+                      "-f", "x11grab", "-framerate", "15", "-i", ":0",
+                      "-t", str(dur + 8), "-pix_fmt", "yuv420p",
+                      "-movflags", "+frag_keyframe+empty_moov+default_base_moof",
+                      mp4])
+    time.sleep(1.0)
+    return mp4
+
+
+def _rec_stop(scn_id, art):
+    """Stop ffmpeg, copy the mp4 into the artifact dir. Returns host path."""
+    subprocess.run(["docker", "exec", BOT_CONTAINER, "pkill", "-INT", "ffmpeg"],
+                   capture_output=True)
+    time.sleep(3.5)
+    dst = art.path(f"{scn_id}.mp4")
+    subprocess.run(["docker", "cp", f"{BOT_CONTAINER}:/mc-data/rec_{scn_id}.mp4",
+                    dst], capture_output=True)
+    return dst if os.path.exists(dst) and os.path.getsize(dst) > 1000 else None
+
+
+def run_scenario(cls, rcon, bot, victim, art_root, record=False):
     scn = cls()
     art = Artifacts(art_root, scn.id)
     ctx = Ctx(bot, victim if scn.needs_victim else None, rcon, art)
@@ -44,13 +82,22 @@ def run_scenario(cls, rcon, bot, victim, art_root):
         arena = ArenaBuilder(rcon)
         arena.prepare(half=scn.arena_half, regen=scn.regen)
         scn.build(arena, ctx)
+        # respawns must land in the arena, not at the world default (y=101):
+        # a bot knocked/killed mid-fight otherwise wanders off at world spawn.
+        sp = ctx.geo["bot_spawn"].split()
+        arena.set_spawn(float(sp[0]), float(sp[1]), float(sp[2]))
         bot.fresh_reset(ctx.geo["bot_spawn"], scn.bot_kit)
         if scn.needs_victim:
             victim.fresh_reset(ctx.geo["victim_spawn"], scn.victim_kit)
         rcon.reset_kd([BOT, VICTIM])
         if scn.settings:
             bot.pin_settings(scn.settings)
+        mp4 = _rec_start(scn.id, scn.duration) if record else None
         crits = scn.run(ctx)
+        if record:
+            clip = _rec_stop(scn.id, art)
+            ctx.geo["clip"] = clip
+            print(f"  clip: {clip}")
     except Exception as e:  # noqa: BLE001 - report, classify, maybe retry
         art.write_json("verdict.json", {"error": str(e)})
         art.close()
@@ -68,6 +115,7 @@ def run_scenario(cls, rcon, bot, victim, art_root):
         bot.py.screenshot(art.path("fail.png"))
     art.write_text("chat.txt", "\n".join(bot.recent_chat(40)))
     verdict = {"id": scn.id, "tier": scn.tier, "passed": passed,
+               "clip": ctx.geo.get("clip"),
                "criteria": [c.as_dict() for c in crits]}
     art.write_json("verdict.json", verdict)
     art.close()
@@ -84,6 +132,8 @@ def main():
     ap.add_argument("suite", nargs="?", help="suite name (pvp)")
     ap.add_argument("--only", help="run one scenario id")
     ap.add_argument("--repeat", type=int, default=1)
+    ap.add_argument("--record", action="store_true",
+                    help="record tester1's screen per scenario (x11grab)")
     ap.add_argument("--list", action="store_true")
     args = ap.parse_args()
 
@@ -117,11 +167,11 @@ def main():
     results = []
     for cls in scenarios:
         for rep in range(args.repeat):
-            res = run_scenario(cls, rcon, bot, victim, art_root)
+            res = run_scenario(cls, rcon, bot, victim, art_root, args.record)
             if not res["passed"] and res.get("flake_suspect") and args.repeat == 1:
                 print(f"  flake suspected ({res.get('error', '')[:80]}) — one retry")
                 time.sleep(10)
-                res = run_scenario(cls, rcon, bot, victim, art_root)
+                res = run_scenario(cls, rcon, bot, victim, art_root, args.record)
                 res["retried"] = True
             results.append(res)
 

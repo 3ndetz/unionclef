@@ -278,7 +278,10 @@ class BridgeAssault(Scenario):
                        crossed_at=None, punk_started=False)
 
     def drive_start(self, ctx):
-        ctx.bot.py.call("bridgeTo", ctx.geo["edge_b"] + 2, FLOOR_Y, 0)
+        # bridgeTo (godbridge) places the block IN HAND — select cobblestone
+        # (slot 0) first; the audit noted bridgeTo does not auto-equip.
+        ctx.bot.py.call("selectHotbar", 0)
+        ctx.bot.py.call("bridgeTo", ctx.geo["edge_b"] + 2, STAND_Y, 0)
         if self.defended:
             ctx.geo["last_def_shot"] = 0.0
 
@@ -293,6 +296,7 @@ class BridgeAssault(Scenario):
             ctx.log(f"  crossed the gap at {t:.1f}s")
         if ctx.geo["crossed_at"] is not None and not ctx.geo["punk_started"]:
             ctx.geo["punk_started"] = True
+            ctx.bot.py.call("selectHotbar", 1)  # sword for melee
             ctx.bot.py.call("punk", ctx.victim.name)
         if self.defended and t - ctx.geo.get("last_def_shot", 0) >= 4.0:
             ctx.geo["last_def_shot"] = t

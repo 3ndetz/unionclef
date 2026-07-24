@@ -44,6 +44,20 @@ class ArenaBuilder:
     def floor(self, x1, z1, x2, z2, block="stone"):
         self._fill(x1, FLOOR_Y, z1, x2, FLOOR_Y, z2, block)
 
+    def rim_wall(self, x1, z1, x2, z2, height=3, block="barrier"):
+        """A wall around the rim so combat knockback can't fling a bot off the
+        floor into the surrounding void (which respawns it at world spawn and
+        ruins the run). Used by flat combat/chase arenas, NOT by void/edge
+        arenas where falling is the metric."""
+        for y in range(FLOOR_Y + 1, FLOOR_Y + 1 + height):
+            self.rcon.cmd(f"fill {x1} {y} {z1} {x2} {y} {z1} {block}")
+            self.rcon.cmd(f"fill {x1} {y} {z2} {x2} {y} {z2} {block}")
+            self.rcon.cmd(f"fill {x1} {y} {z1} {x1} {y} {z2} {block}")
+            self.rcon.cmd(f"fill {x2} {y} {z1} {x2} {y} {z2} {block}")
+
+    def set_spawn(self, x, y, z):
+        self.rcon.cmd(f"setworldspawn {int(x)} {int(y)} {int(z)}")
+
     def island(self, cx, cz, half, block="stone"):
         self.floor(cx - half, cz - half, cx + half, cz + half, block)
 
@@ -56,11 +70,13 @@ class ArenaBuilder:
         self.rcon.cmd(f"setblock {x} {FLOOR_Y} {z} {color}_concrete")
 
     # -- composite polygons ------------------------------------------------
-    def flat_field(self, half=20, grass=False):
+    def flat_field(self, half=20, grass=False, wall=True):
         self.floor(-half, -half, half, half, "grass_block" if grass else "stone")
         if grass:
             self._fill(2, STAND_Y, -4, 6, STAND_Y, 4, "short_grass")
             self._fill(8, STAND_Y, -2, 10, STAND_Y, 2, "tall_grass")
+        if wall:
+            self.rim_wall(-half, -half, half, half)
 
     def edge_platform(self, half=2):
         """Tiny island over void — RW-1 'fight 1 block from the drop'."""

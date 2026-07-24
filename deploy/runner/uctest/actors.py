@@ -74,7 +74,9 @@ class Bot:
 KIT_SWORD = ["item replace entity {name} weapon.mainhand with iron_sword"]
 KIT_BOW = ["item replace entity {name} weapon.mainhand with bow",
            "give {name} arrow 64"]
-KIT_BRIDGER = ["item replace entity {name} weapon.mainhand with iron_sword",
-               "give {name} cobblestone 64"]
+# explicit hotbar slots so the scenario can select deterministically:
+# slot 0 = cobblestone (for bridgeTo — needs a block IN HAND), slot 1 = sword
+KIT_BRIDGER = ["item replace entity {name} hotbar.0 with cobblestone 64",
+               "item replace entity {name} hotbar.1 with iron_sword"]
 KIT_ARCHER_DEF = ["item replace entity {name} weapon.mainhand with bow",
                   "give {name} arrow 64"]
