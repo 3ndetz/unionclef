@@ -767,6 +767,15 @@ public class Py4jEntryPoint {
         return _mod.getPlayer() == null ? new Vec3d(0, 0, 0) : _mod.getPlayer().getRotationVector();
     }
 
+    /** Last n per-tick yaw samples (oldest first) — for quantifying aim jitter (the shake):
+     *  a test computes the Δyaw sign-reversal rate (few = smooth, many/s = shaky). */
+    public java.util.List<Double> getAimSamples(int n) {
+        float[] a = kaptainwutax.tungsten.util.AimSampler.last(n);
+        java.util.List<Double> out = new java.util.ArrayList<>(a.length);
+        for (float y : a) out.add((double) y);
+        return out;
+    }
+
     public double getSpeedX() {
         return _mod.getPlayer() == null ? 0 : _mod.getPlayer().getVelocity().getX();
     }

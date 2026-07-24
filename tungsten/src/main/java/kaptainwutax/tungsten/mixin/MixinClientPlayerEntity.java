@@ -43,6 +43,8 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 	@Inject(method = "tick", at = @At("HEAD"))
 	public void start(CallbackInfo ci) {
 		if (TungstenMod.runKeyBinding == null) return; // tungsten not initialized yet
+		// aim-jitter telemetry: record yaw each tick so a stand test can quantify shake
+		kaptainwutax.tungsten.util.AimSampler.record(((ClientPlayerEntity)(Object)this).getYaw());
 		//#if MC < 12111
 		//$$ FollowEntityTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
 		//$$ FollowPlayerTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
