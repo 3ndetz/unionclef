@@ -149,7 +149,7 @@ def setup_pvp():
     rcon("gamerule pvp true"); rcon("gamerule immediate_respawn true"); rcon("time set day")
     rcon(f"item replace entity {BOT} weapon.mainhand with iron_sword")
     ensure_ingame(C2)
-    rcon(f"tp {VICTIM} 4 -60 0 -90 0"); rcon(f"tp {BOT} -4 -60 0 -90 0"); time.sleep(2)
+    rcon(f"tp {VICTIM} 2 -60 0 -90 0"); rcon(f"tp {BOT} -1 -60 0 -90 0"); time.sleep(2)  # close (3 blocks) — immediate combat, minimal approach
 
 def setup_bedwars():
     clean(-6,-8,24,8)
@@ -189,7 +189,7 @@ def main():
         setup_we()
         record_ext(WE_DUR, (6,-56,7),(0,-59,0), WE_BODY)
     elif SCEN=="pvp":
-        setup_pvp(); record_own(14, 'mc.ChatMessage(";punkPlayer '+VICTIM+'")', persp=1)
+        setup_pvp(); record_own(13, 'mc.ChatMessage(";punkPlayer '+VICTIM+'")', persp=0)
     elif SCEN=="bedwars":
         setup_bedwars(); record_own(28, BEDWARS_BODY, persp=1)
     else: print("unknown scenario"); sys.exit(2)
