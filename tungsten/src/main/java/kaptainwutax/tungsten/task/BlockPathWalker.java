@@ -180,8 +180,11 @@ public class BlockPathWalker {
         WorldView world = player.getEntityWorld();
         double dist = horizontalDist(playerPos, directTarget);
 
-        // check LOS
-        boolean hasLOS = FollowEntityTask.hasLineOfSight(player, directTarget);
+        // check LOS to the target's BODY CENTRE, not its ground-snapped feet: a
+        // ray to the feet clips terrain lips/steps in front and false-negatives on
+        // any non-flat ground, so the live chase drops to BFS on rough terrain
+        // (RW-9). +1.0 lifts the feet point to roughly mid-body.
+        boolean hasLOS = FollowEntityTask.hasLineOfSight(player, directTarget.add(0, 1.0, 0));
 
         // check progress. STATIC target: distance to it should shrink. LIVE (moving)
         // target: distance-shrink is the wrong signal — the target moves — so detect a
@@ -226,7 +229,12 @@ public class BlockPathWalker {
                         playerPos.z + toZ / horiz * aheadDist));
         boolean landingSafe = SafetySystem.isJumpLandingSafe(playerPos, player.getVelocity(), world);
         boolean pathSafe = !SafetySystem.hasHolesOnPath(playerPos, aheadCheck, world);
-        boolean groundSafe = CombatPathfinder.isWalkable(player.getBlockPos(), world);
+        // isWalkable needs a SOLID block under the feet — always false mid-air. Evaluating
+        // it while airborne false-bailed the live chase at every bunny-hop apex ("danger ->
+        // BFS") and armed the 2s steer cooldown, so the drift-prone physics executor did the
+        // moving and never closed on a runner (RW-9). Only a danger when actually grounded.
+        boolean groundSafe = !player.isOnGround()
+                || CombatPathfinder.isWalkable(player.getBlockPos(), world);
 
         // bail to BFS if: no LOS, stalled, or IMMEDIATE danger
         if (!hasLOS || stalled || !pathSafe || !groundSafe) {
@@ -250,7 +258,11 @@ public class BlockPathWalker {
 
         // movement
         float yaw = AttackTiming.yawTo(playerPos, directTarget);
-        WindMouseRotation.INSTANCE.setTarget(yaw, 0);
+        // FAST nav turn: the 45deg face-before-move gate below only stays open if the
+        // camera swings to the new bearing quickly. The slow humanized turn stalled sprint
+        // on every bearing change of a moving target, halving chase speed (RW-9, dead
+        // setTargetFast). Fast mode still goes through the mouse pipeline (anti-cheat safe).
+        WindMouseRotation.INSTANCE.setTargetFast(yaw, 0);
 
         // FACE-BEFORE-MOVE (same fix as tickBFS): the humanized WindMouse yaw takes a few
         // frames to converge; pressing forward while it's still off makes the bot chase a
@@ -321,7 +333,7 @@ public class BlockPathWalker {
         }
 
         float yaw = AttackTiming.yawTo(playerPos, wpPos);
-        WindMouseRotation.INSTANCE.setTarget(yaw, 0);
+        WindMouseRotation.INSTANCE.setTargetFast(yaw, 0);  // fast nav turn — keep the 45deg gate open
 
         // FACE-BEFORE-MOVE (on the ground only). The camera turns via WindMouse (humanized,
         // several frames to converge). Pressing forward while the yaw is still off makes the

@@ -216,7 +216,7 @@ public class FollowEntityTask {
 
         if (hasEntity && !leapActive && steerCooldownTicks == 0
                 && effectiveDist > Math.max(closeEnough, 1.5)
-                && hasLineOfSight(player, effectiveTarget)) {
+                && hasLineOfSight(player, effectiveTarget.add(0, 1.0, 0))) {  // body-centre, not feet (terrain lips)
             // keep the drift-prone physics path OFF so it can't seize the executor
             if (TungstenModDataContainer.PATHFINDER.active.get())
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
