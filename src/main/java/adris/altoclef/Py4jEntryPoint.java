@@ -2318,6 +2318,37 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** Mine out the tungsten navigation SCAFFOLDING (pillar-up / bridge blocks it placed to
+     *  reach a goal) — the "garbage" left around a build/route. Queues the recorded scaffold
+     *  blocks TOP-DOWN into the break queue (so removing a support doesn't strand the bot) and
+     *  clears the registry; poll mineStatus, reposition (gotoXYZ) for out-of-reach. Finite set,
+     *  mined once each, no re-placing during cleanup -> cannot loop. Agent primitive; ;;cleanup. */
+    public Map<String, Object> cleanupScaffold() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (ex == null) { out.put("ok", false); out.put("reason", "no executor"); return out; }
+            java.util.List<net.minecraft.util.math.BlockPos> scaffold =
+                    kaptainwutax.tungsten.util.ScaffoldRegistry.snapshotTopDown();
+            if (scaffold.isEmpty()) { out.put("ok", true); out.put("queued", 0);
+                out.put("reason", "no scaffold recorded"); return out; }
+            kaptainwutax.tungsten.TungstenMod.TARGET = mc.player.getPos();
+            ex.setPath(new java.util.ArrayList<>());
+            ex.breakQueue = new java.util.ArrayList<>(scaffold);
+            ex.stop = false;
+            kaptainwutax.tungsten.util.ScaffoldRegistry.clear();   // now owned by the break queue
+            out.put("ok", true); out.put("queued", scaffold.size());
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** How many scaffold blocks are currently recorded (not yet cleaned). */
+    public int scaffoldCount() {
+        return kaptainwutax.tungsten.util.ScaffoldRegistry.size();
+    }
+
     // ── //replace — stateful break-then-place over the selection ──────────────
     private java.util.List<net.minecraft.util.math.BlockPos> _replaceCells = null;
     private String _replaceToName = null;
@@ -2465,8 +2496,11 @@ public class Py4jEntryPoint {
             }
             return new int[][]{pb, cb};
         }, new int[][]{null, null});
-        adris.altoclef.commands.worldedit.WorldEditCommands.handle(_mod, cmd, pos[0], pos[1]);
-        return Map.of("ok", true, "cmd", cmd);
+        Map<String, Object> res = adris.altoclef.commands.worldedit.WorldEditCommands.handle(_mod, cmd, pos[0], pos[1]);
+        Map<String, Object> out = new HashMap<>(res == null ? Map.of() : res);
+        out.put("cmd", cmd);
+        out.put("pb", pos[0] == null ? "null" : (pos[0][0] + "," + pos[0][1] + "," + pos[0][2]));
+        return out;
     }
 
     /** Shared fill core for //set and //walls. Places `blockName` at every

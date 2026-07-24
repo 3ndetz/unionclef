@@ -329,6 +329,11 @@ public class McpServer {
         tool("mineStatus",
                 "Poll the break queue: {mining, remaining}. mining=false && remaining=0 -> done.",
                 schema(), a -> api.mineStatus());
+        tool("cleanupScaffold",
+                "Mine out the tungsten NAV scaffolding (pillar-up / bridge blocks it placed to reach a "
+                + "goal) — the garbage around a build. Top-down, finite, can't loop. Poll mineStatus; "
+                + "reposition (gotoXYZ) for out-of-reach.",
+                schema(), a -> api.cleanupScaffold());
         tool("replaceSelection",
                 "//replace — swap every selection cell that is `from` (or \"*\"/\"any\" = any non-air) for "
                 + "`to`. Two phases: breaks the matching cells, then poll replaceStatus which places `to`. "

@@ -32,61 +32,83 @@ public final class WorldEditCommands {
     private WorldEditCommands() {}
 
     /** @param playerBlock  the player's block pos (read on the client thread), may be null
-     *  @param crosshairBlock the looked-at block pos (read on the client thread), may be null */
-    public static void handle(AltoClef mod, String line, int[] playerBlock, int[] crosshairBlock) {
+     *  @param crosshairBlock the looked-at block pos (read on the client thread), may be null
+     *  @return the underlying primitive's result map (surfaced to py4j we() for tests). */
+    public static java.util.Map<String, Object> handle(AltoClef mod, String line, int[] playerBlock, int[] crosshairBlock) {
         Py4jEntryPoint api = mod.getInfoSender();
-        if (api == null) { log(mod, "not ready"); return; }
+        if (api == null) return status(false, "not ready");
         String[] t = line.trim().isEmpty() ? new String[]{""} : line.trim().split("\\s+");
         String cmd = t[0].toLowerCase();
         try {
             switch (cmd) {
-                case "pos1": corner(mod, api, 1, playerBlock); break;
-                case "pos2": corner(mod, api, 2, playerBlock); break;
+                case "pos1": return corner(mod, api, 1, playerBlock);
+                case "pos2": return corner(mod, api, 2, playerBlock);
                 case "hpos1":
-                    if (crosshairBlock == null) { log(mod, "no block in view"); return; }
-                    corner(mod, api, 1, crosshairBlock); break;
+                    if (crosshairBlock == null) return status(false, "no block in view");
+                    return corner(mod, api, 1, crosshairBlock);
                 case "hpos2":
-                    if (crosshairBlock == null) { log(mod, "no block in view"); return; }
-                    corner(mod, api, 2, crosshairBlock); break;
+                    if (crosshairBlock == null) return status(false, "no block in view");
+                    return corner(mod, api, 2, crosshairBlock);
                 case "sel": case "desel":
-                    api.clearSelection(); pos1 = null; pos2 = null; log(mod, "selection cleared"); break;
+                    pos1 = null; pos2 = null; log(mod, "selection cleared"); return api.clearSelection();
                 case "set":
-                    log(mod, "//set " + arg(t, 1) + " -> " + api.fillSelection(arg(t, 1))); break;
+                    return logged(mod, "//set " + arg(t, 1), api.fillSelection(arg(t, 1)));
                 case "replace": case "re":
-                    log(mod, "//replace " + arg(t, 1) + "->" + arg(t, 2) + " " + api.replaceSelection(arg(t, 1), arg(t, 2))); break;
+                    return logged(mod, "//replace " + arg(t, 1) + "->" + arg(t, 2), api.replaceSelection(arg(t, 1), arg(t, 2)));
                 case "walls":
-                    log(mod, "//walls " + api.wallsSelection(arg(t, 1))); break;
+                    return logged(mod, "//walls", api.wallsSelection(arg(t, 1)));
                 case "hollow": case "faces":
-                    log(mod, "//hollow " + api.hollowSelection(arg(t, 1))); break;
+                    return logged(mod, "//hollow", api.hollowSelection(arg(t, 1)));
                 case "cyl":
-                    log(mod, "//cyl " + api.cylSelection(arg(t, 1))); break;
+                    return logged(mod, "//cyl", api.cylSelection(arg(t, 1)));
                 case "sphere":
-                    log(mod, "//sphere " + api.sphereSelection(arg(t, 1))); break;
+                    return logged(mod, "//sphere", api.sphereSelection(arg(t, 1)));
                 case "restat": case "replacestat":
-                    log(mod, "replaceStatus " + api.replaceStatus()); break;
+                    return logged(mod, "replaceStatus", api.replaceStatus());
                 case "minestat":
-                    log(mod, "mineStatus " + api.mineStatus()); break;
+                    return logged(mod, "mineStatus", api.mineStatus());
+                case "cleanup": case "clearscaffold":
+                    return logged(mod, "cleanup(" + api.scaffoldCount() + ")", api.cleanupScaffold());
                 case "schem": case "paste": case "load":
-                    log(mod, "schem/paste: parse the schematic file agent-side and drive buildBlocks(list) — no client-side file op yet"); break;
+                    log(mod, "schem/paste: parse the file agent-side and drive buildBlocks(list) — no client file op yet");
+                    return status(true, "schem: agent-side");
                 case "help": case "":
-                    log(mod, "WE: pos1 pos2 hpos1 hpos2 sel | set<b> replace<f><t> walls<b> hollow<b> cyl<b> sphere<b> | restat minestat"); break;
+                    log(mod, "WE: pos1 pos2 hpos1 hpos2 sel | set<b> replace<f><t> walls<b> hollow<b> cyl<b> sphere<b> | cleanup restat minestat");
+                    return status(true, "help");
                 default:
                     log(mod, "unknown ;; command: " + cmd + " (try ;;help)");
+                    return status(false, "unknown: " + cmd);
             }
         } catch (Exception e) {
             log(mod, "WE error: " + e.getMessage());
+            return status(false, "error: " + e.getMessage());
         }
     }
 
-    private static void corner(AltoClef mod, Py4jEntryPoint api, int which, int[] b) {
-        if (b == null) { log(mod, "no player position"); return; }
+    private static java.util.Map<String, Object> corner(AltoClef mod, Py4jEntryPoint api, int which, int[] b) {
+        if (b == null) { log(mod, "no player position"); return status(false, "no player position"); }
         if (which == 1) pos1 = b; else pos2 = b;
         log(mod, "pos" + which + " = " + b[0] + "," + b[1] + "," + b[2]);
+        java.util.Map<String, Object> out = new java.util.HashMap<>();
+        out.put("ok", true);
+        out.put("pos" + which, b[0] + "," + b[1] + "," + b[2]);
         if (pos1 != null && pos2 != null) {
-            api.select(pos1[0], pos1[1], pos1[2], pos2[0], pos2[1], pos2[2]);
-            log(mod, "selection set (" + pos1[0] + "," + pos1[1] + "," + pos1[2] + " -> "
-                    + pos2[0] + "," + pos2[1] + "," + pos2[2] + ")");
+            java.util.Map<String, Object> sel = api.select(pos1[0], pos1[1], pos1[2], pos2[0], pos2[1], pos2[2]);
+            log(mod, "selection set " + sel);
+            out.put("selection", sel);
         }
+        return out;
+    }
+
+    private static java.util.Map<String, Object> logged(AltoClef mod, String label, java.util.Map<String, Object> r) {
+        log(mod, label + " " + r);
+        return r;
+    }
+
+    private static java.util.Map<String, Object> status(boolean ok, String reason) {
+        java.util.Map<String, Object> m = new java.util.HashMap<>();
+        m.put("ok", ok); m.put("reason", reason);
+        return m;
     }
 
     private static String arg(String[] t, int i) { return i < t.length ? t[i] : ""; }

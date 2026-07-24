@@ -113,6 +113,8 @@ public class PillarTask {
                 BlockHitResult hit = new BlockHitResult(faceCenter, Direction.UP, against, false);
                 mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
                 player.swingHand(Hand.MAIN_HAND);
+                // remember this pillar block as scaffolding so a cleanup can mine it back out
+                kaptainwutax.tungsten.util.ScaffoldRegistry.record(placeAt);
             }
         }
 

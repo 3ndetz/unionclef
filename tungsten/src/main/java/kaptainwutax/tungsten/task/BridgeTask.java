@@ -180,6 +180,8 @@ public class BridgeTask {
             BlockHitResult hit = new BlockHitResult(faceCenter, side, against, false);
             mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
             player.swingHand(Hand.MAIN_HAND);
+            // remember this bridge block as scaffolding so a cleanup can mine it back out
+            kaptainwutax.tungsten.util.ScaffoldRegistry.record(toPlace);
         }
 
         // stuck detection along the bridge axis
