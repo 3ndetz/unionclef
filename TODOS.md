@@ -401,6 +401,13 @@
   - [ ] 8.2 планировщик порядка постройки (снизу вверх, доступность позиций, не замуровать себя), tungsten ведёт к каждой позиции и ставит
   - [ ] 8.3 докупка/добыча недостающих материалов (связка с altoclef-инвентарём)
 - [ ] 9. WorldEdit-подобные команды в tungsten (`;` или свой префикс):
+  - ⛔ **9.0 КРИТЕРИЙ СДАЧИ (юзер 2026-07-24): `;;`-ОБРАБОТЧИК КОМАНД WorldEdit.** Обернуть ВСЕ
+    примитивы в `;;`-команды по образцу WE: `;;pos1 ;;pos2` (углы селекта по позиции игрока),
+    `;;hpos1 ;;hpos2` (углы по блоку под ПРИЦЕЛОМ), `;;sel`, `;;set <block>`, `;;replace <from> <to>`,
+    `;;walls`, `;;hollow`, `;;cyl`, `;;sphere`, `;;schem load <name>`, `;;paste`, и сколько ещё смогу
+    (`;;copy ;;cut ;;undo ;;stack ;;move ;;size ;;count`). Скопировать командлист из WE. Префикс `;;`
+    (отдельно от `;` движение/бой и `@` altoclef). Каждая = тонкая обёртка над py4j-примитивом.
+    Тестировать каждую. + МУСОР-CLEANUP после стройки (леса/диагонали) БЕЗ вечного цикла (см. отд. task).
   - [x] 9.1 selection: py4j select(x1,y1,z1,x2,y2,z2) — хранит регион, рендерит жёлтую подсветку (SELECTION-контейнер, гейтится renderVisualization), возвращает min/max/volume; clearSelection(). Тест worldedit_test PASS
   - [~] 9.2 операции: //set + //walls + //hollow + //cyl + //sphere ГОТОВЫ (shapes 2026-07-23,
     worldedit_shapes_test 3/3: cyl=circle, hollow=6-face shell, sphere=ellipsoid; py4j+MCP). fillSelection(block)=//set (все клетки), wallsSelection(block)=//walls (4 вертикальные стены, полый центр). Общее ядро fillCells(predicate) — без дублей. ЧЕСТНЫЙ blockName: equipHotbarBlock экипирует названный блок из хотбара (не молча ставит что в руке). Снизу вверх (опора у каждой), кап 96/вызов (truncated), возвращает filled/remaining/complete → агент репозиционируется для дальних. Тест PASS: //set cobblestone держа dirt (4/4, доказан equip), //walls кольцо 8/8 + центр air. Осталось: //replace (нужен синхронный break-примитив), //hollow/cyl/sphere (генераторы позиций поверх fillCells)
