@@ -83,12 +83,36 @@ def setup_pvp():
     ensure_ingame(C2)
     rcon(f"tp {VICTIM} 4 -60 0 -90 0"); rcon(f"tp {BOT} -1 -60 0 -90 0"); time.sleep(2)
 
+def setup_we():
+    rcon("forceload add -16 -16 16 16")
+    rcon("fill -8 -60 -8 8 -50 8 air")
+    rcon("fill -8 -61 -8 8 -61 8 stone")             # floor
+    rcon("time set day"); rcon("weather clear")
+    rcon(f"item replace entity {BOT} hotbar.1 with stone 64")
+    rcon(f"item replace entity {BOT} hotbar.2 with glass 64")
+    rcon(f"item replace entity {BOT} hotbar.3 with diamond_pickaxe")
+    rcon(f"tp {BOT} 0 -60 2 180 12"); time.sleep(2)  # face -z toward z=0, look slightly down
+
+# @@ WorldEdit: a 5x2 wall APPEARS (@@set stone), then turns to GLASS (@@replace) — real
+# survival placement/breaking through the tungsten executor, on camera.
+WE_BODY = (
+    'mc.ExecuteCommand("@stop")\n'
+    'time.sleep(1.5)\n'
+    'mc.select(-2,-60,0, 2,-59,0)\n'
+    'time.sleep(1.5)\n'
+    'mc.we("set stone")\n'
+    'time.sleep(7)\n'
+    'mc.we("replace stone glass")\n'
+    'time.sleep(9)\n'
+)
+
 def main():
     wait_for("rcon", lambda:"players" in rcon("list"),300,5)
     ensure_ingame(CLIENT); time.sleep(2)
     if SCEN=="slime":     setup_slime();  record(9,  'mc.ChatMessage(";goto 5 -56 0")')
     elif SCEN=="bridge":  setup_bridge(); record(14, 'mc.selectHotbar(0); mc.bridgeForward("east", 14)')
     elif SCEN=="pvp":     setup_pvp();    record(13, 'mc.ChatMessage(";punk '+VICTIM+'")')
+    elif SCEN=="worldedit": setup_we();   record(22, WE_BODY)
     else: print("unknown scenario"); sys.exit(2)
     print("DONE", SCEN)
 
