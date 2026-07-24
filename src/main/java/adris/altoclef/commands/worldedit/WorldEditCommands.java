@@ -86,9 +86,13 @@ public final class WorldEditCommands {
                     return logged(mod, "//paste", api.pasteClipboard());
                 case "size":
                     return logged(mod, "//size", api.selectionSize());
-                case "schem": case "load":
-                    log(mod, "schem load: parse the .schem/.litematic file agent-side and drive buildBlocks(list) — no client file op yet");
-                    return status(true, "schem: agent-side");
+                case "schem":
+                    if ("load".equalsIgnoreCase(arg(t, 1)))
+                        return logged(mod, "//schem load " + arg(t, 2), api.loadSchem(arg(t, 2)));
+                    log(mod, "usage: @@schem load <name>  (file in <gamedir>/schematics/)");
+                    return status(false, "usage: @@schem load <name>");
+                case "load":
+                    return logged(mod, "//load " + arg(t, 1), api.loadSchem(arg(t, 1)));
                 case "help": case "":
                     log(mod, "@@ WE: pos1 pos2 hpos1 hpos2 sel size | set<b> replace<f><t> walls<b> hollow<b> cyl<b> sphere<b> | copy paste undo | cleanup restat minestat | schem load");
                     return status(true, "help");

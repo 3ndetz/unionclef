@@ -2625,6 +2625,59 @@ public class Py4jEntryPoint {
         return out;
     }
 
+    /** @@schem load — read a .schem / .schematic / .litematic from the game dir's `schematics`
+     *  folder (via baritone's parsers), convert to blocks anchored at the player, and BUILD via
+     *  buildBlocks. Download real ones from minecraft-schematics.com into <gamedir>/schematics/.
+     *  Parse+convert on the client thread (registry-safe); build off it (no onClientThread nest). */
+    public Map<String, Object> loadSchem(String name) {
+        Map<String, Object> parsed = onClientThread(() -> {
+            Map<String, Object> o = new HashMap<>();
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc.player == null) { o.put("ok", false); o.put("reason", "not in game"); return o; }
+            java.io.File dir = new java.io.File(mc.runDirectory, "schematics");
+            java.io.File f = new java.io.File(dir, name);
+            if (!f.exists()) {
+                for (String ext : new String[]{".schem", ".schematic", ".litematic"}) {
+                    java.io.File cand = new java.io.File(dir, name + ext);
+                    if (cand.exists()) { f = cand; break; }
+                }
+            }
+            if (!f.exists()) { o.put("ok", false); o.put("reason", "not found in " + dir.getAbsolutePath()); return o; }
+            String fn = f.getName().toLowerCase();
+            baritone.utils.schematic.format.DefaultSchematicFormats fmt =
+                    fn.endsWith(".litematic") ? baritone.utils.schematic.format.DefaultSchematicFormats.LITEMATICA :
+                    fn.endsWith(".schematic") ? baritone.utils.schematic.format.DefaultSchematicFormats.MCEDIT :
+                    baritone.utils.schematic.format.DefaultSchematicFormats.SPONGE;
+            baritone.api.schematic.IStaticSchematic schem;
+            try (java.io.InputStream in = new java.io.FileInputStream(f)) {
+                schem = fmt.parse(in);
+            } catch (Exception e) { o.put("ok", false); o.put("reason", "parse: " + e.getMessage()); return o; }
+            net.minecraft.util.math.BlockPos a = mc.player.getBlockPos();
+            java.util.List<Object> blocks = new java.util.ArrayList<>();
+            for (int y = 0; y < schem.heightY(); y++)
+                for (int x = 0; x < schem.widthX(); x++)
+                    for (int z = 0; z < schem.lengthZ(); z++) {
+                        net.minecraft.block.BlockState st = schem.getDirect(x, y, z);
+                        if (st == null || st.isAir()) continue;
+                        blocks.add(java.util.List.of(a.getX() + x, a.getY() + y, a.getZ() + z,
+                                net.minecraft.registry.Registries.BLOCK.getId(st.getBlock()).toString()));
+                    }
+            o.put("ok", true); o.put("blocks", blocks); o.put("file", f.getName());
+            o.put("size", schem.widthX() + "x" + schem.heightY() + "x" + schem.lengthZ());
+            return o;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+        if (!Boolean.TRUE.equals(parsed.get("ok"))) return parsed;
+        @SuppressWarnings("unchecked")
+        java.util.List<Object> blocks = (java.util.List<Object>) parsed.get("blocks");
+        if (blocks.isEmpty()) return Map.of("ok", false, "reason", "no non-air blocks in schematic");
+        Map<String, Object> r = buildBlocks(blocks);   // build off the client thread
+        Map<String, Object> out = new HashMap<>(parsed);
+        out.remove("blocks");
+        out.put("blockCount", blocks.size());
+        out.put("build", r);
+        return out;
+    }
+
     /** //size — the selection's dimensions + volume (or a no-selection note). */
     public Map<String, Object> selectionSize() {
         Map<String, Object> out = new HashMap<>();

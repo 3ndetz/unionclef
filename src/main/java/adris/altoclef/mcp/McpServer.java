@@ -350,6 +350,10 @@ public class McpServer {
         tool("undoStatus",
                 "Poll //undo: phase breaking -> placing -> done.",
                 schema(), a -> api.undoStatus());
+        tool("loadSchem",
+                "//schem load — read a .schem/.schematic/.litematic from <gamedir>/schematics/ and BUILD it "
+                + "anchored at the player (via buildBlocks). Download real ones from minecraft-schematics.com.",
+                schema("name:string"), a -> api.loadSchem(argStr(a, "name")));
         tool("replaceSelection",
                 "//replace — swap every selection cell that is `from` (or \"*\"/\"any\" = any non-air) for "
                 + "`to`. Two phases: breaks the matching cells, then poll replaceStatus which places `to`. "
