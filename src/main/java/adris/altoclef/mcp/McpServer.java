@@ -334,6 +334,15 @@ public class McpServer {
                 + "goal) — the garbage around a build. Top-down, finite, can't loop. Poll mineStatus; "
                 + "reposition (gotoXYZ) for out-of-reach.",
                 schema(), a -> api.cleanupScaffold());
+        tool("copySelection",
+                "//copy — snapshot the non-air blocks of the selection into a clipboard (offsets from min).",
+                schema(), a -> api.copySelection());
+        tool("pasteClipboard",
+                "//paste — place the clipboard at the player's block position. Poll buildBlocks-style remaining.",
+                schema(), a -> api.pasteClipboard());
+        tool("selectionSize",
+                "//size — the selection's min/max/size/volume and clipboard count.",
+                schema(), a -> api.selectionSize());
         tool("replaceSelection",
                 "//replace — swap every selection cell that is `from` (or \"*\"/\"any\" = any non-air) for "
                 + "`to`. Two phases: breaks the matching cells, then poll replaceStatus which places `to`. "

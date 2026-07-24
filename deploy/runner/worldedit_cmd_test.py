@@ -79,7 +79,18 @@ def main():
         if st.get("phase")=="done" or all(is_block(*c,"cobblestone") for c in cells): break
     rep_ok=all(is_block(*c,"cobblestone") for c in cells)
     print(f"  after ;;replace: cobble={[is_block(*c,'cobblestone') for c in cells]} -> {'OK' if rep_ok else 'FAIL'}")
-    ok=set_ok and rep_ok
+    # copy + paste: copy the cobblestone row, paste it re-anchored at 10,-60,0
+    print("  copy:", py4j("we",cmd="copy"))
+    tp(10,-60,0)
+    print("  paste:", py4j("we",cmd="paste"))
+    for _ in range(12):
+        time.sleep(1.5)
+        if is_block(11,-60,0,"cobblestone") and is_block(12,-60,0,"cobblestone"): break
+    pasted=[is_block(11,-60,0,"cobblestone"), is_block(12,-60,0,"cobblestone")]
+    paste_ok=all(pasted)
+    print(f"  after paste@10,-60,0: 11/12={pasted} -> {'OK' if paste_ok else 'FAIL'}")
+    print("  size:", py4j("we",cmd="size"))
+    ok=set_ok and rep_ok and paste_ok
     print("  WE_CMD:", "PASS" if ok else "FAIL")
     py4j("stop")
 

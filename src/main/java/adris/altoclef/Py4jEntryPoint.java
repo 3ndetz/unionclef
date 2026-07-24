@@ -2503,6 +2503,68 @@ public class Py4jEntryPoint {
         return out;
     }
 
+    // ── //copy + //paste clipboard ────────────────────────────────────────────
+    private java.util.List<Object> _clipboard = null;   // [dx,dy,dz,name] relative to sel min
+
+    /** //copy — snapshot the NON-AIR blocks of the selection into a clipboard, as offsets
+     *  from the selection's min corner. Paste re-anchors them at the player. */
+    public Map<String, Object> copySelection() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            if (_selMin == null) { out.put("ok", false); out.put("reason", "no selection"); return out; }
+            java.util.List<Object> clip = new java.util.ArrayList<>();
+            int ox = _selMin[0], oy = _selMin[1], oz = _selMin[2];
+            for (int y = _selMin[1]; y <= _selMax[1]; y++)
+                for (int x = _selMin[0]; x <= _selMax[0]; x++)
+                    for (int z = _selMin[2]; z <= _selMax[2]; z++) {
+                        net.minecraft.block.BlockState st = client.world.getBlockState(new net.minecraft.util.math.BlockPos(x, y, z));
+                        if (st.isAir()) continue;
+                        clip.add(java.util.List.of(x - ox, y - oy, z - oz,
+                                net.minecraft.registry.Registries.BLOCK.getId(st.getBlock()).toString()));
+                    }
+            _clipboard = clip;
+            out.put("ok", true); out.put("copied", clip.size());
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** //paste — place the clipboard at the player's block position (min corner anchor).
+     *  Reuses buildBlocks (own onClientThread — no nesting since we are off it here). */
+    public Map<String, Object> pasteClipboard() {
+        if (_clipboard == null || _clipboard.isEmpty()) return Map.of("ok", false, "reason", "clipboard empty (//copy first)");
+        int[] anchor = onClientThread(() -> {
+            var p = MinecraftClient.getInstance().player;
+            if (p == null) return null;
+            net.minecraft.util.math.BlockPos b = p.getBlockPos();
+            return new int[]{b.getX(), b.getY(), b.getZ()};
+        }, null);
+        if (anchor == null) return Map.of("ok", false, "reason", "not in game");
+        java.util.List<Object> abs = new java.util.ArrayList<>();
+        for (Object o : _clipboard) {
+            java.util.List<?> c = (java.util.List<?>) o;
+            abs.add(java.util.List.of(anchor[0] + ((Number) c.get(0)).intValue(),
+                    anchor[1] + ((Number) c.get(1)).intValue(),
+                    anchor[2] + ((Number) c.get(2)).intValue(), c.get(3)));
+        }
+        return buildBlocks(abs);
+    }
+
+    /** //size — the selection's dimensions + volume (or a no-selection note). */
+    public Map<String, Object> selectionSize() {
+        Map<String, Object> out = new HashMap<>();
+        if (_selMin == null) { out.put("ok", false); out.put("reason", "no selection"); return out; }
+        out.put("ok", true);
+        out.put("min", _selMin[0] + "," + _selMin[1] + "," + _selMin[2]);
+        out.put("max", _selMax[0] + "," + _selMax[1] + "," + _selMax[2]);
+        int dx = _selMax[0] - _selMin[0] + 1, dy = _selMax[1] - _selMin[1] + 1, dz = _selMax[2] - _selMin[2] + 1;
+        out.put("size", dx + "x" + dy + "x" + dz);
+        out.put("volume", dx * dy * dz);
+        out.put("clipboard", _clipboard == null ? 0 : _clipboard.size());
+        return out;
+    }
+
     /** Shared fill core for //set and //walls. Places `blockName` at every
      *  replaceable selection cell matching `include`, bottom-up (so each cell
      *  has support: the floor or an already-placed block below), capped per

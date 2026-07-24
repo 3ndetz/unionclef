@@ -70,11 +70,17 @@ public final class WorldEditCommands {
                     return logged(mod, "mineStatus", api.mineStatus());
                 case "cleanup": case "clearscaffold":
                     return logged(mod, "cleanup(" + api.scaffoldCount() + ")", api.cleanupScaffold());
-                case "schem": case "paste": case "load":
-                    log(mod, "schem/paste: parse the file agent-side and drive buildBlocks(list) — no client file op yet");
+                case "copy":
+                    return logged(mod, "//copy", api.copySelection());
+                case "paste":
+                    return logged(mod, "//paste", api.pasteClipboard());
+                case "size":
+                    return logged(mod, "//size", api.selectionSize());
+                case "schem": case "load":
+                    log(mod, "schem load: parse the .schem/.litematic file agent-side and drive buildBlocks(list) — no client file op yet");
                     return status(true, "schem: agent-side");
                 case "help": case "":
-                    log(mod, "@@ WE: pos1 pos2 hpos1 hpos2 sel | set<b> replace<f><t> walls<b> hollow<b> cyl<b> sphere<b> | cleanup restat minestat");
+                    log(mod, "@@ WE: pos1 pos2 hpos1 hpos2 sel size | set<b> replace<f><t> walls<b> hollow<b> cyl<b> sphere<b> | copy paste | cleanup restat minestat | schem load");
                     return status(true, "help");
                 default:
                     log(mod, "unknown @@ command: " + cmd + " (try @@help)");
