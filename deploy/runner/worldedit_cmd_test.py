@@ -36,22 +36,34 @@ def rcon(c): return sh(["docker","exec",SERVER,"rcon-cli",c]).stdout.strip()
 def is_block(x,y,z,name): return "passed" in rcon(f"execute if block {x} {y} {z} minecraft:{name}").lower()
 def tp(x,y,z): rcon(f"tp {BOT} {x} {y} {z} 90 0"); time.sleep(1.2)
 
+def ingame():
+    try: return py4j("state")["inGame"]
+    except Exception: return False
+def we_at(cmd, x, y, z):
+    # tp + run the WE command, RETRYING until the mod read a valid player block (pb) —
+    # a restart-fresh bot flickers in/out of game, and a null pb means no selection.
+    for _ in range(8):
+        tp(x, y, z)
+        r = py4j("we", cmd=cmd)
+        if r.get("pb") not in (None, "null"): return r
+        time.sleep(3)
+    return r
+
 def main():
-    for _ in range(40):
-        try:
-            if py4j("state")["inGame"]: break
-        except Exception: pass
+    for _ in range(60):
+        if ingame(): break
         try: py4j("connect",ip="test-server")
         except Exception: pass
         time.sleep(5)
+    time.sleep(8)                                   # settle (connect flicker)
     py4j("stop"); time.sleep(1)
     rcon("forceload add -8 -8 16 16")
     rcon("fill 0 -61 -4 12 5 4 air")
     rcon("fill 0 -61 -4 12 -61 4 stone")           # floor
     cells=[(5,-60,0),(6,-60,0),(7,-60,0)]
-    print("=== ;; WorldEdit command handler ===")
-    tp(5,-60,0); print("  pos1:", py4j("we",cmd="pos1"))
-    tp(7,-60,0); print("  pos2:", py4j("we",cmd="pos2"))
+    print("=== @@ WorldEdit command handler ===")
+    print("  pos1:", we_at("pos1",5,-60,0))
+    print("  pos2:", we_at("pos2",7,-60,0))
     tp(6,-60,2)                                     # stand adjacent, in reach
     rcon(f"item replace entity {BOT} hotbar.1 with stone 64")
     rcon(f"item replace entity {BOT} hotbar.2 with cobblestone 64")

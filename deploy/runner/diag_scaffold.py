@@ -40,21 +40,26 @@ def rcon(c): return sh(["docker","exec",SERVER,"rcon-cli",c]).stdout.strip()
 def is_air(x,y,z): return "passed" in rcon(f"execute if block {x} {y} {z} air").lower()
 
 def main():
-    for _ in range(40):
-        try:
-            if py4j("state")["inGame"]: break
-        except Exception: pass
+    def ingame():
+        try: return py4j("state")["inGame"]
+        except Exception: return False
+    for _ in range(60):
+        if ingame(): break
         try: py4j("connect",ip="test-server")
         except Exception: pass
         time.sleep(5)
+    time.sleep(8)                                   # settle the connect flicker
     py4j("stop"); time.sleep(1)
     rcon("forceload add -8 -8 16 16")
     rcon("fill 0 -61 -4 12 10 4 air")
     rcon("fill 0 -61 -4 12 -61 4 stone")           # floor
-    rcon(f"tp {BOT} 5 -60 0 90 0"); time.sleep(1.5)
+    rcon(f"tp {BOT} 5 -60 0 90 0"); time.sleep(2)
     rcon(f"item replace entity {BOT} hotbar.1 with cobblestone 64")
     rcon(f"item replace entity {BOT} weapon.mainhand with diamond_pickaxe")
+    time.sleep(1)
     print("=== scaffolding cleanup ===")
+    if not ingame():
+        print("  bot not in-game after settle — abort"); print("  SCAFFOLD: FAIL"); return
     print("  pillarTo -55:", py4j("pillar", y=-55))
     for _ in range(20):
         time.sleep(1.5)

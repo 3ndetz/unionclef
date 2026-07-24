@@ -440,10 +440,12 @@ public class AltoClef implements ModInitializer {
         // Receive + cancel chat
         EventBus.subscribe(SendChatEvent.class, evt -> {
             String line = evt.message;
-            // `;;` WorldEdit command handler (user 2026-07-24). Read the player / crosshair
-            // block HERE on the client thread (safe), then run the handler OFF-thread so the
-            // worldedit primitives' onClientThread marshalling doesn't deadlock the client.
-            if (line.startsWith(";;")) {
+            // `@@` WorldEdit command handler (user 2026-07-24) — `@@` distances the many WE
+            // commands from the main `@` altoclef commands (mirrors WorldEdit's `//`) and dodges
+            // the `@set` clash. Checked BEFORE the `@` dispatch. Read the player / crosshair block
+            // HERE on the client thread (safe), then run the handler OFF-thread so the worldedit
+            // primitives' onClientThread marshalling doesn't deadlock the client.
+            if (line.startsWith("@@")) {
                 evt.cancel();
                 final String weCmd = line.substring(2).strip();
                 net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();

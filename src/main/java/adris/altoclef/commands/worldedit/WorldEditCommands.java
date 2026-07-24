@@ -4,24 +4,25 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.Py4jEntryPoint;
 
 /**
- * `;;`-prefixed WorldEdit-like command handler for tungsten — thin wrappers over the
- * Py4jEntryPoint worldedit primitives (select / fill / walls / hollow / cyl / sphere /
- * replace / buildBlocks), so the operator can drive them by typed commands like WorldEdit:
+ * `@@`-prefixed WorldEdit-like command handler — thin wrappers over the Py4jEntryPoint
+ * worldedit primitives (select / fill / walls / hollow / cyl / sphere / replace /
+ * buildBlocks), so the operator can drive them by typed commands like WorldEdit:
  *
- *   ;;pos1 ;;pos2      selection corners at the PLAYER's block
- *   ;;hpos1 ;;hpos2    selection corners at the LOOKED-AT (crosshair) block
- *   ;;sel             clear selection
- *   ;;set <block>     fill selection
- *   ;;replace <from> <to>
- *   ;;walls / ;;hollow / ;;cyl / ;;sphere <block>
- *   ;;restat / ;;minestat   poll //replace and mine progress
- *   ;;schem / ;;paste       (agent parses the file + drives buildBlocks — not a client file op)
+ *   @@pos1 @@pos2      selection corners at the PLAYER's block
+ *   @@hpos1 @@hpos2    selection corners at the LOOKED-AT (crosshair) block
+ *   @@sel             clear selection
+ *   @@set <block>     fill selection
+ *   @@replace <from> <to>
+ *   @@walls / @@hollow / @@cyl / @@sphere <block>
+ *   @@cleanup         mine out nav scaffolding (pillar/bridge garbage)
+ *   @@restat / @@minestat   poll //replace and mine progress
+ *   @@schem / @@paste       (agent parses the file + drives buildBlocks — not a client file op)
  *
  * Called OFF the client thread (the primitives marshal back via onClientThread; calling
  * them ON the client thread would deadlock), with the player/crosshair block positions
  * pre-read on the client thread and passed in. Real survival placement (protection rules
- * apply). The chosen prefix `;;` is distinct from `;` (tungsten movement/combat) and `@`
- * (altoclef). ACCEPTANCE CRITERION for the tungsten worldedit handler (user 2026-07-24).
+ * apply). The prefix `@@` distances the many WE commands from the main `@` altoclef
+ * commands (mirrors WorldEdit's `//`). ACCEPTANCE CRITERION for the WE handler (user 2026-07-24).
  */
 public final class WorldEditCommands {
 
@@ -73,10 +74,10 @@ public final class WorldEditCommands {
                     log(mod, "schem/paste: parse the file agent-side and drive buildBlocks(list) — no client file op yet");
                     return status(true, "schem: agent-side");
                 case "help": case "":
-                    log(mod, "WE: pos1 pos2 hpos1 hpos2 sel | set<b> replace<f><t> walls<b> hollow<b> cyl<b> sphere<b> | cleanup restat minestat");
+                    log(mod, "@@ WE: pos1 pos2 hpos1 hpos2 sel | set<b> replace<f><t> walls<b> hollow<b> cyl<b> sphere<b> | cleanup restat minestat");
                     return status(true, "help");
                 default:
-                    log(mod, "unknown ;; command: " + cmd + " (try ;;help)");
+                    log(mod, "unknown @@ command: " + cmd + " (try @@help)");
                     return status(false, "unknown: " + cmd);
             }
         } catch (Exception e) {
