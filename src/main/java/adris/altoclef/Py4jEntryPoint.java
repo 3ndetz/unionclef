@@ -2551,6 +2551,80 @@ public class Py4jEntryPoint {
         return buildBlocks(abs);
     }
 
+    // ── //undo — snapshot the selection before a modifying op, restore on undo ──
+    private final java.util.Deque<java.util.List<Object>> _undoStack = new java.util.ArrayDeque<>();
+    private java.util.List<Object> _undoBuildPending = null;   // non-air blocks to rebuild after break
+    private static final int UNDO_MAX_CELLS = 4096;
+    private static final int UNDO_MAX_STACK = 10;
+
+    /** Snapshot the selection's blocks (all cells, incl. air) so //undo can restore them.
+     *  Auto-called before a modifying WE op. Skips huge selections (cap). */
+    public Map<String, Object> undoSnapshot() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null || _selMin == null) { out.put("ok", false); out.put("reason", "no selection"); return out; }
+            long vol = (long) (_selMax[0] - _selMin[0] + 1) * (_selMax[1] - _selMin[1] + 1) * (_selMax[2] - _selMin[2] + 1);
+            if (vol > UNDO_MAX_CELLS) { out.put("ok", false); out.put("reason", "selection too big for undo (" + vol + ")"); return out; }
+            java.util.List<Object> snap = new java.util.ArrayList<>();
+            for (int y = _selMin[1]; y <= _selMax[1]; y++)
+                for (int x = _selMin[0]; x <= _selMax[0]; x++)
+                    for (int z = _selMin[2]; z <= _selMax[2]; z++) {
+                        net.minecraft.block.BlockState st = client.world.getBlockState(new net.minecraft.util.math.BlockPos(x, y, z));
+                        snap.add(java.util.List.of(x, y, z,
+                                st.isAir() ? "air" : net.minecraft.registry.Registries.BLOCK.getId(st.getBlock()).toString()));
+                    }
+            _undoStack.push(snap);
+            while (_undoStack.size() > UNDO_MAX_STACK) _undoStack.removeLast();
+            out.put("ok", true); out.put("snapshot", snap.size()); out.put("depth", _undoStack.size());
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** //undo — restore the last snapshot: break the whole region, then poll undoStatus which
+     *  rebuilds the snapshot's non-air blocks. Reuses the break queue + buildBlocks. */
+    public Map<String, Object> undoLast() {
+        return onClientThread(() -> {
+            Map<String, Object> out = new HashMap<>();
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
+            if (_undoStack.isEmpty()) { out.put("ok", false); out.put("reason", "nothing to undo"); return out; }
+            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (ex == null) { out.put("ok", false); out.put("reason", "no executor"); return out; }
+            java.util.List<Object> snap = _undoStack.pop();
+            java.util.List<net.minecraft.util.math.BlockPos> breakAll = new java.util.ArrayList<>();
+            java.util.List<Object> rebuild = new java.util.ArrayList<>();
+            for (Object o : snap) {
+                java.util.List<?> c = (java.util.List<?>) o;
+                int x = ((Number) c.get(0)).intValue(), y = ((Number) c.get(1)).intValue(), z = ((Number) c.get(2)).intValue();
+                breakAll.add(new net.minecraft.util.math.BlockPos(x, y, z));
+                if (!"air".equals(c.get(3))) rebuild.add(o);
+            }
+            kaptainwutax.tungsten.TungstenMod.TARGET = client.player.getPos();
+            ex.setPath(new java.util.ArrayList<>());
+            ex.breakQueue = new java.util.ArrayList<>(breakAll);
+            ex.stop = false;
+            _undoBuildPending = rebuild;
+            out.put("ok", true); out.put("phase", "breaking"); out.put("rebuild", rebuild.size());
+            return out;
+        }, Map.of("ok", false, "reason", "client thread timeout"));
+    }
+
+    /** Poll //undo: breaking (region clearing) -> placing (rebuild snapshot) -> done. */
+    public Map<String, Object> undoStatus() {
+        var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+        int breaking = (ex != null && ex.breakQueue != null) ? ex.breakQueue.size() : 0;
+        if (breaking > 0) return Map.of("ok", true, "phase", "breaking", "remaining", breaking);
+        if (_undoBuildPending == null) return Map.of("ok", true, "phase", "idle");
+        java.util.List<Object> b = _undoBuildPending;
+        _undoBuildPending = null;
+        Map<String, Object> r = buildBlocks(b);   // rebuild the snapshot's non-air blocks
+        Map<String, Object> out = new HashMap<>(r);
+        out.put("phase", Boolean.TRUE.equals(r.get("complete")) ? "done" : "placing");
+        if (!Boolean.TRUE.equals(r.get("complete"))) _undoBuildPending = b;   // reposition + poll again
+        return out;
+    }
+
     /** //size — the selection's dimensions + volume (or a no-selection note). */
     public Map<String, Object> selectionSize() {
         Map<String, Object> out = new HashMap<>();

@@ -53,17 +53,27 @@ public final class WorldEditCommands {
                 case "sel": case "desel":
                     pos1 = null; pos2 = null; log(mod, "selection cleared"); return api.clearSelection();
                 case "set":
+                    api.undoSnapshot();
                     return logged(mod, "//set " + arg(t, 1), api.fillSelection(arg(t, 1)));
                 case "replace": case "re":
+                    api.undoSnapshot();
                     return logged(mod, "//replace " + arg(t, 1) + "->" + arg(t, 2), api.replaceSelection(arg(t, 1), arg(t, 2)));
                 case "walls":
+                    api.undoSnapshot();
                     return logged(mod, "//walls", api.wallsSelection(arg(t, 1)));
                 case "hollow": case "faces":
+                    api.undoSnapshot();
                     return logged(mod, "//hollow", api.hollowSelection(arg(t, 1)));
                 case "cyl":
+                    api.undoSnapshot();
                     return logged(mod, "//cyl", api.cylSelection(arg(t, 1)));
                 case "sphere":
+                    api.undoSnapshot();
                     return logged(mod, "//sphere", api.sphereSelection(arg(t, 1)));
+                case "undo":
+                    return logged(mod, "//undo", api.undoLast());
+                case "undostat": case "ustat":
+                    return logged(mod, "//undo status", api.undoStatus());
                 case "restat": case "replacestat":
                     return logged(mod, "replaceStatus", api.replaceStatus());
                 case "minestat":
@@ -80,7 +90,7 @@ public final class WorldEditCommands {
                     log(mod, "schem load: parse the .schem/.litematic file agent-side and drive buildBlocks(list) — no client file op yet");
                     return status(true, "schem: agent-side");
                 case "help": case "":
-                    log(mod, "@@ WE: pos1 pos2 hpos1 hpos2 sel size | set<b> replace<f><t> walls<b> hollow<b> cyl<b> sphere<b> | copy paste | cleanup restat minestat | schem load");
+                    log(mod, "@@ WE: pos1 pos2 hpos1 hpos2 sel size | set<b> replace<f><t> walls<b> hollow<b> cyl<b> sphere<b> | copy paste undo | cleanup restat minestat | schem load");
                     return status(true, "help");
                 default:
                     log(mod, "unknown @@ command: " + cmd + " (try @@help)");

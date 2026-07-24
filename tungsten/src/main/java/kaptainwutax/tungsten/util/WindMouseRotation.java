@@ -27,10 +27,13 @@ public class WindMouseRotation {
 
     public static final WindMouseRotation INSTANCE = new WindMouseRotation();
 
-    // WindMouse tuning — per render frame
-    private double gravity      = 3.5;
-    private double wind         = 1.2;
-    private double maxStep      = 5.0;
+    // WindMouse tuning — per render frame. Gravity = direct pull to target, wind = the
+    // random orbit/spiral, maxStep = speed cap. Raised gravity + step and cut wind so the
+    // aim converges FASTER and more DIRECTLY instead of slowly circling the target (user
+    // live 2026-07-24). Still pixel-quantized + some wind -> humanized, not a robotic snap.
+    private double gravity      = 6.0;
+    private double wind         = 0.7;
+    private double maxStep      = 8.5;
     private double windDist     = 20.0;
     private double doneThreshold = 0.3;
     private double flickScale   = 4.0;

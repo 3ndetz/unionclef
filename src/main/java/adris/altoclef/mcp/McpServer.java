@@ -343,6 +343,13 @@ public class McpServer {
         tool("selectionSize",
                 "//size — the selection's min/max/size/volume and clipboard count.",
                 schema(), a -> api.selectionSize());
+        tool("undoLast",
+                "//undo — restore the last snapshot (auto-taken before set/replace/walls/hollow/cyl/sphere): "
+                + "breaks the region then rebuilds the snapshot. Poll undoStatus.",
+                schema(), a -> api.undoLast());
+        tool("undoStatus",
+                "Poll //undo: phase breaking -> placing -> done.",
+                schema(), a -> api.undoStatus());
         tool("replaceSelection",
                 "//replace — swap every selection cell that is `from` (or \"*\"/\"any\" = any non-air) for "
                 + "`to`. Two phases: breaks the matching cells, then poll replaceStatus which places `to`. "

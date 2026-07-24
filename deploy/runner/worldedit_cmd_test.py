@@ -34,6 +34,7 @@ def py4j(op,t=30,**kw):
     raise RuntimeError(f"{op}: {last}")
 def rcon(c): return sh(["docker","exec",SERVER,"rcon-cli",c]).stdout.strip()
 def is_block(x,y,z,name): return "passed" in rcon(f"execute if block {x} {y} {z} minecraft:{name}").lower()
+def is_air(x,y,z): return "passed" in rcon(f"execute if block {x} {y} {z} air").lower()
 def tp(x,y,z): rcon(f"tp {BOT} {x} {y} {z} 90 0"); time.sleep(1.2)
 
 def ingame():
@@ -90,7 +91,19 @@ def main():
     paste_ok=all(pasted)
     print(f"  after paste@10,-60,0: 11/12={pasted} -> {'OK' if paste_ok else 'FAIL'}")
     print("  size:", py4j("we",cmd="size"))
-    ok=set_ok and rep_ok and paste_ok
+    # undo: clear cells, fresh @@set stone (snapshot=air), @@undo -> back to air
+    rcon("fill 5 -60 0 7 -60 0 air"); time.sleep(1)
+    print("  pos1b:", we_at("pos1",5,-60,0)); print("  pos2b:", we_at("pos2",7,-60,0))
+    tp(6,-60,2)
+    print("  set stone(2):", py4j("we",cmd="set stone")); time.sleep(3)
+    set2=all(is_block(*c,"stone") for c in cells)
+    print("  undo:", py4j("we",cmd="undo"))
+    for _ in range(20):
+        time.sleep(1.5)
+        if py4j("we",cmd="undostat").get("phase")=="done" or all(is_air(*c) for c in cells): break
+    undo_ok=set2 and all(is_air(*c) for c in cells)
+    print(f"  after undo: air={[is_air(*c) for c in cells]} (set2 was {set2}) -> {'OK' if undo_ok else 'FAIL'}")
+    ok=set_ok and rep_ok and paste_ok and undo_ok
     print("  WE_CMD:", "PASS" if ok else "FAIL")
     py4j("stop")
 
