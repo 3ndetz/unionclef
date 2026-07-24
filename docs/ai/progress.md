@@ -1,5 +1,31 @@
 # Progress
 
+## SESSION 2026-07-24 (work machine) — PvP audit + unified suite v1 (RW-5/RW-1/RW-9 infra)
+
+INVESTIGATE: 8-reader parallel code audit of melee/ranged/chase/bridge/pathcore/test-infra/levers +
+adversarial verification of every critical/high finding + 12 TODOS "[x]" claims re-checked against
+code. Result: **docs/ai/audit-2026-07-24-pvp.md** — 5 verified root causes with file:line for RW-1
+(two key-writer clocks + trigger/aimer point mismatch), RW-9 (mid-air groundSafe bail, dead
+setTargetFast, feet-point LOS gate), RW-2/RW-3 (no-aim no-cooldown placement stacks), #67
+(smartMoves excludes all break/place/water move-gen; greedy no-g-cost search). TODO verification:
+9/12 claims CONFIRMED, 3 PARTIAL (combatBunnyHop* long fields NOT ;settings-tunable; MCP=54 tools;
+@shoot has no "sniper" mode). LIVE-D verified implemented -> flipped to [x].
+
+IMPLEMENT: unified suite pipeline v1 (RW-5): `deploy/runner/run_suite.py` + `deploy/runner/uctest/`
+(harness: ONE generic py4j call-by-name bridge + raising rcon; actors: warm-bot/reset/kits/settings
+pinning; arena: deterministic void islands/bridges/terrain strip; scenario: freeze + stand-still +
+self-vs-knockback-fall detectors, timeline.jsonl artifacts, retry-once flake policy). `pvp` suite:
+melee_basic, edge_duel, narrow_bridge_duel, chase_flat, chase_terrain (RW-9 bench — victim is a REAL
+@goto/baritone runner, never rcon-tp), bow_flee(+hard; info-tier until the kite lever exists — audit
+confirmed flee executor owns the camera), ranged_moving, bridge_assault(+defended), allround
+(primitive-composed ranged->melee). Design doc: docs/features/PVP_SUITE.md.
+
+NOT DONE / NEXT: suite has NOT run on the stand yet — this session ran on the work machine and the
+permission classifier blocked all Mac/jayra access paths (creds fetch, ssh, codex relay). First
+action next session (jayra or unlocked): `docker compose -f deploy/compose.test.yml --profile pvp
+up -d && python3 deploy/runner/run_suite.py pvp`, fix scenario-level fallout (lever semantics,
+thresholds), then start fix passes per the audit plan F1-F12 (each gated by a named scenario).
+
 ## SESSION 2026-07-23/24 — break primitive + follow LIVE-A fix + PvP ranged + tungsten-primary assessment
 
 RELEASED + VERIFIED (gh release asset confirmed):

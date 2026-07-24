@@ -43,11 +43,20 @@
 - [ ] **RW-4 (cross-cutting) — REAL-SERVER + ANTI-CHEAT validation for every mechanic change.**
   Every build/bridge/combat rework "ПУК" must be tested on a real server and visually checked it is
   not flagged by anti-cheat. Ties to item 11 (anti-cheat humanization) and task #64 (live bedwars).
-- [ ] **RW-5 — Build ONE CLEAR, GOOD test pipeline for everything (current tests are a mess).**
+- [~] **RW-5 — Build ONE CLEAR, GOOD test pipeline for everything (current tests are a mess).**
   User: "сейчас везде мусор." Unify the ad-hoc per-feature scripts (deploy/runner/*.py) into a clear,
   documented, repeatable pipeline: one entrypoint, named suites (nav/parkour/combat/build/bridge/
   ranged), consistent PASS/FAIL reporting, fresh-bot handling, frame+log verification baked in (the
   new verify-with-eyes rule). It must be OBVIOUS what each test checks and how to run it.
+  · PROGRESS 2026-07-24: **suite v1 LANDED** — `deploy/runner/run_suite.py` + `uctest/` lib (one
+    generic py4j bridge, raising rcon, deterministic arena builders, freeze/self-fall/stand-still
+    detectors, artifacts+timeline, retry-once flake policy) with the `pvp` suite: melee_basic,
+    edge_duel, narrow_bridge_duel, chase_flat, chase_terrain (RW-9 bench, REAL @goto runner not
+    rcon-tp), bow_flee(+hard, info until kite lever), ranged_moving, bridge_assault(+defended),
+    allround. Docs: docs/features/PVP_SUITE.md. NOT yet run on the stand (this session had no Mac
+    access — permission classifier blocked ssh/creds); first stand run = next step. Legacy script
+    migration (F12) remains. Full audit backing it: docs/ai/audit-2026-07-24-pvp.md (5 root causes
+    with file:line for RW-1/RW-2/RW-3/RW-9/#67 + ordered fix plan F1-F12).
 - [ ] **RW-6 — RANGED/bow demo video from tungsten is MISSING and must exist.**
   No clip shows tungsten ranged shooting; there should be one (bow aim + trajectory + hit). Build a
   clean ranged demo (bow_moving_test already validates the mechanic on the stand) once the capture
@@ -149,7 +158,10 @@
   reworked). Do a validated @gamer-on-tungsten run first (the nightly full-game pass), THEN default
   it on. Interim: the walker (v0.44.0 face-before-move) made terrain nav solid, so tungsten-primary
   is closer to ready than before.
-- [~] LIVE-D SHIFT/sneak STICKS ~5s randomly (esp. pressing sprint near an edge). ROOT FOUND:
+- [x] LIVE-D SHIFT/sneak STICKS — audit 2026-07-24 code-verified the fix IS implemented (VoidGuard
+  sneak release when not near an edge + driving->idle key release, MixinClientPlayerEntity.java:108);
+  needs only a live re-confirmation. ORIGINAL NOTE:
+  SHIFT/sneak STICKS ~5s randomly (esp. pressing sprint near an edge). ROOT FOUND:
   VoidGuard.protect (combat/VoidGuard.java:56) and SafetySystem edge-sneak set `sneakKey.setPressed(true)`
   near a void edge but NEVER release it; when the driving task (flee/punk/combat) ends the sneak is
   left pressed over the human player's control. resetAllState() releases all keys but only fires on
