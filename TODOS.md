@@ -82,6 +82,17 @@
   DISCONNECT, not on task-end. FIX (in progress): VoidGuard releases sneak when not near an edge +
   release mod-controlled keys once on the driving->idle transition.
 
+- ⛔⛔ **MANDATORY FINAL TESTS (боевое крещение, user 2026-07-24) — обязательны для сдачи:**
+  - **LIVE-BEDWARS (task #64):** зайти на РЕАЛЬНЫЙ публичный bedwars (через ../mineswarm инструкции —
+    `mc.musteryworld.net`, пиратка/offline, MC 1.21.x; @connect/@game навигация по меню сервера),
+    сыграть катку на tungsten: убить >=1 РЕАЛЬНОГО игрока, РЕАЛЬНО пошопиться (покупка в живом меню
+    магазина), попасть стрелой в РЕАЛЬНОГО игрока, мостить к чужим островам/кроватям. Стенд-части
+    (void-остров) уже PASS (bedwars_combat/bridge/bow); осталось РЕАЛЬНЫЙ сервер.
+  - **@gamer ПОЛНЫЙ ПРОХОД НА TUNGSTEN (task #67):** бот УСТОЙЧИВО проходит игру @gamer на tungsten
+    ДО КОНЦА, не ломается ни на каких маршрутах. Баритон это проходит — довести tungsten целиком,
+    чтобы баритон вообще НЕ требовался. Блокер: 'Ran out of nodes' на сложном рельефе (см. LIVE-C/#59)
+    — глубокая доработка генерации ходов/достижимости block-space поиска. Пока НЕ флипать primary по умолчанию.
+
 - [x] BUG #26 (CRASH, DONE 2026-07-22) `PathExecutor.getCurrentNode` did `path.get(-1)` on an
   EMPTY path ("mining without a physics leg") → IndexOutOfBounds in the entity tick → whole
   client crash on a goto that needs a 1-block mine. Fix: guard empty path (return null;
