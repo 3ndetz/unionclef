@@ -18,7 +18,7 @@ try:
     elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
     elif op=="stop": mc.ExecuteCommand("@stop"); out={"ok":True}
     elif op=="select": out=dict(mc.select(req["a"][0],req["a"][1],req["a"][2],req["b"][0],req["b"][1],req["b"][2]))
-    elif op=="replace": out=dict(mc.replaceSelection(req["from"],req["to"]))
+    elif op=="replace": out=dict(mc.replaceSelection(req["src"],req["dst"]))
     elif op=="replstat": out=dict(mc.replaceStatus())
 except Exception as e:
     sys.stderr.write("ERR:"+repr(e)+"\n"); sys.exit(3)
@@ -62,7 +62,7 @@ def main():
     print("=== //replace: 3-cell stone column -> cobblestone at x=5 ===")
     print("  before cobble?:", [block_at(*p) for p in patch])
     print("  select:", py4j("select", a=[5,-60,0], b=[5,-58,0]))
-    print("  replace:", py4j("replace", **{"from":"stone","to":"cobblestone"}))
+    print("  replace:", py4j("replace", src="stone", dst="cobblestone"))
     last=None
     for _ in range(40):
         time.sleep(1.5)
