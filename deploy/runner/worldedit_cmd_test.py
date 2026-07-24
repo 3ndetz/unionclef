@@ -67,6 +67,7 @@ def main():
     tp(6,-60,2)                                     # stand adjacent, in reach
     rcon(f"item replace entity {BOT} hotbar.1 with stone 64")
     rcon(f"item replace entity {BOT} hotbar.2 with cobblestone 64")
+    rcon(f"item replace entity {BOT} hotbar.3 with diamond_pickaxe")   # break queue equips it (fast stone)
     print("  set stone:", py4j("we",cmd="set stone"))
     time.sleep(2)
     set_ok=all(is_block(*c,"stone") for c in cells)
