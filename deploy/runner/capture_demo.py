@@ -37,6 +37,14 @@ def py4j(container, body, t=60):
           "mc=gw.entry_point\n"+body+"\ngw.close()")
     return subprocess.run(["docker","exec",container,"python3","-c",snip],capture_output=True,text=True,timeout=t)
 
+def disable_debug():
+    """Turn OFF tungsten's debug render overlays (search-node / path / break / place / combat
+    wireframe boxes) — they buried every demo in dev clutter. Persist in the running client;
+    then wait for the settings-confirmation chat to fade before we start recording."""
+    for s in ["renderVisualization","renderPathMoves","renderBreakPlan","renderPlacePlan","renderCombat"]:
+        py4j(CLIENT, f'mc.ChatMessage(";settings {s} false")'); time.sleep(0.3)
+    time.sleep(11)  # let the confirmation chat lines fade out of frame
+
 def ensure_ingame(container):
     py4j(container,"import time\n"
          "if not mc.inGame():\n"
@@ -77,16 +85,18 @@ def setup_slime():
     rcon("time set day"); rcon("weather clear")
     rcon(f"tp {BOT} -5 -55 0 90 15"); time.sleep(2)
 
-BRIDGE_N = 18   # long enough that the paving spans the whole clip (not a 2s blip)
+BRIDGE_N = 18
 def setup_bridge():
-    # CLEAN DEEP void with a tiny pad at its west edge; bot on the edge so the first step is
-    # already over the void. Camera behind (persp 1) looks EAST along the bridge — you SEE the
-    # leading edge where blocks drop into the void ahead as the bot advances.
-    clean(-6,-4,60,4)
-    rcon("fill -3 -61 -3 1 -61 3 stone")               # small pad, east edge at x=1
+    # WIDE + DEEP clean void (no flanking terrain — so it reads unmistakably as a void), a
+    # small pad at its west edge and a destination platform on the far side. Bot on the pad
+    # edge; camera behind (persp 1) looks EAST along the 1-wide bridge as blocks drop into the
+    # void ahead. Wide clean is the fix — the old z=-4..4 clean left stone flanking the gap.
+    clean(-6,-30,40,30,ytop=30,ybot=-95)
+    rcon("fill -3 -61 -2 1 -61 2 stone")               # start pad, east edge at x=1
+    rcon("fill 20 -61 -3 26 -61 3 stone")              # destination platform on the far side
     rcon(f"clear {BOT}"); rcon(f"item replace entity {BOT} hotbar.0 with cobblestone 64")
     rcon("time set day"); rcon("weather clear")
-    rcon(f"tp {BOT} 1 -60 0 -90 0"); time.sleep(2)     # pad edge, facing east(+x); void x>=2
+    rcon(f"tp {BOT} 1 -60 0 -90 0"); time.sleep(2)     # pad edge, facing east(+x); void x=2..19
 
 def setup_we():
     clean(-10,-8,10,10)
@@ -95,21 +105,26 @@ def setup_we():
     rcon(f"item replace entity {BOT} hotbar.1 with stone 64")
     rcon(f"item replace entity {BOT} hotbar.2 with glass 64")
     rcon(f"item replace entity {BOT} hotbar.3 with diamond_pickaxe")
-    rcon(f"tp {BOT} 0 -60 3 180 8"); time.sleep(2)     # 3 blocks south of the wall plane (z=0), facing north at it
+    rcon(f"tp {BOT} 0 -60 2 180 8"); time.sleep(2)     # 2 blocks south of the wall plane (z=0), facing north at it
 
 # first-person: the 3x2 wall APPEARS in stone (@@set) then turns to GLASS (@@replace),
-# directly in view, no bot body in the way. Fixed windows sized to the op (never truncated).
-WE_SET_WIN = 10
-WE_REP_WIN = 22
+# directly in view, no bot body in the way. The REPLACE place-phase is DRIVEN by polling
+# restat (replaceStatus sorts bottom-up + places) — sleeping alone leaves it broken (only
+# the break ran). Record dur must cover the full poll loop so nothing is truncated.
+WE_DUR = 44
 WE_BODY = (
     'mc.ExecuteCommand("@stop")\n'
     'time.sleep(1.5)\n'
     'mc.select(-1,-60,0, 1,-59,0)\n'
     'time.sleep(1.5)\n'
     'mc.we("set stone")\n'
-    f'time.sleep({WE_SET_WIN})\n'
+    'time.sleep(9)\n'                       # //set places the 6 stone
     'mc.we("replace stone glass")\n'
-    f'time.sleep({WE_REP_WIN})\n'
+    'for _ in range(22):\n'                 # POLL drives break -> place (bottom-up)
+    '    st=dict(mc.we("restat"))\n'
+    '    if str(st.get("phase"))=="done": break\n'
+    '    time.sleep(1.2)\n'
+    'time.sleep(2)\n'
 )
 
 def setup_pvp():
@@ -149,9 +164,10 @@ BEDWARS_BODY = (
 def main():
     wait_for("rcon", lambda:"players" in rcon("list"),300,5)
     ensure_ingame(CLIENT); time.sleep(2)
+    disable_debug()   # clean shot — no dev wireframe clutter
     if SCEN=="slime":       setup_slime();  record(9,  'mc.ChatMessage(";goto 5 -56 0")', persp=1)
-    elif SCEN=="bridge":    setup_bridge(); record(BRIDGE_N//2+8, f'mc.selectHotbar(0); time.sleep(0.6); mc.bridgeForward("east", {BRIDGE_N})', persp=1)
-    elif SCEN=="worldedit": setup_we();     record(3+WE_SET_WIN+WE_REP_WIN+2, WE_BODY, persp=0)
+    elif SCEN=="bridge":    setup_bridge(); record(10, f'mc.selectHotbar(0); time.sleep(0.6); mc.bridgeForward("east", {BRIDGE_N})', persp=1)
+    elif SCEN=="worldedit": setup_we();     record(WE_DUR, WE_BODY, persp=0)
     elif SCEN=="pvp":       setup_pvp();    record(14, 'mc.ChatMessage(";punkPlayer '+VICTIM+'")', persp=1)
     elif SCEN=="bedwars":   setup_bedwars(); record(28, BEDWARS_BODY, persp=1)
     else: print("unknown scenario"); sys.exit(2)
