@@ -54,8 +54,9 @@ def main():
     rcon("fill 0 -61 -4 12 10 4 air")
     rcon("fill 0 -61 -4 12 -61 4 stone")           # floor
     rcon(f"tp {BOT} 5 -60 0 90 0"); time.sleep(2)
-    rcon(f"item replace entity {BOT} hotbar.1 with cobblestone 64")
-    rcon(f"item replace entity {BOT} weapon.mainhand with diamond_pickaxe")
+    # PillarTask requires a BLOCK in the MAIN HAND; the cleanup break queue equips the tool.
+    rcon(f"item replace entity {BOT} hotbar.8 with diamond_pickaxe")
+    rcon(f"item replace entity {BOT} weapon.mainhand with cobblestone 64")
     time.sleep(1)
     print("=== scaffolding cleanup ===")
     if not ingame():
