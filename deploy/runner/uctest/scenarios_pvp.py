@@ -124,12 +124,17 @@ class ChaseFlat(Scenario):
             ctx.victim.cmd(f"@goto {nx} {STAND_Y} {nz}")
 
     def judge(self, ctx):
+        # "catches" = made contact (RW-9's definition) + trails the victim
+        # closely. The victim loops NON-STOP, so a chaser can never hold <~4
+        # avg on a flat loop; <7 separates catching-and-trailing (~5-6) from
+        # never-catching (falls to 10-12). Terrain uses the same idea via
+        # contact-made only.
         yield Criterion("contact <= 45s",
                         ctx.first_contact is not None and ctx.first_contact <= 45,
                         f"contact={ctx.first_contact}")
         avg = ctx.avg_dist(since=max(0, ctx.duration() - 30))
-        yield Criterion("avg dist (last 30s) < 4",
-                        avg is not None and avg < 4, f"avg={avg}")
+        yield Criterion("avg dist (last 30s) < 7 (non-stop looper)",
+                        avg is not None and avg < 7, f"avg={avg}")
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
 

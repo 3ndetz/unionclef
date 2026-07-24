@@ -66,12 +66,16 @@ class Ctx:
         if not bp:
             return
         now = time.time()
-        # freeze: no displacement > 0.05 for 6s
+        # freeze: no displacement > 0.05 for 6s. Target-aware: a stall only
+        # matters when the bot is AWAY from its objective (stuck) — holding still
+        # on a caught/paused target (chase) is correct, not a freeze. The RW-1
+        # "stands still NEAR the target" case is caught by standstill_windows.
+        caught = rec.get("dist") is not None and rec["dist"] < 3
         if self._last_move_pos is None or \
                 sum(abs(a - b) for a, b in zip(bp, self._last_move_pos)) > 0.05:
             self._last_move_pos = bp
             self._last_move_t = now
-        elif now - self._last_move_t > 6:
+        elif now - self._last_move_t > 6 and not caught:
             self.freeze_windows += 1
             self._last_move_t = now
             self.log(f"  WARNING freeze window #{self.freeze_windows} at {bp}")
