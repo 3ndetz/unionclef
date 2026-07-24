@@ -52,14 +52,24 @@ def main():
         rcon(c)
     ensure(FC,"fighter"); ensure(VC,"victim")
     py4j(FC,"chat",msg=";stop")
-    rcon(f"tp {F} 0.5 -60 0.5 0 0"); rcon(f"tp {V} 0.5 -60 6.5 180 0"); time.sleep(2)
-    print("=== aim jitter: ;punkPlayer a gently strafing victim ===")
+    rcon(f"kill {F}"); rcon(f"kill {V}")
+    for _ in range(15):
+        try:
+            hf=float(rcon(f"data get entity {F} Health").rsplit(':',1)[-1].strip().rstrip('fd'))
+            if hf>=19.9: break
+        except Exception: pass
+        time.sleep(2)
+    rcon(f"give {F} iron_sword"); rcon(f"item replace entity {F} weapon.mainhand with iron_sword")
+    # fighter at origin facing +z; victim strafes ALONG X at z=8 (perpendicular) so the
+    # fighter must TURN to track — that yaw movement is what we measure for jitter.
+    rcon(f"tp {F} 0.5 -60 0.5 0 0"); rcon(f"tp {V} 0.5 -60 8.5 180 0"); time.sleep(2)
+    print("=== aim jitter: ;punkPlayer a victim strafing perpendicular at z=8 ===")
     py4j(FC,"chat",msg=f";punkPlayer {V}")
-    t0=time.time(); z=6; dz=2
+    t0=time.time(); x=0; dx=3
     while time.time()-t0 < FIGHT_S:
-        z+=dz
-        if z>=10 or z<=3: dz=-dz
-        try: rcon(f"tp {V} {2.0} -60 {z}.5 180 0")
+        x+=dx
+        if x>=5 or x<=-5: dx=-dx
+        try: rcon(f"tp {V} {x}.5 -60 8.5 180 0")
         except Exception: pass
         time.sleep(STEP_S)
     n=int((time.time()-t0)*20)
