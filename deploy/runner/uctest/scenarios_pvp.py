@@ -269,32 +269,45 @@ class RangedMoving(Scenario):
     duration = 45
     bot_kit = KIT_BOW
 
+    LANE_X = 16          # the strafing lane, well inside the floor
+    STRAFE_Z = 6
+
     def build(self, arena, ctx):
-        arena.flat_field(half=20)
-        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
-        ctx.geo["victim_spawn"] = f"24.5 {STAND_Y} -6.5 90 0"
+        # floor must cover the WHOLE strafe lane: the first version sent the
+        # victim to x=24 on a +-20 floor, so it walked off the edge and died in
+        # the void — and its fall damage was then counted as arrow hits.
+        arena.flat_field(half=24)
+        ctx.geo["bot_spawn"] = f"-8.5 {STAND_Y} 0.5 -90 0"
+        ctx.geo["victim_spawn"] = f"{self.LANE_X}.5 {STAND_Y} -{self.STRAFE_Z}.5 90 0"
         ctx.geo["strafe_pos"] = True
         ctx.geo["last_shot"] = -10.0
         ctx.geo["shots"] = 0
 
     def drive_start(self, ctx):
-        ctx.victim.cmd(f"@goto 24 {STAND_Y} 6")
+        ctx.victim.cmd(f"@goto {self.LANE_X} {STAND_Y} {self.STRAFE_Z}")
 
     def drive_tick(self, ctx, t):
         vp = ctx.samples[-1].get("victim") if ctx.samples else None
-        if vp and abs(vp[2] - (6.5 if ctx.geo["strafe_pos"] else -6.5)) < 2:
+        want = self.STRAFE_Z if ctx.geo["strafe_pos"] else -self.STRAFE_Z
+        if vp and abs(vp[2] - want) < 2:
             ctx.geo["strafe_pos"] = not ctx.geo["strafe_pos"]
-            nz = 6 if ctx.geo["strafe_pos"] else -6
-            ctx.victim.cmd(f"@goto 24 {STAND_Y} {nz}")
+            nz = self.STRAFE_Z if ctx.geo["strafe_pos"] else -self.STRAFE_Z
+            ctx.victim.cmd(f"@goto {self.LANE_X} {STAND_Y} {nz}")
         if ctx.geo["shots"] < 6 and t - ctx.geo["last_shot"] >= 6.0:
             ctx.geo["last_shot"] = t
             ctx.geo["shots"] += 1
             ctx.bot.py.try_call("shootArrowAt", ctx.victim.name)
 
     def judge(self, ctx):
-        hits = ctx.hp_drop_events(who="victim", min_dist=8)
-        yield Criterion("hits >= 2/6 (vanilla spread)", len(hits) >= 2,
+        hits = ctx.arrow_hits(min_dist=8)
+        yield Criterion("hits >= 2/6 (vanilla spread)",
+                        2 <= len(hits) <= ctx.geo["shots"],
                         f"hits={len(hits)} shots={ctx.geo['shots']}")
+        # the victim dying to our ARROWS is the scenario working; only a fall out
+        # of the arena would invalidate the measurement
+        yield Criterion("victim never fell out of the arena",
+                        not ctx.victim_left_arena(),
+                        f"victim_deaths={ctx.deaths_of('victim')} (arrow kills are fine)")
 
 
 class BridgeAssault(Scenario):

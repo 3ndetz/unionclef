@@ -25,6 +25,10 @@ public class BowShooter {
     private static final int TIMEOUT_TICKS = 100;
 
     private static final double VEL_EMA = 0.5;      // smooth packet jitter in the lead
+    /** Above this per-tick jump the sample is a teleport/fall, not running. */
+    private static final double MAX_STEP_PER_TICK = 1.5;
+    /** Hard cap on the lead velocity: sprint-jumping tops out near 0.4 b/t. */
+    private static final double MAX_LEAD_SPEED = 0.5;
 
     private static Entity target = null;
     private static int chargeTicks = 0;
@@ -74,7 +78,18 @@ public class BowShooter {
         Vec3d curPos = target.getEntityPos();
         if (lastTargetPos != null) {
             Vec3d inst = curPos.subtract(lastTargetPos);   // blocks/tick, arrow-sim units
-            trackedVel = trackedVel.multiply(1 - VEL_EMA).add(inst.multiply(VEL_EMA));
+            // Reject teleports//tp/respawn jumps and clamp to a physically possible
+            // player speed. Without this a single position spike (a falling or
+            // teleported target) poisoned the EMA and the solver aimed 57 blocks
+            // ahead — straight into the ground (user 2026-07-24).
+            if (inst.length() <= MAX_STEP_PER_TICK) {
+                trackedVel = trackedVel.multiply(1 - VEL_EMA).add(inst.multiply(VEL_EMA));
+            } else {
+                trackedVel = Vec3d.ZERO;                   // discontinuity: no lead
+            }
+            if (trackedVel.length() > MAX_LEAD_SPEED) {
+                trackedVel = trackedVel.normalize().multiply(MAX_LEAD_SPEED);
+            }
         }
         lastTargetPos = curPos;
         Vec3d aimPoint = curPos.add(0, target.getHeight() * 0.6, 0);

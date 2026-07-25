@@ -47,6 +47,8 @@ class Ctx:
             "victim_hurt": self.rcon.hurt_time(self.victim.name) if self.victim else None,
             "k": self.rcon.score(self.bot.name, "k"),
             "d": self.rcon.score(self.bot.name, "d"),
+            "victim_d": (self.rcon.score(self.victim.name, "d")
+                         if self.victim else 0),
         }
         if bp and vp:
             rec["dist"] = round(sum((a - b) ** 2 for a, b in zip(bp, vp)) ** 0.5, 2)
@@ -163,6 +165,32 @@ class Ctx:
     def first_hit(self):
         ev = self.hp_drop_events()
         return ev[0][0] if ev else None
+
+    def arrow_hits(self, min_dist=8):
+        """Damage that can only be an arrow: the victim took a hit while far
+        away AND stayed inside the arena. Plain hp-drop counting scored a
+        victim's fall damage as 12 'arrow hits' out of 6 shots."""
+        out = []
+        for t, amount, dist in self.hp_drop_events(who="victim",
+                                                   min_dist=min_dist):
+            sample = min(self.samples, key=lambda s: abs(s["t"] - t))
+            vp = sample.get("victim")
+            if vp and vp[1] >= FLOOR_Y - 1 and amount <= 12:
+                out.append((t, amount, dist))
+        return out
+
+    def deaths_of(self, who="victim"):
+        """Death count of either actor, read from the scoreboard samples."""
+        if who == "bot":
+            return self.deaths()
+        return max((s.get("victim_d", 0) or 0 for s in self.samples), default=0)
+
+    def victim_left_arena(self, floor_y=FLOOR_Y):
+        """Did the victim drop out of the arena? Position-based on purpose: the
+        victim dying to our ARROWS is the scenario succeeding, so a death count
+        cannot be the signal here."""
+        return any(s["victim"][1] < floor_y - 3
+                   for s in self.samples if s.get("victim"))
 
     def max_place_rate(self, window=2):
         """Max bridge blocks placed per second over any `window` samples."""
