@@ -47,6 +47,12 @@
 - [ ] **URG-7 (P1) — bow shoots VERY SLOWLY.** Aim used the slow WindMouse mode and only released
   inside a 3.5° cone, so each shot took seconds. FIX IN PROGRESS: fast nav-mode aim for the bow.
   Still to measure: shots per minute on the stand.
+- [ ] **URG-9 (P1) — SPECTATOR CAMERA CLIENT for demos.** The arrow arc DOES render now, but a
+  first-person recording looks straight down the trajectory, so it reads as a dot at the crosshair.
+  Path/jump/combat overlays film fine (proven on melee_basic), ballistics do not. Add a third
+  headless client to `compose.test.yml` as a spectator cam (the `capture_demo.record_ext` pattern:
+  spectator gamemode, fixed vantage perpendicular to the action) and record ranged/bridge scenarios
+  from it. Until then no clip can honestly claim to "show the trajectory".
 - [ ] **URG-8 (P1) — BENCH DESIGN OFFER FROM THE USER (accept):** he offers to hand over **schematics**
   for the test polygons and to mark **start = gold block / finish = diamond block**. Build the import
   path: a `@@schem load` / buildBlocks-based loader + an arena builder that pastes a schematic and

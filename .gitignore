@@ -44,3 +44,4 @@ shredder/.classpath
 .claude/autonomy_active.flag
 .claude/autonomy_stop.flag
 .claude/.autonomy_block_count
+deploy/runner/artifacts/
