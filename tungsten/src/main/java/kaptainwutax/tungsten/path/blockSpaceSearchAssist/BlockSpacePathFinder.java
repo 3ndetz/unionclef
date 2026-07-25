@@ -67,7 +67,68 @@ public class BlockSpacePathFinder {
 			startPos = findNearestAirStart(world, startPos);
 		}
 
+		// SUPPORT SNAP — if the player can stand there, the search MUST be able to
+		// start there. getBlockPos() floors the entity CENTRE, but the collision box
+		// is 0.6 wide: standing on the EDGE of a block over a void (bedwars rim,
+		// bridge lip) floors into the NEIGHBOURING column whose floor is air, so the
+		// start node looked "in mid-air", generated no children and the search died
+		// with "Ran out of nodes" while the bot stood perfectly still on solid ground.
+		startPos = snapToSupport(world, player, startPos);
+
 		return search(world, new BlockNode(startPos, goal, player, world), target, player);
+	}
+
+	/**
+	 * Snap a start cell that has no floor onto the cell that actually supports the
+	 * player (or, while airborne, onto the cell it is about to land on).
+	 * Order: the footprint cells the collision box overlaps (nearest first) ->
+	 * straight down to the landing cell -> a small radius sweep. Returns the input
+	 * unchanged when it is already standable or nothing better exists.
+	 */
+	private static BlockPos snapToSupport(WorldView world, PlayerEntity player, BlockPos startPos) {
+		if (isStandable(world, startPos)) return startPos;
+
+		// 1) cells under the collision-box FOOTPRINT (the edge-standing case)
+		net.minecraft.util.math.Box box = player.getBoundingBox();
+		double[][] corners = {
+			{box.minX, box.minZ}, {box.minX, box.maxZ},
+			{box.maxX, box.minZ}, {box.maxX, box.maxZ},
+		};
+		BlockPos best = null;
+		double bestDist = Double.MAX_VALUE;
+		for (double[] c : corners) {
+			BlockPos cand = BlockPos.ofFloored(c[0], startPos.getY(), c[1]);
+			if (cand.equals(startPos) || !isStandable(world, cand)) continue;
+			double d = cand.toCenterPos().squaredDistanceTo(player.getEntityPos());
+			if (d < bestDist) { bestDist = d; best = cand; }
+		}
+		if (best != null) return best;
+
+		// 2) airborne (falling / jumping): the cell we are about to land on
+		for (int dy = 1; dy <= 8; dy++) {
+			BlockPos cand = startPos.down(dy);
+			if (isStandable(world, cand)) return cand;
+		}
+
+		// 3) last resort: nearest standable cell in a small sweep (+-2 xz, +-2 y)
+		for (int r = 1; r <= 2; r++) {
+			for (int dx = -r; dx <= r; dx++) {
+				for (int dz = -r; dz <= r; dz++) {
+					for (int dy = 1; dy >= -2; dy--) {
+						BlockPos cand = startPos.add(dx, dy, dz);
+						if (isStandable(world, cand)) return cand;
+					}
+				}
+			}
+		}
+		return startPos;
+	}
+
+	/** Solid floor below + room for the body — the block-space notion of "can stand here". */
+	private static boolean isStandable(WorldView world, BlockPos pos) {
+		return !world.getBlockState(pos.down()).getCollisionShape(world, pos.down()).isEmpty()
+				&& world.getBlockState(pos).getCollisionShape(world, pos).isEmpty()
+				&& world.getBlockState(pos.up()).getCollisionShape(world, pos.up()).isEmpty();
 	}
 
 	/**

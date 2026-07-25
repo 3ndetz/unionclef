@@ -1,5 +1,58 @@
 # TODOs
 
+## 🔥🔥 URGENT — USER LIVE REVIEW OF THE PVP SUITE CLIPS (2026-07-24 round 3). NOTHING BELOW IS DELIVERED.
+
+> User verdict on the clips I sent: "НИ ОДИН ИЗ TODO не сдан", "ГЛОБАЛЬНОЕ ПОЗОРИЩЕ". He is right:
+> the clips showed no visualisation, a sluggish camera, a bot standing on a ledge doing nothing, a bot
+> fighting with a BOW and dying, and a "terrain" bench built out of a toy strip. My allround report
+> ("switched to the sword and finished him") was FALSE — the timeline shows the bot died 4 times for
+> 1 kill and the criteria did not even check deaths. Everything here is RE-OPENED; do not mark any of
+> it done without a clip the user can watch.
+
+- [ ] **URG-1 (P0) — tungsten cannot path FROM A BLOCK EDGE over a void.** Live: the bot stands ON the
+  edge of a block above the void for half the fight, tungsten logs "Ran out of nodes / no block path"
+  — it believes it is airborne. Requirement (user): **tungsten must find a route FROM ANY POSITION a
+  player can stand in.** ROOT FOUND: `BlockSpacePathFinder.search` starts at `player.getBlockPos()`,
+  which floors the entity CENTRE; standing on an edge floors into the NEIGHBOURING column whose floor
+  is air -> start node unsupported -> no children -> dead search. FIX IN PROGRESS: `snapToSupport()`
+  (collision-box footprint cells -> landing cell below -> small sweep). Needs stand proof on
+  edge_duel + a dedicated ledge-start test.
+- [ ] **URG-2 (P0) — altoclef Stuck-fix fires CONSTANTLY when not stuck** (there is a GitHub issue; still
+  live). ROOT: `UnstuckChain.checkGenerallyStuck` only tests "moved < 1.5 blocks over ~200 samples"
+  with no check that the bot is even TRYING to move, and skips only when tungsten is PRIMARY — so
+  combat (circle-strafe holds position ON PURPOSE), any non-primary tungsten segment, crafting and
+  waiting all trip it, and the shimmy then throws the aim/task away. FIX IN PROGRESS: guards for
+  combat / tungsten-active / no-movement-keys-pressed. Needs a live repro test.
+- [ ] **URG-3 (P0) — VISUALISATION MUST BE VISIBLE IN EVERY CLIP.** No clip showed tungsten drawing its
+  route, and there is NO arrow-trajectory rendering at all. ROOT: the stand's persisted `tungsten.json`
+  had `renderVisualization/renderPathMoves/renderCombat/... = false` (shipped defaults are true —
+  persist poisoning), and BowShooter never rendered anything. FIX IN PROGRESS: arrow-flight arc +
+  predicted-impact marker in BowShooter; `;settings reset` / py4j `resetTungstenConfig()`; the suite
+  resets config and pins visualisation ON before every recorded run.
+- [ ] **URG-4 (P0) — combat camera is TOO SLOW/smooth.** User: "юзеры крутят мышь РЕЗКО", clean
+  WindMouse, doubts the dampers are needed, wants the parameters tuned for SPEED. Stand was running
+  gravity 2.0 / maxStep 4.0 / wind 0.8 (persisted, months old). Shipped defaults now 12.0 / 25.0 /
+  0.15. STILL TO DO: judge the feel on video, decide whether the aim low-pass + velocity EMA dampers
+  earn their keep at all.
+- [ ] **URG-5 (P0) — the bot FIGHTS WITH THE BOW and dies.** Live: after shooting it kept swinging the
+  bow in melee with a sword in the hotbar, and died repeatedly. ROOT: the tungsten punk pipeline has
+  ZERO weapon handling — TriggerBot swings whatever is held. FIX IN PROGRESS: `WeaponSelector`
+  (best hotbar melee, hooked into the COMBAT stage). ALSO FIXED IN THE SUITE: every combat scenario
+  now carries a "bot deaths" gate — the old criteria let a 1-kill/4-death run report PASS.
+- [ ] **URG-6 (P0) — chase_terrain bench must run on the REAL WORLD GENERATOR.** User: "РЕЛЬЕФ — это
+  РЕАЛЬНЫЙ ГЕНЕРАТОР МИРА, а не сраный плоский мир"; the shape of the bench is: send the baritone bot
+  running in a direction, **tungsten must CATCH it, ideally KILL it**. FIX IN PROGRESS: the scenario
+  now runs on `gamer-server` (normal terrain, seed 12345), no arena building, victim runs 140 blocks
+  on baritone, our bot punks it; gates = caught + killed + no deaths.
+- [ ] **URG-7 (P1) — bow shoots VERY SLOWLY.** Aim used the slow WindMouse mode and only released
+  inside a 3.5° cone, so each shot took seconds. FIX IN PROGRESS: fast nav-mode aim for the bow.
+  Still to measure: shots per minute on the stand.
+- [ ] **URG-8 (P1) — BENCH DESIGN OFFER FROM THE USER (accept):** he offers to hand over **schematics**
+  for the test polygons and to mark **start = gold block / finish = diamond block**. Build the import
+  path: a `@@schem load` / buildBlocks-based loader + an arena builder that pastes a schematic and
+  reads the gold/diamond markers as start/finish instead of hand-coded coordinates. This replaces my
+  ad-hoc geometry (RW-7) and is how every future polygon should be authored.
+
 ## ⛔⛔ URGENT REWORK BACKLOG (user live-tested the demo videos, 2026-07-24 round 2 — RECORD ONLY, do NOT fix; user will take each as its own focused pass)
 
 > Overarching verdict (user): the current build / godbridge / combat mechanisms look CHEATY and

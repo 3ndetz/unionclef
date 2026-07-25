@@ -91,9 +91,13 @@ public class BowShooter {
         }
 
         // Humanized aim via WindMouse (mouse-pipeline) — never setYaw/setPitch,
-        // anti-cheats flag instant rotation. WindMouse converges toward the
-        // ballistic solution over frames like a real hand.
-        kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(sol.yaw, sol.pitch);
+        // anti-cheats flag instant rotation. FAST mode: a real archer flicks onto
+        // the target and holds; the slow glide made every shot take seconds
+        // (user 2026-07-24: "стрелял ОЧЕНЬ МЕДЛЕННО").
+        kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTargetFast(sol.yaw, sol.pitch);
+        // VISUALIZE the ballistic solution — the user must SEE the arc the solver
+        // chose (RW-6 / "где траектории при стрельбе из лука").
+        renderTrajectory(player, sol, Math.max(charge, 1.0));
         float dYaw = MathHelper.wrapDegrees(sol.yaw - player.getYaw());
         float dPitch = MathHelper.wrapDegrees(sol.pitch - player.getPitch());
 
@@ -103,6 +107,7 @@ public class BowShooter {
         if (chargeTicks >= CHARGE_TICKS
                 && Math.abs(dYaw) < RELEASE_CONE && Math.abs(dPitch) < RELEASE_CONE) {
             mc.options.useKey.setPressed(false);
+            kaptainwutax.tungsten.TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
             shotsFired++;
             Debug.logMessage(String.format(
                     "Arrow released (flight ~%d ticks, lead %.1f blocks)",
@@ -110,5 +115,41 @@ public class BowShooter {
                     sol.predictedTarget.distanceTo(target.getEntityPos())));
             stop();
         }
+    }
+
+    /**
+     * Draw the SIMULATED arrow flight (vanilla ballistics: pos += vel; vel *= 0.99;
+     * vel.y -= 0.05) plus a marker on the predicted impact point. Rebuilt every tick
+     * while drawing, so the arc visibly re-aims as the target moves. Gated by
+     * renderCombat / renderVisualization in the debug-renderer mixin.
+     */
+    private static void renderTrajectory(ClientPlayerEntity player,
+                                         TrajectorySolver.Solution sol, double charge) {
+        if (!kaptainwutax.tungsten.TungstenConfig.get().renderVisualization
+                || !kaptainwutax.tungsten.TungstenConfig.get().renderCombat) return;
+        kaptainwutax.tungsten.TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
+
+        double v0 = Math.max(0.1, charge) * TrajectorySolver.FULL_CHARGE_SPEED;
+        double yawRad = Math.toRadians(sol.yaw);
+        double pitchRad = Math.toRadians(sol.pitch);
+        double horiz = v0 * Math.cos(pitchRad);
+        Vec3d vel = new Vec3d(-Math.sin(yawRad) * horiz,
+                              -v0 * Math.sin(pitchRad),
+                               Math.cos(yawRad) * horiz);
+        Vec3d pos = player.getEyePos();
+        kaptainwutax.tungsten.render.Color arc =
+                new kaptainwutax.tungsten.render.Color(80, 220, 255);   // cyan flight arc
+        for (int t = 0; t < Math.max(20, sol.flightTicks + 6); t++) {
+            Vec3d next = pos.add(vel);
+            kaptainwutax.tungsten.TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
+                    new kaptainwutax.tungsten.render.Line(pos, next, arc));
+            pos = next;
+            vel = new Vec3d(vel.x * 0.99, vel.y * 0.99 - 0.05, vel.z * 0.99);
+        }
+        Vec3d p = sol.predictedTarget;                     // where the lead expects the target
+        kaptainwutax.tungsten.TungstenModRenderContainer.COMBAT_TRAJECTORY.add(
+                new kaptainwutax.tungsten.render.Cuboid(
+                        p.subtract(0.3, 0.3, 0.3), new Vec3d(0.6, 0.6, 0.6),
+                        new kaptainwutax.tungsten.render.Color(255, 80, 80)));
     }
 }

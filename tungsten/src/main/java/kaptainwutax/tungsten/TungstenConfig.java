@@ -196,17 +196,17 @@ public class TungstenConfig {
      *  Bumped 2.0→3.2: the bot was reported "turning slowly" and its aim lagged
      *  a strafing/knocked-back target (trigger gate angle hit 90°); faster ramp
      *  closes the gap so swings actually land. */
-    public double combatWindMouseGravity = 5.5;   // x2 in CombatController -> 11 (brake) / 5.5 (aim): STRONG pull. Overshoot is now prevented by the close-range direct-settle zone in WindMouseRotation, not by keeping gravity low (user 2026-07-24, sharper camera)
+    public double combatWindMouseGravity = 12.0;   // 5.5->12 (user 2026-07-24 round 3: "юзеры крутят мышь РЕЗКО"). Real players flick, they do not glide. Overshoot is handled by the close-range direct-settle zone, so pull hard.
 
     /** WindMouse wind — random perturbation magnitude per frame.
      *  Higher = more jitter/overshoot. */
-    public double combatWindMouseWind = 0.35;   // cut from 0.8: the wind is the "circling" the user hated. Low wind + velocity damping = a sharp aim, not a spiral (2026-07-24)
+    public double combatWindMouseWind = 0.15;   // 0.8 -> 0.35 -> 0.15: wind IS the wobble/circling the user hates. Keep a trace (anti-cheat plausibility), not a spiral.
 
     /** WindMouse max step — max degrees per render frame.
      *  Caps rotation speed. Lower = slower, more human-like.
      *  Bumped 4.0→7.0 for snappier close-range tracking (effective PvP over
      *  human-like slowness — this is a combat aura, not a legit-look aimer). */
-    public double combatWindMouseMaxStep = 10.0;   // 7->10: faster close-range tracking; close-settle zone keeps it crisp, not overshooting (2026-07-24)
+    public double combatWindMouseMaxStep = 25.0;   // 4->7->10->25 deg/frame: at 60fps that is a human flick (~1500 deg/s peak, real players hit that); the settle zone still lands it cleanly
 
     /** Distance (degrees) below which wind noise decays.
      *  Below this angle the mouse "settles" toward target. */
@@ -256,5 +256,19 @@ public class TungstenConfig {
         } catch (Exception e) {
             TungstenMod.LOG.warn("Failed to save tungsten.json: " + e.getMessage());
         }
+    }
+
+    /**
+     * Drop every persisted value and go back to the SHIPPED defaults.
+     *
+     * The file is rewritten in full on each `;settings x y`, so any field ever
+     * touched keeps its old value forever — new defaults in the code never reach a
+     * machine that has a tungsten.json. That silently ran test stands with combat
+     * tuning and visualisation from months ago. Levers: `;settings reset` and py4j
+     * resetTungstenConfig().
+     */
+    public static void resetToDefaults() {
+        INSTANCE = new TungstenConfig();
+        save();
     }
 }

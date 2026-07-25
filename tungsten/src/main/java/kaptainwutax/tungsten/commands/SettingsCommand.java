@@ -56,6 +56,18 @@ public class SettingsCommand extends Command {
             return SINGLE_SUCCESS;
         }));
 
+        // ;settings reset — back to SHIPPED defaults, then persist.
+        // tungsten.json is written whole on every `;settings x y`, so a value saved
+        // once shadows every future default: stands kept running months-old combat
+        // tuning and visualisation OFF while the code shipped new values, and both
+        // the "camera is slow" and "no visualisation on the videos" reports traced
+        // back to exactly that (user 2026-07-24). This is the way out.
+        builder.then(literal("reset").executes(context -> {
+            TungstenConfig.resetToDefaults();
+            Debug.logMessage("§aTungsten config RESET to shipped defaults");
+            return SINGLE_SUCCESS;
+        }));
+
         // ;settings ignoreFallDamage [true/false] — legacy, not in TungstenConfig
         builder.then(literal("ignoreFallDamage")
             .executes(context -> {

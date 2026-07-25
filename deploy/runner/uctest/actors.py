@@ -13,14 +13,59 @@ class Bot:
         self.py = Py4jClient(container)
 
     # -- lifecycle ---------------------------------------------------------
-    def ensure_in_game(self, server="test-server", timeout=600):
+    def ensure_in_game(self, server="test-server", timeout=600, rcon=None):
+        """Make sure the bot is in game ON `server`. When `rcon` is given it is
+        the authority on presence: a bot logged into the OTHER stand server
+        still reports inGame()=true, so scenarios that switch worlds (real-
+        terrain chase on gamer-server) must verify against that server's
+        player list, not just the client's own flag."""
         wait_for(f"{self.name} py4j", lambda: self.py.call("inGame") is not None,
                  timeout, 10, self.log)
-        if not self.py.call("inGame"):
-            self.py.call("ConnectToServer", server)
-            wait_for(f"{self.name} in game", lambda: self.py.call("inGame"),
-                     180, 5, self.log)
+
+        def on_target_server():
+            if rcon is None:
+                return bool(self.py.call("inGame"))
+            try:
+                return self.name in rcon.cmd("list")
+            except Exception:  # noqa: BLE001 - server may still be booting
+                return False
+
+        if on_target_server():
+            return
+        self.py.call("ConnectToServer", server)
+        wait_for(f"{self.name} in game on {server}", on_target_server,
+                 240, 5, self.log)
+        time.sleep(3)
+
+    def ensure_alive(self, timeout=60):
+        """A dead bot never moves and every metric after that is noise — one
+        stand run measured a corpse lying on the ground for 3 minutes. Respawn
+        it before any scenario starts."""
+        if (self.health() or 0) > 0:
+            return True
+        self.log(f"  {self.name} is DEAD — respawning")
+        t0 = time.time()
+        while time.time() - t0 < timeout:
+            self.py.try_call("respawnPlayer")
             time.sleep(3)
+            if (self.health() or 0) > 0:
+                self.log(f"  {self.name} respawned")
+                return True
+        raise RuntimeError(f"{self.name} stayed dead for {timeout}s")
+
+    def reset_config(self):
+        """Wipe the persisted tungsten.json back to shipped defaults.
+
+        Any `;settings x y` rewrites the whole file, so a value saved once
+        shadows every future default: the stand silently ran months-old combat
+        tuning with ALL visualisation off, which is why the recorded clips
+        showed no paths and a sluggish camera. Every run starts from defaults
+        now, then pins only what it asserts on."""
+        ok, res = self.py.try_call("resetTungstenConfig")
+        if not ok:
+            self.log(f"  WARN {self.name}: resetTungstenConfig unavailable ({res})")
+            self.py.try_call("ChatMessage", ";settings reset")
+        return res
 
     def stop_all(self):
         """Kill every driver a previous scenario could have left running."""
@@ -43,10 +88,33 @@ class Bot:
     def health(self):
         return self.rcon.entity_float(self.name, "Health")
 
-    def fresh_reset(self, spawn, kit=None):
-        """kill -> respawn -> clear -> kit -> tp. Clears leftover hp/effects
-        AND stale async pathfinder state from earlier scenarios."""
+    def fresh_reset(self, spawn, kit=None, hard=True):
+        """Put the bot in a known state at `spawn`.
+
+        hard=True (arena worlds): kill -> respawn -> clear -> kit -> tp. The
+        death also drops stale async pathfinder state from earlier scenarios.
+        hard=False (real generated world): never kill — a survival respawn there
+        is slow/unreliable (the bot can land far away in unloaded chunks and the
+        health poll times out). Heal in place instead."""
         self.stop_all()
+        self.ensure_alive()
+        if not hard:
+            self.rcon.cmd(f"effect clear {self.name}")
+            self.rcon.cmd(f"effect give {self.name} instant_health 1 10 true")
+            self.rcon.cmd(f"clear {self.name}")
+            if kit:
+                for item_cmd in kit:
+                    self.rcon.cmd(item_cmd.format(name=self.name))
+            self.rcon.cmd(f"tp {self.name} {spawn}")
+            time.sleep(2)
+            return
+        # Personal respawn point INSIDE the arena. setworldspawn alone is not
+        # enough: a player carries its own stored respawn position, so a bot
+        # that dies mid-scenario reappeared at the world default (y=101) and
+        # spent the rest of the run wandering there, poisoning every metric.
+        parts = spawn.split()
+        self.rcon.cmd(f"spawnpoint {self.name} "
+                      f"{int(float(parts[0]))} {int(float(parts[1]))} {int(float(parts[2]))}")
         self.rcon.cmd(f"kill {self.name}")
         wait_for(f"{self.name} respawned",
                  lambda: (self.health() or 0) >= 19.9, 60, 3, self.log)

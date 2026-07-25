@@ -1968,6 +1968,48 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** Respawn after death: close the death screen and send the respawn request.
+     *  Returns true if the request went out. autoRespawn normally handles this,
+     *  but a bot that dies with no task running (or on a server where the death
+     *  screen sticks) stays a corpse forever — a whole 3-minute stand run was
+     *  spent measuring a dead body lying on the ground. Safe to call when alive
+     *  (no-op). */
+    public boolean respawnPlayer() {
+        return Boolean.TRUE.equals(onClientThread(() -> {
+            var client = MinecraftClient.getInstance();
+            if (client.player == null) return false;
+            if (client.player.getHealth() > 0 && client.currentScreen == null) return false;
+            if (client.currentScreen != null) client.setScreen(null);
+            client.player.requestRespawn();
+            return true;
+        }, false));
+    }
+
+    /** Reset the WHOLE tungsten config to shipped defaults and persist it.
+     *  tungsten.json is rewritten in full by every `;settings x y`, so any value
+     *  saved once shadows new shipped defaults forever — stands silently ran
+     *  months-old combat tuning with visualisation OFF. Call this at the start of
+     *  a test run (or after experimenting) to get a known-clean state, then pin
+     *  only what the scenario needs. Returns the visualisation + combat-aim values
+     *  that are live afterwards. */
+    public Map<String, Object> resetTungstenConfig() {
+        Map<String, Object> out = new HashMap<>();
+        try {
+            kaptainwutax.tungsten.TungstenConfig.resetToDefaults();
+            var c = kaptainwutax.tungsten.TungstenConfig.get();
+            out.put("ok", true);
+            out.put("renderVisualization", c.renderVisualization);
+            out.put("renderPathMoves", c.renderPathMoves);
+            out.put("renderCombat", c.renderCombat);
+            out.put("combatWindMouseMaxStep", c.combatWindMouseMaxStep);
+            out.put("combatWindMouseGravity", c.combatWindMouseGravity);
+        } catch (Exception e) {
+            out.put("ok", false);
+            out.put("error", String.valueOf(e.getMessage()));
+        }
+        return out;
+    }
+
     /** Drop-in-swap toggle (goal 13.1): route altoclef/shredder navigation through
      *  tungsten's physics executor. On = useTungsten (delegate flat segments) +
      *  experimentalPathfinding (also ascend/descend). With it on, @goto/@get/

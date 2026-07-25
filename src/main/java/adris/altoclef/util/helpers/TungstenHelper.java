@@ -205,6 +205,28 @@ public class TungstenHelper {
         }
     }
 
+    /**
+     * Is a tungsten COMBAT/movement task driving the client right now (punk, follow,
+     * flee, the block-path walker, bridge/pillar)? These own the movement keys and
+     * legitimately hold a small area (circle-strafe, kite, place-and-step), so
+     * altoclef's stuck detection must never shimmy through them.
+     */
+    public static boolean isCombatActive() {
+        if (!isTungstenLoaded()) return false;
+        try {
+            return kaptainwutax.tungsten.task.PunkPlayerTask.isActive()
+                    || kaptainwutax.tungsten.task.FollowEntityTask.isActive()
+                    || kaptainwutax.tungsten.task.FollowPlayerTask.isActive()
+                    || kaptainwutax.tungsten.task.RunAwayTask.isActive()
+                    || kaptainwutax.tungsten.task.BowShooter.isActive()
+                    || kaptainwutax.tungsten.task.BridgeTask.isActive()
+                    || kaptainwutax.tungsten.task.PillarTask.isActive()
+                    || kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
+        } catch (Throwable e) {
+            return false;
+        }
+    }
+
     /** Is Tungsten currently pathfinding or executing? */
     public static boolean isActive() {
         if (!isTungstenLoaded()) return false;

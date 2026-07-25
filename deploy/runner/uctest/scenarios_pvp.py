@@ -42,6 +42,7 @@ class MeleeBasic(Scenario):
                         f"first_hit={fh}")
         yield Criterion("damage >= 8", ctx.victim_damage() >= 8,
                         f"damage={ctx.victim_damage():.1f}")
+        yield ctx.exchange_criterion()   # mutual punk — winning the trade is the bar
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
         yield Criterion("stand-still near target <= 2",
@@ -68,6 +69,7 @@ class EdgeDuel(Scenario):
 
     def judge(self, ctx):
         yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}")
+        yield ctx.exchange_criterion()          # mutual duel: must not lose it
         yield Criterion("self-falls == 0", ctx.self_falls == 0,
                         f"self={ctx.self_falls} knockback={ctx.knockback_falls}")
 
@@ -91,6 +93,7 @@ class NarrowBridgeDuel(Scenario):
 
     def judge(self, ctx):
         yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}")
+        yield ctx.exchange_criterion()          # mutual duel: must not lose it
         yield Criterion("self-falls == 0", ctx.self_falls == 0,
                         f"self={ctx.self_falls} knockback={ctx.knockback_falls}")
 
@@ -140,37 +143,64 @@ class ChaseFlat(Scenario):
 
 
 class ChaseTerrain(Scenario):
-    """RW-9 bench: victim ping-pongs a deterministic terrain strip on
-    baritone; tungsten @follow MUST catch on rough ground."""
+    """RW-9 bench on REAL generated terrain (gamer-server, seed 12345 — hills,
+    trees, water, cliffs; NOT a hand-built strip). The victim is sent running
+    on baritone toward a far point; our bot must CATCH it with tungsten and
+    KILL it. This is the user's definition of the bench."""
     id = "chase_terrain"
-    duration = 120
+    duration = 180
+    world = "gamer"            # real world generator
+    builds_arena = False       # play the terrain as generated
+    bot_kit = ["item replace entity {name} weapon.mainhand with iron_sword"]
+    victim_kit = []
+    settings = {"combatMovementsEnabled": "true"}
+    RUN_DIST = 140             # how far the runner is sent, in blocks
 
     def build(self, arena, ctx):
-        x0, x1, h_end = arena.terrain_strip()
-        ctx.geo["bot_spawn"] = f"{x0 - 2}.5 {STAND_Y} 0.5 -90 0"
-        ctx.geo["victim_spawn"] = f"{x0 + 6}.5 {STAND_Y + 1} 0.5 -90 0"
-        ctx.geo.update(x0=x0, x1=x1, h_end=h_end, target_far=True)
+        # Start both at the world spawn area; the terrain is whatever generated.
+        # A fixed offset gives the runner a head start along +x.
+        rc = ctx.rcon
+        rc.cmd("gamerule pvp true")
+        rc.cmd("gamerule immediate_respawn true")
+        rc.cmd("difficulty peaceful")   # isolate the chase from mob interference
+        rc.cmd("time set day")
+        rc.cmd("weather clear")
+        rc.cmd("forceload add -200 -200 200 200")
+        # let the server place them on real ground and read the actual Y back
+        # instead of guessing a surface height for this seed
+        rc.cmd(f"spreadplayers 0 0 4 8 false {ctx.bot.name} {ctx.victim.name}")
+        time.sleep(2)
+        bp = ctx.bot.pos() or [0, 80, 0]
+        ctx.geo["bot_spawn"] = f"{bp[0]:.1f} {bp[1]:.1f} {bp[2]:.1f}"
+        ctx.geo["victim_spawn"] = f"{bp[0] + 6:.1f} {bp[1]:.1f} {bp[2]:.1f}"
+        ctx.geo["goal"] = (int(bp[0]) + self.RUN_DIST, int(bp[1]), int(bp[2]))
 
     def drive_start(self, ctx):
-        ctx.geo["target_far"] = True
-        ctx.victim.cmd(f"@goto {ctx.geo['x1']} {STAND_Y + ctx.geo['h_end']} 0")
-        ctx.bot.cmd(f"@follow {ctx.victim.name}")
+        gx, gy, gz = ctx.geo["goal"]
+        # runner: plain baritone @goto over real terrain — it will climb, swim,
+        # walk around obstacles on its own.
+        ctx.victim.cmd(f"@goto {gx} {gy} {gz}")
+        time.sleep(1.0)
+        # chaser: tungsten punk = approach (pathfinder) + combat when in reach
+        ctx.bot.py.call("punk", ctx.victim.name)
 
     def drive_tick(self, ctx, t):
-        vp = ctx.samples[-1].get("victim") if ctx.samples else None
-        if not vp:
-            return
-        gx = ctx.geo["x1"] if ctx.geo["target_far"] else ctx.geo["x0"]
-        if abs(vp[0] - gx) < 2.5:
-            ctx.geo["target_far"] = not ctx.geo["target_far"]
-            nx = ctx.geo["x1"] if ctx.geo["target_far"] else ctx.geo["x0"]
-            ny = STAND_Y + (ctx.geo["h_end"] if ctx.geo["target_far"] else 0)
-            ctx.victim.cmd(f"@goto {nx} {ny} 0")
+        # keep the runner running: baritone finishes/aborts on rough ground, so
+        # re-issue the goal periodically (it is the prey, it must never idle)
+        if int(t) % 20 == 0 and ctx.samples:
+            gx, gy, gz = ctx.geo["goal"]
+            ctx.victim.cmd(f"@goto {gx} {gy} {gz}")
+
+    def early_stop(self, ctx):
+        return ctx.kills() >= 1
 
     def judge(self, ctx):
-        yield Criterion("contact <= 90s",
-                        ctx.first_contact is not None and ctx.first_contact <= 90,
+        yield Criterion("caught the runner (contact <= 120s)",
+                        ctx.first_contact is not None and ctx.first_contact <= 120,
                         f"contact={ctx.first_contact}")
+        yield Criterion("killed the runner", ctx.kills() >= 1,
+                        f"kills={ctx.kills()}")
+        yield ctx.survival_criterion()
         yield Criterion("freezes <= 1", ctx.freeze_windows <= 1,
                         f"freezes={ctx.freeze_windows}")
 
@@ -391,6 +421,7 @@ class AllRound(Scenario):
         yield Criterion("ranged hit while far >= 1", len(ranged) >= 1,
                         f"ranged_hits={len(ranged)}")
         yield Criterion("kill", ctx.kills() >= 1, f"kills={ctx.kills()}")
+        yield ctx.survival_criterion()   # 1 kill / 4 deaths is a LOSS, not a pass
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
 

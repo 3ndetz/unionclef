@@ -33,7 +33,28 @@ SUITES = {"pvp": PVP}
 BOT_CONTAINER = "uctest-mc-tester1"
 VICTIM_CONTAINER = "uctest-mc-tester2"
 BOT, VICTIM = "tester1", "tester2"
-HOLDING_PEN = "0.5 200 0.5"  # parked between scenarios (rebuilt arena below)
+
+# Stand worlds. "flat" = the deterministic superflat arena server; "gamer" = the
+# REAL world generator (normal terrain, seed 12345) for benches that must run on
+# genuine terrain instead of a hand-built strip (user 2026-07-24: "РЕЛЬЕФ — это
+# РЕАЛЬНЫЙ ГЕНЕРАТОР МИРА"). Start it with:
+#   docker compose -f deploy/compose.test.yml --profile gamer --profile pvp up -d
+WORLDS = {
+    "flat":  {"container": "uctest-server",       "host": "test-server"},
+    "gamer": {"container": "uctest-gamer-server", "host": "gamer-server"},
+}
+
+# Visualisation must be ON for every recorded run: the whole point of the clips is
+# to SHOW what tungsten plans (paths, goal, break/place plans, combat + arrow
+# trajectories). These are shipped defaults, but a persisted tungsten.json had
+# them all false on the stand, so the first clip batch showed nothing.
+VIZ_SETTINGS = {
+    "renderVisualization": "true",
+    "renderPathMoves": "true",
+    "renderCombat": "true",
+    "renderBreakPlan": "true",
+    "renderPlacePlan": "true",
+}
 
 
 def _rec_start(scn_id, dur, persp=0):
@@ -79,22 +100,40 @@ def _rec_stop(scn_id, art):
     return dst if os.path.exists(dst) and os.path.getsize(dst) > 1000 else None
 
 
-def run_scenario(cls, rcon, bot, victim, art_root, record=False):
+def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     scn = cls()
+    world = WORLDS[scn.world]
+    rcon = rcons[scn.world]
+    bot.rcon = rcon
+    victim.rcon = rcon
     art = Artifacts(art_root, scn.id)
     ctx = Ctx(bot, victim if scn.needs_victim else None, rcon, art)
-    print(f"\n--- {scn.id} ({scn.tier}, {scn.duration}s) ---")
+    print(f"\n--- {scn.id} ({scn.tier}, {scn.duration}s, world={scn.world}) ---")
     try:
+        wait_for(f"{world['container']} rcon", lambda: "players" in rcon.cmd("list"),
+                 300, 5)
+        bot.ensure_in_game(world["host"], rcon=rcon)
+        if scn.needs_victim:
+            victim.ensure_in_game(world["host"], rcon=rcon)
+        # clean config every run (persist poisoning), then force visualisation ON
+        # so the recording SHOWS the planned path / trajectories, then the
+        # scenario's own pins.
+        bot.reset_config()
+        victim.reset_config()
+        bot.pin_settings(VIZ_SETTINGS)
         arena = ArenaBuilder(rcon)
-        arena.prepare(half=scn.arena_half, regen=scn.regen)
+        if scn.builds_arena:
+            arena.prepare(half=scn.arena_half, regen=scn.regen)
         scn.build(arena, ctx)
         # respawns must land in the arena, not at the world default (y=101):
         # a bot knocked/killed mid-fight otherwise wanders off at world spawn.
-        sp = ctx.geo["bot_spawn"].split()
-        arena.set_spawn(float(sp[0]), float(sp[1]), float(sp[2]))
-        bot.fresh_reset(ctx.geo["bot_spawn"], scn.bot_kit)
+        if scn.builds_arena:
+            sp = ctx.geo["bot_spawn"].split()
+            arena.set_spawn(float(sp[0]), float(sp[1]), float(sp[2]))
+        hard = scn.builds_arena          # never kill-reset on the real world
+        bot.fresh_reset(ctx.geo["bot_spawn"], scn.bot_kit, hard)
         if scn.needs_victim:
-            victim.fresh_reset(ctx.geo["victim_spawn"], scn.victim_kit)
+            victim.fresh_reset(ctx.geo["victim_spawn"], scn.victim_kit, hard)
         rcon.reset_kd([BOT, VICTIM])
         if scn.settings:
             bot.pin_settings(scn.settings)
@@ -163,21 +202,20 @@ def main():
     os.makedirs(art_root, exist_ok=True)
     print(f"artifacts: {art_root}")
 
-    rcon = Rcon()
-    wait_for("server rcon", lambda: "players" in rcon.cmd("list"), 300, 5)
-    bot = Bot(BOT_CONTAINER, BOT, rcon)
-    victim = Bot(VICTIM_CONTAINER, VICTIM, rcon)
-    bot.ensure_in_game()
-    victim.ensure_in_game()
+    rcons = {name: Rcon(w["container"]) for name, w in WORLDS.items()}
+    flat = rcons["flat"]
+    wait_for("server rcon", lambda: "players" in flat.cmd("list"), 300, 5)
+    bot = Bot(BOT_CONTAINER, BOT, flat)
+    victim = Bot(VICTIM_CONTAINER, VICTIM, flat)
 
     results = []
     for cls in scenarios:
         for rep in range(args.repeat):
-            res = run_scenario(cls, rcon, bot, victim, art_root, args.record)
+            res = run_scenario(cls, rcons, bot, victim, art_root, args.record)
             if not res["passed"] and res.get("flake_suspect") and args.repeat == 1:
                 print(f"  flake suspected ({res.get('error', '')[:80]}) — one retry")
                 time.sleep(10)
-                res = run_scenario(cls, rcon, bot, victim, art_root, args.record)
+                res = run_scenario(cls, rcons, bot, victim, art_root, args.record)
                 res["retried"] = True
             results.append(res)
 

@@ -189,6 +189,10 @@ public class PunkPlayerTask {
 
         // ── execute ──────────────────────────────────────────────────────
         if (mode == Mode.COMBAT) {
+            // Never punch with the wrong item: the engine swings whatever is HELD, so a
+            // bot that had just used a bow kept "fighting" with it (2 dmg/hit) while a
+            // sword sat in the hotbar and it lost the fight (user 2026-07-24).
+            kaptainwutax.tungsten.combat.WeaponSelector.equipBestMelee(player);
             combat.tick(player, targetEntity, world);
         } else if (!FollowEntityTask.isActive()) {
             // APPROACH but follow isn't running (e.g. we just resumed after a

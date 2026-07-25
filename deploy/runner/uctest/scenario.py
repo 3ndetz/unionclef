@@ -123,6 +123,23 @@ class Ctx:
     def deaths(self):
         return max((s["d"] for s in self.samples), default=0)
 
+    def survival_criterion(self, limit=0):
+        """'Our bot must not die' gate — for scenarios where the opponent is NOT
+        a symmetric threat (a fleeing runner, a slowed chaser we kite). A run
+        that scores one kill while dying four times is a LOSS, and without this
+        the suite called it a PASS (user 2026-07-24 — allround: 1 kill, 4
+        deaths, reported as PASS)."""
+        d = self.deaths()
+        return Criterion(f"bot deaths <= {limit}", d <= limit, f"deaths={d}")
+
+    def exchange_criterion(self):
+        """For MUTUAL duels (both bots run the same engine): the bar is winning
+        the exchange, kills >= deaths. Demanding 0 deaths against an identical
+        opponent would measure luck; losing the exchange is a real failure."""
+        k, d = self.kills(), self.deaths()
+        return Criterion("won the exchange (kills >= deaths)", k >= d,
+                         f"kills={k} deaths={d}")
+
     def victim_damage(self):
         """Damage dealt to the victim, summed across respawns."""
         return sum(a for _, a, _ in self.hp_drop_events())
@@ -176,6 +193,12 @@ class Scenario:
     victim_kit = []
     arena_half = 40
     regen = False
+    # Which stand server this scenario runs on: the flat determinism world by
+    # default, "gamer" = the REAL world-generator server (uctest-gamer-server,
+    # normal terrain, seed 12345) for benches that must not happen on a
+    # hand-built strip.
+    world = "flat"
+    builds_arena = True        # False = play the world as generated (real terrain)
 
     def build(self, arena, ctx):
         raise NotImplementedError

@@ -104,6 +104,27 @@ public class UnstuckChain extends SingleTaskChain {
         }
     }
 
+    /**
+     * Is the bot actually TRYING to move right now? Standing still on purpose
+     * (fighting in place, crafting, waiting for a search, reading a menu) is not
+     * being stuck, and shimmying through it actively breaks the current action.
+     * "Trying" = a movement key is held (by us or by a mod driving the client).
+     */
+    private boolean isTryingToMove() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        return mc.options.forwardKey.isPressed() || mc.options.backKey.isPressed()
+                || mc.options.leftKey.isPressed() || mc.options.rightKey.isPressed()
+                || mc.options.jumpKey.isPressed();
+    }
+
+    /** In a fight the bot legitimately holds a small area (strafe/kite around a target). */
+    private boolean isInCombat(AltoClef mod) {
+        PlayerEntity player = mod.getPlayer();
+        if (player == null) return false;
+        if (player.hurtTime > 0) return true;                       // being hit right now
+        return adris.altoclef.util.helpers.TungstenHelper.isCombatActive();
+    }
+
     private void checkGenerallyStuck() {
         if (posHistory.size() < 200) return; // ~10 seconds of ticks
 
@@ -124,6 +145,19 @@ public class UnstuckChain extends SingleTaskChain {
         if (mod.getControllerExtras().isBreakingBlock()) return;
         // Only trigger when there's an active user task
         if (!mod.getUserTaskChain().isActive()) return;
+
+        // ⭐ FALSE-POSITIVE GUARDS (user 2026-07-24: "Stuck fix активируется ПОСТОЯННО
+        // даже когда не застряли", GitHub issue). "No displacement" alone is NOT stuck:
+        //  - COMBAT holds a small area on purpose (circle-strafe/kite around a target);
+        //    shimmying mid-fight throws the aim away and gets the bot killed.
+        //  - TUNGSTEN driving (search running / executor / walker) owns the movement;
+        //    the old code only skipped when tungsten was PRIMARY, so every non-primary
+        //    tungsten segment (follow, punk approach, ;goto) could be shimmied into.
+        //  - NOTHING PRESSED means the bot is deliberately standing (waiting for a
+        //    search, a craft, a menu) — a shimmy there is pure damage.
+        if (isInCombat(mod)) { posHistory.clear(); return; }
+        if (adris.altoclef.util.helpers.TungstenHelper.isActive()) { posHistory.clear(); return; }
+        if (!isTryingToMove()) { posHistory.clear(); return; }
 
         // Don't trigger when baritone is actively pathfinding (calculating a path)
         if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
