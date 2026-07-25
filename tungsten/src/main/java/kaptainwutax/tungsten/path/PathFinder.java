@@ -146,7 +146,10 @@ public class PathFinder {
 
         });
         thread.setName("PathFinder");
-        thread.setPriority(4);
+        // Below the client thread: a physics search that outbids the renderer
+        // drops the game to ~1 fps and the bot stops moving even though it has a
+        // plan (stand-observed on the real-terrain chase).
+        thread.setPriority(Thread.MIN_PRIORITY);
         startTime = System.currentTimeMillis();
         thread.start();
     }

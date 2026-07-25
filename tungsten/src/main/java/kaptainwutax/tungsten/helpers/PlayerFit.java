@@ -46,6 +46,28 @@ public final class PlayerFit {
     }
 
     /**
+     * FAST CLASSIFICATION — the reason this class is affordable inside a search.
+     * The exact test builds shapes and runs a boolean shape operation; doing that
+     * for every candidate cell of every expansion drove the client to ~1 fps on
+     * generated terrain. The overwhelming majority of cells are either empty air
+     * or a plain full cube, and both answers are exact without touching a
+     * VoxelShape operation. Only genuinely partial blocks (slabs, stairs, fences,
+     * trapdoors, carpets, snow) fall through to the precise path.
+     * 0 = empty, 1 = full cube, 2 = partial (must be measured).
+     */
+    private static int classify(WorldView world, BlockPos pos) {
+        net.minecraft.block.BlockState state = world.getBlockState(pos);
+        if (state.isAir()) return 0;
+        VoxelShape shape = state.getCollisionShape(world, pos);
+        if (shape.isEmpty()) return 0;
+        if (shape == net.minecraft.util.shape.VoxelShapes.fullCube()) return 1;
+        net.minecraft.util.math.Box bb = shape.getBoundingBox();
+        if (bb.minX <= 0.0001 && bb.minY <= 0.0001 && bb.minZ <= 0.0001
+                && bb.maxX >= 0.9999 && bb.maxY >= 0.9999 && bb.maxZ >= 0.9999) return 1;
+        return 2;
+    }
+
+    /**
      * Does the player body fit with its feet at (x, feetY, z)?
      * Tests the real 0.6x1.8 box against the real shapes of every block it
      * overlaps — this is what makes slabs, stairs, trapdoors, fences, carpets
@@ -63,9 +85,12 @@ public final class PlayerFit {
             for (int by = minY; by <= maxY; by++) {
                 for (int bz = minZ; bz <= maxZ; bz++) {
                     p.set(bx, by, bz);
-                    VoxelShape shape = shapeAt(world, p);
-                    if (shape.isEmpty()) continue;
-                    if (VoxelShapes.matchesAnywhere(shape, boxShape, BooleanBiFunction.AND)) {
+                    int kind = classify(world, p);
+                    if (kind == 0) continue;             // air: cheap, exact
+                    if (kind == 1) return false;         // full cube overlapping the body
+                    // partial block: measure it properly
+                    if (VoxelShapes.matchesAnywhere(shapeAt(world, p), boxShape,
+                            BooleanBiFunction.AND)) {
                         return false;
                     }
                 }
@@ -81,16 +106,18 @@ public final class PlayerFit {
      * block below (y of the cell for a full block).
      */
     public static double supportTop(WorldView world, BlockPos cell) {
-        VoxelShape self = world.getBlockState(cell).getCollisionShape(world, cell);
-        if (!self.isEmpty()) {
-            double top = self.getMax(Direction.Axis.Y);
-            // a full-height block in the cell is a wall, not a floor
+        int self = classify(world, cell);
+        if (self == 2) {   // partial block IN the cell (slab/snow/carpet) = the floor
+            double top = world.getBlockState(cell).getCollisionShape(world, cell)
+                    .getMax(Direction.Axis.Y);
             if (top < 1.0) return cell.getY() + top;
         }
         BlockPos below = cell.down();
-        VoxelShape floor = world.getBlockState(below).getCollisionShape(world, below);
-        if (floor.isEmpty()) return Double.NaN;
-        return below.getY() + floor.getMax(Direction.Axis.Y);
+        int under = classify(world, below);
+        if (under == 0) return Double.NaN;
+        if (under == 1) return below.getY() + 1.0;          // full cube: exact, no shape math
+        return below.getY() + world.getBlockState(below).getCollisionShape(world, below)
+                .getMax(Direction.Axis.Y);
     }
 
     /**

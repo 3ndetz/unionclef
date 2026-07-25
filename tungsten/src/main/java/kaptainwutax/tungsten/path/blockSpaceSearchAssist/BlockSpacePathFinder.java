@@ -44,6 +44,12 @@ public class BlockSpacePathFinder {
 			active = false;
 		});
 		thread.setName("BlockSpacePathFinder");
+		// The search must never win CPU against the client thread. On a
+		// container with few cores this thread starved the renderer down to
+		// ~1 fps on generated terrain, and a bot that gets one frame per second
+		// cannot move at all — the route was planned and the body stood still.
+		thread.setPriority(Thread.MIN_PRIORITY);
+		thread.setDaemon(true);
 		thread.start();
 	}
 	
