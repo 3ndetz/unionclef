@@ -1,6 +1,42 @@
 # TODOs
 
-## 🔥🔥 URGENT — USER LIVE REVIEW OF THE PVP SUITE CLIPS (2026-07-24 round 3). NOTHING BELOW IS DELIVERED.
+## 🚀 PRIORITY BLOCK — PERFORMANCE + PIPELINED PATHING + REAL BLOCK-SPACE + FIGHTER (user 2026-07-25)
+
+> Order is the user's: **PERF-1 is FIRST PRIORITY**, then the pipelined pathing (PIPE-1) with the
+> realism fix it depends on (REAL-1), then the fighter (FIGHT-1). Acceptance is comparative and
+> physical: **guaranteed faster than baritone end-to-end**, and clears parkour baritone cannot.
+
+- [ ] **PERF-1 (P0) — FPS/performance is terrible; fix it.** User: "фпс ещё ужасный, производительность
+  дохлая. Это первый приоритет." Profile what actually burns frame time and tick time (renderers
+  rebuilt per frame, unconditional physics sims, per-tick scans/raycasts, search threads), separate
+  mod cost from the stand's software-GL cost with a measurement, then cut. Acceptance: a measured
+  before/after FPS + tick-time number on the stand, with the mod idle / navigating / fighting.
+- [ ] **PIPE-1 (P0) — FAST BLOCK PATH FIRST, PHYSICS COMPUTED FROM A FUTURE NODE WHILE MOVING.**
+  User's design, verbatim intent: build a fast baritone-class block pathfinder INSIDE tungsten; the
+  bot **starts walking that block path immediately**; the physics search then computes **from a
+  future node (~t+10) DURING the movement**, so the computation overlaps with walking and the bot is
+  genuinely faster end-to-end — "чтобы РЕАЛЬНО УСКОРЯТЬ включая расчёт, а не только сам путь".
+  Handoff must be seamless (no stop at the splice point).
+  - **Simple mode**: move purely on block nodes, baritone-like, as fast as possible (accelerated
+    jumps), while the main route is still computing. **Toggleable by a parameter (a function to turn
+    it off), ON by default.**
+  - **Must NOT break parkour**: any segment reachable only through the physics engine (fence jumps,
+    awkward gaps) is computed by physics even when short — "тут уж нужно просчитывать физикой даже
+    мелкие маршруты".
+  - Acceptance: A/B bench vs baritone on identical start/goal (real terrain + parkour courses) —
+    tungsten wins on time-to-goal AND clears courses where baritone fails.
+- [ ] **REAL-1 (P0, URGENT, previously unrecorded) — block-space plans PHYSICALLY IMPOSSIBLE routes.**
+  User: the search leads through openings that are ~1.5 blocks tall because a SLAB caps them ("стены
+  где полтора блока свободно а сверху закрыто полублоком"), then the physics engine cannot execute it
+  and the bot stalls. Block-space passability must reflect REAL collision shapes (player 1.8 tall /
+  0.6 wide) — slabs, stairs, trapdoors, fences, carpets, snow layers. Blocks PIPE-1: a fast planner
+  over an unreal graph just fails faster.
+- [ ] **FIGHT-1 (P1) — the warrior bot: more aggressive, faster, shield-aware, smart weapon swaps.**
+  User: "должен быть ещё агрессивнее, ещё быстрее, уметь пользоваться щитом и грамотно менять
+  вооружение." Architecture note from the user: the FULL-COMBAT ORCHESTRATOR probably belongs on the
+  altoclef side (strategy: whom to fight, when to block, when to swap, consumables), while **tungsten
+  computes all trajectories and moves under the hood** (aim, ballistics, movement, timing, reach).
+  Builds on the existing split (2.5 in this file) and on WeaponSelector (v0.59.0, hotbar melee only).
 
 > User verdict on the clips I sent: "НИ ОДИН ИЗ TODO не сдан", "ГЛОБАЛЬНОЕ ПОЗОРИЩЕ". He is right:
 > the clips showed no visualisation, a sluggish camera, a bot standing on a ledge doing nothing, a bot
