@@ -54,9 +54,16 @@ public final class SmartMoves {
     private static boolean passable(WorldView w, BlockPos pos) {
         return BlockShapeChecker.getShapeVolume(pos, w) == 0;
     }
-    /** The player can stand with feet at pos: solid below, body + head clear. */
+    /**
+     * The player can stand with feet at pos — measured on the REAL body
+     * (0.6x1.8) against REAL collision shapes. The old test was
+     * "solid below && volume==0 here && volume==0 above", where volume is an XZ
+     * AREA with the height discarded: it accepted a cell floored by a slab and
+     * capped 2 blocks up (1.5 real clearance), which the physics engine then
+     * refused to execute. See PlayerFit.
+     */
     private static boolean standable(WorldView w, BlockPos feet) {
-        return solid(w, feet.down()) && passable(w, feet) && passable(w, feet.up());
+        return kaptainwutax.tungsten.helpers.PlayerFit.standable(w, feet);
     }
 
     /** All valid moves from a feet position, nearest/cheapest per direction. */

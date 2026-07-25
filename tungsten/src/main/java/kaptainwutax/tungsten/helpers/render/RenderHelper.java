@@ -20,7 +20,38 @@ import net.minecraft.util.math.Vec3d;
  */
 public class RenderHelper {
 
+	/**
+	 * PRODUCER-SIDE GATE. The debug-renderer mixin only decides whether to DRAW;
+	 * every render* method below still allocated Line/Cuboid objects into
+	 * synchronised collections shared with the render thread even with
+	 * visualisation off. Measured on the stand: navigating built up to 119
+	 * renderer objects with renderVisualization=false, and fps fell from 23.5
+	 * (idle) to ~12-16 while pathing. Nothing is built when nothing is drawn.
+	 */
+	private static boolean enabled() {
+		kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
+		return cfg.renderVisualization && cfg.renderPathMoves;
+	}
+
+	/**
+	 * SEARCH-PROGRESS THROTTLE. renderNodeConnection/renderPathSoFar are called
+	 * once per EXPANDED NODE (PathFinder search loop) — thousands of allocations
+	 * and lock acquisitions per second on the render thread's collections. The
+	 * visualisation only needs to be human-visible, so cap it to ~20 Hz.
+	 */
+	private static final long SEARCH_RENDER_INTERVAL_MS = 50;
+	private static long lastSearchRenderMs = 0;
+
+	private static boolean searchRenderDue() {
+		if (!enabled()) return false;
+		long now = System.currentTimeMillis();
+		if (now - lastSearchRenderMs < SEARCH_RENDER_INTERVAL_MS) return false;
+		lastSearchRenderMs = now;
+		return true;
+	}
+
 	public static void renderBlockPath(List<BlockNode> nodes, int nextNodeIDX) {
+		if (!enabled()) { TungstenModRenderContainer.BLOCK_PATH_RENDERER.clear(); return; }
 		TungstenModRenderContainer.BLOCK_PATH_RENDERER.clear();
 //		TungstenMod.RENDERERS.clear();
 //		TungstenMod.TEST.clear();
@@ -48,6 +79,7 @@ public class RenderHelper {
 		TungstenModRenderContainer.RUNNING_PATH_RENDERER.clear();
 		TungstenModRenderContainer.RENDERERS.clear();
 		TungstenModRenderContainer.TEST.clear();
+		if (!enabled()) return;
 		if (TungstenModDataContainer.EXECUTOR == null || TungstenModDataContainer.EXECUTOR.getPath() == null || !TungstenModDataContainer.EXECUTOR.isRunning()) return;
 //		Node n = TungstenMod.EXECUTOR.getPath().getLast();
 //		while (n.parent != null) {
@@ -73,6 +105,7 @@ public class RenderHelper {
 	}
 	
 	public static void renderPathSoFar(BlockNode n) {
+		if (!searchRenderDue()) return;   // called per expanded node during the search
 		TungstenModRenderContainer.RENDERERS.clear();
 		Vec3d currentPos = n.getPos(true);
 		TungstenModRenderContainer.RENDERERS.add(new Cuboid(currentPos.subtract(0.1, 0, 0.1), new Vec3d(0.2D, 0.2D, 0.2D), Color.RED));
@@ -85,6 +118,7 @@ public class RenderHelper {
 	}
 	
 	public static void renderPathSoFar(Node n) {
+		if (!searchRenderDue()) return;   // called per expanded node during the search
 		TungstenModRenderContainer.RENDERERS.clear();
 		TungstenModRenderContainer.RENDERERS.add(new Cuboid(n.agent.getPos().subtract(0.05D, 0.05D, 0.05D), new Vec3d(0.1D, 0.1D, 0.1D), Color.RED));
 		while(n.parent != null) {
@@ -94,14 +128,17 @@ public class RenderHelper {
 	}
 	
 	public static void renderNode(Node n) {
+		if (!enabled()) return;
 		TungstenModRenderContainer.RENDERERS.add(new Cuboid(n.agent.getPos().subtract(0.05D, 0.05D, 0.05D), new Vec3d(0.1D, 0.1D, 0.1D), n.color));
 	}
-	
+
 	public static void renderNode(Node n, Collection<Renderer> renderer) {
+		if (!enabled()) return;
 		renderer.add(new Cuboid(n.agent.getPos().subtract(0.05D, 0.05D, 0.05D), new Vec3d(0.1D, 0.1D, 0.1D), n.color));
 	}
-	
+
 	public static void renderNodeConnection(Node child, Node parent) {
+		if (!searchRenderDue()) return;   // per expanded node in the physics search
 		TungstenModRenderContainer.RUNNING_PATH_RENDERER.add(new Line(child.agent.getPos(), parent.agent.getPos(), child.color));
 //	    if (TungstenMod.renderPositonBoxes) {
 //	    	TungstenModRenderContainer.RUNNING_PATH_RENDERER.add(new Cuboid(child.agent.getPos().subtract(0.05D, 0.05D, 0.05D), new Vec3d(0.1D, 0.1D, 0.1D), child.color));
@@ -109,6 +146,7 @@ public class RenderHelper {
 	}
 	
 	public static void renderNodeConnection(BlockNode child, BlockNode parent) {
+		if (!searchRenderDue()) return;   // per expanded node in the block-space search
 
 //		Vec3d childPos = child.getPos(true);
 //		Vec3d parentPos = parent.getPos(true);

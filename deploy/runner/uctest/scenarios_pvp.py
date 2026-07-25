@@ -439,6 +439,47 @@ class AllRound(Scenario):
                         f"freezes={ctx.freeze_windows}")
 
 
+class SlabHole(Scenario):
+    """REAL-1 regression: a wall whose only opening is 1.5 blocks tall (a bottom
+    slab caps a 1-block hole). A 1.8-tall player cannot fit. The block-space
+    search used to plan straight through it — passability was an XZ AREA test
+    with the height discarded — and the bot stalled at the wall. It must route
+    AROUND (the wall is open past z=+/-6) and never enter the fake opening."""
+    id = "slab_hole"
+    duration = 75
+    needs_victim = False
+    arena_half = 30
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=20, wall=False)
+        rc = ctx.rcon
+        rc.cmd(f"fill 8 {STAND_Y} -6 8 {STAND_Y + 4} 6 stone")   # the wall
+        rc.cmd(f"setblock 8 {STAND_Y} 0 air")                    # 1-block hole
+        rc.cmd(f"setblock 8 {STAND_Y + 1} 0 stone_slab[type=bottom]")  # capped -> 1.5
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 90 0"
+        ctx.geo["goal"] = (16, STAND_Y, 0)
+
+    def drive_start(self, ctx):
+        gx, gy, gz = ctx.geo["goal"]
+        ctx.bot.py.call("gotoXYZ", gx, gy, gz)
+
+    def early_stop(self, ctx):
+        p = ctx.samples[-1].get("bot") if ctx.samples else None
+        return bool(p and p[0] > 13.5)
+
+    def judge(self, ctx):
+        xs = [s["bot"][0] for s in ctx.samples if s.get("bot")]
+        zs = [s["bot"][2] for s in ctx.samples if s.get("bot")]
+        inside = any(6.5 < x < 9.5 and abs(z) < 1.5 for x, z in zip(xs, zs))
+        crossed = any(x > 12 for x in xs)
+        yield Criterion("never entered the impossible 1.5-high opening", not inside,
+                        f"max_x={max(xs) if xs else None}")
+        yield Criterion("routed around and crossed the wall", crossed,
+                        f"max_x={max(xs) if xs else None}")
+        yield Criterion("freezes == 0", ctx.freeze_windows == 0,
+                        f"freezes={ctx.freeze_windows}")
+
+
 SCENARIOS = [MeleeBasic, EdgeDuel, NarrowBridgeDuel, ChaseFlat, ChaseTerrain,
              BowFlee, BowFleeHard, RangedMoving, BridgeAssault,
-             BridgeAssaultDefended, AllRound]
+             BridgeAssaultDefended, AllRound, SlabHole]

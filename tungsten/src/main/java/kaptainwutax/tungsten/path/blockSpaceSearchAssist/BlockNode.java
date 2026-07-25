@@ -607,14 +607,24 @@ public class BlockNode {
 
 		if (isJumpImpossible(world, child))
 			return true;
-		
+
 		// TODO: Fix bottom slab under fence thing
 		if (!wasCleared(world, getBlockPos(), child.getBlockPos(), this, child)) {
 			return true;
 		}
 
-		if (BlockStateChecker.isBottomSlab(childState) && isAboveChildSolid2)
-			child.cost += 20;
+		// REAL BODY TEST (the last word). Everything above reasons about block
+		// CLASSES and XZ shape AREA, which cannot see height: a cell whose floor
+		// is a bottom slab with a ceiling two blocks up leaves 1.5 blocks of real
+		// clearance, and used to be accepted for a mere cost penalty — the plan
+		// then could not be executed by the physics engine and the bot stalled in
+		// front of it (user 2026-07-25). PlayerFit measures the actual 0.6x1.8
+		// body against actual collision shapes, so slabs/stairs/trapdoors/fences/
+		// carpets/snow count for exactly what they physically are.
+		if (!kaptainwutax.tungsten.helpers.PlayerFit.standable(world, child.getBlockPos()))
+			return true;
+		if (!kaptainwutax.tungsten.helpers.PlayerFit.corridorClear(world, getBlockPos(), child.getBlockPos()))
+			return true;
 
 		return false;
 	}

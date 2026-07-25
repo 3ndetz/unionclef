@@ -1968,6 +1968,45 @@ public class Py4jEntryPoint {
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
+    /** Client performance snapshot — the number you need before and after any
+     *  perf work: {fps, renderers, pathfinderActive, executorRunning, walker,
+     *  combatActive}. `renderers` is how many render objects tungsten is
+     *  currently drawing (paths, plans, trajectories); on a software renderer
+     *  that count is the single biggest FPS lever, so a measurement that does
+     *  not report it cannot tell "the mod is slow" from "llvmpipe is slow".
+     *  Sample it with visualisation ON and OFF to separate the two. */
+    public Map<String, Object> getPerfStats() {
+        Map<String, Object> out = new HashMap<>();
+        try {
+            var mc = MinecraftClient.getInstance();
+            out.put("fps", mc.getCurrentFps());
+            int renderers = kaptainwutax.tungsten.TungstenModRenderContainer.RENDERERS.size()
+                    + kaptainwutax.tungsten.TungstenModRenderContainer.BLOCK_PATH_RENDERER.size()
+                    + kaptainwutax.tungsten.TungstenModRenderContainer.RUNNING_PATH_RENDERER.size()
+                    + kaptainwutax.tungsten.TungstenModRenderContainer.COMBAT_TRAJECTORY.size()
+                    + kaptainwutax.tungsten.TungstenModRenderContainer.BREAK_PLAN.size()
+                    + kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.size()
+                    + kaptainwutax.tungsten.TungstenModRenderContainer.SELECTION.size();
+            out.put("renderers", renderers);
+            out.put("renderVisualization",
+                    kaptainwutax.tungsten.TungstenConfig.get().renderVisualization);
+            out.put("pathfinderActive",
+                    kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get());
+            out.put("blockSearchActive",
+                    kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.active);
+            out.put("executorRunning",
+                    kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR != null
+                            && kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.isRunning());
+            out.put("walkerRunning", kaptainwutax.tungsten.task.BlockPathWalker.isRunning());
+            out.put("combatActive", kaptainwutax.tungsten.task.PunkPlayerTask.isActive());
+            out.put("ok", true);
+        } catch (Throwable e) {
+            out.put("ok", false);
+            out.put("error", String.valueOf(e.getMessage()));
+        }
+        return out;
+    }
+
     /** Respawn after death: close the death screen and send the respawn request.
      *  Returns true if the request went out. autoRespawn normally handles this,
      *  but a bot that dies with no task running (or on a server where the death
