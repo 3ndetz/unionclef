@@ -155,7 +155,13 @@ public class PunkPlayerTask {
         double targetDrop = player.getY() - targetEntity.getEntityPos().y;
         int targetFall = kaptainwutax.tungsten.combat.VoidDetector.fallHeight(
                 targetEntity.getEntityPos(), world);
-        if (targetDrop > 3.0 && targetFall > 6) {
+        // NB the fall bound must mean "there is no ground down there at all", not
+        // merely "it is a way down". On generated terrain a fleeing target running
+        // downhill is routinely 3+ blocks below with a 6-block drop under it, and
+        // the bedwars-era numbers made the bot sneak-freeze on a hillside and let
+        // the prey escape (stand-measured: 111 s of standing still). A genuine void
+        // is bottomless; 20 blocks of nothing is a safe discriminator.
+        if (targetDrop > 3.0 && targetFall > 20) {
             if (mode == Mode.COMBAT) combat.releaseKeys();
             if (FollowEntityTask.isActive()) FollowEntityTask.stop();
             // Hold with SNEAK: vanilla sneak refuses to walk off a block edge, so

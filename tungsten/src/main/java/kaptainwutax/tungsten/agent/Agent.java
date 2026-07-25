@@ -1618,8 +1618,15 @@ public class Agent {
                             TungstenModDataContainer.EXECUTOR.getCurrentTick(),
                             this.posX, this.posY, this.posZ,
                             player.getX(), player.getY(), player.getZ()));
+                        // Abandon the REPLAY (the simulated chain no longer matches
+                        // reality), but do NOT kill the search: a drift abort used
+                        // to set PATHFINDER.stop as well, so a single mismatch
+                        // ended the whole navigation and the bot stood there. On a
+                        // real-terrain chase that froze it for 111 s while the prey
+                        // ran off (stand-measured). A replay mismatch is a reason to
+                        // RE-PLAN, not to give up; the follow/goto layer re-issues a
+                        // search on its next tick because the executor is now idle.
                         TungstenModDataContainer.EXECUTOR.stop = true;
-                        TungstenModDataContainer.PATHFINDER.stop.set(true);
                     }
                 }
                 if (TungstenModRenderContainer.ERROR.size() > 1000) TungstenModRenderContainer.ERROR.clear();

@@ -294,6 +294,31 @@ public class FollowEntityTask {
                     TungstenModDataContainer.PATHFINDER.overrideStartPos = bfsEnd;
                 }
             }
+
+            // The grid BFS above is flat-minded: it only knows "the two cells are
+            // clear", so on generated terrain it dead-ends and the chase stalls in
+            // front of a slope. Plan the real route as well (ascend/descend/parkour
+            // moves, honest costs, real body clearance) and hand it to the walker.
+            // Async: a terrain plan costs more than a tick.
+            //
+            // MEASURED, do not "improve" without re-running chase_terrain: feeding
+            // this plan via startBFS instead of start(), or dropping the dist gate,
+            // made the bot stop moving entirely (0 blocks in 180 s vs 50 with this
+            // form) because every re-plan restarted the walker at waypoint 0.
+            if (kaptainwutax.tungsten.TungstenConfig.get().fastBlockFirst) {
+                final Vec3d fixedTarget = target;
+                kaptainwutax.tungsten.path.fast.FastPlanner.planAsync(
+                        world, player.getBlockPos(),
+                        net.minecraft.util.math.BlockPos.ofFloored(target),
+                        Math.min(200L, kaptainwutax.tungsten.TungstenConfig.get().fastPlanBudgetMs),
+                        res -> {
+                            if (!active) return;
+                            java.util.List<net.minecraft.util.math.BlockPos> cells = res.positions();
+                            int physics = res.firstPhysicsIndex();
+                            if (physics > 1) cells = cells.subList(0, physics);
+                            if (cells.size() >= 2) BlockPathWalker.start(fixedTarget, cells);
+                        });
+            }
         }
 
         if (dist < 6 && hasLineOfSight(player, target)) {

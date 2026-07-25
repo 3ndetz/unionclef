@@ -166,11 +166,27 @@ class ChaseTerrain(Scenario):
         rc.cmd("time set day")
         rc.cmd("weather clear")
         rc.cmd("forceload add -200 -200 200 200")
-        # let the server place them on real ground and read the actual Y back
-        # instead of guessing a surface height for this seed
-        rc.cmd(f"spreadplayers 0 0 4 8 false {ctx.bot.name} {ctx.victim.name}")
+        # Deterministic placement on the real surface. `spreadplayers` was used
+        # here and silently failed ("Incorrect argument for command"), so the bots
+        # were never relocated and every run restarted from wherever the previous
+        # one left them — three "the chase is broken" results were measured from a
+        # bot standing in the same stuck spot. Probe the column instead.
+        # Scan DOWNWARD from the sky for the first solid block: that is the
+        # surface. Scanning up from below finds the roof of the first cave and
+        # drops the bot underground (measured: spawned at y=50 in a cavern, fell,
+        # died — the run was garbage before the chase even started).
+        sx, sz = 0, 0
+        sy = None
+        for y in range(200, 45, -1):
+            if "Test passed" not in rc.cmd(f"execute if block {sx} {y} {sz} air"):
+                sy = y + 1
+                break
+        if sy is None:
+            sy = 100
+        rc.cmd(f"tp {ctx.bot.name} {sx}.5 {sy} {sz}.5")
+        rc.cmd(f"tp {ctx.victim.name} {sx + 6}.5 {sy} {sz}.5")
         time.sleep(2)
-        bp = ctx.bot.pos() or [0, 80, 0]
+        bp = ctx.bot.pos() or [sx, sy, sz]
         ctx.geo["bot_spawn"] = f"{bp[0]:.1f} {bp[1]:.1f} {bp[2]:.1f}"
         ctx.geo["victim_spawn"] = f"{bp[0] + 6:.1f} {bp[1]:.1f} {bp[2]:.1f}"
         ctx.geo["goal"] = (int(bp[0]) + self.RUN_DIST, int(bp[1]), int(bp[2]))

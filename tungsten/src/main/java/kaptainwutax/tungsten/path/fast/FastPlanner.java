@@ -94,6 +94,27 @@ public final class FastPlanner {
         }
     }
 
+    /**
+     * Plan off the client thread and hand the cells to {@code onReady} when the
+     * plan is worth walking. The chase calls this: a real terrain route costs
+     * more than a tick's budget, and freezing the client to compute it would
+     * cost exactly the fps this planner exists to save.
+     */
+    public static void planAsync(WorldView world, BlockPos start, BlockPos goal,
+                                 long budgetMs, java.util.function.Consumer<Result> onReady) {
+        Thread t = new Thread(() -> {
+            try {
+                Result r = plan(world, start, goal, budgetMs);
+                if (!r.isEmpty() && r.path.size() >= 2) onReady.accept(r);
+            } catch (Exception e) {
+                Debug.logWarning("FastPlanner async failed: " + e.getMessage());
+            }
+        });
+        t.setName("FastPlanner-async");
+        t.setDaemon(true);
+        t.start();
+    }
+
     // ── search node ──────────────────────────────────────────────────────────
     private static final class Node {
         final int x, y, z;
