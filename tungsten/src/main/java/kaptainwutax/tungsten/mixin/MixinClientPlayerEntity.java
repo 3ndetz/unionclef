@@ -57,6 +57,11 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		kaptainwutax.tungsten.task.RunAwayTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
 		//#endif
 
+		// pipelined navigation: walk this leg while the next one is planned from
+		// its tail (must tick BEFORE the walker so a finished leg is replaced in
+		// the same tick and the bot never pauses at a seam)
+		kaptainwutax.tungsten.task.FastNavigator.tick((ClientPlayerEntity)(Object)this);
+
 		// BFS walker: immediate movement while physics A* computes
 		BlockPathWalker.tick((ClientPlayerEntity)(Object)this);
 

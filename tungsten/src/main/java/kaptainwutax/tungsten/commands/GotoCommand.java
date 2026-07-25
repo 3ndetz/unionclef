@@ -53,12 +53,32 @@ public class GotoCommand extends Command {
 		}));
 	}
 
+	/**
+	 * Plan the cheap block route and hand it to the walker so the bot moves NOW.
+	 * Runs on its own thread: the plan is time-sliced (fastPlanBudgetMs) but the
+	 * chat/command thread must never block on it.
+	 */
+	private static void startFastLeg(Vec3d target) {
+		kaptainwutax.tungsten.task.FastNavigator.start(target);
+	}
+
 	private static void startWithRetry(Vec3d target, int attempt) {
 		if (attempt >= MAX_RETRIES) {
 			Debug.logWarning("Gave up after " + MAX_RETRIES + " attempts.");
 			return;
 		}
 		if (TungstenModDataContainer.PATHFINDER.stop.get()) return;
+
+		// FAST-FIRST: plan a cheap, physically-real block path and START WALKING it
+		// right away, then let the physics search work while the bot is already
+		// moving. Without this the first movement key waited for the physics leg
+		// (>=0.5s prelude + block search + physics), i.e. the bot stood still while
+		// the computer thought. The walker only leaves the ground for moves it can
+		// actually do; a waypoint the planner marked needsPhysics stops the walk so
+		// the physics engine takes that segment (parkour stays intact).
+		if (TungstenConfig.get().fastBlockFirst && attempt == 0) {
+			startFastLeg(target);
+		}
 
 		// Reset pathfinder params to defaults (may have been overridden by followPlayer)
 		TungstenConfig.get().searchTimeoutMs       = 15000L;

@@ -44,6 +44,17 @@ public class TungstenConfig {
 
     // ---- visualization (render toggles) ----
 
+    /** FAST-FIRST NAVIGATION (default ON). Plan a cheap, physically-real block
+     *  path first (FastPlanner) and START WALKING it immediately, then let the
+     *  physics engine refine/execute the hard parts. Off = the old behaviour,
+     *  where nothing moves until the physics search produces a path.
+     *  Toggle live: ;settings fastBlockFirst false — or py4j setFastBlockFirst. */
+    public boolean fastBlockFirst = true;
+
+    /** Wall-clock budget for the fast block plan (ms). It is time-sliced and
+     *  returns its best chain, so this is a latency knob, not a quality cliff. */
+    public long fastPlanBudgetMs = 250;
+
     /** Master render toggle. false = draw NOTHING from tungsten (paths, goal,
      *  parkour moves, combat trajectory, break plan). Turn off to keep the view
      *  clean or shave render cost. Toggle live: ;settings renderVisualization false */
