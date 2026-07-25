@@ -48,6 +48,13 @@ public final class FastPlanner {
     private static final int MAX_FALL = 3;
     /** Max horizontal gap a parkour jump may cross (blocks of air). */
     private static final int MAX_JUMP_GAP = 3;
+    /**
+     * Highest ledge we still plan a route over. Anything above a plain jump
+     * (PlayerFit.JUMP_HEIGHT) is emitted as a physics-required step: the walker
+     * stops there and the physics engine climbs it. Refusing these outright is
+     * what made the chase stop at the foot of a mountain.
+     */
+    private static final int CLIMB_MAX = 3;
 
     private static final int[][] CARDINALS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
     private static final int[][] DIAGONALS = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
@@ -219,23 +226,31 @@ public final class FastPlanner {
                              double baseCost) {
         int nx = from.x + dx, nz = from.z + dz;
 
-        // same level / step-up to +1 / drop down to MAX_FALL
-        for (int dy = 1; dy >= -MAX_FALL; dy--) {
+        // same level / climb / drop down to MAX_FALL. CLIMB_MAX covers ledges a
+        // plain jump cannot reach: the route is still emitted, flagged so the
+        // physics engine executes that step (pillar/parkour). Without it the
+        // planner simply refused every cliff and the chase stopped dead at the
+        // foot of a mountain while the prey climbed away (stand-measured).
+        for (int dy = CLIMB_MAX; dy >= -MAX_FALL; dy--) {
             scratch.set(nx, from.y + dy, nz);
             double top = PlayerFit.supportTop(world, scratch);
             if (Double.isNaN(top)) continue;
             double rise = top - support;
-            if (rise > PlayerFit.JUMP_HEIGHT) continue;                 // too high to reach
+            if (rise > CLIMB_MAX) continue;                              // out of reach entirely
             if (!PlayerFit.bodyFits(world, nx + 0.5, top, nz + 0.5)) continue;
             if (rise > PlayerFit.STEP_HEIGHT) {
                 // needs a jump: head clearance above the origin cell
                 scratch.set(from.x, from.y, from.z);
                 if (!PlayerFit.passableAt(world, scratch, support + 0.6)) continue;
             }
+            // above a plain jump the physics engine has to do it (pillar up, a
+            // parkour-ascend, a momentum jump) — emit it, flagged, and charge for it
+            boolean climb = rise > PlayerFit.JUMP_HEIGHT;
             double cost = baseCost
                     + (rise > PlayerFit.STEP_HEIGHT ? ActionCosts.JUMP_PENALTY : 0)
+                    + (climb ? ActionCosts.JUMP_PENALTY * 2 * rise : 0)
                     + (rise < -0.5 ? ActionCosts.FALL_ONE_BLOCK_COST * -rise : 0);
-            relax(map, open, from, nx, from.y + dy, nz, cost, goal, false);
+            relax(map, open, from, nx, from.y + dy, nz, cost, goal, climb);
             return;   // nearest reachable level in this direction wins
         }
 

@@ -289,9 +289,18 @@ public class FollowEntityTask {
                 BlockPathWalker.start(target, bfsPath);
                 // Physics A* starts from BFS endpoint — don't waste time on
                 // the segment the walker already covers
+                // Root the physics search at the walker's endpoint ONLY while the
+                // walker is actually getting there. If it just bailed (a 2-block
+                // wall reads as "danger" and it cannot climb), a path rooted 17
+                // blocks ahead is unreachable: it waits armed, the walker keeps
+                // bailing, and the chase stands at the foot of the wall forever
+                // (stand-measured on a mountainside). Rooting HERE instead lets
+                // the physics engine solve the climb that blocks us right now.
                 Vec3d bfsEnd = BlockPathWalker.getEndpoint();
-                if (bfsEnd != null) {
+                if (bfsEnd != null && !BlockPathWalker.wasStoppedByBail()) {
                     TungstenModDataContainer.PATHFINDER.overrideStartPos = bfsEnd;
+                } else {
+                    TungstenModDataContainer.PATHFINDER.overrideStartPos = null;
                 }
             }
 
