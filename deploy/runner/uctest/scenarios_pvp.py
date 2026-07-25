@@ -156,9 +156,42 @@ class ChaseTerrain(Scenario):
     settings = {"combatMovementsEnabled": "true"}
     RUN_DIST = 140             # how far the runner is sent, in blocks
 
+    # Solid ground we are willing to start a chase on. Anything not in this set
+    # (water, lava, kelp, leaves, ice...) is rejected outright.
+    LAND_BLOCKS = ("grass_block", "dirt", "stone", "sand", "gravel", "podzol",
+                   "coarse_dirt", "snow_block", "moss_block", "mud", "clay",
+                   "sandstone", "terracotta", "rooted_dirt")
+
+    def _find_land(self, rc):
+        """Find a real LAND surface to start on, and prove it.
+
+        The world spawn of this seed is an OCEAN — the repo already knew that
+        ("спавн в ОКЕАНЕ — бот утонул") and a naive 'first non-air block from the
+        sky' probe stops at the WATER surface, which is how both bots ended up
+        spawned in the sea for a whole 'chase' run. Water/lava are not ground:
+        scan candidate columns until the surface block is genuinely walkable,
+        and return its name so the run records what it stood on.
+        """
+        for radius in (0, 64, 128, 192, 256, 320):
+            for dx, dz in ((1, 0), (0, 1), (-1, 0), (0, -1), (1, 1), (-1, -1)):
+                x, z = dx * radius, dz * radius
+                for y in range(120, 55, -1):
+                    if "Test passed" in rc.cmd(f"execute if block {x} {y} {z} air"):
+                        continue
+                    for block in self.LAND_BLOCKS:
+                        if "Test passed" in rc.cmd(
+                                f"execute if block {x} {y} {z} minecraft:{block}"):
+                            # need room to stand on top of it
+                            if ("Test passed" in rc.cmd(f"execute if block {x} {y+1} {z} air")
+                                    and "Test passed" in rc.cmd(
+                                        f"execute if block {x} {y+2} {z} air")):
+                                return x, z, y + 1, block
+                    break   # first non-air was not land: this column is water/lava/leaves
+        raise RuntimeError("no land found for the chase bench — refusing to run in the sea")
+
     def build(self, arena, ctx):
-        # Start both at the world spawn area; the terrain is whatever generated.
-        # A fixed offset gives the runner a head start along +x.
+        # Start both on real LAND (never the ocean spawn); the terrain is whatever
+        # generated. A fixed offset gives the runner a head start along +x.
         rc = ctx.rcon
         rc.cmd("gamerule pvp true")
         rc.cmd("gamerule immediate_respawn true")
@@ -171,18 +204,8 @@ class ChaseTerrain(Scenario):
         # were never relocated and every run restarted from wherever the previous
         # one left them — three "the chase is broken" results were measured from a
         # bot standing in the same stuck spot. Probe the column instead.
-        # Scan DOWNWARD from the sky for the first solid block: that is the
-        # surface. Scanning up from below finds the roof of the first cave and
-        # drops the bot underground (measured: spawned at y=50 in a cavern, fell,
-        # died — the run was garbage before the chase even started).
-        sx, sz = 0, 0
-        sy = None
-        for y in range(200, 45, -1):
-            if "Test passed" not in rc.cmd(f"execute if block {sx} {y} {sz} air"):
-                sy = y + 1
-                break
-        if sy is None:
-            sy = 100
+        sx, sz, sy, ground = self._find_land(rc)
+        ctx.log(f"  chase start: ({sx}, {sy}, {sz}) on {ground}")
         rc.cmd(f"tp {ctx.bot.name} {sx}.5 {sy} {sz}.5")
         rc.cmd(f"tp {ctx.victim.name} {sx + 6}.5 {sy} {sz}.5")
         time.sleep(2)
@@ -191,12 +214,16 @@ class ChaseTerrain(Scenario):
         ctx.geo["victim_spawn"] = f"{bp[0] + 6:.1f} {bp[1]:.1f} {bp[2]:.1f}"
         ctx.geo["goal"] = (int(bp[0]) + self.RUN_DIST, int(bp[1]), int(bp[2]))
 
+    HEAD_START_S = 6.0
+
     def drive_start(self, ctx):
         gx, gy, gz = ctx.geo["goal"]
         # runner: plain baritone @goto over real terrain — it will climb, swim,
         # walk around obstacles on its own.
         ctx.victim.cmd(f"@goto {gx} {gy} {gz}")
-        time.sleep(1.0)
+        # A HEAD START makes this a chase. Without it the prey was still standing
+        # when the chaser reached it and the "bench" was decided in four seconds.
+        time.sleep(self.HEAD_START_S)
         # chaser: tungsten punk = approach (pathfinder) + combat when in reach
         ctx.bot.py.call("punk", ctx.victim.name)
 
@@ -206,14 +233,33 @@ class ChaseTerrain(Scenario):
         if int(t) % 20 == 0 and ctx.samples:
             gx, gy, gz = ctx.geo["goal"]
             ctx.victim.cmd(f"@goto {gx} {gy} {gz}")
+        # record whether the bot is actually swimming — a chase measured in the
+        # sea is not a chase, and this is what proves the setup was sound
+        p = ctx.samples[-1].get("bot") if ctx.samples else None
+        if p and int(t) % 5 == 0:
+            probe = ctx.rcon.cmd(
+                f"execute if block {int(p[0])} {int(p[1])} {int(p[2])} water")
+            if "Test passed" in probe:
+                ctx.geo["swam"] = True
 
     def early_stop(self, ctx):
         return ctx.kills() >= 1
 
     def judge(self, ctx):
-        yield Criterion("caught the runner (contact <= 120s)",
-                        ctx.first_contact is not None and ctx.first_contact <= 120,
-                        f"contact={ctx.first_contact}")
+        # SETUP SANITY FIRST. A whole 'chase' run was once measured with both bots
+        # swimming in the ocean — the numbers were meaningless and the clip was an
+        # embarrassment. If the run did not happen on land, nothing else it says
+        # counts, so this criterion is reported before the behavioural ones.
+        swam = ctx.geo.get("swam", False)
+        yield Criterion("ran on LAND (not in water)", not swam,
+                        f"ground={ctx.geo.get('ground')} swam={swam}")
+        # A kill IS contact — the 1 Hz position sampling can miss the moment the
+        # gap closes (measured: the bot killed the runner at t=4.4 s and the
+        # contact detector still reported None).
+        caught = (ctx.first_contact is not None and ctx.first_contact <= 120) \
+            or ctx.kills() >= 1
+        yield Criterion("caught the runner (contact <= 120s)", caught,
+                        f"contact={ctx.first_contact} kills={ctx.kills()}")
         yield Criterion("killed the runner", ctx.kills() >= 1,
                         f"kills={ctx.kills()}")
         yield ctx.survival_criterion()

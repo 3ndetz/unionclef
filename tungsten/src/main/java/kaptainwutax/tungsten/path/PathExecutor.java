@@ -54,6 +54,17 @@ public class PathExecutor {
 		}
 	}
 
+	/**
+	 * A path may be rooted AHEAD of the player (the search is seeded at a future
+	 * waypoint so it can compute while the walker is still travelling). Replaying
+	 * such a path immediately is nonsense: the very first comparison sees a
+	 * 20-block gap and aborts on drift, forever. So an out-of-reach path is held
+	 * ARMED — the walker keeps driving — and replay begins when the bot actually
+	 * arrives at the root.
+	 */
+	private static final double ARM_TOLERANCE = 2.0;
+	private boolean armed = false;
+
 	public void setPath(List<Node> path) {
 		this.cb = null;
 		this.startTime = System.currentTimeMillis();
@@ -62,8 +73,21 @@ public class PathExecutor {
 	    stop = false;
     	this.path = path;
     	this.tick = 0;
+    	this.armed = false;
+    	if (isClient && path != null && !path.isEmpty() && TungstenMod.mc.player != null) {
+    		double toRoot = TungstenMod.mc.player.getEntityPos()
+    				.distanceTo(path.get(0).agent.getPos());
+    		if (toRoot > ARM_TOLERANCE) {
+    			this.armed = true;   // wait for the bot to reach the root
+    			kaptainwutax.tungsten.Debug.logMessage(String.format(
+    					"Path armed %.1f blocks ahead — walker drives until we reach it", toRoot));
+    		}
+    	}
     	RenderHelper.renderPathCurrentlyExecuted();
 	}
+
+	/** True while a spliced path waits for the bot to reach its root. */
+	public boolean isArmed() { return armed; }
 	
 	public void addToPath(Node n) {
 		this.path.add(n);
@@ -103,7 +127,11 @@ public class PathExecutor {
 
 
 	public boolean isRunning() {
-        return this.path != null && this.tick <= this.path.size();
+        // An ARMED path is waiting, not running: while it waits the walker must
+        // keep driving (and callers that stand down for "the executor is busy"
+        // must not stand down), otherwise nothing moves the bot to the root and
+        // the splice can never start.
+        return this.path != null && !this.armed && this.tick <= this.path.size();
     }
 
 
@@ -140,6 +168,27 @@ public class PathExecutor {
 		    TungstenModRenderContainer.BLOCK_PATH_RENDERER.clear();
     		return;
     	}
+    	// ARMED: this path starts ahead of us. Do not replay it (and do not touch
+    	// the movement keys — the walker owns them until we get there). Start the
+    	// moment the bot is at the root; give up if it never arrives, so a stale
+    	// splice cannot pin the executor forever.
+    	if (this.armed) {
+    		double toRoot = player.getEntityPos().distanceTo(this.path.get(0).agent.getPos());
+    		if (toRoot <= ARM_TOLERANCE) {
+    			this.armed = false;
+    			this.startTime = System.currentTimeMillis();
+    			kaptainwutax.tungsten.Debug.logMessage("Path armed -> replaying (reached root)");
+    		} else {
+    			if (System.currentTimeMillis() - this.startTime > 15000) {
+    				kaptainwutax.tungsten.Debug.logMessage(
+    						"Armed path expired (never reached its root) — dropping it");
+    				this.path = null;
+    				this.armed = false;
+    			}
+    			return;
+    		}
+    	}
+
     	if(this.tick == this.path.size()) {
     		// mine the planned wall before declaring the segment finished —
     		// the continuation search / goto retry then sees the opened world
