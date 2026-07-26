@@ -146,6 +146,14 @@ public class BlockPathWalker {
     }
 
     /** BFS endpoint for A* start position. */
+    /** The waypoint the walker is currently trying to reach (null if idle).
+     *  This is what a jam must blacklist — never the cell we are standing in. */
+    public static net.minecraft.util.math.BlockPos getCurrentWaypoint() {
+        if (path == null || path.isEmpty()) return null;
+        int i = Math.min(waypointIdx, path.size() - 1);
+        return path.get(i);
+    }
+
     public static Vec3d getEndpoint() {
         if (path == null || path.isEmpty()) return null;
         return Vec3d.ofBottomCenter(path.get(path.size() - 1));
@@ -347,18 +355,26 @@ public class BlockPathWalker {
         double yawErr = Math.abs(WindMouseRotation.wrapDelta(yaw - player.getYaw()));
         boolean onGround = player.isOnGround();
         boolean facing = yawErr < 45.0;
-        boolean move = facing || !onGround;     // face-before-move grounded; keep air momentum
+        // CLIMBING A STEP. A vanilla step-up is jump + FORWARD PRESSURE: jumping
+        // without it just bounces on the spot. Right at the step the horizontal
+        // distance is ~0, so the bearing is numerically unstable, `facing` flickers
+        // and the forward key was released exactly when it was needed — the bot
+        // hammered the jump key with X/Z frozen and Y oscillating for the rest of
+        // the run (stand-measured at a 1-block ledge). When the waypoint is higher
+        // and we are already on top of it horizontally, push forward regardless.
+        boolean climbing = wp.getY() > player.getBlockPos().getY() && dist < 1.6;
+        boolean move = facing || !onGround || climbing;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(move);
-        mc.options.sprintKey.setPressed(move);
+        mc.options.sprintKey.setPressed(move && !climbing);   // sprint-jump overshoots a ledge
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
 
         boolean needJumpUp = wp.getY() > player.getBlockPos().getY();
-        boolean canJump = facing && TungstenConfig.get().followJumpingEnabled
+        boolean canJump = (facing || climbing) && TungstenConfig.get().followJumpingEnabled
                 && onGround
                 && (needJumpUp || SafetySystem.isJumpLandingSafe(
                         playerPos, player.getVelocity(), player.getEntityWorld()));

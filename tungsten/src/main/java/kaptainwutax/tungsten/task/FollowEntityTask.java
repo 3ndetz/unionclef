@@ -33,6 +33,13 @@ public class FollowEntityTask {
     // moves 4+ blocks in that window, so the pathfinder (budget 0.5-3s) was
     // restarted forever and never emitted a path: the bot just stood there.
     private static final int    RECALC_TICKS       = 40;   // min 2s between re-plans
+    /** Ticks of zero horizontal progress with the walker "running" before we force a re-plan. */
+    private static final int    WALKER_STUCK_TICKS = 30;   // 1.5s
+    private static Vec3d walkerAnchor = null;
+    private static int   walkerStuckTicks = 0;
+    /** Engine-independent jam detection (see the watchdog in tick()). */
+    private static Vec3d jamAnchor = null;
+    private static int   jamTicks = 0;
     private static final double MIN_MOVE_DIST      = 3.0;  // absolute floor for the threshold
     private static final int    STUCK_TICKS        = 30;
 
@@ -145,14 +152,19 @@ public class FollowEntityTask {
             targetPos    = snapToGround(world, targetEntity);
             lastKnownPos = targetPos;
             hasEntity    = true;
-        } else if (managed && lastKnownPos != null) {
-            // managed mode: survive entity removal, navigate to lastKnownPos
+        } else if (lastKnownPos != null) {
+            // The entity object is gone — but on a long chase that usually means the
+            // prey simply ran out of the client's tracking range, not that it
+            // vanished. Stopping there is why a 150-block chase died silently with
+            // every engine idle: keep travelling to the last place we saw it, and
+            // re-acquire when it comes back into range. (Managed mode always did
+            // this; direct mode used to just stop.)
             targetPos = lastKnownPos;
             hasEntity = false;
-        } else if (!managed) {
-            // direct mode: entity gone → stop
-            stop();
-            return;
+            if (!managed && player.getEntityPos().distanceTo(lastKnownPos) < 3.0) {
+                stop();   // arrived at the last sighting and it is really not there
+                return;
+            }
         } else {
             return; // managed but no position known yet
         }
@@ -242,8 +254,56 @@ public class FollowEntityTask {
         boolean executorRunning  = TungstenModDataContainer.isExecutorRunning();
         boolean pathfinderActive = TungstenModDataContainer.PATHFINDER.active.get();
 
+        // JAM WATCHDOG — engine-independent. Whichever component claims to be
+        // driving, what matters is whether the BOT moves. The walker flickers
+        // on/off while it bounces at an obstacle, so a counter living inside the
+        // walker branch never reached its threshold and the bot bounced in the
+        // same notch indefinitely. Judge by horizontal displacement alone.
+        Vec3d hereNow = player.getEntityPos();
+        if (jamAnchor == null
+                || Math.hypot(hereNow.x - jamAnchor.x, hereNow.z - jamAnchor.z) > 0.5) {
+            jamAnchor = hereNow;
+            jamTicks = 0;
+        } else if (++jamTicks >= WALKER_STUCK_TICKS) {
+            Debug.logMessage("Jammed at " + player.getBlockPos().toShortString()
+                    + " — blacklisting the cell and re-planning");
+            jamTicks = 0;
+            jamAnchor = null;
+            kaptainwutax.tungsten.path.fast.FastPlanner.blockCell(player.getBlockPos());
+            BlockPathWalker.stop();
+            TungstenModDataContainer.PATHFINDER.overrideStartPos = null;
+            TungstenModDataContainer.PATHFINDER.stop.set(true);
+            stopRequested = true;
+            tickCounter = 0;
+            return;
+        }
+
         if (walkerRunning) {
-            // walker active — don't touch pathfinder, just let it compute
+            // "The walker is running" is not the same as "the bot is moving". On
+            // generated terrain it can hammer jump at an obstacle its waypoint sits
+            // behind: X and Z frozen, Y oscillating, forever — and this branch used
+            // to reset the stuck counter every tick, so the chase never recovered
+            // (stand-measured: 27 blocks of progress, then dead for the rest of the
+            // run). Watch HORIZONTAL displacement and force a re-plan when there is
+            // none.
+            Vec3d here = player.getEntityPos();
+            if (walkerAnchor == null
+                    || Math.hypot(here.x - walkerAnchor.x, here.z - walkerAnchor.z) > 0.5) {
+                walkerAnchor = here;
+                walkerStuckTicks = 0;
+            } else if (++walkerStuckTicks >= WALKER_STUCK_TICKS) {
+                Debug.logMessage("Walker jammed (no horizontal progress) — forcing a re-plan");
+                walkerStuckTicks = 0;
+                walkerAnchor = null;
+                // and remember that this cell keeps failing, so the next plan
+                // routes AROUND it instead of handing back the same dead end
+                kaptainwutax.tungsten.path.fast.FastPlanner.blockCell(player.getBlockPos());
+                BlockPathWalker.stop();
+                TungstenModDataContainer.PATHFINDER.overrideStartPos = null;
+                TungstenModDataContainer.PATHFINDER.stop.set(true);
+                stopRequested = true;
+                tickCounter = 0;
+            }
             stuckTicks = 0;
         } else if (!pathfinderActive && !executorRunning && !stopRequested) {
             stuckTicks = 0;
