@@ -40,6 +40,9 @@ public class FollowEntityTask {
     private static Entity  targetEntity    = null;
     private static Vec3d   lastKnownPos    = null;
     private static boolean active          = false;
+    /** Rate-limit for the local physics leg (the obstacle hand-off). */
+    private static final long LOCAL_LEG_COOLDOWN_MS = 3000;
+    private static long lastLocalLegMs = 0;
     private static double  closeEnough     = DEFAULT_CLOSE_ENOUGH;
     private static boolean managed         = false; // true = FollowPlayerTask controls entity
 
@@ -286,8 +289,18 @@ public class FollowEntityTask {
         // root it can never reach. Give physics the SHORT problem instead — a
         // handful of blocks along the planned route, i.e. the jump itself — which
         // is exactly what its physics model is for. Long-range flow resumes after.
+        // ...but it must NEVER replace the normal re-plan. An earlier version
+        // returned here whenever the walker was idle — which is true forever once
+        // it stops — so the long-range search was never issued again and the chase
+        // died silently after its first successful leg (diagnostic: pathfinder,
+        // block search, executor and walker all false for 60 s straight while the
+        // fps stayed at 10). Fire the local leg at most once every few seconds and
+        // fall through to the normal search.
+        long nowMs = System.currentTimeMillis();
         if (!BlockPathWalker.isRunning()
+                && nowMs - lastLocalLegMs > LOCAL_LEG_COOLDOWN_MS
                 && kaptainwutax.tungsten.TungstenConfig.get().fastBlockFirst) {
+            lastLocalLegMs = nowMs;
             kaptainwutax.tungsten.path.fast.FastPlanner.planAsync(
                     world, player.getBlockPos(),
                     net.minecraft.util.math.BlockPos.ofFloored(target), 250L,
@@ -310,7 +323,7 @@ public class FollowEntityTask {
                         TungstenModDataContainer.PATHFINDER.find(
                                 world, Vec3d.ofBottomCenter(local), player);
                     });
-            return;
+            // NO return: the normal long-range flow below must keep running.
         }
 
         // ── Instant BFS for immediate movement while physics A* computes ──

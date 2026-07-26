@@ -214,6 +214,11 @@ public class BlockSpacePathFinder {
                 }
             }
 			numNodes++;
+			// yield to the client thread (same reason as in PathFinder: this
+			// search starved the renderer to a few fps and the bot froze)
+			if ((numNodes & 0xFF) == 0) {
+				try { Thread.sleep(1); } catch (InterruptedException ignored) {}
+			}
 			BlockNode next = openSet.removeLowest();
 
 			if (closed.contains(next)) continue;

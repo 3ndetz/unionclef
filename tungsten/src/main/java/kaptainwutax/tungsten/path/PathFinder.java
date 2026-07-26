@@ -280,7 +280,18 @@ public class PathFinder {
 	    openSet.insert(this.start);
 	    closed.clear();
 
+	    int yieldCounter = 0;
 	    while (!openSet.isEmpty()) {
+	    	// GIVE THE CLIENT ITS CPU BACK. Thread priority is advisory and the
+	    	// stand runs on few cores: a physics search grinding to its timeout
+	    	// starved the render/tick thread to 1-4 fps, and a bot that gets two
+	    	// ticks per second cannot press movement keys — it stood still with a
+	    	// valid plan while this loop spun (measured: fps recovers to 15-17 the
+	    	// instant the search gives up). Sleeping ~1ms per batch costs the
+	    	// search almost nothing and keeps the game playable.
+	    	if ((++yieldCounter & 0xFF) == 0) {
+	    		try { Thread.sleep(1); } catch (InterruptedException ignored) {}
+	    	}
 		    if (blockPath.isEmpty() || blockPath.get().size() < 1) {
 		    	return;
 		    }
