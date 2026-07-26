@@ -277,6 +277,42 @@ public class FollowEntityTask {
         lastTargetPos = target;
         TungstenMod.TARGET = target;
 
+        // LOCAL BLOCKER FIRST. The bot stops in front of the thing the block
+        // planner routed it into and that walking cannot do: usually a JUMP the
+        // planner marked physics-required (a gap), sometimes a 2-block face. The
+        // walked leg ends there by design — and then nobody executed the jump, so
+        // it just stood there. Asking the physics engine for the FAR target does
+        // not help either: it plans past the obstacle and the executor waits for a
+        // root it can never reach. Give physics the SHORT problem instead — a
+        // handful of blocks along the planned route, i.e. the jump itself — which
+        // is exactly what its physics model is for. Long-range flow resumes after.
+        if (!BlockPathWalker.isRunning()
+                && kaptainwutax.tungsten.TungstenConfig.get().fastBlockFirst) {
+            kaptainwutax.tungsten.path.fast.FastPlanner.planAsync(
+                    world, player.getBlockPos(),
+                    net.minecraft.util.math.BlockPos.ofFloored(target), 250L,
+                    res -> {
+                        if (!active) return;
+                        java.util.List<net.minecraft.util.math.BlockPos> cells = res.positions();
+                        if (cells.size() < 2) return;
+                        // Give physics a leg with real length: a target one cell
+                        // away makes the bot inch forward a block per search (seen
+                        // in the log: 194,123 -> 195,124 -> ...). Aim ~8 cells out,
+                        // or the end of a short plan, so one physics solve actually
+                        // carries the bot over the obstacle it is stuck on.
+                        net.minecraft.util.math.BlockPos local =
+                                cells.get(Math.min(8, cells.size() - 1));
+                        TungstenConfig.get().searchTimeoutMs = 800L;
+                        TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 1;
+                        TungstenModDataContainer.PATHFINDER.minDistPath = 0.3;
+                        TungstenModDataContainer.PATHFINDER.overrideStartPos = null;
+                        Debug.logMessage("Local climb: physics leg to " + local);
+                        TungstenModDataContainer.PATHFINDER.find(
+                                world, Vec3d.ofBottomCenter(local), player);
+                    });
+            return;
+        }
+
         // ── Instant BFS for immediate movement while physics A* computes ──
         if (kaptainwutax.tungsten.TungstenConfig.get().followBlockPathFinderEnabled && dist > 6) {
             java.util.List<net.minecraft.util.math.BlockPos> bfsPath =
