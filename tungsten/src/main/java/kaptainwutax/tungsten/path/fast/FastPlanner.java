@@ -163,6 +163,27 @@ public final class FastPlanner {
         Debug.logMessage("FastPlanner: avoiding " + pos.toShortString() + " for 30s (kept failing)");
     }
 
+    /**
+     * Repeated jams in the same place are a POCKET, not one bad cell: banning a
+     * single waypoint just makes the planner offer the neighbour and the bot
+     * circles inside a 2-3 cell notch (stand-measured). Ban a radius, growing
+     * with how many times we got stuck around here, so the plan is forced to
+     * leave the dead end entirely.
+     */
+    public static void blockArea(BlockPos centre, int radius) {
+        long until = System.currentTimeMillis() + BLOCK_TTL_MS;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -1; dy <= 2; dy++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    BLOCKED.put(cellKey(centre.getX() + dx, centre.getY() + dy,
+                            centre.getZ() + dz), until);
+                }
+            }
+        }
+        Debug.logMessage("FastPlanner: avoiding r=" + radius + " around "
+                + centre.toShortString() + " for 30s (repeated jam)");
+    }
+
     private static boolean isBlocked(int x, int y, int z) {
         Long until = BLOCKED.get(cellKey(x, y, z));
         if (until == null) return false;

@@ -42,6 +42,9 @@ public class PunkPlayerTask {
     private static final int JAM_TICKS = 30;   // 1.5s
     private static net.minecraft.util.math.Vec3d jamAnchor = null;
     private static int jamTicks = 0;
+    /** Where we last jammed + how many times in a row nearby (widens the ban). */
+    private static net.minecraft.util.math.BlockPos lastJamPos = null;
+    private static int jamRepeats = 0;
 
     // ── public API ───────────────────────────────────────────────────────────
 
@@ -203,6 +206,18 @@ public class PunkPlayerTask {
             if (badTarget != null && !badTarget.equals(player.getBlockPos())) {
                 kaptainwutax.tungsten.path.fast.FastPlanner.blockCell(badTarget);
             }
+            // Getting stuck AGAIN near the same spot means the whole pocket is a
+            // dead end, not one bad cell — widen the ban so the plan has to leave
+            // it instead of offering the next-door cell and circling.
+            net.minecraft.util.math.BlockPos me = player.getBlockPos();
+            if (lastJamPos != null && me.getSquaredDistance(lastJamPos) < 36) {
+                jamRepeats++;
+                kaptainwutax.tungsten.path.fast.FastPlanner.blockArea(
+                        me, Math.min(1 + jamRepeats, 4));
+            } else {
+                jamRepeats = 0;
+            }
+            lastJamPos = me;
             Debug.logMessage("Punk jammed at " + player.getBlockPos().toShortString()
                     + " -> avoid " + (badTarget == null ? "?" : badTarget.toShortString()));
             BlockPathWalker.stop();
