@@ -174,7 +174,7 @@ class Artifacts:
     def __init__(self, root, scenario):
         self.dir = os.path.join(root, scenario)
         os.makedirs(self.dir, exist_ok=True)
-        self._timeline = open(os.path.join(self.dir, "timeline.jsonl"), "w")
+        self._timeline = open(os.path.join(self.dir, "timeline.jsonl"), "w", encoding="utf-8")
 
     def path(self, name):
         return os.path.join(self.dir, name)
@@ -184,11 +184,11 @@ class Artifacts:
         self._timeline.flush()
 
     def write_json(self, name, obj):
-        with open(self.path(name), "w") as f:
+        with open(self.path(name), "w", encoding="utf-8") as f:
             json.dump(obj, f, indent=1, default=str)
 
     def write_text(self, name, text):
-        with open(self.path(name), "w") as f:
+        with open(self.path(name), "w", encoding="utf-8") as f:
             f.write(text)
 
     def close(self):

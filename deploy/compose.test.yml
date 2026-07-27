@@ -66,8 +66,12 @@ services:
       MC_USERNAME: "tester1"
       MC_MAX_MEM: "3G"
     ports:
-      - "5820:5800"                 # noVNC (debug only)
-      - "25350:25350"               # in-mod MCP server (LAN control surface)
+      # Host ports are overridable: a dev box often already runs a real MC client
+      # (which holds the in-mod MCP port) and the stand must not fight it for the
+      # binding. The test runner itself talks py4j over `docker exec`, so these
+      # publishes are for humans/LAN only and are safe to remap.
+      - "${UCTEST_VNC_PORT:-5820}:5800"            # noVNC (debug only)
+      - "${UCTEST_MCP_PORT:-25350}:25350"          # in-mod MCP server (LAN control surface)
     volumes:
       - ./run/data/tester1:/mc-data
       - ./run/mods:/mc-data/mods:ro
@@ -87,7 +91,7 @@ services:
       MC_USERNAME: "tester2"
       MC_MAX_MEM: "3G"
     ports:
-      - "5821:5800"                 # noVNC (debug only)
+      - "${UCTEST_VNC2_PORT:-5821}:5800"           # noVNC (debug only)
     volumes:
       - ./run/data/tester2:/mc-data
       - ./run/mods:/mc-data/mods:ro

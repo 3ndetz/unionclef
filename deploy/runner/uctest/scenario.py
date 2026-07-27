@@ -32,6 +32,17 @@ class Ctx:
         self._last_move_pos = None
         self._below = False
         self.t0 = time.time()
+        # Kill/death BASELINE. The scoreboard objectives use the `playerKillCount` /
+        # `deathCount` CRITERIA, which Minecraft re-syncs from the player's PERSISTENT
+        # statistics: `scoreboard players set ... 0` is undone the next time the stat
+        # moves, so a fresh run inherits every kill and death the account ever had. That
+        # made `early_stop: kills() >= 1` fire on the very first sample of a clean run and
+        # report someone else's kill as ours (observed 2026-07-27: a run "won" 1-1 before
+        # the bots had even closed). Everything below is reported as a DELTA from the
+        # values seen at scenario start, which is correct regardless of server history.
+        self._k0 = None
+        self._d0 = None
+        self._vd0 = None
 
     # -- sampling ----------------------------------------------------------
     def sample(self, floor_y=FLOOR_Y, contact_dist=2.5, track_bridge=False):
@@ -50,6 +61,13 @@ class Ctx:
             "victim_d": (self.rcon.score(self.victim.name, "d")
                          if self.victim else 0),
         }
+        # latch the baseline on the first sample, then report deltas
+        if self._k0 is None:
+            self._k0, self._d0, self._vd0 = rec["k"], rec["d"], rec["victim_d"]
+        rec["k_raw"], rec["d_raw"], rec["victim_d_raw"] = rec["k"], rec["d"], rec["victim_d"]
+        rec["k"] = max(0, rec["k"] - self._k0)
+        rec["d"] = max(0, rec["d"] - self._d0)
+        rec["victim_d"] = max(0, rec["victim_d"] - self._vd0)
         if bp and vp:
             rec["dist"] = round(sum((a - b) ** 2 for a, b in zip(bp, vp)) ** 0.5, 2)
             if rec["dist"] < contact_dist and self.first_contact is None:
@@ -242,6 +260,11 @@ class Scenario:
         if ctx.victim:
             ctx.victim.stop_all()
 
+    # Recording/diagnostic runs need the FULL duration: an objective reached in the
+    # first seconds produces a 4-second clip and a sample set too small to judge
+    # movement quality from. Set by run_suite's --no-early-stop.
+    no_early_stop = False
+
     def early_stop(self, ctx):
         return False
 
@@ -263,7 +286,7 @@ class Scenario:
             if not shot_taken and time.time() - ctx.t0 > self.duration / 2:
                 ctx.bot.py.screenshot(ctx.art.path("mid_run.png"))
                 shot_taken = True
-            if self.early_stop(ctx):
+            if not Scenario.no_early_stop and self.early_stop(ctx):
                 ctx.log("  early stop (objective reached)")
                 break
         self.drive_stop(ctx)

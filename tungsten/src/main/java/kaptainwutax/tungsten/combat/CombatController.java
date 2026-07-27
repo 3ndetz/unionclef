@@ -166,12 +166,19 @@ public class CombatController {
         double dist = TriggerBot.eyeToHitbox(player, target);
 
         // Range control (we face the target, so forward = toward it).
+        //
+        // EVERY direction is edge-tested individually before it is pressed. VoidGuard is
+        // still the final veto, but it cancels ALL steering at once, so relying on it alone
+        // turns "one unsafe component" into "no movement at all" — which is how the bot ends
+        // up frozen on a ledge. Backing off is the dangerous one: the target stands on solid
+        // ground, so forward is nearly always safe, while backwards is what walks the bot off
+        // a 5x5 platform or a 1-wide bridge.
         boolean tooFar = dist > STRIKE_DISTANCE;
         boolean tooClose = dist < TOO_CLOSE_DISTANCE;
         out.active = true;
-        out.forward = tooFar;
-        out.back = tooClose;
-        out.sprint = tooFar && dist > STRIKE_DISTANCE + 1.0; // sprint only for a real approach
+        out.forward = tooFar && dirSafe(player, world, 1, 0);
+        out.back = tooClose && dirSafe(player, world, -1, 0);
+        out.sprint = out.forward && dist > STRIKE_DISTANCE + 1.0; // sprint only for a real approach
 
         // Circle-strafe: orbit the target, flipping direction on a randomised cadence
         // (unpredictable, keeps flanking). If the chosen side is a drop, take the OTHER
@@ -190,11 +197,16 @@ public class CombatController {
         out.left = canStrafe && strafeDir > 0;
         out.right = canStrafe && strafeDir < 0;
 
-        // If neither side is strafeable and we are already at strike distance, jitter the
-        // range instead of freezing — a professional never stands still in a duel.
+        // Neither side strafeable (a 1-wide bridge, a tiny platform) and already at strike
+        // distance: keep some motion so we are not a static target, but ONLY into space we
+        // have tested. Forward-pulse against the opponent is safe by construction — they are
+        // standing on floor — whereas the backwards half of a naive jitter is exactly what
+        // walked the bot off the edge. If forward is not safe either, we hold position: on a
+        // one-block ledge standing still beats falling, and the aim/trigger still fight.
         if (!canStrafe && !tooFar && !tooClose) {
-            out.forward = ((now / 300) % 2) == 0;
-            out.back = !out.forward;
+            boolean pulse = ((now / 300) % 2) == 0;
+            out.forward = pulse && dirSafe(player, world, 1, 0);
+            out.back = false;
         }
 
         // BUNNY-HOP: jump on a fast cadence so the bot is ALWAYS moving/juking around the
@@ -211,10 +223,26 @@ public class CombatController {
 
     /** Is stepping sideways in {@code dir} (+1 left / -1 right) clear of a drop? */
     private boolean strafeSideSafe(ClientPlayerEntity player, WorldView world, int dir) {
-        double rad = Math.toRadians(player.getYaw());
-        double sdx = dir * Math.cos(rad);   // world dir of the strafe (MC input transform)
-        double sdz = dir * Math.sin(rad);
-        return !VoidDetector.edgeAhead(player.getEntityPos(), sdx, sdz, world, 3, 1.5);
+        return dirSafe(player, world, 0, dir);
+    }
+
+    /**
+     * Is moving with this input combination clear of a serious drop?
+     *
+     * @param fwd    +1 forward, -1 back, 0 none
+     * @param strafe +1 left, -1 right, 0 none (MC convention: sideways +1 = LEFT)
+     */
+    private boolean dirSafe(ClientPlayerEntity player, WorldView world, int fwd, int strafe) {
+        if (fwd == 0 && strafe == 0) return true;
+        double yawRad = Math.toRadians(player.getYaw());
+        double sin = Math.sin(yawRad), cos = Math.cos(yawRad);
+        double dx = strafe * cos - fwd * sin;
+        double dz = fwd * cos + strafe * sin;
+        // Lookahead scales with speed: a sprinting bot must see the rim with room to stop.
+        double speed = Math.sqrt(player.getVelocity().x * player.getVelocity().x
+                + player.getVelocity().z * player.getVelocity().z);
+        double look = Math.max(1.5, speed * 8.0);
+        return !VoidDetector.edgeAhead(player.getEntityPos(), dx, dz, world, 3, look);
     }
 
     public void releaseKeys() {

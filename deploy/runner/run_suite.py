@@ -26,7 +26,7 @@ print = functools.partial(print, flush=True)  # noqa: A001 - stand logs stream
 from uctest.actors import Bot                       # noqa: E402
 from uctest.arena import ArenaBuilder               # noqa: E402
 from uctest.harness import Artifacts, Rcon, wait_for  # noqa: E402
-from uctest.scenario import Ctx, is_flake           # noqa: E402
+from uctest.scenario import Ctx, Scenario, is_flake           # noqa: E402
 from uctest.scenarios_pvp import SCENARIOS as PVP   # noqa: E402
 
 SUITES = {"pvp": PVP}
@@ -179,8 +179,12 @@ def main():
     ap.add_argument("--repeat", type=int, default=1)
     ap.add_argument("--record", action="store_true",
                     help="record tester1's screen per scenario (x11grab)")
+    ap.add_argument("--no-early-stop", action="store_true",
+                    help="always run the full duration (needed for usable clips "
+                         "and for movement stats with enough samples)")
     ap.add_argument("--list", action="store_true")
     args = ap.parse_args()
+    Scenario.no_early_stop = args.no_early_stop
 
     if args.list or not args.suite:
         for name, scns in SUITES.items():
@@ -229,7 +233,7 @@ def main():
         extra = f"  ({r['error'][:60]})" if r.get("error") else ""
         print(f"  {r['id']:28s} {status}{extra}")
     import json
-    with open(os.path.join(art_root, "summary.json"), "w") as f:
+    with open(os.path.join(art_root, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, indent=1, default=str)
     print(f"\n{len(results) - gate_fail}/{len(results)} ok, "
           f"gate failures: {gate_fail}")
