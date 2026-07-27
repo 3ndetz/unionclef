@@ -62,3 +62,34 @@ pre-validated moves *including* break/place/ladder/water/slime.
 Consequence for sequencing: **#7 cannot be done in isolation on the legacy branch** — that branch is
 slated for deletion, and fixing its cost model would be throwaway work. Costs get built correctly
 inside the unified generator (#6 + #7 as one change).
+
+---
+
+## Итерация 1 — паркурные ямы (2026-07-27, вечер)
+
+**Счёт: 3/10 -> 4/10.** `nav_gaps` из «не проходил никогда» -> стабильный PASS
+(6 из 6 подряд, 7.8–9.6 с, самопадений 0). Регрессии нет.
+
+Пять корней, все в ядре, все доказаны логом:
+
+1. `FastNavigator.nextLegNeedsPhysics` — флаг писался и **не читался ни разу**.
+   Передачи прыжка физике не существовало.
+2. `ARM_TOLERANCE = 2.0` против `driftThreshold = 0.8` — путь с корнем между ними
+   не взводился, стартовал и умирал на первом тике (`drift 1.723 at tick 1`).
+3. `findBlockPath` брал маршрут только ПОЛНЫМ — а при передаче прыжка он неполон
+   именно потому, что прыжок делегирован физике. Уходило в legacy -> `Ran out of nodes`.
+4. Шагатель стартовал новый отрезок ВО ВРЕМЯ прыжка (мой баг) — два владельца клавиш.
+5. `FastPlanner.MAX_JUMP_GAP = 3` делал 4-блочные ямы непланируемыми; ветка «тупик»
+   печатала «physics owns this» и звала `stop()`, обнуляя цель; `setPath()` затирал
+   callback повтора `;goto`; безусловный `sleep(500)` на каждый запрос.
+6. `find()` был `void` и **молча выбрасывал** запрос при занятом поиске; `thread` не
+   volatile и чистится ПОСЛЕ `active` -> окно, где корректный запрос пропадал.
+   Это и был источник флака (~30%).
+
+**Оценка дороги:** правильная. Все правки — в ядре, ни одной заплатки, ни одного
+хардкода. Мёртвый флаг оказался корнем ЧЕТЫРЕ раза подряд — это системная болезнь
+кодовой базы, а не совпадение.
+
+**Осталось красным:** `nav_steep`, `nav_water`, `nav_ladder`, `nav_slime`, `nav_break`,
+`nav_wall2`. Из них 4 последних — отсутствующие ходы в `FastPlanner`
+(лестница, плавание, отскок, слом, постановка).
