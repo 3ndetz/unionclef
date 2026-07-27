@@ -1,5 +1,160 @@
 # TODOs
 
+## 🔴🔴 CRITICAL REGISTER — full audit 2026-07-27 (do NOT delete an entry without a fix + test)
+
+> Full write-up with evidence: **[docs/ai/audit-2026-07-27-tungsten-full.md](docs/ai/audit-2026-07-27-tungsten-full.md)**.
+> Method: 7 parallel source readers + 7 adversarial verifiers, 88 findings survived re-check.
+> This register exists so nothing critical is silently dropped. Every line carries file:line.
+> Mark `[x]` ONLY with a fix AND a stand test. Mark `[~]` for partially landed.
+
+### C0 — reframing facts (not bugs, but everything depends on them)
+- [ ] **`baritone/` IS NOT COMPILED.** `settings.gradle.kts`: `// include(":baritone")`. The live
+  pathfinder is **`shredder/`**, in the same `baritone.*` package. Every `import baritone.…` in
+  altoclef resolves to shredder. AGENTS.md is wrong on this — fix the doc.
+- [ ] **Coupling reality:** 78/561 altoclef files import `baritone.*` (→shredder), 7 import tungsten.
+  Not just pathing: `Input` (44), `Goal` (23), `Rotation` (16), and `baritone.altoclef.AltoClefSettings`
+  — altoclef's own settings class lives INSIDE the shredder module. Baritone is a load-bearing type
+  library here, not a pluggable backend.
+
+### C1 — DEAD CODE THAT SILENTLY DISABLES WHOLE FEATURES
+- [ ] **C1.1 `TungstenHelper` is permanently dead.** `initReflection()` (TungstenHelper.java:74)
+  looks up `PathFinder.searchTimeoutMs`, a field moved to `TungstenConfig` (`PathFinder.java:83`
+  says so). `NoSuchFieldException` → `reflectionReady=false` forever → **`isTungstenLoaded()` always
+  returns false** → `tryPathTo`/`tryPathToEntity`/`stop`/`isActive`/`isLocked` are permanent no-ops.
+  The whole documented "tungsten as fallback when baritone fails" layer has NEVER run. Also
+  `EXECUTOR` is `public static PathExecutor EXECUTOR;` (no initialiser) → latent NPE in the same method.
+- [ ] **C1.2 `combatExecutorEnabled` gates nothing** — the flag is read NOWHERE, yet `CombatExecutor`
+  burns a 30-tick full physics sim per 10 ticks for a debug overlay. `airStrafeMultiplier` likewise.
+- [ ] **C1.3 zero-caller code:** `AttackTiming.canAttack` + `isCritState` (so no crit/w-tap timing at
+  all), `WeaponSelector.reset`, `FollowEntityTask` jam-detection state, dead decrease-key branches in
+  both heaps, `VoxelWorld` (never populated, never read).
+
+### C2 — BLOCK-SPACE SEARCH IS STRUCTURALLY BROKEN
+- [ ] **C2.1 Move generation is an either/or that has no good branch.** `BlockNode.getChildren:292-301`
+  returns early for `smartMoves`, so `shouldRemoveNode` — and with it **both `tryPlanBreakThrough` and
+  `tryPlanPlaceThrough`** — is never reached. So: `smartMoves=false` (DEFAULT) = ~1086 children/expansion
+  (~15 000 in the deep retry) but break+place work; `smartMoves=true` = ≤8 clean children but **no break,
+  no place, no ladders, no water, no vines, no slime, no diagonals**. **Neither mode is complete.**
+- [ ] **C2.2 No g-cost accumulation.** `BlockSpacePathFinder.updateNode:345-364` does
+  `child.cost = child.cost + 1` (the CHILD's own cost, not `current.cost + step`), and the `BlockNode`
+  constructor **discards its `cost` argument** (BlockNode.java:162-168). Every computed cost — mining
+  ticks (`:675`), bridge penalty (`:718`), all of `ActionCosts` — is **decorative**. The search is
+  greedy best-first on the heuristic alone.
+- [ ] **C2.3 Knowingly-broken distance math on the DEFAULT path.** `getDistFromStartSq:366-377`
+  computes Y and Z diffs from `start.x`; the comment admits the copy-paste bug and gates the correct
+  form behind `smartMoves` (off). That function gates every partial emission and the `failing` flag
+  that arms the timeout. Downstream `bestSoFar:313-328` `continue`s on the furthest node, so it can
+  only ever return a node that is NOT the best — inverted selection, admitted at `:298`.
+- [ ] **C2.4 Physics A\* drops most of its branching.** `PathFinder.java:1111` and `:1118` do
+  `return null;` inside a chunk loop (`children.size() > 5` path), **aborting the whole chunk on the
+  first rejected child** — non-deterministically, since it depends on ForkJoin scheduling order.
+- [ ] **C2.5 Closed set is inert.** `PathFinder.java:538-590` quantises to 0.01 blocks and keys on
+  inputs/yaw → essentially no state dedup → endless re-expansion of near-identical states.
+- [ ] **C2.6 `FastPlanner`'s result is discarded** unless COMPLETE within 250 ms
+  (`PathFinder.java:784`), so on any long route the guide is always the blind scan.
+
+### C3 — PERFORMANCE (PERF-1 root causes, now with file:line)
+- [ ] **C3.1** Blind scan does ~1086 `new BlockNode` × ~10 `getBlockState` ≈ **10 000+ world reads per
+  A\* expansion** (baritone: ~10-15 neighbours).
+- [ ] **C3.2** The `MIN_PRIORITY` search thread farms real work onto NORM-priority pools including the
+  shared `ForkJoinPool.commonPool` — the "never win CPU against the client thread" comment
+  (`BlockSpacePathFinder.java:48-51`) is not what the code does.
+- [ ] **C3.3** `TungstenModRenderContainer.*.clear()` is called from the search loop **bypassing the
+  render-config gate and the 20 Hz throttle** in `RenderHelper`: `BlockSpacePathFinder.java:209`,
+  `BlockNode.java:315`, and `wasCleared:328` (the last runs per CANDIDATE CHILD). These are
+  `Collections.synchronizedCollection` → multiple ForkJoinPool threads convoy on one lock.
+- [ ] **C3.4** A synchronous 800-node BFS runs on the **client tick thread** whenever the walker is idle
+  in the altoclef primary nav.
+
+### C4 — THREAD SAFETY / CORRECTNESS
+- [ ] **C4.1 All searches read the live `ClientWorld` off-thread**, from two worker pools, with no
+  `BlockStateInterface` equivalent and no chunk-loaded guard. `VoxelWorld` (the would-be cache) is dead.
+- [ ] **C4.2 `PathExecutor` state (path/tick/stop/queues) is mutated from the PathFinder worker thread
+  while the client thread replays it** — no synchronisation, no `volatile`. `breakQueue` is a
+  non-volatile public field written by the search thread.
+- [ ] **C4.3 `pendingBreaks`/`pendingPlaces` are static mutable globals** mutated from background threads.
+- [ ] **C4.4** Search threads write to Minecraft chat directly from background threads.
+
+### C5 — BREAK / PLACE (the user's headline question: both ARE plumbed in, both are crippled)
+- [ ] **C5.1 Break is cardinal, same-Y, ONE cell.** `BlockNode.java:641`:
+  `if (dy != 0 || |dx|+|dz| != 1) return false`. **No dig-down, no dig-up**, no break-to-ascend/descend,
+  no diagonal. `@gamer` mining strategies are literally not expressible. One cell per full re-search.
+- [ ] **C5.2 Break cost priced with the item CURRENTLY HELD** while the executor swaps to the best tool
+  → ~20× mismatch.
+- [ ] **C5.3 The executor mines whatever the CROSSHAIR hits**, so `BreakRules` is enforced on the
+  intended block, not the one vanilla actually breaks.
+- [ ] **C5.4 `mineBlocks()` silently no-ops** on any block with an empty collision shape and still
+  reports "Mining done".
+- [ ] **C5.5 `planPlaceMoves` ships OFF** and nothing in the default path turns it on → the shipped
+  bridging behaviour is still the **reactive 14-second-stall patch** the project rules forbid.
+- [ ] **C5.6 `stringPull` deletes the very nodes carrying the break/place plan** before anything reads
+  them (`BlockSpacePathFinder.java:412-429`, no `hasBreaks()`/`hasPlaces()` guard).
+- [ ] **C5.7 Place has exactly ONE shape** (horizontal bridge, cardinal, same-Y). **No pillar-up as a
+  search move.** Pillar/godbridge exist only as reactive tasks bolted on beside the pathfinder.
+- [ ] **C5.8 "Cheaty placement" CONFIRMED IN CODE:** `BridgeTask`/`PillarTask` place with a
+  **fabricated `BlockHitResult`** and **no aim-convergence check** — the packet goes out regardless of
+  where the camera points. And fills emit **up to 96 placements in one client-thread task with no
+  throttle** (that is the "6 glass appeared at once" clip).
+- [ ] **C5.9** `BridgeTask` has no re-equip / no fallback when the stack empties mid-bridge. Build
+  material is a hardcoded 8-item list duplicated in two files, with a third policy elsewhere.
+
+### C6 — COMBAT (root causes, all code-verified)
+- [ ] **C6.1 THE "STANDS STILL" ROOT.** (a) `PunkPlayerTask.enterCombat:214-220` **hard-stops all
+  navigation** (`PATHFINDER.stop`, `EXECUTOR.stop`, `FollowEntityTask.stop`) — only `combatMove` can
+  move the bot. (b) `CombatController.java:138-142` presses forward only at `dist > 3.4` and back only
+  at `dist < 2.0` → **in 2.0-3.4, melee range, NOTHING is pressed**. (c) The strafe is the only
+  remaining motion and it is suppressed entirely near a drop (`:159-160` sets BOTH keys false); on a
+  1-wide bridge the direction flips every tick and it never strafes at all.
+- [ ] **C6.2 The bot parks OUTSIDE its own reach.** `combatMove` is content at `dist > 3.4`
+  **centre-to-centre**; `TriggerBot` requires `REACH = 3.0` **eye→closest hitbox point**
+  (TriggerBot.java:30,59-63,80). At 3.4 centre-to-centre the eye-to-hitbox distance is ≈3.1 > 3.0 →
+  `gateReach` fails. It neither closes nor hits. Hard logic bug, not aim feel.
+- [ ] **C6.3 Three writers fight for the keys in one tick.** `SafetySystem`'s entire WASD/sprint output
+  (49 `setPressed` calls) is **overwritten by `combatMove`**, which runs after it in
+  `CombatController.tick` (`:36` then `:94`). Then `VoidGuard` runs after and zeroes all four WASD keys.
+  Globally: **14 tungsten classes, 202 `setPressed` sites, no arbitration**, resolved only by
+  undocumented call order — plus shredder's `InputOverrideHandler`, which yields for tungsten's
+  `EXECUTOR` but **NOT** for its `BlockPathWalker`, so it can mute every walker key press.
+- [ ] **C6.4 No health input at all** in the tungsten combat engine → 2 of 6 declared stages are
+  unreachable. No retreat, no eat, no gap-apple, no potion, no totem.
+- [ ] **C6.5 Shield is NEVER raised by the combat engine.** `ShieldBlocker` is reachable only from
+  py4j/`CombatPrimitives`, i.e. only if the agent drives it by hand. Directly contradicts FIGHT-1.
+  The primitive also presses `useKey` without checking what is in hand.
+- [ ] **C6.6 No w-tap / sprint-reset / crit timing.** `AttackTiming.canAttack`/`isCritState`: zero
+  callers. Crit jumps fire on a 280-600 ms RANDOM cadence → crits are accidental.
+- [ ] **C6.7 Aim + the whole stage machine run per RENDER FRAME with no delta-time term** → every
+  tuning constant is framerate-dependent. **This invalidates the past "combat feel" tuning**, which was
+  done on a low-FPS stand.
+- [ ] **C6.8** `WeaponSelector` is hotbar-only, **enchantment-blind** (plain netherite 100 beats
+  Sharpness V iron 75), rescans once/21 ticks, and is called from exactly ONE place
+  (`PunkPlayerTask.java:202`, COMBAT mode only). No offhand, no bow/crossbow-by-range.
+- [ ] **C6.9** `PunkPlayerTask`'s "no hits for 5 s → re-approach" is a self-perpetuating 5-second
+  interrupt cycle, not a recovery.
+- [ ] **C6.10** `WindMouse` accumulates pixel deltas while any `Screen` is open (incl. chat) and dumps
+  the whole pile in one frame when it closes. `KnockbackEstimator`'s enchantment read is a permanent
+  zero and `simulateKnockback` has no terrain collision.
+
+### C7 — INTEGRATION / OPS
+- [ ] **C7.1 `UnstuckChain` preempts and tears down tungsten follow/punk and throws the aim to a random
+  angle** (URG-2 confirmed). `SafeRandomShimmyTask`'s forced baritone inputs nullify tungsten's key
+  presses. `MobDefenseChain` is completely tungsten-unaware and preempts tungsten combat at HP≤10.
+- [ ] **C7.2 Config persistence poisons defaults permanently.** `TungstenConfig.load():250-262`
+  unconditionally re-`save()`s the whole object → once `tungsten.json` exists, **every future shipped
+  default is shadowed forever** on that machine. Any stand result from a machine with an old
+  `tungsten.json` is suspect.
+- [ ] **C7.3 MCP server binds `0.0.0.0` with NO authentication and wildcard CORS, enabled by default.**
+- [ ] **C7.4** `gotoXYZ`/`gotoFar`/`stopPathing` — the primary agent movement levers — are routed
+  through the **human chat anti-spam rate limiter**.
+- [ ] **C7.5** `TungstenBridge` mutates the global persisted `TungstenConfig.searchTimeoutMs` as a side
+  effect of delegation and never restores it. Same pattern for the pathfinder accept-thresholds.
+- [ ] **C7.6** Server-specific data hardcoded in Java source (`ButlerConfig` chat formats).
+
+### C8 — TEST ENVIRONMENT
+- [ ] **C8.1** The Mac stand (`mactrindetz.local`) is **not reachable from this session**: ssh key is
+  rejected and the creds endpoint is blocked by the permission classifier. Local Windows docker has no
+  `mineswarm-mc:amd64` image and the local jars are stale (0.27.0 vs `mod_version=0.61.0`). Standing up
+  the stand locally is a prerequisite for every "tested" claim and for the demo videos.
+
 ## 🚀 PRIORITY BLOCK — PERFORMANCE + PIPELINED PATHING + REAL BLOCK-SPACE + FIGHTER (user 2026-07-25)
 
 > Order is the user's: **PERF-1 is FIRST PRIORITY**, then the pipelined pathing (PIPE-1) with the
