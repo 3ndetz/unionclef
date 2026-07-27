@@ -1,6 +1,5 @@
 package kaptainwutax.tungsten.path.blockSpaceSearchAssist;
 
-import kaptainwutax.tungsten.path.calculators.ActionCosts;
 import net.minecraft.util.math.BlockPos;
 
 public class Goal {
@@ -59,18 +58,8 @@ public class Goal {
         return new BlockPos(x, y, z);
     }
 
-    /**
-     * Straight-line distance to the goal, expressed in the SAME UNIT as the move costs
-     * (ticks) via {@link ActionCosts#HEURISTIC_PER_BLOCK}.
-     *
-     * <p>This used to return raw block distance while costs accumulated in ticks
-     * (~4.6/block). Mixing the two makes h ~4.6x too small, and an A* whose heuristic is
-     * far below the true remaining cost degenerates into Dijkstra: it expands almost
-     * uniformly in every direction instead of pushing toward the goal, and burns its node
-     * budget long before it arrives. (Audit 2026-07-27, C2.2.)
-     */
     public static double calculate(double xDiff, int yDiff, double zDiff) {
-        double blocks = Math.sqrt(xDiff * xDiff + yDiff * yDiff + zDiff * zDiff);
-        return blocks * ActionCosts.HEURISTIC_PER_BLOCK;
+	    
+	    return (Math.sqrt(xDiff * xDiff + yDiff * yDiff + zDiff * zDiff));
     }
 }
