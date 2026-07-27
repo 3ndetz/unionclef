@@ -16,8 +16,15 @@ RE-READ THIS FULLY IF THE CONVERSATION WAS SUMMARIZED! Always read this file at 
 
 ## What is this
 
-Unified monorepo: altoclef (bot) + baritone (pathfinding) + tungsten (A* movement) + shredder (pathfinder v2).
-Single Gradle project, no submodules, all source compiled together.
+Unified monorepo: altoclef (bot) + tungsten (A* movement) + shredder (pathfinder v2), plus
+`baritone/` kept as a **source reference only**.
+
+⛔ **`baritone/` IS NOT COMPILED.** `settings.gradle.kts` has `// include(":baritone")  // kept as
+source reference, not compiled`. The live pathfinder is **`shredder/`**, which occupies the SAME
+`baritone.*` package namespace — so every `import baritone.…` in altoclef resolves to shredder, not
+to the `baritone/` directory. "Replace baritone" therefore means "replace shredder". (Recorded
+2026-07-27; this file previously claimed all four modules were compiled together, which sent several
+sessions looking in the wrong module.)
 
 ## РАБОЧАЯ ВЕТКА — `main` (юзер 2026-07-23)
 
