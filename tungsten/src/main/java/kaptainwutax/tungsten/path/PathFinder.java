@@ -118,15 +118,21 @@ public class PathFinder {
                 // Skip startup delays when using override start (BFS walker active)
                 // or in aggressive close-range mode
                 if (overrideStartPos == null && TungstenConfig.get().searchTimeoutMs > 500) {
+                    // Bounded: an unbounded wait pinned the search forever whenever the
+                    // bot never landed (over a gap, in a hole). And the trailing
+                    // unconditional sleep(500) that used to sit after this loop was pure
+                    // latency on EVERY request — it made a ~58 ms jump search report as
+                    // "558 ms", which is how the physics engine got its reputation for
+                    // being slow at short hops.
+                    long groundWaitUntil = System.currentTimeMillis() + 2000;
                     while (!player.isOnGround() && !player.isTouchingWater()) {
-                        if (stop.get()) break;
+                        if (stop.get() || System.currentTimeMillis() > groundWaitUntil) break;
                         try {
-                            Thread.sleep(500);
+                            Thread.sleep(50);
                         } catch(Exception e) {
                             e.printStackTrace();
                         }
                     }
-                    Thread.sleep(500);
                 }
                 NEXT_CLOSEST_BLOCKNODE_IDX.set(1);
                 if (blockPath.isPresent()) {

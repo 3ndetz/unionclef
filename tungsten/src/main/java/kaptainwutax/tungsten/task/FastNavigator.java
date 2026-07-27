@@ -201,11 +201,19 @@ public final class FastNavigator {
                     double before = Math.sqrt(start.getSquaredDistance(goalCell));
                     double after = Math.sqrt(tail.getSquaredDistance(goalCell));
                     if (before - after < MIN_PARTIAL_PROGRESS) {
+                        // Walking cannot solve this — hand the TAIL to the physics engine
+                        // and wait for it. This branch used to print "physics owns this"
+                        // and then call stop(), which nulls pendingPhysicsTarget: physics
+                        // was never actually asked, nothing else was running, and the bot
+                        // stood at the lip of the obstacle until the run timed out. The
+                        // message described a hand-off that did not happen.
                         Debug.logMessage(String.format(
-                                "FastNavigator: walking dead-ends (%.1f -> %.1f) -> physics owns this",
+                                "FastNavigator: walking dead-ends (%.1f -> %.1f) -> handing tail to physics",
                                 before, after));
                         BlockPathWalker.stop();
-                        stop();
+                        nextLeg = null;
+                        nextPhysicsTarget = null;
+                        pendingPhysicsTarget = tail;
                         return;
                     }
                 }

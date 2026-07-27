@@ -80,7 +80,11 @@ public class PathExecutor {
 	private boolean armed = false;
 
 	public void setPath(List<Node> path) {
-		this.cb = null;
+		// NOTE: the completion callback is deliberately PRESERVED. This used to do
+		// `this.cb = null`, which destroyed the ;goto retry callback the moment the very
+		// first physics path was emitted — so MAX_RETRIES never ran, "Finished!" never
+		// fired, and a goto that needed more than one physics leg simply stopped forever.
+		// addPath() has always preserved cb; this was a one-line asymmetry between them.
 		this.startTime = System.currentTimeMillis();
 		if (isClient)
 			this.allowedFlying = TungstenMod.mc.player.getAbilities().allowFlying;

@@ -46,8 +46,15 @@ public final class FastPlanner {
 
     /** Max drop we plan without physics help (fall damage stays survivable). */
     private static final int MAX_FALL = 3;
-    /** Max horizontal gap a parkour jump may cross (blocks of air). */
-    private static final int MAX_JUMP_GAP = 3;
+    /**
+     * Max horizontal gap a parkour jump may cross, in blocks of AIR.
+     *
+     * <p>Was 3, which silently made every 4-wide gap unplannable: `parkour()` emitted
+     * nothing, the route tailed at the take-off block, and the navigator took its
+     * dead-end branch. A vanilla sprint-jump clears 4 air blocks (the standard
+     * "4-block jump"), so 3 was leaving a real, commonly-built move on the table.
+     */
+    private static final int MAX_JUMP_GAP = 4;
     /**
      * Highest ledge we still plan a route over. Anything above a plain jump
      * (PlayerFit.JUMP_HEIGHT) is emitted as a physics-required step: the walker
