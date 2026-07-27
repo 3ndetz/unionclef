@@ -752,7 +752,42 @@ public class PathFinder {
         return start;
     }
 
+    /**
+     * The block-space guide for the physics search.
+     *
+     * THIS is where the fast planner belongs. The physics A* already routes ALONG
+     * a block path (see NEXT_CLOSEST_BLOCKNODE_IDX / computeHeuristic): the block
+     * route says WHERE to go, tungsten computes HOW to move there with real
+     * physics and jumps — which is the whole reason it beats a block-only
+     * navigator. Feeding the fast route here means one guided engine instead of
+     * two racing ones (the walker sprinting cells while the search re-derives its
+     * own guide with the blind radius-8 scan).
+     */
     private Optional<List<BlockNode>> findBlockPath(WorldView world, Vec3d target, PlayerEntity player) {
+        if (kaptainwutax.tungsten.TungstenConfig.get().fastBlockFirst) {
+            try {
+                kaptainwutax.tungsten.path.blockSpaceSearchAssist.Goal goal =
+                        new kaptainwutax.tungsten.path.blockSpaceSearchAssist.Goal(
+                                (int) target.x, (int) target.y, (int) target.z);
+                var fast = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
+                        world, player.getBlockPos(),
+                        net.minecraft.util.math.BlockPos.ofFloored(target),
+                        kaptainwutax.tungsten.TungstenConfig.get().fastPlanBudgetMs);
+                // Only guide with a COMPLETE fast route. The fast move set is
+                // walking, climbing, dropping and gap jumps — it has no slime
+                // bounce, ladder, vine or swim moves, which the legacy search
+                // does have. Guiding the physics engine with a partial fast route
+                // through such terrain hides those options and broke the slime
+                // drop-bounce course (proven with the toggle: OFF passes, ON
+                // fails). An incomplete plan means "this terrain needs moves I do
+                // not model" — hand it back to the search that models them.
+                if (fast.complete && fast.path.size() >= 2) {
+                    return truncateAtBreaks(Optional.of(fast.toBlockNodes(goal, player)));
+                }
+            } catch (Exception e) {
+                Debug.logWarning("Fast block guide failed, falling back: " + e.getMessage());
+            }
+        }
         return truncateAtBreaks(kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(world, target, player));
     }
 

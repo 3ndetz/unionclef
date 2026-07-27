@@ -87,6 +87,27 @@ public final class FastPlanner {
 
         public boolean isEmpty() { return path.isEmpty(); }
 
+        /**
+         * The route as block-space nodes, i.e. in the form the PHYSICS search
+         * consumes as guidance (PathFinder.find(..., blockPath)). This is the
+         * point of the planner: tungsten computes the physical route ALONG a
+         * good block route, instead of the walker sprinting the cells itself
+         * (which is exactly the straight/diagonal movement baritone already
+         * does) while the physics search re-derives its own guide with the slow
+         * blind scan.
+         */
+        public java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>
+                toBlockNodes(kaptainwutax.tungsten.path.blockSpaceSearchAssist.Goal goal,
+                             net.minecraft.entity.player.PlayerEntity player) {
+            java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode> out =
+                    new ArrayList<>(path.size());
+            for (Waypoint w : path) {
+                out.add(new kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode(
+                        w.pos.getX(), w.pos.getY(), w.pos.getZ(), goal, player));
+            }
+            return out;
+        }
+
         /** Plain cell list for the block walker. */
         public List<BlockPos> positions() {
             List<BlockPos> out = new ArrayList<>(path.size());
@@ -140,60 +161,6 @@ public final class FastPlanner {
 
     private FastPlanner() {}
 
-    // ── temporary blacklist: cells the bot has repeatedly failed to traverse ──
-    /**
-     * Where execution keeps failing, planning must stop insisting. A ledge the
-     * bot slides back off, a notch it bounces in — the geometry says "walkable"
-     * and reality says otherwise, and without this the planner hands back the
-     * same route forever and the bot loops in place (stand-measured: minutes
-     * bouncing between y=125.1 and y=126.3 in the same notch). Entries expire,
-     * so a one-off failure does not permanently scar the map.
-     */
-    private static final java.util.Map<Long, Long> BLOCKED = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final long BLOCK_TTL_MS = 30_000;
-
-    private static long cellKey(int x, int y, int z) {
-        return ((long) (x & 0x3FFFFFF) << 38) | ((long) (y & 0xFFF) << 26) | (z & 0x3FFFFFF);
-    }
-
-    /** Mark a cell as "execution keeps failing here" for the next 30 seconds. */
-    public static void blockCell(BlockPos pos) {
-        BLOCKED.put(cellKey(pos.getX(), pos.getY(), pos.getZ()),
-                System.currentTimeMillis() + BLOCK_TTL_MS);
-        Debug.logMessage("FastPlanner: avoiding " + pos.toShortString() + " for 30s (kept failing)");
-    }
-
-    /**
-     * Repeated jams in the same place are a POCKET, not one bad cell: banning a
-     * single waypoint just makes the planner offer the neighbour and the bot
-     * circles inside a 2-3 cell notch (stand-measured). Ban a radius, growing
-     * with how many times we got stuck around here, so the plan is forced to
-     * leave the dead end entirely.
-     */
-    public static void blockArea(BlockPos centre, int radius) {
-        long until = System.currentTimeMillis() + BLOCK_TTL_MS;
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dy = -1; dy <= 2; dy++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    BLOCKED.put(cellKey(centre.getX() + dx, centre.getY() + dy,
-                            centre.getZ() + dz), until);
-                }
-            }
-        }
-        Debug.logMessage("FastPlanner: avoiding r=" + radius + " around "
-                + centre.toShortString() + " for 30s (repeated jam)");
-    }
-
-    private static boolean isBlocked(int x, int y, int z) {
-        Long until = BLOCKED.get(cellKey(x, y, z));
-        if (until == null) return false;
-        if (System.currentTimeMillis() > until) {
-            BLOCKED.remove(cellKey(x, y, z));
-            return false;
-        }
-        return true;
-    }
-
     // ── public entry ─────────────────────────────────────────────────────────
 
     /**
@@ -206,9 +173,6 @@ public final class FastPlanner {
         NodeMap map = new NodeMap();
         Heap open = new Heap();
 
-        // never let the blacklist ban our own footing — without a root there is no
-        // plan at all, which is worse than any bad cell
-        BLOCKED.remove(cellKey(start.getX(), start.getY(), start.getZ()));
         Node startNode = map.get(start.getX(), start.getY(), start.getZ(), goal);
         startNode.cost = 0;
         startNode.combined = startNode.heuristic;
@@ -354,7 +318,6 @@ public final class FastPlanner {
     /** Standard A* relaxation (this is the g-cost accumulation the old search lacked). */
     private static void relax(NodeMap map, Heap open, Node from, int x, int y, int z,
                               double edgeCost, BlockPos goal, boolean viaJump) {
-        if (isBlocked(x, y, z)) return;   // execution keeps failing here — route around
         Node next = map.get(x, y, z, goal);
         double tentative = from.cost + edgeCost;
         if (tentative >= next.cost) return;

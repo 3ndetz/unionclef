@@ -38,13 +38,6 @@ public class PunkPlayerTask {
 
     private static final CombatController combat = new CombatController();
 
-    /** Jam detection: ticks of zero horizontal progress before we route around. */
-    private static final int JAM_TICKS = 30;   // 1.5s
-    private static net.minecraft.util.math.Vec3d jamAnchor = null;
-    private static int jamTicks = 0;
-    /** Where we last jammed + how many times in a row nearby (widens the ban). */
-    private static net.minecraft.util.math.BlockPos lastJamPos = null;
-    private static int jamRepeats = 0;
 
     // ── public API ───────────────────────────────────────────────────────────
 
@@ -182,51 +175,6 @@ public class PunkPlayerTask {
             mc.options.jumpKey.setPressed(false);
             mc.options.sneakKey.setPressed(true);
             mode = Mode.APPROACH;
-            return;
-        }
-
-        // JAM WATCHDOG (punk owns the chase, so it must live here — a copy in
-        // FollowEntityTask never fired because in COMBAT/APPROACH this task drives
-        // and that tick path is not reached). Judge by the only thing that
-        // matters: horizontal displacement. Bouncing on a ledge with X/Z frozen is
-        // a jam no matter which component claims to be running.
-        net.minecraft.util.math.Vec3d posNow = player.getEntityPos();
-        if (jamAnchor == null
-                || Math.hypot(posNow.x - jamAnchor.x, posNow.z - jamAnchor.z) > 0.5) {
-            jamAnchor = posNow;
-            jamTicks = 0;
-        } else if (++jamTicks >= JAM_TICKS) {
-            jamTicks = 0;
-            jamAnchor = null;
-            // Blacklist the cell we are FAILING TO REACH, never the one we stand
-            // in: banning our own footing removes the search root, every plan
-            // becomes impossible and all engines go quiet (measured — the bot
-            // stood with pf/blk/exec/walk all false right after the ban).
-            net.minecraft.util.math.BlockPos badTarget = BlockPathWalker.getCurrentWaypoint();
-            if (badTarget != null && !badTarget.equals(player.getBlockPos())) {
-                kaptainwutax.tungsten.path.fast.FastPlanner.blockCell(badTarget);
-            }
-            // Getting stuck AGAIN near the same spot means the whole pocket is a
-            // dead end, not one bad cell — widen the ban so the plan has to leave
-            // it instead of offering the next-door cell and circling.
-            net.minecraft.util.math.BlockPos me = player.getBlockPos();
-            if (lastJamPos != null && me.getSquaredDistance(lastJamPos) < 36) {
-                jamRepeats++;
-                kaptainwutax.tungsten.path.fast.FastPlanner.blockArea(
-                        me, Math.min(1 + jamRepeats, 4));
-            } else {
-                jamRepeats = 0;
-            }
-            lastJamPos = me;
-            Debug.logMessage("Punk jammed at " + player.getBlockPos().toShortString()
-                    + " -> avoid " + (badTarget == null ? "?" : badTarget.toShortString()));
-            BlockPathWalker.stop();
-            TungstenModDataContainer.PATHFINDER.overrideStartPos = null;
-            TungstenModDataContainer.PATHFINDER.stop.set(true);
-            FollowEntityTask.stop();
-            mode = Mode.APPROACH;
-            // re-approach immediately: a ban with no re-plan is just a quieter stall
-            FollowEntityTask.start(targetEntity, 1.0);
             return;
         }
 

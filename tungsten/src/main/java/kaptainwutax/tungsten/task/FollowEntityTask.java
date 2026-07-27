@@ -254,56 +254,8 @@ public class FollowEntityTask {
         boolean executorRunning  = TungstenModDataContainer.isExecutorRunning();
         boolean pathfinderActive = TungstenModDataContainer.PATHFINDER.active.get();
 
-        // JAM WATCHDOG — engine-independent. Whichever component claims to be
-        // driving, what matters is whether the BOT moves. The walker flickers
-        // on/off while it bounces at an obstacle, so a counter living inside the
-        // walker branch never reached its threshold and the bot bounced in the
-        // same notch indefinitely. Judge by horizontal displacement alone.
-        Vec3d hereNow = player.getEntityPos();
-        if (jamAnchor == null
-                || Math.hypot(hereNow.x - jamAnchor.x, hereNow.z - jamAnchor.z) > 0.5) {
-            jamAnchor = hereNow;
-            jamTicks = 0;
-        } else if (++jamTicks >= WALKER_STUCK_TICKS) {
-            Debug.logMessage("Jammed at " + player.getBlockPos().toShortString()
-                    + " — blacklisting the cell and re-planning");
-            jamTicks = 0;
-            jamAnchor = null;
-            kaptainwutax.tungsten.path.fast.FastPlanner.blockCell(player.getBlockPos());
-            BlockPathWalker.stop();
-            TungstenModDataContainer.PATHFINDER.overrideStartPos = null;
-            TungstenModDataContainer.PATHFINDER.stop.set(true);
-            stopRequested = true;
-            tickCounter = 0;
-            return;
-        }
-
         if (walkerRunning) {
-            // "The walker is running" is not the same as "the bot is moving". On
-            // generated terrain it can hammer jump at an obstacle its waypoint sits
-            // behind: X and Z frozen, Y oscillating, forever — and this branch used
-            // to reset the stuck counter every tick, so the chase never recovered
-            // (stand-measured: 27 blocks of progress, then dead for the rest of the
-            // run). Watch HORIZONTAL displacement and force a re-plan when there is
-            // none.
-            Vec3d here = player.getEntityPos();
-            if (walkerAnchor == null
-                    || Math.hypot(here.x - walkerAnchor.x, here.z - walkerAnchor.z) > 0.5) {
-                walkerAnchor = here;
-                walkerStuckTicks = 0;
-            } else if (++walkerStuckTicks >= WALKER_STUCK_TICKS) {
-                Debug.logMessage("Walker jammed (no horizontal progress) — forcing a re-plan");
-                walkerStuckTicks = 0;
-                walkerAnchor = null;
-                // and remember that this cell keeps failing, so the next plan
-                // routes AROUND it instead of handing back the same dead end
-                kaptainwutax.tungsten.path.fast.FastPlanner.blockCell(player.getBlockPos());
-                BlockPathWalker.stop();
-                TungstenModDataContainer.PATHFINDER.overrideStartPos = null;
-                TungstenModDataContainer.PATHFINDER.stop.set(true);
-                stopRequested = true;
-                tickCounter = 0;
-            }
+            // walker active — don't touch pathfinder, just let it compute
             stuckTicks = 0;
         } else if (!pathfinderActive && !executorRunning && !stopRequested) {
             stuckTicks = 0;
@@ -340,52 +292,6 @@ public class FollowEntityTask {
         lastTargetPos = target;
         TungstenMod.TARGET = target;
 
-        // LOCAL BLOCKER FIRST. The bot stops in front of the thing the block
-        // planner routed it into and that walking cannot do: usually a JUMP the
-        // planner marked physics-required (a gap), sometimes a 2-block face. The
-        // walked leg ends there by design — and then nobody executed the jump, so
-        // it just stood there. Asking the physics engine for the FAR target does
-        // not help either: it plans past the obstacle and the executor waits for a
-        // root it can never reach. Give physics the SHORT problem instead — a
-        // handful of blocks along the planned route, i.e. the jump itself — which
-        // is exactly what its physics model is for. Long-range flow resumes after.
-        // ...but it must NEVER replace the normal re-plan. An earlier version
-        // returned here whenever the walker was idle — which is true forever once
-        // it stops — so the long-range search was never issued again and the chase
-        // died silently after its first successful leg (diagnostic: pathfinder,
-        // block search, executor and walker all false for 60 s straight while the
-        // fps stayed at 10). Fire the local leg at most once every few seconds and
-        // fall through to the normal search.
-        long nowMs = System.currentTimeMillis();
-        if (!BlockPathWalker.isRunning()
-                && nowMs - lastLocalLegMs > LOCAL_LEG_COOLDOWN_MS
-                && kaptainwutax.tungsten.TungstenConfig.get().fastBlockFirst) {
-            lastLocalLegMs = nowMs;
-            kaptainwutax.tungsten.path.fast.FastPlanner.planAsync(
-                    world, player.getBlockPos(),
-                    net.minecraft.util.math.BlockPos.ofFloored(target), 250L,
-                    res -> {
-                        if (!active) return;
-                        java.util.List<net.minecraft.util.math.BlockPos> cells = res.positions();
-                        if (cells.size() < 2) return;
-                        // Give physics a leg with real length: a target one cell
-                        // away makes the bot inch forward a block per search (seen
-                        // in the log: 194,123 -> 195,124 -> ...). Aim ~8 cells out,
-                        // or the end of a short plan, so one physics solve actually
-                        // carries the bot over the obstacle it is stuck on.
-                        net.minecraft.util.math.BlockPos local =
-                                cells.get(Math.min(8, cells.size() - 1));
-                        TungstenConfig.get().searchTimeoutMs = 800L;
-                        TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 1;
-                        TungstenModDataContainer.PATHFINDER.minDistPath = 0.3;
-                        TungstenModDataContainer.PATHFINDER.overrideStartPos = null;
-                        Debug.logMessage("Local climb: physics leg to " + local);
-                        TungstenModDataContainer.PATHFINDER.find(
-                                world, Vec3d.ofBottomCenter(local), player);
-                    });
-            // NO return: the normal long-range flow below must keep running.
-        }
-
         // ── Instant BFS for immediate movement while physics A* computes ──
         if (kaptainwutax.tungsten.TungstenConfig.get().followBlockPathFinderEnabled && dist > 6) {
             java.util.List<net.minecraft.util.math.BlockPos> bfsPath =
@@ -413,30 +319,10 @@ public class FollowEntityTask {
                 }
             }
 
-            // The grid BFS above is flat-minded: it only knows "the two cells are
-            // clear", so on generated terrain it dead-ends and the chase stalls in
-            // front of a slope. Plan the real route as well (ascend/descend/parkour
-            // moves, honest costs, real body clearance) and hand it to the walker.
-            // Async: a terrain plan costs more than a tick.
-            //
-            // MEASURED, do not "improve" without re-running chase_terrain: feeding
-            // this plan via startBFS instead of start(), or dropping the dist gate,
-            // made the bot stop moving entirely (0 blocks in 180 s vs 50 with this
-            // form) because every re-plan restarted the walker at waypoint 0.
-            if (kaptainwutax.tungsten.TungstenConfig.get().fastBlockFirst) {
-                final Vec3d fixedTarget = target;
-                kaptainwutax.tungsten.path.fast.FastPlanner.planAsync(
-                        world, player.getBlockPos(),
-                        net.minecraft.util.math.BlockPos.ofFloored(target),
-                        Math.min(200L, kaptainwutax.tungsten.TungstenConfig.get().fastPlanBudgetMs),
-                        res -> {
-                            if (!active) return;
-                            java.util.List<net.minecraft.util.math.BlockPos> cells = res.positions();
-                            int physics = res.firstPhysicsIndex();
-                            if (physics > 1) cells = cells.subList(0, physics);
-                            if (cells.size() >= 2) BlockPathWalker.start(fixedTarget, cells);
-                        });
-            }
+            // NB the fast route is NOT walked here. It is the physics search's
+            // block-space guide (PathFinder.findBlockPath) — tungsten's advantage
+            // is executing a route with real physics and jumps, and a second
+            // navigator sprinting the same cells only fought the first one.
         }
 
         if (dist < 6 && hasLineOfSight(player, target)) {

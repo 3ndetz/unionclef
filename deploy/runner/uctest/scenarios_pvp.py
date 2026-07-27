@@ -156,11 +156,13 @@ class ChaseTerrain(Scenario):
     settings = {"combatMovementsEnabled": "true"}
     RUN_DIST = 140             # how far the runner is sent, in blocks
 
-    # Solid ground we are willing to start a chase on. Anything not in this set
-    # (water, lava, kelp, leaves, ice...) is rejected outright.
-    LAND_BLOCKS = ("grass_block", "dirt", "stone", "sand", "gravel", "podzol",
-                   "coarse_dirt", "snow_block", "moss_block", "mud", "clay",
-                   "sandstone", "terracotta", "rooted_dirt")
+    # Dry, walkable ground. NOTE what is NOT here: clay and mud. They are swamp
+    # and riverbed floors — picking the first "land" column landed the whole
+    # bench in a bog, where the bot waded, bounced in pits and the run measured
+    # nothing useful ("там или болото какое-то или вода").
+    LAND_BLOCKS = ("grass_block", "stone", "dirt", "coarse_dirt", "podzol",
+                   "sand", "gravel", "sandstone", "snow_block", "moss_block",
+                   "rooted_dirt", "terracotta")
 
     def _find_land(self, rc):
         """Find a real LAND surface to start on, and prove it.
@@ -172,22 +174,58 @@ class ChaseTerrain(Scenario):
         scan candidate columns until the surface block is genuinely walkable,
         and return its name so the run records what it stood on.
         """
-        for radius in (0, 64, 128, 192, 256, 320):
-            for dx, dz in ((1, 0), (0, 1), (-1, 0), (0, -1), (1, 1), (-1, -1)):
+        # Search a grid of candidates and, for each, the direction whose corridor is
+        # driest. One start cell being dry means nothing if the runner's route goes
+        # through a bog.
+        for radius in (0, 96, 192, 288, 384, 480, 576):
+            for dx, dz in ((1, 0), (0, 1), (-1, 0), (0, -1),
+                           (1, 1), (-1, -1), (1, -1), (-1, 1)):
                 x, z = dx * radius, dz * radius
-                for y in range(120, 55, -1):
-                    if "Test passed" in rc.cmd(f"execute if block {x} {y} {z} air"):
-                        continue
-                    for block in self.LAND_BLOCKS:
-                        if "Test passed" in rc.cmd(
-                                f"execute if block {x} {y} {z} minecraft:{block}"):
-                            # need room to stand on top of it
-                            if ("Test passed" in rc.cmd(f"execute if block {x} {y+1} {z} air")
-                                    and "Test passed" in rc.cmd(
-                                        f"execute if block {x} {y+2} {z} air")):
-                                return x, z, y + 1, block
-                    break   # first non-air was not land: this column is water/lava/leaves
-        raise RuntimeError("no land found for the chase bench — refusing to run in the sea")
+                found = self._probe_column(rc, x, z)
+                if found is None:
+                    continue
+                y, block = found
+                for rdx, rdz in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+                    if self._corridor_is_dry(rc, x, z, rdx, rdz):
+                        self.run_dir = (rdx, rdz)
+                        return x, z, y, block
+        raise RuntimeError("no dry land route found for the chase bench")
+
+    def _probe_column(self, rc, x, z):
+        """First surface block from the sky; (standY, name) if it is dry land.
+        Coarse scan then refine — a 1-block scan of the whole column costs ~95
+        rcon round trips and made a grid search take minutes.
+
+        The column MUST be force-loaded first: in an unloaded chunk `execute if
+        block` simply does not pass, which my earlier version read as "solid" and
+        so every distant candidate looked like a wall at y=150 and the search
+        reported 'no dry land anywhere'."""
+        rc.cmd(f"forceload add {x - 8} {z - 8} {x + 8} {z + 8}")
+        top = None
+        for y in range(150, 55, -4):
+            if "Test passed" not in rc.cmd(f"execute if block {x} {y} {z} air"):
+                top = y
+                break
+        if top is None:
+            return None
+        for y in range(top + 3, top - 1, -1):        # refine upward edge
+            if "Test passed" not in rc.cmd(f"execute if block {x} {y} {z} air"):
+                top = y
+                break
+        for block in self.LAND_BLOCKS:
+            if "Test passed" in rc.cmd(f"execute if block {x} {top} {z} minecraft:{block}"):
+                if ("Test passed" in rc.cmd(f"execute if block {x} {top+1} {z} air")
+                        and "Test passed" in rc.cmd(f"execute if block {x} {top+2} {z} air")):
+                    return top + 1, block
+        return None
+
+    def _corridor_is_dry(self, rc, x, z, rdx, rdz):
+        """Sample the run corridor in one direction: dry land the whole way."""
+        for step in range(30, self.RUN_DIST + 1, 30):
+            cx, cz = x + rdx * step, z + rdz * step
+            if self._probe_column(rc, cx, cz) is None:
+                return False
+        return True
 
     def build(self, arena, ctx):
         # Start both on real LAND (never the ocean spawn); the terrain is whatever
@@ -206,13 +244,15 @@ class ChaseTerrain(Scenario):
         # bot standing in the same stuck spot. Probe the column instead.
         sx, sz, sy, ground = self._find_land(rc)
         ctx.log(f"  chase start: ({sx}, {sy}, {sz}) on {ground}")
+        rdx, rdz = getattr(self, "run_dir", (1, 0))
         rc.cmd(f"tp {ctx.bot.name} {sx}.5 {sy} {sz}.5")
-        rc.cmd(f"tp {ctx.victim.name} {sx + 6}.5 {sy} {sz}.5")
+        rc.cmd(f"tp {ctx.victim.name} {sx + rdx * 6}.5 {sy} {sz + rdz * 6}.5")
         time.sleep(2)
         bp = ctx.bot.pos() or [sx, sy, sz]
         ctx.geo["bot_spawn"] = f"{bp[0]:.1f} {bp[1]:.1f} {bp[2]:.1f}"
         ctx.geo["victim_spawn"] = f"{bp[0] + 6:.1f} {bp[1]:.1f} {bp[2]:.1f}"
-        ctx.geo["goal"] = (int(bp[0]) + self.RUN_DIST, int(bp[1]), int(bp[2]))
+        ctx.geo["goal"] = (int(bp[0]) + rdx * self.RUN_DIST, int(bp[1]),
+                           int(bp[2]) + rdz * self.RUN_DIST)
 
     HEAD_START_S = 6.0
 
