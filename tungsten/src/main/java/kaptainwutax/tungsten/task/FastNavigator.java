@@ -57,6 +57,8 @@ public final class FastNavigator {
     private static volatile BlockPos nextPhysicsTarget = null;
     /** Same, for the leg currently being WALKED — consumed when the walker goes idle. */
     private static volatile BlockPos pendingPhysicsTarget = null;
+    /** True while the physics engine is performing a jump we handed it. */
+    private static volatile boolean awaitingPhysics = false;
     private static volatile boolean planning = false;
     private static BlockPos legTail = null;
     private static int stallTicks = 0;
@@ -83,6 +85,7 @@ public final class FastNavigator {
         legTail = null;
         nextPhysicsTarget = null;
         pendingPhysicsTarget = null;
+        awaitingPhysics = false;
     }
 
     /** Ticked from the client mixin alongside the other tungsten tasks. */
@@ -117,6 +120,23 @@ public final class FastNavigator {
 
         // The walked leg ended at a jump: THIS is the hand-off to the physics engine.
         // It is the piece that never existed — see nextPhysicsTarget above.
+        // While the physics engine performs a jump we handed it, the navigator must keep
+        // its hands off. Starting the next walk leg here means the walker presses movement
+        // keys DURING the jump — two owners of the same keys in the most timing-sensitive
+        // manoeuvre there is. That is exactly what the log showed:
+        //   FastNavigator: physics owns the jump -> 9,-60,0
+        //   Walker: BFS 3 wp                      <- walker steps on the jump
+        if (awaitingPhysics) {
+            if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
+                    || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
+                return;   // physics still working — do not touch the walker or the keys
+            }
+            awaitingPhysics = false;
+            legTail = null;
+            planAhead(player.getBlockPos());   // continue from wherever we actually landed
+            return;
+        }
+
         BlockPos jump = pendingPhysicsTarget;
         if (jump != null) {
             pendingPhysicsTarget = null;
@@ -128,10 +148,11 @@ public final class FastNavigator {
             if (world != null) {
                 Debug.logMessage("FastNavigator: physics owns the jump -> "
                         + jump.getX() + "," + jump.getY() + "," + jump.getZ());
+                BlockPathWalker.stop();      // the walker must not fight the jump
+                nextLeg = null;              // drop any leg prepared for after the gap
+                awaitingPhysics = true;
                 kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.find(
                         world, Vec3d.ofBottomCenter(jump), player);
-                legTail = jump;
-                planAhead(jump);   // plan the walk that continues AFTER the landing
                 return;
             }
         }
