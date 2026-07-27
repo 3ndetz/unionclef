@@ -62,7 +62,21 @@ public class PathExecutor {
 	 * ARMED — the walker keeps driving — and replay begins when the bot actually
 	 * arrives at the root.
 	 */
-	private static final double ARM_TOLERANCE = 2.0;
+	/**
+	 * How close to the path root the bot must be before replay may start.
+	 *
+	 * <p>This used to be a fixed 2.0 while the executor ABORTS on a simulation drift of
+	 * {@code driftThreshold} (0.8). Anything rooted between those two numbers was therefore
+	 * NOT armed, began replaying immediately, and was killed by the drift check on tick 1 —
+	 * a guaranteed-failure band. Observed on the parkour courses:
+	 * {@code Path stopped: drift 1.723 blocks (threshold 0.8) at tick 1}, every single time.
+	 *
+	 * <p>Tied to the drift threshold now, and deliberately STRICTER than it, so replay can
+	 * never begin already in violation of the rule that ends it.
+	 */
+	private static double armTolerance() {
+		return TungstenConfig.get().driftThreshold * 0.5;
+	}
 	private boolean armed = false;
 
 	public void setPath(List<Node> path) {
@@ -77,7 +91,7 @@ public class PathExecutor {
     	if (isClient && path != null && !path.isEmpty() && TungstenMod.mc.player != null) {
     		double toRoot = TungstenMod.mc.player.getEntityPos()
     				.distanceTo(path.get(0).agent.getPos());
-    		if (toRoot > ARM_TOLERANCE) {
+    		if (toRoot > armTolerance()) {
     			this.armed = true;   // wait for the bot to reach the root
     			kaptainwutax.tungsten.Debug.logMessage(String.format(
     					"Path armed %.1f blocks ahead — walker drives until we reach it", toRoot));
@@ -174,7 +188,7 @@ public class PathExecutor {
     	// splice cannot pin the executor forever.
     	if (this.armed) {
     		double toRoot = player.getEntityPos().distanceTo(this.path.get(0).agent.getPos());
-    		if (toRoot <= ARM_TOLERANCE) {
+    		if (toRoot <= armTolerance()) {
     			this.armed = false;
     			this.startTime = System.currentTimeMillis();
     			kaptainwutax.tungsten.Debug.logMessage("Path armed -> replaying (reached root)");

@@ -763,6 +763,10 @@ public class PathFinder {
      * two racing ones (the walker sprinting cells while the search re-derives its
      * own guide with the blind radius-8 scan).
      */
+    /** How close an INCOMPLETE fast route may stop to the target and still be used as
+     *  the physics guide — the last hop is the jump physics was asked for. */
+    private static final double FAST_GUIDE_ARRIVE_DIST = 3.0;
+
     private Optional<List<BlockNode>> findBlockPath(WorldView world, Vec3d target, PlayerEntity player) {
         if (kaptainwutax.tungsten.TungstenConfig.get().fastBlockFirst) {
             try {
@@ -781,7 +785,18 @@ public class PathFinder {
                 // drop-bounce course (proven with the toggle: OFF passes, ON
                 // fails). An incomplete plan means "this terrain needs moves I do
                 // not model" — hand it back to the search that models them.
-                if (fast.complete && fast.path.size() >= 2) {
+                //
+                // ...BUT a route that stops right NEXT to the target is not that case: it
+                // is the normal outcome when the last step is a jump the fast planner
+                // deliberately delegates to physics — which is exactly what this guide is
+                // being built for. Rejecting it sent those requests to the legacy search,
+                // which answered "Ran out of nodes" and killed every parkour hand-off.
+                // So: accept a complete route, or an incomplete one that already arrives.
+                boolean arrivesAnyway = !fast.path.isEmpty()
+                        && Math.sqrt(fast.path.get(fast.path.size() - 1).pos
+                                .getSquaredDistance(net.minecraft.util.math.BlockPos.ofFloored(target)))
+                            <= FAST_GUIDE_ARRIVE_DIST;
+                if ((fast.complete || arrivesAnyway) && fast.path.size() >= 2) {
                     return truncateAtBreaks(Optional.of(fast.toBlockNodes(goal, player)));
                 }
             } catch (Exception e) {
