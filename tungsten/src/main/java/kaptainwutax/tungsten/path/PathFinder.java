@@ -1053,6 +1053,35 @@ public class PathFinder {
         return shouldSkipNode(child, TARGET, world);
     }
 
+    /**
+     * Evaluate ONE candidate child and keep it if it survives every filter.
+     *
+     * <p>Extracted so the chunked and per-child parallel branches share one implementation:
+     * they were duplicated, and the duplicate had drifted into dropping the rest of a chunk
+     * on the first rejection. Rejecting a child must never affect any other child.
+     */
+    private void acceptChildIfValid(Node child, BlockNode lastBlockNode, BlockNode nextBlockNode,
+            boolean isSmallBlock, WorldView world, Queue<Node> validChildren) {
+        // Reject if too close to an already accepted child (near-duplicate state).
+        for (Node other : validChildren) {
+            if (Thread.currentThread().isInterrupted()) return;
+            double distance = other.agent.getPos().distanceTo(child.agent.getPos());
+
+            boolean bothClimbing = other.agent.isClimbing(world) && child.agent.isClimbing(world);
+            boolean bothNotClimbing = !other.agent.isClimbing(world) && !child.agent.isClimbing(world);
+
+            if ((bothClimbing && distance < 0.03) || (bothNotClimbing && distance < 0.294)
+                    || (isSmallBlock && distance < 0.2)) {
+                return;
+            }
+        }
+
+        if (filterChidren(child, lastBlockNode, nextBlockNode, isSmallBlock, world)) return;
+        if (checkForFallDamage(child, world)) return;
+
+        validChildren.add(child);
+    }
+
     private boolean processNodeChildren(WorldView world, Node parent, Vec3d target, Vec3d start, Optional<List<BlockNode>> blockPath,
             BinaryHeapOpenSet openSet, Set<Integer> closed) {
 			boolean timing = TungstenConfig.get().debugTime;
@@ -1088,67 +1117,38 @@ public class PathFinder {
 			
 			List<Callable<Void>> tasks = new ArrayList<>();
 			
+			// Both branches evaluate a child IDENTICALLY; they used to be two copies of the
+			// same block, and the copies had drifted into a serious bug. In the chunked
+			// branch the body ran inside `for (j : nodes)`, but every rejection path was
+			// `return null` — which exits the whole Callable, so the FIRST rejected child
+			// silently discarded every remaining child in its chunk. With ~192 candidates
+			// per expansion and a near-duplicate test that rejects early and often, the
+			// physics search was exploring a small, arbitrary subset of its own move space,
+			// and WHICH subset depended on ForkJoin scheduling order — so the search was
+			// non-deterministic on top of being crippled. One shared method now, so the two
+			// paths cannot drift again. (Audit 2026-07-27, C2.4.)
 			if (children.size() > 5) {
 				Node[][] chunks = ArrayChunkSplitter.splitArrayIntoChunksOfX(children.toArray(new Node[children.size()]), children.size()/5);
-				
+
 				for (int i = 0; i < chunks.length; i++) {
 					Node[] nodes = chunks[i];
 					tasks.add(() -> {
-						for (int j = 0; j < nodes.length; j++) {
-							Node child = nodes[j];
+						for (Node child : nodes) {
 							if (stop.get()) return null;
-					    	if (Thread.currentThread().isInterrupted()) return null;
-							
-							// Check if this child is too close to any already accepted child
-						    for (Node other : validChildren) {
-						    	if (Thread.currentThread().isInterrupted()) return null;
-						        double distance = other.agent.getPos().distanceTo(child.agent.getPos());
-				
-						        boolean bothClimbing = other.agent.isClimbing(world) && child.agent.isClimbing(world);
-						        boolean bothNotClimbing = !other.agent.isClimbing(world) && !child.agent.isClimbing(world);
-				
-						        if ((bothClimbing && distance < 0.03) || (bothNotClimbing && distance < 0.294) || (isSmallBlock && distance < 0.2)) {
-						            return null; // too close to existing child
-						        }
-						    }
-							
-							boolean skip = filterChidren(child, lastBlockNode, nextBlockNode, isSmallBlock, world);
-							
-							if (skip || checkForFallDamage(child, world)) {
-								return null;
-							}
-							
-							validChildren.add(child);
+							if (Thread.currentThread().isInterrupted()) return null;
+							acceptChildIfValid(child, lastBlockNode, nextBlockNode, isSmallBlock,
+									world, validChildren);
 						}
 						return null;
 					});
 				}
-				
+
 			} else {
 				tasks = children.stream().map(child -> (Callable<Void>) () -> {
 					if (stop.get()) return null;
-			    	if (Thread.currentThread().isInterrupted()) return null;
-					
-					// Check if this child is too close to any already accepted child
-				    for (Node other : validChildren) {
-				    	if (Thread.currentThread().isInterrupted()) return null;
-				        double distance = other.agent.getPos().distanceTo(child.agent.getPos());
-		
-				        boolean bothClimbing = other.agent.isClimbing(world) && child.agent.isClimbing(world);
-				        boolean bothNotClimbing = !other.agent.isClimbing(world) && !child.agent.isClimbing(world);
-		
-				        if ((bothClimbing && distance < 0.03) || (bothNotClimbing && distance < 0.294) || (isSmallBlock && distance < 0.2)) {
-				            return null; // too close to existing child
-				        }
-				    }
-					
-					boolean skip = filterChidren(child, lastBlockNode, nextBlockNode, isSmallBlock, world);
-					
-					if (skip || checkForFallDamage(child, world)) {
-						return null;
-					}
-					
-					validChildren.add(child);
+					if (Thread.currentThread().isInterrupted()) return null;
+					acceptChildIfValid(child, lastBlockNode, nextBlockNode, isSmallBlock,
+							world, validChildren);
 					return null;
 				}).collect(Collectors.toList());
 			}

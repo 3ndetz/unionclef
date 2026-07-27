@@ -27,9 +27,10 @@ from uctest.actors import Bot                       # noqa: E402
 from uctest.arena import ArenaBuilder               # noqa: E402
 from uctest.harness import Artifacts, Rcon, wait_for  # noqa: E402
 from uctest.scenario import Ctx, Scenario, is_flake           # noqa: E402
+from uctest.scenarios_nav import SCENARIOS as NAV   # noqa: E402
 from uctest.scenarios_pvp import SCENARIOS as PVP   # noqa: E402
 
-SUITES = {"pvp": PVP}
+SUITES = {"pvp": PVP, "nav": NAV}
 BOT_CONTAINER = "uctest-mc-tester1"
 VICTIM_CONTAINER = "uctest-mc-tester2"
 BOT, VICTIM = "tester1", "tester2"
