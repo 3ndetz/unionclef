@@ -150,9 +150,17 @@ public final class FastNavigator {
                         + jump.getX() + "," + jump.getY() + "," + jump.getZ());
                 BlockPathWalker.stop();      // the walker must not fight the jump
                 nextLeg = null;              // drop any leg prepared for after the gap
-                awaitingPhysics = true;
-                kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.find(
+                // Only commit to waiting if the search ACCEPTED the request. find() refuses
+                // while a previous search is still tearing down, and it used to do so
+                // silently — so we would sit in awaitingPhysics for a jump nobody was
+                // computing, and the run stalled at the lip of the gap.
+                boolean accepted = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.find(
                         world, Vec3d.ofBottomCenter(jump), player);
+                if (accepted) {
+                    awaitingPhysics = true;
+                } else {
+                    pendingPhysicsTarget = jump;   // keep it; retry on a later tick
+                }
                 return;
             }
         }

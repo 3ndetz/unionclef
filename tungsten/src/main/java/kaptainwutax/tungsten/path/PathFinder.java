@@ -56,7 +56,8 @@ public class PathFinder {
 	ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 	public AtomicBoolean active = new AtomicBoolean(false);
 	public AtomicBoolean stop = new AtomicBoolean(false);
-	public Thread thread = null;
+	/** Volatile: written by the search worker as it exits, read by callers in find(). */
+	public volatile Thread thread = null;
 	private final Set<Integer> closed = Collections.synchronizedSet(new HashSet<>());
 	private AtomicDoubleArray bestHeuristicSoFar;
 	private BinaryHeapOpenSet openSet = new BinaryHeapOpenSet();
@@ -99,13 +100,24 @@ public class PathFinder {
 
 	public Vec3d TARGET = new Vec3d(0.5D, 10.0D, 0.5D);
 	
-	synchronized public void find(WorldView world, Vec3d target, PlayerEntity player) {
-		find(world, target, player, Optional.empty());
+	synchronized public boolean find(WorldView world, Vec3d target, PlayerEntity player) {
+		return find(world, target, player, Optional.empty());
 	}
 
-    synchronized public void find(WorldView world, Vec3d target, PlayerEntity player, Optional<List<BlockNode>> blockPath) {
+    /**
+     * Start a search. Returns FALSE when the request was refused because a search is
+     * already running.
+     *
+     * <p>This used to be void and simply `return`ed: a caller had no way to know its request
+     * had been thrown away. Worse, the worker clears `active` BEFORE `thread`, so there is a
+     * window where `active==false && thread!=null` and a perfectly timed request is dropped
+     * for no reason. That is what made nav_gaps flaky ~30% of the time — a run whose FIRST
+     * request landed in the teardown window of the previous one never moved at all
+     * (final_dist stayed at the start position while every other run passed in ~8 s).
+     */
+    synchronized public boolean find(WorldView world, Vec3d target, PlayerEntity player, Optional<List<BlockNode>> blockPath) {
 
-        if(active.get() || thread != null)return;
+        if(active.get() || thread != null) return false;
         active.set(true);
         stop.set(false);
         TARGET = target;
@@ -158,6 +170,7 @@ public class PathFinder {
         thread.setPriority(Thread.MIN_PRIORITY);
         startTime = System.currentTimeMillis();
         thread.start();
+        return true;
     }
 	
 	private boolean checkForFallDamage(Node n, WorldView world) {
