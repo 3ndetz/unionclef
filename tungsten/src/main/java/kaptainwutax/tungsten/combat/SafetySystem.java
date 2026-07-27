@@ -48,6 +48,32 @@ public class SafetySystem {
     private final KnockbackEstimator kbEstimator = new KnockbackEstimator();
     private final CombatExecutor executor = new CombatExecutor();
 
+    /**
+     * What the stage machine wants the legs to do. Filled here, resolved and written
+     * ONCE per client tick by CombatController — see {@link CombatMoveIntent} for why
+     * this is no longer allowed to press keys directly.
+     */
+    private final CombatMoveIntent intent = new CombatMoveIntent();
+
+    /** The stage machine's movement request for this frame (never null). */
+    public CombatMoveIntent getIntent() { return intent; }
+
+    /** Set when renderUpdate has produced a request since the last tick consumed one. */
+    private boolean intentFresh = false;
+
+    /**
+     * Consume the freshness flag. The stage machine runs on the RENDER loop but the keys are
+     * written on the TICK loop, so the tick must be able to tell "this request was computed
+     * for the current situation" from "rendering stalled and this is last frame's leftovers".
+     * A tick that finds no fresh request falls back to its own close-quarters movement rather
+     * than replaying stale keys.
+     */
+    public boolean consumeIntentFresh() {
+        boolean f = intentFresh;
+        intentFresh = false;
+        return f;
+    }
+
     private CombatStage stage = CombatStage.PURSUE;
     private CombatStage prevStage = null;
 
@@ -135,6 +161,9 @@ public class SafetySystem {
         movementActive = false;
         repositioning = false;
         wantsJump = false;
+        // A fresh request every frame: anything not re-asserted below is released by
+        // CombatController's single write, so a stale press cannot survive.
+        intent.clear();
         if (postImminentCooldown > 0) postImminentCooldown--;
         if (edgeSneakTicks > 0) edgeSneakTicks--;
         if (forcedNarrowTimer > 0) forcedNarrowTimer--;
@@ -208,18 +237,11 @@ public class SafetySystem {
                     boolean a = deltaYaw > 20 && deltaYaw < 160;
                     boolean d = deltaYaw < -20 && deltaYaw > -160;
 
-                    mc.options.forwardKey.setPressed(w);
-                    mc.options.backKey.setPressed(s);
-                    mc.options.leftKey.setPressed(a);
-                    mc.options.rightKey.setPressed(d);
-                    mc.options.sprintKey.setPressed(true);
-                    mc.options.sneakKey.setPressed(false);
-
                     if (horizSpeed > 0.05 && player.isOnGround() && currentEdgeScore < 0.5) {
                         // only jump to brake if not on narrow terrain
                         wantsJump = true;
                     }
-                    mc.options.jumpKey.setPressed(wantsJump);
+                    intent.set(w, s, a, d, true, wantsJump, false);
                 }
                 case NARROW_BATTLE -> {
                     // bridge/narrow: face along path, W only. NO STRAFE (instant death on 1-wide).
@@ -233,13 +255,7 @@ public class SafetySystem {
                         brakeYaw = movementYaw;
                         repositioning = true; // tells CombatController to use brakeYaw for aim
 
-                        mc.options.forwardKey.setPressed(true);
-                        mc.options.backKey.setPressed(false);
-                        mc.options.leftKey.setPressed(false);
-                        mc.options.rightKey.setPressed(false);
-                        mc.options.sprintKey.setPressed(false);
-                        mc.options.jumpKey.setPressed(false);
-                        mc.options.sneakKey.setPressed(false);
+                        intent.set(true, false, false, false, false, false, false);
                     }
                 }
                 case DANGER_BATTLE -> {
@@ -253,14 +269,8 @@ public class SafetySystem {
                         brakeYaw = AttackTiming.yawTo(playerPosTick, wpPos);
 
                         // walk, no jump, allow jump ONLY if stuck (below waypoint Y)
-                        mc.options.forwardKey.setPressed(true);
-                        mc.options.sprintKey.setPressed(true);
                         boolean needJumpUp = waypoint.getY() > playerPosTick.y + 0.5 && player.isOnGround();
-                        mc.options.jumpKey.setPressed(needJumpUp);
-                        mc.options.backKey.setPressed(false);
-                        mc.options.leftKey.setPressed(false);
-                        mc.options.rightKey.setPressed(false);
-                        mc.options.sneakKey.setPressed(false);
+                        intent.set(true, false, false, false, true, needJumpUp, false);
                     }
                 }
                 case ESCAPE -> {
@@ -273,14 +283,9 @@ public class SafetySystem {
                         repositioning = true; // use movementYaw for camera via brakeYaw
                         brakeYaw = movementYaw;
 
-                        mc.options.forwardKey.setPressed(true);
-                        mc.options.sprintKey.setPressed(true);
-                        mc.options.backKey.setPressed(false);
-                        mc.options.leftKey.setPressed(false);
-                        mc.options.rightKey.setPressed(false);
-                        mc.options.sneakKey.setPressed(false);
                         // jump if on ground and not on narrow terrain
-                        mc.options.jumpKey.setPressed(player.isOnGround() && currentEdgeScore < 0.4);
+                        intent.set(true, false, false, false, true,
+                                player.isOnGround() && currentEdgeScore < 0.4, false);
                     }
                 }
                 case PURSUE, DELICATE_BATTLE -> {
@@ -300,7 +305,9 @@ public class SafetySystem {
             }
         }
         if (edgeSneakTicks > 0 && !braking) {
-            mc.options.sneakKey.setPressed(true);
+            // additive: claim the legs (sneak-only) if nothing else has
+            intent.active = true;
+            intent.sneak = true;
         }
 
         // ── movement: follow BFS attack path (if enabled + not braking/repositioning/cooldown) ──
@@ -335,17 +342,11 @@ public class SafetySystem {
                     movementYaw = AttackTiming.yawTo(playerPosTick, Vec3d.ofBottomCenter(nextWp));
                     movementActive = true;
 
-                    mc.options.forwardKey.setPressed(true);
-                    mc.options.sprintKey.setPressed(!nearEdge);
-                    mc.options.backKey.setPressed(false);
-                    mc.options.leftKey.setPressed(false);
-                    mc.options.rightKey.setPressed(false);
-                    mc.options.sneakKey.setPressed(false);
-
                     // jump only if landing zone is safe AND we're not on the rim
                     // check 3-4 blocks ahead in velocity direction for drops
                     boolean safeToJump = isJumpLandingSafe(playerPosTick, playerVel, player.getEntityWorld());
-                    mc.options.jumpKey.setPressed(player.isOnGround() && safeToJump && !nearEdge);
+                    intent.set(true, false, false, false, !nearEdge,
+                            player.isOnGround() && safeToJump && !nearEdge, false);
                 }
                 // if waypoint is dangerous, don't move — stay and fight
             }
@@ -360,39 +361,22 @@ public class SafetySystem {
                         net.minecraft.util.math.MathHelper.clamp(eye.x, tb.minX, tb.maxX),
                         net.minecraft.util.math.MathHelper.clamp(eye.y, tb.minY, tb.maxY),
                         net.minecraft.util.math.MathHelper.clamp(eye.z, tb.minZ, tb.maxZ));
-                if (eye.distanceTo(closest) > 2.4) {
+                if (eye.distanceTo(closest) > CombatController.STRIKE_DISTANCE) {
                     movementYaw = AttackTiming.yawTo(playerPosTick, target.getEntityPos());
                     movementActive = true;
-                    mc.options.forwardKey.setPressed(true);
-                    mc.options.sprintKey.setPressed(!nearEdge);
-                    mc.options.backKey.setPressed(false);
-                    mc.options.leftKey.setPressed(false);
-                    mc.options.rightKey.setPressed(false);
-                    mc.options.sneakKey.setPressed(false);
+                    intent.set(true, false, false, false, !nearEdge, false, false);
                 }
             }
         }
 
-        // release keys when nothing is controlling them
-        // (braking ended, repositioning ended, movement not active or in cooldown)
-        boolean anythingControlling = braking || repositioning || movementActive;
-        if (!anythingControlling && (wasBrakingLastFrame || wasRepositioningLastFrame)) {
-            mc.options.forwardKey.setPressed(false);
-            mc.options.backKey.setPressed(false);
-            mc.options.leftKey.setPressed(false);
-            mc.options.rightKey.setPressed(false);
-            mc.options.sprintKey.setPressed(false);
-            mc.options.sneakKey.setPressed(false);
-            mc.options.jumpKey.setPressed(false);
-        }
-
-        // ── VOID-SAFETY HARD CLAMP (applies to EVERY stage) ───────────────
-        // The stage machine (braking, repositioning, escape, pursue) all set
-        // movement keys independently, and near a rim several of them sprint and
-        // even JUMP — the DANGER_IMMINENT brake-jump is what launched the bot off
-        // the island. The shared VoidGuard is the final word on the keys (same
-        // clamp the flee task applies after the pathfinder executor).
-        VoidGuard.protect(player, playerPosTick, playerVel, player.getEntityWorld());
+        // No explicit "release" pass is needed any more: the intent is cleared at the top
+        // of every frame and CombatController writes the FULL key set once per tick, so an
+        // unclaimed key is released by construction rather than by a bookkeeping branch.
+        //
+        // The VoidGuard clamp also moved out of here. It used to run at the end of this
+        // RENDER-frequency method, which meant the per-TICK combat mover bypassed it
+        // entirely; it is now applied by CombatController to the resolved intent, so every
+        // combat movement — whatever produced it — passes the same void clamp exactly once.
 
         // ── visualization ────────────────────────────────────────────────
         renderVelocity(playerPos, playerVel, playerPredicted, COL_PLAYER_VEL);
@@ -427,6 +411,8 @@ public class SafetySystem {
                 .add(enemyVelocity.multiply(getAimLeadTicks()));
         TungstenModRenderContainer.COMBAT_TRAJECTORY.add(new Cuboid(
                 aimTarget.subtract(0.1, 0.1, 0.1), new Vec3d(0.2, 0.2, 0.2), COL_AIM_PREDICT));
+
+        intentFresh = true;
 
         // combat paths visualization
         pathfinder.renderUpdate(tickDelta);

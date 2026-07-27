@@ -2,31 +2,41 @@ package adris.altoclef.util.helpers;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
-import net.fabricmc.loader.api.FabricLoader;
+import kaptainwutax.tungsten.TungstenConfig;
+import kaptainwutax.tungsten.TungstenModDataContainer;
+import kaptainwutax.tungsten.path.PathExecutor;
+import kaptainwutax.tungsten.path.PathFinder;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 /**
- * Tungsten pathfinder integration via reflection.
- * Fallback when Baritone fails (NaN, stuck, no path).
- * When activated, Tungsten LOCKS control for LOCK_DURATION_MS to avoid being
- * immediately interrupted by progress checkers or Baritone restarts.
- * All methods are safe to call even if Tungsten is not installed — they no-op.
+ * Tungsten pathfinder integration.
+ *
+ * When activated, Tungsten LOCKS control for LOCK_DURATION_MS so progress checkers
+ * and shredder restarts don't immediately interrupt it.
+ *
+ * <p>HISTORY (2026-07-27): this class used to reach into tungsten through reflection,
+ * "so it works even if tungsten is not installed". That was never true — the same class
+ * already referenced {@code kaptainwutax.tungsten.task.*} directly in
+ * {@link #isCombatActive()}, so tungsten was always a hard compile-time dependency and
+ * the reflection bought nothing. Worse, it silently BROKE: {@code initReflection()} looked
+ * up {@code PathFinder.searchTimeoutMs}, a field that had been moved to
+ * {@link TungstenConfig}. The resulting {@code NoSuchFieldException} left
+ * {@code reflectionReady = false} permanently, so {@code isTungstenLoaded()} always
+ * returned false and every guarded method here — {@code tryPathTo}, {@code tryPathToEntity},
+ * {@code stop}, {@code isActive}, {@code isLocked} — was a permanent no-op. The whole
+ * "tungsten as a fallback when the primary pathfinder fails" layer had never executed.
+ * It is now direct, typed calls: a signature change becomes a compile error instead of a
+ * feature that silently disappears.
  */
 public class TungstenHelper {
 
-    private static Boolean loaded = null;
     private static boolean active = false;
     private static int failCount = 0;
     private static long lastStartTime = 0;
 
     // Drop-in swap (TODO 13): when primary, altoclef goals route straight to
-    // tungsten instead of waiting for baritone to fail. Baritone movement is
-    // broken on some headless clients; tungsten always drives the player.
+    // tungsten instead of waiting for the fallback path to fail.
     private static volatile boolean primary = false;
     public static void setPrimary(boolean p) { primary = p; }
     public static boolean isPrimary() { return primary; }
@@ -36,65 +46,38 @@ public class TungstenHelper {
     private static final long LOCK_DURATION_MS = 30_000; // 30 sec exclusive control
     private static final long RETARGET_INTERVAL_MS = 3000; // re-send target every 3 sec
 
+    /** Search tuning used for the short, frequently-retargeted fallback legs. */
+    private static final long FALLBACK_SEARCH_TIMEOUT_MS = 2000L;
+    private static final int FALLBACK_MIN_PATH_SIZE = 2;
+    private static final double FALLBACK_MIN_DIST_PATH = 0.3;
+
     private static long lockUntil = 0;       // Tungsten has exclusive control until this time
     private static long lastRetargetTime = 0;
     private static Entity lockedEntity = null; // entity we're chasing during lock
 
-    // Cached reflection handles
-    private static boolean reflectionReady = false;
-    private static Object pathfinderInstance;    // TungstenModDataContainer.PATHFINDER
-    private static Object executorInstance;      // TungstenModDataContainer.EXECUTOR
-    private static AtomicBoolean pathfinderActive;
-    private static AtomicBoolean pathfinderStop;
-    private static Field executorStopField;
-    private static Method findMethod;            // PathFinder.find(WorldView, Vec3d, PlayerEntity)
-    private static Method executorIsRunning;
-    private static Field searchTimeoutField;
-    private static Field minPathSizeField;
-    private static Field minDistPathField;
-
+    /**
+     * Tungsten is compiled into this mod, so the only real question is whether the
+     * client-side singletons have been created yet ({@code EXECUTOR} is assigned in
+     * {@code TungstenMod.onInitializeClient}, so it is null very early in startup).
+     */
     public static boolean isTungstenLoaded() {
-        if (loaded == null) {
-            loaded = FabricLoader.getInstance().isModLoaded("tungsten");
-            if (loaded) initReflection();
-        }
-        return loaded && reflectionReady;
+        return TungstenModDataContainer.PATHFINDER != null
+                && TungstenModDataContainer.EXECUTOR != null;
     }
 
-    private static void initReflection() {
-        try {
-            Class<?> containerClass = Class.forName("kaptainwutax.tungsten.TungstenModDataContainer");
-            pathfinderInstance = containerClass.getField("PATHFINDER").get(null);
-            executorInstance = containerClass.getField("EXECUTOR").get(null);
-
-            Class<?> pfClass = pathfinderInstance.getClass();
-            pathfinderActive = (AtomicBoolean) pfClass.getField("active").get(pathfinderInstance);
-            pathfinderStop = (AtomicBoolean) pfClass.getField("stop").get(pathfinderInstance);
-
-            searchTimeoutField = pfClass.getField("searchTimeoutMs");
-            minPathSizeField = pfClass.getField("minPathSizeForTimeout");
-            minDistPathField = pfClass.getField("minDistPath");
-
-            findMethod = pfClass.getMethod("find",
-                    Class.forName("net.minecraft.world.WorldView"),
-                    Vec3d.class,
-                    Class.forName("net.minecraft.entity.player.PlayerEntity"));
-
-            Class<?> execClass = executorInstance.getClass();
-            executorIsRunning = execClass.getMethod("isRunning");
-            executorStopField = execClass.getField("stop");
-
-            reflectionReady = true;
-            Debug.logInternal("[TungstenHelper] Reflection init OK");
-        } catch (Exception e) {
-            reflectionReady = false;
-            Debug.logWarning("[TungstenHelper] Reflection init failed: " + e.getMessage());
-        }
+    /** Apply the short-leg search tuning used by the fallback driver. */
+    private static void applyFallbackTuning(PathFinder pf) {
+        // NOTE: searchTimeoutMs lives in TungstenConfig, not on PathFinder. Writing it
+        // here mutates GLOBAL persisted config — tracked as C7.5 in TODOS.md; the proper
+        // fix is per-call search parameters, which is a PathFinder API change.
+        TungstenConfig.get().searchTimeoutMs = FALLBACK_SEARCH_TIMEOUT_MS;
+        pf.minPathSizeForTimeout = FALLBACK_MIN_PATH_SIZE;
+        pf.minDistPath = FALLBACK_MIN_DIST_PATH;
     }
 
     /**
      * Try Tungsten pathfinding to a position. Returns true if Tungsten was started.
-     * Acquires a 30-second lock — Baritone should not interfere during this time.
+     * Acquires a 30-second lock — the primary pathfinder should not interfere meanwhile.
      */
     public static boolean tryPathTo(Vec3d target) {
         if (!isTungstenLoaded()) return false;
@@ -108,16 +91,14 @@ public class TungstenHelper {
             var world = AltoClef.getInstance().getWorld();
             if (player == null || world == null) return false;
 
-            boolean tungstenBusy = pathfinderActive.get()
-                    || (boolean) executorIsRunning.invoke(executorInstance);
+            PathFinder pf = TungstenModDataContainer.PATHFINDER;
+            boolean tungstenBusy = pf.active.get() || TungstenModDataContainer.isExecutorRunning();
 
             // If locked and Tungsten is still working, just retarget periodically
             if (isLocked() && tungstenBusy) {
                 if (now - lastRetargetTime > RETARGET_INTERVAL_MS) {
-                    searchTimeoutField.set(pathfinderInstance, 2000L);
-                    minPathSizeField.set(pathfinderInstance, 2);
-                    minDistPathField.set(pathfinderInstance, 0.3);
-                    findMethod.invoke(pathfinderInstance, world, target, player);
+                    applyFallbackTuning(pf);
+                    pf.find(world, target, player);
                     lastRetargetTime = now;
                     Debug.logInternal("[TungstenHelper] Retargeted to " + formatVec(target));
                 }
@@ -125,11 +106,9 @@ public class TungstenHelper {
             }
 
             // If locked but Tungsten finished a segment, restart it
-            if (isLocked() && !tungstenBusy) {
-                searchTimeoutField.set(pathfinderInstance, 2000L);
-                minPathSizeField.set(pathfinderInstance, 2);
-                minDistPathField.set(pathfinderInstance, 0.3);
-                findMethod.invoke(pathfinderInstance, world, target, player);
+            if (isLocked()) {
+                applyFallbackTuning(pf);
+                pf.find(world, target, player);
                 lastStartTime = now;
                 lastRetargetTime = now;
                 Debug.logInternal("[TungstenHelper] Lock active, restarting path to " + formatVec(target));
@@ -137,11 +116,8 @@ public class TungstenHelper {
             }
 
             // Fresh start — acquire lock
-            searchTimeoutField.set(pathfinderInstance, 2000L);
-            minPathSizeField.set(pathfinderInstance, 2);
-            minDistPathField.set(pathfinderInstance, 0.3);
-
-            findMethod.invoke(pathfinderInstance, world, target, player);
+            applyFallbackTuning(pf);
+            pf.find(world, target, player);
             lastStartTime = now;
             lastRetargetTime = now;
             lockUntil = now + LOCK_DURATION_MS;
@@ -194,8 +170,9 @@ public class TungstenHelper {
     public static void stop() {
         if (!isTungstenLoaded()) return;
         try {
-            pathfinderStop.set(true);
-            executorStopField.set(executorInstance, true);
+            TungstenModDataContainer.PATHFINDER.stop.set(true);
+            PathExecutor exec = TungstenModDataContainer.EXECUTOR;
+            if (exec != null) exec.stop = true;
             active = false;
             lockUntil = 0;
             lockedEntity = null;
@@ -212,7 +189,6 @@ public class TungstenHelper {
      * altoclef's stuck detection must never shimmy through them.
      */
     public static boolean isCombatActive() {
-        if (!isTungstenLoaded()) return false;
         try {
             return kaptainwutax.tungsten.task.PunkPlayerTask.isActive()
                     || kaptainwutax.tungsten.task.FollowEntityTask.isActive()
@@ -233,14 +209,10 @@ public class TungstenHelper {
         // If locked, we're "active" even between path segments
         if (isLocked()) return true;
         if (!active) return false;
-        try {
-            boolean busy = pathfinderActive.get()
-                    || (boolean) executorIsRunning.invoke(executorInstance);
-            if (!busy) active = false;
-            return busy;
-        } catch (Exception e) {
-            return false;
-        }
+        boolean busy = TungstenModDataContainer.PATHFINDER.active.get()
+                || TungstenModDataContainer.isExecutorRunning();
+        if (!busy) active = false;
+        return busy;
     }
 
     /** Reset fail counter — call when task restarts or target changes. */

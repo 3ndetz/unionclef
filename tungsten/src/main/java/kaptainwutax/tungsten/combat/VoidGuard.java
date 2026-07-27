@@ -73,6 +73,58 @@ public final class VoidGuard {
         protect(player, player.getEntityPos(), player.getVelocity(), world);
     }
 
+    /**
+     * Intent-based variant of {@link #protect} — same rules, but it vetoes a
+     * {@link CombatMoveIntent} instead of writing the keys itself.
+     *
+     * <p>The combat pipeline resolves all movement into ONE intent per tick and writes the
+     * keys exactly once (see {@link CombatMoveIntent}), so the guard must be able to act
+     * BEFORE that write. The key-writing {@link #protect} overloads stay for the non-combat
+     * callers (the flee task clamps after the pathfinder executor has already set keys).
+     *
+     * @param pos feet position to test from
+     * @param vel current velocity (for the momentum/overshoot check)
+     */
+    public static void apply(CombatMoveIntent intent, ClientPlayerEntity player,
+                             Vec3d pos, Vec3d vel, WorldView world) {
+        if (intent == null || !intent.active) return;
+        double horizSpeed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+        boolean nearVoid = VoidDetector.voidWithin(pos, world, 3, 3);
+        double look = Math.max(1.4, horizSpeed * 10.0);
+
+        double[] keyHeading = intent.heading(player.getYaw());
+        boolean edgeByKey = keyHeading != null
+                && VoidDetector.edgeAhead(pos, keyHeading[0], keyHeading[1], world, 3, look);
+        boolean edgeByVel = horizSpeed > 0.04
+                && VoidDetector.edgeAhead(pos, vel.x, vel.z, world, 3, look);
+
+        if (nearVoid) {
+            intent.sprint = false;
+        }
+        // Jump suppression uses a LONGER lookahead: a jump carries the bot ~4 blocks, so a
+        // rim still 2-3 blocks ahead is exactly where a crit- or brake-jump launches us off.
+        double jumpLook = Math.max(3.2, horizSpeed * 16.0);
+        boolean jumpTowardEdge =
+                (keyHeading != null && VoidDetector.edgeAhead(pos, keyHeading[0], keyHeading[1], world, 3, jumpLook))
+                || (horizSpeed > 0.04 && VoidDetector.edgeAhead(pos, vel.x, vel.z, world, 3, jumpLook));
+        if (jumpTowardEdge) {
+            intent.jump = false;
+        }
+        if (edgeByKey || edgeByVel) {
+            intent.jump = false;
+            intent.sneak = true;
+            if (edgeByKey) {
+                // Only the steering that points AT the drop is cancelled. Momentum-only
+                // danger keeps the toward-island input so recovery isn't stranded.
+                intent.forward = false;
+                intent.back = false;
+                intent.left = false;
+                intent.right = false;
+                intent.sprint = false;
+            }
+        }
+    }
+
     /** World-space horizontal heading (dx,dz) implied by the pressed movement
      *  keys relative to yaw, or null if none. MC convention: sideways +1 = LEFT. */
     public static double[] pressedHeading(ClientPlayerEntity player, MinecraftClient mc) {

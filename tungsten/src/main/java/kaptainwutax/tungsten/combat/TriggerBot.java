@@ -27,8 +27,31 @@ public class TriggerBot {
 
     private static final float COOLDOWN_FULL = 0.95f;
     private static final float COOLDOWN_CRIT = 0.85f; // falling crit is worth an early swing
-    private static final double REACH = 3.0;
+
+    /**
+     * Vanilla melee entity reach, measured EYE -> CLOSEST POINT OF THE HITBOX.
+     *
+     * <p>Public and the single source of truth on purpose: the combat mover used to keep its
+     * own, looser idea of "close enough" (3.4 blocks CENTRE-TO-CENTRE), which at a player
+     * hitbox works out to ~3.1 eye-to-hitbox — i.e. it parked the bot permanently OUTSIDE
+     * the distance this gate will fire at, so the bot neither closed in nor ever swung.
+     * Anything that decides how close to get must derive from this constant.
+     */
+    public static final double REACH = 3.0;
+
     private static final double MAX_LOOK_ANGLE_DEG = 40.0;
+
+    /** Distance from the player's eyes to the nearest point of the target hitbox —
+     *  the metric vanilla actually uses to decide whether an attack lands. */
+    public static double eyeToHitbox(ClientPlayerEntity player, Entity target) {
+        Vec3d eye = player.getEyePos();
+        Box box = target.getBoundingBox();
+        Vec3d closest = new Vec3d(
+                MathHelper.clamp(eye.x, box.minX, box.maxX),
+                MathHelper.clamp(eye.y, box.minY, box.maxY),
+                MathHelper.clamp(eye.z, box.minZ, box.maxZ));
+        return eye.distanceTo(closest);
+    }
 
     // prevent double-clicking on same cooldown cycle
     private boolean clickedThisCycle = false;
