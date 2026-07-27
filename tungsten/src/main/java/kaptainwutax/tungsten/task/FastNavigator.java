@@ -53,7 +53,10 @@ public final class FastNavigator {
     private static Vec3d goal = null;
     /** The leg computed ahead of time, ready to hand to the walker. */
     private static volatile List<BlockPos> nextLeg = null;
-    private static volatile boolean nextLegNeedsPhysics = false;
+    /** The next leg ends at a jump the walker cannot do; this is where it lands. */
+    private static volatile BlockPos nextPhysicsTarget = null;
+    /** Same, for the leg currently being WALKED — consumed when the walker goes idle. */
+    private static volatile BlockPos pendingPhysicsTarget = null;
     private static volatile boolean planning = false;
     private static BlockPos legTail = null;
     private static int stallTicks = 0;
@@ -78,7 +81,8 @@ public final class FastNavigator {
         goal = null;
         nextLeg = null;
         legTail = null;
-        nextLegNeedsPhysics = false;
+        nextPhysicsTarget = null;
+        pendingPhysicsTarget = null;
     }
 
     /** Ticked from the client mixin alongside the other tungsten tasks. */
@@ -111,11 +115,35 @@ public final class FastNavigator {
             return;
         }
 
+        // The walked leg ended at a jump: THIS is the hand-off to the physics engine.
+        // It is the piece that never existed — see nextPhysicsTarget above.
+        BlockPos jump = pendingPhysicsTarget;
+        if (jump != null) {
+            pendingPhysicsTarget = null;
+            if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
+                    || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
+                return;   // physics already busy — let it finish this hop
+            }
+            var world = TungstenMod.mc.world;
+            if (world != null) {
+                Debug.logMessage("FastNavigator: physics owns the jump -> "
+                        + jump.getX() + "," + jump.getY() + "," + jump.getZ());
+                kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.find(
+                        world, Vec3d.ofBottomCenter(jump), player);
+                legTail = jump;
+                planAhead(jump);   // plan the walk that continues AFTER the landing
+                return;
+            }
+        }
+
         // the walker is idle — start the leg that was prepared while we walked
         List<BlockPos> leg = nextLeg;
         if (leg != null && leg.size() >= 2) {
             nextLeg = null;
             legTail = leg.get(leg.size() - 1);
+            // if this leg ends at a jump, arm the hand-off for when the walk finishes
+            pendingPhysicsTarget = nextPhysicsTarget;
+            nextPhysicsTarget = null;
             BlockPathWalker.startBFS(leg);
             // immediately begin planning the leg after this one, from its tail
             planAhead(legTail);
@@ -166,13 +194,26 @@ public final class FastNavigator {
                 // engine owns those (parkour), the walker must not run into one
                 int physics = res.firstPhysicsIndex();
                 if (physics > 0 && physics < cells.size()) {
+                    // REMEMBER where the jump lands. The old code cut the leg here and set
+                    // to the edge of the gap and then no one performed the jump: the
+                    // navigator just replanned 2-cell legs until its stall watchdog fired.
+                    // That single dead flag is why every parkour course failed.
+                    nextPhysicsTarget = cells.get(physics);
                     cells = cells.subList(0, physics);
-                    nextLegNeedsPhysics = true;
                 } else {
-                    nextLegNeedsPhysics = false;
+                    nextPhysicsTarget = null;
                     if (cells.size() > LEG_LENGTH) cells = cells.subList(0, LEG_LENGTH);
                 }
-                if (cells.size() >= 2) nextLeg = cells;
+                if (cells.size() >= 2) {
+                    nextLeg = cells;
+                } else if (nextPhysicsTarget != null) {
+                    // The jump is the very FIRST move from here — there is nothing to walk.
+                    // Hand it straight to physics instead of dropping the plan (the old code
+                    // required size>=2 and silently discarded this case, which is exactly the
+                    // "standing at the lip of the gap" state).
+                    pendingPhysicsTarget = nextPhysicsTarget;
+                    nextPhysicsTarget = null;
+                }
             } catch (Exception e) {
                 Debug.logWarning("FastNavigator plan failed: " + e.getMessage());
             } finally {
