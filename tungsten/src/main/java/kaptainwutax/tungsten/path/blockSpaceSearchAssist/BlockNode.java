@@ -126,6 +126,13 @@ public class BlockNode {
 	 */
 	public int heapPosition;
 
+	/**
+	 * Cost in TICKS of the single move that leads INTO this node (walk, jump, swim,
+	 * mine-through, ...). Kept separate from {@link #cost}, which is the accumulated g
+	 * along the whole path, so relaxation can compute {@code parent.cost + moveCost}.
+	 */
+	public double moveCost = ActionCosts.WALK_ONE_BLOCK_COST;
+
 	public BlockNode(BlockPos pos, Goal goal, PlayerEntity player, WorldView world) {
 		this.player = player;
 		this.previous = null;
@@ -165,7 +172,13 @@ public class BlockNode {
 		this.wasOnSlime = player.getEntityWorld().getBlockState(new BlockPos(x, y - 1, z))
 				.getBlock() instanceof SlimeBlock;
 		this.wasOnLadder = player.getEntityWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
-		this.cost = parent != null ? 0 : ActionCosts.COST_INF;
+		this.moveCost = cost;
+		// g starts at infinity for EVERY node so the first relaxation always wins. This
+		// used to be `parent != null ? 0 : COST_INF`, i.e. every child began at g=0, which
+		// combined with updateNode's `child.cost + 1` meant g never accumulated: every node
+		// in the graph ended up with g == 1 no matter how far along the path it was, and
+		// the search was greedy best-first with all costs decorative. (Audit C2.2.)
+		this.cost = ActionCosts.COST_INF;
 		this.estimatedCostToGoal = goal.heuristic(x, y, z);
 		if (Double.isNaN(estimatedCostToGoal)) {
 			throw new IllegalStateException(goal + " calculated implausible heuristic");
@@ -285,21 +298,34 @@ public class BlockNode {
 
 	public List<BlockNode> getChildren(WorldView world, Goal goal, boolean generateDeep) {
 
-		// EXPERIMENTAL (#1.6.1): tungsten-native smart move generation — a handful of
-		// pre-validated Traverse/Ascend/Descend/Parkour neighbours instead of the blind
-		// r=8 scan, so the search routes stepped/gap terrain within its node budget.
-		// Flag-gated (default off) so course A keeps the proven blind-scan path.
-		if (TungstenConfig.get().smartMoves) {
-			List<BlockNode> smart = new ArrayList<>();
-			for (SmartMoves.Move m : SmartMoves.generate(world, this.getBlockPos())) {
-				BlockNode n = new BlockNode(m.dest.getX(), m.dest.getY(), m.dest.getZ(),
-						goal, this, m.cost, this.player);
-				n.isDoingJump = m.jump;
-				smart.add(n);
-			}
-			return smart;
+		// THE generator. SmartMoves emits typed, already-body-validated moves (walk,
+		// ascend, descend, parkour, parkour-ascend, ladder, swim, slime bounce, diagonal,
+		// break-through, bridge, pillar), each priced in ticks.
+		//
+		// It used to be flag-gated behind `smartMoves` (default OFF) because it could not
+		// mine, bridge, climb or swim — those hooks lived in the blind scan's filter, which
+		// the early-return skipped. So the search had to choose between "~1086 candidates
+		// per expansion, capable but too slow to finish" and "8 candidates, fast but unable
+		// to do half the moves". Both branches failed the nav suite (3/10). The capabilities
+		// now live IN the generator, so there is one path and no choice to get wrong.
+		List<BlockNode> smart = new ArrayList<>();
+		for (SmartMoves.Move m : SmartMoves.generate(world, this.getBlockPos(),
+				this.player, this.toPlace)) {
+			BlockNode n = new BlockNode(m.dest.getX(), m.dest.getY(), m.dest.getZ(),
+					goal, this, m.cost, this.player);
+			n.isDoingJump = m.jump;
+			n.moveCost = m.cost;
+			n.toBreak = m.toBreak;
+			n.toPlace = m.toPlace;
+			smart.add(n);
 		}
+		return smart;
+	}
 
+	/** Legacy blind radius-8 scan — retained only until the unified generator has a
+	 *  full green nav suite, then deleted. Not reachable from getChildren any more. */
+	@Deprecated
+	private List<BlockNode> getChildrenLegacy(WorldView world, Goal goal, boolean generateDeep) {
 		List<BlockNode> nodes = getNodesIn3DCircule(8, this, goal, generateDeep);
 //		nodes.removeIf((child) -> {
 //			return shouldRemoveNode(world, child);

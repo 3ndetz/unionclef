@@ -179,15 +179,14 @@ public class BlockSpacePathFinder {
 		if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) Debug.logMessage("Searchin...");
 		start = new BlockNode(start.getBlockPos(), goal, player, world);
 
-		// Near-goal completion (smartMoves): the `failing` flag forces MIN_DIST_PATH
+		// Near-goal completion: the `failing` flag forces MIN_DIST_PATH
 		// progress from the start before isPathComplete may fire. But when the goal is
 		// ALREADY within MIN_DIST_PATH (a short receding-horizon re-plan next to the
 		// target), no node ever gets 5 blocks away, so `failing` stays true forever and
 		// the search "runs out of nodes" standing next to the goal. Reaching a close goal
 		// IS completion — clear failing up front. (The legacy buggy distances hid this by
 		// flipping failing instantly; gated so the legacy blind scan is untouched.)
-		if (kaptainwutax.tungsten.TungstenConfig.get().smartMoves
-				&& start.getPos().squaredDistanceTo(target) <= MIN_DIST_PATH * MIN_DIST_PATH) {
+		if (start.getPos().squaredDistanceTo(target) <= MIN_DIST_PATH * MIN_DIST_PATH) {
 			failing = false;
 		}
 
@@ -293,38 +292,21 @@ public class BlockSpacePathFinder {
         if (startNode == null) {
             return Optional.empty();
         }
-        if (kaptainwutax.tungsten.TungstenConfig.get().smartMoves) {
-            // SmartMoves rework: return the FURTHEST-progressed heuristically-best node
-            // as a partial path (graceful degradation) — correct, unlike the legacy
-            // inverted selection below which relies on the buggy distances.
-            BlockNode best = null;
-            double bd = -1;
-            for (int i = 0; i < COEFFICIENTS.length; i++) {
-                if (bestSoFar[i] == null) continue;
-                double dist = getDistFromStartSq(bestSoFar[i], startNode.getPos());
-                if (dist > bd) { bd = dist; best = bestSoFar[i]; }
-            }
-            if (best != null && bd > 1.0) {
-                List<BlockNode> path = generatePath(best, world);
-                if (path.size() > 1) return Optional.of(path);
-            }
-            return Optional.empty();
-        }
-        double bestDist = 0;
+        // Return the FURTHEST-progressed heuristically-best node as a partial path
+        // (graceful degradation). The legacy alternative here `continue`d whenever a node
+        // was the furthest so far, so it could only ever return a node that was NOT the
+        // best — an inverted selection that only "worked" because it was fed the broken
+        // distances from getDistFromStartSq. Both are gone. (Audit C2.3.)
+        BlockNode best = null;
+        double bd = -1;
         for (int i = 0; i < COEFFICIENTS.length; i++) {
-            if (bestSoFar[i] == null) {
-                continue;
-            }
+            if (bestSoFar[i] == null) continue;
             double dist = getDistFromStartSq(bestSoFar[i], startNode.getPos());
-            if (dist > bestDist) {
-                bestDist = dist;
-                continue;
-            }
-            if (dist > MIN_DIST_PATH * MIN_DIST_PATH) { // square the comparison since distFromStartSq is squared
-                BlockNode n = bestSoFar[i];
-				List<BlockNode> path = generatePath(n, world);
-				if (path.size() > 1) return Optional.of(path);
-            }
+            if (dist > bd) { bd = dist; best = bestSoFar[i]; }
+        }
+        if (best != null && bd > 1.0) {
+            List<BlockNode> path = generatePath(best, world);
+            if (path.size() > 1) return Optional.of(path);
         }
         return Optional.empty();
     }
@@ -342,10 +324,22 @@ public class BlockSpacePathFinder {
 	    return (Math.sqrt(dx * dx + dy * dy + dz * dz)) /** 3*/;
 	}
 	
+	/**
+	 * Standard A* relaxation: keep this child only if reaching it VIA {@code current} is
+	 * cheaper than any route found to it so far.
+	 *
+	 * <p>The old body was {@code double tentativeCost = child.cost + 1;} — it added one to
+	 * the CHILD's own cost rather than to the parent's, and every child was constructed
+	 * with cost 0, so every node in the graph ended up with g == 1 regardless of how long
+	 * its path actually was. Nothing accumulated, so the carefully computed mining/bridge/
+	 * ActionCosts prices were decorative and the search was really greedy best-first on the
+	 * heuristic alone. It also rewired {@code child.previous} unconditionally, which
+	 * corrupts the path the moment g means anything. (Audit 2026-07-27, C2.2.)
+	 */
 	private static void updateNode(BlockNode current, BlockNode child, Vec3d target, WorldView world) {
-	    Vec3d childPos = child.getPos();
-	    double tentativeCost = child.cost + 1; // Assuming uniform cost for each step
+		double tentativeCost = current.cost + child.moveCost;
 
+		// water is slow to move through, and swimming with a ceiling above is worse
 		if (BlockStateChecker.isAnyWater(child.getBlockState(world))) {
 			tentativeCost += 1.8;
 		}
@@ -353,26 +347,22 @@ public class BlockSpacePathFinder {
 			tentativeCost += 5.8;
 		}
 
-//	    tentativeCost += BlockStateChecker.isAnyWater(TungstenMod.mc.world.getBlockState(child.getBlockPos())) ? 50 : 0; // Assuming uniform cost for each step
+		if (tentativeCost >= child.cost) return;   // we already know a cheaper way here
 
-	    double estimatedCostToGoal = computeHeuristic(childPos, target, world);
-
-	    child.previous = current;
-	    child.cost = tentativeCost;
-	    child.estimatedCostToGoal = estimatedCostToGoal;
-	    child.combinedCost = child.cost + estimatedCostToGoal;
+		child.previous = current;
+		child.cost = tentativeCost;
+		child.estimatedCostToGoal = computeHeuristic(child.getPos(), target, world);
+		child.combinedCost = child.cost + child.estimatedCostToGoal;
 	}
 	
 	private static double getDistFromStartSq(BlockNode n, Vec3d start) {
-        // The original computed the Y and Z diffs from start.x (copy-paste bug) —
-        // garbage distances. Correcting it alone regresses the blind-scan search
-        // (course A depends on the garbage-driven partial paths), so the correct
-        // form is gated behind smartMoves: the SmartMoves rework uses correct
-        // distances, the legacy blind scan keeps the (buggy but working) behaviour.
-        boolean fix = kaptainwutax.tungsten.TungstenConfig.get().smartMoves;
+        // The original computed the Y and Z diffs from start.x — a copy-paste bug that
+        // produced garbage distances. It was left in place because the blind-scan search
+        // had come to DEPEND on the garbage (its partial-path selection only worked with
+        // the wrong numbers). Both the blind scan and that dependency are gone. (C2.3.)
         double xDiff = start.x - n.getPos().x;
-        double yDiff = (fix ? start.y : start.x) - n.getPos().y;
-        double zDiff = (fix ? start.z : start.x) - n.getPos().z;
+        double yDiff = start.y - n.getPos().y;
+        double zDiff = start.z - n.getPos().z;
         return xDiff * xDiff + yDiff * yDiff + zDiff * zDiff;
     }
 
@@ -419,7 +409,12 @@ public class BlockSpacePathFinder {
 	        boolean canGetFromLastNToCurrent = StreightMovementHelper.isPossible(TungstenModDataContainer.world, pi.getBlockPos(), pj.getBlockPos());
 	        double heightDiff = p.previous == null ? 0 : DistanceCalculator.getJumpHeight(p.previous.getPos(true).getY(), p.getPos(true).getY());
 
-	        if (canGetFromLastNToCurrent && !p.isDoingJump && !p.previous.isDoingJump && heightDiff == 0) {
+	        // NEVER string-pull away a node that carries a mine/pave plan: the plan is
+	        // consumed later by PathFinder/PathExecutor, and smoothing it out of the path
+	        // silently threw the whole bridge/break away between search and execution.
+	        boolean carriesPlan = p.hasBreaks() || p.hasPlaces();
+	        if (canGetFromLastNToCurrent && !carriesPlan && !p.isDoingJump
+	        		&& !p.previous.isDoingJump && heightDiff == 0) {
 	        	path.remove(j-1);
 	        } else {
 	        	i = j-1;
