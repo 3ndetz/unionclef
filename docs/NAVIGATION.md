@@ -187,9 +187,15 @@ normally sits one block below the bank. Entry only tested `isWater` at our own f
 and above, and the cell beside a pool at foot level is the AIR over the water — so a normal
 pool was never entered. Fixed: entry also tests one below, like the ordinary walk-down move.
 
-Course geometry was checked first, per the rule below, and this time the arena is FINE:
-`nav_water` carves y=FLOOR_Y-2..FLOOR_Y and fills it, i.e. a real 3-deep pool whose surface
-is one below the bank. The earlier note blaming the arena was wrong and is withdrawn.
+**Root C — the pool had no bottom.** Reading the builder was not enough; the run had to be
+traced. The arena floor is ONE layer thick over the void, so carving three blocks down left
+a floating cube of water with no bottom and no walls. With Roots A and B fixed the bot did
+enter and swim (`SPECIAL at (15,-61,0): water@feet=true` — mid-pool), then sank out through
+the missing bottom: `(12.6,-64,-4.2)` — below the pool floor AND outside its z range — and
+fell to y=-169. Fixed by building a solid block and carving the pool inside it.
+
+Note the sequence: "the arena looks fine when you read it" was itself wrong. Three courses
+have now turned out to be broken arenas. Read the builder AND trace the positions.
 
 **Known still-missing move — getting OFF a ladder.** The ladder branch climbs the column and
 steps onto an adjacent ladder, but has no move from a ladder cell onto an adjacent STANDABLE

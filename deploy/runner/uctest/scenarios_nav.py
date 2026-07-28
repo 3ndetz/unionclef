@@ -189,7 +189,12 @@ class NavWater(NavCourse):
 
     def course(self, arena, ctx):
         arena.floor(7, -3, 30, 3, "stone")
-        # carve a 6-wide, 3-deep pool and fill it
+        # A POOL NEEDS A CONTAINER. The arena floor is ONE layer thick over the void,
+        # so carving three blocks down leaves a floating cube of water with no bottom and
+        # no walls: the bot swims in, sinks straight out through the missing bottom and
+        # falls into the void (measured — it left the pool at y=-64, z=-4.2 and fell to
+        # y=-169). Build a solid block first, then carve the pool inside it.
+        arena._fill(11, FLOOR_Y - 3, -4, 18, FLOOR_Y, 4, "stone")
         arena._fill(12, FLOOR_Y - 2, -3, 17, FLOOR_Y, 3, "air")
         arena._fill(12, FLOOR_Y - 2, -3, 17, FLOOR_Y, 3, "water")
         return (26, STAND_Y, 0)
