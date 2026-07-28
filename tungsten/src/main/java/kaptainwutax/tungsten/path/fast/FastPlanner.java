@@ -244,7 +244,19 @@ public final class FastPlanner {
 
             scratch.set(current.x, current.y, current.z);
             double support = PlayerFit.supportTop(world, scratch);
-            if (Double.isNaN(support)) continue;   // cell became unstandable
+            if (Double.isNaN(support)) {
+                // NO FLOOR IS NOT THE SAME AS NO MOVE. Water and ladder cells are
+                // supportless BY DEFINITION, and special() is precisely the generator that
+                // does not need a floor. Dropping them here is what made every swim and
+                // every ladder route unplannable: special() emitted the node, and this line
+                // deleted it the moment it was popped, so it never expanded even once.
+                // Only the floor-based generators (step, diagonal) actually need `support`.
+                if (isWater(world, current.x, current.y, current.z, scratch)
+                        || isLadder(world, current.x, current.y, current.z, scratch)) {
+                    special(world, current, goal, map, open, scratch);
+                }
+                continue;   // genuinely unstandable
+            }
 
             expand(world, current, support, goal, map, open, scratch);
         }
@@ -302,14 +314,14 @@ public final class FastPlanner {
         // generator actually sees rather than assuming which branch is at fault.
         final boolean diagS = TungstenConfig.get().verboseDebugLogging;
         if (diagS) {
-            int feetY = from.y + 1;
+            int headY = from.y + 1;   // node.y is the FEET cell (planned from getBlockPos())
             boolean inW = isWater(world, from.x, from.y, from.z, scratch);
             boolean lad = isLadder(world, from.x, from.y, from.z, scratch);
-            boolean inW2 = isWater(world, from.x, feetY, from.z, scratch);
-            boolean lad2 = isLadder(world, from.x, feetY, from.z, scratch);
+            boolean inW2 = isWater(world, from.x, headY, from.z, scratch);
+            boolean lad2 = isLadder(world, from.x, headY, from.z, scratch);
             if (inW || lad || inW2 || lad2) {
                 Debug.logMessage(String.format(
-                        "SPECIAL at (%d,%d,%d): water@y=%b water@y+1=%b ladder@y=%b ladder@y+1=%b",
+                        "SPECIAL at (%d,%d,%d): water@feet=%b water@head=%b ladder@feet=%b ladder@head=%b",
                         from.x, from.y, from.z, inW, inW2, lad, lad2));
             }
         }
@@ -346,19 +358,24 @@ public final class FastPlanner {
                 }
             }
         } else {
-            // entering water from land
+            // Entering water from land. YOU STEP DOWN INTO A POOL — a pool's surface
+            // normally sits one block BELOW the bank you are standing on, exactly like the
+            // ordinary walk-down move. Looking only at our own foot level meant a normal
+            // pool was never entered at all: the cell beside us at foot level is the AIR
+            // above the water, not the water.
             for (int[] d : CARDINALS) {
                 int nx = from.x + d[0], nz = from.z + d[1];
-                boolean w0 = isWater(world, nx, from.y, nz, scratch);
-                boolean w1 = isWater(world, nx, from.y + 1, nz, scratch);
-                if (diagS && (w0 || w1)) {
-                    Debug.logMessage(String.format(
-                            "WATER-ENTRY from (%d,%d,%d) -> (%d,%d,%d): water@y=%b water@y+1=%b -> %s",
-                            from.x, from.y, from.z, nx, from.y, nz, w0, w1,
-                            w0 ? "EMITTED" : "SKIPPED (checked wrong level?)"));
+                int entry = Integer.MIN_VALUE;
+                for (int ny : new int[]{from.y, from.y - 1}) {
+                    if (isWater(world, nx, ny, nz, scratch)) { entry = ny; break; }
                 }
-                if (w0) {
-                    relax(map, open, from, nx, from.y, nz,
+                if (diagS && entry != Integer.MIN_VALUE) {
+                    Debug.logMessage(String.format(
+                            "WATER-ENTRY from (%d,%d,%d) -> (%d,%d,%d) EMITTED",
+                            from.x, from.y, from.z, nx, entry, nz));
+                }
+                if (entry != Integer.MIN_VALUE) {
+                    relax(map, open, from, nx, entry, nz,
                             ActionCosts.SWIM_ONE_BLOCK_COST, goal, true);
                 }
             }

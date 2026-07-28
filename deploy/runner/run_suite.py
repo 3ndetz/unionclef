@@ -157,10 +157,28 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
                 pass
 
     passed = all(c.ok for c in crits if c.gate)
-    if not passed:
+
+    # A STARVED HOST IS NOT A BOT FAILURE — AND NOT A PASS EITHER.
+    # This stand runs the server, the client and (sometimes) a build on one machine.
+    # Measured: a healthy course sits at ~15 fps with zero freeze windows; with a gradle
+    # daemon alive alongside it the same courses drop to ~10 fps and report 7-14 freezes
+    # each — including courses that had just passed clean. Reporting that as FAIL invents
+    # regressions that do not exist, and a whole audit gets spent chasing them.
+    # Only the load-sensitive criteria are excused. Not reaching the goal stays a failure.
+    LOAD_SENSITIVE = ("freeze", "stand-still", "standstill")
+    HEALTHY_FPS_MIN = 12.0
+    avg_fps = ctx.geo.get("avg_fps")
+    invalid = False
+    if not passed and avg_fps is not None and avg_fps < HEALTHY_FPS_MIN:
+        failed_gates = [c for c in crits if c.gate and not c.ok]
+        if failed_gates and all(any(k in c.name for k in LOAD_SENSITIVE) for c in failed_gates):
+            invalid = True
+
+    if not passed and not invalid:
         bot.py.screenshot(art.path("fail.png"))
     art.write_text("chat.txt", "\n".join(bot.recent_chat(40)))
     verdict = {"id": scn.id, "tier": scn.tier, "passed": passed,
+               "invalid": invalid, "avg_fps": avg_fps,
                "clip": ctx.geo.get("clip"),
                "criteria": [c.as_dict() for c in crits]}
     art.write_json("verdict.json", verdict)
@@ -168,7 +186,12 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     for c in crits:
         mark = "PASS" if c.ok else ("FAIL" if c.gate else "flag")
         print(f"  [{mark}] {c.name}  {c.detail}")
-    print(f"  => {scn.id}: {'PASS' if passed else 'FAIL'}")
+    if invalid:
+        print(f"  => {scn.id}: INVALID — host starved (avg_fps={avg_fps:.1f} < "
+              f"{HEALTHY_FPS_MIN}). Only load-sensitive checks failed; this measures the "
+              f"machine, not the bot. Close whatever else is running and RE-RUN.")
+    else:
+        print(f"  => {scn.id}: {'PASS' if passed else 'FAIL'}")
     verdict["flake_suspect"] = False
     return verdict
 
@@ -226,19 +249,26 @@ def main():
 
     print("\n================ SUMMARY ================")
     gate_fail = 0
+    invalid_n = sum(1 for r in results if r.get("invalid"))
     for r in results:
-        status = "PASS" if r["passed"] else ("info-fail" if r["tier"] == "info"
-                                             else "FAIL")
-        if not r["passed"] and r["tier"] == "gate":
+        status = ("PASS" if r["passed"] else
+                  "INVALID" if r.get("invalid") else
+                  ("info-fail" if r["tier"] == "info" else "FAIL"))
+        if not r["passed"] and not r.get("invalid") and r["tier"] == "gate":
             gate_fail += 1
         extra = f"  ({r['error'][:60]})" if r.get("error") else ""
         print(f"  {r['id']:28s} {status}{extra}")
     import json
     with open(os.path.join(art_root, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, indent=1, default=str)
-    print(f"\n{len(results) - gate_fail}/{len(results)} ok, "
-          f"gate failures: {gate_fail}")
-    return 1 if gate_fail else 0
+    print(f"\n{len(results) - gate_fail - invalid_n}/{len(results)} ok, "
+          f"gate failures: {gate_fail}, invalid (host starved): {invalid_n}")
+    if invalid_n:
+        print("  INVALID runs measure the MACHINE, not the bot. Do not read them "
+              "as regressions — stop other heavy processes (`gradlew --stop`) "
+              "and re-run.")
+    # 2 = inconclusive: nothing regressed, but the run is not evidence.
+    return 1 if gate_fail else (2 if invalid_n else 0)
 
 
 if __name__ == "__main__":

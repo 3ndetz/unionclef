@@ -164,7 +164,45 @@ assertion; since the pillar logs are clean that stall is BEFORE the hand-off, no
 pillar. Not chased without evidence — watch item. Note the shape of this bug — three complete,
 working mechanisms in a row, none of them reachable, each hidden behind the previous one.
 
-### `nav_water`, `nav_slime` — RED, and they fail one level earlier
+### The dead special moves (`nav_water`, `nav_slime`, `nav_ladder`)
+
+All three fail in the PLANNER, not the hand-off: the route never reaches the goal and
+carries no flagged waypoint at all (`complete=FALSE flagged=0`), i.e. the swim/ladder/bounce
+moves never make it into a plan.
+
+**Coordinate convention, measured, because it decides every check here:** `node.y` is the
+cell the player's FEET are in. `FastNavigator` plans from `player.getBlockPos()`, which is
+the floored entity position, and `PlayerFit.bodyFits(world, x, feetY, z)` takes an ABSOLUTE
+feet height. A diagnostic in `special()` claimed `feetY = node.y + 1` — that was wrong and
+has been corrected; `node.y + 1` is head height.
+
+**Root A — the search loop deleted every supportless node.** `plan()` popped a node, called
+`PlayerFit.supportTop`, and `continue`d on NaN. Water and ladder cells are supportless BY
+DEFINITION, so `special()` emitted them and the next line threw them away before they could
+expand even once. Fixed: a supportless cell that is water or ladder expands through
+`special()` (which needs no floor); anything else is still genuinely unstandable.
+
+**Root B — water entry looked at the wrong level.** You STEP DOWN into a pool: its surface
+normally sits one block below the bank. Entry only tested `isWater` at our own foot level
+and above, and the cell beside a pool at foot level is the AIR over the water — so a normal
+pool was never entered. Fixed: entry also tests one below, like the ordinary walk-down move.
+
+Course geometry was checked first, per the rule below, and this time the arena is FINE:
+`nav_water` carves y=FLOOR_Y-2..FLOOR_Y and fills it, i.e. a real 3-deep pool whose surface
+is one below the bank. The earlier note blaming the arena was wrong and is withdrawn.
+
+**Known still-missing move — getting OFF a ladder.** The ladder branch climbs the column and
+steps onto an adjacent ladder, but has no move from a ladder cell onto an adjacent STANDABLE
+cell. On `nav_ladder` the shelf top is beside the ladder top, so even with Root A fixed the
+bot can climb and then has nowhere to go. Not yet implemented — measure after Root A lands.
+
+### `nav_slime` — the arena is a bounce puzzle
+
+Reading the builder: the bot spawns on a pad at `FLOOR_Y+7` and must FALL ~8 blocks onto a
+slime pad at `FLOOR_Y`, bounce, and land on a ledge at `FLOOR_Y+4`. That is a genuinely
+harder problem than swimming — do it after water.
+
+### `nav_water` original failure notes
 
 ```
 nav_wall2:  PLAN n=19 complete=true  firstPhysics=12 flagged=1
