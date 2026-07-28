@@ -62,6 +62,7 @@ public final class FastNavigator {
     private static volatile boolean planning = false;
     private static BlockPos legTail = null;
     private static int stallTicks = 0;
+    private static int tickLog = 0;
     private static double lastDist = Double.MAX_VALUE;
 
     private FastNavigator() {}
@@ -112,6 +113,16 @@ public final class FastNavigator {
             return;
         }
 
+        if (TungstenConfig.get().verboseDebugLogging && (tickLog++ % 20) == 0) {
+            Debug.logMessage(String.format(
+                    "NAVSTATE walker=%b awaiting=%b pending=%s next=%s planning=%b pfActive=%b exec=%b",
+                    BlockPathWalker.isRunning(), awaitingPhysics,
+                    pendingPhysicsTarget == null ? "-" : "set",
+                    nextPhysicsTarget == null ? "-" : "set", planning,
+                    kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get(),
+                    kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()));
+        }
+
         if (BlockPathWalker.isRunning()) {
             // walking: make sure the FOLLOWING leg is being computed from the tail
             if (nextLeg == null && !planning && legTail != null) planAhead(legTail);
@@ -143,13 +154,29 @@ public final class FastNavigator {
             jump = null;
         }
         if (jump != null) {
-            pendingPhysicsTarget = null;
+            // Check BUSY *before* consuming the target. The other order threw the target
+            // away on any tick where physics happened to be working — and physics is busy
+            // almost always (a failing search runs the full 20 s budget), so the hand-off
+            // was destroyed before it could ever happen. Measured: the plan really does
+            // carry a flagged waypoint (firstPhysics=12, flagged=1), it was consumed here.
             if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
                     || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
-                return;   // physics already busy — let it finish this hop
+                return;   // physics busy — KEEP the target and retry next tick
             }
+            pendingPhysicsTarget = null;
             var world = TungstenMod.mc.world;
             if (world != null) {
+                // DIAGNOSTIC: four attempts to hook pillaring here failed with no output at
+                // all, so print the actual numbers this branch sees instead of guessing.
+                if (TungstenConfig.get().verboseDebugLogging) {
+                    double dRise = (jump.getY() + 0.5) - player.getEntityPos().y;
+                    double dHoriz = Math.hypot(jump.getX() + 0.5 - player.getEntityPos().x,
+                                               jump.getZ() + 0.5 - player.getEntityPos().z);
+                    Debug.logMessage(String.format(
+                            "HANDOFF target=(%d,%d,%d) rise=%.2f horiz=%.2f planPlace=%b",
+                            jump.getX(), jump.getY(), jump.getZ(), dRise, dHoriz,
+                            TungstenConfig.get().planPlaceMoves));
+                }
                 Debug.logMessage("FastNavigator: physics owns the jump -> "
                         + jump.getX() + "," + jump.getY() + "," + jump.getZ());
                 BlockPathWalker.stop();      // the walker must not fight the jump
@@ -238,6 +265,13 @@ public final class FastNavigator {
                     }
                 }
 
+                if (TungstenConfig.get().verboseDebugLogging) {
+                    int flagged = 0;
+                    for (var w : res.path) if (w.needsPhysics) flagged++;
+                    Debug.logMessage(String.format(
+                            "PLAN n=%d complete=%b firstPhysics=%d flagged=%d",
+                            res.path.size(), res.complete, res.firstPhysicsIndex(), flagged));
+                }
                 List<BlockPos> cells = res.positions();
                 // cut at the first waypoint that needs a real jump: the physics
                 // engine owns those (parkour), the walker must not run into one

@@ -185,6 +185,7 @@ class NavWater(NavCourse):
     out. Regression for the swim/surface moves (issue #24)."""
     id = "nav_water"
     duration = 120
+    settings = {"verboseDebugLogging": "true"}
 
     def course(self, arena, ctx):
         arena.floor(7, -3, 30, 3, "stone")
@@ -212,6 +213,7 @@ class NavLadder(NavCourse):
 class NavSlime(NavCourse):
     """Drop onto slime and bounce up to a ledge — the slime-bounce move."""
     id = "nav_slime"
+    settings = {"verboseDebugLogging": "true"}
     start_y = FLOOR_Y + 8
 
     def build(self, arena, ctx):
@@ -250,7 +252,7 @@ class NavWall2(NavCourse):
     id = "nav_wall2"
     duration = 120
     bot_kit = ["item replace entity {name} hotbar.0 with cobblestone 64"]
-    settings = {"planPlaceMoves": "true"}
+    settings = {"planPlaceMoves": "true", "verboseDebugLogging": "true"}
 
     def course(self, arena, ctx):
         arena.floor(7, -3, 11, 3, "stone")

@@ -149,6 +149,13 @@
   effect of delegation and never restores it. Same pattern for the pathfinder accept-thresholds.
 - [ ] **C7.6** Server-specific data hardcoded in Java source (`ButlerConfig` chat formats).
 
+### C9 — DOC LANGUAGE DEBT (my own violation, 2026-07-28)
+- [ ] **C9.1 `docs/NAVIGATION.md` is written in Russian** (591 lines). The language rule in
+  AGENTS.md and at the top of the checklist says ALL instructions/docs/checklists/code
+  comments are ENGLISH. I wrote that document — and the stop-hook text — in Russian while
+  editing the very rules meant to enforce this. The hook is fixed; the document still needs
+  translating.
+
 ### C8 — TEST ENVIRONMENT
 - [ ] **C8.1** The Mac stand (`mactrindetz.local`) is **not reachable from this session**: ssh key is
   rejected and the creds endpoint is blocked by the permission classifier. Local Windows docker has no

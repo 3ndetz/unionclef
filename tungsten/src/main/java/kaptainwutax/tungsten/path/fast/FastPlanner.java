@@ -297,6 +297,22 @@ public final class FastPlanner {
      */
     private static void special(WorldView world, Node from, BlockPos goal,
                                 NodeMap map, Heap open, BlockPos.Mutable scratch) {
+        // DIAGNOSTIC: measured that water/slime routes come out incomplete with ZERO
+        // flagged waypoints, i.e. these moves never reach the plan. Print what this
+        // generator actually sees rather than assuming which branch is at fault.
+        final boolean diagS = TungstenConfig.get().verboseDebugLogging;
+        if (diagS) {
+            int feetY = from.y + 1;
+            boolean inW = isWater(world, from.x, from.y, from.z, scratch);
+            boolean lad = isLadder(world, from.x, from.y, from.z, scratch);
+            boolean inW2 = isWater(world, from.x, feetY, from.z, scratch);
+            boolean lad2 = isLadder(world, from.x, feetY, from.z, scratch);
+            if (inW || lad || inW2 || lad2) {
+                Debug.logMessage(String.format(
+                        "SPECIAL at (%d,%d,%d): water@y=%b water@y+1=%b ladder@y=%b ladder@y+1=%b",
+                        from.x, from.y, from.z, inW, inW2, lad, lad2));
+            }
+        }
         // ── ladders: climb the column we are in, or step onto an adjacent one ──
         if (isLadder(world, from.x, from.y, from.z, scratch)) {
             for (int dy : new int[]{1, -1}) {
@@ -333,7 +349,15 @@ public final class FastPlanner {
             // entering water from land
             for (int[] d : CARDINALS) {
                 int nx = from.x + d[0], nz = from.z + d[1];
-                if (isWater(world, nx, from.y, nz, scratch)) {
+                boolean w0 = isWater(world, nx, from.y, nz, scratch);
+                boolean w1 = isWater(world, nx, from.y + 1, nz, scratch);
+                if (diagS && (w0 || w1)) {
+                    Debug.logMessage(String.format(
+                            "WATER-ENTRY from (%d,%d,%d) -> (%d,%d,%d): water@y=%b water@y+1=%b -> %s",
+                            from.x, from.y, from.z, nx, from.y, nz, w0, w1,
+                            w0 ? "EMITTED" : "SKIPPED (checked wrong level?)"));
+                }
+                if (w0) {
                     relax(map, open, from, nx, from.y, nz,
                             ActionCosts.SWIM_ONE_BLOCK_COST, goal, true);
                 }
@@ -408,14 +432,35 @@ public final class FastPlanner {
         for (int dy = CLIMB_MAX; dy >= -MAX_FALL; dy--) {
             scratch.set(nx, from.y + dy, nz);
             double top = PlayerFit.supportTop(world, scratch);
+            // DIAGNOSTIC: four attempts to make a 2-block ledge reachable failed because the
+            // candidate was rejected somewhere in here and nobody knew where. Print the exact
+            // check that kills a would-be climb instead of guessing at it again.
+            boolean diag = TungstenConfig.get().verboseDebugLogging
+                    && !Double.isNaN(top) && (top - support) > 1.25;
             if (Double.isNaN(top)) continue;
             double rise = top - support;
-            if (rise > CLIMB_MAX) continue;                              // out of reach entirely
-            if (!PlayerFit.bodyFits(world, nx + 0.5, top, nz + 0.5)) continue;
+            if (rise > CLIMB_MAX) {
+                if (diag) Debug.logMessage(String.format(
+                        "CLIMB rejected at (%d,%d): rise %.2f > CLIMB_MAX %d", nx, nz, rise, CLIMB_MAX));
+                continue;                                                // out of reach entirely
+            }
+            if (!PlayerFit.bodyFits(world, nx + 0.5, top, nz + 0.5)) {
+                if (diag) Debug.logMessage(String.format(
+                        "CLIMB rejected at (%d,%d): body does not fit at top %.2f (rise %.2f)",
+                        nx, nz, top, rise));
+                continue;
+            }
+            if (diag) Debug.logMessage(String.format(
+                    "CLIMB candidate at (%d,%d) rise %.2f top %.2f — passed fit (planPlace=%b)",
+                    nx, nz, rise, top, TungstenConfig.get().planPlaceMoves));
             if (rise > PlayerFit.STEP_HEIGHT) {
                 // needs a jump: head clearance above the origin cell
                 scratch.set(from.x, from.y, from.z);
-                if (!PlayerFit.passableAt(world, scratch, support + 0.6)) continue;
+                if (!PlayerFit.passableAt(world, scratch, support + 0.6)) {
+                    if (diag) Debug.logMessage(String.format(
+                            "CLIMB rejected at (%d,%d): no head clearance over origin", nx, nz));
+                    continue;
+                }
             }
             // Above a plain jump the ONLY real way up is to pillar — place a block under
             // yourself — and this planner emits no place moves, so without them such a
@@ -425,7 +470,13 @@ public final class FastPlanner {
             // physics burned its whole budget reporting "goal unreachable". Only offer it
             // when pillaring is actually available.
             boolean climb = rise > PlayerFit.JUMP_HEIGHT;
-            if (climb && !TungstenConfig.get().planPlaceMoves) continue;
+            if (climb && !TungstenConfig.get().planPlaceMoves) {
+                if (diag) Debug.logMessage(String.format(
+                        "CLIMB rejected at (%d,%d): planPlaceMoves is OFF", nx, nz));
+                continue;
+            }
+            if (diag) Debug.logMessage(String.format(
+                    "CLIMB EMITTED at (%d,%d) rise %.2f climb=%b", nx, nz, rise, climb));
             double cost = baseCost
                     + (rise > PlayerFit.STEP_HEIGHT ? ActionCosts.JUMP_PENALTY : 0)
                     + (climb ? ActionCosts.JUMP_PENALTY * 2 * rise : 0)

@@ -207,7 +207,7 @@ public class PathFinder {
 		search(world, start, target, player, 0);
 	}
 
-	private void search(WorldView world, Node start, Vec3d target, PlayerEntity player, int failedAttempts) {
+	private void search(WorldView world, Node start, Vec3d targetIn, PlayerEntity player, int failedAttempts) {
 	    boolean failing = true;
 	    TungstenModRenderContainer.RENDERERS.clear();
 
@@ -220,24 +220,24 @@ public class PathFinder {
 	    long lastProgressMs = startTime;
 		numNodesConsidered.set(0);
 	    int timeCheckInterval = 1 << 3;
-	    double minVelocity = BlockStateChecker.isAnyWater(world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ()))) ? 0.2 :  0.07;
+	    double minVelocity = BlockStateChecker.isAnyWater(world.getBlockState(new BlockPos((int) targetIn.getX(), (int) targetIn.getY(), (int) targetIn.getZ()))) ? 0.2 :  0.07;
 	
-	    if (player.getEntityPos().distanceTo(target) < 1.0 && minDistPath >= MIN_DIST_PATH) {
+	    if (player.getEntityPos().distanceTo(targetIn) < 1.0 && minDistPath >= MIN_DIST_PATH) {
 	        Debug.logMessage("Already at target location!");
 	        return;
 	    }
 	    if (start == null) {
 		    	if (overrideStartPos != null) {
-		    		start = initializeStartNodeFromPos(player, overrideStartPos, target);
+		    		start = initializeStartNodeFromPos(player, overrideStartPos, targetIn);
 		    		overrideStartPos = null; // consumed
 		    	} else {
-		    		start = initializeStartNode(player, target);
+		    		start = initializeStartNode(player, targetIn);
 		    	}
 		    	this.start = start;
 	    }
 	    if (blockPath.isEmpty()) {
 		    long tBlock0 = TungstenConfig.get().debugTime ? System.nanoTime() : 0;
-		    Optional<List<BlockNode>> blockPath = findBlockPath(world, target, player);
+		    Optional<List<BlockNode>> blockPath = findBlockPath(world, targetIn, player);
 		    if (blockPath.isPresent()) {
 	        	RenderHelper.renderBlockPath(blockPath.get(), NEXT_CLOSEST_BLOCKNODE_IDX.get());
 	        	PathFinder.blockPath = blockPath;
@@ -272,6 +272,32 @@ public class PathFinder {
 	        return;
 	    }
 
+	    // DIAGNOSTIC (behind verboseDebugLogging): dump the guide the physics search is about
+	    // to work with, together with the bot's real position. Three attempts to hook the
+	    // pillar mechanism failed because a condition over these nodes never matched, and
+	    // guessing at their coordinate convention has already produced two off-by-one bugs
+	    // today. Print them instead of assuming.
+	    if (TungstenConfig.get().verboseDebugLogging && blockPath.isPresent()) {
+	        StringBuilder sb = new StringBuilder();
+	        Vec3d me = player.getEntityPos();
+	        sb.append(String.format("GUIDE bot=(%.1f,%.1f,%.1f) n=%d:",
+	                me.x, me.y, me.z, blockPath.get().size()));
+	        int shown = 0;
+	        for (BlockNode n : blockPath.get()) {
+	            Vec3d np = n.getPos(true, world);
+	            sb.append(String.format(" (%.1f,%.1f,%.1f)", np.x, np.y, np.z));
+	            if (++shown >= 4) { sb.append(" ..."); break; }
+	        }
+	        // ALSO the tail: whether the guide ends at the obstacle or on top of it is the
+	        // whole question, and printing only the head hid it for four attempts.
+	        int n = blockPath.get().size();
+	        for (int i = Math.max(n - 3, shown); i < n; i++) {
+	            Vec3d np = blockPath.get().get(i).getPos(true, world);
+	            sb.append(String.format(" END(%.1f,%.1f,%.1f)", np.x, np.y, np.z));
+	        }
+	        Debug.logMessage(sb.toString());
+	    }
+
 	    // At the gap: the guidance is a stub the physics search starves on (can't sim onto
 	    // a not-yet-placed floor). Skip the physics leg — hand the executor an empty path
 	    // with the place queue; bridging starts immediately and the goto retry drives the
@@ -293,6 +319,37 @@ public class PathFinder {
 	        PathFinder.blockPath = Optional.empty();
 	        return;
 	    }
+
+	    // A break/place plan means the guide was TRUNCATED at an obstacle, so the real goal
+	    // sits behind something that does not exist yet — an unmined wall, an unbuilt floor,
+	    // the far side of a pool or a bounce. Searching for it cannot succeed, and the
+	    // search dutifully spends its whole 20 s budget before reporting "goal unreachable":
+	    // measured at 180 such attempts on nav_break and 232 on nav_slime, i.e. the entire
+	    // run wasted. The shortcuts above only rescue the case where the bot is ALREADY at
+	    // the obstacle.
+	    //
+	    // From further out the physics leg's job is just to DELIVER the bot to the obstacle;
+	    // the matching mechanism (mining / bridging / swimming) then changes the world and
+	    // the route is recomputed. So aim at the end of the truncated guide, not through it.
+	    //
+	    // NOTE ON SHAPE: `target` is captured by a lambda further down and must stay
+	    // effectively final, so the parameter is `targetIn` and the effective target is this
+	    // final local. Every use below is unchanged.
+	    Vec3d approach = targetIn;
+	    boolean obstaclePlanned = (pendingBreaks != null && !pendingBreaks.isEmpty())
+	            || (pendingPlaces != null && !pendingPlaces.isEmpty());
+	    if (obstaclePlanned && !blockPath.get().isEmpty()) {
+	        Vec3d stubEnd = blockPath.get().get(blockPath.get().size() - 1).getPos(true, world);
+	        if (stubEnd.distanceTo(targetIn) > 1.5) {
+	            approach = stubEnd;
+	            if (TungstenConfig.get().verboseDebugLogging) {
+	                Debug.logMessage(String.format(
+	                        "Obstacle ahead — physics aims at the approach point (%.1f,%.1f,%.1f)",
+	                        approach.x, approach.y, approach.z));
+	            }
+	        }
+	    }
+	    final Vec3d target = approach;
 
 	    bestHeuristicSoFar = initializeBestHeuristics(this.start);
 	    openSet = new BinaryHeapOpenSet();

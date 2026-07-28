@@ -1,288 +1,194 @@
-# Как бот ходит — карта движков
+# How the bot moves — the engine map
 
-> Этот документ существует потому, что 2026-07-27 я переделал «поиск маршрута», а бот
-> не изменил поведение вообще: переделанный движок оказался **не тем**, который водит
-> бота. Разбираться пришлось экспериментом. Если этот файл устарел — чините его первым.
+> This file exists because on 2026-07-27 a whole session was spent reworking "the
+> pathfinder" and the bot's behaviour did not change at all: the engine that was reworked
+> is not the one that drives the bot. It took an experiment to find that out. If this file
+> is out of date, fix it first.
 
-## Короткий ответ
+Everything below is **measured**, not assumed. Intermediate hypotheses that later
+measurements disproved have been deleted rather than left to mislead.
 
-На одну команду `;goto` запускаются **два независимых конвейера одновременно**, и бота
-двигает не тот, который считает «настоящий» маршрут.
+---
+
+## Short answer
+
+One `;goto` starts **two independent pipelines at once**, and the one that moves the bot is
+not the one computing the "real" route.
 
 ```
 ;goto X Y Z
    │
-   ├── КОНВЕЙЕР A (быстрый, он и ходит)
-   │      FastNavigator ──> FastPlanner        (планирует отрезок)
+   ├── PIPELINE A (fast — this is what walks)
+   │      FastNavigator ──> FastPlanner            (plans a leg)
    │                            │
-   │                            └──> BlockPathWalker.startBFS(отрезок)  ← ЭТО двигает бота
-   │                                 (просто идёт по ДАННЫМ ему точкам,
-   │                                  своего поиска у него нет)
+   │                            └──> BlockPathWalker.startBFS(leg)   ← MOVES THE BOT
+   │                                 (walks the cells it is GIVEN;
+   │                                  it has no search of its own)
    │
-   └── КОНВЕЙЕР B (медленный, «правильный»)
+   └── PIPELINE B (slow, the "proper" one)
           PathFinder.findBlockPath
-             ├── FastPlanner              (если успел за 250 мс — берём его)
-             └── BlockSpacePathFinder     (иначе — legacy-поиск)
+             ├── FastPlanner              (used if it finishes inside 250 ms)
+             └── BlockSpacePathFinder     (legacy fallback)
                         │
-                        └──> PathFinder (физический A*, симуляция игрока)
-                                 └──> PathExecutor (воспроизведение записанных клавиш)
+                        └──> PathFinder (physics A*, simulates the player)
+                                 └──> PathExecutor (replays the recorded inputs)
 ```
 
-Оба конвейера пишут **одни и те же клавиши движения**. Кто победит — зависит от того,
-кто последним записал.
+Both pipelines write **the same movement keys**. Whoever wrote last, wins.
 
-## Четыре поисковика, а не три
+They are **not** redundant copies: they are load-bearing for each other. Removing the
+parallel physics search from `GotoCommand` was tried and it **broke `nav_gaps`** — gap jumps
+are currently executed by that parallel search, not by a hand-off from the navigator.
 
-| движок | что это | когда появился | кто его вызывает |
+## Four search engines, not three
+
+| engine | what it is | added | who calls it |
 |---|---|---|---|
-| `CombatPathfinder` | grid BFS, 800 нод, радиус 25, **без прыжков**, СИНХРОННО в клиентском тике | 2026-03 (для боя) | `FollowEntityTask` (погоня) и altoclef `CustomBaritoneGoalTask`. В `;goto` НЕ участвует |
-| `FastPlanner` | Блочный A*: типизированные ходы, честное накопление стоимости, допустимая эвристика, проверка телом | 2026-07-25, задача PIPE-1 | `FastNavigator`, и как первая попытка в `PathFinder.findBlockPath` |
-| `BlockSpacePathFinder` | Блочный A*: слепой скан радиуса 8 (~1086 кандидатов), **стоимости не накапливаются**, эвристика в других единицах | изначальный коммит | запасной вариант в `findBlockPath` |
-| `PathFinder` | Физический A*: симулирует реального игрока (~192 симуляции на раскрытие) | изначальный коммит | конвейер B |
+| `CombatPathfinder` | grid BFS, 800 nodes, radius 25, **no jumps**, runs SYNCHRONOUSLY on the client tick | 2026-03, for combat | `FollowEntityTask` (chase) and altoclef `CustomBaritoneGoalTask`. NOT part of `;goto` |
+| `FastPlanner` | block A*: typed moves, real g accumulation, admissible heuristic, `PlayerFit` body checks | 2026-07-25 (PIPE-1) | `FastNavigator`, and as the first attempt inside `PathFinder.findBlockPath` |
+| `BlockSpacePathFinder` | block A*: blind radius-8 scan (~1086 candidates), **no cost accumulation**, heuristic in different units | initial commit | fallback inside `findBlockPath` |
+| `PathFinder` | physics A*: simulates a real player (~192 sims per expansion) | initial commit | pipeline B |
 
-`FastPlanner` и `BlockSpacePathFinder` **делают одну и ту же работу**, причём первый
-сделан правильно, а второй — нет. Второй не удалили при вводе первого.
+`FastPlanner` and `BlockSpacePathFinder` do **the same job**; the first is correct, the
+second is not, and the second was never removed when the first arrived.
 
-## Что показал эксперимент
+## Log fingerprints — which engine is talking
 
-Прогон `nav_flat` (проходит) и `nav_gaps` (падает), лог мода:
+⚠️ Read `docker logs uctest-mc-tester1`, **not** the in-game chat: the chat overflows and
+drops lines silently (`Tungsten: Chat overflow, message dropped`). Several conclusions this
+session were wrong because a line was missing from the chat, not from the run.
 
-```
-nav_flat:   Walker: BFS 31 wp -> Path armed 3.1 blocks ahead
-            -> Time taken to find path: 965ms -> FastNavigator: arrived (1.8)
-
-nav_gaps:   Walker: BFS 2 wp     (x15, подряд)
-            -> FastNavigator: no progress, handing over
-```
-
-`Walker: BFS 2 wp` пятнадцать раз подряд. `startBFS` получает точки ИЗВНЕ — значит это
-`FastPlanner` каждый раз отдаёт отрезок из 2 точек. Так и должно быть: отрезок **режется
-на первом прыжке**, потому что прыжок должен исполнить физический движок.
-
-**Но передачи физике НЕ СУЩЕСТВУЕТ.** `FastNavigator.nextLegNeedsPhysics` —
-переменная, которая записывается (строки 81, 170, 172) и **не читается ни разу**.
-Проверяется одной командой:
-
-```
-grep -n "nextLegNeedsPhysics" FastNavigator.java
-56:  private static volatile boolean nextLegNeedsPhysics = false;   // объявление
-81:      nextLegNeedsPhysics = false;                               // сброс
-170:                     nextLegNeedsPhysics = true;                // запись
-172:                     nextLegNeedsPhysics = false;               // запись
-```
-
-Поэтому бот доходит до края ямы, отрезок кончается, прыжок **не исполняет никто**,
-`FastNavigator` крутит переплан по 2 точки, пока не сработает сторож простоя
-(`no progress, handing over`) — и просто останавливается.
-
-Отдельная проверка: с `fastBlockFirst=false` поведение меняется и в логе появляется
-`Ran out of nodes` — сообщение `BlockSpacePathFinder`. Это доказывает, что по умолчанию
-маршрут строит не он.
-
-## Почему полоса препятствий 3/10
-
-| курс | почему падает |
+| log line | engine |
 |---|---|
-| `nav_gaps`, `nav_steep` | отрезок корректно режется на прыжке, но **передачи физике не существует** — `nextLegNeedsPhysics` никем не читается, прыжок не исполняет никто |
-| `nav_ladder`, `nav_water`, `nav_slime` | ни у `CombatPathfinder`, ни у `FastPlanner` нет ходов «лестница», «плыть», «отскок» |
-| `nav_break`, `nav_wall2` | ни у одного из двух ходячих движков нет ходов «сломать» и «поставить». Они есть только в `BlockSpacePathFinder`, который бота не водит |
-
-То есть **все семь провалов объясняются одним**: ходы есть не в том движке.
-
-## Что с этим делать (стратегия, не заплатки)
-
-1. **Один блочный планировщик.** `FastPlanner` — база (он уже правильный). Перенести в
-   него недостающие ходы: лестница, вода, слайм, сломать, поставить, пиллар.
-   `BlockSpacePathFinder` после этого удалить.
-2. **`BlockPathWalker` не должен иметь своего поисковика.** Он должен исполнять путь,
-   который ему дали, а не искать свой через боевой BFS. `CombatPathfinder` вернуть в бой.
-3. **Один конвейер, а не два параллельных.** Физический A* — это не второй маршрутизатор,
-   а исполнитель отрезков, помеченных `needsPhysics`.
-4. **Один владелец клавиш** (см. `CombatMoveIntent` в бою — та же схема нужна навигации).
-
-Порядок именно такой: пока ходов нет в том движке, который водит, любая правка стоимостей
-и эвристик ни на что не влияет — это проверено на себе.
-
-## Правило для будущих правок
-
-**Перед тем как что-то чинить в поиске — доказать экспериментом, что этот код исполняется.**
-Дёшево: пин настройки (`;settings <flag> false`) + отпечаток в логе.
-
-Отпечатки:
-
-| строка в логе | движок |
-|---|---|
-| `Walker: BFS N wp`, `Walker: direct→target` | `BlockPathWalker` (+ `CombatPathfinder`) |
-| `FastNavigator: arrived`, `no progress, handing over` | `FastNavigator` (+ `FastPlanner`) |
+| `Walker: BFS N wp`, `Walker: direct→target` | `BlockPathWalker` |
+| `FastNavigator: arrived`, `no progress, handing over` | `FastNavigator` / `FastPlanner` |
 | `Found rought path!`, `Ran out of nodes`, `Partial path` | `BlockSpacePathFinder` |
-| `Time taken to find path`, `Failed!`, `At the wall — mining` | `PathFinder` (физический) |
+| `Time taken to find path`, `Failed!`, `At the wall — mining` | `PathFinder` (physics) |
 | `Mining done — passage open`, `Bridge place aborted` | `PathExecutor` |
 
----
+### Diagnostics left in the code (all behind `verboseDebugLogging`)
 
-## Незакрытое: лестница / вода / слайм (состояние на 2026-07-28)
+These are what finally located the roots after a string of wrong guesses. Keep them.
 
-Три курса (`nav_ladder`, `nav_water`, `nav_slime`) красные. Три итерации подряд не
-сдвинули цифру — по чеклисту это сигнал СМЕНИТЬ ПОДХОД, а не продолжать правки.
-
-**Что уже установлено (не гадать заново):**
-- Физические ходы `ClimbALadderMove`, `SwimmingMove`, `SlimeBounceMove`, `DivingMove`,
-  `EnterWaterAndSwimMove` СУЩЕСТВУЮТ и ПОДКЛЮЧЕНЫ — `Node.java:134/153/163`.
-  «Руки» есть.
-- Они гейтятся по `nextBlockNode` — то есть по БЛОЧНОЙ ПОДСКАЗКЕ. Если клетки лестницы
-  в подсказку не попадают, ни один из этих ходов не выстрелит никогда.
-- В `FastPlanner` ходы лестницы/воды/слайма добавлены (метод `special()`), помечены
-  `viaJump` -> `needsPhysics`.
-- Координатное соглашение УСТАНОВЛЕНО ТОЧНО: `PlayerFit.supportTop(cell)` смотрит на
-  `cell.down()`, значит **y ноды — это клетка НОГ**, опора на `y-1`.
-  (Попытка «поправить» на обратное была ошибкой и откачена.)
-- `physicsRunEnd` добавлен: физике передаётся ДАЛЬНЯЯ сторона физического участка,
-  а не первая его клетка (первая клетка лестницы вровень с ботом = no-op).
-
-**ЭТОТ ВОПРОС ЗАКРЫТ ЭКСПЕРИМЕНТОМ (2026-07-28):** ходы лестницы ЭМИТЯТСЯ.
-Физике передаётся `9,-56,0` — ВЕРХ лестницы (сама лестница y=-60..-56), и физика
-НАХОДИТ путь: `Time taken to find path: 56ms / 25ms / 13ms`. Значит планировщик и
-поиск в порядке, ломается ИСПОЛНЕНИЕ.
-
-**СЛЕДУЮЩАЯ ГИПОТЕЗА (проверять экспериментом, НЕ правкой):**
-`ClimbALadderMove.generateMove` (specialMoves/ClimbALadderMove.java:24-45) формирует
-ввод `PathInput(false,false,false,false,true,false,false, agent.pitch, agent.yaw)` —
-то есть жмёт ТОЛЬКО ПРЫЖОК, «вперёд» не жмёт никогда, и берёт ТЕКУЩИЙ угол взгляда
-вместо «лицом к лестнице». В Minecraft по лестнице лезут, удерживая ВПЕРЁД в неё.
-Первая нода вообще со всеми ложными входами (никакого движения).
-
-Проверить: включить `verboseDebugLogging` и посмотреть, растёт ли y агента внутри
-этого хода в симуляции. Если не растёт — ввод неверный, и это корень.
-
-Симптом для сверки: бот доходит до x=9 (основание лестницы) и стоит там до конца
-прогона, `final_dist=7.1`.
-
----
-
-## Состояние пяти красных курсов (2026-07-28, счёт 5/10)
-
-| курс | что нужно | статус диагностики |
+| line | where | answers |
 |---|---|---|
-| `nav_ladder` | подъём по лестнице | ходы ЭМИТЯТСЯ (доказано: физике идёт `9,-56,0` = верх лестницы), путь НАХОДИТСЯ (56/25/13 мс), физика лазать УМЕЕТ (`Agent.java:616/719/735`). `ClimbALadderMove` починен (вперёд+прыжок лицом к лестнице вместо только прыжка). ВСЁ РАВНО КРАСНЫЙ — не хватает чего-то ещё в исполнении |
-| `nav_water` | плавание | ходы добавлены в `FastPlanner.special()`, физические ходы существуют (`SwimmingMove`/`DivingMove`/`EnterWaterAndSwimMove`, `Node.java:158-166`). Не диагностирован отдельно |
-| `nav_slime` | отскок от слайма | ход добавлен в `FastPlanner.special()`, `SlimeBounceMove` подключён (`Node.java:153`). Не диагностирован отдельно |
-| `nav_break` | сломать стену | **В `FastPlanner` НЕТ НИ ОДНОГО упоминания слома** (проверено grep: allowBreak/BreakRules/toBreak — ноль). Способности нет. Лог: `Walker: BFS 14 wp` -> `Search gave up: goal unreachable after 20s` |
-| `nav_wall2` | поставить блок / пиллар | там же: постановки в `FastPlanner` нет |
+| `GUIDE bot=(...) n=... END(...)` | `PathFinder.search` | what guide the physics search gets, head **and tail** |
+| `CLIMB EMITTED` / `CLIMB rejected at ...` | `FastPlanner.step` | whether a climb is generated, and which check kills it |
+| `PLAN n=... complete=... firstPhysics=... flagged=...` | `FastNavigator.planAhead` | is the plan complete, are any waypoints flagged for physics |
+| `NAVSTATE walker=... awaiting=... pending=... pfActive=...` | `FastNavigator.tick` | why a hand-off does or does not fire |
+| `HANDOFF target=(...) rise=... horiz=...` | `FastNavigator` | the numbers the hand-off branch actually sees |
+| `SPECIAL at ...`, `WATER-ENTRY ...` | `FastPlanner.special` | whether ladder/water moves are reached at all |
 
-**Ключевое для `nav_break` / `nav_wall2`:** это не сломанный код, а ОТСУТСТВУЮЩАЯ
-способность в том планировщике, который водит бота. Логика слома/постановки со
-стоимостями написана в `SmartMoves` (см. историю коммита `ca39af9`, откачен как
-приложенный не к тому движку) — её надо перенести в `FastPlanner`.
+**Printing only the HEAD of a path hid the answer for four attempts.** Print the tail too.
 
-Сложность переноса: `FastPlanner.Waypoint` умеет нести только `pos` + `needsPhysics`.
-Для слома/постановки ему нужны списки клеток `toBreak`/`toPlace`, и их надо протащить
-через `toBlockNodes()` в `BlockNode.toBreak`/`toPlace`, которые уже читает
-`PathFinder.truncateAtBreaks` и исполняет `PathExecutor.tickBreaking`/`tickPlacing`.
-То есть приёмная сторона ГОТОВА — не хватает только производителя и канала передачи.
+---
 
+## Rules learned the hard way
 
-## nav_break: где именно рвётся цепочка (2026-07-28)
+1. **Before fixing anything, prove by experiment that the code runs.** Breaking this cost a
+   whole session (the wrong engine was reworked) and three off-by-one bugs.
+2. **Open the function before calling it.** Three bugs in one day came from assuming a
+   signature: an inverted coordinate convention, a support check one level too low, and
+   `passableAt(cell, 0.1)` — whose third argument is an ABSOLUTE world height, so it asked
+   "does the body fit at y=0.1" (open sky, always true) and made a whole capability
+   unreachable.
+3. **A dead flag is a missing feature, not a detail.** Ten of the eleven roots found this
+   session were code that looks alive and never executes: a flag written and never read, a
+   message describing an action that does not happen, a task handed to itself, two waits
+   deadlocking each other, an unexecutable move, a silently discarded queue.
+4. **Changing approach is not changing target.** A half-done course gets finished. What
+   changes when you are stuck is HOW: stop patching, re-read the sources end to end until
+   you can explain the mechanism, then make one correct fix.
 
-Способность СЛОМА в `FastPlanner` добавлена и работает на уровне планирования:
-маршрут вырос 14 -> 26/31 точек, то есть планировщик ведёт СКВОЗЬ стену, и бот
-доходит до неё вплотную (x=13.7 при стене x=14). Раньше такого маршрута не было.
+---
 
-**Но добыча не стартует, и место разрыва установлено точно:**
-в логе НЕТ строки `Path needs mining: N block(s) at segment end`
-(`PathFinder.truncateAtBreaks`, PathFinder.java:853). Значит ни один узел переданного
-блок-пути не имеет `hasBreaks()` — план не доезжает до приёмника.
+## Course status
 
-Цепочка, которую надо проверить по звеньям (каждое звено — один grep/лог):
-1. `FastPlanner.breakThrough` действительно вызывает `relax(..., plan)`?
-2. `Node.toBreak` переживает перезапись в `relax` (там `next.toBreak = toBreak`, и при
-   более дешёвом маршруте БЕЗ слома план затрётся в null — ВЕРОЯТНЫЙ КОРЕНЬ)?
-3. `Waypoint.toBreak` не теряется при разворачивании пути?
-4. `toBlockNodes()` ставит `bn.toBreak`?
-5. `findBlockPath` вообще берёт результат FastPlanner (условие `complete || arrivesAnyway`)?
+**Suite score: 6/10.** Green and stable: `nav_flat`, `nav_staircase`, `nav_descend`,
+`nav_gaps`, `nav_steep`, `nav_break`.
 
-Подозрение №2 сильнее прочих: `relax` перезаписывает `toBreak` при КАЖДОМ улучшении
-стоимости, поэтому узел, до которого есть и «дешёвый обход», и «дорогой пролом»,
-потеряет план. В коридоре с барьерами обхода нет, но соседние узлы могут перезаписать.
+### `nav_break` — GREEN (previously never passed)
 
-### nav_break: следующий корень (2026-07-28, после починки хода слома)
+Breaking through a wall works end to end. Roots fixed, in order:
 
-Ход слома теперь РАБОТАЕТ и доказан по stdout:
-`FastPlanner: break-through planned at 14,-60,0 (2 block(s), 30 ticks)`.
-В одном из прогонов прошла вся цепочка: `Path needs mining` -> `At the wall — mining
-without a physics leg`. Значит механизм добычи достижим.
+- `FastPlanner` had **no notion of breaking at all** (grep for `allowBreak`/`BreakRules`/
+  `toBreak` returned nothing), so a wall across the only corridor was an unreachable goal.
+  The receiving half already existed: `BlockNode.toBreak` → `truncateAtBreaks` →
+  `PathExecutor.tickBreaking`. Only the producer and the channel were missing.
+- The cell-occupancy test used `passableAt(cell, 0.1)` — see rule 2 above — so every wall
+  block counted as already open and the move could never fire once.
+- The planner preferred to **climb over** a 2-block wall (~30) rather than mine it (~34.6),
+  but above jump height the only way up is to pillar, which this planner cannot emit. An
+  unexecutable move is worse than no move; such climbs are now only offered when pillaring
+  is actually available.
+- `PathExecutor` **silently wiped the mining queue** on the `stop` flag. A mining segment
+  runs with an EMPTY path, so a drift abort — a statement about a *replay* — has nothing to
+  say about it. Narrowed on the executor side; weakening the abort itself regressed
+  `nav_gaps` from a stable 6/6 to failing.
+- The physics search was aimed at the goal *behind* the wall and burned its full 20 s budget
+  (180 attempts per run). It is now aimed at the **approach point** — the end of the
+  truncated guide — so physics delivers the bot to the obstacle and the mining machinery
+  takes over.
 
-**НО прогоны НЕСТАБИЛЬНЫ, и виден конфликт двух путей исполнения:**
+### `nav_wall2` (2-block ledge, needs pillaring) — RED
 
-1. Клетка слома помечена `needsPhysics`, поэтому `FastNavigator` обрезает отрезок и
-   передаёт эту клетку физике как ЦЕЛЬ ХОДЬБЫ — `PATHFINDER.find(..., клетка_стены)`.
-   Но клетка стены СПЛОШНАЯ: войти в неё нельзя, физика ищет 20с и выдаёт
-   `Search gave up: goal unreachable after 20s`.
-2. Правильный путь другой: `findBlockPath` кладёт план в `pendingBreaks`, и в
-   `PathFinder.search` срабатывает шорткат «At the wall — mining without a physics leg»
-   (PathFinder.java:245), который отдаёт исполнителю ПУСТОЙ путь + `breakQueue`.
-   Условия шортката: `blockPath.size() <= 2` И расстояние до блока < 4.0.
+Everything except the hand-off is proven working:
 
-В логе также видно, что `FastNavigator-plan` строит один и тот же план ДЕСЯТКИ РАЗ
-за одну секунду — то есть цикл переплана не сходится.
-
-**Следующий шаг:** клетка слома НЕ должна передаваться физике как цель ходьбы.
-Либо не помечать её `needsPhysics` (тогда отрезок дойдёт до стены и шорткат сработает),
-либо в `FastNavigator` целью физики брать клетку ПЕРЕД стеной, а сам слом оставлять
-механизму `pendingBreaks`. Проверять по stdout: `Mining done — passage open`.
-
-**ВАЖНО про диагностику:** чат ПЕРЕПОЛНЯЕТСЯ и молча глотает строки
-(`Tungsten: Chat overflow, message dropped`). Все прошлые выводы «строки нет в чате,
-значит код не выполнялся» НЕНАДЁЖНЫ. Смотреть только `docker logs uctest-mc-tester1`.
-
-### nav_break: где остановились (конец сессии 2026-07-28)
-
-Последняя правка: клетка слома больше не становится целью ходьбы для физики
-(сплошной блок целью ходьбы быть не может) — вместо неё передаётся цель маршрута.
-
-РЕЗУЛЬТАТ: курс всё ещё красный, в логе 180 повторов `goal unreachable`, а шорткат
-`At the wall` не сработал НИ РАЗУ. Значит `pendingBreaks` был пуст на момент проверки
-в `PathFinder.search` — план добычи снова не доехал до приёмника.
-
-**НЕ ПРОВЕРЕНО (следующий заход начинает отсюда, ОТКРЫВ КОД, а не по памяти):**
-- берёт ли `findBlockPath` результат FastPlanner для ЭТОГО запроса, или проваливается
-  в legacy-поиск (условие `fast.complete || arrivesAnyway` и `size >= 2`);
-- доходит ли `w.toBreak` до `bn.toBreak` в `toBlockNodes()` на этом конкретном пути;
-- не затирается ли план в `relax()` более дешёвым маршрутом без слома.
-
-Проверять ОДНИМ логом на каждое звено (Debug в stdout, НЕ в чат — чат переполняется).
-
-СОСТОЯНИЕ ПОЛОСЫ: 5/10. Зелёные и стабильные: nav_flat, nav_staircase, nav_descend,
-nav_gaps, nav_steep. Красные: nav_break, nav_wall2, nav_ladder, nav_water, nav_slime.
-
-### nav_break: состояние после починки добычи (2026-07-28, конец сессии)
-
-**ДОБЫЧА РАБОТАЕТ ПОЛНОСТЬЮ.** Доказано по `docker logs`:
 ```
-At the wall                 2
-Mining done — passage open  1
+CLIMB EMITTED at (12,..) rise 2.00 climb=true                 the climb IS generated (406x)
+GUIDE ... END(16.5,-58.0) END(17.5,-58.0) END(18.5,-58.0)     the route REACHES the ledge top
+PLAN n=19 complete=true firstPhysics=12 flagged=1             flagged, and the leg IS cut there
+NAVSTATE walker=false awaiting=false pending=set pfActive=TRUE
 ```
-Цепочка замкнута: план -> передача -> старт -> ЗАВЕРШЕНИЕ. Проход в стене реально
-пробивается. Это результат трёх починок: ход слома (проверка занятости клетки),
-ходы-фантазии (подъём выше прыжка без пиллара), и молчаливое стирание очереди
-добычи флагом stop.
 
-**ОСТАВШИЙСЯ КОРЕНЬ — потеря времени, а не отсутствие способности:**
-в логе 180 повторов `goal unreachable`, по ~20с каждый (`HARD_SEARCH_CAP_MS`).
-Механизм: когда `pendingBreaks` установлен, `truncateAtBreaks` обрезает подсказку
-у стены и физика получает ОГРЫЗОК из 1-2 клеток, на котором голодает весь бюджет.
-Шорткат `At the wall` спасает ТОЛЬКО когда бот уже ближе 4.0 к блоку
-(PathFinder.java:264-266). Издалека шорткат не срабатывает -> 20 секунд впустую ->
-прогон (120с) заканчивается раньше, чем бот успевает пройти.
+**Root:** the hand-off is ready and correct on every tick, and refused on every tick because
+the single physics search engine is **busy**. `;goto` starts `PATHFINDER.find(goal)` in
+parallel with `FastNavigator`; that search targets the ledge top, which physics cannot climb,
+so it runs its full 20 s budget, restarts, and monopolises the engine forever.
 
-**СЛЕДУЮЩИЙ ШАГ:** когда `pendingBreaks` установлен, но бот ЕЩЁ ДАЛЕКО, физике
-надо давать целью ПОСЛЕДНЮЮ КЛЕТКУ ОБРЕЗАННОЙ ПОДСКАЗКИ (то есть точку перед
-стеной), а не недостижимую цель за стеной. Тогда бот подходит к стене, шорткат
-срабатывает, добыча пробивает проход, и goto возобновляется уже по открытому миру.
+`PillarTask` — the mechanism that would solve this — is fully implemented ("stay centred,
+jump, place a block under yourself while airborne"), ticked from `MixinClientPlayerEntity`,
+and exposed over py4j. Navigation never asks for it.
 
-Регрессия на момент записи: пять зелёных курсов PASS.
+**Tried and reverted:** removing the parallel `PATHFINDER.find(goal)` from `GotoCommand` —
+it broke `nav_gaps`. Order for the next attempt: (1) make gap jumps go through the
+navigator's hand-off instead of relying on the parallel search, verified on `nav_gaps`;
+(2) only then remove the parallel search; (3) then wire `PillarTask`.
 
-**ПОПЫТКА ПЕРЕНАЦЕЛИВАНИЯ (2026-07-28) — НЕ КОМПИЛИРУЕТСЯ, откачена:**
-переприсвоить `target` внутри `PathFinder.search` НЕЛЬЗЯ: он используется в лямбде
-(PathFinder.java:411) и должен быть effectively final. Правка требует либо новой
-переменной с заменой всех последующих использований, либо поля объекта, либо
-раннего перенацеливания ДО первой лямбды. Это осознанная переработка, не однострочник.
+### `nav_water`, `nav_slime` — RED, and they fail one level earlier
+
+```
+nav_wall2:  PLAN n=19 complete=true  firstPhysics=12 flagged=1
+nav_slime:  PLAN n=7  complete=FALSE firstPhysics=-1 flagged=0
+nav_water:  PLAN n=12 complete=FALSE firstPhysics=-1 flagged=0
+```
+
+These fail in the **planner**, not the hand-off: the route never reaches the goal and
+contains no flagged waypoint at all, i.e. the swim and bounce moves added to
+`FastPlanner.special()` never make it into a plan.
+
+Known arena caveat for `nav_water`: the course fills water from `FLOOR_Y-2` to `FLOOR_Y`,
+i.e. **below** the walking level, so the bot faces a hole with water at the bottom rather
+than water at its own level. Check the course geometry before blaming the engine — two
+courses have already turned out to be broken arenas rather than broken code.
+
+### `nav_ladder` — RED
+
+`ClimbALadderMove` exists and is wired (`Node.java:134`). It used to press **jump only**,
+with the agent's current yaw; a ladder is climbed by holding **forward into it**, which is
+what produces the `horizontalCollision` that `Agent.java:719` needs to grant climbing speed.
+Fixed to face the ladder and hold forward+jump — the course is still red, so something
+further along the chain remains.
+
+---
+
+## Where to fix things (strategy, not band-aids)
+
+1. **One block planner.** `FastPlanner` is the correct base; move the remaining capabilities
+   into it (ladder, water, slime, place/pillar). Delete `BlockSpacePathFinder` afterwards.
+2. **`BlockPathWalker` must not own a search.** It should execute the path it is given.
+   `CombatPathfinder` belongs to combat.
+3. **One pipeline, not two.** The physics A* is an executor for `needsPhysics` segments, not
+   a second router. Note the measured constraint: the pipelines are currently load-bearing
+   for each other, so this is a rework, not a deletion.
+4. **One key owner.** Combat already does this (`CombatMoveIntent`); navigation does not.

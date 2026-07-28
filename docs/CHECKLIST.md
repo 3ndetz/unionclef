@@ -84,8 +84,15 @@ Right after the test, answer in writing:
 2. **Which end goal did this advance, and by how much?**
 3. **Is this the right road?** Does it match the philosophy: core over band-aids, one engine
    instead of three, primitives over policy, no server-specific hardcode?
-4. **Are we treading water?** Two iterations with no movement in the numbers = CHANGE THE
-   APPROACH, do not keep hammering the same spot.
+4. **Are we treading water?** Two iterations with no movement in the numbers means the
+   APPROACH is wrong — **not** that the target is wrong.
+
+   ⛔ **CHANGING APPROACH IS NOT CHANGING TARGET.** You finish what you started: the course
+   goes green. Abandoning a half-done target and picking an easier one is forbidden — that
+   is how a project ends up with ten things at 80%. What changes is HOW you work it:
+   stop patching, stop guessing, go back and RE-READ the sources end to end until you can
+   explain the mechanism, then make ONE correct fix. Three failed patches mean you do not
+   yet understand the code — so go and read it, not write it.
 
 If (3) is "no" — revert (`git revert`, never delete) and rethink.
 
@@ -124,18 +131,19 @@ Always a log line, a number or a run, never reasoning:
 **7. The closing check — MANDATORY, copy it verbatim every time:**
 
 ```
-ПРОВЕРКА УСЛОВИЯ ОСТАНОВКИ:
-- Работа закончена по факту?         -> нет / да
-- Главная цель достигнута?           -> нет / да  (@gamer целиком на tungsten, baritone удалён)
-- Заказчик говорил останавливаться?  -> нет / да
-ВЫВОД: если хоть один ответ "нет" — условие остановки ПРОВАЛЕНО, работа продолжается
-        немедленно, следующая итерация начинается сразу.
+STOP CONDITION CHECK:
+- Is the work actually finished?        -> no / yes
+- Is the END GOAL reached?              -> no / yes  (@gamer plays the whole game on
+                                           tungsten, baritone deleted)
+- Did the customer say to stop?         -> no / yes
+VERDICT: if ANY answer is "no", the stop condition has FAILED — work continues
+         immediately and the next iteration starts at once.
 ```
 
 **Call red things red.** Partial success is "the course is still red, this much moved".
 No victory is ever declared without runs.
 
-**Never end a turn on the word "starting" / "начинаю".** Either the work is in the turn, or
+**Never end a turn on the word "starting".** Either the work is in the turn, or
 the sentence does not belong in it. A report is a checkpoint, not a stopping point.
 
 ## 7b. CONTEXT REFRESH — when it starts feeling hard, RE-READ. Do not wind down.
