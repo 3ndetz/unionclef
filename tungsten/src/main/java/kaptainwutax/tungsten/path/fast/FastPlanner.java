@@ -65,6 +65,12 @@ public final class FastPlanner {
      * fire once no matter what else was right.
      */
     private static final int MAX_SLIME_DROP = 12;
+    /** Horizontal blocks a sprinting player covers per tick — carried through a bounce. */
+    private static final double SPRINT_BLOCKS_PER_TICK = 0.28;
+    /** Ticks of airtime a lossless bounce buys per sqrt(block) of drop (up plus down). */
+    private static final double AIRTIME_TICKS_PER_SQRT_BLOCK = 10.0;
+    /** Hard ceiling on bounce travel, so a deep pit cannot explode the branching factor. */
+    private static final int MAX_SLIME_REACH = 8;
     /**
      * Highest ledge we still plan a route over. Anything above a plain jump
      * (PlayerFit.JUMP_HEIGHT) is emitted as a physics-required step: the walker
@@ -412,69 +418,94 @@ public final class FastPlanner {
             }
         }
 
-        // ── slime: dropping onto it throws us back up, so ledges a plain jump
-        //    cannot reach become reachable ──
+        // ── slime, as TWO ordinary moves rather than one compound leap ─────────────
+        // It used to be a single edge straight from the lip to the far landing, which left
+        // NO waypoint on the slime itself. The physics engine is guided by those waypoints,
+        // so it was handed "get from x=6.5 to x=18" in one piece and answered
+        // "Partial path (goal unreachable)" 208 times in a single run. Split in two — fall
+        // ONTO the slime, then bounce OFF it — the route carries the touch point and each
+        // half is a short, ordinary problem.
+
+        // (A) FALL ONTO SLIME. Landing on slime does no damage, so this is not capped by
+        // MAX_FALL the way an ordinary drop is.
         for (int[] d : CARDINALS) {
-            // ONLY LOOK WHERE STEPPING WOULD ACTUALLY DROP. At a solid neighbour the walk
-            // generator already has the answer, and scanning every node for slime in every
-            // direction to full depth would cost hundreds of world reads per expansion.
+            // Only look where stepping would actually DROP: at a solid neighbour the walk
+            // generator already has the answer, and scanning every node to full depth in
+            // every direction would cost hundreds of world reads per expansion.
             scratch.set(from.x + d[0], from.y, from.z + d[1]);
             if (!Double.isNaN(PlayerFit.supportTop(world, scratch))) continue;
 
-            // A RUN-UP IS PART OF THE MOVE. Slime is rarely directly under the lip you leave
-            // from — on the bounce course the pad ends at x=6 and the slime starts at x=9,
-            // across two cells of void — and a player who runs off an edge keeps travelling
-            // horizontally while it falls. Looking only at the immediately adjacent column
-            // (reach fixed at 1) meant the pad was a dead end: nothing to step to, nothing
-            // to fall onto, no move at all.
+            // A run-up is part of the move: slime is rarely directly under the lip you leave
+            // from (here the pad ends at x=6 and the slime starts at x=9, across two cells of
+            // void), and a player who runs off an edge keeps travelling as it falls.
             for (int reach = 1; reach <= MAX_JUMP_GAP; reach++) {
-            int nx = from.x + d[0] * reach, nz = from.z + d[1] * reach;
-            for (int drop = 1; drop <= MAX_SLIME_DROP; drop++) {
-                int by = from.y - drop;
-                scratch.set(nx, by, nz);
-                if (!isSlime(world, nx, by, nz, scratch)) {
-                    // ONE CELL'S OCCUPANCY IS A COLLISION-SHAPE QUESTION. passableAt's third
-                    // argument is an ABSOLUTE world feet height, so 0.1 asked "does the body
-                    // fit at y=0.1" — open sky, always true. This scan therefore never
-                    // stopped at a floor and went looking for slime straight through solid
-                    // ground. Exactly the trap that made break-through unreachable; this was
-                    // the last instance of it.
+                int nx = from.x + d[0] * reach, nz = from.z + d[1] * reach;
+                for (int drop = 1; drop <= MAX_SLIME_DROP; drop++) {
+                    int by = from.y - drop;
+                    // A FALL IS HALF A BOUNCE, SO IT BUYS HALF THE TRAVEL — the same airtime
+                    // model, one way only. A flat MAX_JUMP_GAP aimed the route four cells out
+                    // from the lip on a seven-block drop, which needs a perfect sprint the
+                    // whole way down: the plan came out complete and the bot still fell past
+                    // the slime at x=8.5 chasing a target at x=10.5. Deeper drops buy more
+                    // travel, so this only skips the column at THIS depth — the scan keeps
+                    // going down, where the same offset becomes reachable.
+                    int fallReach = Math.max(1, (int) (SPRINT_BLOCKS_PER_TICK
+                            * (AIRTIME_TICKS_PER_SQRT_BLOCK / 2.0) * Math.sqrt(drop)));
+                    if (reach > fallReach) continue;
+                    if (isSlime(world, nx, by, nz, scratch)) {
+                        // stand ON the slime: feet in the cell above the block
+                        if (PlayerFit.bodyFits(world, nx + 0.5, by + 1, nz + 0.5)) {
+                            relax(map, open, from, nx, by + 1, nz,
+                                    ActionCosts.JUMP_ONE_BLOCK_COST
+                                            + drop * ActionCosts.FALL_ONE_BLOCK_COST,
+                                    goal, true);
+                        }
+                        break;
+                    }
+                    // One cell's occupancy is a COLLISION-SHAPE question. passableAt's third
+                    // argument is an absolute world feet height, so the 0.1 that used to be
+                    // passed here asked "does the body fit at y=0.1" — open sky, always true —
+                    // and the scan never stopped at a floor, hunting slime through solid rock.
                     scratch.set(nx, by, nz);   // isSlime borrows scratch — re-point it
                     if (!world.getBlockState(scratch).getCollisionShape(world, scratch).isEmpty()) {
-                        break;                                          // hit a non-slime floor
-                    }
-                    continue;
-                }
-                // bounce back up: offer landings above the slime, on either side
-                for (int rise = 1; rise <= 6; rise++) {
-                    int ly = by + rise;
-                    for (int[] e : CARDINALS) {
-                    // YOU KEEP YOUR HORIZONTAL SPEED THROUGH A BOUNCE. Offering landings only
-                    // one cell from the slime column was the mirror of the fixed-reach bug on
-                    // the way DOWN: on the bounce course the pad is 5 blocks from the ledge,
-                    // so the only landings on offer were back onto the slime pad itself and
-                    // the route could never reach the target.
-                    for (int lr = 1; lr <= MAX_JUMP_GAP; lr++) {
-                        int lx = nx + e[0] * lr, lz = nz + e[1] * lr;
-                        if (!PlayerFit.bodyFits(world, lx + 0.5, ly, lz + 0.5)) continue;
-                        // ASK ABOUT THE LANDING CELL, NOT THE ONE BELOW IT. supportTop()
-                        // already looks at cell.down(), so testing ly-1 accepts a cell whose
-                        // real floor is one lower — every bounce landing came out a block too
-                        // high and physics was sent to a point in mid-air (measured:
-                        // HANDOFF target=(11,-59,0) with the slime surface at -60). Third
-                        // instance of this exact off-by-one; breakThrough carries the same
-                        // note from the last one.
-                        scratch.set(lx, ly, lz);
-                        if (Double.isNaN(PlayerFit.supportTop(world, scratch))) continue;
-                        relax(map, open, from, lx, ly, lz,
-                                ActionCosts.JUMP_ONE_BLOCK_COST
-                                        + (drop + rise + lr) * ActionCosts.FALL_ONE_BLOCK_COST,
-                                goal, true);
-                    }
+                        break;                                      // hit a non-slime floor
                     }
                 }
-                break;
             }
+        }
+
+        // (B) BOUNCE OFF THE SLIME WE ARE STANDING ON.
+        // How high and how far, read from the simulator instead of guessed:
+        // Agent.java:832-836 flips velY outright, so the bounce is LOSSLESS and the apex is
+        // the height you fell from; Agent.java:849-856 damps horizontal speed only once you
+        // have SETTLED (|velY| < 0.1), so speed carries through the bounce untouched.
+        // The drop that charged this bounce is simply how far we came down to get here,
+        // which the parent node records — block-space A* has no velocity, but it does have
+        // the route that led in.
+        if (from.parent != null && isSlime(world, from.x, from.y - 1, from.z, scratch)) {
+            int fell = from.parent.y - from.y;
+            if (fell > 0) {
+                int reach = Math.min(MAX_SLIME_REACH,
+                        (int) Math.ceil(SPRINT_BLOCKS_PER_TICK * AIRTIME_TICKS_PER_SQRT_BLOCK
+                                * Math.sqrt(fell)));
+                for (int rise = 1; rise <= fell; rise++) {          // lossless: apex == drop
+                    int ly = from.y + rise;
+                    for (int[] e : CARDINALS) {
+                        for (int lr = 1; lr <= reach; lr++) {
+                            int lx = from.x + e[0] * lr, lz = from.z + e[1] * lr;
+                            if (!PlayerFit.bodyFits(world, lx + 0.5, ly, lz + 0.5)) continue;
+                            // Ask about the LANDING cell: supportTop() already looks at
+                            // cell.down(), so testing one lower accepts a cell whose real
+                            // floor is a block further down and aims physics into mid-air.
+                            scratch.set(lx, ly, lz);
+                            if (Double.isNaN(PlayerFit.supportTop(world, scratch))) continue;
+                            relax(map, open, from, lx, ly, lz,
+                                    ActionCosts.JUMP_ONE_BLOCK_COST
+                                            + (rise + lr) * ActionCosts.FALL_ONE_BLOCK_COST,
+                                    goal, true);
+                        }
+                    }
+                }
             }
         }
     }

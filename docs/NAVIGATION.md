@@ -226,7 +226,32 @@ produced no diagnostics at all and the first pass at it was guesswork. Added.
 `tail -600` pulled in a previous course's lines and produced a confident, wrong conclusion
 that arenas leak between courses. They do not — `ArenaBuilder.prepare` clears the cube.
 
-### `nav_slime` — the arena is a bounce puzzle
+### `nav_slime` — RED, and the block-space side is now solved
+
+The move used to be ONE compound edge straight from the lip to the far landing, which left
+no waypoint on the slime at all. Physics is guided by those waypoints, so it was handed
+"get from x=6.5 to x=18" in one piece and answered `Partial path (goal unreachable)` 208
+times in a single run. It is now two ordinary moves — fall ONTO the slime, bounce OFF it —
+so the route carries the touch point and each half is short.
+
+Both distances are read off the simulator instead of guessed. `Agent.java:832-836` flips
+velY outright, so a slime bounce is LOSSLESS and the apex equals the drop; `Agent.java:849-856`
+damps horizontal speed only once you have SETTLED (|velY| < 0.1), so speed carries straight
+through. Airtime therefore grows with sqrt(height) and travel is airtime x a preserved
+sprint speed — a fall buys HALF of what a bounce does, being one way. The old flat cap of 4
+made the ledge unreachable by construction, and bumping it twice moved nothing, which is
+what a wrong model looks like from outside.
+
+Measured progress: `flagged` 0 -> 1, plan `complete` false -> TRUE, the guide now contains
+the slime touch point, `self_falls` 1 -> 0, final distance 20.7 -> 15.1.
+
+**Where it is stuck, measured:** the bot walks to the lip and stops there.
+`NAVSTATE walker=false awaiting=true pending=- next=-` — the navigator has handed the drop
+to physics and is WAITING, the walker is switched off, and physics returns neither a path
+nor a failure. A deadlock at the lip: same CLASS as the starved hand-off fixed for
+`nav_wall2`, different instance. That is where the next pass starts.
+
+### `nav_slime` — the arena
 
 Reading the builder: the bot spawns on a pad at `FLOOR_Y+7` and must FALL ~8 blocks onto a
 slime pad at `FLOOR_Y`, bounce, and land on a ledge at `FLOOR_Y+4`. That is a genuinely
