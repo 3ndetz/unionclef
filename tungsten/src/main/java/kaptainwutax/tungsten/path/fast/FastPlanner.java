@@ -127,6 +127,22 @@ public final class FastPlanner {
             for (int i = 0; i < path.size(); i++) if (path.get(i).needsPhysics) return i;
             return -1;
         }
+
+        /**
+         * Index of the LAST waypoint in the physics run that starts at {@code first} —
+         * i.e. the far side of the whole physics-only segment.
+         *
+         * <p>Handing physics only the FIRST flagged waypoint is wrong whenever the segment
+         * is more than one step, which is exactly the ladder case: the first flagged cell is
+         * the ladder's base, level with the bot, so physics is asked to travel to where it
+         * already stands and does nothing. The bot then sits at the foot of the ladder
+         * forever. What physics must be given is the TOP of the climb.
+         */
+        public int physicsRunEnd(int first) {
+            int i = first;
+            while (i + 1 < path.size() && path.get(i + 1).needsPhysics) i++;
+            return i;
+        }
     }
 
     /**

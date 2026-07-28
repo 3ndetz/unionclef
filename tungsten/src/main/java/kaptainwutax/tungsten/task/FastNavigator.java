@@ -247,7 +247,11 @@ public final class FastNavigator {
                     // to the edge of the gap and then no one performed the jump: the
                     // navigator just replanned 2-cell legs until its stall watchdog fired.
                     // That single dead flag is why every parkour course failed.
-                    nextPhysicsTarget = cells.get(physics);
+                    // hand physics the FAR SIDE of the whole physics-only run, not just its
+                    // first cell (see FastPlanner.physicsRunEnd — a ladder's first flagged
+                    // cell is level with the bot, so that was a no-op that stalled forever)
+                    int runEnd = res.physicsRunEnd(physics);
+                    nextPhysicsTarget = cells.get(runEnd);
                     cells = cells.subList(0, physics);
                 } else {
                     nextPhysicsTarget = null;
