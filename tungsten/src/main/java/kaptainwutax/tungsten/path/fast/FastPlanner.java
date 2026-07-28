@@ -463,8 +463,12 @@ public final class FastPlanner {
         // head first: the upper block would otherwise fall into the opening
         for (int dy = 1; dy >= 0; dy--) {
             BlockPos cell = new BlockPos(nx, from.y + dy, nz);
-            scratch.set(cell);
-            if (PlayerFit.passableAt(world, scratch, 0.1)) continue;   // already open
+            // "Is this ONE cell occupied?" is a collision-shape question. It must NOT be
+            // asked with passableAt(cell, 0.1): that signature takes an ABSOLUTE world feet
+            // height, so 0.1 asked "does the body fit at y=0.1" — open sky, always true.
+            // Every wall block was therefore treated as already open, the plan came out
+            // empty, and the move returned before doing anything. It could never fire once.
+            if (world.getBlockState(cell).getCollisionShape(world, cell).isEmpty()) continue;
             net.minecraft.block.BlockState st = world.getBlockState(cell);
             if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, cell, st)) return;
             float delta = st.calcBlockBreakingDelta(player, world, cell);
