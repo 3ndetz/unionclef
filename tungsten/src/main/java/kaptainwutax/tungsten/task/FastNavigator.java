@@ -138,6 +138,10 @@ public final class FastNavigator {
         }
 
         BlockPos jump = pendingPhysicsTarget;
+        if (jump != null && player.getBlockPos().isWithinDistance(jump, 1.5)) {
+            pendingPhysicsTarget = null;   // already there — nothing for physics to do
+            jump = null;
+        }
         if (jump != null) {
             pendingPhysicsTarget = null;
             if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
@@ -215,13 +219,21 @@ public final class FastNavigator {
                         // was never actually asked, nothing else was running, and the bot
                         // stood at the lip of the obstacle until the run timed out. The
                         // message described a hand-off that did not happen.
+                        // Hand physics the GOAL, not the tail. The tail is where WALKING
+                        // gave up, which is the cell the bot is already standing on — asking
+                        // the physics engine to travel to its own feet is a no-op, and the
+                        // navigator then re-planned the same dead end forever. Observed on
+                        // nav_steep: "physics owns the jump -> 6,-60,0" repeated while the
+                        // bot sat motionless at x=5.6.
+                        // Physics is precisely the engine that models jumps and parkour, so
+                        // when walking cannot solve the route, it owns the REST of the route.
                         Debug.logMessage(String.format(
-                                "FastNavigator: walking dead-ends (%.1f -> %.1f) -> handing tail to physics",
+                                "FastNavigator: walking dead-ends (%.1f -> %.1f) -> physics owns the rest",
                                 before, after));
                         BlockPathWalker.stop();
                         nextLeg = null;
                         nextPhysicsTarget = null;
-                        pendingPhysicsTarget = tail;
+                        pendingPhysicsTarget = goalCell;
                         return;
                     }
                 }
