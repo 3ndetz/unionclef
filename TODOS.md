@@ -17,13 +17,13 @@
   library here, not a pluggable backend.
 
 ### C1 — DEAD CODE THAT SILENTLY DISABLES WHOLE FEATURES
-- [ ] **C1.1 `TungstenHelper` is permanently dead.** `initReflection()` (TungstenHelper.java:74)
+- [x] **C1.1 `TungstenHelper` is permanently dead.** ЗАКРЫТО 2026-07-27: рефлексия выкинута, прямые типизированные вызовы. `initReflection()` (TungstenHelper.java:74)
   looks up `PathFinder.searchTimeoutMs`, a field moved to `TungstenConfig` (`PathFinder.java:83`
   says so). `NoSuchFieldException` → `reflectionReady=false` forever → **`isTungstenLoaded()` always
   returns false** → `tryPathTo`/`tryPathToEntity`/`stop`/`isActive`/`isLocked` are permanent no-ops.
   The whole documented "tungsten as fallback when baritone fails" layer has NEVER run. Also
   `EXECUTOR` is `public static PathExecutor EXECUTOR;` (no initialiser) → latent NPE in the same method.
-- [ ] **C1.2 `combatExecutorEnabled` gates nothing** — the flag is read NOWHERE, yet `CombatExecutor`
+- [x] **C1.2 `combatExecutorEnabled` gates nothing** ЗАКРЫТО 2026-07-28: настройка и `airStrafeMultiplier` удалены (ноль чтений). — the flag is read NOWHERE, yet `CombatExecutor`
   burns a 30-tick full physics sim per 10 ticks for a debug overlay. `airStrafeMultiplier` likewise.
 - [ ] **C1.3 zero-caller code:** `AttackTiming.canAttack` + `isCritState` (so no crit/w-tap timing at
   all), `WeaponSelector.reset`, `FollowEntityTask` jam-detection state, dead decrease-key branches in
@@ -45,7 +45,7 @@
   form behind `smartMoves` (off). That function gates every partial emission and the `failing` flag
   that arms the timeout. Downstream `bestSoFar:313-328` `continue`s on the furthest node, so it can
   only ever return a node that is NOT the best — inverted selection, admitted at `:298`.
-- [ ] **C2.4 Physics A\* drops most of its branching.** `PathFinder.java:1111` and `:1118` do
+- [x] **C2.4 Physics A\* drops most of its branching.** ЗАКРЫТО 2026-07-27: обе ветки зовут общий acceptChildIfValid. `PathFinder.java:1111` and `:1118` do
   `return null;` inside a chunk loop (`children.size() > 5` path), **aborting the whole chunk on the
   first rejected child** — non-deterministically, since it depends on ForkJoin scheduling order.
 - [ ] **C2.5 Closed set is inert.** `PathFinder.java:538-590` quantises to 0.01 blocks and keys on
@@ -76,7 +76,7 @@
 - [ ] **C4.4** Search threads write to Minecraft chat directly from background threads.
 
 ### C5 — BREAK / PLACE (the user's headline question: both ARE plumbed in, both are crippled)
-- [ ] **C5.1 Break is cardinal, same-Y, ONE cell.** `BlockNode.java:641`:
+- [~] **C5.1 Break is cardinal, same-Y, ONE cell.** ЧАСТИЧНО 2026-07-28: слом добавлен в FastPlanner (тот движок, что реально водит бота) и ПРОБИВАЕТ проход ('Mining done — passage open'). Осталось: маршрут после добычи не возобновляется; dig up/down по-прежнему нет. `BlockNode.java:641`:
   `if (dy != 0 || |dx|+|dz| != 1) return false`. **No dig-down, no dig-up**, no break-to-ascend/descend,
   no diagonal. `@gamer` mining strategies are literally not expressible. One cell per full re-search.
 - [ ] **C5.2 Break cost priced with the item CURRENTLY HELD** while the executor swaps to the best tool
@@ -99,17 +99,17 @@
   material is a hardcoded 8-item list duplicated in two files, with a third policy elsewhere.
 
 ### C6 — COMBAT (root causes, all code-verified)
-- [ ] **C6.1 THE "STANDS STILL" ROOT.** (a) `PunkPlayerTask.enterCombat:214-220` **hard-stops all
+- [x] **C6.1 THE "STANDS STILL" ROOT.** ЗАКРЫТО 2026-07-27, релиз v0.62.0: мёртвая полоса убрана, 3/3 боевых сценария PASS. (a) `PunkPlayerTask.enterCombat:214-220` **hard-stops all
   navigation** (`PATHFINDER.stop`, `EXECUTOR.stop`, `FollowEntityTask.stop`) — only `combatMove` can
   move the bot. (b) `CombatController.java:138-142` presses forward only at `dist > 3.4` and back only
   at `dist < 2.0` → **in 2.0-3.4, melee range, NOTHING is pressed**. (c) The strafe is the only
   remaining motion and it is suppressed entirely near a drop (`:159-160` sets BOTH keys false); on a
   1-wide bridge the direction flips every tick and it never strafes at all.
-- [ ] **C6.2 The bot parks OUTSIDE its own reach.** `combatMove` is content at `dist > 3.4`
+- [x] **C6.2 The bot parks OUTSIDE its own reach.** ЗАКРЫТО 2026-07-27: дистанция выведена из TriggerBot.REACH. `combatMove` is content at `dist > 3.4`
   **centre-to-centre**; `TriggerBot` requires `REACH = 3.0` **eye→closest hitbox point**
   (TriggerBot.java:30,59-63,80). At 3.4 centre-to-centre the eye-to-hitbox distance is ≈3.1 > 3.0 →
   `gateReach` fails. It neither closes nor hits. Hard logic bug, not aim feel.
-- [ ] **C6.3 Three writers fight for the keys in one tick.** `SafetySystem`'s entire WASD/sprint output
+- [~] **C6.3 Three writers fight for the keys in one tick.** ЧАСТИЧНО 2026-07-27: в БОЮ введён CombatMoveIntent, клавиши пишутся один раз за тик. Навигация — ещё нет. `SafetySystem`'s entire WASD/sprint output
   (49 `setPressed` calls) is **overwritten by `combatMove`**, which runs after it in
   `CombatController.tick` (`:36` then `:94`). Then `VoidGuard` runs after and zeroes all four WASD keys.
   Globally: **14 tungsten classes, 202 `setPressed` sites, no arbitration**, resolved only by
@@ -138,7 +138,7 @@
 - [ ] **C7.1 `UnstuckChain` preempts and tears down tungsten follow/punk and throws the aim to a random
   angle** (URG-2 confirmed). `SafeRandomShimmyTask`'s forced baritone inputs nullify tungsten's key
   presses. `MobDefenseChain` is completely tungsten-unaware and preempts tungsten combat at HP≤10.
-- [ ] **C7.2 Config persistence poisons defaults permanently.** `TungstenConfig.load():250-262`
+- [x] **C7.2 Config persistence poisons defaults permanently.** ЗАКРЫТО 2026-07-28: configVersion + файл не создаётся без явной правки настройки. `TungstenConfig.load():250-262`
   unconditionally re-`save()`s the whole object → once `tungsten.json` exists, **every future shipped
   default is shadowed forever** on that machine. Any stand result from a machine with an old
   `tungsten.json` is suspect.
