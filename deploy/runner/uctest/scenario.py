@@ -91,11 +91,20 @@ class Ctx:
         # on a caught/paused target (chase) is correct, not a freeze. The RW-1
         # "stands still NEAR the target" case is caught by standstill_windows.
         caught = rec.get("dist") is not None and rec["dist"] < 3
+        # STANDING STILL ON A GOAL YOU HAVE REACHED IS CORRECT, NOT A FREEZE.
+        # `caught` only ever fires on courses that have a VICTIM — `dist` is populated
+        # from the victim position, so on navigation courses it is always None and the
+        # exemption could never apply. With --no-early-stop a nav course then runs to its
+        # full timeout after arriving, and the bot waiting at the goal was booked as one
+        # freeze window every 6 s. Measured: nav_flat arrived at x=29.3 after 3.4 s and
+        # stood there for the remaining 55 s -> "freezes=7" on a course that had just
+        # passed clean. That is how a whole suite reported regressions that never existed.
+        arrived = self.geo.get("reached_at") is not None
         if self._last_move_pos is None or \
                 sum(abs(a - b) for a, b in zip(bp, self._last_move_pos)) > 0.05:
             self._last_move_pos = bp
             self._last_move_t = now
-        elif now - self._last_move_t > 6 and not caught:
+        elif now - self._last_move_t > 6 and not caught and not arrived:
             self.freeze_windows += 1
             self._last_move_t = now
             self.log(f"  WARNING freeze window #{self.freeze_windows} at {bp}")

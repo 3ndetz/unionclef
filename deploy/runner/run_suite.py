@@ -160,10 +160,13 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
 
     # A STARVED HOST IS NOT A BOT FAILURE — AND NOT A PASS EITHER.
     # This stand runs the server, the client and (sometimes) a build on one machine.
-    # Measured: a healthy course sits at ~15 fps with zero freeze windows; with a gradle
-    # daemon alive alongside it the same courses drop to ~10 fps and report 7-14 freezes
-    # each — including courses that had just passed clean. Reporting that as FAIL invents
-    # regressions that do not exist, and a whole audit gets spent chasing them.
+    # HONEST NOTE ON WHY THIS EXISTS: it was added after a suite reported seven freeze
+    # failures on courses that had just passed clean, while the host WAS loaded (a gradle
+    # daemon beside the stand, ~10 fps against a healthy ~15). That diagnosis was WRONG.
+    # The real cause was the freeze detector booking a bot standing on a REACHED goal as
+    # frozen — see scenario.py, where it is fixed. This guard is kept because starving a
+    # one-machine stand is a genuine hazard, but it is a safety net, NOT the explanation
+    # for that incident, and it must not be cited as one.
     # Only the load-sensitive criteria are excused. Not reaching the goal stays a failure.
     LOAD_SENSITIVE = ("freeze", "stand-still", "standstill")
     HEALTHY_FPS_MIN = 12.0

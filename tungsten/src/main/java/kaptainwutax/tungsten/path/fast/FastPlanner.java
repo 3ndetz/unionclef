@@ -335,6 +335,23 @@ public final class FastPlanner {
                             ActionCosts.LADDER_ONE_BLOCK_COST, goal, true);
                 }
             }
+            // GETTING OFF THE LADDER. The water branch below has an exit clause; this one
+            // never did, so a ladder was a one-way trip — the bot could climb the column
+            // and then had nowhere to go. Step onto a cardinal neighbour that is genuinely
+            // standable, at our level or one up: the shelf beside a ladder top normally
+            // sits one above the last rung, so level-only would still find nothing.
+            for (int[] d : CARDINALS) {
+                for (int dy : new int[]{0, 1}) {
+                    int nx = from.x + d[0], ny = from.y + dy, nz = from.z + d[1];
+                    if (isLadder(world, nx, ny, nz, scratch)) continue;   // climb handles it
+                    scratch.set(nx, ny, nz);
+                    if (!Double.isNaN(PlayerFit.supportTop(world, scratch))
+                            && PlayerFit.bodyFits(world, nx + 0.5, ny, nz + 0.5)) {
+                        relax(map, open, from, nx, ny, nz,
+                                ActionCosts.LADDER_ONE_BLOCK_COST, goal, true);
+                    }
+                }
+            }
         } else {
             for (int[] d : CARDINALS) {
                 int nx = from.x + d[0], nz = from.z + d[1];
@@ -542,6 +559,13 @@ public final class FastPlanner {
             // height, so 0.1 asked "does the body fit at y=0.1" — open sky, always true.
             // Every wall block was therefore treated as already open, the plan came out
             // empty, and the move returned before doing anything. It could never fire once.
+            // A LADDER IS A ROUTE, NOT A WALL. Ladders carry a real (thin) collision box, so
+            // the occupancy test below counts one as an obstruction and the search plans to
+            // MINE the very thing it meant to climb. Measured on nav_ladder: 'break-through
+            // planned at 9,-60,0 (2 block(s))' aimed straight down the ladder column, and the
+            // bot ended up falling out of the world at x=9.5. Destroying your own way up is
+            // never the cheaper route — leave climbables to special().
+            if (isLadder(world, cell.getX(), cell.getY(), cell.getZ(), scratch)) return;
             if (world.getBlockState(cell).getCollisionShape(world, cell).isEmpty()) continue;
             net.minecraft.block.BlockState st = world.getBlockState(cell);
             if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, cell, st)) return;

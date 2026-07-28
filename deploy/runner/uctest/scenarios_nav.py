@@ -203,6 +203,8 @@ class NavWater(NavCourse):
 class NavLadder(NavCourse):
     """Climb a 4-high ladder onto a shelf — the ladder move set."""
     id = "nav_ladder"
+    duration = 120
+    settings = {"verboseDebugLogging": "true"}
 
     def course(self, arena, ctx):
         rc = ctx.rcon
