@@ -166,6 +166,9 @@ public class PathExecutor {
     	player.getAbilities().allowFlying = false;
     	if(TungstenMod.pauseKeyBinding.isPressed() || stop) {
     		if (breakQueue != null) {
+    			// Never discard a mining plan silently — that hid the nav_break failure for
+    			// a whole session (mining started, then simply ceased to exist).
+    			Debug.logMessage("Mining cancelled by stop flag (" + breakQueue.size() + " block(s) left)");
     			MinecraftClient.getInstance().interactionManager.cancelBlockBreaking();
     			TungstenModRenderContainer.BREAK_PLAN.clear();
     			breakQueue = null; breakingTicks = 0; settleTicks = 0;

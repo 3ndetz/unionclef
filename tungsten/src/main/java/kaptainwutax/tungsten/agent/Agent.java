@@ -1626,6 +1626,11 @@ public class Agent {
                         // ran off (stand-measured). A replay mismatch is a reason to
                         // RE-PLAN, not to give up; the follow/goto layer re-issues a
                         // search on its next tick because the executor is now idle.
+                        // NOTE (2026-07-28): gating this on "the path is non-empty" to stop
+                        // it wiping a mining queue REGRESSED nav_gaps from a stable 6/6 to
+                        // failing — the parkour hand-off relies on this abort firing. The
+                        // silent-breakQueue-wipe is real (PathExecutor.tick logs it now) but
+                        // must be fixed on the EXECUTOR side, not by weakening this abort.
                         TungstenModDataContainer.EXECUTOR.stop = true;
                     }
                 }
