@@ -82,6 +82,13 @@ def _rec_start(scn_id, dur, persp=0):
                       # scenario hit 60 MB (> Telegram's 50 MB sendVideo limit,
                       # 413). ultrafast keeps CPU off the software renderer.
                       "-c:v", "libx264", "-preset", "ultrafast",
+                      # ONE KEYFRAME PER SECOND. The container writes a FRAGMENTED mp4 and a
+                      # fragment is only flushed on a keyframe; x264's default interval is
+                      # 250 frames, i.e. ~17 s at 15 fps. Courses now finish in 6 s, so the
+                      # capture was cut before the first fragment ever landed and every clip
+                      # came out as a 28-byte empty-moov header. The bot got faster than the
+                      # recorder — a good problem, but it silently destroyed the evidence.
+                      "-g", "15",
                       "-b:v", "1100k", "-maxrate", "1400k", "-bufsize", "2M",
                       "-pix_fmt", "yuv420p",
                       "-movflags", "+frag_keyframe+empty_moov+default_base_moof",
