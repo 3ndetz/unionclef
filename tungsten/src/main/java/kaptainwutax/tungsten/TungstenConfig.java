@@ -23,6 +23,22 @@ public class TungstenConfig {
 
     // ---- settings (edit defaults here) ----
 
+    /**
+     * Bumped whenever the SHIPPED defaults change in a way that must reach machines
+     * that already have a tungsten.json.
+     *
+     * <p>Why this exists: {@link #load()} used to re-{@link #save()} the whole object on
+     * every startup, so once the file existed it contained EVERY key — and a key present
+     * in the file always wins over a new shipped default. A stand therefore kept running
+     * months-old combat tuning and visualisation switched off, while the code said
+     * otherwise, and nobody could tell from reading the source. Raising this number makes
+     * the next load discard the stale file once and adopt the current defaults.
+     */
+    public int configVersion = CURRENT_CONFIG_VERSION;
+
+    /** Raise this when new shipped defaults must override existing tungsten.json files. */
+    private static final int CURRENT_CONFIG_VERSION = 1;
+
     /** If true: on position mismatch > driftThreshold, setPosition() to simulation value.
      *  If false: stop executor and let path recalculate from real position. */
     public boolean driftCorrectionEnabled = false;
@@ -241,16 +257,28 @@ public class TungstenConfig {
 
     public static void load() {
         java.io.File file = CONFIG_FILE.toFile();
-        if (file.exists()) {
-            try (FileReader r = new FileReader(file)) {
-                TungstenConfig loaded = GSON.fromJson(r, TungstenConfig.class);
-                if (loaded != null) INSTANCE = loaded;
-            } catch (Exception e) {
-                TungstenMod.LOG.warn("Failed to load tungsten.json, using defaults: " + e.getMessage());
-                INSTANCE = new TungstenConfig();
-            }
+        if (!file.exists()) {
+            // Nothing saved yet: run on the shipped defaults and do NOT create a file.
+            // Writing one here is what made every future default unreachable — the file
+            // would contain all keys, and a present key always beats a new default.
+            return;
         }
-        save(); // write file with current values (creates it if missing)
+        try (FileReader r = new FileReader(file)) {
+            TungstenConfig loaded = GSON.fromJson(r, TungstenConfig.class);
+            if (loaded == null) return;
+            if (loaded.configVersion < CURRENT_CONFIG_VERSION) {
+                TungstenMod.LOG.warn("tungsten.json is from an older config version ("
+                        + loaded.configVersion + " < " + CURRENT_CONFIG_VERSION
+                        + ") — discarding it and using the shipped defaults.");
+                INSTANCE = new TungstenConfig();
+                save();
+                return;
+            }
+            INSTANCE = loaded;
+        } catch (Exception e) {
+            TungstenMod.LOG.warn("Failed to load tungsten.json, using defaults: " + e.getMessage());
+            INSTANCE = new TungstenConfig();
+        }
     }
 
     public static void save() {
