@@ -348,6 +348,11 @@ public class BlockPathWalker {
         // stand, which has drifted from ~15 fps to ~9 over a long session. The code was not
         // the cause. Measured effect of keeping this: nav_slime goes from 20.7 blocks short
         // with a void fall on every run, to 8.0-8.4 short with no falls at all, 3 runs of 3.
+        // (Releasing the hold once we had flown PAST the waypoint was tried — the trace shows
+        // the bot crossing its held waypoint five blocks up, steering back and walking off the
+        // pad. Releasing measured WORSE, 3 failures in 3 against 1 landing in 3, so it is not
+        // kept. Both behaviours are the same missing thing: the walker has no model of a
+        // BOUNCING surface, and no rule bolted onto generic walking will give it one.)
         boolean fallingToward = !player.isOnGround() && (playerPos.y - wpPos.y) > 1.0;
         if (dist < 1.5 && (!onLadderNow || Math.abs(playerPos.y - wpPos.y) < 0.4)
                 && !fallingToward) {
@@ -424,7 +429,17 @@ public class BlockPathWalker {
         // of reach. It is nonetheless the better of the two measured states — without it the
         // bot flies past the hop, turns back toward a waypoint now behind it and drops off
         // the pad. The real answer is a bounce chain the executor understands.
-        if (!onGround && (playerPos.y - wpPos.y) > 1.0 && dist < 1.0) move = false;
+        // ...UNLESS that landing is a bouncy one. Cutting the throttle above every hop of a
+        // bounce chain bled the bot from 0.25 to 0.00 blocks/tick (airborne trace), so it
+        // could never carry speed to the far ledge; letting it run free instead made it fly
+        // past the hop and drop off the pad. The world tells the two apart: land on SLIME and
+        // you are going straight back up and still need the speed; land on solid ground and
+        // you are stopping there.
+        if (!onGround && (playerPos.y - wpPos.y) > 1.0 && dist < 1.0
+                && !(player.getEntityWorld().getBlockState(wp.down()).getBlock()
+                        instanceof net.minecraft.block.SlimeBlock)) {
+            move = false;
+        }
 
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(move);

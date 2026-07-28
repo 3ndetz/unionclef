@@ -259,6 +259,25 @@ what a wrong model looks like from outside.
 Measured progress: `flagged` 0 -> 1, plan `complete` false -> TRUE, the guide now contains
 the slime touch point, `self_falls` 1 -> 0, final distance 20.7 -> 15.1.
 
+**THE CONCLUSION, after four executor rules were tried and measured:** a bounce chain needs
+its OWN executor, the way pillaring has `PillarTask`. The generic walker treats a bouncing
+surface as ordinary walking, and every rule bolted onto it fixes one phase and breaks
+another — each of these was built, run and measured, and the numbers are the reason each
+verdict is what it is:
+
+| rule tried | effect |
+|---|---|
+| hold the landing waypoint while airborne above it | 20.7 with a void fall every run -> ~8.4, no falls, but only ~1 run in 3 |
+| release that hold once we have flown PAST the waypoint | WORSE — 3 failures in 3; the bot needs to keep chasing it |
+| cut the throttle over the landing | needed, or the arc overshoots — but it also bleeds a bounce chain from 0.25 to 0.00 blocks/tick |
+| exempt bouncy landings from that cut | no measurable change |
+| charge for horizontal air travel, to prefer the near edge | WORSE — 1 landing in 4 against 1 in 3 |
+
+What such an executor has to own, and what none of these rules can express: keep the planned
+heading and full sprint across an ENTIRE chain of bounces, count them, and cut the throttle
+only above the FINAL landing. Until it exists the course stays red, and the honest number is
+one landing in three, ~8-9 blocks short of the ledge, no falls on the runs that land.
+
 **Where it is stuck, measured:** the bot walks to the lip and stops there.
 `NAVSTATE walker=false awaiting=true pending=- next=-` — the navigator has handed the drop
 to physics and is WAITING, the walker is switched off, and physics returns neither a path

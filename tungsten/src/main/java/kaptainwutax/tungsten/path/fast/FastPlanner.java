@@ -470,6 +470,10 @@ public final class FastPlanner {
                             // in one run with the walker stopped each round, so the bot simply
                             // stood at the lip. Same call as the ladder: the executor that can
                             // do it, owns it.
+                            // (Charging for horizontal air travel was tried here to bias the
+                            // search towards the near, forgiving edge of the pad. It measured
+                            // WORSE — 1 landing in 4 against 1 in 3 — so it is not kept. The
+                            // initial drop was never the problem; the bot dies later.)
                             relax(map, open, from, nx, by + 1, nz,
                                     ActionCosts.JUMP_ONE_BLOCK_COST
                                             + drop * ActionCosts.FALL_ONE_BLOCK_COST,
