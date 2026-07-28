@@ -24,7 +24,17 @@ public class ClimbALadderMove {
 	public static Node generateMove(Node parent, BlockNode nextBlockNode) {
 		WorldView world = TungstenModDataContainer.world;
 		Agent agent = parent.agent;
-	    Node newNode = new Node(parent, world, new PathInput(false, false, false, false, false, false, false, agent.pitch, agent.yaw),
+
+		// A ladder is climbed by holding FORWARD INTO it — that is what keeps the player
+		// attached to the climbable block; jump alone only works while already attached,
+		// and even then not from the ground. This move used to press jump and nothing else,
+		// with the agent's CURRENT yaw, so the simulated player never entered the ladder and
+		// never gained height: the search happily returned a "climb" that does not climb.
+		// Face the ladder, hold forward, and jump to ascend.
+		float climbYaw = kaptainwutax.tungsten.combat.AttackTiming.yawTo(
+				agent.getPos(), nextBlockNode.getPos(true));
+
+	    Node newNode = new Node(parent, world, new PathInput(true, false, false, false, false, false, false, agent.pitch, climbYaw),
 	    				new Color(0, 255, 150), parent.cost + 0.002);
 	    
         int limit = 0;
@@ -38,7 +48,7 @@ public class ClimbALadderMove {
 //				e.printStackTrace();
 //			}
 
-            newNode = new Node(newNode, world, new PathInput(false, false, false, false, true, false, false, agent.pitch, agent.yaw),
+            newNode = new Node(newNode, world, new PathInput(true, false, false, false, true, false, false, agent.pitch, climbYaw),
             		new Color(0, 255, 150), newNode.cost + 0.002);
         }
         
