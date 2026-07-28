@@ -194,6 +194,13 @@ class NavWater(NavCourse):
         # no walls: the bot swims in, sinks straight out through the missing bottom and
         # falls into the void (measured — it left the pool at y=-64, z=-4.2 and fell to
         # y=-169). Build a solid block first, then carve the pool inside it.
+        # THE BANK. The shared start pad ends at PAD_X1=6 and the pool begins at 11, so
+        # without this there are FOUR cells of open void in between — the bot had to clear
+        # them with a jump at the engine's exact limit (MAX_JUMP_GAP=4) before it ever
+        # reached the water. It made that jump alone and missed it in the suite, which is
+        # the definition of a flaky course: this one claims to measure SWIMMING, so it must
+        # not also gate on a borderline parkour.
+        arena.floor(7, -3, 10, 3, "stone")
         arena._fill(11, FLOOR_Y - 3, -4, 18, FLOOR_Y, 4, "stone")
         arena._fill(12, FLOOR_Y - 2, -3, 17, FLOOR_Y, 3, "air")
         arena._fill(12, FLOOR_Y - 2, -3, 17, FLOOR_Y, 3, "water")

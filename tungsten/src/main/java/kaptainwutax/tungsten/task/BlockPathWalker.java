@@ -9,7 +9,10 @@ import kaptainwutax.tungsten.combat.SafetySystem;
 import kaptainwutax.tungsten.util.WindMouseRotation;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
+import kaptainwutax.tungsten.helpers.DirectionHelper;
+import net.minecraft.block.LadderBlock;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldView;
 
@@ -329,8 +332,12 @@ public class BlockPathWalker {
         Vec3d playerPos = player.getEntityPos();
         double dist = horizontalDist(playerPos, wpPos);
 
-        // advance waypoint
-        if (dist < 1.5) {
+        // advance waypoint. WHILE ON A LADDER, HORIZONTAL DISTANCE MEANS NOTHING: every cell
+        // of the column shares one x/z, so this test is true from the first tick and would
+        // consume the whole climb before a single rung is gained. On a ladder, arrival is a
+        // VERTICAL question. (Only ladders are affected — off a ladder this is unchanged.)
+        boolean onLadderNow = player.isClimbing();
+        if (dist < 1.5 && (!onLadderNow || Math.abs(playerPos.y - wpPos.y) < 0.4)) {
             waypointIdx++;
             if (waypointIdx >= path.size()) {
                 stop();
@@ -338,6 +345,40 @@ public class BlockPathWalker {
             }
             wp = path.get(waypointIdx);
             wpPos = Vec3d.ofBottomCenter(wp);
+        }
+
+        // ── LADDER: A COLUMN OF WAYPOINTS HAS NO HORIZONTAL EXTENT ──────────────────
+        // Waypoints advance on HORIZONTAL distance (see `dist` above), so a ladder column —
+        // every cell sharing one x/z — is swallowed whole in a single tick without the bot
+        // gaining a millimetre of height, and the walker then reports "arrived". The bearing
+        // is no help either: a waypoint straight overhead has no meaningful yaw.
+        // Vanilla climbs by holding forward INTO the ladder — that contact is what grants
+        // climbing speed — so aim at the block the ladder hangs on, and advance on VERTICAL
+        // arrival instead of horizontal.
+        if (player.isClimbing()) {
+            BlockPos cell = player.getBlockPos();
+            var state = player.getEntityWorld().getBlockState(cell);
+            if (state.getBlock() instanceof LadderBlock) {
+                // FACING points AWAY from the block the ladder is fixed to, so push the
+                // opposite way to press into it.
+                Direction into = state.get(LadderBlock.FACING).getOpposite();
+                Vec3d support = Vec3d.ofCenter(cell.offset(into));
+                WindMouseRotation.INSTANCE.setTargetFast(
+                        (float) DirectionHelper.calcYawFromVec3d(playerPos, support), 0);
+
+                MinecraftClient lmc = MinecraftClient.getInstance();
+                lmc.options.forwardKey.setPressed(true);
+                lmc.options.sprintKey.setPressed(false);
+                lmc.options.backKey.setPressed(false);
+                lmc.options.leftKey.setPressed(false);
+                lmc.options.rightKey.setPressed(false);
+                lmc.options.sneakKey.setPressed(false);
+                // Going up: jump as well as press in. Going down: contact alone is a slow,
+                // controlled slide, which is what we want — never jump to descend.
+                lmc.options.jumpKey.setPressed(wp.getY() > cell.getY());
+
+                return;   // the advance above is already vertical-aware on a ladder
+            }
         }
 
         float yaw = AttackTiming.yawTo(playerPos, wpPos);

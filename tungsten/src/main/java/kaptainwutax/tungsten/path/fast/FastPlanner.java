@@ -331,8 +331,14 @@ public final class FastPlanner {
                 int ny = from.y + dy;
                 if (isLadder(world, from.x, ny, from.z, scratch)
                         || PlayerFit.bodyFits(world, from.x + 0.5, ny, from.z + 0.5)) {
+                    // NOT flagged for physics. Ladder moves used to be delegated to the
+                    // physics engine on the grounds that only a real simulation can hold
+                    // itself against a rung — but its climb move is gated behind ALREADY
+                    // standing in the ladder column (Node.java:133, horizontal Manhattan
+                    // <= 0.5), so from the ground beside a ladder it is never generated and
+                    // the climb never happened. The walker owns what the walker can do.
                     relax(map, open, from, from.x, ny, from.z,
-                            ActionCosts.LADDER_ONE_BLOCK_COST, goal, true);
+                            ActionCosts.LADDER_ONE_BLOCK_COST, goal, false);
                 }
             }
             // GETTING OFF THE LADDER. The water branch below has an exit clause; this one
@@ -348,7 +354,7 @@ public final class FastPlanner {
                     if (!Double.isNaN(PlayerFit.supportTop(world, scratch))
                             && PlayerFit.bodyFits(world, nx + 0.5, ny, nz + 0.5)) {
                         relax(map, open, from, nx, ny, nz,
-                                ActionCosts.LADDER_ONE_BLOCK_COST, goal, true);
+                                ActionCosts.LADDER_ONE_BLOCK_COST, goal, false);
                     }
                 }
             }
@@ -357,7 +363,7 @@ public final class FastPlanner {
                 int nx = from.x + d[0], nz = from.z + d[1];
                 if (isLadder(world, nx, from.y, nz, scratch)) {
                     relax(map, open, from, nx, from.y, nz,
-                            ActionCosts.LADDER_ONE_BLOCK_COST, goal, true);
+                            ActionCosts.LADDER_ONE_BLOCK_COST, goal, false);
                 }
             }
         }
@@ -406,7 +412,16 @@ public final class FastPlanner {
                 int by = from.y - drop;
                 scratch.set(nx, by, nz);
                 if (!isSlime(world, nx, by, nz, scratch)) {
-                    if (!PlayerFit.passableAt(world, scratch, 0.1)) break;   // hit non-slime floor
+                    // ONE CELL'S OCCUPANCY IS A COLLISION-SHAPE QUESTION. passableAt's third
+                    // argument is an ABSOLUTE world feet height, so 0.1 asked "does the body
+                    // fit at y=0.1" — open sky, always true. This scan therefore never
+                    // stopped at a floor and went looking for slime straight through solid
+                    // ground. Exactly the trap that made break-through unreachable; this was
+                    // the last instance of it.
+                    scratch.set(nx, by, nz);   // isSlime borrows scratch — re-point it
+                    if (!world.getBlockState(scratch).getCollisionShape(world, scratch).isEmpty()) {
+                        break;                                          // hit a non-slime floor
+                    }
                     continue;
                 }
                 // bounce back up: offer landings above the slime, on either side
