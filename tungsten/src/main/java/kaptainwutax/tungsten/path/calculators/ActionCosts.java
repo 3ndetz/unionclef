@@ -16,4 +16,9 @@ public class ActionCosts {
 	// Falling is cheap horizontally but each block of drop adds a little (landing
 	// recovery); large drops are rejected by the fall-damage guard, not priced here.
 	public static double FALL_ONE_BLOCK_COST = 1.0;
+
+	/** Swimming is roughly half walking speed. */
+	public static double SWIM_ONE_BLOCK_COST = WALK_ONE_BLOCK_COST * 2.0;
+	/** Climbing a ladder, per block of height. */
+	public static double LADDER_ONE_BLOCK_COST = WALK_ONE_BLOCK_COST * 1.6;
 }

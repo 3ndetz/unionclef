@@ -246,6 +246,111 @@ public final class FastPlanner {
             step(world, from, support, d[0], d[1], goal, map, open, scratch,
                     ActionCosts.WALK_ONE_BLOCK_COST * SQRT2);
         }
+        special(world, from, goal, map, open, scratch);
+    }
+
+    /**
+     * Moves that have no solid floor to step onto, so {@link #step} never sees them:
+     * ladders, swimming and slime bounces.
+     *
+     * <p>These simply did not exist in this planner. Its move set was walk / diagonal /
+     * climb / drop / parkour, all of which require {@code PlayerFit.supportTop} to return a
+     * real surface — which is NaN inside water and on a ladder. So a route through any of
+     * them was unplannable, and since this is the planner that actually drives the bot,
+     * the ladder, water and slime courses could never pass no matter what else was fixed.
+     *
+     * <p>All three are emitted flagged (viaJump), i.e. handed to the physics engine: it
+     * simulates the real player, so it is the part of the system that can actually hold
+     * itself against a ladder, swim, or ride a bounce.
+     */
+    private static void special(WorldView world, Node from, BlockPos goal,
+                                NodeMap map, Heap open, BlockPos.Mutable scratch) {
+        // ── ladders: climb the column we are in, or step onto an adjacent one ──
+        if (isLadder(world, from.x, from.y, from.z, scratch)) {
+            for (int dy : new int[]{1, -1}) {
+                int ny = from.y + dy;
+                if (isLadder(world, from.x, ny, from.z, scratch)
+                        || PlayerFit.bodyFits(world, from.x + 0.5, ny, from.z + 0.5)) {
+                    relax(map, open, from, from.x, ny, from.z,
+                            ActionCosts.LADDER_ONE_BLOCK_COST, goal, true);
+                }
+            }
+        } else {
+            for (int[] d : CARDINALS) {
+                int nx = from.x + d[0], nz = from.z + d[1];
+                if (isLadder(world, nx, from.y, nz, scratch)) {
+                    relax(map, open, from, nx, from.y, nz,
+                            ActionCosts.LADDER_ONE_BLOCK_COST, goal, true);
+                }
+            }
+        }
+
+        // ── water: swim through it, and surface / climb out onto a bank ──
+        if (isWater(world, from.x, from.y, from.z, scratch)) {
+            int[][] dirs = {{1,0,0},{-1,0,0},{0,0,1},{0,0,-1},{0,1,0},{0,-1,0}};
+            for (int[] d : dirs) {
+                int nx = from.x + d[0], ny = from.y + d[1], nz = from.z + d[2];
+                boolean water = isWater(world, nx, ny, nz, scratch);
+                boolean exit = ny >= from.y && PlayerFit.bodyFits(world, nx + 0.5, ny, nz + 0.5);
+                if (water || exit) {
+                    relax(map, open, from, nx, ny, nz,
+                            ActionCosts.SWIM_ONE_BLOCK_COST, goal, true);
+                }
+            }
+        } else {
+            // entering water from land
+            for (int[] d : CARDINALS) {
+                int nx = from.x + d[0], nz = from.z + d[1];
+                if (isWater(world, nx, from.y, nz, scratch)) {
+                    relax(map, open, from, nx, from.y, nz,
+                            ActionCosts.SWIM_ONE_BLOCK_COST, goal, true);
+                }
+            }
+        }
+
+        // ── slime: dropping onto it throws us back up, so ledges a plain jump
+        //    cannot reach become reachable ──
+        for (int[] d : CARDINALS) {
+            int nx = from.x + d[0], nz = from.z + d[1];
+            for (int drop = 1; drop <= 6; drop++) {
+                int by = from.y - drop;
+                scratch.set(nx, by, nz);
+                if (!isSlime(world, nx, by, nz, scratch)) {
+                    if (!PlayerFit.passableAt(world, scratch, 0.1)) break;   // hit non-slime floor
+                    continue;
+                }
+                // bounce back up: offer landings above the slime, on either side
+                for (int rise = 1; rise <= 6; rise++) {
+                    int ly = by + rise;
+                    for (int[] e : CARDINALS) {
+                        int lx = nx + e[0], lz = nz + e[1];
+                        if (!PlayerFit.bodyFits(world, lx + 0.5, ly, lz + 0.5)) continue;
+                        scratch.set(lx, ly - 1, lz);
+                        if (Double.isNaN(PlayerFit.supportTop(world, scratch))) continue;
+                        relax(map, open, from, lx, ly, lz,
+                                ActionCosts.JUMP_ONE_BLOCK_COST
+                                        + (drop + rise) * ActionCosts.FALL_ONE_BLOCK_COST,
+                                goal, true);
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    private static boolean isLadder(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
+        s.set(x, y, z);
+        return w.getBlockState(s).getBlock() instanceof net.minecraft.block.LadderBlock;
+    }
+
+    private static boolean isWater(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
+        s.set(x, y, z);
+        return kaptainwutax.tungsten.helpers.BlockStateChecker.isAnyWater(w.getBlockState(s));
+    }
+
+    private static boolean isSlime(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
+        s.set(x, y, z);
+        return w.getBlockState(s).getBlock() instanceof net.minecraft.block.SlimeBlock;
     }
 
     /** One horizontal move, trying the same level, one up, and drops. */

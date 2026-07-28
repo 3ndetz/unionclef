@@ -89,12 +89,54 @@ Right after the test, answer in writing:
 
 If (3) is "no" — revert (`git revert`, never delete) and rethink.
 
-## 7. REPORT
+## 7. REPORT — write it for someone who has never seen this code
 
-- Commit and push immediately. Never leave unpushed commits.
-- Say what was broken, WHAT PROVED IT, and what changed — with numbers.
-- **Call red things red.** Partial success is "the course is still red, this much moved".
-  No victory is declared without runs.
+Commit and push immediately; never leave unpushed commits.
+
+The report is NOT a changelog. The reader does not know the class names and should not
+have to. Explain the SUBSTANCE, in plain words, with a concrete example.
+
+Required structure:
+
+**1. What was broken — in plain language, with an example.**
+Not "nextLegNeedsPhysics was never read". Instead:
+> The bot walks up to a gap, and at that point the walking engine is supposed to say
+> "I can't jump, physics takes it from here". It set a flag meaning exactly that — but
+> nobody ever looked at the flag. So the bot arrived at the edge of the gap and just
+> stood there, because the part that performs the jump was never told to start.
+
+**2. How I know — the proof.**
+Always a log line, a number or a run, never reasoning:
+> The log repeated `Walker: BFS 2 wp` fifteen times and then gave up. Two waypoints means
+> the plan ended at the lip of the gap every single time.
+
+**3. What I changed — the idea, not the diff.**
+> Now the landing cell on the far side is remembered and handed to the physics engine,
+> which is the part that can actually jump.
+
+**4. What it gave — numbers before/after.**
+> nav_gaps: never passed -> passes in 8.0s, 6 runs out of 6, zero falls.
+
+**5. What is still broken.** Honestly, by name.
+
+**6. ASSESS** (the four questions from phase 6).
+
+**7. The closing check — MANDATORY, copy it verbatim every time:**
+
+```
+ПРОВЕРКА УСЛОВИЯ ОСТАНОВКИ:
+- Работа закончена по факту?         -> нет / да
+- Главная цель достигнута?           -> нет / да  (@gamer целиком на tungsten, baritone удалён)
+- Заказчик говорил останавливаться?  -> нет / да
+ВЫВОД: если хоть один ответ "нет" — условие остановки ПРОВАЛЕНО, работа продолжается
+        немедленно, следующая итерация начинается сразу.
+```
+
+**Call red things red.** Partial success is "the course is still red, this much moved".
+No victory is ever declared without runs.
+
+**Never end a turn on the word "starting" / "начинаю".** Either the work is in the turn, or
+the sentence does not belong in it. A report is a checkpoint, not a stopping point.
 
 ## 8. Next iteration — immediately
 
