@@ -337,7 +337,20 @@ public class BlockPathWalker {
         // consume the whole climb before a single rung is gained. On a ladder, arrival is a
         // VERTICAL question. (Only ladders are affected — off a ladder this is unchanged.)
         boolean onLadderNow = player.isClimbing();
-        if (dist < 1.5 && (!onLadderNow || Math.abs(playerPos.y - wpPos.y) < 0.4)) {
+        // FALLING PAST A LANDING IS NOT ARRIVING AT IT. Waypoints advance on horizontal
+        // distance, so while airborne above a landing the walker ticked straight through it
+        // and steered at the waypoints BEYOND. Arrival, while we are in the air and the
+        // target is genuinely below us, is a vertical question — as on a ladder.
+        //
+        // This was briefly reverted on a FALSE regression signal: nav_gaps had gone flaky and
+        // these walker changes looked responsible. An A/B on the same session settled it —
+        // the last known-good build flakes on nav_gaps IDENTICALLY (1 pass in 3) on this
+        // stand, which has drifted from ~15 fps to ~9 over a long session. The code was not
+        // the cause. Measured effect of keeping this: nav_slime goes from 20.7 blocks short
+        // with a void fall on every run, to 8.0-8.4 short with no falls at all, 3 runs of 3.
+        boolean fallingToward = !player.isOnGround() && (playerPos.y - wpPos.y) > 1.0;
+        if (dist < 1.5 && (!onLadderNow || Math.abs(playerPos.y - wpPos.y) < 0.4)
+                && !fallingToward) {
             waypointIdx++;
             if (waypointIdx >= path.size()) {
                 stop();
@@ -405,6 +418,13 @@ public class BlockPathWalker {
         // and we are already on top of it horizontally, push forward regardless.
         boolean climbing = wp.getY() > player.getBlockPos().getY() && dist < 1.6;
         boolean move = facing || !onGround || climbing;
+        // Do not keep adding speed once we are directly over the landing, or the arc carries
+        // us past it. Known limit: on a bounce CHAIN this also throttles above every
+        // intermediate hop and the bot bleeds speed, which is why the far ledge is still out
+        // of reach. It is nonetheless the better of the two measured states — without it the
+        // bot flies past the hop, turns back toward a waypoint now behind it and drops off
+        // the pad. The real answer is a bounce chain the executor understands.
+        if (!onGround && (playerPos.y - wpPos.y) > 1.0 && dist < 1.0) move = false;
 
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(move);
@@ -414,9 +434,27 @@ public class BlockPathWalker {
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
 
+        // DIAGNOSTIC: the harness samples roughly every 3 s because each sample is a py4j
+        // round trip, which is far too coarse to see a fall — two samples showed the bot on
+        // the lip and then 16 blocks away and 57 down, with no way to tell whether it ever
+        // touched the pad in between. Print the actual flight, tick by tick.
+        if (!onGround && TungstenConfig.get().verboseDebugLogging && (dbgN++ % 4 == 0)) {
+            Vec3d vv = player.getVelocity();
+            Debug.logMessage(String.format(
+                    "AIR pos=(%.1f,%.1f,%.1f) vel=(%.2f,%.2f,%.2f) wp=(%d,%d,%d) idx=%d/%d",
+                    playerPos.x, playerPos.y, playerPos.z, vv.x, vv.y, vv.z,
+                    wp.getX(), wp.getY(), wp.getZ(), waypointIdx, path.size()));
+        }
+
         boolean needJumpUp = wp.getY() > player.getBlockPos().getY();
+        // YOU STEP OFF A HIGH LEDGE, YOU DO NOT LEAP OFF IT. A sprint-jump at a lip adds
+        // height and forward momentum and stretches the arc far past the target — measured
+        // on the bounce course at ~0.4 blocks/tick where a walk carries 0.28. Only a REAL
+        // drop is meant here: a gap whose far side sits a block lower still has to be
+        // jumped, so the line is drawn at two blocks, not at any descent at all.
+        boolean droppingTo = wp.getY() < player.getBlockPos().getY() - 2;
         boolean canJump = (facing || climbing) && TungstenConfig.get().followJumpingEnabled
-                && onGround
+                && onGround && !droppingTo
                 && (needJumpUp || SafetySystem.isJumpLandingSafe(
                         playerPos, player.getVelocity(), player.getEntityWorld()));
         mc.options.jumpKey.setPressed(canJump);

@@ -72,6 +72,12 @@ public final class FastPlanner {
     /** Hard ceiling on bounce travel, so a deep pit cannot explode the branching factor. */
     private static final int MAX_SLIME_REACH = 8;
     /**
+     * Share of the drop a slime bounce actually returns as height. The collision itself is
+     * lossless, but vertical drag eats the rest of the climb: measured 4.7 blocks back from
+     * a 7-block drop on the stand.
+     */
+    private static final double BOUNCE_HEIGHT_RETURN = 0.67;
+    /**
      * Highest ledge we still plan a route over. Anything above a plain jump
      * (PlayerFit.JUMP_HEIGHT) is emitted as a physics-required step: the walker
      * stops there and the physics engine climbs it. Refusing these outright is
@@ -455,10 +461,19 @@ public final class FastPlanner {
                     if (isSlime(world, nx, by, nz, scratch)) {
                         // stand ON the slime: feet in the cell above the block
                         if (PlayerFit.bodyFits(world, nx + 0.5, by + 1, nz + 0.5)) {
+                            // WALKER-OWNED, NOT FLAGGED FOR PHYSICS. Running off a lip and
+                            // falling is not a manoeuvre that needs a simulator — it is a step
+                            // forward, and gravity does the rest. Handing it to physics instead
+                            // produced a LIVELOCK measured on this course: the search cannot
+                            // solve an 11-block guided leap, gives up, the navigator clears
+                            // 'awaiting', replans, hands the SAME jump over again — 208 refusals
+                            // in one run with the walker stopped each round, so the bot simply
+                            // stood at the lip. Same call as the ladder: the executor that can
+                            // do it, owns it.
                             relax(map, open, from, nx, by + 1, nz,
                                     ActionCosts.JUMP_ONE_BLOCK_COST
                                             + drop * ActionCosts.FALL_ONE_BLOCK_COST,
-                                    goal, true);
+                                    goal, false);
                         }
                         break;
                     }
@@ -485,10 +500,29 @@ public final class FastPlanner {
         if (from.parent != null && isSlime(world, from.x, from.y - 1, from.z, scratch)) {
             int fell = from.parent.y - from.y;
             if (fell > 0) {
-                int reach = Math.min(MAX_SLIME_REACH,
-                        (int) Math.ceil(SPRINT_BLOCKS_PER_TICK * AIRTIME_TICKS_PER_SQRT_BLOCK
-                                * Math.sqrt(fell)));
-                for (int rise = 1; rise <= fell; rise++) {          // lossless: apex == drop
+                double apex = fell * BOUNCE_HEIGHT_RETURN;
+                // THE BOUNCE IS LOSSLESS IN THE COLLISION, NOT IN THE FLIGHT. Agent.java:832
+                // flips velY exactly, but vertical drag then eats about a third of the climb,
+                // so the apex is roughly two thirds of the drop — MEASURED on the stand with
+                // the airborne trace: a 7-block drop bounced to 4.7 above the pad
+                // (-60 -> -55.4), not the 7 the collision alone would suggest. Planning for
+                // the lossless number offers landings the bot cannot physically reach, and it
+                // then chases an impossible waypoint and falls past everything, which is
+                // exactly what this course did.
+                for (int rise = 1; rise <= (int) Math.floor(apex); rise++) {
+                    // THE HIGHER YOU LAND, THE LESS TIME YOU HAVE UP THERE. A single reach for
+                    // the whole bounce is wrong at both ends: it under-sells a low landing and
+                    // badly over-sells one near the apex, where the window is almost nothing.
+                    // Distance is speed times the time spent at or above the landing height —
+                    // up to the apex, then back down to it. With this, the ledge stops being
+                    // offered from the NEAR edge of the pad, which the trace showed the bot
+                    // chasing and missing (apex -55.4 at x=12.3, ledge at x=17 needing -56),
+                    // and the route is forced to bounce from the FAR edge instead.
+                    double ticksAbove = (AIRTIME_TICKS_PER_SQRT_BLOCK / 2.0)
+                            * (Math.sqrt(apex) + Math.sqrt(Math.max(0.0, apex - rise)));
+                    int reach = Math.min(MAX_SLIME_REACH,
+                            (int) Math.floor(SPRINT_BLOCKS_PER_TICK * ticksAbove));
+                    if (reach < 1) continue;
                     int ly = from.y + rise;
                     for (int[] e : CARDINALS) {
                         for (int lr = 1; lr <= reach; lr++) {
@@ -499,10 +533,12 @@ public final class FastPlanner {
                             // floor is a block further down and aims physics into mid-air.
                             scratch.set(lx, ly, lz);
                             if (Double.isNaN(PlayerFit.supportTop(world, scratch))) continue;
+                            // Also walker-owned: bouncing is jumping on the slime and holding
+                            // the direction, which is exactly what the walker already does.
                             relax(map, open, from, lx, ly, lz,
                                     ActionCosts.JUMP_ONE_BLOCK_COST
                                             + (rise + lr) * ActionCosts.FALL_ONE_BLOCK_COST,
-                                    goal, true);
+                                    goal, false);
                         }
                     }
                 }

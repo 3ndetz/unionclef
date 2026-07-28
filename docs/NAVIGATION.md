@@ -112,6 +112,20 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 `nav_staircase`, `nav_descend`, `nav_gaps`, `nav_steep`, `nav_break`, `nav_wall2`,
 `nav_water`, `nav_ladder`. Red: `nav_slime`.
 
+⚠️⚠️ **THE STAND DECIDES MARGINAL COURSES — ALWAYS A/B ON THE SAME SESSION.**
+Over a long session this stand drifts from ~15 fps to ~9, and at 9 fps a marginal course
+flakes no matter what the code says. On 2026-07-28 `nav_gaps` fell to 1 pass in 3 and looked
+exactly like a regression from the walker changes; those changes were reverted on that
+signal. Then the last KNOWN-GOOD build was rebuilt and run on the same stand: it flaked
+**identically**, 1 in 3. The code was never the cause, and the revert was wrong — it was
+undone once the A/B proved it.
+
+Rules that follow, and they are cheap:
+- A suspected regression is not a regression until the previous build is measured in the
+  SAME session, on the SAME stand. `git stash` + `git checkout <good> -- <files>` + build.
+- Read `avg_fps` on every verdict. Below ~12 treat pass/fail on a marginal course as noise.
+- Restarting the containers does NOT restore fps; the drift is on the host.
+
 ⚠️ **Per-course runs are the trustworthy measurement right now.** A back-to-back series of
 ten degrades the stand: the last full sequential run reported 6/10 with `nav_wall2` INVALID
 at 9.8 fps and no build running, while every one of those courses passes on its own. That
