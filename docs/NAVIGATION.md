@@ -157,7 +157,11 @@ A chain of three, where each link was invisible until the one before it was fixe
    airborne — ticked from the client mixin and exposed over py4j. Navigation had simply
    never asked for it. It is now asked at the hand-off point.
 
-Result: `Pillaring up to y=-58`, PASS in ~6 s. Note the shape of this bug — three complete,
+Result: `Pillaring up to y=-58`, PASS in ~6 s. The pillar itself is clean — all four
+attempts across the repeat runs logged `Pillar done ... (placed 1)`, with no `stuck` and no
+`no block in hand`. One repeat run of three took 16.5 s and tripped the 6 s freeze
+assertion; since the pillar logs are clean that stall is BEFORE the hand-off, not in the
+pillar. Not chased without evidence — watch item. Note the shape of this bug — three complete,
 working mechanisms in a row, none of them reachable, each hidden behind the previous one.
 
 ### `nav_water`, `nav_slime` — RED, and they fail one level earlier
