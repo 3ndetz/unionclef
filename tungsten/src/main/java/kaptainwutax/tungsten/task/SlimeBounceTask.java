@@ -142,11 +142,19 @@ public class SlimeBounceTask {
         mc.options.rightKey.setPressed(false);
         mc.options.sneakKey.setPressed(false);
 
-        // NO JUMP. Jumping as you meet the slime turns a passive bounce into a launched one,
-        // which sounds like the extra height the far ledge needs — measured, it is not: with
-        // the launch the bot cleared the pad entirely and died 5 to 6 times per run. The
-        // passive bounce is the one the planner's model was measured against.
-        mc.options.jumpKey.setPressed(false);
+        // JUMP ONCE, ON THE LAST CELL OF THE PAD. A passive bounce provably cannot cross the
+        // gap: traced, the bot leaves the pad's end at x=13.4 with its apex at y=-55.5, and
+        // reaching the ledge from there means 4 blocks of travel while descending 0.6 — about
+        // four ticks, or 0.8 blocks. It is short by a factor of five, so no amount of throttle
+        // policy over a passive bounce will do it. Jumping as you meet slime launches you far
+        // higher, but doing it on EVERY contact is what threw the bot off the pad in the
+        // earlier attempts (5-9 deaths a run). So: only on the last slime cell before the
+        // gap, which is where the launch is actually aimed at something.
+        boolean lastPadCell = onSlime && !(world.getBlockState(
+                player.getBlockPos().down().offset(
+                        net.minecraft.util.math.Direction.getFacing(
+                                tgt.x - pos.x, 0, tgt.z - pos.z))).getBlock() instanceof SlimeBlock);
+        mc.options.jumpKey.setPressed(lastPadCell);
 
         if (TungstenConfig.get().verboseDebugLogging && (ticks % 8 == 0)) {
             Vec3d v = player.getVelocity();

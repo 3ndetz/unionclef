@@ -272,6 +272,21 @@ Measured: `nav_slime` went from one landing in three with a void death on the ot
 result — charging for horizontal air travel, which biased the search towards the NEAR edge,
 measured worse, and now it is clear why.
 
+**A PASSIVE BOUNCE CANNOT CROSS THIS GAP — arithmetic, not opinion.** Traced: the bot leaves
+the pad's end at x=13.4 with its apex at y=-55.5. Reaching the ledge from there means 4
+blocks of horizontal travel while descending 0.6 — about four ticks, or 0.8 blocks at the
+measured speed. It is short by a factor of five, so NO throttle policy over a passive bounce
+can ever do it. The pad also cannot be entered at its far edge directly: the fall from the
+lip carries about 3.7 blocks, and the pad's far edge is 6.6 away, so the crossing necessarily
+starts near the pad's beginning. What is left is a jump-boosted bounce, aimed, on the last
+pad cell — tried, and it still killed the bot 6-8 times a run.
+
+⚠️ **AND THE COURSE IS NOT RELIABLY MEASURABLE AT THIS STAND'S CURRENT ~9 fps.** The same
+build, with no planner change between the runs, produced 8.4-8.9 blocks short with zero falls
+three times in a row, and later 20.7 with a fall three times in a row. Two attractors, and
+which one you get is not decided by the code. Conclusions about nav_slime drawn from a single
+series here are not evidence — restore the stand's performance first, then measure.
+
 **A DEDICATED EXECUTOR EXISTS AND IS OFF BY DEFAULT (`slimeCrossing`).** `SlimeBounceTask`
 is the right architecture — a crossing is ONE manoeuvre, which is what the walker rules below
 could never express — and it is verified to run (starts and bounces counted over py4j, not
@@ -287,6 +302,7 @@ zero deaths with it off. Everything tried on top:
 | exit = first non-slime cell in the route | aimed at x=14, one step past the pad and over the VOID — traced closing to horiz 0.3 while falling to y=-88 |
 | exit must have a real floor under it | still 6-7 deaths |
 | retried after the far-edge landing fix, so the bounce starts where the maths says it can reach | still 9 deaths — the constant sprint is the problem, not the launch point |
+| jump-boost on the LAST pad cell only (a passive bounce provably cannot cross) | still 6-8 deaths |
 
 The remaining suspicion, and where the next pass starts: the executor is doing what it is
 told, so the doubt now falls on the PLAN it is told to follow — the reach model may still be
