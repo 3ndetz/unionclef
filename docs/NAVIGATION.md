@@ -259,6 +259,19 @@ what a wrong model looks like from outside.
 Measured progress: `flagged` 0 -> 1, plan `complete` false -> TRUE, the guide now contains
 the slime touch point, `self_falls` 1 -> 0, final distance 20.7 -> 15.1.
 
+**THE DROP NOW LANDS ON THE FAR EDGE, AND THE DEATHS ARE GONE.** Worked out from the trace,
+not from taste: a bounce leaves the pad at about +1.05 blocks/tick, which under vanilla
+gravity keeps the bot above the ledge's level for ~17 ticks; at the measured 0.26 blocks/tick
+that is 4.4 blocks of travel. The ledge starts at x=17, so the bounce has to begin at
+x >= 12.6 — the pad's LAST cell. When every landing on the pad was offered, the search took a
+near one and spent the height on hops that each shed speed. Only the furthest reachable slime
+cell is emitted now (descending scan, first hit wins).
+
+Measured: `nav_slime` went from one landing in three with a void death on the other two, to
+**8.4-8.9 blocks short with ZERO falls, 3 runs of 3**. It also retro-explains an earlier
+result — charging for horizontal air travel, which biased the search towards the NEAR edge,
+measured worse, and now it is clear why.
+
 **A DEDICATED EXECUTOR EXISTS AND IS OFF BY DEFAULT (`slimeCrossing`).** `SlimeBounceTask`
 is the right architecture — a crossing is ONE manoeuvre, which is what the walker rules below
 could never express — and it is verified to run (starts and bounces counted over py4j, not
@@ -273,6 +286,7 @@ zero deaths with it off. Everything tried on top:
 | release the throttle only over the FINAL landing | still 5-6 deaths, best distance 6.7 |
 | exit = first non-slime cell in the route | aimed at x=14, one step past the pad and over the VOID — traced closing to horiz 0.3 while falling to y=-88 |
 | exit must have a real floor under it | still 6-7 deaths |
+| retried after the far-edge landing fix, so the bounce starts where the maths says it can reach | still 9 deaths — the constant sprint is the problem, not the launch point |
 
 The remaining suspicion, and where the next pass starts: the executor is doing what it is
 told, so the doubt now falls on the PLAN it is told to follow — the reach model may still be

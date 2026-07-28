@@ -444,7 +444,11 @@ public final class FastPlanner {
             // A run-up is part of the move: slime is rarely directly under the lip you leave
             // from (here the pad ends at x=6 and the slime starts at x=9, across two cells of
             // void), and a player who runs off an edge keeps travelling as it falls.
-            for (int reach = 1; reach <= MAX_JUMP_GAP; reach++) {
+            // FURTHEST FIRST, then stop. Descending order is the whole point: the first hit
+            // is the deepest landing on the pad, and once it is emitted the nearer ones are
+            // not offered at all.
+            boolean landed = false;
+            for (int reach = MAX_JUMP_GAP; reach >= 1 && !landed; reach--) {
                 int nx = from.x + d[0] * reach, nz = from.z + d[1] * reach;
                 for (int drop = 1; drop <= MAX_SLIME_DROP; drop++) {
                     int by = from.y - drop;
@@ -459,6 +463,15 @@ public final class FastPlanner {
                             * (AIRTIME_TICKS_PER_SQRT_BLOCK / 2.0) * Math.sqrt(drop)));
                     if (reach > fallReach) continue;
                     if (isSlime(world, nx, by, nz, scratch)) {
+                        // LAND ON THE FAR EDGE OF THE PAD, NOT THE NEAR ONE. Worked out from
+                        // the measured trace rather than taste: a bounce leaves the pad at
+                        // about +1.05 blocks/tick, which with vanilla gravity keeps the bot
+                        // above the ledge's level for ~17 ticks, and at the measured 0.26
+                        // blocks/tick that is 4.4 blocks of travel. The ledge starts at x=17,
+                        // so the bounce has to begin at x>=12.6 — the pad's last cell. Landing
+                        // near the pad's start, which is what the search picked when every
+                        // cell was offered, spends the height on hops that each shed speed.
+                        // Only the FURTHEST reachable slime cell in this direction is emitted.
                         // stand ON the slime: feet in the cell above the block
                         if (PlayerFit.bodyFits(world, nx + 0.5, by + 1, nz + 0.5)) {
                             // WALKER-OWNED, NOT FLAGGED FOR PHYSICS. Running off a lip and
@@ -478,6 +491,7 @@ public final class FastPlanner {
                                     ActionCosts.JUMP_ONE_BLOCK_COST
                                             + drop * ActionCosts.FALL_ONE_BLOCK_COST,
                                     goal, false);
+                            landed = true;
                         }
                         break;
                     }
