@@ -138,6 +138,30 @@ No victory is ever declared without runs.
 **Never end a turn on the word "starting" / "начинаю".** Either the work is in the turn, or
 the sentence does not belong in it. A report is a checkpoint, not a stopping point.
 
+## 7b. CONTEXT REFRESH — when it starts feeling hard, RE-READ. Do not wind down.
+
+Signs you need this: the same course fails three iterations in a row; you are guessing
+instead of citing; you catch yourself writing "I am running low on context" or "the next
+session should…"; you avoid re-opening a file because you only half-remember it.
+
+**That feeling is NOT a reason to stop. It is the signal to re-read.** Being fuzzy on
+something you read hours ago is normal — the fix is thirty seconds of reading, not a
+handover. Refusing to re-open a file you half-remember is the actual failure mode: it makes
+you guess, and guessing is what has cost this project entire sessions.
+
+Do this, in order, then continue:
+
+1. Re-read [NAVIGATION.md](NAVIGATION.md) — which engine does what, and the log fingerprints.
+2. Re-read this checklist, phases 1 and 6.
+3. Re-read [../TODOS.md](../TODOS.md) section 0 and the critical register — restate the END
+   GOAL out loud: `@gamer` plays the whole game on tungsten, baritone deleted.
+4. Re-open the actual files involved in the current problem. Not from memory. Open them.
+5. Re-state, in writing: what is PROVEN, what is ASSUMED, what is UNKNOWN. Attack the
+   UNKNOWN with one experiment — never with a code change.
+6. Write down the vectors again: where we are (score X/10), what is red, what is next.
+
+Then keep going with a clear head. A refresh is part of the loop, not an exit from it.
+
 ## 8. Next iteration — immediately
 
 Reaching a milestone is not a reason to stop. Close a root cause, take the next priority,

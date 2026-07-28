@@ -95,7 +95,13 @@ public class PathExecutor {
     	if (isClient && path != null && !path.isEmpty() && TungstenMod.mc.player != null) {
     		double toRoot = TungstenMod.mc.player.getEntityPos()
     				.distanceTo(path.get(0).agent.getPos());
-    		if (toRoot > armTolerance()) {
+    		// Arming exists for ONE reason: the walker is still travelling toward the root,
+    		// so replaying now would compare against a position the bot has not reached yet.
+    		// If the walker is NOT running, nobody is going to bring the bot there — arming
+    		// is then a deadlock, not a wait. That is exactly what stalled every ladder run:
+    		// the hand-off stops the walker, the physics path armed 2.2 blocks ahead, and
+    		// both sides waited for each other until the navigator gave up.
+    		if (toRoot > armTolerance() && kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
     			this.armed = true;   // wait for the bot to reach the root
     			kaptainwutax.tungsten.Debug.logMessage(String.format(
     					"Path armed %.1f blocks ahead — walker drives until we reach it", toRoot));
