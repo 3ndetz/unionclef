@@ -140,6 +140,17 @@ the sentence does not belong in it. A report is a checkpoint, not a stopping poi
 
 ## 7b. CONTEXT REFRESH — when it starts feeling hard, RE-READ. Do not wind down.
 
+⛔⛔ **IT IS STRICTLY FORBIDDEN TO WORK A TASK WHILE TIRED.**
+Not "wind down", not "one more small step to finish it off" — both are banned. A tired pass
+does not produce a smaller result, it produces a WRONG one: on 2026-07-28 the tired steps
+were an inverted coordinate convention (reverted), a floor check one level off, and a
+capability that could never fire. Every one of them cost more time than the refresh would have.
+
+When tired you do a **FULL FRESH RE-ENTRY FROM ZERO**, and that re-entry IS the work:
+re-read the docs, RE-OPEN the source files (never from memory), re-establish the whole
+context out loud, then act. Compaction refreshes the session automatically — you do not
+need permission and you do not need a new session; you need to actually re-enter.
+
 Signs you need this: the same course fails three iterations in a row; you are guessing
 instead of citing; you catch yourself writing "I am running low on context" or "the next
 session should…"; you avoid re-opening a file because you only half-remember it.

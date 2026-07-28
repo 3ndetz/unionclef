@@ -391,6 +391,15 @@ public final class FastPlanner {
                              double baseCost) {
         int nx = from.x + dx, nz = from.z + dz;
 
+        // Mining is offered ALONGSIDE stepping, not only as a last resort. The loop below
+        // `return`s as soon as ANY level is steppable, and a 2-high wall always offers one:
+        // its own TOP. So the planner "solved" a wall by climbing over it — a climb it then
+        // could not execute — and breakThrough was never even reached (proved by
+        // instrumentation: the "break-through planned" line never appeared once).
+        // Emitting both lets A* choose on cost, and mining two dirt blocks is far cheaper
+        // than a 2-block climb.
+        breakThrough(world, from, dx, dz, goal, map, open, scratch);
+
         // same level / climb / drop down to MAX_FALL. CLIMB_MAX covers ledges a
         // plain jump cannot reach: the route is still emitted, flagged so the
         // physics engine executes that step (pillar/parkour). Without it the
@@ -419,9 +428,8 @@ public final class FastPlanner {
             return;   // nearest reachable level in this direction wins
         }
 
-        // nothing to step onto: try a parkour jump across the gap, then mining through
+        // nothing to step onto: try a parkour jump across the gap
         parkour(world, from, support, dx, dz, goal, map, open, scratch);
-        breakThrough(world, from, dx, dz, goal, map, open, scratch);
     }
 
     /**
@@ -443,8 +451,11 @@ public final class FastPlanner {
         if (player == null) return;
 
         int nx = from.x + dx, nz = from.z + dz;
-        // there must be a floor on the far side to land on
-        scratch.set(nx, from.y - 1, nz);
+        // There must be a floor on the far side to land on. supportTop(cell) already looks
+        // at cell.down(), so the cell to ask about is the DESTINATION, not the one below it
+        // — asking one level too low made this return on every single call (the course floor
+        // has nothing under it), which is why the move never fired even once.
+        scratch.set(nx, from.y, nz);
         if (Double.isNaN(PlayerFit.supportTop(world, scratch))) return;
 
         List<BlockPos> plan = new ArrayList<>();
@@ -468,6 +479,10 @@ public final class FastPlanner {
         // Flagged needsPhysics: the WALKER cannot mine — it would just walk into the wall.
         // Flagging cuts the walked leg here and hands the cell to the physics side, whose
         // guide carries toBreak into PathFinder.truncateAtBreaks -> PathExecutor.tickBreaking.
+        if (TungstenConfig.get().verboseDebugLogging) {
+            Debug.logMessage("FastPlanner: break-through planned at " + nx + "," + from.y + "," + nz
+                    + " (" + plan.size() + " block(s), " + (int) ticks + " ticks)");
+        }
         relax(map, open, from, nx, from.y, nz, cost, goal, true, plan);
     }
 

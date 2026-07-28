@@ -233,6 +233,7 @@ class NavBreak(NavCourse):
     way around — this fails if break-as-a-move is not reachable."""
     id = "nav_break"
     duration = 120
+    settings = {"verboseDebugLogging": "true"}
 
     def course(self, arena, ctx):
         arena.floor(7, -1, 30, 1, "stone")
