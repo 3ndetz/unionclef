@@ -59,6 +59,14 @@ public final class FastNavigator {
     private static volatile BlockPos pendingPhysicsTarget = null;
     /** True while the physics engine is performing a jump we handed it. */
     private static volatile boolean awaitingPhysics = false;
+    /**
+     * Far side of a slime pad the route crosses. The walker only ever gets a LEG, and the
+     * leg is cut at LEG_LENGTH, so on a pad wider than that its last waypoint sits ON the
+     * slime and a crossing has nothing to aim at — measured as 59 trigger hits and zero
+     * crossings started. The navigator holds the whole route, so it is the one that can see
+     * the exit; same shape as pendingPhysicsTarget for a jump.
+     */
+    private static volatile BlockPos pendingCrossing = null;
     private static volatile boolean planning = false;
     private static BlockPos legTail = null;
     private static int stallTicks = 0;
@@ -91,6 +99,7 @@ public final class FastNavigator {
         legTail = null;
         nextPhysicsTarget = null;
         pendingPhysicsTarget = null;
+        pendingCrossing = null;
         awaitingPhysics = false;
     }
 
@@ -221,6 +230,16 @@ public final class FastNavigator {
             }
         }
 
+        // A crossing was planned and the walk to the lip is done — hand the pad over.
+        if (pendingCrossing != null && !BlockPathWalker.isRunning()
+                && !kaptainwutax.tungsten.task.SlimeBounceTask.isActive()) {
+            BlockPos exit = pendingCrossing;
+            pendingCrossing = null;
+            legTail = null;
+            kaptainwutax.tungsten.task.SlimeBounceTask.startTo(exit);
+            return;
+        }
+
         // the walker is idle — start the leg that was prepared while we walked
         List<BlockPos> leg = nextLeg;
         if (leg != null && leg.size() >= 2) {
@@ -323,7 +342,30 @@ public final class FastNavigator {
                     cells = cells.subList(0, physics);
                 } else {
                     nextPhysicsTarget = null;
-                    if (cells.size() > LEG_LENGTH) cells = cells.subList(0, LEG_LENGTH);
+                    // A SLIME PAD IS ONE MANOEUVRE. Walk to its LIP and let the crossing own
+                    // the pad itself, aimed at the first cell past it — which only the full
+                    // route knows, since a truncated leg ends on the slime.
+                    int padStart = -1, padExit = -1;
+                    for (int i = 0; i < cells.size(); i++) {
+                        BlockPos below = cells.get(i).down();
+                        var st = world.getBlockState(below);
+                        boolean slime = st.getBlock() instanceof net.minecraft.block.SlimeBlock;
+                        if (slime && padStart < 0) padStart = i;
+                        // "NOT SLIME" IS NOT THE SAME AS "SOMEWHERE TO STAND". The exit has to
+                        // be a cell with a real floor under it: the first version took the
+                        // first non-slime cell and aimed the crossing at x=14 — one step past
+                        // the pad, straight over the void between it and the ledge — so the
+                        // bot flew at it and fell (traced: horiz closing to 0.3 while dropping
+                        // to y=-88).
+                        boolean standable = !st.getCollisionShape(world, below).isEmpty();
+                        if (padStart >= 0 && !slime && standable) { padExit = i; break; }
+                    }
+                    if (TungstenConfig.get().slimeCrossing && padStart > 0 && padExit > padStart) {
+                        pendingCrossing = cells.get(padExit);
+                        cells = cells.subList(0, padStart);
+                    } else if (cells.size() > LEG_LENGTH) {
+                        cells = cells.subList(0, LEG_LENGTH);
+                    }
                 }
                 if (cells.size() >= 2) {
                     nextLeg = cells;

@@ -259,7 +259,28 @@ what a wrong model looks like from outside.
 Measured progress: `flagged` 0 -> 1, plan `complete` false -> TRUE, the guide now contains
 the slime touch point, `self_falls` 1 -> 0, final distance 20.7 -> 15.1.
 
-**THE CONCLUSION, after four executor rules were tried and measured:** a bounce chain needs
+**A DEDICATED EXECUTOR EXISTS AND IS OFF BY DEFAULT (`slimeCrossing`).** `SlimeBounceTask`
+is the right architecture — a crossing is ONE manoeuvre, which is what the walker rules below
+could never express — and it is verified to run (starts and bounces counted over py4j, not
+read off the chat, which drops messages here). Its POLICY is unfinished and the numbers say
+so: constant sprint at the exit gives 5-7 void deaths per run, against 8.6 blocks short and
+zero deaths with it off. Everything tried on top:
+
+| crossing policy tried | effect |
+|---|---|
+| full sprint + jump on the slime (launched bounce) | 5-6 deaths per run — the launch clears the pad entirely |
+| passive bounce, no jump | 5-7 deaths |
+| release the throttle only over the FINAL landing | still 5-6 deaths, best distance 6.7 |
+| exit = first non-slime cell in the route | aimed at x=14, one step past the pad and over the VOID — traced closing to horiz 0.3 while falling to y=-88 |
+| exit must have a real floor under it | still 6-7 deaths |
+
+The remaining suspicion, and where the next pass starts: the executor is doing what it is
+told, so the doubt now falls on the PLAN it is told to follow — the reach model may still be
+optimistic under the executor's real conditions, i.e. the ledge may not be reachable from
+where the route starts the bounce. That is a planner question, not a policy one, and it is
+answered by tracing one crossing against the model's own prediction.
+
+**THE EARLIER CONCLUSION, after four walker rules were tried and measured:** a bounce chain needs
 its OWN executor, the way pillaring has `PillarTask`. The generic walker treats a bouncing
 surface as ordinary walking, and every rule bolted onto it fixes one phase and breaks
 another — each of these was built, run and measured, and the numbers are the reason each

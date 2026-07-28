@@ -131,8 +131,12 @@ public class SlimeBounceTask {
         // it must never be released mid-chain.
         WindMouseRotation.INSTANCE.setTargetFast(
                 (float) DirectionHelper.calcYawFromVec3d(pos, tgt), 0);
-        mc.options.forwardKey.setPressed(true);
-        mc.options.sprintKey.setPressed(true);
+        // Full throttle across the chain, released ONLY over the final landing — that is the
+        // whole difference from doing this in the walker, which released it above every
+        // intermediate hop and bled the speed the last bounce needs.
+        boolean overTarget = horiz < 1.5 && pos.y > tgt.y + 0.5;
+        mc.options.forwardKey.setPressed(!overTarget);
+        mc.options.sprintKey.setPressed(!overTarget);
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
