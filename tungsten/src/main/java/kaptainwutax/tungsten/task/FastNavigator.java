@@ -63,6 +63,11 @@ public final class FastNavigator {
     private static BlockPos legTail = null;
     private static int stallTicks = 0;
     private static int tickLog = 0;
+
+    /** Height a plain jump clears; above this only pillaring gets the bot up. */
+    private static double PlayerFitJumpHeight() {
+        return kaptainwutax.tungsten.helpers.PlayerFit.JUMP_HEIGHT;
+    }
     private static double lastDist = Double.MAX_VALUE;
 
     private FastNavigator() {}
@@ -177,6 +182,26 @@ public final class FastNavigator {
                             jump.getX(), jump.getY(), jump.getZ(), dRise, dHoriz,
                             TungstenConfig.get().planPlaceMoves));
                 }
+                // A target ABOVE US and almost overhead is a WALL, not a jump. The physics
+                // engine cannot climb one: above jump height the only real way up is to
+                // place a block under yourself. PillarTask implements exactly that (stay
+                // centred, jump, place while airborne), is ticked from the client mixin and
+                // exposed over py4j — the capability was complete, navigation simply never
+                // asked for it. By the time we reach here the walker has already delivered
+                // us to the foot of the wall. Measured on nav_wall2: rise=1.48 horiz=2.18.
+                double rise = (jump.getY() + 0.5) - player.getEntityPos().y;
+                double horiz = Math.hypot(jump.getX() + 0.5 - player.getEntityPos().x,
+                                          jump.getZ() + 0.5 - player.getEntityPos().z);
+                if (rise > PlayerFitJumpHeight() && horiz < 2.5
+                        && TungstenConfig.get().planPlaceMoves
+                        && !kaptainwutax.tungsten.task.PillarTask.isActive()) {
+                    Debug.logMessage("Wall too high to jump — pillaring to y=" + jump.getY());
+                    kaptainwutax.tungsten.task.PillarTask.startTo(jump.getY());
+                    awaitingPhysics = false;
+                    legTail = null;
+                    return;
+                }
+
                 Debug.logMessage("FastNavigator: physics owns the jump -> "
                         + jump.getX() + "," + jump.getY() + "," + jump.getZ());
                 BlockPathWalker.stop();      // the walker must not fight the jump

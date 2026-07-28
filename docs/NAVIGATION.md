@@ -36,9 +36,13 @@ not the one computing the "real" route.
 
 Both pipelines write **the same movement keys**. Whoever wrote last, wins.
 
-They are **not** redundant copies: they are load-bearing for each other. Removing the
-parallel physics search from `GotoCommand` was tried and it **broke `nav_gaps`** — gap jumps
-are currently executed by that parallel search, not by a hand-off from the navigator.
+**Pipeline B no longer races pipeline A.** While the navigator drives, `GotoCommand` does
+not start its own search for the final goal: the navigator owns the route and asks physics
+only for the segments it cannot walk itself. An earlier attempt at this looked like it
+proved the two pipelines were load-bearing for each other, because it broke `nav_gaps` —
+but the real cause was that the same edit also skipped the `EXECUTOR.cb` retry callback, so
+nothing continued the goto after a segment finished. Skipping only the SEARCH regresses
+nothing and is what finally let hand-offs fire.
 
 ## Four search engines, not three
 
@@ -130,30 +134,31 @@ Breaking through a wall works end to end. Roots fixed, in order:
   truncated guide — so physics delivers the bot to the obstacle and the mining machinery
   takes over.
 
-### `nav_wall2` (2-block ledge, needs pillaring) — RED
+### `nav_wall2` (2-block ledge, needs pillaring) — GREEN
 
-Everything except the hand-off is proven working:
+A chain of three, where each link was invisible until the one before it was fixed.
 
-```
-CLIMB EMITTED at (12,..) rise 2.00 climb=true                 the climb IS generated (406x)
-GUIDE ... END(16.5,-58.0) END(17.5,-58.0) END(18.5,-58.0)     the route REACHES the ledge top
-PLAN n=19 complete=true firstPhysics=12 flagged=1             flagged, and the leg IS cut there
-NAVSTATE walker=false awaiting=false pending=set pfActive=TRUE
-```
+1. **The hand-off was starved.** Everything around it was already correct — the climb was
+   generated (`CLIMB EMITTED ... rise 2.00`), the route reached the ledge top, the leg was
+   cut at the right waypoint (`PLAN complete=true flagged=1`) — and the hand-off was still
+   refused on every single tick, because there is ONE physics search engine and `;goto` was
+   running a second search on it for the final goal. That goal sits on top of the ledge,
+   which physics cannot climb, so the search never succeeded: full 20 s budget, restart,
+   repeat, engine busy forever (`pending=set pfActive=TRUE`).
+2. **The first attempt to free the engine broke `nav_gaps`** and was reverted, which made
+   the two pipelines look mutually load-bearing. They are not. Re-reading
+   `GotoCommand.startWithRetry` end to end showed the edit had returned early and skipped
+   the `EXECUTOR.cb` retry callback a few lines below — so after the first executor segment
+   nothing continued the goto. Skipping only the search keeps every course green.
+3. **With the engine free, the hand-off fired** (`HANDOFF target=(12,-58,0) rise=1.48
+   horiz=2.18`) and physics was asked to climb 1.48 blocks, which no jump clears. A target
+   above you and nearly overhead is a WALL, not a jump: the only way up is to place a block
+   under yourself. `PillarTask` already implemented exactly that — centre, jump, place while
+   airborne — ticked from the client mixin and exposed over py4j. Navigation had simply
+   never asked for it. It is now asked at the hand-off point.
 
-**Root:** the hand-off is ready and correct on every tick, and refused on every tick because
-the single physics search engine is **busy**. `;goto` starts `PATHFINDER.find(goal)` in
-parallel with `FastNavigator`; that search targets the ledge top, which physics cannot climb,
-so it runs its full 20 s budget, restarts, and monopolises the engine forever.
-
-`PillarTask` — the mechanism that would solve this — is fully implemented ("stay centred,
-jump, place a block under yourself while airborne"), ticked from `MixinClientPlayerEntity`,
-and exposed over py4j. Navigation never asks for it.
-
-**Tried and reverted:** removing the parallel `PATHFINDER.find(goal)` from `GotoCommand` —
-it broke `nav_gaps`. Order for the next attempt: (1) make gap jumps go through the
-navigator's hand-off instead of relying on the parallel search, verified on `nav_gaps`;
-(2) only then remove the parallel search; (3) then wire `PillarTask`.
+Result: `Pillaring up to y=-58`, PASS in ~6 s. Note the shape of this bug — three complete,
+working mechanisms in a row, none of them reachable, each hidden behind the previous one.
 
 ### `nav_water`, `nav_slime` — RED, and they fail one level earlier
 
@@ -188,7 +193,7 @@ further along the chain remains.
    into it (ladder, water, slime, place/pillar). Delete `BlockSpacePathFinder` afterwards.
 2. **`BlockPathWalker` must not own a search.** It should execute the path it is given.
    `CombatPathfinder` belongs to combat.
-3. **One pipeline, not two.** The physics A* is an executor for `needsPhysics` segments, not
-   a second router. Note the measured constraint: the pipelines are currently load-bearing
-   for each other, so this is a rework, not a deletion.
+3. **One pipeline, not two.** Done for `;goto`: physics is now an executor for
+   `needsPhysics` segments, not a second router. The other entry points that still start
+   their own search (`followPlayer`, altoclef goal tasks) should be moved the same way.
 4. **One key owner.** Combat already does this (`CombatMoveIntent`); navigation does not.
