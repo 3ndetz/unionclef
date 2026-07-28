@@ -165,6 +165,22 @@ public class PathExecutor {
     public void tick(ClientPlayerEntity player, GameOptions options) {
     	player.getAbilities().allowFlying = false;
     	if(TungstenMod.pauseKeyBinding.isPressed() || stop) {
+    		// A MINING/BRIDGING segment runs with an EMPTY path (the "At the wall" and
+    		// "At the gap" shortcuts): there is no recorded replay, so a drift abort —
+    		// which is a statement about the REPLAY diverging from reality — has nothing
+    		// to say about it. Letting `stop` fall through here wiped the whole queue,
+    		// silently, and that is what made nav_break start mining and then do nothing.
+    		//
+    		// The abort itself is left ALONE: weakening it on the Agent side regressed
+    		// nav_gaps from a stable 6/6 to failing, because the parkour hand-off depends
+    		// on it firing. Only the consequence is narrowed, here, where the distinction
+    		// between "abandon a replay" and "abandon the work" actually lives.
+    		boolean replayInProgress = this.path != null && !this.path.isEmpty();
+    		boolean explicitStop = TungstenMod.pauseKeyBinding.isPressed();
+    		if (!replayInProgress && !explicitStop && (breakQueue != null || placeQueue != null)) {
+    			stop = false;                 // consume the flag, keep doing the real work
+    			// fall through to the normal tick so tickBreaking/tickPlacing can run
+    		} else {
     		if (breakQueue != null) {
     			// Never discard a mining plan silently — that hid the nav_break failure for
     			// a whole session (mining started, then simply ceased to exist).
@@ -194,6 +210,7 @@ public class PathExecutor {
 		    TungstenModRenderContainer.RUNNING_PATH_RENDERER.clear();
 		    TungstenModRenderContainer.BLOCK_PATH_RENDERER.clear();
     		return;
+    		}
     	}
     	// ARMED: this path starts ahead of us. Do not replay it (and do not touch
     	// the movement keys — the walker owns them until we get there). Start the
