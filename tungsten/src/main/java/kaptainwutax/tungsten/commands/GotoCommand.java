@@ -76,7 +76,8 @@ public class GotoCommand extends Command {
 		// the computer thought. The walker only leaves the ground for moves it can
 		// actually do; a waypoint the planner marked needsPhysics stops the walk so
 		// the physics engine takes that segment (parkour stays intact).
-		if (TungstenConfig.get().fastBlockFirst && attempt == 0) {
+		boolean navigatorDrives = TungstenConfig.get().fastBlockFirst && attempt == 0;
+		if (navigatorDrives) {
 			startFastLeg(target);
 		}
 
@@ -84,7 +85,22 @@ public class GotoCommand extends Command {
 		TungstenConfig.get().searchTimeoutMs       = 15000L;
 		TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 15;
 		TungstenModDataContainer.PATHFINDER.minDistPath           = 1.8;
-		TungstenModDataContainer.PATHFINDER.find(TungstenMod.mc.world, target, TungstenMod.mc.player);
+
+		// ONE OWNER OF THE ROUTE while the navigator is driving. There is a SINGLE physics
+		// search engine. Searching for the final goal in parallel looks free, but on any
+		// route whose goal is not directly reachable — behind a wall, on top of a ledge —
+		// that search cannot succeed, burns its full 20 s budget, restarts, and monopolises
+		// the engine, so the hand-offs the navigator needs for jumps and climbs are refused
+		// on every single tick (measured on nav_wall2: `pending=set` and `pfActive=true`,
+		// forever). The navigator owns the route and asks physics for the segments it cannot
+		// walk itself.
+		//
+		// NOTE: only the SEARCH is skipped. An earlier attempt returned here outright and
+		// also skipped the retry callback below — which is what actually broke nav_gaps,
+		// because nothing continued the goto once an executor segment finished.
+		if (!navigatorDrives) {
+			TungstenModDataContainer.PATHFINDER.find(TungstenMod.mc.world, target, TungstenMod.mc.player);
+		}
 
 		// Set callback: when pathfinder+executor finish, retry if not at target
 		TungstenModDataContainer.EXECUTOR.cb = () -> {
