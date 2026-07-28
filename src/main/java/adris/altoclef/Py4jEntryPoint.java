@@ -1908,6 +1908,27 @@ public class Py4jEntryPoint {
         } catch (Exception e) { return false; }
     }
     public boolean pillarActive() { return kaptainwutax.tungsten.task.PillarTask.isActive(); }
+
+    /**
+     * Is a slime crossing running right now? A crossing is one manoeuvre — hold heading and
+     * sprint across a whole chain of bounces — so it cannot be read off the walker's state.
+     * Exposed here because the in-game chat is not a reliable channel for this: on the bounce
+     * course the physics search floods it and the client reports "Chat overflow, message
+     * dropped" dozens of times a run, so a task's log line going missing proves nothing.
+     */
+    public boolean slimeCrossActive() { return kaptainwutax.tungsten.task.SlimeBounceTask.isActive(); }
+
+    /** How many times the walker's BFS tick ran — zero means the walker never drove at all. */
+    public int walkerBfsTicks() { return kaptainwutax.tungsten.task.BlockPathWalker.bfsTicks; }
+
+    /** How many times the walker saw a waypoint standing on slime (the crossing trigger). */
+    public int walkerSlimeWpSeen() { return kaptainwutax.tungsten.task.BlockPathWalker.slimeWpSeen; }
+
+    /** Crossings STARTED — separates "never triggered" from "ran but bounced zero times". */
+    public int slimeStarts() { return kaptainwutax.tungsten.task.SlimeBounceTask.starts; }
+
+    /** Bounces counted in the last/current crossing — non-zero means the task really ran. */
+    public int slimeBounces() { return kaptainwutax.tungsten.task.SlimeBounceTask.getBounces(); }
     public int pillarPlaced() { return kaptainwutax.tungsten.task.PillarTask.getPlaced(); }
 
     // Movement lever for the cognitive agent — the keystone that ties perception

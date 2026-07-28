@@ -155,6 +155,18 @@ public class TungstenConfig {
      *  block, so parkour/walk routing without blocks is completely unaffected. */
     public boolean planPlaceMoves = false;
 
+    /** Hand a slime pad to {@link kaptainwutax.tungsten.task.SlimeBounceTask} — one manoeuvre
+     *  that holds heading and sprint across the whole bounce chain, instead of the walker
+     *  re-deciding at every waypoint.
+     *
+     *  <p>Default OFF because it is UNFINISHED, and the numbers say so plainly: the task is
+     *  verified to run (15 starts, 7 bounces counted over py4j in one run) but its policy —
+     *  constant full sprint at the far target — drives the bot off the pad, 5 to 7 void
+     *  deaths per run against 8.6 blocks short and zero deaths with it off. The architecture
+     *  is right and the executor stays; the throttle policy across a chain is the open work.
+     *  Turn it on to work on that: {@code ;settings slimeCrossing true}. */
+    public boolean slimeCrossing = false;
+
     /** No-placing zones: [x1,y1,z1,x2,y2,z2] boxes (inclusive, any corner order).
      *  Protected areas (claims/privates) — the mod never places here. Paired with
      *  breakDenyZones so markProtectedArea can lock both mining and building. */

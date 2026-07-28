@@ -70,6 +70,12 @@ public class BlockPathWalker {
     // first instead of guessed from external position alone. Key signal: playerYaw vs the
     // target yaw the walker set (tests whether WindMouse easing lags during a sprint).
     public static volatile boolean DEBUG = false;
+
+    // Counters, not log lines: on the bounce course the physics search floods the chat and
+    // the client drops messages ("Chat overflow"), so a missing log line proves nothing.
+    // These are read over py4j and answer "did this code path run at all".
+    public static volatile int bfsTicks = 0;
+    public static volatile int slimeWpSeen = 0;
     private static int dbgN = 0;
 
     // ── public API ──────────────────────────────────────────────────────────
@@ -325,6 +331,46 @@ public class BlockPathWalker {
         if (path == null || waypointIdx >= path.size()) {
             stop();
             return;
+        }
+
+        // A SLIME PAD IS ONE MANOEUVRE, NOT A RUN OF WAYPOINTS. Hand the whole crossing to
+        // the task that keeps heading and throttle across every bounce; the walker cannot,
+        // because it re-decides each waypoint independently and bleeds the speed the last
+        // bounce needs. Hand over the moment we are standing on the pad, aimed at the first
+        // waypoint beyond it whose floor is NOT slime.
+        bfsTicks++;
+        if (kaptainwutax.tungsten.task.SlimeBounceTask.isActive()) return;
+        // TRIGGER ON THE PLAN, NOT ON THE INSTANT. The first version of this asked whether we
+        // were STANDING on slime, and it never once fired: on a bouncing pad the bot is
+        // airborne almost every tick, so that window barely exists (measured — zero crossings
+        // started across three runs). The route itself is the reliable signal: if the waypoint
+        // we are heading for stands on slime, this is a crossing.
+        if (TungstenConfig.get().slimeCrossing
+                && path.get(waypointIdx) != null
+                && player.getEntityWorld().getBlockState(path.get(waypointIdx).down())
+                        .getBlock() instanceof net.minecraft.block.SlimeBlock) {
+            slimeWpSeen++;
+            BlockPos exit = null;
+            for (int i = waypointIdx; i < path.size(); i++) {
+                BlockPos c = path.get(i);
+                if (!(player.getEntityWorld().getBlockState(c.down()).getBlock()
+                        instanceof net.minecraft.block.SlimeBlock)) {
+                    exit = c;
+                    waypointIdx = i;
+                    break;
+                }
+            }
+            // THE LEG MAY END ON THE PAD. The walker is given a LEG, not the whole route, and
+            // on this course the leg stops on the slime while the ledge belongs to the next
+            // one — so "first waypoint past the pad" simply does not exist yet. Measured with
+            // counters rather than logs, because the chat drops messages here: the trigger
+            // condition was true 59 times in one run and a crossing still never started.
+            // Aim at the far end of what we DO know; the navigator re-plans on arrival.
+            if (exit == null && !path.isEmpty()) exit = path.get(path.size() - 1);
+            if (exit != null) {
+                kaptainwutax.tungsten.task.SlimeBounceTask.startTo(exit);
+                return;
+            }
         }
 
         BlockPos wp = path.get(waypointIdx);

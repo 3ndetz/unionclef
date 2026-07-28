@@ -76,7 +76,16 @@ public class GotoCommand extends Command {
 		// the computer thought. The walker only leaves the ground for moves it can
 		// actually do; a waypoint the planner marked needsPhysics stops the walk so
 		// the physics engine takes that segment (parkour stays intact).
-		boolean navigatorDrives = TungstenConfig.get().fastBlockFirst && attempt == 0;
+		// OWNERSHIP OF THE ROUTE DOES NOT EXPIRE ON THE FIRST RETRY. This used to be
+		// `&& attempt == 0`, so every retry handed the route back to a rival physics search
+		// for the FINAL goal. On any route physics cannot solve, that search then runs
+		// forever — and BlockPathWalker.tick() stops the walker outright whenever the physics
+		// executor is running, so the navigator's own execution is switched off as a side
+		// effect. Measured on the bounce course: 78 "Partial path (goal unreachable)" in a
+		// single run and a slime crossing that could never start because the walker was never
+		// ticked. The navigator owns the route for as long as it is enabled; physics is asked
+		// for the segments the navigator flags, and only those.
+		boolean navigatorDrives = TungstenConfig.get().fastBlockFirst;
 		if (navigatorDrives) {
 			startFastLeg(target);
 		}

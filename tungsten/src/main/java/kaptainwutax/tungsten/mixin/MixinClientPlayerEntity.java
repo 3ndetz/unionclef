@@ -77,6 +77,9 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// pillar-up primitive (place under self + jump to reach a raised goal — #46)
 		kaptainwutax.tungsten.task.PillarTask.tick((ClientPlayerEntity)(Object)this);
 
+		// slime crossing primitive (hold heading + sprint across a whole bounce chain)
+		kaptainwutax.tungsten.task.SlimeBounceTask.tick((ClientPlayerEntity)(Object)this);
+
 		if(TungstenModDataContainer.isExecutorRunning()) {
 			try {
 				TungstenModDataContainer.EXECUTOR.tick((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);
@@ -109,6 +112,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 				|| kaptainwutax.tungsten.task.FollowPlayerTask.isActive()
 				|| kaptainwutax.tungsten.task.BridgeTask.isActive()
 				|| kaptainwutax.tungsten.task.PillarTask.isActive()
+				|| kaptainwutax.tungsten.task.SlimeBounceTask.isActive()
 				|| (TungstenModDataContainer.PATHFINDER != null && TungstenModDataContainer.PATHFINDER.active.get());
 		if (tungsten$wasDriving && !tungsten$driving) {
 			var opts = MinecraftClient.getInstance().options;
