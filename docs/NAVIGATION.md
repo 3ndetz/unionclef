@@ -108,8 +108,8 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ## Course status
 
-**Suite score: 6/10.** Green and stable: `nav_flat`, `nav_staircase`, `nav_descend`,
-`nav_gaps`, `nav_steep`, `nav_break`.
+**Suite score: 8/10.** Green: `nav_flat`, `nav_staircase`, `nav_descend`, `nav_gaps`,
+`nav_steep`, `nav_break`, `nav_wall2`, `nav_water`. Red: `nav_ladder`, `nav_slime`.
 
 ### `nav_break` — GREEN (previously never passed)
 
@@ -197,10 +197,28 @@ fell to y=-169. Fixed by building a solid block and carving the pool inside it.
 Note the sequence: "the arena looks fine when you read it" was itself wrong. Three courses
 have now turned out to be broken arenas. Read the builder AND trace the positions.
 
-**Known still-missing move — getting OFF a ladder.** The ladder branch climbs the column and
-steps onto an adjacent ladder, but has no move from a ladder cell onto an adjacent STANDABLE
-cell. On `nav_ladder` the shelf top is beside the ladder top, so even with Root A fixed the
-bot can climb and then has nowhere to go. Not yet implemented — measure after Root A lands.
+**Root D — the search planned to MINE the ladder it meant to climb.** Ladders carry a real
+(thin) collision box, so the break move's occupancy test counted one as an obstruction:
+`break-through planned at 9,-60,0 (2 block(s))`, aimed straight down the ladder column, and
+the bot fell out of the world at x=9.5. Climbables are now left to `special()`.
+
+**Root E — no move for getting OFF a ladder.** The water branch has an exit clause (step out
+onto the bank); the ladder branch never did, so a ladder was a one-way trip. Now it steps
+onto a standable cardinal neighbour at our level OR ONE UP — a shelf beside a ladder top
+normally sits one above the last rung, so a level-only check finds nothing.
+
+With D and E fixed the PLANNER solves the course: `SPECIAL` fires on every rung
+(9,-60)...(9,-56) and the plan comes out `complete=true`. Final distance went 97.7 -> 5.5.
+**Still RED: executing the climb.** Special moves are emitted flagged, i.e. delegated to the
+physics engine, and physics is not getting the bot up. Next measurement belongs there —
+`ClimbALadderMove` (`Node.java:134`) was reworked once already and never verified to run.
+
+⚠️ `nav_ladder` had NO `verboseDebugLogging` in its scenario settings, which is why it
+produced no diagnostics at all and the first pass at it was guesswork. Added.
+
+⚠️ Read logs with a window BOUND TO THE RUN (`docker logs | tail -n +$BEFORE`). An unbounded
+`tail -600` pulled in a previous course's lines and produced a confident, wrong conclusion
+that arenas leak between courses. They do not — `ArenaBuilder.prepare` clears the cube.
 
 ### `nav_slime` — the arena is a bounce puzzle
 
