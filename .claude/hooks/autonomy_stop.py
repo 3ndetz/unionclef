@@ -83,9 +83,7 @@ def main():
 
     reason = (
         "[autonomy] DO NOT STOP — you are in autonomous mode (.claude/autonomy_active.flag). "
-        "
-
-*** IF YOU FEEL TIRED / LOW ON CONTEXT / LIKE YOU ARE GUESSING: this is NOT "
+        "\n\n*** IF YOU FEEL TIRED / LOW ON CONTEXT / LIKE YOU ARE GUESSING: this is NOT "
         "permission to take 'one more small step', and NOT a reason to stop either. "
         "It is the trigger for docs/CHECKLIST.md phase 7b (CONTEXT REFRESH). "
         "It is STRICTLY FORBIDDEN to keep working a task while tired — that is how the "
@@ -94,9 +92,7 @@ def main():
         "actual source files (never from memory), restate PROVEN / ASSUMED / UNKNOWN in "
         "writing, restate the end goal and the score, and only then act. Re-entering the "
         "task from zero IS the work — compaction refreshes the session automatically. "
-        "Never 'quickly finish' something while tired. ***
-
-"
+        "Never 'quickly finish' something while tired. ***\n\n"
         "Follow docs/CHECKLIST.md + AGENTS.md. A milestone is NOT a stop (rule #11). "
         "Right now: (1) if you just hit a milestone, run its AUDIT regression; (2) then "
         "IMMEDIATELY pick the next-priority TODOS.md task — or a new/emergent one (e.g. the "
