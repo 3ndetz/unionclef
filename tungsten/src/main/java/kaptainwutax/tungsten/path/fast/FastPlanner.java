@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.List;
 
 import kaptainwutax.tungsten.Debug;
+import kaptainwutax.tungsten.TungstenConfig;
+import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.helpers.PlayerFit;
 import kaptainwutax.tungsten.path.calculators.ActionCosts;
 import net.minecraft.util.math.BlockPos;
@@ -71,10 +73,20 @@ public final class FastPlanner {
         /** True when reaching this cell needs a real jump the walker cannot do
          *  reliably (gap crossing) — the caller should let physics run it. */
         public final boolean needsPhysics;
+        /** Cells that must be mined (top-down) before this waypoint is walkable, or null.
+         *  The receiving side already exists: PathFinder.truncateAtBreaks reads
+         *  BlockNode.toBreak and PathExecutor.tickBreaking performs the mining — this
+         *  planner simply had no way to ASK for it. */
+        public final List<BlockPos> toBreak;
 
         Waypoint(BlockPos pos, boolean needsPhysics) {
+            this(pos, needsPhysics, null);
+        }
+
+        Waypoint(BlockPos pos, boolean needsPhysics, List<BlockPos> toBreak) {
             this.pos = pos;
             this.needsPhysics = needsPhysics;
+            this.toBreak = toBreak;
         }
     }
 
@@ -109,8 +121,11 @@ public final class FastPlanner {
             java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode> out =
                     new ArrayList<>(path.size());
             for (Waypoint w : path) {
-                out.add(new kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode(
-                        w.pos.getX(), w.pos.getY(), w.pos.getZ(), goal, player));
+                kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode bn =
+                        new kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode(
+                                w.pos.getX(), w.pos.getY(), w.pos.getZ(), goal, player);
+                bn.toBreak = w.toBreak;   // consumed by PathFinder.truncateAtBreaks
+                out.add(bn);
             }
             return out;
         }
@@ -174,6 +189,7 @@ public final class FastPlanner {
         double combined = Double.POSITIVE_INFINITY; // f = g + h
         Node parent;
         boolean viaJump;
+        List<BlockPos> toBreak;
         int heapPosition = -1;
 
         Node(int x, int y, int z, double heuristic) {
@@ -236,7 +252,7 @@ public final class FastPlanner {
         Node tail = complete && goalNode != null ? goalNode : best;
         List<Waypoint> path = new ArrayList<>();
         for (Node n = tail; n != null; n = n.parent) {
-            path.add(new Waypoint(new BlockPos(n.x, n.y, n.z), n.viaJump));
+            path.add(new Waypoint(new BlockPos(n.x, n.y, n.z), n.viaJump, n.toBreak));
         }
         Collections.reverse(path);
         long ms = System.currentTimeMillis() - t0;
@@ -403,8 +419,56 @@ public final class FastPlanner {
             return;   // nearest reachable level in this direction wins
         }
 
-        // nothing to step onto: try a parkour jump across the gap
+        // nothing to step onto: try a parkour jump across the gap, then mining through
         parkour(world, from, support, dx, dz, goal, map, open, scratch);
+        breakThrough(world, from, dx, dz, goal, map, open, scratch);
+    }
+
+    /**
+     * Mine through into the adjacent cell when it is blocked only by breakable blocks.
+     *
+     * <p>This planner had NO notion of breaking at all — grepping it for allowBreak /
+     * BreakRules / toBreak returned nothing. Since it is the planner that actually drives
+     * the bot, a wall across the only corridor was simply an unreachable goal: the route
+     * ended at the wall and the search gave up after 20 s. The receiving half of the
+     * feature was already complete (BlockNode.toBreak -> PathFinder.truncateAtBreaks ->
+     * PathExecutor.tickBreaking); only the producer was missing.
+     */
+    private static void breakThrough(WorldView world, Node from, int dx, int dz,
+                                     BlockPos goal, NodeMap map, Heap open,
+                                     BlockPos.Mutable scratch) {
+        if (dx != 0 && dz != 0) return;                       // cardinal only
+        if (!TungstenConfig.get().allowBreak) return;
+        net.minecraft.entity.player.PlayerEntity player = TungstenMod.mc.player;
+        if (player == null) return;
+
+        int nx = from.x + dx, nz = from.z + dz;
+        // there must be a floor on the far side to land on
+        scratch.set(nx, from.y - 1, nz);
+        if (Double.isNaN(PlayerFit.supportTop(world, scratch))) return;
+
+        List<BlockPos> plan = new ArrayList<>();
+        double ticks = 0;
+        // head first: the upper block would otherwise fall into the opening
+        for (int dy = 1; dy >= 0; dy--) {
+            BlockPos cell = new BlockPos(nx, from.y + dy, nz);
+            scratch.set(cell);
+            if (PlayerFit.passableAt(world, scratch, 0.1)) continue;   // already open
+            net.minecraft.block.BlockState st = world.getBlockState(cell);
+            if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, cell, st)) return;
+            float delta = st.calcBlockBreakingDelta(player, world, cell);
+            if (delta <= 0) return;                                     // unbreakable here
+            ticks += delta >= 1 ? 1 : Math.ceil(1f / delta);
+            plan.add(cell);
+        }
+        if (plan.isEmpty()) return;                                     // nothing in the way
+
+        double cost = ActionCosts.WALK_ONE_BLOCK_COST
+                + ticks * TungstenConfig.get().breakCostMultiplier;
+        // Flagged needsPhysics: the WALKER cannot mine — it would just walk into the wall.
+        // Flagging cuts the walked leg here and hands the cell to the physics side, whose
+        // guide carries toBreak into PathFinder.truncateAtBreaks -> PathExecutor.tickBreaking.
+        relax(map, open, from, nx, from.y, nz, cost, goal, true, plan);
     }
 
     /** Jump across up to MAX_JUMP_GAP empty cells onto a standable landing. */
@@ -446,6 +510,12 @@ public final class FastPlanner {
     /** Standard A* relaxation (this is the g-cost accumulation the old search lacked). */
     private static void relax(NodeMap map, Heap open, Node from, int x, int y, int z,
                               double edgeCost, BlockPos goal, boolean viaJump) {
+        relax(map, open, from, x, y, z, edgeCost, goal, viaJump, null);
+    }
+
+    private static void relax(NodeMap map, Heap open, Node from, int x, int y, int z,
+                              double edgeCost, BlockPos goal, boolean viaJump,
+                              List<BlockPos> toBreak) {
         Node next = map.get(x, y, z, goal);
         double tentative = from.cost + edgeCost;
         if (tentative >= next.cost) return;
@@ -453,6 +523,7 @@ public final class FastPlanner {
         next.combined = tentative + next.heuristic * HEURISTIC;
         next.parent = from;
         next.viaJump = viaJump;
+        next.toBreak = toBreak;
         if (next.isOpen()) open.update(next); else open.insert(next);
     }
 
