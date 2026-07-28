@@ -91,8 +91,4 @@ public final class WeaponSelector {
         return true;
     }
 
-    /** Call when a fight starts so the first swing already lands with a weapon. */
-    public static void reset() {
-        cooldown = 0;
-    }
 }

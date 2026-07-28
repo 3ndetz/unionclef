@@ -23,14 +23,6 @@ public final class AttackTiming {
         return player.getAttackCooldownProgress(0.5f) >= MIN_COOLDOWN;
     }
 
-    /** True if player is currently in crit state (falling, not on ground, not in water). */
-    public static boolean isCritState(ClientPlayerEntity player) {
-        return !player.isOnGround()
-            && player.getVelocity().y < 0
-            && !player.isTouchingWater()
-            && !player.isClimbing()
-            && !player.hasVehicle();
-    }
 
     /**
      * Compute yaw from player to target entity.

@@ -94,11 +94,6 @@ public class TungstenConfig {
      *  thread-safe. Disable if you see rare ConcurrentModificationException. */
     public boolean enableParallelStreaming = true;
 
-    /** Air strafe speed multiplier. Vanilla uses 0.02 (walk) / 0.026 (sprint).
-     *  Higher values = more air control = pathfinder finds longer jumps.
-     *  Set to 1.0 for vanilla-accurate simulation.
-     *  Set to 3.0 for the old tungsten behavior (more aggressive jumps). */
-    public float airStrafeMultiplier = 1.0F;
 
     // ---- follow settings ----
 
@@ -162,9 +157,6 @@ public class TungstenConfig {
      *  the only approach-pressing code sits behind this flag. */
     public boolean combatMovementsEnabled = true;
 
-    /** Enable combat executor — pre-computes jump+turn+attack timeline via Agent sim.
-     *  Visualization only when false (shows planned arc). */
-    public boolean combatExecutorEnabled = false;
 
     /** Enable safety system (edge detection, anti-fall braking, escape jump). */
     public boolean combatSaverEnabled = true;
