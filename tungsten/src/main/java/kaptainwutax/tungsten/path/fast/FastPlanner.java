@@ -417,9 +417,15 @@ public final class FastPlanner {
                 scratch.set(from.x, from.y, from.z);
                 if (!PlayerFit.passableAt(world, scratch, support + 0.6)) continue;
             }
-            // above a plain jump the physics engine has to do it (pillar up, a
-            // parkour-ascend, a momentum jump) — emit it, flagged, and charge for it
+            // Above a plain jump the ONLY real way up is to pillar — place a block under
+            // yourself — and this planner emits no place moves, so without them such a
+            // "climb" is a move nobody can perform. It was emitted anyway, priced at about
+            // 30, which made it CHEAPER than mining the same wall (~34.6): the planner
+            // preferred a fantasy climb over a real tunnel, handed it to physics, and
+            // physics burned its whole budget reporting "goal unreachable". Only offer it
+            // when pillaring is actually available.
             boolean climb = rise > PlayerFit.JUMP_HEIGHT;
+            if (climb && !TungstenConfig.get().planPlaceMoves) continue;
             double cost = baseCost
                     + (rise > PlayerFit.STEP_HEIGHT ? ActionCosts.JUMP_PENALTY : 0)
                     + (climb ? ActionCosts.JUMP_PENALTY * 2 * rise : 0)
