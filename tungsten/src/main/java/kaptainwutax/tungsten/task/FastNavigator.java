@@ -250,8 +250,17 @@ public final class FastNavigator {
                     // hand physics the FAR SIDE of the whole physics-only run, not just its
                     // first cell (see FastPlanner.physicsRunEnd — a ladder's first flagged
                     // cell is level with the bot, so that was a no-op that stalled forever)
+                    // A BREAK waypoint must NOT become a walking target for the physics
+                    // engine: that cell is SOLID, so the search spends its whole budget
+                    // trying to stand inside a wall and reports "goal unreachable". Mining
+                    // has its own path (pendingBreaks -> the "At the wall" shortcut), and
+                    // that shortcut only fires once the bot is within 4 blocks of the
+                    // block — which is exactly what the walker leg, cut here, delivers.
+                    // So: walk up to the wall, then aim physics at the GOAL and let the
+                    // mining machinery take over.
+                    boolean breakCell = res.path.get(physics).toBreak != null;
                     int runEnd = res.physicsRunEnd(physics);
-                    nextPhysicsTarget = cells.get(runEnd);
+                    nextPhysicsTarget = breakCell ? goalCell : cells.get(runEnd);
                     cells = cells.subList(0, physics);
                 } else {
                     nextPhysicsTarget = null;
