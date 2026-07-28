@@ -108,8 +108,14 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ## Course status
 
-**Suite score: 8/10.** Green: `nav_flat`, `nav_staircase`, `nav_descend`, `nav_gaps`,
-`nav_steep`, `nav_break`, `nav_wall2`, `nav_water`. Red: `nav_ladder`, `nav_slime`.
+**Suite score: 9/10 on per-course runs** (released as 0.64.0). Green: `nav_flat`,
+`nav_staircase`, `nav_descend`, `nav_gaps`, `nav_steep`, `nav_break`, `nav_wall2`,
+`nav_water`, `nav_ladder`. Red: `nav_slime`.
+
+⚠️ **Per-course runs are the trustworthy measurement right now.** A back-to-back series of
+ten degrades the stand: the last full sequential run reported 6/10 with `nav_wall2` INVALID
+at 9.8 fps and no build running, while every one of those courses passes on its own. That
+is a stand problem, not a bot one — but it means "the suite says N/10" needs the caveat.
 
 ### `nav_break` — GREEN (previously never passed)
 

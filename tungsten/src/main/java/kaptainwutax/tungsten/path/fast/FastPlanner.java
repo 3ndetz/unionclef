@@ -58,6 +58,14 @@ public final class FastPlanner {
      */
     private static final int MAX_JUMP_GAP = 4;
     /**
+     * How far below a lip to look for slime to land on. Ordinary drops are capped at
+     * {@link #MAX_FALL} because they hurt; a slime landing does not, so the useful depth is
+     * set by how high the bounce can throw you back, not by damage. The bounce course drops
+     * EIGHT blocks, so the old fixed 6 put the slime out of sight and the move could not
+     * fire once no matter what else was right.
+     */
+    private static final int MAX_SLIME_DROP = 12;
+    /**
      * Highest ledge we still plan a route over. Anything above a plain jump
      * (PlayerFit.JUMP_HEIGHT) is emitted as a physics-required step: the walker
      * stops there and the physics engine climbs it. Refusing these outright is
@@ -407,8 +415,21 @@ public final class FastPlanner {
         // ── slime: dropping onto it throws us back up, so ledges a plain jump
         //    cannot reach become reachable ──
         for (int[] d : CARDINALS) {
-            int nx = from.x + d[0], nz = from.z + d[1];
-            for (int drop = 1; drop <= 6; drop++) {
+            // ONLY LOOK WHERE STEPPING WOULD ACTUALLY DROP. At a solid neighbour the walk
+            // generator already has the answer, and scanning every node for slime in every
+            // direction to full depth would cost hundreds of world reads per expansion.
+            scratch.set(from.x + d[0], from.y, from.z + d[1]);
+            if (!Double.isNaN(PlayerFit.supportTop(world, scratch))) continue;
+
+            // A RUN-UP IS PART OF THE MOVE. Slime is rarely directly under the lip you leave
+            // from — on the bounce course the pad ends at x=6 and the slime starts at x=9,
+            // across two cells of void — and a player who runs off an edge keeps travelling
+            // horizontally while it falls. Looking only at the immediately adjacent column
+            // (reach fixed at 1) meant the pad was a dead end: nothing to step to, nothing
+            // to fall onto, no move at all.
+            for (int reach = 1; reach <= MAX_JUMP_GAP; reach++) {
+            int nx = from.x + d[0] * reach, nz = from.z + d[1] * reach;
+            for (int drop = 1; drop <= MAX_SLIME_DROP; drop++) {
                 int by = from.y - drop;
                 scratch.set(nx, by, nz);
                 if (!isSlime(world, nx, by, nz, scratch)) {
@@ -428,17 +449,32 @@ public final class FastPlanner {
                 for (int rise = 1; rise <= 6; rise++) {
                     int ly = by + rise;
                     for (int[] e : CARDINALS) {
-                        int lx = nx + e[0], lz = nz + e[1];
+                    // YOU KEEP YOUR HORIZONTAL SPEED THROUGH A BOUNCE. Offering landings only
+                    // one cell from the slime column was the mirror of the fixed-reach bug on
+                    // the way DOWN: on the bounce course the pad is 5 blocks from the ledge,
+                    // so the only landings on offer were back onto the slime pad itself and
+                    // the route could never reach the target.
+                    for (int lr = 1; lr <= MAX_JUMP_GAP; lr++) {
+                        int lx = nx + e[0] * lr, lz = nz + e[1] * lr;
                         if (!PlayerFit.bodyFits(world, lx + 0.5, ly, lz + 0.5)) continue;
-                        scratch.set(lx, ly - 1, lz);
+                        // ASK ABOUT THE LANDING CELL, NOT THE ONE BELOW IT. supportTop()
+                        // already looks at cell.down(), so testing ly-1 accepts a cell whose
+                        // real floor is one lower — every bounce landing came out a block too
+                        // high and physics was sent to a point in mid-air (measured:
+                        // HANDOFF target=(11,-59,0) with the slime surface at -60). Third
+                        // instance of this exact off-by-one; breakThrough carries the same
+                        // note from the last one.
+                        scratch.set(lx, ly, lz);
                         if (Double.isNaN(PlayerFit.supportTop(world, scratch))) continue;
                         relax(map, open, from, lx, ly, lz,
                                 ActionCosts.JUMP_ONE_BLOCK_COST
-                                        + (drop + rise) * ActionCosts.FALL_ONE_BLOCK_COST,
+                                        + (drop + rise + lr) * ActionCosts.FALL_ONE_BLOCK_COST,
                                 goal, true);
+                    }
                     }
                 }
                 break;
+            }
             }
         }
     }
