@@ -458,7 +458,15 @@ Three links, found and fixed in order:
 2. **The plan was thrown away at the seam.** `Result.toBlockNodes` carried `toBreak` and not
    `toPlace`, so every bridge the planner worked out died on the way to the executor. One
    line. After it the log shows `Path needs bridging: 1 block(s) at segment end`.
-3. **Execution aborts.** `Bridge place aborted (timeout or out of reach)` — the executor gives
+3. **The bridge is only ever planned from the WRONG side.** Every bridge in the log sits at
+   `8,-61,z` — the slime level, seven blocks below the launch pad. Nothing is planned from the
+   pad itself, and the searches that start there report `1 nodes, 1 wp`: one node expanded and
+   the open set empty, which is what a search looks like when the bot is AIRBORNE — no
+   support, so no moves. In other words the bot leaves the pad before it ever plans to build
+   from it, and only starts thinking about bridges once it has already fallen.
+   Not a budget problem: the budget is 250 ms and the searches that do run expand 164 nodes,
+   so they exhaust the reachable set rather than run out of time.
+4. **Execution aborts.** `Bridge place aborted (timeout or out of reach)` — the executor gives
    up when the target is beyond 5.5 blocks or after 200 ticks. The bot is not being delivered
    to the bridge point, so the placement waits and times out. THAT is the next step.
 
