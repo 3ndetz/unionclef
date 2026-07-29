@@ -346,6 +346,7 @@ public final class FastPlanner {
         }
         if (TungstenConfig.get().planPlaceMoves) {
             for (int[] d : CARDINALS) placeAcross(world, from, d[0], d[1], support, goal, map, open, scratch);
+            pillarUp(world, from, goal, map, open, scratch);
         }
         special(world, from, goal, map, open, scratch);
     }
@@ -797,6 +798,34 @@ public final class FastPlanner {
         }
         relax(map, open, from, nx, from.y, nz, cost, goal, true, null,
                 new java.util.ArrayList<>(java.util.List.of(floor)));
+    }
+
+    /**
+     * PILLAR UP ONE BLOCK: jump, place a block under yourself, land on it. Repeatable, which
+     * is the whole point — a single climb move is capped at CLIMB_MAX (3), so a ledge four
+     * blocks up was unreachable by construction no matter how many blocks the bot carried.
+     * Baritone gets anywhere partly BECAUSE it will just build a tower; this is that move.
+     * The receiving side is the same one bridging uses (toPlace -> the executor's place
+     * queue), and PillarTask already performs the manoeuvre when navigation asks for it.
+     */
+    private static void pillarUp(WorldView world, Node from, BlockPos goal,
+                                 NodeMap map, Heap open, BlockPos.Mutable scratch) {
+        int upY = from.y + 1;
+        // Room for the body one block higher, and nothing already occupying our own cell.
+        if (!PlayerFit.bodyFits(world, from.x + 0.5, upY, from.z + 0.5)) return;
+        BlockPos feet = new BlockPos(from.x, from.y, from.z);
+        if (!world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()) return;
+        // We must be standing on something to jump off in the first place.
+        scratch.set(from.x, from.y, from.z);
+        if (Double.isNaN(PlayerFit.supportTop(world, scratch))) return;
+
+        double cost = ActionCosts.JUMP_ONE_BLOCK_COST
+                + ActionCosts.PLACE_ONE_BLOCK_COST * TungstenConfig.get().placeCostMultiplier;
+        if (TungstenConfig.get().verboseDebugLogging) {
+            Debug.logMessage("FastPlanner: pillar planned at " + feet.toShortString());
+        }
+        relax(map, open, from, from.x, upY, from.z, cost, goal, true, null,
+                new java.util.ArrayList<>(java.util.List.of(feet)));
     }
 
     /** Jump across up to MAX_JUMP_GAP empty cells onto a standable landing. */
