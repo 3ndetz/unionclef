@@ -310,5 +310,29 @@ class NavWall2(NavCourse):
         return (18, FLOOR_Y + 3, 0)
 
 
+class NavBridge(NavCourse):
+    """A 6-block gap, floor level on both sides, cobblestone in the pocket: the only
+    way over is a BRIDGE of placed blocks, which means placing against a block the
+    route itself laid a step earlier.
+
+    This is the course that isolates chained placement. It exists because the search
+    used to look for the face to click against in the WORLD, so the second plank —
+    whose face is the first plank — was never reachable, and every bridge was capped
+    at one block. A 6-block gap is too wide to jump (MAX_JUMP_GAP) and has nothing to
+    walk around, so it passes only if the search can place against its own work."""
+    id = "nav_bridge"
+    duration = 120
+    bot_kit = ["item replace entity {name} hotbar.0 with cobblestone 64"]
+    settings = {"planPlaceMoves": "true", "verboseDebugLogging": "true"}
+
+    def course(self, arena, ctx):
+        arena.floor(7, -3, 12, 3, "stone")            # near side
+        arena.floor(19, -3, 26, 3, "stone")           # far side, 6-block gap at x=13..18
+        # Walls, or the bot walks around the gap and the course proves nothing.
+        arena._fill(13, STAND_Y, -4, 18, STAND_Y + 3, -4, "barrier")
+        arena._fill(13, STAND_Y, 4, 18, STAND_Y + 3, 4, "barrier")
+        return (23, STAND_Y, 0)
+
+
 SCENARIOS = [NavFlat, NavStaircase, NavSteep, NavGaps, NavDescend,
-             NavWater, NavLadder, NavSlime, NavBreak, NavWall2]
+             NavWater, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge]
