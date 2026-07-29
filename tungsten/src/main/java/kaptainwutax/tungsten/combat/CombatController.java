@@ -260,6 +260,11 @@ public class CombatController {
      * @param fwd    +1 forward, -1 back, 0 none
      * @param strafe +1 left, -1 right, 0 none (MC convention: sideways +1 = LEFT)
      */
+    // Counters, read over py4j. The chat is not usable for this — it floods and drops — and
+    // the question "is the edge guard the thing stopping the approach" cannot be answered by
+    // reading the code, only by counting how often it says no.
+    public static volatile int dirAsked = 0, dirBlockedFwd = 0;
+
     private boolean dirSafe(ClientPlayerEntity player, WorldView world, int fwd, int strafe) {
         if (fwd == 0 && strafe == 0) return true;
         double yawRad = Math.toRadians(player.getYaw());
@@ -270,7 +275,9 @@ public class CombatController {
         double speed = Math.sqrt(player.getVelocity().x * player.getVelocity().x
                 + player.getVelocity().z * player.getVelocity().z);
         double look = Math.max(1.5, speed * 8.0);
-        return !VoidDetector.edgeAhead(player.getEntityPos(), dx, dz, world, 3, look);
+        boolean safe = !VoidDetector.edgeAhead(player.getEntityPos(), dx, dz, world, 3, look);
+        if (fwd > 0) { dirAsked++; if (!safe) dirBlockedFwd++; }
+        return safe;
     }
 
     public void releaseKeys() {

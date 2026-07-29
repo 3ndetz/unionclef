@@ -121,6 +121,11 @@
   moving from x=6.2 to x=9.5 while the bot trails at 5-6 blocks. So "the approach never
   closes" and "follow never catches a moving target" are one bug, not two, and the melee
   suite is really a chase test wearing a duel's clothes.
+  RULED OUT BY MEASUREMENT, so nobody re-checks it: the combat edge guard is NOT what stops
+  the approach — `dirAsked=53, dirBlockedFwd=0` over a full run, it never once said no. That
+  same 53 is itself the tell: combat movement ticks with the client (~1200 times a minute),
+  so being asked 53 times means the bot is hardly ever IN combat mode. It spends the run in
+  APPROACH and never reaches 4.5 blocks. Third independent measurement pointing at the chase.
   Two contributing causes fixed on 2026-07-29, neither of them the main one: the no-progress
   rule dropped COMBAT back to APPROACH while the bot was closing the last stride (six flips
   a run), and the crit/shield counters could not be read after a fight because reset() zeroed

@@ -1927,6 +1927,10 @@ public class Py4jEntryPoint {
     /** Swings that landed while falling, i.e. CRITS (+50% damage), and total swings. The
      *  ratio is the only honest way to tell whether crit timing works: the previous attempt
      *  at this shipped a helper with zero callers and no way to see that. */
+    /** How often combat asked "is forward safe" and how often the edge guard said no. */
+    public int dirAsked() { return kaptainwutax.tungsten.combat.CombatController.dirAsked; }
+    public int dirBlockedFwd() { return kaptainwutax.tungsten.combat.CombatController.dirBlockedFwd; }
+
     public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }
     public int totalHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeHits; }
 
