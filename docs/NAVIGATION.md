@@ -451,6 +451,23 @@ further along the chain remains.
 
 ---
 
+## State as of the end of the 2026-07-29 run
+
+| course | state |
+|---|---|
+| flat, staircase, descend, gaps, steep, break, wall2, ladder | GREEN |
+| water | GREEN-ish: 5 passes in 6, and now an HONEST pass — two bypasses I had built into the arena (a walkable rim, minable walls) are closed, so it measures swimming |
+| slime | RED: 14.4 blocks short, ONE block placed per run |
+
+⚠️ **A number I reported and cannot reproduce:** one slime run placed SEVEN blocks and closed
+to 6.3. Repeated measurement gives one placement per run and 14.4 every time. Treat the 6.3 as
+an outlier, not as a level that was reached — the honest figure is 14.4.
+
+Search cost was the other big find: 2.2-2.4 ms PER NODE, because every "is this water / is it a
+ladder / does a body fit" was a fresh live-world lookup from a background thread. A per-search
+memo took water from 2-3 in 4 to 5 in 6. It did NOT help slime, so the bridge loop is limited
+by something else.
+
 ## Bridging: planned, plumbed, not yet executed (2026-07-29)
 
 The user's correction reset this whole area: **baritone does not build jumps out of physics —
