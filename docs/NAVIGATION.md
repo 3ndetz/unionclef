@@ -287,7 +287,14 @@ lip carries about 3.7 blocks, and the pad's far edge is 6.6 away, so the crossin
 starts near the pad's beginning. What is left is a jump-boosted bounce, aimed, on the last
 pad cell — tried, and it still killed the bot 6-8 times a run.
 
-⚠️ **THE OUTCOME OF THIS COURSE IS DECIDED BY FPS, NOT BY THE CODE.** The same build gave
+⚠️ **THE OUTCOME OF THIS COURSE IS BIMODAL — either ~8.5 blocks short and safe, or 20.7 with
+a fall — AND FPS ONLY PARTLY EXPLAINS IT.** An earlier version of this note claimed fps
+decided it outright, on a four-run sample where the correlation looked perfect. More data
+killed that: on a freshly recreated client the course failed at 18.3 and 19.3 fps and passed
+at 13.6. Low fps makes the bad mode more likely; it is not the whole story. Treat any single
+nav_slime run as one sample of a coin, and never conclude from fewer than three.
+
+The original four-run sample, kept because it is still the reason to keep the stand healthy: The same build gave
 8.4-8.9 blocks short with zero falls three times running, and later 20.7 with a fall three
 times running. After recreating the tester container the correlation was plain:
 
@@ -324,6 +331,12 @@ the tick trace says 4.6. Dropping onto a pad from a standstill:
 - The ledge was briefly lowered on the strength of the standing numbers and then put back:
   height is not the blocker, HORIZONTAL distance is, and weakening the course would have
   hidden that.
+
+**A BOUNCE CHAIN IN THE MODEL WAS BUILT AND MEASURED WORSE.** The parent chain does remember
+the route, so the height from the entry fall can be carried across the pad and decayed once
+per cell — that was implemented. A/B on one healthy client: without it 8.7 / 10.1 / 8.5 (two
+of three with no falls), with it 20.7 / 8.3 / 20.7. Discarded. The decay makes the search
+prefer shorter, earlier hops, and the route it then picks is worse than the naive one.
 
 **THE STRUCTURAL LIMIT, and it is in the planner.** A bounce is only offered from a node the
 bot FELL onto, because the height comes from the parent edge. Walk one cell along the pad and

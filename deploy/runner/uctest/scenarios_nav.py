@@ -228,6 +228,14 @@ class NavSlime(NavCourse):
     """Drop onto slime and bounce up to a ledge — the slime-bounce move."""
     id = "nav_slime"
     settings = {"verboseDebugLogging": "true"}
+    # NOTE ON THE GEOMETRY, so nobody re-runs these experiments. The first bounce off the pad
+    # reaches about 4 blocks horizontally at the ledge's height, while the ledge sits 8 away:
+    # this course asks for roughly double what the slime mechanic gives, and cannot be passed
+    # by bouncing. Both dials were tried and both were reverted — lowering the ledge weakens
+    # what the course claims to measure, and raising this launch pad (to FLOOR_Y+16) makes the
+    # bot overshoot the pad entirely and fall, 18.5 blocks short with a death every run.
+    # Left exactly as it was: the course is honest about being unreachable, and the change
+    # that would make it passable is a design decision, not a tuning one.
     start_y = FLOOR_Y + 8
 
     def build(self, arena, ctx):
