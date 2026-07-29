@@ -452,11 +452,19 @@ public class PathExecutor {
         // distinguish "the bot never arrived" from "it arrived and the placement stalled",
         // and those need opposite fixes. Say which, and how far.
         double placeDist = Math.sqrt(eye.squaredDistanceTo(center));
-        if (placingTicks++ > 200 || placeDist > 5.5) {
+        // TOO FAR IS "NOT YET", NOT "GIVE UP". The place queue is armed the moment a path is
+        // handed over, and the bot is normally still walking TOWARDS the gap — so throwing the
+        // plan away on distance destroyed every bridge before it could be built. Measured:
+        // "aborted (OUT OF REACH) dist=13.73 ticks=1", i.e. abandoned on the very first tick
+        // while the route to that spot was still being walked. Wait instead, and only count
+        // the timeout once we are actually in range, so a long approach cannot expire it.
+        if (placeDist > 5.5) {
+            return false;                       // keep the queue; we are on our way there
+        }
+        if (placingTicks++ > 200) {
             Debug.logMessage(String.format(
-                    "Bridge place aborted (%s) dist=%.2f ticks=%d target=%s",
-                    placingTicks > 200 ? "TIMEOUT" : "OUT OF REACH", placeDist, placingTicks,
-                    target.toShortString()));
+                    "Bridge place aborted (TIMEOUT) dist=%.2f ticks=%d target=%s",
+                    placeDist, placingTicks, target.toShortString()));
             options.useKey.setPressed(false);
             TungstenModRenderContainer.PLACE_PLAN.clear();
             placeQueue = null; placingTicks = 0;
