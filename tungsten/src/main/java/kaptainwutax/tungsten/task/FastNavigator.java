@@ -175,9 +175,25 @@ public final class FastNavigator {
         }
 
         BlockPos jump = pendingPhysicsTarget;
-        if (jump != null && player.getBlockPos().isWithinDistance(jump, 1.5)) {
-            pendingPhysicsTarget = null;   // already there — nothing for physics to do
-            jump = null;
+        if (jump != null) {
+            // "ALREADY THERE" IS A HORIZONTAL QUESTION. This used to be a plain 3D distance
+            // test, and a pillar target sits ONE BLOCK STRAIGHT UP — distance 1.0, inside the
+            // 1.5 radius — so every pillar hand-off was thrown away as "nothing to do" before
+            // anyone could perform it. You cannot walk upwards; a cell above your head is the
+            // one place you are most definitely NOT already at.
+            //
+            // Measured on nav_wall2, which this silently broke: 54 of 82 plans flagged a
+            // pillar as their first move, HANDOFF and PillarTask fired ZERO times, and the
+            // navigator replanned 26 legs while the bot stood 7.5 blocks short at the foot of
+            // its wall. The course used to pass because a 2-block climb landed 2.2 away and
+            // survived this test by 0.7 of a block — it was never right, just lucky.
+            Vec3d here = player.getEntityPos();
+            double horiz = Math.hypot((jump.getX() + 0.5) - here.x, (jump.getZ() + 0.5) - here.z);
+            double rise = (jump.getY() + 0.5) - here.y;
+            if (horiz < 1.5 && Math.abs(rise) < 1.0) {
+                pendingPhysicsTarget = null;   // genuinely standing on it
+                jump = null;
+            }
         }
         if (jump != null) {
             // Check BUSY *before* consuming the target. The other order threw the target
