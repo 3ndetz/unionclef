@@ -151,6 +151,10 @@ public final class FastNavigator {
         // manoeuvre there is. That is exactly what the log showed:
         //   FastNavigator: physics owns the jump -> 9,-60,0
         //   Walker: BFS 3 wp                      <- walker steps on the jump
+        // (Making the navigator yield entirely while a place/break queue exists was tried and
+        // MEASURED WORSE: placement activity fell from 37 ticks to 12 and a second run added
+        // nothing at all. The builder took the body and nobody gave it back. Whatever the
+        // right arbitration is here, "stop navigating" is not it.)
         if (awaitingPhysics) {
             if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
                     || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {

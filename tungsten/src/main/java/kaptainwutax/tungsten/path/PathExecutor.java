@@ -41,6 +41,7 @@ public class PathExecutor {
     /** Support cells to PLACE (bridge floor) once the replay reaches the segment end
      *  (set by PathFinder from the block path's place plan) — the mirror of breakQueue. */
     public List<net.minecraft.util.math.BlockPos> placeQueue = null;
+    public static volatile int placeCalled=0, placeDeferred=0, placeInRange=0, placeClicked=0;
     private int placingTicks = 0;
 
     public PathExecutor(boolean isClient) {
@@ -420,6 +421,9 @@ public class PathExecutor {
      */
     private boolean tickPlacing(ClientPlayerEntity player, GameOptions options) {
         if (placeQueue == null || placeQueue.isEmpty()) return false;
+        // Counters over py4j: does the bot ever ARRIVE at a bridge point, or does it spend
+        // the whole run deferring? The chat cannot answer this — it floods on these courses.
+        placeCalled++;
         MinecraftClient mc = MinecraftClient.getInstance();
         var world = player.getEntityWorld();
 
@@ -459,8 +463,10 @@ public class PathExecutor {
         // while the route to that spot was still being walked. Wait instead, and only count
         // the timeout once we are actually in range, so a long approach cannot expire it.
         if (placeDist > 5.5) {
+            placeDeferred++;
             return false;                       // keep the queue; we are on our way there
         }
+        placeInRange++;
         if (placingTicks++ > 200) {
             Debug.logMessage(String.format(
                     "Bridge place aborted (TIMEOUT) dist=%.2f ticks=%d target=%s",
@@ -506,6 +512,7 @@ public class PathExecutor {
         if (Math.abs(dYaw) < 15f && Math.abs(dPitch) < 15f) {   // place only once aimed
             net.minecraft.util.hit.BlockHitResult hit =
                     new net.minecraft.util.hit.BlockHitResult(faceCenter, side, against, false);
+            placeClicked++;
             mc.interactionManager.interactBlock(player, net.minecraft.util.Hand.MAIN_HAND, hit);
             player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
         }

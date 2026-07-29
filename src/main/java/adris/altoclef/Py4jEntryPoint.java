@@ -1984,6 +1984,16 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.combat.TriggerBot.gPassed);
     }
 
+    /** Bridge execution telemetry: ticks the place logic ran, ticks deferred because the bot
+     *  was still walking there, ticks actually in range, and blocks actually clicked. */
+    public String placeStats() {
+        return String.format("called=%d deferred=%d inRange=%d clicked=%d",
+                kaptainwutax.tungsten.path.PathExecutor.placeCalled,
+                kaptainwutax.tungsten.path.PathExecutor.placeDeferred,
+                kaptainwutax.tungsten.path.PathExecutor.placeInRange,
+                kaptainwutax.tungsten.path.PathExecutor.placeClicked);
+    }
+
     public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }
     public int totalHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeHits; }
 

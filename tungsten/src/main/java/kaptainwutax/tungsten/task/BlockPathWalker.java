@@ -181,6 +181,10 @@ public class BlockPathWalker {
             return;
         }
 
+        // (Making the walker yield while a place/break queue exists was tried here and
+        // measured WORSE — clicks fell from 2 in 28 in-range ticks to 1 in 35. The camera
+        // contention is real but this is not the cure.)
+
         if (mode == Mode.DIRECT) {
             tickDirect(player);
         } else {
