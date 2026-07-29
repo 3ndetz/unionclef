@@ -30,8 +30,22 @@ for c in $CONTAINERS; do
         if [ "$n" != "1" ]; then
             echo "ERROR: $c sees $n unionclef jars, expected 1"; exit 1
         fi
-        docker restart "$c" >/dev/null
-        echo "restarted: $c"
+        # RECREATE, DO NOT RESTART. The client ages inside a long-lived container: measured
+        # 8-10 fps after a session of runs, and 13.4-18.3 straight after recreating it. That
+        # matters because the courses are fps-sensitive — nav_slime lands on the pad every
+        # time above ~13 fps and misses below ~10 — so a restart-only deploy quietly turns
+        # later measurements into noise. `docker compose restart` does NOT clear it; only a
+        # full recreate does.
+        svc=$(echo "$c" | sed 's/^uctest-//')
+        if ! UCTEST_MCP_PORT="${UCTEST_MCP_PORT:-25350}" docker compose -f deploy/compose.test.yml                 up -d --force-recreate "$svc" >/dev/null 2>&1; then
+            # The in-mod MCP port is often taken on a dev box (a local Minecraft client binds
+            # the same one). Fall back to a free host port — the harness talks py4j through
+            # `docker exec`, so nothing in the tests depends on that mapping.
+            alt=$((25350 + $$ % 100 + 1))
+            echo "  MCP port busy — recreating $svc with UCTEST_MCP_PORT=$alt"
+            UCTEST_MCP_PORT="$alt" docker compose -f deploy/compose.test.yml                 up -d --force-recreate "$svc" >/dev/null
+        fi
+        echo "recreated: $c"
     fi
 done
 

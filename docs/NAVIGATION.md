@@ -124,7 +124,13 @@ Rules that follow, and they are cheap:
 - A suspected regression is not a regression until the previous build is measured in the
   SAME session, on the SAME stand. `git stash` + `git checkout <good> -- <files>` + build.
 - Read `avg_fps` on every verdict. Below ~12 treat pass/fail on a marginal course as noise.
-- Restarting the containers does NOT restore fps; the drift is on the host.
+- `docker compose restart` does NOT restore fps, but a full `down` + `up` DOES: measured
+  8-10 fps before, 13.4-14.7 straight after recreating the tester. The client ages within a
+  long-lived container. (An earlier note here said restarting does not help and left it at
+  that — it was drawn from `restart` alone and was wrong.)
+- The stand shares the host with whatever else is running. During this session that included
+  several unrelated containers plus `uctest-mc-tester2` and `uctest-gamer-server` from this
+  same project, up for 33 and 37 hours. Check `docker ps` before trusting a marginal verdict.
 
 ⚠️ **Per-course runs are the trustworthy measurement right now.** A back-to-back series of
 ten degrades the stand: the last full sequential run reported 6/10 with `nav_wall2` INVALID
@@ -281,11 +287,20 @@ lip carries about 3.7 blocks, and the pad's far edge is 6.6 away, so the crossin
 starts near the pad's beginning. What is left is a jump-boosted bounce, aimed, on the last
 pad cell — tried, and it still killed the bot 6-8 times a run.
 
-⚠️ **AND THE COURSE IS NOT RELIABLY MEASURABLE AT THIS STAND'S CURRENT ~9 fps.** The same
-build, with no planner change between the runs, produced 8.4-8.9 blocks short with zero falls
-three times in a row, and later 20.7 with a fall three times in a row. Two attractors, and
-which one you get is not decided by the code. Conclusions about nav_slime drawn from a single
-series here are not evidence — restore the stand's performance first, then measure.
+⚠️ **THE OUTCOME OF THIS COURSE IS DECIDED BY FPS, NOT BY THE CODE.** The same build gave
+8.4-8.9 blocks short with zero falls three times running, and later 20.7 with a fall three
+times running. After recreating the tester container the correlation was plain:
+
+| run | avg_fps | outcome |
+|---|---|---|
+| 1 | 14.8 | 8.0 short, no falls |
+| 2 | 18.3 | 8.5 short, no falls |
+| 3 | 13.1 | 9.2 short, no falls |
+| 4 | 9.9 | 20.7 short, fell |
+
+At healthy fps the bot lands on the pad every time; below ~12 it misses. The "two attractors"
+were the machine all along. Restore the stand first (`down` + `up`, not `restart`), confirm
+fps, and only then read a nav_slime number as evidence.
 
 **A DEDICATED EXECUTOR EXISTS AND IS OFF BY DEFAULT (`slimeCrossing`).** `SlimeBounceTask`
 is the right architecture — a crossing is ONE manoeuvre, which is what the walker rules below
