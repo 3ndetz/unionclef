@@ -209,6 +209,13 @@ class NavWater(NavCourse):
         # stays and is capped with barriers instead: the water is held, and there is nowhere to
         # put your feet.
         arena._fill(11, FLOOR_Y - 3, -4, 18, FLOOR_Y, 4, "stone")
+        # AND THE WALLS MUST NOT BE A SECOND SOLUTION. Built from stone they are MINABLE, and
+        # the search took that road instead: "break-through planned at 18,-63" thirty-six times
+        # in a stalled run — cheaper, in its cost model, than swimming. Draining a pool through
+        # its wall is a perfectly good way to cross, but it is not what a course called
+        # "swim across" is measuring, so the end walls are barrier.
+        arena._fill(11, FLOOR_Y - 3, -4, 11, FLOOR_Y, 4, "barrier")
+        arena._fill(18, FLOOR_Y - 3, -4, 18, FLOOR_Y, 4, "barrier")
         arena._fill(11, FLOOR_Y + 1, -4, 18, FLOOR_Y + 3, -4, "barrier")
         arena._fill(11, FLOOR_Y + 1, 4, 18, FLOOR_Y + 3, 4, "barrier")
         arena._fill(12, FLOOR_Y - 2, -3, 17, FLOOR_Y, 3, "air")
