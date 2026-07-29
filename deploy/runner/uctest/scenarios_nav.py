@@ -227,7 +227,13 @@ class NavLadder(NavCourse):
 class NavSlime(NavCourse):
     """Drop onto slime and bounce up to a ledge — the slime-bounce move."""
     id = "nav_slime"
-    settings = {"verboseDebugLogging": "true"}
+    # BLOCKS IN THE POCKET, AND PLACEMENT ON. The point of this course is "get to the ledge",
+    # not "get there by bouncing": baritone reaches anywhere by BREAKING AND PLACING, and a
+    # bot with an empty inventory cannot be compared against it. Measured separately: the
+    # bounce alone cannot cross this gap, so with no blocks the course tests something the
+    # engine has no legal way to do.
+    bot_kit = ["item replace entity {name} hotbar.0 with cobblestone 64"]
+    settings = {"verboseDebugLogging": "true", "planPlaceMoves": "true"}
     # NOTE ON THE GEOMETRY, so nobody re-runs these experiments. The first bounce off the pad
     # reaches about 4 blocks horizontally at the ledge's height, while the ledge sits 8 away:
     # this course asks for roughly double what the slime mechanic gives, and cannot be passed

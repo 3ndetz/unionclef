@@ -21,4 +21,10 @@ public class ActionCosts {
 	public static double SWIM_ONE_BLOCK_COST = WALK_ONE_BLOCK_COST * 2.0;
 	/** Climbing a ladder, per block of height. */
 	public static double LADDER_ONE_BLOCK_COST = WALK_ONE_BLOCK_COST * 1.6;
+
+	/** Placing one block to bridge with: aim, click, wait out the placement, then step on.
+	 *  Priced above a jump so the search still PREFERS to jump a gap it can jump, and only
+	 *  reaches for blocks where jumping is impossible — which is exactly how baritone gets
+	 *  anywhere, and what tungsten could not plan at all before. */
+	public static double PLACE_ONE_BLOCK_COST = WALK_ONE_BLOCK_COST * 2.5;
 }

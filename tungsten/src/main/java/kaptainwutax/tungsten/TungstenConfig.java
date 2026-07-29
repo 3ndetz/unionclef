@@ -139,6 +139,10 @@ public class TungstenConfig {
     /** Multiplier on the mining-time cost of planned breaks (higher = prefer detours). */
     public double breakCostMultiplier = 1.0;
 
+    /** Scales the cost of bridging with a placed block. Raise it to make the bot prefer
+     *  going around; lower it to make it build more readily. */
+    public double placeCostMultiplier = 1.0;
+
     /** Block ids the pathfinder must NEVER mine (e.g. "minecraft:diamond_block").
      *  Blocks with block entities (chests, spawners, furnaces) are always denied. */
     public java.util.List<String> breakDenyBlocks = new java.util.ArrayList<>();

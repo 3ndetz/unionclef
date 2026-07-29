@@ -114,15 +114,27 @@ public final class FastPlanner {
          *  BlockNode.toBreak and PathExecutor.tickBreaking performs the mining — this
          *  planner simply had no way to ASK for it. */
         public final List<BlockPos> toBreak;
+        /** Cells that must be PLACED before this waypoint is walkable, or null. The mirror of
+         *  toBreak, and the receiving side already exists too: BlockNode.hasPlaces ->
+         *  PathFinder.truncateAtBreaks -> PathExecutor's place queue. The planner simply had
+         *  no way to ASK for a bridge, which is why a gap it could not JUMP was a dead end
+         *  even with a stack of blocks in the bot's hand. */
+        public final List<BlockPos> toPlace;
 
         Waypoint(BlockPos pos, boolean needsPhysics) {
             this(pos, needsPhysics, null);
         }
 
         Waypoint(BlockPos pos, boolean needsPhysics, List<BlockPos> toBreak) {
+            this(pos, needsPhysics, toBreak, null);
+        }
+
+        Waypoint(BlockPos pos, boolean needsPhysics, List<BlockPos> toBreak,
+                 List<BlockPos> toPlace) {
             this.pos = pos;
             this.needsPhysics = needsPhysics;
             this.toBreak = toBreak;
+            this.toPlace = toPlace;
         }
     }
 
@@ -226,6 +238,7 @@ public final class FastPlanner {
         Node parent;
         boolean viaJump;
         List<BlockPos> toBreak;
+        List<BlockPos> toPlace;
         int heapPosition = -1;
 
         Node(int x, int y, int z, double heuristic) {
@@ -300,7 +313,7 @@ public final class FastPlanner {
         Node tail = complete && goalNode != null ? goalNode : best;
         List<Waypoint> path = new ArrayList<>();
         for (Node n = tail; n != null; n = n.parent) {
-            path.add(new Waypoint(new BlockPos(n.x, n.y, n.z), n.viaJump, n.toBreak));
+            path.add(new Waypoint(new BlockPos(n.x, n.y, n.z), n.viaJump, n.toBreak, n.toPlace));
         }
         Collections.reverse(path);
         long ms = System.currentTimeMillis() - t0;
@@ -325,6 +338,9 @@ public final class FastPlanner {
             if (!sideClear(world, from, 0, d[1], support, scratch)) continue;
             step(world, from, support, d[0], d[1], goal, map, open, scratch,
                     ActionCosts.WALK_ONE_BLOCK_COST * SQRT2);
+        }
+        if (TungstenConfig.get().planPlaceMoves) {
+            for (int[] d : CARDINALS) placeAcross(world, from, d[0], d[1], support, goal, map, open, scratch);
         }
         special(world, from, goal, map, open, scratch);
     }
@@ -740,6 +756,44 @@ public final class FastPlanner {
         relax(map, open, from, nx, from.y, nz, cost, goal, true, plan);
     }
 
+    /**
+     * BRIDGE ACROSS A GAP: place a block into the hole and step onto it. The mirror of
+     * {@link #breakThrough}, and the reason it has to exist at all — baritone reaches
+     * anywhere by BREAKING AND PLACING, and without this a gap the bot cannot JUMP is a dead
+     * end even with a stack of cobblestone in its hand. The receiving side was already
+     * complete (BlockNode.hasPlaces -> PathFinder.truncateAtBreaks -> the executor's place
+     * queue); only the planner had no way to ask.
+     */
+    private static void placeAcross(WorldView world, Node from, int dx, int dz, double support,
+                                    BlockPos goal, NodeMap map, Heap open,
+                                    BlockPos.Mutable scratch) {
+        if (dx != 0 && dz != 0) return;                          // cardinal only
+        int nx = from.x + dx, nz = from.z + dz;
+
+        // The destination must be a HOLE: nothing to stand on, and room for a body once the
+        // floor exists. If it already has a floor the ordinary walk move covers it.
+        scratch.set(nx, from.y, nz);
+        if (!Double.isNaN(PlayerFit.supportTop(world, scratch))) return;
+        if (!PlayerFit.bodyFits(world, nx + 0.5, from.y, nz + 0.5)) return;
+
+        // The block goes in the cell BELOW the destination, and that cell has to be empty.
+        BlockPos floor = new BlockPos(nx, from.y - 1, nz);
+        if (!world.getBlockState(floor).getCollisionShape(world, floor).isEmpty()) return;
+
+        // You cannot place against nothing: vanilla needs a face to click. The cell we are
+        // standing on is that face when we bridge straight out from our own feet.
+        BlockPos against = new BlockPos(from.x, from.y - 1, from.z);
+        if (world.getBlockState(against).getCollisionShape(world, against).isEmpty()) return;
+
+        double cost = ActionCosts.WALK_ONE_BLOCK_COST
+                + ActionCosts.PLACE_ONE_BLOCK_COST * TungstenConfig.get().placeCostMultiplier;
+        if (TungstenConfig.get().verboseDebugLogging) {
+            Debug.logMessage("FastPlanner: bridge planned at " + floor.toShortString());
+        }
+        relax(map, open, from, nx, from.y, nz, cost, goal, true, null,
+                new java.util.ArrayList<>(java.util.List.of(floor)));
+    }
+
     /** Jump across up to MAX_JUMP_GAP empty cells onto a standable landing. */
     private static void parkour(WorldView world, Node from, double support, int dx, int dz,
                                 BlockPos goal, NodeMap map, Heap open, BlockPos.Mutable scratch) {
@@ -785,6 +839,12 @@ public final class FastPlanner {
     private static void relax(NodeMap map, Heap open, Node from, int x, int y, int z,
                               double edgeCost, BlockPos goal, boolean viaJump,
                               List<BlockPos> toBreak) {
+        relax(map, open, from, x, y, z, edgeCost, goal, viaJump, toBreak, null);
+    }
+
+    private static void relax(NodeMap map, Heap open, Node from, int x, int y, int z,
+                              double edgeCost, BlockPos goal, boolean viaJump,
+                              List<BlockPos> toBreak, List<BlockPos> toPlace) {
         Node next = map.get(x, y, z, goal);
         double tentative = from.cost + edgeCost;
         if (tentative >= next.cost) return;
@@ -793,6 +853,7 @@ public final class FastPlanner {
         next.parent = from;
         next.viaJump = viaJump;
         next.toBreak = toBreak;
+        next.toPlace = toPlace;
         if (next.isOpen()) open.update(next); else open.insert(next);
     }
 
