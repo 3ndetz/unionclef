@@ -287,6 +287,10 @@ public final class FastNavigator {
                     BlockPos tail = res.path.get(res.path.size() - 1).pos;
                     double before = Math.sqrt(start.getSquaredDistance(goalCell));
                     double after = Math.sqrt(tail.getSquaredDistance(goalCell));
+                    // (Refusing to hand off a LONG incomplete route — "nineteen waypoints the
+                    // walker could have walked" — was tried here and did not move the number:
+                    // nav_water sat at 2-3 passes in 4 either way. Reverted rather than kept on
+                    // faith, because this branch is on the path of every course.)
                     if (before - after < MIN_PARTIAL_PROGRESS) {
                         // Walking cannot solve this — hand the TAIL to the physics engine
                         // and wait for it. This branch used to print "physics owns this"

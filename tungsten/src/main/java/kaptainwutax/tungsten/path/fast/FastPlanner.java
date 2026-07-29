@@ -440,7 +440,14 @@ public final class FastPlanner {
                     // run shows every water cell being expanded while the bot never left the
                     // bank. A pool is something you swim ACROSS.
                     double swim = ActionCosts.SWIM_ONE_BLOCK_COST * (d[1] != 0 ? 1.6 : 1.0);
-                    relax(map, open, from, nx, ny, nz, swim, goal, true);
+                    // WALKER-OWNED, NOT FLAGGED FOR PHYSICS — the same call that made the
+                    // ladder work. Vanilla swims for you: hold forward in water and you move.
+                    // Handing a swim to the physics engine instead produced the starved
+                    // hand-off all over again: measured on a stalled run, a 19-waypoint plan
+                    // whose only flagged cell is the last one, the walker completes its 18,
+                    // and then NAVSTATE sits at "awaiting=true" forever while physics fails to
+                    // solve a stroke of swimming.
+                    relax(map, open, from, nx, ny, nz, swim, goal, false);
                 }
             }
         } else {
@@ -462,7 +469,7 @@ public final class FastPlanner {
                 }
                 if (entry != Integer.MIN_VALUE) {
                     relax(map, open, from, nx, entry, nz,
-                            ActionCosts.SWIM_ONE_BLOCK_COST, goal, true);
+                            ActionCosts.SWIM_ONE_BLOCK_COST, goal, false);
                 }
             }
         }
