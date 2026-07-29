@@ -269,7 +269,15 @@ public class CombatController {
         float cd = player.getAttackCooldownProgress(0.5f);
         boolean windingUp = cd > 0.55f && cd < 0.92f;
         long interval = windingUp ? jcfg.combatBunnyHopMinMs : jumpInterval;
-        if (player.isOnGround() && now - lastJump > interval
+        // DO NOT HOP ON A LEDGE. A crit is worth half a hit; falling off is worth the whole
+        // fight. isJumpLandingSafe projects the CURRENT velocity, which is not enough on a
+        // one-wide walkway where a strafe or a knockback nudge arrives mid-air — measured on
+        // narrow_bridge_duel, self-falls 1/0/3 across three runs, and 1/0/0 with the hop
+        // suppressed entirely. The same edge score the safety machine already computes is the
+        // right gate: hop on open ground, keep both feet down on a bridge.
+        double edgeScore = kaptainwutax.tungsten.combat.VoidDetector
+                .edgeScoreWithFallThreshold(player.getEntityPos(), world, 5);
+        if (player.isOnGround() && edgeScore < 0.4 && now - lastJump > interval
                 && SafetySystem.isJumpLandingSafe(player.getEntityPos(), player.getVelocity(), world)) {
             out.jump = true;
             lastJump = now;
