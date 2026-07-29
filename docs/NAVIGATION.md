@@ -302,7 +302,38 @@ At healthy fps the bot lands on the pad every time; below ~12 it misses. The "tw
 were the machine all along. Restore the stand first (`down` + `up`, not `restart`), confirm
 fps, and only then read a nav_slime number as evidence.
 
-**WHAT IS ACTUALLY MISSING, stated precisely so the next pass does not re-derive it.** With
+**THE BOUNCE IS NOW MEASURED, AND TWO IDEAS ARE DEAD.** A tick-rate Y probe was added to the
+toolkit (`probeYStart/Stop/Min/Max` over py4j) because sampling position over rcon gives about
+three points a second and walks straight past an apex — it read a bounce as 0.15 blocks where
+the tick trace says 4.6. Dropping onto a pad from a standstill:
+
+| drop | rise | ratio |
+|---|---|---|
+| 4.0 | 1.53 | 0.38 |
+| 7.0 | 3.07 | 0.44 |
+| 10.0 | 4.25 | 0.43 |
+| 15.0 | 8.78 | 0.59 |
+
+- **Holding JUMP through the landing changes NOTHING** — 3.07 either way. There is no
+  "boosted bounce" mechanic, so the whole plan of modelling and executing one is dead. That
+  was the single piece of work this file named as the next step; it is now closed as a
+  dead end rather than left to be attempted.
+- **A standing drop is NOT the case routes are planned for.** Entering the pad at a run the
+  apex is -55.4 from the same 7-block drop, i.e. 4.6 blocks, about 0.66. The model keeps the
+  in-motion figure; the standing table stays as the evidence that killed the jump idea.
+- The ledge was briefly lowered on the strength of the standing numbers and then put back:
+  height is not the blocker, HORIZONTAL distance is, and weakening the course would have
+  hidden that.
+
+**THE STRUCTURAL LIMIT, and it is in the planner.** A bounce is only offered from a node the
+bot FELL onto, because the height comes from the parent edge. Walk one cell along the pad and
+that history is gone, so the only bounce available starts where the fall landed — near the
+pad's beginning, about 3 blocks of reach, which lands back on the pad. The bot therefore can
+never leave the pad upward, and the plan honestly comes out `complete=false`. Representing a
+bounce CHAIN — where each hop keeps the horizontal speed and the height decays — is what this
+course actually needs, in the planner as well as the executor.
+
+**WHAT WAS THOUGHT TO BE MISSING (now superseded by the measurements above):** With
 the measured physics the planner reports `complete=false` — and it is RIGHT to. A passive
 bounce cannot cross the gap (the arithmetic is below), so no route to the ledge exists in the
 current move set. The course needs a JUMP-BOOSTED bounce, and neither half of that exists:

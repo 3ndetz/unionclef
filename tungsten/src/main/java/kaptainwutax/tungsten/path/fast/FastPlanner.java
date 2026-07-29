@@ -72,11 +72,27 @@ public final class FastPlanner {
     /** Hard ceiling on bounce travel, so a deep pit cannot explode the branching factor. */
     private static final int MAX_SLIME_REACH = 8;
     /**
-     * Share of the drop a slime bounce actually returns as height. The collision itself is
-     * lossless, but vertical drag eats the rest of the climb: measured 4.7 blocks back from
-     * a 7-block drop on the stand.
+     * Share of the drop a slime bounce actually returns as height. The collision is lossless
+     * in the code (Agent.java:832 flips velY) but vertical drag eats most of the climb back.
+     * MEASURED on the stand with a tick-rate probe, dropping onto a pad from four heights:
+     *
+     * <pre>
+     *   drop  4.0 -> rise 1.53  (0.38)
+     *   drop  7.0 -> rise 3.07  (0.44)
+     *   drop 10.0 -> rise 4.25  (0.43)
+     *   drop 15.0 -> rise 8.78  (0.59)
+     * </pre>
+     *
+     * Holding JUMP through the landing changes nothing — 3.07 either way — so there is no
+     * "boosted bounce" to plan for; that idea was tested and is dead.
+     *
+     * <p>The value used is the IN-MOTION one, not the table above. Those drops start from a
+     * standstill; entering the pad at a run the tick trace puts the apex at -55.4 from the
+     * same 7-block drop, i.e. 4.6 blocks, about 0.66. Routes are planned for a bot that is
+     * moving, so that is the number that belongs here — the standing figures are kept
+     * because they are what killed the "boosted bounce" idea.
      */
-    private static final double BOUNCE_HEIGHT_RETURN = 0.67;
+    private static final double BOUNCE_HEIGHT_RETURN = 0.66;
     /**
      * Highest ledge we still plan a route over. Anything above a plain jump
      * (PlayerFit.JUMP_HEIGHT) is emitted as a physics-required step: the walker

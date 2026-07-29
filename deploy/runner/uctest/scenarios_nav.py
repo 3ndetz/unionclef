@@ -237,6 +237,12 @@ class NavSlime(NavCourse):
         ctx.geo["bot_spawn"] = f"0.5 {self.start_y} 0.5 -90 0"
 
     def course(self, arena, ctx):
+        # The ledge is left where it was. It was briefly lowered on the strength of a probe
+        # that dropped the bot onto the pad from a STANDING START — 3.07 blocks back from a
+        # 7-block drop, which would have made the original ledge unreachable. The in-motion
+        # tick trace says otherwise: entering the slime at a run the apex is -55.4, i.e. 4.6
+        # blocks, so HEIGHT is not what blocks this course. The blocker is horizontal, and
+        # weakening the test would have hidden that.
         arena._fill(9, FLOOR_Y, -3, 13, FLOOR_Y, 3, "slime_block")     # bounce pad
         arena._fill(17, FLOOR_Y + 4, -3, 23, FLOOR_Y + 4, 3, "stone")  # target ledge
         return (21, FLOOR_Y + 5, 0)

@@ -51,6 +51,30 @@ public class SlimeBounceTask {
     /** Crossings STARTED — distinguishes "never triggered" from "ran but bounced zero times". */
     public static volatile int starts = 0;
 
+    // ── Y PROBE ────────────────────────────────────────────────────────────────────
+    // A tick-rate instrument for "how high does this throw the bot". Sampling position over
+    // rcon gives ~3 points a second, which walks straight past the apex of a bounce: a
+    // passive drop measured -59.85 that way when the tick trace says -55.4. Started and read
+    // over py4j; it costs two comparisons a tick while armed and nothing when not.
+    private static volatile boolean probing = false;
+    private static volatile double probeMin, probeMax;
+
+    public static void probeStart() {
+        ClientPlayerEntity p = MinecraftClient.getInstance().player;
+        probeMin = probeMax = (p == null ? 0 : p.getY());
+        probing = true;
+    }
+    public static void probeStop() { probing = false; }
+    public static double probeMin() { return probeMin; }
+    public static double probeMax() { return probeMax; }
+
+    private static void probeTick(ClientPlayerEntity player) {
+        if (!probing) return;
+        double y = player.getY();
+        if (y < probeMin) probeMin = y;
+        if (y > probeMax) probeMax = y;
+    }
+
     /** Ticks to give a crossing before calling it stuck (a bounce chain is a few seconds). */
     private static final int TICK_BUDGET = 200;
 
@@ -90,6 +114,7 @@ public class SlimeBounceTask {
 
     /** Called every game tick from MixinClientPlayerEntity. */
     public static void tick(ClientPlayerEntity player) {
+        probeTick(player);
         if (!active) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         WorldView world = player.getEntityWorld();

@@ -1924,6 +1924,14 @@ public class Py4jEntryPoint {
     /** How many times the walker saw a waypoint standing on slime (the crossing trigger). */
     public int walkerSlimeWpSeen() { return kaptainwutax.tungsten.task.BlockPathWalker.slimeWpSeen; }
 
+    /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
+     *  position over rcon gives about three points a second and walks past the apex of a
+     *  bounce — measured -59.85 that way where the tick trace says -55.4. */
+    public void probeYStart() { kaptainwutax.tungsten.task.SlimeBounceTask.probeStart(); }
+    public void probeYStop() { kaptainwutax.tungsten.task.SlimeBounceTask.probeStop(); }
+    public double probeYMin() { return kaptainwutax.tungsten.task.SlimeBounceTask.probeMin(); }
+    public double probeYMax() { return kaptainwutax.tungsten.task.SlimeBounceTask.probeMax(); }
+
     /** Crossings STARTED — separates "never triggered" from "ran but bounced zero times". */
     public int slimeStarts() { return kaptainwutax.tungsten.task.SlimeBounceTask.starts; }
 
