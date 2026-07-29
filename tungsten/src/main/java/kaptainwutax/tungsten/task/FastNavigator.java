@@ -67,16 +67,6 @@ public final class FastNavigator {
      * the exit; same shape as pendingPhysicsTarget for a jump.
      */
     private static volatile BlockPos pendingCrossing = null;
-    /**
-     * Build work the route ends at. The plan ALWAYS puts it last — measured, workIdx is n-1
-     * every time — so arming it only when it is already within reach never fired once. Walk to
-     * it first and arm on arrival, exactly as pendingPhysicsTarget does for a jump.
-     */
-    private static volatile java.util.List<BlockPos> pendingBuild = null;
-    // Where a build plan goes between being made and being executed. Armed rarely and the
-    // chat cannot say why, so count each step: set when the route ends in work, armed on
-    // arrival, dropped when we finished the walk somewhere else.
-    public static volatile int buildSet = 0, buildArmed = 0, buildDropped = 0;
     private static volatile boolean planning = false;
     private static BlockPos legTail = null;
     private static int stallTicks = 0;
@@ -110,7 +100,6 @@ public final class FastNavigator {
         nextPhysicsTarget = null;
         pendingPhysicsTarget = null;
         pendingCrossing = null;
-        pendingBuild = null;
         awaitingPhysics = false;
     }
 
@@ -129,13 +118,10 @@ public final class FastNavigator {
         // progress watchdog: the physics engine or a re-plan owns recovery, but a
         // navigator that silently stops is the failure the user reported, so make
         // it loud and let the caller (goto retry / physics search) take over.
-        // BUILDING IS PROGRESS, even though the distance does not move. While the executor
-        // is placing or mining, the bot is deliberately standing still doing the work that
-        // makes the rest of the route possible — and this watchdog counted that as failure and
-        // SHUT THE NAVIGATOR DOWN. That is why a build route produced two plans in a whole run
-        // and the direct build channel almost never fired: not because planning was suspended,
-        // but because the planner had been stopped. Two earlier fixes aimed at the wait missed
-        // this and both measured worse; reading the method end to end found it.
+        // BUILDING IS PROGRESS, even though the distance does not move. While the executor is
+        // placing or mining, the bot stands still on purpose doing the work that makes the
+        // rest of the route possible — and this watchdog counted that as failure and SHUT THE
+        // NAVIGATOR DOWN, which is why a build route produced two plans in a whole run.
         var exec = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
         boolean building = exec != null && (exec.placeQueue != null || exec.breakQueue != null);
         if (building) {
@@ -180,12 +166,6 @@ public final class FastNavigator {
         if (awaitingPhysics) {
             if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
                     || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
-                // (Planning WHILE waiting for physics was tried here — the reasoning being
-                // that thinking is not driving, and that the build channel never gets a plan
-                // to fire on because only two plans happen in a whole run. It measured WORSE:
-                // 20.7 blocks and one placement per run, against 9.8-14.6 and up to three.
-                // Reverted. The wait is a real problem, but replanning underneath it is not
-                // the answer.)
                 return;   // physics still working — do not touch the walker or the keys
             }
             awaitingPhysics = false;
@@ -259,35 +239,6 @@ public final class FastNavigator {
                     pendingPhysicsTarget = jump;   // keep it; retry on a later tick
                 }
                 return;
-            }
-        }
-
-        // Arrived at the build point the route ends in — arm the executor now.
-        if (pendingBuild != null && !BlockPathWalker.isRunning()) {
-            var cell0 = pendingBuild.get(0);
-            double d = Math.sqrt(player.getEntityPos().squaredDistanceTo(Vec3d.ofCenter(cell0)));
-            if (d < 5.0) {
-                kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.setPath(new java.util.ArrayList<>());
-                kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.placeQueue =
-                        new java.util.ArrayList<>(pendingBuild);
-                if (TungstenConfig.get().verboseDebugLogging) {
-                    Debug.logMessage("Navigator arms the build on arrival at " + cell0.toShortString());
-                }
-                pendingBuild = null;
-                buildArmed++;
-                legTail = null;
-                return;
-            }
-            // (Keeping the work and re-planning the approach instead of dropping it was tried
-            // and SPUN: drops went from 3 a run to 55, then 111, then 167, and armed stayed at
-            // zero — the bot re-plans towards a build point it never reaches. The plan is
-            // dropped here deliberately; the shortfall is in the WALK, not in the bookkeeping.)
-            pendingBuild = null; buildDropped++;
-            // How far short does the walk actually come? "Not within 5" could be six blocks
-            // or twenty, and those need completely different fixes.
-            if (TungstenConfig.get().verboseDebugLogging) {
-                Debug.logMessage(String.format("BUILDDROP dist=%.1f at %s", d,
-                        player.getBlockPos().toShortString()));
             }
         }
 
@@ -391,55 +342,6 @@ public final class FastNavigator {
                             "PLAN n=%d complete=%b firstPhysics=%d flagged=%d",
                             res.path.size(), res.complete, res.firstPhysicsIndex(), flagged));
                 }
-                // THE BLOCK PLANNER'S OWN CHANNEL TO THE EXECUTOR. Until now a place plan
-                // could only reach the executor THROUGH the physics search
-                // (PathFinder.truncateAtBreaks), so building was hostage to a search that
-                // cannot solve these goals: every bridge cost a full physics timeout and the
-                // loop managed one block a run. The navigator has the plan and the bot's
-                // position — it can arm the executor itself, exactly as the "at the gap"
-                // shortcut does, and skip the round trip entirely.
-                int workIdx = -1;
-                for (int i = 0; i < res.path.size(); i++) {
-                    if (res.path.get(i).toPlace != null) { workIdx = i; break; }
-                }
-                // The channel never fired in three runs (armed=0) while the PHYSICS side
-                // reported "Path needs bridging" in the same runs — so say plainly whether the
-                // navigator's own plan carries a build at all, instead of inferring it.
-                if (TungstenConfig.get().verboseDebugLogging) {
-                    Debug.logMessage("PLANWORK n=" + res.path.size() + " workIdx=" + workIdx);
-                }
-                if (workIdx >= 0) {
-                    BlockPos cell = res.path.get(workIdx).toPlace.get(0);
-                    var me = TungstenMod.mc.player;
-                    double dWork = me == null ? 999.0
-                            : Math.sqrt(me.getEntityPos().squaredDistanceTo(Vec3d.ofCenter(cell)));
-                    if (dWork >= 4.5) {
-                        // Too far to build from here: walk the route up to it and remember the
-                        // work for when we arrive.
-                        pendingBuild = res.path.get(workIdx).toPlace;
-                        buildSet++;
-                        List<BlockPos> upTo = res.positions();
-                        if (workIdx >= 2) {
-                            nextLeg = new java.util.ArrayList<>(upTo.subList(0, workIdx));
-                            legTail = nextLeg.get(nextLeg.size() - 1);
-                            return;
-                        }
-                    }
-                    if (dWork < 4.5) {
-                        BlockPathWalker.stop();
-                        kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.setPath(new java.util.ArrayList<>());
-                        kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.placeQueue =
-                                new java.util.ArrayList<>(res.path.get(workIdx).toPlace);
-                        if (TungstenConfig.get().verboseDebugLogging) {
-                            Debug.logMessage("Navigator arms the build directly at "
-                                    + cell.toShortString());
-                        }
-                        nextLeg = null;
-                        legTail = null;
-                        return;
-                    }
-                }
-
                 List<BlockPos> cells = res.positions();
                 // cut at the first waypoint that needs a real jump: the physics
                 // engine owns those (parkour), the walker must not run into one
