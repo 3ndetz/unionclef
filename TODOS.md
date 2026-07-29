@@ -105,6 +105,18 @@
   material is a hardcoded 8-item list duplicated in two files, with a third policy elsewhere.
 
 ### C6 — COMBAT (root causes, all code-verified)
+
+- [ ] **C6.0 THE PVP SUITE IS 1/7, AND THE ROOT IS THE APPROACH, NOT THE SWING** (measured
+  2026-07-29). `melee_basic`: `first_hit=None`, `damage=0.0`, and `totalHits=0` over py4j —
+  the trigger never swings once. The timeline says why: the bot starts 5.14 blocks from the
+  victim and is 6.21 away five seconds later. It never closes. The trigger's own gate log
+  agrees — `reach2=19.79` (4.4 blocks) with the cooldown full, i.e. ready to swing and out of
+  range. Everything downstream of "get to the enemy" is therefore untestable right now.
+  NOT a regression from the crit work: A/B'd by rebuilding the previous commit, which fails
+  identically. Also note the course is bimodal like nav_slime — one run in this session did
+  land a hit at 5.4 s for 6.0 damage — so measure in threes.
+  Failing: bow_flee, bow_flee_hard, chase_terrain, edge_duel, melee_basic, narrow_bridge_duel.
+  Passing: chase_flat.
 - [x] **C6.1 THE "STANDS STILL" ROOT.** ЗАКРЫТО 2026-07-27, релиз v0.62.0: мёртвая полоса убрана, 3/3 боевых сценария PASS. (a) `PunkPlayerTask.enterCombat:214-220` **hard-stops all
   navigation** (`PATHFINDER.stop`, `EXECUTOR.stop`, `FollowEntityTask.stop`) — only `combatMove` can
   move the bot. (b) `CombatController.java:138-142` presses forward only at `dist > 3.4` and back only

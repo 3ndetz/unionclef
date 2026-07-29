@@ -100,6 +100,24 @@ public class CombatController {
             triggerBot.tick(player, target);
         }
 
+        // SHIELD UP IN THE GAP BETWEEN SWINGS. The engine never raised it at all: the
+        // primitive existed but only ever ran when an agent drove it by hand over py4j, so
+        // the bot fought with a shield in its off hand and never used it. Blocking and
+        // attacking are mutually exclusive in vanilla, which decides the policy for us —
+        // raise it while the attack cooldown is recharging, when we could not swing anyway,
+        // and drop it just before the swing lands. Free mitigation, no lost damage.
+        var offHand = player.getOffHandStack();
+        if (offHand.getItem() instanceof net.minecraft.item.ShieldItem) {
+            double d2 = player.squaredDistanceTo(target);
+            float cd = player.getAttackCooldownProgress(0.5f);
+            boolean threatClose = d2 < (TriggerBot.REACH + 2.0) * (TriggerBot.REACH + 2.0);
+            if (threatClose && cd < 0.55f) {
+                kaptainwutax.tungsten.task.ShieldBlocker.hold(3);
+            } else if (kaptainwutax.tungsten.task.ShieldBlocker.isBlocking()) {
+                kaptainwutax.tungsten.task.ShieldBlocker.release();
+            }
+        }
+
         // LEGS: resolve ONE movement request and write it ONCE.
         //
         // Previously two subsystems pressed the keys independently: the SafetySystem stage

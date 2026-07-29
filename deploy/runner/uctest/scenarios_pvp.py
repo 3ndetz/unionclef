@@ -20,7 +20,7 @@ class MeleeBasic(Scenario):
     to a target that fights back (RW-1)."""
     id = "melee_basic"
     duration = 60
-    settings = {"combatMovementsEnabled": "true"}
+    settings = {"combatMovementsEnabled": "true", "verboseDebugLogging": "true"}
     bot_kit = KIT_SWORD
     victim_kit = KIT_SWORD
 

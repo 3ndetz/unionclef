@@ -16,6 +16,12 @@ public class ShieldBlocker {
     private static int holdTicks = 0;
 
     /** Raise (or extend) the shield for the given number of ticks. */
+    /**
+     * Hold the use key for {@code ticks}. NOTHING HERE CHECKS WHAT IS IN HAND — that is the
+     * caller's job, and it matters: pressing use with food in the main hand eats it, with a
+     * bow draws it, with a block places it. The combat engine checks for a shield in the OFF
+     * hand before calling this.
+     */
     public static synchronized void hold(int ticks) {
         holdTicks = Math.max(holdTicks, ticks);
     }
