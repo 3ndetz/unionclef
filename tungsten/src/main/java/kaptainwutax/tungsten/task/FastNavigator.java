@@ -158,6 +158,12 @@ public final class FastNavigator {
         if (awaitingPhysics) {
             if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
                     || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
+                // (Planning WHILE waiting for physics was tried here — the reasoning being
+                // that thinking is not driving, and that the build channel never gets a plan
+                // to fire on because only two plans happen in a whole run. It measured WORSE:
+                // 20.7 blocks and one placement per run, against 9.8-14.6 and up to three.
+                // Reverted. The wait is a real problem, but replanning underneath it is not
+                // the answer.)
                 return;   // physics still working — do not touch the walker or the keys
             }
             awaitingPhysics = false;
