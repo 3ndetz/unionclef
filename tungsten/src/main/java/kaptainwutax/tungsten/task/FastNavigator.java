@@ -278,6 +278,10 @@ public final class FastNavigator {
     private static void planAhead(BlockPos from) {
         if (planning || goal == null) return;
         planning = true;
+        // Read the pocket HERE, on the client thread — the search runs on its own thread and
+        // must not touch the inventory, but it does need to know how long a bridge it may
+        // promise (see FastPlanner.placeBudget).
+        FastPlanner.placeBudget = FastPlanner.countPlaceable(TungstenMod.mc.player);
         final BlockPos start = from;
         final Vec3d target = goal;
         Thread t = new Thread(() -> {

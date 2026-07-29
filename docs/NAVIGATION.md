@@ -535,6 +535,59 @@ cross that gap and concluded the course was unwinnable. It is unwinnable BY BOUN
 test that settles a course's validity is the user's: **would baritone pass it** — and baritone
 would have built across.
 
+## The bridge could only ever be one block long (2026-07-29, root cause)
+
+`nav_slime` was the last red course, and the reason turned out not to be the slime at all.
+The course is crossed the way baritone would cross it — a bridge of placed blocks over the
+gap — and that bridge was **unplannable by construction**:
+
+```java
+BlockPos against = new BlockPos(from.x, from.y - 1, from.z);
+if (world.getBlockState(against).getCollisionShape(world, against).isEmpty()) return;
+```
+
+Placing needs a face to click against, and `placeAcross` looked for that face **in the
+world**. The face for the second plank of a bridge is the first plank — a block that exists
+only in the plan at search time — so the search gave up after one placed block. `pillarUp`
+had the identical flaw, capping a tower at one block. Any route needing two or more placed
+blocks was therefore impossible, which is a whole class of route rather than a corner case:
+getting anywhere at all by breaking and placing is precisely what baritone does that this
+planner could not.
+
+Fix: nodes carry `placedDepth`, and `branchPlaced(node, x, y, z)` walks the parent chain to
+ask whether **this route** has already put a block there. The walk stops at the first
+ancestor that placed nothing, so it costs nothing on routes that build nothing. Support is
+now "solid in the world OR placed by this branch" in both `placeAcross` and `pillarUp`, and
+a plank this branch already laid is walked over rather than placed on twice.
+
+### How the root cause was found, and two dead ends on the way
+
+The bot parked at the launch pad's lip: `minY` stayed at -53 and `maxX` at 6.7-6.9 on three
+runs of four. A `WALKSTOP` diagnostic — print the gate's inputs whenever the walker is on
+the ground with movement NOT pressed — gave the state directly:
+
+```
+WALKSTOP pos=(6.7,0.5) wp=(10,-60,0) dist=0.8 yawErr=51 facing=false
+```
+
+Two things came out of that line, one of them a red herring:
+
+- **DEAD END, do not retry: "two owners of the camera".** The reading that the executor's
+  place-aim and the walker's waypoint-aim were fighting looked compelling. Letting the
+  builder own the aim outright — walker still walking, no longer gating on an aim it may not
+  set — changed nothing measurable: 13.6 / 7.6 / 7.8 blocks short against 13.7 / 7.9 before
+  it. Reverted rather than kept on faith.
+- **Real defect, fixed:** `dist=0.8` was the distance to the waypoint the walker had just
+  LEFT — it is not recomputed when the waypoint advances, and it also feeds the ladder
+  arrival threshold.
+
+Also measured while chasing this, and worth knowing: **`slimeCrossing` ships OFF**
+(`TungstenConfig.slimeCrossing = false`), so `SlimeBounceTask` started **zero** times across
+four runs while the planner offered the drop onto the pad 217 times. The bounce path was
+never under test. That matters less than it sounds — bouncing is not how this course is
+meant to be passed — but "the task never ran" is not the same finding as "the task ran and
+failed", and the logs will read as the latter if you do not know this.
+
 ## Where to fix things (strategy, not band-aids)
 
 1. **One block planner.** `FastPlanner` is the correct base; move the remaining capabilities

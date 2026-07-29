@@ -244,12 +244,40 @@ public final class FastPlanner {
         boolean viaJump;
         List<BlockPos> toBreak;
         List<BlockPos> toPlace;
+        /**
+         * How many blocks this branch has placed on its way here, counting every ancestor.
+         * Zero for the overwhelming majority of nodes, which is what makes
+         * {@link #branchPlaced} free on routes that build nothing: the walk up the parent
+         * chain stops the moment it meets a node that has placed nothing.
+         */
+        int placedDepth;
         int heapPosition = -1;
 
         Node(int x, int y, int z, double heuristic) {
             this.x = x; this.y = y; this.z = z; this.heuristic = heuristic;
         }
         boolean isOpen() { return heapPosition != -1; }
+    }
+
+    /**
+     * How many blocks the bot may promise to place on ONE route. A bridge used to be capped
+     * at a single block by a bug (see {@link #branchPlaced}); with that gone, nothing stopped
+     * the search from planning a hundred-block causeway across a void with an empty pocket,
+     * which is a plan that cannot be walked. Set from the client thread before each search —
+     * reading the inventory off the planning thread is not safe.
+     */
+    public static volatile int placeBudget = Integer.MAX_VALUE;
+
+    /** Blocks in the pocket, i.e. the honest value for {@link #placeBudget}. */
+    public static int countPlaceable(net.minecraft.entity.player.PlayerEntity player) {
+        if (player == null) return 0;
+        int n = 0;
+        var inv = player.getInventory();
+        for (int i = 0; i < inv.size(); i++) {
+            var st = inv.getStack(i);
+            if (st.getItem() instanceof net.minecraft.item.BlockItem) n += st.getCount();
+        }
+        return n;
     }
 
     private FastPlanner() {}
@@ -821,6 +849,7 @@ public final class FastPlanner {
     private static void placeAcross(WorldView world, Node from, int dx, int dz, double support,
                                     BlockPos goal, NodeMap map, Heap open,
                                     BlockPos.Mutable scratch) {
+        if (from.placedDepth >= placeBudget) return;   // no more blocks in the pocket
         if (dx != 0 && dz != 0) return;                          // cardinal only
         int nx = from.x + dx, nz = from.z + dz;
 
@@ -833,11 +862,20 @@ public final class FastPlanner {
         // The block goes in the cell BELOW the destination, and that cell has to be empty.
         BlockPos floor = new BlockPos(nx, from.y - 1, nz);
         if (!world.getBlockState(floor).getCollisionShape(world, floor).isEmpty()) return;
+        // Already planked by this very route (a bridge doubling back on itself): walking onto
+        // it is free and placing there twice is not a move at all.
+        if (branchPlaced(from, nx, from.y - 1, nz)) {
+            relax(map, open, from, nx, from.y, nz, ActionCosts.WALK_ONE_BLOCK_COST, goal, false);
+            return;
+        }
 
         // You cannot place against nothing: vanilla needs a face to click. The cell we are
-        // standing on is that face when we bridge straight out from our own feet.
+        // standing on is that face when we bridge straight out from our own feet — and it
+        // counts whether the world put it there or this route did, which is what lets a
+        // bridge be longer than one block (see branchPlaced).
         BlockPos against = new BlockPos(from.x, from.y - 1, from.z);
-        if (world.getBlockState(against).getCollisionShape(world, against).isEmpty()) return;
+        if (world.getBlockState(against).getCollisionShape(world, against).isEmpty()
+                && !branchPlaced(from, from.x, from.y - 1, from.z)) return;
 
         double cost = ActionCosts.WALK_ONE_BLOCK_COST
                 + ActionCosts.PLACE_ONE_BLOCK_COST * TungstenConfig.get().placeCostMultiplier;
@@ -858,14 +896,18 @@ public final class FastPlanner {
      */
     private static void pillarUp(WorldView world, Node from, BlockPos goal,
                                  NodeMap map, Heap open, BlockPos.Mutable scratch) {
+        if (from.placedDepth >= placeBudget) return;   // no more blocks in the pocket
         int upY = from.y + 1;
         // Room for the body one block higher, and nothing already occupying our own cell.
         if (!PlayerFit.bodyFits(world, from.x + 0.5, upY, from.z + 0.5)) return;
         BlockPos feet = new BlockPos(from.x, from.y, from.z);
         if (!world.getBlockState(feet).getCollisionShape(world, feet).isEmpty()) return;
-        // We must be standing on something to jump off in the first place.
+        // We must be standing on something to jump off in the first place — including the
+        // block the previous pillar step of this same route placed, without which a tower is
+        // capped at a single block for exactly the reason a bridge was.
         scratch.set(from.x, from.y, from.z);
-        if (Double.isNaN(PlayerFit.supportTop(world, scratch))) return;
+        if (Double.isNaN(PlayerFit.supportTop(world, scratch))
+                && !branchPlaced(from, from.x, from.y - 1, from.z)) return;
 
         double cost = ActionCosts.JUMP_ONE_BLOCK_COST
                 + ActionCosts.PLACE_ONE_BLOCK_COST * TungstenConfig.get().placeCostMultiplier;
@@ -874,6 +916,30 @@ public final class FastPlanner {
         }
         relax(map, open, from, from.x, upY, from.z, cost, goal, true, null,
                 new java.util.ArrayList<>(java.util.List.of(feet)));
+    }
+
+    /**
+     * Is this cell solid ON THIS BRANCH — either in the world, or because the route itself
+     * puts a block there before it arrives?
+     *
+     * <p>THE BRIDGE COULD ONLY EVER BE ONE BLOCK LONG WITHOUT THIS. Placing needs a face to
+     * click, and the face for the second plank of a bridge is the FIRST plank — a block that
+     * does not exist in the world at search time, only in the plan. So {@link #placeAcross}
+     * asked the world, got "empty", and returned; the same for the second step of a tower.
+     * Every route that needed more than a single placed block was therefore unplannable, and
+     * that is a whole class of route, not a corner case: reaching anywhere at all by breaking
+     * and placing is the thing baritone does that this planner could not.
+     */
+    private static boolean branchPlaced(Node from, int x, int y, int z) {
+        for (Node n = from; n != null && n.placedDepth > 0; n = n.parent) {
+            List<BlockPos> placed = n.toPlace;
+            if (placed == null) continue;
+            for (int i = 0; i < placed.size(); i++) {
+                BlockPos b = placed.get(i);
+                if (b.getX() == x && b.getY() == y && b.getZ() == z) return true;
+            }
+        }
+        return false;
     }
 
     /** Jump across up to MAX_JUMP_GAP empty cells onto a standable landing. */
@@ -936,6 +1002,7 @@ public final class FastPlanner {
         next.viaJump = viaJump;
         next.toBreak = toBreak;
         next.toPlace = toPlace;
+        next.placedDepth = from.placedDepth + (toPlace == null ? 0 : toPlace.size());
         if (next.isOpen()) open.update(next); else open.insert(next);
     }
 

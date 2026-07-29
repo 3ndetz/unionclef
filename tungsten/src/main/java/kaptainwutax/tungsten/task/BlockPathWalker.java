@@ -413,6 +413,10 @@ public class BlockPathWalker {
             }
             wp = path.get(waypointIdx);
             wpPos = Vec3d.ofBottomCenter(wp);
+            // RECOMPUTE, or every test below this line judges the waypoint we just left: the
+            // diagnostic caught "dist=0.8" while the new waypoint was 3.8 blocks away, and
+            // that stale value also feeds the ladder threshold.
+            dist = horizontalDist(playerPos, wpPos);
         }
 
         // ── LADDER: A COLUMN OF WAYPOINTS HAS NO HORIZONTAL EXTENT ──────────────────
@@ -449,6 +453,12 @@ public class BlockPathWalker {
             }
         }
 
+        // TWO OWNERS OF THE CAMERA — MEASURED DEAD END, DO NOT RETRY. The executor aims at
+        // the face it is about to click while the walker aims at its waypoint, and at the pad's
+        // lip the pair were caught not converging ("WALKSTOP wp=(10,-60,0) yawErr=51
+        // facing=false"). Letting the builder own the aim outright, with the walker still
+        // walking and no longer gating on an aim it may not set, changed NOTHING measurable:
+        // nav_slime 13.6/7.6/7.8 blocks short against 13.7/7.9 before it. Not kept.
         float yaw = AttackTiming.yawTo(playerPos, wpPos);
         WindMouseRotation.INSTANCE.setTargetFast(yaw, 0);  // fast nav turn — keep the 45deg gate open
 
@@ -493,6 +503,16 @@ public class BlockPathWalker {
 
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(move);
+        // WHY IS THE BOT STANDING? Measured: on three runs of four it never leaves the pad's
+        // lip (minY stays at -53, maxX at 6.7-6.9) even though the drop onto the slime is
+        // planned 553 times a run. Standing on the ground with movement NOT pressed is the
+        // exact state to explain, so print what the gate saw.
+        if (!move && player.isOnGround() && TungstenConfig.get().verboseDebugLogging
+                && (dbgN++ % 20 == 0)) {
+            Debug.logMessage(String.format(
+                    "WALKSTOP pos=(%.1f,%.1f) wp=(%d,%d,%d) dist=%.1f yawErr=%.0f facing=%b",
+                    playerPos.x, playerPos.z, wp.getX(), wp.getY(), wp.getZ(), dist, yawErr, facing));
+        }
         mc.options.sprintKey.setPressed(move && !climbing);   // sprint-jump overshoots a ledge
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
