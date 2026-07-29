@@ -443,6 +443,33 @@ further along the chain remains.
 
 ---
 
+## Bridging: planned, plumbed, not yet executed (2026-07-29)
+
+The user's correction reset this whole area: **baritone does not build jumps out of physics —
+it reaches anywhere by BREAKING AND PLACING.** Tungsten could break and could not place, so a
+gap it was unable to jump was a dead end even with a stack of blocks in hand.
+
+Three links, found and fixed in order:
+
+1. **No place move existed.** `breakThrough` had no mirror. `placeAcross` now emits a move
+   into a cardinal hole — no floor, body fits once there is one, the cell below empty, a solid
+   face to click against — priced at 2.5 walks, deliberately dearer than a jump so the search
+   still jumps what it can jump.
+2. **The plan was thrown away at the seam.** `Result.toBlockNodes` carried `toBreak` and not
+   `toPlace`, so every bridge the planner worked out died on the way to the executor. One
+   line. After it the log shows `Path needs bridging: 1 block(s) at segment end`.
+3. **Execution aborts.** `Bridge place aborted (timeout or out of reach)` — the executor gives
+   up when the target is beyond 5.5 blocks or after 200 ticks. The bot is not being delivered
+   to the bridge point, so the placement waits and times out. THAT is the next step.
+
+Measured on `nav_slime` along the way: final distance 20.7 -> 13.2-14.4, and self-falls to
+ZERO across three runs where the bot used to kill itself. The course is still red.
+
+⚠️ Do not repeat this: I spent many passes proving with physics that the slime bounce cannot
+cross that gap and concluded the course was unwinnable. It is unwinnable BY BOUNCING. The
+test that settles a course's validity is the user's: **would baritone pass it** — and baritone
+would have built across.
+
 ## Where to fix things (strategy, not band-aids)
 
 1. **One block planner.** `FastPlanner` is the correct base; move the remaining capabilities

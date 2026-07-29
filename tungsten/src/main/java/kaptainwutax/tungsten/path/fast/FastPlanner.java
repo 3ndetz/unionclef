@@ -173,6 +173,11 @@ public final class FastPlanner {
                         new kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode(
                                 w.pos.getX(), w.pos.getY(), w.pos.getZ(), goal, player);
                 bn.toBreak = w.toBreak;   // consumed by PathFinder.truncateAtBreaks
+                // ...AND THE BRIDGE PLAN WITH IT. This line was missing, so every bridge the
+                // planner worked out was thrown away right here, at the seam: the executor
+                // was never told to place anything and the route simply stopped at the gap.
+                // truncateAtBreaks already handles hasPlaces() identically to hasBreaks().
+                bn.toPlace = w.toPlace;
                 out.add(bn);
             }
             return out;
