@@ -191,6 +191,16 @@ public final class FastPlanner {
         }
 
         /** Index of the first waypoint that needs physics, or -1. */
+        /**
+         * MEASURED DEAD END — DO NOT RETRY WITHOUT A DIFFERENT PLAN. Skipping waypoints that
+         * carry toPlace here (on the theory that "a placement is ours to build, not physics'
+         * job") REGRESSED the courses that already worked: nav_wall2 went from PASS to FAIL
+         * twice over, stuck 6.4 blocks out at the foot of its wall, and nav_bridge dropped
+         * from 3 passes of 3 to 1 of 2. The reason is that the ledge courses pass BECAUSE the
+         * cut happens: the hand-off is what routes the climb to PillarTask. Giving the block
+         * planner its own route to the executor is still the right fix — it is just a bigger
+         * job than a condition in this method.
+         */
         public int firstPhysicsIndex() {
             for (int i = 0; i < path.size(); i++) if (path.get(i).needsPhysics) return i;
             return -1;

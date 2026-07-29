@@ -433,6 +433,7 @@ public class PathExecutor {
         }
         if (target == null) {                       // all placed — bridge floor is in
             options.useKey.setPressed(false);
+            options.sneakKey.setPressed(false);
             TungstenModRenderContainer.PLACE_PLAN.clear();
             placeQueue = null; placingTicks = 0;
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
@@ -446,6 +447,7 @@ public class PathExecutor {
         if (!(player.getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem)) {
             Debug.logMessage("Bridge place aborted (no block in hand)");
             options.useKey.setPressed(false);
+            options.sneakKey.setPressed(false);
             placeQueue = null; placingTicks = 0;
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
             return false;
@@ -472,6 +474,7 @@ public class PathExecutor {
                     "Bridge place aborted (TIMEOUT) dist=%.2f ticks=%d target=%s",
                     placeDist, placingTicks, target.toShortString()));
             options.useKey.setPressed(false);
+            options.sneakKey.setPressed(false);
             TungstenModRenderContainer.PLACE_PLAN.clear();
             placeQueue = null; placingTicks = 0;
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
@@ -480,6 +483,7 @@ public class PathExecutor {
         if (!kaptainwutax.tungsten.path.PlaceRules.canPlace(world, target)) {
             Debug.logMessage("Bridge place aborted (denied by place rules)");
             options.useKey.setPressed(false);
+            options.sneakKey.setPressed(false);
             placeQueue = null; placingTicks = 0;
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
             return false;
@@ -497,6 +501,20 @@ public class PathExecutor {
 
         releaseMovementKeys(options);
         options.attackKey.setPressed(false);
+        // SNEAK WHILE BRIDGING — PORTED FROM BARITONE, NOT INVENTED. MovementTraverse holds
+        // SNEAK the moment it is close to the cell it is paving and only clicks once the
+        // player is actually in the sneaking pose; its cost function even prices the manoeuvre
+        // separately (SNEAK_ONE_BLOCK_COST) because a backplace IS a sneak. Tungsten placed
+        // without it, and releasing the movement keys does not cancel momentum: the bot slid
+        // off the lip it was paving from and fell. Measured on nav_slime, twice in a row,
+        // 20.7 blocks short — the void-fall signature. Sneaking is what makes an edge safe in
+        // vanilla, so hold it whenever the block we are laying is BELOW our feet and we are
+        // standing over it, and do not click until the pose has actually taken effect.
+        boolean bridging = target.getY() < net.minecraft.util.math.MathHelper.floor(player.getY());
+        double edgeDist = Math.max(Math.abs(player.getX() - (target.getX() + 0.5)),
+                                   Math.abs(player.getZ() - (target.getZ() + 0.5)));
+        boolean sneakToPlace = bridging && edgeDist < 1.6;
+        options.sneakKey.setPressed(sneakToPlace);
         Vec3d faceCenter = Vec3d.ofCenter(against).add(Vec3d.of(side.getVector()).multiply(0.5));
         Vec3d d = faceCenter.subtract(eye);
         float wantYaw = (float) Math.toDegrees(-Math.atan2(d.x, d.z));
@@ -517,7 +535,7 @@ public class PathExecutor {
         // range and 2 clicks, and both attempts at winning the camera outright measured
         // WORSE. Keep turning towards the face so it looks right; place regardless.
         boolean aimed = Math.abs(dYaw) < 15f && Math.abs(dPitch) < 15f;
-        if (aimed || placingTicks > 6) {
+        if ((aimed || placingTicks > 6) && (!sneakToPlace || player.isInSneakingPose())) {
             net.minecraft.util.hit.BlockHitResult hit =
                     new net.minecraft.util.hit.BlockHitResult(faceCenter, side, against, false);
             placeClicked++;

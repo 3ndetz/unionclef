@@ -588,6 +588,50 @@ never under test. That matters less than it sounds — bouncing is not how this 
 meant to be passed — but "the task never ran" is not the same finding as "the task ran and
 failed", and the logs will read as the latter if you do not know this.
 
+## OPEN REGRESSION: nav_wall2 (2026-07-29)
+
+`nav_wall2` was green and is now FAIL, 7.5 blocks short, standing at the foot of its wall.
+Isolated by measurement, not by reading:
+
+- it is NOT the sneak-while-bridging port — stashed it, rebuilt, identical 7.5 / 7.5;
+- it is NOT the leg-cut experiment — that was reverted and nav_bridge recovered to PASS 2/2
+  while nav_wall2 stayed broken.
+
+So it came in with the committed core work, and the likeliest suspect is the one change that
+alters which routes the search can express: a node standing on a block the branch placed is
+now expandable, so pillar/bridge routes compete with the CLIMB that nav_wall2 used to take.
+The trace says exactly that — the plan is complete (10 wp, 1 flagged), the walker starts 26
+legs, and `HANDOFF` / `Pillaring up` never fire once. The course passed BECAUSE the climb was
+handed to PillarTask; now something else is winning the search and nothing executes it.
+
+Next pass starts here: dump the chosen route on nav_wall2 and see what it picked instead.
+
+## Baritone's placement model, read at last (2026-07-29)
+
+Prompted by the user, and it should have been the starting point rather than the fallback.
+`MovementTraverse.cost` (baritone/src/main/java/.../movements/MovementTraverse.java) does two
+things tungsten did not:
+
+1. **Side place first, backplace second.** It tries all four horizontals plus down of the cell
+   being paved, SKIPPING the direction that would be a backplace, and only if none of them
+   can be placed against does it fall back to placing against the block under its own feet —
+   at a different price, `SNEAK_ONE_BLOCK_COST`, because a backplace IS a sneak. Tungsten's
+   `placeAcross` only ever implemented the backplace.
+2. **It sneaks.** `updateState` holds `Input.SNEAK` as soon as it is close to the cell and
+   only clicks once `ctx.player().isInSneakingPose()`; if it has come too close it presses
+   `MOVE_BACK` first. Tungsten released the movement keys and clicked, and releasing keys does
+   not cancel momentum — the bot slid off the lip it was paving from.
+
+`canPlaceAgainst` is also stricter than tungsten's "collision shape is not empty": normal
+cubes and glass only, because the check exists to answer "can I look at a side face and place
+against it", which carpets and the like fail in practice.
+
+Ported so far: the sneak and the click-only-when-sneaking gate. Measured neutral on both
+nav_slime (20.7 / 8.8 / 8.3, unchanged) and nav_wall2 (identical with and without) — kept
+because it is upstream's actual behaviour and the failure it addresses is real, but it has
+not paid for itself yet and that is not hidden here. NOT yet ported: side-place preference,
+the two-tier cost, MOVE_BACK when too close, and the stricter canPlaceAgainst.
+
 ## Where to fix things (strategy, not band-aids)
 
 1. **One block planner.** `FastPlanner` is the correct base; move the remaining capabilities
