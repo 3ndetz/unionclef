@@ -434,8 +434,13 @@ public final class FastPlanner {
                 boolean water = isWater(world, nx, ny, nz, scratch);
                 boolean exit = ny >= from.y && PlayerFit.bodyFits(world, nx + 0.5, ny, nz + 0.5);
                 if (water || exit) {
-                    relax(map, open, from, nx, ny, nz,
-                            ActionCosts.SWIM_ONE_BLOCK_COST, goal, true);
+                    // DIVING AND SURFACING COST MORE THAN CROSSING. Vertical movement in water
+                    // is slower in vanilla, and pricing all six directions the same made the
+                    // search tour the pool's whole volume instead of crossing it: a stalled
+                    // run shows every water cell being expanded while the bot never left the
+                    // bank. A pool is something you swim ACROSS.
+                    double swim = ActionCosts.SWIM_ONE_BLOCK_COST * (d[1] != 0 ? 1.6 : 1.0);
+                    relax(map, open, from, nx, ny, nz, swim, goal, true);
                 }
             }
         } else {
