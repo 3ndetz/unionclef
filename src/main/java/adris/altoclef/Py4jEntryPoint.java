@@ -1994,15 +1994,6 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.path.PathExecutor.placeClicked);
     }
 
-    /** Where a build plan goes: set when the route ends in work, armed on arrival, or
-     *  dropped because the walk finished somewhere else. */
-    public String buildStats() {
-        return String.format("set=%d armed=%d dropped=%d",
-                kaptainwutax.tungsten.task.FastNavigator.buildSet,
-                kaptainwutax.tungsten.task.FastNavigator.buildArmed,
-                kaptainwutax.tungsten.task.FastNavigator.buildDropped);
-    }
-
     public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }
     public int totalHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeHits; }
 

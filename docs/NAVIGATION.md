@@ -498,7 +498,16 @@ Three links, found and fixed in order:
 2. **The plan was thrown away at the seam.** `Result.toBlockNodes` carried `toBreak` and not
    `toPlace`, so every bridge the planner worked out died on the way to the executor. One
    line. After it the log shows `Path needs bridging: 1 block(s) at segment end`.
-0. **THE WALKER PARKS AT THE LIP, so every build beyond the drop is discarded.** Measured with
+0. **CORRECTED: the drop IS planned, and the walker takes it SOMETIMES.** A diagnostic in the
+   move itself settles the planner side — `SLIMEDROP from (6,-53,z) reach=3 drop=8 ->
+   (9,-60,z)`, 553 times in a run, exactly the intended geometry: off the pad's lip onto the
+   slime. So the earlier "the walker parks at the lip" was too absolute; it parks on SOME runs
+   (final 14.7-20.7) and crosses on others (8.1). The variance is in EXECUTION of a correctly
+   planned drop, not in the plan.
+   Note against my own method: I first grepped for this with a pattern that did not match and
+   concluded the move was never emitted. Always confirm the diagnostic channel is alive before
+   reading an absence as evidence.
+0b. **(superseded) The walker parks at the lip, so every build beyond the drop is discarded.** Measured with
    a distance on the drop counter: `BUILDDROP dist=10.7 at 6,...` — the bot is standing on the
    pad's last block and the build point is 10.7 blocks away, down in the pit. The leg towards
    the work is never walked, so the plan is thrown away 12 times out of 12. It is not the

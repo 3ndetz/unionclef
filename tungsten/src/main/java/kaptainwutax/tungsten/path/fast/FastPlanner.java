@@ -521,6 +521,14 @@ public final class FastPlanner {
                             * (AIRTIME_TICKS_PER_SQRT_BLOCK / 2.0) * Math.sqrt(drop)));
                     if (reach > fallReach) continue;
                     if (isSlime(world, nx, by, nz, scratch)) {
+                        // The route stops at the pad's lip and never takes the drop, so say
+                        // whether this move is even offered rather than inferring it from the
+                        // shape of the plan.
+                        if (TungstenConfig.get().verboseDebugLogging) {
+                            Debug.logMessage(String.format(
+                                    "SLIMEDROP from (%d,%d,%d) reach=%d drop=%d -> (%d,%d,%d)",
+                                    from.x, from.y, from.z, reach, drop, nx, by + 1, nz));
+                        }
                         // LAND ON THE FAR EDGE OF THE PAD, NOT THE NEAR ONE. Worked out from
                         // the measured trace rather than taste: a bounce leaves the pad at
                         // about +1.05 blocks/tick, which with vanilla gravity keeps the bot
