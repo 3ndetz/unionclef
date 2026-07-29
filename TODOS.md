@@ -127,7 +127,21 @@
   combat stops it. An earlier counter sat deep in the method behind several early returns and
   measured "reached the steering decision", which read as the bot doing nothing for 87% of the
   run. It was not idling — it was fighting.
-  ⚠️ AND THE TWO MEASUREMENTS DISAGREE, so at least one is untrustworthy: a run reporting
+  ⛔ **SETTLED, AND IT IS THE SUITE THAT IS WRONG: THE PVP SCENARIOS DO NOT MEASURE FIGHTING.**
+  The bot registers `kills=1` with `totalHits=0` — a lifetime swing counter that increments
+  immediately before the attack call and is never reset. It cannot kill anything without
+  swinging, so the kill is not ours. Three things compound:
+    * `early_stop: kills() >= 1` ends the run in about five seconds, leaving TWO samples to
+      compute every metric from — which is the whole "bimodal course" mystery;
+    * `victim_damage()` sums any HP DROP between samples regardless of cause, and the arena is
+      a 28-wide platform over void, so a fall reads as damage dealt;
+    * the same timeline shows victim_hp RISING 8 -> 14 mid-run, i.e. regen interleaves with
+      the drops it is summing.
+  Ruled out along the way, both by experiment: the combat edge guard (never blocks) and the
+  combat movement layer (`combatMovementsEnabled=false` gives the SAME 1-in-3 rate and still
+  zero swings). FIX THE SUITE FIRST — attribute damage to an actual attacker, stop early only
+  on a real kill, and sample often enough to see a fight — then combat work becomes testable.
+  ⚠️ The two measurements disagreed, which is how this was found: a run reporting
   `damage=6.0` had `totalHits=0` on the lifetime swing counter. The mod has exactly two attack
   paths (TriggerBot and the py4j primitive) and the interaction mixin is an empty stub, so if
   the trigger never swung, the victim's HP loss came from somewhere else — the harness's own
