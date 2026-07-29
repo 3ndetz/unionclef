@@ -1927,6 +1927,21 @@ public class Py4jEntryPoint {
     /** Swings that landed while falling, i.e. CRITS (+50% damage), and total swings. The
      *  ratio is the only honest way to tell whether crit timing works: the previous attempt
      *  at this shipped a helper with zero callers and no way to see that. */
+    /** Chase telemetry: ticks the follow task got, ticks it actually steered, and the gates
+     *  that ate the rest (leap owning the body, the post-bail cooldown, no line of sight). */
+    public String chaseStats() {
+        var F = kaptainwutax.tungsten.task.FollowEntityTask.class;
+        return String.format("called=%d inactive=%d active=%d | reached=%d steer=%d leap=%d cooldown=%d losBlocked=%d",
+                kaptainwutax.tungsten.task.FollowEntityTask.tickCalled,
+                kaptainwutax.tungsten.task.FollowEntityTask.tickInactive,
+                kaptainwutax.tungsten.task.FollowEntityTask.tickActive,
+                kaptainwutax.tungsten.task.FollowEntityTask.followTicks,
+                kaptainwutax.tungsten.task.FollowEntityTask.steerTicks,
+                kaptainwutax.tungsten.task.FollowEntityTask.leapTicks,
+                kaptainwutax.tungsten.task.FollowEntityTask.cooldownTicks,
+                kaptainwutax.tungsten.task.FollowEntityTask.losBlocked);
+    }
+
     /** How often combat asked "is forward safe" and how often the edge guard said no. */
     public int dirAsked() { return kaptainwutax.tungsten.combat.CombatController.dirAsked; }
     public int dirBlockedFwd() { return kaptainwutax.tungsten.combat.CombatController.dirBlockedFwd; }

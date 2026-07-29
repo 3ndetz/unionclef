@@ -135,6 +135,15 @@ public class FollowEntityTask {
     }
 
     public static boolean isActive()  { return active; }
+
+    // Lifetime counters for the chase. Never reset: a per-fight counter read after the run
+    // reports zero, which already misled once this session.
+    public static volatile int followTicks = 0, steerTicks = 0,
+            leapTicks = 0, cooldownTicks = 0, losBlocked = 0;
+    // Counted at the very TOP, because the first version of this counter sat deep in the
+    // method behind several early returns and so measured "reached the steering decision",
+    // not "was called" — a difference that would have been read as the bot idling.
+    public static volatile int tickCalled = 0, tickInactive = 0, tickActive = 0;
     public static Entity  getTarget() { return targetEntity; }
     public static boolean isManaged() { return managed; }
 
@@ -142,7 +151,9 @@ public class FollowEntityTask {
 
     /** Called every game tick from MixinClientPlayerEntity. */
     public static void tick(WorldView world, ClientPlayerEntity player) {
-        if (!active) return;
+        tickCalled++;
+        if (!active) { tickInactive++; return; }
+        tickActive++;
 
         // resolve target position
         Vec3d   targetPos;
@@ -229,9 +240,17 @@ public class FollowEntityTask {
         steerRequestedLastTick = false;
         if (steerCooldownTicks > 0) steerCooldownTicks--;
 
+        // Counters over py4j, because this is the question the chat cannot answer: of the
+        // ticks the chase gets, how many actually steer, and which gate eats the rest.
+        followTicks++;
+        if (leapActive) leapTicks++;
+        if (steerCooldownTicks > 0) cooldownTicks++;
+        if (!hasLineOfSight(player, effectiveTarget.add(0, 1.0, 0))) losBlocked++;
+
         if (hasEntity && !leapActive && steerCooldownTicks == 0
                 && effectiveDist > Math.max(closeEnough, 1.5)
                 && hasLineOfSight(player, effectiveTarget.add(0, 1.0, 0))) {  // body-centre, not feet (terrain lips)
+            steerTicks++;
             // keep the drift-prone physics path OFF so it can't seize the executor
             if (TungstenModDataContainer.PATHFINDER.active.get())
                 TungstenModDataContainer.PATHFINDER.stop.set(true);

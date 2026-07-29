@@ -121,6 +121,19 @@
   moving from x=6.2 to x=9.5 while the bot trails at 5-6 blocks. So "the approach never
   closes" and "follow never catches a moving target" are one bug, not two, and the melee
   suite is really a chase test wearing a duel's clothes.
+  THE CHASE IS NOT IDLE — I MISREAD MY OWN INSTRUMENT ONCE, corrected here. Counted from the
+  TOP of the method: `called=1727 inactive=1629 active=98`. The follow task is ticked fine; it
+  is simply switched OFF for 94% of the run, because the bot is in COMBAT mode and entering
+  combat stops it. An earlier counter sat deep in the method behind several early returns and
+  measured "reached the steering decision", which read as the bot doing nothing for 87% of the
+  run. It was not idling — it was fighting.
+  ⚠️ AND THE TWO MEASUREMENTS DISAGREE, so at least one is untrustworthy: a run reporting
+  `damage=6.0` had `totalHits=0` on the lifetime swing counter. The mod has exactly two attack
+  paths (TriggerBot and the py4j primitive) and the interaction mixin is an empty stub, so if
+  the trigger never swung, the victim's HP loss came from somewhere else — the harness's own
+  HP bookkeeping is the first suspect, since the timeline also shows victim_hp RISING from 8
+  to 20 mid-run. Settle which number lies before tuning against either.
+  Rate as it stands: 1 pass in 5 runs.
   RULED OUT BY MEASUREMENT, so nobody re-checks it: the combat edge guard is NOT what stops
   the approach — `dirAsked=53, dirBlockedFwd=0` over a full run, it never once said no. That
   same 53 is itself the tell: combat movement ticks with the client (~1200 times a minute),
