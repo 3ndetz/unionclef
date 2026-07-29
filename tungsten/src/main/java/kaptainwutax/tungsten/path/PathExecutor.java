@@ -535,6 +535,15 @@ public class PathExecutor {
     private void resumeGotoAfterMining(ClientPlayerEntity player) {
         Vec3d goal = TungstenMod.TARGET;
         if (goal == null || player.getEntityPos().distanceTo(goal) < 2.0) return;
+        // THE NAVIGATOR DOES NOT NEED THE PHYSICS THREAD DEAD. Waiting for it costs up to
+        // FIVE SECONDS per resume, and a bridge is a loop: place, resume, walk, place. That
+        // wait is why a sixty-second run managed one or two blocks — most of it was spent
+        // watching a search thread it was not going to use. Wait only when physics is the one
+        // that will drive.
+        if (kaptainwutax.tungsten.TungstenConfig.get().fastBlockFirst) {
+            kaptainwutax.tungsten.task.FastNavigator.start(goal);
+            return;
+        }
         new Thread(() -> {
             try {
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
@@ -548,11 +557,7 @@ public class PathExecutor {
                 // so a bridge that needs many blocks got one or two placements in a whole run:
                 // place, hand the whole route to physics, wait 20 s, repeat. When the
                 // navigator is driving, hand it back to the navigator instead.
-                if (kaptainwutax.tungsten.TungstenConfig.get().fastBlockFirst) {
-                    kaptainwutax.tungsten.task.FastNavigator.start(goal);
-                } else {
-                    TungstenModDataContainer.PATHFINDER.find(player.getEntityWorld(), goal, player);
-                }
+                TungstenModDataContainer.PATHFINDER.find(player.getEntityWorld(), goal, player);
             } catch (Throwable ignored) {}
         }, "tungsten-build-resume").start();
     }

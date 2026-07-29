@@ -108,7 +108,15 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ## Course status
 
-**Suite score: 9/10 on per-course runs** (released as 0.64.0). Green: `nav_flat`,
+⛔ **CORRECTION 2026-07-29: the score is 8/10, not 9/10.** `nav_water` was a FALSE GREEN and
+it was my own doing. Fixing the bottomless pool, I filled the shell to floor level across
+z=-4..4 and carved only z=-3..3, which left a stone rim on both sides at walking height — the
+bot WALKED AROUND the water and the course passed without ever testing a swim. The user
+spotted it by watching the clip. The rim is now capped with barriers: the water is held and
+there is nowhere to put your feet. With the bypass gone the course fails 3 runs of 3
+(25.5 / 7.0 / 25.5, no falls), which is the honest state of swimming.
+
+**Suite score (STALE, see the correction above): 9/10 on per-course runs** (released as 0.64.0). Green: `nav_flat`,
 `nav_staircase`, `nav_descend`, `nav_gaps`, `nav_steep`, `nav_break`, `nav_wall2`,
 `nav_water`, `nav_ladder`. Red: `nav_slime`.
 

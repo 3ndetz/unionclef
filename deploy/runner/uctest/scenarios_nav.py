@@ -201,7 +201,16 @@ class NavWater(NavCourse):
         # the definition of a flaky course: this one claims to measure SWIMMING, so it must
         # not also gate on a borderline parkour.
         arena.floor(7, -3, 10, 3, "stone")
+        # THE CONTAINER MUST NOT BECOME A FOOTPATH. Filling it to FLOOR_Y across z=-4..4 and
+        # carving only z=-3..3 left a stone rim on both sides of the pool at walking level, and
+        # the bot simply WALKED AROUND the water — the course passed for days without ever
+        # testing a swim. Spotted by watching the clip, which is exactly what clips are for.
+        # The shell still has to reach the surface or the water pours out sideways, so the rim
+        # stays and is capped with barriers instead: the water is held, and there is nowhere to
+        # put your feet.
         arena._fill(11, FLOOR_Y - 3, -4, 18, FLOOR_Y, 4, "stone")
+        arena._fill(11, FLOOR_Y + 1, -4, 18, FLOOR_Y + 3, -4, "barrier")
+        arena._fill(11, FLOOR_Y + 1, 4, 18, FLOOR_Y + 3, 4, "barrier")
         arena._fill(12, FLOOR_Y - 2, -3, 17, FLOOR_Y, 3, "air")
         arena._fill(12, FLOOR_Y - 2, -3, 17, FLOOR_Y, 3, "water")
         return (26, STAND_Y, 0)
