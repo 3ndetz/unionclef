@@ -67,6 +67,12 @@ public final class FastNavigator {
      * the exit; same shape as pendingPhysicsTarget for a jump.
      */
     private static volatile BlockPos pendingCrossing = null;
+    /**
+     * Build work the route ends at. The plan ALWAYS puts it last — measured, workIdx is n-1
+     * every time — so arming it only when it is already within reach never fired once. Walk to
+     * it first and arm on arrival, exactly as pendingPhysicsTarget does for a jump.
+     */
+    private static volatile java.util.List<BlockPos> pendingBuild = null;
     private static volatile boolean planning = false;
     private static BlockPos legTail = null;
     private static int stallTicks = 0;
@@ -100,6 +106,7 @@ public final class FastNavigator {
         nextPhysicsTarget = null;
         pendingPhysicsTarget = null;
         pendingCrossing = null;
+        pendingBuild = null;
         awaitingPhysics = false;
     }
 
@@ -251,6 +258,24 @@ public final class FastNavigator {
             }
         }
 
+        // Arrived at the build point the route ends in — arm the executor now.
+        if (pendingBuild != null && !BlockPathWalker.isRunning()) {
+            var cell0 = pendingBuild.get(0);
+            double d = Math.sqrt(player.getEntityPos().squaredDistanceTo(Vec3d.ofCenter(cell0)));
+            if (d < 5.0) {
+                kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.setPath(new java.util.ArrayList<>());
+                kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.placeQueue =
+                        new java.util.ArrayList<>(pendingBuild);
+                if (TungstenConfig.get().verboseDebugLogging) {
+                    Debug.logMessage("Navigator arms the build on arrival at " + cell0.toShortString());
+                }
+                pendingBuild = null;
+                legTail = null;
+                return;
+            }
+            pendingBuild = null;   // we ended up somewhere else; the next plan decides
+        }
+
         // A crossing was planned and the walk to the lip is done — hand the pad over.
         if (pendingCrossing != null && !BlockPathWalker.isRunning()
                 && !kaptainwutax.tungsten.task.SlimeBounceTask.isActive()) {
@@ -362,11 +387,28 @@ public final class FastNavigator {
                 for (int i = 0; i < res.path.size(); i++) {
                     if (res.path.get(i).toPlace != null) { workIdx = i; break; }
                 }
+                // The channel never fired in three runs (armed=0) while the PHYSICS side
+                // reported "Path needs bridging" in the same runs — so say plainly whether the
+                // navigator's own plan carries a build at all, instead of inferring it.
+                if (TungstenConfig.get().verboseDebugLogging) {
+                    Debug.logMessage("PLANWORK n=" + res.path.size() + " workIdx=" + workIdx);
+                }
                 if (workIdx >= 0) {
                     BlockPos cell = res.path.get(workIdx).toPlace.get(0);
                     var me = TungstenMod.mc.player;
                     double dWork = me == null ? 999.0
                             : Math.sqrt(me.getEntityPos().squaredDistanceTo(Vec3d.ofCenter(cell)));
+                    if (dWork >= 4.5) {
+                        // Too far to build from here: walk the route up to it and remember the
+                        // work for when we arrive.
+                        pendingBuild = res.path.get(workIdx).toPlace;
+                        List<BlockPos> upTo = res.positions();
+                        if (workIdx >= 2) {
+                            nextLeg = new java.util.ArrayList<>(upTo.subList(0, workIdx));
+                            legTail = nextLeg.get(nextLeg.size() - 1);
+                            return;
+                        }
+                    }
                     if (dWork < 4.5) {
                         BlockPathWalker.stop();
                         kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.setPath(new java.util.ArrayList<>());
