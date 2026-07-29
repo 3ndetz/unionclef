@@ -302,6 +302,22 @@ At healthy fps the bot lands on the pad every time; below ~12 it misses. The "tw
 were the machine all along. Restore the stand first (`down` + `up`, not `restart`), confirm
 fps, and only then read a nav_slime number as evidence.
 
+**WHAT IS ACTUALLY MISSING, stated precisely so the next pass does not re-derive it.** With
+the measured physics the planner reports `complete=false` — and it is RIGHT to. A passive
+bounce cannot cross the gap (the arithmetic is below), so no route to the ledge exists in the
+current move set. The course needs a JUMP-BOOSTED bounce, and neither half of that exists:
+
+- the planner models only the passive apex (`BOUNCE_HEIGHT_RETURN = 0.67`, measured);
+- nothing performs a jump at the one cell where it would matter. The walker does press jump
+  when a waypoint is higher, but that alone does not produce the boost — tested by letting
+  the planner offer the ledge (`BOUNCE_HEIGHT_RETURN = 1.00`) now that the drop lands on the
+  pad's FAR edge, a combination never tried before: 8.7 / 20.7-with-a-fall / 8.5, and the
+  failure came at 17.5 fps, so it was not the stand. Reverted; the measured value stands.
+
+So the next pass is one coherent piece of work: measure the jump-boosted apex on the stand,
+put it in the model as a distinct move, and have the executor jump on exactly the cell that
+move names — not on every slime contact, which is what killed the bot 5-9 times a run.
+
 **A DEDICATED EXECUTOR EXISTS AND IS OFF BY DEFAULT (`slimeCrossing`).** `SlimeBounceTask`
 is the right architecture — a crossing is ONE manoeuvre, which is what the walker rules below
 could never express — and it is verified to run (starts and bounces counted over py4j, not
