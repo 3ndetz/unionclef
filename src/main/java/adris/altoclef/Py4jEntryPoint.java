@@ -1927,8 +1927,8 @@ public class Py4jEntryPoint {
     /** Swings that landed while falling, i.e. CRITS (+50% damage), and total swings. The
      *  ratio is the only honest way to tell whether crit timing works: the previous attempt
      *  at this shipped a helper with zero callers and no way to see that. */
-    public int critHits() { return kaptainwutax.tungsten.combat.CombatController.triggerBot.getCritHits(); }
-    public int totalHits() { return kaptainwutax.tungsten.combat.CombatController.triggerBot.getTotalHits(); }
+    public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }
+    public int totalHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeHits; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a

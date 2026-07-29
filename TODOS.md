@@ -117,6 +117,14 @@
   land a hit at 5.4 s for 6.0 damage — so measure in threes.
   Failing: bow_flee, bow_flee_hard, chase_terrain, edge_duel, melee_basic, narrow_bridge_duel.
   Passing: chase_flat.
+  AND IT IS THE SAME THING AS RW-9. The victim is not standing still — the timeline has it
+  moving from x=6.2 to x=9.5 while the bot trails at 5-6 blocks. So "the approach never
+  closes" and "follow never catches a moving target" are one bug, not two, and the melee
+  suite is really a chase test wearing a duel's clothes.
+  Two contributing causes fixed on 2026-07-29, neither of them the main one: the no-progress
+  rule dropped COMBAT back to APPROACH while the bot was closing the last stride (six flips
+  a run), and the crit/shield counters could not be read after a fight because reset() zeroed
+  them. Still 0 hits in three runs of three afterwards, so the chase itself is the target.
 - [x] **C6.1 THE "STANDS STILL" ROOT.** ЗАКРЫТО 2026-07-27, релиз v0.62.0: мёртвая полоса убрана, 3/3 боевых сценария PASS. (a) `PunkPlayerTask.enterCombat:214-220` **hard-stops all
   navigation** (`PATHFINDER.stop`, `EXECUTOR.stop`, `FollowEntityTask.stop`) — only `combatMove` can
   move the bot. (b) `CombatController.java:138-142` presses forward only at `dist > 3.4` and back only

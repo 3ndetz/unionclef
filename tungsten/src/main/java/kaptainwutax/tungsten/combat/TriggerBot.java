@@ -59,6 +59,11 @@ public class TriggerBot {
     private int totalHits = 0;
     /** Swings that landed while falling — i.e. CRITS, half again the damage. */
     private int critHits = 0;
+    // LIFETIME counters, deliberately never reset. The per-fight ones above go to zero in
+    // reset() when combat ends, so reading them after a scenario always gave 0 — the
+    // instrument reported "no swings" for a run that had just dealt 12 damage.
+    public static volatile int lifetimeHits = 0;
+    public static volatile int lifetimeCrits = 0;
     private int ticksSinceLastHit = 0;
 
     private int traceCooldown = 0;

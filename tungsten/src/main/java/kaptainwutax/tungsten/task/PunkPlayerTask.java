@@ -187,8 +187,17 @@ public class PunkPlayerTask {
         // ── mode switching ───────────────────────────────────────────────
         if (mode == Mode.APPROACH && dist < COMBAT_RANGE && hasLOS) {
             enterCombat();
+        // NO HITS YET IS NOT THE SAME AS STUCK. The no-progress rule exists to break out of a
+        // chase that has gone nowhere, but it fired on the far more common case of closing the
+        // last stride: COMBAT_RANGE is 4.5 and the swing needs 3.0, so the bot enters combat
+        // still out of reach and, five seconds later, is dropped back into APPROACH before it
+        // can land anything. Measured on melee_basic: six mode flips in one run, "Following"
+        // and "Follow stopped" six times each, zero swings, and the distance drifting OUT from
+        // 5.14 to 6.21. Only re-approach on no progress when we are genuinely not in striking
+        // range; inside it the answer is to keep fighting, not to restart the chase.
         } else if (mode == Mode.COMBAT && (dist > APPROACH_RESUME
-                || (CombatController.triggerBot.hasNoProgress(100)
+                || (dist > kaptainwutax.tungsten.combat.TriggerBot.REACH
+                    && CombatController.triggerBot.hasNoProgress(100)
                     && CombatController.safety.getStage() != kaptainwutax.tungsten.combat.CombatStage.ESCAPE))) {
             // too far OR no hits for 5 sec → re-approach with A* pathfinding
             enterApproach();
