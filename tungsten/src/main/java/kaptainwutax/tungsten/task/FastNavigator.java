@@ -118,7 +118,18 @@ public final class FastNavigator {
         // progress watchdog: the physics engine or a re-plan owns recovery, but a
         // navigator that silently stops is the failure the user reported, so make
         // it loud and let the caller (goto retry / physics search) take over.
-        if (dist < lastDist - 0.25) {
+        // BUILDING IS PROGRESS, even though the distance does not move. While the executor
+        // is placing or mining, the bot is deliberately standing still doing the work that
+        // makes the rest of the route possible — and this watchdog counted that as failure and
+        // SHUT THE NAVIGATOR DOWN. That is why a build route produced two plans in a whole run
+        // and the direct build channel almost never fired: not because planning was suspended,
+        // but because the planner had been stopped. Two earlier fixes aimed at the wait missed
+        // this and both measured worse; reading the method end to end found it.
+        var exec = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+        boolean building = exec != null && (exec.placeQueue != null || exec.breakQueue != null);
+        if (building) {
+            stallTicks = 0;
+        } else if (dist < lastDist - 0.25) {
             lastDist = dist;
             stallTicks = 0;
         } else if (++stallTicks > STALL_TICKS) {
