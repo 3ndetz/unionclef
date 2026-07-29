@@ -106,8 +106,15 @@
 
 ### C6 — COMBAT (root causes, all code-verified)
 
-- [ ] **C6.0 THE PVP SUITE IS 1/7, AND THE ROOT IS THE APPROACH, NOT THE SWING** (measured
-  2026-07-29). `melee_basic`: `first_hit=None`, `damage=0.0`, and `totalHits=0` over py4j —
+- [x] **C6.0 SOLVED 2026-07-29 — melee_basic GREEN, 16 swings with 11 CRITS.** Two defects and
+  one lost edit. (1) The edge-sneak claimed the legs EXCLUSIVELY instead of additively, so the
+  safety intent replaced close-quarters movement and the bot crept instead of stepping in —
+  closeQuarters ran 130 of 453 combat ticks and the bot sat at 4.37 blocks, outside the 3.0
+  reach. Now a bare sneak layers over the approach: 2.6-2.8 blocks, 71-156 ticks per fight
+  inside reach. (2) The swing counter's increments had been lost in a revert, so "the bot never
+  swings" survived an entire investigation while it was in fact swinging — per-gate counters
+  exposed it (passed=24 with the counter reading 0). Both fixed; all melee criteria green.
+  ORIGINAL DIAGNOSIS, kept because the reasoning was sound even where a number lied: `melee_basic`: `first_hit=None`, `damage=0.0`, and `totalHits=0` over py4j —
   the trigger never swings once. The timeline says why: the bot starts 5.14 blocks from the
   victim and is 6.21 away five seconds later. It never closes. The trigger's own gate log
   agrees — `reach2=19.79` (4.4 blocks) with the cooldown full, i.e. ready to swing and out of
