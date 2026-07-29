@@ -291,6 +291,16 @@ public final class FastNavigator {
                     // walker could have walked" — was tried here and did not move the number:
                     // nav_water sat at 2-3 passes in 4 either way. Reverted rather than kept on
                     // faith, because this branch is on the path of every course.)
+                    // ⛔ DO NOT "FIX" THIS BY REFUSING THE HAND-OFF. It looks like the cap on
+                    // bridging — the trace is a loop of walk a leg, "walking dead-ends
+                    // (8.9 -> 8.1)", hand the goal to a physics search that cannot solve it,
+                    // wait out its budget, place ONE block, repeat — but skipping the hand-off
+                    // when the plan contains a place/break took placements to ZERO and the
+                    // distance to 20.7 in three runs of three. The reason is structural: the
+                    // place plan only reaches the executor THROUGH the physics path, in
+                    // PathFinder.truncateAtBreaks. No hand-off, no bridging at all. Giving the
+                    // block planner its own route to the executor is the real fix, and it is a
+                    // bigger job than a condition here.
                     if (before - after < MIN_PARTIAL_PROGRESS) {
                         // Walking cannot solve this — hand the TAIL to the physics engine
                         // and wait for it. This branch used to print "physics owns this"
