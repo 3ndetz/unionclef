@@ -49,8 +49,16 @@ class Ctx:
         now = time.time() - self.t0
         bp = self.bot.pos()
         vp = self.victim.pos() if self.victim else None
+        # SWINGS THAT OUR BOT ACTUALLY LANDED, straight from the mod. HP deltas cannot tell
+        # who did the damage: this arena is a platform over void, so a fall reads as "damage
+        # dealt", and regeneration interleaves with the drops being summed. The counter
+        # increments immediately before the attack call and is never reset, so it attributes.
+        ok, hits = self.bot.py.try_call("totalHits")
+        ok2, crits = self.bot.py.try_call("critHits")
         rec = {
             "t": round(now, 1),
+            "bot_hits": hits if ok else None,
+            "bot_crits": crits if ok2 else None,
             "bot": bp, "bot_hp": self.bot.health(),
             "bot_hurt": self.rcon.hurt_time(self.bot.name),
             "victim": vp,
@@ -168,6 +176,28 @@ class Ctx:
         k, d = self.kills(), self.deaths()
         return Criterion("won the exchange (kills >= deaths)", k >= d,
                          f"kills={k} deaths={d}")
+
+    def landed_swings(self):
+        """Swings our bot landed during the run, from the mod's own counter."""
+        vals = [s.get("bot_hits") for s in self.samples if s.get("bot_hits") is not None]
+        return 0 if len(vals) < 2 else max(0, vals[-1] - vals[0])
+
+    def first_swing_time(self):
+        """When the bot first landed a swing, or None. Attributable, unlike an HP dip."""
+        base = None
+        for s in self.samples:
+            h = s.get("bot_hits")
+            if h is None:
+                continue
+            if base is None:
+                base = h
+            elif h > base:
+                return s["t"]
+        return None
+
+    def crit_swings(self):
+        vals = [s.get("bot_crits") for s in self.samples if s.get("bot_crits") is not None]
+        return 0 if len(vals) < 2 else max(0, vals[-1] - vals[0])
 
     def victim_damage(self):
         """Damage dealt to the victim, summed across respawns."""

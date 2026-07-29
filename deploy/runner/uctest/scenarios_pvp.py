@@ -1,3 +1,4 @@
+import time
 """uctest pvp suite — the scenario catalogue (docs/features/PVP_SUITE.md).
 
 Chase, bow-flee, bridge-assault, narrow/high bedwars bridges, edge duels,
@@ -34,14 +35,24 @@ class MeleeBasic(Scenario):
         ctx.victim.py.call("punk", ctx.bot.name)
 
     def early_stop(self, ctx):
-        return ctx.kills() >= 1
+        # DO NOT END THE RUN ON THE FIRST KILL. Sampling is a py4j round trip, so it happens
+        # every few seconds; stopping at the first kill ended runs after about five seconds
+        # and left TWO samples to judge a fight from, which is why this course looked bimodal.
+        # Give it at least half the duration so there is something to measure.
+        return ctx.kills() >= 1 and (time.time() - ctx.t0) > self.duration / 2
 
     def judge(self, ctx):
-        fh = ctx.first_hit()
-        yield Criterion("first hit <= 15s", fh is not None and fh <= 15,
-                        f"first_hit={fh}")
-        yield Criterion("damage >= 8", ctx.victim_damage() >= 8,
-                        f"damage={ctx.victim_damage():.1f}")
+        # JUDGE BY SWINGS THE BOT LANDED, not by the victim's HP going down. This arena is a
+        # platform over void: a fall reads as "damage dealt", regeneration interleaves with
+        # the drops, and the bot was scoring kills with ZERO swings on the mod's own counter.
+        fs = ctx.first_swing_time()
+        yield Criterion("first landed swing <= 15s", fs is not None and fs <= 15,
+                        f"first_swing={fs}")
+        yield Criterion("landed >= 3 swings", ctx.landed_swings() >= 3,
+                        f"swings={ctx.landed_swings()} crits={ctx.crit_swings()}")
+        # Kept for the record, no longer a gate: it cannot attribute.
+        yield Criterion("victim hp dropped >= 8 (unattributed)", True,
+                        f"damage={ctx.victim_damage():.1f}", gate=False)
         yield ctx.exchange_criterion()   # mutual punk — winning the trade is the bar
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
