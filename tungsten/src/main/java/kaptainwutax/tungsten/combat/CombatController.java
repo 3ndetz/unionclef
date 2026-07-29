@@ -142,6 +142,9 @@ public class CombatController {
                 VoidGuard.apply(resolved, player, player.getEntityPos(),
                         player.getVelocity(), world);
             }
+            // Did the request to close survive arbitration? The safety intent can win, and
+            // the void guard can veto after that — this counts what actually reaches the keys.
+            if (resolved.forward) fwdPressed++;
             resolved.writeKeys(MinecraftClient.getInstance());
         }
 
@@ -195,6 +198,12 @@ public class CombatController {
         boolean tooClose = dist < TOO_CLOSE_DISTANCE;
         out.active = true;
         out.forward = tooFar && dirSafe(player, world, 1, 0);
+        // Did we ASK to close, and did the ask survive? Combat runs 416 ticks a fight and
+        // lands zero swings, with the trigger's gate reporting "ready, but out of reach" —
+        // so either forward is never requested, or something downstream overrides it.
+        if (tooFar) fwdWanted++;
+        if (out.forward) fwdAsked++;
+        lastDist = dist;
         out.back = tooClose && dirSafe(player, world, -1, 0);
         out.sprint = out.forward && dist > STRIKE_DISTANCE + 1.0; // sprint only for a real approach
 
@@ -264,6 +273,8 @@ public class CombatController {
     // the question "is the edge guard the thing stopping the approach" cannot be answered by
     // reading the code, only by counting how often it says no.
     public static volatile int dirAsked = 0, dirBlockedFwd = 0;
+    public static volatile int fwdWanted = 0, fwdAsked = 0, fwdPressed = 0;
+    public static volatile double lastDist = -1;
 
     private boolean dirSafe(ClientPlayerEntity player, WorldView world, int fwd, int strafe) {
         if (fwd == 0 && strafe == 0) return true;

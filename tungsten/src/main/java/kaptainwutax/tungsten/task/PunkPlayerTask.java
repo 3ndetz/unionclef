@@ -111,8 +111,15 @@ public class PunkPlayerTask {
 
     // ── tick ─────────────────────────────────────────────────────────────────
 
+    // Branch counters, read over py4j. Two earlier measurements disagreed about where the
+    // bot spends its time — the chase says it is fighting, combat says it is not — and only
+    // counting each branch can settle it.
+    public static volatile int pCalled = 0, pInactive = 0, pNoTarget = 0,
+            pVoidHold = 0, pCombat = 0, pApproach = 0;
+
     public static void tick(WorldView world, ClientPlayerEntity player) {
-        if (!active) return;
+        pCalled++;
+        if (!active) { pInactive++; return; }
 
         // ── Universal edge-protection while punking ───────────────────────
         // If we're on the ground and our HORIZONTAL VELOCITY points at a serious
@@ -133,6 +140,7 @@ public class PunkPlayerTask {
 
         tryRediscover();
         if (targetEntity == null || targetEntity.isRemoved() || !targetEntity.isAlive()) {
+            pNoTarget++;
             // No valid target — most often the instant we KILLED it. The combat
             // render frame stops refreshing keys (its target is gone), so a stale
             // forward-toward-the-enemy press would coast us off the rim before we
@@ -163,6 +171,7 @@ public class PunkPlayerTask {
         // the prey escape (stand-measured: 111 s of standing still). A genuine void
         // is bottomless; 20 blocks of nothing is a safe discriminator.
         if (targetDrop > 3.0 && targetFall > 20) {
+            pVoidHold++;
             if (mode == Mode.COMBAT) combat.releaseKeys();
             if (FollowEntityTask.isActive()) FollowEntityTask.stop();
             // Hold with SNEAK: vanilla sneak refuses to walk off a block edge, so
@@ -205,12 +214,14 @@ public class PunkPlayerTask {
 
         // ── execute ──────────────────────────────────────────────────────
         if (mode == Mode.COMBAT) {
+            pCombat++;
             // Never punch with the wrong item: the engine swings whatever is HELD, so a
             // bot that had just used a bow kept "fighting" with it (2 dmg/hit) while a
             // sword sat in the hotbar and it lost the fight (user 2026-07-24).
             kaptainwutax.tungsten.combat.WeaponSelector.equipBestMelee(player);
             combat.tick(player, targetEntity, world);
         } else if (!FollowEntityTask.isActive()) {
+            pApproach++;
             // APPROACH but follow isn't running (e.g. we just resumed after a
             // void-wait) — (re)start it so the bot actually walks to the target.
             FollowEntityTask.start(targetEntity, 1.0);

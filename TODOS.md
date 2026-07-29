@@ -137,6 +137,16 @@
       a 28-wide platform over void, so a fall reads as damage dealt;
     * the same timeline shows victim_hp RISING 8 -> 14 mid-run, i.e. regen interleaves with
       the drops it is summing.
+  **LOCALISED 2026-07-29: the safety stage machine pre-empts combat movement 71% of the time.**
+  Counted at the key-write site: `wanted=130 asked=130 pressed=412 lastDist=4.37` against
+  `combat=453` punk ticks. `wanted` is incremented INSIDE closeQuarters, so closing only ran
+  130 times out of 453 — the safety intent won the other 323 — and its manoeuvres do not close
+  distance: the last combat tick sat at 4.37 blocks, just outside the 3.0 reach. That is why
+  the bot is "in combat" and never swings.
+  Two of my own misreadings, corrected so they are not repeated: an earlier counter placed
+  deep in the follow tick measured "reached the steering decision" not "was called"; and these
+  counters are LIFETIME, so a ratio taken against a single run's tick budget is meaningless —
+  "punk inactive 67%" was that mistake and is withdrawn.
   Ruled out along the way, both by experiment: the combat edge guard (never blocks) and the
   combat movement layer (`combatMovementsEnabled=false` gives the SAME 1-in-3 rate and still
   zero swings). FIX THE SUITE FIRST — attribute damage to an actual attacker, stop early only

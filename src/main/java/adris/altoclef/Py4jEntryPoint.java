@@ -1927,6 +1927,19 @@ public class Py4jEntryPoint {
     /** Swings that landed while falling, i.e. CRITS (+50% damage), and total swings. The
      *  ratio is the only honest way to tell whether crit timing works: the previous attempt
      *  at this shipped a helper with zero callers and no way to see that. */
+    /** Where the punk task actually spends its ticks: called, inactive, no target, holding
+     *  because the target is over void, in combat, or (re)starting the chase. */
+    public String punkStats() {
+        var P = kaptainwutax.tungsten.task.PunkPlayerTask.class;
+        return String.format("called=%d inactive=%d noTarget=%d voidHold=%d combat=%d approachRestart=%d",
+                kaptainwutax.tungsten.task.PunkPlayerTask.pCalled,
+                kaptainwutax.tungsten.task.PunkPlayerTask.pInactive,
+                kaptainwutax.tungsten.task.PunkPlayerTask.pNoTarget,
+                kaptainwutax.tungsten.task.PunkPlayerTask.pVoidHold,
+                kaptainwutax.tungsten.task.PunkPlayerTask.pCombat,
+                kaptainwutax.tungsten.task.PunkPlayerTask.pApproach);
+    }
+
     /** Chase telemetry: ticks the follow task got, ticks it actually steered, and the gates
      *  that ate the rest (leap owning the body, the post-bail cooldown, no line of sight). */
     public String chaseStats() {
@@ -1943,6 +1956,16 @@ public class Py4jEntryPoint {
     }
 
     /** How often combat asked "is forward safe" and how often the edge guard said no. */
+    /** Combat closing telemetry: ticks it WANTED to close, ticks the request was made after
+     *  the edge test, and ticks it actually reached the keys after arbitration. */
+    public String closeStats() {
+        return String.format("wanted=%d asked=%d pressed=%d lastDist=%.2f",
+                kaptainwutax.tungsten.combat.CombatController.fwdWanted,
+                kaptainwutax.tungsten.combat.CombatController.fwdAsked,
+                kaptainwutax.tungsten.combat.CombatController.fwdPressed,
+                kaptainwutax.tungsten.combat.CombatController.lastDist);
+    }
+
     public int dirAsked() { return kaptainwutax.tungsten.combat.CombatController.dirAsked; }
     public int dirBlockedFwd() { return kaptainwutax.tungsten.combat.CombatController.dirBlockedFwd; }
 
