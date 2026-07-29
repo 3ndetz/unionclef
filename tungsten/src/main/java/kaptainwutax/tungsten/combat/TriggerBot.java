@@ -63,6 +63,7 @@ public class TriggerBot {
     // reset() when combat ends, so reading them after a scenario always gave 0 — the
     // instrument reported "no swings" for a run that had just dealt 12 damage.
     public static volatile int lifetimeHits = 0;
+    public static volatile int gTotal=0, gClick=0, gCooldown=0, gReach=0, gAngle=0, gLos=0, gPassed=0;
     public static volatile int lifetimeCrits = 0;
     private int ticksSinceLastHit = 0;
 
@@ -120,8 +121,24 @@ public class TriggerBot {
                 gateClick, cooldown, distSq, angle, hit.getType()));
         }
 
+        // WHICH GATE SAYS NO. The bot stands inside reach for 71-156 ticks a fight and swings
+        // zero times, and the sampled log line only prints on failure, so it cannot show the
+        // distribution. Count each gate: exactly one of these is the answer.
+        gTotal++;
+        if (gateClick) gClick++;
+        if (gateCooldown) gCooldown++;
+        if (gateReach) gReach++;
+        if (gateAngle) gAngle++;
+        if (gateLos) gLos++;
         if (gateClick || gateCooldown || gateReach || gateAngle || gateLos) return;
+        gPassed++;
 
+        // Count the swing BEFORE it lands — the state that decides a crit is the one we are in
+        // as we click. These increments were lost in a revert during an A/B and nothing put
+        // them back, so the counter read zero through an entire investigation while the bot
+        // was swinging 24 times a fight. The gate counters above are what exposed that.
+        if (kaptainwutax.tungsten.combat.AttackTiming.isCrit(player)) { critHits++; lifetimeCrits++; }
+        lifetimeHits++;
         mc.interactionManager.attackEntity(player, target);
         player.swingHand(Hand.MAIN_HAND);
         clickedThisCycle = true;

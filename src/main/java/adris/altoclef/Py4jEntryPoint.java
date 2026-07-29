@@ -1959,15 +1959,30 @@ public class Py4jEntryPoint {
     /** Combat closing telemetry: ticks it WANTED to close, ticks the request was made after
      *  the edge test, and ticks it actually reached the keys after arbitration. */
     public String closeStats() {
-        return String.format("wanted=%d asked=%d pressed=%d lastDist=%.2f",
+        return String.format("wanted=%d asked=%d pressed=%d inReach=%d nearReach=%d lastDist=%.2f",
                 kaptainwutax.tungsten.combat.CombatController.fwdWanted,
                 kaptainwutax.tungsten.combat.CombatController.fwdAsked,
                 kaptainwutax.tungsten.combat.CombatController.fwdPressed,
+                kaptainwutax.tungsten.combat.CombatController.inReachTicks,
+                kaptainwutax.tungsten.combat.CombatController.nearReachTicks,
                 kaptainwutax.tungsten.combat.CombatController.lastDist);
     }
 
     public int dirAsked() { return kaptainwutax.tungsten.combat.CombatController.dirAsked; }
     public int dirBlockedFwd() { return kaptainwutax.tungsten.combat.CombatController.dirBlockedFwd; }
+
+    /** Which trigger gate refuses the swing, counted rather than sampled. */
+    public String gateStats() {
+        var T = kaptainwutax.tungsten.combat.TriggerBot.class;
+        return String.format("total=%d click=%d cd=%d reach=%d angle=%d los=%d passed=%d",
+                kaptainwutax.tungsten.combat.TriggerBot.gTotal,
+                kaptainwutax.tungsten.combat.TriggerBot.gClick,
+                kaptainwutax.tungsten.combat.TriggerBot.gCooldown,
+                kaptainwutax.tungsten.combat.TriggerBot.gReach,
+                kaptainwutax.tungsten.combat.TriggerBot.gAngle,
+                kaptainwutax.tungsten.combat.TriggerBot.gLos,
+                kaptainwutax.tungsten.combat.TriggerBot.gPassed);
+    }
 
     public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }
     public int totalHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeHits; }

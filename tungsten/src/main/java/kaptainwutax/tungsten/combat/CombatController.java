@@ -132,10 +132,23 @@ public class CombatController {
 
             CombatMoveIntent safetyIntent = safety.getIntent();
             boolean safetyFresh = safety.consumeIntentFresh();
-            if (cfg.combatSaverEnabled && safetyFresh && safetyIntent.active) {
+            boolean safetyClaims = cfg.combatSaverEnabled && safetyFresh && safetyIntent.active;
+            // A SNEAK-ONLY CLAIM IS A LAYER, NOT A VETO. The edge-sneak arms whenever the bot
+            // is moving and sits within 0.3 of a block boundary — which on open ground is most
+            // of the time — and its own comment calls it "additive: claim the legs (sneak-only)
+            // if nothing else has". It was not additive: setting intent.active made the whole
+            // safety intent win arbitration and REPLACE the approach, so instead of stepping in
+            // the bot crept. Measured on melee_basic: closeQuarters ran 130 of 453 combat ticks,
+            // the last of them at 4.37 blocks — permanently outside the 3.0 reach, which is why
+            // the trigger never swung once. Steering claims still win outright; a bare sneak is
+            // now layered over the approach.
+            boolean safetyWantsLegs = safetyIntent.forward || safetyIntent.back
+                    || safetyIntent.left || safetyIntent.right || safetyIntent.jump;
+            if (safetyClaims && safetyWantsLegs) {
                 resolved.copyFrom(safetyIntent);
             } else {
                 closeQuarters(player, target, world, resolved);
+                if (safetyClaims && safetyIntent.sneak) resolved.sneak = true;
             }
 
             if (cfg.combatSaverEnabled) {
@@ -202,6 +215,11 @@ public class CombatController {
         // lands zero swings, with the trigger's gate reporting "ready, but out of reach" —
         // so either forward is never requested, or something downstream overrides it.
         if (tooFar) fwdWanted++;
+        // How often is the bot genuinely inside the swing's reach? "lastDist" is one sample —
+        // the final tick — and a distribution is what decides whether the trigger ever gets a
+        // chance at all.
+        if (dist <= TriggerBot.REACH) inReachTicks++;
+        if (dist <= TriggerBot.REACH + 0.5) nearReachTicks++;
         if (out.forward) fwdAsked++;
         lastDist = dist;
         out.back = tooClose && dirSafe(player, world, -1, 0);
@@ -274,6 +292,7 @@ public class CombatController {
     // reading the code, only by counting how often it says no.
     public static volatile int dirAsked = 0, dirBlockedFwd = 0;
     public static volatile int fwdWanted = 0, fwdAsked = 0, fwdPressed = 0;
+    public static volatile int inReachTicks = 0, nearReachTicks = 0;
     public static volatile double lastDist = -1;
 
     private boolean dirSafe(ClientPlayerEntity player, WorldView world, int fwd, int strafe) {
