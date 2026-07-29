@@ -55,7 +55,77 @@ public final class PlayerFit {
      * trapdoors, carpets, snow) fall through to the precise path.
      * 0 = empty, 1 = full cube, 2 = partial (must be measured).
      */
+    // ── PER-SEARCH MEMO ────────────────────────────────────────────────────────────
+    // EVERY world read the block-space search makes funnels through classify(), and there
+    // are a lot of them: bodyFits classifies up to a dozen cells, and a single node expansion
+    // calls bodyFits once per direction per move generator. Measured on the stand: 164 nodes
+    // in 204 ms, i.e. over a MILLISECOND per node, so a 250 ms budget bought ~160 nodes and
+    // every course that needed real searching got a truncated plan back — "PLAN n=14
+    // complete=false" on a course whose answer is six blocks in a straight line.
+    //
+    // The memo is OPT-IN and scoped to one search (see beginCachedRead). It must never be on
+    // while the bot is breaking or placing: those change the world under it, and a stale
+    // "that cell is air" is exactly the kind of lie that walks a bot into a wall. The search
+    // already assumes a still world for its duration — that is what makes a plan a plan.
+    private static final class ClassifyCache {
+        // Open addressing: no boxing, no allocation per lookup. Sized well past the cells one
+        // search touches; if it ever fills up it is emptied rather than grown, which costs a
+        // few re-reads and keeps the memory flat.
+        private static final int CAP = 1 << 15, MASK = CAP - 1;
+        private final long[] keys = new long[CAP];
+        private final byte[] vals = new byte[CAP];   // 0 = empty slot, else classify + 1
+        private int used;
+
+        int get(long key) {
+            int i = (int) (key ^ (key >>> 32)) & MASK;
+            while (vals[i] != 0) {
+                if (keys[i] == key) return vals[i] - 1;
+                i = (i + 1) & MASK;
+            }
+            return -1;
+        }
+        void put(long key, int value) {
+            if (used > (CAP >> 1) + (CAP >> 2)) clear();   // 0.75 load: empty it, do not grow
+            int i = (int) (key ^ (key >>> 32)) & MASK;
+            while (vals[i] != 0) {
+                if (keys[i] == key) { vals[i] = (byte) (value + 1); return; }
+                i = (i + 1) & MASK;
+            }
+            keys[i] = key; vals[i] = (byte) (value + 1); used++;
+        }
+        void clear() { java.util.Arrays.fill(vals, (byte) 0); used = 0; }
+    }
+
+    private static final ThreadLocal<ClassifyCache> CACHE = new ThreadLocal<>();
+
+    /** Start memoising world reads on THIS thread. Pair with {@link #endCachedRead()}. */
+    public static void beginCachedRead() {
+        ClassifyCache c = CACHE.get();
+        if (c == null) { c = new ClassifyCache(); CACHE.set(c); }
+        else c.clear();
+    }
+
+    /** Stop memoising — the world is allowed to change again. */
+    public static void endCachedRead() { CACHE.remove(); }
+
+    private static long cellKey(BlockPos pos) {
+        return (((long) pos.getX() & 0x3FFFFFFL) << 38)
+                | (((long) pos.getZ() & 0x3FFFFFFL) << 12)
+                | ((long) (pos.getY() + 2048) & 0xFFFL);
+    }
+
     private static int classify(WorldView world, BlockPos pos) {
+        ClassifyCache cache = CACHE.get();
+        if (cache == null) return classifyUncached(world, pos);
+        long key = cellKey(pos);
+        int hit = cache.get(key);
+        if (hit >= 0) return hit;
+        int value = classifyUncached(world, pos);
+        cache.put(key, value);
+        return value;
+    }
+
+    private static int classifyUncached(WorldView world, BlockPos pos) {
         net.minecraft.block.BlockState state = world.getBlockState(pos);
         if (state.isAir()) return 0;
         VoxelShape shape = state.getCollisionShape(world, pos);

@@ -280,6 +280,13 @@ public final class FastPlanner {
         return n;
     }
 
+    // DIAGNOSTICS DO NOT BELONG IN THE INNER LOOP. Each of these used to be a
+    // Debug.logMessage at the point of emission, i.e. a chat message per candidate move:
+    // measured 16568 pillar lines and 7024 bridge lines in ONE run. That is the search's
+    // own budget being spent on talking about itself — the very "164 nodes in 204 ms" that
+    // made every hard course return a truncated plan. Counted here, printed once per search.
+    private static int cntBridge, cntPillar, cntSlimeDrop, cntClimb, cntSpecial, cntBreak;
+
     private FastPlanner() {}
 
     // ── public entry ─────────────────────────────────────────────────────────
@@ -305,7 +312,11 @@ public final class FastPlanner {
         boolean complete = false;
         Node goalNode = null;
 
+        cntBridge = cntPillar = cntSlimeDrop = cntClimb = cntSpecial = cntBreak = 0;
         STATE_CACHE.get().clear();   // the world changes between plans — never reuse
+        // Memoise the geometry reads for the duration of this search (see PlayerFit).
+        kaptainwutax.tungsten.helpers.PlayerFit.beginCachedRead();
+        try {
         BlockPos.Mutable scratch = new BlockPos.Mutable();
 
         while (!open.isEmpty()) {
@@ -327,6 +338,17 @@ public final class FastPlanner {
 
             scratch.set(current.x, current.y, current.z);
             double support = PlayerFit.supportTop(world, scratch);
+            // THE OTHER HALF OF branchPlaced, and without it the bridge was still capped at
+            // one plank — just somewhere else. placeAcross would happily lay a plank and step
+            // onto it, and then THIS line threw the node away the moment it was popped,
+            // because the world has no floor there: the plank exists only in the plan. The
+            // search closed its whole open list in 202 nodes and returned a stump. A placed
+            // block is a full cube, so the surface we are standing on is the top of the cell
+            // below, i.e. exactly our own feet height.
+            if (Double.isNaN(support)
+                    && branchPlaced(current, current.x, current.y - 1, current.z)) {
+                support = current.y;
+            }
             if (Double.isNaN(support)) {
                 // NO FLOOR IS NOT THE SAME AS NO MOVE. Water and ladder cells are
                 // supportless BY DEFINITION, and special() is precisely the generator that
@@ -343,6 +365,9 @@ public final class FastPlanner {
 
             expand(world, current, support, goal, map, open, scratch);
         }
+        } finally {
+            kaptainwutax.tungsten.helpers.PlayerFit.endCachedRead();
+        }
 
         Node tail = complete && goalNode != null ? goalNode : best;
         List<Waypoint> path = new ArrayList<>();
@@ -352,8 +377,10 @@ public final class FastPlanner {
         Collections.reverse(path);
         long ms = System.currentTimeMillis() - t0;
         if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) {
-            Debug.logMessage(String.format("FastPlanner: %d nodes, %d wp, %s, %d ms",
-                    expanded, path.size(), complete ? "complete" : "partial", ms));
+            Debug.logMessage(String.format(
+                    "FastPlanner: %d nodes, %d wp, %s, %d ms (bridge=%d pillar=%d slime=%d climb=%d spec=%d brk=%d)",
+                    expanded, path.size(), complete ? "complete" : "partial", ms,
+                    cntBridge, cntPillar, cntSlimeDrop, cntClimb, cntSpecial, cntBreak));
         }
         return new Result(path, complete, expanded, ms);
     }
@@ -407,9 +434,7 @@ public final class FastPlanner {
             boolean inW2 = isWater(world, from.x, headY, from.z, scratch);
             boolean lad2 = isLadder(world, from.x, headY, from.z, scratch);
             if (inW || lad || inW2 || lad2) {
-                Debug.logMessage(String.format(
-                        "SPECIAL at (%d,%d,%d): water@feet=%b water@head=%b ladder@feet=%b ladder@head=%b",
-                        from.x, from.y, from.z, inW, inW2, lad, lad2));
+                cntSpecial++;
             }
         }
         // ── ladders: climb the column we are in, or step onto an adjacent one ──
@@ -499,9 +524,7 @@ public final class FastPlanner {
                     if (isWater(world, nx, ny, nz, scratch)) { entry = ny; break; }
                 }
                 if (diagS && entry != Integer.MIN_VALUE) {
-                    Debug.logMessage(String.format(
-                            "WATER-ENTRY from (%d,%d,%d) -> (%d,%d,%d) EMITTED",
-                            from.x, from.y, from.z, nx, entry, nz));
+                    cntSpecial++;
                 }
                 if (entry != Integer.MIN_VALUE) {
                     relax(map, open, from, nx, entry, nz,
@@ -552,11 +575,7 @@ public final class FastPlanner {
                         // The route stops at the pad's lip and never takes the drop, so say
                         // whether this move is even offered rather than inferring it from the
                         // shape of the plan.
-                        if (TungstenConfig.get().verboseDebugLogging) {
-                            Debug.logMessage(String.format(
-                                    "SLIMEDROP from (%d,%d,%d) reach=%d drop=%d -> (%d,%d,%d)",
-                                    from.x, from.y, from.z, reach, drop, nx, by + 1, nz));
-                        }
+                        cntSlimeDrop++;
                         // LAND ON THE FAR EDGE OF THE PAD, NOT THE NEAR ONE. Worked out from
                         // the measured trace rather than taste: a bounce leaves the pad at
                         // about +1.05 blocks/tick, which with vanilla gravity keeps the bot
@@ -724,25 +743,19 @@ public final class FastPlanner {
             if (Double.isNaN(top)) continue;
             double rise = top - support;
             if (rise > CLIMB_MAX) {
-                if (diag) Debug.logMessage(String.format(
-                        "CLIMB rejected at (%d,%d): rise %.2f > CLIMB_MAX %d", nx, nz, rise, CLIMB_MAX));
+                cntClimb++;
                 continue;                                                // out of reach entirely
             }
             if (!PlayerFit.bodyFits(world, nx + 0.5, top, nz + 0.5)) {
-                if (diag) Debug.logMessage(String.format(
-                        "CLIMB rejected at (%d,%d): body does not fit at top %.2f (rise %.2f)",
-                        nx, nz, top, rise));
+                cntClimb++;
                 continue;
             }
-            if (diag) Debug.logMessage(String.format(
-                    "CLIMB candidate at (%d,%d) rise %.2f top %.2f — passed fit (planPlace=%b)",
-                    nx, nz, rise, top, TungstenConfig.get().planPlaceMoves));
+            cntClimb++;
             if (rise > PlayerFit.STEP_HEIGHT) {
                 // needs a jump: head clearance above the origin cell
                 scratch.set(from.x, from.y, from.z);
                 if (!PlayerFit.passableAt(world, scratch, support + 0.6)) {
-                    if (diag) Debug.logMessage(String.format(
-                            "CLIMB rejected at (%d,%d): no head clearance over origin", nx, nz));
+                    cntClimb++;
                     continue;
                 }
             }
@@ -755,12 +768,10 @@ public final class FastPlanner {
             // when pillaring is actually available.
             boolean climb = rise > PlayerFit.JUMP_HEIGHT;
             if (climb && !TungstenConfig.get().planPlaceMoves) {
-                if (diag) Debug.logMessage(String.format(
-                        "CLIMB rejected at (%d,%d): planPlaceMoves is OFF", nx, nz));
+                cntClimb++;
                 continue;
             }
-            if (diag) Debug.logMessage(String.format(
-                    "CLIMB EMITTED at (%d,%d) rise %.2f climb=%b", nx, nz, rise, climb));
+            cntClimb++;
             double cost = baseCost
                     + (rise > PlayerFit.STEP_HEIGHT ? ActionCosts.JUMP_PENALTY : 0)
                     + (climb ? ActionCosts.JUMP_PENALTY * 2 * rise : 0)
@@ -831,10 +842,7 @@ public final class FastPlanner {
         // Flagged needsPhysics: the WALKER cannot mine — it would just walk into the wall.
         // Flagging cuts the walked leg here and hands the cell to the physics side, whose
         // guide carries toBreak into PathFinder.truncateAtBreaks -> PathExecutor.tickBreaking.
-        if (TungstenConfig.get().verboseDebugLogging) {
-            Debug.logMessage("FastPlanner: break-through planned at " + nx + "," + from.y + "," + nz
-                    + " (" + plan.size() + " block(s), " + (int) ticks + " ticks)");
-        }
+        cntBreak++;
         relax(map, open, from, nx, from.y, nz, cost, goal, true, plan);
     }
 
@@ -879,9 +887,7 @@ public final class FastPlanner {
 
         double cost = ActionCosts.WALK_ONE_BLOCK_COST
                 + ActionCosts.PLACE_ONE_BLOCK_COST * TungstenConfig.get().placeCostMultiplier;
-        if (TungstenConfig.get().verboseDebugLogging) {
-            Debug.logMessage("FastPlanner: bridge planned at " + floor.toShortString());
-        }
+        cntBridge++;
         relax(map, open, from, nx, from.y, nz, cost, goal, true, null,
                 new java.util.ArrayList<>(java.util.List.of(floor)));
     }
@@ -911,9 +917,7 @@ public final class FastPlanner {
 
         double cost = ActionCosts.JUMP_ONE_BLOCK_COST
                 + ActionCosts.PLACE_ONE_BLOCK_COST * TungstenConfig.get().placeCostMultiplier;
-        if (TungstenConfig.get().verboseDebugLogging) {
-            Debug.logMessage("FastPlanner: pillar planned at " + feet.toShortString());
-        }
+        cntPillar++;
         relax(map, open, from, from.x, upY, from.z, cost, goal, true, null,
                 new java.util.ArrayList<>(java.util.List.of(feet)));
     }
