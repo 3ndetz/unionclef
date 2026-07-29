@@ -454,6 +454,18 @@ further along the chain remains.
 
 ---
 
+## VERIFIED SWEEP, warmed stand, end of the 2026-07-29 run — 9/10
+
+flat, staircase, descend, gaps (14-17 fps) · steep, break, wall2, ladder (12.7-16) ·
+water PASS 2/2 · slime FAIL at 14.4.
+
+This 9/10 is worth more than the 9/10 the night started with: `nav_water` now passes HONESTLY.
+Both ways round it — a walkable rim and minable walls, both of which I had built into the
+arena myself while fixing something else — are closed, so the course finally measures a swim.
+
+Swept with a warm-up run first, because the first run after recreating the client is
+unreliable (see below).
+
 ## State as of the end of the 2026-07-29 run
 
 | course | state |
