@@ -509,7 +509,15 @@ public class PathExecutor {
                 new Vec3d(0.8, 0.8, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 120)));
         float dYaw = net.minecraft.util.math.MathHelper.wrapDegrees(wantYaw - player.getYaw());
         float dPitch = net.minecraft.util.math.MathHelper.wrapDegrees(wantPitch - player.getPitch());
-        if (Math.abs(dYaw) < 15f && Math.abs(dPitch) < 15f) {   // place only once aimed
+        // AIM, BUT DO NOT WAIT FOR THE AIM. The click carries an explicit BlockHitResult, so
+        // the server is told which face is being used — the camera is cosmetic here, and
+        // PillarTask in this same codebase has always placed without any convergence check
+        // (that is why nav_wall2 passes). Requiring 15 degrees made the bridge hostage to a
+        // camera two other systems re-aim every tick: measured 28 ticks inside placement
+        // range and 2 clicks, and both attempts at winning the camera outright measured
+        // WORSE. Keep turning towards the face so it looks right; place regardless.
+        boolean aimed = Math.abs(dYaw) < 15f && Math.abs(dPitch) < 15f;
+        if (aimed || placingTicks > 6) {
             net.minecraft.util.hit.BlockHitResult hit =
                     new net.minecraft.util.hit.BlockHitResult(faceCenter, side, against, false);
             placeClicked++;
