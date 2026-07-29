@@ -498,6 +498,14 @@ Three links, found and fixed in order:
 2. **The plan was thrown away at the seam.** `Result.toBlockNodes` carried `toBreak` and not
    `toPlace`, so every bridge the planner worked out died on the way to the executor. One
    line. After it the log shows `Path needs bridging: 1 block(s) at segment end`.
+0. **THE WALKER PARKS AT THE LIP, so every build beyond the drop is discarded.** Measured with
+   a distance on the drop counter: `BUILDDROP dist=10.7 at 6,...` — the bot is standing on the
+   pad's last block and the build point is 10.7 blocks away, down in the pit. The leg towards
+   the work is never walked, so the plan is thrown away 12 times out of 12. It is not the
+   bookkeeping and not the arrival check: the walker simply will not go over the edge, and
+   every bridge the search wants to lay is on the far side of that edge. THAT is the next
+   thing to read — the walker's step logic at a drop — and it is a different place from where
+   the last three passes were looking.
 3. **The bridge is only ever planned from the WRONG side.** Every bridge in the log sits at
    `8,-61,z` — the slime level, seven blocks below the launch pad. Nothing is planned from the
    pad itself, and the searches that start there report `1 nodes, 1 wp`: one node expanded and

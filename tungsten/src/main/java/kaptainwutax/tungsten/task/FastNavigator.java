@@ -283,6 +283,12 @@ public final class FastNavigator {
             // zero — the bot re-plans towards a build point it never reaches. The plan is
             // dropped here deliberately; the shortfall is in the WALK, not in the bookkeeping.)
             pendingBuild = null; buildDropped++;
+            // How far short does the walk actually come? "Not within 5" could be six blocks
+            // or twenty, and those need completely different fixes.
+            if (TungstenConfig.get().verboseDebugLogging) {
+                Debug.logMessage(String.format("BUILDDROP dist=%.1f at %s", d,
+                        player.getBlockPos().toShortString()));
+            }
         }
 
         // A crossing was planned and the walk to the lip is done — hand the pad over.
