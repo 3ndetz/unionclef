@@ -106,6 +106,16 @@
 
 ### C6 — COMBAT (root causes, all code-verified)
 
+- [ ] **C6.10 TWO THINGS THE PVP SUITE CANNOT CURRENTLY DECIDE** (found 2026-07-29 while
+  closing C6.0, recorded so the next pass does not read noise as signal):
+  * **The shield fix is untestable here.** `KIT_SWORD` is an iron sword and nothing else, so
+    no melee scenario ever puts a shield in the off hand and the raise-between-swings logic
+    never runs. Give the kit a shield, or the feature stays unvalidated.
+  * **A mirror duel makes "won the exchange" a coin flip.** Both fighters run the SAME AI, so
+    `kills >= deaths` is decided by luck unless our side has a real edge. Post-fix trades are
+    4:5 and 6:8 — parity, not failure. Either give the criterion a margin, or test against a
+    fixed-behaviour opponent.
+
 - [x] **C6.0 SOLVED 2026-07-29 — melee_basic GREEN, 16 swings with 11 CRITS.** Two defects and
   one lost edit. (1) The edge-sneak claimed the legs EXCLUSIVELY instead of additively, so the
   safety intent replaced close-quarters movement and the bot crept instead of stepping in —
