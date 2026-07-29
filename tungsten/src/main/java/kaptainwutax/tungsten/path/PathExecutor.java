@@ -542,9 +542,19 @@ public class PathExecutor {
                     Thread.sleep(250);
                 }
                 TungstenModDataContainer.PATHFINDER.stop.set(false);
-                TungstenModDataContainer.PATHFINDER.find(player.getEntityWorld(), goal, player);
+                // RESUME THROUGH THE ROUTE'S OWNER. This restarted the PHYSICS search on the
+                // final goal, bypassing the navigator — the same mistake ;goto used to make.
+                // On any route physics cannot solve it burns its full budget before giving up,
+                // so a bridge that needs many blocks got one or two placements in a whole run:
+                // place, hand the whole route to physics, wait 20 s, repeat. When the
+                // navigator is driving, hand it back to the navigator instead.
+                if (kaptainwutax.tungsten.TungstenConfig.get().fastBlockFirst) {
+                    kaptainwutax.tungsten.task.FastNavigator.start(goal);
+                } else {
+                    TungstenModDataContainer.PATHFINDER.find(player.getEntityWorld(), goal, player);
+                }
             } catch (Throwable ignored) {}
-        }, "tungsten-mining-resume").start();
+        }, "tungsten-build-resume").start();
     }
 
     private static void releaseMovementKeys(GameOptions options) {
