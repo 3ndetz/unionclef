@@ -334,6 +334,37 @@ public final class FastNavigator {
                             "PLAN n=%d complete=%b firstPhysics=%d flagged=%d",
                             res.path.size(), res.complete, res.firstPhysicsIndex(), flagged));
                 }
+                // THE BLOCK PLANNER'S OWN CHANNEL TO THE EXECUTOR. Until now a place plan
+                // could only reach the executor THROUGH the physics search
+                // (PathFinder.truncateAtBreaks), so building was hostage to a search that
+                // cannot solve these goals: every bridge cost a full physics timeout and the
+                // loop managed one block a run. The navigator has the plan and the bot's
+                // position — it can arm the executor itself, exactly as the "at the gap"
+                // shortcut does, and skip the round trip entirely.
+                int workIdx = -1;
+                for (int i = 0; i < res.path.size(); i++) {
+                    if (res.path.get(i).toPlace != null) { workIdx = i; break; }
+                }
+                if (workIdx >= 0) {
+                    BlockPos cell = res.path.get(workIdx).toPlace.get(0);
+                    var me = TungstenMod.mc.player;
+                    double dWork = me == null ? 999.0
+                            : Math.sqrt(me.getEntityPos().squaredDistanceTo(Vec3d.ofCenter(cell)));
+                    if (dWork < 4.5) {
+                        BlockPathWalker.stop();
+                        kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.setPath(new java.util.ArrayList<>());
+                        kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR.placeQueue =
+                                new java.util.ArrayList<>(res.path.get(workIdx).toPlace);
+                        if (TungstenConfig.get().verboseDebugLogging) {
+                            Debug.logMessage("Navigator arms the build directly at "
+                                    + cell.toShortString());
+                        }
+                        nextLeg = null;
+                        legTail = null;
+                        return;
+                    }
+                }
+
                 List<BlockPos> cells = res.positions();
                 // cut at the first waypoint that needs a real jump: the physics
                 // engine owns those (parkour), the walker must not run into one
