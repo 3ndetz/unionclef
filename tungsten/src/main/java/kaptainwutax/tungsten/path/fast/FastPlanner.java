@@ -277,6 +277,7 @@ public final class FastPlanner {
         boolean complete = false;
         Node goalNode = null;
 
+        STATE_CACHE.get().clear();   // the world changes between plans — never reuse
         BlockPos.Mutable scratch = new BlockPos.Mutable();
 
         while (!open.isEmpty()) {
@@ -621,14 +622,34 @@ public final class FastPlanner {
         }
     }
 
-    private static boolean isLadder(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
+    // ── per-search block cache ───────────────────────────────────────────────────
+    // The same cell is asked about many times in one expansion — is it water, is it a ladder,
+    // is it solid, does a body fit — and every ask was a fresh live-world lookup from a
+    // BACKGROUND thread. Measured cost: 2.2-2.4 ms PER NODE, which is why a pool cannot be
+    // crossed inside a 250 ms budget. A plain memo for the duration of one search is the
+    // cheap half of the off-thread snapshot this planner really wants (C4.1 / TODO #11).
+    private static final ThreadLocal<java.util.HashMap<Long, net.minecraft.block.BlockState>>
+            STATE_CACHE = ThreadLocal.withInitial(java.util.HashMap::new);
+
+    private static net.minecraft.block.BlockState cachedState(WorldView w, int x, int y, int z,
+                                                              BlockPos.Mutable s) {
+        long key = (((long) x & 0x3FFFFFFL) << 38) | (((long) z & 0x3FFFFFFL) << 12)
+                | ((long) (y + 2048) & 0xFFFL);
+        var cache = STATE_CACHE.get();
+        var hit = cache.get(key);
+        if (hit != null) return hit;
         s.set(x, y, z);
-        return w.getBlockState(s).getBlock() instanceof net.minecraft.block.LadderBlock;
+        var st = w.getBlockState(s);
+        cache.put(key, st);
+        return st;
+    }
+
+    private static boolean isLadder(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
+        return cachedState(w, x, y, z, s).getBlock() instanceof net.minecraft.block.LadderBlock;
     }
 
     private static boolean isWater(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
-        s.set(x, y, z);
-        return kaptainwutax.tungsten.helpers.BlockStateChecker.isAnyWater(w.getBlockState(s));
+        return kaptainwutax.tungsten.helpers.BlockStateChecker.isAnyWater(cachedState(w, x, y, z, s));
     }
 
     private static boolean isSlime(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
