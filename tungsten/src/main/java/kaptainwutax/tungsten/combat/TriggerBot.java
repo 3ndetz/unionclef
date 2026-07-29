@@ -57,6 +57,8 @@ public class TriggerBot {
     private boolean clickedThisCycle = false;
     // hit tracking for progress detection
     private int totalHits = 0;
+    /** Swings that landed while falling — i.e. CRITS, half again the damage. */
+    private int critHits = 0;
     private int ticksSinceLastHit = 0;
 
     private int traceCooldown = 0;
@@ -128,11 +130,14 @@ public class TriggerBot {
     }
 
     public int getTotalHits() { return totalHits; }
+
+    public int getCritHits() { return critHits; }
     public int getTicksSinceLastHit() { return ticksSinceLastHit; }
 
     public void reset() {
         clickedThisCycle = false;
         totalHits = 0;
+        critHits = 0;
         ticksSinceLastHit = 0;
     }
 }

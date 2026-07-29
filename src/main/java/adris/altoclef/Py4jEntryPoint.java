@@ -1924,6 +1924,12 @@ public class Py4jEntryPoint {
     /** How many times the walker saw a waypoint standing on slime (the crossing trigger). */
     public int walkerSlimeWpSeen() { return kaptainwutax.tungsten.task.BlockPathWalker.slimeWpSeen; }
 
+    /** Swings that landed while falling, i.e. CRITS (+50% damage), and total swings. The
+     *  ratio is the only honest way to tell whether crit timing works: the previous attempt
+     *  at this shipped a helper with zero callers and no way to see that. */
+    public int critHits() { return kaptainwutax.tungsten.combat.CombatController.triggerBot.getCritHits(); }
+    public int totalHits() { return kaptainwutax.tungsten.combat.CombatController.triggerBot.getTotalHits(); }
+
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a
      *  bounce — measured -59.85 that way where the tick trace says -55.4. */

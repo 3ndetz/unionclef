@@ -28,6 +28,20 @@ public final class AttackTiming {
      * Compute yaw from player to target entity.
      * Returns degrees, same coordinate system as Minecraft yaw.
      */
+    /**
+     * Would a swing RIGHT NOW be a critical hit? Vanilla's rule, nothing invented: falling,
+     * off the ground, not in water, not on a ladder, not slowed in the air, not riding.
+     * A crit is +50% damage and it is free — the bot is already jumping around the target.
+     */
+    public static boolean isCrit(ClientPlayerEntity player) {
+        return player.getVelocity().y < 0.0
+                && !player.isOnGround()
+                && !player.isClimbing()
+                && !player.isTouchingWater()
+                && !player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.BLINDNESS)
+                && !player.hasVehicle();
+    }
+
     public static float yawTo(Vec3d from, Vec3d to) {
         double dx = to.x - from.x;
         double dz = to.z - from.z;

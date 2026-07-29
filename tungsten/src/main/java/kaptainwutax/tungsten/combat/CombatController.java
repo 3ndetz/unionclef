@@ -212,11 +212,21 @@ public class CombatController {
         // BUNNY-HOP: jump on a fast cadence so the bot is ALWAYS moving/juking around the
         // target, for crits + a harder-to-hit profile. Only from the ground and only when the
         // landing isn't a drop (a jump can never launch us into the void).
-        if (player.isOnGround() && now - lastJump > jumpInterval
+        // JUMP ON THE ATTACK COOLDOWN, NOT ON A DICE ROLL. A hit lands as a CRIT — half again
+        // the damage — only while the player is falling. The bot was already hopping around
+        // the target constantly, but on a 280-600 ms random cadence, so whether a swing
+        // happened to coincide with a descent was pure chance. Taking off while the cooldown
+        // is nearly recharged puts the swing on the way DOWN, which turns an accident into
+        // the normal case. The random interval survives as a floor so the bot still juks
+        // when it is not about to swing.
+        var jcfg = kaptainwutax.tungsten.TungstenConfig.get();
+        float cd = player.getAttackCooldownProgress(0.5f);
+        boolean windingUp = cd > 0.55f && cd < 0.92f;
+        long interval = windingUp ? jcfg.combatBunnyHopMinMs : jumpInterval;
+        if (player.isOnGround() && now - lastJump > interval
                 && SafetySystem.isJumpLandingSafe(player.getEntityPos(), player.getVelocity(), world)) {
             out.jump = true;
             lastJump = now;
-            var jcfg = kaptainwutax.tungsten.TungstenConfig.get();
             jumpInterval = jcfg.combatBunnyHopMinMs + (long) (Math.random() * jcfg.combatBunnyHopRandMs);
         }
     }

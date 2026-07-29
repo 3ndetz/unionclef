@@ -126,8 +126,14 @@
 - [ ] **C6.5 Shield is NEVER raised by the combat engine.** `ShieldBlocker` is reachable only from
   py4j/`CombatPrimitives`, i.e. only if the agent drives it by hand. Directly contradicts FIGHT-1.
   The primitive also presses `useKey` without checking what is in hand.
-- [ ] **C6.6 No w-tap / sprint-reset / crit timing.** `AttackTiming.canAttack`/`isCritState`: zero
-  callers. Crit jumps fire on a 280-600 ms RANDOM cadence → crits are accidental.
+- [~] **C6.6 No w-tap / sprint-reset / crit timing.** CRIT HALF DONE 2026-07-29. The entry was
+  also stale: `isCritState` had already been deleted as dead code in 0.63.0, so there was no
+  crit notion in the engine at all. Now there is one — `AttackTiming.isCrit` implements
+  vanilla's actual rule (falling, off the ground, not in water/on a ladder/riding) — and the
+  bunny-hop takes off while the attack cooldown is 0.55-0.92 recharged instead of on a
+  280-600 ms dice roll, so the swing lands on the way DOWN. Crit and total swings are counted
+  and exposed over py4j (`critHits`/`totalHits`) so the ratio can be MEASURED, which is what
+  the previous attempt lacked. STILL OPEN: w-tap and sprint-reset.
 - [ ] **C6.7 Aim + the whole stage machine run per RENDER FRAME with no delta-time term** → every
   tuning constant is framerate-dependent. **This invalidates the past "combat feel" tuning**, which was
   done on a low-FPS stand.
