@@ -167,6 +167,16 @@ public class TungstenConfig {
      *  Turn it on to work on that: {@code ;settings slimeCrossing true}. */
     public boolean slimeCrossing = false;
 
+    /** Raise the shield while the attack cooldown recharges.
+     *
+     *  <p>Default OFF because it MEASURES WORSE, and by a lot. The idea is sound on paper —
+     *  blocking and attacking are mutually exclusive in vanilla, so the recharge window looks
+     *  free — but on the stand it collapses the offence: melee went from 15-19 landed swings
+     *  per fight to ONE in two runs of three, and the trade from 4:5 to 0:5 and 0:6. Holding
+     *  the use key evidently costs the swing that follows it. The kit now carries a shield so
+     *  this is testable at all; fix the timing, prove it on melee_basic, then turn it on. */
+    public boolean combatShieldEnabled = false;
+
     /** No-placing zones: [x1,y1,z1,x2,y2,z2] boxes (inclusive, any corner order).
      *  Protected areas (claims/privates) — the mod never places here. Paired with
      *  breakDenyZones so markProtectedArea can lock both mining and building. */

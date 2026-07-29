@@ -139,6 +139,12 @@ class Bot:
 
 
 # Standard kits: rcon command templates ({name} substituted).
+# Sword only. A shield WAS added here to make the raise-between-swings logic testable, and
+# the experiment is worth keeping in writing: with the shield in the off hand and the logic
+# ON, melee collapsed from 15-19 landed swings a fight to ONE, trades 0:5 and 0:6. With the
+# logic OFF but the shield still held, swings still fell to 6-9. Merely carrying it changes
+# the baseline, so it is not left in the kit while the feature is disabled — put it back
+# together with a fixed shield timing, and compare against these numbers.
 KIT_SWORD = ["item replace entity {name} weapon.mainhand with iron_sword"]
 KIT_BOW = ["item replace entity {name} weapon.mainhand with bow",
            "give {name} arrow 64"]

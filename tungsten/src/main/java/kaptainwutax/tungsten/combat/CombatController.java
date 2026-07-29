@@ -107,7 +107,8 @@ public class CombatController {
         // raise it while the attack cooldown is recharging, when we could not swing anyway,
         // and drop it just before the swing lands. Free mitigation, no lost damage.
         var offHand = player.getOffHandStack();
-        if (offHand.getItem() instanceof net.minecraft.item.ShieldItem) {
+        if (cfg.combatShieldEnabled
+                && offHand.getItem() instanceof net.minecraft.item.ShieldItem) {
             double d2 = player.squaredDistanceTo(target);
             float cd = player.getAttackCooldownProgress(0.5f);
             boolean threatClose = d2 < (TriggerBot.REACH + 2.0) * (TriggerBot.REACH + 2.0);
