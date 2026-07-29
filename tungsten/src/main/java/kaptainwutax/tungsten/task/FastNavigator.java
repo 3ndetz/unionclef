@@ -73,6 +73,10 @@ public final class FastNavigator {
      * it first and arm on arrival, exactly as pendingPhysicsTarget does for a jump.
      */
     private static volatile java.util.List<BlockPos> pendingBuild = null;
+    // Where a build plan goes between being made and being executed. Armed rarely and the
+    // chat cannot say why, so count each step: set when the route ends in work, armed on
+    // arrival, dropped when we finished the walk somewhere else.
+    public static volatile int buildSet = 0, buildArmed = 0, buildDropped = 0;
     private static volatile boolean planning = false;
     private static BlockPos legTail = null;
     private static int stallTicks = 0;
@@ -270,10 +274,15 @@ public final class FastNavigator {
                     Debug.logMessage("Navigator arms the build on arrival at " + cell0.toShortString());
                 }
                 pendingBuild = null;
+                buildArmed++;
                 legTail = null;
                 return;
             }
-            pendingBuild = null;   // we ended up somewhere else; the next plan decides
+            // (Keeping the work and re-planning the approach instead of dropping it was tried
+            // and SPUN: drops went from 3 a run to 55, then 111, then 167, and armed stayed at
+            // zero — the bot re-plans towards a build point it never reaches. The plan is
+            // dropped here deliberately; the shortfall is in the WALK, not in the bookkeeping.)
+            pendingBuild = null; buildDropped++;
         }
 
         // A crossing was planned and the walk to the lip is done — hand the pad over.
@@ -402,6 +411,7 @@ public final class FastNavigator {
                         // Too far to build from here: walk the route up to it and remember the
                         // work for when we arrive.
                         pendingBuild = res.path.get(workIdx).toPlace;
+                        buildSet++;
                         List<BlockPos> upTo = res.positions();
                         if (workIdx >= 2) {
                             nextLeg = new java.util.ArrayList<>(upTo.subList(0, workIdx));

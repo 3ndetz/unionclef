@@ -132,6 +132,9 @@ Rules that follow, and they are cheap:
 - A suspected regression is not a regression until the previous build is measured in the
   SAME session, on the SAME stand. `git stash` + `git checkout <good> -- <files>` + build.
 - Read `avg_fps` on every verdict. Below ~12 treat pass/fail on a marginal course as noise.
+- ⚠️ **The FIRST run after recreating the client is unreliable** — nav_gaps failed on it at a
+  perfectly healthy 16.4 fps and then passed 3/3 at 16-17. Discard it, or warm up with a
+  throwaway run before measuring anything.
 - `docker compose restart` does NOT restore fps, but a full `down` + `up` DOES: measured
   8-10 fps before, 13.4-14.7 straight after recreating the tester. The client ages within a
   long-lived container. (An earlier note here said restarting does not help and left it at
