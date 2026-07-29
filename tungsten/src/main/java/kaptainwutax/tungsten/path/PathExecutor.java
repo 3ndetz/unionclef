@@ -448,8 +448,15 @@ public class PathExecutor {
         }
         Vec3d eye = player.getEyePos();
         Vec3d center = Vec3d.ofCenter(target);
-        if (placingTicks++ > 200 || eye.squaredDistanceTo(center) > 5.5 * 5.5) {
-            Debug.logMessage("Bridge place aborted (timeout or out of reach)");
+        // ONE MESSAGE FOR TWO CAUSES TELLS YOU NOTHING. "timeout or out of reach" cannot
+        // distinguish "the bot never arrived" from "it arrived and the placement stalled",
+        // and those need opposite fixes. Say which, and how far.
+        double placeDist = Math.sqrt(eye.squaredDistanceTo(center));
+        if (placingTicks++ > 200 || placeDist > 5.5) {
+            Debug.logMessage(String.format(
+                    "Bridge place aborted (%s) dist=%.2f ticks=%d target=%s",
+                    placingTicks > 200 ? "TIMEOUT" : "OUT OF REACH", placeDist, placingTicks,
+                    target.toShortString()));
             options.useKey.setPressed(false);
             TungstenModRenderContainer.PLACE_PLAN.clear();
             placeQueue = null; placingTicks = 0;
