@@ -982,3 +982,36 @@ That is AC-1.4 inverted: we are supposed to run the exact block route immediatel
 while running. Next step is to walk the ROUTE in a chase and stop gating planning on the physics
 engine being idle — measured against both chase courses and the nav sweep, since chase_flat
 passes today WITH the beeline.
+
+### chase_terrain: the bot gets stuck EARLY, pushing into terrain it cannot leave (2026-07-30)
+
+Five iterations improved the pursuit's numbers without touching the gate, because the framing
+was wrong. The chase does not fall behind gradually — it stops.
+
+| run | freeze position | start |
+|---|---|---|
+| A | (-270.30, 114.02, 284.50) | (-288, 117, 288) |
+| B | (-270.30, 114.02, 284.50) | same |
+| C | (-252.68, 107.00, 286.18), three windows | same |
+
+**Correction to an earlier claim in this file:** two runs freezing at an identical position led
+me to call the point deterministic. Run C froze somewhere else entirely, 18 blocks further on
+and 7 blocks lower. It is not one cursed cell; it is terrain the bot cannot get out of, wherever
+it first meets it.
+
+What the bot is doing there, measured: `WALKSTOP` — the diagnostic that fires when the walker is
+on the ground with movement NOT pressed — printed ZERO times. So the walker is pressing forward
+the whole time and the body does not move. It is pushing into something. `Walker: danger` also
+appears once per run, and the walker's own comment says a 2-block wall reads as danger and it
+cannot climb.
+
+Elevation says the same: start y=117, freezes at y=114 and y=107. The route descends and then
+the bot cannot climb back out.
+
+So the open question is NOT "why are we slower than the runner" but: **what does the block route
+do when the terrain requires a climb the walker refuses, and why does nothing recover?** The
+physics engine is supposed to own exactly that (it has the jump moves), and per AC-2.3 it is the
+last resort — but here it is the case that matters.
+
+Numbers moved by the five pursuit iterations, for the record, none of which took the gate:
+plans 4 -> 15 -> 97, one-waypoint stumps 93 -> 1, routes walked 2 -> 8, chase_flat 4.64 -> 3.74.
