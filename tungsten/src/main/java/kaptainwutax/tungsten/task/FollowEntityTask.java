@@ -287,7 +287,7 @@ public class FollowEntityTask {
                 && tickCounter >= RECALC_TICKS) {
             tickCounter = 0;
             var res = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
-                    world, player.getBlockPos(),
+                    world, planStart(world, player),
                     net.minecraft.util.math.BlockPos.ofFloored(effectiveTarget),
                     kaptainwutax.tungsten.TungstenConfig.get().fastPlanBudgetMs);
             var cells = res.positions();
@@ -327,6 +327,59 @@ public class FollowEntityTask {
 
     }
 
+    /**
+     * Where a plan should START, ported from baritone's {@code PathingBehavior.pathStart()}
+     * (baritone/src/main/java/baritone/behavior/PathingBehavior.java:423-461).
+     *
+     * <p>WHY: a plan seeded from the raw feet cell is unplannable whenever that cell has no
+     * floor — standing off the edge of a block, or mid-jump — and the search returns a
+     * one-waypoint stump. Measured during a chase, where the bot is airborne most of the time:
+     * of 97 plans, **93 came back "partial" with ONE waypoint** and were discarded, leaving
+     * two walked routes in three minutes. Upstream solves it by faking a plausible start:
+     * the nearest neighbouring cell we could be sneaking off, or the cell below when falling.
+     */
+    private static net.minecraft.util.math.BlockPos planStart(WorldView world,
+                                                              ClientPlayerEntity player) {
+        net.minecraft.util.math.BlockPos feet = player.getBlockPos();
+        net.minecraft.util.math.BlockPos.Mutable scratch = new net.minecraft.util.math.BlockPos.Mutable();
+        scratch.set(feet.getX(), feet.getY(), feet.getZ());
+        if (!Double.isNaN(kaptainwutax.tungsten.helpers.PlayerFit.supportTop(world, scratch))) {
+            return feet;
+        }
+        double px = player.getEntityPos().x, pz = player.getEntityPos().z;
+        if (player.isOnGround()) {
+            java.util.List<net.minecraft.util.math.BlockPos> closest = new java.util.ArrayList<>();
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    closest.add(new net.minecraft.util.math.BlockPos(
+                            feet.getX() + dx, feet.getY(), feet.getZ() + dz));
+                }
+            }
+            closest.sort(java.util.Comparator.comparingDouble(pos ->
+                    ((pos.getX() + 0.5D) - px) * ((pos.getX() + 0.5D) - px)
+                            + ((pos.getZ() + 0.5D) - pz) * ((pos.getZ() + 0.5D) - pz)));
+            for (int i = 0; i < 4 && i < closest.size(); i++) {
+                net.minecraft.util.math.BlockPos support = closest.get(i);
+                double xDist = Math.abs((support.getX() + 0.5D) - px);
+                double zDist = Math.abs((support.getZ() + 0.5D) - pz);
+                if (xDist > 0.8 && zDist > 0.8) continue;   // too far to be sneaking off it
+                scratch.set(support.getX(), support.getY(), support.getZ());
+                if (!Double.isNaN(kaptainwutax.tungsten.helpers.PlayerFit.supportTop(world, scratch))
+                        && kaptainwutax.tungsten.helpers.PlayerFit.bodyFits(
+                                world, support.getX() + 0.5, support.getY(), support.getZ() + 0.5)) {
+                    return support;
+                }
+            }
+        } else {
+            // mid-jump or falling: the cell below is where we are heading
+            scratch.set(feet.getX(), feet.getY() - 1, feet.getZ());
+            if (!Double.isNaN(kaptainwutax.tungsten.helpers.PlayerFit.supportTop(world, scratch))) {
+                return feet.down();
+            }
+        }
+        return feet;
+    }
+
     private static void startFind(WorldView world, ClientPlayerEntity player, Vec3d target, double dist) {
         tickCounter   = 0;
         lastTargetPos = target;
@@ -348,7 +401,7 @@ public class FollowEntityTask {
         // and physics stays the last resort — which is what the physics search below now is.
         if (kaptainwutax.tungsten.TungstenConfig.get().followBlockPathFinderEnabled && dist > 6) {
             var fastRes = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
-                    world, player.getBlockPos(),
+                    world, planStart(world, player),
                     net.minecraft.util.math.BlockPos.ofFloored(target),
                     kaptainwutax.tungsten.TungstenConfig.get().fastPlanBudgetMs);
             java.util.List<net.minecraft.util.math.BlockPos> bfsPath = fastRes.positions();
