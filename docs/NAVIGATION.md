@@ -1015,3 +1015,31 @@ last resort — but here it is the case that matters.
 
 Numbers moved by the five pursuit iterations, for the record, none of which took the gate:
 plans 4 -> 15 -> 97, one-waypoint stumps 93 -> 1, routes walked 2 -> 8, chase_flat 4.64 -> 3.74.
+
+### chase_terrain: 59% of the pursuit's active ticks think it has ARRIVED (2026-07-30)
+
+Six iterations went into pursuit logic — planner choice, planning frequency, walking the route,
+pathStart, mid-walk replanning, driving through the navigator — and none took the gate. The
+counters the code already carried answer why in one line:
+
+```
+chaseStats: called=10786 inactive=7771 active=3015
+            | reached=1781 steer=615 leap=0 cooldown=195 losBlocked=981
+punkStats:  called=10797 inactive=9614 noTarget=239
+```
+
+Of 3015 ACTIVE ticks, **1781 — 59% — are spent in the "reached" branch**, i.e. the follow task
+believes it has arrived and does nothing. The runner is 140 blocks away and never stops moving.
+Steering gets 615 ticks; line of sight blocks 981.
+
+That is the mechanism behind every symptom recorded above: the bot standing still while the
+walker reports itself running, the freeze windows, the pursuit ending 18 blocks in. It was never
+about being slower than the runner, nor about which engine plans — the chase simply stops
+because something says it is already there.
+
+Next pass starts at that branch: what `effectiveDist` and `closeEnough` actually are on those
+1781 ticks. Print them; do not reason about them.
+
+Also worth noting for whoever picks this up: `punkStats` shows the punk task itself inactive on
+9614 of 10797 calls, with noTarget on 239. The two counters together say the chase is idle far
+more than it is chasing.
