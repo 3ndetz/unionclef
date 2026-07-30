@@ -181,6 +181,11 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   после. Заведено как задача, ждёт освобождения стенда.
 - [ ] **C5.6 `stringPull` deletes the very nodes carrying the break/place plan** before anything reads
   them (`BlockSpacePathFinder.java:412-429`, no `hasBreaks()`/`hasPlaces()` guard).
+  ПЕРЕПРОВЕРЕНО 2026-07-30: гарды по-прежнему нет, `path.remove(j-1)` на месте. Важность при этом
+  СНИЗИЛАСЬ, но пункт не закрыт: постановка ушла в `FastPlanner` и перенесённые ходы baritone, то
+  есть основной путь бота этот код больше не проходит. Остаётся значимым для маршрутов, которыми
+  владеет физ-движок — `BlockSpacePathFinder` это его блок-пространственный поводырь, и планы
+  слома доезжают до исполнителя через `PathFinder.truncateAtBreaks`.
 - [x] **C5.7 Place has exactly ONE shape** (horizontal bridge, cardinal, same-Y). **No pillar-up as a
   search move.** Pillar/godbridge exist only as reactive tasks bolted on beside the pathfinder.
   PARTLY CLOSED 2026-07-28 (nav_wall2 GREEN). The climb is now genuinely PLANNED by the search
