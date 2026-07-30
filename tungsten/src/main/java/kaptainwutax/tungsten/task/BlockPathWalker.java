@@ -34,6 +34,8 @@ public class BlockPathWalker {
 
     private static List<BlockPos> path = null;
     private static int waypointIdx = 0;
+    private static final net.minecraft.util.math.BlockPos.Mutable scratch2 =
+            new net.minecraft.util.math.BlockPos.Mutable();
     private static boolean active = false;
     private static Mode mode = Mode.DIRECT;
 
@@ -404,21 +406,15 @@ public class BlockPathWalker {
         // kept. Both behaviours are the same missing thing: the walker has no model of a
         // BOUNCING surface, and no rule bolted onto generic walking will give it one.)
         boolean fallingToward = !player.isOnGround() && (playerPos.y - wpPos.y) > 1.0;
-        // ADVANCING ON OCCUPANCY INSTEAD OF A RADIUS — PORTED, MEASURED NEUTRAL, NOT KEPT.
-        // baritone's PathExecutor.onTick advances only when the player is actually IN a cell the
-        // movement declares valid (:102) and skips forward if it finds itself in a later one
-        // (:115-123), so it never steers at the next waypoint while still a block and a half
-        // from the current one. Ported here with the skip-forward scan (mandatory at this
-        // stand's 8-12 fps, or a cell crossed between two ticks stalls the walker for good).
-        //
-        // It changed nothing: nav_hazard still grazed (19.0 / 18.0) and nav_flat / nav_gaps
-        // stayed PASS. So the magma contact is NOT waypoint corner-cutting. Narrowed by
-        // measurement: the run uses ONE BFS leg with no direct-sprint mode at all, and the
-        // hazard gate fires 176 times, i.e. the planned route genuinely avoids magma cells.
-        // What is left is sub-block drift — the body is 0.6 wide and the walker steers towards
-        // a waypoint centre, so a momentary drift across a cell boundary puts the FEET BLOCK in
-        // the magma for a tick. That needs a margin from hazards, not a different advance rule,
-        // and the right place is a cost penalty for walking ADJACENT to a hazard.
+        // ADVANCE ON OCCUPANCY — CORRECT, BUT IT CANNOT LAND ALONE. Ported from baritone's
+        // PathExecutor.onTick (:102, plus the skip-forward scan at :115-123). It fixes a real
+        // defect: a 1.5-block radius consumes a TWO-CELL leg without a step, which is why the bot
+        // parked 0.56 blocks short of every bridge lip ("PLACEWAIT against=12,-61 feet=11,-60").
+        // With it the bot does reach the lip — and then walks straight through it into the void,
+        // because nothing reliably sneaks there (see the note below on two writers of sneakKey):
+        // 22.5 against 11.6 standing. Both halves have to land together, inside one movement,
+        // which is unit 2 of docs/BARITONE-PORT-SPEC.md. Kept out until then; falling is worse
+        // than standing.
         if (dist < 1.5 && (!onLadderNow || Math.abs(playerPos.y - wpPos.y) < 0.4)
                 && !fallingToward) {
             waypointIdx++;
@@ -554,6 +550,13 @@ public class BlockPathWalker {
                     "WALKSTOP pos=(%.1f,%.1f) wp=(%d,%d,%d) dist=%.1f yawErr=%.0f facing=%b",
                     playerPos.x, playerPos.z, wp.getX(), wp.getY(), wp.getZ(), dist, yawErr, facing));
         }
+        // SNEAKING AT A LIP FROM HERE — MEASURED, PARTIAL, NOT KEPT. The rule itself is right
+        // (walking into a floorless cell is a fall, and sneaking cannot leave a ledge) and it did
+        // save one run in three: 11.0 standing against 22.5 / 22.5 falls. It cannot be made
+        // reliable from this side, because the walker and the placer BOTH write sneakKey in the
+        // same tick and the last writer wins — the placer clears it on its exit paths. That is
+        // the "exactly one per-tick writer of keys" point from docs/BARITONE-PORT-SPEC.md,
+        // measured rather than argued: the fix is unit 2, one movement owning the manoeuvre.
         mc.options.sprintKey.setPressed(move && !climbing);   // sprint-jump overshoots a ledge
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
