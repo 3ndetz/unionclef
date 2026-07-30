@@ -366,14 +366,19 @@ public final class FastPlanner {
                 // every ladder route unplannable: special() emitted the node, and this line
                 // deleted it the moment it was popped, so it never expanded even once.
                 // Only the floor-based generators (step, diagonal) actually need `support`.
-                // FLOATING AT THE SURFACE IS STILL SWIMMING. A player at the top of a pool has
-                // its FEET CELL IN AIR and the water one below, so asking only "is my feet cell
-                // water" answered no, the node was dropped, and the search came back with a
-                // one-node plan — nothing to walk, from the middle of a pool. Measured on
-                // nav_water: "1 nodes, 1 wp, partial, 0 ms" with the water counter at zero,
-                // one run in three, 8.2 blocks short.
+                // TREATING THE SURFACE FLOAT AS SWIMMABLE MADE IT WORSE — BOTH HALVES,
+                // MEASURED, DO NOT RETRY. A player at the top of a pool has its FEET CELL IN
+                // AIR with the water one below, so this test says no, the node is dropped, and
+                // the search returns a one-node plan from the middle of a pool ("1 nodes, 1 wp,
+                // partial, 0 ms" with the water counter at zero, one run in three, 8.2 short).
+                // That diagnosis is correct. The fix is not: accepting water-one-below here
+                // took nav_water to 8.5 / 8.5 FAIL, and additionally pricing a cell above water
+                // as a swim took it to 4 FAILS of 4 (13.5 / 8.5 / 9.5 / 8.5), against 2 passes
+                // of 3 with neither. Expanding those nodes replaces a clean climb-onto-the-bank
+                // route with surface floating, which is what the walker is worst at. The real
+                // fix is a SWIMMING EXECUTOR that can hold a heading at the surface — the
+                // course passes today by walking round the rim, and that is the honest state.
                 if (isWater(world, current.x, current.y, current.z, scratch)
-                        || isWater(world, current.x, current.y - 1, current.z, scratch)
                         || isLadder(world, current.x, current.y, current.z, scratch)) {
                     special(world, current, goal, map, open, scratch);
                 }
@@ -498,10 +503,7 @@ public final class FastPlanner {
         }
 
         // ── water: swim through it, and surface / climb out onto a bank ──
-        // Water at the feet, or water directly below them — the surface float (see the
-        // one-node plans this used to produce in plan()).
-        if (isWater(world, from.x, from.y, from.z, scratch)
-                || isWater(world, from.x, from.y - 1, from.z, scratch)) {
+        if (isWater(world, from.x, from.y, from.z, scratch)) {
             int[][] dirs = {{1,0,0},{-1,0,0},{0,0,1},{0,0,-1},{0,1,0},{0,-1,0}};
             for (int[] d : dirs) {
                 int nx = from.x + d[0], ny = from.y + d[1], nz = from.z + d[2];
