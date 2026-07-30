@@ -948,7 +948,11 @@ public final class FastPlanner {
         if (world.getBlockState(against).getCollisionShape(world, against).isEmpty()
                 && !branchPlaced(from, from.x, from.y - 1, from.z)) return;
 
-        double cost = ActionCosts.WALK_ONE_BLOCK_COST
+        // A BACKPLACE IS A SNEAK, AND UPSTREAM PRICES IT AS ONE: MovementTraverse.cost
+        // multiplies the walk by SNEAK_ONE_BLOCK_COST / WALK_ONE_BLOCK_COST for exactly this
+        // branch (baritone/.../MovementTraverse.java:164). Pricing it as a plain walk made the
+        // search treat bridging as cheaper than it is.
+        double cost = ActionCosts.SNEAK_ONE_BLOCK_COST
                 + ActionCosts.PLACE_ONE_BLOCK_COST * TungstenConfig.get().placeCostMultiplier;
         cntBridge++;
         relax(map, open, from, nx, from.y, nz, cost, goal, true, null,
