@@ -44,6 +44,49 @@ but the real cause was that the same edit also skipped the `EXECUTOR.cb` retry c
 nothing continued the goto after a segment finished. Skipping only the SEARCH regresses
 nothing and is what finally let hand-offs fire.
 
+## WHICH ENGINE CAN DO WHAT — read this before deciding who owns a manoeuvre
+
+Pointed out by the user on 2026-07-30 after a session was spent working around it, and
+verified in the code rather than recalled. **The two engines have DISJOINT capabilities, and
+every hard course needs both.**
+
+| | swim / dive / enter+exit water / ladder / slime bounce | break / place blocks |
+|---|---|---|
+| **physics engine** — `PathFinder` + `Node.getChildren` + `path/specialMoves/` | **YES, implemented and live** | **NO — no such move exists** |
+| **block engine** — `FastPlanner` + `BlockPathWalker` / `PathExecutor` | badly, bolted onto the waypoint walker | **YES** |
+| baritone / shredder (reference) | no physics simulation at all | yes, this is how it reaches anywhere |
+
+The physics side really does swim. `path/specialMoves/` contains `SwimmingMove`,
+`DivingMove`, `EnterWaterAndSwimMove`, `ExitWaterMove`, `ClimbALadderMove`,
+`JumpToLadderMove` and `SlimeBounceMove`, and they are NOT dead: `Node.java:163` calls
+`SwimmingMove.generateMove` from physics move generation, and the move drives a simulated
+player through `PathInput` while tracking `agent.swimming` / `agent.isSubmergedInWater`. It
+simulates the real body, which is why it can hold itself in water at all.
+
+What it cannot do is BUILD. There is no `PlaceMove`, `BreakMove`, `BridgeMove` or
+`PillarMove` in `specialMoves/`, and neither `Node.java` nor any move in that package
+mentions `toBreak` or `toPlace`. Breaking and placing exist ONLY on the block side.
+
+### Why this matters more than it sounds
+
+Three of this week's dead ends are the same mistake wearing different clothes — deciding an
+executor owns a manoeuvre without checking which engine can actually perform it:
+
+- **Water.** "The real fix is a swimming executor" was written in a commit message here. It
+  is wrong: the swimming executor exists. What is missing is a route that swims AND builds,
+  and a hand-off between the engines that survives the seam. nav_water passes today by
+  walking round the rim.
+- **Slime.** The bounce is implemented twice — `SlimeBounceMove` in physics, and
+  `SlimeBounceTask` bolted onto the walker (which ships OFF, `slimeCrossing = false`). The
+  course needs a bounce or a drop AND a bridge over the gap after it, i.e. both engines.
+- **Ladders.** Climbing was moved out of physics into the walker under the slogan "the
+  executor that can do it, owns it", while `ClimbALadderMove` sat in physics. That may still
+  be the right call for a plain climb, but it was not made with this table in view.
+
+So the question for any new manoeuvre is not "which executor should own this" but: **does
+the route need building, physics, or both?** Both means the seam, and the seam is where the
+failures are — see the hand-off notes further down this file.
+
 ## Four search engines, not three
 
 | engine | what it is | added | who calls it |

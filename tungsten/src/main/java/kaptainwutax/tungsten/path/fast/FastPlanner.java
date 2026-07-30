@@ -385,8 +385,13 @@ public final class FastPlanner {
                 // as a swim took it to 4 FAILS of 4 (13.5 / 8.5 / 9.5 / 8.5), against 2 passes
                 // of 3 with neither. Expanding those nodes replaces a clean climb-onto-the-bank
                 // route with surface floating, which is what the walker is worst at. The real
-                // fix is a SWIMMING EXECUTOR that can hold a heading at the surface — the
-                // course passes today by walking round the rim, and that is the honest state.
+                // fix is NOT "write a swimming executor" — one already exists and is live:
+                // path/specialMoves/SwimmingMove (plus Diving/EnterWaterAndSwim/ExitWater),
+                // called from Node.java:163 in PHYSICS move generation, which simulates the
+                // real body. What is missing is a route that swims AND builds, since physics
+                // has no place/break move at all. See the capability table in
+                // docs/NAVIGATION.md. The course passes today by walking round the rim, and
+                // that is the honest state of it.
                 if (isWater(world, current.x, current.y, current.z, scratch)
                         || isLadder(world, current.x, current.y, current.z, scratch)) {
                     special(world, current, goal, map, open, scratch);
