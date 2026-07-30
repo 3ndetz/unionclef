@@ -273,6 +273,18 @@ public class FollowEntityTask {
         boolean executorRunning  = TungstenModDataContainer.isExecutorRunning();
         boolean pathfinderActive = TungstenModDataContainer.PATHFINDER.active.get();
 
+        // WHICH GATE IS SHUTTING? 7 complete plans and 4 walked routes in 180 s, with an
+        // interval of 40 ticks, means the planning branch is reached far less often than it
+        // could be — and there are four booleans that decide it. Print them rather than guess;
+        // every diagnostic in this repo that paid off printed what the code SAW.
+        if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging
+                && (tickCounter % 40 == 0)) {
+            kaptainwutax.tungsten.Debug.logMessage(String.format(
+                    "FOLLOWGATE walker=%b stopReq=%b pf=%b exec=%b dist=%.1f tc=%d",
+                    walkerRunning, stopRequested, pathfinderActive, executorRunning,
+                    effectiveDist, tickCounter));
+        }
+
         // THE BLOCK ROUTE MUST NOT WAIT FOR THE PHYSICS ENGINE TO FINISH. Every branch below
         // is gated on physics being idle, so during a chase — where the simulation search runs
         // almost continuously — the block route was computed only when physics happened to be
@@ -280,11 +292,22 @@ public class FollowEntityTask {
         // TODOS.md AC-2.3 puts it the other way round: the block route comes FIRST and physics
         // is the last resort, so plan and walk it on its own cadence while physics does whatever
         // it is doing. Only when the walker is idle — a running walker is already following one.
-        if (!walkerRunning && !stopRequested
+        // A ROUTE TO WHERE THE RUNNER WAS IS NOT A CHASE. The gate diagnostic settled this:
+        // `walker=true` in 91 samples of 91, i.e. the walker is running essentially the whole
+        // pursuit, so every planning branch is skipped by design — and the route it is walking
+        // is 25-31 blocks long, aimed at where the target stood when it was planned. By the far
+        // end the runner is long gone. TODOS.md AC-1.2: a moving target is tracked by REPLACING
+        // the plan as it strays, not by finishing a stale one first. So re-plan mid-walk once
+        // the target has moved a meaningful fraction of the remaining distance — the same
+        // staleness test the physics branch below already uses.
+        boolean targetStrayed = lastTargetPos != null
+                && effectiveTarget.distanceTo(lastTargetPos)
+                        > Math.max(MIN_MOVE_DIST, effectiveDist * 0.25);
+        if ((!walkerRunning || targetStrayed) && !stopRequested
                 && kaptainwutax.tungsten.TungstenConfig.get().followBlockPathFinderEnabled
                 && effectiveDist > 6
-                && (pathfinderActive || executorRunning)
                 && tickCounter >= RECALC_TICKS) {
+            lastTargetPos = effectiveTarget;
             tickCounter = 0;
             var res = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
                     world, planStart(world, player),
