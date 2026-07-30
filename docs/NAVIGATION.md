@@ -696,3 +696,23 @@ the two-tier cost, MOVE_BACK when too close, and the stricter canPlaceAgainst.
    `needsPhysics` segments, not a second router. The other entry points that still start
    their own search (`followPlayer`, altoclef goal tasks) should be moved the same way.
 4. **One key owner.** Combat already does this (`CombatMoveIntent`); navigation does not.
+
+## nav_bridge after the verbatim port: green at 15-18 fps, void fall at 10 fps (2026-07-30)
+
+The baritone movement port landed (`62e1108` substrate + MovementTraverse/MovementPillar,
+`71254fd` the bridge wiring) and nav_bridge went **PASS 3/3** — 12.5s / ~14s / 18.0s, final_dist
+0.4 / 0.6 / 1.0, no self-falls, no freezes, at **avg_fps 14.2-18.3**.
+
+Re-measured independently afterwards on the same commit: **FAIL 3/3, final_dist 22.5, avg_fps
+9.9-10.0** — the void-fall signature. And in a full end-to-end sweep, also FAIL, with the suite at
+10/12. `uctest-mc-tester2` was already stopped, so it is not that; the host is simply carrying the
+user's production containers again.
+
+So the port is correct and the manoeuvre works — three passes prove it — but it is **not tick-rate
+robust**: somewhere between 10 and 14 fps it stops surviving. That is the same class of defect as
+the aim/stage machines that assume 20 tps, and it is now the thing standing between this course and
+a reliable green. It is a real gap, not a stand artefact: a bot that only bridges on a fast client
+is not finished.
+
+What NOT to conclude: that the port is wrong. `placeStats` reads `called=0` on the new path, i.e.
+the old forged-placement route is genuinely dead and the ported movement is doing the work.
