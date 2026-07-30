@@ -404,6 +404,21 @@ public class BlockPathWalker {
         // kept. Both behaviours are the same missing thing: the walker has no model of a
         // BOUNCING surface, and no rule bolted onto generic walking will give it one.)
         boolean fallingToward = !player.isOnGround() && (playerPos.y - wpPos.y) > 1.0;
+        // ADVANCING ON OCCUPANCY INSTEAD OF A RADIUS — PORTED, MEASURED NEUTRAL, NOT KEPT.
+        // baritone's PathExecutor.onTick advances only when the player is actually IN a cell the
+        // movement declares valid (:102) and skips forward if it finds itself in a later one
+        // (:115-123), so it never steers at the next waypoint while still a block and a half
+        // from the current one. Ported here with the skip-forward scan (mandatory at this
+        // stand's 8-12 fps, or a cell crossed between two ticks stalls the walker for good).
+        //
+        // It changed nothing: nav_hazard still grazed (19.0 / 18.0) and nav_flat / nav_gaps
+        // stayed PASS. So the magma contact is NOT waypoint corner-cutting. Narrowed by
+        // measurement: the run uses ONE BFS leg with no direct-sprint mode at all, and the
+        // hazard gate fires 176 times, i.e. the planned route genuinely avoids magma cells.
+        // What is left is sub-block drift — the body is 0.6 wide and the walker steers towards
+        // a waypoint centre, so a momentary drift across a cell boundary puts the FEET BLOCK in
+        // the magma for a tick. That needs a margin from hazards, not a different advance rule,
+        // and the right place is a cost penalty for walking ADJACENT to a hazard.
         if (dist < 1.5 && (!onLadderNow || Math.abs(playerPos.y - wpPos.y) < 0.4)
                 && !fallingToward) {
             waypointIdx++;

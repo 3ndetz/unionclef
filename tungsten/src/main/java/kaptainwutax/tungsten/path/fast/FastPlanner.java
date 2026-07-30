@@ -1086,6 +1086,32 @@ public final class FastPlanner {
                 || b instanceof net.minecraft.block.BubbleColumnBlock;
     }
 
+    /**
+     * A MARGIN, NOT JUST A BAN. Refusing hazardous cells is not enough: the body is 0.6 wide
+     * and the walker steers towards a waypoint's centre, so walking the lane directly beside
+     * magma drifts across the boundary and puts the FEET BLOCK in it for a tick. Measured on
+     * nav_hazard: the planned route avoids magma (the gate fires 176 times a run) and the bot
+     * still took 1.0-2.0 damage. Advancing waypoints on cell occupancy instead of a radius was
+     * ported from baritone and measured NEUTRAL, which is what narrowed it to sub-block drift.
+     *
+     * <p>So walking NEXT TO danger is priced instead of forbidden: the search takes the lane
+     * one block further out when there is one, and still crosses a narrow ledge when there is
+     * not. Baritone reaches the same place from the other direction — its executor moves
+     * discretely cell to cell, so it has no drift to price.
+     */
+    private static double hazardProximityPenalty(int x, int y, int z) {
+        WorldView w = SEARCH_WORLD.get();
+        if (w == null) return 0.0;
+        BlockPos.Mutable s = new BlockPos.Mutable();
+        for (int[] d : CARDINALS) {
+            int ax = x + d[0], az = z + d[1];
+            if (hazardAt(w, ax, y, az, s) || hazardAt(w, ax, y - 1, az, s)) {
+                return ActionCosts.WALK_ONE_BLOCK_COST * 2.0;
+            }
+        }
+        return 0.0;
+    }
+
     /** Body cell, head cell, or the surface we would stand on. */
     private static boolean hazardousDestination(int x, int y, int z) {
         WorldView w = SEARCH_WORLD.get();
@@ -1103,7 +1129,7 @@ public final class FastPlanner {
         // destination once covers all of them and cannot be forgotten in a new generator.
         if (hazardousDestination(x, y, z)) { cntHazard++; return; }
         Node next = map.get(x, y, z, goal);
-        double tentative = from.cost + edgeCost;
+        double tentative = from.cost + edgeCost + hazardProximityPenalty(x, y, z);
         if (tentative >= next.cost) return;
         next.cost = tentative;
         next.combined = tentative + next.heuristic * HEURISTIC;
