@@ -109,12 +109,26 @@ public class PillarTask {
                     stop();
                     return;
                 }
+                // THIS DID NOT EVEN AIM. It forged a hit on the top face of the block below
+                // and clicked, so a tower went up with the camera pointing anywhere at all —
+                // a placement through geometry, not a placement. Now: look DOWN at that face
+                // through the mouse pipeline, and click only when the player's own crosshair
+                // agrees it would fill the cell (RealPlacement, ported from baritone's
+                // MovementHelper.attemptToPlaceABlock).
                 Vec3d faceCenter = Vec3d.ofCenter(against).add(0, 0.5, 0); // top face of the block below
-                BlockHitResult hit = new BlockHitResult(faceCenter, Direction.UP, against, false);
-                mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
-                player.swingHand(Hand.MAIN_HAND);
-                // remember this pillar block as scaffolding so a cleanup can mine it back out
-                kaptainwutax.tungsten.util.ScaffoldRegistry.record(placeAt);
+                Vec3d dv = faceCenter.subtract(player.getEyePos());
+                float wantYaw = (float) Math.toDegrees(-Math.atan2(dv.x, dv.z));
+                float wantPitch = (float) Math.toDegrees(
+                        -Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z)));
+                kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
+                BlockHitResult hit =
+                        kaptainwutax.tungsten.helpers.RealPlacement.readyToPlace(mc, placeAt);
+                if (hit != null) {
+                    mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
+                    player.swingHand(Hand.MAIN_HAND);
+                    // remember this pillar block as scaffolding so a cleanup can mine it back out
+                    kaptainwutax.tungsten.util.ScaffoldRegistry.record(placeAt);
+                }
             }
         }
 

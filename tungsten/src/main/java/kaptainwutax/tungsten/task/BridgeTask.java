@@ -172,16 +172,21 @@ public class BridgeTask {
             Vec3d dv = faceCenter.subtract(eye);
             // Humanized aim: never setYaw/setPitch (anti-cheat flags it instantly)
             // — feed the target to WindMouse, which rotates via the vanilla mouse
-            // pipeline so the server sees physical-mouse steps. The placement
-            // itself uses the exact hit below (independent of camera lag).
+            // pipeline so the server sees physical-mouse steps. The placement then WAITS for
+            // that aim: it used to forge a BlockHitResult from the face centre and place
+            // "independent of camera lag", i.e. through the block's edge with the camera
+            // pointing elsewhere. See RealPlacement, ported from baritone.
             float wantYaw = (float) Math.toDegrees(-Math.atan2(dv.x, dv.z));
             float wantPitch = (float) Math.toDegrees(-Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z)));
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
-            BlockHitResult hit = new BlockHitResult(faceCenter, side, against, false);
-            mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
-            player.swingHand(Hand.MAIN_HAND);
-            // remember this bridge block as scaffolding so a cleanup can mine it back out
-            kaptainwutax.tungsten.util.ScaffoldRegistry.record(toPlace);
+            BlockHitResult hit =
+                    kaptainwutax.tungsten.helpers.RealPlacement.readyToPlace(mc, toPlace);
+            if (hit != null) {
+                mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
+                player.swingHand(Hand.MAIN_HAND);
+                // remember this bridge block as scaffolding so a cleanup can mine it back out
+                kaptainwutax.tungsten.util.ScaffoldRegistry.record(toPlace);
+            }
         }
 
         // stuck detection along the bridge axis

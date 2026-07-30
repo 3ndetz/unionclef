@@ -468,14 +468,23 @@ public class BlockPathWalker {
             }
         }
 
-        // TWO OWNERS OF THE CAMERA — MEASURED DEAD END, DO NOT RETRY. The executor aims at
-        // the face it is about to click while the walker aims at its waypoint, and at the pad's
-        // lip the pair were caught not converging ("WALKSTOP wp=(10,-60,0) yawErr=51
-        // facing=false"). Letting the builder own the aim outright, with the walker still
-        // walking and no longer gating on an aim it may not set, changed NOTHING measurable:
-        // nav_slime 13.6/7.6/7.8 blocks short against 13.7/7.9 before it. Not kept.
+        // ONE OWNER OF THE CAMERA AT A TIME. While the executor is in range and aiming at the
+        // face it is about to click, the walker must not re-aim at its waypoint — baritone has
+        // exactly one thing steering (the movement sets a MovementTarget, LookBehavior applies
+        // it) and never two.
+        //
+        // This was tried before and recorded as a dead end because it measured NEUTRAL. That
+        // measurement was worthless: placement at the time FORGED its BlockHitResult and did
+        // not care where the camera pointed, so of course nothing changed. With placement going
+        // through the game's real ray trace the aim has to converge, and nav_bridge fails
+        // outright (11.6 blocks short, twice) while both owners fight for it. Keep WALKING —
+        // only the steering is yielded; an earlier attempt returned outright here and was worse.
+        var execAim = TungstenModDataContainer.EXECUTOR;
+        boolean placerOwnsAim = execAim != null && execAim.placingNow;
         float yaw = AttackTiming.yawTo(playerPos, wpPos);
-        WindMouseRotation.INSTANCE.setTargetFast(yaw, 0);  // fast nav turn — keep the 45deg gate open
+        if (!placerOwnsAim) {
+            WindMouseRotation.INSTANCE.setTargetFast(yaw, 0);  // fast nav turn — keep the 45deg gate open
+        }
 
         // FACE-BEFORE-MOVE (on the ground only). The camera turns via WindMouse (humanized,
         // several frames to converge). Pressing forward while the yaw is still off makes the
@@ -488,7 +497,7 @@ public class BlockPathWalker {
         // and drops the bot short (that killed parkour: course B, slime drop-bounce).
         double yawErr = Math.abs(WindMouseRotation.wrapDelta(yaw - player.getYaw()));
         boolean onGround = player.isOnGround();
-        boolean facing = yawErr < 45.0;
+        boolean facing = placerOwnsAim || yawErr < 45.0;
         // CLIMBING A STEP. A vanilla step-up is jump + FORWARD PRESSURE: jumping
         // without it just bounces on the spot. Right at the step the horizontal
         // distance is ~0, so the bearing is numerically unstable, `facing` flickers

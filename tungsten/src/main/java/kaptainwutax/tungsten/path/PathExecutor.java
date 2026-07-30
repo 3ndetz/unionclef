@@ -41,6 +41,14 @@ public class PathExecutor {
     /** Support cells to PLACE (bridge floor) once the replay reaches the segment end
      *  (set by PathFinder from the block path's place plan) — the mirror of breakQueue. */
     public List<net.minecraft.util.math.BlockPos> placeQueue = null;
+    /**
+     * The placer is aiming RIGHT NOW and owns the camera. Baritone has exactly one thing
+     * steering at a time — the movement sets a MovementTarget and LookBehavior applies it —
+     * while tungsten had the walker re-aiming at its waypoint every tick underneath the
+     * placer. That never mattered before because the placement was forged and ignored the
+     * camera entirely; now that it goes through the real ray trace, the aim must converge.
+     */
+    public volatile boolean placingNow = false;
     public static volatile int placeCalled=0, placeDeferred=0, placeInRange=0, placeClicked=0;
     private int placingTicks = 0;
 
@@ -434,6 +442,7 @@ public class PathExecutor {
         if (target == null) {                       // all placed — bridge floor is in
             options.useKey.setPressed(false);
             options.sneakKey.setPressed(false);
+            placingNow = false;
             TungstenModRenderContainer.PLACE_PLAN.clear();
             placeQueue = null; placingTicks = 0;
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
@@ -448,6 +457,7 @@ public class PathExecutor {
             Debug.logMessage("Bridge place aborted (no block in hand)");
             options.useKey.setPressed(false);
             options.sneakKey.setPressed(false);
+            placingNow = false;
             placeQueue = null; placingTicks = 0;
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
             return false;
@@ -466,15 +476,18 @@ public class PathExecutor {
         // the timeout once we are actually in range, so a long approach cannot expire it.
         if (placeDist > 5.5) {
             placeDeferred++;
+            placingNow = false;                 // still walking there — the walker steers
             return false;                       // keep the queue; we are on our way there
         }
         placeInRange++;
+        placingNow = true;                      // in range: the placer owns the aim
         if (placingTicks++ > 200) {
             Debug.logMessage(String.format(
                     "Bridge place aborted (TIMEOUT) dist=%.2f ticks=%d target=%s",
                     placeDist, placingTicks, target.toShortString()));
             options.useKey.setPressed(false);
             options.sneakKey.setPressed(false);
+            placingNow = false;
             TungstenModRenderContainer.PLACE_PLAN.clear();
             placeQueue = null; placingTicks = 0;
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
@@ -484,6 +497,7 @@ public class PathExecutor {
             Debug.logMessage("Bridge place aborted (denied by place rules)");
             options.useKey.setPressed(false);
             options.sneakKey.setPressed(false);
+            placingNow = false;
             placeQueue = null; placingTicks = 0;
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
             return false;
@@ -493,7 +507,9 @@ public class PathExecutor {
         net.minecraft.util.math.Direction side = null;
         for (net.minecraft.util.math.Direction dir : net.minecraft.util.math.Direction.values()) {
             net.minecraft.util.math.BlockPos n = target.offset(dir);
-            if (kaptainwutax.tungsten.helpers.BlockShapeChecker.getShapeVolume(n, world) > 0) {
+            // Stricter than "the collision shape is not empty" — see RealPlacement.canPlaceAgainst,
+            // ported from baritone: the question is whether a side face can actually be clicked.
+            if (kaptainwutax.tungsten.helpers.RealPlacement.canPlaceAgainst(world, n)) {
                 against = n; side = dir.getOpposite(); break;
             }
         }
@@ -527,19 +543,21 @@ public class PathExecutor {
                 new Vec3d(0.8, 0.8, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 120)));
         float dYaw = net.minecraft.util.math.MathHelper.wrapDegrees(wantYaw - player.getYaw());
         float dPitch = net.minecraft.util.math.MathHelper.wrapDegrees(wantPitch - player.getPitch());
-        // AIM, BUT DO NOT WAIT FOR THE AIM. The click carries an explicit BlockHitResult, so
-        // the server is told which face is being used — the camera is cosmetic here, and
-        // PillarTask in this same codebase has always placed without any convergence check
-        // (that is why nav_wall2 passes). Requiring 15 degrees made the bridge hostage to a
-        // camera two other systems re-aim every tick: measured 28 ticks inside placement
-        // range and 2 clicks, and both attempts at winning the camera outright measured
-        // WORSE. Keep turning towards the face so it looks right; place regardless.
-        boolean aimed = Math.abs(dYaw) < 15f && Math.abs(dPitch) < 15f;
-        if ((aimed || placingTicks > 6) && (!sneakToPlace || player.isInSneakingPose())) {
-            net.minecraft.util.hit.BlockHitResult hit =
-                    new net.minecraft.util.hit.BlockHitResult(faceCenter, side, against, false);
+        // PLACE THROUGH THE GAME'S OWN RAY TRACE. What stood here forged a BlockHitResult
+        // out of the face centre and handed it to interactBlock, so the packet claimed the
+        // player had clicked a face the player was never looking at — blocks appeared through
+        // block edges with the camera pointing elsewhere. It even said so in a comment: "the
+        // camera is cosmetic here". It is not cosmetic, it is the whole interaction.
+        //
+        // Ported from baritone's MovementHelper.attemptToPlaceABlock
+        // (baritone/.../MovementHelper.java:806-856): aim at the face, then accept only when
+        // the player's REAL crosshair lands somewhere that would produce the wanted block,
+        // and place with THAT hit result. If the aim never converges the placement does not
+        // happen — which is a bug to fix in the aim, not to paper over with a forged packet.
+        var realHit = kaptainwutax.tungsten.helpers.RealPlacement.readyToPlace(mc, target);
+        if (realHit != null && (!sneakToPlace || player.isInSneakingPose())) {
             placeClicked++;
-            mc.interactionManager.interactBlock(player, net.minecraft.util.Hand.MAIN_HAND, hit);
+            mc.interactionManager.interactBlock(player, net.minecraft.util.Hand.MAIN_HAND, realHit);
             player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
         }
         return true;

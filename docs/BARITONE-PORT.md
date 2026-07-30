@@ -663,3 +663,52 @@ None of this needs calling baritone (which is not compiled); every item is a sel
 - baritone: `baritone/src/main/java/baritone/pathing/movement/movements/MovementFall.java:87`
 - tungsten: `tungsten/src/main/java/kaptainwutax/tungsten/path/Node.java:391`
 - copy: nothing
+
+## CRITICAL, found by the user on 2026-07-30: tungsten was placing blocks by FORGING the interaction
+
+Three sites — `PathExecutor.tickPlacing`, `BridgeTask`, `PillarTask` — built their own
+`BlockHitResult` from a face centre and handed it to `interactionManager.interactBlock`. That
+is not a placement, it is a forged packet: it claims the player clicked a face the player was
+never looking at. Blocks appeared through block edges with the camera pointing elsewhere.
+`PillarTask` did not even aim first. One of the sites carried a comment of mine calling the
+camera "cosmetic here" — it is not cosmetic, it IS the interaction.
+
+Fixed: `helpers/RealPlacement.java` ports baritone's gate — aim at the face, then accept only
+when the player's own crosshair lands somewhere that would produce the wanted block
+(`hit.getBlockPos().offset(hit.getSide()).equals(placeAt)`), and place with THAT hit result.
+Also ports `canPlaceAgainst` (normal cubes and glass, not "any non-empty collision shape").
+
+### What this exposed, and what still has to be ported
+
+With the forgery gone the suite got WORSE, and that is the honest state: `nav_bridge` fails at
+11.6 blocks, twice, because **the bridging MANOEUVRE was never ported — only the click was.**
+
+Two things were tried and measured before understanding this:
+
+1. **Sole aim ownership.** The walker re-aimed at its waypoint every tick underneath the
+   placer. Baritone has exactly one thing steering. Ported — and it did NOT fix it (still
+   11.6). Worth keeping regardless (it was previously judged "measured neutral", a worthless
+   verdict taken while placement ignored the camera entirely).
+2. **Aiming at the target's face from on top of the block.** Geometrically impossible: from
+   ON TOP of block B, a ray towards B's side face hits B's TOP face first. No amount of aiming
+   fixes it.
+
+The actual manoeuvre, from `MovementTraverse.updateState`
+(baritone/.../movements/MovementTraverse.java:336-350):
+
+```java
+BlockPos goalLook = src.down();   // the block we were JUST STANDING ON
+Rotation backToFace = calcRotationFromVec3d(playerHead(), faceCentre(src.down(), dest.down()));
+double dist2 = max(|player.x - faceX|, |player.z - faceZ|);
+if (dist2 < 0.29) { ...MOVE_BACK... }        // too close to see the face — back off first
+if (ctx.isLookingAt(goalLook)) CLICK_RIGHT;  // only then
+```
+
+So it is: **sneak forward INTO the empty cell** (sneaking is what stops the fall), turn round,
+look down and BACK at the face of the block you came from, press MOVE_BACK if you are too
+close to see it, and click only when the crosshair is genuinely on that block. The new block
+appears beneath you. Tungsten instead stands ON the block and looks forward-down at the
+destination, which cannot work.
+
+Next pass ports that manoeuvre — sneak-into-the-cell, look back, MOVE_BACK separation — not
+another variation on aiming from where the bot already stands.
