@@ -1089,3 +1089,23 @@ Also recorded, because it cost a pass: a diagnostic attempt that added counters 
 `FollowEntityTask` took the task's `active` ticks from 3015 to **ZERO** — the chase never
 activated at all. Reverted; `active` came back at 3635. A counter added to an activation path is
 not free, and "it only adds logging" is not a safe assumption there.
+
+### The BFS walker has NO bail signal at all (2026-07-31)
+
+Tried giving the chase the climb hand-off that `FastNavigator` has: on
+`BlockPathWalker.wasStoppedByBail()`, if the current waypoint is above jump height and roughly
+overhead, hand it to `PillarTask`. It fired **zero** times, and the reason is exact:
+
+`stoppedByBail` is set in ONE place — `BlockPathWalker.tickDirect` (:283) — and on bail that
+code calls `switchToBFS()` and keeps running. So the flag means "direct mode gave up, now
+walking the route", not "the walker is stuck". **The BFS mode sets it never.** A caller watching
+`!isRunning() && wasStoppedByBail()` therefore cannot see a BFS-mode obstruction at all, which
+is why the chase presses into a wall until the run ends with nobody asked to solve it.
+
+That is the shape of the real fix, and it is not another hand-off: **the BFS walk needs a stuck
+signal of its own** — it currently pushes forward forever with no notion of failing. Baritone's
+executor has exactly this (per-move cost-proportional timeout, graduated off-path distance, live
+cost re-verification) and `docs/BARITONE-PORT.md` already lists it as tungsten's biggest
+execution gap: "one failure detector where baritone has five".
+
+The inert hand-off was reverted rather than left in place.
