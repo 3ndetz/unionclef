@@ -829,3 +829,29 @@ it is the structural one this file has been pointing at from the start: **one co
 own a bridge step's walk AND its placement**, the way MovementTraverse does. Every attempt to
 keep them split has now failed at a different seam, which is about as clear a signal as a
 codebase can give.
+
+### The root cause, and why the obvious owner still did not work
+
+`placeAcross` emits its planks **flagged `viaJump`**. So the leg is cut at the first plank and
+everything after it is handed to the physics search — the engine with **no place move at all**.
+That is the whole reason the bridge died the moment placement became honest: previously the
+place plan reached the executor THROUGH that physics path and the forged hit result did not
+care where the body was.
+
+Wiring the run to `BridgeTask` instead — the one component that owns the step AND the
+placement, exactly as `PillarTask` owns a tower — was the right idea and it MEASURED WORSE:
+BridgeTask did start (twice a run), and nav_bridge went from 11.6 standing still to **22.5,
+three of three, the void-fall signature**. Sneaking when there is no floor ahead (kept inside
+BridgeTask, since the godbridge model is broken without it now) did not save it.
+
+The reason is timing, and it is the last unknown turned into a known: **by the time the
+hand-off happens the walker has already delivered the bot off the lip.** The owner has to take
+the manoeuvre from BEFORE the lip, not at it. That means changing WHERE the leg is cut — which
+this file already records as a dead end for a different reason (the ledge courses pass because
+the cut routes their climb to PillarTask). Both cannot hold, so the next session's job is
+narrow and clear: **the cut has to become per-move-kind rather than one flag.** A waypoint that
+places is not "physics"; it needs its own owner, taken over BEFORE the bot reaches the lip,
+while the climb keeps going to PillarTask exactly as it does now.
+
+Reverted rather than kept, because falling is a strictly worse failure than standing.
+nav_bridge is back to 11.6 and nav_wall2 verified still PASS (0.6).

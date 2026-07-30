@@ -163,6 +163,13 @@ public final class FastNavigator {
         // MEASURED WORSE: placement activity fell from 37 ticks to 12 and a second run added
         // nothing at all. The builder took the body and nobody gave it back. Whatever the
         // right arbitration is here, "stop navigating" is not it.)
+        // A BRIDGE STEP IS ONE MANOEUVRE. BridgeTask owns the walk AND the placement, the way
+        // baritone's MovementTraverse does and the way PillarTask already owns a tower here.
+        // Splitting them — walker steps, executor places — failed at three different seams in
+        // a row: the placer froze the body 5.5 blocks short, and with that fixed the leg was cut
+        // and handed to physics on every leg (12 legs, 12 HANDOFFs, WALKSTOP=0, nobody walking).
+        if (kaptainwutax.tungsten.task.BridgeTask.isActive()) return;
+
         if (awaitingPhysics) {
             if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
                     || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
@@ -229,6 +236,19 @@ public final class FastNavigator {
                 double rise = (jump.getY() + 0.5) - player.getEntityPos().y;
                 double horiz = Math.hypot(jump.getX() + 0.5 - player.getEntityPos().x,
                                           jump.getZ() + 0.5 - player.getEntityPos().z);
+                // ROUTING THE BRIDGE RUN TO BridgeTask — MEASURED WORSE, REVERTED. The
+                // reasoning was sound and still is: placeAcross flags its planks viaJump, so the
+                // leg is cut at the first plank and the rest goes to the physics search, which
+                // has NO place move at all — and BridgeTask is the one component that owns both
+                // the step and the placement, exactly as PillarTask owns a tower. Wiring it up
+                // worked (BridgeTask started, twice a run) and the result was WORSE: 22.5 blocks
+                // short, three of three, the void-fall signature, against 11.6 standing still.
+                // Sneaking when there is no floor ahead (kept, in BridgeTask) did not save it —
+                // the bot is already off the lip by the time the hand-off happens, because the
+                // WALKER delivered it there first. So the owner has to take the manoeuvre from
+                // BEFORE the lip, not at it, and that is a change to where the leg is cut — the
+                // one thing this file has already recorded as a dead end for other reasons.
+                // Falling is a strictly worse failure than standing, so this is not kept.
                 if (rise > PlayerFitJumpHeight() && horiz < 2.5
                         && TungstenConfig.get().planPlaceMoves
                         && !kaptainwutax.tungsten.task.PillarTask.isActive()) {
@@ -275,8 +295,16 @@ public final class FastNavigator {
             legTail = leg.get(leg.size() - 1);
             // if this leg ends at a jump, arm the hand-off for when the walk finishes
             pendingPhysicsTarget = nextPhysicsTarget;
+            pendingIsBridge = nextPhysicsIsBridge;
             nextPhysicsTarget = null;
-            BlockPathWalker.startBFS(leg);
+            nextPhysicsIsBridge = false;
+            if (nextLegBridge) {
+                nextLegBridge = false;
+                kaptainwutax.tungsten.task.BridgeTask.startTo(
+                        legTail.getX(), legTail.getY(), legTail.getZ());
+            } else {
+                BlockPathWalker.startBFS(leg);
+            }
             // immediately begin planning the leg after this one, from its tail
             planAhead(legTail);
             return;
@@ -291,6 +319,12 @@ public final class FastNavigator {
      * bot has not reached yet. This is the overlap that makes the whole thing
      * fast: the search for the next piece runs while the current piece is walked.
      */
+    /** The prepared leg places blocks, so BridgeTask owns it rather than the walker. */
+    private static volatile boolean nextLegBridge = false;
+    /** The cut-out run is a BRIDGE (its waypoints place blocks), so BridgeTask owns it. */
+    private static volatile boolean nextPhysicsIsBridge = false;
+    private static volatile boolean pendingIsBridge = false;
+
     private static void planAhead(BlockPos from) {
         if (planning || goal == null) return;
         planning = true;
@@ -383,6 +417,17 @@ public final class FastNavigator {
                     // So: walk up to the wall, then aim physics at the GOAL and let the
                     // mining machinery take over.
                     boolean breakCell = res.path.get(physics).toBreak != null;
+                    // PLACE-AS-A-MOVE IS FLAGGED viaJump, SO THE BRIDGE WAS BEING HANDED TO THE
+                    // ENGINE THAT CANNOT BUILD. placeAcross emits its planks flagged, so the leg
+                    // is cut at the first plank and the rest goes to the physics search — which
+                    // has no place move at all (capability table in docs/NAVIGATION.md). It only
+                    // ever "worked" because the placement was forged and did not care where the
+                    // body was; with placement going through the real ray trace it stopped dead
+                    // at 11.6 blocks, 12 legs and 12 hand-offs a run with nobody walking.
+                    // Route it like a pillar instead: to the component that owns BOTH the step
+                    // and the placement.
+                    var flaggedWp = res.path.get(physics);
+                    nextPhysicsIsBridge = flaggedWp.toPlace != null && !flaggedWp.toPlace.isEmpty();
                     int runEnd = res.physicsRunEnd(physics);
                     nextPhysicsTarget = breakCell ? goalCell : cells.get(runEnd);
                     cells = cells.subList(0, physics);
@@ -414,6 +459,12 @@ public final class FastNavigator {
                     }
                 }
                 if (cells.size() >= 2) {
+                    boolean builds = false;
+                    for (int i = 1; i < Math.min(res.path.size(), cells.size()); i++) {
+                        var w = res.path.get(i);
+                        if (w.toPlace != null && !w.toPlace.isEmpty()) { builds = true; break; }
+                    }
+                    nextLegBridge = builds;
                     nextLeg = cells;
                 } else if (nextPhysicsTarget != null) {
                     // The jump is the very FIRST move from here — there is nothing to walk.

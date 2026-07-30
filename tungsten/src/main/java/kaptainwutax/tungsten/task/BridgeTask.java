@@ -134,13 +134,22 @@ public class BridgeTask {
         BlockPos targetCell = support.offset(dir);
         Vec3d eye = player.getEyePos();
 
-        // SPRINT forward along the bridge — real godbridge speed. No sneak
-        // (that's the slow/broken way). Force sprint at the entity level so it
-        // actually engages (the key alone doesn't always re-trigger it).
-        opts.sneakKey.setPressed(false);
+        // DO NOT OUTRUN THE FLOOR. The godbridge model above — sprint and pave on the move,
+        // never sneak — only holds while the placement is INSTANT, and it was: the old code
+        // forged its BlockHitResult and the block appeared the tick it was asked for. Now that
+        // placement goes through the game's own ray trace it takes real ticks, and sprinting
+        // walked the bot straight off the lip: 22.5 blocks short, the void-fall signature.
+        //
+        // So sneak exactly when there is nothing to walk onto. Sneaking cannot fall off a
+        // ledge, and it still lets the body creep to the sneak limit (centre = edge + 0.3,
+        // since the 0.6-wide box keeps support while x - 0.3 is over the block) — which is the
+        // ONLY position from which the block's side face is visible at all. Forward stays
+        // pressed: that creep is what the manoeuvre needs. Sprint only on real ground.
+        boolean floorAhead = !isAir(world, targetCell);
+        opts.sneakKey.setPressed(!floorAhead);
         opts.forwardKey.setPressed(true);
-        opts.sprintKey.setPressed(true);
-        player.setSprinting(true);
+        opts.sprintKey.setPressed(floorAhead);
+        player.setSprinting(floorAhead);
 
         // aim: prefer paving the cell 2 ahead as well so a fast walk never
         // outruns the floor. Place the nearest air cell in {targetCell, +2}.
