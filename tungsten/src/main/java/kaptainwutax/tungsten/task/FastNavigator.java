@@ -101,6 +101,9 @@ public final class FastNavigator {
         pendingPhysicsTarget = null;
         pendingCrossing = null;
         awaitingPhysics = false;
+        nextLegMovement = false;
+        // A queue left running past the navigator would keep pressing keys with nobody steering.
+        kaptainwutax.tungsten.path.movements.MovementQueue.stop();
     }
 
     /** Ticked from the client mixin alongside the other tungsten tasks. */
@@ -123,7 +126,10 @@ public final class FastNavigator {
         // rest of the route possible — and this watchdog counted that as failure and SHUT THE
         // NAVIGATOR DOWN, which is why a build route produced two plans in a whole run.
         var exec = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
-        boolean building = exec != null && (exec.placeQueue != null || exec.breakQueue != null);
+        // A MovementQueue leg is building too: a sneak-backplace step spends several ticks
+        // stationary while the aim converges, and the watchdog used to call that failure.
+        boolean building = (exec != null && (exec.placeQueue != null || exec.breakQueue != null))
+                || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning();
         if (building) {
             stallTicks = 0;
         } else if (dist < lastDist - 0.25) {
@@ -144,6 +150,16 @@ public final class FastNavigator {
                     kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get(),
                     kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()));
         }
+
+        // A MovementQueue leg owns the body, the keys AND the camera for its whole run — that is the
+        // entire point of the port (spec pitfall P1: a second per-tick writer measured
+        // called=11041 inRange=11040 clicked=0). So: hands off, and do NOT pre-plan the following
+        // leg either. Pre-planning is safe behind a WALK because the cells the walk crosses already
+        // exist; behind a BRIDGE it is not — the planks are not in the world yet, so a plan from the
+        // chain's tail would price a route out of a cell that is still air and come back nonsense.
+        // The queue is short; replanning from the bot's real position when it finishes costs one
+        // planning round and cannot be wrong.
+        if (kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) return;
 
         if (BlockPathWalker.isRunning()) {
             // walking: make sure the FOLLOWING leg is being computed from the tail
@@ -297,15 +313,37 @@ public final class FastNavigator {
             pendingIsBridge = nextPhysicsIsBridge;
             nextPhysicsTarget = null;
             nextPhysicsIsBridge = false;
-            if (nextLegBridge) {
+            // ONE OWNER FOR A BUILD LEG. A leg whose route places blocks goes to the ported
+            // MovementQueue: a chain of baritone MovementTraverse objects, each of which owns its own
+            // one-block step — the walk, the aim, the sneak and the click — and none of which shares
+            // a tick with the walker or the physics executor. This is the replacement for the split
+            // path (walker moves the body, PathExecutor.tickPlacing aims and clicks), whose seam
+            // measured clicked=0 across eleven thousand in-range ticks.
+            boolean queued = false;
+            if (nextLegMovement) {
+                nextLegMovement = false;
                 nextLegBridge = false;
-                kaptainwutax.tungsten.task.BridgeTask.startTo(
-                        legTail.getX(), legTail.getY(), legTail.getZ());
-            } else {
-                BlockPathWalker.startBFS(leg);
+                queued = kaptainwutax.tungsten.path.movements.MovementQueue.start(leg) > 0;
+                if (!queued) {
+                    // traversePrefix already vetted this leg on the planning thread, so a refusal
+                    // here means the plan changed shape under us. Walk it instead of standing still.
+                    Debug.logWarning("FastNavigator: MovementQueue refused the leg, walking it");
+                }
             }
-            // immediately begin planning the leg after this one, from its tail
-            planAhead(legTail);
+            if (!queued) {
+                if (nextLegBridge) {
+                    nextLegBridge = false;
+                    kaptainwutax.tungsten.task.BridgeTask.startTo(
+                            legTail.getX(), legTail.getY(), legTail.getZ());
+                } else {
+                    BlockPathWalker.startBFS(leg);
+                }
+                // immediately begin planning the leg after this one, from its tail
+                planAhead(legTail);
+            } else {
+                // See the isRunning() guard above for why a build leg is NOT pre-planned.
+                legTail = null;
+            }
             return;
         }
         if (!planning) {
@@ -320,6 +358,12 @@ public final class FastNavigator {
      */
     /** The prepared leg places blocks, so BridgeTask owns it rather than the walker. */
     private static volatile boolean nextLegBridge = false;
+    /**
+     * The prepared leg is a contiguous run of one-block cardinal steps that includes a PLACE, so the
+     * ported {@code MovementQueue} owns it end to end — walk edges and bridge edges alike. Mutually
+     * exclusive with {@link #nextLegBridge}: one owner per leg.
+     */
+    private static volatile boolean nextLegMovement = false;
     /** The cut-out run is a BRIDGE (its waypoints place blocks), so BridgeTask owns it. */
     private static volatile boolean nextPhysicsIsBridge = false;
     private static volatile boolean pendingIsBridge = false;
@@ -396,6 +440,8 @@ public final class FastNavigator {
                             res.path.size(), res.complete, res.firstPhysicsIndex(), flagged));
                 }
                 List<BlockPos> cells = res.positions();
+                /** Set below only for a leg the ported MovementQueue is taking over. */
+                boolean movementLeg = false;
                 // cut at the first waypoint that needs a real jump: the physics
                 // engine owns those (parkour), the walker must not run into one
                 int physics = res.firstPhysicsIndex();
@@ -442,8 +488,32 @@ public final class FastNavigator {
                     // AT the lip inherits a body already carried past it by the walker.
                     nextPhysicsIsBridge = false;
                     int runEnd = res.physicsRunEnd(physics);
-                    nextPhysicsTarget = breakCell ? goalCell : cells.get(runEnd);
-                    cells = cells.subList(0, physics);
+                    // A PLACE RUN IS NOT PHYSICS, AND IT IS NOT A SEPARATE LEG EITHER. placeAcross
+                    // emits its planks flagged viaJump (FastPlanner.java:958), which routed them to
+                    // the one engine with no place move — pitfall P2. It is also why the previous
+                    // three attempts handed the bridge over AT the lip and fell into the void 22.5
+                    // blocks in: whoever inherits a body already carried past the edge has lost
+                    // before it starts. So do not cut at all. The WALK edges and the PLACE edges go
+                    // to the SAME owner, as one contiguous chain of MovementTraverse: the movement
+                    // that steps onto the lip is the one that decides whether to sprint out of it
+                    // (wasTheBridgeBlockAlwaysThere), and the next one sneaks and places. There is no
+                    // hand-off left to fumble.
+                    boolean placeRun = flaggedWp.toPlace != null && !flaggedWp.toPlace.isEmpty();
+                    int covered = placeRun
+                            ? kaptainwutax.tungsten.path.movements.MovementQueue.traversePrefix(
+                                    cells.subList(0, Math.min(cells.size(), runEnd + 1)))
+                            : 0;
+                    // The chain must actually REACH the first cell that needs a block placed,
+                    // otherwise routing it here achieves nothing and the queue would finish short of
+                    // the gap, replan the identical plan and loop. Below that bar, keep the old path.
+                    if (covered >= physics + 1) {
+                        nextPhysicsTarget = null;
+                        movementLeg = true;
+                        cells = cells.subList(0, covered);
+                    } else {
+                        nextPhysicsTarget = breakCell ? goalCell : cells.get(runEnd);
+                        cells = cells.subList(0, physics);
+                    }
                 } else {
                     nextPhysicsTarget = null;
                     // A SLIME PAD IS ONE MANOEUVRE. Walk to its LIP and let the crossing own
@@ -477,7 +547,10 @@ public final class FastNavigator {
                         var w = res.path.get(i);
                         if (w.toPlace != null && !w.toPlace.isEmpty()) { builds = true; break; }
                     }
-                    nextLegBridge = builds;
+                    nextLegMovement = movementLeg;
+                    // BridgeTask only gets a look-in when the MovementQueue did not take the leg;
+                    // the two must never both be armed (two owners of the keys is pitfall P1).
+                    nextLegBridge = builds && !movementLeg;
                     nextLeg = cells;
                 } else if (nextPhysicsTarget != null) {
                     // The jump is the very FIRST move from here — there is nothing to walk.

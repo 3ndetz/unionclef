@@ -1987,11 +1987,31 @@ public class Py4jEntryPoint {
     /** Bridge execution telemetry: ticks the place logic ran, ticks deferred because the bot
      *  was still walking there, ticks actually in range, and blocks actually clicked. */
     public String placeStats() {
-        return String.format("called=%d deferred=%d inRange=%d clicked=%d",
+        // Two engines, both reported. The first four are the SPLIT path (walker moves the body,
+        // PathExecutor.tickPlacing aims and clicks) whose seam measured clicked=0 across eleven
+        // thousand in-range ticks. The `mq`/`mv` numbers are the ported baritone MovementQueue that
+        // replaces it for bridge legs: mq* is the chain (legs started, steps completed, handbacks,
+        // timeouts, ticks owned), mv* is the one and only promotion to a click — a movement asked for
+        // CLICK_RIGHT because its live crosshair agreed, and interactBlock said SUCCESS.
+        return String.format(
+                "called=%d deferred=%d inRange=%d clicked=%d"
+                        + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
+                        + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
                 kaptainwutax.tungsten.path.PathExecutor.placeDeferred,
                 kaptainwutax.tungsten.path.PathExecutor.placeInRange,
-                kaptainwutax.tungsten.path.PathExecutor.placeClicked);
+                kaptainwutax.tungsten.path.PathExecutor.placeClicked,
+                kaptainwutax.tungsten.path.movements.MovementQueue.qStarted,
+                kaptainwutax.tungsten.path.movements.MovementQueue.qSteps,
+                kaptainwutax.tungsten.path.movements.MovementQueue.qUnreachable,
+                kaptainwutax.tungsten.path.movements.MovementQueue.qTimeout,
+                kaptainwutax.tungsten.path.movements.MovementQueue.qTicks,
+                kaptainwutax.tungsten.path.movements.MovementQueue.getIndex(),
+                kaptainwutax.tungsten.path.movements.MovementQueue.size(),
+                kaptainwutax.tungsten.path.movements.Movement.placeRequested,
+                kaptainwutax.tungsten.path.movements.Movement.placeOnCooldown,
+                kaptainwutax.tungsten.path.movements.Movement.placeNoHit,
+                kaptainwutax.tungsten.path.movements.Movement.placeClicked);
     }
 
     public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }

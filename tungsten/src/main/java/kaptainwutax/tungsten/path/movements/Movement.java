@@ -102,6 +102,20 @@ public abstract class Movement {
      */
     private static int rightClickTimer;
 
+    /**
+     * TELEMETRY ONLY — no branch reads these. They exist because the split place engine's counters
+     * ({@code PathExecutor.placeCalled/placeInRange/placeClicked}) are what proved it broken —
+     * {@code called=11041 inRange=11040 clicked=0} — and the replacement has to be measurable at the
+     * same granularity or "it works now" is a claim rather than a number. Exposed over py4j as
+     * {@code placeStats}.
+     *
+     * <p>{@code placeRequested} = ticks a movement asked for CLICK_RIGHT (i.e. its own crosshair gate
+     * had already passed); {@code placeOnCooldown} = of those, the ones the 4-tick BlockPlaceHelper
+     * gate swallowed; {@code placeNoHit} = the raytrace was not on a block after all;
+     * {@code placeClicked} = {@code interactBlock} returned SUCCESS.
+     */
+    public static volatile int placeRequested, placeOnCooldown, placeNoHit, placeClicked;
+
     /** The {@code IPlayerContext} stand-in. See {@link PlayerCtx}. */
     protected final PlayerCtx ctx = new PlayerCtx();
 
@@ -419,8 +433,13 @@ public abstract class Movement {
      * a force map that mixins read; here the keys themselves are released, which is the same thing
      * one layer down. Called before every apply, so no input can latch across ticks, and again on a
      * completed movement (Movement.java:146-148).
+     *
+     * <p>Package-visible, not private: upstream's {@code clearAllKeys} is public API on
+     * {@code InputOverrideHandler} and {@code PathExecutor.onLostControl} calls it when it hands the
+     * body back (PathExecutor.java:346). {@link MovementQueue#stop()} is that call here — a queue
+     * that stops mid-sneak must not leave SHIFT latched.
      */
-    private static void clearAllKeys() {
+    static void clearAllKeys() {
         GameOptions options = MinecraftClient.getInstance().options;
         if (options == null) {
             return;
@@ -506,8 +525,14 @@ public abstract class Movement {
      * crosshair agreed (MovementHelper.java:840-851), so a second gate would only re-implement it.
      */
     private void blockPlaceHelperTick(ClientPlayerEntity player, boolean rightClickRequested) {
+        if (rightClickRequested) {
+            placeRequested++;
+        }
         if (rightClickTimer > 0) {
             rightClickTimer--;
+            if (rightClickRequested) {
+                placeOnCooldown++;
+            }
             return;
         }
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -516,12 +541,16 @@ public abstract class Movement {
         }
         HitResult mouseOver = ctx.objectMouseOver();
         if (!rightClickRequested || player.isRiding() || mouseOver == null || mouseOver.getType() != HitResult.Type.BLOCK) {
+            if (rightClickRequested) {
+                placeNoHit++;
+            }
             return;
         }
         rightClickTimer = RIGHT_CLICK_SPEED - BASE_PLACE_DELAY;
         for (Hand hand : Hand.values()) {
             if (mc.interactionManager.interactBlock(player, hand, (BlockHitResult) mouseOver) == ActionResult.SUCCESS) {
                 player.swingHand(hand);
+                placeClicked++;
                 return;
             }
             if (!player.getStackInHand(hand).isEmpty() && mc.interactionManager.interactItem(player, hand) == ActionResult.SUCCESS) {

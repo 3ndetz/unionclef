@@ -62,8 +62,22 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// the same tick and the bot never pauses at a seam)
 		kaptainwutax.tungsten.task.FastNavigator.tick((ClientPlayerEntity)(Object)this);
 
-		// BFS walker: immediate movement while physics A* computes
-		BlockPathWalker.tick((ClientPlayerEntity)(Object)this);
+		// PORTED BARITONE MOVEMENTS — ONE OWNER OF THE TICK. A MovementQueue leg is a chain of
+		// MovementTraverse objects, each owning its whole one-block step: the body, the keys, the
+		// camera and the click. Movement.update() releases every key and then presses exactly what
+		// this tick declared, so a SECOND per-tick writer does not merely conflict, it silently wins
+		// half the ticks — which is the measured failure this port exists to remove
+		// (called=11041 inRange=11040 clicked=0, BARITONE-PORT-SPEC.md pitfall P1). Hence the early
+		// return: while the queue runs, the walker, the two build primitives, the crossing and the
+		// physics executor do not run at all. Ticked here, after the navigator that starts it and
+		// before the walker it replaces (spec unit 2's wiring).
+		kaptainwutax.tungsten.path.movements.MovementQueue.tick((ClientPlayerEntity)(Object)this);
+		boolean tungsten$movementOwnsTick = kaptainwutax.tungsten.path.movements.MovementQueue.isRunning();
+
+		if (!tungsten$movementOwnsTick) {
+			// BFS walker: immediate movement while physics A* computes
+			BlockPathWalker.tick((ClientPlayerEntity)(Object)this);
+		}
 
 		// bow-shot primitive (aim + charge + release)
 		kaptainwutax.tungsten.task.BowShooter.tick((ClientPlayerEntity)(Object)this);
@@ -71,16 +85,18 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// shield-block primitive (hold use for N ticks)
 		kaptainwutax.tungsten.task.ShieldBlocker.tick((ClientPlayerEntity)(Object)this);
 
-		// sneak-bridge primitive (epic parkour block placing)
-		kaptainwutax.tungsten.task.BridgeTask.tick((ClientPlayerEntity)(Object)this);
+		if (!tungsten$movementOwnsTick) {
+			// sneak-bridge primitive (epic parkour block placing)
+			kaptainwutax.tungsten.task.BridgeTask.tick((ClientPlayerEntity)(Object)this);
 
-		// pillar-up primitive (place under self + jump to reach a raised goal — #46)
-		kaptainwutax.tungsten.task.PillarTask.tick((ClientPlayerEntity)(Object)this);
+			// pillar-up primitive (place under self + jump to reach a raised goal — #46)
+			kaptainwutax.tungsten.task.PillarTask.tick((ClientPlayerEntity)(Object)this);
 
-		// slime crossing primitive (hold heading + sprint across a whole bounce chain)
-		kaptainwutax.tungsten.task.SlimeBounceTask.tick((ClientPlayerEntity)(Object)this);
+			// slime crossing primitive (hold heading + sprint across a whole bounce chain)
+			kaptainwutax.tungsten.task.SlimeBounceTask.tick((ClientPlayerEntity)(Object)this);
+		}
 
-		if(TungstenModDataContainer.isExecutorRunning()) {
+		if(TungstenModDataContainer.isExecutorRunning() && !tungsten$movementOwnsTick) {
 			try {
 				TungstenModDataContainer.EXECUTOR.tick((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);
 			} catch (Exception e) {
@@ -105,6 +121,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// combat near a ledge). Release the mod-controlled keys ONCE on the driving->idle
 		// transition, so we clear the leak without fighting the user's own held keys mid-play.
 		boolean tungsten$driving = TungstenModDataContainer.isExecutorRunning()
+				|| tungsten$movementOwnsTick
 				|| kaptainwutax.tungsten.task.BlockPathWalker.isRunning()
 				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive()
 				|| kaptainwutax.tungsten.task.RunAwayTask.isActive()
