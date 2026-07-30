@@ -784,3 +784,34 @@ So what remains to investigate is inside the manoeuvre's own timing: the 4-tick
 between leaving support and the block existing. The measurement to take first is a tick trace
 of ONE crossing at ~10 fps against one at ~20: where do the extra ticks go, and is the bot
 airborne during them.
+
+#### FOUND: the queue aborts on OFF-PATH DRIFT, not on place rate (2026-07-30)
+
+The tick trace of a failing sweep run, which is what the fps sensitivity actually is:
+
+```
+MovementQueue: too far from path (3.4)
+MovementQueue: too far from path (3.3)
+MovementQueue: rewound 7 -> 5
+MovementQueue: rewound 13 -> 11
+MovementQueue: 16 traverse(s) 0,-53,0 -> 16,-53,0
+MovementQueue: 14 traverse(s) 0,-60,0 -> 14,-60,0
+```
+
+The manoeuvre is not too slow and the placement gate is not starving — the bot DRIFTS 3.3-3.4
+blocks off its path and the queue gives up. The 4-tick `BlockPlaceHelper` hypothesis is refuted.
+
+Two things follow, and both are upstream behaviour we did not carry over:
+
+1. **The tolerance is tuned for a 20 tps client.** Baritone's `MAX_DIST_FROM_PATH` (2.0) and
+   `MAX_MAX_DIST_FROM_PATH` (3.0) assume ticks arrive on time. At ~10 fps each tick moves the
+   body further, so the same walk overshoots past a threshold that was never meant to be a
+   fps-dependent quantity.
+2. **Upstream does not ABORT on off-path — it RE-PLANS.** `PathingBehavior` re-searches on the
+   same tick a segment fails; the audit already recorded this as tungsten's biggest execution
+   gap ("its watchdog hands over to a caller that does not exist"). Our queue rewinds and then
+   gives up, so a recoverable drift ends the whole crossing.
+
+Next fix, precisely: on `too far from path`, re-plan from the bot's ACTUAL position and continue,
+the way `PathingBehavior` does — instead of rewinding twice and abandoning. That is a closed loop
+and it removes the fps dependence, because a drift becomes a re-plan rather than a failure.
