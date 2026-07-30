@@ -741,3 +741,27 @@ gap in wall-clock time on this host.
 The live trace is kept regardless: reading a once-per-render cache in a gate that upstream
 ray-traces every time is wrong on its own terms (RayTraceUtils.rayTraceTowards), whatever it
 turns out to be worth on this stand.
+
+### A/B SETTLED: the port fixed nav_bridge, the live trace did not (2026-07-30)
+
+Both builds run back to back in ONE window, so the host load is the same for both. Only
+`RealPlacement.java` differs.
+
+| build | nav_bridge x3 | avg_fps |
+|---|---|---|
+| A — cached `mc.crosshairTarget` (pre-fix file) | **PASS 3/3** — 1.1 / 1.2 / 1.1 | 18.7-20.3 |
+| B — live `RotationHelper.liveHit` | 3.9 FAIL, 1.0 PASS, 1.3 PASS | 18.3-21.5 |
+
+So the live trace is NOT what made the course pass — the old file passes 3/3 at the same fps,
+and if anything B is marginally worse (one FAIL, within this stand's noise at n=3). What made
+nav_bridge pass is the **verbatim movement port itself** (`71254fd`), and the 22.5 failures
+measured earlier were the host at ~10 fps, exactly as the withdrawn claim feared.
+
+The live trace is KEPT anyway, on its own terms rather than on a result it did not produce:
+upstream ray-traces in this gate every time (`RayTraceUtils.rayTraceTowards`) and a
+once-per-render cache is stale by 1-2 ticks at 10 fps. It costs nothing measurable here.
+
+**What this leaves as the real open problem:** nav_bridge passes at 18-21 fps and fails at ~10,
+i.e. the ported manoeuvre is not tick-rate robust — which is also why it is red inside a full
+12-course sweep, where fps sags by the eleventh course. That is the next target, and it is a
+genuine defect: a bot that only bridges on a fast client is not finished.
