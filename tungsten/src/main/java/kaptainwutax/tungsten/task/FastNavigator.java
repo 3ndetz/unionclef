@@ -236,19 +236,17 @@ public final class FastNavigator {
                 double rise = (jump.getY() + 0.5) - player.getEntityPos().y;
                 double horiz = Math.hypot(jump.getX() + 0.5 - player.getEntityPos().x,
                                           jump.getZ() + 0.5 - player.getEntityPos().z);
-                // ROUTING THE BRIDGE RUN TO BridgeTask — MEASURED WORSE, REVERTED. The
-                // reasoning was sound and still is: placeAcross flags its planks viaJump, so the
-                // leg is cut at the first plank and the rest goes to the physics search, which
-                // has NO place move at all — and BridgeTask is the one component that owns both
-                // the step and the placement, exactly as PillarTask owns a tower. Wiring it up
-                // worked (BridgeTask started, twice a run) and the result was WORSE: 22.5 blocks
-                // short, three of three, the void-fall signature, against 11.6 standing still.
-                // Sneaking when there is no floor ahead (kept, in BridgeTask) did not save it —
-                // the bot is already off the lip by the time the hand-off happens, because the
-                // WALKER delivered it there first. So the owner has to take the manoeuvre from
-                // BEFORE the lip, not at it, and that is a change to where the leg is cut — the
-                // one thing this file has already recorded as a dead end for other reasons.
-                // Falling is a strictly worse failure than standing, so this is not kept.
+                // HANDING A BUILD RUN TO BridgeTask — TRIED TWICE, WORSE BOTH TIMES.
+                // The diagnosis is right: placeAcross flags its planks viaJump and the physics
+                // search has no place move at all, so a bridge is handed to the one engine that
+                // cannot build it. BridgeTask owns walk+place together, as PillarTask owns a
+                // tower. Wired at the lip: 22.5 blocks, void fall, 3 of 3. Wired one cell EARLIER
+                // so it would take over before the lip: 22.5 again, 3 of 3. Against 11.6 standing.
+                // The remaining cause is inside BridgeTask and is now known: it sprints while the
+                // cell ahead is solid, and the cell ahead of "one short of the lip" IS the lip —
+                // so at this stand's 8-12 fps a single sprinting tick carries the bot past the
+                // lip into the void before the next tick can sneak. It must look TWO cells ahead
+                // (pace against place-rate) and never sprint towards a lip.
                 if (rise > PlayerFitJumpHeight() && horiz < 2.5
                         && TungstenConfig.get().planPlaceMoves
                         && !kaptainwutax.tungsten.task.PillarTask.isActive()) {
@@ -427,7 +425,16 @@ public final class FastNavigator {
                     // Route it like a pillar instead: to the component that owns BOTH the step
                     // and the placement.
                     var flaggedWp = res.path.get(physics);
-                    nextPhysicsIsBridge = flaggedWp.toPlace != null && !flaggedWp.toPlace.isEmpty();
+                    // CUT BY MOVE KIND, AND FOR A BUILD CUT ONE CELL EARLIER. A waypoint that
+                    // PLACES is not "physics" — the physics engine has no place move at all —
+                    // so its run goes to BridgeTask, which owns the step and the placement
+                    // together the way PillarTask owns a tower. Handing it over AT the lip was
+                    // already tried and fell into the void, 22.5 three times: the walker's
+                    // advance radius plus momentum carry the bot past the lip before the
+                    // hand-off fires, so the owner inherits a body already in the air. Stopping
+                    // the walker one cell SHORT lets the owner walk that last cell itself, with
+                    // sneak, and arrive at the lip in control.
+                    nextPhysicsIsBridge = false;
                     int runEnd = res.physicsRunEnd(physics);
                     nextPhysicsTarget = breakCell ? goalCell : cells.get(runEnd);
                     cells = cells.subList(0, physics);
