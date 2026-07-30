@@ -1043,3 +1043,29 @@ Next pass starts at that branch: what `effectiveDist` and `closeEnough` actually
 Also worth noting for whoever picks this up: `punkStats` shows the punk task itself inactive on
 9614 of 10797 calls, with noTarget on 239. The two counters together say the chase is idle far
 more than it is chasing.
+
+#### RETRACTION: "59% of ticks think it has arrived" was a misread label (2026-07-30)
+
+The section immediately above is wrong and is withdrawn. The `reached=` field in `chaseStats`
+is `FollowEntityTask.followTicks`, incremented at FollowEntityTask.java:245, and the comment
+beside its declaration says exactly what it means: *"the first version of this counter sat deep
+in the method behind several early returns and so measured 'reached the steering decision', not
+'was called'"*. It counts reaching the steering DECISION, not arriving at the target. 1781 of
+those is healthy, not a defect.
+
+The correct reading of the same numbers:
+
+```
+active=3015 | reached(=decision point)=1781  steer=615  losBlocked=981  cooldown=195
+```
+
+Steering requires line of sight (`hasLineOfSight(effectiveTarget.add(0,1,0))`), and **981 active
+ticks — about a third — have it blocked**, against 615 that actually steer. That fits the two
+courses exactly: `chase_flat` is open ground and passes; `chase_terrain` is broken ground where
+LOS is lost constantly, and there the pursuit depends entirely on the fallback route path.
+
+So the question for the next pass is what happens on the 981 LOS-blocked ticks — not whether
+the bot thinks it has arrived. Print the state there.
+
+Recorded as a retraction rather than an edit because misreading one's own instrument is exactly
+the failure this file exists to make expensive.
