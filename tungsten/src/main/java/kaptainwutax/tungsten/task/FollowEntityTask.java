@@ -273,6 +273,27 @@ public class FollowEntityTask {
         boolean executorRunning  = TungstenModDataContainer.isExecutorRunning();
         boolean pathfinderActive = TungstenModDataContainer.PATHFINDER.active.get();
 
+        // THE BLOCK ROUTE MUST NOT WAIT FOR THE PHYSICS ENGINE TO FINISH. Every branch below
+        // is gated on physics being idle, so during a chase — where the simulation search runs
+        // almost continuously — the block route was computed only when physics happened to be
+        // between searches. Measured on chase_terrain: four route walks in 180 seconds.
+        // TODOS.md AC-2.3 puts it the other way round: the block route comes FIRST and physics
+        // is the last resort, so plan and walk it on its own cadence while physics does whatever
+        // it is doing. Only when the walker is idle — a running walker is already following one.
+        if (!walkerRunning && !stopRequested
+                && kaptainwutax.tungsten.TungstenConfig.get().followBlockPathFinderEnabled
+                && effectiveDist > 6
+                && (pathfinderActive || executorRunning)
+                && tickCounter >= RECALC_TICKS) {
+            tickCounter = 0;
+            var res = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
+                    world, player.getBlockPos(),
+                    net.minecraft.util.math.BlockPos.ofFloored(effectiveTarget),
+                    kaptainwutax.tungsten.TungstenConfig.get().fastPlanBudgetMs);
+            var cells = res.positions();
+            if (cells.size() >= 2) BlockPathWalker.startBFS(cells);
+        }
+
         if (walkerRunning) {
             // walker active — don't touch pathfinder, just let it compute
             stuckTicks = 0;
