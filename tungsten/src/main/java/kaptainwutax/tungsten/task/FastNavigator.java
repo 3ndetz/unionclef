@@ -236,17 +236,18 @@ public final class FastNavigator {
                 double rise = (jump.getY() + 0.5) - player.getEntityPos().y;
                 double horiz = Math.hypot(jump.getX() + 0.5 - player.getEntityPos().x,
                                           jump.getZ() + 0.5 - player.getEntityPos().z);
-                // HANDING A BUILD RUN TO BridgeTask — TRIED TWICE, WORSE BOTH TIMES.
-                // The diagnosis is right: placeAcross flags its planks viaJump and the physics
-                // search has no place move at all, so a bridge is handed to the one engine that
-                // cannot build it. BridgeTask owns walk+place together, as PillarTask owns a
-                // tower. Wired at the lip: 22.5 blocks, void fall, 3 of 3. Wired one cell EARLIER
-                // so it would take over before the lip: 22.5 again, 3 of 3. Against 11.6 standing.
-                // The remaining cause is inside BridgeTask and is now known: it sprints while the
-                // cell ahead is solid, and the cell ahead of "one short of the lip" IS the lip —
-                // so at this stand's 8-12 fps a single sprinting tick carries the bot past the
-                // lip into the void before the next tick can sneak. It must look TWO cells ahead
-                // (pace against place-rate) and never sprint towards a lip.
+                // ROUTING A BUILD RUN TO BridgeTask — TRIED THREE TIMES, WORSE EVERY TIME,
+                // AND THE SPRINT HYPOTHESIS IS REFUTED. Wired at the lip: 22.5, void fall, 3 of
+                // 3. Wired one cell earlier: 22.5, 3 of 3. With BridgeTask paced two cells ahead
+                // and sneaking near a lip (kept — its godbridge model is broken without it now
+                // that placement is honest): 22.5, 3 of 3 again. So it is NOT sprint overshoot.
+                // Against 11.6 standing still. Falling is a strictly worse failure, so no.
+                //
+                // Three refuted hypotheses in a row on one seam is the signal to stop guessing:
+                // the port has to come from baritone's execution MODEL (Movement owns its inputs,
+                // its failure condition and its valid positions), not from wiring tungsten's
+                // existing tasks into a plan that was never shaped for them. See
+                // docs/BARITONE-PORT-SPEC.md.
                 if (rise > PlayerFitJumpHeight() && horiz < 2.5
                         && TungstenConfig.get().planPlaceMoves
                         && !kaptainwutax.tungsten.task.PillarTask.isActive()) {
@@ -434,6 +435,11 @@ public final class FastNavigator {
                     // hand-off fires, so the owner inherits a body already in the air. Stopping
                     // the walker one cell SHORT lets the owner walk that last cell itself, with
                     // sneak, and arrive at the lip in control.
+                    // CUT BY MOVE KIND. A waypoint that PLACES is not "physics" — that engine
+                    // has no place move at all — so its run goes to BridgeTask, which owns the
+                    // step and the placement together as PillarTask owns a tower. Cut one cell
+                    // EARLIER for a build so the owner takes over BEFORE the lip: handing over
+                    // AT the lip inherits a body already carried past it by the walker.
                     nextPhysicsIsBridge = false;
                     int runEnd = res.physicsRunEnd(physics);
                     nextPhysicsTarget = breakCell ? goalCell : cells.get(runEnd);

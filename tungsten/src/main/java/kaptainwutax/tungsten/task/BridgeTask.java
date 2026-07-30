@@ -145,11 +145,22 @@ public class BridgeTask {
         // since the 0.6-wide box keeps support while x - 0.3 is over the block) — which is the
         // ONLY position from which the block's side face is visible at all. Forward stays
         // pressed: that creep is what the manoeuvre needs. Sprint only on real ground.
+        // PACE AGAINST THE PLACE RATE, TWO CELLS AHEAD. Looking only ONE cell ahead is what
+        // dropped the bot into the void: the cell ahead of "one short of the lip" IS the lip, so
+        // floorAhead was true, the bot sprinted — and at this stand's 8-12 fps a single
+        // sprinting tick carries it clean past the lip before the next tick can sneak. Measured
+        // 22.5 blocks short, 3 of 3, twice over. Sprint only when there is floor for the tick
+        // AFTER this one as well, and sneak the moment the lip is within one cell: sneaking
+        // cannot walk off an edge, and it still lets the body creep to the sneak limit
+        // (centre = edge + 0.3, the 0.6-wide box keeping support), which is the only place from
+        // which the block's side face can be seen at all.
         boolean floorAhead = !isAir(world, targetCell);
-        opts.sneakKey.setPressed(!floorAhead);
+        boolean floorTwoAhead = !isAir(world, targetCell.offset(dir));
+        boolean lipNear = !floorAhead || !floorTwoAhead;
+        opts.sneakKey.setPressed(lipNear);
         opts.forwardKey.setPressed(true);
-        opts.sprintKey.setPressed(floorAhead);
-        player.setSprinting(floorAhead);
+        opts.sprintKey.setPressed(!lipNear);
+        player.setSprinting(!lipNear);
 
         // aim: prefer paving the cell 2 ahead as well so a fast walk never
         // outruns the floor. Place the nearest air cell in {targetCell, +2}.
