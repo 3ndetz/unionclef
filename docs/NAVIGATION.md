@@ -908,3 +908,40 @@ Standing caveat, so this is not read as more than it is: the stand's fps varies 
 host's other containers, and nav_bridge has passed at 22-24 fps and failed at ~10. A green
 sweep is a green sweep, but the low-fps behaviour is not yet proven and AC-1 in TODOS.md
 still stands.
+
+## THE CHASE DOES NOT USE THE FAST PLANNER AT ALL (2026-07-30) — AC-1 root cause
+
+The user's complaint, verbatim: *while the enemy runs away we recompute the whole route and end
+up 100+ blocks behind*. Reproduced on the bench and traced, and the cause is not a tuning
+problem — the chase runs on the wrong engine.
+
+`chase_terrain`: **FAIL — contact=None, kills=0** over 120 s of pursuit. `chase_flat` passes
+(contact 12.3 s, avg dist 4.64), so the failure needs terrain to show.
+
+The decisive measurement is what is NOT in the log. Across a whole failing run:
+
+| fingerprint | count |
+|---|---|
+| `FastPlanner:` | **0** |
+| `Walker: BFS` | **0** |
+| `MovementQueue:` | **0** |
+| `physics owns` | 0 |
+
+Zero. The block planner never runs during a chase. `PunkPlayerTask` hands the approach to
+`FollowEntityTask`, which steers with `BlockPathWalker.steerLive(...)` — a beeline at the target
+— and whose "primary pathfinder" (`FollowEntityTask.java:279`, `startFind`) is
+`TungstenModDataContainer.PATHFINDER`, the **physics** A\*. So the pursuit is: beeline, and when
+that is not enough, run the slow simulation search.
+
+That is exactly backwards from the agreed engagement order (`TODOS.md`, AC-2.1: block route
+first, always; physics LAST, only when nothing else reaches). It also explains the shape of the
+complaint precisely: the physics search is the one that takes real time, and it is being asked
+to keep up with a runner.
+
+Note the bench's own asymmetry, which makes it a fair test of exactly this: the RUNNER flees
+with `@goto`, i.e. on baritone/shredder, while the CHASER pursues on tungsten. Baritone's block
+route outruns our physics search — which is the whole reason the user asked for baritone's speed
+as well as its building.
+
+Next: give the chase the fast block route (plan with `FastPlanner`, extend rather than replan)
+and leave physics as the last resort, per AC-2.
