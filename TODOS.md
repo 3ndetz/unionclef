@@ -173,6 +173,12 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   reports "Mining done".
 - [ ] **C5.5 `planPlaceMoves` ships OFF** and nothing in the default path turns it on → the shipped
   bridging behaviour is still the **reactive 14-second-stall patch** the project rules forbid.
+  СТАТУС 2026-07-30: всё ещё `false` (`TungstenConfig.java:160`) — и теперь это ХУЖЕ, чем было.
+  За эту сессию постановка стала полноценной: оценённый ход в поиске, цепочка планок, честный
+  рейтрейс вместо подделки, перенесённые ходы baritone. Полоса 12/12. Но nav-сценарии включают
+  флаг ЯВНО, поэтому зелёный счёт получает стенд, а реальный пользователь — ничего. Правка в одну
+  строку, но она меняет выбор маршрута везде, поэтому нужен полный свип + оба курса погони до и
+  после. Заведено как задача, ждёт освобождения стенда.
 - [ ] **C5.6 `stringPull` deletes the very nodes carrying the break/place plan** before anything reads
   them (`BlockSpacePathFinder.java:412-429`, no `hasBreaks()`/`hasPlaces()` guard).
 - [x] **C5.7 Place has exactly ONE shape** (horizontal bridge, cardinal, same-Y). **No pillar-up as a
