@@ -481,6 +481,23 @@ public class BlockPathWalker {
         // only the steering is yielded; an earlier attempt returned outright here and was worse.
         var execAim = TungstenModDataContainer.EXECUTOR;
         boolean placerOwnsAim = execAim != null && execAim.placingNow;
+        // ONE OWNER OF THE BODY, NOT JUST THE CAMERA. The backplace manoeuvre has to creep the
+        // body ~0.3 past the lip — sneaking allows exactly that much, since the box's rear
+        // stays supported — and it is the only position from which the block's SIDE face is
+        // visible at all. The walker was still pressing towards its waypoint underneath it, and
+        // with the placer facing BACK up the bridge those two pushes cancel: measured
+        // "called=11041 inRange=11040 clicked=0", eleven thousand ticks in range and the
+        // crosshair never once on the right face, because the body never got past the lip.
+        //
+        // Yielding here was previously recorded as MEASURED WORSE. That measurement was taken
+        // while placement forged its hit result and therefore did not care where the body or
+        // the camera were; it says nothing about this code.
+        if (placerOwnsAim) {
+            // Do NOT releaseKeys() here: the placer has already set sneak and MOVE_BACK for
+            // this tick, and depending on tick order releasing would wipe the very inputs the
+            // manoeuvre needs. Yielding means keeping hands off, not undoing the other owner.
+            return;
+        }
         float yaw = AttackTiming.yawTo(playerPos, wpPos);
         if (!placerOwnsAim) {
             WindMouseRotation.INSTANCE.setTargetFast(yaw, 0);  // fast nav turn — keep the 45deg gate open

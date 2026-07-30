@@ -735,3 +735,30 @@ how faithfully each half is ported.
 Current honest state: placement no longer forges interactions (correct), and nav_bridge is red
 because of it (11.6 blocks, 3 of 3). nav_wall2 still passes 2/2 — pillaring reaches its face
 from where it already stands, so it never needed the manoeuvre.
+
+### Three attempts, none moved the number — where the next session must start
+
+All measured on nav_bridge, all still `clicked=0`:
+
+1. sole ownership of the AIM while the placer is in range — 11.6, unchanged;
+2. the full backplace manoeuvre (face back, look down at the face, MOVE_BACK, sneak) — 11.6;
+3. sole ownership of the BODY too, and then not wiping the placer's keys on yield — still
+   `called=336 inRange=336 clicked=0`.
+
+So the crosshair never lands on the face, and it is not key contention and not aim contention.
+The remaining candidates, in the order worth testing:
+
+- **Is the body actually creeping past the lip?** Sneaking permits the centre to reach
+  `edge + 0.3` (the box's rear 0.3 keeps support), and that is the ONLY position from which a
+  block's side face is visible — from anywhere further back the ray crosses the block's top
+  plane while still inside its footprint. Log the player's x/z against the lip, per tick. If it
+  never passes the edge, the manoeuvre is being blocked by something else pressing keys.
+- **Is the pitch reaching ~-79 degrees?** That is roughly what the geometry needs. WindMouse
+  smooths, so log the achieved pitch, not the requested one.
+- **What IS the crosshair hitting?** Log `mc.crosshairTarget`'s block and side each tick while
+  in range. If it is the TOP face of the block below, the body has not passed the lip. This is
+  one line and it settles the question — it should have been the first thing logged.
+
+The structural conclusion stands regardless: MovementTraverse owns the step AND the place, and
+tungsten splits them. Until one component owns both, each faithful half-port will keep failing
+for a different reason.
