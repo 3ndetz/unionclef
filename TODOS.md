@@ -1,5 +1,85 @@
 # TODOs
 
+## TARGET PLATFORM AND ACCEPTANCE CRITERIA (user 2026-07-30) — what every pass is judged against
+
+> Written down because it was only ever in one agent's head. This section defines WHAT we are
+> building and HOW a pass is accepted. It outranks any individual fix: a change that improves a
+> course but violates a criterion here is not accepted.
+
+### The deal: take baritone's BEST, keep tungsten's BEST, kill neither
+
+Baritone gives us two things it is genuinely better at: **building/breaking** and **SPEED**.
+Tungsten gives one thing baritone cannot do at all: a **real physics simulation** of the player
+body. Neither engine is being replaced. What was wrong is that each was being asked to do the
+other's job.
+
+| capability | owner | why |
+|---|---|---|
+| place / break as part of movement | **ported baritone `Movement`** (`tungsten/.../path/movements/`) | it owns the whole step: keys, aim, real crosshair click. tungsten's version split walking from placing and failed at a different seam every time |
+| route planning, short and instant | **block-space BFS/A\*** (`FastPlanner`), baritone-shaped | this is HOW baritone is fast: block cells, not simulated bodies |
+| swim / dive / enter+exit water / ladder / slime bounce | **physics engine** (`path/PathFinder`, `Node.getChildren`, `path/specialMoves/`) | it simulates the real body; nothing else can hold a heading in water or ride a bounce |
+| hard parkour no block route can reach | **physics engine**, engaged LAST | only when there are no blocks and no way round |
+
+**The physics engine is not to be deleted, weakened or bypassed.** It lives in
+`tungsten/src/main/java/kaptainwutax/tungsten/path/PathFinder.java`, `path/Node.java`
+(`getChildren` = move generation) and `path/specialMoves/` — 13 moves: `SwimmingMove`,
+`DivingMove`, `EnterWaterAndSwimMove`, `ExitWaterMove`, `ClimbALadderMove`, `JumpToLadderMove`,
+`SlimeBounceMove`, `LongJump`, `CornerJump`, `SprintJumpMove`, `TurnACornerMove`, `RunToNode`,
+`WalkToNode` — driven through `PathInput`/`Agent`. Any pass touching these must say why.
+
+### AC-1 - SPEED IS A FEATURE, AND WE ARE CURRENTLY FAILING IT
+
+**The symptom, in the user's words: while the enemy runs away we recompute the whole route and
+end up 100+ blocks behind the target. That is unacceptable.**
+
+- [ ] **AC-1.1 Time to first step.** From "goal set" to "a movement key is pressed": single-digit
+      milliseconds for a short route, not a planning budget. The search can already do this -
+      measured 202 nodes in 1.7 ms once its own logging left the inner loop - so the budget is no
+      longer the constraint, the pipeline is.
+- [ ] **AC-1.2 Never recompute from scratch while moving.** A moving target is tracked by
+      EXTENDING the plan, not replanning it. A full mid-chase replan is a defect, not a tuning
+      parameter.
+- [ ] **AC-1.3 Chase gate.** Against a target moving at sprint speed the bot stays within a few
+      blocks and closes. "100+ blocks behind" is the current value and the number that must move.
+- [ ] **AC-1.4 Run first, refine while running.** Start running the exact block route
+      IMMEDIATELY. While running, compute the physics route FROM A FUTURE NODE and switch to it
+      at that node ONLY if it came back faster in time. Never stand still waiting for a better
+      idea.
+- [ ] **AC-1.5 Minimal physics pass, instantly.** Baritone has no physics at all; we do. A simple
+      route over the block nodes gets a MINIMAL physics check straight away - enough to know it is
+      walkable, not a full simulation. The full search stays for the hard cases.
+
+### AC-2 - ENGAGEMENT ORDER (what runs when)
+
+- [ ] **AC-2.1** Block route first, always. It is the fast one.
+- [ ] **AC-2.2** A step needing a block placed or broken goes to the ported baritone movement.
+- [ ] **AC-2.3** Physics is engaged LAST: when the block route genuinely cannot reach - nothing in
+      the pocket, no way round - then try the hard parkour move.
+- [ ] **AC-2.4** Dispatch BY MOVE KIND, not by one `viaJump` flag. A waypoint that PLACES is not
+      "physics": measured, `placeAcross` flags its planks `viaJump` and the plan is then handed to
+      the one engine that has no place move at all.
+
+### AC-3 - SIDE TASK: teach the physics side to PLACE
+
+- [ ] **AC-3.1 Parkour-place.** Placing is fast, so it should be available to the physics side
+      too: a block under yourself mid-jump when that is quicker than going round. After AC-1/AC-2.
+
+### The two porting rules (user, 2026-07-30)
+
+**RULE 1 - TAKE IT WHOLE, ADAPT LATER.** The BFS routing logic for placing and breaking comes over
+from baritone ENTIRELY, verbatim, including parts that look redundant. Only once it WORKS on the
+stand do we adapt it to tungsten's shape. Adapting during the port is what produced eight failed
+passes on one course: a forged hit result instead of the real ray trace, `WALK * 2.5` instead of
+the real `SNEAK_ONE_BLOCK_COST = 15.385`, a jump priced at 11.13 instead of 3.163, and a comment
+claiming "the camera is cosmetic here".
+
+**RULE 2 - ALWAYS RE-CHECK BOTH SIDES BEFORE WRITING ANYTHING.** Before adding any mechanism, open
+baritone's version AND tungsten's own. Two questions, answered with `file:line`: *does this already
+exist?* and *did we already hit this bug?* Then REUSE it. The cost of skipping this is on record:
+an audit found **58 re-derived / 40 missing** behaviours (`docs/BARITONE-PORT.md`), and a whole
+session went into rediscovering that the search burns its budget writing chat from the inner loop -
+which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` section 1b.
+
 ## 🔴🔴 CRITICAL REGISTER — full audit 2026-07-27 (do NOT delete an entry without a fix + test)
 
 > Full write-up with evidence: **[docs/ai/audit-2026-07-27-tungsten-full.md](docs/ai/audit-2026-07-27-tungsten-full.md)**.
