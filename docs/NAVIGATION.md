@@ -716,3 +716,28 @@ is not finished.
 
 What NOT to conclude: that the port is wrong. `placeStats` reads `called=0` on the new path, i.e.
 the old forged-placement route is genuinely dead and the ported movement is doing the work.
+
+### CORRECTION: the live-trace fix is NOT proven to be what fixed nav_bridge (2026-07-30)
+
+The commit for it says "this is what the fps sensitivity was". That claim is not supported by
+its own numbers and is withdrawn here.
+
+| when | isolated nav_bridge | avg_fps |
+|---|---|---|
+| before the live-trace fix | FAIL 3/3, 22.5 | 9.9-10.0 |
+| after it | PASS 3/3, 1.2-1.4 | 20.0-21.7 |
+| after it, inside a full 12-course sweep | **FAIL** | ~10 (late-sweep) |
+
+The fps doubled between the two isolated measurements, and the host's load is not something
+this session controls — the user's production containers come and go. So the pass may be the
+fix, or it may be the machine, and the in-sweep FAIL at ~10 fps points at the machine. Both
+readings survive the evidence, which means neither is established.
+
+To settle it, and it is one experiment: pin the two builds against each other in the SAME
+window — check out the previous commit, run nav_bridge three times, check out this one, run it
+three times, and compare only if both sets report a similar avg_fps. Do not compare across a
+gap in wall-clock time on this host.
+
+The live trace is kept regardless: reading a once-per-render cache in a gate that upstream
+ray-traces every time is wrong on its own terms (RayTraceUtils.rayTraceTowards), whatever it
+turns out to be worth on this stand.
