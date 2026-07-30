@@ -884,3 +884,27 @@ Baselines on the same bench: nav_flat 1.0, nav_wall2 0.9, nav_hazard 1.6, nav_ga
 **Full sweep: 12/12**, at avg_fps 5.3-9.0 — i.e. green under conditions HARSHER than the ~10 fps
 that used to score 10/12. `nav_slime` came with it (t=29.0s, final_dist 1.3) exactly as expected:
 it needed the same bridging.
+
+## 12/12 — the whole nav suite green in a full sweep (2026-07-30)
+
+```
+nav_flat nav_staircase nav_steep nav_gaps nav_descend nav_water
+nav_ladder nav_slime nav_break nav_wall2 nav_bridge nav_hazard   all PASS
+12/12 ok, gate failures: 0, invalid (host starved): 0
+```
+
+`MovementQueue` reports two chains and both finish — `16 traverse(s) 0,-53,0 -> 16,-53,0`,
+`chain complete`, `14 traverse(s) 0,-60,0 -> 14,-60,0`, `chain complete` — with no off-path
+aborts at all. Bridging is done by the ported baritone movements end to end.
+
+Getting here took, in order: the search's own logging out of its inner loop (164 nodes in
+204 ms -> 202 in 1.7 ms), the search remembering blocks it places, a hazard predicate the
+planner never had, an arrival test that mistook a cell overhead for one underfoot, the
+verbatim movement port, and finally treating off-path drift as a re-plan rather than a
+failure. Every step of that is above, including the parts that measured worse and were
+reverted.
+
+Standing caveat, so this is not read as more than it is: the stand's fps varies with the
+host's other containers, and nav_bridge has passed at 22-24 fps and failed at ~10. A green
+sweep is a green sweep, but the low-fps behaviour is not yet proven and AC-1 in TODOS.md
+still stands.
