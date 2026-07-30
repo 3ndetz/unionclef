@@ -183,9 +183,20 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   react" patch. STILL OPEN: the placement is not COSTED inside `FastPlanner` (a climb costs the same
   whether or not a block must be placed), and the shape is still one-per-kind. Full closure = a
   costed place move in the search itself.
-- [ ] **C5.8 "Cheaty placement" CONFIRMED IN CODE:** `BridgeTask`/`PillarTask` place with a
+- [~] **C5.8 "Cheaty placement" CONFIRMED IN CODE:** `BridgeTask`/`PillarTask` place with a
   **fabricated `BlockHitResult`** and **no aim-convergence check** — the packet goes out regardless of
-  where the camera points. And fills emit **up to 96 placements in one client-thread task with no
+  where the camera points.
+  ЧАСТИЧНО ЗАКРЫТО 2026-07-30 + прогон на стенде (юзер поймал это на видео, и регистр уже нёс
+  этот пункт неотмеченным). Подделка убрана во ВСЕХ ТРЁХ местах — `PathExecutor.tickPlacing`,
+  `BridgeTask`, `PillarTask` (последний вообще не наводился). Теперь постановка идёт через
+  НАСТОЯЩИЙ рейтрейс игры: `helpers/RealPlacement.java` — порт гейта
+  `MovementHelper.attemptToPlaceABlock` (baritone/.../MovementHelper.java:806-856): целимся в
+  грань, принимаем только когда собственный прицел игрока попадает туда, откуда получится нужный
+  блок, и ставим ЭТИМ ЖЕ хитом. Плюс порт `canPlaceAgainst` (нормальные кубы и стекло, а не
+  «форма коллизии непустая»). Проверено: `placeStats` даёт `called=0` на старом пути, полоса
+  навигации 12/12 в трёх сквозных свипах подряд.
+  ОСТАЛОСЬ по этому пункту: троттлинг заливок — «до 96 постановок в одной задаче клиентского
+  потока без ограничения» (клип «6 стекла появились разом») не трогали. And fills emit **up to 96 placements in one client-thread task with no
   throttle** (that is the "6 glass appeared at once" clip).
 - [ ] **C5.9** `BridgeTask` has no re-equip / no fallback when the stack empties mid-bridge. Build
   material is a hardcoded 8-item list duplicated in two files, with a third policy elsewhere.
