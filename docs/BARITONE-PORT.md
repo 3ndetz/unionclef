@@ -762,3 +762,40 @@ The remaining candidates, in the order worth testing:
 The structural conclusion stands regardless: MovementTraverse owns the step AND the place, and
 tungsten splits them. Until one component owns both, each faithful half-port will keep failing
 for a different reason.
+
+### The crosshair question, answered — and the next one, also answered
+
+Logged what the crosshair was actually hitting, which is what should have happened first:
+
+```
+PLACEAIM want=13,-61 against=12,-61 side=east pos=(11.43,0.62) pitch=53/53
+         hit=12,-61 side=up -> would fill 12,-60
+```
+
+The bot was standing at **x=11.43** — a block and a half short of the lip block (x=12), aiming
+at its TOP face — because the placer took the BODY as soon as it was within 5.5 blocks and
+froze it there. Upstream never has this because walking is a separate movement that finishes
+first; the placement runs when the bot is already in the cell it places from.
+
+Fixed: the placer now takes the body only when the feet cell is directly above the block it
+will click. And that immediately answered the next question too:
+
+```
+PLACEWAIT want=13,-61 against=12,-61 feet=11,-60 pos=(11.44,0.50) onGround=true
+```
+
+**The walker leaves the bot 0.56 blocks short of the lip block and stops.** The placer is no
+longer interfering — `placingNow` is false in this state, so the walker is free — and the bot
+still does not step onto (12,-60). That is where the next session starts, and it is a walker /
+navigator question, not a placement one:
+
+- is the walker even ticking here, or did its leg end and the navigator not start another
+  (its leg-start needs `!BlockPathWalker.isRunning()`, and the stall watchdog counts a live
+  place queue as progress, so it will neither stop nor advance);
+- does the leg contain (12,-60) at all, or did the waypoint advance already consume it and
+  leave the walker steering at (13,-60), the floorless cell;
+- and the geometry to aim for once it does arrive: sneaking permits the centre to reach
+  ~13.29 (the box is 0.6 wide, so support holds while `x - 0.3 < 13`), and from there the
+  face IS visible at a pitch of about 82 degrees. From the block's centre it is not, at any
+  pitch — the ray crosses the top plane while still inside the footprint. Verified by
+  construction, not by guess.

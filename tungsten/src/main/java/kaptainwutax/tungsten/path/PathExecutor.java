@@ -480,7 +480,6 @@ public class PathExecutor {
             return false;                       // keep the queue; we are on our way there
         }
         placeInRange++;
-        placingNow = true;                      // in range: the placer owns the aim
         if (placingTicks++ > 200) {
             Debug.logMessage(String.format(
                     "Bridge place aborted (TIMEOUT) dist=%.2f ticks=%d target=%s",
@@ -546,6 +545,30 @@ public class PathExecutor {
         // the bridge while still looking at the face — and sneaks so stepping over the empty
         // cell does not become a fall. The new block appears beneath it. That is the whole
         // trick, and it is why the bot must walk BACKWARDS to bridge.
+        // THE PLACER TAKES THE BODY ONLY WHEN THE BODY IS IN THE RIGHT CELL. Owning it from
+        // 5.5 blocks out froze the bot short of the lip and it then tried to place from there:
+        // "PLACEAIM want=13,-61 against=12,-61 pos=(11.43,0.62) pitch=53 hit=12,-61 side=up",
+        // i.e. standing a block and a half back, aiming at the wrong face, forever — 336 ticks
+        // in range and not one click. Upstream never has this problem because WALKING is a
+        // separate movement that finishes first; the placement runs when the bot is already in
+        // the cell it places from. So: while the bot is not standing on the block it will click,
+        // keep hands off and let the walker deliver it.
+        net.minecraft.util.math.BlockPos feetCell = player.getBlockPos();
+        boolean onAgainst = feetCell.getX() == against.getX() && feetCell.getZ() == against.getZ()
+                && feetCell.getY() == against.getY() + 1;
+        placingNow = onAgainst;
+        if (!onAgainst) {
+            if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging
+                    && (placingTicks % 20 == 0)) {
+                Debug.logMessage(String.format(
+                        "PLACEWAIT want=%s against=%s feet=%s pos=(%.2f,%.2f) onGround=%b",
+                        target.toShortString(), against.toShortString(),
+                        feetCell.toShortString(), player.getX(), player.getZ(),
+                        player.isOnGround()));
+            }
+            return true;                        // still being walked there — do not touch it
+        }
+
         if (sneakToPlace) {
             Vec3d destCentre = Vec3d.ofCenter(target);
             // yaw FROM the cell being paved TOWARDS the head — i.e. facing back up the bridge.
@@ -577,6 +600,25 @@ public class PathExecutor {
         // and place with THAT hit result. If the aim never converges the placement does not
         // happen — which is a bug to fix in the aim, not to paper over with a forged packet.
         var realHit = kaptainwutax.tungsten.helpers.RealPlacement.readyToPlace(mc, target);
+        // WHAT IS THE CROSSHAIR ACTUALLY HITTING? This should have been the FIRST thing logged,
+        // not the fourth: three attempts were spent on aim ownership, the manoeuvre and key
+        // ownership while "clicked=0" could have been explained by one line.
+        if (realHit == null && kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging
+                && (placingTicks % 20 == 0)) {
+            var ct = mc.crosshairTarget;
+            String what = "null";
+            if (ct instanceof net.minecraft.util.hit.BlockHitResult b
+                    && ct.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
+                what = b.getBlockPos().toShortString() + " side=" + b.getSide()
+                        + " -> would fill " + b.getBlockPos().offset(b.getSide()).toShortString();
+            } else if (ct != null) {
+                what = String.valueOf(ct.getType());
+            }
+            Debug.logMessage(String.format(
+                    "PLACEAIM want=%s against=%s side=%s pos=(%.2f,%.2f) pitch=%.0f/%.0f hit=%s",
+                    target.toShortString(), against.toShortString(), side,
+                    player.getX(), player.getZ(), player.getPitch(), wantPitch, what));
+        }
         if (realHit != null && (!sneakToPlace || player.isInSneakingPose())) {
             placeClicked++;
             mc.interactionManager.interactBlock(player, net.minecraft.util.Hand.MAIN_HAND, realHit);
