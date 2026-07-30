@@ -309,6 +309,16 @@ public class FollowEntityTask {
                 && tickCounter >= RECALC_TICKS) {
             lastTargetPos = effectiveTarget;
             tickCounter = 0;
+            // DRIVING THE CHASE THROUGH FastNavigator — MEASURED WORSE, REVERTED. The
+            // reasoning still looks right and is worth keeping written down: everything that
+            // makes the nav suite 12/12 (handing a climb to PillarTask, a build to MovementQueue,
+            // cutting legs by move kind) lives in the navigator, and the chase bypasses all of it
+            // by driving BlockPathWalker directly. But routing the approach through
+            // FastNavigator.start(target) did not take chase_terrain's gate AND made the passing
+            // course worse: chase_flat avg dist 3.74 -> 4.9 (gate < 7). A moving goal restarts
+            // the navigator's leg planning from scratch on every re-aim, which is the opposite of
+            // AC-1.2. Extending a plan towards a moving target is the thing that has to be built;
+            // pointing a static-goal navigator at a runner is not it.
             var res = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
                     world, planStart(world, player),
                     net.minecraft.util.math.BlockPos.ofFloored(effectiveTarget),
