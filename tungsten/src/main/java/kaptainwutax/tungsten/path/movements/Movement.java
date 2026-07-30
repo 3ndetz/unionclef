@@ -24,6 +24,7 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldView;
 
@@ -95,6 +96,10 @@ public abstract class Movement {
     /** Baritone {@code pauseMiningForFallingBlocks}, Settings.java:370 = true. */
     private static final boolean PAUSE_MINING_FOR_FALLING_BLOCKS = true;
 
+    /** Purely a telemetry threshold: how far the camera has to be from the requested facing before
+     *  a tick counts as "steered" in {@link #motionSteered}. Nothing branches on it. */
+    private static final float STEER_REPORT_DEG = 15.0f;
+
     /**
      * BlockPlaceHelper.java:31 keeps this per-Baritone-instance, i.e. per player, NOT per movement:
      * the 4-tick place cooldown has to survive the handover from one movement to the next, or a
@@ -115,6 +120,59 @@ public abstract class Movement {
      * {@code placeClicked} = {@code interactBlock} returned SUCCESS.
      */
     public static volatile int placeRequested, placeOnCooldown, placeNoHit, placeClicked;
+
+    /**
+     * Ticks on which the motion frame ({@link #motionYaw}) differed from the camera by more than
+     * {@link #STEER_REPORT_DEG} — i.e. ticks where the bot walked in the direction this movement
+     * ASKED for while the camera was still on its way there. Telemetry only, read as
+     * {@code placeStats}: "the mechanism fired N times" is the difference between a fix that is
+     * doing something and one that merely compiles.
+     */
+    public static volatile int motionSteered;
+
+    /**
+     * The facing in which THIS TICK's inputs are to be resolved, or {@code null} when no ported
+     * movement owns the tick. Read by {@code MixinEntityMotionYaw} around
+     * {@code Entity.updateVelocity}; cleared at the RETURN of {@code ClientPlayerEntity.tick}, which
+     * is upstream's "the target is done being used for this game tick" (LookBehavior.java:126).
+     *
+     * <p>WHY THIS EXISTS — the mechanism, measured. Baritone's movements press a direction key in the
+     * same breath as they ask for a rotation, and that is sound upstream because
+     * {@code LookBehavior.onPlayerUpdate} PRE snaps {@code player.setYaw(...)} on that very tick, and
+     * {@code MixinEntity} (baritone/src/main/java/baritone/launch/mixins/MixinEntity.java:43-66, and
+     * the identical file in shredder/) swaps the yaw around {@code updateVelocity} so the input
+     * vector is resolved in the requested facing whatever the camera is doing. Our aim goes through
+     * {@link WindMouseRotation}, stepped once per RENDER FRAME, so the direction keys were being
+     * resolved in LAST tick's facing. Traced on nav_bridge at the seam where the sneak-backplace
+     * (which deliberately faces BACKWARDS down the bridge) hands over to the next step:
+     * <pre>
+     *   MV 12,-60,0-&gt;13,-60,0 pos=13.30 yaw=90/90   err=0    keys=Su  &lt;- plank placed, facing back
+     *   MV 13,-60,0-&gt;14,-60,0 pos=13.30 yaw=90/-90  err=-180 keys=F   &lt;- "forward" pressed...
+     *   MV 13,-60,0-&gt;14,-60,0 pos=13.20 yaw=81/-91  err=-171 keys=F   &lt;- ...runs the bot BACKWARDS
+     *   MV 13,-60,0-&gt;14,-60,0 pos=12.87 ...
+     *   MovementQueue: off path (3.1) at 10.96,-60.00,2.13 ground=true
+     * </pre>
+     * At 25 fps the turn costs half a block and the course still passes; at the ~9 fps of a full
+     * sweep it costs three, the queue gives up, and the bot ends in the void — final_dist 22.5,
+     * self_falls=1.
+     *
+     * <p>MEASURED AND REVERTED, so it is not tried again: holding the direction keys back until the
+     * CAMERA reached a forced target changed nothing (22.5 before, 22.5 after, avg_fps 8.8 both).
+     * The branch that walks the bot backwards is the {@code MovementHelper.moveTowards} fall-through,
+     * whose target is UNFORCED, so the gate never saw it — and widening the gate to every target
+     * would make the bot stand still through every heading change, which is not what upstream does.
+     * Upstream STEERS. So does this.
+     */
+    public static volatile Float motionYaw;
+
+    /** Companion to {@link #motionYaw}: the pitch of the same requested rotation. */
+    public static volatile Float motionPitch;
+
+    /** {@code LookBehavior}'s POST (LookBehavior.java:100-126): one target, one game tick. */
+    public static void clearMotionFrame() {
+        motionYaw = null;
+        motionPitch = null;
+    }
 
     /** The {@code IPlayerContext} stand-in. See {@link PlayerCtx}. */
     protected final PlayerCtx ctx = new PlayerCtx();
@@ -238,6 +296,9 @@ public abstract class Movement {
                         player,
                         rotation,
                         currentState.getTarget().hasToForceRotations()));
+        if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) {
+            logTick(player);
+        }
         clearAllKeys();
         // Movement.java:139-148 is `clearAllKeys(); apply; clear; if (complete) clearAllKeys();` —
         // upstream can force the inputs and then take them back, because the force map is consumed
@@ -245,11 +306,81 @@ public abstract class Movement {
         // cannot be un-clicked, so the trailing cancellation has to be the guard in front instead.
         // Net behaviour is identical: a completed movement forces no inputs.
         if (!currentState.getStatus().isComplete()) {
+            armMotionFrame(player);
             applyInputs(player, currentState.getInputStates());
         }
         currentState.getInputStates().clear();
 
         return currentState.getStatus();
+    }
+
+    /**
+     * Declare the facing this tick's inputs are to be resolved in — the port of
+     * {@code LookBehavior.onPlayerRotationMove} (LookBehavior.java:167-173) plus the mixin that
+     * consumes it. See {@link #motionYaw} for the trace this was built from.
+     *
+     * <p>EVERY target counts, forced or not: upstream's hook does not look at the mode either, and
+     * the branch that broke nav_bridge is the unforced {@code moveTowards} fall-through. A movement
+     * that declares no rotation at all leaves the frame unset and the body walks by the camera, as
+     * before.
+     */
+    private void armMotionFrame(ClientPlayerEntity player) {
+        Rotation rotation = currentState.getTarget().getRotation().orElse(null);
+        if (rotation == null) {
+            return;
+        }
+        motionYaw = rotation.getYaw();
+        motionPitch = rotation.getPitch();
+        if (Math.abs(MathHelper.wrapDegrees(rotation.getYaw() - player.getYaw())) > STEER_REPORT_DEG) {
+            motionSteered++;
+        }
+    }
+
+    /**
+     * DIAGNOSTIC, verbose-gated, one line per ticked movement — never in a search loop. It prints the
+     * three things a tick of this port is made of, together, because every mechanism question asked
+     * of it so far ("did it press MOVE_BACK before or after the camera turned round?") needs all
+     * three at once: the body (feet cell + exact position), the CAMERA (where it is against where
+     * this tick asked it to be) and the KEYS this tick declared. A crossing is ~250 ticks, so the
+     * whole run fits in the container log.
+     *
+     * <p>READ IT FROM {@code docker logs uctest-mc-tester1}, not from {@code getRecentChat}: 250
+     * lines overflow the py4j chat ring ({@code Py4jEntryPoint.CHAT_LOG_MAX = 300}) and the client
+     * prints "Chat overflow, message dropped". Everything sent to chat also reaches the container's
+     * stdout as a {@code [CHAT]} line, which has no such limit.
+     */
+    private void logTick(ClientPlayerEntity player) {
+        Rotation want = currentState.getTarget().getRotation().orElse(null);
+        float yawNow = player.getYaw();
+        String yaw = want == null
+                ? String.format("yaw=%.0f/- err=-", yawNow)
+                : String.format("yaw=%.0f/%.0f err=%.0f", yawNow, want.getYaw(),
+                        MathHelper.wrapDegrees(want.getYaw() - yawNow));
+        StringBuilder keys = new StringBuilder();
+        for (Map.Entry<Input, Boolean> e : currentState.getInputStates().entrySet()) {
+            if (!Boolean.TRUE.equals(e.getValue())) {
+                continue;
+            }
+            switch (e.getKey()) {
+                case MOVE_FORWARD: keys.append('F'); break;
+                case MOVE_BACK:    keys.append('B'); break;
+                case MOVE_LEFT:    keys.append('L'); break;
+                case MOVE_RIGHT:   keys.append('R'); break;
+                case JUMP:         keys.append('J'); break;
+                case SNEAK:        keys.append('S'); break;
+                case SPRINT:       keys.append('P'); break;
+                case CLICK_LEFT:   keys.append('a'); break;
+                case CLICK_RIGHT:  keys.append('u'); break;
+                default: break;
+            }
+        }
+        Vec3d p = player.getEntityPos();
+        kaptainwutax.tungsten.Debug.logMessage(String.format(
+                "MV %s->%s st=%s feet=%s pos=%.2f,%.2f,%.2f %s keys=%s ground=%b pose=%b",
+                src.toString(), dest.toString(), currentState.getStatus(),
+                ctx.playerFeet().toString(), p.x, p.y, p.z, yaw,
+                keys.length() == 0 ? "-" : keys.toString(),
+                player.isOnGround(), player.isInSneakingPose()));
     }
 
     protected boolean prepared(MovementState state) {

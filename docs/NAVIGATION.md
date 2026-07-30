@@ -815,3 +815,72 @@ Two things follow, and both are upstream behaviour we did not carry over:
 Next fix, precisely: on `too far from path`, re-plan from the bot's ACTUAL position and continue,
 the way `PathingBehavior` does — instead of rewinding twice and abandoning. That is a closed loop
 and it removes the fps dependence, because a drift becomes a re-plan rather than a failure.
+
+#### CLOSED: the drift was the bot walking BACKWARDS, and the suite is 12/12 (2026-07-30)
+
+The drift above is real but it is a symptom, not a cause, and the cause is one line of upstream we
+never ported. A per-tick trace of the ported movement — body, camera and keys on the same line —
+caught it at the seam where the sneak-backplace hands over to the step after it:
+
+```
+MV 12,-60,0->13,-60,0 pos=13.30 yaw=90/90   err=0    keys=Su   <- plank placed, facing BACK
+MV 13,-60,0->14,-60,0 pos=13.30 yaw=90/-90  err=-180 keys=F    <- "forward" pressed...
+MV 13,-60,0->14,-60,0 pos=13.20 yaw=81/-91  err=-171 keys=F    <- ...runs the bot BACKWARDS
+MV 13,-60,0->14,-60,0 pos=12.87 ...
+MovementQueue: off path (3.1) at 10.96,-60.00,2.13 ground=true
+```
+
+A backplace deliberately faces backwards down the bridge (`MovementTraverse.updateState`, the
+`dist2 < 0.29` branch), so the movement that follows it asks for a 180 turn AND presses MOVE_FORWARD
+in the same tick. Baritone may do that because its camera is instant: `LookBehavior.onPlayerUpdate`
+PRE calls `player.setYaw(...)` on that very tick, and `MixinEntity` (baritone .../launch/mixins/
+MixinEntity.java:43-66, identical file in `shredder/`) swaps the yaw around `Entity.updateVelocity`
+so the input vector is resolved in the REQUESTED facing whatever the camera is doing. Tungsten aims
+through `WindMouseRotation`, stepped once per RENDER FRAME, so every direction key was resolved in
+the previous facing. At 25 fps the turn costs half a block and the course still passes; at the 9 fps
+of a full sweep it costs three, the queue calls that off-path, the rewind re-arms the sprint guard,
+and the bot sprints into the void — 22.5 blocks short, self_falls=1.
+
+**The fix is that mixin, ported:** `Movement` publishes the rotation it asked for as a per-tick
+motion frame (`motionYaw`/`motionPitch`), `MixinEntityMotionYaw` swaps it in around
+`Entity.updateVelocity` and back out, and it is cleared at the RETURN of `ClientPlayerEntity.tick`
+— upstream's "the target is done being used for this game tick". Scope: the client player, on ticks
+a ported movement declared a rotation, i.e. only while `MovementQueue` runs.
+
+**MEASURED AND REVERTED — do not retry:** holding the direction keys back until the CAMERA reached
+a FORCED target. No change at all (22.5 before, 22.5 after, avg_fps 8.8 both). The branch that walks
+the bot backwards is the `MovementHelper.moveTowards` fall-through, whose target is UNFORCED, so the
+gate never saw it; and widening it to every target would stall the bot through every heading change,
+which is not what upstream does. Upstream STEERS.
+
+**Second defect, found by the first one's fix and fixed with it.** With the bridge working, the run
+still failed at `final_dist 3.5`: the bot bridged the lip, handed the last gap to physics
+(`physics owns the jump -> 19,-60,0`), and three seconds later `FastNavigator: no progress, handing
+over`. The stall watchdog counts a stationary bot as failure, and `awaitingPhysics` — this
+navigator having deliberately stopped and asked another engine to own the next piece — was not in
+its list of things that count as progress, though the build queues already were. The jump then
+landed at x=19.57 with nobody left to plan the last 3.4 blocks and the bot stood there for 104 of
+the 120 seconds. One clause, same shape as the BUILDING-IS-PROGRESS fix beside it.
+
+##### The bench that made this measurable
+
+`docker update --cpus 1.2 uctest-mc-tester1` pins the client at 5-10 fps deterministically, which is
+the condition a full sweep reaches by its eleventh course. Before this, low fps could only be got by
+waiting for the host to be busy, and every A/B was contaminated by that. (`maxFps` in options.txt is
+NOT a lever: `startapp.sh` inside the image rewrites it to 30 on every boot.) Undo with a
+`--force-recreate`, which `deploy/deploy_jar.sh` does anyway.
+
+##### Numbers, all on that bench
+
+| build | nav_bridge | final_dist | self-falls |
+|---|---|---|---|
+| before (2c51266) | FAIL 3/3 | 22.5 | 1 |
+| + camera gate on forced targets | FAIL | 22.5 | 1 | (reverted)
+| + motion frame | FAIL (goal only) | 3.5 | 0 |
+| + physics wait counts as progress | **PASS 3/3** | 1.6 / 0.8 / 1.3 | 0 |
+
+Baselines on the same bench: nav_flat 1.0, nav_wall2 0.9, nav_hazard 1.6, nav_gaps 0.7, all PASS.
+
+**Full sweep: 12/12**, at avg_fps 5.3-9.0 — i.e. green under conditions HARSHER than the ~10 fps
+that used to score 10/12. `nav_slime` came with it (t=29.0s, final_dist 1.3) exactly as expected:
+it needed the same bridging.

@@ -128,8 +128,20 @@ public final class FastNavigator {
         var exec = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
         // A MovementQueue leg is building too: a sneak-backplace step spends several ticks
         // stationary while the aim converges, and the watchdog used to call that failure.
+        // AND SO IS THE ENGINE WE JUST HANDED THE LEG TO. `awaitingPhysics` means this navigator
+        // deliberately stopped moving and asked the physics search to own the next piece; counting
+        // that wait as "no progress" makes the navigator shoot itself while doing exactly what it
+        // decided to do. Measured on nav_bridge at ~9 fps, immediately after the bridge itself was
+        // fixed: the bot bridged the lip, "physics owns the jump -> 19,-60,0", and three seconds
+        // later "no progress, handing over" — then the jump LANDED it at x=19.57 with nobody left
+        // to plan the last 3.4 blocks, and it stood there for 104 of the 120 seconds (final_dist
+        // 3.5, tolerance 2.5). Same shape as the BUILDING-IS-PROGRESS fix above; the physics engine
+        // was simply left out of the list.
         boolean building = (exec != null && (exec.placeQueue != null || exec.breakQueue != null))
-                || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning();
+                || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()
+                || (awaitingPhysics
+                        && (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
+                            || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()));
         if (building) {
             stallTicks = 0;
         } else if (dist < lastDist - 0.25) {

@@ -196,6 +196,7 @@ public final class MovementQueue {
         if (running) {
             running = false;
             Movement.clearAllKeys();
+            Movement.clearMotionFrame();
             WindMouseRotation.INSTANCE.clearTarget();
         }
     }
@@ -259,7 +260,11 @@ public final class MovementQueue {
             if (closest <= MAX_DIST_FROM_PATH) ticksAway = 0;
             if (lost) {
                 Debug.logMessage(String.format(
-                        "MovementQueue: off path (%.1f) — replanning from here", closest));
+                        "MovementQueue: off path (%.1f) at %.2f,%.2f,%.2f ground=%b fall=%.1f"
+                                + " step=%d/%d — replanning from here",
+                        closest, player.getEntityPos().x, player.getEntityPos().y,
+                        player.getEntityPos().z, player.isOnGround(), player.fallDistance,
+                        index, movements.size()));
                 qUnreachable++;
                 stop();
                 // Re-plan from where the bot ACTUALLY is. The navigator owns planning, so ask it

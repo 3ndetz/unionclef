@@ -20,7 +20,8 @@
     "MixinSuggestionWindow",
     "MixinChatHud",
     "MixinInGameHud",
-    "MixinMouse"
+    "MixinMouse",
+    "MixinEntityMotionYaw"
   ],
   "injectors": {
     "defaultRequire": 0

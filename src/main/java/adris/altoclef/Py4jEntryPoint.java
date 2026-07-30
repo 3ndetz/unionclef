@@ -1996,7 +1996,7 @@ public class Py4jEntryPoint {
         return String.format(
                 "called=%d deferred=%d inRange=%d clicked=%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
-                        + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d",
+                        + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
                 kaptainwutax.tungsten.path.PathExecutor.placeDeferred,
                 kaptainwutax.tungsten.path.PathExecutor.placeInRange,
@@ -2011,7 +2011,8 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.path.movements.Movement.placeRequested,
                 kaptainwutax.tungsten.path.movements.Movement.placeOnCooldown,
                 kaptainwutax.tungsten.path.movements.Movement.placeNoHit,
-                kaptainwutax.tungsten.path.movements.Movement.placeClicked);
+                kaptainwutax.tungsten.path.movements.Movement.placeClicked,
+                kaptainwutax.tungsten.path.movements.Movement.motionSteered);
     }
 
     public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }

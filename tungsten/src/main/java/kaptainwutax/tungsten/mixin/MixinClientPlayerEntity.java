@@ -203,6 +203,10 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 
 	@Inject(method = "tick", at = @At(value = "RETURN"))
 	public void end(CallbackInfo ci) {
+		// "The target is done being used for this game tick" (LookBehavior.java:126). The motion
+		// frame a ported Movement declared at HEAD has been consumed by travel()/updateVelocity by
+		// now, and it must not survive into a tick nobody set it for.
+		kaptainwutax.tungsten.path.movements.Movement.clearMotionFrame();
 		ClientPlayerEntity self = (ClientPlayerEntity)(Object)this;
 		//#if MC < 12111
 		//$$ // MC 1.21: Input has no playerInput field; build TungstenPlayerInput from input fields
