@@ -1069,3 +1069,23 @@ the bot thinks it has arrived. Print the state there.
 
 Recorded as a retraction rather than an edit because misreading one's own instrument is exactly
 the failure this file exists to make expensive.
+
+### chase_terrain: steering barely happens on real terrain (2026-07-31)
+
+Two runs of the same course, same build, measured with `chaseStats`:
+
+| run | active | steer | losBlocked | cooldown |
+|---|---|---|---|---|
+| A | 3015 | 615 | 981 | 195 |
+| B | 3635 | **7** | 441 | 273 |
+
+Seven steering ticks out of 3635. Live-steer is the chase's PRIMARY mode and it is gated on
+line of sight, so on broken ground the pursuit runs almost entirely on the fallback block route —
+the path that has no climb hand-off, which is where the bot gets stuck. Run A and run B differ
+only in the terrain the generator handed them, which is why the two courses split so cleanly:
+`chase_flat` is open ground where steering works and it passes; `chase_terrain` is not.
+
+Also recorded, because it cost a pass: a diagnostic attempt that added counters inside
+`FollowEntityTask` took the task's `active` ticks from 3015 to **ZERO** — the chase never
+activated at all. Reverted; `active` came back at 3635. A counter added to an activation path is
+not free, and "it only adds logging" is not a safe assumption there.
