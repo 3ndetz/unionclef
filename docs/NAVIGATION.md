@@ -765,3 +765,22 @@ once-per-render cache is stale by 1-2 ticks at 10 fps. It costs nothing measurab
 i.e. the ported manoeuvre is not tick-rate robust — which is also why it is red inside a full
 12-course sweep, where fps sags by the eleventh course. That is the next target, and it is a
 genuine defect: a bot that only bridges on a fast client is not finished.
+
+#### Tick-rate robustness: what has already been ruled out
+
+Checked so the next pass does not re-check it:
+
+- **Injection point is correct.** `MovementQueue.tick` runs inside
+  `MixinClientPlayerEntity`'s `@Inject(method = "tick", at = @At("HEAD"))`, so the movement's
+  inputs are set BEFORE the player's own movement for that tick. A one-tick input lag — which
+  at 10 fps would be 100 ms of walking, easily a step off a lip — is not the mechanism.
+- **Key ownership is enforced.** The same mixin skips `BlockPathWalker`, the build primitives,
+  the crossing and the physics executor entirely while the queue runs, so it is not contention.
+- **The placement gate is not the discriminator.** Settled by A/B above: the cached-crosshair
+  build passes 3/3 at the same fps.
+
+So what remains to investigate is inside the manoeuvre's own timing: the 4-tick
+`BlockPlaceHelper` gate (upstream `rightClickSpeed`), and how many ticks the bot spends
+between leaving support and the block existing. The measurement to take first is a tick trace
+of ONE crossing at ~10 fps against one at ~20: where do the extra ticks go, and is the bot
+airborne during them.
