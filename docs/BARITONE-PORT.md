@@ -799,3 +799,33 @@ navigator question, not a placement one:
   face IS visible at a pitch of about 82 degrees. From the block's centre it is not, at any
   pitch — the ray crosses the top plane while still inside the footprint. Verified by
   construction, not by guess.
+
+### And one level deeper: the leg is cut and handed to physics on every single leg
+
+Counted over one nav_bridge run:
+
+| signal | count |
+|---|---|
+| `Walker: BFS` (legs started) | 12 |
+| `HANDOFF` (leg ended at a flagged waypoint) | 12 |
+| `walking dead-ends` | 1 |
+| `WALKSTOP` (on the ground with movement not pressed) | **0** |
+
+`WALKSTOP = 0` is the informative one: the walker is never standing still with movement
+released. It simply is not running — every leg it starts ends at a flagged waypoint, the
+navigator hands the rest to the physics engine, physics cannot solve it, and the cycle repeats
+twelve times. That is why the bot is left 0.56 blocks short of the lip: nobody is walking it.
+
+So the chain, all measured, none of it guessed:
+
+1. placements were forged → fixed, and that exposed
+2. the placer seizing the body 5.5 blocks early → fixed, and that exposed
+3. the leg being cut and handed to physics on every leg → **open**.
+
+Note that (3) is the same family as an earlier recorded dead end: skipping `toPlace` waypoints
+in `firstPhysicsIndex` regressed nav_wall2 and nav_bridge, because the ledge courses pass
+BECAUSE the cut routes their climb to PillarTask. So the fix is not to change the cut again —
+it is the structural one this file has been pointing at from the start: **one component must
+own a bridge step's walk AND its placement**, the way MovementTraverse does. Every attempt to
+keep them split has now failed at a different seam, which is about as clear a signal as a
+codebase can give.
