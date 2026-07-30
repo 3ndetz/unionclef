@@ -334,5 +334,39 @@ class NavBridge(NavCourse):
         return (23, STAND_Y, 0)
 
 
+class NavHazard(NavCourse):
+    """A MAGMA floor across the corridor with a one-block safe walkway past it, and
+    the gate is "the bot never took damage". A magma block is walkable and burns you,
+    which is precisely the case a geometry-only planner cannot see.
+
+    Lava was tried here first and does NOT discriminate: lava has an empty collision
+    shape, so `PlayerFit.supportTop` finds no floor above it and the walk generators
+    already refuse the cell — the course passed 4 of 4 with the hazard counter at
+    ZERO, i.e. for the wrong reason. Magma is the honest test: `classify` calls it a
+    full cube, so before 2026-07-30 it was an ordinary floor and the shortest route
+    ran straight over it. Baritone has refused it since forever
+    (MovementHelper.avoidWalkingInto); tungsten never asked."""
+    id = "nav_hazard"
+    duration = 120
+    settings = {"verboseDebugLogging": "true"}
+
+    def course(self, arena, ctx):
+        arena.floor(7, -3, 26, 3, "stone")
+        # Magma covers z=-3..1 at x=14..16, leaving z=2..3 clean. Beelining burns.
+        arena._fill(14, FLOOR_Y, -3, 16, FLOOR_Y, 1, "magma_block")
+        arena._fill(7, STAND_Y, -4, 26, STAND_Y + 3, -4, "barrier")
+        arena._fill(7, STAND_Y, 4, 26, STAND_Y + 3, 4, "barrier")
+        return (23, STAND_Y, 0)
+
+    def judge(self, ctx):
+        yield from super().judge(ctx)
+        hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        low = min(hps) if hps else None
+        # Reaching the goal is not the point — reaching it UNBURNED is. Half a heart of
+        # damage means the route went over the magma.
+        yield Criterion("took no damage", low is not None and low >= 19.5,
+                        f"min_hp={low}")
+
+
 SCENARIOS = [NavFlat, NavStaircase, NavSteep, NavGaps, NavDescend,
-             NavWater, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge]
+             NavWater, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge, NavHazard]

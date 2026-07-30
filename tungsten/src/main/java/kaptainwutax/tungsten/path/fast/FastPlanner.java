@@ -278,6 +278,14 @@ public final class FastPlanner {
      */
     public static volatile int placeBudget = Integer.MAX_VALUE;
 
+    /**
+     * The world this thread's search is reading, so {@link #relax} can refuse a hazardous
+     * destination without every generator having to pass it down. Set for the duration of one
+     * {@link #plan} call, exactly like the state memo beside it; null outside a search, and the
+     * hazard gate is simply inert then.
+     */
+    private static final ThreadLocal<WorldView> SEARCH_WORLD = new ThreadLocal<>();
+
     /** Blocks in the pocket, i.e. the honest value for {@link #placeBudget}. */
     public static int countPlaceable(net.minecraft.entity.player.PlayerEntity player) {
         if (player == null) return 0;
@@ -295,7 +303,7 @@ public final class FastPlanner {
     // measured 16568 pillar lines and 7024 bridge lines in ONE run. That is the search's
     // own budget being spent on talking about itself — the very "164 nodes in 204 ms" that
     // made every hard course return a truncated plan. Counted here, printed once per search.
-    private static int cntBridge, cntPillar, cntSlimeDrop, cntClimb, cntSpecial, cntBreak;
+    private static int cntBridge, cntPillar, cntSlimeDrop, cntClimb, cntSpecial, cntBreak, cntHazard;
 
     private FastPlanner() {}
 
@@ -322,7 +330,8 @@ public final class FastPlanner {
         boolean complete = false;
         Node goalNode = null;
 
-        cntBridge = cntPillar = cntSlimeDrop = cntClimb = cntSpecial = cntBreak = 0;
+        cntBridge = cntPillar = cntSlimeDrop = cntClimb = cntSpecial = cntBreak = cntHazard = 0;
+        SEARCH_WORLD.set(world);
         STATE_CACHE.get().clear();   // the world changes between plans — never reuse
         // Memoise the geometry reads for the duration of this search (see PlayerFit).
         kaptainwutax.tungsten.helpers.PlayerFit.beginCachedRead();
@@ -389,6 +398,7 @@ public final class FastPlanner {
         }
         } finally {
             kaptainwutax.tungsten.helpers.PlayerFit.endCachedRead();
+            SEARCH_WORLD.remove();
         }
 
         Node tail = complete && goalNode != null ? goalNode : best;
@@ -400,9 +410,9 @@ public final class FastPlanner {
         long ms = System.currentTimeMillis() - t0;
         if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) {
             Debug.logMessage(String.format(
-                    "FastPlanner: %d nodes, %d wp, %s, %d ms (bridge=%d pillar=%d slime=%d climb=%d spec=%d brk=%d)",
+                    "FastPlanner: %d nodes, %d wp, %s, %d ms (bridge=%d pillar=%d slime=%d climb=%d spec=%d brk=%d haz=%d)",
                     expanded, path.size(), complete ? "complete" : "partial", ms,
-                    cntBridge, cntPillar, cntSlimeDrop, cntClimb, cntSpecial, cntBreak));
+                    cntBridge, cntPillar, cntSlimeDrop, cntClimb, cntSpecial, cntBreak, cntHazard));
         }
         return new Result(path, complete, expanded, ms);
     }
@@ -1023,9 +1033,51 @@ public final class FastPlanner {
         relax(map, open, from, x, y, z, edgeCost, goal, viaJump, toBreak, null);
     }
 
+    /**
+     * Ported VERBATIM from baritone's {@code MovementHelper.avoidWalkingInto}
+     * (baritone/src/main/java/baritone/pathing/movement/MovementHelper.java:420-431), minus the
+     * blanket fluid clause: baritone refuses ALL fluids there, while tungsten deliberately
+     * swims, so water stays traversable and only lava is refused.
+     *
+     * <p>WHY THIS DID NOT EXIST AND HAD TO. {@link PlayerFit} classifies a cell by its
+     * COLLISION SHAPE, and lava, fire, cobweb, sweet berry, bubble column and powder snow all
+     * have empty or near-empty shapes — so to every generator in this planner they were
+     * indistinguishable from AIR, and magma was an ordinary floor. The planner that drives the
+     * bot had no notion of a dangerous cell at all. tungsten even had the pieces already
+     * (BlockStateChecker.isAnyLava, and a working predicate in CombatPathfinder.isHazard) and
+     * this class called neither.
+     */
+    private static boolean hazardAt(WorldView w, int x, int y, int z, BlockPos.Mutable s) {
+        var state = cachedState(w, x, y, z, s);
+        if (kaptainwutax.tungsten.helpers.BlockStateChecker.isAnyLava(state)) return true;
+        var b = state.getBlock();
+        return b == net.minecraft.block.Blocks.MAGMA_BLOCK
+                || b == net.minecraft.block.Blocks.CACTUS
+                || b == net.minecraft.block.Blocks.SWEET_BERRY_BUSH
+                || b instanceof net.minecraft.block.AbstractFireBlock
+                || b instanceof net.minecraft.block.EndPortalFrameBlock
+                || b == net.minecraft.block.Blocks.END_PORTAL
+                || b == net.minecraft.block.Blocks.COBWEB
+                || b == net.minecraft.block.Blocks.POWDER_SNOW
+                || b instanceof net.minecraft.block.BubbleColumnBlock;
+    }
+
+    /** Body cell, head cell, or the surface we would stand on. */
+    private static boolean hazardousDestination(int x, int y, int z) {
+        WorldView w = SEARCH_WORLD.get();
+        if (w == null) return false;              // not inside a search — gate is inert
+        BlockPos.Mutable s = new BlockPos.Mutable();
+        return hazardAt(w, x, y, z, s) || hazardAt(w, x, y + 1, z, s)
+                || hazardAt(w, x, y - 1, z, s);
+    }
+
     private static void relax(NodeMap map, Heap open, Node from, int x, int y, int z,
                               double edgeCost, BlockPos goal, boolean viaJump,
                               List<BlockPos> toBreak, List<BlockPos> toPlace) {
+        // ONE GATE FOR EVERY MOVE. Every generator — step, diagonal, climb, drop, parkour,
+        // bridge, pillar, swim, ladder, slime — arrives here, so refusing a hazardous
+        // destination once covers all of them and cannot be forgotten in a new generator.
+        if (hazardousDestination(x, y, z)) { cntHazard++; return; }
         Node next = map.get(x, y, z, goal);
         double tentative = from.cost + edgeCost;
         if (tentative >= next.cost) return;

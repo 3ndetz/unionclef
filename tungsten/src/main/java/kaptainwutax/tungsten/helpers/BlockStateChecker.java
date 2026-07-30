@@ -243,7 +243,7 @@ public class BlockStateChecker {
     }
 
 	// Helper method to check if the block is lava. Either flowing or source
-	static boolean isAnyLava(BlockState state) {
+	public static boolean isAnyLava(BlockState state) {
         return isLava(state) || isFlowingLava(state);
     }
 
