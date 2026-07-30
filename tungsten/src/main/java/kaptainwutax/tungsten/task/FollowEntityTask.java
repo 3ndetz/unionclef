@@ -311,13 +311,26 @@ public class FollowEntityTask {
         lastTargetPos = target;
         TungstenMod.TARGET = target;
 
-        // ── Instant BFS for immediate movement while physics A* computes ──
+        // ── THE BLOCK ROUTE, FROM THE PLANNER THAT CAN ACTUALLY REACH ────────────────
+        // This branch used CombatPathfinder, whose search is capped at MAX_RADIUS = 25 blocks
+        // (CombatPathfinder.java:29). A chase runs over far greater distances than that — the
+        // bench sends the runner 140 blocks — so the route could never be built, the branch
+        // silently produced nothing, and the pursuit fell through to a beeline plus the PHYSICS
+        // A*. Measured on chase_terrain: contact=None, kills=0 over 120 s, with ZERO
+        // "FastPlanner:", ZERO "Walker: BFS" and ZERO "MovementQueue:" lines in the whole run.
+        // That is the user's "100+ blocks behind" complaint, and it is an engine mismatch rather
+        // than a tuning problem: the slow simulation search was being asked to keep up with a
+        // runner that flees on baritone's block route.
+        //
+        // FastPlanner is the block planner that drives the bot everywhere else, has no radius
+        // cap, and expands 202 nodes in 1.7 ms. Per TODOS.md AC-2.1 the block route comes FIRST
+        // and physics stays the last resort — which is what the physics search below now is.
         if (kaptainwutax.tungsten.TungstenConfig.get().followBlockPathFinderEnabled && dist > 6) {
-            java.util.List<net.minecraft.util.math.BlockPos> bfsPath =
-                    kaptainwutax.tungsten.combat.CombatPathfinder.findPath(
-                            player.getBlockPos(),
-                            net.minecraft.util.math.BlockPos.ofFloored(target),
-                            world);
+            var fastRes = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
+                    world, player.getBlockPos(),
+                    net.minecraft.util.math.BlockPos.ofFloored(target),
+                    kaptainwutax.tungsten.TungstenConfig.get().fastPlanBudgetMs);
+            java.util.List<net.minecraft.util.math.BlockPos> bfsPath = fastRes.positions();
             if (bfsPath.size() >= 2) {
                 // Direct sprint first, BFS as fallback
                 BlockPathWalker.start(target, bfsPath);

@@ -164,7 +164,10 @@ class ChaseTerrain(Scenario):
     builds_arena = False       # play the terrain as generated
     bot_kit = ["item replace entity {name} weapon.mainhand with iron_sword"]
     victim_kit = []
-    settings = {"combatMovementsEnabled": "true"}
+    # verboseDebugLogging ON: without it the planner's own summary line is gated off, and a
+    # silent channel was once read as "the planner never ran". Confirm the channel is alive
+    # before treating an absence as evidence.
+    settings = {"combatMovementsEnabled": "true", "verboseDebugLogging": "true"}
     RUN_DIST = 140             # how far the runner is sent, in blocks
 
     # Dry, walkable ground. NOTE what is NOT here: clay and mud. They are swamp

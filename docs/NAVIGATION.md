@@ -945,3 +945,40 @@ as well as its building.
 
 Next: give the chase the fast block route (plan with `FastPlanner`, extend rather than replan)
 and leave physics as the last resort, per AC-2.
+
+### CORRECTION and the real chase evidence (2026-07-30)
+
+The section above concluded "the block planner never runs during a chase" from an absence of
+log lines. That inference was WRONG and is withdrawn: `chase_terrain` does not set
+`verboseDebugLogging`, and it defaults to false, so the planner's summary line was gated off.
+The channel was dead, not the code. (This file already warns about exactly that mistake; I made
+it anyway. The scenario now sets the flag, so the next reader gets real evidence.)
+
+What the source DID establish, and what stands: the branch used `CombatPathfinder`, capped at
+`MAX_RADIUS = 25` (CombatPathfinder.java:29), while the bench sends the runner 140 blocks. A
+25-block search cannot route to a target 140 blocks away. That is now `FastPlanner`, which has
+no radius cap.
+
+With logging on, the honest picture of a failing `chase_terrain` (contact=None, kills=0):
+
+| fingerprint | count over ~180 s |
+|---|---|
+| `FastPlanner:` | 4 |
+| `Walker: direct` | 3 |
+| `Walker: BFS` | **0** |
+| `MovementQueue:` | 0 |
+
+So the planner does run now — but only FOUR times in three minutes, and its route is never
+walked. Two causes, both visible in the code:
+
+1. `startFind` is only reached when the physics engine is idle
+   (`!pathfinderActive && !executorRunning && !stopRequested`, FollowEntityTask.java:279), and
+   the physics search occupies most of the time — so the block plan is computed rarely.
+2. `BlockPathWalker.start(target, bfsPath)` begins in DIRECT mode with the route only as a
+   fallback ("Start with direct-sprint toward target. BFS path is fallback",
+   BlockPathWalker.java:87). So even a computed route is not followed; the bot beelines.
+
+That is AC-1.4 inverted: we are supposed to run the exact block route immediately and refine
+while running. Next step is to walk the ROUTE in a chase and stop gating planning on the physics
+engine being idle — measured against both chase courses and the nav sweep, since chase_flat
+passes today WITH the beeline.
