@@ -175,7 +175,7 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   bridging behaviour is still the **reactive 14-second-stall patch** the project rules forbid.
 - [ ] **C5.6 `stringPull` deletes the very nodes carrying the break/place plan** before anything reads
   them (`BlockSpacePathFinder.java:412-429`, no `hasBreaks()`/`hasPlaces()` guard).
-- [~] **C5.7 Place has exactly ONE shape** (horizontal bridge, cardinal, same-Y). **No pillar-up as a
+- [x] **C5.7 Place has exactly ONE shape** (horizontal bridge, cardinal, same-Y). **No pillar-up as a
   search move.** Pillar/godbridge exist only as reactive tasks bolted on beside the pathfinder.
   PARTLY CLOSED 2026-07-28 (nav_wall2 GREEN). The climb is now genuinely PLANNED by the search
   (`CLIMB EMITTED ... rise 2.00`, route runs over the ledge top, waypoint flagged) and the pillar
@@ -183,6 +183,15 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   react" patch. STILL OPEN: the placement is not COSTED inside `FastPlanner` (a climb costs the same
   whether or not a block must be placed), and the shape is still one-per-kind. Full closure = a
   costed place move in the search itself.
+  ЗАКРЫТО 2026-07-30 + прогоны на стенде — то самое «полное закрытие»: постановка стала
+  ОЦЕНЁННЫМ ходом внутри `FastPlanner`. `placeAcross` (мост) и `pillarUp` (башня) — обычные
+  ходы поиска со своей ценой, причём цена backplace взята у апстрима: `SNEAK_ONE_BLOCK_COST`
+  = 15.385, а не придуманная `WALK * 2.5` (backplace ЕСТЬ присед, MovementTraverse.cost:164).
+  Мост длиннее одного блока стал возможен вообще: узлы несут `placedDepth`, а `branchPlaced()`
+  спрашивает, не положила ли ЭТА ветка блок в клетку — раньше опора искалась в мире, где второй
+  планки ещё нет, и поиск обрывался. План при этом ограничен тем, что реально есть в инвентаре
+  (`placeBudget`). Проверено: `nav_bridge` (курс ровно на цепочку постановок) и `nav_slime`
+  зелёные, полоса 12/12 в трёх сквозных свипах.
 - [~] **C5.8 "Cheaty placement" CONFIRMED IN CODE:** `BridgeTask`/`PillarTask` place with a
   **fabricated `BlockHitResult`** and **no aim-convergence check** — the packet goes out regardless of
   where the camera points.
