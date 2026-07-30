@@ -125,6 +125,12 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   form behind `smartMoves` (off). That function gates every partial emission and the `failing` flag
   that arms the timeout. Downstream `bestSoFar:313-328` `continue`s on the furthest node, so it can
   only ever return a node that is NOT the best — inverted selection, admitted at `:298`.
+  ПЕРЕПРОВЕРЕНО 2026-07-30 по коду, баг ЖИВ и переехал на `PathFinder.java:785-789`:
+  `yDiff = start.x - ...getPos().y` и `zDiff = start.x - ...getPos().z` — все три оси от `start.x`.
+  НЕ правил на месте и объясняю почему: это математика внутри физ-движка, который помечен
+  неприкосновенным, а функция гейтит и частичную выдачу, и флаг `failing`, взводящий таймаут —
+  то есть правка меняет поведение широко и требует полного свипа плюс обоих курсов погони.
+  Стенд занят другим заходом. Кандидат №1 на следующую итерацию по физике.
 - [x] **C2.4 Physics A\* drops most of its branching.** ЗАКРЫТО 2026-07-27: обе ветки зовут общий acceptChildIfValid. `PathFinder.java:1111` and `:1118` do
   `return null;` inside a chunk loop (`children.size() > 5` path), **aborting the whole chunk on the
   first rejected child** — non-deterministically, since it depends on ForkJoin scheduling order.
