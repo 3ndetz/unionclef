@@ -515,7 +515,6 @@ public class PathExecutor {
         }
         if (against == null) return true;           // no support yet — wait a tick
 
-        releaseMovementKeys(options);
         options.attackKey.setPressed(false);
         // SNEAK WHILE BRIDGING — PORTED FROM BARITONE, NOT INVENTED. MovementTraverse holds
         // SNEAK the moment it is close to the cell it is paving and only clicks once the
@@ -535,6 +534,29 @@ public class PathExecutor {
         Vec3d d = faceCenter.subtract(eye);
         float wantYaw = (float) Math.toDegrees(-Math.atan2(d.x, d.z));
         float wantPitch = (float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)));
+
+        // THE BACKPLACE MANOEUVRE, ported from MovementTraverse.updateState
+        // (baritone/.../movements/MovementTraverse.java:336-350). Only the CLICK was ported
+        // before, and the click alone cannot work: standing ON a block, a ray towards that
+        // block's side face hits its TOP face first, so the crosshair test can never pass and
+        // nav_bridge failed at 11.6 twice over once the forged hit result was removed.
+        //
+        // Upstream turns ROUND. It faces back the way it came, looks down at the face of the
+        // block it was just standing on, presses MOVE_BACK — which carries it forward along
+        // the bridge while still looking at the face — and sneaks so stepping over the empty
+        // cell does not become a fall. The new block appears beneath it. That is the whole
+        // trick, and it is why the bot must walk BACKWARDS to bridge.
+        if (sneakToPlace) {
+            Vec3d destCentre = Vec3d.ofCenter(target);
+            // yaw FROM the cell being paved TOWARDS the head — i.e. facing back up the bridge.
+            Vec3d back = eye.subtract(destCentre);
+            wantYaw = (float) Math.toDegrees(-Math.atan2(back.x, back.z));
+            releaseMovementKeys(options);
+            options.backKey.setPressed(true);     // MOVE_BACK: forward in world, facing back
+            options.sneakKey.setPressed(true);
+        } else {
+            releaseMovementKeys(options);
+        }
         kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
         // visualize the cell being paved (green)
         TungstenModRenderContainer.PLACE_PLAN.clear();

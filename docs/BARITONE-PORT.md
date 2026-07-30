@@ -712,3 +712,26 @@ destination, which cannot work.
 
 Next pass ports that manoeuvre — sneak-into-the-cell, look back, MOVE_BACK separation — not
 another variation on aiming from where the bot already stands.
+
+### Telemetry after porting the manoeuvre — still 0 clicks, and the reason is a vanilla rule
+
+`placeStats` mid-run on nav_bridge: **`called=11041 deferred=1 inRange=11040 clicked=0`**. The
+placer is in range for eleven thousand ticks and the crosshair test never passes ONCE. So the
+bot never reaches a position from which the face is visible.
+
+The blocker is a vanilla mechanic working against the port: **sneaking prevents you from
+walking off a ledge.** The manoeuvre as written sneaks and presses MOVE_BACK to carry the body
+over the empty cell — and sneaking is exactly what stops that from happening. Baritone does not
+have this problem because the BOT IS ALREADY IN `dest` when `updateState` runs the placement:
+the traverse movement owns both the step and the place, and the step happens first. In tungsten
+the walker owns the step and refuses to walk into a floorless cell, while the executor owns the
+place — so nobody ever puts the body where the face can be seen.
+
+That is the seam again, in its sharpest form yet. The fix is structural: whatever performs a
+bridge step must own BOTH the step into the empty cell and the placement, the way
+MovementTraverse does. Splitting them across the walker and the executor cannot work, no matter
+how faithfully each half is ported.
+
+Current honest state: placement no longer forges interactions (correct), and nav_bridge is red
+because of it (11.6 blocks, 3 of 3). nav_wall2 still passes 2/2 — pillaring reaches its face
+from where it already stands, so it never needed the manoeuvre.
