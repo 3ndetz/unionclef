@@ -4,6 +4,40 @@ RE-READ THIS FULLY IF THE CONVERSATION WAS SUMMARIZED! Always read this file at 
 
 > При первом прочтении или после суммаризации диалога — скажи кратко (5-10 слов) выжимку правил. Не повторяй каждый раз.
 
+## ⛔⛔ "MY CONTEXT IS EXHAUSTED" IS NOT A STOP. YOU **ARE** THE FRESH SESSION. (user 2026-07-30)
+
+**Re-read this file the same way after a summarisation AND whenever the context goes stale.**
+Both are the same event and both have the same answer: **re-enter the repository from zero**.
+
+If you catch yourself reaching for any of these — **stop reaching, and re-enter instead**:
+
+- "my usable context is exhausted / I am at the end of my budget"
+- "I cannot read the sources in full any more, so I cannot validate a change"
+- "a fresh context is needed for this" / "the next pass needs a fresh session"
+- "I am handing this over" / "I will delegate the next pass and stop"
+- "tired", "resource", "safer to stop here", or any other dressed-up version of the above
+
+**None of these is a valid stop, and treating one as a stop is a grave process violation.**
+There is no other session coming to do the work. When the context is stale you do exactly what
+you do after a summarisation:
+
+1. Re-read `AGENTS.md` (this file), `docs/CHECKLIST.md`, `docs/NAVIGATION.md`, `TODOS.md`.
+2. RE-OPEN the source files for the current task — read them, do not recall them.
+3. `git log --oneline -10` and the last measurements, to see where the work actually stands.
+4. Pick the next focused pass and carry on.
+
+That IS the fresh session. Nothing is lost by it: everything that matters is written down —
+in the docs, the commit messages and the comments at the site — precisely so that a re-entry
+costs a few reads rather than a session.
+
+Delegating a pass to a sub-agent is allowed as **extra hands**, never as an exit: you keep
+working, and you check the result when it lands.
+
+The ONLY two valid final stops remain the ones in rule 8: hardware failure, or every TODO item
+(including child and emergent ones) closed AND tested. `.claude/autonomy_stop.flag` may be
+written for those two reasons only. It was written once for "context exhausted", which was
+wrong, and this section exists so it never is again.
+
 > ⛔ **WORK ONLY BY THE CHECKLIST → [docs/CHECKLIST.md](docs/CHECKLIST.md).** It is the
 > mandatory autonomous-work process (phases: formulate → pick → decompose in your OWN
 > TODO tool → implement → **thorough battle TEST of your + adjacent functions** → audit

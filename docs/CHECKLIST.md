@@ -178,6 +178,15 @@ the sentence does not belong in it. A report is a checkpoint, not a stopping poi
 
 ## 7b. CONTEXT REFRESH — when it starts feeling hard, RE-READ. Do not wind down.
 
+⛔ **A STALE OR EXHAUSTED CONTEXT IS A RE-ENTRY, NOT AN EXIT (user 2026-07-30).** "My usable
+context is exhausted", "I can no longer read the sources in full", "this needs a fresh session",
+"I will hand over and stop" — every one of these is the SAME event as a summarisation, and the
+answer is the same: re-read AGENTS.md, this checklist, NAVIGATION.md and TODOS.md, re-open the
+current task's sources, check `git log --oneline -10` and the last measurements, and take the
+next focused pass. **You are the fresh session.** No one else is coming. Writing
+`.claude/autonomy_stop.flag` for this reason is a process violation — the flag is for hardware
+failure or an entirely closed and tested TODO, nothing else.
+
 ⛔⛔ **IT IS STRICTLY FORBIDDEN TO WORK A TASK WHILE TIRED.**
 Not "wind down", not "one more small step to finish it off" — both are banned. A tired pass
 does not produce a smaller result, it produces a WRONG one: on 2026-07-28 the tired steps
