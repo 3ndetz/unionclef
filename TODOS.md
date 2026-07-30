@@ -153,7 +153,13 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   while the client thread replays it** — no synchronisation, no `volatile`. `breakQueue` is a
   non-volatile public field written by the search thread.
 - [ ] **C4.3 `pendingBreaks`/`pendingPlaces` are static mutable globals** mutated from background threads.
-- [ ] **C4.4** Search threads write to Minecraft chat directly from background threads.
+- [x] **C4.4** Search threads write to Minecraft chat directly from background threads.
+  ЗАКРЫТО 2026-07-30 + прогон на стенде. Это была не косметика: генераторы ходов писали
+  строку в чат НА КАЖДЫЙ ход-кандидат — 16568 строк «pillar planned» и 7024 «bridge planned»
+  за ОДИН прогон курса. Поиск тратил на разговоры о себе весь свой бюджет: 164 узла за 204 мс.
+  Все подиагностики (bridge/pillar/slime/climb/special/break) стали счётчиками, печатаются
+  один раз на поиск в существующей итоговой строке. Стало 202 узла за 1.7 мс — в ~120 раз
+  быстрее. Именно это открыло дорогу мосту: раньше поиск не успевал найти маршрут вообще.
 
 ### C5 — BREAK / PLACE (the user's headline question: both ARE plumbed in, both are crippled)
 - [~] **C5.1 Break is cardinal, same-Y, ONE cell.** ЧАСТИЧНО 2026-07-28: слом добавлен в FastPlanner (тот движок, что реально водит бота) и ПРОБИВАЕТ проход ('Mining done — passage open'). Осталось: маршрут после добычи не возобновляется; dig up/down по-прежнему нет. `BlockNode.java:641`:
