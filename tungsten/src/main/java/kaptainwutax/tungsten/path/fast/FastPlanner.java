@@ -587,6 +587,25 @@ public final class FastPlanner {
 
         // (A) FALL ONTO SLIME. Landing on slime does no damage, so this is not capped by
         // MAX_FALL the way an ordinary drop is.
+        //
+        // OFFERED ONLY WHEN SOMETHING CAN RIDE THE LANDING. A bouncing pad is not a surface
+        // the waypoint walker can steer on — it is airborne almost every tick — and this move
+        // is walker-owned (viaJump=false, see the note at its relax below). Offering a move to
+        // an executor that cannot perform it is how nav_slime spent a whole session red: the
+        // drop was planned 553 times a run, it is genuinely the cheapest route because falling
+        // costs almost nothing, and then the bot either parked at the lip or ended in the void.
+        //
+        // The engines have DISJOINT capabilities (capability table in docs/NAVIGATION.md):
+        // physics has SlimeBounceMove and can ride a pad but cannot place a block, the block
+        // engine can bridge but cannot ride a bounce. `slimeCrossing` is the switch for the
+        // walker-side crossing task that CAN ride it, and it ships OFF. So while it is off,
+        // do not offer the drop — the search then solves the course the way baritone would,
+        // by BUILDING across, which is a route the block engine can execute end to end
+        // (proved on nav_bridge). Turn the crossing on and the drop comes back with it.
+        //
+        // Handing this move to physics instead is a RECORDED DEAD END: as one compound leap it
+        // produced "Partial path (goal unreachable)" 208 times in a single run.
+        if (!TungstenConfig.get().slimeCrossing) return;
         for (int[] d : CARDINALS) {
             // Only look where stepping would actually DROP: at a solid neighbour the walk
             // generator already has the answer, and scanning every node to full depth in
