@@ -366,7 +366,14 @@ public final class FastPlanner {
                 // every ladder route unplannable: special() emitted the node, and this line
                 // deleted it the moment it was popped, so it never expanded even once.
                 // Only the floor-based generators (step, diagonal) actually need `support`.
+                // FLOATING AT THE SURFACE IS STILL SWIMMING. A player at the top of a pool has
+                // its FEET CELL IN AIR and the water one below, so asking only "is my feet cell
+                // water" answered no, the node was dropped, and the search came back with a
+                // one-node plan — nothing to walk, from the middle of a pool. Measured on
+                // nav_water: "1 nodes, 1 wp, partial, 0 ms" with the water counter at zero,
+                // one run in three, 8.2 blocks short.
                 if (isWater(world, current.x, current.y, current.z, scratch)
+                        || isWater(world, current.x, current.y - 1, current.z, scratch)
                         || isLadder(world, current.x, current.y, current.z, scratch)) {
                     special(world, current, goal, map, open, scratch);
                 }
@@ -491,10 +498,20 @@ public final class FastPlanner {
         }
 
         // ── water: swim through it, and surface / climb out onto a bank ──
-        if (isWater(world, from.x, from.y, from.z, scratch)) {
+        // Water at the feet, or water directly below them — the surface float (see the
+        // one-node plans this used to produce in plan()).
+        if (isWater(world, from.x, from.y, from.z, scratch)
+                || isWater(world, from.x, from.y - 1, from.z, scratch)) {
             int[][] dirs = {{1,0,0},{-1,0,0},{0,0,1},{0,0,-1},{0,1,0},{0,-1,0}};
             for (int[] d : dirs) {
                 int nx = from.x + d[0], ny = from.y + d[1], nz = from.z + d[2];
+                // PRICING A CELL ABOVE WATER AS A SWIM MADE IT WORSE — MEASURED, DO NOT RETRY.
+                // The idea was that moving along the surface is a swim, not a climb-out. With
+                // it, nav_water went 4 FAILS of 4 (13.5 / 8.5 / 9.5 / 8.5) against 2 passes of
+                // 3 without it: cells above water stopped being exits and became swims, so the
+                // search preferred floating along the surface to climbing onto the bank, and
+                // floating is the thing the walker is worst at. Only the dead-end half of that
+                // change is kept — see the surface-float note in plan() and above.
                 boolean water = isWater(world, nx, ny, nz, scratch);
                 // SHORT-CIRCUIT THE EXPENSIVE TEST. bodyFits walks the real 0.6x1.8 box
                 // against every block it touches, and it was being run for all six directions
