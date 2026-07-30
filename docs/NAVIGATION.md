@@ -1109,3 +1109,24 @@ cost re-verification) and `docs/BARITONE-PORT.md` already lists it as tungsten's
 execution gap: "one failure detector where baritone has five".
 
 The inert hand-off was reverted rather than left in place.
+
+### A stuck signal for the BFS walk: right idea, wrong alone (2026-07-31)
+
+Gave `tickBFS` what it has never had — a way to say "I am pressing forward and not moving":
+40 ticks of `move` pressed with the body under 0.05 blocks of travel, exempting climbing, being
+airborne, and any tick where the executor's place/break queue or `MovementQueue` is running
+(standing still IS the job while building).
+
+Measured: the nav suite went **12/12 -> 11/12 with a real gate failure** — so the definition
+catches at least one legitimate pause that none of those exemptions cover. Reverted.
+
+Two things to carry forward:
+
+1. The signal is still the right target. `stoppedByBail` is set only in `tickDirect` (:283) and
+   means "direct mode gave up", never "the route is blocked", so no caller can see a BFS-mode
+   obstruction — which is why the chase presses into a wall until the run ends.
+2. It must land WITH its consumer and with a better definition of stuck. A signal nobody reads
+   cannot pay for a regression, and "did not move for 2 s" is too blunt: the bot legitimately
+   waits on physics hand-offs and on slow water. Baritone's answer is not a timer but
+   cost-proportional per-move budgets plus graduated off-path distance — five detectors, each
+   converting a specific failure into a re-plan (docs/BARITONE-PORT.md, execution section).
