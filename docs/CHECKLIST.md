@@ -44,6 +44,36 @@ Then:
 - Distinguish: runs by default / gated off / dead / missing. **A dead flag is not a detail,
   it is a missing feature** — that was the root cause four times in a row.
 
+## 1b. READ UPSTREAM FIRST — you are almost certainly re-deriving something (user, 2026-07-30)
+
+⛔ **BEFORE writing a mechanism, OPEN THE ONE THAT ALREADY EXISTS.** `baritone/` is in this
+repo as source reference precisely so its logic can be COPIED rather than rediscovered. Also
+check `TODOS.md` — the register frequently already names the bug you are about to hunt.
+
+Three questions, answered with `file:line`, before any new mechanism:
+
+1. **Does baritone already do this?** Where, and what exactly does it do differently?
+2. **Am I walking its path of mistakes from scratch?** If the answer is "probably", stop and
+   port instead. Copying working logic is not cheating — it is the job.
+3. **Does `TODOS.md` already name this?** If yes, the entry has the diagnosis; read it first.
+
+Evidence that this rule was earned, all from 2026-07-29:
+
+- Placement was hand-rolled. `MovementTraverse.cost` prefers a SIDE place and only falls back
+  to a backplace at `SNEAK_ONE_BLOCK_COST`, and `updateState` holds `Input.SNEAK` and clicks
+  only once `isInSneakingPose()`. Tungsten implemented the backplace alone, without sneaking,
+  so the bot slid off the lip it was paving and fell into the void — 20.7 blocks short, twice
+  in a row, for a reason upstream solved years ago.
+- `canPlaceAgainst` accepts normal cubes and glass only. Tungsten accepted "any non-empty
+  collision shape", which is not the same question.
+- A whole session went into finding that the search burns its budget writing chat from the
+  inner loop. `TODOS.md` already carried it: **C4.4 "Search threads write to Minecraft chat
+  directly from background threads."** The diagnosis was sitting in the register.
+
+The `ponytail` skill (installed) is the same instinct as a standing rule: stop at the first
+rung that holds, reach for what exists, and do not build what you can borrow. `ponytail-audit`
+scans the repo for exactly the over-building this rule is meant to prevent.
+
 ## 2. PLAN
 
 - One iteration = one root cause. Fixing five things at once tells you nothing about which worked.

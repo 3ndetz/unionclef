@@ -588,23 +588,34 @@ never under test. That matters less than it sounds — bouncing is not how this 
 meant to be passed — but "the task never ran" is not the same finding as "the task ran and
 failed", and the logs will read as the latter if you do not know this.
 
-## OPEN REGRESSION: nav_wall2 (2026-07-29)
+## CLOSED: nav_wall2, and the pillar hand-off that never once fired (2026-07-29)
 
-`nav_wall2` was green and is now FAIL, 7.5 blocks short, standing at the foot of its wall.
-Isolated by measurement, not by reading:
+`nav_wall2` went red when the search started preferring chained pillars over a single
+2-block climb, and the cause was a test that had been wrong the whole time:
 
-- it is NOT the sneak-while-bridging port — stashed it, rebuilt, identical 7.5 / 7.5;
-- it is NOT the leg-cut experiment — that was reverted and nav_bridge recovered to PASS 2/2
-  while nav_wall2 stayed broken.
+```java
+if (jump != null && player.getBlockPos().isWithinDistance(jump, 1.5)) {
+    pendingPhysicsTarget = null;   // "already there — nothing for physics to do"
+}
+```
 
-So it came in with the committed core work, and the likeliest suspect is the one change that
-alters which routes the search can express: a node standing on a block the branch placed is
-now expandable, so pillar/bridge routes compete with the CLIMB that nav_wall2 used to take.
-The trace says exactly that — the plan is complete (10 wp, 1 flagged), the walker starts 26
-legs, and `HANDOFF` / `Pillaring up` never fire once. The course passed BECAUSE the climb was
-handed to PillarTask; now something else is winning the search and nothing executes it.
+A pillar target is ONE BLOCK STRAIGHT UP — distance 1.0, inside the radius — so every
+pillar hand-off was discarded on the tick it was armed. Measured across one run: 54 of 82
+plans flagged a pillar as their first move, `HANDOFF` and `Pillaring up` fired **zero**
+times, and the navigator replanned 26 legs while the bot stood 7.5 blocks short at the foot
+of its wall. The course had been passing only because a 2-block climb lands 2.2 away and
+cleared the test by 0.7 of a block. It was never right, just lucky — which is why it broke
+the moment the search gained a cheaper way up.
 
-Next pass starts here: dump the chosen route on nav_wall2 and see what it picked instead.
+Arrival is a horizontal question plus a height check: you cannot walk upwards. After the
+fix, nav_wall2 is **PASS 3/3** (1.2 / 1.2 / 1.1). The one FAIL seen just after the fix was
+the first run following a container recreate — the known cold-start effect, not the code.
+
+How it was isolated, for the next person: the sneak port was stashed and rebuilt (identical
+7.5 / 7.5, so not that), the leg-cut experiment was reverted (nav_bridge recovered to PASS
+while nav_wall2 stayed broken, so not that either), and only then was the distribution of
+`firstPhysics` over a whole run counted. That distribution — 54 ones — was the fact that
+pointed straight at the guard.
 
 ## Baritone's placement model, read at last (2026-07-29)
 
