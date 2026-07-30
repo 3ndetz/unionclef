@@ -243,22 +243,29 @@ public final class MovementQueue {
             // belong to no movement in the chain, and cancelling on that alone would abort a
             // backplace every time the body hangs over the hole. Only three blocks away from every
             // cell in the chain is genuinely lost.
+            // DRIFT IS A RE-PLAN, NOT A FAILURE — this is the closed loop upstream has and we did
+            // not. PathingBehavior re-searches on the SAME TICK a segment goes wrong; our queue
+            // rewound twice and then abandoned the crossing, so a recoverable drift killed it.
+            //
+            // And it is exactly what makes the port fps-dependent. MAX_DIST_FROM_PATH (2.0) and
+            // MAX_MAX (3.0) assume ticks arrive on time; at this stand's ~10 fps each tick moves
+            // the body further, the same walk overshoots, and the run dies on a threshold that was
+            // never meant to be an fps-dependent quantity. Measured on a failing sweep run:
+            //   MovementQueue: too far from path (3.4) / (3.3), rewound 7 -> 5, rewound 13 -> 11
+            // The manoeuvre was fine; only the recovery was missing.
             double closest = closestPathPos(player);
-            if (closest > MAX_MAX_DIST_FROM_PATH) {
-                Debug.logMessage("MovementQueue: too far from path (" + String.format("%.1f", closest) + ")");
+            boolean lost = closest > MAX_MAX_DIST_FROM_PATH
+                    || (closest > MAX_DIST_FROM_PATH && ++ticksAway > MAX_TICKS_AWAY);
+            if (closest <= MAX_DIST_FROM_PATH) ticksAway = 0;
+            if (lost) {
+                Debug.logMessage(String.format(
+                        "MovementQueue: off path (%.1f) — replanning from here", closest));
                 qUnreachable++;
                 stop();
+                // Re-plan from where the bot ACTUALLY is. The navigator owns planning, so ask it
+                // for a fresh leg rather than trying to repair a chain built from a stale start.
+                kaptainwutax.tungsten.task.FastNavigator.replanFromHere();
                 return;
-            }
-            if (closest > MAX_DIST_FROM_PATH) {
-                if (++ticksAway > MAX_TICKS_AWAY) {
-                    Debug.logMessage("MovementQueue: too far away from path for too long");
-                    qUnreachable++;
-                    stop();
-                    return;
-                }
-            } else {
-                ticksAway = 0;
             }
 
             // PathExecutor.java:193-197: read the estimate ONCE, when the movement becomes current,

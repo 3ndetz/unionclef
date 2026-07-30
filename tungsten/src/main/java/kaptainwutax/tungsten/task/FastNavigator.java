@@ -368,6 +368,25 @@ public final class FastNavigator {
     private static volatile boolean nextPhysicsIsBridge = false;
     private static volatile boolean pendingIsBridge = false;
 
+    /**
+     * Re-plan from the bot's ACTUAL position, for a component that has just given up its leg.
+     *
+     * <p>Upstream's failure path is closed: PathingBehavior re-searches on the same tick a
+     * segment fails. Ours ended at a stop() with nobody to hand back to — recorded in the audit
+     * as the biggest execution gap and measured as the reason a bridge dies at low fps, where a
+     * drift past a 20-tps-shaped tolerance ends the crossing instead of restarting it.
+     */
+    public static void replanFromHere() {
+        if (!active) return;
+        nextLeg = null;
+        legTail = null;
+        nextPhysicsTarget = null;
+        pendingPhysicsTarget = null;
+        awaitingPhysics = false;
+        var p = TungstenMod.mc.player;
+        if (p != null && !planning) planAhead(p.getBlockPos());
+    }
+
     private static void planAhead(BlockPos from) {
         if (planning || goal == null) return;
         planning = true;
