@@ -332,8 +332,14 @@ public class FollowEntityTask {
                     kaptainwutax.tungsten.TungstenConfig.get().fastPlanBudgetMs);
             java.util.List<net.minecraft.util.math.BlockPos> bfsPath = fastRes.positions();
             if (bfsPath.size() >= 2) {
-                // Direct sprint first, BFS as fallback
-                BlockPathWalker.start(target, bfsPath);
+                // IF WE HAVE A ROUTE, WALK THE ROUTE. A beeline is what you do when you have
+                // no route, not what you do instead of one. `start(target, path)` begins in
+                // DIRECT mode with the path merely as a fallback (BlockPathWalker.java:87), and
+                // measured on chase_terrain that is what the chase actually did: over ~180 s the
+                // log shows "Walker: direct" 3 times and "Walker: BFS" ZERO — a plan was
+                // computed and then ignored while the bot sprinted at a runner it never caught
+                // (contact=None, kills=0). AC-1.4 says the exact block route is run IMMEDIATELY.
+                BlockPathWalker.startBFS(bfsPath);
                 // Physics A* starts from BFS endpoint — don't waste time on
                 // the segment the walker already covers
                 // Root the physics search at the walker's endpoint ONLY while the
