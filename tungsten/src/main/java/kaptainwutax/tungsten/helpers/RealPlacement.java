@@ -42,7 +42,14 @@ public final class RealPlacement {
      *         the camera is not yet looking somewhere that would produce the wanted block.
      */
     public static BlockHitResult readyToPlace(MinecraftClient mc, BlockPos target) {
-        HitResult ct = mc.crosshairTarget;
+        // A LIVE RAY TRACE, NOT mc.crosshairTarget. The cached crosshair is computed once per
+        // RENDER frame, so at this stand's ~10 fps it is 1-2 ticks — 100-200 ms — out of date,
+        // and the gate then judges a placement against where the camera USED to point. Upstream
+        // never reads a cache here: MovementHelper.attemptToPlaceABlock ray-traces from the
+        // player each time (RayTraceUtils.rayTraceTowards). RotationHelper.liveHit is that trace,
+        // ported with it. Named as trap 4 in docs/BARITONE-PORT-SPEC.md.
+        HitResult ct = mc.player == null ? null
+                : kaptainwutax.tungsten.path.movements.RotationHelper.liveHit(mc.player);
         if (ct == null || ct.getType() != HitResult.Type.BLOCK
                 || !(ct instanceof BlockHitResult hit)) {
             return null;
