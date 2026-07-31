@@ -415,8 +415,19 @@ public class PathExecutor {
         kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
         float dYaw = net.minecraft.util.math.MathHelper.wrapDegrees(wantYaw - player.getYaw());
         float dPitch = net.minecraft.util.math.MathHelper.wrapDegrees(wantPitch - player.getPitch());
-        boolean aimed = Math.abs(dYaw) < 12f && Math.abs(dPitch) < 12f;
-        options.attackKey.setPressed(aimed);
+        // MINE THE BLOCK IN THE PLAN, NOT WHATEVER IS WITHIN 12 DEGREES. The gate was an ANGLE
+        // test, and vanilla's handleBlockBreaking then mines whatever the CROSSHAIR is on — so
+        // any block nearer along the ray gets dug instead, and BreakRules were checked against
+        // the planned cell while a different one was destroyed. That is register entry C5.3, and
+        // it is the same defect the placement side had: an approximation standing in for the
+        // game's own ray trace. Baritone gates on ctx.isLookingAt(pos) for exactly this reason.
+        //
+        // The aim above is unchanged; only the trigger is now identity rather than proximity.
+        var look = mc.crosshairTarget;
+        boolean onTarget = look instanceof net.minecraft.util.hit.BlockHitResult bhr
+                && look.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
+                && bhr.getBlockPos().equals(target);
+        options.attackKey.setPressed(onTarget);
         return true;
     }
 

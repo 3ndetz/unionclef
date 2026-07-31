@@ -181,7 +181,14 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   `COST_INF` для неломаемого — невозможный копок становится непланируемым, а не сюрпризом на
   исполнении. `nav_break` PASS 3/3 (0.7 / 0.8 / 0.6).
   → ~20× mismatch.
-- [ ] **C5.3 The executor mines whatever the CROSSHAIR hits**, so `BreakRules` is enforced on the
+- [x] **C5.3 The executor mines whatever the CROSSHAIR hits**, so `BreakRules` is enforced on the
+  ЗАКРЫТО 2026-07-31 + прогон: удар разрешался по УГЛУ (±12°), а ванильный `handleBlockBreaking`
+  затем ломает то, на чём стоит ПРИЦЕЛ — значит любой блок ближе по лучу копался вместо
+  запланированного, а правила слома проверялись для другой клетки. Теперь триггер — тождество:
+  бьём только когда `crosshairTarget` это блок и его позиция РАВНА запланированной (так же
+  гейтит baritone через `ctx.isLookingAt`). Наведение не менялось. Та же болезнь, что была у
+  подделанной постановки: приближение вместо собственного рейтрейса игры.
+  `nav_break` PASS 3/3 (1.1 / 0.6 / 0.9).
   intended block, not the one vanilla actually breaks.
 - [ ] **C5.4 `mineBlocks()` silently no-ops** on any block with an empty collision shape and still
   reports "Mining done".
