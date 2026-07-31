@@ -56,11 +56,37 @@ public class PathExecutor {
      * <p>Eight call sites assigned the field directly. They all come here now, which is the only
      * way this cannot happen again.
      */
+    /** Everything about this executor that can survive a job and poison the next one, in one
+     *  string. Added because //replace alternates pass/fail run after run, which is not noise —
+     *  it is state carried across runs, and the only way to name it is to look at it. */
+    public String debugState() {
+        return String.format("stop=%b path=%d tick=%d breakQ=%s placeQ=%s breakTicks=%d",
+                stop, path == null ? -1 : path.size(), tick,
+                breakQueue == null ? "null" : String.valueOf(breakQueue.size()),
+                placeQueue == null ? "null" : String.valueOf(placeQueue.size()),
+                breakingTicks);
+    }
+
     public void startBreaking(java.util.List<net.minecraft.util.math.BlockPos> blocks) {
         breakQueue = blocks == null ? null : new java.util.ArrayList<>(blocks);
         breakingTicks = 0;
         settleTicks = 0;
         stop = false;
+        // AND PUT THE EXECUTOR WHERE IT WILL ACTUALLY RUN THE JOB. Mining only happens inside
+        // the "segment finished" branch (tick == path.size()), and the caller only ticks this
+        // class at all while it HAS a path. Finishing a segment nulls the path and leaves tick
+        // at 1 — so a break queue handed over after that point was never looked at again.
+        //
+        // Measured, and it is what made //replace alternate pass and fail run after run: on a
+        // failing run the executor read "stop=false path=-1 tick=1 breakQ=null" three seconds in
+        // — the job had been accepted and silently dropped, and every later poll refilled a queue
+        // nobody was reading. An empty path with tick 0 is exactly the state the mining shortcut
+        // expects, and it is this method's job to establish it, not the caller's.
+        if (blocks != null && !blocks.isEmpty()) {
+            this.path = new java.util.ArrayList<>();
+            this.tick = 0;
+            this.armed = false;
+        }
     }
 
     /** Support cells to PLACE (bridge floor) once the replay reaches the segment end

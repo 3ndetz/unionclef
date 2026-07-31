@@ -21,6 +21,7 @@ try:
     elif op=="replace": out=dict(mc.replaceSelection(req["src"],req["dst"]))
     elif op=="replstat": out=dict(mc.replaceStatus())
     elif op=="bq": out=dict(mc.buildQueue())
+    elif op=="exec": out={"s":mc.execState()}
     elif op=="pos": out={"pos":str(mc.getGameState().get("self",{}).get("pos"))}
 except Exception as e:
     sys.stderr.write("ERR:"+repr(e)+"\n"); sys.exit(3)
@@ -64,7 +65,10 @@ def main():
     print("=== //replace: 3-cell stone column -> cobblestone at x=5 ===")
     print("  before cobble?:", [block_at(*p) for p in patch])
     print("  select:", py4j("select", a=[5,-60,0], b=[5,-58,0]))
+    print("  exec BEFORE:", py4j("exec")["s"])
     print("  replace:", py4j("replace", src="stone", dst="cobblestone"))
+    time.sleep(3)
+    print("  exec 3s IN:", py4j("exec")["s"])
     # replaceStatus now hands the PLACING half to the tick-driven build queue, so the poll is
     # two-stage: drive the break phase with replaceStatus, then watch buildQueue drain.
     last=None
@@ -88,6 +92,7 @@ def main():
     print(f"  bot: {py4j('pos')}")
     time.sleep(1)
     after=[block_at(*p) for p in patch]
+    print("  exec AFTER:", py4j("exec")["s"])
     print(f"  final replaceStatus: {last}")
     print(f"  after: {after}")
     ok = all(b=="cobblestone" for b in after)

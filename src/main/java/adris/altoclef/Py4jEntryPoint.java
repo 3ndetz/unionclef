@@ -3047,6 +3047,19 @@ public class Py4jEntryPoint {
         return Map.of("ok", true, "walkToBuild", on);
     }
 
+    /** Executor + task state in one string — for telling "this run is broken" apart from
+     *  "the previous run left something behind". */
+    public String execState() {
+        var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+        var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
+        return (ex == null ? "no-exec" : ex.debugState())
+                + " pfStop=" + (pf == null ? "?" : pf.stop.get())
+                + " pfActive=" + (pf == null ? "?" : pf.active.get())
+                + " pillar=" + kaptainwutax.tungsten.task.PillarTask.isActive()
+                + " nav=" + kaptainwutax.tungsten.task.FastNavigator.isActive()
+                + " buildQ=" + kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued();
+    }
+
     /** Abandon whatever the build queue still owes (//set gone wrong, wrong selection). */
     public Map<String, Object> buildQueueClear() {
         kaptainwutax.tungsten.helpers.BlockPlaceHelper.clearQueue();
