@@ -267,7 +267,7 @@ public class PathFinder {
 	        Debug.logMessage("At the wall — mining without a physics leg");
 	        TungstenModDataContainer.EXECUTOR.setPath(new ArrayList<>());
 	        TungstenModDataContainer.EXECUTOR.blockPath = blockPath.get();
-	        TungstenModDataContainer.EXECUTOR.breakQueue = new ArrayList<>(pendingBreaks);
+	        TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
 	        PathFinder.blockPath = Optional.empty();
 	        return;
 	    }
@@ -995,7 +995,7 @@ public class PathFinder {
         	TungstenModDataContainer.EXECUTOR.setPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
         }
-        TungstenModDataContainer.EXECUTOR.breakQueue = pendingBreaks == null ? null : new ArrayList<>(pendingBreaks);
+        TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
         TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
 		long endTime = System.currentTimeMillis();
 		long elapsedTime = endTime - startTime;
@@ -1027,7 +1027,7 @@ public class PathFinder {
             }
             TungstenModDataContainer.EXECUTOR.setPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
-            TungstenModDataContainer.EXECUTOR.breakQueue = pendingBreaks == null ? null : new ArrayList<>(pendingBreaks);
+            TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
             TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
         TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
             NEXT_CLOSEST_BLOCKNODE_IDX.set(1);
@@ -1090,7 +1090,7 @@ public class PathFinder {
         }
         TungstenModDataContainer.EXECUTOR.addPath(result.get());
         TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
-        TungstenModDataContainer.EXECUTOR.breakQueue = pendingBreaks == null ? null : new ArrayList<>(pendingBreaks);
+        TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
         TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
         // Continue A* from the last node of the emitted path — don't reset the
         // entire search. This allows pathfinder to keep computing while executor

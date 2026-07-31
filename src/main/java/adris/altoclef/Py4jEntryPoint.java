@@ -2530,7 +2530,7 @@ public class Py4jEntryPoint {
             // getPos() (not getEntityPos()) — version-safe across 1.21.1..1.21.11 shared src.
             kaptainwutax.tungsten.TungstenMod.TARGET = mc.player.getPos();
             ex.setPath(new java.util.ArrayList<>());
-            ex.breakQueue = new java.util.ArrayList<>(queue);
+            ex.startBreaking(queue);
             ex.stop = false;
             out.put("ok", true); out.put("queued", queue.size());
             return out;
@@ -2568,7 +2568,7 @@ public class Py4jEntryPoint {
                 out.put("reason", "no scaffold recorded"); return out; }
             kaptainwutax.tungsten.TungstenMod.TARGET = mc.player.getPos();
             ex.setPath(new java.util.ArrayList<>());
-            ex.breakQueue = new java.util.ArrayList<>(scaffold);
+            ex.startBreaking(scaffold);
             ex.stop = false;
             kaptainwutax.tungsten.util.ScaffoldRegistry.clear();   // now owned by the break queue
             out.put("ok", true); out.put("queued", scaffold.size());
@@ -2619,8 +2619,7 @@ public class Py4jEntryPoint {
             // point mining-resume at the bot so it doesn't wander to a stale goal
             kaptainwutax.tungsten.TungstenMod.TARGET = client.player.getPos();
             ex.setPath(new java.util.ArrayList<>());
-            ex.breakQueue = new java.util.ArrayList<>(cells);
-            ex.stop = false;
+            ex.startBreaking(cells);
             out.put("ok", true); out.put("matched", cells.size()); out.put("phase", "breaking");
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));
@@ -2637,20 +2636,52 @@ public class Py4jEntryPoint {
             int breaking = (ex != null && ex.breakQueue != null) ? ex.breakQueue.size() : 0;
             if (breaking > 0) { out.put("ok", true); out.put("phase", "breaking"); out.put("remaining", breaking); return out; }
             if (_replaceCells == null) { out.put("ok", true); out.put("phase", "idle"); return out; }
-            // breaks drained -> hand the matched cells to the build queue (bottom-up), which
-            // places them one at a time at the human rate. Poll buildQueue() from here on.
+
+            // A CELL THAT IS STILL THE OLD BLOCK IS NOT FINISHED WITH — it is waiting to be
+            // BROKEN. This loop used to skip anything non-replaceable as "already filled" and
+            // then null the whole list, so every cell the break phase had not yet reached was
+            // thrown away silently. Measured on the stand: //replace on a 3-cell column reported
+            // matched=3, queued=1, placed=1 — one cell converted, two lost, and the caller was
+            // told "placing" as though nothing had gone wrong.
+            //
+            // The break queue going empty does NOT mean every block broke; the executor drops
+            // what it cannot reach. So each poll re-derives the state from the WORLD, which is
+            // the only honest source, and keeps the list until every cell actually holds the
+            // wanted block.
             _replaceCells.sort(java.util.Comparator.comparingInt(net.minecraft.util.math.BlockPos::getY));
-            java.util.List<net.minecraft.util.math.BlockPos> want = new java.util.ArrayList<>();
+            java.util.List<net.minecraft.util.math.BlockPos> toBreak = new java.util.ArrayList<>();
+            java.util.List<net.minecraft.util.math.BlockPos> toPlace = new java.util.ArrayList<>();
             for (net.minecraft.util.math.BlockPos p : _replaceCells) {
-                if (!client.world.getBlockState(p).isReplaceable()) continue;   // already filled
-                want.add(p);
+                net.minecraft.block.BlockState st = client.world.getBlockState(p);
+                if (blockNameMatches(st, _replaceToName)) continue;        // done: it is the new block
+                if (st.isReplaceable()) toPlace.add(p); else toBreak.add(p);
             }
-            kaptainwutax.tungsten.helpers.BlockPlaceHelper.beginBatch(want, _replaceToName);
-            _replaceCells = null;
-            _replaceToName = null;
+            if (toBreak.isEmpty() && toPlace.isEmpty()) {
+                _replaceCells = null;
+                _replaceToName = null;
+                out.put("ok", true); out.put("phase", "done");
+                return out;
+            }
+            if (!toBreak.isEmpty()) {
+                // Still solid: hand them back to the break queue rather than losing them. If they
+                // are out of reach the caller repositions and polls again — same contract as
+                // before, except the cells survive it now.
+                if (ex != null) {
+                    ex.startBreaking(toBreak);
+                }
+                out.put("ok", true); out.put("phase", "breaking");
+                out.put("remaining", toBreak.size());
+                out.put("toPlace", toPlace.size());
+                return out;
+            }
+            // Only placing left. Enqueue once — re-issuing every poll would clear the queue and
+            // cancel a walk that is already under way.
+            if (kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued() == 0) {
+                kaptainwutax.tungsten.helpers.BlockPlaceHelper.beginBatch(toPlace, _replaceToName);
+            }
             out.put("ok", true); out.put("phase", "placing");
-            out.put("queued", want.size());
-            out.put("poll", "buildQueue()");
+            out.put("queued", toPlace.size());
+            out.put("poll", "buildQueue(), then replaceStatus() again to confirm");
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
@@ -2843,7 +2874,7 @@ public class Py4jEntryPoint {
             }
             kaptainwutax.tungsten.TungstenMod.TARGET = client.player.getPos();
             ex.setPath(new java.util.ArrayList<>());
-            ex.breakQueue = new java.util.ArrayList<>(breakAll);
+            ex.startBreaking(breakAll);
             ex.stop = false;
             _undoBuildPending = rebuild;
             out.put("ok", true); out.put("phase", "breaking"); out.put("rebuild", rebuild.size());

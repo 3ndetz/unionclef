@@ -38,6 +38,31 @@ public class PathExecutor {
     private int breakingTicks = 0;
     private int settleTicks = 0;
 
+    /**
+     * HAND THE EXECUTOR A NEW BREAK JOB. Use this instead of assigning {@link #breakQueue}.
+     *
+     * <p>{@code breakingTicks} is the mining watchdog: past 300 the current block is abandoned
+     * with "Mining aborted (timeout or out of reach)". It is reset only when a job FINISHES or
+     * aborts inside this class — so a caller that dropped a fresh list into the field inherited
+     * whatever the previous job left behind, and if that was already over the limit the new job
+     * was aborted on its very first tick.
+     *
+     * <p>Measured on //replace, which polls and re-issues: it refilled the queue, the executor
+     * aborted it instantly, it refilled again — for as long as the caller was willing to wait.
+     * Three cells, `remaining: 3` after seventy polls, nothing mined. It escaped the loop only
+     * when the counter happened to be low at the start, which is why the test passed one run in
+     * three rather than never.
+     *
+     * <p>Eight call sites assigned the field directly. They all come here now, which is the only
+     * way this cannot happen again.
+     */
+    public void startBreaking(java.util.List<net.minecraft.util.math.BlockPos> blocks) {
+        breakQueue = blocks == null ? null : new java.util.ArrayList<>(blocks);
+        breakingTicks = 0;
+        settleTicks = 0;
+        stop = false;
+    }
+
     /** Support cells to PLACE (bridge floor) once the replay reaches the segment end
      *  (set by PathFinder from the block path's place plan) — the mirror of breakQueue. */
     public List<net.minecraft.util.math.BlockPos> placeQueue = null;

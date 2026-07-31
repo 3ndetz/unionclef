@@ -20,6 +20,8 @@ try:
     elif op=="select": out=dict(mc.select(req["a"][0],req["a"][1],req["a"][2],req["b"][0],req["b"][1],req["b"][2]))
     elif op=="replace": out=dict(mc.replaceSelection(req["src"],req["dst"]))
     elif op=="replstat": out=dict(mc.replaceStatus())
+    elif op=="bq": out=dict(mc.buildQueue())
+    elif op=="pos": out={"pos":str(mc.getGameState().get("self",{}).get("pos"))}
 except Exception as e:
     sys.stderr.write("ERR:"+repr(e)+"\n"); sys.exit(3)
 print(json.dumps(out,default=str)); gw.close()
@@ -63,11 +65,27 @@ def main():
     print("  before cobble?:", [block_at(*p) for p in patch])
     print("  select:", py4j("select", a=[5,-60,0], b=[5,-58,0]))
     print("  replace:", py4j("replace", src="stone", dst="cobblestone"))
+    # replaceStatus now hands the PLACING half to the tick-driven build queue, so the poll is
+    # two-stage: drive the break phase with replaceStatus, then watch buildQueue drain.
     last=None
     for _ in range(40):
         time.sleep(1.5)
         st=py4j("replstat"); last=st
-        if st.get("phase")=="done": break
+        ph=str(st.get("phase"))
+        if ph in ("placing","done"): break
+    # //replace is a loop, not two straight-line phases: a cell that is still the old block
+    # goes BACK to the break queue, so the caller alternates replaceStatus and buildQueue until
+    # replaceStatus reports done.
+    q=None
+    for _ in range(70):   # //replace cycles break->place->break; give it room
+        q=py4j("bq")
+        if not q.get("done"):
+            time.sleep(1.5); continue
+        st=py4j("replstat"); last=st
+        if str(st.get("phase"))=="done": break
+        time.sleep(1.5)
+    print(f"  buildQueue: {q}")
+    print(f"  bot: {py4j('pos')}")
     time.sleep(1)
     after=[block_at(*p) for p in patch]
     print(f"  final replaceStatus: {last}")
