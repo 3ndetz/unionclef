@@ -31,7 +31,7 @@ services:
       ALLOW_FLIGHT: "TRUE"          # big slime bounces trip the vanilla flight kick
       SPAWN_PROTECTION: "0"
       RCON_PASSWORD: "uctest"
-      VIEW_DISTANCE: "8"
+      VIEW_DISTANCE: "12"
     networks: [uctest]
     restart: unless-stopped
 
@@ -54,7 +54,7 @@ services:
       MODE: "survival"
       SPAWN_PROTECTION: "0"
       RCON_PASSWORD: "uctest"
-      VIEW_DISTANCE: "8"
+      VIEW_DISTANCE: "12"
     networks: [uctest]
     restart: unless-stopped
 
