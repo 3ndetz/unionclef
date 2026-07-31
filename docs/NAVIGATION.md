@@ -1240,3 +1240,23 @@ silences the detector precisely where the bot is stuck.
 Sharpens the next attempt: the exemption must distinguish *"physics is solving the obstacle in
 front of us"* from *"physics happens to be running while we walk"*. A pending hand-off for THIS
 waypoint is a legitimate pause; a background search is not. Reverted rather than left inert.
+
+### The chase does not stall in tickBFS at all (2026-07-31)
+
+Third attempt at a stuck signal, this time NARROW — exempting only a build in progress
+(place/break queue, `MovementQueue`), not a running physics search. It fires **zero** times in a
+chase, exactly like the wide version. So the physics exemption was never the reason.
+
+The conclusion is stronger than the fix that was attempted. BOTH diagnostics that live in
+`tickBFS` — `WALKSTOP` (on the ground, movement not pressed) and this stuck detector (movement
+pressed, body not moving) — report zero across whole failing runs. Two complementary conditions,
+both silent, in the same method. **The chase's stall does not happen inside `tickBFS`.**
+
+That redirects the next pass away from the block walk entirely. The walker has two modes and the
+chase's primary one is DIRECT (live-steer); `tickDirect` has its own bail which switches to BFS.
+Where the pursuit actually spends its stalled time is now the open question, and the cheap answer
+is one line: log the walker's mode per N ticks during a chase and count the distribution. Do that
+before touching any more code — three attempts here have each been aimed at a method the bot was
+not in.
+
+Reverted; nothing inert kept.
