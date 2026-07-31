@@ -68,7 +68,13 @@ class Bot:
         return res
 
     def stop_all(self):
-        """Kill every driver a previous scenario could have left running."""
+        """Kill every driver a previous scenario could have left running.
+
+        LOGGED, because this is also called from prepare() and therefore from any RE-prepare:
+        a chase measured two Punking/PUNKSTOP pairs inside ONE scenario attempt, and the stop
+        carried a direct py4j caller trace. If a mid-run call appears here — especially one for
+        the OTHER actor — then the bench is ending the chase, not the bot."""
+        self.log(f"  stop_all({self.name})")
         for m, args in (("ExecuteCommand", ("@stop",)), ("punkStop", ()),
                         ("runAwayStop", ()), ("stopPathing", ())):
             self.py.try_call(m, *args)

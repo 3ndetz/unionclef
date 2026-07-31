@@ -1480,3 +1480,35 @@ Next step, one line of Python: log every `stop_all()` call with a timestamp and 
 is for. If the mid-run one is for the victim, the bot's chase is being killed by the other
 actor's housekeeping — a bench defect, and the six passes spent inside the mod were looking in
 the wrong repository entirely.
+
+#### SETTLED, and it overturns the two sections above: there is NO mid-run restart
+
+Logged every `stop_all()` from the Python side, with the actor, and timestamped the punk events
+in the same run:
+
+```
+stop_all(tester1), stop_all(tester2)     <- prepare, BEFORE the chase
+Punking player   05:49:43
+PUNKSTOP         05:52:46                <- 183 s on a 180 s course
+stop_all x4                              <- teardown, AFTER
+```
+
+**No `stop_all` during the run, and exactly ONE punk start/stop pair spanning the whole course.**
+The chase runs its full 180 seconds; neither the bench nor anything else kills it mid-run.
+
+So the section claiming "the chase dies and restarts twice per run" is WRONG and is withdrawn.
+Those two pairs came from two separate RUNS that both landed in one `docker logs` window,
+because they were launched back to back. That makes three flips on this single question, all
+from the same root cause: **reading a log window that spans more runs than the one being
+judged.** Every future log grep here must be bounded to the run — capture the line count before
+the run and tail from it, which is what the runs that produced correct answers did.
+
+What actually stands, from the honest per-run counters:
+
+```
+active=1501 ticks (~75 s of the 180 s course)   losBlocked=1453   steer=2   noTarget=966
+```
+
+`noTarget=966` is the number to chase next: the punk task is alive the whole course but has no
+target for a large part of it, and steering is gated shut by line of sight for essentially all
+of the rest. Neither of those is a walking problem, which is where six passes went.
