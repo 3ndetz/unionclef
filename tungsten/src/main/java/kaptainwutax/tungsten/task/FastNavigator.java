@@ -51,6 +51,15 @@ public final class FastNavigator {
 
     private static volatile boolean active = false;
     private static Vec3d goal = null;
+    /**
+     * When set, arrival means STANDING IN THIS CELL, not "within {@link #ARRIVE_DIST} of it" —
+     * baritone's {@code GoalBlock}, whose {@code isInGoal} compares block coordinates and nothing
+     * else. Every goal here was a two-block sphere, which is the right answer for "go over there"
+     * and useless for "stand exactly here": the builder asked to stand in a cell 2.5 blocks away,
+     * the navigator walked half a block, declared arrival at 2.0 and stopped — then the builder
+     * asked again, and was instantly "arrived" from the same spot, over and over.
+     */
+    private static BlockPos exactCell = null;
     /** The leg computed ahead of time, ready to hand to the walker. */
     private static volatile List<BlockPos> nextLeg = null;
     /** The next leg ends at a jump the walker cannot do; this is where it lands. */
@@ -82,6 +91,13 @@ public final class FastNavigator {
 
     public static boolean isActive() { return active; }
 
+    /** Walk until standing IN {@code cell} — baritone's GoalBlock. For callers that need a
+     *  position rather than a neighbourhood, such as the builder standing where it will pillar. */
+    public static void startExact(BlockPos cell) {
+        start(new Vec3d(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5));
+        exactCell = cell;
+    }
+
     public static void start(Vec3d target) {
         stop();
         goal = target;
@@ -95,6 +111,7 @@ public final class FastNavigator {
     public static void stop() {
         active = false;
         goal = null;
+        exactCell = null;
         nextLeg = null;
         legTail = null;
         nextPhysicsTarget = null;
@@ -126,7 +143,10 @@ public final class FastNavigator {
         // Only the upward case changes: a goal level with the player or below it still arrives
         // exactly as before, which is every goal the nav courses use.
         double goalRise = goal.y - player.getY();
-        if (dist <= ARRIVE_DIST && goalRise < 1.0) {
+        boolean arrived = exactCell != null
+                ? player.getBlockPos().equals(exactCell)
+                : (dist <= ARRIVE_DIST && goalRise < 1.0);
+        if (arrived) {
             Debug.logMessage("FastNavigator: arrived (" + String.format("%.1f", dist) + ")");
             BlockPathWalker.stop();
             stop();

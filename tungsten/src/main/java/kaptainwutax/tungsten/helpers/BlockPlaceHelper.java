@@ -473,8 +473,11 @@ public final class BlockPlaceHelper {
                     walkDebug += "[" + walkStarted + " pillarbase=" + head.toShortString()
                             + " from=" + player.getBlockPos().toShortString() + "] ";
                 }
-                kaptainwutax.tungsten.task.FastNavigator.start(
-                        new Vec3d(head.getX() + 0.5, head.getY(), head.getZ() + 0.5));
+                // EXACT: the whole point is to be standing in this cell, and "within two blocks
+                // of it" is where the previous version stopped — from (4,-60,0) it was already
+                // 2.55 from (6,-60,0), so it walked half a block, hit the 2.0 radius, declared
+                // arrival and quit. Fifteen times in one run.
+                kaptainwutax.tungsten.task.FastNavigator.startExact(head);
                 return;
             }
         }
@@ -553,8 +556,9 @@ public final class BlockPlaceHelper {
                     + " stand=" + stand.toShortString()
                     + " from=" + player.getBlockPos().toShortString() + "] ";
         }
-        kaptainwutax.tungsten.task.FastNavigator.start(
-                new Vec3d(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5));
+        // Exact too: a stand chosen because THAT cell can see the face is not interchangeable
+        // with any cell within two blocks of it.
+        kaptainwutax.tungsten.task.FastNavigator.startExact(stand);
     }
 
     /** End a walk, if one is running: the navigator stops steering and the builder takes the
