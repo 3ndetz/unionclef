@@ -165,6 +165,24 @@ public class BridgeTask {
         boolean floorAhead = !isAir(world, targetCell);
         boolean floorTwoAhead = !isAir(world, targetCell.offset(dir));
         boolean lipNear = !floorAhead || !floorTwoAhead;
+        // WALK ALONG THE BRIDGE, NOT ALONG THE CAMERA. forwardKey moves the body wherever the
+        // camera happens to point, and this task points the camera at the FACE it is placing
+        // against — so while WindMouse converges, "forward" is whatever heading the aim is
+        // passing through. Measured: a bridge asked to run due east ended at z=1.5 having
+        // started at z=0.5, off the side of its own lip, with zero blocks placed and
+        // "Bridge aborted (falling) after 0" in chat.
+        //
+        // The fix is not new: Movement.motionYaw plus MixinEntityMotionYaw exist precisely to
+        // resolve a tick's inputs in a DECLARED facing while the camera is still travelling, and
+        // that mechanism's own javadoc cites a fall into the void as the trace it was built from.
+        // BridgeTask never declared a frame, so it fell into the void the mechanism was written
+        // for. The frame is cleared globally at the end of ClientPlayerEntity.tick, so declaring
+        // it here owns this tick only.
+        kaptainwutax.tungsten.path.movements.Movement.motionYaw =
+                dir.getAxis() == Direction.Axis.X
+                        ? (dir.getOffsetX() > 0 ? -90.0f : 90.0f)
+                        : (dir.getOffsetZ() > 0 ? 0.0f : 180.0f);
+        kaptainwutax.tungsten.path.movements.Movement.motionPitch = player.getPitch();
         opts.sneakKey.setPressed(lipNear);
         opts.forwardKey.setPressed(true);
         opts.sprintKey.setPressed(!lipNear);

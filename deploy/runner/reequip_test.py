@@ -27,6 +27,7 @@ try:
     elif op=="bridge": out={"ok":mc.bridgeForward(req["d"], int(req["n"]))}
     elif op=="placed": out={"n":mc.bridgePlaced(),"active":mc.bridgeActive()}
     elif op=="chat": out={"c":[str(x) for x in (mc.getRecentChat(30) or [])]}
+    elif op=="ground": out={"g":bool(dict(mc.getGameState().get("self",{})).get("onGround")),"pos":str(dict(mc.getGameState().get("self",{})).get("pos"))}
     elif op=="held": out={"h":str(dict(mc.getGameState().get("self",{})).get("held")),"pos":str(dict(mc.getGameState().get("self",{})).get("pos"))}
 except Exception as e:
     sys.stderr.write("ERR:"+repr(e)+"\n"); sys.exit(3)
@@ -60,7 +61,17 @@ def main():
     rcon(f"item replace entity {BOT} hotbar.1 with cobblestone 64")  # the re-equip target
     rcon(f"tp {BOT} 0.5 -60 0.5 -90 0"); time.sleep(2)
     py4j("selhot", s=0)                       # hold the SHORT stack
-    time.sleep(0.5)
+    # SETTLE FIRST. A teleport drops the bot a few ticks while the client loads the floor, and
+    # BridgeTask aborts on one tick of downward velocity — so starting eagerly kills the bridge
+    # before it begins, with "aborted (falling) after 0". That is the harness being impatient,
+    # not the bridge being broken; wait for the bot to actually be standing.
+    for _ in range(20):
+        g = py4j("ground")
+        if g["g"]:
+            print("  settled:", g)
+            break
+        time.sleep(0.5)
+    time.sleep(1.0)
 
     print("=== bridge 6 blocks holding a stack of 2 ===")
     print("  start:", py4j("bridge", d="east", n=6))
