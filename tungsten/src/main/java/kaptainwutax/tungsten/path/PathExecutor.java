@@ -229,6 +229,30 @@ public class PathExecutor {
 		return this.path != null;
 	}
 
+	/**
+	 * The walker has stopped, so an ARMED path is waiting for a delivery that is not coming.
+	 *
+	 * <p>Arming means exactly one thing: "the walker is running and will bring us to this path's
+	 * root" — {@code setPath} only arms while {@code BlockPathWalker.isRunning()}. When the walker
+	 * stops, that premise is dead, and the path cannot rescue itself: an armed path is excluded
+	 * from {@code isRunning()}, so the executor is never ticked, so the branch that would expire
+	 * or disarm it never runs. Measured on chase_terrain as fourteen freeze windows at ONE
+	 * position over eighty-four seconds — {@code path=119 tick=0 ... nav=false}.
+	 *
+	 * <p>It is DROPPED rather than replayed. Replaying it was tried by ticking any held route and
+	 * measured worse (nav 12/12 -> 9/12): a path that was waiting starts taking the body from
+	 * whatever is now driving. Dropping hands the problem back to the planner, which is what the
+	 * file already wanted — "a stale splice cannot pin the executor forever".
+	 */
+	public void onWalkerStopped() {
+		if (this.path != null && this.armed) {
+			kaptainwutax.tungsten.Debug.logMessage(
+					"Armed path dropped: the walker that was to reach its root has stopped");
+			this.path = null;
+			this.armed = false;
+		}
+	}
+
 	public boolean isRunning() {
         // An ARMED path is waiting, not running: while it waits the walker must
         // keep driving (and callers that stand down for "the executor is busy"

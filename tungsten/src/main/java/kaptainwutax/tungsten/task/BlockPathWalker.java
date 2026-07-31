@@ -136,6 +136,12 @@ public class BlockPathWalker {
     public static void stop() {
         if (active) {
             releaseKeys();
+            // An ARMED path is waiting for THIS walker to bring the bot to its root. Stopping
+            // without saying so leaves the executor pinned on a promise nobody will keep, and it
+            // cannot notice on its own — an armed path is excluded from isRunning(), so it is
+            // never ticked. See PathExecutor.onWalkerStopped for the measurement.
+            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (ex != null) ex.onWalkerStopped();
         }
         active = false;
         path = null;
