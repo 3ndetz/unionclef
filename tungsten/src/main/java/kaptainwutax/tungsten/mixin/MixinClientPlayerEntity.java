@@ -96,6 +96,12 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 			kaptainwutax.tungsten.task.SlimeBounceTask.tick((ClientPlayerEntity)(Object)this);
 		}
 
+		// MEASURED WORSE, REVERTED. Ticking the executor whenever it merely HOLDS a route — armed
+		// or not — is the obvious cure for the armed deadlock (an armed path is never ticked, and
+		// only the tick can disarm it). It is also a regression: nav went 12/12 -> 9/12 with two
+		// gate failures, because an armed path that used to WAIT now runs its expiry and replay
+		// logic and takes the body from the walker that was bringing it to the root. Whatever the
+		// right cure is, it is not "tick it anyway"; see C5.15.
 		if(TungstenModDataContainer.isExecutorRunning() && !tungsten$movementOwnsTick) {
 			try {
 				TungstenModDataContainer.EXECUTOR.tick((ClientPlayerEntity)(Object)this, MinecraftClient.getInstance().options);

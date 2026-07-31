@@ -210,6 +210,25 @@ public class PathExecutor {
 	}
 
 
+	/**
+	 * Is there a route here AT ALL — armed or not. Distinct from {@link #isRunning()} on purpose.
+	 *
+	 * <p>{@code isRunning()} excludes an armed path so that callers who stand down for "the
+	 * executor is busy" keep driving the walker instead. That is right for THEM and was fatal for
+	 * the TICK: the mixin gated ticking on {@code isExecutorRunning()}, so an armed path was never
+	 * ticked — and the only code that can ever disarm, expire or replay it lives inside that tick.
+	 * The deadlock closed on itself: disarming required a tick, and the tick required not being
+	 * armed.
+	 *
+	 * <p>Measured on chase_terrain: fourteen freeze windows, the identical position for
+	 * eighty-four seconds, and the same line each time —
+	 * {@code path=119 tick=0 ... nav=false}. A full route, a counter that never moves, and no
+	 * walker to bring the bot to its root.
+	 */
+	public boolean hasPath() {
+		return this.path != null;
+	}
+
 	public boolean isRunning() {
         // An ARMED path is waiting, not running: while it waits the walker must
         // keep driving (and callers that stand down for "the executor is busy"
