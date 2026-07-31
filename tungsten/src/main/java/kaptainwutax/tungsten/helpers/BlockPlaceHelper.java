@@ -1,5 +1,6 @@
 package kaptainwutax.tungsten.helpers;
 
+import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.BlockItem;
@@ -65,9 +66,21 @@ public final class BlockPlaceHelper {
      *  from outside without this. */
     public static volatile int gatedByCooldown, gatedThrough;
 
-    /** Ticked exactly once per client tick. The single owner of the countdown. */
+    /**
+     * Ticked exactly once per client tick. The single owner of the countdown.
+     *
+     * <p>The {@code return} matters and was missing. Upstream's tick is
+     * {@code if (timer > 0) { timer--; return; }} (BlockPlaceHelper.java:39-42) — a tick spent
+     * decrementing is a tick in which NOTHING places. Splitting it into "decrement here, test
+     * {@code > 0} over there" let the same tick decrement 1 to 0 and then place, which is a
+     * period of three ticks, not four: a bot placing 6.7 blocks a second where a player manages
+     * 5. Charging one tick per tick, and only then draining, restores upstream's arithmetic.
+     */
     public static void tickCooldown() {
-        if (rightClickTimer > 0) rightClickTimer--;
+        if (rightClickTimer > 0) {
+            rightClickTimer--;
+            return;
+        }
         drainQueue();
     }
 
@@ -134,9 +147,28 @@ public final class BlockPlaceHelper {
      *  {@code protected} = a claim or protection rule refused it. The 2x2 //set that placed
      *  1 of 4 was read straight off these. */
     public static volatile int deferNoFace, deferTimeout, deferProtected;
+    /** The block cannot survive in that cell (a torch with no wall, a sapling on stone) —
+     *  {@code BlockState.canPlaceAt}, BuilderProcess.possibleToPlace:506. */
+    public static volatile int deferNoSupport;
+    /** The named block is not in the hotbar. Upstream's NO_OPTION: not a placement problem. */
+    public static volatile int deferNoMaterial;
     /** Consecutive ticks on which NOTHING in the scan window was buildable from where the
      *  player stands. Reset by any progress, including merely finding a face to aim at. */
     private static int idleTicks;
+    /** The cell the builder is currently walking to a placing position for, so it asks the
+     *  navigator once instead of restarting the search every tick. */
+    private static BlockPos walkingFor;
+    /** Whether the builder may walk at all. An agent that wants to own movement itself turns
+     *  this off and repositions on its own using {@code buildQueue().deferred}. */
+    private static volatile boolean walkToBuild = true;
+    /** Ticks walked for the current cell; past this it is deferred and the queue moves on, so
+     *  one unreachable cell cannot hold a whole schematic hostage. */
+    private static int walkTicks;
+    public static volatile int walkStarted;
+    /** Cells skipped because the block would have been placed inside an entity — almost always
+     *  the player itself. Non-zero here means "the builder is standing in its own way", which is
+     *  a walking problem, not an aiming problem. */
+    public static volatile int blockedByOwnBody;
     private static String equipped;
 
     /** How long to keep looking before handing the rest back. Generous: the aim is humanized
@@ -145,6 +177,12 @@ public final class BlockPlaceHelper {
     /** How far down the queue one tick looks for something buildable. Bounded because this runs
      *  on the client tick and the queue can hold a whole sphere. */
     private static final int SCAN_LIMIT = 64;
+    /** Idle ticks before the builder decides the answer is "stand somewhere else" and walks. */
+    private static final int WALK_AFTER_TICKS = 10;
+    /** How long to spend walking for one cell before giving up on it. 200 ticks (10 s) was too
+     *  tight and deferred cells the navigator was still walking towards; a build walk is a
+     *  pathfind plus the walk, and the queue is not in a hurry. */
+    private static final int WALK_TIMEOUT_TICKS = 600;
 
     /** Hand a batch of cells to the tick drain. Order is the caller's — the callers sort
      *  bottom-up so each cell has support by the time it is reached. */
@@ -183,14 +221,26 @@ public final class BlockPlaceHelper {
         deferNoFace = 0;
         deferTimeout = 0;
         deferProtected = 0;
+        deferNoSupport = 0;
+        deferNoMaterial = 0;
+        walkStarted = 0;
+        blockedByOwnBody = 0;
         DEFERRED.clear();
     }
 
     public static synchronized void clearQueue() {
         QUEUE.clear();
         idleTicks = 0;
+        walkingFor = null;
+        walkTicks = 0;
         equipped = null;
     }
+
+    /** Let the agent own movement instead: with this off the queue places only what it can see
+     *  from where it stands and hands the rest back through {@code deferred}. */
+    public static void setWalkToBuild(boolean on) { walkToBuild = on; }
+
+    public static boolean walkToBuild() { return walkToBuild; }
 
     /**
      * One placement's worth of work per tick, at most.
@@ -237,6 +287,24 @@ public final class BlockPlaceHelper {
                 idleTicks = 0;
                 return;
             }
+            // AM I STANDING WHERE THE BLOCK GOES? Then no face on earth will work from here, and
+            // hammering the use key at it is what the operator filmed. Skip the cell this tick
+            // and let the idle branch below walk us out of it — moving IS the fix, not retrying.
+            BlockState wanted = wantedState(player, cell.blockName());
+            // WILL THE BLOCK SURVIVE THERE — BuilderProcess.possibleToPlace:506, dropped entirely.
+            // A torch needs a wall, a door needs two cells, a sapling needs dirt: without this the
+            // queue burns its whole budget aiming at cells the game will refuse on arrival.
+            if (!wanted.canPlaceAt(mc.world, target)) {
+                it.remove();
+                DEFERRED.add(target);
+                deferNoSupport++;
+                idleTicks = 0;
+                return;
+            }
+            if (!placementPlausible(mc.world, target, wanted)) {
+                blockedByOwnBody++;
+                continue;
+            }
 
             // WHICH FACE - and this is the part I first got wrong by adapting instead of porting.
             // My version picked the NEAREST placeable neighbour and aimed at it. Nearest is not
@@ -250,8 +318,12 @@ public final class BlockPlaceHelper {
             // HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP, ray traces TOWARDS the
             // rotation that face would need, and accepts the first candidate whose trace actually
             // lands on it and would fill the target. Occlusion answers itself.
-            for (Direction dir : kaptainwutax.tungsten.path.movements.Movement
-                    .HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP) {
+            // ALL SIX directions. This loop is the analogue of BuilderProcess.possibleToPlace
+            // (:499), which iterates Direction.values() — not of attemptToPlaceABlock, whose
+            // EXCEPT_UP list exists because a MOVEMENT places under itself and must never aim up.
+            // A builder placing a ceiling has only the block above to click, and this loop could
+            // not see it.
+            for (Direction dir : Direction.values()) {
                 BlockPos against = target.offset(dir);
                 if (!RealPlacement.canPlaceAgainst(mc.world, against)) continue;
                 // The face point, MovementHelper.attemptToPlaceABlock:822-824 verbatim - including
@@ -271,38 +343,215 @@ public final class BlockPlaceHelper {
                 }
                 // This face works from where the player stands. Equip, turn the camera to it
                 // through the mouse pipeline, and place the moment the crosshair agrees.
-                equipBlock(player, cell.blockName());
+                if (!equipBlock(player, cell.blockName())) {
+                    // Upstream's NO_OPTION: no material, so this is not a placement problem and
+                    // no amount of walking or aiming fixes it. Hand it back instead of spinning.
+                    it.remove();
+                    DEFERRED.add(target);
+                    deferNoMaterial++;
+                    idleTicks = 0;
+                    return;
+                }
                 kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE
                         .setTarget(place.getYaw(), place.getPitch());
-                idleTicks = 0;
                 BlockHitResult hit = RealPlacement.readyToPlace(mc, target);
+                // "A face exists" is NOT progress, and counting it as progress disabled the very
+                // escape hatch below: an aim that never converges kept resetting idleTicks, so the
+                // queue neither walked nor gave up. Only a placement, or the rate gate holding us
+                // back from one, counts.
                 if (hit == null) return;         // aim still on its way; hold this cell
+                idleTicks = 0;
                 if (!tryPlace(hit)) return;      // rate gate closed this tick
                 it.remove();
                 placedFromQueue++;
+                if (walkingFor != null) {
+                    kaptainwutax.tungsten.task.FastNavigator.stop();
+                    walkingFor = null;
+                    walkTicks = 0;
+                }
                 return;
             }
         }
 
-        // Nothing in the scan window can be built from where the player is standing. Give the
-        // caller time to walk (it may be pathing right now), then hand the rest back rather than
-        // spinning forever.
-        if (++idleTicks > IDLE_TIMEOUT_TICKS) {
-            for (Cell c : QUEUE) {
-                DEFERRED.add(c.pos());
+        // Nothing in the scan window can be built from where the player is standing. THE ANSWER
+        // IS TO STAND SOMEWHERE ELSE — that is the half of baritone's BuilderProcess that turns
+        // a list of cells into a builder. Upstream never places from wherever it happens to be:
+        // BuilderProcess.placementGoal (BuilderProcess.java:1050-1063) turns each cell into a
+        // GOAL and the pathfinder walks there.
+        idleTicks++;
+        if (!walkToBuild) {
+            if (idleTicks > IDLE_TIMEOUT_TICKS) deferRest();
+            return;
+        }
+        Cell headCell = QUEUE.peek();
+        BlockPos head = headCell.pos();
+        if (walkingFor != null && walkingFor.equals(head)) {
+            // Already on our way. Let the navigator work; it is what moves the player.
+            if (++walkTicks > WALK_TIMEOUT_TICKS) {
+                kaptainwutax.tungsten.task.FastNavigator.stop();
+                walkingFor = null;
+                walkTicks = 0;
+                QUEUE.poll();
+                DEFERRED.add(head);
                 deferNoFace++;
             }
-            QUEUE.clear();
-            idleTicks = 0;
+            return;
         }
+        if (idleTicks <= WALK_AFTER_TICKS) return;   // the aim may still be arriving
+        BlockPos stand = placementStand(mc.world, head, wantedState(player, headCell.blockName()));
+        if (stand == null) {
+            deferRest();
+            return;
+        }
+        walkingFor = head;
+        walkTicks = 0;
+        walkStarted++;
+        kaptainwutax.tungsten.task.FastNavigator.start(
+                new Vec3d(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5));
     }
 
-    /** Select the hotbar slot holding {@code blockName}; if unnamed or absent, any block item
-     *  will do. Skips the lookup when the wanted type is already equipped. */
-    private static void equipBlock(ClientPlayerEntity player, String blockName) {
+    /** Hand the whole remaining queue back to the caller. */
+    private static void deferRest() {
+        for (Cell c : QUEUE) {
+            DEFERRED.add(c.pos());
+            deferNoFace++;
+        }
+        QUEUE.clear();
+        idleTicks = 0;
+        walkingFor = null;
+        walkTicks = 0;
+    }
+
+    /**
+     * WOULD THE BLOCK FIT, OR AM I STANDING IN IT — port of
+     * {@code BuilderProcess.placementPlausible} (BuilderProcess.java:492-496).
+     *
+     * <p>THE ONE I DROPPED, and the operator found it on video: the bot walked flush against a
+     * wall and tried to place a block inside its own hitbox, forever. Vanilla refuses that
+     * placement, so every attempt failed, charged the four-tick cooldown and started again — a
+     * bot standing still, shoving at a wall.
+     *
+     * <p>Upstream never gets there, because both places that decide "can this cell be built"
+     * ask this question: {@code placementGoal} (:1058) requires
+     * {@code canPlaceAgainst(neighbour) && placementPlausible(pos, state)}, and
+     * {@code possibleToPlace} (:508) refuses a face outright when it fails. I ported the first
+     * half of that {@code &&} and left the second, which is precisely the half that knows a
+     * player is a solid object.
+     *
+     * <p>The question is asked of the block THAT WILL EXIST: take the collision shape the new
+     * block would have at that cell and test it against every entity. An empty shape (a torch,
+     * a sapling) always passes.
+     */
+    private static boolean placementPlausible(net.minecraft.world.World world, BlockPos pos, BlockState state) {
+        if (state == null) return false;
+        net.minecraft.util.shape.VoxelShape shape = state.getCollisionShape(world, pos);
+        return shape.isEmpty()
+                || world.doesNotIntersectEntities(null, shape.offset(pos.getX(), pos.getY(), pos.getZ()));
+    }
+
+    /**
+     * The state that WILL EXIST in the cell — the thing {@link #placementPlausible} has to
+     * measure. Upstream reads it from the schematic ({@code toPlace} at BuilderProcess.java:508,
+     * {@code bcc.getSchematic(...)} at :1058); the queue's own {@code blockName} IS our schematic.
+     *
+     * <p>It first measured the HELD item instead, which is a different question and answered it
+     * wrongly in both directions: a batch of torches queued with a pickaxe in hand fell back to
+     * STONE, whose full cube "intersects" the player, so every cell was refused — though vanilla
+     * places a torch inside your own hitbox happily. And the check runs before the equip, so with
+     * the previous batch's torch still in hand a stone batch measured a shapeless torch and the
+     * guard passed vacuously on the one tick it mattered.
+     */
+    private static BlockState wantedState(ClientPlayerEntity player, String blockName) {
+        if (blockName != null && !blockName.isEmpty()) {
+            String want = blockName.contains(":") ? blockName : "minecraft:" + blockName;
+            net.minecraft.util.Identifier id = net.minecraft.util.Identifier.tryParse(want);
+            if (id != null && Registries.BLOCK.containsId(id)) {
+                return Registries.BLOCK.get(id).getDefaultState();
+            }
+        }
+        // Unnamed batch: fall back to the hand, and to a full cube if even that says nothing —
+        // the conservative assumption, since a full cube is the shape most likely to hit us.
+        if (player.getMainHandStack().getItem() instanceof BlockItem bi) {
+            return bi.getBlock().getDefaultState();
+        }
+        return net.minecraft.block.Blocks.STONE.getDefaultState();
+    }
+
+    /**
+     * WHERE TO STAND to place a block at {@code target} — port of
+     * {@code BuilderProcess.placementGoal} (BuilderProcess.java:1050-1063).
+     *
+     * <p>Upstream returns a Goal (a predicate over positions) and lets the pathfinder pick any
+     * position satisfying it. Tungsten's navigator takes a concrete destination, so the goal's
+     * predicate is evaluated here and one cell is chosen — preferring lower y, which is what
+     * {@code GoalAdjacent.heuristic} (:1109-1112) does with its {@code y * 100} term.
+     *
+     * <ul>
+     *   <li>A placeable neighbour exists -&gt; {@code GoalAdjacent(target, against, allowSameLevel)}:
+     *       stand NEXT TO the cell, never in it and never in the block being placed against, never
+     *       below {@code target.y - 1}, and at the same level only when {@code target.up()} is
+     *       solid (:1092-1106). That last rule is why the builder does not try to place a block
+     *       into the space its own head occupies.</li>
+     *   <li>Otherwise -&gt; {@code GoalPlace(target)} = {@code GoalBlock(target.up())} (:1147):
+     *       stand ON TOP of where the block goes and place downwards. This is the case that
+     *       reaches the top of a column, which nothing on the ground can see: you cannot look at
+     *       the top face of a block whose top is above your eye.</li>
+     * </ul>
+     */
+    private static BlockPos placementStand(net.minecraft.world.WorldView world, BlockPos target,
+                                           BlockState state) {
+        boolean allowSameLevel = !world.getBlockState(target.up()).isAir();
+        for (Direction facing : kaptainwutax.tungsten.path.movements.Movement
+                .HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP) {
+            BlockPos against = target.offset(facing);
+            // BOTH halves of upstream's condition (BuilderProcess.java:1058). The second half is
+            // the one that says "and the block would actually fit there".
+            if (!RealPlacement.canPlaceAgainst(world, against)) continue;
+            if (world instanceof net.minecraft.world.World w
+                    && !placementPlausible(w, target, state)) continue;
+            BlockPos stand = adjacentStand(world, target, against, allowSameLevel);
+            if (stand != null) return stand;
+        }
+        return target.up();   // GoalPlace: on top of it, placing down
+    }
+
+    /** The {@code GoalAdjacent.isInGoal} predicate (BuilderProcess.java:1092-1106), evaluated
+     *  over the cells around the target, lowest first. */
+    private static BlockPos adjacentStand(net.minecraft.world.WorldView world, BlockPos target,
+                                          BlockPos against, boolean allowSameLevel) {
+        int[] levels = allowSameLevel ? new int[]{-1, 0, 1} : new int[]{0, 1};
+        for (int dy : levels) {
+            for (Direction d : Direction.Type.HORIZONTAL) {
+                BlockPos stand = target.offset(d).up(dy);
+                if (stand.equals(target) || stand.equals(against)) continue;
+                if (stand.getY() < target.getY() - 1) continue;
+                // A player is two blocks tall: standing with FEET or HEAD in the cell we are
+                // trying to fill is the very situation placementPlausible refuses. GoalAdjacent
+                // excludes the target cell itself (:1093-1095); the head is the same rule one
+                // level up, and skipping it is how the bot ends up shoving at its own eye level.
+                if (stand.up().equals(target)) continue;
+                if (!standable(world, stand)) continue;
+                return stand;
+            }
+        }
+        return null;
+    }
+
+    /** Feet space, head space, and something to stand on — asked with the ported predicates so
+     *  the builder and the pathfinder agree on what a standing position is. */
+    private static boolean standable(net.minecraft.world.WorldView world, BlockPos feet) {
+        return kaptainwutax.tungsten.path.movements.MovementHelperB.canWalkThrough(world, feet)
+                && kaptainwutax.tungsten.path.movements.MovementHelperB.canWalkThrough(world, feet.up())
+                && kaptainwutax.tungsten.path.movements.MovementHelperB.canWalkOn(world, feet.down());
+    }
+
+    /** Hold {@code blockName}. Returns false when it is not in the hotbar at all — the caller
+     *  must then NOT place, because placing something else is worse than placing nothing.
+     *  Skips the lookup when the wanted type is already equipped. */
+    private static boolean equipBlock(ClientPlayerEntity player, String blockName) {
         if (blockName != null && blockName.equals(equipped)
                 && player.getMainHandStack().getItem() instanceof BlockItem) {
-            return;
+            return true;
         }
         if (blockName != null && !blockName.isEmpty()) {
             String want = blockName.contains(":") ? blockName : "minecraft:" + blockName;
@@ -312,17 +561,18 @@ public final class BlockPlaceHelper {
                 if (Registries.ITEM.getId(st.getItem()).toString().equals(want)) {
                     player.getInventory().setSelectedSlot(i);
                     equipped = blockName;
-                    return;
+                    return true;
                 }
             }
         }
-        if (player.getMainHandStack().getItem() instanceof BlockItem) return;
-        for (int i = 0; i < 9; i++) {
-            if (player.getInventory().getStack(i).getItem() instanceof BlockItem) {
-                player.getInventory().setSelectedSlot(i);
-                equipped = null;
-                return;
-            }
-        }
+        if (player.getMainHandStack().getItem() instanceof BlockItem) return true;
+        // NO "ANY BLOCK WILL DO" FALLBACK. It used to grab the first BlockItem in the hotbar when
+        // the named one was absent, so a //set cobblestone with no cobblestone quietly built the
+        // wall out of whatever was lying in slot 1 — and a schematic came out the wrong colour
+        // with every cell reported as placed. Upstream refuses instead:
+        // selectThrowawayForLocation failing makes attemptToPlaceABlock return NO_OPTION and set
+        // the movement UNREACHABLE (MovementHelper.java:819-823). Same answer here: say so, and
+        // let the caller see it as a deferral rather than a silent substitution.
+        return false;
     }
 }

@@ -2991,11 +2991,28 @@ public class Py4jEntryPoint {
         out.put("deferNoFace", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferNoFace);
         out.put("deferTimeout", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferTimeout);
         out.put("deferProtected", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferProtected);
+        out.put("walkStarted", kaptainwutax.tungsten.helpers.BlockPlaceHelper.walkStarted);
+        // The two reasons that are NOT "stand somewhere else": the block cannot survive in that
+        // cell, and the named block is not in the hotbar at all.
+        out.put("deferNoSupport", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferNoSupport);
+        out.put("deferNoMaterial", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferNoMaterial);
+        out.put("blockedByOwnBody", kaptainwutax.tungsten.helpers.BlockPlaceHelper.blockedByOwnBody);
+        out.put("walkToBuild", kaptainwutax.tungsten.helpers.BlockPlaceHelper.walkToBuild());
         java.util.List<String> d = new java.util.ArrayList<>();
         for (var p : deferred) d.add(p.getX() + "," + p.getY() + "," + p.getZ());
         out.put("deferred", d);
         out.put("done", kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued() == 0);
         return out;
+    }
+
+    /** Who moves the bot while it builds. ON (default): the queue walks itself to a position
+     *  each cell is placeable from — the port of baritone's BuilderProcess placement goal, which
+     *  is what lets it reach the top of a column or the far side of a wall. OFF: the queue places
+     *  only what is visible from where it stands and hands the rest back through
+     *  buildQueue().deferred, for an agent that wants to own movement itself. */
+    public Map<String, Object> setBuilderWalks(boolean on) {
+        kaptainwutax.tungsten.helpers.BlockPlaceHelper.setWalkToBuild(on);
+        return Map.of("ok", true, "walkToBuild", on);
     }
 
     /** Abandon whatever the build queue still owes (//set gone wrong, wrong selection). */

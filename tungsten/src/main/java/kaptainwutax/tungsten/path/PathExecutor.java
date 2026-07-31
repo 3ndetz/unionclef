@@ -525,7 +525,8 @@ public class PathExecutor {
         net.minecraft.util.math.Direction side = null;
         for (net.minecraft.util.math.Direction dir : net.minecraft.util.math.Direction.values()) {
             net.minecraft.util.math.BlockPos n = target.offset(dir);
-            // Stricter than "the collision shape is not empty" — see RealPlacement.canPlaceAgainst,
+            // Stricter than "the collision shape is not empty" — RealPlacement.canPlaceAgainst
+            // forwards to MovementHelperB's faithful port (protection, world border, blacklist),
             // ported from baritone: the question is whether a side face can actually be clicked.
             if (kaptainwutax.tungsten.helpers.RealPlacement.canPlaceAgainst(world, n)) {
                 against = n; side = dir.getOpposite(); break;

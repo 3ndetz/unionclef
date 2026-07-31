@@ -56,8 +56,15 @@ public final class RealPlacement {
         }
         BlockPos hitPos = hit.getBlockPos();
         // The normal case: we are looking at a neighbour's face, and the block will appear in
-        // the cell on that side of it.
-        if (hitPos.offset(hit.getSide()).equals(target)) return hit;
+        // the cell on that side of it. BOTH halves of upstream's condition
+        // (MovementHelper.attemptToPlaceABlock:845-847): the geometry has to work AND the block
+        // being clicked has to be one you can actually place against. Only the geometry was
+        // ported, so any hit whose side happened to point at the target was promoted to a click
+        // — including hits on the very blocks canPlaceAgainst exists to refuse.
+        if (hitPos.offset(hit.getSide()).equals(target)
+                && mc.world != null && canPlaceAgainst(mc.world, hitPos)) {
+            return hit;
+        }
         // Baritone also allows looking straight AT the target when the block already there is
         // replaceable (tall grass, snow layer, water) — the new block takes its place.
         if (hitPos.equals(target) && mc.world != null
@@ -68,17 +75,32 @@ public final class RealPlacement {
     }
 
     /**
-     * Can a face of this block be clicked against — ported from
-     * {@code MovementHelper.canPlaceAgainst} (baritone/.../MovementHelper.java:637-647).
-     * Deliberately stricter than "the collision shape is not empty", which was tungsten's
-     * test: the question is whether looking at the centre of a side face will actually place,
-     * and carpets, fences and the like fail that in practice however solid they seem.
+     * Can a face of this block be clicked against — {@code MovementHelper.canPlaceAgainst}
+     * (baritone/.../MovementHelper.java:637-647).
+     *
+     * <p>THIS USED TO BE A SECOND, WEAKER COPY OF A PORT THAT ALREADY EXISTED. It kept only the
+     * shape test — {@code isShapeFullCube} plus glass — and dropped the three guards upstream
+     * puts in front of it, all of which {@code MovementHelperB.canPlaceAgainst}
+     * (MovementHelperB.java:729-741) had already ported correctly:
+     *
+     * <ul>
+     *   <li>{@code shouldAvoidPlacingAt} -&gt; {@code PlaceRules.allowedByPolicy}, so the builder
+     *       stopped honouring claims and protected areas for the block it CLICKS (the target cell
+     *       was checked; the support was not).</li>
+     *   <li>the world border.</li>
+     *   <li>{@code isBlockNormalCube}'s explicit blacklist (MovementHelper.java:790-797):
+     *       bamboo, moving pistons, scaffolding, SHULKER BOXES, pointed dripstone, amethyst.
+     *       Their collision shape says "full cube" and lies about it. A shulker box next to the
+     *       target passed the shape test, the click OPENED it, {@code interactBlock} returned
+     *       SUCCESS, and the queue counted a block it never placed while the bot sat in a
+     *       container GUI.</li>
+     * </ul>
+     *
+     * <p>So it now forwards to the real port. Two spellings of one upstream function is exactly
+     * the duplication this project keeps paying for.
      */
     public static boolean canPlaceAgainst(WorldView world, BlockPos pos) {
-        BlockState state = world.getBlockState(pos);
-        if (state.isAir()) return false;
-        Block b = state.getBlock();
-        if (b == Blocks.GLASS || b instanceof StainedGlassBlock) return true;
-        return Block.isShapeFullCube(state.getCollisionShape(world, pos));
+        return kaptainwutax.tungsten.path.movements.MovementHelperB.canPlaceAgainst(
+                world, pos.getX(), pos.getY(), pos.getZ(), world.getBlockState(pos));
     }
 }

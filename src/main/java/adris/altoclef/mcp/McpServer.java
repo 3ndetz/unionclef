@@ -315,6 +315,12 @@ public class McpServer {
                 + "buildBlocks feed: queued / placed / already / deferred (cells out of reach — walk closer with "
                 + "gotoXYZ and re-issue for those) / done.",
                 schema(), a -> api.buildQueue());
+        tool("setBuilderWalks",
+                "Who moves the bot while it builds. ON (default): the build queue walks itself to a position each "
+                + "cell is placeable from, so it can reach a column top or a wall's far side. OFF: it places only "
+                + "what is visible from where it stands and returns the rest in buildQueue().deferred for you to "
+                + "reposition for yourself.",
+                schema("on:boolean"), a -> api.setBuilderWalks(Boolean.parseBoolean(String.valueOf(a.get("on")))));
         tool("buildQueueClear",
                 "Drop whatever the build queue still owes (wrong selection, changed plan).",
                 schema(), a -> api.buildQueueClear());
