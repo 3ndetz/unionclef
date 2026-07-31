@@ -190,8 +190,14 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   подделанной постановки: приближение вместо собственного рейтрейса игры.
   `nav_break` PASS 3/3 (1.1 / 0.6 / 0.9).
   intended block, not the one vanilla actually breaks.
-- [ ] **C5.4 `mineBlocks()` silently no-ops** on any block with an empty collision shape and still
+- [x] **C5.4 `mineBlocks()` silently no-ops** on any block with an empty collision shape and still
   reports "Mining done".
+  ЗАКРЫТО 2026-07-31 + прогон: очередь слома искала цель через `getShapeVolume(pos) > 0`, то есть
+  спрашивала про ОБЪЁМ КОЛЛИЗИИ. Блоки с пустой коллизией — трава, факелы, цветы, снежный слой,
+  паутина — пропускались как «уже сломанные», и очередь рапортовала об успехе, не сломав ничего.
+  Правильный вопрос у baritone другой: можно ли сквозь клетку ПРОЙТИ. Предикат приехал вместе с
+  портом — `MovementHelperB.canWalkThrough` (порт `MovementHelper.java:187-195` с NO-списком ровно
+  этих блоков), теперь очередь спрашивает его. `nav_break` PASS 3/3 (0.6 / 0.6 / 0.8).
 - [x] **C5.5 `planPlaceMoves` ships OFF** and nothing in the default path turns it on → the shipped
   bridging behaviour is still the **reactive 14-second-stall patch** the project rules forbid.
   СТАТУС 2026-07-30: всё ещё `false` (`TungstenConfig.java:160`) — и теперь это ХУЖЕ, чем было.

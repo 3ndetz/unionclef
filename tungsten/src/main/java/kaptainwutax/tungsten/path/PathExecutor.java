@@ -336,9 +336,17 @@ public class PathExecutor {
         MinecraftClient mc = MinecraftClient.getInstance();
         var world = player.getEntityWorld();
 
+        // "STILL THERE?" IS NOT A COLLISION-VOLUME QUESTION. This asked getShapeVolume > 0, so
+        // every block with an empty collision shape — grass, torches, flowers, snow layers,
+        // cobwebs — was skipped as if already gone, and the queue then reported "Mining done"
+        // having mined nothing: register entry C5.4. Baritone asks whether the cell can be
+        // WALKED THROUGH, which is the question that actually decides whether a dig is needed,
+        // and that predicate came over with the port (MovementHelperB.canWalkThrough, from
+        // MovementHelper.java:187-195 with its NO-list of exactly these blocks).
         net.minecraft.util.math.BlockPos target = null;
         for (net.minecraft.util.math.BlockPos pos : breakQueue) {
-            if (kaptainwutax.tungsten.helpers.BlockShapeChecker.getShapeVolume(pos, world) > 0) {
+            if (!kaptainwutax.tungsten.path.movements.MovementHelperB.canWalkThrough(
+                    world, pos.getX(), pos.getY(), pos.getZ())) {
                 target = pos;
                 break;
             }
