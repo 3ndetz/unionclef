@@ -1366,3 +1366,34 @@ needs a different explanation and the search moves back inside the mod.
 
 The caller diagnostic is kept: it is gated on verbose, costs a stack walk only when a chase
 actually stops, and it is the instrument that should have been reached for first.
+
+### RETRACTION: the "80% idle" and "89% inactive" figures were lifetime counters (2026-07-31)
+
+Timestamped the stop against the run window, and it settles the last three sections:
+
+```
+04:41:48  "Punking player: tester2"     <- chase starts
+04:44:51  PUNKSTOP                      <- +183 s, on a 180 s course
+```
+
+The stop is the scenario's own teardown. **The harness does not kill the chase, and the punk
+task runs the whole course.** So `punkStats inactive=9614` was never measuring the chase window
+— those counters are plain statics that are never reset, accumulating over the CONTAINER's
+lifetime, which today spans dozens of runs. The same is true of the `WALKMODE off/bfs/direct`
+counters I added.
+
+Therefore both conclusions built on them are withdrawn:
+
+- "the walker is off for 80% of a pursuit" — unproven; that ratio covers hours of idle container
+  time between runs;
+- "the punk task is inactive for 89% of a chase" — same, and it is contradicted by the
+  timestamps above.
+
+This is the third instrument I have misread today, after treating a switched-off log as a dead
+code path and a `reached=` label as "arrived". The pattern is specific and worth naming: **a
+counter is only a measurement if you know its zero.** Any counter used to judge a run must be
+reset at the run's start, or be a delta between two reads taken inside it.
+
+What survives from those passes: the mode counters themselves (useful once zeroed per run), the
+caller trace on `PunkPlayerTask.stop()` (which produced this correction), and the confirmed fact
+that steering is gated on line of sight. What does not survive: every "X% of the chase" claim.
