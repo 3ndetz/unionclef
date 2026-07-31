@@ -1582,3 +1582,21 @@ change that takes min from 30 to 15 is now visible, and until this criterion exi
 
 Reported, not gated, deliberately: turning it into a gate would invent a threshold nobody has
 measured. Let it accumulate across passes first.
+
+### Forcing sprint at the entity level: measured WORSE, not kept
+
+`BridgeTask` forces sprint with `player.setSprinting` because "the key alone doesn't always
+re-trigger it" (BridgeTask.java:163), and `BlockPathWalker` only ever pressed the key — so a
+long chase might have been WALKING (4.317 b/s) while the runner sprinted (5.612), which is the
+shape of a gap that grows. Plausible, and wrong:
+
+| build | gap min | gap last |
+|---|---|---|
+| key only (current) | 30.1 | 85.5 |
+| + `setSprinting` | 30.7 | **111.6** |
+
+Closing distance unchanged, falling-behind worse. Reverted.
+
+Worth noting what made this judgeable: the `gap to runner` criterion added an hour earlier.
+Without it both builds read "chase_terrain: FAIL" and the change would have been kept on
+plausibility.
