@@ -114,7 +114,16 @@ def setup_bridge():
     rcon("fill 20 -54 -3 26 -54 3 stone")              # destination platform
     rcon(f"clear {BOT}"); rcon(f"item replace entity {BOT} hotbar.0 with cobblestone 64")
     rcon("time set day"); rcon("weather clear")
-    rcon(f"tp {BOT} 1 -53 0 -90 0"); time.sleep(2)     # pad edge, facing east(+x); void x=2..19 below y=-54
+    rcon(f"tp {BOT} 1 -53 0 -90 0")                    # pad edge, facing east(+x); void x=2..19 below y=-54
+    # WAIT FOR THE LANDING. The teleport drops the bot a block onto the pad, and starting the
+    # bridge mid-fall walks it straight off the edge — measured: the bot ended at y=-65.6, i.e.
+    # through the world floor, having placed nothing. Over a ten-block void that is unrecoverable,
+    # which is why the flat probe never showed it.
+    for _ in range(20):
+        r = py4j(CLIENT, "print(mc.getGameState()['self']['onGround'])")
+        if r.stdout.strip().endswith("True"): break
+        time.sleep(0.5)
+    time.sleep(1.5)
 
 def setup_we():
     clean(-12,-10,12,10)
@@ -199,7 +208,11 @@ def main():
         record_ext(9, (6,-49,14),(6,-57,0), 'mc.ChatMessage(";goto 5 -56 0")')
     elif SCEN=="bridge":
         setup_bridge()
-        record_ext(10, (10,-46,15),(10,-54,0), f'mc.selectHotbar(0); time.sleep(0.6); mc.bridgeForward("east", {BRIDGE_N})')
+        # FIRST PERSON and much longer. 10 s was sized for instantaneous placement; a block now
+        # costs 4 ticks plus the aim, so an 18-block span takes over a minute. The own-camera
+        # shot also does not depend on tester2 being joined to the right server, which it
+        # silently was not when the external cam was last used.
+        record_own(95, f'mc.selectHotbar(0); time.sleep(0.6); mc.bridgeForward("east", {BRIDGE_N})', persp=0)
     elif SCEN=="worldedit":
         setup_we()
         # FIRST PERSON, deliberately. The question this clip has to answer is whether the bot
