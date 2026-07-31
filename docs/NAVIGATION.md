@@ -1169,3 +1169,24 @@ This is the same family as the nav_wall2 defect fixed earlier — a cut at index
 of one cell, which `startBFS` refuses (it needs two), so nothing walks and nothing hands over.
 The fix belongs there, in how a flagged FIRST move is handled, not in the water course and not
 in the flag.
+
+### The 12/12 with placement shipping ON — the honest rate (2026-07-31)
+
+One sweep is not a result, so here are three on the same build (`planPlaceMoves` now true by
+default):
+
+| sweep | gate failures | note |
+|---|---|---|
+| unrecorded #1 | **0** | 12/12 |
+| unrecorded #2 | **0** | 11/12, the one non-pass marked INVALID = host starved |
+| **recorded** (`--record`) | **2** | `nav_bridge` and `nav_water` |
+
+So: zero gate failures whenever the machine is not loaded, and under the extra load of
+per-course ffmpeg exactly the two courses already documented as fragile fail — `nav_water` with
+its long-standing 1-in-3 flake, and `nav_bridge` with its known fps sensitivity (passes at
+18-24 fps, fails at ~10).
+
+That is the honest reading and it is also the argument for the open AC-1 item: the suite is
+green on a quiet machine and not proven on a busy one. Recording is itself a load, which makes
+`--record` sweeps a rough low-fps probe — but a deliberate one (`docker update --cpus N`) is
+what actually settles it.
