@@ -390,7 +390,16 @@ public final class BlockPlaceHelper {
                 if (hit == null) return;         // aim still on its way; hold this cell
                 idleTicks = 0;
                 if (!tryPlace(hit)) return;      // rate gate closed this tick
-                it.remove();
+                // DO NOT TRUST ActionResult.SUCCESS — TRUST THE WORLD. The click succeeding is a
+                // CLIENT-side prediction, and the server can still refuse it; measured on
+                // //replace, where the queue reported placed=3, deferred=0, done and the three
+                // cells were still empty ten seconds later. Removing the cell on the click threw
+                // away the only record that the work was still owed.
+                //
+                // So leave it queued. Next tick's scan asks the world: filled counts it as done
+                // (alreadyFilled) and drops it, still air retries it — at the gate's rate, and
+                // bounded by the same idle timeout as everything else. Same rule the //replace
+                // poll already follows: the world is the only honest source.
                 placedFromQueue++;
                 walkDone();
                 return;

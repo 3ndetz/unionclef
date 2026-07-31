@@ -99,7 +99,16 @@ def main():
     print(f"  buildQueue: {q}")
     print(f"  bot: {py4j('pos')}")
     time.sleep(1)
-    after=[block_at(*p) for p in patch]
+    # RE-READ THE WORLD, DO NOT SNAPSHOT IT. The mod reported placed=3, deferred=0, done=true and
+    # this check still found nothing — because it ran the instant the queue emptied, before the
+    # server had applied the last placements. That is a false FAIL, and the same shape produced
+    # one in the bridge probe too. Give the world a moment and re-ask.
+    after = None
+    for _ in range(10):
+        after = [block_at(*p) for p in patch]
+        if all(b == "cobblestone" for b in after):
+            break
+        time.sleep(1)
     print("  exec AFTER:", py4j("exec")["s"])
     # tickBreaking only returns false in three places and every one of them says so in chat.
     for line in py4j("chat")["c"]:

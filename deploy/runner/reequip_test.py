@@ -98,7 +98,14 @@ def main():
     for line in py4j("chat")["c"]:
         if "bridge" in line.lower() or "block" in line.lower():
             print("    chat:", line)
-    paved = [x for x in range(1, 7) if solid(x, PAD_Y, 0)]
+    # Same re-read as diag_replace: the task can report "Bridge done" a moment before the server
+    # has the last blocks, and snapshotting once turned that into a false FAIL.
+    paved = []
+    for _ in range(10):
+        paved = [x for x in range(1, 7) if solid(x, PAD_Y, 0)]
+        if len(paved) >= 3:
+            break
+        time.sleep(1)
     print(f"  paved cells: {paved}")
     # Two dirt can only pave two cells; anything beyond proves the re-equip fired.
     ok = len(paved) >= 3
