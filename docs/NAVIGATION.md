@@ -1289,3 +1289,28 @@ what stops it), not a `BlockPathWalker` one, and it is where the next pass start
 
 The mode counters are kept: they are the instrument that answered this, they are gated on
 verbose logging, and they cost three increments a tick.
+
+### It is not the walker that is idle — it is the whole chase (2026-07-31)
+
+Removing the 2-second replan interval for an idle walker changed nothing:
+`off=16486 bfs=3712 direct=2` against `off=14339 bfs=3655 direct=6` before. So the interval was
+not why the walker sits off 80% of a pursuit, and that model is dead too.
+
+The numbers line up with one measured earlier and not connected until now:
+
+```
+WALKMODE   off = 80%  of the walker's ticks
+punkStats  called=10797  inactive=9614   -> the PUNK task itself is inactive 89% of the time
+```
+
+The walker is off because **nothing is asking it to run**: `PunkPlayerTask` is inactive for the
+overwhelming majority of a chase, so `FollowEntityTask` is never started, so no walk happens.
+Every pass so far has been tuning the machinery of a chase that, for 9 ticks in 10, is not
+running at all.
+
+Next question, and it is one level up again: what makes `PunkPlayerTask` inactive during
+`chase_terrain`? `punkStats` also reports `noTarget=239`, which is not enough to explain 9614.
+Measure the branch it takes on those ticks before touching anything — that has been the lesson
+of every pass here.
+
+The interval change was reverted (measured neutral).
