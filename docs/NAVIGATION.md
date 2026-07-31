@@ -1218,3 +1218,25 @@ fps at which it used to fall into the void.
 Method note worth keeping: `--record` sweeps are a rough low-fps probe (per-course ffmpeg is
 itself load), but `docker update --cpus N` is the deliberate one. Judge low-fps behaviour with
 the limit, never by waiting for the machine to be busy.
+
+### The stuck signal, attempt two: safe but inert, and exactly why (2026-07-31)
+
+Re-applied the BFS stuck detector (3 s of pressing forward without moving) with a wider
+exemption than the first attempt: place/break queue, `MovementQueue`, AND an active physics
+search or executor.
+
+Measured, both directions:
+
+- **No false positives on nav.** `nav_gaps` — the course the first attempt was blamed for —
+  passes 3/3 with the detector in, and the detector fires ZERO times. The sweep failure that
+  first attempt was blamed for was the course's own documented 1-in-3 flake.
+- **But it fires ZERO times in a chase too**, which is the one place it exists for.
+
+The reason is the exemption itself: `busyElsewhere` includes `PATHFINDER.active`, and during a
+chase the physics search runs almost continuously (that is the measured shape of
+`FollowEntityTask` — it starts a search whenever it is idle). So the guard added to protect nav
+silences the detector precisely where the bot is stuck.
+
+Sharpens the next attempt: the exemption must distinguish *"physics is solving the obstacle in
+front of us"* from *"physics happens to be running while we walk"*. A pending hand-off for THIS
+waypoint is a legitimate pause; a background search is not. Reverted rather than left inert.
