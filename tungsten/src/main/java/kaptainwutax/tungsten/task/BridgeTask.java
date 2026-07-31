@@ -35,6 +35,11 @@ public class BridgeTask {
     /** True on ticks where a cell was wanted and the aim was being driven at it: the bot is
      *  standing still ON PURPOSE, which the stuck watchdog must not read as a fault. */
     private static boolean aimingToPlace;
+    /** Consecutive ticks spent aiming without a placement landing. */
+    private static int aimTicks;
+    /** How long the aim is allowed to fail to converge before the bridge says so and stops.
+     *  Generous — WindMouse is humanised and the rate gate is four ticks — but finite. */
+    private static final int AIM_PATIENCE = 100;
     private static double startAlong = Double.NaN; // position along bridge axis at start
 
     public static synchronized boolean start(String direction, int blocks) {
@@ -61,6 +66,7 @@ public class BridgeTask {
         stuckTicks = 0;
         placedAtLastCheck = 0;
         aimingToPlace = false;
+        aimTicks = 0;
         lastProgress = 0;
         startAlong = Double.NaN;
         active = true;
@@ -106,8 +112,20 @@ public class BridgeTask {
         var world = player.getEntityWorld();
         var opts = mc.options;
 
+        // PER-TICK TRACE, because three hypotheses about this abort have now been wrong. It prints
+        // the only things the fall test is made of — where the body is, what it is standing on,
+        // and how fast it is going down — so the next reading is evidence rather than a theory.
+        if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) {
+            System.out.println(String.format(
+                    "BRIDGETRACE pos=(%.2f,%.2f,%.2f) vel=%.3f ground=%b sneakPose=%b placed=%d",
+                    player.getX(), player.getY(), player.getZ(),
+                    player.getVelocity().y, player.isOnGround(), player.isInSneakingPose(), placed));
+        }
         if (player.getVelocity().y < -0.5) { // falling — paving fell behind
-            Debug.logMessage("Bridge aborted (falling) after " + placed);
+            Debug.logMessage("Bridge aborted (falling) after " + placed
+                    + String.format(" at (%.2f,%.2f,%.2f) vel=%.3f ground=%b sneak=%b",
+                    player.getX(), player.getY(), player.getZ(),
+                    player.getVelocity().y, player.isOnGround(), player.isInSneakingPose()));
             stop();
             return;
         }
@@ -248,7 +266,24 @@ public class BridgeTask {
         // FastNavigator already carries this exact lesson in its own watchdog ("BUILDING IS
         // PROGRESS, even though the distance does not move"); BridgeTask was simply never given
         // it. Aiming at a cell we intend to fill counts, and so does having just filled one.
+        // AIMING COUNTS AS PROGRESS, BUT NOT FOREVER. Letting it count without a bound was my
+        // own mistake and the trace caught it: the bot parks at the sneak limit
+        //   pos=(1.29,-60.00,0.50) vel=-0.078 ground=true sneakPose=true placed=0
+        // aiming at a face it can never see — x=1.29 is PAST the face at x=1.0, so the ray trace
+        // will never agree — and because aiming reset the watchdog every tick, a three-second
+        // loud failure became an unbounded silent one. A wait that cannot end is not a wait.
+        //
+        // (The "Bridge aborted (falling)" lines that sent me chasing a fall were from EARLIER
+        // runs still in the chat ring. vel=-0.078 is resting gravity; nothing was ever falling.)
         double progress = dir.getAxis() == Direction.Axis.X ? player.getX() : player.getZ();
+        if (placed != placedAtLastCheck) aimTicks = 0;
+        else if (aimingToPlace && ++aimTicks > AIM_PATIENCE) {
+            Debug.logMessage("Bridge gave up aiming after " + placed
+                    + String.format(" — %d ticks at (%.2f,%.2f,%.2f), the face never came into view",
+                    aimTicks, player.getX(), player.getY(), player.getZ()));
+            stop();
+            return;
+        }
         boolean working = placed != placedAtLastCheck || aimingToPlace;
         placedAtLastCheck = placed;
         if (working) {
