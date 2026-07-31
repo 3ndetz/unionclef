@@ -1543,3 +1543,21 @@ Two honest ways forward, and they are different products:
 Recorded before choosing, because the choice is the user's: option 1 is more bot, option 2 is a
 more honest bench. What is settled is that the previous framings — slow pathing, no climb
 hand-off, walker idle, mid-run restarts — were all downstream of a target the client cannot see.
+
+### Pursuing the last known position: landed, and the bench cannot see whether it helped
+
+The root cause says the bot must keep going towards where it last saw the runner, because the
+runner leaves the client's entity range by design. `FollowEntityTask` ALREADY implements that —
+`targetPos = lastKnownPos` at FollowEntityTask.java:173 — and `PunkPlayerTask` was preventing it
+from ever running: on a lost target it released the drive keys and returned. Now, while the
+follow task is still active, it is left to do its job. Reuse, not a second implementation.
+
+`chase_terrain` still FAILS, and the honest statement is that **the bench cannot tell whether
+this helped**: its gate is binary — contact within 120 s — with no partial credit, so any change
+that closes distance without making contact is invisible to it. There is no "final distance to
+runner" criterion the way the nav courses have `final_dist`.
+
+That is a bench gap worth fixing before the next attempt at this course, and it is cheap: record
+the minimum distance to the runner over the run and report it. Without it, every future pass
+here is judged pass/fail on an outcome that depends on a target the client cannot see for a
+quarter of the course — which is exactly how six passes were spent without a number moving.

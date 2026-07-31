@@ -53,7 +53,7 @@ public class PunkPlayerTask {
      * the zero.
      */
     private static void resetCounters() {
-        pCalled = pInactive = pNoTarget = 0;
+        pCalled = pInactive = pNoTarget = pLastKnown = 0;
         kaptainwutax.tungsten.task.BlockPathWalker.tickOff = 0;
         kaptainwutax.tungsten.task.BlockPathWalker.tickBfs = 0;
         kaptainwutax.tungsten.task.BlockPathWalker.tickDir = 0;
@@ -150,6 +150,7 @@ public class PunkPlayerTask {
     // Branch counters, read over py4j. Two earlier measurements disagreed about where the
     // bot spends its time — the chase says it is fighting, combat says it is not — and only
     // counting each branch can settle it.
+    public static volatile int pLastKnown = 0;
     public static volatile int pCalled = 0, pInactive = 0, pNoTarget = 0,
             pVoidHold = 0, pCombat = 0, pApproach = 0;
 
@@ -177,6 +178,22 @@ public class PunkPlayerTask {
         tryRediscover();
         if (targetEntity == null || targetEntity.isRemoved() || !targetEntity.isAlive()) {
             pNoTarget++;
+            // A LOST TARGET IS NOT A REASON TO STAND STILL — AND THE ANSWER ALREADY EXISTS.
+            // A target only lives while the SERVER sends it: tryRediscover reads the client's
+            // entity list, and this server tracks entities for view-distance=8, i.e. 128 blocks,
+            // while the chase bench drives the runner 140 blocks out. So it drops out of view by
+            // design. Measured: noTarget for 966 ticks, about 27% of chase_terrain.
+            //
+            // FollowEntityTask already remembers where it last saw the target and falls back to
+            // that position (FollowEntityTask.java:173, `targetPos = lastKnownPos`). Killing the
+            // drive keys and returning here is what prevented that from ever running. So: while
+            // the follow task is still active, let it keep going to the remembered spot —
+            // exactly what a person does — and only release the keys when there is nothing to
+            // go to. Reuse, not a second implementation of the same idea.
+            if (FollowEntityTask.isActive() && !anyMode) {
+                pLastKnown++;
+                return;
+            }
             // No valid target — most often the instant we KILLED it. The combat
             // render frame stops refreshing keys (its target is gone), so a stale
             // forward-toward-the-enemy press would coast us off the rim before we
