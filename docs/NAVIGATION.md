@@ -1130,3 +1130,24 @@ Two things to carry forward:
    waits on physics hand-offs and on slow water. Baritone's answer is not a timer but
    cost-proportional per-move budgets plus graduated off-path distance — five detectors, each
    converting a specific failure into a re-plan (docs/BARITONE-PORT.md, execution section).
+
+### Why placement-ON breaks nav_water: not bridging into water (2026-07-31)
+
+Switching `planPlaceMoves` on by default takes `nav_water` from 3 passes of 3 to **3 failures of
+3 at final_dist 25.5** — a signature nothing like the course's known 1-in-3 flake at ~8.2, and
+the bot never leaves the start area.
+
+First hypothesis, and it is REFUTED: that the search bridges INTO the pool. It is plausible on
+paper — water has no collision shape, so `supportTop` is NaN ("no floor") and the cell below
+reads as empty, i.e. every water cell looks like a hole to pave, while the placement cannot
+execute because the ray trace passes THROUGH water and the crosshair never lands on a face.
+Guarding `placeAcross` against water destinations changed nothing: still 25.5, 3 of 3.
+
+Next hypothesis, grounded in the source rather than in taste: the flag also unlocks CLIMB moves
+above jump height. `climb` is explicitly refused while the flag is off — the generator logs
+"CLIMB rejected: planPlaceMoves is OFF" — and when it is on, such a climb is emitted FLAGGED,
+which cuts the walked leg and hands the rest to the physics engine. On this course that hand-off
+would leave the bot at the start, which is exactly what 25.5 looks like. Measure that before
+changing anything: count flagged waypoints and hand-offs on nav_water with the flag on.
+
+Both the flag and the (unmeasured) water guard were reverted rather than kept.
