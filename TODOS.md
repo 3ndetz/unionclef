@@ -171,7 +171,15 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
 - [~] **C5.1 Break is cardinal, same-Y, ONE cell.** ЧАСТИЧНО 2026-07-28: слом добавлен в FastPlanner (тот движок, что реально водит бота) и ПРОБИВАЕТ проход ('Mining done — passage open'). Осталось: маршрут после добычи не возобновляется; dig up/down по-прежнему нет. `BlockNode.java:641`:
   `if (dy != 0 || |dx|+|dz| != 1) return false`. **No dig-down, no dig-up**, no break-to-ascend/descend,
   no diagonal. `@gamer` mining strategies are literally not expressible. One cell per full re-search.
-- [ ] **C5.2 Break cost priced with the item CURRENTLY HELD** while the executor swaps to the best tool
+- [x] **C5.2 Break cost priced with the item CURRENTLY HELD** while the executor swaps to the best tool
+  ЗАКРЫТО 2026-07-31 + прогон: живой генератор слома в `FastPlanner` считал цену через
+  `st.calcBlockBreakingDelta(player, ...)`, то есть «насколько быстро тем, что сейчас в руке»,
+  а исполнитель перед копанием переключается на лучший инструмент — поиск оценивал камень по
+  скорости кулака и копал его киркой. Теперь используется перенесённая
+  `MovementHelperB.getMiningDurationTicks` (порт `MovementHelper.java:649-685`): считает по
+  ЛУЧШЕМУ инструменту через `strVsBlock`, применяет множитель правил слома и возвращает
+  `COST_INF` для неломаемого — невозможный копок становится непланируемым, а не сюрпризом на
+  исполнении. `nav_break` PASS 3/3 (0.7 / 0.8 / 0.6).
   → ~20× mismatch.
 - [ ] **C5.3 The executor mines whatever the CROSSHAIR hits**, so `BreakRules` is enforced on the
   intended block, not the one vanilla actually breaks.

@@ -901,9 +901,19 @@ public final class FastPlanner {
             if (world.getBlockState(cell).getCollisionShape(world, cell).isEmpty()) continue;
             net.minecraft.block.BlockState st = world.getBlockState(cell);
             if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, cell, st)) return;
-            float delta = st.calcBlockBreakingDelta(player, world, cell);
-            if (delta <= 0) return;                                     // unbreakable here
-            ticks += delta >= 1 ? 1 : Math.ceil(1f / delta);
+            // PRICE THE DIG WITH THE TOOL WE WILL ACTUALLY USE, NOT THE ONE IN HAND. This read
+            // `st.calcBlockBreakingDelta(player, ...)`, which asks "how fast with whatever is
+            // held right now" — while the executor swaps to the best tool before digging. So the
+            // search priced stone at fist speed and then mined it with a pickaxe: register entry
+            // C5.2. The ported MovementHelper.getMiningDurationTicks (MovementHelperB:751, from
+            // baritone MovementHelper.java:649-685) prices with the best tool via strVsBlock,
+            // applies the break-rule multiplier, and returns COST_INF for the unbreakable — so
+            // an impossible dig becomes unplannable instead of a surprise at run time.
+            double cellTicks = kaptainwutax.tungsten.path.movements.MovementHelperB
+                    .getMiningDurationTicks(world, player, cell.getX(), cell.getY(), cell.getZ(),
+                                            st, dy == 1);
+            if (cellTicks >= 1_000_000) return;                         // unbreakable here
+            ticks += cellTicks;
             plan.add(cell);
         }
         if (plan.isEmpty()) return;                                     // nothing in the way
