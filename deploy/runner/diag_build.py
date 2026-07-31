@@ -17,6 +17,7 @@ try:
     elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
     elif op=="stop": mc.ExecuteCommand("@stop"); out={"ok":True}
     elif op=="build": out=dict(mc.buildBlocks(req["blocks"]))
+    elif op=="bq": out=dict(mc.buildQueue())
 except Exception as e:
     sys.stderr.write("ERR:"+repr(e)+"\n"); sys.exit(3)
 print(json.dumps(out,default=str)); gw.close()
@@ -62,13 +63,28 @@ def main():
     # structure: stone column (5,-60/-59) + cobblestone cap (5,-58) + a stone step (6,-60)
     struct=[[5,-60,0,"stone"],[5,-59,0,"stone"],[5,-58,0,"cobblestone"],[6,-60,0,"stone"]]
     print("=== buildBlocks: mixed-block structure ===")
-    r=None
-    for attempt in range(6):
+    # buildBlocks hands the cells to the tick-driven queue (4 ticks a block, BlockPlaceHelper).
+    # Cells whose every neighbour is hidden behind the block just placed come back as DEFERRED
+    # rather than being placed through the obstruction with a forged hit — so the caller walks,
+    # exactly as an agent (or baritone's BuilderProcess) would, and re-issues.
+    for rnd in range(8):
         r=py4j("build", blocks=struct)
-        print(f"  build[{attempt}]: {r}")
-        if r.get("complete"): break
-        time.sleep(1.5)
-    time.sleep(1)
+        print(f"  build[{rnd}] (enqueued): {r}")
+        if int(r.get("queued",0))==0: break
+        q=None
+        t0=time.time()
+        while time.time()-t0 < 45:
+            q=py4j("bq")
+            if q.get("done"): break
+            time.sleep(1)
+        print(f"  buildQueue[{rnd}]: {q}")
+        d=q.get("deferred") or []
+        if isinstance(d,str):
+            d=json.loads(d.replace("'",'"')) if d.strip().startswith("[") else []
+        if not d: break
+        # stand next to the first cell still owed, at its own level, and try again
+        x,y,z=[int(v) for v in d[0].split(",")]
+        rcon(f"tp {BOT} {x-1.5} {y} {z+0.5} 90 20"); time.sleep(2)
     checks={(5,-60,0):"stone",(5,-59,0):"stone",(5,-58,0):"cobblestone",(6,-60,0):"stone"}
     results={p:block_is(p[0],p[1],p[2],n) for p,n in checks.items()}
     print("  verify:", results)

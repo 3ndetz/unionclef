@@ -1863,11 +1863,32 @@ public class Py4jEntryPoint {
                 client.player.changeLookDirection(
                         Math.round(dYawDeg / degPerPixel) * sensScale,
                         Math.round(dPitchDeg / degPerPixel) * sensScale);
-                net.minecraft.util.hit.BlockHitResult hit = new net.minecraft.util.hit.BlockHitResult(faceCenter, side, support, false);
-                var res = client.interactionManager.interactBlock(client.player, net.minecraft.util.Hand.MAIN_HAND, hit);
-                client.player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
+                // THE LAST FORGED PLACEMENT IN THE PROJECT DIED HERE. What stood on this line
+                // built a BlockHitResult out of the face centre and sent it — a packet claiming a
+                // click the player had not made, on a face the camera had not yet reached. The
+                // camera was turned one line above and the raytrace only agrees a frame later, so
+                // the claim was not merely unverified, it was usually false. Three other sites did
+                // the same and were fixed on 2026-07-30; this one was missed because it lives in
+                // the py4j surface rather than in tungsten.
+                //
+                // Now: aim, then ask the game where the player is ACTUALLY looking
+                // (RealPlacement.readyToPlace -> a live raytrace, baritone's
+                // MovementHelper.attemptToPlaceABlock:840-851), and place with THAT hit through
+                // the shared rate gate, so this lever cannot out-place a human either.
+                var realHit = kaptainwutax.tungsten.helpers.RealPlacement.readyToPlace(client, target);
+                if (realHit == null) {
+                    out.put("ok", false);
+                    out.put("reason", "aim has not converged on " + target.toShortString()
+                            + " — the crosshair is not on a face that would fill it");
+                    out.put("support", support.toShortString());
+                    out.put("side", side.toString());
+                    out.put("placed", false);
+                    return out;
+                }
+                boolean sent = kaptainwutax.tungsten.helpers.BlockPlaceHelper.tryPlace(realHit);
                 out.put("ok", true);
-                out.put("result", res.toString());
+                out.put("sent", sent);
+                out.put("cooldown", !sent);   // rate gate: one place per 4 ticks, as in vanilla
                 out.put("support", support.toShortString());
                 out.put("side", side.toString());
                 out.put("placed", !world.getBlockState(target).isAir());
@@ -1996,7 +2017,8 @@ public class Py4jEntryPoint {
         return String.format(
                 "called=%d deferred=%d inRange=%d clicked=%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
-                        + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d",
+                        + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
+                        + " | gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
                 kaptainwutax.tungsten.path.PathExecutor.placeDeferred,
                 kaptainwutax.tungsten.path.PathExecutor.placeInRange,
@@ -2012,7 +2034,13 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.path.movements.Movement.placeOnCooldown,
                 kaptainwutax.tungsten.path.movements.Movement.placeNoHit,
                 kaptainwutax.tungsten.path.movements.Movement.placeClicked,
-                kaptainwutax.tungsten.path.movements.Movement.motionSteered);
+                kaptainwutax.tungsten.path.movements.Movement.motionSteered,
+                // The shared rate gate every placement now passes through — gateHeld is how many
+                // clicks it swallowed, i.e. proof the limit is doing something rather than compiling.
+                kaptainwutax.tungsten.helpers.BlockPlaceHelper.gatedThrough,
+                kaptainwutax.tungsten.helpers.BlockPlaceHelper.gatedByCooldown,
+                kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued(),
+                kaptainwutax.tungsten.helpers.BlockPlaceHelper.placedFromQueue());
     }
 
     public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }
@@ -2609,23 +2637,20 @@ public class Py4jEntryPoint {
             int breaking = (ex != null && ex.breakQueue != null) ? ex.breakQueue.size() : 0;
             if (breaking > 0) { out.put("ok", true); out.put("phase", "breaking"); out.put("remaining", breaking); return out; }
             if (_replaceCells == null) { out.put("ok", true); out.put("phase", "idle"); return out; }
-            // breaks drained -> place toName at the matched cells (bottom-up, in reach)
-            equipHotbarBlock(client, _replaceToName);
+            // breaks drained -> hand the matched cells to the build queue (bottom-up), which
+            // places them one at a time at the human rate. Poll buildQueue() from here on.
             _replaceCells.sort(java.util.Comparator.comparingInt(net.minecraft.util.math.BlockPos::getY));
-            int placed = 0;
-            java.util.List<net.minecraft.util.math.BlockPos> still = new java.util.ArrayList<>();
+            java.util.List<net.minecraft.util.math.BlockPos> want = new java.util.ArrayList<>();
             for (net.minecraft.util.math.BlockPos p : _replaceCells) {
-                if (!client.world.getBlockState(p).isReplaceable()) continue;   // already filled -> done for this cell
-                if (placed >= 64) { still.add(p); continue; }                    // per-call cap
-                Map<String, Object> r = placeBlockAtRaw(p.getX(), p.getY(), p.getZ());
-                if (Boolean.TRUE.equals(r.get("placed"))) placed++;
-                else still.add(p);   // out of reach — reposition + poll again
+                if (!client.world.getBlockState(p).isReplaceable()) continue;   // already filled
+                want.add(p);
             }
-            _replaceCells = still.isEmpty() ? null : still;
-            boolean done = still.isEmpty();
-            if (done) _replaceToName = null;
-            out.put("ok", true); out.put("phase", done ? "done" : "placing");
-            out.put("placed", placed); out.put("remaining", still.size());
+            kaptainwutax.tungsten.helpers.BlockPlaceHelper.beginBatch(want, _replaceToName);
+            _replaceCells = null;
+            _replaceToName = null;
+            out.put("ok", true); out.put("phase", "placing");
+            out.put("queued", want.size());
+            out.put("poll", "buildQueue()");
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
@@ -2658,25 +2683,37 @@ public class Py4jEntryPoint {
             Integer[] order = new Integer[pos.size()];
             for (int i = 0; i < order.length; i++) order[i] = i;
             java.util.Arrays.sort(order, (a, b) -> Integer.compare(pos.get(a)[1], pos.get(b)[1]));
-            final int CAP = 64;
-            int placed = 0, remaining = 0, already = 0;
-            String lastEquipped = null;
+            // Hand the batch to the tick-driven build queue, in bottom-up order, grouping runs of
+            // the same block type so the queue re-equips only when the type actually changes.
+            // (It used to place up to 64 of them inside this one client tick.)
+            int queued = 0, already = 0;
+            String runName = null;
+            boolean first = true;   // the first run REPLACES the previous batch, the rest append
+            java.util.List<net.minecraft.util.math.BlockPos> run = new java.util.ArrayList<>();
             for (int oi : order) {
                 int[] p = pos.get(oi);
                 String name = names.get(oi);
                 net.minecraft.util.math.BlockPos bp = new net.minecraft.util.math.BlockPos(p[0], p[1], p[2]);
                 if (!client.world.getBlockState(bp).isReplaceable()) { already++; continue; }
-                if (placed >= CAP) { remaining++; continue; }
-                if (!name.equals(lastEquipped)) { equipHotbarBlock(client, name); lastEquipped = name; }
-                Map<String, Object> r = placeBlockAtRaw(p[0], p[1], p[2]);
-                if (Boolean.TRUE.equals(r.get("placed"))) placed++;
-                else remaining++;   // out of reach / no support yet — reposition + call again
+                if (runName != null && !runName.equals(name)) {
+                    if (first) { kaptainwutax.tungsten.helpers.BlockPlaceHelper.beginBatch(run, runName); first = false; }
+                    else kaptainwutax.tungsten.helpers.BlockPlaceHelper.enqueue(run, runName);
+                    queued += run.size();
+                    run = new java.util.ArrayList<>();
+                }
+                runName = name;
+                run.add(bp);
+            }
+            if (!run.isEmpty()) {
+                if (first) kaptainwutax.tungsten.helpers.BlockPlaceHelper.beginBatch(run, runName);
+                else kaptainwutax.tungsten.helpers.BlockPlaceHelper.enqueue(run, runName);
+                queued += run.size();
             }
             out.put("ok", true);
-            out.put("placed", placed);
-            out.put("remaining", remaining);     // reposition (gotoXYZ) + call again
+            out.put("queued", queued);
             out.put("already", already);         // already occupied (skipped)
-            out.put("complete", remaining == 0);
+            out.put("queueTotal", kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued());
+            out.put("poll", "buildQueue()");
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
@@ -2896,13 +2933,17 @@ public class Py4jEntryPoint {
         return out;
     }
 
-    /** Shared fill core for //set and //walls. Places `blockName` at every
-     *  replaceable selection cell matching `include`, bottom-up (so each cell
-     *  has support: the floor or an already-placed block below), capped per
-     *  call so a big region never stalls a tick. Equips the named block from
-     *  the hotbar if present (else placeBlockAtRaw auto-picks any block item).
-     *  Returns filled / remaining (out of reach — reposition + call again) /
-     *  already (non-replaceable) / truncated (hit cap) / complete. */
+    /** Shared fill core for //set, //walls, //hollow, //cyl and //sphere. HANDS the matching
+     *  selection cells to the tick-driven build queue, bottom-up so each cell has support (the
+     *  floor, or a block this same queue placed below it) by the time it is reached.
+     *
+     *  <p>This used to place them itself, in a loop, inside one client tick — up to 96 blocks
+     *  between two frames, which is the clip where six panes of glass appeared at once. A block
+     *  costs four ticks to place (helpers/BlockPlaceHelper, ported from baritone), so "fill this
+     *  region" is not a question anyone can answer inside a single call. It is work handed over:
+     *  the queue aims and places one cell at a time, and the agent polls buildQueue().
+     *
+     *  Returns queued (cells accepted) / already (non-replaceable, nothing owed) / queueTotal. */
     private Map<String, Object> fillCells(String blockName, String op, java.util.function.Predicate<int[]> include) {
         return onClientThread(() -> {
             Map<String, Object> out = new HashMap<>();
@@ -2910,51 +2951,57 @@ public class Py4jEntryPoint {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
             if (_selMin == null) { out.put("ok", false); out.put("reason", "no selection — call select() first"); return out; }
-            equipHotbarBlock(client, blockName);   // honest lever: hold the named block
-            // Cap placements per call so a big region never stalls the render
-            // thread inside one tick — the agent just calls again (remaining>0).
-            final int MAX_PLACEMENTS = 96;
-            int filled = 0, remaining = 0, already = 0;
-            boolean truncated = false;
-            for (int y = _selMin[1]; y <= _selMax[1] && !truncated; y++) {   // bottom-up
-                for (int x = _selMin[0]; x <= _selMax[0] && !truncated; x++) {
+            java.util.List<net.minecraft.util.math.BlockPos> cells = new java.util.ArrayList<>();
+            int already = 0;
+            for (int y = _selMin[1]; y <= _selMax[1]; y++) {   // bottom-up
+                for (int x = _selMin[0]; x <= _selMax[0]; x++) {
                     for (int z = _selMin[2]; z <= _selMax[2]; z++) {
                         if (!include.test(new int[]{x, y, z})) continue;
                         net.minecraft.util.math.BlockPos p = new net.minecraft.util.math.BlockPos(x, y, z);
                         if (!client.world.getBlockState(p).isReplaceable()) { already++; continue; }
-                        // placeBlockAtRaw (not placeBlockAt) — we are already on
-                        // the client thread; nesting onClientThread would deadlock.
-                        Map<String, Object> r = placeBlockAtRaw(x, y, z);
-                        if (Boolean.TRUE.equals(r.get("placed"))) filled++;
-                        else remaining++;
-                        if (filled >= MAX_PLACEMENTS) { truncated = true; break; }
+                        cells.add(p);
                     }
                 }
             }
+            kaptainwutax.tungsten.helpers.BlockPlaceHelper.beginBatch(cells, blockName);
             out.put("ok", true);
-            out.put("filled", filled);
-            out.put("remaining", remaining);   // out of reach — reposition + call again
+            out.put("queued", cells.size());
             out.put("already", already);
-            out.put("truncated", truncated);   // hit per-call cap — call again to continue
-            out.put("complete", remaining == 0 && !truncated);
+            out.put("queueTotal", kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued());
+            out.put("poll", "buildQueue()");
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));
     }
 
-    /** Select the first hotbar slot (0-8) holding `blockName` (item-id match,
-     *  with or without the "minecraft:" namespace). No-op if blank or absent —
-     *  the caller then keeps whatever block is held. Must run on client thread. */
-    private void equipHotbarBlock(MinecraftClient client, String blockName) {
-        if (blockName == null || blockName.isEmpty()) return;
-        String want = blockName.contains(":") ? blockName : "minecraft:" + blockName;
-        for (int i = 0; i < 9; i++) {
-            ItemStack st = client.player.getInventory().getStack(i);
-            if (st.isEmpty()) continue;
-            if (net.minecraft.registry.Registries.ITEM.getId(st.getItem()).toString().equals(want)) {
-                adris.altoclef.multiversion.entity.PlayerVer.setSelectedSlot(client.player.getInventory(), i);
-                return;
-            }
-        }
+    /** Poll the tick-driven build queue (//set, //walls, //hollow, //cyl, //sphere, buildBlocks,
+     *  //replace). Placement runs at the human rate — one block per 4 ticks, baritone's
+     *  rightClickSpeed — so a big region takes as long as it takes; this is how the agent watches
+     *  it. `deferred` are cells the queue could not reach or had nothing to place against: walk
+     *  closer (gotoXYZ) and re-issue for those. `done` = nothing left queued. */
+    public Map<String, Object> buildQueue() {
+        Map<String, Object> out = new HashMap<>();
+        var deferred = kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferred();
+        out.put("ok", true);
+        out.put("queued", kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued());
+        out.put("placed", kaptainwutax.tungsten.helpers.BlockPlaceHelper.placedFromQueue());
+        out.put("already", kaptainwutax.tungsten.helpers.BlockPlaceHelper.alreadyFilled());
+        out.put("deferredCount", deferred.size());
+        // WHY they were deferred: noFace = nothing placeable was visible from where the bot
+        // stood (walk closer), timeout = a face existed but the aim never got there (an aim bug).
+        out.put("deferNoFace", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferNoFace);
+        out.put("deferTimeout", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferTimeout);
+        out.put("deferProtected", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferProtected);
+        java.util.List<String> d = new java.util.ArrayList<>();
+        for (var p : deferred) d.add(p.getX() + "," + p.getY() + "," + p.getZ());
+        out.put("deferred", d);
+        out.put("done", kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued() == 0);
+        return out;
+    }
+
+    /** Abandon whatever the build queue still owes (//set gone wrong, wrong selection). */
+    public Map<String, Object> buildQueueClear() {
+        kaptainwutax.tungsten.helpers.BlockPlaceHelper.clearQueue();
+        return Map.of("ok", true, "queued", 0);
     }
 
     /** Compact battle game-state for a cognitive agent (TODO 6.1) — one call

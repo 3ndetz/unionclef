@@ -3,7 +3,7 @@
 
 Selects a region, runs each generator, and checks the placed-cell count is the expected
 SHAPE — strictly between empty and the full box (a circle/shell/sphere, not //set). Uses the
-count fillCells returns (filled + already), repositioning if any cells are out of reach.
+count the build queue drains (placed + already), repositioning for deferred cells.
 Bot on a stone floor with cobblestone in hand.
 """
 import functools, json, subprocess, time
@@ -22,6 +22,7 @@ elif op=="hollow": out=dict(mc.hollowSelection(req["b"]))
 elif op=="cyl": out=dict(mc.cylSelection(req["b"]))
 elif op=="sphere": out=dict(mc.sphereSelection(req["b"]))
 elif op=="goto": out=dict(mc.gotoXYZ(req["x"],req["y"],req["z"]))
+elif op=="bq": out=dict(mc.buildQueue())
 elif op=="stop": mc.ExecuteCommand("@stop"); out={"ok":True}
 print(json.dumps(out,default=str)); gw.close()
 """
@@ -57,17 +58,30 @@ def prep(region):
     rcon(f"tp {BOT} {(x1+x2)//2} {y1} {z1-3} 0 0"); time.sleep(1)
     rcon(f"item replace entity {BOT} weapon.mainhand with cobblestone 64")
 
-def total_placed(op, region, block, secs=25):
-    """Call the generator, repositioning until complete or time out; return total placed+already."""
-    total=0; t0=time.time()
+def total_placed(op, region, block, secs=90):
+    """Enqueue the shape, then let the build queue drain it.
+
+    The generator no longer places anything itself: it hands the cells over and the queue
+    places one per 4 ticks (BlockPlaceHelper, baritone's rightClickSpeed). So the loop waits
+    on buildQueue() and only repositions for cells the queue reports as DEFERRED — out of
+    reach, or nothing to place against yet."""
+    t0=time.time()
     x1,y1,z1,x2,y2,z2=region
+    res=py4j(op, b=block)
+    already=int(res.get("already",0))
+    moved=False
     while time.time()-t0 < secs:
-        res=py4j(op, b=block)
-        total = int(res.get("filled",0)) + int(res.get("already",0))
-        if res.get("complete") or int(res.get("remaining",0))==0: break
-        # reposition toward the far side for out-of-reach cells
-        py4j("goto", x=x2, y=y1, z=z2); time.sleep(3); py4j("stop")
-    return total, res
+        q=py4j("bq")
+        if q.get("done"):
+            if int(q.get("deferredCount",0))>0 and not moved:
+                # one reposition attempt for the far side, then re-issue the shape
+                moved=True
+                py4j("goto", x=x2, y=y1, z=z2); time.sleep(3); py4j("stop")
+                res=py4j(op, b=block); already=int(res.get("already",0)); continue
+            break
+        time.sleep(1)
+    q=py4j("bq")
+    return int(q.get("placed",0)) + already, q
 
 def run(name, op, region, lo, hi, full):
     prep(region); time.sleep(0.5)

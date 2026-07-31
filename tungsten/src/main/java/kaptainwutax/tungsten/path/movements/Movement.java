@@ -88,11 +88,6 @@ public abstract class Movement {
      *  IPlayerController.java:58-60. Hardcoded default, not a tungsten setting. */
     private static final double BLOCK_REACH_DISTANCE = 4.5;
 
-    /** Baritone {@code rightClickSpeed}, Settings.java:375 = 4, minus BlockPlaceHelper's
-     *  {@code BASE_PLACE_DELAY = 1} (BlockPlaceHelper.java:29). */
-    private static final int RIGHT_CLICK_SPEED = 4;
-    private static final int BASE_PLACE_DELAY = 1;
-
     /** Baritone {@code pauseMiningForFallingBlocks}, Settings.java:370 = true. */
     private static final boolean PAUSE_MINING_FOR_FALLING_BLOCKS = true;
 
@@ -100,12 +95,9 @@ public abstract class Movement {
      *  a tick counts as "steered" in {@link #motionSteered}. Nothing branches on it. */
     private static final float STEER_REPORT_DEG = 15.0f;
 
-    /**
-     * BlockPlaceHelper.java:31 keeps this per-Baritone-instance, i.e. per player, NOT per movement:
-     * the 4-tick place cooldown has to survive the handover from one movement to the next, or a
-     * chain of one-block bridge steps would place on every single tick. Hence static.
-     */
-    private static int rightClickTimer;
+    // The 4-tick place cooldown moved to helpers/BlockPlaceHelper — see its header. It was
+    // private to this class, so it governed the ported movements and nothing else; four other
+    // placement sites (executor, bridge, pillar, the py4j build surface) had no rate at all.
 
     /**
      * TELEMETRY ONLY — no branch reads these. They exist because the split place engine's counters
@@ -645,9 +637,10 @@ public abstract class Movement {
 
     /**
      * {@code BlockPlaceHelper.tick} (BlockPlaceHelper.java:38-57): one attempt every four ticks, and
-     * the cooldown is charged even when the attempt fails. Upstream is ticked by the input handler
-     * on every tick; here it is ticked by whichever movement is applying inputs, so the countdown
-     * pauses on the ticks no movement is running. That only ever makes the gate more conservative.
+     * the cooldown is charged even when the attempt fails. The gate itself now lives in
+     * {@code helpers/BlockPlaceHelper} and is ticked once per client tick, as upstream ticks it
+     * from the input handler — so the rate is shared with every other placement site instead of
+     * applying to ported movements alone.
      *
      * <p>The hit result handed to {@code interactBlock} is THE ONE THE RAYTRACE PRODUCED — never a
      * {@link BlockHitResult} built from a face centre, which would be a packet claiming a click the
@@ -659,15 +652,10 @@ public abstract class Movement {
         if (rightClickRequested) {
             placeRequested++;
         }
-        if (rightClickTimer > 0) {
-            rightClickTimer--;
+        if (kaptainwutax.tungsten.helpers.BlockPlaceHelper.onCooldown()) {
             if (rightClickRequested) {
                 placeOnCooldown++;
             }
-            return;
-        }
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.interactionManager == null) {
             return;
         }
         HitResult mouseOver = ctx.objectMouseOver();
@@ -677,16 +665,8 @@ public abstract class Movement {
             }
             return;
         }
-        rightClickTimer = RIGHT_CLICK_SPEED - BASE_PLACE_DELAY;
-        for (Hand hand : Hand.values()) {
-            if (mc.interactionManager.interactBlock(player, hand, (BlockHitResult) mouseOver) == ActionResult.SUCCESS) {
-                player.swingHand(hand);
-                placeClicked++;
-                return;
-            }
-            if (!player.getStackInHand(hand).isEmpty() && mc.interactionManager.interactItem(player, hand) == ActionResult.SUCCESS) {
-                return;
-            }
+        if (kaptainwutax.tungsten.helpers.BlockPlaceHelper.tryPlace((BlockHitResult) mouseOver)) {
+            placeClicked++;
         }
     }
 

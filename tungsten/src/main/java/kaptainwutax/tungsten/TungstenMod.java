@@ -181,7 +181,11 @@ public class TungstenMod implements ClientModInitializer {
         ScheduledFuture<?> handle = scheduler.scheduleAtFixedRate(toRun, 1, 15, TimeUnit.SECONDS);
     
         ClientTickEvents.START_CLIENT_TICK.register((a) -> {
-        	
+        	// The place-rate gate, ticked exactly once per client tick — upstream ticks it from
+        	// InputOverrideHandler, which is the same "once per tick, whatever else is going on".
+        	// This is also what drains the build queue, so it must run regardless of pathing.
+        	kaptainwutax.tungsten.helpers.BlockPlaceHelper.tickCooldown();
+
         	boolean isRunning = TungstenModDataContainer.PATHFINDER.active.get() || TungstenModDataContainer.isExecutorRunning();
         	if (!isRunning) {
 	        	if (!TungstenModRenderContainer.BLOCK_PATH_RENDERER.isEmpty()) {

@@ -638,10 +638,11 @@ public class PathExecutor {
                     target.toShortString(), against.toShortString(), side,
                     player.getX(), player.getZ(), player.getPitch(), wantPitch, what));
         }
-        if (realHit != null && (!sneakToPlace || player.isInSneakingPose())) {
+        // ...and at the rate a player can place: this runs once per client tick, so without the
+        // shared gate it placed 20 blocks a second, four times what holding the use key does.
+        if (realHit != null && (!sneakToPlace || player.isInSneakingPose())
+                && kaptainwutax.tungsten.helpers.BlockPlaceHelper.tryPlace(realHit)) {
             placeClicked++;
-            mc.interactionManager.interactBlock(player, net.minecraft.util.Hand.MAIN_HAND, realHit);
-            player.swingHand(net.minecraft.util.Hand.MAIN_HAND);
         }
         return true;
     }

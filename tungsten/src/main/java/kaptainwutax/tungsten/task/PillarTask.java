@@ -123,9 +123,8 @@ public class PillarTask {
                 kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
                 BlockHitResult hit =
                         kaptainwutax.tungsten.helpers.RealPlacement.readyToPlace(mc, placeAt);
-                if (hit != null) {
-                    mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
-                    player.swingHand(Hand.MAIN_HAND);
+                // Same shared rate gate as every other placement (helpers/BlockPlaceHelper).
+                if (hit != null && kaptainwutax.tungsten.helpers.BlockPlaceHelper.tryPlace(hit)) {
                     // remember this pillar block as scaffolding so a cleanup can mine it back out
                     kaptainwutax.tungsten.util.ScaffoldRegistry.record(placeAt);
                 }

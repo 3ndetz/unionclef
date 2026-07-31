@@ -306,9 +306,18 @@ public class McpServer {
                                 argInt(a, "x2"), argInt(a, "y2"), argInt(a, "z2")));
         tool("clearSelection", "Clear the WorldEdit selection.", schema(), a -> api.clearSelection());
         tool("fillSelection",
-                "//set — fill the selection with a block (reachable cells, bottom-up, cap per call). Equips the named "
-                + "block from the hotbar. If remaining>0, reposition (gotoXYZ) and call again.",
+                "//set — queue the selection to be filled with a block (bottom-up). Placement is a TICK-DRIVEN "
+                + "QUEUE at the human rate (one block per 4 ticks), so this returns immediately with queued=N: "
+                + "poll buildQueue() for progress. Equips the named block from the hotbar per cell.",
                 schema("block:string"), a -> api.fillSelection(argStr(a, "block")));
+        tool("buildQueue",
+                "Progress of the build queue that //set, //walls, //hollow, //cyl, //sphere, //replace and "
+                + "buildBlocks feed: queued / placed / already / deferred (cells out of reach — walk closer with "
+                + "gotoXYZ and re-issue for those) / done.",
+                schema(), a -> api.buildQueue());
+        tool("buildQueueClear",
+                "Drop whatever the build queue still owes (wrong selection, changed plan).",
+                schema(), a -> api.buildQueueClear());
         tool("wallsSelection",
                 "//walls — fill only the 4 vertical walls of the selection (hollow interior).",
                 schema("block:string"), a -> api.wallsSelection(argStr(a, "block")));

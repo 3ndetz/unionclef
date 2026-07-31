@@ -126,19 +126,31 @@ def setup_we():
     rcon(f"item replace entity {BOT} hotbar.3 with diamond_pickaxe")
     rcon(f"tp {BOT} 0 -60 3 180 8"); time.sleep(2)     # 3 blocks south of the wall plane (z=0) — the distance where //set builds the 2-tall wall
 
-WE_DUR = 44
+WE_DUR = 60
+# THE CLIP THIS EXISTS FOR. //set and //replace on a 3x2 wall used to finish between two frames
+# — six panes of glass appearing simultaneously, which is what the operator filmed and called
+# building with cheats. Placement now goes through the shared rate gate (one block per 4 ticks,
+# baritone's rightClickSpeed) and through the game's own raytrace, so the wall goes up block by
+# block with the camera actually looking at each face. Polling is buildQueue(), because the fill
+# hands the cells to the tick drain instead of placing them inside the call.
 WE_BODY = (
     'mc.ExecuteCommand("@stop")\n'
     'time.sleep(1.5)\n'
     'mc.select(-1,-60,0, 1,-59,0)\n'
     'time.sleep(1.5)\n'
     'mc.we("set stone")\n'
-    'time.sleep(9)\n'
+    'for _ in range(20):\n'
+    '    if dict(mc.buildQueue()).get("done"): break\n'
+    '    time.sleep(1.0)\n'
+    'time.sleep(2)\n'
     'mc.we("replace stone glass")\n'
-    'for _ in range(22):\n'
+    'for _ in range(14):\n'
     '    st=dict(mc.we("restat"))\n'
-    '    if str(st.get("phase"))=="done": break\n'
-    '    time.sleep(1.2)\n'
+    '    if str(st.get("phase")) in ("placing","done"): break\n'
+    '    time.sleep(1.0)\n'
+    'for _ in range(20):\n'
+    '    if dict(mc.buildQueue()).get("done"): break\n'
+    '    time.sleep(1.0)\n'
     'time.sleep(2)\n'
 )
 

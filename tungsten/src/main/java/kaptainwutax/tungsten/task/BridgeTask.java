@@ -201,9 +201,9 @@ public class BridgeTask {
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
             BlockHitResult hit =
                     kaptainwutax.tungsten.helpers.RealPlacement.readyToPlace(mc, toPlace);
-            if (hit != null) {
-                mc.interactionManager.interactBlock(player, Hand.MAIN_HAND, hit);
-                player.swingHand(Hand.MAIN_HAND);
+            // Rate through the shared gate (helpers/BlockPlaceHelper): this ticks once per client
+            // tick, and a bridge is the exact case where placing every tick looks inhuman.
+            if (hit != null && kaptainwutax.tungsten.helpers.BlockPlaceHelper.tryPlace(hit)) {
                 // remember this bridge block as scaffolding so a cleanup can mine it back out
                 kaptainwutax.tungsten.util.ScaffoldRegistry.record(toPlace);
             }

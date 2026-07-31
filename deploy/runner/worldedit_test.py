@@ -3,7 +3,11 @@
 
 Bot on a stone floor with dirt in hand selects a small reachable region and
 fills it. Verifies the cells became dirt. (Larger regions: the agent
-repositions and calls fillSelection again for out-of-reach cells.)
+repositions and re-issues for the cells buildQueue() reports as deferred.)
+
+//set now HANDS the cells to the tick-driven build queue rather than placing
+them inside the call — a placement costs 4 ticks (BlockPlaceHelper), so the
+test waits on buildQueue().done instead of assuming instant walls.
 Exit 0 = pass.
 """
 import functools, json, subprocess, sys, time
@@ -21,6 +25,8 @@ elif op=="selhot": out={"ok":mc.selectHotbar(int(req["s"]))}
 elif op=="select": out=dict(mc.select(*[int(v) for v in req["r"]]))
 elif op=="fill": out=dict(mc.fillSelection(req["b"]))
 elif op=="walls": out=dict(mc.wallsSelection(req["b"]))
+elif op=="bq": out=dict(mc.buildQueue())
+elif op=="tp": out={"ok":True}
 print(json.dumps(out,default=str)); gw.close()
 """
 def sh(a,t=30): return subprocess.run(a,capture_output=True,text=True,timeout=t)
@@ -39,6 +45,32 @@ def wait_for(desc,fn,ts,iv=3):
         time.sleep(iv)
     raise TimeoutError(f"{desc}: {ts}s ({last})")
 def is_block(c): return "passed" in rcon(f"execute if block {c}").lower()
+
+def drain(op, block, rounds=6):
+    """Let the build queue drain, repositioning for cells it could not see a face for.
+
+    THIS LOOP IS THE POINT OF THE TEST NOW. Placement goes through the game's own raytrace, so
+    a cell whose only support is hidden behind the block just placed CANNOT be filled from where
+    the bot stands — the queue reports it as deferred (deferNoFace) instead of placing through it.
+    The old code passed this test without moving an inch because it forged the hit result and
+    placed straight through the occluding block. An agent (or a player) walks; so does this test.
+    """
+    last=None
+    for r in range(rounds):
+        res=py4j(op, b=block)
+        if int(res.get("queued",0))==0: return res, last
+        t0=time.time()
+        while time.time()-t0 < 45:
+            last=py4j("bq")
+            if last.get("done"): break
+            time.sleep(1)
+        d=last.get("deferred") or []
+        if isinstance(d,str): d=json.loads(d.replace("'",'"')) if d.strip().startswith("[") else []
+        if not d: return res, last
+        # stand next to the first cell still owed and try again
+        x,y,z=[int(v) for v in d[0].split(",")]
+        rcon(f"tp {BOT} {x+0.5} {y} {z+1.5} 0 40"); time.sleep(2)
+    return res, last
 
 def main():
     wait_for("rcon", lambda:"players" in rcon("list"),300,5)
@@ -59,9 +91,9 @@ def main():
     py4j("selhot",s=0)                                              # hold dirt
     sel = py4j("select", r=[1,-60,1, 2,-60,2])
     print(f"  select: {sel}")
-    res = py4j("fill", b="cobblestone")                            # ask for cobblestone
+    res, q = drain("fill", "cobblestone")                          # ask for cobblestone
     print(f"  fillSelection(cobblestone): {res}")
-    time.sleep(1)
+    print(f"  buildQueue: {q}")
     setcells = [(1,-60,1),(2,-60,1),(1,-60,2),(2,-60,2)]
     set_cobble = sum(1 for (x,y,z) in setcells if is_block(f"{x} {y} {z} cobblestone"))
     print(f"  //set: {set_cobble}/4 cells are cobblestone (proves blockName equip)")
@@ -71,9 +103,9 @@ def main():
     rcon(f"tp {BOT} 0.5 -60 0.5 -45 0"); time.sleep(2)
     py4j("selhot",s=0)                                              # hold dirt
     selw = py4j("select", r=[1,-60,1, 3,-60,3])
-    resw = py4j("walls", b="dirt")
+    resw, qw = drain("walls", "dirt")
     print(f"  wallsSelection(dirt): {resw}")
-    time.sleep(1)
+    print(f"  buildQueue: {qw}")
     ring = [(1,-60,1),(2,-60,1),(3,-60,1),(1,-60,2),(3,-60,2),(1,-60,3),(2,-60,3),(3,-60,3)]
     ring_dirt = sum(1 for (x,y,z) in ring if is_block(f"{x} {y} {z} dirt"))
     center_air = is_block("2 -60 2 air")
