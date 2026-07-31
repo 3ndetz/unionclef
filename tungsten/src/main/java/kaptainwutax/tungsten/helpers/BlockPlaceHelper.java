@@ -454,7 +454,16 @@ public final class BlockPlaceHelper {
         if (idleTicks <= WALK_AFTER_TICKS) return;   // the aim may still be arriving
         BlockPos stand = placementStand(mc.world, head, wantedState(player, headCell.blockName()));
         if (stand == null) {
-            deferRest();
+            // Nowhere to stand that we can reach. That is this CELL's problem, not the batch's:
+            // hand it back and carry on with the rest, which is what deferRest() used to prevent
+            // by throwing the whole remaining queue away over one awkward cell.
+            if (walkDebug.length() < 700) {
+                walkDebug += "NOSTAND(" + head.toShortString() + ") ";
+            }
+            QUEUE.poll();
+            DEFERRED.add(head);
+            deferNoFace++;
+            idleTicks = 0;
             return;
         }
         walkingFor = head;
@@ -591,14 +600,22 @@ public final class BlockPlaceHelper {
             BlockPos stand = adjacentStand(world, target, against, allowSameLevel);
             if (stand != null) return stand;
         }
-        // MEASURED WORSE, NOT KEPT. A "step back to somewhere you can see it from" search sat
-        // here: when no touching cell was standable it looked two cells out for anywhere with the
-        // feet and head clear of the target. It is the right instinct — the bot standing inside
-        // the cell it is filling has to move, not climb — but the stand it produced was often far
-        // enough that the aim never converged, and diag_build went from 3 passes in 5 to 2 in 6.
-        // Reverted rather than tuned: the honest reading is that the destination is not the
-        // problem, the arrival is (the navigator goes inactive one block into the walk).
-        return target.up();   // GoalPlace: on top of it, placing down
+        // GoalPlace — stand on top of the cell and place downwards (BuilderProcess.java:1147).
+        // ONLY IF WE CAN ACTUALLY STAND THERE. Upstream can hand this goal to a pathfinder that
+        // pillars up to reach it; ours walks, so a goal floating in mid-air is not a destination,
+        // it is a lie, and the walk burns its whole timeout failing to satisfy it.
+        //
+        // Measured, in the sharpest possible form. While the navigator's arrival test was a plain
+        // 3D sphere it "arrived" at such a goal instantly without moving, which hid this — and the
+        // moment that test was fixed, diag_build fell from 4 passes in 5 to 1, because four walks
+        // of thirty seconds each now genuinely tried and genuinely failed. The arrival fix was
+        // right (nav stayed 12/12); the goal was what was wrong.
+        //
+        // So: no reachable stand, no walk. Say so, and let the caller hand the cell back to the
+        // agent, which can put a block under itself or come at it from a scaffold — decisions
+        // that belong to whoever owns the build, not to the queue draining it.
+        BlockPos above = target.up();
+        return standable(world, above) ? above : null;
     }
 
     /** The {@code GoalAdjacent.isInGoal} predicate (BuilderProcess.java:1092-1106), evaluated

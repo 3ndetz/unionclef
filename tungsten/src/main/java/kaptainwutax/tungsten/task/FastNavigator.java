@@ -111,7 +111,22 @@ public final class FastNavigator {
         if (!active || player == null || goal == null) return;
 
         double dist = player.getEntityPos().distanceTo(goal);
-        if (dist <= ARRIVE_DIST) {
+        // ARRIVAL IS NOT A 3D QUESTION WHEN THE GOAL IS ABOVE YOU. This test was a plain sphere
+        // of radius 2, and this file already knows why that is wrong — the pillar hand-off below
+        // carries the same finding in its own words: "you cannot walk upwards; a cell above your
+        // head is the one place you are most definitely NOT already at". That fix was applied
+        // there and not here, a hundred lines up, where every goal passes.
+        //
+        // Measured while chasing the last cell of diag_build. The builder asked to stand at
+        // (5,-58,0) to place downwards; the bot was at (5,-59,0), one block below. Distance 1.0,
+        // inside the radius, so the navigator declared arrival and shut down WITHOUT MOVING —
+        // four times in a row, from the identical position:
+        //   [3 for=(5,-59,0) stand=(5,-58,0) from=(5,-59,0)] [4] [5] [6] EXHAUSTED
+        //
+        // Only the upward case changes: a goal level with the player or below it still arrives
+        // exactly as before, which is every goal the nav courses use.
+        double goalRise = goal.y - player.getY();
+        if (dist <= ARRIVE_DIST && goalRise < 1.0) {
             Debug.logMessage("FastNavigator: arrived (" + String.format("%.1f", dist) + ")");
             BlockPathWalker.stop();
             stop();
