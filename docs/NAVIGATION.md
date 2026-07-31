@@ -1151,3 +1151,21 @@ would leave the bot at the start, which is exactly what 25.5 looks like. Measure
 changing anything: count flagged waypoints and hand-offs on nav_water with the flag on.
 
 Both the flag and the (unmeasured) water guard were reverted rather than kept.
+
+**CONFIRMED by measurement.** With the flag on, `nav_water` reports:
+
+```
+PLAN n=10 complete=true firstPhysics=1 flagged=1   x102
+HANDOFF = 24     physics owns = 0
+bridge planned = 0     pillar planned = 0
+```
+
+The flag unlocks NO placement at all on this course — zero bridges, zero pillars. What it
+unlocks is a CLIMB, emitted flagged at index 1, so the walked leg collapses to a single cell
+immediately; the hand-off then fires 24 times and the physics engine never takes it. Hence 25.5:
+the bot never leaves the start.
+
+This is the same family as the nav_wall2 defect fixed earlier — a cut at index 1 produces a leg
+of one cell, which `startBFS` refuses (it needs two), so nothing walks and nothing hands over.
+The fix belongs there, in how a flagged FIRST move is handled, not in the water course and not
+in the flag.
