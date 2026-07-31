@@ -1455,3 +1455,28 @@ whether `noTarget=966` leads somewhere that stops rather than waits.
 
 The 27-second gap between a stop and the next start is the expensive part: on a 180-second
 course that is dead time nobody is accounting for.
+
+#### Located: `stop_all()` runs at PREPARE, not only at teardown
+
+`stop_all()` — which issues `@stop`, `punkStop`, `runAwayStop`, `stopPathing` — has three call
+sites, and the first is the one that matters:
+
+| site | when |
+|---|---|
+| `actors.py:99`, inside the bot's prepare/reset ("put the bot in a known state at spawn") | **start of a scenario, and any re-prepare** |
+| `scenario.py:298`, `Scenario.drive_stop` | teardown |
+| `run_suite.py:162`, the suite's `finally` | teardown |
+
+So a mid-run `PUNKSTOP` is a **second prepare**, not a teardown — which fits the trace exactly
+(a direct py4j call, with no `PunkPlayerTask.start` or `TungstenPunkTask.onStop` frame above it,
+so it is neither a re-`punk` nor the altoclef wrapper).
+
+The likely trigger on this course specifically: `chase_terrain` sets
+`gamerule immediate_respawn true` and the runner flees over real terrain, so a death and respawn
+mid-chase is expected — and a respawn is exactly what a prepare exists to handle. That would
+stop the chaser's punk as collateral damage from re-preparing after the RUNNER's respawn.
+
+Next step, one line of Python: log every `stop_all()` call with a timestamp and which actor it
+is for. If the mid-run one is for the victim, the bot's chase is being killed by the other
+actor's housekeeping — a bench defect, and the six passes spent inside the mod were looking in
+the wrong repository entirely.
