@@ -5,7 +5,6 @@ import kaptainwutax.tungsten.path.PlaceRules;
 import kaptainwutax.tungsten.util.WindMouseRotation;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.BlockItem;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -75,10 +74,10 @@ public class PillarTask {
             return;
         }
 
-        // need a block in hand — the caller equips it (dependency direction: tungsten
-        // must not reach into altoclef's inventory layer).
-        if (!(player.getMainHandStack().getItem() instanceof BlockItem)) {
-            Debug.logMessage("Pillar: no block in hand — equip one first");
+        // Same re-equip as BridgeTask: a tower that stops halfway because one stack ended is
+        // not a tower. One policy, one place — helpers/BlockPlaceHelper.equipThrowaway.
+        if (!kaptainwutax.tungsten.helpers.BlockPlaceHelper.equipThrowaway(player)) {
+            Debug.logMessage("Pillar: out of blocks — nothing placeable in the hotbar");
             stop();
             return;
         }

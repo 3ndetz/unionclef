@@ -4,7 +4,6 @@ import kaptainwutax.tungsten.Debug;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.BlockItem;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -31,6 +30,11 @@ public class BridgeTask {
     private static int placed;
     private static int stuckTicks;
     private static double lastProgress;
+    /** {@link #placed} as of the previous tick — a placement between ticks is progress. */
+    private static int placedAtLastCheck;
+    /** True on ticks where a cell was wanted and the aim was being driven at it: the bot is
+     *  standing still ON PURPOSE, which the stuck watchdog must not read as a fault. */
+    private static boolean aimingToPlace;
     private static double startAlong = Double.NaN; // position along bridge axis at start
 
     public static synchronized boolean start(String direction, int blocks) {
@@ -55,6 +59,8 @@ public class BridgeTask {
         blocksRequested = Math.max(1, blocks);
         placed = 0;
         stuckTicks = 0;
+        placedAtLastCheck = 0;
+        aimingToPlace = false;
         lastProgress = 0;
         startAlong = Double.NaN;
         active = true;
@@ -117,10 +123,12 @@ public class BridgeTask {
         }
         placed = (int) Math.max(0, advanced);
 
-        // need a block in hand — the caller equips it (selectHotbar); tungsten
-        // must not depend on altoclef's inventory layer (dependency direction)
-        if (!(player.getMainHandStack().getItem() instanceof BlockItem)) {
-            Debug.logMessage("Bridge: no block in hand — equip one first");
+        // RE-EQUIP RATHER THAN GIVE UP. This used to abort the moment the held stack ran out —
+        // which mid-bridge means stopping on a one-block ledge over the gap you were crossing.
+        // Upstream re-selects a throwaway on every placement attempt and only reports NO_OPTION
+        // when the inventory has nothing at all (MovementHelper.java:819-823).
+        if (!kaptainwutax.tungsten.helpers.BlockPlaceHelper.equipThrowaway(player)) {
+            Debug.logMessage("Bridge: out of blocks — nothing placeable in the hotbar");
             stop();
             return;
         }
@@ -180,6 +188,7 @@ public class BridgeTask {
                 new Vec3d(targetCell.getX() + 0.1, targetCell.getY() + 0.1, targetCell.getZ() + 0.1),
                 new Vec3d(0.8, 0.3, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 120)));
 
+        aimingToPlace = false;
         // honour protected areas / claims (same policy as the pathfinder)
         if (toPlace != null && !kaptainwutax.tungsten.path.PlaceRules.canPlace(world, toPlace)) {
             Debug.logMessage("Bridge stopped: protected area at " + toPlace.toShortString());
@@ -199,6 +208,7 @@ public class BridgeTask {
             float wantYaw = (float) Math.toDegrees(-Math.atan2(dv.x, dv.z));
             float wantPitch = (float) Math.toDegrees(-Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z)));
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
+            aimingToPlace = true;   // standing still to aim is work, not a stall
             BlockHitResult hit =
                     kaptainwutax.tungsten.helpers.RealPlacement.readyToPlace(mc, toPlace);
             // Rate through the shared gate (helpers/BlockPlaceHelper): this ticks once per client
@@ -209,9 +219,24 @@ public class BridgeTask {
             }
         }
 
-        // stuck detection along the bridge axis
+        // STUCK DETECTION, AND PLACING IS NOT STUCK. This measured movement along the bridge
+        // axis and gave up after sixty motionless ticks — three seconds — which was fine while a
+        // placement was instantaneous, because the bot only ever stood still when something was
+        // wrong. It is not fine now: a placement goes through the game's own ray trace and the
+        // shared four-tick rate gate, so standing still while the aim converges is the bot doing
+        // its job. Measured after that change: bridgeForward ran for exactly three seconds and
+        // stopped having placed ZERO blocks, every time.
+        //
+        // FastNavigator already carries this exact lesson in its own watchdog ("BUILDING IS
+        // PROGRESS, even though the distance does not move"); BridgeTask was simply never given
+        // it. Aiming at a cell we intend to fill counts, and so does having just filled one.
         double progress = dir.getAxis() == Direction.Axis.X ? player.getX() : player.getZ();
-        if (Math.abs(progress - lastProgress) < 0.02) {
+        boolean working = placed != placedAtLastCheck || aimingToPlace;
+        placedAtLastCheck = placed;
+        if (working) {
+            stuckTicks = 0;
+            lastProgress = progress;
+        } else if (Math.abs(progress - lastProgress) < 0.02) {
             if (++stuckTicks > 60) { Debug.logMessage("Bridge stuck at " + placed); stop(); return; }
         } else {
             stuckTicks = 0;

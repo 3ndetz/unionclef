@@ -741,6 +741,38 @@ public final class BlockPlaceHelper {
                 && kaptainwutax.tungsten.path.movements.MovementHelperB.canWalkOn(world, feet.down());
     }
 
+    /**
+     * Hold ANY block worth throwing away — scaffolding for a bridge or a pillar, where the
+     * material is deliberately not specified. Port of the distinction upstream draws between
+     * {@code selectThrowawayForLocation} (place SOMETHING, MovementHelper.java:819) and a
+     * schematic's named block: the first legitimately takes whatever is to hand, the second must
+     * never substitute.
+     *
+     * <p>{@link #equipBlock} deliberately refuses to substitute, because a //set cobblestone that
+     * quietly builds out of whatever is in slot 1 is worse than one that stops. Bridging is the
+     * opposite case and needs its own, explicitly named policy — not the same method with a
+     * silent second meaning.
+     *
+     * <p>This is also the re-equip {@code BridgeTask} and {@code PillarTask} never had: they
+     * aborted the moment the held stack ran out, which mid-gap means stopping on a one-block
+     * ledge over the void. Both carried the same hardcoded check and a comment saying tungsten
+     * must not touch the inventory — true when it was written, and no longer: this uses the
+     * vanilla hotbar API and reaches into nothing.
+     *
+     * @return true if a block item is in hand when this returns.
+     */
+    public static boolean equipThrowaway(ClientPlayerEntity player) {
+        if (player.getMainHandStack().getItem() instanceof BlockItem) return true;
+        for (int i = 0; i < 9; i++) {
+            if (player.getInventory().getStack(i).getItem() instanceof BlockItem) {
+                player.getInventory().setSelectedSlot(i);
+                equipped = null;
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Hold {@code blockName}. Returns false when it is not in the hotbar at all — the caller
      *  must then NOT place, because placing something else is worse than placing nothing.
      *  Skips the lookup when the wanted type is already equipped. */
