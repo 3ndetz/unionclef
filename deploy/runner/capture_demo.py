@@ -126,7 +126,10 @@ def setup_we():
     rcon(f"item replace entity {BOT} hotbar.3 with diamond_pickaxe")
     rcon(f"tp {BOT} 0 -60 3 180 8"); time.sleep(2)     # 3 blocks south of the wall plane (z=0) — the distance where //set builds the 2-tall wall
 
-WE_DUR = 60
+# 60 s no longer covers it: placement is rate-gated to one block per 4 ticks now, and the clip
+# has to show BOTH halves — the wall going up and then each pane of glass replacing a stone,
+# which is the exact sequence the operator filmed happening instantaneously.
+WE_DUR = 115
 # THE CLIP THIS EXISTS FOR. //set and //replace on a 3x2 wall used to finish between two frames
 # — six panes of glass appearing simultaneously, which is what the operator filmed and called
 # building with cheats. Placement now goes through the shared rate gate (one block per 4 ticks,
