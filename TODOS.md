@@ -177,7 +177,7 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   intended block, not the one vanilla actually breaks.
 - [ ] **C5.4 `mineBlocks()` silently no-ops** on any block with an empty collision shape and still
   reports "Mining done".
-- [ ] **C5.5 `planPlaceMoves` ships OFF** and nothing in the default path turns it on → the shipped
+- [x] **C5.5 `planPlaceMoves` ships OFF** and nothing in the default path turns it on → the shipped
   bridging behaviour is still the **reactive 14-second-stall patch** the project rules forbid.
   СТАТУС 2026-07-30: всё ещё `false` (`TungstenConfig.java:160`) — и теперь это ХУЖЕ, чем было.
   За эту сессию постановка стала полноценной: оценённый ход в поиске, цепочка планок, честный
@@ -192,6 +192,13 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   моста, он выбирает строить вместо обхода — и этот маршрут не едет. То есть флаг нельзя просто
   включить: сначала надо, чтобы постановка и вода уживались в одном поиске (см. раздел про
   плавание по поверхности в docs/NAVIGATION.md — там же два откаченных захода).
+  ЗАКРЫТО 2026-07-31: причина найдена и оказалась НЕ в воде. Подъём выше высоты прыжка — это
+  ПОСТАНОВКА, но его генератор проверял только флаг и НИКОГДА не проверял, есть ли у бота блоки.
+  У `nav_water` набор пустой (`bot_kit = []`), поэтому с включённым флагом поиск выдавал подъём,
+  который бот физически не мог выполнить: «PLAN complete=true firstPhysics=1 flagged=1» ×102,
+  24 передачи, физика не берёт НИ РАЗУ, мостов и башен ноль — то есть флаг открывал не постановку,
+  а только этот подъём. Теперь подъём с постановкой уважает `placeBudget`, как `placeAcross` и
+  `pillarUp`. Флаг ВКЛЮЧЁН по умолчанию, полный свип **12/12, ноль провалов гейтов**.
 - [ ] **C5.6 `stringPull` deletes the very nodes carrying the break/place plan** before anything reads
   them (`BlockSpacePathFinder.java:412-429`, no `hasBreaks()`/`hasPlaces()` guard).
   ПЕРЕПРОВЕРЕНО 2026-07-30: гарды по-прежнему нет, `path.remove(j-1)` на месте. Важность при этом

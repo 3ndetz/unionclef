@@ -157,7 +157,7 @@ public class TungstenConfig {
      *  across a gap as part of the route — the mirror of allowBreak's break-through).
      *  Default OFF: opt-in, and altoclef enables it only when the bot has a placeable
      *  block, so parkour/walk routing without blocks is completely unaffected. */
-    public boolean planPlaceMoves = false;
+    public boolean planPlaceMoves = true;   // shipping placement on — see C5.5
 
     /** Hand a slime pad to {@link kaptainwutax.tungsten.task.SlimeBounceTask} — one manoeuvre
      *  that holds heading and sprint across the whole bounce chain, instead of the walker

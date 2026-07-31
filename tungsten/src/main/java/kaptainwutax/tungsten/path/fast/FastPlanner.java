@@ -829,8 +829,16 @@ public final class FastPlanner {
             // preferred a fantasy climb over a real tunnel, handed it to physics, and
             // physics burned its whole budget reporting "goal unreachable". Only offer it
             // when pillaring is actually available.
+            // A CLIMB ABOVE JUMP HEIGHT IS A PLACEMENT, SO IT NEEDS BLOCKS IN THE POCKET.
+            // The flag alone was the whole condition, and an empty inventory was never checked —
+            // so with placement enabled the search happily emitted a climb the bot could not
+            // possibly perform. Measured on nav_water, whose kit is EMPTY (`bot_kit = []`):
+            // "PLAN complete=true firstPhysics=1 flagged=1" x102, 24 hand-offs, physics takes it
+            // ZERO times, bridge and pillar counts both zero — the flag unlocked no placement at
+            // all, only this climb — and the bot never left the start (final_dist 25.5, 3 of 3).
+            // placeAcross and pillarUp already respect placeBudget; this generator did not.
             boolean climb = rise > PlayerFit.JUMP_HEIGHT;
-            if (climb && !TungstenConfig.get().planPlaceMoves) {
+            if (climb && (!TungstenConfig.get().planPlaceMoves || placeBudget <= 0)) {
                 cntClimb++;
                 continue;
             }
