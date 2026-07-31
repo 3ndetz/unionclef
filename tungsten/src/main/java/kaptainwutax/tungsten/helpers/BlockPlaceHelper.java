@@ -275,6 +275,11 @@ public final class BlockPlaceHelper {
         ClientPlayerEntity player = mc.player;
         if (player == null || mc.world == null) return;
 
+        // A pillar owns the body, the keys and the camera for its whole run, exactly as a
+        // MovementQueue leg does. Hands off until it finishes; the cells it fills come back to
+        // the scan as "already built" and drop out of the queue on their own.
+        if (kaptainwutax.tungsten.task.PillarTask.isActive()) return;
+
         Vec3d eye = kaptainwutax.tungsten.path.movements.RotationHelper.playerHead(player);
         double reach = kaptainwutax.tungsten.path.movements.RotationHelper.blockReachDistance(player);
         kaptainwutax.tungsten.path.movements.Rotation current =
@@ -404,6 +409,76 @@ public final class BlockPlaceHelper {
         }
         Cell headCell = QUEUE.peek();
         BlockPos head = headCell.pos();
+
+        // VERTICAL RUNS ARE NOT WALKED, THEY ARE JUMPED. If the cell can be STOOD IN — air, with
+        // air above it and something solid below — then the reason no neighbouring face works is
+        // that the cell is a step of a column, and a column is built the way a player builds one:
+        // stand in it, jump, and place the block into the space your feet just left.
+        //
+        // This is the whole of C5.11, and it is the sixth time the answer was already in the
+        // repo: PillarTask does exactly that manoeuvre and already performs it for the executor's
+        // planned climbs (MovementPillar upstream). The build queue simply never asked it.
+        //
+        // Measured before this: a 3-tall column left its top two cells unbuildable from every
+        // position on the ground, because to place the third block you must stand on the second,
+        // and the second is a cell you are yourself filling. NOSTAND(5,-59,0) NOSTAND(5,-58,0).
+        if (standable(mc.world, head)) {
+            if (player.getBlockPos().equals(head)) {
+                if (!equipBlock(player, headCell.blockName())) {
+                    QUEUE.poll();
+                    DEFERRED.add(head);
+                    deferNoMaterial++;
+                    idleTicks = 0;
+                    return;
+                }
+                stopWalking();
+                if (walkDebug.length() < 700) {
+                    walkDebug += "PILLAR(" + head.toShortString() + ") ";
+                }
+                // One step: the block lands in this cell and we come to rest on top of it, which
+                // is where the next cell of the run wants us anyway.
+                kaptainwutax.tungsten.task.PillarTask.startTo(head.getY() + 1);
+                idleTicks = 0;
+                return;
+            }
+            // Not there yet. Walk INTO the cell — standing in it is the point, not a mistake.
+            if (walkingFor == null || !walkingFor.equals(head)) {
+                // The same attempt cap as every other walk. Without it this branch spun: one run
+                // logged FIFTEEN walks to the same pillar base from two blocks away, because the
+                // exhaustion check further down is never reached on this path.
+                if (lastWalkCell != null && lastWalkCell.equals(head)) {
+                    if (walkAttempts >= MAX_WALK_ATTEMPTS) {
+                        if (walkDebug.length() < 700) {
+                            walkDebug += "PILLARUNREACHED(" + head.toShortString() + ")@"
+                                    + player.getBlockPos().toShortString() + " ";
+                        }
+                        stopWalking();
+                        QUEUE.poll();
+                        DEFERRED.add(head);
+                        deferNoFace++;
+                        walkAttempts = 0;
+                        lastWalkCell = null;
+                        idleTicks = 0;
+                        return;
+                    }
+                } else {
+                    walkAttempts = 0;
+                }
+                walkingFor = head;
+                walkTicks = 0;
+                walkStarted++;
+                lastWalkCell = head;
+                walkAttempts++;
+                if (walkDebug.length() < 600) {
+                    walkDebug += "[" + walkStarted + " pillarbase=" + head.toShortString()
+                            + " from=" + player.getBlockPos().toShortString() + "] ";
+                }
+                kaptainwutax.tungsten.task.FastNavigator.start(
+                        new Vec3d(head.getX() + 0.5, head.getY(), head.getZ() + 0.5));
+                return;
+            }
+        }
+
         if (walkingFor != null && walkingFor.equals(head)) {
             walkTicks++;
             // THE NAVIGATOR STOPPING IS AN EVENT, AND THE BUILDER WAS DEAF TO IT. Measured on the
