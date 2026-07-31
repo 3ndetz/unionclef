@@ -42,10 +42,31 @@ public class PunkPlayerTask {
     // ── public API ───────────────────────────────────────────────────────────
 
     /** Hunt one specific player by name (explicit target overrides allow/avoid). */
+    /**
+     * ZERO THE INSTRUMENTS AT THE START OF A RUN. Every counter here and in the walker is a
+     * plain static that nothing reset, so it accumulated over the CONTAINER's lifetime — dozens
+     * of runs — while being read as if it described one chase. That produced two withdrawn
+     * conclusions in a single session ("the walker is off 80% of a pursuit", "punk is inactive
+     * 89% of a chase"), both arithmetic on hours of idle time between runs.
+     *
+     * <p>A counter is only a measurement if you know its zero. A chase begins here, so this is
+     * the zero.
+     */
+    private static void resetCounters() {
+        pCalled = pInactive = pNoTarget = 0;
+        kaptainwutax.tungsten.task.BlockPathWalker.tickOff = 0;
+        kaptainwutax.tungsten.task.BlockPathWalker.tickBfs = 0;
+        kaptainwutax.tungsten.task.BlockPathWalker.tickDir = 0;
+        FollowEntityTask.followTicks = FollowEntityTask.steerTicks = 0;
+        FollowEntityTask.leapTicks = FollowEntityTask.cooldownTicks = FollowEntityTask.losBlocked = 0;
+        FollowEntityTask.tickCalled = FollowEntityTask.tickInactive = FollowEntityTask.tickActive = 0;
+    }
+
     public static void start(String name) {
         stop();
         RunAwayTask.stop();   // can't hunt and flee at once
         targetName = name;
+        resetCounters();
         active = true;
         mode = Mode.APPROACH;
         Debug.logMessage("Punking player: " + name);
@@ -61,6 +82,7 @@ public class PunkPlayerTask {
         setTargets(allow);
         setAvoid(avoid);
         anyMode = true;
+        resetCounters();
         active = true;
         mode = Mode.APPROACH;
         Debug.logMessage("Punk ANY allow=" + allowTargets + " avoid=" + avoidTargets);
