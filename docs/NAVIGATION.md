@@ -1431,3 +1431,27 @@ steering never runs (steer=2).
 
 Next: find what kills it at the 80-second mark. The caller trace is already in
 `PunkPlayerTask.stop()` — read the one that fires mid-run, not the last one in the log.
+
+#### What is established about the restart, and what is still open
+
+Established, all measured:
+
+- The chase runs, dies, and is restarted WITHIN one scenario attempt: two `Punking player` /
+  `PUNKSTOP` pairs at 05:20:24/05:21:46 and 05:22:13/05:23:28, while `run_suite` reports exactly
+  ONE `--- chase_terrain` attempt for that run.
+- Both stops carry an IDENTICAL caller trace: `class_1255` / `class_4093` frames, i.e. a task
+  submitted through `mc.execute(...)` — the py4j path. So both arrive from outside the mod.
+- The harness's only `punkStop` call is `stop_all()`, invoked from `Scenario.drive_stop`
+  (scenario.py:298) — teardown, once per scenario.
+- Per-run counters at mid-chase: `active=1501` (~75 s, i.e. one cycle, not the 180 s course),
+  `losBlocked=1453` of those 1501, `steer=2`, `noTarget=966`.
+
+Still open, and it is now a narrow question: **what issues the mid-run stop over py4j when the
+harness only issues one at teardown?** Candidates to check in order — whether `punk` is re-called
+during the run (its `start()` calls `stop()` first, though that would put the two log lines in
+the same tick, and they are 27 s apart); whether an altoclef task wrapper (`TungstenPunkTask`,
+whose `onStop` calls `PunkPlayerTask.stop()`) is being cycled by altoclef's own task runner; and
+whether `noTarget=966` leads somewhere that stops rather than waits.
+
+The 27-second gap between a stop and the next start is the expensive part: on a 180-second
+course that is dead time nobody is accounting for.
