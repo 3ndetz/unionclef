@@ -115,7 +115,12 @@ class Ctx:
         elif now - self._last_move_t > 6 and not caught and not arrived:
             self.freeze_windows += 1
             self._last_move_t = now
-            self.log(f"  WARNING freeze window #{self.freeze_windows} at {bp}")
+            # WHAT WAS THE BOT DOING WHILE IT STOOD THERE? A position alone cannot tell a
+            # "the search found nothing" stall from a "the executor is mid-manoeuvre" one, and
+            # those need opposite fixes. execState reports the engines in one string.
+            ok, st = self.bot.py.try_call("execState")
+            self.log(f"  WARNING freeze window #{self.freeze_windows} at {bp}"
+                     + (f" | {st}" if ok else ""))
         # stand-still near target (RW-1): ~no displacement for 4 consecutive
         # samples while the target is within 4 blocks -> one window (then the
         # counter re-arms, so windows are non-overlapping)

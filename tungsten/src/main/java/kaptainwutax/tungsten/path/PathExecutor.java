@@ -282,6 +282,24 @@ public class PathExecutor {
     			this.armed = false;
     			this.startTime = System.currentTimeMillis();
     			kaptainwutax.tungsten.Debug.logMessage("Path armed -> replaying (reached root)");
+    		} else if (!kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
+    			// NOBODY IS BRINGING US THERE. setPath only arms while the walker is running,
+    			// for exactly this reason — its own comment says "if the walker is NOT running,
+    			// nobody is going to bring the bot there; arming is then a deadlock, not a wait".
+    			// But the walker can STOP after the arming, and then the deadlock happens anyway:
+    			// the executor sits on a full route it refuses to replay until the 15-second
+    			// expiry, fifteen times over.
+    			//
+    			// Measured on chase_terrain, at a freeze window:
+    			//   path=117 tick=0 ... nav=false
+    			// a 117-node route, tick zero, navigator not running. The bench counted FIFTEEN
+    			// six-second freezes in one chase and the gap grew to 130 blocks.
+    			//
+    			// The wait is over the moment its premise is: disarm and replay from here.
+    			kaptainwutax.tungsten.Debug.logMessage(
+    					"Armed path: walker gone — replaying from here instead of waiting");
+    			this.armed = false;
+    			this.startTime = System.currentTimeMillis();
     		} else {
     			if (System.currentTimeMillis() - this.startTime > 15000) {
     				kaptainwutax.tungsten.Debug.logMessage(
