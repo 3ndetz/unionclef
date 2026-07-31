@@ -1337,3 +1337,32 @@ shape of the mistake for the record: every measurement was correct and every con
 from it was one level too low — walker, then tickBFS, then the planning interval, then the
 walker's mode, then punk's activity. The instrument to reach for first is the one that says
 WHO STOPPED, not the one that says what is not moving.
+
+### Who stops the chase: it comes through the py4j bridge, and that is not yet damning (2026-07-31)
+
+Made `PunkPlayerTask.stop()` name its caller (gated on verbose). On a failing `chase_terrain`:
+
+```
+PUNKSTOP by class_1255.method_18859:169 class_4093.method_18859:23
+            class_1255.method_16075:143 class_1255.method_5383:124
+```
+
+Obfuscated but legible: `class_1255` / `class_4093` are the client's task-queue machinery, i.e.
+the stop runs from a task submitted with `mc.execute(...)` — the path every py4j call takes. So
+the chase is stopped from OUTSIDE the mod, over the bridge.
+
+And the harness does call it: `deploy/runner/uctest/actors.py:72`, `stop_all()` —
+`ExecuteCommand @stop`, `punkStop`, `runAwayStop`, `stopPathing`.
+
+**Do not conclude the bench is killing the run.** `stop_all` is documented as scenario
+setup/teardown — "kill every driver a previous scenario could have left running" — and a
+teardown call would appear in the same log tail as the run itself. The captured line carries no
+timestamp relative to the chase window, so it is equally consistent with a clean end-of-run.
+
+Next step is small and decisive: timestamp the PUNKSTOP against the run's start and the
+scenario's 180 s window. If it lands mid-run, the harness is ending the chase and every
+measurement taken after it is meaningless. If it lands at teardown, the 1183-active-tick figure
+needs a different explanation and the search moves back inside the mod.
+
+The caller diagnostic is kept: it is gated on verbose, costs a stack walk only when a chase
+actually stops, and it is the instrument that should have been reached for first.

@@ -77,6 +77,20 @@ public class PunkPlayerTask {
     }
 
     public static void stop() {
+        // WHO STOPPED THE CHASE? It stops itself about a third of the way through
+        // chase_terrain — 1183 active ticks of a 180 s course — and six passes were spent
+        // measuring the consequences (walker idle, tickBFS silent, planning interval) before
+        // asking this. `active` is cleared only here, so the caller IS the answer.
+        if (active && kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) {
+            StackTraceElement[] st = Thread.currentThread().getStackTrace();
+            StringBuilder who = new StringBuilder("PUNKSTOP by");
+            for (int i = 2; i < Math.min(st.length, 6); i++) {
+                who.append(' ').append(st[i].getClassName()
+                        .substring(st[i].getClassName().lastIndexOf('.') + 1))
+                   .append('.').append(st[i].getMethodName()).append(':').append(st[i].getLineNumber());
+            }
+            kaptainwutax.tungsten.Debug.logMessage(who.toString());
+        }
         if (active) {
             combat.releaseKeys();
             FollowEntityTask.stop();
