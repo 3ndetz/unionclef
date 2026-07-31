@@ -1397,3 +1397,37 @@ reset at the run's start, or be a delta between two reads taken inside it.
 What survives from those passes: the mode counters themselves (useful once zeroed per run), the
 caller trace on `PunkPlayerTask.stop()` (which produced this correction), and the confirmed fact
 that steering is gated on line of sight. What does not survive: every "X% of the chase" claim.
+
+### THE CHASE DIES AND RESTARTS TWICE PER RUN (2026-07-31) — and this corrects the retraction above
+
+With the counters finally zeroed at the start of a chase, the per-run numbers are honest for the
+first time, and they did not fit the previous section. Chasing that discrepancy gave the answer:
+
+```
+05:20:24  Punking player
+05:21:46  PUNKSTOP        <- 82 s later
+05:22:13  Punking player  <- restarted after 27 s of nothing
+05:23:28  PUNKSTOP        <- 75 s later
+```
+
+**The pursuit dies roughly every 75-85 seconds and is restarted, losing ~27 seconds of dead
+time each cycle, on a 180-second course.**
+
+This corrects the retraction immediately above, which said the stop was merely the scenario's
+teardown. That was drawn from ONE start/stop pair read off the tail of the log, whose spacing
+(183 s) happened to match the course length. There are TWO pairs per run; I had looked at the
+last one. A single sample of a repeating event is not evidence about the event.
+
+The honest per-run counters that exposed it:
+
+```
+chaseStats  called=10461 inactive=8960 active=1501 | reached=1501 steer=2 losBlocked=1453
+punkStats   called=10471 inactive=8969 noTarget=966 combat=44
+```
+
+`active=1501` ticks is ~75 s — one cycle, not the course. And `losBlocked=1453` of 1501 active
+ticks says that while it IS alive, line of sight is blocked essentially the whole time, so
+steering never runs (steer=2).
+
+Next: find what kills it at the 80-second mark. The caller trace is already in
+`PunkPlayerTask.stop()` — read the one that fires mid-run, not the last one in the log.
