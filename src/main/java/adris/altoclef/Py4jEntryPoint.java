@@ -2992,6 +2992,7 @@ public class Py4jEntryPoint {
         out.put("deferTimeout", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferTimeout);
         out.put("deferProtected", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferProtected);
         out.put("walkStarted", kaptainwutax.tungsten.helpers.BlockPlaceHelper.walkStarted);
+        out.put("walkDebug", kaptainwutax.tungsten.helpers.BlockPlaceHelper.walkDebug);
         // The two reasons that are NOT "stand somewhere else": the block cannot survive in that
         // cell, and the named block is not in the hotbar at all.
         out.put("deferNoSupport", kaptainwutax.tungsten.helpers.BlockPlaceHelper.deferNoSupport);

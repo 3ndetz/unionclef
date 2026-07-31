@@ -164,7 +164,16 @@ public final class BlockPlaceHelper {
     /** Ticks walked for the current cell; past this it is deferred and the queue moves on, so
      *  one unreachable cell cannot hold a whole schematic hostage. */
     private static int walkTicks;
+    /** The cell the last walk was planned for, and how many walks it has cost. A walk that ends
+     *  without making the cell placeable is worth retrying from the new position — but not
+     *  forever. */
+    private static BlockPos lastWalkCell;
+    private static int walkAttempts;
     public static volatile int walkStarted;
+    /** The cell being walked for and the cell being walked TO. Reported by buildQueue(), because
+     *  "it deferred after two walks" does not say whether it picked a bad destination or picked a
+     *  good one and never arrived — and those need opposite fixes. */
+    public static volatile String walkDebug = "";
     /** Cells skipped because the block would have been placed inside an entity — almost always
      *  the player itself. Non-zero here means "the builder is standing in its own way", which is
      *  a walking problem, not an aiming problem. */
@@ -179,6 +188,8 @@ public final class BlockPlaceHelper {
     private static final int SCAN_LIMIT = 64;
     /** Idle ticks before the builder decides the answer is "stand somewhere else" and walks. */
     private static final int WALK_AFTER_TICKS = 10;
+    /** How many walks one cell is worth before it goes back to the agent. */
+    private static final int MAX_WALK_ATTEMPTS = 4;
     /** How long to spend walking for one cell before giving up on it. 200 ticks (10 s) was too
      *  tight and deferred cells the navigator was still walking towards; a build walk is a
      *  pathfind plus the walk, and the queue is not in a hurry. */
@@ -225,6 +236,7 @@ public final class BlockPlaceHelper {
         deferNoMaterial = 0;
         walkStarted = 0;
         blockedByOwnBody = 0;
+        walkDebug = "";
         DEFERRED.clear();
     }
 
@@ -352,6 +364,17 @@ public final class BlockPlaceHelper {
                     idleTicks = 0;
                     return;
                 }
+                // ONE OWNER OF THE BODY AT A TIME. This line used to set the camera every tick a
+                // face happened to trace — including the ticks the navigator was mid-walk, which
+                // made the builder and the navigator fight over the same camera: the walk was
+                // steering towards one cell while the aim was dragged onto another, and the walk
+                // never finished. Measured: the last cell of diag_build deferred after two walks
+                // that never arrived.
+                //
+                // So arriving is a MODE CHANGE. Reaching this line means the cell is placeable
+                // from where we already are, which is the whole reason we were walking; end the
+                // walk here, then aim.
+                stopWalking();
                 kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE
                         .setTarget(place.getYaw(), place.getPitch());
                 BlockHitResult hit = RealPlacement.readyToPlace(mc, target);
@@ -364,11 +387,7 @@ public final class BlockPlaceHelper {
                 if (!tryPlace(hit)) return;      // rate gate closed this tick
                 it.remove();
                 placedFromQueue++;
-                if (walkingFor != null) {
-                    kaptainwutax.tungsten.task.FastNavigator.stop();
-                    walkingFor = null;
-                    walkTicks = 0;
-                }
+                walkDone();
                 return;
             }
         }
@@ -386,15 +405,50 @@ public final class BlockPlaceHelper {
         Cell headCell = QUEUE.peek();
         BlockPos head = headCell.pos();
         if (walkingFor != null && walkingFor.equals(head)) {
-            // Already on our way. Let the navigator work; it is what moves the player.
-            if (++walkTicks > WALK_TIMEOUT_TICKS) {
-                kaptainwutax.tungsten.task.FastNavigator.stop();
-                walkingFor = null;
-                walkTicks = 0;
+            walkTicks++;
+            // THE NAVIGATOR STOPPING IS AN EVENT, AND THE BUILDER WAS DEAF TO IT. Measured on the
+            // stand: the bot walked one block, from (3,-60,0) to (4,-60,-1), and the navigator
+            // went inactive — arrived by its own reckoning, or gave up — while the builder sat
+            // there for the full thirty-second timeout waiting for an arrival that had already
+            // happened or was never coming. Both failing runs ended "nav=false", and both passing
+            // ones simply never hit this.
+            //
+            // So when the navigator finishes, the walk is finished: take the body back and let
+            // the scan re-decide from where we ACTUALLY are next tick. That is upstream's shape
+            // too — BuilderProcess re-issues its goal every tick from the current position rather
+            // than committing to one walk.
+            if (!kaptainwutax.tungsten.task.FastNavigator.isActive()) {
+                stopWalking();
+                return;
+            }
+            if (walkTicks > WALK_TIMEOUT_TICKS) {
+                if (walkDebug.length() < 700) {
+                    walkDebug += "TIMEOUT(" + head.toShortString() + ")@"
+                            + player.getBlockPos().toShortString() + " ";
+                }
+                stopWalking();
                 QUEUE.poll();
                 DEFERRED.add(head);
                 deferNoFace++;
             }
+            return;
+        }
+        // A walk that ends without making the cell placeable must not be retried forever: the
+        // stand is recomputed from the new position each time, but if that keeps producing a
+        // place we cannot reach, the honest answer is to hand the cell back to the agent.
+        boolean sameCellAsLastAttempt = lastWalkCell != null && lastWalkCell.equals(head);
+        if (!sameCellAsLastAttempt) walkAttempts = 0;
+        if (sameCellAsLastAttempt && walkAttempts >= MAX_WALK_ATTEMPTS) {
+            if (walkDebug.length() < 700) {
+                walkDebug += "EXHAUSTED(" + head.toShortString() + ")@"
+                        + player.getBlockPos().toShortString() + " ";
+            }
+            QUEUE.poll();
+            DEFERRED.add(head);
+            deferNoFace++;
+            walkAttempts = 0;
+            lastWalkCell = null;
+            idleTicks = 0;
             return;
         }
         if (idleTicks <= WALK_AFTER_TICKS) return;   // the aim may still be arriving
@@ -406,8 +460,33 @@ public final class BlockPlaceHelper {
         walkingFor = head;
         walkTicks = 0;
         walkStarted++;
+        lastWalkCell = head;
+        walkAttempts++;
+        // APPEND, do not overwrite: the failing runs differ from the passing ones only in HOW
+        // MANY walks happened, so the sequence is the measurement and the last entry is not.
+        if (walkDebug.length() < 600) {
+            walkDebug += "[" + walkStarted + " for=" + head.toShortString()
+                    + " stand=" + stand.toShortString()
+                    + " from=" + player.getBlockPos().toShortString() + "] ";
+        }
         kaptainwutax.tungsten.task.FastNavigator.start(
                 new Vec3d(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5));
+    }
+
+    /** End a walk, if one is running: the navigator stops steering and the builder takes the
+     *  body back. Idempotent, so the placing path can call it unconditionally. */
+    private static void stopWalking() {
+        if (walkingFor == null) return;
+        kaptainwutax.tungsten.task.FastNavigator.stop();
+        walkingFor = null;
+        walkTicks = 0;
+    }
+
+    /** A placement clears the walk bookkeeping for that cell. */
+    private static void walkDone() {
+        stopWalking();
+        lastWalkCell = null;
+        walkAttempts = 0;
     }
 
     /** Hand the whole remaining queue back to the caller. */
@@ -512,6 +591,13 @@ public final class BlockPlaceHelper {
             BlockPos stand = adjacentStand(world, target, against, allowSameLevel);
             if (stand != null) return stand;
         }
+        // MEASURED WORSE, NOT KEPT. A "step back to somewhere you can see it from" search sat
+        // here: when no touching cell was standable it looked two cells out for anywhere with the
+        // feet and head clear of the target. It is the right instinct — the bot standing inside
+        // the cell it is filling has to move, not climb — but the stand it produced was often far
+        // enough that the aim never converged, and diag_build went from 3 passes in 5 to 2 in 6.
+        // Reverted rather than tuned: the honest reading is that the destination is not the
+        // problem, the arrival is (the navigator goes inactive one block into the walk).
         return target.up();   // GoalPlace: on top of it, placing down
     }
 
@@ -536,6 +622,7 @@ public final class BlockPlaceHelper {
         }
         return null;
     }
+
 
     /** Feet space, head space, and something to stand on — asked with the ported predicates so
      *  the builder and the pathfinder agree on what a standing position is. */
