@@ -1314,3 +1314,26 @@ Measure the branch it takes on those ticks before touching anything — that has
 of every pass here.
 
 The interval change was reverted (measured neutral).
+
+### Narrowed: what turns the chase OFF (2026-07-31)
+
+`punkStats` reads `called=10797 inactive=9614`, i.e. 1183 active ticks — about **59 seconds of a
+180-second course**. So the chase does not fail to start; it **stops itself roughly a third of
+the way in**, and everything measured after that point (walker off 80%, tickBFS diagnostics
+silent) is a consequence, not a cause.
+
+`active` is cleared in exactly one place — `PunkPlayerTask.stop()` — and it has four callers:
+
+| caller | plausible mid-chase? |
+|---|---|
+| `StopCommand` | no, nothing issues it |
+| `TungstenMod.resetAllState()` | no — registered on the client DISCONNECT event (TungstenMod.java:112) |
+| `RunAwayTask` ("can't hunt and flee at once", RunAwayTask.java:42) | **yes** — if flee ever arms, the hunt dies permanently |
+| `TungstenPunkTask.onStop` (altoclef wrapper, :39) | **yes, if the wrapper is involved** — but the bench calls `punk` straight over py4j, so it may not be |
+
+Next pass: log which of the two fires, with the tick it fires on. One line each, and it ends a
+chain that has now cost six passes aimed at machinery downstream of the real event. Note the
+shape of the mistake for the record: every measurement was correct and every conclusion drawn
+from it was one level too low — walker, then tickBFS, then the planning interval, then the
+walker's mode, then punk's activity. The instrument to reach for first is the one that says
+WHO STOPPED, not the one that says what is not moving.
