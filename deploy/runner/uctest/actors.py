@@ -53,6 +53,52 @@ class Bot:
                 return True
         raise RuntimeError(f"{self.name} stayed dead for {timeout}s")
 
+    def ensure_grounded(self, floor_y=-61, timeout=90):
+        """Recover a bot that is ALIVE but falling through the void.
+
+        ensure_alive() cannot see this one: the bot has full health, it is simply somewhere below
+        the world and still going. Measured while filming a bridge demo — the bot went over a
+        ten-block void and read Pos [0.5,-65.6,0.5], then -128, then -187 — and the important part
+        is what did NOT recover it: `kill` did not land it, `tp` did not stick, and RECREATING THE
+        CLIENT CONTAINER did not help either, because the client keeps falling and its position
+        wins over the server's. Every run after that measured nothing, and one video was recorded
+        with no bot on the pad at all, which I nearly read as a result.
+
+        What works is to take physics away from the client first: spectator mode stops the fall,
+        THEN the teleport sticks, and survival is restored on solid ground. One fall used to
+        poison a whole series; this is why it no longer can.
+        """
+        y = self.position_y()
+        if y is None or y > floor_y - 20:
+            return True
+        self.log(f"  {self.name} is IN THE VOID at y={y:.1f} — recovering")
+        t0 = time.time()
+        while time.time() - t0 < timeout:
+            self.rcon.cmd(f"gamemode spectator {self.name}")
+            time.sleep(2)
+            self.rcon.cmd(f"forceload add -8 -8 8 8")
+            self.rcon.cmd(f"fill -4 {floor_y} -4 4 {floor_y} 4 stone")
+            self.rcon.cmd(f"tp {self.name} 0.5 {floor_y + 1} 0.5")
+            time.sleep(4)
+            self.rcon.cmd(f"tp {self.name} 0.5 {floor_y + 1} 0.5")
+            time.sleep(2)
+            self.rcon.cmd(f"gamemode survival {self.name}")
+            time.sleep(3)
+            y = self.position_y()
+            if y is not None and y > floor_y - 20:
+                self.log(f"  {self.name} recovered at y={y:.1f}")
+                return True
+        raise RuntimeError(f"{self.name} could not be lifted out of the void")
+
+    def position_y(self):
+        pos = self.rcon.entity_pos(self.name)
+        if not pos:
+            return None
+        try:
+            return float(pos[1])
+        except (TypeError, ValueError, IndexError):
+            return None
+
     def reset_config(self):
         """Wipe the persisted tungsten.json back to shipped defaults.
 
@@ -104,6 +150,9 @@ class Bot:
         health poll times out). Heal in place instead."""
         self.stop_all()
         self.ensure_alive()
+        # ALIVE IS NOT THE SAME AS RECOVERABLE — see ensure_grounded. A bot falling through the
+        # void has full health and passes every check above it.
+        self.ensure_grounded()
         if not hard:
             self.rcon.cmd(f"effect clear {self.name}")
             self.rcon.cmd(f"effect give {self.name} instant_health 1 10 true")
