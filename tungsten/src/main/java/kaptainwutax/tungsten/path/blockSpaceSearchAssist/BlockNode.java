@@ -712,10 +712,23 @@ public class BlockNode {
 		boolean floorPlanned = this.toPlace != null && this.toPlace.contains(myFloor);
 		if (!floorSolid && !floorPlanned) return false;
 		if (!kaptainwutax.tungsten.path.PlaceRules.canPlace(world, support)) return false;
+		// CAN WE ACTUALLY BUILD THIS? The new planner learned to ask (register C5.5: a route that
+		// plans placements the inventory cannot pay for is a route the bot physically cannot walk,
+		// and on an empty kit it produced climbs that were never once performed). This planner —
+		// the legacy engine's own, still live for routes the physics engine owns — never asked.
+		// Count the whole planned chain, not one block: a multi-cell bridge costs one block per cell.
+		int planned = this.toPlace == null ? 0 : this.toPlace.size();
+		if (planned + 1 > kaptainwutax.tungsten.path.fast.FastPlanner.countPlaceable(this.player)) {
+			return false;
+		}
 		child.toPlace = new java.util.ArrayList<>(java.util.List.of(support));
-		// place penalty ~ a slow action (same scaling as break): high enough to prefer a
-		// walk/parkour route, low enough to beat an unbounded detour.
-		child.cost += 20.0 * 0.15;
+		if (this.toPlace != null) child.toPlace.addAll(0, this.toPlace);
+		// THE PRICE OF A BRIDGE STEP IS UPSTREAM'S, NOT AN INVENTED ONE. This was 20.0 * 0.15 = 3.0,
+		// about a fifth of what a backplace really costs, so this planner priced bridging as almost
+		// free and preferred it over walking round. Baritone charges SNEAK_ONE_BLOCK_COST (15.385)
+		// because a backplace IS a sneak (MovementTraverse.cost:164), and FastPlanner was corrected
+		// to that same constant when place-as-a-move was made first class. One law, one number.
+		child.cost += ActionCosts.SNEAK_ONE_BLOCK_COST;
 		return true;
 	}
 
