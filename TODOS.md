@@ -220,7 +220,7 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   24 передачи, физика не берёт НИ РАЗУ, мостов и башен ноль — то есть флаг открывал не постановку,
   а только этот подъём. Теперь подъём с постановкой уважает `placeBudget`, как `placeAcross` и
   `pillarUp`. Флаг ВКЛЮЧЁН по умолчанию, полный свип **12/12, ноль провалов гейтов**.
-- [ ] **C5.6 `stringPull` deletes the very nodes carrying the break/place plan** before anything reads
+- [x] **C5.6 `stringPull` deletes the very nodes carrying the break/place plan** before anything reads
   them (`BlockSpacePathFinder.java:412-429`, no `hasBreaks()`/`hasPlaces()` guard).
   ПЕРЕПРОВЕРЕНО 2026-07-30: гарды по-прежнему нет, `path.remove(j-1)` на месте.
   И ВАЖНАЯ ПОПРАВКА 2026-07-31 к соседнему пункту: `BlockNode.tryPlanPlaceThrough` — НЕ мёртвый
@@ -233,6 +233,11 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   есть основной путь бота этот код больше не проходит. Остаётся значимым для маршрутов, которыми
   владеет физ-движок — `BlockSpacePathFinder` это его блок-пространственный поводырь, и планы
   слома доезжают до исполнителя через `PathFinder.truncateAtBreaks`.
+  ЗАКРЫТО 2026-07-31 + прогон: гарда добавлена. Сглаживание удаляло промежуточные узлы, у которых
+  можно срезать угол, — но узел несёт и план работ для своего шага (`toBreak`/`toPlace`), и вместе
+  с ним план исчезал МОЛЧА: маршрут выглядел проходимым, а стену, которую надо было прокопать,
+  никто не копал. Предикаты для этого вопроса уже существовали в самом узле (`hasBreaks` :110,
+  `hasPlaces` :120) — их просто никто не спрашивал. `nav_break` PASS 3/3 (0.6 / 1.5 / 0.6).
 - [x] **C5.7 Place has exactly ONE shape** (horizontal bridge, cardinal, same-Y). **No pillar-up as a
   search move.** Pillar/godbridge exist only as reactive tasks bolted on beside the pathfinder.
   PARTLY CLOSED 2026-07-28 (nav_wall2 GREEN). The climb is now genuinely PLANNED by the search

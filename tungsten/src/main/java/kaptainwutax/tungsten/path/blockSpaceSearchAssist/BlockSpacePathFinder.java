@@ -419,7 +419,16 @@ public class BlockSpacePathFinder {
 	        boolean canGetFromLastNToCurrent = StreightMovementHelper.isPossible(TungstenModDataContainer.world, pi.getBlockPos(), pj.getBlockPos());
 	        double heightDiff = p.previous == null ? 0 : DistanceCalculator.getJumpHeight(p.previous.getPos(true).getY(), p.getPos(true).getY());
 
-	        if (canGetFromLastNToCurrent && !p.isDoingJump && !p.previous.isDoingJump && heightDiff == 0) {
+	        // NEVER SMOOTH AWAY A NODE THAT CARRIES WORK. String-pulling deletes intermediate
+	        // nodes whose corner can be cut — but a node also carries the break/place plan for
+	        // its own step (BlockNode.toBreak / toPlace), and dropping it drops the plan with
+	        // it, silently: the route still looks walkable and the wall that had to be mined is
+	        // simply never mined. Register entry C5.6, open since the audit. The node's own
+	        // predicates already exist for this question (hasBreaks / hasPlaces, BlockNode:110
+	        // and :120) — nothing consulted them.
+	        boolean carriesWork = p.hasBreaks() || p.hasPlaces();
+	        if (canGetFromLastNToCurrent && !carriesWork
+	                && !p.isDoingJump && !p.previous.isDoingJump && heightDiff == 0) {
 	        	path.remove(j-1);
 	        } else {
 	        	i = j-1;
