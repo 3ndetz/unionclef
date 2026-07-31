@@ -199,7 +199,12 @@ def main():
         record_ext(10, (10,-46,15),(10,-54,0), f'mc.selectHotbar(0); time.sleep(0.6); mc.bridgeForward("east", {BRIDGE_N})')
     elif SCEN=="worldedit":
         setup_we()
-        record_ext(WE_DUR, (6,-56,7),(0,-59,0), WE_BODY)
+        # FIRST PERSON, deliberately. The question this clip has to answer is whether the bot
+        # LOOKS at the face it places against — the operator's complaint was that it did not —
+        # and only the acting bot's own camera shows the crosshair landing on each block. The
+        # external spectator cam also depends on tester2 being joined to the right server, which
+        # it silently was not.
+        record_own(WE_DUR, WE_BODY, persp=0)
     elif SCEN=="pvp":
         setup_pvp(); record_own(13, 'mc.ChatMessage(";punkPlayer '+VICTIM+'")', persp=0)
     elif SCEN=="bedwars":
