@@ -1561,3 +1561,24 @@ That is a bench gap worth fixing before the next attempt at this course, and it 
 the minimum distance to the runner over the run and report it. Without it, every future pass
 here is judged pass/fail on an outcome that depends on a target the client cannot see for a
 quarter of the course — which is exactly how six passes were spent without a number moving.
+
+### chase_terrain finally has a scale: gap min=30.1, last=85.5
+
+Added a reported (never gating) criterion: the distance between bot and runner across the run's
+samples. First measurement:
+
+```
+gap to runner: min=30.1  last=85.5  samples=31
+```
+
+That changes the picture the complaint started from. The bot **closes to 30 blocks** — it is
+genuinely gaining — and then the gap grows back to 85 by the end. "100+ blocks behind" is no
+longer what happens; what happens is close, lose the target past the 128-block tracking range,
+fall back, re-acquire, repeat.
+
+The value of the number is that this course can now be judged by movement instead of a binary.
+Contact needs ~1.5 blocks and the best approach is 30, so there is a long way to go — but a
+change that takes min from 30 to 15 is now visible, and until this criterion existed it was not.
+
+Reported, not gated, deliberately: turning it into a gate would invent a threshold nobody has
+measured. Let it accumulate across passes first.

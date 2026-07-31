@@ -307,6 +307,21 @@ class ChaseTerrain(Scenario):
         swam = ctx.geo.get("swam", False)
         yield Criterion("ran on LAND (not in water)", not swam,
                         f"ground={ctx.geo.get('ground')} swam={swam}")
+
+        # HOW CLOSE DID IT GET? Reported, never a gate. Without this the course is
+        # pass/fail on "contact within 120 s" and nothing else, so a change that halves the
+        # gap looks identical to one that does nothing — which is how several passes were
+        # spent here with no number to move. The nav courses have `final_dist` for exactly
+        # this reason; the chase had no equivalent.
+        gaps = [((s["bot"][0] - s["victim"][0]) ** 2
+                 + (s["bot"][1] - s["victim"][1]) ** 2
+                 + (s["bot"][2] - s["victim"][2]) ** 2) ** 0.5
+                for s in ctx.samples
+                if s.get("bot") and s.get("victim")]
+        yield Criterion("gap to runner (reported)", True,
+                        f"min={round(min(gaps), 1) if gaps else None} "
+                        f"last={round(gaps[-1], 1) if gaps else None} "
+                        f"samples={len(gaps)}", gate=False)
         # A kill IS contact — the 1 Hz position sampling can miss the moment the
         # gap closes (measured: the bot killed the runner at t=4.4 s and the
         # contact detector still reported None).
