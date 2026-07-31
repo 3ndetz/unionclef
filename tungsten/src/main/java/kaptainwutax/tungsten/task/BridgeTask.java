@@ -151,8 +151,23 @@ public class BridgeTask {
             return;
         }
 
-        // ofFloored(y-0.1) IS the block the player stands on (the support).
+        // THE SUPPORT MUST BE A BLOCK THAT EXISTS. ofFloored takes the cell under the player's
+        // CENTRE — and at the sneak limit the centre is already PAST the edge, hanging over air,
+        // held up by the block behind. So the task aimed at a support that was not there and
+        // targeted the cell beyond it. The crosshair diagnostic caught it exactly:
+        //   BRIDGEAIM want=2,-61,0 against=1,-61,0 wantYaw=90.0/90.0 wantPitch=68.0/68.0
+        //             hit=0,-61,0 side=up -> fills 0,-60,0
+        // The aim had converged perfectly (asked 90/68, camera at 90/68) onto a face of a block
+        // that does not exist, while the real block under the bot was one cell back — and the ray
+        // landed on ITS top face, which would have built a step on the bot's own head. Not an aim
+        // problem at all; the geometry was being computed from a cell of air.
+        //
+        // Walk the support back along the bridge until it is solid, which is what "the block the
+        // player stands on" means when the player is sneaking over a ledge.
         BlockPos support = BlockPos.ofFloored(player.getX(), player.getY() - 0.1, player.getZ());
+        for (int back = 0; back < 2 && isAir(world, support); back++) {
+            support = support.offset(dir.getOpposite());
+        }
         // Continuous godbridge model: NO sneak, walk forward, and PAVE the floor
         // ahead every tick so a flat block always exists before our feet reach
         // the edge — targetCell is at the SAME level as support, so it's flat
@@ -201,8 +216,20 @@ public class BridgeTask {
                         ? (dir.getOffsetX() > 0 ? -90.0f : 90.0f)
                         : (dir.getOffsetZ() > 0 ? 0.0f : 180.0f);
         kaptainwutax.tungsten.path.movements.Movement.motionPitch = player.getPitch();
+        // AT THE LIP, TURN ROUND — the backplace, which this task never had. Walking forward and
+        // LOOKING forward cannot work at the edge, and the trace said so exactly: parked at the
+        // sneak limit, "101 ticks at (1.29,-60.00,0.50), the face never came into view". The eye
+        // was at x=1.29 and the face it had to click at x=1.0, i.e. BEHIND it. You cannot look at
+        // the east face of the block you are standing on from past its east edge.
+        //
+        // Upstream's answer is MovementTraverse's backplace, and it is already ported and working
+        // in PathExecutor.tickPlacing: face BACK up the bridge, look down at the face of the block
+        // you are standing on, press MOVE_BACK — which carries the body FORWARD in the world while
+        // the camera keeps looking at the face — and sneak so stepping over the empty cell is not
+        // a fall. The new block appears beneath you. That is why a bot bridges walking backwards.
         opts.sneakKey.setPressed(lipNear);
-        opts.forwardKey.setPressed(true);
+        opts.forwardKey.setPressed(!lipNear);
+        opts.backKey.setPressed(lipNear);
         opts.sprintKey.setPressed(!lipNear);
         player.setSprinting(!lipNear);
 
@@ -243,10 +270,41 @@ public class BridgeTask {
             // pointing elsewhere. See RealPlacement, ported from baritone.
             float wantYaw = (float) Math.toDegrees(-Math.atan2(dv.x, dv.z));
             float wantPitch = (float) Math.toDegrees(-Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z)));
+            if (lipNear) {
+                // PathExecutor.tickPlacing:650-656 verbatim in intent: the yaw runs FROM the cell
+                // being paved TOWARDS the head, which is "facing back up the bridge". The pitch
+                // stays on the face — it is the same face, seen from the other side.
+                Vec3d back = eye.subtract(Vec3d.ofCenter(toPlace));
+                wantYaw = (float) Math.toDegrees(-Math.atan2(back.x, back.z));
+            }
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
+            // The body must follow the BRIDGE, not this camera: with MOVE_BACK held, the declared
+            // motion frame is the reverse of the bridge axis so "back" resolves to forward along it.
+            if (lipNear) {
+                kaptainwutax.tungsten.path.movements.Movement.motionYaw = wantYaw;
+                kaptainwutax.tungsten.path.movements.Movement.motionPitch = player.getPitch();
+            }
             aimingToPlace = true;   // standing still to aim is work, not a stall
             BlockHitResult hit =
                     kaptainwutax.tungsten.helpers.RealPlacement.readyToPlace(mc, toPlace);
+            // WHAT IS THE CROSSHAIR ACTUALLY ON? The one question that separates "the aim has not
+            // converged yet" from "this face cannot be hit from here", and guessing between those
+            // two has now cost three passes.
+            if (hit == null && kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) {
+                var live = kaptainwutax.tungsten.path.movements.RotationHelper.liveHit(player);
+                String what = "null";
+                if (live instanceof BlockHitResult lb
+                        && live.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
+                    what = lb.getBlockPos().toShortString() + " side=" + lb.getSide()
+                            + " -> fills " + lb.getBlockPos().offset(lb.getSide()).toShortString();
+                } else if (live != null) {
+                    what = String.valueOf(live.getType());
+                }
+                System.out.println(String.format(
+                        "BRIDGEAIM want=%s against=%s wantYaw=%.1f/%.1f wantPitch=%.1f/%.1f hit=%s",
+                        toPlace.toShortString(), against.toShortString(),
+                        wantYaw, player.getYaw(), wantPitch, player.getPitch(), what));
+            }
             // Rate through the shared gate (helpers/BlockPlaceHelper): this ticks once per client
             // tick, and a bridge is the exact case where placing every tick looks inhuman.
             if (hit != null && kaptainwutax.tungsten.helpers.BlockPlaceHelper.tryPlace(hit)) {
