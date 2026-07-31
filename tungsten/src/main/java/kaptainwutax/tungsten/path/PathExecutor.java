@@ -432,7 +432,14 @@ public class PathExecutor {
         Vec3d eye = player.getEyePos();
         Vec3d center = Vec3d.ofCenter(target);
         if (breakingTicks++ > 300 || eye.squaredDistanceTo(center) > 4.5 * 4.5) {
-            Debug.logMessage("Mining aborted (timeout or out of reach)");
+            // SAY WHICH HALF. "timeout or out of reach" is two different failures wearing one
+            // message, and telling them apart by eye cost a whole diagnosis pass: one means the
+            // watchdog expired, the other means the bot is standing in the wrong place, and they
+            // have opposite fixes.
+            Debug.logMessage(String.format(
+                    "Mining aborted: ticks=%d dist=%.2f target=%s eye=(%.2f,%.2f,%.2f)",
+                    breakingTicks, Math.sqrt(eye.squaredDistanceTo(center)),
+                    target.toShortString(), eye.x, eye.y, eye.z));
             options.attackKey.setPressed(false);
             mc.interactionManager.cancelBlockBreaking();
             TungstenModRenderContainer.BREAK_PLAN.clear();

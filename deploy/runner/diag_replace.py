@@ -22,6 +22,8 @@ try:
     elif op=="replstat": out=dict(mc.replaceStatus())
     elif op=="bq": out=dict(mc.buildQueue())
     elif op=="exec": out={"s":mc.execState()}
+    elif op=="chat": out={"c":[str(x) for x in (mc.getRecentChat(40) or [])]}
+    elif op=="cview": out={"v":[str(dict(mc.getBlockAt(c[0],c[1],c[2])).get("block")) for c in req["cells"]]}
     elif op=="pos": out={"pos":str(mc.getGameState().get("self",{}).get("pos"))}
 except Exception as e:
     sys.stderr.write("ERR:"+repr(e)+"\n"); sys.exit(3)
@@ -65,9 +67,14 @@ def main():
     print("=== //replace: 3-cell stone column -> cobblestone at x=5 ===")
     print("  before cobble?:", [block_at(*p) for p in patch])
     print("  select:", py4j("select", a=[5,-60,0], b=[5,-58,0]))
+    # THE CLIENT'S OWN VIEW of the three cells. The alternation is deterministic, and the last
+    # suspect is the client world lagging the rcon fill that rebuilds the arena — if the client
+    # still sees the PREVIOUS run's cobblestone, replaceSelection matches nothing real.
+    print("  client view BEFORE:", py4j("cview", cells=[[5,-60,0],[5,-59,0],[5,-58,0]])["v"])
     print("  exec BEFORE:", py4j("exec")["s"])
     print("  replace:", py4j("replace", src="stone", dst="cobblestone"))
     time.sleep(3)
+    print("  client view 3s IN:", py4j("cview", cells=[[5,-60,0],[5,-59,0],[5,-58,0]])["v"])
     print("  exec 3s IN:", py4j("exec")["s"])
     # replaceStatus now hands the PLACING half to the tick-driven build queue, so the poll is
     # two-stage: drive the break phase with replaceStatus, then watch buildQueue drain.
@@ -76,6 +83,7 @@ def main():
         time.sleep(1.5)
         st=py4j("replstat"); last=st
         ph=str(st.get("phase"))
+        if ph == "walking": continue   # it is walking into reach; keep polling
         if ph in ("placing","done"): break
     # //replace is a loop, not two straight-line phases: a cell that is still the old block
     # goes BACK to the break queue, so the caller alternates replaceStatus and buildQueue until
@@ -93,6 +101,10 @@ def main():
     time.sleep(1)
     after=[block_at(*p) for p in patch]
     print("  exec AFTER:", py4j("exec")["s"])
+    # tickBreaking only returns false in three places and every one of them says so in chat.
+    for line in py4j("chat")["c"]:
+        if any(k in line.lower() for k in ("mining", "break", "denied", "abort", "cancel")):
+            print("    chat:", line)
     print(f"  final replaceStatus: {last}")
     print(f"  after: {after}")
     ok = all(b=="cobblestone" for b in after)

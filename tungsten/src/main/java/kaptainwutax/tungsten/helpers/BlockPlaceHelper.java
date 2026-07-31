@@ -720,6 +720,19 @@ public final class BlockPlaceHelper {
     }
 
 
+    /**
+     * A cell to stand in to work on {@code target} — placing OR breaking. Public because the
+     * break side needs the same answer and had no way to ask: a break job simply spun when the
+     * block was out of reach. Measured on //replace: "Mining aborted: ticks=1 dist=5.12" over and
+     * over, the bot four and a half blocks too far away and nobody walking it in.
+     */
+    public static BlockPos workStand(net.minecraft.world.WorldView world, BlockPos target) {
+        boolean allowSameLevel = !world.getBlockState(target.up()).isAir();
+        BlockPos adj = adjacentStand(world, target, target, allowSameLevel);
+        if (adj != null) return adj;
+        return standable(world, target) ? target : null;
+    }
+
     /** Feet space, head space, and something to stand on — asked with the ported predicates so
      *  the builder and the pathfinder agree on what a standing position is. */
     private static boolean standable(net.minecraft.world.WorldView world, BlockPos feet) {

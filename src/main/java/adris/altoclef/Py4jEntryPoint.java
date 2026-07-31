@@ -2663,9 +2663,27 @@ public class Py4jEntryPoint {
                 return out;
             }
             if (!toBreak.isEmpty()) {
-                // Still solid: hand them back to the break queue rather than losing them. If they
-                // are out of reach the caller repositions and polls again — same contract as
-                // before, except the cells survive it now.
+                // OUT OF REACH IS NOT A REASON TO SPIN. The executor abandons a dig the moment the
+                // block is further than 4.5 away, and this poll used to just hand the same job
+                // back, forever: measured as "Mining aborted: ticks=1 dist=5.12" on repeat, with
+                // the bot four and a half blocks too far and nobody walking it in. The build queue
+                // learned to walk (C5.10); the break side never did, so it does it here — same
+                // question, same helper.
+                net.minecraft.util.math.BlockPos first = toBreak.get(0);
+                double reach = client.player.getEyePos()
+                        .distanceTo(net.minecraft.util.math.Vec3d.ofCenter(first));
+                if (reach > 4.0) {
+                    net.minecraft.util.math.BlockPos stand =
+                            kaptainwutax.tungsten.helpers.BlockPlaceHelper.workStand(client.world, first);
+                    if (stand != null && !client.player.getBlockPos().equals(stand)) {
+                        kaptainwutax.tungsten.task.FastNavigator.startExact(stand);
+                        out.put("ok", true); out.put("phase", "walking");
+                        out.put("remaining", toBreak.size());
+                        out.put("walkingTo", stand.toShortString());
+                        out.put("dist", String.format("%.2f", reach));
+                        return out;
+                    }
+                }
                 if (ex != null) {
                     ex.startBreaking(toBreak);
                 }
