@@ -1512,3 +1512,34 @@ active=1501 ticks (~75 s of the 180 s course)   losBlocked=1453   steer=2   noTa
 `noTarget=966` is the number to chase next: the punk task is alive the whole course but has no
 target for a large part of it, and steering is gated shut by line of sight for essentially all
 of the rest. Neither of those is a walking problem, which is where six passes went.
+
+## ROOT CAUSE of chase_terrain: the runner leaves the client's entity range (2026-07-31)
+
+The target is resolved from the CLIENT's entity list — `PunkPlayerTask.tryRediscover` uses
+`mc.world.getEntityById` and `mc.world.getPlayers()`. So the bot can only chase what the server
+is still sending it. And the server is configured:
+
+```
+view-distance=8                      -> 128 blocks of entity tracking
+simulation-distance=10               -> 160 blocks
+entity-broadcast-range-percentage=100
+```
+
+while the bench sends the runner **`RUN_DIST = 140` blocks** away (scenarios_pvp.py). **The
+runner is driven past the tracking range**, at which point the entity simply stops existing for
+the chaser. That is `noTarget=966` — about 27% of the course with no target at all, measured on
+honest per-run counters.
+
+This is not a pathing bug, and it is not fixable by anything the last several passes touched.
+Two honest ways forward, and they are different products:
+
+1. **Pursue the last known position** when the entity drops out of tracking, the way a human
+   does — a real capability the bot lacks, and the one worth building. Note baritone would be
+   equally blind here: it also reads the client entity list, so this is not a "catch up with
+   baritone" item but a new capability.
+2. **Or keep the bench inside the tracking range** (`RUN_DIST` under 128, or raise
+   `view-distance`), which changes what the course measures rather than what the bot can do.
+
+Recorded before choosing, because the choice is the user's: option 1 is more bot, option 2 is a
+more honest bench. What is settled is that the previous framings — slow pathing, no climb
+hand-off, walker idle, mid-run restarts — were all downstream of a target the client cannot see.
