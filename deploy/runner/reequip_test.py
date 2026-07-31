@@ -13,6 +13,11 @@ asks for a bridge longer than two blocks. Passing means the bridge continued int
 import functools, json, subprocess, sys, time
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
+# "raised": the same bridge, but from a pad ten blocks above the world floor, which is the case
+# the demo scenario failed at and the flat arena cannot show — falling there is unrecoverable, so
+# the probe recovers the bot first (register C5.14).
+RAISED = len(sys.argv) > 1 and sys.argv[1] == "raised"
+PAD_Y = -54 if RAISED else -61
 SNIP = r"""
 import json,sys
 from py4j.java_gateway import JavaGateway,GatewayParameters
@@ -54,12 +59,18 @@ def main():
 
     # A gap to bridge: solid ground at x=0, then air from x=1 to x=8, at y=-61.
     rcon("forceload add -8 -8 16 16")
-    rcon("fill -2 -61 -4 12 5 4 air")
-    rcon("fill -2 -61 -4 0 -61 4 stone")     # the near bank only
+    # RECOVER FIRST. A bot that fell into the void keeps falling and its position overrides the
+    # server's, so every later run measures nothing. spectator takes physics off the client.
+    rcon(f"gamemode spectator {BOT}"); time.sleep(1)
+    rcon(f"tp {BOT} 0.5 {PAD_Y + 1} 0.5"); time.sleep(2)
+    rcon(f"fill -2 {PAD_Y} -4 12 {PAD_Y + 6} 4 air")
+    rcon(f"fill -2 {PAD_Y} -4 0 {PAD_Y} 4 stone")     # the near bank only
+    rcon(f"tp {BOT} 0.5 {PAD_Y + 1} 0.5"); time.sleep(2)
+    rcon(f"gamemode survival {BOT}")
     rcon(f"clear {BOT}")
     rcon(f"item replace entity {BOT} hotbar.0 with dirt 2")          # runs out after two
     rcon(f"item replace entity {BOT} hotbar.1 with cobblestone 64")  # the re-equip target
-    rcon(f"tp {BOT} 0.5 -60 0.5 -90 0"); time.sleep(2)
+    rcon(f"tp {BOT} 0.5 {PAD_Y + 1} 0.5 -90 0"); time.sleep(2)
     py4j("selhot", s=0)                       # hold the SHORT stack
     # SETTLE FIRST. A teleport drops the bot a few ticks while the client loads the floor, and
     # BridgeTask aborts on one tick of downward velocity — so starting eagerly kills the bridge
@@ -73,7 +84,8 @@ def main():
         time.sleep(0.5)
     time.sleep(1.0)
 
-    print("=== bridge 6 blocks holding a stack of 2 ===")
+    print(f"=== bridge 6 blocks holding a stack of 2 (pad y={PAD_Y}, "
+          f"{'RAISED over a void' if RAISED else 'flat'}) ===")
     print("  start:", py4j("bridge", d="east", n=6))
     for k in range(40):
         st = py4j("placed")
@@ -86,7 +98,7 @@ def main():
     for line in py4j("chat")["c"]:
         if "bridge" in line.lower() or "block" in line.lower():
             print("    chat:", line)
-    paved = [x for x in range(1, 7) if solid(x, -61, 0)]
+    paved = [x for x in range(1, 7) if solid(x, PAD_Y, 0)]
     print(f"  paved cells: {paved}")
     # Two dirt can only pave two cells; anything beyond proves the re-equip fired.
     ok = len(paved) >= 3
