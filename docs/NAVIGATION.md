@@ -1260,3 +1260,32 @@ before touching any more code — three attempts here have each been aimed at a 
 not in.
 
 Reverted; nothing inert kept.
+
+### WHERE THE CHASE ACTUALLY GOES: the walker is OFF for 80% of it (2026-07-31)
+
+The one-line experiment that should have come first. Counting the walker's mode per game tick
+through a failing `chase_terrain`:
+
+```
+WALKMODE off=14339  bfs=3655  direct=6
+```
+
+- **off: 14339 ticks — 80% of the pursuit, the walker is not running at all**
+- bfs: 3655 (20%)
+- direct: **6 ticks**, i.e. never
+
+Two models die here, both of them mine:
+
+1. "Live-steer is the chase's primary mode." It is not — 6 ticks in a whole run. `FollowEntityTask`'s
+   `steer` counter counts REQUESTS to `steerLive`, not ticks spent steering, and I read it as the
+   latter for several passes.
+2. "The bot presses into terrain it cannot climb." For 80% of the chase nothing is pressing
+   anything, because no walker is running. That is also why every diagnostic inside `tickBFS`
+   reported zero: not because the bot was elsewhere in the method, but because it was nowhere.
+
+So the question is not how the walk fails — it is **why the walker is off 4 ticks out of 5**
+while a chase is in progress. That is a `FollowEntityTask` question (who starts the walker, and
+what stops it), not a `BlockPathWalker` one, and it is where the next pass starts.
+
+The mode counters are kept: they are the instrument that answered this, they are gated on
+verbose logging, and they cost three increments a tick.

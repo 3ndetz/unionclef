@@ -34,6 +34,7 @@ public class BlockPathWalker {
 
     private static List<BlockPos> path = null;
     private static int waypointIdx = 0;
+    public static volatile int tickOff = 0, tickBfs = 0, tickDir = 0;
     private static final net.minecraft.util.math.BlockPos.Mutable scratch2 =
             new net.minecraft.util.math.BlockPos.Mutable();
     private static boolean active = false;
@@ -173,6 +174,17 @@ public class BlockPathWalker {
     // ── tick ─────────────────────────────────────────────────────────────────
 
     public static void tick(ClientPlayerEntity player) {
+        // WHERE DOES THE CHASE ACTUALLY SPEND ITS TICKS? Three passes aimed a fix at tickBFS
+        // before noticing that BOTH of its diagnostics report zero on a failing chase — so the
+        // bot is not in that method. Count the modes instead of guessing which one it is in.
+        // Per game tick, printed once every 10 s: not the search's inner loop.
+        if (!active) tickOff++;
+        else if (mode == Mode.BFS) tickBfs++;
+        else tickDir++;
+        if (TungstenConfig.get().verboseDebugLogging && ((tickOff + tickBfs + tickDir) % 200 == 0)) {
+            Debug.logMessage(String.format("WALKMODE off=%d bfs=%d direct=%d",
+                    tickOff, tickBfs, tickDir));
+        }
         if (!active) return;
 
         // auto-stop when executor takes over (NON-live only). In live-steer the walker
