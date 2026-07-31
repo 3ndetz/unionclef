@@ -106,6 +106,31 @@ def setup_slime():
     rcon(f"tp {BOT} -5 -55 0 90 15"); time.sleep(2)
 
 BRIDGE_N = 18
+def recover_from_void(floor_y=-61):
+    """Lift a bot that is alive but falling below the world.
+
+    A fall into a demo void is NOT self-healing: kill does not land it, tp does not stick, and
+    recreating the client does not help, because the client keeps falling and its position wins
+    over the server's. One such fall silently ruined a recording — the next clip was filmed with
+    no bot on the pad at all. Spectator takes physics off the client, and only then does the
+    teleport hold."""
+    pos = rcon(f"data get entity {BOT} Pos")
+    if "d," not in pos:
+        return
+    try:
+        y = float(pos[pos.index("[") + 1:pos.index("]")].split(",")[1].strip().rstrip("d"))
+    except (ValueError, IndexError):
+        return
+    if y > floor_y - 20:
+        return
+    print(f"  bot is in the void at y={y:.1f} — recovering")
+    rcon(f"gamemode spectator {BOT}"); time.sleep(2)
+    rcon("forceload add -8 -8 8 8")
+    rcon(f"fill -4 {floor_y} -4 4 {floor_y} 4 stone")
+    rcon(f"tp {BOT} 0.5 {floor_y + 1} 0.5"); time.sleep(4)
+    rcon(f"tp {BOT} 0.5 {floor_y + 1} 0.5"); time.sleep(2)
+    rcon(f"gamemode survival {BOT}"); time.sleep(3)
+
 def setup_bridge():
     # bridge RAISED to y=-54 so the void below (down to the world floor -64) is ~10 deep and
     # reads unmistakably as a void from the side cam (at y=-60 the floor is only 4 below).
@@ -114,6 +139,10 @@ def setup_bridge():
     rcon("fill 20 -54 -3 26 -54 3 stone")              # destination platform
     rcon(f"clear {BOT}"); rcon(f"item replace entity {BOT} hotbar.0 with cobblestone 64")
     rcon("time set day"); rcon("weather clear")
+    # RECOVER AFTER THE ARENA EXISTS, NOT BEFORE. Recovering first put the bot on a temporary
+    # floor that clean() then wiped, so it fell through the void again before the pads were laid —
+    # which is exactly what happened on the previous two takes.
+    recover_from_void(-54)
     rcon(f"tp {BOT} 1 -53 0 -90 0")                    # pad edge, facing east(+x); void x=2..19 below y=-54
     # WAIT FOR THE LANDING. The teleport drops the bot a block onto the pad, and starting the
     # bridge mid-fall walks it straight off the edge — measured: the bot ended at y=-65.6, i.e.
