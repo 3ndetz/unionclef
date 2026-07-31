@@ -1190,3 +1190,31 @@ That is the honest reading and it is also the argument for the open AC-1 item: t
 green on a quiet machine and not proven on a busy one. Recording is itself a load, which makes
 `--record` sweeps a rough low-fps probe — but a deliberate one (`docker update --cpus N`) is
 what actually settles it.
+
+### AC-1 SETTLED: the suite holds at a FORCED 10 fps (2026-07-31)
+
+The low-fps question has hung over this work all session — `nav_bridge` passed at 18-24 fps and
+failed at ~10, and every attempt to judge it waited on the host being busy, which produced one
+withdrawn claim. It is now deterministic:
+
+```
+docker update --cpus 2 uctest-mc-tester1      # -> avg_fps 10.0, reproducibly
+python deploy/runner/run_suite.py nav
+```
+
+Result at that limit, with `planPlaceMoves` shipping ON:
+
+```
+nav_flat nav_staircase nav_steep nav_gaps nav_descend nav_water
+nav_ladder nav_slime nav_break nav_wall2 nav_bridge nav_hazard   all PASS
+12/12 ok, gate failures: 0, invalid (host starved): 0
+```
+
+So the fps sensitivity recorded earlier is GONE — and it went away with the work that landed
+since, not by luck: the verbatim movement port, the placement gate going through the real ray
+trace, and the block-budget guard on climbs. `nav_bridge` in particular now passes at the exact
+fps at which it used to fall into the void.
+
+Method note worth keeping: `--record` sweeps are a rough low-fps probe (per-course ffmpeg is
+itself load), but `docker update --cpus N` is the deliberate one. Judge low-fps behaviour with
+the limit, never by waiting for the machine to be busy.
