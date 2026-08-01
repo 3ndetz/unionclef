@@ -182,7 +182,7 @@ public final class MovementQueue {
      * class of four buys nothing and cost twice the stalls.
      */
     private static boolean isSupportedEdge(BlockPos a, BlockPos b) {
-        return isTraverseEdge(a, b);
+        return isTraverseEdge(a, b) || isAscendEdge(a, b);
     }
 
     /**
@@ -201,8 +201,11 @@ public final class MovementQueue {
             BetterBlockPos to = new BetterBlockPos(cells.get(i));
             // ONE MOVEMENT CLASS PER EDGE SHAPE, which is upstream's whole model: the step decides
             // for itself how to be walked, and the queue only decides whose turn it is.
-            // isAscendEdge/MovementAscend deliberately unused here — see isSupportedEdge.
-            movements.add(new MovementTraverse(from, to));
+            // ONE MOVEMENT CLASS PER EDGE SHAPE, which is upstream's model: the step decides for
+            // itself how to be walked, and the queue only decides whose turn it is.
+            movements.add(isAscendEdge(from, to)
+                    ? new MovementAscend(from, to)
+                    : new MovementTraverse(from, to));
         }
         index = 0;
         ticksOnCurrent = 0;
