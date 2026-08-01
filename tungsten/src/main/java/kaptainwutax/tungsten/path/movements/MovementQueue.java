@@ -288,7 +288,14 @@ public final class MovementQueue {
         // MovementPillar owns ladders and vines too.
         if (isPillarEdge(a, b)) return true;
         if (cfg.queueClimbs && (isAscendEdge(a, b) || isDescendEdge(a, b))) return true;
-        if (cfg.queueClimbs && isFallEdge(a, b)) return true;
+        // ⛔ FALLS ARE NOT ADMITTED YET — MEASURED 2026-08-02, MovementFall DOES NOT MOVE.
+        // Armed for one chase: 25 of 26 chains died on the queue's timeout and EVERY ONE was a
+        // MovementFall that never left the lip — "step 0 has taken too long (161 ticks) ...
+        // (-248,105,285)->(-247,102,285), feet (-248,105,285)". freezes 20 with falls admitted
+        // against 3 for the plain walker in the same batch. The class stays in the tree, the
+        // dispatch below stays wired, but nothing routes to it until the reason it never starts
+        // is found — a class that stands still for eight seconds is worse than no class.
+        // if (cfg.queueClimbs && isFallEdge(a, b)) return true;
         return cfg.queueDiagonals && isDiagonalEdge(a, b);
     }
 
