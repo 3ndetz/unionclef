@@ -140,6 +140,11 @@ public class TungstenConfig {
      *  instead of {@code BlockPathWalker}. Until now the queue only ever received build legs, so
      *  every plain walk in the mod — nav and chase alike — was the hand-rolled walker. See C5.18. */
     public boolean chaseUsesQueue = false;
+    /** May a fall place a water bucket to break itself (an "MLG")? OFF, because altoclef —
+     *  the brain this module runs under — calls configurePlaceBucketButDontFall(true)
+     *  unconditionally at init, i.e. it owns the bucket and asks the pathfinder not to touch it.
+     *  This is the fourth conjunct of MovementFall.java:99 restored under a name tungsten has. */
+    public boolean allowBucketMlg = false;
 
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
      *  If false, only walks (no jumps) — safer but slower. */

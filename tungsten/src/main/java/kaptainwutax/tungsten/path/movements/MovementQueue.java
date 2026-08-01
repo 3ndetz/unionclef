@@ -551,6 +551,13 @@ public final class MovementQueue {
             }
 
             // :242-250. ticksOnCurrent is only charged on a tick the movement actually ran.
+            // PathExecutor.java:237-242. Releasing the sprint KEY is not the same as clearing the
+            // sprint STATE — a movement that deliberately withholds Input.SPRINT (MovementTraverse
+            // does, on a step whose floor this route just placed) still holds MOVE_FORWARD, and
+            // without this the body sprints off the block it has only just laid.
+            if (!movement.sprintRequested()) {
+                player.setSprinting(false);
+            }
             ticksOnCurrent++;
             if (ticksOnCurrent > currentCostEstimate + MOVEMENT_TIMEOUT_TICKS) {
                 // WHICH step, not just that one. 13 of 15 chains in a measured chase died here,

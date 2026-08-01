@@ -286,12 +286,38 @@ public final class FastPlanner {
      */
     private static final ThreadLocal<WorldView> SEARCH_WORLD = new ThreadLocal<>();
 
-    /** Blocks in the pocket, i.e. the honest value for {@link #placeBudget}. */
+    /**
+     * Blocks in the pocket THE EXECUTOR CAN REACH, i.e. the honest value for {@link #placeBudget}.
+     *
+     * <p>This counted every {@link net.minecraft.item.BlockItem} in the inventory, which is wider
+     * than the executor: tungsten never manipulates the inventory itself. What it can select on its
+     * own is the HOTBAR — {@code MovementHelperB.selectThrowaway} (MovementHelperB.java:1010-1028)
+     * walks slots 0..getHotbarSize()-1 and calls setSelectedSlot — and the main-hand test that gates
+     * every placement ({@code hasThrowaway}, MovementPillar.java:445-447 and
+     * MovementTraverse.java:556-558) sees only what that selector left in hand. Anything deeper in
+     * the pack is reachable ONLY through {@code equipBlockHook}, the brain's restock
+     * (AltoClef.java:550-566). So the count follows the same rule: the hotbar always, the rest of
+     * the pack only while that hook is registered.
+     *
+     * <p>{@code allowPlace} short-circuits to zero because {@code hasThrowaway} and
+     * {@code selectThrowaway} both refuse outright when it is off — with it false, a promised bridge
+     * is a bridge nobody will lay.
+     *
+     * <p>ONE OVERCOUNT IS LEFT, knowingly: the hook equips from a fixed build-block whitelist
+     * (cobblestone / dirt / stone / netherrack / …), so a pack full of shulker boxes is counted and
+     * would never be equipped. Narrowing that needs the whitelist exposed from altoclef's side — a
+     * tungsten module cannot see it — which is a change to another file.
+     */
     public static int countPlaceable(net.minecraft.entity.player.PlayerEntity player) {
         if (player == null) return 0;
+        if (!TungstenConfig.get().allowPlace) return 0;
+        boolean brainRestocks = kaptainwutax.tungsten.TungstenModDataContainer.equipBlockHook != null;
+        int hotbar = net.minecraft.entity.player.PlayerInventory.getHotbarSize();
         int n = 0;
         var inv = player.getInventory();
         for (int i = 0; i < inv.size(); i++) {
+            // slots past the hotbar are the brain's to hand over; tungsten cannot select them
+            if (i >= hotbar && !brainRestocks) continue;
             var st = inv.getStack(i);
             if (st.getItem() instanceof net.minecraft.item.BlockItem) n += st.getCount();
         }
@@ -813,6 +839,37 @@ public final class FastPlanner {
                 cntClimb++;
                 continue;
             }
+            // WALKING OFF A LIP HAPPENS AT THE OLD HEIGHT. Only the landing was checked — the body
+            // at the destination SURFACE — but the horizontal half of a step down is taken while
+            // still standing on this side, and a 0.6-wide box overlaps the destination column
+            // before it is over the edge. So that column must accept the body at OUR feet height
+            // too, i.e. one cell higher than anything tested here: dest.above(2). A ceiling there
+            // stops the step outright (a sneaking body is 1.5 tall — it does not fit either), which
+            // is the stepped 2-high tunnel and the overhang.
+            //
+            // It is also exactly what the executor declares and gates on: MovementDescend's
+            // positionsToBreak are {dest.above(2), dest.above(), dest} (MovementDescend.java:49) and
+            // MovementFall's column starts at src.above() (MovementFall.java:119-121) — cells
+            // Movement.prepared() (Movement.java:434-473) MINES before the step may run, and reports
+            // UNREACHABLE when it cannot. The planner modelled none of that, so it emitted a walk
+            // and the executor answered by digging out a ceiling nobody had priced.
+            //
+            // Deeper drops need no further cells: this loop takes the NEAREST standable level, so
+            // every level it skipped was skipped BECAUSE the cell below it was not solid.
+            // ⛔ MEASURED AND REVERTED, 2026-08-02. Requiring the destination column to accept the
+            // body at OUR feet height as well took nav from 12/12 to 10/12 — nav_gaps went red —
+            // and that is the predicted failure: with no break-and-descend generator (breakThrough
+            // handles same-level cardinal steps only) the check does not make a bad step better,
+            // it makes the step unplannable and the course has no route at all. The reasoning
+            // behind it stands and the executor really does declare dest.above(2); the missing
+            // half is a descend variant of breakThrough that puts that cell in toBreak and PRICES
+            // it. Until that exists this stays off, because "no path" is worse than "a path that
+            // has to dig".
+            //
+            // if (top < support && !PlayerFit.bodyFits(world, nx + 0.5, support, nz + 0.5)) {
+            //     cntClimb++;
+            //     continue;
+            // }
             cntClimb++;
             if (rise > PlayerFit.STEP_HEIGHT) {
                 // needs a jump: head clearance above the origin cell
@@ -837,8 +894,13 @@ public final class FastPlanner {
             // ZERO times, bridge and pillar counts both zero — the flag unlocked no placement at
             // all, only this climb — and the bot never left the start (final_dist 25.5, 3 of 3).
             // placeAcross and pillarUp already respect placeBudget; this generator did not.
+            // ...AND THE PLACE POLICY HAS TO ALLOW BUILDING AT ALL. Both of the executor's throwaway
+            // gates (MovementPillar.java:445-447, MovementTraverse.java:556-558) return false the
+            // moment allowPlace is off, so with it off this climb is a move no executor performs.
+            // placeBudget does not cover it: it is MAX_VALUE until a caller sets it.
             boolean climb = rise > PlayerFit.JUMP_HEIGHT;
-            if (climb && (!TungstenConfig.get().planPlaceMoves || placeBudget <= 0)) {
+            if (climb && (!TungstenConfig.get().planPlaceMoves || !TungstenConfig.get().allowPlace
+                    || placeBudget <= 0)) {
                 cntClimb++;
                 continue;
             }
@@ -966,6 +1028,18 @@ public final class FastPlanner {
         if (world.getBlockState(against).getCollisionShape(world, against).isEmpty()
                 && !branchPlaced(from, from.x, from.y - 1, from.z)) return;
 
+        // MAY WE BUILD HERE AT ALL? PlaceRules is this project's single place policy — allowPlace,
+        // the deny zones, and altoclef's place-avoiders / protected zones through canPlaceHook — and
+        // the executor asks it on EVERY placement: BlockPlaceHelper.java:300 drops a refused target
+        // out of the place queue, and MovementTraverse.costOfPlacingAt (MovementTraverse.java:571-577)
+        // prices one COST_INF. The planner never asked, so a bridge across a protected zone was
+        // planned in full and then refused a plank at a time, leaving a route with holes in it.
+        // It also settles a subtler mismatch: the collision-shape test above accepts a cell holding a
+        // flower or a torch, and vanilla will not replace either — canPlace tests isReplaceable.
+        // Called from the search thread exactly as BreakRules.canBreak already is in breakThrough();
+        // the altoclef hooks are synchronized on their side (AltoClefSettings.java:111-115).
+        if (!kaptainwutax.tungsten.path.PlaceRules.canPlace(world, floor)) return;
+
         // A BACKPLACE IS A SNEAK, AND UPSTREAM PRICES IT AS ONE: MovementTraverse.cost
         // multiplies the walk by SNEAK_ONE_BLOCK_COST / WALK_ONE_BLOCK_COST for exactly this
         // branch (baritone/.../MovementTraverse.java:164). Pricing it as a plain walk made the
@@ -999,12 +1073,81 @@ public final class FastPlanner {
         scratch.set(from.x, from.y, from.z);
         if (Double.isNaN(PlayerFit.supportTop(world, scratch))
                 && !branchPlaced(from, from.x, from.y - 1, from.z)) return;
+        // The stances a pillar cannot be started from at all — see pillarImpossible.
+        if (pillarImpossible(world, from, scratch)) return;
+        // Same place policy as placeAcross, on the cell our feet are in (that is where the block
+        // goes): MovementPillar.costOfPlacingAt asks PlaceRules.canPlace for this exact cell
+        // (MovementPillar.java:459-467) and prices a refusal COST_INF.
+        if (!kaptainwutax.tungsten.path.PlaceRules.canPlace(world, feet)) return;
 
         double cost = ActionCosts.JUMP_ONE_BLOCK_COST
                 + ActionCosts.PLACE_ONE_BLOCK_COST * TungstenConfig.get().placeCostMultiplier;
         cntPillar++;
         relax(map, open, from, from.x, upY, from.z, cost, goal, true, null,
                 new java.util.ArrayList<>(java.util.List.of(feet)));
+    }
+
+    /**
+     * The stances {@code MovementPillar.cost} prices COST_INF, i.e. the pillars the executor refuses
+     * to start. Ported clause for clause from MovementPillar.java:146-195 (itself baritone's
+     * MovementPillar.cost), because a move the planner emits and the executor prices as impossible is
+     * a route that stops dead at the tower's foot: the movement goes UNREACHABLE on its first tick
+     * and the queue replans onto the same plan.
+     *
+     * <p>These are FEASIBILITY clauses, not pricing: each one is COST_INF upstream, which is the cost
+     * model's way of spelling "not a move". Nothing here changes what a possible pillar costs.
+     *
+     * <p>Two of upstream's COST_INF clauses are deliberately NOT repeated, because the geometry test
+     * in {@link #pillarUp} already covers them: an unbreakable block at {@code y+2} and a falling
+     * block above it both matter only when the tower has to MINE its way up, and this planner only
+     * ever pillars into a cell the body already fits in ({@code bodyFits} at {@code y+1} spans
+     * {@code y+1} and {@code y+2}). The inventory clauses are not repeated either — {@link
+     * #placeBudget} and {@link kaptainwutax.tungsten.path.PlaceRules} model those, and asking the
+     * main hand from the search thread would refuse every pillar planned while a pickaxe is held,
+     * which the executor's equip step then fixes (MovementPillar.java:417-436).
+     *
+     * <p>Takes the NODE, not bare coordinates, for the same reason {@link #placeAcross} does: the
+     * fluid clause asks what is under our feet, and on a route that has bridged its way out over
+     * water that block exists in the plan rather than in the world (see {@link #branchPlaced}).
+     */
+    private static boolean pillarImpossible(WorldView world, Node node, BlockPos.Mutable scratch) {
+        int x = node.x, y = node.y, z = node.z;
+        net.minecraft.block.BlockState fromState = cachedState(world, x, y, z, scratch);
+        net.minecraft.block.Block from = fromState.getBlock();
+        boolean ladder = from == net.minecraft.block.Blocks.LADDER
+                || from == net.minecraft.block.Blocks.VINE;
+        net.minecraft.block.BlockState fromDown = cachedState(world, x, y - 1, z, scratch);
+        net.minecraft.block.Block below = fromDown.getBlock();
+        if (!ladder) {
+            // MovementPillar.java:153-155 — you cannot tower off a ladder or vine onto a block.
+            if (below == net.minecraft.block.Blocks.LADDER
+                    || below == net.minecraft.block.Blocks.VINE) return true;
+            // MovementPillar.java:156-158 — nor off a bottom slab.
+            if (below instanceof net.minecraft.block.SlabBlock
+                    && fromDown.get(net.minecraft.block.SlabBlock.TYPE)
+                        == net.minecraft.block.enums.SlabType.BOTTOM) return true;
+        }
+        // MovementPillar.java:160-162 — a vine with nothing behind it cannot be climbed.
+        if (from == net.minecraft.block.Blocks.VINE
+                && !kaptainwutax.tungsten.path.movements.MovementPillar.hasAgainst(world, x, y, z)) {
+            return true;
+        }
+        // MovementPillar.java:165-167 (upstream issue #172) — a fence gate over our head. NOT
+        // redundant with bodyFits: an open gate has no collision shape, so the body fits and the
+        // executor still refuses.
+        if (cachedState(world, x, y + 2, z, scratch).getBlock()
+                instanceof net.minecraft.block.FenceGateBlock) return true;
+        // MovementPillar.java:186-191 — standing IN a fluid with no face under us to place against.
+        // (Upstream's second half is assumeWalkOnWater, hardcoded false here as there.)
+        if (kaptainwutax.tungsten.path.movements.MovementHelperB.isLiquid(fromState)
+                && !kaptainwutax.tungsten.path.movements.MovementHelperB
+                        .canPlaceAgainst(world, x, y - 1, z, fromDown)
+                && !branchPlaced(node, x, y - 1, z)) return true;
+        // MovementPillar.java:192-195 — a lily pad or carpet over a fluid: to go up you would have
+        // to break the thing you are standing on.
+        return (from == net.minecraft.block.Blocks.LILY_PAD
+                    || from instanceof net.minecraft.block.CarpetBlock)
+                && !fromDown.getFluidState().isEmpty();
     }
 
     /**

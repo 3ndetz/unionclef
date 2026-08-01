@@ -298,13 +298,15 @@ public class MovementFall extends Movement {
         // ADAPTER — MovementFall.java:99 is a FOUR-part condition and the fourth is
         // `!AltoClefSettings.getInstance().shouldNotPlaceBucketButStillFall()` (AltoClefSettings.java:143-147,
         // reading the `_dontPlaceBucketButStillFall` flag). Tungsten has no AltoClefSettings and no
-        // equivalent flag anywhere (grep: no bucket/MLG policy exists in this module), so the conjunct
-        // is DROPPED. Its default is false, so `!false` is true and dropping it reproduces plain
-        // upstream baritone with the toggle at rest; it can only ever make this port place a bucket
-        // where altoclef would have asked it not to, never the other way round. Recorded, not faked:
-        // if a "fall but do not MLG" policy ever lands in TungstenConfig, it goes back HERE, as the
-        // fourth conjunct, not as a separate early-return.
-        if (!isWater && willPlaceBucket() && !playerFeet.equals(dest)) {
+        // equivalent flag anywhere. The first version of this port DROPPED the conjunct, arguing
+        // its default is false so `!false` reproduces upstream at rest. That argument is wrong in
+        // THIS repository: AltoClef.java:681 calls configurePlaceBucketButDontFall(true)
+        // UNCONDITIONALLY at init, so upstream's fourth conjunct is permanently false here and
+        // shredder never enters this branch at all. Dropping it did not reproduce upstream — it
+        // inverted it, and put two MLG owners in the same tick, which is precisely what altoclef
+        // sets that flag to prevent. Restored under a name tungsten has.
+        if (!isWater && willPlaceBucket() && !playerFeet.equals(dest)
+                && kaptainwutax.tungsten.TungstenConfig.get().allowBucketMlg) {
             if (!PlayerInventory.isValidHotbarIndex(player.getInventory().getSlotWithStack(STACK_BUCKET_WATER))
                     || ctx.world().getRegistryKey() == World.NETHER) {
                 return state.setStatus(MovementStatus.UNREACHABLE);

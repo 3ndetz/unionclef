@@ -353,8 +353,11 @@ public abstract class Movement {
         // a tick later by InputOverrideHandler.onTick. Here the apply IS the tick, and a place click
         // cannot be un-clicked, so the trailing cancellation has to be the guard in front instead.
         // Net behaviour is identical: a completed movement forces no inputs.
+        sprintRequested = false;
         if (!currentState.getStatus().isComplete()) {
             armMotionFrame(player);
+            sprintRequested = Boolean.TRUE.equals(
+                    currentState.getInputStates().get(Input.SPRINT));
             applyInputs(player, currentState.getInputStates());
         }
         currentState.getInputStates().clear();
@@ -541,6 +544,17 @@ public abstract class Movement {
     public boolean needsClearBreaks() {
         return true;
     }
+
+    /**
+     * Did the movement just executed ask for SPRINT? Read by {@link MovementQueue} straight after
+     * {@code update()}, because the input map is CLEARED at the end of it — the queue cannot ask
+     * the state afterwards, and asking before would race the movement's own decision.
+     */
+    public boolean sprintRequested() {
+        return sprintRequested;
+    }
+
+    private boolean sprintRequested = false;
 
     public void resetBlockCache() {
         toBreakCached = null;
