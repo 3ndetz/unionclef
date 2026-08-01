@@ -3084,7 +3084,13 @@ public class Py4jEntryPoint {
                 // climbing tickInactive means the chase is switched off, not stuck.
                 + " | followCalled=" + kaptainwutax.tungsten.task.FollowEntityTask.tickCalled
                 + " active=" + kaptainwutax.tungsten.task.FollowEntityTask.tickActive
-                + " inactive=" + kaptainwutax.tungsten.task.FollowEntityTask.tickInactive;
+                + " inactive=" + kaptainwutax.tungsten.task.FollowEntityTask.tickInactive
+                // The live-steer branch suppresses BOTH planners, resets the replan clock and
+                // returns — so if steerTicks is what climbs during a stall, the chase is not
+                // stuck for want of a plan, it is steering into something.
+                + " steer=" + kaptainwutax.tungsten.task.FollowEntityTask.steerTicks
+                + " los0=" + kaptainwutax.tungsten.task.FollowEntityTask.losBlocked
+                + " cooldown=" + kaptainwutax.tungsten.task.FollowEntityTask.cooldownTicks;
     }
 
     /** Abandon whatever the build queue still owes (//set gone wrong, wrong selection). */
