@@ -127,6 +127,25 @@ public final class MovementQueue {
      * chain that stops short of the cell that needs a block placed would hand the bridge back to
      * the split path anyway — and a chain of length 1 would replan the same dead end forever.
      */
+    /** Edge-shape histogram over every route offered to the queue. Which class buys the most is a
+     *  question with an answer, and 4% coverage said the prefix RULE was the ceiling — this says
+     *  which shapes the routes are actually made of, so the next class is chosen by count and not
+     *  by guess. Telemetry only. */
+    public static volatile int edgeTraverse, edgeAscend, edgeDescend, edgeDiagonal, edgeOther;
+
+    /** Count the shapes of every edge in a route. Called from the planners' telemetry, not here. */
+    public static void histogram(List<BlockPos> cells) {
+        if (cells == null || cells.size() < 2) return;
+        for (int i = 1; i < cells.size(); i++) {
+            BlockPos a = cells.get(i - 1), b = cells.get(i);
+            if (isTraverseEdge(a, b)) edgeTraverse++;
+            else if (isAscendEdge(a, b)) edgeAscend++;
+            else if (isDescendEdge(a, b)) edgeDescend++;
+            else if (isDiagonalEdge(a, b)) edgeDiagonal++;
+            else edgeOther++;
+        }
+    }
+
     public static int traversePrefix(List<BlockPos> cells) {
         if (cells == null || cells.size() < 2) {
             return 0;

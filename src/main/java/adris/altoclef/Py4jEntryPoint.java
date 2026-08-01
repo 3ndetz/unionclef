@@ -3093,7 +3093,12 @@ public class Py4jEntryPoint {
                 + " cooldown=" + kaptainwutax.tungsten.task.FollowEntityTask.cooldownTicks
                 + " | routeCells=" + kaptainwutax.tungsten.task.FollowEntityTask.routeCells
                 + " traversable=" + kaptainwutax.tungsten.task.FollowEntityTask.traversableCells
-                + " routes=" + kaptainwutax.tungsten.task.FollowEntityTask.routeSamples;
+                + " routes=" + kaptainwutax.tungsten.task.FollowEntityTask.routeSamples
+                + " | edges trav=" + kaptainwutax.tungsten.path.movements.MovementQueue.edgeTraverse
+                + " asc=" + kaptainwutax.tungsten.path.movements.MovementQueue.edgeAscend
+                + " desc=" + kaptainwutax.tungsten.path.movements.MovementQueue.edgeDescend
+                + " diag=" + kaptainwutax.tungsten.path.movements.MovementQueue.edgeDiagonal
+                + " other=" + kaptainwutax.tungsten.path.movements.MovementQueue.edgeOther;
     }
 
     /** Abandon whatever the build queue still owes (//set gone wrong, wrong selection). */

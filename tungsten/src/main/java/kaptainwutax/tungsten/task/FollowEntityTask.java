@@ -514,6 +514,7 @@ public class FollowEntityTask {
                 // "a different movement class that this port does not include yet". On a course
                 // named chase_terrain that is the whole question, so it gets a number instead of
                 // an opinion. Telemetry only — nothing branches on it.
+                kaptainwutax.tungsten.path.movements.MovementQueue.histogram(bfsPath);
                 int pfx = kaptainwutax.tungsten.path.movements.MovementQueue.traversePrefix(bfsPath);
                 traversableCells += pfx;
                 routeCells += bfsPath.size();
