@@ -120,6 +120,19 @@ public class TungstenConfig {
      *  the target every tick (drift-immune) and now face-before-moves (no spin). */
     public boolean followBlockPathFinderEnabled = true;
 
+    /** Which ported movement classes {@code MovementQueue} may take, switchable AT RUNTIME.
+     *
+     *  <p>These exist because the MEASUREMENT was the blocker, not the code. chase_terrain's freeze
+     *  count drifts with host state over a long session — the same build measured 15, 16 and later
+     *  22 — so comparing "this batch against this morning's" compared stand states, not
+     *  configurations, and I did it twice. Flags make A and B ALTERNATE within one sitting
+     *  (`;settings queueClimbs false`), which is the only way an A/B of this size is worth
+     *  anything here. Defaults are the configuration currently kept. */
+    public boolean queueClimbs = true;
+    /** Diagonals are ported but OFF: within ONE batch they measured 19/23/11, a spread of 12 where
+     *  every other configuration sat at 1-3. That signal is independent of host drift. */
+    public boolean queueDiagonals = false;
+
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
      *  If false, only walks (no jumps) — safer but slower. */
     public boolean followJumpingEnabled = true;

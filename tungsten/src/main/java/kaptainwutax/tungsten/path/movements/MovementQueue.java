@@ -218,7 +218,10 @@ public final class MovementQueue {
         // UNREACHABLE the moment playerInValidPosition() fails, which a re-planned chase route
         // trips easily, and it sprints through corners on rough ground — but that is a hypothesis,
         // not a measurement, so the class stays staged until it is one.
-        return isTraverseEdge(a, b) || isAscendEdge(a, b) || isDescendEdge(a, b);
+        var cfg = kaptainwutax.tungsten.TungstenConfig.get();
+        if (isTraverseEdge(a, b)) return true;
+        if (cfg.queueClimbs && (isAscendEdge(a, b) || isDescendEdge(a, b))) return true;
+        return cfg.queueDiagonals && isDiagonalEdge(a, b);
     }
 
     /**
@@ -239,8 +242,9 @@ public final class MovementQueue {
             // for itself how to be walked, and the queue only decides whose turn it is.
             // ONE MOVEMENT CLASS PER EDGE SHAPE, which is upstream's model: the step decides for
             // itself how to be walked, and the queue only decides whose turn it is.
-            // isDiagonalEdge/MovementDiagonal deliberately unused — see isSupportedEdge.
-            if (isAscendEdge(from, to)) {
+            if (isDiagonalEdge(from, to)) {
+                movements.add(new MovementDiagonal(from, to));
+            } else if (isAscendEdge(from, to)) {
                 movements.add(new MovementAscend(from, to));
             } else if (isDescendEdge(from, to)) {
                 movements.add(new MovementDescend(from, to));
