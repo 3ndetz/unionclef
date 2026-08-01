@@ -89,6 +89,14 @@ public final class MovementQueue {
     // broken (clicked=0) have to keep telling us the truth about the replacement.
     // ---------------------------------------------------------------------------------------
     public static volatile int qStarted, qSteps, qSuccess, qUnreachable, qTimeout, qTicks;
+    /**
+     * WHY the queue handed the body back, split three ways. {@code qUnreachable} lumped them
+     * together and the lump was unreadable: a chase measured 481 starts for 53 steps, and "454
+     * hand-backs" cannot tell you whether the chain was aimed at the wrong cell to begin with,
+     * whether a movement declared itself impossible, or whether the body drifted off the route.
+     * Those have three different fixes, so they get three counters.
+     */
+    public static volatile int qLost, qStatusFail, qRefused;
 
     /** {@code MAX_DIST_FROM_PATH} / {@code MAX_MAX_DIST_FROM_PATH} / {@code MAX_TICKS_AWAY}
      *  (PathExecutor.java:51-61). 200 ticks is upstream's ten seconds. */
@@ -180,6 +188,17 @@ public final class MovementQueue {
      * routes it could take TEN. A route over terrain is climbs and drops, so every one of them fell
      * back to the hand-rolled walker.
      */
+    /**
+     * A PILLAR is straight up in place: same column, one Y higher. Measured on chase_terrain this
+     * is what the chase route opens with and it was the single biggest source of hand-backs — 52
+     * of them in one run, all {@code MovementFallback (0,88,-283)->(0,89,-283)}, a steer being
+     * asked to climb a block it has to BUILD. {@link MovementPillar} was ported long ago; nothing
+     * ever dispatched to it, so the step fell through to the fallback and failed every time.
+     */
+    private static boolean isPillarEdge(BlockPos a, BlockPos b) {
+        return b.getY() - a.getY() == 1 && a.getX() == b.getX() && a.getZ() == b.getZ();
+    }
+
     private static boolean isAscendEdge(BlockPos a, BlockPos b) {
         if (b.getY() - a.getY() != 1) {
             return false;
@@ -255,9 +274,16 @@ public final class MovementQueue {
     public static synchronized int start(List<BlockPos> cells) {
         int covered = traversePrefix(cells);
         if (covered < 2) {
+            qRefused++;
             return 0;
         }
         stop();
+        net.minecraft.world.WorldView world =
+                net.minecraft.client.MinecraftClient.getInstance().world;
+        if (world == null) {
+            qRefused++;
+            return 0;
+        }
         for (int i = 1; i < covered; i++) {
             BetterBlockPos from = new BetterBlockPos(cells.get(i - 1));
             BetterBlockPos to = new BetterBlockPos(cells.get(i));
@@ -265,7 +291,9 @@ public final class MovementQueue {
             // for itself how to be walked, and the queue only decides whose turn it is.
             // ONE MOVEMENT CLASS PER EDGE SHAPE, which is upstream's model: the step decides for
             // itself how to be walked, and the queue only decides whose turn it is.
-            if (isDiagonalEdge(from, to)) {
+            if (isPillarEdge(from, to)) {
+                movements.add(new MovementPillar(from, to));
+            } else if (isDiagonalEdge(from, to)) {
                 movements.add(new MovementDiagonal(from, to));
             } else if (isAscendEdge(from, to)) {
                 movements.add(new MovementAscend(from, to));
@@ -277,6 +305,38 @@ public final class MovementQueue {
                 // No class for this shape — walk it rather than hand the tail back.
                 movements.add(new MovementFallback(from, to));
             }
+        }
+        // A STEP WE CANNOT PREPARE IS NOT A STEP WE CAN TAKE.
+        // Movement.updateState returns PREPPING while prepared() is false, and every ported
+        // subclass returns immediately on a non-RUNNING status — BEFORE its own arrival check.
+        // So a movement that can never be prepared does not fail: it sits there pressing nothing
+        // until the queue's cost+100 timeout, and measured on chase_terrain that is where the
+        // freezes come from. Five of six timeouts in one run were MovementAscend, one of them
+        // with the feet ALREADY STANDING ON THE DESTINATION (src 228,50,177 -> dest 229,51,177,
+        // feet 229,51,177) burning 161 ticks, because an ascend also wants src.above().above()
+        // and dest.above() clear and nothing in a chase breaks them.
+        //
+        // Upstream does not need this check: its cost model prices the breaking, so a step that
+        // would have to break something either carries that price or is never planned. FastPlanner
+        // does not model it, so the chain gets vetted here instead — truncate at the first step
+        // whose preparation is impossible right now, and keep the executable head.
+        int executable = movements.size();
+        for (int i = 0; i < movements.size(); i++) {
+            if (!movements.get(i).toBreak(world).isEmpty()) {
+                executable = i;
+                break;
+            }
+        }
+        if (executable < movements.size()) {
+            Debug.logMessage("MovementQueue: chain cut to " + executable + "/" + movements.size()
+                    + " — step " + executable + " needs blocks broken first");
+            while (movements.size() > executable) {
+                movements.remove(movements.size() - 1);
+            }
+        }
+        if (movements.isEmpty()) {
+            qRefused++;
+            return 0;
         }
         index = 0;
         ticksOnCurrent = 0;
@@ -375,6 +435,7 @@ public final class MovementQueue {
                         player.getEntityPos().z, player.isOnGround(), player.fallDistance,
                         index, movements.size()));
                 qUnreachable++;
+                qLost++;
                 stop();
                 // Re-plan from where the bot ACTUALLY is. The navigator owns planning, so ask it
                 // for a fresh leg rather than trying to repair a chain built from a stale start.
@@ -409,8 +470,11 @@ public final class MovementQueue {
 
             if (status == MovementStatus.UNREACHABLE || status == MovementStatus.FAILED) {
                 Debug.logMessage("MovementQueue: movement returns status " + status
-                        + " at step " + index + "/" + movements.size());
+                        + " at step " + index + "/" + movements.size()
+                        + " (" + movement.getClass().getSimpleName() + " " + movement.src
+                        + "->" + movement.dest + ", feet " + movement.ctx.playerFeet() + ")");
                 qUnreachable++;
+                qStatusFail++;
                 stop();
                 return;
             }
@@ -427,8 +491,14 @@ public final class MovementQueue {
             // :242-250. ticksOnCurrent is only charged on a tick the movement actually ran.
             ticksOnCurrent++;
             if (ticksOnCurrent > currentCostEstimate + MOVEMENT_TIMEOUT_TICKS) {
+                // WHICH step, not just that one. 13 of 15 chains in a measured chase died here,
+                // each burning cost+100 ticks — five to six seconds of standing still per stuck
+                // step, which is the freeze the bench counts. The class and the two cells say
+                // whether the planner is emitting steps the ported movements cannot execute.
                 Debug.logMessage("MovementQueue: step " + index + " has taken too long ("
-                        + ticksOnCurrent + " ticks, expected " + (int) currentCostEstimate + ")");
+                        + ticksOnCurrent + " ticks, expected " + (int) currentCostEstimate + ") "
+                        + movement.getClass().getSimpleName() + " " + movement.src + "->"
+                        + movement.dest + ", feet " + movement.ctx.playerFeet());
                 qTimeout++;
                 stop();
                 return;
