@@ -54,6 +54,8 @@ public class BlockPathWalker {
     // moves — so a stall is detected by the BOT's own displacement instead (pressed
     // against a wall / not physically advancing).
     private static boolean liveMode = false;
+    /** The caller asked to keep this walk even while the executor runs — see startBFS(path, true). */
+    private static boolean owningMovement = false;
     private static Vec3d liveStuckAnchor = null;
     private static int liveStuckTicks = 0;
     // true when the last DIRECT stop was a BAIL (no LOS / stall / danger) rather than a
@@ -96,6 +98,7 @@ public class BlockPathWalker {
         lastDistToTarget = Double.MAX_VALUE;
         noProgressTicks = 0;
         liveMode = false;
+        owningMovement = false;
         liveStuckAnchor = null;
         liveStuckTicks = 0;
         mode = Mode.DIRECT;
@@ -124,13 +127,36 @@ public class BlockPathWalker {
 
     /** Start BFS-only (no direct sprint). */
     public static void startBFS(List<BlockPos> blockPath) {
+        startBFS(blockPath, false);
+    }
+
+    /**
+     * @param ownsMovement the caller keeps this walk even while the executor runs.
+     *
+     * <p>The walker normally stops itself the moment the executor starts (tick():199), which is
+     * right for navigation: there the physics path REPLACES the walk. In a chase it is exactly
+     * wrong, and it is what the chase actually did — measured, "Walker: BFS 82" restarted EIGHTY
+     * times in one run. The sequence: the chase plans a block route and starts the walk, its own
+     * startFind launches the physics search, the search returns something, the executor starts,
+     * THE WALKER SWITCHES ITSELF OFF, the physics path does not reach the runner, everything goes
+     * idle, replan, repeat.
+     *
+     * <p>That is AC-2.1 inverted — the acceptance criterion says the block route comes FIRST and
+     * physics is the LAST resort, and here physics preempted the block route as soon as it had
+     * anything at all. {@code liveMode} already carries this exemption for live-steer ("the walker
+     * OWNS movement"); a chase's block walk needs the same guarantee, so it says so explicitly
+     * rather than inheriting navigation's assumption.
+     */
+    public static void startBFS(List<BlockPos> blockPath, boolean ownsMovement) {
         if (blockPath == null || blockPath.size() < 2) return;
         stop();
         path = blockPath;
         waypointIdx = 1;
         mode = Mode.BFS;
         active = true;
-        Debug.logMessage("Walker: BFS " + blockPath.size() + " wp");
+        owningMovement = ownsMovement;
+        Debug.logMessage("Walker: BFS " + blockPath.size() + " wp"
+                + (ownsMovement ? " (owns movement)" : ""));
     }
 
     public static void stop() {
@@ -150,6 +176,7 @@ public class BlockPathWalker {
         noProgressTicks = 0;
         lastDistToTarget = Double.MAX_VALUE;
         liveMode = false;
+        owningMovement = false;
         liveStuckAnchor = null;
         liveStuckTicks = 0;
     }
@@ -196,7 +223,7 @@ public class BlockPathWalker {
         // auto-stop when executor takes over (NON-live only). In live-steer the walker
         // OWNS movement — FollowEntityTask has explicitly stopped the executor — so a
         // 1-tick transient "executor still running" must not yank the walker off.
-        if (!liveMode && TungstenModDataContainer.isExecutorRunning()) {
+        if (!liveMode && !owningMovement && TungstenModDataContainer.isExecutorRunning()) {
             stop();
             return;
         }

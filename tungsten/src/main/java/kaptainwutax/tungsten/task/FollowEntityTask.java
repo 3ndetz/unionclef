@@ -345,7 +345,7 @@ public class FollowEntityTask {
             planCalls++;
             if (cells.size() >= 2) {
                 planUsable++;
-                BlockPathWalker.startBFS(cells);
+                BlockPathWalker.startBFS(cells, true);
             } else {
                 planTooShort++;
             }
@@ -505,7 +505,10 @@ public class FollowEntityTask {
                 // log shows "Walker: direct" 3 times and "Walker: BFS" ZERO — a plan was
                 // computed and then ignored while the bot sprinted at a runner it never caught
                 // (contact=None, kills=0). AC-1.4 says the exact block route is run IMMEDIATELY.
-                BlockPathWalker.startBFS(bfsPath);
+                // THE CHASE KEEPS ITS BLOCK ROUTE. Without this the physics search below starts
+                // the executor and the walker switches itself off — measured as the same route
+                // restarted eighty times without progress. AC-2.1: block route first, physics last.
+                BlockPathWalker.startBFS(bfsPath, true);
                 // Physics A* starts from BFS endpoint — don't waste time on
                 // the segment the walker already covers
                 // Root the physics search at the walker's endpoint ONLY while the
