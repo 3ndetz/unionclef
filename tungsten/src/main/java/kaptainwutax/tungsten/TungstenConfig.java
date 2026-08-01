@@ -132,6 +132,10 @@ public class TungstenConfig {
     /** Diagonals are ported but OFF: within ONE batch they measured 19/23/11, a spread of 12 where
      *  every other configuration sat at 1-3. That signal is independent of host drift. */
     public boolean queueDiagonals = false;
+    /** Let {@code MovementQueue} own the WHOLE route, walking untyped edges with
+     *  {@code MovementFallback} instead of abandoning the tail at the first one. OFF by default
+     *  until an interleaved A/B says otherwise — see C5.18. */
+    public boolean queueWholeRoute = false;
 
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
      *  If false, only walks (no jumps) — safer but slower. */

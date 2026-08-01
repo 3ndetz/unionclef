@@ -238,6 +238,10 @@ public final class MovementQueue {
         // trips easily, and it sprints through corners on rough ground — but that is a hypothesis,
         // not a measurement, so the class stays staged until it is one.
         var cfg = kaptainwutax.tungsten.TungstenConfig.get();
+        // WHOLE-ROUTE MODE: every edge is ours, untyped ones walked by MovementFallback. The
+        // contiguous-prefix rule is what capped coverage at 4%, and the tail it gave back went to
+        // a walker that measurably cannot cross terrain. See C5.18.
+        if (cfg.queueWholeRoute) return true;
         if (isTraverseEdge(a, b)) return true;
         if (cfg.queueClimbs && (isAscendEdge(a, b) || isDescendEdge(a, b))) return true;
         return cfg.queueDiagonals && isDiagonalEdge(a, b);
@@ -267,8 +271,11 @@ public final class MovementQueue {
                 movements.add(new MovementAscend(from, to));
             } else if (isDescendEdge(from, to)) {
                 movements.add(new MovementDescend(from, to));
-            } else {
+            } else if (isTraverseEdge(from, to)) {
                 movements.add(new MovementTraverse(from, to));
+            } else {
+                // No class for this shape — walk it rather than hand the tail back.
+                movements.add(new MovementFallback(from, to));
             }
         }
         index = 0;
