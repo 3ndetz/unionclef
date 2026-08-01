@@ -181,8 +181,20 @@ public final class MovementQueue {
      * MovementDescend and MovementDiagonal join it and a prefix can actually form. Wiring one
      * class of four buys nothing and cost twice the stalls.
      */
+    /**
+     * One cardinal step DOWN — {@link MovementDescend}. Ascend alone could not lengthen the
+     * contiguous prefix at all (64 route cells, 4 taken), because a terrain route meets its first
+     * drop almost immediately and the count stops there; climbs and drops only pay off together.
+     */
+    private static boolean isDescendEdge(BlockPos a, BlockPos b) {
+        if (b.getY() - a.getY() != -1) {
+            return false;
+        }
+        return Math.abs(b.getX() - a.getX()) + Math.abs(b.getZ() - a.getZ()) == 1;
+    }
+
     private static boolean isSupportedEdge(BlockPos a, BlockPos b) {
-        return isTraverseEdge(a, b) || isAscendEdge(a, b);
+        return isTraverseEdge(a, b) || isAscendEdge(a, b) || isDescendEdge(a, b);
     }
 
     /**
@@ -203,9 +215,13 @@ public final class MovementQueue {
             // for itself how to be walked, and the queue only decides whose turn it is.
             // ONE MOVEMENT CLASS PER EDGE SHAPE, which is upstream's model: the step decides for
             // itself how to be walked, and the queue only decides whose turn it is.
-            movements.add(isAscendEdge(from, to)
-                    ? new MovementAscend(from, to)
-                    : new MovementTraverse(from, to));
+            if (isAscendEdge(from, to)) {
+                movements.add(new MovementAscend(from, to));
+            } else if (isDescendEdge(from, to)) {
+                movements.add(new MovementDescend(from, to));
+            } else {
+                movements.add(new MovementTraverse(from, to));
+            }
         }
         index = 0;
         ticksOnCurrent = 0;
