@@ -133,7 +133,7 @@ public final class MovementQueue {
         }
         int covered = 1;
         for (int i = 1; i < cells.size(); i++) {
-            if (!isTraverseEdge(cells.get(i - 1), cells.get(i))) {
+            if (!isSupportedEdge(cells.get(i - 1), cells.get(i))) {
                 break;
             }
             covered++;
@@ -156,6 +156,36 @@ public final class MovementQueue {
     }
 
     /**
+     * One cardinal step UP — {@link MovementAscend}. The queue used to take traverses only, and
+     * that was not a small gap: measured on chase_terrain, of 193 route cells across four chase
+     * routes it could take TEN. A route over terrain is climbs and drops, so every one of them fell
+     * back to the hand-rolled walker.
+     */
+    private static boolean isAscendEdge(BlockPos a, BlockPos b) {
+        if (b.getY() - a.getY() != 1) {
+            return false;
+        }
+        return Math.abs(b.getX() - a.getX()) + Math.abs(b.getZ() - a.getZ()) == 1;
+    }
+
+    /**
+     * Any edge this queue has a ported movement class for.
+     *
+     * ⛔ ASCEND IS PORTED BUT NOT ACCEPTED HERE — MEASURED WORSE, REVERTED. Adding it looked
+     * obviously right and the numbers said no, twice over:
+     *   * the traversable prefix did NOT grow (64 route cells, 4 taken — the same ~6%), because
+     *     traversePrefix counts a CONTIGUOUS run from the start and a terrain route hits its first
+     *     DESCEND almost immediately. Ascend alone cannot lengthen that prefix.
+     *   * chase_terrain went from 12 freezes to 22.
+     * So MovementAscend stays a completed, compiling port unit and is wired in only when
+     * MovementDescend and MovementDiagonal join it and a prefix can actually form. Wiring one
+     * class of four buys nothing and cost twice the stalls.
+     */
+    private static boolean isSupportedEdge(BlockPos a, BlockPos b) {
+        return isTraverseEdge(a, b);
+    }
+
+    /**
      * Take over the given cell chain. Returns the number of movements actually queued (0 = refused,
      * and the caller must keep its existing route). The chain is truncated at the first non-traverse
      * edge rather than skipped over: the queue owns a contiguous run or nothing.
@@ -167,7 +197,12 @@ public final class MovementQueue {
         }
         stop();
         for (int i = 1; i < covered; i++) {
-            movements.add(new MovementTraverse(new BetterBlockPos(cells.get(i - 1)), new BetterBlockPos(cells.get(i))));
+            BetterBlockPos from = new BetterBlockPos(cells.get(i - 1));
+            BetterBlockPos to = new BetterBlockPos(cells.get(i));
+            // ONE MOVEMENT CLASS PER EDGE SHAPE, which is upstream's whole model: the step decides
+            // for itself how to be walked, and the queue only decides whose turn it is.
+            // isAscendEdge/MovementAscend deliberately unused here — see isSupportedEdge.
+            movements.add(new MovementTraverse(from, to));
         }
         index = 0;
         ticksOnCurrent = 0;
@@ -176,7 +211,7 @@ public final class MovementQueue {
         currentCostEstimate = MAX_COST_ESTIMATE;
         running = true;
         qStarted++;
-        Debug.logMessage("MovementQueue: " + movements.size() + " traverse(s) "
+        Debug.logMessage("MovementQueue: " + movements.size() + " movement(s) "
                 + cells.get(0).getX() + "," + cells.get(0).getY() + "," + cells.get(0).getZ()
                 + " -> " + cells.get(covered - 1).getX() + "," + cells.get(covered - 1).getY() + "," + cells.get(covered - 1).getZ());
         return movements.size();
