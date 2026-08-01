@@ -20,9 +20,10 @@ import net.minecraft.world.WorldView;
  * cross that terrain at all. So the queue hands its remaining route to something that will not walk
  * it.
  *
- * <p>Porting more classes does not fix that: ascend, descend and diagonal are all in, and an
- * interleaved A/B on diagonals moved the freeze count by -2 and +1 — nothing — while genuinely
- * lengthening the prefix. The ceiling is the RULE, not the class list.
+ * <p>An earlier version of this comment claimed the class list was irrelevant, citing an A/B on
+ * diagonals that moved nothing. That A/B was void: {@code @settings} is not a command and
+ * TungstenConfig was not settable at runtime, so it compared the build against itself. Whether
+ * more classes would help is OPEN, and this class does not settle it.
  *
  * <p>This class exists so the rule can go. It does for an untyped edge exactly what the walker did
  * for a waypoint — steer at the cell, jump if the body is against something and the step is up —
