@@ -522,7 +522,23 @@ public class FollowEntityTask {
                 // THE CHASE KEEPS ITS BLOCK ROUTE. Without this the physics search below starts
                 // the executor and the walker switches itself off — measured as the same route
                 // restarted eighty times without progress. AC-2.1: block route first, physics last.
-                BlockPathWalker.startBFS(bfsPath, true);
+                // THE CHASE'S ROUTE GOES TO THE PORTED MOVEMENTS, NOT THE WALKER.
+                // Until C5.18 MovementQueue.start() had exactly ONE caller — FastNavigator:373 —
+                // and only for a leg that PLACES blocks. Every plain walk in the mod, nav and
+                // chase alike, was therefore the hand-rolled BlockPathWalker, and a clean
+                // FOLLOWGATE read (walker=true, a route in hand, replanning every 40 ticks,
+                // dist=89.3 unmoved) says the walker cannot cross this terrain. The ported
+                // traverse/ascend/descend/diagonal classes CAN — they carry the jump, the
+                // overshoot off a lip and the head-bonk check — but nothing was handing them a
+                // chase route. This does.
+                boolean queued = false;
+                if (kaptainwutax.tungsten.TungstenConfig.get().chaseUsesQueue
+                        && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
+                    queued = kaptainwutax.tungsten.path.movements.MovementQueue.start(bfsPath) > 0;
+                }
+                if (!queued && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
+                    BlockPathWalker.startBFS(bfsPath, true);
+                }
                 // Physics A* starts from BFS endpoint — don't waste time on
                 // the segment the walker already covers
                 // Root the physics search at the walker's endpoint ONLY while the

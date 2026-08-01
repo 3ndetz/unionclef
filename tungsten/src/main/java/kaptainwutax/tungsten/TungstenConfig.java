@@ -136,6 +136,10 @@ public class TungstenConfig {
      *  {@code MovementFallback} instead of abandoning the tail at the first one. OFF by default
      *  until an interleaved A/B says otherwise — see C5.18. */
     public boolean queueWholeRoute = false;
+    /** Run the CHASE's block route through {@code MovementQueue} (the ported baritone movements)
+     *  instead of {@code BlockPathWalker}. Until now the queue only ever received build legs, so
+     *  every plain walk in the mod — nav and chase alike — was the hand-rolled walker. See C5.18. */
+    public boolean chaseUsesQueue = false;
 
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
      *  If false, only walks (no jumps) — safer but slower. */
