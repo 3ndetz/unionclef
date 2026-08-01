@@ -2065,7 +2065,7 @@ public class Py4jEntryPoint {
         return String.format(
                 "called=%d deferred=%d inRange=%d clicked=%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
-                        + " mqLost=%d mqStatusFail=%d mqRefused=%d"
+                        + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d)"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
                         + " | gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
@@ -2082,6 +2082,8 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.path.movements.MovementQueue.qLost,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qStatusFail,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qRefused,
+                kaptainwutax.tungsten.path.movements.MovementQueue.qShort,
+                kaptainwutax.tungsten.path.movements.MovementQueue.qVetoed,
                 kaptainwutax.tungsten.path.movements.Movement.placeRequested,
                 kaptainwutax.tungsten.path.movements.Movement.placeOnCooldown,
                 kaptainwutax.tungsten.path.movements.Movement.placeNoHit,

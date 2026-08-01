@@ -41,16 +41,15 @@ class ArenaBuilder:
             (("do_mob_spawning", "doMobSpawning"), "false"),
         ):
             # Deliberately tolerant: each tuple carries one spelling per MC generation and the
-            # others are EXPECTED to be rejected. Everything outside this loop is not.
-            ok = False
-            for rule in rules:
-                try:
-                    self.rcon.cmd(f"gamerule {rule} {val}")
-                    ok = True
-                except RuntimeError:
-                    continue
-            if not ok:
-                raise RuntimeError(f"no accepted spelling for gamerule {rules} = {val}")
+            # others are EXPECTED to be rejected, so rejection is not an error HERE. It must not
+            # be promoted to one either: "pvp" is in this list and is not a gamerule at all (it
+            # lives in server.properties), so a hard failure on "no spelling worked" takes down
+            # every arena build. Everything OUTSIDE this loop still raises on rejection.
+            accepted = [r for r in rules
+                        if "Unknown" not in self.rcon.cmd(f"gamerule {r} {val}",
+                                                          allow_reject=True)]
+            if not accepted:
+                print(f"  note: no accepted spelling for gamerule {rules} = {val}", flush=True)
         self.rcon.cmd("time set day")
         self.rcon.cmd("weather clear")
 

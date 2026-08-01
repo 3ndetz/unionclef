@@ -155,7 +155,12 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
                         return float(a) == float(b)
                     except (TypeError, ValueError):
                         return False
-                if not ok or not _same(str(got).split("=", 1)[-1], v):
+                # Check the NAME as well as the value. findSettingField falls back to a substring
+                # match, so "combatWindMouseWindDist" resolves to "combatWindMouseWind" — and a
+                # guard that compares only the value would confirm a pin that hit the wrong field.
+                # tungstenSetting answers with the field it actually resolved, so compare both.
+                name, _, read = str(got).partition("=")
+                if not ok or name != k or not _same(read, v):
                     raise SystemExit(
                         f"--pin {k}={v} did not apply (got {got!r}). Refusing to run: an "
                         f"A/B against an unapplied flag measures the build against itself.")

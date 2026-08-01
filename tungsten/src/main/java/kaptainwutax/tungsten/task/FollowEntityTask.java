@@ -127,6 +127,8 @@ public class FollowEntityTask {
     }
 
     public static void stop() {
+        // A chase that started the queue must also be able to end it — see StopCommand.
+        kaptainwutax.tungsten.path.movements.MovementQueue.stop();
         active             = false;
         managed            = false;
         targetEntity       = null;
@@ -264,7 +266,11 @@ public class FollowEntityTask {
         if (steerCooldownTicks > 0) cooldownTicks++;
         if (!hasLineOfSight(player, effectiveTarget.add(0, 1.0, 0))) losBlocked++;
 
-        if (hasEntity && !leapActive && steerCooldownTicks == 0
+        // THE QUEUE OWNS THE BODY WHILE IT RUNS, SO DO NOT STEER OVER IT. steerLive() would set
+        // the walker active with a fresh direct target that the mixin never ticks — a zombie
+        // owner that resumes a stale steer the moment the chain ends.
+        boolean queueRunning = kaptainwutax.tungsten.path.movements.MovementQueue.isRunning();
+        if (hasEntity && !leapActive && !queueRunning && steerCooldownTicks == 0
                 && effectiveDist > Math.max(closeEnough, 1.5)
                 && hasLineOfSight(player, effectiveTarget.add(0, 1.0, 0))) {  // body-centre, not feet (terrain lips)
             steerTicks++;
@@ -285,7 +291,11 @@ public class FollowEntityTask {
         // ── Tungsten A*: always runs as primary pathfinder ───────────────────
         // While BFS walker is running, suppress recalc — let it finish its segment.
         // A* is already computing from BFS endpoint; recalc would restart everything.
-        boolean walkerRunning   = BlockPathWalker.isRunning();
+        // "IS SOMETHING ALREADY WALKING THIS ROUTE" — the queue counts as much as the walker.
+        // Reading only the walker made a queue-driven chase look permanently IDLE: the 40-tick
+        // replan fired every time, ran FastPlanner synchronously on the client thread, and then
+        // threw the result away because the hand-off below refuses while the queue is running.
+        boolean walkerRunning   = BlockPathWalker.isRunning() || queueRunning;
         tickCounter++;
         boolean executorRunning  = TungstenModDataContainer.isExecutorRunning();
         boolean pathfinderActive = TungstenModDataContainer.PATHFINDER.active.get();

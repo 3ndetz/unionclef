@@ -28,6 +28,14 @@ public class StopCommand extends Command {
 						|| TungstenModDataContainer.PATHFINDER.active.get()
 						|| TungstenModDataContainer.EXECUTOR.isRunning();
 
+				// THE QUEUE IS A DRIVER TOO, AND IT SUPPRESSES EVERY OTHER ONE WHILE IT RUNS.
+				// MovementQueue.stop() had a single caller in the whole repo (FastNavigator), so
+				// a stop left it owning the tick: walker, bridge, pillar, slime task and the
+				// physics executor all stay suppressed by the mixin while the old chain keeps
+				// writing keys and camera until it completes or times out — including straight
+				// through the next test scenario's setup.
+				kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+
 				// Stop punk task first (it manages its own follow internally)
 				if (PunkPlayerTask.isActive()) {
 					PunkPlayerTask.stop();

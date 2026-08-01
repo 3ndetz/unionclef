@@ -245,7 +245,7 @@ class ChaseTerrain(Scenario):
         # Start both on real LAND (never the ocean spawn); the terrain is whatever
         # generated. A fixed offset gives the runner a head start along +x.
         rc = ctx.rcon
-        rc.cmd("gamerule pvp true")
+        rc.cmd("gamerule pvp true", allow_reject=True)  # not a gamerule; server.properties
         rc.cmd("gamerule immediate_respawn true")
         rc.cmd("difficulty peaceful")   # isolate the chase from mob interference
         rc.cmd("time set day")

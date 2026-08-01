@@ -36,10 +36,9 @@ public class MovementFallback extends Movement {
      * Ticks of no approach before this step admits defeat.
      *
      * <p>It has to be its own limit, not the queue's. The queue times a step out at
-     * {@code cost + 100} ticks, and a fallback has no instance cost — {@code calculateCost} throws,
-     * the queue catches it and applies the {@code MAX_COST_ESTIMATE} ceiling of 60. So an edge a
-     * plain steer cannot do would burn 160 ticks, EIGHT SECONDS, standing still, which the chase
-     * harness counts as a freeze and the user counts as the bot being broken.
+     * {@code cost + 100} ticks — 120 with the modest price declared below, and 160 for a movement
+     * that declares none. Six to eight seconds of standing still is what the chase harness counts
+     * as a freeze and what the user counts as the bot being broken.
      *
      * <p>A dumb steer needs no such patience: one cell is about ten ticks away, so a second and a
      * half of getting no closer means it will never arrive. Failing fast is also the honest signal

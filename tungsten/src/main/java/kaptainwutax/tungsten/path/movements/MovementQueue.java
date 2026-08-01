@@ -98,6 +98,9 @@ public final class MovementQueue {
      * Those have three different fixes, so they get three counters.
      */
     public static volatile int qLost, qStatusFail, qRefused;
+    /** {@link #qRefused} split by cause: the route was shorter than two cells, or the vetting
+     *  left nothing executable. Same reasoning as the split above — one number, two fixes. */
+    public static volatile int qShort, qVetoed;
 
     /** {@code MAX_DIST_FROM_PATH} / {@code MAX_MAX_DIST_FROM_PATH} / {@code MAX_TICKS_AWAY}
      *  (PathExecutor.java:51-61). 200 ticks is upstream's ten seconds. */
@@ -264,17 +267,13 @@ public final class MovementQueue {
     }
 
     private static boolean isSupportedEdge(BlockPos a, BlockPos b) {
-        // ⛔ DIAGONAL IS PORTED BUT NOT ACCEPTED — MEASURED, IN BATCHES, AND NOT KEPT. Its mean is
-        // no better and its VARIANCE explodes, which is the more interesting number:
-        //     traverse only        20, 18, 19  -> 19.0, spread 2
-        //     + ascend             19, 17, 16  -> 17.3, spread 3
-        //     + ascend + descend   15, 16      -> 15.5, spread 1
-        //     + diagonal           19, 23, 11  -> 17.7, spread 12
-        // A step that sometimes runs beautifully (11) and sometimes twice as badly (23) is not a
-        // step that is understood yet. The likely suspects are in its own updateState — it returns
-        // UNREACHABLE the moment playerInValidPosition() fails, which a re-planned chase route
-        // trips easily, and it sprints through corners on rough ground — but that is a hypothesis,
-        // not a measurement, so the class stays staged until it is one.
+        // ⛔ THE NUMBERS THAT USED TO BE QUOTED HERE ARE RETRACTED (register C5.19): every A/B of
+        // that session ran against a lever that was never wired, so they compared the build with
+        // itself. What was a hypothesis in them has since been CONFIRMED by reading the source:
+        // playerInValidPosition() had dropped upstream's `|| contains(pathStart())`, and
+        // MovementDiagonal is its only live caller and turns a false into an immediate
+        // UNREACHABLE that kills the whole chain. That half is restored; diagonals stay behind
+        // the flag only until a genuinely-armed A/B says where they belong.
         var cfg = kaptainwutax.tungsten.TungstenConfig.get();
         // WHOLE-ROUTE MODE: every edge is ours, untyped ones walked by MovementFallback. The
         // contiguous-prefix rule is what capped coverage at 4%, and the tail it gave back went to
@@ -302,6 +301,7 @@ public final class MovementQueue {
         int covered = traversePrefix(cells);
         if (covered < 2) {
             qRefused++;
+            qShort++;
             return 0;
         }
         stop();
@@ -386,6 +386,7 @@ public final class MovementQueue {
         }
         if (movements.isEmpty()) {
             qRefused++;
+            qVetoed++;
             return 0;
         }
         index = 0;
@@ -397,7 +398,10 @@ public final class MovementQueue {
         qStarted++;
         Debug.logMessage("MovementQueue: " + movements.size() + " movement(s) "
                 + cells.get(0).getX() + "," + cells.get(0).getY() + "," + cells.get(0).getZ()
-                + " -> " + cells.get(covered - 1).getX() + "," + cells.get(covered - 1).getY() + "," + cells.get(covered - 1).getZ());
+                // the chain may have been truncated, so report where it will ACTUALLY end
+                + " -> " + cells.get(movements.size()).getX() + ","
+                + cells.get(movements.size()).getY() + ","
+                + cells.get(movements.size()).getZ());
         return movements.size();
     }
 

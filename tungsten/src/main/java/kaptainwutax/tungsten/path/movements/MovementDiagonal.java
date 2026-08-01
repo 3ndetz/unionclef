@@ -12,10 +12,10 @@ import net.minecraft.world.WorldView;
  *
  * <h2>Why it is next</h2>
  *
- * {@link MovementQueue} takes a CONTIGUOUS run of steps it has classes for. With traverse, ascend
- * and descend wired, chase_terrain moved for the first time in batches — 19.0 to 17.3 to ~15.5
- * freezes — and the prefix now breaks on the first DIAGONAL, which is what a route across open
- * ground is mostly made of.
+ * {@link MovementQueue} takes a CONTIGUOUS run of steps it has classes for, and a route across
+ * open ground is mostly diagonals, so the prefix used to break on the first one. (The freeze
+ * counts once quoted here are retracted — register C5.19: they were measured against a lever that
+ * was never wired.)
  *
  * <p>Simpler than its neighbours: a diagonal never places and never breaks to make its floor, so
  * there is no place branch and {@code prepared()} is unconditionally true upstream. What it does
