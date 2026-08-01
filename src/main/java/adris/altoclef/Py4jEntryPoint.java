@@ -3079,7 +3079,12 @@ public class Py4jEntryPoint {
                 + " | planCalls=" + kaptainwutax.tungsten.task.FollowEntityTask.planCalls
                 + " usable=" + kaptainwutax.tungsten.task.FollowEntityTask.planUsable
                 + " tooShort=" + kaptainwutax.tungsten.task.FollowEntityTask.planTooShort
-                + " physFallback=" + kaptainwutax.tungsten.task.FollowEntityTask.physicsFallbacks;
+                + " physFallback=" + kaptainwutax.tungsten.task.FollowEntityTask.physicsFallbacks
+                // Does the follow task RUN at all? tick() returns immediately when inactive, so a
+                // climbing tickInactive means the chase is switched off, not stuck.
+                + " | followCalled=" + kaptainwutax.tungsten.task.FollowEntityTask.tickCalled
+                + " active=" + kaptainwutax.tungsten.task.FollowEntityTask.tickActive
+                + " inactive=" + kaptainwutax.tungsten.task.FollowEntityTask.tickInactive;
     }
 
     /** Abandon whatever the build queue still owes (//set gone wrong, wrong selection). */
