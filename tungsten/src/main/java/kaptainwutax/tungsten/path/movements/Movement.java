@@ -249,13 +249,69 @@ public abstract class Movement {
     }
 
     /**
-     * Movement.java:112-114 also accepts {@code PathingBehavior.pathStart()} — the cell the path is
-     * anchored at, which differs from the feet cell only while airborne. Tungsten has no
-     * PathingBehavior, and inventing an anchor here would be inventing behaviour, so only the feet
-     * half comes across. ADAPTER: divergence recorded, not faked.
+     * Port of {@code PathingBehavior.pathStart()} (baritone/.../behavior/PathingBehavior.java:423-461)
+     * — the cell a path is anchored at. It differs from the feet cell only when the feet cell has
+     * no floor: standing off the edge of a block, or mid-jump/mid-fall.
+     *
+     * <p>An earlier comment here claimed tungsten could not have this because "inventing an anchor
+     * would be inventing behaviour". That was wrong — the anchor is fully specified upstream and
+     * every helper it needs already exists in {@link MovementHelperB}. Note this must NOT be
+     * {@code FollowEntityTask.planStart}, which is a structurally similar routine built on
+     * {@code PlayerFit} geometry and returning a plain {@code BlockPos}: valid positions are a
+     * hash set of {@link BetterBlockPos} with a custom hash, so a plain BlockPos never matches,
+     * and the anchor has to be tested with the same block-space predicates the set was built from.
+     */
+    protected BetterBlockPos pathStart() {
+        BetterBlockPos feet = ctx.playerFeet();
+        ClientPlayerEntity player = ctx.player();
+        if (player == null) {
+            return feet;
+        }
+        net.minecraft.world.WorldView world = player.getEntityWorld();
+        if (world == null || MovementHelperB.canWalkOn(world, feet.below())) {
+            return feet;
+        }
+        if (!player.isOnGround()) {
+            // mid-jump
+            return MovementHelperB.canWalkOn(world, feet.below().below()) ? feet.below() : feet;
+        }
+        final double playerX = player.getEntityPos().x;
+        final double playerZ = player.getEntityPos().z;
+        ArrayList<BetterBlockPos> closest = new ArrayList<>();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                closest.add(new BetterBlockPos(feet.x + dx, feet.y, feet.z + dz));
+            }
+        }
+        closest.sort(java.util.Comparator.comparingDouble(pos ->
+                ((pos.x + 0.5D) - playerX) * ((pos.x + 0.5D) - playerX)
+                        + ((pos.z + 0.5D) - playerZ) * ((pos.z + 0.5D) - playerZ)));
+        for (int i = 0; i < 4; i++) {
+            BetterBlockPos possibleSupport = closest.get(i);
+            double xDist = Math.abs((possibleSupport.x + 0.5D) - playerX);
+            double zDist = Math.abs((possibleSupport.z + 0.5D) - playerZ);
+            if (xDist > 0.8 && zDist > 0.8) {
+                // can't possibly be sneaking off of this one, we're too far away
+                continue;
+            }
+            if (MovementHelperB.canWalkOn(world, possibleSupport.below())
+                    && MovementHelperB.canWalkThrough(world, possibleSupport)
+                    && MovementHelperB.canWalkThrough(world, possibleSupport.above())) {
+                return possibleSupport;   // standing off the edge of a block
+            }
+        }
+        return feet;
+    }
+
+    /**
+     * Movement.java:112-114. EITHER cell counts — and the second half is what stops a movement
+     * declaring UNREACHABLE for the one or two airborne ticks in the middle of its own step.
+     * MovementDiagonal is the only live caller and turns a false into an immediate UNREACHABLE
+     * that kills the whole chain, which is what the recorded diagonal variance (11 / 19 / 23) was.
      */
     protected boolean playerInValidPosition() {
-        return getValidPositions().contains(ctx.playerFeet());
+        return getValidPositions().contains(ctx.playerFeet())
+                || getValidPositions().contains(pathStart());
     }
 
     /**

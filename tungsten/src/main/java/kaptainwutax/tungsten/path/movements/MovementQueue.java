@@ -196,6 +196,24 @@ public final class MovementQueue {
      * asked to climb a block it has to BUILD. {@link MovementPillar} was ported long ago; nothing
      * ever dispatched to it, so the step fell through to the fallback and failed every time.
      */
+    /**
+     * A FALL is a cardinal step down by TWO or THREE. Deliberately disjoint from
+     * {@link #isDescendEdge} (exactly -1) so the first-match dispatch chain cannot shadow either,
+     * and cardinal only, as upstream — {@code MovementFall} is only ever constructed off
+     * {@code MovementDescend.cost}. FastPlanner plans drops to MAX_FALL=3 and until now the
+     * executor's deepest drop was one block, so everything deeper met a dumb steer with no fall
+     * model at all.
+     */
+    private static final int MAX_FALL = 3;
+
+    private static boolean isFallEdge(BlockPos a, BlockPos b) {
+        int dy = b.getY() - a.getY();
+        if (dy > -2 || dy < -MAX_FALL) {
+            return false;
+        }
+        return Math.abs(b.getX() - a.getX()) + Math.abs(b.getZ() - a.getZ()) == 1;
+    }
+
     private static boolean isPillarEdge(BlockPos a, BlockPos b) {
         return b.getY() - a.getY() == 1 && a.getX() == b.getX() && a.getZ() == b.getZ();
     }
@@ -271,6 +289,7 @@ public final class MovementQueue {
         // MovementPillar owns ladders and vines too.
         if (isPillarEdge(a, b)) return true;
         if (cfg.queueClimbs && (isAscendEdge(a, b) || isDescendEdge(a, b))) return true;
+        if (cfg.queueClimbs && isFallEdge(a, b)) return true;
         return cfg.queueDiagonals && isDiagonalEdge(a, b);
     }
 
@@ -307,6 +326,8 @@ public final class MovementQueue {
                 movements.add(new MovementAscend(from, to));
             } else if (isDescendEdge(from, to)) {
                 movements.add(new MovementDescend(from, to));
+            } else if (isFallEdge(from, to)) {
+                movements.add(new MovementFall(from, to));
             } else if (isTraverseEdge(from, to)) {
                 movements.add(new MovementTraverse(from, to));
             } else {
@@ -460,9 +481,10 @@ public final class MovementQueue {
             //   MovementQueue: too far from path (3.4) / (3.3), rewound 7 -> 5, rewound 13 -> 11
             // The manoeuvre was fine; only the recovery was missing.
             double closest = closestPathPos(player);
-            boolean lost = closest > MAX_MAX_DIST_FROM_PATH
-                    || (closest > MAX_DIST_FROM_PATH && ++ticksAway > MAX_TICKS_AWAY);
-            if (closest <= MAX_DIST_FROM_PATH) ticksAway = 0;
+            boolean far = possiblyOffPath(player, movement, closest, MAX_DIST_FROM_PATH);
+            boolean lost = possiblyOffPath(player, movement, closest, MAX_MAX_DIST_FROM_PATH)
+                    || (far && ++ticksAway > MAX_TICKS_AWAY);
+            if (!far) ticksAway = 0;
             if (lost) {
                 Debug.logMessage(String.format(
                         "MovementQueue: off path (%.1f) at %.2f,%.2f,%.2f ground=%b fall=%.1f"
@@ -596,6 +618,31 @@ public final class MovementQueue {
      * entity position to the block CENTRE (VecUtils.java:91-96, :107-109) — note the {@code +0.5} on
      * Y as well, which is upstream's and is not a bug to fix here.
      */
+    /**
+     * PathExecutor.java:304-317. Mid-air in a fall the body is LEGITIMATELY far from the route, so
+     * upstream measures the FLAT (Y-ignored) distance to the fall's destination instead of the 3D
+     * distance to the nearest route cell — and it applies that to BOTH leniencies, not just the
+     * hard one, or the ticksAway accumulator charges through every fall.
+     *
+     * <p>Without this a fall is the likeliest edge in the game to trip {@code MAX_MAX} (3.0): it
+     * is the move with the most un-braked drift, the body leaves the lip at full momentum with
+     * three blocks of air before anything slows it, and tripping that threshold means an immediate
+     * stop + replan MID-AIR — from a position with no support to route from.
+     */
+    private static boolean possiblyOffPath(ClientPlayerEntity player, Movement current,
+                                           double closest, double leniency) {
+        if (closest <= leniency) {
+            return false;
+        }
+        if (current instanceof MovementFall) {
+            BetterBlockPos fallDest = current.getDest();
+            double dx = player.getEntityPos().x - (fallDest.getX() + 0.5);
+            double dz = player.getEntityPos().z - (fallDest.getZ() + 0.5);
+            return Math.sqrt(dx * dx + dz * dz) >= leniency;   // >=, as upstream
+        }
+        return true;
+    }
+
     private static double closestPathPos(ClientPlayerEntity player) {
         double best = -1;
         for (Movement movement : movements) {
