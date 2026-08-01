@@ -49,6 +49,13 @@ WORLDS = {
 # to SHOW what tungsten plans (paths, goal, break/place plans, combat + arrow
 # trajectories). These are shipped defaults, but a persisted tungsten.json had
 # them all false on the stand, so the first clip batch showed nothing.
+# Tungsten flags pinned for every scenario of this invocation, from --pin k=v.
+# A/B EXPERIMENTS GO THROUGH HERE AND NOWHERE ELSE. Setting a flag over py4j before the
+# run does nothing: prepare() calls reset_config(), which resets tungsten.json to shipped
+# defaults on purpose, so any pre-run write is wiped before the scenario starts. Four A/B
+# batches in one session were run that way and silently compared the build against itself.
+EXTRA_PINS = {}
+
 VIZ_SETTINGS = {
     "renderVisualization": "true",
     "renderPathMoves": "true",
@@ -129,6 +136,20 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
         bot.reset_config()
         victim.reset_config()
         bot.pin_settings(VIZ_SETTINGS)
+        if EXTRA_PINS:
+            # SET THROUGH py4j, NOT CHAT. pin_settings() sends ";settings k v" as a chat
+            # message, which the client runs on a later tick — at this stand's ~10 fps the
+            # 0.3 s it waits is not enough, and a read-back straight after showed the OLD
+            # value while the command landed somewhere inside the scenario. tungstenSetting()
+            # applies and RETURNS the resulting value in the same call.
+            for k, v in EXTRA_PINS.items():
+                ok, got = bot.py.try_call("tungstenSetting", k, v)
+                print(f"  PIN {got if ok else 'UNSET ' + k + ' (' + str(got) + ')'}",
+                      flush=True)
+                if not ok or got != f"{k}={v}":
+                    raise SystemExit(
+                        f"--pin {k}={v} did not apply (got {got!r}). Refusing to run: an "
+                        f"A/B against an unapplied flag measures the build against itself.")
         arena = ArenaBuilder(rcon)
         if scn.builds_arena:
             arena.prepare(half=scn.arena_half, regen=scn.regen)
@@ -217,7 +238,17 @@ def main():
                     help="always run the full duration (needed for usable clips "
                          "and for movement stats with enough samples)")
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--pin", action="append", default=[], metavar="NAME=VALUE",
+                    help="pin a tungsten setting for every scenario (applied AFTER the "
+                         "config reset, then read back). Use this for A/B runs: "
+                         "--pin chaseUsesQueue=true")
     args = ap.parse_args()
+    global EXTRA_PINS
+    for spec in args.pin:
+        if "=" not in spec:
+            ap.error(f"--pin expects NAME=VALUE, got {spec!r}")
+        k, v = spec.split("=", 1)
+        EXTRA_PINS[k.strip()] = v.strip()
     Scenario.no_early_stop = args.no_early_stop
 
     if args.list or not args.suite:
