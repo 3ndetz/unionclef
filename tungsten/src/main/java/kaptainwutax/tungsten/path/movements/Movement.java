@@ -471,6 +471,21 @@ public abstract class Movement {
         return calculatedWhileLoaded;
     }
 
+    /**
+     * Does this movement REQUIRE its {@code positionsToBreak} to be clear before it can run?
+     *
+     * <p>True for everything that gates on {@code prepared()}, which is the default. False for the
+     * movements whose {@code prepared()} is unconditionally true — a diagonal never breaks its
+     * corners (upstream prices a diagonal with ONE solid corner as walkable and edges around it),
+     * and a fallback steer breaks nothing at all. Both nevertheless DECLARE cells in
+     * {@code positionsToBreak}, so a chain vetted on {@code toBreak} alone was being cut at every
+     * diagonal that hugs a wall — the common case on terrain, and precisely where the diagonals
+     * were meant to add coverage.
+     */
+    public boolean needsClearBreaks() {
+        return true;
+    }
+
     public void resetBlockCache() {
         toBreakCached = null;
         toPlaceCached = null;

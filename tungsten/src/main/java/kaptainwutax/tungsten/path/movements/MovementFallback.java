@@ -84,6 +84,12 @@ public class MovementFallback extends Movement {
         return true;
     }
 
+    /** ...and therefore it must not be vetted on its declared breaks either. */
+    @Override
+    public boolean needsClearBreaks() {
+        return false;
+    }
+
     @Override
     public MovementState updateState(MovementState state) {
         super.updateState(state);

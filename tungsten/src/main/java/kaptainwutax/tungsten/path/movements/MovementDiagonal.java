@@ -108,9 +108,51 @@ public class MovementDiagonal extends Movement {
         return true;
     }
 
+    /**
+     * MovementDiagonal.java:294-307. Only indices 4..5 — {@code end} and {@code end.above()} — are
+     * cells this movement would ever BREAK. The first four are the corner columns, and upstream
+     * never breaks those: {@code cost()} accepts a diagonal with ONE solid corner and edges around
+     * it. Inheriting the base scan over all six made every wall-hugging diagonal look like it
+     * needed mining.
+     */
+    @Override
+    public java.util.List<net.minecraft.util.math.BlockPos> toBreak(WorldView bsi) {
+        if (toBreakCached != null) {
+            return toBreakCached;
+        }
+        java.util.List<net.minecraft.util.math.BlockPos> result = new java.util.ArrayList<>();
+        for (int i = 4; i < 6; i++) {
+            if (!MovementHelperB.canWalkThrough(bsi, positionsToBreak[i])) {
+                result.add(positionsToBreak[i]);
+            }
+        }
+        toBreakCached = result;
+        return result;
+    }
+
+    /** MovementDiagonal.java:309-322: the corner columns are cells we WALK INTO, not break. */
+    @Override
+    public java.util.List<net.minecraft.util.math.BlockPos> toWalkInto(WorldView bsi) {
+        if (toWalkIntoCached == null) {
+            toWalkIntoCached = new java.util.ArrayList<>();
+        }
+        for (int i = 0; i < 4; i++) {
+            if (!MovementHelperB.canWalkThrough(bsi, positionsToBreak[i])) {
+                toWalkIntoCached.add(positionsToBreak[i]);
+            }
+        }
+        return toWalkIntoCached;
+    }
+
     /** MovementDiagonal.java:289-292: a diagonal has nothing to prepare — it never places. */
     @Override
     protected boolean prepared(MovementState state) {
         return true;
+    }
+
+    /** ...and therefore it must not be vetted on its declared breaks either. */
+    @Override
+    public boolean needsClearBreaks() {
+        return false;
     }
 }

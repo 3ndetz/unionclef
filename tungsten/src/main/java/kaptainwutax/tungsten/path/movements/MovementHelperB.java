@@ -1005,7 +1005,9 @@ public final class MovementHelperB {
      * Returning false is not a failure to paper over: it is what turns into {@code NO_OPTION} +
      * {@code UNREACHABLE} at run time and COST_INF at plan time.
      */
-    private static boolean selectThrowaway(PlayerEntity player, boolean select) {
+    // Package-visible: MovementPillar aims and clicks by hand instead of going through
+    // attemptToPlaceABlock, so it needs the same hotbar selector its siblings get for free.
+    static boolean selectThrowaway(PlayerEntity player, boolean select) {
         if (player == null || !TungstenConfig.get().allowPlace) {
             return false;
         }

@@ -423,6 +423,15 @@ public class MovementPillar extends Movement {
                 // an inventory-side failure must not take the movement down; the main-hand test decides
             }
         }
+        // THEN SWITCH SLOTS OURSELVES, which is what upstream's selectThrowawayForLocation does
+        // and what this movement was missing. The hook equips from a short hardcoded whitelist;
+        // anything else in the hotbar — granite, sandstone, spruce planks — was invisible to it,
+        // so a pillar with a pickaxe in hand (i.e. straight after mining, the common case) went
+        // UNREACHABLE on its first tick while a bridging traverse paved happily, because
+        // attemptToPlaceABlock calls this same selector for free.
+        if (!(player.getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem)) {
+            MovementHelperB.selectThrowaway(player, true);
+        }
         return hasThrowaway(player);
     }
 

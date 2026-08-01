@@ -57,7 +57,11 @@ public class MovementAscend extends Movement {
     @Override
     protected Set<BetterBlockPos> calculateValidPositions() {
         BetterBlockPos prior = new BetterBlockPos(src.subtract(getDirection())).above();
-        return ImmutableSet.<BetterBlockPos>of(src, src.above(), dest, prior);
+        // MovementAscend.java:57-65 lists FIVE, and names why the fifth is there: "sometimes we
+        // back up to place the block, also sprint ascends, also skip descend to straight ascend".
+        // Without it a sprint-ascend reads as off-path, which drives spurious snap rewinds and
+        // inflates the off-path distance that decides whether the leg is abandoned.
+        return ImmutableSet.<BetterBlockPos>of(src, src.above(), dest, prior, prior.above());
     }
 
     /**

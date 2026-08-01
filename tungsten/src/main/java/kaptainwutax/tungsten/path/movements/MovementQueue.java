@@ -262,6 +262,13 @@ public final class MovementQueue {
         // a walker that measurably cannot cross terrain. See C5.18.
         if (cfg.queueWholeRoute) return true;
         if (isTraverseEdge(a, b)) return true;
+        // A PILLAR IS AN ACCEPTED EDGE, NOT JUST A DISPATCHABLE ONE. The dispatch switch below
+        // has known isPillarEdge since the pillar fix, but admission is what decides how much of
+        // a route becomes a chain at all — so a straight-up edge still ENDED the prefix, and if
+        // it came first the chain was refused outright. MovementPillar was reachable only with
+        // queueWholeRoute on. That is also why ladders were unclimbable through the queue:
+        // MovementPillar owns ladders and vines too.
+        if (isPillarEdge(a, b)) return true;
         if (cfg.queueClimbs && (isAscendEdge(a, b) || isDescendEdge(a, b))) return true;
         return cfg.queueDiagonals && isDiagonalEdge(a, b);
     }
@@ -322,7 +329,7 @@ public final class MovementQueue {
         // whose preparation is impossible right now, and keep the executable head.
         int executable = movements.size();
         for (int i = 0; i < movements.size(); i++) {
-            if (!movements.get(i).toBreak(world).isEmpty()) {
+            if (movements.get(i).needsClearBreaks() && !movements.get(i).toBreak(world).isEmpty()) {
                 executable = i;
                 break;
             }
@@ -389,6 +396,13 @@ public final class MovementQueue {
             return;
         }
         qTicks++;
+        // PathExecutor.java:148-181 recomputes toBreak/toPlace/toWalkInto EVERY tick. Movement
+        // caches them on first use and nothing here ever dropped that cache, so a chain kept
+        // acting on the world as it was when start() ran — including after it had broken the very
+        // block it was waiting on.
+        for (Movement m : movements) {
+            m.resetBlockCache();
+        }
         for (int advances = 0; advances < MAX_ADVANCES_PER_TICK; advances++) {
             // PathExecutor.java:93-99. `path.length()` counts POSITIONS, so upstream's
             // `pathPosition >= path.length()` is `index >= movements.size()` here.
