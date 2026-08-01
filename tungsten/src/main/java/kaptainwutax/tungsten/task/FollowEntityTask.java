@@ -34,7 +34,11 @@ public class FollowEntityTask {
     // restarted forever and never emitted a path: the bot just stood there.
     private static final int    RECALC_TICKS       = 40;   // min 2s between re-plans
     /** Ticks of zero horizontal progress with the walker "running" before we force a re-plan. */
-    private static final int    WALKER_STUCK_TICKS = 30;   // 1.5s
+    // 30 ticks is 1.5 SECONDS, and that constant had never actually run: it was declared and
+    // never read until the watchdog was wired up. A walker climbing a hillside legitimately makes
+    // no HORIZONTAL progress for longer than that, so the first live value was measured, not
+    // assumed — the log showed the same route restarted 80 times ("Walker: BFS 82" x80).
+    private static final int    WALKER_STUCK_TICKS = 80;   // 4s
     private static Vec3d walkerAnchor = null;
     private static int   walkerStuckTicks = 0;
     /** Why the chase stands still, in four numbers. `planTooShort` = the block planner returned
