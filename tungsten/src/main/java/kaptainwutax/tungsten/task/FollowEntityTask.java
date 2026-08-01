@@ -109,6 +109,8 @@ public class FollowEntityTask {
         lastTargetPos      = null;
         tickCounter        = 0;
         stuckTicks         = 0;
+        walkerAnchor       = null;
+        walkerStuckTicks   = 0;
         stopRequested      = false;
         leapActive         = false;
         steerCooldownTicks = 0;
@@ -124,6 +126,8 @@ public class FollowEntityTask {
         leapActive         = false;
         stopRequested      = false;
         stuckTicks         = 0;
+        walkerAnchor       = null;
+        walkerStuckTicks   = 0;
         trail.reset();
         BlockPathWalker.stop();
         releaseKeys();
@@ -344,6 +348,34 @@ public class FollowEntityTask {
         }
 
         if (walkerRunning) {
+            // A WALKER THAT IS "RUNNING" AND MOVING NOTHING IS THE ONE STATE NOTHING COULD SEE.
+            // The replan gate needs (!walkerRunning || targetStrayed); a stuck walker fails the
+            // first, and a chase heading for a REMEMBERED position fails the second, so the gate
+            // is shut from both sides. And this branch used to reset stuckTicks outright — the
+            // watchdog was cleared by exactly the state it exists for, while its own trigger sits
+            // in a later else-if a running walker can never reach.
+            //
+            // Measured with the FOLLOWGATE diagnostic, 440 ticks of it:
+            //   FOLLOWGATE walker=true stopReq=false pf=false exec=false dist=86.1 tc=2720..3160
+            // walker running, distance frozen, bot not moving, nobody replanning.
+            //
+            // WALKER_STUCK_TICKS, walkerAnchor and walkerStuckTicks were declared for precisely
+            // this — with a javadoc saying "ticks of zero horizontal progress with the walker
+            // running before we force a re-plan" — and NOTHING READ THEM. Wiring them up is the
+            // whole fix: stopping the walker opens the replanning path that already exists (and
+            // BlockPathWalker.stop() also releases any armed executor path).
+            Vec3d hereNow = player.getEntityPos();
+            if (walkerAnchor == null
+                    || Math.hypot(hereNow.x - walkerAnchor.x, hereNow.z - walkerAnchor.z) > 0.25) {
+                walkerAnchor = hereNow;
+                walkerStuckTicks = 0;
+            } else if (++walkerStuckTicks >= WALKER_STUCK_TICKS) {
+                kaptainwutax.tungsten.Debug.logMessage(
+                        "Chase: walker running but not moving — stopping it so the route can be replanned");
+                BlockPathWalker.stop();
+                walkerStuckTicks = 0;
+                walkerAnchor = null;
+            }
             // walker active — don't touch pathfinder, just let it compute
             stuckTicks = 0;
         } else if (!pathfinderActive && !executorRunning && !stopRequested) {
