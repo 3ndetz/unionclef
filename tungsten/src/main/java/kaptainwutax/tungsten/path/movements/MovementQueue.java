@@ -8,6 +8,7 @@ import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.util.WindMouseRotation;
 import kaptainwutax.tungsten.world.BetterBlockPos;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.block.BlockState;
 import net.minecraft.util.math.BlockPos;
 
 /**
@@ -327,11 +328,32 @@ public final class MovementQueue {
         // would have to break something either carries that price or is never planned. FastPlanner
         // does not model it, so the chain gets vetted here instead — truncate at the first step
         // whose preparation is impossible right now, and keep the executable head.
+        // "NEEDS A BLOCK BROKEN" IS NOT THE SAME AS "CANNOT BE DONE". Breaking is what
+        // prepared() is FOR — it aims, swaps tool and holds attack (Movement.java:378-418), and
+        // upstream simply prices the mining in cost(). Cutting on any non-empty toBreak refused
+        // 25 route hand-offs for every 2 it accepted, because a terrain route meets a breakable
+        // cell almost immediately. Cut only where the break is genuinely impossible: a block we
+        // are forbidden to break, or one with no finite mining time.
+        net.minecraft.client.network.ClientPlayerEntity self =
+                net.minecraft.client.MinecraftClient.getInstance().player;
         int executable = movements.size();
+        outer:
         for (int i = 0; i < movements.size(); i++) {
-            if (movements.get(i).needsClearBreaks() && !movements.get(i).toBreak(world).isEmpty()) {
-                executable = i;
-                break;
+            Movement m = movements.get(i);
+            if (!m.needsClearBreaks()) {
+                continue;
+            }
+            for (BlockPos cell : m.toBreak(world)) {
+                BlockState st = world.getBlockState(cell);
+                double ticksToMine = self == null ? Double.POSITIVE_INFINITY
+                        : MovementHelperB.getMiningDurationTicks(world, self, cell.getX(),
+                                cell.getY(), cell.getZ(), st, true);
+                if (MovementHelperB.avoidBreaking(world, cell.getX(), cell.getY(), cell.getZ(), st)
+                        || !Double.isFinite(ticksToMine)
+                        || ticksToMine >= kaptainwutax.tungsten.path.calculators.ActionCosts.COST_INF) {
+                    executable = i;
+                    break outer;
+                }
             }
         }
         if (executable < movements.size()) {

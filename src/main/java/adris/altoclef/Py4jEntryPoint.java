@@ -2022,12 +2022,25 @@ public class Py4jEntryPoint {
      */
     public String tungstenSetting(String name, String value) {
         Object cfg = kaptainwutax.tungsten.TungstenConfig.get();
-        if (value != null && !adris.altoclef.util.helpers.SettingsReflectionHelper
-                .setSetting(cfg, name, value)) {
+        // ANSWER WITH THE FIELD THAT WAS ACTUALLY RESOLVED, NOT THE NAME THAT WAS ASKED FOR.
+        // findSettingField falls back to a substring match and returns the FIRST hit in
+        // declaration order, so "combatWindMouseWindDist" lands on "combatWindMouseWind". Echoing
+        // the caller's name made a mis-resolved write look like a clean one — and the test
+        // runner's --pin guard compares against exactly this string, so it would have confirmed
+        // a pin that hit the wrong field. Now a typo reads back under the other field's name and
+        // the guard fires.
+        var field = adris.altoclef.util.helpers.SettingsReflectionHelper
+                .findSettingField(cfg.getClass(), name);
+        if (field.isEmpty()) {
             return "unknown:" + name;
         }
-        var got = adris.altoclef.util.helpers.SettingsReflectionHelper.getSetting(cfg, name);
-        return got.isPresent() ? name + "=" + got.get() : "unknown:" + name;
+        String resolved = field.get().getName();
+        if (value != null && !adris.altoclef.util.helpers.SettingsReflectionHelper
+                .setSetting(cfg, resolved, value)) {
+            return "unsettable:" + resolved;
+        }
+        var got = adris.altoclef.util.helpers.SettingsReflectionHelper.getSetting(cfg, resolved);
+        return got.isPresent() ? resolved + "=" + got.get() : "unknown:" + name;
     }
 
     /** Every settable tungsten runtime flag and its current value, one per line. */

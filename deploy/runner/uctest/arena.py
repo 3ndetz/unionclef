@@ -31,12 +31,26 @@ class ArenaBuilder:
             (("immediate_respawn", "immediateRespawn"), "true"),
             (("do_daylight_cycle", "doDaylightCycle"), "false"),
             (("keep_inventory", "keepInventory"), "true"),
-            (("natural_health_regeneration", "naturalRegeneration"),
+            # 1.21.11 spells it natural_regeneration. "naturalRegeneration" is the pre-1.21.9
+            # form and "natural_health_regeneration" is not a gamerule in EITHER scheme — so of
+            # the six rules here this was the only one where neither spelling landed, and it is
+            # the one every HP criterion depends on ("took no damage", "survived with >= 8 hp",
+            # every hp_drop number). All three are sent; the two wrong ones are tolerated.
+            (("natural_regeneration", "natural_health_regeneration", "naturalRegeneration"),
              "true" if regen else "false"),
             (("do_mob_spawning", "doMobSpawning"), "false"),
         ):
+            # Deliberately tolerant: each tuple carries one spelling per MC generation and the
+            # others are EXPECTED to be rejected. Everything outside this loop is not.
+            ok = False
             for rule in rules:
-                self.rcon.cmd(f"gamerule {rule} {val}")
+                try:
+                    self.rcon.cmd(f"gamerule {rule} {val}")
+                    ok = True
+                except RuntimeError:
+                    continue
+            if not ok:
+                raise RuntimeError(f"no accepted spelling for gamerule {rules} = {val}")
         self.rcon.cmd("time set day")
         self.rcon.cmd("weather clear")
 

@@ -108,11 +108,22 @@ class Rcon:
     def __init__(self, container=SERVER_CONTAINER):
         self.container = container
 
-    def cmd(self, command, timeout=20):
+    # A REJECTED COMMAND IS NOT A SUCCESSFUL ONE. rcon-cli exits 0 while the SERVER replies
+    # "Unknown or incomplete command" — so every fill, setblock, tp, gamerule, scoreboard and
+    # effect in this harness used to succeed as far as Python was concerned. One instance of
+    # that (a silently failing spreadplayers) already burned three runs; the fix was made at
+    # the call site, so the hazard stayed everywhere else. It is fixed here instead.
+    REJECTIONS = ("Unknown or incomplete command", "Incorrect argument",
+                  "Expected ", "Unknown command", "Invalid ")
+
+    def cmd(self, command, timeout=20, allow_reject=False):
         r = sh(["docker", "exec", self.container, "rcon-cli", command], timeout)
         if r.returncode != 0:
             raise RuntimeError(f"rcon `{command}`: {r.stderr.strip()[-300:]}")
-        return r.stdout.strip()
+        out = r.stdout.strip()
+        if not allow_reject and any(x in out for x in self.REJECTIONS):
+            raise RuntimeError(f"rcon REJECTED `{command}`: {out[:300]}")
+        return out
 
     def entity_float(self, name, path):
         out = self.cmd(f"data get entity {name} {path}")

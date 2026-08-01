@@ -146,7 +146,16 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
                 ok, got = bot.py.try_call("tungstenSetting", k, v)
                 print(f"  PIN {got if ok else 'UNSET ' + k + ' (' + str(got) + ')'}",
                       flush=True)
-                if not ok or got != f"{k}={v}":
+                # Compare loosely on numbers: a double field reads back "12.0" for a pin of
+                # "12", and an exact string test would abort every numeric A/B.
+                def _same(a, b):
+                    if a == b:
+                        return True
+                    try:
+                        return float(a) == float(b)
+                    except (TypeError, ValueError):
+                        return False
+                if not ok or not _same(str(got).split("=", 1)[-1], v):
                     raise SystemExit(
                         f"--pin {k}={v} did not apply (got {got!r}). Refusing to run: an "
                         f"A/B against an unapplied flag measures the build against itself.")

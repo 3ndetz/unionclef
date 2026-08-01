@@ -95,6 +95,12 @@ public class SettingsReflectionHelper {
                type == int.class || type == Integer.class ||
                type == float.class || type == Float.class ||
                type == double.class || type == Double.class ||
+               // long was missing, so four TungstenConfig knobs (fastPlanBudgetMs,
+               // searchTimeoutMs, combatBunnyHopMinMs, combatBunnyHopRandMs) LISTED and READ but
+               // could not be written — `;settings` registered no setter for them and
+               // tungstenSetting answered "unknown:". A knob that reads but cannot be set is the
+               // exact shape of the lever bug that voided a session of A/B runs.
+               type == long.class || type == Long.class ||
                type == String.class;
     }
 
@@ -126,6 +132,7 @@ public class SettingsReflectionHelper {
     private static Object convertStringToType(String value, Class<?> type) {
         if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(value);
         if (type == int.class || type == Integer.class) return Integer.parseInt(value);
+        if (type == long.class || type == Long.class) return Long.parseLong(value);
         if (type == float.class || type == Float.class) return Float.parseFloat(value);
         if (type == double.class || type == Double.class) return Double.parseDouble(value);
         if (type == String.class) {
