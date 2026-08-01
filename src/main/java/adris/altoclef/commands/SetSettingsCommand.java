@@ -35,6 +35,8 @@ public class SetSettingsCommand extends Command {
             // Show current value
             var val = SettingsReflectionHelper.getSetting(mod.getModSettings(), settingName);
             if (val.isEmpty()) val = SettingsReflectionHelper.getSetting(ButlerConfig.getInstance(), settingName);
+            if (val.isEmpty()) val = SettingsReflectionHelper.getSetting(
+                    kaptainwutax.tungsten.TungstenConfig.get(), settingName);
             if (val.isPresent()) {
                 mod.log(settingName + " = " + val.get());
             } else {
@@ -58,6 +60,19 @@ public class SetSettingsCommand extends Command {
             success = true;
         }
 
+        // TUNGSTEN CONFIG IS SETTABLE TOO — and it has to be, or an A/B is a lie.
+        // Until now `@set` reached only the altoclef Settings and ButlerConfig, so every
+        // TungstenConfig flag was compile-time only. Four interleaved A/B batches in one session
+        // (queueDiagonals, queueWholeRoute, chaseUsesQueue) silently compared the build against
+        // ITSELF, because the command that was supposed to flip the flag did not know the field
+        // and reported "not found" into a log nobody was reading. It is NOT saved to disk: these
+        // are experiment levers, and a run must start from the compiled default.
+        if (!success && SettingsReflectionHelper.setSetting(
+                kaptainwutax.tungsten.TungstenConfig.get(), settingName, newValue)) {
+            mod.log("Tungsten настройка обновлена (runtime only, не сохраняется)");
+            success = true;
+        }
+
         if (!success) {
             mod.log("Настройка '" + settingName + "' не найдена. Используй '@set list' для списка.");
         }
@@ -71,6 +86,11 @@ public class SetSettingsCommand extends Command {
         List<SettingsReflectionHelper.SettingInfo> main =
                 SettingsReflectionHelper.getSettableFields(mod.getModSettings());
         for (SettingsReflectionHelper.SettingInfo s : main) {
+            mod.log("  " + s);
+        }
+        mod.log("Tungsten (runtime only):");
+        for (SettingsReflectionHelper.SettingInfo s :
+                SettingsReflectionHelper.getSettableFields(kaptainwutax.tungsten.TungstenConfig.get())) {
             mod.log("  " + s);
         }
         mod.log("Butler (configs/butler.json):");

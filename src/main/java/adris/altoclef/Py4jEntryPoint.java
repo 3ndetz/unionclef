@@ -2005,6 +2005,41 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.combat.TriggerBot.gPassed);
     }
 
+    /**
+     * Read or write a tungsten runtime flag, and get the RESULTING value back.
+     *
+     * <p>Pass {@code value == null} to read. Returns {@code "<name>=<value>"} on success, or
+     * {@code "unknown:<name>"} if no such field exists — so a caller can TELL whether the lever
+     * moved. That return value is the whole point: the {@code @set} command reports failure only
+     * into the in-game chat, and an experiment driven over py4j never sees it. Four interleaved
+     * A/B batches in one session were run against a flag that was never applied, each came back
+     * flat, and each flat result was read as evidence about the code rather than about the lever.
+     *
+     * <p>Runtime only — nothing is written to disk, so every run starts from the compiled default.
+     *
+     * @param name  field name on {@code TungstenConfig}, e.g. {@code chaseUsesQueue}
+     * @param value new value as text ({@code "true"}, {@code "12"}), or null to just read
+     */
+    public String tungstenSetting(String name, String value) {
+        Object cfg = kaptainwutax.tungsten.TungstenConfig.get();
+        if (value != null && !adris.altoclef.util.helpers.SettingsReflectionHelper
+                .setSetting(cfg, name, value)) {
+            return "unknown:" + name;
+        }
+        var got = adris.altoclef.util.helpers.SettingsReflectionHelper.getSetting(cfg, name);
+        return got.isPresent() ? name + "=" + got.get() : "unknown:" + name;
+    }
+
+    /** Every settable tungsten runtime flag and its current value, one per line. */
+    public String tungstenSettings() {
+        StringBuilder sb = new StringBuilder();
+        for (var s : adris.altoclef.util.helpers.SettingsReflectionHelper
+                .getSettableFields(kaptainwutax.tungsten.TungstenConfig.get())) {
+            sb.append(s).append(System.lineSeparator());
+        }
+        return sb.toString();
+    }
+
     /** Bridge execution telemetry: ticks the place logic ran, ticks deferred because the bot
      *  was still walking there, ticks actually in range, and blocks actually clicked. */
     public String placeStats() {
