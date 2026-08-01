@@ -45,6 +45,10 @@ public class FollowEntityTask {
      *  fewer than two cells and the plan was dropped with no alternative; `physicsFallbacks` =
      *  times the physics search was asked instead. Read over py4j as chaseStats. */
     public static volatile int planCalls, planUsable, planTooShort, physicsFallbacks;
+    /** Of the cells a chase route contains, how many the PORTED movements could actually take —
+     *  they cover flat cardinal steps only. The ratio says whether unit 2 as ported can drive a
+     *  chase over terrain at all. */
+    public static volatile int traversableCells, routeCells, routeSamples;
 
     /** Engine-independent jam detection (see the watchdog in tick()). */
     private static Vec3d jamAnchor = null;
@@ -505,6 +509,15 @@ public class FollowEntityTask {
                 // log shows "Walker: direct" 3 times and "Walker: BFS" ZERO — a plan was
                 // computed and then ignored while the bot sprinted at a runner it never caught
                 // (contact=None, kills=0). AC-1.4 says the exact block route is run IMMEDIATELY.
+                // HOW MUCH OF A CHASE ROUTE COULD THE PORTED MOVEMENTS TAKE? MovementQueue only
+                // accepts same-Y cardinal steps (isTraverseEdge); climbs, drops and diagonals are
+                // "a different movement class that this port does not include yet". On a course
+                // named chase_terrain that is the whole question, so it gets a number instead of
+                // an opinion. Telemetry only — nothing branches on it.
+                int pfx = kaptainwutax.tungsten.path.movements.MovementQueue.traversePrefix(bfsPath);
+                traversableCells += pfx;
+                routeCells += bfsPath.size();
+                routeSamples++;
                 // THE CHASE KEEPS ITS BLOCK ROUTE. Without this the physics search below starts
                 // the executor and the walker switches itself off — measured as the same route
                 // restarted eighty times without progress. AC-2.1: block route first, physics last.

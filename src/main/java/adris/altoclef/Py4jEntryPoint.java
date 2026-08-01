@@ -3090,7 +3090,10 @@ public class Py4jEntryPoint {
                 // stuck for want of a plan, it is steering into something.
                 + " steer=" + kaptainwutax.tungsten.task.FollowEntityTask.steerTicks
                 + " los0=" + kaptainwutax.tungsten.task.FollowEntityTask.losBlocked
-                + " cooldown=" + kaptainwutax.tungsten.task.FollowEntityTask.cooldownTicks;
+                + " cooldown=" + kaptainwutax.tungsten.task.FollowEntityTask.cooldownTicks
+                + " | routeCells=" + kaptainwutax.tungsten.task.FollowEntityTask.routeCells
+                + " traversable=" + kaptainwutax.tungsten.task.FollowEntityTask.traversableCells
+                + " routes=" + kaptainwutax.tungsten.task.FollowEntityTask.routeSamples;
     }
 
     /** Abandon whatever the build queue still owes (//set gone wrong, wrong selection). */
