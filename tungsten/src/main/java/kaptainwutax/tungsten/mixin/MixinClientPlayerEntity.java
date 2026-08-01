@@ -116,8 +116,23 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// and can overshoot off a rim (no combat clamp runs). Apply the shared void
 		// guard as the final word so a flee never carries the bot into the void.
 		// Flee AND punk-approach — normal goto/get keep the executor's decisions.
-		if (kaptainwutax.tungsten.task.RunAwayTask.isActive()
-				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive()) {
+		// ...BUT NOT WHILE A PORTED MOVEMENT OWNS THE TICK. That movement is the only writer
+		// of the movement keys (Movement.update(): release everything, then press exactly what
+		// this tick declared), and VoidGuard is a per-tick key writer that was never added to the
+		// exemption the walker, bridge, pillar and executor all have above. So on every punk tick
+		// it had the LAST word: at the lip of a PLANNED three-block drop it read back the
+		// MOVE_FORWARD MovementFall had just pressed, measured fallHeight 4 one step ahead against
+		// its hardcoded maxSafeFall of 3, released forward and forced SNEAK — and vanilla ledge
+		// protection pinned the body on the lip until the queue's cost+100 timeout. Measured:
+		// 25 of 26 chains, 161 ticks each, feet never leaving the source cell. Only drops of 3+
+		// trip it, which is exactly why nothing else in the queue ever showed this.
+		//
+		// The guard is for FREE-FORM movement, as VoidDetector.edgeAhead says itself: pathfinder
+		// moves are not gated by it, because they may descend deliberately. A queued step never
+		// aims at the void — FastPlanner only emits a destination it proved standable.
+		if ((kaptainwutax.tungsten.task.RunAwayTask.isActive()
+				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive())
+				&& !tungsten$movementOwnsTick) {
 			kaptainwutax.tungsten.combat.VoidGuard.protect((ClientPlayerEntity)(Object)this, this.getEntityWorld());
 		}
 

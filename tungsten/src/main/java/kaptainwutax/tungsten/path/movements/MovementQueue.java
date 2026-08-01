@@ -288,7 +288,15 @@ public final class MovementQueue {
         // MovementPillar owns ladders and vines too.
         if (isPillarEdge(a, b)) return true;
         if (cfg.queueClimbs && (isAscendEdge(a, b) || isDescendEdge(a, b))) return true;
-        // ⛔ FALLS ARE NOT ADMITTED YET — MEASURED 2026-08-02, MovementFall DOES NOT MOVE.
+        // FALLS ARE ADMITTED AGAIN. They were pulled for one build after 25 of 26 chains died on
+        // the timeout with the feet never leaving the lip — but MovementFall was not the culprit:
+        // VoidGuard ran after the queue on every punk tick, un-pressed the MOVE_FORWARD the
+        // movement had just declared and forced SNEAK, because a planned 3-block drop reads as
+        // fallHeight 4 against its hardcoded limit of 3. Fixed at that call site
+        // (MixinClientPlayerEntity), where the same exemption already covered every other driver.
+        if (cfg.queueClimbs && isFallEdge(a, b)) return true;
+        // ⛔ (previous retraction, kept for the record)
+        // MEASURED 2026-08-02, MovementFall DOES NOT MOVE.
         // Armed for one chase: 25 of 26 chains died on the queue's timeout and EVERY ONE was a
         // MovementFall that never left the lip — "step 0 has taken too long (161 ticks) ...
         // (-248,105,285)->(-247,102,285), feet (-248,105,285)". freezes 20 with falls admitted
@@ -376,9 +384,16 @@ public final class MovementQueue {
                 double ticksToMine = self == null ? Double.POSITIVE_INFINITY
                         : MovementHelperB.getMiningDurationTicks(world, self, cell.getX(),
                                 cell.getY(), cell.getZ(), st, true);
-                if (MovementHelperB.avoidBreaking(world, cell.getX(), cell.getY(), cell.getZ(), st)
-                        || !Double.isFinite(ticksToMine)
+                boolean forbidden = MovementHelperB.avoidBreaking(
+                        world, cell.getX(), cell.getY(), cell.getZ(), st);
+                if (forbidden || !Double.isFinite(ticksToMine)
                         || ticksToMine >= kaptainwutax.tungsten.path.calculators.ActionCosts.COST_INF) {
+                    // NAME THE CELL AND THE REASON. "chain cut to 0/40" says a 40-cell route was
+                    // thrown away whole and nothing about why, which is not a diagnosis.
+                    Debug.logMessage("MovementQueue: cut at " + i + " — "
+                            + m.getClass().getSimpleName() + " needs " + cell + " ("
+                            + net.minecraft.registry.Registries.BLOCK.getId(st.getBlock())
+                            + ") " + (forbidden ? "FORBIDDEN" : "mine=" + ticksToMine));
                     executable = i;
                     break outer;
                 }
