@@ -381,6 +381,16 @@ public final class MovementQueue {
             }
             for (BlockPos cell : m.toBreak(world)) {
                 BlockState st = world.getBlockState(cell);
+                // A FLUID IS NOT A BREAK. Flowing water fails canWalkThrough, so it lands in
+                // toBreak; BreakRules then refuses it because you cannot mine a fluid — and this
+                // loop read that refusal as "this step is impossible" and threw away the ENTIRE
+                // route. Measured on chase_terrain: every single cut was minecraft:water, 68 of
+                // them in one run, at step 0 of routes 40 to 58 cells long. Upstream never breaks
+                // water either; it PRICES swimming, and the movements carry the liquid handling
+                // themselves. So a fluid cell is simply not this check's business.
+                if (!world.getFluidState(cell).isEmpty()) {
+                    continue;
+                }
                 double ticksToMine = self == null ? Double.POSITIVE_INFINITY
                         : MovementHelperB.getMiningDurationTicks(world, self, cell.getX(),
                                 cell.getY(), cell.getZ(), st, true);
