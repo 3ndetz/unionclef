@@ -551,13 +551,19 @@ public final class MovementQueue {
             }
 
             // :242-250. ticksOnCurrent is only charged on a tick the movement actually ran.
-            // PathExecutor.java:237-242. Releasing the sprint KEY is not the same as clearing the
-            // sprint STATE — a movement that deliberately withholds Input.SPRINT (MovementTraverse
-            // does, on a step whose floor this route just placed) still holds MOVE_FORWARD, and
-            // without this the body sprints off the block it has only just laid.
-            if (!movement.sprintRequested()) {
-                player.setSprinting(false);
-            }
+            // ⛔ MEASURED AND TAKEN BACK, 2026-08-02. PathExecutor.java:237-242 does clear the
+            // sprint STATE when the next movement does not ask for it, and releasing the KEY is
+            // genuinely not the same thing — but upstream's teardown is one half of a mechanism
+            // whose other half is shouldSprintNextTick() (PathExecutor.java:345-475), a lookahead
+            // over the next one to three movements that DECIDES sprint. We have no such policy:
+            // only traverse and diagonal ever request SPRINT, so the teardown fired on nearly
+            // every tick and nav_gaps — which is jumps across gaps, i.e. the one course that
+            // needs sprint distance — went red. Porting half a mechanism is the exact defect
+            // class this file keeps fixing. It goes back in WITH shouldSprintNextTick, not before.
+            //
+            // if (!movement.sprintRequested()) {
+            //     player.setSprinting(false);
+            // }
             ticksOnCurrent++;
             if (ticksOnCurrent > currentCostEstimate + MOVEMENT_TIMEOUT_TICKS) {
                 // WHICH step, not just that one. 13 of 15 chains in a measured chase died here,
