@@ -193,7 +193,31 @@ public final class MovementQueue {
         return Math.abs(b.getX() - a.getX()) + Math.abs(b.getZ() - a.getZ()) == 1;
     }
 
+    /**
+     * One corner step — {@link MovementDiagonal}. Same Y or one up or down, one cell in each of two
+     * axes. With traverse, ascend and descend wired the contiguous prefix now breaks here, and open
+     * ground is mostly diagonals.
+     */
+    private static boolean isDiagonalEdge(BlockPos a, BlockPos b) {
+        int dy = b.getY() - a.getY();
+        if (dy < -1 || dy > 1) {
+            return false;
+        }
+        return Math.abs(b.getX() - a.getX()) == 1 && Math.abs(b.getZ() - a.getZ()) == 1;
+    }
+
     private static boolean isSupportedEdge(BlockPos a, BlockPos b) {
+        // ⛔ DIAGONAL IS PORTED BUT NOT ACCEPTED — MEASURED, IN BATCHES, AND NOT KEPT. Its mean is
+        // no better and its VARIANCE explodes, which is the more interesting number:
+        //     traverse only        20, 18, 19  -> 19.0, spread 2
+        //     + ascend             19, 17, 16  -> 17.3, spread 3
+        //     + ascend + descend   15, 16      -> 15.5, spread 1
+        //     + diagonal           19, 23, 11  -> 17.7, spread 12
+        // A step that sometimes runs beautifully (11) and sometimes twice as badly (23) is not a
+        // step that is understood yet. The likely suspects are in its own updateState — it returns
+        // UNREACHABLE the moment playerInValidPosition() fails, which a re-planned chase route
+        // trips easily, and it sprints through corners on rough ground — but that is a hypothesis,
+        // not a measurement, so the class stays staged until it is one.
         return isTraverseEdge(a, b) || isAscendEdge(a, b) || isDescendEdge(a, b);
     }
 
@@ -215,6 +239,7 @@ public final class MovementQueue {
             // for itself how to be walked, and the queue only decides whose turn it is.
             // ONE MOVEMENT CLASS PER EDGE SHAPE, which is upstream's model: the step decides for
             // itself how to be walked, and the queue only decides whose turn it is.
+            // isDiagonalEdge/MovementDiagonal deliberately unused — see isSupportedEdge.
             if (isAscendEdge(from, to)) {
                 movements.add(new MovementAscend(from, to));
             } else if (isDescendEdge(from, to)) {
