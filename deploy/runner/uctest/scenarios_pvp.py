@@ -257,6 +257,7 @@ class ChaseTerrain(Scenario):
         # one left them — three "the chase is broken" results were measured from a
         # bot standing in the same stuck spot. Probe the column instead.
         sx, sz, sy, ground = self._find_land(rc)
+        ctx.geo["ground"] = ground   # the verdict line read ground=None in every recorded run
         ctx.log(f"  chase start: ({sx}, {sy}, {sz}) on {ground}")
         rdx, rdz = getattr(self, "run_dir", (1, 0))
         rc.cmd(f"tp {ctx.bot.name} {sx}.5 {sy} {sz}.5")
@@ -281,19 +282,30 @@ class ChaseTerrain(Scenario):
         # chaser: tungsten punk = approach (pathfinder) + combat when in reach
         ctx.bot.py.call("punk", ctx.victim.name)
 
+    RE_GOAL_EVERY = 20.0   # seconds of WALL CLOCK
+    PROBE_EVERY = 5.0
+
     def drive_tick(self, ctx, t):
-        # keep the runner running: baritone finishes/aborts on rough ground, so
-        # re-issue the goal periodically (it is the prey, it must never idle)
-        if int(t) % 20 == 0 and ctx.samples:
+        # ⛔ A MODULO ON A REAL-VALUED CLOCK IS A LOTTERY, NOT A SCHEDULE. One sample
+        # iteration costs ~6.7 s here (nine rcon round trips plus two py4j), so `int(t) % 20`
+        # fired on 0.9% of drive ticks across 122 recorded runs — about 0.23 times per run.
+        # In MOST runs the prey was therefore NEVER re-tasked: @goto finished or aborted on
+        # rough ground, the runner stopped, and "caught the runner" was decided against a
+        # STANDING target. Gate on elapsed time instead.
+        if t - ctx.geo.get("last_regoal", 0.0) >= self.RE_GOAL_EVERY and ctx.samples:
+            ctx.geo["last_regoal"] = t
             gx, gy, gz = ctx.geo["goal"]
             ctx.victim.cmd(f"@goto {gx} {gy} {gz}")
         # record whether the bot is actually swimming — a chase measured in the
         # sea is not a chase, and this is what proves the setup was sound
         p = ctx.samples[-1].get("bot") if ctx.samples else None
-        if p and int(t) % 5 == 0:
+        if p and t - ctx.geo.get("last_probe", -1e9) >= self.PROBE_EVERY:
+            ctx.geo["last_probe"] = t
+            ctx.geo["water_probes"] = ctx.geo.get("water_probes", 0) + 1
             probe = ctx.rcon.cmd(
                 f"execute if block {int(p[0])} {int(p[1])} {int(p[2])} water")
             if "Test passed" in probe:
+                ctx.geo["water_hits"] = ctx.geo.get("water_hits", 0) + 1
                 ctx.geo["swam"] = True
 
     def early_stop(self, ctx):
@@ -305,8 +317,20 @@ class ChaseTerrain(Scenario):
         # embarrassment. If the run did not happen on land, nothing else it says
         # counts, so this criterion is reported before the behavioural ones.
         swam = ctx.geo.get("swam", False)
-        yield Criterion("ran on LAND (not in water)", not swam,
-                        f"ground={ctx.geo.get('ground')} swam={swam}")
+        probes = ctx.geo.get("water_probes", 0)
+        # A CHECK THAT NEVER RAN IS NOT A PASS. `swam` defaults to False, so while the probe
+        # was on the modulo lottery above this criterion went green whenever it never fired.
+        yield Criterion("ran on LAND (not in water)", (not swam) and probes >= 3,
+                        f"ground={ctx.geo.get('ground')} swam={swam} "
+                        f"water={ctx.geo.get('water_hits', 0)}/{probes} probes")
+
+        # DID THE PREY ACTUALLY RUN? Without this, everything the chase claims can be true of
+        # a target that stopped moving in the first ten seconds.
+        vps = [s["victim"] for s in ctx.samples if s.get("victim")]
+        run_len = sum(((a[0] - b[0]) ** 2 + (a[2] - b[2]) ** 2) ** 0.5
+                      for a, b in zip(vps, vps[1:]))
+        yield Criterion("the runner actually ran (>= 30 blocks)", run_len >= 30,
+                        f"runner_path={run_len:.1f}")
 
         # HOW CLOSE DID IT GET? Reported, never a gate. Without this the course is
         # pass/fail on "contact within 120 s" and nothing else, so a change that halves the
