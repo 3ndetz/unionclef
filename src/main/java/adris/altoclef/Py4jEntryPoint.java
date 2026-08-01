@@ -3075,7 +3075,11 @@ public class Py4jEntryPoint {
                 + " pfActive=" + (pf == null ? "?" : pf.active.get())
                 + " pillar=" + kaptainwutax.tungsten.task.PillarTask.isActive()
                 + " nav=" + kaptainwutax.tungsten.task.FastNavigator.isActive()
-                + " buildQ=" + kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued();
+                + " buildQ=" + kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued()
+                + " | planCalls=" + kaptainwutax.tungsten.task.FollowEntityTask.planCalls
+                + " usable=" + kaptainwutax.tungsten.task.FollowEntityTask.planUsable
+                + " tooShort=" + kaptainwutax.tungsten.task.FollowEntityTask.planTooShort
+                + " physFallback=" + kaptainwutax.tungsten.task.FollowEntityTask.physicsFallbacks;
     }
 
     /** Abandon whatever the build queue still owes (//set gone wrong, wrong selection). */

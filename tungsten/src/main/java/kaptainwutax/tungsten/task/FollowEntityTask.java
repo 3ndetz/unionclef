@@ -37,6 +37,11 @@ public class FollowEntityTask {
     private static final int    WALKER_STUCK_TICKS = 30;   // 1.5s
     private static Vec3d walkerAnchor = null;
     private static int   walkerStuckTicks = 0;
+    /** Why the chase stands still, in four numbers. `planTooShort` = the block planner returned
+     *  fewer than two cells and the plan was dropped with no alternative; `physicsFallbacks` =
+     *  times the physics search was asked instead. Read over py4j as chaseStats. */
+    public static volatile int planCalls, planUsable, planTooShort, physicsFallbacks;
+
     /** Engine-independent jam detection (see the watchdog in tick()). */
     private static Vec3d jamAnchor = null;
     private static int   jamTicks = 0;
@@ -324,7 +329,18 @@ public class FollowEntityTask {
                     net.minecraft.util.math.BlockPos.ofFloored(effectiveTarget),
                     kaptainwutax.tungsten.TungstenConfig.get().fastPlanBudgetMs);
             var cells = res.positions();
-            if (cells.size() >= 2) BlockPathWalker.startBFS(cells);
+            // COUNT WHAT HAPPENS TO THE PLAN. A plan of fewer than two cells is dropped here
+            // WITHOUT an alternative, and the tick counter has just been reset — so if the planner
+            // keeps returning short, nobody drives the bot at all. That is exactly the state the
+            // chase freezes in (`path=-1 nav=false pfActive=false`), and "the plan was short" and
+            // "the physics fallback refused" need opposite fixes. Telemetry only; read as chaseStats.
+            planCalls++;
+            if (cells.size() >= 2) {
+                planUsable++;
+                BlockPathWalker.startBFS(cells);
+            } else {
+                planTooShort++;
+            }
         }
 
         if (walkerRunning) {
@@ -332,6 +348,7 @@ public class FollowEntityTask {
             stuckTicks = 0;
         } else if (!pathfinderActive && !executorRunning && !stopRequested) {
             stuckTicks = 0;
+            physicsFallbacks++;
             startFind(world, player, effectiveTarget, effectiveDist);
         } else if (stopRequested && !pathfinderActive) {
             stopRequested = false;
