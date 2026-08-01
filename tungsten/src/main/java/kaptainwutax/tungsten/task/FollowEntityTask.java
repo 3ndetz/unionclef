@@ -462,7 +462,12 @@ public class FollowEntityTask {
         return feet;
     }
 
+    /** How far along the block route the physics search is aimed. FastNavigator's LEG_LENGTH is
+     *  32 cells and it is the reason far goals never reach the physics engine there. */
+    private static final int PHYSICS_LEG_CELLS = 32;
+
     private static void startFind(WorldView world, ClientPlayerEntity player, Vec3d target, double dist) {
+        java.util.List<net.minecraft.util.math.BlockPos> bfsGuide = null;
         tickCounter   = 0;
         lastTargetPos = target;
         TungstenMod.TARGET = target;
@@ -487,6 +492,7 @@ public class FollowEntityTask {
                     net.minecraft.util.math.BlockPos.ofFloored(target),
                     kaptainwutax.tungsten.TungstenConfig.get().fastPlanBudgetMs);
             java.util.List<net.minecraft.util.math.BlockPos> bfsPath = fastRes.positions();
+            bfsGuide = bfsPath;
             if (bfsPath.size() >= 2) {
                 // IF WE HAVE A ROUTE, WALK THE ROUTE. A beeline is what you do when you have
                 // no route, not what you do instead of one. `start(target, path)` begins in
@@ -536,7 +542,25 @@ public class FollowEntityTask {
             TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 5;
             TungstenModDataContainer.PATHFINDER.minDistPath           = 0.8;
         }
-        TungstenModDataContainer.PATHFINDER.find(world, target, player);
+        // HAND PHYSICS A LEG, NOT THE WHOLE CHASE. The physics search was being given the FULL
+        // target — measured at 87 blocks — and this file's own history says what that costs: a
+        // search that cannot finish burns its entire budget and restarts, forever. It is also
+        // exactly what the navigator that keeps nav at 12/12 never does: FastNavigator cuts the
+        // route into LEG_LENGTH pieces and only ever hands physics the piece in front of it.
+        //
+        // Measured after the walker watchdog was wired up, which unblocked replanning and left
+        // this as the next blocker:
+        //   FOLLOWGATE walker=false stopReq=false pf=true exec=false dist=87.7 tc=40
+        // planning resumed, physics active, bot motionless, distance unchanged.
+        //
+        // So when a block route exists, aim physics at a point ALONG it rather than at the runner.
+        Vec3d physicsGoal = target;
+        if (bfsGuide != null && bfsGuide.size() >= 2) {
+            int leg = Math.min(bfsGuide.size() - 1, PHYSICS_LEG_CELLS);
+            var cell = bfsGuide.get(leg);
+            physicsGoal = new Vec3d(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5);
+        }
+        TungstenModDataContainer.PATHFINDER.find(world, physicsGoal, player);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
