@@ -176,6 +176,26 @@ public class TungstenConfig {
      *  path until SmartMoves is validated A-green. */
     public boolean smartMoves = false;
 
+    /**
+     * Blocks -> ticks for the BLOCK-SPACE search's heuristic (BlockSpacePathFinder).
+     *
+     * <p>Every edge in that search is priced in TICKS (ActionCosts: a walk step is 4.633),
+     * while the heuristic measures BLOCKS. f = g + h only means something if both halves use
+     * one unit, so the heuristic is multiplied by this. The number decides the search's whole
+     * character: below the walk cost A* investigates alternatives and is optimal but broad;
+     * above it, upstream's own note (baritone Settings.java:406-409) is that it "will result in
+     * it going straight at its goal, and not investigating alternatives" — fast and suboptimal.
+     *
+     * <p>WHY IT IS A KNOB. Before C5.21 this search had no accumulated g at all (f was h + 1),
+     * i.e. it ran greedy — the limit of this scale going to infinity. The first C5.21 attempt
+     * made the costs live and pinned the scale at 4.633 by argument, not measurement: nav went
+     * 12/12 -> 8/12 (nav_steep, nav_gaps, nav_slime red, nav_break lost to a death). The scale
+     * was bundled with six other fixes, so that run cannot say which one cost the courses.
+     * Default is upstream's costHeuristic (baritone Settings.java:413). Pin it per run:
+     * {@code run_suite.py --pin searchHeuristicScale=<x>}.
+     */
+    public double searchHeuristicScale = 3.563;
+
     // ---- block breaking ----
 
     /** Allow the block-space pathfinder to plan breaking through breakable walls. */

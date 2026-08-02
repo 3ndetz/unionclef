@@ -85,6 +85,17 @@ public class BlockNode {
 	public double cost;
 
 	/**
+	 * The price of the ONE move that produced this node — upstream's {@code res.cost}
+	 * (AStarPathFinder.java:120), which the relaxation adds to the parent's {@link #cost}.
+	 *
+	 * <p>It needs its own field because {@link #cost} is g, the total from the start, and the
+	 * two were being stored in the same place: the constructor below took the move's price as
+	 * an argument and dropped it on the floor, so every move {@code SmartMoves} and the blind
+	 * scan bothered to price arrived at the search worth exactly the same.
+	 */
+	public double actionCost;
+
+	/**
 	 * Should always be equal to estimatedCosttoGoal + cost Mutable and changed by
 	 * PathFinder
 	 */
@@ -130,6 +141,7 @@ public class BlockNode {
 		this.player = player;
 		this.previous = null;
 		this.cost = ActionCosts.COST_INF;
+		this.actionCost = 0;   // no incoming move: this is a root
 		this.estimatedCostToGoal = goal.heuristic(pos.getX(), pos.getY(), pos.getZ());
 		if (Double.isNaN(estimatedCostToGoal)) {
 			throw new IllegalStateException(goal + " calculated implausible heuristic");
@@ -146,6 +158,7 @@ public class BlockNode {
 		this.player = player;
 		this.previous = null;
 		this.cost = ActionCosts.COST_INF;
+		this.actionCost = 0;   // no incoming move: this is a root
 		this.estimatedCostToGoal = goal.heuristic(x, y, z);
 		if (Double.isNaN(estimatedCostToGoal)) {
 			throw new IllegalStateException(goal + " calculated implausible heuristic");
@@ -165,7 +178,13 @@ public class BlockNode {
 		this.wasOnSlime = player.getEntityWorld().getBlockState(new BlockPos(x, y - 1, z))
 				.getBlock() instanceof SlimeBlock;
 		this.wasOnLadder = player.getEntityWorld().getBlockState(new BlockPos(x, y, z)).getBlock() instanceof LadderBlock;
-		this.cost = parent != null ? 0 : ActionCosts.COST_INF;
+		// g is "infinity until relaxed" for EVERY node, the start included — upstream sets the
+		// start's to 0 by hand and nothing else (AStarPathFinder.java:55). This read
+		// `parent != null ? 0 : COST_INF`, i.e. every child was born already free, which the
+		// missing relaxation guard hid and which would otherwise make each child look like a
+		// zero-cost ride from the start. The move's own price goes to actionCost instead.
+		this.cost = ActionCosts.COST_INF;
+		this.actionCost = cost;
 		this.estimatedCostToGoal = goal.heuristic(x, y, z);
 		if (Double.isNaN(estimatedCostToGoal)) {
 			throw new IllegalStateException(goal + " calculated implausible heuristic");
@@ -668,11 +687,12 @@ public class BlockNode {
 		}
 
 		child.toBreak = plan;
-		// NOTE: this A* does NOT accumulate cost along the path (updateNode uses
-		// child.cost + 1), so a break penalty comparable to a couple of walk
-		// nodes is the most a break can carry and still ever be chosen over an
-		// unbounded-length detour. 0.15 ≈ one walk node per ~30 mining ticks.
-		child.cost += ticks * 0.15 * TungstenConfig.get().breakCostMultiplier;
+		// The mining time is the price of THIS MOVE, so it goes on the edge, next to the
+		// walk/jump price the generator already put there. 0.15 ticks-of-mining per unit means
+		// one walk step per ~30 mining ticks — which is what this comment always claimed, and
+		// which only became true now that g accumulates: a walk step used to be worth the
+		// literal 1, so a 30-tick wall was priced at four and a half steps of detour, not one.
+		child.actionCost += ticks * 0.15 * TungstenConfig.get().breakCostMultiplier;
 		return true;
 	}
 
@@ -728,7 +748,9 @@ public class BlockNode {
 		// free and preferred it over walking round. Baritone charges SNEAK_ONE_BLOCK_COST (15.385)
 		// because a backplace IS a sneak (MovementTraverse.cost:164), and FastPlanner was corrected
 		// to that same constant when place-as-a-move was made first class. One law, one number.
-		child.cost += ActionCosts.SNEAK_ONE_BLOCK_COST;
+		// It is charged to the EDGE now, so it is finally being compared against the real price of
+		// walking round (WALK_ONE_BLOCK_COST a step) instead of against the literal 1.
+		child.actionCost += ActionCosts.SNEAK_ONE_BLOCK_COST;
 		return true;
 	}
 

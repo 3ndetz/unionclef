@@ -63,7 +63,21 @@ public class PathFinder {
 	private BinaryHeapOpenSet openSet = new BinaryHeapOpenSet();
 	protected static final double[] COEFFICIENTS = {1.5, 2, 2.5, 3, 4, 5, 10};
 	protected static final AtomicReferenceArray<Node> bestSoFar = new AtomicReferenceArray<Node>(COEFFICIENTS.length);
-	private static final double minimumImprovement = -500;
+	/**
+	 * Upstream's MIN_IMPROVEMENT (AbstractNodeCostSearch.java:75-82): the smallest heuristic gain
+	 * worth recording, there to shrug off floating-point noise of the order 1e-16.
+	 *
+	 * <p>It was <b>-500</b>. A NEGATIVE threshold does not filter improvements, it accepts
+	 * regressions: {@code bestHeuristicSoFar - heuristic > -500} is true for a child that is 400
+	 * units WORSE, so every child overwrote {@code bestSoFar[i]} and the array ended up holding
+	 * whichever child the parallelStream happened to finish last. Which partial path got handed
+	 * to the executor on a timeout was, literally, a race.
+	 *
+	 * <p>⚠ Making it positive makes the record MONOTONE, and two places in this file were only
+	 * ever correct because it was not: see {@link #setCurrentPath} (which threw away its re-seed)
+	 * and the note on the moving waypoint at {@link #updateNextClosestBlockNodeIDX}.
+	 */
+	private static final double minimumImprovement = 0.01;
 	/** Give up a search that has made no REAL progress (emit / block-path advance) for
 	 *  this long. The re-root machinery resets the primary timeout every time it
 	 *  re-plans, so a goal it can never reach (over the void, no blocks to place) would
@@ -492,6 +506,16 @@ public class PathFinder {
 	        	primaryTimeoutTime = System.currentTimeMillis() + 1120L;
 	        	lastProgressMs = System.currentTimeMillis();   // advanced along the block path = progress
 				failedAttempts = 0;
+	        	// KNOWN, DELIBERATELY NOT FIXED IN THIS PASS (C5.21 follow-up). The waypoint just
+	        	// moved, and updateNode measures estimatedCostToGoal against THAT waypoint — so
+	        	// the yardstick behind bestHeuristicSoFar has changed while the record it holds
+	        	// has not. Upstream cannot hit this: a PathNode's estimatedCostToGoal is fixed for
+	        	// the whole search. Here the record now (positive minimumImprovement) freezes
+	        	// until the frontier physically reaches the new waypoint, so bestSoFar[] lags a
+	        	// segment behind. It self-clears — each emission re-seeds via setCurrentPath, and
+	        	// nodes that reach the new waypoint beat the old record — so it costs emission
+	        	// FRESHNESS, not emission itself. Left alone on purpose: it is a behaviour change
+	        	// nobody has measured, and this pass already has one variable under test.
 	        }
 //        	if (numNodesConsidered % 5 == 0 && updateNextClosestBlockNodeIDX(blockPath.get(), next, closed)) {
 //        		List<Node> path = constructPath(next);
@@ -770,7 +794,13 @@ public class PathFinder {
 	private static boolean updateBestSoFar(Node child, Vec3d start, AtomicDoubleArray bestHeuristicSoFar) {
 		boolean failing = true;
 	    for (int i = 0; i < COEFFICIENTS.length; i++) {
-	        double heuristic = child.combinedCost / COEFFICIENTS[i];
+	        // h + g/C, not (h + g)/C (AStarPathFinder.java:154). The coefficient exists to
+	        // DISCOUNT the distance already travelled against the distance still to go — that is
+	        // what makes the seven of them a spread of "how much detour am I willing to accept".
+	        // Dividing the combined cost discounts both halves equally, so all seven coefficients
+	        // rank the frontier identically and only the scale changes: seven searches for the
+	        // price of seven, all of them the same search.
+	        double heuristic = child.estimatedCostToGoal + child.cost / COEFFICIENTS[i];
 	        if (bestHeuristicSoFar.get(i) - heuristic > minimumImprovement) {
 	            bestHeuristicSoFar.set(i, heuristic);
 	            bestSoFar.set(i, child);
@@ -783,52 +813,51 @@ public class PathFinder {
 	}
 
 	/**
-	 * How far this node has travelled from the search's start, squared.
+	 * How far this node has travelled from the search's start, squared — upstream is
+	 * AbstractNodeCostSearch.java:149-154, which reads startX / startY / startZ.
 	 *
-	 * <p>All three axes read {@code start.x}. It is a copied line with the letter left
-	 * unchanged, and it makes the function return a number that is not a distance at all: with
-	 * a start at x=100, y=64, the Y term alone contributes (100-64)^2 = 1296, so the result is
-	 * enormous everywhere and the test it feeds — "have we got clear of the start yet?"
-	 * (:777, {@code &gt; MIN_DIST_PATH^2}) — is satisfied by the FIRST child expanded, wherever
-	 * it is. `failing` therefore clears immediately, the search reports itself out of trouble
-	 * and hands back a path of one node.
+	 * <p>All three axes used to read {@code start.x}: a copied line with the letter left
+	 * unchanged, returning a number that was not a distance at all. With a start at x=100, y=64
+	 * the Y term alone contributed (100-64)^2 = 1296, so the result was enormous everywhere and
+	 * the question it answers — "have we got clear of the start yet?" — was satisfied by the
+	 * FIRST child expanded, wherever it was. Register C2.3.
 	 *
-	 * <p>Upstream is AbstractNodeCostSearch.java:149-154, which reads startX/startY/startZ.
-	 * This is register C2.3, and it is the mechanism behind the RW-1 report: the bot barely
-	 * moves when the target is close, because close is exactly when a one-node path looks
-	 * like an answer.
+	 * <p>Fixing this alone was measured on 2026-08-02 and reverted: nav went 12/12 -> 10/12.
+	 * That was never evidence the arithmetic was right, it was evidence that this engine's
+	 * defects mask each other — with the number honest, `failing` stays set, and the outcome
+	 * passes to the five defects that were still in place. All six land together (C5.21), which
+	 * is the only shape in which this one is meaningful.
+	 *
+	 * <p>Note for whoever reads a suite result: the value produced here reaches exactly one
+	 * consumer — the local `failing` in {@link #updateBestSoFar}, which travels up through
+	 * {@code processNodeChildren} to {@code isPathComplete(next, target, failing, world)}, and
+	 * THAT method does not read its `failing` parameter. In this engine, as it stands, this
+	 * function's result is discarded. It cannot on its own move a course either way.
 	 */
 	private static double getDistFromStartSq(Node n, Vec3d start) {
-		// ⛔ THE OBVIOUS FIX IS MEASURED AND REVERTED — 2026-08-02.
-		// Reading start.y and start.z here (i.e. actually measuring a distance) took nav from
-		// 12/12 to 10/12, nav_flat and nav_steep red. That is not an argument that the maths is
-		// right — it is wrong, plainly, and upstream reads startX/startY/startZ
-		// (AbstractNodeCostSearch.java:149-154). It is evidence for what the audit said about
-		// this engine: its defects MASK EACH OTHER. Today `failing` clears on the first child
-		// because this number is enormous everywhere; correct it alone and `failing` stays set,
-		// and the five other defects recorded as C5.21 — the missing A* relaxation guard, the
-		// absent failure timeout, the negative improvement threshold, the extra `continue`, the
-		// extra `&& !failing` — decide the outcome instead.
-		//
-		// So it goes back to the broken form until C5.21 lands as ONE piece, and the register
-		// says so. Restoring it piecemeal costs two courses and fixes nothing.
 		double xDiff = start.x - n.agent.getPos().x;
-		double yDiff = start.x - n.agent.getPos().y;
-		double zDiff = start.x - n.agent.getPos().z;
+		double yDiff = start.y - n.agent.getPos().y;
+		double zDiff = start.z - n.agent.getPos().z;
 		return xDiff * xDiff + yDiff * yDiff + zDiff * zDiff;
 	}
 	
 	private Node initializeStartNode(Node node, Vec3d target) {
         Node start = new Node(null,  Agent.of(node.agent, node.agent.input.toPathInput()), new Color(255, 255, 255), 0);
         start.agent.tick(TungstenModDataContainer.world);
-        start.combinedCost = computeHeuristic(start.agent.getPos(), start.agent.onGround, target, TARGET);
+        // h AND f, not just f (AStarPathFinder.java:55-56). estimatedCostToGoal was left at its
+        // field default of 0, which was harmless only while initializeBestHeuristics read
+        // combinedCost; it seeds the best-so-far metric now, and a seed of 0 would mean no
+        // child ever counts as an improvement and nothing is ever emitted.
+        start.estimatedCostToGoal = computeHeuristic(start.agent.getPos(), start.agent.onGround, target, TARGET);
+        start.combinedCost = start.estimatedCostToGoal;
         return start;
     }
 
 	
 	private Node initializeStartNode(PlayerEntity player, Vec3d target) {
         Node start = new Node(null, Agent.of(player), new Color(255, 255, 255), 0);
-        start.combinedCost = computeHeuristic(start.agent.getPos(), start.agent.onGround, target, TARGET);
+        start.estimatedCostToGoal = computeHeuristic(start.agent.getPos(), start.agent.onGround, target, TARGET);
+        start.combinedCost = start.estimatedCostToGoal;
         return start;
     }
 
@@ -853,7 +882,8 @@ public class PathFinder {
         agent.yaw = (float) Math.toDegrees(-Math.atan2(dx, dz));
         agent.pitch = 0;
         Node start = new Node(null, agent, new Color(255, 255, 255), 0);
-        start.combinedCost = computeHeuristic(start.agent.getPos(), start.agent.onGround, target, TARGET);
+        start.estimatedCostToGoal = computeHeuristic(start.agent.getPos(), start.agent.onGround, target, TARGET);
+        start.combinedCost = start.estimatedCostToGoal;
         return start;
     }
 
@@ -956,7 +986,10 @@ public class PathFinder {
     private AtomicDoubleArray initializeBestHeuristics(Node start) {
     	AtomicDoubleArray bestHeuristicSoFar = new AtomicDoubleArray(COEFFICIENTS.length);
         for (int i = 0; i < bestHeuristicSoFar.length(); i++) {
-            bestHeuristicSoFar.set(i, start.combinedCost / COEFFICIENTS[i]);
+            // Same metric updateBestSoFar uses, seeded with the start (AStarPathFinder.java:61).
+            // The start's g is 0, so this is just its heuristic — but written in full, because
+            // the two ends of this comparison drifting apart is how the whole thing went wrong.
+            bestHeuristicSoFar.set(i, start.estimatedCostToGoal + start.cost / COEFFICIENTS[i]);
             bestSoFar.set(i, start);
         }
         return bestHeuristicSoFar;
@@ -1129,7 +1162,18 @@ public class PathFinder {
 		}
         TungstenModDataContainer.PATHFINDER.clearParentsForBestSoFar(newStart);
         TungstenModDataContainer.PATHFINDER.closed.clear();
-        TungstenModDataContainer.PATHFINDER.initializeBestHeuristics(newStart);
+        // THE RE-SEED HAS TO BE KEPT. initializeBestHeuristics BUILDS AND RETURNS a new
+        // threshold array — the return value was dropped here, so the re-rooted search carried
+        // on comparing against the thresholds the PREVIOUS root had already driven down.
+        //
+        // That was survivable only while minimumImprovement was negative, i.e. while the
+        // thresholds were ignored. With a positive threshold the record is monotone, so after
+        // this emission no child of the new root can beat the old root's record, bestSoFar[]
+        // stays where initializeBestHeuristics just put it — at newStart, whose parent is null —
+        // and bestSoFar() skips every entry and returns empty. The bot emits ONCE and then
+        // stands still until the 20 s hard cap, on every course at the same time.
+        TungstenModDataContainer.PATHFINDER.bestHeuristicSoFar =
+                TungstenModDataContainer.PATHFINDER.initializeBestHeuristics(newStart);
         TungstenModDataContainer.PATHFINDER.openSet = new BinaryHeapOpenSet();
         TungstenModDataContainer.PATHFINDER.openSet.insert(newStart);
         TungstenModDataContainer.PATHFINDER.start = newStart;

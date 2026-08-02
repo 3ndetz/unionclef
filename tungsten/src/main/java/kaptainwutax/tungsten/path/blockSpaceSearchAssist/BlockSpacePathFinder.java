@@ -15,6 +15,7 @@ import kaptainwutax.tungsten.helpers.BlockStateChecker;
 import kaptainwutax.tungsten.helpers.DistanceCalculator;
 import kaptainwutax.tungsten.helpers.movement.StreightMovementHelper;
 import kaptainwutax.tungsten.helpers.render.RenderHelper;
+import kaptainwutax.tungsten.path.calculators.ActionCosts;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -26,6 +27,9 @@ public class BlockSpacePathFinder {
 	public static Thread thread = null;
 	protected static final double[] COEFFICIENTS = {1.5, 2, 2.5, 3, 4, 5, 10};
 	protected static final BlockNode[] bestSoFar = new BlockNode[COEFFICIENTS.length];
+	/** Tungsten's own value for upstream's MIN_IMPROVEMENT (AbstractNodeCostSearch.java:82,
+	 *  where it is 0.01). Left as it was found — it is a positive threshold doing the job the
+	 *  name says, unlike PathFinder's, which was -500. */
 	private static final double minimumImprovement = 0.21;
 	protected static final double MIN_DIST_PATH = 5;
 	
@@ -174,33 +178,59 @@ public class BlockSpacePathFinder {
         int timeCheckInterval = 1 << 6;
         long startTime = System.currentTimeMillis();
         long primaryTimeoutTime = startTime + (generateDeep ? 4800L : 480L);
-		
+        // THE OTHER HALF OF UPSTREAM'S TIMEOUT (AStarPathFinder.java:85). The primary one only
+        // fires once the search is out of trouble (`!failing`); the failure one is what stops a
+        // search that never gets anywhere. It did not exist here at all, so a start that is
+        // walled in — where no node ever gets MIN_DIST_PATH from the start, so `failing` stays
+        // set forever — ran until the open set emptied, which on the blind scan is never. That
+        // search is called SYNCHRONOUSLY by PathFinder.findBlockPath, so it took the pathfinder
+        // thread down with it.
+        // ADAPTER: upstream takes both budgets from settings (Settings.java:577,582 — 500 ms
+        // primary, 2000 ms failure). Tungsten has no such settings, so the failure budget keeps
+        // upstream's 4:1 ratio against the primary budget this search already had.
+        long failureTimeoutTime = startTime + (generateDeep ? 19200L : 1920L);
+        // Read ONCE per search, not per node and not into a static: the stand pins it at runtime
+        // (run_suite.py --pin searchHeuristicScale=<x>), and a search must not change its own
+        // yardstick halfway through — every f it has already ordered was measured with this one.
+        final double heuristicScale = kaptainwutax.tungsten.TungstenConfig.get().searchHeuristicScale;
+
         TungstenModRenderContainer.RENDERERS.clear();
 		if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) Debug.logMessage("Searchin...");
 		start = new BlockNode(start.getBlockPos(), goal, player, world);
 
-		// Near-goal completion (smartMoves): the `failing` flag forces MIN_DIST_PATH
-		// progress from the start before isPathComplete may fire. But when the goal is
-		// ALREADY within MIN_DIST_PATH (a short receding-horizon re-plan next to the
-		// target), no node ever gets 5 blocks away, so `failing` stays true forever and
-		// the search "runs out of nodes" standing next to the goal. Reaching a close goal
-		// IS completion — clear failing up front. (The legacy buggy distances hid this by
-		// flipping failing instantly; gated so the legacy blind scan is untouched.)
+		// Near-goal re-plan (smartMoves): `failing` means "this search has not got clear of its
+		// own start yet", and it decides WHICH timeout applies — the short primary one, or the
+		// long failure one. A re-plan that starts within MIN_DIST_PATH of the goal never gets
+		// 5 blocks away and so would sit on the failure budget for a search that is one hop
+		// long. It is not failing, it is nearly done: say so. (This clause also used to be what
+		// let a close goal complete at all, because isPathComplete carried a `&& !failing` that
+		// upstream does not have; that conjunct is gone and completion no longer depends on it.)
 		if (kaptainwutax.tungsten.TungstenConfig.get().smartMoves
 				&& start.getPos().squaredDistanceTo(target) <= MIN_DIST_PATH * MIN_DIST_PATH) {
 			failing = false;
 		}
 
+		BinaryHeapOpenSet openSet = new BinaryHeapOpenSet();
+		Set<BlockNode> closed = new HashSet<>();
+		// Block centre. Moved above the start's heuristic on purpose: the seed and the children
+		// must be measured against the SAME target, and now that the heuristic is in cost units
+		// half a block of disagreement is worth several ticks of it.
+		target = target.subtract(0.5, 0, 0.5);
+
+		// THE START IS THE ONE NODE WITH A KNOWN g (AStarPathFinder.java:55-56). Every node is
+		// born at COST_INF so that a relaxation can only ever lower it; without this line the
+		// start's g is COST_INF too and every path's cost begins at infinity.
+		start.cost = 0;
+		start.estimatedCostToGoal = computeHeuristic(start.getPos(), target, world, heuristicScale);
+		start.combinedCost = start.estimatedCostToGoal;
+
 		double[] bestHeuristicSoFar = new double[COEFFICIENTS.length];//keep track of the best node by the metric of (estimatedCostToGoal + cost / COEFFICIENTS[i])
 		for (int i = 0; i < COEFFICIENTS.length; i++) {
-            bestHeuristicSoFar[i] = computeHeuristic(start.getPos(), target, world);
+            bestHeuristicSoFar[i] = start.estimatedCostToGoal;   // AStarPathFinder.java:61
             bestSoFar[i] = start;
         }
 
-		BinaryHeapOpenSet openSet = new BinaryHeapOpenSet();
-		Set<BlockNode> closed = new HashSet<>();
 		openSet.insert(start);
-		target = target.subtract(0.5, 0, 0.5);
 		while(!openSet.isEmpty()) {
 			if (TungstenModDataContainer.PATHFINDER.stop.get()) {
 				RenderHelper.clearRenderers();
@@ -209,7 +239,7 @@ public class BlockSpacePathFinder {
 			TungstenModRenderContainer.RENDERERS.clear();
 			if ((numNodes & (timeCheckInterval - 1)) == 0) { // only call this once every 64 nodes (about half a millisecond)
                 long now = System.currentTimeMillis(); // since nanoTime is slow on windows (takes many microseconds)
-                if ((!failing && now - primaryTimeoutTime >= 0)) {
+                if (now - failureTimeoutTime >= 0 || (!failing && now - primaryTimeoutTime >= 0)) {
                     break;
                 }
             }
@@ -224,7 +254,7 @@ public class BlockSpacePathFinder {
 			if (closed.contains(next)) continue;
 			
 			closed.add(next);
-			if(isPathComplete(next, target, failing)) {
+			if(isPathComplete(next, target)) {
 				TungstenModRenderContainer.RENDERERS.clear();
 				List<BlockNode> path = generatePath(next, world);
 
@@ -242,22 +272,40 @@ public class BlockSpacePathFinder {
 				if (TungstenModDataContainer.PATHFINDER.stop.get()) return Optional.empty();
 //				if (closed.contains(child)) continue;
 
+				// g OF THE PARENT PLUS THE PRICE OF THIS MOVE (AStarPathFinder.java:143). It read
+				// `child.cost + 1`: the wrong receiver, and the move's real price replaced by a
+				// literal. g therefore never accumulated — f was h + 1, which is greedy
+				// best-first wearing A*'s clothes, and every number in ActionCosts and
+				// SmartMoves was dead weight the moment it was computed.
+				double tentativeCost = next.cost + edgeCost(child, world);
 
-				updateNode(next, child, target, world);
+				// ADAPTER: there is no getNodeAtPosition here (AbstractNodeCostSearch.java:169-176).
+				// A BlockNode is a per-EDGE object in tungsten — it carries the move's own plan
+				// (toBreak / toPlace, isDoingNeo + neoSide, isDoingCornerJump), so a single
+				// canonical node per position would mix one parent's move into another parent's
+				// route. Duplicate states are resolved lazily instead, at the pop above (the
+				// `closed` test): the first time a position leaves the heap it does so with the
+				// lowest f among its duplicates, which is the same answer for a consistent
+				// heuristic. The guard below is kept in upstream's shape regardless — it is free,
+				// it is where a node map would plug in, and half-conditions quietly dropped are
+				// this engine's signature failure.
+				if (child.cost - tentativeCost > minimumImprovement) {
+					updateNode(next, child, tentativeCost, target, world, heuristicScale);
 
-                if (child.isOpen()) {
-                    openSet.update(child);
-                } else {
-                    openSet.insert(child);//dont double count, dont insert into open set if it's already there
-                }
+					if (child.isOpen()) {
+						openSet.update(child);
+					} else {
+						openSet.insert(child);//dont double count, dont insert into open set if it's already there
+					}
 
-				for (int i = 0; i < COEFFICIENTS.length; i++) {
-					double heuristic = child.estimatedCostToGoal + child.cost / COEFFICIENTS[i];
-					if (bestHeuristicSoFar[i] - heuristic > minimumImprovement) {
-						bestHeuristicSoFar[i] = heuristic;
-						bestSoFar[i] = child;
-						if (failing && getDistFromStartSq(child, start.getPos()) > MIN_DIST_PATH * MIN_DIST_PATH) {
-							failing = false;
+					for (int i = 0; i < COEFFICIENTS.length; i++) {
+						double heuristic = child.estimatedCostToGoal + child.cost / COEFFICIENTS[i];
+						if (bestHeuristicSoFar[i] - heuristic > minimumImprovement) {
+							bestHeuristicSoFar[i] = heuristic;
+							bestSoFar[i] = child;
+							if (failing && getDistFromStartSq(child, start.getPos()) > MIN_DIST_PATH * MIN_DIST_PATH) {
+								failing = false;
+							}
 						}
 					}
 				}
@@ -316,9 +364,13 @@ public class BlockSpacePathFinder {
                 continue;
             }
             double dist = getDistFromStartSq(bestSoFar[i], startNode.getPos());
+            // NO `continue` HERE — upstream records the running maximum and then falls straight
+            // into the return check (AbstractNodeCostSearch.java:198-201). The `continue` this
+            // had meant a coefficient that became the new furthest never got asked whether it
+            // was far enough to return, and i=0 — the least-detour coefficient, the one you
+            // actually want — becomes the furthest every single time.
             if (dist > bestDist) {
                 bestDist = dist;
-                continue;
             }
             if (dist > MIN_DIST_PATH * MIN_DIST_PATH) { // square the comparison since distFromStartSq is squared
                 BlockNode n = bestSoFar[i];
@@ -329,7 +381,18 @@ public class BlockSpacePathFinder {
         return Optional.empty();
     }
 	
-	private static double computeHeuristic(Vec3d position, Vec3d target, WorldView world) {
+	/**
+	 * Distance to the goal, in the same TICK unit the edges are priced in.
+	 *
+	 * <p>{@code heuristicScale} converts blocks to ticks. It has to: every edge cost in this
+	 * search is an ActionCosts tick figure and this function measures blocks, so without the
+	 * conversion f = g + h adds two different units and means nothing. The value is a live
+	 * setting rather than a constant because it decides the search's whole character (broad and
+	 * optimal below the walk price, straight-at-the-goal above it) and because the first attempt
+	 * at this repair guessed it — see TungstenConfig#searchHeuristicScale for that measurement.
+	 * It is passed down rather than read here so one search uses one yardstick throughout.
+	 */
+	private static double computeHeuristic(Vec3d position, Vec3d target, WorldView world, double heuristicScale) {
 		double xzMultiplier = 1/*.2*/;
 	    double dx = (target.x - position.x)*xzMultiplier;
 	    double dy = 0;
@@ -339,28 +402,44 @@ public class BlockSpacePathFinder {
 	    } else if (DistanceCalculator.getHorizontalManhattanDistance(position, target) < 32) {
 	    	dy = (target.y - position.y)*1.5;
 	    }
-	    return (Math.sqrt(dx * dx + dy * dy + dz * dz)) /** 3*/;
+	    return (Math.sqrt(dx * dx + dy * dy + dz * dz)) * heuristicScale;
 	}
-	
-	private static void updateNode(BlockNode current, BlockNode child, Vec3d target, WorldView world) {
-	    Vec3d childPos = child.getPos();
-	    double tentativeCost = child.cost + 1; // Assuming uniform cost for each step
+
+	/**
+	 * The price of ONE move into {@code child} — upstream's {@code res.cost}
+	 * (AStarPathFinder.java:120), which the move generator has already worked out and parked on
+	 * the node ({@link BlockNode#actionCost}: WALK / JUMP / PARKOUR from SmartMoves or the blind
+	 * scan, plus whatever mining or bridging that particular move committed to).
+	 *
+	 * <p>Water is tungsten's own surcharge and is kept exactly as tuned — as a MULTIPLE of a walk
+	 * step, which is what it was: it was written against the old implicit "1 per step", so 1.8
+	 * meant "almost three times a step" and 5.8 meant "nearly seven". Converting rather than
+	 * re-typing the numbers keeps the water landscape where it was measured.
+	 */
+	private static double edgeCost(BlockNode child, WorldView world) {
+	    double cost = child.actionCost;
 
 		if (BlockStateChecker.isAnyWater(child.getBlockState(world))) {
-			tentativeCost += 1.8;
+			cost += 1.8 * ActionCosts.WALK_ONE_BLOCK_COST;
 		}
 		if (BlockStateChecker.isAnyWater(world.getBlockState(child.getBlockPos().up()))) {
-			tentativeCost += 5.8;
+			cost += 5.8 * ActionCosts.WALK_ONE_BLOCK_COST;
 		}
 
-//	    tentativeCost += BlockStateChecker.isAnyWater(TungstenMod.mc.world.getBlockState(child.getBlockPos())) ? 50 : 0; // Assuming uniform cost for each step
+//	    cost += BlockStateChecker.isAnyWater(TungstenMod.mc.world.getBlockState(child.getBlockPos())) ? 50 : 0;
 
-	    double estimatedCostToGoal = computeHeuristic(childPos, target, world);
+	    return cost;
+	}
+
+	/** Upstream's relaxation body, run only once the guard has passed (AStarPathFinder.java:145-147). */
+	private static void updateNode(BlockNode current, BlockNode child, double tentativeCost, Vec3d target,
+			WorldView world, double heuristicScale) {
+	    double estimatedCostToGoal = computeHeuristic(child.getPos(), target, world, heuristicScale);
 
 	    child.previous = current;
 	    child.cost = tentativeCost;
 	    child.estimatedCostToGoal = estimatedCostToGoal;
-	    child.combinedCost = child.cost + estimatedCostToGoal;
+	    child.combinedCost = tentativeCost + estimatedCostToGoal;
 	}
 	
 	private static double getDistFromStartSq(BlockNode n, Vec3d start) {
@@ -376,8 +455,15 @@ public class BlockSpacePathFinder {
         return xDiff * xDiff + yDiff * yDiff + zDiff * zDiff;
     }
 
-	private static boolean isPathComplete(BlockNode node, Vec3d target, boolean failing) {
-        return node.getPos().squaredDistanceTo(target) < 1.0D && !failing;
+	/**
+	 * Standing on the goal IS the answer — upstream asks nothing else
+	 * (AStarPathFinder.java:97, {@code goal.isInGoal(...)}), and its `failing` flag gates the
+	 * TIMEOUT and nothing more. This carried an extra {@code && !failing}, so a search that had
+	 * not yet got MIN_DIST_PATH clear of its own start would pop the goal, decline to recognise
+	 * it, and keep going until it ran out of nodes next to the thing it was sent to.
+	 */
+	private static boolean isPathComplete(BlockNode node, Vec3d target) {
+        return node.getPos().squaredDistanceTo(target) < 1.0D;
     }
 	
 	private static List<BlockNode> generatePath(BlockNode node, WorldView world) {
