@@ -378,13 +378,20 @@ public class CombatController {
                       net.minecraft.world.WorldView world, double dist) {
         out.active = true;
         out.forward = false;
-        out.back = dist < KITE_DISTANCE && dirSafe(player, world, -1, 0);
+        // A WALL AT YOUR BACK IS NOT A RETREAT. dirSafe answers "is there floor that way", which
+        // is the right question for a ledge and the wrong one for a wall: pressed against one the
+        // bot keeps holding BACK, goes nowhere, and becomes a stationary target at exactly the
+        // moment it can least afford to be one. These arenas are walled, so this is not a corner
+        // case here — and neither is a cave, a ravine wall or a doorway anywhere else.
+        boolean penned = player.horizontalCollision;
+        out.back = dist < KITE_DISTANCE && !penned && dirSafe(player, world, -1, 0);
         out.sprint = out.back;
-        // If backing off is unsafe, strafe instead of standing still — the one thing that is
-        // certainly wrong at low HP is remaining a stationary target.
+        // Blocked or unsafe behind: run ALONG the obstacle instead of into it. Standing still is
+        // the one option that is certainly wrong.
         if (!out.back && dist < KITE_DISTANCE) {
             out.left = dirSafe(player, world, 0, -1);
             out.right = !out.left && dirSafe(player, world, 0, 1);
+            out.sprint = out.left || out.right;
         }
     }
 
