@@ -45,6 +45,21 @@ public class TungstenConfig {
 
     /** Blocks of drift before triggering correction or executor stop. */
     public double driftThreshold = 0.8;
+    /**
+     * Extra drift tolerated per tick of replay, blocks.
+     *
+     * <p>The threshold above is an ABSOLUTE number, but the quantity it guards GROWS: every
+     * replayed tick adds a little integration error between the simulated chain and the real
+     * player, and at this stand's ~10 fps each tick covers twice the ground it was tuned for.
+     * A fixed bound therefore means "the longer the path runs correctly, the more likely it is
+     * to be thrown away". Measured on a live @gamer run: {@code Path stopped: drift 0.830 blocks
+     * (threshold 0.8) at tick 14} — a path abandoned for three centimetres, fourteen ticks in.
+     *
+     * <p>The allowance grows with the tick index so the guarantee at the START is unchanged —
+     * the historical failure this check exists for is {@code drift 1.723 at tick 1}, which still
+     * aborts — while a path that has been tracking well for a while is no longer punished for it.
+     */
+    public double driftPerTick = 0.05;
 
     /** If true: enable trail-following when target escapes (dist>20).
      *  If false: always pathfind directly to target position. */

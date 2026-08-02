@@ -1610,11 +1610,19 @@ public class Agent {
                 } else {
                     // Our default behavior: log + stop path on large drift
                     double drift = player.getEntityPos().distanceTo(new Vec3d(this.posX, this.posY, this.posZ));
-                    if (drift > kaptainwutax.tungsten.TungstenConfig.get().driftThreshold) {
+                    // THE BOUND GROWS BECAUSE THE ERROR GROWS. Each replayed tick adds a little
+                    // integration error, so a fixed bound means the longer a path runs correctly
+                    // the likelier it is to be thrown away. Measured on a live @gamer run:
+                    // "drift 0.830 (threshold 0.8) at tick 14" — a path abandoned for three
+                    // centimetres. The tick-1 guarantee this check exists for is untouched.
+                    int replayTick = Math.max(0, TungstenModDataContainer.EXECUTOR.getCurrentTick());
+                    double allowed = kaptainwutax.tungsten.TungstenConfig.get().driftThreshold
+                            + kaptainwutax.tungsten.TungstenConfig.get().driftPerTick * replayTick;
+                    if (drift > allowed) {
                         Debug.logMessage(String.format(
                             "§c[Tungsten] Path stopped: drift %.3f blocks (threshold %.1f) at tick %d. " +
                             "Expected (%.2f, %.2f, %.2f), actual (%.2f, %.2f, %.2f)",
-                            drift, kaptainwutax.tungsten.TungstenConfig.get().driftThreshold,
+                            drift, allowed,
                             TungstenModDataContainer.EXECUTOR.getCurrentTick(),
                             this.posX, this.posY, this.posZ,
                             player.getX(), player.getY(), player.getZ()));
