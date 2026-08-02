@@ -30,6 +30,10 @@ public class CombatController {
     /** Below this we are inside the opponent's swing and lose angle — drift back out. */
     public static final double TOO_CLOSE_DISTANCE = TriggerBot.REACH - 1.4; // 1.6
 
+    /** Ground walking speed the combat mover actually produces, blocks per tick. Vanilla walk is
+     *  4.317 b/s = 0.216 b/t; this is the yardstick for "how long is the road back in". */
+    public static final double CLOSE_SPEED_PER_TICK = 0.216;
+
     /** Half a bar. Below it a melee exchange is a losing trade and the bot breaks contact. */
     public static final double LOW_HP = 10.0;
     /** Distance a hurt bot holds — clear of every melee reach, and the range the bench's bow
@@ -232,7 +236,23 @@ public class CombatController {
         double backOffAt = TOO_CLOSE_DISTANCE;
         if (kaptainwutax.tungsten.TungstenConfig.get().combatReachControl) {
             float cd = player.getAttackCooldownProgress(0f);
-            boolean armed = cd >= TriggerBot.COOLDOWN_CRIT;
+            // START CLOSING BEFORE THE SWING IS READY, BY EXACTLY THE TRAVEL TIME.
+            // Standing off until `armed` and only THEN walking back in spends the first ticks of
+            // every ready swing on the road: the stand-off sits a full block outside
+            // STRIKE_DISTANCE, which is about five ticks of walking, while the last stretch of
+            // cooldown is two. Measured against the baseline engine that showed up as a trade
+            // rather than a win — 4:4, 4:6, 4:4, 3:4, margin -0.75: fewer free hits taken, and
+            // fewer landed, because the bot arrived late to its own swing.
+            //
+            // So the decision is not "is the swing ready" but "is it ready by the time I get
+            // there". Both sides in ticks, from what the game already tells us: the cooldown's
+            // full period from the attack-speed attribute, and the distance to cover at the
+            // walk speed this controller actually produces.
+            double cdTicks = 20.0 / Math.max(0.1,
+                    player.getAttributeValue(net.minecraft.entity.attribute.EntityAttributes.ATTACK_SPEED));
+            double ticksToReady = Math.max(0.0, (TriggerBot.COOLDOWN_CRIT - cd) * cdTicks);
+            double ticksToClose = Math.max(0.0, (dist - STRIKE_DISTANCE) / CLOSE_SPEED_PER_TICK);
+            boolean armed = cd >= TriggerBot.COOLDOWN_CRIT || ticksToClose >= ticksToReady;
             // HURT ⇒ STOP TRADING. This is the whole of tungsten's health awareness, and until
             // now there was none: getHealth() was read NOWHERE in the module, and SafetySystem's
             // ESCAPE stage is declared, handled and unreachable ("TODO: DELICATE_BATTLE — low HP
