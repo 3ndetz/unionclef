@@ -20,6 +20,9 @@ class MeleeBasic(Scenario):
     """Mutual close combat in tall grass — the original freeze case, upgraded
     to a target that fights back (RW-1)."""
     id = "melee_basic"
+    # The opponent fights on the BASELINE engine so this duel measures our changes
+    # rather than cancelling them — see Scenario.victim_settings.
+    victim_settings = {"combatReachControl": "false"}
     duration = 60
     settings = {"combatMovementsEnabled": "true", "verboseDebugLogging": "true"}
     bot_kit = KIT_SWORD
@@ -89,6 +92,9 @@ class NarrowBridgeDuel(Scenario):
     """Two islands + 1-wide bridge over void (bedwars walkway). Spawns force
     the fight ONTO the bridge."""
     id = "narrow_bridge_duel"
+    # The opponent fights on the BASELINE engine so this duel measures our changes
+    # rather than cancelling them — see Scenario.victim_settings.
+    victim_settings = {"combatReachControl": "false"}
     duration = 90
     settings = {"combatMovementsEnabled": "true"}
     bot_kit = KIT_SWORD
@@ -556,6 +562,9 @@ class AllRound(Scenario):
     drive): shootArrowAt while the closing enemy is far, punk once he is
     inside 10 blocks. Benches both halves + the switch."""
     id = "allround"
+    # The opponent fights on the BASELINE engine so this duel measures our changes
+    # rather than cancelling them — see Scenario.victim_settings.
+    victim_settings = {"combatReachControl": "false"}
     duration = 120
     settings = {"combatMovementsEnabled": "true"}
     # slot 0 = bow (shootArrowAt needs it IN HAND), slot 1 = sword, + arrows

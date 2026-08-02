@@ -303,6 +303,14 @@ class Scenario:
     duration = 60
     needs_victim = True
     settings = {}              # ;settings pins for the bot
+    # PINS FOR THE OPPONENT — the only way a MUTUAL duel can measure anything.
+    # melee_basic, narrow_bridge_duel and allround all put this jar against ITSELF with the
+    # same kit, so every criterion is symmetric and cancels: over 66 recorded melee_basic runs
+    # the mean margin is +0.03 kills, i.e. a dead heat by construction, and the course's green
+    # comes from draws counting as wins. No improvement to the bot can fix that, because the
+    # improvement lands on the opponent too. Pinning the opponent to the BASELINE engine makes
+    # the duel "current versus baseline", which is what a regression suite should be asking.
+    victim_settings = {}
     bot_kit = []
     victim_kit = []
     arena_half = 40

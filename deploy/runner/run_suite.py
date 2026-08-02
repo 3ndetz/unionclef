@@ -183,6 +183,17 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
         rcon.reset_kd([BOT, VICTIM])
         if scn.settings:
             bot.pin_settings(scn.settings)
+        if scn.victim_settings and scn.needs_victim:
+            # Applied over py4j, verified, for the same reason --pin is: a chat ";settings"
+            # lands a tick or more later and a duel that started against the wrong engine is
+            # not a measurement.
+            for k, v in scn.victim_settings.items():
+                ok, got = victim.py.try_call("tungstenSetting", k, str(v))
+                print(f"  VICTIM PIN {got if ok else 'UNSET ' + k}", flush=True)
+                if not ok or str(got) != f"{k}={v}":
+                    raise SystemExit(
+                        f"victim pin {k}={v} did not apply (got {got!r}) — a mutual duel with "
+                        f"the opponent on the wrong engine measures nothing.")
         # ZERO THE CHAT RING HERE, not earlier: everything above (config reset, pins) logs into
         # it and belongs to the setup, not to the measurement.
         # A COUNTER IS ONLY A MEASUREMENT IF YOU KNOW ITS ZERO. Without this every number in
