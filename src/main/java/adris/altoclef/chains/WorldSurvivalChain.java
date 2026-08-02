@@ -16,7 +16,8 @@ import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.multiversion.DimensionVer;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.time.TimerGame;
-import baritone.api.utils.Rotation;
+import kaptainwutax.tungsten.path.movements.Rotation;
+import kaptainwutax.tungsten.util.WindMouseRotation;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.Block;
@@ -105,9 +106,12 @@ public class WorldSurvivalChain extends SingleTaskChain {
                     BlockPos targetWaterPos = mod.getPlayer().getBlockPos();
                     if (WorldHelper.isSolidBlock(targetWaterPos.down()) && WorldHelper.canPlace(targetWaterPos)) {
                         Optional<Rotation> reach = LookHelper.getReach(targetWaterPos.down(), Direction.UP);
-                        if (reach.isPresent() && mod.getClientBaritone() != null) {
-                            mod.getClientBaritone().getLookBehavior().updateTarget(reach.get(), true);
-                            if (mod.getClientBaritone().getPlayerContext().isLookingAt(targetWaterPos.down())) {
+                        if (reach.isPresent()) {
+                            // Ask the camera driver for the aim and place the water only when the
+                            // crosshair has arrived — same request-then-poll shape baritone's
+                            // updateTarget gave this branch, now driven by tungsten.
+                            WindMouseRotation.INSTANCE.setTarget(reach.get().getYaw(), reach.get().getPitch());
+                            if (LookHelper.isLookingAt(mod, targetWaterPos.down())) {
                                 if (mod.getSlotHandler().forceEquipItem(Items.WATER_BUCKET)) {
                                     _extinguishWaterPosition = targetWaterPos;
                                     mod.getInputControls().tryPress(Input.CLICK_RIGHT);

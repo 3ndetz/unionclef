@@ -6,7 +6,7 @@ import adris.altoclef.tasks.movement.SafeRandomShimmyTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.time.TimerGame;
-import baritone.api.utils.Rotation;
+import kaptainwutax.tungsten.path.movements.Rotation;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;

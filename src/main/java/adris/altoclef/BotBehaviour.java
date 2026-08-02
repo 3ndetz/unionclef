@@ -5,7 +5,7 @@ import adris.altoclef.util.slots.Slot;
 import baritone.altoclef.AltoClefSettings;
 import baritone.api.Settings;
 import baritone.api.utils.RayTraceUtils;
-import baritone.api.utils.Rotation;
+import kaptainwutax.tungsten.path.movements.Rotation;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
@@ -486,8 +486,14 @@ public class BotBehaviour {
             sa.setFlowingWaterPass(_allowWalkThroughFlowingWater);
             sa.allowSwimThroughLava(swimThroughLava);
 
-            // Extra / hard coded
+            // Extra / hard coded.
+            // Mirrored into tungsten: LookHelper's reach tests and isLookingAt() now raytrace
+            // through RotationHelper, which keeps its own copy of this flag. Without the mirror,
+            // "let me aim at a fluid" (bucket pickup, MLG water recovery, ClearLiquidTask) would
+            // set the baritone flag and then raytrace with the tungsten one still on NONE — water
+            // would stay invisible to the aim and the click would never be armed.
             RayTraceUtils.fluidHandling = rayFluidHandling;
+            kaptainwutax.tungsten.path.movements.RotationHelper.fluidHandling = rayFluidHandling;
 
             // Minecraft
             MinecraftClient.getInstance().options.pauseOnLostFocus = pauseOnLostFocus;

@@ -10,9 +10,8 @@ import adris.altoclef.util.helpers.*;
 import adris.altoclef.util.serialization.ItemDeserializer;
 import adris.altoclef.util.serialization.ItemSerializer;
 import baritone.Baritone;
-import baritone.api.utils.IPlayerContext;
-import baritone.api.utils.Rotation;
-import baritone.api.utils.RotationUtils;
+import kaptainwutax.tungsten.path.movements.Rotation;
+import kaptainwutax.tungsten.path.movements.RotationHelper;
 import kaptainwutax.tungsten.path.movements.Input;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -190,8 +189,11 @@ public class MLGBucketTask extends Task {
             return null;
         }
 
-        IPlayerContext ctx = mod.getClientBaritone().getPlayerContext();
-        Optional<Rotation> reachable = RotationUtils.reachableCenter(ctx.player(), toPlaceOn, ctx.playerController().getBlockReachDistance(), false);
+        // Aim at the centre of the block's COLLISION shape, not the cell centre — for a slab or a
+        // fence those differ, and clutching onto one needs the shape. Same call baritone made,
+        // ported: RotationHelper.blockReachDistance is 4.5 clamped against the vanilla attribute.
+        ClientPlayerEntity clutchPlayer = mod.getPlayer();
+        Optional<Rotation> reachable = RotationHelper.reachableCenter(clutchPlayer, toPlaceOn, RotationHelper.blockReachDistance(clutchPlayer), false);
         if (reachable.isPresent()) {
             setDebugState("Performing MLG");
             LookHelper.lookAt(reachable.get());
@@ -210,7 +212,7 @@ public class MLGBucketTask extends Task {
             }
             // Try to capture tall grass as well...
             BlockPos[] toCheckLook = new BlockPos[]{toPlaceOn, toPlaceOn.up(), toPlaceOn.up(2)};
-            if (hasClutch && Arrays.stream(toCheckLook).anyMatch(check -> mod.getClientBaritone().getPlayerContext().isLookingAt(check))) {
+            if (hasClutch && Arrays.stream(toCheckLook).anyMatch(check -> LookHelper.isLookingAt(mod, check))) {
                 Debug.logMessage("HIT: " + willLandIn);
                 placedPos = willLandIn;
                 mod.getInputControls().tryPress(Input.CLICK_RIGHT);

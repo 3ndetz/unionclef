@@ -14,7 +14,7 @@ import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.agent.Pipeline;
 import baritone.api.pathing.calc.IPath;
 import baritone.api.utils.BetterBlockPos;
-import baritone.api.utils.Rotation;
+import kaptainwutax.tungsten.path.movements.Rotation;
 
 import java.util.*;
 import java.util.concurrent.*;

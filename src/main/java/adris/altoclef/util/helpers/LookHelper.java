@@ -3,11 +3,9 @@ package adris.altoclef.util.helpers;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.util.slots.Slot;
-import baritone.api.BaritoneAPI;
-import baritone.api.utils.IPlayerContext;
-import baritone.api.utils.RayTraceUtils;
-import baritone.api.utils.Rotation;
-import baritone.api.utils.RotationUtils;
+import kaptainwutax.tungsten.path.movements.Rotation;
+import kaptainwutax.tungsten.path.movements.RotationHelper;
+import kaptainwutax.tungsten.util.WindMouseRotation;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
@@ -29,6 +27,16 @@ import java.util.Optional;
 
 /**
  * Helper functions to interpret and change our player's look direction
+ *
+ * <p>The aim maths live in tungsten's {@link RotationHelper}, which is the line-for-line port of
+ * baritone's {@code RotationUtils} / {@code RayTraceUtils} / {@code IPlayerContext} accessors, so
+ * every reach test and every rotation computed here is the same number it always was. The value
+ * type is tungsten's {@link Rotation} — a verbatim copy of baritone's, same constructor order
+ * (yaw, pitch), same helpers.
+ *
+ * <p>The one behaviour that did NOT survive the move is baritone's {@code
+ * LookBehavior.updateTarget}: see {@link #lookAt(AltoClef, Rotation, boolean)} for why it was a
+ * no-op-with-a-side-effect in this mod's configuration and what replaced it.
  */
 public interface LookHelper {
     /**
@@ -39,8 +47,16 @@ public interface LookHelper {
      * @return an optional rotation if reachable, otherwise empty
      */
     static Optional<Rotation> getReach(BlockPos target, Direction side) {
-        // Get the player context
-        IPlayerContext context = BaritoneAPI.getProvider().getPrimaryBaritone().getPlayerContext();
+        // The reach test only ever needed the player and a reach distance; the baritone player
+        // context this used to go through was just a wrapper around mc.player. RotationHelper's
+        // blockReachDistance() is the same 4.5 default, clamped against the vanilla attribute so a
+        // server handing out a longer reach can't make this gate optimistic.
+        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        if (player == null) {
+            // The old path would NPE here. Nothing is reachable without a player, so say so.
+            return Optional.empty();
+        }
+        double blockReachDistance = RotationHelper.blockReachDistance(player);
 
         // Declare the reachable rotation variable
         Optional<Rotation> reachableRotation;
@@ -48,7 +64,7 @@ public interface LookHelper {
         // Check if the side is null
         if (side == null) {
             // Calculate the reachable rotation from the player's position to the target position
-            reachableRotation = RotationUtils.reachable(context.player(), target, context.playerController().getBlockReachDistance());
+            reachableRotation = RotationHelper.reachable(player, target, blockReachDistance);
         } else {
             // Calculate the center offset vector based on the side direction
             Vec3i sideVector = side.getVector();
@@ -59,13 +75,13 @@ public interface LookHelper {
             Vec3d sidePoint = centerOffset.add(target.getX(), target.getY(), target.getZ());
 
             // Calculate the reachable rotation from the player's position to the side point
-            reachableRotation = RotationUtils.reachableOffset(context.player(), target, sidePoint,
-                    context.playerController().getBlockReachDistance(), false);
+            reachableRotation = RotationHelper.reachableOffset(player, target, sidePoint,
+                    blockReachDistance, false);
 
             // Check if the reachable rotation is present
             if (reachableRotation.isPresent()) {
                 // Calculate the camera position and vector to player position
-                Vec3d cameraPos = context.player().getCameraPosVec(1.0F);
+                Vec3d cameraPos = player.getCameraPosVec(1.0F);
                 Vec3d vecToPlayerPos = cameraPos.subtract(sidePoint);
 
                 // Calculate the dot product between the vector to player position and the side vector
@@ -247,11 +263,12 @@ public interface LookHelper {
     }
 
     static Vec3d calcLookDirectionFromRotation(Rotation rotation) {
-        float flatZ = MathHelper.cos(-rotation.getYaw() * 0.017453292F - 3.1415927F);
-        float flatX = MathHelper.sin(-rotation.getYaw() * 0.017453292F - 3.1415927F);
-        float pitchBase = -MathHelper.cos(-rotation.getPitch() * 0.017453292F);
-        float pitchHeight = MathHelper.sin(-rotation.getPitch() * 0.017453292F);
-        return new Vec3d(flatX * pitchBase, pitchHeight, flatZ * pitchBase);
+        // Was an inlined copy of baritone's RotationUtils.calcLookDirectionFromRotation with the
+        // constants written out (0.017453292F is DEG_TO_RAD, 3.1415927F is pi). Delegated so the
+        // raytraces done here and the ones RotationHelper does inside reachable() cannot drift
+        // apart — a direction vector that disagrees with the reach gate is invisible until an
+        // aimed click misses.
+        return RotationHelper.calcLookDirectionFromRotation(rotation);
     }
 
     /**
@@ -343,7 +360,9 @@ public interface LookHelper {
 
         // If the entity is a player and is sneaking, infer the sneaking eye position
         if (isPlayerSneaking) {
-            return RayTraceUtils.inferSneakingEyePosition(entity);
+            // Same hardcoded 1.27 sneaking eye as baritone's RayTraceUtils — deliberately NOT the
+            // live pose height, so the answer is about the tick the bot will be sneaking in.
+            return RotationHelper.inferSneakingEyePosition(entity);
         } else {
             // Otherwise, return the default camera position of the entity
             return entity.getCameraPosVec(1.0F);
@@ -357,11 +376,9 @@ public interface LookHelper {
      * @return The camera position vector.
      */
     static Vec3d getCameraPos(AltoClef mod) {
-        // Get the player context from the Baritone API
-        IPlayerContext playerContext = BaritoneAPI.getProvider().getPrimaryBaritone().getPlayerContext();
-
-        // Get the camera position vector from the player context
-        return playerContext.player().getCameraPosVec(1);
+        // The baritone player context this used to walk through resolved to mc.player, which is
+        // the same object mod.getPlayer() returns.
+        return mod.getPlayer().getCameraPosVec(1);
     }
 
     /**
@@ -496,22 +513,49 @@ public interface LookHelper {
      * @return True if the player is looking at the given block position, false otherwise.
      */
     static boolean isLookingAt(AltoClef mod, BlockPos pos) {
-        return mod.getClientBaritone().getPlayerContext().isLookingAt(pos);
+        // A LIVE raytrace along the player's current rotations, not mc.crosshairTarget: the cached
+        // crosshair is a tick or two stale at low framerates, and callers use this as the "safe to
+        // click now" gate. RotationHelper.isLookingAt is baritone's IPlayerContext.isLookingAt
+        // verbatim (getSelectedBlock().equals(Optional.of(pos))), including honouring the current
+        // fluid-handling mode set by BotBehaviour.
+        return RotationHelper.isLookingAt(mod.getPlayer(), pos);
     }
 
     /**
-     * Updates the player's look direction and rotation.
+     * Snaps the player's look direction to a rotation, immediately. Callers rely on that: the
+     * usual shape is {@code lookAt(...)} and then a click in the SAME tick, so this must not
+     * become a request that arrives a few frames later.
+     *
+     * <p>WHY THE {@code withBaritone} FLAG NO LONGER DOES ANYTHING. It used to add
+     * {@code getLookBehavior().updateTarget(rotation, true)} on top of the snap below. In THIS
+     * mod's configuration that bought nothing and cost accuracy:
+     * <ul>
+     *   <li>{@code AltoClef.initializeBaritoneSettings} sets {@code freeLook = false}, so the
+     *       target resolved to CLIENT mode — one tick later baritone re-applied the very rotation
+     *       this method had already written, then dropped the target. A one-tick echo.</li>
+     *   <li>Every altoclef call site passed {@code blockInteract = true}, which made LookBehavior
+     *       snap its render smoother to the same value, so there was no visual smoothing either.</li>
+     *   <li>The echo went through {@code AimProcessor.peekRotation}, whose {@code nudgeToLevel}
+     *       fires when the requested pitch equals the current pitch — which the snap below makes
+     *       true by construction. So the rotation actually SENT drifted 1 degree toward level
+     *       whenever the pitch was outside [-20, 10]. Aiming straight down for an MLG went out as
+     *       89, not 90. That was a bug riding on the coupling, not a feature.</li>
+     * </ul>
+     *
+     * <p>Tungsten's {@link WindMouseRotation} is deliberately NOT armed here. It is a LEASE — it
+     * holds a target for 600 ms and keeps steering the camera back to it every render frame —
+     * whereas baritone's target lasted exactly one tick. Arming it from a snap would hand this
+     * helper an ownership it never had, and it would fight {@link #updateWindMouseRotation}, which
+     * drives the combat aim through {@link #lookAtForced} on the same camera. Use
+     * {@code WindMouseRotation.INSTANCE.setTarget(...)} directly where a lease is what you want
+     * (request an aim, poll {@link #isLookingAt(AltoClef, BlockPos)}, then click).
      *
      * @param mod      The instance of AltoClef.
      * @param rotation The desired rotation to look at.
-     * @param withBaritone Whether to use Baritone to look.
+     * @param withBaritone Retained so the ~50 call sites keep compiling; inert since the
+     *                     baritone/shredder look path was cut. Both values snap.
      */
     static void lookAt(AltoClef mod, Rotation rotation, boolean withBaritone) {
-        if (withBaritone) {
-            // Update the target rotation in the LookBehavior
-            mod.getClientBaritone().getLookBehavior().updateTarget(rotation, true);
-        }
-
         // Set the player's yaw and pitch
         mod.getPlayer().setYaw(rotation.getYaw());
         mod.getPlayer().setPitch(rotation.getPitch());
@@ -523,10 +567,8 @@ public interface LookHelper {
      * @param rotation The desired rotation to look at.
      */
     static void lookAt(Rotation rotation) {
-        // Update the target rotation in the LookBehavior
-        AltoClef.getInstance().getClientBaritone().getLookBehavior().updateTarget(rotation, true);
-
-        // Set the player's yaw and pitch
+        // Snap only — see lookAt(AltoClef, Rotation, boolean) for why the baritone look target
+        // that used to sit here was dropped rather than re-pointed at tungsten.
         ClientPlayerEntity player = AltoClef.getInstance().getPlayer();
 
         player.setYaw(rotation.getYaw());
@@ -538,7 +580,7 @@ public interface LookHelper {
      *
      * @param mod    The AltoClef instance.
      * @param toLook The position to look at.
-     * @param withBaritone Whether to use Baritone to look.
+     * @param withBaritone Forwarded to {@link #lookAt(AltoClef, Rotation, boolean)}; inert.
      * @throws IllegalArgumentException if mod or toLook is null.
      */
     static void lookAt(AltoClef mod, Vec3d toLook, boolean withBaritone) {
@@ -572,7 +614,7 @@ public interface LookHelper {
      * @param mod    The AltoClef mod instance.
      * @param toLook The position to look at.
      * @param side   The direction to look from.
-     * @param withBaritone Whether to use Baritone to look.
+     * @param withBaritone Forwarded to {@link #lookAt(AltoClef, Rotation, boolean)}; inert.
      */
     static void lookAt(AltoClef mod, BlockPos toLook, Direction side, boolean withBaritone) {
         // Calculate the center coordinates of the target location
@@ -632,7 +674,7 @@ public interface LookHelper {
      *
      * @param mod    The AltoClef instance.
      * @param toLook The block position to look at.
-     * @param withBaritone Whether to use Baritone to look.
+     * @param withBaritone Forwarded to {@link #lookAt(AltoClef, Rotation, boolean)}; inert.
      */
     static void lookAt(AltoClef mod, BlockPos toLook, boolean withBaritone) {
         lookAt(mod, toLook, null, withBaritone);
@@ -656,14 +698,17 @@ public interface LookHelper {
      * @return The rotation needed to look at the specified point.
      */
     public static Rotation getLookRotation(AltoClef mod, Vec3d toLook) {
-        // Get the player's head position
-        Vec3d playerHead = mod.getClientBaritone().getPlayerContext().playerHead();
+        // Get the player's head position. NOT getEyePos(): playerHead() is feet + STANDING eye
+        // height, so the answer doesn't change when the bot happens to be crouching mid-aim.
+        Vec3d playerHead = RotationHelper.playerHead(mod.getPlayer());
 
         // Get the player's current rotations
-        Rotation playerRotations = mod.getClientBaritone().getPlayerContext().playerRotations();
+        Rotation playerRotations = RotationHelper.playerRotations(mod.getPlayer());
 
-        // Calculate the rotation needed to look at the specified point
-        return RotationUtils.calcRotationFromVec3d(playerHead, toLook, playerRotations);
+        // Calculate the rotation needed to look at the specified point. Passing the current
+        // rotations is what wraps the yaw relatively, so +179 -> -179 is a 2 degree turn rather
+        // than 358 — dropping that argument would make every aim take the long way round.
+        return RotationHelper.calcRotationFromVec3d(playerHead, toLook, playerRotations);
     }
 
     /**
@@ -834,8 +879,13 @@ public interface LookHelper {
         }
         if (WindMouseState.targetRotation == null) return false;
 
-        // Don't fight with Baritone's custom goal pathing rotation
-        if (mod.getClientBaritone().getCustomGoalProcess().isActive()) {
+        // Don't fight whoever else is steering the camera. This used to test baritone's
+        // CustomGoalProcess; tungsten's equivalent is stronger and covers more: an active
+        // WindMouseRotation target means the path executor, the walker, a combat controller, a
+        // bridge/pillar task or the py4j agent is driving the aim through the vanilla mouse
+        // pipeline right now. Two drivers writing rotation in the same tick is visible jitter, so
+        // the loser yields. The lease auto-expires after 600 ms, so this can never wedge.
+        if (WindMouseRotation.INSTANCE.hasTarget()) {
             return false;
         }
 

@@ -10,7 +10,8 @@ import adris.altoclef.tasksystem.TaskRunner;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.time.TimerGame;
-import baritone.api.utils.Rotation;
+import kaptainwutax.tungsten.path.movements.Rotation;
+import kaptainwutax.tungsten.util.WindMouseRotation;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
@@ -110,9 +111,14 @@ public class MLGBucketFallChain extends SingleTaskChain implements ITaskOverride
                         mod.getBehaviour().push();
                         mod.getBehaviour().setRayTracingFluidHandling(RaycastContext.FluidHandling.SOURCE_ONLY);
                         Optional<Rotation> reach = LookHelper.getReach(toInteract, Direction.UP);
-                        if (reach.isPresent() && mod.getClientBaritone() != null) {
-                            mod.getClientBaritone().getLookBehavior().updateTarget(reach.get(), true);
-                            if (mod.getClientBaritone().getPlayerContext().isLookingAt(toInteract)) {
+                        if (reach.isPresent()) {
+                            // Request the aim, then click only once the crosshair actually got
+                            // there. This is the shape baritone's updateTarget had here (ask now,
+                            // arrive later), so it maps straight onto tungsten's camera driver:
+                            // the target is re-asserted every tick while this branch holds and
+                            // auto-releases 600 ms after we stop asking.
+                            WindMouseRotation.INSTANCE.setTarget(reach.get().getYaw(), reach.get().getPitch());
+                            if (LookHelper.isLookingAt(mod, toInteract)) {
                                 if (mod.getSlotHandler().forceEquipItem(Items.BUCKET)) {
                                     if (pickupRepeatTimer.elapsed()) {
                                         // Pick up

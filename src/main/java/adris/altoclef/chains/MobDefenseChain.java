@@ -25,7 +25,7 @@ import adris.altoclef.util.helpers.*;
 import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.slots.Slot;
 import baritone.Baritone;
-import baritone.api.utils.Rotation;
+import kaptainwutax.tungsten.path.movements.Rotation;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.Block;

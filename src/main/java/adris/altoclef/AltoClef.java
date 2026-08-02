@@ -62,14 +62,16 @@ public class AltoClef implements ModInitializer {
     // Static access to altoclef
     private static final Queue<Consumer<AltoClef>> _postInitQueue = new ArrayDeque<>();
 
-    // Camera modifier statics (used by CameraMixin / EpicCamera)
-    public static baritone.api.utils.Rotation _cameraRotationModifer = null;
+    // Camera modifier statics (used by CameraMixin / EpicCamera).
+    // Kept fully qualified because this file also imports baritone types; the rotation itself is
+    // tungsten's now — same (yaw, pitch) value type, it never crossed into the pathfinder.
+    public static kaptainwutax.tungsten.path.movements.Rotation _cameraRotationModifer = null;
     public static net.minecraft.util.math.Vec3d _cameraPositionModifer = null;
 
-    public static baritone.api.utils.Rotation getCameraRotationModifer() {
+    public static kaptainwutax.tungsten.path.movements.Rotation getCameraRotationModifer() {
         return _cameraRotationModifer;
     }
-    public static void setCameraRotationModifer(baritone.api.utils.Rotation rotation) {
+    public static void setCameraRotationModifer(kaptainwutax.tungsten.path.movements.Rotation rotation) {
         _cameraRotationModifer = rotation;
     }
     public static void resetCameraRotationModifer() {

@@ -15,12 +15,13 @@ import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.MiningRequirement;
 import adris.altoclef.util.helpers.ItemHelper;
+import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.time.TimerGame;
 import baritone.api.pathing.goals.GoalGetToBlock;
-import baritone.api.utils.Rotation;
-import baritone.api.utils.RotationUtils;
+import kaptainwutax.tungsten.path.movements.Rotation;
+import kaptainwutax.tungsten.util.WindMouseRotation;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
@@ -118,7 +119,11 @@ public class KillEnderDragonTask extends Task {
         if (!isRailingOnDragon() && lookDownTimer.elapsed() && !mod.getControllerExtras().isBreakingBlock()) {
             if (mod.getPlayer().isOnGround()) {
                 lookDownTimer.reset();
-                mod.getClientBaritone().getLookBehavior().updateTarget(new Rotation(0f, 90f), true);
+                // One-shot "look at your feet" while waiting out the perch. A camera-driver
+                // target rather than a snap: nothing here polls for arrival, so a smooth turn
+                // that lands over the next few frames is exactly what was wanted, and the
+                // target releases itself once we stop refreshing it.
+                WindMouseRotation.INSTANCE.setTarget(0f, 90f);
             }
         }
 
@@ -295,8 +300,13 @@ public class KillEnderDragonTask extends Task {
                                 AbstractKillEntityTask.equipWeapon(mod);
                                 // Look torwards da dragon
                                 Vec3d targetLookPos = head.getPos().add(0, 3, 0);
-                                Rotation targetRotation = RotationUtils.calcRotationFromVec3d(mod.getClientBaritone().getPlayerContext().playerHead(), targetLookPos, mod.getClientBaritone().getPlayerContext().playerRotations());
-                                mod.getClientBaritone().getLookBehavior().updateTarget(targetRotation, true);
+                                // Identical composition to the old RotationUtils call: head
+                                // position, target, current rotations (for the relative yaw wrap).
+                                Rotation targetRotation = LookHelper.getLookRotation(mod, targetLookPos);
+                                // Refreshed every tick while the head is in range, which is what
+                                // the camera driver's per-tick lease expects — the aim tracks the
+                                // moving head instead of snapping to where it was.
+                                WindMouseRotation.INSTANCE.setTarget(targetRotation.getYaw(), targetRotation.getPitch());
                                 // Also look towards da dragon
                                 OptionsVer.setAutoJump(false);
                                 mod.getInputControls().hold(Input.MOVE_FORWARD);

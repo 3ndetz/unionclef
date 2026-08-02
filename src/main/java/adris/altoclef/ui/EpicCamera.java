@@ -4,7 +4,7 @@ import adris.altoclef.util.time.TimerReal;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import baritone.api.utils.Rotation;
+import kaptainwutax.tungsten.path.movements.Rotation;
 
 /*
  * EpicCamera approach:

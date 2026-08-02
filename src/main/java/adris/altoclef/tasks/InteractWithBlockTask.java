@@ -20,7 +20,7 @@ import baritone.api.pathing.goals.Goal;
 import baritone.api.pathing.goals.GoalNear;
 import baritone.api.pathing.goals.GoalTwoBlocks;
 import baritone.api.process.ICustomGoalProcess;
-import baritone.api.utils.Rotation;
+import kaptainwutax.tungsten.path.movements.Rotation;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.*;
 import net.minecraft.client.MinecraftClient;
