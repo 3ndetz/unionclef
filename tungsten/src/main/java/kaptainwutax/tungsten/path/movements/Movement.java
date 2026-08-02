@@ -443,6 +443,19 @@ public abstract class Movement {
             if (!ctx.world().getNonSpectatingEntities(FallingBlockEntity.class, new Box(0, 0, 0, 1, 1.1, 1).offset(blockPos)).isEmpty() && PAUSE_MINING_FOR_FALLING_BLOCKS) {
                 return false;
             }
+            // ...AND YOU CANNOT BREAK A FLUID EITHER. Flowing water fails canWalkThrough, so it
+            // lands here and this loop aims at it and holds CLICK_LEFT forever: the block never
+            // goes away, prepared() never returns true, and because Movement.updateState returns
+            // PREPPING before every subclass's own logic the step also never arrives and never
+            // fails. It just sits until the queue's cost+100 timeout. Measured on chase_terrain:
+            // the same flat step (-157,60,288)->(-156,60,288) timing out every eight seconds, and
+            // rcon says the bot's feet, its head AND the destination are all minecraft:water.
+            //
+            // Whether a route should go through water is the PLANNER's business. What the
+            // executor must not do is spend eight seconds mining something that cannot be mined.
+            if (!ctx.world().getFluidState(blockPos).isEmpty()) {
+                continue;
+            }
             if (!MovementHelperB.canWalkThrough(ctx.world(), blockPos)) { // can't break air, so don't try
                 somethingInTheWay = true;
                 switchToBestToolFor(blockPos, ctx.world().getBlockState(blockPos));
