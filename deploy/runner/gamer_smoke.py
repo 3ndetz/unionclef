@@ -61,7 +61,16 @@ def main():
     print("[2] connect bot to gamer-server...")
     if not py4j("state")["inGame"] or True:
         py4j("connect", ip="gamer-server")
-        wait_for("bot in game (gamer)", lambda: py4j("state")["inGame"], 200, 5); time.sleep(5)
+        wait_for("bot in game (gamer)", lambda: py4j("state")["inGame"], 200, 5)
+        # WAIT FOR THE WORLD, NOT JUST THE CONNECTION. inGame flips as soon as the play
+        # handler exists; the client world can still be null a moment later, and @gamer
+        # issued in that window threw a NullPointerException out of BeatMinecraftTask's
+        # constructor. The task then never existed, the bot sat "busy" and motionless, and
+        # this script recorded five minutes of that as a PATHFINDING failure. Wait for a
+        # position the server agrees with instead of sleeping and hoping.
+        wait_for("world loaded (bot has a position)",
+                 lambda: bool((py4j("gs").get("self") or {}).get("pos")), 200, 5)
+        time.sleep(5)
     print("[3] tungsten-primary ON + @gamer...")
     print("  swap:", py4j("swap", on=True))
     inv0 = py4j("inv"); print("  start inv:", inv0)

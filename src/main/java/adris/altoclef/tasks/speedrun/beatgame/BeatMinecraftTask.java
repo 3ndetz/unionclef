@@ -155,7 +155,17 @@ public class BeatMinecraftTask extends Task {
 
         SetGammaCommand.changeGamma(20d);
 
-        if (mod.getWorld().getDifficulty() != Difficulty.EASY) {
+        // A WARNING MUST NOT ABORT THE COMMAND. `@gamer` issued before the world finishes
+        // loading — which is exactly what happens when a script connects and starts the bot in
+        // one breath — made getWorld() null here and threw a NullPointerException out of the
+        // CONSTRUCTOR. The task never existed, the bot sat "busy" and motionless, and the smoke
+        // test recorded it as a pathfinding failure: measured 5 minutes, one distinct position,
+        // zero items, with the walker never once active (WALKMODE off=10503 bfs=97).
+        // The difficulty check is a courtesy message. It waits for a world; it does not get to
+        // decide whether the run happens.
+        if (mod.getWorld() == null) {
+            mod.logWarning("World not loaded yet — skipping the difficulty check.");
+        } else if (mod.getWorld().getDifficulty() != Difficulty.EASY) {
             mod.logWarning("Detected that the difficulty is other than easy!");
             if (mod.getWorld().getDifficulty() == Difficulty.PEACEFUL) {
                 mod.logWarning("No mobs spawn on peaceful difficulty, so the bot will not be able to beat the game. Please change it!");
