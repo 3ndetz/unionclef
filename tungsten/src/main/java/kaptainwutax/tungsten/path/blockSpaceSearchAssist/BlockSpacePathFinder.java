@@ -230,6 +230,11 @@ public class BlockSpacePathFinder {
             bestSoFar[i] = start;
         }
 
+		// The closest cell this search actually reaches, tracked unconditionally — the
+		// last-resort partial when the monotone bestSoFar record declines to move.
+		BlockNode closestToGoal = null;
+		double closestDistSq = Double.MAX_VALUE;
+
 		openSet.insert(start);
 		while(!openSet.isEmpty()) {
 			if (TungstenModDataContainer.PATHFINDER.stop.get()) {
@@ -329,6 +334,25 @@ public class BlockSpacePathFinder {
 				Debug.logMessage("Partial path (goal unreachable via move-gen) — advancing "
 						+ partial.get().size() + " nodes toward goal");
 				return partial;
+			}
+			// LAST RESORT: THE CLOSEST CELL WE ACTUALLY REACHED.
+			// bestSoFar is a MONOTONE record of heuristic improvement, so if no child ever beat
+			// the seeded threshold it stays on the start node — whose parent is null — and the
+			// graceful-degradation branch above sees "no progress" even though the search did
+			// explore. Measured on a live @gamer run: "Ran out of nodes" repeatedly while the bot
+			// stood on ONE position for ~500 s with the walker never active.
+			//
+			// A search that expanded thousands of nodes knows perfectly well which of them came
+			// closest to the goal. Handing that one back is not a guess and not a band-aid — it
+			// is the same graceful degradation as above, measured against the GOAL instead of
+			// against a record that can decline to move.
+			if (closestToGoal != null && closestToGoal.previous != null) {
+				List<BlockNode> path = generatePath(closestToGoal, world);
+				if (path.size() > 1) {
+					Debug.logMessage("Exhausted — advancing " + path.size()
+							+ " nodes to the closest cell reached");
+					return Optional.of(path);
+				}
 			}
 			Debug.logWarning("Ran out of nodes");
 			return Optional.empty();
