@@ -45,6 +45,30 @@ public final class TrajectorySolver {
         return solve(shooterEye, aimPoint, vel, charge);
     }
 
+    /**
+     * How far AHEAD of the flight time the lead has to reach, in ticks.
+     *
+     * <p>Two lags stack, and both point the same way, so the arrow always passes BEHIND a moving
+     * target:
+     *
+     * <ul>
+     *   <li>the position we solve against is the CLIENT-INTERPOLATED one. A remote player moves by
+     *       position packets with a 3-step lerp restarted every tick, whose steady-state lag is
+     *       three ticks of velocity — the same model this repo already documents where it explains
+     *       why {@code getVelocity()} reads ~0 for a walking remote player;</li>
+     *   <li>the release is one to two ticks later than the solve: the solve runs at the head of
+     *       the client tick, and dropping the use key is only acted on by {@code
+     *       handleInputEvents()} on the NEXT tick.</li>
+     * </ul>
+     *
+     * <p>Measured cost of ignoring it, on a 25-block lane against a sprinting target (the effective
+     * lateral window is about ±0.6 blocks including vanilla's hit margin): 0 ticks of lag puts the
+     * arrow 0.38 behind, three ticks puts it 1.30 behind. Leading by {@code flight + 4} puts it
+     * +0.08 — a centre hit — and stays a hit at lag 2, 3 and 4 alike, which is what makes a fixed
+     * term defensible rather than a tuning knob.
+     */
+    private static final double LATENCY_TICKS = 4.0;
+
     /** Solve for a target point moving with a constant velocity (may be zero). */
     public static Solution solve(Vec3d shooterEye, Vec3d targetPos, Vec3d targetVel, double charge) {
         double v0 = Math.max(0.1, charge) * FULL_CHARGE_SPEED;
@@ -52,7 +76,7 @@ public final class TrajectorySolver {
         double flight = 0;
 
         for (int round = 0; round < 3; round++) {
-            predicted = targetPos.add(targetVel.multiply(flight));
+            predicted = targetPos.add(targetVel.multiply(flight + LATENCY_TICKS));
             double dx = Math.hypot(predicted.x - shooterEye.x, predicted.z - shooterEye.z);
             double dy = predicted.y - shooterEye.y;
             double[] sol = solvePitch(v0, dx, dy);

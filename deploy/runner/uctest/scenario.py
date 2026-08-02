@@ -211,17 +211,27 @@ class Ctx:
     def hp_drop_events(self, who="victim", min_dist=None):
         """[(t, amount, dist)] hp-drop events; min_dist filters for ranged
         attribution (a drop while the fighters were far apart = arrow)."""
+        # ATTRIBUTE OVER THE INTERVAL, NOT THE INSTANT. One sample iteration costs about 7.5 s
+        # here (nine blocking rcon round trips), so the distance recorded WITH a drop is up to
+        # 7.5 s stale. Measured in allround: t=1.0 dist=25.6 hp=20.0, then t=8.4 dist=2.2 hp=10.0
+        # on a flat field with zero landed swings — that 10 HP can only have been the arrow, and
+        # testing the drop against dist=2.2 threw the hit away and reported ranged_hits=0. The
+        # fighters were far apart for part of that interval, so the far test uses the WIDEST
+        # separation the interval saw.
         key = f"{who}_hp"
-        events, prev = [], None
+        events, prev, prev_d = [], None, None
         for s in self.samples:
             hp = s.get(key)
             if hp is None:
                 continue
+            d = s.get("dist")
             if prev is not None and hp < prev:
-                d = s.get("dist")
-                if min_dist is None or (d is not None and d > min_dist):
-                    events.append((s["t"], prev - hp, d))
+                span = [x for x in (d, prev_d) if x is not None]
+                widest = max(span) if span else None
+                if min_dist is None or (widest is not None and widest > min_dist):
+                    events.append((s["t"], prev - hp, widest if widest is not None else d))
             prev = hp
+            prev_d = d
         return events
 
     def first_hit(self):
