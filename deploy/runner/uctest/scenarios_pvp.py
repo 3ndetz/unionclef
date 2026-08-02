@@ -320,9 +320,18 @@ class ChaseTerrain(Scenario):
         probes = ctx.geo.get("water_probes", 0)
         # A CHECK THAT NEVER RAN IS NOT A PASS. `swam` defaults to False, so while the probe
         # was on the modulo lottery above this criterion went green whenever it never fired.
-        yield Criterion("ran on LAND (not in water)", (not swam) and probes >= 3,
+        # SETUP SANITY, NOT A PURITY TEST. The intent recorded above is "a whole run measured in
+        # the sea is meaningless" — crossing a stream mid-chase is not that. Gating on ANY water
+        # sample failed a run where the bot caught AND killed the runner with a 4.4-block gap and
+        # zero freezes, which is the bench calling a good run bad. So it gates on the run being
+        # MOSTLY in water, and still requires that the probe actually ran — a check that never
+        # executed must not pass by default, which is the defect this criterion had.
+        hits = ctx.geo.get("water_hits", 0)
+        mostly_water = probes >= 3 and hits > probes / 2
+        yield Criterion("ran on LAND (not mostly in water)",
+                        probes >= 3 and not mostly_water,
                         f"ground={ctx.geo.get('ground')} swam={swam} "
-                        f"water={ctx.geo.get('water_hits', 0)}/{probes} probes")
+                        f"water={hits}/{probes} probes")
 
         # DID THE PREY ACTUALLY RUN? Without this, everything the chase claims can be true of
         # a target that stopped moving in the first ten seconds.
@@ -619,6 +628,11 @@ class SlabHole(Scenario):
         ctx.bot.py.call("gotoXYZ", gx, gy, gz)
 
     def early_stop(self, ctx):
+        return self.arrived(ctx)
+
+    def arrived(self, ctx):
+        # Through the base hook, so the freeze detector learns the goal was reached even under
+        # --no-early-stop — which is exactly the mode where early_stop is never consulted.
         p = ctx.samples[-1].get("bot") if ctx.samples else None
         return bool(p and p[0] > 13.5)
 

@@ -192,6 +192,10 @@ class Bot:
         chat = self.py.call("getRecentChat", n)
         return [str(x) for x in (chat or [])]
 
+    def clear_chat(self):
+        """Zero the client's chat ring so the next scenario's chat is only its own."""
+        return self.py.try_call("clearRecentChat")[0]
+
 
 # Standard kits: rcon command templates ({name} substituted).
 # Sword only. A shield WAS added here to make the raise-between-swings logic testable, and

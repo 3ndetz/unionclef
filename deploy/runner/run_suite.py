@@ -183,6 +183,13 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
         rcon.reset_kd([BOT, VICTIM])
         if scn.settings:
             bot.pin_settings(scn.settings)
+        # ZERO THE CHAT RING HERE, not earlier: everything above (config reset, pins) logs into
+        # it and belongs to the setup, not to the measurement.
+        # A COUNTER IS ONLY A MEASUREMENT IF YOU KNOW ITS ZERO. Without this every number in
+        # placeStats/execState is a container-lifetime sum printed as if it described this run.
+        for b in ((bot, victim) if scn.needs_victim else (bot,)):
+            b.py.try_call("resetRunCounters")
+        bot.clear_chat()
         mp4 = _rec_start(scn.id, scn.duration, bot=bot) if record else None
         crits = scn.run(ctx)
         if record:

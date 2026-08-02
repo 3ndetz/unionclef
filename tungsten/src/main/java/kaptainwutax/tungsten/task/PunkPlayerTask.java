@@ -52,7 +52,7 @@ public class PunkPlayerTask {
      * <p>A counter is only a measurement if you know its zero. A chase begins here, so this is
      * the zero.
      */
-    private static void resetCounters() {
+    public static void resetCounters() {
         pCalled = pInactive = pNoTarget = pLastKnown = 0;
         kaptainwutax.tungsten.task.BlockPathWalker.tickOff = 0;
         kaptainwutax.tungsten.task.BlockPathWalker.tickBfs = 0;

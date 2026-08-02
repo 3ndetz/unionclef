@@ -266,11 +266,25 @@ class Ctx:
                 best = max(best, (p1 - p0) / (t1 - t0))
         return best
 
+    # WHAT THE TWO COMMAND SYSTEMS ACTUALLY PRINT. The old list ("unknown command",
+    # "command not found", "no such command") matched NOTHING either of them says: altoclef
+    # and tungsten both print `Command X does not exist.` / `Invalid command:X`
+    # (CommandExecutor.java), brigadier says `Unknown command at position N`, and
+    # Debug.logError tags `[ERROR]`. Combined with the chat ring never holding the mod's own
+    # lines at all, the criterion below could not fail, and it is on EVERY scenario.
+    BAD_CHAT = ("unknown command", "command not found", "no such command",
+                "does not exist.", "invalid command", "[error]",
+                "unknown or incomplete command", "incorrect argument")
+
+    def chat_lines(self):
+        """This scenario's chat. The ring is cleared at scenario start, so read the WHOLE
+        thing — pulling the last 30 lines of a verbose 90 s run saw only its final second."""
+        return self.bot.recent_chat(2000)
+
     def chat_errors(self):
-        """Verify-with-logs: unknown commands / errors in recent chat."""
-        bad = ("unknown command", "command not found", "no such command")
-        return [l for l in self.bot.recent_chat(30)
-                if any(b in l.lower() for b in bad)]
+        """Verify-with-logs: command errors in this scenario's chat."""
+        return [l for l in self.chat_lines()
+                if any(b in l.lower() for b in self.BAD_CHAT)]
 
 
 class Scenario:
@@ -312,6 +326,14 @@ class Scenario:
     def early_stop(self, ctx):
         return False
 
+    def arrived(self, ctx):
+        """Has this scenario's OBJECTIVE been reached? Latched by run() into
+        ctx.geo['reached_at'], which is what tells the freeze detector "standing on a goal it
+        already reached" apart from "stuck". Only NavCourse ever set that key, so a
+        goal-navigation scenario living in the pvp suite (slab_hole) booked false freezes.
+        Defaults to False, so nothing that does not opt in changes behaviour."""
+        return False
+
     def sample_kwargs(self):
         return {}
 
@@ -327,6 +349,9 @@ class Scenario:
             time.sleep(1)
             ctx.sample(**self.sample_kwargs())
             self.drive_tick(ctx, time.time() - ctx.t0)
+            if ctx.geo.get("reached_at") is None and self.arrived(ctx):
+                ctx.geo["reached_at"] = round(time.time() - ctx.t0, 1)
+                ctx.log(f"  objective reached at {ctx.geo['reached_at']}s")
             if not shot_taken and time.time() - ctx.t0 > self.duration / 2:
                 ctx.bot.py.screenshot(ctx.art.path("mid_run.png"))
                 shot_taken = True

@@ -44,7 +44,9 @@ public class Py4jEntryPoint {
     PythonCallback _cb;
     // Ring buffer of recent chat lines this client saw — lets external control (e.g. the Telegram
     // `/switch local` bridge) PULL chat over py4j via getRecentChat(), with no log file needed.
-    private static final int CHAT_LOG_MAX = 300;
+    // 300 lines is less than ONE scenario of verbose tungsten logging, so an error early in a
+    // run was evicted long before any test read the ring.
+    private static final int CHAT_LOG_MAX = 2000;
     private final java.util.concurrent.ConcurrentLinkedDeque<String> _chatLog = new java.util.concurrent.ConcurrentLinkedDeque<>();
     Executor _executor;
     public static String last_talking_player = "";
@@ -573,6 +575,30 @@ public class Py4jEntryPoint {
                 _cb.onUpdateServerInfo(CentralGameInfoDict);
             }
         });
+    }
+
+    /**
+     * Put a line in the chat ring and NOTHING ELSE.
+     *
+     * <p>Recording used to be welded to {@link #onChatMessage}, which is reached only through
+     * {@code Butler.onReceiveChat} — and AltoClef drops every line carrying the mod's own chat
+     * prefix before it gets there, because Butler must not parse the bot's own log as server
+     * chat. The consequence was that the mod's OWN errors were the one class of message the ring
+     * could never hold, while every scenario carried a green "no command errors in chat".
+     * So the two jobs are separated: the ring records what the client saw, Butler still sees only
+     * what it should.
+     */
+    public void recordChat(String msg) {
+        if (msg == null) {
+            return;
+        }
+        _chatLog.addLast(msg);
+        while (_chatLog.size() > CHAT_LOG_MAX) _chatLog.pollFirst();
+    }
+
+    /** Drop the ring, so a scenario's chat is that scenario's and not the container's lifetime. */
+    public void clearRecentChat() {
+        _chatLog.clear();
     }
 
     public void onChatMessage(String msg) {
@@ -2051,6 +2077,52 @@ public class Py4jEntryPoint {
             sb.append(s).append(System.lineSeparator());
         }
         return sb.toString();
+    }
+
+    /**
+     * ZERO EVERY ENGINE TELEMETRY COUNTER — the entry point a bench calls before it measures.
+     *
+     * <p>Each of these is a plain static that nothing resets, so what {@code placeStats()} and
+     * {@code execState()} print is a sum over the CONTAINER's lifetime — dozens of scenarios —
+     * while being read as if it described one run. Two conclusions have already been withdrawn
+     * for exactly that reason. Every counter below is write-only in the engine ({@code x++}), so
+     * zeroing them cannot change behaviour.
+     */
+    public java.util.Map<String, Object> resetRunCounters() {
+        var q = kaptainwutax.tungsten.path.movements.MovementQueue.class;   // for the reader
+        kaptainwutax.tungsten.path.movements.MovementQueue.qStarted = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.qSteps = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.qSuccess = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.qUnreachable = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.qTimeout = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.qTicks = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.qLost = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.qStatusFail = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.qRefused = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.qShort = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.qVetoed = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.edgeTraverse = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.edgeAscend = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.edgeDescend = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.edgeDiagonal = 0;
+        kaptainwutax.tungsten.path.movements.MovementQueue.edgeOther = 0;
+        kaptainwutax.tungsten.path.movements.Movement.placeRequested = 0;
+        kaptainwutax.tungsten.path.movements.Movement.placeOnCooldown = 0;
+        kaptainwutax.tungsten.path.movements.Movement.placeNoHit = 0;
+        kaptainwutax.tungsten.path.movements.Movement.placeClicked = 0;
+        kaptainwutax.tungsten.path.movements.Movement.motionSteered = 0;
+        kaptainwutax.tungsten.task.FollowEntityTask.planCalls = 0;
+        kaptainwutax.tungsten.task.FollowEntityTask.planUsable = 0;
+        kaptainwutax.tungsten.task.FollowEntityTask.planTooShort = 0;
+        kaptainwutax.tungsten.task.FollowEntityTask.physicsFallbacks = 0;
+        kaptainwutax.tungsten.task.FollowEntityTask.traversableCells = 0;
+        kaptainwutax.tungsten.task.FollowEntityTask.routeCells = 0;
+        kaptainwutax.tungsten.task.FollowEntityTask.routeSamples = 0;
+        kaptainwutax.tungsten.task.PunkPlayerTask.resetCounters();
+        kaptainwutax.tungsten.helpers.BlockPlaceHelper.resetCounters();
+        java.util.Map<String, Object> out = new HashMap<>();
+        out.put("ok", true);
+        return out;
     }
 
     /** Bridge execution telemetry: ticks the place logic ran, ticks deferred because the bot

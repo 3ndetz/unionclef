@@ -424,6 +424,7 @@ public class AltoClef implements ModInitializer {
         String _modChatPrefixNoCodes = getModSettings().getChatLogPrefix();
         ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
             String msg = message.getString();
+            if (getInfoSender() != null) getInfoSender().recordChat(msg);
             if (!msg.startsWith(_modChatPrefixNoCodes) && getButler() != null)
                 getButler().onReceiveChat(msg);
             return true;
@@ -431,6 +432,10 @@ public class AltoClef implements ModInitializer {
         ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
             if (!overlay) {
                 String msg = message.getString();
+                // RECORD FIRST, FILTER SECOND. The filter exists so Butler does not parse the
+                // bot's own log lines as server chat; it must not also blind the chat ring, which
+                // is the only channel a test has for seeing the mod's own errors.
+                if (getInfoSender() != null) getInfoSender().recordChat(msg);
                 if (!msg.contains(_modChatPrefixNoCodes) && getButler() != null)
                     getButler().onReceiveChat(msg);
             }
