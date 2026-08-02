@@ -622,6 +622,10 @@ public class BeatMinecraftTask extends Task {
 
     }
 
+    /** Half a bar. Below it the bot may gather food without waiting for stone tools and a sword —
+     *  see the gate in {@link #addCollectFoodTask}. */
+    private static final float LOW_HEALTH_FOOD_OVERRIDE = 10.0f;
+
     private void addCollectFoodTask(AltoClef mod) {
         List<Item> food = new LinkedList<>(ItemHelper.cookableFoodMap.values());
         food.addAll(ItemHelper.cookableFoodMap.keySet());
@@ -629,8 +633,19 @@ public class BeatMinecraftTask extends Task {
 
         gatherResources.add(new ResourcePriorityTask(
                 new CollectFoodPriorityCalculator(mod, config.foodUnits),
-                a -> StorageHelper.miningRequirementMet(MiningRequirement.STONE)
-                        && mod.getItemStorage().hasItem(Items.STONE_SWORD, Items.IRON_SWORD, Items.DIAMOND_SWORD)
+                // STARVING BEATS UNARMED. The stone+sword gate is right for the OPENING — do not
+                // send a barehanded bot to punch cows before it has tools. But it also means a bot
+                // that gets hurt before it reaches stone tier CANNOT GO FOR FOOD AT ALL, and
+                // altoclef's FoodChain has nothing to eat, so it keeps mining until it dies.
+                // Measured on a live @gamer run: SIX MINUTES standing at 1.1 HP with one item in
+                // the inventory, then repeated deaths.
+                //
+                // Below half a bar that trade inverts: food is survival, not convenience, and
+                // plenty of it — bread, wheat, hay, berries, apples — needs no sword whatsoever.
+                // So the tool gate is bypassed only while hurt; above the line it is unchanged.
+                a -> (a.getPlayer() != null && a.getPlayer().getHealth() <= LOW_HEALTH_FOOD_OVERRIDE
+                        || StorageHelper.miningRequirementMet(MiningRequirement.STONE)
+                        && mod.getItemStorage().hasItem(Items.STONE_SWORD, Items.IRON_SWORD, Items.DIAMOND_SWORD))
                         && CollectFoodTask.calculateFoodPotential(mod) < config.foodUnits,
 
                 new CollectFoodTask(config.foodUnits), ItemTarget.of(food.toArray(new Item[]{}))
