@@ -152,13 +152,18 @@ public class TungstenConfig {
     /**
      * Hold the melee distance as a function of the ATTACK COOLDOWN instead of a fixed band.
      *
-     * <p>OFF by default, and that is not timidity: melee_basic is a MIRROR duel — both fighters
+     * <p>ON since 2026-08-02, proved on the ASYMMETRIC course because melee_basic is a MIRROR duel — both fighters
      * are this same jar with the same kit — so shipping a combat change on by default hands it to
      * the opponent too and the course stays a coin flip. The only way this stand can prove the
      * change is worth anything is `run_suite.py --pin combatReachControl=true`, which applies to
-     * ONE of the two fighters.
+     * ONE of the two fighters. Measured that way on the asymmetric course (allround), interleaved:
+     * deaths 1 and 1 with it against 2 and 3 without.
+     *
+     * <p>It also carries this module's ONLY health awareness — below half a bar the bot breaks
+     * contact instead of trading (see {@code CombatController.LOW_HP}). Before it, getHealth() was
+     * read nowhere in tungsten at all.
      */
-    public boolean combatReachControl = false;
+    public boolean combatReachControl = true;
 
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
      *  If false, only walks (no jumps) — safer but slower. */

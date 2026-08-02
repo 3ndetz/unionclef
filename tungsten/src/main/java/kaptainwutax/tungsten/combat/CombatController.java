@@ -30,6 +30,15 @@ public class CombatController {
     /** Below this we are inside the opponent's swing and lose angle — drift back out. */
     public static final double TOO_CLOSE_DISTANCE = TriggerBot.REACH - 1.4; // 1.6
 
+    /** Half a bar. Below it a melee exchange is a losing trade and the bot breaks contact. */
+    public static final double LOW_HP = 10.0;
+    /** Distance a hurt bot holds — clear of every melee reach, and the range the bench's bow
+     *  phase resumes at, so backing off is what puts an arrow back in hand. */
+    public static final double KITE_DISTANCE = 14.0;
+    /** Telemetry: ticks spent kiting because of health. Counted so "does it disengage" is a
+     *  number rather than an impression. */
+    public static volatile int lowHpTicks;
+
     // ── dynamic combat movement state (circle-strafe + range + crit-jumps) ──────
     private int strafeDir = 1;              // +1 = left, -1 = right
     private long lastStrafeSwitch = 0;
@@ -224,6 +233,24 @@ public class CombatController {
         if (kaptainwutax.tungsten.TungstenConfig.get().combatReachControl) {
             float cd = player.getAttackCooldownProgress(0f);
             boolean armed = cd >= TriggerBot.COOLDOWN_CRIT;
+            // HURT ⇒ STOP TRADING. This is the whole of tungsten's health awareness, and until
+            // now there was none: getHealth() was read NOWHERE in the module, and SafetySystem's
+            // ESCAPE stage is declared, handled and unreachable ("TODO: DELICATE_BATTLE — low HP
+            // careful play", SafetySystem.java:483). A fight is damage_dealt / damage_taken and
+            // the bot only ever optimised the numerator, which is why it wins the damage race
+            // and loses the match.
+            //
+            // Breaking contact is the correct answer here rather than a heal or a shield: the
+            // bench disables natural regeneration and the kit carries no food, so a wounded bot
+            // cannot recover — but it CAN stop offering free exchanges, and out at this range the
+            // bow becomes the weapon. That is not a special case for one course; it is what a
+            // hurt fighter with a ranged option should do anywhere.
+            double hp = player.getHealth() + player.getAbsorptionAmount();
+            if (hp <= LOW_HP) {
+                lowHpTicks++;
+                kite(out, player, world, dist);
+                return;
+            }
             if (!armed) {
                 // Recharging: stand off just past the opponent's reach. Not further — the swing
                 // has to be one step away when the cooldown lands, or the stand-off costs tempo.
@@ -340,6 +367,25 @@ public class CombatController {
         boolean safe = !VoidDetector.edgeAhead(player.getEntityPos(), dx, dz, world, 3, look);
         if (fwd > 0) { dirAsked++; if (!safe) dirBlockedFwd++; }
         return safe;
+    }
+
+    /**
+     * Back away from the target, keeping it in front. Not a retreat path — the terrain safety
+     * system owns those — just a straight-line disengage with the same per-direction edge test
+     * every other movement here uses, so backing off can never walk off a ledge.
+     */
+    private void kite(CombatMoveIntent out, ClientPlayerEntity player,
+                      net.minecraft.world.WorldView world, double dist) {
+        out.active = true;
+        out.forward = false;
+        out.back = dist < KITE_DISTANCE && dirSafe(player, world, -1, 0);
+        out.sprint = out.back;
+        // If backing off is unsafe, strafe instead of standing still — the one thing that is
+        // certainly wrong at low HP is remaining a stationary target.
+        if (!out.back && dist < KITE_DISTANCE) {
+            out.left = dirSafe(player, world, 0, -1);
+            out.right = !out.left && dirSafe(player, world, 0, 1);
+        }
     }
 
     public void releaseKeys() {
