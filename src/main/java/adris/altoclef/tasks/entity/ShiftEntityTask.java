@@ -8,7 +8,7 @@ import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.time.TimerGame;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
@@ -137,33 +137,33 @@ public class ShiftEntityTask extends AbstractDoToEntityTask {
         }
 
         if (yDiff >= yBorder) {
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.JUMP, true);
+            mod.getInputControls().hold(Input.JUMP);
         } else {
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.JUMP, false);
+            mod.getInputControls().release(Input.JUMP);
         }
 
         if (shifting) {
             if (_phase == 0) {
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.SNEAK, true);
+                mod.getInputControls().hold(Input.SNEAK);
             } else {
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.SNEAK, false);
+                mod.getInputControls().release(Input.SNEAK);
             }
         } else {
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.SNEAK, false);
+            mod.getInputControls().release(Input.SNEAK);
         }
 
         if (tooClose) {
             if (mod.getPlayer().getVelocity().horizontalLengthSquared() > 0.0025) {
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, true);
+                mod.getInputControls().hold(Input.MOVE_BACK);
             } else {
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, false);
+                mod.getInputControls().release(Input.MOVE_BACK);
             }
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.SPRINT, false);
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, false);
+            mod.getInputControls().release(Input.SPRINT);
+            mod.getInputControls().release(Input.MOVE_FORWARD);
         } else {
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, false);
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.SPRINT, true);
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
+            mod.getInputControls().release(Input.MOVE_BACK);
+            mod.getInputControls().hold(Input.SPRINT);
+            mod.getInputControls().hold(Input.MOVE_FORWARD);
         }
 
         if (_shiftTimer.elapsed()) {

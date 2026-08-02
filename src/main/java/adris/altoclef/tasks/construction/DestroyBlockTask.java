@@ -15,7 +15,7 @@ import adris.altoclef.util.slots.Slot;
 import baritone.api.pathing.goals.GoalBlock;
 import baritone.api.pathing.goals.GoalNear;
 import baritone.api.utils.Rotation;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.*;
 import adris.altoclef.multiversion.versionedfields.Blocks;
 import net.minecraft.entity.Entity;
@@ -336,7 +336,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                 LookHelper.lookAt(reach.get());
             }
             // Tool equip is handled in `PlayerInteractionFixChain`. Oof.
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
+            mod.getInputControls().hold(Input.CLICK_LEFT);
         } else {
             setDebugState("Getting to block...");
             if (isMining && mod.getPlayer().isTouchingWater()) {
@@ -386,7 +386,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         }
 
         // Release input controls
-        mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, false);
+        mod.getInputControls().release(Input.CLICK_LEFT);
         mod.getInputControls().release(Input.SNEAK);
         mod.getInputControls().release(Input.MOVE_BACK);
         mod.getInputControls().release(Input.MOVE_FORWARD);

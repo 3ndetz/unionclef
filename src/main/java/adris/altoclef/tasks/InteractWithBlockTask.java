@@ -21,7 +21,7 @@ import baritone.api.pathing.goals.GoalNear;
 import baritone.api.pathing.goals.GoalTwoBlocks;
 import baritone.api.process.ICustomGoalProcess;
 import baritone.api.utils.Rotation;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.*;
 import net.minecraft.client.MinecraftClient;
 import adris.altoclef.multiversion.versionedfields.Blocks;

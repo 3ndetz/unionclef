@@ -11,7 +11,7 @@ import adris.altoclef.tasksystem.TaskRunner;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.time.TimerGame;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.EndPortalFrameBlock;
 import net.minecraft.client.MinecraftClient;

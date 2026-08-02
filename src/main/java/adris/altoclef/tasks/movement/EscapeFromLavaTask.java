@@ -8,7 +8,7 @@ import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import baritone.api.pathing.goals.Goal;
 import baritone.api.utils.Rotation;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import baritone.pathing.movement.MovementHelper;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;

@@ -1567,17 +1567,17 @@ public class Py4jEntryPoint {
         }, false));
     }
 
-    private static baritone.api.utils.input.Input inputByName(String name) {
+    private static kaptainwutax.tungsten.path.movements.Input inputByName(String name) {
         switch (name.toLowerCase()) {
-            case "forward": return baritone.api.utils.input.Input.MOVE_FORWARD;
-            case "back": return baritone.api.utils.input.Input.MOVE_BACK;
-            case "left": return baritone.api.utils.input.Input.MOVE_LEFT;
-            case "right": return baritone.api.utils.input.Input.MOVE_RIGHT;
-            case "jump": return baritone.api.utils.input.Input.JUMP;
-            case "sneak": return baritone.api.utils.input.Input.SNEAK;
-            case "sprint": return baritone.api.utils.input.Input.SPRINT;
-            case "attack": return baritone.api.utils.input.Input.CLICK_LEFT;
-            case "use": return baritone.api.utils.input.Input.CLICK_RIGHT;
+            case "forward": return kaptainwutax.tungsten.path.movements.Input.MOVE_FORWARD;
+            case "back": return kaptainwutax.tungsten.path.movements.Input.MOVE_BACK;
+            case "left": return kaptainwutax.tungsten.path.movements.Input.MOVE_LEFT;
+            case "right": return kaptainwutax.tungsten.path.movements.Input.MOVE_RIGHT;
+            case "jump": return kaptainwutax.tungsten.path.movements.Input.JUMP;
+            case "sneak": return kaptainwutax.tungsten.path.movements.Input.SNEAK;
+            case "sprint": return kaptainwutax.tungsten.path.movements.Input.SPRINT;
+            case "attack": return kaptainwutax.tungsten.path.movements.Input.CLICK_LEFT;
+            case "use": return kaptainwutax.tungsten.path.movements.Input.CLICK_RIGHT;
             default: return null;
         }
     }
@@ -1649,8 +1649,8 @@ public class Py4jEntryPoint {
             if (client.player == null) { out.put("ok", false); out.put("reason", "not in game"); return out; }
             String b = button == null ? "left" : button.toLowerCase();
             switch (b) {
-                case "left" -> _mod.getInputControls().tryPress(baritone.api.utils.input.Input.CLICK_LEFT);
-                case "right" -> _mod.getInputControls().tryPress(baritone.api.utils.input.Input.CLICK_RIGHT);
+                case "left" -> _mod.getInputControls().tryPress(kaptainwutax.tungsten.path.movements.Input.CLICK_LEFT);
+                case "right" -> _mod.getInputControls().tryPress(kaptainwutax.tungsten.path.movements.Input.CLICK_RIGHT);
                 case "middle" -> {
                     var k = client.options.pickItemKey;
                     k.setPressed(true);

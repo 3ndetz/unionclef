@@ -4,7 +4,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.multiversion.BlockTagVer;
 import adris.altoclef.trackers.threats.WeaponThreat;
 import adris.altoclef.util.slots.Slot;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import adris.altoclef.multiversion.entity.PlayerVer;
 import adris.altoclef.multiversion.item.ItemVer;
 import adris.altoclef.multiversion.versionedfields.Blocks;

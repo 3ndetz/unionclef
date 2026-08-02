@@ -3,7 +3,7 @@ package adris.altoclef.util.agent;
 import adris.altoclef.AltoClef;
 import adris.altoclef.multiversion.entity.PlayerVer;
 
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 

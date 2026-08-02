@@ -4,7 +4,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.time.TimerGame;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 
 /**
  * Will move around randomly while holding shift
@@ -38,14 +38,14 @@ public class LobbyMoveTask extends Task {
             //LookHelper.randomOrientation(mod);
         }
 
-        mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, true);
+        mod.getInputControls().hold(Input.MOVE_BACK);
         return null;
     }
 
     @Override
     protected void onStop(Task interruptTask) {
         AltoClef mod = AltoClef.getInstance();
-        mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, false);
+        mod.getInputControls().release(Input.MOVE_BACK);
     }
 
     @Override

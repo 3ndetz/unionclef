@@ -26,7 +26,7 @@ import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.slots.Slot;
 import baritone.Baritone;
 import baritone.api.utils.Rotation;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.Block;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -218,7 +218,7 @@ public class MobDefenseChain extends SingleTaskChain {
         } else {
             // Stop putting stuff out if we no longer need to put out a fire.
             if (mod.getClientBaritone() != null)
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, false);
+                mod.getInputControls().release(Input.CLICK_LEFT);
             wasPuttingOutFire = false;
         }
 
@@ -550,7 +550,7 @@ public class MobDefenseChain extends SingleTaskChain {
             if (LookHelper.isLookingAt(mod, pos)) {
                 if (b != null) {
                     b.getPathingBehavior().requestPause();
-                    b.getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
+                    AltoClef.getInstance().getInputControls().hold(Input.CLICK_LEFT);
                 }
                 return;
             }

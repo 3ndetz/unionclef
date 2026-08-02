@@ -7,7 +7,7 @@ import adris.altoclef.tasks.movement.MLGBucketTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.time.TimerGame;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.entity.Entity;
 //#if MC >= 12100
 import net.minecraft.item.Items;

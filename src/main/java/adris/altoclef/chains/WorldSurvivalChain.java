@@ -17,7 +17,7 @@ import adris.altoclef.multiversion.DimensionVer;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.time.TimerGame;
 import baritone.api.utils.Rotation;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.AbstractFireBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -188,7 +188,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
                 if (mod.getPlayer().isTouchingWater() && mod.getPlayer().getAir() < mod.getPlayer().getMaxAir()) {
                     // Swim up!
                     mod.getInputControls().hold(Input.JUMP);
-                    //mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.JUMP, true);
+                    //mod.getInputControls().hold(Input.JUMP);
                     avoidedDrowning = true;
                     wasAvoidingDrowning = true;
                 }
@@ -198,7 +198,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
         if (wasAvoidingDrowning && !avoidedDrowning) {
             wasAvoidingDrowning = false;
             mod.getInputControls().release(Input.JUMP);
-            //mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.JUMP, false);
+            //mod.getInputControls().release(Input.JUMP);
         }
     }
 

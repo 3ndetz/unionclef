@@ -15,7 +15,7 @@ import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import adris.altoclef.util.time.TimerGame;
 import baritone.api.utils.IPlayerContext;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import baritone.pathing.movement.MovementHelper;
 import net.minecraft.block.Block;
 import net.minecraft.client.MinecraftClient;
@@ -61,7 +61,7 @@ public class PlaceBlockNearbyTask extends Task {
     @Override
     protected void onStart() {
         progressChecker.reset();
-        AltoClef.getInstance().getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, false);
+        AltoClef.getInstance().getInputControls().release(Input.CLICK_RIGHT);
 
         // Check for blocks being placed
         _onBlockPlaced = EventBus.subscribe(BlockPlaceEvent.class, evt -> {
@@ -232,7 +232,7 @@ public class PlaceBlockNearbyTask extends Task {
             }
 
             //mod.getControllerExtras().mouseClickOverride(1, true);
-            //mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
+            //mod.getInputControls().hold(Input.CLICK_RIGHT);
             return true;
         }
         return false;

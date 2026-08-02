@@ -7,7 +7,7 @@ import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.time.TimerGame;
 import baritone.api.utils.Rotation;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Vec3d;
@@ -220,9 +220,9 @@ public class GestureTask extends Task {
         // Handle jumping and actions
         if (_gesture.equals(Gesture.Cheer)) {
             mod.getInputControls().tryPress(Input.JUMP);
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.JUMP, true);
+            mod.getInputControls().hold(Input.JUMP);
         } else {
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.JUMP, false);
+            mod.getInputControls().release(Input.JUMP);
         }
 
         if (swingHand) {
@@ -247,15 +247,15 @@ public class GestureTask extends Task {
 
         if (moveLeftRight) {
             if (_phase == 0) {
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_LEFT, true);
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_RIGHT, false);
+                mod.getInputControls().hold(Input.MOVE_LEFT);
+                mod.getInputControls().release(Input.MOVE_RIGHT);
             } else {
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_LEFT, false);
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_RIGHT, true);
+                mod.getInputControls().release(Input.MOVE_LEFT);
+                mod.getInputControls().hold(Input.MOVE_RIGHT);
             }
         } else {
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_LEFT, false);
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_RIGHT, false);
+            mod.getInputControls().release(Input.MOVE_LEFT);
+            mod.getInputControls().release(Input.MOVE_RIGHT);
         }
 
         // we can show gesture to target that is line of sight no matter of distance
@@ -263,20 +263,20 @@ public class GestureTask extends Task {
         if (SIMPLE_GO_TO_TARGET) {
             if (tooClose) {
                 if (mod.getPlayer().getVelocity().horizontalLengthSquared() > 0.0025) {
-                    mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, true);
+                    mod.getInputControls().hold(Input.MOVE_BACK);
                 } else {
-                    mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, false);
+                    mod.getInputControls().release(Input.MOVE_BACK);
                 }
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.SPRINT, false);
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, false);
+                mod.getInputControls().release(Input.SPRINT);
+                mod.getInputControls().release(Input.MOVE_FORWARD);
             } else if (!mod.getPlayer().getPos().isInRange(lookTarget, _interactDistance)) {
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, false);
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.SPRINT, true);
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
+                mod.getInputControls().release(Input.MOVE_BACK);
+                mod.getInputControls().hold(Input.SPRINT);
+                mod.getInputControls().hold(Input.MOVE_FORWARD);
             } else {
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, false);
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_BACK, false);
-                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.SPRINT, false);
+                mod.getInputControls().release(Input.MOVE_FORWARD);
+                mod.getInputControls().release(Input.MOVE_BACK);
+                mod.getInputControls().release(Input.SPRINT);
             }
         }
 

@@ -13,7 +13,7 @@ import baritone.Baritone;
 import baritone.api.utils.IPlayerContext;
 import baritone.api.utils.Rotation;
 import baritone.api.utils.RotationUtils;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import net.minecraft.block.Block;
@@ -186,7 +186,7 @@ public class MLGBucketTask extends Task {
         if (willLandInState.getBlock() == Blocks.WATER) {
             // We good.
             setDebugState("Waiting to fall into water");
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, false);
+            mod.getInputControls().release(Input.CLICK_RIGHT);
             return null;
         }
 
@@ -214,7 +214,7 @@ public class MLGBucketTask extends Task {
                 Debug.logMessage("HIT: " + willLandIn);
                 placedPos = willLandIn;
                 mod.getInputControls().tryPress(Input.CLICK_RIGHT);
-                //mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
+                //mod.getInputControls().hold(Input.CLICK_RIGHT);
             } else {
                 setDebugState("NOT LOOKING CORRECTLY!");
             }
@@ -427,7 +427,7 @@ public class MLGBucketTask extends Task {
 
         baritone.getPathingBehavior().forceCancel();
         movingTorwards = null;
-        baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, false);
+        AltoClef.getInstance().getInputControls().release(Input.CLICK_RIGHT);
         moveLeftRight(0);
         moveForwardBack(0);
         controls.release(Input.SPRINT);

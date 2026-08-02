@@ -6,7 +6,7 @@ import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.time.TimerGame;
 import baritone.Baritone;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 
 /**
  * Will move around randomly while holding shift
@@ -40,9 +40,9 @@ public class SafeRandomShimmyTask extends Task {
 
         Baritone baritone = AltoClef.getInstance().getClientBaritone();
 
-        baritone.getInputOverrideHandler().setInputForceState(Input.SNEAK, true);
-        baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
-        baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
+        AltoClef.getInstance().getInputControls().hold(Input.SNEAK);
+        AltoClef.getInstance().getInputControls().hold(Input.MOVE_FORWARD);
+        AltoClef.getInstance().getInputControls().hold(Input.CLICK_LEFT);
         return null;
     }
 
@@ -50,9 +50,9 @@ public class SafeRandomShimmyTask extends Task {
     protected void onStop(Task interruptTask) {
         Baritone baritone = AltoClef.getInstance().getClientBaritone();
 
-        baritone.getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, false);
-        baritone.getInputOverrideHandler().setInputForceState(Input.SNEAK, false);
-        baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, false);
+        AltoClef.getInstance().getInputControls().release(Input.MOVE_FORWARD);
+        AltoClef.getInstance().getInputControls().release(Input.SNEAK);
+        AltoClef.getInstance().getInputControls().release(Input.CLICK_LEFT);
     }
 
     @Override

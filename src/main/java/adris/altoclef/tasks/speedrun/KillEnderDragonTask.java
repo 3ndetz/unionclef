@@ -21,7 +21,7 @@ import adris.altoclef.util.time.TimerGame;
 import baritone.api.pathing.goals.GoalGetToBlock;
 import baritone.api.utils.Rotation;
 import baritone.api.utils.RotationUtils;
-import baritone.api.utils.input.Input;
+import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.boss.dragon.EnderDragonEntity;
@@ -299,7 +299,7 @@ public class KillEnderDragonTask extends Task {
                                 mod.getClientBaritone().getLookBehavior().updateTarget(targetRotation, true);
                                 // Also look towards da dragon
                                 OptionsVer.setAutoJump(false);
-                                mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, true);
+                                mod.getInputControls().hold(Input.MOVE_FORWARD);
                                 hit(mod);
                             } else {
                                 stopHitting(mod);
@@ -371,7 +371,7 @@ public class KillEnderDragonTask extends Task {
             AltoClef mod = AltoClef.getInstance();
 
             mod.getClientBaritone().getCustomGoalProcess().onLostControl();
-            mod.getClientBaritone().getInputOverrideHandler().setInputForceState(Input.MOVE_FORWARD, false);
+            mod.getInputControls().release(Input.MOVE_FORWARD);
             //mod.getControllerExtras().mouseClickOverride(0, false);
             mod.getExtraBaritoneSettings().setInteractionPaused(false);
         }
