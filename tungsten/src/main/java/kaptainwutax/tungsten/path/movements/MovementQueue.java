@@ -497,6 +497,7 @@ public final class MovementQueue {
             return;
         }
         qTicks++;
+
         // PathExecutor.java:148-181 recomputes toBreak/toPlace/toWalkInto EVERY tick. Movement
         // caches them on first use and nothing here ever dropped that cache, so a chain kept
         // acting on the world as it was when start() ran — including after it had broken the very
@@ -605,19 +606,23 @@ public final class MovementQueue {
             }
 
             // :242-250. ticksOnCurrent is only charged on a tick the movement actually ran.
-            // ⛔ MEASURED AND TAKEN BACK, 2026-08-02. PathExecutor.java:237-242 does clear the
-            // sprint STATE when the next movement does not ask for it, and releasing the KEY is
-            // genuinely not the same thing — but upstream's teardown is one half of a mechanism
-            // whose other half is shouldSprintNextTick() (PathExecutor.java:345-475), a lookahead
-            // over the next one to three movements that DECIDES sprint. We have no such policy:
-            // only traverse and diagonal ever request SPRINT, so the teardown fired on nearly
-            // every tick and nav_gaps — which is jumps across gaps, i.e. the one course that
-            // needs sprint distance — went red. Porting half a mechanism is the exact defect
-            // class this file keeps fixing. It goes back in WITH shouldSprintNextTick, not before.
+            // PathExecutor.java:238-241, AND its other half. The teardown alone took nav_gaps
+            // from 12/12 to 11/12 when it landed without a policy to decide sprint — only
+            // traverse and diagonal ever ask for it themselves, so the release fired nearly every
+            // tick on the one course made of sprint jumps. SprintPolicy is that missing half: a
+            // lookahead over the next one to three movements, ported from shouldSprintNextTick.
+            // ⛔ WIRED, MEASURED, TAKEN BACK — 2026-08-02, SECOND ATTEMPT AT THIS MECHANISM.
+            // The class is a faithful port of shouldSprintNextTick and the wiring follows
+            // upstream's order, but on chase_terrain it PINNED the gap: two runs, min=25.0 and
+            // 25.0, last=25.0 and 25.1, kills=0 — against min 4.4 / 5.1 and a kill on the build
+            // immediately before. Freezes stayed at 0, so it does not stall the bot; it stops it
+            // closing. The suspects are the skip branch (advances(), which moves `index` without
+            // the movement ever running) and applySteer, which clears the keys — but that is a
+            // hypothesis and this is a measurement, so the wiring comes out until the hypothesis
+            // is one too. SprintPolicy.java stays in the tree; nothing calls it.
             //
-            // if (!movement.sprintRequested()) {
-            //     player.setSprinting(false);
-            // }
+            //   SprintPolicy.Decision d = SprintPolicy.shouldSprintNextTick(movements, index, player);
+            //   ... latch, applySprint / applyJump / applySteer, and the advances() re-entry.
             ticksOnCurrent++;
             if (ticksOnCurrent > currentCostEstimate + MOVEMENT_TIMEOUT_TICKS) {
                 // WHICH step, not just that one. 13 of 15 chains in a measured chase died here,

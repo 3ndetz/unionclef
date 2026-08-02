@@ -358,6 +358,8 @@ public abstract class Movement {
             armMotionFrame(player);
             sprintRequested = Boolean.TRUE.equals(
                     currentState.getInputStates().get(Input.SPRINT));
+            moveTicks++;
+            if (sprintRequested) sprintTicks++;
             applyInputs(player, currentState.getInputStates());
         }
         currentState.getInputStates().clear();
@@ -566,6 +568,11 @@ public abstract class Movement {
     public boolean sprintRequested() {
         return sprintRequested;
     }
+
+    /** Ticks a queued movement asked for SPRINT, and ticks one ran at all. A chase that keeps
+     *  station 25 blocks behind a sprinting target is a SPEED question, and speed is not
+     *  something to A/B on a bimodal metric — it is something to count. */
+    public static volatile int sprintTicks, moveTicks;
 
     private boolean sprintRequested = false;
 
