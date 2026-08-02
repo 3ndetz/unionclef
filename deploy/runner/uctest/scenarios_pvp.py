@@ -575,20 +575,36 @@ class AllRound(Scenario):
         ctx.bot.py.call("selectHotbar", 0)  # bow in hand for the ranged phase
         ctx.victim.py.call("punk", ctx.bot.name)
 
+    MELEE_AT = 12.0
+
     def drive_tick(self, ctx, t):
+        # ⛔ THE PHASE DECISION WAS MADE ON A ~7.5 s STALE DISTANCE, AND IT LATCHED.
+        # `ctx.samples[-1]["dist"]` is whatever the last sample saw, and one sample iteration
+        # costs about 7.5 s of blocking rcon here — a sprinting victim covers some forty blocks
+        # in that time. So the bot stood with a BOW in hand, with punk not yet started, while a
+        # sword bot walked up and killed it: a death handed over by the harness, counted against
+        # the bot on a course whose gate is "deaths <= 0". And `melee_started` never cleared, so
+        # after a respawn the ranged phase never came back.
+        # Read the distance FRESH, and let the phase follow it in both directions.
+        bp, vp = ctx.rcon.entity_pos(ctx.bot.name), ctx.rcon.entity_pos(ctx.victim.name)
+        if not bp or not vp:
+            return
+        dist = ((bp[0] - vp[0]) ** 2 + (bp[1] - vp[1]) ** 2 + (bp[2] - vp[2]) ** 2) ** 0.5
+        if dist <= self.MELEE_AT:
+            if not ctx.geo["melee_started"]:
+                ctx.geo["melee_started"] = True
+                ctx.bot.py.call("selectHotbar", 1)   # punk swings the HELD item
+                ctx.bot.py.call("punk", ctx.victim.name)
+            return
         if ctx.geo["melee_started"]:
-            return
-        dist = ctx.samples[-1].get("dist") if ctx.samples else None
-        if dist is None:
-            return
-        if dist > 10:
-            if t - ctx.geo["last_shot"] >= 2.5:
-                ctx.geo["last_shot"] = t
-                ctx.bot.py.try_call("shootArrowAt", ctx.victim.name)
-        else:
-            ctx.geo["melee_started"] = True
-            ctx.bot.py.call("selectHotbar", 1)  # sword for melee (punk swings the held item)
-            ctx.bot.py.call("punk", ctx.victim.name)
+            # Back to range — a respawn puts the fighters apart again, and the course is meant
+            # to measure the bow phase every round, not only the first one.
+            ctx.geo["melee_started"] = False
+            ctx.bot.py.try_call("punkStop")
+            ctx.bot.py.call("selectHotbar", 0)
+        if t - ctx.geo["last_shot"] >= 2.5:
+            ctx.geo["last_shot"] = t
+            ctx.bot.py.try_call("shootArrowAt", ctx.victim.name)
 
     def early_stop(self, ctx):
         return ctx.kills() >= 1
