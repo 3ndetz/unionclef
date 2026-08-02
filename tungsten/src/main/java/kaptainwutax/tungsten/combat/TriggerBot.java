@@ -26,7 +26,9 @@ import net.minecraft.world.RaycastContext;
 public class TriggerBot {
 
     private static final float COOLDOWN_FULL = 0.95f;
-    private static final float COOLDOWN_CRIT = 0.85f; // falling crit is worth an early swing
+    // Package-visible: CombatController's reach control holds its distance against the same
+    // threshold this gate fires at, so the mover and the swing cannot disagree about "armed".
+    static final float COOLDOWN_CRIT = 0.85f; // falling crit is worth an early swing
 
     /**
      * Vanilla melee entity reach, measured EYE -> CLOSEST POINT OF THE HITBOX.

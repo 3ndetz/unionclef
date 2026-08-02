@@ -208,8 +208,31 @@ public class CombatController {
         // up frozen on a ledge. Backing off is the dangerous one: the target stands on solid
         // ground, so forward is nearly always safe, while backwards is what walks the bot off
         // a 5x5 platform or a 1-wide bridge.
-        boolean tooFar = dist > STRIKE_DISTANCE;
-        boolean tooClose = dist < TOO_CLOSE_DISTANCE;
+        // REACH CONTROL: THE BAND FOLLOWS THE COOLDOWN.
+        // With a fixed band the bot parks in [1.6, 2.4] for the WHOLE fight — permanently inside
+        // the opponent's 3.0 reach, including its own ~12.5-tick recharge, which is a window it
+        // cannot attack in at all. Every swing the opponent offers in that window is free. This
+        // is the one change that removes incoming damage without costing a single point of
+        // outgoing damage: close when the swing is ready, hold just OUTSIDE the opponent's reach
+        // while it is not.
+        //
+        // Derived from getAttackCooldownProgress — the same signal TriggerBot gates the swing on
+        // (TriggerBot.java:75), so the mover and the attack gate stay one source of truth, which
+        // is the reason STRIKE_DISTANCE was tied to TriggerBot.REACH in the first place.
+        double strikeAt = STRIKE_DISTANCE;
+        double backOffAt = TOO_CLOSE_DISTANCE;
+        if (kaptainwutax.tungsten.TungstenConfig.get().combatReachControl) {
+            float cd = player.getAttackCooldownProgress(0f);
+            boolean armed = cd >= TriggerBot.COOLDOWN_CRIT;
+            if (!armed) {
+                // Recharging: stand off just past the opponent's reach. Not further — the swing
+                // has to be one step away when the cooldown lands, or the stand-off costs tempo.
+                strikeAt = TriggerBot.REACH + 0.4;
+                backOffAt = TriggerBot.REACH + 0.2;
+            }
+        }
+        boolean tooFar = dist > strikeAt;
+        boolean tooClose = dist < backOffAt;
         out.active = true;
         out.forward = tooFar && dirSafe(player, world, 1, 0);
         // Did we ASK to close, and did the ask survive? Combat runs 416 ticks a fight and
@@ -224,7 +247,7 @@ public class CombatController {
         if (out.forward) fwdAsked++;
         lastDist = dist;
         out.back = tooClose && dirSafe(player, world, -1, 0);
-        out.sprint = out.forward && dist > STRIKE_DISTANCE + 1.0; // sprint only for a real approach
+        out.sprint = out.forward && dist > strikeAt + 1.0; // sprint only for a real approach
 
         // Circle-strafe: orbit the target, flipping direction on a randomised cadence
         // (unpredictable, keeps flanking). If the chosen side is a drop, take the OTHER

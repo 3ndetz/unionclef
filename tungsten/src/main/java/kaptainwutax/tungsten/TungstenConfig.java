@@ -149,6 +149,16 @@ public class TungstenConfig {
      *  unconditionally at init, i.e. it owns the bucket and asks the pathfinder not to touch it.
      *  This is the fourth conjunct of MovementFall.java:99 restored under a name tungsten has. */
     public boolean allowBucketMlg = false;
+    /**
+     * Hold the melee distance as a function of the ATTACK COOLDOWN instead of a fixed band.
+     *
+     * <p>OFF by default, and that is not timidity: melee_basic is a MIRROR duel — both fighters
+     * are this same jar with the same kit — so shipping a combat change on by default hands it to
+     * the opponent too and the course stays a coin flip. The only way this stand can prove the
+     * change is worth anything is `run_suite.py --pin combatReachControl=true`, which applies to
+     * ONE of the two fighters.
+     */
+    public boolean combatReachControl = false;
 
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
      *  If false, only walks (no jumps) — safer but slower. */
