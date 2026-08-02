@@ -135,11 +135,15 @@ public class TungstenConfig {
     /** Let {@code MovementQueue} own the WHOLE route, walking untyped edges with
      *  {@code MovementFallback} instead of abandoning the tail at the first one. OFF by default
      *  until an interleaved A/B says otherwise — see C5.18. */
+    // ⛔ STAYS OFF BY DEFAULT — MEASURED 2026-08-02. Turning it on took nav 12/12 -> 11/12 with
+    // nav_bridge red: whole-route mode also changes what the NAVIGATOR's build legs accept, and
+    // a bridge leg is exactly where an untyped edge becoming a MovementFallback matters. The
+    // chase turns it on for itself; nav is the protected baseline and does not get to regress.
     public boolean queueWholeRoute = false;
     /** Run the CHASE's block route through {@code MovementQueue} (the ported baritone movements)
      *  instead of {@code BlockPathWalker}. Until now the queue only ever received build legs, so
      *  every plain walk in the mod — nav and chase alike — was the hand-rolled walker. See C5.18. */
-    public boolean chaseUsesQueue = false;
+    public boolean chaseUsesQueue = true;
     /** May a fall place a water bucket to break itself (an "MLG")? OFF, because altoclef —
      *  the brain this module runs under — calls configurePlaceBucketButDontFall(true)
      *  unconditionally at init, i.e. it owns the bucket and asks the pathfinder not to touch it.

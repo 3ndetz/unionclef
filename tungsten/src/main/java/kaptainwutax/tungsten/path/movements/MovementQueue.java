@@ -313,7 +313,21 @@ public final class MovementQueue {
      * edge rather than skipped over: the queue owns a contiguous run or nothing.
      */
     public static synchronized int start(List<BlockPos> cells) {
-        int covered = traversePrefix(cells);
+        return start(cells, kaptainwutax.tungsten.TungstenConfig.get().queueWholeRoute);
+    }
+
+    /**
+     * As {@link #start(List)}, but the caller states whether it wants the WHOLE route.
+     *
+     * <p>The two callers want different things and measuring proved it. The chase is better off
+     * with every edge in the chain (4 interleaved pairs: 7/15, 13/12, 22/22, 0/22 — and the
+     * 0-freeze run was the longest chase of the batch, the runner covering 529 blocks against
+     * ~107). The NAVIGATOR is not: turning the same mode on globally took nav 12/12 to 11/12 with
+     * nav_bridge red, because it also changes what a build leg accepts. So it stops being one
+     * global switch and becomes the caller's choice.
+     */
+    public static synchronized int start(List<BlockPos> cells, boolean wholeRoute) {
+        int covered = wholeRoute ? (cells == null ? 0 : cells.size()) : traversePrefix(cells);
         if (covered < 2) {
             qRefused++;
             qShort++;

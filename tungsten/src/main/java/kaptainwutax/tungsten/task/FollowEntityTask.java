@@ -544,7 +544,11 @@ public class FollowEntityTask {
                 boolean queued = false;
                 if (kaptainwutax.tungsten.TungstenConfig.get().chaseUsesQueue
                         && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
-                    queued = kaptainwutax.tungsten.path.movements.MovementQueue.start(bfsPath) > 0;
+                    // THE CHASE ASKS FOR THE WHOLE ROUTE, whatever the global default is: that is
+                    // the configuration the pairs above were measured in, and the navigator's
+                    // build legs must not be dragged along with it.
+                    queued = kaptainwutax.tungsten.path.movements.MovementQueue
+                            .start(bfsPath, true) > 0;
                 }
                 if (!queued && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
                     BlockPathWalker.startBFS(bfsPath, true);
