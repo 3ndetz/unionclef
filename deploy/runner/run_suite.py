@@ -65,17 +65,20 @@ VIZ_SETTINGS = {
 }
 
 
-def _rec_start(scn_id, dur, persp=0):
+def _rec_start(scn_id, dur, persp=0, bot=None):
     """Record tester1's own screen for the scenario window (x11grab on the
     container's :0). First-person + the tungsten combat overlay (Walker/Punk
     state, freeze behaviour) — reliable and diagnostic; the combat aim forces
     first-person anyway, so third-person doesn't hold during a fight. Returns
     the in-container mp4 path."""
     mp4 = f"/mc-data/rec_{scn_id}.mp4"
-    try:
-        Py4jClient(BOT_CONTAINER).call("setPerspective", persp)
-    except Exception:
-        pass
+    # USE THE BOT'S OWN CLIENT. This called an un-imported `Py4jClient`, so every --record run
+    # raised NameError straight into the bare `except` below and filmed in whatever perspective
+    # the previous scenario happened to leave behind.
+    if bot is not None:
+        ok, res = bot.py.try_call("setPerspective", persp)
+        if not ok:
+            print(f"  WARN setPerspective({persp}) failed: {res}", flush=True)
     subprocess.run(["docker", "exec", BOT_CONTAINER, "sh", "-c",
                     "pkill -INT ffmpeg 2>/dev/null; sleep 0.3; true"],
                    capture_output=True)
@@ -180,7 +183,7 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
         rcon.reset_kd([BOT, VICTIM])
         if scn.settings:
             bot.pin_settings(scn.settings)
-        mp4 = _rec_start(scn.id, scn.duration) if record else None
+        mp4 = _rec_start(scn.id, scn.duration, bot=bot) if record else None
         crits = scn.run(ctx)
         if record:
             clip = _rec_stop(scn.id, art)
