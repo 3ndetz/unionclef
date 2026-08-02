@@ -506,6 +506,18 @@ public class PathFinder {
 	        	primaryTimeoutTime = System.currentTimeMillis() + 1120L;
 	        	lastProgressMs = System.currentTimeMillis();   // advanced along the block path = progress
 				failedAttempts = 0;
+	        	// A NEW OBJECTIVE NEEDS A NEW RECORD. The waypoint just moved, and updateNode
+	        	// measures estimatedCostToGoal against THAT waypoint — so the yardstick behind
+	        	// bestHeuristicSoFar has changed while the record it holds has not. With a
+	        	// positive minimumImprovement the record is monotone, so it freezes until the
+	        	// frontier physically reaches the new waypoint and bestSoFar[] lags a segment
+	        	// behind. Upstream never meets this because a PathNode's estimatedCostToGoal is
+	        	// fixed for the whole search; here the goal legitimately advances, and re-seeding
+	        	// is what "the goal changed" means. `next` is the node that reached the new
+	        	// waypoint, so it is the honest seed — the same thing setCurrentPath does on a
+	        	// re-root.
+	        	bestHeuristicSoFar = initializeBestHeuristics(next);
+	        	// (previous note, kept for the record:)
 	        	// KNOWN, DELIBERATELY NOT FIXED IN THIS PASS (C5.21 follow-up). The waypoint just
 	        	// moved, and updateNode measures estimatedCostToGoal against THAT waypoint — so
 	        	// the yardstick behind bestHeuristicSoFar has changed while the record it holds
