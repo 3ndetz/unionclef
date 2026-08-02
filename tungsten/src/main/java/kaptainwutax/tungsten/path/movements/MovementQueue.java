@@ -347,7 +347,15 @@ public final class MovementQueue {
             // for itself how to be walked, and the queue only decides whose turn it is.
             // ONE MOVEMENT CLASS PER EDGE SHAPE, which is upstream's model: the step decides for
             // itself how to be walked, and the queue only decides whose turn it is.
-            if (isPillarEdge(from, to)) {
+            // WATER FIRST, BEFORE ANY LAND PREDICATE CAN CLAIM THE SHAPE. FastPlanner expands all
+            // six directions inside water and prices them as strokes, so a route through a lake
+            // carries vertical edges — and a vertical edge matches isPillarEdge, which means the
+            // bot was told to build a tower under itself while floating. Measured: 34 hand-backs
+            // in one run, every one of them MovementPillar (-177,62,290)->(-177,63,290), with
+            // rcon confirming the source is water and the destination is the air above it.
+            if (MovementHelperB.isLiquid(world, from) || MovementHelperB.isLiquid(world, to)) {
+                movements.add(new MovementSwim(from, to));
+            } else if (isPillarEdge(from, to)) {
                 movements.add(new MovementPillar(from, to));
             } else if (isDiagonalEdge(from, to)) {
                 movements.add(new MovementDiagonal(from, to));
