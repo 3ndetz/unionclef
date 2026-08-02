@@ -782,7 +782,36 @@ public class PathFinder {
 	    return failing;
 	}
 
+	/**
+	 * How far this node has travelled from the search's start, squared.
+	 *
+	 * <p>All three axes read {@code start.x}. It is a copied line with the letter left
+	 * unchanged, and it makes the function return a number that is not a distance at all: with
+	 * a start at x=100, y=64, the Y term alone contributes (100-64)^2 = 1296, so the result is
+	 * enormous everywhere and the test it feeds — "have we got clear of the start yet?"
+	 * (:777, {@code &gt; MIN_DIST_PATH^2}) — is satisfied by the FIRST child expanded, wherever
+	 * it is. `failing` therefore clears immediately, the search reports itself out of trouble
+	 * and hands back a path of one node.
+	 *
+	 * <p>Upstream is AbstractNodeCostSearch.java:149-154, which reads startX/startY/startZ.
+	 * This is register C2.3, and it is the mechanism behind the RW-1 report: the bot barely
+	 * moves when the target is close, because close is exactly when a one-node path looks
+	 * like an answer.
+	 */
 	private static double getDistFromStartSq(Node n, Vec3d start) {
+		// ⛔ THE OBVIOUS FIX IS MEASURED AND REVERTED — 2026-08-02.
+		// Reading start.y and start.z here (i.e. actually measuring a distance) took nav from
+		// 12/12 to 10/12, nav_flat and nav_steep red. That is not an argument that the maths is
+		// right — it is wrong, plainly, and upstream reads startX/startY/startZ
+		// (AbstractNodeCostSearch.java:149-154). It is evidence for what the audit said about
+		// this engine: its defects MASK EACH OTHER. Today `failing` clears on the first child
+		// because this number is enormous everywhere; correct it alone and `failing` stays set,
+		// and the five other defects recorded as C5.21 — the missing A* relaxation guard, the
+		// absent failure timeout, the negative improvement threshold, the extra `continue`, the
+		// extra `&& !failing` — decide the outcome instead.
+		//
+		// So it goes back to the broken form until C5.21 lands as ONE piece, and the register
+		// says so. Restoring it piecemeal costs two courses and fixes nothing.
 		double xDiff = start.x - n.agent.getPos().x;
 		double yDiff = start.x - n.agent.getPos().y;
 		double zDiff = start.x - n.agent.getPos().z;
