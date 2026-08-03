@@ -37,6 +37,7 @@ elif op=="inv":
                 if nm: ids.append(nm)
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
+elif op=="task": out={"chain": str(mc.getTaskChainString() or "")[:220]}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",8)))]}
 elif op=="hasTask": out={"busy":mc.hasActiveTask()}
 print(json.dumps(out,default=str)); gw.close()
@@ -94,6 +95,7 @@ def main():
               ("bucket", ("bucket",)), ("nether", ("obsidian", "flint_and_steel")),
               ("blaze", ("blaze_rod", "blaze_powder")), ("ender", ("ender_pearl", "ender_eye"))]
     reached = {}
+    ctx_last_chain = [None]
 
     print(f"[4] watching {MINUTES} min for progress...")
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
@@ -101,6 +103,18 @@ def main():
         time.sleep(20)
         try:
             gs=py4j("gs"); inv=py4j("inv"); ht=py4j("hasTask")
+            # WHAT IS IT DOING WHEN IT FAILS? Asking after the run is useless — the task
+            # chain reads "No tasks" the moment @gamer ends, which is what my first attempt
+            # measured. Sample it WHILE the run is alive, and only when it changes, so the
+            # log shows the sequence of intents rather than one line repeated forty times.
+            okc, tc = True, None
+            try:
+                tc = py4j("task").get("chain")
+            except Exception:
+                okc = False
+            if okc and tc and tc != ctx_last_chain[0]:
+                ctx_last_chain[0] = tc
+                print(f"  TASK {tc}")
             for rung, needles in LADDER:
                 if rung in reached: continue
                 if any(any(nd in i for nd in needles) for i in inv.get("ids") or []):
