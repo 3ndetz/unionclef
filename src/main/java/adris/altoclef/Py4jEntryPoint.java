@@ -2111,6 +2111,19 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.path.movements.MovementQueue.qUnreachable = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qTimeout = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qTicks = 0;
+        // The nav-branch tallies zero here too, or they are container-lifetime sums wearing a
+        // per-run label: three runs in a row reported pdNoVec=238 while pdEnter climbed, and the
+        // only thing that ever really zeroed them was a client restart on redeploy.
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdEnter = 0;
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdNotPrimary = 0;
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdPillar = 0;
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdBridge = 0;
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdStuckGiveUp = 0;
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdWalking = 0;
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdNear = 0;
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdNoGoal = 0;
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdFinished = 0;
+        adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdNoVec = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qLost = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qStatusFail = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qRefused = 0;

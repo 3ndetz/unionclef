@@ -38,6 +38,7 @@ elif op=="inv":
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")[:300]}
+elif op=="zero": out={"r": str(mc.resetRunCounters())}
 elif op=="wdbg": out={"r": str(mc.setWalkerDebug(bool(req.get("on"))))}
 elif op=="task": out={"chain": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-1400:], "runner": str(mc.getRunnerStatus() or "")[:300]}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",8)))]}
@@ -99,6 +100,11 @@ def main():
     print("[3] tungsten-primary ON + @gamer...")
     print("  swap:", py4j("swap", on=True))
     print("  walker debug:", py4j("wdbg", on=True))
+    # A COUNTER IS ONLY A MEASUREMENT IF YOU KNOW ITS ZERO. Without this every pd*/mq* number
+    # below is a container-lifetime sum printed as if it described this run -- two consecutive
+    # runs both reported pdNoVec=238, which is what gave it away. run_suite.py has always done
+    # this; the smoke did not.
+    print("  zero counters:", py4j("zero"))
     inv0 = py4j("inv"); print("  start inv:", inv0)
     py4j("cmd", c="@gamer")
 
