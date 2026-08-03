@@ -386,6 +386,22 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             return true;
         }
 
+        // A BOT IN WATER IS NOT STUCK, IT IS FLOATING.
+        // A swimmer bobs inside one block — measured on the playthrough course, ten minutes at
+        // (-177,62,290) with the body oscillating between y 62.2 and 63.0, which is well inside
+        // the 0.75 this detector calls "has not moved". The escalation then fires every five
+        // seconds and its recovery is to KILL the pathfinder, the executor and the walker; after
+        // three rounds primDrive returns false and hands movement back to the legacy driver
+        // entirely. That is why every tungsten counter read zero on that course — mqStarted=0 and
+        // called=0 — while the search kept finding paths: control never reached the block-route
+        // branch below, which is the one that can hand a liquid edge to MovementSwim.
+        // Refreshing the timer here lets that branch run. It is not a licence to float forever:
+        // the branch below either produces a route or falls through as before.
+        if (mod.getPlayer().isTouchingWater()) {
+            twStuckPos = plNow;
+            twStuckSinceMs = nowMs;
+            twStuckResets = 0;
+        }
         if (twStuckPos == null || plNow.distanceTo(twStuckPos) > 0.75) {
             twStuckPos = plNow; twStuckSinceMs = nowMs; twStuckResets = 0;
         } else if (kaptainwutax.tungsten.task.BlockPathWalker.isRunning() && nowMs - twStuckSinceMs > 2500) {

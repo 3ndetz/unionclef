@@ -2,6 +2,7 @@ package adris.altoclef.tasks.construction;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
+import adris.altoclef.tasks.movement.GetToBlockTask;
 import adris.altoclef.tasks.movement.RunAwayFromPositionTask;
 import adris.altoclef.tasks.movement.SafeRandomShimmyTask;
 import adris.altoclef.tasksystem.ITaskRequiresGrounded;
@@ -358,11 +359,17 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                     mod.getInputControls().release(Input.SNEAK);
                 }
             }
-            if (!mod.getClientBaritone().getCustomGoalProcess().isActive()) {
-                mod.getClientBaritone().getBuilderProcess().onLostControl();
-                mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(mod.getWorld().getBlockState(pos.up()).getBlock() ==
-                        Blocks.SNOW ? new GoalBlock(pos) : new GoalNear(pos, 1));
-            }
+            // WALK THERE WITH THE MOD'S OWN DRIVER, NOT WITH SHREDDER.
+            // This called getCustomGoalProcess().setGoalAndPath() directly, which is the old
+            // pathfinder — tungsten never saw the request. And this task is the LEAF of the whole
+            // playthrough: "beat the game" descends through pickaxe -> planks -> Mine And Collect
+            // -> Destroy block at (-177,67,331), and that last step is how the bot walks to every
+            // log, every ore, every block it ever breaks. Measured on the playthrough course: the
+            // task chain sat on exactly this leaf while EVERY tungsten counter read zero
+            // (mqStarted=0, called=0, staleRoot=0) and the bot did not move for ten minutes.
+            // GetToBlockTask extends CustomBaritoneGoalTask, so returning it here puts the walk on
+            // the tungsten-primary driver like the rest of navigation.
+            return new GetToBlockTask(pos, false);
         }
         return null;
     }

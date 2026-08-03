@@ -38,7 +38,7 @@ elif op=="inv":
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")[:300]}
-elif op=="task": out={"chain": str(mc.getTaskChainString() or "")[:220], "runner": str(mc.getRunnerStatus() or "")[:300]}
+elif op=="task": out={"chain": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-1400:], "runner": str(mc.getRunnerStatus() or "")[:300]}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",8)))]}
 elif op=="hasTask": out={"busy":mc.hasActiveTask()}
 print(json.dumps(out,default=str)); gw.close()
