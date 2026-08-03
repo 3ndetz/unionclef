@@ -1151,6 +1151,28 @@ public class PathFinder {
         // does not start where the player actually stands is garbage (stale
         // root from before a re-root) and drift-aborts on tick 1. Refuse it.
         if (result.get().getFirst().agent.getPos().distanceTo(player.getEntityPos()) > 2.0) {
+            // THE EXECUTOR ALREADY KNOWS HOW TO HANDLE A DISTANT ROOT — ASK IT.
+            // PathExecutor.setPath ARMS a path whose root is out of reach: it does not replay,
+            // it waits while the WALKER carries the bot to that root, and only then starts. Its
+            // own comment says arming exists for exactly this, and that arming without a walker
+            // would be a deadlock rather than a wait.
+            //
+            // This check fires FIRST and throws the emission away, so that mechanism never gets
+            // the chance — measured as staleRoot=609 in eight minutes, every one a whole search
+            // discarded. Three ways of avoiding the staleness have now been tried and measured
+            // worse or useless (slicing the tail, re-seeding the next search at the player,
+            // rooting ahead of the player). The reason they all failed is the same: they treated
+            // a distant root as an error to be prevented, when the executor treats it as a
+            // situation to be waited out.
+            //
+            // So the refusal narrows to the case the executor genuinely cannot survive: nobody
+            // is walking the bot to that root.
+            if (kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
+                if (TungstenConfig.get().verboseDebugLogging) {
+                    Debug.logMessage("Distant root, but the walker is driving — letting the "
+                            + "executor arm it");
+                }
+            } else {
             staleRootRejections++;
             if (TungstenConfig.get().verboseDebugLogging) {
                 Debug.logMessage("Rejecting stale-rooted path emission (root far from player)");
@@ -1169,6 +1191,7 @@ public class PathFinder {
             // overrideStartPos is consumed by the next search to root it at a given position.
             TungstenModDataContainer.PATHFINDER.overrideStartPos = player.getEntityPos();
             return false;
+            }
         }
 
         Node newStart = null;
