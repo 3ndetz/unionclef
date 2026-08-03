@@ -626,6 +626,10 @@ public class BeatMinecraftTask extends Task {
      *  see the gate in {@link #addCollectFoodTask}. */
     private static final float LOW_HEALTH_FOOD_OVERRIDE = 10.0f;
 
+    /** Wool positions whose surroundings have already been examined for ancient-city blocks.
+     *  The answer cannot change for a fixed position, so it is asked once. */
+    private final java.util.Set<BlockPos> ancientCityCheckedWool = new java.util.HashSet<>();
+
     private void addCollectFoodTask(AltoClef mod) {
         List<Item> food = new LinkedList<>(ItemHelper.cookableFoodMap.values());
         food.addAll(ItemHelper.cookableFoodMap.keySet());
@@ -1342,6 +1346,15 @@ public class BeatMinecraftTask extends Task {
         List<Block> ancientCityBlocks = List.of(Blocks.DEEPSLATE_BRICKS, Blocks.SCULK, Blocks.SCULK_VEIN, Blocks.SCULK_SENSOR, Blocks.SCULK_SHRIEKER, Blocks.DEEPSLATE_TILE_STAIRS, Blocks.CRACKED_DEEPSLATE_BRICKS, Blocks.SOUL_LANTERN, Blocks.DEEPSLATE_TILES, Blocks.POLISHED_DEEPSLATE);
         final int radius = 5;
         for (BlockPos pos : mod.getBlockScanner().getKnownLocations(ItemHelper.itemsToBlocks(ItemHelper.WOOL))) {
+            // ASK ONCE PER WOOL, NOT ONCE PER TICK. "Is this wool inside an ancient city" is a
+            // property of the world around a FIXED position, and this loop ran on every tick,
+            // reading a 10x10x10 cube — a THOUSAND block states — for every known wool, then
+            // re-blacklisting positions it had already blacklisted. Measured on a live @gamer
+            // run: 695 "Blacklisting ancient city wool" lines, all of them repeats, with that
+            // cube scanned again behind each one on the client thread.
+            if (!ancientCityCheckedWool.add(pos.toImmutable())) {
+                continue;
+            }
 
             searchLoop:
             for (int x = -radius; x < radius; x++) {
