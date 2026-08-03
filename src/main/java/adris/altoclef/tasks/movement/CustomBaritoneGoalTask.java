@@ -21,7 +21,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
 
     /** Entry and early-exit tallies for the tungsten branch; read over py4j in placeStats(). */
     public static volatile int pdEnter, pdNotPrimary, pdPillar, pdBridge, pdStuckGiveUp,
-            pdWalking, pdNear, pdNoGoal, pdFinished, pdNoVec, pdStallWalker, pdStallReset;
+            pdWalking, pdNear, pdNoGoal, pdFinished, pdNoVec, pdStallWalker, pdStallReset, pdNearBusy, pdNearFind;
+    /** When the near-goal branch last issued a search; see the rate gate at its site. */
+    private long twLastNearFindMs = 0L;
 
     private final Task wanderTask = new TimeoutWanderTask(5, true);
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
@@ -591,8 +593,23 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 return true;
             }
             // Final approach (<=4 blocks) or water → physics executor.
+            // THIS IS WHERE THE BOT SPENDS ITS LIFE, so it gets counted like everything else:
+            // pdNear is ~5000 of ~5100 entries, i.e. the goal is within 4 blocks about 98% of the
+            // time, and inside that radius the block route does not run at all — the physics
+            // executor is the only driver. Whether it is working or merely "busy" is the
+            // difference between arriving and the 5-second reset firing twenty times a run, and
+            // nothing here could tell those apart.
             boolean busy = (pf != null && pf.active.get()) || (ex != null && ex.isRunning());
-            if (!busy && pf != null) {
+            if (busy) pdNearBusy++;
+            // A SEARCH PER TWO TICKS IS NOT PLANNING, IT IS THRASHING.
+            // Measured: pdNearFind 2460 and 2707 in a four-minute run — about 4800 ticks — for a
+            // goal FOUR BLOCKS away. Every tick the search was not already busy, this issued a
+            // fresh one, so no search ever survived long enough for its path to be walked, and
+            // the bot stood in place until the 5-second reset fired (pdStallReset 14 and 17).
+            // The same rate gate the placements got: give a search time to become a path.
+            if (!busy && pf != null && nowMs - twLastNearFindMs > 600) {
+                twLastNearFindMs = nowMs;
+                pdNearFind++;
                 if (ex != null) ex.stop = false;   // a prior ;stop leaves it stuck true
                 pf.find(mod.getWorld(), gp, mod.getPlayer());
             }
