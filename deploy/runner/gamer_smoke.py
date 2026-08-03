@@ -95,6 +95,16 @@ def main():
               ("bucket", ("bucket",)), ("nether", ("obsidian", "flint_and_steel")),
               ("blaze", ("blaze_rod", "blaze_powder")), ("ender", ("ender_pearl", "ender_eye"))]
     reached = {}
+    # A RUNG YOU SPAWNED WITH IS NOT A RUNG YOU CLIMBED.
+    # The gamer world is not wiped between runs, so the bot can start already holding gear it
+    # earned in an earlier run. Measured: a run reported "iron tools at 21.2s" with items gained
+    # 0 and reported PASS — it had simply been handed the previous run's pickaxe. Rungs already
+    # satisfied by the STARTING inventory are recorded and then excluded, so the bar is what this
+    # run actually achieved.
+    preexisting = {rung for rung, needles in LADDER
+                   if any(any(nd in i for nd in needles) for i in (inv0.get("ids") or []))}
+    if preexisting:
+        print("  already held at start (cannot count):", ", ".join(sorted(preexisting)))
     ctx_last_chain = [None]
 
     print(f"[4] watching {MINUTES} min for progress...")
@@ -118,7 +128,7 @@ def main():
             if okc and tcj.get("runner"):
                 print(f"  RUNNER {tcj.get('runner')}")
             for rung, needles in LADDER:
-                if rung in reached: continue
+                if rung in reached or rung in preexisting: continue
                 if any(any(nd in i for nd in needles) for i in inv.get("ids") or []):
                     reached[rung] = round(time.time()-t0, 1)
                     print(f"  RUNG '{rung}' at {reached[rung]}s")
