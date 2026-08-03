@@ -234,6 +234,10 @@ public class BlockSpacePathFinder {
 		// last-resort partial when the monotone bestSoFar record declines to move.
 		BlockNode closestToGoal = null;
 		double closestDistSq = Double.MAX_VALUE;
+		// "How many children did we make, and how many got in" — the question that settles an
+		// empty open set without guessing.
+		int generatedChildren = 0;
+		int insertedChildren = 0;
 
 		openSet.insert(start);
 		while(!openSet.isEmpty()) {
@@ -294,7 +298,20 @@ public class BlockSpacePathFinder {
 				// heuristic. The guard below is kept in upstream's shape regardless — it is free,
 				// it is where a node map would plug in, and half-conditions quietly dropped are
 				// this engine's signature failure.
-				if (child.cost - tentativeCost > minimumImprovement) {
+				// A NODE THAT HAS NEVER BEEN RELAXED MUST ACCEPT ITS FIRST RELAXATION.
+				// Every node is born with cost = COST_INF, so the improvement test reads
+				// `COST_INF - tentativeCost`. That is fine while tentativeCost is finite — but
+				// the moment it is not (an edge priced COST_INF, or a parent still at infinity)
+				// the expression is `COST_INF - COST_INF`, which is ZERO, which is not greater
+				// than minimumImprovement — and the child is REJECTED. Reject every child of a
+				// node and the open set empties right after the start: measured on a live @gamer
+				// run as "Ran out of nodes!" 638 times, with the closest-reached fallback finding
+				// no parent because nothing beyond the start was ever expanded.
+				// Upstream never meets this: its nodes come from a node map with finite costs.
+				boolean firstRelaxation = child.cost >= ActionCosts.COST_INF;
+				generatedChildren++;
+				if (firstRelaxation || child.cost - tentativeCost > minimumImprovement) {
+					insertedChildren++;
 					updateNode(next, child, tentativeCost, target, world, heuristicScale);
 
 					if (child.isOpen()) {
@@ -354,7 +371,8 @@ public class BlockSpacePathFinder {
 					return Optional.of(path);
 				}
 			}
-			Debug.logWarning("Ran out of nodes");
+			Debug.logWarning("Ran out of nodes (children generated=" + generatedChildren
+					+ " inserted=" + insertedChildren + ")");
 			return Optional.empty();
 		}
         Optional<List<BlockNode>> result = bestSoFar(true, numNodes, start, world);
