@@ -457,7 +457,14 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     Debug.logMessage(String.format("primDrive gridBFS sz%d degen%b d%.1f dy%.1f",
                             bfs.size(), degenerateStub, distToGoal, gp.y - mod.getPlayer().getY()));
                 if (bfs.size() >= 2 && !degenerateStub) {
-                    if (pf != null) pf.stop.set(true);
+                    // STOP THE DRIVER, NOT THE SEARCH.
+                    // Handing movement to the walker is an OWNERSHIP decision and the executor
+                    // must indeed stand down — it is the thing that would fight for the keys.
+                    // The SEARCH is not fighting anyone: it is computing, on its own thread, a
+                    // route this task will want in a moment. Killing it here threw that work
+                    // away on every hand-off, which is the "[Tungsten] stopped!" that fires
+                    // every ~5 seconds all run long, and it takes the armed paths with it
+                    // ("the walker that was to reach its root has stopped").
                     if (ex != null) ex.stop = true;
                     kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
                     mod.getClientBaritone().getPathingBehavior().forceCancel();
