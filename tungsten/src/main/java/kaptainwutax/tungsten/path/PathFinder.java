@@ -1145,10 +1145,31 @@ public class PathFinder {
         // does not start where the player actually stands is garbage (stale
         // root from before a re-root) and drift-aborts on tick 1. Refuse it.
         if (result.get().getFirst().agent.getPos().distanceTo(player.getEntityPos()) > 2.0) {
-            if (TungstenConfig.get().verboseDebugLogging) {
-                Debug.logMessage("Rejecting stale-rooted path emission (root far from player)");
+            // RE-ROOT INSTEAD OF DISCARDING. The root goes stale for the most ordinary reason
+            // there is: the bot kept WALKING while the search ran, and usually it walked along
+            // this very path. Throwing the whole emission away wastes the search and leaves the
+            // bot with nothing — measured on a live @gamer run, 374 rejections.
+            // If the player is standing near some node of the path, the TAIL from that node is
+            // still a valid chain to replay; only the part already walked is stale.
+            List<Node> full = result.get();
+            int nearest = -1;
+            double nearestDist = Double.MAX_VALUE;
+            for (int i = 0; i < full.size(); i++) {
+                double d = full.get(i).agent.getPos().distanceTo(player.getEntityPos());
+                if (d < nearestDist) { nearestDist = d; nearest = i; }
             }
-            return false;
+            if (nearest < 0 || nearestDist > 2.0 || nearest >= full.size() - 1) {
+                if (TungstenConfig.get().verboseDebugLogging) {
+                    Debug.logMessage("Rejecting stale-rooted path emission (nothing within reach: "
+                            + String.format("%.2f", nearestDist) + ")");
+                }
+                return false;
+            }
+            if (TungstenConfig.get().verboseDebugLogging) {
+                Debug.logMessage("Re-rooting stale emission at node " + nearest + "/" + full.size()
+                        + " (" + String.format("%.2f", nearestDist) + " away)");
+            }
+            result = Optional.of(new java.util.ArrayList<>(full.subList(nearest, full.size())));
         }
 
         Node newStart = null;
