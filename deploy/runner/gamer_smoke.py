@@ -77,6 +77,25 @@ def main():
         wait_for("world loaded (bot has a position)",
                  lambda: bool((py4j("gs").get("self") or {}).get("pos")), 200, 5)
         time.sleep(5)
+    # A RUN THAT STARTS WHEREVER THE LAST ONE STOPPED MEASURES LUCK, NOT CODE.
+    # This world is never wiped, so each @gamer run began from whatever the previous one left:
+    # one run started at a pond holding an iron sword, the next somewhere else entirely. That
+    # made single-run conclusions worthless -- measured twice in a row, the same build gave
+    # pdEnter=192 and then pdEnter=0, because the bot was simply doing different things. Death
+    # and respawn is vanilla's own "put me back at world spawn", and it is what the nav suite's
+    # hard reset uses for exactly this reason (uctest/actors.py fresh_reset).
+    print("[2b] reset to a known start (kill -> respawn -> empty -> heal -> day)...")
+    grcon(f"gamerule keepInventory false")
+    grcon(f"kill {BOT}")
+    time.sleep(3)
+    py4j("cmd", c="@stop")          # a task surviving the death would fight the next run
+    wait_for("bot respawned", lambda: (py4j("gs").get("self") or {}).get("hp", 0) > 0, 120, 4)
+    grcon(f"clear {BOT}")
+    grcon(f"effect clear {BOT}")
+    grcon("time set day")
+    grcon(f"kill @e[type=item,distance=..40]")   # our own dropped kit must not be re-collected
+    time.sleep(2)
+    print("  start pos:", (py4j("gs").get("self") or {}).get("pos"))
     print("[3] tungsten-primary ON + @gamer...")
     print("  swap:", py4j("swap", on=True))
     print("  walker debug:", py4j("wdbg", on=True))
