@@ -159,6 +159,17 @@ public class TungstenConfig {
      *  instead of {@code BlockPathWalker}. Until now the queue only ever received build legs, so
      *  every plain walk in the mod — nav and chase alike — was the hand-rolled walker. See C5.18. */
     public boolean chaseUsesQueue = true;
+    /**
+     * Run ORDINARY navigation's block route through {@code MovementQueue} too.
+     *
+     * <p>The sibling of {@link #chaseUsesQueue}, and the larger half by far. With that one alone,
+     * the queue's only callers were the navigator's build legs and the chase, so a plain walk
+     * anywhere else in the mod — including the whole {@code @gamer} playthrough — was still the
+     * hand-rolled {@code BlockPathWalker}, and every ported movement class (traverse, ascend,
+     * descend, diagonal, swim, fall) sat unused. Measured on the playthrough course:
+     * {@code mqStarted=0} for an entire run while the search kept finding paths.
+     */
+    public boolean navUsesQueue = true;
     /** May a fall place a water bucket to break itself (an "MLG")? OFF, because altoclef —
      *  the brain this module runs under — calls configurePlaceBucketButDontFall(true)
      *  unconditionally at init, i.e. it owns the bucket and asks the pathfinder not to touch it.

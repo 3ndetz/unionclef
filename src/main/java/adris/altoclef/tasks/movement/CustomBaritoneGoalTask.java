@@ -440,7 +440,17 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 setDebugState("Tungsten (primary) walking terrain...");
                 return true;
             }
-            if (distToGoal > 4.0 && !mod.getPlayer().isTouchingWater()
+            // WATER NO LONGER EXCLUDES THE BLOCK ROUTE.
+            // This gate was written when the only consumer of a block route was BlockPathWalker,
+            // which cannot swim, so a bot in water had to fall through to the physics executor.
+            // The queue now types liquid edges as MovementSwim and dispatches them BEFORE any
+            // land predicate, so with navUsesQueue on there is something here that can cross a
+            // pond. Measured on the playthrough course: the bot sat in the pond at (-177,62,290)
+            // for ten minutes with mqStarted=0 and called=0 — this branch was never entered at
+            // all, so nothing downstream could have helped.
+            boolean inWater = mod.getPlayer().isTouchingWater();
+            if (distToGoal > 4.0
+                    && (!inWater || kaptainwutax.tungsten.TungstenConfig.get().navUsesQueue)
                     && nowMs >= twPreferExecutorUntilMs) {
                 // (1) cheap grid BFS — instant, good for near/clean terrain.
                 net.minecraft.util.math.BlockPos startB = mod.getPlayer().getBlockPos();
@@ -466,7 +476,25 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     // every ~5 seconds all run long, and it takes the armed paths with it
                     // ("the walker that was to reach its root has stopped").
                     if (ex != null) ex.stop = true;
-                    kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
+                    // THE PORTED MOVEMENTS GET FIRST REFUSAL ON THE ROUTE.
+                    // MovementQueue.start() had two callers, neither of them on this path: the
+                    // navigator's build legs and the chase. So ordinary navigation — every step of
+                    // the @gamer playthrough — went to the hand-rolled walker, and traverse /
+                    // ascend / descend / diagonal / swim / fall were never asked for anything.
+                    // Measured on the playthrough course: mqStarted=0 across a whole run, every
+                    // refusal counter also 0, while the search kept finding paths. The walker
+                    // stays as the fallback for a route the queue declines, exactly as in
+                    // FollowEntityTask.
+                    boolean queuedRoute = false;
+                    if (kaptainwutax.tungsten.TungstenConfig.get().navUsesQueue
+                            && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
+                        queuedRoute = kaptainwutax.tungsten.path.movements.MovementQueue
+                                .start(bfs, true) > 0;
+                    }
+                    if (!queuedRoute
+                            && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
+                        kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
+                    }
                     mod.getClientBaritone().getPathingBehavior().forceCancel();
                     checker.reset();
                     setDebugState("Tungsten (primary) walking terrain...");
@@ -490,7 +518,25 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     java.util.List<net.minecraft.util.math.BlockPos> wps = new java.util.ArrayList<>();
                     for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : bp.get()) wps.add(n.getBlockPos());
                     if (ex != null) ex.stop = true;   // don't let the executor drift-replay
-                    kaptainwutax.tungsten.task.BlockPathWalker.startBFS(wps);
+                    // THE PORTED MOVEMENTS GET FIRST REFUSAL ON THE ROUTE.
+                    // MovementQueue.start() had two callers, neither of them on this path: the
+                    // navigator's build legs and the chase. So ordinary navigation — every step of
+                    // the @gamer playthrough — went to the hand-rolled walker, and traverse /
+                    // ascend / descend / diagonal / swim / fall were never asked for anything.
+                    // Measured on the playthrough course: mqStarted=0 across a whole run, every
+                    // refusal counter also 0, while the search kept finding paths. The walker
+                    // stays as the fallback for a route the queue declines, exactly as in
+                    // FollowEntityTask.
+                    boolean queuedRoute = false;
+                    if (kaptainwutax.tungsten.TungstenConfig.get().navUsesQueue
+                            && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
+                        queuedRoute = kaptainwutax.tungsten.path.movements.MovementQueue
+                                .start(wps, true) > 0;
+                    }
+                    if (!queuedRoute
+                            && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
+                        kaptainwutax.tungsten.task.BlockPathWalker.startBFS(wps);
+                    }
                     mod.getClientBaritone().getPathingBehavior().forceCancel();
                     checker.reset();
                     setDebugState("Tungsten (primary) walking (robust path)...");
