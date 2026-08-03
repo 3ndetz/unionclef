@@ -37,7 +37,7 @@ elif op=="inv":
                 if nm: ids.append(nm)
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
-elif op=="task": out={"chain": str(mc.getTaskChainString() or "")[:220]}
+elif op=="task": out={"chain": str(mc.getTaskChainString() or "")[:220], "runner": str(mc.getRunnerStatus() or "")[:300]}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",8)))]}
 elif op=="hasTask": out={"busy":mc.hasActiveTask()}
 print(json.dumps(out,default=str)); gw.close()
@@ -107,14 +107,16 @@ def main():
             # chain reads "No tasks" the moment @gamer ends, which is what my first attempt
             # measured. Sample it WHILE the run is alive, and only when it changes, so the
             # log shows the sequence of intents rather than one line repeated forty times.
-            okc, tc = True, None
+            okc, tc, tcj = True, None, {}
             try:
-                tc = py4j("task").get("chain")
+                tcj = py4j("task"); tc = tcj.get("chain")
             except Exception:
                 okc = False
             if okc and tc and tc != ctx_last_chain[0]:
                 ctx_last_chain[0] = tc
                 print(f"  TASK {tc}")
+            if okc and tcj.get("runner"):
+                print(f"  RUNNER {tcj.get('runner')}")
             for rung, needles in LADDER:
                 if rung in reached: continue
                 if any(any(nd in i for nd in needles) for i in inv.get("ids") or []):

@@ -290,6 +290,21 @@ public class Py4jEntryPoint {
         return "Description of current game pipeline that is selected: " + getPipelineDescription() + "Current game tasks: " + tasks_string.toString();
     }
 
+    /**
+     * Which task chain owns this tick, and what every chain bid for it.
+     *
+     * <p>Call this when the bot is idle but a task was set: it distinguishes "the runner is off",
+     * "no chain wants the tick" and "a chain is running but has no tasks", which
+     * {@code getTaskChainString} reports identically as "No tasks".
+     */
+    public String getRunnerStatus() {
+        try {
+            return _mod.getTaskRunner().describeChains();
+        } catch (Exception e) {
+            return "error: " + e;
+        }
+    }
+
     public String getGroundBlock() {
         if (AltoClef.inGame() && _mod.getPlayer() != null && _mod.getWorld() != null) {
             // Get the block below the player

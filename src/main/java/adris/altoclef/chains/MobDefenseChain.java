@@ -713,24 +713,36 @@ public class MobDefenseChain extends SingleTaskChain {
 
     private boolean isInDanger(AltoClef mod) {
         boolean witchNearby = mod.getEntityTracker().entityFound(WitchEntity.class);
-
         float health = mod.getPlayer().getHealth();
-        if (health <= 10 && !witchNearby) {
-            return true;
-        }
+
+        // DANGER REQUIRES A THREAT.
+        // Low health alone used to return true right here, with nothing hostile anywhere. The
+        // chain then bid 70, out-bid the user task's 50 for EVERY tick, and ran
+        // RunAwayFromHostilesTask away from an empty field. Standing still, the bot never ate and
+        // never gathered, so health never recovered and the bid never dropped. Measured on @gamer:
+        // ten minutes frozen on one block at 2.5 hearts, "Mob Defense, priority: 70.0" every
+        // sample, the beat-the-game task alive the whole time and never once ticked. That also
+        // explains the older "no food, six minutes at 1.1 HP" observation — same deadlock.
+        // Health is a MULTIPLIER on danger, not danger itself: it now widens the radius at which a
+        // real mob counts, and a real mob is still required.
         if (mod.getPlayer().hasStatusEffect(StatusEffects.WITHER) ||
                 (mod.getPlayer().hasStatusEffect(StatusEffects.POISON) && !witchNearby)) {
+            // Damage over time IS an active threat with no mob to point at, so it stays.
             return true;
         }
-        if (WorldHelper.isVulnerable()) {
+        if (WorldHelper.isVulnerable() || health <= 10) {
             // If hostile mobs are nearby...
             try {
                 ClientPlayerEntity player = mod.getPlayer();
                 List<LivingEntity> hostiles = mod.getEntityTracker().getHostiles();
 
                 synchronized (BaritoneHelper.MINECRAFT_LOCK) {
+                    // Hurt and unarmoured, a mob one step further away is just as lethal, so the
+                    // radius grows as health falls rather than the rule short-circuiting.
+                    double reach = (health <= 10 && !witchNearby)
+                            ? SAFE_KEEP_DISTANCE * 1.5 : SAFE_KEEP_DISTANCE;
                     for (Entity entity : hostiles) {
-                        if (entity.isInRange(player, SAFE_KEEP_DISTANCE)
+                        if (entity.isInRange(player, reach)
                                 && !mod.getBehaviour().shouldExcludeFromForcefield(entity)
                                 && EntityHelper.isAngryAtPlayer(mod, entity)) {
                             return true;
