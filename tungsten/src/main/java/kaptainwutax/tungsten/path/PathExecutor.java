@@ -101,6 +101,8 @@ public class PathExecutor {
      */
     public volatile boolean placingNow = false;
     public static volatile int placeCalled=0, placeDeferred=0, placeInRange=0, placeClicked=0;
+    /** How a replayed path ended: within 1.5 blocks of its last cell, or simply out of ticks. */
+    public static volatile int execArrived=0, execRanOut=0;
     private int placingTicks = 0;
 
     public PathExecutor(boolean isClient) {
@@ -365,6 +367,20 @@ public class PathExecutor {
     		if (tickPlacing(player, options)) {
     			return;
     		}
+    		// DID WE ACTUALLY GET THERE? Nothing ever asked.
+    		// A path replayed to its end frees the executor (isRunning() is false once
+    		// tick > path.size()), the near-goal branch sees "not busy" and orders another
+    		// search, and the loop closes. Measured across a five-run sweep, the failing run
+    		// had pdNearBusy=1455 / pdNearFind=385 against 304 / 62 in the best one -- five
+    		// times as many paths run out. Count arrival against the path's own last cell
+    		// before declaring the segment finished, so the two outcomes stop looking alike.
+    		try {
+    			net.minecraft.util.math.Vec3d last = this.path.get(this.path.size() - 1)
+    					.agent.getPos();
+    			double dx = player.getX() - last.x, dy = player.getY() - last.y,
+    					dz = player.getZ() - last.z;
+    			if (dx * dx + dy * dy + dz * dz <= 2.25) execArrived++; else execRanOut++;
+    		} catch (Throwable ignored) { execRanOut++; }
     		long endTime = System.currentTimeMillis();
     		long elapsedTime = endTime - startTime;
     		long minutes = (elapsedTime / 1000) / 60;

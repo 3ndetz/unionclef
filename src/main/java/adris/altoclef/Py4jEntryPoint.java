@@ -2128,6 +2128,8 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdStallReset = 0;
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdNearBusy = 0;
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdNearFind = 0;
+        kaptainwutax.tungsten.path.PathExecutor.execArrived = 0;
+        kaptainwutax.tungsten.path.PathExecutor.execRanOut = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qLost = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qStatusFail = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qRefused = 0;
@@ -2173,7 +2175,7 @@ public class Py4jEntryPoint {
         return String.format(
                 "called=%d deferred=%d inRange=%d clicked=%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
-                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d"
+                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d exArrived=%d exRanOut=%d"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d)"
                         + " sprint=%d/%d lowHp=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
@@ -2203,6 +2205,8 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdStallReset,
                 adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdNearBusy,
                 adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdNearFind,
+                kaptainwutax.tungsten.path.PathExecutor.execArrived,
+                kaptainwutax.tungsten.path.PathExecutor.execRanOut,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qLost,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qStatusFail,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qRefused,
