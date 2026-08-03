@@ -29,9 +29,21 @@ public abstract class AbstractObjectBlacklist<T> {
         BlacklistEntry entry = entries.get(item);
         double newDistance = getPos(item).squaredDistanceTo(mod.getPlayer().getPos());
         MiningRequirement newTool = StorageHelper.getCurrentMiningRequirement();
-        // For distance, add a slight threshold so it doesn't reset EVERY time we move a tiny bit closer.
-        if (newTool.ordinal() > entry.bestTool.ordinal() || (newDistance < entry.bestDistanceSq - 1)) {
-            if (newTool.ordinal() > entry.bestTool.ordinal()) entry.bestTool = newTool;
+        // A CRAWL IS NOT A CHANGE OF CIRCUMSTANCES.
+        // The reset exists so that "I failed at this from thirty blocks away" does not condemn a
+        // block I am now standing next to. That is a STEP CHANGE. As written it fired whenever
+        // the squared distance improved by 1, and walking toward a target produces exactly such a
+        // monotone sequence — so approaching an unreachable block reset the failure count on
+        // every attempt, `unreachable()` could never become true, and the bot hammered the same
+        // target forever instead of picking another. Measured on a live @gamer run: 160
+        // blacklists against 160 RESETs, and ONE item gathered in fifteen minutes.
+        //
+        // Requiring the distance to have HALVED keeps the intent — genuinely closer, or a better
+        // tool — while a one-block shuffle no longer buys another life.
+        boolean betterTool = newTool.ordinal() > entry.bestTool.ordinal();
+        boolean materiallyCloser = newDistance < entry.bestDistanceSq * 0.5 - 1;
+        if (betterTool || materiallyCloser) {
+            if (betterTool) entry.bestTool = newTool;
             if (newDistance < entry.bestDistanceSq) entry.bestDistanceSq = newDistance;
             entry.numberOfFailures = 0;
             Debug.logMessage("Blacklist RESET: " + item.toString());
