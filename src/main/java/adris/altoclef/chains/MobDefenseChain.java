@@ -80,6 +80,16 @@ public class MobDefenseChain extends SingleTaskChain {
     // Player threat tracking (ported from autoclef)
     public Task _killTask = null;
     private final TimerGame _runAwayTimer = new TimerGame(2);
+    /**
+     * When something last took health off us.
+     *
+     * <p>The difference between HURT and UNDER ATTACK, which is the whole of the low-health rule.
+     * Two hearts left and being hit right now is a fight to disengage from; two hearts left and
+     * untouched for ten minutes is just a bot that needs to go eat.
+     */
+    private long lastDamageMs = 0L;
+    /** How long after a hit we still count as being in a fight. */
+    private static final long RECENT_DAMAGE_MS = 5000L;
     // Projectile pre-dodge (ported from autoclef, DISABLED — kept for future use)
     private Rotation suggestedProjectileRotation;
     private final TimerGame preProjectileTimer = new TimerGame(0.3);
@@ -147,7 +157,11 @@ public class MobDefenseChain extends SingleTaskChain {
         if (mainTask == null && cachedLastPriority > 0) {
             cachedLastPriority = 0;
         }
-        prevHealth = AltoClef.getInstance().getPlayer().getHealth();
+        float nowHealth = AltoClef.getInstance().getPlayer().getHealth();
+        if (nowHealth < prevHealth) {
+            lastDamageMs = System.currentTimeMillis();
+        }
+        prevHealth = nowHealth;
         return cachedLastPriority;
     }
 
@@ -728,6 +742,14 @@ public class MobDefenseChain extends SingleTaskChain {
         if (mod.getPlayer().hasStatusEffect(StatusEffects.WITHER) ||
                 (mod.getPlayer().hasStatusEffect(StatusEffects.POISON) && !witchNearby)) {
             // Damage over time IS an active threat with no mob to point at, so it stays.
+            return true;
+        }
+        // Low and STILL BEING HIT — disengage. This half is load-bearing in a duel, where the
+        // thing hurting us is a player and therefore not in getHostiles() at all: dropping it
+        // outright took the pvp duels from 9/12 to 1/12 over 12 repeats, which is far too one-sided
+        // to be the coin-flip a mirror duel usually is. The clause that had to go was the one that
+        // fired with NOTHING hitting us, which is the @gamer freeze.
+        if (health <= 10 && System.currentTimeMillis() - lastDamageMs < RECENT_DAMAGE_MS) {
             return true;
         }
         if (WorldHelper.isVulnerable() || health <= 10) {
