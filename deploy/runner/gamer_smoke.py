@@ -38,6 +38,7 @@ elif op=="inv":
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")[:300]}
+elif op=="wdbg": out={"r": str(mc.setWalkerDebug(bool(req.get("on"))))}
 elif op=="task": out={"chain": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-1400:], "runner": str(mc.getRunnerStatus() or "")[:300]}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",8)))]}
 elif op=="hasTask": out={"busy":mc.hasActiveTask()}
@@ -78,6 +79,7 @@ def main():
         time.sleep(5)
     print("[3] tungsten-primary ON + @gamer...")
     print("  swap:", py4j("swap", on=True))
+    print("  walker debug:", py4j("wdbg", on=True))
     inv0 = py4j("inv"); print("  start inv:", inv0)
     py4j("cmd", c="@gamer")
 
