@@ -37,6 +37,7 @@ elif op=="inv":
                 if nm: ids.append(nm)
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
+elif op=="stats": out={"s": str(mc.placeStats() or "")[:300]}
 elif op=="task": out={"chain": str(mc.getTaskChainString() or "")[:220], "runner": str(mc.getRunnerStatus() or "")[:300]}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",8)))]}
 elif op=="hasTask": out={"busy":mc.hasActiveTask()}
@@ -140,6 +141,7 @@ def main():
             print(f"  t={int(time.time()-t0)}s inGame={gs.get('inGame')} hp={hp} pos={pos} items={inv.get('items')} busy={ht.get('busy')}")
         except Exception as e:
             print(f"  poll error (client may be busy): {str(e)[:80]}")
+    print("  queue stats:", py4j("stats").get("s"))
     print("  recent chat:", py4j("chat", n=10).get("chat"))
 
     gained = best_items - inv0.get("items",0)

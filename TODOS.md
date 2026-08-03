@@ -2288,3 +2288,27 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
     - [x] 1.7.5 Optimize: debug flag, drift correction, cooldown, path-end graceful exit
 <!-- Верхнеуровневые задачи. Пишет юзер, AI отмечает выполнение. -->
 <!-- Формат: - [ ] задача / - [x] задача -->
+
+### G-1.6 — очередь ходов НЕ ЗАПУСКАЕТСЯ ВООБЩЕ на курсе @gamer (замерено 2026-08-03)
+
+После снятия двух захватов управления (см. коммиты «hand the walker the keys without
+killing the search» и «danger needs a threat») картина стала чистой и упёрлась в одно:
+
+- владение тиком вылечено: `UserTaskChain, priority: 50.0` в **11 замерах из 11**
+  (было `Mob Defense, priority: 70.0` в 12 из 12), здоровье 20.0, задача жива;
+- поиск пути работает: 205 «Time taken to find path», 27 «Found rought path!»;
+- **но `mqStarted=0` за весь прогон.** Не `mqRefused`, не `mqLost`, не `staleRoot` —
+  все они тоже 0. Очередь ходов не получает маршрут НИ РАЗУ.
+
+Бот при этом стоит в пруду около (-177, 62, 290) — той самой луже из javadoc
+`MovementSwim` — и колеблется в пределах полутора блоков.
+
+⛔ ВОПРОС СЛЕДУЮЩЕГО ЗАХОДА: КТО должен вызывать `MovementQueue.start(...)` на этом
+пути и почему вызов не происходит. Искать от вызывающих `start(` в `PathExecutor` и в
+`CustomBaritoneGoalTask.primDrive`, а не от `MovementQueue` внутрь: внутри всё чисто,
+счётчики отказов нулевые, значит до неё просто не доходит управление.
+
+ОГОВОРКА К СТЕНДУ: при диагностике я выполнил `fill ... air replace water` в точке
+(-177,62,290) — блок воды там был (команда отчиталась «Successfully filled 1 block»),
+но мир стенда этим ИЗМЕНЁН, и последующие прогоны идут не на идентичной местности.
+
