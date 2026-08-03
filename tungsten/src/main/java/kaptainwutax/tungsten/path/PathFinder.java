@@ -1148,6 +1148,19 @@ public class PathFinder {
             if (TungstenConfig.get().verboseDebugLogging) {
                 Debug.logMessage("Rejecting stale-rooted path emission (root far from player)");
             }
+            // ...AND MAKE THE NEXT SEARCH START WHERE THE BOT ACTUALLY IS.
+            // The root goes stale because the bot kept walking while the search ran, and
+            // refusing the emission alone lets that repeat forever: 374 rejections in one live
+            // @gamer run, every one of them a whole search thrown away.
+            //
+            // Slicing the path and emitting the tail was tried and measured WORSE (nav 10/12,
+            // nav_flat and nav_staircase red with freezes on flat ground): this executor replays
+            // recorded INPUTS from the first node, so starting mid-chain replays inputs for a
+            // body that was already moving. A waypoint list can be re-rooted; a recording cannot.
+            //
+            // The honest fix is on the search side, and the machinery already exists —
+            // overrideStartPos is consumed by the next search to root it at a given position.
+            TungstenModDataContainer.PATHFINDER.overrideStartPos = player.getEntityPos();
             return false;
         }
 
