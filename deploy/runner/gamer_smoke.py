@@ -130,7 +130,10 @@ def main():
     # NOT ONE rung of the ladder — a green light that meant nothing, which is the same defect
     # class as the bench checks repaired earlier today. A playthrough is a ladder: clearing no
     # rung in a whole window is not progress, whatever the bot's feet did.
-    ok = responsive>=3 and busy_cnt>=2 and (bool(reached) or gained>0)
+    # AND NOT "ANY ITEM" EITHER. That escape hatch was still in the bar one commit ago, and a
+    # run passed on a single picked-up AZALEA — measured, item id minecraft:azalea, ten minutes,
+    # no rung. A flower is not progress toward beating the game. The bar is a RUNG.
+    ok = responsive>=3 and busy_cnt>=2 and bool(reached)
     print("  GAMER_SMOKE:", "PASS" if ok else "FAIL (or no early progress in window)")
     sys.exit(0 if ok else 1)
 
