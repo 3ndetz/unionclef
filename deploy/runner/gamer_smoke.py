@@ -27,13 +27,16 @@ elif op=="gs":
     gs=mc.getGameState()
     out={"inGame":gs.get("inGame"),"self":dict(gs.get("self") or {})}
 elif op=="inv":
-    f=mc.getInventoryFull(); n=0; items=0
+    f=mc.getInventoryFull(); n=0; items=0; ids=[]
     try:
         for s in f.get("slots") or []:
             sd=dict(s)
-            if not sd.get("empty"): n+=1; items+=int(sd.get("count",0) or 0)
+            if not sd.get("empty"):
+                n+=1; items+=int(sd.get("count",0) or 0)
+                nm=str(sd.get("item") or sd.get("name") or "")
+                if nm: ids.append(nm)
     except Exception: pass
-    out={"nonEmpty":n,"items":items}
+    out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",8)))]}
 elif op=="hasTask": out={"busy":mc.hasActiveTask()}
 print(json.dumps(out,default=str)); gw.close()
@@ -76,12 +79,33 @@ def main():
     inv0 = py4j("inv"); print("  start inv:", inv0)
     py4j("cmd", c="@gamer")
 
+    # WHAT THE RUN ACHIEVED, NOT JUST HOW MUCH IT CARRIED.
+    # "items gained" cannot tell progress from thrashing: a run that mines 17 cobblestone and
+    # one that crafts a stone pickaxe read the same. A playthrough is a LADDER, so name the
+    # rungs and report which were reached. This is the measurable form of "@gamer beats the
+    # game" — without it the acceptance criterion is one boolean at the very end.
+    LADDER = [("wood", ("log", "planks")), ("crafting", ("crafting_table",)),
+              ("wood tools", ("wooden_pickaxe", "wooden_axe", "wooden_sword")),
+              ("stone tools", ("stone_pickaxe", "stone_axe", "stone_sword")),
+              ("furnace", ("furnace",)), ("coal", ("coal", "torch")),
+              ("iron ore", ("raw_iron", "iron_ore")), ("iron", ("iron_ingot",)),
+              ("iron tools", ("iron_pickaxe", "iron_sword")),
+              ("food", ("bread", "cooked_", "apple", "carrot", "berries")),
+              ("bucket", ("bucket",)), ("nether", ("obsidian", "flint_and_steel")),
+              ("blaze", ("blaze_rod", "blaze_powder")), ("ender", ("ender_pearl", "ender_eye"))]
+    reached = {}
+
     print(f"[4] watching {MINUTES} min for progress...")
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
     while time.time()-t0 < MINUTES*60:
         time.sleep(20)
         try:
             gs=py4j("gs"); inv=py4j("inv"); ht=py4j("hasTask")
+            for rung, needles in LADDER:
+                if rung in reached: continue
+                if any(any(nd in i for nd in needles) for i in inv.get("ids") or []):
+                    reached[rung] = round(time.time()-t0, 1)
+                    print(f"  RUNG '{rung}' at {reached[rung]}s")
             responsive+=1
             pos=gs.get("self",{}).get("pos"); hp=gs.get("self",{}).get("hp")
             if ht.get("busy"): busy_cnt+=1
@@ -96,8 +120,17 @@ def main():
     distinct_pos = len(moved)
     print("\n=== RESULTS ===")
     print(f"  responsive polls: {responsive}, busy polls: {busy_cnt}, distinct positions: {distinct_pos}, items gained: {gained}")
-    # progress = gathered items OR moved around meaningfully, and stayed responsive/busy
-    ok = responsive>=3 and (gained>0 or distinct_pos>=3) and busy_cnt>=2
+    if reached:
+        print("  ladder: " + ", ".join(f"{k}@{v}s" for k, v in reached.items()))
+    else:
+        print("  ladder: nothing reached")
+    # PROGRESS IS A RUNG, NOT A WIGGLE.
+    # The old bar was "gained an item OR stood in 3 different places", and `distinct_pos >= 3`
+    # is met by a bot that shuffles. It passed a run measured at THREE positions, ZERO items and
+    # NOT ONE rung of the ladder — a green light that meant nothing, which is the same defect
+    # class as the bench checks repaired earlier today. A playthrough is a ladder: clearing no
+    # rung in a whole window is not progress, whatever the bot's feet did.
+    ok = responsive>=3 and busy_cnt>=2 and (bool(reached) or gained>0)
     print("  GAMER_SMOKE:", "PASS" if ok else "FAIL (or no early progress in window)")
     sys.exit(0 if ok else 1)
 
