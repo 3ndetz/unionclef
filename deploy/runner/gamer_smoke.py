@@ -9,7 +9,7 @@ the full playthrough is nightly-scale. Bring up the server first:
 Exit 0 = the bot started @gamer and made early progress (items gained), stayed
 responsive and not permanently stuck.
 """
-import functools, json, os, pathlib, subprocess, sys, time
+import functools, json, os, pathlib, re, subprocess, sys, time
 print = functools.partial(print, flush=True)
 SPAWN_FILE=pathlib.Path(__file__).with_name("gamer_spawn.txt")
 CLIENT="uctest-mc-tester1"; GSERVER="uctest-gamer-server"; BOT="tester1"; PORT=25333
@@ -39,6 +39,7 @@ elif op=="inv":
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")[:600]}
+elif op=="blk": out={"b": {str(k): str(v) for k, v in dict(mc.getBlockAt(int(req["x"]),int(req["y"]),int(req["z"]))).items()}}
 elif op=="zero": out={"r": str(mc.resetRunCounters())}
 elif op=="wdbg": out={"r": str(mc.setWalkerDebug(bool(req.get("on"))))}
 elif op=="task": out={"chain": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-1400:], "runner": str(mc.getRunnerStatus() or "")[:300]}
@@ -171,6 +172,17 @@ def main():
             if okc and tc and tc != ctx_last_chain[0]:
                 ctx_last_chain[0] = tc
                 print(f"  TASK {tc}")
+                # IS THE TARGET REALLY THERE? The bot was seen walking hundreds of blocks toward
+                # a "wool" cell at y=-50. Ask the CLIENT what is actually at the cell it picked,
+                # because the scanner that picked it is the client's.
+                m = re.search(r"Destroy block at (-?\d+),\s*(-?\d+),\s*(-?\d+)", tc)
+                if m:
+                    bx, by, bz = (int(g) for g in m.groups())
+                    try:
+                        print(f"  TARGET ({bx},{by},{bz}) is",
+                              py4j("blk", x=bx, y=by, z=bz).get("b"))
+                    except Exception as e:
+                        print(f"  target probe failed: {str(e)[:80]}")
             if okc and tcj.get("runner"):
                 print(f"  RUNNER {tcj.get('runner')}")
             for rung, needles in LADDER:
