@@ -13,7 +13,7 @@ import functools, json, os, pathlib, subprocess, sys, time
 print = functools.partial(print, flush=True)
 SPAWN_FILE=pathlib.Path(__file__).with_name("gamer_spawn.txt")
 CLIENT="uctest-mc-tester1"; GSERVER="uctest-gamer-server"; BOT="tester1"; PORT=25333
-MINUTES=float(sys.argv[1]) if len(sys.argv)>1 else 5.0
+MINUTES=float(sys.argv[1]) if len(sys.argv)>1 and not sys.argv[1].startswith("--") else 5.0
 SNIP=r"""
 import json,sys
 from py4j.java_gateway import JavaGateway,GatewayParameters
@@ -208,6 +208,37 @@ def main():
     # no rung. A flower is not progress toward beating the game. The bar is a RUNG.
     ok = responsive>=3 and busy_cnt>=2 and bool(reached)
     print("  GAMER_SMOKE:", "PASS" if ok else "FAIL (or no early progress in window)")
-    sys.exit(0 if ok else 1)
+    return ok
 
-if __name__=="__main__": main()
+# ONE RUN OF THIS IS A COIN, NOT A CRITERION.
+# With the start point pinned to a tenth of a block, two consecutive runs still went FAIL then
+# PASS: the variance is the bot's own behaviour -- task order, which way it explores, what
+# spawns -- not the setup. Over a session's runs from an empty inventory the tally was four in
+# seven. So a fix "confirmed" or "refuted" by a single run is being judged at random, which
+# cost real passes. The verdict is a repeated one, the way run_suite --repeat already works.
+def sweep(runs, need):
+    results = []
+    for i in range(runs):
+        print("")
+        print(f"=========== RUN {i + 1}/{runs} ===========")
+        try:
+            results.append(bool(main()))
+        except Exception as e:                       # a broken run is a failed run, not a crash
+            print(f"  run error: {str(e)[:160]}")
+            results.append(False)
+    passed = sum(results)
+    print("")
+    print(f"=========== GAMER_SUITE: {passed}/{runs} passed, need {need} ===========")
+    print("  runs:", " ".join("PASS" if r else "FAIL" for r in results))
+    return passed >= need
+
+if __name__ == "__main__":
+    rep = 1
+    if "--repeat" in sys.argv:
+        rep = int(sys.argv[sys.argv.index("--repeat") + 1])
+    # Default threshold: all of one run, otherwise all but one. A playthrough bench that tolerates
+    # half its runs failing is not a criterion either.
+    need = rep if rep < 3 else rep - 1
+    if "--need" in sys.argv:
+        need = int(sys.argv[sys.argv.index("--need") + 1])
+    sys.exit(0 if (sweep(rep, need) if rep > 1 else main()) else 1)
