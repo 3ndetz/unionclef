@@ -342,6 +342,16 @@ public final class FastPlanner {
      */
     public static Result plan(WorldView world, BlockPos start, BlockPos goal, long budgetMs) {
         long t0 = System.currentTimeMillis();
+        // ASK HOW MANY BLOCKS WE HAVE, EVERY PLAN. DO NOT TRUST A STATIC SOMEONE ELSE SET.
+        // placeBudget starts at MAX_VALUE and had exactly ONE writer, FastNavigator:443. Any plan
+        // reached by another route — which includes every step of the @gamer playthrough, since
+        // that goes through CustomBaritoneGoalTask — planned bridges and pillars against an
+        // infinite supply of blocks the bot did not have. Measured: the bot stood at a pond edge
+        // for ten minutes while the planner asked for a one-block bridge, and the executor
+        // answered "Bridge place aborted (no block in hand)" every tick — placeCalled=1219 with
+        // placeDeferred=0 and placeInRange=0, i.e. it never even got as far as the distance check.
+        // A move you cannot perform is not a move, so the count is taken here, where the plan is.
+        placeBudget = countPlaceable(TungstenMod.mc == null ? null : TungstenMod.mc.player);
         NodeMap map = new NodeMap();
         Heap open = new Heap();
 
