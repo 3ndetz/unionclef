@@ -9,8 +9,9 @@ the full playthrough is nightly-scale. Bring up the server first:
 Exit 0 = the bot started @gamer and made early progress (items gained), stayed
 responsive and not permanently stuck.
 """
-import functools, json, subprocess, sys, time
+import functools, json, os, pathlib, subprocess, sys, time
 print = functools.partial(print, flush=True)
+SPAWN_FILE=pathlib.Path(__file__).with_name("gamer_spawn.txt")
 CLIENT="uctest-mc-tester1"; GSERVER="uctest-gamer-server"; BOT="tester1"; PORT=25333
 MINUTES=float(sys.argv[1]) if len(sys.argv)>1 else 5.0
 SNIP=r"""
@@ -96,7 +97,24 @@ def main():
     grcon("time set day")
     grcon(f"kill @e[type=item,distance=..40]")   # our own dropped kit must not be re-collected
     time.sleep(2)
-    print("  start pos:", (py4j("gs").get("self") or {}).get("pos"))
+    # RESPAWN IS NOT A FIXED POINT. Vanilla scatters a respawn around the world spawn, and two
+    # consecutive resets landed the bot at 99.5,143 and 91.7,137 -- far enough apart that one is
+    # beside a forest and the other is not, which is the difference between this bench passing
+    # and failing. Pin it: the first run records where it landed, every later run teleports
+    # there, and GAMER_SPAWN overrides. Recorded rather than written into the source, because a
+    # coordinate baked into a runner is exactly the per-world hardcode this project forbids.
+    spawn = os.environ.get("GAMER_SPAWN")
+    if not spawn and SPAWN_FILE.exists():
+        spawn = SPAWN_FILE.read_text(encoding="utf-8").strip()
+    if spawn:
+        grcon(f"tp {BOT} {spawn}")
+        time.sleep(2)
+    pos = (py4j("gs").get("self") or {}).get("pos")
+    if not spawn and pos:
+        got = ",".join(str(round(float(c))) for c in str(pos).split(","))
+        SPAWN_FILE.write_text(got.replace(",", " "), encoding="utf-8")
+        print("  recorded start point for later runs:", got)
+    print("  start pos:", pos, "(pinned)" if spawn else "(first run — recording)")
     print("[3] tungsten-primary ON + @gamer...")
     print("  swap:", py4j("swap", on=True))
     print("  walker debug:", py4j("wdbg", on=True))
