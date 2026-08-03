@@ -31,6 +31,11 @@ import java.util.Optional;
  * Destroy a block at a position.
  */
 public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
+
+    /** Ticks, and each way this task gives up on its block; read over py4j in placeStats(). */
+    public static volatile int dbTick, dbUnreachMove, dbUnreachWater, dbUnreachPillager;
+    /** Closest we have been to this task's block, squared; the yardstick for real progress. */
+    private double _bestDistSq = Double.MAX_VALUE;
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
     private final MovementProgressChecker _moveChecker = new MovementProgressChecker();
     private final BlockPos pos;
@@ -247,6 +252,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
      */
     @Override
     protected Task onTick() {
+        dbTick++;
         AltoClef mod = AltoClef.getInstance();
 
         // Check if there is white wool at the specified position
@@ -257,6 +263,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                 // Check if the entity is a PillagerEntity and is within a distance of 144 blocks from the position
                 if (entity instanceof PillagerEntity && pos.isWithinDistance(entity.getPos(), 144)) {
                     Debug.logMessage("Blacklisting pillager wool.");
+                    dbUnreachPillager++;
                     // Request the block at the position to be marked as unreachable
                     mod.getBlockScanner().requestBlockUnreachable(pos, 0);
                 }
@@ -308,7 +315,23 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         }
 
         // Check if the move checker failed
+        // A BLOCK YOU ARE STILL WALKING TOWARDS IS NOT UNREACHABLE.
+        // Measured: 21 blacklistings in eight minutes, every target a real dark oak log within
+        // fifteen blocks, and the counters say all 21 came from here (dbUnreachWater and
+        // dbUnreachPillager were 0). The parent then picks the next log, so the bot toured
+        // eighteen perfectly good trees and felled none. The generic move checker times out on
+        // things that are not failure — a detour, a climb, a fight — and its verdict was being
+        // spent on a permanent judgement about the block.
+        // Progress is progress TOWARDS THIS BLOCK, so that is what is measured, and the checker
+        // only gets to condemn a block the bot has genuinely stopped closing on.
+        double distSqNow = mod.getPlayer().getPos().squaredDistanceTo(
+                pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        if (distSqNow < _bestDistSq - 0.5) {
+            _bestDistSq = distSqNow;
+            _moveChecker.reset();
+        }
         if (!_moveChecker.check(mod)) {
+            dbUnreachMove++;
             _moveChecker.reset();
             // Request the block at the position to be marked as unreachable
             mod.getBlockScanner().requestBlockUnreachable(pos);
@@ -343,6 +366,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             if (isMining && mod.getPlayer().isTouchingWater()) {
                 setDebugState("We are in water... holding break button");
                 isMining = false;
+                dbUnreachWater++;
                 mod.getBlockScanner().requestBlockUnreachable(pos);
                 mod.getInputControls().hold(Input.CLICK_LEFT);
             } else {
