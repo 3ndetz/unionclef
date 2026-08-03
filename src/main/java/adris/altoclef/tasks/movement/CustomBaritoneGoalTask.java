@@ -21,7 +21,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
 
     /** Entry and early-exit tallies for the tungsten branch; read over py4j in placeStats(). */
     public static volatile int pdEnter, pdNotPrimary, pdPillar, pdBridge, pdStuckGiveUp,
-            pdWalking, pdNear, pdNoGoal, pdFinished, pdNoVec;
+            pdWalking, pdNear, pdNoGoal, pdFinished, pdNoVec, pdStallWalker, pdStallReset;
 
     private final Task wanderTask = new TimeoutWanderTask(5, true);
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
@@ -420,6 +420,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // The WALKER stalled — most likely a parkour move it can't do (gap jump /
             // wall climb). Hand this segment to the physics executor (which parkours)
             // for a window, then re-try the walker.
+            pdStallWalker++;
             kaptainwutax.tungsten.task.BlockPathWalker.stop();
             twPreferExecutorUntilMs = nowMs + 8000;
             twStuckSinceMs = nowMs;
@@ -433,6 +434,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             if (pfR != null) { pfR.stop.set(true); pfR.overrideStartPos = null; }
             if (exR != null) exR.stop = true;
             kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            pdStallReset++;
             twStuckSinceMs = nowMs;
             if (++twStuckResets >= 3) { pdStuckGiveUp++; twStuckResets = 0; twStuckPos = null; return false; }
         }
