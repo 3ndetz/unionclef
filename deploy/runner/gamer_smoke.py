@@ -38,7 +38,7 @@ elif op=="inv":
                 if nm: ids.append(nm)
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
-elif op=="stats": out={"s": str(mc.placeStats() or "")[:300]}
+elif op=="stats": out={"s": str(mc.placeStats() or "")[:600]}
 elif op=="zero": out={"r": str(mc.resetRunCounters())}
 elif op=="wdbg": out={"r": str(mc.setWalkerDebug(bool(req.get("on"))))}
 elif op=="task": out={"chain": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-1400:], "runner": str(mc.getRunnerStatus() or "")[:300]}

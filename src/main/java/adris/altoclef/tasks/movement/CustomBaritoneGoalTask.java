@@ -24,6 +24,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             pdWalking, pdNear, pdNoGoal, pdFinished, pdNoVec, pdStallWalker, pdStallReset, pdNearBusy, pdNearFind;
     /** When the near-goal branch last issued a search; see the rate gate at its site. */
     private long twLastNearFindMs = 0L;
+    /** Simple name of the last goal type goalToVec could not translate; read over py4j. */
+    public static volatile String pdLastUnknownGoal = "-";
 
     private final Task wanderTask = new TimeoutWanderTask(5, true);
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
@@ -325,7 +327,15 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (cachedGoal == null) { pdNoGoal++; return false; }
         if (isFinished()) { pdFinished++; return false; }
         net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
-        if (gp == null) { pdNoVec++; return false; }
+        if (gp == null) {
+            // NAME THE TYPE, DO NOT GUESS IT. Extending the translator from two goal types to six
+            // took pdNoVec to 0 on short runs, but a fifteen-minute run put it back at 1039 of
+            // 3815 entries -- 27% -- so a further type turns up once the bot gets past its first
+            // job. Record which, because that is the whole of the next fix.
+            pdLastUnknownGoal = cachedGoal.getClass().getSimpleName();
+            pdNoVec++;
+            return false;
+        }
         // NOTE: @goto keeps planPlaceMoves at its default (off) — the proactive @goto bridge
         // needs a walker↔executor hand-off that isn't wired yet (the walker takes a gap stub
         // and the executor's bridge never runs). @goto still bridges REACTIVELY (v0.41 give-up).
