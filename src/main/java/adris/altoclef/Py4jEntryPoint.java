@@ -2134,6 +2134,9 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachMove = 0;
         adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachWater = 0;
         adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachPillager = 0;
+        adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachNear = 0;
+        adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachFar = 0;
+        adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachDistSum = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qLost = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qStatusFail = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qRefused = 0;
@@ -2179,7 +2182,7 @@ public class Py4jEntryPoint {
         return String.format(
                 "called=%d deferred=%d inRange=%d clicked=%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
-                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d"
+                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d)"
                         + " sprint=%d/%d lowHp=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
@@ -2216,6 +2219,9 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachMove,
                 adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachWater,
                 adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachPillager,
+                adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachNear,
+                adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachFar,
+                adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachDistSum,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qLost,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qStatusFail,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qRefused,

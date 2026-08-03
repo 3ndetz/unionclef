@@ -33,7 +33,8 @@ import java.util.Optional;
 public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
 
     /** Ticks, and each way this task gives up on its block; read over py4j in placeStats(). */
-    public static volatile int dbTick, dbUnreachMove, dbUnreachWater, dbUnreachPillager;
+    public static volatile int dbTick, dbUnreachMove, dbUnreachWater, dbUnreachPillager,
+            dbUnreachNear, dbUnreachFar, dbUnreachDistSum;
     /** Closest we have been to this task's block, squared; the yardstick for real progress. */
     private double _bestDistSq = Double.MAX_VALUE;
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
@@ -332,6 +333,11 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         }
         if (!_moveChecker.check(mod)) {
             dbUnreachMove++;
+            // FAR OR NEAR? Those need opposite fixes. Far means the bot never got there at all;
+            // near means it arrived and something stops it finishing. One number tells them apart.
+            int d = (int) Math.round(Math.sqrt(distSqNow));
+            dbUnreachDistSum += d;
+            if (d <= 4) dbUnreachNear++; else dbUnreachFar++;
             _moveChecker.reset();
             // Request the block at the position to be marked as unreachable
             mod.getBlockScanner().requestBlockUnreachable(pos);
