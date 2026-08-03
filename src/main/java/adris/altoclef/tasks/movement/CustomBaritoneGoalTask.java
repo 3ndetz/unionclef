@@ -18,6 +18,11 @@ import net.minecraft.util.math.BlockPos;
  * Turns a baritone goal into a task.
  */
 public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequiresGrounded {
+
+    /** Entry and early-exit tallies for the tungsten branch; read over py4j in placeStats(). */
+    public static volatile int pdEnter, pdNotPrimary, pdPillar, pdBridge, pdStuckGiveUp,
+            pdWalking, pdNear, pdNoGoal, pdFinished, pdNoVec;
+
     private final Task wanderTask = new TimeoutWanderTask(5, true);
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
     private final boolean wander;
@@ -309,11 +314,16 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
      *  onTick (e.g. GetToBlockTask's wander) MUST call this BEFORE their own
      *  stuck/wander logic, or the wander loop starves the swap. */
     protected boolean driveTungstenPrimary(AltoClef mod) {
-        if (!TungstenHelper.isPrimary()) return false;
+        // WHERE DOES THIS METHOD ACTUALLY LEAVE? Three passes guessed at the reason the bot
+        // stands still and all three were refuted; every place a counter already existed, the
+        // answer came on the first run. So count the entry and each early exit.
+        pdEnter++;
+        if (!TungstenHelper.isPrimary()) { pdNotPrimary++; return false; }
         if (cachedGoal == null) cachedGoal = newGoal(mod);
-        if (cachedGoal == null || isFinished()) return false;
+        if (cachedGoal == null) { pdNoGoal++; return false; }
+        if (isFinished()) { pdFinished++; return false; }
         net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
-        if (gp == null) return false;
+        if (gp == null) { pdNoVec++; return false; }
         // NOTE: @goto keeps planPlaceMoves at its default (off) — the proactive @goto bridge
         // needs a walker↔executor hand-off that isn't wired yet (the walker takes a gap stub
         // and the executor's bridge never runs). @goto still bridges REACTIVELY (v0.41 give-up).
@@ -375,12 +385,14 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
 
         // Mid-pillar (#46) — let the pillar finish before any other nav runs.
         if (kaptainwutax.tungsten.task.PillarTask.isActive()) {
+            pdPillar++;
             checker.reset();
             setDebugState("Tungsten pillaring up to goal (#46)...");
             return true;
         }
         // Mid-bridge (#46) — let the bridge finish crossing before any other nav runs.
         if (kaptainwutax.tungsten.task.BridgeTask.isActive()) {
+            pdBridge++;
             checker.reset();
             setDebugState("Tungsten bridging across a gap (#46)...");
             return true;
@@ -422,7 +434,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             if (exR != null) exR.stop = true;
             kaptainwutax.tungsten.task.BlockPathWalker.stop();
             twStuckSinceMs = nowMs;
-            if (++twStuckResets >= 3) { twStuckResets = 0; twStuckPos = null; return false; }
+            if (++twStuckResets >= 3) { pdStuckGiveUp++; twStuckResets = 0; twStuckPos = null; return false; }
         }
 
         try {
@@ -451,6 +463,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // precise approach (short range = negligible drift).
             if (walking && distToGoal <= 4.0) { kaptainwutax.tungsten.task.BlockPathWalker.stop(); walking = false; }
             if (walking) {
+                pdWalking++;
                 mod.getClientBaritone().getPathingBehavior().forceCancel();
                 checker.reset();
                 setDebugState("Tungsten (primary) walking terrain...");
@@ -465,6 +478,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // for ten minutes with mqStarted=0 and called=0 — this branch was never entered at
             // all, so nothing downstream could have helped.
             boolean inWater = mod.getPlayer().isTouchingWater();
+            if (distToGoal <= 4.0) pdNear++;
             if (distToGoal > 4.0
                     && (!inWater || kaptainwutax.tungsten.TungstenConfig.get().navUsesQueue)
                     && nowMs >= twPreferExecutorUntilMs) {
@@ -591,6 +605,27 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             raw = new net.minecraft.util.math.Vec3d(gb.x, gb.y, gb.z);
         } else if (goal instanceof baritone.api.pathing.goals.GoalGetToBlock gg) {
             raw = new net.minecraft.util.math.Vec3d(gg.x, gg.y, gg.z);
+        } else if (goal instanceof baritone.api.pathing.goals.GoalNear gn) {
+            net.minecraft.util.math.BlockPos p = gn.getGoalPos();
+            raw = new net.minecraft.util.math.Vec3d(p.getX(), p.getY(), p.getZ());
+        } else if (goal instanceof baritone.api.pathing.goals.GoalTwoBlocks gt) {
+            net.minecraft.util.math.BlockPos p = gt.getGoalPos();
+            raw = new net.minecraft.util.math.Vec3d(p.getX(), p.getY(), p.getZ());
+        } else if (goal instanceof baritone.api.pathing.goals.GoalXZ gxz) {
+            // No y in the goal at all — an XZ goal means "get to this column", so aim at our own
+            // height and let the search find the surface.
+            raw = new net.minecraft.util.math.Vec3d(gxz.getX(), mod.getPlayer().getY(), gxz.getZ());
+        } else if (goal instanceof baritone.api.pathing.goals.GoalComposite gc) {
+            // Nearest member wins: a composite is "any of these will do".
+            double best = Double.MAX_VALUE;
+            for (Goal sub : gc.goals()) {
+                net.minecraft.util.math.Vec3d v = goalToVec(sub, mod);
+                if (v == null) continue;
+                double d = v.squaredDistanceTo(mod.getPlayer().getX(),
+                        mod.getPlayer().getY(), mod.getPlayer().getZ());
+                if (d < best) { best = d; raw = v; }
+            }
+            return raw;   // already snapped by the recursive call
         }
         return raw == null ? null : snapGoalToStandable(raw, mod);
     }
