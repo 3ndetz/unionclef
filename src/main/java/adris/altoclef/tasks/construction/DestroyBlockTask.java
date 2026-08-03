@@ -34,7 +34,8 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
 
     /** Ticks, and each way this task gives up on its block; read over py4j in placeStats(). */
     public static volatile int dbTick, dbUnreachMove, dbUnreachWater, dbUnreachPillager,
-            dbUnreachNear, dbUnreachFar, dbUnreachDistSum;
+            dbUnreachNear, dbUnreachFar, dbUnreachDistSum,
+            dbNearTick, dbNearNoReach, dbNearAirborne, dbNearHungry, dbNearUnsafe;
     /** Closest we have been to this task's block, squared; the yardstick for real progress. */
     private double _bestDistSq = Double.MAX_VALUE;
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
@@ -353,6 +354,17 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         }
 
         Optional<Rotation> reach = LookHelper.getReach(pos);
+        // WHY DOES A BOT STANDING NEXT TO A TREE KEEP WALKING? Measured: the give-ups are
+        // overwhelmingly NEAR -- eight of eight and three of three at a mean 2.5 blocks. Something
+        // in this condition sends an arrived bot back to "Getting to block...", and there are six
+        // clauses that could. Count them apart instead of picking one.
+        if (distSqNow <= 16.0) {
+            dbNearTick++;
+            if (!reach.isPresent()) dbNearNoReach++;
+            else if (!(mod.getPlayer().isTouchingWater() || mod.getPlayer().isOnGround())) dbNearAirborne++;
+            else if (mod.getFoodChain().needsToEat()) dbNearHungry++;
+            else if (!mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) dbNearUnsafe++;
+        }
         if (reach.isPresent() && (mod.getPlayer().isTouchingWater() || mod.getPlayer().isOnGround()) && !mod.getFoodChain().needsToEat() && !WorldHelper.isInNetherPortal() && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
             setDebugState("Block in range, mining...");
             stuckCheck.reset();
