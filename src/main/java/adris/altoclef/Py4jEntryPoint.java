@@ -2114,6 +2114,7 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.path.movements.Movement.sprintTicks = 0;
         kaptainwutax.tungsten.path.movements.Movement.moveTicks = 0;
         kaptainwutax.tungsten.combat.CombatController.lowHpTicks = 0;
+        kaptainwutax.tungsten.path.PathFinder.staleRootRejections = 0;
         kaptainwutax.tungsten.task.FollowEntityTask.planCalls = 0;
         kaptainwutax.tungsten.task.FollowEntityTask.planUsable = 0;
         kaptainwutax.tungsten.task.FollowEntityTask.planTooShort = 0;
@@ -2141,7 +2142,7 @@ public class Py4jEntryPoint {
                 "called=%d deferred=%d inRange=%d clicked=%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d)"
-                        + " sprint=%d/%d lowHp=%d"
+                        + " sprint=%d/%d lowHp=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
                         + " | gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
@@ -2163,6 +2164,7 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.path.movements.Movement.sprintTicks,
                 kaptainwutax.tungsten.path.movements.Movement.moveTicks,
                 kaptainwutax.tungsten.combat.CombatController.lowHpTicks,
+                kaptainwutax.tungsten.path.PathFinder.staleRootRejections,
                 kaptainwutax.tungsten.path.movements.Movement.placeRequested,
                 kaptainwutax.tungsten.path.movements.Movement.placeOnCooldown,
                 kaptainwutax.tungsten.path.movements.Movement.placeNoHit,

@@ -109,6 +109,12 @@ public class PathFinder {
 	 *  Consumed (set to null) after use. */
 	public Vec3d overrideStartPos = null;
 
+	/** Searches thrown away because their root went stale while they ran. A COUNTER rather than a
+	 *  log line: the message it replaces sits behind verboseDebugLogging, which is exactly why the
+	 *  fix that re-seeds the next search at the player could only be called "suggestive" — the
+	 *  before and after were greps of a channel neither run controlled. */
+	public static volatile int staleRootRejections;
+
 	private long startTime;
 	private Node start;
 
@@ -1145,6 +1151,7 @@ public class PathFinder {
         // does not start where the player actually stands is garbage (stale
         // root from before a re-root) and drift-aborts on tick 1. Refuse it.
         if (result.get().getFirst().agent.getPos().distanceTo(player.getEntityPos()) > 2.0) {
+            staleRootRejections++;
             if (TungstenConfig.get().verboseDebugLogging) {
                 Debug.logMessage("Rejecting stale-rooted path emission (root far from player)");
             }
