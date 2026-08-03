@@ -416,6 +416,12 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         }
         if (twStuckPos == null || plNow.distanceTo(twStuckPos) > 0.75) {
             twStuckPos = plNow; twStuckSinceMs = nowMs; twStuckResets = 0;
+            // REFUTED, AND THE COUNTER IS WHY. Adding MovementQueue.isRunning() to this rung
+            // changed nothing at all: pdStallWalk stayed 0 across three more runs and the sweep
+            // went 2/3 to 0/3. So when the stall is detected NEITHER owner is running — the rung
+            // below, which resets the nav, is not a missing hand-off but the correct branch for
+            // "nobody is driving". Whatever leaves both drivers idle is the real question, and it
+            // is upstream of this ladder. Reverted rather than left in as a no-op.
         } else if (kaptainwutax.tungsten.task.BlockPathWalker.isRunning() && nowMs - twStuckSinceMs > 2500) {
             // The WALKER stalled — most likely a parkour move it can't do (gap jump /
             // wall climb). Hand this segment to the physics executor (which parkours)
