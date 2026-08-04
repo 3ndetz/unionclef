@@ -243,6 +243,14 @@ def main():
             print(f"  poll error (client may be busy): {str(e)[:80]}")
     # WHAT DID IT ACTUALLY END UP HOLDING? "Ten items gathered" and "no materials to craft"
     # are only contradictory if those ten are logs. Print the list rather than assume.
+    # DID IT DIE, AND TO WHAT? A run that ends with an empty pack has usually lost it on death,
+    # and the server says so in plain words ("tester1 was blown up by Creeper"). Counting that is
+    # the difference between "crafting is flaky" and "the bot keeps dying with its progress".
+    deaths = [ln for ln in sh(["docker", "logs", "--tail", "400", GSERVER]).stdout.splitlines()
+              if BOT in ln and (" was " in ln or " died" in ln or " fell " in ln)]
+    print(f"  deaths this run: {len(deaths)}")
+    for d in deaths[-4:]:
+        print("   ", d.strip()[-110:])
     print("  end inv:", py4j("inv"))
     print("  queue stats:", py4j("stats").get("s"))
     print("  recent chat:", py4j("chat", n=10).get("chat"))
