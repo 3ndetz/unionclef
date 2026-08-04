@@ -38,7 +38,7 @@ elif op=="inv":
                 if nm: ids.append(nm)
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
-elif op=="stats": out={"s": str(mc.placeStats() or "")[:600]}
+elif op=="stats": out={"s": str(mc.placeStats() or "")}
 elif op=="blk": out={"b": {str(k): str(v) for k, v in dict(mc.getBlockAt(int(req["x"]),int(req["y"]),int(req["z"]))).items()}}
 elif op=="zero": out={"r": str(mc.resetRunCounters())}
 elif op=="wdbg": out={"r": str(mc.setWalkerDebug(bool(req.get("on"))))}
@@ -218,7 +218,15 @@ def main():
     # AND NOT "ANY ITEM" EITHER. That escape hatch was still in the bar one commit ago, and a
     # run passed on a single picked-up AZALEA — measured, item id minecraft:azalea, ten minutes,
     # no rung. A flower is not progress toward beating the game. The bar is a RUNG.
-    ok = responsive>=3 and busy_cnt>=2 and bool(reached)
+    # A BAR THAT ANY RUNG SATISFIES CANNOT SHOW THE NEXT ONE.
+    # With wood solved, every run passes on wood alone and progress on crafting is invisible.
+    # --rung NAME demands that specific rung, so work on rung two can be measured at all.
+    want = None
+    if "--rung" in sys.argv:
+        want = sys.argv[sys.argv.index("--rung") + 1]
+    ok = responsive>=3 and busy_cnt>=2 and (want in reached if want else bool(reached))
+    if want:
+        print(f"  required rung '{want}':", "reached" if want in reached else "NOT reached")
     print("  GAMER_SMOKE:", "PASS" if ok else "FAIL (or no early progress in window)")
     return ok
 

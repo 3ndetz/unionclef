@@ -23,6 +23,9 @@ import java.util.Optional;
 
 public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCraftingGrid {
 
+    /** States this task passes through per tick; read over py4j in placeStats(). */
+    public static volatile int cgTick, cgBigOpen, cgInvOpen, cgNoScreen;
+
     private final RecipeTarget target;
 
     public CraftGenericWithRecipeBooksTask(RecipeTarget target) {
@@ -50,6 +53,13 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         // Check if the big crafting UI or player inventory UI is open
         boolean isBigCraftingOpen = StorageHelper.isBigCraftingOpen();
         boolean isPlayerInventoryOpen = StorageHelper.isPlayerInventoryOpen();
+        // WHERE DOES A CRAFT DIE? Measured: twelve minutes with twelve wood items in the pack --
+        // a table needs four planks -- and the crafting rung never arrives, while the chain sits
+        // in this very task. Count the states it passes through before touching any of them.
+        cgTick++;
+        if (isBigCraftingOpen) cgBigOpen++;
+        else if (isPlayerInventoryOpen) cgInvOpen++;
+        else cgNoScreen++;
 
         // Get the item stack in the cursor slot
         ItemStack cursorStack = StorageHelper.getItemStackInCursorSlot();
