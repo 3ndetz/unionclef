@@ -333,11 +333,19 @@ public final class RotationHelper {
                 blockedBy = net.minecraft.registry.Registries.BLOCK.getId(
                         world.getBlockState(((BlockHitResult) r).getBlockPos()).getBlock()).toString();
                 if (world.getBlockState(((BlockHitResult) r).getBlockPos())
-                        .isIn(net.minecraft.registry.tag.BlockTags.LEAVES)) rayLeaves++;
-                else rayOtherBlock++;
+                        .isIn(net.minecraft.registry.tag.BlockTags.LEAVES)) {
+                    rayLeaves++;
+                    // Remember WHERE, not just what: the caller's fix is to fell the obstruction,
+                    // and it needs a position to aim at.
+                    blockedPos = ((BlockHitResult) r).getBlockPos();
+                } else {
+                    rayOtherBlock++;
+                    blockedPos = null;
+                }
             } else {
                 blockedBy = r == null ? "null" : String.valueOf(r.getType());
                 rayMiss++;
+                blockedPos = null;
             }
         } catch (Throwable t) {
             blockedBy = "err";
@@ -349,6 +357,8 @@ public final class RotationHelper {
     public static volatile String blockedBy = "-";
     /** Shares of what the failed reach ray hit: leaves, some other block, or nothing at all. */
     public static volatile int rayLeaves, rayOtherBlock, rayMiss;
+    /** Where the leaves that stopped the last reach ray are, or null if it was not leaves. */
+    public static volatile net.minecraft.util.math.BlockPos blockedPos;
 
     /**
      * RotationUtils.java:233-248. Note which eye is used: the SNEAKING eye when {@code wouldSneak},

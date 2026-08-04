@@ -35,7 +35,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     /** Ticks, and each way this task gives up on its block; read over py4j in placeStats(). */
     public static volatile int dbTick, dbUnreachMove, dbUnreachWater, dbUnreachPillager,
             dbUnreachNear, dbUnreachFar, dbUnreachDistSum,
-            dbNearTick, dbNearNoReach, dbNearAirborne, dbNearHungry, dbNearUnsafe, dbTargetAir;
+            dbNearTick, dbNearNoReach, dbNearAirborne, dbNearHungry, dbNearUnsafe, dbTargetAir, dbLeafCleared;
     /** Closest we have been to this task's block, squared; the yardstick for real progress. */
     private double _bestDistSq = Double.MAX_VALUE;
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
@@ -369,6 +369,27 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             else if (!(mod.getPlayer().isTouchingWater() || mod.getPlayer().isOnGround())) dbNearAirborne++;
             else if (mod.getFoodChain().needsToEat()) dbNearHungry++;
             else if (!mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) dbNearUnsafe++;
+        }
+        // FELL WHAT IS IN THE WAY, DO NOT WALK AWAY FROM IT.
+        // Measured: while the bot stands within four blocks of its target log, the reach ray is
+        // stopped by LEAVES on 91-100% of the ticks it fails -- the same tree's own canopy. The
+        // old answer was to keep walking, which the progress checker then read as being stuck,
+        // so a perfectly good log was blacklisted and the bot toured trees without felling one.
+        // Leaves are due to come down anyway, so the obstruction is simply the first block of
+        // this job rather than a reason to abandon it.
+        if (!reach.isPresent() && distSqNow <= 16.0) {
+            net.minecraft.util.math.BlockPos blocking =
+                    kaptainwutax.tungsten.path.movements.RotationHelper.blockedPos;
+            if (blocking != null && !blocking.equals(pos)) {
+                Optional<Rotation> leafReach = LookHelper.getReach(blocking);
+                if (leafReach.isPresent()) {
+                    dbLeafCleared++;
+                    _moveChecker.reset();   // clearing a path IS progress
+                    LookHelper.lookAt(leafReach.get());
+                    mod.getInputControls().hold(Input.CLICK_LEFT);
+                    return null;
+                }
+            }
         }
         if (reach.isPresent() && (mod.getPlayer().isTouchingWater() || mod.getPlayer().isOnGround()) && !mod.getFoodChain().needsToEat() && !WorldHelper.isInNetherPortal() && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
             setDebugState("Block in range, mining...");
