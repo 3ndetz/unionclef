@@ -175,7 +175,13 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         //$$ // SlotDisplayContexts.createParameters(World) rather than the null the compiler would
         //$$ // have accepted and the runtime would have thrown on.
         //$$ ClientPlayerEntity player = MinecraftClient.getInstance().player;
-        //$$ if (player != null && mod.getWorld() != null && mod.getSlotHandler().canDoSlotAction()) {
+        //$$ // THE RECOMPUTE MUST NOT SIT BEHIND THE RATE GATE.
+        //$$ // It used to live inside the canDoSlotAction() branch, so the book was only refreshed
+        //$$ // on the ticks an action was already permitted -- and by the time a send happened the
+        //$$ // set could be stale again. Measured: one run in four produced output (866 items in
+        //$$ // the slot, and one run reaching sticks, which the chain had never done), the other
+        //$$ // three produced none. Refresh every tick; only the send stays gated.
+        //$$ if (player != null && mod.getWorld() != null) {
         //$$     net.minecraft.util.context.ContextParameterMap ctx =
         //$$             net.minecraft.recipe.display.SlotDisplayContexts.createParameters(mod.getWorld());
         //$$     // TELL THE BOOK WHAT WE ARE CARRYING.
@@ -199,6 +205,7 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         //$$                     // not unlocked is dropped silently, which looks exactly like what
         //$$                     // was measured: the right recipe sent, cgOutReady=0. One counter
         //$$                     // settles it before any theory about screens or arguments.
+        //$$                     if (!mod.getSlotHandler().canDoSlotAction()) continue;
         //$$                     if (col.isCraftable(entry.id())) cgCraftable++; else cgNotCraftable++;
         //$$                     cgSent++;   // "the hang is gone" is not "a recipe was sent"
         //$$                     cgLastSent = String.valueOf(
