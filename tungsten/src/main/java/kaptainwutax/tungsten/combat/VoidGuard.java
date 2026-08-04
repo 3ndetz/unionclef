@@ -26,7 +26,15 @@ public final class VoidGuard {
      * @param pos feet position to test from (tick pos in combat, entity pos elsewhere)
      * @param vel current velocity (for the momentum/overshoot check)
      */
+    /** How often the guard runs, and how often it actually sees an edge; read over py4j. */
+    public static volatile int vgCalls, vgEdgeSeen;
+
     public static void protect(ClientPlayerEntity player, Vec3d pos, Vec3d vel, WorldView world) {
+        // IS THE GUARD EVEN ON DUTY? Two thirds of the bot's real deaths are "fell from a high
+        // place" -- six of nine in every run of a clean sweep. Either this never runs, or it runs
+        // and sees no edge, or it sees one and the bot goes over anyway. Counting the three apart
+        // is the only way to tell, and guessing has gone eight wrong out of nine today.
+        vgCalls++;
         MinecraftClient mc = MinecraftClient.getInstance();
         double horizSpeed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
         boolean nearVoid = VoidDetector.voidWithin(pos, world, 3, 3);
@@ -52,6 +60,7 @@ public final class VoidGuard {
             mc.options.jumpKey.setPressed(false);
         }
         if (edgeByKey || edgeByVel) {
+            vgEdgeSeen++;
             mc.options.jumpKey.setPressed(false);
             mc.options.sneakKey.setPressed(true);
             if (edgeByKey) {
