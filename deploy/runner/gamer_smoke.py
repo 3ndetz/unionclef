@@ -197,6 +197,11 @@ def main():
         print("  already held at start (cannot count):", ", ".join(sorted(preexisting)))
     ctx_last_chain = [None]
 
+    # MARK WHERE THE RUN STARTS IN THE SERVER LOG.
+    # Deaths were being read from a --tail window WIDER than the run, so a run whose counters were
+    # all zero still reported "6 deaths, 4 falls" -- deaths from some earlier run entirely. Counters
+    # and deaths were measuring different spans of time and being compared as if they were not.
+    log_mark = len(sh(["docker", "logs", "--tail", "2000", GSERVER]).stdout.splitlines())
     print(f"[4] watching {MINUTES} min for progress...")
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
     while time.time()-t0 < MINUTES*60:
@@ -250,7 +255,8 @@ def main():
     # and counting it put the figure at twenty-two a run when sixty-one of some eighty-nine log
     # entries were simply the reset. Drop it, and report the rest BY CAUSE -- because the split
     # is the finding: falls outnumber any single mob, and a fall is a movement failure.
-    raw = [ln for ln in sh(["docker", "logs", "--tail", "400", GSERVER]).stdout.splitlines()
+    all_lines = sh(["docker", "logs", "--tail", "2000", GSERVER]).stdout.splitlines()
+    raw = [ln for ln in all_lines[log_mark:]
            if BOT in ln and (" was " in ln or " died" in ln or " fell " in ln)]
     deaths = [ln for ln in raw if "was killed" not in ln or " by " in ln]
     causes = {}
