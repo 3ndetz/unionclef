@@ -178,11 +178,19 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         //$$ if (player != null && mod.getWorld() != null && mod.getSlotHandler().canDoSlotAction()) {
         //$$     net.minecraft.util.context.ContextParameterMap ctx =
         //$$             net.minecraft.recipe.display.SlotDisplayContexts.createParameters(mod.getWorld());
+        //$$     // TELL THE BOOK WHAT WE ARE CARRYING.
+        //$$     // Measured: the book held 109 collections and NOT ONE had a craftable recipe, while
+        //$$     // the pack carried logs and planks are made from a log. Vanilla recomputes that set
+        //$$     // when a crafting screen's contents change; this bot moves items its own way, so the
+        //$$     // recompute never happened and every send was refused (cgCraftable 0, cgNotCraftable
+        //$$     // 4) -- which is why the server dropped the click and the output slot stayed empty.
+        //$$     net.minecraft.recipe.RecipeFinder finder = new net.minecraft.recipe.RecipeFinder();
+        //$$     for (int i = 0; i < player.getInventory().size(); i++) {
+        //$$         finder.addInputIfUsable(player.getInventory().getStack(i));
+        //$$     }
         //$$     for (net.minecraft.client.gui.screen.recipebook.RecipeResultCollection col
         //$$             : player.getRecipeBook().getOrderedResults()) {
-        //$$         // IS THE CRAFTABLE SET EVER FILLED? isCraftable was false on every send while
-        //$$         // the pack held logs, so either the book cannot see the inventory or nothing
-        //$$         // recomputes it. Counting the whole book tells those apart in one run.
+        //$$         col.populateRecipes(finder, e -> true);
         //$$         if (col.hasCraftableRecipes()) cgBookCraftable++; else cgBookNone++;
         //$$         for (net.minecraft.recipe.RecipeDisplayEntry entry : col.getAllRecipes()) {
         //$$             for (ItemStack shown : entry.getStacks(ctx)) {
