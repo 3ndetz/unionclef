@@ -40,6 +40,7 @@ elif op=="inv":
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
 elif op=="blk": out={"b": {str(k): str(v) for k, v in dict(mc.getBlockAt(int(req["x"]),int(req["y"]),int(req["z"]))).items()}}
+elif op=="respawn": out={"r": str(mc.respawnPlayer())}
 elif op=="zero": out={"r": str(mc.resetRunCounters())}
 elif op=="wdbg": out={"r": str(mc.setWalkerDebug(bool(req.get("on"))))}
 elif op=="task": out={"chain": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-1400:], "runner": str(mc.getRunnerStatus() or "")[:300]}
@@ -80,12 +81,28 @@ def main():
         # constructor. The task then never existed, the bot sat "busy" and motionless, and
         # this script recorded five minutes of that as a PATHFINDING failure. Wait for a
         # position the server agrees with instead of sleeping and hoping.
+        # THREE CASES, NOT TWO. A bot with no position is usually not a dead stand at all -- it
+        # is a DEAD BOT sitting on the death screen, which has no position to report. Measured:
+        # the server was running the whole time (exit 0, never OOM, zero restarts) with
+        # "tester1 was blown up by Creeper" in its log, while this branch was filing the run as
+        # infrastructure failure and throwing it away -- two runs in three. Respawn first, and
+        # only call it INVALID if that does not help either.
         try:
             wait_for("world loaded (bot has a position)",
-                     lambda: bool((py4j("gs").get("self") or {}).get("pos")), 200, 5)
-        except TimeoutError as e:
-            # No position after connecting means the server went away, not that the bot is bad.
-            raise StandDown(f"no position after connect: {e}")
+                     lambda: bool((py4j("gs").get("self") or {}).get("pos")), 60, 5)
+        except TimeoutError:
+            print("  no position — bot may be dead, respawning")
+            for _ in range(8):
+                try:
+                    py4j("respawn")
+                except Exception:
+                    pass
+                time.sleep(4)
+                if bool((py4j("gs").get("self") or {}).get("pos")):
+                    break
+            if not bool((py4j("gs").get("self") or {}).get("pos")):
+                raise StandDown("no position even after respawn attempts")
+            print("  respawned")
         time.sleep(5)
     # A RUN THAT STARTS WHEREVER THE LAST ONE STOPPED MEASURES LUCK, NOT CODE.
     # This world is never wiped, so each @gamer run began from whatever the previous one left:
