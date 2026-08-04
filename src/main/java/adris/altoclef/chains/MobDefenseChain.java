@@ -60,6 +60,14 @@ public class MobDefenseChain extends SingleTaskChain {
 
     /** How often this chain is asked, wins, flees or fights; read over py4j in placeStats(). */
     public static volatile int mdPriorityCalls, mdWon, mdFlee, mdFight;
+    /**
+     * One counter per positive-priority exit of getPriorityInner.
+     *
+     * <p>The chain wins the tick on 41% of ticks yet never flees and never fights, so it is
+     * leaving through some other door -- and there are eight. Counting them apart is the only
+     * way to know which, and guessing has gone one for eight this session.
+     */
+    public static volatile int mdRet0, mdRet1, mdRet2, mdRet3, mdRet4, mdRet5, mdRet6, mdRet7;
     private static final double DANGER_KEEP_DISTANCE = 30;
     private static final double CREEPER_KEEP_DISTANCE = 10;
     private static final double ARROW_KEEP_DISTANCE_HORIZONTAL = 2;
@@ -249,7 +257,7 @@ public class MobDefenseChain extends SingleTaskChain {
             mdFlee++;
             runAwayTask = new RunAwayFromHostilesTask(DANGER_KEEP_DISTANCE, true);
             setTask(runAwayTask);
-            return 70;
+            mdRet0++; return 70;
         }
 
         doingFunkyStuff = false;
@@ -279,7 +287,7 @@ public class MobDefenseChain extends SingleTaskChain {
                 doingFunkyStuff = true;
                 runAwayTask = new RunAwayFromCreepersTask(CREEPER_KEEP_DISTANCE);
                 setTask(runAwayTask);
-                return 50 + blowingUp.getClientFuseTime(1) * 50;
+                mdRet1++; return 50 + blowingUp.getClientFuseTime(1) * 50;
             }
         }
         if (mod.getFoodChain().needsToEat() || mod.getFoodChain().isTryingToEat()
@@ -332,7 +340,7 @@ public class MobDefenseChain extends SingleTaskChain {
                 mod.getInputControls().tryPress(Input.MOVE_FORWARD);
                 mod.getInputControls().tryPress(Input.JUMP);
             }
-            return 65;
+            mdRet2++; return 65;
         }
         // Projectile threat gone — clear stale dodge task so it doesn't block other chains
         if (runAwayTask instanceof DodgeProjectilesTask && !projectileIsClose) {
@@ -343,7 +351,7 @@ public class MobDefenseChain extends SingleTaskChain {
             if (targetEntity == null || WorldHelper.isSurroundedByHostiles()) {
                 runAwayTask = new RunAwayFromHostilesTask(DANGER_KEEP_DISTANCE, true);
                 setTask(runAwayTask);
-                return 70;
+                mdRet3++; return 70;
             }
         }
 
@@ -354,7 +362,7 @@ public class MobDefenseChain extends SingleTaskChain {
                 Entity avoid = avoidTarget.get();
                 runAwayTask = new RunAwayFromPlayersTask(avoid, SAFE_KEEP_DISTANCE + 5);
                 setTask(runAwayTask);
-                return 55;
+                mdRet4++; return 55;
             }
         }
 
@@ -364,7 +372,7 @@ public class MobDefenseChain extends SingleTaskChain {
             _killTask = new CombatTask(player.getName().getString(), false, true);
             mdFight++;
             setTask(_killTask);
-            return 65;
+            mdRet5++; return 65;
         } else {
             _killTask = null;
         }
@@ -451,12 +459,12 @@ public class MobDefenseChain extends SingleTaskChain {
                     lockedOnEntity = toKill;
 
                     setTask(new KillEntitiesTask(toKill.getClass()));
-                    return 65;
+                    mdRet6++; return 65;
                 } else {
                     // We can't deal with it
                     runAwayTask = new RunAwayFromHostilesTask(DANGER_KEEP_DISTANCE, true);
                     setTask(runAwayTask);
-                    return 80;
+                    mdRet7++; return 80;
                 }
             }
         }
