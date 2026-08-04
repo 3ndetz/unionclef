@@ -650,6 +650,14 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // No y in the goal at all — an XZ goal means "get to this column", so aim at our own
             // height and let the search find the surface.
             raw = new net.minecraft.util.math.Vec3d(gxz.getX(), mod.getPlayer().getY(), gxz.getZ());
+        } else if (goal instanceof adris.altoclef.util.baritone.GoalRunAwayFromEntities flee) {
+            // A FLEE GOAL IS A PLACE TOO, ONCE YOU ASK IT PROPERLY.
+            // It carries no position, so this used to fall through to null -- which switches the
+            // tungsten driver off entirely for as long as the bot is running away. Measured on the
+            // playthrough: 368 of 596 entries lost here, unknownGoal=GoalRunAwayFromHostiles, and
+            // the bot standing on one spot for over four minutes.
+            raw = flee.suggestFleePoint(new net.minecraft.util.math.Vec3d(
+                    mod.getPlayer().getX(), mod.getPlayer().getY(), mod.getPlayer().getZ()));
         } else if (goal instanceof baritone.api.pathing.goals.GoalComposite gc) {
             // Nearest member wins: a composite is "any of these will do".
             double best = Double.MAX_VALUE;

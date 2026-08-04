@@ -6,6 +6,7 @@ import baritone.api.pathing.goals.Goal;
 import baritone.api.pathing.goals.GoalXZ;
 import baritone.api.pathing.goals.GoalYLevel;
 import net.minecraft.entity.Entity;
+import net.minecraft.util.math.Vec3d;
 
 import java.util.List;
 
@@ -26,6 +27,40 @@ public abstract class GoalRunAwayFromEntities implements Goal {
         this.distance = distance;
         this.xzOnly = xzOnly;
         this.penaltyFactor = penaltyFactor;
+    }
+
+    /**
+     * "Run away" expressed as a PLACE to walk to.
+     *
+     * <p>This goal has no position of its own, so the tungsten driver could not translate it and
+     * stood down every tick it was active -- measured: 368 of 596 navigation entries lost to it,
+     * and the bot standing motionless for over four minutes while the legacy driver did not move
+     * it either. A direction is not something a pathfinder can reach; a point is. So take the
+     * average heading away from the entities and offer a point that far along it.
+     *
+     * @return somewhere away from the threats, or null when there are none to flee
+     */
+    public Vec3d suggestFleePoint(Vec3d from) {
+        List<Entity> entities = getEntities(mod);
+        if (entities == null || entities.isEmpty()) {
+            return null;
+        }
+        double ax = 0, az = 0;
+        int n = 0;
+        synchronized (BaritoneHelper.MINECRAFT_LOCK) {
+            for (Entity entity : entities) {
+                double dx = from.x - entity.getX(), dz = from.z - entity.getZ();
+                double len = Math.sqrt(dx * dx + dz * dz);
+                if (len < 0.01) continue;
+                ax += dx / len;
+                az += dz / len;
+                n++;
+            }
+        }
+        if (n == 0) return null;
+        double len = Math.sqrt(ax * ax + az * az);
+        if (len < 0.01) return null;
+        return new Vec3d(from.x + ax / len * distance, from.y, from.z + az / len * distance);
     }
 
     @Override
