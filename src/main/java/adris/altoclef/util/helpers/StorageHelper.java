@@ -485,6 +485,22 @@ public class StorageHelper {
         return isScreenOpenInner(screen -> screen instanceof CraftingScreenHandler);
     }
 
+    /**
+     * Is the inventory GUI actually on screen?
+     *
+     * <p>Distinct from {@link #isPlayerInventoryOpen()}, which asks about the screen HANDLER and
+     * therefore answers true unconditionally: {@code PlayerScreenHandler} is the default handler
+     * and stays current when nothing is open. That mattered -- the craft task believed a screen
+     * was already up, never opened one, and the server dropped every recipe click it sent.
+     *
+     * <p>Deliberately a NEW method rather than a correction to the old one: that has eleven
+     * callers, and "always true" may have become load-bearing in some of them.
+     */
+    public static boolean isPlayerInventoryScreenOpen() {
+        return MinecraftClient.getInstance().currentScreen
+                instanceof net.minecraft.client.gui.screen.ingame.InventoryScreen;
+    }
+
     public static boolean isPlayerInventoryOpen() {
         return isScreenOpenInner(screen -> screen instanceof PlayerScreenHandler);
     }

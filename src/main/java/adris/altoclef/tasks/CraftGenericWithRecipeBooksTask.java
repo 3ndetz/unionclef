@@ -184,6 +184,17 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         //$$ // 214 seconds. The book being slightly stale is a smaller problem than the client not
         //$$ // having time to chop. If staleness needs solving it wants its own rate gate -- a few
         //$$ // times a second, not sixty -- rather than no gate at all.
+        //$$ // OPEN THE SCREEN BEFORE ASKING THE SERVER TO CRAFT.
+        //$$ // isPlayerInventoryOpen() reads the screen HANDLER, and PlayerScreenHandler is the
+        //$$ // default one -- so it answered true with nothing open, this task never opened a
+        //$$ // screen, and the server dropped every craft request. Measured: cgInv on every tick,
+        //$$ // cgNoScreen 0 always, cgOutReady 0 while the book was healthy and the packet did go.
+        //$$ if (player != null && mod.getWorld() != null
+        //$$         && !StorageHelper.isPlayerInventoryScreenOpen()) {
+        //$$     MinecraftClient.getInstance().setScreen(
+        //$$             new net.minecraft.client.gui.screen.ingame.InventoryScreen(player));
+        //$$     return null;
+        //$$ }
         //$$ if (player != null && mod.getWorld() != null && mod.getSlotHandler().canDoSlotAction()) {
         //$$     net.minecraft.util.context.ContextParameterMap ctx =
         //$$             net.minecraft.recipe.display.SlotDisplayContexts.createParameters(mod.getWorld());
