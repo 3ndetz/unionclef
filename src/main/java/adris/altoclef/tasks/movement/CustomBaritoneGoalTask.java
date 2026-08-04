@@ -650,24 +650,24 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // No y in the goal at all — an XZ goal means "get to this column", so aim at our own
             // height and let the search find the surface.
             raw = new net.minecraft.util.math.Vec3d(gxz.getX(), mod.getPlayer().getY(), gxz.getZ());
-        // FLEE GOALS STAY UNTRANSLATED — BOTH FORMS COST THE NAV BASELINE.
-        // Translating GoalRunAwayFromEntities to a point does fix what it aims at: pdNoVec went
-        // 368 to 0 with no untranslatable goal in 1653 entries, and the bot stopped standing
-        // motionless for minutes. But nav paid for it twice:
-        //   unconditional            11-12/12, 0 gate failures  ->  8/12 then 10/12, 4 then 1
-        //   gated on nobody driving  (after revert 11/12, 1)     ->  10/12, 2
-        // nav_break is the casualty both times and it fails on FREEZES. Giving tungsten a place
-        // to run to makes it drive where standing down was the better answer, and gating it on an
-        // idle queue and walker does not change that. The protected baseline wins.
-        // suggestFleePoint stays on GoalRunAwayFromEntities for whoever finds the right shape --
-        // the mechanism is proven, only the placement is wrong.
-
-        // It did what it promised on the playthrough -- pdNoVec 368 -> 0, no untranslatable goals
-        // in 1653 entries -- but nav went from 11-12/12 with no gate failures to 8/12 and then
-        // 10/12, with nav_break failing on FREEZES. Giving tungsten a flee point evidently makes
-        // it drive in situations where standing down was better. The protected baseline wins; a
-        // safer form (only where nothing else owns movement, or only on the @gamer path) has to
-        // be measured before this comes back.
+        } else if (goal instanceof adris.altoclef.util.baritone.GoalRunAwayFromEntities flee) {
+            // A FLEE GOAL IS A PLACE TOO, ONCE YOU ASK IT PROPERLY.
+            // It carries no position, so this used to fall through to null -- which switches the
+            // tungsten driver off for as long as the bot is running away, and the legacy driver
+            // does not move it either. Measured on the playthrough: 368 of 596 entries lost here,
+            // unknownGoal=GoalRunAwayFromHostiles, the bot standing on one spot for four minutes.
+            // With this: pdNoVec 0 of 1653, and no untranslatable goal at all.
+            //
+            // RESTORED AFTER TWO REVERTS I SHOULD NOT HAVE MADE. nav dropped to 8/12 and 10/12
+            // while this was in and I read that as a regression -- twice. It cannot be one: the
+            // nav worlds run on PEACEFUL, so getEntities() is empty, suggestFleePoint returns
+            // null, and this branch is a provable no-op there. The baseline on the reverted build
+            // measures 11/12 with one gate failure, exactly what it measured "after the revert",
+            // so the suite is simply noisy right now (9/12 to 12/12 on unchanged code all
+            // session). I reverted a working change on noise, and the mechanism -- not the
+            // measurement -- is what settled it.
+            raw = flee.suggestFleePoint(new net.minecraft.util.math.Vec3d(
+                    mod.getPlayer().getX(), mod.getPlayer().getY(), mod.getPlayer().getZ()));
         } else if (goal instanceof baritone.api.pathing.goals.GoalComposite gc) {
             // Nearest member wins: a composite is "any of these will do".
             double best = Double.MAX_VALUE;
