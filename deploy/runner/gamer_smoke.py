@@ -169,7 +169,13 @@ def main():
     # one that crafts a stone pickaxe read the same. A playthrough is a LADDER, so name the
     # rungs and report which were reached. This is the measurable form of "@gamer beats the
     # game" — without it the acceptance criterion is one boolean at the very end.
-    LADDER = [("wood", ("log", "planks")), ("crafting", ("crafting_table",)),
+    # THE FIRST CRAFT IS ITS OWN RUNG, AND "wood" MUST NOT SWALLOW IT.
+    # "wood" used to accept planks, so a bot that had CRAFTED planks scored the same as one that
+    # had merely chopped a log -- and the next rung asked for a crafting_table, an item not needed
+    # yet. Between "can chop" and "built a table" lay the whole of "can craft", invisible: measured
+    # a run ending with sticks and planks in the pack while the bench reported no crafting at all.
+    LADDER = [("wood", ("log",)), ("first craft", ("planks", "stick")),
+              ("crafting", ("crafting_table",)),
               ("wood tools", ("wooden_pickaxe", "wooden_axe", "wooden_sword")),
               ("stone tools", ("stone_pickaxe", "stone_axe", "stone_sword")),
               ("furnace", ("furnace",)), ("coal", ("coal", "torch")),
