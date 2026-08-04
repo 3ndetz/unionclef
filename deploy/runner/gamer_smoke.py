@@ -79,14 +79,20 @@ def main():
         # on the server at 09:30:21 -- and it never gets back in, sitting on the title screen with
         # no position. Which then read as "the stand is down" and threw the run away. Retry the
         # connect instead, and only give up when several attempts in a row fail.
+        # A SECOND OPINION IS NOT A BETTER ONE. This used to re-check inGame right after a
+        # SUCCESSFUL wait, and that extra call catches the odd transient false -- which then threw
+        # away a perfectly good run as "would not rejoin". Trust the wait that just succeeded;
+        # only give up when every attempt has failed.
+        joined = False
         for attempt in range(4):
             py4j("connect", ip="gamer-server")
             try:
                 wait_for("bot in game (gamer)", lambda: py4j("state")["inGame"], 60, 5)
+                joined = True
                 break
             except TimeoutError:
                 print(f"  connect attempt {attempt + 1} did not land, retrying")
-        if not py4j("state")["inGame"]:
+        if not joined:
             raise StandDown("client would not rejoin after four attempts")
         # WAIT FOR THE WORLD, NOT JUST THE CONNECTION. inGame flips as soon as the play
         # handler exists; the client world can still be null a moment later, and @gamer
