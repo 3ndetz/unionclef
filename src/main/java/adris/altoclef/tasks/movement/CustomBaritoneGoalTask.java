@@ -650,7 +650,18 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // No y in the goal at all — an XZ goal means "get to this column", so aim at our own
             // height and let the search find the surface.
             raw = new net.minecraft.util.math.Vec3d(gxz.getX(), mod.getPlayer().getY(), gxz.getZ());
-        // REVERTED: translating the flee goal to a point cost the nav baseline.
+        // FLEE GOALS STAY UNTRANSLATED — BOTH FORMS COST THE NAV BASELINE.
+        // Translating GoalRunAwayFromEntities to a point does fix what it aims at: pdNoVec went
+        // 368 to 0 with no untranslatable goal in 1653 entries, and the bot stopped standing
+        // motionless for minutes. But nav paid for it twice:
+        //   unconditional            11-12/12, 0 gate failures  ->  8/12 then 10/12, 4 then 1
+        //   gated on nobody driving  (after revert 11/12, 1)     ->  10/12, 2
+        // nav_break is the casualty both times and it fails on FREEZES. Giving tungsten a place
+        // to run to makes it drive where standing down was the better answer, and gating it on an
+        // idle queue and walker does not change that. The protected baseline wins.
+        // suggestFleePoint stays on GoalRunAwayFromEntities for whoever finds the right shape --
+        // the mechanism is proven, only the placement is wrong.
+
         // It did what it promised on the playthrough -- pdNoVec 368 -> 0, no untranslatable goals
         // in 1653 entries -- but nav went from 11-12/12 with no gate failures to 8/12 and then
         // 10/12, with nav_break failing on FREEZES. Giving tungsten a flee point evidently makes
