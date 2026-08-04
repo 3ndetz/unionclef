@@ -109,6 +109,19 @@ public class Settings implements IFailableConfigFile {
      * <p>
      * If false, will place items in each slot manually (the original way)
      */
+    /**
+     * NEITHER PATH CRAFTS ON 1.21.11, so this default is left where upstream put it.
+     *
+     * <p>The book route was measured healthy in every part and still produced nothing: the call
+     * is ported and fires, the recipe sent is the right one, the book holds 36-40 craftable
+     * collections, the packet goes through the real interaction manager, the screen is genuinely
+     * open, the recipes are unlocked server-side -- and the output slot stayed empty every run.
+     * Switching this to false takes {@code CraftGenericManuallyTask} instead, and that measured
+     * the same: wood gathered, crafting rung never reached, three runs.
+     *
+     * <p>So the fault is upstream of BOTH routes and this switch is not the lever. Flipped back
+     * rather than left changed, because there is no evidence either setting is better.
+     */
     private boolean useCraftingBookToCraft = true;
 
     /**
