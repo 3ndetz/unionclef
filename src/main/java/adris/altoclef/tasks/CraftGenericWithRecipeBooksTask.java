@@ -156,27 +156,37 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
             }
         }
         //#else
-        //$$ // TODO [1.21.11] recipe book crafting. This is what blocks the playthrough's second
-        //$$ // rung: the task holds the inventory screen for a whole run -- measured 9295 ticks of
-        //$$ // 9295, no table screen, no close -- because it arrives here and does nothing, with
-        //$$ // wood to spare in the pack.
+        //$$ // 1.21.11 moved recipe-book crafting onto NetworkRecipeId, and the port had been left
+        //$$ // switched off. That is what blocked the playthrough's second rung: this task held the
+        //$$ // inventory screen for a whole run -- measured 9295 ticks of 9295, no table screen, no
+        //$$ // close -- because it reached here and did nothing, with wood to spare in the pack.
         //$$ //
-        //$$ // EVERYTHING BELOW IS ESTABLISHED, NOT GUESSED -- read from the 1.21.11 yarn mappings
-        //$$ // or named by the compiler when a deliberate wrong call was written and built:
-        //$$ //   clickRecipe(int syncId, NetworkRecipeId, boolean)          <- compiler
-        //$$ //   RecipeDisplayEntry.id() returns NetworkRecipeId            <- mappings
-        //$$ //   ClientRecipeBook.getOrderedResults() -> List<RecipeResultCollection>   <- compiler
-        //$$ //   RecipeResultCollection.getAllRecipes() -> the entries      <- mappings
-        //$$ //   RecipeDisplayEntry.getStacks(ctx) -> List<ItemStack>       <- compiler
-        //$$ //
-        //$$ // The ids are assigned at RUNTIME by the server during its recipe sync, so the
-        //$$ // client's own book is the only place they exist -- the recipe registry cannot help.
-        //$$ //
-        //$$ // ONE UNKNOWN LEFT: what to pass as the getStacks context. It accepts null at compile
-        //$$ // time, which is exactly the sort of thing that then throws at runtime, so it wants
-        //$$ // looking up rather than trying. Everything else is a straight write-out of the loop:
-        //$$ // walk the collections, find the entry whose stacks contain target.getOutputItem(),
-        //$$ // hand its id() to clickRecipe, then registerSlotAction().
+        //$$ // The ids are handed out at RUNTIME by the server during its recipe sync, so the
+        //$$ // client's own book is the only place they exist; the recipe registry cannot help.
+        //$$ // Every type below came from the yarn mappings or from the compiler naming it, never
+        //$$ // from a guess: clickRecipe(int, NetworkRecipeId, boolean), RecipeDisplayEntry.id(),
+        //$$ // ClientRecipeBook.getOrderedResults(), RecipeResultCollection.getAllRecipes(),
+        //$$ // RecipeDisplayEntry.getStacks(ContextParameterMap), and the context itself from
+        //$$ // SlotDisplayContexts.createParameters(World) rather than the null the compiler would
+        //$$ // have accepted and the runtime would have thrown on.
+        //$$ ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        //$$ if (player != null && mod.getWorld() != null && mod.getSlotHandler().canDoSlotAction()) {
+        //$$     net.minecraft.util.context.ContextParameterMap ctx =
+        //$$             net.minecraft.recipe.display.SlotDisplayContexts.createParameters(mod.getWorld());
+        //$$     for (net.minecraft.client.gui.screen.recipebook.RecipeResultCollection col
+        //$$             : player.getRecipeBook().getOrderedResults()) {
+        //$$         for (net.minecraft.recipe.RecipeDisplayEntry entry : col.getAllRecipes()) {
+        //$$             for (ItemStack shown : entry.getStacks(ctx)) {
+        //$$                 if (shown.getItem() == target.getOutputItem()) {
+        //$$                     mod.getController().clickRecipe(
+        //$$                             player.currentScreenHandler.syncId, entry.id(), true);
+        //$$                     mod.getSlotHandler().registerSlotAction();
+        //$$                     return null;
+        //$$                 }
+        //$$             }
+        //$$         }
+        //$$     }
+        //$$ }
         //#endif
 
         return null;
