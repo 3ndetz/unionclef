@@ -156,7 +156,17 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
             }
         }
         //#else
-        //$$ // TODO [1.21.11] clickRecipe arg type changed — recipe book crafting disabled
+        //$$ // TODO [1.21.11] recipe book crafting is OFF here, and this is what blocks the second
+        //$$ // rung of the playthrough. Measured: the task holds the inventory screen for a whole
+        //$$ // run -- 9295 ticks of 9295, no table screen, no close -- because it reaches this
+        //$$ // point and does nothing, while the pack holds wood to spare.
+        //$$ //
+        //$$ // THE SIGNATURE IS NO LONGER A GUESS. Writing the old call here and building says:
+        //$$ //   incompatible types: RecipeEntry<CAP#1> cannot be converted to NetworkRecipeId
+        //$$ // so 1.21.11 wants clickRecipe(int syncId, NetworkRecipeId, boolean). What is missing
+        //$$ // is the mapping from our WrappedRecipeEntry to a NetworkRecipeId -- the client learns
+        //$$ // those ids from the server's recipe book sync, so the next pass looks there
+        //$$ // (ClientRecipeBook / recipe display entries) rather than at the recipe registry.
         //#endif
 
         return null;
