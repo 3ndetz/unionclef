@@ -65,7 +65,10 @@ def wait_for(desc,fn,ts,iv=4):
 
 def main():
     print("[1] wait gamer-server rcon...")
-    wait_for("gamer rcon", lambda: "players" in grcon("list"), 300, 6)
+    try:
+        wait_for("gamer rcon", lambda: "players" in grcon("list"), 120, 6)
+    except TimeoutError as e:
+        raise StandDown(f"gamer-server rcon never answered: {e}")
     grcon("difficulty easy"); grcon("gamerule doDaylightCycle true")
     print("[2] connect bot to gamer-server...")
     if not py4j("state")["inGame"] or True:
@@ -77,8 +80,12 @@ def main():
         # constructor. The task then never existed, the bot sat "busy" and motionless, and
         # this script recorded five minutes of that as a PATHFINDING failure. Wait for a
         # position the server agrees with instead of sleeping and hoping.
-        wait_for("world loaded (bot has a position)",
-                 lambda: bool((py4j("gs").get("self") or {}).get("pos")), 200, 5)
+        try:
+            wait_for("world loaded (bot has a position)",
+                     lambda: bool((py4j("gs").get("self") or {}).get("pos")), 200, 5)
+        except TimeoutError as e:
+            # No position after connecting means the server went away, not that the bot is bad.
+            raise StandDown(f"no position after connect: {e}")
         time.sleep(5)
     # A RUN THAT STARTS WHEREVER THE LAST ONE STOPPED MEASURES LUCK, NOT CODE.
     # This world is never wiped, so each @gamer run began from whatever the previous one left:
@@ -236,16 +243,34 @@ def main():
 # spawns -- not the setup. Over a session's runs from an empty inventory the tally was four in
 # seven. So a fix "confirmed" or "refuted" by a single run is being judged at random, which
 # cost real passes. The verdict is a repeated one, the way run_suite --repeat already works.
+class StandDown(Exception):
+    """The stand, not the bot, is what failed."""
+
 def sweep(runs, need):
+    # AN INFRASTRUCTURE FAILURE IS NOT A BOT FAILURE.
+    # The gamer server's container died mid-session and every run afterwards reported FAIL with
+    # zeroed counters, which read exactly like a code regression -- and was believed as one for
+    # a pass. That is the mirror image of the false-green bars repaired earlier: a false RED.
+    # A run that cannot reach a live server is INVALID and does not count either way, the same
+    # convention run_suite already uses for a starved host.
     results = []
     for i in range(runs):
         print("")
         print(f"=========== RUN {i + 1}/{runs} ===========")
         try:
             results.append(bool(main()))
+        except StandDown as e:
+            print(f"  INVALID (stand down): {str(e)[:160]}")
+            results.append(None)
         except Exception as e:                       # a broken run is a failed run, not a crash
             print(f"  run error: {str(e)[:160]}")
             results.append(False)
+    invalid = sum(1 for r in results if r is None)
+    if invalid:
+        print(f"  {invalid} run(s) INVALID — the stand was down, not the bot. Restart with:")
+        print("    docker compose -f deploy/compose.test.yml --profile gamer up -d")
+    results = [r for r in results if r is not None]
+    runs = len(results) or 1
     passed = sum(results)
     print("")
     print(f"=========== GAMER_SUITE: {passed}/{runs} passed, need {need} ===========")
