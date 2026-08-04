@@ -24,7 +24,7 @@ import java.util.Optional;
 public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCraftingGrid {
 
     /** States this task passes through per tick; read over py4j in placeStats(). */
-    public static volatile int cgTick, cgBigOpen, cgInvOpen, cgNoScreen, cgSent, cgOutputReady, cgCraftable, cgNotCraftable;
+    public static volatile int cgTick, cgBigOpen, cgInvOpen, cgNoScreen, cgSent, cgOutputReady, cgCraftable, cgNotCraftable, cgBookCraftable, cgBookNone;
     /** Item of the last recipe actually sent; read over py4j. */
     public static volatile String cgLastSent = "-";
 
@@ -180,6 +180,10 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         //$$             net.minecraft.recipe.display.SlotDisplayContexts.createParameters(mod.getWorld());
         //$$     for (net.minecraft.client.gui.screen.recipebook.RecipeResultCollection col
         //$$             : player.getRecipeBook().getOrderedResults()) {
+        //$$         // IS THE CRAFTABLE SET EVER FILLED? isCraftable was false on every send while
+        //$$         // the pack held logs, so either the book cannot see the inventory or nothing
+        //$$         // recomputes it. Counting the whole book tells those apart in one run.
+        //$$         if (col.hasCraftableRecipes()) cgBookCraftable++; else cgBookNone++;
         //$$         for (net.minecraft.recipe.RecipeDisplayEntry entry : col.getAllRecipes()) {
         //$$             for (ItemStack shown : entry.getStacks(ctx)) {
         //$$                 if (shown.getItem() == target.getOutputItem()) {
