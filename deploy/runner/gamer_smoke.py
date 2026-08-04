@@ -12,6 +12,7 @@ responsive and not permanently stuck.
 import functools, json, os, pathlib, re, subprocess, sys, time
 print = functools.partial(print, flush=True)
 SPAWN_FILE=pathlib.Path(__file__).with_name("gamer_spawn.txt")
+RUN_INDEX_FILE=pathlib.Path(__file__).with_name("gamer_run_index.txt")
 CLIENT="uctest-mc-tester1"; GSERVER="uctest-gamer-server"; BOT="tester1"; PORT=25333
 MINUTES=float(sys.argv[1]) if len(sys.argv)>1 and not sys.argv[1].startswith("--") else 5.0
 SNIP=r"""
@@ -147,9 +148,36 @@ def main():
     # and failing. Pin it: the first run records where it landed, every later run teleports
     # there, and GAMER_SPAWN overrides. Recorded rather than written into the source, because a
     # coordinate baked into a runner is exactly the per-world hardcode this project forbids.
+    # A FRESH PATCH OF FOREST EVERY RUN, OR THE BENCH ROTS.
+    # The world is never wiped and the bot fells the trees around wherever it starts, so a FIXED
+    # start gets harder every run: measured 21.5s to first log on untouched ground against 300 to
+    # 585 seconds, or never, at a point the bot had been working all session. That decay was read
+    # as code regressions for hours. So each run steps to ground the bot has not cleared: a
+    # square spiral out from the base point, 300 blocks a step, with the index kept on disk.
     spawn = os.environ.get("GAMER_SPAWN")
     if not spawn and SPAWN_FILE.exists():
-        spawn = SPAWN_FILE.read_text(encoding="utf-8").strip()
+        base = [int(v) for v in SPAWN_FILE.read_text(encoding="utf-8").split()]
+        idx = 0
+        if RUN_INDEX_FILE.exists():
+            try:
+                idx = int(RUN_INDEX_FILE.read_text(encoding="utf-8").strip())
+            except ValueError:
+                idx = 0
+        RUN_INDEX_FILE.write_text(str(idx + 1), encoding="utf-8")
+        # square spiral: right, up, left, down, growing every two legs
+        dx, dz, leg, step = 1, 0, 1, 0
+        x, z = 0, 0
+        for _ in range(idx):
+            x += dx
+            z += dz
+            step += 1
+            if step == leg:
+                step = 0
+                dx, dz = -dz, dx
+                if dz == 0:
+                    leg += 1
+        spawn = f"{base[0] + x * 300} {base[1]} {base[2] + z * 300}"
+        print(f"  fresh start #{idx}: {spawn}")
     if spawn:
         grcon(f"tp {BOT} {spawn}")
         time.sleep(2)
