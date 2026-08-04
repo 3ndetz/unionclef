@@ -22,6 +22,9 @@ import java.util.Optional;
  */
 public class CraftInInventoryTask extends ResourceTask {
 
+    /** Ticks, "no materials" exits, and output collections; read over py4j in placeStats(). */
+    public static volatile int ciTick, ciCollect, ciReceive;
+
     private final RecipeTarget _target;
     private final boolean _collect;
     private final boolean _ignoreUncataloguedSlots;
@@ -64,6 +67,10 @@ public class CraftInInventoryTask extends ResourceTask {
 
     @Override
     protected Task onResourceTick(AltoClef mod) {
+        // A LEVEL UP FROM THE PLACEMENT. Both crafting routes -- recipe book and manual -- behave
+        // identically: wood gathered, crafting rung never reached. So the question is no longer
+        // how ingredients are laid out but whether control gets that far, and with what.
+        ciTick++;
         // Grab from output FIRST
         if (StorageHelper.isPlayerInventoryOpen()) {
             if (StorageHelper.getItemStackInCursorSlot().isEmpty()) {
@@ -71,6 +78,7 @@ public class CraftInInventoryTask extends ResourceTask {
                 if (itemTargets != null) {
                     for (ItemTarget target : itemTargets) {
                         if (target.matches(outputItem)) {
+                            ciReceive++;
                             return new ReceiveCraftingOutputSlotTask(PlayerSlot.CRAFT_OUTPUT_SLOT, target.getTargetCount());
                         }
                     }
@@ -81,6 +89,9 @@ public class CraftInInventoryTask extends ResourceTask {
         ItemTarget toGet = itemTargets[0];
         Item toGetItem = toGet.getMatches()[0];
         if (_collect && !StorageHelper.hasRecipeMaterialsOrTarget(mod, _target)) {
+            // PRIME SUSPECT: a bot that believes it lacks materials never reaches crafting at
+            // all, however well placement works -- and it holds up to twelve wood items a run.
+            ciCollect++;
             // Collect recipe materials
             setDebugState("Collecting materials");
             return collectRecipeSubTask(mod);
