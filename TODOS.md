@@ -3320,3 +3320,33 @@ false у ВСЕХ 109, при том что у бота в руках брёвн
 ЗАМЕЧАНИЕ ПО ПРИОРИТЕТУ: версию про `craftAll` считаю СЛАБОЙ — маппинги говорят, что это
 «скрафтить максимум», а не «крафтить ли вообще». Проверять её последней.
 
+### G-1.47 — ⭐⭐⭐ НАЙДЕНО ЧТЕНИЕМ: `isPlayerInventoryOpen()` ВСЕГДА TRUE
+
+```java
+private static boolean isScreenOpenInner(Predicate<ScreenHandler> p) {
+    return p.test(player.currentScreenHandler);      // <- ОБРАБОТЧИК, не экран
+}
+public static boolean isPlayerInventoryOpen() {
+    return isScreenOpenInner(sh -> sh instanceof PlayerScreenHandler);
+}
+```
+
+`PlayerScreenHandler` — обработчик ПО УМОЛЧАНИЮ: он остаётся `currentScreenHandler`, когда
+никакой экран не открыт. Значит `isPlayerInventoryOpen()` возвращает **true ВСЕГДА**.
+
+ЭТО ОБЪЯСНЯЕТ ВСЁ, ЧТО МЕРИЛОСЬ: `cgInv` = все тики, `cgNoScreen` = 0 всегда, а задача
+крафта, считая экран открытым, НИКОГДА ЕГО НЕ ОТКРЫВАЕТ — и сервер отбрасывает запрос
+крафта, потому что экран на самом деле закрыт. Отсюда `cgOutReady=0` при живой книге и
+уходящем пакете.
+
+⛔ ПРАВКА (ЯДРО, но ОСТОРОЖНО): проверять НАСТОЯЩИЙ экран —
+`MinecraftClient.getInstance().currentScreen instanceof InventoryScreen` — а не обработчик.
+РИСК: `isPlayerInventoryOpen()` используется во МНОГИХ местах (см. счётчик в коммите), и
+поведение «всегда true» могло стать неявной опорой для другого кода. Поэтому:
+1. сперва добавить ОТДЕЛЬНЫЙ честный метод (например `isPlayerInventoryScreenOpen()`) и
+   применить ЕГО ТОЛЬКО в задаче крафта;
+2. замерить сводкой (`--repeat 3 --rung crafting`) + nav 12/12;
+3. и лишь потом решать, чинить ли сам `isPlayerInventoryOpen()` глобально.
+НЕ МЕНЯТЬ общий помощник одним махом — это ровно тот случай, где «правильная» правка может
+уронить десяток мест сразу.
+
