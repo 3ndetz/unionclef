@@ -24,7 +24,9 @@ import java.util.Optional;
 public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCraftingGrid {
 
     /** States this task passes through per tick; read over py4j in placeStats(). */
-    public static volatile int cgTick, cgBigOpen, cgInvOpen, cgNoScreen, cgSent;
+    public static volatile int cgTick, cgBigOpen, cgInvOpen, cgNoScreen, cgSent, cgOutputReady;
+    /** Item of the last recipe actually sent; read over py4j. */
+    public static volatile String cgLastSent = "-";
 
     private final RecipeTarget target;
 
@@ -104,6 +106,9 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         ItemStack output = StorageHelper.getItemStackInSlot(outputSlot);
 
         // Check if the output item matches the target item and the target count has not been reached
+        // DOES THE CLICK PRODUCE ANYTHING? A recipe going out (cgSent 3/2/1) is not the same as
+        // an item appearing in the output slot, and those two need opposite fixes.
+        if (target.getOutputItem() == output.getItem()) cgOutputReady++;
         if (target.getOutputItem() == output.getItem() && mod.getItemStorage().getItemCount(target.getOutputItem()) < target.getTargetCount()) {
             // Return a task to receive the crafting output slot
             return new ReceiveCraftingOutputSlotTask(outputSlot, target.getTargetCount());
@@ -179,6 +184,8 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         //$$             for (ItemStack shown : entry.getStacks(ctx)) {
         //$$                 if (shown.getItem() == target.getOutputItem()) {
         //$$                     cgSent++;   // "the hang is gone" is not "a recipe was sent"
+        //$$                     cgLastSent = String.valueOf(
+        //$$                             net.minecraft.registry.Registries.ITEM.getId(target.getOutputItem()));
         //$$                     mod.getController().clickRecipe(
         //$$                             player.currentScreenHandler.syncId, entry.id(), true);
         //$$                     mod.getSlotHandler().registerSlotAction();

@@ -2149,6 +2149,7 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.CraftGenericWithRecipeBooksTask.cgInvOpen = 0;
         adris.altoclef.tasks.CraftGenericWithRecipeBooksTask.cgNoScreen = 0;
         adris.altoclef.tasks.CraftGenericWithRecipeBooksTask.cgSent = 0;
+        adris.altoclef.tasks.CraftGenericWithRecipeBooksTask.cgOutputReady = 0;
         kaptainwutax.tungsten.path.movements.RotationHelper.rayLeaves = 0;
         kaptainwutax.tungsten.path.movements.RotationHelper.rayOtherBlock = 0;
         kaptainwutax.tungsten.path.movements.RotationHelper.rayMiss = 0;
@@ -2197,7 +2198,7 @@ public class Py4jEntryPoint {
         return String.format(
                 "called=%d deferred=%d inRange=%d clicked=%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
-                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d"
+                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d)"
                         + " sprint=%d/%d lowHp=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
@@ -2253,6 +2254,8 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.CraftGenericWithRecipeBooksTask.cgInvOpen,
                 adris.altoclef.tasks.CraftGenericWithRecipeBooksTask.cgNoScreen,
                 adris.altoclef.tasks.CraftGenericWithRecipeBooksTask.cgSent,
+                adris.altoclef.tasks.CraftGenericWithRecipeBooksTask.cgOutputReady,
+                adris.altoclef.tasks.CraftGenericWithRecipeBooksTask.cgLastSent,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qLost,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qStatusFail,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qRefused,
