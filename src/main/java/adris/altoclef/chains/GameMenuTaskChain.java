@@ -38,6 +38,9 @@ import org.apache.commons.lang3.ArrayUtils;
 
 public class GameMenuTaskChain extends SingleTaskChain {
 
+    /** Steps of the death-disconnect-reconnect path; read over py4j in placeStats(). */
+    public static volatile int gmDisconnect, gmReconnectSet, gmGuardBlocked, gmConnectCalled;
+
     private final TimerReal _reconnectTimer = new TimerReal(10);
     private final TimerReal _kickScreenTimer = new TimerReal(7);
     private boolean _waitingOnKickScreen = false;
@@ -261,7 +264,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
             } else if (_kickScreenTimer.elapsed()) {
                 Debug.logMessage("RECONNECTING: Going to Multiplayer Screen");
                 _waitingOnKickScreen = false;
-                _reconnecting = true;
+                gmReconnectSet++; _reconnecting = true;
                 _reconnectTimer.reset();
                 MinecraftClient.getInstance().setScreen(new MultiplayerScreen(new TitleScreen()));
             }
@@ -311,7 +314,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
                             if (_prevServerEntry == null) {
                                 _prevServerEntry = finalSrv;
                             }
-                            _reconnecting = true;
+                            gmReconnectSet++; _reconnecting = true;
                             _reconnectTimer.reset();
                         });
                         mod.runUserTask(new StuckFixingTask(), doOnStuckFixFinish);
@@ -337,7 +340,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 }
 
                 if (_prevServerEntry != null && _reJoinAfterDisconnect) {
-                    _reconnecting = true;
+                    gmReconnectSet++; _reconnecting = true;
                     _reconnectTimer.reset();
                     _reJoinAfterDisconnect = false;
                 }
@@ -358,6 +361,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 // the client (removed() NPEs on the null server list widget). Wait until
                 // the screen is initialized (has children) before connecting.
                 if (screen.children().isEmpty()) {
+                    gmGuardBlocked++;
                     return;
                 }
                 reconnectAttemps += 1;
@@ -370,10 +374,11 @@ public class GameMenuTaskChain extends SingleTaskChain {
                     Debug.logMessage("RECONNECTING: Connect to " + _prevServerEntry.address.toString());
                     MinecraftClient client = MinecraftClient.getInstance();
                     try {
+                        gmConnectCalled++;
                         ConnectScreenVer.connect(screen, client, ServerAddress.parse(_prevServerEntry.address), _prevServerEntry, false);
                     } catch (Throwable t) {
                         Debug.logWarning("Reconnect threw " + t.getClass().getSimpleName() + " — retry next cycle instead of crashing");
-                        _reconnecting = true;
+                        gmReconnectSet++; _reconnecting = true;
                         _reconnectTimer.reset();
                     }
                     if (_needToStopTasksOnReconnect) {
@@ -391,6 +396,10 @@ public class GameMenuTaskChain extends SingleTaskChain {
 
     public Runnable _innerDisconnect(MinecraftClient client) {
         return () -> {
+            // WHICH PART OF THE RECONNECT NEVER HAPPENS? The bot leaves the server on death by
+            // design, and then sits on the title screen for the rest of the run -- inGame=false,
+            // every poll returning zeros, which produced six separate "bugs" this session.
+            gmDisconnect++;
             if (client.world != null) {
                 boolean bl = client.isInSingleplayer();
                 //#if MC >= 12111
@@ -456,7 +465,7 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 MinecraftClient.getInstance().setScreen(new TitleScreen());
             }
             _needDisconnect = false;
-            _reconnecting = true;
+            gmReconnectSet++; _reconnecting = true;
             _reconnectTimer.reset();
         }
     }
