@@ -246,11 +246,21 @@ def main():
     # DID IT DIE, AND TO WHAT? A run that ends with an empty pack has usually lost it on death,
     # and the server says so in plain words ("tester1 was blown up by Creeper"). Counting that is
     # the difference between "crafting is flaky" and "the bot keeps dying with its progress".
-    deaths = [ln for ln in sh(["docker", "logs", "--tail", "400", GSERVER]).stdout.splitlines()
-              if BOT in ln and (" was " in ln or " died" in ln or " fell " in ln)]
-    print(f"  deaths this run: {len(deaths)}")
-    for d in deaths[-4:]:
-        print("   ", d.strip()[-110:])
+    # THE BENCH'S OWN /kill IS NOT A DEATH. It produces the sourceless "tester1 was killed",
+    # and counting it put the figure at twenty-two a run when sixty-one of some eighty-nine log
+    # entries were simply the reset. Drop it, and report the rest BY CAUSE -- because the split
+    # is the finding: falls outnumber any single mob, and a fall is a movement failure.
+    raw = [ln for ln in sh(["docker", "logs", "--tail", "400", GSERVER]).stdout.splitlines()
+           if BOT in ln and (" was " in ln or " died" in ln or " fell " in ln)]
+    deaths = [ln for ln in raw if "was killed" not in ln or " by " in ln]
+    causes = {}
+    for ln in deaths:
+        i = ln.find(BOT)
+        key = ln[i + len(BOT):].strip()[:44]
+        causes[key] = causes.get(key, 0) + 1
+    print(f"  deaths this run: {len(deaths)} (bench /kill excluded: {len(raw) - len(deaths)})")
+    for k, v in sorted(causes.items(), key=lambda kv: -kv[1])[:5]:
+        print(f"    {v}x {k}")
     print("  end inv:", py4j("inv"))
     print("  queue stats:", py4j("stats").get("s"))
     print("  recent chat:", py4j("chat", n=10).get("chat"))
