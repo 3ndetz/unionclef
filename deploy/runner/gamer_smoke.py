@@ -193,7 +193,9 @@ def main():
                 logs = py4j("logs", r=40).get("n", -1)
             except Exception:
                 logs = -1
-            if logs is None or logs < 0 or logs >= 4:
+            # A DOZEN LOGS IS NOT A FOREST. The first threshold accepted 12 within forty blocks
+            # and that run reached nothing, so the check was still partly measuring the world.
+            if logs is None or logs < 0 or logs >= 40:
                 print(f"  start has {logs} log blocks within 40")
                 break
             skipped += 1
