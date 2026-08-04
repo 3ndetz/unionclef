@@ -30,6 +30,9 @@ import java.util.function.Predicate;
 
 public class SlotHandler {
 
+    /** Slot clicks that went through, and those the rate gate swallowed; read over py4j. */
+    public static volatile int shIssued, shDropped;
+
     private final AltoClef mod;
 
     private final TimerGame slotActionTimer = new TimerGame(0);
@@ -67,7 +70,12 @@ public class SlotHandler {
 
 
     public void clickSlot(Slot slot, int mouseButton, SlotActionType type) {
-        if (!canDoSlotAction()) return;
+        // A CLICK THAT SILENTLY DOES NOT HAPPEN LOOKS EXACTLY LIKE A CLICK THAT DID NOTHING.
+        // The output-collection task clicks the crafting result 8996 times a run and the item
+        // never leaves the slot; this gate returning early is one of the two ways that happens,
+        // and until now nothing told them apart.
+        if (!canDoSlotAction()) { shDropped++; return; }
+        shIssued++;
 
         if (slot.getWindowSlot() == -1) {
             clickSlot(PlayerSlot.UNDEFINED, 0, SlotActionType.PICKUP);
