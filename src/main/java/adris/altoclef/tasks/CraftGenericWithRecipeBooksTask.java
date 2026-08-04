@@ -24,7 +24,7 @@ import java.util.Optional;
 public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCraftingGrid {
 
     /** States this task passes through per tick; read over py4j in placeStats(). */
-    public static volatile int cgTick, cgBigOpen, cgInvOpen, cgNoScreen;
+    public static volatile int cgTick, cgBigOpen, cgInvOpen, cgNoScreen, cgSent;
 
     private final RecipeTarget target;
 
@@ -178,6 +178,7 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         //$$         for (net.minecraft.recipe.RecipeDisplayEntry entry : col.getAllRecipes()) {
         //$$             for (ItemStack shown : entry.getStacks(ctx)) {
         //$$                 if (shown.getItem() == target.getOutputItem()) {
+        //$$                     cgSent++;   // "the hang is gone" is not "a recipe was sent"
         //$$                     mod.getController().clickRecipe(
         //$$                             player.currentScreenHandler.syncId, entry.id(), true);
         //$$                     mod.getSlotHandler().registerSlotAction();
