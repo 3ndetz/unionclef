@@ -24,7 +24,7 @@ import java.util.Optional;
 public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCraftingGrid {
 
     /** States this task passes through per tick; read over py4j in placeStats(). */
-    public static volatile int cgTick, cgBigOpen, cgInvOpen, cgNoScreen, cgSent, cgOutputReady;
+    public static volatile int cgTick, cgBigOpen, cgInvOpen, cgNoScreen, cgSent, cgOutputReady, cgCraftable, cgNotCraftable;
     /** Item of the last recipe actually sent; read over py4j. */
     public static volatile String cgLastSent = "-";
 
@@ -183,6 +183,11 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         //$$         for (net.minecraft.recipe.RecipeDisplayEntry entry : col.getAllRecipes()) {
         //$$             for (ItemStack shown : entry.getStacks(ctx)) {
         //$$                 if (shown.getItem() == target.getOutputItem()) {
+        //$$                     // IS THE SERVER EVEN WILLING? A click on a recipe the player has
+        //$$                     // not unlocked is dropped silently, which looks exactly like what
+        //$$                     // was measured: the right recipe sent, cgOutReady=0. One counter
+        //$$                     // settles it before any theory about screens or arguments.
+        //$$                     if (col.isCraftable(entry.id())) cgCraftable++; else cgNotCraftable++;
         //$$                     cgSent++;   // "the hang is gone" is not "a recipe was sent"
         //$$                     cgLastSent = String.valueOf(
         //$$                             net.minecraft.registry.Registries.ITEM.getId(target.getOutputItem()));
