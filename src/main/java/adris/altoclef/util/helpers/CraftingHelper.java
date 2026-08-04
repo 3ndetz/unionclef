@@ -23,7 +23,19 @@ public class CraftingHelper {
             inventoryItems.add(new ItemStack(stack.getItem(), stack.getCount()));
         }
 
-        for (CraftingRecipe recipe : mod.getCraftingRecipeTracker().getRecipeForItem(item)) {
+        // A MISSING RECIPE IS "CANNOT CRAFT", NOT A CRASH.
+        // getRecipeForItem returns null when the tracker has no recipe for an item, and on 1.21.11
+        // it has none for plenty of them -- the recipe APIs are only half ported (see the
+        // //$$ TODO [1.21.11] markers in CraftingRecipeVer and RecipeManagerWrapper). The NPE from
+        // that null escaped BeatMinecraftTask.onTick, out through AltoClef.onClientTick, and threw
+        // the CLIENT OUT OF THE WORLD -- measured: inGame=false for two thirds of an 18-minute run,
+        // which is the single cause behind "the pack is empty", "items vanish", "eighteen minutes
+        // buys one rung", "every counter reads zero" and "the stand keeps falling over".
+        List<CraftingRecipe> recipes = mod.getCraftingRecipeTracker().getRecipeForItem(item);
+        if (recipes == null) {
+            return false;
+        }
+        for (CraftingRecipe recipe : recipes) {
             if (canCraftItemNow(mod, new ArrayList<>(inventoryItems), recipe, new HashSet<>())) {
                 return true;
             }
