@@ -27,6 +27,8 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
     public static volatile int cgTick, cgBigOpen, cgInvOpen, cgNoScreen, cgSent, cgOutputReady, cgCraftable, cgNotCraftable, cgBookCraftable, cgBookNone;
     /** Item of the last recipe actually sent; read over py4j. */
     public static volatile String cgLastSent = "-";
+    /** Screen handler the last recipe was sent from; read over py4j. */
+    public static volatile String cgScreen = "-";
 
     private final RecipeTarget target;
 
@@ -175,13 +177,14 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         //$$ // SlotDisplayContexts.createParameters(World) rather than the null the compiler would
         //$$ // have accepted and the runtime would have thrown on.
         //$$ ClientPlayerEntity player = MinecraftClient.getInstance().player;
-        //$$ // THE RECOMPUTE MUST NOT SIT BEHIND THE RATE GATE.
-        //$$ // It used to live inside the canDoSlotAction() branch, so the book was only refreshed
-        //$$ // on the ticks an action was already permitted -- and by the time a send happened the
-        //$$ // set could be stale again. Measured: one run in four produced output (866 items in
-        //$$ // the slot, and one run reaching sticks, which the chain had never done), the other
-        //$$ // three produced none. Refresh every tick; only the send stays gated.
-        //$$ if (player != null && mod.getWorld() != null) {
+        //$$ // REVERTED: REFRESHING EVERY TICK IS TOO EXPENSIVE.
+        //$$ // Moving the recompute out of this gate meant walking all 109 collections and matching
+        //$$ // ingredients for each, every single tick. Measured over three runs: cgSent fell to 0
+        //$$ // and the bot stopped reaching even the WOOD rung, which it had been clearing in 21 to
+        //$$ // 214 seconds. The book being slightly stale is a smaller problem than the client not
+        //$$ // having time to chop. If staleness needs solving it wants its own rate gate -- a few
+        //$$ // times a second, not sixty -- rather than no gate at all.
+        //$$ if (player != null && mod.getWorld() != null && mod.getSlotHandler().canDoSlotAction()) {
         //$$     net.minecraft.util.context.ContextParameterMap ctx =
         //$$             net.minecraft.recipe.display.SlotDisplayContexts.createParameters(mod.getWorld());
         //$$     // TELL THE BOOK WHAT WE ARE CARRYING.
@@ -205,8 +208,12 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         //$$                     // not unlocked is dropped silently, which looks exactly like what
         //$$                     // was measured: the right recipe sent, cgOutReady=0. One counter
         //$$                     // settles it before any theory about screens or arguments.
-        //$$                     if (!mod.getSlotHandler().canDoSlotAction()) continue;
         //$$                     if (col.isCraftable(entry.id())) cgCraftable++; else cgNotCraftable++;
+        //$$                     // WHICH SCREEN IS THIS SENT FROM? The book recompute lands and the
+        //$$                     // recipe is craftable, yet nothing reaches the output slot -- so the
+        //$$                     // fault is after the send, and the handler we hold is the first
+        //$$                     // suspect: cgBig has been 0 all session, i.e. never a crafting table.
+        //$$                     cgScreen = player.currentScreenHandler.getClass().getSimpleName();
         //$$                     cgSent++;   // "the hang is gone" is not "a recipe was sent"
         //$$                     cgLastSent = String.valueOf(
         //$$                             net.minecraft.registry.Registries.ITEM.getId(target.getOutputItem()));
