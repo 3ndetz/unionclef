@@ -67,7 +67,7 @@ public class MobDefenseChain extends SingleTaskChain {
      * leaving through some other door -- and there are eight. Counting them apart is the only
      * way to know which, and guessing has gone one for eight this session.
      */
-    public static volatile int mdRet0, mdRet1, mdRet2, mdRet3, mdRet4, mdRet5, mdRet6, mdRet7;
+    public static volatile int mdRet0, mdRet1, mdRet2, mdRet3, mdRet4, mdRet5, mdRet6, mdRet7, mdRet8, mdRet9;
     private static final double DANGER_KEEP_DISTANCE = 30;
     private static final double CREEPER_KEEP_DISTANCE = 10;
     private static final double ARROW_KEEP_DISTANCE_HORIZONTAL = 2;
@@ -471,6 +471,10 @@ public class MobDefenseChain extends SingleTaskChain {
         // By default, if we aren't "immediately" in danger but were running away, keep
         // running away until we're good.
         if (runAwayTask != null && !runAwayTask.isFinished()) {
+            // THE SUSPECT: this re-sets an OLD flee task and returns the PREVIOUS priority, so the
+            // chain keeps the tick without choosing to flee or fight again -- which is exactly what
+            // was measured (mdWon in the thousands, mdFlee and mdFight both zero, ~17 deaths a run).
+            mdRet8++;
             setTask(runAwayTask);
             return cachedLastPriority;
         } else {
@@ -478,6 +482,7 @@ public class MobDefenseChain extends SingleTaskChain {
         }
 
         if (needsChangeOnAttack && lockedOnEntity != null && lockedOnEntity.isAlive()) {
+            mdRet9++;
             setTask(new KillEntitiesTask(lockedOnEntity.getClass()));
             return 65;
         } else {
