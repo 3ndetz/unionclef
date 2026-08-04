@@ -235,6 +235,9 @@ def main():
             print(f"  t={int(time.time()-t0)}s inGame={gs.get('inGame')} hp={hp} pos={pos} items={inv.get('items')} busy={ht.get('busy')}")
         except Exception as e:
             print(f"  poll error (client may be busy): {str(e)[:80]}")
+    # WHAT DID IT ACTUALLY END UP HOLDING? "Ten items gathered" and "no materials to craft"
+    # are only contradictory if those ten are logs. Print the list rather than assume.
+    print("  end inv:", py4j("inv"))
     print("  queue stats:", py4j("stats").get("s"))
     print("  recent chat:", py4j("chat", n=10).get("chat"))
 
