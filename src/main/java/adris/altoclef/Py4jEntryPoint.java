@@ -2187,7 +2187,7 @@ public class Py4jEntryPoint {
         return String.format(
                 "called=%d deferred=%d inRange=%d clicked=%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
-                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d"
+                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d)"
                         + " sprint=%d/%d lowHp=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
@@ -2232,6 +2232,7 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.construction.DestroyBlockTask.dbNearAirborne,
                 adris.altoclef.tasks.construction.DestroyBlockTask.dbNearHungry,
                 adris.altoclef.tasks.construction.DestroyBlockTask.dbNearUnsafe,
+                kaptainwutax.tungsten.path.movements.RotationHelper.blockedBy,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qLost,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qStatusFail,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qRefused,

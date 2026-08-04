@@ -316,8 +316,29 @@ public final class RotationHelper {
                 return possibleRotation;
             }
         }
+        // WHAT IS IN THE WAY? Measured on the playthrough: while the bot stands within four
+        // blocks of its target log, this method returns empty on 98% of ticks, which is what
+        // stops the swing and eventually gets the log blacklisted. Distance cannot be the cause
+        // at that range, so the ray must be hitting something else -- record what, by name, at
+        // the centre aim, and let a run say whether it is the tree's own leaves.
+        try {
+            Vec3d eyes = wouldSneak ? inferSneakingEyePosition(player) : player.getCameraPosVec(1.0F);
+            Rotation aim = calcRotationFromVec3d(eyes, Vec3d.ofCenter(pos), playerRotations(player));
+            HitResult r = rayTraceTowards(player, peekRotation(aim), blockReachDistance, wouldSneak);
+            if (r != null && r.getType() == HitResult.Type.BLOCK) {
+                blockedBy = net.minecraft.registry.Registries.BLOCK.getId(
+                        world.getBlockState(((BlockHitResult) r).getBlockPos()).getBlock()).toString();
+            } else {
+                blockedBy = r == null ? "null" : String.valueOf(r.getType());
+            }
+        } catch (Throwable t) {
+            blockedBy = "err";
+        }
         return Optional.empty();
     }
+
+    /** Block the centre reach ray last hit instead of the wanted one; read over py4j. */
+    public static volatile String blockedBy = "-";
 
     /**
      * RotationUtils.java:233-248. Note which eye is used: the SNEAKING eye when {@code wouldSneak},
