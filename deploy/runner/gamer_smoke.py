@@ -264,6 +264,7 @@ def main():
     if preexisting:
         print("  already held at start (cannot count):", ", ".join(sorted(preexisting)))
     ctx_last_chain = [None]
+    prev_stats = {}
 
     # MARK WHERE THE RUN STARTS IN THE SERVER LOG.
     # Deaths were being read from a --tail window WIDER than the run, so a run whose counters were
@@ -311,7 +312,24 @@ def main():
             if ht.get("busy"): busy_cnt+=1
             if pos: moved.add(pos)
             best_items=max(best_items, inv.get("items",0))
-            print(f"  t={int(time.time()-t0)}s inGame={gs.get('inGame')} hp={hp} pos={pos} items={inv.get('items')} busy={ht.get('busy')}")
+            # DELTAS, NOT TOTALS. Over a whole run the counters smear two and a half idle
+            # minutes across eight working ones; per poll they show what goes quiet WITH the bot.
+            dl = ""
+            try:
+                st = py4j("stats").get("s") or ""
+                cur = {}
+                for tok in st.split():
+                    if "=" in tok:
+                        k, v = tok.split("=", 1)
+                        if v.lstrip("-").isdigit():
+                            cur[k] = int(v)
+                keys = ["pdEnter", "mqStarted", "mqSteps", "dbTick", "rayMiss", "leafCleared"]
+                dl = " d:" + ",".join(f"{k[:7]}+{cur.get(k,0)-prev_stats.get(k,0)}" for k in keys)
+                prev_stats.clear()
+                prev_stats.update(cur)
+            except Exception:
+                pass
+            print(f"  t={int(time.time()-t0)}s inGame={gs.get('inGame')} hp={hp} pos={pos} items={inv.get('items')} busy={ht.get('busy')}{dl}")
         except Exception as e:
             print(f"  poll error (client may be busy): {str(e)[:80]}")
     # WHAT DID IT ACTUALLY END UP HOLDING? "Ten items gathered" and "no materials to craft"
