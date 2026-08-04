@@ -650,14 +650,13 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // No y in the goal at all — an XZ goal means "get to this column", so aim at our own
             // height and let the search find the surface.
             raw = new net.minecraft.util.math.Vec3d(gxz.getX(), mod.getPlayer().getY(), gxz.getZ());
-        } else if (goal instanceof adris.altoclef.util.baritone.GoalRunAwayFromEntities flee) {
-            // A FLEE GOAL IS A PLACE TOO, ONCE YOU ASK IT PROPERLY.
-            // It carries no position, so this used to fall through to null -- which switches the
-            // tungsten driver off entirely for as long as the bot is running away. Measured on the
-            // playthrough: 368 of 596 entries lost here, unknownGoal=GoalRunAwayFromHostiles, and
-            // the bot standing on one spot for over four minutes.
-            raw = flee.suggestFleePoint(new net.minecraft.util.math.Vec3d(
-                    mod.getPlayer().getX(), mod.getPlayer().getY(), mod.getPlayer().getZ()));
+        // REVERTED: translating the flee goal to a point cost the nav baseline.
+        // It did what it promised on the playthrough -- pdNoVec 368 -> 0, no untranslatable goals
+        // in 1653 entries -- but nav went from 11-12/12 with no gate failures to 8/12 and then
+        // 10/12, with nav_break failing on FREEZES. Giving tungsten a flee point evidently makes
+        // it drive in situations where standing down was better. The protected baseline wins; a
+        // safer form (only where nothing else owns movement, or only on the @gamer path) has to
+        // be measured before this comes back.
         } else if (goal instanceof baritone.api.pathing.goals.GoalComposite gc) {
             // Nearest member wins: a composite is "any of these will do".
             double best = Double.MAX_VALUE;
