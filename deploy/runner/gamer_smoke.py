@@ -73,8 +73,21 @@ def main():
     grcon("difficulty easy"); grcon("gamerule doDaylightCycle true")
     print("[2] connect bot to gamer-server...")
     if not py4j("state")["inGame"] or True:
-        py4j("connect", ip="gamer-server")
-        wait_for("bot in game (gamer)", lambda: py4j("state")["inGame"], 200, 5)
+        # ONE CONNECT ATTEMPT IS NOT ENOUGH.
+        # Reconstructed from both logs: the bot dies mid-run (a creeper, in the run that exposed
+        # this), the next run's connect disconnects the client first -- "tester1 lost connection"
+        # on the server at 09:30:21 -- and it never gets back in, sitting on the title screen with
+        # no position. Which then read as "the stand is down" and threw the run away. Retry the
+        # connect instead, and only give up when several attempts in a row fail.
+        for attempt in range(4):
+            py4j("connect", ip="gamer-server")
+            try:
+                wait_for("bot in game (gamer)", lambda: py4j("state")["inGame"], 60, 5)
+                break
+            except TimeoutError:
+                print(f"  connect attempt {attempt + 1} did not land, retrying")
+        if not py4j("state")["inGame"]:
+            raise StandDown("client would not rejoin after four attempts")
         # WAIT FOR THE WORLD, NOT JUST THE CONNECTION. inGame flips as soon as the play
         # handler exists; the client world can still be null a moment later, and @gamer
         # issued in that window threw a NullPointerException out of BeatMinecraftTask's
