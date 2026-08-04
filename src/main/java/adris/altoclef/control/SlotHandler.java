@@ -31,7 +31,7 @@ import java.util.function.Predicate;
 public class SlotHandler {
 
     /** Slot clicks that went through, and those the rate gate swallowed; read over py4j. */
-    public static volatile int shIssued, shDropped, shBlacklisted;
+    public static volatile int shIssued, shDropped, shBlacklisted, shThrown;
     /** Window slot most recently blacklisted as "server cancelled"; read over py4j. */
     public static volatile int shLastBlacklistedSlot = -1;
 
@@ -99,6 +99,12 @@ public class SlotHandler {
         if (player == null) {
             return;
         }
+        // A CLICK OUTSIDE THE WINDOW IS A THROW ONTO THE GROUND, and the crafting code does it in
+        // several places. Measured: the bot crafts planks and sticks, does NOT die (zero deaths a
+        // run), and still ends with an empty pack while its craft task spends 95% of its time
+        // "collecting materials". If this counter runs into the hundreds, it is throwing away what
+        // it just made.
+        if (windowSlot < 0) shThrown++;
         // Bounds check — prevent CrashException from ScreenHandler.onSlotClick
         if (windowSlot >= 0 && windowSlot >= player.currentScreenHandler.slots.size()) {
             return;
