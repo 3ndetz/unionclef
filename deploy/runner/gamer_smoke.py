@@ -307,8 +307,18 @@ def sweep(runs, need):
         try:
             results.append(bool(main()))
         except StandDown as e:
-            print(f"  INVALID (stand down): {str(e)[:160]}")
-            results.append(None)
+            # THE CLIENT WEDGES EVERY FEW RUNS, AND DISCARDING THE RUN IS NOT GOOD ENOUGH.
+            # It has eaten about half the measurements today and twice produced a false
+            # conclusion -- "the server is dying", then "the bot is dead" -- before the logs said
+            # otherwise. Restart it and take the run again; only call it INVALID if that fails too.
+            print(f"  stand down ({str(e)[:120]}) — restarting the client and retrying")
+            sh(["docker", "restart", CLIENT], t=120)
+            time.sleep(90)
+            try:
+                results.append(bool(main()))
+            except StandDown as e2:
+                print(f"  INVALID (stand down after restart): {str(e2)[:140]}")
+                results.append(None)
         except Exception as e:                       # a broken run is a failed run, not a crash
             print(f"  run error: {str(e)[:160]}")
             results.append(False)
