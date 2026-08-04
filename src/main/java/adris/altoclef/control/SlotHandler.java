@@ -31,7 +31,9 @@ import java.util.function.Predicate;
 public class SlotHandler {
 
     /** Slot clicks that went through, and those the rate gate swallowed; read over py4j. */
-    public static volatile int shIssued, shDropped;
+    public static volatile int shIssued, shDropped, shBlacklisted;
+    /** Window slot most recently blacklisted as "server cancelled"; read over py4j. */
+    public static volatile int shLastBlacklistedSlot = -1;
 
     private final AltoClef mod;
 
@@ -133,6 +135,22 @@ public class SlotHandler {
 
     public void onServerSlotUpdate(int syncId, int slot, ItemStack serverStack) {
         long now = System.currentTimeMillis();
+        // A CRAFTING RESULT THAT REFILLS IS NOT A CANCELLATION.
+        // The test below blacklists a slot whose server state equals the state from before the
+        // click, which is right for an ordinary slot. A crafting output is the exception: take
+        // four planks, the grid still holds a log, the slot refills with four planks, and the two
+        // stacks match to the byte. Measured: slot 0 -- the 2x2 result -- was blacklisted three
+        // times in one run, and three cancels escalate to a TEN MINUTE muzzle, after which every
+        // click on it is dropped in silence. That is the whole of "the item is in the slot
+        // (ciReceive 98%), the task clicks thousands of times, nothing ever leaves".
+        try {
+            ClientPlayerEntity p = MinecraftClient.getInstance().player;
+            if (p != null && slot >= 0 && slot < p.currentScreenHandler.slots.size()
+                    && p.currentScreenHandler.getSlot(slot)
+                            instanceof net.minecraft.screen.slot.CraftingResultSlot) {
+                return;
+            }
+        } catch (Exception ignored) {}
         for (PendingSlotAction action : _pendingSlotActions) {
             if (now - action.timeMs() > 600) continue;
             if (action.syncId() == syncId && action.windowSlot() == slot
@@ -147,6 +165,11 @@ public class SlotHandler {
                 // action" and gets the bot anti-cheat-KICKED. So the more times it's cancelled, the LONGER
                 // we give up on it: 4s -> 30s -> 10min. Normal inventory slots are ~never cancelled, so
                 // they never escalate; this only muzzles slots the server actively refuses.
+                // WHICH SLOTS GET MUZZLED? Reading says a crafting OUTPUT looks identical to a
+                // cancellation when it refills with the same stack, and the escalation would then
+                // silence it for ten minutes. Record the slot so that stops being a reading.
+                shBlacklisted++;
+                shLastBlacklistedSlot = slot;
                 int cancels = _slotCancelCount.merge(key, 1, Integer::sum);
                 long blacklistMs = cancels >= 3 ? 600_000L : (cancels == 2 ? 30_000L : SLOT_BLACKLIST_MS);
                 _slotBlacklist.put(key, now + blacklistMs);
