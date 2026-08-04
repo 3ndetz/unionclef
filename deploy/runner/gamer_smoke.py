@@ -40,6 +40,7 @@ elif op=="inv":
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
+elif op=="logs": out={"n": int(mc.countLogsNear(int(req.get("r",40))))}
 elif op=="blk": out={"b": {str(k): str(v) for k, v in dict(mc.getBlockAt(int(req["x"]),int(req["y"]),int(req["z"]))).items()}}
 elif op=="respawn": out={"r": str(mc.respawnPlayer())}
 elif op=="zero": out={"r": str(mc.resetRunCounters())}
@@ -178,7 +179,38 @@ def main():
                     leg += 1
         spawn = f"{base[0] + x * 300} {base[1]} {base[2] + z * 300}"
         print(f"  fresh start #{idx}: {spawn}")
-    if spawn:
+    # FRESH IS NOT THE SAME AS SUITABLE.
+    # A 300-block step lands in whatever biome is there. Measured: first log in 21 seconds on one
+    # patch, never on another, same build -- so the metric was reading the biome. Walk the spiral
+    # until the ground actually has trees on it, and say how many were skipped.
+    if spawn and not os.environ.get("GAMER_SPAWN"):
+        base = [int(v) for v in SPAWN_FILE.read_text(encoding="utf-8").split()]
+        skipped = 0
+        while skipped < 8:
+            grcon(f"tp {BOT} {spawn}")
+            time.sleep(3)
+            try:
+                logs = py4j("logs", r=40).get("n", -1)
+            except Exception:
+                logs = -1
+            if logs is None or logs < 0 or logs >= 4:
+                print(f"  start has {logs} log blocks within 40")
+                break
+            skipped += 1
+            print(f"  no trees at {spawn} ({logs} logs) — stepping on")
+            idx += 1
+            RUN_INDEX_FILE.write_text(str(idx + 1), encoding="utf-8")
+            dx2, dz2, leg2, step2, x2, z2 = 1, 0, 1, 0, 0, 0
+            for _ in range(idx):
+                x2 += dx2; z2 += dz2; step2 += 1
+                if step2 == leg2:
+                    step2 = 0
+                    dx2, dz2 = -dz2, dx2
+                    if dz2 == 0: leg2 += 1
+            spawn = f"{base[0] + x2 * 300} {base[1]} {base[2] + z2 * 300}"
+        if skipped:
+            print(f"  skipped {skipped} treeless start(s)")
+    elif spawn:
         grcon(f"tp {BOT} {spawn}")
         time.sleep(2)
     pos = (py4j("gs").get("self") or {}).get("pos")

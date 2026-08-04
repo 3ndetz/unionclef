@@ -305,6 +305,38 @@ public class Py4jEntryPoint {
         }
     }
 
+    /**
+     * How many log blocks sit within {@code radius} of the player.
+     *
+     * <p>For the bench, so a run can be started somewhere the bot actually CAN work. Measured: the
+     * same build reached its first log in 21 seconds on one patch of ground and never on another
+     * 300 blocks away, because one was forest and the other was not -- so "time to first log" was
+     * measuring the biome rather than the bot. One call instead of a grid of py4j round trips.
+     *
+     * @return the count, or -1 when there is no world to look at
+     */
+    public int countLogsNear(int radius) {
+        try {
+            if (!AltoClef.inGame() || _mod.getWorld() == null || _mod.getPlayer() == null) return -1;
+            net.minecraft.util.math.BlockPos me = _mod.getPlayer().getBlockPos();
+            int found = 0;
+            for (int dx = -radius; dx <= radius; dx += 2) {
+                for (int dz = -radius; dz <= radius; dz += 2) {
+                    for (int dy = -8; dy <= 24; dy += 2) {
+                        net.minecraft.util.math.BlockPos p = me.add(dx, dy, dz);
+                        if (!_mod.getWorld().isChunkLoaded(p.getX() >> 4, p.getZ() >> 4)) continue;
+                        if (_mod.getWorld().getBlockState(p).isIn(net.minecraft.registry.tag.BlockTags.LOGS)) {
+                            found++;
+                        }
+                    }
+                }
+            }
+            return found;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
     public String getGroundBlock() {
         if (AltoClef.inGame() && _mod.getPlayer() != null && _mod.getWorld() != null) {
             // Get the block below the player
