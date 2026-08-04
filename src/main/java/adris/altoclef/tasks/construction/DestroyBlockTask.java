@@ -35,7 +35,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     /** Ticks, and each way this task gives up on its block; read over py4j in placeStats(). */
     public static volatile int dbTick, dbUnreachMove, dbUnreachWater, dbUnreachPillager,
             dbUnreachNear, dbUnreachFar, dbUnreachDistSum,
-            dbNearTick, dbNearNoReach, dbNearAirborne, dbNearHungry, dbNearUnsafe;
+            dbNearTick, dbNearNoReach, dbNearAirborne, dbNearHungry, dbNearUnsafe, dbTargetAir;
     /** Closest we have been to this task's block, squared; the yardstick for real progress. */
     private double _bestDistSq = Double.MAX_VALUE;
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
@@ -256,6 +256,11 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     protected Task onTick() {
         dbTick++;
         AltoClef mod = AltoClef.getInstance();
+        // IS THE BLOCK STILL THERE? The reach ray was measured hitting NOTHING (MISS) 5142 times
+        // in one run, which is what aiming at an empty cell looks like. If the log has already
+        // been felled, every downstream symptom follows: no reach, no swing, no movement, the
+        // progress checker expires and a block that no longer exists gets blacklisted.
+        if (mod.getWorld() != null && mod.getWorld().getBlockState(pos).isAir()) dbTargetAir++;
 
         // Check if there is white wool at the specified position
         if (mod.getWorld().getBlockState(pos).getBlock() == Blocks.WHITE_WOOL) {

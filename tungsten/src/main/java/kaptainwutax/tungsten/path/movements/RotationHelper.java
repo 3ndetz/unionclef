@@ -325,11 +325,19 @@ public final class RotationHelper {
             Vec3d eyes = wouldSneak ? inferSneakingEyePosition(player) : player.getCameraPosVec(1.0F);
             Rotation aim = calcRotationFromVec3d(eyes, Vec3d.ofCenter(pos), playerRotations(player));
             HitResult r = rayTraceTowards(player, peekRotation(aim), blockReachDistance, wouldSneak);
+            // A LAST VALUE IS NOT A DISTRIBUTION. The first version of this kept only the most
+            // recent hit, and two runs disagreed -- leaves in one, MISS in the other -- which was
+            // read as "MISS dominates" on the strength of a single snapshot. It is not knowable
+            // that way. Count the kinds instead, so the shares are the answer.
             if (r != null && r.getType() == HitResult.Type.BLOCK) {
                 blockedBy = net.minecraft.registry.Registries.BLOCK.getId(
                         world.getBlockState(((BlockHitResult) r).getBlockPos()).getBlock()).toString();
+                if (world.getBlockState(((BlockHitResult) r).getBlockPos())
+                        .isIn(net.minecraft.registry.tag.BlockTags.LEAVES)) rayLeaves++;
+                else rayOtherBlock++;
             } else {
                 blockedBy = r == null ? "null" : String.valueOf(r.getType());
+                rayMiss++;
             }
         } catch (Throwable t) {
             blockedBy = "err";
@@ -339,6 +347,8 @@ public final class RotationHelper {
 
     /** Block the centre reach ray last hit instead of the wanted one; read over py4j. */
     public static volatile String blockedBy = "-";
+    /** Shares of what the failed reach ray hit: leaves, some other block, or nothing at all. */
+    public static volatile int rayLeaves, rayOtherBlock, rayMiss;
 
     /**
      * RotationUtils.java:233-248. Note which eye is used: the SNEAKING eye when {@code wouldSneak},
