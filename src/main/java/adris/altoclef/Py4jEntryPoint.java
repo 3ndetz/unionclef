@@ -2152,6 +2152,10 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.CraftInInventoryTask.ciTick = 0;
         adris.altoclef.tasks.CraftInInventoryTask.ciCollect = 0;
         adris.altoclef.tasks.CraftInInventoryTask.ciReceive = 0;
+        adris.altoclef.chains.MobDefenseChain.mdPriorityCalls = 0;
+        adris.altoclef.chains.MobDefenseChain.mdWon = 0;
+        adris.altoclef.chains.MobDefenseChain.mdFlee = 0;
+        adris.altoclef.chains.MobDefenseChain.mdFight = 0;
         adris.altoclef.control.SlotHandler.shIssued = 0;
         adris.altoclef.control.SlotHandler.shDropped = 0;
         adris.altoclef.control.SlotHandler.shBlacklisted = 0;
@@ -2275,6 +2279,10 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.CraftInInventoryTask.ciTick,
                 adris.altoclef.tasks.CraftInInventoryTask.ciCollect,
                 adris.altoclef.tasks.CraftInInventoryTask.ciReceive,
+                adris.altoclef.chains.MobDefenseChain.mdPriorityCalls,
+                adris.altoclef.chains.MobDefenseChain.mdWon,
+                adris.altoclef.chains.MobDefenseChain.mdFlee,
+                adris.altoclef.chains.MobDefenseChain.mdFight,
                 adris.altoclef.control.SlotHandler.shIssued,
                 adris.altoclef.control.SlotHandler.shDropped,
                 adris.altoclef.control.SlotHandler.shBlacklisted,

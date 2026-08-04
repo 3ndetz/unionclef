@@ -57,6 +57,9 @@ import java.util.*;
 // TODO: Optimise shielding against spiders and skeletons
 
 public class MobDefenseChain extends SingleTaskChain {
+
+    /** How often this chain is asked, wins, flees or fights; read over py4j in placeStats(). */
+    public static volatile int mdPriorityCalls, mdWon, mdFlee, mdFight;
     private static final double DANGER_KEEP_DISTANCE = 30;
     private static final double CREEPER_KEEP_DISTANCE = 10;
     private static final double ARROW_KEEP_DISTANCE_HORIZONTAL = 2;
@@ -151,7 +154,11 @@ public class MobDefenseChain extends SingleTaskChain {
 
     @Override
     public float getPriority() {
+        // SIXTEEN DEATHS TO ZOMBIES IN ONE RUN. Either this chain never gets the tick, or it gets
+        // it and its answer does not save the bot. Those need opposite fixes, so count them apart.
+        mdPriorityCalls++;
         cachedLastPriority = getPriorityInner();
+        if (cachedLastPriority > 0) mdWon++;
         // If no task was set but a non-zero priority was returned, that's an inconsistent
         // state — drop priority so we don't claim control without doing anything.
         if (mainTask == null && cachedLastPriority > 0) {
@@ -239,6 +246,7 @@ public class MobDefenseChain extends SingleTaskChain {
         // Run away if a weird mob is close by.
         Optional<Entity> universallyDangerous = getUniversallyDangerousMob(mod);
         if (universallyDangerous.isPresent() && mod.getPlayer().getHealth() <= 10) {
+            mdFlee++;
             runAwayTask = new RunAwayFromHostilesTask(DANGER_KEEP_DISTANCE, true);
             setTask(runAwayTask);
             return 70;
@@ -354,6 +362,7 @@ public class MobDefenseChain extends SingleTaskChain {
         Optional<Entity> toAttackPlayer = getAttackPlayer(mod);
         if (toAttackPlayer.isPresent() && toAttackPlayer.get() instanceof PlayerEntity player) {
             _killTask = new CombatTask(player.getName().getString(), false, true);
+            mdFight++;
             setTask(_killTask);
             return 65;
         } else {
