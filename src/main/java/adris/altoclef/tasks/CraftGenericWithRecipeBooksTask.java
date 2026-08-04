@@ -156,17 +156,27 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
             }
         }
         //#else
-        //$$ // TODO [1.21.11] recipe book crafting is OFF here, and this is what blocks the second
-        //$$ // rung of the playthrough. Measured: the task holds the inventory screen for a whole
-        //$$ // run -- 9295 ticks of 9295, no table screen, no close -- because it reaches this
-        //$$ // point and does nothing, while the pack holds wood to spare.
+        //$$ // TODO [1.21.11] recipe book crafting. This is what blocks the playthrough's second
+        //$$ // rung: the task holds the inventory screen for a whole run -- measured 9295 ticks of
+        //$$ // 9295, no table screen, no close -- because it arrives here and does nothing, with
+        //$$ // wood to spare in the pack.
         //$$ //
-        //$$ // THE SIGNATURE IS NO LONGER A GUESS. Writing the old call here and building says:
-        //$$ //   incompatible types: RecipeEntry<CAP#1> cannot be converted to NetworkRecipeId
-        //$$ // so 1.21.11 wants clickRecipe(int syncId, NetworkRecipeId, boolean). What is missing
-        //$$ // is the mapping from our WrappedRecipeEntry to a NetworkRecipeId -- the client learns
-        //$$ // those ids from the server's recipe book sync, so the next pass looks there
-        //$$ // (ClientRecipeBook / recipe display entries) rather than at the recipe registry.
+        //$$ // EVERYTHING BELOW IS ESTABLISHED, NOT GUESSED -- read from the 1.21.11 yarn mappings
+        //$$ // or named by the compiler when a deliberate wrong call was written and built:
+        //$$ //   clickRecipe(int syncId, NetworkRecipeId, boolean)          <- compiler
+        //$$ //   RecipeDisplayEntry.id() returns NetworkRecipeId            <- mappings
+        //$$ //   ClientRecipeBook.getOrderedResults() -> List<RecipeResultCollection>   <- compiler
+        //$$ //   RecipeResultCollection.getAllRecipes() -> the entries      <- mappings
+        //$$ //   RecipeDisplayEntry.getStacks(ctx) -> List<ItemStack>       <- compiler
+        //$$ //
+        //$$ // The ids are assigned at RUNTIME by the server during its recipe sync, so the
+        //$$ // client's own book is the only place they exist -- the recipe registry cannot help.
+        //$$ //
+        //$$ // ONE UNKNOWN LEFT: what to pass as the getStacks context. It accepts null at compile
+        //$$ // time, which is exactly the sort of thing that then throws at runtime, so it wants
+        //$$ // looking up rather than trying. Everything else is a straight write-out of the loop:
+        //$$ // walk the collections, find the entry whose stacks contain target.getOutputItem(),
+        //$$ // hand its id() to clickRecipe, then registerSlotAction().
         //#endif
 
         return null;
