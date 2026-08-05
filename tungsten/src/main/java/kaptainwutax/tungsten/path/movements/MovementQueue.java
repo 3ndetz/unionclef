@@ -118,6 +118,27 @@ public final class MovementQueue {
     private static BetterBlockPos chainStartFeet = null;
     /** Feet cell at the end of the previous tick, for spotting a jump the walk cannot explain. */
     private static BetterBlockPos lastTickFeet = null;
+    /**
+     * Ticks the queue has run with the body in the SAME cell.
+     *
+     * <p>This lives on the queue, not on a Movement, and that is the entire point. The per-step
+     * timeout ({@code ticksOnCurrent}) is charged to the current movement and {@code reset()} on
+     * every rewind -- so a step that can never complete never times out, because the drift check
+     * keeps rewinding and wiping its clock. Measured in a stall capture: mqBack=87 rewinds over 91
+     * chains, mvSteered=4810 and moveTicks=5352 (the keys ARE being pressed), and mqTimeout=0
+     * across ninety seconds during which the bot did not move a single block.
+     */
+    private static int ticksNotMoving = 0;
+    /** Chains abandoned because the body would not leave its cell. Read as qNoMove. */
+    public static volatile int qStuckNoMove;
+    /**
+     * How long the body may fail to change cell while the queue is actively steering.
+     *
+     * <p>Six seconds. A legitimate step is about ten ticks; a break-and-step or a place can take a
+     * few seconds; ninety seconds is what the bench calls a stall. This sits well above the
+     * slowest honest movement and far below the point where a run is lost.
+     */
+    private static final int MAX_TICKS_NOT_MOVING = 120;
     /** Chains abandoned because the body was MOVED rather than walked. Read as qTeleport. */
     public static volatile int qTeleported;
     /**
@@ -546,10 +567,30 @@ public final class MovementQueue {
                 kaptainwutax.tungsten.task.FastNavigator.replanFromHere();
                 return;
             }
+            // AND THE CLOCK A REWIND CANNOT ERASE.
+            // Same cell as last tick while we are steering means no progress, whatever the step
+            // counter says: rewinds replay steps and reset their timers, so the only honest
+            // yardstick is the body itself.
+            if (feet != null && feet.equals(lastTickFeet)) {
+                if (++ticksNotMoving > MAX_TICKS_NOT_MOVING) {
+                    Debug.logMessage("MovementQueue: body has not left " + feet + " for "
+                            + ticksNotMoving + " ticks while steering — dropping the chain"
+                            + " (step " + index + "/" + movements.size() + ")");
+                    qStuckNoMove++;
+                    ticksNotMoving = 0;
+                    lastTickFeet = feet;
+                    stop();
+                    kaptainwutax.tungsten.task.FastNavigator.replanFromHere();
+                    return;
+                }
+            } else {
+                ticksNotMoving = 0;
+            }
             lastTickFeet = feet;
         } catch (Throwable t) {
             // A diagnostic must never be the thing that stops the bot walking.
             lastTickFeet = null;
+            ticksNotMoving = 0;
         }
 
         for (int advances = 0; advances < MAX_ADVANCES_PER_TICK; advances++) {
