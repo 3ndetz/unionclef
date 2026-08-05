@@ -303,7 +303,27 @@ public final class BlockOptionalMeta {
                 registryLookup = lk;
             }
             try {
-                return lk.join();
+                // NEVER BLOCK THE CLIENT TICK ON THIS.
+                // join() waits forever when the future simply does not complete -- not
+                // exceptionally, just never -- and this is reached from the client tick. Caught in
+                // the act with a thread dump: "Render thread" WAITING in CompletableFuture.join
+                // through holder -> getDrops -> drops -> getStackHashes, with every mod counter at
+                // zero, no exception anywhere, the client still in game and the bot standing still
+                // for the rest of the run. That one wait accounted for the whole intermittent
+                // freeze.
+                //
+                // A bounded wait keeps the fast path (the lookup is normally ready at once) and
+                // turns the pathological case into a skipped frame instead of a dead client:
+                // drops() already catches Throwable and yields empty drops, and the next tick
+                // retries with the future one tick closer to done.
+                return lk.get(50, java.util.concurrent.TimeUnit.MILLISECONDS);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("interrupted waiting for registry lookup", ie);
+            } catch (java.util.concurrent.TimeoutException te) {
+                // Not ready yet. Keep the future -- it is still loading -- and let drops() fall
+                // back to empty for this tick.
+                throw new IllegalStateException("registry lookup not ready", te);
             } catch (Throwable e) {
                 registryLookup = null; // drop the failed future so a later join can retry
                 throw e;               // caught by drops() → empty drops, client stays alive
