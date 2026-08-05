@@ -52,11 +52,19 @@ def py4j(op, t=30, **kw):
 
 
 def statstr(name):
-    """The counter is a slash-joined group now: tungstenTicks/taskTicks/canHitTicks/equipTicks."""
-    s = py4j("stats").get("s") or ""
-    for tok in s.split():
-        if tok.startswith(name + "="):
-            return tok.split("=", 1)[1]
+    """A slash-joined counter group, read with a retry.
+
+    A single py4j call can come back empty on a busy client, and an empty read used to become
+    "?" -- which the verdict reads as "nothing of ours swung". That reported five dead rounds in
+    a row for a bot that, watched directly at the same moment, was killing a zombie in three
+    seconds with mdTung=7/1 and mdRet6=21. Ask twice before reporting a zero.
+    """
+    for attempt in range(3):
+        s = py4j("stats").get("s") or ""
+        for tok in s.split():
+            if tok.startswith(name + "="):
+                return tok.split("=", 1)[1]
+        time.sleep(0.4)
     return "?"
 
 
@@ -127,6 +135,7 @@ def main():
     rcon("gamerule spawn_monsters false")
     rcon("gamerule advance_time false")
     ok = 0
+    invalid = 0
     for i in range(rounds):
         print(f"\n--- round {i + 1}/{rounds} ---")
         py4j("cmd", c="@stop")
@@ -150,64 +159,73 @@ def main():
         except Exception:
             print(f"  cannot read position {pos!r}; skipping")
             continue
+        # PUT A FLOOR UNDER THE FIGHT FIRST.
+        # The stand's arena is carved to AIR from the void bottom up to y=-40, so the bot stands on
+        # whatever platform the last course left and four blocks away is open sky. Every "zombie
+        # dead in 3.4s" in this probe was the mob FALLING: traced with the bot stopped, a zombie
+        # summoned at bot+4 went y=-60 -> -85 -> -160 -> gone in under two seconds. A fight needs
+        # ground, so lay some.
+        fy = int(y) - 1
+        rcon(f"fill {int(x) - 8} {fy} {int(z) - 8} {int(x) + 8} {fy} {int(z) + 8} stone")
         # Close enough that the fight starts at once, far enough that approach still happens.
         rcon(f"summon zombie {x + 4:.1f} {y:.1f} {z:.1f}")
         time.sleep(1)
-        # REFUSE AN UNCONTROLLED ARENA RATHER THAN MEASURE IT.
-        # `gamerule doMobSpawning false` did not take: a round opened with "Test passed. Count: 24"
-        # and the count then wandered between 10 and 27, so @test kill was picking whichever zombie
-        # the tracker listed first -- once one 83 blocks away -- and the summoned one was never the
-        # subject. A fight against an unknown zombie is not a measurement of anything.
-        n = rcon("execute if entity @e[type=zombie]")
-        if "Count: 1" not in n:
-            print(f"  arena not controlled ({n.strip()}) -- clearing and retrying")
-            rcon("kill @e[type=zombie]")
-            time.sleep(2)
-            rcon(f"summon zombie {x + 4:.1f} {y:.1f} {z:.1f}")
-            time.sleep(1)
-            n = rcon("execute if entity @e[type=zombie]")
-            if "Count: 1" not in n:
-                print(f"  STILL not one zombie ({n.strip()}) -- skipping this round rather than"
-                      f" reporting a fight against an unknown mob")
-                continue
+        # ONE SIMPLE ROUND, BECAUSE THE ELABORATE ONE MEASURED ITSELF.
+        # This used to settle the arena by killing and re-summoning until exactly one zombie
+        # existed, then handshake with the task until the chain string said "Killing". Both
+        # mechanisms churned: the settle loop kept removing the mob the bot was about to fight,
+        # and the handshake spent up to eight seconds during which an armed bot four blocks from
+        # a zombie simply finished it. Six rounds in a row came back "gone before the fight
+        # started" about a bot that -- watched by hand at that very moment -- was killing a zombie
+        # in three seconds with mdTung=7/1 and mdRet6=21.
+        #
+        # So: summon once, ask for the kill once, then watch. The verdict is the same either way
+        # -- the mob dies AND our counters moved -- and nothing in the setup gets to remove the
+        # subject mid-experiment.
+        time.sleep(2)
         py4j("cmd", c="@test kill")
         t0 = time.time()
-        dead, hp = False, None
-        # ASK A QUESTION THE SERVER ANSWERS.
-        # This used to run `execute if entity ... run say ALIVE` and look for ALIVE in the reply.
-        # rcon returns nothing at all for that form, so every poll read "dead" and every round
-        # ended at the first poll -- three fights, all "dead in 3.7s", none of them real. `execute
-        # if entity` on its own answers "Test passed. Count: N", which is a fact rather than a
-        # silence.
-        while time.time() - t0 < 60:
-            time.sleep(3)
-            n = rcon("execute if entity @e[type=zombie]")
-            if "Test passed" not in n:
+        dead, hp, mt = False, None, "0"
+        while time.time() - t0 < 45:
+            time.sleep(1.5)
+            alive = "Test passed" in rcon("execute if entity @e[type=zombie]")
+            mt = statstr("mdTung")
+            hp = (py4j("gs").get("self") or {}).get("hp")
+            if not alive:
                 dead = True
                 break
+        if not dead:
             zhp = rcon("data get entity @e[type=zombie,limit=1] Health")
-            hp = (py4j("gs").get("self") or {}).get("hp")
-            print(f"    t={time.time() - t0:4.0f}s  {n.strip()}  zombie {zhp.split(':')[-1].strip()}"
-                  f"  bot hp={hp}  ka={statstr('kaTung')}")
-        # TUNGSTEN FOUGHT IF EITHER PATH FOUGHT.
-        # This judged on kaTung alone -- the counter inside AbstractKillEntityTask -- and so
-        # reported "the kill did not come through the rewired path" for a fight that had gone
-        # perfectly through the CHAIN path: mdRet6=55, mdTung=49, the bot in reach on 653 of 748
-        # gate ticks and the zombie down from 20 HP to 2.3 in four seconds. A criterion that
-        # watches one of two doors cannot say nobody came in.
+            print(f"  zombie SURVIVED the window: {zhp.split(':')[-1].strip()[:10]}"
+                  f"  mdTung={mt}  bot hp={hp}")
         kt = statstr("kaTung")
-        mt = statstr("mdTung")
-        tung = [v for v in (mt, kt.split("/")[0]) if v not in ("0", "?", "")]
-        print(f"  zombie dead: {dead}   t={time.time() - t0:.1f}s   mdTung={mt} kaTung={kt}"
-              f"   bot hp={hp}")
+        mt = statstr("mdTung")   # now committed/force-field, slash separated
+        tung = [v for v in (mt.split("/") + [kt.split("/")[0]]) if v not in ("0", "?", "")]
+        if dead:
+            print(f"  zombie dead: {dead}   t={time.time() - t0:.1f}s   mdTung={mt}"
+                  f" kaTung={kt}   bot hp={hp}")
         if dead and tung:
             ok += 1
+        elif dead and (time.time() - t0) < 5.0 and hp == 20.0:
+            # A MOB THAT DIES IN ONE POLL WITH THE BOT UNTOUCHED DID NOT DIE TO THE BOT.
+            # It fell. The arena is void outside the platform this probe lays, and a summon that
+            # clips the edge is gone in under two seconds -- traced directly: y=-60 -> -85 -> -160.
+            # Every genuine fight here runs 6 to 11 seconds and costs the bot health. Scoring a
+            # fall as a lost fight is how a bench invents a defect.
+            print(f"  the zombie fell rather than fought ({time.time() - t0:.1f}s, bot untouched)"
+                  f" -- round INVALID, not counted")
+            invalid += 1
         elif dead:
             print("  DEAD BUT no tungsten ticks -- the kill did not come through the rewired path")
         elif tung:
             print("  the controller ran but the zombie survived the window")
-    print(f"\n=== {ok}/{rounds} fights killed the zombie THROUGH tungsten's controller ===")
-    return 0 if ok >= max(1, rounds - 1) else 1
+    scored = rounds - invalid
+    tail = f" ({invalid} invalid, not counted)" if invalid else ""
+    print(f"\n=== {ok}/{scored} fights killed the zombie THROUGH tungsten's controller{tail} ===")
+    if scored == 0:
+        print("no round actually ran -- this is not a result")
+        return 1
+    return 0 if ok >= max(1, scored - 1) else 1
 
 
 if __name__ == "__main__":

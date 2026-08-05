@@ -88,6 +88,8 @@ public class MobDefenseChain extends SingleTaskChain {
     private long tungstenDrivingMs = 0L;
     /** Ticks the committed fight ran on tungsten. Read over py4j as mdTung. */
     public static volatile int mdTungstenTicks;
+    /** Ticks the force field's nearest target was struck by tungsten's trigger bot. */
+    public static volatile int mdAuraTungstenTicks;
     private Entity targetEntity;
     private boolean doingFunkyStuff = false;
     private boolean wasPuttingOutFire = false;
@@ -681,6 +683,20 @@ public class MobDefenseChain extends SingleTaskChain {
 
         // Hit all hostiles close to us.
         List<Entity> entities = mod.getEntityTracker().getCloseEntities();
+        // WHICH ONE IS THE FIGHT? The closest living hostile -- that is the one tungsten strikes;
+        // the rest keep the old broad swat, because a force field's job is breadth.
+        Entity nearest = null;
+        double nearestSq = Double.MAX_VALUE;
+        for (Entity e : entities) {
+            if (!(e instanceof net.minecraft.entity.LivingEntity) || !e.isAlive()) {
+                continue;
+            }
+            double d2 = e.squaredDistanceTo(mod.getPlayer());
+            if (d2 < nearestSq) {
+                nearestSq = d2;
+                nearest = e;
+            }
+        }
         try {
             for (Entity entity : entities) {
                 boolean shouldForce = false;
@@ -698,12 +714,31 @@ public class MobDefenseChain extends SingleTaskChain {
                 }
 
                 if (shouldForce) {
-                    // ONE WRITER PER TARGET. The controller above aims with WindMouse at a
-                    // predicted point; letting the aura smooth-look at the same mob in the same
-                    // tick leaves the crosshair somewhere between the two. Everything else in
-                    // range is still the aura's to swat.
+                    // ONE WRITER PER TARGET. The controller in the committed-fight branch aims
+                    // with WindMouse at a predicted point; letting the aura smooth-look at the
+                    // same mob in the same tick leaves the crosshair somewhere between the two.
                     if (entity == lockedOnEntity && tungstenDrivingMs > 0
                             && System.currentTimeMillis() - tungstenDrivingMs < 500) {
+                        continue;
+                    }
+                    // THE NEAREST MOB IS STRUCK BY TUNGSTEN, WHATEVER ELSE IS HAPPENING.
+                    // The committed-fight branch only fires when the chain gets that far, and
+                    // measurement says it often does not: over four fights it committed twice,
+                    // fled first once (mdRet3=81) and returned by an uncounted path once -- yet
+                    // the zombie died every time. The killer, every time, was this force field.
+                    // It is the one piece that runs on EVERY priority evaluation, so it is the
+                    // only place a change reaches every fight.
+                    //
+                    // TriggerBot only SWINGS -- vanilla cooldown model, crit window, reach and
+                    // angle gates -- and never touches the movement keys. That is precisely the
+                    // property that kept this method off tungsten until now: the bot must stay
+                    // able to chop wood while swatting. Aim still comes from the aura, and the
+                    // angle gate simply refuses until it lands.
+                    if (nearest != null && entity == nearest) {
+                        LookHelper.smoothLook(mod, (net.minecraft.entity.LivingEntity) entity);
+                        kaptainwutax.tungsten.combat.CombatController.triggerBot.tick(
+                                mod.getPlayer(), entity);
+                        mdAuraTungstenTicks++;
                         continue;
                     }
                     killAura.applyAura(entity);
