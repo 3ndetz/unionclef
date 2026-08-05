@@ -348,6 +348,24 @@ def main():
                 stall[1] += 1
                 if stall[1] == 3:
                     print(f"  STALLED: position unchanged for 3 polls at {here}")
+                    # A STALL DESERVES THE SAME EVIDENCE A FREEZE GETS.
+                    # The dump trigger below only covers "no world", so the run that stalled
+                    # IN GAME -- position frozen, still connected -- produced no stack and no
+                    # exit distribution, and left nothing to diagnose but six counter deltas.
+                    # A stalled bot is still ticking, so the useful evidence here is WHICH exit
+                    # the drive keeps taking: the six printed deltas cannot say, and the full
+                    # counter string can.
+                    try:
+                        blob = ["position stalled at %s" % here,
+                                "", "FULL COUNTERS:", py4j("stats").get("s") or "",
+                                "", "RUNNER:", str(py4j("task").get("runner", "")),
+                                "", "CHAIN:", str(py4j("task").get("chain", "")),
+                                "", "THREADS:", py4j("tdump", f="Render")["d"] or ""]
+                        fn = os.path.join(FREEZE_DIR, "stall_run%d.txt" % RUN_SEQ[0])
+                        io.open(fn, "w", encoding="utf-8").write(chr(10).join(blob))
+                        print(f"  stall evidence written to {fn}")
+                    except Exception as e:
+                        print(f"  stall evidence failed: {str(e)[:70]}")
             else:
                 stall[0] = here
                 stall[1] = 0
@@ -433,9 +451,21 @@ def main():
     want = None
     if "--rung" in sys.argv:
         want = sys.argv[sys.argv.index("--rung") + 1]
-    ok = responsive>=3 and busy_cnt>=2 and (want in reached if want else bool(reached))
+    # A LADDER IS CLIMBED PAST, NOT ONLY LANDED ON.
+    # Rungs are detected by what is HELD, and holding is temporary: a run that chopped a log and
+    # spent it on planks, a table and tools no longer holds a log. Measured on this bench --
+    # "first craft 21.8s, crafting 65.8s, wood tools 65.8s, STONE TOOLS 88.1s" reported as
+    # "required rung 'wood': NOT reached", FAIL. That is a false red on the best run of the sweep,
+    # and it is the same family as the false greens already removed: a bar that cannot answer the
+    # question it is asked. Reaching anything DEEPER than the required rung is passing it.
+    order = [name for name, _ in LADDER]
+    deepest = max((order.index(r) for r in reached), default=-1)
+    satisfied = want in reached or (want in order and deepest >= order.index(want))
+    ok = responsive>=3 and busy_cnt>=2 and (satisfied if want else bool(reached))
     if want:
-        print(f"  required rung '{want}':", "reached" if want in reached else "NOT reached")
+        how = ("reached" if want in reached else
+               ("passed (got as far as '%s')" % order[deepest]) if satisfied else "NOT reached")
+        print(f"  required rung '{want}':", how)
     print("  GAMER_SMOKE:", "PASS" if ok else "FAIL (or no early progress in window)")
     return ok
 

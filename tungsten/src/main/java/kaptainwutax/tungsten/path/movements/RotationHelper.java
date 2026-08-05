@@ -332,15 +332,20 @@ public final class RotationHelper {
             if (r != null && r.getType() == HitResult.Type.BLOCK) {
                 blockedBy = net.minecraft.registry.Registries.BLOCK.getId(
                         world.getBlockState(((BlockHitResult) r).getBlockPos()).getBlock()).toString();
-                if (world.getBlockState(((BlockHitResult) r).getBlockPos())
-                        .isIn(net.minecraft.registry.tag.BlockTags.LEAVES)) {
+                // REMEMBER WHERE, WHATEVER IT IS.
+                // This used to record the position for LEAVES only and null it for anything else,
+                // on the assumption that the canopy was the whole story. A stall capture says
+                // otherwise: standing at a dark oak, rayOther=502 against rayLeaves=10, with
+                // blockedBy=minecraft:dark_oak_log. The ray is stopped by ANOTHER LOG -- the near
+                // side of the same trunk -- and with the position nulled the caller had nothing to
+                // aim at, so it stood there for 1525 ticks breaking nothing.
+                // The kinds stay counted separately; only the position is now unconditional.
+                // Deciding what may be cleared belongs to the caller, which knows the job.
+                blockedPos = ((BlockHitResult) r).getBlockPos();
+                if (world.getBlockState(blockedPos).isIn(net.minecraft.registry.tag.BlockTags.LEAVES)) {
                     rayLeaves++;
-                    // Remember WHERE, not just what: the caller's fix is to fell the obstruction,
-                    // and it needs a position to aim at.
-                    blockedPos = ((BlockHitResult) r).getBlockPos();
                 } else {
                     rayOtherBlock++;
-                    blockedPos = null;
                 }
             } else {
                 blockedBy = r == null ? "null" : String.valueOf(r.getType());

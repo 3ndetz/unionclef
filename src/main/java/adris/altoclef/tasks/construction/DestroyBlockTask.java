@@ -377,15 +377,20 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         // so a perfectly good log was blacklisted and the bot toured trees without felling one.
         // Leaves are due to come down anyway, so the obstruction is simply the first block of
         // this job rather than a reason to abandon it.
+        //
+        // AND IT IS NOT ONLY LEAVES. A stall capture at a dark oak: rayOther=502 to rayLeaves=10,
+        // blockedBy=minecraft:dark_oak_log -- the near side of the trunk hiding the far side, with
+        // dbTick=1525 and nothing broken. So clear whatever is genuinely in the way, subject to
+        // the three things that make clearing wrong rather than slow.
         if (!reach.isPresent() && distSqNow <= 16.0) {
             net.minecraft.util.math.BlockPos blocking =
                     kaptainwutax.tungsten.path.movements.RotationHelper.blockedPos;
-            if (blocking != null && !blocking.equals(pos)) {
-                Optional<Rotation> leafReach = LookHelper.getReach(blocking);
-                if (leafReach.isPresent()) {
+            if (blocking != null && !blocking.equals(pos) && canClear(mod, blocking)) {
+                Optional<Rotation> clearReach = LookHelper.getReach(blocking);
+                if (clearReach.isPresent()) {
                     dbLeafCleared++;
                     _moveChecker.reset();   // clearing a path IS progress
-                    LookHelper.lookAt(leafReach.get());
+                    LookHelper.lookAt(clearReach.get());
                     mod.getInputControls().hold(Input.CLICK_LEFT);
                     return null;
                 }
@@ -526,4 +531,29 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     protected String toDebugString() {
         return "Destroy block at " + pos.toShortString();
     }
+
+    /**
+     * Is this obstruction one we may break to open a line to the target?
+     *
+     * <p>Three refusals, and no more than three -- an over-cautious rule here puts the bot back to
+     * standing in front of a trunk it will not touch:
+     * <ul>
+     *   <li>UNBREAKABLE (hardness below zero: bedrock, barriers) -- swinging at it is a loop;</li>
+     *   <li>FLUID -- you do not mine water, and the ray stopping at one is not an obstruction
+     *       this task can remove;</li>
+     *   <li>THE BLOCK UNDER OUR OWN FEET -- clearing that is how a bot digs itself into a hole
+     *       while trying to see a tree.</li>
+     * </ul>
+     */
+    private boolean canClear(AltoClef mod, net.minecraft.util.math.BlockPos blocking) {
+        net.minecraft.block.BlockState st = mod.getWorld().getBlockState(blocking);
+        if (st.isAir() || !st.getFluidState().isEmpty()) {
+            return false;
+        }
+        if (st.getHardness(mod.getWorld(), blocking) < 0) {
+            return false;
+        }
+        return !blocking.equals(mod.getPlayer().getBlockPos().down());
+    }
+
 }
