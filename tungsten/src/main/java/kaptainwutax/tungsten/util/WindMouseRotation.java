@@ -27,6 +27,13 @@ public class WindMouseRotation {
 
     public static final WindMouseRotation INSTANCE = new WindMouseRotation();
 
+    /** Frame time the per-frame tuning above was written against: 20 fps, the tick rate. */
+    private static final double REF_FRAME_MS = 50.0;
+    /** Most a single starved frame may claim, so a hitch cannot become a teleport. */
+    private static final double MAX_CATCHUP = 4.0;
+    /** When the last aim step ran, for measuring the frame in milliseconds. */
+    private long lastStepMs = 0L;
+
     // WindMouse tuning — per render frame. Gravity = direct pull to target, wind = the
     // random orbit/spiral, maxStep = speed cap. Raised gravity + step and cut wind so the
     // aim converges FASTER and more DIRECTLY instead of slowly circling the target (user
@@ -126,6 +133,25 @@ public class WindMouseRotation {
             return;
         }
 
+        // AN AIM THAT ADVANCES PER FRAME TURNS SLOWER ON A SLOWER MACHINE.
+        // Every step below is a fixed fraction or cap PER RENDER FRAME, so at 10 fps the head
+        // turns at half the angular rate it does at 20 -- while the world, the mobs and the
+        // block-placing all still run at 20 ticks a second. Anything that needs the crosshair on
+        // a target before it acts is starved exactly when the host is loaded.
+        // Measured on nav_bridge: 16.3 fps -> reaches the goal in 11.0s; 9.9 fps (the same course
+        // WITH the recorder running) -> the bot stands at the lip of the gap and never places a
+        // block. Same build, same course, different frame rate. The user's word for it was that
+        // it must work "железно стабильно" -- and a behaviour that depends on frame rate is not
+        // that.
+        // So the step becomes a rate in TIME rather than per frame: a frame that took twice as
+        // long is allowed twice the angular movement. Clamped at 1.0 below so nothing changes at
+        // or above the reference rate -- this only ever gives back what a starved frame lost --
+        // and capped above so a hitch cannot become a teleport.
+        long nowMs = System.currentTimeMillis();
+        double frameMs = lastStepMs == 0L ? REF_FRAME_MS : (nowMs - lastStepMs);
+        lastStepMs = nowMs;
+        double rate = Math.max(1.0, Math.min(MAX_CATCHUP, frameMs / REF_FRAME_MS));
+
         float currentYaw   = player.getYaw();
         float currentPitch = player.getPitch();
 
@@ -143,12 +169,14 @@ public class WindMouseRotation {
         // Move a large fraction of the remaining angle straight at the target. At render
         // FPS this converges in a few frames = a sharp, crisp land, not a slow spiral.
         if (dist < CLOSE_DEG) {
-            double frac = fastMode ? 0.9 : closeFrac;
+            // The fraction is per frame, so a long frame gets a bigger bite -- capped at 0.98
+            // because taking the whole remainder in one step is a teleport, not a mouse.
+            double frac = Math.min(0.98, (fastMode ? 0.9 : closeFrac) * rate);
             double stepYaw   = dYaw   * frac;
             double stepPitch = dPitch * frac;
             // clamp so an extreme sensitivity can't overshoot in one frame
             double stepMag = Math.sqrt(stepYaw * stepYaw + stepPitch * stepPitch);
-            double capClose = (fastMode ? maxStep * 2.6 : maxStep);
+            double capClose = (fastMode ? maxStep * 2.6 : maxStep) * rate;
             if (stepMag > capClose) {
                 double s = capClose / stepMag;
                 stepYaw *= s; stepPitch *= s;
@@ -160,8 +188,8 @@ public class WindMouseRotation {
 
         // Fast (nav) turn converges quicker: stronger pull, bigger cap, less random
         // slow-down — a running player's quick head-turn, not a careful combat micro-aim.
-        double g  = fastMode ? gravity * 2.2 : gravity;
-        double ms = fastMode ? maxStep * 2.6 : maxStep;
+        double g  = (fastMode ? gravity * 2.2 : gravity) * rate;
+        double ms = (fastMode ? maxStep * 2.6 : maxStep) * rate;
         double stepLo = fastMode ? 0.85 : 0.6;
 
         double W = Math.min(wind, dist);
