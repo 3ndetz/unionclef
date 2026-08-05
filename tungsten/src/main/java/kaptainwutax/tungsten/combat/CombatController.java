@@ -416,7 +416,6 @@ public class CombatController {
         boolean canStrafe = strafeSideSafe(player, world, strafeDir);
         out.left = canStrafe && strafeDir > 0;
         out.right = canStrafe && strafeDir < 0;
-
         // Neither side strafeable (a 1-wide bridge, a tiny platform) and already at strike
         // distance: keep some motion so we are not a static target, but ONLY into space we
         // have tested. Forward-pulse against the opponent is safe by construction — they are
