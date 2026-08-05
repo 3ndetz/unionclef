@@ -133,6 +133,11 @@ class MobTrioNoDamage(MobMelee):
         ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
         ctx.rcon.cmd("difficulty normal")
         ctx.rcon.cmd("kill @e[type=zombie]")
+        # START THE FIGHT WHOLE. A run inherits whatever health the previous one left, and the
+        # criterion is about damage taken HERE -- one run took zero damage and still failed the
+        # gate because it walked in on 14 hearts from the run before.
+        ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:instant_health 1 10 true")
+        time.sleep(0.5)
         ctx.bot.py.try_call("resetRunCounters")
         # Spread them out: three in a line would be a queue, three around the bot is a fight.
         for x, z in ((5.5, 0.5), (-4.5, 3.5), (0.5, -5.5)):
@@ -173,9 +178,19 @@ class MobTrioNoDamage(MobMelee):
                         f"count_at_spawn={ctx.geo.get('spawned')}")
         yield Criterion("all three are dead", killed, f"remaining={_zombie_count(ctx)}")
         yield Criterion("the fight ran on tungsten", ticks > 0, f"mdTung total={ticks}")
-        # THE CRITERION. Not "survived", not "mostly fine" -- untouched.
-        yield Criterion("the bot took ZERO damage", low is not None and low >= 20.0,
-                        f"min_hp={low}")
+        # THE CRITERION, MEASURED AS DAMAGE RATHER THAN AS LEFTOVER HEALTH.
+        # min_hp answers "how healthy did it end up", which is not the question: a run that took
+        # no damage at all failed this gate because it started on 14 hearts inherited from the
+        # previous fight. The mod counts damage per tick, so ask that instead -- and only fall
+        # back to min_hp if the counter cannot be read.
+        exact_dmg = _stat(ctx, "dmgTaken")
+        try:
+            took = float(exact_dmg)
+        except (TypeError, ValueError):
+            took = None
+        ok_zero = (took == 0.0) if took is not None else (low is not None and low >= 20.0)
+        yield Criterion("the bot took ZERO damage", ok_zero,
+                        f"damage={exact_dmg} min_hp={low}")
         # The mod counts damage EVERY TICK; the sampled figure is kept beside it so the gap
         # between them stays visible (5 samples caught 3 points of a 9-point loss).
         exact = _stat(ctx, "dmgTaken")
