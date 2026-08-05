@@ -29,16 +29,26 @@ class ArenaBuilder:
         for rules, val in (
             (("pvp",), "true"),
             (("immediate_respawn", "immediateRespawn"), "true"),
-            (("do_daylight_cycle", "doDaylightCycle"), "false"),
+            # 1.21.11 calls it advance_time. Both older spellings are rejected here, so before
+            # this line the arena never actually stopped the clock -- it only looked like it,
+            # because rejection is tolerated below and merely prints a note.
+            (("advance_time", "do_daylight_cycle", "doDaylightCycle"), "false"),
             (("keep_inventory", "keepInventory"), "true"),
-            # 1.21.11 spells it natural_regeneration. "naturalRegeneration" is the pre-1.21.9
-            # form and "natural_health_regeneration" is not a gamerule in EITHER scheme — so of
-            # the six rules here this was the only one where neither spelling landed, and it is
-            # the one every HP criterion depends on ("took no damage", "survived with >= 8 hp",
-            # every hp_drop number). All three are sent; the two wrong ones are tolerated.
+            # 1.21.11 spells it natural_health_regeneration -- verified against the live
+            # server, which answers "currently set to" for that name and rejects both
+            # natural_regeneration and naturalRegeneration. An earlier version of this comment
+            # had it backwards and called the working name "not a gamerule in EITHER scheme".
+            # It is the one every HP criterion depends on ("took no damage", "survived with
+            # >= 8 hp", every hp_drop number), so which name lands is not a detail.
             (("natural_regeneration", "natural_health_regeneration", "naturalRegeneration"),
              "true" if regen else "false"),
-            (("do_mob_spawning", "doMobSpawning"), "false"),
+            # AND THIS ONE WAS NEVER LANDING EITHER, WHICH IS WORSE.
+            # On 1.21.11 the rule is spawn_monsters; do_mob_spawning and doMobSpawning are both
+            # rejected. So every nav and pvp course has been running with monsters spawning into
+            # the arena -- found while a mob probe kept counting 11 to 27 zombies in a world it
+            # believed it had silenced. Courses are short and lit, so the damage is mostly noise
+            # rather than wrong verdicts, but "mostly" is not a thing a bench should rely on.
+            (("spawn_monsters", "do_mob_spawning", "doMobSpawning"), "false"),
         ):
             # Deliberately tolerant: each tuple carries one spelling per MC generation and the
             # others are EXPECTED to be rejected, so rejection is not an error HERE. It must not

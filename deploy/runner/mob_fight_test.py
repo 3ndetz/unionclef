@@ -119,7 +119,13 @@ def main():
     # Measured: the bot walked 28 blocks away to a zombie at (-23.5,-60,49) while the one summoned
     # beside it stood untouched at full health -- and every "it never closes the distance" reading
     # was really about a chase 20+ blocks off. One zombie in the world means one answer.
-    rcon("gamerule doMobSpawning false")
+    # BOTH SPELLINGS. 1.21.11 renamed the gamerules to snake_case, so `doMobSpawning` is simply
+    # rejected there -- which is why the arena kept 11 to 27 zombies while this line looked like
+    # it was doing its job. uctest/arena.py has sent both spellings all along; this had not.
+    # spawn_monsters is the name on 1.21.11; the other two spellings are rejected outright,
+    # which is why this arena kept 11 to 27 zombies while the line looked like it worked.
+    rcon("gamerule spawn_monsters false")
+    rcon("gamerule advance_time false")
     ok = 0
     for i in range(rounds):
         print(f"\n--- round {i + 1}/{rounds} ---")
@@ -183,13 +189,22 @@ def main():
             hp = (py4j("gs").get("self") or {}).get("hp")
             print(f"    t={time.time() - t0:4.0f}s  {n.strip()}  zombie {zhp.split(':')[-1].strip()}"
                   f"  bot hp={hp}  ka={statstr('kaTung')}")
+        # TUNGSTEN FOUGHT IF EITHER PATH FOUGHT.
+        # This judged on kaTung alone -- the counter inside AbstractKillEntityTask -- and so
+        # reported "the kill did not come through the rewired path" for a fight that had gone
+        # perfectly through the CHAIN path: mdRet6=55, mdTung=49, the bot in reach on 653 of 748
+        # gate ticks and the zombie down from 20 HP to 2.3 in four seconds. A criterion that
+        # watches one of two doors cannot say nobody came in.
         kt = statstr("kaTung")
-        print(f"  zombie dead: {dead}   t={time.time() - t0:.1f}s   kaTung={kt}   bot hp={hp}")
-        if dead and kt.split("/")[0] not in ("0", "?"):
+        mt = statstr("mdTung")
+        tung = [v for v in (mt, kt.split("/")[0]) if v not in ("0", "?", "")]
+        print(f"  zombie dead: {dead}   t={time.time() - t0:.1f}s   mdTung={mt} kaTung={kt}"
+              f"   bot hp={hp}")
+        if dead and tung:
             ok += 1
         elif dead:
-            print("  DEAD BUT kaTung=0 -- the kill did not come through the rewired path")
-        elif kt.split("/")[0] not in ("0", "?"):
+            print("  DEAD BUT no tungsten ticks -- the kill did not come through the rewired path")
+        elif tung:
             print("  the controller ran but the zombie survived the window")
     print(f"\n=== {ok}/{rounds} fights killed the zombie THROUGH tungsten's controller ===")
     return 0 if ok >= max(1, rounds - 1) else 1
