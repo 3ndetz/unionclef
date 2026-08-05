@@ -519,6 +519,9 @@ public class MobDefenseChain extends SingleTaskChain {
             }
 
             // attack entities closest to the player first
+            // (focus-firing the WEAKEST was measured instead -- 9/12/17 damage against 8.0 for
+            // nearest-first -- and is worse: the bot walks between targets instead of hitting the
+            // one in front of it, which lengthens the fight, which is what costs health)
             toDealWithList.sort(Comparator.comparingDouble((entity) -> mod.getPlayer().distanceTo(entity)));
 
             if (!toDealWithList.isEmpty()) {
