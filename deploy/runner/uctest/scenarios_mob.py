@@ -112,5 +112,90 @@ class MobMelee(Scenario):
                         f"min_hp={low}", gate=False)
 
 
+
+class MobTrioNoDamage(MobMelee):
+    """THREE zombies at once, and the bot must not lose a single point of health.
+
+    The user's acceptance criterion, in his words: tungsten must fight skilfully and PREDICT
+    danger -- plan the route of the fight in advance and not let itself be hit even once.
+
+    That is deliberately harsher than mob_melee, which passes while LOSING health (its min_hp
+    check exists only to prove the bot took part). Here health is the whole point: winning while
+    taking damage is a FAIL.
+    """
+
+    id = "mob_trio"
+    tier = "gate"
+    duration = 120
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set midnight")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd("difficulty normal")
+        ctx.rcon.cmd("kill @e[type=zombie]")
+        ctx.bot.py.try_call("resetRunCounters")
+        # Spread them out: three in a line would be a queue, three around the bot is a fight.
+        for x, z in ((5.5, 0.5), (-4.5, 3.5), (0.5, -5.5)):
+            ctx.rcon.cmd(f"summon zombie {x} {STAND_Y} {z}")
+        ctx.geo["spawned"] = _zombie_count(ctx)
+        time.sleep(2)
+        ctx.bot.cmd("@test kill")
+
+    def judge(self, ctx):
+        killed = _zombie_count(ctx) == 0
+        ticks = _tung_ticks(ctx)
+        hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        low = min(hps) if hps else None
+
+        yield Criterion("three zombies were spawned", ctx.geo.get("spawned") == 3,
+                        f"count_at_spawn={ctx.geo.get('spawned')}")
+        yield Criterion("all three are dead", killed, f"remaining={_zombie_count(ctx)}")
+        yield Criterion("the fight ran on tungsten", ticks > 0, f"mdTung total={ticks}")
+        # THE CRITERION. Not "survived", not "mostly fine" -- untouched.
+        yield Criterion("the bot took ZERO damage", low is not None and low >= 20.0,
+                        f"min_hp={low}")
+
+
+class SkeletonDodge(MobMelee):
+    """One skeleton. The arrow has to be dodged BEFORE it lands, not survived after.
+
+    The user's harder criterion: work out the arrow's flight and step off the line in advance.
+    Winning while being shot is not what is being asked for, so damage taken is the gate here as
+    well -- with one point of slack, because a skeleton that spawns already drawing can land the
+    first arrow before any policy could react, and the test should measure the dodging rather
+    than the spawn.
+    """
+
+    id = "mob_skeleton"
+    tier = "gate"
+    duration = 120
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set midnight")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd("difficulty normal")
+        ctx.rcon.cmd("kill @e[type=skeleton]")
+        ctx.bot.py.try_call("resetRunCounters")
+        # Far enough that it shoots rather than melees -- the point is the arrow.
+        ctx.rcon.cmd(f"summon skeleton 12.5 {STAND_Y} 0.5")
+        time.sleep(2)
+        ctx.bot.cmd("@test kill")
+
+    def early_stop(self, ctx):
+        return "Count:" not in ctx.rcon.cmd("execute if entity @e[type=skeleton]",
+                                            allow_reject=True)
+
+    def judge(self, ctx):
+        alive = "Count:" in ctx.rcon.cmd("execute if entity @e[type=skeleton]", allow_reject=True)
+        ticks = _tung_ticks(ctx)
+        hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        low = min(hps) if hps else None
+
+        yield Criterion("the skeleton is dead", not alive, f"alive={alive}")
+        yield Criterion("the fight ran on tungsten", ticks > 0, f"mdTung total={ticks}")
+        yield Criterion("at most one arrow landed", low is not None and low >= 19.0,
+                        f"min_hp={low}")
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
-SCENARIOS = [MobMelee]
+SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge]

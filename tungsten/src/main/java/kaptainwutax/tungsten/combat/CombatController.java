@@ -30,6 +30,31 @@ public class CombatController {
     /** Below this we are inside the opponent's swing and lose angle — drift back out. */
     public static final double TOO_CLOSE_DISTANCE = TriggerBot.REACH - 1.4; // 1.6
 
+    /**
+     * Distance held against a MOB while the swing is ready.
+     *
+     * <p>Right at the edge of our own reach and outside a zombie's. Ours is
+     * {@link TriggerBot#REACH} = 3.0 eye-to-hitbox; a zombie's is about 2.0 by the same measure,
+     * so anywhere near 2.9 hits without being hit. The margin below 3.0 is what absorbs a tick of
+     * jitter or knockback -- go closer and the free swings come back, go further and our own gate
+     * refuses.
+     */
+    public static final double MOB_STRIKE_DISTANCE = TriggerBot.REACH - 0.1;  // 2.9
+    /** Below this against a mob we are inside its arm: step back out immediately. */
+    public static final double MOB_BACK_OFF_DISTANCE = TriggerBot.REACH - 0.35; // 2.65
+    /**
+     * How far a mob can hit us, eye-to-hitbox, and therefore the radius to stay out of.
+     *
+     * <p>A vanilla mob attacks at roughly its own width plus two blocks centre-to-centre, which
+     * measured the way {@link TriggerBot#eyeToHitbox} measures comes out near 2.0. The extra
+     * quarter block is the margin for a mob that is walking toward us as it swings.
+     */
+    public static final double MOB_ARM_REACH = 2.25;
+    /** Within this, a second hostile turns the fight from a duel into a crowd. */
+    public static final double CROWD_RADIUS = 7.0;
+    /** Ticks the fight was treated as a CROWD (kite) rather than a duel. Read as crowdEsc. */
+    public static volatile int crowdEscapeTicks;
+
     /** Ground walking speed the combat mover actually produces, blocks per tick. Vanilla walk is
      *  4.317 b/s = 0.216 b/t; this is the yardstick for "how long is the road back in". */
     public static final double CLOSE_SPEED_PER_TICK = 0.216;
@@ -179,6 +204,30 @@ public class CombatController {
     }
 
     /**
+     * How many hostile mobs OTHER than the target are close enough to matter.
+     *
+     * <p>"Close enough" is generous on purpose -- a zombie six blocks away will be on us within
+     * the time one exchange takes, so it counts toward the decision to kite rather than duel.
+     */
+    private static int countThreats(ClientPlayerEntity player, Entity target) {
+        net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+        if (mc.world == null) {
+            return 0;
+        }
+        int n = 0;
+        for (Entity e : mc.world.getEntities()) {
+            if (e == player || e == target || !e.isAlive()
+                    || !(e instanceof net.minecraft.entity.mob.HostileEntity)) {
+                continue;
+            }
+            if (e.squaredDistanceTo(player) <= CROWD_RADIUS * CROWD_RADIUS) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /**
      * Close-quarters movement: circle-strafe around the target while holding strike
      * distance, crit-hop on a randomised cadence. Only runs when the safety stage machine
      * does not want the legs (i.e. PURSUE / DELICATE_BATTLE — no fall, no bridge, no retreat).
@@ -212,6 +261,8 @@ public class CombatController {
 
         long now = System.currentTimeMillis();
         double dist = TriggerBot.eyeToHitbox(player, target);
+
+
 
         // Range control (we face the target, so forward = toward it).
         //
@@ -271,6 +322,7 @@ public class CombatController {
                 kite(out, player, world, dist);
                 return;
             }
+
             if (!armed) {
                 // Recharging: stand off just past the opponent's reach. Not further — the swing
                 // has to be one step away when the cooldown lands, or the stand-off costs tempo.
