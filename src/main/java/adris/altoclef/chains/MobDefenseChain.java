@@ -179,8 +179,34 @@ public class MobDefenseChain extends SingleTaskChain {
         return numberOfProblematicEntities;
     }
 
+    /**
+     * Health lost since the last counter reset, accumulated EVERY TICK.
+     *
+     * <p>The bench samples health every few seconds, which is far too coarse for this question:
+     * a trio fight lasts ten to fifteen seconds, so five samples caught three points of a
+     * nine-point loss and reported total_drop=3.0 while min_hp said 11.0. A criterion of "zero
+     * damage" cannot be judged by a sampler that misses most of the hits. This is ticked with the
+     * chain, so nothing is missed between polls.
+     */
+    public static volatile float mdDamageTaken;
+    private float mdLastHealth = -1f;
+
+    private void trackDamage() {
+        AltoClef mod = AltoClef.getInstance();
+        if (mod == null || mod.getPlayer() == null) {
+            mdLastHealth = -1f;
+            return;
+        }
+        float hp = mod.getPlayer().getHealth();
+        if (mdLastHealth >= 0f && hp < mdLastHealth) {
+            mdDamageTaken += mdLastHealth - hp;
+        }
+        mdLastHealth = hp;
+    }
+
     @Override
     public float getPriority() {
+        trackDamage();
         // SIXTEEN DEATHS TO ZOMBIES IN ONE RUN. Either this chain never gets the tick, or it gets
         // it and its answer does not save the bot. Those need opposite fixes, so count them apart.
         mdPriorityCalls++;

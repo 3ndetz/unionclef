@@ -147,6 +147,28 @@ class MobTrioNoDamage(MobMelee):
         hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
         low = min(hps) if hps else None
 
+        # MEASURE THE THING THE FIGHT IS ACTUALLY MADE OF.
+        # Eight combat hypotheses were judged on min_hp alone and every one of them landed inside
+        # the run-to-run spread of that number: 2 to 11 out of 20 on the SAME build. An effect
+        # smaller than about six health points is not detectable that way, so eight experiments
+        # produced eight verdicts of "noise" and no mechanism.
+        #
+        # The series did establish one law -- damage tracks TIME IN CONTACT, because every policy
+        # that lengthened the fight cost more health than it saved. Duration is therefore the
+        # controllable quantity and min_hp is its consequence, so both get recorded. They do not
+        # gate anything: the user's criterion is still zero damage. They exist so the NEXT
+        # hypothesis can be judged on the mechanism it claims to change rather than on the number
+        # it happens to end at.
+        drops = 0.0
+        prev = None
+        for h in hps:
+            if prev is not None and h < prev:
+                drops += prev - h
+            prev = h
+        first_t = ctx.samples[0]["t"] if ctx.samples else None
+        last_t = ctx.samples[-1]["t"] if ctx.samples else None
+        duration = None if first_t is None else round(last_t - first_t, 1)
+
         yield Criterion("three zombies were spawned", ctx.geo.get("spawned") == 3,
                         f"count_at_spawn={ctx.geo.get('spawned')}")
         yield Criterion("all three are dead", killed, f"remaining={_zombie_count(ctx)}")
@@ -154,6 +176,13 @@ class MobTrioNoDamage(MobMelee):
         # THE CRITERION. Not "survived", not "mostly fine" -- untouched.
         yield Criterion("the bot took ZERO damage", low is not None and low >= 20.0,
                         f"min_hp={low}")
+        # The mod counts damage EVERY TICK; the sampled figure is kept beside it so the gap
+        # between them stays visible (5 samples caught 3 points of a 9-point loss).
+        exact = _stat(ctx, "dmgTaken")
+        yield Criterion("damage taken (recorded, not gated)", True,
+                        f"exact={exact} sampled_drop={round(drops, 1)} min_hp={low}", gate=False)
+        yield Criterion("fight duration (recorded, not gated)", True,
+                        f"{duration}s over {len(ctx.samples)} samples", gate=False)
 
 
 class SkeletonDodge(MobMelee):
