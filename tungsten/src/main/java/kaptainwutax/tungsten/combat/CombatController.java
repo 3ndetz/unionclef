@@ -54,6 +54,8 @@ public class CombatController {
      * quarter block is the margin for a mob that is walking toward us as it swings.
      */
     public static final double MOB_ARM_REACH = 2.25;
+    /** Centre-to-centre floor against a mob: the worst hit ever observed (2.00) plus a margin. */
+    public static final double MOB_MIN_CENTRE_GAP = 2.30;
     /** Within this, a second hostile turns the fight from a duel into a crowd. */
     public static final double CROWD_RADIUS = 7.0;
     /** Walking speed of a hostile mob, blocks per tick — a zombie's, which is the slow case. */

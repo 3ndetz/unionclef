@@ -189,6 +189,11 @@ public class MobDefenseChain extends SingleTaskChain {
      * chain, so nothing is missed between polls.
      */
     public static volatile float mdDamageTaken;
+    /** Where the hits land, relative to where the bot is looking. Read as hits=F/B/L/R. */
+    public static volatile int mdHitFront, mdHitBack, mdHitLeft, mdHitRight;
+    /** Centre-to-centre range at which hits actually land: sum, count and the worst case. */
+    public static volatile double mdHitDistSum, mdHitDistMax;
+    public static volatile int mdHitCount;
     private float mdLastHealth = -1f;
 
     private void trackDamage() {
@@ -200,6 +205,50 @@ public class MobDefenseChain extends SingleTaskChain {
         float hp = mod.getPlayer().getHealth();
         if (mdLastHealth >= 0f && hp < mdLastHealth) {
             mdDamageTaken += mdLastHealth - hp;
+            // WHERE DID IT COME FROM? Twelve tactical hypotheses were tried without ever asking
+            // this. The best run of the best policy still concedes one hit, and whether that hit
+            // arrives from the front (the mob we are fighting) or from behind (one that walked
+            // round while we fought) decides which fix is even relevant: aim/timing for the
+            // former, positioning for the latter. Recorded as four counters rather than argued.
+            net.minecraft.entity.Entity src = null;
+            double best = Double.MAX_VALUE;
+            try {
+                for (net.minecraft.entity.Entity e : mod.getWorld().getEntities()) {
+                    if (!(e instanceof net.minecraft.entity.mob.HostileEntity) || !e.isAlive()) {
+                        continue;
+                    }
+                    double d = e.squaredDistanceTo(mod.getPlayer());
+                    if (d < best) {
+                        best = d;
+                        src = e;
+                    }
+                }
+            } catch (Throwable ignored) {
+                src = null;
+            }
+            if (src != null) {
+                double dx = src.getX() - mod.getPlayer().getX();
+                double dz = src.getZ() - mod.getPlayer().getZ();
+                double yaw = Math.toRadians(mod.getPlayer().getYaw());
+                double fwd = -Math.sin(yaw) * dx + Math.cos(yaw) * dz;
+                double side = Math.cos(yaw) * dx + Math.sin(yaw) * dz;
+                if (Math.abs(fwd) >= Math.abs(side)) {
+                    if (fwd > 0) mdHitFront++; else mdHitBack++;
+                } else {
+                    if (side > 0) mdHitLeft++; else mdHitRight++;
+                }
+                // AND AT WHAT RANGE. The hits come from the FRONT -- 7 of 9 -- so this is not
+                // about being flanked, it is about the distance of the exchange itself. Twelve
+                // hypotheses argued about that distance using an eye-to-hitbox metric, while the
+                // server decides with its own centre-to-centre one. Record the real number at the
+                // moment damage lands and the argument is over.
+                double centre = Math.sqrt(best);
+                mdHitDistSum += centre;
+                mdHitCount++;
+                if (centre > mdHitDistMax) {
+                    mdHitDistMax = centre;
+                }
+            }
         }
         mdLastHealth = hp;
     }
