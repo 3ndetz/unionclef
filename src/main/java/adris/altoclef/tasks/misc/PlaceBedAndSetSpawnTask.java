@@ -466,6 +466,17 @@ public class PlaceBedAndSetSpawnTask extends Task {
             return true;
         }
 
+        // NO PLAYER MEANS NOT FINISHED, NOT A CRASH.
+        // isFinished() is reached from BeatMinecraftTask's CONSTRUCTOR, through getTargetBeds and
+        // isTaskRunning, so it runs before the world has handed over a player -- which is exactly
+        // what happens when @gamer is issued the moment the bot connects. Caught in the client
+        // log: NullPointerException on getPlayer() at this line, thrown out of
+        // BeatMinecraftTask.<init> via GamerCommand, so the task never existed and the bot sat
+        // idle for the whole run. Same shape as the world-null guard already in that constructor.
+        if (AltoClef.getInstance() == null || AltoClef.getInstance().getPlayer() == null) {
+            return false;
+        }
+
         // Check if player is sleeping
         boolean isSleeping = AltoClef.getInstance().getPlayer().isSleeping();
 
