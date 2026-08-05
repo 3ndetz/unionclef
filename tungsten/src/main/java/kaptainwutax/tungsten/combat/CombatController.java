@@ -442,7 +442,16 @@ public class CombatController {
         // when it is not about to swing.
         var jcfg = kaptainwutax.tungsten.TungstenConfig.get();
         float cd = player.getAttackCooldownProgress(0.5f);
-        boolean windingUp = cd > 0.55f && cd < 0.92f;
+        // THE TAKE-OFF HAS TO BE EARLIER THAN THIS, OR THE SWING LANDS ON THE WAY UP.
+        // A crit counts only while FALLING. A jump climbs for about six ticks, and the attack
+        // cooldown at the default attack speed runs 12.5 ticks end to end -- so leaving the ground
+        // at cd=0.55 leaves barely five ticks before the swing is ready, and the bot is still
+        // ASCENDING when it hits. Measured on the trio course: 13 hits, 1 crit -- 7.7%, where the
+        // whole point of hopping is to make crits the normal case.
+        // Solving (1 - cd) * 12.5 > 6 gives cd < 0.52: take off then, and the swing arrives on the
+        // way down. The lower bound keeps the bot from hopping the instant it has swung, when the
+        // next swing is still most of a second away.
+        boolean windingUp = cd > 0.25f && cd < 0.50f;
         long interval = windingUp ? jcfg.combatBunnyHopMinMs : jumpInterval;
         // DO NOT HOP ON A LEDGE. A crit is worth half a hit; falling off is worth the whole
         // fight. isJumpLandingSafe projects the CURRENT velocity, which is not enough on a
