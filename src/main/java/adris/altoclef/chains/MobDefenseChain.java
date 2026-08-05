@@ -90,6 +90,10 @@ public class MobDefenseChain extends SingleTaskChain {
     public static volatile int mdTungstenTicks;
     /** Ticks the force field's nearest target was struck by tungsten's trigger bot. */
     public static volatile int mdAuraTungstenTicks;
+    /** Ticks a crowd was answered with the bow instead of the sword. Read as mdBow. */
+    public static volatile int mdBowTicks;
+    /** Closer than this a bow is the wrong weapon -- they arrive before the draw finishes. */
+    private static final double BOW_MIN_RANGE = 5.0;
     private Entity targetEntity;
     private boolean doingFunkyStuff = false;
     private boolean wasPuttingOutFire = false;
