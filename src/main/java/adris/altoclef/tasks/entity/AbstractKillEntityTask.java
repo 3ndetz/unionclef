@@ -55,6 +55,12 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
     private static final long NO_DAMAGE_MS = 4000L;
     /** Ticks the fight ran on tungsten. Counted so "are mobs on tungsten" is a number. */
     public static volatile int kaTungstenTicks;
+    /** Ticks this task ran at all, and ticks it was within reach. A probe put a zombie in front of
+     *  the bot, told it to kill, watched it die in four seconds -- and read kaTungstenTicks=0. So
+     *  the kill came from somewhere else. These two separate the candidates: no ticks at all means
+     *  the task never ran (something else did the killing), ticks without reach means it never got
+     *  close enough, and reach without tungsten ticks means equipWeapon held the branch. */
+    public static volatile int kaTaskTicks, kaCanHitTicks, kaEquipTicks;
     private static boolean _aggressiveAttackStrategy = true;
 
     // No-damage detection: reposition when attacks aren't connecting
@@ -312,7 +318,11 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             _attackStrategyTimer.reset();
         }
 
+        kaTaskTicks++;
         boolean canHit = LookHelper.canHitEntity(mod, player);
+        if (canHit) {
+            kaCanHitTicks++;
+        }
         boolean directViewing = LookHelper.cleanLineOfSight(player.getBoundingBox().getCenter(), 50.0);
         double dist = player.distanceTo(mod.getPlayer());
         double yDelta = player.getY() - mod.getPlayer().getY();
@@ -388,7 +398,9 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             //
             // Approach is untouched: below this branch, altoclef's pathing still walks us in.
             // This is only the part where the target is already within reach.
-            if (!equipWeapon(mod, preferAxe)) {
+            if (equipWeapon(mod, preferAxe)) {
+                kaEquipTicks++;
+            } else {
                 _combat.tick(mod.getPlayer(), player, mod.getWorld());
                 kaTungstenTicks++;
 

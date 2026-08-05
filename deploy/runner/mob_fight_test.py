@@ -1,0 +1,151 @@
+"""Does the bot actually fight a mob on tungsten? Answer it with a number, not a belief.
+
+WHY THIS EXISTS. Mob combat was moved off the hand-rolled duel in AbstractKillEntityTask and onto
+tungsten's CombatController. The obvious places to check both refuse to answer:
+
+  - the PVP SUITE cannot: its courses drive `punk`, which is tungsten's own PunkPlayerTask and
+    never enters the class that changed. A score from it is about something else entirely.
+  - the GAMER SWEEP did not: three runs of wood-gathering in daylight finished with kaTung=0,
+    because a bot chopping trees never commits to a melee. Zero deaths and a passed rung proved
+    nothing about the new code -- it had not run.
+
+So put a zombie in front of the bot and tell it to kill it. `@test kill` runs KillEntityTask on
+the nearest tracked zombie, which is exactly the path that changed.
+
+  python deploy/runner/mob_fight_test.py [count]
+
+Reports, per fight: whether the zombie died, how long it took, and kaTung -- the ticks the fight
+spent inside tungsten's controller. kaTung == 0 with a dead zombie would mean the kill came from
+somewhere else and this rewiring is still unproven.
+"""
+import json, subprocess, sys, time, pathlib
+
+CLIENT = "uctest-mc-tester1"
+SERVER = "uctest-server"
+BOT = "tester1"
+PORT = 25333
+SNIP = pathlib.Path(__file__).with_name("gamer_smoke.py")
+
+
+def sh(a, t=40):
+    return subprocess.run(a, capture_output=True, text=True, timeout=t)
+
+
+def rcon(c, t=20):
+    return sh(["docker", "exec", SERVER, "rcon-cli", c], t).stdout.strip()
+
+
+# Reuse gamer_smoke's py4j snippet verbatim rather than keeping a second copy in step with it.
+_SNIP = None
+for line in SNIP.read_text(encoding="utf-8").split("SNIP=r\"\"\"")[1].split("\"\"\"")[0:1]:
+    _SNIP = line
+
+
+def py4j(op, t=30, **kw):
+    req = dict(op=op, port=PORT)
+    req.update(kw)
+    r = sh(["docker", "exec", CLIENT, "python3", "-c", _SNIP, json.dumps(req)], t)
+    try:
+        return json.loads(r.stdout.strip().splitlines()[-1])
+    except Exception:
+        return {}
+
+
+def statstr(name):
+    """The counter is a slash-joined group now: tungstenTicks/taskTicks/canHitTicks/equipTicks."""
+    s = py4j("stats").get("s") or ""
+    for tok in s.split():
+        if tok.startswith(name + "="):
+            return tok.split("=", 1)[1]
+    return "?"
+
+
+def stat(name):
+    s = py4j("stats").get("s") or ""
+    for tok in s.split():
+        if tok.startswith(name + "="):
+            v = tok.split("=", 1)[1]
+            return int(v) if v.lstrip("-").isdigit() else 0
+    return 0
+
+
+def ensure_in_world():
+    """A recreated client is in no world at all, and every reading below would be None.
+
+    The first version of this probe read a position only because the client happened to still be
+    connected from an earlier sweep; straight after a deploy it recreates the container and all
+    three rounds reported "no position" and scored zero. That is a probe measuring its own setup.
+    """
+    for _ in range(24):
+        if py4j("state").get("inGame"):
+            return True
+        py4j("connect", ip="test-server")
+        time.sleep(5)
+    return bool(py4j("state").get("inGame"))
+
+
+def main():
+    rounds = int(sys.argv[1]) if len(sys.argv) > 1 else 3
+    print(f"mob fight probe: {rounds} rounds")
+    if not ensure_in_world():
+        print("client will not join test-server -- nothing to measure")
+        return 1
+    rcon("difficulty normal")
+    rcon("time set day")
+    ok = 0
+    for i in range(rounds):
+        print(f"\n--- round {i + 1}/{rounds} ---")
+        py4j("cmd", c="@stop")
+        time.sleep(1)
+        rcon(f"kill @e[type=zombie]")
+        rcon(f"effect give {BOT} minecraft:instant_health 1 10")
+        # ARM THE BOT. An unarmed fight measures the mob, not the wiring.
+        rcon(f"item replace entity {BOT} weapon.mainhand with iron_sword")
+        py4j("zero")
+        gs = py4j("gs").get("self") or {}
+        pos = gs.get("pos") or gs.get("position")
+        if not pos:
+            print("  no position from the client; skipping")
+            continue
+        try:
+            x, y, z = [float(v) for v in (pos if isinstance(pos, (list, tuple))
+                                          else str(pos).replace(",", " ").split())[:3]]
+        except Exception:
+            print(f"  cannot read position {pos!r}; skipping")
+            continue
+        # Close enough that the fight starts at once, far enough that approach still happens.
+        rcon(f"summon zombie {x + 4:.1f} {y:.1f} {z:.1f}")
+        time.sleep(1)
+        py4j("cmd", c="@test kill")
+        t0 = time.time()
+        dead, hp = False, None
+        # ASK A QUESTION THE SERVER ANSWERS.
+        # This used to run `execute if entity ... run say ALIVE` and look for ALIVE in the reply.
+        # rcon returns nothing at all for that form, so every poll read "dead" and every round
+        # ended at the first poll -- three fights, all "dead in 3.7s", none of them real. `execute
+        # if entity` on its own answers "Test passed. Count: N", which is a fact rather than a
+        # silence.
+        while time.time() - t0 < 60:
+            time.sleep(3)
+            n = rcon("execute if entity @e[type=zombie]")
+            if "Test passed" not in n:
+                dead = True
+                break
+            zhp = rcon("data get entity @e[type=zombie,limit=1] Health")
+            hp = (py4j("gs").get("self") or {}).get("hp")
+            print(f"    t={time.time() - t0:4.0f}s  {n.strip()}  zombie {zhp.split(':')[-1].strip()}"
+                  f"  bot hp={hp}  ka={statstr('kaTung')}")
+        kt = statstr("kaTung")
+        print(f"  zombie dead: {dead}   t={time.time() - t0:.1f}s   kaTung={kt}   bot hp={hp}")
+        if dead and kt.split("/")[0] not in ("0", "?"):
+            ok += 1
+        elif dead:
+            print("  DEAD BUT kaTung=0 -- the kill did not come through the rewired path")
+        elif kt.split("/")[0] not in ("0", "?"):
+            print("  the controller ran but the zombie survived the window")
+    print(f"\n=== {ok}/{rounds} fights killed the zombie THROUGH tungsten's controller ===")
+    return 0 if ok >= max(1, rounds - 1) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
