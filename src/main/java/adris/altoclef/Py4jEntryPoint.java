@@ -2275,6 +2275,18 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.entity.AbstractDoToEntityTask.dteMlg = 0;
         adris.altoclef.tasks.entity.AbstractDoToEntityTask.dteUnsafe = 0;
         adris.altoclef.chains.MobDefenseChain.mdTungstenTicks = 0;
+        // THE SWING GATES HAVE TO BE RESET TOO, OR THEY REPORT AN OLD FIGHT.
+        // They were left out, so a mob-combat probe read total=161 passed=8 -- values left over
+        // from a pvp suite hours earlier -- and they never moved, which was mistaken for "eight
+        // swings that dealt no damage". The truth was that the trigger bot never ticked at all.
+        // A counter that survives its run is a counter that lies about the next one.
+        kaptainwutax.tungsten.combat.TriggerBot.gTotal = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.gClick = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.gCooldown = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.gReach = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.gAngle = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.gLos = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.gPassed = 0;
         kaptainwutax.tungsten.path.PathFinder.staleRootRejections = 0;
         kaptainwutax.tungsten.task.FollowEntityTask.planCalls = 0;
         kaptainwutax.tungsten.task.FollowEntityTask.planUsable = 0;
