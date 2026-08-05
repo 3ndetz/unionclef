@@ -395,7 +395,16 @@ public class CombatController {
         // (unpredictable, keeps flanking). If the chosen side is a drop, take the OTHER
         // side rather than standing still; only when BOTH sides are unsafe do we skip the
         // strafe, and even then the range control above keeps the bot moving.
-        if (now - lastStrafeSwitch > strafeInterval) {
+        // AGAINST A CROWD, COMMIT TO ONE DIRECTION.
+        // Flipping every half second is right in a duel -- it is unpredictable, and one opponent
+        // cannot exploit it. Against three it is the opposite: each flip walks the bot back
+        // through the arc it just cleared, and they re-surround it. A steady orbit strings them
+        // into a line instead, because they all path to the same moving point, and a line can be
+        // fought one at a time.
+        // The safety flip below still applies -- an unsafe side is always abandoned -- so this
+        // only removes the RANDOM flip, not the one that keeps the bot on the platform.
+        boolean crowded = countThreats(player, target) >= 1;
+        if (!crowded && now - lastStrafeSwitch > strafeInterval) {
             strafeDir = -strafeDir;
             lastStrafeSwitch = now;
             strafeInterval = 500 + (long) (Math.random() * 700);
