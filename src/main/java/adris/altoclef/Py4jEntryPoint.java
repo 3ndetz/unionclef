@@ -337,6 +337,35 @@ public class Py4jEntryPoint {
         }
     }
 
+    /**
+     * Stacks of every live thread, returned as text.
+     *
+     * <p>Because a JVM signal dump could not be got out of this container: kill -3 runs without
+     * error and the output never reaches either the container log or the client's own 24 MB
+     * latest.log. This goes through our own code and comes back through py4j, so nothing in the
+     * image or the log rotation can swallow it. Intended for the moment the bench's watcher
+     * reports a freeze -- every counter delta zero while the bot stays in game and busy.
+     *
+     * @param filter only threads whose name contains this (empty for all)
+     */
+    public String threadDump(String filter) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            for (Map.Entry<Thread, StackTraceElement[]> e : Thread.getAllStackTraces().entrySet()) {
+                Thread t = e.getKey();
+                if (filter != null && !filter.isEmpty() && !t.getName().contains(filter)) continue;
+                sb.append('"').append(t.getName()).append("\" ").append(t.getState()).append(System.lineSeparator());
+                StackTraceElement[] st = e.getValue();
+                for (int i = 0; i < Math.min(st.length, 18); i++) {
+                    sb.append("    at ").append(st[i]).append(System.lineSeparator());
+                }
+            }
+        } catch (Exception ex) {
+            sb.append("error: ").append(ex);
+        }
+        return sb.toString();
+    }
+
     public String getGroundBlock() {
         if (AltoClef.inGame() && _mod.getPlayer() != null && _mod.getWorld() != null) {
             // Get the block below the player

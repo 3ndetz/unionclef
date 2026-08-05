@@ -40,6 +40,7 @@ elif op=="inv":
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
+elif op=="tdump": out={"d": str(mc.threadDump(str(req.get("f",""))))[:4000]}
 elif op=="logs": out={"n": int(mc.countLogsNear(int(req.get("r",40))))}
 elif op=="blk": out={"b": {str(k): str(v) for k, v in dict(mc.getBlockAt(int(req["x"]),int(req["y"]),int(req["z"]))).items()}}
 elif op=="respawn": out={"r": str(mc.respawnPlayer())}
