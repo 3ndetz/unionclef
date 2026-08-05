@@ -76,12 +76,19 @@ def ensure_in_world():
     connected from an earlier sweep; straight after a deploy it recreates the container and all
     three rounds reported "no position" and scored zero. That is a probe measuring its own setup.
     """
-    for _ in range(24):
+    # CONNECT ONCE, THEN WAIT. ConnectToServer LEAVES the current world to rejoin, so calling it
+    # every poll restarts the join for ever: the first version asked every 5s for two minutes and
+    # reported "will not join" about a client that was perfectly able to, and had in fact been in
+    # game when the loop started. Ask again only if a long wait really produced nothing.
+    for attempt in range(3):
         if py4j("state").get("inGame"):
             return True
         py4j("connect", ip="test-server")
-        time.sleep(5)
-    return bool(py4j("state").get("inGame"))
+        for _ in range(12):
+            time.sleep(5)
+            if py4j("state").get("inGame"):
+                return True
+    return False
 
 
 def main():
@@ -91,13 +98,28 @@ def main():
         print("client will not join test-server -- nothing to measure")
         return 1
     rcon("difficulty normal")
-    rcon("time set day")
+    # NIGHT, BECAUSE DAYLIGHT KILLS THE ZOMBIE FOR US.
+    # With `time set day` the zombie BURNS: measured 17 -> 12 -> 8 -> 3 -> dead at about 1.2 HP a
+    # second, with mdCalls=0 -- the defence chain not even being ticked. Every "the bot is fighting
+    # now" reading taken that way was sunlight, not the bot. At midnight the only thing that can
+    # take the zombie's health is us.
+    rcon("time set midnight")
+    rcon("gamerule doDaylightCycle false")
+    # AND NO OTHER ZOMBIES, OR THE BOT FIGHTS THE WRONG ONE.
+    # `@test kill` takes the first TRACKED zombie, and at midnight the world keeps making them.
+    # Measured: the bot walked 28 blocks away to a zombie at (-23.5,-60,49) while the one summoned
+    # beside it stood untouched at full health -- and every "it never closes the distance" reading
+    # was really about a chase 20+ blocks off. One zombie in the world means one answer.
+    rcon("gamerule doMobSpawning false")
     ok = 0
     for i in range(rounds):
         print(f"\n--- round {i + 1}/{rounds} ---")
         py4j("cmd", c="@stop")
         time.sleep(1)
-        rcon(f"kill @e[type=zombie]")
+        rcon("kill @e[type=zombie]")
+        rcon("kill @e[type=skeleton]")
+        rcon("kill @e[type=spider]")
+        rcon("kill @e[type=creeper]")
         rcon(f"effect give {BOT} minecraft:instant_health 1 10")
         # ARM THE BOT. An unarmed fight measures the mob, not the wiring.
         rcon(f"item replace entity {BOT} weapon.mainhand with iron_sword")

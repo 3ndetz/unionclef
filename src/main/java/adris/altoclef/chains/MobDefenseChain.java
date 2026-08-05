@@ -81,6 +81,13 @@ public class MobDefenseChain extends SingleTaskChain {
     private static boolean shielding = false;
     private final DragonBreathTracker dragonBreathTracker = new DragonBreathTracker();
     private final KillAura killAura = new KillAura();
+    /** Tungsten's duelling engine, used for the fight this chain has decided to take. */
+    private final kaptainwutax.tungsten.combat.CombatController tungstenCombat =
+            new kaptainwutax.tungsten.combat.CombatController();
+    /** When the controller last drove, so the aura can stand off that target for a moment. */
+    private long tungstenDrivingMs = 0L;
+    /** Ticks the committed fight ran on tungsten. Read over py4j as mdTung. */
+    public static volatile int mdTungstenTicks;
     private Entity targetEntity;
     private boolean doingFunkyStuff = false;
     private boolean wasPuttingOutFire = false;
@@ -437,11 +444,18 @@ public class MobDefenseChain extends SingleTaskChain {
                 //#endif
 
                 int armor = mod.getPlayer().getArmor();
-                //#if MC < 12111
-                float damage = bestSword == null ? 0 : (bestSword.getMaterial().getAttackDamage()) + 1;
-                //#else
-                //$$ float damage = 0; // TODO [1.21.11] get attack damage from Item.Settings component
-                //#endif
+                // ASK THE ITEM WHAT IT HITS FOR. ONE ANSWER, BOTH VERSIONS.
+                // This used to be a version split whose 1.21.11 half was `float damage = 0` with a
+                // TODO, because getMaterial().getAttackDamage() was removed there. The consequence
+                // was not a missing nicety: canDealWith = ceil(armor*3.6/20 + damage*0.8 + shield)
+                // came out ZERO for any bot without armour, one zombie scores 1, so
+                // canDealWith >= dangerousness was NEVER true and the chain took the else branch --
+                // RunAwayFromHostilesTask at priority 80. Measured with a probe: the bot fled a
+                // single zombie while holding an iron sword at full health, and the kill task never
+                // got a tick (kaTaskTicks=0), which is why the tungsten combat wiring looked dead.
+                // The damage lives in the item's attribute modifiers on both 1.21.1 and 1.21.11,
+                // so reading it there removes the divergence instead of papering over one side.
+                float damage = bestSword == null ? 0 : meleeDamageOf(bestSword) + 1;
 
                 int shield = hasShield(mod) && bestSword != null ? 3 : 0;
 
@@ -457,6 +471,36 @@ public class MobDefenseChain extends SingleTaskChain {
                     runAwayTask = null;
                     Entity toKill = toDealWithList.get(0);
                     lockedOnEntity = toKill;
+
+                    // THE COMMITTED FIGHT RUNS ON TUNGSTEN.
+                    // Measured, and not what anyone assumed: mobs were never killed by a kill task
+                    // at all. With a zombie four blocks away the task sat in "Approaching target"
+                    // while AbstractDoToEntityTask's interact gate was never even REACHED
+                    // (dte=0/0/0/0/0/0) -- and the zombie still lost health steadily, 18 -> 15 ->
+                    // 11 -> 7 -> 4 -> dead. The killer was the force field: KillAura swinging every
+                    // tick, no spacing, no kiting, and the bot down to 3 HP for one zombie.
+                    //
+                    // This branch is the one place where the bot has DECIDED to fight: it has
+                    // weighed weapon, armour and shield against the mob's dangerousness and it
+                    // returns 65, out-bidding the user chain, so the movement keys are the chain's
+                    // to use. That makes it the right owner for tungsten's duelling controller --
+                    // aim, striking distance, circle-strafe, crit timing, disengage below half a
+                    // bar. The passive force field elsewhere stays exactly as it was, because it
+                    // must keep swatting without stealing the legs of a bot that is chopping wood.
+                    // ONE OWNER OF THE LEGS AT A TIME, SPLIT BY DISTANCE.
+                    // Ticking the controller while the kill task walks gives the movement keys two
+                    // writers pulling opposite ways -- the task closing, the controller holding its
+                    // striking distance -- and the bot never arrives. Measured: mdRet6=57 and
+                    // mdTung=57 (it does commit to the fight now), but the interact gate saw reach
+                    // on 36 of 690 ticks and the zombie sat at a full 20.0 HP throughout, stuck in
+                    // "Approaching target".
+                    // So the approach belongs to the task, and the strike belongs to tungsten.
+                    if (mod.getControllerExtras().inRange(toKill)) {
+                        kaptainwutax.tungsten.combat.WeaponSelector.equipBestMelee(mod.getPlayer());
+                        tungstenCombat.tick(mod.getPlayer(), toKill, mod.getWorld());
+                        tungstenDrivingMs = System.currentTimeMillis();
+                        mdTungstenTicks++;
+                    }
 
                     setTask(new KillEntitiesTask(toKill.getClass()));
                     mdRet6++; return 65;
@@ -555,6 +599,44 @@ public class MobDefenseChain extends SingleTaskChain {
     //$$ }
     //#endif
 
+    /**
+     * Attack damage the item adds, straight from its own attribute modifiers.
+     *
+     * <p>Matched by the attribute's registry PATH rather than by an EntityAttributes constant: the
+     * constant is spelled GENERIC_ATTACK_DAMAGE on one of the two versions this file builds for and
+     * ATTACK_DAMAGE on the other, and the whole point here is to stop maintaining two spellings of
+     * the same question. The registry id is "attack_damage" in both.
+     *
+     * <p>Returns 0 for anything that is not a weapon, which the caller reads as "we cannot deal
+     * with it" -- an unarmed, unarmoured bot fleeing a zombie is correct; an armed one fleeing is
+     * the bug this fixes.
+     */
+    private static float meleeDamageOf(Item item) {
+        if (item == null) {
+            return 0;
+        }
+        try {
+            ItemStack stack = new ItemStack(item);
+            var comp = stack.get(net.minecraft.component.DataComponentTypes.ATTRIBUTE_MODIFIERS);
+            if (comp == null) {
+                return 0;
+            }
+            float sum = 0;
+            for (var entry : comp.modifiers()) {
+                String path = entry.attribute().getKey()
+                        .map(k -> k.getValue().getPath()).orElse("");
+                if ("attack_damage".equals(path)) {
+                    sum += (float) entry.modifier().value();
+                }
+            }
+            return sum;
+        } catch (Throwable t) {
+            // A reading that throws must not decide a fight. Say "no weapon" and let the bot flee,
+            // which is the safe half of the choice.
+            return 0;
+        }
+    }
+
     private BlockPos isInsideFireAndOnFire(AltoClef mod) {
         boolean onFire = mod.getPlayer().isOnFire();
         if (!onFire) return null;
@@ -616,6 +698,14 @@ public class MobDefenseChain extends SingleTaskChain {
                 }
 
                 if (shouldForce) {
+                    // ONE WRITER PER TARGET. The controller above aims with WindMouse at a
+                    // predicted point; letting the aura smooth-look at the same mob in the same
+                    // tick leaves the crosshair somewhere between the two. Everything else in
+                    // range is still the aura's to swat.
+                    if (entity == lockedOnEntity && tungstenDrivingMs > 0
+                            && System.currentTimeMillis() - tungstenDrivingMs < 500) {
+                        continue;
+                    }
                     killAura.applyAura(entity);
                 }
             }

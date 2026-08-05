@@ -27,6 +27,9 @@ import java.util.Optional;
  */
 public abstract class AbstractDoToEntityTask extends Task implements ITaskRequiresGrounded {
     protected final MovementProgressChecker progress = new MovementProgressChecker();
+    /** Why the interact gate refuses, counted per condition. Read over py4j as dte=... */
+    public static volatile int dteGate, dteInRange, dteHungry, dteFalling, dteMlg, dteUnsafe;
+
     private final double maintainDistance;
     private final double combatGuardLowerRange;
     private final double combatGuardLowerFieldRadius;
@@ -111,6 +114,18 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
             }
 
             boolean inRange = mod.getControllerExtras().inRange(entity);
+
+            // WHICH OF THE FIVE CONDITIONS IS SAYING NO?
+            // The bot sat in "Approaching target" for ever with a zombie four blocks away, and the
+            // child task's counters could not say why: they live past this gate. Five conditions
+            // guard it and the debug state names none of them, so count each separately rather
+            // than guess which one is false.
+            dteGate++;
+            if (inRange) dteInRange++;
+            if (mod.getFoodChain().needsToEat()) dteHungry++;
+            if (mod.getMLGBucketChain().isFalling(mod)) dteFalling++;
+            if (!mod.getMLGBucketChain().doneMLG()) dteMlg++;
+            if (!mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) dteUnsafe++;
 
             // Interact when in range. Only gate on inRange (canHitEntity) — the old raycast check
             // was "basically useless" and blocked interaction most of the time.
