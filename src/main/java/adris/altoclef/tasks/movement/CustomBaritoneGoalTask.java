@@ -21,9 +21,18 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
 
     /** Entry and early-exit tallies for the tungsten branch; read over py4j in placeStats(). */
     public static volatile int pdEnter, pdNotPrimary, pdPillar, pdBridge, pdStuckGiveUp,
-            pdWalking, pdNear, pdNoGoal, pdFinished, pdNoVec, pdStallWalker, pdStallReset, pdNearBusy, pdNearFind;
+            pdWalking, pdNear, pdNoGoal, pdFinished, pdNoVec, pdStallWalker, pdStallReset, pdNearBusy, pdNearFind, pdPlanning, pdPlanGiveUp;
     /** When the near-goal branch last issued a search; see the rate gate at its site. */
     private long twLastNearFindMs = 0L;
+    /** When the drive started planning without the body moving or a chain running; 0 = not in
+     *  that state. The yardstick for PLAN_GIVE_UP_MS. */
+    private long twPlanSinceMs = 0L;
+    /** Where the body was when that clock started, so ANY real movement restarts it. */
+    private net.minecraft.util.math.BlockPos twPlanFeet = null;
+    /** How long the drive may claim the tick while producing no route and no movement. Eight
+     *  seconds is far longer than a healthy plan (which becomes a chain within a tick or two)
+     *  and far shorter than the ninety seconds of standing still the bench calls a stall. */
+    private static final long PLAN_GIVE_UP_MS = 8000L;
     /** Simple name of the last goal type goalToVec could not translate; read over py4j. */
     public static volatile String pdLastUnknownGoal = "-";
 
@@ -629,6 +638,29 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         mod.getClientBaritone().getPathingBehavior().forceCancel();
         checker.reset();
         setDebugState("Tungsten (primary) pathfinding...");
+        // PLANNING THAT NEVER BECOMES A ROUTE IS NOT DRIVING, AND MUST NOT HOLD THE TICK.
+        // Returning true here claims ownership of movement. A stall capture shows what that costs
+        // when the claim is empty: pdEnter=7478 with pdWalking=0, pdNear=26, dbTick=7521 and
+        // rayMiss=7072 -- the bot standing 8.5 blocks from the block it wants, asking to move 29
+        // times, and never moving, because this branch reported "I am driving" on every one of
+        // those ticks while the movement queue never started.
+        // So bound it: if we have been planning this long with no chain ever running and the body
+        // not moving, hand the tick back and let something else try.
+        pdPlanning++;
+        boolean queueRunning = kaptainwutax.tungsten.path.movements.MovementQueue.isRunning();
+        net.minecraft.util.math.BlockPos hereNow = mod.getPlayer().getBlockPos();
+        if (queueRunning || !hereNow.equals(twPlanFeet)) {
+            twPlanFeet = hereNow;
+            twPlanSinceMs = nowMs;
+        } else if (twPlanSinceMs != 0L && nowMs - twPlanSinceMs > PLAN_GIVE_UP_MS) {
+            pdPlanGiveUp++;
+            twPlanSinceMs = 0L;
+            twPlanFeet = null;
+            return false;   // not driving; let the caller fall back
+        } else if (twPlanSinceMs == 0L) {
+            twPlanSinceMs = nowMs;
+            twPlanFeet = hereNow;
+        }
         return true;
     }
 
