@@ -80,13 +80,22 @@ def ensure_in_world():
     # every poll restarts the join for ever: the first version asked every 5s for two minutes and
     # reported "will not join" about a client that was perfectly able to, and had in fact been in
     # game when the loop started. Ask again only if a long wait really produced nothing.
+    # IN GAME IS NOT THE SAME AS IN *THIS* GAME.
+    # The gate used to accept any world at all. After a gamer_smoke sweep the client sits on the
+    # GAMER server while every rcon call here goes to test-server, so the zombie was summoned in
+    # one world and the bot fought in another: readings showed the bot at y=-106 and the "target"
+    # teleporting a hundred blocks between polls. The server's own player list is the authority,
+    # exactly as uctest/actors.py already warns.
+    def on_target():
+        return BOT in rcon("list")
+
     for attempt in range(3):
-        if py4j("state").get("inGame"):
+        if on_target():
             return True
         py4j("connect", ip="test-server")
         for _ in range(12):
             time.sleep(5)
-            if py4j("state").get("inGame"):
+            if on_target():
                 return True
     return False
 
@@ -138,6 +147,23 @@ def main():
         # Close enough that the fight starts at once, far enough that approach still happens.
         rcon(f"summon zombie {x + 4:.1f} {y:.1f} {z:.1f}")
         time.sleep(1)
+        # REFUSE AN UNCONTROLLED ARENA RATHER THAN MEASURE IT.
+        # `gamerule doMobSpawning false` did not take: a round opened with "Test passed. Count: 24"
+        # and the count then wandered between 10 and 27, so @test kill was picking whichever zombie
+        # the tracker listed first -- once one 83 blocks away -- and the summoned one was never the
+        # subject. A fight against an unknown zombie is not a measurement of anything.
+        n = rcon("execute if entity @e[type=zombie]")
+        if "Count: 1" not in n:
+            print(f"  arena not controlled ({n.strip()}) -- clearing and retrying")
+            rcon("kill @e[type=zombie]")
+            time.sleep(2)
+            rcon(f"summon zombie {x + 4:.1f} {y:.1f} {z:.1f}")
+            time.sleep(1)
+            n = rcon("execute if entity @e[type=zombie]")
+            if "Count: 1" not in n:
+                print(f"  STILL not one zombie ({n.strip()}) -- skipping this round rather than"
+                      f" reporting a fight against an unknown mob")
+                continue
         py4j("cmd", c="@test kill")
         t0 = time.time()
         dead, hp = False, None
