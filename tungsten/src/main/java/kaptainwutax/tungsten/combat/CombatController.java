@@ -40,6 +40,10 @@ public class CombatController {
      * refuses.
      */
     public static final double MOB_STRIKE_DISTANCE = TriggerBot.REACH - 0.1;  // 2.9
+    /** Pressing distance against a mob: well inside our reach, so no tick is spent closing. */
+    public static final double MOB_PRESS_DISTANCE = 1.8;
+    /** And essentially never retreat -- retreating is what the measurements punish. */
+    public static final double MOB_PRESS_BACK_OFF = 0.9;
     /** Below this against a mob we are inside its arm: step back out immediately. */
     public static final double MOB_BACK_OFF_DISTANCE = TriggerBot.REACH - 0.35; // 2.65
     /**
@@ -303,6 +307,25 @@ public class CombatController {
         // Derived from getAttackCooldownProgress — the same signal TriggerBot gates the swing on
         // (TriggerBot.java:75), so the mover and the attack gate stay one source of truth, which
         // is the reason STRIKE_DISTANCE was tied to TriggerBot.REACH in the first place.
+        // RE-TESTED WITH AN INSTRUMENT THAT WORKS.
+        // This was tried once and called "no effect", but that verdict came from min_hp sampled
+        // two or three times across a four-second fight -- and for part of the series the stats
+        // line was throwing and returning nothing at all. Damage is now counted per tick in the
+        // mod, so a change of three health points against a 3.0 baseline is visible.
+        // The reasoning is unchanged and still sound: STRIKE_DISTANCE (2.4) is derived for a duel
+        // where the opponent reaches as far as we do. A zombie's arm is about 2.0 eye-to-hitbox
+        // against our 3.0, so there is a band that hits without being hit -- and 2.4 sits inside
+        // its arm, conceding a free swing on every exchange.
+        // DISTANCE TUNING IS EXHAUSTED, AND THE DEFAULT WINS.
+        // Three settings measured with a per-tick damage counter, three runs each, against three
+        // zombies:
+        //     2.9 (outside their arm)  -> 12 / 20 / 6 damage, 3.9-6.9s
+        //     2.4 (this default)       ->  3 /  3 / 9 damage, 3.6-4.4s
+        //     1.8 (pressing in)        -> 14 / 15 / 14 damage, 7.5-7.9s
+        // Backing off lengthens the fight, as the law predicts. Pressing in ALSO lengthens it,
+        // which the law did not predict and the physics explains: inside 2.0 the bot is in the
+        // knockback, the mobs are shoved away, and it spends its time re-closing. The tuned
+        // default sits at the minimum of both, so this line stays as it is.
         double strikeAt = STRIKE_DISTANCE;
         double backOffAt = TOO_CLOSE_DISTANCE;
         if (kaptainwutax.tungsten.TungstenConfig.get().combatReachControl) {
