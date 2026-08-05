@@ -90,6 +90,10 @@ public class MobDefenseChain extends SingleTaskChain {
     public static volatile int mdTungstenTicks;
     /** Ticks the force field's nearest target was struck by tungsten's trigger bot. */
     public static volatile int mdAuraTungstenTicks;
+    /** Times height was taken against a crowd. Read as mdPillar. */
+    public static volatile int mdPillarDefence;
+    /** How high to climb: two blocks puts a zombie's arm out of the question. */
+    private static final int PILLAR_HEIGHT = 2;
     /** Ticks a crowd was answered with the bow instead of the sword. Read as mdBow. */
     public static volatile int mdBowTicks;
     /** Closer than this a bow is the wrong weapon -- they arrive before the draw finishes. */
@@ -641,6 +645,17 @@ public class MobDefenseChain extends SingleTaskChain {
             // which is the safe half of the choice.
             return 0;
         }
+    }
+
+    /** Anything in the pack we can stand on. Without one, height is not an option. */
+    private static boolean hasPillarBlock(AltoClef mod) {
+        for (net.minecraft.item.Item b : new net.minecraft.item.Item[]{
+                Items.COBBLESTONE, Items.DIRT, Items.STONE, Items.NETHERRACK, Items.OAK_PLANKS}) {
+            if (mod.getItemStorage().hasItem(b)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private BlockPos isInsideFireAndOnFire(AltoClef mod) {

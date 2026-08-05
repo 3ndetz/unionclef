@@ -2280,6 +2280,7 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.entity.AbstractDoToEntityTask.dteUnsafe = 0;
         adris.altoclef.chains.MobDefenseChain.mdTungstenTicks = 0;
         adris.altoclef.chains.MobDefenseChain.mdAuraTungstenTicks = 0;
+        adris.altoclef.chains.MobDefenseChain.mdPillarDefence = 0;
         adris.altoclef.chains.MobDefenseChain.mdBowTicks = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qBurnedInPlace = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qTeleported = 0;
@@ -2326,7 +2327,7 @@ public class Py4jEntryPoint {
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
                         + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d)"
-                        + " sprint=%d/%d lowHp=%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdBow=%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
+                        + " sprint=%d/%d lowHp=%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdPillarD=%d mdBow=%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
                         + " | gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
@@ -2440,6 +2441,7 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.entity.AbstractDoToEntityTask.dteUnsafe,
                 adris.altoclef.chains.MobDefenseChain.mdTungstenTicks,
                 adris.altoclef.chains.MobDefenseChain.mdAuraTungstenTicks,
+                adris.altoclef.chains.MobDefenseChain.mdPillarDefence,
                 adris.altoclef.chains.MobDefenseChain.mdBowTicks,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qBurnedInPlace,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qTeleported,
