@@ -90,10 +90,12 @@ public class MobDefenseChain extends SingleTaskChain {
     public static volatile int mdTungstenTicks;
     /** Ticks the force field's nearest target was struck by tungsten's trigger bot. */
     public static volatile int mdAuraTungstenTicks;
-    /** Times height was taken against a crowd. Read as mdPillar. */
+    /** Times height was taken against a crowd. Read as mdPillarD. */
     public static volatile int mdPillarDefence;
-    /** How high to climb: two blocks puts a zombie's arm out of the question. */
+    /** Two blocks puts a zombie's arm out of the question and keeps our own swing in range. */
     private static final int PILLAR_HEIGHT = 2;
+    /** Climb only while the nearest is still this far off -- the climb must not cost health. */
+    private static final double CLIMB_EARLY_RANGE = 6.0;
     /** Ticks a crowd was answered with the bow instead of the sword. Read as mdBow. */
     public static volatile int mdBowTicks;
     /** Closer than this a bow is the wrong weapon -- they arrive before the draw finishes. */
