@@ -266,6 +266,7 @@ def main():
         print("  already held at start (cannot count):", ", ".join(sorted(preexisting)))
     ctx_last_chain = [None]
     prev_stats = {}
+    stall = [None, 0]
 
     # MARK WHERE THE RUN STARTS IN THE SERVER LOG.
     # Deaths were being read from a --tail window WIDER than the run, so a run whose counters were
@@ -330,6 +331,18 @@ def main():
                 prev_stats.update(cur)
             except Exception:
                 pass
+            # A STALL IS AN UNCHANGED POSITION, NOT A ZEROED COUNTER.
+            # The first watcher only knew "every delta zero" and walked straight past the state
+            # that replaced it: the movement queue taking 110 steps a poll while the bot does not
+            # shift a single block. Position is the honest signal, whatever the counters say.
+            here = str(pos)
+            if here == stall[0] and here != "None":
+                stall[1] += 1
+                if stall[1] == 3:
+                    print(f"  STALLED: position unchanged for 3 polls at {here}")
+            else:
+                stall[0] = here
+                stall[1] = 0
             print(f"  t={int(time.time()-t0)}s inGame={gs.get('inGame')} hp={hp} pos={pos} items={inv.get('items')} busy={ht.get('busy')}{dl}")
         except Exception as e:
             print(f"  poll error (client may be busy): {str(e)[:80]}")
