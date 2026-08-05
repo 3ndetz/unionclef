@@ -90,6 +90,9 @@ public final class MovementQueue {
     // broken (clicked=0) have to keep telling us the truth about the replacement.
     // ---------------------------------------------------------------------------------------
     public static volatile int qStarted, qSteps, qSuccess, qUnreachable, qTimeout, qTicks;
+    /** Steps completed while the body has not left the cell it started the chain in. A route that
+     *  is being consumed rather than walked shows up here and nowhere else. */
+    public static volatile int qBurnedInPlace;
     /**
      * WHY the queue handed the body back, split three ways. {@code qUnreachable} lumped them
      * together and the lump was unreadable: a chase measured 481 starts for 53 steps, and "454
@@ -111,6 +114,8 @@ public final class MovementQueue {
     private static final List<Movement> movements = new ArrayList<>();
     private static volatile boolean running = false;
     private static int index = 0;
+    /** Where the body stood when the current chain began; the yardstick for qBurnedInPlace. */
+    private static BetterBlockPos chainStartFeet = null;
     private static int ticksOnCurrent = 0;
     private static int ticksAway = 0;
     /** {@code costEstimateIndex} (PathExecutor.java:68): -1 = "no estimate read yet". */
@@ -450,6 +455,12 @@ public final class MovementQueue {
         currentCostEstimate = MAX_COST_ESTIMATE;
         running = true;
         qStarted++;
+        // Latch where the body is as this chain begins; qBurnedInPlace is measured against it.
+        try {
+            chainStartFeet = movements.get(0).ctx.playerFeet();
+        } catch (Throwable t) {
+            chainStartFeet = null;
+        }
         Debug.logMessage("MovementQueue: " + movements.size() + " movement(s) "
                 + cells.get(0).getX() + "," + cells.get(0).getY() + "," + cells.get(0).getZ()
                 // the chain may have been truncated, so report where it will ACTUALLY end
@@ -598,6 +609,14 @@ public final class MovementQueue {
             if (status == MovementStatus.SUCCESS) {
                 qSuccess++;
                 qSteps++;
+                // A STEP THAT MOVES NOBODY IS NOT PROGRESS, AND IT SHOULD BE VISIBLE AS SUCH.
+                // Compared against where the body was when this chain started: a genuine route
+                // leaves that cell within a step or two, while a consumed one never does.
+                BetterBlockPos feetNow = movement.ctx.playerFeet();
+                if (chainStartFeet != null && feetNow != null
+                        && feetNow.equals(chainStartFeet)) {
+                    qBurnedInPlace++;
+                }
                 index++;
                 onChangeInPathPosition();
                 // Upstream recurses into onTick() here (:229-236) so the NEXT movement presses its
@@ -681,6 +700,27 @@ public final class MovementQueue {
                     Debug.logMessage("MovementQueue: skipping forward " + (i - index) + " steps, to " + i);
                 }
                 index = i - 1;
+                // RESET WHAT WE LAND ON -- THE SAME REASON THE REWIND ABOVE DOES.
+                // A SUCCESS status is sticky: updateState returns immediately when the status is
+                // neither RUNNING nor PREPPING, so replaying an already-succeeded movement reports
+                // SUCCESS again without touching the world. The backwards branch has reset for
+                // exactly that reason and this one did not, which leaves the identical failure
+                // reachable from the other side -- land on a movement that has already succeeded,
+                // it completes instantly, index++, land again, and the chain is consumed WITHOUT
+                // THE BOT MOVING.
+                //
+                // That is the stall this file's own history describes (mqSteps=14365 on a
+                // 14-step chain) and it is what a capture on the playthrough shows: 114 steps
+                // advanced in a single poll, one chain started, sixteen rewinds in the whole run,
+                // and the position not changing by a block. Sixteen rewinds cannot burn 114
+                // steps; a forward landing with no reset can.
+                //
+                // Reset the landing movement AND the one after it: the loop re-enters at `index`
+                // and the very next advance runs `index + 1`, which the same stickiness would
+                // otherwise wave through.
+                for (int j = index; j <= i && j < movements.size(); j++) {
+                    movements.get(j).reset();
+                }
                 onChangeInPathPosition();
                 return true;
             }
