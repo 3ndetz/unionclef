@@ -256,7 +256,22 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (cachedGoal == null) {
             cachedGoal = newGoal(AltoClef.getInstance());
         }
-        return cachedGoal != null && cachedGoal.isInGoal(AltoClef.getInstance().getPlayer().getBlockPos());
+        // SAY WHERE WE WERE WHEN WE CALLED IT DONE.
+        // nav_bridge ends with the bot standing at the lip of the gap, 11.6 blocks short, and the
+        // chain reading "No tasks" -- with no "interrupted" and no "finished in N seconds" in the
+        // log, which leaves this method returning true as the only way out. If that is what
+        // happens, the goal and the position at that moment name the bug; if it is not, this line
+        // never prints and the search moves elsewhere.
+        if (AltoClef.getInstance() == null || AltoClef.getInstance().getPlayer() == null) {
+            return false;
+        }
+        net.minecraft.util.math.BlockPos at = AltoClef.getInstance().getPlayer().getBlockPos();
+        boolean done = cachedGoal != null && cachedGoal.isInGoal(at);
+        if (done) {
+            kaptainwutax.tungsten.Debug.logMessage("[nav] goal task reports FINISHED at "
+                    + at.getX() + "," + at.getY() + "," + at.getZ() + " goal=" + cachedGoal);
+        }
+        return done;
     }
 
     @Override
