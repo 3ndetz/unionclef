@@ -43,6 +43,18 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
 
     // Player PvP strategy fields (player-only)
     private static final TimerGame _attackStrategyTimer = new TimerGame(15);
+
+    /** Tungsten's duelling engine -- aim, spacing, strafe, crit timing, disengage. One per task. */
+    private final kaptainwutax.tungsten.combat.CombatController _combat =
+            new kaptainwutax.tungsten.combat.CombatController();
+    /** When we entered striking range with the target's health unchanged; 0 = not in reach. */
+    private long _inReachSinceMs = 0L;
+    /** How long in reach without the target losing health before we blame the angle. Set to match
+     *  the old HITS_BEFORE_REPOSITION at roughly a swing a second, so giving up keeps its former
+     *  patience rather than acquiring a new one by accident. */
+    private static final long NO_DAMAGE_MS = 4000L;
+    /** Ticks the fight ran on tungsten. Counted so "are mobs on tungsten" is a number. */
+    public static volatile int kaTungstenTicks;
     private static boolean _aggressiveAttackStrategy = true;
 
     // No-damage detection: reposition when attacks aren't connecting
@@ -310,6 +322,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         // Sync baseline HP whenever it drops (DamageTracker-equivalent: real-time health check)
         if (_repositionEntityId == player.getId() && player.getHealth() < _targetHealthAtFirstSwing) {
             _swingCount = 0;
+            _inReachSinceMs = 0L;   // it IS taking damage; the angle is fine
             _targetHealthAtFirstSwing = player.getHealth();
             _repositioning = false;
         }
@@ -337,8 +350,13 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             _repositioning = false;
         }
 
-        // Always smooth-aim at player during PvP
-        LookHelper.smoothLook(mod, player);
+        // AIM BELONGS TO WHOEVER IS FIGHTING.
+        // In reach, tungsten's controller aims (WindMouse, at a PREDICTED position); steering the
+        // camera from here as well would mean two writers per tick and a crosshair that lands
+        // between them. Out of reach there is no controller running, so this is the only aim.
+        if (!canHit) {
+            LookHelper.smoothLook(mod, player);
+        }
 
         // Detect whether target is blocking with a shield → prefer axe to break it
         boolean preferAxe = false;
@@ -360,53 +378,43 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
 
         // PRIORITY 1: If we can hit, attack immediately — edge caution is for MOVEMENT only
         if (canHit) {
+            // THE FIGHT ITSELF RUNS ON TUNGSTEN.
+            // What stood here was a hand-rolled duel: swing on cooldown, sprint-jump when far
+            // enough, shuffle when near an edge. Tungsten's CombatController already does that job
+            // and more -- aim at a predicted position, hold a striking distance, circle-strafe,
+            // time crit jumps, and break contact below half a bar -- and it is what the PvP side
+            // has fought with since the duel work took it from 7/12 to 9/12. Mobs stayed on the
+            // old code for no better reason than that nothing had rewired them.
+            //
+            // Approach is untouched: below this branch, altoclef's pathing still walks us in.
+            // This is only the part where the target is already within reach.
             if (!equipWeapon(mod, preferAxe)) {
-                float hitProg = mod.getPlayer().getAttackCooldownProgress(0);
-                if (hitProg >= 0.99 && player.hurtTime <= 0) {
-                    boolean didHit = mod.getControllerExtras().attack(player);
-                    // Count only confirmed hits (crosshair actually connected)
-                    if (didHit) {
-                        float currentHP = player.getHealth();
-                        if (currentHP < _targetHealthAtFirstSwing) {
-                            _swingCount = 0;
-                            _targetHealthAtFirstSwing = currentHP;
-                            _repositionCycles.remove(player.getId());
-                        } else {
-                            // Only count at ≥0.5s intervals
-                            long now = System.currentTimeMillis();
-                            if (now - _lastSwingCountedMs >= MIN_SWING_INTERVAL_MS) {
-                                _lastSwingCountedMs = now;
-                                _swingCount++;
-                            }
-                            if (_swingCount >= HITS_BEFORE_REPOSITION && !_repositioning
-                                    && _repositionCooldown.elapsed()) {
-                                _repositioning = true;
-                                _repositionCooldown.reset();
-                                _swingCount = 0;
-                                int cycles = _repositionCycles.merge(player.getId(), 1, Integer::sum);
-                                if (cycles >= REPOSITION_CYCLES_FOR_IMMUNITY) {
-                                    _repositionCycles.remove(player.getId());
-                                    grantImmunity(player, currentHP);
-                                    mod.getEntityTracker().requestEntityUnreachable(player);
-                                }
-                            }
-                        }
+                _combat.tick(mod.getPlayer(), player, mod.getWorld());
+                kaTungstenTicks++;
+
+                // NO-DAMAGE DETECTION HAS TO CHANGE ITS YARDSTICK.
+                // It used to count OUR attack calls, which only exist while we do the swinging.
+                // With the controller swinging, that counter would sit at zero for ever and the
+                // machinery that gives up on an unreachable target would go quietly blind. Time
+                // spent in reach measures the same thing without assuming who swings: if we have
+                // been in range this long and its health has not moved, the angle is wrong.
+                long now = System.currentTimeMillis();
+                if (_inReachSinceMs == 0L) {
+                    _inReachSinceMs = now;
+                }
+                if (now - _inReachSinceMs >= NO_DAMAGE_MS && !_repositioning
+                        && _repositionCooldown.elapsed()) {
+                    _repositioning = true;
+                    _repositionCooldown.reset();
+                    _inReachSinceMs = 0L;
+                    int cycles = _repositionCycles.merge(player.getId(), 1, Integer::sum);
+                    if (cycles >= REPOSITION_CYCLES_FOR_IMMUNITY) {
+                        _repositionCycles.remove(player.getId());
+                        grantImmunity(player, player.getHealth());
+                        mod.getEntityTracker().requestEntityUnreachable(player);
                     }
-                    setDebugState(didHit ? "ATTACKING PLAYER (" + _swingCount + " no-dmg hits)" : "Swinging — crosshair missed");
-                } else {
-                    setDebugState("Waiting for cooldown (PvP)");
                 }
-            }
-            // Movement while attacking: strafe near edge, sprint-jump if safe
-            if (nearEdge) {
-                // Light strafe only, no forward rush, no jumping off edge
-                if (dist > 1.5) {
-                    // Close enough to swing but drifting — shuffle forward carefully
-                    mod.getInputControls().hold(Input.SNEAK);
-                    mod.getInputControls().hold(Input.MOVE_FORWARD);
-                }
-            } else if (dist > 0.5) {
-                KillAuraHelper.GoJump(mod, dist < 4.4, true);
+                setDebugState("Fighting (tungsten)");
             }
             return null;
         }
