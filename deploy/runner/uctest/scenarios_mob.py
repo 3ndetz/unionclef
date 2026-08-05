@@ -1,0 +1,116 @@
+"""uctest mob suite — does the bot fight MOBS, and does the fight run on tungsten?
+
+Why this exists as a suite rather than a script. Mob combat could not be measured by anything
+already here: the pvp courses drive `punk`, which is tungsten's own PunkPlayerTask and never
+touches the mob path, and a @gamer sweep spends its time chopping wood and never commits to a
+melee at all. A hand-rolled probe filled the gap for a while and spent most of that time being
+wrong about its own arena -- the worst of it being that the stand's arena is carved to AIR from
+the void bottom up to y=-40, so a zombie summoned beside the bot simply FELL (traced: y=-60 ->
+-85 -> -160 -> gone in under two seconds) and every one of those falls was recorded as a lost
+fight.
+
+Building the course through the arena helper removes that whole class of error: a flat field is
+a floor, laid the same way every run.
+"""
+import time
+
+from .actors import KIT_SWORD
+from .arena import STAND_Y
+from .scenario import Criterion, Scenario
+
+
+def _zombie_count(ctx):
+    """How many zombies exist, straight from the server. -1 when the answer is unparseable."""
+    r = ctx.rcon.cmd("execute if entity @e[type=zombie]", allow_reject=True)
+    if "Count:" not in r:
+        return 0
+    try:
+        return int(r.split("Count:")[1].strip().split()[0])
+    except (IndexError, ValueError):
+        return -1
+
+
+def _stat(ctx, name):
+    """One counter group out of the mod's stats line, or None when it cannot be read."""
+    ok, s = ctx.bot.py.try_call("placeStats")
+    if not ok or not s:
+        return None
+    for tok in str(s).split():
+        if tok.startswith(name + "="):
+            return tok.split("=", 1)[1]
+    return None
+
+
+def _tung_ticks(ctx):
+    """Ticks the fight spent inside tungsten, across BOTH paths.
+
+    mdTung is a pair: the committed-fight branch of MobDefenseChain, and the force field's strike
+    on the nearest hostile. Watching only one of them once reported "the kill did not come through
+    the rewired path" about a fight that had gone entirely through the other.
+    """
+    raw = _stat(ctx, "mdTung") or ""
+    total = 0
+    for part in raw.split("/"):
+        if part.lstrip("-").isdigit():
+            total += int(part)
+    return total
+
+
+class MobMelee(Scenario):
+    """One zombie, one armed bot, flat ground at night. It should die, and to tungsten."""
+
+    id = "mob_melee"
+    tier = "gate"
+    needs_victim = False
+    duration = 60
+    bot_kit = KIT_SWORD
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=14, grass=False)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+
+    def drive_start(self, ctx):
+        # Night, because a zombie in daylight BURNS: measured at about 1.2 HP a second, which
+        # kills it in twenty seconds flat with the bot doing nothing. Anything scored on a lit
+        # arena is measuring the sun.
+        ctx.rcon.cmd("time set midnight")
+        # spawn_monsters is the name this version accepts; the arena sends it too, but a course
+        # that depends on there being exactly ONE zombie says so itself.
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd("difficulty normal")
+        ctx.rcon.cmd("kill @e[type=zombie]")
+        ctx.bot.py.try_call("resetRunCounters")
+        # Four blocks: inside the field, close enough to engage at once, far enough that closing
+        # the distance is still part of the test.
+        ctx.rcon.cmd(f"summon zombie 4.5 {STAND_Y} 0.5")
+        ctx.geo["spawned"] = _zombie_count(ctx)
+        time.sleep(2)
+        # @test kill runs KillEntityTask on the nearest tracked zombie. The tracker lags the summon
+        # by about a second, and issued too early the command finds an empty list and starts
+        # nothing -- with no task running the defence chain is never ticked and nothing fights.
+        ctx.bot.cmd("@test kill")
+
+    def early_stop(self, ctx):
+        return _zombie_count(ctx) == 0
+
+    def judge(self, ctx):
+        killed = _zombie_count(ctx) == 0
+        ticks = _tung_ticks(ctx)
+        hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
+        low = min(hps) if hps else None
+
+        yield Criterion("exactly one zombie was spawned", ctx.geo.get("spawned") == 1,
+                        f"count_at_spawn={ctx.geo.get('spawned')}")
+        yield Criterion("the zombie is dead", killed,
+                        f"remaining={_zombie_count(ctx)}")
+        # THE POINT OF THE COURSE. Killed is not enough: the old force field could always do that.
+        # What is being measured is whether the swinging ran on tungsten.
+        yield Criterion("the fight ran on tungsten", ticks > 0, f"mdTung total={ticks}")
+        # A fall is not a fight. On a flat field with a floor this should never fire, and if it
+        # does the arena is wrong rather than the bot.
+        yield Criterion("the bot was actually in the fight", low is not None and low < 20.0,
+                        f"min_hp={low}", gate=False)
+
+
+# The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
+SCENARIOS = [MobMelee]
