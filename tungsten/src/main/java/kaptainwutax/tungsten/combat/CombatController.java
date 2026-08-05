@@ -52,6 +52,13 @@ public class CombatController {
     public static final double MOB_ARM_REACH = 2.25;
     /** Within this, a second hostile turns the fight from a duel into a crowd. */
     public static final double CROWD_RADIUS = 7.0;
+    /** A vanilla mob owes about a second between melee attacks; this is that gap, less a margin
+     *  for the tick the animation arrives on. */
+    private static final long MOB_SWING_COOLDOWN_MS = 850L;
+    /** Last observed swing per entity id -- the clock the safe window is measured from. */
+    private static final java.util.Map<Integer, Long> lastSwingMs = new java.util.HashMap<>();
+    /** Ticks spent holding off because a loaded arm was in range. Read as armHold. */
+    public static volatile int armLoadedTicks;
     /** Ticks the fight was treated as a CROWD (kite) rather than a duel. Read as crowdEsc. */
     public static volatile int crowdEscapeTicks;
 
@@ -261,6 +268,7 @@ public class CombatController {
 
         long now = System.currentTimeMillis();
         double dist = TriggerBot.eyeToHitbox(player, target);
+
 
 
 
