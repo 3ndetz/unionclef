@@ -52,6 +52,16 @@ public class CombatController {
     public static final double MOB_ARM_REACH = 2.25;
     /** Within this, a second hostile turns the fight from a duel into a crowd. */
     public static final double CROWD_RADIUS = 7.0;
+    /** Walking speed of a hostile mob, blocks per tick — a zombie's, which is the slow case. */
+    private static final double MOB_SPEED_PER_TICK = 0.115;
+    /** How far ahead the plan looks. One second: long enough to matter, short enough to be true. */
+    private static final double PLAN_HORIZON_TICKS = 20.0;
+    /** Ticks between decisions, and therefore how far a candidate step reaches. */
+    private static final int PLAN_REPLAN_TICKS = 6;
+    /** What being able to hit is worth against one enemy arriving within the horizon. */
+    private static final double PLAN_OPPORTUNITY_WEIGHT = 0.8;
+    /** Ticks the crowd plan chose the step. Read as crowdPlan. */
+    public static volatile int crowdPlanTicks;
     /** A vanilla mob owes about a second between melee attacks; this is that gap, less a margin
      *  for the tick the animation arrives on. */
     private static final long MOB_SWING_COOLDOWN_MS = 850L;
@@ -268,6 +278,8 @@ public class CombatController {
 
         long now = System.currentTimeMillis();
         double dist = TriggerBot.eyeToHitbox(player, target);
+
+
 
 
 
