@@ -87,7 +87,7 @@ public class Playground {
             "cam 0", "cam 1", "cam 2",
             "sign", "sign2", "signshop", "pickup", "chunk", "structure", "place",
             "deadmeme", "stacked", "stacked2", "ravage", "temples", "outer",
-            "smelt", "iron", "avoid", "portal", "kill", "kill2", "craft",
+            "smelt", "iron", "avoid", "portal", "kill", "killhostile", "kill2", "craft",
             "food", "temple", "blaze", "flint", "unobtainable", "piglin",
             "stronghold", "terminate", "stoprot", "startrot",
             "t", "tt", "sw", "swt", "mm", "kpvp", "thepit",
@@ -316,6 +316,33 @@ public class Playground {
                     mod.runUserTask(new KillEntityTask(entity));
                 }
                 break;
+            // KILL THE NEAREST HOSTILE, NOT JUST A ZOMBIE.
+            // `kill` above looks for ZombieEntity specifically, so a course built around a
+            // skeleton silently started NOTHING: no user task, an idle runner, and with no task
+            // running the defence chain is never ticked either. Measured on mob_skeleton -- every
+            // mdRet slot at zero for the whole fight while the bot stood there and was shot from
+            // 16 health down to 4. The course was invalid, not the bot.
+            case "killhostile": {
+                // ASK FOR THE HOSTILES LIST, NOT FOR A SUPERCLASS.
+                // getTrackedEntities indexes by CONCRETE class, so asking it for HostileEntity
+                // returns nothing at all -- the first version of this printed "No hostiles found"
+                // with a skeleton standing eight blocks away. The tracker keeps a hostiles list of
+                // its own, which is what MobDefenseChain uses.
+                java.util.List<LivingEntity> hostiles = mod.getEntityTracker().getHostiles();
+                LivingEntity best = null;
+                double bestD = Double.MAX_VALUE;
+                for (LivingEntity h : hostiles) {
+                    if (!h.isAlive()) continue;
+                    double d = h.squaredDistanceTo(mod.getPlayer());
+                    if (d < bestD) { bestD = d; best = h; }
+                }
+                if (best == null) {
+                    Debug.logWarning("No hostiles found.");
+                } else {
+                    mod.runUserTask(new KillEntityTask(best));
+                }
+                break;
+            }
             case "kill2":
                 mod.getMobDefenseChain().resetTargetEntity();
                 mod.getMobDefenseChain().resetForceField();

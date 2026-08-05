@@ -223,7 +223,9 @@ class SkeletonDodge(MobMelee):
         # Far enough that it shoots rather than melees -- the point is the arrow.
         ctx.rcon.cmd(f"summon skeleton 12.5 {STAND_Y} 0.5")
         time.sleep(2)
-        ctx.bot.cmd("@test kill")
+        # `@test kill` targets ZOMBIES only, so it started nothing here and the bot stood and
+        # was shot with every defence-chain counter at zero. This one takes the nearest hostile.
+        ctx.bot.cmd("@test killhostile")
 
     def early_stop(self, ctx):
         return "Count:" not in ctx.rcon.cmd("execute if entity @e[type=skeleton]",
