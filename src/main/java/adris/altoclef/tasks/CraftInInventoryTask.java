@@ -4,6 +4,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.tasks.resources.CollectRecipeCataloguedResourcesTask;
 import adris.altoclef.tasks.slot.ReceiveCraftingOutputSlotTask;
 import adris.altoclef.tasksystem.Task;
+import adris.altoclef.tasks.slot.EnsureFreePlayerCraftingGridTask;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.RecipeTarget;
 import adris.altoclef.util.helpers.ItemHelper;
@@ -24,6 +25,8 @@ public class CraftInInventoryTask extends ResourceTask {
 
     /** Ticks, "no materials" exits, and output collections; read over py4j in placeStats(). */
     public static volatile int ciTick, ciCollect, ciReceive;
+    /** Ticks the craft found its own ingredients stranded in the 2x2 grid. Read as ciGrid. */
+    public static volatile int ciGridStranded;
 
     private final RecipeTarget _target;
     private final boolean _collect;
@@ -88,6 +91,27 @@ public class CraftInInventoryTask extends ResourceTask {
 
         ItemTarget toGet = itemTargets[0];
         Item toGetItem = toGet.getMatches()[0];
+
+        // MATERIALS SITTING IN THE GRID ARE NOT MISSING MATERIALS.
+        // hasRecipeMaterialsOrTarget looks at the INVENTORY. Manual crafting -- now the default,
+        // because the recipe book is disabled on plenty of servers -- puts the ingredients INTO
+        // the 2x2 grid, and anything that interrupts the craft leaves them stranded there. The
+        // inventory check then says "no materials", the collect branch runs, and it runs again,
+        // and again: measured on the playthrough, ciCollect=8051 out of ciTick=8051 -- EVERY
+        // tick -- with ciReceive=0 and 1008 slot clicks, the bot standing at a table "Getting
+        // stick x 2" while its planks sat in the grid in front of it.
+        // Clearing the grid puts them back where the check can see them. The task already exists;
+        // nothing was calling it from here.
+        if (StorageHelper.isPlayerInventoryOpen()) {
+            for (Slot gridSlot : PlayerSlot.CRAFT_INPUT_SLOTS) {
+                if (!StorageHelper.getItemStackInSlot(gridSlot).isEmpty()) {
+                    ciGridStranded++;
+                    setDebugState("Ingredients stranded in the crafting grid — taking them back");
+                    return new EnsureFreePlayerCraftingGridTask();
+                }
+            }
+        }
+
         if (_collect && !StorageHelper.hasRecipeMaterialsOrTarget(mod, _target)) {
             // PRIME SUSPECT: a bot that believes it lacks materials never reaches crafting at
             // all, however well placement works -- and it holds up to twelve wood items a run.
