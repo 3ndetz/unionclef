@@ -9,7 +9,6 @@ import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import baritone.api.pathing.goals.Goal;
 import kaptainwutax.tungsten.path.movements.Rotation;
 import kaptainwutax.tungsten.path.movements.Input;
-import baritone.pathing.movement.MovementHelper;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -256,7 +255,7 @@ public class EscapeFromLavaTask extends CustomBaritoneGoalTask {
 
         private static boolean isLava(int x, int y, int z) {
             if (MinecraftClient.getInstance().world == null) return false;
-            return MovementHelper.isLava(MinecraftClient.getInstance().world.getBlockState(new BlockPos(x, y, z)));
+            return adris.altoclef.util.helpers.WorldHelper.isLavaState(MinecraftClient.getInstance().world.getBlockState(new BlockPos(x, y, z)));
         }
 
         private static boolean isLavaAdjacent(int x, int y, int z) {
@@ -267,7 +266,7 @@ public class EscapeFromLavaTask extends CustomBaritoneGoalTask {
 
         private static boolean isWater(int x, int y, int z) {
             if (MinecraftClient.getInstance().world == null) return false;
-            return MovementHelper.isWater(MinecraftClient.getInstance().world.getBlockState(new BlockPos(x, y, z)));
+            return adris.altoclef.util.helpers.WorldHelper.isWaterState(MinecraftClient.getInstance().world.getBlockState(new BlockPos(x, y, z)));
         }
 
         @Override

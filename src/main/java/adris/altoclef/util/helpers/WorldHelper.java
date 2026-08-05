@@ -42,6 +42,24 @@ import java.util.*;
 public interface WorldHelper {
 
     /**
+     * Is this block lava? Asked of the STATE, with no pathfinder attached.
+     *
+     * <p>Part of G-0, cutting altoclef's baritone imports: this was
+     * {@code baritone.pathing.movement.MovementHelper.isLava}, a one-line vanilla check wearing a
+     * pathfinder's coat -- two task files pulled in the whole of MovementHelper for it. The fluid
+     * TAG is what the game itself tests, so flowing lava counts exactly as it should.
+     */
+    static boolean isLavaState(net.minecraft.block.BlockState state) {
+        return state != null && state.getFluidState().isIn(net.minecraft.registry.tag.FluidTags.LAVA);
+    }
+
+    /** Is this block water? The same one-line check, for the same reason. */
+    static boolean isWaterState(net.minecraft.block.BlockState state) {
+        return state != null && state.getFluidState().isIn(net.minecraft.registry.tag.FluidTags.WATER);
+    }
+
+
+    /**
      * Get the number of in-game ticks the game/world has been active for.
      */
     static int getTicks() {
