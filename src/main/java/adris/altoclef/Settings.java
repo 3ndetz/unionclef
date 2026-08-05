@@ -122,7 +122,23 @@ public class Settings implements IFailableConfigFile {
      * <p>So the fault is upstream of BOTH routes and this switch is not the lever. Flipped back
      * rather than left changed, because there is no evidence either setting is better.
      */
-    private boolean useCraftingBookToCraft = true;
+    /**
+     * Craft by PLACING ITEMS IN THE GRID, not by clicking the recipe book.
+     *
+     * <p>Off by default at the user's instruction (2026-08-05): the recipe book is DISABLED on a
+     * good number of servers, and a bot that depends on it simply stops there. Manual placement
+     * works everywhere the grid does.
+     *
+     * <p>It is also what the stand caught: a stall capture had the bot ninety seconds inside
+     * "Doing stuff in crafting_table container" with cgScreen=class_1723 -- the 2x2 player grid --
+     * and cgBookNone=655, the book correctly answering "no such recipe" over and over while
+     * nothing listened.
+     *
+     * <p>Still a setting rather than a deletion: on a server that does have the book, clicking one
+     * recipe is fewer packets than placing nine items, so it stays available to anyone who wants
+     * it.
+     */
+    private boolean useCraftingBookToCraft = false;
 
     /**
      * If a dropped resource item is further than this from the player, don't pick it up.

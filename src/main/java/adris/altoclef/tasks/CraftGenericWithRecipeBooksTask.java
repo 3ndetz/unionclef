@@ -25,6 +25,8 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
 
     /** States this task passes through per tick; read over py4j in placeStats(). */
     public static volatile int cgTick, cgBigOpen, cgInvOpen, cgNoScreen, cgSent, cgOutputReady, cgCraftable, cgNotCraftable, cgBookCraftable, cgBookNone;
+    /** Ticks a 3x3 recipe was attempted with only the 2x2 inventory grid open. Read as cgSmall. */
+    public static volatile int cgTooSmallGrid;
     /** Item of the last recipe actually sent; read over py4j. */
     public static volatile String cgLastSent = "-";
     /** Screen handler the last recipe was sent from; read over py4j. */
@@ -64,6 +66,20 @@ public class CraftGenericWithRecipeBooksTask extends Task implements ITaskUsesCr
         if (isBigCraftingOpen) cgBigOpen++;
         else if (isPlayerInventoryOpen) cgInvOpen++;
         else cgNoScreen++;
+
+        // A 3x3 RECIPE CANNOT BE MADE IN A 2x2 GRID, AND PRETENDING OTHERWISE COSTS THE RUN.
+        // Read out of a stall capture: the bot stood still for ninety seconds inside
+        // <Doing stuff in crafting_table container> while trying to make a wooden_pickaxe, with
+        // cgScreen=class_1723 -- the PLAYER inventory, a 2x2 grid -- and cgBookNone=655. The
+        // recipe book was answering correctly every single time; nothing here listened, so the
+        // task retried an impossible craft for ever instead of admitting it needs a table.
+        // Saying so lets the parent open one, which is the whole point of having a parent.
+        if (!isBigCraftingOpen && target.getRecipe() != null && target.getRecipe().isBig()) {
+            cgTooSmallGrid++;
+            setDebugState("Recipe needs a 3x3 grid; the 2x2 inventory cannot make it");
+            stop();
+            return null;
+        }
 
         // Get the item stack in the cursor slot
         ItemStack cursorStack = StorageHelper.getItemStackInCursorSlot();

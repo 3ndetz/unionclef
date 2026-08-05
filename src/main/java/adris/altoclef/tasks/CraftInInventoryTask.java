@@ -100,6 +100,11 @@ public class CraftInInventoryTask extends ResourceTask {
         // No need to free inventory, output gets picked up.
 
         setDebugState("Crafting in inventory... for " + toGet);
+        // MANUAL PLACEMENT IS THE ONE THAT WORKS EVERYWHERE.
+        // The recipe book is off by default (see Settings.useCraftingBookToCraft): plenty of
+        // servers disable it, and this is the exact path a stall capture caught looping -- the
+        // book answering "no such recipe" 655 times for a 3x3 item while the 2x2 player grid was
+        // open. Placing the items needs no book and no server feature.
         return mod.getModSettings().shouldUseCraftingBookToCraft()
                 ? new CraftGenericWithRecipeBooksTask(_target)
                 : new CraftGenericManuallyTask(_target);
