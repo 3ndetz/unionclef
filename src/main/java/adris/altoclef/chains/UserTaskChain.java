@@ -13,6 +13,12 @@ import adris.altoclef.util.time.Stopwatch;
 @SuppressWarnings("ALL")
 public class UserTaskChain extends SingleTaskChain {
 
+    /** How many times an INTERRUPTED (not finished) goal is put back on its feet before we stop
+     *  insisting. Three is enough for a death, an MLG and a mob-defence interruption in the same
+     *  run, and few enough that a task stopping itself every tick still terminates. */
+    private static final int MAX_REARM_ATTEMPTS = 3;
+    private int rearmAttempts = 0;
+
     private final Stopwatch taskStopwatch = new Stopwatch();
     private Runnable currentOnFinish = null;
 
@@ -114,6 +120,30 @@ public class UserTaskChain extends SingleTaskChain {
 
     @Override
     protected void onTaskFinish(AltoClef mod) {
+        // STOPPED IS NOT FINISHED, AND A GOAL DOES NOT EXPIRE BECAUSE WE DIED ON THE WAY.
+        // SingleTaskChain calls this on `isFinished() || stopped()`, and the second half is
+        // reached whenever something interrupts the task -- a death and respawn being the
+        // ordinary case. Everything below then treats it as a completed job: the runner is
+        // DISABLED, the chain switched off, and the bot stands where it respawned for the rest
+        // of the run.
+        //
+        // Measured on nav_bridge, and reproduced on demand by killing the bot mid-goal: it walks
+        // off a lip at x~18, falls to y=-193, respawns at 0.5,-60,0.5, and then does nothing for
+        // forty seconds. The state afterwards reads
+        //     active=false | (no chain running) | UserTaskChain(on=false)
+        // which is a runner that was switched off, not a goal that was met.
+        //
+        // The goal is still unmet, so re-arm it instead. Bounded, because a task that stops
+        // itself every tick must not spin here for ever: three attempts, then let it end the way
+        // it used to, so a genuinely doomed task still terminates and says so.
+        if (mainTask != null && !mainTask.isFinished() && rearmAttempts < MAX_REARM_ATTEMPTS) {
+            rearmAttempts++;
+            Debug.logMessage("Задача была ПРЕРВАНА, а не выполнена — возобновляю (попытка %d из %d)",
+                    rearmAttempts, MAX_REARM_ATTEMPTS);
+            mainTask.reset();
+            return;
+        }
+
         boolean shouldIdle = mod.getModSettings().shouldRunIdleCommandWhenNotActive();
         if (!shouldIdle) {
             // Stop.
@@ -125,6 +155,7 @@ public class UserTaskChain extends SingleTaskChain {
         double seconds = taskStopwatch.time();
         Task oldTask = mainTask;
         mainTask = null;
+        rearmAttempts = 0;
         if (currentOnFinish != null) {
             currentOnFinish.run();
         }

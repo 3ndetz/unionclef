@@ -116,6 +116,16 @@ public final class MovementQueue {
     private static int index = 0;
     /** Where the body stood when the current chain began; the yardstick for qBurnedInPlace. */
     private static BetterBlockPos chainStartFeet = null;
+    /** Feet cell at the end of the previous tick, for spotting a jump the walk cannot explain. */
+    private static BetterBlockPos lastTickFeet = null;
+    /** Chains abandoned because the body was MOVED rather than walked. Read as qTeleport. */
+    public static volatile int qTeleported;
+    /**
+     * A body cannot walk this far in one tick, so a jump this large means something moved it:
+     * a death and respawn, a teleport, a portal. Vanilla sprint-jump covers well under a block
+     * per tick, so eight is far above anything legitimate and far below a respawn across an arena.
+     */
+    private static final double TELEPORT_JUMP = 8.0;
     private static int ticksOnCurrent = 0;
     private static int ticksAway = 0;
     /** {@code costEstimateIndex} (PathExecutor.java:68): -1 = "no estimate read yet". */
@@ -516,6 +526,32 @@ public final class MovementQueue {
         for (Movement m : movements) {
             m.resetBlockCache();
         }
+        // A ROUTE IS ABOUT WHERE WE WERE. IF SOMETHING MOVED US, IT IS ABOUT NOWHERE.
+        // Measured on nav_bridge: the bot walks off a lip, falls into the void, dies, and
+        // respawns at 0.5,-60,0.5 -- and then stands there for the remaining forty seconds of the
+        // run while the chain it is holding describes a walk across an island it is no longer on.
+        // The off-path check below cannot save this: it rewinds or replans against cells that are
+        // now hundreds of blocks away, and its own thresholds (2.0 and 3.0) were written for
+        // drift, not for teleportation.
+        // A death is the common case, but the same is true of any teleport or portal.
+        try {
+            BetterBlockPos feet = movements.isEmpty() ? null : movements.get(0).ctx.playerFeet();
+            if (feet != null && lastTickFeet != null
+                    && Math.sqrt(feet.distanceSq(lastTickFeet)) > TELEPORT_JUMP) {
+                Debug.logMessage("MovementQueue: body MOVED " + lastTickFeet + " -> " + feet
+                        + " (not walked) — dropping the chain and replanning");
+                qTeleported++;
+                lastTickFeet = feet;
+                stop();
+                kaptainwutax.tungsten.task.FastNavigator.replanFromHere();
+                return;
+            }
+            lastTickFeet = feet;
+        } catch (Throwable t) {
+            // A diagnostic must never be the thing that stops the bot walking.
+            lastTickFeet = null;
+        }
+
         for (int advances = 0; advances < MAX_ADVANCES_PER_TICK; advances++) {
             // PathExecutor.java:93-99. `path.length()` counts POSITIONS, so upstream's
             // `pathPosition >= path.length()` is `index >= movements.size()` here.
