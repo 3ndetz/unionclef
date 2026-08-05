@@ -29,6 +29,10 @@ public class TriggerBot {
     // Package-visible: CombatController's reach control holds its distance against the same
     // threshold this gate fires at, so the mover and the swing cannot disagree about "armed".
     static final float COOLDOWN_CRIT = 0.85f; // falling crit is worth an early swing
+    /** Charge accepted when a mob is close enough to hit us: enough to knock it back. */
+    private static final float COOLDOWN_INTERRUPT = 0.55f;
+    /** Centre-to-centre band inside which a mob's swing can land -- measured, worst case 2.00. */
+    private static final double DANGER_BAND = 2.10;
 
     /**
      * Vanilla melee entity reach, measured EYE -> CLOSEST POINT OF THE HITBOX.
