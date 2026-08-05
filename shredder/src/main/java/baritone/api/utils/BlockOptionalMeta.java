@@ -324,8 +324,18 @@ public final class BlockOptionalMeta {
                 // Not ready yet. Keep the future -- it is still loading -- and let drops() fall
                 // back to empty for this tick.
                 throw new IllegalStateException("registry lookup not ready", te);
+            } catch (java.util.concurrent.ExecutionException ee) {
+                // THE CHECKED ONE get() ADDS THAT join() DID NOT.
+                // Leaving it to the Throwable catch below does not compile: precise rethrow infers
+                // ExecutionException into `throw e` and holder() does not declare it -- which is
+                // exactly why :shredder:compileJava failed silently while :1.21.11:build went on
+                // packaging the last SUCCESSFUL shredder jar, so the bounded wait was measured
+                // against bytecode that still called join().
+                // The future genuinely failed here, so drop it and let the next tick rebuild.
+                registryLookup = null;
+                throw new IllegalStateException("registry lookup failed", ee.getCause());
             } catch (Throwable e) {
-                registryLookup = null; // drop the failed future so a later join can retry
+                registryLookup = null; // drop the failed future so a later attempt can retry
                 throw e;               // caught by drops() → empty drops, client stays alive
             }
         }

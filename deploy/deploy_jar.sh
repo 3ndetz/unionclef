@@ -17,6 +17,11 @@ JAR_DIR="versions/1.21.11/build/libs"
 JAR=$(ls -t "$JAR_DIR"/unionclef-1.21.11-*.jar 2>/dev/null | grep -v -- '-all\|-sources' | head -1)
 [ -n "$JAR" ] || { echo "no jar in $JAR_DIR — build first"; exit 1; }
 
+# ...AND THE SAME CHECK FOR THE JARS INSIDE IT. A fresh outer jar can still carry a stale
+# shredder/tungsten nested jar, which is how a client-tick freeze fix was measured as failed
+# while the deployed bytecode still had the unbounded join it removed. See check_nested_fresh.py.
+python deploy/check_nested_fresh.py "$JAR" || exit 1
+
 mkdir -p deploy/run/mods
 rm -f deploy/run/mods/unionclef-*.jar
 cp "$JAR" deploy/run/mods/

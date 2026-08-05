@@ -1,3 +1,4 @@
+import io
 #!/usr/bin/env python3
 """@gamer smoke test on a real survival world, routed through tungsten.
 
@@ -13,6 +14,12 @@ import functools, json, os, pathlib, re, subprocess, sys, time
 print = functools.partial(print, flush=True)
 SPAWN_FILE=pathlib.Path(__file__).with_name("gamer_spawn.txt")
 RUN_INDEX_FILE=pathlib.Path(__file__).with_name("gamer_run_index.txt")
+RUN_SEQ=[0]   # which run of this sweep we are in, so a freeze dump names its own file
+# WRITE THE DUMPS WHERE BOTH SHELLS AGREE. Python on Windows reads a leading /tmp as the tmp
+# directory of the current DRIVE, while the bash side looks in its own; the first two captures
+# were written and then reported missing. An explicit directory next to the runner ends that.
+FREEZE_DIR=str(pathlib.Path(__file__).with_name("freezes"))
+os.makedirs(FREEZE_DIR, exist_ok=True)
 CLIENT="uctest-mc-tester1"; GSERVER="uctest-gamer-server"; BOT="tester1"; PORT=25333
 MINUTES=float(sys.argv[1]) if len(sys.argv)>1 and not sys.argv[1].startswith("--") else 5.0
 SNIP=r"""
@@ -267,6 +274,7 @@ def main():
     ctx_last_chain = [None]
     prev_stats = {}
     stall = [None, 0]
+    froze = [0, False]   # consecutive frozen polls, and whether this run already dumped
 
     # MARK WHERE THE RUN STARTS IN THE SERVER LOG.
     # Deaths were being read from a --tail window WIDER than the run, so a run whose counters were
@@ -343,6 +351,37 @@ def main():
             else:
                 stall[0] = here
                 stall[1] = 0
+            # A FROZEN CLIENT MUST BE DUMPED WHILE IT IS STILL FROZEN.
+            # Measured signature, run 1 of the sweep after the constructor-NPE fix: inGame=False,
+            # hp=None, and EVERY counter delta zero for 222 seconds straight -- while py4j kept
+            # answering. That is the main thread blocked with the bridge thread alive, and it is
+            # the freeze the BlockOptionalMeta bounded wait was supposed to have removed.
+            # Reading the log afterwards is useless: by the end of the sweep the client has
+            # restarted (the deltas go NEGATIVE as the counters reset) and the stack is gone.
+            # So take the dump HERE, on the poll that sees it, and keep the first one per run --
+            # the first is the one that caught the block, later ones only catch the aftermath.
+            frozen = (not gs.get("inGame")) and dl and all(
+                tok.endswith("+0") for tok in dl.replace(" d:", "").split(","))
+            if frozen:
+                froze[0] += 1
+                if froze[0] == 2 and not froze[1]:
+                    froze[1] = True
+                    try:
+                        # NAME THE THREAD, OR THE DUMP IS ALL POOL WORKERS.
+                        # The unfiltered dump is truncated at 4000 chars and the JVM hands the
+                        # threads over in no useful order: the first capture spent all of it on
+                        # netty and ForkJoin workers parked in the usual places and never reached
+                        # the one thread that matters. The client ticks on "Render thread".
+                        d = py4j("tdump", f="Render")["d"] or ""
+                        if len(d) < 40:
+                            d = py4j("tdump", f="")["d"] or ""
+                        fn = os.path.join(FREEZE_DIR, "freeze_run%d.txt" % RUN_SEQ[0])
+                        io.open(fn, "w", encoding="utf-8").write(d)
+                        print(f"  FROZEN: no world and every counter still -> thread dump in {fn}")
+                    except Exception as e:
+                        print(f"  FROZEN: thread dump failed: {str(e)[:60]}")
+            else:
+                froze[0] = 0
             print(f"  t={int(time.time()-t0)}s inGame={gs.get('inGame')} hp={hp} pos={pos} items={inv.get('items')} busy={ht.get('busy')}{dl}")
         except Exception as e:
             print(f"  poll error (client may be busy): {str(e)[:80]}")
@@ -419,6 +458,7 @@ def sweep(runs, need):
     results = []
     for i in range(runs):
         print("")
+        RUN_SEQ[0] = i + 1
         print(f"=========== RUN {i + 1}/{runs} ===========")
         try:
             results.append(bool(main()))
