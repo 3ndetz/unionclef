@@ -200,13 +200,20 @@ public class TungstenConfig {
      *  Fewer, already-valid neighbours -> the search routes stepped/gap terrain within
      *  its node budget.
      *
-     *  ON BY DEFAULT (G-0), together with tungsten-primary, which is the pairing every
-     *  measurement of altoclef navigation has actually used -- setTungstenPathing() has always
-     *  turned the two on together, because without these neighbours the block-space search follows
-     *  a grid stub that cannot route a staircase (terrain courses A/B fail without it). The old
-     *  default said "until SmartMoves is validated A-green"; it has been the only configuration
-     *  under test for a long time. */
-    public boolean smartMoves = true;
+     *  STAYS OFF BY DEFAULT, and now for a MEASURED reason rather than an old caution. Turning it
+     *  on shipped-wide failed nav_water 3 runs out of 3, each ending at exactly final_dist=25.5
+     *  with 11-12 client freezes -- the same distance every time, i.e. the search never routes the
+     *  crossing at all rather than trying and drifting. The mechanism is in SmartMoves.generate:
+     *  it emits walk, jump-up, descend and parkour, and NOTHING else. Water is not passable to any
+     *  of them, so replacing the blind r=8 scan with these neighbours removes the bot's ability to
+     *  swim; the freezes are the search spending its whole budget every replan and finding nothing.
+     *  (Break and place survive the switch because they are separate hooks, not neighbours, which
+     *  is why nav_break and nav_bridge pass either way.)
+     *
+     *  Making this the default therefore needs SmartMoves to cover what the blind scan covers --
+     *  water first. Until then the pairing "primary + smartMoves" that setTungstenPathing turns on
+     *  is a deliberate agent lever, not the shipped configuration. */
+    public boolean smartMoves = false;
 
     /**
      * Blocks -> ticks for the BLOCK-SPACE search's heuristic (BlockSpacePathFinder).
