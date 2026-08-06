@@ -513,7 +513,15 @@ def main():
     # Same convention as run_suite: the run is INVALID, never PASS -- it has to be run again rather
     # than counted -- and it does not read as broken code. Only a failing run can be invalidated;
     # a run that cleared its rung on a slow machine cleared it.
-    HEALTHY_FPS_MIN = 12.0
+    # WHY 14 AND NOT 12. The old floor admitted a band in which the bot provably cannot perform.
+    # Measured tonight on a machine with 24 cores and only ~460% of them in use elsewhere: the
+    # client tops out at 12 fps whatever I do -- one client instead of two, cores pinned with
+    # cpuset, render distance halved -- and at 12 fps three separate runs reached NO rung in four
+    # to five minutes. At 15-18 fps, the same build reaches wood in 21 to 43 seconds. nav's own
+    # notes say the same from the other side: nav_slime lands on its pad above ~13 fps and misses
+    # below ~10. A floor of 12 therefore called a degraded run a bot failure, which is the false
+    # red this guard exists to prevent.
+    HEALTHY_FPS_MIN = 14.0
     med_fps = None
     if fps_samples:
         ordered = sorted(fps_samples)

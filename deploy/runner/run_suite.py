@@ -242,7 +242,15 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     # reason: two containers belonging to another project were taking 225% and 171% of the CPU.
     # Calling that a code regression would have sent the next pass bisecting the machine.
     LOAD_SENSITIVE = ("freeze", "stand-still", "standstill", "reached goal")
-    HEALTHY_FPS_MIN = 12.0
+    # WHY 14 AND NOT 12. The old floor admitted a band in which the bot provably cannot perform.
+    # Measured tonight on a machine with 24 cores and only ~460% of them in use elsewhere: the
+    # client tops out at 12 fps whatever I do -- one client instead of two, cores pinned with
+    # cpuset, render distance halved -- and at 12 fps three separate runs reached NO rung in four
+    # to five minutes. At 15-18 fps, the same build reaches wood in 21 to 43 seconds. nav's own
+    # notes say the same from the other side: nav_slime lands on its pad above ~13 fps and misses
+    # below ~10. A floor of 12 therefore called a degraded run a bot failure, which is the false
+    # red this guard exists to prevent.
+    HEALTHY_FPS_MIN = 14.0
     avg_fps = ctx.geo.get("avg_fps")
     invalid = False
     if not passed and avg_fps is not None and avg_fps < HEALTHY_FPS_MIN:
