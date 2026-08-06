@@ -788,17 +788,27 @@ public class Py4jEntryPoint {
         return result;
     }
 
+    /**
+     * Is the bot navigating somewhere right now?
+     *
+     * <p>An agent-facing primitive has to be honest, and this one answered NO always. It read the
+     * legacy engine's path; tungsten drives, so that Optional is permanently empty and every agent
+     * asking "are you going anywhere" was told no while the bot walked past it. The name is kept
+     * because agents call it; the answer now comes from whichever engine is actually driving.
+     */
     public boolean hasBaritoneGoal() {
-        if (AltoClef.inGame()) {
-            Optional<IPath> pathq;
-            if (Nav.hasGoal())
-                pathq = _mod.getClientBaritone().getPathingBehavior().getPath();
-            else
-                pathq = Optional.empty();
-
+        if (!AltoClef.inGame()) {
+            return false;
+        }
+        if (adris.altoclef.util.helpers.TungstenHelper.isActive()
+                || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()
+                || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
+            return true;
+        }
+        if (Nav.hasGoal()) {
+            Optional<IPath> pathq = _mod.getClientBaritone().getPathingBehavior().getPath();
             if (pathq.isPresent()) {
-                List<BetterBlockPos> pathlist = pathq.get().positions();
-                return !pathlist.isEmpty();
+                return !pathq.get().positions().isEmpty();
             }
         }
         return false;
