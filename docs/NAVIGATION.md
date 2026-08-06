@@ -67,6 +67,39 @@ What it cannot do is BUILD. There is no `PlaceMove`, `BreakMove`, `BridgeMove` o
 `PillarMove` in `specialMoves/`, and neither `Node.java` nor any move in that package
 mentions `toBreak` or `toPlace`. Breaking and placing exist ONLY on the block side.
 
+### The THIRD generator, and what it could not do until 2026-08-06
+
+The table above has two rows because the block side was read as one thing. It is two. The
+altoclef drive does not call `FastPlanner` first — it calls `CombatPathfinder.findPath`, a plain
+grid BFS, and only falls through to the others when that returns nothing usable. So the generator
+that decides most of a playthrough's steps is a third one, with its own capability list:
+
+| `CombatPathfinder.getWalkableNeighbors` | walk / step up / step down / cardinal parkour | water | break / place |
+|---|---|---|---|
+| before 2026-08-06 | yes | **NO — every neighbour failed for want of a floor** | no (separate hooks) |
+| after | yes | yes, when the search STARTS in liquid (six directions) | no (separate hooks) |
+
+`isWalkable` demands a solid block underneath, which is right on land and fatal in open water: a
+swimming bot found no neighbour at all, the route came back one cell long, and the drive had
+nothing to execute. It printed `primDrive gridBFS sz1` in the hundreds and the run reached nothing.
+The search now says why it cannot expand (`BFS stuck at x,y,z — dir:reason`), which is how this was
+found at all, and a search that begins in liquid expands six ways because getting OUT of water is as
+often vertical as sideways.
+
+`SmartMoves.generate` — the OTHER neighbour generator, behind the `smartMoves` flag — still has
+exactly this gap: walk, jump-up, descend and parkour, and nothing else. Turning it on cost
+`nav_water` three runs out of three. It is the same defect in the fourth generator, and TODO G-0.1
+holds the measurement.
+
+### What the QUEUE will and will not run
+
+`MovementQueue` types each edge and runs a movement class per shape. There is no `MovementParkour`,
+so a route containing a running jump — which `CombatPathfinder` happily produces, four blocks across
+and one up — used to fall through to `MovementFallback`, a dumb steer that walks at the gap and
+fails its own no-progress check a second and a half later, forever. The queue now truncates at the
+first shape it has no class for and hands the tail back; a route whose FIRST edge is a jump is
+refused outright, which sends it to the walker, the thing that can actually clear a gap.
+
 ### Why this matters more than it sounds
 
 Three of this week's dead ends are the same mistake wearing different clothes — deciding an
