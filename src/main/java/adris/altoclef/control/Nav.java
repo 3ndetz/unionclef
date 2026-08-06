@@ -82,8 +82,37 @@ public final class Nav {
         return b != null && b.getPathingBehavior().isPathing();
     }
 
-    /** Can navigation be interrupted at this instant without leaving the bot mid-air? */
+    /** Times the answer was NO because tungsten had the body in the air. Read as navUnsafeAir. */
+    public static volatile int navUnsafeAir;
+
+    /**
+     * Can navigation be interrupted at this instant without leaving the bot mid-air?
+     *
+     * <p>The name says what the question is FOR, and the legacy engine's answer no longer serves
+     * it: baritone never paths now, so it said "yes, safe" every single time. About ten callers
+     * treat this as a permission -- attack, place, break, take a screen -- and they have therefore
+     * been granted it unconditionally, including with the body half-way through a jump. The
+     * evidence is in the counters those callers keep: dteUnsafe has read 0 in every run all
+     * session, which is not a quiet code path, it is a condition that cannot occur.
+     *
+     * <p>What makes an interruption unsafe is unchanged in meaning: the body is committed to
+     * something that ends in the air. While tungsten is running a route and the player is off the
+     * ground, that is exactly the case, and it clears itself within a tick or two of landing -- so
+     * the cost of the honest answer is that an action waits for the feet, which is what the callers
+     * wanted when they asked.
+     */
     public static boolean isSafeToCancel() {
+        boolean tungstenDriving = adris.altoclef.util.helpers.TungstenHelper.isActive()
+                || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()
+                || kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
+        if (tungstenDriving) {
+            net.minecraft.client.network.ClientPlayerEntity p =
+                    net.minecraft.client.MinecraftClient.getInstance().player;
+            if (p != null && !p.isOnGround() && !p.isTouchingWater()) {
+                navUnsafeAir++;
+                return false;
+            }
+        }
         baritone.Baritone b = engine();
         return b == null || b.getPathingBehavior().isSafeToCancel();
     }
