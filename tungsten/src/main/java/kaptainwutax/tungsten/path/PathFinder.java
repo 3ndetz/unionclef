@@ -120,6 +120,8 @@ public class PathFinder {
 	 *  BlockSpacePathFinder's long form, which is how the water work turned out to be aimed at
 	 *  the wrong engine. Count them apart. */
 	public static volatile int physicsRanOut;
+	/** Of those, how many were salvaged into a partial route instead of standing still. */
+	public static volatile int physicsRanOutSalvaged;
 
 	private long startTime;
 	private Node start;
@@ -575,7 +577,24 @@ public class PathFinder {
 				return;
 			}
 			physicsRanOut++;
-			Debug.logMessage("Ran out of nodes!");
+			// EXHAUSTION DESERVES THE SAME MERCY AS A TIMEOUT, AND ONLY ONE OF THEM HAD IT.
+			// handleTimeout (this file, ~1129) already hands the executor the best partial route
+			// when the clock runs out; the open set emptying returned nothing at all, so the bot
+			// simply stood. Its twin, BlockSpacePathFinder, learned this the expensive way and
+			// carries TWO fallbacks with a comment recording a bot that stood in one place for
+			// ~500 seconds.
+			// Measured on nav_water with smartMoves pinned on: srch=283/0 -- this search exhausted
+			// 283 times in one run while the block-space search never did, and the failing runs
+			// show the bot never leaving the start pad.
+			// setCurrentPath is the same delivery handleTimeout uses, and bestSoFar only yields a
+			// route with real forward progress, so a search that got nowhere still gives up
+			// cleanly rather than oscillating in place.
+			if (setCurrentPath(target, start, player)) {
+				physicsRanOutSalvaged++;
+				Debug.logMessage("Ran out of nodes — advancing on the best partial route");
+			} else {
+				Debug.logMessage("Ran out of nodes!");
+			}
 	    }
 	    if (TungstenConfig.get().debugTime) {
 	        long elapsed = System.currentTimeMillis() - startTime;
