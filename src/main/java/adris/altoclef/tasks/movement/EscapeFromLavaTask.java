@@ -44,7 +44,7 @@ public class EscapeFromLavaTask extends CustomBaritoneGoalTask {
         AltoClef mod = AltoClef.getInstance();
 
         mod.getBehaviour().push();
-        mod.getClientBaritone().getExploreProcess().onLostControl();
+        Nav.stopExploring();
         Nav.clearGoal();
         mod.getBehaviour().allowSwimThroughLava(true);
         // Encourage placing of all blocks!

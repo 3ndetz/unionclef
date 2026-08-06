@@ -385,7 +385,7 @@ public class PlaceBedAndSetSpawnTask extends Task {
         if (!progressChecker.check(mod)) {
             mod.getClientBaritone().getPathingBehavior().cancelEverything();
             Nav.cancel();
-            mod.getClientBaritone().getExploreProcess().onLostControl();
+            Nav.stopExploring();
             Nav.clearGoal();
             progressChecker.reset();
         }

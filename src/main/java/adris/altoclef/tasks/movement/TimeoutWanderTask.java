@@ -187,7 +187,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
             stuckCheck.reset();
             // Stop other tasks, we are JUST shimmying
             Nav.clearGoal();
-            mod.getClientBaritone().getExploreProcess().onLostControl();
+            Nav.stopExploring();
             return _unstuckTask;
         }
         if (!progressChecker.check(mod) || !stuckCheck.check(mod)) {
@@ -224,7 +224,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 }
             }
         }
-        if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+        if (!Nav.isExploring()) {
             mod.getClientBaritone().getExploreProcess().explore((int) origin.getX(), (int) origin.getZ());
         }
         if (!progressChecker.check(mod)) {

@@ -71,7 +71,7 @@ public class EnterNetherPortalTask extends Task {
                 return wanderTask;
             }
             setDebugState("Waiting inside portal");
-            mod.getClientBaritone().getExploreProcess().onLostControl();
+            Nav.stopExploring();
             Nav.clearGoal();
             mod.getClientBaritone().getMineProcess().onLostControl();
             mod.getClientBaritone().getFarmProcess().onLostControl();

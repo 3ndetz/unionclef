@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.speedrun;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
@@ -702,7 +703,7 @@ public class MarvionBeatMinecraftTask extends Task {
         }
         if (_locateStrongholdTask.isActive()) {
             if (WorldHelper.getCurrentDimension() == Dimension.OVERWORLD) {
-                if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+                if (!Nav.isExploring()) {
                     if (_timer1.elapsed()) {
                         if (_config.renderDistanceManipulation) {
                             getInstance().options.getViewDistance().setValue(12);
@@ -715,7 +716,7 @@ public class MarvionBeatMinecraftTask extends Task {
         if ((_logsTask != null || _foodTask != null || _getOneBedTask.isActive() || _stoneGearTask != null ||
                 (_sleepThroughNightTask.isActive() && !mod.getItemStorage().hasItem(ItemHelper.BED))) &&
                 getBedTask == null) {
-            if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+            if (!Nav.isExploring()) {
                 if (_timer3.getDuration() >= 30) {
                     if (_config.renderDistanceManipulation) {
                         getInstance().options.getViewDistance().setValue(12);
@@ -735,7 +736,7 @@ public class MarvionBeatMinecraftTask extends Task {
                 && !_locateStrongholdTask.isActive() && _logsTask == null && _stoneGearTask == null &&
                 _getPorkchopTask == null && searchBiomeTask == null && _config.renderDistanceManipulation &&
                 !_ranStrongholdLocator && getBedTask == null && !_sleepThroughNightTask.isActive()) {
-            if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+            if (!Nav.isExploring()) {
                 if (_timer1.elapsed()) {
                     if (_config.renderDistanceManipulation) {
                         getInstance().options.getViewDistance().setValue(2);
@@ -746,7 +747,7 @@ public class MarvionBeatMinecraftTask extends Task {
             }
         }
         if (WorldHelper.getCurrentDimension() == Dimension.NETHER) {
-            if (!mod.getClientBaritone().getExploreProcess().isActive() && !_locateStrongholdTask.isActive() &&
+            if (!Nav.isExploring() && !_locateStrongholdTask.isActive() &&
                     _config.renderDistanceManipulation) {
                 if (_timer1.elapsed()) {
                     if (_config.renderDistanceManipulation) {
@@ -1073,7 +1074,7 @@ public class MarvionBeatMinecraftTask extends Task {
             }
             if (WorldHelper.canSleep() && !_bedHuntGaveUp) {
                 if (_config.renderDistanceManipulation && mod.getItemStorage().hasItem(ItemHelper.BED)) {
-                    if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+                    if (!Nav.isExploring()) {
                         if (_timer1.elapsed()) {
                             getInstance().options.getViewDistance().setValue(2);
                             getInstance().options.getEntityDistanceScaling().setValue(0.5);
@@ -1126,7 +1127,7 @@ public class MarvionBeatMinecraftTask extends Task {
             if (needsBeds(mod) && anyBedsFound(mod)) {
                 setDebugState("A bed was found, getting it.");
                 if (_config.renderDistanceManipulation) {
-                    if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+                    if (!Nav.isExploring()) {
                         if (_timer1.elapsed()) {
                             getInstance().options.getViewDistance().setValue(2);
                             getInstance().options.getEntityDistanceScaling().setValue(0.5);
@@ -1234,7 +1235,7 @@ public class MarvionBeatMinecraftTask extends Task {
                     // Get beds before starting our portal location.
                     if (WorldHelper.getCurrentDimension() == Dimension.OVERWORLD && needsBeds(mod)) {
                         setDebugState("Getting beds before stronghold search.");
-                        if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+                        if (!Nav.isExploring()) {
                             if (_timer1.elapsed()) {
                                 if (_config.renderDistanceManipulation) {
                                     getInstance().options.getViewDistance().setValue(32);
@@ -1533,7 +1534,7 @@ public class MarvionBeatMinecraftTask extends Task {
                 if (needsBeds(mod) && anyBedsFound(mod)) {
                     setDebugState("A bed was found, getting it.");
                     if (_config.renderDistanceManipulation) {
-                        if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+                        if (!Nav.isExploring()) {
                             if (_timer1.elapsed()) {
                                 getInstance().options.getViewDistance().setValue(2);
                                 getInstance().options.getEntityDistanceScaling().setValue(0.5);
@@ -1558,7 +1559,7 @@ public class MarvionBeatMinecraftTask extends Task {
                 if (shouldForce(mod, _getPorkchopTask)) {
                     setDebugState("Getting pork chop just for fun.");
                     if (_config.renderDistanceManipulation) {
-                        if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+                        if (!Nav.isExploring()) {
                             getInstance().options.getViewDistance().setValue(32);
                             getInstance().options.getEntityDistanceScaling().setValue(5.0);
                         }
@@ -1583,7 +1584,7 @@ public class MarvionBeatMinecraftTask extends Task {
                 _foodTask = null;
                 if (shouldForce(mod, _smeltTask)) {
                     if (_config.renderDistanceManipulation) {
-                        if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+                        if (!Nav.isExploring()) {
                             if (_timer1.elapsed()) {
                                 getInstance().options.getViewDistance().setValue(2);
                                 getInstance().options.getEntityDistanceScaling().setValue(0.5);
@@ -1659,7 +1660,7 @@ public class MarvionBeatMinecraftTask extends Task {
                         }
                         setDebugState("Searching a better place to start with.");
                         if (_config.renderDistanceManipulation) {
-                            if (!mod.getClientBaritone().getExploreProcess().isActive()) {
+                            if (!Nav.isExploring()) {
                                 if (_timer1.elapsed()) {
                                     getInstance().options.getViewDistance().setValue(32);
                                     getInstance().options.getEntityDistanceScaling().setValue(5.0);

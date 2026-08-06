@@ -264,7 +264,7 @@ public class InteractWithBlockTask extends Task {
             stuckCheck.reset();
             // Stop other tasks, we are JUST shimmying
             Nav.clearGoal();
-            mod.getClientBaritone().getExploreProcess().onLostControl();
+            Nav.stopExploring();
             return unstuckTask;
         }
         if (!moveChecker.check(mod) || !stuckCheck.check(mod)) {

@@ -162,7 +162,7 @@ public class CollectBucketLiquidTask extends ResourceTask {
                     if (!progressChecker.check(mod)) {
                         mod.getClientBaritone().getPathingBehavior().cancelEverything();
                         Nav.cancel();
-                        mod.getClientBaritone().getExploreProcess().onLostControl();
+                        Nav.stopExploring();
                         Nav.clearGoal();
                         Debug.logMessage("Failed to break, blacklisting.");
                         mod.getBlockScanner().requestBlockUnreachable(blockPos);

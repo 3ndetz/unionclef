@@ -173,7 +173,7 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
             stuckCheck.reset();
             // Stop other tasks, we are JUST shimmying
             Nav.clearGoal();
-            mod.getClientBaritone().getExploreProcess().onLostControl();
+            Nav.stopExploring();
             return unstuckTask;
         }
         if (!progressChecker.check(mod) || !stuckCheck.check(mod)) {

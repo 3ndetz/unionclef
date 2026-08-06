@@ -306,7 +306,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             stuckCheck.reset();
             // Release control of Baritone's custom goal process and explore process
             Nav.clearGoal();
-            mod.getClientBaritone().getExploreProcess().onLostControl();
+            Nav.stopExploring();
             return unstuckTask;
         }
 

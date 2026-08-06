@@ -1374,10 +1374,10 @@ public class BeatMinecraftTask extends Task {
             }
         }
 
-        if (locateStrongholdTask.isActive() && WorldHelper.getCurrentDimension() == Dimension.OVERWORLD && !mod.getClientBaritone().getExploreProcess().isActive() && timer1.elapsed()) {
+        if (locateStrongholdTask.isActive() && WorldHelper.getCurrentDimension() == Dimension.OVERWORLD && !Nav.isExploring() && timer1.elapsed()) {
             timer1.reset();
         }
-        if ((getOneBedTask != null && getOneBedTask.isActive() || (sleepThroughNightTask.isActive() && !itemStorage.hasItem(ItemHelper.BED))) && getBedTask == null && !mod.getClientBaritone().getExploreProcess().isActive() && timer3.elapsed()) {
+        if ((getOneBedTask != null && getOneBedTask.isActive() || (sleepThroughNightTask.isActive() && !itemStorage.hasItem(ItemHelper.BED))) && getBedTask == null && !Nav.isExploring() && timer3.elapsed()) {
             timer3.reset();
         }
 
@@ -1684,7 +1684,7 @@ public class BeatMinecraftTask extends Task {
             // Get beds before starting our portal location.
             if (WorldHelper.getCurrentDimension() == Dimension.OVERWORLD && needsBeds(mod)) {
                 setDebugState("Getting beds before stronghold search.");
-                if (!mod.getClientBaritone().getExploreProcess().isActive() && timer1.elapsed()) {
+                if (!Nav.isExploring() && timer1.elapsed()) {
                     timer1.reset();
                 }
                 getBedTask = getBedTask(mod);

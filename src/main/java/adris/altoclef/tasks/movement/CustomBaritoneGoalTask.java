@@ -179,7 +179,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             stuckCheck.reset();
             // Stop other tasks, we are JUST shimmying
             Nav.clearGoal();
-            mod.getClientBaritone().getExploreProcess().onLostControl();
+            Nav.stopExploring();
             return unstuckTask;
         }
         if (!checker.check(mod) || !stuckCheck.check(mod)) {

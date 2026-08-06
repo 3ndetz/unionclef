@@ -136,7 +136,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             stuckCheck.reset();
             // Stop other tasks, we are JUST shimmying
             Nav.clearGoal();
-            mod.getClientBaritone().getExploreProcess().onLostControl();
+            Nav.stopExploring();
             return _unstuckTask;
         }
         if (!_progress.check(mod) || !stuckCheck.check(mod)) {
