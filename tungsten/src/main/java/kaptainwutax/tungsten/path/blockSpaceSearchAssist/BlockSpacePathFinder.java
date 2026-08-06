@@ -22,6 +22,12 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldView;
 
 public class BlockSpacePathFinder {
+
+	/** Times the BLOCK-SPACE search exhausted its open set; the twin of PathFinder.physicsRanOut.
+	 *  See the note there: telling the two searches apart is what settles which engine a course
+	 *  actually runs on. */
+	public static volatile int blockRanOut;
+
 	
 	public static boolean active = false;
 	public static Thread thread = null;
@@ -371,6 +377,7 @@ public class BlockSpacePathFinder {
 					return Optional.of(path);
 				}
 			}
+			blockRanOut++;
 			Debug.logWarning("Ran out of nodes (children generated=" + generatedChildren
 					+ " inserted=" + insertedChildren + ")");
 			return Optional.empty();

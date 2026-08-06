@@ -114,6 +114,12 @@ public class PathFinder {
 	 *  fix that re-seeds the next search at the player could only be called "suggestive" — the
 	 *  before and after were greps of a channel neither run controlled. */
 	public static volatile int staleRootRejections;
+	/** Times the PHYSICS search exhausted its open set. Read as srch=physOut/blockOut.
+	 *  Which of the two searches is even trying on a course is not obvious from the outside:
+	 *  nav_water's failing runs print 828 bare "Ran out of nodes!" (this file) and NOT ONE of
+	 *  BlockSpacePathFinder's long form, which is how the water work turned out to be aimed at
+	 *  the wrong engine. Count them apart. */
+	public static volatile int physicsRanOut;
 
 	private long startTime;
 	private Node start;
@@ -568,6 +574,7 @@ public class PathFinder {
 				search(world, lastNode, target, player, failedAttempts+1);
 				return;
 			}
+			physicsRanOut++;
 			Debug.logMessage("Ran out of nodes!");
 	    }
 	    if (TungstenConfig.get().debugTime) {
