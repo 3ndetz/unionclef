@@ -133,6 +133,8 @@ public class MarvionBeatMinecraftTask extends Task {
     private final Task _killDragonBedStratsTask = new KillEnderDragonWithBedsTask();
     // End specific dragon breath avoidance
     private final DragonBreathTracker _dragonBreathTracker = new DragonBreathTracker();
+    /** How often the dangerous-block housekeeping below may run. See the note at its site. */
+    private final TimerGame _blacklistScanTimer = new TimerGame(0.25);
     private final TimerGame _timer1 = new TimerGame(5);
     private final TimerGame _timer2 = new TimerGame(35);
     private final TimerGame _timer3 = new TimerGame(60);
@@ -601,9 +603,29 @@ public class MarvionBeatMinecraftTask extends Task {
             }
             return false;
         };
+        // ONE NEAREST-SCAN PER BLOCK TYPE, SIXTY TIMES A SECOND, FOREVER.
+        // Everything from here to the end of the log guard asks the scanner for the nearest block
+        // of a type and blacklists it if it is somewhere dangerous. getNearestBlock walks EVERY
+        // tracked position of that type and prices each one, and the section does it for sixteen
+        // wool colours plus logs plus four station types -- every tick.
+        // What that costs when the world supplies a lot of one type: an ancient city sits in the
+        // loaded column under a forest, so its wool is tracked, and a failing @gamer run showed
+        // this section blacklisting one wool block per colour per tick without end -- 4080 chat
+        // lines in six minutes, "Blacklist RESET" then "Blacklist ... Try 1 / 0" for position after
+        // position at y=-46 -- while the bot's own work got 493 ticks out of six thousand and it
+        // never felled a log it was standing next to.
+        // It is a HOUSEKEEPING pass, not a per-tick decision: the danger of a block does not change
+        // between ticks, and the answer it produces is a blacklist that persists. Four times a
+        // second keeps it responsive to newly loaded chunks and gives back the other 93% of the
+        // scans. The same reasoning, and the same cadence, as the recipe-book refresh gate.
+        boolean scanNow = _blacklistScanTimer.elapsed();
+        if (scanNow) {
+            _blacklistScanTimer.reset();
+        }
         // Crafting table blacklisting (BlockScanner replaces BlockTracker)
         {
-            Optional<BlockPos> craftingTables = mod.getBlockScanner().getNearestBlock(Blocks.CRAFTING_TABLE);
+            Optional<BlockPos> craftingTables = scanNow
+                    ? mod.getBlockScanner().getNearestBlock(Blocks.CRAFTING_TABLE) : Optional.empty();
             if (craftingTables.isPresent() && mod.getItemStorage().hasItem(Items.CRAFTING_TABLE)
                     && !thisOrChildSatisfies(isCraftingTableTask) && !mod.getBlockScanner().isUnreachable(craftingTables.get())) {
                 Debug.logMessage("Blacklisting extra crafting table.");
@@ -621,7 +643,8 @@ public class MarvionBeatMinecraftTask extends Task {
             }
         }
         {
-            Optional<BlockPos> smokers = mod.getBlockScanner().getNearestBlock(Blocks.SMOKER);
+            Optional<BlockPos> smokers = scanNow
+                    ? mod.getBlockScanner().getNearestBlock(Blocks.SMOKER) : Optional.empty();
             if (smokers.isPresent() && mod.getItemStorage().hasItem(Items.SMOKER)
                     && !thisOrChildSatisfies(isSmokerTask) && !mod.getBlockScanner().isUnreachable(smokers.get())) {
                 Debug.logMessage("Blacklisting extra smoker.");
@@ -629,7 +652,8 @@ public class MarvionBeatMinecraftTask extends Task {
             }
         }
         {
-            Optional<BlockPos> furnaces = mod.getBlockScanner().getNearestBlock(Blocks.FURNACE);
+            Optional<BlockPos> furnaces = scanNow
+                    ? mod.getBlockScanner().getNearestBlock(Blocks.FURNACE) : Optional.empty();
             if (furnaces.isPresent() && (mod.getItemStorage().hasItem(Items.FURNACE) || mod.getItemStorage().hasItem(Items.BLAST_FURNACE))
                     && !thisOrChildSatisfies(isFurnaceTask) && !mod.getBlockScanner().isUnreachable(furnaces.get())) {
                 Debug.logMessage("Blacklisting extra furnace.");
@@ -637,14 +661,15 @@ public class MarvionBeatMinecraftTask extends Task {
             }
         }
         {
-            Optional<BlockPos> blastFurnaces = mod.getBlockScanner().getNearestBlock(Blocks.BLAST_FURNACE);
+            Optional<BlockPos> blastFurnaces = scanNow
+                    ? mod.getBlockScanner().getNearestBlock(Blocks.BLAST_FURNACE) : Optional.empty();
             if (blastFurnaces.isPresent() && mod.getItemStorage().hasItem(Items.BLAST_FURNACE)
                     && !thisOrChildSatisfies(isBlastFurnaceTask) && !mod.getBlockScanner().isUnreachable(blastFurnaces.get())) {
                 Debug.logMessage("Blacklisting extra blast furnace.");
                 mod.getBlockScanner().requestBlockUnreachable(blastFurnaces.get(), 0);
             }
         }
-        Block[] wools = ItemHelper.itemsToBlocks(ItemHelper.WOOL);
+        Block[] wools = scanNow ? ItemHelper.itemsToBlocks(ItemHelper.WOOL) : new Block[0];
         for (Block wool : wools) {
             Optional<BlockPos> woolsPos = mod.getBlockScanner().getNearestBlock(wool);
             if (woolsPos.isPresent() && woolsPos.get().getY() < 62 && !mod.getBlockScanner().isUnreachable(woolsPos.get())) {
@@ -652,7 +677,7 @@ public class MarvionBeatMinecraftTask extends Task {
                 mod.getBlockScanner().requestBlockUnreachable(woolsPos.get(), 0);
             }
         }
-        Block[] logBlocks = ItemHelper.itemsToBlocks(ItemHelper.LOG);
+        Block[] logBlocks = scanNow ? ItemHelper.itemsToBlocks(ItemHelper.LOG) : new Block[0];
         for (Block logBlock : logBlocks) {
             Optional<BlockPos> logs = mod.getBlockScanner().getNearestBlock(logBlock);
             if (logs.isPresent()) {
