@@ -24,6 +24,25 @@ import java.util.Optional;
  */
 public class CraftGenericManuallyTask extends Task {
 
+    /**
+     * WHERE A MANUAL CRAFT ACTUALLY GOES. Read as mc=fill/short/out/wait/invalid.
+     *
+     * <p>This task had no counters at all, and it is where the playthrough now stops: two identical
+     * chain snapshots at the end of a run, six levels deep, ending at "Getting planks x 2" with the
+     * logs already in the pack. The bot is at a TABLE, planks are a 2x2 recipe, so the route is the
+     * big-grid branch and the 2x2-into-3x3 slot mapping. Which of the five things below it does
+     * every tick decides what to read next, and nothing currently said.
+     *
+     * <p>FIRST READING, and it names the component: <b>mc=1051/0/0/0/0</b>. Every single tick took
+     * the "Moving item to slot..." branch and returned a MoveItemToSlotFromInventoryTask -- 1051 of
+     * them, about fifty seconds of solid loop -- while mcShort, mcFromOutput, mcWait and
+     * mcInvalidSlot all stayed at zero, and ciGrid stayed 0 as well, meaning nothing ever landed in
+     * the grid. So the slot never becomes satisfied because the item never arrives: this task is
+     * asking correctly and MoveItemToSlotFromInventoryTask is not delivering. That is the next
+     * thing to read -- not this loop, and not the recipe mapping.
+     */
+    public static volatile int mcFilled, mcShort, mcFromOutput, mcWait, mcInvalidSlot;
+
     private final RecipeTarget target;
 
     public CraftGenericManuallyTask(RecipeTarget target) {
@@ -92,6 +111,7 @@ public class CraftGenericManuallyTask extends Task {
                 if (present.getItem() != Items.AIR) {
                     // Move this item OUT if it should be empty
                     setDebugState("Found INVALID slot");
+                    mcInvalidSlot++;
                     mod.getSlotHandler().clickSlot(currentCraftSlot, 0, SlotActionType.PICKUP);
                 }
             } else {
@@ -119,14 +139,17 @@ public class CraftGenericManuallyTask extends Task {
                     if (!mod.getItemStorage().hasItemInventoryOnly(toFill.getMatches())) {
                         if (!StorageHelper.getItemStackInSlot(outputSlot).isEmpty()) {
                             setDebugState("NO MORE to fit: grabbing from output.");
+                            mcFromOutput++;
                             return new ReceiveCraftingOutputSlotTask(outputSlot, target.getTargetCount());
                         } else {
                             // Move on to the NEXT slot, we can't fill this one anymore.
+                            mcShort++;
                             continue;
                         }
                     }
 
                     setDebugState("Moving item to slot...");
+                    mcFilled++;
                     return new MoveItemToSlotFromInventoryTask(new ItemTarget(toFill, requiredPerSlot), currentCraftSlot);
                 }
                 // We could be OVER satisfied
@@ -154,6 +177,7 @@ public class CraftGenericManuallyTask extends Task {
             return new ReceiveCraftingOutputSlotTask(outputSlot, target.getTargetCount());
         } else {
             // Wait
+            mcWait++;
             return null;
         }
     }
