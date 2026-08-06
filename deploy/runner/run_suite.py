@@ -259,7 +259,17 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
               f"machine, not the bot. Close whatever else is running and RE-RUN.")
     else:
         print(f"  => {scn.id}: {'PASS' if passed else 'FAIL'}")
-    verdict["flake_suspect"] = False
+    # A GATE FAILURE IS A CLAIM, AND ONE RUN CANNOT SUPPORT IT.
+    # Measured across a day: nav_gaps failed twice in wide runs (final_dist=26.5, a self-fall,
+    # eleven freezes, at avg_fps=16.3 -- the host was NOT starved) and passed 3 out of 3 in
+    # isolation on the same build, 8.4 to 12.1 seconds each. nav_slime does the same. So a wide-run
+    # verdict depends on WHERE in the suite the course ran, which cost this session two false
+    # regression alarms and hid one real regression inside the noise.
+    # Re-running the course immediately does not clear whatever the earlier courses left behind,
+    # but it does separate the two cases that matter: a failure that reproduces at once is REAL,
+    # and one that does not is the suite talking about itself. The retry hook was already here and
+    # hardcoded to False, so nothing ever used it.
+    verdict["flake_suspect"] = (not passed) and (not invalid) and scn.tier == "gate"
     return verdict
 
 
@@ -318,10 +328,16 @@ def main():
         for rep in range(args.repeat):
             res = run_scenario(cls, rcons, bot, victim, art_root, args.record)
             if not res["passed"] and res.get("flake_suspect") and args.repeat == 1:
-                print(f"  flake suspected ({res.get('error', '')[:80]}) — one retry")
+                first = [c["name"] for c in res["criteria"] if not c["ok"] and c["gate"]]
+                print(f"  gate failure ({', '.join(first)}) — running it once more before believing it")
                 time.sleep(10)
-                res = run_scenario(cls, rcons, bot, victim, art_root, args.record)
-                res["retried"] = True
+                again = run_scenario(cls, rcons, bot, victim, art_root, args.record)
+                again["retried"] = True
+                again["first_attempt_failed"] = first
+                if again["passed"]:
+                    print(f"  => {cls.id}: PASSED on the retry — the first verdict was the suite, "
+                          f"not the course")
+                res = again
             results.append(res)
 
     print("\n================ SUMMARY ================")
