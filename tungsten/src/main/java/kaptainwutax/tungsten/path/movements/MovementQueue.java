@@ -633,6 +633,18 @@ public final class MovementQueue {
                     || (far && ++ticksAway > MAX_TICKS_AWAY);
             if (!far) ticksAway = 0;
             if (lost) {
+                // NAME THE ROUTE, NOT JUST THE DISTANCE.
+                // A run of @gamer produced mqStarted=226 with mqLost=226 and step=0/1 every time:
+                // the queue was handed a one-movement route, called itself lost 6-7 blocks from it
+                // on the FIRST tick, stopped, and got the same route again. A route that far from
+                // the body cannot have been rooted where the body is -- but "off path (6.4)" does
+                // not say where the route WAS, so the loop cannot be diagnosed from it. The first
+                // movement's own endpoints answer that in one line.
+                Movement head = movements.isEmpty() ? null : movements.get(0);
+                Debug.logMessage(String.format("MovementQueue: lost route head %s->%s (%s), feet %s",
+                        head == null ? "-" : head.getSrc(), head == null ? "-" : head.getDest(),
+                        head == null ? "-" : head.getClass().getSimpleName(),
+                        head == null ? "-" : head.ctx.playerFeet()));
                 Debug.logMessage(String.format(
                         "MovementQueue: off path (%.1f) at %.2f,%.2f,%.2f ground=%b fall=%.1f"
                                 + " step=%d/%d — replanning from here",

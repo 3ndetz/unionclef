@@ -31,6 +31,7 @@ mc=gw.entry_point; op=req["op"]; out={}
 if op=="state": out={"inGame":mc.inGame()}
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="swap": out=dict(mc.setTungstenPathing(bool(req["on"])))
+elif op=="swapstate": out=dict(mc.pathingMode())
 elif op=="cmd": mc.ExecuteCommand(req["c"]); out={"ok":True}
 elif op=="gs":
     gs=mc.getGameState()
@@ -229,8 +230,22 @@ def main():
         SPAWN_FILE.write_text(got.replace(",", " "), encoding="utf-8")
         print("  recorded start point for later runs:", got)
     print("  start pos:", pos, "(pinned)" if spawn else "(first run — recording)")
-    print("[3] tungsten-primary ON + @gamer...")
-    print("  swap:", py4j("swap", on=True))
+    print("[3] tungsten-primary (SHIPPED DEFAULT) + @gamer...")
+    # MEASURE WHAT SHIPS. This used to call setTungstenPathing(True), which turned on four flags
+    # at once -- including smartMoves, which is NOT a shipped default (it costs the search its
+    # water moves; see nav_water 3/3). So the bench measured a configuration no user ever ran.
+    # tungsten-primary is the default now, so the bench asserts it instead of setting it: if the
+    # default ever regresses to baritone, this run says so instead of quietly fixing it.
+    st = py4j("swapstate")
+    print("  shipped pathing flags:", st)
+    if not st.get("tungstenPrimary"):
+        print("FAIL: tungsten is not the default pathfinder - the bot would run on the old engine")
+        sys.exit(2)
+    # --swap runs the OLD bench behaviour (setTungstenPathing turns on four flags at once,
+    # smartMoves among them). Kept as a CONTROL: when a run on shipped defaults fails, this says
+    # whether the difference is the flags or something else that changed.
+    if "--swap" in sys.argv:
+        print("  CONTROL RUN: setTungstenPathing(True) ->", py4j("swap", on=True))
     print("  walker debug:", py4j("wdbg", on=True))
     # A COUNTER IS ONLY A MEASUREMENT IF YOU KNOW ITS ZERO. Without this every pd*/mq* number
     # below is a container-lifetime sum printed as if it described this run -- two consecutive

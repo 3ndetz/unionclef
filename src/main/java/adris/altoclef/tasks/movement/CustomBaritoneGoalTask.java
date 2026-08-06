@@ -626,7 +626,23 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     && (!inWater || kaptainwutax.tungsten.TungstenConfig.get().navUsesQueue)
                     && nowMs >= twPreferExecutorUntilMs) {
                 // (1) cheap grid BFS — instant, good for near/clean terrain.
-                net.minecraft.util.math.BlockPos startB = mod.getPlayer().getBlockPos();
+                // ROOT THE ROUTE WHERE THE MOVEMENTS THINK THE FEET ARE.
+                // getBlockPos() is a plain floor of y, and a player standing on solid ground sits
+                // at y = 132.99999... about as often as at exactly 133 -- so the route was rooted
+                // one cell BELOW the feet, inside the ground. Everything downstream then makes
+                // sense and still cannot work: the first edge is an ASCEND from that buried cell
+                // to the real one, MovementAscend waits to be standing at a source the player will
+                // never occupy, and it holds forward against the block face until the queue times
+                // out and re-plans the same thing.
+                // Measured on the @gamer sweep, shipped defaults: 3 distinct positions in five
+                // minutes, 0 items, the same "MV {109,132,-40}->{108,133,-40} st=RUNNING
+                // feet={109,133,-40} keys=F ground=true" repeating -- src and feet one apart in Y,
+                // which is precisely the difference between these two functions.
+                // playerFeet is baritone's own answer (IPlayerContext.java:62-81, the +0.1251 and
+                // the slab correction) and it is what every ported Movement tests itself against,
+                // so the search and the executor now agree on where the bot is standing.
+                net.minecraft.util.math.BlockPos startB =
+                        kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(mod.getPlayer());
                 net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
                 java.util.List<net.minecraft.util.math.BlockPos> bfs =
                         kaptainwutax.tungsten.combat.CombatPathfinder.findPath(startB, goalB, mod.getWorld());
