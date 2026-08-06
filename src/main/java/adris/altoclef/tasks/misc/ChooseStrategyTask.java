@@ -81,9 +81,28 @@ public class ChooseStrategyTask<T extends Enum<T>> extends AbstractDoToClosestOb
 
     }
 
-    private static double getCurrentBaritoneHeuristic(AltoClef mod) {
-        Optional<Double> ticksRemainingOp = mod.getClientBaritone().getPathingBehavior().ticksRemainingInSegment();
-        return ticksRemainingOp.orElse(Double.POSITIVE_INFINITY);
+    /**
+     * How expensive the strategy being followed still looks, in ticks.
+     *
+     * <p>THE SECOND COPY OF A COMPARISON THAT RAN ON INFINITY. This asked BARITONE how many ticks
+     * remained in the path it was walking; tungsten drives, so baritone is never pathing, the
+     * Optional is always empty, and every strategy scored POSITIVE_INFINITY. Comparing infinities
+     * decides nothing, so the switch below could only ever be made by its timeout.
+     * AbstractDoToClosestObjectTask had the identical line and was fixed first; this is the same
+     * fix in the second place it lives -- the estimate comes from the cost model the block scanner
+     * ranks with, measured from the bot to where the strategy is, which is in ticks, comparable,
+     * and does not care which engine is driving.
+     */
+    private double getCurrentStrategyEstimate(AltoClef mod) {
+        if (_currentStrategy == null || mod.getPlayer() == null) {
+            return Double.POSITIVE_INFINITY;
+        }
+        Vec3d at = getPos(mod, _currentStrategy);
+        if (at == null) {
+            return Double.POSITIVE_INFINITY;
+        }
+        return adris.altoclef.util.helpers.BaritoneHelper.calculateGenericHeuristic(
+                mod.getPlayer().getPos(), at);
     }
 
     @Override
@@ -101,7 +120,7 @@ public class ChooseStrategyTask<T extends Enum<T>> extends AbstractDoToClosestOb
             return Optional.ofNullable(_currentStrategy);
         }
 
-        double currentHeuristic = getCurrentBaritoneHeuristic(mod);
+        double currentHeuristic = getCurrentStrategyEstimate(mod);
         _strategyHeuristics.put(_currentStrategy, currentHeuristic);
 
         if (currentHeuristic <= LOW_HEURISTIC_THRESHOLD) {
