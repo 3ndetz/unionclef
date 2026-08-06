@@ -194,6 +194,9 @@ public class CombatPathfinder {
 
     // ── BFS ──────────────────────────────────────────────────────────────────
 
+    /** When the no-expansion diagnosis above last printed; it repeats every tick otherwise. */
+    private static volatile long lastNoExpandLogMs = 0L;
+
     private static List<BlockPos> bfsPath(BlockPos start, BlockPos goal, WorldView world, boolean allowParkour) {
         if (start.equals(goal)) return Collections.emptyList();
 
@@ -202,6 +205,9 @@ public class CombatPathfinder {
         queue.add(start);
         cameFrom.put(start, null);
         int explored = 0;
+        // Decided once, from where the search begins: a bot already in the water is the only case
+        // that gets floorless moves, so a land route can never start preferring a pond.
+        boolean swimming = isLiquid(start, world) || isLiquid(start.up(), world);
 
         while (!queue.isEmpty() && explored < MAX_NODES) {
             BlockPos current = queue.poll();
@@ -211,11 +217,40 @@ public class CombatPathfinder {
                 return reconstructPath(cameFrom, current);
             }
 
-            for (BlockPos neighbor : getWalkableNeighbors(current, world, allowParkour)) {
+            for (BlockPos neighbor : getWalkableNeighbors(current, world, allowParkour, swimming)) {
                 if (cameFrom.containsKey(neighbor)) continue;
                 if (!start.isWithinDistance(neighbor, MAX_RADIUS)) continue;
                 cameFrom.put(neighbor, current);
                 queue.add(neighbor);
+            }
+        }
+
+        // A SEARCH THAT NEVER LEFT ITS OWN CELL SHOULD SAY SO, AND SAY WHY.
+        // "primDrive gridBFS sz1" appears in the hundreds on a failing @gamer run: the route is one
+        // cell long, which means NOT ONE neighbour of the bot's own cell was accepted. Which of the
+        // four tests in isWalkable rejected them is the whole question, and the answer is three
+        // block states away -- but only at the moment it happens, so it is logged here rather than
+        // guessed at later. Rate-limited to once a second: the situation repeats every tick.
+        if (cameFrom.size() == 1) {
+            long now = System.currentTimeMillis();
+            if (now - lastNoExpandLogMs > 1000) {
+                lastNoExpandLogMs = now;
+                StringBuilder why = new StringBuilder();
+                for (int[] off : HORIZONTAL) {
+                    BlockPos c = start.add(off[0], 0, off[1]);
+                    why.append(' ').append(off[0]).append(',').append(off[1]).append(':');
+                    if (!isSolid(c.down(), world)) why.append("noFloor");
+                    else if (isHazard(c.down(), world)) why.append("hazardBelow");
+                    else if (!canPassThrough(c, world)) why.append("feetBlocked=")
+                            .append(world.getBlockState(c).getBlock().getTranslationKey());
+                    else if (isHazardOrSlow(c, world)) why.append("feetSlow");
+                    else if (!canPassThrough(c.up(), world)) why.append("headBlocked=")
+                            .append(world.getBlockState(c.up()).getBlock().getTranslationKey());
+                    else if (isHazardOrSlow(c.up(), world)) why.append("headSlow");
+                    else why.append("OK?");
+                }
+                kaptainwutax.tungsten.Debug.logMessage("BFS stuck at " + start.getX() + ","
+                        + start.getY() + "," + start.getZ() + " —" + why);
             }
         }
 
@@ -286,7 +321,35 @@ public class CombatPathfinder {
     private static final int[][] HORIZONTAL = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
 
     private static List<BlockPos> getWalkableNeighbors(BlockPos pos, WorldView world, boolean allowParkour) {
+        return getWalkableNeighbors(pos, world, allowParkour, false);
+    }
+
+    /**
+     * @param allowSwim the search STARTED in liquid, so cells with no floor are still traversable
+     */
+    private static List<BlockPos> getWalkableNeighbors(BlockPos pos, WorldView world,
+                                                       boolean allowParkour, boolean allowSwim) {
         List<BlockPos> result = new ArrayList<>();
+
+        if (allowSwim) {
+            // A SWIMMER NEEDS NO FLOOR, AND THAT IS WHY THE BOT STOPS DEAD IN WATER.
+            // isWalkable demands a solid block underneath, so in open water every neighbour fails
+            // it. Measured on a failing @gamer run, printed by the diagnosis above:
+            //   BFS stuck at 3636,60,3309 — 1,0:noFloor -1,0:noFloor 0,1:noFloor 0,-1:noFloor ...
+            // all eight, at sea level. The route comes back one cell long ("gridBFS sz1" in the
+            // hundreds), the drive has nothing to follow, and the run reaches nothing.
+            // Six directions, because getting OUT of water is as often up or down as sideways, and
+            // the queue already types a liquid edge as MovementSwim.
+            // Only when the search began in liquid: on land nothing changes, so no land route can
+            // start preferring a pond.
+            for (int[] off : SWIM_DIRS) {
+                BlockPos c = pos.add(off[0], off[1], off[2]);
+                if (isLiquid(c, world) || (isWalkable(c, world) && !isHazard(c.down(), world))) {
+                    result.add(c);
+                }
+            }
+            return result;
+        }
 
         for (int[] off : HORIZONTAL) {
             BlockPos candidate = pos.add(off[0], 0, off[1]);
@@ -340,6 +403,16 @@ public class CombatPathfinder {
         if (!canPassThrough(feetPos.up(), world)) return false;
         if (isHazardOrSlow(feetPos.up(), world)) return false;
         return true;
+    }
+
+    /** Six neighbours for a swimmer: four sides plus up and down. */
+    private static final int[][] SWIM_DIRS = {
+            {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}
+    };
+
+    /** Is this cell liquid we can move through? Lava is a hazard, not a route. */
+    public static boolean isLiquid(BlockPos pos, WorldView world) {
+        return world.getBlockState(pos).getBlock() == Blocks.WATER;
     }
 
     public static boolean isSolid(BlockPos pos, WorldView world) {
