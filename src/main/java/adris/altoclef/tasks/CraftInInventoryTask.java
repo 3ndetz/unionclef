@@ -102,11 +102,22 @@ public class CraftInInventoryTask extends ResourceTask {
         // stick x 2" while its planks sat in the grid in front of it.
         // Clearing the grid puts them back where the check can see them. The task already exists;
         // nothing was calling it from here.
+        // BUT THE INGREDIENTS OF THE CRAFT IN PROGRESS ARE NOT STRANDED EITHER.
+        // As written this fired on ANY occupied grid slot, and manual crafting fills those slots on
+        // purpose -- so the two tasks undid each other every tick. Read straight off a failing
+        // @gamer run's chain:
+        //     <Craft 2x2 Task {dark_oak_planks x 2}> Crafting in inventory...
+        //     <Crafting: {dark_oak_planks x 2}> Moving item to slot...
+        //     <Breaking the crafting grid> Clearing the 2x2 crafting grid
+        // place, clear, place, clear, and no planks ever come out.
+        // Stranded means FOREIGN: an item this recipe has no use for. An item the recipe does want
+        // is the craft working, and it is left alone.
         if (StorageHelper.isPlayerInventoryOpen()) {
             for (Slot gridSlot : PlayerSlot.CRAFT_INPUT_SLOTS) {
-                if (!StorageHelper.getItemStackInSlot(gridSlot).isEmpty()) {
+                ItemStack inGrid = StorageHelper.getItemStackInSlot(gridSlot);
+                if (!inGrid.isEmpty() && !isRecipeIngredient(inGrid.getItem())) {
                     ciGridStranded++;
-                    setDebugState("Ingredients stranded in the crafting grid — taking them back");
+                    setDebugState("Something foreign in the crafting grid — taking it back");
                     return new EnsureFreePlayerCraftingGridTask();
                 }
             }
@@ -175,6 +186,20 @@ public class CraftInInventoryTask extends ResourceTask {
     }
 
     // virtual. By default assumes subtasks are CATALOGUED (in TaskCatalogue.java)
+    /** Does the recipe being made use this item in any of its slots? */
+    private boolean isRecipeIngredient(net.minecraft.item.Item item) {
+        if (_target == null || _target.getRecipe() == null) {
+            return false;
+        }
+        for (int i = 0; i < _target.getRecipe().getSlotCount(); ++i) {
+            ItemTarget slot = _target.getRecipe().getSlot(i);
+            if (slot != null && !slot.isEmpty() && slot.matches(item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     protected Task collectRecipeSubTask(AltoClef mod) {
         return new CollectRecipeCataloguedResourcesTask(_ignoreUncataloguedSlots, _target);
     }
