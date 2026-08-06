@@ -41,6 +41,18 @@ for c in $CONTAINERS; do
         # time above ~13 fps and misses below ~10 — so a restart-only deploy quietly turns
         # later measurements into noise. `docker compose restart` does NOT clear it; only a
         # full recreate does.
+        # START FROM THE SHIPPED DEFAULTS, NOT FROM A SNAPSHOT OF OLD ONES.
+        # altoclef writes its WHOLE settings object to altoclef_settings.json, so the file on the
+        # stand is a frozen copy of whatever the defaults were the first time it ran -- and it wins
+        # over the code. Measured: useCraftingBookToCraft was changed to false (the user's
+        # requirement: plenty of servers disable the recipe book), and the stand kept crafting
+        # through the book for days because its file still said true. A fifteen-minute @gamer run
+        # spent itself in that path -- cgSent=1955 recipe clicks, cgOutReady=0, the grid filled and
+        # cleared 1955 times and not one plank made.
+        # Deleting it makes the mod write a fresh one from the current defaults, which is the only
+        # way the bench measures what actually ships. Anything a course needs set differently, the
+        # course sets itself.
+        docker exec "$c" sh -c 'rm -f /mc-data/altoclef/altoclef_settings.json' 2>/dev/null || true
         svc=$(echo "$c" | sed 's/^uctest-//')
         if ! UCTEST_MCP_PORT="${UCTEST_MCP_PORT:-25350}" docker compose -f deploy/compose.test.yml                 up -d --force-recreate "$svc" >/dev/null 2>&1; then
             # The in-mod MCP port is often taken on a dev box (a local Minecraft client binds
