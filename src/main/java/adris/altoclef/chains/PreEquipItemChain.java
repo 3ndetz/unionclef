@@ -4,11 +4,6 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.tasks.entity.AbstractKillEntityTask;
 import adris.altoclef.tasksystem.TaskChain;
 import adris.altoclef.tasksystem.TaskRunner;
-import baritone.api.BaritoneAPI;
-import baritone.api.pathing.calc.IPath;
-import baritone.api.pathing.movement.IMovement;
-import baritone.pathing.movement.Movement;
-import baritone.utils.BlockStateInterface;
 
 import java.util.Optional;
 
@@ -38,19 +33,15 @@ public class PreEquipItemChain extends SingleTaskChain {
         TaskChain currentChain = mod.getTaskRunner().getCurrentTaskChain();
         if (currentChain == null) return;
 
-        // we will need to place or break some blocks, do not pre-equip anything...
-        if (mod.getClientBaritone() == null) return;
-        Optional<IPath> pathOptional = mod.getClientBaritone().getPathingBehavior().getPath();
-        if (pathOptional.isEmpty()) return;
-
-        IPath path = pathOptional.get();
-
-        // should this really be created each tick?
-        BlockStateInterface bsi = new BlockStateInterface(BaritoneAPI.getProvider().getPrimaryBaritone().getPlayerContext());
-        for (IMovement iMovement : path.movements()) {
-            Movement movement = (Movement) iMovement;
-            if (movement.toBreak(bsi).stream().anyMatch(pos -> mod.getWorld().getBlockState(pos).getBlock().getHardness() > 0)
-                    || !movement.toPlace(bsi).isEmpty()) return;
+        // ASK THE ENGINE THAT IS ACTUALLY DRIVING.
+        // This read BARITONE's current path and returned on its first line when there wasn't one.
+        // Tungsten drives, so there never is one: the whole chain has been silently dead since the
+        // swap, and "equip the sword while walking to a fight" simply stopped happening.
+        // The question it asks is engine-independent -- does the route ahead need blocks broken or
+        // placed, because then the hand belongs to a tool rather than a weapon -- so the queue
+        // answers it now.
+        if (kaptainwutax.tungsten.path.movements.MovementQueue.remainingNeedsBlockWork(mod.getWorld())) {
+            return;
         }
 
         // we are *probably* trying to kill sth, might as well equip sword

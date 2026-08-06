@@ -884,6 +884,33 @@ public final class MovementQueue {
         return best == -1 ? 0 : best;
     }
 
+    /**
+     * Does the rest of the queued route need blocks broken or placed?
+     *
+     * <p>Asked by altoclef's pre-equip chain, which wants to know whether it is safe to put a sword
+     * in hand: a route that has to mine or bridge needs the tool, a route that is just walking does
+     * not. It used to ask BARITONE's path, which is empty whenever tungsten is driving -- so the
+     * whole chain returned on its first line and the feature had been silently dead since the swap.
+     *
+     * @return true if any remaining step wants a block broken or placed, or if we cannot tell
+     */
+    public static synchronized boolean remainingNeedsBlockWork(net.minecraft.world.WorldView world) {
+        if (world == null || movements.isEmpty()) {
+            return false;
+        }
+        for (int i = Math.max(0, index); i < movements.size(); i++) {
+            Movement m = movements.get(i);
+            try {
+                if (!m.toBreak(world).isEmpty() || !m.toPlace(world).isEmpty()) {
+                    return true;
+                }
+            } catch (RuntimeException e) {
+                return true;   // cannot tell: assume it does, which is the cautious answer
+            }
+        }
+        return false;
+    }
+
     /** {@code onChangeInPathPosition} (PathExecutor.java:583-586): release the keys, reset the clock. */
     private static void onChangeInPathPosition() {
         Movement.clearAllKeys();
