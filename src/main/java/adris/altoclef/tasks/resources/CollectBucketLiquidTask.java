@@ -160,7 +160,7 @@ public class CollectBucketLiquidTask extends ResourceTask {
                 // but NOT if we're standing right above.
                 if (mod.getWorld().getBlockState(blockPos.up()).isSolid()) {
                     if (!progressChecker.check(mod)) {
-                        mod.getClientBaritone().getPathingBehavior().cancelEverything();
+                        Nav.cancelEverything();
                         Nav.cancel();
                         Nav.stopExploring();
                         Nav.clearGoal();

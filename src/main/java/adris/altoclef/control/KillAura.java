@@ -208,7 +208,7 @@ public class KillAura {
     public void startShielding(AltoClef mod) {
         shielding = true;
         if (mod.getClientBaritone() != null)
-            mod.getClientBaritone().getPathingBehavior().requestPause();
+            Nav.pause();
         mod.getExtraBaritoneSettings().setInteractionPaused(true);
         if (!mod.getPlayer().isBlocking()) {
             ItemStack handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot());

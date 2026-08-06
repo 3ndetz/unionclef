@@ -87,6 +87,28 @@ public final class Nav {
         return b != null && b.getExploreProcess().isActive();
     }
 
+    /**
+     * Hold the current route for a moment without throwing it away.
+     *
+     * <p>Said by five places that need the body still for one action -- eating, a bucket, a screen.
+     * Cancelling would make them re-plan afterwards; pausing is the difference between "wait" and
+     * "forget where you were going".
+     */
+    public static void pause() {
+        baritone.Baritone b = engine();
+        if (b != null) {
+            b.getPathingBehavior().requestPause();
+        }
+    }
+
+    /** Drop everything, including any queued path. Stronger than {@link #cancel()}. */
+    public static void cancelEverything() {
+        baritone.Baritone b = engine();
+        if (b != null) {
+            b.getPathingBehavior().cancelEverything();
+        }
+    }
+
     /** Stop exploring. Safe to call when nothing is. */
     public static void stopExploring() {
         baritone.Baritone b = engine();

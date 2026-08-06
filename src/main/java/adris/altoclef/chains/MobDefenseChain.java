@@ -144,7 +144,7 @@ public class MobDefenseChain extends SingleTaskChain {
     private static void startShielding(AltoClef mod) {
         shielding = true;
         if (mod.getClientBaritone() != null)
-            mod.getClientBaritone().getPathingBehavior().requestPause();
+            Nav.pause();
         mod.getExtraBaritoneSettings().setInteractionPaused(true);
         if (!mod.getPlayer().isBlocking()) {
             ItemStack handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot());
@@ -891,7 +891,7 @@ public class MobDefenseChain extends SingleTaskChain {
                         if (ghastBall.isPresent() && ghast.isPresent() && runAwayTask == null
                                 && (mod.getClientBaritone() == null || Nav.isSafeToCancel())) {
                             if (mod.getClientBaritone() != null)
-                                mod.getClientBaritone().getPathingBehavior().requestPause();
+                                Nav.pause();
                             LookHelper.lookAt(mod, ghast.get().getEyePos());
                         }
                         return false;
@@ -926,7 +926,7 @@ public class MobDefenseChain extends SingleTaskChain {
 
                         if (runAwayTask == null && (mod.getClientBaritone() == null || Nav.isSafeToCancel())) {
                             if (mod.getClientBaritone() != null)
-                                mod.getClientBaritone().getPathingBehavior().requestPause();
+                                Nav.pause();
                         }
                         return true;
                     }

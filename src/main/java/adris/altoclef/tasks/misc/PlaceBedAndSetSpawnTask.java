@@ -383,7 +383,7 @@ public class PlaceBedAndSetSpawnTask extends Task {
 
         setDebugState("Filling in Portal");
         if (!progressChecker.check(mod)) {
-            mod.getClientBaritone().getPathingBehavior().cancelEverything();
+            Nav.cancelEverything();
             Nav.cancel();
             Nav.stopExploring();
             Nav.clearGoal();
