@@ -134,6 +134,10 @@ public class MarvionBeatMinecraftTask extends Task {
     // End specific dragon breath avoidance
     private final DragonBreathTracker _dragonBreathTracker = new DragonBreathTracker();
     /** How often the dangerous-block housekeeping below may run. See the note at its site. */
+    /** How long one night's bed hunt may run before the ladder gets its ticks back. */
+    private final TimerGame _bedHuntTimer = new TimerGame(120);
+    /** Set when that clock ran out; cleared by daylight or by actually having a bed. */
+    private boolean _bedHuntGaveUp = false;
     private final TimerGame _blacklistScanTimer = new TimerGame(0.25);
     private final TimerGame _timer1 = new TimerGame(5);
     private final TimerGame _timer2 = new TimerGame(35);
@@ -1046,7 +1050,28 @@ public class MarvionBeatMinecraftTask extends Task {
         }
         // Sleep through night.
         if (_config.sleepThroughNight && !_endPortalOpened && WorldHelper.getCurrentDimension() == Dimension.OVERWORLD) {
-            if (WorldHelper.canSleep()) {
+            // SLEEPING THROUGH THE NIGHT IS AN OPTIMISATION, NOT A REQUIREMENT.
+            // Read off a ten-minute run that reached NO rung at all -- the chain, six deep:
+            //   <Placing a bed nearby + resetting spawn point> Getting a bed first
+            //   <Crafting bed: [16 colours]> -> <Collect 999999 wool.>
+            //   <Collect items from SheepEntity> -> <Wander for Infinity blocks> Exploring.
+            // A bed needs three wool of ONE colour, and the collect-all idiom asks for 999999, so
+            // the gather can never be satisfied; with no sheep in a dark oak forest the bot simply
+            // explores until the run ends. Meanwhile wood takes twenty-one seconds when it is
+            // allowed to happen.
+            // So the hunt gets a clock. If a whole night's worth of searching produces no bed, the
+            // game goes on -- the mobs are survivable, the ladder is not optional -- and the next
+            // night tries again from scratch. This bounds the activity without touching WHEN the
+            // bot decides it wants a bed.
+            if (!WorldHelper.canSleep() || mod.getItemStorage().hasItem(ItemHelper.BED)) {
+                _bedHuntGaveUp = false;      // day again, or we have one: the clock means nothing
+                _bedHuntTimer.reset();
+            } else if (!_bedHuntGaveUp && _bedHuntTimer.elapsed()) {
+                _bedHuntGaveUp = true;
+                Debug.logMessage("No bed after " + (int) _bedHuntTimer.getDuration()
+                        + "s of hunting — getting on with the game, will try again tomorrow night");
+            }
+            if (WorldHelper.canSleep() && !_bedHuntGaveUp) {
                 if (_config.renderDistanceManipulation && mod.getItemStorage().hasItem(ItemHelper.BED)) {
                     if (!mod.getClientBaritone().getExploreProcess().isActive()) {
                         if (_timer1.elapsed()) {
