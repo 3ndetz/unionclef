@@ -2258,6 +2258,11 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.path.movements.MovementQueue.qShort = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qVetoed = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qNoClass = 0;
+        adris.altoclef.tasks.AbstractDoToClosestObjectTask.dcTick = 0;
+        adris.altoclef.tasks.AbstractDoToClosestObjectTask.dcNewPursuit = 0;
+        adris.altoclef.tasks.AbstractDoToClosestObjectTask.dcRetryOld = 0;
+        adris.altoclef.tasks.AbstractDoToClosestObjectTask.dcHold = 0;
+        adris.altoclef.tasks.AbstractDoToClosestObjectTask.dcWander = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.edgeTraverse = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.edgeAscend = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.edgeDescend = 0;
@@ -2337,7 +2342,7 @@ public class Py4jEntryPoint {
                 "called=%d deferred=%d inRange=%d clicked=%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
                         + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d pdLegacy=%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
-                        + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d"
+                        + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d dc=%d/%d/%d/%d/%d"
                         + " sprint=%d/%d lowHp=%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdPillarD=%d dmgTaken=%.1f hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
                         + " | gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d",
@@ -2439,6 +2444,11 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.path.movements.MovementQueue.qShort,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qVetoed,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qNoClass,
+                adris.altoclef.tasks.AbstractDoToClosestObjectTask.dcTick,
+                adris.altoclef.tasks.AbstractDoToClosestObjectTask.dcNewPursuit,
+                adris.altoclef.tasks.AbstractDoToClosestObjectTask.dcRetryOld,
+                adris.altoclef.tasks.AbstractDoToClosestObjectTask.dcHold,
+                adris.altoclef.tasks.AbstractDoToClosestObjectTask.dcWander,
                 kaptainwutax.tungsten.path.movements.Movement.sprintTicks,
                 kaptainwutax.tungsten.path.movements.Movement.moveTicks,
                 kaptainwutax.tungsten.combat.CombatController.lowHpTicks,

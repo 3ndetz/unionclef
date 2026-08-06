@@ -3,6 +3,7 @@ package adris.altoclef.tasks;
 import adris.altoclef.AltoClef;
 import adris.altoclef.tasks.movement.TimeoutWanderTask;
 import adris.altoclef.tasksystem.Task;
+import adris.altoclef.util.helpers.BaritoneHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import net.minecraft.util.math.Vec3d;
 
@@ -15,6 +16,26 @@ import java.util.Optional;
  * https://www.notion.so/Closest-threshold-ing-system-utility-c3816b880402494ba9209c9f9b62b8bf
  */
 public abstract class AbstractDoToClosestObjectTask<T> extends Task {
+
+    /**
+     * WHICH BRANCH OF THE PURSUIT DECISION ACTUALLY RUNS. Read as dcNew/dcRetry/dcHold/dcWander.
+     *
+     * <p>Two fixes with provably correct mechanisms -- a climb priced as a stair that is not there,
+     * and a comparison that ran on infinity -- moved nothing measurable on the wood rung, which
+     * means the dominant blocker is elsewhere and guessing again would be a third guess. A run
+     * beginning in 184 log blocks within forty reaches nothing in five minutes while ciCollect
+     * spins 4399 times and the drive is entered 94 times; whether that is this task changing its
+     * mind every tick or never getting one is exactly what these four numbers say, and nothing
+     * currently said it.
+     *
+     * <p>FIRST READING, and it refutes the thrash: dc=493/14/4/0/0 over a five-minute run. This
+     * task ticked 493 times out of roughly 6000, changed its mind 14 times and retried an old
+     * target 4 times -- that is a bot pursuing steadily, not one dithering. The time is going
+     * somewhere ABOVE here: CraftInInventoryTask ticked 4192 times, 2336 of them in its
+     * collect-materials branch, and only 493 of those reached the mining task at all. That gap,
+     * not the choice of block, is where the wood rung is being lost.
+     */
+    public static volatile int dcNewPursuit, dcRetryOld, dcHold, dcWander, dcTick;
 
     private final HashMap<T, CachedHeuristic> heuristicMap = new HashMap<>();
     private T currentlyPursuing = null;
@@ -46,14 +67,41 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
         return wasWandering;
     }
 
+    /**
+     * How expensive the thing being pursued still looks, in ticks.
+     *
+     * <h2>This asked the wrong engine, and the answer was always infinity</h2>
+     *
+     * It used to be {@code getPathingBehavior().ticksRemainingInSegment()} — BARITONE's estimate of
+     * the path it is walking. Tungsten drives now, so baritone is never pathing, the Optional is
+     * always empty, and this returned POSITIVE_INFINITY on every call of every tick.
+     *
+     * <p>That is not a cosmetic staleness. The whole switch-target decision below is a comparison
+     * of this number between the thing being pursued and a candidate, and infinity compares equal
+     * to infinity — so the only branch that could ever fire was "this candidate has never been
+     * tried, take it". In a dark oak forest the scanner's nearest log changes as the bot walks, so
+     * the bot took a new target, built a new goal task for it, walked a step, took another, and
+     * felled nothing. Measured with the start point finally recorded: a run beginning in 170 log
+     * blocks within forty reached NOTHING in five minutes, with pdEnter=94 ticks of navigation goal
+     * in the whole run and ciCollect spinning 4399 times.
+     *
+     * <p>The estimate does not need a pathfinder: it is the same cost model the block scanner uses
+     * to rank candidates in the first place, measured from where the bot is now to where the thing
+     * is. It is in ticks, it is comparable between candidates, and it exists whichever engine is
+     * driving — which is also one less call into baritone (G-0).
+     */
     private double getCurrentCalculatedHeuristic(AltoClef mod) {
-        Optional<Double> ticksRemainingOp = mod.getClientBaritone().getPathingBehavior().ticksRemainingInSegment();
-        return ticksRemainingOp.orElse(Double.POSITIVE_INFINITY);
+        if (currentlyPursuing == null || mod.getPlayer() == null) {
+            return Double.POSITIVE_INFINITY;
+        }
+        return BaritoneHelper.calculateGenericHeuristic(
+                mod.getPlayer().getPos(), getPos(mod, currentlyPursuing));
     }
 
     @Override
     protected Task onTick() {
         wasWandering = false;
+        dcTick++;
         AltoClef mod = AltoClef.getInstance();
 
         // Reset our pursuit if our pursuing object no longer is pursuable.
@@ -94,6 +142,7 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
                         // Get considerably closer (divide distance by 2)
                         if (maybeReAttempt.getHeuristicValue() < h.getHeuristicValue() || maybeClosestDistance < maybeReAttempt.getClosestDistanceSqr() / 4) {
                             setDebugState("Retrying old heuristic!");
+                            dcRetryOld++;
                             // The currently closest previously calculated heuristic is better, move towards it!
                             currentlyPursuing = newClosest;
                             // In theory, this next line shouldn't need to be run,
@@ -102,11 +151,13 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
                         }
                     } else {
                         setDebugState("Trying out NEW pursuit");
+                        dcNewPursuit++;
                         // Our new object does not have a heuristic, TRY IT OUT!
                         currentlyPursuing = newClosest;
                     }
                 } else {
                     setDebugState("Waiting for move task to kick in...");
+                    dcHold++;
                     // We should keep moving towards our object until we get some new info.
                 }
             }
@@ -122,6 +173,7 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
 
         if (checkNewClosest.isEmpty()) {
             setDebugState("Waiting for calculations I think (wandering)");
+            dcWander++;
             wasWandering = true;
             return getWanderTask(mod);
         }
