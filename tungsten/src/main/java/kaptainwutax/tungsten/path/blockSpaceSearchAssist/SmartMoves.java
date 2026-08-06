@@ -66,13 +66,53 @@ public final class SmartMoves {
         return kaptainwutax.tungsten.helpers.PlayerFit.standable(w, feet);
     }
 
+    /** Water moves emitted: entering from the bank, and strokes once wet. Read as smWater. */
+    public static volatile int waterMoves;
+
+    /** Is this cell water we can move through? Lava is a hazard, not a route. */
+    private static boolean isWater(WorldView w, BlockPos p) {
+        return w.getBlockState(p).getBlock() == net.minecraft.block.Blocks.WATER;
+    }
+
     /** All valid moves from a feet position, nearest/cheapest per direction. */
     public static List<Move> generate(WorldView w, BlockPos feet) {
         List<Move> moves = new ArrayList<>();
         boolean headClear = passable(w, feet.up().up()); // room to jump
 
+        // WITH THE FEET WET, NOTHING BELOW CAN FIRE: every move here is built on `standable`, and
+        // water is not standable. Six directions, because leaving water is as often vertical as
+        // sideways. Counted separately so the next question -- do these survive into the executed
+        // path -- can be asked of a number instead of a guess.
+        if (isWater(w, feet)) {
+            for (Direction d : HORIZONTALS) {
+                BlockPos ahead = feet.offset(d);
+                if (isWater(w, ahead) || standable(w, ahead)) {
+                    moves.add(new Move(ahead, ActionCosts.SWIM_ONE_BLOCK_COST, false));
+                    waterMoves++;
+                }
+            }
+            if (isWater(w, feet.up()) || passable(w, feet.up())) {
+                moves.add(new Move(feet.up(), ActionCosts.SWIM_ONE_BLOCK_COST, false));
+                waterMoves++;
+            }
+            if (isWater(w, feet.down())) {
+                moves.add(new Move(feet.down(), ActionCosts.SWIM_ONE_BLOCK_COST, false));
+                waterMoves++;
+            }
+            return moves;
+        }
+
         for (Direction d : HORIZONTALS) {
             BlockPos ahead = feet.offset(d);
+
+            // --- Enter the water from the bank. ---
+            // Without this edge the search stops at the shore: a water cell is not standable, so
+            // nothing below ever proposes it, and the swim branch above only helps once already in.
+            if (isWater(w, ahead) && passable(w, ahead.up())) {
+                moves.add(new Move(ahead, ActionCosts.SWIM_ONE_BLOCK_COST, false));
+                waterMoves++;
+                continue;
+            }
 
             // --- Traverse: flat step into an adjacent standable cell. ---
             if (standable(w, ahead)) {
