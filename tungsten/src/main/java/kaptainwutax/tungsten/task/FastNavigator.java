@@ -450,7 +450,24 @@ public final class FastNavigator {
                 BlockPos goalCell = BlockPos.ofFloored(target);
                 FastPlanner.Result res = FastPlanner.plan(world, start, goalCell,
                         TungstenConfig.get().fastPlanBudgetMs);
-                if (!active || res.isEmpty() || res.path.size() < 2) return;
+                if (!active) return;
+                // A ONE-WAYPOINT PLAN IS AN ANSWER: THERE IS NOTHING TO WALK FROM HERE.
+                // FastPlanner returns exactly that when the start already satisfies the goal --
+                // "1 nodes, 1 wp, complete" (FastPlanner.java:445-457, expanded=1 and the goal node
+                // IS the start). This used to fall into the same `return` as a failed plan, so the
+                // tail that produced it stayed set, the tick loop asked again from that same tail,
+                // and got the same answer. Measured on a failing @gamer run: 218 of those in five
+                // minutes, about one every one and a half seconds, all identical.
+                // Forgetting the tail is what "there is no further leg from there" means; the
+                // arrival check owns finishing the navigation, and any genuinely new situation
+                // replans from the bot's real position anyway.
+                if (res.path.size() < 2) {
+                    if (legTail != null && legTail.equals(start)) {
+                        legTail = null;
+                    }
+                    return;
+                }
+                if (res.isEmpty()) return;
 
                 // Walking cannot solve this route — hand it to the physics engine
                 // (already searching in parallel) and get out of its way.
