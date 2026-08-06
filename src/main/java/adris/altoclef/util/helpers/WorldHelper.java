@@ -6,16 +6,12 @@ import adris.altoclef.multiversion.DimensionVer;
 import adris.altoclef.multiversion.MethodWrapper;
 import adris.altoclef.multiversion.world.WorldVer;
 import adris.altoclef.util.Dimension;
-import baritone.api.BaritoneAPI;
-import baritone.pathing.movement.CalculationContext;
-import baritone.pathing.movement.MovementHelper;
-import baritone.process.MineProcess;
-import baritone.utils.BlockStateInterface;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.MobSpawnerBlockEntity;
 import net.minecraft.block.enums.BedPart;
 import net.minecraft.block.enums.ChestType;
+import kaptainwutax.tungsten.path.movements.MovementHelperB;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
@@ -263,12 +259,41 @@ public interface WorldHelper {
 
         boolean canBreak = altoClef.getWorld().getBlockState(pos).getHardness(altoClef.getWorld(), pos) >= 0
                 && !altoClef.getExtraBaritoneSettings().shouldAvoidBreaking(pos)
-                && MineProcess.plausibleToBreak(new CalculationContext(altoClef.getClientBaritone()), pos)
+                && plausibleToBreak(altoClef.getWorld(), pos)
                 && canReach(pos);
 
         altoClef.getExtraBaritoneSettings().setInteractionPaused(prevInteractionPaused);
 
         return canBreak;
+    }
+
+    /**
+     * Is breaking this block even worth planning around?
+     *
+     * <p>{@code MineProcess.plausibleToBreak}, ported (G-0). It answered the same question with a
+     * whole CalculationContext built per call — a pathfinder object constructed to ask "is this
+     * minable", from {@link #canBreak} which the block scanner runs over every candidate.
+     *
+     * <p>Unchanged in substance: portal frames, the portal itself and lava are always worth
+     * breaking through (upstream's special cases), anything whose mining time is infinite is not,
+     * and bedrock both above and below means we could never get at it anyway.
+     */
+    private static boolean plausibleToBreak(World world, BlockPos pos) {
+        BlockState state = world.getBlockState(pos);
+        if (state.getBlock() instanceof net.minecraft.block.EndPortalFrameBlock
+                || state.getBlock() instanceof net.minecraft.block.EndPortalBlock
+                || state.getBlock() == Blocks.LAVA) {
+            return true;
+        }
+        ClientPlayerEntity player = AltoClef.getInstance().getPlayer();
+        double ticks = MovementHelperB.getMiningDurationTicks(world, player, pos.getX(), pos.getY(),
+                pos.getZ(), state, true);
+        if (!Double.isFinite(ticks)
+                || ticks >= kaptainwutax.tungsten.path.calculators.ActionCosts.COST_INF) {
+            return false;
+        }
+        return !(world.getBlockState(pos.up()).getBlock() == Blocks.BEDROCK
+                && world.getBlockState(pos.down()).getBlock() == Blocks.BEDROCK);
     }
 
     static boolean isInNetherPortal() {
@@ -283,7 +308,8 @@ public interface WorldHelper {
         AltoClef altoClef = AltoClef.getInstance();
 
         // There might be mumbo jumbo next to it, we fall and we get killed by lava or something.
-        if (MovementHelper.avoidBreaking(altoClef.getClientBaritone().bsi, toBreak.getX(), toBreak.getY(), toBreak.getZ(), altoClef.getWorld().getBlockState(toBreak))) {
+        if (MovementHelperB.avoidBreaking(altoClef.getWorld(), toBreak.getX(), toBreak.getY(),
+                toBreak.getZ(), altoClef.getWorld().getBlockState(toBreak))) {
             return true;
         }
         // Fall down
@@ -292,11 +318,11 @@ public interface WorldHelper {
             BlockState s = altoClef.getWorld().getBlockState(check);
             boolean tooFarToFall = dy > altoClef.getClientBaritoneSettings().maxFallHeightNoWater.value;
             // Don't fall in lava
-            if (MovementHelper.isLava(s))
+            if (isLavaState(s))
                 return true;
             // Always fall in water
             // TODO: If there's a 1 meter thick layer of water and then a massive drop below, the bot will think it is safe.
-            if (MovementHelper.isWater(s))
+            if (isWaterState(s))
                 return true;
             // We hit ground, depends
             if (WorldHelper.isSolidBlock(check)) {
@@ -449,11 +475,10 @@ public interface WorldHelper {
     }
 
     static boolean fallingBlockSafeToBreak(BlockPos pos) {
-        BlockStateInterface bsi = new BlockStateInterface(BaritoneAPI.getProvider().getPrimaryBaritone().getPlayerContext());
         World w = MinecraftClient.getInstance().world;
         assert w != null;
         while (isFallingBlock(pos)) {
-            if (MovementHelper.avoidBreaking(bsi, pos.getX(), pos.getY(), pos.getZ(), w.getBlockState(pos)))
+            if (MovementHelperB.avoidBreaking(w, pos.getX(), pos.getY(), pos.getZ(), w.getBlockState(pos)))
                 return false;
             pos = pos.up();
         }
