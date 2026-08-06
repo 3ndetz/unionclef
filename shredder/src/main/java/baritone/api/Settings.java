@@ -839,7 +839,7 @@ public final class Settings {
      * Tungsten pre-computes tick-precise key presses and yaw/pitch for more natural-looking movement.
      * Only activates on long (8+ block) flat stretches with no block breaking/placing.
      */
-    public final Setting<Boolean> useTungsten = new Setting<>(false);
+    public final Setting<Boolean> useTungsten = new Setting<>(true);
 
     /**
      * Minimum consecutive simple movements before tungsten delegation kicks in.
@@ -852,7 +852,7 @@ public final class Settings {
      * Allows Y changes (ascend/descend) unlike the flat-only useTungsten mode.
      * Falls back to shredder if tungsten can't find a path.
      */
-    public final Setting<Boolean> experimentalPathfinding = new Setting<>(false);
+    public final Setting<Boolean> experimentalPathfinding = new Setting<>(true);
 
     /**
      * When true, the player will remain with its existing look direction as often as possible.

@@ -198,9 +198,15 @@ public class TungstenConfig {
     /** EXPERIMENTAL (#1.6.1): generate block-space neighbours via the tungsten-native
      *  SmartMoves (Traverse/Ascend/Descend/Parkour) instead of the blind r=8 scan.
      *  Fewer, already-valid neighbours -> the search routes stepped/gap terrain within
-     *  its node budget. Default OFF so course A (staircase) keeps the proven blind-scan
-     *  path until SmartMoves is validated A-green. */
-    public boolean smartMoves = false;
+     *  its node budget.
+     *
+     *  ON BY DEFAULT (G-0), together with tungsten-primary, which is the pairing every
+     *  measurement of altoclef navigation has actually used -- setTungstenPathing() has always
+     *  turned the two on together, because without these neighbours the block-space search follows
+     *  a grid stub that cannot route a staircase (terrain courses A/B fail without it). The old
+     *  default said "until SmartMoves is validated A-green"; it has been the only configuration
+     *  under test for a long time. */
+    public boolean smartMoves = true;
 
     /**
      * Blocks -> ticks for the BLOCK-SPACE search's heuristic (BlockSpacePathFinder).

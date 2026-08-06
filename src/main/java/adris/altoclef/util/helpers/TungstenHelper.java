@@ -37,7 +37,14 @@ public class TungstenHelper {
 
     // Drop-in swap (TODO 13): when primary, altoclef goals route straight to
     // tungsten instead of waiting for the fallback path to fail.
-    private static volatile boolean primary = false;
+    //
+    // ON BY DEFAULT (G-0). The goal of this repo is that the bot navigates on tungsten; while this
+    // shipped false, it did not -- out of the box every altoclef goal went to shredder, and
+    // tungsten only drove after a harness or an agent called setTungstenPathing(true). Everything
+    // the bench measures about altoclef navigation, it measures with this ON: the @gamer survival
+    // sweep flips it before it starts, so the configuration under test was never the configuration
+    // shipped. Now they are the same one.
+    private static volatile boolean primary = true;
     public static void setPrimary(boolean p) { primary = p; }
     public static boolean isPrimary() { return primary; }
 

@@ -35,6 +35,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
      *  seconds is far longer than a healthy plan (which becomes a chain within a tick or two)
      *  and far shorter than the ninety seconds of standing still the bench calls a stall. */
     private static final long PLAN_GIVE_UP_MS = 8000L;
+    /** Ticks the LEGACY engine was handed the goal because tungsten declined. Read as pdLegacy;
+     *  the whole of "can baritone go" is whether this stays at zero on a real run. */
+    public static volatile int pdLegacyPath;
     /** Simple name of the last goal type goalToVec could not translate; read over py4j. */
     public static volatile String pdLastUnknownGoal = "-";
 
@@ -247,6 +250,12 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (!TungstenHelper.isActive()
                 && !Nav.hasGoal()
                 && Nav.isSafeToCancel()) {
+            // THE LAST PLACE THE LEGACY ENGINE STILL MOVES THE BOT.
+            // Everything above this line is tungsten; reaching here means the tungsten drive
+            // declined the tick and shredder is being asked to walk instead. Count it, because
+            // "can baritone be deleted" is exactly the question of whether this number is zero on
+            // a real run -- and a guess about that is worth nothing.
+            pdLegacyPath++;
             mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(cachedGoal);
         }
         setDebugState("Completing goal.");
