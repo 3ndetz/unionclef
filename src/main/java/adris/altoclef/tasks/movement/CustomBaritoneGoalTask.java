@@ -24,6 +24,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     /** Entry and early-exit tallies for the tungsten branch; read over py4j in placeStats(). */
     public static volatile int pdEnter, pdNotPrimary, pdPillar, pdBridge, pdStuckGiveUp,
             pdWalking, pdNear, pdNoGoal, pdFinished, pdNoVec, pdStallWalker, pdStallReset, pdNearBusy, pdNearFind, pdPlanning, pdPlanGiveUp;
+    /** When the "no route" line last printed; the state repeats every tick otherwise. */
+    private long twLastNoRouteLogMs = 0L;
     /** When the near-goal branch last issued a search; see the rate gate at its site. */
     private long twLastNearFindMs = 0L;
     /** When the drive started planning without the body moving or a chain running; 0 = not in
@@ -655,6 +657,21 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 if (kaptainwutax.tungsten.task.BlockPathWalker.DEBUG)
                     Debug.logMessage(String.format("primDrive gridBFS sz%d degen%b d%.1f dy%.1f",
                             bfs.size(), degenerateStub, distToGoal, gp.y - mod.getPlayer().getY()));
+                // A ONE-CELL ROUTE IS THE SEARCH SAYING "NOTHING I CAN REACH IS ANY CLOSER".
+                // Measured on a failing @gamer run: 1029 of them, every one at exactly d30.0 dy0.0
+                // -- the same distance to the same goal, so the bot never moved an inch, and the
+                // BFS was expanding (the no-expansion diagnosis in CombatPathfinder never fired).
+                // Everything the fix needs is WHERE: which cell the bot is in and which cell it is
+                // being sent to. Those two positions name the situation; the distance alone does
+                // not. Rate-limited, because the state repeats every tick.
+                if (bfs.size() < 2 && nowMs - twLastNoRouteLogMs > 2000) {
+                    twLastNoRouteLogMs = nowMs;
+                    net.minecraft.util.math.BlockPos me = startB;
+                    Debug.logMessage(String.format(
+                            "primDrive NO ROUTE: at %d,%d,%d -> goal %d,%d,%d (d%.1f) goalTask=%s",
+                            me.getX(), me.getY(), me.getZ(), goalB.getX(), goalB.getY(), goalB.getZ(),
+                            distToGoal, goal));
+                }
                 if (bfs.size() >= 2 && !degenerateStub) {
                     // STOP THE DRIVER, NOT THE SEARCH.
                     // Handing movement to the walker is an OWNERSHIP decision and the executor
@@ -855,8 +872,28 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             net.minecraft.world.World w = mod.getWorld();
             int gx = (int) Math.floor(gp.x), gy = (int) Math.floor(gp.y), gz = (int) Math.floor(gp.z);
             if (standable(w, gx, gy, gz)) return gp;                 // already fine
-            if (isSolidAt(w, gx, gy, gz)) {                          // goal inside a block → stand on top
-                for (int y = gy + 1; y <= gy + 5; y++)
+            if (isSolidAt(w, gx, gy, gz)) {
+                // A BLOCK TO BE MINED IS REACHED FROM BESIDE IT, NOT FROM ON TOP OF IT.
+                // Going up the column first is right for "stand on this surface" and wrong for
+                // every mining target: a log's first standable cell above it is the top of the
+                // TREE, so the drive was sent to an air cell in the canopy that nothing can route
+                // to. Measured on a failing @gamer run, printed by the drive itself:
+                //   NO ROUTE: at 90,135,-36 -> goal 84,140,-39  goalTask=block(84,136,-39)
+                //   NO ROUTE: at -3308,150,-3239 -> goal -3290,101,-3230 goalTask=block(-3290,99,-3230)
+                // -- the task asked for a block and the drive aimed four (and two) blocks above it,
+                // then reported a one-cell route 1029 times without the bot moving an inch.
+                // Standing beside the block is both reachable and the position mining needs, so the
+                // neighbours come first; the column search stays as the fallback for a goal that
+                // really is a surface to stand on.
+                for (int[] d : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+                    for (int dy = 0; dy >= -1; dy--) {
+                        if (standable(w, gx + d[0], gy + dy, gz + d[1])) {
+                            return new net.minecraft.util.math.Vec3d(
+                                    gx + d[0] + 0.5, gy + dy, gz + d[1] + 0.5);
+                        }
+                    }
+                }
+                for (int y = gy + 1; y <= gy + 5; y++)               // no neighbour: stand on top
                     if (standable(w, gx, y, gz)) return new net.minecraft.util.math.Vec3d(gx + 0.5, y, gz + 0.5);
             }
             for (int y = gy; y >= gy - 6; y--)                       // floating goal → drop to the ground
