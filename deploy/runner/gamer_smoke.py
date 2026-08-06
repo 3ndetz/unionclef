@@ -33,6 +33,7 @@ elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="swap": out=dict(mc.setTungstenPathing(bool(req["on"])))
 elif op=="swapstate": out=dict(mc.pathingMode())
 elif op=="cmd": mc.ExecuteCommand(req["c"]); out={"ok":True}
+elif op=="chatcmd": mc.ChatMessage(req["c"]); out={"ok":True}
 elif op=="gs":
     gs=mc.getGameState()
     out={"inGame":gs.get("inGame"),"self":dict(gs.get("self") or {})}
@@ -254,6 +255,18 @@ def main():
     # water moves; see nav_water 3/3). So the bench measured a configuration no user ever ran.
     # tungsten-primary is the default now, so the bench asserts it instead of setting it: if the
     # default ever regresses to baritone, this run says so instead of quietly fixing it.
+    # DRAWING FOR NOBODY IS COST WITHOUT BENEFIT. No clip is recorded here, so tungsten's overlays
+    # buy nothing.
+    # WHAT IS AND IS NOT MEASURED: one A/B read 12 fps with them on and 16 with them off, which
+    # looked like the lever the perf notes promise. Two later runs WITH the pins in place read 10.
+    # The effect is NOT established -- the first pair was the machine moving under me -- so the
+    # pins stay on principle and that number is not to be quoted as fact.
+    for flag in ("renderVisualization", "renderPathMoves", "renderCombat",
+                 "renderBreakPlan", "renderPlacePlan"):
+        # ChatMessage, not ExecuteCommand: `;settings` is TUNGSTEN's chat command, while
+        # ExecuteCommand runs altoclef's `@` commands -- sent the wrong way it silently does
+        # nothing, which is what the first attempt did (fps unchanged at 10).
+        py4j("chatcmd", c=f";settings {flag} false")
     st = py4j("swapstate")
     print("  shipped pathing flags:", st)
     if not st.get("tungstenPrimary"):

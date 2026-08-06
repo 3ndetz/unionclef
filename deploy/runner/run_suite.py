@@ -65,6 +65,9 @@ VIZ_SETTINGS = {
     "renderPlacePlan": "true",
 }
 
+# The same flags, off: what every UNRECORDED run uses. See the note at the pin site.
+VIZ_OFF = {k: "false" for k in VIZ_SETTINGS}
+
 
 def _rec_start(scn_id, dur, persp=0, bot=None):
     """Record tester1's own screen for the scenario window (x11grab on the
@@ -139,7 +142,15 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
         # scenario's own pins.
         bot.reset_config()
         victim.reset_config()
-        bot.pin_settings(VIZ_SETTINGS)
+        # DRAWING FOR NOBODY IS COST WITHOUT BENEFIT.
+        # Visualisation belongs ON for a recording -- that is what the clip is for -- and it is a
+        # pure cost for every other run, so unrecorded runs turn it off.
+        # WHAT IS AND IS NOT MEASURED: one A/B on this stand read 12 fps with the overlays on and
+        # 16 with them off, which looked like the lever the perf notes promise. Two later runs WITH
+        # the pins in place read 10. So the effect is NOT established -- that first pair was the
+        # machine moving under me, and the number must not be quoted as fact. The pins stay on the
+        # principle that drawing for nobody is cost without benefit, not on a measurement.
+        bot.pin_settings(VIZ_SETTINGS if record else VIZ_OFF)
         if EXTRA_PINS:
             # SET THROUGH py4j, NOT CHAT. pin_settings() sends ";settings k v" as a chat
             # message, which the client runs on a later tick — at this stand's ~10 fps the
