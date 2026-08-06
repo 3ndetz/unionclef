@@ -101,6 +101,8 @@ public final class MovementQueue {
      * Those have three different fixes, so they get three counters.
      */
     public static volatile int qLost, qStatusFail, qRefused;
+    /** Edges dropped because no movement class matches their shape (a running jump, today). */
+    public static volatile int qNoClass;
     /** {@link #qRefused} split by cause: the route was shorter than two cells, or the vetting
      *  left nothing executable. Same reasoning as the split above — one number, two fixes. */
     public static volatile int qShort, qVetoed;
@@ -404,8 +406,19 @@ public final class MovementQueue {
             } else if (isTraverseEdge(from, to)) {
                 movements.add(new MovementTraverse(from, to));
             } else {
-                // No class for this shape — walk it rather than hand the tail back.
-                movements.add(new MovementFallback(from, to));
+                // AN EDGE WITH NO CLASS IS NOT THIS QUEUE'S WORK -- KEEP THE HEAD, HAND BACK THE REST.
+                // The route comes from CombatPathfinder with parkour enabled, so it contains running
+                // jumps: measured on @gamer, {90,134,-36}->{86,135,-34}, four blocks across and one
+                // up. There is no MovementParkour here, so the shape fell through to a dumb steer
+                // that walks at the gap, fails its own no-progress check a second and a half later,
+                // and gets planned again identically -- the bot oscillates on the lip and the drive
+                // eventually reports "goal unreachable - no progress in 14s".
+                // Truncating instead is honest about capability: the queue runs the part it has
+                // movements for, and a route whose FIRST edge is a jump is refused outright, which
+                // sends it to the walker -- the thing that sprint-jumps toward a waypoint and can
+                // actually clear the gap.
+                qNoClass++;
+                break;
             }
         }
         // A STEP WE CANNOT PREPARE IS NOT A STEP WE CAN TAKE.
@@ -428,6 +441,13 @@ public final class MovementQueue {
         // 25 route hand-offs for every 2 it accepted, because a terrain route meets a breakable
         // cell almost immediately. Cut only where the break is genuinely impossible: a block we
         // are forbidden to break, or one with no finite mining time.
+        if (movements.isEmpty()) {
+            // Every edge was a shape we have no class for -- most often a route whose very first
+            // step is a jump. Refusing sends the drive to the walker instead of starting an empty
+            // queue that would report "chain complete" and look like an arrival.
+            qRefused++;
+            return 0;
+        }
         net.minecraft.client.network.ClientPlayerEntity self =
                 net.minecraft.client.MinecraftClient.getInstance().player;
         int executable = movements.size();
