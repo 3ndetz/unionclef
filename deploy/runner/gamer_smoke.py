@@ -48,6 +48,7 @@ elif op=="inv":
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
+elif op=="perf": out={"p": dict(mc.getPerfStats())}
 elif op=="tdump": out={"d": str(mc.threadDump(str(req.get("f",""))))[:4000]}
 elif op=="logs": out={"n": int(mc.countLogsNear(int(req.get("r",40))))}
 elif op=="blk": out={"b": {str(k): str(v) for k, v in dict(mc.getBlockAt(int(req["x"]),int(req["y"]),int(req["z"]))).items()}}
@@ -315,6 +316,7 @@ def main():
     log_mark = len(sh(["docker", "logs", "--tail", "2000", GSERVER]).stdout.splitlines())
     print(f"[4] watching {MINUTES} min for progress...")
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
+    fps_samples = []
     while time.time()-t0 < MINUTES*60:
         time.sleep(20)
         try:
@@ -350,6 +352,15 @@ def main():
                     reached[rung] = round(time.time()-t0, 1)
                     print(f"  RUNG '{rung}' at {reached[rung]}s")
             responsive+=1
+            # HOW FAST WAS THE CLIENT WHILE IT TRIED? The nav suite has asked this since the day a
+            # starved host was read as a code regression; this bench never has, so its verdicts
+            # during a loaded hour looked exactly like the bot failing. Measured on this machine:
+            # another project's containers at 250%+, the client at 10 fps, and four sweeps in a row
+            # reporting "nothing reached" against 3/3 from the last quiet sample.
+            try:
+                fps_samples.append(float(py4j("perf").get("p", {}).get("fps") or 0))
+            except Exception:
+                pass
             pos=gs.get("self",{}).get("pos"); hp=gs.get("self",{}).get("hp")
             if ht.get("busy"): busy_cnt+=1
             if pos: moved.add(pos)
@@ -498,6 +509,21 @@ def main():
         how = ("reached" if want in reached else
                ("passed (got as far as '%s')" % order[deepest]) if satisfied else "NOT reached")
         print(f"  required rung '{want}':", how)
+    # A STARVED CLIENT DID NOT MEASURE THE BOT.
+    # Same convention as run_suite: the run is INVALID, never PASS -- it has to be run again rather
+    # than counted -- and it does not read as broken code. Only a failing run can be invalidated;
+    # a run that cleared its rung on a slow machine cleared it.
+    HEALTHY_FPS_MIN = 12.0
+    med_fps = None
+    if fps_samples:
+        ordered = sorted(fps_samples)
+        med_fps = ordered[len(ordered) // 2]
+    if not ok and med_fps is not None and med_fps < HEALTHY_FPS_MIN:
+        print(f"  client fps (median): {med_fps:.1f} over {len(fps_samples)} samples")
+        raise StandDown(f"client starved: median {med_fps:.1f} fps < {HEALTHY_FPS_MIN}"
+                        f" — this measured the MACHINE, not the bot")
+    if med_fps is not None:
+        print(f"  client fps (median): {med_fps:.1f} over {len(fps_samples)} samples")
     print("  GAMER_SMOKE:", "PASS" if ok else "FAIL (or no early progress in window)")
     return ok
 
@@ -561,4 +587,11 @@ if __name__ == "__main__":
     need = rep if rep < 3 else rep - 1
     if "--need" in sys.argv:
         need = int(sys.argv[sys.argv.index("--need") + 1])
-    sys.exit(0 if (sweep(rep, need) if rep > 1 else main()) else 1)
+    # EXIT 2 MEANS "ASK AGAIN LATER", NOT "THE BOT IS BROKEN".
+    # sweep() already treats a stand-down as invalid; a single run used to let the exception out as
+    # a traceback, which reads like a crash in the bench itself.
+    try:
+        sys.exit(0 if (sweep(rep, need) if rep > 1 else main()) else 1)
+    except StandDown as e:
+        print(f"  GAMER_SMOKE: INVALID — {e}")
+        sys.exit(2)
