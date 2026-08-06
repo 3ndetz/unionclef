@@ -267,6 +267,20 @@ def main():
         # ExecuteCommand runs altoclef's `@` commands -- sent the wrong way it silently does
         # nothing, which is what the first attempt did (fps unchanged at 10).
         py4j("chatcmd", c=f";settings {flag} false")
+    # WHAT THIS CLIENT CAN DO IN THIS WORLD, TODAY, BEFORE THE BOT STARTS.
+    # A fixed fps floor cannot work here. The survival world costs about half the frame budget of
+    # the flat course arena -- measured tonight: 35-43 fps idle on the flat stand, 17-19 idle in the
+    # gamer world, 9-12 under a run -- so the floor that keeps nav honest (14) marks EVERY @gamer
+    # failure invalid, which is a check that cannot fail: the very defect this guard was added to
+    # remove. The reference is therefore taken per run, from this client in this world moments
+    # before @gamer starts, and a run is only disowned when it collapses well below its own
+    # reference.
+    fps_ref = None
+    try:
+        fps_ref = float(py4j("perf").get("p", {}).get("fps") or 0) or None
+    except Exception:
+        pass
+    print(f"  client fps before start: {fps_ref}")
     st = py4j("swapstate")
     print("  shipped pathing flags:", st)
     if not st.get("tungstenPrimary"):
@@ -534,7 +548,10 @@ def main():
     # notes say the same from the other side: nav_slime lands on its pad above ~13 fps and misses
     # below ~10. A floor of 12 therefore called a degraded run a bot failure, which is the false
     # red this guard exists to prevent.
-    HEALTHY_FPS_MIN = 14.0
+    # Disown a failure only when the client collapsed to well under what it managed in this same
+    # world minutes earlier. 60% of the reference, with a hard floor of 6 so a broken reference
+    # cannot silence everything.
+    HEALTHY_FPS_MIN = max(6.0, 0.6 * fps_ref) if fps_ref else 6.0
     med_fps = None
     if fps_samples:
         ordered = sorted(fps_samples)
