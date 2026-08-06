@@ -302,6 +302,11 @@ public class BlockNode {
 		return x == other.x && y == other.y && z == other.z;
 	}
 
+	/** Times the smartMoves branch below was taken, and moves it produced. Read as sm=sel/moves.
+	 *  A swim fix was written into SmartMoves and changed the course numbers by NOTHING, digit for
+	 *  digit, twice -- which is what a code path that never runs looks like. Prove it runs. */
+	public static volatile int smSelected, smMoves;
+
 	public List<BlockNode> getChildren(WorldView world, Goal goal, boolean generateDeep) {
 
 		// EXPERIMENTAL (#1.6.1): tungsten-native smart move generation — a handful of
@@ -309,8 +314,11 @@ public class BlockNode {
 		// r=8 scan, so the search routes stepped/gap terrain within its node budget.
 		// Flag-gated (default off) so course A keeps the proven blind-scan path.
 		if (TungstenConfig.get().smartMoves) {
+			smSelected++;
 			List<BlockNode> smart = new ArrayList<>();
-			for (SmartMoves.Move m : SmartMoves.generate(world, this.getBlockPos())) {
+			java.util.List<SmartMoves.Move> generated = SmartMoves.generate(world, this.getBlockPos());
+			smMoves += generated.size();
+			for (SmartMoves.Move m : generated) {
 				BlockNode n = new BlockNode(m.dest.getX(), m.dest.getY(), m.dest.getZ(),
 						goal, this, m.cost, this.player);
 				n.isDoingJump = m.jump;
