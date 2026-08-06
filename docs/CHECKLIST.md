@@ -32,6 +32,24 @@ The score IS "how far we got".
 
 ## 1. AUDIT — every iteration, before a single line of code
 
+⛔ **RULE ZERO: BEFORE BELIEVING A RED, ASK WHETHER THE MACHINE WAS THERE.**
+
+Added 2026-08-06, after most of an evening's readings turned out to be about the host. Another
+project's containers took 250-450% of this machine's CPU for hours; the stand ran at 10 fps; four
+sweeps in a row said "nothing reached" against 3/3 from the last quiet sample. Nothing in the
+output distinguished that from a code regression, and a whole pass nearly went to bisecting my own
+commits.
+
+`docker stats --no-stream` answers it in one second. Both benches now answer it themselves —
+`run_suite` counts a starved run INVALID (never PASS: it must be re-run, not counted), and
+`gamer_smoke` samples the client's fps every poll and stands down below the healthy line. If a run
+is INVALID, it measured the MACHINE. Do not read it as a regression, do not revert on it, and do
+not ship a behaviour change measured against it.
+
+The mirror rule holds too: a behaviour change that CANNOT be measured today does not get shipped
+today. Park it with its patch, its blast radius and its reason written at the site, and bench it
+first thing when the machine is quiet. There is one parked right now (TODOS G-0.3).
+
 ⛔ **THE RULE: before fixing anything, PROVE BY EXPERIMENT that the code runs.**
 
 Breaking this rule on 2026-07-27 cost a whole session: a search engine was reworked while a
