@@ -243,7 +243,7 @@ public class PlaceBlockNearbyTask extends Task {
         AltoClef.getInstance().getInputControls().release(Input.SNEAK);
         //mod.getControllerExtras().mouseClickOverride(1, false);
         // Oof, these sometimes cause issues so this is a bit of a duct tape fix.
-        AltoClef.getInstance().getClientBaritone().getBuilderProcess().onLostControl();
+        Nav.stopBuilding();
     }
 
     private BlockPos locateClosePlacePos(AltoClef mod) {

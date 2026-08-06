@@ -144,7 +144,7 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
         } else {
             setDebugState("Letting baritone place a block.");
             // Perform baritone placement
-            if (!mod.getClientBaritone().getBuilderProcess().isActive()) {
+            if (!Nav.isBuilding()) {
                 Debug.logInternal("Run Structure Build");
                 ISchematic schematic = new PlaceStructureSchematic(mod);
                 mod.getClientBaritone().getBuilderProcess().build("structure", schematic, target);
@@ -155,7 +155,7 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
 
     @Override
     protected void onStop(Task interruptTask) {
-        AltoClef.getInstance().getClientBaritone().getBuilderProcess().onLostControl();
+        Nav.stopBuilding();
     }
 
     //TODO: Place structure where a leaf block was???? Might need to delete the block first if it's not empty/air/water.

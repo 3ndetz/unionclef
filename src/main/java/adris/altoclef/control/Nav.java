@@ -109,6 +109,26 @@ public final class Nav {
         }
     }
 
+    /**
+     * Is a schematic being built right now?
+     *
+     * <p>Five of the eight builder calls are these two questions -- am I building, stop building --
+     * asked by tasks that are about to take the body for something else. Starting a build still
+     * names the engine, because it hands over a schematic and there is nowhere else yet to hand it.
+     */
+    public static boolean isBuilding() {
+        baritone.Baritone b = engine();
+        return b != null && b.getBuilderProcess().isActive();
+    }
+
+    /** Stop building. Safe to call when nothing is. */
+    public static void stopBuilding() {
+        baritone.Baritone b = engine();
+        if (b != null) {
+            b.getBuilderProcess().onLostControl();
+        }
+    }
+
     /** Stop exploring. Safe to call when nothing is. */
     public static void stopExploring() {
         baritone.Baritone b = engine();

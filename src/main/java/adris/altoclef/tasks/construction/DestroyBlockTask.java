@@ -403,7 +403,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             mod.getInputControls().release(Input.MOVE_BACK);
             mod.getInputControls().release(Input.MOVE_FORWARD);
             Nav.clearGoal();
-            mod.getClientBaritone().getBuilderProcess().onLostControl();
+            Nav.stopBuilding();
             if (!LookHelper.isLookingAt(mod, reach.get())) {
                 LookHelper.lookAt(reach.get());
             }
