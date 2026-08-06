@@ -231,8 +231,17 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     # frozen — see scenario.py, where it is fixed. This guard is kept because starving a
     # one-machine stand is a genuine hazard, but it is a safety net, NOT the explanation
     # for that incident, and it must not be cited as one.
-    # Only the load-sensitive criteria are excused. Not reaching the goal stays a failure.
-    LOAD_SENSITIVE = ("freeze", "stand-still", "standstill")
+    # WHICH CRITERIA A STARVED MACHINE CAN INVALIDATE.
+    # "Not reaching the goal stays a failure" was written to stop this excuse being used to hide
+    # real breakage, and that intent is kept: a starved run is INVALID, never PASS, so it has to be
+    # run again rather than counted.
+    # But arrival is measured against a wall-clock course timeout, so at 40% of the normal frame
+    # budget it is exactly as load-sensitive as the freeze count. Measured today: nav_wall2 and
+    # nav_bridge failed "reached goal" at avg_fps 9.9 and 10.0 with sixteen and seventeen freezes,
+    # in ISOLATION, on a build whose previous audit was 12/12 -- and `docker stats` named the
+    # reason: two containers belonging to another project were taking 225% and 171% of the CPU.
+    # Calling that a code regression would have sent the next pass bisecting the machine.
+    LOAD_SENSITIVE = ("freeze", "stand-still", "standstill", "reached goal")
     HEALTHY_FPS_MIN = 12.0
     avg_fps = ctx.geo.get("avg_fps")
     invalid = False
