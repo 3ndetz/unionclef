@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.misc;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
@@ -383,9 +384,9 @@ public class PlaceBedAndSetSpawnTask extends Task {
         setDebugState("Filling in Portal");
         if (!progressChecker.check(mod)) {
             mod.getClientBaritone().getPathingBehavior().cancelEverything();
-            mod.getClientBaritone().getPathingBehavior().forceCancel();
+            Nav.cancel();
             mod.getClientBaritone().getExploreProcess().onLostControl();
-            mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+            Nav.clearGoal();
             progressChecker.reset();
         }
 

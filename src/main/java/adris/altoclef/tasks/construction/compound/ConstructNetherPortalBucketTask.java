@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.construction.compound;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
@@ -134,7 +135,7 @@ public class ConstructNetherPortalBucketTask extends Task {
                 return null;
             }
         }
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             progressChecker.reset();
         }
         if (wanderTask.isActive() && !wanderTask.isFinished()) {
@@ -144,7 +145,7 @@ public class ConstructNetherPortalBucketTask extends Task {
         }
 
         if (!progressChecker.check(mod)) {
-            mod.getClientBaritone().getPathingBehavior().forceCancel();
+            Nav.cancel();
             if (portalOrigin != null && currentDestroyTarget != null) {
                 mod.getBlockScanner().requestBlockUnreachable(portalOrigin);
                 mod.getBlockScanner().requestBlockUnreachable(currentDestroyTarget);

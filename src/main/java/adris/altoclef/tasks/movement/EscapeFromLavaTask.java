@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.multiversion.FoodComponentWrapper;
 import adris.altoclef.multiversion.item.ItemVer;
@@ -44,7 +45,7 @@ public class EscapeFromLavaTask extends CustomBaritoneGoalTask {
 
         mod.getBehaviour().push();
         mod.getClientBaritone().getExploreProcess().onLostControl();
-        mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+        Nav.clearGoal();
         mod.getBehaviour().allowSwimThroughLava(true);
         // Encourage placing of all blocks!
         mod.getBehaviour().setBlockPlacePenalty(0);

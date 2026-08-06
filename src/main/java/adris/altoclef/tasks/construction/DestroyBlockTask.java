@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.construction;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasks.movement.GetToBlockTask;
@@ -13,8 +14,6 @@ import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import adris.altoclef.util.slots.Slot;
-import baritone.api.pathing.goals.GoalBlock;
-import baritone.api.pathing.goals.GoalNear;
 import kaptainwutax.tungsten.path.movements.Rotation;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.*;
@@ -201,7 +200,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         AltoClef mod = AltoClef.getInstance();
 
         // Cancel any ongoing pathing behavior.
-        mod.getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
 
         // Reset move checker and stuck check.
         _moveChecker.reset();
@@ -278,13 +277,13 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         }
 
         // Reset the move checker if Baritone is currently pathing
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             _moveChecker.reset();
         }
 
         // Check if the player is in a Nether portal
         if (WorldHelper.isInNetherPortal()) {
-            if (!mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (!Nav.isPathing()) {
                 setDebugState("Getting out from nether portal");
                 // Hold the sneak and move forward inputs to exit the Nether portal
                 mod.getInputControls().hold(Input.SNEAK);
@@ -295,7 +294,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                 mod.getInputControls().release(Input.MOVE_BACK);
                 mod.getInputControls().release(Input.MOVE_FORWARD);
             }
-        } else if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        } else if (Nav.isPathing()) {
             mod.getInputControls().release(Input.SNEAK);
             mod.getInputControls().release(Input.MOVE_BACK);
             mod.getInputControls().release(Input.MOVE_FORWARD);
@@ -306,7 +305,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             setDebugState("Getting unstuck from block.");
             stuckCheck.reset();
             // Release control of Baritone's custom goal process and explore process
-            mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+            Nav.clearGoal();
             mod.getClientBaritone().getExploreProcess().onLostControl();
             return unstuckTask;
         }
@@ -368,7 +367,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             if (!reach.isPresent()) dbNearNoReach++;
             else if (!(mod.getPlayer().isTouchingWater() || mod.getPlayer().isOnGround())) dbNearAirborne++;
             else if (mod.getFoodChain().needsToEat()) dbNearHungry++;
-            else if (!mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) dbNearUnsafe++;
+            else if (!Nav.isSafeToCancel()) dbNearUnsafe++;
         }
         // FELL WHAT IS IN THE WAY, DO NOT WALK AWAY FROM IT.
         // Measured: while the bot stands within four blocks of its target log, the reach ray is
@@ -396,14 +395,14 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                 }
             }
         }
-        if (reach.isPresent() && (mod.getPlayer().isTouchingWater() || mod.getPlayer().isOnGround()) && !mod.getFoodChain().needsToEat() && !WorldHelper.isInNetherPortal() && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
+        if (reach.isPresent() && (mod.getPlayer().isTouchingWater() || mod.getPlayer().isOnGround()) && !mod.getFoodChain().needsToEat() && !WorldHelper.isInNetherPortal() && Nav.isSafeToCancel()) {
             setDebugState("Block in range, mining...");
             stuckCheck.reset();
             isMining = true;
             mod.getInputControls().release(Input.SNEAK);
             mod.getInputControls().release(Input.MOVE_BACK);
             mod.getInputControls().release(Input.MOVE_FORWARD);
-            mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+            Nav.clearGoal();
             mod.getClientBaritone().getBuilderProcess().onLostControl();
             if (!LookHelper.isLookingAt(mod, reach.get())) {
                 LookHelper.lookAt(reach.get());
@@ -423,7 +422,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             }
             boolean isCloseToMoveBack = pos.isWithinDistance(mod.getPlayer().getPos(), 2);
             if (isCloseToMoveBack) {
-                if (!mod.getClientBaritone().getPathingBehavior().isPathing() && !mod.getPlayer().isTouchingWater() &&
+                if (!Nav.isPathing() && !mod.getPlayer().isTouchingWater() &&
                         !mod.getFoodChain().needsToEat()) {
                     mod.getInputControls().hold(Input.MOVE_BACK);
                     mod.getInputControls().hold(Input.SNEAK);
@@ -458,7 +457,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         AltoClef mod = AltoClef.getInstance();
 
         // Cancel Baritone pathing
-        mod.getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
 
         // If not in game, return
         if (!AltoClef.inGame()) {

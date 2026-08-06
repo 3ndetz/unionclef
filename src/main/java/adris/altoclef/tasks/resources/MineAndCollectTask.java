@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.resources;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.multiversion.blockpos.BlockPosVer;
@@ -239,11 +240,11 @@ public class MineAndCollectTask extends ResourceTask {
         protected Task onTick() {
             AltoClef mod = AltoClef.getInstance();
 
-            if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (Nav.isPathing()) {
                 progressChecker.reset();
             }
             if (miningPos != null && !progressChecker.check(mod)) {
-                mod.getClientBaritone().getPathingBehavior().forceCancel();
+                Nav.cancel();
                 Debug.logMessage("Failed to mine block. Suggesting it may be unreachable.");
                 mod.getBlockScanner().requestBlockUnreachable(miningPos, 2);
                 blacklist.add(miningPos);

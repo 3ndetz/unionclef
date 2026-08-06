@@ -1,11 +1,13 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.control.InputControls;
 import adris.altoclef.multiversion.versionedfields.Blocks;
 import adris.altoclef.tasksystem.ITaskRequiresGrounded;
 import adris.altoclef.tasksystem.Task;
+import adris.altoclef.util.goals.AltoGoal;
 import adris.altoclef.util.helpers.TungstenHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
@@ -41,6 +43,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     private final boolean wander;
     protected MovementProgressChecker checker = new MovementProgressChecker();
     protected Goal cachedGoal = null;
+    /** The same goal in altoclef's own terms — what the drive and isFinished actually steer by. */
+    protected AltoGoal cachedAlto = null;
     // Anti-permanent-stuck (tungsten-primary): if the bot hasn't moved for a while,
     // the tungsten nav is trapped (unreachable sub-goal / stale-rooted reject loop) —
     // reset its state so it re-plans fresh, then yield to wander if it stays stuck.
@@ -133,7 +137,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
 
     @Override
     protected void onStart() {
-        AltoClef.getInstance().getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
         TungstenHelper.reset();
         checker.reset();
         stuckCheck.reset();
@@ -144,11 +148,11 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         AltoClef mod = AltoClef.getInstance();
         InputControls controls = mod.getInputControls();
         
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             checker.reset();
         }
         if (WorldHelper.isInNetherPortal()) {
-            if (!mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (!Nav.isPathing()) {
                 setDebugState("Getting out from nether portal");
                 controls.hold(Input.SNEAK);
                 controls.hold(Input.MOVE_FORWARD);
@@ -159,7 +163,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 controls.release(Input.MOVE_FORWARD);
             }
         } else {
-            if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (Nav.isPathing()) {
                 controls.release(Input.SNEAK);
                 controls.release(Input.MOVE_BACK);
                 controls.release(Input.MOVE_FORWARD);
@@ -169,7 +173,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             setDebugState("Getting unstuck from block.");
             stuckCheck.reset();
             // Stop other tasks, we are JUST shimmying
-            mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+            Nav.clearGoal();
             mod.getClientBaritone().getExploreProcess().onLostControl();
             return unstuckTask;
         }
@@ -180,12 +184,10 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 return unstuckTask;
             }
             // Not in annoying block — force baritone to recompute, so wander fallback can fire
-            mod.getClientBaritone().getPathingBehavior().forceCancel();
+            Nav.cancel();
             stuckCheck.reset();
         }
-        if (cachedGoal == null) {
-            cachedGoal = newGoal(mod);
-        }
+        goal(mod);
 
         // ── Tungsten-PRIMARY (drop-in swap, TODO 13) ──
         if (driveTungstenPrimary(mod)) return null;
@@ -193,7 +195,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         // ── Tungsten lock: exclusive 30s control, Baritone stays off ──
         if (TungstenHelper.isLocked()) {
             TungstenHelper.tickLock();
-            mod.getClientBaritone().getPathingBehavior().forceCancel();
+            Nav.cancel();
             checker.reset();
             long remaining = Math.max(0, (TungstenHelper.lockUntilMs() - System.currentTimeMillis()) / 1000);
             setDebugState("Tungsten pathfinding (" + remaining + "s left)");
@@ -231,7 +233,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                             goalPos = new net.minecraft.util.math.Vec3d(gg.x, gg.y, gg.z);
                         }
                         if (TungstenHelper.tryPathTo(goalPos)) {
-                            mod.getClientBaritone().getPathingBehavior().forceCancel();
+                            Nav.cancel();
                             setDebugState("Baritone stuck, trying Tungsten...");
                             return null;
                         }
@@ -243,8 +245,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             }
         }
         if (!TungstenHelper.isActive()
-                && !mod.getClientBaritone().getCustomGoalProcess().isActive()
-                && mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
+                && !Nav.hasGoal()
+                && Nav.isSafeToCancel()) {
             mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(cachedGoal);
         }
         setDebugState("Completing goal.");
@@ -253,9 +255,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
 
     @Override
     public boolean isFinished() {
-        if (cachedGoal == null) {
-            cachedGoal = newGoal(AltoClef.getInstance());
-        }
+        AltoGoal g = goal(AltoClef.getInstance());
         // SAY WHERE WE WERE WHEN WE CALLED IT DONE.
         // nav_bridge ends with the bot standing at the lip of the gap, 11.6 blocks short, and the
         // chain reading "No tasks" -- with no "interrupted" and no "finished in N seconds" in the
@@ -266,21 +266,99 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             return false;
         }
         net.minecraft.util.math.BlockPos at = AltoClef.getInstance().getPlayer().getBlockPos();
-        boolean done = cachedGoal != null && cachedGoal.isInGoal(at);
+        boolean done = g != null && g.reached(at);
         if (done) {
             kaptainwutax.tungsten.Debug.logMessage("[nav] goal task reports FINISHED at "
-                    + at.getX() + "," + at.getY() + "," + at.getZ() + " goal=" + cachedGoal);
+                    + at.getX() + "," + at.getY() + "," + at.getZ() + " goal=" + g);
         }
         return done;
     }
 
     @Override
     protected void onStop(Task interruptTask) {
-        AltoClef.getInstance().getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
         TungstenHelper.stop();
     }
 
-    protected abstract Goal newGoal(AltoClef mod);
+    /**
+     * THE GOAL, IN ALTOCLEF'S TERMS — whichever vocabulary the task chose to express it in.
+     *
+     * <p>A task states its goal by overriding EITHER {@link #newAltoGoal} (the way forward) or
+     * {@link #newGoal} (baritone's types, the way out). Both are resolved here into one
+     * {@link AltoGoal}, so everything downstream — the tungsten drive, isFinished — knows exactly
+     * one type and the files can be moved over one at a time without a flag day.
+     */
+    protected AltoGoal goal(AltoClef mod) {
+        if (cachedAlto != null) return cachedAlto;
+        cachedAlto = newAltoGoal(mod);
+        if (cachedAlto != null) {
+            // The legacy baritone fallback further down still needs a goal of ITS type. This is the
+            // only translation in that direction in the codebase, and it is deliberately here
+            // rather than in AltoGoal: when the fallback goes, the import goes with it.
+            if (cachedGoal == null) cachedGoal = toBaritone(cachedAlto);
+            return cachedAlto;
+        }
+        if (cachedGoal == null) cachedGoal = newGoal(mod);
+        if (cachedGoal != null) cachedAlto = new BaritoneGoalView(cachedGoal);
+        return cachedAlto;
+    }
+
+    /**
+     * Where this task is going, in altoclef's own goal type. Null means "I still speak baritone" —
+     * see {@link #newGoal}. Overriding this is what removes a file from the baritone count.
+     */
+    protected AltoGoal newAltoGoal(AltoClef mod) {
+        return null;
+    }
+
+    /**
+     * Where this task is going, in baritone's goal type.
+     *
+     * <p>The legacy way. Tasks whose goal is a place (a block, a radius, a column, a height) should
+     * override {@link #newAltoGoal} instead; this stays for the goals that are really custom
+     * HEURISTICS rather than places — flee goals, the lava escape, the direction goal — which carry
+     * baritone's cost model inside them and need porting rather than translating.
+     */
+    protected Goal newGoal(AltoClef mod) {
+        return null;
+    }
+
+    /** A baritone goal seen through the AltoGoal window, so the drive needs to know one type. */
+    private record BaritoneGoalView(Goal goal) implements AltoGoal {
+        @Override
+        public net.minecraft.util.math.Vec3d target() {
+            return goalToVec(goal, AltoClef.getInstance());
+        }
+
+        @Override
+        public boolean reached(BlockPos pos) {
+            return goal.isInGoal(pos);
+        }
+
+        @Override
+        public String toString() {
+            return String.valueOf(goal);
+        }
+    }
+
+    /** An AltoGoal in baritone's vocabulary, for as long as the legacy fallback is still wired up.
+     *  Null when the shape has no baritone equivalent — the fallback then simply does not run,
+     *  which is the same thing it does today for any goal it cannot translate. */
+    private static Goal toBaritone(AltoGoal g) {
+        if (g instanceof AltoGoal.Block b) {
+            return new baritone.api.pathing.goals.GoalBlock(b.pos());
+        }
+        if (g instanceof AltoGoal.Near n) {
+            return new baritone.api.pathing.goals.GoalNear(n.pos(), n.range());
+        }
+        if (g instanceof AltoGoal.Xz x) {
+            return new baritone.api.pathing.goals.GoalXZ(x.x(), x.z());
+        }
+        if (g instanceof AltoGoal.YLevel y) {
+            return new baritone.api.pathing.goals.GoalYLevel(y.y());
+        }
+        return null;
+    }
 
     protected void onWander(AltoClef mod) {
     }
@@ -347,16 +425,28 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         // answer came on the first run. So count the entry and each early exit.
         pdEnter++;
         if (!TungstenHelper.isPrimary()) { pdNotPrimary++; return false; }
-        if (cachedGoal == null) cachedGoal = newGoal(mod);
-        if (cachedGoal == null) { pdNoGoal++; return false; }
+        AltoGoal goal = goal(mod);
+        if (goal == null) { pdNoGoal++; return false; }
         if (isFinished()) { pdFinished++; return false; }
-        net.minecraft.util.math.Vec3d gp = goalToVec(cachedGoal, mod);
+        net.minecraft.util.math.Vec3d gp = goal.target();
+        if (gp != null) {
+            // An XZ goal has no height and a Y-level goal has no column; both say so with NaN and
+            // borrow the missing half from where the bot is standing.
+            if (Double.isNaN(gp.x) || Double.isNaN(gp.z)) {
+                gp = new net.minecraft.util.math.Vec3d(Double.isNaN(gp.x) ? mod.getPlayer().getX() : gp.x,
+                        gp.y, Double.isNaN(gp.z) ? mod.getPlayer().getZ() : gp.z);
+            }
+            if (Double.isNaN(gp.y)) {
+                gp = new net.minecraft.util.math.Vec3d(gp.x, mod.getPlayer().getY(), gp.z);
+            }
+            gp = snapGoalToStandable(gp, mod);
+        }
         if (gp == null) {
             // NAME THE TYPE, DO NOT GUESS IT. Extending the translator from two goal types to six
             // took pdNoVec to 0 on short runs, but a fifteen-minute run put it back at 1039 of
             // 3815 entries -- 27% -- so a further type turns up once the bot gets past its first
             // job. Record which, because that is the whole of the next fix.
-            pdLastUnknownGoal = cachedGoal.getClass().getSimpleName();
+            pdLastUnknownGoal = goal.toString();
             pdNoVec++;
             return false;
         }
@@ -508,7 +598,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             if (walking && distToGoal <= 4.0) { kaptainwutax.tungsten.task.BlockPathWalker.stop(); walking = false; }
             if (walking) {
                 pdWalking++;
-                mod.getClientBaritone().getPathingBehavior().forceCancel();
+                Nav.cancel();
                 checker.reset();
                 setDebugState("Tungsten (primary) walking terrain...");
                 return true;
@@ -569,7 +659,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                             && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
                         kaptainwutax.tungsten.task.BlockPathWalker.startBFS(bfs);
                     }
-                    mod.getClientBaritone().getPathingBehavior().forceCancel();
+                    Nav.cancel();
                     checker.reset();
                     setDebugState("Tungsten (primary) walking terrain...");
                     return true;
@@ -611,7 +701,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                             && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
                         kaptainwutax.tungsten.task.BlockPathWalker.startBFS(wps);
                     }
-                    mod.getClientBaritone().getPathingBehavior().forceCancel();
+                    Nav.cancel();
                     checker.reset();
                     setDebugState("Tungsten (primary) walking (robust path)...");
                     return true;
@@ -621,7 +711,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 if (kaptainwutax.tungsten.task.BlockPathWalker.DEBUG)
                     Debug.logMessage("primDrive asyncKick busy" + busy);
                 if (!busy && pf != null) { if (ex != null) ex.stop = false; pf.find(mod.getWorld(), gp, mod.getPlayer()); }
-                mod.getClientBaritone().getPathingBehavior().forceCancel();
+                Nav.cancel();
                 checker.reset();
                 setDebugState("Tungsten (primary) planning...");
                 return true;
@@ -650,7 +740,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         } catch (Throwable t) {
             Debug.logInternal("[swap] tungsten primary drive failed: " + t);
         }
-        mod.getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
         checker.reset();
         setDebugState("Tungsten (primary) pathfinding...");
         // PLANNING THAT NEVER BECOMES A ROUTE IS NOT DRIVING, AND MUST NOT HOLD THE TICK.
@@ -725,9 +815,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                         mod.getPlayer().getY(), mod.getPlayer().getZ());
                 if (d < best) { best = d; raw = v; }
             }
-            return raw;   // already snapped by the recursive call
         }
-        return raw == null ? null : snapGoalToStandable(raw, mod);
+        return raw;
     }
 
     /** A goal cell that isn't standable (inside a solid block, or floating in air

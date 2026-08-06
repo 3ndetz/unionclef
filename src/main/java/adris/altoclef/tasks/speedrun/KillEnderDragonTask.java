@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.speedrun;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.multiversion.blockpos.BlockPosVer;
@@ -267,7 +268,7 @@ public class KillEnderDragonTask extends Task {
 
         @Override
         protected void onStart() {
-            AltoClef.getInstance().getClientBaritone().getCustomGoalProcess().onLostControl();
+            Nav.clearGoal();
         }
 
         @Override
@@ -288,7 +289,7 @@ public class KillEnderDragonTask extends Task {
                         case RAILING -> {
                             if (!perchingOrGettingReady) {
                                 Debug.logMessage("Dragon no longer perching.");
-                                mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+                                Nav.clearGoal();
                                 _mode = Mode.WAITING_FOR_PERCH;
                                 break;
                             }
@@ -314,7 +315,7 @@ public class KillEnderDragonTask extends Task {
                             } else {
                                 stopHitting(mod);
                             }
-                            if (!mod.getClientBaritone().getCustomGoalProcess().isActive()) {
+                            if (!Nav.hasGoal()) {
                                 // Set goal to closest block within the pillar that's by the head.
                                 if (exitPortalTop != null) {
                                     int bottomYDelta = -3;
@@ -345,7 +346,7 @@ public class KillEnderDragonTask extends Task {
                             stopHitting(mod);
                             if (perchingOrGettingReady) {
                                 // We're perching!!
-                                mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+                                Nav.clearGoal();
                                 Debug.logMessage("Dragon perching detected. Dabar duosiu į snuki.");
                                 _mode = Mode.RAILING;
                                 break;
@@ -361,9 +362,9 @@ public class KillEnderDragonTask extends Task {
                             if (_randomWanderPos == null) {
                                 _randomWanderPos = getRandomWanderPos(mod);
                                 _randomWanderChangeTimeout.reset();
-                                mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+                                Nav.clearGoal();
                             }
-                            if (!mod.getClientBaritone().getCustomGoalProcess().isActive()) {
+                            if (!Nav.hasGoal()) {
                                 mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(
                                         new GoalGetToBlock(_randomWanderPos)
                                 );
@@ -380,7 +381,7 @@ public class KillEnderDragonTask extends Task {
         protected void onStop(Task interruptTask) {
             AltoClef mod = AltoClef.getInstance();
 
-            mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+            Nav.clearGoal();
             mod.getInputControls().release(Input.MOVE_FORWARD);
             //mod.getControllerExtras().mouseClickOverride(0, false);
             mod.getExtraBaritoneSettings().setInteractionPaused(false);

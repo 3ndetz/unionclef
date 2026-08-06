@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.tasksystem.ITaskRequiresGrounded;
 import adris.altoclef.tasksystem.Task;
@@ -98,7 +99,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
 
     @Override
     protected void onStart() {
-        AltoClef.getInstance().getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
         TungstenHelper.reset();
         _progress.reset();
         stuckCheck.reset();
@@ -109,11 +110,11 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             _progress.reset();
         }
         if (WorldHelper.isInNetherPortal()) {
-            if (!mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (!Nav.isPathing()) {
                 setDebugState("Getting out from nether portal");
                 mod.getInputControls().hold(Input.SNEAK);
                 mod.getInputControls().hold(Input.MOVE_FORWARD);
@@ -124,7 +125,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
                 mod.getInputControls().release(Input.MOVE_FORWARD);
             }
         } else {
-            if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (Nav.isPathing()) {
                 mod.getInputControls().release(Input.SNEAK);
                 mod.getInputControls().release(Input.MOVE_BACK);
                 mod.getInputControls().release(Input.MOVE_FORWARD);
@@ -134,7 +135,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             setDebugState("Getting unstuck from block.");
             stuckCheck.reset();
             // Stop other tasks, we are JUST shimmying
-            mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+            Nav.clearGoal();
             mod.getClientBaritone().getExploreProcess().onLostControl();
             return _unstuckTask;
         }
@@ -152,14 +153,14 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
         // ── superParkourMode: Tungsten is PRIMARY, start immediately ──
         if (parkourMode && !TungstenHelper.isLocked() && !TungstenHelper.isActive()) {
             if (TungstenHelper.tryPathToEntity(_entity)) {
-                mod.getClientBaritone().getPathingBehavior().forceCancel();
+                Nav.cancel();
             }
         }
 
         // ── Tungsten lock: exclusive 30s control, Baritone stays off ──
         if (TungstenHelper.isLocked()) {
             TungstenHelper.tickLock();
-            mod.getClientBaritone().getPathingBehavior().forceCancel();
+            Nav.cancel();
             _progress.reset();
             long remaining = Math.max(0, (TungstenHelper.lockUntilMs() - System.currentTimeMillis()) / 1000);
             setDebugState("Tungsten pathfinding (" + remaining + "s left)");
@@ -181,7 +182,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
 
         // Baritone: only if Tungsten not active
         if (!TungstenHelper.isActive()
-                && !mod.getClientBaritone().getCustomGoalProcess().isActive()) {
+                && !Nav.hasGoal()) {
             mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(new GoalFollowEntity(_entity, _closeEnoughDistance));
         }
 
@@ -193,7 +194,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
         if (!_progress.check(mod)) {
             // Baritone failed — try Tungsten (acquires 30s lock)
             if (TungstenHelper.tryPathToEntity(_entity)) {
-                mod.getClientBaritone().getPathingBehavior().forceCancel();
+                Nav.cancel();
                 setDebugState(parkourMode ? "Tungsten retrying" : "Baritone stuck → Tungsten locked for 30s");
                 return null;
             }
@@ -206,7 +207,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
 
     @Override
     protected void onStop(Task interruptTask) {
-        AltoClef.getInstance().getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
         TungstenHelper.stop();
     }
 

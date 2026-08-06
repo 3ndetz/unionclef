@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.entity;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasks.movement.GetToEntityTask;
@@ -74,7 +75,7 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             progress.reset();
         }
 
@@ -109,7 +110,7 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
             boolean tooClose = sqDist < maintainDistance * maintainDistance;
 
             // Step away if too close — but NEVER run away from a player target (we need to be close to fight!)
-            if (tooClose && !(entity instanceof PlayerEntity) && !mod.getClientBaritone().getCustomGoalProcess().isActive()) {
+            if (tooClose && !(entity instanceof PlayerEntity) && !Nav.hasGoal()) {
                 mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(new GoalRunAway(maintainDistance, entity.getBlockPos()));
             }
 
@@ -125,14 +126,14 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
             if (mod.getFoodChain().needsToEat()) dteHungry++;
             if (mod.getMLGBucketChain().isFalling(mod)) dteFalling++;
             if (!mod.getMLGBucketChain().doneMLG()) dteMlg++;
-            if (!mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) dteUnsafe++;
+            if (!Nav.isSafeToCancel()) dteUnsafe++;
 
             // Interact when in range. Only gate on inRange (canHitEntity) — the old raycast check
             // was "basically useless" and blocked interaction most of the time.
             if (inRange && !mod.getFoodChain().needsToEat() &&
                     !mod.getMLGBucketChain().isFalling(mod) && mod.getMLGBucketChain().doneMLG() &&
                     !mod.getMLGBucketChain().isChorusFruiting() &&
-                    mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
+                    Nav.isSafeToCancel()) {
                 progress.reset();
                 return onEntityInteract(mod, entity);
             } else if (!tooClose) {
@@ -151,7 +152,7 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
             return wanderTask;
         }
 
-        if (!mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
+        if (!Nav.isSafeToCancel()) {
             return null;
         }
         wanderTask = new TimeoutWanderTask();

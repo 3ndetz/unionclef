@@ -1,5 +1,6 @@
 package adris.altoclef.chains;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.control.KillAura;
@@ -368,7 +369,7 @@ public class MobDefenseChain extends SingleTaskChain {
                     //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
                     //#endif
-                    && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())
+                    && (mod.getClientBaritone() == null || Nav.isSafeToCancel())
                     && blowingUp.getClientFuseTime(blowingUp.getFuseSpeed()) > 0.5) {
                 LookHelper.lookAt(mod, blowingUp.getEyePos());
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);
@@ -404,7 +405,7 @@ public class MobDefenseChain extends SingleTaskChain {
                     //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
                     //#endif
-                    && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())
+                    && (mod.getClientBaritone() == null || Nav.isSafeToCancel())
                     && !mod.getEntityTracker().entityFound(PotionEntity.class) && projectileIsClose) {
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);
                 if (shieldSlot.getItem() != Items.SHIELD) {
@@ -888,7 +889,7 @@ public class MobDefenseChain extends SingleTaskChain {
                         Optional<Entity> ghastBall = mod.getEntityTracker().getClosestEntity(FireballEntity.class);
                         Optional<Entity> ghast = mod.getEntityTracker().getClosestEntity(GhastEntity.class);
                         if (ghastBall.isPresent() && ghast.isPresent() && runAwayTask == null
-                                && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())) {
+                                && (mod.getClientBaritone() == null || Nav.isSafeToCancel())) {
                             if (mod.getClientBaritone() != null)
                                 mod.getClientBaritone().getPathingBehavior().requestPause();
                             LookHelper.lookAt(mod, ghast.get().getEyePos());
@@ -923,7 +924,7 @@ public class MobDefenseChain extends SingleTaskChain {
                         if (invertedYaw < 0) invertedYaw += 360;
                         suggestedProjectileRotation = new Rotation(invertedYaw, 0f);
 
-                        if (runAwayTask == null && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())) {
+                        if (runAwayTask == null && (mod.getClientBaritone() == null || Nav.isSafeToCancel())) {
                             if (mod.getClientBaritone() != null)
                                 mod.getClientBaritone().getPathingBehavior().requestPause();
                         }

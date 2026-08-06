@@ -3,9 +3,8 @@ package adris.altoclef.tasks.movement;
 import adris.altoclef.AltoClef;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.Dimension;
+import adris.altoclef.util.goals.AltoGoal;
 import adris.altoclef.util.helpers.WorldHelper;
-import baritone.api.pathing.goals.Goal;
-import baritone.api.pathing.goals.GoalXZ;
 import net.minecraft.util.math.BlockPos;
 
 public class GetToXZTask extends CustomBaritoneGoalTask {
@@ -32,8 +31,8 @@ public class GetToXZTask extends CustomBaritoneGoalTask {
     }
 
     @Override
-    protected Goal newGoal(AltoClef mod) {
-        return new GoalXZ(x, z);
+    protected AltoGoal newAltoGoal(AltoClef mod) {
+        return AltoGoal.xz(x, z);
     }
 
     @Override

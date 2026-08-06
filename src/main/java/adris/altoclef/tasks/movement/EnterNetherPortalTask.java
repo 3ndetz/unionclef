@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.tasks.DoToClosestBlockTask;
 import adris.altoclef.tasks.construction.compound.ConstructNetherPortalBucketTask;
@@ -71,7 +72,7 @@ public class EnterNetherPortalTask extends Task {
             }
             setDebugState("Waiting inside portal");
             mod.getClientBaritone().getExploreProcess().onLostControl();
-            mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+            Nav.clearGoal();
             mod.getClientBaritone().getMineProcess().onLostControl();
             mod.getClientBaritone().getFarmProcess().onLostControl();
             mod.getClientBaritone().getGetToBlockProcess();

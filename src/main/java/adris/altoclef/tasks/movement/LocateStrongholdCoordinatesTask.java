@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
@@ -109,7 +110,7 @@ public class LocateStrongholdCoordinatesTask extends Task {
             }
 
             if (mod.getEntityTracker().getClosestEntity(EyeOfEnderEntity.class).isPresent() &&
-                    !mod.getClientBaritone().getPathingBehavior().isPathing()) {
+                    !Nav.isPathing()) {
                 LookHelper.lookAt(mod,
                         mod.getEntityTracker().getClosestEntity(EyeOfEnderEntity.class).get().getEyePos());
             }

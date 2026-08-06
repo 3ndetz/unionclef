@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.TaskCatalogue;
 import adris.altoclef.tasks.construction.compound.ConstructNetherPortalObsidianTask;
@@ -137,7 +138,7 @@ public class FastTravelTask extends Task {
                 }
 
                 if (WorldHelper.inRangeXZ(mod.getPlayer(), netherTarget, IN_NETHER_CLOSE_ENOUGH_THRESHOLD) &&
-                        mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
+                        Nav.isSafeToCancel()) {
                     // If we're precisely at our target XZ or if we've tried long enough
                     if ((mod.getPlayer().getBlockX() == netherTarget.getX() && mod.getPlayer().getBlockZ() == netherTarget.getZ()) || _attemptToMoveToIdealNetherCoordinateTimeout.elapsed()) {
                         return _goToOverworldTask;

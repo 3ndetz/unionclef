@@ -1,5 +1,6 @@
 package adris.altoclef.chains;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.butler.Butler;
@@ -188,7 +189,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
         // Swim
         boolean avoidedDrowning = false;
         if (mod.getModSettings().shouldAvoidDrowning()) {
-            if (mod.getClientBaritone() == null || !mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (mod.getClientBaritone() == null || !Nav.isPathing()) {
                 if (mod.getPlayer().isTouchingWater() && mod.getPlayer().getAir() < mod.getPlayer().getMaxAir()) {
                     // Swim up!
                     mod.getInputControls().hold(Input.JUMP);

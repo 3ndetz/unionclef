@@ -1,5 +1,6 @@
 package adris.altoclef.tasks;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
@@ -225,7 +226,7 @@ public class InteractWithBlockTask extends Task {
 
     @Override
     protected void onStart() {
-        AltoClef.getInstance().getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
 
         moveChecker.reset();
         stuckCheck.reset();
@@ -237,11 +238,11 @@ public class InteractWithBlockTask extends Task {
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             moveChecker.reset();
         }
         if (WorldHelper.isInNetherPortal()) {
-            if (!mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (!Nav.isPathing()) {
                 setDebugState("Getting out from nether portal");
                 mod.getInputControls().hold(Input.SNEAK);
                 mod.getInputControls().hold(Input.MOVE_FORWARD);
@@ -252,7 +253,7 @@ public class InteractWithBlockTask extends Task {
                 mod.getInputControls().release(Input.MOVE_FORWARD);
             }
         } else {
-            if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (Nav.isPathing()) {
                 mod.getInputControls().release(Input.SNEAK);
                 mod.getInputControls().release(Input.MOVE_BACK);
                 mod.getInputControls().release(Input.MOVE_FORWARD);
@@ -262,7 +263,7 @@ public class InteractWithBlockTask extends Task {
             setDebugState("Getting unstuck from block.");
             stuckCheck.reset();
             // Stop other tasks, we are JUST shimmying
-            mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+            Nav.clearGoal();
             mod.getClientBaritone().getExploreProcess().onLostControl();
             return unstuckTask;
         }
@@ -350,7 +351,7 @@ public class InteractWithBlockTask extends Task {
     protected void onStop(Task interruptTask) {
         AltoClef mod = AltoClef.getInstance();
 
-        mod.getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
         mod.getInputControls().release(Input.SNEAK);
     }
 

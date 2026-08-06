@@ -5,10 +5,9 @@ import adris.altoclef.Debug;
 import adris.altoclef.tasksystem.ITaskRequiresGrounded;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.Dimension;
+import adris.altoclef.util.goals.AltoGoal;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.time.TimerGame;
-import baritone.api.pathing.goals.Goal;
-import baritone.api.pathing.goals.GoalBlock;
 import net.minecraft.util.math.BlockPos;
 
 public class GetToBlockTask extends CustomBaritoneGoalTask implements ITaskRequiresGrounded {
@@ -104,8 +103,8 @@ public class GetToBlockTask extends CustomBaritoneGoalTask implements ITaskRequi
 
 
     @Override
-    protected Goal newGoal(AltoClef mod) {
-        return new GoalBlock(_position);
+    protected AltoGoal newAltoGoal(AltoClef mod) {
+        return AltoGoal.block(_position);
     }
 
     @Override

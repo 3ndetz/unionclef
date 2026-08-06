@@ -25,10 +25,21 @@ import net.minecraft.util.math.Vec3d;
  * <p>With those two the drive needs no knowledge of goal classes at all, and a task can be moved
  * over one at a time while everything still compiles — the migration is mechanical rather than a
  * flag day.
+ *
+ * <p>The shapes are RECORDS rather than anonymous classes on purpose: while the legacy baritone
+ * fallback is still wired up, one adapter has to translate a goal back into baritone's vocabulary,
+ * and it can only do that if the shape is still visible. They also compare and print sensibly,
+ * which the drive's debug lines rely on.
  */
 public interface AltoGoal {
 
-    /** The point to head for, in world coordinates. Never null. */
+    /**
+     * The point to head for, in world coordinates.
+     *
+     * <p>Null when the goal genuinely cannot name a point right now — a flee goal with nothing to
+     * flee from is the real case — and the drive reads that as "no route this tick" rather than as
+     * an error. The shapes below always return one.
+     */
     Vec3d target();
 
     /**
@@ -40,85 +51,99 @@ public interface AltoGoal {
      */
     default boolean reached(BlockPos pos) {
         Vec3d t = target();
-        return pos.getX() == (int) Math.floor(t.x)
+        return t != null
+                && pos.getX() == (int) Math.floor(t.x)
                 && pos.getY() == (int) Math.floor(t.y)
                 && pos.getZ() == (int) Math.floor(t.z);
     }
 
     /** A goal that is simply a block. */
-    static AltoGoal block(BlockPos pos) {
-        return new AltoGoal() {
-            @Override
-            public Vec3d target() {
-                return new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-            }
+    record Block(BlockPos pos) implements AltoGoal {
+        @Override
+        public Vec3d target() {
+            return new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+        }
 
-            @Override
-            public String toString() {
-                return "block(" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")";
-            }
-        };
+        @Override
+        public boolean reached(BlockPos at) {
+            return at.getX() == pos.getX() && at.getY() == pos.getY() && at.getZ() == pos.getZ();
+        }
+
+        @Override
+        public String toString() {
+            return "block(" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")";
+        }
     }
 
     /** A goal that is a block, satisfied from anywhere within {@code range} of it. */
-    static AltoGoal near(BlockPos pos, int range) {
-        return new AltoGoal() {
-            @Override
-            public Vec3d target() {
-                return new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-            }
+    record Near(BlockPos pos, int range) implements AltoGoal {
+        @Override
+        public Vec3d target() {
+            return new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+        }
 
-            @Override
-            public boolean reached(BlockPos at) {
-                return at.getSquaredDistance(pos) <= (double) range * range;
-            }
+        @Override
+        public boolean reached(BlockPos at) {
+            return at.getSquaredDistance(pos) <= (double) range * range;
+        }
 
-            @Override
-            public String toString() {
-                return "near(" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + " r=" + range + ")";
-            }
-        };
+        @Override
+        public String toString() {
+            return "near(" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + " r=" + range + ")";
+        }
     }
 
     /** A goal on the horizontal plane only — any Y will do. */
-    static AltoGoal xz(int x, int z) {
-        return new AltoGoal() {
-            @Override
-            public Vec3d target() {
-                // The Y is filled in by the caller from the player, because an XZ goal genuinely
-                // has none; the drive treats it as "keep your height, change your ground".
-                return new Vec3d(x + 0.5, Double.NaN, z + 0.5);
-            }
+    record Xz(int x, int z) implements AltoGoal {
+        @Override
+        public Vec3d target() {
+            // An XZ goal genuinely has no Y, so it names its own height as NaN and the drive fills
+            // it in from the player: "keep your height, change your ground".
+            return new Vec3d(x + 0.5, Double.NaN, z + 0.5);
+        }
 
-            @Override
-            public boolean reached(BlockPos at) {
-                return at.getX() == x && at.getZ() == z;
-            }
+        @Override
+        public boolean reached(BlockPos at) {
+            return at.getX() == x && at.getZ() == z;
+        }
 
-            @Override
-            public String toString() {
-                return "xz(" + x + "," + z + ")";
-            }
-        };
+        @Override
+        public String toString() {
+            return "xz(" + x + "," + z + ")";
+        }
     }
 
     /** A goal that is a height, wherever you happen to stand. */
+    record YLevel(int y) implements AltoGoal {
+        @Override
+        public Vec3d target() {
+            return new Vec3d(Double.NaN, y, Double.NaN);
+        }
+
+        @Override
+        public boolean reached(BlockPos at) {
+            return at.getY() == y;
+        }
+
+        @Override
+        public String toString() {
+            return "y(" + y + ")";
+        }
+    }
+
+    static AltoGoal block(BlockPos pos) {
+        return new Block(pos);
+    }
+
+    static AltoGoal near(BlockPos pos, int range) {
+        return new Near(pos, range);
+    }
+
+    static AltoGoal xz(int x, int z) {
+        return new Xz(x, z);
+    }
+
     static AltoGoal yLevel(int y) {
-        return new AltoGoal() {
-            @Override
-            public Vec3d target() {
-                return new Vec3d(Double.NaN, y, Double.NaN);
-            }
-
-            @Override
-            public boolean reached(BlockPos at) {
-                return at.getY() == y;
-            }
-
-            @Override
-            public String toString() {
-                return "y(" + y + ")";
-            }
-        };
+        return new YLevel(y);
     }
 }

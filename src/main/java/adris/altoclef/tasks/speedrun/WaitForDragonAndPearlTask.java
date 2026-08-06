@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.speedrun;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
@@ -130,7 +131,7 @@ public class WaitForDragonAndPearlTask extends Task {
             if (mod.getEntityTracker().entityFound(entity ->
                     mod.getPlayer().getPos().isInRange(entity.getPos(), 4), AreaEffectCloudEntity.class)) {
                 if (mod.getEntityTracker().getClosestEntity(EnderDragonEntity.class).isPresent() &&
-                        !mod.getClientBaritone().getPathingBehavior().isPathing()) {
+                        !Nav.isPathing()) {
                     LookHelper.lookAt(mod, mod.getEntityTracker().getClosestEntity(EnderDragonEntity.class).get().getEyePos());
                 }
                 return null;
@@ -148,7 +149,7 @@ public class WaitForDragonAndPearlTask extends Task {
                                     return heightPillarTask;
                                 } else {
                                     if (mod.getEntityTracker().getClosestEntity(EnderDragonEntity.class).isPresent() &&
-                                            !mod.getClientBaritone().getPathingBehavior().isPathing()) {
+                                            !Nav.isPathing()) {
                                         LookHelper.lookAt(mod, mod.getEntityTracker().getClosestEntity(EnderDragonEntity.class).get().getEyePos());
                                     }
                                     return null;
@@ -178,7 +179,7 @@ public class WaitForDragonAndPearlTask extends Task {
                                 return heightPillarTask;
                             } else {
                                 if (mod.getEntityTracker().getClosestEntity(EnderDragonEntity.class).isPresent() &&
-                                        !mod.getClientBaritone().getPathingBehavior().isPathing()) {
+                                        !Nav.isPathing()) {
                                     LookHelper.lookAt(mod, mod.getEntityTracker().getClosestEntity(EnderDragonEntity.class).get().getEyePos());
                                 }
                                 return null;
@@ -188,7 +189,7 @@ public class WaitForDragonAndPearlTask extends Task {
                 );
             }
             if (mod.getEntityTracker().getClosestEntity(EnderDragonEntity.class).isPresent() &&
-                    !mod.getClientBaritone().getPathingBehavior().isPathing()) {
+                    !Nav.isPathing()) {
                 LookHelper.lookAt(mod, mod.getEntityTracker().getClosestEntity(EnderDragonEntity.class).get().getEyePos());
             }
             return null;
@@ -197,7 +198,7 @@ public class WaitForDragonAndPearlTask extends Task {
             if (mod.getEntityTracker().entityFound(entity ->
                     mod.getPlayer().getPos().isInRange(entity.getPos(), 4), AreaEffectCloudEntity.class)) {
                 if (mod.getEntityTracker().getClosestEntity(EnderDragonEntity.class).isPresent() &&
-                        !mod.getClientBaritone().getPathingBehavior().isPathing()) {
+                        !Nav.isPathing()) {
                     LookHelper.lookAt(mod, mod.getEntityTracker().getClosestEntity(EnderDragonEntity.class).get().getEyePos());
                 }
                 return null;

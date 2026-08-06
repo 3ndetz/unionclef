@@ -1,5 +1,6 @@
 package adris.altoclef.chains;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.multiversion.entity.PlayerVer;
@@ -160,7 +161,7 @@ public class UnstuckChain extends SingleTaskChain {
         if (!isTryingToMove()) { posHistory.clear(); return; }
 
         // Don't trigger when baritone is actively pathfinding (calculating a path)
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             posHistory.clear();
             return;
         }

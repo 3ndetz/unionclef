@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.chains.MobDefenseChain;
 import adris.altoclef.tasksystem.Task;
@@ -39,7 +40,7 @@ public class RunAwayFromCreepersTask extends CustomBaritoneGoalTask {
     @Override
     protected Goal newGoal(AltoClef mod) {
         // We want to run away NOW
-        mod.getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
         return new GoalRunAwayFromCreepers(mod, _distanceToRun);
     }
 

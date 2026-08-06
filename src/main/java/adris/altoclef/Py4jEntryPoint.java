@@ -1,5 +1,6 @@
 package adris.altoclef;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.butler.WhisperChecker;
 import adris.altoclef.tasks.entity.AbstractKillEntityTask;
 import adris.altoclef.tasks.movement.IdleTask;
@@ -790,7 +791,7 @@ public class Py4jEntryPoint {
     public boolean hasBaritoneGoal() {
         if (AltoClef.inGame()) {
             Optional<IPath> pathq;
-            if (_mod.getClientBaritone().getCustomGoalProcess().isActive())
+            if (Nav.hasGoal())
                 pathq = _mod.getClientBaritone().getPathingBehavior().getPath();
             else
                 pathq = Optional.empty();

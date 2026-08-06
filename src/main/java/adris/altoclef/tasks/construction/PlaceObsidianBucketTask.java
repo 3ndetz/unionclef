@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.construction;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.BotBehaviour;
 import adris.altoclef.Debug;
@@ -108,7 +109,7 @@ public class PlaceObsidianBucketTask extends Task {
         AltoClef mod = AltoClef.getInstance();
 
         // Reset progress if pathing
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             _progressChecker.reset();
         }
 
@@ -134,7 +135,7 @@ public class PlaceObsidianBucketTask extends Task {
 
         // Check progress
         if (!_progressChecker.check(mod)) {
-            mod.getClientBaritone().getPathingBehavior().forceCancel();
+            Nav.cancel();
             mod.getBlockScanner().requestBlockUnreachable(_pos);
             _progressChecker.reset();
             return new TimeoutWanderTask(5);

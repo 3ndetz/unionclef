@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.multiversion.versionedfields.Blocks;
@@ -134,7 +135,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         AltoClef mod = AltoClef.getInstance();
 
         timer.reset();
-        mod.getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
         origin = mod.getPlayer().getPos();
         progressChecker.reset();
         stuckCheck.reset();
@@ -160,11 +161,11 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         AltoClef mod = AltoClef.getInstance();
 
 
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             progressChecker.reset();
         }
         if (WorldHelper.isInNetherPortal()) {
-            if (!mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (!Nav.isPathing()) {
                 setDebugState("Getting out from nether portal");
                 mod.getInputControls().hold(Input.SNEAK);
                 mod.getInputControls().hold(Input.MOVE_FORWARD);
@@ -175,7 +176,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 mod.getInputControls().release(Input.MOVE_FORWARD);
             }
         } else {
-            if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+            if (Nav.isPathing()) {
                 mod.getInputControls().release(Input.SNEAK);
                 mod.getInputControls().release(Input.MOVE_BACK);
                 mod.getInputControls().release(Input.MOVE_FORWARD);
@@ -185,7 +186,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
             setDebugState("Getting unstuck from block.");
             stuckCheck.reset();
             // Stop other tasks, we are JUST shimmying
-            mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+            Nav.clearGoal();
             mod.getClientBaritone().getExploreProcess().onLostControl();
             return _unstuckTask;
         }
@@ -205,7 +206,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 return _unstuckTask;
             }
             // Not in annoying block — force baritone to recompute
-            mod.getClientBaritone().getPathingBehavior().forceCancel();
+            Nav.cancel();
             stuckCheck.reset();
         }
         setDebugState("Exploring.");
@@ -238,7 +239,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
 
     @Override
     protected void onStop(Task interruptTask) {
-        AltoClef.getInstance().getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
         if (isFinished()) {
             if (increaseRange) {
                 _wanderDistanceExtension += distanceToWander;

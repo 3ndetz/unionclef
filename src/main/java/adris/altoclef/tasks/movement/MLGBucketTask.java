@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.control.InputControls;
@@ -265,7 +266,7 @@ public class MLGBucketTask extends Task {
 
     @Override
     protected void onStart() {
-        AltoClef.getInstance().getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
         placedPos = null;
         // hold shift while falling.
         // Look down at first, might help

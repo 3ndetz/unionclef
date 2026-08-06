@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.speedrun.beatgame;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
@@ -2343,7 +2344,7 @@ public class BeatMinecraftTask extends Task {
 
                             if ((cachedFortressTask != null && !fortressTimer.elapsed() &&
                                     mod.getPlayer().getPos().distanceTo(WorldHelper.toVec3d(cachedFortressTask.blockPos)) - 1 > prevPos.getManhattanDistance(cachedFortressTask.blockPos) / 2d
-                            ) || !mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
+                            ) || !Nav.isSafeToCancel()) {
                                 if (cachedFortressTask != null) {
                                     mod.log(mod.getPlayer().getPos().distanceTo(WorldHelper.toVec3d(cachedFortressTask.blockPos)) + " : " + prevPos.getManhattanDistance(cachedFortressTask.blockPos) / 2);
                                     return cachedFortressTask;
@@ -2385,7 +2386,7 @@ public class BeatMinecraftTask extends Task {
                     return new TimeoutWanderTask();
                 }
 
-                if (!gotToBiome && (biomePos == null || !WorldHelper.inRangeXZ(mod.getPlayer(), biomePos, 30) || !mod.getClientBaritone().getPathingBehavior().isSafeToCancel())) {
+                if (!gotToBiome && (biomePos == null || !WorldHelper.inRangeXZ(mod.getPlayer(), biomePos, 30) || !Nav.isSafeToCancel())) {
                     if (biomePos != null) {
                         setDebugState("Going to biome");
 

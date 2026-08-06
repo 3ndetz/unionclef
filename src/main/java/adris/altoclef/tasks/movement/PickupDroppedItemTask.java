@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasks.AbstractDoToClosestObjectTask;
@@ -164,14 +165,14 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
         }
         AltoClef mod = AltoClef.getInstance();
 
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             progressChecker.reset();
         }
         if (unstuckTask != null && unstuckTask.isActive() && !unstuckTask.isFinished() && stuckInBlock(mod) != null) {
             setDebugState("Getting unstuck from block.");
             stuckCheck.reset();
             // Stop other tasks, we are JUST shimmying
-            mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+            Nav.clearGoal();
             mod.getClientBaritone().getExploreProcess().onLostControl();
             return unstuckTask;
         }
@@ -198,7 +199,7 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
         }
 
         if (!progressChecker.check(mod)) {
-            mod.getClientBaritone().getPathingBehavior().forceCancel();
+            Nav.cancel();
             if (_currentDrop != null && !_currentDrop.getStack().isEmpty()) {
                 // We might want to get a pickaxe first.
                 if (!isGettingPickaxeFirstFlag && mod.getModSettings().shouldCollectPickaxeFirst() && !StorageHelper.miningRequirementMetInventory(MiningRequirement.STONE)) {

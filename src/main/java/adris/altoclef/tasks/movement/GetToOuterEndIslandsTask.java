@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasks.InteractWithBlockTask;
@@ -74,7 +75,7 @@ public class GetToOuterEndIslandsTask extends Task {
             Debug.logMessage(mod.getPlayer().getBlockPos().toString());
             if (!goal.isInGoal(mod.getPlayer().getBlockPos()) || !mod.getPlayer().isOnGround()) {
                 mod.getClientBaritone().getCustomGoalProcess().setGoal(goal);
-                if (!mod.getClientBaritone().getPathingBehavior().isPathing()) {
+                if (!Nav.isPathing()) {
                     mod.getClientBaritone().getCustomGoalProcess().path();
                 }
                 setDebugState("Getting close to gateway...");

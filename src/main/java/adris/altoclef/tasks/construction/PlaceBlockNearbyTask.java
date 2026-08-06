@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.construction;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.eventbus.EventBus;
@@ -75,7 +76,7 @@ public class PlaceBlockNearbyTask extends Task {
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             progressChecker.reset();
         }
         // Method:

@@ -101,7 +101,7 @@ public class KillAura {
                     //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
                     //#endif
-                    && (mod.getClientBaritone() == null || mod.getClientBaritone().getPathingBehavior().isSafeToCancel())) {
+                    && (mod.getClientBaritone() == null || Nav.isSafeToCancel())) {
                 LookHelper.smoothLookAt(mod, entities.get().getEyePos());
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);
                 if (shieldSlot.getItem() != Items.SHIELD) {

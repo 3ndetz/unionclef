@@ -2,8 +2,7 @@ package adris.altoclef.tasks.movement;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.tasksystem.Task;
-import baritone.api.pathing.goals.Goal;
-import baritone.api.pathing.goals.GoalNear;
+import adris.altoclef.util.goals.AltoGoal;
 import net.minecraft.util.math.BlockPos;
 
 public class GetWithinRangeOfBlockTask extends CustomBaritoneGoalTask {
@@ -17,8 +16,8 @@ public class GetWithinRangeOfBlockTask extends CustomBaritoneGoalTask {
     }
 
     @Override
-    protected Goal newGoal(AltoClef mod) {
-        return new GoalNear(blockPos, range);
+    protected AltoGoal newAltoGoal(AltoClef mod) {
+        return AltoGoal.near(blockPos, range);
     }
 
     @Override

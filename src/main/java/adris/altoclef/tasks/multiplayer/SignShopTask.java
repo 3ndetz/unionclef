@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.multiplayer;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasks.movement.SafeRandomShimmyTask;
@@ -113,7 +114,7 @@ public class SignShopTask extends Task {
                             state = State.DONE;
                             return null;
                         }
-                        mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+                        Nav.clearGoal();
                         retryDelay = RETRY_DELAY_TICKS;
                         return null;
                     }
@@ -126,7 +127,7 @@ public class SignShopTask extends Task {
                 }
                 // In reach — stop pathing, look at the sign and click
                 approachTicks = 0;
-                mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+                Nav.clearGoal();
                 lookTicks++;
 
                 boolean looking = LookHelper.isLookingAt(mod, signPos);

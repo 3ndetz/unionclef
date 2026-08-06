@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.resources;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
@@ -88,7 +89,7 @@ public class CollectBucketLiquidTask extends ResourceTask {
 
     @Override
     protected Task onResourceTick(AltoClef mod) {
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             progressChecker.reset();
         }
         // If we're standing inside a liquid, go pick it up.
@@ -160,9 +161,9 @@ public class CollectBucketLiquidTask extends ResourceTask {
                 if (mod.getWorld().getBlockState(blockPos.up()).isSolid()) {
                     if (!progressChecker.check(mod)) {
                         mod.getClientBaritone().getPathingBehavior().cancelEverything();
-                        mod.getClientBaritone().getPathingBehavior().forceCancel();
+                        Nav.cancel();
                         mod.getClientBaritone().getExploreProcess().onLostControl();
-                        mod.getClientBaritone().getCustomGoalProcess().onLostControl();
+                        Nav.clearGoal();
                         Debug.logMessage("Failed to break, blacklisting.");
                         mod.getBlockScanner().requestBlockUnreachable(blockPos);
                         blacklist.add(blockPos);
@@ -181,7 +182,7 @@ public class CollectBucketLiquidTask extends ResourceTask {
 
                 // We can reach the block.
                 if (LookHelper.getReach(blockPos).isPresent() &&
-                        mod.getClientBaritone().getPathingBehavior().isSafeToCancel()) {
+                        Nav.isSafeToCancel()) {
                     tries++;
                     return new InteractWithBlockTask(new ItemTarget(Items.BUCKET, 1), blockPos, toCollect != Blocks.LAVA, new Vec3i(0, 1, 0));
                 }

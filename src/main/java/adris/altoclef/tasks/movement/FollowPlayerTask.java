@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.movement;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.tasksystem.Task;
 
@@ -57,7 +58,7 @@ public class FollowPlayerTask extends Task {
         }
         // Keep baritone off — tungsten owns movement here; a residual baritone goal
         // would fight the tungsten walker/executor for the input keys.
-        AltoClef.getInstance().getClientBaritone().getPathingBehavior().forceCancel();
+        Nav.cancel();
         setDebugState("Following " + _playerName + " (tungsten)");
         return null;
     }

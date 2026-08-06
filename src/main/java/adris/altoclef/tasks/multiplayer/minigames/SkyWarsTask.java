@@ -1,5 +1,6 @@
 package adris.altoclef.tasks.multiplayer.minigames;
 
+import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.butler.ButlerConfig;
@@ -275,7 +276,7 @@ public class SkyWarsTask extends Task {
     }
 
     private double getCurrentCalculatedHeuristic(AltoClef mod) {
-        if (mod.getClientBaritone().getPathingBehavior().isPathing()) {
+        if (Nav.isPathing()) {
             Optional<Double> ticksRemainingOp = mod.getClientBaritone().getPathingBehavior().ticksRemainingInSegment();
             return ticksRemainingOp.orElse(Double.POSITIVE_INFINITY);
         }
