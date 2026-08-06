@@ -98,9 +98,25 @@ public class CraftGenericManuallyTask extends Task {
                 boolean correctItem = toFill.matches(present.getItem());
                 boolean isSatisfied = correctItem && present.getCount() >= requiredPerSlot;
                 if (!isSatisfied) {
-                    // We have items that satisfy, but we CAN NOT fill in the current slot!
-                    // In that case, just grab from the output.
-                    if (!mod.getItemStorage().hasItemInventoryOnly(present.getItem())) {
+                    // ASK ABOUT THE INGREDIENT WE NEED, NOT ABOUT WHATEVER IS SITTING THERE.
+                    // The question this guard means to ask is "have we run out, so should we take
+                    // what the grid already made instead" -- and it asked it about `present`, the
+                    // stack IN the craft slot. For a slot still to be filled `present` is AIR, so
+                    // it asked whether the inventory contains AIR.
+                    //
+                    // That answer is not even stable: hasItem checks the CURSOR first
+                    // (InventorySubTracker.java:76-79), and an empty cursor is an ItemStack whose
+                    // item is AIR. So with an empty cursor it said "yes, we have air", the guard
+                    // fell through and the slot got filled -- crafting worked by accident. The
+                    // moment the bot is holding anything, the same call says no, every slot is
+                    // skipped by the `continue` below, and with an empty output the tail of this
+                    // method waits. Nothing fills, nothing comes out, and it never recovers,
+                    // because clearing the cursor is gated on the output NOT stacking with it and
+                    // an empty output stacks with everything.
+                    // Measured on the playthrough: 1856 ticks inside this task with the materials
+                    // in the pack, ciReceive=0, ciGrid=0 -- the grid empty because the ingredients
+                    // never went in.
+                    if (!mod.getItemStorage().hasItemInventoryOnly(toFill.getMatches())) {
                         if (!StorageHelper.getItemStackInSlot(outputSlot).isEmpty()) {
                             setDebugState("NO MORE to fit: grabbing from output.");
                             return new ReceiveCraftingOutputSlotTask(outputSlot, target.getTargetCount());
