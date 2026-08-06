@@ -32,7 +32,7 @@ public class SafeNetherPortalTask extends Task {
 
     @Override
     protected void onStart() {
-        AltoClef.getInstance().getClientBaritone().getInputOverrideHandler().clearAllKeys();
+        AltoClef.getInstance().getInputControls().releaseAll();
         wait.reset();
     }
 
@@ -45,7 +45,7 @@ public class SafeNetherPortalTask extends Task {
 
         if (!keyReset) {
             keyReset = true;
-            mod.getClientBaritone().getInputOverrideHandler().clearAllKeys();
+            mod.getInputControls().releaseAll();
         }
 
         if (mod.getPlayer().getPortalCooldown() < 10) {
@@ -138,7 +138,7 @@ public class SafeNetherPortalTask extends Task {
         controls.release(Input.MOVE_FORWARD);
         controls.release(Input.SNEAK);
         controls.release(Input.CLICK_LEFT);
-        AltoClef.getInstance().getClientBaritone().getInputOverrideHandler().clearAllKeys();
+        AltoClef.getInstance().getInputControls().releaseAll();
     }
 
     @Override
@@ -168,7 +168,7 @@ public class SafeNetherPortalTask extends Task {
 
         @Override
         protected void onStart() {
-            AltoClef.getInstance().getClientBaritone().getInputOverrideHandler().clearAllKeys();
+            AltoClef.getInstance().getInputControls().releaseAll();
         }
 
         @Override
@@ -208,7 +208,7 @@ public class SafeNetherPortalTask extends Task {
             controls.release(Input.MOVE_FORWARD);
             controls.release(Input.SNEAK);
             controls.release(Input.CLICK_LEFT);
-            AltoClef.getInstance().getClientBaritone().getInputOverrideHandler().clearAllKeys();
+            AltoClef.getInstance().getInputControls().releaseAll();
         }
 
         @Override

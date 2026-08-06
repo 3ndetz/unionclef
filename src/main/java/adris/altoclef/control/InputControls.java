@@ -64,6 +64,23 @@ public class InputControls {
         inputToKeyBinding(input).setPressed(false);
     }
 
+    /**
+     * Let go of everything.
+     *
+     * <p>The last eight callers of the pathfinder's own input handler all said exactly this --
+     * clearAllKeys() -- from places that have nothing to do with pathing: a task chain handing over,
+     * a gesture finishing, the nether-portal task steadying itself before a step. Altoclef has owned
+     * the input path since the InputControls migration; these were the stragglers, and they were
+     * reaching across to a second key system to do something this one already knows how to do,
+     * which is also how two systems end up disagreeing about whether a key is down.
+     */
+    public void releaseAll() {
+        for (Input input : Input.values()) {
+            release(input);
+        }
+        toUnpress.clear();
+    }
+
     public boolean isHeldDown(Input input) {
         return inputToKeyBinding(input).isPressed();
     }

@@ -28,7 +28,7 @@ public class SupervisorTaskChain extends SingleTaskChain {
         if (!mod.getUserTaskChain().isActive() && !this.isActive()) {
             mod.getTaskRunner().disable();
             if (mod.getClientBaritone() != null)
-                mod.getClientBaritone().getInputOverrideHandler().clearAllKeys();
+                mod.getInputControls().releaseAll();
         }
     }
 

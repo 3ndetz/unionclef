@@ -313,7 +313,7 @@ public class GestureTask extends Task {
     @Override
     protected void onStop(Task interruptTask) {
         AltoClef mod = AltoClef.getInstance();
-        mod.getClientBaritone().getInputOverrideHandler().clearAllKeys();
+        mod.getInputControls().releaseAll();
         mod.getInputControls().release(Input.SNEAK);
         mod.getInputControls().release(Input.MOVE_FORWARD);
         mod.getInputControls().release(Input.SPRINT);
