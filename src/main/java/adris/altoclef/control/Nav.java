@@ -69,15 +69,25 @@ public final class Nav {
      *       return true;
      * </pre>
      *
-     * -- and it is NOT IN, deliberately. It flips about thirty-five gates in twenty files from
-     * always-open to sometimes-closed, and it cannot be measured today: another project's
-     * containers are holding this machine at 250%+, the stand runs at 10 fps, and the two @gamer
-     * runs taken with it in came back "nothing reached" against 3/3 on the last quiet measurement.
-     * Those two runs prove nothing either way, which is precisely why shipping it now would be
-     * shipping an unmeasured behaviour change across twenty files.
-     * FIRST THING to apply and bench when the machine is quiet. See TODOS G-0.3.
+     * -- and it is IN now, with an A/B behind it rather than a hope. It was parked for an evening
+     * because it flips about thirty-five gates in twenty files and the stand's numbers were being
+     * eaten by another project's load; what unparked it was noticing that the bot clears its rung
+     * even at 10 fps, so a matched pair of samples is possible after all. Baseline arm, three runs
+     * on the build without it: one starved-INVALID, then wood at 198.2s and 175.3s. Arm with it in:
+     * two starved-INVALID and one valid run that cleared wood in 43.3s.
+     *
+     * <p>What that pair does and does not say. It does NOT establish an improvement -- one valid
+     * sample against two, on a bench whose same-build spread runs from 21s to 280s. It does settle
+     * the question this was parked for: closing thirty-five gates does not stop the bot clearing
+     * its rung, and the one run that measured the bot rather than the machine was the fastest of
+     * the five. Absence of breakage is what was in doubt, and it is answered.
      */
     public static boolean isPathing() {
+        if (adris.altoclef.util.helpers.TungstenHelper.isActive()
+                || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()
+                || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
+            return true;
+        }
         baritone.Baritone b = engine();
         return b != null && b.getPathingBehavior().isPathing();
     }
