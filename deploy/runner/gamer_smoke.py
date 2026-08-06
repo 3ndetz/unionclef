@@ -204,9 +204,26 @@ def main():
                 logs = -1
             # A DOZEN LOGS IS NOT A FOREST. The first threshold accepted 12 within forty blocks
             # and that run reached nothing, so the check was still partly measuring the world.
-            if logs is None or logs < 0 or logs >= 40:
+            #
+            # AND AN UNREADABLE COUNT IS NOT A FOREST EITHER. This used to break out of the loop on
+            # logs < 0 -- the value it uses for "the call threw" -- so a failed count ACCEPTED the
+            # spot. That is a check that cannot fail: measured, a run started in an ancient city at
+            # y=-45 with no wood within reach, spent five minutes blacklisting wool 750 times, and
+            # was recorded as the bot failing to reach the wood rung. Ask again; if it will not
+            # answer twice, step on rather than pretend.
+            if logs is not None and logs >= 0 and logs >= 40:
                 print(f"  start has {logs} log blocks within 40")
                 break
+            if logs is None or logs < 0:
+                time.sleep(2)
+                try:
+                    logs = py4j("logs", r=40).get("n", -1)
+                except Exception:
+                    logs = -1
+                if logs is not None and logs >= 40:
+                    print(f"  start has {logs} log blocks within 40 (second reading)")
+                    break
+                print(f"  could not count logs at {spawn} ({logs}) — stepping on rather than guessing")
             skipped += 1
             print(f"  no trees at {spawn} ({logs} logs) — stepping on")
             idx += 1

@@ -56,13 +56,36 @@ public class BaritoneHelper {
     /**
      * {@code GoalYLevel.calculate(0, yDiff)}: yDiff is how far ABOVE the goal we are, so a positive
      * value means descending and a negative one means climbing.
+     *
+     * <h2>Why climbing is priced higher here than upstream prices it</h2>
+     *
+     * Upstream charges one JUMP_ONE_BLOCK_COST per block of ascent, which is the price of a STAIR
+     * STEP — it assumes the terrain provides the climb, and as an A* heuristic it MUST underestimate
+     * or the search stops being admissible. This function is not a search heuristic. It is the
+     * comparison the block scanner uses to pick which block to walk to, and for a comparison an
+     * underestimate is simply wrong.
+     *
+     * <p>What it cost, measured on the @gamer playthrough: a dark oak canopy log three blocks away
+     * and seven up scored 10.7 + 22.1 = 32.8 against a trunk twelve blocks away at 42.8, so the bot
+     * chose the canopy every time. It cannot get there — the block-space search has no way up seven
+     * blocks of air — so it walked at it until the move checker gave up, blacklisted that log,
+     * and picked the next canopy log one block over. The counters say the same thing: 29
+     * "unreachable" verdicts in fifteen minutes, every one of them from more than four blocks away,
+     * averaging 162 blocks of distance. Wood took 21 seconds when a log happened to be at eye
+     * level, and 219 seconds or never when it did not.
+     *
+     * <p>So price a climb at what a climb actually costs this bot when nothing is there to walk up:
+     * a jump plus the block it has to place under itself. Both numbers are tungsten's own — it is
+     * the engine that would do the placing. Where terrain DOES provide a staircase this overprices
+     * slightly and the bot prefers a flatter route to a further block, which is the right
+     * preference anyway. Descending is unchanged: falling is as cheap as upstream says it is.
      */
     private static double climbCost(int yDiff) {
         if (yDiff > 0) {
             return ActionCosts.distanceToTicks(2) / 2 * yDiff;
         }
         if (yDiff < 0) {
-            return -yDiff * ActionCosts.JUMP_ONE_BLOCK_COST;
+            return -yDiff * (ActionCosts.JUMP_ONE_BLOCK_COST + ActionCosts.PLACE_ONE_BLOCK_COST);
         }
         return 0;
     }
