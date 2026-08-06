@@ -29,6 +29,17 @@ echo "deployed: $(basename "$JAR")"
 
 CONTAINERS="${*:-uctest-mc-tester1 uctest-mc-tester2}"
 for c in $CONTAINERS; do
+    # A STOPPED CLIENT IS NOT A CLIENT TO SKIP -- IT IS ONE TO BRING BACK.
+    # This loop only acted on RUNNING containers, so once the clients were stopped (which is the
+    # right thing to do between runs: they burn ~390% CPU each even idle) deploy became a no-op for
+    # them and printed nothing about it. Two suites afterwards failed with "tester1 py4j: timed out
+    # after 600s" and were reported as gate FAILURES -- a stand with no client at all, recorded as
+    # the bot failing a course.
+    if ! docker ps --format '{{.Names}}' | grep -qx "$c"        && docker ps -a --format '{{.Names}}' | grep -qx "$c"; then
+        echo "  $c was stopped — starting it"
+        docker start "$c" >/dev/null 2>&1 || true
+        sleep 5
+    fi
     if docker ps --format '{{.Names}}' | grep -qx "$c"; then
         # prove exactly one jar is present INSIDE the container before restarting
         n=$(docker exec "$c" sh -c 'ls /mc-data/mods/unionclef-*.jar 2>/dev/null | wc -l')
