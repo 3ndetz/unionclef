@@ -47,7 +47,36 @@ public final class Nav {
         }
     }
 
-    /** Is a route being followed right now? */
+    /**
+     * Is a route being followed right now?
+     *
+     * <h2>This answered for the wrong engine, in about thirty-five gates</h2>
+     *
+     * It asked the LEGACY engine, which never paths now, so it said NO permanently -- and twenty
+     * files gate real behaviour on it: DestroyBlockTask will not mine while pathing,
+     * PlaceBlockTask will not place, the interaction-fix chain will not touch the inventory, the
+     * unstuck chain will not intervene. Every one of those guards has been open since the engine
+     * swap, which means those tasks have been acting on the body WHILE tungsten was walking it.
+     * That is the same shape as the pre-equip chain and hasBaritoneGoal, and it is the largest
+     * instance of it.
+     *
+     * <p>Answering for whichever engine is driving is exactly what this facade exists to do: the
+     * question is "is the body committed to a route", and tungsten's helper, its movement queue and
+     * its walker are the three things that commit it. That change is written and ready --
+     *
+     * <pre>
+     *   if (TungstenHelper.isActive() || MovementQueue.isRunning() || BlockPathWalker.isRunning())
+     *       return true;
+     * </pre>
+     *
+     * -- and it is NOT IN, deliberately. It flips about thirty-five gates in twenty files from
+     * always-open to sometimes-closed, and it cannot be measured today: another project's
+     * containers are holding this machine at 250%+, the stand runs at 10 fps, and the two @gamer
+     * runs taken with it in came back "nothing reached" against 3/3 on the last quiet measurement.
+     * Those two runs prove nothing either way, which is precisely why shipping it now would be
+     * shipping an unmeasured behaviour change across twenty files.
+     * FIRST THING to apply and bench when the machine is quiet. See TODOS G-0.3.
+     */
     public static boolean isPathing() {
         baritone.Baritone b = engine();
         return b != null && b.getPathingBehavior().isPathing();
