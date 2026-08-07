@@ -137,6 +137,8 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         timer.reset();
         Nav.cancel();
         origin = mod.getPlayer().getPos();
+        // No carry-over between legs: the gap between two wanders is not ground this task covered.
+        lastTickPos = null;
         progressChecker.reset();
         stuckCheck.reset();
         failCounter = 0;
@@ -160,6 +162,28 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
+        // AN ODOMETER THAT ONLY RUNS WHILE THIS TASK DOES.
+        //
+        // The first attempt to prove the wander fix measured how far the bot got from its start
+        // over a whole course, and the A/B threw it out: the unfixed build travelled FURTHER
+        // (38.0 blocks against 26.8), because the search task's own approach and the shimmy in the
+        // stuck branch walk the body regardless. A gate like that answers "did the bot go
+        // anywhere", which was never in question.
+        //
+        // This counts ground covered ONLY on ticks where this task is the one running, so no other
+        // task's movement can satisfy it. That is the difference between a measurement and a
+        // reassurance, and it is what makes the course able to FAIL on a build where wandering
+        // issues no movement of its own.
+        wanderTicks++;
+        ClientPlayerEntity self = mod.getPlayer();
+        if (self != null) {
+            if (lastTickPos != null) {
+                double dx = self.getX() - lastTickPos.x;
+                double dz = self.getZ() - lastTickPos.z;
+                wanderMovedCm += (int) Math.round(Math.sqrt(dx * dx + dz * dz) * 100);
+            }
+            lastTickPos = self.getPos();
+        }
 
         if (Nav.isPathing()) {
             progressChecker.reset();
@@ -224,27 +248,28 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 }
             }
         }
-        // WANDERING WAS A NO-OP, AND WANDERING IS WHERE EVERY STUCK SITUATION LANDS.
+        // REVERTED, ON A MEASUREMENT THAT REFUTED MY OWN REASONING. KEEP THIS NOTE.
         //
-        // This used to say `getExploreProcess().explore(origin.x, origin.z)`, and both halves of
-        // that addressed the LEGACY engine: Nav.isExploring() asks baritone's explore process,
-        // which never runs now, so the guard was permanently false and explore() was called every
-        // single tick -- at an engine that does not drive the body. The task therefore issued no
-        // movement at all. It only looked alive because the progress checker kept failing and
-        // saying so:
+        // The reasoning looked airtight: explore() and Nav.isExploring() BOTH address the legacy
+        // engine, which stopped driving the body when tungsten became the default, so this branch
+        // returns null having issued no movement -- and "Failed exploring." x11 appeared on the one
+        // craft_iron_pickaxe run that failed. I replaced it with a real destination on the live
+        // engine (GetToXZTask) and the craft suite stayed 6/6.
         //
-        //   11x Failed exploring.    2x Increased wander range    2x Failed, blacklisting
+        // Then the A/B, with an odometer that counts ground covered ONLY on ticks where this task
+        // is the one running, so no other task's movement can flatter either side:
         //
-        // measured on the run of craft_iron_pickaxe that failed with the ingots already smelted.
-        // Every recovery path in the bot falls back here -- lost the crafting table, cannot reach
-        // a resource, progress checker tripped -- so "get away from here and look around" has been
-        // doing nothing since the engine swap.
+        //   with the replacement:  wanderMoved=24.6   overallMoved=30.0
+        //   with THIS code:        wanderMoved=42.6   overallMoved=41.8
         //
-        // The fix is to say where to go and let the live engine take it there. GetToXZTask extends
-        // CustomBaritoneGoalTask, which is the drive tungsten already serves, so this needs no new
-        // machinery -- only a destination.
-        if (wanderTarget == null || wanderReached(mod)) {
-            wanderTarget = pickWanderTarget();
+        // The bot covers MORE ground under the supposedly dead code. So wandering was never a
+        // no-op -- something here does move the body (the shimmy in the stuck branch is the
+        // obvious candidate) -- and the replacement measurably did LESS. The call below is still a
+        // dead-engine call and still has to go for G-0, but it has to go as a real port of
+        // exploration onto tungsten, not a one-line substitution that trades measured coverage for
+        // a tidier dependency graph.
+        if (!Nav.isExploring()) {
+            mod.getClientBaritone().getExploreProcess().explore((int) origin.getX(), (int) origin.getZ());
         }
         if (!progressChecker.check(mod)) {
             progressChecker.reset();
@@ -252,61 +277,20 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 failCounter++;
                 Debug.logMessage("Failed exploring.");
             }
-            // A DIRECTION THAT DID NOT WORK IS NOT WORTH REPEATING. Re-aiming on failure is what
-            // makes this a search rather than a stubborn walk into the same wall.
-            wanderTarget = pickWanderTarget();
         }
-        wanderTicks++;
-        return new GetToXZTask(wanderTarget.getX(), wanderTarget.getZ());
+        return null;
     }
 
-    /** Times this task actually asked the live engine to take the body somewhere. Read as wander. */
+    /** Ticks this task spent running. Read as wander. */
     public static volatile int wanderTicks;
 
-    private BlockPos wanderTarget;
-    private int wanderSpin;
-
-    /** Are we close enough to the point we picked to want a new one? */
-    private boolean wanderReached(AltoClef mod) {
-        ClientPlayerEntity player = mod.getPlayer();
-        if (player == null || wanderTarget == null) {
-            return true;
-        }
-        double dx = player.getX() - wanderTarget.getX();
-        double dz = player.getZ() - wanderTarget.getZ();
-        return dx * dx + dz * dz < 9;   // three blocks, in the horizontal plane only
-    }
-
     /**
-     * Somewhere to go, that far from where we started, in a direction we have not just tried.
-     *
-     * <p>The distance is the task's own contract ({@code distanceToWander} plus whatever the range
-     * extension has added), so callers that ask to be taken far away still are. The direction turns
-     * by a whole number of radians each time rather than being random, because a wander that
-     * repeats its own choices is the failure this replaces, and a deterministic sweep is also
-     * reproducible on the bench.
-     *
-     * <p>An infinite distance means "just get out of here" — no caller can walk to infinity, so it
-     * is treated as a sensible finite step.
+     * Ground covered, in centimetres, on ticks where THIS task was the one running. Read as
+     * wanderMoved. Centimetres so it stays an int in the stats line; a course divides by 100.
      */
-    private BlockPos pickWanderTarget() {
-        double distance = distanceToWander + _wanderDistanceExtension;
-        if (!Double.isFinite(distance) || distance <= 0) {
-            distance = 32;
-        }
-        distance = Math.min(distance, 128);
-        // AIM PAST THE LINE, NOT AT IT. isFinished ends this task when the player is STRICTLY
-        // farther from the origin than distanceToWander, so a target sitting exactly on that circle
-        // can be reached without ever satisfying it -- the bot would arrive, pick the next
-        // direction and set off again, finishing only when the fail counter ran out. Two blocks of
-        // margin makes "reached the point I picked" mean "far enough away", which is what every
-        // caller of this task is actually asking for.
-        distance += 2;
-        double angle = (wanderSpin++) * 1.0;
-        Vec3d from = origin != null ? origin : AltoClef.getInstance().getPlayer().getPos();
-        return new BlockPos((int) Math.round(from.getX() + Math.cos(angle) * distance), 0,
-                (int) Math.round(from.getZ() + Math.sin(angle) * distance));
-    }
+    public static volatile int wanderMovedCm;
+
+    private Vec3d lastTickPos;
 
     @Override
     protected void onStop(Task interruptTask) {

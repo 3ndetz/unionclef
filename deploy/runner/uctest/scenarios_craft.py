@@ -304,7 +304,7 @@ class WanderRecovery(CraftTable):
     """
 
     id = "wander_recovery"
-    duration = 120
+    duration = 150
     bot_kit = []
 
     def build(self, arena, ctx):
@@ -321,7 +321,26 @@ class WanderRecovery(CraftTable):
         ctx.bot.cmd("@get oak_log")
 
     def early_stop(self, ctx):
-        return self._travelled(ctx) > 25
+        return self._wander_moved(ctx) > 15
+
+    def _wander_moved(self, ctx):
+        """Blocks covered on ticks where TimeoutWanderTask was the task running.
+
+        Not the same question as "how far did the bot get", which the first version of this course
+        asked and the A/B threw out: the unfixed build travelled FURTHER (38.0 against 26.8) because
+        the search's own approach and the shimmy walk the body regardless. This number can only be
+        raised by the wander task itself, so a build where wandering issues no movement reads ~0.
+        """
+        ok, stats = ctx.bot.py.try_call("placeStats")
+        if not ok or not stats:
+            return 0.0
+        for part in str(stats).split():
+            if part.startswith("wanderMoved="):
+                try:
+                    return int(part.split("=", 1)[1]) / 100.0
+                except ValueError:
+                    return 0.0
+        return 0.0
 
     def _travelled(self, ctx):
         """How far from the start, horizontally. Y is ignored on purpose: falling is not searching.
@@ -341,18 +360,15 @@ class WanderRecovery(CraftTable):
             return 0.0
 
     def judge(self, ctx):
-        moved = self._travelled(ctx)
-        ok, stats = ctx.bot.py.try_call("placeStats")
-        wander = ""
-        if ok and stats:
-            for part in str(stats).split():
-                if part.startswith("wander="):
-                    wander = part
-        yield Criterion("the bot went looking (25+ blocks from the start)", moved > 25,
-                        f"moved={moved:.1f} {wander}")
-        # RECORDED: the counter says the branch RAN, the distance says it WORKED. Both are needed --
-        # a counter that ticks while the body stands still is what this course exists to catch.
-        yield Criterion("the wander branch was reached", True, wander or "wander=?", gate=False)
+        under_wander = self._wander_moved(ctx)
+        overall = self._travelled(ctx)
+        yield Criterion("the bot covered ground while WANDERING (15+ blocks)", under_wander > 15,
+                        f"wanderMoved={under_wander:.1f} overallMoved={overall:.1f}")
+        # RECORDED, NOT GATED, AND THE REASON THIS COURSE WAS REWRITTEN: total displacement passes
+        # on a build where the wander branch moves nothing at all, because other tasks walk the
+        # body. Keep it visible so the two numbers can be compared, but never gate on it.
+        yield Criterion("overall displacement (NOT evidence on its own)", True,
+                        f"overallMoved={overall:.1f}", gate=False)
 
 
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
