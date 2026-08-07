@@ -191,6 +191,75 @@ public interface AltoGoal {
         }
     }
 
+    /**
+     * Get AWAY from some places — the first goal here that names no destination of its own.
+     *
+     * <p>Ported from baritone's {@code GoalRunAway}. Fleeing is a DIRECTION, not a place, which is
+     * exactly the case {@link #target()} documents as legitimately having no point: upstream
+     * expressed it as a heuristic that grew with distance from the danger, and a search could work
+     * with that. A drive cannot — it steers at something.
+     *
+     * <p>So the CALLER computes where "away" is and hands over a finished point, and this stays a
+     * pure record like every other shape here. Dragging the client into the type to read the
+     * player's position would be the easy wrong move: it would make the goal's answer depend on
+     * when you asked it.
+     *
+     * <p>{@code reached} keeps upstream's meaning exactly — clear of EVERY danger position, not
+     * merely the nearest one.
+     */
+    record Flee(Vec3d away, java.util.List<BlockPos> from, double distance) implements AltoGoal {
+        @Override
+        public Vec3d target() {
+            return away;
+        }
+
+        @Override
+        public boolean reached(BlockPos at) {
+            for (BlockPos danger : from) {
+                if (at.getSquaredDistance(danger) < distance * distance) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public String toString() {
+            return "flee(" + from.size() + " danger(s), d=" + distance + ")";
+        }
+    }
+
+    /**
+     * A flee goal aimed away from the danger, as seen from {@code standingAt}.
+     *
+     * @param maintainY hold this height, or null to keep the player's own (NaN, filled by the drive)
+     */
+    static AltoGoal flee(Vec3d standingAt, java.util.List<BlockPos> from, double distance,
+                         Integer maintainY) {
+        double cx = 0, cz = 0;
+        for (BlockPos p : from) {
+            cx += p.getX() + 0.5;
+            cz += p.getZ() + 0.5;
+        }
+        cx /= from.size();
+        cz /= from.size();
+        double dx = standingAt.x - cx, dz = standingAt.z - cz;
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 1.0E-4) {
+            // Standing exactly on the danger: any direction is equally away, so pick one rather
+            // than dividing by zero and steering the bot at NaN.
+            dx = 1;
+            dz = 0;
+            len = 1;
+        }
+        // Aim past the ring, so arriving at the point means the reached() test is satisfied.
+        double reach = distance + 2;
+        Vec3d away = new Vec3d(cx + dx / len * reach,
+                maintainY != null ? maintainY : Double.NaN,
+                cz + dz / len * reach);
+        return new Flee(away, java.util.List.copyOf(from), distance);
+    }
+
     /** {@code offset} need not be normalised; it is flattened to XZ and normalised here. */
     static AltoGoal direction(Vec3d origin, Vec3d offset) {
         Vec3d flat = offset.multiply(1, 0, 1).normalize();
