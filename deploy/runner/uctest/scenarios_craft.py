@@ -711,7 +711,14 @@ class EscapeLava(CraftTable):
     and only one of them is the one being preserved.
     """
 
-    # ✅✅ THE COURSE IS AN INSTRUMENT NOW, AND THE ANSWER IS CORROBORATED FROM THREE SIDES:
+    # ⛔⛔⛔ THE "CORROBORATED" FINDING BELOW IS WITHDRAWN — THE TASK SYSTEM WAS SWITCHED OFF.
+    # TaskRunner.tick() begins `if (!active) return;` and `active` stays false until a user task
+    # starts. This course issued NO command, so no chain ticked at all -- survival included -- and
+    # surv=0/0 was measuring an idle bot, not a broken reflex. Three witnesses agreed with each
+    # other and all three were answering the wrong question.
+    # Fixed by ordering a harmless gather before the teleport, which makes the runner active.
+    #
+    # ⛔ (WITHDRAWN) THE COURSE IS AN INSTRUMENT NOW, AND THE ANSWER IS CORROBORATED FROM THREE SIDES:
     #   * the block at 0,-60,0 is confirmed minecraft:lava (read back through py4j, not assumed);
     #   * 24 timeline samples across 90s all read [0.5, -60.0, 0.5] -- the bot NEVER MOVES;
     #   * hp is pinned at 16 with deaths=0, so it is alive and stable, not dying and not fleeing.
@@ -860,6 +867,14 @@ class EscapeLava(CraftTable):
         ctx.geo["entered"] = False
         time.sleep(1)
         ctx.bot.py.try_call("resetRunCounters")
+        # GIVE THE BOT A TASK FIRST, OR NOTHING IS RUNNING AT ALL.
+        # TaskRunner.tick() opens with `if (!active) return;`, and `active` is false until a user
+        # task starts. An idle bot therefore ticks NO chains -- survival included -- so the earlier
+        # version of this course measured a switched-off task system and read it as "the bot does
+        # not escape lava". It was never asked to. A harmless gathering order makes the runner
+        # active; the survival chain outranks it the moment the bot is in danger.
+        ctx.bot.cmd("@get oak_log 1")
+        time.sleep(2)
         # At the pool's edge, not its centre: one step east is dry.
         ctx.rcon.cmd(f"tp {ctx.bot.name} 0.5 {STAND_Y} 0.5", allow_reject=True)
         # RESISTANCE, NOT FIRE RESISTANCE — AND THE DIFFERENCE IS THE WHOLE COURSE.

@@ -79,7 +79,16 @@ public class WorldSurvivalChain extends SingleTaskChain {
 
     @Override
     public float getPriority() {
+        // TWO COUNTERS, ONE EITHER SIDE OF THE GUARD, BECAUSE lavaCond=0/0 SAYS THIS METHOD DOES
+        // NOT REACH ITS BODY. The second lava counter tallies shouldEscapeLava() alone, which
+        // defaults to TRUE -- and a true condition cannot count zero unless the line never runs.
+        // Drowning sits below this guard too, and fire escape below that, so the question is not
+        // about lava: it is whether the survival chain executes at all.
+        //   both zero           -> never ticked (registration or runner)
+        //   entered > 0, past 0 -> AltoClef.inGame() is false where the bot is plainly in a world
+        survivalEntered++;
         if (!AltoClef.inGame()) return Float.NEGATIVE_INFINITY;
+        survivalPastGuard++;
 
         AltoClef mod = AltoClef.getInstance();
 
@@ -230,6 +239,9 @@ public class WorldSurvivalChain extends SingleTaskChain {
 
     /** The two halves of that condition, counted apart. Read as lavaCond=hazard/allowed. */
     public static volatile int lavaCondHazard, lavaCondAllowed;
+
+    /** getPriority calls, before and after the inGame guard. Read as surv=entered/past. */
+    public static volatile int survivalEntered, survivalPastGuard;
 
     private boolean isInLavaOhShit(AltoClef mod) {
         if (mod.getPlayer().isInLava() && !mod.getPlayer().hasStatusEffect(StatusEffects.FIRE_RESISTANCE)) {
