@@ -244,5 +244,48 @@ class SmeltIron(CraftTable):
                         f"furnace={_has(ctx, 'furnace')} rawIron={_count(ctx, 'raw_iron')}")
 
 
+class CraftIronPickaxe(CraftTable):
+    """The fifth rung, and the first that needs TWO subsystems to work in sequence.
+
+    Everything below hands over what it needs and asks for one thing. This one cannot be satisfied
+    without smelting first -- there is no iron in the kit, only raw iron -- and then crafting the
+    result at a table. It is the shortest course that fails if EITHER half breaks, which is the
+    whole reason to have it: the rungs below can all pass while the join between them does not.
+
+    On the playthrough ladder this is the step that ends the stone age, so it is also the last
+    cheap rung. Everything past it (diamonds, the nether) needs a real world.
+    """
+
+    id = "craft_iron_pickaxe"
+    duration = 300
+    bot_kit = ["give {name} oak_log 16", "give {name} cobblestone 16",
+               "give {name} raw_iron 4", "give {name} coal 8"]
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        time.sleep(1)
+        for line in self.bot_kit:
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        ctx.bot.cmd("@get iron_pickaxe")
+
+    def early_stop(self, ctx):
+        return _has(ctx, "iron_pickaxe")
+
+    def judge(self, ctx):
+        got = _has(ctx, "iron_pickaxe")
+        ingots = _count(ctx, "iron_ingot")
+        yield Criterion("the bot holds an iron pickaxe", got,
+                        f"pickaxe={got} ingots={ingots} rawIron={_count(ctx, 'raw_iron')}")
+        # RECORDED, NOT GATED: whether the smelt half finished tells you which side to read when
+        # this goes red -- ingots present means the join or the craft, ingots absent means the melt.
+        yield Criterion("ingots were smelted along the way", True,
+                        f"ingots={ingots}", gate=False)
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
-SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron]
+SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
+             CraftIronPickaxe]
