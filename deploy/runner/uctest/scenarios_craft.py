@@ -371,6 +371,62 @@ class WanderRecovery(CraftTable):
                         f"overallMoved={overall:.1f}", gate=False)
 
 
+class CraftAtDistantTable(CraftTable):
+    """The table is 28 blocks away and the bot cannot build another one.
+
+    Every craft course so far puts the table under the bot's feet, so nothing on the ladder asks
+    whether the bot can WALK to a station it needs. InteractWithBlockTask's out-of-reach branch
+    steers `getCustomGoalProcess()` -- the LEGACY engine -- and prints "Getting to our goal" while
+    doing it; the failing craft_iron_pickaxe run showed exactly that line. Whether that means the
+    bot cannot approach is NOT established, and this course is here to settle it rather than let a
+    reading decide (the same reading was wrong about wandering).
+
+    THE KIT IS EXACT ON PURPOSE. Three planks and two sticks is precisely a wooden pickaxe and NOT
+    a crafting table (which needs four planks), so the bot cannot dodge the question by building its
+    own table where it stands. It either reaches the one provided or it fails.
+    """
+
+    id = "craft_at_distant_table"
+    duration = 180
+    bot_kit = ["give {name} oak_planks 3", "give {name} stick 2"]
+    TABLE_X = 28
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=40, grass=False)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        # The only crafting table in the world, well out of reach.
+        ctx.rcon.cmd(f"setblock {self.TABLE_X} {STAND_Y} 0 minecraft:crafting_table",
+                     allow_reject=True)
+        time.sleep(1)
+        for line in self.bot_kit:
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        ctx.bot.cmd("@get wooden_pickaxe")
+
+    def early_stop(self, ctx):
+        return _has(ctx, "wooden_pickaxe")
+
+    def judge(self, ctx):
+        got = _has(ctx, "wooden_pickaxe")
+        try:
+            now = ctx.bot.pos()
+            reached = abs(float(now[0]) - self.TABLE_X)
+        except (TypeError, ValueError, IndexError):
+            reached = -1
+        yield Criterion("the bot holds a wooden pickaxe", got,
+                        f"pickaxe={got} planks={_count(ctx, 'planks')} sticks={_count(ctx, 'stick')}")
+        # RECORDED: how close it got to the table separates "never set off" from "walked there and
+        # the craft failed" -- two completely different defects that look identical in the pack.
+        yield Criterion("distance from the table at the end", True,
+                        f"dxToTable={reached:.1f}", gate=False)
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
-             CraftIronPickaxe, WanderRecovery]
+             CraftIronPickaxe, WanderRecovery, CraftAtDistantTable]
