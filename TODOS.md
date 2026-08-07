@@ -559,7 +559,22 @@
       `sidePenalty` НЕ перенесён сознательно: это ранжирующий член для A*, а привод tungsten не
       ранжирует, он рулит на точку. Параметр оставлен в конструкторе (5 мест вызова не трогаем),
       причина записана там же.
-      ⛔ СЛЕДУЮЩИЙ МЕХАНИЧЕСКИЙ ШАГ (готов, НЕ СДЕЛАН — нужен свой гейт): `GoalFollowEntity`.
+      ✅ `GoalFollowEntity` СДЕЛАН И ПРОВЕРЕН СВОИМ ГЕЙТОМ (mob, а не craft):
+        до: `PASS remaining=0 mdTung total=51 min_hp=14.0` / после: `PASS ... total=40 min_hp=14.0`
+      Разница в `mdTung` — длина боя, не поведение.
+      ✅ `GoalBlockSide` + весь путь цели в `InteractWithBlockTask` УДАЛЕНЫ: цель строилась только
+      чтобы уйти в `setGoalAndPath` мёртвого движка. Замерено ДО правки: до верстака в 28 блоках бот
+      доходит и так (`dxToTable 0.5-0.7`). Ушли также 4 импорта целей и `ICustomGoalProcess`.
+      ⚠️ `GoalAnd` ОСТАВЛЕН: первый заход снёс и его, а сборка нашла ВТОРОГО пользователя —
+      `GetToOuterEndIslandsTask`. Мой grep его не увидел, потому что фильтровал ровно ту папку, где
+      пользователь и лежит. Проверку поймал компилятор; записано на месте, чтобы не повторили.
+      ⛔ СЛЕДУЮЩАЯ ПАРА (у КАЖДОЙ свой гейт, не смешивать):
+      • `GoalRunAway` (это класс baritone, не наш переходник) — два пользователя:
+        `AbstractDoToEntityTask:114` (снова `setGoalAndPath` у мёртвого движка → гейт **mob**) и
+        `RunAwayFromPositionTask` (движение → гейт **nav**).
+      • `GoalDodgeProjectiles` / `GoalRunAwayFromEntities` — бой, у юзера низкий приоритет.
+      • `CachedProjectile` / `PlaceBlockSchematic` — не цели вовсе, отдельная работа.
+      ⛔ (СТАРАЯ ЗАПИСЬ, ОСТАВЛЕНА ДЛЯ ИСТОРИИ) СЛЕДУЮЩИЙ МЕХАНИЧЕСКИЙ ШАГ: `GoalFollowEntity`.
       В `GetToEntityTask:186` вызов baritone уже стоит под охраной
       `if (!TungstenHelper.isActive() && !Nav.hasGoal())`, а настоящий привод ниже —
       `TungstenHelper.tryPathToEntity`. То есть это ФОЛЛБЕК В МЁРТВЫЙ ДВИЖОК: удаляется вместе с
