@@ -573,13 +573,38 @@ class ChopCanopy(ChopTree):
     def early_stop(self, ctx):
         return _count(ctx, "oak_log") >= 2
 
+    def _stat(self, ctx, key):
+        """One counter out of placeStats, read at judge time rather than sampled.
+
+        POLLING A PER-RUN COUNTER IS A RACE, AND IT NEARLY COST A FALSE CONCLUSION. This course can
+        finish in fifteen seconds when the bot ignores the bait, so a sampler ticking every fifteen
+        seconds may see mqNull=0 for a run in which the branch fired and reset. Reading it here,
+        once, at the end of the run and before the next scenario zeroes it, is the only honest way
+        to say whether a code path ran.
+        """
+        ok, stats = ctx.bot.py.try_call("placeStats")
+        if not ok or not stats:
+            return None
+        for part in str(stats).split():
+            if part.startswith(key + "="):
+                try:
+                    return int(part.split("=", 1)[1])
+                except ValueError:
+                    return None
+        return None
+
     def judge(self, ctx):
         self._publish_fps(ctx)
         logs = _count(ctx, "oak_log")
         first = ctx.geo.get("first_log_at")
         shown = "never" if first is None else format(first, ".1f") + "s"
+        nulls = self._stat(ctx, "mqNull")
         yield Criterion("two logs, with a reachable trunk and an unreachable bait", logs >= 2,
-                        f"logs={logs} firstLogAt={shown}")
+                        f"logs={logs} firstLogAt={shown} mqNull={nulls}")
+        # RECORDED: whether the null-route refusal actually FIRED on this run. A pass with mqNull=0
+        # means the bot never got trapped under the bait at all, and says nothing about the fix.
+        yield Criterion("null routes refused (did the fix run?)", True,
+                        f"mqNull={nulls}", gate=False)
         # RECORDED: against chop_tree's 7.8s on the plain case. A large gap here means the ranking
         # sent the bot at the canopy first and it recovered only after blacklisting.
         yield Criterion("time to the first log, versus 7.8s unbaited", True,
