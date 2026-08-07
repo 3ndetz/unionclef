@@ -109,5 +109,36 @@ class CraftWoodPickaxe(CraftTable):
                         f"table={_has(ctx, 'crafting_table')} sticks={_has(ctx, 'stick')}")
 
 
+class CraftStonePickaxe(CraftTable):
+    """The third rung, with the stone handed over rather than mined.
+
+    Mining is a separate skill and has its own courses; what this asks is whether the crafting chain
+    keeps working one level deeper -- logs to planks to sticks, cobble and sticks to a stone pickaxe,
+    through the table. The rung above wooden tools on the playthrough ladder.
+    """
+
+    id = "craft_stone_pickaxe"
+    duration = 180
+    bot_kit = ["give {name} oak_log 16", "give {name} cobblestone 16"]
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        time.sleep(1)
+        for line in self.bot_kit:
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        ctx.bot.cmd("@get stone_pickaxe")
+
+    def early_stop(self, ctx):
+        return _has(ctx, "stone_pickaxe")
+
+    def judge(self, ctx):
+        yield Criterion("the bot holds a stone pickaxe", _has(ctx, "stone_pickaxe"),
+                        f"table={_has(ctx, 'crafting_table')} sticks={_has(ctx, 'stick')}")
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
-SCENARIOS = [CraftTable, CraftWoodPickaxe]
+SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe]
