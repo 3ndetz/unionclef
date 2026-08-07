@@ -1,6 +1,7 @@
 package adris.altoclef.tasks;
 
 import adris.altoclef.AltoClef;
+import adris.altoclef.Debug;
 import adris.altoclef.tasks.resources.CollectRecipeCataloguedResourcesTask;
 import adris.altoclef.tasks.slot.ReceiveCraftingOutputSlotTask;
 import adris.altoclef.tasksystem.Task;
@@ -25,6 +26,8 @@ public class CraftInInventoryTask extends ResourceTask {
 
     /** Ticks, "no materials" exits, and output collections; read over py4j in placeStats(). */
     public static volatile int ciTick, ciCollect, ciReceive;
+    /** Ticks traced for the collect-or-craft decision; see the note at its site. */
+    public static volatile int ciDecisionTrace;
     /** Ticks the craft found its own ingredients stranded in the 2x2 grid. Read as ciGrid. */
     public static volatile int ciGridStranded;
 
@@ -121,6 +124,21 @@ public class CraftInInventoryTask extends ResourceTask {
                     return new EnsureFreePlayerCraftingGridTask();
                 }
             }
+        }
+
+        // WATCH THE DECISION ITSELF, TICK BY TICK.
+        // ciTick=3720 against ciCollect=1860 -- exactly half -- says this branch alternates, and the
+        // click trace shows the matching rhythm: log into the cursor, log back into the slot. But
+        // "exactly half" is an inference from two totals; the decision and its inputs, printed
+        // together, are the fact. First twenty ticks only.
+        if (ciDecisionTrace < 20) {
+            ciDecisionTrace++;
+            ItemStack cur = StorageHelper.getItemStackInCursorSlot();
+            boolean hasMats = StorageHelper.hasRecipeMaterialsOrTarget(mod, _target);
+            Debug.logMessage("CRAFTDEC target=" + _target + " hasMats=" + hasMats
+                    + " collect=" + _collect
+                    + " cursor=" + (cur.isEmpty() ? "empty" : (cur.getItem() + "x" + cur.getCount()))
+                    + " invOpen=" + StorageHelper.isPlayerInventoryOpen());
         }
 
         if (_collect && !StorageHelper.hasRecipeMaterialsOrTarget(mod, _target)) {
