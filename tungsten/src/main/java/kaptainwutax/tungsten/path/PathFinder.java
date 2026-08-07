@@ -119,6 +119,9 @@ public class PathFinder {
 	 *  nav_water's failing runs print 828 bare "Ran out of nodes!" (this file) and NOT ONE of
 	 *  BlockSpacePathFinder's long form, which is how the water work turned out to be aimed at
 	 *  the wrong engine. Count them apart. */
+	/** Searches that hit the hard give-up cap, and how many still handed back a partial route. Read as gaveUp/salvaged. */
+	public static volatile int searchGaveUp, searchGaveUpSalvaged;
+
 	public static volatile int physicsRanOut;
 	/** Of those, how many were salvaged into a partial route instead of standing still. */
 	public static volatile int physicsRanOutSalvaged;
@@ -237,6 +240,9 @@ public class PathFinder {
 
 	private void search(WorldView world, Node start, Vec3d targetIn, PlayerEntity player, int failedAttempts) {
 	    boolean failing = true;
+	    // Set when the hard cap ends the search; read after the loop, where it used to fall through
+	    // both arms and hand the caller nothing.
+	    boolean gaveUpHard = false;
 	    TungstenModRenderContainer.RENDERERS.clear();
 
 	    long startTime = System.currentTimeMillis();
@@ -505,6 +511,7 @@ public class PathFinder {
 	            if (System.currentTimeMillis() - lastProgressMs > HARD_SEARCH_CAP_MS) {
 	                Debug.logWarning("Search gave up: goal unreachable after "
 	                        + (HARD_SEARCH_CAP_MS / 1000) + "s without progress");
+	                gaveUpHard = true;
 	                break;
 	            }
 	        }
@@ -563,7 +570,33 @@ public class PathFinder {
 //			}
 	    }
 	
-	    if (stop.get()) {
+	    if (gaveUpHard) {
+	        // THE HARD GIVE-UP FELL BETWEEN THE TWO BRANCHES BELOW, AND DELIVERED NOTHING.
+	        //
+	        // stop is false here and the open set is NOT empty -- that is the whole reason the hard
+	        // cap exists, because "on open ground the physics openSet never empties". So neither
+	        // arm ran, the search returned no route at all, and the bot simply stood. The comment
+	        // under `openSet.isEmpty()` already records what that costs, learned from the twin
+	        // search: "a bot that stood in one place for ~500 seconds". Exhaustion was given the
+	        // mercy of a partial route; this exit, added later, never was.
+	        //
+	        // Measured on chop_canopy, a course where a bait log sits three blocks away and seven
+	        // up. On the failing runs:
+	        //   Search gave up: goal unreachable after 20s without progress
+	        //   t=37.9  [-6.4, -60.0, -18.4]
+	        //   t=150.9 [-6.4, -60.0, -18.4]     <- unchanged for 110 seconds
+	        // The bot walks off, the search quits, nothing comes back, and it stands there for the
+	        // rest of the run.
+	        //
+	        // setCurrentPath is the same delivery the timeout and exhaustion paths use, and
+	        // bestSoFar only yields a route with real forward progress, so a search that truly got
+	        // nowhere still ends cleanly instead of oscillating.
+	        searchGaveUp++;
+	        if (setCurrentPath(target, start, player)) {
+	            searchGaveUpSalvaged++;
+	            Debug.logMessage("Search gave up — advancing on the best partial route");
+	        }
+	    } else if (stop.get()) {
 	        if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) Debug.logMessage("stopped!");
 	        stop.set(false);
 	    } else if (openSet.isEmpty()) {

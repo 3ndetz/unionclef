@@ -273,8 +273,12 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         }
         if (!progressChecker.check(mod)) {
             progressChecker.reset();
+            // COUNT THE FAILURE EVEN WHEN EXPLORING WAS FORCED, or the escape above can never
+            // trigger for the one caller that most needs it. _forceExplore only ever meant "do not
+            // shout about it" -- it was silencing the counter as well as the message, which is how
+            // the search fallback ended up in a wander with both exits sealed.
+            failCounter++;
             if (!_forceExplore) {
-                failCounter++;
                 Debug.logMessage("Failed exploring.");
             }
         }
@@ -308,12 +312,29 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         // Why the heck did I add this in?
         //if (_origin == null) return true;
 
-        if (Float.isInfinite(distanceToWander)) return false;
-
-        // If we fail 10 times or more, we may as well try the previous task again.
+        // A WANDER THAT CANNOT END IS A DEAD END, AND IT IS THE ONE EVERY SEARCH FALLS INTO.
+        //
+        // AbstractDoToClosestObjectTask hands back `new TimeoutWanderTask(true)` when it cannot
+        // find its target, and that constructor routes to the INFINITE distance one. So the guard
+        // below used to answer "not finished" for ever, and the give-up counter underneath it was
+        // unreachable for exactly the wander that needed it. The bot entered this task and never
+        // came back to searching.
+        //
+        // Measured on chop_canopy, from the task's own odometer:
+        //   passing runs:  wanderTicks=0        (never entered)
+        //   failing runs:  wanderTicks=3089     wanderMoved=2135cm
+        // Three thousand ticks is the WHOLE run -- about 154 seconds spent covering twenty-one
+        // blocks and never retrying the search, which is what the frozen positions in the timeline
+        // look like from the inside.
+        //
+        // Order matters: the give-up test goes FIRST, so an endless wander can still end. The
+        // infinite distance keeps its meaning -- "no target distance, just get away" -- it simply
+        // no longer means "for ever".
         if (failCounter > 10) {
             return true;
         }
+
+        if (Float.isInfinite(distanceToWander)) return false;
 
         ClientPlayerEntity player = AltoClef.getInstance().getPlayer();
 

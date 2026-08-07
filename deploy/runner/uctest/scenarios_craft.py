@@ -605,6 +605,13 @@ class ChopCanopy(ChopTree):
         # means the bot never got trapped under the bait at all, and says nothing about the fix.
         yield Criterion("null routes refused (did the fix run?)", True,
                         f"mqNull={nulls}", gate=False)
+        # RECORDED: what the WANDER path did on this run. The failures freeze at one spot for two
+        # minutes after "Search gave up", so the question is whether the recovery moves the body at
+        # all when it matters. wanderMoved counts ground covered only on ticks where that task was
+        # the one running, so nothing else can flatter it.
+        moved = self._stat(ctx, "wanderMoved")
+        yield Criterion("ground covered while wandering (cm)", True,
+                        f"wanderMoved={moved} wanderTicks={self._stat(ctx, 'wander')}", gate=False)
         # RECORDED: against chop_tree's 7.8s on the plain case. A large gap here means the ranking
         # sent the bot at the canopy first and it recovered only after blacklisting.
         yield Criterion("time to the first log, versus 7.8s unbaited", True,
