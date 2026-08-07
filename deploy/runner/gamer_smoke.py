@@ -85,7 +85,14 @@ def main():
         raise StandDown(f"gamer-server rcon never answered: {e}")
     grcon("difficulty easy"); grcon("gamerule doDaylightCycle true")
     print("[2] connect bot to gamer-server...")
-    if not py4j("state")["inGame"] or True:
+    if True:
+        # ALWAYS CONNECT, AND SAY SO RATHER THAN HIDING IT BEHIND A DEAD CONDITION.
+        # This used to read `if not py4j("state")["inGame"] or True:` -- a condition welded open,
+        # which reads like a check and is not one. The `or True` was right and the CONDITION was
+        # wrong: inGame says the bot is in A world, not that it is in the GAMER one, so skipping
+        # the connect when it happens to be on the uctest server is how a run ends up measuring the
+        # wrong world. Connecting unconditionally is the correct behaviour, so state it plainly.
+        #
         # ONE CONNECT ATTEMPT IS NOT ENOUGH.
         # Reconstructed from both logs: the bot dies mid-run (a creeper, in the run that exposed
         # this), the next run's connect disconnects the client first -- "tester1 lost connection"
