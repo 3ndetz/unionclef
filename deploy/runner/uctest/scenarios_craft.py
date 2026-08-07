@@ -56,6 +56,15 @@ class CraftTable(Scenario):
         # Daylight and no monsters: this course is about the inventory, not about surviving.
         ctx.rcon.cmd("time set day")
         ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        # START WITH AN EMPTY HAND AND AN EMPTY GRID.
+        # The stand's world is not wiped between runs, so a previous run's leftovers ride along --
+        # and something sitting in the 2x2 before any craft claims it is exactly what starts the
+        # clear-the-grid carousel this course is here to measure. Clearing then re-giving makes the
+        # start state a fact rather than an inheritance.
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        time.sleep(1)
+        for line in self.bot_kit:
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
         ctx.bot.py.try_call("resetRunCounters")
         time.sleep(1)
         ctx.bot.cmd("@get crafting_table")
