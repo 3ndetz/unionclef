@@ -224,8 +224,27 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 }
             }
         }
-        if (!Nav.isExploring()) {
-            mod.getClientBaritone().getExploreProcess().explore((int) origin.getX(), (int) origin.getZ());
+        // WANDERING WAS A NO-OP, AND WANDERING IS WHERE EVERY STUCK SITUATION LANDS.
+        //
+        // This used to say `getExploreProcess().explore(origin.x, origin.z)`, and both halves of
+        // that addressed the LEGACY engine: Nav.isExploring() asks baritone's explore process,
+        // which never runs now, so the guard was permanently false and explore() was called every
+        // single tick -- at an engine that does not drive the body. The task therefore issued no
+        // movement at all. It only looked alive because the progress checker kept failing and
+        // saying so:
+        //
+        //   11x Failed exploring.    2x Increased wander range    2x Failed, blacklisting
+        //
+        // measured on the run of craft_iron_pickaxe that failed with the ingots already smelted.
+        // Every recovery path in the bot falls back here -- lost the crafting table, cannot reach
+        // a resource, progress checker tripped -- so "get away from here and look around" has been
+        // doing nothing since the engine swap.
+        //
+        // The fix is to say where to go and let the live engine take it there. GetToXZTask extends
+        // CustomBaritoneGoalTask, which is the drive tungsten already serves, so this needs no new
+        // machinery -- only a destination.
+        if (wanderTarget == null || wanderReached(mod)) {
+            wanderTarget = pickWanderTarget();
         }
         if (!progressChecker.check(mod)) {
             progressChecker.reset();
@@ -233,8 +252,60 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 failCounter++;
                 Debug.logMessage("Failed exploring.");
             }
+            // A DIRECTION THAT DID NOT WORK IS NOT WORTH REPEATING. Re-aiming on failure is what
+            // makes this a search rather than a stubborn walk into the same wall.
+            wanderTarget = pickWanderTarget();
         }
-        return null;
+        wanderTicks++;
+        return new GetToXZTask(wanderTarget.getX(), wanderTarget.getZ());
+    }
+
+    /** Times this task actually asked the live engine to take the body somewhere. Read as wander. */
+    public static volatile int wanderTicks;
+
+    private BlockPos wanderTarget;
+    private int wanderSpin;
+
+    /** Are we close enough to the point we picked to want a new one? */
+    private boolean wanderReached(AltoClef mod) {
+        ClientPlayerEntity player = mod.getPlayer();
+        if (player == null || wanderTarget == null) {
+            return true;
+        }
+        double dx = player.getX() - wanderTarget.getX();
+        double dz = player.getZ() - wanderTarget.getZ();
+        return dx * dx + dz * dz < 9;   // three blocks, in the horizontal plane only
+    }
+
+    /**
+     * Somewhere to go, that far from where we started, in a direction we have not just tried.
+     *
+     * <p>The distance is the task's own contract ({@code distanceToWander} plus whatever the range
+     * extension has added), so callers that ask to be taken far away still are. The direction turns
+     * by a whole number of radians each time rather than being random, because a wander that
+     * repeats its own choices is the failure this replaces, and a deterministic sweep is also
+     * reproducible on the bench.
+     *
+     * <p>An infinite distance means "just get out of here" — no caller can walk to infinity, so it
+     * is treated as a sensible finite step.
+     */
+    private BlockPos pickWanderTarget() {
+        double distance = distanceToWander + _wanderDistanceExtension;
+        if (!Double.isFinite(distance) || distance <= 0) {
+            distance = 32;
+        }
+        distance = Math.min(distance, 128);
+        // AIM PAST THE LINE, NOT AT IT. isFinished ends this task when the player is STRICTLY
+        // farther from the origin than distanceToWander, so a target sitting exactly on that circle
+        // can be reached without ever satisfying it -- the bot would arrive, pick the next
+        // direction and set off again, finishing only when the fail counter ran out. Two blocks of
+        // margin makes "reached the point I picked" mean "far enough away", which is what every
+        // caller of this task is actually asking for.
+        distance += 2;
+        double angle = (wanderSpin++) * 1.0;
+        Vec3d from = origin != null ? origin : AltoClef.getInstance().getPlayer().getPos();
+        return new BlockPos((int) Math.round(from.getX() + Math.cos(angle) * distance), 0,
+                (int) Math.round(from.getZ() + Math.sin(angle) * distance));
     }
 
     @Override
