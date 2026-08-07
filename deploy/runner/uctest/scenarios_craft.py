@@ -461,6 +461,70 @@ class CraftAtDistantTable(CraftTable):
                         f"dxToTable={reached:.1f}", gate=False)
 
 
+class ChopTree(CraftTable):
+    """One tree, ten blocks away, and a clock on it.
+
+    TODOS #37 says felling a single log takes MINUTES while the bot stands in a forest, and that
+    has only ever been seen through @gamer -- a ten-minute window on a survival world that this
+    machine often cannot run at all. Wood is the first rung of the whole playthrough, so a slow
+    chop taxes every run behind it.
+
+    A tree is four setblocks. Put one on the flat arena and the question costs ninety seconds and
+    answers under any load.
+
+    NO TOOL IN THE KIT, ON PURPOSE. Bare hands fell oak perfectly well, and this course is about the
+    chop-and-collect loop rather than about tool selection, which has its own unfinished item.
+    """
+
+    id = "chop_tree"
+    duration = 120
+    bot_kit = []
+    TREE_X = 10
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=20, grass=False)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        # A trunk five high, with a cap of leaves so the block scanner sees a tree and not a pillar.
+        for dy in range(5):
+            ctx.rcon.cmd(f"setblock {self.TREE_X} {STAND_Y + dy} 0 minecraft:oak_log",
+                         allow_reject=True)
+        ctx.rcon.cmd(f"fill {self.TREE_X - 1} {STAND_Y + 5} -1 {self.TREE_X + 1} {STAND_Y + 5} 1 "
+                     f"minecraft:oak_leaves", allow_reject=True)
+        ctx.geo["fps"] = []
+        ctx.geo["first_log_at"] = None
+        time.sleep(1)
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        ctx.bot.cmd("@get oak_log 4")
+
+    def drive_tick(self, ctx, elapsed):
+        super().drive_tick(ctx, elapsed)
+        # WHEN the first log lands separates "cannot reach the tree" from "chops slowly" -- two
+        # different defects that a pass/fail on the count cannot tell apart.
+        if ctx.geo.get("first_log_at") is None and _count(ctx, "oak_log") > 0:
+            ctx.geo["first_log_at"] = elapsed
+
+    def early_stop(self, ctx):
+        return _count(ctx, "oak_log") >= 4
+
+    def judge(self, ctx):
+        self._publish_fps(ctx)
+        logs = _count(ctx, "oak_log")
+        first = ctx.geo.get("first_log_at")
+        yield Criterion("four logs in the pack", logs >= 4,
+                        f"logs={logs} firstLogAt="
+                        f"{'never' if first is None else format(first, '.1f') + 's'}")
+        yield Criterion("time to the FIRST log (recorded)", True,
+                        f"firstLogAt={'never' if first is None else format(first, '.1f') + 's'}",
+                        gate=False)
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
-             CraftIronPickaxe, WanderRecovery, CraftAtDistantTable]
+             CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
+             ChopTree]
