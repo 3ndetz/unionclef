@@ -70,6 +70,16 @@ class CraftTable(Scenario):
         arena.flat_field(half=6, grass=False)
         ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
 
+    # A ONE-BLOCK FLOOR OVER THE VOID IS NOT A WORLD, IT IS A TRAP FOR THE MEASUREMENT.
+    # mine_stone failed for a reason that turned out to be the arena's: the stand carves everything
+    # under the floor to air, so breaking a floor block leaves a hole with the void beneath it. The
+    # cobblestone drops INTO that hole and hangs there -- traced from the tracker itself:
+    #   ETITEM cobblestone pos=-0.26,-60.43,-0.59 block=-1,-61,-1 onGround=false self=false d1..d3=false
+    # Nothing solid within three blocks, so the tracker's "is it on the ground" test refuses it
+    # forever, the pickup never starts and the pack stays empty. That is arguably correct behaviour
+    # for an item hanging over a void; it is simply not what this course means to ask.
+    # Courses that mine therefore lay several layers, the way any real ground has them.
+
     def drive_start(self, ctx):
         # Daylight and no monsters: this course is about the inventory, not about surviving.
         ctx.rcon.cmd("time set day")
@@ -171,6 +181,13 @@ class MineStone(CraftTable):
     id = "mine_stone"
     duration = 120
     bot_kit = ["give {name} wooden_pickaxe 1"]
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=6, grass=False)
+        # Three more layers under the surface: mining one block still leaves ground below it.
+        y = STAND_Y - 1
+        ctx.rcon.cmd(f"fill -8 {y - 3} -8 8 {y - 1} 8 minecraft:stone", allow_reject=True)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
 
     def drive_start(self, ctx):
         ctx.rcon.cmd("time set day")

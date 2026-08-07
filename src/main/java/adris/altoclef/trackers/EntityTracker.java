@@ -39,6 +39,8 @@ public class EntityTracker extends Tracker {
      *  drop=2415/0 says the tracker reports no drops while rcon sees three on the floor; these two
      *  separate "the sweep never runs" from "the grounded test rejects them". */
     public static volatile int etItemsSeen, etItemsGrounded;
+    /** Traced item entities; see the note at the sweep. */
+    private static volatile int etTrace = 0;
     private final HashMap<Class, List<Entity>> entityMap = new HashMap<>();
 
     private final List<Entity> closeEntities = new ArrayList<>();
@@ -368,6 +370,22 @@ public class EntityTracker extends Tracker {
 
                 if (entity instanceof ItemEntity ientity) {
                     etItemsSeen++;
+                    // ONE ITEM, FULLY DESCRIBED. All six ground checks say no for 161 entities in a
+                    // run, which cannot be true of a drop lying on a stone floor -- so either
+                    // isSolidBlock is lying here or the drops are not where they are assumed to be.
+                    // Position and the four block states it consults, once.
+                    if (etTrace < 4) {
+                        etTrace++;
+                        net.minecraft.util.math.BlockPos bp = ientity.getBlockPos();
+                        Debug.logMessage("ETITEM " + ientity.getStack().getItem()
+                                + " pos=" + String.format("%.2f,%.2f,%.2f", ientity.getX(), ientity.getY(), ientity.getZ())
+                                + " block=" + bp.getX() + "," + bp.getY() + "," + bp.getZ()
+                                + " onGround=" + ientity.isOnGround()
+                                + " self=" + WorldHelper.isSolidBlock(bp)
+                                + " d1=" + WorldHelper.isSolidBlock(bp.down())
+                                + " d2=" + WorldHelper.isSolidBlock(bp.down(2))
+                                + " d3=" + WorldHelper.isSolidBlock(bp.down(3)));
+                    }
                     Item droppedItem = ientity.getStack().getItem();
 
                     // Only cared about GROUNDED item entities -- AND THE BLOCK DIRECTLY BELOW COUNTS.
