@@ -32,6 +32,28 @@ The score IS "how far we got".
 
 ## 1. AUDIT — every iteration, before a single line of code
 
+⛔ **RULE TWO: AN IDLE BOT RUNS NOTHING. A COURSE MUST GIVE IT A TASK BEFORE MEASURING ANYTHING.**
+
+Added 2026-08-08, after it produced a fully corroborated finding that was completely wrong.
+`TaskRunner.tick()` opens with `if (!active) return;`, and `active` stays false until a USER TASK
+starts. So a bot standing idle ticks NO chains at all — not survival, not mob defence, not food.
+
+The escape_lava course issued no command, dropped the bot in lava, and watched it do nothing for
+ninety seconds. Three independent witnesses agreed: the block read back as lava through py4j, 24
+timeline samples showed it never moving, health and death counters showed it alive and stable. The
+conclusion — "lava escape is a dead survival path" — was published, and it was false. A counter on
+the FIRST LINE of `WorldSurvivalChain.getPriority()` read zero: the method was never called, because
+the runner was switched off.
+
+With a harmless `@get oak_log 1` ordered first, the same course reads `surv=145/145`,
+`lavaEsc=101`, and the bot escapes — into WATER six blocks south rather than dry ground one step
+east, which is the behaviour the old heuristic's -100 water term was there to produce.
+
+**Agreement between witnesses is not truth when they share a hidden assumption.** All three were
+answering "what does an idle bot do", and none of them could see that the question was wrong.
+
+---
+
 ⛔ **RULE ONE: WHEN PLAUSIBLE FIXES KEEP SCORING THE SAME, THE INPUT IS LYING — INSTRUMENT IT.**
 
 Added 2026-08-08, after it cost most of an evening. TODOS #37 took FOUR consecutive fixes, each made
