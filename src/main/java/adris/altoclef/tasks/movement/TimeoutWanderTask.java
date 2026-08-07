@@ -271,7 +271,14 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         if (!Nav.isExploring()) {
             mod.getClientBaritone().getExploreProcess().explore((int) origin.getX(), (int) origin.getZ());
         }
-        if (!progressChecker.check(mod)) {
+        boolean progressing = progressChecker.check(mod);
+        if (progressing) {
+            wanderCheckOk++;
+        } else {
+            wanderCheckTrip++;
+        }
+        wanderFailPeak = Math.max(wanderFailPeak, failCounter);
+        if (!progressing) {
             progressChecker.reset();
             // COUNT THE FAILURE EVEN WHEN EXPLORING WAS FORCED, or the escape above can never
             // trigger for the one caller that most needs it. _forceExplore only ever meant "do not
@@ -287,6 +294,17 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
 
     /** Ticks this task spent running. Read as wander. */
     public static volatile int wanderTicks;
+
+    /**
+     * What the give-up machinery actually saw. Read as wanderChk=ok/trip and wanderFail=peak.
+     *
+     * <p>Three fixes in a row were made from reading this task and every one landed on the same
+     * course score, so the next move is not another edit: these say whether the progress checker
+     * EVER trips during a failing run, and how high failCounter climbs before the run ends. The
+     * escape needs eleven trips; if the checker is satisfied by a bot crawling 0.1 blocks per six
+     * seconds, it will never get there and no amount of unsealing the exit will matter.
+     */
+    public static volatile int wanderCheckOk, wanderCheckTrip, wanderFailPeak;
 
     /**
      * Ground covered, in centimetres, on ticks where THIS task was the one running. Read as

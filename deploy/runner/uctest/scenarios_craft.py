@@ -612,6 +612,17 @@ class ChopCanopy(ChopTree):
         moved = self._stat(ctx, "wanderMoved")
         yield Criterion("ground covered while wandering (cm)", True,
                         f"wanderMoved={moved} wanderTicks={self._stat(ctx, 'wander')}", gate=False)
+        # RECORDED: what the give-up machinery SAW. The escape needs eleven checker trips; if the
+        # checker is satisfied by a bot crawling, failPeak stays near zero and no amount of
+        # unsealing the exit can matter. This is the reading that decides the next move.
+        ok, stats = ctx.bot.py.try_call("placeStats")
+        chk = ""
+        if ok and stats:
+            for part in str(stats).split():
+                if part.startswith("wanderChk=") or part.startswith("wanderFail="):
+                    chk += " " + part
+        yield Criterion("give-up machinery (checker ok/trip, failCounter peak)", True,
+                        chk.strip() or "n/a", gate=False)
         # RECORDED: against chop_tree's 7.8s on the plain case. A large gap here means the ranking
         # sent the bot at the canopy first and it recovered only after blacklisting.
         yield Criterion("time to the first log, versus 7.8s unbaited", True,
