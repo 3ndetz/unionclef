@@ -524,7 +524,69 @@ class ChopTree(CraftTable):
                         gate=False)
 
 
+class ChopCanopy(ChopTree):
+    """The trap that made wood cost 219 seconds: a log CLOSE and HIGH against one FAR and reachable.
+
+    chop_tree shows the plain case is fast, so it cannot see the defect TODOS #37 describes. This
+    builds the actual shape instead. Three blocks away and seven up sits a canopy log on a bare
+    stem, with nothing to climb; twelve blocks away stands an ordinary trunk the bot can simply walk
+    to and break.
+
+    The scanner ranks candidates by BaritoneHelper.calculateGenericHeuristic, and upstream prices a
+    block of climb at one stair step -- correct for an A* heuristic, which must underestimate, and
+    wrong for a comparison, which must not. Under the old pricing the canopy scored 32.8 against the
+    trunk's 42.8, so the bot chose what it could not reach, walked at it until the move checker gave
+    up, blacklisted that log and picked the next canopy log one block over: 29 "unreachable"
+    verdicts in fifteen minutes.
+
+    The repricing -- a climb costs a jump PLUS the block you must place under yourself -- was made
+    on that reasoning and has never been tested by a course. This is that course, and it can fail:
+    if the ranking is wrong the bot goes for the canopy and gets nothing.
+    """
+
+    id = "chop_canopy"
+    duration = 150
+    CANOPY_X = 3
+    TRUNK_X = 12
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        # THE BAIT: close, high, and standing on nothing the bot can climb.
+        for dy in (7, 8):
+            ctx.rcon.cmd(f"setblock {self.CANOPY_X} {STAND_Y + dy} 0 minecraft:oak_log",
+                         allow_reject=True)
+        # THE HONEST OPTION: further away, on the ground, walk up and break it.
+        for dy in range(4):
+            ctx.rcon.cmd(f"setblock {self.TRUNK_X} {STAND_Y + dy} 0 minecraft:oak_log",
+                         allow_reject=True)
+        ctx.rcon.cmd(f"fill {self.TRUNK_X - 1} {STAND_Y + 4} -1 {self.TRUNK_X + 1} {STAND_Y + 4} 1 "
+                     f"minecraft:oak_leaves", allow_reject=True)
+        ctx.geo["fps"] = []
+        ctx.geo["first_log_at"] = None
+        time.sleep(1)
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        ctx.bot.cmd("@get oak_log 2")
+
+    def early_stop(self, ctx):
+        return _count(ctx, "oak_log") >= 2
+
+    def judge(self, ctx):
+        self._publish_fps(ctx)
+        logs = _count(ctx, "oak_log")
+        first = ctx.geo.get("first_log_at")
+        shown = "never" if first is None else format(first, ".1f") + "s"
+        yield Criterion("two logs, with a reachable trunk and an unreachable bait", logs >= 2,
+                        f"logs={logs} firstLogAt={shown}")
+        # RECORDED: against chop_tree's 7.8s on the plain case. A large gap here means the ranking
+        # sent the bot at the canopy first and it recovered only after blacklisting.
+        yield Criterion("time to the first log, versus 7.8s unbaited", True,
+                        f"firstLogAt={shown}", gate=False)
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
-             ChopTree]
+             ChopTree, ChopCanopy]
