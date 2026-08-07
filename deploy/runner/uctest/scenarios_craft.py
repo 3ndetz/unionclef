@@ -698,7 +698,87 @@ class MineDiamond(CraftTable):
                         f"pickaxe={_has(ctx, 'iron_pickaxe')}", gate=False)
 
 
+class EscapeLava(CraftTable):
+    """Standing in lava, with water three steps one way and dry ground the other.
+
+    Written BEFORE porting EscapeFromLavaTask, because that port has a trap: the old goal scores
+    water at -100 in its heuristic -- escaping INTO water is strongly preferred, since water puts the
+    fire out -- while its isInGoal is merely "not lava, not lava-adjacent". Port it as "nearest
+    non-lava cell" and a burning bot walks to dry ground while water sits three blocks away.
+
+    So this course does not just ask "did it survive". It records WHICH WAY the bot went, because
+    surviving by luck on a short pool and surviving by choosing the water are different behaviours
+    and only one of them is the one being preserved.
+    """
+
+    # ⛔ THIS COURSE IS NOT TRUSTWORTHY YET — MY ARENA, NOT THE BOT. First run: the bot never left
+    # (x=0.5), minHp hit 0, and the chat carried the death message TWELVE times. Two faults, both
+    # mine:
+    #   1. the lava fills -1..1 and the spawn is 0.5,0.5 -- every respawn drops it BACK into lava,
+    #      so one death becomes a loop and the counter says nothing about escaping;
+    #   2. standing in the middle of a 3x3 pool is close to instant death at this damage rate;
+    #      there is no window in which an escape could be observed even if it worked perfectly.
+    # This is the same error as mine_stone this morning (a one-block floor over the void): the
+    # course measured the arena. Fix before believing ANY verdict from it -- put the bot one block
+    # INTO the edge of a pool with dry ground a step away, and move the spawn clear of the lava.
+    id = "escape_lava"
+    duration = 90
+    bot_kit = []
+    LAVA_X = 0
+    WATER_X = 6
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=14, grass=False)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        y = STAND_Y - 1
+        # A small pool the bot is standing in, water a short walk east, dry ground everywhere else.
+        ctx.rcon.cmd(f"fill -1 {y} -1 1 {y} 1 minecraft:lava", allow_reject=True)
+        ctx.rcon.cmd(f"fill {self.WATER_X} {y} -1 {self.WATER_X + 1} {y} 1 minecraft:water",
+                     allow_reject=True)
+        ctx.geo["fps"] = []
+        ctx.geo["min_hp"] = 20.0
+        time.sleep(1)
+        ctx.bot.py.try_call("resetRunCounters")
+        # Drop the bot in. Nothing is commanded: escaping lava is a survival reflex, and if the
+        # chain does not fire on its own that is itself the finding.
+        ctx.rcon.cmd(f"tp {ctx.bot.name} 0.5 {STAND_Y} 0.5", allow_reject=True)
+
+    def drive_tick(self, ctx, elapsed):
+        super().drive_tick(ctx, elapsed)
+        hp = ctx.bot.health()
+        if hp is not None:
+            ctx.geo["min_hp"] = min(ctx.geo.get("min_hp", 20.0), float(hp))
+
+    def early_stop(self, ctx):
+        try:
+            now = ctx.bot.pos()
+            return abs(float(now[0])) > 2.5 and (ctx.bot.health() or 0) > 0
+        except (TypeError, ValueError, IndexError):
+            return False
+
+    def judge(self, ctx):
+        self._publish_fps(ctx)
+        hp = ctx.bot.health()
+        alive = hp is not None and float(hp) > 0
+        try:
+            x = float(ctx.bot.pos()[0])
+        except (TypeError, ValueError, IndexError):
+            x = 0.0
+        out_of_lava = abs(x) > 2.5
+        yield Criterion("alive and out of the lava", alive and out_of_lava,
+                        f"hp={hp} x={x:.1f} minHp={ctx.geo.get('min_hp')}")
+        # RECORDED, NOT GATED: which way it ran. Positive x is the water; negative is dry ground.
+        # This is the number that will show whether the port kept the water preference.
+        yield Criterion("direction taken (+x = water, -x = dry)", True,
+                        f"x={x:.1f} waterAt={self.WATER_X}", gate=False)
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
-             ChopTree, ChopCanopy, MineDiamond]
+             ChopTree, ChopCanopy, MineDiamond, EscapeLava]
