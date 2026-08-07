@@ -184,6 +184,40 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ## Course status
 
+### The craft ladder — 5/5 GREEN (added 2026-08-07)
+
+A second suite, `run_suite.py craft`, on the FLAT arena rather than a survival world. It exists
+because crafting was only ever measured through `@gamer`, which costs ten minutes and cannot answer
+at all on a loaded machine; these courses hold 35-43 fps under the same load and answer in seconds.
+
+```
+craft_table         PASS    logs -> planks -> table          (2x2 and the grid guard)
+craft_wood_pickaxe  PASS    + sticks, through the table      (2x2 and 3x3 meeting)
+craft_stone_pickaxe PASS    + cobble                         (the rung above wood)
+mine_stone          PASS    break, drop, pick up             (gathering, not crafting)
+smelt_iron          PASS    furnace, fuel, ore, ingot        (the whole smelt subsystem)
+```
+
+The rung is the ITEM IN THE PACK, never "the task ran" — the same bar the playthrough uses.
+
+⛔ **WHAT THESE COURSES FOUND, AND WHY IT MATTERS MORE THAN THE SCORE.** Every failure on this
+ladder turned out to be a capability that had been DEAD SINCE THE 1.21.11 PORT, not a regression:
+
+- `smelt_iron` — `ItemHelper.getFuelTimeMap()` returned an empty map on 1.21.11 (`//$$ ... // TODO
+  [1.21.11] createFuelTimeMap() removed`). An empty map tells every caller NOTHING BURNS: `isFuel`
+  false for coal, inventory fuel count 0 whatever the pack holds. Furnace, blast furnace and smoker
+  were all dead, and with them the gate to iron. The bot walked off to mine coal it was carrying.
+- `craft_*` — the manual craft loop asked `hasItemInventoryOnly` while its ingredient was in the
+  CURSOR mid-move, read "run out", and its own tail put the item back. A carousel with no exit.
+- mining — the mid-mining tool swap had its whole body behind `//#if MC < 12111`.
+
+⭐ **THE LESSON FOR THE NEXT SESSION.** A port stub that returns "nothing" neither throws nor logs;
+it quietly deletes a whole capability, and every caller reads it as a confident "no". Weeks of
+reading had not found the fuel one — four minutes on a flat arena did, because a COURSE DEMANDED
+THE CAPABILITY. There are 29 `TODO [1.21.11]` markers left in the tree (TODOS G-1.38). Do not
+audit them by reading. Write the course that needs the capability, and let it fail.
+
+
 ⛔ **CORRECTION 2026-07-29: the score is 8/10, not 9/10.** `nav_water` was a FALSE GREEN and
 it was my own doing. Fixing the bottomless pool, I filled the shell to floor level across
 z=-4..4 and carved only z=-3..3, which left a stone rim on both sides at walking height — the

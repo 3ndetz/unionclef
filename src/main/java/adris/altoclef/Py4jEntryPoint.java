@@ -2360,6 +2360,44 @@ public class Py4jEntryPoint {
 
     /** Bridge execution telemetry: ticks the place logic ran, ticks deferred because the bot
      *  was still walking there, ticks actually in range, and blocks actually clicked. */
+    /**
+     * Ask the crafting-recipe tracker what it knows, and MAKE it answer.
+     *
+     * <h2>Why this exists as a lever rather than a counter</h2>
+     *
+     * Trackers rebuild lazily: {@code ensureUpdated()} runs only when one of their getters is
+     * called. So a bare {@code recipesKnown} counter reads 0 in any course that never asks the
+     * tracker anything -- which is every course on the flat arena -- and a reading that cannot
+     * distinguish "the port is broken" from "nobody asked" is not a measurement at all.
+     *
+     * <p>This calls a getter, which forces the rebuild, and then reports. Deliberately probes a few
+     * named items across both grid sizes: oak planks (2x2, one ingredient), a crafting table (2x2,
+     * four), a stone pickaxe (3x3, mixed) and a bucket (3x3, the one BeatMinecraftTask asks the
+     * tracker for by name).
+     *
+     * @return {@code recipesKnown=N oak_planks=true crafting_table=true stone_pickaxe=true bucket=true}
+     */
+    public String recipeProbe() {
+        AltoClef mod = AltoClef.getInstance();
+        if (mod == null || mod.getCraftingRecipeTracker() == null) {
+            return "recipeProbe: no mod";
+        }
+        net.minecraft.item.Item[] probes = {
+                net.minecraft.item.Items.OAK_PLANKS,
+                net.minecraft.item.Items.CRAFTING_TABLE,
+                net.minecraft.item.Items.STONE_PICKAXE,
+                net.minecraft.item.Items.BUCKET,
+        };
+        StringBuilder out = new StringBuilder();
+        for (net.minecraft.item.Item probe : probes) {
+            // hasRecipeForItem calls ensureUpdated, which is the whole point of asking.
+            boolean known = mod.getCraftingRecipeTracker().hasRecipeForItem(probe);
+            out.append(' ').append(net.minecraft.registry.Registries.ITEM.getId(probe).getPath())
+                    .append('=').append(known);
+        }
+        return "recipesKnown=" + adris.altoclef.trackers.CraftingRecipeTracker.recipesKnown + out;
+    }
+
     public String placeStats() {
         // Two engines, both reported. The first four are the SPLIT path (walker moves the body,
         // PathExecutor.tickPlacing aims and clicks) whose seam measured clicked=0 across eleven
@@ -2371,7 +2409,7 @@ public class Py4jEntryPoint {
                 "called=%d deferred=%d inRange=%d clicked=%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
                         + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d pdLegacy=%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
-                        + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d dc=%d/%d/%d/%d/%d mc=%d/%d/%d/%d/%d mcFlight=%d toolSwap=%d navUnsafeAir=%d sm=%d/%d smWater=%d srch=%d/%d/%d drop=%d/%d et=%d/%d"
+                        + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d dc=%d/%d/%d/%d/%d mc=%d/%d/%d/%d/%d mcFlight=%d toolSwap=%d recipesKnown=%d navUnsafeAir=%d sm=%d/%d smWater=%d srch=%d/%d/%d drop=%d/%d et=%d/%d"
                         + " sprint=%d/%d lowHp=%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdPillarD=%d dmgTaken=%.1f hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
                         + " | gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d",
@@ -2485,6 +2523,7 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.CraftGenericManuallyTask.mcInvalidSlot,
                 adris.altoclef.tasks.CraftGenericManuallyTask.mcInFlight,
                 adris.altoclef.tasks.resources.MineAndCollectTask.toolSwaps,
+                adris.altoclef.trackers.CraftingRecipeTracker.recipesKnown,
                 adris.altoclef.control.Nav.navUnsafeAir,
                 kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode.smSelected,
                 kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode.smMoves,
