@@ -62,6 +62,13 @@ public class CraftGenericManuallyTask extends Task implements adris.altoclef.tas
      */
     public static volatile int mcFilled, mcShort, mcFromOutput, mcWait, mcInvalidSlot;
 
+    /**
+     * Ticks where the ingredient this slot wants was already in the cursor, mid-move. Read as
+     * mcFlight. Zero on a build without the fix below is not proof of anything; a NON-zero reading
+     * is proof that the carousel condition really does occur.
+     */
+    public static volatile int mcInFlight;
+
     private final RecipeTarget target;
 
     public CraftGenericManuallyTask(RecipeTarget target) {
@@ -155,7 +162,28 @@ public class CraftGenericManuallyTask extends Task implements adris.altoclef.tas
                     // Measured on the playthrough: 1856 ticks inside this task with the materials
                     // in the pack, ciReceive=0, ciGrid=0 -- the grid empty because the ingredients
                     // never went in.
-                    if (!mod.getItemStorage().hasItemInventoryOnly(toFill.getMatches())) {
+                    // THE STACK IN FLIGHT LIVES IN THE CURSOR, AND THIS QUESTION COULD NOT SEE IT.
+                    // Filling a slot takes two ticks: the mover picks the ingredient UP into the
+                    // cursor, and puts it DOWN on the next one. Between those two ticks the item is
+                    // in neither the pack nor the grid. So when the stack being moved is the last of
+                    // its kind, this guard reads "we have run out", takes the `continue` below, the
+                    // loop ends with nothing returned -- which drops the mover mid-move -- and the
+                    // tail of this method, finding a cursor that does not stack with an empty
+                    // output, puts the ingredient back in the pack. Next tick it is in the pack
+                    // again, the mover picks it up again, and the craft rides that carousel forever.
+                    // Measured on the smelt course, from the tag on that tail:
+                    //   90x CURSORBACK manualTail holding=minecraft:oak_log
+                    //   30x CURSORBACK manualTail holding=minecraft:stick
+                    //   30x CURSORBACK manualTail holding=minecraft:oak_planks
+                    // Note what this does NOT go back to: `hasItem`, which checks the cursor FIRST
+                    // and reports an empty cursor as AIR, is the bug the comment above describes.
+                    // Asking whether the cursor holds THIS INGREDIENT is a different question and
+                    // has no such hole -- toFill is non-empty here, so an empty cursor never matches.
+                    boolean inFlight = toFill.matches(StorageHelper.getItemStackInCursorSlot().getItem());
+                    if (inFlight) {
+                        mcInFlight++;
+                    }
+                    if (!inFlight && !mod.getItemStorage().hasItemInventoryOnly(toFill.getMatches())) {
                         if (!StorageHelper.getItemStackInSlot(outputSlot).isEmpty()) {
                             setDebugState("NO MORE to fit: grabbing from output.");
                             mcFromOutput++;
