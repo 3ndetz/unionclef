@@ -711,7 +711,19 @@ class EscapeLava(CraftTable):
     and only one of them is the one being preserved.
     """
 
-    # ⛔⛔⛔ THE "CLEAN ANSWER" BELOW IS WITHDRAWN. THE FIRE RESISTANCE DISABLED THE TRIGGER.
+    # ✅✅ THE COURSE IS AN INSTRUMENT NOW, AND THE ANSWER IS CORROBORATED FROM THREE SIDES:
+    #   * the block at 0,-60,0 is confirmed minecraft:lava (read back through py4j, not assumed);
+    #   * 24 timeline samples across 90s all read [0.5, -60.0, 0.5] -- the bot NEVER MOVES;
+    #   * hp is pinned at 16 with deaths=0, so it is alive and stable, not dying and not fleeing.
+    # The trigger is NOT suppressed this time: minecraft:resistance cuts damage but is invisible to
+    # isInLavaOhShit, which only excludes FIRE_RESISTANCE. So the bot is in lava, in danger by the
+    # chain's own definition, with ninety seconds to act -- and does nothing.
+    #
+    # THAT is a dead survival path, and it is now safe to say so. The earlier version of this claim
+    # was withdrawn because fire resistance had switched the branch off; this one survives that
+    # objection by construction.
+    #
+    # ⛔ (WITHDRAWN, kept for the record) THE FIRE RESISTANCE DISABLED THE TRIGGER.
     # WorldSurvivalChain.isInLavaOhShit reads:
     #     player.isInLava() && !player.hasStatusEffect(FIRE_RESISTANCE)
     # so a fire-resistant bot is DELIBERATELY not considered to be in danger -- which is correct
@@ -850,13 +862,17 @@ class EscapeLava(CraftTable):
         ctx.bot.py.try_call("resetRunCounters")
         # At the pool's edge, not its centre: one step east is dry.
         ctx.rcon.cmd(f"tp {ctx.bot.name} 0.5 {STAND_Y} 0.5", allow_reject=True)
-        # FIRE RESISTANCE, ON PURPOSE, AND IT MAKES THE COURSE HONEST RATHER THAN EASY.
-        # Without it the bot has about three seconds of life, and a red cannot be read: it may mean
-        # "no bot could get out in time" rather than "this one did not try". That is a PHYSICS
-        # question, and it is not the one being asked. With the burning removed, what is left is the
-        # BEHAVIOUR question -- given time, does the escape logic walk the bot out of lava at all?
-        # A bot that stands in fire-proof lava for ninety seconds has answered no, unambiguously.
-        ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:fire_resistance 120 0 true",
+        # RESISTANCE, NOT FIRE RESISTANCE — AND THE DIFFERENCE IS THE WHOLE COURSE.
+        # A survivable window is needed, or a red only means "nothing could have escaped in three
+        # seconds". But fire resistance cannot buy it: WorldSurvivalChain.isInLavaOhShit reads
+        #     player.isInLava() && !player.hasStatusEffect(FIRE_RESISTANCE)
+        # so granting it switches OFF the branch under test -- correctly, since such a bot is in no
+        # danger. An earlier version of this course did exactly that and "measured" a bot that was
+        # never asked to escape.
+        # minecraft:resistance cuts the DAMAGE and is invisible to that check, so the trigger still
+        # fires and the bot simply has longer to act on it. Amplifier 4 is 80% off, turning three
+        # seconds into roughly fifteen: enough to separate "did not try" from "ran out of time".
+        ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:resistance 120 4 true",
                      allow_reject=True)
 
     def drive_tick(self, ctx, elapsed):
