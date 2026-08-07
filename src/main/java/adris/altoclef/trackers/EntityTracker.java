@@ -365,8 +365,20 @@ public class EntityTracker extends Tracker {
                 if (entity instanceof ItemEntity ientity) {
                     Item droppedItem = ientity.getStack().getItem();
 
-                    // Only cared about GROUNDED item entities
-                    if (ientity.isOnGround() || ientity.isTouchingWater() || WorldHelper.isSolidBlock(ientity.getBlockPos().down(2)) || WorldHelper.isSolidBlock(ientity.getBlockPos().down(3))) {
+                    // Only cared about GROUNDED item entities -- AND THE BLOCK DIRECTLY BELOW COUNTS.
+                    // The fallbacks looked two and three blocks down and skipped the one cell that
+                    // actually decides it: down(1), the floor the item is resting on. On the client
+                    // a dropped item bobs and isOnGround() is unreliable, so on any thin floor --
+                    // the bench arena is exactly one layer with air beneath -- every test failed and
+                    // the drop was never tracked at all.
+                    // Measured on mine_stone: drop=2426/0, the tracker asked 2426 times whether any
+                    // drop existed and answering no every time, while rcon saw three item entities
+                    // lying in that arena. The pickup task therefore never started, the pack stayed
+                    // empty, and the whole playthrough ladder stalled one rung above it.
+                    if (ientity.isOnGround() || ientity.isTouchingWater()
+                            || WorldHelper.isSolidBlock(ientity.getBlockPos().down())
+                            || WorldHelper.isSolidBlock(ientity.getBlockPos().down(2))
+                            || WorldHelper.isSolidBlock(ientity.getBlockPos().down(3))) {
                         if (!itemDropLocations.containsKey(droppedItem)) {
                             itemDropLocations.put(droppedItem, new ArrayList<>());
                         }
