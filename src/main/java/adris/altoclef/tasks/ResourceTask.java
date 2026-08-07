@@ -95,7 +95,16 @@ public abstract class ResourceTask extends Task implements ITaskCanForce {
         AltoClef mod = AltoClef.getInstance();
 
         // If we have an item in an INACCESSIBLE inventory slot
-        if (!(thisOrChildSatisfies(task -> task instanceof ITaskUsesCraftingGrid)) || ensureFreeCraftingGridTask.isActive()) {
+        // ONCE THE CLEARING TASK IS THE CURRENT CHILD, NOTHING BELOW CAN CLAIM THE GRID ANY MORE.
+        // The `|| ensureFreeCraftingGridTask.isActive()` clause made this self-sustaining: the
+        // moment the clearing task becomes the sub-task, the craft that owns the grid is no longer
+        // in the chain, thisOrChildSatisfies can never see its marker again, and the exemption is
+        // gone for good. Measured on craft_table: "CURSORBACK onResourceStop holding=oak_log
+        // interrupt=EnsureFreePlayerCraftingGridTask" on repeat, the mover picking an ingredient up
+        // and the parent taking it away, 1854 times, never a plank.
+        // thisOrChildSatisfies does walk the whole sub chain (Task.java:157-164), so the marker is
+        // seen while the craft is running -- which is exactly when this exemption has to hold.
+        if (!(thisOrChildSatisfies(task -> task instanceof ITaskUsesCraftingGrid))) {
             for (ItemTarget target : itemTargets) {
                 if (StorageHelper.isItemInaccessibleToContainer(mod, target)) {
                     setDebugState("Moving from SPECIAL inventory slot");
@@ -197,7 +206,7 @@ public abstract class ResourceTask extends Task implements ITaskCanForce {
         }
         // Make sure that items don't get stuck in the player crafting grid. May be an issue if a future task isn't a resource task.
         if (StorageHelper.isPlayerInventoryOpen()) {
-            if (!(thisOrChildSatisfies(task -> task instanceof ITaskUsesCraftingGrid)) || ensureFreeCraftingGridTask.isActive()) {
+            if (!(thisOrChildSatisfies(task -> task instanceof ITaskUsesCraftingGrid))) {
                 for (Slot slot : PlayerSlot.CRAFT_INPUT_SLOTS) {
                     if (!StorageHelper.getItemStackInSlot(slot).isEmpty()) {
                         return ensureFreeCraftingGridTask;
