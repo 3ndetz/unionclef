@@ -623,6 +623,16 @@ class ChopCanopy(ChopTree):
                     chk += " " + part
         yield Criterion("give-up machinery (checker ok/trip, failCounter peak)", True,
                         chk.strip() or "n/a", gate=False)
+        # RECORDED: what the block filter saw. If the reachable trunk is being discarded as
+        # unreachable alongside the bait, the search has no candidate and every downstream repair
+        # is beside the point.
+        scan = ""
+        if ok and stats:
+            for part in str(stats).split():
+                if part.startswith("scan="):
+                    scan = part
+        yield Criterion("block filter (accepted/unreachable/unbreakable)", True,
+                        scan or "n/a", gate=False)
         # RECORDED: against chop_tree's 7.8s on the plain case. A large gap here means the ranking
         # sent the bot at the canopy first and it recovered only after blacklisting.
         yield Criterion("time to the first log, versus 7.8s unbaited", True,

@@ -217,6 +217,10 @@ public class MineAndCollectTask extends ResourceTask {
          *  pickup task never ticks -- so whether the tracker AGREES that a drop exists is the question. */
         public static volatile int dropAsked, dropSeen;
 
+        /** Candidates the block filter saw: accepted / rejected as unreachable / rejected as unbreakable.
+         *  Read as scan=ok/unreach/nobreak. */
+        public static volatile int scanAccepted, scanUnreachable, scanNoBreak;
+
         public static Pair<Double, Optional<ItemEntity>> getClosestItemDrop(AltoClef mod,Vec3d pos, ItemTarget... items) {
             Optional<ItemEntity> closestDrop = Optional.empty();
             dropAsked++;
@@ -235,8 +239,23 @@ public class MineAndCollectTask extends ResourceTask {
         public static Pair<Double,Optional<BlockPos> > getClosestBlock(AltoClef mod,Vec3d pos ,Block... blocks) {
             Optional<BlockPos> closestBlock = mod.getBlockScanner().getNearestBlock(pos, check -> {
 
-                if (mod.getBlockScanner().isUnreachable(check)) return false;
-                return WorldHelper.canBreak(check);
+                // WHY IS THERE NOTHING TO MINE? MEASURE IT, DO NOT GUESS AGAIN.
+                // Four fixes to the wander machinery all measured an identical course score,
+                // because the wander is healthy and the real question is upstream: the parent
+                // re-asks for a wander only because this search comes back EMPTY. These three say
+                // whether candidates existed and were DISCARDED here, and by which of the two
+                // filters -- if the reachable trunk is being rejected as unreachable alongside the
+                // bait, no reset anywhere else can help, because that set lives in the scanner.
+                if (mod.getBlockScanner().isUnreachable(check)) {
+                    scanUnreachable++;
+                    return false;
+                }
+                if (!WorldHelper.canBreak(check)) {
+                    scanNoBreak++;
+                    return false;
+                }
+                scanAccepted++;
+                return true;
             }, blocks);
 
             return new Pair<>(
