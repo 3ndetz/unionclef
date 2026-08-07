@@ -17,6 +17,24 @@ from .arena import STAND_Y
 from .scenario import Criterion, Scenario
 
 
+def _count(ctx, needle):
+    """How many of anything whose id contains `needle` are in the pack."""
+    ok, inv = ctx.bot.py.try_call("getInventoryFull")
+    if not ok or not inv:
+        return 0
+    total = 0
+    try:
+        for slot in dict(inv).get("slots") or []:
+            sd = dict(slot)
+            if sd.get("empty"):
+                continue
+            if needle in str(sd.get("item") or sd.get("name") or ""):
+                total += int(sd.get("count", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+    return total
+
+
 def _has(ctx, needle):
     """Is anything whose id contains `needle` in the pack?"""
     ok, inv = ctx.bot.py.try_call("getInventoryFull")
@@ -140,5 +158,40 @@ class CraftStonePickaxe(CraftTable):
                         f"table={_has(ctx, 'crafting_table')} sticks={_has(ctx, 'stick')}")
 
 
+class MineStone(CraftTable):
+    """Gathering, not crafting: a pickaxe and a stone floor, and eight cobblestone asked for.
+
+    The craft courses hand over their materials on purpose, so nothing above tests the step that
+    actually feeds them. This does, and it is the cheapest possible version of it: the arena floor
+    IS stone, so there is no searching, no travel and no terrain -- just break, pick up, repeat.
+    It also exercises DestroyBlockTask under the gates that isPathing now closes while the body is
+    walking, which until today could only be checked through a ten-minute survival window.
+    """
+
+    id = "mine_stone"
+    duration = 120
+    bot_kit = ["give {name} wooden_pickaxe 1"]
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        time.sleep(1)
+        for line in self.bot_kit:
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        ctx.bot.cmd("@get cobblestone 8")
+
+    def early_stop(self, ctx):
+        return _count(ctx, "cobblestone") >= 8
+
+    def judge(self, ctx):
+        got = _count(ctx, "cobblestone")
+        yield Criterion("eight cobblestone in the pack", got >= 8, f"cobblestone={got}")
+        yield Criterion("the pickaxe survived (recorded)", True,
+                        f"pickaxe={_has(ctx, 'wooden_pickaxe')}", gate=False)
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
-SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe]
+SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone]
