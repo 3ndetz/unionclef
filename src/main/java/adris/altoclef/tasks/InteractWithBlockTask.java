@@ -8,8 +8,6 @@ import adris.altoclef.tasks.movement.SafeRandomShimmyTask;
 import adris.altoclef.tasks.movement.TimeoutWanderTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
-import adris.altoclef.util.baritone.GoalAnd;
-import adris.altoclef.util.baritone.GoalBlockSide;
 import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
@@ -17,10 +15,6 @@ import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import adris.altoclef.util.slots.Slot;
 import adris.altoclef.util.time.TimerGame;
-import baritone.api.pathing.goals.Goal;
-import baritone.api.pathing.goals.GoalNear;
-import baritone.api.pathing.goals.GoalTwoBlocks;
-import baritone.api.process.ICustomGoalProcess;
 import kaptainwutax.tungsten.path.movements.Rotation;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.*;
@@ -160,33 +154,6 @@ public class InteractWithBlockTask extends Task {
         };
     }
 
-    private static Goal createGoalForInteract(BlockPos target, int reachDistance, Direction interactSide, Vec3i interactOffset, boolean walkInto) {
-
-        boolean sideMatters = interactSide != null;
-        if (sideMatters) {
-            Vec3i offs = interactSide.getVector();
-            if (offs.getY() == -1) {
-                // If we're below, place ourselves two blocks below.
-                offs = offs.down();
-            }
-            target = target.add(offs);
-        }
-
-        if (walkInto) {
-            return new GoalTwoBlocks(target);
-        } else {
-            if (sideMatters) {
-                // Make sure we're on the right side of the block.
-                Goal sideGoal = new GoalBlockSide(target, interactSide, 1);
-                return new GoalAnd(sideGoal, new GoalNear(target.add(interactOffset), reachDistance));
-            } else {
-                // TODO: Cleaner method of picking which side to approach from. This is only here for the lava stuff.
-                return new GoalTwoBlocks(target.up());
-                //return new GoalNear(target.add(interactOffset), reachDistance);
-            }
-        }
-    }
-
     private boolean isAnnoying(AltoClef mod, BlockPos pos) {
         if (annoyingBlocks != null) {
             for (Block AnnoyingBlocks : annoyingBlocks) {
@@ -297,24 +264,29 @@ public class InteractWithBlockTask extends Task {
             return wanderTask;
         }
 
-        int reachDistance = 0;
-        Goal moveGoal = createGoalForInteract(target, reachDistance, direction, interactOffset, walkInto);
-        ICustomGoalProcess proc = mod.getClientBaritone().getCustomGoalProcess();
-
+        // G-0: THE GOAL HERE EXISTED ONLY TO FEED AN ENGINE THAT DOES NOT DRIVE.
+        // createGoalForInteract built a baritone Goal (GoalTwoBlocks / GoalBlockSide / GoalAnd /
+        // GoalNear) and handed it to getCustomGoalProcess().setGoalAndPath -- the legacy engine,
+        // which has not moved the body since tungsten became the default. Measured before touching
+        // it: the bot reaches a crafting table 28 blocks away regardless (craft_at_distant_table,
+        // dxToTable 0.5-0.7), so something else does the walking and this call contributed nothing.
+        // Removing it takes GoalBlockSide with it, which had no other user. GoalAnd STAYS: a first
+        // pass deleted it too and the build caught a second user in GetToOuterEndIslandsTask -- the
+        // grep that cleared it had filtered out the very directory the user lived in.
+        //
+        // The remaining engine questions go through Nav, which is null-safe and is the one place
+        // that names an engine. This is a REFACTOR with no promised win, gated by the craft ladder,
+        // which exercises this task on every single table craft.
         cachedClickStatus = rightClick(mod);
         switch (Objects.requireNonNull(cachedClickStatus)) {
             case CANT_REACH -> {
                 setDebugState("Getting to our goal");
-                // Get to our goal then
-                if (!proc.isActive()) {
-                    proc.setGoalAndPath(moveGoal);
-                }
                 clickTimer.reset();
             }
             case WAIT_FOR_CLICK -> {
                 setDebugState("Waiting for click");
-                if (proc.isActive()) {
-                    proc.onLostControl();
+                if (Nav.hasGoal()) {
+                    Nav.clearGoal();
                 }
                 clickTimer.reset();
 
@@ -333,8 +305,8 @@ public class InteractWithBlockTask extends Task {
             }
             case CLICK_ATTEMPTED -> {
                 setDebugState("Clicking.");
-                if (proc.isActive()) {
-                    proc.onLostControl();
+                if (Nav.hasGoal()) {
+                    Nav.clearGoal();
                 }
                 if (clickTimer.elapsed()) {
                     // We tried clicking but failed.
