@@ -21,6 +21,8 @@ public class MoveItemToSlotTask extends Task {
     private final ItemTarget toMove;
     private final Slot destination;
     private final Function<AltoClef, List<Slot>> getMovableSlots;
+    /** One mismatch line per task instance; see the note at its site. */
+    private boolean loggedMismatch = false;
 
     public MoveItemToSlotTask(ItemTarget toMove, Slot destination, Function<AltoClef, List<Slot>> getMovableSlots) {
         this.toMove = toMove;
@@ -54,6 +56,18 @@ public class MoveItemToSlotTask extends Task {
 
             // We need to deal with our cursor stack OR put an item there (to move).
             boolean wrongItemHeld = !Arrays.asList(validItems).contains(currentHeld.getItem());
+            // THE LAST PLACE LEFT TO GUESS. The craft loop ends here: the mover picks a log up and
+            // puts it straight back, which means the held item is not in this slot's accepted set.
+            // Print both, once per task, and there is nothing left to infer.
+            if (!loggedMismatch && wrongItemHeld && !currentHeld.isEmpty()) {
+                loggedMismatch = true;
+                StringBuilder want = new StringBuilder();
+                for (Item it : validItems) {
+                    want.append(want.length() == 0 ? "" : ",").append(it);
+                }
+                Debug.logMessage("MOVEMISMATCH holding=" + currentHeld.getItem()
+                        + " want=[" + want + "] dest=" + destination);
+            }
             if (currentHeld.isEmpty() || wrongItemHeld) {
                 Optional<Slot> toPlace;
                 if (currentHeld.isEmpty()) {
