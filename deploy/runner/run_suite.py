@@ -253,7 +253,17 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     # in ISOLATION, on a build whose previous audit was 12/12 -- and `docker stats` named the
     # reason: two containers belonging to another project were taking 225% and 171% of the CPU.
     # Calling that a code regression would have sent the next pass bisecting the machine.
-    LOAD_SENSITIVE = ("freeze", "stand-still", "standstill", "reached goal")
+    # THE KEYWORDS WERE ALL NAV'S, SO THE GUARD STILL COULD NOT FIRE ON THE CRAFT LADDER.
+    # Giving the craft courses an fps (earlier today) was only half the repair: this whitelist
+    # decides WHICH failed gates a low frame rate is allowed to excuse, and every entry named a nav
+    # criterion. Craft gates read "the bot holds an iron pickaxe" or "four logs in the pack", match
+    # nothing here, and so a starved craft run was still recorded as a bot failure -- measured:
+    # craft_iron_pickaxe FAIL at avg_fps 9.88 with the smelt half already done (ingots=3), while
+    # another project held ~470% of this box.
+    # Every craft gate is "did the bot finish this within the window", which is exactly the kind of
+    # claim a slow client invalidates, so the rung phrasings belong here beside nav's.
+    LOAD_SENSITIVE = ("freeze", "stand-still", "standstill", "reached goal",
+                      "holds", "in the pack", "logs", "ground while", "went looking")
     # WHY 14 AND NOT 12. The old floor admitted a band in which the bot provably cannot perform.
     # Measured tonight on a machine with 24 cores and only ~460% of them in use elsewhere: the
     # client tops out at 12 fps whatever I do -- one client instead of two, cores pinned with
