@@ -30,8 +30,9 @@ from uctest.scenario import Ctx, Scenario, is_flake           # noqa: E402
 from uctest.scenarios_nav import SCENARIOS as NAV   # noqa: E402
 from uctest.scenarios_pvp import SCENARIOS as PVP   # noqa: E402
 from uctest.scenarios_mob import SCENARIOS as MOB   # noqa: E402
+from uctest.scenarios_craft import SCENARIOS as CRAFT  # noqa: E402
 
-SUITES = {"pvp": PVP, "nav": NAV, "mob": MOB}
+SUITES = {"pvp": PVP, "nav": NAV, "mob": MOB, "craft": CRAFT}
 BOT_CONTAINER = "uctest-mc-tester1"
 VICTIM_CONTAINER = "uctest-mc-tester2"
 BOT, VICTIM = "tester1", "tester2"
