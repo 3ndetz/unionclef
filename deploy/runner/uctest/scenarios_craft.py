@@ -711,7 +711,24 @@ class EscapeLava(CraftTable):
     and only one of them is the one being preserved.
     """
 
-    # ✅ THE INSTRUMENT WORKS NOW, AND ITS FIRST CLEAN ANSWER IS A REAL DEFECT:
+    # ⛔⛔⛔ THE "CLEAN ANSWER" BELOW IS WITHDRAWN. THE FIRE RESISTANCE DISABLED THE TRIGGER.
+    # WorldSurvivalChain.isInLavaOhShit reads:
+    #     player.isInLava() && !player.hasStatusEffect(FIRE_RESISTANCE)
+    # so a fire-resistant bot is DELIBERATELY not considered to be in danger -- which is correct
+    # behaviour, since it is not. Granting the effect to remove the physics confound switched off
+    # the very branch under test. "The bot never leaves the lava" therefore says NOTHING about lava
+    # escape; it says the escape was never asked for.
+    #
+    # This is the sharpest version of today's recurring lesson: the control that makes a measurement
+    # cleaner can also make it meaningless, and the only way to know is to read what the code does
+    # with that control.
+    #
+    # THE COURSE STILL NEEDS A SURVIVABLE WINDOW WITHOUT SUPPRESSING THE TRIGGER. Options, none of
+    # them tried: start the bot with high health and armour; use a single lava block and accept the
+    # three-second window as the real question; or grant resistance ONLY after the first sample, so
+    # the trigger fires and then the bot has time to act on it.
+    #
+    # ⛔ (WITHDRAWN) THE INSTRUMENT WORKS NOW, AND ITS FIRST CLEAN ANSWER IS A REAL DEFECT:
     #   entered=True (by position)  deaths=0 (fire resistance held)  x=0.5 z=0.5  "nowhere"
     # Given ninety seconds and no burning, THE BOT NEVER LEAVES THE LAVA. It sits at the exact
     # coordinates it was placed. That is not "too slow to escape" and not "died before it could" --
