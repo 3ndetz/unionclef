@@ -711,7 +711,26 @@ class EscapeLava(CraftTable):
     and only one of them is the one being preserved.
     """
 
-    # ⛔ DIAGNOSED FROM THE TIMELINE: THE TELEPORT WORKS. THE POOL IS SIMPLY UNSURVIVABLE.
+    # ⛔⛔ STATUS AFTER FIVE RUNS: HONEST BUT NOT YET AN INSTRUMENT. DO NOT READ ITS VERDICT.
+    # It no longer passes falsely -- three separate false-green mechanisms have been closed:
+    #   * "not in the lava" was true of a CORPSE that respawned somewhere clear;
+    #   * the death COUNTER read 0 because the last sample was taken before the bot died;
+    #   * the exit condition was satisfied by the spawn point's own coordinates.
+    # Escape is now defined as "out AND still nearby" (1.5 < distance < 8), which a respawn fifteen
+    # blocks away cannot satisfy.
+    #
+    # WHAT IS STILL WRONG: entry detection is RACY. The bot goes 20 hp to 4 in about a second and
+    # dies in three, while the harness samples once a second -- so whether any sample catches the
+    # damage is luck, and `entered` flips between runs on identical setups.
+    # AND THE DEEPER QUESTION IS UNANSWERED: with roughly three seconds of life in a lava source
+    # block, it is not established that ANY escape logic could get out in time. Until that is known,
+    # a red here cannot be read as "the bot cannot escape lava" -- it may be "no bot could".
+    #
+    # NEXT, IN ORDER: (1) give the bot fire resistance for the run, or use a shallower hazard, so
+    # there IS a survivable window and the question becomes about behaviour rather than physics;
+    # (2) take entry from the FIRST timeline sample's position rather than from a health dip.
+    #
+    # ⛔ (earlier) DIAGNOSED FROM THE TIMELINE: THE TELEPORT WORKS. THE POOL IS UNSURVIVABLE.
     #   t=1.0  [0.5, -61.9, 0.5]  hp 4.0    <- in the lava, SUBMERGED (y is below the floor)
     #   t=4.5  [10.5, -60.0, 10.5] hp 20.0  <- dead, respawned on the spawn point
     # The bot goes 20 hp to 4 inside one second and dies in about three and a half. `entered` read
@@ -784,7 +803,10 @@ class EscapeLava(CraftTable):
         y = STAND_Y - 1
         # Spawn point well clear of the hazard: a death must END the run, not restart it in lava.
         ctx.rcon.cmd(f"spawnpoint {ctx.bot.name} 10 {STAND_Y} 10", allow_reject=True)
-        ctx.rcon.cmd(f"fill -1 {y} -1 0 {y} 1 minecraft:lava", allow_reject=True)
+        # ONE BLOCK OF LAVA, NOT A POOL. Submerging the bot leaves no window for any escape logic;
+        # a single source block at floor level puts its feet in the hazard with solid ground one
+        # step away in every direction -- the situation a bot actually walks into.
+        ctx.rcon.cmd(f"setblock 0 {y} 0 minecraft:lava", allow_reject=True)
         ctx.rcon.cmd(f"fill -1 {y} {self.WATER_Z} 1 {y} {self.WATER_Z + 1} minecraft:water",
                      allow_reject=True)
         ctx.geo["fps"] = []
@@ -800,12 +822,17 @@ class EscapeLava(CraftTable):
         hp = ctx.bot.health()
         if hp is not None:
             ctx.geo["min_hp"] = min(ctx.geo.get("min_hp", 20.0), float(hp))
-        # OBSERVE THE HAZARD, DO NOT ASSUME IT. The previous version trusted the teleport and passed
-        # with the bot standing on its spawn point, untouched. Either being inside the pool or
-        # losing health proves it actually happened.
+        # OBSERVE THE HAZARD FROM THE HARNESS TIMELINE, NOT A SLOWER POLL OF OUR OWN.
+        # The previous version polled health over rcon and missed the whole episode: the bot went
+        # 20 hp to 4 in one second and died in three and a half, and our first sample landed after
+        # the respawn. ctx.samples is already collected every second by the harness, so ask it.
+        for sample in (ctx.samples or []):
+            shp = sample.get("bot_hp")
+            if shp is not None and float(shp) < 20.0:
+                ctx.geo["entered"] = True
+                break
         x, z = self._pos(ctx)
-        inside = -1.5 <= x <= 0.9 and -1.5 <= z <= 1.5
-        if inside or (hp is not None and float(hp) < 20.0):
+        if -0.6 <= x <= 1.4 and -0.6 <= z <= 1.4:
             ctx.geo["entered"] = True
 
     def _pos(self, ctx):
@@ -815,26 +842,50 @@ class EscapeLava(CraftTable):
         except (TypeError, ValueError, IndexError):
             return 0.0, 0.0
 
+    def _escaped(self, ctx):
+        """Out of the lava and STILL NEARBY — which a corpse respawning across the map is not.
+
+        Every earlier version of this test could be satisfied by dying: the bot burned, respawned at
+        10.5,10.5 with full health, and "not in the lava any more" was true of the corpse's
+        replacement. Death even outran the death COUNTER, because the last sample was taken before
+        it happened. Distance closes that: an escape leaves the bot a step or two away, never
+        fifteen blocks off at the spawn point.
+        """
+        x, z = self._pos(ctx)
+        d = (x * x + z * z) ** 0.5
+        return 1.5 < d < 8.0
+
     def early_stop(self, ctx):
-        # Only after the hazard is CONFIRMED, or the spawn point itself satisfies the exit.
         if not ctx.geo.get("entered"):
             return False
-        x, z = self._pos(ctx)
-        return (x > 1.5 or z < -1.5) and (ctx.bot.health() or 0) > 0
+        return self._escaped(ctx) and (ctx.bot.health() or 0) > 0
 
     def judge(self, ctx):
         self._publish_fps(ctx)
         hp = ctx.bot.health()
         x, z = self._pos(ctx)
         alive = hp is not None and float(hp) > 0
-        clear = x > 1.5 or z < -1.5
+        clear = self._escaped(ctx)
         entered = bool(ctx.geo.get("entered"))
+        # A CORPSE THAT RESPAWNED SOMEWHERE CLEAR IS NOT AN ESCAPE.
+        # The previous version passed on exactly that: the bot burned to death, respawned at
+        # 10.5,10.5 with full health, and "alive and clear" read hp=20 and x=10.5 as success. The
+        # harness counts deaths in its timeline, so ask it rather than inferring from the corpse.
+        deaths = 0
+        for sample in (ctx.samples or []):
+            try:
+                deaths = max(deaths, int(sample.get("d") or 0))
+            except (TypeError, ValueError):
+                pass
+        survived = deaths == 0
         # A SETUP FAILURE MUST NOT READ AS A BOT SUCCESS. If the bot never got into the lava there
         # is nothing to escape, and the honest verdict is red on the COURSE, not green on the bot.
         yield Criterion("the bot actually entered the lava", entered,
                         f"entered={entered} minHp={ctx.geo.get('min_hp')}")
-        yield Criterion("alive and clear of the lava", entered and alive and clear,
-                        f"hp={hp} x={x:.1f} z={z:.1f} minHp={ctx.geo.get('min_hp')}")
+        yield Criterion("survived it (never died)", entered and survived,
+                        f"deaths={deaths} entered={entered}")
+        yield Criterion("alive and clear of the lava", entered and survived and alive and clear,
+                        f"hp={hp} x={x:.1f} z={z:.1f} deaths={deaths}")
         # RECORDED, NOT GATED: dry ground is EAST (+x, one step), water is SOUTH (-z, six). This is
         # the number that shows whether a port kept the old goal's strong preference for water.
         went = "water(south)" if z < -1.5 else ("dry(east)" if x > 1.5 else "nowhere")
