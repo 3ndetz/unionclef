@@ -191,12 +191,22 @@ because crafting was only ever measured through `@gamer`, which costs ten minute
 at all on a loaded machine; these courses hold 35-43 fps under the same load and answer in seconds.
 
 ```
-craft_table         PASS    logs -> planks -> table          (2x2 and the grid guard)
-craft_wood_pickaxe  PASS    + sticks, through the table      (2x2 and 3x3 meeting)
-craft_stone_pickaxe PASS    + cobble                         (the rung above wood)
-mine_stone          PASS    break, drop, pick up             (gathering, not crafting)
-smelt_iron          PASS    furnace, fuel, ore, ingot        (the whole smelt subsystem)
+craft_table            PASS   logs -> planks -> table       (2x2 and the grid guard)
+craft_wood_pickaxe     PASS   + sticks, through the table   (2x2 and 3x3 meeting)
+craft_stone_pickaxe    PASS   + cobble                      (the rung above wood)
+mine_stone             PASS   break, drop, pick up          (gathering, not crafting)
+smelt_iron             PASS   furnace, fuel, ore, ingot     (the whole smelt subsystem)
+craft_iron_pickaxe     PASS   smelt THEN craft              (the join between two subsystems)
+wander_recovery        PASS   go and look for it            (the recovery path, 80 call sites)
+craft_at_distant_table PASS   a station 28 blocks away      (walking to a station)
+chop_tree              PASS   fell one tree, on the clock   (first log at ~7.5s)
+chop_canopy            PASS   a close UNREACHABLE bait      (the #37 trap)
+mine_diamond           PASS   ore needing a minimum tool    (tool selection)
 ```
+
+**11/11 as of 2026-08-07.** Grown from five courses to eleven in one day, and every course added
+found something: the join between smelting and crafting, the recovery path nothing else touched,
+and the bait that turned out to cost the bot every block in the world.
 
 The rung is the ITEM IN THE PACK, never "the task ran" — the same bar the playthrough uses.
 
@@ -210,6 +220,13 @@ ladder turned out to be a capability that had been DEAD SINCE THE 1.21.11 PORT, 
 - `craft_*` — the manual craft loop asked `hasItemInventoryOnly` while its ingredient was in the
   CURSOR mid-move, read "run out", and its own tail put the item back. A carousel with no exit.
 - mining — the mid-mining tool swap had its whole body behind `//#if MC < 12111`.
+
+⭐⭐ **AND THE LESSON THAT COST THE MOST.** `chop_canopy` took FOUR fixes that each measured exactly
+the same score, and all four were reverted. What broke it was giving up on fixes for three runs and
+instrumenting the INPUT instead: a counter on the block filter named the cause on the first run --
+`cb=0/18456/0/0`, every candidate refused by a 50-block no-break ban that one unreachable log had
+triggered. **When plausible fixes keep scoring identically, the input is lying to you. Instrument
+it, do not fix harder.** Reading blamed four different links, and was wrong every time.
 
 ⭐ **THE LESSON FOR THE NEXT SESSION.** A port stub that returns "nothing" neither throws nor logs;
 it quietly deletes a whole capability, and every caller reads it as a confident "no". Weeks of
