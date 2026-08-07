@@ -157,6 +157,14 @@ public final class MovementQueue {
 
     private MovementQueue() {}
 
+    /**
+     * Chains refused for ending on the cell they started from. Read as qNull.
+     *
+     * <p>Non-zero means the search really does hand back routes to nowhere -- which was invisible
+     * before, because accepting one looked exactly like healthy pathing from the outside.
+     */
+    public static volatile int qNullRoute;
+
     public static boolean isRunning() {
         return running;
     }
@@ -497,6 +505,31 @@ public final class MovementQueue {
         if (movements.isEmpty()) {
             qRefused++;
             qVetoed++;
+            return 0;
+        }
+        // A CHAIN THAT ENDS WHERE IT BEGAN IS NOT A ROUTE, AND ACCEPTING ONE COSTS ALL THE WOOD.
+        //
+        // Measured on chop_canopy, a course built for exactly this: a log three blocks away and
+        // seven up, with an ordinary trunk twelve blocks off. The bot walks to the column beneath
+        // the unreachable log and then, ten times over:
+        //
+        //   MovementQueue: 2 movement(s) 3,-60,0 -> 3,-60,0
+        //   MovementQueue: chain complete
+        //
+        // Same cell in and out. The chain is accepted, running goes true, and that is enough to
+        // ruin the recovery: MineOrCollectTask resets its progress checker on every tick where
+        // Nav.isPathing() is true, so a queue that perpetually "runs" a route to nowhere means the
+        // checker CANNOT trip, the log is never blacklisted, and the fallback to the reachable
+        // trunk never happens. Result: logs=0 in 150 seconds, against 7.8 seconds to the first log
+        // when the same tree stands alone.
+        //
+        // Refusing it is the honest answer to "can you take me there": we are already there, and
+        // whatever the caller wants next, it is not walking. That lets isRunning() go false, the
+        // progress checker do its job, and the blacklist-and-move-on path finally run.
+        if (cells.get(0).equals(cells.get(movements.size()))) {
+            qRefused++;
+            qNullRoute++;
+            movements.clear();
             return 0;
         }
         index = 0;
