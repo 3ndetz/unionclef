@@ -158,6 +158,45 @@ public interface AltoGoal {
         }
     }
 
+    /**
+     * A goal that is a DIRECTION rather than a place: keep going that way.
+     *
+     * <p>Ported from {@code util.baritone.GoalDirectionXZ}, whose {@code isInGoal} was literally
+     * {@code return false} — you never arrive, you just keep walking — and whose heuristic rewarded
+     * distance along the line and punished drift off it.
+     *
+     * <p>WHAT IS NOT CARRIED OVER, AND WHY. The side penalty was a RANKING term for baritone's A*,
+     * which chose between candidate nodes. The tungsten drive does not rank; it steers at a point.
+     * So the direction is expressed the way a drive can use it — a target far along the line — and
+     * staying on that line falls out of steering toward it rather than out of a cost. If a future
+     * search wants the penalty back it belongs in that search, not in the goal type.
+     */
+    record Direction(double originX, double originZ, double dirX, double dirZ) implements AltoGoal {
+        /** Far enough that the bot never runs out of line before something else re-targets it. */
+        private static final double PROJECTION = 128.0;
+
+        @Override
+        public Vec3d target() {
+            return new Vec3d(originX + dirX * PROJECTION, Double.NaN, originZ + dirZ * PROJECTION);
+        }
+
+        @Override
+        public boolean reached(BlockPos at) {
+            return false;   // a direction is never arrived at, exactly as upstream had it
+        }
+
+        @Override
+        public String toString() {
+            return String.format("dir(%.1f,%.1f -> %.2f,%.2f)", originX, originZ, dirX, dirZ);
+        }
+    }
+
+    /** {@code offset} need not be normalised; it is flattened to XZ and normalised here. */
+    static AltoGoal direction(Vec3d origin, Vec3d offset) {
+        Vec3d flat = offset.multiply(1, 0, 1).normalize();
+        return new Direction(origin.getX(), origin.getZ(), flat.x, flat.z);
+    }
+
     static AltoGoal chunk(int startX, int startZ) {
         return new Chunk(startX, startZ);
     }
