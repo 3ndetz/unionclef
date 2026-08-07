@@ -43,7 +43,20 @@ public class BaritoneHelper {
      */
     public static double calculateGenericHeuristic(double xStart, double yStart, double zStart, double xTarget, double yTarget, double zTarget) {
         double xDiff = xTarget - xStart;
-        int yDiff = (int) yTarget - (int) yStart;
+        // THE SIGN HERE WAS INVERTED, AND IT PRICED EVERY CLIMB AS A FALL.
+        //
+        // GoalYLevel.calculate(goalY, currentY) reads currentY > goalY as DESCENDING (cheap, half a
+        // two-block fall) and currentY < goalY as ASCENDING, and GoalBlock hands it
+        // yDiff = CURRENT - GOAL. This port computed target - start, the other way round, so a
+        // block ABOVE the bot took the descending branch: seven blocks up was costed as seven
+        // blocks down.
+        //
+        // That is not academic. It is exactly the ranking the block scanner uses to choose what to
+        // walk to, and it is why chop_canopy still failed after the climb repricing: a canopy log
+        // three blocks away and seven up kept beating a reachable trunk twelve blocks off, because
+        // the climb term it was supposed to be charged never applied to a climb at all. The
+        // repricing below was correct and had simply never been reached by an ascent.
+        int yDiff = (int) yStart - (int) yTarget;
         double zDiff = zTarget - zStart;
         return calculate(xDiff, yDiff < 0 ? yDiff - 1 : yDiff, zDiff);
     }
