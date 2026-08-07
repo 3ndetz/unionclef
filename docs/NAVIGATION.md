@@ -184,6 +184,28 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ## Course status
 
+### BOTH SUITES FULLY GREEN — 2026-08-07
+
+```
+nav    11/11   flat staircase steep gaps descend water ladder slime break wall2 bridge
+craft  11/11   table wood_pick stone_pick mine_stone smelt iron_pick wander distant_table
+                tree canopy diamond
+```
+
+⛔ **THIS SUPERSEDES THE "8/10, nav_slime RED" NOTES BELOW, WHICH ARE NOW STALE.** They are kept
+because their reasoning is still worth reading, but the scores in them are not current. Two entries
+in particular have changed and should not mislead anyone:
+
+- `nav_slime` was recorded RED. It passes.
+- `nav_water` was recorded as failing 3 runs of 3 once its false-green rim was capped. It passes.
+
+⚠️ **WHAT THIS RUN DOES AND DOES NOT ESTABLISH.** One run per course, not a rate — and the notes
+below rightly warn that a marginal course flakes on a busy stand whatever the code says. What makes
+it worth writing down anyway is that it was a BACK-TO-BACK SERIES, exactly the shape this file says
+degrades the stand ("the last full sequential run reported 6/10"), and it went eleven for eleven.
+The load that produced 9-10 fps on the craft ladder an hour earlier was still on the box.
+
+
 ### The craft ladder — 5/5 GREEN (added 2026-08-07)
 
 A second suite, `run_suite.py craft`, on the FLAT arena rather than a survival world. It exists
