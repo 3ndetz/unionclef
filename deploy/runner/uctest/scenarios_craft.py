@@ -210,5 +210,39 @@ class MineStone(CraftTable):
                         f"pickaxe={_has(ctx, 'wooden_pickaxe')}", gate=False)
 
 
+class SmeltIron(CraftTable):
+    """The rung above stone: a furnace, fuel and ore in, an iron ingot out.
+
+    Smelting is a whole subsystem the ladder has never reached on a cheap world -- build the
+    furnace, put it down, load it, wait, take the result -- and every step of it is inventory and
+    container work rather than terrain. Materials are handed over for the same reason the other
+    craft courses hand them over: this asks whether the SMELT works, not whether the bot can find
+    iron.
+    """
+
+    id = "smelt_iron"
+    duration = 240
+    bot_kit = ["give {name} oak_log 16", "give {name} cobblestone 16",
+               "give {name} raw_iron 4", "give {name} coal 8"]
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        time.sleep(1)
+        for line in self.bot_kit:
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        ctx.bot.cmd("@get iron_ingot")
+
+    def early_stop(self, ctx):
+        return _has(ctx, "iron_ingot")
+
+    def judge(self, ctx):
+        yield Criterion("the bot holds an iron ingot", _has(ctx, "iron_ingot"),
+                        f"furnace={_has(ctx, 'furnace')} rawIron={_count(ctx, 'raw_iron')}")
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
-SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone]
+SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron]
