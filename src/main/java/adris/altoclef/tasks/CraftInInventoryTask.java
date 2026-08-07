@@ -186,13 +186,54 @@ public class CraftInInventoryTask extends ResourceTask {
     }
 
     // virtual. By default assumes subtasks are CATALOGUED (in TaskCatalogue.java)
-    /** Does the recipe being made use this item in any of its slots? */
+    /**
+     * Does ANY craft currently on the task chain want this item?
+     *
+     * <p>ONE GRID, MANY TASKS. The first version of this guard asked whether the item belonged to
+     * MY recipe, and that is too narrow: the 2x2 grid is shared by every task in the chain, so
+     * ingredients another task has just placed look foreign to this one. Measured on the
+     * playthrough -- the chain tail read
+     * "Clearing the 2x2 crafting grid" / "Getting a bed first" / "Crafting bed" / "Clearing the
+     * 2x2 crafting grid" -- place, clear, place, clear, with the bed craft on a TABLE and this
+     * guard clearing the inventory grid under it. Wood was reached at 245s and the crafting table
+     * never.
+     *
+     * <p>Stranded therefore means what it says: nothing that is actually being crafted wants it.
+     */
     private boolean isRecipeIngredient(net.minecraft.item.Item item) {
-        if (_target == null || _target.getRecipe() == null) {
+        if (wantedBy(_target, item)) {
+            return true;
+        }
+        AltoClef mod = AltoClef.getInstance();
+        if (mod == null || mod.getTaskRunner() == null) {
             return false;
         }
-        for (int i = 0; i < _target.getRecipe().getSlotCount(); ++i) {
-            ItemTarget slot = _target.getRecipe().getSlot(i);
+        adris.altoclef.tasksystem.TaskChain chain = mod.getTaskRunner().getCurrentTaskChain();
+        if (chain == null) {
+            return false;
+        }
+        for (Task t : chain.getTasks()) {
+            if (t instanceof CraftInInventoryTask c && wantedBy(c._target, item)) {
+                return true;
+            }
+            if (t instanceof adris.altoclef.tasks.container.CraftInTableTask table) {
+                for (RecipeTarget rt : table.getRecipeTargets()) {
+                    if (wantedBy(rt, item)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Does this recipe target use the item in any of its slots? */
+    private static boolean wantedBy(RecipeTarget target, net.minecraft.item.Item item) {
+        if (target == null || target.getRecipe() == null) {
+            return false;
+        }
+        for (int i = 0; i < target.getRecipe().getSlotCount(); ++i) {
+            ItemTarget slot = target.getRecipe().getSlot(i);
             if (slot != null && !slot.isEmpty() && slot.matches(item)) {
                 return true;
             }

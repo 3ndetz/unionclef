@@ -281,6 +281,18 @@ def main():
     except Exception:
         pass
     print(f"  client fps before start: {fps_ref}")
+    # A REFERENCE TAKEN ON A CRAWLING CLIENT CALIBRATES THE FLOOR DOWN TO THE CRAWL.
+    # The per-run reference fixed one hole and opened a smaller one: if the machine is already
+    # struggling when the reference is taken, the floor drops with it and a doomed run counts as a
+    # real failure. Measured: reference 5.0, median 8.0, floor 6.0 -- a ten-minute window that
+    # reached nothing recorded as a bot failure, on a build that had cleared wood in 44s hours
+    # earlier. The gamer world manages 17-19 fps idle when the machine is healthy, so a reference
+    # in single digits is not a slow world, it is a machine that cannot answer.
+    # Standing down BEFORE the window also gives back the ten minutes.
+    SANE_REF_FPS = 12.0
+    if fps_ref is not None and fps_ref < SANE_REF_FPS:
+        raise StandDown(f"client at {fps_ref:.0f} fps before the run even starts"
+                        f" (< {SANE_REF_FPS}) — the machine cannot answer today")
     st = py4j("swapstate")
     print("  shipped pathing flags:", st)
     if not st.get("tungstenPrimary"):
