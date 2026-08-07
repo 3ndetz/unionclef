@@ -147,6 +147,9 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
 
     }
 
+    /** Traced pickup decisions; see the note at the branch. */
+    private static volatile int puTrace = 0;
+
     @Override
     protected Task onTick() {
         // Prevent soft lock: if we've blacklisted too many items, there are too many drops.
@@ -187,6 +190,16 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
         _mod = mod;
 
         // If we're getting a pickaxe for THIS resource...
+        // WHY IS THE PICKUP NOT PICKING UP? The mine_stone course breaks blocks, the drops lie on the
+        // floor (rcon: three item entities) and the pack stays empty. This branch can divert the
+        // pickup into fetching a better pickaxe, and it asks for a STONE one -- which needs the very
+        // cobblestone that is not being collected. Print its three inputs rather than assume.
+        if (puTrace < 6) {
+            puTrace++;
+            Debug.logMessage("PICKUPDEC gettingPickaxeFirst=" + isIsGettingPickaxeFirst(mod)
+                    + " forThisResource=" + _collectingPickaxeForThisResource
+                    + " stoneMet=" + StorageHelper.miningRequirementMetInventory(MiningRequirement.STONE));
+        }
         if (isIsGettingPickaxeFirst(mod) && _collectingPickaxeForThisResource && !StorageHelper.miningRequirementMetInventory(MiningRequirement.STONE)) {
             progressChecker.reset();
             setDebugState("Collecting pickaxe first");
