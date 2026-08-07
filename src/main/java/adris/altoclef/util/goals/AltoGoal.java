@@ -192,6 +192,116 @@ public interface AltoGoal {
     }
 
     /**
+     * The nearest cell that SATISFIES A TEST — the shape every goal left in altoclef actually needs.
+     *
+     * <h2>Why one type rather than four ports</h2>
+     *
+     * Taken one at a time, the goals still holding a baritone type look like separate jobs. They
+     * are not: every one of them is a PREDICATE rather than a place.
+     *
+     * <ul>
+     *   <li>escape water — "not water, and not next to water"</li>
+     *   <li>escape lava — "not lava, and not next to lava"</li>
+     *   <li>flee — "further than N from every threat"</li>
+     *   <li>dodge — "not on the arrow's line"</li>
+     * </ul>
+     *
+     * <p>Baritone could consume those directly because it SEARCHED: a predicate is a perfectly good
+     * goal function for A*, which visits candidate nodes and asks each one. The tungsten drive does
+     * not search — it STEERS AT A POINT. That mismatch is what cost an earlier session 368 of 596
+     * navigation entries and left the bot motionless for over four minutes, and it is why
+     * {@code GoalRunAwayFromEntities} grew a {@code suggestFleePoint} and why {@link Flee} makes
+     * its caller compute the point.
+     *
+     * <p>So the point search belongs in ONE place, done properly once, rather than open-coded per
+     * goal: expansion order, a radius cap, and a cache so a target read every tick does not rescan
+     * the world sixty times a second.
+     *
+     * <h2>Deliberately unused for now</h2>
+     *
+     * Nothing calls this yet. Wiring water, lava, flee and dodge onto it changes BEHAVIOUR on paths
+     * the bot uses to survive, and that wants a pass which can watch nav_water and the mob suite
+     * react. Adding the type alone cannot regress anything — no caller, no effect — and it leaves
+     * the next pass four call sites instead of four designs.
+     */
+    final class NearestSatisfying implements AltoGoal {
+
+        private final java.util.function.Predicate<BlockPos> satisfies;
+        private final BlockPos origin;
+        private final int maxRadius;
+
+        /** Cached answer, and the tick it was computed on — see the note about rescanning. */
+        private Vec3d cached;
+        private long cachedAtTick = Long.MIN_VALUE;
+
+        public NearestSatisfying(java.util.function.Predicate<BlockPos> satisfies, BlockPos origin,
+                                 int maxRadius) {
+            this.satisfies = satisfies;
+            this.origin = origin;
+            this.maxRadius = maxRadius;
+        }
+
+        @Override
+        public Vec3d target() {
+            // ONE SCAN PER TICK AT MOST. target() is read by the drive every tick, and an
+            // unbounded rescan of a radius-N shell sixty times a second is how a goal type turns
+            // into a frame-rate problem.
+            net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+            long tick = mc.world == null ? 0 : mc.world.getTime();
+            if (tick == cachedAtTick) {
+                return cached;
+            }
+            cachedAtTick = tick;
+            cached = search();
+            return cached;
+        }
+
+        /**
+         * Expand outward until the test passes.
+         *
+         * <p>Radius-first, so the answer is the NEAREST satisfying cell rather than merely one that
+         * satisfies; within a shell the vertical offsets come last, because walking sideways is
+         * cheaper than climbing and a goal one block up is rarely what "get out of the water" means.
+         */
+        private Vec3d search() {
+            if (satisfies.test(origin)) {
+                return new Vec3d(origin.getX() + 0.5, origin.getY(), origin.getZ() + 0.5);
+            }
+            for (int r = 1; r <= maxRadius; r++) {
+                for (int dy = 0; dy <= r; dy++) {
+                    for (int sy : dy == 0 ? new int[]{0} : new int[]{dy, -dy}) {
+                        for (int dx = -r; dx <= r; dx++) {
+                            for (int dz = -r; dz <= r; dz++) {
+                                // Only the SHELL at this radius; the inside was covered already.
+                                if (Math.max(Math.abs(dx), Math.abs(dz)) != r && Math.abs(sy) != r) {
+                                    continue;
+                                }
+                                BlockPos at = origin.add(dx, sy, dz);
+                                if (satisfies.test(at)) {
+                                    return new Vec3d(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // NOTHING WITHIN REACH SATISFIES IT. Null is the honest answer, and the drive already
+            // reads a null target as "no route this tick" rather than as an error -- see target().
+            return null;
+        }
+
+        @Override
+        public boolean reached(BlockPos at) {
+            return satisfies.test(at);
+        }
+
+        @Override
+        public String toString() {
+            return "nearest(r<=" + maxRadius + ")";
+        }
+    }
+
+    /**
      * Get AWAY from some places — the first goal here that names no destination of its own.
      *
      * <p>Ported from baritone's {@code GoalRunAway}. Fleeing is a DIRECTION, not a place, which is
