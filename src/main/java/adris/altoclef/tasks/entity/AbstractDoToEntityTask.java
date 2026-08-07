@@ -13,7 +13,6 @@ import adris.altoclef.util.helpers.KillAuraHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import adris.altoclef.util.slots.Slot;
-import baritone.api.pathing.goals.GoalRunAway;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -109,10 +108,18 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
 
             boolean tooClose = sqDist < maintainDistance * maintainDistance;
 
-            // Step away if too close — but NEVER run away from a player target (we need to be close to fight!)
-            if (tooClose && !(entity instanceof PlayerEntity) && !Nav.hasGoal()) {
-                mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(new GoalRunAway(maintainDistance, entity.getBlockPos()));
-            }
+            // G-0: THE "STEP AWAY" HERE WENT TO AN ENGINE THAT DOES NOT DRIVE, SO IT IS GONE.
+            // It handed a GoalRunAway to getCustomGoalProcess().setGoalAndPath -- the legacy
+            // engine, which has not moved the body since tungsten became the default -- so the
+            // backing-off it describes has not happened for a long time regardless of this line.
+            //
+            // NOT replaced with a real step-away on the live drive, deliberately. That would be a
+            // BEHAVIOUR change on the combat path, which is deprioritised, and it belongs in a pass
+            // that can measure whether backing off actually helps rather than one clearing imports.
+            // The `tooClose` computation above stays: it still feeds the counters below.
+            //
+            // Gate: mob_melee, baselined before the change at PASS (zombie dead, mdTung 51,
+            // min_hp 14.0).
 
             boolean inRange = mod.getControllerExtras().inRange(entity);
 
