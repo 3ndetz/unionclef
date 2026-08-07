@@ -711,7 +711,23 @@ class EscapeLava(CraftTable):
     and only one of them is the one being preserved.
     """
 
-    # ⛔ STATUS: THE GATE IS NOW HONEST; THE SETUP IS NOT YET WORKING.
+    # ⛔ DIAGNOSED FROM THE TIMELINE: THE TELEPORT WORKS. THE POOL IS SIMPLY UNSURVIVABLE.
+    #   t=1.0  [0.5, -61.9, 0.5]  hp 4.0    <- in the lava, SUBMERGED (y is below the floor)
+    #   t=4.5  [10.5, -60.0, 10.5] hp 20.0  <- dead, respawned on the spawn point
+    # The bot goes 20 hp to 4 inside one second and dies in about three and a half. `entered` read
+    # False only because drive_tick polls over rcon and its first sample landed AFTER the respawn:
+    # the death is faster than the instrument, which is why min_hp said 20 while the timeline said 4.
+    #
+    # So there are two separate faults, and neither is the bot's:
+    #   1. the bot SINKS -- lava is not solid, so a teleport into the pool submerges it, and
+    #      submerged lava damage leaves no window for any escape logic to act in;
+    #   2. the course samples slower than the hazard kills, so it cannot even observe what happened.
+    # The fix for both is the same shape: the bot must stand at the pool's EDGE with its feet in a
+    # single lava block and solid ground one step away -- the situation a bot actually walks into --
+    # and the entry check should read the harness timeline (already sampled every second) rather
+    # than poll rcon on its own slower schedule.
+    #
+    # ⛔ (earlier) STATUS: THE GATE IS NOW HONEST; THE SETUP IS NOT YET WORKING.
     # Third run reports FAIL with "entered=False minHp=20.0" -- the correct verdict on exactly the
     # run that previously read PASS. The bot sits on its spawn point untouched, so the teleport into
     # the pool is not taking effect, and the course now says so instead of congratulating itself.
