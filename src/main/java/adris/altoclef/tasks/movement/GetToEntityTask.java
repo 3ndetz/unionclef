@@ -4,7 +4,6 @@ import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.tasksystem.ITaskRequiresGrounded;
 import adris.altoclef.tasksystem.Task;
-import adris.altoclef.util.baritone.GoalFollowEntity;
 import adris.altoclef.util.helpers.TungstenHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
@@ -180,11 +179,14 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             return _wanderTask;
         }
 
-        // Baritone: only if Tungsten not active
-        if (!TungstenHelper.isActive()
-                && !Nav.hasGoal()) {
-            mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(new GoalFollowEntity(_entity, _closeEnoughDistance));
-        }
+        // G-0: THE BARITONE FALLBACK HERE COULD NOT DO ANYTHING, SO IT GOES.
+        // It was guarded by !TungstenHelper.isActive(), i.e. it only ran when tungsten was NOT
+        // driving -- and it handed the goal to the legacy engine, which has not driven the body
+        // since tungsten became the default. The real driver is the tryPathToEntity call below,
+        // on the progress-checker path. Deleting the call removes the last user of GoalFollowEntity
+        // and one more baritone import; nothing else in this method changes.
+        // Gated on the mob suite rather than craft, because entity following lives there:
+        // mob_melee before = PASS (zombie dead, mdTung total=51, min_hp=14.0).
 
         if (mod.getPlayer().isInRange(_entity, _closeEnoughDistance)) {
             _progress.reset();
