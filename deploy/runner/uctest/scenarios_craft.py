@@ -80,8 +80,34 @@ class CraftTable(Scenario):
     # for an item hanging over a void; it is simply not what this course means to ask.
     # Courses that mine therefore lay several layers, the way any real ground has them.
 
+    def drive_tick(self, ctx, elapsed):
+        """Sample the client's frame rate, so a starved run can be TOLD from a broken one.
+
+        This was missing, and it cost a diagnosis. Only the nav courses sampled fps, so every craft
+        verdict carried avg_fps=None -- and run_suite's starvation guard, which marks a run INVALID
+        below the healthy line, CANNOT FIRE on a value it never receives. A guard that can never
+        fire is the mirror image of a check that can never fail, and this suite had one all day.
+
+        It bit immediately: craft_stone_pickaxe went red twice while another project's containers
+        were taking ~500% of this box, with the bot stuck at one spot and "Failed exploring." x11.
+        Nothing in that verdict could distinguish a host problem from a code regression, which is
+        precisely what RULE ZERO exists to prevent.
+        """
+        ok, st = ctx.bot.py.try_call("getPerfStats")
+        if ok and isinstance(st, dict) and st.get("fps") is not None:
+            try:
+                ctx.geo.setdefault("fps", []).append(float(st["fps"]))
+            except (TypeError, ValueError):
+                pass
+
+    def _publish_fps(self, ctx):
+        """Hand the average to run_suite, which is where the starvation guard reads it."""
+        fps = ctx.geo.get("fps") or []
+        ctx.geo["avg_fps"] = (sum(fps) / len(fps)) if fps else None
+
     def drive_start(self, ctx):
         # Daylight and no monsters: this course is about the inventory, not about surviving.
+        ctx.geo["fps"] = []
         ctx.rcon.cmd("time set day")
         ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
         # START WITH AN EMPTY HAND AND AN EMPTY GRID.
@@ -101,6 +127,7 @@ class CraftTable(Scenario):
         return _has(ctx, "crafting_table")
 
     def judge(self, ctx):
+        self._publish_fps(ctx)
         got_planks = _has(ctx, "planks")
         got_table = _has(ctx, "crafting_table")
         yield Criterion("the bot holds a crafting table", got_table,
@@ -133,6 +160,7 @@ class CraftWoodPickaxe(CraftTable):
         return _has(ctx, "wooden_pickaxe")
 
     def judge(self, ctx):
+        self._publish_fps(ctx)
         yield Criterion("the bot holds a wooden pickaxe", _has(ctx, "wooden_pickaxe"),
                         f"table={_has(ctx, 'crafting_table')} sticks={_has(ctx, 'stick')}")
 
@@ -164,6 +192,7 @@ class CraftStonePickaxe(CraftTable):
         return _has(ctx, "stone_pickaxe")
 
     def judge(self, ctx):
+        self._publish_fps(ctx)
         yield Criterion("the bot holds a stone pickaxe", _has(ctx, "stone_pickaxe"),
                         f"table={_has(ctx, 'crafting_table')} sticks={_has(ctx, 'stick')}")
 
@@ -204,6 +233,7 @@ class MineStone(CraftTable):
         return _count(ctx, "cobblestone") >= 8
 
     def judge(self, ctx):
+        self._publish_fps(ctx)
         got = _count(ctx, "cobblestone")
         yield Criterion("eight cobblestone in the pack", got >= 8, f"cobblestone={got}")
         yield Criterion("the pickaxe survived (recorded)", True,
@@ -240,6 +270,7 @@ class SmeltIron(CraftTable):
         return _has(ctx, "iron_ingot")
 
     def judge(self, ctx):
+        self._publish_fps(ctx)
         yield Criterion("the bot holds an iron ingot", _has(ctx, "iron_ingot"),
                         f"furnace={_has(ctx, 'furnace')} rawIron={_count(ctx, 'raw_iron')}")
 
@@ -276,6 +307,7 @@ class CraftIronPickaxe(CraftTable):
         return _has(ctx, "iron_pickaxe")
 
     def judge(self, ctx):
+        self._publish_fps(ctx)
         got = _has(ctx, "iron_pickaxe")
         ingots = _count(ctx, "iron_ingot")
         yield Criterion("the bot holds an iron pickaxe", got,
@@ -360,6 +392,7 @@ class WanderRecovery(CraftTable):
             return 0.0
 
     def judge(self, ctx):
+        self._publish_fps(ctx)
         under_wander = self._wander_moved(ctx)
         overall = self._travelled(ctx)
         yield Criterion("the bot covered ground while WANDERING (15+ blocks)", under_wander > 15,
@@ -413,6 +446,7 @@ class CraftAtDistantTable(CraftTable):
         return _has(ctx, "wooden_pickaxe")
 
     def judge(self, ctx):
+        self._publish_fps(ctx)
         got = _has(ctx, "wooden_pickaxe")
         try:
             now = ctx.bot.pos()
