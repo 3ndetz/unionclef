@@ -61,6 +61,9 @@ public class WorldSurvivalChain extends SingleTaskChain {
     // Block break tracking
     private boolean _lastBrokenBlock = false;
     private BlockPos _lastBrokenBlockPos = null;
+
+    /** Failed breaks judged out of reach (no ban) versus treated as a claim (ban). Read as brkFail=far/claim. */
+    public static volatile int breakFailOutOfReach, breakFailClaimed;
     private final TimerGame _blockBreakCheckTimer = new TimerGame(0.5);
     private final TimerGame _breakAvoidTimer = new TimerGame(BREAK_AVOID_TIMEOUT);
     private boolean _isAvoidingBlockBreak = false;
@@ -254,10 +257,47 @@ public class WorldSurvivalChain extends SingleTaskChain {
     private void checkLastBrokenBlock(AltoClef mod) {
         if (_lastBrokenBlock && _lastBrokenBlockPos != null && _blockBreakCheckTimer.elapsed()) {
             if (!WorldHelper.isAir(_lastBrokenBlockPos)) {
-                Debug.logWarning("Block at " + _lastBrokenBlockPos + " failed to break! Maybe private area, try another place.");
-                if (!_isAvoidingBlockBreak || _breakAvoidTimer.elapsed()) {
-                    Debug.logMessage("Adding temporary block " + _lastBrokenBlockPos + " avoidance for block breaking.");
-                    addTemporaryBreakAvoidance(mod, _lastBrokenBlockPos);
+                // A BREAK THAT FAILED BECAUSE YOU COULD NOT REACH IT SAYS NOTHING ABOUT A CLAIM.
+                //
+                // This reads "the block did not turn to air" as "private area" and answers by
+                // banning ALL breaking inside a cube of radius 50 -- and that ban is what stops the
+                // bot mining anything at all. Measured on chop_canopy, where a bait log sits three
+                // blocks away and SEVEN UP:
+                //
+                //   passing runs:  cb=0/0/0/0        (no refusals)
+                //   failing run:   cb=0/18456/0/0    (every candidate refused by this ban)
+                //
+                // The arena is 45 blocks half-width, so one unreachable log silences the entire
+                // world: the search honestly finds no minable block, the parent asks for another
+                // wander, and the bot never recovers. That is TODOS #37 end to end, and it is why
+                // four separate fixes downstream all measured the same -- each repaired a link
+                // AFTER the candidate list had already been emptied here.
+                //
+                // Protection is still detected where it exists: on a real claim the bot reaches the
+                // block, strikes it, and it survives -- distance is small and the ban fires as
+                // designed. What no longer counts as evidence is failing to touch something seven
+                // metres overhead.
+                // blockReachDistance is the vanilla 4.5 clamped against the player's attribute,
+                // the same figure LookHelper.getReach uses, so this asks the identical question the
+                // reach test asks -- no second opinion, no hardcoded number.
+                boolean wasInReach = false;
+                if (mod.getPlayer() != null) {
+                    double reach = kaptainwutax.tungsten.path.movements.RotationHelper.blockReachDistance(mod.getPlayer());
+                    double d = mod.getPlayer().getEyePos().squaredDistanceTo(
+                            net.minecraft.util.math.Vec3d.ofCenter(_lastBrokenBlockPos));
+                    wasInReach = d <= (reach + 1) * (reach + 1);
+                }
+                if (!wasInReach) {
+                    breakFailOutOfReach++;
+                    Debug.logMessage("Block at " + _lastBrokenBlockPos
+                            + " did not break, but it was OUT OF REACH — not treating that as a claim.");
+                } else {
+                    Debug.logWarning("Block at " + _lastBrokenBlockPos + " failed to break! Maybe private area, try another place.");
+                    if (!_isAvoidingBlockBreak || _breakAvoidTimer.elapsed()) {
+                        breakFailClaimed++;
+                        Debug.logMessage("Adding temporary block " + _lastBrokenBlockPos + " avoidance for block breaking.");
+                        addTemporaryBreakAvoidance(mod, _lastBrokenBlockPos);
+                    }
                 }
             }
             _lastBrokenBlock = false;
