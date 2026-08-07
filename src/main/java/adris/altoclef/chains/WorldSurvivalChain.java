@@ -91,6 +91,17 @@ public class WorldSurvivalChain extends SingleTaskChain {
         handleDrowning(mod);
 
         // Lava Escape
+        // SPLIT INTO TWO COUNTERS RATHER THAN GUESS WHICH CONDITION LIES. lavaEsc read 0 with the
+        // bot standing in a confirmed lava block for ninety seconds, so one of these is false and
+        // an && tells you nothing about which. Two candidates, both settled by one run: isInLava()
+        // may judge SUBMERSION rather than occupancy, or the behaviour stack may be holding
+        // escapeLava false somewhere despite its default of true.
+        if (isInLavaOhShit(mod)) {
+            lavaCondHazard++;
+        }
+        if (mod.getBehaviour().shouldEscapeLava()) {
+            lavaCondAllowed++;
+        }
         if (isInLavaOhShit(mod) && mod.getBehaviour().shouldEscapeLava()) {
             // "The branch is reached" was an INFERENCE from two defaults until this counter. The
             // escape_lava course shows the bot standing in confirmed lava for ninety seconds
@@ -216,6 +227,9 @@ public class WorldSurvivalChain extends SingleTaskChain {
 
     /** Ticks the lava-escape branch actually fired. Read as lavaEsc. */
     public static volatile int lavaEscapeTicks;
+
+    /** The two halves of that condition, counted apart. Read as lavaCond=hazard/allowed. */
+    public static volatile int lavaCondHazard, lavaCondAllowed;
 
     private boolean isInLavaOhShit(AltoClef mod) {
         if (mod.getPlayer().isInLava() && !mod.getPlayer().hasStatusEffect(StatusEffects.FIRE_RESISTANCE)) {
