@@ -131,6 +131,37 @@ public interface AltoGoal {
         }
     }
 
+    /**
+     * A goal that is a whole CHUNK — anywhere inside it will do.
+     *
+     * <p>Ported from {@code adris.altoclef.util.baritone.GoalChunk}, which implemented baritone's
+     * Goal purely to answer these two questions: head for the middle, and count any column inside
+     * the sixteen-by-sixteen as arrived. Neither needs a pathfinder, so the type does not either.
+     */
+    record Chunk(int startX, int startZ) implements AltoGoal {
+        @Override
+        public Vec3d target() {
+            // The centre of the chunk, and NaN for Y: a chunk goal has no height, exactly as the
+            // XZ goal above has none, and the drive fills it in from the player.
+            return new Vec3d(startX + 8.0, Double.NaN, startZ + 8.0);
+        }
+
+        @Override
+        public boolean reached(BlockPos at) {
+            return at.getX() >= startX && at.getX() <= startX + 15
+                    && at.getZ() >= startZ && at.getZ() <= startZ + 15;
+        }
+
+        @Override
+        public String toString() {
+            return "chunk(" + (startX >> 4) + "," + (startZ >> 4) + ")";
+        }
+    }
+
+    static AltoGoal chunk(int startX, int startZ) {
+        return new Chunk(startX, startZ);
+    }
+
     static AltoGoal block(BlockPos pos) {
         return new Block(pos);
     }
