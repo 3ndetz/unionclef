@@ -188,9 +188,16 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ```
 nav    11/11   flat staircase steep gaps descend water ladder slime break wall2 bridge
-craft  11/11   table wood_pick stone_pick mine_stone smelt iron_pick wander distant_table
-                tree canopy diamond
+craft  12 courses  table wood_pick stone_pick mine_stone smelt iron_pick wander distant_table
+                  tree canopy diamond escape_lava
 ```
+
+`escape_lava` was added last and is the one worth reading about: it took seven runs to become an
+instrument, produced a false red (its own arena), a false green (the spawn point satisfied its exit
+condition), and one fully corroborated WRONG finding — three witnesses agreeing that lava escape was
+dead, while the task runner was simply switched off because the course issued no command. See RULE
+TWO in the checklist. Once it worked, it showed the escape choosing WATER six blocks away over dry
+ground one step away, which is the behaviour the old goal's -100 water term existed to produce.
 
 ⛔ **THIS SUPERSEDES THE "8/10, nav_slime RED" NOTES BELOW, WHICH ARE NOW STALE.** They are kept
 because their reasoning is still worth reading, but the scores in them are not current. Two entries
