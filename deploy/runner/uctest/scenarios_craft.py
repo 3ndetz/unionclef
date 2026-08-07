@@ -286,6 +286,75 @@ class CraftIronPickaxe(CraftTable):
                         f"ingots={ingots}", gate=False)
 
 
+class WanderRecovery(CraftTable):
+    """Can the bot go and LOOK for something that is not in front of it?
+
+    Not a crafting course; it is here because the craft ladder is what found the defect. Every
+    "I cannot find it" path in the bot -- 80 call sites -- falls back to TimeoutWanderTask, and on
+    1.21.11 that task issued no movement whatsoever: its only instruction went to baritone's
+    explore process, which stopped driving the body when tungsten became the default. Nothing on
+    the other courses notices, because there is nothing to get lost from on a six-block platform.
+
+    So: ask for wood on a field with no trees. AbstractDoToClosestObjectTask finds nothing, hands
+    over to TimeoutWanderTask(true), and the only question that matters is whether the body MOVES.
+
+    The field is deliberately large. The stand carves everything under the floor to air, so on the
+    usual six-block platform "wandering" means walking into the void -- the course would measure a
+    fall, not a search.
+    """
+
+    id = "wander_recovery"
+    duration = 120
+    bot_kit = []
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=45, grass=False)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        self._start = ctx.bot.pos()
+        ctx.bot.cmd("@get oak_log")
+
+    def early_stop(self, ctx):
+        return self._travelled(ctx) > 25
+
+    def _travelled(self, ctx):
+        """How far from the start, horizontally. Y is ignored on purpose: falling is not searching.
+
+        rcon hands coordinates back as TEXT (see actors.position_y, which floats them before use).
+        Subtracting those directly raises, the except swallows it, and the course reads 0.0 -- a
+        silent zero that fails for the wrong reason and looks exactly like a bot that did not move.
+        """
+        try:
+            now = ctx.bot.pos()
+            if not now or not self._start:
+                return 0.0
+            dx = float(now[0]) - float(self._start[0])
+            dz = float(now[2]) - float(self._start[2])
+            return (dx * dx + dz * dz) ** 0.5
+        except (TypeError, ValueError, IndexError, AttributeError):
+            return 0.0
+
+    def judge(self, ctx):
+        moved = self._travelled(ctx)
+        ok, stats = ctx.bot.py.try_call("placeStats")
+        wander = ""
+        if ok and stats:
+            for part in str(stats).split():
+                if part.startswith("wander="):
+                    wander = part
+        yield Criterion("the bot went looking (25+ blocks from the start)", moved > 25,
+                        f"moved={moved:.1f} {wander}")
+        # RECORDED: the counter says the branch RAN, the distance says it WORKED. Both are needed --
+        # a counter that ticks while the body stands still is what this course exists to catch.
+        yield Criterion("the wander branch was reached", True, wander or "wander=?", gate=False)
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
-             CraftIronPickaxe]
+             CraftIronPickaxe, WanderRecovery]
