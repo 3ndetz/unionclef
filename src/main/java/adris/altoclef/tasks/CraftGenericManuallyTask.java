@@ -22,7 +22,26 @@ import java.util.Optional;
  * <p>
  * Not useful for custom tasks.
  */
-public class CraftGenericManuallyTask extends Task {
+/*
+ * IMPLEMENTS ITaskUsesCraftingGrid, AND THAT ONE WORD IS THE WHOLE BUG.
+ *
+ * ResourceTask.onTick (line ~98) asks "does anything under me claim the crafting grid?" and, if
+ * nothing does, treats an item in the CURSOR that matches its targets as a stray to be put away --
+ * "Moving from cursor", click, back in the pack. The marker interface is how a craft says "that
+ * item in my hand is mine, I am mid-placement".
+ *
+ * CraftGenericWithRecipeBooksTask declares it. This task -- the MANUAL one, which became the
+ * default when the recipe book was turned off because servers disable it -- did not. So every time
+ * the mover picked an ingredient up, the parent took it away again, and the craft could never place
+ * a single item.
+ *
+ * The evidence, in the order it was found: mc=1854/0/0/0/0 (asking for a move every tick and
+ * nothing else), the click trace showing pick-up-from-36 then straight back into 36, no
+ * MOVEMISMATCH line (so the ingredient was correct all along), and finally
+ * "CURSORBACK onResourceStop holding=minecraft:oak_log interrupt=EnsureFreePlayerCraftingGridTask",
+ * which named both the hand that returned it and the task that interrupted the craft.
+ */
+public class CraftGenericManuallyTask extends Task implements adris.altoclef.tasksystem.ITaskUsesCraftingGrid {
 
     /**
      * WHERE A MANUAL CRAFT ACTUALLY GOES. Read as mc=fill/short/out/wait/invalid.
