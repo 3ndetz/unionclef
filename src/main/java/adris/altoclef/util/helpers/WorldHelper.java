@@ -248,6 +248,12 @@ public interface WorldHelper {
         return -1;
     }
 
+    /** Which term of {@link #canBreak} refused, counted by name. Read as cb=hard/avoid/plaus/reach. */
+    final class BreakStats {
+        public static volatile int cbHardness, cbAvoid, cbPlausible, cbReach;
+        private BreakStats() {}
+    }
+
     static boolean canBreak(BlockPos pos) {
         AltoClef altoClef = AltoClef.getInstance();
 
@@ -257,10 +263,25 @@ public interface WorldHelper {
 
         altoClef.getExtraBaritoneSettings().setInteractionPaused(false);
 
-        boolean canBreak = altoClef.getWorld().getBlockState(pos).getHardness(altoClef.getWorld(), pos) >= 0
-                && !altoClef.getExtraBaritoneSettings().shouldAvoidBreaking(pos)
-                && plausibleToBreak(altoClef.getWorld(), pos)
-                && canReach(pos);
+        // SPLIT INTO FOUR COUNTERS, BECAUSE FOUR THEORIES HAVE ALREADY BEEN WRONG TODAY.
+        // The block filter rejects every candidate on a failing chop_canopy run -- scan=0/0/18384
+        // against scan=914/0/0 when the bot is near its target -- and reading picked the wrong
+        // term once already (canReach, which the unreachable counter had shown returns true).
+        // One run with these will name the term instead.
+        boolean okHardness = altoClef.getWorld().getBlockState(pos).getHardness(altoClef.getWorld(), pos) >= 0;
+        boolean okAvoid = !altoClef.getExtraBaritoneSettings().shouldAvoidBreaking(pos);
+        boolean okPlausible = okHardness && okAvoid && plausibleToBreak(altoClef.getWorld(), pos);
+        boolean okReach = okPlausible && canReach(pos);
+        if (!okHardness) {
+            BreakStats.cbHardness++;
+        } else if (!okAvoid) {
+            BreakStats.cbAvoid++;
+        } else if (!okPlausible) {
+            BreakStats.cbPlausible++;
+        } else if (!okReach) {
+            BreakStats.cbReach++;
+        }
+        boolean canBreak = okReach;
 
         altoClef.getExtraBaritoneSettings().setInteractionPaused(prevInteractionPaused);
 

@@ -633,6 +633,13 @@ class ChopCanopy(ChopTree):
                     scan = part
         yield Criterion("block filter (accepted/unreachable/unbreakable)", True,
                         scan or "n/a", gate=False)
+        # RECORDED: WHICH term of canBreak refused. Reading blamed the wrong one once already.
+        cb = ""
+        if ok and stats:
+            for part in str(stats).split():
+                if part.startswith("cb="):
+                    cb = part + "  (hardness/avoid/plausible/reach)"
+        yield Criterion("canBreak refusals by term", True, cb or "n/a", gate=False)
         # RECORDED: against chop_tree's 7.8s on the plain case. A large gap here means the ranking
         # sent the bot at the canopy first and it recovered only after blacklisting.
         yield Criterion("time to the first log, versus 7.8s unbaited", True,
