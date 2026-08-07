@@ -231,8 +231,26 @@ public class EscapeFromLavaTask extends CustomBaritoneGoalTask {
     }
 
     @Override
-    protected Goal newGoal(AltoClef mod) {
-        return new EscapeFromLavaGoal();
+    protected adris.altoclef.util.goals.AltoGoal newAltoGoal(AltoClef mod) {
+        // G-0 + the escape_lava finding: EscapeFromLavaGoal was a PREDICATE with no point in it,
+        // and the tungsten drive steers at points. That is why the bot stood in lava for ninety
+        // seconds without moving -- the task ran, the goal could not be translated. Water had the
+        // identical defect and was fixed today (nav_water PASS at 16.2 fps).
+        //
+        // TWO STAGES, AND THE ORDER IS THE BEHAVIOUR. The old heuristic priced water at -100:
+        // escaping INTO water is strongly preferred because it extinguishes, and that preference
+        // does not fall off with distance. A predicate cannot express a preference -- the ORDER OF
+        // CALLS can. So look for water first, and settle for dry ground only if none is near.
+        BlockPos feet = mod.getPlayer().getBlockPos();
+        adris.altoclef.util.goals.AltoGoal water = new adris.altoclef.util.goals.AltoGoal.NearestSatisfying(
+                pos -> EscapeFromLavaGoal.isWater(pos.getX(), pos.getY(), pos.getZ()), feet, 12);
+        if (water.target() != null) {
+            return water;
+        }
+        return new adris.altoclef.util.goals.AltoGoal.NearestSatisfying(
+                pos -> !EscapeFromLavaGoal.isLava(pos.getX(), pos.getY(), pos.getZ())
+                        && !EscapeFromLavaGoal.isLavaAdjacent(pos.getX(), pos.getY(), pos.getZ()),
+                feet, 16);
     }
 
     @Override
@@ -252,7 +270,7 @@ public class EscapeFromLavaTask extends CustomBaritoneGoalTask {
         return "Escaping lava";
     }
 
-    private class EscapeFromLavaGoal implements Goal {
+    private static final class EscapeFromLavaGoal {
 
         private static boolean isLava(int x, int y, int z) {
             if (MinecraftClient.getInstance().world == null) return false;
@@ -270,22 +288,5 @@ public class EscapeFromLavaTask extends CustomBaritoneGoalTask {
             return adris.altoclef.util.helpers.WorldHelper.isWaterState(MinecraftClient.getInstance().world.getBlockState(new BlockPos(x, y, z)));
         }
 
-        @Override
-        public boolean isInGoal(int x, int y, int z) {
-            return !isLava(x, y, z) && !isLavaAdjacent(x, y, z);
-        }
-
-        @Override
-        public double heuristic(int x, int y, int z) {
-            if (isLava(x, y, z)) {
-                return strength;
-            } else if (isLavaAdjacent(x, y, z)) {
-                return strength * 0.5f;
-            }
-            if (isWater(x, y, z)) {
-                return -100;
-            }
-            return 0;
-        }
     }
 }

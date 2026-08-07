@@ -92,6 +92,10 @@ public class WorldSurvivalChain extends SingleTaskChain {
 
         // Lava Escape
         if (isInLavaOhShit(mod) && mod.getBehaviour().shouldEscapeLava()) {
+            // "The branch is reached" was an INFERENCE from two defaults until this counter. The
+            // escape_lava course shows the bot standing in confirmed lava for ninety seconds
+            // without moving, and today has been a long lesson in what an inference is worth.
+            lavaEscapeTicks++;
             setTask(new EscapeFromLavaTask(mod));
             return 100;
         }
@@ -209,6 +213,9 @@ public class WorldSurvivalChain extends SingleTaskChain {
             //mod.getInputControls().release(Input.JUMP);
         }
     }
+
+    /** Ticks the lava-escape branch actually fired. Read as lavaEsc. */
+    public static volatile int lavaEscapeTicks;
 
     private boolean isInLavaOhShit(AltoClef mod) {
         if (mod.getPlayer().isInLava() && !mod.getPlayer().hasStatusEffect(StatusEffects.FIRE_RESISTANCE)) {
