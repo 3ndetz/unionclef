@@ -205,9 +205,16 @@ public class MineAndCollectTask extends ResourceTask {
             }
         }
 
+        /** Times the tracker was asked about drops, and times it said there were some. Read as drop=asked/seen.
+         *  rcon says three cobblestone entities are lying in the arena while the pack stays empty and the
+         *  pickup task never ticks -- so whether the tracker AGREES that a drop exists is the question. */
+        public static volatile int dropAsked, dropSeen;
+
         public static Pair<Double, Optional<ItemEntity>> getClosestItemDrop(AltoClef mod,Vec3d pos, ItemTarget... items) {
             Optional<ItemEntity> closestDrop = Optional.empty();
+            dropAsked++;
             if (mod.getEntityTracker().itemDropped(items)) {
+                dropSeen++;
                 closestDrop = mod.getEntityTracker().getClosestItemDrop(pos, items);
             }
 
