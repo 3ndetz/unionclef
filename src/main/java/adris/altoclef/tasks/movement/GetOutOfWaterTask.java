@@ -4,8 +4,8 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
+import adris.altoclef.util.goals.AltoGoal;
 import adris.altoclef.util.time.TimerGame;
-import baritone.api.pathing.goals.Goal;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
@@ -64,8 +64,20 @@ public class GetOutOfWaterTask extends CustomBaritoneGoalTask{
     }
 
     @Override
-    protected Goal newGoal(AltoClef mod) {
-        return new EscapeFromWaterGoal();
+    protected AltoGoal newAltoGoal(AltoClef mod) {
+        // G-0: this goal was a PREDICATE ("not water, and not next to water") with no point in it,
+        // which baritone could search but the tungsten drive cannot steer at. AltoGoal
+        // .NearestSatisfying carries the point search for exactly this shape, so the goal becomes
+        // the test itself and nothing here open-codes a scan.
+        //
+        // The radius is 16: far enough to leave any pool the bot can fall into, near enough that a
+        // failed search costs a bounded scan rather than a frame. The old heuristic ranked
+        // water (1) above water-adjacent (0.5) above dry (0); a nearest-first search expresses the
+        // same preference by ARRIVING at dry ground first, without a cost table.
+        return new AltoGoal.NearestSatisfying(
+                pos -> !EscapeFromWaterGoal.isWater(pos.getX(), pos.getY(), pos.getZ())
+                        && !EscapeFromWaterGoal.isWaterAdjacent(pos.getX(), pos.getY(), pos.getZ()),
+                mod.getPlayer().getBlockPos(), 16);
     }
 
     @Override
@@ -83,7 +95,10 @@ public class GetOutOfWaterTask extends CustomBaritoneGoalTask{
         return !AltoClef.getInstance().getPlayer().isTouchingWater() && AltoClef.getInstance().getPlayer().isOnGround();
     }
 
-    private static class EscapeFromWaterGoal implements Goal {
+    /** The water test itself, kept as the predicate the goal now asks. */
+    private static final class EscapeFromWaterGoal {
+
+
 
         private static boolean isWater(int x, int y, int z) {
             if (MinecraftClient.getInstance().world == null) return false;
@@ -94,22 +109,6 @@ public class GetOutOfWaterTask extends CustomBaritoneGoalTask{
             return isWater(x + 1, y, z) || isWater(x - 1, y, z) || isWater(x, y, z + 1) || isWater(x, y, z - 1)
                     || isWater(x + 1, y, z - 1) || isWater(x + 1, y, z + 1) || isWater(x - 1, y, z - 1)
                     || isWater(x - 1, y, z + 1);
-        }
-
-        @Override
-        public boolean isInGoal(int x, int y, int z) {
-            return !isWater(x, y, z) && !isWaterAdjacent(x, y, z);
-        }
-
-        @Override
-        public double heuristic(int x, int y, int z) {
-            if (isWater(x, y, z)) {
-                return 1;
-            } else if (isWaterAdjacent(x, y, z)) {
-                return 0.5f;
-            }
-
-            return 0;
         }
     }
 }
