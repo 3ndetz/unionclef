@@ -711,7 +711,20 @@ class EscapeLava(CraftTable):
     and only one of them is the one being preserved.
     """
 
-    # ⛔⛔ STATUS AFTER FIVE RUNS: HONEST BUT NOT YET AN INSTRUMENT. DO NOT READ ITS VERDICT.
+    # ✅ THE INSTRUMENT WORKS NOW, AND ITS FIRST CLEAN ANSWER IS A REAL DEFECT:
+    #   entered=True (by position)  deaths=0 (fire resistance held)  x=0.5 z=0.5  "nowhere"
+    # Given ninety seconds and no burning, THE BOT NEVER LEAVES THE LAVA. It sits at the exact
+    # coordinates it was placed. That is not "too slow to escape" and not "died before it could" --
+    # both of those confounds were removed on purpose -- it is the escape never happening at all.
+    #
+    # It took six runs to be able to say that, and every one of the six was my own instrument
+    # failing rather than the bot: a pool that respawned the bot into itself, an exit condition the
+    # spawn point satisfied, a corpse counting as an escape, a death counter sampled too late, a
+    # racy health-based entry check, and a lava block that replaced the FLOOR so the bot fell into
+    # the void the stand carves underneath. Each was found by asking what the number could mean
+    # other than what I wanted it to mean.
+    #
+    # ⛔ (history) STATUS AFTER FIVE RUNS: HONEST BUT NOT YET AN INSTRUMENT.
     # It no longer passes falsely -- three separate false-green mechanisms have been closed:
     #   * "not in the lava" was true of a CORPSE that respawned somewhere clear;
     #   * the death COUNTER read 0 because the last sample was taken before the bot died;
@@ -806,7 +819,11 @@ class EscapeLava(CraftTable):
         # ONE BLOCK OF LAVA, NOT A POOL. Submerging the bot leaves no window for any escape logic;
         # a single source block at floor level puts its feet in the hazard with solid ground one
         # step away in every direction -- the situation a bot actually walks into.
-        ctx.rcon.cmd(f"setblock 0 {y} 0 minecraft:lava", allow_reject=True)
+        # LAVA ON THE FLOOR, NOT INSTEAD OF IT. Replacing the floor block let the bot sink through
+        # (y reached -61.9) into the air the stand carves under the arena, and the death recorded as
+        # deaths=1 was a VOID fall, not a burn -- the same trap that made mine_stone look broken this
+        # morning. The floor stays solid; the lava sits in the space the bot occupies.
+        ctx.rcon.cmd(f"setblock 0 {STAND_Y} 0 minecraft:lava", allow_reject=True)
         ctx.rcon.cmd(f"fill -1 {y} {self.WATER_Z} 1 {y} {self.WATER_Z + 1} minecraft:water",
                      allow_reject=True)
         ctx.geo["fps"] = []
@@ -816,13 +833,29 @@ class EscapeLava(CraftTable):
         ctx.bot.py.try_call("resetRunCounters")
         # At the pool's edge, not its centre: one step east is dry.
         ctx.rcon.cmd(f"tp {ctx.bot.name} 0.5 {STAND_Y} 0.5", allow_reject=True)
+        # FIRE RESISTANCE, ON PURPOSE, AND IT MAKES THE COURSE HONEST RATHER THAN EASY.
+        # Without it the bot has about three seconds of life, and a red cannot be read: it may mean
+        # "no bot could get out in time" rather than "this one did not try". That is a PHYSICS
+        # question, and it is not the one being asked. With the burning removed, what is left is the
+        # BEHAVIOUR question -- given time, does the escape logic walk the bot out of lava at all?
+        # A bot that stands in fire-proof lava for ninety seconds has answered no, unambiguously.
+        ctx.rcon.cmd(f"effect give {ctx.bot.name} minecraft:fire_resistance 120 0 true",
+                     allow_reject=True)
 
     def drive_tick(self, ctx, elapsed):
         super().drive_tick(ctx, elapsed)
         hp = ctx.bot.health()
         if hp is not None:
             ctx.geo["min_hp"] = min(ctx.geo.get("min_hp", 20.0), float(hp))
-        # OBSERVE THE HAZARD FROM THE HARNESS TIMELINE, NOT A SLOWER POLL OF OUR OWN.
+        # ENTRY IS A POSITION, NOT A HEALTH DIP. Health-based detection was racy -- the damage
+        # window was shorter than the sampling interval, so `entered` flipped between runs on
+        # identical setups. Where the bot WAS is recorded every sample and cannot be missed.
+        first = (ctx.samples or [None])[0]
+        if first and first.get("bot"):
+            fx, fz = float(first["bot"][0]), float(first["bot"][2])
+            if -0.6 <= fx <= 1.4 and -0.6 <= fz <= 1.4:
+                ctx.geo["entered"] = True
+        # (kept as a second witness) OBSERVE THE HAZARD FROM THE HARNESS TIMELINE.
         # The previous version polled health over rcon and missed the whole episode: the bot went
         # 20 hp to 4 in one second and died in three and a half, and our first sample landed after
         # the respawn. ctx.samples is already collected every second by the harness, so ask it.
