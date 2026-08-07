@@ -711,7 +711,22 @@ class EscapeLava(CraftTable):
     and only one of them is the one being preserved.
     """
 
-    # ⛔⛔ STILL NOT AN INSTRUMENT — SECOND ATTEMPT PASSES WITHOUT TESTING ANYTHING.
+    # ⛔ STATUS: THE GATE IS NOW HONEST; THE SETUP IS NOT YET WORKING.
+    # Third run reports FAIL with "entered=False minHp=20.0" -- the correct verdict on exactly the
+    # run that previously read PASS. The bot sits on its spawn point untouched, so the teleport into
+    # the pool is not taking effect, and the course now says so instead of congratulating itself.
+    # That is a COURSE failure, not a bot one, and no claim about lava escape follows from it.
+    #
+    # Next: find why `tp` does not land the bot in the pool. Likely candidates, in order --
+    # the harness re-places the bot at bot_spawn AFTER drive_start; the rcon tp is rejected; or the
+    # bot is moved by its own idle behaviour before the first tick is sampled. Check the timeline's
+    # first samples: they say where the bot actually was, second by second.
+    #
+    # (History kept deliberately: this course produced one false RED from its own arena and one
+    # false GREEN from its exit condition before reaching the state above. A new gate is not to be
+    # trusted until it has failed for the RIGHT reason at least once -- which it now has.)
+    #
+    # ⛔ (earlier) SECOND ATTEMPT PASSED WITHOUT TESTING ANYTHING.
     # Rebuilt run: "PASS, hp=20.0 x=10.5 z=10.5 minHp=20.0". The bot is standing on the SPAWN POINT,
     # took no damage at all, and early_stop fired instantly because x > 1.5 was already true there.
     # It never entered the lava. That is a check that CANNOT FAIL -- precisely the defect being
@@ -758,6 +773,7 @@ class EscapeLava(CraftTable):
                      allow_reject=True)
         ctx.geo["fps"] = []
         ctx.geo["min_hp"] = 20.0
+        ctx.geo["entered"] = False
         time.sleep(1)
         ctx.bot.py.try_call("resetRunCounters")
         # At the pool's edge, not its centre: one step east is dry.
@@ -768,6 +784,13 @@ class EscapeLava(CraftTable):
         hp = ctx.bot.health()
         if hp is not None:
             ctx.geo["min_hp"] = min(ctx.geo.get("min_hp", 20.0), float(hp))
+        # OBSERVE THE HAZARD, DO NOT ASSUME IT. The previous version trusted the teleport and passed
+        # with the bot standing on its spawn point, untouched. Either being inside the pool or
+        # losing health proves it actually happened.
+        x, z = self._pos(ctx)
+        inside = -1.5 <= x <= 0.9 and -1.5 <= z <= 1.5
+        if inside or (hp is not None and float(hp) < 20.0):
+            ctx.geo["entered"] = True
 
     def _pos(self, ctx):
         try:
@@ -777,6 +800,9 @@ class EscapeLava(CraftTable):
             return 0.0, 0.0
 
     def early_stop(self, ctx):
+        # Only after the hazard is CONFIRMED, or the spawn point itself satisfies the exit.
+        if not ctx.geo.get("entered"):
+            return False
         x, z = self._pos(ctx)
         return (x > 1.5 or z < -1.5) and (ctx.bot.health() or 0) > 0
 
@@ -786,7 +812,12 @@ class EscapeLava(CraftTable):
         x, z = self._pos(ctx)
         alive = hp is not None and float(hp) > 0
         clear = x > 1.5 or z < -1.5
-        yield Criterion("alive and clear of the lava", alive and clear,
+        entered = bool(ctx.geo.get("entered"))
+        # A SETUP FAILURE MUST NOT READ AS A BOT SUCCESS. If the bot never got into the lava there
+        # is nothing to escape, and the honest verdict is red on the COURSE, not green on the bot.
+        yield Criterion("the bot actually entered the lava", entered,
+                        f"entered={entered} minHp={ctx.geo.get('min_hp')}")
+        yield Criterion("alive and clear of the lava", entered and alive and clear,
                         f"hp={hp} x={x:.1f} z={z:.1f} minHp={ctx.geo.get('min_hp')}")
         # RECORDED, NOT GATED: dry ground is EAST (+x, one step), water is SOUTH (-z, six). This is
         # the number that shows whether a port kept the old goal's strong preference for water.
