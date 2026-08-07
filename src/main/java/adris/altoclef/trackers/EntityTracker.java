@@ -35,6 +35,10 @@ import java.util.function.Predicate;
 public class EntityTracker extends Tracker {
 
     private final HashMap<Item, List<ItemEntity>> itemDropLocations = new HashMap<>();
+    /** ItemEntities the sweep saw, and how many passed the grounded test. Read as et=seen/grounded.
+     *  drop=2415/0 says the tracker reports no drops while rcon sees three on the floor; these two
+     *  separate "the sweep never runs" from "the grounded test rejects them". */
+    public static volatile int etItemsSeen, etItemsGrounded;
     private final HashMap<Class, List<Entity>> entityMap = new HashMap<>();
 
     private final List<Entity> closeEntities = new ArrayList<>();
@@ -363,6 +367,7 @@ public class EntityTracker extends Tracker {
                 }
 
                 if (entity instanceof ItemEntity ientity) {
+                    etItemsSeen++;
                     Item droppedItem = ientity.getStack().getItem();
 
                     // Only cared about GROUNDED item entities -- AND THE BLOCK DIRECTLY BELOW COUNTS.
@@ -375,10 +380,17 @@ public class EntityTracker extends Tracker {
                     // drop existed and answering no every time, while rcon saw three item entities
                     // lying in that arena. The pickup task therefore never started, the pack stayed
                     // empty, and the whole playthrough ladder stalled one rung above it.
+                    // AND THE ITEM'S OWN CELL, because a resting drop sinks INTO the floor block.
+                    // et=178/0 measured it: the sweep saw 178 item entities and not one passed this
+                    // test, even with down() added. A dropped item settles a few hundredths BELOW
+                    // the surface, so flooring its Y lands on the floor block ITSELF -- down() is
+                    // then the air beneath the floor, and down(2)/down(3) deeper air still.
                     if (ientity.isOnGround() || ientity.isTouchingWater()
+                            || WorldHelper.isSolidBlock(ientity.getBlockPos())
                             || WorldHelper.isSolidBlock(ientity.getBlockPos().down())
                             || WorldHelper.isSolidBlock(ientity.getBlockPos().down(2))
                             || WorldHelper.isSolidBlock(ientity.getBlockPos().down(3))) {
+                        etItemsGrounded++;
                         if (!itemDropLocations.containsKey(droppedItem)) {
                             itemDropLocations.put(droppedItem, new ArrayList<>());
                         }
