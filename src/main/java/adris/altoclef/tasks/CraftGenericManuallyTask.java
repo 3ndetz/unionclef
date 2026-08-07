@@ -164,6 +164,10 @@ public class CraftGenericManuallyTask extends Task {
         // Ensure our cursor is empty/can receive our item
         ItemStack cursor = StorageHelper.getItemStackInCursorSlot();
         if (!ItemHelper.canStackTogether(StorageHelper.getItemStackInSlot(outputSlot), cursor)) {
+            // The twin of the tag in CraftInInventoryTask.onResourceStop -- see the note there.
+            if (!cursor.isEmpty()) {
+                adris.altoclef.Debug.logMessage("CURSORBACK manualTail holding=" + cursor.getItem());
+            }
             Optional<Slot> toFit = mod.getItemStorage().getSlotThatCanFitInPlayerInventory(cursor, false).or(() -> StorageHelper.getGarbageSlot(mod));
             if (toFit.isPresent()) {
                 mod.getSlotHandler().clickSlot(toFit.get(), 0, SlotActionType.PICKUP);

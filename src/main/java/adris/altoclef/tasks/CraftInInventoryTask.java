@@ -167,6 +167,11 @@ public class CraftInInventoryTask extends ResourceTask {
     protected void onResourceStop(AltoClef mod, Task interruptTask) {
         ItemStack cursorStack = StorageHelper.getItemStackInCursorSlot();
         if (!cursorStack.isEmpty()) {
+            // WHO PUTS THE LOG BACK? The craft loop is a pick-up followed by a put-back, and the
+            // mover is innocent (its mismatch line never printed). These are the two places that
+            // return a held stack to the pack; tag both and let one run identify itself.
+            Debug.logMessage("CURSORBACK onResourceStop holding=" + cursorStack.getItem()
+                    + " interrupt=" + (interruptTask == null ? "none" : interruptTask.getClass().getSimpleName()));
             List<Slot> moveTo = mod.getItemStorage().getSlotsThatCanFitInPlayerInventory(cursorStack, false);
             if (!moveTo.isEmpty()) {
                 for (Slot MoveTo : moveTo) {
