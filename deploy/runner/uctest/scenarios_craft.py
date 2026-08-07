@@ -646,7 +646,59 @@ class ChopCanopy(ChopTree):
                         f"firstLogAt={shown}", gate=False)
 
 
+class MineDiamond(CraftTable):
+    """The rung above iron, and the first that REQUIRES the right tool.
+
+    Diamond ore drops nothing to a stone pickaxe -- the game simply refuses it -- so this is the
+    cheapest course that asks whether the bot picks and holds a tool good enough for the block in
+    front of it. That matters because the tool-tier code carries a port stub: ToolMaterialVer throws
+    on 1.21.11 and MineAndCollectTask's mid-mining swap compares mining speed rather than tiers.
+    Nothing on the ladder has needed a MINIMUM tool until now.
+
+    The ore is laid in the floor rather than hidden at depth: this asks about the tool, not about
+    caving, and the two want separate courses.
+    """
+
+    id = "mine_diamond"
+    duration = 180
+    bot_kit = ["give {name} iron_pickaxe 1"]
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=12, grass=False)
+        y = STAND_Y - 1
+        ctx.rcon.cmd(f"fill -14 {y - 3} -14 14 {y - 1} 14 minecraft:stone", allow_reject=True)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        # Three ores in the floor, a few blocks apart, all within easy reach.
+        for x in (4, 6, 8):
+            ctx.rcon.cmd(f"setblock {x} {STAND_Y - 1} 0 minecraft:diamond_ore", allow_reject=True)
+        ctx.geo["fps"] = []
+        time.sleep(1)
+        for line in self.bot_kit:
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        ctx.bot.cmd("@get diamond 2")
+
+    def early_stop(self, ctx):
+        return _count(ctx, "diamond") >= 2
+
+    def judge(self, ctx):
+        self._publish_fps(ctx)
+        got = _count(ctx, "diamond")
+        yield Criterion("two diamonds in the pack", got >= 2,
+                        f"diamonds={got} pickaxe={_has(ctx, 'iron_pickaxe')}")
+        # RECORDED: the pickaxe surviving says the bot used the right tool rather than punching the
+        # ore, which drops nothing and would look identical to "never found it".
+        yield Criterion("the iron pickaxe is still held", True,
+                        f"pickaxe={_has(ctx, 'iron_pickaxe')}", gate=False)
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
-             ChopTree, ChopCanopy]
+             ChopTree, ChopCanopy, MineDiamond]
