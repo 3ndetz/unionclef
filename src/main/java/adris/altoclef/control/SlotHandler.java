@@ -71,6 +71,9 @@ public class SlotHandler {
     }
 
 
+    /** How many clicks have been traced; see the note at the trace site. Reset by resetRunCounters. */
+    public static volatile int clickTrace;
+
     public void clickSlot(Slot slot, int mouseButton, SlotActionType type) {
         // A CLICK THAT SILENTLY DOES NOT HAPPEN LOOKS EXACTLY LIKE A CLICK THAT DID NOTHING.
         // The output-collection task clicks the crafting result 8996 times a run and the item
@@ -108,6 +111,26 @@ public class SlotHandler {
         // Bounds check — prevent CrashException from ScreenHandler.onSlotClick
         if (windowSlot >= 0 && windowSlot >= player.currentScreenHandler.slots.size()) {
             return;
+        }
+        // WATCH ONE CLICK, PROPERLY. The craft loop asks for a move 1854 times, 658 clicks go out,
+        // and the grid stays empty -- and no counter can say whether the click lands on the wrong
+        // slot, or the right slot with nothing in hand, or the right slot and the server undoes it.
+        // Slot, button, what is in the cursor and what is in the target, before the click. The
+        // first twenty are enough to see one whole pick-up-and-place cycle; after that it is noise.
+        if (clickTrace < 20) {
+            clickTrace++;
+            net.minecraft.item.ItemStack cur = StorageHelper.getItemStackInCursorSlot();
+            String tgt = "?";
+            try {
+                if (windowSlot >= 0 && windowSlot < player.currentScreenHandler.slots.size()) {
+                    net.minecraft.item.ItemStack st = player.currentScreenHandler.getSlot(windowSlot).getStack();
+                    tgt = st.isEmpty() ? "empty" : (st.getItem() + "x" + st.getCount());
+                }
+            } catch (RuntimeException ignored) { }
+            Debug.logMessage("CLICK win=" + windowSlot + " btn=" + mouseButton + " type=" + type
+                    + " cursor=" + (cur.isEmpty() ? "empty" : (cur.getItem() + "x" + cur.getCount()))
+                    + " target=" + tgt
+                    + " screen=" + player.currentScreenHandler.getClass().getSimpleName());
         }
         registerSlotAction();
         int syncId = player.currentScreenHandler.syncId;
