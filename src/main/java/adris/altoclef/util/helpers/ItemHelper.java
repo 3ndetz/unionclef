@@ -416,12 +416,47 @@ public class ItemHelper {
         return to.getItem().equals(from.getItem()) && (from.getCount() + to.getCount() < to.getMaxCount());
     }
 
+    /**
+     * What burns, and for how long.
+     *
+     * <h2>On 1.21.11 this was an empty map, and that made smelting impossible</h2>
+     *
+     * The port left {@code new HashMap<>()} with a TODO because {@code createFuelTimeMap()} was
+     * removed from AbstractFurnaceBlockEntity. An empty map does not mean "we do not know yet" to
+     * any of the three callers below — it means NOTHING IN THE GAME IS FUEL. {@link #isFuel} is
+     * false for coal, {@link #getFuelAmount} is 0 for coal, and so
+     * {@code StorageHelper.calculateInventoryFuelCount} is 0 no matter what the bot is carrying.
+     *
+     * <p>Measured on the smelt course, with eight coal in the pack and a furnace already placed and
+     * open: SmeltInFurnaceTask asks for one unit of fuel, reads zero, and returns CollectFuelTask,
+     * which walks off to MINE COAL. It can never stop, because no amount of coal ever raises the
+     * count above zero. The chain said it plainly —
+     * {@code <Doing stuff in [furnace] container> Getting Fuel -> <Collect Fuel: x2.0> -> <Mine And
+     * Collect: [[coal]]> -> Wander for Infinity blocks} — while the pack held {@code coal 8}.
+     *
+     * <p>1.21.11 did not delete the data, it MOVED it: fuels are a registry hanging off the world
+     * ({@code World.getFuelRegistry()}), which is strictly better than the old static map because a
+     * datapack can change what burns. So ask the game rather than hardcoding a table — the values
+     * are then right by construction, including modded and datapack fuels.
+     *
+     * <p>The re-read on an empty map matters: this is called from tracker code that can run before
+     * the client has a world, and caching the empty answer once would reproduce the very bug this
+     * replaces.
+     */
     private static Map<Item, Integer> getFuelTimeMap() {
-        if (fuelTimeMap == null) {
+        if (fuelTimeMap == null || fuelTimeMap.isEmpty()) {
             //#if MC < 12111
             fuelTimeMap = AbstractFurnaceBlockEntity.createFuelTimeMap();
             //#else
-            //$$ fuelTimeMap = new java.util.HashMap<>(); // TODO [1.21.11] createFuelTimeMap() removed
+            //$$ java.util.Map<Item, Integer> built = new java.util.HashMap<>();
+            //$$ net.minecraft.client.world.ClientWorld world = net.minecraft.client.MinecraftClient.getInstance().world;
+            //$$ if (world != null) {
+            //$$     net.minecraft.item.FuelRegistry registry = world.getFuelRegistry();
+            //$$     for (Item item : registry.getFuelItems()) {
+            //$$         built.put(item, registry.getFuelTicks(new ItemStack(item)));
+            //$$     }
+            //$$ }
+            //$$ fuelTimeMap = built;
             //#endif
         }
         return fuelTimeMap;
