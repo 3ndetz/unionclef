@@ -4,7 +4,6 @@ import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.multiversion.blockpos.BlockPosVer;
-import adris.altoclef.multiversion.ToolMaterialVer;
 import adris.altoclef.tasks.AbstractDoToClosestObjectTask;
 import adris.altoclef.tasks.ResourceTask;
 import adris.altoclef.tasks.construction.DestroyBlockTask;
@@ -24,9 +23,6 @@ import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-//#if MC < 12111
-import net.minecraft.item.MiningToolItem;
-//#endif
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -127,6 +123,12 @@ public class MineAndCollectTask extends ResourceTask {
         return "Mine And Collect";
     }
 
+    /**
+     * Times a better tool was moved from the cursor into the hand mid-mining. Read as toolSwap.
+     * It was structurally 0 on 1.21.11 before this was ported -- the body was switched off.
+     */
+    public static volatile int toolSwaps;
+
     private void makeSureToolIsEquipped(AltoClef mod) {
         if (_cursorStackTimer.elapsed() && !mod.getFoodChain().needsToEat()) {
             assert MinecraftClient.getInstance().player != null;
@@ -134,25 +136,30 @@ public class MineAndCollectTask extends ResourceTask {
             if (cursorStack != null && !cursorStack.isEmpty()) {
                 // We have something in our cursor stack
                 Item item = cursorStack.getItem();
-                if (item.getDefaultStack().isSuitableFor(mod.getWorld().getBlockState(_subtask.miningPos()))) {
-                    // Our cursor stack would help us mine our current block
-                    Item currentlyEquipped = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
-                    //#if MC < 12111
-                    if (item instanceof MiningToolItem) {
-                        if (currentlyEquipped instanceof MiningToolItem currentPick) {
-                            MiningToolItem swapPick = (MiningToolItem) item;
-                            if (ToolMaterialVer.getMiningLevel(swapPick) > ToolMaterialVer.getMiningLevel(currentPick)) {
-                                // We can equip a better pickaxe.
-                                mod.getSlotHandler().forceEquipSlot(CursorSlot.SLOT);
-                            }
-                        } else {
-                            // We're not equipped with a pickaxe...
-                            mod.getSlotHandler().forceEquipSlot(CursorSlot.SLOT);
-                        }
+                net.minecraft.block.BlockState mining = mod.getWorld().getBlockState(_subtask.miningPos());
+                if (item.getDefaultStack().isSuitableFor(mining)) {
+                    // ASK WHAT THE TOOLS DO TO THIS BLOCK, NOT WHAT CLASS THEY ARE.
+                    //
+                    // On 1.21.11 this whole body was switched off -- the mining-tool CLASS was
+                    // deleted in that version and the port left a TODO where the comparison used
+                    // to be -- so the bot never moved a better pickaxe from its cursor into its
+                    // hand while mining. It would pick one up and carry on with whatever was
+                    // already equipped, including a bare hand.
+                    //
+                    // Comparing mining SPEED on the block in front of us needs no version fork at
+                    // all: getMiningSpeedMultiplier and isSuitableFor both exist unchanged in 1.21.1
+                    // and 1.21.11. It is also a truer question than the old one, which asked about
+                    // tool tiers and so could only ever rank pickaxes against pickaxes. The old
+                    // `else` branch equipped ANY mining tool over a non-mining one even when that
+                    // was a downgrade; a speed comparison cannot make that mistake. An empty hand
+                    // scores 1.0, so a pickaxe wins on stone by arithmetic rather than by a special
+                    // case, and axes, shovels and shears are handled by the same line for free.
+                    ItemStack equipped = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot());
+                    if (item.getDefaultStack().getMiningSpeedMultiplier(mining)
+                            > equipped.getMiningSpeedMultiplier(mining)) {
+                        toolSwaps++;
+                        mod.getSlotHandler().forceEquipSlot(CursorSlot.SLOT);
                     }
-                    //#else
-                    //$$ // TODO [1.21.11] mining-tool-class deleted — compare tool tiers via Item.Settings component
-                    //#endif
                 }
             }
             _cursorStackTimer.reset();
