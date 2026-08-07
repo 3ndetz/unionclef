@@ -32,6 +32,29 @@ The score IS "how far we got".
 
 ## 1. AUDIT — every iteration, before a single line of code
 
+⛔ **RULE ONE: WHEN PLAUSIBLE FIXES KEEP SCORING THE SAME, THE INPUT IS LYING — INSTRUMENT IT.**
+
+Added 2026-08-08, after it cost most of an evening. TODOS #37 took FOUR consecutive fixes, each made
+by careful reading of a real mechanism, and each measured EXACTLY the same course score (2/4). All
+four were reverted. What broke it was giving up on fixes for three runs and putting a counter on the
+INPUT instead: the block filter reported `cb=0/18456/0/0` on its first run — every candidate refused
+by a fifty-block no-break ban that one unreachable log had triggered. Reading had blamed four
+different links and been wrong every time.
+
+The tell is not "the fix failed". It is **identical numbers across different fixes**. Different
+causes produce different failures; the same number four times means none of them was the cause, and
+the thing feeding the code is what needs measuring.
+
+Two corollaries, both paid for the same day:
+- A counter at zero is ambiguous until you know it CAN be non-zero. `recipesKnown=0` meant "nobody
+  asked" (trackers rebuild lazily), not "the port failed"; `toolSwap=0` meant "the branch never
+  fired", so a green suite proved nothing about it.
+- Poll a per-run counter and you will lose the window: `chop_canopy` finishes in fifteen seconds
+  when the bot ignores the bait, so a fifteen-second sampler read 0 for runs where the branch DID
+  fire. Print it in the verdict instead.
+
+---
+
 ⛔ **RULE ZERO: BEFORE BELIEVING A RED, ASK WHETHER THE MACHINE WAS THERE.**
 
 Added 2026-08-06, after most of an evening's readings turned out to be about the host. Another
