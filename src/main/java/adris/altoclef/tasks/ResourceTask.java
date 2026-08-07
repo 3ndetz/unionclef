@@ -1,6 +1,7 @@
 package adris.altoclef.tasks;
 
 import adris.altoclef.AltoClef;
+import net.minecraft.item.ItemStack;
 import adris.altoclef.BotBehaviour;
 import adris.altoclef.multiversion.blockpos.BlockPosVer;
 import adris.altoclef.tasks.container.PickupFromContainerTask;
@@ -44,6 +45,8 @@ public abstract class ResourceTask extends Task implements ITaskCanForce {
     protected final ItemTarget[] itemTargets;
 
     private final PickupDroppedItemTask pickupTask;
+    /** Traced grid clears; see the note at the site. */
+    private static volatile int gridClearTrace = 0;
     private final EnsureFreePlayerCraftingGridTask ensureFreeCraftingGridTask = new EnsureFreePlayerCraftingGridTask();
     private ContainerCache currentContainer;
     // Extra resource parameters
@@ -206,9 +209,22 @@ public abstract class ResourceTask extends Task implements ITaskCanForce {
         }
         // Make sure that items don't get stuck in the player crafting grid. May be an issue if a future task isn't a resource task.
         if (StorageHelper.isPlayerInventoryOpen()) {
-            if (!(thisOrChildSatisfies(task -> task instanceof ITaskUsesCraftingGrid))) {
+            boolean claimed = thisOrChildSatisfies(task -> task instanceof ITaskUsesCraftingGrid);
+            if (!claimed) {
                 for (Slot slot : PlayerSlot.CRAFT_INPUT_SLOTS) {
-                    if (!StorageHelper.getItemStackInSlot(slot).isEmpty()) {
+                    ItemStack inGrid = StorageHelper.getItemStackInSlot(slot);
+                    if (!inGrid.isEmpty()) {
+                        // THE LAST LINE OF THE HUNT. Every number says the placement WORKS and this
+                        // guard undoes it a tick later; what is missing is why the exemption is not
+                        // in force at that instant. Name the task that is clearing, what it is
+                        // after, the chain under it and the slot that tripped it.
+                        if (gridClearTrace < 10) {
+                            gridClearTrace++;
+                            adris.altoclef.Debug.logMessage("GRIDCLEAR by=" + getClass().getSimpleName()
+                                    + " for=" + java.util.Arrays.toString(itemTargets)
+                                    + " slotItem=" + inGrid.getItem()
+                                    + " chain=" + toString());
+                        }
                         return ensureFreeCraftingGridTask;
                     }
                 }

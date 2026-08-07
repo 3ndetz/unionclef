@@ -227,17 +227,19 @@ public class CraftInInventoryTask extends ResourceTask {
         if (wantedBy(_target, item)) {
             return true;
         }
-        AltoClef mod = AltoClef.getInstance();
-        if (mod == null || mod.getTaskRunner() == null) {
-            return false;
-        }
-        adris.altoclef.tasksystem.TaskChain chain = mod.getTaskRunner().getCurrentTaskChain();
-        if (chain == null) {
-            return false;
-        }
-        for (Task t : chain.getTasks()) {
-            if (t instanceof CraftInInventoryTask c && wantedBy(c._target, item)) {
-                return true;
+        // ASK THE TASK TREE, NOT THE CHAIN LIST.
+        // The first attempt walked TaskChain.getTasks(), which is the chain's own list and does not
+        // descend into a task's sub-tasks -- so the planks craft nested under the table craft was
+        // invisible, and the table task called the planks ingredient foreign. The guard's own line
+        // said so once it was asked to name itself:
+        //   GRIDCLEAR by=CraftInInventoryTask for=[[crafting_table]] slotItem=minecraft:oak_log
+        //   "Something foreign in the crafting grid — taking it back"
+        // A log IS foreign to a table recipe and entirely wanted by the planks recipe underneath
+        // it. thisOrChildSatisfies walks the real sub chain (Task.java:157-164), which is where the
+        // nesting lives.
+        return thisOrChildSatisfies(t -> {
+            if (t instanceof CraftInInventoryTask c) {
+                return wantedBy(c._target, item);
             }
             if (t instanceof adris.altoclef.tasks.container.CraftInTableTask table) {
                 for (RecipeTarget rt : table.getRecipeTargets()) {
@@ -246,8 +248,8 @@ public class CraftInInventoryTask extends ResourceTask {
                     }
                 }
             }
-        }
-        return false;
+            return false;
+        });
     }
 
     /** Does this recipe target use the item in any of its slots? */
