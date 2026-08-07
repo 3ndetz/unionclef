@@ -915,6 +915,13 @@ class EscapeLava(CraftTable):
         x, z = self._pos(ctx)
         if -0.6 <= x <= 1.4 and -0.6 <= z <= 1.4:
             ctx.geo["entered"] = True
+        # LATCH THE ESCAPE WHEN IT HAPPENS, DO NOT JUDGE WHERE THE BOT ENDED UP.
+        # With --no-early-stop the run continues after the escape and the bot wanders on, so a test
+        # of the FINAL position called a successful escape a failure (ended 14 blocks out, past the
+        # window that exists to exclude a respawn). The escape is an EVENT; record it when seen.
+        if ctx.geo.get("entered") and self._escaped(ctx) and not ctx.geo.get("escaped_at"):
+            ctx.geo["escaped_at"] = round(elapsed, 1)
+            ctx.geo["escaped_pos"] = (round(x, 1), round(z, 1))
 
     def _pos(self, ctx):
         try:
@@ -946,7 +953,7 @@ class EscapeLava(CraftTable):
         hp = ctx.bot.health()
         x, z = self._pos(ctx)
         alive = hp is not None and float(hp) > 0
-        clear = self._escaped(ctx)
+        clear = bool(ctx.geo.get("escaped_at")) or self._escaped(ctx)
         entered = bool(ctx.geo.get("entered"))
         # A CORPSE THAT RESPAWNED SOMEWHERE CLEAR IS NOT AN ESCAPE.
         # The previous version passed on exactly that: the bot burned to death, respawned at
@@ -969,8 +976,11 @@ class EscapeLava(CraftTable):
                         f"hp={hp} x={x:.1f} z={z:.1f} deaths={deaths}")
         # RECORDED, NOT GATED: dry ground is EAST (+x, one step), water is SOUTH (-z, six). This is
         # the number that shows whether a port kept the old goal's strong preference for water.
-        went = "water(south)" if z < -1.5 else ("dry(east)" if x > 1.5 else "nowhere")
-        yield Criterion("which way it went", True, f"{went} x={x:.1f} z={z:.1f}", gate=False)
+        # Judge the direction at the ESCAPE, not at the end of a run the bot kept walking through.
+        ex, ez = ctx.geo.get("escaped_pos", (x, z))
+        went = "water(south)" if ez < -1.5 else ("dry(east)" if ex > 1.5 else "nowhere")
+        yield Criterion("which way it went", True,
+                        f"{went} at={ctx.geo.get('escaped_at')}s pos=({ex},{ez})", gate=False)
 
 
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
