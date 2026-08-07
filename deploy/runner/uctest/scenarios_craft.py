@@ -711,41 +711,56 @@ class EscapeLava(CraftTable):
     and only one of them is the one being preserved.
     """
 
-    # ⛔ THIS COURSE IS NOT TRUSTWORTHY YET — MY ARENA, NOT THE BOT. First run: the bot never left
-    # (x=0.5), minHp hit 0, and the chat carried the death message TWELVE times. Two faults, both
-    # mine:
-    #   1. the lava fills -1..1 and the spawn is 0.5,0.5 -- every respawn drops it BACK into lava,
-    #      so one death becomes a loop and the counter says nothing about escaping;
-    #   2. standing in the middle of a 3x3 pool is close to instant death at this damage rate;
-    #      there is no window in which an escape could be observed even if it worked perfectly.
-    # This is the same error as mine_stone this morning (a one-block floor over the void): the
-    # course measured the arena. Fix before believing ANY verdict from it -- put the bot one block
-    # INTO the edge of a pool with dry ground a step away, and move the spawn clear of the lava.
+    # ⛔⛔ STILL NOT AN INSTRUMENT — SECOND ATTEMPT PASSES WITHOUT TESTING ANYTHING.
+    # Rebuilt run: "PASS, hp=20.0 x=10.5 z=10.5 minHp=20.0". The bot is standing on the SPAWN POINT,
+    # took no damage at all, and early_stop fired instantly because x > 1.5 was already true there.
+    # It never entered the lava. That is a check that CANNOT FAIL -- precisely the defect being
+    # removed from this bench all day, reproduced in a course written to hunt it.
+    # Two things must change before any verdict here means anything:
+    #   1. the course must CONFIRM the bot is in the hazard before it starts judging (wait for the
+    #      first point of damage, or for the position to be inside the pool), otherwise the tp is
+    #      assumed rather than observed;
+    #   2. early_stop must be relative to where the bot STARTED, not to absolute coordinates that
+    #      the spawn point happens to satisfy.
+    # Until then this course is a placeholder. It has now produced one false red (its own arena) and
+    # one false green (this), which is a fair summary of how easy it is to build a bad gate.
+    #
+    # ARENA REBUILT AFTER ITS FIRST RUN MEASURED ITSELF. The original filled lava across -1..1 with
+    # the spawn at 0.5, so every respawn dropped the bot BACK in and one death became a loop; and
+    # the middle of a 3x3 pool is near-instant death, leaving no window in which an escape could be
+    # SEEN even if it worked. Same error as mine_stone this morning, where a one-block floor over
+    # the void made gathering look broken.
+    #
+    # Now: a two-wide pool, the bot at its EDGE with dry ground one step east, and the spawn moved
+    # well clear so a death ends the run instead of restarting it inside the hazard.
+    #
+    # And the directions are deliberate. Dry ground is EAST (one step); water is SOUTH (six). A
+    # "nearest non-lava cell" port walks east; one that keeps the old goal's -100 preference for
+    # water goes south. That is the whole reason this course exists before the port.
     id = "escape_lava"
     duration = 90
     bot_kit = []
-    LAVA_X = 0
-    WATER_X = 6
+    WATER_Z = -7
 
     def build(self, arena, ctx):
         arena.flat_field(half=14, grass=False)
-        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+        ctx.geo["bot_spawn"] = f"10.5 {STAND_Y} 10.5 -90 0"
 
     def drive_start(self, ctx):
         ctx.rcon.cmd("time set day")
         ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
         ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
         y = STAND_Y - 1
-        # A small pool the bot is standing in, water a short walk east, dry ground everywhere else.
-        ctx.rcon.cmd(f"fill -1 {y} -1 1 {y} 1 minecraft:lava", allow_reject=True)
-        ctx.rcon.cmd(f"fill {self.WATER_X} {y} -1 {self.WATER_X + 1} {y} 1 minecraft:water",
+        # Spawn point well clear of the hazard: a death must END the run, not restart it in lava.
+        ctx.rcon.cmd(f"spawnpoint {ctx.bot.name} 10 {STAND_Y} 10", allow_reject=True)
+        ctx.rcon.cmd(f"fill -1 {y} -1 0 {y} 1 minecraft:lava", allow_reject=True)
+        ctx.rcon.cmd(f"fill -1 {y} {self.WATER_Z} 1 {y} {self.WATER_Z + 1} minecraft:water",
                      allow_reject=True)
         ctx.geo["fps"] = []
         ctx.geo["min_hp"] = 20.0
         time.sleep(1)
         ctx.bot.py.try_call("resetRunCounters")
-        # Drop the bot in. Nothing is commanded: escaping lava is a survival reflex, and if the
-        # chain does not fire on its own that is itself the finding.
+        # At the pool's edge, not its centre: one step east is dry.
         ctx.rcon.cmd(f"tp {ctx.bot.name} 0.5 {STAND_Y} 0.5", allow_reject=True)
 
     def drive_tick(self, ctx, elapsed):
@@ -754,28 +769,29 @@ class EscapeLava(CraftTable):
         if hp is not None:
             ctx.geo["min_hp"] = min(ctx.geo.get("min_hp", 20.0), float(hp))
 
-    def early_stop(self, ctx):
+    def _pos(self, ctx):
         try:
-            now = ctx.bot.pos()
-            return abs(float(now[0])) > 2.5 and (ctx.bot.health() or 0) > 0
+            p = ctx.bot.pos()
+            return float(p[0]), float(p[2])
         except (TypeError, ValueError, IndexError):
-            return False
+            return 0.0, 0.0
+
+    def early_stop(self, ctx):
+        x, z = self._pos(ctx)
+        return (x > 1.5 or z < -1.5) and (ctx.bot.health() or 0) > 0
 
     def judge(self, ctx):
         self._publish_fps(ctx)
         hp = ctx.bot.health()
+        x, z = self._pos(ctx)
         alive = hp is not None and float(hp) > 0
-        try:
-            x = float(ctx.bot.pos()[0])
-        except (TypeError, ValueError, IndexError):
-            x = 0.0
-        out_of_lava = abs(x) > 2.5
-        yield Criterion("alive and out of the lava", alive and out_of_lava,
-                        f"hp={hp} x={x:.1f} minHp={ctx.geo.get('min_hp')}")
-        # RECORDED, NOT GATED: which way it ran. Positive x is the water; negative is dry ground.
-        # This is the number that will show whether the port kept the water preference.
-        yield Criterion("direction taken (+x = water, -x = dry)", True,
-                        f"x={x:.1f} waterAt={self.WATER_X}", gate=False)
+        clear = x > 1.5 or z < -1.5
+        yield Criterion("alive and clear of the lava", alive and clear,
+                        f"hp={hp} x={x:.1f} z={z:.1f} minHp={ctx.geo.get('min_hp')}")
+        # RECORDED, NOT GATED: dry ground is EAST (+x, one step), water is SOUTH (-z, six). This is
+        # the number that shows whether a port kept the old goal's strong preference for water.
+        went = "water(south)" if z < -1.5 else ("dry(east)" if x > 1.5 else "nowhere")
+        yield Criterion("which way it went", True, f"{went} x={x:.1f} z={z:.1f}", gate=False)
 
 
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
