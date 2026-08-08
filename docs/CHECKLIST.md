@@ -264,9 +264,17 @@ scans the repo for exactly the over-building this rule is meant to prevent.
 
 - Run the target course AND the three green baselines (`nav_flat`, `nav_staircase`,
   `nav_descend`) — otherwise you will not see a regression.
+- `--only` takes a comma-separated LIST, so that is one invocation, not five. The stand is
+  rebuilt per invocation, and courses run in the order you ask for — put the fixed one first.
 - **One good run is not a result.** Run 5-6 times and report the rate (`4/6`).
   Flaky is RED, not "mostly works".
 - Diagnose a failure from that run's log, never by guessing.
+
+**Launch long runs with the tool's own background mode, never `nohup … &` in a subshell.**
+A backgrounded shell job is killed when the tool call returns: the suite dies seconds in and
+leaves an artifacts directory containing one empty `timeline.jsonl`. That looks exactly like a
+course that crashed on entry, and it will be diagnosed as a bot bug. Symptom to recognise: the
+log stops right after the `--- <course> ---` banner and the process is already gone.
 
 ## 5. VIDEO
 
