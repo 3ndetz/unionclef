@@ -10,12 +10,8 @@ import adris.altoclef.tasks.squashed.CataloguedResourceTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.Dimension;
 import adris.altoclef.util.ItemTarget;
-import adris.altoclef.util.baritone.GoalAnd;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.helpers.WorldHelper;
-import baritone.api.pathing.goals.GoalComposite;
-import baritone.api.pathing.goals.GoalGetToBlock;
-import baritone.api.pathing.goals.GoalYLevel;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.Items;
 import net.minecraft.util.math.BlockPos;
@@ -71,15 +67,37 @@ public class GetToOuterEndIslandsTask extends Task {
                 setDebugState("Getting building materials");
                 return new GetBuildingMaterialsTask(blocksNeeded);
             }
-            GoalAnd goal = makeGoal(gateway);
-            Debug.logMessage(mod.getPlayer().getBlockPos().toString());
-            if (!goal.isInGoal(mod.getPlayer().getBlockPos()) || !mod.getPlayer().isOnGround()) {
-                mod.getClientBaritone().getCustomGoalProcess().setGoal(goal);
-                if (!Nav.isPathing()) {
-                    mod.getClientBaritone().getCustomGoalProcess().path();
+            // THE APPROACH USED TO GO TO THE LEGACY ENGINE, AND IT ARRIVED ONE RUN IN THREE.
+            // setGoal(goal) + path() on getCustomGoalProcess is the same hand-off that left
+            // InteractWithBlockTask standing still. Here it is not dead, it is UNRELIABLE, which is
+            // worse to diagnose: measured on end_gateway with a closest-approach counter, the bot
+            // reached the gateway once and stalled eight to twelve blocks short twice
+            // (closest = 2.2 / 7.7 / 12.3 over three runs).
+            //
+            // The goal it built was GoalAnd(GoalComposite(eight cells beside the gateway),
+            // GoalYLevel(74)) -- "stand on one of these eight AND be at y=74". Beside, not on: you
+            // stand next to a gateway and throw the pearl in, because stepping into one teleports
+            // you. Expressed directly that is just "walk to the nearest of eight cells", which the
+            // live drive can steer at without a pathfinder type in the middle.
+            //
+            // The y=74 term is dropped deliberately. It is a hardcoded REAL-End gateway height, and
+            // the eight cells already sit at gateway.y-1: if a gateway is at any other height the
+            // AND could never be satisfied at all. Using the cells alone is strictly more correct.
+            BlockPos approach = null;
+            double approachDist = Double.POSITIVE_INFINITY;
+            boolean standingOnACell = false;
+            for (Vec3i off : OFFSETS) {
+                BlockPos cell = gateway.add(off);
+                if (cell.equals(mod.getPlayer().getBlockPos())) standingOnACell = true;
+                double d = cell.getSquaredDistance(mod.getPlayer().getPos());
+                if (d < approachDist) {
+                    approachDist = d;
+                    approach = cell;
                 }
+            }
+            if ((!standingOnACell || !mod.getPlayer().isOnGround()) && approach != null) {
                 setDebugState("Getting close to gateway...");
-                return null;
+                return new GetToBlockTask(approach);
             }
             setDebugState("Throwing the pearl inside");
             return new InteractWithBlockTask(Items.ENDER_PEARL, gateway);
@@ -111,16 +129,4 @@ public class GetToOuterEndIslandsTask extends Task {
         return "Going to outer end islands";
     }
 
-    private GoalAnd makeGoal(BlockPos gateway) {
-        return new GoalAnd(new GoalComposite(
-                new GoalGetToBlock(gateway.add(OFFSETS[0])),
-                new GoalGetToBlock(gateway.add(OFFSETS[1])),
-                new GoalGetToBlock(gateway.add(OFFSETS[2])),
-                new GoalGetToBlock(gateway.add(OFFSETS[3])),
-                new GoalGetToBlock(gateway.add(OFFSETS[4])),
-                new GoalGetToBlock(gateway.add(OFFSETS[5])),
-                new GoalGetToBlock(gateway.add(OFFSETS[6])),
-                new GoalGetToBlock(gateway.add(OFFSETS[7]))
-        ), new GoalYLevel(74));
-    }
 }
