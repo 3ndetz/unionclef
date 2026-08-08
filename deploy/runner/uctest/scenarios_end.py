@@ -15,6 +15,7 @@ These courses build their own platform with dimension-prefixed rcon rather than 
 Arena, which has no dimension support. That is deliberate: Arena is shared by 24 passing courses
 and teaching it a new concept to add one test is how a green suite acquires a new way to fail.
 """
+import re
 import time
 
 from .scenario import Criterion, Scenario
@@ -223,4 +224,119 @@ class EndGateway(EndCourse):
                         f"samples={len(fps)}", gate=False)
 
 
-SCENARIOS = [EndWalk, EndGateway]
+class EndDragon(EndCourse):
+    """The literal end of the game: does the bot damage the ender dragon at all?
+
+    Nothing in this repo has ever measured the dragon fight. `@test dragon` runs
+    KillEnderDragonWithBedsTask, the dragon is summonable on the stand, and its health reads back
+    over rcon — so the excuse for never checking (End content is unreachable) is gone.
+
+    THE BAR IS DELIBERATELY LOW AND HONEST. The gate is "the dragon lost health", not "the dragon
+    died". A summoned dragon has no fountain and no crystals, so it may never perch, and the bed
+    strategy leans on perching; demanding a kill would fail the course for the arena's shape rather
+    than the bot's behaviour. First measurement first — a kill can be its own course once this one
+    says whether the bot engages at all.
+    """
+    id = "end_dragon"
+    # INFO, NOT A GATE — AND THAT IS A STATEMENT ABOUT THE ARENA, NOT A SOFTENED VERDICT.
+    # First run: the dragon took ZERO damage in 240s (200.0 -> 200.0) with beds, obsidian, a bow,
+    # 64 arrows and a sword in the pack. The log says why, and it is not the bot:
+    #     "Failed to place, wandering timeout."  x3
+    #     MovementQueue: body has not left {x=-7,y=75,z=-7} for 121 ticks while steering
+    #     MovementQueue: body MOVED (not walked) -- dropping the chain and replanning
+    # `@test dragon` runs KillEnderDragonWithBedsTask, which places a bed where the dragon PERCHES.
+    # A dragon summoned into a hand-built platform has no EnderDragonFight instance and no exit-
+    # portal fountain, so it never perches and there is never a valid place to put the bed. Gating
+    # on that would fail the bot for the shape of the arena -- the exact false red this suite exists
+    # to avoid. The numbers are still worth recording every run, so the course stays and reports.
+    # To make it a gate, the arena needs a real fountain (or the course needs a strategy that does
+    # not depend on perching); until then "the dragon lost health" is a fact, not a judgement.
+    tier = "info"
+    duration = 240
+    START_D = (0.5, 75, 0.5)
+
+    def _dragon_health(self, ctx):
+        out = ctx.rcon.cmd(
+            f"execute in {END} run data get entity "
+            f"@e[type=minecraft:ender_dragon,limit=1] Health", allow_reject=True)
+        if not out:
+            return None
+        m = re.search(r"([0-9]+(?:\.[0-9]+)?)f", str(out))
+        return float(m.group(1)) if m else None
+
+    def build(self, arena, ctx):
+        r = ctx.rcon
+        r.cmd(f"execute in {END} run forceload add -6 -6 6 6")
+        for y in range(73, 90):
+            r.cmd(f"execute in {END} run fill -20 {y} -20 20 {y} 20 air")
+        r.cmd(f"execute in {END} run fill -16 74 -16 16 74 16 end_stone")
+        ctx.geo["goal"] = (0, 75, 0)
+        ctx.geo["fps"] = []
+        arena.floor(-3, -3, 6, 3, "stone")
+        ctx.geo["bot_spawn"] = "0.5 -59 0.5 -90 0"
+        return ctx.geo["goal"]
+
+    def drive_start(self, ctx):
+        r = ctx.rcon
+        name = ctx.bot.name
+        r.cmd("gamerule keepInventory true", allow_reject=True)
+        r.cmd(f"clear {name}", allow_reject=True)
+        # Kit for both strategies the task might reach for, so a red means "did not fight" and not
+        # "had nothing to fight with".
+        for item, n in (("white_bed", 32), ("obsidian", 64), ("bow", 1), ("arrow", 64),
+                        ("diamond_sword", 1), ("golden_apple", 8)):
+            r.cmd(f"give {name} minecraft:{item} {n}", allow_reject=True)
+        r.cmd(f"effect give {name} minecraft:resistance 999 2 true", allow_reject=True)
+        r.cmd(f"execute in {END} run kill @e[type=minecraft:ender_dragon]", allow_reject=True)
+        sx, sy, sz = self.START_D
+        r.cmd(f"execute in {END} run tp {name} {sx} {sy} {sz}")
+        time.sleep(3)
+        ctx.geo["dim_at_start"] = self._dimension(ctx)
+        r.cmd(f"execute in {END} run summon minecraft:ender_dragon 0 90 0", allow_reject=True)
+        time.sleep(2)
+        ctx.geo["hp0"] = self._dragon_health(ctx)
+        ctx.geo["hp_min"] = ctx.geo["hp0"]
+        ctx.bot.cmd("@test dragon")
+
+    def drive_tick(self, ctx, elapsed):
+        ok, st = ctx.bot.py.try_call("getPerfStats")
+        if ok and isinstance(st, dict) and st.get("fps") is not None:
+            try:
+                ctx.geo["fps"].append(float(st["fps"]))
+            except (TypeError, ValueError):
+                pass
+        if int(elapsed) % 5 != 0:
+            return
+        hp = self._dragon_health(ctx)
+        if hp is None:
+            ctx.geo["dragon_gone"] = True
+            return
+        best = ctx.geo.get("hp_min")
+        if best is None or hp < best:
+            ctx.geo["hp_min"] = hp
+
+    def early_stop(self, ctx):
+        return bool(ctx.geo.get("dragon_gone"))
+
+    def judge(self, ctx):
+        hp0 = ctx.geo.get("hp0")
+        hpm = ctx.geo.get("hp_min")
+        gone = bool(ctx.geo.get("dragon_gone"))
+        fps = ctx.geo.get("fps") or []
+        avg_fps = sum(fps) / len(fps) if fps else None
+        ctx.geo["avg_fps"] = avg_fps
+        dim = ctx.geo.get("dim_at_start")
+        yield Criterion("bot is IN the End", dim is not None and "end" in str(dim).lower(),
+                        f"dimension={dim}")
+        yield Criterion("a dragon was actually there to fight", hp0 is not None,
+                        f"hp_at_start={hp0}")
+        yield Criterion("the dragon LOST HEALTH", gone or (hp0 is not None and hpm is not None and hpm < hp0),
+                        f"hp {hp0} -> {hpm}{' (gone)' if gone else ''}")
+        yield Criterion("dragon killed", gone, f"gone={gone}", gate=False)
+        yield Criterion("bot survived", ctx.deaths == 0, f"deaths={ctx.deaths}", gate=False)
+        yield Criterion("fps recorded", True,
+                        f"avg_fps={None if avg_fps is None else round(avg_fps, 1)} "
+                        f"samples={len(fps)}", gate=False)
+
+
+SCENARIOS = [EndWalk, EndGateway, EndDragon]
