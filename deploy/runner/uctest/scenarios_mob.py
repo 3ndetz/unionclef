@@ -68,6 +68,26 @@ class MobMelee(Scenario):
     def build(self, arena, ctx):
         arena.flat_field(half=14, grass=False)
         ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+        ctx.geo["fps"] = []
+
+    def drive_tick(self, ctx, elapsed):
+        # THE MOB COURSES NEVER SAMPLED FRAME RATE, so every mob verdict carried avg_fps=0.0 and the
+        # starvation guard -- which can only downgrade a run it has an fps for -- could never fire on
+        # this suite. That is the same half-repair the craft ladder had: a starved mob run was
+        # recorded as a bot failure. Measured today with it missing: mob_skeleton FAIL with the bot
+        # at 3 hp and no way to tell whether dodging arrows is even possible at ~10 fps.
+        ok, st = ctx.bot.py.try_call("getPerfStats")
+        if ok and isinstance(st, dict) and st.get("fps") is not None:
+            try:
+                ctx.geo["fps"].append(float(st["fps"]))
+            except (TypeError, ValueError):
+                pass
+
+    def _publish_fps(self, ctx):
+        fps = ctx.geo.get("fps") or []
+        avg = sum(fps) / len(fps) if fps else None
+        ctx.geo["avg_fps"] = avg
+        return avg, len(fps)
 
     def drive_start(self, ctx):
         # Night, because a zombie in daylight BURNS: measured at about 1.2 HP a second, which
@@ -94,6 +114,9 @@ class MobMelee(Scenario):
         return _zombie_count(ctx) == 0
 
     def judge(self, ctx):
+        avg_fps, n_fps = self._publish_fps(ctx)
+        # Reported, never a gate -- same contract as nav and craft. It exists so the starvation
+        # guard has a number to judge with; without it every mob verdict read avg_fps=0.0.
         killed = _zombie_count(ctx) == 0
         ticks = _tung_ticks(ctx)
         hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
@@ -147,6 +170,9 @@ class MobTrioNoDamage(MobMelee):
         ctx.bot.cmd("@test kill")
 
     def judge(self, ctx):
+        avg_fps, n_fps = self._publish_fps(ctx)
+        # Reported, never a gate -- same contract as nav and craft. It exists so the starvation
+        # guard has a number to judge with; without it every mob verdict read avg_fps=0.0.
         killed = _zombie_count(ctx) == 0
         ticks = _tung_ticks(ctx)
         hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
@@ -232,6 +258,9 @@ class SkeletonDodge(MobMelee):
                                             allow_reject=True)
 
     def judge(self, ctx):
+        avg_fps, n_fps = self._publish_fps(ctx)
+        # Reported, never a gate -- same contract as nav and craft. It exists so the starvation
+        # guard has a number to judge with; without it every mob verdict read avg_fps=0.0.
         alive = "Count:" in ctx.rcon.cmd("execute if entity @e[type=skeleton]", allow_reject=True)
         ticks = _tung_ticks(ctx)
         hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
