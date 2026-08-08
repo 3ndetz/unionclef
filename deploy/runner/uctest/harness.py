@@ -116,12 +116,40 @@ class Rcon:
     REJECTIONS = ("Unknown or incomplete command", "Incorrect argument",
                   "Expected ", "Unknown command", "Invalid ")
 
+    # ...BUT A REJECTION IN THE REPLY IS NOT NECESSARILY *THIS* COMMAND'S REJECTION. Vanilla's rcon
+    # accumulates command output in a shared buffer, and under the rapid one-shot connections this
+    # harness makes (a fresh `docker exec rcon-cli` per command) a previous command's output can
+    # bleed into the next reply. Observed, and it killed two courses of an otherwise good run:
+    #
+    #   rcon REJECTED `gamemode spectator tester2`: Incorrect argument for command
+    #   gamerule doMobSpawning false<--[HERE]Set tester2's game mode to Spectator Mode
+    #
+    # Read it carefully and the command SUCCEEDED — "Set tester2's game mode to Spectator Mode" is
+    # right there. The rejection belongs to `gamerule doMobSpawning false`, an EARLIER command.
+    # Scanning the whole reply for rejection substrings cannot tell the two apart, so a healthy
+    # command aborted the scenario.
+    #
+    # Vanilla echoes the offending command immediately before `<--[HERE]`, so attribution is
+    # possible: if every echo in the reply belongs to some OTHER command, the rejection is not ours.
+    # When there is no echo at all we cannot attribute it, and then we keep the original strict
+    # behaviour — that guard was expensive to learn and is not being loosened here.
+    HERE = "<--[HERE]"
+
+    def _rejects_this(self, out, command):
+        echoes = [seg.rsplit("\n", 1)[-1].strip()
+                  for seg in out.split(self.HERE)[:-1]]
+        if not echoes:
+            return True                       # unattributable — stay strict
+        return any(e and command.startswith(e[:len(command)]) for e in echoes)
+
     def cmd(self, command, timeout=20, allow_reject=False):
         r = sh(["docker", "exec", self.container, "rcon-cli", command], timeout)
         if r.returncode != 0:
             raise RuntimeError(f"rcon `{command}`: {r.stderr.strip()[-300:]}")
         out = r.stdout.strip()
-        if not allow_reject and any(x in out for x in self.REJECTIONS):
+        if (not allow_reject
+                and any(x in out for x in self.REJECTIONS)
+                and self._rejects_this(out, command)):
             raise RuntimeError(f"rcon REJECTED `{command}`: {out[:300]}")
         return out
 

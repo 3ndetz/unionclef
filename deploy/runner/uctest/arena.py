@@ -55,9 +55,14 @@ class ArenaBuilder:
             # be promoted to one either: "pvp" is in this list and is not a gamerule at all (it
             # lives in server.properties), so a hard failure on "no spelling worked" takes down
             # every arena build. Everything OUTSIDE this loop still raises on rejection.
+            # Test against the FULL rejection vocabulary, not just "Unknown". A wrong-generation
+            # gamerule name comes back as "Incorrect argument for command", which contains no
+            # "Unknown" — so every such spelling counted as ACCEPTED and the warning below could
+            # never fire for the very failure mode it exists to catch. (doMobSpawning on 1.21.11
+            # is exactly that case.)
             accepted = [r for r in rules
-                        if "Unknown" not in self.rcon.cmd(f"gamerule {r} {val}",
-                                                          allow_reject=True)]
+                        if not any(x in self.rcon.cmd(f"gamerule {r} {val}", allow_reject=True)
+                                   for x in self.rcon.REJECTIONS)]
             if not accepted:
                 print(f"  note: no accepted spelling for gamerule {rules} = {val}", flush=True)
         self.rcon.cmd("time set day")
