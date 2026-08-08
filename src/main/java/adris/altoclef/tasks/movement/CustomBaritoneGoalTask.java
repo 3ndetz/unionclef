@@ -249,7 +249,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 }
             }
         }
-        if (!TungstenHelper.isActive()
+        if (!isFinished()
+                && !TungstenHelper.isActive()
                 && !Nav.hasGoal()
                 && Nav.isSafeToCancel()) {
             // THE LAST PLACE THE LEGACY ENGINE STILL MOVES THE BOT.
@@ -257,6 +258,20 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // declined the tick and shredder is being asked to walk instead. Count it, because
             // "can baritone be deleted" is exactly the question of whether this number is zero on
             // a real run -- and a guess about that is worth nothing.
+            //
+            // ⛔ A FINISHED TASK MUST NOT COMMAND AN ENGINE, and until now it did. Measured on
+            // craft_iron_pickaxe, which passes: pdLegacy=62 of pdEnter=151, with the declines
+            // reading pdFinished=122 pdWalking=23 pdNear=5. So the dominant reason tungsten
+            // stepped aside was that the goal was ALREADY REACHED (isFinished), and this line
+            // then handed that reached goal to shredder and asked it to path there.
+            //
+            // That is not a safety net catching a tungsten failure — it is spurious work, and on
+            // that course it was 40% of every drive entry. It is also why the whole "baritone is
+            // nearly dead" reading was wrong: the number was large because finished tasks kept
+            // poking it on their way out, not because tungsten kept failing.
+            //
+            // The other two declines are already handled by the guard below: pdWalking and
+            // pdNear both leave TungstenHelper.isActive() true, so those ticks never reach here.
             pdLegacyPath++;
             mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(cachedGoal);
         }
