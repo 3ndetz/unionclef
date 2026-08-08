@@ -87,6 +87,16 @@ public class RunAwayTask {
     public static boolean isActive()      { return active; }
     public static String  getThreatName() { return threatName; }
 
+    /** The gap this flee order was told to hold. Other primitives need it to avoid working
+     *  against the order — see {@code BowShooter.shootAt}. */
+    public static double getKeepDistance() { return keepDistance; }
+
+    /** Current gap to the threat, or -1 when there is no live threat to measure against. */
+    public static double gapTo(ClientPlayerEntity player) {
+        return (active && threat != null && threat.isAlive() && !threat.isRemoved())
+                ? player.getEntityPos().distanceTo(threat.getEntityPos()) : -1;
+    }
+
     /** Name of the threat currently tracked (null if not visible). */
     public static String getCurrentThreat() {
         return (threat != null && threat.isAlive() && !threat.isRemoved())

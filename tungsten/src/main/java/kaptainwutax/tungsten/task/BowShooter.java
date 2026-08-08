@@ -87,11 +87,52 @@ public class BowShooter {
      * how good its aim is, and the fix is the shot CYCLE, not the shot.
      */
     private static int facingTicks = 0;
+    /** Shots refused because a live flee order had no distance to spare — see {@link #shootAt}. */
+    private static int declinedTooClose = 0;
     /** Closest predicted impact (blocks) seen during the last draw — how near the gate we got. */
     private static double bestMiss = -1;
 
+    /**
+     * How much of the ordered gap must still be in hand before it is worth turning to shoot.
+     *
+     * <p>MEASURED, not chosen. Turning to face the target is what a kiting bot pays for a shot,
+     * because vanilla will not sprint without forward input ({@code canStartSprinting()} requires
+     * {@code input.hasForwardMovement()}) and penalises non-forward travel on top. On bow_flee the
+     * gap closes at 1.47 blocks/second while facing, and one shot cycle costs about 49 ticks —
+     * roughly 3.6 blocks of ground per arrow.
+     *
+     * <p>So a shot taken with the pursuer already close does not merely fail to help, it spends
+     * ground the flee order was given to protect. Holding fire above half the ordered gap leaves
+     * enough room to pay for the shot and still be outside contact when it lands.
+     */
+    private static final double SHOOT_ABOVE_FRACTION = 0.5;
+
+    /**
+     * Begin a shot at {@code entity}, or decline when a flee order says there is no room for one.
+     *
+     * <p>WHY A PRIMITIVE DECLINES AT ALL. This mod executes and the agent decides — but here the
+     * agent has given TWO orders, "keep 12 blocks away from X" and "shoot X", and at four blocks
+     * they contradict each other. Turning to shoot spends the very distance the other order exists
+     * to hold. The precedence is not invented by this class; it is read off the flee order the
+     * caller already issued, and it applies only while that order is live.
+     *
+     * <p>The arithmetic that forced this. bow_flee requests a shot every 3s for 60s. Measured
+     * {@code bowFacing=391} ticks — 33% of the run spent facing — which at 1.47 blocks/s is 28.7
+     * blocks of ground given away against a 12-block head start. No aim quality closes that gap:
+     * a full draw is 22 ticks by vanilla construction, so shooting that often and holding distance
+     * are mutually unsatisfiable. Firing only from beyond half the ordered gap turns a losing
+     * continuous exchange into the burst that kiting actually is: run, turn, loose, run.
+     */
     public static synchronized boolean shootAt(Entity entity) {
         if (entity == null) return false;
+        ClientPlayerEntity self = MinecraftClient.getInstance().player;
+        if (self != null && RunAwayTask.isActive()) {
+            double gap = RunAwayTask.gapTo(self);
+            if (gap >= 0 && gap < RunAwayTask.getKeepDistance() * SHOOT_ABOVE_FRACTION) {
+                declinedTooClose++;
+                return false;                     // no room to pay for a shot — keep running
+            }
+        }
         target = entity;
         drawing = false;
         bestMiss = -1;
@@ -123,6 +164,9 @@ public class BowShooter {
 
     /** Ticks spent facing the target for a shot — see the field docs; this is the kiting cost. */
     public static int getFacingTicks() { return facingTicks; }
+
+    /** Shots declined for lack of room under a live flee order — see {@link #shootAt}. */
+    public static int getDeclinedTooClose() { return declinedTooClose; }
 
     /** Draws that never turned onto the solution / never predicted a hit — see the field docs. */
     public static int getAimTimeouts() { return aimTimeouts; }
@@ -176,6 +220,7 @@ public class BowShooter {
         aimTimeouts = 0;
         drawTimeouts = 0;
         facingTicks = 0;
+        declinedTooClose = 0;
         bestMiss = -1;
     }
 
