@@ -71,6 +71,22 @@ public class BowShooter {
      */
     private static int aimTimeouts = 0;
     private static int drawTimeouts = 0;
+    /**
+     * Ticks spent with a shot in progress — i.e. ticks the bot is FACING ITS TARGET.
+     *
+     * <p>This is the quantity that decides whether a kiting bot can hold its distance, and nothing
+     * was counting it. Vanilla will not sprint unless the movement input has a forward component
+     * ({@code canStartSprinting()} requires {@code input.hasForwardMovement()}), and
+     * {@code getDirectionalMovementSpeedMultiplier} penalises non-forward travel on top. A bot
+     * turned around to shoot is therefore walking backwards, and on bow_flee the trace shows the
+     * gap closing at 1.47 blocks/second — which is what a backwards-walking target loses to a
+     * sprinting chaser, even one the course has afflicted with slowness.
+     *
+     * <p>So the cost of shooting is measured in TICKS SPENT FACING, and the course requests a shot
+     * every 3 seconds. If this lands near half the run, the bot cannot win that footrace no matter
+     * how good its aim is, and the fix is the shot CYCLE, not the shot.
+     */
+    private static int facingTicks = 0;
     /** Closest predicted impact (blocks) seen during the last draw — how near the gate we got. */
     private static double bestMiss = -1;
 
@@ -104,6 +120,9 @@ public class BowShooter {
      * same shape of lie as the landed_swings undercount.
      */
     public static int getWildShots() { return wildShots; }
+
+    /** Ticks spent facing the target for a shot — see the field docs; this is the kiting cost. */
+    public static int getFacingTicks() { return facingTicks; }
 
     /** Draws that never turned onto the solution / never predicted a hit — see the field docs. */
     public static int getAimTimeouts() { return aimTimeouts; }
@@ -156,6 +175,7 @@ public class BowShooter {
         wildShots = 0;
         aimTimeouts = 0;
         drawTimeouts = 0;
+        facingTicks = 0;
         bestMiss = -1;
     }
 
@@ -173,6 +193,7 @@ public class BowShooter {
     /** Called every game tick from MixinClientPlayerEntity. */
     public static void tick(ClientPlayerEntity player) {
         if (!active) return;
+        facingTicks++;      // the camera is claimed for the whole shot — this IS the kiting cost
         MinecraftClient mc = MinecraftClient.getInstance();
 
         if (target == null || target.isRemoved() || ++totalTicks > TIMEOUT_TICKS) {
