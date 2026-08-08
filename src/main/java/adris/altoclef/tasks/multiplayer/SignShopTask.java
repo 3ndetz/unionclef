@@ -1,6 +1,7 @@
 package adris.altoclef.tasks.multiplayer;
 
 import adris.altoclef.control.Nav;
+import adris.altoclef.util.helpers.TungstenHelper;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasks.movement.SafeRandomShimmyTask;
@@ -9,8 +10,6 @@ import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.ChestSlot;
-import baritone.api.pathing.goals.GoalNear;
-import baritone.api.process.ICustomGoalProcess;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.SignBlockEntity;
@@ -118,10 +117,15 @@ public class SignShopTask extends Task {
                         retryDelay = RETRY_DELAY_TICKS;
                         return null;
                     }
-                    ICustomGoalProcess proc = mod.getClientBaritone().getCustomGoalProcess();
-                    if (!proc.isActive()) {
-                        proc.setGoalAndPath(new GoalNear(signPos, 2));
-                    }
+                    // WALK WITH THE ENGINE THAT MOVES THE BODY.
+                    // This asked getCustomGoalProcess() to path -- the legacy hand-off tungsten
+                    // replaced -- and guarded it with proc.isActive() on that same dead process,
+                    // which nothing sets, so the branch ran every tick and moved nothing. The bot
+                    // never walked to a sign, and the retry counter above then reached MAX_RETRIES
+                    // and BLACKLISTED the sign as unreachable: a real symptom with an invented
+                    // cause. Fifth site of this shape in the port (see KillEnderDragonTask).
+                    TungstenHelper.tryPathTo(new Vec3d(
+                            signPos.getX() + 0.5, signPos.getY(), signPos.getZ() + 0.5));
                     setDebugState("Walking to sign (" + approachTicks + "/" + MAX_APPROACH_TICKS + ")");
                     return null;
                 }
