@@ -280,6 +280,7 @@ public class BlockScanner {
         }
 
         scanning = true;
+        scanStarted++;
         forceStop = false;
         new Thread(() -> {
             try {
@@ -339,6 +340,9 @@ public class BlockScanner {
         }
     }
 
+    /** Instrumentation for the distant-block investigation: does a full rescan pass ever COMPLETE? */
+    public static volatile int scanStarted, scanDone, scanChunks, scanMs;
+
     private void rescan(int maxCount, int cutOffRadius) {
         if (mod.getWorld() == null || mod.getPlayer() == null) return;
 
@@ -365,10 +369,21 @@ public class BlockScanner {
             visited.add(node.pos);
             scanChunk(node.pos, playerChunkPos);
 
-            queue.add(new Node(new ChunkPos(node.pos.x + 1, node.pos.z + 1), node.distance + 1));
-            queue.add(new Node(new ChunkPos(node.pos.x - 1, node.pos.z + 1), node.distance + 1));
-            queue.add(new Node(new ChunkPos(node.pos.x - 1, node.pos.z - 1), node.distance + 1));
-            queue.add(new Node(new ChunkPos(node.pos.x + 1, node.pos.z - 1), node.distance + 1));
+            // THIS BFS USED TO STEP ONLY DIAGONALLY -- (x+1,z+1), (x-1,z+1), (x-1,z-1), (x+1,z-1).
+            // Every such step changes both coordinates by one, so (x + z) % 2 is INVARIANT: from the
+            // player's chunk you can only ever reach chunks of the same parity, and the other half of
+            // the world is never scanned at all. Not a smaller radius -- a checkerboard.
+            // It hid behind scanCloseBlocks(), which re-reads +-8 blocks around the player every tick,
+            // so anything close was always seen and only distant blocks blinked in and out as the
+            // player walked between chunks of one parity and the other. Measured on the distant-table
+            // course: a crafting table 29 blocks away was found on 510 of 6018 lookups.
+            // Orthogonal steps cover both parities, and they also make node.distance exactly the
+            // Manhattan getChunkDist() used for the cutoff below and the prune further down, which
+            // the diagonal version did not.
+            queue.add(new Node(new ChunkPos(node.pos.x + 1, node.pos.z), node.distance + 1));
+            queue.add(new Node(new ChunkPos(node.pos.x - 1, node.pos.z), node.distance + 1));
+            queue.add(new Node(new ChunkPos(node.pos.x, node.pos.z + 1), node.distance + 1));
+            queue.add(new Node(new ChunkPos(node.pos.x, node.pos.z - 1), node.distance + 1));
         }
         if (forceStop) {
             // reset again, might have changed some values from the time forceStop was called
@@ -394,8 +409,11 @@ public class BlockScanner {
             getFirstFewPositions(set, playerPos);
         }
 
+        scanDone++;
+        scanChunks = visited.size();
+        scanMs = (int) (System.currentTimeMillis() - ms);
         if (LOG) {
-            mod.log("Rescanned in: " + (System.currentTimeMillis() - ms) + " ms; visited: " + visited.size() + " chunks");
+            mod.log("Rescanned in: " + scanMs + " ms; visited: " + scanChunks + " chunks");
         }
     }
 

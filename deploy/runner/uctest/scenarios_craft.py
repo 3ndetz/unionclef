@@ -475,16 +475,17 @@ class CraftAtDistantTable(CraftTable):
         # the craft failed" -- two completely different defects that look identical in the pack.
         yield Criterion("distance from the table at the end", True,
                         f"dxToTable={reached:.1f}", gate=False)
-        # RECORDED, AND IT IS THE COURSE CHECKING ITSELF: the table the bot actually locks onto must
-        # be THIS course's, at 28 blocks. A larger number means a leftover from an earlier run is
-        # still standing and the verdict above is about the wrong table.
+        # RECORDED: how often the station lookup actually finds a table, as a fraction of lookups.
+        # The @N is the distance from the PLAYER AT THAT INSTANT, not from spawn -- so a large N means
+        # the bot had wandered off, NOT that it locked onto a leftover. An earlier note here read it
+        # the second way and was wrong; the sweep above is what rules leftovers out.
         ok, stats = ctx.bot.py.try_call("placeStats")
         tbl = ""
         if ok and stats:
             for part in str(stats).split():
-                if part.startswith("tbl="):
-                    tbl = part
-        yield Criterion("the table found is OURS (~28 blocks, not a leftover)", True,
+                if part.startswith("tbl=") or part.startswith("bs="):
+                    tbl = (tbl + " " + part).strip()
+        yield Criterion("station lookup hit rate (found/asked, @dist-from-player)", True,
                         tbl or "n/a", gate=False)
 
 
