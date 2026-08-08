@@ -145,14 +145,19 @@ public class RunAwayTask {
         if (searching) fleeSearch++;
         if (executing) fleeRan++;
 
-        // REPLAN ON NEED, NOT ON A CLOCK. The old condition also fired every RECALC ticks, which
-        // tore down a perfectly good path twice a second: stop.set(true) then a fresh find() with a
-        // 400ms timeout on a stand running at ~9 fps, so the next search frequently had not
-        // finished before the following teardown. Flee paths are short by construction (STEP is 8
-        // blocks, ~2 seconds of travel), so they exhaust on their own and !pathing is a sufficient
-        // trigger; tickCounter stays as a floor so a failing search cannot thrash.
+        // THE CLOCK STAYS, AND IT WAS MEASURED BACK IN. Replanning every RECALC ticks looks
+        // wasteful — it tears down a live path twice a second and pays for a fresh search — so it
+        // was changed to fire only once nothing was pathing. That made things WORSE, and by the
+        // margin the bench can actually see:
+        //     clock (this code)    avg_dist 7.32 / 7.10 / 9.43   3 of 3 above the gate
+        //     replan-on-need       avg_dist 6.11 / 4.84 / 8.39   1 of 3
+        // and it did not even buy what it was for: search ticks stayed at 250-330 per run against
+        // 276 before, while plans halved from ~110 to ~45. So the searches simply got longer
+        // instead of fewer, and the flee lost the thing the cadence was really providing — a
+        // direction that stays fresh while the threat keeps moving. A stale plan followed
+        // perfectly is worse than a fresh plan followed in bursts.
         boolean pathing = searching || executing;
-        if (!pathing && tickCounter >= RECALC) {
+        if (!pathing || tickCounter >= RECALC) {
             tickCounter = 0;
             Vec3d flee = safeFleePoint(world, player);
             if (flee != null) {
