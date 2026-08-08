@@ -649,6 +649,15 @@ class AllRound(Scenario):
                         f"ranged_hits={len(ranged)}")
         yield Criterion("kill", ctx.kills() >= 1, f"kills={ctx.kills()}")
         yield ctx.survival_criterion()   # 1 kill / 4 deaths is a LOSS, not a pass
+        # HOW MANY TIMES DID IT ACTUALLY CONNECT. Read off a timeline by hand for the first time
+        # today, and it is the sharpest number this course has: over a full run the bot landed
+        # FOUR swings (lifetimeHits 105 -> 109) while dying twice. A sword swings ~1.6/s, so ~13 s
+        # of contact should be nearer twenty. The course reported "kills=1 deaths=2" and said
+        # nothing about that, so nobody could see the fight was lost on output rather than luck.
+        # Recorded, never a gate: it is a count, so unlike a timing gate it stays readable at the
+        # 5-9 fps this stand runs at.
+        yield Criterion("swings landed (recorded, not gated)", True,
+                        f"landed={ctx.landed_swings()} crits={ctx.crit_swings()}", gate=False)
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
 
