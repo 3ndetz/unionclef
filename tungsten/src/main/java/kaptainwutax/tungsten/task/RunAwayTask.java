@@ -156,8 +156,24 @@ public class RunAwayTask {
         if (away.lengthSquared() < 1e-4) away = new Vec3d(1, 0, 0);
         away = away.normalize();
 
-        Vec3d best = null;
-        double bestScore = -1;
+        // TWO TIERS, NOT ONE SCORE. "Furthest from the threat" is a corner-seeking objective in any
+        // bounded space: the corner IS the furthest point from something approaching the middle, and
+        // once standing in it every candidate scores worse, so the flee has nowhere left to go.
+        //
+        // bow_flee's traces show exactly that, every run. The bot spawns centre, sprints out, and
+        // the gap collapses at the boundary of the 40x40 field:
+        //     t= 6.5 bot=[-17.7,-17.1]   t=17.5 bot=[5.5, 19.4]   t=28.4 bot=[-18.7,-7.9]
+        //     t=40.4 bot=[-5.3, 19.7]    t=56.7 bot=[-8.3, 19.5]
+        // min distance ~3 blocks in EVERY run regardless of the mean — it dies at a wall, respawns
+        // in the middle, and repeats. Raising the average gap did nothing for that, because the
+        // average was never the thing killing it.
+        //
+        // So a candidate you cannot flee ONWARD from is a dead end, and is taken only when nothing
+        // else exists. Expressed as a tier rather than a weighted penalty on purpose: a weight
+        // would be a number invented to trade blocks against escape room, and there is no honest
+        // exchange rate between them.
+        Vec3d best = null, bestDeadEnd = null;
+        double bestScore = -1, bestDeadEndScore = -1;
         double[] angles = {0, 25, -25, 50, -50, 80, -80};
         double[] dists  = {STEP, STEP * 0.66, STEP * 0.4, 2.0};
         for (double a : angles) {
@@ -170,11 +186,21 @@ public class RunAwayTask {
                 Vec3d ground = snapGround(world, cand);
                 if (ground == null) continue;
                 double score = ground.distanceTo(threat.getEntityPos());
-                if (score > bestScore) { bestScore = score; best = ground; }
+                if (hasRoomBeyond(world, ground, dx, dz)) {
+                    if (score > bestScore) { bestScore = score; best = ground; }
+                } else if (score > bestDeadEndScore) {
+                    bestDeadEndScore = score; bestDeadEnd = ground;
+                }
                 break; // furthest reachable in this direction wins; stop shrinking
             }
         }
-        return best;
+        return best != null ? best : bestDeadEnd;
+    }
+
+    /** Can the flee CONTINUE past {@code from} in the same direction? One more standable step is
+     *  enough to tell a corner from open ground, and it costs one snapGround call. */
+    private static boolean hasRoomBeyond(WorldView world, Vec3d from, double dx, double dz) {
+        return snapGround(world, new Vec3d(from.x + dx * STEP, from.y, from.z + dz * STEP)) != null;
     }
 
     /** Nearest standable INTERIOR cell around {@code pos} (scan a few blocks
