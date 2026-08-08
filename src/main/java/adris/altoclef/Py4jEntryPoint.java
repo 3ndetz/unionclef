@@ -2300,6 +2300,7 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.CraftGenericManuallyTask.mcInvalidSlot = 0;
         adris.altoclef.control.Nav.navUnsafeAir = 0;
         adris.altoclef.control.SlotHandler.clickTrace = 0;
+        adris.altoclef.tasks.container.DoStuffInContainerTask.dsicTrace = 0;
         kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode.smSelected = 0;
         kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode.smMoves = 0;
         kaptainwutax.tungsten.path.blockSpaceSearchAssist.SmartMoves.waterMoves = 0;

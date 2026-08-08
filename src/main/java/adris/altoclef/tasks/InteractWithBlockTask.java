@@ -5,6 +5,7 @@ import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.TaskCatalogue;
 import adris.altoclef.tasks.movement.SafeRandomShimmyTask;
+import adris.altoclef.tasks.movement.GetWithinRangeOfBlockTask;
 import adris.altoclef.tasks.movement.TimeoutWanderTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
@@ -62,6 +63,9 @@ public class InteractWithBlockTask extends Task {
             Blocks.SWEET_BERRY_BUSH
     };
     private Task unstuckTask = null;
+    /** Walks us into reach when the target is too far to click. See the CANT_REACH branch. */
+    private static final int INTERACT_APPROACH_RANGE = 3;
+    private GetWithinRangeOfBlockTask approachTask = null;
     private ClickResponse cachedClickStatus = ClickResponse.CANT_REACH;
     private int waitingForClickTicks = 0;
     private int entityBlockingTicks = 0;
@@ -280,8 +284,25 @@ public class InteractWithBlockTask extends Task {
         cachedClickStatus = rightClick(mod);
         switch (Objects.requireNonNull(cachedClickStatus)) {
             case CANT_REACH -> {
+                // THIS SAID "Getting to our goal" AND THEN WENT NOWHERE, WHICH IS THE WHOLE BUG.
+                // The G-0 pass above removed the goal that fed getCustomGoalProcess, on the grounds
+                // that the legacy engine does not drive and "something else does the walking". The
+                // second half was wrong: nothing else does. With the goal gone, an out-of-reach
+                // target left this branch setting a debug string and resetting a timer -- no goal, no
+                // movement -- so the bot announced it was getting to its goal and stood still.
+                // Measured on craft_at_distant_table with a trace on the decision above: near=true,
+                // makeNew=INF, the container task correctly returned this task on every tick, and
+                // dist stayed 28.0 for the full five minutes. The bot never took a step.
+                // The removal was right about the engine and wrong about the consequence. Movement is
+                // restored through the LIVE path -- AltoGoal.near via GetWithinRangeOfBlockTask, the
+                // same drive the water and lava escapes use -- not through the legacy process.
+                // Cached, because building a fresh task each tick would restart the walk every tick.
                 setDebugState("Getting to our goal");
                 clickTimer.reset();
+                if (approachTask == null) {
+                    approachTask = new GetWithinRangeOfBlockTask(target, INTERACT_APPROACH_RANGE);
+                }
+                return approachTask;
             }
             case WAIT_FOR_CLICK -> {
                 setDebugState("Waiting for click");

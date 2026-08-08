@@ -108,6 +108,21 @@ public abstract class DoStuffInContainerTask extends Task {
         if (costToWalk > getCostToMakeNew(mod)) {
             placeForceTimer.reset();
         }
+        // NAME THE TERM. The bot walks off to craft a crafting table while the scanner reports a table
+        // on 100% of lookups (tbl=6059/6059) and nothing is blacklisted -- so BOTH conditions below
+        // read false to me and yet this branch is the one that runs. One of the terms is not what it
+        // looks like, and reasoning has already been wrong twice here. Log each term separately.
+        if (dsicTrace < 4000) {
+            dsicTrace++;
+            adris.altoclef.Debug.logMessage("DSIC near=" + nearest.isPresent()
+                    + " walk=" + (costToWalk > 1e17 ? "INF" : String.format("%.1f", costToWalk))
+                    + " makeNew=" + (getCostToMakeNew(mod) > 1e17 ? "INF" : String.format("%.1f", getCostToMakeNew(mod)))
+                    + " forceEl=" + placeForceTimer.elapsed()
+                    + " justPlacedEl=" + justPlacedTimer.elapsed()
+                    + " hasContainerItem=" + mod.getItemStorage().hasItem(containerTarget)
+                    + " dist=" + (nearest.isPresent()
+                        ? String.format("%.1f", Math.sqrt(nearest.get().getSquaredDistance(currentPos))) : "-"));
+        }
         if (nearest.isEmpty() || (!placeForceTimer.elapsed() && justPlacedTimer.elapsed())) {
             // It's cheaper to make a new one, or our only option.
 
@@ -194,6 +209,9 @@ public abstract class DoStuffInContainerTask extends Task {
     protected abstract boolean isContainerOpen(AltoClef mod);
 
     protected abstract Task containerSubTask(AltoClef mod);
+
+    /** Instrumentation for the distant-table decision; reset per run by resetRunCounters(). */
+    public static volatile int dsicTrace;
 
     protected abstract double getCostToMakeNew(AltoClef mod);
 }
