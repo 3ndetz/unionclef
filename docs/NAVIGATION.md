@@ -252,6 +252,40 @@ ladder turned out to be a capability that had been DEAD SINCE THE 1.21.11 PORT, 
 - `craft_at_distant_table` — and this one was NOT dead since the port. It was **a regression we
   introduced ourselves**, and it is the most instructive failure on the ladder. See below.
 
+### Four instruments were lying, and each repair changed what the suite appeared to say (2026-08-08)
+
+Collected in one place because they are the same defect wearing four costumes, and because every one
+of them cost a wrong conclusion before it was found.
+
+| instrument | what it did | what it hid |
+|---|---|---|
+| craft fps sampling | craft courses never sampled frame rate | a starved craft run read as a bot failure |
+| the guard's message | printed "host starved — close whatever else is running" | the box was 47% idle; it sent a session hunting `docker stats` |
+| mob fps sampling | mob courses never sampled frame rate at all | `mob_trio` recorded as broken while the bot had WON the fight |
+| `LOAD_SENSITIVE` | matched criterion NAMES against substrings | every timed pvp gate, and `mob_skeleton`'s entire red |
+
+**The last one is the shape of the others.** The guard may only mark a run INVALID when EVERY failed
+gate could plausibly be caused by a low frame rate, and it decided that by matching the gate's *name*
+against keywords in a different file. Word a gate differently and it silently counted as
+not-load-sensitive — **failing closed, in the direction that blames the bot.**
+
+That list was built for nav, extended for craft, extended again for mob: three patches in one
+session. Three patches is a design fault, not bad luck. `Criterion` now takes `load_sensitive`, so a
+gate answers the question where it is written, while the author still knows the answer. The keyword
+list survives as a fallback so nothing moved on the day.
+
+⭐ **What it cost before it was found.** `mob_skeleton` failed five runs at 9.2–12.4 fps against a
+floor of 14 — not one trustworthy — and every one was recorded as a bot failure, because one gate's
+wording kept the guard silent. Those reds were then read as a real defect, a fix was built on them,
+and the fix measured WORSE and was reverted. The bench being quietly wrong cost more than any bug
+in the bot did.
+
+⛔ **And the gate name that started it.** `"the fight ran on tungsten"` reads as "did the engine
+run". `mdTung` counts the tungsten DUELLING CONTROLLER, which `MobDefenseChain` hands the legs to
+only AT striking distance — the approach belongs to the task. So `mdTung=0` means **"the bot never
+closed"**. It is now called `"reached striking distance"`. A gate named for its implementation
+instead of its meaning will be misread, and then reasoned from.
+
 ### The End suite — new, 3 courses (2026-08-08)
 
 ```
