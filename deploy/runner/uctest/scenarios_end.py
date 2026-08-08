@@ -107,12 +107,7 @@ class EndCourse(Scenario):
         return None
 
     def drive_tick(self, ctx, elapsed):
-        ok, st = ctx.bot.py.try_call("getPerfStats")
-        if ok and isinstance(st, dict) and st.get("fps") is not None:
-            try:
-                ctx.geo["fps"].append(float(st["fps"]))
-            except (TypeError, ValueError):
-                pass
+        # FPS sampling moved to Scenario._sample_fps (one site for all five suites).
         d = self._dist_to_goal(ctx)
         if d is not None and ctx.geo.get("reached_at") is None and d < self.goal_tolerance:
             ctx.geo["reached_at"] = elapsed
@@ -331,12 +326,7 @@ class EndDragon(EndCourse):
         ctx.bot.cmd("@test dragon-old")
 
     def drive_tick(self, ctx, elapsed):
-        ok, st = ctx.bot.py.try_call("getPerfStats")
-        if ok and isinstance(st, dict) and st.get("fps") is not None:
-            try:
-                ctx.geo["fps"].append(float(st["fps"]))
-            except (TypeError, ValueError):
-                pass
+        # FPS sampling moved to Scenario._sample_fps (one site for all five suites).
         if int(elapsed) % 5 != 0:
             return
         hp = self._dragon_health(ctx)

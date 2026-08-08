@@ -377,6 +377,28 @@ class Scenario:
     def judge(self, ctx):
         raise NotImplementedError
 
+    # -- frame rate, sampled for EVERY suite by the loop below ---------------
+    # This lived as four identical copies -- nav, craft, mob, end -- each one added on the day
+    # that suite's starved runs were finally read as bot failures rather than as an unmeasurable
+    # host. pvp is the fifth suite and never got a copy, so every pvp verdict carried
+    # avg_fps=None, and the starvation guard, whose first condition is `avg_fps is not None`,
+    # could not engage on that suite at all: its seven load_sensitive flags sat inert.
+    # A hole that has to be patched per-file gets forgotten per-file. The loop that ticks every
+    # scenario is the one place it cannot be.
+    def _sample_fps(self, ctx):
+        ok, st = ctx.bot.py.try_call("getPerfStats")
+        if ok and isinstance(st, dict) and st.get("fps") is not None:
+            try:
+                ctx.geo.setdefault("fps", []).append(float(st["fps"]))
+            except (TypeError, ValueError):
+                pass
+
+    def _publish_fps(self, ctx):
+        """Hand the average to run_suite, which is where the starvation guard reads it."""
+        fps = ctx.geo.get("fps") or []
+        ctx.geo["avg_fps"] = (sum(fps) / len(fps)) if fps else None
+        return ctx.geo["avg_fps"], len(fps)
+
     # -- shared run loop ---------------------------------------------------
     def run(self, ctx):
         self.drive_start(ctx)
@@ -385,6 +407,7 @@ class Scenario:
         while time.time() - ctx.t0 < self.duration:
             time.sleep(1)
             ctx.sample(**self.sample_kwargs())
+            self._sample_fps(ctx)
             self.drive_tick(ctx, time.time() - ctx.t0)
             if ctx.geo.get("reached_at") is None and self.arrived(ctx):
                 ctx.geo["reached_at"] = round(time.time() - ctx.t0, 1)
@@ -396,6 +419,7 @@ class Scenario:
                 ctx.log("  early stop (objective reached)")
                 break
         self.drive_stop(ctx)
+        self._publish_fps(ctx)
         crits = list(self.judge(ctx))
         errs = ctx.chat_errors()
         crits.append(Criterion("no command errors in chat", not errs,

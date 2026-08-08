@@ -80,30 +80,18 @@ class CraftTable(Scenario):
     # for an item hanging over a void; it is simply not what this course means to ask.
     # Courses that mine therefore lay several layers, the way any real ground has them.
 
-    def drive_tick(self, ctx, elapsed):
-        """Sample the client's frame rate, so a starved run can be TOLD from a broken one.
-
-        This was missing, and it cost a diagnosis. Only the nav courses sampled fps, so every craft
-        verdict carried avg_fps=None -- and run_suite's starvation guard, which marks a run INVALID
-        below the healthy line, CANNOT FIRE on a value it never receives. A guard that can never
-        fire is the mirror image of a check that can never fail, and this suite had one all day.
-
-        It bit immediately: craft_stone_pickaxe went red twice while another project's containers
-        were taking ~500% of this box, with the bot stuck at one spot and "Failed exploring." x11.
-        Nothing in that verdict could distinguish a host problem from a code regression, which is
-        precisely what RULE ZERO exists to prevent.
-        """
-        ok, st = ctx.bot.py.try_call("getPerfStats")
-        if ok and isinstance(st, dict) and st.get("fps") is not None:
-            try:
-                ctx.geo.setdefault("fps", []).append(float(st["fps"]))
-            except (TypeError, ValueError):
-                pass
-
-    def _publish_fps(self, ctx):
-        """Hand the average to run_suite, which is where the starvation guard reads it."""
-        fps = ctx.geo.get("fps") or []
-        ctx.geo["avg_fps"] = (sum(fps) / len(fps)) if fps else None
+    # FRAME RATE IS SAMPLED BY Scenario._sample_fps, FOR EVERY SUITE.
+    #
+    # It used to be sampled here, and the comment that lived at this spot said why it had to be:
+    # only nav sampled fps, so every craft verdict carried avg_fps=None, and run_suite's starvation
+    # guard CANNOT FIRE on a value it never receives. A guard that can never fire is the mirror
+    # image of a check that can never fail, and this suite had one all day. It bit immediately --
+    # craft_stone_pickaxe went red twice while another project's containers took ~500% of this box.
+    #
+    # That reasoning was right and the placement was wrong. Copying it here fixed craft and left
+    # mob, end and pvp with the same hole; each was then found separately, days apart, by the same
+    # symptom. pvp was still missing it three fixes later. The tick loop shared by every scenario
+    # is the only place a sampler cannot be forgotten in.
 
     def drive_start(self, ctx):
         # Daylight and no monsters: this course is about the inventory, not about surviving.

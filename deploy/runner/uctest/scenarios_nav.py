@@ -61,13 +61,8 @@ class NavCourse(Scenario):
         return ((p[0] - gx) ** 2 + (p[1] - gy) ** 2 + (p[2] - gz) ** 2) ** 0.5
 
     def drive_tick(self, ctx, elapsed):
-        # FPS/engine sampling doubles as the PERF-1 baseline. Cheap and read-only.
-        ok, st = ctx.bot.py.try_call("getPerfStats")
-        if ok and isinstance(st, dict) and st.get("fps") is not None:
-            try:
-                ctx.geo["fps"].append(float(st["fps"]))
-            except (TypeError, ValueError):
-                pass
+        # FPS sampling moved to Scenario._sample_fps: it was copied into four scenario files and
+        # forgotten in the fifth (pvp), which left that whole suite unjudgeable by the guard.
         d = self._dist_to_goal(ctx)
         if d is not None and ctx.geo.get("reached_at") is None and d < self.goal_tolerance:
             ctx.geo["reached_at"] = elapsed

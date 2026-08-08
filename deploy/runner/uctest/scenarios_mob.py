@@ -71,24 +71,12 @@ class MobMelee(Scenario):
         ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
         ctx.geo["fps"] = []
 
-    def drive_tick(self, ctx, elapsed):
-        # THE MOB COURSES NEVER SAMPLED FRAME RATE, so every mob verdict carried avg_fps=0.0 and the
-        # starvation guard -- which can only downgrade a run it has an fps for -- could never fire on
-        # this suite. That is the same half-repair the craft ladder had: a starved mob run was
-        # recorded as a bot failure. Measured today with it missing: mob_skeleton FAIL with the bot
-        # at 3 hp and no way to tell whether dodging arrows is even possible at ~10 fps.
-        ok, st = ctx.bot.py.try_call("getPerfStats")
-        if ok and isinstance(st, dict) and st.get("fps") is not None:
-            try:
-                ctx.geo["fps"].append(float(st["fps"]))
-            except (TypeError, ValueError):
-                pass
-
-    def _publish_fps(self, ctx):
-        fps = ctx.geo.get("fps") or []
-        avg = sum(fps) / len(fps) if fps else None
-        ctx.geo["avg_fps"] = avg
-        return avg, len(fps)
+    # THE MOB COURSES NEVER SAMPLED FRAME RATE, so every mob verdict carried avg_fps=0.0 and the
+    # starvation guard -- which can only downgrade a run it has an fps for -- could never fire on
+    # this suite. Measured on the day it was found: mob_skeleton FAIL with the bot at 3 hp and no
+    # way to tell whether dodging arrows is even possible at ~10 fps.
+    # The sampler that fixed it now lives in Scenario._sample_fps, because it was the THIRD file to
+    # need its own copy and pvp was still missing a fourth.
 
     def drive_start(self, ctx):
         # Night, because a zombie in daylight BURNS: measured at about 1.2 HP a second, which

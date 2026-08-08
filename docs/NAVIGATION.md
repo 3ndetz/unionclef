@@ -184,13 +184,27 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ## Course status
 
-### BOTH SUITES FULLY GREEN — 2026-08-07
+### FULL AUDIT — 2026-08-08, all four suites, ZERO gate failures
 
 ```
-nav    11/11   flat staircase steep gaps descend water ladder slime break wall2 bridge
-craft  12 courses  table wood_pick stone_pick mine_stone smelt iron_pick wander distant_table
-                  tree canopy diamond escape_lava
+nav    12 courses   11 PASS   1 INVALID (nav_hazard)
+craft  12 courses   10 PASS   2 INVALID (chop_tree, mine_diamond)
+end     3 courses    2 PASS   1 info    (end_dragon gates nothing)
+pvp    12 courses   10 ok     2 gate failures (edge_duel, allround)
 ```
+
+nav: flat staircase steep gaps descend water ladder slime break wall2 bridge **hazard**
+craft: table wood_pick stone_pick mine_stone smelt iron_pick wander distant_table tree canopy
+diamond escape_lava
+
+**The INVALIDs are the host, not the bot** — every course above ran between roughly 8 and 12 fps
+against a floor of 14, and the three that went INVALID are the heavy ones. A bare "12/12" would
+hide that, which is why the counts are split.
+
+⛔ **THE LINE HERE USED TO READ `nav 11/11`, AND nav HAS TWELVE COURSES.** It was true when
+written and was left standing after `nav_hazard` was added — the same defect class as every
+instrument bug in the 0.74.0 notes: a number that was correct on the day and never revisited.
+Both figures on this page are now filled from a suite run, not from memory.
 
 `escape_lava` was added last and is the one worth reading about: it took seven runs to become an
 instrument, produced a false red (its own arena), a false green (the spawn point satisfied its exit
@@ -213,7 +227,7 @@ degrades the stand ("the last full sequential run reported 6/10"), and it went e
 The load that produced 9-10 fps on the craft ladder an hour earlier was still on the box.
 
 
-### The craft ladder — 5/5 GREEN (added 2026-08-07)
+### The craft ladder — TWELVE courses (started at 5, added 2026-08-07)
 
 A second suite, `run_suite.py craft`, on the FLAT arena rather than a survival world. It exists
 because crafting was only ever measured through `@gamer`, which costs ten minutes and cannot answer
@@ -233,7 +247,11 @@ chop_canopy            PASS   a close UNREACHABLE bait      (the #37 trap)
 mine_diamond           PASS   ore needing a minimum tool    (tool selection)
 ```
 
-**11/11 as of 2026-08-07.** Grown from five courses to eleven in one day, and every course added
+The table above lists eleven; `escape_lava` is the twelfth and is described below it. The last
+measured tally is **10 PASS / 2 INVALID on 2026-08-08** — see the audit block at the top of this
+section, and note that `chop_tree` and `mine_diamond` are unmeasurable on this host rather than red.
+
+Grown from five courses to twelve in one day, and every course added
 found something: the join between smelting and crafting, the recovery path nothing else touched,
 and the bait that turned out to cost the bot every block in the world.
 
