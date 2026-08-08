@@ -436,6 +436,15 @@ public class PathExecutor {
 			    // are re-expressed from the planner's yaw frame into the one the bot is actually
 			    // facing, which preserves the WORLD-SPACE direction of travel. Gated on
 			    // BowShooter.isActive(), so ordinary navigation is byte-for-byte unchanged.
+			    // FOR THE WHOLE DRAW, NOT JUST THE END OF IT — TRIED THE NARROW VERSION AND IT
+			    // MEASURED WORSE. Reasoning that facing the target costs the sprint (vanilla only
+			    // sprints while moving FORWARD), I gated this on BowShooter.isAimCritical(), the
+			    // last few ticks before release, expecting the distance back. It halved the shots
+			    // and returned nothing:
+			    //     whole draw   bowShots 5 / 5 / 3    avg_dist 4.95 / 6.51 / 6.02
+			    //     last ticks   bowShots 2            avg_dist 5.98
+			    // So the sprint story does not explain the distance, and isAimCritical stays in
+			    // BowShooter unused-by-this-path rather than being wired on a hunch.
 			    boolean aiming = kaptainwutax.tungsten.task.BowShooter.isActive();
 			    boolean fwd = node.input.forward, back = node.input.back;
 			    boolean left = node.input.left, right = node.input.right;

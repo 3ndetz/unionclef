@@ -52,6 +52,29 @@ public class BowShooter {
     public static boolean isActive() { return active; }
     public static int getShotsFired() { return shotsFired; }
 
+    /**
+     * Is the draw close enough to release that the aim should own the camera?
+     *
+     * <p>WHY THIS IS NARROWER THAN {@link #isActive()}. PathExecutor hands the camera to the aim
+     * while a shot is in progress, because movement otherwise overwrites the yaw every tick and the
+     * arrow is never loosed. That works — shots went from 1 in 20 to 5 — but facing the target
+     * means travelling on the strafe and back keys, and VANILLA ONLY SPRINTS WHILE MOVING FORWARD.
+     * So the whole flight was being run at walking pace to buy a shot once a second:
+     *
+     *     pre-fix   avg_dist 7.17   bowShots 1
+     *     post-fix  avg_dist 4.95 / 6.51 / 6.02   bowShots 5 / 5 / 3
+     *
+     * <p>The draw takes {@link #CHARGE_TICKS} ticks and only the last of them need the crosshair on
+     * the solution. Before that the bot may as well be sprinting away with its back turned, which
+     * is what keeps the gap open. So the camera is claimed only for the final stretch, and the cost
+     * is paid for a fraction of a second per arrow instead of for the entire flight.
+     */
+    private static final int AIM_LOCK_TICKS = 6;
+
+    public static boolean isAimCritical() {
+        return active && chargeTicks >= CHARGE_TICKS - AIM_LOCK_TICKS;
+    }
+
     /** Zero the shot tally so a bench run measures its own shots, not the stand's history.
      *  Called from resetRunCounters alongside every other per-run counter. */
     public static void resetShotsFired() { shotsFired = 0; }
