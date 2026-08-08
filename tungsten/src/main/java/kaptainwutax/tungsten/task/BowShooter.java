@@ -35,8 +35,12 @@ public class BowShooter {
     private static int totalTicks = 0;
     private static boolean active = false;
     private static int shotsFired = 0;
+    private static int wildShots = 0;
     private static Vec3d lastTargetPos = null;       // for position-delta velocity
     private static Vec3d trackedVel = Vec3d.ZERO;
+
+    /** Draw length past which vanilla fires on key release — see {@link #getWildShots()}. */
+    private static final int VANILLA_FIRES_AFTER = 3;
 
     public static synchronized boolean shootAt(Entity entity) {
         if (entity == null) return false;
@@ -51,6 +55,21 @@ public class BowShooter {
 
     public static boolean isActive() { return active; }
     public static int getShotsFired() { return shotsFired; }
+
+    /**
+     * Arrows thrown away by an ABORT rather than aimed — and they are real arrows.
+     *
+     * <p>{@link #stop()} drops the use key, and in vanilla dropping the use key on a drawn bow IS
+     * the shot: {@code BowItem.onStoppedUsing} fires whenever {@code getPullProgress(useTicks)}
+     * reaches 0.1, which {@code (t/20)^2 + 2(t/20) > 0.3} puts at about 2.8 ticks of draw. All
+     * three abort paths — timeout, target removed, out of range — are reached far past that.
+     *
+     * <p>So an aborted draw is not a cancelled shot, it is an arrow loosed wherever the camera
+     * happened to point, usually mid-slew. {@code shotsFired} never saw them, which makes
+     * "bowShots=6 requested~20" mean "6 AIMED, the rest thrown", not "14 never happened" — the
+     * same shape of lie as the landed_swings undercount.
+     */
+    public static int getWildShots() { return wildShots; }
 
     /**
      * Is the draw close enough to release that the aim should own the camera?
@@ -77,9 +96,12 @@ public class BowShooter {
 
     /** Zero the shot tally so a bench run measures its own shots, not the stand's history.
      *  Called from resetRunCounters alongside every other per-run counter. */
-    public static void resetShotsFired() { shotsFired = 0; }
+    public static void resetShotsFired() { shotsFired = 0; wildShots = 0; }
 
     public static void stop() {
+        // Count the arrow this release is about to throw. Ordered BEFORE active is cleared, since
+        // TungstenMod's global stop() calls this with nothing drawn and that must not count.
+        if (active && chargeTicks >= VANILLA_FIRES_AFTER) wildShots++;
         active = false;
         target = null;
         MinecraftClient.getInstance().options.useKey.setPressed(false);

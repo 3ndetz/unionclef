@@ -426,8 +426,13 @@ class BowFlee(Scenario):
         # them. Measured from the chat logs of two earlier runs before this line existed --
         # bow_flee released 0 of ~20 requested shots, bow_flee_hard released 2 -- so this counter
         # has a value to prove itself against on the very first run that prints it.
+        # bowShots counts only the AIMED releases. An aborted draw is not a cancelled shot —
+        # vanilla fires on key release past ~3 ticks of draw — so bowWild is the rest of the
+        # arrows, thrown wherever the camera happened to point. Reading bowShots alone made
+        # "6 of ~20" look like "14 never happened" when it means "14 were thrown away".
         yield Criterion("arrows actually loosed (recorded, not gated)", True,
-                        f"bowShots={_stat(ctx, 'bowShots')} requested~{int(self.duration / 3)}",
+                        f"bowShots={_stat(ctx, 'bowShots')} bowWild={_stat(ctx, 'bowWild')}"
+                        f" requested~{int(self.duration / 3)}",
                         gate=False)
         yield Criterion("self-falls == 0", ctx.self_falls == 0,
                         f"self={ctx.self_falls}")
@@ -453,8 +458,13 @@ class BowFleeHard(BowFlee):
         # Same reading as bow_flee, and the pair is the whole point: this course releases arrows
         # (2 per run in the logs) while bow_flee releases none, which is what says the fault is
         # "cannot shoot while MOVING" rather than "cannot shoot".
+        # bowShots counts only the AIMED releases. An aborted draw is not a cancelled shot —
+        # vanilla fires on key release past ~3 ticks of draw — so bowWild is the rest of the
+        # arrows, thrown wherever the camera happened to point. Reading bowShots alone made
+        # "6 of ~20" look like "14 never happened" when it means "14 were thrown away".
         yield Criterion("arrows actually loosed (recorded, not gated)", True,
-                        f"bowShots={_stat(ctx, 'bowShots')} requested~{int(self.duration / 3)}",
+                        f"bowShots={_stat(ctx, 'bowShots')} bowWild={_stat(ctx, 'bowWild')}"
+                        f" requested~{int(self.duration / 3)}",
                         gate=False)
 
 
