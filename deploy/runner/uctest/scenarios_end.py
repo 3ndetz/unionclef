@@ -270,6 +270,22 @@ class EndDragon(EndCourse):
         for y in range(73, 90):
             r.cmd(f"execute in {END} run fill -20 {y} -20 20 {y} 20 air")
         r.cmd(f"execute in {END} run fill -16 74 -16 16 74 16 end_stone")
+        # A BEDROCK FOUNTAIN, BECAUSE BOTH STRATEGIES LOOK FOR ONE.
+        # KillEnderDragonTask.locateExitPortalTop is just
+        # WorldHelper.getGroundHeight(0, 0, Blocks.BEDROCK) -- the highest bedrock at the origin --
+        # so the structure can be built rather than generated. Without it the task has no podium to
+        # reason about at all. Whether a SUMMONED dragon will actually perch on it is a different
+        # question, and one only a run can answer.
+        # IT ANSWERED: NO. With the fountain built AND the non-bed strategy (@test dragon-old), the
+        # dragon still took zero damage in four minutes, and the log shows no engagement at all --
+        # KillEnderDragonTask sits in Mode.WAITING_FOR_PERCH, and a dragon summoned into a world
+        # with no EnderDragonFight instance never perches. Both strategies wait on the same event.
+        # A FAIR DRAGON COURSE THEREFORE NEEDS A GENUINELY GENERATED END, entered through a real
+        # portal so the fight instance exists. That is a world-setup problem, not a course problem,
+        # and it is not something rcon can fabricate. Recorded so the next attempt starts here
+        # instead of rebuilding this fountain and rediscovering it.
+        r.cmd(f"execute in {END} run fill -2 74 -2 2 74 2 minecraft:bedrock")
+        r.cmd(f"execute in {END} run fill 0 75 0 0 77 0 minecraft:bedrock")
         ctx.geo["goal"] = (0, 75, 0)
         ctx.geo["fps"] = []
         arena.floor(-3, -3, 6, 3, "stone")
@@ -296,7 +312,9 @@ class EndDragon(EndCourse):
         time.sleep(2)
         ctx.geo["hp0"] = self._dragon_health(ctx)
         ctx.geo["hp_min"] = ctx.geo["hp0"]
-        ctx.bot.cmd("@test dragon")
+        # dragon-old = KillEnderDragonTask, which finds its own podium via bedrock rather than
+        # needing the vanilla EnderDragonFight the bed strategy leans on.
+        ctx.bot.cmd("@test dragon-old")
 
     def drive_tick(self, ctx, elapsed):
         ok, st = ctx.bot.py.try_call("getPerfStats")
