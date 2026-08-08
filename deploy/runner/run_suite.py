@@ -357,7 +357,7 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("suite", nargs="?", help="suite name (pvp)")
-    ap.add_argument("--only", help="run one scenario id")
+    ap.add_argument("--only", help="scenario id, or a comma-separated list of them")
     ap.add_argument("--repeat", type=int, default=1)
     ap.add_argument("--record", action="store_true",
                     help="record tester1's screen per scenario (x11grab)")
@@ -387,10 +387,19 @@ def main():
         return 0
     scenarios = SUITES[args.suite]
     if args.only:
-        scenarios = [c for c in scenarios if c.id == args.only]
-        if not scenarios:
-            print(f"no scenario '{args.only}' in suite {args.suite}")
+        # A LIST, not one id: a targeted pass is almost always "the course I fixed plus the
+        # baselines it could have broken", and running those as N separate invocations restarts
+        # the whole stand N times. Name the misses individually — reporting only "no scenario
+        # '<the entire list>'" hides which element was the typo.
+        wanted = [s.strip() for s in args.only.split(",") if s.strip()]
+        known = {c.id for c in scenarios}
+        missing = [w for w in wanted if w not in known]
+        if missing:
+            print(f"no scenario {', '.join(repr(m) for m in missing)} in suite {args.suite}")
+            print(f"  available: {', '.join(sorted(known))}")
             return 2
+        order = {w: i for i, w in enumerate(wanted)}
+        scenarios = sorted((c for c in scenarios if c.id in order), key=lambda c: order[c.id])
 
     stamp = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     art_root = os.path.join(os.path.dirname(os.path.abspath(__file__)),
