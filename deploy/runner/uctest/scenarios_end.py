@@ -340,7 +340,11 @@ class EndDragon(EndCourse):
         yield Criterion("the dragon LOST HEALTH", gone or (hp0 is not None and hpm is not None and hpm < hp0),
                         f"hp {hp0} -> {hpm}{' (gone)' if gone else ''}")
         yield Criterion("dragon killed", gone, f"gone={gone}", gate=False)
-        yield Criterion("bot survived", ctx.deaths == 0, f"deaths={ctx.deaths}", gate=False)
+        # ctx.deaths is a METHOD. This compared the bound method object to 0 -- always false --
+        # and printed "<bound method Ctx.deaths of ...>" as its detail, which is how it was
+        # spotted. A criterion that cannot be true is the mirror of one that cannot fail, and
+        # this suite was written the same day the checklist gained a rule about exactly that.
+        yield Criterion("bot survived", ctx.deaths() == 0, f"deaths={ctx.deaths()}", gate=False)
 
 
 SCENARIOS = [EndWalk, EndGateway, EndDragon]

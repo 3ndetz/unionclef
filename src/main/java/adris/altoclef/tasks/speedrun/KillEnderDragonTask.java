@@ -10,6 +10,7 @@ import adris.altoclef.tasks.entity.AbstractKillEntityTask;
 import adris.altoclef.tasks.entity.DoToClosestEntityTask;
 import adris.altoclef.tasks.misc.EquipArmorTask;
 import adris.altoclef.tasks.movement.GetToBlockTask;
+import adris.altoclef.util.helpers.TungstenHelper;
 import adris.altoclef.tasks.movement.PickupDroppedItemTask;
 import adris.altoclef.tasks.resources.CollectBlockByOneTask;
 import adris.altoclef.tasksystem.Task;
@@ -20,7 +21,6 @@ import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.time.TimerGame;
-import baritone.api.pathing.goals.GoalGetToBlock;
 import kaptainwutax.tungsten.path.movements.Rotation;
 import kaptainwutax.tungsten.util.WindMouseRotation;
 import kaptainwutax.tungsten.path.movements.Input;
@@ -334,9 +334,19 @@ public class KillEnderDragonTask extends Task {
                                         }
                                     }
                                     if (closest != null) {
-                                        mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(
-                                                new GoalGetToBlock(closest)
-                                        );
+                                        // DRIVE THE BODY, NOT THE DEAD ENGINE. This asked
+                                        // getCustomGoalProcess() to path -- the legacy hand-off
+                                        // that tungsten replaced, so the goal was set on an engine
+                                        // that moves nothing. The guard above it reads the same
+                                        // dead process (Nav.hasGoal -> customGoalProcess.isActive),
+                                        // so it was always true and this always "re-set" a goal
+                                        // nobody would act on. end_dragon records exactly that:
+                                        // zero damage in four minutes, "wandering timeout", and the
+                                        // movement chains dropping after "body has not left ... for
+                                        // 121 ticks". Same shape as InteractWithBlockTask (RULE
+                                        // FOUR) and GetToOuterEndIslandsTask before it.
+                                        TungstenHelper.tryPathTo(new Vec3d(
+                                                closest.getX() + 0.5, closest.getY(), closest.getZ() + 0.5));
                                     }
                                 }
                             }
@@ -364,10 +374,13 @@ public class KillEnderDragonTask extends Task {
                                 _randomWanderChangeTimeout.reset();
                                 Nav.clearGoal();
                             }
-                            if (!Nav.hasGoal()) {
-                                mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(
-                                        new GoalGetToBlock(_randomWanderPos)
-                                );
+                            // Same dead hand-off as the rail branch above: the wander that is
+                            // supposed to keep the bot moving while the dragon circles never moved
+                            // it at all.
+                            if (_randomWanderPos != null) {
+                                TungstenHelper.tryPathTo(new Vec3d(
+                                        _randomWanderPos.getX() + 0.5, _randomWanderPos.getY(),
+                                        _randomWanderPos.getZ() + 0.5));
                             }
                             setDebugState("Waiting for perch");
                         }
