@@ -2219,6 +2219,8 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdPlanGiveUp = 0;
         kaptainwutax.tungsten.path.PathExecutor.execArrived = 0;
         kaptainwutax.tungsten.path.PathExecutor.execRanOut = 0;
+        kaptainwutax.tungsten.path.PathExecutor.execTicks = 0;
+        kaptainwutax.tungsten.path.PathExecutor.execSprintTicks = 0;
         adris.altoclef.tasks.construction.DestroyBlockTask.dbTick = 0;
         adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachMove = 0;
         adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachWater = 0;
@@ -2459,7 +2461,7 @@ public class Py4jEntryPoint {
         return String.format(
                 "called=%d deferred=%d inRange=%d clicked=%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
-                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d pdLegacy=%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
+                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d pdLegacy=%d exArrived=%d exRanOut=%d exSprint=%d/%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d mqNull=%d gaveUp=%d/%d dc=%d/%d/%d/%d/%d mc=%d/%d/%d/%d/%d mcFlight=%d toolSwap=%d recipesKnown=%d wander=%d wanderMoved=%d wanderChk=%d/%d wanderFail=%d lavaEsc=%d lavaCond=%d/%d surv=%d/%d tbl=%d/%d@%d bs=%d/%d/%d/%d@%dms navUnsafeAir=%d sm=%d/%d smWater=%d srch=%d/%d/%d drop=%d/%d scan=%d/%d/%d cb=%d/%d/%d/%d et=%d/%d"
                         + " sprint=%d/%d lowHp=%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdFleeStuck=%d mdPillarD=%d dmgTaken=%.1f hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d bowShots=%d bowWild=%d bowAimTO=%d bowDrawTO=%d bowBestMiss=%.2f bowFacing=%d bowNoRoom=%d flee=%d/%d/%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
@@ -2494,6 +2496,11 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdLegacyPath,
                 kaptainwutax.tungsten.path.PathExecutor.execArrived,
                 kaptainwutax.tungsten.path.PathExecutor.execRanOut,
+                // sprinted / total executor ticks. The sprint is chosen by the PATH NODE
+                // (SprintPolicy at move-generation time), not by the executor, so a flee that never
+                // requests it walks the whole way and no amount of shooting discipline can matter.
+                kaptainwutax.tungsten.path.PathExecutor.execSprintTicks,
+                kaptainwutax.tungsten.path.PathExecutor.execTicks,
                 adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdLastUnknownGoal,
                 adris.altoclef.tasks.construction.DestroyBlockTask.dbTick,
                 adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachMove,

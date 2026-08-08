@@ -103,6 +103,8 @@ public class PathExecutor {
     public static volatile int placeCalled=0, placeDeferred=0, placeInRange=0, placeClicked=0;
     /** How a replayed path ended: within 1.5 blocks of its last cell, or simply out of ticks. */
     public static volatile int execArrived=0, execRanOut=0;
+    /** Ticks the executor replayed, and how many of them requested SPRINT — see the tick loop. */
+    public static volatile int execTicks=0, execSprintTicks=0;
     private int placingTicks = 0;
 
     public PathExecutor(boolean isClient) {
@@ -469,6 +471,15 @@ public class PathExecutor {
 			    options.jumpKey.setPressed(node.input.jump);
 			    options.sneakKey.setPressed(node.input.sneak);
 			    options.sprintKey.setPressed(node.input.sprint);
+			    // HOW MUCH OF A JOURNEY IS ACTUALLY SPRINTED — never counted until now, and it is
+			    // the quantity every "the bot is too slow" reading has been assuming. The sprint
+			    // comes from the PATH NODE, i.e. from SprintPolicy during move generation; the
+			    // executor only replays it. On bow_flee the bot paths 80% of the run, faces its
+			    // pursuer 14%, and STILL cannot pull away from a chaser the course afflicted with
+			    // slowness — so either those ticks sprint and the explanation lies elsewhere, or
+			    // they do not and three mechanisms were chased tonight for nothing.
+			    execTicks++;
+			    if (node.input.sprint) execSprintTicks++;
 		    }
 //		    if(this.tick != 0 && options != null) {
 //			    this.path.get(this.tick - 1).agent.compare(player, optionsToPlayerInput(options), true);
