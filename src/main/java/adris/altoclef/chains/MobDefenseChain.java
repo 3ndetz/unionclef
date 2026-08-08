@@ -43,9 +43,6 @@ import net.minecraft.entity.projectile.thrown.PotionEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-//#if MC < 12111
-import net.minecraft.item.SwordItem;
-//#endif
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -575,11 +572,7 @@ public class MobDefenseChain extends SingleTaskChain {
             if (!toDealWithList.isEmpty()) {
 
                 // Depending on our weapons/armor, we may choose to straight up kill hostiles if we're not dodging their arrows.
-                //#if MC < 12111
-                SwordItem bestSword = getBestSword(mod);
-                //#else
-                //$$ var bestSword = getBestSword(mod);
-                //#endif
+                Item bestSword = getBestSword(mod);
 
                 int armor = mod.getPlayer().getArmor();
                 // ASK THE ITEM WHAT IT HITS FOR. ONE ANSWER, BOTH VERSIONS.
@@ -709,33 +702,32 @@ public class MobDefenseChain extends SingleTaskChain {
         return mod.getItemStorage().hasItem(Items.SHIELD) || mod.getItemStorage().hasItemInOffhand(Items.SHIELD);
     }
 
-    //#if MC < 12111
-    private static SwordItem getBestSword(AltoClef mod) {
-        Item[] SWORDS = new Item[]{Items.NETHERITE_SWORD, Items.DIAMOND_SWORD, Items.IRON_SWORD, Items.GOLDEN_SWORD,
-                Items.STONE_SWORD, Items.WOODEN_SWORD};
-
-        SwordItem bestSword = null;
-        for (Item item : SWORDS) {
-            if (mod.getItemStorage().hasItem(item)) {
-                bestSword = (SwordItem) item;
-                break;
+    /**
+     * The hardest-hitting melee weapon in the pack, or null if we are carrying none.
+     *
+     * <p>NULL IS LOAD-BEARING HERE and is why this is not just {@code bestWeapon(mod)}: the caller
+     * reads null as "unarmed", which zeroes the damage term AND withdraws the shield bonus. A
+     * method that falls back to whatever is in the hand can never say "unarmed", so an empty-handed
+     * bot would score as armed.
+     *
+     * <p>It used to walk a hardcoded list of the six vanilla swords in a fixed order, which is both
+     * a hardcode this project's design rules reject and slightly wrong -- it ranked GOLDEN (4
+     * damage) above STONE (5), so a bot carrying both estimated its own damage low. Asking the
+     * items for their numbers is shorter, needs no version split, and covers weapons the list never
+     * knew about.
+     */
+    private static Item getBestSword(AltoClef mod) {
+        Item best = null;
+        float bestDamage = 0;
+        for (ItemStack stack : mod.getItemStorage().getItemStacksPlayerInventory(true)) {
+            float damage = adris.altoclef.util.helpers.ItemHelper.meleeDamageOf(stack.getItem());
+            if (damage > bestDamage) {
+                best = stack.getItem();
+                bestDamage = damage;
             }
         }
-        return bestSword;
+        return best;
     }
-    //#else
-    //$$ // TODO [1.21.11] sword item class deleted — return Item and get damage from component
-    //$$ private static Item getBestSword(AltoClef mod) {
-    //$$     Item[] SWORDS = new Item[]{Items.NETHERITE_SWORD, Items.DIAMOND_SWORD, Items.IRON_SWORD, Items.GOLDEN_SWORD,
-    //$$             Items.STONE_SWORD, Items.WOODEN_SWORD};
-    //$$     for (Item item : SWORDS) {
-    //$$         if (mod.getItemStorage().hasItem(item)) {
-    //$$             return item;
-    //$$         }
-    //$$     }
-    //$$     return null;
-    //$$ }
-    //#endif
 
     /**
      * Attack damage the item adds, straight from its own attribute modifiers.
@@ -750,29 +742,7 @@ public class MobDefenseChain extends SingleTaskChain {
      * the bug this fixes.
      */
     private static float meleeDamageOf(Item item) {
-        if (item == null) {
-            return 0;
-        }
-        try {
-            ItemStack stack = new ItemStack(item);
-            var comp = stack.get(net.minecraft.component.DataComponentTypes.ATTRIBUTE_MODIFIERS);
-            if (comp == null) {
-                return 0;
-            }
-            float sum = 0;
-            for (var entry : comp.modifiers()) {
-                String path = entry.attribute().getKey()
-                        .map(k -> k.getValue().getPath()).orElse("");
-                if ("attack_damage".equals(path)) {
-                    sum += (float) entry.modifier().value();
-                }
-            }
-            return sum;
-        } catch (Throwable t) {
-            // A reading that throws must not decide a fight. Say "no weapon" and let the bot flee,
-            // which is the safe half of the choice.
-            return 0;
-        }
+        return adris.altoclef.util.helpers.ItemHelper.meleeDamageOf(item);
     }
 
     /** Anything in the pack we can stand on. Without one, height is not an option. */

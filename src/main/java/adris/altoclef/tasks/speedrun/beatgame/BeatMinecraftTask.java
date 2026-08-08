@@ -1229,17 +1229,14 @@ public class BeatMinecraftTask extends Task {
 
         mod.getClientBaritoneSettings().blockPlacementPenalty.value = blockPlacementPenalty;
 
+        // GET THE EYE OUT OF THE HAND. On 1.21.11 this whole block was a TODO comment, so the bot
+        // walked the stronghold approach holding an eye of ender with nothing to fight with. Asking
+        // for the best melee weapon replaces both the version split and the old loop, which equipped
+        // EVERY sword it found in turn and kept whichever happened to be last.
         if (mod.getPlayer().getMainHandStack().getItem() instanceof EnderEyeItem && !openingEndPortal) {
-            List<ItemStack> itemStacks = itemStorage.getItemStacksPlayerInventory(true);
-            for (ItemStack itemStack : itemStacks) {
-                Item item = itemStack.getItem();
-                //#if MC < 12111
-                if (item instanceof SwordItem) {
-                    mod.getSlotHandler().forceEquipItem(item);
-                }
-                //#else
-                //$$ // TODO [1.21.11] sword-class deleted — equip sword via item ID check
-                //#endif
+            Item weapon = adris.altoclef.tasks.entity.AbstractKillEntityTask.bestWeapon(mod);
+            if (weapon != null && adris.altoclef.util.helpers.ItemHelper.meleeDamageOf(weapon) > 0) {
+                mod.getSlotHandler().forceEquipItem(weapon);
             }
         }
 

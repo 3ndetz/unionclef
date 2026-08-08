@@ -670,19 +670,87 @@ public class ItemHelper {
         return false;
     }
 
+    /**
+     * Attack damage this item adds, read from its own attribute modifiers.
+     *
+     * <p>THE ONE ANSWER TO "HOW HARD DOES THIS HIT", FOR EVERY VERSION. It used to be asked as
+     * {@code item instanceof SwordItem} followed by {@code getMaterial().getAttackDamage()}, and
+     * 1.21.11 deleted both the class and the material accessor. Every site that asked it was left
+     * with a preprocessor branch whose 1.21.11 half was an empty stub, so on the live version the
+     * answer was silently ZERO -- see {@link adris.altoclef.control.KillAura#equipWeapon}, whose
+     * whole body sat in the dead half.
+     *
+     * <p>Matched by the attribute's registry PATH rather than an EntityAttributes constant: the
+     * constant is GENERIC_ATTACK_DAMAGE on one version and ATTACK_DAMAGE on the other, and the
+     * point of this method is to stop maintaining two spellings of one question. The registry id
+     * is "attack_damage" on both.
+     *
+     * <p>Returns 0 for anything that is not a weapon, which every caller reads as "no weapon".
+     */
+    public static float meleeDamageOf(net.minecraft.item.Item item) {
+        return attributeSum(item, "attack_damage");
+    }
+
+    /**
+     * Damage per second, which is what "best weapon" actually means.
+     *
+     * <p>Ranking by raw damage picks a netherite AXE (10) over a netherite SWORD (8), and the axe
+     * swings at 1.0/s against the sword's 1.6 -- 10 dps against 12.8. The old code dodged this by
+     * only ever considering swords, which it could do because it had a sword CLASS to test. With
+     * the class gone, asking the item how fast it swings is both the smaller change and the more
+     * correct one: it needs no class, no tag and no item list, and it prefers swords for the
+     * reason a player does rather than by fiat.
+     *
+     * <p>Base values are the vanilla player's: 1 damage, 4 swings a second, before modifiers.
+     */
+    public static float meleeDps(net.minecraft.item.Item item) {
+        float damage = 1.0f + attributeSum(item, "attack_damage");
+        float speed = 4.0f + attributeSum(item, "attack_speed");
+        if (speed <= 0) {
+            return 0;
+        }
+        return damage * speed;
+    }
+
+    private static float attributeSum(net.minecraft.item.Item item, String path) {
+        if (item == null) {
+            return 0;
+        }
+        try {
+            ItemStack stack = new ItemStack(item);
+            var comp = stack.get(net.minecraft.component.DataComponentTypes.ATTRIBUTE_MODIFIERS);
+            if (comp == null) {
+                return 0;
+            }
+            float sum = 0;
+            for (var entry : comp.modifiers()) {
+                String id = entry.attribute().getKey().map(k -> k.getValue().getPath()).orElse("");
+                if (path.equals(id)) {
+                    sum += (float) entry.modifier().value();
+                }
+            }
+            return sum;
+        } catch (Throwable t) {
+            // A reading that throws must not decide a fight. Say "no weapon" -- the safe half.
+            return 0;
+        }
+    }
+
     public static WeaponThreat getWeaponThreat(AltoClef mod, PlayerEntity entity) {
         ItemStack stack = entity.getMainHandStack();
         if (stack != null) {
             if (holdWeapon(entity, RangedTopPriority)) return WeaponThreat.Ranged;
             net.minecraft.item.Item handItem = stack.getItem();
             float damage = (float) entity.getAttributeValue(EntityAttributes.GENERIC_ATTACK_DAMAGE);
-            //#if MC < 12111
-            if (handItem instanceof ToolItem tool && (tool instanceof SwordItem || tool instanceof AxeItem)) {
-                damage += tool.getMaterial().getAttackDamage() + 3;
+            // ASK THE ITEM, DO NOT ASK ITS CLASS. The version split that used to live here had an
+            // EMPTY 1.21.11 half, so an enemy holding a diamond sword was read as Harmless unless
+            // their base attack attribute already cleared 4 -- on the version this mod ships for.
+            // The +3 the old branch added on top of the material damage is kept: it is the melee
+            // threat bonus this scale was tuned with, not part of the item's own numbers.
+            float weapon = meleeDamageOf(handItem);
+            if (weapon > 0) {
+                damage += weapon + 3;
             }
-            //#else
-            //$$ // TODO [1.21.11] tool-class/sword-class deleted — get attack damage from Item.Settings component
-            //#endif
             //#if MC >= 12100
             if (handItem instanceof net.minecraft.item.TridentItem || handItem instanceof net.minecraft.item.MaceItem) {
                 damage += 7f;

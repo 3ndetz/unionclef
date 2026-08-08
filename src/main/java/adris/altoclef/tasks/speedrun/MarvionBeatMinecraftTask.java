@@ -561,16 +561,11 @@ public class MarvionBeatMinecraftTask extends Task {
 
         if (mod.getPlayer().getMainHandStack().getItem() instanceof EnderEyeItem && !openingEndPortal
                 && StorageHelper.getItemStackInCursorSlot().isEmpty()) {
-            List<ItemStack> itemStacks = mod.getItemStorage().getItemStacksPlayerInventory(true);
-            for (ItemStack itemStack : itemStacks) {
-                Item item = itemStack.getItem();
-                //#if MC < 12111
-                if (item instanceof SwordItem) {
-                    mod.getSlotHandler().forceEquipItem(item);
-                }
-                //#else
-                //$$ // TODO [1.21.11] sword-class deleted — equip sword via item ID check
-                //#endif
+            // Same fix as BeatMinecraftTask: one weapon, chosen by what it hits for, on both
+            // versions. The 1.21.11 half of the split this replaces was an empty TODO.
+            Item weapon = adris.altoclef.tasks.entity.AbstractKillEntityTask.bestWeapon(mod);
+            if (weapon != null && adris.altoclef.util.helpers.ItemHelper.meleeDamageOf(weapon) > 0) {
+                mod.getSlotHandler().forceEquipItem(weapon);
             }
         }
         boolean eyeGearSatisfied = StorageHelper.isArmorEquippedAll(COLLECT_EYE_ARMOR);

@@ -3,6 +3,7 @@ package adris.altoclef.tasks.entity;
 import adris.altoclef.AltoClef;
 import adris.altoclef.Debug;
 import adris.altoclef.tasksystem.Task;
+import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.KillAuraHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
@@ -16,9 +17,6 @@ import net.minecraft.item.AxeItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-//#if MC < 12111
-import net.minecraft.item.SwordItem;
-//#endif
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import adris.altoclef.tasks.movement.GetToEntityTask;
@@ -159,38 +157,44 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
 
     // --- Weapon helpers ---
 
+    /**
+     * Attack damage of an item. One reading, both versions -- see {@link ItemHelper#meleeDamageOf}.
+     *
+     * <p>The version split that used to live here returned 0 on 1.21.11 for EVERY item, because
+     * its 1.21.11 half was an empty stub. Everything downstream that compared weapons therefore
+     * compared zeroes.
+     */
     public static float getAttackDamage(Item item) {
-        //#if MC < 12111
-        if (item instanceof SwordItem sword) return sword.getMaterial().getAttackDamage();
-        if (item instanceof AxeItem axe) return axe.getMaterial().getAttackDamage();
-        //#else
-        //$$ // TODO [1.21.11] sword-class/AxeItem.getMaterial() removed — get attack damage from components
-        //#endif
-        return 0;
+        return ItemHelper.meleeDamageOf(item);
     }
 
+    /**
+     * The best melee weapon in the pack, or what is already held if nothing beats it.
+     *
+     * <p>ON 1.21.11 THIS USED TO RETURN WHATEVER WAS IN THE HAND, ALWAYS. The inventory scan was
+     * written against {@code instanceof SwordItem} and lived entirely inside the {@code
+     * MC < 12111} branch; the 1.21.11 half was a TODO comment, so the loop simply did not exist
+     * and the method degenerated to "read the equip slot". A bot with a diamond sword in its pack
+     * and dirt in its hand went to fight with the dirt.
+     *
+     * <p>Now ranked by {@link ItemHelper#meleeDps} with no version split and no class test. Damage
+     * per second rather than raw damage is what makes this correct without a sword class: it
+     * prefers a sword to an axe the way the numbers do, not by naming the type.
+     */
     public static Item bestWeapon(AltoClef mod) {
         List<ItemStack> invStacks = mod.getItemStorage().getItemStacksPlayerInventory(true);
 
         Item bestItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
-        float bestDamage = Float.NEGATIVE_INFINITY;
-
-        //#if MC < 12111
-        if (bestItem instanceof SwordItem handToolItem) {
-            bestDamage = handToolItem.getMaterial().getAttackDamage();
-        }
+        float bestDps = ItemHelper.meleeDps(bestItem);
 
         for (ItemStack invStack : invStacks) {
-            if (!(invStack.getItem() instanceof SwordItem item)) continue;
-            float itemDamage = item.getMaterial().getAttackDamage();
-            if (itemDamage > bestDamage) {
+            Item item = invStack.getItem();
+            float dps = ItemHelper.meleeDps(item);
+            if (dps > bestDps) {
                 bestItem = item;
-                bestDamage = itemDamage;
+                bestDps = dps;
             }
         }
-        //#else
-        //$$ // TODO [1.21.11] sword-class deleted — use Item.Settings attack damage component
-        //#endif
 
         return bestItem;
     }
@@ -208,12 +212,12 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
 
         for (ItemStack invStack : invStacks) {
             Item item = invStack.getItem();
-            //#if MC < 12111
-            if (!(item instanceof SwordItem) && !(item instanceof AxeItem)) continue;
-            //#else
-            //$$ // TODO [1.21.11] sword-class deleted — check for sword items via other means
-            //$$ if (!(item instanceof AxeItem)) continue;
-            //#endif
+            // Anything that hits harder than a fist counts as a candidate. The old test named the
+            // two classes it would accept, which on 1.21.11 narrowed to axes only -- so preferAxe
+            // could not fall back to a sword when no axe was carried, and the shield-breaking
+            // caller silently got nothing. Asking for damage instead of for a type keeps the axe
+            // preference below intact while letting swords back in.
+            if (ItemHelper.meleeDamageOf(item) <= 0) continue;
 
             if (item instanceof AxeItem) {
                 if (!hasAxe) {

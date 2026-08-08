@@ -5,6 +5,7 @@ import adris.altoclef.multiversion.versionedfields.Entities;
 import adris.altoclef.multiversion.item.ItemVer;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StlHelper;
+import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.slots.PlayerSlot;
@@ -20,9 +21,6 @@ import net.minecraft.entity.projectile.thrown.PotionEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-//#if MC < 12111
-import net.minecraft.item.SwordItem;
-//#endif
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.math.Vec3d;
 
@@ -41,28 +39,40 @@ public class KillAura {
     private Entity forceHit = null;
     public boolean attackedLastTick = false;
 
+    /**
+     * Put the best melee weapon in the pack into the hand.
+     *
+     * <p>THIS METHOD DID NOTHING AT ALL ON 1.21.11. Its entire body was inside the {@code
+     * MC < 12111} half of a preprocessor split, because it was written around {@code instanceof
+     * SwordItem} and that class is gone; the 1.21.11 half was a TODO comment. So the force field
+     * -- which MobDefenseChain's own measurements say is what actually kills things -- swung with
+     * whatever happened to already be in the hand, sword in the pack or not.
+     *
+     * <p>Rewritten without any version split: rank every stack in the pack by
+     * {@link ItemHelper#meleeDps}, which asks the ITEM for its damage and swing speed instead of
+     * asking its class what it is. Nothing is equipped unless it beats what is already held, so a
+     * bot holding the best weapon it owns is left alone rather than re-equipping every tick.
+     */
     public static void equipWeapon(AltoClef mod) {
         List<ItemStack> invStacks = mod.getItemStorage().getItemStacksPlayerInventory(true);
-        if (!invStacks.isEmpty()) {
-            float handDamage = Float.NEGATIVE_INFINITY;
-            for (ItemStack invStack : invStacks) {
-                //#if MC < 12111
-                if (invStack.getItem() instanceof SwordItem item) {
-                    float itemDamage = item.getMaterial().getAttackDamage();
-                    Item handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
-                    if (handItem instanceof SwordItem handToolItem) {
-                        handDamage = handToolItem.getMaterial().getAttackDamage();
-                    }
-                    if (itemDamage > handDamage) {
-                        mod.getSlotHandler().forceEquipItem(item);
-                    } else {
-                        mod.getSlotHandler().forceEquipItem(handItem);
-                    }
-                }
-                //#else
-                //$$ // TODO [1.21.11] sword-class deleted — use Item.Settings attack damage component
-                //#endif
+        if (invStacks.isEmpty()) {
+            return;
+        }
+        Item handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot()).getItem();
+        Item best = handItem;
+        float bestDps = ItemHelper.meleeDps(handItem);
+        for (ItemStack invStack : invStacks) {
+            Item item = invStack.getItem();
+            float dps = ItemHelper.meleeDps(item);
+            if (dps > bestDps) {
+                best = item;
+                bestDps = dps;
             }
+        }
+        // An empty hand and a pack of blocks is not a reason to equip a block: meleeDps returns the
+        // bare-fist number for anything without weapon modifiers, so nothing wins by accident.
+        if (best != null && best != handItem) {
+            mod.getSlotHandler().forceEquipItem(best);
         }
     }
 
