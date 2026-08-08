@@ -115,7 +115,6 @@ class CraftTable(Scenario):
         return _has(ctx, "crafting_table")
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         got_planks = _has(ctx, "planks")
         got_table = _has(ctx, "crafting_table")
         yield Criterion("the bot holds a crafting table", got_table,
@@ -148,7 +147,6 @@ class CraftWoodPickaxe(CraftTable):
         return _has(ctx, "wooden_pickaxe")
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         yield Criterion("the bot holds a wooden pickaxe", _has(ctx, "wooden_pickaxe"),
                         f"table={_has(ctx, 'crafting_table')} sticks={_has(ctx, 'stick')}")
 
@@ -180,7 +178,6 @@ class CraftStonePickaxe(CraftTable):
         return _has(ctx, "stone_pickaxe")
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         yield Criterion("the bot holds a stone pickaxe", _has(ctx, "stone_pickaxe"),
                         f"table={_has(ctx, 'crafting_table')} sticks={_has(ctx, 'stick')}")
 
@@ -221,7 +218,6 @@ class MineStone(CraftTable):
         return _count(ctx, "cobblestone") >= 8
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         got = _count(ctx, "cobblestone")
         yield Criterion("eight cobblestone in the pack", got >= 8, f"cobblestone={got}")
         yield Criterion("the pickaxe survived (recorded)", True,
@@ -258,7 +254,6 @@ class SmeltIron(CraftTable):
         return _has(ctx, "iron_ingot")
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         yield Criterion("the bot holds an iron ingot", _has(ctx, "iron_ingot"),
                         f"furnace={_has(ctx, 'furnace')} rawIron={_count(ctx, 'raw_iron')}")
 
@@ -295,7 +290,6 @@ class CraftIronPickaxe(CraftTable):
         return _has(ctx, "iron_pickaxe")
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         got = _has(ctx, "iron_pickaxe")
         ingots = _count(ctx, "iron_ingot")
         yield Criterion("the bot holds an iron pickaxe", got,
@@ -380,7 +374,6 @@ class WanderRecovery(CraftTable):
             return 0.0
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         under_wander = self._wander_moved(ctx)
         overall = self._travelled(ctx)
         yield Criterion("the bot covered ground while WANDERING (15+ blocks)", under_wander > 15,
@@ -450,7 +443,6 @@ class CraftAtDistantTable(CraftTable):
         return _has(ctx, "wooden_pickaxe")
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         got = _has(ctx, "wooden_pickaxe")
         try:
             now = ctx.bot.pos()
@@ -529,7 +521,6 @@ class ChopTree(CraftTable):
         return _count(ctx, "oak_log") >= 4
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         logs = _count(ctx, "oak_log")
         first = ctx.geo.get("first_log_at")
         yield Criterion("four logs in the pack", logs >= 4,
@@ -610,7 +601,6 @@ class ChopCanopy(ChopTree):
         return None
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         logs = _count(ctx, "oak_log")
         first = ctx.geo.get("first_log_at")
         shown = "never" if first is None else format(first, ".1f") + "s"
@@ -704,7 +694,6 @@ class MineDiamond(CraftTable):
         return _count(ctx, "diamond") >= 2
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         got = _count(ctx, "diamond")
         yield Criterion("two diamonds in the pack", got >= 2,
                         f"diamonds={got} pickaxe={_has(ctx, 'iron_pickaxe')}")
@@ -965,7 +954,6 @@ class EscapeLava(CraftTable):
         return self._escaped(ctx) and (ctx.bot.health() or 0) > 0
 
     def judge(self, ctx):
-        self._publish_fps(ctx)
         hp = ctx.bot.health()
         x, z = self._pos(ctx)
         alive = hp is not None and float(hp) > 0

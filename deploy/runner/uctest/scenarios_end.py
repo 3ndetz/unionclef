@@ -118,9 +118,6 @@ class EndCourse(Scenario):
     def judge(self, ctx):
         t = ctx.geo.get("reached_at")
         d = self._dist_to_goal(ctx)
-        fps = ctx.geo.get("fps") or []
-        avg_fps = sum(fps) / len(fps) if fps else None
-        ctx.geo["avg_fps"] = avg_fps
         dim = ctx.geo.get("dim_at_start")
         # THE BOT BEING IN THE END IS ITS OWN CHECK, and it comes first. If the teleport did not
         # take, everything below measures a bot standing in the overworld and would read as a
@@ -132,9 +129,6 @@ class EndCourse(Scenario):
                         f"{None if d is None else round(d, 1)}")
         yield Criterion("no self-fall", ctx.self_falls == 0, f"self_falls={ctx.self_falls}")
         yield Criterion("freezes == 0", ctx.freeze_windows == 0, f"freezes={ctx.freeze_windows}")
-        yield Criterion("fps recorded", True,
-                        f"avg_fps={None if avg_fps is None else round(avg_fps, 1)} "
-                        f"samples={len(fps)}", gate=False)
 
 
 class EndWalk(EndCourse):
@@ -214,9 +208,6 @@ class EndGateway(EndCourse):
 
     def judge(self, ctx):
         d = self._dist_to_goal(ctx)
-        fps = ctx.geo.get("fps") or []
-        avg_fps = sum(fps) / len(fps) if fps else None
-        ctx.geo["avg_fps"] = avg_fps
         dim = ctx.geo.get("dim_at_start")
         yield Criterion("bot is IN the End", dim is not None and "end" in str(dim).lower(),
                         f"dimension={dim}")
@@ -228,9 +219,6 @@ class EndGateway(EndCourse):
                         f"closest={None if best is None else round(best, 1)} "
                         f"final={None if d is None else round(d, 1)} start={self.GATE_X}")
         yield Criterion("no self-fall", ctx.self_falls == 0, f"self_falls={ctx.self_falls}")
-        yield Criterion("fps recorded", True,
-                        f"avg_fps={None if avg_fps is None else round(avg_fps, 1)} "
-                        f"samples={len(fps)}", gate=False)
 
 
 class EndDragon(EndCourse):
@@ -344,9 +332,6 @@ class EndDragon(EndCourse):
         hp0 = ctx.geo.get("hp0")
         hpm = ctx.geo.get("hp_min")
         gone = bool(ctx.geo.get("dragon_gone"))
-        fps = ctx.geo.get("fps") or []
-        avg_fps = sum(fps) / len(fps) if fps else None
-        ctx.geo["avg_fps"] = avg_fps
         dim = ctx.geo.get("dim_at_start")
         yield Criterion("bot is IN the End", dim is not None and "end" in str(dim).lower(),
                         f"dimension={dim}")
@@ -356,9 +341,6 @@ class EndDragon(EndCourse):
                         f"hp {hp0} -> {hpm}{' (gone)' if gone else ''}")
         yield Criterion("dragon killed", gone, f"gone={gone}", gate=False)
         yield Criterion("bot survived", ctx.deaths == 0, f"deaths={ctx.deaths}", gate=False)
-        yield Criterion("fps recorded", True,
-                        f"avg_fps={None if avg_fps is None else round(avg_fps, 1)} "
-                        f"samples={len(fps)}", gate=False)
 
 
 SCENARIOS = [EndWalk, EndGateway, EndDragon]

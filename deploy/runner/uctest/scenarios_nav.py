@@ -73,9 +73,6 @@ class NavCourse(Scenario):
     def judge(self, ctx):
         t = ctx.geo.get("reached_at")
         d = self._dist_to_goal(ctx)
-        fps = ctx.geo.get("fps") or []
-        avg_fps = sum(fps) / len(fps) if fps else None
-        ctx.geo["avg_fps"] = avg_fps
         yield Criterion(f"reached goal (tol {self.goal_tolerance})", t is not None,
                         f"t={t if t is None else round(t, 1)}s final_dist="
                         f"{None if d is None else round(d, 1)}")
@@ -83,11 +80,6 @@ class NavCourse(Scenario):
                         f"self_falls={ctx.self_falls}")
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
-        # Reported, never a gate: FPS on a software-GL container is not a pass/fail
-        # number, it is a trend line to compare before/after a perf change against.
-        yield Criterion("fps recorded", True,
-                        f"avg_fps={None if avg_fps is None else round(avg_fps, 1)} "
-                        f"samples={len(fps)}", gate=False)
 
 
 # ── 1. baseline ──────────────────────────────────────────────────────────────

@@ -419,8 +419,16 @@ class Scenario:
                 ctx.log("  early stop (objective reached)")
                 break
         self.drive_stop(ctx)
-        self._publish_fps(ctx)
+        avg_fps, n_fps = self._publish_fps(ctx)
         crits = list(self.judge(ctx))
+        # Reported for every course, never a gate. FPS on a software-GL container is not a
+        # pass/fail number, it is the line that tells a starved run from a broken one -- and it
+        # belongs in the OUTPUT, not only in verdict.json, or the reader has to already suspect
+        # starvation to go looking for it. nav and end printed it, craft and mob published it
+        # without printing, and pvp had neither.
+        crits.append(Criterion("fps recorded", True,
+                               f"avg_fps={None if avg_fps is None else round(avg_fps, 1)} "
+                               f"samples={n_fps}", gate=False))
         errs = ctx.chat_errors()
         crits.append(Criterion("no command errors in chat", not errs,
                                "; ".join(errs[:3])))

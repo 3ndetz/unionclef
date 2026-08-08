@@ -103,9 +103,6 @@ class MobMelee(Scenario):
         return _zombie_count(ctx) == 0
 
     def judge(self, ctx):
-        avg_fps, n_fps = self._publish_fps(ctx)
-        # Reported, never a gate -- same contract as nav and craft. It exists so the starvation
-        # guard has a number to judge with; without it every mob verdict read avg_fps=0.0.
         killed = _zombie_count(ctx) == 0
         ticks = _tung_ticks(ctx)
         hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
@@ -160,9 +157,6 @@ class MobTrioNoDamage(MobMelee):
         ctx.bot.cmd("@test kill")
 
     def judge(self, ctx):
-        avg_fps, n_fps = self._publish_fps(ctx)
-        # Reported, never a gate -- same contract as nav and craft. It exists so the starvation
-        # guard has a number to judge with; without it every mob verdict read avg_fps=0.0.
         killed = _zombie_count(ctx) == 0
         ticks = _tung_ticks(ctx)
         hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
@@ -269,9 +263,6 @@ class SkeletonDodge(MobMelee):
                                             allow_reject=True)
 
     def judge(self, ctx):
-        avg_fps, n_fps = self._publish_fps(ctx)
-        # Reported, never a gate -- same contract as nav and craft. It exists so the starvation
-        # guard has a number to judge with; without it every mob verdict read avg_fps=0.0.
         alive = "Count:" in ctx.rcon.cmd("execute if entity @e[type=skeleton]", allow_reject=True)
         ticks = _tung_ticks(ctx)
         hps = [s["bot_hp"] for s in ctx.samples if s.get("bot_hp") is not None]
