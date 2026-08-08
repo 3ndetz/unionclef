@@ -1,13 +1,12 @@
 package adris.altoclef.tasks.speedrun;
 
 import adris.altoclef.AltoClef;
+import adris.altoclef.util.goals.AltoGoal;
 import adris.altoclef.BotBehaviour;
 import adris.altoclef.tasks.movement.CustomBaritoneGoalTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
-import baritone.api.pathing.goals.Goal;
-import baritone.api.pathing.goals.GoalRunAway;
 import net.minecraft.entity.AreaEffectCloudEntity;
 import net.minecraft.util.math.BlockPos;
 
@@ -52,9 +51,27 @@ public class DragonBreathTracker {
             AltoClef.getInstance().getBehaviour().pop();
         }
 
+        /**
+         * OFF BARITONE'S GOAL TYPE, AND THIS ONE WAS DEAD ON THE DRAGON PATH.
+         *
+         * <p>{@code GoalRunAway} is not one of the six types {@code goalToVec} can translate
+         * (GoalBlock, GoalGetToBlock, GoalNear, GoalTwoBlocks, GoalXZ, GoalComposite). So the drive
+         * asked this task where to go, got NULL, and the bot stood in the dragon's breath — which
+         * is one of the two things that kill it in the End.
+         *
+         * <p>{@link AltoGoal.FleeLive} recomputes from the CURRENT breath blocks every tick, which
+         * this needs more than the mob flees do: breath is laid down and expires continuously, so
+         * a snapshot would run the bot out of a cloud that had already moved.
+         */
         @Override
-        protected Goal newGoal(AltoClef mod) {
-            return new GoalRunAway(10, breathBlocks.toArray(BlockPos[]::new));
+        protected AltoGoal newAltoGoal(AltoClef mod) {
+            return new AltoGoal.FleeLive(
+                    () -> breathBlocks.stream()
+                            .map(b -> new net.minecraft.util.math.Vec3d(
+                                    b.getX() + 0.5, b.getY(), b.getZ() + 0.5))
+                            .collect(java.util.stream.Collectors.toList()),
+                    () -> mod.getPlayer() == null ? null : mod.getPlayer().getPos(),
+                    10);
         }
 
         @Override
