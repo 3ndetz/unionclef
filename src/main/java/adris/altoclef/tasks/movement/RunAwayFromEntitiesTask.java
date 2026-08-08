@@ -1,8 +1,7 @@
 package adris.altoclef.tasks.movement;
 
 import adris.altoclef.AltoClef;
-import adris.altoclef.util.baritone.GoalRunAwayFromEntities;
-import baritone.api.pathing.goals.Goal;
+import adris.altoclef.util.goals.AltoGoal;
 import net.minecraft.entity.Entity;
 
 import java.util.List;
@@ -29,21 +28,31 @@ public abstract class RunAwayFromEntitiesTask extends CustomBaritoneGoalTask {
     }
 
 
+    /**
+     * OFF BARITONE'S GOAL TYPE — the last of the three flee tasks.
+     *
+     * <p>{@code _penalty} and {@code _xz} are not carried over, and neither is load-bearing under
+     * the live engine. Both only ever reached {@code Goal.heuristic()} / {@code isInGoal}'s XZ
+     * flattening, and heuristic() is read exclusively by shredder's A*; the tungsten drive asks a
+     * goal for target() and reached(). The constructors keep both parameters so the callers and
+     * their tuning history stay readable, and so this is one honest edit rather than a rename
+     * cascade across every subclass.
+     */
     @Override
-    protected Goal newGoal(AltoClef mod) {
-        return new GoalRunAwayStuff(mod, _distanceToRun, _xz);
+    protected AltoGoal newAltoGoal(AltoClef mod) {
+        return new AltoGoal.FleeLive(
+                () -> {
+                    List<Entity> from = _runAwaySupplier.get();
+                    if (from == null) {
+                        return java.util.List.of();
+                    }
+                    return from.stream()
+                            .map(e -> new net.minecraft.util.math.Vec3d(e.getX(), e.getY(), e.getZ()))
+                            .collect(java.util.stream.Collectors.toList());
+                },
+                () -> mod.getPlayer() == null ? null : mod.getPlayer().getPos(),
+                _distanceToRun);
     }
 
 
-    private class GoalRunAwayStuff extends GoalRunAwayFromEntities {
-
-        public GoalRunAwayStuff(AltoClef mod, double distance, boolean xz) {
-            super(mod, distance, xz, _penalty);
-        }
-
-        @Override
-        protected List<net.minecraft.entity.Entity> getEntities(AltoClef mod) {
-            return _runAwaySupplier.get();
-        }
-    }
 }

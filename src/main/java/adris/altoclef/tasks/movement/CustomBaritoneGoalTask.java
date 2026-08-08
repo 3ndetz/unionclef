@@ -829,24 +829,13 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // No y in the goal at all — an XZ goal means "get to this column", so aim at our own
             // height and let the search find the surface.
             raw = new net.minecraft.util.math.Vec3d(gxz.getX(), mod.getPlayer().getY(), gxz.getZ());
-        } else if (goal instanceof adris.altoclef.util.baritone.GoalRunAwayFromEntities flee) {
-            // A FLEE GOAL IS A PLACE TOO, ONCE YOU ASK IT PROPERLY.
-            // It carries no position, so this used to fall through to null -- which switches the
-            // tungsten driver off for as long as the bot is running away, and the legacy driver
-            // does not move it either. Measured on the playthrough: 368 of 596 entries lost here,
-            // unknownGoal=GoalRunAwayFromHostiles, the bot standing on one spot for four minutes.
-            // With this: pdNoVec 0 of 1653, and no untranslatable goal at all.
-            //
-            // RESTORED AFTER TWO REVERTS I SHOULD NOT HAVE MADE. nav dropped to 8/12 and 10/12
-            // while this was in and I read that as a regression -- twice. It cannot be one: the
-            // nav worlds run on PEACEFUL, so getEntities() is empty, suggestFleePoint returns
-            // null, and this branch is a provable no-op there. The baseline on the reverted build
-            // measures 11/12 with one gate failure, exactly what it measured "after the revert",
-            // so the suite is simply noisy right now (9/12 to 12/12 on unchanged code all
-            // session). I reverted a working change on noise, and the mechanism -- not the
-            // measurement -- is what settled it.
-            raw = flee.suggestFleePoint(new net.minecraft.util.math.Vec3d(
-                    mod.getPlayer().getX(), mod.getPlayer().getY(), mod.getPlayer().getZ()));
+        // THE FLEE BRANCH IS GONE BECAUSE THE GOAL TYPE IS. All three flee tasks now build an
+        // AltoGoal.FleeLive, which the drive reads directly, so nothing produces a
+        // GoalRunAwayFromEntities for this method to translate. What lived here is worth keeping
+        // in one line: a flee goal carries no position, it used to fall through to null, and that
+        // switched the tungsten driver off for the whole time the bot was running away -- 368 of
+        // 596 navigation entries lost, the bot standing still for four minutes. FleeLive answers
+        // target() with a real point, so the failure cannot come back by omission.
         } else if (goal instanceof baritone.api.pathing.goals.GoalComposite gc) {
             // Nearest member wins: a composite is "any of these will do".
             double best = Double.MAX_VALUE;
