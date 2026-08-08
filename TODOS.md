@@ -428,6 +428,17 @@ mob+pvp как гейта, то есть база mob снимается ПРЯ�
       Что осталось по убыванию: `Goal` (23), `Rotation` (16), `BaritoneAPI` (6), `Baritone` (6),
       `MovementHelper` (4), цели `GoalNear/GoalBlock/GoalXZ/...`, `IPlayerContext`,
       `BlockStateInterface`, `RayTraceUtils`, `AbstractSchematic`, `ICustomGoalProcess`.
+      ⛔ ЦИФРЫ ВЫШЕ — ОТ 2026-08-02 И УЖЕ НЕВЕРНЫ. Пересчитано 2026-08-08 (`grep -rn "^import baritone"`):
+      **26 импортов в 13 файлах** (было 40 в 23 на утро того же дня). Удалены с подтверждением
+      СБОРКОЙ, а не grep-ом: `util/baritone/GoalRunAwayFromEntities.java` и
+      `util/baritone/GoalDodgeProjectiles.java`. Из altoclef целиком ушёл пакет `baritone.utils`
+      (`ToolSet.calculateSpeedVsBlock` перенесён в `ItemHelper.miningSpeedVsBlock`).
+      `baritone.api.pathing.goals` теперь ОДИН импорт — сам фолбэк в `CustomBaritoneGoalTask`.
+      ⭐ И ГЛАВНОЕ, ЧЕГО ЭТА ЗАПИСЬ НЕ ИЗМЕРЯЛА: импорты считают СВЯЗАННОСТЬ, а не ОПОРУ. Счётчик
+      `pdLegacy` (тики, где бота вёл легаси-движок) на утро давал 62 из 151 на `craft_iron_pickaxe`
+      — 40% вождения. Причина: ЗАВЕРШЁННАЯ задача продолжала отдавать цель shredder-у на выходе.
+      После правки (`!isFinished()` на легаси-ветке) — **0 из ~2000 в craft и 0 из 1012 в mob**.
+      Удалять фолбэк всё равно рано: это стенд на 6-9 fps, а не живой `@gamer`-мир.
       * ✅ 2026-08-06 — СВОЙ ТИП ЦЕЛИ. `adris.altoclef.util.goals.AltoGoal`: цель отвечает на два
         вопроса (куда и дошли ли), и ни одному не нужен пасфайндер. `CustomBaritoneGoalTask`
         принимает ОБА словаря (`newAltoGoal` / `newGoal`), поэтому файлы переезжают по одному,
