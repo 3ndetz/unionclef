@@ -59,6 +59,43 @@ result.** A rate is 5–6 runs. That applies to the numbers you diagnose from, n
 fail you report — because a diagnosis is a claim about the bot, and a single run cannot support one
 on a stand whose frame rate moves between 9 and 15.
 
+*Second example, 2026-08-09, because knowing the rule is not the same as obeying it.* A ballistics
+fix was reported as moving `bow_flee` from `hits=0 avg_dist=6.66` to `hits=2 avg_dist=11.35`. One
+run, at 5.9 fps. The repeat on a healthy stand: `hits=0 avg_dist=6.07`. The physics was right and
+the attribution was invented — and the tell was in the report itself, which said in the same breath
+that the change had no mechanism by which it could move a DISTANCE gate at all. **When you cannot
+name the mechanism connecting your change to the number that moved, the number is noise until a
+repeat says otherwise.** Say so instead of publishing it.
+
+⛔ **RULE SEVEN: A BROKEN STAND OUTLIVES THE RUN THAT BROKE IT, AND LOOKS EXACTLY LIKE A BROKEN BOT.**
+
+`ensure_grounded` lifts a bot out of the void with `gamemode spectator` → `tp` → `gamemode
+survival`. A scenario aborted between those lines. `tester2` stayed a SPECTATOR for the rest of the
+suite, through a rebuild, through a redeploy, and into two later runs — where every course reported
+at once:
+
+```
+melee_basic  swings=0 crits=0 damage=0.0      bow_flee  bowShots=0 avg_dist=0.0 hits=0
+chase_flat   contact=None freezes=13          ranged_moving hits=0
+```
+
+A spectator cannot be hit, takes no damage and has no collision, so it stands inside the bot. That
+profile is indistinguishable from a dead mod, and a build plus two runs went into hunting one —
+client logs read for a stack trace, the last code change suspected, the format string suspected.
+
+The tell was `dist=0.0` in EVERY sample of a fight whose victim never lost a hit point: not "the bot
+cannot reach it" but "the bench thinks they are in the same block". One command settles it —
+`data get entity <name> playerGameType` — and it is worth running the moment a whole suite goes to
+zero at once.
+
+Two habits follow, both now in the harness:
+- **state a run changes, it restores in a `finally`** — teardown cannot run when SETUP is what threw;
+- **normalise at the START of each course**, not only at the end of the previous one. That bounds
+  any leak of this shape to a single course instead of a night.
+
+And when the whole suite fails at once, **suspect the stand before the bot.** Bots regress on one
+course. Stands take out every course simultaneously.
+
 ⛔ **RULE SIX: A COURSE THAT HANDS THE BOT THE FINISHED STATE CANNOT TEST HOW THE BOT REACHES IT.**
 
 Added 2026-08-08. The most expensive kind of blind spot, because every gate stays GREEN.
