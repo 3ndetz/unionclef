@@ -16,6 +16,17 @@ def _dist_xz(pos, x, z):
     return ((pos[0] - x) ** 2 + (pos[2] - z) ** 2) ** 0.5
 
 
+def _stat(ctx, name):
+    """One counter out of the mod's stats line, or None when it cannot be read."""
+    ok, s = ctx.bot.py.try_call("placeStats")
+    if not ok or not s:
+        return None
+    for tok in str(s).split():
+        if tok.startswith(name + "="):
+            return tok.split("=", 1)[1]
+    return None
+
+
 class MeleeBasic(Scenario):
     """Mutual close combat in tall grass — the original freeze case, upgraded
     to a target that fights back (RW-1)."""
@@ -410,6 +421,14 @@ class BowFlee(Scenario):
         yield Criterion("survived (0 deaths)", ctx.deaths() == 0,
                         f"deaths={ctx.deaths()}")
         yield Criterion("arrow hits >= 2", len(hits) >= 2, f"hits={len(hits)}")
+        # HITS=0 IS THREE DIFFERENT FAULTS WEARING ONE NUMBER: never drew, drew and missed, or hit
+        # while the detector above looked past it. Counting the arrows actually LOOSED separates
+        # them. Measured from the chat logs of two earlier runs before this line existed --
+        # bow_flee released 0 of ~20 requested shots, bow_flee_hard released 2 -- so this counter
+        # has a value to prove itself against on the very first run that prints it.
+        yield Criterion("arrows actually loosed (recorded, not gated)", True,
+                        f"bowShots={_stat(ctx, 'bowShots')} requested~{int(self.duration / 3)}",
+                        gate=False)
         yield Criterion("self-falls == 0", ctx.self_falls == 0,
                         f"self={ctx.self_falls}")
         avg = ctx.avg_dist()
@@ -431,6 +450,12 @@ class BowFleeHard(BowFlee):
                         first_death is None or first_death >= 30,
                         f"first_death={first_death}", load_sensitive=True)
         yield Criterion("arrow hits >= 1", len(hits) >= 1, f"hits={len(hits)}")
+        # Same reading as bow_flee, and the pair is the whole point: this course releases arrows
+        # (2 per run in the logs) while bow_flee releases none, which is what says the fault is
+        # "cannot shoot while MOVING" rather than "cannot shoot".
+        yield Criterion("arrows actually loosed (recorded, not gated)", True,
+                        f"bowShots={_stat(ctx, 'bowShots')} requested~{int(self.duration / 3)}",
+                        gate=False)
 
 
 class RangedMoving(Scenario):
