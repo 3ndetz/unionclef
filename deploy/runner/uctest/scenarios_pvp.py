@@ -671,6 +671,14 @@ class AllRound(Scenario):
         ok, ps = ctx.bot.py.try_call("punkStats")
         yield Criterion("punk task (recorded, not gated)", True,
                         str(ps) if ok and ps else "unreadable", gate=False)
+        # WHICH GATE REFUSES THE SWING. 200-330 ticks inside combat producing FOUR landed swings is
+        # a hit-rate problem, and TriggerBot already counts every reason it declines to click:
+        # click / cooldown / reach / angle / los. Its own comment says "exactly one of these is the
+        # answer". gateStats() has existed all along with no callers — the FOURTH such counter this
+        # session (mdFleeStuck, getShotsFired, punkStats were the others).
+        ok, gs = ctx.bot.py.try_call("gateStats")
+        yield Criterion("swing gates (recorded, not gated)", True,
+                        str(gs) if ok and gs else "unreadable", gate=False)
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
 

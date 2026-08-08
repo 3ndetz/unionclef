@@ -142,6 +142,19 @@ public class CombatController {
                         cfg.combatWindMouseDoneThreshold,
                         cfg.combatWindMouseFlickScale
                 );
+                // AIM MODE TRIED AND REVERTED — setTargetFast changed NOTHING here, and the
+                // measurement is worth more than the idea. TriggerBot's gate counters on allround:
+                //     slow glide   angle 83/113 (73%)  76/137 (55%)   landed 4, 5
+                //     fast aim     angle 190/238 (80%) 123/203 (61%)  landed 5, 3
+                // The precedent looked strong — BowShooter:139 and BlockPathWalker both switched to
+                // setTargetFast for exactly this symptom — and it still did not transfer. So the
+                // crosshair is not merely arriving slowly.
+                //
+                // What the counters DO say, for whoever takes this next: click=0 and los=0 never
+                // refuse, so it is never "already swung" or "no line of sight". angle and REACH
+                // share the blame (reach refused 48% and 70% after the change), which reads as the
+                // opponent circling out of range rather than an aim that cannot keep up. Instrument
+                // whether the yaw actually reaches the requested value before touching aim again.
                 WindMouseRotation.INSTANCE.setTarget(safety.getAimYaw(), safety.getAimPitch());
             } else if (safety.isMovementActive()) {
                 // no LOS: face BFS path direction to navigate around walls
