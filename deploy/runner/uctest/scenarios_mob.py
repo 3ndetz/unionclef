@@ -12,6 +12,7 @@ fight.
 Building the course through the arena helper removes that whole class of error: a flat field is
 a floor, laid the same way every run.
 """
+import re
 import time
 
 from .actors import KIT_SWORD
@@ -253,6 +254,26 @@ class SkeletonDodge(MobMelee):
         # was shot with every defence-chain counter at zero. This one takes the nearest hostile.
         ctx.bot.cmd("@test killhostile")
 
+    def drive_tick(self, ctx, elapsed):
+        super().drive_tick(ctx, elapsed)
+        # DOES THE BOT EVER CLOSE? dte says inRange was false on all 1948 evaluations, which splits
+        # into two completely different faults: the approach never moves the body, or it does and the
+        # reach test is wrong. Sampling the actual gap answers it without touching any code.
+        if int(elapsed) % 2 != 0:
+            return
+        out = ctx.rcon.cmd("execute in minecraft:overworld run data get entity "
+                           "@e[type=skeleton,limit=1] Pos", allow_reject=True)
+        m = re.search(r"\[([-0-9.]+)d, ([-0-9.]+)d, ([-0-9.]+)d\]", str(out or ""))
+        s_ = ctx.samples[-1] if ctx.samples else None
+        b = s_.get("bot") if s_ else None
+        if not m or not b:
+            return
+        sx, sy, sz = float(m.group(1)), float(m.group(2)), float(m.group(3))
+        d = ((b[0] - sx) ** 2 + (b[1] - sy) ** 2 + (b[2] - sz) ** 2) ** 0.5
+        best = ctx.geo.get("min_gap")
+        if best is None or d < best:
+            ctx.geo["min_gap"] = d
+
     def early_stop(self, ctx):
         return "Count:" not in ctx.rcon.cmd("execute if entity @e[type=skeleton]",
                                             allow_reject=True)
@@ -277,7 +298,12 @@ class SkeletonDodge(MobMelee):
         # inviting another guess. Recorded, never a gate.
         yield Criterion("chain return paths (recorded, not gated)", True,
                         f"mdRet={_stat(ctx, 'mdRet')} mdFlee={_stat(ctx, 'mdFlee')} "
-                        f"mdFight={_stat(ctx, 'mdFight')} mdCalls={_stat(ctx, 'mdCalls')}",
+                        f"mdFight={_stat(ctx, 'mdFight')} mdCalls={_stat(ctx, 'mdCalls')} "
+                        # dte = the five conditions guarding the ENGAGE gate in
+                        # AbstractDoToEntityTask: gate/inRange/hungry/falling/mlg/unsafe. mdRet6 says
+                        # the chain commits to the fight; these say why the swing never happens.
+                        f"dte={_stat(ctx, 'dte')} kaTung={_stat(ctx, 'kaTung')} "
+                        f"closest_gap={ctx.geo.get('min_gap')}",
                         gate=False)
 
 
