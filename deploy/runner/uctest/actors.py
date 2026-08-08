@@ -74,15 +74,24 @@ class Bot:
         self.log(f"  {self.name} is IN THE VOID at y={y:.1f} — recovering")
         t0 = time.time()
         while time.time() - t0 < timeout:
-            self.rcon.cmd(f"gamemode spectator {self.name}")
-            time.sleep(2)
-            self.rcon.cmd(f"forceload add -8 -8 8 8")
-            self.rcon.cmd(f"fill -4 {floor_y} -4 4 {floor_y} 4 stone")
-            self.rcon.cmd(f"tp {self.name} 0.5 {floor_y + 1} 0.5")
-            time.sleep(4)
-            self.rcon.cmd(f"tp {self.name} 0.5 {floor_y + 1} 0.5")
-            time.sleep(2)
-            self.rcon.cmd(f"gamemode survival {self.name}")
+            # SPECTATOR MUST BE GIVEN BACK EVEN IF THE MIDDLE OF THIS THROWS. It once did — an
+            # rcon reply carrying an unrelated command's rejection aborted the scenario between
+            # these two lines — and tester2 stayed a SPECTATOR across the rest of the suite, a
+            # redeploy, and every run after it. A spectator cannot be hit, takes no damage and has
+            # no collision, so the courses kept running against a ghost: swings=0, damage=0.0,
+            # bowShots=0, dist=0.0 on every course at once. That reads exactly like a dead mod,
+            # and I spent a build and two runs looking for one.
+            try:
+                self.rcon.cmd(f"gamemode spectator {self.name}")
+                time.sleep(2)
+                self.rcon.cmd(f"forceload add -8 -8 8 8")
+                self.rcon.cmd(f"fill -4 {floor_y} -4 4 {floor_y} 4 stone")
+                self.rcon.cmd(f"tp {self.name} 0.5 {floor_y + 1} 0.5")
+                time.sleep(4)
+                self.rcon.cmd(f"tp {self.name} 0.5 {floor_y + 1} 0.5")
+                time.sleep(2)
+            finally:
+                self.rcon.cmd(f"gamemode survival {self.name}", allow_reject=True)
             time.sleep(3)
             y = self.position_y()
             if y is not None and y > floor_y - 20:
@@ -149,6 +158,15 @@ class Bot:
         is slow/unreliable (the bot can land far away in unloaded chunks and the
         health poll times out). Heal in place instead."""
         self.stop_all()
+        # NORMALISE THE GAME MODE FIRST, so a poisoned stand heals itself instead of quietly
+        # invalidating everything that follows. A scenario once aborted between ensure_grounded's
+        # `gamemode spectator` and its restore, and tester2 stayed a spectator across the rest of
+        # the suite, a rebuild and a redeploy. Spectators cannot be hit, take no damage and have no
+        # collision, so every later course measured a bot fighting a ghost — swings=0, damage=0.0,
+        # bowShots=0, dist=0.0 everywhere — which looks precisely like a broken mod. The teardown
+        # that was supposed to undo it cannot run when the setup is what threw; a per-course
+        # normalisation can, and it bounds any future leak of this shape to a single course.
+        self.rcon.cmd(f"gamemode survival {self.name}", allow_reject=True)
         self.ensure_alive()
         # ALIVE IS NOT THE SAME AS RECOVERABLE — see ensure_grounded. A bot falling through the
         # void has full health and passes every check above it.
