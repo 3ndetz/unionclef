@@ -340,6 +340,111 @@ public interface AltoGoal {
     }
 
     /**
+     * Get away from things that MOVE — the flee goal that survives being cached.
+     *
+     * <h2>Why {@link Flee} could not be used for this</h2>
+     *
+     * {@code Flee} is a record holding a finished point, and {@code CustomBaritoneGoalTask.goal()}
+     * caches the goal object for the life of the task and never invalidates it. A cached record is
+     * a FIXED destination: the bot would run to the spot the mobs were standing on when the task
+     * started and stop there while they followed it.
+     *
+     * <p>Today's live behaviour does not come from the cache being refreshed — it comes from
+     * {@code goalToVec} re-interrogating baritone's {@code GoalRunAwayFromEntities} every tick.
+     * Any port that hands over a snapshot therefore changes behaviour even though the types line
+     * up, which is exactly the trap recorded against this task in TODOS.
+     *
+     * <p>So this is a class rather than a record, and it recomputes {@link #target()} from live
+     * positions — at most once per tick, the same guard {@link NearestSatisfying} uses, because
+     * the drive reads the target every tick and an unguarded recompute is how a goal type turns
+     * into a frame-rate problem.
+     *
+     * <h2>The direction, and why it is the centroid</h2>
+     *
+     * Upstream averaged UNIT vectors away from each threat. That cancels: two mobs on opposite
+     * sides sum to nothing, the method returns null, the drive gets no point and the bot stands
+     * still between them. Taking the heading from the centroid degrades into "any direction" in
+     * that case instead of into "no direction", which is the behaviour a cornered bot needs.
+     */
+    final class FleeLive implements AltoGoal {
+
+        private final java.util.function.Supplier<java.util.List<Vec3d>> dangers;
+        private final java.util.function.Supplier<Vec3d> standingAt;
+        private final double distance;
+
+        private Vec3d cached;
+        private long cachedAtTick = Long.MIN_VALUE;
+
+        public FleeLive(java.util.function.Supplier<java.util.List<Vec3d>> dangers,
+                        java.util.function.Supplier<Vec3d> standingAt, double distance) {
+            this.dangers = dangers;
+            this.standingAt = standingAt;
+            this.distance = distance;
+        }
+
+        @Override
+        public Vec3d target() {
+            net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+            long tick = mc.world == null ? 0 : mc.world.getTime();
+            if (tick == cachedAtTick) {
+                return cached;
+            }
+            cachedAtTick = tick;
+            cached = compute();
+            return cached;
+        }
+
+        private Vec3d compute() {
+            java.util.List<Vec3d> from = dangers.get();
+            Vec3d me = standingAt.get();
+            if (from == null || from.isEmpty() || me == null) {
+                // NOTHING TO FLEE IS NOT A PLACE TO GO. Null tells the drive "no target", which is
+                // what the nav courses see -- they run on PEACEFUL, so this branch is where every
+                // flee goal lands there and why nav cannot be moved by this change.
+                return null;
+            }
+            double cx = 0, cz = 0;
+            for (Vec3d p : from) {
+                cx += p.x;
+                cz += p.z;
+            }
+            cx /= from.size();
+            cz /= from.size();
+            double dx = me.x - cx, dz = me.z - cz;
+            double len = Math.sqrt(dx * dx + dz * dz);
+            if (len < 1.0E-4) {
+                dx = 1;
+                dz = 0;
+                len = 1;
+            }
+            double reach = distance + 2;
+            return new Vec3d(cx + dx / len * reach, me.y, cz + dz / len * reach);
+        }
+
+        @Override
+        public boolean reached(BlockPos at) {
+            java.util.List<Vec3d> from = dangers.get();
+            if (from == null || from.isEmpty()) {
+                return true;
+            }
+            for (Vec3d danger : from) {
+                double dx = at.getX() + 0.5 - danger.x;
+                double dz = at.getZ() + 0.5 - danger.z;
+                if (dx * dx + dz * dz < distance * distance) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public String toString() {
+            java.util.List<Vec3d> from = dangers.get();
+            return "fleeLive(" + (from == null ? 0 : from.size()) + " danger(s), d=" + distance + ")";
+        }
+    }
+
+    /**
      * A flee goal aimed away from the danger, as seen from {@code standingAt}.
      *
      * @param maintainY hold this height, or null to keep the player's own (NaN, filled by the drive)
