@@ -35,6 +35,15 @@ import java.util.*;
  */
 public class CraftInTableTask extends ResourceTask {
 
+    /**
+     * Scanner lookups for a crafting table: asked / found, and the last distance. Read as tbl.
+     *
+     * <p>Declared here rather than on DoCraftInTableTask, which does the incrementing, because that
+     * class is package-private and the py4j bridge lives outside the package. Same package, so the
+     * writes still resolve.
+     */
+    public static volatile int tblAsked, tblFound, tblLastDist;
+
     private final RecipeTarget[] targets;
 
     private final DoCraftInTableTask craftTask;
@@ -439,6 +448,19 @@ class DoCraftInTableTask extends DoStuffInContainerTask {
     protected double getCostToMakeNew(AltoClef mod) {
         // Get the nearest crafting table.
         Optional<BlockPos> closestCraftingTable = mod.getBlockScanner().getNearestBlock(Blocks.CRAFTING_TABLE);
+        // THE DECISION THAT craft_at_distant_table TURNS ON, AND IT WAS NEVER MEASURED.
+        // If the scanner does not KNOW about a table, this returns a finite cost and the bot sets
+        // out to CRAFT one -- and that course hands it three planks and two sticks on purpose, one
+        // plank short of a table, so it can never finish and ends up wandering. That matches the
+        // failure exactly: the bot stopped 19.7 blocks from a table it had 300 seconds to reach.
+        // Whether the scanner sees a table 28 blocks away is therefore the whole question, and it
+        // has been an assumption until now.
+        CraftInTableTask.tblAsked++;
+        if (closestCraftingTable.isPresent()) {
+            CraftInTableTask.tblFound++;
+            CraftInTableTask.tblLastDist = (int) Math.round(Math.sqrt(
+                    closestCraftingTable.get().getSquaredDistance(mod.getPlayer().getPos())));
+        }
 
         // If a crafting table is within 40 blocks of the player, return positive infinity.
         if (closestCraftingTable.isPresent() && closestCraftingTable.get().isWithinDistance(mod.getPlayer().getPos(), 40)) {
