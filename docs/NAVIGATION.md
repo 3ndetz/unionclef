@@ -187,7 +187,7 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 ### FULL AUDIT — 2026-08-08, all five suites
 
 ```
-nav    12 courses   11 PASS   1 INVALID (nav_hazard)
+nav    12 courses   12 PASS   0 INVALID   0 gate failures  (re-run after the G-0 flee port)
 craft  12 courses   10 PASS   2 INVALID (chop_tree, mine_diamond)
 end     3 courses    2 PASS   1 info    (end_dragon gates nothing)
 mob     4 courses    2 PASS   2 INVALID (mob_trio, mob_skeleton)   0 gate failures
