@@ -31,8 +31,9 @@ from uctest.scenarios_nav import SCENARIOS as NAV   # noqa: E402
 from uctest.scenarios_pvp import SCENARIOS as PVP   # noqa: E402
 from uctest.scenarios_mob import SCENARIOS as MOB   # noqa: E402
 from uctest.scenarios_craft import SCENARIOS as CRAFT  # noqa: E402
+from uctest.scenarios_end import SCENARIOS as END  # noqa: E402
 
-SUITES = {"pvp": PVP, "nav": NAV, "mob": MOB, "craft": CRAFT}
+SUITES = {"pvp": PVP, "nav": NAV, "mob": MOB, "craft": CRAFT, "end": END}
 BOT_CONTAINER = "uctest-mc-tester1"
 VICTIM_CONTAINER = "uctest-mc-tester2"
 BOT, VICTIM = "tester1", "tester2"

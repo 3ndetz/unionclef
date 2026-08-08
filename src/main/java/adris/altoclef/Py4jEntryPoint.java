@@ -3720,6 +3720,12 @@ public class Py4jEntryPoint {
             self.put("armor", me.getArmor());
             self.put("pos", String.format("%.1f,%.1f,%.1f", me.getX(), me.getY(), me.getZ()));
             self.put("onGround", me.isOnGround());
+            // WHICH WORLD AM I IN? There was no way to ask over py4j at all, which a playthrough
+            // needs constantly -- overworld, nether, end are three different sets of rules, and an
+            // agent that cannot tell them apart cannot plan across a portal. Found while writing the
+            // first End course: the course had to infer the dimension from the bot's Y coordinate,
+            // which is exactly the kind of guess a primitive is supposed to remove.
+            self.put("dimension", adris.altoclef.util.helpers.WorldHelper.getCurrentDimension().toString());
             self.put("held", me.getMainHandStack().isEmpty() ? "empty"
                     : net.minecraft.registry.Registries.ITEM.getId(me.getMainHandStack().getItem()).toString());
             int blocks = 0;
