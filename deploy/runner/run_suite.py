@@ -263,8 +263,16 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     # another project held ~470% of this box.
     # Every craft gate is "did the bot finish this within the window", which is exactly the kind of
     # claim a slow client invalidates, so the rung phrasings belong here beside nav's.
+    # AND THE MOB PHRASINGS, FOR THE THIRD TIME THIS LIST HAS BEEN HALF-BUILT.
+    # It was nav-only, which meant a starved CRAFT run read as a bot failure; craft rungs were added.
+    # The mob suite has exactly the same hole: "the skeleton is dead", "at most one arrow landed" and
+    # "the bot took ZERO damage" are all "did the bot manage it in time / react fast enough", which a
+    # slow client genuinely invalidates -- and none of them matched anything here.
+    # DELIBERATELY NOT ADDED: "ran on tungsten". mdTung=0 means the combat path never engaged, and no
+    # frame rate excuses an engine that did not run. That one must stay a real failure.
     LOAD_SENSITIVE = ("freeze", "stand-still", "standstill", "reached goal",
-                      "holds", "in the pack", "logs", "ground while", "went looking")
+                      "holds", "in the pack", "logs", "ground while", "went looking",
+                      "is dead", "arrow landed", "ZERO damage")
     # WHY 14 AND NOT 12. The old floor admitted a band in which the bot provably cannot perform.
     # Measured tonight on a machine with 24 cores and only ~460% of them in use elsewhere: the
     # client tops out at 12 fps whatever I do -- one client instead of two, cores pinned with
