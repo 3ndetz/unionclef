@@ -212,7 +212,26 @@ public class TungstenConfig {
      *
      *  Making this the default therefore needs SmartMoves to cover what the blind scan covers --
      *  water first. Until then the pairing "primary + smartMoves" that setTungstenPathing turns on
-     *  is a deliberate agent lever, not the shipped configuration. */
+     *  is a deliberate agent lever, not the shipped configuration.
+     *
+     *  ⛔ THE MECHANISM ABOVE IS OUT OF DATE, CHECKED BY READING THE SOURCE 2026-08-08.
+     *  "It emits walk, jump-up, descend and parkour, and NOTHING else" is no longer true:
+     *  SmartMoves.generate has WATER MOVES -- entering from the bank (the edge whose absence the
+     *  note describes, "the search stops at the shore"), strokes once wet, and vertical up/down --
+     *  with a waterMoves counter published as smWater. So the stated reason this flag is off has
+     *  been fixed since the reason was written.
+     *
+     *  WHAT IS STILL UNMEASURED, AND WHY THE DEFAULT HAS NOT MOVED: whether nav_water actually
+     *  PASSES with it on. The moves existing and the course passing are two different claims, and
+     *  only the first has been checked. The experiment is one command, and the bench verifies the
+     *  flag really applied before it runs:
+     *
+     *      python deploy/runner/run_suite.py nav --only nav_water --pin smartMoves=true
+     *
+     *  Read smWater in placeStats afterwards: zero would mean the swim edges are present but never
+     *  generated for this course, which is a different bug from "water is not modelled at all".
+     *  The old failure signature to compare against is in the paragraph above -- 3 runs of 3, each
+     *  ending at exactly final_dist=25.5 with 11-12 freezes. */
     public boolean smartMoves = false;
 
     /**
