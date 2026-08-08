@@ -45,6 +45,19 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		if (TungstenMod.runKeyBinding == null) return; // tungsten not initialized yet
 		// aim-jitter telemetry: record yaw each tick so a stand test can quantify shake
 		kaptainwutax.tungsten.util.AimSampler.record(((ClientPlayerEntity)(Object)this).getYaw());
+		// TRIED: advancing the aim on the TICK path as well as the render frame. MEASURED WORSE,
+		// REVERTED. The tick-vs-frame ratio is real (6 fps = 0.30 aim steps per game tick, so the
+		// crosshair is unchanged on most gate checks), but acting on it here does not help:
+		//     baseline            angle 83/113 (73%)  76/137 (55%)   landed 4, 5
+		//     aim stepped on tick angle 70/87  (80%)  183/211 (87%)  landed 3, 3
+		// Plausibly the extra calls fight WindMouse's own velocity/wind model — smaller, more
+		// frequent steps are not the same motion as fewer larger ones. Whatever the reason, the
+		// frequency story does not survive its own test.
+		//
+		// THREE aim changes have now measured flat or worse on this path: setTargetFast for melee,
+		// a narrower bow release window, and this. Stop guessing at the aim. The datum nobody has
+		// is what the yaw ACTUALLY does between a setTarget and the gate check — instrument that
+		// residual before touching this again.
 		//#if MC < 12111
 		//$$ FollowEntityTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
 		//$$ FollowPlayerTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
