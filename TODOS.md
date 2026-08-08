@@ -64,6 +64,11 @@ INVALID). Чинить вслепую то, что нечем проверить
 `BlockNode`, снять клавишу-отладку вместе с классом (или перевести туда же), и ТОЛЬКО
 ПОТОМ удалять `BlockSpacePathFinder`. Удаление подтверждать СБОРКОЙ, а не grep-ом (на grep-е уже
 горели с `GoalAnd`).
+✅ И ПОСЛЕДНЯЯ ДЕТАЛЬ, ЧТОБЫ СЛЕДУЮЩИЙ ЗАХОД НЕ ИСКАЛ: конвертация УЖЕ ГОТОВА КАК МЕТОД —
+`FastPlanner.Result.toBlockNodes(Goal, PlayerEntity)` возвращает `List<BlockNode>` и проставляет
+И `toBreak`, И `toPlace`. То есть весь вызов такой: собрать `Goal` из `Vec3d` предсказателя →
+`FastPlanner.plan(world, playerPos, goalPos, budgetMs)` → `.toBlockNodes(goal, player)`, а
+существующая отчётность (`hasBreaks()`, `n.toBreak.size()`) работает БЕЗ изменений.
 ⛔ ГЕЙТ: nav-сюита (сегодня 12/12 на ~10 fps) — она и есть база. Плюс проверить сам py4j-предсказатель
 (`found/pathSize/breaks/endDistance`) до и после: числа обязаны совпасть по смыслу.
 
