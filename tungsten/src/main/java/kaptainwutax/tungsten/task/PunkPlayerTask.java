@@ -20,7 +20,19 @@ import net.minecraft.world.WorldView;
  */
 public class PunkPlayerTask {
 
-    private static final double COMBAT_RANGE   = 4.5; // MC entity reach = 3.0; enter combat early
+    // ENTER COMBAT AT THE DISTANCE COMBAT CAN ACTUALLY WORK AT, not a block and a half outside it.
+    //
+    // This was 4.5 ("enter combat early"), while MC entity reach is 3.0. Between 3.0 and 4.5 the
+    // bot is in COMBAT mode, which drives with RAW FORWARD KEYS — no pathing — straight at an
+    // opponent that is circle-strafing. Measured over 404 combat ticks: inReach=95 (23%),
+    // lastDist=5.05 mid-fight while the controller's own target spacing said 2.9, forward pressed
+    // 177 times against 74 wanted, and dirBlockedFwd=0. It wants to close, nothing blocks it, and
+    // walking in a straight line at a moving target does not close the gap.
+    //
+    // APPROACH mode paths (PATHFINDER.find) and can cut the corner. Keeping it until 3.4 means the
+    // pathfinder owns the chase and the controller only owns the last stride. APPROACH_RESUME
+    // stays at 6.0, so the hysteresis band widens rather than flipping mode every tick.
+    private static final double COMBAT_RANGE   = 3.4; // MC entity reach = 3.0
     private static final double APPROACH_RESUME = 6.0;
 
     private enum Mode { APPROACH, COMBAT }
