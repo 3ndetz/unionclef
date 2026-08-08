@@ -418,17 +418,45 @@ public class PathExecutor {
 			            ? calculateLookAheadPitch(node)
 			            : node.input.pitch;
 
-			    if (TungstenConfig.get().enableNativeRotation) {
+			    // WHO OWNS THE CAMERA WHILE AN ARROW IS ON THE STRING.
+			    //
+			    // This block drives the yaw to the MOVEMENT direction on every replayed tick, and
+			    // BowShooter releases only when |sol.yaw - player.getYaw()| < 3.5 degrees. So while
+			    // a path is replaying, movement overwrites the aim every tick and the draw can
+			    // never converge: measured on bow_flee with the shot counter, ONE arrow loosed out
+			    // of ~20 requested, the other nineteen timing out at 100 ticks as "Bow shot
+			    // aborted". The single success came in a hold-position window, which is exactly
+			    // when RunAwayTask stops pathing (dist >= keepDistance + 1.5).
+			    //
+			    // It is also why ranged_moving is GREEN and bow_flee is not: there the BOT stands
+			    // still and only the target moves, so no path replay is fighting the aim.
+			    //
+			    // A player solves this by facing the target and travelling on the strafe keys. So
+			    // does this: while a draw is live the aim keeps the camera, and the movement keys
+			    // are re-expressed from the planner's yaw frame into the one the bot is actually
+			    // facing, which preserves the WORLD-SPACE direction of travel. Gated on
+			    // BowShooter.isActive(), so ordinary navigation is byte-for-byte unchanged.
+			    boolean aiming = kaptainwutax.tungsten.task.BowShooter.isActive();
+			    boolean fwd = node.input.forward, back = node.input.back;
+			    boolean left = node.input.left, right = node.input.right;
+
+			    if (aiming) {
+			        float[] keys = reframeMovement(node.input, player.getYaw());
+			        fwd = keys[0] > 0.35f;
+			        back = keys[0] < -0.35f;
+			        right = keys[1] > 0.35f;
+			        left = keys[1] < -0.35f;
+			    } else if (TungstenConfig.get().enableNativeRotation) {
 			        applyNativeRotation(player, targetYaw, targetPitch);
 			    } else {
 			        player.setYaw(targetYaw);
 			        player.setPitch(targetPitch);
 			    }
 			    // player.stopGliding() removed in MC 1.21
-	    		options.forwardKey.setPressed(node.input.forward);
-			    options.backKey.setPressed(node.input.back);
-			    options.leftKey.setPressed(node.input.left);
-			    options.rightKey.setPressed(node.input.right);
+	    		options.forwardKey.setPressed(fwd);
+			    options.backKey.setPressed(back);
+			    options.leftKey.setPressed(left);
+			    options.rightKey.setPressed(right);
 			    options.jumpKey.setPressed(node.input.jump);
 			    options.sneakKey.setPressed(node.input.sneak);
 			    options.sprintKey.setPressed(node.input.sprint);
@@ -833,6 +861,44 @@ public class PathExecutor {
      * Converts degree deltas to integer mouse pixels and back,
      * making the rotation indistinguishable from a physical mouse.
      */
+    /**
+     * The planned movement, expressed in the yaw the bot is ACTUALLY facing.
+     *
+     * <p>The planner emits its keys relative to {@code input.yaw}. If something else owns the
+     * camera — an aim, for instance — pressing those same keys walks a different way in the world,
+     * because forward means "where I am looking". This converts the plan to a world-space heading
+     * and reads it back out in the current frame, so the bot travels where it was told to while
+     * facing wherever it is aiming.
+     *
+     * @return {@code {forwardAmount, strafeAmount}}, each in [-1, 1]; positive strafe is RIGHT.
+     */
+    private static float[] reframeMovement(PathInput in, float currentYaw) {
+        float f = (in.forward ? 1f : 0f) - (in.back ? 1f : 0f);
+        float s = (in.right ? 1f : 0f) - (in.left ? 1f : 0f);
+        if (f == 0f && s == 0f) {
+            return new float[]{0f, 0f};
+        }
+        // Minecraft yaw: 0 faces +Z, and increasing yaw turns clockwise seen from above.
+        double planned = Math.toRadians(in.yaw);
+        double sinP = Math.sin(planned), cosP = Math.cos(planned);
+        // World heading of the planned keys.
+        double wx = -f * sinP + s * cosP;
+        double wz = f * cosP + s * sinP;
+
+        double cur = Math.toRadians(currentYaw);
+        double sinC = Math.sin(cur), cosC = Math.cos(cur);
+        // Project the world heading back onto the CURRENT facing's axes.
+        double fwd = -wx * sinC + wz * cosC;
+        double str = wx * cosC + wz * sinC;
+
+        double len = Math.sqrt(fwd * fwd + str * str);
+        if (len > 1.0E-6) {
+            fwd /= len;
+            str /= len;
+        }
+        return new float[]{(float) fwd, (float) str};
+    }
+
     private static void applyNativeRotation(ClientPlayerEntity player, float targetYaw, float targetPitch) {
         double deltaYaw = targetYaw - player.getYaw();
         double deltaPitch = targetPitch - player.getPitch();
