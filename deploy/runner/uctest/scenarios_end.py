@@ -137,4 +137,76 @@ class EndWalk(EndCourse):
     id = "end_walk"
 
 
-SCENARIOS = [EndWalk]
+class EndGateway(EndCourse):
+    """Does the bot actually WALK to an end gateway? GetToOuterEndIslandsTask says it does.
+
+    This course exists to settle that, because the task drives with
+    `getCustomGoalProcess().setGoal(goal)` + `.path()` — the LEGACY engine, the same one that had
+    InteractWithBlockTask standing still for five minutes while announcing it was on its way. If
+    the legacy engine does not move the body, this task has never reached a gateway and the End
+    leg of the playthrough is dead on the ground.
+
+    Reachable because `@test outer` runs it directly (Playground -> runUserTask).
+
+    Its preconditions, read out of the task rather than guessed, and all supplied below:
+      - a block scanner hit on END_GATEWAY
+      - an ender pearl in the pack        (else it goes shopping for one)
+      - building materials >= |dx|+|dy|+|dz| - 3   (else it goes mining)
+
+    The platform sits at y=74 ON PURPOSE. makeGoal ANDs the eight cells beside the gateway with
+    `GoalYLevel(74)`, a hardcoded real-End height — put the gateway anywhere else and the goal can
+    never be satisfied, so the course would measure an impossible condition instead of the bot.
+    """
+    id = "end_gateway"
+    duration = 150
+    GATE_X = 26
+
+    def build(self, arena, ctx):
+        r = ctx.rcon
+        r.cmd(f"execute in {END} run forceload add -3 -3 4 4")
+        for y in range(73, 82):
+            r.cmd(f"execute in {END} run fill -6 {y} -6 {self.GATE_X + 6} {y} 6 air")
+        r.cmd(f"execute in {END} run fill -4 74 -4 {self.GATE_X + 4} 74 4 end_stone")
+        r.cmd(f"execute in {END} run setblock {self.GATE_X} 75 0 minecraft:end_gateway")
+        goal = (self.GATE_X, 75, 0)
+        ctx.geo["goal"] = goal
+        ctx.geo["fps"] = []
+        arena.floor(-3, -3, 6, 3, "stone")
+        ctx.geo["bot_spawn"] = "0.5 -59 0.5 -90 0"
+        return goal
+
+    def drive_start(self, ctx):
+        r = ctx.rcon
+        name = ctx.bot.name
+        r.cmd("gamerule keepInventory true", allow_reject=True)
+        r.cmd(f"effect give {name} minecraft:resistance 999 4 true", allow_reject=True)
+        r.cmd(f"clear {name}", allow_reject=True)
+        # Exactly the preconditions the task checks, so the run measures the WALK and not a
+        # shopping trip. 64 cobble covers the ~26-block Manhattan gap it asks for.
+        r.cmd(f"give {name} minecraft:ender_pearl 1", allow_reject=True)
+        r.cmd(f"give {name} minecraft:cobblestone 64", allow_reject=True)
+        r.cmd(f"execute in {END} run tp {name} 0.5 75 0.5 -90 0")
+        time.sleep(3)
+        ctx.geo["dim_at_start"] = self._dimension(ctx)
+        ctx.bot.cmd("@test outer")
+
+    def judge(self, ctx):
+        d = self._dist_to_goal(ctx)
+        fps = ctx.geo.get("fps") or []
+        avg_fps = sum(fps) / len(fps) if fps else None
+        ctx.geo["avg_fps"] = avg_fps
+        dim = ctx.geo.get("dim_at_start")
+        yield Criterion("bot is IN the End", dim is not None and "end" in str(dim).lower(),
+                        f"dimension={dim}")
+        # The rung is CLOSING THE DISTANCE, not touching the gateway: the task's own arrival test
+        # is the eight cells beside it, and stepping into a gateway teleports you away.
+        yield Criterion("walked to within 4 blocks of the gateway",
+                        d is not None and d < 4.0,
+                        f"final_dist={None if d is None else round(d, 1)} start_dist={self.GATE_X}")
+        yield Criterion("no self-fall", ctx.self_falls == 0, f"self_falls={ctx.self_falls}")
+        yield Criterion("fps recorded", True,
+                        f"avg_fps={None if avg_fps is None else round(avg_fps, 1)} "
+                        f"samples={len(fps)}", gate=False)
+
+
+SCENARIOS = [EndWalk, EndGateway]
