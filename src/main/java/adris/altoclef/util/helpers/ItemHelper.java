@@ -713,6 +713,79 @@ public class ItemHelper {
     }
 
     /**
+     * How fast this stack mines that block — ported out of shredder's {@code ToolSet}.
+     *
+     * <p>StorageHelper's "which tool is best here" used {@code ToolSet.calculateSpeedVsBlock}, and
+     * that was altoclef's ONLY reason to import anything from {@code baritone.utils}. The function
+     * is a pure one of (stack, state): mining-speed multiplier, the efficiency enchantment, and
+     * hardness. No engine, no pathfinder, no context. So it moves here rather than keeping a
+     * module dependency alive for one call — the direction of travel is that shredder goes and
+     * altoclef stays.
+     *
+     * <p>Copied faithfully, including the two quirks worth not silently "improving":
+     * <ul>
+     *   <li>a hardness read that throws is treated as UNBREAKABLE (-1), not as free
+     *   <li>the /30 vs /100 split is upstream's, and encodes "the right tool or none required"
+     *       against "wrong tool, mining anyway"
+     * </ul>
+     *
+     * <p>THE FORCED-TOOL OVERRIDE IS KEPT, and the first draft of this comment said it was dropped
+     * because "nothing in altoclef sets it — checked before dropping it". That sentence was FALSE
+     * and was written before the check: ShearAndCollectBlockTask calls
+     * {@code botBehaviour.forceUseTool(...)} and BotBehaviour pushes those predicates into
+     * AltoClefSettings. Dropping it would have stopped the bot forcing shears onto leaves, quietly,
+     * on a path no course covers. Exactly the RULE FOUR failure — a checkable claim about the
+     * running system, asserted in a comment, unchecked.
+     *
+     * <p>Keeping it costs an AltoClefSettings reference, which lives in shredder's tree. That is a
+     * package altoclef already depends on (AltoClef and BotBehaviour both import it), so this
+     * removes the {@code baritone.utils} dependency without inventing a new one, and the settings
+     * class dies with shredder rather than before it.
+     *
+     * @return blocks per tick, or -1 when the block cannot be broken
+     */
+    public static double miningSpeedVsBlock(ItemStack item, net.minecraft.block.BlockState state) {
+        float hardness;
+        try {
+            hardness = state.getHardness(null, null);
+        } catch (NullPointerException npe) {
+            return -1;
+        }
+        if (hardness < 0) {
+            return -1;
+        }
+        float speed = item.getMiningSpeedMultiplier(state);
+        if (speed > 1) {
+            var enchants = item.getEnchantments();
+            outer:
+            for (var enchant : enchants.getEnchantments()) {
+                var effects = enchant.value().getEffect(
+                        net.minecraft.component.EnchantmentEffectComponentTypes.ATTRIBUTES);
+                for (var e : effects) {
+                    // BY REGISTRY PATH, NOT BY CONSTANT. EntityAttributes.MINING_EFFICIENCY does
+                    // not exist on every version altoclef builds for (shredder compiles against
+                    // one; this module compiles against three), and the build says so. Same
+                    // technique as meleeDamageOf above, for the same reason.
+                    String attrPath = e.attribute().getKey()
+                            .map(k -> k.getValue().getPath()).orElse("");
+                    if ("mining_efficiency".equals(attrPath)) {
+                        speed += e.amount().getValue(enchants.getLevel(enchant));
+                        break outer;
+                    }
+                }
+            }
+        }
+        if (baritone.altoclef.AltoClefSettings.getInstance().shouldForceUseTool(state, item)) {
+            return Double.POSITIVE_INFINITY;
+        }
+        speed /= hardness;
+        if (!state.isToolRequired() || (!item.isEmpty() && item.isSuitableFor(state))) {
+            return speed / 30;
+        }
+        return speed / 100;
+    }
+
+    /**
      * Is this a tool — a pickaxe, axe, shovel, hoe or sword?
      *
      * <p>Replaces {@code item instanceof ToolItem}, which 1.21.11 deleted. The TOOL component is

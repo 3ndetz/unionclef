@@ -17,7 +17,6 @@ import adris.altoclef.util.slots.CraftingTableSlot;
 import adris.altoclef.util.slots.CursorSlot;
 import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.slots.Slot;
-import baritone.utils.ToolSet;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
@@ -178,7 +177,7 @@ public class StorageHelper {
                 if (stack.getItem().getDefaultStack().isSuitableFor(state)) {
                     if (shouldSaveStack(mod,  state.getBlock(), stack)) continue;
 
-                    double speed = ToolSet.calculateSpeedVsBlock(stack, state);
+                    double speed = ItemHelper.miningSpeedVsBlock(stack, state);
                     if (speed > highestSpeed) {
                         highestSpeed = speed;
                         bestToolSlot = slot;
