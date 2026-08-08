@@ -221,17 +221,28 @@ public class TungstenConfig {
      *  with a waterMoves counter published as smWater. So the stated reason this flag is off has
      *  been fixed since the reason was written.
      *
-     *  WHAT IS STILL UNMEASURED, AND WHY THE DEFAULT HAS NOT MOVED: whether nav_water actually
-     *  PASSES with it on. The moves existing and the course passing are two different claims, and
-     *  only the first has been checked. The experiment is one command, and the bench verifies the
-     *  flag really applied before it runs:
+     *  ...AND THE DEFAULT STILL DOES NOT MOVE, NOW FOR A CURRENT MEASUREMENT RATHER THAN A STALE
+     *  ONE. Ran the A/B back to back on the same host, minutes apart:
      *
-     *      python deploy/runner/run_suite.py nav --only nav_water --pin smartMoves=true
+     *      smartMoves OFF   PASS   reached goal 12.9 s, final_dist=0.9, 0 freezes    8.0 fps
+     *      smartMoves ON    FAIL   final_dist=25.5, 9 freezes                        7.5 fps
      *
-     *  Read smWater in placeStats afterwards: zero would mean the swim edges are present but never
-     *  generated for this course, which is a different bug from "water is not modelled at all".
-     *  The old failure signature to compare against is in the paragraph above -- 3 runs of 3, each
-     *  ending at exactly final_dist=25.5 with 11-12 freezes. */
+     *  final_dist=25.5 is the SAME failure distance recorded above from before the water moves
+     *  existed. Adding them changed the outcome not at all.
+     *
+     *  AND THE COUNTER RULES OUT THE OBVIOUS EXPLANATION. I predicted smWater would read zero --
+     *  edges present but never generated for this course. It reads 3810. The swim moves are being
+     *  emitted in bulk and the search still cannot produce a route the bot follows, so the fault is
+     *  neither "water is not modelled" nor "the edges are never offered". Both of my candidates
+     *  were wrong, which is exactly what the counter was added to settle.
+     *
+     *  Next investigation starts there: 9 freezes with 3810 water moves generated says the search
+     *  is doing work and throwing it away. Compare against the r=8 blind scan on the SAME course --
+     *  it passes in 12.9 s -- rather than reasoning about the move set again.
+     *
+     *  Reproduce with (the bench verifies the flag really applied before running):
+     *
+     *      python deploy/runner/run_suite.py nav --only nav_water --pin smartMoves=true */
     public boolean smartMoves = false;
 
     /**
