@@ -36,6 +36,35 @@ public class RunAwayTask {
     private static PlayerEntity threat  = null;
     private static int     tickCounter  = 0;
 
+    /**
+     * What the flee actually spent its time doing. Read over py4j as {@code flee=held/ran/plans}.
+     *
+     * <p>bow_flee's last two reds are "survived (0 deaths)" and "avg dist >= 7", and the bot is
+     * being caught at an average of 5-6.5 blocks while told to hold TWELVE. The suspicion from
+     * reading this file is that flight is stop-start — {@link #tick} stops pathing the moment the
+     * gap reaches {@code keepDistance + 1.5} and then holds, so the chaser closes for free until
+     * the next {@code RECALC} plan lands. That is a story, not a measurement, and the last three
+     * things I was sure of here were wrong. These three numbers decide it:
+     *
+     * <ul>
+     *   <li>{@code fleeHeld} — ticks spent deliberately standing still because we were far enough
+     *   <li>{@code fleeRan} — ticks spent with a path actually replaying
+     *   <li>{@code fleePlans} — how many times a new flee route was requested
+     * </ul>
+     *
+     * <p>If held greatly exceeds ran, the stop-start reading is right and the hold rule is the
+     * thing to change. If ran dominates, the bot is pathing the whole time and simply losing a
+     * footrace, which is a different fix entirely.
+     */
+    public static volatile int fleeHeld, fleeRan, fleePlans;
+
+    /** Zeroed by resetRunCounters so a bench run measures itself, not the stand's history. */
+    public static void resetCounters() {
+        fleeHeld = 0;
+        fleeRan = 0;
+        fleePlans = 0;
+    }
+
     /** Start fleeing {@code name}, keeping at least {@code dist} blocks (min 3). */
     public static void start(String name, double dist) {
         stop();
@@ -75,6 +104,7 @@ public class RunAwayTask {
         double dist = player.getEntityPos().distanceTo(threat.getEntityPos());
         if (dist >= keepDistance + 1.5) {
             // far enough — stop pathing, hold position
+            fleeHeld++;
             if (TungstenModDataContainer.PATHFINDER.active.get()) {
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
             }
@@ -84,10 +114,14 @@ public class RunAwayTask {
         tickCounter++;
         boolean pathing = TungstenModDataContainer.PATHFINDER.active.get()
                 || TungstenModDataContainer.isExecutorRunning();
+        if (pathing) {
+            fleeRan++;
+        }
         if (!pathing || tickCounter >= RECALC) {
             tickCounter = 0;
             Vec3d flee = safeFleePoint(world, player);
             if (flee != null) {
+                fleePlans++;
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
                 TungstenConfig.get().searchTimeoutMs = 400L;
                 TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 1;
