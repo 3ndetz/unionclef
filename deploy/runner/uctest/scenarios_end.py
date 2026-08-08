@@ -175,6 +175,18 @@ class EndGateway(EndCourse):
         ctx.geo["bot_spawn"] = "0.5 -59 0.5 -90 0"
         return goal
 
+    def drive_tick(self, ctx, elapsed):
+        # CLOSEST APPROACH, NOT FINAL POSITION. An end gateway TELEPORTS whatever touches it, so
+        # succeeding at this course moves the bot ~110 blocks away and a final-distance check reads
+        # that as a failure. Measured exactly that way: final_dist=109.9 on a run where the bot had
+        # walked the whole 26 blocks and gone through. The end state is destroyed by the success.
+        super().drive_tick(ctx, elapsed)
+        d = self._dist_to_goal(ctx)
+        if d is not None:
+            best = ctx.geo.get("min_dist")
+            if best is None or d < best:
+                ctx.geo["min_dist"] = d
+
     def drive_start(self, ctx):
         r = ctx.rcon
         name = ctx.bot.name
@@ -200,9 +212,11 @@ class EndGateway(EndCourse):
                         f"dimension={dim}")
         # The rung is CLOSING THE DISTANCE, not touching the gateway: the task's own arrival test
         # is the eight cells beside it, and stepping into a gateway teleports you away.
+        best = ctx.geo.get("min_dist")
         yield Criterion("walked to within 4 blocks of the gateway",
-                        d is not None and d < 4.0,
-                        f"final_dist={None if d is None else round(d, 1)} start_dist={self.GATE_X}")
+                        best is not None and best < 4.0,
+                        f"closest={None if best is None else round(best, 1)} "
+                        f"final={None if d is None else round(d, 1)} start={self.GATE_X}")
         yield Criterion("no self-fall", ctx.self_falls == 0, f"self_falls={ctx.self_falls}")
         yield Criterion("fps recorded", True,
                         f"avg_fps={None if avg_fps is None else round(avg_fps, 1)} "
