@@ -215,6 +215,28 @@ public class WindMouseRotation {
             veloPitch *= scale;
         }
 
+        // NEVER STEP FURTHER THAN THE ANGLE THAT IS LEFT.
+        //
+        // Measured on a live duel (sampled while punkStats reported combat=82): the head moves on
+        // 26% of ticks, mean 13.56 deg, MAX 175.35 deg — a full spin in one tick while the target
+        // sat 79 deg away. A step larger than the remaining angle cannot land; it can only cross
+        // to the other side, and the momentum term then carries it back again. That is the orbit
+        // this integrator's damping was meant to prevent, happening one scale up.
+        //
+        // It also explains why the close-range settle never helped: that zone only engages within
+        // CLOSE_DEG = 7 deg, and a head travelling 13.6 deg a tick steps straight over it — from
+        // outside the zone on one side to outside it on the other, never inside.
+        //
+        // Clamping to `dist` is the arithmetic fix rather than another tuned constant: the step
+        // keeps its wind, its momentum and its direction, and simply stops at the target instead
+        // of past it. Overshooting by 175 deg is not more human than landing — it is the shake the
+        // user complained about ("прицел трясёт как не в себя").
+        double stepMag = Math.sqrt(veloYaw * veloYaw + veloPitch * veloPitch);
+        if (stepMag > dist && stepMag > 1.0E-6) {
+            double s = dist / stepMag;
+            veloYaw *= s;
+            veloPitch *= s;
+        }
         accumulatePixels(veloYaw, veloPitch);
     }
 
