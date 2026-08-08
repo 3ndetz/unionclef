@@ -184,14 +184,21 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ## Course status
 
-### FULL AUDIT — 2026-08-08, all four suites, ZERO gate failures
+### FULL AUDIT — 2026-08-08, all five suites
 
 ```
 nav    12 courses   11 PASS   1 INVALID (nav_hazard)
 craft  12 courses   10 PASS   2 INVALID (chop_tree, mine_diamond)
 end     3 courses    2 PASS   1 info    (end_dragon gates nothing)
+mob     4 courses    2 PASS   2 INVALID (mob_trio, mob_skeleton)   0 gate failures
 pvp    12 courses   10 ok     2 gate failures (edge_duel, allround)
 ```
+
+**There are FIVE suites, not four.** The heading here said four and the block listed four, while
+`run_suite.py mob` has existed for days — the same "true when written" rot as the nav count below.
+mob's fourth course, `mob_weapon_swap`, was added 2026-08-08 and is the only course on the bench
+that tests whether the bot can ARM ITSELF: every other combat course hands it the sword already
+equipped. See RULE SIX in the checklist.
 
 nav: flat staircase steep gaps descend water ladder slime break wall2 bridge **hazard**
 craft: table wood_pick stone_pick mine_stone smelt iron_pick wander distant_table tree canopy
