@@ -7,12 +7,31 @@ from .arena import FLOOR_Y
 
 
 class Criterion:
-    def __init__(self, name, ok, detail="", gate=True):
+    """One check in a verdict.
+
+    ``load_sensitive`` says whether a LOW FRAME RATE could plausibly cause this check to fail — "did
+    the bot manage it in time / react fast enough". The starvation guard may only downgrade a run to
+    INVALID when EVERY failed gate says yes, so getting this wrong on one gate makes a whole starved
+    run read as a bot failure.
+
+    IT USED TO BE DECIDED BY MATCHING THIS NAME AGAINST KEYWORDS IN run_suite.py, and that failed
+    closed: word a gate differently and its load-sensitivity silently became False. The list was
+    built for nav, extended for craft, extended again for mob -- three patches in one session -- and
+    a sweep found whole classes still outside it, especially timed pvp gates like
+    "first landed swing <= 15s" and "kill <= 120s". Declaring it HERE means a new gate answers the
+    question where it is written, while the author still knows the answer.
+
+    The keyword list survives as a fallback so no existing verdict moves; new gates should set this
+    flag instead of relying on their wording.
+    """
+
+    def __init__(self, name, ok, detail="", gate=True, load_sensitive=None):
         self.name, self.ok, self.detail, self.gate = name, bool(ok), detail, gate
+        self.load_sensitive = load_sensitive
 
     def as_dict(self):
         return {"name": self.name, "ok": self.ok, "detail": self.detail,
-                "gate": self.gate}
+                "gate": self.gate, "load_sensitive": self.load_sensitive}
 
 
 class Ctx:

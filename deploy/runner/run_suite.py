@@ -297,7 +297,16 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     invalid = False
     if not passed and avg_fps is not None and avg_fps < HEALTHY_FPS_MIN:
         failed_gates = [c for c in crits if c.gate and not c.ok]
-        if failed_gates and all(any(k in c.name for k in LOAD_SENSITIVE) for c in failed_gates):
+        # THE FLAG FIRST, THE KEYWORDS ONLY AS A FALLBACK.
+        # Criterion.load_sensitive lets a gate declare this where it is written; the substring list
+        # below stays for every gate that has not been migrated, so no existing verdict moves. See
+        # the note on Criterion for why matching names was the wrong shape.
+        def _load_sensitive(c):
+            if c.load_sensitive is not None:
+                return c.load_sensitive
+            return any(k in c.name for k in LOAD_SENSITIVE)
+
+        if failed_gates and all(_load_sensitive(c) for c in failed_gates):
             invalid = True
 
     if not passed and not invalid:

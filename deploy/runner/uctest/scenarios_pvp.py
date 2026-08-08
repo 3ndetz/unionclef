@@ -50,7 +50,7 @@ class MeleeBasic(Scenario):
         # the drops, and the bot was scoring kills with ZERO swings on the mod's own counter.
         fs = ctx.first_swing_time()
         yield Criterion("first landed swing <= 15s", fs is not None and fs <= 15,
-                        f"first_swing={fs}")
+                        f"first_swing={fs}", load_sensitive=True)
         yield Criterion("landed >= 3 swings", ctx.landed_swings() >= 3,
                         f"swings={ctx.landed_swings()} crits={ctx.crit_swings()}")
         # Kept for the record, no longer a gate: it cannot attribute.
@@ -151,7 +151,7 @@ class ChaseFlat(Scenario):
         # contact-made only.
         yield Criterion("contact <= 45s",
                         ctx.first_contact is not None and ctx.first_contact <= 45,
-                        f"contact={ctx.first_contact}")
+                        f"contact={ctx.first_contact}", load_sensitive=True)
         avg = ctx.avg_dist(since=max(0, ctx.duration() - 30))
         yield Criterion("avg dist (last 30s) < 7 (non-stop looper)",
                         avg is not None and avg < 7, f"avg={avg}")
@@ -367,7 +367,7 @@ class ChaseTerrain(Scenario):
         caught = (ctx.first_contact is not None and ctx.first_contact <= 120) \
             or ctx.kills() >= 1
         yield Criterion("caught the runner (contact <= 120s)", caught,
-                        f"contact={ctx.first_contact} kills={ctx.kills()}")
+                        f"contact={ctx.first_contact} kills={ctx.kills()}", load_sensitive=True)
         yield Criterion("killed the runner", ctx.kills() >= 1,
                         f"kills={ctx.kills()}")
         yield ctx.survival_criterion()
@@ -429,7 +429,7 @@ class BowFleeHard(BowFlee):
                            None)
         yield Criterion("survive >= 30s",
                         first_death is None or first_death >= 30,
-                        f"first_death={first_death}")
+                        f"first_death={first_death}", load_sensitive=True)
         yield Criterion("arrow hits >= 1", len(hits) >= 1, f"hits={len(hits)}")
 
 
@@ -526,8 +526,8 @@ class BridgeAssault(Scenario):
     def judge(self, ctx):
         crossed = ctx.geo["crossed_at"]
         yield Criterion("crossed <= 60s", crossed is not None and crossed <= 60,
-                        f"crossed={crossed}")
-        yield Criterion("kill <= 120s", ctx.kills() >= 1, f"kills={ctx.kills()}")
+                        f"crossed={crossed}", load_sensitive=True)
+        yield Criterion("kill <= 120s", ctx.kills() >= 1, f"kills={ctx.kills()}", load_sensitive=True)
         yield Criterion("self-falls == 0", ctx.self_falls == 0,
                         f"self={ctx.self_falls}")
         placed = max((s.get("bridge_placed") or 0 for s in ctx.samples),
@@ -554,7 +554,7 @@ class BridgeAssaultDefended(BridgeAssault):
                   if s.get("bot_hp") is not None), default=None)
         yield Criterion("survived with >= 8 hp", hp is not None and hp >= 8,
                         f"min_hp={hp}")
-        yield Criterion("kill <= 150s", ctx.kills() >= 1, f"kills={ctx.kills()}")
+        yield Criterion("kill <= 150s", ctx.kills() >= 1, f"kills={ctx.kills()}", load_sensitive=True)
 
 
 class AllRound(Scenario):
