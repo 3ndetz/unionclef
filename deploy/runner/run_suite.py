@@ -294,9 +294,22 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
         mark = "PASS" if c.ok else ("FAIL" if c.gate else "flag")
         print(f"  [{mark}] {c.name}  {c.detail}")
     if invalid:
-        print(f"  => {scn.id}: INVALID — host starved (avg_fps={avg_fps:.1f} < "
-              f"{HEALTHY_FPS_MIN}). Only load-sensitive checks failed; this measures the "
-              f"machine, not the bot. Close whatever else is running and RE-RUN.")
+        # THIS USED TO SAY "host starved ... Close whatever else is running", WHICH IT NEVER
+        # MEASURED. The guard looks at fps and nothing else. Measured on 2026-08-08 while that line
+        # was printing: 24 cores, ~53% in use and ~47% IDLE, with the client alone taking 383% to
+        # produce 5 fps -- a single-threaded render ceiling, not contention. Naming foreign load as
+        # the cause sent a whole session through `docker stats` hunting other people's containers
+        # instead of reading the justification twelve lines above this message.
+        # The FLOOR is not the problem and does not move: below ~12 fps three runs reached no rung
+        # in five minutes, while 15-18 fps reached wood in 21-43 seconds. Only the attribution was
+        # invented -- and the nav half is worth saying too, because the whole nav suite passes at
+        # ~10 fps and a reader who takes "the bot cannot perform" literally will misread a good run.
+        print(f"  => {scn.id}: INVALID — client at {avg_fps:.1f} fps, below the "
+              f"{HEALTHY_FPS_MIN} floor. Only load-sensitive checks failed, so this run cannot "
+              f"say whether the bot is broken. The floor is measured: below ~12 fps the craft "
+              f"rungs are unreachable, while nav courses still pass at ~10. The cause may be "
+              f"foreign load OR this course's own weight under software rendering — check both "
+              f"before blaming either. RE-RUN.")
     else:
         print(f"  => {scn.id}: {'PASS' if passed else 'FAIL'}")
     # A GATE FAILURE IS A CLAIM, AND ONE RUN CANNOT SUPPORT IT.

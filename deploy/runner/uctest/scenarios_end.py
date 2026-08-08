@@ -82,6 +82,20 @@ class EndCourse(Scenario):
         gx, gy, gz = ctx.geo["goal"]
         ctx.bot.py.call("gotoXYZ", gx, gy, gz)
 
+    def drive_stop(self, ctx):
+        # PUT THE WORLD BACK. build() forceloads End chunks and nothing released them, so every
+        # later run on this stand paid for an extra dimension staying resident and ticking.
+        # Measured after a day of runs: `forceload query` in the_end returned 4 chunks.
+        # HONESTLY: no fps effect was measurable — craft courses after the End suite came back at
+        # 9.0/10.5/12.0/14.1/15.2 against ~10 before it, so foreign-load variance swamps whatever
+        # four chunks cost. This is hygiene, not a performance fix: a course must not leave the
+        # world altered for the next one.
+        try:
+            ctx.rcon.cmd(f"execute in {END} run forceload remove all", allow_reject=True)
+        except Exception:
+            pass
+        super().drive_stop(ctx)
+
     def _dimension(self, ctx):
         # getGameState had NO dimension field until this course needed one — the first run had to
         # infer "we are in the End" from the bot standing at y=65 where the overworld has only air.
