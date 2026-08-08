@@ -109,7 +109,14 @@ public class MobDefenseChain extends SingleTaskChain {
     private net.minecraft.util.math.BlockPos fleeAnchor = null;
     private int fleeStuckTicks = 0;
     private int fleeSuppressedTicks = 0;
-    /** Ticks flight was abandoned because it was going nowhere. Read over py4j as mdFleeStuck. */
+    /**
+     * Times flight was abandoned because it was going nowhere. Read over py4j as mdFleeStuck.
+     *
+     * <p>This javadoc said exactly that while the counter was NOT in placeStats at all — incremented,
+     * reset, and unreadable. Written hours after RULE FOUR went into the checklist, which forbids
+     * precisely this: a checkable claim about the running system, stated in a comment, never checked.
+     * A counter nobody can read is not instrumentation, it is a comment that flatters itself.
+     */
     public static volatile int mdFleeStuck;
     private float prevHealth = 20;
     private boolean needsChangeOnAttack = false;

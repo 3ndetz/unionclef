@@ -2437,7 +2437,7 @@ public class Py4jEntryPoint {
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
                         + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d pdLegacy=%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d mqNull=%d gaveUp=%d/%d dc=%d/%d/%d/%d/%d mc=%d/%d/%d/%d/%d mcFlight=%d toolSwap=%d recipesKnown=%d wander=%d wanderMoved=%d wanderChk=%d/%d wanderFail=%d lavaEsc=%d lavaCond=%d/%d surv=%d/%d tbl=%d/%d@%d bs=%d/%d/%d/%d@%dms navUnsafeAir=%d sm=%d/%d smWater=%d srch=%d/%d/%d drop=%d/%d scan=%d/%d/%d cb=%d/%d/%d/%d et=%d/%d"
-                        + " sprint=%d/%d lowHp=%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdPillarD=%d dmgTaken=%.1f hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
+                        + " sprint=%d/%d lowHp=%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdFleeStuck=%d mdPillarD=%d dmgTaken=%.1f hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
                         + " | gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
@@ -2605,6 +2605,7 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.entity.AbstractDoToEntityTask.dteUnsafe,
                 adris.altoclef.chains.MobDefenseChain.mdTungstenTicks,
                 adris.altoclef.chains.MobDefenseChain.mdAuraTungstenTicks,
+                adris.altoclef.chains.MobDefenseChain.mdFleeStuck,
                 // ORDER MATTERS AND IT IS NOT COMMENTED ANYWHERE ELSE: these arguments are
                 // positional against the format string above, so a float slotted where the %d
                 // for mdPillarD sits makes String.format throw and placeStats return EMPTY --
