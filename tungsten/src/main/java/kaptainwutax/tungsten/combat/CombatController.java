@@ -101,6 +101,22 @@ public class CombatController {
     /** The resolved request actually written to the keys this tick. */
     private final CombatMoveIntent resolved = new CombatMoveIntent();
 
+    /**
+     * WHICH BRANCH OWNS THE CAMERA. The aim is put on the ENEMY only in the hasLOS branch; the
+     * other three point it at a brake yaw or at the path direction. Measured on allround, the
+     * crosshair sits ~85 deg off the target when TriggerBot refuses (angleMean 77.6 and 91.2
+     * against a threshold of 40), while TriggerBot's OWN los gate refuses zero times — so
+     * something here is steering the head away from a target it can plainly see.
+     *
+     * <p>Counting the branches is the only way to say which. Three guesses at this aim have
+     * already been built and reverted; this is the measurement that should have come first.
+     */
+    public static volatile int aimBrake=0, aimReposition=0, aimEnemy=0, aimPath=0, aimNone=0;
+
+    public static void resetAimCounters() {
+        aimBrake = 0; aimReposition = 0; aimEnemy = 0; aimPath = 0; aimNone = 0;
+    }
+
     public boolean tick(ClientPlayerEntity player, Entity target, WorldView world) {
         if (target == null || target.isRemoved() || !target.isAlive()) return false;
 
@@ -120,6 +136,7 @@ public class CombatController {
                         cfg.combatWindMouseDoneThreshold,
                         cfg.combatWindMouseFlickScale
                 );
+                aimBrake++;
                 WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), 0);
             } else if (cfg.combatSaverEnabled && safety.isRepositioning()) {
                 // DANGER_BATTLE: face retreat waypoint (faster turn, still fighting)
@@ -131,6 +148,25 @@ public class CombatController {
                         cfg.combatWindMouseDoneThreshold,
                         cfg.combatWindMouseFlickScale
                 );
+                aimReposition++;
+// TRIED: aiming at the ENEMY here instead of the retreat waypoint, on the grounds that
+                // this branch owns 63-80% of combat ticks (enemy=45 brake=5 reposition=77 / enemy=35
+                // brake=0 reposition=144) and the crosshair sits ~85 deg off target. MEASURED FLAT:
+                // angleMean 77.6/91.2 -> 79.0/79.2, landed 4,5 -> 5,3. Reverted, because it also
+                // gives up facing the retreat for nothing.
+                //
+                // So the branch that SETS the aim is not the problem: even when the target is the
+                // enemy, the crosshair does not arrive. Everything downstream of it has now been
+                // checked and cleared — combatWindMouseMaxStep is 25 deg/frame and IS rate-scaled
+                // on the large-angle path (g and ms both multiply by rate), so at 6 fps the cap is
+                // ~83 deg/frame and one frame should cover 79. combatAimSmoothing is 0.5 with a
+                // 55 deg snap. None of it explains the residual.
+                //
+                // WHAT IS LEFT UNCHECKED, for the next pass: whether accumulatePixels actually
+                // becomes rotation on this client. It converts degrees to raw mouse pixels and the
+                // stand runs UNFOCUSED, where MixinInGameHud has to apply the deltas by hand
+                // (UnfocusedMouseHelper). If that path drops or rounds them away, every layer above
+                // is correct and the head still never turns — which is exactly what the numbers say.
                 WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), 0);
             } else if (safety.hasLOS()) {
                 // LOS to target: aim at predicted target position for hits
@@ -155,6 +191,7 @@ public class CombatController {
                 // share the blame (reach refused 48% and 70% after the change), which reads as the
                 // opponent circling out of range rather than an aim that cannot keep up. Instrument
                 // whether the yaw actually reaches the requested value before touching aim again.
+                aimEnemy++;
                 WindMouseRotation.INSTANCE.setTarget(safety.getAimYaw(), safety.getAimPitch());
             } else if (safety.isMovementActive()) {
                 // no LOS: face BFS path direction to navigate around walls
@@ -166,7 +203,10 @@ public class CombatController {
                         cfg.combatWindMouseDoneThreshold,
                         cfg.combatWindMouseFlickScale
                 );
+                aimPath++;
                 WindMouseRotation.INSTANCE.setTarget(safety.getMovementYaw(), 0);
+            } else {
+                aimNone++;
             }
         }
 

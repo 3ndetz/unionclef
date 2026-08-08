@@ -2108,10 +2108,12 @@ public class Py4jEntryPoint {
     /** Which trigger gate refuses the swing, counted rather than sampled. */
     public String gateStats() {
         var T = kaptainwutax.tungsten.combat.TriggerBot.class;
+        var C = kaptainwutax.tungsten.combat.CombatController.class;
         int ga = kaptainwutax.tungsten.combat.TriggerBot.gAngle;
         int gr = kaptainwutax.tungsten.combat.TriggerBot.gReach;
         return String.format("total=%d click=%d cd=%d reach=%d angle=%d los=%d passed=%d"
-                        + " | angleMean=%.1f angleMax=%.1f (thr 40) reachMean=%.2f reachMax=%.2f (thr 3.0)",
+                        + " | angleMean=%.1f angleMax=%.1f (thr 40) reachMean=%.2f reachMax=%.2f (thr 3.0)"
+                        + " | aim: enemy=%d brake=%d reposition=%d path=%d none=%d",
                 kaptainwutax.tungsten.combat.TriggerBot.gTotal,
                 kaptainwutax.tungsten.combat.TriggerBot.gClick,
                 kaptainwutax.tungsten.combat.TriggerBot.gCooldown,
@@ -2122,7 +2124,12 @@ public class Py4jEntryPoint {
                 ga == 0 ? 0.0 : kaptainwutax.tungsten.combat.TriggerBot.gAngleSum / ga,
                 kaptainwutax.tungsten.combat.TriggerBot.gAngleMax,
                 gr == 0 ? 0.0 : kaptainwutax.tungsten.combat.TriggerBot.gReachDistSum / gr,
-                kaptainwutax.tungsten.combat.TriggerBot.gReachDistMax);
+                kaptainwutax.tungsten.combat.TriggerBot.gReachDistMax,
+                kaptainwutax.tungsten.combat.CombatController.aimEnemy,
+                kaptainwutax.tungsten.combat.CombatController.aimBrake,
+                kaptainwutax.tungsten.combat.CombatController.aimReposition,
+                kaptainwutax.tungsten.combat.CombatController.aimPath,
+                kaptainwutax.tungsten.combat.CombatController.aimNone);
     }
 
     /**
@@ -2370,6 +2377,7 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.combat.TriggerBot.gAngleMax = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gReachDistSum = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gReachDistMax = 0;
+        kaptainwutax.tungsten.combat.CombatController.resetAimCounters();
         kaptainwutax.tungsten.path.movements.MovementQueue.qBurnedInPlace = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qTeleported = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qStuckNoMove = 0;
