@@ -472,9 +472,17 @@ class Scenario:
                 if "=" in tok:
                     k, _, v = tok.partition("=")
                     drive[k] = v
+        # WHICH EXIT LET THE FALLBACK THROUGH. pdLegacy alone says the legacy engine drove;
+        # it cannot say WHY tungsten declined that tick. driveTungstenPrimary counts every one of
+        # its early returns, so print the ones that fired -- mine_stone reads pdLegacy=2 of 246 and
+        # the next question is which of these two ticks took.
+        exits = " ".join(f"{k}={drive[k]}" for k in
+                         ("pdNotPrim", "pdNoGoal", "pdFinished", "pdNoVec", "pdWalking",
+                          "pdNear", "pdStuck", "pdPillar", "pdBridge")
+                         if drive.get(k) not in (None, "0"))
         crits.append(Criterion("who drove (recorded, not gated)", True,
-                               f"pdLegacy={drive.get('pdLegacy')} pdEnter={drive.get('pdEnter')} "
-                               f"pdNoVec={drive.get('pdNoVec')}", gate=False))
+                               f"pdLegacy={drive.get('pdLegacy')} pdEnter={drive.get('pdEnter')}"
+                               + (f" | declined: {exits}" if exits else ""), gate=False))
         errs = ctx.chat_errors()
         crits.append(Criterion("no command errors in chat", not errs,
                                "; ".join(errs[:3])))
