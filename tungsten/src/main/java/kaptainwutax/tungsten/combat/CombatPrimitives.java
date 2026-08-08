@@ -67,7 +67,7 @@ public final class CombatPrimitives {
 
     /** Ballistic solution for a full-draw arrow at a moving entity. */
     public static TrajectorySolver.Solution solveArrow(ClientPlayerEntity player, Entity target) {
-        return TrajectorySolver.solve(player.getEyePos(), target, 1.0);
+        return TrajectorySolver.solve(player, target, 1.0);
     }
 
     /** Fire an aimed, lead-predicted arrow (bow already in hand). */

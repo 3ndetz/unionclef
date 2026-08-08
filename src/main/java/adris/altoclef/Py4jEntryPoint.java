@@ -1164,7 +1164,7 @@ public class Py4jEntryPoint {
                 if (p.getName().getString().equalsIgnoreCase(playerName)) {
                     kaptainwutax.tungsten.combat.TrajectorySolver.Solution sol =
                             kaptainwutax.tungsten.combat.TrajectorySolver.solve(
-                                    _mod.getPlayer().getEyePos(), p, 1.0);
+                                    _mod.getPlayer(), p, 1.0);
                     if (sol != null) {
                         m.put("yaw", String.format("%.2f", sol.yaw));
                         m.put("pitch", String.format("%.2f", sol.pitch));

@@ -117,7 +117,10 @@ public class ShootArrowSimpleProjectileTask extends Task {
         Vec3d eye = mod.getPlayer().getEyePos();
 
         if (!highAng) {
-            TrajectorySolver.Solution sol = TrajectorySolver.solve(eye, aimPoint, vel, charge);
+            // The arrow carries the shooter's own movement (vanilla adds it on release), so a shot
+            // taken while walking lands off by the drag-weighted sum of that velocity over the flight.
+            Vec3d shooterVel = TrajectorySolver.shooterVelocity(mod.getPlayer());
+            TrajectorySolver.Solution sol = TrajectorySolver.solve(eye, shooterVel, aimPoint, vel, charge);
             if (sol != null) return new Rotation(sol.yaw, sol.pitch);
         }
         return calculateThrowLookLegacy(mod, target, highAng, rangedItem);

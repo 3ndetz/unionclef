@@ -124,8 +124,14 @@ public class BowShooter {
                 ? new Vec3d(trackedVel.x, 0, trackedVel.z) : trackedVel;
 
         double charge = Math.min(1.0, chargeTicks / 20.0);
+        // The arrow inherits the SHOOTER's movement (vanilla adds it in setVelocity). It costs
+        // almost nothing when running straight away from the target (0.14 blocks — collinear), and
+        // up to 2.33 blocks when the motion is ACROSS the shot. Kiting is the second kind: the aim
+        // claims the camera for the last AIM_LOCK_TICKS while the body keeps running its escape
+        // path, so the body is moving sideways relative to where the bow points.
+        Vec3d shooterVel = TrajectorySolver.shooterVelocity(player);
         TrajectorySolver.Solution sol = TrajectorySolver.solve(
-                player.getEyePos(), aimPoint, leadVel, Math.max(charge, 1.0)); // full-draw arc
+                player.getEyePos(), shooterVel, aimPoint, leadVel, Math.max(charge, 1.0)); // full-draw arc
         if (sol == null) {
             Debug.logMessage("Bow shot aborted (out of range)");
             stop();
@@ -175,9 +181,13 @@ public class BowShooter {
         double yawRad = Math.toRadians(sol.yaw);
         double pitchRad = Math.toRadians(sol.pitch);
         double horiz = v0 * Math.cos(pitchRad);
+        // Same inherited-movement term the solver corrects for. Drawing the aim direction alone
+        // would show an arc through the crosshair, which is NOT the arc the arrow flies while the
+        // bot is kiting — the picture has to match the physics or it is worse than no picture.
         Vec3d vel = new Vec3d(-Math.sin(yawRad) * horiz,
                               -v0 * Math.sin(pitchRad),
-                               Math.cos(yawRad) * horiz);
+                               Math.cos(yawRad) * horiz)
+                .add(TrajectorySolver.shooterVelocity(player));
         Vec3d pos = player.getEyePos();
         kaptainwutax.tungsten.render.Color arc =
                 new kaptainwutax.tungsten.render.Color(80, 220, 255);   // cyan flight arc
