@@ -37,30 +37,43 @@ public class RunAwayTask {
     private static int     tickCounter  = 0;
 
     /**
-     * What the flee actually spent its time doing. Read over py4j as {@code flee=held/ran/plans}.
-     *
-     * <p>bow_flee's last two reds are "survived (0 deaths)" and "avg dist >= 7", and the bot is
-     * being caught at an average of 5-6.5 blocks while told to hold TWELVE. The suspicion from
-     * reading this file is that flight is stop-start — {@link #tick} stops pathing the moment the
-     * gap reaches {@code keepDistance + 1.5} and then holds, so the chaser closes for free until
-     * the next {@code RECALC} plan lands. That is a story, not a measurement, and the last three
-     * things I was sure of here were wrong. These three numbers decide it:
+     * What the flee actually spent its time doing. Read over py4j as
+     * {@code flee=held/searching/ran/plans}.
      *
      * <ul>
-     *   <li>{@code fleeHeld} — ticks spent deliberately standing still because we were far enough
-     *   <li>{@code fleeRan} — ticks spent with a path actually replaying
-     *   <li>{@code fleePlans} — how many times a new flee route was requested
+     *   <li>{@code fleeHeld} — standing still on purpose, already far enough
+     *   <li>{@code fleeSearch} — a path SEARCH in flight: also standing still, but not on purpose
+     *   <li>{@code fleeRan} — the executor actually replaying a path
+     *   <li>{@code fleePlans} — how many routes were requested
      * </ul>
      *
-     * <p>If held greatly exceeds ran, the stop-start reading is right and the hold rule is the
-     * thing to change. If ran dominates, the bot is pathing the whole time and simply losing a
-     * footrace, which is a different fix entirely.
+     * <p>ANSWERED, and the answer needed the split. The question this block used to pose was
+     * "held vs ran": if holding dominated, the stop-start reading was right; if running dominated,
+     * the bot was simply losing a footrace. Running dominated ~5:1 — so it looked like a footrace,
+     * and it was not one.
+     *
+     * <p>The reason is that {@code fleeRan} was counting SEARCHES as running.
+     * {@code PathFinder.active} is raised at the top of {@code find()} and cleared when the worker
+     * finishes, so it means a search is in flight and the bot is stationary. One run read
+     * {@code flee=244/894/103} while {@code execTicks} — the executor's own count of replayed
+     * ticks — was 618. The missing 276 ticks are nearly FOURTEEN SECONDS of a sixty-second course
+     * spent looking for a path instead of following one, and no combination of the old three
+     * numbers could show it.
+     *
+     * <p>That is also what {@code RECALC} was buying: the old tick replanned every 10 ticks whether
+     * or not a good path was running, tearing it down with {@code stop.set(true)} and starting a
+     * 400ms search on a stand that renders at ~9 fps. Flee paths are ~8 blocks, about two seconds
+     * of travel, so they exhaust on their own; replanning now waits for that.
      */
     public static volatile int fleeHeld, fleeRan, fleePlans;
+    /** Ticks spent with a SEARCH in flight — standing still, not fleeing. Split out of fleeRan,
+     *  which had been counting them as running and hiding ~14s of a 60s course. */
+    public static volatile int fleeSearch;
 
     /** Zeroed by resetRunCounters so a bench run measures itself, not the stand's history. */
     public static void resetCounters() {
         fleeHeld = 0;
+        fleeSearch = 0;
         fleeRan = 0;
         fleePlans = 0;
     }
@@ -122,12 +135,24 @@ public class RunAwayTask {
         }
 
         tickCounter++;
-        boolean pathing = TungstenModDataContainer.PATHFINDER.active.get()
-                || TungstenModDataContainer.isExecutorRunning();
-        if (pathing) {
-            fleeRan++;
-        }
-        if (!pathing || tickCounter >= RECALC) {
+        // SEARCHING IS NOT RUNNING. PathFinder.active is set at the top of find() and cleared when
+        // the worker finishes, so it means "a search is in flight" — the bot is STANDING. Counting
+        // it as fleeRan hid the cost: one run reported flee=244/894/103 while the executor replayed
+        // only 618 ticks, so 276 of those "running" ticks — nearly 14 seconds of a 60-second course
+        // — were spent looking for a path rather than following one.
+        boolean searching = TungstenModDataContainer.PATHFINDER.active.get();
+        boolean executing = TungstenModDataContainer.isExecutorRunning();
+        if (searching) fleeSearch++;
+        if (executing) fleeRan++;
+
+        // REPLAN ON NEED, NOT ON A CLOCK. The old condition also fired every RECALC ticks, which
+        // tore down a perfectly good path twice a second: stop.set(true) then a fresh find() with a
+        // 400ms timeout on a stand running at ~9 fps, so the next search frequently had not
+        // finished before the following teardown. Flee paths are short by construction (STEP is 8
+        // blocks, ~2 seconds of travel), so they exhaust on their own and !pathing is a sufficient
+        // trigger; tickCounter stays as a floor so a failing search cannot thrash.
+        boolean pathing = searching || executing;
+        if (!pathing && tickCounter >= RECALC) {
             tickCounter = 0;
             Vec3d flee = safeFleePoint(world, player);
             if (flee != null) {
