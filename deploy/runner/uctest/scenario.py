@@ -227,8 +227,25 @@ class Ctx:
                          f"kills={k} deaths={d}", load_sensitive=True)
 
     def landed_swings(self):
-        """Swings our bot landed during the run, from the mod's own counter."""
+        """Swings our bot landed during the run, from the mod's own counter.
+
+        READ LIVE AT JUDGE TIME, not off the last sample. Sampling costs ~7.5 s a round here, and
+        a course with early_stop ends on the first kill — so the delta between the first and LAST
+        SAMPLE misses everything after that sample, which on a short fight is most of it.
+
+        That undercount hid a real result: a chase fix moved the mod's own gate counter from a mean
+        of 4.7 swings to 7.3 (+55%), while this method read 4-6 on both sides and looked flat. A
+        metric that cannot see a 55% change is not measuring the thing its name claims.
+
+        The baseline still comes from the first sample, because the counter is cumulative across
+        the client's life; only the endpoint moves to a fresh read.
+        """
         vals = [s.get("bot_hits") for s in self.samples if s.get("bot_hits") is not None]
+        if not vals:
+            return 0
+        ok, now = self.bot.py.try_call("totalHits")
+        if ok and isinstance(now, int):
+            return max(0, now - vals[0])
         return 0 if len(vals) < 2 else max(0, vals[-1] - vals[0])
 
     def first_swing_time(self):
