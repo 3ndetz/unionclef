@@ -1104,3 +1104,33 @@ Also this block (verifiable, non-combat):
   the executor break queue (the proven 'mine without a physics leg' path). Unblocks //replace + mineTo.
 - core_bridge: 3rd fix attempt (physics-target edge-completion) — break-safe (4/4) but still 3/8,
   reverted. Definitively a #1.6.1 block-space-search rework (deferred).
+
+## 2026-08-08 — ASSESS (checklist section 6, for the interact-movement + scanner pass)
+
+**1. Did the score move?** Yes. Craft suite was **9 PASS / 3 INVALID**, now **10 PASS / 2 INVALID**,
+0 gate failures both times. The new green is `craft_at_distant_table` itself (6/6 across standalone
+runs and the suite). Nothing was traded for it: the two remaining INVALIDs are the same two courses
+(`chop_tree`, `mine_diamond`) at the same ~10 fps as before.
+
+Numbers that moved underneath the score:
+- scanner reach `13 -> 157` chunks walked per pass (31 re-scanned)
+- station lookup hit rate `510/6018` -> `6059/6059`
+- distance to the target table at end of run `28.0 (frozen 5 min)` -> `0.4`
+
+**2. Which end goal did this advance?** Beating the game on tungsten. Every tool rung above wood
+needs a 3x3 station, so "walk to a crafting table you can see" is on the critical path, not a nicety.
+The scanner fixes are broader still: a 13-chunk world model bounded ore, tree and station finding
+alike, and that ceiling is now gone.
+
+**3. Is this the right road?** Yes, and deliberately so. The movement fix restores the drive AT THE
+SOURCE — `AltoGoal.near` through the live tungsten path — rather than papering over a frozen bot with
+a timeout, a retry or a nudge. The scanner fixes are in the traversal itself, not in a caller working
+around it. No band-aid, no hardcode, no server-specific anything. The legacy engine the earlier pass
+removed STAYS removed.
+
+**4. Are we treading water?** We were — two iterations moved nothing — and the thing that broke it
+was not trying harder at the same approach. Three hypotheses were argued convincingly and all three
+were false (scanner blind; table blacklisted; 40-block threshold flipping). What ended it was
+instrumenting the DECISION instead of reasoning about it a fourth time: `near=true makeNew=INF` on
+every tick with `dist` frozen at 28.0 said the container task was right all along and the body simply
+never moved. **When two passes produce no movement, the next move is a counter, not another theory.**
