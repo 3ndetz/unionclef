@@ -129,7 +129,8 @@ class MobMelee(Scenario):
                         f"remaining={_zombie_count(ctx)}")
         # THE POINT OF THE COURSE. Killed is not enough: the old force field could always do that.
         # What is being measured is whether the swinging ran on tungsten.
-        yield Criterion("the fight ran on tungsten", ticks > 0, f"mdTung total={ticks}")
+        yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
+                        f"mdTung total={ticks}")
         # A fall is not a fight. On a flat field with a floor this should never fire, and if it
         # does the arena is wrong rather than the bot.
         yield Criterion("the bot was actually in the fight", low is not None and low < 20.0,
@@ -204,7 +205,8 @@ class MobTrioNoDamage(MobMelee):
         yield Criterion("three zombies were spawned", ctx.geo.get("spawned") == 3,
                         f"count_at_spawn={ctx.geo.get('spawned')}")
         yield Criterion("all three are dead", killed, f"remaining={_zombie_count(ctx)}")
-        yield Criterion("the fight ran on tungsten", ticks > 0, f"mdTung total={ticks}")
+        yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
+                        f"mdTung total={ticks}")
         # THE CRITERION, MEASURED AS DAMAGE RATHER THAN AS LEFTOVER HEALTH.
         # min_hp answers "how healthy did it end up", which is not the question: a run that took
         # no damage at all failed this gate because it started on 14 hearts inherited from the
@@ -288,7 +290,8 @@ class SkeletonDodge(MobMelee):
         low = min(hps) if hps else None
 
         yield Criterion("the skeleton is dead", not alive, f"alive={alive}")
-        yield Criterion("the fight ran on tungsten", ticks > 0, f"mdTung total={ticks}")
+        yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
+                        f"mdTung total={ticks}")
         yield Criterion("at most one arrow landed", low is not None and low >= 19.0,
                         f"min_hp={low}")
         # WHICH BRANCH ATE THE TICKS? mdTung=0 says no fight was ever committed, and the chain has

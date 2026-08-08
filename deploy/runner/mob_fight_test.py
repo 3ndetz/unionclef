@@ -58,6 +58,12 @@ def statstr(name):
     "?" -- which the verdict reads as "nothing of ours swung". That reported five dead rounds in
     a row for a bot that, watched directly at the same moment, was killing a zombie in three
     seconds with mdTung=7/1 and mdRet6=21. Ask twice before reporting a zero.
+
+    AND KNOW WHAT mdTung ACTUALLY MEANS, because the name invites the wrong reading. It counts the
+    tungsten DUELLING CONTROLLER, which MobDefenseChain hands the legs to only AT striking distance;
+    the approach belongs to the task. So mdTung=0 does NOT mean "the engine did not run" -- it means
+    "the bot never closed". Reading it the first way cost a whole diagnosis on mob_skeleton and left
+    runs at 8.7-12.4 fps recorded as bot failures rather than as unmeasurable.
     """
     for attempt in range(3):
         s = py4j("stats").get("s") or ""
