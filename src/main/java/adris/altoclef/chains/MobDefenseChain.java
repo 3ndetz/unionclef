@@ -105,6 +105,12 @@ public class MobDefenseChain extends SingleTaskChain {
     private boolean doingFunkyStuff = false;
     private boolean wasPuttingOutFire = false;
     private CustomBaritoneGoalTask runAwayTask;
+    /** Flight needs a plan B. See the flee branch for what happens without one. */
+    private net.minecraft.util.math.BlockPos fleeAnchor = null;
+    private int fleeStuckTicks = 0;
+    private int fleeSuppressedTicks = 0;
+    /** Ticks flight was abandoned because it was going nowhere. Read over py4j as mdFleeStuck. */
+    public static volatile int mdFleeStuck;
     private float prevHealth = 20;
     private boolean needsChangeOnAttack = false;
     private Entity lockedOnEntity = null;
@@ -347,12 +353,46 @@ public class MobDefenseChain extends SingleTaskChain {
         }
 
         // Run away if a weird mob is close by.
+        // FLIGHT USED TO HAVE NO PLAN B, AND THE BOT DIED STANDING STILL BECAUSE OF IT.
+        // Measured on mob_skeleton: a skeleton 12.5 blocks away shoots the bot under 10 hp, this
+        // branch commits to RunAwayFromHostilesTask and returns 70 every tick -- so nothing else in
+        // the chain can act. The flee goal lands 30 blocks out, the arena is a 28x28 walled field,
+        // and the drive answers `primDrive NO ROUTE ... (d30.0)` over and over. The bot stands where
+        // it is and is shot dead FIVE TIMES in one run, with a sword in its hand and mdTung=0
+        // because no fight was ever committed.
+        // Running away is still the right first answer -- it just cannot be the ONLY answer. If the
+        // body has not moved while fleeing, the flight is not happening, and holding priority for it
+        // only guarantees the death it was meant to avoid. Stand down for a while and let the rest
+        // of the chain (force field, the committed fight) have the tick.
+        if (fleeSuppressedTicks > 0) {
+            fleeSuppressedTicks--;
+        }
         Optional<Entity> universallyDangerous = getUniversallyDangerousMob(mod);
-        if (universallyDangerous.isPresent() && mod.getPlayer().getHealth() <= 10) {
-            mdFlee++;
-            runAwayTask = new RunAwayFromHostilesTask(DANGER_KEEP_DISTANCE, true);
-            setTask(runAwayTask);
-            mdRet0++; return 70;
+        if (universallyDangerous.isPresent() && mod.getPlayer().getHealth() <= 10
+                && fleeSuppressedTicks == 0) {
+            net.minecraft.util.math.BlockPos here = mod.getPlayer().getBlockPos();
+            if (fleeAnchor != null && fleeAnchor.equals(here)) {
+                fleeStuckTicks++;
+            } else {
+                fleeAnchor = here;
+                fleeStuckTicks = 0;
+            }
+            // Three seconds of "fleeing" without leaving the block is not flight.
+            if (fleeStuckTicks > 60) {
+                mdFleeStuck++;
+                fleeStuckTicks = 0;
+                fleeAnchor = null;
+                fleeSuppressedTicks = 100;
+                runAwayTask = null;
+            } else {
+                mdFlee++;
+                runAwayTask = new RunAwayFromHostilesTask(DANGER_KEEP_DISTANCE, true);
+                setTask(runAwayTask);
+                mdRet0++; return 70;
+            }
+        } else if (fleeSuppressedTicks == 0) {
+            fleeAnchor = null;
+            fleeStuckTicks = 0;
         }
 
         doingFunkyStuff = false;

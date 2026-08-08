@@ -2342,6 +2342,7 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.entity.AbstractDoToEntityTask.dteMlg = 0;
         adris.altoclef.tasks.entity.AbstractDoToEntityTask.dteUnsafe = 0;
         adris.altoclef.chains.MobDefenseChain.mdTungstenTicks = 0;
+        adris.altoclef.chains.MobDefenseChain.mdFleeStuck = 0;
         adris.altoclef.chains.MobDefenseChain.mdAuraTungstenTicks = 0;
         adris.altoclef.chains.MobDefenseChain.mdDamageTaken = 0f;
         adris.altoclef.chains.MobDefenseChain.mdHitFront = 0;
