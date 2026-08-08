@@ -297,6 +297,10 @@ public class InteractWithBlockTask extends Task {
                 // restored through the LIVE path -- AltoGoal.near via GetWithinRangeOfBlockTask, the
                 // same drive the water and lava escapes use -- not through the legacy process.
                 // Cached, because building a fresh task each tick would restart the walk every tick.
+                // Reusing one instance is safe even after the parent stops it: Task.stop() sets
+                // first=true as well as stopped=true, and tick()'s if(first) block clears stopped
+                // before the `if (stopped) return` guard is reached. So the cached task revives on its
+                // next use rather than going inert -- checked, because it reads like a landmine.
                 setDebugState("Getting to our goal");
                 clickTimer.reset();
                 if (approachTask == null) {
