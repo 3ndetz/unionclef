@@ -658,6 +658,19 @@ class AllRound(Scenario):
         # 5-9 fps this stand runs at.
         yield Criterion("swings landed (recorded, not gated)", True,
                         f"landed={ctx.landed_swings()} crits={ctx.crit_swings()}", gate=False)
+        # WHERE THE PUNK TASK SPENDS ITS TICKS. This course drives with `punk`, which is
+        # tungsten's PunkPlayerTask — NOT MobDefenseChain and NOT AbstractKillEntityTask.
+        #
+        # I first printed mdTung/kaTung/dte here and got 0/0, 0/0/0/0, 0/0/0/0/0/0 and very nearly
+        # read it as "the combat engine never ran". Those counters belong to code paths this course
+        # never touches, so their zeros mean nothing — the identical mistake as nav's pdEnter=0 two
+        # hours earlier, made again because I picked counters without checking which path the
+        # course actually uses.
+        #
+        # punkStats() is the right instrument, it has existed all along, and NOTHING called it.
+        ok, ps = ctx.bot.py.try_call("punkStats")
+        yield Criterion("punk task (recorded, not gated)", True,
+                        str(ps) if ok and ps else "unreadable", gate=False)
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
 
