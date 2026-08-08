@@ -424,6 +424,17 @@ public class CombatController {
             if (!armed) {
                 // Recharging: stand off just past the opponent's reach. Not further — the swing
                 // has to be one step away when the cooldown lands, or the stand-off costs tempo.
+                //
+                // TRIED HOLDING INSIDE REACH INSTEAD (REACH-0.1 / REACH-0.4), on the measurement
+                // that the bot can only hit on 23% of combat ticks (closeStats inReach=95 of 404)
+                // and that nothing was blocking it (dirBlockedFwd=0, forward pressed 177 vs wanted
+                // 74). It changed nothing:
+                //     inReach share  23% -> 20%
+                //     landed         4-6 -> 4, 4
+                //     kills/deaths   1/2 -> 1/2, 1/1
+                // and lastDist read 5.05 mid-fight, i.e. the bot was out of range for reasons that
+                // have nothing to do with its target spacing. The limiter is the CHASE, not this
+                // constant. Reverted.
                 strikeAt = TriggerBot.REACH + 0.4;
                 backOffAt = TriggerBot.REACH + 0.2;
             }
