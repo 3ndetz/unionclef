@@ -32,6 +32,33 @@ The score IS "how far we got".
 
 ## 1. AUDIT — every iteration, before a single line of code
 
+⛔ **RULE FIVE: A COUNTER FROM ONE RUN IS A SAMPLE, NOT A MECHANISM.**
+
+Added 2026-08-08, and it is the subtle one. RULE FOUR is about claims nobody ever checked. This is
+about a claim that WAS checked — once — which feels like evidence and is not.
+
+`mob_skeleton` read `dte=2022/0/0/0/0/0`: of the five guards on the engage gate, only `inRange` was
+ever false, on all 2022 evaluations. That was read as a property of the bot — "it never closes on a
+skeleton" — and a fix was built on it: hold SPRINT while approaching, since a walking bot cannot
+catch a mob that backs away at walking pace.
+
+The fix measured WORSE (`closest_gap` 5.73 → 7.78, `min_hp` 5.0 → 2.0) and was reverted. Then a third
+run refuted the mechanism outright:
+
+```
+run A   dte=2022/0/0/0/0/0     gap 5.73    in range NEVER
+run B   dte=1842/0/0/0/0/0     gap 7.78    in range NEVER   (with the sprint fix)
+run C   dte=1903/37/0/0/0/57   gap 4.85    IN RANGE 37 TIMES
+```
+
+The counter was accurate every time. The inference from one sample was not, and the spread between
+runs was larger than the effect being chased.
+
+**The rule this repo already had, applied to counters as well as verdicts: one good run is not a
+result.** A rate is 5–6 runs. That applies to the numbers you diagnose from, not only to the pass or
+fail you report — because a diagnosis is a claim about the bot, and a single run cannot support one
+on a stand whose frame rate moves between 9 and 15.
+
 ⛔ **RULE FOUR: A REMOVAL MAY DECLARE A DEBT. IT MAY NOT ASSERT AN UNCHECKED FACT.**
 
 Added 2026-08-08, after it cost six days on one course.
