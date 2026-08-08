@@ -196,10 +196,35 @@ class Ctx:
     def exchange_criterion(self):
         """For MUTUAL duels (both bots run the same engine): the bar is winning
         the exchange, kills >= deaths. Demanding 0 deaths against an identical
-        opponent would measure luck; losing the exchange is a real failure."""
+        opponent would measure luck; losing the exchange is a real failure.
+
+        LOAD-SENSITIVE, AND THAT WAS MEASURED RATHER THAN ARGUED. I first reasoned the opposite:
+        a self-duel is symmetric, both sides are equally starved, so no frame rate excuses losing
+        to yourself. The symmetry argument is about whether the fight is FAIR. It says nothing
+        about whether the result is INFORMATIVE, and the run below settles that.
+
+        Two full pvp suites, hours apart, against a BIT-IDENTICAL jar (0.73.0, built before both,
+        mtime checked). Three of twelve courses returned a different verdict, and the flips are
+        not spread at random:
+
+            melee_basic         PASS -> FAIL     7.2 fps    this gate
+            narrow_bridge_duel  PASS -> FAIL     8.9 fps    this gate
+            chase_flat          PASS -> INVALID  9.0 fps    freezes (already flagged)
+            slab_hole, bridge_assault, ranged_moving, chase_terrain, allround, edge_duel ... held
+
+        Every mutual duel judged by THIS criterion flipped. Every objective course -- reach the
+        far side, cross the bridge, route around the wall -- held. That is exactly the shape you
+        get when a starved client turns a fight into a coin toss while leaving navigation
+        deterministic, and a coin toss recorded as a bot failure is the precise error the
+        starvation guard exists to prevent.
+
+        Deliberately NOT flagged with it: `self-falls == 0` and `bot deaths <= 0`. They failed in
+        BOTH runs rather than flipping, so there is no evidence they are noise, and flagging a
+        gate on suspicion is how the keyword whitelist grew wrong in the first place.
+        """
         k, d = self.kills(), self.deaths()
         return Criterion("won the exchange (kills >= deaths)", k >= d,
-                         f"kills={k} deaths={d}")
+                         f"kills={k} deaths={d}", load_sensitive=True)
 
     def landed_swings(self):
         """Swings our bot landed during the run, from the mod's own counter."""
