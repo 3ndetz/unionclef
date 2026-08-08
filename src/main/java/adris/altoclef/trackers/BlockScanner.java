@@ -341,7 +341,7 @@ public class BlockScanner {
     }
 
     /** Instrumentation for the distant-block investigation: does a full rescan pass ever COMPLETE? */
-    public static volatile int scanStarted, scanDone, scanChunks, scanMs;
+    public static volatile int scanStarted, scanDone, scanChunks, scanScanned, scanMs;
 
     private void rescan(int maxCount, int cutOffRadius) {
         if (mod.getWorld() == null || mod.getPlayer() == null) return;
@@ -351,6 +351,7 @@ public class BlockScanner {
         ChunkPos playerChunkPos = mod.getPlayer().getChunkPos();
         Vec3d playerPos = mod.getPlayer().getPos();
 
+        int scanned = 0;
         HashSet<ChunkPos> visited = new HashSet<>();
         Queue<Node> queue = new ArrayDeque<>();
         queue.add(new Node(playerChunkPos, 0));
@@ -362,12 +363,22 @@ public class BlockScanner {
             if (node.distance > cutOffRadius || visited.contains(node.pos) || !mod.getWorld().getChunkManager().isChunkLoaded(node.pos.x, node.pos.z))
                 continue;
 
-            boolean isPriorityChunk = getChunkDist(node.pos, playerChunkPos) <= 2;
-            if (!isPriorityChunk && scannedChunks.containsKey(node.pos) && mod.getWorld().getTime() - scannedChunks.get(node.pos) < RESCAN_TICK_DELAY)
-                continue;
-
             visited.add(node.pos);
-            scanChunk(node.pos, playerChunkPos);
+
+            // A CHUNK SCANNED RECENTLY USED TO `continue` HERE -- skipping the enqueue below with it,
+            // so a fresh chunk BLOCKED THE WAVEFRONT and nothing beyond it was reached on that pass.
+            // rescan() runs about once a second while RESCAN_TICK_DELAY is 80 ticks, so the ring at
+            // distance 3 is nearly always too fresh to re-scan: the walk stopped there, and only the
+            // priority chunks (distance <= 2, exempt from the delay) were reliably covered at all.
+            // Recency is a reason to skip the WORK, not the TRAVERSAL. Walking on costs a set lookup;
+            // the expensive part, scanChunk(), is still gated exactly as before.
+            boolean isPriorityChunk = getChunkDist(node.pos, playerChunkPos) <= 2;
+            boolean tooFresh = !isPriorityChunk && scannedChunks.containsKey(node.pos)
+                    && mod.getWorld().getTime() - scannedChunks.get(node.pos) < RESCAN_TICK_DELAY;
+            if (!tooFresh) {
+                scanned++;
+                scanChunk(node.pos, playerChunkPos);
+            }
 
             // THIS BFS USED TO STEP ONLY DIAGONALLY -- (x+1,z+1), (x-1,z+1), (x-1,z-1), (x+1,z-1).
             // Every such step changes both coordinates by one, so (x + z) % 2 is INVARIANT: from the
@@ -410,7 +421,10 @@ public class BlockScanner {
         }
 
         scanDone++;
+        // visited = chunks WALKED, scanned = chunks actually re-read. They differ once recency stops
+        // gating the traversal, and the gap is the point: a pass now reaches far more than it re-reads.
         scanChunks = visited.size();
+        scanScanned = scanned;
         scanMs = (int) (System.currentTimeMillis() - ms);
         if (LOG) {
             mod.log("Rescanned in: " + scanMs + " ms; visited: " + scanChunks + " chunks");
