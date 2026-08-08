@@ -251,13 +251,10 @@ public class SlotHandler {
         return false;
     }
 
+    /** Put away whatever we are hitting with. The 1.21.11 stub was {@code stack -> false}, which
+     *  matches nothing, so on the live version this never put anything away. */
     public boolean forceDeequipHitTool() {
-        //#if MC >= 12111
-        //$$ // TODO [1.21.11] tool-class removed — check via item components or tags
-        //$$ return forceDeequip(stack -> false);
-        //#else
-        return forceDeequip(stack -> stack.getItem() instanceof ToolItem);
-        //#endif
+        return forceDeequip(stack -> adris.altoclef.util.helpers.ItemHelper.isTool(stack.getItem()));
     }
 
     public void forceDeequipRightClickableItem() {

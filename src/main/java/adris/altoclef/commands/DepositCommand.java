@@ -7,13 +7,11 @@ import adris.altoclef.commandsystem.args.ListArg;
 import adris.altoclef.commandsystem.exception.CommandException;
 import adris.altoclef.tasks.container.StoreInAnyContainerTask;
 import adris.altoclef.util.ItemTarget;
+import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.PlayerSlot;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-//#if MC < 12111
-import net.minecraft.item.ToolItem;
-//#endif
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.List;
@@ -33,12 +31,10 @@ public class DepositCommand extends Command {
             ItemStack stack = StorageHelper.getItemStackInSlot(slot);
             // Ignore tools
             if (!stack.isEmpty()) {
-                Item item = stack.getItem();
-                //#if MC < 12111
-                return !(item instanceof ToolItem);
-                //#else
-                //$$ return true; // TODO [1.21.11] tool-class deleted — filter tools via Item.Settings component
-                //#endif
+                // KEEP THE TOOLS. The 1.21.11 stub for this was `return true`, i.e. "yes, deposit
+                // it" for every item including the pickaxe the bot is mining with — the opposite of
+                // what the line above it says.
+                return !ItemHelper.isTool(stack.getItem());
             }
             return false;
         });

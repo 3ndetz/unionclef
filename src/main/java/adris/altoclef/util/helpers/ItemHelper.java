@@ -712,6 +712,22 @@ public class ItemHelper {
         return damage * speed;
     }
 
+    /**
+     * Is this a tool — a pickaxe, axe, shovel, hoe or sword?
+     *
+     * <p>Replaces {@code item instanceof ToolItem}, which 1.21.11 deleted. The TOOL component is
+     * what the game itself uses to decide mining behaviour, and swords carry it there exactly as
+     * they used to extend ToolItem, so the set this matches is the same one on both versions.
+     *
+     * <p>Two callers were silently inverted without it. {@code @deposit} filtered tools OUT of the
+     * chest with {@code !(item instanceof ToolItem)} and its 1.21.11 stub was {@code return true} —
+     * so on the live version the command posted the bot's own pickaxe into the chest. And
+     * {@code forceDeequipHitTool} stubbed to {@code stack -> false}, which never puts anything away.
+     */
+    public static boolean isTool(net.minecraft.item.Item item) {
+        return item != null && item.getComponents().contains(net.minecraft.component.DataComponentTypes.TOOL);
+    }
+
     private static float attributeSum(net.minecraft.item.Item item, String path) {
         if (item == null) {
             return 0;
