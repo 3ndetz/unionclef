@@ -32,6 +32,21 @@ The score IS "how far we got".
 
 ## 1. AUDIT — every iteration, before a single line of code
 
+⛔ **RULE THREE: `gradlew build` DOES NOT DEPLOY. AFTER A BUILD, RUN `deploy/deploy_jar.sh`.**
+
+Added 2026-08-08. Building writes a jar into `versions/1.21.11/build/libs`. The containers run
+whatever `deploy/deploy_jar.sh` last copied into `deploy/run/mods` — a SEPARATE step. Build without
+deploy and the bench measures the PREVIOUS code while you read the numbers as if they were the new
+code.
+
+It cost a wrong conclusion in the BlockScanner work. A fix was built, the course was run twice, and
+the station lookup dropped from 510 hits to 0 and then 0 again — read as "my change made it strictly
+worse", which nearly got it reverted. Both runs were the OLD jar, and the 510-vs-0 spread was this
+course's ordinary run-to-run variance. Deployed, the same change took the hit rate to 6034/6034.
+
+Two ways to not get caught: deploy in the same command as the build, and when a result is surprising,
+confirm the binary under test contains the change before believing anything it says.
+
 ⛔ **RULE TWO: AN IDLE BOT RUNS NOTHING. A COURSE MUST GIVE IT A TASK BEFORE MEASURING ANYTHING.**
 
 Added 2026-08-08, after it produced a fully corroborated finding that was completely wrong.
