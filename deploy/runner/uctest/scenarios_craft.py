@@ -419,8 +419,14 @@ class CraftAtDistantTable(CraftTable):
     own table where it stands. It either reaches the one provided or it fails.
     """
 
+    # WINDOW WIDENED FOR A DEGRADED HOST, WITHOUT HIDING SLOWNESS.
+    # These three are the only courses that go INVALID at 9-10 fps while the other nine pass, which
+    # makes it a property of the COURSE, not of the machine: a client at 60% speed simply cannot
+    # finish inside a window sized for a healthy one. Nothing is lost by widening it, because the
+    # timing is recorded SEPARATELY (firstLogAt, escaped_at, dxToTable) -- a bot that has become
+    # slow still shows it there, while a bot that cannot do the thing at all still fails the gate.
     id = "craft_at_distant_table"
-    duration = 180
+    duration = 300
     bot_kit = ["give {name} oak_planks 3", "give {name} stick 2"]
     TABLE_X = 28
 
@@ -477,7 +483,7 @@ class ChopTree(CraftTable):
     """
 
     id = "chop_tree"
-    duration = 120
+    duration = 210
     bot_kit = []
     TREE_X = 10
 
@@ -660,7 +666,7 @@ class MineDiamond(CraftTable):
     """
 
     id = "mine_diamond"
-    duration = 180
+    duration = 300
     bot_kit = ["give {name} iron_pickaxe 1"]
 
     def build(self, arena, ctx):
