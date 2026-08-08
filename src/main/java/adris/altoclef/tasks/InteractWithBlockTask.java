@@ -274,9 +274,11 @@ public class InteractWithBlockTask extends Task {
         // which has not moved the body since tungsten became the default. Measured before touching
         // it: the bot reaches a crafting table 28 blocks away regardless (craft_at_distant_table,
         // dxToTable 0.5-0.7), so something else does the walking and this call contributed nothing.
-        // Removing it takes GoalBlockSide with it, which had no other user. GoalAnd STAYS: a first
-        // pass deleted it too and the build caught a second user in GetToOuterEndIslandsTask -- the
-        // grep that cleared it had filtered out the very directory the user lived in.
+        // Removing it takes GoalBlockSide with it, which had no other user. GoalAnd survived this
+        // pass because the build caught a second user in GetToOuterEndIslandsTask -- the grep that
+        // cleared it had filtered out the very directory the user lived in. That last user is now
+        // gone too (its gateway approach moved to the live drive, gated by the end_gateway course),
+        // and GoalAnd is deleted.
         //
         // The remaining engine questions go through Nav, which is null-safe and is the one place
         // that names an engine. This is a REFACTOR with no promised win, gated by the craft ladder,
