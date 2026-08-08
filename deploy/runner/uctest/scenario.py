@@ -454,6 +454,27 @@ class Scenario:
         crits.append(Criterion("fps recorded", True,
                                f"avg_fps={None if avg_fps is None else round(avg_fps, 1)} "
                                f"samples={n_fps}", gate=False))
+        # WHO DROVE THE BODY — the "can baritone be deleted" number, on every course.
+        #
+        # CustomBaritoneGoalTask:261 is labelled "THE LAST PLACE THE LEGACY ENGINE STILL MOVES THE
+        # BOT" and counts itself as pdLegacy, with a comment saying the deletion question is
+        # exactly whether that number is zero on a real run. It is reset per course, so reading it
+        # by hand after a suite samples only the LAST course -- which is how a 0 could be believed
+        # on the strength of one course out of twelve.
+        #
+        # Reported here so every course in every suite contributes a sample, the same reasoning
+        # that moved fps sampling into this loop. pdEnter is printed beside it because pdLegacy=0
+        # means nothing if the drive never ran at all: 0/0 is an idle course, 0/29 is evidence.
+        ok, stats = ctx.bot.py.try_call("placeStats")
+        drive = {}
+        if ok and stats:
+            for tok in str(stats).split():
+                if "=" in tok:
+                    k, _, v = tok.partition("=")
+                    drive[k] = v
+        crits.append(Criterion("who drove (recorded, not gated)", True,
+                               f"pdLegacy={drive.get('pdLegacy')} pdEnter={drive.get('pdEnter')} "
+                               f"pdNoVec={drive.get('pdNoVec')}", gate=False))
         errs = ctx.chat_errors()
         crits.append(Criterion("no command errors in chat", not errs,
                                "; ".join(errs[:3])))
