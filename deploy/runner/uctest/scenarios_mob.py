@@ -270,6 +270,15 @@ class SkeletonDodge(MobMelee):
         yield Criterion("the fight ran on tungsten", ticks > 0, f"mdTung total={ticks}")
         yield Criterion("at most one arrow landed", low is not None and low >= 19.0,
                         f"min_hp={low}")
+        # WHICH BRANCH ATE THE TICKS? mdTung=0 says no fight was ever committed, and the chain has
+        # several branches that return early -- flee, creeper, shield, dodge-projectiles -- each of
+        # which starves everything below it while it holds priority. mdRet is the per-branch return
+        # tally (mdRet0=flee, mdRet2=dodge-projectiles), so this names the culprit instead of
+        # inviting another guess. Recorded, never a gate.
+        yield Criterion("chain return paths (recorded, not gated)", True,
+                        f"mdRet={_stat(ctx, 'mdRet')} mdFlee={_stat(ctx, 'mdFlee')} "
+                        f"mdFight={_stat(ctx, 'mdFight')} mdCalls={_stat(ctx, 'mdCalls')}",
+                        gate=False)
 
 
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
