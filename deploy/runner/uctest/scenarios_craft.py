@@ -438,7 +438,17 @@ class CraftAtDistantTable(CraftTable):
         ctx.rcon.cmd("time set day")
         ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
         ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
-        # The only crafting table in the world, well out of reach.
+        # "THE ONLY CRAFTING TABLE IN THE WORLD" WAS A COMMENT, NOT A FACT.
+        # The stand's world is not wiped between runs, so tables left by earlier courses survive.
+        # Measured with a counter on the lookup: tbl=6075/6075@44 -- a table is found on EVERY
+        # lookup, at 44 blocks, while this course places its own at 28. And 40 is the threshold in
+        # getCostToMakeNew, so a table at 44 counts as too far: the bot decides to CRAFT one and
+        # cannot, because the kit here is deliberately a plank short. The course was failing on its
+        # own leftovers.
+        # Clear the whole arena of tables first; the assertion below then checks the sweep worked.
+        ctx.rcon.cmd(f"fill -60 {STAND_Y - 2} -60 60 {STAND_Y + 4} 60 minecraft:air "
+                     f"replace minecraft:crafting_table", allow_reject=True)
+        time.sleep(1)
         ctx.rcon.cmd(f"setblock {self.TABLE_X} {STAND_Y} 0 minecraft:crafting_table",
                      allow_reject=True)
         time.sleep(1)
@@ -465,6 +475,17 @@ class CraftAtDistantTable(CraftTable):
         # the craft failed" -- two completely different defects that look identical in the pack.
         yield Criterion("distance from the table at the end", True,
                         f"dxToTable={reached:.1f}", gate=False)
+        # RECORDED, AND IT IS THE COURSE CHECKING ITSELF: the table the bot actually locks onto must
+        # be THIS course's, at 28 blocks. A larger number means a leftover from an earlier run is
+        # still standing and the verdict above is about the wrong table.
+        ok, stats = ctx.bot.py.try_call("placeStats")
+        tbl = ""
+        if ok and stats:
+            for part in str(stats).split():
+                if part.startswith("tbl="):
+                    tbl = part
+        yield Criterion("the table found is OURS (~28 blocks, not a leftover)", True,
+                        tbl or "n/a", gate=False)
 
 
 class ChopTree(CraftTable):
