@@ -249,6 +249,49 @@ ladder turned out to be a capability that had been DEAD SINCE THE 1.21.11 PORT, 
 - `craft_*` — the manual craft loop asked `hasItemInventoryOnly` while its ingredient was in the
   CURSOR mid-move, read "run out", and its own tail put the item back. A carousel with no exit.
 - mining — the mid-mining tool swap had its whole body behind `//#if MC < 12111`.
+- `craft_at_distant_table` — and this one was NOT dead since the port. It was **a regression we
+  introduced ourselves**, and it is the most instructive failure on the ladder. See below.
+
+⛔ **"Getting to our goal" SET A DEBUG STRING AND WENT NOWHERE (2026-08-08).**
+
+`InteractWithBlockTask`'s out-of-reach branch had been reduced to this:
+
+```java
+case CANT_REACH -> {
+    setDebugState("Getting to our goal");
+    clickTimer.reset();
+}
+```
+
+No goal, no movement. The bot announced it was on its way and stood still — measured at
+`dist=28.0` for five straight minutes, tick after tick, twenty-eight blocks from a crafting table it
+could see the whole time.
+
+The goal had been removed by the baritone-removal pass on two premises: that the legacy engine no
+longer drives the body — TRUE, and still true — and that "something else does the walking" — FALSE.
+Nothing else does. The measurement that licensed it (`dxToTable 0.5-0.7`) came from a state where
+something else still moved the body.
+
+**Fixed on the LIVE drive** — `AltoGoal.near` via `GetWithinRangeOfBlockTask`, the same path the
+water and lava escapes use — not by restoring the legacy process, which stays removed. FAIL -> PASS,
+6/6.
+
+Three of our own hypotheses died on the way, in this order, each argued convincingly first:
+
+| hypothesis | what the counter said |
+|---|---|
+| the scanner cannot see the table | found on 100% of lookups (`tbl=6059/6059`) |
+| the table got blacklisted | nothing blacklisted that run |
+| the 40-block threshold flips mid-run | `makeNew` never left `INF` |
+
+What ended it was instrumenting the DECISION rather than reasoning about it a fourth time:
+`near=true makeNew=INF forceEl=true` on every tick — the container task was correct throughout —
+while `dist` never changed. The bot was never deciding wrongly. It was never moving.
+
+⭐ **The rule this leaves.** A cleanup may say "I have not measured this, so I am not touching it"
+— that is a debt, and `TimeoutWanderTask` and `AbstractDoToEntityTask` both do exactly that, with
+gates. What a cleanup may NOT do is assert a checkable fact about the running system without
+checking it. All 15 files touched by that pass were swept afterwards; this was the only one.
 
 ⭐⭐ **AND THE LESSON THAT COST THE MOST.** `chop_canopy` took FOUR fixes that each measured exactly
 the same score, and all four were reverted. What broke it was giving up on fixes for three runs and
