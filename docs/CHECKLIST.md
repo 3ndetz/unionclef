@@ -32,6 +32,32 @@ The score IS "how far we got".
 
 ## 1. AUDIT — every iteration, before a single line of code
 
+⛔ **RULE FOUR: A REMOVAL MAY DECLARE A DEBT. IT MAY NOT ASSERT AN UNCHECKED FACT.**
+
+Added 2026-08-08, after it cost six days on one course.
+
+`InteractWithBlockTask`'s out-of-reach branch was reduced to `setDebugState("Getting to our goal")`
+and a timer reset. No goal, no movement. The bot stood `dist=28.0` from a crafting table for five
+minutes announcing it was on its way. The comment justifying the removal said the legacy engine does
+not drive the body — TRUE — and that "something else does the walking" — FALSE. Nothing else did.
+
+The distinction that matters, because two other removals in the same pass were FINE:
+
+- `TimeoutWanderTask` keeps a dead-engine `explore()` call and says why: an A/B odometer showed the
+  live-engine replacement covered LESS ground (`wanderMoved 42.6` vs `24.6`). A measurement.
+- `AbstractDoToEntityTask` drops the step-away and says "NOT replaced, deliberately", with a reason
+  and a passing gate. A declared debt.
+- `InteractWithBlockTask` asserted a **checkable claim about the running system** and never checked
+  it.
+
+The first two are honest. The third reads like reassurance and rots silently, because nothing fails
+loudly — the task still returns, the chain still ticks, the debug string still says something
+plausible. All 15 files of that pass were swept afterwards; this was the only one, but one was
+enough.
+
+**When a cleanup comment contains a claim of the form "X still happens elsewhere", that claim is a
+TEST YOU OWE, not a note.** Either measure it in the same pass, or write "unmeasured" and gate it.
+
 ⛔ **RULE THREE: `gradlew build` DOES NOT DEPLOY. AFTER A BUILD, RUN `deploy/deploy_jar.sh`.**
 
 Added 2026-08-08. Building writes a jar into `versions/1.21.11/build/libs`. The containers run
