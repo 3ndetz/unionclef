@@ -133,14 +133,39 @@ class Rcon:
     # possible: if every echo in the reply belongs to some OTHER command, the rejection is not ours.
     # When there is no echo at all we cannot attribute it, and then we keep the original strict
     # behaviour — that guard was expensive to learn and is not being loosened here.
+    # ATTRIBUTION IS BY SUFFIX MATCH, and the first version of this got it wrong in the dangerous
+    # direction: it split the echo off with rsplit("\n"), assuming a newline before the echoed
+    # command. There is none. Real replies from this server, captured rather than imagined:
+    #
+    #   Incorrect argument for commandgamerule doMobSpawning false<--[HERE]
+    #   Unknown or incomplete command. See below for errorgamerule<--[HERE]
+    #   Incorrect argument for command...p tester1 zz -60 0<--[HERE]
+    #   Invalid boolean: expected 'true' or 'false' but found 'fals'...s 0 0 1 2 fals tester1<--[HERE]
+    #
+    # The rejection phrase runs straight into the echo, and the echo is TRUNCATED FROM THE FRONT
+    # ("...p tester1" for `tp tester1`, "s 0 0 1 2" for `spreadplayers 0 0 1 2`). So a
+    # startswith() test matches nothing, every rejection looked foreign, every rejection was
+    # swallowed — and a whole run came back with the bot standing at world spawn and every counter
+    # zero, because the arena setup "succeeded" without doing anything.
+    #
+    # What holds across all four shapes: the text before the marker ENDS WITH a run of the command
+    # (vanilla prints up to the error cursor). So match the longest suffix of the segment that is a
+    # substring of the command, and require it to be long enough not to be a coincidence.
     HERE = "<--[HERE]"
 
     def _rejects_this(self, out, command):
-        echoes = [seg.rsplit("\n", 1)[-1].strip()
-                  for seg in out.split(self.HERE)[:-1]]
-        if not echoes:
-            return True                       # unattributable — stay strict
-        return any(e and command.startswith(e[:len(command)]) for e in echoes)
+        segments = out.split(self.HERE)[:-1]
+        if not segments:
+            return True                       # no echo to attribute by — stay strict
+        need = min(len(command), 6)
+        for seg in segments:
+            best = 0
+            for k in range(1, min(len(seg), len(command)) + 1):
+                if seg[-k:] in command:
+                    best = k
+            if best >= need:
+                return True
+        return False
 
     def cmd(self, command, timeout=20, allow_reject=False):
         r = sh(["docker", "exec", self.container, "rcon-cli", command], timeout)
