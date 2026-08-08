@@ -289,5 +289,70 @@ class SkeletonDodge(MobMelee):
                         gate=False)
 
 
+class MobWeaponFromPack(MobMelee):
+    """The sword is in the PACK and the hand is EMPTY. Does the bot arm itself?
+
+    WHY NO EXISTING COURSE COULD ASK THIS. Every pvp and mob course kits the bot with
+    `item replace entity {name} weapon.mainhand with iron_sword` -- the weapon starts already
+    equipped. So the whole "choose a weapon and put it in the hand" path was invisible to the
+    entire bench, and it could be, and was, completely dead on 1.21.11 without a single course
+    noticing: `KillAura.equipWeapon`'s body sat inside a `//#if MC < 12111` branch and
+    `bestWeapon` returned whatever was already in the hand rather than scanning the pack.
+
+    THE GATE IS AN INVENTORY OUTCOME, NOT A TIMING ONE, and that is deliberate. This stand runs
+    at 7-9 fps against a floor of 14, where fight outcomes are a coin toss (two full pvp suites
+    on a bit-identical jar disagreed on three courses). "Is the sword in the hand" does not care
+    how many frames the client managed -- it is the same shape of bar as the craft ladder's
+    "the item is in the pack", and it stays readable on a starved host.
+    """
+
+    id = "mob_weapon_swap"
+    tier = "gate"
+    duration = 60
+    # Empty hand, sword out of reach of the hotbar: it has to be FOUND, not just selected.
+    bot_kit = ["item replace entity {name} weapon.mainhand with air",
+               "item replace entity {name} inventory.0 with iron_sword"]
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set midnight")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd("difficulty normal")
+        ctx.rcon.cmd("kill @e[type=zombie]")
+        # Wipe first: the stand does not reset the world between runs, and a sword left in the
+        # hotbar by the PREVIOUS course would make this one pass without the bot doing anything.
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        time.sleep(1)
+        for line in self.bot_kit:
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
+        time.sleep(1)
+        ctx.geo["held_at_start"] = ctx.rcon.held_item(ctx.bot.name)
+        ctx.geo["held_seen"] = []
+        ctx.bot.py.try_call("resetRunCounters")
+        ctx.rcon.cmd(f"summon zombie 4.5 {STAND_Y} 0.5")
+        ctx.geo["spawned"] = _zombie_count(ctx)
+        time.sleep(2)
+        ctx.bot.cmd("@test kill")
+
+    def drive_tick(self, ctx, elapsed):
+        held = ctx.rcon.held_item(ctx.bot.name)
+        if held and held not in ctx.geo["held_seen"]:
+            ctx.geo["held_seen"].append(held)
+
+    def judge(self, ctx):
+        seen = ctx.geo.get("held_seen") or []
+        started_empty = ctx.geo.get("held_at_start") is None
+        armed = any("sword" in h for h in seen)
+
+        # THE COURSE MUST NOT LIE TO ITSELF. If the kit failed and the bot began holding the
+        # sword, "it armed itself" would be true without the bot having done anything -- the
+        # exact shape of false green this bench has been bitten by twice.
+        yield Criterion("the bot started EMPTY-HANDED", started_empty,
+                        f"held_at_start={ctx.geo.get('held_at_start')}")
+        yield Criterion("the bot armed itself from the pack", armed,
+                        f"held_during_run={seen}")
+        yield Criterion("the zombie is dead", _zombie_count(ctx) == 0,
+                        f"remaining={_zombie_count(ctx)}")
+
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
-SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge]
+SCENARIOS = [MobMelee, MobTrioNoDamage, SkeletonDodge, MobWeaponFromPack]
