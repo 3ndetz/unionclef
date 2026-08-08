@@ -59,6 +59,48 @@ result.** A rate is 5–6 runs. That applies to the numbers you diagnose from, n
 fail you report — because a diagnosis is a claim about the bot, and a single run cannot support one
 on a stand whose frame rate moves between 9 and 15.
 
+⛔ **RULE SIX: A COURSE THAT HANDS THE BOT THE FINISHED STATE CANNOT TEST HOW THE BOT REACHES IT.**
+
+Added 2026-08-08. The most expensive kind of blind spot, because every gate stays GREEN.
+
+Every pvp and mob course kits the bot with
+
+```
+item replace entity {name} weapon.mainhand with iron_sword
+```
+
+The weapon starts **already in the hand**. So the entire "choose a weapon and equip it" path was
+invisible to the bench — and it was completely dead on 1.21.11 for as long as the port has existed.
+`KillAura.equipWeapon`'s whole body sat inside a `//#if MC < 12111` branch, and `bestWeapon` returned
+whatever was already held instead of scanning the pack. Twelve pvp courses and three mob courses ran
+against that for weeks and none of them could see it.
+
+**The reason nothing rang: the force field wins bare-handed.** Measured both ways on the same arena,
+same host, only the Java differing:
+
+```
+pre-fix  jar   held_during_run=[]               the zombie still DIED
+post-fix jar   held_during_run=['iron_sword']   the zombie still DIED
+```
+
+Every outcome gate above the missing capability — "the zombie is dead", "won the exchange" — stayed
+green while the bot fought with its fists. **A capability can be entirely absent and every gate above
+it still pass**, which is why "the suite is green" is not the same as "the suite covers it".
+
+The test that finds this asks for the STEP, not the outcome: empty hand, sword in `inventory.0` where
+it must be found rather than selected, and the gate is "is the sword in the hand". Two further
+properties are worth copying:
+
+- **It is an inventory outcome, so it survives a starved host.** Both runs above sat at 5–6 fps
+  against a floor of 14 and both gave a clean verdict. Same reason the craft ladder judges the item
+  in the pack rather than the seconds it took.
+- **It guards against lying to itself.** "The bot started EMPTY-HANDED" is its own gate, so a kit
+  that silently failed — or a sword inherited from the previous run's hotbar — cannot make "it armed
+  itself" pass without the bot doing anything.
+
+**Before trusting a green suite on a capability, ask what the kit or the arena already GIVES the
+bot.** Whatever is handed over is not being tested, however many courses pass.
+
 ⛔ **RULE FOUR: A REMOVAL MAY DECLARE A DEBT. IT MAY NOT ASSERT AN UNCHECKED FACT.**
 
 Added 2026-08-08, after it cost six days on one course.
