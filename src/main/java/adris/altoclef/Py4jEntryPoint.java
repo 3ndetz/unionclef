@@ -2354,6 +2354,7 @@ public class Py4jEntryPoint {
         adris.altoclef.chains.MobDefenseChain.mdHitCount = 0;
         adris.altoclef.chains.MobDefenseChain.mdPillarDefence = 0;
         adris.altoclef.chains.MobDefenseChain.mdBowTicks = 0;
+        kaptainwutax.tungsten.task.BowShooter.resetShotsFired();
         kaptainwutax.tungsten.path.movements.MovementQueue.qBurnedInPlace = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qTeleported = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qStuckNoMove = 0;
@@ -2437,7 +2438,7 @@ public class Py4jEntryPoint {
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
                         + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d pdLegacy=%d exArrived=%d exRanOut=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d mqNull=%d gaveUp=%d/%d dc=%d/%d/%d/%d/%d mc=%d/%d/%d/%d/%d mcFlight=%d toolSwap=%d recipesKnown=%d wander=%d wanderMoved=%d wanderChk=%d/%d wanderFail=%d lavaEsc=%d lavaCond=%d/%d surv=%d/%d tbl=%d/%d@%d bs=%d/%d/%d/%d@%dms navUnsafeAir=%d sm=%d/%d smWater=%d srch=%d/%d/%d drop=%d/%d scan=%d/%d/%d cb=%d/%d/%d/%d et=%d/%d"
-                        + " sprint=%d/%d lowHp=%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdFleeStuck=%d mdPillarD=%d dmgTaken=%.1f hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
+                        + " sprint=%d/%d lowHp=%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdFleeStuck=%d mdPillarD=%d dmgTaken=%.1f hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d bowShots=%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
                         + " | gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
@@ -2622,6 +2623,14 @@ public class Py4jEntryPoint {
                                 / adris.altoclef.chains.MobDefenseChain.mdHitCount,
                 adris.altoclef.chains.MobDefenseChain.mdHitDistMax,
                 adris.altoclef.chains.MobDefenseChain.mdBowTicks,
+                // ARROWS ACTUALLY LOOSED. bow_flee and bow_flee_hard both record hits=0 over ~20
+                // shot requests a run, and nothing could say which of three very different things
+                // that means: never drew, drew and missed, or hit while the course's own detector
+                // (hp_drop_events, min_dist=5) looked past it. BowShooter has counted this all
+                // along in getShotsFired() -- and NOTHING called it, which is the same shape as
+                // mdFleeStuck earlier today: a counter that exists and cannot be read is not
+                // instrumentation. Reset with the others in resetRunCounters.
+                kaptainwutax.tungsten.task.BowShooter.getShotsFired(),
                 kaptainwutax.tungsten.path.movements.MovementQueue.qBurnedInPlace,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qTeleported,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qStuckNoMove,

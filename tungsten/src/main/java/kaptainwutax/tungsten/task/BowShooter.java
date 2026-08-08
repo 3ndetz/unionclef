@@ -52,6 +52,10 @@ public class BowShooter {
     public static boolean isActive() { return active; }
     public static int getShotsFired() { return shotsFired; }
 
+    /** Zero the shot tally so a bench run measures its own shots, not the stand's history.
+     *  Called from resetRunCounters alongside every other per-run counter. */
+    public static void resetShotsFired() { shotsFired = 0; }
+
     public static void stop() {
         active = false;
         target = null;
