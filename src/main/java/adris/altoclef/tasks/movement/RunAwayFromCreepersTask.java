@@ -4,8 +4,7 @@ import adris.altoclef.control.Nav;
 import adris.altoclef.AltoClef;
 import adris.altoclef.chains.MobDefenseChain;
 import adris.altoclef.tasksystem.Task;
-import adris.altoclef.util.baritone.GoalRunAwayFromEntities;
-import baritone.api.pathing.goals.Goal;
+import adris.altoclef.util.goals.AltoGoal;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.mob.CreeperEntity;
 import net.minecraft.util.math.Vec3d;
@@ -37,30 +36,31 @@ public class RunAwayFromCreepersTask extends CustomBaritoneGoalTask {
         return "Run " + _distanceToRun + " blocks away from creepers";
     }
 
+    /**
+     * OFF BARITONE'S GOAL TYPE. See {@link AltoGoal.FleeLive} for why a record snapshot could not
+     * be used: the task's goal object is cached for its whole life, so a fixed point would send
+     * the bot to where the creepers were when it started running.
+     *
+     * <p>⛔ WHAT THIS DOES NOT PORT, AND IT WAS ALREADY GONE: the old inner goal overrode
+     * {@code getCostOfEntity} to weight cells by {@link MobDefenseChain#getCreeperSafety}, i.e. to
+     * respect a creeper's FUSE. That override is only ever read through {@code Goal.heuristic()},
+     * and heuristic() is consumed exclusively inside shredder's A* (PathNode, PathingBehavior) —
+     * the fallback engine, not the tungsten drive, which asks a goal only for target() and
+     * reached(). So fuse-aware creeper avoidance has not been happening on the live engine for as
+     * long as tungsten has been primary. This port does not remove it; it removes the appearance
+     * of it. Written down as a debt rather than quietly dropped: if fleeing creepers should weigh
+     * the fuse, that belongs in the flee POINT, not in a heuristic nothing calls.
+     */
     @Override
-    protected Goal newGoal(AltoClef mod) {
+    protected AltoGoal newAltoGoal(AltoClef mod) {
         // We want to run away NOW
         Nav.cancel();
-        return new GoalRunAwayFromCreepers(mod, _distanceToRun);
+        return new AltoGoal.FleeLive(
+                () -> mod.getEntityTracker().getTrackedEntities(CreeperEntity.class).stream()
+                        .map(e -> new Vec3d(e.getX(), e.getY(), e.getZ()))
+                        .collect(java.util.stream.Collectors.toList()),
+                () -> mod.getPlayer() == null ? null : mod.getPlayer().getPos(),
+                _distanceToRun);
     }
 
-    private static class GoalRunAwayFromCreepers extends GoalRunAwayFromEntities {
-
-        public GoalRunAwayFromCreepers(AltoClef mod, double distance) {
-            super(mod, distance, false, 10);
-        }
-
-        @Override
-        protected List<Entity> getEntities(AltoClef mod) {
-            return new ArrayList<>(mod.getEntityTracker().getTrackedEntities(CreeperEntity.class));
-        }
-
-        @Override
-        protected double getCostOfEntity(Entity entity, int x, int y, int z) {
-            if (entity instanceof CreeperEntity) {
-                return MobDefenseChain.getCreeperSafety(new Vec3d(x + 0.5, y + 0.5, z + 0.5), (CreeperEntity) entity);
-            }
-            return super.getCostOfEntity(entity, x, y, z);
-        }
-    }
 }
