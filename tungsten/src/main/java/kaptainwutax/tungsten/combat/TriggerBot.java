@@ -70,6 +70,18 @@ public class TriggerBot {
     // instrument reported "no swings" for a run that had just dealt 12 damage.
     public static volatile int lifetimeHits = 0;
     public static volatile int gTotal=0, gClick=0, gCooldown=0, gReach=0, gAngle=0, gLos=0, gPassed=0;
+    /**
+     * HOW FAR OFF the crosshair is when the angle gate refuses, and how far the target is when
+     * reach refuses. Counts alone cannot separate "nearly aimed, threshold too tight" from "not
+     * tracking at all", and THREE aim changes were built and reverted without that distinction:
+     * setTargetFast for melee, a narrower bow release window, and stepping the aim on the tick.
+     * All three changed HOW the aim moves; none measured WHERE it ended up.
+     *
+     * <p>Sum plus max, so the mean is recoverable. The threshold is {@link #MAX_LOOK_ANGLE_DEG}
+     * (40 deg) and reach is {@link #REACH} (3.0), so a mean just above either says the gate is
+     * marginal, and a mean far above says the bot is simply not on target or not in range.
+     */
+    public static volatile double gAngleSum=0, gAngleMax=0, gReachDistSum=0, gReachDistMax=0;
     public static volatile int lifetimeCrits = 0;
     private int ticksSinceLastHit = 0;
 
@@ -133,8 +145,8 @@ public class TriggerBot {
         gTotal++;
         if (gateClick) gClick++;
         if (gateCooldown) gCooldown++;
-        if (gateReach) gReach++;
-        if (gateAngle) gAngle++;
+        if (gateReach) { gReach++; double d = Math.sqrt(distSq); gReachDistSum += d; if (d > gReachDistMax) gReachDistMax = d; }
+        if (gateAngle) { gAngle++; gAngleSum += angle; if (angle > gAngleMax) gAngleMax = angle; }
         if (gateLos) gLos++;
         if (gateClick || gateCooldown || gateReach || gateAngle || gateLos) return;
         gPassed++;
