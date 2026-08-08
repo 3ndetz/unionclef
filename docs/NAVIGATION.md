@@ -252,6 +252,47 @@ ladder turned out to be a capability that had been DEAD SINCE THE 1.21.11 PORT, 
 - `craft_at_distant_table` — and this one was NOT dead since the port. It was **a regression we
   introduced ourselves**, and it is the most instructive failure on the ladder. See below.
 
+### The End suite — new, 3 courses (2026-08-08)
+
+```
+run_suite.py end
+end_walk      PASS 5/5   32 blocks of end_stone, ~10s      does the bot move in the End at all
+end_gateway   PASS 3/3   26 blocks to an end gateway       was 1/3 before the drive was ported
+end_dragon    info       200.0 -> 200.0, no engagement     arena cannot host a real dragon fight
+```
+
+**Why this exists.** Beating the game happens in the End, and NO suite touched End content, so
+`GetToOuterEndIslandsTask`, `KillEnderDragonTask`, `DragonBreathTracker` and `GoalAnd` were all
+parked on "we cannot check it". That was never true. Two rcon commands settled it:
+
+```
+execute in minecraft:the_end run time query daytime   ->  The time is 1000
+execute in minecraft:the_end run forceload add 0 0    ->  Marked chunk [0, 0]
+```
+
+The courses build their own platform with `execute in minecraft:the_end run …` rather than teaching
+`Arena` about dimensions — `Arena` is shared by 24 passing courses, and adding a concept to it for
+one new test is how a green suite acquires a new way to fail.
+
+**What the suite found on day one:**
+
+- `getGameState` had **no dimension field**. There was no way to ask over py4j which world the bot
+  is in; the first course had to infer "we are in the End" from the bot standing at y=65 where the
+  overworld arena has only air. A playthrough crosses two portals and needs this constantly. Added.
+- **The gateway approach arrived one run in three.** `GetToOuterEndIslandsTask` drove through
+  `getCustomGoalProcess().setGoal + .path` — not dead, but unreliable, which is harder to spot than
+  dead. `closest = 2.2 / 7.7 / 12.3` before, `1.0 / 1.2 / 1.2` after porting to the live drive.
+- That removed the **last `GoalAnd` user**, and the class is deleted. Its goal also ANDed the eight
+  cells beside a gateway with a hardcoded `GoalYLevel(74)` while the cells sit at `gateway.y-1` —
+  unsatisfiable by construction for a gateway at any other height.
+
+**And one thing the suite cannot answer, stated plainly.** `end_dragon` is `tier=info`, not a gate.
+A dragon summoned onto a hand-built platform never perches, because there is no `EnderDragonFight`
+instance in a world nobody entered through a real portal — and BOTH strategies wait on the perch
+(`Mode.WAITING_FOR_PERCH`; the bed trick needs it too). Building the bedrock podium the task looks
+for was necessary and not sufficient: still `200.0 -> 200.0`. Gating on that would fail the bot for
+the shape of the arena. A real dragon course needs a properly generated End.
+
 ⛔ **"Getting to our goal" SET A DEBUG STRING AND WENT NOWHERE (2026-08-08).**
 
 `InteractWithBlockTask`'s out-of-reach branch had been reduced to this:
