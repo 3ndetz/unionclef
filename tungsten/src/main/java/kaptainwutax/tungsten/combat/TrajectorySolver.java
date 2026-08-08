@@ -162,6 +162,48 @@ public final class TrajectorySolver {
         return null;
     }
 
+    /**
+     * How close an arrow LOOSED RIGHT NOW, at this yaw/pitch, would pass to {@code targetPoint}.
+     *
+     * <p>This is the honest release gate. An angular tolerance cannot be one: the lateral error a
+     * given angle produces grows with range, so a constant cone is generous at 6 blocks and
+     * hopeless at 25 (measured: releasing at the edge of a 3.5-degree cone misses by 0.37 blocks at
+     * 6 and 1.53 at 25, against a target about 0.6 wide). Asking "where does the arrow actually
+     * land" needs no such tolerance, and it accounts for range, elevation and the inherited
+     * shooter velocity at once.
+     *
+     * <p>Distance is measured to the SWEPT SEGMENT of each tick, not to the tick endpoints: an
+     * arrow covers about 2.5 blocks per tick and vanilla raycasts that whole span, so sampling only
+     * the endpoints invents up to a tick of travel of imaginary miss.
+     */
+    public static double predictedMiss(Vec3d shooterEye, Vec3d shooterVel,
+                                       float yaw, float pitch, double charge, Vec3d targetPoint) {
+        double v0 = Math.max(0.1, charge) * FULL_CHARGE_SPEED;
+        double yawRad = Math.toRadians(yaw), pitchRad = Math.toRadians(pitch);
+        double horiz = v0 * Math.cos(pitchRad);
+        Vec3d vel = new Vec3d(-Math.sin(yawRad) * horiz,
+                              -v0 * Math.sin(pitchRad),
+                               Math.cos(yawRad) * horiz).add(shooterVel);
+        Vec3d pos = shooterEye;
+        double best = Double.MAX_VALUE;
+        for (int t = 0; t < MAX_FLIGHT_TICKS; t++) {
+            Vec3d next = pos.add(vel);
+            best = Math.min(best, distanceToSegment(pos, next, targetPoint));
+            pos = next;
+            vel = new Vec3d(vel.x * DRAG, vel.y * DRAG - GRAVITY, vel.z * DRAG);
+            if (pos.y < shooterEye.y - 40) break;
+        }
+        return best;
+    }
+
+    private static double distanceToSegment(Vec3d a, Vec3d b, Vec3d p) {
+        Vec3d ab = b.subtract(a);
+        double denom = ab.lengthSquared();
+        if (denom < 1.0E-9) return p.distanceTo(a);
+        double t = MathHelper.clamp(p.subtract(a).dotProduct(ab) / denom, 0.0, 1.0);
+        return p.distanceTo(a.add(ab.multiply(t)));
+    }
+
     /** {@code A(t) = sum(DRAG^k, k &lt; t)} — the multiplier vanilla applies to the WHOLE initial
      *  velocity over a flight of {@code ticks}, which is what makes the shooter-velocity shift exact. */
     private static double dragSum(double ticks) {

@@ -20,8 +20,17 @@ import net.minecraft.util.math.Vec3d;
 public class BowShooter {
 
     private static final int CHARGE_TICKS = 22;    // full draw is 20
-    private static final float AIM_STEP = 18.0f;   // deg per tick toward the solution
-    private static final float RELEASE_CONE = 3.5f; // max aim error at release (deg)
+    /**
+     * How near the solution the aim must be before the bow is DRAWN at all.
+     *
+     * <p>Coarse on purpose. It is not an accuracy gate — {@link TrajectorySolver#predictedMiss}
+     * decides accuracy at release — it only stops the draw from starting while the camera is still
+     * swinging round, because a drawn bow cannot sprint. Wide enough that the remaining slew fits
+     * comfortably inside the draw, tight enough that the draw is not begun facing the wrong way.
+     */
+    private static final float DRAW_START_CONE = 12.0f;
+    /** Target half-width to aim inside, including vanilla's hit margin. */
+    private static final double HIT_RADIUS = 0.55;
     private static final int TIMEOUT_TICKS = 100;
 
     private static final double VEL_EMA = 0.5;      // smooth packet jitter in the lead
@@ -31,6 +40,8 @@ public class BowShooter {
     private static final double MAX_LEAD_SPEED = 0.5;
 
     private static Entity target = null;
+    /** False while still turning onto the solution, true once the bow is actually being drawn. */
+    private static boolean drawing = false;
     private static int chargeTicks = 0;
     private static int totalTicks = 0;
     private static boolean active = false;
@@ -42,9 +53,32 @@ public class BowShooter {
     /** Draw length past which vanilla fires on key release — see {@link #getWildShots()}. */
     private static final int VANILLA_FIRES_AFTER = 3;
 
+    /**
+     * Which HALF of the shot ran out of time — recorded because a red course cannot otherwise tell
+     * these two apart, and they want opposite fixes.
+     *
+     * <ul>
+     *   <li>{@code aimTimeouts}: the turn never got within {@link #DRAW_START_CONE}, so the bow was
+     *       never drawn. The camera is losing its fight with movement — the TURN is the problem.</li>
+     *   <li>{@code drawTimeouts}: the bow was drawn and fully charged, but no tick ever predicted an
+     *       impact inside {@link #HIT_RADIUS}. The RELEASE GATE is the problem — at 24.5 blocks it
+     *       tolerates about 1.26 degrees, and if the aim cannot hold that, shots stop entirely and a
+     *       course that used to pass goes red for a reason that looks nothing like its cause.</li>
+     * </ul>
+     *
+     * <p>Written BEFORE the change that creates the risk, so the next run answers the question
+     * instead of me guessing at it afterwards.
+     */
+    private static int aimTimeouts = 0;
+    private static int drawTimeouts = 0;
+    /** Closest predicted impact (blocks) seen during the last draw — how near the gate we got. */
+    private static double bestMiss = -1;
+
     public static synchronized boolean shootAt(Entity entity) {
         if (entity == null) return false;
         target = entity;
+        drawing = false;
+        bestMiss = -1;
         chargeTicks = 0;
         totalTicks = 0;
         active = true;
@@ -71,6 +105,12 @@ public class BowShooter {
      */
     public static int getWildShots() { return wildShots; }
 
+    /** Draws that never turned onto the solution / never predicted a hit — see the field docs. */
+    public static int getAimTimeouts() { return aimTimeouts; }
+    public static int getDrawTimeouts() { return drawTimeouts; }
+    /** Closest predicted impact of the last draw, in blocks; -1 if nothing was ever evaluated. */
+    public static double getBestMiss() { return bestMiss; }
+
     /**
      * Is the draw close enough to release that the aim should own the camera?
      *
@@ -87,22 +127,44 @@ public class BowShooter {
      * the solution. Before that the bot may as well be sprinting away with its back turned, which
      * is what keeps the gap open. So the camera is claimed only for the final stretch, and the cost
      * is paid for a fraction of a second per arrow instead of for the entire flight.
+     *
+     * <p>UPDATED with the aim-first split. The camera is now claimed for the WHOLE shot, aiming
+     * included — the turn cannot finish while movement rewrites the yaw every tick, and it is the
+     * turn that decides when the bow may be drawn. That sounds like the regression this comment
+     * was written to prevent, and it is not, because the two costs are different:
+     *
+     * <ul>
+     *   <li>the camera claim costs the SPRINT DIRECTION — facing the target means travelling on
+     *       strafe and back, and vanilla only sprints forward;</li>
+     *   <li>the DRAW costs sprinting outright — {@code isBlockedFromSprinting()} is
+     *       {@code isUsingItem() && !USE_EFFECTS.canSprint()}.</li>
+     * </ul>
+     *
+     * <p>Before, a draw that could not satisfy its release gate ran to the 100-tick timeout paying
+     * BOTH. Now the bow stays down until the shot is roughly on-solution, so an impossible shot
+     * costs the camera only and the bot keeps sprinting; and a shot that does happen pays the draw
+     * for the ~22 ticks it actually needs.
      */
-    private static final int AIM_LOCK_TICKS = 6;
-
     public static boolean isAimCritical() {
-        return active && chargeTicks >= CHARGE_TICKS - AIM_LOCK_TICKS;
+        return active;
     }
 
     /** Zero the shot tally so a bench run measures its own shots, not the stand's history.
      *  Called from resetRunCounters alongside every other per-run counter. */
-    public static void resetShotsFired() { shotsFired = 0; wildShots = 0; }
+    public static void resetShotsFired() {
+        shotsFired = 0;
+        wildShots = 0;
+        aimTimeouts = 0;
+        drawTimeouts = 0;
+        bestMiss = -1;
+    }
 
     public static void stop() {
         // Count the arrow this release is about to throw. Ordered BEFORE active is cleared, since
         // TungstenMod's global stop() calls this with nothing drawn and that must not count.
         if (active && chargeTicks >= VANILLA_FIRES_AFTER) wildShots++;
         active = false;
+        drawing = false;
         target = null;
         MinecraftClient.getInstance().options.useKey.setPressed(false);
         kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
@@ -114,7 +176,13 @@ public class BowShooter {
         MinecraftClient mc = MinecraftClient.getInstance();
 
         if (target == null || target.isRemoved() || ++totalTicks > TIMEOUT_TICKS) {
-            Debug.logMessage("Bow shot aborted");
+            if (totalTicks > TIMEOUT_TICKS) {
+                if (drawing) drawTimeouts++; else aimTimeouts++;
+                Debug.logMessage(String.format("Bow shot timed out (%s, best miss %.2f)",
+                        drawing ? "drawn but never on target" : "never finished turning", bestMiss));
+            } else {
+                Debug.logMessage("Bow shot aborted");
+            }
             stop();
             return;
         }
@@ -149,7 +217,7 @@ public class BowShooter {
         // The arrow inherits the SHOOTER's movement (vanilla adds it in setVelocity). It costs
         // almost nothing when running straight away from the target (0.14 blocks — collinear), and
         // up to 2.33 blocks when the motion is ACROSS the shot. Kiting is the second kind: the aim
-        // claims the camera for the last AIM_LOCK_TICKS while the body keeps running its escape
+        // claims the camera while the body keeps running its escape
         // path, so the body is moving sideways relative to where the bow points.
         Vec3d shooterVel = TrajectorySolver.shooterVelocity(player);
         TrajectorySolver.Solution sol = TrajectorySolver.solve(
@@ -171,18 +239,45 @@ public class BowShooter {
         float dYaw = MathHelper.wrapDegrees(sol.yaw - player.getYaw());
         float dPitch = MathHelper.wrapDegrees(sol.pitch - player.getPitch());
 
-        // draw while tracking; release only at full charge AND on-solution aim
+        // AIM FIRST, DRAW SECOND — the draw is not free, it costs the sprint.
+        //
+        // Vanilla: isBlockedFromSprinting() is `isUsingItem() && !USE_EFFECTS.canSprint()`, and
+        // canStartSprinting() requires !isBlockedFromSprinting(); the movement input is scaled by
+        // getActiveItemSpeedMultiplier() on top. A vanilla bow carries no override, so EVERY TICK
+        // THE BOW IS DRAWN IS A TICK THE BOT CANNOT SPRINT.
+        //
+        // The old code pressed the use key on tick 0 and kept it pressed while the camera was
+        // still slewing onto the solution. If the aim never settled the draw did not end at
+        // CHARGE_TICKS, it ran to the TIMEOUT_TICKS abort — up to 100 ticks of no sprint, against
+        // a caller asking for a shot every 60. So the kiting bot walked, and bow_flee, ordered to
+        // hold 12 blocks, averaged 6.66.
+        //
+        // Slewing costs the camera but NOT the sprint, so do it with the bow down. Only start
+        // drawing once the shot is roughly on-solution; the draw then almost always completes on
+        // time, and the no-sprint window is the ~22 ticks it genuinely needs.
+        boolean onSolution = Math.abs(dYaw) < DRAW_START_CONE && Math.abs(dPitch) < DRAW_START_CONE;
+        if (!drawing) {
+            if (!onSolution) return;                  // still turning — bow stays down
+            drawing = true;
+        }
         mc.options.useKey.setPressed(true);
         chargeTicks++;
-        if (chargeTicks >= CHARGE_TICKS
-                && Math.abs(dYaw) < RELEASE_CONE && Math.abs(dPitch) < RELEASE_CONE) {
+
+        // RELEASE ON PREDICTED IMPACT, NOT ON AN ANGLE. What matters is where the arrow lands, and
+        // the same simulator that solved the shot can answer that from the CURRENT aim. An angular
+        // cone cannot: the lateral miss it permits grows with range, so 3.5 degrees was 0.37 blocks
+        // at 6 and 1.53 at 25 against a target ~0.6 wide. This also needs no separate allowance for
+        // the shooter's inherited velocity — the simulation already carries it.
+        double miss = TrajectorySolver.predictedMiss(player.getEyePos(), shooterVel,
+                player.getYaw(), player.getPitch(), 1.0, sol.predictedTarget);
+        if (bestMiss < 0 || miss < bestMiss) bestMiss = miss;
+        if (chargeTicks >= CHARGE_TICKS && miss <= HIT_RADIUS) {
             mc.options.useKey.setPressed(false);
             kaptainwutax.tungsten.TungstenModRenderContainer.COMBAT_TRAJECTORY.clear();
             shotsFired++;
             Debug.logMessage(String.format(
-                    "Arrow released (flight ~%d ticks, lead %.1f blocks)",
-                    sol.flightTicks,
-                    sol.predictedTarget.distanceTo(target.getEntityPos())));
+                    "Arrow released (flight ~%d ticks, predicted miss %.2f blocks)",
+                    sol.flightTicks, miss));
             stop();
         }
     }
