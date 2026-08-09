@@ -41,6 +41,24 @@ public final class VoidGuard {
      * origin instead of a correlation.
      */
     public static volatile int vgFallOnset, vgFallHurt, vgFallSprint, vgFallAfterEdge;
+    /**
+     * HOW FAR A BLOW ACTUALLY THROWS US, measured instead of assumed.
+     *
+     * <p>CombatController's KNOCKBACK_REACH is 3.0 and that number is a guess I wrote. Everything
+     * downstream depends on it: how wide the danger line behind the bot is, how often NO orbit side
+     * clears the rim, and therefore how big the residue is that two reverted fixes were aimed at.
+     * Vanilla applies roughly 0.4 velocity on an ordinary hit, which decays over a handful of ticks
+     * -- if the real throw is closer to one block than three, the guard fires far more often than
+     * the danger warrants and part of that residue is an artefact of my own constant.
+     *
+     * <p>Accumulated as hundredths of a block so it can travel through an int counter: kbThrowMax is
+     * the furthest single throw seen, kbThrowSum/kbThrowN the mean. The window is ten ticks from the
+     * hit, which is longer than knockback survives.
+     */
+    public static volatile int kbThrowMax = 0, kbThrowSum = 0, kbThrowN = 0;
+    private static net.minecraft.util.math.Vec3d kbAnchor = null;
+    private static int kbTicksLeft = 0;
+    private static boolean wasHurt = false;
     private static boolean wasAirborneOverVoid = false;
     private static boolean sawEdgeLastTick = false;
 
@@ -74,6 +92,24 @@ public final class VoidGuard {
         if (jumpTowardEdge) {
             mc.options.jumpKey.setPressed(false);
         }
+        // Knockback throw distance, measured from the hit rather than assumed.
+        boolean hurtNow = player.hurtTime > 0;
+        if (hurtNow && !wasHurt) {
+            kbAnchor = pos;
+            kbTicksLeft = 10;
+        }
+        wasHurt = hurtNow;
+        if (kbTicksLeft > 0 && kbAnchor != null) {
+            double dx = pos.x - kbAnchor.x, dz = pos.z - kbAnchor.z;
+            int cm = (int) Math.round(Math.sqrt(dx * dx + dz * dz) * 100.0);
+            if (--kbTicksLeft == 0) {
+                if (cm > kbThrowMax) kbThrowMax = cm;
+                kbThrowSum += cm;
+                kbThrowN++;
+                kbAnchor = null;
+            }
+        }
+
         // Rising edge of "airborne over a void": snapshot WHY, once, before the fall buries it.
         boolean airborneOverVoid = !player.isOnGround()
                 && kaptainwutax.tungsten.combat.VoidDetector.fallHeight(pos, world) > 20;
