@@ -167,7 +167,30 @@ public class CombatController {
                 // stand runs UNFOCUSED, where MixinInGameHud has to apply the deltas by hand
                 // (UnfocusedMouseHelper). If that path drops or rounds them away, every layer above
                 // is correct and the head still never turns — which is exactly what the numbers say.
-                WindMouseRotation.INSTANCE.setTarget(safety.getBrakeYaw(), 0);
+                //
+                // ⛔ THAT "MEASURED FLAT" VERDICT IS VOID, AND SO IS THE FRAME-RATE STORY ABOVE IT.
+                // Every number in this comment block was taken at 4-8 fps against the bench's own
+                // 14.0 validity floor, on runs the guard was failing to void (fixed 2026-08-09:
+                // five gates across four courses now declare load_sensitive). The stand now runs at
+                // 20.6-22.7 fps after dropping the clients from 1920x1080 to 854x480, and the first
+                // valid verdict says the opposite of what was concluded here:
+                //     angleMean 93.3 (thr 40)   reachMean 3.97 (thr 3.0)   passed 48 of 714
+                //     aim: enemy=252 brake=8 reposition=453     kills=9 deaths=14
+                // The residual did not shrink with the frame rate — it GREW, from 68-84 to 93.3. So
+                // it was never starvation, and "aiming at the enemy here changes nothing" rests on a
+                // measurement that no longer counts.
+                //
+                // AND THE MECHANISM IS PLAIN ONCE THE BRANCH SPLIT IS READ AS A SHARE OF THE FIGHT:
+                // this branch owns 453 of 714 ticks — 63% — and it deliberately points the head at
+                // the retreat waypoint. The bot therefore spends two thirds of a duel looking away
+                // from the opponent, which is exactly when the angle gate refuses and the swing does
+                // not happen. It is not failing to aim; it is aiming somewhere else on purpose, and
+                // losing 9-14 while it does.
+                //
+                // So: keep the retreat MOVEMENT, drop the retreat GAZE. Same fast turn parameters
+                // above, enemy as the target. If this measures flat again on a VALID stand, the
+                // next suspect is how often isRepositioning() is true at all, not where it looks.
+                WindMouseRotation.INSTANCE.setTarget(safety.getAimYaw(), safety.getAimPitch());
             } else if (safety.hasLOS()) {
                 // LOS to target: aim at predicted target position for hits
                 WindMouseRotation.INSTANCE.setParams(
