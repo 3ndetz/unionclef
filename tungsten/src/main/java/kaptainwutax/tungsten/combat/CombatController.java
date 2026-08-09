@@ -113,6 +113,11 @@ public class CombatController {
 
     // ── dynamic combat movement state (circle-strafe + range + crit-jumps) ──────
     private int strafeDir = 1;              // +1 = left, -1 = right
+    /** How far a blow can throw us: knockback is ~0.4 blocks/tick decaying, so three blocks of
+     *  clearance behind is the margin that matters. */
+    private static final double KNOCKBACK_REACH = 3.0;
+    /** Ticks spent with the rim in the knockback line -- the exposure this fix is meant to remove. */
+    public static volatile int rimAtBackTicks;
     private long lastStrafeSwitch = 0;
     private long strafeInterval = 800;
     private long lastJump = 0;
@@ -592,6 +597,36 @@ public class CombatController {
         boolean canStrafe = strafeSideSafe(player, world, strafeDir);
         out.left = canStrafe && strafeDir > 0;
         out.right = canStrafe && strafeDir < 0;
+        // ⛔ NEVER FIGHT WITH THE RIM AT YOUR BACK.
+        //
+        // MEASURED on edge_duel, five falls out of five: vgFall = onset 5 / hurt 5 / sprint 0 /
+        // afterEdge 5. Every single fall STARTED on a tick where hurtTime > 0, none while
+        // sprinting, and in all five the void guard had already seen the edge the tick before and
+        // went over regardless. The bot does not walk off this platform -- it is HIT off it.
+        //
+        // Which is why no amount of work in VoidGuard can fix it: knockback is a velocity the
+        // server applies, and the guard's whole hold is releasing keys and pressing sneak. Neither
+        // cancels momentum nobody asked for. The only move that survives a blow is not to be
+        // standing where the blow sends you over.
+        //
+        // Knockback pushes AWAY from the attacker, so the dangerous edge is the one directly
+        // behind us, and the answer is to close instead: the opponent is standing on floor by
+        // construction, so forward is the one direction guaranteed to have ground. This does not
+        // fight the range control -- it only overrides the hold, and only when the rim is in the
+        // line a hit would throw us along.
+        net.minecraft.util.math.Vec3d awayFromTarget =
+                player.getEntityPos().subtract(target.getEntityPos());
+        if (awayFromTarget.horizontalLengthSquared() > 1e-6) {
+            boolean rimAtBack = VoidDetector.edgeAhead(
+                    player.getEntityPos(), awayFromTarget.x, awayFromTarget.z, world, 3, KNOCKBACK_REACH);
+            if (rimAtBack) {
+                rimAtBackTicks++;
+                out.back = false;                    // never retreat into it
+                if (!canStrafe && dirSafe(player, world, 1, 0)) {
+                    out.forward = true;              // close, so a blow cannot launch us clear
+                }
+            }
+        }
         // Neither side strafeable (a 1-wide bridge, a tiny platform) and already at strike
         // distance: keep some motion so we are not a static target, but ONLY into space we
         // have tested. Forward-pulse against the opponent is safe by construction — they are
