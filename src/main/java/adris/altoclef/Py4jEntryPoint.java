@@ -599,6 +599,40 @@ public class Py4jEntryPoint {
         return false;
     }
 
+    /**
+     * WALK TO A PLAYER AND STAY WITH THEM — the "come here / follow me" lever.
+     *
+     * <p>tungsten has had {@code FollowPlayerTask} all along and nothing exposed it: py4j reached
+     * only its sibling's COUNTERS ({@code followStats}), so an agent could read how the follow was
+     * going without ever being able to start one. This is the thin wrapper, not a second
+     * implementation.
+     *
+     * @param playerName who to walk to, by name as it appears in game
+     * @param radius     how close to settle, in blocks. ~2 is conversational range, ~4 keeps out of
+     *                   the way, ~1 crowds them. Values below 1 make the bot jostle the target.
+     * @return false if not in game; true once the task is running
+     */
+    public boolean followPlayer(String playerName, double radius) {
+        if (!AltoClef.inGame()) return false;
+        kaptainwutax.tungsten.task.FollowPlayerTask.start(playerName, radius);
+        return true;
+    }
+
+    /** {@link #followPlayer(String, double)} at a conversational two blocks. */
+    public boolean followPlayer(String playerName) {
+        return followPlayer(playerName, 2.0);
+    }
+
+    /** Stop following. Safe to call when nothing is following. */
+    public void stopFollowPlayer() {
+        kaptainwutax.tungsten.task.FollowPlayerTask.stop();
+    }
+
+    /** Is the follow task currently driving? Pair with {@link #followPlayer(String, double)}. */
+    public boolean isFollowingPlayer() {
+        return kaptainwutax.tungsten.task.FollowPlayerTask.isActive();
+    }
+
     public boolean isAttacking(String playerName) {
         if (AltoClef.inGame()) {
             return _mod.getDamageTracker().getThreatTable().shouldAttack(playerName);
