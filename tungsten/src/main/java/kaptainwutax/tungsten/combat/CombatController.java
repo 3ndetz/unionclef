@@ -473,7 +473,27 @@ public class CombatController {
             // bow becomes the weapon. That is not a special case for one course; it is what a
             // hurt fighter with a ranged option should do anywhere.
             double hp = player.getHealth() + player.getAbsorptionAmount();
-            if (hp <= LOW_HP) {
+            // DISENGAGE ONLY WHERE DISENGAGING CAN WORK — NOT FROM INSIDE THE TRADE.
+            //
+            // With natural regeneration off on the bench (arena.py sets
+            // natural_health_regeneration=false) and no food in the kit, health within one life
+            // is monotonically non-increasing. So `hp <= LOW_HP` is not a threshold, it is a
+            // ONE-WAY LATCH: the first two or three hits put the bot under half health and every
+            // remaining tick of that life returned here, before reach control, before the crit
+            // hop and before any reaction to being hit. The bot surrendered the second half of
+            // every life and the opponent simply followed it.
+            //
+            // Measured, and the budget reconciles exactly (cqEntry = cqNoLos + lowHp + ctl):
+            //     385 = 1 + 180 + 204
+            // i.e. 47% of every close-quarters tick went to kiting, while the no-LOS return —
+            // the other suspect — took 1 tick in 385.
+            //
+            // Backing off from INSIDE the opponent's reach is strictly dominated: the same blows
+            // land on us and none land on them, which converts a trade into a beating. A wounded
+            // fighter already in the trade has to fight. Out past reach the original intent still
+            // holds and the bow is the weapon, so the caution is kept exactly where it was designed
+            // to work.
+            if (hp <= LOW_HP && dist > TriggerBot.REACH) {
                 lowHpTicks++;
                 kite(out, player, world, dist);
                 return;
