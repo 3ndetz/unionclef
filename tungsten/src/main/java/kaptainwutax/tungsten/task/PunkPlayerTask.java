@@ -260,6 +260,12 @@ public class PunkPlayerTask {
         // own established discriminator — the same "a genuine void is bottomless; 20 blocks of
         // nothing is a safe discriminator" that the target-hold below is built on. A legitimate
         // descent is a few blocks; nothing legitimate walks into twenty blocks of air.
+        // ⛔ AND THE FIX BELOW WAS THEN MEASURED AND DOES NOT WORK. Like-for-like re-run of
+        // allround (--no-early-stop, as the baseline was): deaths=10 at 7.0 fps, against 11 and 13
+        // before it. Inside the noise, on a different frame rate, gate still FAIL. Do not record
+        // this change as an improvement to anything; it stays only because it is correct in its own
+        // right. The suite score did NOT move.
+        //
         // ⛔ MEASURED AFTERWARDS: edgeSkipExec = 0. THE PREMISE ABOVE WAS WRONG.
         // The counter was added precisely to check it, and it says the executor was NEVER driving on
         // a punk-active tick, so the guard was not being disabled that way at all. The override
