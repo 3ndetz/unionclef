@@ -25,30 +25,32 @@ SINK_NAME="botmic"
 for c in "${CONTAINERS[@]}"; do
     echo "=== $c ==="
 
+    # TWO THINGS HERE ARE NOT OPTIONAL AND BOTH COST A DEBUGGING ROUND TO FIND.
+    # (1) AS THE `app` USER, NOT root. PulseAudio refuses to start as root without --system
+    #     ("This program is not intended to be run as root"), and more importantly the GAME runs as
+    #     `app`, so the daemon has to live in that user's session or the client cannot see the
+    #     microphone at all.
+    # (2) MODULES ON THE COMMAND LINE. With no config file the daemon starts, finds nothing to load
+    #     and quits with "startup without any loaded modules, refusing to work". Passing them here
+    #     also means the sink exists the moment the daemon is up, so there is no pactl race.
     docker exec "$c" sh -c '
         set -e
         PA=/opt/base/bin/pulseaudio
         [ -x "$PA" ] || { echo "  no pulseaudio in this image"; exit 1; }
-
-        # --system=false: a per-user daemon is enough and avoids the root warnings.
-        # --exit-idle-time=-1: never exit; the bot may be silent for hours between lines.
-        if ! pgrep -x pulseaudio >/dev/null 2>&1; then
-            $PA --start --exit-idle-time=-1 --disallow-exit >/dev/null 2>&1 || true
-            sleep 1
-        fi
-
-        PACTL=$(command -v pactl || echo /opt/base/bin/pactl)
-        [ -x "$PACTL" ] || { echo "  pactl missing — cannot configure the sink"; exit 1; }
-
-        # The virtual mic. Idempotent: loading it twice would give the bot two microphones.
-        if ! "$PACTL" list short sinks 2>/dev/null | grep -q "'"$SINK_NAME"'"; then
-            "$PACTL" load-module module-null-sink \
-                sink_name='"$SINK_NAME"' \
-                sink_properties=device.description=BotMicrophone >/dev/null
-        fi
-        "$PACTL" set-default-sink '"$SINK_NAME"' 2>/dev/null || true
-        "$PACTL" set-default-source '"$SINK_NAME"'.monitor 2>/dev/null || true
-        echo "  sink + monitor ready"
+        su -s /bin/sh app -c "
+            export XDG_RUNTIME_DIR=/tmp/pulse-app
+            mkdir -p \$XDG_RUNTIME_DIR
+            if ! pactl info >/dev/null 2>&1; then
+                $PA -n --daemonize=yes --exit-idle-time=-1 \
+                    --load=\"module-native-protocol-unix\" \
+                    --load=\"module-null-sink sink_name='"$SINK_NAME"' sink_properties=device.description=BotMicrophone\" \
+                    >/dev/null 2>&1
+                sleep 1
+            fi
+            pactl set-default-sink '"$SINK_NAME"' 2>/dev/null || true
+            pactl set-default-source '"$SINK_NAME"'.monitor 2>/dev/null || true
+            pactl list short sources | sed \"s/^/  /\"
+        "
     ' || { echo "  FAILED — see above"; continue; }
 
     # SVC must (a) listen to that source and (b) transmit on sound rather than on a key it will
