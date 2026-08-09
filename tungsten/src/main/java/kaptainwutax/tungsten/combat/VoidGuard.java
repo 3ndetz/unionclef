@@ -28,6 +28,21 @@ public final class VoidGuard {
      */
     /** How often the guard runs, and how often it actually sees an edge; read over py4j. */
     public static volatile int vgCalls, vgEdgeSeen;
+    /**
+     * STATE AT THE MOMENT THE FALL BEGINS, which is the one thing the existing counters cannot
+     * give. edgeAir accumulates a tick at a time while the bot is already in the void, so a single
+     * fall that the harness takes seconds to fish out dominates it -- 317 ticks read as "airborne a
+     * quarter of the course" when it was two or three falls being counted while they lasted. That
+     * is the consequence, not the cause.
+     *
+     * <p>These four fire ONCE, on the rising edge of "off the ground with nothing underneath", and
+     * record what the bot was doing as it left: hurt (so knockback launched it), sprinting, and
+     * whether the guard had seen the rim on the previous tick. Between them the self-fall gets an
+     * origin instead of a correlation.
+     */
+    public static volatile int vgFallOnset, vgFallHurt, vgFallSprint, vgFallAfterEdge;
+    private static boolean wasAirborneOverVoid = false;
+    private static boolean sawEdgeLastTick = false;
 
     public static void protect(ClientPlayerEntity player, Vec3d pos, Vec3d vel, WorldView world) {
         // IS THE GUARD EVEN ON DUTY? Two thirds of the bot's real deaths are "fell from a high
@@ -59,6 +74,18 @@ public final class VoidGuard {
         if (jumpTowardEdge) {
             mc.options.jumpKey.setPressed(false);
         }
+        // Rising edge of "airborne over a void": snapshot WHY, once, before the fall buries it.
+        boolean airborneOverVoid = !player.isOnGround()
+                && kaptainwutax.tungsten.combat.VoidDetector.fallHeight(pos, world) > 20;
+        if (airborneOverVoid && !wasAirborneOverVoid) {
+            vgFallOnset++;
+            if (player.hurtTime > 0) vgFallHurt++;
+            if (player.isSprinting()) vgFallSprint++;
+            if (sawEdgeLastTick) vgFallAfterEdge++;
+        }
+        wasAirborneOverVoid = airborneOverVoid;
+        sawEdgeLastTick = edgeByKey || edgeByVel;
+
         if (edgeByKey || edgeByVel) {
             vgEdgeSeen++;
             mc.options.jumpKey.setPressed(false);
