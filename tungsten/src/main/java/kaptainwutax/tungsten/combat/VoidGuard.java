@@ -56,6 +56,19 @@ public final class VoidGuard {
      * hit, which is longer than knockback survives.
      */
     public static volatile int kbThrowMax = 0, kbThrowSum = 0, kbThrowN = 0;
+    /**
+     * Throws that exceeded two blocks -- the platform radius on edge_duel (half=2).
+     *
+     * <p>THE MEAN IS NOT THE QUESTION, and two samples in one session proved it: 16 hits gave a
+     * mean of 1.45 and 29 gave 2.47. I set KNOCKBACK_REACH from the first and the second moved the
+     * target above it, so a mean that has not stopped drifting cannot settle either the constant or
+     * the bigger question -- whether a centred fighter survives at all. What decides both is the
+     * SHARE of hits that clear the radius: if it is small, holding the middle is a viable answer and
+     * the gate is reachable; if it is large, no standing position survives and edge_duel's red is
+     * the course's, not the engine's. A fraction converges where a mean pulled by rare big throws
+     * does not.
+     */
+    public static volatile int kbThrowOverRadius = 0;
     private static net.minecraft.util.math.Vec3d kbAnchor = null;
     private static int kbTicksLeft = 0;
     private static boolean wasHurt = false;
@@ -104,6 +117,7 @@ public final class VoidGuard {
             int cm = (int) Math.round(Math.sqrt(dx * dx + dz * dz) * 100.0);
             if (--kbTicksLeft == 0) {
                 if (cm > kbThrowMax) kbThrowMax = cm;
+                if (cm > 200) kbThrowOverRadius++;   // 2.00 blocks = edge_duel's platform radius
                 kbThrowSum += cm;
                 kbThrowN++;
                 kbAnchor = null;
