@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --no-project python .claude/hooks/autonomy_stop.py"
+            "command": "uv run --no-project python \"$CLAUDE_PROJECT_DIR/.claude/hooks/autonomy_stop.py\""
           }
         ]
       }
