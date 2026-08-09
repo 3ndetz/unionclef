@@ -11,6 +11,18 @@ Requires the stand with BOTH clients:
 
 Exit code 0 = every selected GATE scenario passed. Artifacts (timeline.jsonl,
 chat, screenshots, verdict.json) in deploy/runner/artifacts/<run>/<scenario>/.
+
+
+ORDER BIAS IS REAL, AND IT IS NOT THE COURSE'S FAULT. The client degrades as a suite runs:
+a full pvp sweep on one container set has been seen at 29 fps early and 9.9 fps by the middle,
+which is below the 14.0 validity floor. So a course near the END of the list collects INVALIDs
+for its POSITION, not its content -- chase_terrain and bow_flee_hard were once written off as
+"structurally unmeasurable" on exactly this artefact, and fresh containers then took the same
+course from 9.9 to 29.4.
+
+Practical rule: an INVALID late in a sweep says nothing. Re-run that course alone on fresh
+containers (deploy_jar.sh recreates them) before drawing any conclusion about it, and never
+compare a late course's numbers against an early one's.
 """
 import argparse
 import datetime
