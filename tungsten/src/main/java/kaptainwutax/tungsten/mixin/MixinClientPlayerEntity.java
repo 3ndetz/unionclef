@@ -168,8 +168,21 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 			kaptainwutax.tungsten.task.RunAwayTask.driveAwayRaw(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
 		}
 
+		// BowShooter added 2026-08-09: THE RANGED PHASE HAD NO VOID GUARD AT ALL.
+		// Sampling both guards every 15 s through an allround run:
+		//     t+0..60    punkActive=0     vgCalls=0      <- seventy-five seconds unguarded
+		//     t+75       punkActive=173   vgCalls=185
+		//     t+90..120  punkActive=272   vgCalls=272
+		// Neither guard covered the opening phase: PunkPlayerTask's own returns at `if (!active)`,
+		// and this call site asked only for punk or runaway. That is precisely the phase the bot
+		// spends kiting and backing away with the bow, and the bench attributes the falls
+		// `SELF (walked off)` rather than knockback (scenario.py:161-166).
+		// Deliberately NOT widened to `tungsten$driving`: that would arm the guard during
+		// BridgeTask/PillarTask/the walker, which stand at a rim ON PURPOSE, and those courses were
+		// not measured here. Cover the phase the evidence points at, nothing more.
 		if ((kaptainwutax.tungsten.task.RunAwayTask.isActive()
-				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive())
+				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive()
+				|| kaptainwutax.tungsten.task.BowShooter.isActive())
 				&& !tungsten$movementOwnsTick) {
 			kaptainwutax.tungsten.combat.VoidGuard.protect((ClientPlayerEntity)(Object)this, this.getEntityWorld());
 		}
