@@ -65,6 +65,18 @@ services:
     environment:
       MC_USERNAME: "tester1"
       MC_MAX_MEM: "3G"
+      # THE FRAME RATE IS THE WHOLE PVP SUITE'S BLOCKER, AND THIS IS THE UNTOUCHED LEVER.
+      # The stand runs at 4-8 fps against its own 14.0 validity floor, and run_suite.py:326 already
+      # established the cause is a single-threaded SOFTWARE render ceiling rather than foreign load
+      # (24 cores with ~47% idle, 106 GB of 128 free). options.txt is already as lean as it goes —
+      # renderDistance 5, simulationDistance 5, particles minimal, ao/entityShadows off — but the
+      # clients were still rendering at 1920x1080, i.e. 2.07 MILLION pixels per frame on llvmpipe.
+      # Fill rate is the one thing that dominates a software rasteriser, and nothing had touched it.
+      # 854x480 is 410k pixels — five times less to shade per frame.
+      # Only noVNC and the bench's screen capture see this resolution; every measurement the suite
+      # makes is read over py4j or rcon, not off the pixels.
+      DISPLAY_WIDTH: "854"
+      DISPLAY_HEIGHT: "480"
     ports:
       # Host ports are overridable: a dev box often already runs a real MC client
       # (which holds the in-mod MCP port) and the stand must not fight it for the
@@ -90,6 +102,10 @@ services:
     environment:
       MC_USERNAME: "tester2"
       MC_MAX_MEM: "3G"
+      # Same as tester1 — see the note there. The opponent is a client too, and on a duel course the
+      # two of them share the same cores, so leaving this one at 1920x1080 would cap the pair.
+      DISPLAY_WIDTH: "854"
+      DISPLAY_HEIGHT: "480"
     ports:
       - "${UCTEST_VNC2_PORT:-5821}:5800"           # noVNC (debug only)
     volumes:
