@@ -69,6 +69,24 @@ public final class VoidGuard {
      * does not.
      */
     public static volatile int kbThrowOverRadius = 0;
+    /**
+     * THE IMPULSE ITSELF: |v - v_prev| horizontally on the tick the hit lands, in thousandths of a
+     * block per tick.
+     *
+     * <p>Three statistics failed this question before this one. A mean over 16 throws said 1.45
+     * blocks, over 29 it said 2.47, and a share-past-the-radius said 65% -- and that last one turned
+     * out to be measuring the bot's own walking, since ten ticks of ordinary movement covers two
+     * blocks with no knockback at all. Each looked like the right shape of answer while quantifying
+     * something adjacent.
+     *
+     * <p>A velocity DELTA on the hit tick cannot be confused with locomotion: the server applies
+     * knockback as a single impulse, and the bot's own acceleration is an order of magnitude
+     * smaller. From it the throw distance follows -- horizontal friction is about 0.6 per tick, so
+     * the total carry is roughly the impulse times 2.5 -- and that is a derivation from one clean
+     * number rather than an accumulation over a window that catches everything else too.
+     */
+    public static volatile int kbImpulseMax = 0, kbImpulseSum = 0, kbImpulseN = 0;
+    private static net.minecraft.util.math.Vec3d prevVel = net.minecraft.util.math.Vec3d.ZERO;
     private static net.minecraft.util.math.Vec3d kbAnchor = null;
     private static int kbTicksLeft = 0;
     private static boolean wasHurt = false;
@@ -108,10 +126,16 @@ public final class VoidGuard {
         // Knockback throw distance, measured from the hit rather than assumed.
         boolean hurtNow = player.hurtTime > 0;
         if (hurtNow && !wasHurt) {
+            double idx = vel.x - prevVel.x, idz = vel.z - prevVel.z;
+            int imp = (int) Math.round(Math.sqrt(idx * idx + idz * idz) * 1000.0);
+            if (imp > kbImpulseMax) kbImpulseMax = imp;
+            kbImpulseSum += imp;
+            kbImpulseN++;
             kbAnchor = pos;
             kbTicksLeft = 10;
         }
         wasHurt = hurtNow;
+        prevVel = vel;
         if (kbTicksLeft > 0 && kbAnchor != null) {
             double dx = pos.x - kbAnchor.x, dz = pos.z - kbAnchor.z;
             int cm = (int) Math.round(Math.sqrt(dx * dx + dz * dz) * 100.0);
