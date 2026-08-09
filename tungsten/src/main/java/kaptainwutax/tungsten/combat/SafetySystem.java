@@ -91,6 +91,15 @@ public class SafetySystem {
     private float brakeYaw = 0;
     private boolean braking = false;
     private boolean repositioning = false;
+    /**
+     * WHICH STAGE IS ACTUALLY RETREATING. isRepositioning() is set from THREE different places —
+     * NARROW_BATTLE (path-following on a ledge), DANGER_BATTLE (knockback would drop us) and ESCAPE
+     * (low HP, break contact) — and CombatController's aimReposition counter adds them all up. A
+     * whole pass was spent predicting how "the reposition share" would move on the assumption it
+     * meant DANGER_BATTLE; it rose, and the number could not say which of the three did it, so the
+     * result settled nothing either way. Count them apart and the branch becomes measurable.
+     */
+    public static volatile int rpNarrow = 0, rpDanger = 0, rpEscape = 0;
     private boolean wasBrakingLastFrame = false;
     private boolean wasRepositioningLastFrame = false;
     private boolean wantsJump = false;
@@ -254,6 +263,7 @@ public class SafetySystem {
                         // override aim to path direction (NOT target) — safety first
                         brakeYaw = movementYaw;
                         repositioning = true; // tells CombatController to use brakeYaw for aim
+                        rpNarrow++;
 
                         intent.set(true, false, false, false, false, false, false);
                     }
@@ -264,6 +274,7 @@ public class SafetySystem {
                     java.util.List<net.minecraft.util.math.BlockPos> retreat = pathfinder.getRetreatPath();
                     if (kbDanger.isSerious() && retreat.size() >= 2) {
                         repositioning = true;
+                        rpDanger++;
                         net.minecraft.util.math.BlockPos waypoint = retreat.get(Math.min(2, retreat.size() - 1));
                         Vec3d wpPos = Vec3d.ofBottomCenter(waypoint);
                         brakeYaw = AttackTiming.yawTo(playerPosTick, wpPos);
@@ -304,6 +315,7 @@ public class SafetySystem {
                         movementYaw = AttackTiming.yawTo(playerPosTick, Vec3d.ofBottomCenter(wp));
                         movementActive = true;
                         repositioning = true; // use movementYaw for camera via brakeYaw
+                        rpEscape++;
                         brakeYaw = movementYaw;
 
                         // jump if on ground and not on narrow terrain
