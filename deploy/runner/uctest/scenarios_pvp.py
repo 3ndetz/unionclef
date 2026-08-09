@@ -625,6 +625,23 @@ class AllRound(Scenario):
                "give {name} arrow 64"]
     victim_kit = KIT_SWORD
 
+    # ⛔ THE THIRTEEN DEATHS ON THIS COURSE ARE VOID FALLS, NOT LOST FIGHTS (measured 2026-08-09).
+    # This course was read for a whole pass as an AIM failure ("27 swings of 556, 79 deg off"). Two
+    # things were wrong with that. The swing numbers came off runs at 4-8 fps against a 14.0 floor
+    # that was not voiding this course (fixed in f56a511). And the gate that actually fails is
+    # `bot deaths <= 0`, which is NOT frame-noise — so it is worth reading, and it says this:
+    #
+    #     [07:22:45] tester1 fell out of the world
+    #     [07:22:45] tester2 fell out of the world      <- the OPPONENT falls too
+    #
+    # Straight from the server log, repeating every few seconds. flat_field(half=24) is a 48x48
+    # platform surrounded by void and the duel drifts off the edge. punkStats agrees from the other
+    # side: voidHold=406 — the void guard engaged four hundred times and still did not hold.
+    # At 4.1 fps the same run scored kills=7 and landed=44 swings, so the offensive half is fine.
+    #
+    # BEFORE TOUCHING THE AIM AGAIN, note that BOTH bots fall. That points at the guard losing the
+    # tick to whoever drives combat movement (the "one owner of the tick" pitfall that has already
+    # bitten this repo twice) rather than at a targeting bug.
     def build(self, arena, ctx):
         arena.flat_field(half=24)
         ctx.geo["bot_spawn"] = f"-19.5 {STAND_Y} 0.5 -90 0"
