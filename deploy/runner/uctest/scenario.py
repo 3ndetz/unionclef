@@ -168,7 +168,16 @@ class Ctx:
             # where blows land most seconds -- which would make this criterion unfalsifiable, the
             # same defect as the missed-hurt-flag it replaces, only inverted. The hit must be
             # adjacent to the fall, not merely somewhere in the last two seconds.
-            recent = self.samples[-1:]
+            # WINDOW WIDTH DEPENDS ON WHICH EVIDENCE WE HAVE, and that is not a nicety.
+            # The monotonic count is only incremented where VoidGuard runs; on courses where it
+            # does not (narrow_bridge reads rimBack=0 and hitsTaken never moves), the only
+            # evidence left is the 10-tick hurt flag -- and narrowing the window to a single
+            # 1 Hz sample then misses MORE hits than the two-sample version it replaced.
+            # Measured: narrow_bridge went from self=0 knockback=2 to self=2 knockback=0 on an
+            # unchanged bot, purely from this narrowing. So: narrow only when the counter is
+            # actually supplying the answer, and keep the wider flag window when it is not.
+            counter_live = self.bot_hits_taken_now() not in (None, 0)
+            recent = self.samples[-1:] if counter_live else self.samples[-2:]
             taken = [s.get("bot_hits_taken") for s in recent]
             taken = [v for v in taken if v is not None]
             now_taken = self.bot_hits_taken_now()
