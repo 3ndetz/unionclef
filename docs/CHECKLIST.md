@@ -243,6 +243,19 @@ visible effect in the trace, anything that distinguishes "did nothing" from "did
 that never reached the game has not been tested, and burying it as a dead end is worse than never
 having tried it — the next session inherits the wrong conclusion.
 
+**And the same trap on the other side: REPRODUCE THE FAILURE IN ITS OWN CONTEXT BEFORE COMPARING
+VERSIONS.** nav_ladder failed twice in a full nav sweep (self_falls=2), so the night's shared-code
+edits went on trial. Pre-tonight sources passed, which looked like confirmation, and a five-step
+bisect followed — every commit passing, until only one remained whose diff could not touch a nav
+course. The suspect by then was the method, and the control proved it: CURRENT HEAD, run the same
+isolated way, PASSES. Every version passes alone; the failure exists only at position nine of a
+twelve-course suite on a warmed, loaded stand.
+
+All five bisect steps had been comparing isolated-vs-in-suite, never commit-vs-commit. One control
+run — the one skipped at the start — settled what an hour of bisection could not. If a failure
+appeared in a suite, the A/B has to run in that suite too; otherwise the thing being varied is the
+harness, not the code.
+
 ---
 
 ⛔ **RULE ZERO: BEFORE BELIEVING A RED, ASK WHETHER THE MACHINE WAS THERE.**
