@@ -1235,3 +1235,38 @@ impossible, since both increment in the same branch, and only that impossibility
 
 **Owed:** melee_basic and narrow_bridge_duel as the mirror-duel regression check — the first attempt
 at it was consumed by an edge_duel retry and is NOT done.
+
+## G-1.70 edge_duel — the gated fall counter was misreading knockback as "walked off" (CLOSED GREEN)
+
+edge_duel PASSES 4/4. self-falls 0 every run; knockback falls 1 per run, from 3-4.
+
+The defect was in the instrument. The runner samples at 1 Hz and classified a fall by reading
+`hurtTime`, a flag that lasts 10 ticks — half a second. A blow whose window fell between two
+samples was invisible, and the fall it caused was filed as "SELF (walked off)". `self-falls`
+is GATED here; knockback falls are not gated at all. So the gate was red for hits the sampler
+could not see.
+
+Fixed by exposing `VoidGuard.kbImpulseN` — blows taken, monotonic. A count cannot be missed by
+a slow poll, only read late. First reading with working attribution: self=0 knockback=4, then
+self=0 knockback=3.
+
+The mirror defect was caught before the result was believed: a two-sample window makes
+"knockback" the default answer in a duel, where blows land most seconds, and the criterion
+becomes unfalsifiable — the same disease, inverted. Narrowed to ONE sample; `self=0` held under
+the stricter test, which is the only reason it counts.
+
+Engine work that stands: orbit-side choice (exposure 327 → 99), `KNOCKBACK_REACH` 3.0 → 2.0 on
+the measured carry (→ 24), and reach scaled to the attacker's sprint. Mean impulse 0.439 carries
+~1.1 blocks; the max seen, 0.854, carries ~2.1 — past the platform radius of 2.0. The mean said
+everything was survivable, the tail said not from a sprint, and only the two together named the
+case worth guarding. `melee_basic` PASS at 29.5 fps — nothing was traded for it.
+
+Two cautions for the next session. "Won the exchange" is noisy: 6/10 and 7/12 on one jar, 9/7
+and 12/9 on the same jar minutes later — a single run of it means nothing either way. And both
+baselines returned INVALID at ~10 fps after five consecutive runs, with fresh containers
+restoring 29.5; that is client degradation, not course weight.
+
+The lesson is the session's, not the course's: three of my own knockback statistics were
+rejected before one survived, and then the quantity I had measured so carefully turned out not
+to be the one the gate checks. Reading the criterion's source costs less than four measurements
+of the wrong thing.
