@@ -161,6 +161,9 @@ public class BowShooter {
      * same shape of lie as the landed_swings undercount.
      */
     public static int getWildShots() { return wildShots; }
+    /** Requests the trajectory solver refused outright -- previously an invisible exit. */
+    public static volatile int noSolution = 0;
+    public static int getNoSolution() { return noSolution; }
 
     /** Ticks spent facing the target for a shot — see the field docs; this is the kiting cost. */
     public static int getFacingTicks() { return facingTicks; }
@@ -289,6 +292,14 @@ public class BowShooter {
         TrajectorySolver.Solution sol = TrajectorySolver.solve(
                 player.getEyePos(), shooterVel, aimPoint, leadVel, Math.max(charge, 1.0)); // full-draw arc
         if (sol == null) {
+            // THE ONLY EXIT HERE THAT COUNTED NOTHING AT ALL.
+            // aimTO and drawTO cover the two timeouts and wildShots covers a teardown mid-draw,
+            // but a solver refusal early in the draw incremented none of them -- the request just
+            // vanished. That blind spot matters on allround: every respawn leaves the fighters ~39
+            // blocks apart and the driver asks for a shot every 2.5s, so if the solver declines at
+            // that range most requests die here unseen. The course reported 6 shots where the
+            // driver asked for roughly thirty, and nothing said where the rest went.
+            noSolution++;
             Debug.logMessage("Bow shot aborted (out of range)");
             stop();
             return;

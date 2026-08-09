@@ -2461,6 +2461,7 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.combat.CombatController.fwdWanted = 0;
         kaptainwutax.tungsten.combat.CombatController.fwdAsked = 0;
         kaptainwutax.tungsten.combat.CombatController.fwdPressed = 0;
+        kaptainwutax.tungsten.task.BowShooter.noSolution = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gSwingChargeSum = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gSwingWeaponSum = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gSwingNoWeapon = 0;
@@ -2541,7 +2542,7 @@ public class Py4jEntryPoint {
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
                         + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d pdLegacy=%d exArrived=%d exRanOut=%d exSprint=%d/%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d mqNull=%d gaveUp=%d/%d dc=%d/%d/%d/%d/%d mc=%d/%d/%d/%d/%d mcFlight=%d toolSwap=%d recipesKnown=%d wander=%d wanderMoved=%d wanderChk=%d/%d wanderFail=%d lavaEsc=%d lavaCond=%d/%d surv=%d/%d tbl=%d/%d@%d bs=%d/%d/%d/%d@%dms navUnsafeAir=%d sm=%d/%d smWater=%d srch=%d/%d/%d drop=%d/%d scan=%d/%d/%d cb=%d/%d/%d/%d et=%d/%d"
-                        + " sprint=%d/%d lowHp=%d hurt=%d/%d/%d hurtWin=%d/%d diseng=%d/%d ctl=%d cq=%d/%d los=%d/%d/%d/%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdFleeStuck=%d mdPillarD=%d dmgTaken=%.1f dw=%d/%.1f/%.2f/%.2f/%d/%d voidEntries=%d voidTicks=%d lastFall=[%s] hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d bowShots=%d bowWild=%d bowAimTO=%d bowDrawTO=%d bowBestMiss=%.2f bowFacing=%d bowNoRoom=%d flee=%d/%d/%d/%d/%d/%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
+                        + " sprint=%d/%d lowHp=%d hurt=%d/%d/%d hurtWin=%d/%d diseng=%d/%d ctl=%d cq=%d/%d los=%d/%d/%d/%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdFleeStuck=%d mdPillarD=%d dmgTaken=%.1f dw=%d/%.1f/%.2f/%.2f/%d/%d voidEntries=%d voidTicks=%d lastFall=[%s] hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d bowShots=%d bowWild=%d bowNoSol=%d bowAimTO=%d bowDrawTO=%d bowBestMiss=%.2f bowFacing=%d bowNoRoom=%d flee=%d/%d/%d/%d/%d/%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
                         + " | gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
@@ -2771,6 +2772,7 @@ public class Py4jEntryPoint {
                 // which requests ~20 and reported bowShots=6, bowWild should land near 14. Zero
                 // would mean the aborts are not happening and this reading is wrong.
                 kaptainwutax.tungsten.task.BowShooter.getWildShots(),
+                kaptainwutax.tungsten.task.BowShooter.getNoSolution(),
                 // WHICH half of the shot ran out of time. A bow course that goes red cannot
                 // otherwise say whether the TURN never arrived (bowAimTO) or the release gate was
                 // unreachable (bowDrawTO) — and those want opposite fixes. bowBestMiss is how close
