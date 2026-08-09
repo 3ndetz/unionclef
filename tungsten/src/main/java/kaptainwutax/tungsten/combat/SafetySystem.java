@@ -108,6 +108,14 @@ public class SafetySystem {
      * escalates into a forced narrow.
      */
     public static volatile int rpImminent = 0, rpForcedNarrow = 0;
+    /**
+     * The forced-narrow countdown itself, published live. imm/forced froze at 12/4 while narrow kept
+     * climbing 324 -> 478, and 4 escalations x 200 frames is only ~32 s of a 120 s fight at 26 fps —
+     * so either the lockouts overlap far more than that arithmetic allows, or something keeps NARROW
+     * pinned after this timer expires. Watching the timer's own value across a fight answers both,
+     * and costs nothing.
+     */
+    public static volatile int rpForcedTimer = 0;
     private boolean wasBrakingLastFrame = false;
     private boolean wasRepositioningLastFrame = false;
     private boolean wantsJump = false;
@@ -184,6 +192,7 @@ public class SafetySystem {
         if (postImminentCooldown > 0) postImminentCooldown--;
         if (edgeSneakTicks > 0) edgeSneakTicks--;
         if (forcedNarrowTimer > 0) forcedNarrowTimer--;
+        rpForcedTimer = forcedNarrowTimer;
         if (imminentDecayTimer > 0) { imminentDecayTimer--; } else { imminentCount = 0; }
         TungstenModRenderContainer.COMBAT_TRAJECTORY =
                 java.util.Collections.synchronizedCollection(new java.util.ArrayList<>());

@@ -2120,7 +2120,7 @@ public class Py4jEntryPoint {
         int gr = kaptainwutax.tungsten.combat.TriggerBot.gReach;
         return String.format("total=%d click=%d cd=%d reach=%d angle=%d los=%d passed=%d"
                         + " | angleMean=%.1f angleMax=%.1f (thr 40) reachMean=%.2f reachMax=%.2f (thr 3.0)"
-                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d escape=%d imm=%d forced=%d) path=%d none=%d",
+                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d escape=%d imm=%d forced=%d timer=%d) path=%d none=%d",
                 kaptainwutax.tungsten.combat.TriggerBot.gTotal,
                 kaptainwutax.tungsten.combat.TriggerBot.gClick,
                 kaptainwutax.tungsten.combat.TriggerBot.gCooldown,
@@ -2140,6 +2140,7 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.combat.SafetySystem.rpEscape,
                 kaptainwutax.tungsten.combat.SafetySystem.rpImminent,
                 kaptainwutax.tungsten.combat.SafetySystem.rpForcedNarrow,
+                kaptainwutax.tungsten.combat.SafetySystem.rpForcedTimer,
                 kaptainwutax.tungsten.combat.CombatController.aimPath,
                 kaptainwutax.tungsten.combat.CombatController.aimNone);
     }
