@@ -116,6 +116,15 @@ public class SafetySystem {
      * and costs nothing.
      */
     public static volatile int rpForcedTimer = 0;
+    /**
+     * WHY hasLOS IS FALSE ALL FIGHT. closeQuarters returns on its first line when !hasLOS
+     * (CombatController:363), so everything below it is dead code in a fight — proven by ctlTotal=0
+     * against lowHpTicks=149. The raycast itself (hasCleanLOS) reads correctly, so the cause is
+     * above it: either findBestAimPoint never runs, leaving hasLOS stuck at its clear, or it runs
+     * and every sample is blocked. losCalls separates those in one run; losClosest/losSample say
+     * which path succeeded, and losNone counts the give-up that clears the flag.
+     */
+    public static volatile int losCalls = 0, losClosest = 0, losSample = 0, losNone = 0;
     private boolean wasBrakingLastFrame = false;
     private boolean wasRepositioningLastFrame = false;
     private boolean wantsJump = false;
@@ -655,9 +664,11 @@ public class SafetySystem {
     private Vec3d findBestAimPoint(ClientPlayerEntity player, Vec3d eyePos,
                                     net.minecraft.util.math.Box box, Vec3d targetPos, double height) {
         // closest point on bounding box to our eyes
+        losCalls++;
         Vec3d closest = closestPointOnBox(eyePos, box);
 
         if (hasCleanLOS(player, eyePos, closest)) {
+            losClosest++;
             hasLOS = true;
             return closest;
         }
@@ -688,11 +699,13 @@ public class SafetySystem {
         }
 
         if (bestVisible != null) {
+            losSample++;
             hasLOS = true;
             return bestVisible;
         }
 
         // no visible point — aim at predicted center anyway (WindMouse will track)
+        losNone++;
         hasLOS = false;
         return center;
     }
