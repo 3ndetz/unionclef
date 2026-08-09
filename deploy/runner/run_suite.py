@@ -29,6 +29,7 @@ import datetime
 import functools
 import os
 import subprocess
+import shutil
 
 # The fps below which a failure says nothing about the bot. Module level ON PURPOSE: it was a
 # local inside the judging function, and the suite loop referenced it -- which would have raised
@@ -442,7 +443,22 @@ def main():
         print(f"  refreshing clients: {why}")
         script = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                               "deploy_jar.sh")
-        rc = subprocess.call(["bash", script],
+        # RESOLVE bash, do not assume it. The first version called ["bash", script] and got
+        # exit 127 -- command not found -- because this runs under Windows Python where bash is
+        # not on PATH. The guard reported that honestly and carried on, which is exactly why the
+        # INVALID it existed to repair still stands in that run's log: a recovery path that is
+        # never exercised until it is needed is a recovery path nobody has tested.
+        sh = shutil.which("bash") or shutil.which("bash.exe")
+        if not sh:
+            for cand in (os.path.join("C:", os.sep, "Program Files", "Git", "bin", "bash.exe"),
+                         os.path.join("C:", os.sep, "Program Files", "Git", "usr", "bin", "bash.exe")):
+                if os.path.exists(cand):
+                    sh = cand
+                    break
+        if not sh:
+            print("  refresh SKIPPED: no bash found to run deploy_jar.sh")
+            return False
+        rc = subprocess.call([sh, script],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         if rc != 0:
             print(f"  refresh FAILED (deploy_jar.sh exit {rc}) -- the next result stays suspect")
