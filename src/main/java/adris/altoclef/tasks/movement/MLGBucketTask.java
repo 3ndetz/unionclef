@@ -10,7 +10,6 @@ import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.*;
 import adris.altoclef.util.serialization.ItemDeserializer;
 import adris.altoclef.util.serialization.ItemSerializer;
-import baritone.Baritone;
 import kaptainwutax.tungsten.path.movements.Rotation;
 import kaptainwutax.tungsten.path.movements.RotationHelper;
 import kaptainwutax.tungsten.path.movements.Input;
@@ -425,10 +424,10 @@ public class MLGBucketTask extends Task {
 
     @Override
     protected void onStop(Task interruptTask) {
-        Baritone baritone = AltoClef.getInstance().getClientBaritone();
         InputControls controls = AltoClef.getInstance().getInputControls();
 
-        baritone.getPathingBehavior().forceCancel();
+        // Nav.cancel() is the same forceCancel, behind the seam that already owns the engine.
+        Nav.cancel();
         movingTorwards = null;
         AltoClef.getInstance().getInputControls().release(Input.CLICK_RIGHT);
         moveLeftRight(0);
