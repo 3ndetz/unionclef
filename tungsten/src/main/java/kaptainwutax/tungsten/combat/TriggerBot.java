@@ -93,6 +93,8 @@ public class TriggerBot {
      *  charge is 1.000, the weapon is the remaining suspect. */
     public static volatile double gSwingWeaponSum = 0;
     public static volatile int gSwingNoWeapon = 0;
+    /** Swings declined because a better weapon was one slot away and being drawn. */
+    public static volatile int gSwingDeferred = 0;
     public static volatile int gSwingCritWindow = 0;
     public static volatile int lifetimeCrits = 0;
     private int ticksSinceLastHit = 0;
@@ -161,6 +163,20 @@ public class TriggerBot {
         if (gateAngle) { gAngle++; gAngleSum += angle; if (angle > gAngleMax) gAngleMax = angle; }
         if (gateLos) gLos++;
         if (gateClick || gateCooldown || gateReach || gateAngle || gateLos) return;
+        // DO NOT SPEND THE SWING ON THE WRONG ITEM.
+        // Forcing a weapon re-check when combat starts took bow swings from 21% of all swings to
+        // 9%, not to zero, because a slot switch is not instantaneous: equipBestMelee sets the
+        // selected slot and the attack can still go out the same tick holding the old item. No
+        // re-check cadence can close that; only the attack declining can. One skipped tick costs
+        // nothing -- the cooldown is already full, so the swing lands on the next one -- while a
+        // bow swing spends the whole cooldown on about one damage where the sword is six.
+        // Guarded on "something strictly better exists", so bare fists still swing.
+        if (kaptainwutax.tungsten.combat.WeaponSelector.hasBetterThanHeld(player)) {
+            kaptainwutax.tungsten.combat.WeaponSelector.forceRecheck();
+            kaptainwutax.tungsten.combat.WeaponSelector.equipBestMelee(player);
+            gSwingDeferred++;
+            return;
+        }
         gPassed++;
 
         // Count the swing BEFORE it lands — the state that decides a crit is the one we are in

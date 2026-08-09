@@ -2120,7 +2120,7 @@ public class Py4jEntryPoint {
         int gr = kaptainwutax.tungsten.combat.TriggerBot.gReach;
         int gp = kaptainwutax.tungsten.combat.TriggerBot.gPassed;
         return String.format("total=%d click=%d cd=%d reach=%d angle=%d los=%d passed=%d"
-                        + " | chargeMean=%.3f critWindowSwings=%d crits=%d weaponMean=%.2f noWeapon=%d"
+                        + " | chargeMean=%.3f critWindowSwings=%d crits=%d weaponMean=%.2f noWeapon=%d deferred=%d"
                         + " | angleMean=%.1f angleMax=%.1f (thr 40) reachMean=%.2f reachMax=%.2f (thr 3.0)"
                         + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d escape=%d imm=%d forced=%d timer=%d) path=%d none=%d",
                 kaptainwutax.tungsten.combat.TriggerBot.gTotal,
@@ -2135,6 +2135,7 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits,
                 gp == 0 ? 0.0 : kaptainwutax.tungsten.combat.TriggerBot.gSwingWeaponSum / gp,
                 kaptainwutax.tungsten.combat.TriggerBot.gSwingNoWeapon,
+                kaptainwutax.tungsten.combat.TriggerBot.gSwingDeferred,
                 ga == 0 ? 0.0 : kaptainwutax.tungsten.combat.TriggerBot.gAngleSum / ga,
                 kaptainwutax.tungsten.combat.TriggerBot.gAngleMax,
                 gr == 0 ? 0.0 : kaptainwutax.tungsten.combat.TriggerBot.gReachDistSum / gr,
@@ -2463,6 +2464,7 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.combat.TriggerBot.gSwingChargeSum = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gSwingWeaponSum = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gSwingNoWeapon = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.gSwingDeferred = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gSwingCritWindow = 0;
         kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gTotal = 0;

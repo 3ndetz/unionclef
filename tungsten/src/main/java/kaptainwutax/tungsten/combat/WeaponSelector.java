@@ -52,6 +52,29 @@ public final class WeaponSelector {
         cooldown = 0;
     }
 
+    /**
+     * Is the hotbar holding something strictly better than what is in the hand right now?
+     *
+     * <p>Exists so the swing itself can decline. Forcing a re-check when combat starts took the
+     * bow swings from 21% of all swings down to 9% but not to zero, because a slot switch is not
+     * instantaneous: {@code equipBestMelee} sets the selected slot and the swing can still go out
+     * the same tick with the old item in hand. Rate-limiting the CHECK cannot fix that; only the
+     * attack declining can.
+     *
+     * <p>Strictly better, and only ever consulted when the hand is empty of a real weapon, so a bot
+     * with nothing but its fists still swings rather than standing there waiting for a sword that
+     * does not exist.
+     */
+    public static boolean hasBetterThanHeld(ClientPlayerEntity player) {
+        if (player == null) return false;
+        double held = meleeScore(player.getInventory().getStack(
+                player.getInventory().getSelectedSlot()));
+        for (int slot = 0; slot < 9; slot++) {
+            if (meleeScore(player.getInventory().getStack(slot)) > held) return true;
+        }
+        return false;
+    }
+
     /** Melee value of each weapon (vanilla attack damage, ties broken by speed). */
     private static final Map<Item, Double> MELEE_SCORE = new HashMap<>();
     static {
