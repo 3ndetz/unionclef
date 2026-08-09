@@ -693,7 +693,7 @@ public class SafetySystem {
      * @param asEnemy true = simulate enemy hitting victim (use estimator), false = us hitting
      */
     private Vec3d simulateKnockback(Vec3d victimPos, Vec3d victimVel,
-                                     Vec3d attackerPos, boolean asEnemy, WorldView world) {
+                                     Vec3d attackerPos, boolean asEnemy) {
         double dx = victimPos.x - attackerPos.x;
         double dz = victimPos.z - attackerPos.z;
         double len = Math.sqrt(dx * dx + dz * dz);
@@ -714,36 +714,16 @@ public class SafetySystem {
             vx *= 0.91;
             vy = (vy - 0.08) * 0.98;
             vz *= 0.91;
-            // ⛔ IT USED TO FALL THROUGH THE FLOOR, AND EVERY DANGER READING WAS BUILT ON THAT.
-            // The arc has gravity and had no ground, so after KB_PREDICT_TICKS=15 it always ended
-            // BELOW where it started — 2.3 blocks below, by hand from vy0=0.4: the rise peaks at
-            // +1.15 around tick 5 and the descent overshoots it by tick 11. The caller then asks
-            // VoidDetector.fallHeight() about that sunken point, the scan starts UNDER the platform,
-            // finds no ground, and answers MAX_SCAN_DEPTH=30. Against KB_FALL_THRESHOLD=4 that reads
-            // as "the next hit knocks me into a pit" — ON EVERY ARENA, including allround's flat
-            // field with a wall round it, where nothing can fall anywhere.
-            // Measured consequence: DANGER_BATTLE owned 453 of 714 combat ticks (63%), the branch
-            // that retreats instead of fighting, on a course the bot then loses 9-14.
-            // A real knockback LANDS. Stop the arc where the ground is, which is also the only
-            // position that means anything to the caller's question.
-            if (vy < 0 && world != null) {
-                net.minecraft.util.math.BlockPos below =
-                        net.minecraft.util.math.BlockPos.ofFloored(px, py, pz);
-                if (!world.getBlockState(below).getCollisionShape(world, below).isEmpty()) {
-                    py = below.getY() + 1.0;
-                    break;
-                }
-            }
         }
         return new Vec3d(px, py, pz);
     }
 
     private void analyzeKnockback(Vec3d playerPos, Vec3d playerVel,
                                    Vec3d targetPos, WorldView world) {
-        lastUsAfterKB = simulateKnockback(playerPos, playerVel, targetPos, true, world);
+        lastUsAfterKB = simulateKnockback(playerPos, playerVel, targetPos, true);
         lastFallIfHit = VoidDetector.fallHeight(lastUsAfterKB, world);
 
-        lastEnemyAfterKB = simulateKnockback(targetPos, enemyVelocity, playerPos, false, world);
+        lastEnemyAfterKB = simulateKnockback(targetPos, enemyVelocity, playerPos, false);
         lastEnemyFallIfHit = VoidDetector.fallHeight(lastEnemyAfterKB, world);
     }
 
