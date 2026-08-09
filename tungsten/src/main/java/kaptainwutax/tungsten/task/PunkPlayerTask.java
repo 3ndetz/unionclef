@@ -214,6 +214,18 @@ public class PunkPlayerTask {
         // time are from that same unreliable window and must be re-measured LIVE, mid-fight, before
         // anyone reasons from them.
         //
+        // THE LEAD THAT IS LEFT: edgeAhead NEVER FIRES ON THIS ARENA.
+        // Read live mid-fight, both counters ZERO at both ends of a 25 s window in which `called`
+        // climbed into the hundreds and the bot falls roughly every nine seconds:
+        //     edgeSneak 0 -> 0     edgeAir 0 -> 0     voidHold 0 -> 0
+        // (Caveat, stated because it bit me twice today: a reset landed inside that window —
+        // `inactive` went 158 -> 0 — so the DELTAS there are worthless. What survives is that both
+        // counters read zero AFTER hundreds of active fighting ticks, which no reset can manufacture.)
+        // So the guard is not losing; it is never triggered. VoidDetector.edgeAhead(pos, vx, vz,
+        // world, 3, look) does not see the rim of a flat platform standing in void. Start there —
+        // its drop threshold, its look distance, and whether the WorldView it is handed can report
+        // anything about a column that is pure air all the way down.
+        //
         // CHECKED AND UNSUPPORTED: an exception upstream in the same @Inject. DamageWatch.tick,
         // FollowEntityTask.tick and FollowPlayerTask.tick all run ahead of this one
         // (MixinClientPlayerEntity:70-72) and a throw in any of them would eat the rest of the
