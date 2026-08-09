@@ -35,6 +35,17 @@ public final class DamageWatch {
     public static volatile double gapSum, gapMax;
     /** Hits that landed while the gap was already beyond melee reach — i.e. not a sword. */
     public static volatile int rangedHits;
+    /**
+     * Health reaching zero, counted here so the damage total can be checked against reality.
+     *
+     * <p>It does not currently add up. With regeneration off and respawn restoring full health,
+     * thirteen deaths on allround need at least 13 x 20 = 260 damage, and this class reported 137.
+     * Either it misses hits, or it misses the final drop, or the bench and the client disagree about
+     * what a death is. Rather than pick one of those and build on it, count the deaths this class
+     * can SEE and compare with the scoreboard the bench reads: equal counts move the discrepancy
+     * onto the per-hit accounting, unequal counts move it onto the death path itself.
+     */
+    public static volatile int deathsSeen;
 
     private static float lastHealth = -1f;
 
@@ -49,6 +60,7 @@ public final class DamageWatch {
         gapSum = 0;
         gapMax = 0;
         rangedHits = 0;
+        deathsSeen = 0;
         lastHealth = -1f;
     }
 
@@ -61,6 +73,7 @@ public final class DamageWatch {
         float hp = player.getHealth();
         // A respawn restores health upward, which is not a hit; only drops are counted. lastHealth
         // is re-seeded every tick so a death simply starts the next life's accounting.
+        if (lastHealth > 0f && hp <= 0f) deathsSeen++;
         if (lastHealth >= 0f && hp < lastHealth) {
             hits++;
             damage += lastHealth - hp;
