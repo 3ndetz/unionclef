@@ -165,8 +165,10 @@ public class PunkPlayerTask {
     public static volatile int pLastKnown = 0;
     public static volatile int pCalled = 0, pInactive = 0, pNoTarget = 0,
             pVoidHold = 0, pCombat = 0, pApproach = 0;
-    /** Edge guard: ticks it held sneak, and ticks we were near an edge AIRBORNE (it cannot help). */
+    /** Edge guard: ticks it held sneak, and ticks we were airborne over a bottomless column. */
     public static volatile int pEdgeSneak = 0, pEdgeAir = 0;
+    /** Ticks the executor was driving — where the guard used to switch itself off entirely. */
+    public static volatile int pEdgeSkipExec = 0;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
         pCalled++;
@@ -193,17 +195,11 @@ public class PunkPlayerTask {
         // Two runs on the deployed jar, counters now per-run (see resetRunCounters):
         //     deaths=11  edgeSneak=1  edgeAir=2   called=296  inactive=143  combat=415
         //     deaths=13  edgeSneak=1  edgeAir=4   called=133  inactive=122  combat=633
-        // Neither counter tracks the deaths, so it is neither the crit hop nor this guard mis-firing.
-        // The number that matters is `called - inactive`: this guard sits BELOW the `if (!active)`
-        // return above, so it got ELEVEN opportunities in the second run against THIRTEEN deaths. A
-        // guard that runs eleven times cannot prevent thirteen falls whatever its logic says.
-        // Meanwhile combat=633 — the fight is being driven, hard, by a different loop.
+        // Neither counter tracks the deaths, so it is neither the crit hop nor a mis-firing guard.
         //
-        // So this is the "one owner of the tick" shape again: the protection lives in a task tick
-        // that hardly executes while movement is owned elsewhere.
-        //
-        // ⛔ RETRACTED: "the tick is suppressed to ~1.1/s during a fight, so the guard got eleven
-        // chances". THAT WAS WRONG, and it was wrong the ordinary way — I did not know the zero.
+        // ⛔ AND THE FIRST EXPLANATION I DREW FROM THEM WAS WRONG. I read `called - inactive` at
+        // judge time as "the guard got eleven opportunities against thirteen deaths" and called the
+        // tick suppressed to ~1.1/s. Wrong the ordinary way — I did not know the counter's zero.
         // Sampling `called` live DURING a fight, four reads ten seconds apart:
         //     271 -> 157 -> 368 -> 561        (inactive 122 -> 0 -> 0 -> 130)
         // The drop is the suite starting its retry attempt ("running it once more before believing
@@ -252,15 +248,37 @@ public class PunkPlayerTask {
         // same course, so whatever it is, it is not a constant.
         // Do NOT re-open the aim for this; the aim numbers on this course are frame-rate noise below
         // the 14 fps floor (see the course file).
-        if (!TungstenModDataContainer.isExecutorRunning()) {
+        // ── THE FIX: the guard used to switch OFF entirely whenever the executor drove ──────
+        // `if (!isExecutorRunning())` was the whole condition, on the grounds that the executor is
+        // void-aware and "may descend on purpose". In a duel the executor is what CHASES, so the
+        // protection was disabled for most of every fight — which is when the bot is being pushed
+        // around near a rim and least able to look after itself.
+        //
+        // Removing the exclusion outright would be wrong: descending IS legitimate on real terrain
+        // (chase_terrain, slab_hole, the nav courses all path downhill deliberately). So keep the
+        // exclusion for ordinary drops and override it only for a BOTTOMLESS one, using this file's
+        // own established discriminator — the same "a genuine void is bottomless; 20 blocks of
+        // nothing is a safe discriminator" that the target-hold below is built on. A legitimate
+        // descent is a few blocks; nothing legitimate walks into twenty blocks of air.
+        boolean execDriving = TungstenModDataContainer.isExecutorRunning();
+        if (execDriving) pEdgeSkipExec++;   // counts how often the old code switched itself off
+        {
             double vx = player.getVelocity().x, vz = player.getVelocity().z;
             double look = Math.max(1.4, Math.sqrt(vx * vx + vz * vz) * 10.0);
+            // While the executor drives, only a bottomless column overrides it.
+            int guardFall = execDriving ? 20 : 3;
             boolean nearEdge = kaptainwutax.tungsten.combat.VoidDetector.edgeAhead(
-                    player.getEntityPos(), vx, vz, world, 3, look);
+                    player.getEntityPos(), vx, vz, world, guardFall, look);
             if (player.isOnGround() && (vx * vx + vz * vz) > 0.0016 && nearEdge) {
                 pEdgeSneak++;
                 MinecraftClient.getInstance().options.sneakKey.setPressed(true);
-            } else if (!player.isOnGround() && nearEdge) {
+            }
+            // pEdgeAir used to be read through edgeAhead, which opens with "already over a drop ->
+            // not my problem" (VoidDetector.java:93) — so it could never see the fall it was added
+            // to catch. Ask the world directly instead.
+            if (!player.isOnGround()
+                    && kaptainwutax.tungsten.combat.VoidDetector.fallHeight(
+                            player.getEntityPos(), world) > 20) {
                 pEdgeAir++;
             }
         }

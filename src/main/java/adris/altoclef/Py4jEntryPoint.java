@@ -2069,7 +2069,7 @@ public class Py4jEntryPoint {
         // ground, versus being near the edge AIRBORNE where sneak holds nothing. allround dies to
         // `fell out of the world` thirteen times a run and this is how we tell which one it is.
         return String.format("called=%d inactive=%d noTarget=%d voidHold=%d combat=%d approachRestart=%d"
-                        + " edgeSneak=%d edgeAir=%d",
+                        + " edgeSneak=%d edgeAir=%d edgeSkipExec=%d",
                 kaptainwutax.tungsten.task.PunkPlayerTask.pCalled,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pInactive,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pNoTarget,
@@ -2077,7 +2077,8 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.task.PunkPlayerTask.pCombat,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pApproach,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeSneak,
-                kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeAir);
+                kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeAir,
+                kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeSkipExec);
     }
 
     /** Chase telemetry: ticks the follow task got, ticks it actually steered, and the gates
@@ -2238,6 +2239,7 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.PunkPlayerTask.pLastKnown = 0;
         kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeSneak = 0;
         kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeAir = 0;
+        kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeSkipExec = 0;
         kaptainwutax.tungsten.path.PathExecutor.execTicks = 0;
         kaptainwutax.tungsten.path.PathExecutor.execSprintTicks = 0;
         adris.altoclef.tasks.construction.DestroyBlockTask.dbTick = 0;
