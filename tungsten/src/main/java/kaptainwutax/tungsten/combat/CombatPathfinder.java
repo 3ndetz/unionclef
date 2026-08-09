@@ -55,7 +55,17 @@ public class CombatPathfinder {
         tickCounter = 0;
 
         // attack path targets predicted position (~20 ticks ahead based on enemy avg speed)
-        Vec3d predicted = Vec3d.ofBottomCenter(targetPos).add(enemyVelocity.multiply(20));
+        // ⛔ THE VERTICAL COMPONENT USED TO GO IN HERE TOO, AND IT AIMED THE SEARCH UNDERGROUND.
+        // Same bug as SafetySystem:216 (fixed: the danger look-ahead extrapolated the bot through the
+        // floor and read its own crit hop as a fatal fall) but with a 20-tick horizon instead of 10,
+        // so it is worse in scale: an opponent mid-jump carrying vy about -0.3 put this BFS target
+        // roughly SIX BLOCKS UNDERGROUND. The search then tried to reach a cell inside terrain or in
+        // void, which is the shape of the "Ran out of nodes" chase failures already noted in this
+        // repo.
+        // A pathfinding target has to be a walkable cell. Lead the enemy across the GROUND, which is
+        // what a chase actually needs, and let the BFS resolve the height itself.
+        Vec3d predicted = Vec3d.ofBottomCenter(targetPos)
+                .add(enemyVelocity.x * 20, 0, enemyVelocity.z * 20);
         BlockPos predictedTarget = BlockPos.ofFloored(predicted);
         lastWorld = world;
         attackPath = bfsPath(playerPos, predictedTarget, world, false);
