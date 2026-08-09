@@ -180,6 +180,20 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// Deliberately NOT widened to `tungsten$driving`: that would arm the guard during
 		// BridgeTask/PillarTask/the walker, which stand at a rim ON PURPOSE, and those courses were
 		// not measured here. Cover the phase the evidence points at, nothing more.
+		//
+		// ⛔ MEASURED AFTERWARDS AND IT DID NOT HELP. allround, like-for-like (--no-early-stop):
+		//     deaths=16 at 8.4 fps, samples=18   vs baseline 11 and 13 at 4.1-4.5 fps, samples=13-14
+		// Normalising by run length (samples as the duration proxy) that is ~0.89 deaths/sample
+		// against ~1.0 — no movement either way. The suite score did not move.
+		// WHY IT PROBABLY CANNOT, and this was foreseeable from BowShooter's own lifecycle: `active`
+		// is set by shootArrowAt and cleared by stop() on release/abort, while allround fires every
+		// 2.5 s. So this covers the seconds AROUND each shot and leaves the gaps between them
+		// unguarded — partial cover of the phase, not cover of it.
+		// The next attempt should arm the guard for the whole time a combat TARGET is engaged rather
+		// than per-shot, and must still keep BridgeTask/PillarTask/the walker out of it.
+		// Also note: this run logged NO `fall:` lines at all despite 16 deaths, so its deaths were
+		// not attributed by scenario.py:161-166 — do not reuse the earlier "SELF (walked off)"
+		// attribution for this run without re-establishing it.
 		if ((kaptainwutax.tungsten.task.RunAwayTask.isActive()
 				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive()
 				|| kaptainwutax.tungsten.task.BowShooter.isActive())
