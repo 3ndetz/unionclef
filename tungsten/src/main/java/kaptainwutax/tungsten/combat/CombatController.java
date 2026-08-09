@@ -113,6 +113,13 @@ public class CombatController {
 
     // ── dynamic combat movement state (circle-strafe + range + crit-jumps) ──────
     private int strafeDir = 1;              // +1 = left, -1 = right
+    /** How far a blow throws us: knockback decays fast, so three blocks of clearance behind is
+     *  the margin that decides whether a hit is survivable on a small platform. */
+    private static final double KNOCKBACK_REACH = 3.0;
+    /** One stride, for probing where an orbit side would leave us. */
+    private static final double STRAFE_PROBE = 1.5;
+    /** Ticks with the rim on the knockback line -- the exposure, and the measure this must lower. */
+    public static volatile int rimAtBackTicks;
     private long lastStrafeSwitch = 0;
     private long strafeInterval = 800;
     private long lastJump = 0;
@@ -588,6 +595,51 @@ public class CombatController {
         if (!strafeSideSafe(player, world, strafeDir)) {
             strafeDir = -strafeDir;               // try the other side immediately
             lastStrafeSwitch = now;
+        }
+        // ⛔ CIRCLE THE SIDE THAT PUTS FLOOR AT YOUR BACK, NOT THE VOID.
+        //
+        // MEASURED on edge_duel across three runs: vgFall onset 5/9, hurt 5/8, sprint 0/0 -- every
+        // fall begins on a tick where hurtTime > 0 and none while sprinting. The bot is HIT off the
+        // platform, not walked off, and rimBack read 327 ticks of standing with the rim in the line
+        // a blow throws it along. Nothing inside VoidGuard can answer that: knockback is a velocity
+        // the server applies and the guard only releases keys and presses sneak, which is inert in
+        // the air anyway.
+        //
+        // A FIRST ATTEMPT AT THIS WAS REVERTED, and its failure is the reason this one is shaped
+        // differently. It refused to retreat and closed instead -- but the closing half was gated
+        // on !canStrafe, and on a 5x5 platform a strafe is nearly always available, so in practice
+        // it only suppressed `back` and never moved the bot off the dangerous line. Onsets went
+        // 5 -> 9. Suppressing a direction is not repositioning.
+        //
+        // So choose the ORBIT DIRECTION by where it leaves us: step each candidate out by a stride,
+        // and ask whether the rim would then lie behind us on the knockback line. Circling the
+        // target rotates that line, so one side genuinely fixes what the other does not.
+        net.minecraft.util.math.Vec3d selfPos = player.getEntityPos();
+        net.minecraft.util.math.Vec3d toTgt = target.getEntityPos().subtract(selfPos);
+        if (toTgt.horizontalLengthSquared() > 1e-6) {
+            net.minecraft.util.math.Vec3d fwdN = new net.minecraft.util.math.Vec3d(
+                    toTgt.x, 0, toTgt.z).normalize();
+            // MC convention: sideways +1 is LEFT, which is (-fwd.z, +fwd.x) rotated
+            net.minecraft.util.math.Vec3d leftN =
+                    new net.minecraft.util.math.Vec3d(-fwdN.z, 0, fwdN.x);
+            boolean rimBehindNow = VoidDetector.edgeAhead(
+                    selfPos, -fwdN.x, -fwdN.z, world, 3, KNOCKBACK_REACH);
+            if (rimBehindNow) {
+                rimAtBackTicks++;
+                for (int cand : new int[]{strafeDir, -strafeDir}) {
+                    net.minecraft.util.math.Vec3d step = leftN.multiply(cand * STRAFE_PROBE);
+                    net.minecraft.util.math.Vec3d after = selfPos.add(step);
+                    net.minecraft.util.math.Vec3d awayAfter = after.subtract(target.getEntityPos());
+                    if (awayAfter.horizontalLengthSquared() < 1e-6) continue;
+                    boolean stillRim = VoidDetector.edgeAhead(
+                            after, awayAfter.x, awayAfter.z, world, 3, KNOCKBACK_REACH);
+                    if (!stillRim && strafeSideSafe(player, world, cand)) {
+                        strafeDir = cand;         // this orbit side gets the void off our back
+                        lastStrafeSwitch = now;
+                        break;
+                    }
+                }
+            }
         }
         boolean canStrafe = strafeSideSafe(player, world, strafeDir);
         out.left = canStrafe && strafeDir > 0;
