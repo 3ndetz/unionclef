@@ -291,7 +291,20 @@ public class CombatController {
             // now layered over the approach.
             boolean safetyWantsLegs = safetyIntent.forward || safetyIntent.back
                     || safetyIntent.left || safetyIntent.right || safetyIntent.jump;
-            if (safetyClaims && safetyWantsLegs) {
+            // ⛔ IN REACH, A DANGER CLAIM IS A LAYER TOO — SAME LESSON AS THE SNEAK CLAIM ABOVE.
+            // Measured tonight: closeQuarters executes 107 times in a ~2400-tick course because this
+            // branch hands the legs to the safety stage first, so the reach control, the
+            // advance/back-off decision and any reaction to being hit run on about 4% of a fight.
+            // With narrow fixed (324 -> 45) the claim now comes overwhelmingly from DANGER_BATTLE
+            // (danger=107), whose trigger is a knockback estimate — and that estimate is inflated on
+            // flat ground, yet load-bearing: removing it was measured harmful twice (16 -> 23 and
+            // 15 -> 19 deaths). So do not remove the caution and do not obey it blindly either.
+            // INSIDE STRIKE RANGE the bot is already in the trade; retreating there is what produces
+            // an even exchange, and an even exchange still loses when only OUR deaths are counted.
+            // Let the stage keep its claim at distance, and let close combat own the legs in reach.
+            double claimDist = TriggerBot.eyeToHitbox(player, target);
+            boolean stageOverridesInReach = claimDist > TriggerBot.REACH + 1.0;
+            if (safetyClaims && safetyWantsLegs && stageOverridesInReach) {
                 resolved.copyFrom(safetyIntent);
             } else {
                 closeQuarters(player, target, world, resolved);
