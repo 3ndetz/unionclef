@@ -33,6 +33,8 @@ public class RunAwayTask {
     private static boolean active       = false;
     private static String  threatName   = null;
     private static double  keepDistance = 8.0;
+    /** Previous tick's distance to the threat, so the hold can tell closing from holding. */
+    private static double  lastThreatDist = -1;
     private static PlayerEntity threat  = null;
     private static int     tickCounter  = 0;
 
@@ -92,6 +94,7 @@ public class RunAwayTask {
         PunkPlayerTask.stop();            // can't hunt and flee at once
         threatName   = name;
         keepDistance = Math.max(3.0, dist);
+        lastThreatDist = -1;
         active       = true;
         Debug.logMessage("Run away from " + name + " (keep " + (int) keepDistance + ")");
     }
@@ -133,7 +136,24 @@ public class RunAwayTask {
         if (threat == null) return; // threat gone / out of view — idle; agent decides next
 
         double dist = player.getEntityPos().distanceTo(threat.getEntityPos());
-        if (dist >= keepDistance + 1.5) {
+        // DO NOT HOLD WHILE THE THREAT IS CLOSING.
+        //
+        // The hold exists to save effort once the gap is safe, and it stops the bot dead AND
+        // cancels the search. Against a pursuer that sprints, "safe" lasts under two seconds: a
+        // sprinting player covers ~5.6 blocks a second, so the 9.5 this triggers at is gone before
+        // the bot has any reason to move again -- and it restarts from a standstill against
+        // something already at full speed.
+        //
+        // MEASURED on bow_flee: the course's own criterion reported a mean separation of 9.32,
+        // which is the signature of parking exactly on this threshold, and it PASSED. Meanwhile 36
+        // of the 38 hits taken landed with something inside 4.5 blocks (dw rangedHits=2), and the
+        // bot died 10 times in 60s. A good average and a collapsing distance are the same fact
+        // here: it holds at the line, the gap is eaten, it is caught flat-footed.
+        //
+        // So the gap alone is the wrong test. Hold only while the threat is NOT gaining ground.
+        boolean closing = lastThreatDist >= 0 && dist < lastThreatDist - 0.01;
+        lastThreatDist = dist;
+        if (!closing && dist >= keepDistance + 1.5) {
             // far enough — stop pathing, hold position
             fleeHeld++;
             if (TungstenModDataContainer.PATHFINDER.active.get()) {
