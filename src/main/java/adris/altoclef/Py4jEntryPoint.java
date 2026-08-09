@@ -2636,11 +2636,16 @@ public class Py4jEntryPoint {
                 adris.altoclef.chains.MobDefenseChain.mdRet8,
                 adris.altoclef.chains.MobDefenseChain.mdRet9,
                 kaptainwutax.tungsten.combat.VoidGuard.vgCalls,
+                // ORDER MATTERS AND I GOT IT WRONG ONCE: vgEdge=%d comes SECOND in the format, so
+                // vgEdgeSeen must be the second arg. Inserting the vgFall four ahead of it shifted
+                // every value one place and printed afterEdge=117 against onset=5 -- impossible,
+                // since both increment in the same branch. That impossibility is the only reason
+                // the mis-order was caught rather than believed.
+                kaptainwutax.tungsten.combat.VoidGuard.vgEdgeSeen,
                 kaptainwutax.tungsten.combat.VoidGuard.vgFallOnset,
                 kaptainwutax.tungsten.combat.VoidGuard.vgFallHurt,
                 kaptainwutax.tungsten.combat.VoidGuard.vgFallSprint,
                 kaptainwutax.tungsten.combat.VoidGuard.vgFallAfterEdge,
-                kaptainwutax.tungsten.combat.VoidGuard.vgEdgeSeen,
                 adris.altoclef.control.SlotHandler.shIssued,
                 adris.altoclef.control.SlotHandler.shDropped,
                 adris.altoclef.control.SlotHandler.shBlacklisted,
