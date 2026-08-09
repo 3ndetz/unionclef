@@ -114,6 +114,12 @@ class NarrowBridgeDuel(Scenario):
     # The opponent fights on the BASELINE engine so this duel measures our changes
     # rather than cancelling them — see Scenario.victim_settings.
     victim_settings = {"combatReachControl": "false"}
+    # NO SPRINT ASYMMETRY HERE, checked so it is not raised again. VoidGuard sets
+    # nearVoid = voidWithin(pos, 3, 3), permanently true on a 1-wide bridge, so sprint is off
+    # for the whole course -- but protect() is gated on PunkPlayerTask.isActive()
+    # (MixinClientPlayerEntity:197-201), NOT on combatReachControl, and drive_start punks BOTH
+    # fighters. So the handicap is symmetric and the pin below does not buy the victim a sprint
+    # the bot cannot use.
     duration = 90
     settings = {"combatMovementsEnabled": "true"}
     bot_kit = KIT_SWORD
