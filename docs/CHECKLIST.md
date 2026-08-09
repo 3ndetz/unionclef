@@ -222,6 +222,27 @@ Two corollaries, both paid for the same day:
   when the bot ignores the bait, so a fifteen-second sampler read 0 for runs where the branch DID
   fire. Print it in the verdict instead.
 
+**RULE ONE HAS A MIRROR IMAGE, and it cost a fix that was probably correct.** A disconnected SENSOR
+reports nothing happening. A disconnected ACTUATOR *also* reports nothing happening, and looks
+exactly like a refuted hypothesis.
+
+Two of these on one evening, 2026-08-09:
+- `dmgTaken=0.0 hits=0/0/0/0` on a course where the bot died five times. altoclef's damage tracker
+  hangs off `MobDefenseChain.getPriority()`, and on courses the agent drives with tungsten
+  primitives that chain never ticks — `mdCalls=0`. The number meant "nothing is measuring", not
+  "nothing hit the bot".
+- A break-contact fallback that drove the movement keys away during a path search measured 22 hits
+  against 23, i.e. nothing — and was reverted as refuted. It had never run. `RunAwayTask` ticks
+  BEFORE `MovementQueue`/`BlockPathWalker`, which release every key and press their own. The rule is
+  spelled out in that very tick file: *"ONE OWNER OF THE TICK ... a SECOND per-tick writer does not
+  merely conflict, it silently wins half the ticks"* — pitfall P1, with its own measured failure
+  (`called=11041 inRange=11040 clicked=0`) already recorded next to it.
+
+So before filing a behaviour change as refuted, prove it EXECUTED: a counter on the branch, a
+visible effect in the trace, anything that distinguishes "did nothing" from "did not run". A fix
+that never reached the game has not been tested, and burying it as a dead end is worse than never
+having tried it — the next session inherits the wrong conclusion.
+
 ---
 
 ⛔ **RULE ZERO: BEFORE BELIEVING A RED, ASK WHETHER THE MACHINE WAS THERE.**
