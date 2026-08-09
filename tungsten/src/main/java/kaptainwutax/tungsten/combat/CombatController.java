@@ -97,8 +97,19 @@ public class CombatController {
     public static volatile boolean controlledThisTick;
     /** THE CONTROL FOR "controlled=0 during 166 hurt ticks". Without a total, that zero cannot tell
      *  "the controller runs but never while hit" from "the controller barely runs at all" — two very
-     *  different diagnoses. This counts every time the close-quarters method executes. */
+     *  different diagnoses.
+     *
+     *  ⚠ THIS COUNTS COMPLETIONS, NOT ENTRIES. It sits at the BOTTOM of closeQuarters, below the
+     *  no-LOS return and the low-hp kite return, so it misses every tick that leaves early. The
+     *  comment here used to claim it counted "every time the method executes", and that wrong
+     *  sentence cost a whole experiment: the in-reach arbitration edit controls the ENTRY, so ctl
+     *  was read as its verdict while answering a different question. Use cqEntry for the entry. */
     public static volatile int controlTicks;
+    /** Entries into closeQuarters, and the two ways out that never reach controlTicks. The budget
+     *  reconciles exactly: cqEntry = cqNoLos + lowHpTicks + controlTicks. Anything that claims the
+     *  branch is starved has to show it HERE, because this is the number the stage arbitration in
+     *  {@code tick()} actually moves. */
+    public static volatile int cqEntry, cqNoLos;
 
     // ── dynamic combat movement state (circle-strafe + range + crit-jumps) ──────
     private int strafeDir = 1;              // +1 = left, -1 = right
@@ -373,7 +384,9 @@ public class CombatController {
         // No line of sight: the target is occluded (a wall, or another entity in the way).
         // Don't just spin and click — walk toward the route so we flank around it. The aim
         // branch already points us at getMovementYaw().
+        cqEntry++;
         if (!safety.hasLOS()) {
+            cqNoLos++;
             if (safety.isMovementActive()) {
                 out.set(true, false, false, false, true, false, false);
             }
