@@ -64,6 +64,10 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		//$$ PunkPlayerTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
 		//$$ kaptainwutax.tungsten.task.RunAwayTask.tick(this.getWorld(), (ClientPlayerEntity)(Object)this);
 		//#else
+		// Damage accounting FIRST and unconditionally: altoclef's own tracker hangs off its chain
+		// loop, which never runs on a course the agent drives with tungsten primitives — bow_flee
+		// reported dmgTaken=0.0 hits=0/0/0/0 through five deaths.
+		kaptainwutax.tungsten.combat.DamageWatch.tick((ClientPlayerEntity)(Object)this);
 		FollowEntityTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
 		FollowPlayerTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
 		PunkPlayerTask.tick(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
