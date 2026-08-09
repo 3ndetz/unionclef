@@ -143,11 +143,19 @@ public class SafetySystem {
 
     // imminent spam detection → force NARROW_BATTLE mode
     private int imminentCount = 0;       // how many times IMMINENT triggered recently
-    private int imminentDecayTimer = 0;  // frames until count decays
+    private long imminentDecayUntil = 0L;  // wall-clock deadline for the spam window
     private static final int IMMINENT_SPAM_THRESHOLD = 3;  // 3 times in window → narrow mode
-    private static final int IMMINENT_DECAY_FRAMES = 120;  // ~2 sec window
-    private static final int FORCED_NARROW_FRAMES = 200;   // ~3.3 sec forced narrow
-    private int forcedNarrowTimer = 0;
+    // ⛔ THESE WERE FRAME COUNTS ON A LOOP THAT RUNS AT THE FRAME RATE, SO THEY MEANT DIFFERENT
+    // DURATIONS ON DIFFERENT MACHINES. 120 and 200 frames were written for ~60 fps, i.e. ~2 s and
+    // ~3.3 s. This stand measures 28-30 fps, so the forced-narrow pin actually lasted about SEVEN
+    // seconds — more than double its intent — and every second of it is a second the bot does not
+    // fight, because the safety stage claims the legs and closeQuarters never runs
+    // (CombatController:294). The worse the frame rate, the longer the bot stands there.
+    // A behaviour that changes with frame rate is wrong on any machine, not just a slow one, so
+    // these are now wall-clock and mean what they say.
+    private static final long IMMINENT_DECAY_MS = 2000;    // 2 s window
+    private static final long FORCED_NARROW_MS  = 3300;    // 3.3 s forced narrow
+    private long forcedNarrowUntil = 0L;
 
     private boolean active = false;
     private int logCooldown = 0;
@@ -200,9 +208,8 @@ public class SafetySystem {
         intent.clear();
         if (postImminentCooldown > 0) postImminentCooldown--;
         if (edgeSneakTicks > 0) edgeSneakTicks--;
-        if (forcedNarrowTimer > 0) forcedNarrowTimer--;
-        rpForcedTimer = forcedNarrowTimer;
-        if (imminentDecayTimer > 0) { imminentDecayTimer--; } else { imminentCount = 0; }
+        rpForcedTimer = (int) Math.max(0, forcedNarrowUntil - System.currentTimeMillis());
+        if (System.currentTimeMillis() > imminentDecayUntil) imminentCount = 0;
         TungstenModRenderContainer.COMBAT_TRAJECTORY =
                 java.util.Collections.synchronizedCollection(new java.util.ArrayList<>());
         if (logCooldown > 0) logCooldown--;
@@ -504,7 +511,7 @@ public class SafetySystem {
         boolean onNarrowTerrain = edgeScore >= 0.4 && player.isOnGround();
 
         // forced NARROW from imminent spam
-        if (forcedNarrowTimer > 0) {
+        if (System.currentTimeMillis() < forcedNarrowUntil) {
             onNarrowTerrain = true;
         }
 
@@ -514,10 +521,10 @@ public class SafetySystem {
                     && (dangerCurrent != DangerLevel.NONE || playerVel.y < -0.3)) {
                 imminentCount++;
                 rpImminent++;
-                imminentDecayTimer = IMMINENT_DECAY_FRAMES;
+                imminentDecayUntil = System.currentTimeMillis() + IMMINENT_DECAY_MS;
                 if (imminentCount >= IMMINENT_SPAM_THRESHOLD) {
                     // too many imminents → force narrow mode
-                    forcedNarrowTimer = FORCED_NARROW_FRAMES;
+                    forcedNarrowUntil = System.currentTimeMillis() + FORCED_NARROW_MS;
                     rpForcedNarrow++;
                     imminentCount = 0;
                     if (logCooldown <= 0) {
