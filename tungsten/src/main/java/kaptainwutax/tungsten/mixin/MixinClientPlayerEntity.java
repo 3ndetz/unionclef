@@ -147,6 +147,27 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// The guard is for FREE-FORM movement, as VoidDetector.edgeAhead says itself: pathfinder
 		// moves are not gated by it, because they may descend deliberately. A queued step never
 		// aims at the void — FastPlanner only emits a destination it proved standable.
+		// KEEP MOVING WHILE THE NEXT PATH IS BEING COMPUTED. A flee search takes several ticks and
+		// the executor has nothing to replay meanwhile, so the bot STANDS — free at nine blocks,
+		// fatal at four. Measured on bow_flee: net displacement is only 41-57% of what sprinting
+		// gives, and flee searches occupy 40-45% of the course; the two match, so the escape runs
+		// at ~2.8 blocks/s against a SLOWED pursuer's ~4.8. Hence 23 hits a course at a mean gap of
+		// 3.95 blocks, and an episode that ends only when the bot dies.
+		//
+		// HERE, not in RunAwayTask.tick, and that distinction is the whole point. The first attempt
+		// drove these keys from the task, which ticks BEFORE MovementQueue and the walker — both of
+		// which release every key and press their own. It measured 22 hits against 23 and was filed
+		// as refuted; it had simply never run. That is pitfall P1, documented above, and this is the
+		// established position for a final-word writer: after every owner, gated on the same
+		// !movementOwnsTick exemption, and BEFORE VoidGuard so the guard can still veto a step off
+		// the rim.
+		if (kaptainwutax.tungsten.task.RunAwayTask.isActive()
+				&& !tungsten$movementOwnsTick
+				&& !TungstenModDataContainer.isExecutorRunning()
+				&& !kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
+			kaptainwutax.tungsten.task.RunAwayTask.driveAwayRaw((ClientPlayerEntity)(Object)this);
+		}
+
 		if ((kaptainwutax.tungsten.task.RunAwayTask.isActive()
 				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive())
 				&& !tungsten$movementOwnsTick) {

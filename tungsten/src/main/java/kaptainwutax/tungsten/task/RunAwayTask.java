@@ -69,11 +69,15 @@ public class RunAwayTask {
     /** Ticks spent with a SEARCH in flight — standing still, not fleeing. Split out of fleeRan,
      *  which had been counting them as running and hiding ~14s of a 60s course. */
     public static volatile int fleeSearch;
+    /** Ticks the break-contact fallback actually drove the keys. Exists to prove the
+     *  fallback RUNS: its first version never did, and read as a refuted hypothesis. */
+    public static volatile int fleeDriveTicks;
 
     /** Zeroed by resetRunCounters so a bench run measures itself, not the stand's history. */
     public static void resetCounters() {
         fleeHeld = 0;
         fleeSearch = 0;
+        fleeDriveTicks = 0;
         fleeRan = 0;
         fleePlans = 0;
     }
@@ -225,6 +229,47 @@ public class RunAwayTask {
             }
         }
         return best != null ? best : bestDeadEnd;
+    }
+
+    /**
+     * Walk directly away from the threat on the movement KEYS, without touching the view.
+     *
+     * <p>Called from the mixin as a FINAL-WORD writer — after every tick owner, under the same
+     * {@code !movementOwnsTick} exemption the walker and executor use, and before VoidGuard so the
+     * guard can still veto a step off a rim. It must not be called from {@link #tick}: that runs
+     * before MovementQueue and BlockPathWalker, which release every key and press their own, so a
+     * writer there is silently overwritten (pitfall P1). The first version of this WAS there, read
+     * as "no effect" across three runs, and was reverted as a refuted idea when it had never once
+     * executed.
+     *
+     * <p>{@code fleeDriveTicks} exists so that cannot happen twice: a zero there means the fallback
+     * is not running, which is a different fact from "the fallback does not help".
+     *
+     * <p>Directions are expressed in the player's own frame, so this composes with a bow shot that
+     * has claimed the view and never produces the instant rotation the aim pipeline avoids. Sprint
+     * is requested only when the motion is mostly FORWARD, because vanilla refuses it otherwise —
+     * {@code canStartSprinting()} requires {@code input.hasForwardMovement()}.
+     */
+    public static void driveAwayRaw(ClientPlayerEntity player) {
+        if (!active || threat == null || !threat.isAlive() || threat.isRemoved()) return;
+        Vec3d away = player.getEntityPos().subtract(threat.getEntityPos());
+        away = new Vec3d(away.x, 0, away.z);
+        if (away.lengthSquared() < 1e-6) return;
+        away = away.normalize();
+
+        fleeDriveTicks++;
+        double yaw = Math.toRadians(player.getYaw());
+        Vec3d facing = new Vec3d(-Math.sin(yaw), 0, Math.cos(yaw));
+        Vec3d right  = new Vec3d(Math.cos(yaw), 0, Math.sin(yaw));
+        double fwd = away.dotProduct(facing);
+        double str = away.dotProduct(right);
+
+        var options = MinecraftClient.getInstance().options;
+        options.forwardKey.setPressed(fwd > 0.35);
+        options.backKey.setPressed(fwd < -0.35);
+        options.rightKey.setPressed(str > 0.35);
+        options.leftKey.setPressed(str < -0.35);
+        options.sprintKey.setPressed(fwd > 0.6);
     }
 
     /** Can the flee CONTINUE past {@code from} in the same direction? One more standable step is
