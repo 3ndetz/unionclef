@@ -15,6 +15,19 @@ set -euo pipefail
 CONTAINER="${1:?usage: speak.sh <container> \"text\"}"
 TEXT="${2:?usage: speak.sh <container> \"text\"}"
 
+# SELF-HEALING, BECAUSE THE MICROPHONE DOES NOT SURVIVE A RESTART AND THAT FAILS SILENTLY.
+# PulseAudio lives inside the container, so `docker restart` — and every deploy_jar.sh, which
+# RECREATES the clients — takes the sink with it. Verified: after a restart pactl answers
+# "Connection refused" and the bot would simply be mute with nothing in any log to say why.
+# Re-running setup is idempotent (it checks `pactl info` before starting anything), so the cheap
+# correct thing is to make speaking depend on it rather than on someone remembering.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if ! MSYS_NO_PATHCONV=1 docker exec "$CONTAINER" sh -c \
+        'su -s /bin/sh app -c "XDG_RUNTIME_DIR=/tmp/pulse-app pactl info" >/dev/null 2>&1'; then
+    echo "(microphone missing — running voice_setup.sh first)" >&2
+    bash "$HERE/voice_setup.sh" "$CONTAINER" >/dev/null 2>&1 || true
+fi
+
 ENV_FILE="$HOME/.claude/codex-docs.env"
 [ -f "$ENV_FILE" ] || { echo "missing $ENV_FILE — no TTS endpoint configured"; exit 1; }
 set -a; . "$ENV_FILE"; set +a
