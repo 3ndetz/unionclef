@@ -5,7 +5,6 @@ import adris.altoclef.Debug;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.time.TimerGame;
-import baritone.Baritone;
 import kaptainwutax.tungsten.path.movements.Input;
 
 /**
@@ -38,8 +37,6 @@ public class SafeRandomShimmyTask extends Task {
             LookHelper.randomOrientation();
         }
 
-        Baritone baritone = AltoClef.getInstance().getClientBaritone();
-
         AltoClef.getInstance().getInputControls().hold(Input.SNEAK);
         AltoClef.getInstance().getInputControls().hold(Input.MOVE_FORWARD);
         AltoClef.getInstance().getInputControls().hold(Input.CLICK_LEFT);
@@ -48,8 +45,6 @@ public class SafeRandomShimmyTask extends Task {
 
     @Override
     protected void onStop(Task interruptTask) {
-        Baritone baritone = AltoClef.getInstance().getClientBaritone();
-
         AltoClef.getInstance().getInputControls().release(Input.MOVE_FORWARD);
         AltoClef.getInstance().getInputControls().release(Input.SNEAK);
         AltoClef.getInstance().getInputControls().release(Input.CLICK_LEFT);
