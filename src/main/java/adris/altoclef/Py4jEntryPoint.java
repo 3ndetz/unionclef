@@ -2872,6 +2872,20 @@ public class Py4jEntryPoint {
      */
     public int hitsTaken() { return kaptainwutax.tungsten.combat.VoidGuard.kbImpulseN; }
 
+    /**
+     * Ticks spent fighting with a rim at the bot's back -- the knockback guard's exposure.
+     *
+     * <p>Reset per run, so it is a measurement rather than a lifetime tally (a counter that does
+     * not reset was compared against one that did earlier tonight, and produced a confident and
+     * completely wrong conclusion).
+     *
+     * <p>Read it on courses where the geometry is tight. On a 5x5 platform a centred fighter has
+     * clear ground behind and the guard rarely fires; on a bridge the rim is always behind, and
+     * the same guard could hold the bot in permanent retreat. The counter is what distinguishes
+     * those two worlds, and it gates nothing -- a number that gates nothing cannot be gamed.
+     */
+    public int rimAtBackTicks() { return kaptainwutax.tungsten.combat.CombatController.rimAtBackTicks; }
+
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a
      *  bounce — measured -59.85 that way where the tick trace says -55.4. */

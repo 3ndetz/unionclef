@@ -128,6 +128,13 @@ class NarrowBridgeDuel(Scenario):
         ctx.victim.py.call("punk", ctx.bot.name)
 
     def judge(self, ctx):
+        # RIM EXPOSURE IS PRINTED HERE ON PURPOSE. On a bridge the rim is ALWAYS behind, so the
+        # knockback guard could hold the bot in permanent retreat and cost it the exchange -- a
+        # mechanism invisible on edge_duel's 5x5 platform, where a centred fighter has clear
+        # ground at its back. Read this before blaming or clearing the guard. Recorded, not
+        # gated: it is a diagnostic, and a number that gates nothing cannot be gamed into green.
+        ok, rim = ctx.bot.py.try_call("rimAtBackTicks")
+        ctx.log(f"  rimBack={rim if ok else 'ABSENT'}")
         # Same frame-gated aim as melee_basic; see the note there.
         yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}",
                         load_sensitive=True)
