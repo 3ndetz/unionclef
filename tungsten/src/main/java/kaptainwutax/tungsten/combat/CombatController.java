@@ -547,7 +547,24 @@ public class CombatController {
         if (dist <= TriggerBot.REACH + 0.5) nearReachTicks++;
         if (out.forward) fwdAsked++;
         lastDist = dist;
-        out.back = tooClose && dirSafe(player, world, -1, 0);
+        // WHILE WE ARE BEING HIT THE STAND-OFF HAS ALREADY FAILED — TRADE, DO NOT CEDE GROUND.
+        //
+        // backOffAt holds at REACH+0.2 during the attack cooldown, which is right against an
+        // opponent that respects reach. The bench opponent does not: punk charges and swings
+        // without pause, so retreating inside its arc hands it ground and answers nothing.
+        //
+        // Measured with the low-hp fix already in: hurt = 142/41/101 — of 142 ticks inside the
+        // post-hit window the bot spent 101 backing off. Both fighters carry an iron sword, no
+        // scenario in the pvp suite issues armour, and 206 damage over 40 hits means four blows
+        // kill. In that duel whoever lands more wins, and retreating lowers OUR landing rate
+        // without lowering theirs, because they are the one advancing.
+        //
+        // AND THE DEATHS REALLY ARE LOST FIGHTS, from the server log rather than a mod counter:
+        // tester1 slain 25 / fell out of the world 4, tester2 slain 14 / fell 4. The comment on
+        // AllRound.build claiming these deaths are void falls was written from 4-8 fps runs and
+        // no longer holds at 29 fps — worth correcting there before it misdirects another pass.
+        boolean beingHit = player.hurtTime > 0;
+        out.back = tooClose && !beingHit && dirSafe(player, world, -1, 0);
         out.sprint = out.forward && dist > strikeAt + 1.0; // sprint only for a real approach
 
         // Circle-strafe: orbit the target, flipping direction on a randomised cadence

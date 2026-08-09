@@ -625,7 +625,18 @@ class AllRound(Scenario):
                "give {name} arrow 64"]
     victim_kit = KIT_SWORD
 
-    # ⛔ THE THIRTEEN DEATHS ON THIS COURSE ARE VOID FALLS, NOT LOST FIGHTS (measured 2026-08-09).
+    # ⛔ SUPERSEDED — AT PLAYABLE FRAME RATES THESE DEATHS ARE LOST FIGHTS, NOT VOID FALLS.
+    # Re-measured from the server log on the 29 fps jar: tester1 slain 25 / fell out of the world 4,
+    # tester2 slain 14 / fell 4. Falls are 14% of the bot's deaths, and it is losing a SYMMETRIC duel
+    # (both iron_sword, no scenario in this suite issues armour, 206 damage over 40 hits = four blows
+    # kill) by roughly 25:14. The section below is kept because it is correct for the run it describes
+    # -- 4-8 fps, where the guard lost the tick and both fighters drifted off the rim -- but reading it
+    # as the current cause sends a pass at the void guard instead of at the exchange. Check the log
+    # before believing either framing; `voidEntries` in placeStats reads 0 here and sits beside two
+    # counters that are provably dead (hits=0/0/0/0 in a run with 10 kills, dmgTaken=0.0), so it is
+    # not evidence on its own.
+    #
+    # ORIGINAL NOTE (measured 2026-08-09, at 4-8 fps):
     # This course was read for a whole pass as an AIM failure ("27 swings of 556, 79 deg off"). Two
     # things were wrong with that. The swing numbers came off runs at 4-8 fps against a 14.0 floor
     # that was not voiding this course (fixed in f56a511). And the gate that actually fails is
