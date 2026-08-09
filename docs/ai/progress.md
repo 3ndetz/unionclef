@@ -1134,3 +1134,58 @@ were false (scanner blind; table blacklisted; 40-block threshold flipping). What
 instrumenting the DECISION instead of reasoning about it a fourth time: `near=true makeNew=INF` on
 every tick with `dist` frozen at 28.0 said the container task was right all along and the body simply
 never moved. **When two passes produce no movement, the next move is a counter, not another theory.**
+
+## 2026-08-09 — pvp: allround diagnosed to the harness, bow_flee fixed (deaths 10 -> 4)
+
+**Investigate.** allround's gate (`bot deaths <= 0`) held at 17-19 deaths against 8-11 kills
+across ~10 runs at 29 fps. Every subsystem that could carry the deficit was measured and
+cleared, each by its own instrument rather than by argument:
+
+| checked | result |
+|---|---|
+| melee engine | `melee_basic` PASSES 10:10; counters symmetric to the unit (punk ticks 1360 vs 1364, hits taken 38 vs 37, damage 200.0 vs 205.0) |
+| shooting | all loss counters zero (wild 0, noSol 0, restart 0, both timeouts 0), aim within 0.04 blocks; re-confirmed under load on bow_flee (12 loosed, aim 0.10 while running) |
+| void falls | server log: slain 25, fell 4 |
+| reach-control bundle | mirrored by `--pin combatReachControl=false` -> 19 deaths vs a 17-18 baseline |
+| swing charge | 1.000, full |
+| weapon in hand | 21% of swings held a bow -> 0%, gate unmoved |
+
+**What remains, measured and never refuted:** exposure. The bot's punk task ticks 199 times
+against the victim's 300 and is inactive 26 times against zero, because allround's driver calls
+punkStop and re-arms the bow on every death (scenarios_pvp:693,701; scenario.py:449 polls once a
+second) and never touches the opponent's. That is in the harness. Taking the gate from inside the
+mod would mean editing the course to make the test pass, which was declined — the decision is the
+course owner's: either the ranged phase is intended, and zero deaths over 120s of continuous
+respawning is unreachable for a fighter that draws even in a symmetric duel, or the phase is
+restructured so the bot is not a stationary target while the opponent closes 27 blocks.
+
+**Implement — the one fix that moved an outcome.** `RunAwayTask:136` held position whenever
+`dist >= keepDistance + 1.5` (9.5), stopping the bot AND cancelling the search. A sprinting player
+covers ~5.6 blocks/s, so that safety lasted under two seconds and the bot restarted from a
+standstill. Three numbers said so together: the course reported a 9.32 mean separation (parked on
+the threshold) and PASSED it, while dw `rangedHits` read 2 of 38 — 36 hits landed from inside 4.5
+blocks. Fix: hold only while the threat is NOT gaining ground. Measured 10 -> 4 deaths, fleeHeld
+52 -> 26, fleeRan 34 -> 150+, avg separation 9.32 -> 8.22 (gate >= 7, the falsification test that
+was on record before the run).
+
+**Instrument repairs, five of them, without which none of the above was readable:**
+`tungstenSetting(name, "")` WROTE false when asked to read (cost a contaminated run);
+closeStats' counters never reset while `gTotal` beside them did; a deliberate bow release counted
+as a wild one; two bow exits (solver refusal, request-discards-draw) counted nothing at all.
+
+**Eight field-meaning errors, all mine, all named in the commits:** ctl counted completions not
+entries; dw's rangedHits is field five; `hits=`/`dmgTaken=` are MobDefenseChain, not combat;
+closeStats vs gTotal reset points; wildShots on the success path; resetAllState fires on DISCONNECT
+not on death; "searching" does not mean standing because driveAwayRaw runs then; and dw's third
+field is a DISTANCE in blocks, not ticks between hits. The bench already documents half the rule at
+run_suite:214 — *a counter is only a measurement if you know its zero* — and it needs the other
+half: know the UNIT.
+
+**Regression sweep (full pvp suite, in flight at time of writing).** Recorded prior failing set in
+TODOS.md:3315 was bow_flee, bow_flee_hard, chase_terrain, edge_duel, melee_basic,
+narrow_bridge_duel. So far `melee_basic` and `narrow_bridge_duel` PASS, `edge_duel` FAILs twice
+(self-falls 2, knockback 0) as it did before, and nothing regressed.
+
+**Owed next:** a rate over 5-6 runs (the flee fix rests on one); the suite's remaining GATE-red
+courses, taken by STATUS — bow_flee was picked by adjacency and is marked INFO
+(scenarios_pvp:403); and a baseline for edge_duel on the previous jar.
