@@ -80,6 +80,10 @@ class Ctx:
             "bot_crits": crits if ok2 else None,
             "bot": bp, "bot_hp": self.bot.health(),
             "bot_hurt": self.rcon.hurt_time(self.bot.name),
+            # Blows TAKEN, monotonic. hurt_time is a 10-tick flag read by a 20-tick sampler, so
+            # it misses about half the hits; this counter cannot be missed, only read late.
+            "bot_hits_taken": (lambda r: r[1] if r[0] else None)(
+                self.bot.py.try_call("hitsTaken")),
             "victim": vp,
             "victim_hp": self.victim.health() if self.victim else None,
             "victim_hurt": self.rcon.hurt_time(self.victim.name) if self.victim else None,
@@ -156,8 +160,21 @@ class Ctx:
         # fall attribution: dropped below floor - 2
         below = bp[1] < floor_y - 2
         if below and not self._below:
-            hurt_recent = any((s.get("bot_hurt") or 0) > 0
-                              for s in self.samples[-2:])
+            # A fall is "knockback" if a blow landed in the window before it. Prefer the
+            # monotonic count -- an increase over the last samples proves a hit regardless of
+            # WHEN in the second it happened -- and keep the old hurt flag as a fallback for
+            # runs where the mod is too old to answer.
+            # ONE sample, not two. A wide window makes "knockback" the default answer in a duel,
+            # where blows land most seconds -- which would make this criterion unfalsifiable, the
+            # same defect as the missed-hurt-flag it replaces, only inverted. The hit must be
+            # adjacent to the fall, not merely somewhere in the last two seconds.
+            recent = self.samples[-1:]
+            taken = [s.get("bot_hits_taken") for s in recent]
+            taken = [v for v in taken if v is not None]
+            now_taken = self.bot_hits_taken_now()
+            hurt_recent = any((s.get("bot_hurt") or 0) > 0 for s in recent)
+            if taken and now_taken is not None and now_taken > min(taken):
+                hurt_recent = True
             if hurt_recent:
                 self.knockback_falls += 1
                 self.log("  fall: knockback")
@@ -165,6 +182,11 @@ class Ctx:
                 self.self_falls += 1
                 self.log("  fall: SELF (walked off)")
         self._below = below
+
+    def bot_hits_taken_now(self):
+        """Current blows-taken count, or None when the mod does not expose it."""
+        ok, v = self.bot.py.try_call("hitsTaken")
+        return v if ok else None
 
     # -- aggregates for judging -------------------------------------------
     def dists(self, since=0.0):

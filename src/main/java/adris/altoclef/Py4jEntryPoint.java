@@ -2852,6 +2852,26 @@ public class Py4jEntryPoint {
     public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }
     public int totalHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeHits; }
 
+    /**
+     * How many separate blows the bot has TAKEN this run -- one per hurt onset, not per tick.
+     *
+     * <p>Exists because the bench cannot classify a fall without it. The runner samples once a
+     * second (scenario.py:450) and asks for {@code hurtTime}, which lasts 10 ticks -- half a
+     * second. A blow whose whole hurt window falls between two samples is invisible, and the
+     * fall it caused is then recorded as "SELF (walked off)" because no hit was seen. Roughly
+     * half of knockback falls can be mislabelled that way, and "self-falls == 0" is a GATED
+     * criterion on edge_duel while knockback falls are not gated at all.
+     *
+     * <p>A monotonic count cannot be missed by a slow poll: the sampler compares the value
+     * against the one it read a moment ago, and any increase means a blow landed in between,
+     * whenever inside that second it actually happened.
+     *
+     * <p>This does NOT relax the criterion -- both kinds of fall still count, and both are still
+     * reported. It only decides which of the two a fall belongs to, using evidence that does not
+     * depend on catching a 10-tick flag with a 20-tick sampler.
+     */
+    public int hitsTaken() { return kaptainwutax.tungsten.combat.VoidGuard.kbImpulseN; }
+
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a
      *  bounce — measured -59.85 that way where the tick trace says -55.4. */
