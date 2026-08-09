@@ -415,6 +415,12 @@ public class PunkPlayerTask {
 
     private static void enterCombat() {
         mode = Mode.COMBAT;
+        // Combat is starting: look at the hand NOW rather than up to a second from now. The
+        // selector's 20-tick cadence is deliberate (a slot switch resets the attack cooldown), but
+        // carrying a stale count into the one moment the hand is most likely to be wrong is how
+        // about one swing in five went out with a bow -- measured weaponMean 59.21 against the
+        // iron_sword's 75.0 on allround, where every respawn puts the bow back in hand.
+        kaptainwutax.tungsten.combat.WeaponSelector.forceRecheck();
         TungstenModDataContainer.PATHFINDER.stop.set(true);
         if (TungstenModDataContainer.EXECUTOR != null) TungstenModDataContainer.EXECUTOR.stop = true;
         FollowEntityTask.stop();

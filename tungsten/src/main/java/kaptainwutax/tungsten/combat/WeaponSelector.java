@@ -31,6 +31,27 @@ public final class WeaponSelector {
     private static final int RECHECK_TICKS = 20;
     private static int cooldown = 0;
 
+    /**
+     * Force the next {@link #equipBestMelee} call to actually look, instead of spending up to
+     * RECHECK_TICKS coasting on a decision made before the world changed under it.
+     *
+     * <p>MEASURED: on allround the mean melee score of what the bot was HOLDING as it swung came
+     * back 59.21 against an iron_sword's 75.0, i.e. about one swing in five went out with a score
+     * of zero -- a bow, worth roughly one damage where the sword is six. The course hands the bot
+     * a bow for its ranged phase and restores the sword only when the driver's rcon poll sees the
+     * range close (scenarios_pvp:693), and the bot dies seventeen times a course, so seventeen
+     * lives BEGIN holding the bow while this cadence is mid-count. PunkPlayerTask's own comment
+     * already records the failure this produces: "kept fighting with the bow (2 dmg/hit) while a
+     * sword sat in the hotbar and it lost the fight".
+     *
+     * <p>The cadence itself is right -- switching slots resets the attack cooldown, so re-checking
+     * every tick would cost more than it saves. What is wrong is carrying a stale count across the
+     * moment combat STARTS, which is exactly when the hand is most likely to hold the wrong thing.
+     */
+    public static void forceRecheck() {
+        cooldown = 0;
+    }
+
     /** Melee value of each weapon (vanilla attack damage, ties broken by speed). */
     private static final Map<Item, Double> MELEE_SCORE = new HashMap<>();
     static {
