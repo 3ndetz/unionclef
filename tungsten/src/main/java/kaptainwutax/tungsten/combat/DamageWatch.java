@@ -76,7 +76,26 @@ public final class DamageWatch {
      * ran, which makes the coverage visible instead of hiding it.
      */
     public static volatile int hurtWindow, hurtWhileControlled;
+    /**
+     * AN HONEST REASON TO BREAK CONTACT — computed here, deliberately NOT wired to behaviour yet.
+     *
+     * <p>The bot has none today: combat reads no hit event at all and reacts only to hp <= LOW_HP,
+     * which measurement showed fires about eleven ticks before each death. Its only caution comes
+     * from an INFLATED knockback estimate reading a phantom cliff, and removing that was measured
+     * harmful twice (16 -> 23 and 15 -> 19 deaths) — it is load-bearing. So the order has to be: add
+     * a real trigger, prove it fires at sensible moments, THEN correct the fake one.
+     *
+     * <p>losing = more hits taken than landed inside a rolling window. disengageTicks counts how long
+     * that has been true, so the next pass can see WHEN it would have fired before anything acts on
+     * it. Nothing reads these yet, on purpose.
+     */
+    public static volatile int disengageTicks, disengageSpells;
+    private static int winTaken, winLanded, winAge;
+    private static boolean losingPrev;
+    /** ~3 s at 20 tps: long enough to be a trade rather than a single unlucky hit. */
+    private static final int WINDOW_TICKS = 60;
     public static volatile String lastFall = "";
+    private static int lastLanded = 0;
     private static boolean overVoid = false;
     private static boolean wasOnGround = true;
 
@@ -97,6 +116,9 @@ public final class DamageWatch {
         voidEntries = 0;
         hurtWindow = 0;
         hurtWhileControlled = 0;
+        disengageTicks = 0;
+        disengageSpells = 0;
+        winTaken = 0; winLanded = 0; winAge = 0; lastLanded = 0; losingPrev = false;
         lastFall = "";
         overVoid = false;
         wasOnGround = true;
@@ -114,6 +136,7 @@ public final class DamageWatch {
         if (lastHealth > 0f && hp <= 0f) deathsSeen++;
         if (lastHealth >= 0f && hp < lastHealth) {
             hits++;
+            winTaken++;
             damage += lastHealth - hp;
             double gap = nearestLivingGap(player);
             if (gap >= 0) {
@@ -123,6 +146,17 @@ public final class DamageWatch {
             }
         }
         lastHealth = hp;
+        // rolling exchange window — taken vs landed, both from counters that already work
+        if (++winAge >= WINDOW_TICKS) { winAge = 0; winTaken = 0; winLanded = 0; }
+        int landedNow = kaptainwutax.tungsten.combat.TriggerBot.lifetimeHits;
+        if (landedNow > lastLanded) winLanded += landedNow - lastLanded;
+        lastLanded = landedNow;
+        boolean losing = winTaken > winLanded && winTaken >= 2;
+        if (losing) {
+            disengageTicks++;
+            if (!losingPrev) disengageSpells++;
+        }
+        losingPrev = losing;
         if (player.hurtTime > 0) {
             hurtWindow++;
             if (kaptainwutax.tungsten.combat.CombatController.controlledThisTick) hurtWhileControlled++;
