@@ -49,6 +49,26 @@ public final class DamageWatch {
 
     private static float lastHealth = -1f;
 
+    /**
+     * WHERE AND WHEN THE BOT GOES OVER THE RIM — recorded UNCONDITIONALLY, on the tick that always
+     * fires.
+     *
+     * <p>Two fixes were spent on the void guard without this. Both failed, and both failed the same
+     * way: every edge counter that existed lived inside PunkPlayerTask, below its {@code if
+     * (!active)} return, so all of them were blind during the phase the falls were most likely
+     * happening in. Guarding harder is not the next move; knowing the event is.
+     *
+     * <p>{@code voidTicks} counts ticks spent airborne over a bottomless column (fallHeight > 20,
+     * this file's established "genuine void" discriminator). {@code voidEntries} counts distinct
+     * departures rather than ticks. {@code lastFall} captures the state at the first tick of a
+     * departure — position, velocity, whether we were on the ground the tick before, and which
+     * tasks were live — which is the datum no counter so far has produced.
+     */
+    public static volatile int voidTicks, voidEntries;
+    public static volatile String lastFall = "";
+    private static boolean overVoid = false;
+    private static boolean wasOnGround = true;
+
     /** Beyond this a melee weapon cannot reach, so the damage came from something else. */
     private static final double MELEE_REACH = 4.5;
 
@@ -62,6 +82,11 @@ public final class DamageWatch {
         rangedHits = 0;
         deathsSeen = 0;
         lastHealth = -1f;
+        voidTicks = 0;
+        voidEntries = 0;
+        lastFall = "";
+        overVoid = false;
+        wasOnGround = true;
     }
 
     /** Called every client tick from MixinClientPlayerEntity, before anything can decline to run. */
@@ -85,6 +110,34 @@ public final class DamageWatch {
             }
         }
         lastHealth = hp;
+        recordVoid(player);
+    }
+
+    /** Unconditional rim recorder — see the field docs. Runs whatever task is or is not driving. */
+    private static void recordVoid(ClientPlayerEntity player) {
+        boolean airborne = !player.isOnGround();
+        boolean bottomless = airborne
+                && VoidDetector.fallHeight(player.getEntityPos(), player.getEntityWorld()) > 20;
+        if (bottomless) {
+            voidTicks++;
+            if (!overVoid) {
+                voidEntries++;
+                net.minecraft.util.math.Vec3d p = player.getEntityPos();
+                net.minecraft.util.math.Vec3d v = player.getVelocity();
+                lastFall = String.format(
+                        "pos=%.1f,%.1f,%.1f vel=%.3f,%.3f,%.3f wasOnGround=%b sneak=%b"
+                                + " punk=%b flee=%b bow=%b exec=%b walker=%b",
+                        p.x, p.y, p.z, v.x, v.y, v.z, wasOnGround,
+                        net.minecraft.client.MinecraftClient.getInstance().options.sneakKey.isPressed(),
+                        kaptainwutax.tungsten.task.PunkPlayerTask.isActive(),
+                        kaptainwutax.tungsten.task.RunAwayTask.isActive(),
+                        kaptainwutax.tungsten.task.BowShooter.isActive(),
+                        kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning(),
+                        kaptainwutax.tungsten.task.BlockPathWalker.isRunning());
+            }
+        }
+        overVoid = bottomless;
+        wasOnGround = player.isOnGround();
     }
 
     /** Distance to the closest other living entity, or -1 when there is none to blame. */
