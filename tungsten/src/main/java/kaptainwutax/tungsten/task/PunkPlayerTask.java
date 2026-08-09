@@ -165,6 +165,8 @@ public class PunkPlayerTask {
     public static volatile int pLastKnown = 0;
     public static volatile int pCalled = 0, pInactive = 0, pNoTarget = 0,
             pVoidHold = 0, pCombat = 0, pApproach = 0;
+    /** Edge guard: ticks it held sneak, and ticks we were near an edge AIRBORNE (it cannot help). */
+    public static volatile int pEdgeSneak = 0, pEdgeAir = 0;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
         pCalled++;
@@ -177,13 +179,25 @@ public class PunkPlayerTask {
         // void — this covers the seams between combat/approach/disengage where
         // per-frame key logic isn't running. Skipped while the void-aware
         // pathfinder executor drives (it may descend on purpose).
+        // WHICH OF THE TWO BLIND SPOTS ACTUALLY DROPS US — COUNT, DO NOT GUESS.
+        // allround loses its only non-frame-noise gate to `fell out of the world`, thirteen times a
+        // run, and the OPPONENT falls too (server log, 2026-08-09). This guard covers exactly one
+        // case: on the ground, already moving at a drop. It cannot cover two others, and both are
+        // live in a duel — (a) AIRBORNE, because the crit hop leaves the ground on purpose and sneak
+        // holds nothing mid-air (that run: crits=11), and (b) KNOCKBACK, which sneak never resisted.
+        // pEdgeSneak counts the guard firing, pEdgeAir counts being over/near an edge with no ground
+        // under us. If the falls track pEdgeAir the fix is the hop's take-off test; if they track
+        // neither, it is knockback and the fix is not fighting at the rim at all.
         if (!TungstenModDataContainer.isExecutorRunning()) {
             double vx = player.getVelocity().x, vz = player.getVelocity().z;
             double look = Math.max(1.4, Math.sqrt(vx * vx + vz * vz) * 10.0);
-            if (player.isOnGround() && (vx * vx + vz * vz) > 0.0016
-                    && kaptainwutax.tungsten.combat.VoidDetector.edgeAhead(
-                            player.getEntityPos(), vx, vz, world, 3, look)) {
+            boolean nearEdge = kaptainwutax.tungsten.combat.VoidDetector.edgeAhead(
+                    player.getEntityPos(), vx, vz, world, 3, look);
+            if (player.isOnGround() && (vx * vx + vz * vz) > 0.0016 && nearEdge) {
+                pEdgeSneak++;
                 MinecraftClient.getInstance().options.sneakKey.setPressed(true);
+            } else if (!player.isOnGround() && nearEdge) {
+                pEdgeAir++;
             }
         }
 

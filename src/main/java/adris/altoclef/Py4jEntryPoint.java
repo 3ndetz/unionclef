@@ -2065,13 +2065,19 @@ public class Py4jEntryPoint {
      *  because the target is over void, in combat, or (re)starting the chase. */
     public String punkStats() {
         var P = kaptainwutax.tungsten.task.PunkPlayerTask.class;
-        return String.format("called=%d inactive=%d noTarget=%d voidHold=%d combat=%d approachRestart=%d",
+        // edgeSneak/edgeAir separate the two ways a duel ends in the void: the guard firing on the
+        // ground, versus being near the edge AIRBORNE where sneak holds nothing. allround dies to
+        // `fell out of the world` thirteen times a run and this is how we tell which one it is.
+        return String.format("called=%d inactive=%d noTarget=%d voidHold=%d combat=%d approachRestart=%d"
+                        + " edgeSneak=%d edgeAir=%d",
                 kaptainwutax.tungsten.task.PunkPlayerTask.pCalled,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pInactive,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pNoTarget,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pVoidHold,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pCombat,
-                kaptainwutax.tungsten.task.PunkPlayerTask.pApproach);
+                kaptainwutax.tungsten.task.PunkPlayerTask.pApproach,
+                kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeSneak,
+                kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeAir);
     }
 
     /** Chase telemetry: ticks the follow task got, ticks it actually steered, and the gates
@@ -2219,6 +2225,19 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdPlanGiveUp = 0;
         kaptainwutax.tungsten.path.PathExecutor.execArrived = 0;
         kaptainwutax.tungsten.path.PathExecutor.execRanOut = 0;
+        // THE PUNK TALLIES WERE NEVER RESET, so every punkStats() ever read was a container-lifetime
+        // sum wearing a per-run label — the exact failure the note fifteen lines above describes for
+        // the nav branch. It matters right now: allround's `voidHold=406` was read as "this run held
+        // 406 times", and it is not that. Reset them with everything else.
+        kaptainwutax.tungsten.task.PunkPlayerTask.pCalled = 0;
+        kaptainwutax.tungsten.task.PunkPlayerTask.pInactive = 0;
+        kaptainwutax.tungsten.task.PunkPlayerTask.pNoTarget = 0;
+        kaptainwutax.tungsten.task.PunkPlayerTask.pVoidHold = 0;
+        kaptainwutax.tungsten.task.PunkPlayerTask.pCombat = 0;
+        kaptainwutax.tungsten.task.PunkPlayerTask.pApproach = 0;
+        kaptainwutax.tungsten.task.PunkPlayerTask.pLastKnown = 0;
+        kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeSneak = 0;
+        kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeAir = 0;
         kaptainwutax.tungsten.path.PathExecutor.execTicks = 0;
         kaptainwutax.tungsten.path.PathExecutor.execSprintTicks = 0;
         adris.altoclef.tasks.construction.DestroyBlockTask.dbTick = 0;
