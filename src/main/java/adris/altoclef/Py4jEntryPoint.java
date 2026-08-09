@@ -2175,7 +2175,15 @@ public class Py4jEntryPoint {
             return "unknown:" + name;
         }
         String resolved = field.get().getName();
-        if (value != null && !adris.altoclef.util.helpers.SettingsReflectionHelper
+        // AN EMPTY VALUE IS A READ, NOT A WRITE OF "".
+        // It used to be a write: "" is not null, so it reached setSetting and a boolean field
+        // parsed it as FALSE. Calling this with "" to ask what a flag currently is therefore
+        // SILENTLY TURNED THAT FLAG OFF and handed back "name=false" -- an answer the caller
+        // then reasonably believed. It cost a contaminated run tonight: probing three combat
+        // flags in the middle of a fight disabled the trigger bot, the movement controller and
+        // the saver, and the "false" that came back was read as a finding about the engine
+        // rather than as damage the probe had just done. Reading a lever must never move it.
+        if (value != null && !value.isEmpty() && !adris.altoclef.util.helpers.SettingsReflectionHelper
                 .setSetting(cfg, resolved, value)) {
             return "unsettable:" + resolved;
         }
@@ -2434,6 +2442,17 @@ public class Py4jEntryPoint {
         // from a pvp suite hours earlier -- and they never moved, which was mistaken for "eight
         // swings that dealt no damage". The truth was that the trigger bot never ticked at all.
         // A counter that survives its run is a counter that lies about the next one.
+        // THESE FIVE WERE NEVER RESET WHILE EVERYTHING AROUND THEM WAS, WHICH MAKES THEM TRAPS.
+        // closeStats' counters accumulated for the LIFETIME of the container while gTotal beside
+        // them cleared every run, so reading the two together invites a comparison that cannot be
+        // true: "in reach 259 ticks but only 71 trigger evaluations" is a lifetime number set
+        // against a per-run one. That exact reading was taken as evidence tonight that the OFFENCE
+        // was broken, and it is not evidence of anything. Same window or no comparison.
+        kaptainwutax.tungsten.combat.CombatController.inReachTicks = 0;
+        kaptainwutax.tungsten.combat.CombatController.nearReachTicks = 0;
+        kaptainwutax.tungsten.combat.CombatController.fwdWanted = 0;
+        kaptainwutax.tungsten.combat.CombatController.fwdAsked = 0;
+        kaptainwutax.tungsten.combat.CombatController.fwdPressed = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gTotal = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gClick = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gCooldown = 0;
