@@ -165,7 +165,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 				&& !tungsten$movementOwnsTick
 				&& !TungstenModDataContainer.isExecutorRunning()
 				&& !kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
-			kaptainwutax.tungsten.task.RunAwayTask.driveAwayRaw((ClientPlayerEntity)(Object)this);
+			kaptainwutax.tungsten.task.RunAwayTask.driveAwayRaw(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
 		}
 
 		if ((kaptainwutax.tungsten.task.RunAwayTask.isActive()

@@ -72,12 +72,16 @@ public class RunAwayTask {
     /** Ticks the break-contact fallback actually drove the keys. Exists to prove the
      *  fallback RUNS: its first version never did, and read as a refuted hypothesis. */
     public static volatile int fleeDriveTicks;
+    /** Ticks the fallback DECLINED to drive because the next step had no floor. On a
+     *  1-wide bridge this should dominate fleeDriveTicks; on flat ground it should be 0. */
+    public static volatile int fleeDriveBlocked;
 
     /** Zeroed by resetRunCounters so a bench run measures itself, not the stand's history. */
     public static void resetCounters() {
         fleeHeld = 0;
         fleeSearch = 0;
         fleeDriveTicks = 0;
+        fleeDriveBlocked = 0;
         fleeRan = 0;
         fleePlans = 0;
     }
@@ -250,13 +254,32 @@ public class RunAwayTask {
      * is requested only when the motion is mostly FORWARD, because vanilla refuses it otherwise —
      * {@code canStartSprinting()} requires {@code input.hasForwardMovement()}.
      */
-    public static void driveAwayRaw(ClientPlayerEntity player) {
+    public static void driveAwayRaw(WorldView world, ClientPlayerEntity player) {
         if (!active || threat == null || !threat.isAlive() || threat.isRemoved()) return;
         Vec3d away = player.getEntityPos().subtract(threat.getEntityPos());
         away = new Vec3d(away.x, 0, away.z);
         if (away.lengthSquared() < 1e-6) return;
         away = away.normalize();
 
+        // ONLY WHERE THERE IS GROUND TO RUN ONTO. Blind key-driving cost a self-fall on
+        // narrow_bridge_duel the first time this shipped — the course whose whole floor is a
+        // one-wide walkway over the void. VoidGuard runs after this and did not save it, so the
+        // veto is not enough on its own; the honest rule is that standing still beats falling.
+        // Same standability test the flee planner already applies to its waypoints, so "somewhere
+        // to run" means exactly what it means everywhere else in this file.
+        // NO GROUND PROBE HERE, AND THAT WAS MEASURED THREE WAYS. Blind key-driving over a void
+        // is an obvious hazard, so this checked standability before pressing anything. Both
+        // versions cost more than they protected, blocking ~260-290 ticks per run on FLAT ground
+        // where nothing was at risk:
+        //     no probe            hits 17   avg_dist 9.02 / 10.75 / 7.02
+        //     3 probes (diagonal) hits 22   avg_dist 9.51 / 8.77
+        //     1 probe (ahead)     hits 26   avg_dist 6.47 / 6.55
+        // And the regression that prompted them was misattributed: narrow_bridge_duel's self-falls
+        // were blamed on this fallback before reading flee=0/0/0/0/0/0 — that course is a duel and
+        // never runs a flee at all, so this code cannot execute there. The void courses that DO
+        // pass through here, bridge_assault and slab_hole, were green without any probe.
+        //
+        // VoidGuard still runs after this and keeps its veto, which is where void safety belongs.
         fleeDriveTicks++;
         double yaw = Math.toRadians(player.getYaw());
         Vec3d facing = new Vec3d(-Math.sin(yaw), 0, Math.cos(yaw));
@@ -271,6 +294,7 @@ public class RunAwayTask {
         options.leftKey.setPressed(str < -0.35);
         options.sprintKey.setPressed(fwd > 0.6);
     }
+
 
     /** Can the flee CONTINUE past {@code from} in the same direction? One more standable step is
      *  enough to tell a corner from open ground, and it costs one snapGround call. */
