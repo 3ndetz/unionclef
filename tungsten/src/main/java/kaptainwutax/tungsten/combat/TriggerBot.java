@@ -88,6 +88,11 @@ public class TriggerBot {
      *  reachMean) are conditional on the gate REFUSING, so they are always past their threshold
      *  by construction and say nothing about typical behaviour; this pair is unconditional. */
     public static volatile double gSwingChargeSum = 0;
+    /** Mean melee score of what was actually held at the swing, and swings made with nothing
+     *  worth swinging. A full-charge iron_sword is 6 damage; if our hits average 3.50 while the
+     *  charge is 1.000, the weapon is the remaining suspect. */
+    public static volatile double gSwingWeaponSum = 0;
+    public static volatile int gSwingNoWeapon = 0;
     public static volatile int gSwingCritWindow = 0;
     public static volatile int lifetimeCrits = 0;
     private int ticksSinceLastHit = 0;
@@ -174,6 +179,22 @@ public class TriggerBot {
         // and the damage gap is somewhere else entirely.
         gSwingChargeSum += cooldown;
         if (critWindow) gSwingCritWindow++;
+        // WHAT IS ACTUALLY IN THE HAND WHEN WE SWING?
+        // chargeMean came back 1.000, which kills the "we swing undercharged" theory outright --
+        // the swings are fully charged. Yet the symmetric measurement says our hits deal 3.50 and
+        // theirs 5.17, and a fully charged iron_sword is 6. Half damage from a full swing means
+        // the sword is not what is being swung: allround puts a BOW in slot 0 for the ranged phase
+        // and only restores the sword when the driver sees dist <= 12, while WeaponSelector
+        // re-checks just once every RECHECK_TICKS = 20 ticks. The bot dies 17 times a course and
+        // every life starts holding the bow, so there is a window each life where it fights with
+        // it -- exactly the failure PunkPlayerTask's own comment warns about ("kept fighting with
+        // the bow (2 dmg/hit) while a sword sat in the hotbar and it lost the fight").
+        // Mixing 6-damage sword hits with ~1-damage bow hits averages 3.5 at a 50/50 split.
+        // So count it rather than believe it: the mean weapon score across swings, and how many
+        // swings went out with nothing that deserves the name.
+        double ws = kaptainwutax.tungsten.combat.WeaponSelector.meleeScore(player.getMainHandStack());
+        gSwingWeaponSum += ws;
+        if (ws <= 1.0) gSwingNoWeapon++;
         if (kaptainwutax.tungsten.combat.AttackTiming.isCrit(player)) { critHits++; lifetimeCrits++; }
         lifetimeHits++;
         mc.interactionManager.attackEntity(player, target);
