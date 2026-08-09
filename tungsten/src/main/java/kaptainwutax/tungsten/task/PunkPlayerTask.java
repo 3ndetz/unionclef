@@ -188,6 +188,23 @@ public class PunkPlayerTask {
         // pEdgeSneak counts the guard firing, pEdgeAir counts being over/near an edge with no ground
         // under us. If the falls track pEdgeAir the fix is the hop's take-off test; if they track
         // neither, it is knockback and the fix is not fighting at the rim at all.
+        //
+        // ⛔ MEASURED, AND IT REFUTED BOTH OF THOSE — THE GUARD BARELY RUNS AT ALL.
+        // Two runs on the deployed jar, counters now per-run (see resetRunCounters):
+        //     deaths=11  edgeSneak=1  edgeAir=2   called=296  inactive=143  combat=415
+        //     deaths=13  edgeSneak=1  edgeAir=4   called=133  inactive=122  combat=633
+        // Neither counter tracks the deaths, so it is neither the crit hop nor this guard mis-firing.
+        // The number that matters is `called - inactive`: this guard sits BELOW the `if (!active)`
+        // return above, so it got ELEVEN opportunities in the second run against THIRTEEN deaths. A
+        // guard that runs eleven times cannot prevent thirteen falls whatever its logic says.
+        // Meanwhile combat=633 — the fight is being driven, hard, by a different loop.
+        //
+        // So this is the "one owner of the tick" shape again: the protection lives in a task tick
+        // that hardly executes while movement is owned elsewhere. NEXT: find why tick() ran 133
+        // times in a 120 s course (~2400 client ticks expected) — the only early return upstream is
+        // the runKeyBinding null check in MixinClientPlayerEntity:45 — and move the edge guard onto
+        // whichever loop actually drives combat movement. Do NOT re-open the aim for this; the aim
+        // numbers on this course are frame-rate noise below the 14 fps floor (see the course file).
         if (!TungstenModDataContainer.isExecutorRunning()) {
             double vx = player.getVelocity().x, vz = player.getVelocity().z;
             double look = Math.max(1.4, Math.sqrt(vx * vx + vz * vz) * 10.0);
