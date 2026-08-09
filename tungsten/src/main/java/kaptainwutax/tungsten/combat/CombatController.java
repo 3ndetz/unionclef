@@ -113,9 +113,26 @@ public class CombatController {
 
     // ── dynamic combat movement state (circle-strafe + range + crit-jumps) ──────
     private int strafeDir = 1;              // +1 = left, -1 = right
-    /** How far a blow throws us: knockback decays fast, so three blocks of clearance behind is
-     *  the margin that decides whether a hit is survivable on a small platform. */
-    private static final double KNOCKBACK_REACH = 3.0;
+    /**
+     * How far a blow actually throws us, MEASURED rather than assumed.
+     *
+     * <p>This was 3.0, a number I wrote from intuition, and it guarded a line more than twice as
+     * long as the real thing. Measured on edge_duel over 16 hits: mean throw 1.45 blocks. A
+     * threshold at double the mean makes the guard fire far more often than the danger warrants,
+     * which manufactured much of the exposure it then reported -- and explains why two separate
+     * "close instead" fixes changed nothing: both were treating the symptom of an inflated
+     * constant rather than a real geometric bind.
+     *
+     * <p>2.0 is the mean plus a margin of roughly a third, and it is also the platform radius on
+     * edge_duel (half=2), which is the distance that decides whether a centred fighter survives a
+     * hit at all. The measurement says it does: 1.45 < 2.0, so the course's stated intent -- "both
+     * keep footing 1 block from drop" -- is consistent with the physics and this gate is reachable.
+     *
+     * <p>The measured MAX was 5.32, but the ten-tick window also catches the horizontal drift of a
+     * fall already in progress, so that figure is part cause and part consequence and is not what
+     * this constant should be set from.
+     */
+    private static final double KNOCKBACK_REACH = 2.0;
     /** One stride, for probing where an orbit side would leave us. */
     private static final double STRAFE_PROBE = 1.5;
     /** Ticks with the rim on the knockback line -- the exposure, and the measure this must lower. */
