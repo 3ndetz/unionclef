@@ -90,6 +90,8 @@ public class CombatController {
     /** Telemetry: ticks spent kiting because of health. Counted so "does it disengage" is a
      *  number rather than an impression. */
     public static volatile int lowHpTicks;
+    /** Ticks spent inside the ~10-tick window after taking a hit, split by what the bot was doing. */
+    public static volatile int hurtTicks, hurtAdvancing, hurtBackingOff;
 
     // ── dynamic combat movement state (circle-strafe + range + crit-jumps) ──────
     private int strafeDir = 1;              // +1 = left, -1 = right
@@ -462,6 +464,19 @@ public class CombatController {
                 backOffAt = TriggerBot.REACH + 0.2;
             }
         }
+        // WHAT DOES IT DO WHILE IT IS BEING HIT? Combat is open-loop on incoming damage — a sweep
+        // of combat/ and task/ finds no hurtTime, no lastDamage, nothing: behaviour is driven purely
+        // by the hp <= LOW_HP threshold, which measurement showed fires ~11 ticks before each death.
+        // hurtTime is non-zero for about ten ticks after every hit, so these three say plainly
+        // whether the bot spends those ticks walking INTO the fight, holding at range, or backing
+        // off. Read them before deciding what a hit should change — bolting on a reaction blind is
+        // how three fixes died today.
+        if (player.hurtTime > 0) {
+            hurtTicks++;
+            if (dist > strikeAt) hurtAdvancing++;
+            else if (dist < backOffAt) hurtBackingOff++;
+        }
+
         boolean tooFar = dist > strikeAt;
         boolean tooClose = dist < backOffAt;
         out.active = true;
