@@ -209,10 +209,17 @@ public class PunkPlayerTask {
         // client-tick rate. So the tick runs at 20/s idle and ~1.1/s during the fight. Frame rate
         // alone does not explain that — MC batches catch-up ticks and 4.5 fps is far from its cap.
         //
-        // NEXT, and check this first: three calls run AHEAD of this one in the same @Inject —
-        // DamageWatch.tick, FollowEntityTask.tick, FollowPlayerTask.tick (MixinClientPlayerEntity
-        // :70-72). An exception in any of them eats the rest of the injection, and all three are
-        // busy exactly when a fight is on and idle when it is not, which is the shape of the data.
+        // CHECKED AND UNSUPPORTED: an exception upstream in the same @Inject. DamageWatch.tick,
+        // FollowEntityTask.tick and FollowPlayerTask.tick all run ahead of this one
+        // (MixinClientPlayerEntity:70-72) and a throw in any of them would eat the rest of the
+        // injection — the right shape, since all three are busy exactly when a fight is on. But the
+        // client log across the whole run carries no tick exception at all, only startup noise
+        // (audio device, realms auth, options.txt permissions). Not proven impossible, but nothing
+        // supports it; do not spend the next pass here without new evidence.
+        //
+        // STILL OPEN, and it is the question worth taking: what drops this tick from 20/s to ~1.1/s
+        // for the duration of a fight. Note the two runs differed 2.2x (called=296 vs 133) on the
+        // same course, so whatever it is, it is not a constant.
         // Do NOT re-open the aim for this; the aim numbers on this course are frame-rate noise below
         // the 14 fps floor (see the course file).
         if (!TungstenModDataContainer.isExecutorRunning()) {
