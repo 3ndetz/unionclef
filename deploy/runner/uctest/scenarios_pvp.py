@@ -631,10 +631,18 @@ class AllRound(Scenario):
     # (both iron_sword, no scenario in this suite issues armour, 206 damage over 40 hits = four blows
     # kill) by roughly 25:14. The section below is kept because it is correct for the run it describes
     # -- 4-8 fps, where the guard lost the tick and both fighters drifted off the rim -- but reading it
-    # as the current cause sends a pass at the void guard instead of at the exchange. Check the log
-    # before believing either framing; `voidEntries` in placeStats reads 0 here and sits beside two
-    # counters that are provably dead (hits=0/0/0/0 in a run with 10 kills, dmgTaken=0.0), so it is
-    # not evidence on its own.
+    # as the current cause sends a pass at the void guard instead of at the exchange. Check the
+    # SERVER LOG before believing either framing -- it is the one source that names the cause of
+    # each death.
+    #
+    # CORRECTION, because the first version of this note got it wrong: I called hits=0/0/0/0 and
+    # dmgTaken=0.0 "provably dead counters" and used them to distrust voidEntries. They are not
+    # dead. hits= is MobDefenseChain.mdHitFront/Back/Left/Right and dmgTaken= is
+    # MobDefenseChain.mdDamageTaken -- MOB-defence counters, correctly zero in a player-vs-player
+    # duel. voidEntries is a DamageWatch field, the same live family as dw= (ticked from the client
+    # precisely so it survives courses where altoclef's chain loop never runs), so it is trustworthy.
+    # Note it read 0 while the log showed 4 falls for tester1 in the same window; counters reset per
+    # run and the log window spanned two, so check both and do not assume either is lying.
     #
     # ORIGINAL NOTE (measured 2026-08-09, at 4-8 fps):
     # This course was read for a whole pass as an AIM failure ("27 swings of 556, 79 deg off"). Two
