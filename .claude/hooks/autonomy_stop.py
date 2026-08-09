@@ -26,8 +26,21 @@ def main():
     except Exception:
         return 0  # unparseable input -> allow stop (safe)
 
-    cwd = data.get("cwd") or os.getcwd()
-    claude_dir = pathlib.Path(cwd) / ".claude"
+    # ⛔ THE FLAGS ARE FOUND FROM THIS FILE, NEVER FROM THE WORKING DIRECTORY.
+    # This used to be `pathlib.Path(data.get("cwd") or os.getcwd()) / ".claude"`, which meant a
+    # session whose shell had wandered into a subdirectory looked for
+    # `deploy/runner/.claude/autonomy_active.flag`, did not find it, and took the `not active` exit
+    # below — SILENTLY ALLOWING THE STOP. No error, no message, the hook simply did nothing. That is
+    # exactly the failure mode reported ("stop hook doesn't work"), and pointing settings.json at an
+    # absolute script path fixed only half of it: the script always RAN, then looked in the wrong
+    # place for its flags.
+    # The script lives at <project>/.claude/hooks/, so its own parent is the truth. $CLAUDE_PROJECT_DIR
+    # is honoured first when present, and cwd is not consulted at all.
+    env_root = os.environ.get("CLAUDE_PROJECT_DIR")
+    if env_root and (pathlib.Path(env_root) / ".claude").is_dir():
+        claude_dir = pathlib.Path(env_root) / ".claude"
+    else:
+        claude_dir = pathlib.Path(__file__).resolve().parent.parent
     active = claude_dir / "autonomy_active.flag"
     done = claude_dir / "autonomy_stop.flag"
     counter = claude_dir / ".autonomy_block_count"
