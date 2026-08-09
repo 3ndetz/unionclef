@@ -453,6 +453,16 @@ class BowFlee(Scenario):
 
     def judge(self, ctx):
         hits = ctx.hp_drop_events(who="victim", min_dist=5)
+        # WHAT THE AVERAGE HIDES. The flee fix holds the MEAN separation at 9.3-9.4, comfortably
+        # past the 3-block melee reach, and the bot still dies ~5 times. A mean cannot explain
+        # that; only the minimum can. So print how close the chaser ever got and how many
+        # samples sat inside reach -- if the gap collapses periodically, the deaths are catches
+        # and the objective is right but not tight enough; if it never collapses, the deaths are
+        # not melee at all and this course is red for some other reason entirely.
+        ds = [s["dist"] for s in ctx.samples if s.get("dist") is not None]
+        closest = round(min(ds), 2) if ds else None
+        caught = sum(1 for d in ds if d <= 3.0)
+        ctx.log(f"  closest={closest} samples_in_reach={caught}/{len(ds)}")
         yield Criterion("survived (0 deaths)", ctx.deaths() == 0,
                         f"deaths={ctx.deaths()}")
         # Landing an arrow on a MOVING target is the most frame-sensitive thing this suite asks for:
