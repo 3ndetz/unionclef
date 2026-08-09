@@ -95,6 +95,10 @@ public class CombatController {
     /** True on ticks where the close-quarters controller actually ran — lets DamageWatch report
      *  what share of the hurt window this branch even sees. */
     public static volatile boolean controlledThisTick;
+    /** THE CONTROL FOR "controlled=0 during 166 hurt ticks". Without a total, that zero cannot tell
+     *  "the controller runs but never while hit" from "the controller barely runs at all" — two very
+     *  different diagnoses. This counts every time the close-quarters method executes. */
+    public static volatile int controlTicks;
 
     // ── dynamic combat movement state (circle-strafe + range + crit-jumps) ──────
     private int strafeDir = 1;              // +1 = left, -1 = right
@@ -475,6 +479,7 @@ public class CombatController {
         // off. Read them before deciding what a hit should change — bolting on a reaction blind is
         // how three fixes died today.
         controlledThisTick = true;
+        controlTicks++;
         if (player.hurtTime > 0) {
             hurtTicks++;
             if (dist > strikeAt) hurtAdvancing++;
