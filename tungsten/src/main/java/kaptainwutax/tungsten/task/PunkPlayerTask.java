@@ -202,12 +202,17 @@ public class PunkPlayerTask {
         // So this is the "one owner of the tick" shape again: the protection lives in a task tick
         // that hardly executes while movement is owned elsewhere.
         //
-        // AND THE SUPPRESSION IS REAL, NOT A COUNTER ARTEFACT — both halves checked before believing
-        // it. resetRunCounters fires at run_suite.py:216, immediately BEFORE scn.run(), so 133 is
-        // the whole 120 s course and not a late-reset window. And the tick is perfectly capable:
-        // sampling `called` twice ten seconds apart on an IDLE client gives 19.6 calls/s, i.e. full
-        // client-tick rate. So the tick runs at 20/s idle and ~1.1/s during the fight. Frame rate
-        // alone does not explain that — MC batches catch-up ticks and 4.5 fps is far from its cap.
+        // ⛔ RETRACTED: "the tick is suppressed to ~1.1/s during a fight, so the guard got eleven
+        // chances". THAT WAS WRONG, and it was wrong the ordinary way — I did not know the zero.
+        // Sampling `called` live DURING a fight, four reads ten seconds apart:
+        //     271 -> 157 -> 368 -> 561        (inactive 122 -> 0 -> 0 -> 130)
+        // The drop is the suite starting its retry attempt ("running it once more before believing
+        // it"), which resets at run_suite.py:216. Between resets: 157 -> 561 in 20 s = 20.2 calls/s.
+        // THE TICK IS HEALTHY AT FULL CLIENT RATE while fighting. So the guard is NOT starved, and
+        // any conclusion drawn from `called - inactive` read at judge time — including the eleven —
+        // rests on a counter whose window I had not established. edgeSneak/edgeAir read at judge
+        // time are from that same unreliable window and must be re-measured LIVE, mid-fight, before
+        // anyone reasons from them.
         //
         // CHECKED AND UNSUPPORTED: an exception upstream in the same @Inject. DamageWatch.tick,
         // FollowEntityTask.tick and FollowPlayerTask.tick all run ahead of this one
