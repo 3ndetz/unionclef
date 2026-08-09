@@ -268,9 +268,32 @@ public class SafetySystem {
                         Vec3d wpPos = Vec3d.ofBottomCenter(waypoint);
                         brakeYaw = AttackTiming.yawTo(playerPosTick, wpPos);
 
+                        // THE GAZE USED TO BE THE STEERING, AND THAT IS WHY THE BOT COULD NOT FIGHT
+                        // WHILE RETREATING. This branch used to press FORWARD and rely on the camera
+                        // being pointed at the waypoint (CombatController read brakeYaw for aim), so
+                        // "retreat" and "look away from the opponent" were the same instruction. It
+                        // owns 63% of a duel's ticks, which is exactly why the angle gate refused on
+                        // 40% of them and the bot lost 9-14 while looking the wrong way.
+                        // Measured when the aim was pointed at the enemy while this still pressed
+                        // forward: the retreat became an ADVANCE — reach refusals 57% -> 33% (closer),
+                        // kills 9 -> 11 (more time in range), deaths 14 -> 17 (walking into it).
+                        //
+                        // So resolve travel against the head instead of assuming they agree. Minecraft
+                        // movement keys are relative to the look direction, and yaw increases turning
+                        // right, so a positive difference puts the waypoint to the player's right.
+                        // The bot can now back away and strafe while its crosshair stays on the enemy,
+                        // which is what a fighting retreat actually is.
+                        float rel = net.minecraft.util.math.MathHelper.wrapDegrees(
+                                brakeYaw - player.getYaw());
+                        float a = Math.abs(rel);
+                        boolean goFwd   = a <= 67.5f;
+                        boolean goBack  = a >= 112.5f;
+                        boolean goRight = rel > 22.5f && rel < 157.5f;
+                        boolean goLeft  = rel < -22.5f && rel > -157.5f;
+
                         // walk, no jump, allow jump ONLY if stuck (below waypoint Y)
                         boolean needJumpUp = waypoint.getY() > playerPosTick.y + 0.5 && player.isOnGround();
-                        intent.set(true, false, false, false, true, needJumpUp, false);
+                        intent.set(goFwd, goBack, goLeft, goRight, true, needJumpUp, false);
                     }
                 }
                 case ESCAPE -> {
