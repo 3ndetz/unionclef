@@ -133,6 +133,14 @@ public class BowShooter {
                 return false;                     // no room to pay for a shot — keep running
             }
         }
+        // THE SECOND INVISIBLE EXIT: a new request silently discards a draw in progress.
+        // allround's driver asks for a shot every 2.5s while the range is open, and aiming plus
+        // drawing can outlast that, so each request may be killing the one before it -- with no
+        // counter anywhere to say so. The solver refusal above at least had a place to put a
+        // number; this one overwrote the state and left nothing. If restarts turn out to dominate,
+        // the ranged phase is not failing to aim or to reach, it is being interrupted by its own
+        // caller, and the answer is to let a draw finish rather than to touch the solver.
+        if (active && chargeTicks > 0) restarts++;
         target = entity;
         drawing = false;
         bestMiss = -1;
@@ -164,6 +172,9 @@ public class BowShooter {
     /** Requests the trajectory solver refused outright -- previously an invisible exit. */
     public static volatile int noSolution = 0;
     public static int getNoSolution() { return noSolution; }
+    /** Requests that discarded a draw already in progress. */
+    public static volatile int restarts = 0;
+    public static int getRestarts() { return restarts; }
 
     /** Ticks spent facing the target for a shot — see the field docs; this is the kiting cost. */
     public static int getFacingTicks() { return facingTicks; }
