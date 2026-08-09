@@ -65,6 +65,17 @@ public final class DamageWatch {
      * tasks were live — which is the datum no counter so far has produced.
      */
     public static volatile int voidTicks, voidEntries;
+    /**
+     * THE HURT WINDOW, COUNTED WHERE IT CANNOT BE MISSED.
+     * hurtTime is non-zero for ~10 ticks after every hit. A first attempt put this inside
+     * CombatController's reach-control branch and read 12 ticks against 30 hits taken — it sat
+     * behind an early return and in a method that does not run every combat tick, so the split it
+     * produced described an unknown slice. Caught by comparing against dwHits before concluding.
+     * Here it rides the unconditional client tick, same as the fall recorder, so hurtWindow is the
+     * true total; hurtWhileControlled counts the subset where the close-quarters controller also
+     * ran, which makes the coverage visible instead of hiding it.
+     */
+    public static volatile int hurtWindow, hurtWhileControlled;
     public static volatile String lastFall = "";
     private static boolean overVoid = false;
     private static boolean wasOnGround = true;
@@ -84,6 +95,8 @@ public final class DamageWatch {
         lastHealth = -1f;
         voidTicks = 0;
         voidEntries = 0;
+        hurtWindow = 0;
+        hurtWhileControlled = 0;
         lastFall = "";
         overVoid = false;
         wasOnGround = true;
@@ -110,6 +123,15 @@ public final class DamageWatch {
             }
         }
         lastHealth = hp;
+        if (player.hurtTime > 0) {
+            hurtWindow++;
+            if (kaptainwutax.tungsten.combat.CombatController.controlledThisTick) hurtWhileControlled++;
+        }
+        // CONSUME THE FLAG, or it latches true after the first controlled tick and the coverage
+        // ratio reads 100% forever — a counter lying in a new way instead of the old one. This tick
+        // runs BEFORE the controller in MixinClientPlayerEntity, so the value read above is last
+        // tick's, which is exactly the right question ("was the controller running around then").
+        kaptainwutax.tungsten.combat.CombatController.controlledThisTick = false;
         recordVoid(player);
     }
 

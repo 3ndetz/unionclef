@@ -92,6 +92,9 @@ public class CombatController {
     public static volatile int lowHpTicks;
     /** Ticks spent inside the ~10-tick window after taking a hit, split by what the bot was doing. */
     public static volatile int hurtTicks, hurtAdvancing, hurtBackingOff;
+    /** True on ticks where the close-quarters controller actually ran — lets DamageWatch report
+     *  what share of the hurt window this branch even sees. */
+    public static volatile boolean controlledThisTick;
 
     // ── dynamic combat movement state (circle-strafe + range + crit-jumps) ──────
     private int strafeDir = 1;              // +1 = left, -1 = right
@@ -471,6 +474,7 @@ public class CombatController {
         // whether the bot spends those ticks walking INTO the fight, holding at range, or backing
         // off. Read them before deciding what a hit should change — bolting on a reaction blind is
         // how three fixes died today.
+        controlledThisTick = true;
         if (player.hurtTime > 0) {
             hurtTicks++;
             if (dist > strikeAt) hurtAdvancing++;
