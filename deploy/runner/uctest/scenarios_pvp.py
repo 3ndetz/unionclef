@@ -654,10 +654,27 @@ class AllRound(Scenario):
         return ctx.kills() >= 1
 
     def judge(self, ctx):
+        # BOTH OF THESE ARE FRAME-GATED, AND SAYING SO HERE IS THE POINT OF THE FLAG.
+        # This course ran at 4.79 fps and came out `invalid: false`, because only survival_criterion
+        # carried the flag: `all(load_sensitive)` needs EVERY failed gate to declare itself, so two
+        # unflagged gates were enough to certify a run the floor should have thrown out. melee_basic
+        # at 5.11 fps was correctly voided the same evening — same stand, same minute, opposite
+        # verdict — and a whole pass was then spent explaining allround's combat numbers as a bot
+        # defect. They were a frame rate.
+        #
+        # WHY AIMING IS LOAD-SENSITIVE, measured 2026-08-09 rather than assumed. Rotation reaches the
+        # client as accumulated mouse pixels consumed in MixinMouse#updateMouse, which fires once per
+        # FRAME, not per tick. Sampling yaw during the fight: the head moved on 9 of 59 ticks, in
+        # steps of ~9.7 deg spaced ~4 ticks apart — exactly 20 tps / 5 fps. So at this frame rate the
+        # bot gets ~5 aim corrections per second against a sprinting opponent, and the swing gate
+        # reads angleMean 68-79 deg. A kill needs swings to land and a ranged hit needs the bow on a
+        # moving target; neither can be met when the crosshair is only allowed to move five times a
+        # second. That is the definition of this flag: a low frame rate could plausibly cause it.
         ranged = ctx.hp_drop_events(who="victim", min_dist=8)
         yield Criterion("ranged hit while far >= 1", len(ranged) >= 1,
-                        f"ranged_hits={len(ranged)}")
-        yield Criterion("kill", ctx.kills() >= 1, f"kills={ctx.kills()}")
+                        f"ranged_hits={len(ranged)}", load_sensitive=True)
+        yield Criterion("kill", ctx.kills() >= 1, f"kills={ctx.kills()}",
+                        load_sensitive=True)
         yield ctx.survival_criterion()   # 1 kill / 4 deaths is a LOSS, not a pass
         # HOW MANY TIMES DID IT ACTUALLY CONNECT. Read off a timeline by hand for the first time
         # today, and it is the sharpest number this course has: over a full run the bot landed
