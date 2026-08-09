@@ -100,6 +100,14 @@ public class SafetySystem {
      * result settled nothing either way. Count them apart and the branch becomes measurable.
      */
     public static volatile int rpNarrow = 0, rpDanger = 0, rpEscape = 0;
+    /**
+     * NARROW_BATTLE turned out to be a SYMPTOM: it is pinned for 200 frames whenever DANGER_IMMINENT
+     * fires 3 times in a 120-frame window (:467, :479). Measured on allround: narrow=323 against
+     * danger=18 and escape=0, on a flat walled platform where edgeScore is 0. So the question is why
+     * the imminent stage panics, and these two count it — how often it triggers, and how often that
+     * escalates into a forced narrow.
+     */
+    public static volatile int rpImminent = 0, rpForcedNarrow = 0;
     private boolean wasBrakingLastFrame = false;
     private boolean wasRepositioningLastFrame = false;
     private boolean wantsJump = false;
@@ -473,10 +481,12 @@ public class SafetySystem {
             if (dangerPredicted.isSerious() && horizSpeed > 0.02
                     && (dangerCurrent != DangerLevel.NONE || playerVel.y < -0.3)) {
                 imminentCount++;
+                rpImminent++;
                 imminentDecayTimer = IMMINENT_DECAY_FRAMES;
                 if (imminentCount >= IMMINENT_SPAM_THRESHOLD) {
                     // too many imminents → force narrow mode
                     forcedNarrowTimer = FORCED_NARROW_FRAMES;
+                    rpForcedNarrow++;
                     imminentCount = 0;
                     if (logCooldown <= 0) {
                         MinecraftClient.getInstance().execute(() -> Debug.logMessage("§9COMBAT: imminent spam → forced NARROW_BATTLE"));
