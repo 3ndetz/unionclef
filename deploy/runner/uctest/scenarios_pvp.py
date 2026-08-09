@@ -93,8 +93,16 @@ class EdgeDuel(Scenario):
         ctx.victim.py.call("punk", ctx.bot.name)
 
     def judge(self, ctx):
-        yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}")
+        # Frame-gated for the reason measured on allround: aim is delivered once per FRAME, so at
+        # ~5 fps the crosshair gets five corrections a second and swings stop landing. This course
+        # WAS voided correctly at 5.11 fps, but only by luck — the guard inspects FAILED gates, and
+        # that run happened to land its kill. Had it not, one unflagged gate would have certified it.
+        yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}",
+                        load_sensitive=True)
         yield ctx.exchange_criterion()          # mutual duel: must not lose it
+        # self-falls is NOT flagged: low fps is a plausible cause (nav_ladder self-falls at 9.4-9.9
+        # fps, origin still open) but that is a correlation, not the measurement the aim case has.
+        # Flag it when someone measures the mechanism, not before.
         yield Criterion("self-falls == 0", ctx.self_falls == 0,
                         f"self={ctx.self_falls} knockback={ctx.knockback_falls}")
 
@@ -120,7 +128,9 @@ class NarrowBridgeDuel(Scenario):
         ctx.victim.py.call("punk", ctx.bot.name)
 
     def judge(self, ctx):
-        yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}")
+        # Same frame-gated aim as melee_basic; see the note there.
+        yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}",
+                        load_sensitive=True)
         yield ctx.exchange_criterion()          # mutual duel: must not lose it
         yield Criterion("self-falls == 0", ctx.self_falls == 0,
                         f"self={ctx.self_falls} knockback={ctx.knockback_falls}")
@@ -379,8 +389,10 @@ class ChaseTerrain(Scenario):
             or ctx.kills() >= 1
         yield Criterion("caught the runner (contact <= 120s)", caught,
                         f"contact={ctx.first_contact} kills={ctx.kills()}", load_sensitive=True)
+        # A kill needs swings to land, and landing needs the crosshair on target — frame-gated for
+        # the reason measured on allround (aim is delivered once per frame).
         yield Criterion("killed the runner", ctx.kills() >= 1,
-                        f"kills={ctx.kills()}")
+                        f"kills={ctx.kills()}", load_sensitive=True)
         yield ctx.survival_criterion()
         yield Criterion("freezes <= 1", ctx.freeze_windows <= 1,
                         f"freezes={ctx.freeze_windows}")
@@ -420,7 +432,12 @@ class BowFlee(Scenario):
         hits = ctx.hp_drop_events(who="victim", min_dist=5)
         yield Criterion("survived (0 deaths)", ctx.deaths() == 0,
                         f"deaths={ctx.deaths()}")
-        yield Criterion("arrow hits >= 2", len(hits) >= 2, f"hits={len(hits)}")
+        # Landing an arrow on a MOVING target is the most frame-sensitive thing this suite asks for:
+        # the bow must be aimed while both fighters run, and aim arrives once per frame. Left
+        # unflagged this course certified its own sub-floor runs, which is where G-1.67 was reading
+        # its numbers from.
+        yield Criterion("arrow hits >= 2", len(hits) >= 2, f"hits={len(hits)}",
+                        load_sensitive=True)
         # HITS=0 IS THREE DIFFERENT FAULTS WEARING ONE NUMBER: never drew, drew and missed, or hit
         # while the detector above looked past it. Counting the arrows actually LOOSED separates
         # them. Measured from the chat logs of two earlier runs before this line existed --
