@@ -200,11 +200,21 @@ public class PunkPlayerTask {
         // Meanwhile combat=633 — the fight is being driven, hard, by a different loop.
         //
         // So this is the "one owner of the tick" shape again: the protection lives in a task tick
-        // that hardly executes while movement is owned elsewhere. NEXT: find why tick() ran 133
-        // times in a 120 s course (~2400 client ticks expected) — the only early return upstream is
-        // the runKeyBinding null check in MixinClientPlayerEntity:45 — and move the edge guard onto
-        // whichever loop actually drives combat movement. Do NOT re-open the aim for this; the aim
-        // numbers on this course are frame-rate noise below the 14 fps floor (see the course file).
+        // that hardly executes while movement is owned elsewhere.
+        //
+        // AND THE SUPPRESSION IS REAL, NOT A COUNTER ARTEFACT — both halves checked before believing
+        // it. resetRunCounters fires at run_suite.py:216, immediately BEFORE scn.run(), so 133 is
+        // the whole 120 s course and not a late-reset window. And the tick is perfectly capable:
+        // sampling `called` twice ten seconds apart on an IDLE client gives 19.6 calls/s, i.e. full
+        // client-tick rate. So the tick runs at 20/s idle and ~1.1/s during the fight. Frame rate
+        // alone does not explain that — MC batches catch-up ticks and 4.5 fps is far from its cap.
+        //
+        // NEXT, and check this first: three calls run AHEAD of this one in the same @Inject —
+        // DamageWatch.tick, FollowEntityTask.tick, FollowPlayerTask.tick (MixinClientPlayerEntity
+        // :70-72). An exception in any of them eats the rest of the injection, and all three are
+        // busy exactly when a fight is on and idle when it is not, which is the shape of the data.
+        // Do NOT re-open the aim for this; the aim numbers on this course are frame-rate noise below
+        // the 14 fps floor (see the course file).
         if (!TungstenModDataContainer.isExecutorRunning()) {
             double vx = player.getVelocity().x, vz = player.getVelocity().z;
             double look = Math.max(1.4, Math.sqrt(vx * vx + vz * vz) * 10.0);
