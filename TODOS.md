@@ -3314,6 +3314,13 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   land a hit at 5.4 s for 6.0 damage — so measure in threes.
   Failing: bow_flee, bow_flee_hard, chase_terrain, edge_duel, melee_basic, narrow_bridge_duel.
   Passing: chase_flat.
+  RE-MEASURED 2026-08-09 on the 29 fps jar, full pvp suite: melee_basic PASSES (10:10, and the
+  two fighters' counters match to the unit -- punk ticks 1360 vs 1364, hits taken 38 vs 37),
+  narrow_bridge_duel PASSES, chase_flat still PASSES, edge_duel still FAILS twice out of two
+  (self-falls 2, knockback 0). bow_flee still FAILS its zero-deaths criterion but the deaths
+  dropped 10 -> 4 after RunAwayTask stopped holding position while the threat was closing.
+  So two of the six recorded failures are now green and nothing regressed. Undated record above
+  kept as-is: the set it describes is real, it is simply no longer current.
   AND IT IS THE SAME THING AS RW-9. The victim is not standing still — the timeline has it
   moving from x=6.2 to x=9.5 while the bot trails at 5-6 blocks. So "the approach never
   closes" and "follow never catches a moving target" are one bug, not two, and the melee
