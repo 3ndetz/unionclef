@@ -134,7 +134,17 @@ class NarrowBridgeDuel(Scenario):
         # ground at its back. Read this before blaming or clearing the guard. Recorded, not
         # gated: it is a diagnostic, and a number that gates nothing cannot be gamed into green.
         ok, rim = ctx.bot.py.try_call("rimAtBackTicks")
-        ctx.log(f"  rimBack={rim if ok else 'ABSENT'}")
+        # THIS COURSE IS BIMODAL: it either engages (14 kills, rimBack=29) or barely fights at
+        # all (0-1 kills, rimBack=0) on the SAME jar. rimBack turned out to be a witness to
+        # whether the fight happened, not a cause of losing it -- the guard firing correlates
+        # with WINNING. So print what separates the two modes instead of guessing again:
+        # how close the fighters ever got, and how long it took them to reach each other.
+        ds = [s["dist"] for s in ctx.samples if s.get("dist") is not None]
+        closest = min(ds) if ds else None
+        # first moment they were within a sword's reach; None means they never met
+        met = next((s["t"] for s in ctx.samples
+                    if s.get("dist") is not None and s["dist"] <= 3.0), None)
+        ctx.log(f"  rimBack={rim if ok else 'ABSENT'} closest={closest} met_at={met}")
         # Same frame-gated aim as melee_basic; see the note there.
         yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}",
                         load_sensitive=True)
