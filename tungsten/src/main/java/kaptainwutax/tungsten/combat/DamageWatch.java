@@ -91,9 +91,20 @@ public final class DamageWatch {
      */
     public static volatile int disengageTicks, disengageSpells;
     private static int winTaken, winLanded, winAge;
+    private static double winHpLost;
     private static boolean losingPrev;
-    /** ~3 s at 20 tps: long enough to be a trade rather than a single unlucky hit. */
-    private static final int WINDOW_TICKS = 60;
+    /**
+     * ⛔ 60 TICKS WAS TOO SHORT AND THE TEST TOO LOCAL — MEASURED: 2 firing ticks over 24 hits taken.
+     * The bot takes ~4.6 hits per death but spread thin, so inside three seconds it usually takes
+     * ONE, and `taken > landed` almost never holds even while it is steadily losing. A trade lost
+     * over fifteen seconds does not look lost in any three-second slice of it.
+     * 240 ticks is twelve seconds — the scale allround's exchanges actually run at — and the test is
+     * now on HEALTH rather than hit parity, because a hit taken costs ~5 hp while a hit landed is
+     * worth whatever the opponent's armour leaves. Health is the currency the gate is scored in.
+     */
+    private static final int WINDOW_TICKS = 240;
+    /** Lost at least this much health in the window while the exchange is not going our way. */
+    private static final double LOSING_HP = 8.0;
     public static volatile String lastFall = "";
     private static int lastLanded = 0;
     private static boolean overVoid = false;
@@ -118,7 +129,7 @@ public final class DamageWatch {
         hurtWhileControlled = 0;
         disengageTicks = 0;
         disengageSpells = 0;
-        winTaken = 0; winLanded = 0; winAge = 0; lastLanded = 0; losingPrev = false;
+        winTaken = 0; winLanded = 0; winAge = 0; winHpLost = 0; lastLanded = 0; losingPrev = false;
         lastFall = "";
         overVoid = false;
         wasOnGround = true;
@@ -137,6 +148,7 @@ public final class DamageWatch {
         if (lastHealth >= 0f && hp < lastHealth) {
             hits++;
             winTaken++;
+            winHpLost += lastHealth - hp;
             damage += lastHealth - hp;
             double gap = nearestLivingGap(player);
             if (gap >= 0) {
@@ -147,11 +159,11 @@ public final class DamageWatch {
         }
         lastHealth = hp;
         // rolling exchange window — taken vs landed, both from counters that already work
-        if (++winAge >= WINDOW_TICKS) { winAge = 0; winTaken = 0; winLanded = 0; }
+        if (++winAge >= WINDOW_TICKS) { winAge = 0; winTaken = 0; winLanded = 0; winHpLost = 0; }
         int landedNow = kaptainwutax.tungsten.combat.TriggerBot.lifetimeHits;
         if (landedNow > lastLanded) winLanded += landedNow - lastLanded;
         lastLanded = landedNow;
-        boolean losing = winTaken > winLanded && winTaken >= 2;
+        boolean losing = winHpLost >= LOSING_HP && winTaken > winLanded;
         if (losing) {
             disengageTicks++;
             if (!losingPrev) disengageSpells++;
