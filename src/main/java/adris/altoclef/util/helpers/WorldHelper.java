@@ -359,6 +359,52 @@ public interface WorldHelper {
                 && canReach(pos);
     }
 
+    /**
+     * Can a block be placed against this one -- i.e. can we look at the centre of one of its side
+     * faces and expect the placement to take?
+     *
+     * <p>Ported off baritone's MovementHelper.canPlaceAgainst, which is three checks and no more:
+     * altoclef's own avoid-list, the world border, and "is this a full cube (or glass)". None of
+     * the three needs baritone -- the avoid-list is ours, the border is on the vanilla world, and
+     * the cube test is a vanilla collision shape. The only thing the baritone version added was a
+     * BlockStateInterface to read the state through, and the world reads it just as well.
+     *
+     * <p>The exclusion list is kept verbatim rather than trusted to the collision shape: bamboo,
+     * piston heads, scaffolding, shulker boxes, dripstone and amethyst can all report a full cube
+     * in some state while being useless to place against in practice.
+     *
+     * @see #canPlace(BlockPos) which asks a different question -- whether we may place AT a
+     *      position and can reach it -- and is not interchangeable with this one.
+     */
+    static boolean canPlaceAgainst(BlockPos pos) {
+        if (AltoClef.getInstance().getExtraBaritoneSettings().shouldAvoidPlacingAt(pos)) return false;
+
+        net.minecraft.world.World world = AltoClef.getInstance().getWorld();
+        if (world == null) return false;
+        if (!world.getWorldBorder().contains(pos)) return false;
+
+        net.minecraft.block.BlockState state = world.getBlockState(pos);
+        net.minecraft.block.Block block = state.getBlock();
+        if (block instanceof net.minecraft.block.BambooBlock
+                || block instanceof net.minecraft.block.PistonExtensionBlock
+                || block instanceof net.minecraft.block.ScaffoldingBlock
+                || block instanceof net.minecraft.block.ShulkerBoxBlock
+                || block instanceof net.minecraft.block.PointedDripstoneBlock
+                || block instanceof net.minecraft.block.AmethystClusterBlock) {
+            return false;
+        }
+        if (block == net.minecraft.block.Blocks.GLASS
+                || block instanceof net.minecraft.block.StainedGlassBlock) {
+            return true;
+        }
+        try {
+            return net.minecraft.block.Block.isShapeFullCube(state.getCollisionShape(world, pos));
+        } catch (Exception ignored) {
+            // A state that cannot report a shape is one we should not lean a block against.
+            return false;
+        }
+    }
+
     static boolean canReach(BlockPos pos) {
         AltoClef altoClef = AltoClef.getInstance();
 
