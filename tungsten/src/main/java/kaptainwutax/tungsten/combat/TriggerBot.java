@@ -82,6 +82,13 @@ public class TriggerBot {
      * marginal, and a mean far above says the bot is simply not on target or not in range.
      */
     public static volatile double gAngleSum=0, gAngleMax=0, gReachDistSum=0, gReachDistMax=0;
+    /** Charge carried by the swings that PASSED, and how many took the early crit-window
+     *  threshold. Divide the sum by gPassed for the mean -- these two are the difference between
+     *  "we swing undercharged" as a theory and as a number. Note the means above (angleMean,
+     *  reachMean) are conditional on the gate REFUSING, so they are always past their threshold
+     *  by construction and say nothing about typical behaviour; this pair is unconditional. */
+    public static volatile double gSwingChargeSum = 0;
+    public static volatile int gSwingCritWindow = 0;
     public static volatile int lifetimeCrits = 0;
     private int ticksSinceLastHit = 0;
 
@@ -155,6 +162,18 @@ public class TriggerBot {
         // as we click. These increments were lost in a revert during an A/B and nothing put
         // them back, so the counter read zero through an entire investigation while the bot
         // was swinging 24 times a fight. The gate counters above are what exposed that.
+        // WHAT CHARGE DOES THE SWING ACTUALLY CARRY? Measured symmetrically over one course,
+        // both fighters' counters zeroed together: the opponent's hits land 5.17 damage and ours
+        // 3.50, on the same iron_sword. Vanilla scales a swing by 0.2 + charge^2 * 0.8, so 5.17
+        // of 6 is ~0.95 charge and 3.50 of 6 is ~0.70 -- we appear to be swinging undercharged.
+        // The only path in this method that permits it is the crit window buying an early swing
+        // at COOLDOWN_CRIT instead of COOLDOWN_FULL, which collects the charge penalty and only
+        // pays for itself if the swing IS a crit. So count all three together: the charge we
+        // actually swing at, how often the early threshold was the one in force, and how many of
+        // those swings vanilla scored as crits. If chargeMean sits near 0.95 the theory is wrong
+        // and the damage gap is somewhere else entirely.
+        gSwingChargeSum += cooldown;
+        if (critWindow) gSwingCritWindow++;
         if (kaptainwutax.tungsten.combat.AttackTiming.isCrit(player)) { critHits++; lifetimeCrits++; }
         lifetimeHits++;
         mc.interactionManager.attackEntity(player, target);

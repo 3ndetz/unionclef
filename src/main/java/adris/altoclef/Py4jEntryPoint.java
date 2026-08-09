@@ -2118,7 +2118,9 @@ public class Py4jEntryPoint {
         var C = kaptainwutax.tungsten.combat.CombatController.class;
         int ga = kaptainwutax.tungsten.combat.TriggerBot.gAngle;
         int gr = kaptainwutax.tungsten.combat.TriggerBot.gReach;
+        int gp = kaptainwutax.tungsten.combat.TriggerBot.gPassed;
         return String.format("total=%d click=%d cd=%d reach=%d angle=%d los=%d passed=%d"
+                        + " | chargeMean=%.3f critWindowSwings=%d crits=%d"
                         + " | angleMean=%.1f angleMax=%.1f (thr 40) reachMean=%.2f reachMax=%.2f (thr 3.0)"
                         + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d escape=%d imm=%d forced=%d timer=%d) path=%d none=%d",
                 kaptainwutax.tungsten.combat.TriggerBot.gTotal,
@@ -2128,6 +2130,9 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.combat.TriggerBot.gAngle,
                 kaptainwutax.tungsten.combat.TriggerBot.gLos,
                 kaptainwutax.tungsten.combat.TriggerBot.gPassed,
+                gp == 0 ? 0.0 : kaptainwutax.tungsten.combat.TriggerBot.gSwingChargeSum / gp,
+                kaptainwutax.tungsten.combat.TriggerBot.gSwingCritWindow,
+                kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits,
                 ga == 0 ? 0.0 : kaptainwutax.tungsten.combat.TriggerBot.gAngleSum / ga,
                 kaptainwutax.tungsten.combat.TriggerBot.gAngleMax,
                 gr == 0 ? 0.0 : kaptainwutax.tungsten.combat.TriggerBot.gReachDistSum / gr,
@@ -2453,6 +2458,9 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.combat.CombatController.fwdWanted = 0;
         kaptainwutax.tungsten.combat.CombatController.fwdAsked = 0;
         kaptainwutax.tungsten.combat.CombatController.fwdPressed = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.gSwingChargeSum = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.gSwingCritWindow = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gTotal = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gClick = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gCooldown = 0;
