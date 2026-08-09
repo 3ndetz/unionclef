@@ -344,6 +344,15 @@ public class BowShooter {
             Debug.logMessage(String.format(
                     "Arrow released (flight ~%d ticks, predicted miss %.2f blocks)",
                     sol.flightTicks, miss));
+            // A DELIBERATE RELEASE IS NOT A WILD ONE. stop() counts a wildShot whenever it tears
+            // down with the bow still drawn, which is right for the two abort paths above and
+            // WRONG here -- this arrow is being loosed on purpose, on a solution. Sharing the exit
+            // made every good shot increment both counters, so a course that fired six aimed
+            // arrows reported "shots=6 wild=6" and read as though the bot never once got a clean
+            // release. It cost a whole diagnosis tonight: the ranged phase was written off as
+            // broken on the strength of that six, while bestMiss=0.06 and zero timeouts beside it
+            // were saying the opposite.
+            chargeTicks = 0;
             stop();
         }
     }
