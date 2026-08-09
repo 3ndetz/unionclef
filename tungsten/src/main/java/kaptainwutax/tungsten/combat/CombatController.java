@@ -626,6 +626,7 @@ public class CombatController {
                     selfPos, -fwdN.x, -fwdN.z, world, 3, KNOCKBACK_REACH);
             if (rimBehindNow) {
                 rimAtBackTicks++;
+                boolean cleared = false;
                 for (int cand : new int[]{strafeDir, -strafeDir}) {
                     net.minecraft.util.math.Vec3d step = leftN.multiply(cand * STRAFE_PROBE);
                     net.minecraft.util.math.Vec3d after = selfPos.add(step);
@@ -636,8 +637,24 @@ public class CombatController {
                     if (!stillRim && strafeSideSafe(player, world, cand)) {
                         strafeDir = cand;         // this orbit side gets the void off our back
                         lastStrafeSwitch = now;
+                        cleared = true;
                         break;
                     }
+                }
+                // NEITHER SIDE CLEARS IT -- THE RESIDUE, AND IT IS MEASURED.
+                // Choosing the orbit side took the exposure from 327 ticks to 99. Those 99 are the
+                // ticks where the board has run out of room: on a 5x5 platform both orbit arcs can
+                // leave the rim behind at once. There the only direction with guaranteed floor is
+                // the one the opponent is standing on, so go there. Forward is toward the interior
+                // by construction whenever the rim is at our back, and the opponent cannot be
+                // standing on air.
+                //
+                // My first attempt pressed forward too, and failed because it was gated on
+                // !canStrafe -- a condition almost never true on open ground, so it never fired
+                // where it mattered. This gate is the measured one: rim behind AND no side clears.
+                if (!cleared && dirSafe(player, world, 1, 0)) {
+                    out.forward = true;
+                    out.back = false;
                 }
             }
         }
