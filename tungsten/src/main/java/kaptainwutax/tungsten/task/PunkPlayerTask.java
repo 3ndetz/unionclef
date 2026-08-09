@@ -221,10 +221,23 @@ public class PunkPlayerTask {
         // (Caveat, stated because it bit me twice today: a reset landed inside that window —
         // `inactive` went 158 -> 0 — so the DELTAS there are worthless. What survives is that both
         // counters read zero AFTER hundreds of active fighting ticks, which no reset can manufacture.)
-        // So the guard is not losing; it is never triggered. VoidDetector.edgeAhead(pos, vx, vz,
-        // world, 3, look) does not see the rim of a flat platform standing in void. Start there —
-        // its drop threshold, its look distance, and whether the WorldView it is handed can report
-        // anything about a column that is pure air all the way down.
+        // So the guard is not losing; it is never triggered.
+        //
+        // AND PART OF THAT ZERO IS MY OWN INSTRUMENT, SAID PLAINLY. VoidDetector.edgeAhead opens
+        // with `if (fallHeight(pos, world) > maxSafeFall) return false;` (VoidDetector.java:93) —
+        // "already over a drop, this guard does not apply". The moment the bot is past the rim that
+        // is exactly true of it, so edgeAhead returns false for the whole fall. edgeAir, which I
+        // added as `!onGround && nearEdge`, therefore CANNOT count a real fall by construction: the
+        // one state it was meant to catch is the one the detector opts out of. Its zero is evidence
+        // about my counter, not only about the bot. Fix the counter before reading it again — sample
+        // fallHeight directly rather than going through edgeAhead.
+        //
+        // The ground case is still open and still worth the pass: standing ON the platform,
+        // fallHeight reads 1 and a cell beyond the rim reads MAX_SCAN_DEPTH, so edgeAhead should
+        // fire while the bot walks at the rim. It read zero across hundreds of fighting ticks. Check
+        // the velocity gate (`(vx*vx+vz*vz) > 0.0016` plus the isOnGround requirement) against a bot
+        // that is being knocked around rather than driving itself — knockback moves you without your
+        // own velocity pointing anywhere useful.
         //
         // CHECKED AND UNSUPPORTED: an exception upstream in the same @Inject. DamageWatch.tick,
         // FollowEntityTask.tick and FollowPlayerTask.tick all run ahead of this one
