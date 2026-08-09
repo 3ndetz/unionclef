@@ -213,7 +213,21 @@ public class SafetySystem {
         Vec3d enemyPredicted = targetPos.add(enemyVelocity.multiply(PREDICT_TICKS));
 
         // terrain checks use tick positions (block grid)
-        Vec3d playerPredictedTick = playerPosTick.add(playerVel.multiply(PREDICT_TICKS));
+        // ⛔ THIS EXTRAPOLATED THE BOT THROUGH THE FLOOR AND CALLED IT A CLIFF.
+        // It was pos + velocity*10 with the VERTICAL component included, no gravity, no ground.
+        // Descending from a crit hop the bot carries vy about -0.3, so the predicted point landed
+        // ~3 blocks BELOW its feet — under the platform — and fallHeight() started its scan down
+        // there, found nothing and returned MAX_SCAN_DEPTH=30. fromFallHeight(30) is HEIGHT_DEATH,
+        // so dangerPredicted.isSerious() was true on EVERY crit hop, which fired DANGER_IMMINENT
+        // (:490), and three of those inside 120 frames pinned NARROW_BATTLE for 200 — measured as a
+        // self-sustaining loop (timer 92 -> 67 -> 4 -> re-armed to 120, imm 3 -> 6) that cost about
+        // thirty seconds of retreat in a two-minute duel.
+        //
+        // The question this look-ahead exists to answer is "if I keep going this way, is there floor
+        // ahead of me" — that is the GROUND TRACK, so take the horizontal velocity only. The vertical
+        // guess was never meaningful anyway without gravity or collision.
+        Vec3d playerPredictedTick = playerPosTick.add(
+                playerVel.x * PREDICT_TICKS, 0, playerVel.z * PREDICT_TICKS);
         int fallAtPredicted = VoidDetector.fallHeight(playerPredictedTick, player.getEntityWorld());
         int fallAtCurrent = VoidDetector.fallHeight(playerPosTick, player.getEntityWorld());
         DangerLevel dangerPredicted = DangerLevel.fromFallHeight(fallAtPredicted);
