@@ -260,6 +260,21 @@ public class PunkPlayerTask {
         // own established discriminator — the same "a genuine void is bottomless; 20 blocks of
         // nothing is a safe discriminator" that the target-hold below is built on. A legitimate
         // descent is a few blocks; nothing legitimate walks into twenty blocks of air.
+        // ⛔ MEASURED AFTERWARDS: edgeSkipExec = 0. THE PREMISE ABOVE WAS WRONG.
+        // The counter was added precisely to check it, and it says the executor was NEVER driving on
+        // a punk-active tick, so the guard was not being disabled that way at all. The override
+        // below is harmless and principled, but it does NOT explain the falls. Do not credit it.
+        //
+        // WHAT THE SAME SAMPLING DID SHOW, tracking both guards every 15 s through a run:
+        //     t+0..60   punkActive=0    vgCalls=0     <- SEVENTY-FIVE SECONDS WITH NO GUARD AT ALL
+        //     t+75      punkActive=173  vgCalls=185
+        //     t+90..120 punkActive=272  vgCalls=272   sneak=1  vgEdge=1
+        // Two things, both bigger than this branch. (1) For the whole ranged phase neither guard
+        // runs: this one returns at `if (!active)` above, and VoidGuard's call site requires
+        // RunAwayTask or PunkPlayerTask active (MixinClientPlayerEntity:171). That is the phase the
+        // bot spends kiting and backing up. (2) Once punk IS active both guards run every tick and
+        // between them they see the rim ONCE in 272 ticks — two independent implementations
+        // agreeing, which puts the fault in VoidDetector.edgeAhead rather than in either call site.
         boolean execDriving = TungstenModDataContainer.isExecutorRunning();
         if (execDriving) pEdgeSkipExec++;   // counts how often the old code switched itself off
         {
