@@ -29,6 +29,12 @@ import datetime
 import functools
 import os
 import subprocess
+
+# The fps below which a failure says nothing about the bot. Module level ON PURPOSE: it was a
+# local inside the judging function, and the suite loop referenced it -- which would have raised
+# NameError on the FIRST invalid run and never on a healthy one, i.e. exactly where it was needed
+# and nowhere it would be noticed.
+HEALTHY_FPS_MIN = 14.0
 import sys
 import time
 
@@ -304,7 +310,6 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     # notes say the same from the other side: nav_slime lands on its pad above ~13 fps and misses
     # below ~10. A floor of 12 therefore called a degraded run a bot failure, which is the false
     # red this guard exists to prevent.
-    HEALTHY_FPS_MIN = 14.0
     avg_fps = ctx.geo.get("avg_fps")
     invalid = False
     if not passed and avg_fps is not None and avg_fps < HEALTHY_FPS_MIN:
@@ -425,10 +430,46 @@ def main():
     bot = Bot(BOT_CONTAINER, BOT, flat)
     victim = Bot(VICTIM_CONTAINER, VICTIM, flat)
 
+    # A DEGRADED CLIENT IS A REPAIRABLE CONDITION, NOT A VERDICT. The client slows as a suite
+    # runs -- 29 fps early, under 10 by the middle of a pvp sweep -- so a course late in the list
+    # collects INVALIDs for its POSITION. Recording that and moving on is what made two courses
+    # look "structurally unmeasurable" until fresh containers took one of them from 9.9 to 29.4.
+    # Recreating the containers costs a couple of minutes and buys a real measurement, which is
+    # the whole point of running the suite at all.
+    state = {"rcons": rcons, "bot": bot, "victim": victim}
+
+    def refresh_clients(why):
+        print(f"  refreshing clients: {why}")
+        script = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                              "deploy_jar.sh")
+        rc = subprocess.call(["bash", script],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if rc != 0:
+            print(f"  refresh FAILED (deploy_jar.sh exit {rc}) -- the next result stays suspect")
+            return False
+        fresh = {name: Rcon(w["container"]) for name, w in WORLDS.items()}
+        wait_for("server rcon", lambda: "players" in fresh["flat"].cmd("list"), 300, 5)
+        state["rcons"] = fresh
+        state["bot"] = Bot(BOT_CONTAINER, BOT, fresh["flat"])
+        state["victim"] = Bot(VICTIM_CONTAINER, VICTIM, fresh["flat"])
+        return True
+
     results = []
     for cls in scenarios:
         for rep in range(args.repeat):
-            res = run_scenario(cls, rcons, bot, victim, art_root, args.record)
+            res = run_scenario(cls, state["rcons"], state["bot"], state["victim"],
+                               art_root, args.record)
+            # Retry an fps-invalidated run ONCE on fresh clients. If it comes back invalid again,
+            # the load is not ours to fix and the INVALID stands honestly.
+            if res.get("invalid") and not res.get("refreshed"):
+                if refresh_clients(f"{cls.id} ran at {res.get('avg_fps')} fps, "
+                                   f"below the {HEALTHY_FPS_MIN} floor"):
+                    res = run_scenario(cls, state["rcons"], state["bot"], state["victim"],
+                                       art_root, args.record)
+                    res["refreshed"] = True
+                    if not res.get("invalid"):
+                        print(f"  => {cls.id}: measured on fresh clients — the INVALID was the "
+                              f"suite's wear, not the course")
             if not res["passed"] and res.get("flake_suspect") and args.repeat == 1:
                 first = [c["name"] for c in res["criteria"] if not c["ok"] and c["gate"]]
                 print(f"  gate failure ({', '.join(first)}) — running it once more before believing it")
