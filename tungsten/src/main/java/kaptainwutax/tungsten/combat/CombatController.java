@@ -133,6 +133,8 @@ public class CombatController {
      * this constant should be set from.
      */
     private static final double KNOCKBACK_REACH = 2.0;
+    /** Sprint hits carry further: max impulse measured 0.854 blocks/tick, ~2.1 blocks of carry. */
+    private static final double KNOCKBACK_REACH_SPRINT = 2.2;
     /** One stride, for probing where an orbit side would leave us. */
     private static final double STRAFE_PROBE = 1.5;
     /** Ticks with the rim on the knockback line -- the exposure, and the measure this must lower. */
@@ -639,8 +641,19 @@ public class CombatController {
             // MC convention: sideways +1 is LEFT, which is (-fwd.z, +fwd.x) rotated
             net.minecraft.util.math.Vec3d leftN =
                     new net.minecraft.util.math.Vec3d(-fwdN.z, 0, fwdN.x);
+            // A SPRINTING ATTACKER IS A DIFFERENT THREAT, and the impulse says so plainly:
+            // mean 0.439 blocks/tick carries ~1.1 blocks, but the max seen is 0.854 -- roughly
+            // 2.1 blocks, past this platform's radius. That gap is the sprint hit. An ordinary
+            // blow cannot throw a centred fighter off a 5x5 board; a sprint blow can.
+            //
+            // So the danger is not "a rim within two blocks", it is "a rim behind me while
+            // someone runs at me", which is a far narrower condition and one the bot can see.
+            // Guarding the wide case all the time is what the 3.0 constant did, and it cost
+            // exposure without buying safety.
+            double reach = (target instanceof net.minecraft.entity.LivingEntity le && le.isSprinting())
+                    ? KNOCKBACK_REACH_SPRINT : KNOCKBACK_REACH;
             boolean rimBehindNow = VoidDetector.edgeAhead(
-                    selfPos, -fwdN.x, -fwdN.z, world, 3, KNOCKBACK_REACH);
+                    selfPos, -fwdN.x, -fwdN.z, world, 3, reach);
             if (rimBehindNow) {
                 rimAtBackTicks++;
                 for (int cand : new int[]{strafeDir, -strafeDir}) {
