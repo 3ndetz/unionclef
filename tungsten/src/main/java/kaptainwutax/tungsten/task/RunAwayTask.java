@@ -323,6 +323,8 @@ public class RunAwayTask {
     public static volatile int fleeSprintTicks;
     /** Of the non-sprinting drive ticks: how many had a shot running, and how many did not. */
     public static volatile int fleeNoSprintBowTicks, fleeNoSprintOtherTicks;
+    /** Of the 'other' idle ticks: how many were mid-turn, i.e. not yet facing away enough to sprint. */
+    public static volatile int fleeNoSprintTurningTicks;
 
     /**
      * The reach the blows actually showed: mean 4.25, max 5.35 over 22 hits recorded at the rising
@@ -541,7 +543,21 @@ public class RunAwayTask {
         // suspect -- and suspects have been wrong thirteen times tonight. Attribute it instead:
         // of the ticks NOT sprinting, how many had a shot running.
         else if (BowShooter.isActive()) fleeNoSprintBowTicks++;
-        else fleeNoSprintOtherTicks++;
+        else {
+            fleeNoSprintOtherTicks++;
+            // MID-TURN? The flee asks WindMouse for the away heading and the glide takes several
+            // ticks, during which fwd is below the 0.6 sprint gate. That is the price of not using
+            // setYaw, which this codebase bans -- so if the 64 are mostly turning, the ceiling is
+            // structural rather than a defect, and the honest move is to say so instead of
+            // hunting a fifteenth culprit.
+            double yawNow = Math.toRadians(player.getYaw());
+            Vec3d f = new Vec3d(-Math.sin(yawNow), 0, Math.cos(yawNow));
+            Vec3d aw = player.getEntityPos().subtract(threat.getEntityPos());
+            if (aw.horizontalLengthSquared() > 1e-6) {
+                Vec3d awN = new Vec3d(aw.x, 0, aw.z).normalize();
+                if (awN.x * f.x + awN.z * f.z < 0.6) fleeNoSprintTurningTicks++;
+            }
+        }
 
         // TAKE THE CAMERA THE BOW JUST GAVE UP. Sprint is pressed on fwd > 0.6 and vanilla sprints
         // forward only. Releasing the bow mid-shot at a closing gap raised the sprint share from

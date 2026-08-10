@@ -518,6 +518,7 @@ class BowFlee(Scenario):
         _, fsp = ctx.bot.py.try_call("fleeSprintTicks")
         _, nsb = ctx.bot.py.try_call("fleeNoSprintBow")
         _, nso = ctx.bot.py.try_call("fleeNoSprintOther")
+        _, nst = ctx.bot.py.try_call("fleeNoSprintTurning")
         ctx.log(f"  closest={closest} samples_in_reach={caught}/{len(ds)}"
                 f" | reachTicks={rt if okr else 'ABSENT'}(drawing {rd})"
                 f" nearTicks={nt if okn else 'ABSENT'}(drawing {nd})"
@@ -530,7 +531,7 @@ class BowFlee(Scenario):
                 f" | AFTER GUARD stalled {sag}, keys still down {kag}"
                 f" | blows taken {dwh if okdw else 'ABSENT'}, damage {dwd}"
                 f" | hit dist max {hdm}, mean {round(hds/hdn,1) if hdn else 0} hundredths over {hdn}"
-                f" | sprint {fsp} of {fd} drive ticks (no-sprint: bow {nsb}, other {nso})")
+                f" | sprint {fsp} of {fd} drive ticks (no-sprint: bow {nsb}, other {nso} of which turning {nst})")
         # DO NOT MARK THE SURVIVAL CRITERION load_sensitive. It looks like a candidate -- runs
         # get judged at 10 fps, below the 14.0 floor -- but the data says the opposite of the
         # intuition: across 34 recorded runs r(fps, deaths) = +0.47, and runs ABOVE the floor
