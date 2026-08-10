@@ -111,6 +111,31 @@ Rule of thumb for planning a series: to see a shift of `d` at two standard error
 spread, and all of them were withdrawn. When the sensitive course cannot show an effect, more runs on
 the coarse one is not the answer — a different statistic is (see the ledger below, and CHECKLIST 4i).
 
+### What the duel gates can and cannot ask for (2026-08-10)
+
+The four duels pin the victim to `combatReachControl=false` and punk both sides with the same
+controller and the same kit. That makes each run a controlled comparison of that ONE setting — which
+is what finally let it be measured — but it also fixes what the gate can mean:
+
+**`kills >= deaths` between two near-identical fighters is a coin flip with ties passing.** It can
+only be passed *reliably* if the bot's engine is genuinely BETTER than the baseline engine, and the
+only difference available is that one flag. Measured this session:
+
+| course | margin, bot with the flag vs the same engine without it |
+|---|---|
+| `melee_basic` | **0** (n=7, sd 0.75 — resolution ±0.6) |
+| `edge_duel` | **−0.27** (n=11, after the stand-off fix; was −3.82 before it) |
+| `allround` | **−2** (n=3, after the aim arbiter; was about −4 before it) |
+
+So `combatReachControl` is currently worth approximately **nothing**, and two gates are asking a
+level fight to be won. A pass rate near half is the honest expectation, not a defect to chase — and
+chasing it with combat changes that land OUTSIDE the flag cannot work, because the opponent gets
+them too and the margin returns to zero by construction.
+
+What a future pass on these two courses should therefore target is **the flag itself**: make the
+cooldown behaviour genuinely beat parking at strike distance, or conclude it cannot and remove it.
+Anything else is measuring the suite against itself.
+
 ### The other half of the ledger
 
 Both fighters run this mod, so `DamageWatch` is counting on the **victim** too. `_ledger()` in
