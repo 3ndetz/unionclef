@@ -37,6 +37,10 @@ import shutil
 # NameError on the FIRST invalid run and never on a healthy one, i.e. exactly where it was needed
 # and nowhere it would be noticed.
 HEALTHY_FPS_MIN = 14.0
+# How many times ONE suite invocation will rebuild the stand chasing a starved frame rate before
+# concluding the load is somebody else's. Two minutes a rebuild; a repeat-8 series could spend
+# half an hour on it and still measure nothing.
+MAX_STARVE_REFRESHES = 2
 import sys
 import time
 
@@ -536,6 +540,9 @@ def _main():
         state["victim"] = Bot(VICTIM_CONTAINER, VICTIM, fresh["flat"])
         return True
 
+    # Mutable cell: refresh_clients is a closure defined above, and the loop below needs a
+    # counter both can see without threading state through every call.
+    starve_refreshes = [0]
     results = []
     for cls in scenarios:
         for rep in range(args.repeat):
@@ -574,8 +581,21 @@ def _main():
                 # survive an em dash only because cp1251 happens to have one.
                 print(f"  [!] {cls.id} passed at {fps_now} fps, below the {HEALTHY_FPS_MIN} floor - "
                       f"this run is NOT comparable against a healthy baseline")
-                if not res.get("refreshed"):
-                    refresh_clients(f"{cls.id} is running starved at {fps_now} fps")
+                # CAP THE REPAIRS. Rebuilding the containers costs about two minutes, and
+                # `refreshed` is only ever set on the INVALID path -- so a --repeat 8 series that
+                # starves on every run would rebuild the stand before every one of them. The
+                # reasoning is the one the INVALID retry already uses: if replacing the clients
+                # twice did not bring the frame rate back, the load is not this suite's, and
+                # thrashing the containers buys nothing but wall-clock. Past the cap the runs are
+                # still MARKED, so the measurement stays honest; it just stops paying for a repair
+                # that has already been shown not to work.
+                if starve_refreshes[0] < MAX_STARVE_REFRESHES and not res.get("refreshed"):
+                    starve_refreshes[0] += 1
+                    refresh_clients(f"{cls.id} starved at {fps_now} fps "
+                                    f"(rebuild {starve_refreshes[0]}/{MAX_STARVE_REFRESHES})")
+                elif starve_refreshes[0] >= MAX_STARVE_REFRESHES:
+                    print(f"  [!] not rebuilding again - {MAX_STARVE_REFRESHES} rebuilds already "
+                          f"failed to restore the frame rate; runs stay marked instead")
             if not res["passed"] and res.get("flake_suspect") and args.repeat == 1:
                 first = [c["name"] for c in res["criteria"] if not c["ok"] and c["gate"]]
                 print(f"  gate failure ({', '.join(first)}) — running it once more before believing it")
