@@ -468,6 +468,9 @@ class BowFlee(Scenario):
         closest = round(min(ds), 2) if ds else None
         caught = sum(1 for d in ds if d <= 3.0)
         ctx.log(f"  closest={closest} samples_in_reach={caught}/{len(ds)}")
+        # A run where the fight never happened must not be able to score a clean sheet.
+        yield Criterion("the fight actually happened", ctx.engagement_happened(),
+                        f"closest={closest} samples={len(ds)}")
         yield Criterion("survived (0 deaths)", ctx.deaths() == 0,
                         f"deaths={ctx.deaths()}")
         # Landing an arrow on a MOVING target is the most frame-sensitive thing this suite asks for:

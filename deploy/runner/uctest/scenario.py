@@ -192,6 +192,20 @@ class Ctx:
                 self.log("  fall: SELF (walked off)")
         self._below = below
 
+    def engagement_happened(self):
+        """Did this run actually put the two fighters in the same fight?
+
+        A COURSE THAT CAN PASS BY NOT RUNNING IS A COURSE WHOSE GREEN MEANS NOTHING. Found in
+        the artifacts: a bow_flee run recorded zero deaths and zero path aborts with EVERY
+        distance sample at 0.00 and the bot's HP never leaving 20.0. Nothing happened, and it
+        scored a pass -- then sat in a 49-run correlation as if it were data.
+
+        Returns False when no sample ever saw a real separation, which is what an unspawned or
+        unlatched victim looks like from here.
+        """
+        ds = [s["dist"] for s in self.samples if s.get("dist") is not None]
+        return bool(ds) and max(ds) > 0.0
+
     def bot_hits_taken_now(self):
         """Current blows-taken count, or None when the mod does not expose it."""
         ok, v = self.bot.py.try_call("hitsTaken")
