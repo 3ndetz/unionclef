@@ -607,6 +607,19 @@ def _main():
                     print(f"  => {cls.id}: PASSED on the retry — the first verdict was the suite, "
                           f"not the course")
                 res = again
+            # ⛔ CHECK THE RUN THAT IS ACTUALLY RECORDED, NOT ONLY THE FIRST ATTEMPT.
+            # The starvation check above inspects the first run and then the flake retry REPLACES
+            # res, so the retry's own frame rate was never examined -- and the retry is precisely
+            # where a "passed on the second go" verdict comes from. Caught live: narrow_bridge_duel
+            # failed 11:15 at 28.8 fps, retried at 9.9 fps, came back 17:11, and the sweep recorded
+            # an unmarked PASS. Worse on this course than it sounds, because starved runs there
+            # flatter the bot systematically -- a whole discarded series at 10.0 fps read as the
+            # best result of the session.
+            fps_final = res.get("avg_fps")
+            if fps_final is not None and fps_final < HEALTHY_FPS_MIN and not res.get("starved"):
+                res["starved"] = True
+                print(f"  [!] {cls.id} recorded a verdict at {fps_final} fps, below the "
+                      f"{HEALTHY_FPS_MIN} floor - NOT comparable against a healthy baseline")
             results.append(res)
 
     print("\n================ SUMMARY ================")
