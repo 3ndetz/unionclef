@@ -327,6 +327,8 @@ public class RunAwayTask {
     public static volatile int fleeNoSprintTurningTicks;
     /** Facing away, key down, and vanilla still refuses -- and how many of those were hungry. */
     public static volatile int fleeNoSprintUnexplained, fleeNoSprintHungryTicks;
+    /** Of the refused ticks: how many had sneak held, which cancels sprint outright. */
+    public static volatile int fleeNoSprintSneakTicks;
 
     /**
      * The reach the blows actually showed: mean 4.25, max 5.35 over 22 hits recorded at the rising
@@ -567,6 +569,10 @@ public class RunAwayTask {
                     // three idle buckets and the only one still open.
                     fleeNoSprintUnexplained++;
                     if (player.getHungerManager().getFoodLevel() <= 6) fleeNoSprintHungryTicks++;
+                    // SNEAK CANCELS SPRINT, and VoidGuard presses sneak at an edge -- which on a
+                    // bounded platform is exactly where a flee ends up. Counted rather than
+                    // asserted: hunger looked just as reasonable and came back zero.
+                    if (MinecraftClient.getInstance().options.sneakKey.isPressed()) fleeNoSprintSneakTicks++;
                 }
             }
         }

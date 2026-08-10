@@ -2350,6 +2350,7 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintTurningTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintUnexplained = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintHungryTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintSneakTicks = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowMax = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowSum = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowN = 0;
@@ -3027,6 +3028,8 @@ public class Py4jEntryPoint {
     /** Facing away with the key down while vanilla refuses, and how many of those were hungry. */
     public int fleeNoSprintUnexplained() { return kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintUnexplained; }
     public int fleeNoSprintHungry()      { return kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintHungryTicks; }
+    /** Of the refused ticks, how many had sneak held (sneak cancels sprint). */
+    public int fleeNoSprintSneak()       { return kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintSneakTicks; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a
