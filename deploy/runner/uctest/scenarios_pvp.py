@@ -900,6 +900,13 @@ class AllRound(Scenario):
         # blocks the last half-block" has been answerable and unanswered. Recorded, not gated.
         ok_cs, cs = ctx.bot.py.try_call("chaseStats")
         ctx.log(f"  chase: {cs if ok_cs else 'UNREADABLE'}")
+        # AND THE GATE ABOVE THE CHASE. enterCombat() needs `dist < 3.4 AND hasLOS`, and this
+        # repo already records that hasLOS is false for whole fights -- closeQuarters returns on
+        # its first line when !hasLOS, "proven by ctlTotal=0 against lowHpTicks=149". The four
+        # counters that separate "findBestAimPoint never ran" from "every sample was blocked"
+        # exist (losCalls/losClosest/losSample/losNone) and, like chaseStats, no course printed
+        # them. cq= is the entry/no-LOS split for the same question one layer down.
+        ctx.log(f"  los={_stat(ctx, 'los')} cq={_stat(ctx, 'cq')} ctl={_stat(ctx, 'ctl')}")
         yield Criterion("ranged hit while far >= 1", len(ranged) >= 1,
                         f"ranged_hits={len(ranged)}", load_sensitive=True)
         yield Criterion("kill", ctx.kills() >= 1, f"kills={ctx.kills()}",
