@@ -425,6 +425,42 @@ The rule:
 The general form is rule 4c's: a statistic taken under conditions selected by something other than
 the thing you are studying. Here the selector was the clock rather than the code.
 
+## 4h. AN EVENT-TERMINATED COURSE MEASURES THE PHASE BEFORE THE EVENT, NOT THE SCENARIO (2026-08-10)
+
+`early_stop` ends a run when something happens. Then the run is not the course — it is *the stretch
+up to that event*, and the composition of that stretch can have nothing in common with the scenario
+the course is named after.
+
+`allround` is `duration = 120` with `early_stop: kills >= 1`. Every run it has ever produced lasted
+about twenty seconds, and those twenty seconds are the APPROACH phase. Measured over them, the bot
+looked as though it barely fought: chasing dominated, the head pointed away from the opponent 63% of
+the time, the swing gate was consulted 58 times. Run to its declared length the same build gives:
+
+| | truncated (~20 s) | full 120 s |
+|---|---|---|
+| kills / deaths | 1 / 1 | 5 / 6 |
+| fps samples | 3 | 11 |
+| follow task | active 149–164 ticks | **active 0** |
+| aim at enemy | 31 | **155** (71%) |
+| forced-narrow pin | fires | **never fires** |
+
+Seven mechanisms were proposed for the "defect" over one session and every one of them was an
+artefact of the window. Nothing was scaled — the *composition* changed, because the phase being
+sampled changed.
+
+The rule:
+
+1. Before quoting any per-run figure, check `early_stop`. If it ends on an event, ask which PHASE the
+   run actually covered.
+2. A gate that ACCUMULATES (deaths, damage taken, time survived) must not be judged over an
+   event-terminated window. `bot deaths <= 0` over "the sprint to a first kill" is a different
+   criterion from the same words over a two-minute fight, and the short one is easier.
+3. `samples=N` in the fps line is the cheapest tell. Three samples on a two-minute course means the
+   course did not run for two minutes.
+4. melee_basic already carried this fix, with the reasoning written out, while three other courses
+   kept the naive line. A fix applied to one course is not applied to the suite — grep for the
+   pattern.
+
 ## 4g. A CHANGE THAT MAKES A RARE PATH COMMON PUTS UNTESTED CODE ON THE HOT PATH (2026-08-10)
 
 Rare code is unverified *because* it is rare. Raise its frequency and its faults surface immediately
