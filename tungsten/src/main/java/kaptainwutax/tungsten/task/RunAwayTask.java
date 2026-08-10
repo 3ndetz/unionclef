@@ -247,7 +247,15 @@ public class RunAwayTask {
         // box is 0.6 wide -- so a sword lands at a centre-to-centre distance of roughly 3.3-3.6.
         // Measured the error directly: a run reported reachTicks=0 with closest=3.44 and five
         // deaths, which is only possible if the killing band sits above the threshold being used.
-        if (d <= 3.6) {
+        // 5.5, CALIBRATED BY THE BLOWS. Not 3.0 (my first guess), not 3.6 (my "correction" reasoned
+        // from hitbox widths) -- both were argued and both were wrong. Recorded at the rising edge
+        // of hurtTime over 22 hits: mean 4.25, max 5.35. Likely lag compensation, since the client
+        // measures the distance and the server decides the hit while both fighters move.
+        //
+        // The old band was why 19-22 blows landed in runs that counted 3-5 "exposed" ticks, and why
+        // a sixfold exposure reduction bought no survival: it was reducing a quantity that
+        // described a quarter of the danger.
+        if (d <= 5.5) {
             Vec3d v = player.getVelocity();
             Vec3d away = player.getEntityPos().subtract(threat.getEntityPos());
             if (player.isSprinting()) reachSprintTicks++;
@@ -261,7 +269,7 @@ public class RunAwayTask {
         // 3.0 band it used to sit above. Written down because I changed it in the same edit as the
         // reach fix and gave no reason -- an unexplained constant is what this session kept
         // tripping over, and I have no standing to leave one behind.
-        } else if (d <= 5.0) {
+        } else if (d <= 7.0) {
             nearTicks++;
             if (BowShooter.isDrawing()) nearDrawingTicks++;
         }
