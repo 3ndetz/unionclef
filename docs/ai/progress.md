@@ -1303,3 +1303,33 @@ The rule that came out of it is now CHECKLIST section 4b: characterise a metric 
 quoting any delta, report median and range, and call anything smaller "not distinguishable from
 run-to-run variation". The bench measured honestly all evening. The conclusions were the unsound
 part.
+
+## bow_flee, consolidated — what is measured, what is fixed, what is still open (2026-08-10)
+
+MEASURED AND TRUSTWORTHY (each on its own denominator, counters reset per run):
+- Sword reach, calibrated by the blows themselves at the rising edge of `hurtTime`:
+  **mean 4.25 blocks, max 5.35** over 22 hits. Every band I picked by argument was wrong — 3.0
+  first, then a "correction" to 3.6. What the code calls `nearTicks` (3.6–5.0) IS the killing zone.
+- The bot takes ~19–22 blows a run while only 3–5 ticks fall inside 3.6. The mislabel, not a new
+  mechanism, explains that gap.
+- Stalls: the flee cornered itself on the rim of a `flat_field(half=20)` platform — every stall at
+  radius 18.57–18.7, movement keys held, no subsystem contending, chaser not in contact (0 of 17).
+- `VoidGuard` is INNOCENT. It clears keys on ~40% of stalls because the bot is at a real void edge,
+  which is also why self-falls here are zero. I suspected it twice and withdrew twice.
+
+FIXED: the flee objective sampled only ±80° from straight-away, so at a boundary every candidate
+pointed outward, all failed `hasRoomBeyond`, and the dead-end fallback took the rim. Added ±115 and
+±145. Stalls **54 → 0/8/8/5**; exposure inside 3.6 **55 → 8.5** ticks/run. Baselines after the
+change: `edge_duel`, `melee_basic`, `nav_flat` all PASS.
+
+STILL RED, and the exposure win is weaker than it looked: deaths 4–5 against a criterion of zero,
+and the exposure figure was counted on the wrong band, so it describes about a quarter of the blows
+that land. The bot is hit at 4.25 blocks while under orders to hold **12** — the gap collapses to a
+third of what was asked, and the flee neither prevents nor recovers from it. That is the open
+question.
+
+METHOD, which cost more than the code did. Thirteen hypotheses refuted, six fixes reverted on
+measures named before they ran, seven of my own instruments corrected, and eight assertions made
+before reading the line that settled them. Every one of the six fixes edited the DRIVE; the fault
+was in the OBJECTIVE, which task G-1.66 had already recorded as "seeks corners — furthest from the
+threat has no continuation". Reading that first would have been cheaper than the entire session.
