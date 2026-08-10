@@ -899,6 +899,23 @@ class AllRound(Scenario):
         ctx.bot.py.call("selectHotbar", 0)  # bow in hand for the ranged phase
         ctx.victim.py.call("punk", ctx.bot.name)
 
+    # ⛔ AND NEITHER IS THE WOUNDED KITE, WHICH IS LIVE ONLY HERE. This is the one pvp kit with a
+    # bow, so hasRangedOption is true and CombatController's low-health branch actually FIRES --
+    # lowHp reads 56/0 and 75/0 here against 0/xx everywhere else, i.e. 56-75 ticks a run spent
+    # breaking contact to use a bow. Given the control above says the bow is worth nothing on this
+    # course, that looked like G-1.73's defect one level down: a predicate asking "is there a bow"
+    # where the question is "is the bow worth more than the fight".
+    # Control: arrows removed from bot_kit, so hasRangedOption is false and the branch declines
+    # (lowHp 0/49, 0/68, 0/54 confirms it). Three runs at 25.8-28.7 fps: 6:8, 5:7, 6:9 -- margin
+    # -2, -2, -3, indistinguishable from -2, -2, -2 with the kite live. REFUTED.
+    #
+    # WHAT THE LEDGER POINTS AT INSTEAD, for whoever takes this next: the bot takes MORE DAMAGE PER
+    # BLOW than it deals -- 172/33 = 5.2 against the victim's 132/31 = 4.3, on identical iron
+    # swords. The counters say why: critWindowSwings reads bot 4-10 against victim 8-15, and crits
+    # 11-17 against 12-25. The opponent takes the early crit-window swing two to three times as
+    # often. That is a CRIT RATE asymmetry, and the crit hop is movement -- which is the one thing
+    # combatReachControl changes about this bot and not about its opponent.
+    #
     # ⛔ THE RANGED PHASE IS NOT WHAT LOSES THIS COURSE. MEASURED, DO NOT RE-DERIVE.
     # After the aim arbiter landed, the margin sat at -2, -2, -2 where it had been about -4, and
     # the obvious next suspect was the bow economy: a draw blocks sprinting, so shooting on the
@@ -1017,6 +1034,15 @@ class AllRound(Scenario):
         # exist (losCalls/losClosest/losSample/losNone) and, like chaseStats, no course printed
         # them. cq= is the entry/no-LOS split for the same question one layer down.
         ctx.log(f"  los={_stat(ctx, 'los')} cq={_stat(ctx, 'cq')} ctl={_stat(ctx, 'ctl')}")
+        # THE ONE THING THIS COURSE SHARES WITH edge_duel AND melee_basic DOES NOT: a 40x40 field
+        # with a VOID border. standOff says whether the cooldown stand-off is being refused here --
+        # i.e. whether fights are drifting to the rim where backing off is unsafe. It reads 0 on
+        # melee_basic (an open island) and 14-207 on a 5x5 platform, so a large number here would
+        # say this arena behaves like the platform and point the residual at the rim rather than at
+        # the melee. Both fighters, because only the bot carries the setting.
+        ctx.log(f"  standOff={_stat(ctx, 'standOff')} lowHp={_stat(ctx, 'lowHp')}"
+                f" | victim standOff={_stat(ctx, 'standOff', ctx.victim)}")
+        _ledger(ctx)
         yield Criterion("ranged hit while far >= 1", len(ranged) >= 1,
                         f"ranged_hits={len(ranged)}", load_sensitive=True)
         yield Criterion("kill", ctx.kills() >= 1, f"kills={ctx.kills()}",
