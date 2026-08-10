@@ -2352,6 +2352,8 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintHungryTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintSneakTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintCollideTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.fleeCollideWithThreatTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.fleeCollideMaxRadius = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowMax = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowSum = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowN = 0;
@@ -3033,6 +3035,9 @@ public class Py4jEntryPoint {
     public int fleeNoSprintSneak()       { return kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintSneakTicks; }
     /** Of the refused ticks, how many had a horizontal collision. */
     public int fleeNoSprintCollide()     { return kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintCollideTicks; }
+    /** Of those collisions: how many touched the chaser, and the furthest radius one happened at. */
+    public int fleeCollideThreat()       { return kaptainwutax.tungsten.task.RunAwayTask.fleeCollideWithThreatTicks; }
+    public int fleeCollideMaxRadius()    { return kaptainwutax.tungsten.task.RunAwayTask.fleeCollideMaxRadius; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a

@@ -331,6 +331,8 @@ public class RunAwayTask {
     public static volatile int fleeNoSprintSneakTicks;
     /** Of the refused ticks: how many had a horizontal collision, which also cancels sprint. */
     public static volatile int fleeNoSprintCollideTicks;
+    /** Of the mid-flight collisions: how many touched the chaser, and how far out they happened. */
+    public static volatile int fleeCollideWithThreatTicks, fleeCollideMaxRadius;
 
     /**
      * The reach the blows actually showed: mean 4.25, max 5.35 over 22 hits recorded at the rising
@@ -580,7 +582,19 @@ public class RunAwayTask {
                     // Related to the rim collision measured earlier but NOT the same event -- those
                     // stalls are fixed and these ticks are in motion -- so it gets its own counter
                     // rather than an inference carried across from a different measurement.
-                    if (player.horizontalCollision) fleeNoSprintCollideTicks++;
+                    if (player.horizontalCollision) {
+                        fleeNoSprintCollideTicks++;
+                        // WHAT is it hitting? On flat_field the only solid things are the chaser
+                        // and the platform rim. Two player boxes touch under ~1.2 blocks centre to
+                        // centre; 1.5 leaves margin. The rim was already ruled out for the STALLS
+                        // (TOUCHING 0 there) but these ticks are in motion, so the question is open
+                        // again and gets its own count rather than the earlier answer reused.
+                        double dd = player.getEntityPos().distanceTo(threat.getEntityPos());
+                        if (dd < 1.5) fleeCollideWithThreatTicks++;
+                        int r = (int) Math.round(Math.max(Math.abs(player.getX()),
+                                                          Math.abs(player.getZ())) * 10.0);
+                        if (r > fleeCollideMaxRadius) fleeCollideMaxRadius = r;
+                    }
                 }
             }
         }
