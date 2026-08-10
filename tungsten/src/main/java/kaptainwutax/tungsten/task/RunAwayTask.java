@@ -167,7 +167,14 @@ public class RunAwayTask {
                 // Recorded at the motionless tick itself, so the attribution needs no inference.
                 if (TungstenModDataContainer.isExecutorRunning()) stillExecutorTicks++;
                 else if (TungstenModDataContainer.PATHFINDER.active.get()) stillSearchTicks++;
-                else stillNobodyTicks++;
+                else {
+                    stillNobodyTicks++;
+                    // SPLIT THE "NOBODY" BUCKET. driveAwayRaw is also gated on !movementOwnsTick,
+                    // which is exactly MovementQueue.isRunning() (MixinClientPlayerEntity:92). If a
+                    // movement claimed the tick and did not move the bot, that is the gap; if not,
+                    // the decline is somewhere else again and the search continues one level down.
+                    if (kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) stillMoveQueueTicks++;
+                }
             }
             nearThreatTicks++;
         }
@@ -228,6 +235,8 @@ public class RunAwayTask {
     public static volatile int nearThreatTicks, stillNearThreatTicks;
     /** Of the motionless ticks: executor between legs, search in flight, or nobody driving. */
     public static volatile int stillExecutorTicks, stillSearchTicks, stillNobodyTicks;
+    /** Of the "nobody" ticks: how many had a MovementQueue claiming the tick without moving. */
+    public static volatile int stillMoveQueueTicks;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
         // WHERE THE OTHER TWO THIRDS GO. The flee drives 345 ticks and holds 72 of a 1200-tick
