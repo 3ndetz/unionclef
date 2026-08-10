@@ -891,6 +891,15 @@ class AllRound(Scenario):
         # moving target; neither can be met when the crosshair is only allowed to move five times a
         # second. That is the definition of this flag: a low frame rate could plausibly cause it.
         ranged = ctx.hp_drop_events(who="victim", min_dist=8)
+        # WHY THE BOT NEVER ARRIVES. Measured n=3: only 58-74 of ~2400 ticks reach COMBAT mode,
+        # the rest sit in APPROACH with the follow task live and never restarting. The follow
+        # chain is follow -> trail -> live direct-steer -> leap -> enterCombat(dist < 3.4), and
+        # FollowEntityTask already counts which gate eats the chase -- steer/leap/cooldown/
+        # losBlocked against the ticks it got. chaseStats() has existed and been exposed over
+        # py4j all along and NO course reads it, so the question "which of the five conditions
+        # blocks the last half-block" has been answerable and unanswered. Recorded, not gated.
+        ok_cs, cs = ctx.bot.py.try_call("chaseStats")
+        ctx.log(f"  chase: {cs if ok_cs else 'UNREADABLE'}")
         yield Criterion("ranged hit while far >= 1", len(ranged) >= 1,
                         f"ranged_hits={len(ranged)}", load_sensitive=True)
         yield Criterion("kill", ctx.kills() >= 1, f"kills={ctx.kills()}",
