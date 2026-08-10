@@ -311,6 +311,8 @@ public class RunAwayTask {
     public static volatile int stalledSeenAfterGuard, keysDownAfterGuardTicks;
     /** Distance to the threat at the moment each blow landed, in hundredths of a block. */
     public static volatile int hitDistMax, hitDistSum, hitDistN;
+    /** Of the flee's driving ticks, how many were spent sprinting. */
+    public static volatile int fleeSprintTicks;
     private static boolean wasHurtForReach = false;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
@@ -508,6 +510,13 @@ public class RunAwayTask {
         //
         // VoidGuard still runs after this and keeps its veto, which is where void safety belongs.
         fleeDriveTicks++;
+        // SPRINT SHARE OVER THE WHOLE FLEE, not just inside the killing band. The in-reach sample
+        // is a few dozen ticks and swung 0-14% between runs, too noisy to settle anything. This
+        // denominator is every tick the flee actually drives, which is hundreds -- and the question
+        // it answers is why a 12-block order collapses to blows landing at 4.25: a sprinting player
+        // covers 5.6 blocks a second, so a flee that cannot sprint loses the gap no matter where it
+        // points.
+        if (player.isSprinting()) fleeSprintTicks++;
 
         double yaw = Math.toRadians(player.getYaw());
         Vec3d facing = new Vec3d(-Math.sin(yaw), 0, Math.cos(yaw));
