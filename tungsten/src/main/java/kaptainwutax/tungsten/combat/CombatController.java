@@ -476,6 +476,9 @@ public class CombatController {
         // which the law did not predict and the physics explains: inside 2.0 the bot is in the
         // knockback, the mobs are shoved away, and it spends its time re-closing. The tuned
         // default sits at the minimum of both, so this line stays as it is.
+        // Set when a wounded bot has nothing to shoot with: it stops ADVANCING but does not step
+        // back. See the note at lowHpDeclined for why those are two different things.
+        boolean holdWounded = false;
         double strikeAt = STRIKE_DISTANCE;
         double backOffAt = TOO_CLOSE_DISTANCE;
         if (kaptainwutax.tungsten.TungstenConfig.get().combatReachControl) {
@@ -545,7 +548,24 @@ public class CombatController {
             // on the same jar. A wounded fighter with no ranged option has to fight.
             if (hp <= LOW_HP && dist > TriggerBot.REACH) {
                 if (!WeaponSelector.hasRangedOption(player)) {
+                    // ⛔ THE OLD BRANCH DID TWO THINGS, AND ONLY ONE OF THEM WAS WRONG.
+                    // Removing it whole cost edge_duel: n=8 on a healthy stand came back
+                    // +1,-1,+1,-3,-4,+1,-2,-5 -- median -1.5, 3 passes in 8 -- on a course that
+                    // closed 4/4 with the branch in place. The trigger for this change was
+                    // declared before that measurement ran.
+                    //
+                    // What kite() actually did: out.forward = false, and THEN out.back only when
+                    // dirSafe(back). On a 5x5 platform over void dirSafe(back) is false almost
+                    // everywhere near the rim, so there was never a retreat there -- only a bot
+                    // that stopped walking into a fight it was losing. That half is sound. The
+                    // half that is not is stepping OUT to a range where a bowless bot can do
+                    // nothing, which is what the predicate above still refuses.
+                    //
+                    // So: hold, do not withdraw. And do it with a flag rather than kite()'s early
+                    // return, because that return also skips the circle-strafe, the crit hop and
+                    // the trigger -- and melee_basic's gain rests on those still running.
                     lowHpDeclined++;          // the ticks this predicate gave back to the fight
+                    holdWounded = true;
                 } else {
                     lowHpTicks++;
                     kite(out, player, world, dist);
@@ -598,7 +618,9 @@ public class CombatController {
         boolean tooFar = dist > strikeAt;
         boolean tooClose = dist < backOffAt;
         out.active = true;
-        out.forward = tooFar && dirSafe(player, world, 1, 0);
+        // holdWounded: below half health, out of reach, nothing to shoot with. Stop closing --
+        // but out.back below is left to its own rule, so the bot holds ground instead of ceding it.
+        out.forward = tooFar && !holdWounded && dirSafe(player, world, 1, 0);
         // Did we ASK to close, and did the ask survive? Combat runs 416 ticks a fight and
         // lands zero swings, with the trigger's gate reporting "ready, but out of reach" —
         // so either forward is never requested, or something downstream overrides it.
