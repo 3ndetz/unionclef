@@ -538,6 +538,36 @@ The rule:
 Related in shape to 4c: a conclusion drawn from a sample selected by something other than the thing
 being studied. Here the sample was the courses on which the surviving behaviour happened to matter.
 
+## 4i. THE GATE'S STATISTIC IS RARELY THE MEASUREMENT'S STATISTIC (2026-08-10)
+
+A criterion answers "did this run pass". A comparison answers "is this build different". They want
+different numbers, and using the gate's number for the comparison is how this session produced three
+confident claims and withdrew all three.
+
+The duels are judged on kills minus deaths. About 27 exchanges decide a run, so that margin carries a
+standard deviation near **2.7** — six healthy `narrow_bridge_duel` runs read `+3, −2, −3, +1, −4, +1`.
+At n=6 the resolution is about ±2.2, and **every mechanism proposed for that course has been smaller
+than its own spread**. No amount of care in the fix rescues a measurement taken with a ruler that
+coarse; the answer is a finer ruler, not a fourth hypothesis.
+
+The rule:
+
+1. Before running a series, work out the spread of the statistic you intend to quote, from the data
+   you already have. If the effect you are hunting is smaller than it, the series will not answer
+   the question no matter how many runs it gets — n scales as the *square* of that ratio.
+2. Prefer a statistic that counts **events** over one that counts **outcomes**. The same duel that
+   yields ~13 deaths yields ~50 blows a side; blows resolve what the margin cannot, for free, on the
+   same runs.
+3. Look for the instrument that already exists before adding one. `DamageWatch` counts from the
+   client tick, so it had been running on the **opponent** all along — both fighters run this mod —
+   and no probe had ever read it. That is the fourth time this session the instrument was already in
+   the repo.
+4. A biased instrument is still usable as a **ratio between two sides measured the same way**.
+   `DamageWatch`'s total does not reconcile with deaths × 20, but it undercounts identically on both
+   fighters, and a shared bias cancels in a ratio while it does not in a total.
+5. Keep the gate as it is. It answers its own question correctly; it just must not be the only number
+   the comparison gets.
+
 ## 5. VIDEO
 
 `--record` on the run, then:
