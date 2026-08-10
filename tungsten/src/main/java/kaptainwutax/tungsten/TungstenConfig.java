@@ -188,6 +188,18 @@ public class TungstenConfig {
      * <p>It also carries this module's ONLY health awareness — below half a bar the bot breaks
      * contact instead of trading (see {@code CombatController.LOW_HP}). Before it, getHealth() was
      * read nowhere in tungsten at all.
+     *
+     * <p>⛔ THAT RETREAT IS NO LONGER UNCONDITIONAL, 2026-08-10. It now also requires a launcher
+     * and ammunition ({@code WeaponSelector.hasRangedOption}), because its whole justification is
+     * that out past reach the bow becomes the weapon — and on a sword-only kit there is no bow, so
+     * the bot walked out of range, dealt nothing, could not heal, and handed over the initiative.
+     *
+     * <p>Note what that means for reading THIS setting's measurements: the victim in the pvp duels
+     * is pinned to {@code combatReachControl=false}, so it never entered this block and never had
+     * the retreat. The bot did. Every "the bot loses a symmetric duel" figure recorded before that
+     * date was therefore taken with a handicap on ONE side that no longer exists — including the
+     * "4:4, 4:6, 4:4, 3:4, margin -0.75" series in CombatController and the verdict above it that
+     * distance tuning is exhausted. Re-measure before trusting either.
      */
     public boolean combatReachControl = true;
 
