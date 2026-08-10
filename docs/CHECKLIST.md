@@ -374,6 +374,30 @@ The failure this prevents is not carelessness -- it is comparing point estimates
 rigorous, which is exactly how a whole evening of measurements ends up unable to carry its own
 conclusions.
 
+## 4c. TWO RULES THAT COST MORE THAN THE VARIANCE ONE (2026-08-10)
+
+**Read the CLOSED tasks before you instrument.** The largest defect of that session --- a flee
+objective that ran itself into a corner and stood there --- was already written down, in one
+sentence, in a task marked completed: "seeks corners --- furthest from the threat has no
+continuation" (G-1.66). Finding it again from the outside cost thirteen refuted hypotheses and six
+reverted fixes. Closed does not mean absent; it often means *described and not yet fixed*. Grep the
+task list for the subsystem before building a single counter.
+
+**Measure across the population, not inside the condition.** Every wrong number that session ---
+nine corrections to figures I had published --- was the same error: a statistic taken over the
+ticks that already satisfied the thing being studied. "Sprint 3-5%" was measured inside melee
+range, where sprint fails by construction; over the whole flee it was 24%. A subsample selected by
+the condition under study is not a measurement of the population, and it will read as evidence.
+
+Two corollaries, both earned the hard way:
+
+- **Count the denominator, never assume it.** "538 of 1200 ticks" was a deficit invented by
+  assuming 60 seconds at 20 tps. The player entity does not tick while dead, and that course kills
+  the bot five times a run. Count it.
+- **A duplicated constant will drift.** The same reach band lived in the mod and the bench and
+  diverged twice in one evening, each time because one side was corrected. Care at the moment of
+  editing prevented neither. Have one side READ the other.
+
 ## 5. VIDEO
 
 `--record` on the run, then:
