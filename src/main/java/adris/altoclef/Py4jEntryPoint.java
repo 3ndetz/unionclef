@@ -13,8 +13,6 @@ import adris.altoclef.util.agent.AgentState;
 import adris.altoclef.util.agent.AgentActionButtons;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.agent.Pipeline;
-import baritone.api.pathing.calc.IPath;
-import baritone.api.utils.BetterBlockPos;
 import kaptainwutax.tungsten.path.movements.Rotation;
 
 import java.util.*;
@@ -805,29 +803,19 @@ public class Py4jEntryPoint {
                 || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
             return true;
         }
-        if (Nav.hasGoal()) {
-            Optional<IPath> pathq = _mod.getClientBaritone().getPathingBehavior().getPath();
-            if (pathq.isPresent()) {
-                return !pathq.get().positions().isEmpty();
-            }
-        }
-        return false;
+        // LEGACY FALLBACK DELETED (G-1.58: "sample pdLegacy, then delete the fallback").
+        // pdLegacy read 0 on every run of every course measured -- the legacy engine never drives,
+        // so asking it whether a path exists could only ever answer no.
+        return Nav.hasGoal();
     }
 
     public Vec3d getCurrentGoal() {
         Vec3d result = null;
         if (AltoClef.inGame()) {
-            // Try baritone path endpoint first
-            Optional<IPath> pathq = _mod.getClientBaritone().getPathingBehavior().getPath();
-            if (pathq.isPresent()) {
-                List<BetterBlockPos> pathlist = pathq.get().positions();
-                if (!pathlist.isEmpty()) {
-                    BetterBlockPos goalpos = pathlist.get(pathlist.size() - 1);
-                    result = new Vec3d(goalpos.getX(), goalpos.getY(), goalpos.getZ());
-                }
-            }
-            // Fallback to tungsten target
-            if (result == null && isTungstenActive()) {
+            // BARITONE WAS ASKED FIRST HERE, which was the wrong order and survived only because
+            // it never had an answer: pdLegacy is 0 on every measured run. Tungsten is the engine;
+            // it is now asked directly. (G-1.58: sample pdLegacy, then delete the fallback.)
+            if (isTungstenActive()) {
                 result = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.TARGET;
             }
         }
