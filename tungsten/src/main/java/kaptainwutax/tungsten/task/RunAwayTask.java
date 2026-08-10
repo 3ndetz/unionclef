@@ -175,6 +175,20 @@ public class RunAwayTask {
     public static void countExposure(ClientPlayerEntity player) {
         if (player == null || threat == null || !threat.isAlive() || threat.isRemoved()) return;
         double d = player.getEntityPos().distanceTo(threat.getEntityPos());
+
+        // CALIBRATE THE REACH BY THE BLOWS, not by arguing about hitbox widths. 3.0 was wrong, the
+        // 3.6 I "corrected" it to is wrong too -- 19 blows landed in a run where only 5 ticks were
+        // counted inside it. Record the distance AT the moment a blow arrives and let the
+        // distribution state the reach. hurtTime goes positive on the tick damage lands, so its
+        // rising edge is the event.
+        boolean hurtNow = player.hurtTime > 0;
+        if (hurtNow && !wasHurtForReach) {
+            int dd = (int) Math.round(d * 100.0);
+            if (dd > hitDistMax) hitDistMax = dd;
+            hitDistSum += dd;
+            hitDistN++;
+        }
+        wasHurtForReach = hurtNow;
         // STANDING, MEASURED DIRECTLY. Not "the flee did not steer this tick" and not "a search was
         // in flight" -- both are claims about which subsystem owns the tick, and I concluded "the
         // bot is standing" from them twice tonight and withdrew it twice, because the path executor
@@ -295,6 +309,9 @@ public class RunAwayTask {
     public static volatile int stillMaxRadius, stillRadiusSum;
     /** Stalled ticks seen after the guard, and how many still had a key held then. */
     public static volatile int stalledSeenAfterGuard, keysDownAfterGuardTicks;
+    /** Distance to the threat at the moment each blow landed, in hundredths of a block. */
+    public static volatile int hitDistMax, hitDistSum, hitDistN;
+    private static boolean wasHurtForReach = false;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
         // WHERE THE OTHER TWO THIRDS GO. The flee drives 345 ticks and holds 72 of a 1200-tick

@@ -2341,6 +2341,9 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.stillRadiusSum = 0;
         kaptainwutax.tungsten.task.RunAwayTask.stalledSeenAfterGuard = 0;
         kaptainwutax.tungsten.task.RunAwayTask.keysDownAfterGuardTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.hitDistMax = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.hitDistSum = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.hitDistN = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowMax = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowSum = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowN = 0;
@@ -2991,6 +2994,11 @@ public class Py4jEntryPoint {
     /** Blows the bot has TAKEN this run, and the total damage of them. */
     public int dwHits()      { return kaptainwutax.tungsten.combat.DamageWatch.hits; }
     public double dwDamage() { return kaptainwutax.tungsten.combat.DamageWatch.damage; }
+
+    /** Distance to the threat when blows landed: max, sum and count, in hundredths of a block. */
+    public int hitDistMax() { return kaptainwutax.tungsten.task.RunAwayTask.hitDistMax; }
+    public int hitDistSum() { return kaptainwutax.tungsten.task.RunAwayTask.hitDistSum; }
+    public int hitDistN()   { return kaptainwutax.tungsten.task.RunAwayTask.hitDistN; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a

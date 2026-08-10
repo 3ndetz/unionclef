@@ -503,6 +503,9 @@ class BowFlee(Scenario):
         # last one. dw counts blows taken and total damage; both are already tracked mod-side.
         okdw, dwh = ctx.bot.py.try_call("dwHits")
         _, dwd = ctx.bot.py.try_call("dwDamage")
+        _, hdm = ctx.bot.py.try_call("hitDistMax")
+        _, hds = ctx.bot.py.try_call("hitDistSum")
+        _, hdn = ctx.bot.py.try_call("hitDistN")
         ctx.log(f"  closest={closest} samples_in_reach={caught}/{len(ds)}"
                 f" | reachTicks={rt if okr else 'ABSENT'}(drawing {rd})"
                 f" nearTicks={nt if okn else 'ABSENT'}(drawing {nd})"
@@ -513,7 +516,8 @@ class BowFlee(Scenario):
                 f" of which moveQueue {mq}, KEYS DOWN {kd}, TOUCHING {tch},"
                 f" stallRadius max {mr}, sum {rs} tenths)"
                 f" | AFTER GUARD stalled {sag}, keys still down {kag}"
-                f" | blows taken {dwh if okdw else 'ABSENT'}, damage {dwd}")
+                f" | blows taken {dwh if okdw else 'ABSENT'}, damage {dwd}"
+                f" | hit dist max {hdm}, mean {round(hds/hdn,1) if hdn else 0} hundredths over {hdn}")
         # DO NOT MARK THE SURVIVAL CRITERION load_sensitive. It looks like a candidate -- runs
         # get judged at 10 fps, below the 14.0 floor -- but the data says the opposite of the
         # intuition: across 34 recorded runs r(fps, deaths) = +0.47, and runs ABOVE the floor
