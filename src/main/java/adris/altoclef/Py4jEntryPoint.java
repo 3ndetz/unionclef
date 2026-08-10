@@ -2324,6 +2324,8 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.nearTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.reachDrawingTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.nearDrawingTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.reachSprintTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.reachAwayTicks = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowMax = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowSum = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowN = 0;
@@ -2901,6 +2903,12 @@ public class Py4jEntryPoint {
 
     /** Of the near-reach ticks, how many had the bow drawn. */
     public int fleeNearDrawingTicks() { return kaptainwutax.tungsten.task.RunAwayTask.nearDrawingTicks; }
+
+    /** Of the in-reach ticks, how many were spent sprinting. */
+    public int fleeReachSprintTicks() { return kaptainwutax.tungsten.task.RunAwayTask.reachSprintTicks; }
+
+    /** Of the in-reach ticks, how many had the bot moving AWAY from the threat. */
+    public int fleeReachAwayTicks() { return kaptainwutax.tungsten.task.RunAwayTask.reachAwayTicks; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a

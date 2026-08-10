@@ -55,6 +55,9 @@ public class RunAwayTask {
     /** Of those ticks, how many had the bow drawn -- i.e. sprint unavailable. */
     public static volatile int reachDrawingTicks;
     public static volatile int nearDrawingTicks;
+    /** Of the in-reach ticks: how many were spent sprinting, and how many moving away. */
+    public static volatile int reachSprintTicks;
+    public static volatile int reachAwayTicks;
     private static PlayerEntity threat  = null;
     private static int     tickCounter  = 0;
 
@@ -171,7 +174,18 @@ public class RunAwayTask {
         // here: it holds at the line, the gap is eaten, it is caught flat-footed.
         //
         // So the gap alone is the wrong test. Hold only while the threat is NOT gaining ground.
+        // HEADING OR SPEED -- the two ways a gap is lost with sprint available, and they are not
+        // the same defect. If the bot is moving AWAY and still caught, it is out-run and the
+        // objective needs a bigger margin. If it is caught while moving sideways or toward the
+        // threat, the flee DIRECTION is wrong at that instant and no margin will save it.
+        // Counted per tick, because the exposure is ~1% of the run and a 1 Hz poll sees none of it.
         if (dist <= 3.0) {
+            boolean sprinting = player.isSprinting();
+            net.minecraft.util.math.Vec3d v = player.getVelocity();
+            net.minecraft.util.math.Vec3d away = player.getEntityPos().subtract(threat.getEntityPos());
+            boolean movingAway = (v.x * away.x + v.z * away.z) > 0;
+            if (sprinting) reachSprintTicks++;
+            if (movingAway) reachAwayTicks++;
             reachTicks++;                       // inside a sword swing
             // WAS THE BOW DRAWN WHILE IT HAPPENED? Vanilla will not sprint with a bow drawn, so
             // a draw taken at the wrong moment hands a sprinting chaser the metres it needs. The
