@@ -321,6 +321,8 @@ public class RunAwayTask {
     public static volatile int hitDistMax, hitDistSum, hitDistN;
     /** Of the flee's driving ticks, how many were spent sprinting. */
     public static volatile int fleeSprintTicks;
+    /** Of the non-sprinting drive ticks: how many had a shot running, and how many did not. */
+    public static volatile int fleeNoSprintBowTicks, fleeNoSprintOtherTicks;
 
     /**
      * The reach the blows actually showed: mean 4.25, max 5.35 over 22 hits recorded at the rising
@@ -534,6 +536,12 @@ public class RunAwayTask {
         // covers 5.6 blocks a second, so a flee that cannot sprint loses the gap no matter where it
         // points.
         if (player.isSprinting()) fleeSprintTicks++;
+        // WHERE THE OTHER HALF GOES. Sprint sits at ~50% of drive ticks; the bow owns the camera
+        // for whole shots and vanilla sprints forward only, so a shot in progress is the obvious
+        // suspect -- and suspects have been wrong thirteen times tonight. Attribute it instead:
+        // of the ticks NOT sprinting, how many had a shot running.
+        else if (BowShooter.isActive()) fleeNoSprintBowTicks++;
+        else fleeNoSprintOtherTicks++;
 
         // TAKE THE CAMERA THE BOW JUST GAVE UP. Sprint is pressed on fwd > 0.6 and vanilla sprints
         // forward only. Releasing the bow mid-shot at a closing gap raised the sprint share from

@@ -2345,6 +2345,8 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.hitDistSum = 0;
         kaptainwutax.tungsten.task.RunAwayTask.hitDistN = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeSprintTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintBowTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintOtherTicks = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowMax = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowSum = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowN = 0;
@@ -3013,6 +3015,10 @@ public class Py4jEntryPoint {
      * A value duplicated across two repositories of truth will drift; one that is read cannot.
      */
     public double fleeReachBand() { return kaptainwutax.tungsten.task.RunAwayTask.REACH_BAND; }
+
+    /** Of the flee's non-sprinting drive ticks: with a shot running, and without one. */
+    public int fleeNoSprintBow()   { return kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintBowTicks; }
+    public int fleeNoSprintOther() { return kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintOtherTicks; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a
