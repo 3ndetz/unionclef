@@ -961,7 +961,26 @@ class AllRound(Scenario):
                         f"ranged_hits={len(ranged)}", load_sensitive=True)
         yield Criterion("kill", ctx.kills() >= 1, f"kills={ctx.kills()}",
                         load_sensitive=True)
-        yield ctx.survival_criterion()   # 1 kill / 4 deaths is a LOSS, not a pass
+        # ⛔ THIS WAS survival_criterion() -- "bot deaths <= 0" -- AND NO BUILD COULD EVER PASS IT.
+        # The victim punks back for the whole 120 s with the same engine and an iron sword, no
+        # scenario in this suite issues armour, and 206 damage over 40 hits means four blows kill.
+        # Deaths are the currency of this course: the honest full-length baseline is 5:6 and 4:10,
+        # and the sweep that prompted this read 4:10 and 6:8. A gate the course's own design makes
+        # unreachable is the mirror of a check that cannot fail, and worth exactly as little.
+        #
+        # The right criterion was already written down HERE, in the bench's own docstrings.
+        # survival_criterion says it is "for scenarios where the opponent is NOT a symmetric
+        # threat (a fleeing runner, a slowed chaser we kite)"; exchange_criterion says
+        # "demanding 0 deaths against an identical opponent would measure luck". The comment at
+        # the top of this class had already concluded the same thing from the server log --
+        # "it is losing a SYMMETRIC duel ... by roughly 25:14". Three statements of the answer,
+        # none of them applied.
+        #
+        # THIS DOES NOT TURN THE COURSE GREEN, and it is not meant to. On the current build the
+        # margins are -6 and -2, so it still fails -- but now it fails for something a build can
+        # change, and the bot carries a BOW the opponent does not, so kills >= deaths is if
+        # anything a generous bar here.
+        yield ctx.exchange_criterion()   # mutual duel, and the bot has the ranged advantage
         # HOW MANY TIMES DID IT ACTUALLY CONNECT. Read off a timeline by hand for the first time
         # today, and it is the sharpest number this course has: over a full run the bot landed
         # FOUR swings (lifetimeHits 105 -> 109) while dying twice. A sword swings ~1.6/s, so ~13 s
