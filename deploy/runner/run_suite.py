@@ -74,6 +74,26 @@ try:
 except Exception:                                  # very old interpreters: leave it alone
     pass
 
+def _jar_fingerprint():
+    """(filename, "sizeB@mtime") of the jar deploy_jar.sh would copy right now, or (None, None).
+
+    Mirrors that script's selection deliberately -- newest unionclef-1.21.11-*.jar in
+    versions/1.21.11/build/libs, minus the -all/-sources variants -- because the point is to
+    identify the artefact a refresh WOULD deploy, not the one someone meant to deploy. Size and
+    mtime rather than a hash: a rebuild moves both even when the bytecode is identical, and "a
+    build happened mid-series" is exactly the event worth flagging."""
+    import glob
+    d = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                     "versions", "1.21.11", "build", "libs")
+    cands = [p for p in glob.glob(os.path.join(d, "unionclef-1.21.11-*.jar"))
+             if "-all" not in os.path.basename(p) and "-sources" not in os.path.basename(p)]
+    if not cands:
+        return (None, None)
+    p = max(cands, key=os.path.getmtime)
+    st = os.stat(p)
+    return (os.path.basename(p), f"{st.st_size}B@{int(st.st_mtime)}")
+
+
 from uctest.actors import Bot                       # noqa: E402
 from uctest.arena import ArenaBuilder               # noqa: E402
 from uctest.harness import Artifacts, Rcon, wait_for  # noqa: E402
@@ -502,6 +522,15 @@ def _main():
     os.makedirs(art_root, exist_ok=True)
     print(f"artifacts: {art_root}")
 
+    # WHICH JAR IS THIS SERIES MEASURING? Recorded at the start, checked before every run.
+    # A client refresh deploys whatever is in build/libs at the moment it fires, and the
+    # starvation and drift guards make refreshes common and mid-series. Until now the only
+    # protection was an operator rule in a comment ("do not build while a series is running"),
+    # which is not a measurement. This is: if the build output moves under the suite, every run
+    # from that point carries `jar_changed` and says so in the SUMMARY.
+    jar0 = _jar_fingerprint()
+    print(f"jar: {jar0[0]} {jar0[1]}" if jar0[0] else "jar: NOT FOUND in build/libs")
+
     rcons = {name: Rcon(w["container"]) for name, w in WORLDS.items()}
     flat = rcons["flat"]
     wait_for("server rcon", lambda: "players" in flat.cmd("list"), 300, 5)
@@ -533,8 +562,14 @@ def _main():
         # landed. The starvation guard added 2026-08-10 makes them COMMON and mid-series, which is
         # the third time that guard has taken a rarely-exercised path and put it on the hot one.
         #
-        # Proper fix (not done): record the jar's hash when the suite starts and either redeploy
-        # THAT artefact here or refuse and mark the series. Until then the rule is for the operator:
+        # HALF-FIXED 2026-08-10: the suite now fingerprints the jar deploy_jar.sh would copy, at
+        # start and before every run, and marks every run after a change with `jar_changed` in the
+        # log and in the SUMMARY. So a swap can no longer happen silently -- but it is still
+        # DETECTION, not prevention: this function will happily deploy the new artefact. Keeping
+        # the old one and redeploying THAT would mean the suite holding its own copy, which is a
+        # bigger change than the problem currently justifies.
+        #
+        # So the operator rule stands and is now enforced by a witness rather than by memory:
         # DO NOT BUILD while a series is running. Prepare edits in the tree; build after the last run.
         print(f"  refreshing clients: {why}")
         script = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -576,8 +611,16 @@ def _main():
     results = []
     for cls in scenarios:
         for rep in range(args.repeat):
+            # Checked BEFORE the run, not after a refresh, because a build can land at any point
+            # and the next refresh is only the moment it reaches the clients.
+            jar_now = _jar_fingerprint()
+            if jar_now != jar0:
+                print(f"  [!] the build output changed under this series: {jar0} -> {jar_now}. "
+                      f"Runs from here are NOT the same code as the ones before it")
             res = run_scenario(cls, state["rcons"], state["bot"], state["victim"],
                                art_root, args.record)
+            if jar_now != jar0:
+                res["jar_changed"] = f"{jar0[0]} -> {jar_now[0]}"
             # Retry an fps-invalidated run ONCE on fresh clients. If it comes back invalid again,
             # the load is not ours to fix and the INVALID stands honestly.
             if res.get("invalid") and not res.get("refreshed"):
@@ -693,7 +736,8 @@ def _main():
         # guess, and the SUMMARY is the part that gets quoted into comparisons, so it belongs here
         # where the reader can see a 29-and-17 pair for themselves.
         fps_col = f"  {r['avg_fps']:.1f}fps" if r.get("avg_fps") is not None else ""
-        print(f"  {r['id']:28s} {status}{fps_col}{extra}{starved}")
+        jarcol = f"  [jar changed mid-series: {r['jar_changed']}]" if r.get("jar_changed") else ""
+        print(f"  {r['id']:28s} {status}{fps_col}{extra}{starved}{jarcol}")
     import json
     with open(os.path.join(art_root, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, indent=1, default=str)
