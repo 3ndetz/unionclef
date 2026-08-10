@@ -140,16 +140,26 @@ class NarrowBridgeDuel(Scenario):
         # ground at its back. Read this before blaming or clearing the guard. Recorded, not
         # gated: it is a diagnostic, and a number that gates nothing cannot be gamed into green.
         ok, rim = ctx.bot.py.try_call("rimAtBackTicks")
-        # THIS COURSE IS BIMODAL: it either engages (14 kills, rimBack=29) or barely fights at
-        # all (0-1 kills, rimBack=0) on the SAME jar. rimBack turned out to be a witness to
-        # whether the fight happened, not a cause of losing it -- the guard firing correlates
-        # with WINNING. So print what separates the two modes instead of guessing again:
-        # how close the fighters ever got, and how long it took them to reach each other.
+        # THIS COURSE WAS CALLED BIMODAL: it either engaged (14 kills, rimBack=29) or barely
+        # fought at all (0-1 kills, rimBack=0) on the SAME jar. rimBack turned out to be a witness
+        # to whether the fight happened, not a cause of losing it -- the guard firing correlates
+        # with WINNING. So print what separates the modes instead of guessing again: how close the
+        # fighters ever got, and how long it took them to reach each other.
+        # WHAT THE PROBE ACTUALLY CAUGHT (2026-08-10, two runs): NEITHER mode. Both engaged hard
+        # -- kills 12 and 11, rimBack 33 and 91 -- and both LOST the trade (deaths 15 and 17).
+        # "Barely fights" did not appear. So the live failure here is a losing exchange, not a
+        # no-show, and the no-show is a separate mode still waiting to be caught.
         ds = [s["dist"] for s in ctx.samples if s.get("dist") is not None]
         closest = min(ds) if ds else None
-        # first moment they were within a sword's reach; None means they never met
+        # First moment they were within a sword's reach; None means they never met.
+        # The 3.0 that used to sit here was GUESSED, and it reported met_at=None on a run with
+        # TWELVE kills -- a threshold below the distance the bot actually kills at cannot witness
+        # a meeting. Read the band from the mod like the bow_flee probe does: it is calibrated
+        # from the blows (mean 4.25, max 5.35), and asking for it means it can only be wrong once.
+        okb, band = ctx.bot.py.try_call("fleeReachBand")
+        band = band if okb else 5.5
         met = next((s["t"] for s in ctx.samples
-                    if s.get("dist") is not None and s["dist"] <= 3.0), None)
+                    if s.get("dist") is not None and s["dist"] <= band), None)
         ctx.log(f"  rimBack={rim if ok else 'ABSENT'} closest={closest} met_at={met}")
         # Same frame-gated aim as melee_basic; see the note there.
         yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}",
