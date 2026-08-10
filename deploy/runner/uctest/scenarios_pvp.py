@@ -173,6 +173,21 @@ class EdgeDuel(Scenario):
         # never fired and any change is something else.
         ctx.log(f"  lowHp={_stat(ctx, 'lowHp')} standOff={_stat(ctx, 'standOff')}")
         _ledger(ctx)
+        # WHY THE TRADE IS STILL LEVEL RATHER THAN WON. After the stand-off fix this course sits at
+        # a mean margin of -0.27 against the baseline engine, i.e. a coin flip, and a gate of
+        # "kills >= deaths" against an equal opponent passes about half the time by construction.
+        # Winning it needs the engine to be BETTER, not equal, and the trigger already counts every
+        # reason it declines to click -- its own comment says exactly one of them is the answer.
+        # allround has printed these for a while and this course, which is where the duel is
+        # cleanest, never did.
+        #
+        # ⛔ READ THE MEANS AS MEANS OVER REJECTIONS. angleMean and reachMean accumulate only inside
+        # their failure branches, so they describe the swings that were REFUSED, not all swings.
+        # Misread twice already.
+        ok_gs, gs = ctx.bot.py.try_call("gateStats")
+        ctx.log(f"  gates: {gs if ok_gs else 'UNREADABLE'}")
+        ok_cs2, cs2 = ctx.bot.py.try_call("closeStats")
+        ctx.log(f"  close: {cs2 if ok_cs2 else 'UNREADABLE'}")
         yield ctx.exchange_criterion()          # mutual duel: must not lose it
         # self-falls is NOT flagged: low fps is a plausible cause (nav_ladder self-falls at 9.4-9.9
         # fps, origin still open) but that is a correlation, not the measurement the aim case has.
@@ -1021,6 +1036,22 @@ class AllRound(Scenario):
         ok, gs = ctx.bot.py.try_call("gateStats")
         yield Criterion("swing gates (recorded, not gated)", True,
                         str(gs) if ok and gs else "unreadable", gate=False)
+        # ⛔ AND THE SAME COUNTERS FROM THE OPPONENT, WHICH IS RUNNING THIS MOD TOO.
+        # The bot's own line says reach refuses 178 of 285 evaluations -- it is out of range on
+        # 62% of the ticks it could have swung on. That number is USELESS alone: both fighters
+        # chase with the same code, so 62% might simply be what this arena costs. What decides
+        # whether it is a defect is whether the VICTIM's share is the same or lower.
+        #
+        # This is the ledger lesson applied to the trigger: DamageWatch had been counting on the
+        # opponent all along and no probe read it, and reading it turned a coin-flip margin into a
+        # 3.2 sigma result the same afternoon. gateStats and punkStats are in exactly that position
+        # -- exposed over py4j, running on both clients, and read on one.
+        okv, gsv = ctx.victim.py.try_call("gateStats")
+        yield Criterion("swing gates, VICTIM (recorded, not gated)", True,
+                        str(gsv) if okv and gsv else "unreadable", gate=False)
+        okvp, psv = ctx.victim.py.try_call("punkStats")
+        yield Criterion("punk task, VICTIM (recorded, not gated)", True,
+                        str(psv) if okvp and psv else "unreadable", gate=False)
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
 
