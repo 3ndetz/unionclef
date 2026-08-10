@@ -178,6 +178,23 @@ public class TungstenConfig {
     /**
      * Hold the melee distance as a function of the ATTACK COOLDOWN instead of a fixed band.
      *
+     * <p>⛔ THE EVIDENCE BELOW IS DEAD, AND THE SETTING WAS MEASURED PROPERLY ON 2026-08-10.
+     * The allround figures cited in the next paragraph are n=2 an arm on the course that was later
+     * proven to be ending at ~20 s of its 120 s, i.e. they describe the approach and not the fight.
+     * The paragraph is kept because its METHOD is right — a mirror duel cancels a symmetric change,
+     * so only an asymmetric arm can measure one — and that method is what finally produced a number:
+     * <pre>
+     *   edge_duel, n=11 an arm, arms interleaved, starved runs excluded
+     *     bot carries it, victim on the baseline   margins -7 -5 -2 0 -10 +2 -4 -2 -4 -6 -4  mean -3.82
+     *     neither side carries it (the mirror)     margins  0 +2 -5 +1  +1 -1 +1 +4  0 -3 +1  mean +0.09
+     * </pre>
+     * 3.2 sigma, and the mirror's +0.09 is the structural zero that makes the other column readable.
+     * On melee_basic, whose spread is 0.75 and which would show a shift that size at more than five
+     * standard errors, the same comparison reads median 0 over n=7. So this setting is NEUTRAL on
+     * open ground and expensive where a retreat is impossible — see the stand-off note in
+     * {@code CombatController}, which now refuses the band change when {@code dirSafe(back)} is
+     * false, and which is itself NOT yet proven.
+     *
      * <p>ON since 2026-08-02, proved on the ASYMMETRIC course because melee_basic is a MIRROR duel — both fighters
      * are this same jar with the same kit — so shipping a combat change on by default hands it to
      * the opponent too and the course stays a coin flip. The only way this stand can prove the
