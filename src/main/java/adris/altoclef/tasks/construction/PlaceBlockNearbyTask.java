@@ -239,8 +239,10 @@ public class PlaceBlockNearbyTask extends Task {
     private void stopPlacing() {
         AltoClef.getInstance().getInputControls().release(Input.SNEAK);
         //mod.getControllerExtras().mouseClickOverride(1, false);
-        // Oof, these sometimes cause issues so this is a bit of a duct tape fix.
-        Nav.stopBuilding();
+        // The duct-tape `Nav.stopBuilding()` that stood here is gone with G-0a: this task places
+        // through PlaceBlockTask, which now owns the tungsten build queue and clears its own cell
+        // in onStop. Clearing the shared queue from here as well would cancel whatever ELSE is
+        // building, which is not what a nearby-place giving up should mean.
     }
 
     private BlockPos locateClosePlacePos(AltoClef mod) {

@@ -75,8 +75,13 @@ public class EnterNetherPortalTask extends Task {
             Nav.clearGoal();
             mod.getClientBaritone().getMineProcess().onLostControl();
             mod.getClientBaritone().getFarmProcess().onLostControl();
+            // ⛔ THESE TWO LINES DO NOTHING, AND THEY ARE LEFT THAT WAY DELIBERATELY.
+            // The two above them cancel a process (`getMineProcess().onLostControl()`); these
+            // only FETCH one and drop it. A third line of the same shape asked for the builder
+            // and was removed with G-0a, because nothing starts the builder any more -- but
+            // adding the missing .onLostControl() to these two is a behaviour change to portal
+            // entry, not a cleanup, and it gets its own pass and its own test.
             mod.getClientBaritone().getGetToBlockProcess();
-            mod.getClientBaritone().getBuilderProcess();
             mod.getClientBaritone().getFollowProcess();
             mod.getInputControls().release(Input.SNEAK);
             mod.getInputControls().release(Input.MOVE_BACK);

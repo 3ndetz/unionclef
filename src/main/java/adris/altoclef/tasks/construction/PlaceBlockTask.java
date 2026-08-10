@@ -13,12 +13,10 @@ import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.ItemHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
-import baritone.api.schematic.AbstractSchematic;
-import baritone.api.schematic.ISchematic;
+import kaptainwutax.tungsten.helpers.BlockPlaceHelper;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.Item;
 import net.minecraft.util.math.BlockPos;
@@ -141,20 +139,58 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
             setDebugState("Alternative way: Trying to go above block to place block.");
             return new GetToBlockTask(target.up(), false);
         } else {
-            setDebugState("Letting baritone place a block.");
-            // Perform baritone placement
-            if (!Nav.isBuilding()) {
-                Debug.logInternal("Run Structure Build");
-                ISchematic schematic = new PlaceStructureSchematic(mod);
-                mod.getClientBaritone().getBuilderProcess().build("structure", schematic, target);
+            // TUNGSTEN PLACES IT NOW (G-0a). What stood here asked baritone's BuilderProcess to
+            // build a schematic that was 1x1x1 -- "put one of these blocks in that cell" dressed
+            // up as a structure. Tungsten's build queue is that request without the costume: it
+            // walks to a placing position, aims with a live raytrace, and goes through the same
+            // rate gate as every other placement in this project.
+            //
+            // The block is chosen HERE rather than by the queue because the choice is altoclef's
+            // question, not the placer's: `toPlace` is a preference list and `useThrowaways` opens
+            // it to whatever the settings call disposable. The queue equips by name from the
+            // hotbar, so the item has to be in the hotbar first -- which is what forceEquipItem
+            // is for, and it also tells us WHICH of the candidates we actually got.
+            if (!mod.getSlotHandler().forceEquipItem(acceptableItems(mod))) {
+                setDebugState("No placeable block in the inventory.");
+                return null;
+            }
+            String blockId = heldBlockId(mod);
+            if (blockId == null) {
+                setDebugState("Held item is not a block.");
+                return null;
+            }
+            setDebugState("Placing " + blockId + " at " + target.toShortString());
+            if (BlockPlaceHelper.queued() == 0) {
+                // beginBatch, not enqueue: a previous cell that the drain gave up on must not sit
+                // in front of this one. See BlockPlaceHelper.beginBatch — a //sphere once left 37
+                // cells queued and the next four-block structure never got built.
+                BlockPlaceHelper.beginBatch(List.of(target), blockId);
             }
         }
         return null;
     }
 
+    /** Items this task will accept in hand: the requested blocks, plus the throwaways when the
+     *  caller allowed them. Order matters — forceEquipItem takes the first one it finds. */
+    private Item[] acceptableItems(AltoClef mod) {
+        Item[] wanted = ItemHelper.blocksToItems(toPlace);
+        if (!useThrowaways) return wanted;
+        return ArrayUtils.addAll(wanted,
+                mod.getClientBaritoneSettings().acceptableThrowawayItems.value.toArray(new Item[0]));
+    }
+
+    /** Registry id of the block the held item would place, or null when it would place nothing. */
+    private static String heldBlockId(AltoClef mod) {
+        Item held = mod.getPlayer().getMainHandStack().getItem();
+        if (!(held instanceof net.minecraft.item.BlockItem bi)) return null;
+        return net.minecraft.registry.Registries.BLOCK.getId(bi.getBlock()).toString();
+    }
+
     @Override
     protected void onStop(Task interruptTask) {
-        Nav.stopBuilding();
+        // Drop OUR cell, not "whatever the builder was doing": the queue is shared, and clearing
+        // it is the same contract onLostControl had on the process it replaced.
+        BlockPlaceHelper.clearQueue();
     }
 
     //TODO: Place structure where a leaf block was???? Might need to delete the block first if it's not empty/air/water.
@@ -186,40 +222,4 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
         return failCount % 4 == 3;
     }
 
-    private class PlaceStructureSchematic extends AbstractSchematic {
-
-        private final AltoClef _mod;
-
-        public PlaceStructureSchematic(AltoClef mod) {
-            super(1, 1, 1);
-            _mod = mod;
-        }
-
-        @Override
-        public BlockState desiredState(int x, int y, int z, BlockState blockState, List<BlockState> available) {
-            if (x == 0 && y == 0 && z == 0) {
-                // Place!!
-                if (!available.isEmpty()) {
-                    for (BlockState possible : available) {
-                        if (possible == null) continue;
-                        if (useThrowaways && _mod.getClientBaritoneSettings().acceptableThrowawayItems.value.contains(possible.getBlock().asItem())) {
-                            return possible;
-                        }
-                        if (Arrays.asList(toPlace).contains(possible.getBlock())) {
-                            return possible;
-                        }
-                    }
-                }
-                Debug.logInternal("Failed to find throwaway block");
-                // No throwaways available!!
-                // BlockOptionalMeta(COBBLESTONE).getAnyBlockState() returns the first of that
-                // block's states, and cobblestone has exactly ONE -- so this is its default state
-                // and nothing more. Safe HERE for that reason; the same swap on a block with
-                // variants (stairs, slabs, logs) would silently pick one and would not be.
-                return Blocks.COBBLESTONE.getDefaultState();
-            }
-            // Don't care.
-            return blockState;
-        }
-    }
 }

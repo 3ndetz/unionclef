@@ -177,25 +177,17 @@ public final class Nav {
         }
     }
 
-    /**
-     * Is a schematic being built right now?
-     *
-     * <p>Five of the eight builder calls are these two questions -- am I building, stop building --
-     * asked by tasks that are about to take the body for something else. Starting a build still
-     * names the engine, because it hands over a schematic and there is nowhere else yet to hand it.
-     */
-    public static boolean isBuilding() {
-        baritone.Baritone b = engine();
-        return b != null && b.getBuilderProcess().isActive();
-    }
-
-    /** Stop building. Safe to call when nothing is. */
-    public static void stopBuilding() {
-        baritone.Baritone b = engine();
-        if (b != null) {
-            b.getBuilderProcess().onLostControl();
-        }
-    }
+    // isBuilding() / stopBuilding() USED TO LIVE HERE, and G-0a removed both.
+    //
+    // Their javadoc said "five of the eight builder calls are these two questions -- am I
+    // building, stop building -- asked by tasks that are about to take the body for something
+    // else", and that the third question, starting a build, still named the engine "because it
+    // hands over a schematic and there is nowhere else yet to hand it". There is now: the schematic
+    // was always 1x1x1, and tungsten's build queue takes that request directly.
+    //
+    // With the only starter gone, "am I building" could only answer false and "stop building" could
+    // only be a no-op, so both went, along with their two remaining call sites. Nothing in altoclef
+    // touches BuilderProcess any more.
 
     /** Stop exploring. Safe to call when nothing is. */
     public static void stopExploring() {
