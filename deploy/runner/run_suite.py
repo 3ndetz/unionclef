@@ -510,6 +510,18 @@ def _main():
     state = {"rcons": rcons, "bot": bot, "victim": victim}
 
     def refresh_clients(why):
+        # ⛔ THIS REDEPLOYS WHATEVER IS CURRENTLY BUILT, NOT WHAT THE SERIES STARTED WITH.
+        # deploy_jar.sh copies the current build output. Build anything while a series is running
+        # and the next automatic refresh swaps the jar under the measurement, mid-series, with
+        # nothing in the log to say the runs before and after came from different code.
+        #
+        # It was nearly harmless while refreshes only fired on INVALID -- rare, and wherever they
+        # landed. The starvation guard added 2026-08-10 makes them COMMON and mid-series, which is
+        # the third time that guard has taken a rarely-exercised path and put it on the hot one.
+        #
+        # Proper fix (not done): record the jar's hash when the suite starts and either redeploy
+        # THAT artefact here or refuse and mark the series. Until then the rule is for the operator:
+        # DO NOT BUILD while a series is running. Prepare edits in the tree; build after the last run.
         print(f"  refreshing clients: {why}")
         script = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                               "deploy_jar.sh")
