@@ -153,6 +153,9 @@ public class BowShooter {
     }
 
     public static boolean isActive() { return active; }
+
+    /** Is the bow being drawn right now? A drawn bow cannot sprint (vanilla), which is why it matters. */
+    public static boolean isDrawing() { return drawing; }
     public static int getShotsFired() { return shotsFired; }
 
     /**

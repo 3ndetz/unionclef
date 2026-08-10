@@ -52,6 +52,9 @@ public class RunAwayTask {
      */
     public static volatile int reachTicks;
     public static volatile int nearTicks;
+    /** Of those ticks, how many had the bow drawn -- i.e. sprint unavailable. */
+    public static volatile int reachDrawingTicks;
+    public static volatile int nearDrawingTicks;
     private static PlayerEntity threat  = null;
     private static int     tickCounter  = 0;
 
@@ -168,8 +171,17 @@ public class RunAwayTask {
         // here: it holds at the line, the gap is eaten, it is caught flat-footed.
         //
         // So the gap alone is the wrong test. Hold only while the threat is NOT gaining ground.
-        if (dist <= 3.0) reachTicks++;          // inside a sword swing
-        else if (dist <= 4.5) nearTicks++;      // one stride from one
+        if (dist <= 3.0) {
+            reachTicks++;                       // inside a sword swing
+            // WAS THE BOW DRAWN WHILE IT HAPPENED? Vanilla will not sprint with a bow drawn, so
+            // a draw taken at the wrong moment hands a sprinting chaser the metres it needs. The
+            // course fires every 3s and the bot dies about every 12s, so the cadences are close
+            // enough to suspect and far too close to assert. This counts it instead.
+            if (BowShooter.isDrawing()) reachDrawingTicks++;
+        } else if (dist <= 4.5) {
+            nearTicks++;                        // one stride from one
+            if (BowShooter.isDrawing()) nearDrawingTicks++;
+        }
         boolean closing = lastThreatDist >= 0 && dist < lastThreatDist - 0.01;
         lastThreatDist = dist;
         if (!closing && dist >= keepDistance + 1.5) {
