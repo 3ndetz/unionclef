@@ -425,6 +425,34 @@ The rule:
 The general form is rule 4c's: a statistic taken under conditions selected by something other than
 the thing you are studying. Here the selector was the clock rather than the code.
 
+## 4e. ONE CONDITION CAN HOLD SEVERAL BEHAVIOURS — DELETING IT DELETES ALL OF THEM (2026-08-10)
+
+A branch is not one decision. `if (wounded && out of reach)` held **two**: stepping OUT to a range
+where a bowless bot can do nothing (unjustified — the comment above it argued from a bow the kit did
+not carry), and declining to walk INTO a fight it was losing (perfectly sound). Removing the branch
+removed both, and the second one was doing all the work on the course where the first was impossible:
+on a 5×5 platform over void `dirSafe(back)` is false near the rim, so there had never been a retreat
+there at all.
+
+The bill: `melee_basic` improved and `edge_duel` went from **4/4 to 3 passes in 8**, median −1.5.
+
+The rule:
+
+1. Before deleting or gating a condition, enumerate every behaviour it currently produces — read the
+   function it calls, do not infer from the condition's name or its comment. The comment states the
+   author's *intent*; the callee states the *effect*.
+2. Check each behaviour against a course where the OTHERS cannot operate. Here the retreat was
+   impossible on `edge_duel` by terrain, which is exactly what made that course able to isolate the
+   hold — and exactly why measuring only `melee_basic` certified the change.
+3. When they turn out to be separable, separate them in the code rather than choosing one. The fix
+   was a flag suppressing the forward press, NOT the callee's early return — that return also skipped
+   the strafe, the crit hop and the trigger, and the other course's gain depended on those.
+4. Re-measure **every** course the split touches, not the one being repaired. Winning one back while
+   quietly losing the other is invisible from a single-course measurement.
+
+Related in shape to 4c: a conclusion drawn from a sample selected by something other than the thing
+being studied. Here the sample was the courses on which the surviving behaviour happened to matter.
+
 ## 5. VIDEO
 
 `--record` on the run, then:
