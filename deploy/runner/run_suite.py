@@ -54,6 +54,13 @@ MAX_STARVE_REFRESHES = 2
 #
 # The ratio has room: run-to-run jitter on a healthy stand measures about 6% (27.9-29.6 over six
 # runs), so a quarter of the frame rate is well outside it and still catches 29 -> 20.
+#
+# EXERCISED, not merely written: the branch was forced by setting this above 1.0 for one
+# --repeat 2 run, and all four of its jobs happened -- the run marked, both frame rates printed,
+# a rebuild spent from the capped budget, and "[fps drift ... - not comparable]" in the SUMMARY.
+# Worth the five minutes: the starvation guard beside it crashed the eight-run series it existed
+# to protect the first time it fired, and its successor inspected the first attempt while the
+# flake retry replaced the result. Two guards, two holes, both only visible on the path that fires.
 FPS_DRIFT_RATIO = 0.75
 import sys
 import time
