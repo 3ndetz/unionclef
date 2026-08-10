@@ -160,7 +160,15 @@ public class RunAwayTask {
         // 0.02 blocks/tick nothing is going anywhere, whoever is nominally driving.
         if (d <= 5.0) {
             Vec3d hv = player.getVelocity();
-            if (Math.sqrt(hv.x * hv.x + hv.z * hv.z) < 0.02) stillNearThreatTicks++;
+            if (Math.sqrt(hv.x * hv.x + hv.z * hv.z) < 0.02) {
+                stillNearThreatTicks++;
+                // WHICH STATE IS HOLDING IT. Three candidates were listed and none guessed at:
+                // the executor between legs, a search in flight, or neither (nobody driving).
+                // Recorded at the motionless tick itself, so the attribution needs no inference.
+                if (TungstenModDataContainer.isExecutorRunning()) stillExecutorTicks++;
+                else if (TungstenModDataContainer.PATHFINDER.active.get()) stillSearchTicks++;
+                else stillNobodyTicks++;
+            }
             nearThreatTicks++;
         }
 
@@ -218,6 +226,8 @@ public class RunAwayTask {
 
     /** Ticks with a threat within 5 blocks, and how many of those the bot spent motionless. */
     public static volatile int nearThreatTicks, stillNearThreatTicks;
+    /** Of the motionless ticks: executor between legs, search in flight, or nobody driving. */
+    public static volatile int stillExecutorTicks, stillSearchTicks, stillNobodyTicks;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
         // WHERE THE OTHER TWO THIRDS GO. The flee drives 345 ticks and holds 72 of a 1200-tick

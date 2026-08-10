@@ -2331,6 +2331,9 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.clientTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.nearThreatTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.stillNearThreatTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.stillExecutorTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.stillSearchTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.stillNobodyTicks = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowMax = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowSum = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowN = 0;
@@ -2955,6 +2958,11 @@ public class Py4jEntryPoint {
 
     /** Of those, ticks the bot was motionless (speed &lt; 0.02) -- standing, measured not inferred. */
     public int fleeStillNearThreat() { return kaptainwutax.tungsten.task.RunAwayTask.stillNearThreatTicks; }
+
+    /** Motionless ticks attributed: executor running / search in flight / nobody driving. */
+    public int fleeStillExecutor() { return kaptainwutax.tungsten.task.RunAwayTask.stillExecutorTicks; }
+    public int fleeStillSearch()   { return kaptainwutax.tungsten.task.RunAwayTask.stillSearchTicks; }
+    public int fleeStillNobody()   { return kaptainwutax.tungsten.task.RunAwayTask.stillNobodyTicks; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a
