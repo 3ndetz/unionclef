@@ -110,13 +110,12 @@ public class CombatController {
      * the branch never fired. Expect it near zero on an open field and large on a platform — 285
      * in a 60 s edge_duel run, against 0 for {@code lowHpTicks} on the same run.
      *
-     * <p>⛔ READ THE NAME AGAINST THE CODE, NOT THE OTHER WAY ROUND. It increments on every
-     * reach-control tick where {@code !canWithdraw}, INCLUDING the ticks where the swing was armed
-     * and the stand-off would not have applied anyway. So it is an upper bound on the ticks the fix
-     * actually changed, not a count of them. Tightening it to {@code !armed && !canWithdraw} needs
-     * a rebuild, and rebuilding mid-series swaps the jar under the measurement — it waits for the
-     * next build. Counting a superset and saying so beats a precise number nobody checked: five
-     * counters were misread in this file's history by trusting the name.
+     * <p>It counts {@code !armed && !canWithdraw} — exactly the ticks on which the stand-off would
+     * have fired and was refused — so the name and the code agree. The first version counted every
+     * reach-control tick with {@code !canWithdraw}, armed ones included, which was an upper bound
+     * rather than a count; the numbers 57-307 quoted in the release notes for 0.77.0 are from THAT
+     * version and read high. Five counters in this file's history were misread by trusting the name
+     * over the code, which is why this one was corrected before it was quoted again.
      */
     public static volatile int standOffDeclined;
     /** Ticks spent inside the ~10-tick window after taking a hit, split by what the bot was doing. */
@@ -616,7 +615,7 @@ public class CombatController {
             // cannot drift apart: if the retreat would be refused down there, the band is not
             // raised up here, and the bot keeps its ordinary strike distance and fights.
             boolean canWithdraw = dirSafe(player, world, -1, 0);
-            if (!canWithdraw) standOffDeclined++;
+            if (!armed && !canWithdraw) standOffDeclined++;   // the ticks this guard actually took
             if (!armed && canWithdraw) {
                 // Recharging: stand off just past the opponent's reach. Not further — the swing
                 // has to be one step away when the cooldown lands, or the stand-off costs tempo.

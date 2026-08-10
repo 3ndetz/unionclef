@@ -105,7 +105,13 @@ class MeleeBasic(Scenario):
         # was measured in another context entirely, and quoting it for these courses would be the
         # subsample error this checklist has a rule about. fired+declined is what fired used to be,
         # on the same course and the same jar. Recorded, not gated.
-        ctx.log(f"  lowHp={_stat(ctx, 'lowHp')} hurt={_stat(ctx, 'hurt')}")
+        # standOff is the CONTROL for the stand-off guard, and this course is where it must read
+        # near ZERO: an open field is where backing off works, so the guard should almost never
+        # refuse the band change here. A large number on melee_basic would mean the guard reached a
+        # course it was never meant to touch, and any change in this course's margin would be its
+        # fault rather than the platform fix's.
+        ctx.log(f"  lowHp={_stat(ctx, 'lowHp')} standOff={_stat(ctx, 'standOff')} "
+                f"hurt={_stat(ctx, 'hurt')}")
         _ledger(ctx)
         yield ctx.exchange_criterion()   # mutual punk — winning the trade is the bar
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
