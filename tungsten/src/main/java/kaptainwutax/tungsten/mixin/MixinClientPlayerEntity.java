@@ -194,6 +194,11 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// Also note: this run logged NO `fall:` lines at all despite 16 deaths, so its deaths were
 		// not attributed by scenario.py:161-166 — do not reuse the earlier "SELF (walked off)"
 		// attribution for this run without re-establishing it.
+		// Exposure is counted here, not inside RunAwayTask, because the task returns early on
+		// its hold and search paths -- so counting there measured only the ticks that reached
+		// the bottom of it, and read 0 on a run whose closest approach was 2.72 blocks.
+		kaptainwutax.tungsten.task.RunAwayTask.countExposure((ClientPlayerEntity)(Object)this);
+
 		if ((kaptainwutax.tungsten.task.RunAwayTask.isActive()
 				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive()
 				|| kaptainwutax.tungsten.task.BowShooter.isActive())

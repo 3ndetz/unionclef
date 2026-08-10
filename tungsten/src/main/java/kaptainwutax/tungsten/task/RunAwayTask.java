@@ -138,6 +138,38 @@ public class RunAwayTask {
      *  against the order — see {@code BowShooter.shootAt}. */
     public static double getKeepDistance() { return keepDistance; }
 
+    /**
+     * Count exposure for THIS tick. Called from the client tick, unconditionally.
+     *
+     * <p>IT USED TO LIVE INSIDE THE TASK BODY and that made it lie. The task has early returns --
+     * the hold branch, the search path -- so the counter only ran on ticks that reached it, and
+     * the denominator moved between runs: 25, 14, 12, then 0 on a run with closest=2.72 and four
+     * deaths, which is arithmetically impossible for a counter that sees every tick inside three
+     * blocks. It was measuring exposure DURING A FLEE and being read as exposure.
+     *
+     * <p>Here it runs while the flee ORDER stands ({@code threat} survives until stop()), which is
+     * the span the question is actually about.
+     */
+    public static void countExposure(ClientPlayerEntity player) {
+        if (player == null || threat == null || !threat.isAlive() || threat.isRemoved()) return;
+        double d = player.getEntityPos().distanceTo(threat.getEntityPos());
+        // 3.6, NOT 3.0. Vanilla melee reaches the target's HITBOX, not its centre, and a player
+        // box is 0.6 wide -- so a sword lands at a centre-to-centre distance of roughly 3.3-3.6.
+        // Measured the error directly: a run reported reachTicks=0 with closest=3.44 and five
+        // deaths, which is only possible if the killing band sits above the threshold being used.
+        if (d <= 3.6) {
+            Vec3d v = player.getVelocity();
+            Vec3d away = player.getEntityPos().subtract(threat.getEntityPos());
+            if (player.isSprinting()) reachSprintTicks++;
+            if ((v.x * away.x + v.z * away.z) > 0) reachAwayTicks++;
+            if (BowShooter.isDrawing()) reachDrawingTicks++;
+            reachTicks++;
+        } else if (d <= 5.0) {
+            nearTicks++;
+            if (BowShooter.isDrawing()) nearDrawingTicks++;
+        }
+    }
+
     /** Current gap to the threat, or -1 when there is no live threat to measure against. */
     public static double gapTo(ClientPlayerEntity player) {
         return (active && threat != null && threat.isAlive() && !threat.isRemoved())
@@ -179,23 +211,6 @@ public class RunAwayTask {
         // objective needs a bigger margin. If it is caught while moving sideways or toward the
         // threat, the flee DIRECTION is wrong at that instant and no margin will save it.
         // Counted per tick, because the exposure is ~1% of the run and a 1 Hz poll sees none of it.
-        if (dist <= 3.0) {
-            boolean sprinting = player.isSprinting();
-            net.minecraft.util.math.Vec3d v = player.getVelocity();
-            net.minecraft.util.math.Vec3d away = player.getEntityPos().subtract(threat.getEntityPos());
-            boolean movingAway = (v.x * away.x + v.z * away.z) > 0;
-            if (sprinting) reachSprintTicks++;
-            if (movingAway) reachAwayTicks++;
-            reachTicks++;                       // inside a sword swing
-            // WAS THE BOW DRAWN WHILE IT HAPPENED? Vanilla will not sprint with a bow drawn, so
-            // a draw taken at the wrong moment hands a sprinting chaser the metres it needs. The
-            // course fires every 3s and the bot dies about every 12s, so the cadences are close
-            // enough to suspect and far too close to assert. This counts it instead.
-            if (BowShooter.isDrawing()) reachDrawingTicks++;
-        } else if (dist <= 4.5) {
-            nearTicks++;                        // one stride from one
-            if (BowShooter.isDrawing()) nearDrawingTicks++;
-        }
         boolean closing = lastThreatDist >= 0 && dist < lastThreatDist - 0.01;
         lastThreatDist = dist;
         if (!closing && dist >= keepDistance + 1.5) {
