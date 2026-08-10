@@ -43,6 +43,19 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 print = functools.partial(print, flush=True)  # noqa: A001 - stand logs stream
 
+# ⛔ NEVER LET A PRINT KILL A RUN.
+# The console on the machine this runs on is cp1251. A warning line carrying U+26A0 raised
+# UnicodeEncodeError the FIRST time it fired -- which was inside the starved-stand guard, so the
+# guard written to protect an eight-run measurement destroyed one instead, at run 5 of 8, and took
+# the queued sweep behind it (the chain waited on a SUMMARY that a dead process never printed).
+# Hunting individual characters is a patch; a print that cannot raise is the fix. Nearby lines
+# survive an em dash only by the accident that cp1251 has one.
+try:
+    sys.stdout.reconfigure(errors="replace")
+    sys.stderr.reconfigure(errors="replace")
+except Exception:                                  # very old interpreters: leave it alone
+    pass
+
 from uctest.actors import Bot                       # noqa: E402
 from uctest.arena import ArenaBuilder               # noqa: E402
 from uctest.harness import Artifacts, Rcon, wait_for  # noqa: E402
@@ -554,7 +567,12 @@ def _main():
             fps_now = res.get("avg_fps")
             if fps_now is not None and fps_now < HEALTHY_FPS_MIN:
                 res["starved"] = True
-                print(f"  ⚠ {cls.id} passed at {fps_now} fps, below the {HEALTHY_FPS_MIN} floor — "
+                # ASCII ONLY IN PRINTED STRINGS. The first version of this line carried a U+26A0
+                # warning sign, which cp1251 -- the console encoding on the machine this runs on --
+                # cannot encode. The guard therefore raised UnicodeEncodeError the first time it
+                # ever fired and killed the eight-run series it existed to protect. Nearby lines
+                # survive an em dash only because cp1251 happens to have one.
+                print(f"  [!] {cls.id} passed at {fps_now} fps, below the {HEALTHY_FPS_MIN} floor - "
                       f"this run is NOT comparable against a healthy baseline")
                 if not res.get("refreshed"):
                     refresh_clients(f"{cls.id} is running starved at {fps_now} fps")
@@ -584,7 +602,7 @@ def _main():
         # Starved runs are marked in the SUMMARY too, not only in the scroll above it. The summary
         # is the part that gets read and quoted; a run taken at 10 fps that reads a bare "PASS"
         # here is how a degraded series ends up in a before/after table.
-        starved = "  [starved — not comparable]" if r.get("starved") else ""
+        starved = "  [starved - not comparable]" if r.get("starved") else ""
         print(f"  {r['id']:28s} {status}{extra}{starved}")
     import json
     with open(os.path.join(art_root, "summary.json"), "w", encoding="utf-8") as f:
