@@ -2988,6 +2988,10 @@ public class Py4jEntryPoint {
     public int fleeStalledAfterGuard() { return kaptainwutax.tungsten.task.RunAwayTask.stalledSeenAfterGuard; }
     public int fleeKeysAfterGuard()    { return kaptainwutax.tungsten.task.RunAwayTask.keysDownAfterGuardTicks; }
 
+    /** Blows the bot has TAKEN this run, and the total damage of them. */
+    public int dwHits()      { return kaptainwutax.tungsten.combat.DamageWatch.hits; }
+    public double dwDamage() { return kaptainwutax.tungsten.combat.DamageWatch.damage; }
+
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a
      *  bounce — measured -59.85 that way where the tick trace says -55.4. */
