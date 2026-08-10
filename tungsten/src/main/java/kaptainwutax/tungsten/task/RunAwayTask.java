@@ -518,6 +518,20 @@ public class RunAwayTask {
         // points.
         if (player.isSprinting()) fleeSprintTicks++;
 
+        // TAKE THE CAMERA THE BOW JUST GAVE UP. Sprint is pressed on fwd > 0.6 and vanilla sprints
+        // forward only. Releasing the bow mid-shot at a closing gap raised the sprint share from
+        // 24% to ~39%, but nothing then TURNS the bot: the flee only reads yaw, so the view stays
+        // where the aim pipeline left it -- on the threat -- and it keeps retreating backwards.
+        //
+        // This turn was tried twice and reverted twice. It failed because it was guarded on
+        // !isDrawing() while the bow claims the camera on isActive(); the guard is now correct AND
+        // the bow actually releases when the gap is gone, so there is a camera to take. Through
+        // WindMouse, never setYaw -- instant rotation is banned across this codebase.
+        if (!BowShooter.isActive() && away.horizontalLengthSquared() > 1e-6) {
+            float fleeYaw = (float) Math.toDegrees(Math.atan2(-away.x, away.z));
+            kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTargetFast(fleeYaw, player.getPitch());
+        }
+
         double yaw = Math.toRadians(player.getYaw());
         Vec3d facing = new Vec3d(-Math.sin(yaw), 0, Math.cos(yaw));
         Vec3d right  = new Vec3d(Math.cos(yaw), 0, Math.sin(yaw));
