@@ -194,6 +194,14 @@ mob     4 courses    2 PASS   2 INVALID (mob_trio, mob_skeleton)   0 gate failur
 pvp    12 courses   10 ok     2 gate failures (edge_duel, allround)
 ```
 
+⛔ **THE pvp LINE ABOVE IS SUPERSEDED (2026-08-10).** A full sweep that day closed **9/12, gate
+failures `melee_basic`, `narrow_bridge_duel`, `allround`** — `edge_duel` had been fixed in the
+meantime (the gated fall counter was reading knockback as "walked off"), and the two duels that
+replaced it had been passing on 08-08 *because that audit ran one repeat per course*. Their own
+recorded history is 4:4, 4:6, 4:4, 3:4 — two passes in four. A single run per course cannot tell a
+coin flip from a green, which is the warning this section already carries a few lines down; here is
+the instance.
+
 **There are FIVE suites, not four.** The heading here said four and the block listed four, while
 `run_suite.py mob` has existed for days — the same "true when written" rot as the nav count below.
 mob's fourth course, `mob_weapon_swap`, was added 2026-08-08 and is the only course on the bench
