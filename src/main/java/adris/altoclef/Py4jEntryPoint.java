@@ -2339,6 +2339,8 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.stillTouchingThreatTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.stillMaxRadius = 0;
         kaptainwutax.tungsten.task.RunAwayTask.stillRadiusSum = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.stalledSeenAfterGuard = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.keysDownAfterGuardTicks = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowMax = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowSum = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowN = 0;
@@ -2981,6 +2983,10 @@ public class Py4jEntryPoint {
     public int fleeStillMaxRadius() { return kaptainwutax.tungsten.task.RunAwayTask.stillMaxRadius; }
     /** Sum of those distances, for a mean. */
     public int fleeStillRadiusSum() { return kaptainwutax.tungsten.task.RunAwayTask.stillRadiusSum; }
+
+    /** Stalled ticks seen after VoidGuard, and how many still had a movement key held then. */
+    public int fleeStalledAfterGuard() { return kaptainwutax.tungsten.task.RunAwayTask.stalledSeenAfterGuard; }
+    public int fleeKeysAfterGuard()    { return kaptainwutax.tungsten.task.RunAwayTask.keysDownAfterGuardTicks; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a

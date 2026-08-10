@@ -206,6 +206,9 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 			kaptainwutax.tungsten.combat.VoidGuard.protect((ClientPlayerEntity)(Object)this, this.getEntityWorld());
 		}
 
+		// Keys AFTER the guard: the state the player ticks with, not the state the drive asked for.
+		kaptainwutax.tungsten.task.RunAwayTask.countKeysAfterGuard((ClientPlayerEntity)(Object)this);
+
 		// LEAKED-INPUT RELEASE: a task (VoidGuard edge-sneak during flee/punk, SafetySystem's
 		// combat edge-sneak) can setPressed(true) and end without releasing, leaving SHIFT /
 		// sprint / etc. STUCK over the human player's control (user: sneak sticks ~5s after

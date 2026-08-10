@@ -150,6 +150,28 @@ public class RunAwayTask {
      * <p>Here it runs while the flee ORDER stands ({@code threat} survives until stop()), which is
      * the span the question is actually about.
      */
+    /**
+     * Keys as they stand AFTER VoidGuard has had its say -- the state the player actually ticks with.
+     *
+     * <p>countExposure runs between the drive and the guard, so its "keys down" reading proves only
+     * that the drive pressed them. VoidGuard zeroes movement keys on an edge, and every stall sits
+     * at radius 18.6 against the arena boundary, which is where an edge test would fire. Six fixes
+     * were reverted for changing which keys the drive presses; if the guard clears them afterwards,
+     * all six were editing a value nobody reads.
+     */
+    public static void countKeysAfterGuard(ClientPlayerEntity player) {
+        if (player == null || threat == null || !threat.isAlive() || threat.isRemoved()) return;
+        if (player.getEntityPos().distanceTo(threat.getEntityPos()) > 5.0) return;
+        Vec3d hv = player.getVelocity();
+        if (Math.sqrt(hv.x * hv.x + hv.z * hv.z) >= 0.02) return;
+        var o = MinecraftClient.getInstance().options;
+        if (o.forwardKey.isPressed() || o.backKey.isPressed()
+                || o.leftKey.isPressed() || o.rightKey.isPressed()) {
+            keysDownAfterGuardTicks++;
+        }
+        stalledSeenAfterGuard++;
+    }
+
     public static void countExposure(ClientPlayerEntity player) {
         if (player == null || threat == null || !threat.isAlive() || threat.isRemoved()) return;
         double d = player.getEntityPos().distanceTo(threat.getEntityPos());
@@ -271,6 +293,8 @@ public class RunAwayTask {
     public static volatile int stillTouchingThreatTicks;
     /** Distance from arena centre at stalled ticks, in tenths of a block. */
     public static volatile int stillMaxRadius, stillRadiusSum;
+    /** Stalled ticks seen after the guard, and how many still had a key held then. */
+    public static volatile int stalledSeenAfterGuard, keysDownAfterGuardTicks;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
         // WHERE THE OTHER TWO THIRDS GO. The flee drives 345 ticks and holds 72 of a 1200-tick
