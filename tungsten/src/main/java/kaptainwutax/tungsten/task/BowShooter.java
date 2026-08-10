@@ -255,6 +255,29 @@ public class BowShooter {
     /** Called every game tick from MixinClientPlayerEntity. */
     public static void tick(ClientPlayerEntity player) {
         if (!active) return;
+
+        // THE GAP CHECK BELONGED IN THE SHOT, NOT ONLY AT ITS START. shootAt refuses to BEGIN a
+        // shot below keepDistance * 0.5 (6.0 blocks against the 12 this course orders), which is a
+        // sound threshold -- blows were measured landing at a mean of 4.25 and a max of 5.35. But
+        // a shot that began at a safe gap keeps running while the gap collapses: the bow was drawn
+        // for 41 of 121 ticks in the 3.6-5.0 band and 20 of 70 inside 3.6.
+        //
+        // That matters because the bow owns the camera for the whole shot, and vanilla only
+        // sprints FORWARD -- so every drawn tick at a closing gap is a tick the flee cannot run.
+        // Measured over a proper denominator: the flee sprints 67 of 279 driving ticks, 24%,
+        // against a chaser that sprints throughout, and a 12-block order ends in blows at 4.25.
+        //
+        // So the same threshold is now enforced every tick, not once. Survival outranks the shot.
+        ClientPlayerEntity me = MinecraftClient.getInstance().player;
+        if (me != null && RunAwayTask.isActive()) {
+            double gapNow = RunAwayTask.gapTo(me);
+            if (gapNow >= 0 && gapNow < RunAwayTask.getKeepDistance() * SHOOT_ABOVE_FRACTION) {
+                declinedTooClose++;
+                stop();                       // release the camera so the flee can turn and sprint
+                return;
+            }
+        }
+
         facingTicks++;      // the camera is claimed for the whole shot — this IS the kiting cost
         MinecraftClient mc = MinecraftClient.getInstance();
 
