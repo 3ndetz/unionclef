@@ -398,6 +398,33 @@ Two corollaries, both earned the hard way:
   diverged twice in one evening, each time because one side was corrected. Care at the moment of
   editing prevented neither. Have one side READ the other.
 
+## 4d. READ THE FRAME RATE OF *BOTH* SIDES BEFORE COMPARING THEM (2026-08-10)
+
+The suite marks a run INVALID when it is starved *and something load-sensitive failed*. A run that
+happens to **pass** while starved is not marked at all — so it never triggered a client refresh,
+and every later run in that series inherited the degradation.
+
+What that cost, the day this rule was written: a `--repeat 8` comparison of `narrow_bridge_duel`
+returned `+1, +4, +1, +2, −3` against a baseline of `−3, −6`. It was the strongest-looking result
+of the session and it was worthless — every run of it was taken at **10.0 fps** while the baseline
+had been recorded at 29.3 and 18.1. The summary printed clean passes throughout. `melee_basic` in
+the same series held 27.9–29.6 for six runs and then fell to 9.9, which is the shape to remember:
+**the wear arrives mid-series**, precisely when a before/after is least able to notice it.
+
+The rule:
+
+1. A verdict and a *comparison* have different requirements. A starved run's PASS is real — it
+   passed. It still cannot be set against a baseline taken at three times the frame rate.
+2. Print and check `avg_fps` for the baseline runs and the after runs. If they differ by more than
+   a few fps, you are comparing stands, not builds. The runner now marks these
+   `[starved — not comparable]` in the SUMMARY, but read the number yourself.
+3. This is retrospective. Any earlier comparison in this repo where one side ran starved and passed
+   carries the same defect and was equally unflagged. Before quoting an old before/after, check
+   whether its fps were recorded at all.
+
+The general form is rule 4c's: a statistic taken under conditions selected by something other than
+the thing you are studying. Here the selector was the clock rather than the code.
+
 ## 5. VIDEO
 
 `--record` on the run, then:
