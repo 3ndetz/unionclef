@@ -15,7 +15,6 @@ import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
 import baritone.api.schematic.AbstractSchematic;
 import baritone.api.schematic.ISchematic;
-import baritone.api.utils.BlockOptionalMeta;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -213,7 +212,11 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
                 }
                 Debug.logInternal("Failed to find throwaway block");
                 // No throwaways available!!
-                return new BlockOptionalMeta(Blocks.COBBLESTONE).getAnyBlockState();
+                // BlockOptionalMeta(COBBLESTONE).getAnyBlockState() returns the first of that
+                // block's states, and cobblestone has exactly ONE -- so this is its default state
+                // and nothing more. Safe HERE for that reason; the same swap on a block with
+                // variants (stairs, slabs, logs) would silently pick one and would not be.
+                return Blocks.COBBLESTONE.getDefaultState();
             }
             // Don't care.
             return blockState;
