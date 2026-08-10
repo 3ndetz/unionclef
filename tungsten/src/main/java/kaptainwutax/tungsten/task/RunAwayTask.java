@@ -164,6 +164,13 @@ public class RunAwayTask {
             if ((v.x * away.x + v.z * away.z) > 0) reachAwayTicks++;
             if (BowShooter.isDrawing()) reachDrawingTicks++;
             reachTicks++;
+        // 5.0 = the reach band plus roughly one stride: a sprinting player covers ~0.28 blocks a
+        // tick, about 1.4 in the half-second it takes to notice and react, and 3.6 + 1.4 is 5.0.
+        // The near band means "close enough that one commitment by the chaser puts it in range",
+        // so it has to track the reach band; left at 4.5 it would still be calibrated against the
+        // 3.0 band it used to sit above. Written down because I changed it in the same edit as the
+        // reach fix and gave no reason -- an unexplained constant is what this session kept
+        // tripping over, and I have no standing to leave one behind.
         } else if (d <= 5.0) {
             nearTicks++;
             if (BowShooter.isDrawing()) nearDrawingTicks++;
