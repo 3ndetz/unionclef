@@ -347,6 +347,33 @@ leaves an artifacts directory containing one empty `timeline.jsonl`. That looks 
 course that crashed on entry, and it will be diagnosed as a bot bug. Symptom to recognise: the
 log stops right after the `--- <course> ---` banner and the process is already gone.
 
+## 4b. MEASURE THE SPREAD BEFORE YOU COMPARE MEANS (2026-08-10)
+
+A metric you have not characterised cannot support a before/after claim, and most bench metrics
+here are noisier than the effects being chased.
+
+Worked example, from the session that produced this rule: `bow_flee` death counts came back
+**10, 4, 5, 6 on four runs with the same jar, the same criteria and healthy fps**. On that
+course a "10 -> 4" improvement is one draw from each tail of an uncharacterised distribution.
+Three separate claims were built on such pairs that night and all three had to be retracted --
+including one that had been recorded as "REPLICATED".
+
+The rule:
+
+1. Before quoting any delta, run the metric **n >= 8** under fixed conditions and record its
+   **median and range**, not its mean.
+2. Treat any difference **smaller than that range** as unproven. Say "not distinguishable from
+   run-to-run variation", never "improved".
+3. A single run can still **refute** (one counter-example kills a universal), and a counter can
+   still be exact (`rimBack=0`, `self=0`, an import count). Asymmetry is fine: cheap evidence
+   for "this is impossible", expensive evidence for "this is better".
+4. Prefer a metric with no spread when one exists. Mechanisms read from source, and counts that
+   are zero or not-zero, do not need eight runs.
+
+The failure this prevents is not carelessness -- it is comparing point estimates while feeling
+rigorous, which is exactly how a whole evening of measurements ends up unable to carry its own
+conclusions.
+
 ## 5. VIDEO
 
 `--record` on the run, then:
