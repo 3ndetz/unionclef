@@ -29,6 +29,7 @@ import datetime
 import functools
 import os
 import subprocess
+import tempfile
 import shutil
 
 # The fps below which a failure says nothing about the bot. Module level ON PURPOSE: it was a
@@ -372,7 +373,52 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     return verdict
 
 
+# ONE SUITE AT A TIME, ENFORCED BY THE RUNNER ITSELF.
+#
+# Two suites shared the containers tonight because a shell guard --
+# `while pgrep -f "run_suite.py pvp"; do sleep` -- never matched under Git Bash on Windows and fell
+# through instantly. The runs that followed competed for the same two clients and their numbers had
+# to be thrown away. A guard outside the program cannot know the program is running; a lock the
+# program takes itself can.
+#
+# Stale locks are handled by age rather than by trusting a pid: a suite that has not touched its
+# lock in twenty minutes is gone, whatever the process table says.
+_LOCK = os.path.join(tempfile.gettempdir(), "uctest_suite.lock")
+
+
+def _take_lock():
+    try:
+        if os.path.exists(_LOCK) and (time.time() - os.path.getmtime(_LOCK)) < 1200:
+            with open(_LOCK, encoding="utf-8") as fh:
+                who = fh.read().strip()
+            print(f"REFUSING TO START: another suite holds the bench ({who}).")
+            print("Two suites on one pair of containers produce numbers that cannot be trusted.")
+            return False
+        with open(_LOCK, "w", encoding="utf-8") as fh:
+            fh.write(" ".join(sys.argv[1:]) or "suite")
+        return True
+    except OSError as exc:                     # a lock we cannot take is not a reason to corrupt data
+        print(f"REFUSING TO START: cannot manage the bench lock ({exc}).")
+        return False
+
+
+def _release_lock():
+    try:
+        os.remove(_LOCK)
+    except OSError:
+        pass
+
+
 def main():
+    if not _take_lock():
+        return 2
+    try:
+        return _main()
+    finally:
+        _release_lock()
+
+
+def _main():
     ap = argparse.ArgumentParser()
     ap.add_argument("suite", nargs="?", help="suite name (pvp)")
     ap.add_argument("--only", help="scenario id, or a comma-separated list of them")
