@@ -425,6 +425,27 @@ The rule:
 The general form is rule 4c's: a statistic taken under conditions selected by something other than
 the thing you are studying. Here the selector was the clock rather than the code.
 
+## 4g. A CHANGE THAT MAKES A RARE PATH COMMON PUTS UNTESTED CODE ON THE HOT PATH (2026-08-10)
+
+Rare code is unverified *because* it is rare. Raise its frequency and its faults surface immediately
+— and they surface in the new feature's name, not the old code's.
+
+One guard, added in a single session, produced three defects and **none of them was in its own
+logic**. All three were in paths it had merely made frequent:
+
+| what broke | the path it made common |
+|---|---|
+| `UnicodeEncodeError` killed an 8-run series at run 5 | a warning line that had never once been printed |
+| a starved verdict recorded unmarked | the flake-retry result, which the check had never inspected |
+| an automatic refresh redeploys the CURRENT build | `deploy_jar.sh` firing mid-series instead of rarely |
+
+The guard fired on INVALID before — rare, and wherever it landed. Now it fires on any starved run,
+which is often and mid-series.
+
+The rule: when a change increases how often something runs, **the review is of that something**, not
+of the change's own condition. Ask what now executes ten times a suite that used to execute once a
+week, and read *that* code. Its comments, its failure modes, and what it assumes about when it runs.
+
 ## 4f. ⛔ CHECK THAT YOUR REGRESSION GUARD IS NOT A MIRROR (2026-08-10)
 
 `Scenario.victim_settings` defaults to `{}`. A duel that does not override it gives the OPPONENT the
