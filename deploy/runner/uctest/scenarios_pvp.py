@@ -459,6 +459,11 @@ class BowFlee(Scenario):
         # samples sat inside reach -- if the gap collapses periodically, the deaths are catches
         # and the objective is right but not tight enough; if it never collapses, the deaths are
         # not melee at all and this course is red for some other reason entirely.
+        # DRIFT ABORTS ARE NOT THE CAUSE, settled over 50 recorded runs: r=0.23 between
+        # "Path stopped: drift" counts and deaths, with a run at 0 aborts / 10 deaths and
+        # another at 0 aborts / 0 deaths. The path abort is real and worth fixing on its own
+        # terms, but it explains a few percent of the deaths here and nothing more. Do not
+        # widen driftThreshold expecting this course to go green.
         ds = [s["dist"] for s in ctx.samples if s.get("dist") is not None]
         closest = round(min(ds), 2) if ds else None
         caught = sum(1 for d in ds if d <= 3.0)
