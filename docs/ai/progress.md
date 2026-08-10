@@ -1423,3 +1423,37 @@ NEXT: `narrow_bridge` n=8 on the healthy stand, full pvp sweep for the score, th
 suite — `mob_trio` and `mob_skeleton` inherit `KIT_SWORD` and are in the blast radius, and `mob_trio`
 is the one place this fix could plausibly make things worse. If it does, the answer is a crowd
 exemption in the predicate, not a revert.
+
+### ASSESS (checklist §6) — G-1.73, written before the sweep finished
+
+1. **Did the score move?** The pre-fix pvp sweep closed 9/12 with three gate failures
+   (`melee_basic`, `narrow_bridge_duel`, `allround`). `melee_basic` now passes — 4 PASS / 2 FAIL over
+   healthy repeats and PASS in the sweep (5:5 at 26.2 fps) — against a baseline of 2 PASS / 6. What
+   moved in the numbers where the verdict did not: `lowHpDeclined`, the ticks of useless retreat the
+   predicate takes back, reads **40 a run on `melee_basic` and 136–187 on `narrow_bridge`**. Note that
+   `narrow_bridge`'s sweep PASS came off a 9.9 fps retry and does NOT count.
+
+2. **Which end goal?** Combat competence on the way to `@gamer` finishing the game on tungsten alone,
+   plus G-0 closed at its floor (26 → 18 imports, every survivor traced to live code).
+
+3. **Is this the right road?** Yes, and by the stated test: the fix is in the core, not beside it.
+   The question "can I turn distance into damage" belongs to the class that already knows about
+   weapons, and the retreat asks it. No hardcode, no server specifics, no reactive timer. The
+   instrument repairs are the same shape — a threshold that is READ rather than restated, a print
+   that cannot raise, a guard that inspects the run actually recorded.
+
+4. **Are we treading water?** On `melee_basic`, no — it moved. On `narrow_bridge`, yes, and the rule
+   applies: the target is NOT abandoned. What changes is the approach. Three signals now say the
+   wounded retreat is not that course's cause — deaths are blows not falls (`self=0`,
+   `knockback=1–2` of 16–17), the dose-response is inverted (three times the ticks removed, less
+   effect), and the median sits inside the spread. Read from source instead of patching again: on a
+   one-block bridge `strafeSideSafe` rejects both sides and the crit hop is gated off by
+   `edgeScore`, so every advantage the bot has is suppressed by its own safety machinery and only
+   the tempo-costing stand-off survives. That is G-1.74, and it is a MEASUREMENT (`--pin
+   combatReachControl=false`), not another patch.
+
+**Cost of the session's own mistakes, recorded because they are the lesson.** Seven claims of mine
+were withdrawn on re-checking, and the last two were defects in code I wrote today: a print that
+killed the eight-run series it was written to protect, and a starvation check blind to the retry
+path — which is exactly where "passed on the second go" verdicts come from. Both were found by
+re-reading after a suspicious number, not by a test.
