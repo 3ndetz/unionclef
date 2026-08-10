@@ -89,6 +89,22 @@ class MeleeBasic(Scenario):
 class EdgeDuel(Scenario):
     """5x5 platform over void — RW-1 'both keep footing 1 block from drop'."""
     id = "edge_duel"
+    # ⛔ THIS COURSE WAS A MIRROR, AND IT WAS BEING USED AS A REGRESSION GUARD.
+    # victim_settings defaults to {}, so without this line the opponent ran the SAME build, the
+    # same settings and the same kit -- and a symmetric engine change went to both sides and
+    # cancelled. Expected margin 0 by construction, pass rate a coin flip with ties passing.
+    #
+    # It cost a whole conclusion on 2026-08-10: n=8 here returned median -1.5 and 3 passes against
+    # a 4/4 baseline, that was read as a confirmed regression from a combat change, and a fix was
+    # designed and shipped in response to a number the course could not produce. The 4/4 was luck
+    # (~2% at that rate) and the 3/8 was the coin.
+    #
+    # melee_basic and narrow_bridge_duel have carried this pin for exactly this reason, and
+    # TungstenConfig's javadoc spells it out. edge_duel simply never got it.
+    #
+    # NOTE FOR ANYONE COMPARING: this makes the course ASYMMETRIC, so its history from before this
+    # line is not a baseline for anything measured after it. That history was a coin flip anyway.
+    victim_settings = {"combatReachControl": "false"}
     duration = 60
     settings = {"combatMovementsEnabled": "true"}
     bot_kit = KIT_SWORD
