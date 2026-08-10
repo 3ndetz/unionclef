@@ -102,13 +102,21 @@ public class CombatController {
      */
     public static volatile int lowHpDeclined;
     /**
-     * Ticks where the cooldown stand-off was refused because the bot could not have walked
-     * backwards anyway.
+     * Reach-control ticks on which the bot could not have walked backwards.
      *
      * <p>The same shape as {@link #lowHpDeclined} and for the same reason: without it, "the fix is
      * in" is an impression. It says how often the arena is the kind where the stand-off degenerated
      * into standing still, so a course that shows no change can be told apart from a course where
-     * the branch never fired. Expect it near zero on an open field and large on a platform.
+     * the branch never fired. Expect it near zero on an open field and large on a platform — 285
+     * in a 60 s edge_duel run, against 0 for {@code lowHpTicks} on the same run.
+     *
+     * <p>⛔ READ THE NAME AGAINST THE CODE, NOT THE OTHER WAY ROUND. It increments on every
+     * reach-control tick where {@code !canWithdraw}, INCLUDING the ticks where the swing was armed
+     * and the stand-off would not have applied anyway. So it is an upper bound on the ticks the fix
+     * actually changed, not a count of them. Tightening it to {@code !armed && !canWithdraw} needs
+     * a rebuild, and rebuilding mid-series swaps the jar under the measurement — it waits for the
+     * next build. Counting a superset and saying so beats a precise number nobody checked: five
+     * counters were misread in this file's history by trusting the name.
      */
     public static volatile int standOffDeclined;
     /** Ticks spent inside the ~10-tick window after taking a hit, split by what the bot was doing. */
