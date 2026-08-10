@@ -90,6 +90,17 @@ public class CombatController {
     /** Telemetry: ticks spent kiting because of health. Counted so "does it disengage" is a
      *  number rather than an impression. */
     public static volatile int lowHpTicks;
+    /**
+     * Ticks where the wounded retreat WOULD have fired and was declined for having nothing to
+     * shoot with.
+     *
+     * <p>lowHpTicks going to zero only says the branch stopped firing; it cannot say how much was
+     * removed, and the "47% of close-quarters ticks" figure it is tempting to quote was measured
+     * in another context, not on the courses this changed. This counter is the missing half: it is
+     * the SAME course, the SAME jar, and it reports exactly the ticks the predicate took away.
+     * lowHpTicks + lowHpDeclined is what lowHpTicks alone used to be.
+     */
+    public static volatile int lowHpDeclined;
     /** Ticks spent inside the ~10-tick window after taking a hit, split by what the bot was doing. */
     public static volatile int hurtTicks, hurtAdvancing, hurtBackingOff;
     /** True on ticks where the close-quarters controller actually ran — lets DamageWatch report
@@ -532,10 +543,14 @@ public class CombatController {
             // and fps all pass: 5:6, 5:6 and 12:15, 11:17. edge_duel carries the same kit, fires
             // this branch far less because a 5x5 platform has nowhere to retreat TO, and wins 4/4
             // on the same jar. A wounded fighter with no ranged option has to fight.
-            if (hp <= LOW_HP && dist > TriggerBot.REACH && WeaponSelector.hasRangedOption(player)) {
-                lowHpTicks++;
-                kite(out, player, world, dist);
-                return;
+            if (hp <= LOW_HP && dist > TriggerBot.REACH) {
+                if (!WeaponSelector.hasRangedOption(player)) {
+                    lowHpDeclined++;          // the ticks this predicate gave back to the fight
+                } else {
+                    lowHpTicks++;
+                    kite(out, player, world, dist);
+                    return;
+                }
             }
 
             if (!armed) {

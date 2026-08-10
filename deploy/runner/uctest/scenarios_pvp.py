@@ -67,11 +67,16 @@ class MeleeBasic(Scenario):
         # Kept for the record, no longer a gate: it cannot attribute.
         yield Criterion("victim hp dropped >= 8 (unattributed)", True,
                         f"damage={ctx.victim_damage():.1f}", gate=False)
-        # WITNESS FOR THE SWORD-ONLY DISENGAGE. `lowHp` counts the ticks the controller spent
-        # kiting a wounded bot back out of reach, a retreat justified by "out there the bow is the
-        # weapon". THIS KIT HAS NO BOW, so that branch now refuses to fire and this must read 0.
-        # If it reads anything else the fix did not apply, and whatever the exchange does below
-        # came from somewhere other than this change. Recorded, not gated.
+        # WITNESS FOR THE SWORD-ONLY DISENGAGE, as fired/declined. The first number is ticks spent
+        # kiting a wounded bot back out of reach -- a retreat justified by "out there the bow is
+        # the weapon" -- and THIS KIT HAS NO BOW, so it must read 0. The second is the ticks where
+        # that retreat would have fired and was refused for having nothing to shoot with.
+        #
+        # The second number exists because the first cannot carry the claim alone: 0 says the
+        # branch stopped firing, not how much it used to take. The only "before" figure available
+        # was measured in another context entirely, and quoting it for these courses would be the
+        # subsample error this checklist has a rule about. fired+declined is what fired used to be,
+        # on the same course and the same jar. Recorded, not gated.
         ctx.log(f"  lowHp={_stat(ctx, 'lowHp')} hurt={_stat(ctx, 'hurt')}")
         yield ctx.exchange_criterion()   # mutual punk — winning the trade is the bar
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
