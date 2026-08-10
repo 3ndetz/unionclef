@@ -871,7 +871,22 @@ class AllRound(Scenario):
             ctx.bot.py.try_call("shootArrowAt", ctx.victim.name)
 
     def early_stop(self, ctx):
-        return ctx.kills() >= 1
+        # ⛔ DO NOT END A 120s COURSE AT THE FIRST KILL.
+        # melee_basic had exactly this line and it was fixed there: "stopping at the first kill
+        # ended runs after about five seconds and left TWO samples to judge a fight from, which is
+        # why this course looked bimodal". allround kept the naive form, so every run ended in
+        # roughly twenty seconds -- samples=3 on a two-minute course, kills=1 in every run by
+        # construction, and every ratio anyone computed against "120 s of ticks" was wrong by
+        # about a factor of six. (Measured today: punk called=363, follow called=322 -- read as
+        # ~3 Hz against a 120 s run, they are ~18 Hz against the ~20 s the run actually lasted.)
+        #
+        # It also mis-states the GATE. `bot deaths <= 0` is a quantity that accumulates over a
+        # fight; judging it over the sprint to the first kill measures something else entirely.
+        #
+        # NOT applied to chase_terrain or bridge_assault, which carry the same line: for those two
+        # the first kill may legitimately BE the task ("catch it and kill it", "break through and
+        # kill"). Decide what each course means to measure before copying this across.
+        return ctx.kills() >= 1 and (time.time() - ctx.t0) > self.duration / 2
 
     def judge(self, ctx):
         # BOTH OF THESE ARE FRAME-GATED, AND SAYING SO HERE IS THE POINT OF THE FLAG.
