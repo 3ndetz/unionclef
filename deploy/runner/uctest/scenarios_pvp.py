@@ -110,6 +110,13 @@ class EdgeDuel(Scenario):
         # that run happened to land its kill. Had it not, one unflagged gate would have certified it.
         yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}",
                         load_sensitive=True)
+        # WITNESS ON A GUARD COURSE. edge_duel is one of the eight bowless courses, so the
+        # wounded-retreat predicate reaches it -- but this probe never printed the counter, so
+        # when the course failed the exchange there was no way to tell whether the branch had
+        # even fired here. A control that cannot report the quantity it is controlling for is
+        # not a control. The 5x5 platform runs to ~5.6 blocks on the diagonal, i.e. past REACH,
+        # so "it barely fires on a small platform" was an assumption and is now a measurement.
+        ctx.log(f"  lowHp={_stat(ctx, 'lowHp')}")
         yield ctx.exchange_criterion()          # mutual duel: must not lose it
         # self-falls is NOT flagged: low fps is a plausible cause (nav_ladder self-falls at 9.4-9.9
         # fps, origin still open) but that is a correlation, not the measurement the aim case has.
