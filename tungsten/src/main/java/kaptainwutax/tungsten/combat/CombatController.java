@@ -101,6 +101,16 @@ public class CombatController {
      * lowHpTicks + lowHpDeclined is what lowHpTicks alone used to be.
      */
     public static volatile int lowHpDeclined;
+    /**
+     * Ticks where the cooldown stand-off was refused because the bot could not have walked
+     * backwards anyway.
+     *
+     * <p>The same shape as {@link #lowHpDeclined} and for the same reason: without it, "the fix is
+     * in" is an impression. It says how often the arena is the kind where the stand-off degenerated
+     * into standing still, so a course that shows no change can be told apart from a course where
+     * the branch never fired. Expect it near zero on an open field and large on a platform.
+     */
+    public static volatile int standOffDeclined;
     /** Ticks spent inside the ~10-tick window after taking a hit, split by what the bot was doing. */
     public static volatile int hurtTicks, hurtAdvancing, hurtBackingOff;
     /** True on ticks where the close-quarters controller actually ran — lets DamageWatch report
@@ -569,7 +579,37 @@ public class CombatController {
                 }
             }
 
-            if (!armed) {
+            // ⛔ A STAND-OFF YOU CANNOT WALK BACKWARDS FROM IS NOT A STAND-OFF. IT IS STANDING.
+            //
+            // The block below raises strikeAt to REACH+0.4 and backOffAt to REACH+0.2 while the
+            // swing recharges. Look at what the two keys then do, thirty lines further down:
+            //     out.forward = dist > strikeAt && dirSafe(fwd)
+            //     out.back    = dist < backOffAt && !beingHit && dirSafe(back)
+            // On open ground the bot backs off, gains the block, and closes when the swing is
+            // ready -- the behaviour as designed. Where `back` is unsafe, `back` is never pressed;
+            // and because strikeAt was raised to 3.4, `forward` is false at every distance under
+            // that too. The bot presses NEITHER KEY. It stands still, inside the reach of an
+            // opponent that has no such rule and simply walks in and swings.
+            //
+            // MEASURED, n=11 an arm on edge_duel (a 5x5 platform over void, where dirSafe(back)
+            // is false almost everywhere near the rim), the victim on the baseline engine:
+            //     with this setting     margins -7 -5 -2 0 -10 +2 -4 -2 -4 -6 -4   median -4
+            //     both sides without it  margins  0 +2 -5 +1  +1 -1 +1 +4  0 -3 +1  median +1
+            // 3.2 sigma, and the mirror arm's mean is +0.09 -- exactly the zero a duel between two
+            // copies of one build must produce, which is what makes the other column readable.
+            // The bot took 1.93x the blows it landed with the setting and 1.12x without.
+            //
+            // And it is the ARENA, not the setting: on melee_basic, whose spread is 0.75 and which
+            // would show a shift this size at more than five standard errors, the same comparison
+            // reads median 0 over n=7. So the cure is not to delete the stand-off -- it works
+            // where retreating works -- it is to stop applying it where retreating cannot happen.
+            //
+            // dirSafe(back) is checked with the SAME arguments the key press uses, so the two
+            // cannot drift apart: if the retreat would be refused down there, the band is not
+            // raised up here, and the bot keeps its ordinary strike distance and fights.
+            boolean canWithdraw = dirSafe(player, world, -1, 0);
+            if (!canWithdraw) standOffDeclined++;
+            if (!armed && canWithdraw) {
                 // Recharging: stand off just past the opponent's reach. Not further — the swing
                 // has to be one step away when the cooldown lands, or the stand-off costs tempo.
                 //

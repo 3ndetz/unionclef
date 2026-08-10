@@ -161,7 +161,11 @@ class EdgeDuel(Scenario):
         # even fired here. A control that cannot report the quantity it is controlling for is
         # not a control. The 5x5 platform runs to ~5.6 blocks on the diagonal, i.e. past REACH,
         # so "it barely fires on a small platform" was an assumption and is now a measurement.
-        ctx.log(f"  lowHp={_stat(ctx, 'lowHp')}")
+        # standOff counts the ticks where the cooldown stand-off was refused because the bot could
+        # not have walked backwards anyway. On THIS course it is the whole point: a 5x5 platform is
+        # where the stand-off degenerated into standing still. Near zero here would mean the fix
+        # never fired and any change is something else.
+        ctx.log(f"  lowHp={_stat(ctx, 'lowHp')} standOff={_stat(ctx, 'standOff')}")
         _ledger(ctx)
         yield ctx.exchange_criterion()          # mutual duel: must not lose it
         # self-falls is NOT flagged: low fps is a plausible cause (nav_ladder self-falls at 9.4-9.9
