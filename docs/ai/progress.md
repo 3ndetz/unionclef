@@ -1366,3 +1366,60 @@ cutting shots simply loses the hits.
 NEXT: mid-flight collision is the largest actionable bucket. Measure what the bot collides with
 during flight before touching it — the rim collision was a different event and assuming otherwise is
 how several wrong turns started tonight.
+
+## SESSION 2026-08-10 — one defect under two red courses, and three instruments that were lying
+
+INVESTIGATE: the final pvp sweep closed 9/12 with three gate failures — `melee_basic`,
+`narrow_bridge_duel`, `allround`. Reading the criteria rather than the verdicts showed the first two
+failing **exactly one** check each, the same one (won the exchange), with swings, crits, damage,
+freezes, standstill and fps all green: 5:6, 5:6 and 12:15, 11:17. `edge_duel` carried the same kit
+and passed 4/4 on the same jar. That pattern is one cause, not two courses.
+
+FOUND: `CombatController` broke contact whenever the bot fell below half a bar and the opponent was
+outside sword reach. Its own comment justifies the retreat from the bow — "out past reach the bow
+becomes the weapon" — and the branch never asked whether a bow existed. `KIT_SWORD` is an iron sword
+and nothing else. The three courses order by the **cost** of retreating, not the room for it:
+`edge_duel` cannot retreat (green throughout), `melee_basic` loses tempo (coin flip), and on
+`narrow_bridge`'s one-block bridge retreating **is how you fall off** (worst). I predicted the
+opposite for the bridge, in writing, before the data — the model was wrong and the registration is
+what made that visible.
+
+IMPLEMENT: `WeaponSelector.hasRangedOption` — launcher in hotbar or offhand, ammunition anywhere in
+the inventory (vanilla finds arrows wherever they are; a narrower scan would have made the answer
+depend on where a `/give` landed). Built on `Items.*` constants, as that class requires: the item
+class hierarchy is version-dependent, the constants are not.
+
+MEASURED: `lowHp` reads 0 on every bowless run — exact, no eight runs needed. `melee_basic` on its
+six HEALTHY runs: median −1 → 0, verdicts 2/6 → 4/6. By rule 4b the margin alone proves nothing
+(shift 1, range 2); what carries it is three readings agreeing.
+
+THREE INSTRUMENTS WERE WRONG, and each was found by re-checking something already believed:
+
+1. The `narrow_bridge` probe asked whether the fighters came within **3.0** and answered "they never
+   met" on a run with twelve kills. The blows say 4.25 mean / 5.35 max. It now READS the band.
+2. `hurtBackingOff` counts a POSITION, not a key press. I read it as "the bot retreats under fire"
+   and nearly aimed a fix at a mechanism fixed two commits earlier in the same file.
+3. ⭐ The fps refresh only fires on INVALID, and INVALID needs a load-sensitive criterion to FAIL — so
+   a course that PASSES while starved never refreshes the stand and every later run inherits the
+   degradation. A `--repeat 8` series of `narrow_bridge` ran all five completed runs at **10.0 fps**
+   against a baseline at 29.3/18.1, printing clean passes. The series was discarded. Now marked
+   `[starved — not comparable]` in the SUMMARY and the clients are replaced mid-series.
+   → CHECKLIST rule **4d**, and it is retrospective: older comparisons here have the same hole.
+
+ADDED `lowHpDeclined`, because `lowHp=0` says the branch stopped firing and cannot say how much was
+removed — and the only "before" figure to hand (47% of close-quarters ticks) came from another
+context. Same course, same jar: the clean runs read `0/166` and `0/136`. Note the asymmetry that
+matters: the removed ticks are **stable** (~150/run) while the outcome swings by 5. "The fix does
+something" and "the fix changes the verdict" are different claims and only the first is cheap.
+
+ALSO: G-0 closed at its floor — 26 → 18 imports, every remaining one traced to live code, and the
+`var` trick refused because it moves the counter without touching the coupling. `BuilderProcess` is
+not a 1399-line port: altoclef calls exactly two entry points and always with a 1×1×1 schematic.
+`allround` re-read from its own numbers: 1:1 and 1:2 in 120s is a QUARTER of `melee_basic`'s death
+rate — it is not losing badly, it is under-fighting (5 landed swings in 120s, aim 89.8° off), and
+its gate demands zero deaths.
+
+NEXT: `narrow_bridge` n=8 on the healthy stand, full pvp sweep for the score, then the FULL mob
+suite — `mob_trio` and `mob_skeleton` inherit `KIT_SWORD` and are in the blast radius, and `mob_trio`
+is the one place this fix could plausibly make things worse. If it does, the answer is a crowd
+exemption in the predicate, not a revert.
