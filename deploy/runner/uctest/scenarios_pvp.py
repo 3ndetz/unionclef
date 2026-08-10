@@ -899,6 +899,18 @@ class AllRound(Scenario):
         ctx.bot.py.call("selectHotbar", 0)  # bow in hand for the ranged phase
         ctx.victim.py.call("punk", ctx.bot.name)
 
+    # ⛔ THE RANGED PHASE IS NOT WHAT LOSES THIS COURSE. MEASURED, DO NOT RE-DERIVE.
+    # After the aim arbiter landed, the margin sat at -2, -2, -2 where it had been about -4, and
+    # the obvious next suspect was the bow economy: a draw blocks sprinting, so shooting on the
+    # approach should cost the ground that decides the fight.
+    #
+    # Control run with this constant raised to 999, so the drive never enters the ranged phase at
+    # all -- four runs, three at healthy fps: 6:8, 6:9, 6:8, 6:8, i.e. -2, -3, -2, -2.
+    # Indistinguishable from the with-bow numbers. Deleting the bow economy ENTIRELY changes
+    # nothing, so the residual is the melee itself, on a flat field, against the same engine --
+    # which is exactly where melee_basic reads dead even at 5:5 under the identical asymmetry.
+    # Kills per minute: allround 3, melee_basic 5; deaths per minute 4 and 5. The bot dies at the
+    # same rate on both and kills less on this one.
     MELEE_AT = 12.0
 
     def drive_tick(self, ctx, t):
