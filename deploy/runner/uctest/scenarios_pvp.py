@@ -909,12 +909,17 @@ class AllRound(Scenario):
     # (lowHp 0/49, 0/68, 0/54 confirms it). Three runs at 25.8-28.7 fps: 6:8, 5:7, 6:9 -- margin
     # -2, -2, -3, indistinguishable from -2, -2, -2 with the kite live. REFUTED.
     #
-    # WHAT THE LEDGER POINTS AT INSTEAD, for whoever takes this next: the bot takes MORE DAMAGE PER
-    # BLOW than it deals -- 172/33 = 5.2 against the victim's 132/31 = 4.3, on identical iron
-    # swords. The counters say why: critWindowSwings reads bot 4-10 against victim 8-15, and crits
-    # 11-17 against 12-25. The opponent takes the early crit-window swing two to three times as
-    # often. That is a CRIT RATE asymmetry, and the crit hop is movement -- which is the one thing
-    # combatReachControl changes about this bot and not about its opponent.
+    # ⛔ AND A THIRD SUSPECT DIED THE MOMENT ITS NUMBERS WERE SPLIT BY BUILD. The ledger shows the
+    # bot taking more damage per blow than it deals (172/33 = 5.2 against the victim's 132/31 =
+    # 4.3, identical iron swords), which looked like a CRIT RATE asymmetry -- and the crit hop is
+    # movement, the one thing combatReachControl changes about this bot and not its opponent.
+    # Crits per passed swing, both fighters, same runs:
+    #     before the aim arbiter   bot 0.46 0.34 0.31   victim 0.58 0.54 0.60
+    #     after  the aim arbiter   bot 0.52 0.50 0.50   victim 0.50 0.32 0.41
+    # The gap was real and the ARBITER ALREADY CLOSED IT -- the bot now crits slightly more than
+    # its opponent. It was never the flag: a bot standing still to shoot does not bunny-hop, so it
+    # swung flat-footed. Quoting the range across both builds (critWindowSwings "4-10 against
+    # 8-15") hides that completely, which is how this nearly became a fourth investigation.
     #
     # ⛔ THE RANGED PHASE IS NOT WHAT LOSES THIS COURSE. MEASURED, DO NOT RE-DERIVE.
     # After the aim arbiter landed, the margin sat at -2, -2, -2 where it had been about -4, and
