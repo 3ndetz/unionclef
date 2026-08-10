@@ -90,6 +90,35 @@ geometry, zero clutter).
 | `bridge_assault_defended` | same + victim shoots arrows at the bridger | same; **info tier** until stable | crossing under fire; survive with ≥ 8 hp; kill ≤ 150s |
 | `allround` | 40×40 floor, spawns 26 apart | composed from primitives (agent-style): `shootArrowAt` every 4s while dist > 10, switch to `punk` inside 10; victim `punk`s back the whole time | ≥1 arrow hit while far + melee kill; freezes = 0 |
 
+### Know the ruler before the series — measured spread of `kills − deaths`
+
+The duels are judged on the margin, and the three of them are **not** equally able to measure a
+difference. Taken from healthy series on known builds (runs under the 14 fps floor excluded):
+
+| course | healthy series | sd | resolves at n=6/arm |
+|---|---|---|---|
+| `melee_basic` | `0, −1, 0, 0, +1, −1` and `−1, −2, −2, −2, −1, 0` | **0.75** | ~0.9 |
+| `edge_duel` | `+1, −1, +1, −3, −4, +1, −2, −5` (pre-pin) | **2.4** | ~2.8 |
+| `narrow_bridge_duel` | `+3, −2, −3, +1, −4, +1` | **2.7** | ~3.1 |
+
+`melee_basic` is three times the instrument the other two are, and the reason is the arena rather
+than the code: an open field decides a fight on the trade, while a platform and a 1-wide bridge add
+knockback geometry that the margin cannot separate from combat quality.
+
+Rule of thumb for planning a series: to see a shift of `d` at two standard errors you need about
+`8·(sd/d)²` runs **per arm**. A one-point shift costs 6 runs an arm on `melee_basic` and **57** on
+`narrow_bridge_duel`. Every "effect" claimed on the bridge this session has been smaller than its own
+spread, and all of them were withdrawn. When the sensitive course cannot show an effect, more runs on
+the coarse one is not the answer — a different statistic is (see the ledger below, and CHECKLIST 4i).
+
+### The other half of the ledger
+
+Both fighters run this mod, so `DamageWatch` is counting on the **victim** too. `_ledger()` in
+`scenarios_pvp.py` prints blows, damage and `deathsSeen` for both sides of every duel. A run yields
+~50 blows a side against ~13 deaths, so the blow ratio resolves what the margin cannot. Read it as a
+**ratio between the sides**, never as a total: the class's own javadoc records that its damage does
+not reconcile with deaths × 20, and a shared undercount cancels in a ratio while it does not in a sum.
+
 Two tiers: **gate** scenarios (regression — a red blocks release) and
 **informational** (`bow_flee_hard`, `bridge_assault_defended`, placement-rate) that
 record today's honest capability without blocking, until the corresponding rework
