@@ -2326,6 +2326,8 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.nearDrawingTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.reachSprintTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.reachAwayTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.fleeIdleInactive = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.fleeIdleNoThreat = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowMax = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowSum = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowN = 0;
@@ -2935,6 +2937,12 @@ public class Py4jEntryPoint {
 
     /** Ticks the flee spent holding position instead of driving. */
     public int fleeHeldTicks() { return kaptainwutax.tungsten.task.RunAwayTask.fleeHeld; }
+
+    /** Ticks the flee declined because no flee order was active. */
+    public int fleeIdleInactive() { return kaptainwutax.tungsten.task.RunAwayTask.fleeIdleInactive; }
+
+    /** Ticks the flee declined because the threat could not be resolved (gone or out of view). */
+    public int fleeIdleNoThreat() { return kaptainwutax.tungsten.task.RunAwayTask.fleeIdleNoThreat; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a

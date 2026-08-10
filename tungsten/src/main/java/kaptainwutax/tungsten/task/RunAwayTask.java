@@ -191,11 +191,21 @@ public class RunAwayTask {
 
     // ── tick ─────────────────────────────────────────────────────────────────
 
+    /** Ticks the flee declined at each of its two entry gates -- the missing time, itemised. */
+    public static volatile int fleeIdleInactive, fleeIdleNoThreat;
+
     public static void tick(WorldView world, ClientPlayerEntity player) {
-        if (!active) return;
+        // WHERE THE OTHER TWO THIRDS GO. The flee drives 345 ticks and holds 72 of a 1200-tick
+        // course; four fixes to how it DRIVES all left the exposure profile unchanged, because
+        // they could only touch 29% of the run. These two counters itemise the rest.
+        //
+        // The second gate is the one to watch: "threat out of view" idles the flee, and fleeing
+        // means turning away from the threat -- which would be self-reinforcing, the bot turning
+        // its back, losing sight, stopping, and being caught. Counted rather than assumed.
+        if (!active) { fleeIdleInactive++; return; }
 
         threat = resolve(player);
-        if (threat == null) return; // threat gone / out of view — idle; agent decides next
+        if (threat == null) { fleeIdleNoThreat++; return; } // gone / out of view — idle
 
         double dist = player.getEntityPos().distanceTo(threat.getEntityPos());
         // DO NOT HOLD WHILE THE THREAT IS CLOSING.
