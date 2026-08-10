@@ -247,6 +247,17 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
                 Debug.logMessage("Failed to pick up drop, suggesting it's unreachable.");
                 _blacklist.add(_currentDrop);
                 mod.getEntityTracker().requestEntityUnreachable(_currentDrop);
+                // ⛔ AND LET GO OF IT. We have just declared this drop unreachable; keeping it as
+                // the current target means the next failure blacklists the SAME entity again,
+                // without ever asking the tracker for another. The tracker's selector honours the
+                // blacklist correctly (EntityTracker:139) -- it simply was never consulted again.
+                //
+                // That is the rest of mine_diamond's stall, and it is visible in the counter: a
+                // LIVE diamond (no removed=DISCARDED this time) logged "Try 1920 / 3", i.e. 1920
+                // failures against a limit of three, on one entity. A limit of three that a single
+                // target can exceed six hundred times over is not a limit; it is a target that was
+                // never re-selected.
+                _currentDrop = null;
                 return wanderTask;
             }
         }
