@@ -644,6 +644,29 @@ public class CombatController {
             // dirSafe(back) is checked with the SAME arguments the key press uses, so the two
             // cannot drift apart: if the retreat would be refused down there, the band is not
             // raised up here, and the bot keeps its ordinary strike distance and fights.
+            // ⛔ KEYING THIS TO THE OPPONENT'S SWING CLOCK WAS TRIED TWICE AND IS WORSE. DO NOT.
+            //
+            // The reasoning is good enough that it will occur to the next person too: `armed` is
+            // OUR cooldown, and standing off while OUR swing recharges only avoids a blow when the
+            // two cooldowns happen to be in phase -- which nothing keeps them in. The blow that
+            // lands is THEIRS, so key off theirs. A vanilla swing animation is broadcast to every
+            // client, so their period IS observable, and lastSwingMs (declared here with no writer
+            // and no reader) even looks like it was meant for that.
+            //
+            // Measured on edge_duel against this version's -0.27 at n=11:
+            //     stand off while their swing is imminent      -4, 0, -4, -2   mean -2.5
+            //     ...and treat a stale clock as NOT imminent    0, -8, -5, +1   mean -3.0
+            // Pooled n=8 that is about 2.2 sigma BELOW the shipped behaviour, and the counters say
+            // why in both directions: the first cut read "imminent" permanently, because a player
+            // walking toward us has not swung recently by definition (theirSwing=240/236), so the
+            // band stayed raised and the bot never closed. Guarding the staleness inverted it --
+            // 42/344, i.e. almost always pressing in -- and that was no better. The window this
+            // reasoning wants does not survive contact with an opponent who is sometimes walking.
+            //
+            // What the two runs DID confirm is the premise underneath: this flag is the only
+            // asymmetry these gates can see, so it is the only place a fix can come from
+            // (docs/features/PVP_SUITE.md). The next idea for it needs to beat -0.27, and the
+            // measurement is edge_duel A/B at n=11 an arm -- nothing smaller separates anything.
             boolean canWithdraw = dirSafe(player, world, -1, 0);
             if (!armed && !canWithdraw) standOffDeclined++;   // the ticks this guard actually took
             if (!armed && canWithdraw) {
