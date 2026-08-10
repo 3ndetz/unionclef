@@ -122,6 +122,15 @@ public final class WeaponSelector {
      *
      * <p>A charged crossbow can fire once with no ammunition. Not modelled: it would change the
      * answer only for that single loaded shot, and no course produces one.
+     *
+     * <p>⚠️ WHAT THIS PREDICATE DOES NOT COVER, for whoever extends it. It answers "can I convert
+     * distance into damage", which is the only justification the retreat currently claims. It is
+     * NOT the right question for a retreat that means to HEAL: on the bench that distinction is
+     * invisible because regeneration is off and no kit carries food, but in a real world a wounded
+     * bot could break contact and recover. Nothing in tungsten does that today — the module never
+     * eats and never waits out a regen — so removing the retreat removes nothing. If a
+     * disengage-to-heal behaviour is ever added, it needs its OWN predicate and must not be hung
+     * on this one, or it will be gated on owning a bow for no reason.
      */
     public static boolean hasRangedOption(ClientPlayerEntity player) {
         if (player == null) return false;
