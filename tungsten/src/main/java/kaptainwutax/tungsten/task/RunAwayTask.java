@@ -185,6 +185,13 @@ public class RunAwayTask {
                             || MinecraftClient.getInstance().options.leftKey.isPressed()
                             || MinecraftClient.getInstance().options.rightKey.isPressed()) {
                         stillKeysDownTicks++;
+                        // IS THE BLOCKER THE CHASER? I have been asserting it from "flat arena,
+                        // what else is there", which is an inference, and inferences have cost me
+                        // five reverts tonight. Two player boxes are 0.6 wide each, so contact is
+                        // under ~1.2 blocks centre to centre; 1.5 leaves margin. If this stays
+                        // near zero the obstacle is something else entirely and an anti-body-block
+                        // remedy would be aimed at nothing.
+                        if (d < 1.5) stillTouchingThreatTicks++;
                     }
                 }
             }
@@ -251,6 +258,8 @@ public class RunAwayTask {
     public static volatile int stillMoveQueueTicks;
     /** Of the nobody-ticks: how many had a movement key actually held down. */
     public static volatile int stillKeysDownTicks;
+    /** Of the stalled keys-down ticks: how many had the threat within body contact. */
+    public static volatile int stillTouchingThreatTicks;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
         // WHERE THE OTHER TWO THIRDS GO. The flee drives 345 ticks and holds 72 of a 1200-tick
