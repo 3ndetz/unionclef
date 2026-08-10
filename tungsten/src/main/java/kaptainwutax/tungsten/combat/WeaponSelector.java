@@ -113,10 +113,12 @@ public final class WeaponSelector {
      * losing the exchange while every other check passes — against edge_duel, which is a 5x5
      * platform with nowhere to retreat TO and wins 4/4 on the same jar.
      *
-     * <p>Hotbar and offhand only, like the rest of this class. A bow in the hotbar whose arrows
-     * are buried in the deep inventory therefore reads as "no ranged option" although vanilla
-     * would fire it happily. The error is one-directional and lands on "keep fighting", which is
-     * the safe side of this question.
+     * <p>The two halves are scanned differently, on purpose. The LAUNCHER has to be reachable to
+     * be fired and this class only ever equips from the hotbar, so hotbar plus offhand is the
+     * honest question. The AMMUNITION is searched across the whole inventory because that is what
+     * vanilla does when the string is released — asking a narrower question would have made the
+     * answer depend on where a `/give` happened to drop the arrows, and the retreat would then
+     * disappear from a bow course silently, the first time a kit filled the hotbar first.
      *
      * <p>A charged crossbow can fire once with no ammunition. Not modelled: it would change the
      * answer only for that single loaded shot, and no course produces one.
@@ -124,21 +126,19 @@ public final class WeaponSelector {
     public static boolean hasRangedOption(ClientPlayerEntity player) {
         if (player == null) return false;
         boolean launcher = false;
-        boolean ammo = false;
-        for (int slot = 0; slot < 9; slot++) {
-            ItemStack st = player.getInventory().getStack(slot);
-            if (st == null || st.isEmpty()) continue;
-            Item it = st.getItem();
+        for (int slot = 0; slot < 9 && !launcher; slot++) {
+            Item it = player.getInventory().getStack(slot).getItem();
             if (it == Items.BOW || it == Items.CROSSBOW) launcher = true;
-            else if (ARROWS.contains(it)) ammo = true;
         }
-        ItemStack off = player.getOffHandStack();
-        if (off != null && !off.isEmpty()) {
-            Item it = off.getItem();
-            if (it == Items.BOW || it == Items.CROSSBOW) launcher = true;
-            else if (ARROWS.contains(it)) ammo = true;
+        if (!launcher) {
+            Item off = player.getOffHandStack().getItem();
+            launcher = off == Items.BOW || off == Items.CROSSBOW;
         }
-        return launcher && ammo;
+        if (!launcher) return false;
+        for (int slot = 0; slot < player.getInventory().size(); slot++) {
+            if (ARROWS.contains(player.getInventory().getStack(slot).getItem())) return true;
+        }
+        return ARROWS.contains(player.getOffHandStack().getItem());
     }
 
     private WeaponSelector() {}
