@@ -467,7 +467,13 @@ class BowFlee(Scenario):
         ds = [s["dist"] for s in ctx.samples if s.get("dist") is not None]
         closest = round(min(ds), 2) if ds else None
         caught = sum(1 for d in ds if d <= 3.0)
-        ctx.log(f"  closest={closest} samples_in_reach={caught}/{len(ds)}")
+        # Per-tick, from the mod: the 1 Hz series above cannot see this course. The victim
+        # carries only a sword, so every death is a catch, yet the sampler has reported 0-in-reach
+        # on runs with six of them.
+        okr, rt = ctx.bot.py.try_call("fleeReachTicks")
+        okn, nt = ctx.bot.py.try_call("fleeNearTicks")
+        ctx.log(f"  closest={closest} samples_in_reach={caught}/{len(ds)}"
+                f" | reachTicks={rt if okr else 'ABSENT'} nearTicks={nt if okn else 'ABSENT'}")
         # DO NOT MARK THE SURVIVAL CRITERION load_sensitive. It looks like a candidate -- runs
         # get judged at 10 fps, below the 14.0 floor -- but the data says the opposite of the
         # intuition: across 34 recorded runs r(fps, deaths) = +0.47, and runs ABOVE the floor

@@ -35,6 +35,23 @@ public class RunAwayTask {
     private static double  keepDistance = 8.0;
     /** Previous tick's distance to the threat, so the hold can tell closing from holding. */
     private static double  lastThreatDist = -1;
+
+    /**
+     * Ticks the threat spent inside melee reach, and inside a stride of it.
+     *
+     * <p>A COUNT, DELIBERATELY, NOT A RATE. bow_flee's death total ranges 4 to 10 on unchanged
+     * code (n=8 at healthy fps), so no tightening of the flee objective can be demonstrated by
+     * counting deaths -- the effect would have to exceed the spread. Ticks-in-reach is a count
+     * over 1200 ticks of course, it moves with the behaviour rather than with luck, and a
+     * monotonic counter cannot be missed by the bench's 1 Hz poll.
+     *
+     * <p>The poll is exactly why this has to live here. The victim on this course carries only a
+     * sword (scenarios_pvp: victim_kit = KIT_SWORD), so EVERY death is a catch -- and yet the
+     * sampler reported 0 of 14 samples inside reach on a run with six of them. The gap collapses
+     * and recovers between samples. Only per-tick counting sees it.
+     */
+    public static volatile int reachTicks;
+    public static volatile int nearTicks;
     private static PlayerEntity threat  = null;
     private static int     tickCounter  = 0;
 
@@ -151,6 +168,8 @@ public class RunAwayTask {
         // here: it holds at the line, the gap is eaten, it is caught flat-footed.
         //
         // So the gap alone is the wrong test. Hold only while the threat is NOT gaining ground.
+        if (dist <= 3.0) reachTicks++;          // inside a sword swing
+        else if (dist <= 4.5) nearTicks++;      // one stride from one
         boolean closing = lastThreatDist >= 0 && dist < lastThreatDist - 0.01;
         lastThreatDist = dist;
         if (!closing && dist >= keepDistance + 1.5) {
