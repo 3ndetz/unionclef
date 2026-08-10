@@ -989,6 +989,26 @@ public class PathFinder {
                         world, player.getBlockPos(),
                         net.minecraft.util.math.BlockPos.ofFloored(target),
                         kaptainwutax.tungsten.TungstenConfig.get().fastPlanBudgetMs);
+                // ⛔ THE TOGGLE EVIDENCE QUOTED BELOW IS NOW INVERTED. RE-MEASURED 2026-08-10,
+                // three runs an arm on a healthy stand, the pin verified in the log:
+                //
+                //     course       fastBlockFirst ON (default)   OFF (the "old behaviour")
+                //     nav_slime            2/3 PASS                    0/3
+                //     nav_ladder           3/3 PASS                    3/3
+                //     nav_water            3/3 PASS                    0/3
+                //
+                // "OFF passes, ON fails" was true when it was written and is the opposite of what
+                // the stand says today: OFF now fails nav_water outright and never passes slime.
+                // The reason is in the same file the claim distrusts -- FastPlanner.special()
+                // (:485-530) models ladders, swimming and slime bounce now, and its own debug line
+                // prints slime= and climb=. The move-set gap the rule was built on has closed.
+                //
+                // WHAT THAT DOES AND DOES NOT SETTLE. It settles the TOGGLE: fast-first belongs on.
+                // It does NOT settle THIS RULE, because the runs above were all taken with the
+                // rule in force -- accepting only complete fast routes is inside the ON path. To
+                // test the rule itself, relax it to guide with a partial route and re-run these
+                // same three courses. That is a code change and it is the next step, not this one.
+                //
                 // Only guide with a COMPLETE fast route. The fast move set is
                 // walking, climbing, dropping and gap jumps — it has no slime
                 // bounce, ladder, vine or swim moves, which the legacy search
