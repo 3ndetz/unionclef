@@ -2335,6 +2335,7 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.stillSearchTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.stillNobodyTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.stillMoveQueueTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.stillKeysDownTicks = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowMax = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowSum = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowN = 0;
@@ -2966,6 +2967,9 @@ public class Py4jEntryPoint {
     public int fleeStillNobody()   { return kaptainwutax.tungsten.task.RunAwayTask.stillNobodyTicks; }
     /** Of the nobody-ticks, how many had a MovementQueue claiming the tick without moving. */
     public int fleeStillMoveQueue() { return kaptainwutax.tungsten.task.RunAwayTask.stillMoveQueueTicks; }
+
+    /** Of the nobody-ticks, how many had a movement key held -- collision if high, key-clearing if 0. */
+    public int fleeStillKeysDown() { return kaptainwutax.tungsten.task.RunAwayTask.stillKeysDownTicks; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a

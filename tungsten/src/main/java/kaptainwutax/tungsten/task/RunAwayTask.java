@@ -174,6 +174,18 @@ public class RunAwayTask {
                     // movement claimed the tick and did not move the bot, that is the gap; if not,
                     // the decline is somewhere else again and the search continues one level down.
                     if (kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) stillMoveQueueTicks++;
+                    // ONE BOOLEAN DECIDES IT. Every gate driveAwayRaw has is open on these ticks
+                    // (moveQueue 0, executor 0, search 0), so the keys ought to be down. If they
+                    // ARE down and the bot still is not moving, this is collision -- walking into
+                    // the victim or geometry. If they are NOT, something clears them after the
+                    // drive presses them, and VoidGuard runs immediately after and zeroes movement
+                    // keys when it sees an edge. Recorded, not assumed.
+                    if (MinecraftClient.getInstance().options.forwardKey.isPressed()
+                            || MinecraftClient.getInstance().options.backKey.isPressed()
+                            || MinecraftClient.getInstance().options.leftKey.isPressed()
+                            || MinecraftClient.getInstance().options.rightKey.isPressed()) {
+                        stillKeysDownTicks++;
+                    }
                 }
             }
             nearThreatTicks++;
@@ -237,6 +249,8 @@ public class RunAwayTask {
     public static volatile int stillExecutorTicks, stillSearchTicks, stillNobodyTicks;
     /** Of the "nobody" ticks: how many had a MovementQueue claiming the tick without moving. */
     public static volatile int stillMoveQueueTicks;
+    /** Of the nobody-ticks: how many had a movement key actually held down. */
+    public static volatile int stillKeysDownTicks;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
         // WHERE THE OTHER TWO THIRDS GO. The flee drives 345 ticks and holds 72 of a 1200-tick
