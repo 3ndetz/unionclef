@@ -213,6 +213,28 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
 
         if (!progressChecker.check(mod)) {
             Nav.cancel();
+            // ⛔ A DISCARDED ITEM ENTITY STILL HAS ITS STACK, SO THIS TEST NEVER ENDS.
+            // The condition below asks "is there a drop and does it still hold something", and a
+            // removed=DISCARDED entity answers yes to both forever -- getStack() is untouched by
+            // removal. So once the target vanished (picked up, despawned, merged) the task kept
+            // failing against a ghost: blacklist, wander, come back, blacklist again.
+            //
+            // Measured on mine_diamond, which is where this was found: the bot mined its diamond,
+            // the drop was discarded, and the log reads
+            //     Blacklist: class_1542['Diamond'/3634, ..., removed=DISCARDED]: Try 4144 / 3
+            // four thousand times against a limit of three, while the timeline shows the bot at
+            // EXACTLY (-10.7, -60.0, -7.479) from t=28 s to t=284 s of a 300 s course. Not slow
+            // mining -- a hard stall on an item that no longer exists.
+            //
+            // The tracker's own filter has always had this right (`obj.isAlive() && !blacklisted`,
+            // line ~310); only this branch, which runs off the CACHED _currentDrop, did not ask.
+            // Clearing the reference is what lets the task pick another target instead of a ghost.
+            if (_currentDrop != null && !_currentDrop.isAlive()) {
+                Debug.logMessage("Drop vanished before we reached it — dropping the reference.");
+                _currentDrop = null;
+                progressChecker.reset();
+                return null;
+            }
             if (_currentDrop != null && !_currentDrop.getStack().isEmpty()) {
                 // We might want to get a pickaxe first.
                 if (!isGettingPickaxeFirstFlag && mod.getModSettings().shouldCollectPickaxeFirst() && !StorageHelper.miningRequirementMetInventory(MiningRequirement.STONE)) {
