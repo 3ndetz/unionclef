@@ -1003,11 +1003,23 @@ public class PathFinder {
                 // (:485-530) models ladders, swimming and slime bounce now, and its own debug line
                 // prints slime= and climb=. The move-set gap the rule was built on has closed.
                 //
-                // WHAT THAT DOES AND DOES NOT SETTLE. It settles the TOGGLE: fast-first belongs on.
-                // It does NOT settle THIS RULE, because the runs above were all taken with the
-                // rule in force -- accepting only complete fast routes is inside the ON path. To
-                // test the rule itself, relax it to guide with a partial route and re-run these
-                // same three courses. That is a code change and it is the next step, not this one.
+                // AND THE RULE ITSELF WAS THEN MEASURED, via fastGuidePartial. Third arm, same
+                // courses, three runs each, all healthy:
+                //
+                //     arm                                   nav_slime  nav_ladder  nav_water
+                //     fastBlockFirst=false (old behaviour)     0/3         3/3        0/3
+                //     default (fast-first + this rule)         2/3         3/3        3/3
+                //     fastGuidePartial=true (rule relaxed)     3/3         3/3        0/3
+                //
+                // The rule is BLUNT rather than wrong: it earns its keep on nav_water, where
+                // relaxing it costs 3/3, and it costs nav_slime a run in three, where relaxing it
+                // wins 3/3. Of the four moves the justification below names -- slime bounce,
+                // ladder, vine, swim -- only the WATER half still holds, which is what
+                // FastPlanner.special() modelling slime and ladders predicts.
+                //
+                // So the fix is conditional, not either/or: reject a partial route only when the
+                // REMAINDER needs a move the fast set really lacks. Nobody has measured that yet,
+                // so the default stays -- best of the three arms at 8/9 against 6/9 and 3/9.
                 //
                 // Only guide with a COMPLETE fast route. The fast move set is
                 // walking, climbing, dropping and gap jumps — it has no slime
@@ -1028,7 +1040,16 @@ public class PathFinder {
                         && Math.sqrt(fast.path.get(fast.path.size() - 1).pos
                                 .getSquaredDistance(net.minecraft.util.math.BlockPos.ofFloored(target)))
                             <= FAST_GUIDE_ARRIVE_DIST;
-                if ((fast.complete || arrivesAnyway) && fast.path.size() >= 2) {
+                // STEP 2 OF THE RE-MEASUREMENT, BEHIND A FLAG SO THE DEFAULT IS UNTOUCHED.
+                // The toggle evidence above is inverted, but that only settles fast-first itself;
+                // the complete-only acceptance has never been tested on its own because it lives
+                // inside the arm that passes. fastGuidePartial=true accepts ANY fast route as a
+                // guide, which is the rule's opposite, so the two can be compared on the same
+                // courses that produced the original claim. Default false: shipping behaviour does
+                // not move until the measurement says it should.
+                boolean acceptable = fast.complete || arrivesAnyway
+                        || kaptainwutax.tungsten.TungstenConfig.get().fastGuidePartial;
+                if (acceptable && fast.path.size() >= 2) {
                     return truncateAtBreaks(Optional.of(fast.toBlockNodes(goal, player)));
                 }
             } catch (Exception e) {

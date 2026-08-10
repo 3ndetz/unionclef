@@ -82,6 +82,36 @@ public class TungstenConfig {
      *  Toggle live: ;settings fastBlockFirst false — or py4j setFastBlockFirst. */
     public boolean fastBlockFirst = true;
 
+    /**
+     * Guide the physics engine with an INCOMPLETE fast route (default OFF).
+     *
+     * <p>The rule this bypasses accepts a fast route only when it is complete, or when it already
+     * arrives, on the grounds that the fast move set has no slime bounce, ladder, vine or swim move
+     * and a partial route through such terrain hides those options. It cites the fastBlockFirst
+     * toggle as proof — "OFF passes, ON fails" — and that is now exactly backwards: re-measured
+     * 2026-08-10, OFF fails nav_water 0/3 and nav_slime 0/3 while ON passes 3/3 and 2/3.
+     *
+     * <p>MEASURED WITH IT, three runs an arm, all at a healthy frame rate:
+     * <pre>
+     *   arm                                   nav_slime  nav_ladder  nav_water
+     *   fastBlockFirst=false (old behaviour)     0/3         3/3        0/3
+     *   default (fast-first + this rule)         2/3         3/3        3/3
+     *   fastGuidePartial=true (rule relaxed)     3/3         3/3        0/3
+     * </pre>
+     *
+     * <p>So the rule is neither right nor wrong — it is BLUNT. It earns its keep on nav_water,
+     * where relaxing it costs 3/3, and it costs nav_slime one run in three, where relaxing it wins
+     * 3/3. The original justification named the missing moves as "slime bounce, ladder, vine or
+     * swim"; the measurement says only the WATER half of that is still true, which is exactly what
+     * FastPlanner.special() modelling slime and ladders would predict.
+     *
+     * <p>The right shape of the fix is therefore conditional rather than either/or: reject a
+     * partial fast route only when the remainder needs a move the fast set really lacks. Until
+     * someone measures that, the default stays where it is — best of the three arms at 8/9 against
+     * 6/9 and 3/9 — and this flag stays as the instrument that produced the table.
+     */
+    public boolean fastGuidePartial = false;
+
     /** Wall-clock budget for the fast block plan (ms). It is time-sliced and
      *  returns its best chain, so this is a latency knob, not a quality cliff. */
     public long fastPlanBudgetMs = 250;
