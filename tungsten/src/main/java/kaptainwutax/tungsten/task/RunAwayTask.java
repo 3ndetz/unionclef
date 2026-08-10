@@ -192,6 +192,15 @@ public class RunAwayTask {
                         // near zero the obstacle is something else entirely and an anti-body-block
                         // remedy would be aimed at nothing.
                         if (d < 1.5) stillTouchingThreatTicks++;
+                        // WHERE does it stall? The arena is centred on the origin, so the larger
+                        // of |x| and |z| is how far out the bot is. G-1.66 already recorded that
+                        // this objective "seeks corners"; if the stalls sit at a large radius the
+                        // bot is pressing into the boundary and the subject is the OBJECTIVE, not
+                        // the drive. Reported in tenths of a block to keep it an int.
+                        int radius = (int) Math.round(Math.max(Math.abs(player.getX()),
+                                                               Math.abs(player.getZ())) * 10.0);
+                        if (radius > stillMaxRadius) stillMaxRadius = radius;
+                        stillRadiusSum += radius;
                     }
                 }
             }
@@ -260,6 +269,8 @@ public class RunAwayTask {
     public static volatile int stillKeysDownTicks;
     /** Of the stalled keys-down ticks: how many had the threat within body contact. */
     public static volatile int stillTouchingThreatTicks;
+    /** Distance from arena centre at stalled ticks, in tenths of a block. */
+    public static volatile int stillMaxRadius, stillRadiusSum;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
         // WHERE THE OTHER TWO THIRDS GO. The flee drives 345 ticks and holds 72 of a 1200-tick
