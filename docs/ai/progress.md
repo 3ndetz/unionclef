@@ -1333,3 +1333,36 @@ measures named before they ran, seven of my own instruments corrected, and eight
 before reading the line that settled them. Every one of the six fixes edited the DRIVE; the fault
 was in the OBJECTIVE, which task G-1.66 had already recorded as "seeks corners — furthest from the
 threat has no continuation". Reading that first would have been cheaper than the entire session.
+
+## bow_flee, final state of this session — three fixes, the gate metric moved, the gate not met
+
+DEATHS, the gate metric, n=8 vs n=9 under the same conditions:
+  before  4, 5, 5, 6, 6, 6, 6, 10        median 6, range 4–10
+  after   4, 4, 4, 4, 4, 4, 5, 5, 6      median 4, range 4–6
+Seven of nine below the old median. The gate wants **zero**, so the course is still RED.
+
+THREE FIXES, each judged on a number named before it ran:
+1. The flee objective could not express "run along the rim" — it sampled only ±80° from
+   straight-away, so at a boundary every candidate pointed outward, all failed `hasRoomBeyond`,
+   and the dead-end fallback took the rim itself. Added ±115/±145. **Stalls 54 → 0/8/8/5.**
+2. The bow enforced its gap threshold only at a shot's START, so a shot begun safely kept the
+   camera while the gap collapsed. Now checked every tick. **Sprint 24% → ~39%.**
+3. The flee never TOOK the camera the bow released, so it kept retreating backwards, which vanilla
+   will not sprint. Requests the away heading through WindMouse. **Sprint → ~50–60%.**
+Baselines after each: `edge_duel`, `melee_basic`, `ranged_moving`, `nav_flat` all PASS.
+
+REACH, calibrated by the blows at the rising edge of `hurtTime`: **mean 4.25, max 5.35** over 22
+hits. Every band chosen by argument was wrong (3.0, then 3.6). `REACH_BAND`/`NEAR_BAND` are now
+named constants the bench READS rather than restates — the duplicate drifted twice in one evening.
+
+IDLE TIME, fully attributed by counting: shot running 35–40, mid-turn 30–47 (structural — `setYaw`
+is banned), collision 20, sneak 5–9, unexplained ~28. **No single cause dominates.** The two I
+would have named without counting — the bow, then sneak — are a third and a twentieth.
+
+REFUTED BY EXPERIMENT: shooting less does not buy survival. `SHOOT_ABOVE_FRACTION` 0.5 → 0.75 left
+deaths at 5/4/5 and took arrow hits to 0/0/0. There is no tension between the course's two criteria;
+cutting shots simply loses the hits.
+
+NEXT: mid-flight collision is the largest actionable bucket. Measure what the bot collides with
+during flight before touching it — the rim collision was a different event and assuming otherwise is
+how several wrong turns started tonight.
