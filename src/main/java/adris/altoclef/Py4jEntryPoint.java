@@ -2345,6 +2345,7 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.hitDistSum = 0;
         kaptainwutax.tungsten.task.RunAwayTask.hitDistN = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeSprintTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.fleeAtRimTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintBowTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintOtherTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintTurningTicks = 0;
@@ -3012,6 +3013,8 @@ public class Py4jEntryPoint {
 
     /** Of the flee's driving ticks, how many were spent sprinting. */
     public int fleeSprintTicks() { return kaptainwutax.tungsten.task.RunAwayTask.fleeSprintTicks; }
+    /** Ticks spent hugging the rim -- accumulates, so it can judge a metre of clearance. */
+    public int fleeAtRimTicks() { return kaptainwutax.tungsten.task.RunAwayTask.fleeAtRimTicks; }
 
     /**
      * The reach band the mod counts exposure at, so the bench does not have to restate it.

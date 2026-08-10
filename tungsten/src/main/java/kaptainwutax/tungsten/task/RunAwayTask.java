@@ -321,6 +321,8 @@ public class RunAwayTask {
     public static volatile int hitDistMax, hitDistSum, hitDistN;
     /** Of the flee's driving ticks, how many were spent sprinting. */
     public static volatile int fleeSprintTicks;
+    /** Ticks spent within half a block of the rim -- an integral, not an event count. */
+    public static volatile int fleeAtRimTicks;
     /** Of the non-sprinting drive ticks: how many had a shot running, and how many did not. */
     public static volatile int fleeNoSprintBowTicks, fleeNoSprintOtherTicks;
     /** Of the 'other' idle ticks: how many were mid-turn, i.e. not yet facing away enough to sprint. */
@@ -546,6 +548,15 @@ public class RunAwayTask {
         // covers 5.6 blocks a second, so a flee that cannot sprint loses the gap no matter where it
         // points.
         if (player.isSprinting()) fleeSprintTicks++;
+        // TIME AT THE RIM, ACCUMULATED. The collision counter reads 0 and 20 on the same unchanged
+        // build, so it cannot judge a change that moves the bot a metre off the boundary -- it
+        // counts discrete events, and those events are rare and clumpy. This integrates instead:
+        // every tick spent within half a block of where the grazes happen (radius 18.7 on a
+        // half=20 platform) adds one. An integral over hundreds of ticks does not swing an order
+        // of magnitude between identical runs, which is the property the clearance idea needs to
+        // be judged on at all.
+        double rr = Math.max(Math.abs(player.getX()), Math.abs(player.getZ()));
+        if (rr > 18.2) fleeAtRimTicks++;
         // WHERE THE OTHER HALF GOES. Sprint sits at ~50% of drive ticks; the bow owns the camera
         // for whole shots and vanilla sprints forward only, so a shot in progress is the obvious
         // suspect -- and suspects have been wrong thirteen times tonight. Attribute it instead:
