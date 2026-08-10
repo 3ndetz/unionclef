@@ -36,7 +36,7 @@ public class ConstructIronGolemTask extends Task {
     protected void onStart() {
         AltoClef.getInstance().getBehaviour().push();
         AltoClef.getInstance().getBehaviour().addProtectedItems(Items.IRON_BLOCK, Items.CARVED_PUMPKIN);
-        AltoClef.getInstance().getClientBaritoneSettings().blocksToAvoidBreaking.value.add(Blocks.IRON_BLOCK);
+        AltoClef.getInstance().avoidBreaking(Blocks.IRON_BLOCK);
     }
 
     @Override
@@ -112,7 +112,7 @@ public class ConstructIronGolemTask extends Task {
 
     @Override
     protected void onStop(Task interruptTask) {
-        AltoClef.getInstance().getClientBaritoneSettings().blocksToAvoidBreaking.value.remove(Blocks.IRON_BLOCK);
+        AltoClef.getInstance().allowBreaking(Blocks.IRON_BLOCK);
         AltoClef.getInstance().getBehaviour().pop();
     }
 

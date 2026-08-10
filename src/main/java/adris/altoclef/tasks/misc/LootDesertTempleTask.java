@@ -30,7 +30,7 @@ public class LootDesertTempleTask extends Task {
 
     @Override
     protected void onStart() {
-        AltoClef.getInstance().getClientBaritoneSettings().blocksToAvoid.value.add(Blocks.STONE_PRESSURE_PLATE);
+        AltoClef.getInstance().avoidWalkingThrough(Blocks.STONE_PRESSURE_PLATE);
     }
 
     @Override
@@ -57,7 +57,7 @@ public class LootDesertTempleTask extends Task {
 
     @Override
     protected void onStop(Task task) {
-        AltoClef.getInstance().getClientBaritoneSettings().blocksToAvoid.value.remove(Blocks.STONE_PRESSURE_PLATE);
+        AltoClef.getInstance().allowWalkingThrough(Blocks.STONE_PRESSURE_PLATE);
     }
 
     @Override

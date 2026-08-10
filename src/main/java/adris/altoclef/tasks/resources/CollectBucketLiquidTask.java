@@ -70,7 +70,7 @@ public class CollectBucketLiquidTask extends ResourceTask {
         mod.getBehaviour().avoidBlockBreaking((pos) -> MinecraftClient.getInstance().world.getBlockState(pos).getBlock() == toCollect);
         mod.getBehaviour().avoidBlockPlacing((pos) -> MinecraftClient.getInstance().world.getBlockState(pos).getBlock() == toCollect);
 
-        mod.getClientBaritoneSettings().avoidUpdatingFallingBlocks.value = true;
+        mod.setAvoidUpdatingFallingBlocks(true);
         //_blacklist.clear();
 
         progressChecker.reset();
@@ -215,7 +215,7 @@ public class CollectBucketLiquidTask extends ResourceTask {
         //mod.getInputControls().release(Input.CLICK_RIGHT);
         mod.getExtraBaritoneSettings().setInteractionPaused(false);
 
-        mod.getClientBaritoneSettings().avoidUpdatingFallingBlocks.value = false;
+        mod.setAvoidUpdatingFallingBlocks(false);
     }
 
     @Override

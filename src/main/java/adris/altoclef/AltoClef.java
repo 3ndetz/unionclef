@@ -40,6 +40,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import adris.altoclef.mixins.MinecraftClientSessionMixin;
 import adris.altoclef.util.helpers.ConfigHelper;
+import net.minecraft.block.Block;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.session.Session;
@@ -683,7 +684,7 @@ public class AltoClef implements ModInitializer {
                 Blocks.AMETHYST_CLUSTER, Blocks.SCULK, Blocks.SCULK_VEIN));
 
         // dont try to break nether portal block
-        getClientBaritoneSettings().blocksToAvoidBreaking.value.add(Blocks.NETHER_PORTAL);
+        avoidBreaking(Blocks.NETHER_PORTAL);
         getClientBaritoneSettings().blocksToDisallowBreaking.value.add(Blocks.NETHER_PORTAL);
 
         // Let baritone move items to hotbar to use them
@@ -915,6 +916,44 @@ public class AltoClef implements ModInitializer {
      * has to become a re-read, and that is the thing to check first if the list ever looks stale.
      */
     private final List<Item> throwawayItems = new ArrayList<>();
+
+    /**
+     * Protect blocks from the pathfinder's pick — and let them go again (G-0b).
+     *
+     * <p>Eleven call sites reached into {@code getClientBaritoneSettings().blocksToAvoidBreaking
+     * .value} to add or remove a block, which is altoclef's OWN policy stored in, and mutated
+     * through, a foreign object model. Every one of them is a WRITE; nothing ever read the list
+     * back. So the port is an encapsulation rather than a data move: one seam instead of eleven,
+     * and when the pathfinder behind it is replaced only this method changes.
+     *
+     * <p>Pairs of add/remove across a task's lifetime are exactly the shape that drifts. It already
+     * had: ConstructGraveTask protected COBBLESTONE_SLAB and released STONE_SLAB, so the slab it
+     * actually added was never released and the pathfinder refused to break cobblestone slabs for
+     * the rest of the session.
+     */
+    public void avoidBreaking(Block... blocks) {
+        getClientBaritoneSettings().blocksToAvoidBreaking.value.addAll(Arrays.asList(blocks));
+    }
+
+    /** Release blocks protected by {@link #avoidBreaking}. Pass exactly what was passed there. */
+    public void allowBreaking(Block... blocks) {
+        getClientBaritoneSettings().blocksToAvoidBreaking.value.removeAll(Arrays.asList(blocks));
+    }
+
+    /** Keep the pathfinder from routing THROUGH these blocks, and let them go again. */
+    public void avoidWalkingThrough(Block... blocks) {
+        getClientBaritoneSettings().blocksToAvoid.value.addAll(Arrays.asList(blocks));
+    }
+
+    /** Undo {@link #avoidWalkingThrough}. */
+    public void allowWalkingThrough(Block... blocks) {
+        getClientBaritoneSettings().blocksToAvoid.value.removeAll(Arrays.asList(blocks));
+    }
+
+    /** Whether the pathfinder should leave gravel and sand alone (bucket work turns this on). */
+    public void setAvoidUpdatingFallingBlocks(boolean avoid) {
+        getClientBaritoneSettings().avoidUpdatingFallingBlocks.value = avoid;
+    }
 
     /** @return items safe to place and abandon — see {@link #throwawayItems}. Never null. */
     public List<Item> getThrowawayItems() {

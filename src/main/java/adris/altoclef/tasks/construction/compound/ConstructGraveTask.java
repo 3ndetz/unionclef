@@ -35,6 +35,18 @@ import java.util.Objects;
  * As you can see, there is only 2 dimensions using, so we have Y height and X length, no width.
  */
 public class ConstructGraveTask extends Task {
+
+    /**
+     * The blocks this task protects from the pathfinder while it builds, and releases after.
+     *
+     * <p>ONE list, used by both the add and the remove, because the two had already drifted: the
+     * add protected COBBLESTONE_SLAB and the remove released STONE_SLAB, so the slab it actually
+     * added was never released and the pathfinder refused to break cobblestone slabs for the rest
+     * of the session. A pair of hand-written lists cannot be kept in step by care alone.
+     */
+    private static final Block[] GRAVE_BLOCKS = {
+            Blocks.COBBLESTONE, Blocks.OAK_SIGN, Blocks.COBBLESTONE_SLAB, Blocks.SMOOTH_STONE_SLAB,
+    };
     protected BlockPos _position;
     private final String _signText;
     private boolean _finished = false;
@@ -56,10 +68,7 @@ public class ConstructGraveTask extends Task {
         AltoClef mod = AltoClef.getInstance();
         mod.getBehaviour().push();
         mod.getBehaviour().addProtectedItems(Items.COBBLESTONE, Items.COBBLESTONE_SLAB, Items.SMOOTH_STONE_SLAB, Items.OAK_SIGN);
-        mod.getClientBaritoneSettings().blocksToAvoidBreaking.value.add(Blocks.COBBLESTONE);
-        mod.getClientBaritoneSettings().blocksToAvoidBreaking.value.add(Blocks.OAK_SIGN);
-        mod.getClientBaritoneSettings().blocksToAvoidBreaking.value.add(Blocks.COBBLESTONE_SLAB);
-        mod.getClientBaritoneSettings().blocksToAvoidBreaking.value.add(Blocks.SMOOTH_STONE_SLAB);
+        mod.avoidBreaking(GRAVE_BLOCKS);
     }
 
     public static boolean hasGraveMaterials(AltoClef mod) {
@@ -172,10 +181,7 @@ public class ConstructGraveTask extends Task {
     protected void onStop(Task interruptTask) {
         AltoClef mod = AltoClef.getInstance();
         mod.getBehaviour().pop();
-        mod.getClientBaritoneSettings().blocksToAvoidBreaking.value.remove(Blocks.COBBLESTONE);
-        mod.getClientBaritoneSettings().blocksToAvoidBreaking.value.remove(Blocks.OAK_SIGN);
-        mod.getClientBaritoneSettings().blocksToAvoidBreaking.value.remove(Blocks.SMOOTH_STONE_SLAB);
-        mod.getClientBaritoneSettings().blocksToAvoidBreaking.value.remove(Blocks.STONE_SLAB);
+        mod.allowBreaking(GRAVE_BLOCKS);
     }
 
     @Override
