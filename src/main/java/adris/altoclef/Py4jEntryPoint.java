@@ -2922,6 +2922,20 @@ public class Py4jEntryPoint {
      */
     public int bowFacingTicks() { return kaptainwutax.tungsten.task.BowShooter.getFacingTicks(); }
 
+    /**
+     * Ticks this run in which the flee actually DROVE the player, versus ticks it chose to hold.
+     *
+     * <p>The question four failed fixes pointed at: the exposure profile barely moved whatever I
+     * changed about HOW the flee drives (27% moving away, 3-5% sprinting, across two camera
+     * guards, a rotation route and the hold's standstill). If the flee only owns a fraction of the
+     * 1200-tick course, no change to its driving can matter, and that would explain four flat
+     * results in a row far better than any property of the driving itself.
+     */
+    public int fleeDriveTicks() { return kaptainwutax.tungsten.task.RunAwayTask.fleeDriveTicks; }
+
+    /** Ticks the flee spent holding position instead of driving. */
+    public int fleeHeldTicks() { return kaptainwutax.tungsten.task.RunAwayTask.fleeHeld; }
+
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a
      *  bounce — measured -59.85 that way where the tick trace says -55.4. */
