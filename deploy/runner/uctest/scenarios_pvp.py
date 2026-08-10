@@ -468,6 +468,14 @@ class BowFlee(Scenario):
         closest = round(min(ds), 2) if ds else None
         caught = sum(1 for d in ds if d <= 3.0)
         ctx.log(f"  closest={closest} samples_in_reach={caught}/{len(ds)}")
+        # DO NOT MARK THE SURVIVAL CRITERION load_sensitive. It looks like a candidate -- runs
+        # get judged at 10 fps, below the 14.0 floor -- but the data says the opposite of the
+        # intuition: across 34 recorded runs r(fps, deaths) = +0.47, and runs ABOVE the floor
+        # averaged 6.25 deaths against 4.20 below it. A starved client does not kill this bot,
+        # it flatters it, because the chaser slows down too. Flagging this criterion would stop
+        # the course failing honestly on exactly the healthy runs where it fails hardest.
+        # (n=4 above the floor, so the gap is thin -- the SIGN is what matters here, not the size.)
+        #
         # A run where the fight never happened must not be able to score a clean sheet.
         yield Criterion("the fight actually happened", ctx.engagement_happened(),
                         f"closest={closest} samples={len(ds)}")
