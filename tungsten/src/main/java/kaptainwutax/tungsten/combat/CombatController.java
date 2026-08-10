@@ -570,6 +570,15 @@ public class CombatController {
             if (dist > strikeAt) hurtAdvancing++;
             else if (dist < backOffAt) hurtBackingOff++;
         }
+        // ⛔ THESE TWO COUNT POSITION, NOT KEYS -- THE NAMES OVERSTATE THEM.
+        // hurtBackingOff is "hurt AND closer than backOffAt", not "hurt AND pressed back". Since
+        // out.back gained its !beingHit guard a few lines below, the bot does not retreat while it
+        // is being hit at all, so a high hurtBackingOff now says the OPPOSITE of what it reads
+        // like: the bot is standing INSIDE the trade. Misread once already, from these very
+        // numbers -- 115/45/65 and 133/54/70 -- as "it retreats more than it advances", which
+        // would have sent a fix at a mechanism that was already fixed. They also do not partition:
+        // the band between backOffAt and strikeAt increments neither, so the two never have to sum
+        // to hurtTicks.
 
         boolean tooFar = dist > strikeAt;
         boolean tooClose = dist < backOffAt;
