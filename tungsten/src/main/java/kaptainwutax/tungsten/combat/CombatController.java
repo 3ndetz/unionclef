@@ -519,7 +519,20 @@ public class CombatController {
             // fighter already in the trade has to fight. Out past reach the original intent still
             // holds and the bow is the weapon, so the caution is kept exactly where it was designed
             // to work.
-            if (hp <= LOW_HP && dist > TriggerBot.REACH) {
+            // ...AND ONLY WHERE THERE IS SOMETHING TO DISENGAGE *WITH*.
+            // The paragraph above argues the retreat from the bow: out past reach the bow becomes
+            // the weapon. It never asked whether the bot HAS one. On a sword-only kit the answer
+            // is no, and then this branch buys nothing and spends everything -- the bot walks out
+            // of range, deals zero, cannot heal, and gives the opponent the initiative for the
+            // rest of a life it has already latched into.
+            //
+            // That is the exact shape of the two red courses. melee_basic and narrow_bridge are
+            // both KIT_SWORD (an iron sword and nothing else) and both fail ONE criterion, the
+            // same one -- won the exchange -- while swings, crits, damage, freezes, standstill
+            // and fps all pass: 5:6, 5:6 and 12:15, 11:17. edge_duel carries the same kit, fires
+            // this branch far less because a 5x5 platform has nowhere to retreat TO, and wins 4/4
+            // on the same jar. A wounded fighter with no ranged option has to fight.
+            if (hp <= LOW_HP && dist > TriggerBot.REACH && WeaponSelector.hasRangedOption(player)) {
                 lowHpTicks++;
                 kite(out, player, world, dist);
                 return;

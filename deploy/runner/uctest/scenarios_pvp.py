@@ -67,6 +67,12 @@ class MeleeBasic(Scenario):
         # Kept for the record, no longer a gate: it cannot attribute.
         yield Criterion("victim hp dropped >= 8 (unattributed)", True,
                         f"damage={ctx.victim_damage():.1f}", gate=False)
+        # WITNESS FOR THE SWORD-ONLY DISENGAGE. `lowHp` counts the ticks the controller spent
+        # kiting a wounded bot back out of reach, a retreat justified by "out there the bow is the
+        # weapon". THIS KIT HAS NO BOW, so that branch now refuses to fire and this must read 0.
+        # If it reads anything else the fix did not apply, and whatever the exchange does below
+        # came from somewhere other than this change. Recorded, not gated.
+        ctx.log(f"  lowHp={_stat(ctx, 'lowHp')} hurt={_stat(ctx, 'hurt')}")
         yield ctx.exchange_criterion()   # mutual punk — winning the trade is the bar
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
@@ -160,7 +166,10 @@ class NarrowBridgeDuel(Scenario):
         band = band if okb else 5.5
         met = next((s["t"] for s in ctx.samples
                     if s.get("dist") is not None and s["dist"] <= band), None)
-        ctx.log(f"  rimBack={rim if ok else 'ABSENT'} closest={closest} met_at={met}")
+        # lowHp: same witness as melee_basic — this kit has no bow either, so the wounded-retreat
+        # branch must not fire. See the note there.
+        ctx.log(f"  rimBack={rim if ok else 'ABSENT'} closest={closest} met_at={met}"
+                f" lowHp={_stat(ctx, 'lowHp')}")
         # Same frame-gated aim as melee_basic; see the note there.
         yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}",
                         load_sensitive=True)

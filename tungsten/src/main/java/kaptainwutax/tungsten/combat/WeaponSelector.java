@@ -98,6 +98,49 @@ public final class WeaponSelector {
         }
     }
 
+    /** Counts as ammunition for a bow or a crossbow. */
+    private static final java.util.Set<Item> ARROWS =
+            java.util.Set.of(Items.ARROW, Items.SPECTRAL_ARROW, Items.TIPPED_ARROW);
+
+    /**
+     * Is there any way to turn DISTANCE into DAMAGE — a launcher, and something to put in it?
+     *
+     * <p>Asked before backing a wounded bot out of a fight. That retreat is justified in
+     * CombatController by "out past reach the bow is the weapon", and the justification holds
+     * exactly when a bow exists. On a sword-only kit it does not: the bot walks out of range,
+     * deals nothing, cannot heal (no regeneration, no food) and hands over the initiative. That
+     * is the shape of the two red courses — melee_basic and narrow_bridge, both KIT_SWORD, both
+     * losing the exchange while every other check passes — against edge_duel, which is a 5x5
+     * platform with nowhere to retreat TO and wins 4/4 on the same jar.
+     *
+     * <p>Hotbar and offhand only, like the rest of this class. A bow in the hotbar whose arrows
+     * are buried in the deep inventory therefore reads as "no ranged option" although vanilla
+     * would fire it happily. The error is one-directional and lands on "keep fighting", which is
+     * the safe side of this question.
+     *
+     * <p>A charged crossbow can fire once with no ammunition. Not modelled: it would change the
+     * answer only for that single loaded shot, and no course produces one.
+     */
+    public static boolean hasRangedOption(ClientPlayerEntity player) {
+        if (player == null) return false;
+        boolean launcher = false;
+        boolean ammo = false;
+        for (int slot = 0; slot < 9; slot++) {
+            ItemStack st = player.getInventory().getStack(slot);
+            if (st == null || st.isEmpty()) continue;
+            Item it = st.getItem();
+            if (it == Items.BOW || it == Items.CROSSBOW) launcher = true;
+            else if (ARROWS.contains(it)) ammo = true;
+        }
+        ItemStack off = player.getOffHandStack();
+        if (off != null && !off.isEmpty()) {
+            Item it = off.getItem();
+            if (it == Items.BOW || it == Items.CROSSBOW) launcher = true;
+            else if (ARROWS.contains(it)) ammo = true;
+        }
+        return launcher && ammo;
+    }
+
     private WeaponSelector() {}
 
     /** Melee score of a stack; 0 means "not a weapon". */
