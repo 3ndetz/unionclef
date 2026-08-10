@@ -2348,6 +2348,8 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintBowTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintOtherTicks = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintTurningTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintUnexplained = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintHungryTicks = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowMax = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowSum = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowN = 0;
@@ -3022,6 +3024,9 @@ public class Py4jEntryPoint {
     public int fleeNoSprintOther() { return kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintOtherTicks; }
     /** Of those, how many were mid-turn (not yet facing away enough for vanilla to sprint). */
     public int fleeNoSprintTurning() { return kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintTurningTicks; }
+    /** Facing away with the key down while vanilla refuses, and how many of those were hungry. */
+    public int fleeNoSprintUnexplained() { return kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintUnexplained; }
+    public int fleeNoSprintHungry()      { return kaptainwutax.tungsten.task.RunAwayTask.fleeNoSprintHungryTicks; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a

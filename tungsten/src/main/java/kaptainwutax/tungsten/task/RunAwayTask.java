@@ -325,6 +325,8 @@ public class RunAwayTask {
     public static volatile int fleeNoSprintBowTicks, fleeNoSprintOtherTicks;
     /** Of the 'other' idle ticks: how many were mid-turn, i.e. not yet facing away enough to sprint. */
     public static volatile int fleeNoSprintTurningTicks;
+    /** Facing away, key down, and vanilla still refuses -- and how many of those were hungry. */
+    public static volatile int fleeNoSprintUnexplained, fleeNoSprintHungryTicks;
 
     /**
      * The reach the blows actually showed: mean 4.25, max 5.35 over 22 hits recorded at the rising
@@ -556,6 +558,16 @@ public class RunAwayTask {
             if (aw.horizontalLengthSquared() > 1e-6) {
                 Vec3d awN = new Vec3d(aw.x, 0, aw.z).normalize();
                 if (awN.x * f.x + awN.z * f.z < 0.6) fleeNoSprintTurningTicks++;
+                else {
+                    // KEY SHOULD BE DOWN AND VANILLA STILL REFUSES. fwd >= 0.6 means the sprint key
+                    // is pressed, so these are ticks where the game itself declines. Vanilla's
+                    // reasons are few, and the first is hunger: canStartSprinting needs food > 6,
+                    // this course hands the bot a bow and arrows and nothing to eat, and running
+                    // is what spends it. Recorded rather than assumed -- it is the last of the
+                    // three idle buckets and the only one still open.
+                    fleeNoSprintUnexplained++;
+                    if (player.getHungerManager().getFoodLevel() <= 6) fleeNoSprintHungryTicks++;
+                }
             }
         }
 
