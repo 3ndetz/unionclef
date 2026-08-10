@@ -469,7 +469,12 @@ class BowFlee(Scenario):
         # 3.6 to match the mod counter. Vanilla melee reaches the HITBOX, not the centre, and a
         # player box is 0.6 wide -- 3.0 was my guess and it under-counted. These two numbers print
         # side by side on one line, so a band mismatch between them is a lie told twice.
-        caught = sum(1 for d in ds if d <= 3.6)
+        # 5.5, tracking the mod's band. This drifted TWICE: 3.0 vs 3.6 first, now 3.6 vs 5.5,
+        # each time because the mod side was corrected and this line was not. Both numbers print on
+        # one line under the same word, so a mismatch here is a lie told twice per run. If the mod's
+        # band changes again, change this with it -- the reach is calibrated from the blows
+        # (mean 4.25, max 5.35), not from either of these constants.
+        caught = sum(1 for d in ds if d <= 5.5)
         # Per-tick, from the mod: the 1 Hz series above cannot see this course. The victim
         # carries only a sword, so every death is a catch, yet the sampler has reported 0-in-reach
         # on runs with six of them.
