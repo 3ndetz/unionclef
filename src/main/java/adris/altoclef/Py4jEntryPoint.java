@@ -3004,6 +3004,16 @@ public class Py4jEntryPoint {
     /** Of the flee's driving ticks, how many were spent sprinting. */
     public int fleeSprintTicks() { return kaptainwutax.tungsten.task.RunAwayTask.fleeSprintTicks; }
 
+    /**
+     * The reach band the mod counts exposure at, so the bench does not have to restate it.
+     *
+     * <p>This constant drifted between mod and harness TWICE tonight -- 3.0 against 3.6, then 3.6
+     * against 5.5 -- each time because one side was corrected and the other was not, and both
+     * print on the same line under the same word. Care at the moment of editing prevented neither.
+     * A value duplicated across two repositories of truth will drift; one that is read cannot.
+     */
+    public double fleeReachBand() { return kaptainwutax.tungsten.task.RunAwayTask.REACH_BAND; }
+
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a
      *  bounce — measured -59.85 that way where the tick trace says -55.4. */

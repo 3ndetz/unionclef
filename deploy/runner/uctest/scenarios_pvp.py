@@ -474,7 +474,11 @@ class BowFlee(Scenario):
         # one line under the same word, so a mismatch here is a lie told twice per run. If the mod's
         # band changes again, change this with it -- the reach is calibrated from the blows
         # (mean 4.25, max 5.35), not from either of these constants.
-        caught = sum(1 for d in ds if d <= 5.5)
+        # READ the band from the mod, never restate it. It drifted twice tonight because it lived
+        # in two places; asking for it means it can only ever be wrong in one.
+        okb, band = ctx.bot.py.try_call("fleeReachBand")
+        band = band if okb else 5.5
+        caught = sum(1 for d in ds if d <= band)
         # Per-tick, from the mod: the 1 Hz series above cannot see this course. The victim
         # carries only a sword, so every death is a catch, yet the sampler has reported 0-in-reach
         # on runs with six of them.

@@ -255,7 +255,7 @@ public class RunAwayTask {
         // The old band was why 19-22 blows landed in runs that counted 3-5 "exposed" ticks, and why
         // a sixfold exposure reduction bought no survival: it was reducing a quantity that
         // described a quarter of the danger.
-        if (d <= 5.5) {
+        if (d <= REACH_BAND) {
             Vec3d v = player.getVelocity();
             Vec3d away = player.getEntityPos().subtract(threat.getEntityPos());
             if (player.isSprinting()) reachSprintTicks++;
@@ -269,7 +269,7 @@ public class RunAwayTask {
         // 3.0 band it used to sit above. Written down because I changed it in the same edit as the
         // reach fix and gave no reason -- an unexplained constant is what this session kept
         // tripping over, and I have no standing to leave one behind.
-        } else if (d <= 7.0) {
+        } else if (d <= NEAR_BAND) {
             nearTicks++;
             if (BowShooter.isDrawing()) nearDrawingTicks++;
         }
@@ -321,6 +321,15 @@ public class RunAwayTask {
     public static volatile int hitDistMax, hitDistSum, hitDistN;
     /** Of the flee's driving ticks, how many were spent sprinting. */
     public static volatile int fleeSprintTicks;
+
+    /**
+     * The reach the blows actually showed: mean 4.25, max 5.35 over 22 hits recorded at the rising
+     * edge of hurtTime. THE single source -- the bench reads this through py4j instead of holding
+     * its own copy, because this number lived in two places and drifted twice in one evening.
+     */
+    public static final double REACH_BAND = 5.5;
+    /** One committed stride beyond the reach -- "close enough that one move puts it in range". */
+    public static final double NEAR_BAND = 7.0;
     private static boolean wasHurtForReach = false;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
