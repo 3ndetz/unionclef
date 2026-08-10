@@ -50,7 +50,7 @@ public class GetOutOfWaterTask extends CustomBaritoneGoalTask{
                 return new SafeRandomShimmyTask();
             }
 
-            mod.getSlotHandler().forceEquipItem(mod.getClientBaritoneSettings().acceptableThrowawayItems.value.toArray(new Item[0]));
+            mod.getSlotHandler().forceEquipItem(mod.getThrowawayItems().toArray(new Item[0]));
             LookHelper.lookAt(mod, mod.getPlayer().getSteppingPos().down());
             mod.getInputControls().tryPress(Input.CLICK_RIGHT);
         }

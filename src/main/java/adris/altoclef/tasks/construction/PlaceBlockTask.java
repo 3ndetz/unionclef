@@ -56,7 +56,7 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
         int count = mod.getItemStorage().getItemCount(ItemHelper.blocksToItems(toPlace));
 
         if (useThrowaways) {
-            count += mod.getItemStorage().getItemCount(mod.getClientBaritoneSettings().acceptableThrowawayItems.value.toArray(new Item[0]));
+            count += mod.getItemStorage().getItemCount(mod.getThrowawayItems().toArray(new Item[0]));
         }
         return count;
     }
@@ -112,7 +112,6 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
                 }
             }
 
-            //Item[] items = Util.toArray(Item.class, mod.getClientBaritoneSettings().acceptableThrowawayItems.value);
             if (getMaterialCount(mod) < MIN_MATERIALS) {
                 // TODO: Mine items, extract their resource key somehow.
                 materialTask = getMaterialTask(PREFERRED_MATERIALS);
@@ -176,7 +175,7 @@ public class PlaceBlockTask extends Task implements ITaskRequiresGrounded {
         Item[] wanted = ItemHelper.blocksToItems(toPlace);
         if (!useThrowaways) return wanted;
         return ArrayUtils.addAll(wanted,
-                mod.getClientBaritoneSettings().acceptableThrowawayItems.value.toArray(new Item[0]));
+                mod.getThrowawayItems().toArray(new Item[0]));
     }
 
     /** Registry id of the block the held item would place, or null when it would place nothing. */

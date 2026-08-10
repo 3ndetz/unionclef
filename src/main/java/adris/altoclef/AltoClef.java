@@ -392,6 +392,16 @@ public class AltoClef implements ModInitializer {
                     .filter(item -> item != Items.SOUL_SAND && item != Items.MAGMA_BLOCK && item != Items.SAND && item
                             != Items.GRAVEL).toList();
             getClientBaritoneSettings().acceptableThrowawayItems.value.addAll(baritoneCanPlace);
+            // ⛔ AND SNAPSHOT THE RESULT AS ALTOCLEF'S OWN (G-0b).
+            // Six places in this mod read the throwaway list back OUT of the pathfinder's settings
+            // object, which is how a list altoclef derives from its OWN settings ends up being
+            // owned by a foreign type. The union is what matters -- the pathfinder ships defaults
+            // (cobblestone, dirt, ...) and the line above adds ours -- so it is captured HERE, at
+            // the one moment both halves are present, rather than reconstructed by each reader.
+            // The write above stays: the pathfinder still needs the list to plan placements. What
+            // goes away is six READS of a foreign object model for data we produced.
+            throwawayItems.clear();
+            throwawayItems.addAll(getClientBaritoneSettings().acceptableThrowawayItems.value);
             // If we should run an idle command...
             if ((!getUserTaskChain().isActive() || getUserTaskChain().isRunningIdleTask()) && getModSettings().shouldRunIdleCommandWhenNotActive()) {
                 getUserTaskChain().signalNextTaskToBeIdleTask();
@@ -896,6 +906,21 @@ public class AltoClef implements ModInitializer {
     /**
      * Minecraft player client access (could just be static honestly)
      */
+    /**
+     * Items this bot is willing to place and lose — altoclef's own list, snapshotted at load.
+     *
+     * <p>The union of the pathfinder's shipped defaults and the throwaways altoclef derives from
+     * its settings, taken at the moment both are present. A snapshot rather than a live view
+     * because there is exactly one writer, in the settings-load callback; if a second appears this
+     * has to become a re-read, and that is the thing to check first if the list ever looks stale.
+     */
+    private final List<Item> throwawayItems = new ArrayList<>();
+
+    /** @return items safe to place and abandon — see {@link #throwawayItems}. Never null. */
+    public List<Item> getThrowawayItems() {
+        return throwawayItems;
+    }
+
     public ClientPlayerEntity getPlayer() {
         return MinecraftClient.getInstance().player;
     }

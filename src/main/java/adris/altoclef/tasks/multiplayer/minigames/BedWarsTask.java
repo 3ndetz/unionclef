@@ -136,7 +136,7 @@ public class BedWarsTask extends Task {
     }
 
     private void setupThrowawayBlocks(AltoClef mod) {
-        List<Item> throwaways = mod.getClientBaritoneSettings().acceptableThrowawayItems.value;
+        List<Item> throwaways = mod.getThrowawayItems();
         for (Item wool : ItemHelper.WOOL) {
             if (!throwaways.contains(wool)) {
                 throwaways.add(wool);

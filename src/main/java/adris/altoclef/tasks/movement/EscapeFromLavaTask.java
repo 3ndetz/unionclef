@@ -120,7 +120,7 @@ public class EscapeFromLavaTask extends CustomBaritoneGoalTask {
                         if (mod.getItemStorage().hasItem(Items.NETHERRACK)) {
                             mod.getSlotHandler().forceEquipItem(Items.NETHERRACK);
                         } else {
-                            mod.getSlotHandler().forceEquipItem(mod.getClientBaritoneSettings().acceptableThrowawayItems.value.toArray(new Item[0]));
+                            mod.getSlotHandler().forceEquipItem(mod.getThrowawayItems().toArray(new Item[0]));
                         }
                         mod.log(pos+"");
                         mod.log(facing+"");
