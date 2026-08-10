@@ -1270,3 +1270,36 @@ The lesson is the session's, not the course's: three of my own knockback statist
 rejected before one survived, and then the quantity I had measured so carefully turned out not
 to be the one the gate checks. Reading the criterion's source costs less than four measurements
 of the wrong thing.
+
+## Session close 2026-08-10 — what survived, what was retracted, and the rule it cost
+
+VALIDATED ON THE BENCH, all of it re-run after the change:
+- `edge_duel` GREEN 4/4 (also PASS inside a full sweep). The gated fall counter had been reading
+  knockback as "walked off": a 1 Hz sampler chasing a 10-tick `hurtTime` flag. Fixed with a
+  monotonic blows-taken counter; `self=0` every run, and it held when the window was NARROWED,
+  which is the only reason it counts.
+- `narrow_bridge_duel` 2/3 (third INVALID on client wear, not a gate failure).
+- G-0 26 -> 21. Three cuts: `canPlaceAgainst` ported to vanilla (`nav_bridge` PASS,
+  `bridge_assault` PASS with 15 blocks placed), two dead locals, and two calls moved behind the
+  `Nav` seam (`mob_melee` PASS, `escape_lava` PASS).
+- Bench guards: a starved client now refreshes and re-measures instead of recording INVALID; a
+  run where the fight never happened can no longer score a clean sheet.
+
+RETRACTED, and this is the more useful half:
+- "The flee fix replicated, 10 -> 4 -> 5." `bow_flee` deaths are **4, 5, 5, 6, 6, 6, 6, 10** over
+  n=8 at healthy fps — median 6, range 4-10. Every delta claimed on that course sits inside the
+  spread of unchanged code.
+- "Low fps flatters the bot, r=+0.47" — computed on that same quantity, with one starved run
+  against four healthy ones.
+- "The deaths are not melee catches" — drawn from one run's coarse silence; the 10-death run
+  reached 2.44 blocks, inside reach.
+
+EIGHT hypotheses raised and refuted in one session, all mine. The trajectory is the point: the
+first five cost bench runs, the sixth and seventh were killed by data already on disk, and the
+eighth died before a line of code was written. Cheap evidence for "this is impossible", expensive
+evidence for "this is better".
+
+The rule that came out of it is now CHECKLIST section 4b: characterise a metric at n>=8 before
+quoting any delta, report median and range, and call anything smaller "not distinguishable from
+run-to-run variation". The bench measured honestly all evening. The conclusions were the unsound
+part.
