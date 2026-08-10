@@ -2910,6 +2910,18 @@ public class Py4jEntryPoint {
     /** Of the in-reach ticks, how many had the bot moving AWAY from the threat. */
     public int fleeReachAwayTicks() { return kaptainwutax.tungsten.task.RunAwayTask.reachAwayTicks; }
 
+    /**
+     * Ticks this run in which the bow owned the camera -- the whole shot, aiming included.
+     *
+     * <p>The number that decides whether a flee may ever turn. BowShooter.tick is gated on
+     * {@code active}, not on {@code drawing}, and it drives the look pipeline at the target every
+     * tick it runs; its own comment calls this "the kiting cost". Two attempts to turn the flee
+     * away from a closing threat failed because they were guarded on !isDrawing() and were
+     * overwritten inside the aiming phase. Before widening that guard to !isActive(), this says
+     * whether such a guard would leave the flee any ticks at all.
+     */
+    public int bowFacingTicks() { return kaptainwutax.tungsten.task.BowShooter.getFacingTicks(); }
+
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a
      *  bounce — measured -59.85 that way where the tick trace says -55.4. */
