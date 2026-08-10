@@ -539,6 +539,25 @@ def _main():
                     if not res.get("invalid"):
                         print(f"  => {cls.id}: measured on fresh clients — the INVALID was the "
                               f"suite's wear, not the course")
+            # ⛔ A RUN THAT PASSES AT 10 FPS IS STILL A RUINED MEASUREMENT.
+            # The retry above only fires on INVALID, and INVALID needs a load-sensitive criterion
+            # to FAIL. So a course that happens to pass while starved sails through, the stand is
+            # never refreshed, and every later run in the series inherits the degradation.
+            #
+            # That is not hypothetical. A --repeat 8 series of narrow_bridge_duel ran all five of
+            # its completed runs at exactly 10.0 fps against a baseline taken at 29.3 and 18.1,
+            # and nothing flagged it: the course kept passing, so no INVALID, so no refresh. Five
+            # runs of a before/after comparison were spent comparing two different stands.
+            #
+            # The verdict stands -- it passed, and that is real -- but it is MARKED, and the
+            # clients are replaced before the next run so the rest of the series is not lost too.
+            fps_now = res.get("avg_fps")
+            if fps_now is not None and fps_now < HEALTHY_FPS_MIN:
+                res["starved"] = True
+                print(f"  ⚠ {cls.id} passed at {fps_now} fps, below the {HEALTHY_FPS_MIN} floor — "
+                      f"this run is NOT comparable against a healthy baseline")
+                if not res.get("refreshed"):
+                    refresh_clients(f"{cls.id} is running starved at {fps_now} fps")
             if not res["passed"] and res.get("flake_suspect") and args.repeat == 1:
                 first = [c["name"] for c in res["criteria"] if not c["ok"] and c["gate"]]
                 print(f"  gate failure ({', '.join(first)}) — running it once more before believing it")
@@ -562,7 +581,11 @@ def _main():
         if not r["passed"] and not r.get("invalid") and r["tier"] == "gate":
             gate_fail += 1
         extra = f"  ({r['error'][:60]})" if r.get("error") else ""
-        print(f"  {r['id']:28s} {status}{extra}")
+        # Starved runs are marked in the SUMMARY too, not only in the scroll above it. The summary
+        # is the part that gets read and quoted; a run taken at 10 fps that reads a bare "PASS"
+        # here is how a degraded series ends up in a before/after table.
+        starved = "  [starved — not comparable]" if r.get("starved") else ""
+        print(f"  {r['id']:28s} {status}{extra}{starved}")
     import json
     with open(os.path.join(art_root, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, indent=1, default=str)
