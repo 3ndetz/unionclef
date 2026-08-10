@@ -346,6 +346,7 @@ public class RunAwayTask {
         //
         // VoidGuard still runs after this and keeps its veto, which is where void safety belongs.
         fleeDriveTicks++;
+
         double yaw = Math.toRadians(player.getYaw());
         Vec3d facing = new Vec3d(-Math.sin(yaw), 0, Math.cos(yaw));
         Vec3d right  = new Vec3d(Math.cos(yaw), 0, Math.sin(yaw));
