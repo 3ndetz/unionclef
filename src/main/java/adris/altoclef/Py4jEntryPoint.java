@@ -2329,6 +2329,8 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.task.RunAwayTask.fleeIdleInactive = 0;
         kaptainwutax.tungsten.task.RunAwayTask.fleeIdleNoThreat = 0;
         kaptainwutax.tungsten.task.RunAwayTask.clientTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.nearThreatTicks = 0;
+        kaptainwutax.tungsten.task.RunAwayTask.stillNearThreatTicks = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowMax = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowSum = 0;
         kaptainwutax.tungsten.combat.VoidGuard.kbThrowN = 0;
@@ -2947,6 +2949,12 @@ public class Py4jEntryPoint {
 
     /** Client ticks seen this run -- the denominator every flee share must be divided by. */
     public int fleeClientTicks() { return kaptainwutax.tungsten.task.RunAwayTask.clientTicks; }
+
+    /** Ticks with a threat within 5 blocks. */
+    public int fleeNearThreatTicks() { return kaptainwutax.tungsten.task.RunAwayTask.nearThreatTicks; }
+
+    /** Of those, ticks the bot was motionless (speed &lt; 0.02) -- standing, measured not inferred. */
+    public int fleeStillNearThreat() { return kaptainwutax.tungsten.task.RunAwayTask.stillNearThreatTicks; }
 
     /** Arm the tick-rate Y probe: records the lowest and highest Y until stopped. Sampling
      *  position over rcon gives about three points a second and walks past the apex of a

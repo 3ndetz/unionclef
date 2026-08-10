@@ -153,6 +153,17 @@ public class RunAwayTask {
     public static void countExposure(ClientPlayerEntity player) {
         if (player == null || threat == null || !threat.isAlive() || threat.isRemoved()) return;
         double d = player.getEntityPos().distanceTo(threat.getEntityPos());
+        // STANDING, MEASURED DIRECTLY. Not "the flee did not steer this tick" and not "a search was
+        // in flight" -- both are claims about which subsystem owns the tick, and I concluded "the
+        // bot is standing" from them twice tonight and withdrew it twice, because the path executor
+        // moves the bot without the flee steering. Horizontal speed cannot be argued with: under
+        // 0.02 blocks/tick nothing is going anywhere, whoever is nominally driving.
+        if (d <= 5.0) {
+            Vec3d hv = player.getVelocity();
+            if (Math.sqrt(hv.x * hv.x + hv.z * hv.z) < 0.02) stillNearThreatTicks++;
+            nearThreatTicks++;
+        }
+
         // 3.6, NOT 3.0. Vanilla melee reaches the target's HITBOX, not its centre, and a player
         // box is 0.6 wide -- so a sword lands at a centre-to-centre distance of roughly 3.3-3.6.
         // Measured the error directly: a run reported reachTicks=0 with closest=3.44 and five
@@ -204,6 +215,9 @@ public class RunAwayTask {
      * denominator is not the wall clock -- it has to be counted, not assumed.
      */
     public static volatile int clientTicks;
+
+    /** Ticks with a threat within 5 blocks, and how many of those the bot spent motionless. */
+    public static volatile int nearThreatTicks, stillNearThreatTicks;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
         // WHERE THE OTHER TWO THIRDS GO. The flee drives 345 ticks and holds 72 of a 1200-tick
