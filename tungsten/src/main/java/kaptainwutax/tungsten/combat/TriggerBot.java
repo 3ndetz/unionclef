@@ -156,6 +156,17 @@ public class TriggerBot {
         // WHICH GATE SAYS NO. The bot stands inside reach for 71-156 ticks a fight and swings
         // zero times, and the sampled log line only prints on failure, so it cannot show the
         // distribution. Count each gate: exactly one of these is the answer.
+        // ⛔ EVERY SUM BELOW ACCUMULATES INSIDE ITS OWN FAILURE BRANCH.
+        // gReachDistSum only grows when the reach gate REFUSED, gAngleSum only when the angle gate
+        // refused. So "reachMean" and "angleMean" are means over the REJECTED swings, never over
+        // the attempts -- reachMean 4.06 does not say the bot fights at 4.06, it says that when it
+        // was too far, it was too far by that much. On the same run 31 of 58 evaluations failed
+        // reach, so the other 27 were inside it and contribute to no mean at all.
+        //
+        // Misread three separate times in one session (angleMean as "the aim is 90 degrees off",
+        // reachMean as "the bot holds at 4 blocks"), each time turning a conditional statistic into
+        // a claim about the fight. The counts (gReach, gAngle) are the honest half; the means only
+        // describe the misses.
         gTotal++;
         if (gateClick) gClick++;
         if (gateCooldown) gCooldown++;
