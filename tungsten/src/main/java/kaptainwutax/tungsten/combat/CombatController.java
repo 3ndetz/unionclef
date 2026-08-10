@@ -476,9 +476,6 @@ public class CombatController {
         // which the law did not predict and the physics explains: inside 2.0 the bot is in the
         // knockback, the mobs are shoved away, and it spends its time re-closing. The tuned
         // default sits at the minimum of both, so this line stays as it is.
-        // Set when a wounded bot has nothing to shoot with: it stops ADVANCING but does not step
-        // back. See the note at lowHpDeclined for why those are two different things.
-        boolean holdWounded = false;
         double strikeAt = STRIKE_DISTANCE;
         double backOffAt = TOO_CLOSE_DISTANCE;
         if (kaptainwutax.tungsten.TungstenConfig.get().combatReachControl) {
@@ -565,7 +562,6 @@ public class CombatController {
                     // return, because that return also skips the circle-strafe, the crit hop and
                     // the trigger -- and melee_basic's gain rests on those still running.
                     lowHpDeclined++;          // the ticks this predicate gave back to the fight
-                    holdWounded = true;
                 } else {
                     lowHpTicks++;
                     kite(out, player, world, dist);
@@ -618,9 +614,7 @@ public class CombatController {
         boolean tooFar = dist > strikeAt;
         boolean tooClose = dist < backOffAt;
         out.active = true;
-        // holdWounded: below half health, out of reach, nothing to shoot with. Stop closing --
-        // but out.back below is left to its own rule, so the bot holds ground instead of ceding it.
-        out.forward = tooFar && !holdWounded && dirSafe(player, world, 1, 0);
+        out.forward = tooFar && dirSafe(player, world, 1, 0);
         // Did we ASK to close, and did the ask survive? Combat runs 416 ticks a fight and
         // lands zero swings, with the trigger's gate reporting "ready, but out of reach" —
         // so either forward is never requested, or something downstream overrides it.
