@@ -194,6 +194,17 @@ public class RunAwayTask {
     /** Ticks the flee declined at each of its two entry gates -- the missing time, itemised. */
     public static volatile int fleeIdleInactive, fleeIdleNoThreat;
 
+    /**
+     * THE DENOMINATOR. Client ticks seen in the same window as every counter beside it.
+     *
+     * <p>Exists because I compared 538 counted ticks against an ASSUMED 1200 (60 seconds at 20
+     * tps) and called the difference a deficit, then built a conclusion about the caller on it.
+     * The call site turned out to be unconditional. The player entity does not tick while dead
+     * and awaiting respawn, and this course kills the bot four to ten times a run, so the real
+     * denominator is not the wall clock -- it has to be counted, not assumed.
+     */
+    public static volatile int clientTicks;
+
     public static void tick(WorldView world, ClientPlayerEntity player) {
         // WHERE THE OTHER TWO THIRDS GO. The flee drives 345 ticks and holds 72 of a 1200-tick
         // course; four fixes to how it DRIVES all left the exposure profile unchanged, because
@@ -202,6 +213,7 @@ public class RunAwayTask {
         // The second gate is the one to watch: "threat out of view" idles the flee, and fleeing
         // means turning away from the threat -- which would be self-reinforcing, the bot turning
         // its back, losing sight, stopping, and being caught. Counted rather than assumed.
+        clientTicks++;
         if (!active) { fleeIdleInactive++; return; }
 
         threat = resolve(player);
