@@ -25,7 +25,6 @@ import adris.altoclef.util.baritone.CachedProjectile;
 import adris.altoclef.util.helpers.*;
 import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.slots.Slot;
-import baritone.Baritone;
 import kaptainwutax.tungsten.path.movements.Rotation;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.AbstractFireBlock;
@@ -783,12 +782,10 @@ public class MobDefenseChain extends SingleTaskChain {
     private void putOutFire(AltoClef mod, BlockPos pos) {
         Optional<Rotation> reach = LookHelper.getReach(pos);
         if (reach.isPresent()) {
-            Baritone b = mod.getClientBaritone();
             if (LookHelper.isLookingAt(mod, pos)) {
-                if (b != null) {
-                    b.getPathingBehavior().requestPause();
-                    AltoClef.getInstance().getInputControls().hold(Input.CLICK_LEFT);
-                }
+                // Nav.pause() is the same requestPause, behind the seam that owns the engine.
+                Nav.pause();
+                AltoClef.getInstance().getInputControls().hold(Input.CLICK_LEFT);
                 return;
             }
             LookHelper.lookAt(reach.get());
