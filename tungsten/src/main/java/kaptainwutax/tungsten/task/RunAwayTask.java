@@ -412,7 +412,17 @@ public class RunAwayTask {
         // exchange rate between them.
         Vec3d best = null, bestDeadEnd = null;
         double bestScore = -1, bestDeadEndScore = -1;
-        double[] angles = {0, 25, -25, 50, -50, 80, -80};
+        // THE CANDIDATE SET COULD NOT EXPRESS "RUN ALONG THE RIM". It stopped at +-80 degrees from
+        // straight-away, so at a boundary every candidate points outward, every one is a dead end,
+        // and the fallback takes the rim itself -- which is exactly where the bot was measured
+        // standing: every stall at radius 18.57-18.7 on a platform whose edge is 20, keys held,
+        // waiting for the sword.
+        //
+        // The tiering above was already right; it simply had nothing tangential to choose. +-115
+        // and +-145 give it the two moves a cornered runner actually has -- slide along the edge,
+        // or cut back past the chaser through open ground -- and both are scored by the same
+        // hasRoomBeyond test, so a direction is still only taken if the flee can continue from it.
+        double[] angles = {0, 25, -25, 50, -50, 80, -80, 115, -115, 145, -145};
         double[] dists  = {STEP, STEP * 0.66, STEP * 0.4, 2.0};
         for (double a : angles) {
             double rad = Math.toRadians(a);
