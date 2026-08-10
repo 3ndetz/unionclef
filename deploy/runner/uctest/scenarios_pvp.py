@@ -920,11 +920,34 @@ class AllRound(Scenario):
                 ctx.bot.py.call("selectHotbar", 1)   # punk swings the HELD item
                 ctx.bot.py.call("punk", ctx.victim.name)
             return
+        # PUNK STAYS ON THROUGH THE RANGED PHASE. Started once, here, so the bot closes the whole
+        # time instead of standing still between arrows. The idempotent re-issue is cheap and
+        # survives a respawn, which is what silently ended the pursuit before.
+        if not ctx.geo.get("punk_running"):
+            ctx.geo["punk_running"] = True
+            ctx.bot.py.call("punk", ctx.victim.name)
         if ctx.geo["melee_started"]:
             # Back to range — a respawn puts the fighters apart again, and the course is meant
             # to measure the bow phase every round, not only the first one.
+            #
+            # ⛔ THE punkStop THAT USED TO BE HERE IS GONE, AND IT WAS THE COURSE'S WHOLE DEFICIT.
+            # Read from BOTH fighters' counters on the same runs (n=3, healthy fps):
+            #     punk called   bot 201-396   victim 1375-1404
+            #     combat ticks  bot 221-287   victim  417-475
+            #     swings passed bot  24- 29   victim   39- 43
+            # The bot was not out-fought, it was out-TICKED three to seven times over: it stopped
+            # pursuing every time it wanted an arrow, while an opponent that never stops walked in
+            # with the initiative.
+            #
+            # It was there for a real reason — two writers on WindMouseRotation in one tick means
+            # last-writer-wins, so a shot taken while punk was live never converged. That is now
+            # fixed in the ENGINE, not worked around here: CombatController yields the camera while
+            # BowShooter.isAimCritical(), exactly as PathExecutor already did, and keeps producing
+            # movement keys. Walking at someone and aiming at them want the same yaw.
+            #
+            # So this is not the drive being rewritten to pass. It is the drive using a composition
+            # the primitives refused to support until today, which is the point of the toolkit.
             ctx.geo["melee_started"] = False
-            ctx.bot.py.try_call("punkStop")
             ctx.bot.py.call("selectHotbar", 0)
         if t - ctx.geo["last_shot"] >= 2.5:
             ctx.geo["last_shot"] = t

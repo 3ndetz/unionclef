@@ -186,9 +186,13 @@ public class CombatController {
      * already been built and reverted; this is the measurement that should have come first.
      */
     public static volatile int aimBrake=0, aimReposition=0, aimEnemy=0, aimPath=0, aimNone=0;
+    /** Ticks this controller handed the camera to a bow on the critical stretch of its aim.
+     *  Zero on a sword-only course by construction; on allround it is the measure of how much
+     *  overlap the arbiter actually bought, and it must be non-zero for any claim about it. */
+    public static volatile int aimYieldedToBow=0;
 
     public static void resetAimCounters() {
-        aimBrake = 0; aimReposition = 0; aimEnemy = 0; aimPath = 0; aimNone = 0;
+        aimBrake = 0; aimReposition = 0; aimEnemy = 0; aimPath = 0; aimNone = 0; aimYieldedToBow = 0;
     }
 
     public boolean tick(ClientPlayerEntity player, Entity target, WorldView world) {
@@ -199,7 +203,33 @@ public class CombatController {
         // safety: velocity tracking always, braking/viz only if enabled
         safety.tick(player, target, world);
 
-        if (cfg.combatRotatesEnabled) {
+        // ⛔ A BOW ON THE FINAL STRETCH OF ITS AIM OWNS THE CAMERA. MOVEMENT DOES NOT STOP.
+        //
+        // PathExecutor has honoured BowShooter.isAimCritical() for a while; this controller never
+        // did, and that omission is what forces the agent to choose between closing and shooting.
+        // Two writers on WindMouseRotation in one tick means last-writer-wins, so a shot taken
+        // while punk is live never converges and the arrow is either loosed wild or times out --
+        // which is why AllRound's drive calls punkStop before every arrow, and why the bot's combat
+        // engine is ticked three to seven times less often than its opponent's:
+        //
+        //     punk called   bot 201-396   victim 1375-1404      (allround, n=3, healthy fps)
+        //     combat ticks  bot 221-287   victim  417-475
+        //     swings passed bot  24- 29   victim   39- 43
+        //
+        // The bot is not out-fought, it is out-TICKED: it spends the run standing still to shoot
+        // while an opponent that never stops walks in with the initiative.
+        //
+        // Yielding the aim is enough because the two want nearly the SAME yaw whenever the shot
+        // and the chase share a target -- walking at someone and aiming at them are the same
+        // direction, and only the ballistic pitch differs. So the keys below keep running: the
+        // bot closes, strafes and swings on schedule, and the bow gets an uncontested crosshair
+        // for the ~22 ticks it actually needs.
+        //
+        // Movement keys are DELIBERATELY not gated on this. Skipping them too would reproduce the
+        // exact defect this removes, one layer down.
+        boolean bowOwnsCamera = kaptainwutax.tungsten.task.BowShooter.isAimCritical();
+        if (bowOwnsCamera) aimYieldedToBow++;
+        if (cfg.combatRotatesEnabled && !bowOwnsCamera) {
             if (cfg.combatSaverEnabled && safety.isBraking()) {
                 // DANGER_IMMINENT: face opposite velocity
                 WindMouseRotation.INSTANCE.setParams(
