@@ -329,6 +329,8 @@ public class RunAwayTask {
     public static volatile int fleeNoSprintUnexplained, fleeNoSprintHungryTicks;
     /** Of the refused ticks: how many had sneak held, which cancels sprint outright. */
     public static volatile int fleeNoSprintSneakTicks;
+    /** Of the refused ticks: how many had a horizontal collision, which also cancels sprint. */
+    public static volatile int fleeNoSprintCollideTicks;
 
     /**
      * The reach the blows actually showed: mean 4.25, max 5.35 over 22 hits recorded at the rising
@@ -573,6 +575,12 @@ public class RunAwayTask {
                     // bounded platform is exactly where a flee ends up. Counted rather than
                     // asserted: hunger looked just as reasonable and came back zero.
                     if (MinecraftClient.getInstance().options.sneakKey.isPressed()) fleeNoSprintSneakTicks++;
+                    // The last of vanilla's refusal conditions: canStartSprinting also wants no
+                    // horizontal collision. Mid-flight bumps would cancel the sprint tick by tick.
+                    // Related to the rim collision measured earlier but NOT the same event -- those
+                    // stalls are fixed and these ticks are in motion -- so it gets its own counter
+                    // rather than an inference carried across from a different measurement.
+                    if (player.horizontalCollision) fleeNoSprintCollideTicks++;
                 }
             }
         }
