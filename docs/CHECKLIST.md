@@ -425,6 +425,34 @@ The rule:
 The general form is rule 4c's: a statistic taken under conditions selected by something other than
 the thing you are studying. Here the selector was the clock rather than the code.
 
+## 4f. ⛔ CHECK THAT YOUR REGRESSION GUARD IS NOT A MIRROR (2026-08-10)
+
+`Scenario.victim_settings` defaults to `{}`. A duel that does not override it gives the OPPONENT the
+same build, the same settings and the same kit as the bot — so **a symmetric engine change is handed
+to both sides and cancels**. Expected margin 0 by construction; the pass rate is a coin flip, ties
+included.
+
+`melee_basic` and `narrow_bridge_duel` pin the victim to `combatReachControl=false` for exactly this
+reason, and `TungstenConfig` states it outright: *"melee_basic is a MIRROR duel — both fighters are
+this same jar with the same kit — so shipping a combat change on by default hands it to the opponent
+too and the course stays a coin flip."* **`edge_duel` was never given that pin.**
+
+What that cost, the day this rule was written: `edge_duel` was chosen as the primary regression guard
+for a combat change, run at n=8, and returned median −1.5 with 3 passes in 8 against a 4/4 baseline.
+That was read as a confirmed regression, a fix was designed and shipped in response, and none of it
+was measurable: the course cannot see a symmetric change at all. The 4/4 was luck (~2% at that pass
+rate, which is unlikely and not impossible), and 3/8 is a coin flip.
+
+The rule:
+
+1. Before using a course to guard against regression, check `victim_settings`. If the opponent runs
+   your change too, the course measures nothing about it — whatever it prints.
+2. The knowledge existing SOMEWHERE does not protect you. This was documented in the config's own
+   javadoc, quoted earlier the same session, and still not applied to the choice of guard. Check the
+   scenario, not your memory of the doctrine.
+3. A course can be a perfectly good GATE and a useless GUARD. `edge_duel` still tests that both
+   fighters keep their footing; it just cannot attribute a difference to your build.
+
 ## 4e. ONE CONDITION CAN HOLD SEVERAL BEHAVIOURS — DELETING IT DELETES ALL OF THEM (2026-08-10)
 
 A branch is not one decision. `if (wounded && out of reach)` held **two**: stepping OUT to a range
