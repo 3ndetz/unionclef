@@ -466,7 +466,10 @@ class BowFlee(Scenario):
         # widen driftThreshold expecting this course to go green.
         ds = [s["dist"] for s in ctx.samples if s.get("dist") is not None]
         closest = round(min(ds), 2) if ds else None
-        caught = sum(1 for d in ds if d <= 3.0)
+        # 3.6 to match the mod counter. Vanilla melee reaches the HITBOX, not the centre, and a
+        # player box is 0.6 wide -- 3.0 was my guess and it under-counted. These two numbers print
+        # side by side on one line, so a band mismatch between them is a lie told twice.
+        caught = sum(1 for d in ds if d <= 3.6)
         # Per-tick, from the mod: the 1 Hz series above cannot see this course. The victim
         # carries only a sword, so every death is a catch, yet the sampler has reported 0-in-reach
         # on runs with six of them.
