@@ -41,6 +41,20 @@ HEALTHY_FPS_MIN = 14.0
 # concluding the load is somebody else's. Two minutes a rebuild; a repeat-8 series could spend
 # half an hour on it and still measure nothing.
 MAX_STARVE_REFRESHES = 2
+# COMPARABILITY IS RELATIVE; THE FLOOR ABOVE IS ABSOLUTE, AND THE GAP BETWEEN THEM IS A HOLE.
+# A course that ran at 29 fps and then runs at 17 is above the floor twice over and is still not
+# the same measurement -- half the frames means half the aim corrections, and aim is delivered per
+# FRAME (measured on allround). A before/after series is exactly where that lands: the wear arrives
+# mid-series, so the two arms get different stands and the difference is read as the build.
+#
+# So a repeat of the SAME course in the SAME invocation is also compared against the best frame
+# rate that course has already shown here. Same course only, because arenas differ -- a 5x5
+# platform and a 90 s chase over terrain do not owe each other a frame rate, and comparing across
+# them would mark half a healthy sweep.
+#
+# The ratio has room: run-to-run jitter on a healthy stand measures about 6% (27.9-29.6 over six
+# runs), so a quarter of the frame rate is well outside it and still catches 29 -> 20.
+FPS_DRIFT_RATIO = 0.75
 import sys
 import time
 
@@ -555,6 +569,10 @@ def _main():
     # Mutable cell: refresh_clients is a closure defined above, and the loop below needs a
     # counter both can see without threading state through every call.
     starve_refreshes = [0]
+    # Best frame rate each course has reached in THIS invocation — the reference for the drift
+    # check below. Per invocation rather than per session: a stand rebuild resets the wear, and a
+    # number from an hour ago is not a baseline for this series.
+    course_best_fps = {}
     results = []
     for cls in scenarios:
         for rep in range(args.repeat):
@@ -632,6 +650,23 @@ def _main():
                 res["starved"] = True
                 print(f"  [!] {cls.id} recorded a verdict at {fps_final} fps, below the "
                       f"{HEALTHY_FPS_MIN} floor - NOT comparable against a healthy baseline")
+            # ⛔ AND THE FLOOR IS NOT THE WHOLE OF COMPARABILITY (see FPS_DRIFT_RATIO).
+            # Everything above only fires below 14 fps. A series that opens at 29 and finishes at
+            # 17 never trips it, and 17 against 29 is not the same stand. Compare each repeat with
+            # the best this course has shown in this invocation, and treat a big drop the way a
+            # starved run is treated: mark it, and spend a rebuild from the same capped budget.
+            ref = course_best_fps.get(cls.id)
+            if (fps_final is not None and ref is not None and not res.get("starved")
+                    and fps_final < FPS_DRIFT_RATIO * ref):
+                res["drift_from"] = ref
+                print(f"  [!] {cls.id} ran at {fps_final} fps against {ref} earlier in this "
+                      f"series - the stand moved under the measurement, NOT comparable")
+                if starve_refreshes[0] < MAX_STARVE_REFRESHES:
+                    starve_refreshes[0] += 1
+                    refresh_clients(f"{cls.id} drifted {ref} -> {fps_final} fps "
+                                    f"(rebuild {starve_refreshes[0]}/{MAX_STARVE_REFRESHES})")
+            if fps_final is not None:
+                course_best_fps[cls.id] = max(ref or 0.0, fps_final)
             results.append(res)
 
     print("\n================ SUMMARY ================")
@@ -648,7 +683,17 @@ def _main():
         # is the part that gets read and quoted; a run taken at 10 fps that reads a bare "PASS"
         # here is how a degraded series ends up in a before/after table.
         starved = "  [starved - not comparable]" if r.get("starved") else ""
-        print(f"  {r['id']:28s} {status}{extra}{starved}")
+        if not starved and r.get("drift_from"):
+            starved = (f"  [fps drift {r['drift_from']} -> {r.get('avg_fps')} - "
+                       f"not comparable]")
+        # PRINT THE FRAME RATE ON EVERY LINE, not only on the ones a guard objected to. The
+        # per-course drift check above cannot fire in a plain --repeat 1 sweep (one run per
+        # course, so no earlier reading to compare with), and courses differ enough in arena size
+        # that marking one course against another would be a guess. The frame rate itself is not a
+        # guess, and the SUMMARY is the part that gets quoted into comparisons, so it belongs here
+        # where the reader can see a 29-and-17 pair for themselves.
+        fps_col = f"  {r['avg_fps']:.1f}fps" if r.get("avg_fps") is not None else ""
+        print(f"  {r['id']:28s} {status}{fps_col}{extra}{starved}")
     import json
     with open(os.path.join(art_root, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(results, f, indent=1, default=str)
