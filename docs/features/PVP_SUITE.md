@@ -127,6 +127,14 @@ only difference available is that one flag. Measured this session:
 | `edge_duel` | **−0.27** (n=11, after the stand-off fix; was −3.82 before it) |
 | `allround` | **−2** (n=3, after the aim arbiter; was about −4 before it) |
 
+`narrow_bridge_duel` is the same story read with a better instrument. Five healthy runs give margins
+`−6, +2, +2, −3, +3` (mean −0.4, sd 3.65) and a blow ratio of `1.41, 0.75, 0.89, 1.30, 0.90` —
+**mean 1.05, sem 0.13**. The ratio resolves to ±0.25 where the margin resolves to ±3.6, and it says
+the fight is dead even. That course was chased through four investigations — collision counters,
+rim time, levelling the sides, the bowless retreat — and every effect came out smaller than its own
+spread **because the effect is zero**. The series scored 4 of 6, which is what a level fight
+produces against a `kills >= deaths` gate with ties passing.
+
 So `combatReachControl` is currently worth approximately **nothing**, and two gates are asking a
 level fight to be won. A pass rate near half is the honest expectation, not a defect to chase — and
 chasing it with combat changes that land OUTSIDE the flag cannot work, because the opponent gets
