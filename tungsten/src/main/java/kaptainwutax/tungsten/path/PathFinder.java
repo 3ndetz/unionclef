@@ -1011,15 +1011,15 @@ public class PathFinder {
                 //     default (fast-first + this rule)         2/3         3/3        3/3
                 //     fastGuidePartial=true (rule relaxed)     3/3         3/3        0/3
                 //
-                // The rule is BLUNT rather than wrong: it earns its keep on nav_water, where
-                // relaxing it costs 3/3, and it costs nav_slime a run in three, where relaxing it
-                // wins 3/3. Of the four moves the justification below names -- slime bounce,
-                // ladder, vine, swim -- only the WATER half still holds, which is what
-                // FastPlanner.special() modelling slime and ladders predicts.
+                // The rule EARNS ITS KEEP ON nav_water and nowhere else that was measured:
+                // relaxing it costs that course 3/3, decisively. Its supposed cost on nav_slime is
+                // NOT established -- the 2/3 above is one series, a later three at the default read
+                // 3/3, so with the rule in force slime is 5/6 against 6/6 relaxed, which no series
+                // this size can separate. The first version of this note asserted the cost anyway.
                 //
-                // So the fix is conditional, not either/or: reject a partial route only when the
-                // REMAINDER needs a move the fast set really lacks. Nobody has measured that yet,
-                // so the default stays -- best of the three arms at 8/9 against 6/9 and 3/9.
+                // Of the four moves the justification below names -- slime bounce, ladder, vine,
+                // swim -- only the WATER half is still load-bearing, which is what
+                // FastPlanner.special() modelling slime and ladders predicts.
                 //
                 // Only guide with a COMPLETE fast route. The fast move set is
                 // walking, climbing, dropping and gap jumps — it has no slime
@@ -1047,6 +1047,21 @@ public class PathFinder {
                 // guide, which is the rule's opposite, so the two can be compared on the same
                 // courses that produced the original claim. Default false: shipping behaviour does
                 // not move until the measurement says it should.
+                // ⛔ THE CONDITIONAL VERSION WAS BUILT, MEASURED AND REVERTED. The table says the
+                // rule is blunt -- it saves nav_water and costs nav_slime -- so the obvious fix is
+                // to reject a partial route only when the REMAINDER needs the one move the fast set
+                // still cannot make. Implemented as a straight XZ walk from the route's end to the
+                // goal, sampling a vertical band for fluid, conservative past 64 cells.
+                //
+                // It scored 6/9: nav_slime 3/3, nav_ladder 3/3, nav_water 0/3 -- IDENTICAL to
+                // relaxing the rule entirely. So the discriminator never fires on the course it was
+                // written for: whatever makes a partial route fatal there is not fluid on the
+                // straight line between the route's end and the target.
+                //
+                // The next attempt should not guess at geometry again. FastPlanner KNOWS why it
+                // stopped -- which move it wanted and did not have -- and asking it is a fact where
+                // this was an inference. Until someone does that, the blanket rule stays: 8/9
+                // against 6/9 for both relaxations.
                 boolean acceptable = fast.complete || arrivesAnyway
                         || kaptainwutax.tungsten.TungstenConfig.get().fastGuidePartial;
                 if (acceptable && fast.path.size() >= 2) {

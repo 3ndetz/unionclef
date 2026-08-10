@@ -99,16 +99,20 @@ public class TungstenConfig {
      *   fastGuidePartial=true (rule relaxed)     3/3         3/3        0/3
      * </pre>
      *
-     * <p>So the rule is neither right nor wrong — it is BLUNT. It earns its keep on nav_water,
-     * where relaxing it costs 3/3, and it costs nav_slime one run in three, where relaxing it wins
-     * 3/3. The original justification named the missing moves as "slime bounce, ladder, vine or
-     * swim"; the measurement says only the WATER half of that is still true, which is exactly what
-     * FastPlanner.special() modelling slime and ladders would predict.
+     * <p>The rule earns its keep on nav_water and nowhere else that was measured: relaxing it
+     * costs that course 3/3. Its supposed cost on nav_slime is NOT established — the 2/3 above is
+     * one series and a later three at the default read 3/3, so slime is 5/6 with the rule against
+     * 6/6 relaxed, which no series this size can separate.
      *
-     * <p>The right shape of the fix is therefore conditional rather than either/or: reject a
-     * partial fast route only when the remainder needs a move the fast set really lacks. Until
-     * someone measures that, the default stays where it is — best of the three arms at 8/9 against
-     * 6/9 and 3/9 — and this flag stays as the instrument that produced the table.
+     * <p>A conditional version was then built and reverted: reject a partial route only when the
+     * remainder crosses fluid, on a straight walk from the route's end to the goal. It scored 6/9 —
+     * nav_water 0/3 — identical to relaxing the rule outright, so the discriminator never fires on
+     * the course it was written for. Whatever makes a partial route fatal there is not fluid on
+     * that line, and the next attempt should ASK FastPlanner which move it lacked rather than infer
+     * it from geometry.
+     *
+     * <p>So the default stays: 8/9 against 6/9 for both relaxations. This flag stays as the
+     * instrument that produced the table.
      */
     public boolean fastGuidePartial = false;
 
