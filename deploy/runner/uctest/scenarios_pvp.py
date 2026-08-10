@@ -16,15 +16,43 @@ def _dist_xz(pos, x, z):
     return ((pos[0] - x) ** 2 + (pos[2] - z) ** 2) ** 0.5
 
 
-def _stat(ctx, name):
-    """One counter out of the mod's stats line, or None when it cannot be read."""
-    ok, s = ctx.bot.py.try_call("placeStats")
+def _stat(ctx, name, actor=None):
+    """One counter out of the mod's stats line, or None when it cannot be read.
+
+    `actor` defaults to the bot. Pass ctx.victim to read the OPPONENT's copy: in a mutual duel
+    both fighters run this mod, so the victim's counters are the other half of the ledger."""
+    ok, s = (actor or ctx.bot).py.try_call("placeStats")
     if not ok or not s:
         return None
     for tok in str(s).split():
         if tok.startswith(name + "="):
             return tok.split("=", 1)[1]
     return None
+
+
+def _ledger(ctx):
+    """Blows and damage taken by EACH fighter, from the same instrument on both sides.
+
+    Kills-minus-deaths is the criterion, and it is a terrible instrument for a difference: about
+    27 exchanges decide a duel, so the margin carries a standard deviation near 2.7 and no series
+    this bench can afford resolves a shift smaller than that. Every "effect" measured on these
+    courses has been smaller than their own spread.
+
+    DamageWatch counts from the CLIENT TICK, so it runs on the victim exactly as it runs on the
+    bot, and a duel produces ~50 blows per side instead of ~13 deaths. Read it as a RATIO of the
+    two sides rather than as an absolute: the class's own javadoc records that the total does not
+    reconcile with deaths x 20, so it undercounts somewhere -- but it undercounts the same way on
+    both fighters, and a shared bias cancels in a ratio while it does not in a total."""
+    out = []
+    for who, actor in (("bot", ctx.bot), ("victim", ctx.victim)):
+        dw = _stat(ctx, "dw", actor)
+        if not dw:
+            out.append(f"{who}=?")
+            continue
+        f = dw.split("/")
+        # dw = hits/damage/gapMean/gapMax/rangedHits/deathsSeen
+        out.append(f"{who} blows={f[0]} dmg={f[1]} deaths={f[5] if len(f) > 5 else '?'}")
+    ctx.log("  ledger: " + " | ".join(out))
 
 
 class MeleeBasic(Scenario):
@@ -78,6 +106,7 @@ class MeleeBasic(Scenario):
         # subsample error this checklist has a rule about. fired+declined is what fired used to be,
         # on the same course and the same jar. Recorded, not gated.
         ctx.log(f"  lowHp={_stat(ctx, 'lowHp')} hurt={_stat(ctx, 'hurt')}")
+        _ledger(ctx)
         yield ctx.exchange_criterion()   # mutual punk — winning the trade is the bar
         yield Criterion("freezes == 0", ctx.freeze_windows == 0,
                         f"freezes={ctx.freeze_windows}")
@@ -133,6 +162,7 @@ class EdgeDuel(Scenario):
         # not a control. The 5x5 platform runs to ~5.6 blocks on the diagonal, i.e. past REACH,
         # so "it barely fires on a small platform" was an assumption and is now a measurement.
         ctx.log(f"  lowHp={_stat(ctx, 'lowHp')}")
+        _ledger(ctx)
         yield ctx.exchange_criterion()          # mutual duel: must not lose it
         # self-falls is NOT flagged: low fps is a plausible cause (nav_ladder self-falls at 9.4-9.9
         # fps, origin still open) but that is a correlation, not the measurement the aim case has.
@@ -198,6 +228,11 @@ class NarrowBridgeDuel(Scenario):
         # branch must not fire. See the note there.
         ctx.log(f"  rimBack={rim if ok else 'ABSENT'} closest={closest} met_at={met}"
                 f" lowHp={_stat(ctx, 'lowHp')}")
+        # The ledger matters most HERE. This course carries the largest spread in the suite -- six
+        # healthy runs read +3, -2, -3, +1, -4, +1 -- and every mechanism tried on it has been
+        # smaller than that. Blows are ~50 a side per run against ~27 deciding events, so they are
+        # the only statistic on this bridge with a chance of resolving anything.
+        _ledger(ctx)
         # Same frame-gated aim as melee_basic; see the note there.
         yield Criterion("kill >= 1", ctx.kills() >= 1, f"kills={ctx.kills()}",
                         load_sensitive=True)
