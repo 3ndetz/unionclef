@@ -483,6 +483,13 @@ def _main():
     # look "structurally unmeasurable" until fresh containers took one of them from 9.9 to 29.4.
     # Recreating the containers costs a couple of minutes and buys a real measurement, which is
     # the whole point of running the suite at all.
+    #
+    # VALIDATED ON LIVE DATA, AND IN BOTH DIRECTIONS (full pvp sweep, 2026-08-10). Two courses
+    # tripped the floor and were re-measured on fresh clients: chase_terrain 9.0 fps -> PASS, and
+    # bow_flee_hard 10.0 fps -> FAIL. That second one is the important half. A repair path that
+    # only ever turns INVALID into green is indistinguishable from laundering, and would be worth
+    # less than no repair at all; this one cleared a course and condemned a course in the same
+    # sweep, which is what says it is measuring rather than flattering.
     state = {"rcons": rcons, "bot": bot, "victim": victim}
 
     def refresh_clients(why):
