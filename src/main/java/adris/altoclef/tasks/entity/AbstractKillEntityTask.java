@@ -422,6 +422,21 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             // because altoclef's pathing owns it today and adding a second writer is the exact bug
             // shape found twice elsewhere tonight (two writers on the aim; two on the movement
             // keys). Hand-off first, then the controller can hold its distance on the way in.
+            //
+            // ⛔ AND THE OBVIOUS HAND-OFF WAS TRIED AND IS WORSE. The `dist < 5.0` branch below
+            // used to rush -- GoJump straight at the target -- so swapping THAT for _combat.tick()
+            // looked clean: two alternative movers in different arms of one if/else, no second
+            // writer, and the spacing engine finally owning the last five blocks.
+            // Measured on mob_trio, two runs: damage 17.0 and 18.0 against 6-15 before, with
+            // ctl=8 and ctl=4. Reverted.
+            //
+            // WHY, and this is the bit worth keeping: controlTicks only increments inside
+            // closeQuarters, which the controller enters at COMBAT_RANGE = 3.4. Between 5 and 3.4
+            // it drives NOTHING -- it assumes an external navigator is closing the gap. So the
+            // swap replaced a rush that closed the distance with a dawdle that did not, and the
+            // zombies simply walked in. A hand-off has to begin inside 3.4, or the controller
+            // needs an approach mover of its own; those are the two shapes left to try.
+            // mob_melee and mob_weapon_swap passed throughout, so the blast radius is this course.
             if (equipWeapon(mod, preferAxe)) {
                 kaEquipTicks++;
             } else {
