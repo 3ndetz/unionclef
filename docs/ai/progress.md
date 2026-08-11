@@ -1,5 +1,51 @@
 # Progress
 
+## SESSION 2026-08-11/12 — mob_skeleton: from 0/N to passing, and four wrong headlines
+
+INVESTIGATE: the course had never passed since it was written. Instrumented the swing gate, the
+interact gate, the crit hop gate-by-gate, and the mdTung split (committed fight vs force field).
+Three of those counters turned out to be reading things nobody had checked.
+
+PLAN: one root cause per pass, judged on the bench, reverting anything that did not measure.
+
+IMPLEMENT — what survives scrutiny (mechanism proven to EXECUTE, not a delta):
+
+1. **The arrow dodge never reached the keys.** `MobDefenseChain` pressed SPRINT/FORWARD/JUMP from
+   altoclef's task runner, which ticks BEFORE `MovementQueue`, and `Movement.update()` releases every
+   key then presses its own. Every tick the walker drove the approach — i.e. every tick of an
+   approach — the dodge was wiped before the game read it. Fixed with `ProjectileDodge`, a primitive
+   at the final-word position. Proven by `dodgeDrive` going from structurally-zero to 42/20/204/9/34/30.
+   **This had silently invalidated four earlier dodge experiments**, all filed as refuted.
+   Same pitfall (P1) the flee keys already paid for once: "22 hits against 23 — it had never run".
+2. **You cannot outrun an arrow.** `isInDanger` + the flee branch bid 70, out-bidding the fight
+   branch's 65, so an arrow that landed made the bot RUN instead of closing — and running gains a
+   shooter exactly what it wants. Declined for `RangedAttackMob` (a property, not a mob name).
+   Damage 17.5 -> 9.62; `mdRet3` 0 in 13/13. Released as 0.83.0.
+3. **Three bench defects.** The course gave the bot a free arrow during a 2 s window where
+   `TaskRunner` was inactive (RULE TWO). `summon skeleton {NoAI:1b}` produces an UNARMED skeleton
+   because `SummonCommand` only calls `initialize()` with no NBT — the course scored **6/6 green
+   against a statue**. And the gate added to catch that failed the PERFECT run, because it tested
+   whether the skeleton landed a hit rather than whether it could fight.
+4. **The ruler.** min_hp clusters ARE arrows landed (20=0, 16=1, 12=2, 8=3). Characterised at n=53.
+   Pass counts showed 17/17/25% over runs where arrows moved 1.53 -> 1.10.
+
+UNPROVEN, kept on mechanism only and marked as such at the site: ground-distance positioning,
+point-blank sidestep, cooldown stand-off for shooters (no effect at n=40).
+
+CLOSED, with numbers at the site — do not re-open: reducing the bunny hop (three branches, all
+worse); making movement predictable (steady orbit, worse) — **the bot's jitter is a defence, not a
+bug**; the crit thread (crits already land); "more controller" on mob_trio (engagement goes with MORE
+damage, two series); the player band for a ranged mob; MOB_PRESS_DISTANCE / MOB_MIN_CENTRE_GAP.
+
+THE METHOD FAILURE, now checklist rule 4j: four headlines softened or vanished on more data because
+the arms were BUILT HOURS APART and this course's variance lives between series (same build: 0.77,
+0.90, 1.18 arrows). Cure: flag the thing under test, A/B it with `--pin` in one session, and PROVE
+the pin reaches the behaviour by reading it back.
+
+RESULT: mob_skeleton 0/N -> passing regularly; damage 17.5 -> 4.50. Still RED on its gate (zero
+arrows demanded, median run takes one). Baselines pvp 12/12, nav 12/12, craft 10-12/12, mob 2/4.
+
+
 ## SESSION 2026-07-24 (work machine) — PvP audit + unified suite v1 (RW-5/RW-1/RW-9 infra)
 
 INVESTIGATE: 8-reader parallel code audit of melee/ranged/chase/bridge/pathcore/test-infra/levers +
