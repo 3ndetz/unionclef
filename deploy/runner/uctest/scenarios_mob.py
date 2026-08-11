@@ -294,6 +294,24 @@ class MobTrioNoDamage(MobMelee):
 # its keep and "it is too eager" is only half true — it costs the approach and pays for it. What it
 # cannot do is get anywhere near the one-point bar.
 #
+# ⛔ AND THE PREDICTIVE DODGE WAS BUILT AND MEASURED TOO — BIMODAL, NOT BETTER ON AVERAGE.
+# Two changes together, because either alone is inert: (1) isDangerZone looked only ONE block down,
+# so any jump -- and the bot jumps constantly, for crits and for the rush -- read the whole 5x5 as
+# air and returned "danger" on solid flat ground, which is what kept routing the dodge to its
+# keep-distance pathing arm; fixed by accepting y-1 OR y-2. (2) suggestedProjectileRotation
+# computed for real from the arrow's cached velocity -- perpendicular in the horizontal plane is
+# (-vz, vx) -- so the safe-ground arm finally had a direction to run.
+#     baseline (pathing dodge)   dmgTaken 20, 13, 16, 20            mean 17.25
+#     predictive dodge           dmgTaken 37, 24, 9, 8, 9, 27       mean 19.0
+# No better on average, so it was reverted. BUT LOOK AT THE SPLIT: three runs at 8-9 damage, the
+# best this course has ever recorded, and three at 24-37. It is bimodal, not noisy-around-a-mean.
+#
+# THE LIKELY SWITCH, and the next thing to try: the implementation picks ONE perpendicular side
+# always. Both sides are perpendicular to the arrow; only one of them is away from the rim. This
+# arena is flat_field(half=14) with the skeleton at 12.5, so the fight happens near the edge, and
+# bow_flee already taught this suite that a flee which corners itself on a rim collapses. Choose
+# the side with more open ground and the good mode may become the only mode.
+#
 # So neither dodging more nor dodging less reaches the criterion, and the only option left is the
 # one the course was written for: AVOID the arrow rather than survive it. That is the safe-ground
 # arm — LookHelper.lookAt(suggestedProjectileRotation) then sprint-jump perpendicular — which is
