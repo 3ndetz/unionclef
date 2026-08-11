@@ -378,6 +378,24 @@ public class TungstenConfig {
      *  this is testable at all; fix the timing, prove it on melee_basic, then turn it on. */
     public boolean combatShieldEnabled = false;
 
+    /**
+     * Does an arrow dodge stop closing on the shooter once the shot is point-blank?
+     *
+     * <p>ON is the shipped behaviour: inside melee reach the dodge drops its approach component and
+     * goes pure sidestep, because an arrow fired that close arrives in under a tick and only lateral
+     * speed across the aim can make it miss.
+     *
+     * <p>EXISTS AS A SETTING SO IT CAN BE A/B'd WITHOUT A REBUILD, which on mob_skeleton is the
+     * difference between a readable experiment and an unreadable one. That course's variance is
+     * BETWEEN SERIES -- the same build has read 0.77, 0.90 and 1.18 arrows on three series -- so an
+     * arm built hours apart from its baseline measures the stand as much as the bot. With this flag
+     * both arms run back to back on the same clients:
+     *     run_suite.py mob --only mob_skeleton --repeat 20
+     *     run_suite.py mob --only mob_skeleton --repeat 20 --pin combatDodgePointBlank=false
+     * Budget n=40 an arm; n=12 and n=26 have both misled repeatedly on this course.
+     */
+    public boolean combatDodgePointBlank = true;
+
     /** No-placing zones: [x1,y1,z1,x2,y2,z2] boxes (inclusive, any corner order).
      *  Protected areas (claims/privates) — the mod never places here. Paired with
      *  breakDenyZones so markProtectedArea can lock both mining and building. */

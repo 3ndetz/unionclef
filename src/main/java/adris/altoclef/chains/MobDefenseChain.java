@@ -1069,7 +1069,10 @@ public class MobDefenseChain extends SingleTaskChain {
                         Vec3d toShooter = projectile.position.subtract(plyPos);
                         toShooter = new Vec3d(toShooter.x, 0, toShooter.z);
                         double shotRange = toShooter.length();
-                        double bias = shotRange <= DODGE_PRESS_MIN_RANGE ? 0.0 : DODGE_PRESS_BIAS;
+                        boolean pointBlankPure = kaptainwutax.tungsten.TungstenConfig.get()
+                                .combatDodgePointBlank;
+                        double bias = (pointBlankPure && shotRange <= DODGE_PRESS_MIN_RANGE)
+                                ? 0.0 : DODGE_PRESS_BIAS;
                         Vec3d dodgeDir = toShooter.lengthSquared() < 1.0e-6
                                 ? perp
                                 : perp.add(toShooter.normalize().multiply(bias)).normalize();
