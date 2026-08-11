@@ -840,6 +840,19 @@ public class CombatController {
                 //
                 // Same property test as the flee reflex and the dodge, so no mob is named, and
                 // duels are untouched by construction (a player is not a RangedAttackMob).
+                // ⛔ AND IT SHOWS NO MEASURED EFFECT AT n=40. The arm read 0.77 arrows at n=13,
+                // 0.90 at n=26 and 1.18 at n=40 -- identical to the 1.18 baseline. Both earlier
+                // readings were noise, and this was shipped on the 1.4 sigma the n=26 figure gave.
+                //
+                // KEPT ON THE MECHANISM ALONE, which is a plain logical correction: withdrawing
+                // while the swing recharges leaves a DUEL opponent's reach, and a shooter has no
+                // reach to leave, so the withdrawal can only add re-closing time. It is inert for
+                // players and zombies by the type test, so it costs nothing to hold. It is NOT an
+                // improvement and must not be quoted as one.
+                //
+                // THE REAL LESSON, and it is the fourth time in this work: on this course n=13 and
+                // n=26 BOTH misled. Nothing here is believable under n=40, and preferably against a
+                // baseline measured in the same session.
                 if (!(target instanceof net.minecraft.entity.ai.RangedAttackMob)) {
                     strikeAt = TriggerBot.REACH + 0.4;
                     backOffAt = TriggerBot.REACH + 0.2;
