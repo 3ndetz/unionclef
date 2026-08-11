@@ -165,6 +165,14 @@ public class CombatController {
      *  sentence cost a whole experiment: the in-reach arbitration edit controls the ENTRY, so ctl
      *  was read as its verdict while answering a different question. Use cqEntry for the entry. */
     public static volatile int controlTicks;
+    /**
+     * The crit take-off, counted gate by gate, over the windingUp window ONLY.
+     *
+     * <p>hopWind is the opportunity count; the four after it are the refusals; hopFired is the
+     * take-off. They reconcile as hopWind = hopFired + (refusals, which may overlap on one tick).
+     * Read over py4j as hop=wind/air/edge/interval/unsafe/fired.
+     */
+    public static volatile int hopWind, hopAir, hopEdge, hopInterval, hopUnsafe, hopFired;
     /** Entries into closeQuarters, and the two ways out that never reach controlTicks. The budget
      *  reconciles exactly: cqEntry = cqNoLos + lowHpTicks + controlTicks. Anything that claims the
      *  branch is starved has to show it HERE, because this is the number the stage arbitration in
@@ -225,6 +233,7 @@ public class CombatController {
 
     public static void resetAimCounters() {
         aimBrake = 0; aimReposition = 0; aimEnemy = 0; aimPath = 0; aimNone = 0; aimYieldedToBow = 0;
+        hopWind = 0; hopAir = 0; hopEdge = 0; hopInterval = 0; hopUnsafe = 0; hopFired = 0;
     }
 
     public boolean tick(ClientPlayerEntity player, Entity target, WorldView world) {
@@ -994,11 +1003,31 @@ public class CombatController {
         // right gate: hop on open ground, keep both feet down on a bridge.
         double edgeScore = kaptainwutax.tungsten.combat.VoidDetector
                 .edgeScoreWithFallThreshold(player.getEntityPos(), world, 5);
-        if (player.isOnGround() && edgeScore < 0.4 && now - lastJump > interval
-                && SafetySystem.isJumpLandingSafe(player.getEntityPos(), player.getVelocity(), world)) {
+        // WHICH OF THE FOUR GATES EATS THE CRIT TAKE-OFF? Counted only over the windingUp window,
+        // because that is the only window in which a hop can produce a crit -- a count over all
+        // ticks would be a statistic about juking, not about crits (checklist rule 4c).
+        //
+        // Two plausible fixes have now been refuted here in a row -- the player band, and
+        // suppressing the juke -- so this is rule one applied literally: stop patching the thing
+        // and measure the input. critWindowSwings reads 0 in about half of all runs and nothing in
+        // the repository can currently say why.
+        boolean gAir = !player.isOnGround();
+        boolean gEdge = edgeScore >= 0.4;
+        boolean gInterval = now - lastJump <= interval;
+        boolean gLand = !SafetySystem.isJumpLandingSafe(
+                player.getEntityPos(), player.getVelocity(), world);
+        if (windingUp) {
+            hopWind++;
+            if (gAir) hopAir++;
+            if (gEdge) hopEdge++;
+            if (gInterval) hopInterval++;
+            if (gLand) hopUnsafe++;
+        }
+        if (!gAir && !gEdge && !gInterval && !gLand) {
             out.jump = true;
             lastJump = now;
             jumpInterval = jcfg.combatBunnyHopMinMs + (long) (Math.random() * jcfg.combatBunnyHopRandMs);
+            if (windingUp) hopFired++;
         }
     }
 

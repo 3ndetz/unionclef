@@ -126,7 +126,7 @@ class MobMelee(Scenario):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
-                        f"dodgeDrive={_stat(ctx, 'dodgeDrive')}")
+                        f"dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
         # A fall is not a fight. On a flat field with a floor this should never fire, and if it
         # does the arena is wrong rather than the bot.
         yield Criterion("the bot was actually in the fight", low is not None and low < 20.0,
@@ -201,7 +201,7 @@ class MobTrioNoDamage(MobMelee):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
-                        f"dodgeDrive={_stat(ctx, 'dodgeDrive')}")
+                        f"dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
         # THE CRITERION, MEASURED AS DAMAGE RATHER THAN AS LEFTOVER HEALTH.
         # min_hp answers "how healthy did it end up", which is not the question: a run that took
         # no damage at all failed this gate because it started on 14 hearts inherited from the
@@ -470,7 +470,7 @@ class SkeletonDodge(MobMelee):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
-                        f"dodgeDrive={_stat(ctx, 'dodgeDrive')}")
+                        f"dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
         # ⛔ THIS LABEL AND THIS THRESHOLD DISAGREE, AND THE THRESHOLD IS THE STRICTER ONE.
         # min_hp >= 19.0 permits ONE point of damage. A skeleton arrow on normal difficulty does
         # 2-5, so the arithmetic demands "no arrow ever landed" while the label says "at most one".
