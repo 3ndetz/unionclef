@@ -586,6 +586,27 @@ public class CombatController {
         // is 3 to 18, so this is judged at n=6, not at the n=2 that made my last two attempts
         // unreadable. mob_melee and mob_weapon_swap must not move.
         boolean vsPlayer = target instanceof net.minecraft.entity.player.PlayerEntity;
+        // ⛔ THE MOB BAND EXISTS TO STAY OUTSIDE AN ARM. A SHOOTER HAS NO ARM.
+        //
+        // MOB_STRIKE_DISTANCE is 2.9 for one stated reason, written above: a zombie's arm is
+        // MOB_ARM_REACH = 2.25, so 2.9 hits without being hit. Against a skeleton that trade does
+        // not exist -- its threat is the bow and it reaches us at 2.9 exactly as well as at 1.9 --
+        // so the band buys nothing and costs the thing this course is actually priced by, which is
+        // TIME IN CONTACT. Held at the outer edge of our own 3.0 reach, one knockback puts the
+        // target outside it and the bot spends the next swing re-closing instead of hitting.
+        //
+        // RangedAttackMob is vanilla's own marker, the same property the flee reflex now asks, so
+        // this names no mob. Zombies keep the arm band exactly as measured (mob_trio, mob_melee are
+        // untouched by construction -- a zombie is not a RangedAttackMob).
+        // TRIED AND REVERTED, 2026-08-11: giving a RangedAttackMob the tighter PLAYER band
+        // (2.4/1.6) on the argument above. mob_skeleton min_hp, six runs an arm:
+        //     mob band 2.9/2.65   12 3 15 16 16 16 16    median 16
+        //     player band 2.4/1.6 20 11 13 12 16 16      median 14.5
+        // Not an improvement, and the argument was sound enough that the reason matters: the swing
+        // gates say REACH is what refuses, 35-56 refusals of 49-83 evaluations with only 1-4 swings
+        // passing a whole fight. Both bands sit inside our 3.0 reach, so neither is what holds the
+        // bot out -- something else is, and moving the band cannot fix it. Read the reach counter
+        // before touching these numbers again.
         double strikeAt = vsPlayer ? STRIKE_DISTANCE : MOB_STRIKE_DISTANCE;
         double backOffAt = vsPlayer ? TOO_CLOSE_DISTANCE : MOB_BACK_OFF_DISTANCE;
         if (kaptainwutax.tungsten.TungstenConfig.get().combatReachControl) {

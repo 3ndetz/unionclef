@@ -413,6 +413,8 @@ class SkeletonDodge(MobMelee):
         # Minecraft omits default values -- so "no elements matching" is the healthy answer.
         ctx.geo["noai_after"] = str(ctx.rcon.cmd(
             "data get entity @e[type=skeleton,limit=1] NoAI", allow_reject=True))
+        ctx.geo["equip_after"] = str(ctx.rcon.cmd(
+            "data get entity @e[type=skeleton,limit=1] equipment", allow_reject=True))
 
     def drive_tick(self, ctx, elapsed):
         super().drive_tick(ctx, elapsed)
@@ -448,9 +450,23 @@ class SkeletonDodge(MobMelee):
         # ⛔ THE COURSE MUST NOT PASS AGAINST A STATUE. See drive_start: an inert skeleton once
         # gave six straight passes at min_hp=20. If nothing was ever shot at us, this course
         # measured nothing, so it is GATED rather than recorded.
-        yield Criterion("the skeleton actually fought back",
-                        (_stat(ctx, "dw") or "0/0").split("/")[0] != "0",
-                        f"dw={_stat(ctx, 'dw')} noai_after={ctx.geo.get('noai_after')}")
+        # KILL SPEED IS THE REMAINING LEVER AND IT WAS UNMEASURED HERE. mob_trio prints this line
+        # and mob_skeleton never did, so whether crits land on this course -- which decides a
+        # 4-swing kill against a 3-swing one, and therefore whether the skeleton gets a shot off
+        # during the melee -- was pure guesswork.
+        ok_gs, gs = ctx.bot.py.try_call("gateStats")
+        yield Criterion("swing gates (recorded, not gated)", True,
+                        str(gs) if ok_gs and gs else "unreadable", gate=False)
+        # ⛔ THIS GATE ASKS WHETHER THE SKELETON *COULD* FIGHT, NOT WHETHER IT LANDED A HIT.
+        # The first version tested dw hits > 0 and therefore FAILED THE PERFECT RUN: a run that
+        # took min_hp=20.0 with dw=0/0/0/0/0/0 -- nothing landed on the bot at all -- was marked
+        # red by the very gate meant to catch a defenceless target. A criterion that punishes the
+        # outcome the course exists to reward is worse than no criterion.
+        # Armed-and-awake is the honest test of the statue bug, and it is read from the server.
+        armed = "bow" in str(ctx.geo.get("equip_after", ""))
+        awake = "NoAI" not in str(ctx.geo.get("noai_after", "")) or                 "no elements" in str(ctx.geo.get("noai_after", ""))
+        yield Criterion("the skeleton was armed and awake", armed and awake,
+                        f"equip={ctx.geo.get('equip_after')} noai={ctx.geo.get('noai_after')}")
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
