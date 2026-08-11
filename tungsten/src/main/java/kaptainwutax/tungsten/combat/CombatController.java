@@ -173,6 +173,8 @@ public class CombatController {
      * Read over py4j as hop=wind/air/edge/interval/unsafe/fired.
      */
     public static volatile int hopWind, hopAir, hopEdge, hopInterval, hopUnsafe, hopFired;
+    /** Crit windows where the hop stood down because an arrow was inbound. Read as hopDodge. */
+    public static volatile int hopDodge;
     /** Entries into closeQuarters, and the two ways out that never reach controlTicks. The budget
      *  reconciles exactly: cqEntry = cqNoLos + lowHpTicks + controlTicks. Anything that claims the
      *  branch is starved has to show it HERE, because this is the number the stage arbitration in
@@ -233,7 +235,7 @@ public class CombatController {
 
     public static void resetAimCounters() {
         aimBrake = 0; aimReposition = 0; aimEnemy = 0; aimPath = 0; aimNone = 0; aimYieldedToBow = 0;
-        hopWind = 0; hopAir = 0; hopEdge = 0; hopInterval = 0; hopUnsafe = 0; hopFired = 0;
+        hopWind = 0; hopAir = 0; hopEdge = 0; hopInterval = 0; hopUnsafe = 0; hopFired = 0; hopDodge = 0;
     }
 
     public boolean tick(ClientPlayerEntity player, Entity target, WorldView world) {
@@ -1033,6 +1035,29 @@ public class CombatController {
         // suppressing the juke -- so this is rule one applied literally: stop patching the thing
         // and measure the input. critWindowSwings reads 0 in about half of all runs and nothing in
         // the repository can currently say why.
+        // ⛔ TRIED AND REVERTED: STANDING THE HOP DOWN WHILE DODGING, FOR GROUND TRACTION.
+        //
+        // Minecraft air control is a fraction of ground control: a lateral key pressed mid-air
+        // barely accelerates the body, which keeps whatever momentum it left the ground with. So a
+        // bot that is airborne 78-100% of the time -- which the hopAir counter says this one is --
+        // presses its dodge keys into the air and does not actually leave the arrow's line.
+        //
+        // That is the same shape as the defect that made the dodge worth fixing at all: it now
+        // REACHES the keys (dodgeDrive is non-zero) and the hop then denies them traction. Two
+        // systems, one body, and the hop wins by being airborne first.
+        //
+        // MEASURED FLAT, n=12: 2/12 PASS against 2/12 for the build without it, min_hp median
+        // 12-13 either way. And the counter says why it could not have worked: hopDodge -- crit
+        // windows where the hop stood down for an inbound arrow -- reads 4 0 0 2 0 3 0 0 2 0 2 0 0
+        // against 3-9 windows a fight. The overlap between "an arrow is inbound" and "the hop wants
+        // to take off" is a couple of ticks a fight, far too small a slice to move anything.
+        //
+        // The air-control argument itself is untested by this, not refuted: the bot is still
+        // airborne 78-100% of the ticks that matter, and lateral keys still do little up there.
+        // What is refuted is that the DODGE WINDOW is where that costs the fight. If this is worth
+        // another attempt it has to reduce the airborne fraction across the WHOLE fight, and the
+        // outright version of that is already measured and reverted (crits 1.0 -> 0.5, 1/8 -> 0/8).
+        boolean gDodging = kaptainwutax.tungsten.task.ProjectileDodge.isActive();
         boolean gAir = !player.isOnGround();
         boolean gEdge = edgeScore >= 0.4;
         boolean gInterval = now - lastJump <= interval;
@@ -1045,6 +1070,7 @@ public class CombatController {
             if (gInterval) hopInterval++;
             if (gLand) hopUnsafe++;
         }
+        if (windingUp && gDodging) hopDodge++;
         if (!gAir && !gEdge && !gInterval && !gLand) {
             out.jump = true;
             lastJump = now;
