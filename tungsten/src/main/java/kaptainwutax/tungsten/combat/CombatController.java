@@ -30,6 +30,27 @@ public class CombatController {
     /** Below this we are inside the opponent's swing and lose angle — drift back out. */
     public static final double TOO_CLOSE_DISTANCE = TriggerBot.REACH - 1.4; // 1.6
 
+    // ⛔⛔ EVERYTHING FROM HERE TO PLAN_OPPORTUNITY_WEIGHT IS DECLARED AND NEVER READ.
+    //
+    // Eleven constants -- MOB_STRIKE_DISTANCE, MOB_PRESS_DISTANCE, MOB_PRESS_BACK_OFF,
+    // MOB_BACK_OFF_DISTANCE, MOB_ARM_REACH, MOB_MIN_CENTRE_GAP, MOB_SPEED_PER_TICK,
+    // MOB_SWING_COOLDOWN_MS, PLAN_HORIZON_TICKS, PLAN_REPLAN_TICKS, PLAN_OPPORTUNITY_WEIGHT --
+    // each appears exactly ONCE in this repository: on its own declaration. Nothing reads them,
+    // here or anywhere else. The mob combat policy they describe DOES NOT EXIST; a zombie is
+    // fought with the player duelling code and nothing else.
+    //
+    // That is the answer to mob_trio, which gates on zero damage and has never passed, and to the
+    // eight hypotheses its header records as dying there: there was no mob policy to tune. The
+    // javadoc below still reads as a specification -- "a band that hits without being hit", a
+    // horizon, a replan interval, an opportunity weight -- and it is a specification of something
+    // unimplemented. Left in place, and labelled, because it is a good specification: whoever
+    // implements it should start from these numbers rather than invent new ones.
+    //
+    // Fourth instance of this pattern found on 2026-08-11 alone: lastSwingMs (declared, no writer,
+    // no reader), armHold/crowdEsc/crowdPlan (declared, never incremented, and I briefly cited
+    // their zeros as evidence), and these. Assume a counter or constant is dead until grep says
+    // otherwise -- `grep -c` returning 1 means the declaration and nothing more.
+
     /**
      * Distance held against a MOB while the swing is ready.
      *
