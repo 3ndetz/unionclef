@@ -260,10 +260,30 @@ class MobTrioNoDamage(MobMelee):
 # mob_trio established on this same suite that damage tracks TIME IN CONTACT. So dodging more may
 # cost more arrows, not fewer. closest_gap read 4.60 and 2.82, so it does arrive.
 #
-# INSTRUMENT FIRST. Nobody has recorded how many arrows are loosed, how many land, at what range
-# each lands, or how long the approach takes — and without those, "the dodge is too weak" and "the
-# dodge is too eager" are indistinguishable and both are plausible. Judge on exact dmgTaken, not
-# min_hp, at n>=6 an arm; this suite's damage numbers have a spread that ate eight hypotheses.
+# ⛔ INSTRUMENTED, AND IT IS "TOO EAGER". DamageWatch had the answer all along and no mob course
+# read it: dw = hits/damage/gapMean/gapMax/rangedHits/deathsSeen, where the gap is the distance to
+# the nearest living entity AT THE MOMENT each hit landed. Four runs:
+#     5/20.0/8.08/11.17/5/1     4/17.0/5.63/9.34/3/0
+#     5/20.0/7.13/13.55/3/1     5/20.0/4.84/9.20/2/1
+# Every arrow lands at a mean gap of 4.8 to 8.1 blocks, maxima to 13.6 — during the APPROACH, not
+# in close quarters. And closest_gap reads 4.31, 5.19, 5.57, 7.53: over a whole run the bot never
+# gets near a skeleton it was sent to kill, with kaTung=0/0/0/0 — the kill task never engages.
+#
+# WHICH BRANCH DOES IT. This arena is flat_field(half=14) and the skeleton spawns at 12.5, so the
+# fight happens NEAR THE RIM — and WorldHelper.isDangerZone returns true wherever fewer than five
+# of the twenty-five blocks under a 5x5 around the feet are solid. So the danger-zone arm of the
+# dodge is the live one, and it hands control to DodgeProjectilesTask, a PATHING task whose whole
+# job is to hold ARROW_KEEP_DISTANCE away from projectiles. The bot is not failing to close; it is
+# being driven away, correctly, by a task doing exactly what it says.
+#
+# (The other arm is dead: suggestedProjectileRotation is assigned only inside onPlayerItemUse,
+# which is wrapped in `if (false && ...)`. I made that arm yield instead of holding priority,
+# measured it, and found it INERT — mdRet2 kept incrementing, which is how the danger-zone arm was
+# identified as the live one. Reverted unshipped.)
+#
+# SO THE QUESTION IS A POLICY ONE, not a bug: a bot sent to KILL a skeleton cannot also be running
+# ARROW_KEEP_DISTANCE from its arrows. One of the two has to yield while a kill order is live.
+# Judge on exact dmgTaken, not min_hp, at n>=6 an arm.
 
 
 class SkeletonDodge(MobMelee):
@@ -328,6 +348,20 @@ class SkeletonDodge(MobMelee):
                         f"mdTung total={ticks}")
         yield Criterion("at most one arrow landed", low is not None and low >= 19.0,
                         f"min_hp={low}")
+        # ⛔ THE INSTRUMENT THAT SEPARATES THE TWO CANDIDATES, AND IT ALREADY EXISTED.
+        # "The dodge is too weak" and "the dodge is too eager" predict opposite fixes and the same
+        # min_hp, so min_hp cannot choose between them. DamageWatch has recorded the answer since
+        # it was written and no mob course has ever read it: dw = hits/damage/gapMean/gapMax/
+        # rangedHits/deathsSeen, where the gap is the centre-to-centre distance to the nearest
+        # living entity AT THE MOMENT each hit landed, and rangedHits counts the ones that landed
+        # from beyond melee reach.
+        #
+        # So: arrows landing at gapMean 8-12 means they land during the approach, and the dodge is
+        # spending the bot's time under fire without clearing the line -- dodge LESS, close faster.
+        # Arrows landing at gapMean 2-4 means they land after arrival, which is a different fix
+        # entirely. exact dmgTaken is printed beside it because min_hp is a leftover, not a count.
+        yield Criterion("where the hits landed (recorded, not gated)", True,
+                        f"dw={_stat(ctx, 'dw')} dmgTaken={_stat(ctx, 'dmgTaken')}", gate=False)
         # WHICH BRANCH ATE THE TICKS? mdTung=0 says no fight was ever committed, and the chain has
         # several branches that return early -- flee, creeper, shield, dodge-projectiles -- each of
         # which starves everything below it while it holds priority. mdRet is the per-branch return
