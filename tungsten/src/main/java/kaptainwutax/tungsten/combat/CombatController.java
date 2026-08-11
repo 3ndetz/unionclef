@@ -964,6 +964,26 @@ public class CombatController {
         // Solving (1 - cd) * 12.5 > 6 gives cd < 0.52: take off then, and the swing arrives on the
         // way down. The lower bound keeps the bot from hopping the instant it has swung, when the
         // next swing is still most of a second away.
+        // ⛔ SUPPRESSING THE RANDOM JUKE TO "PROTECT" THE CRIT HOP IS REFUTED. TRIED AND REVERTED.
+        //
+        // The reasoning looked sound: a swing cycle is 12.5 ticks, a jump holds the bot off the
+        // ground for about 600 ms of it, and the crit take-off window (cd 0.25-0.50) is ticks 3-6 --
+        // so a juke launched just after a swing leaves the bot airborne exactly when it needs to
+        // take off, and it lands flat-footed. Making the crit window the ONLY hop should have made
+        // crits reliable.
+        //
+        // It did the opposite, n=8 an arm on mob_skeleton:
+        //     random juke kept    critWindowSwings 2 0 0 0 0 2 2 0   crits mean 1.0   1/8 PASS
+        //     juke suppressed     critWindowSwings 1 0 1 2 0 0 0 0   crits mean 0.5   0/8 PASS
+        //
+        // So the juke was not stealing the take-off, it was PROVIDING it: with only 2-4 swings in a
+        // fight, the crit window is missed for reasons of its own (not grounded, edge score, landing
+        // check) and the random hop was the thing that happened to put the bot in a descent often
+        // enough to matter. Remove it and the accidental crits go with it.
+        //
+        // The lesson for whoever times this next: crits here are not a cadence problem. Find out
+        // WHY the windingUp branch fails to take off -- count the three gates below separately --
+        // before touching the interval again.
         boolean windingUp = cd > 0.25f && cd < 0.50f;
         long interval = windingUp ? jcfg.combatBunnyHopMinMs : jumpInterval;
         // DO NOT HOP ON A LEDGE. A crit is worth half a hit; falling off is worth the whole
