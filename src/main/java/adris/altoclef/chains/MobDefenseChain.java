@@ -67,6 +67,8 @@ public class MobDefenseChain extends SingleTaskChain {
     public static volatile int mdRet0, mdRet1, mdRet2, mdRet3, mdRet4, mdRet5, mdRet6, mdRet7, mdRet8, mdRet9;
     /** Times the flee reflex was declined because the thing endangering us shoots. */
     public static volatile int mdFleeShooter;
+    /** Committed-fight ticks where the target was beyond the 4.5 gate, and the last such gap (x1000). */
+    public static volatile int mdFarTicks, mdFarGapMilli;
     private static final double DANGER_KEEP_DISTANCE = 30;
     private static final double CREEPER_KEEP_DISTANCE = 10;
     private static final double ARROW_KEEP_DISTANCE_HORIZONTAL = 2;
@@ -659,6 +661,17 @@ public class MobDefenseChain extends SingleTaskChain {
                     // on 36 of 690 ticks and the zombie sat at a full 20.0 HP throughout, stuck in
                     // "Approaching target".
                     // So the approach belongs to the task, and the strike belongs to tungsten.
+                    // HOW FAR IS IT WHEN THE GATE REFUSES? mob_trio runs this branch on 99% of
+                    // ticks (mdRet6=2405 of mdCalls=2431) and the committed half of mdTung stays at
+                    // ZERO, so inRange -- which on flat ground reduces to distance < 4.5 -- is
+                    // false every single time, while the force field kills all three anyway. Either
+                    // the bot never closes or the test is wrong about what it measures, and those
+                    // want opposite fixes. Record the distance rather than argue about it.
+                    double gapToKill = mod.getPlayer().distanceTo(toKill);
+                    if (gapToKill > 4.5) {
+                        mdFarTicks++;
+                        mdFarGapMilli = (int) (gapToKill * 1000);
+                    }
                     if (mod.getControllerExtras().inRange(toKill)) {
                         kaptainwutax.tungsten.combat.WeaponSelector.equipBestMelee(mod.getPlayer());
                         tungstenCombat.tick(mod.getPlayer(), toKill, mod.getWorld());

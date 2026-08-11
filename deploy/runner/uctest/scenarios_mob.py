@@ -114,8 +114,18 @@ class MobMelee(Scenario):
                         f"remaining={_zombie_count(ctx)}")
         # THE POINT OF THE COURSE. Killed is not enough: the old force field could always do that.
         # What is being measured is whether the swinging ran on tungsten.
+        #
+        # ⛔ AND THE SUM HIDES THE ONE THING IT IS SUPPOSED TO SHOW. mdTung is a PAIR -- the
+        # committed-fight branch and the force field's strike -- and _tung_ticks adds them, so this
+        # criterion passes on force-field ticks alone, which is precisely the outcome it was written
+        # to detect. Measured on mob_trio: mdTung total=174 with CombatController's own counters at
+        # ctl=0 and cq=0/0, and every aim counter zero. The aim block is gated only on
+        # combatRotatesEnabled (default true), so a single tick() call would have incremented
+        # aimNone at least -- meaning the controller was never ticked at all and the whole 174 came
+        # from the force field. The split is printed now so that cannot pass unseen again.
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
-                        f"mdTung total={ticks}")
+                        f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
+                        f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')}")
         # A fall is not a fight. On a flat field with a floor this should never fire, and if it
         # does the arena is wrong rather than the bot.
         yield Criterion("the bot was actually in the fight", low is not None and low < 20.0,
@@ -188,7 +198,8 @@ class MobTrioNoDamage(MobMelee):
                         f"count_at_spawn={ctx.geo.get('spawned')}")
         yield Criterion("all three are dead", killed, f"remaining={_zombie_count(ctx)}")
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
-                        f"mdTung total={ticks}")
+                        f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
+                        f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')}")
         # THE CRITERION, MEASURED AS DAMAGE RATHER THAN AS LEFTOVER HEALTH.
         # min_hp answers "how healthy did it end up", which is not the question: a run that took
         # no damage at all failed this gate because it started on 14 hearts inherited from the
@@ -390,7 +401,8 @@ class SkeletonDodge(MobMelee):
 
         yield Criterion("the skeleton is dead", not alive, f"alive={alive}")
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
-                        f"mdTung total={ticks}")
+                        f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
+                        f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')}")
         # ⛔ THIS LABEL AND THIS THRESHOLD DISAGREE, AND THE THRESHOLD IS THE STRICTER ONE.
         # min_hp >= 19.0 permits ONE point of damage. A skeleton arrow on normal difficulty does
         # 2-5, so the arithmetic demands "no arrow ever landed" while the label says "at most one".
