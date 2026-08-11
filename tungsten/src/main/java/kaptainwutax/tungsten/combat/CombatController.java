@@ -546,6 +546,18 @@ public class CombatController {
         // own -- Fisher gives about 0.19 -- but it is the only candidate here with the mechanism
         // AND the numbers pointing the same way, and four alternatives have been refuted outright.
         //
+        // ⛔ AND THE FOLLOW-UP SERIES DOES NOT HOLD IT UP. A fresh n=12 on the SHIPPED build reads
+        // 1/12, against the 5/13 that justified shipping. Pooled over every series on this build the
+        // course sits at about 6/25 (~24%), and no single change here has been shown to move that
+        // rate reliably. The 5/13 was a favourable draw, which is exactly the failure mode checklist
+        // 4b describes and which the p~0.19 stated at the time already warned about.
+        //
+        // KEPT ON THE MECHANISM, NOT ON THE NUMBERS: positioning must not chase its own altitude,
+        // and eyeToHitbox provably does while the bot is airborne 78-100% of the ticks that matter.
+        // Its baselines are clean (nav 12/12, craft 11/12, melee_basic 4/5 on re-test). If a later
+        // pass finds a reason to revert it, the numbers above are the honest record -- do not quote
+        // the 5/13 alone.
+        //
         // BLAST RADIUS, since `dist` also feeds the sprint cut-off, tooClose and kite: this changes
         // every pvp duel too, so it does not ship without a pvp baseline. See the commit.
         double dist = TriggerBot.eyeToHitbox(player, target);
