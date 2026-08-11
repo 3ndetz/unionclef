@@ -410,10 +410,16 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             // once the bot is ALREADY within reach, i.e. already inside the arm. It cannot prevent
             // the first hits, and mob_trio's gate is ZERO damage.
             //
-            // The counters agree: on that course ctl reads 0 and 10 over fights of 220-300 ticks,
-            // with hurt=0/0/0, while TriggerBot evaluates 161-181 times and passes 11-12. The
-            // spacing engine is present for a handful of ticks at the end of an approach somebody
-            // else drove.
+            // ⛔ HOW MUCH THE CONTROLLER PARTICIPATES IS WILDLY VARIABLE, AND I FIRST WROTE THAT
+            // DOWN AS "BARELY". Across five runs on this course ctl read 0, 0, 4, 10 and 118 --
+            // the last one over a fight of the same length as the zeros. So the honest statement
+            // is that its participation is INCONSISTENT, not small, and any claim resting on a
+            // two-run sample of ctl (including the one that used to be on this line) is worth
+            // nothing. hurt=0/0/0 throughout, while TriggerBot evaluates 161-181 times.
+            //
+            // What does NOT vary is the ordering: whatever share the controller gets, it gets it
+            // only after canHit, i.e. only after the approach has already delivered the bot inside
+            // the arm.
             //
             // This is also why eight combat hypotheses died on that course judged on min_hp: they
             // were tuning constants that only take effect after the damage they exist to prevent.
