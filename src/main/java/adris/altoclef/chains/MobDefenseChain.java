@@ -84,6 +84,14 @@ public class MobDefenseChain extends SingleTaskChain {
      * still the primary motion and the approach is what it does with the rest.
      */
     private static final double DODGE_PRESS_BIAS = 0.6;
+    /**
+     * Inside this, a dodge is pure sidestep -- the closing half of the heading is dropped.
+     *
+     * <p>Set at our own melee reach: past it there is range to close and the bias earns its keep;
+     * inside it the fight is already joined, an arrow arrives in under a tick, and the only thing
+     * that can make the shot miss is lateral speed across the shooter's aim.
+     */
+    private static final double DODGE_PRESS_MIN_RANGE = 4.0;
     private static final double SAFE_KEEP_DISTANCE = 8;
     private static final List<Class<? extends Entity>> ignoredMobs = List.of(Entities.WARDEN, WitherEntity.class, EndermanEntity.class, BlazeEntity.class,
             WitherSkeletonEntity.class, HoglinEntity.class, ZoglinEntity.class, PiglinBruteEntity.class, VindicatorEntity.class, MagmaCubeEntity.class);
@@ -1038,12 +1046,24 @@ public class MobDefenseChain extends SingleTaskChain {
                         }
 
                         // The shooter is back up the flight line. Pure perpendicular holds the
-                        // range open for ever, so blend in the approach.
+                        // range open for ever, so blend in the approach -- BUT ONLY WHILE THERE IS
+                        // RANGE LEFT TO CLOSE.
+                        //
+                        // ⛔ AT POINT-BLANK THE PRESS BIAS IS ACTIVELY WRONG. The remaining damage on
+                        // this course is one arrow landing at gap 2.29-3.80, where flight time is
+                        // under a tick and no sidestep can outrun it. What makes a point-blank shot
+                        // MISS is lateral speed across the shooter's aim, and every unit of the
+                        // forward bias is a unit taken out of that -- while the dodge is also
+                        // overriding the controller's circle-strafe for those ticks. So the closing
+                        // half of the heading fades out as the shot gets close, leaving a pure
+                        // sidestep exactly where a sidestep is the only thing that can work.
                         Vec3d toShooter = projectile.position.subtract(plyPos);
                         toShooter = new Vec3d(toShooter.x, 0, toShooter.z);
+                        double shotRange = toShooter.length();
+                        double bias = shotRange <= DODGE_PRESS_MIN_RANGE ? 0.0 : DODGE_PRESS_BIAS;
                         Vec3d dodgeDir = toShooter.lengthSquared() < 1.0e-6
                                 ? perp
-                                : perp.add(toShooter.normalize().multiply(DODGE_PRESS_BIAS)).normalize();
+                                : perp.add(toShooter.normalize().multiply(bias)).normalize();
 
                         // The heading is kept as a VECTOR now, not a yaw. The primitive that
                         // executes it strafes in the player's own frame, so nothing here has to
