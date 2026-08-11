@@ -402,6 +402,26 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             //
             // Approach is untouched: below this branch, altoclef's pathing still walks us in.
             // This is only the part where the target is already within reach.
+            //
+            // ⛔ AND THAT IS EXACTLY WHY mob_trio CANNOT PASS. MEASURED 2026-08-11.
+            // MOB_STRIKE_DISTANCE is 2.9, chosen expressly to sit OUTSIDE a zombie's ~2.0 arm --
+            // CombatController's own comment calls it "a band that hits without being hit". A
+            // policy whose entire purpose is to keep the bot out of the arm can only run here,
+            // once the bot is ALREADY within reach, i.e. already inside the arm. It cannot prevent
+            // the first hits, and mob_trio's gate is ZERO damage.
+            //
+            // The counters agree: on that course ctl reads 0 and 10 over fights of 220-300 ticks,
+            // with hurt=0/0/0, while TriggerBot evaluates 161-181 times and passes 11-12. The
+            // spacing engine is present for a handful of ticks at the end of an approach somebody
+            // else drove.
+            //
+            // This is also why eight combat hypotheses died on that course judged on min_hp: they
+            // were tuning constants that only take effect after the damage they exist to prevent.
+            //
+            // The fix is not widening this `if`. It is deciding who owns movement OUTSIDE reach,
+            // because altoclef's pathing owns it today and adding a second writer is the exact bug
+            // shape found twice elsewhere tonight (two writers on the aim; two on the movement
+            // keys). Hand-off first, then the controller can hold its distance on the way in.
             if (equipWeapon(mod, preferAxe)) {
                 kaEquipTicks++;
             } else {
