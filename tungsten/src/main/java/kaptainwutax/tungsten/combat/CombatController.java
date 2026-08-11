@@ -828,7 +828,27 @@ public class CombatController {
         // no longer holds at 29 fps — worth correcting there before it misdirects another pass.
         boolean beingHit = player.hurtTime > 0;
         out.back = tooClose && !beingHit && dirSafe(player, world, -1, 0);
-        out.sprint = out.forward && dist > strikeAt + 1.0; // sprint only for a real approach
+        // ⛔ THE SPRINT CUT-OFF LEFT A DEAD BAND THE BOT COULD NOT CROSS.
+        //
+        // This was `dist > strikeAt + 1.0`, which against a mob is 2.9 + 1.0 = 3.9. Our own swing
+        // needs eye-to-hitbox <= TriggerBot.REACH = 3.0. So between 3.0 and 3.9 the bot WALKED:
+        // too close to be allowed to sprint, too far to be allowed to hit. A skeleton retreats as
+        // you approach, at about a walking bot's speed, so that band is not crossed by walking --
+        // the gap simply holds.
+        //
+        // Measured on mob_skeleton, eight runs, over the swings the reach gate REFUSED:
+        //     reachMean 3.52 3.52 3.48 3.64 3.57 3.56 3.71 3.50   (threshold 3.0)
+        //     reachMax  4.06 4.15 4.13 4.11 4.18 4.02 4.10 4.08
+        // The bot sits half a block outside its own reach, every run, and only 1-4 swings pass a
+        // whole fight while 35-56 are refused for reach.
+        //
+        // AND WHY THE OBVIOUS VERSION OF THIS WAS REFUTED BEFORE. "Hold SPRINT while approaching"
+        // was tried and measured WORSE -- closest_gap 5.73 -> 7.78 (checklist rule five). That is
+        // what sprint KNOCKBACK does: a blow landed while sprinting throws the target further away
+        // and the chase restarts, so sprinting all the way through the swing enlarges the very gap
+        // it was meant to close. Hence the cut-off is our REACH and not the strike band: sprint
+        // across the dead zone, arrive walking, and let the hit land without the extra shove.
+        out.sprint = out.forward && dist > TriggerBot.REACH;
 
         // Circle-strafe: orbit the target, flipping direction on a randomised cadence
         // (unpredictable, keeps flanking). If the chosen side is a drop, take the OTHER
