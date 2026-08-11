@@ -118,9 +118,31 @@ public final class Nav {
         if (tungstenDriving) {
             net.minecraft.client.network.ClientPlayerEntity p =
                     net.minecraft.client.MinecraftClient.getInstance().player;
+            // ⛔ A HOP IS NOT A FALL, AND THE BOT HOPS CONSTANTLY BY DESIGN.
+            //
+            // This used to refuse for ANY airborne tick while tungsten drove. The bot jumps for
+            // crits, jumps to rush a mob, and sprint-jumps to dodge arrows -- so "airborne" is its
+            // normal state in a fight, and this predicate gates AbstractDoToEntityTask's interact.
+            //
+            // Measured on mob_skeleton: dte=682/92/0/0/0/213 -- the gate was evaluated 682 times,
+            // the bot was IN RANGE on 92 of them, hungry/falling/mlg were all zero, and the
+            // interact still never fired ONCE (kaTung=0/0/0/0, and its first counter increments on
+            // the very first line of the kill tick). The bot spent whole runs beside a skeleton it
+            // was never allowed to hit.
+            //
+            // What the guard is for is cancelling a path mid-FALL, which is a real hazard. Ground
+            // within a couple of blocks means the bot is mid-hop, not mid-fall, so it keeps the
+            // protection where it matters and stops vetoing every jump.
             if (p != null && !p.isOnGround() && !p.isTouchingWater()) {
-                navUnsafeAir++;
-                return false;
+                boolean groundClose = false;
+                net.minecraft.util.math.BlockPos below = p.getBlockPos();
+                for (int d = 1; d <= 3 && !groundClose; d++) {
+                    groundClose = !p.getEntityWorld().getBlockState(below.down(d)).isAir();
+                }
+                if (!groundClose) {
+                    navUnsafeAir++;
+                    return false;
+                }
             }
         }
         baritone.Baritone b = engine();
