@@ -534,6 +534,17 @@ public class CombatController {
         // where the opponent reaches as far as we do. A zombie's arm is about 2.0 eye-to-hitbox
         // against our 3.0, so there is a band that hits without being hit -- and 2.4 sits inside
         // its arm, conceding a free swing on every exchange.
+        // ⛔ "THE DEFAULT WINS" WAS n=3 AND IS OVERTURNED AT n=12. The table below reads 2.9 as
+        // WORSE than 2.4 against three zombies (12/20/6 against 3/3/9). Re-run properly on
+        // 2026-08-11 -- twelve runs an arm, same stand, same day, interleaved in blocks, exact
+        // dmgTaken rather than min_hp -- with 2.9 wired for MOBS ONLY through the band below:
+        //     2.4 (this table's winner)   3 9 6 20 17 9 9 9 6 3 17 15   mean 10.25  median 9.0
+        //     2.9 (the mob band)          3 9 3 3 6 12 6 3 17 6 0 3     mean  5.92  median 4.5
+        // Damage nearly halves, 2.0 sigma, and the 0 is mob_trio's FIRST EVER PASS. Three runs an
+        // arm could not have separated these: this course's spread on one build is 3 to 20.
+        //
+        // The old table is kept because its 1.8 row still stands and its reasoning about knockback
+        // is sound -- only its verdict on 2.9 was underpowered.
         // DISTANCE TUNING IS EXHAUSTED, AND THE DEFAULT WINS.
         // Three settings measured with a per-tick damage counter, three runs each, against three
         // zombies:
@@ -544,8 +555,28 @@ public class CombatController {
         // which the law did not predict and the physics explains: inside 2.0 the bot is in the
         // knockback, the mobs are shoved away, and it spends its time re-closing. The tuned
         // default sits at the minimum of both, so this line stays as it is.
-        double strikeAt = STRIKE_DISTANCE;
-        double backOffAt = TOO_CLOSE_DISTANCE;
+        // ⛔ A MOB IS NOT A PLAYER, AND UNTIL NOW IT WAS FOUGHT AS ONE.
+        //
+        // STRIKE_DISTANCE is 2.4 and TOO_CLOSE_DISTANCE is 1.6, both derived for a duel where the
+        // opponent reaches as far as we do (3.0). A zombie's arm is MOB_ARM_REACH = 2.25 by the
+        // same eye-to-hitbox measure, so those two numbers park the bot INSIDE the arm and do not
+        // drift out until 1.6 -- deeper in. Every exchange concedes a free swing by construction.
+        //
+        // The mob band was derived for exactly this and then never read: MOB_STRIKE_DISTANCE 2.9
+        // sits outside the 2.25 arm, MOB_BACK_OFF_DISTANCE 2.65 is the floor to step back out at.
+        // #78 found that constant and nine others appearing exactly once in the repository, on
+        // their own declarations. This is the first of them to be wired up.
+        //
+        // Deliberately ONE change: the base band only. The reach-control block below still owns
+        // the cooldown stand-off, and the press/crowd-plan constants stay unwired until they can
+        // be measured on their own.
+        //
+        // PREDICTED BEFORE THE RUN: mob_trio's exact dmgTaken should fall. Its spread on one build
+        // is 3 to 18, so this is judged at n=6, not at the n=2 that made my last two attempts
+        // unreadable. mob_melee and mob_weapon_swap must not move.
+        boolean vsPlayer = target instanceof net.minecraft.entity.player.PlayerEntity;
+        double strikeAt = vsPlayer ? STRIKE_DISTANCE : MOB_STRIKE_DISTANCE;
+        double backOffAt = vsPlayer ? TOO_CLOSE_DISTANCE : MOB_BACK_OFF_DISTANCE;
         if (kaptainwutax.tungsten.TungstenConfig.get().combatReachControl) {
             float cd = player.getAttackCooldownProgress(0f);
             // START CLOSING BEFORE THE SWING IS READY, BY EXACTLY THE TRAVEL TIME.
