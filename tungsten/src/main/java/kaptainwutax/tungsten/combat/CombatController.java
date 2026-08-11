@@ -829,8 +829,21 @@ public class CombatController {
                 // and lastDist read 5.05 mid-fight, i.e. the bot was out of range for reasons that
                 // have nothing to do with its target spacing. The limiter is the CHASE, not this
                 // constant. Reverted.
-                strikeAt = TriggerBot.REACH + 0.4;
-                backOffAt = TriggerBot.REACH + 0.2;
+                // ⛔ BUT NOT AGAINST SOMETHING THAT REACHES US ANYWHERE.
+                //
+                // Withdrawing while the swing recharges is sound in a DUEL: it leaves the
+                // opponent's reach for the ticks we cannot hit back. A shooter has no such reach to
+                // leave -- it hits us at 3.4 exactly as well as at 2.9 -- so the withdrawal buys
+                // nothing and costs the time to close again, and TIME IN CONTACT is what this
+                // course's arrows are priced by. Every extra second beside a skeleton is half
+                // another shot at us.
+                //
+                // Same property test as the flee reflex and the dodge, so no mob is named, and
+                // duels are untouched by construction (a player is not a RangedAttackMob).
+                if (!(target instanceof net.minecraft.entity.ai.RangedAttackMob)) {
+                    strikeAt = TriggerBot.REACH + 0.4;
+                    backOffAt = TriggerBot.REACH + 0.2;
+                }
             }
         }
         // WHAT DOES IT DO WHILE IT IS BEING HIT? Combat is open-loop on incoming damage — a sweep
