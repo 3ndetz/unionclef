@@ -75,7 +75,26 @@ public class CombatController {
      * quarter block is the margin for a mob that is walking toward us as it swings.
      */
     public static final double MOB_ARM_REACH = 2.25;
-    /** Centre-to-centre floor against a mob: the worst hit ever observed (2.00) plus a margin. */
+    /**
+     * Centre-to-centre floor against a mob: the worst hit ever observed (2.00) plus a margin.
+     *
+     * <p>⛔ WIRED AS A FORWARD-PRESS VETO AND REVERTED, 2026-08-11. The band above holds a distance
+     * from the ONE entity being fought; mob_trio spawns three and the other two close while it
+     * does. So: when another hostile is already inside this floor, suppress the press rather than
+     * walk into a free swing. Six runs against the band-only twelve:
+     *     band only        3 9 3 3 6 12 6 3 17 6 0 3   mean 5.92
+     *     + press veto     3 9 12 20 3 6               mean 8.83
+     * No improvement, and all three zombies still died, so it was not trading damage for kills.
+     *
+     * <p>The reason is a lesson this repo has already written down once, in the void-guard work:
+     * SUPPRESSING A DIRECTION IS NOT REPOSITIONING. Refusing to press leaves the bot standing among
+     * three zombies instead of moving through them, and this course's own established law is that
+     * damage tracks TIME IN CONTACT. A veto lengthens contact by construction.
+     *
+     * <p>So this constant belongs to the crowd PLAN — candidate steps scored over a horizon,
+     * which is what PLAN_HORIZON_TICKS, PLAN_REPLAN_TICKS and PLAN_OPPORTUNITY_WEIGHT describe —
+     * not to a key that gets withheld.
+     */
     public static final double MOB_MIN_CENTRE_GAP = 2.30;
     /** Within this, a second hostile turns the fight from a duel into a crowd. */
     public static final double CROWD_RADIUS = 7.0;
