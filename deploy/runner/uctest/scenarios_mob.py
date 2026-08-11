@@ -248,6 +248,24 @@ class MobTrioNoDamage(MobMelee):
                         f"lowHp={_stat(ctx, 'lowHp')} hurt={_stat(ctx, 'hurt')}", gate=False)
 
 
+# ⛔ WHAT IS ALREADY KNOWN ABOUT WHY THIS FAILS, so the next pass does not re-derive it.
+# The dodge is LIVE, not dead machinery: DodgeProjectilesTask is instantiated at
+# MobDefenseChain:472, gated on `isDodgeProjectiles() && projectileIsClose`, and this course's own
+# counters show that branch returning 46 and 167 times a run (mdRet slot 3). It fires, repeatedly,
+# and the bot still takes 15-17 damage — four to six arrows — over a 12.5 block approach.
+#
+# THE TENSION, and it is why "dodge harder" is not obviously the fix: on safe ground the dodge
+# turns the bot PERPENDICULAR and sprint-jumps. The bot is at the same time trying to CLOSE those
+# 12.5 blocks. Every dodge is a step not taken toward the skeleton, the approach lengthens, and
+# mob_trio established on this same suite that damage tracks TIME IN CONTACT. So dodging more may
+# cost more arrows, not fewer. closest_gap read 4.60 and 2.82, so it does arrive.
+#
+# INSTRUMENT FIRST. Nobody has recorded how many arrows are loosed, how many land, at what range
+# each lands, or how long the approach takes — and without those, "the dodge is too weak" and "the
+# dodge is too eager" are indistinguishable and both are plausible. Judge on exact dmgTaken, not
+# min_hp, at n>=6 an arm; this suite's damage numbers have a spread that ate eight hypotheses.
+
+
 class SkeletonDodge(MobMelee):
     """One skeleton. The arrow has to be dodged BEFORE it lands, not survived after.
 
