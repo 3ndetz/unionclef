@@ -538,6 +538,46 @@ The rule:
 Related in shape to 4c: a conclusion drawn from a sample selected by something other than the thing
 being studied. Here the sample was the courses on which the surviving behaviour happened to matter.
 
+## 4j. WHEN THE VARIANCE LIVES *BETWEEN SERIES*, A REBUILT ARM MEASURES THE STAND (2026-08-11)
+
+Rule 4b says characterise the metric before quoting a delta. This is the failure that survives
+doing that correctly: the metric was characterised, the arms were large, and four separate
+headlines still softened or vanished — because the arms were built hours apart.
+
+`mob_skeleton`, the SAME build, three separate series:
+
+```
+0.77 arrows (n=13)      0.90 (n=26)      1.18 (n=40)
+```
+
+and pass rates on one build across the day: 3/6, 0/6, 2/12, 2/12, 5/13, 1/12. The spread is not
+within a series, it is BETWEEN them — client wear, host load, whatever the stand carries forward.
+So an arm measured after a rebuild is compared against a baseline taken in a different world, and
+the difference you read is partly the stand.
+
+What it cost, on one course in one day:
+
+- a change shipped at "2.1 sigma" that pooled to 1.7 and then to nothing;
+- a change shipped at "1.4 sigma" that read 1.18 against a 1.18 baseline at n=40 — no effect at all;
+- a pass rate reported as ~38% from a 5/13 series that the next twelve runs read as 1/12.
+
+Each was measured carefully. Each was wrong, and the care went into the wrong place.
+
+The rule:
+
+1. **Put the thing under test behind a `TungstenConfig` flag, and A/B it with `--pin`.** The runner
+   already supports it and its own help says "use this for A/B runs". Both arms then run
+   back-to-back on the SAME clients, in one invocation each, with no rebuild between them.
+2. **Prove the pin reaches the behaviour** — read it back from the run, do not assume. A flag that
+   silently fails to apply produces a clean-looking A/B in which both arms are the same build. That
+   is the identical failure mode as a fix that never reached the keys, and it looks like a refutation.
+3. **A single arm is not a result**, however large. Report the pair or report nothing.
+4. If a rebuild between arms is unavoidable, say so and treat the comparison as provisional
+   whatever the sigma says.
+
+The general form: rule 4c warns against a statistic taken over a sample selected by something other
+than the thing being studied. Here the selector is *when the run happened*.
+
 ## 4i. THE GATE'S STATISTIC IS RARELY THE MEASUREMENT'S STATISTIC (2026-08-10)
 
 A criterion answers "did this run pass". A comparison answers "is this build different". They want
