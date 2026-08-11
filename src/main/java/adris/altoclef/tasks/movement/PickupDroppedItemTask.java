@@ -213,6 +213,26 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
 
         if (!progressChecker.check(mod)) {
             Nav.cancel();
+            // ⛔ WHAT ACTUALLY LOSES mine_diamond, MEASURED — AND IT IS NOT ANY OF THE THREE BUGS
+            // FIXED IN THIS FILE. The bot mines all three ores (drops at 4.88, 6.78, 8.82 against
+            // ore at x=4,6,8) and fails to collect every one. The closest it EVER comes to them,
+            // horizontally, across a whole 300 s run:
+            //     drop (4.88, 0.88)   1.35 blocks, at t=5 s
+            //     drop (6.78, 0.35)   2.45 blocks, at t=20 s
+            //     drop (8.82, 0.13)   3.57 blocks, at t=20 s
+            // It stops short and never closes, and both best approaches are in the first twenty
+            // seconds -- everything after that is leaving.
+            //
+            // A previous version of this note explained it as vanilla's pickup box: an item in the
+            // one-deep hole sits at y=-61, its box expanded by 0.5 reaches -60.25, and a player on
+            // the rim has its feet at -60.0, so they miss by a quarter block. The arithmetic is
+            // right and IRRELEVANT -- the bot never gets over the hole for it to matter. Kept as a
+            // correction because it was committed as the cause and it is not.
+            //
+            // So the open question is NAVIGATION to a goal one block below the surface, not pickup
+            // range. getPos() already returns the item's own position; what to read next is what
+            // counts as arriving there.
+            //
             // ⛔ A DISCARDED ITEM ENTITY STILL HAS ITS STACK, SO THIS TEST NEVER ENDS.
             // The condition below asks "is there a drop and does it still hold something", and a
             // removed=DISCARDED entity answers yes to both forever -- getStack() is untouched by
