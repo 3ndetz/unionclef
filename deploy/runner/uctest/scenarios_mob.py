@@ -376,11 +376,43 @@ class SkeletonDodge(MobMelee):
         # assumes. Do not re-gate this course on dmgTaken.
         ctx.bot.py.try_call("resetRunCounters")
         # Far enough that it shoots rather than melees -- the point is the arrow.
-        ctx.rcon.cmd(f"summon skeleton 12.5 {STAND_Y} 0.5")
+        #
+        # ⛔ SPAWNED INERT, AND THIS IS CHECKLIST RULE TWO. The skeleton used to be summoned live,
+        # followed by sleep(2) before the task was issued -- and an IDLE BOT TICKS NO CHAINS
+        # (TaskRunner.tick opens with `if (!active) return;`, and `active` stays false until a user
+        # task starts). So for two seconds a live skeleton shot at a bot whose mob defence, dodge
+        # and force field were all switched off. A skeleton fires about every two seconds, so the
+        # course was handing over almost exactly one free arrow that no policy could ever answer.
+        #
+        # The evidence it was doing so: on the runs that take a single hit, DamageWatch puts that
+        # hit at gap 9.48 / 9.37 / 9.20 / 9.13 -- clustered at the very start of a twelve-block
+        # approach, which is where an arrow launched during the dead window arrives.
+        #
+        # NoAI parks it for the tracker's benefit (the tracker lags a summon by about a second,
+        # which is what the sleep was for) and it is switched on the moment the fight is ordered.
+        # The bot still has to cross twelve blocks under fire -- nothing about the difficulty of
+        # the course changes, only the two seconds where nothing of the bot was running.
+        # ⛔ AND THE BOW MUST BE GIVEN BY HAND ONCE ANY NBT IS SUPPLIED. SummonCommand only calls
+        # MobEntity.initialize() when the summon carries NO nbt, and initialize() is what equips a
+        # skeleton. So `summon skeleton {NoAI:1b}` produces an UNARMED skeleton -- measured:
+        #     plain summon        equipment: {mainhand: {id: "minecraft:bow", ...}}
+        #     with {NoAI:1b}      Found no elements matching equipment
+        # That is how this course briefly went 6/6 at min_hp=20 against something that could not
+        # shoot. The "actually fought back" gate below now makes that failure loud instead of green.
+        ctx.rcon.cmd(f"summon skeleton 12.5 {STAND_Y} 0.5 "
+                     '{NoAI:1b,equipment:{mainhand:{id:"minecraft:bow",count:1}}}')
         time.sleep(2)
         # `@test kill` targets ZOMBIES only, so it started nothing here and the bot stood and
         # was shot with every defence-chain counter at zero. This one takes the nearest hostile.
         ctx.bot.cmd("@test killhostile")
+        ctx.rcon.cmd("data merge entity @e[type=skeleton,limit=1] {NoAI:0b}",
+                     allow_reject=True)
+        # PROVE THE AI CAME BACK ON. A false green already happened here once: the skeleton was
+        # summoned inert, the re-enable silently did not take, and six runs passed at min_hp=20
+        # against a statue (dw=0/0/0/0/0/0, dodgeDrive=0). NoAI reads back ABSENT when false --
+        # Minecraft omits default values -- so "no elements matching" is the healthy answer.
+        ctx.geo["noai_after"] = str(ctx.rcon.cmd(
+            "data get entity @e[type=skeleton,limit=1] NoAI", allow_reject=True))
 
     def drive_tick(self, ctx, elapsed):
         super().drive_tick(ctx, elapsed)
@@ -413,6 +445,12 @@ class SkeletonDodge(MobMelee):
         low = min(hps) if hps else None
 
         yield Criterion("the skeleton is dead", not alive, f"alive={alive}")
+        # ⛔ THE COURSE MUST NOT PASS AGAINST A STATUE. See drive_start: an inert skeleton once
+        # gave six straight passes at min_hp=20. If nothing was ever shot at us, this course
+        # measured nothing, so it is GATED rather than recorded.
+        yield Criterion("the skeleton actually fought back",
+                        (_stat(ctx, "dw") or "0/0").split("/")[0] != "0",
+                        f"dw={_stat(ctx, 'dw')} noai_after={ctx.geo.get('noai_after')}")
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
