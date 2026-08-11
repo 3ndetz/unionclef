@@ -652,6 +652,16 @@ class ChopCanopy(ChopTree):
                         f"firstLogAt={shown}", gate=False)
 
 
+# ⛔ mine_stone IS FLAKY AT ABOUT ONE RUN IN THREE, AND EVERY SWEEP HID IT.
+# Measured 2026-08-11 on two builds, three runs each at a healthy frame rate:
+#     pre-mover build   PASS, FAIL, PASS
+#     with the mover    PASS, FAIL, FAIL
+# It fails at least once in both arms, so the mover fix is neither convicted nor cleared by this —
+# one run of difference at n=3 separates nothing. What IS established is that the course is a coin
+# and every single-run craft sweep before today recorded it as a clean PASS, because a sweep runs it
+# once. Take n>=6 before reading anything into a mine_stone verdict.
+
+
 class MineDiamond(CraftTable):
     """The rung above iron, and the first that REQUIRES the right tool.
 
