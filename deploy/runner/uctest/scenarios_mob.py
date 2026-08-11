@@ -281,9 +281,26 @@ class MobTrioNoDamage(MobMelee):
 # measured it, and found it INERT — mdRet2 kept incrementing, which is how the danger-zone arm was
 # identified as the live one. Reverted unshipped.)
 #
-# SO THE QUESTION IS A POLICY ONE, not a bug: a bot sent to KILL a skeleton cannot also be running
-# ARROW_KEEP_DISTANCE from its arrows. One of the two has to yield while a kill order is live.
-# Judge on exact dmgTaken, not min_hp, at n>=6 an arm.
+# ⛔ AND "MAKE THE DODGE YIELD TO THE KILL ORDER" IS REFUTED. That looked like the obvious
+# resolution: a bot sent to KILL a skeleton cannot also run ARROW_KEEP_DISTANCE from its arrows, so
+# let the dodge ignore projectiles fired by the current kill target and keep it for everything else.
+# Built it properly -- owner id carried on CachedProjectile, kill target published by
+# AbstractKillEntityTask, the chain skipping that shooter's arrows. Healthy runs:
+#     with the dodge (baseline)   dmgTaken 20, 13, 16, 20        mean 17.25
+#     dodge yielding              dmgTaken 19, 40, 65, 20, 20    mean 32.8
+# Nearly double, one run at 65 damage over 17 hits. Reverted unshipped.
+#
+# THE USEFUL PART: that quantifies the dodge. It roughly HALVES incoming damage, so it is earning
+# its keep and "it is too eager" is only half true — it costs the approach and pays for it. What it
+# cannot do is get anywhere near the one-point bar.
+#
+# So neither dodging more nor dodging less reaches the criterion, and the only option left is the
+# one the course was written for: AVOID the arrow rather than survive it. That is the safe-ground
+# arm — LookHelper.lookAt(suggestedProjectileRotation) then sprint-jump perpendicular — which is
+# dead because suggestedProjectileRotation is assigned only inside onPlayerItemUse, wrapped in
+# `if (false && ...)`. Implementing a predictive dodge there is the remaining work, and it is a
+# feature, not a tweak. Judge on exact dmgTaken, not min_hp, at n>=6 an arm; this course spans
+# 4 to 65.
 
 
 class SkeletonDodge(MobMelee):
