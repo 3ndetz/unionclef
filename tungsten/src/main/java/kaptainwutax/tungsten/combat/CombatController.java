@@ -519,6 +519,28 @@ public class CombatController {
         }
 
         long now = System.currentTimeMillis();
+        // ⛔ PARKED, NOT SHIPPED: POSITIONING ON GROUND DISTANCE INSTEAD OF EYE-TO-HITBOX.
+        //
+        // The argument is sound and the measurement will not carry it. eyeToHitbox is measured from
+        // the EYE, so a hop of about 1.25 blocks adds a vertical leg: a target 3.0 away on the
+        // ground reads sqrt(3.0^2 + 1.25^2) = 3.25 at the apex. The hop counters say the bot is
+        // airborne for 78-100% of the ticks that matter (hop=9/7/.., 9/8/.., 9/9/..), so this
+        // reading swings by half a block for reasons unrelated to where either fighter stands, and
+        // the range control below then presses forward and back in response to the bot's OWN jump.
+        //
+        // The patch is four lines -- clamp the player's x/z into the target box and take the
+        // horizontal distance -- leaving TriggerBot's exact 3D test alone, because hitting must
+        // keep the true measure while positioning should not chase its own altitude.
+        //
+        // Measured on mob_skeleton at n=12: 4/12 PASS against 3/12 for the build without it, with
+        // `passed` swings unchanged at 3 and reach refusals still 15-65. That difference is smaller
+        // than this course's own spread -- the same build gave 3/6 and then 0/6 on consecutive
+        // series -- so it is NOT DISTINGUISHABLE from run-to-run variation.
+        //
+        // BLAST RADIUS is why it is parked rather than kept anyway: `dist` here also feeds the
+        // sprint cut-off, tooClose and kite, so this is a change to every pvp duel as well, and it
+        // has no pvp baseline. Bench it with n well past 12 on a quiet stand, pvp included, before
+        // shipping.
         double dist = TriggerBot.eyeToHitbox(player, target);
 
 
