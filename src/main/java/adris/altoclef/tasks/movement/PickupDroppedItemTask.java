@@ -320,6 +320,24 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
         if (!itemEntity.equals(_currentDrop)) {
             _currentDrop = itemEntity;
             progressChecker.reset();
+            // ⛔ A NEW TARGET SPENDS THE LAST FAILURE'S ESCALATION. WITHOUT THIS IT COMPOUNDS.
+            //
+            // This task holds ONE TimeoutWanderTask(5, true) for its whole life, and `true` is
+            // increaseRange: every completed wander adds another 5 blocks to the distance the next
+            // one must cover. Nothing resets it -- onStart calls Task.reset(), which is not
+            // resetWander() -- so across a run the radius goes 5, 10, 15, 20, 25 without bound.
+            //
+            // The escalation is right for being stuck on ONE item: push further each time. It is
+            // wrong across items, and mine_diamond is what that costs. Three ores sit 4, 6 and 8
+            // blocks from spawn; the timeline shows the bot walking to -10.3 and sitting there
+            // from t=58 s to t=210 s of a 300 s course, and in another run stepping out 8.1 ->
+            // 11.7 -> 14.7 -> 17.1. It is not lost. It is satisfying a wander radius that grew
+            // every time a pickup failed.
+            //
+            // So: finding something new to go for is progress, and progress spends the escalation.
+            // A bot that is stuck on one drop still gets the bigger jumps, because _currentDrop
+            // does not change in that case and this branch does not run.
+            wanderTask.resetWander();
             if (isGettingPickaxeFirstFlag && _collectingPickaxeForThisResource) {
                 Debug.logMessage("New goal, no longer collecting a pickaxe.");
                 _collectingPickaxeForThisResource = false;
