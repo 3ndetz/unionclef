@@ -87,17 +87,9 @@ public class CombatController {
     private static final int PLAN_REPLAN_TICKS = 6;
     /** What being able to hit is worth against one enemy arriving within the horizon. */
     private static final double PLAN_OPPORTUNITY_WEIGHT = 0.8;
-    /** Ticks the crowd plan chose the step. Read as crowdPlan. */
-    public static volatile int crowdPlanTicks;
     /** A vanilla mob owes about a second between melee attacks; this is that gap, less a margin
      *  for the tick the animation arrives on. */
     private static final long MOB_SWING_COOLDOWN_MS = 850L;
-    /** Last observed swing per entity id -- the clock the safe window is measured from. */
-    private static final java.util.Map<Integer, Long> lastSwingMs = new java.util.HashMap<>();
-    /** Ticks spent holding off because a loaded arm was in range. Read as armHold. */
-    public static volatile int armLoadedTicks;
-    /** Ticks the fight was treated as a CROWD (kite) rather than a duel. Read as crowdEsc. */
-    public static volatile int crowdEscapeTicks;
 
     /** Ground walking speed the combat mover actually produces, blocks per tick. Vanilla walk is
      *  4.317 b/s = 0.216 b/t; this is the yardstick for "how long is the road back in". */
