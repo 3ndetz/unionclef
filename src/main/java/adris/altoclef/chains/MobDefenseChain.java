@@ -65,12 +65,23 @@ public class MobDefenseChain extends SingleTaskChain {
      * way to know which, and guessing has gone one for eight this session.
      */
     public static volatile int mdRet0, mdRet1, mdRet2, mdRet3, mdRet4, mdRet5, mdRet6, mdRet7, mdRet8, mdRet9;
+    /** Times the flee reflex was declined because the thing endangering us shoots. */
+    public static volatile int mdFleeShooter;
     private static final double DANGER_KEEP_DISTANCE = 30;
     private static final double CREEPER_KEEP_DISTANCE = 10;
     private static final double ARROW_KEEP_DISTANCE_HORIZONTAL = 2;
     private static final double ARROW_KEEP_DISTANCE_VERTICAL = 10;
     // Wider detection radius for arrow approach (from autoclef: horizontalDistanceSq < 1000)
     private static final double ARROW_DETECT_HORIZONTAL_SQ = 1000;
+    /**
+     * How much of the dodge is spent closing on the shooter rather than leaving the arrow's line.
+     *
+     * <p>At 0 the sidestep is purely perpendicular: it survives the arrow and holds the range open
+     * for ever, which against a ranged mob is a draw the bot always loses on damage. At 1 it is a
+     * 45-degree advance. Below 1 the perpendicular component stays dominant, so leaving the line is
+     * still the primary motion and the approach is what it does with the rest.
+     */
+    private static final double DODGE_PRESS_BIAS = 0.6;
     private static final double SAFE_KEEP_DISTANCE = 8;
     private static final List<Class<? extends Entity>> ignoredMobs = List.of(Entities.WARDEN, WitherEntity.class, EndermanEntity.class, BlazeEntity.class,
             WitherSkeletonEntity.class, HoglinEntity.class, ZoglinEntity.class, PiglinBruteEntity.class, VindicatorEntity.class, MagmaCubeEntity.class);
@@ -487,9 +498,32 @@ public class MobDefenseChain extends SingleTaskChain {
         // Dodge all mobs cause we boutta die son
         if (isInDanger(mod) && !escapeDragonBreath(mod) && !mod.getFoodChain().isShouldStop()) {
             if (targetEntity == null || WorldHelper.isSurroundedByHostiles()) {
-                runAwayTask = new RunAwayFromHostilesTask(DANGER_KEEP_DISTANCE, true);
-                setTask(runAwayTask);
-                mdRet3++; return 70;
+                // ⛔ YOU CANNOT OUTRUN AN ARROW, AND THIS BRANCH HAS BEEN TRYING TO.
+                //
+                // Fleeing is a defence against a MELEE threat: break contact and the damage stops.
+                // Against a shooter it stops nothing -- the projectile follows -- and it hands the
+                // attacker the one thing it wants, which is range. This branch bids 70 and so
+                // out-bids the fight branch's 65, meaning an arrow that lands takes health under
+                // the isInDanger threshold and the bot then runs INSTEAD of closing, stays at
+                // range, gets shot again, and stays under the threshold. That is a spiral with no
+                // exit, and it is why mob_skeleton has been 0/N since it was written.
+                //
+                // Measured, six runs, flee ticks against damage taken:
+                //     mdRet3    10   21   111   332   356   356
+                //     dmgTaken   8    4    16    36    16    25
+                // The two runs that barely fled took the least damage in the series.
+                //
+                // RangedAttackMob is vanilla's own marker for "attacks from a distance", so this
+                // asks a property rather than naming a mob. When the thing endangering us shoots,
+                // we decline to flee HERE and let the branches below decide: the fight branch takes
+                // it at 65 if it judges the mob beatable, and if it does not, its own retreat at 80
+                // still fires. The safety valve is kept; only the reflex is removed.
+                if (!endangeredByShooter(mod)) {
+                    runAwayTask = new RunAwayFromHostilesTask(DANGER_KEEP_DISTANCE, true);
+                    setTask(runAwayTask);
+                    mdRet3++; return 70;
+                }
+                mdFleeShooter++;
             }
         }
 
@@ -932,11 +966,50 @@ public class MobDefenseChain extends SingleTaskChain {
                     double lookProb = LookHelper.getLookingProbability(projectile.position, plyPos, projectile.velocity.normalize());
                     if (lookProb > 0.7 && horizontalDistanceSq < ARROW_DETECT_HORIZONTAL_SQ
                             && verticalDistance < ARROW_KEEP_DISTANCE_VERTICAL) {
-                        // Calculate dodge direction: sprint perpendicular to arrow trajectory
-                        Rotation targetRotation = LookHelper.getLookRotation(mod, expectedHit);
-                        float invertedYaw = (targetRotation.getYaw() + 180) % 360;
-                        if (invertedYaw < 0) invertedYaw += 360;
-                        suggestedProjectileRotation = new Rotation(invertedYaw, 0f);
+                        // ⛔ THE COMMENT HERE SAID "PERPENDICULAR" AND THE ARITHMETIC SAID "+180".
+                        //
+                        // It took the rotation toward expectedHit and inverted it, which is
+                        // "directly away from where the arrow will land" -- not perpendicular. And
+                        // a skeleton AIMS AT US, so expectedHit sits practically on top of plyPos:
+                        // the vector being inverted is near zero, and the yaw of a near-zero vector
+                        // is numerically unstable. The dodge direction was therefore NOISE, which
+                        // is why the bot never closed on mob_skeleton -- closest_gap=6.83 over a
+                        // whole 300 s course, in range on 105 of 940 ticks, 74 damage taken.
+                        //
+                        // It also explains the three refutations already on record: removing the
+                        // dodge doubled the damage (17.25 -> 32.8) because moving ANYWHERE beats
+                        // standing in arrow fire, and the three geometry variants measured the same
+                        // (17.25 / 19.0 / 17.2) because all three still steered by this vector.
+                        //
+                        // The arrow's VELOCITY is well-conditioned whatever the range, so the
+                        // sidestep is taken from that. Perpendicular leaves the line for the least
+                        // distance travelled; the bias toward the shooter is what turns a dodge
+                        // that merely survives into one that also closes, and closing is the only
+                        // thing that ends a fight against something that outranges us.
+                        Vec3d flight = projectile.velocity.normalize();
+                        Vec3d perp = new Vec3d(-flight.z, 0, flight.x).normalize();
+
+                        // Which side? Keep going the way we are already off the line -- that is the
+                        // shorter way out of it. When the arrow is dead-on that offset is the same
+                        // near-zero vector as above, so it only breaks the tie and never steers.
+                        if (perp.dotProduct(delta) < 0) {
+                            perp = perp.multiply(-1);
+                        }
+
+                        // The shooter is back up the flight line. Pure perpendicular holds the
+                        // range open for ever, so blend in the approach.
+                        Vec3d toShooter = projectile.position.subtract(plyPos);
+                        toShooter = new Vec3d(toShooter.x, 0, toShooter.z);
+                        Vec3d dodgeDir = toShooter.lengthSquared() < 1.0e-6
+                                ? perp
+                                : perp.add(toShooter.normalize().multiply(DODGE_PRESS_BIAS)).normalize();
+
+                        // Look where we are GOING: the caller presses MOVE_FORWARD along this yaw.
+                        Rotation targetRotation =
+                                LookHelper.getLookRotation(mod, plyPos.add(dodgeDir.multiply(4.0)));
+                        float dodgeYaw = targetRotation.getYaw() % 360;
+                        if (dodgeYaw < 0) dodgeYaw += 360;
+                        suggestedProjectileRotation = new Rotation(dodgeYaw, 0f);
 
                         if (runAwayTask == null && (mod.getClientBaritone() == null || Nav.isSafeToCancel())) {
                             if (mod.getClientBaritone() != null)
@@ -984,6 +1057,44 @@ public class MobDefenseChain extends SingleTaskChain {
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Is the thing endangering us something that attacks from a distance?
+     *
+     * <p>Asked by the flee branch, which is a melee defence being applied to a ranged attack. Only
+     * hostiles close enough to be the reason we are in danger count -- a shooter across the map is
+     * not why {@link #isInDanger} said yes, and letting it veto the flee would leave the bot
+     * standing in a crowd of zombies. Angry-at-us is required for the same reason.
+     *
+     * <p>A crowd containing ANY melee attacker still flees: the case this turns off is the pure
+     * shooting gallery, where closing is the only thing that ends it.
+     */
+    private boolean endangeredByShooter(AltoClef mod) {
+        try {
+            ClientPlayerEntity player = mod.getPlayer();
+            if (player == null) return false;
+            boolean sawShooter = false;
+            synchronized (BaritoneHelper.MINECRAFT_LOCK) {
+                for (LivingEntity entity : mod.getEntityTracker().getHostiles()) {
+                    if (entity == null || !entity.isAlive()) continue;
+                    if (!entity.isInRange(player, SAFE_KEEP_DISTANCE * 1.5)) continue;
+                    if (mod.getBehaviour().shouldExcludeFromForcefield(entity)) continue;
+                    if (!EntityHelper.isAngryAtPlayer(mod, entity)) continue;
+                    if (entity instanceof net.minecraft.entity.ai.RangedAttackMob) {
+                        sawShooter = true;
+                    } else {
+                        // Something in the danger radius hits us with its hands. Flee is still the
+                        // right answer to that, so one melee attacker settles it.
+                        return false;
+                    }
+                }
+            }
+            return sawShooter;
+        } catch (Exception e) {
+            // The flee reflex is the safe default: if we cannot tell, do what we did before.
+            return false;
+        }
     }
 
     private boolean isInDanger(AltoClef mod) {
