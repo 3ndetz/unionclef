@@ -306,11 +306,21 @@ class MobTrioNoDamage(MobMelee):
 # No better on average, so it was reverted. BUT LOOK AT THE SPLIT: three runs at 8-9 damage, the
 # best this course has ever recorded, and three at 24-37. It is bimodal, not noisy-around-a-mean.
 #
-# THE LIKELY SWITCH, and the next thing to try: the implementation picks ONE perpendicular side
-# always. Both sides are perpendicular to the arrow; only one of them is away from the rim. This
-# arena is flat_field(half=14) with the skeleton at 12.5, so the fight happens near the edge, and
-# bow_flee already taught this suite that a flee which corners itself on a rim collapses. Choose
-# the side with more open ground and the good mode may become the only mode.
+# THAT SWITCH WAS TESTED AND IT IS NOT THE SIDE. The fixed-side implementation was replaced by one
+# that scores BOTH perpendiculars by the ground under them -- four blocks along each, count the
+# floor -- and takes the better, on the theory that both dodge equally and only one keeps the bot
+# on the island (bow_flee's lesson about cornering on a rim).
+#     first six    dmgTaken 39, 0, 16, 11, 5, 8      mean 13.2   <- and a PASS at 29.5 fps
+#     next six     dmgTaken 11, 24, 8, 29, 52, 3     mean 21.2
+#     all twelve                                     mean 17.2   vs baseline 17.25
+# Identical to the baseline. The first block was simply the favourable half, and the n>=12 rule
+# this file already carries is what caught it -- at n=6 it looked like the best variant yet.
+#
+# ⛔ SO THREE DODGE VARIANTS NOW MEASURE THE SAME: pathing keep-distance 17.25, predictive with a
+# fixed side 19.0, predictive with the side chosen for ground 17.2. The dodge geometry is not the
+# lever. What HAS been established is that removing the dodge doubles the damage (32.8), so it is
+# load-bearing, and that a single run can reach 0 -- twice now -- so nothing structural forbids it.
+# The next hypothesis should not be a fourth way to choose a direction.
 #
 # So neither dodging more nor dodging less reaches the criterion, and the only option left is the
 # one the course was written for: AVOID the arrow rather than survive it. That is the safe-ground
