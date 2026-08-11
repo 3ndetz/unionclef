@@ -2110,7 +2110,7 @@ public class Py4jEntryPoint {
         return String.format("total=%d click=%d cd=%d reach=%d angle=%d los=%d passed=%d"
                         + " | chargeMean=%.3f critWindowSwings=%d crits=%d weaponMean=%.2f noWeapon=%d deferred=%d"
                         + " | angleMean=%.1f angleMax=%.1f (thr 40) reachMean=%.2f reachMax=%.2f (thr 3.0)"
-                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d escape=%d imm=%d forced=%d timer=%d) path=%d none=%d bowYield=%d",
+                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d escape=%d imm=%d forced=%d timer=%d) path=%d none=%d bowYield=%d crowd=%d/%d/%d",
                 kaptainwutax.tungsten.combat.TriggerBot.gTotal,
                 kaptainwutax.tungsten.combat.TriggerBot.gClick,
                 kaptainwutax.tungsten.combat.TriggerBot.gCooldown,
@@ -2139,7 +2139,10 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.combat.SafetySystem.rpForcedTimer,
                 kaptainwutax.tungsten.combat.CombatController.aimPath,
                 kaptainwutax.tungsten.combat.CombatController.aimNone,
-                kaptainwutax.tungsten.combat.CombatController.aimYieldedToBow);
+                kaptainwutax.tungsten.combat.CombatController.aimYieldedToBow,
+                kaptainwutax.tungsten.combat.CombatController.armLoadedTicks,
+                kaptainwutax.tungsten.combat.CombatController.crowdEscapeTicks,
+                kaptainwutax.tungsten.combat.CombatController.crowdPlanTicks);
     }
 
     /**
@@ -2445,6 +2448,9 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.combat.CombatController.lowHpTicks = 0;
         kaptainwutax.tungsten.combat.CombatController.lowHpDeclined = 0;
         kaptainwutax.tungsten.combat.CombatController.aimYieldedToBow = 0;
+        kaptainwutax.tungsten.combat.CombatController.armLoadedTicks = 0;
+        kaptainwutax.tungsten.combat.CombatController.crowdEscapeTicks = 0;
+        kaptainwutax.tungsten.combat.CombatController.crowdPlanTicks = 0;
         kaptainwutax.tungsten.combat.CombatController.standOffDeclined = 0;
         adris.altoclef.tasks.entity.AbstractKillEntityTask.kaTungstenTicks = 0;
         adris.altoclef.tasks.entity.AbstractKillEntityTask.kaTaskTicks = 0;

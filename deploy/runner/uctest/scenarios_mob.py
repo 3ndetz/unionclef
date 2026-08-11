@@ -209,6 +209,22 @@ class MobTrioNoDamage(MobMelee):
                         f"exact={exact} sampled_drop={round(drops, 1)} min_hp={low}", gate=False)
         yield Criterion("fight duration (recorded, not gated)", True,
                         f"{duration}s over {len(ctx.samples)} samples", gate=False)
+        # ⛔ THE COUNTERS THIS COURSE HAS NEVER READ, AND EIGHT HYPOTHESES DIED WITHOUT THEM.
+        # The note above records the cost: eight combat ideas judged on min_hp alone, whose spread
+        # is 2 to 11 out of 20 on ONE build, so all eight came back "noise" and none named a
+        # mechanism. Meanwhile TriggerBot has counted every reason it declines to swing since
+        # before that series started, and no mob course has ever printed it.
+        #
+        # crowd= is armHold/crowdEsc/crowdPlan: ticks held off because a loaded arm was in range,
+        # ticks the fight was treated as a CROWD rather than a duel, and ticks the crowd planner
+        # chose the step. Against THREE zombies those three are the whole policy under test, and
+        # until now they were unreachable -- they existed in CombatController and were never
+        # exposed over py4j at all.
+        ok_gs, gs = ctx.bot.py.try_call("gateStats")
+        yield Criterion("swing gates (recorded, not gated)", True,
+                        str(gs) if ok_gs and gs else "unreadable", gate=False)
+        yield Criterion("crowd policy (recorded, not gated)", True,
+                        f"crowd={_stat(ctx, 'crowd')} armHold/crowdEsc/crowdPlan", gate=False)
 
 
 class SkeletonDodge(MobMelee):
