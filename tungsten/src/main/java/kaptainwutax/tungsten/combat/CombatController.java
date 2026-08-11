@@ -921,6 +921,23 @@ public class CombatController {
         // The safety flip below still applies -- an unsafe side is always abandoned -- so this
         // only removes the RANDOM flip, not the one that keeps the bot on the platform.
         boolean crowded = countThreats(player, target) >= 1;
+        // ⛔ TRIED AND REVERTED: GIVING A SHOOTER THE STEADY ORBIT TOO.
+        //
+        // The argument was lateral SPEED -- a flip is a moment of zero sideways velocity, the flip
+        // runs every 500-1200 ms while a skeleton fires about every 2000 ms, so the overlap is
+        // likely rather than rare, and inside contact an arrow arrives in under a tick so reacting
+        // to it is too late by construction. It should have been the orbit's job, not the dodge's.
+        //
+        // Measured on arrows landed, which is this course's real ruler:
+        //     flip kept      mean 1.10 arrows   sd 0.75   n=27
+        //     steady orbit   mean 1.60 arrows   sd 1.02   n=13
+        // Worse, and the reasoning was backwards. What the flip buys is not speed but
+        // UNPREDICTABILITY: a constant orbit is a constant velocity, which is exactly what a mob's
+        // aim leads correctly. Randomising the side is what makes it miss. Do not remove it.
+        //
+        // Note the cost of finding this out: ONE n=12 run, because the ruler was characterised
+        // first. The same question judged on pass counts would have taken days and still not
+        // answered.
         if (!crowded && now - lastStrafeSwitch > strafeInterval) {
             strafeDir = -strafeDir;
             lastStrafeSwitch = now;
