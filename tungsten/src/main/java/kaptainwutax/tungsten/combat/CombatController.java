@@ -175,6 +175,10 @@ public class CombatController {
     public static volatile int hopWind, hopAir, hopEdge, hopInterval, hopUnsafe, hopFired;
     /** Crit windows where the hop stood down because an arrow was inbound. Read as hopDodge. */
     public static volatile int hopDodge;
+    /** Crit windows where a hop would have carried the swing out of reach. Read as hopFar. */
+    public static volatile int hopFar;
+    /** How high a vanilla jump lifts the eye, blocks. Used to keep the hop inside our own reach. */
+    private static final double JUMP_APEX = 1.25;
     /** Entries into closeQuarters, and the two ways out that never reach controlTicks. The budget
      *  reconciles exactly: cqEntry = cqNoLos + lowHpTicks + controlTicks. Anything that claims the
      *  branch is starved has to show it HERE, because this is the number the stage arbitration in
@@ -235,7 +239,7 @@ public class CombatController {
 
     public static void resetAimCounters() {
         aimBrake = 0; aimReposition = 0; aimEnemy = 0; aimPath = 0; aimNone = 0; aimYieldedToBow = 0;
-        hopWind = 0; hopAir = 0; hopEdge = 0; hopInterval = 0; hopUnsafe = 0; hopFired = 0; hopDodge = 0;
+        hopWind = 0; hopAir = 0; hopEdge = 0; hopInterval = 0; hopUnsafe = 0; hopFired = 0; hopDodge = 0; hopFar = 0;
     }
 
     public boolean tick(ClientPlayerEntity player, Entity target, WorldView world) {
@@ -1100,6 +1104,28 @@ public class CombatController {
         // another attempt it has to reduce the airborne fraction across the WHOLE fight, and the
         // outright version of that is already measured and reverted (crits 1.0 -> 0.5, 1/8 -> 0/8).
         boolean gDodging = kaptainwutax.tungsten.task.ProjectileDodge.isActive();
+        // ⛔⛔ THE BUNNY HOP IS LOAD-BEARING. THREE SEPARATE ATTEMPTS TO REDUCE IT ALL MEASURED WORSE.
+        //
+        // This one gated it on a DERIVED radius: eyeToHitbox is 3D from the eye and vanilla reach
+        // is too, so a 1.25-block hop turns a ground gap d into sqrt(d^2 + 1.25^2), and the bot
+        // must be inside sqrt(REACH^2 - 1.25^2) = 2.73 for leaving the ground to be free. Beyond
+        // that the hop takes the swing out of range -- which is why REACH stays the dominant
+        // refusal (15-65 a fight against 2-4 swings passed). Sound arithmetic; wrong answer.
+        //
+        // Measured on arrows landed, the ruler for this course:
+        //     hop as-is                mean 1.10   sd 0.75   n=27
+        //     hop gated by distance    mean 1.63   sd 0.87   n=13
+        // Worse, and `passed` swings did not move either (3, range 2-4) -- so it did not even buy
+        // the swings it was designed to buy.
+        //
+        // THE FAMILY, so nobody re-opens it one branch at a time:
+        //     suppress the juke outright     crits 1.0 -> 0.5, course 1/8 -> 0/8
+        //     stand it down while dodging    2/12 vs 2/12, and hopDodge showed why (a couple of
+        //                                    ticks of overlap a fight)
+        //     gate it by distance            arrows 1.10 -> 1.63
+        // Whatever the hop costs in reach, it buys more back -- crits, and an unpredictable
+        // profile that a mob's aim cannot lead (see the strafe-flip refutation above, same lesson).
+        // Do not reduce the hop. If reach refusals are to be attacked, attack them somewhere else.
         boolean gAir = !player.isOnGround();
         boolean gEdge = edgeScore >= 0.4;
         boolean gInterval = now - lastJump <= interval;
