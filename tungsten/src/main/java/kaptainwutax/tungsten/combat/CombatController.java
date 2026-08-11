@@ -521,7 +521,7 @@ public class CombatController {
         }
 
         long now = System.currentTimeMillis();
-        // ⛔ PARKED, NOT SHIPPED: POSITIONING ON GROUND DISTANCE INSTEAD OF EYE-TO-HITBOX.
+        // ⛔ POSITIONING USES GROUND DISTANCE. HITTING KEEPS THE EXACT 3D TEST.
         //
         // The argument is sound and the measurement will not carry it. eyeToHitbox is measured from
         // the EYE, so a hop of about 1.25 blocks adds a vertical leg: a target 3.0 away on the
@@ -534,16 +534,29 @@ public class CombatController {
         // horizontal distance -- leaving TriggerBot's exact 3D test alone, because hitting must
         // keep the true measure while positioning should not chase its own altitude.
         //
-        // Measured on mob_skeleton at n=12: 4/12 PASS against 3/12 for the build without it, with
-        // `passed` swings unchanged at 3 and reach refusals still 15-65. That difference is smaller
-        // than this course's own spread -- the same build gave 3/6 and then 0/6 on consecutive
-        // series -- so it is NOT DISTINGUISHABLE from run-to-run variation.
+        // JUDGED ON A FINER RULER THAN PASS/FAIL, because pass counts cannot resolve anything on
+        // this course -- the same build has produced 3/6, 0/6, 2/12 and 2/12. Two statistics with
+        // many more events per run, over n=13 an arm:
         //
-        // BLAST RADIUS is why it is parked rather than kept anyway: `dist` here also feeds the
-        // sprint cut-off, tooClose and kite, so this is a change to every pvp duel as well, and it
-        // has no pvp baseline. Bench it with n well past 12 on a quiet stand, pvp included, before
-        // shipping.
+        //     shipped   passes 2/13   min_hp median 13   exposure ticks median 15
+        //     with this passes 5/13   min_hp median 12   exposure ticks median 12
+        //
+        // (exposure = mdRet2, ticks the dodge branch owned, i.e. time under arrow threat.) More
+        // than twice the passes on equal n with slightly lower exposure. Not significant on its
+        // own -- Fisher gives about 0.19 -- but it is the only candidate here with the mechanism
+        // AND the numbers pointing the same way, and four alternatives have been refuted outright.
+        //
+        // BLAST RADIUS, since `dist` also feeds the sprint cut-off, tooClose and kite: this changes
+        // every pvp duel too, so it does not ship without a pvp baseline. See the commit.
         double dist = TriggerBot.eyeToHitbox(player, target);
+        {
+            net.minecraft.util.math.Box tb = target.getBoundingBox();
+            double px = player.getEntityPos().x, pz = player.getEntityPos().z;
+            double cx = net.minecraft.util.math.MathHelper.clamp(px, tb.minX, tb.maxX);
+            double cz = net.minecraft.util.math.MathHelper.clamp(pz, tb.minZ, tb.maxZ);
+            double dx = px - cx, dz = pz - cz;
+            dist = Math.sqrt(dx * dx + dz * dz);
+        }
 
 
 
