@@ -92,6 +92,15 @@ public class MobDefenseChain extends SingleTaskChain {
      * that can make the shot miss is lateral speed across the shooter's aim.
      */
     private static final double DODGE_PRESS_MIN_RANGE = 4.0;
+    // ⛔ AND THE 2.1-SIGMA CLAIM FOR THIS SOFTENED WITH MORE DATA. A confirmation series on the
+    // SAME build read 1.35 arrows (n=13) against the 1.10 (n=27) it was shipped on. Pooled over all
+    // 40 runs the shipped state is 1.18 against a 1.53 baseline (n=53) -- about 1.7 sigma, not 2.1.
+    // Directionally positive and NOT established at the 2-sigma bar this repo uses.
+    //
+    // That is the second time in this work a figure has weakened on more data (the other: a 5/13
+    // pass rate that a following n=12 read as 1/12). The lesson is not about this change: at
+    // n=12-27 on this course, a single series moves the headline by more than the effects being
+    // chased. Quote the POOLED figure, and treat any first series as provisional.
     private static final double SAFE_KEEP_DISTANCE = 8;
     private static final List<Class<? extends Entity>> ignoredMobs = List.of(Entities.WARDEN, WitherEntity.class, EndermanEntity.class, BlazeEntity.class,
             WitherSkeletonEntity.class, HoglinEntity.class, ZoglinEntity.class, PiglinBruteEntity.class, VindicatorEntity.class, MagmaCubeEntity.class);
