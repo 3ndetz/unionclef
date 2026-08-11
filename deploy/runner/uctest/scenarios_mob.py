@@ -372,6 +372,25 @@ class SkeletonDodge(MobMelee):
     than the spawn.
     """
 
+    # ⛔ THE RULER FOR THIS COURSE, CHARACTERISED AT LAST (checklist 4b step 1, never done here).
+    #
+    # min_hp over n=53 runs on the current build, pooled across every series:
+    #     median 16.0   IQR 12-16   range 4-20   passes (>=19) 9/53 = 17%
+    #     values cluster: 20 x9, 16 x16, 12 x11, then 8/7/5/4
+    #
+    # Those clusters are ARROWS LANDED. A skeleton arrow takes about 4, so 20 -> 0 arrows,
+    # 16 -> 1, 12 -> 2, 8 -> 3. The course's honest statistic is therefore a small integer COUNT
+    # per run, not a coin flip -- and mean-arrows-landed uses the whole distribution where pass/fail
+    # uses only the >=19 tail.
+    #
+    # WHY THIS MATTERS: five careful hypotheses this session each cost an hour and returned nothing
+    # readable, and one was shipped on a favourable 5/13 that the next series contradicted at 1/12.
+    # At a 17% pass rate, separating these effects on PASS COUNTS needs n>=30 an arm. On mean arrows
+    # landed -- values 0-4, tight clusters -- n=12 resolves a half-arrow shift. Compare on that, and
+    # on mdRet2 (ticks under arrow threat, 5-196 a run), NOT on how many runs went green.
+    #
+    # The gate stays exactly as it is. It answers its own question correctly; it just must not be
+    # the number a before/after is judged on (checklist 4i.5).
     id = "mob_skeleton"
     tier = "gate"
     duration = 120
