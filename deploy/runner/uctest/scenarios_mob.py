@@ -200,6 +200,16 @@ class MobTrioNoDamage(MobMelee):
         except (TypeError, ValueError):
             took = None
         ok_zero = (took == 0.0) if took is not None else (low is not None and low >= 20.0)
+        # ⛔ KNOW THE SPREAD BEFORE SPENDING A HYPOTHESIS ON THIS COURSE.
+        # The header above records eight ideas judged on min_hp, whose spread is 2-11 out of 20,
+        # all returning "noise". Switching to exact dmgTaken made the INSTRUMENT precise and did
+        # NOT make the course quiet: on one build, one day, at a healthy frame rate, this number
+        # read 3, 3, 6, 9, 12, 15, 17 and 18. A three-point difference is inside that by a factor
+        # of five.
+        #
+        # So n=2 and n=3 comparisons here — which is what a ninth, tenth and eleventh hypothesis
+        # will reach for — cannot resolve anything at all. Budget n>=6 an arm, the way the duels
+        # are budgeted (docs/features/PVP_SUITE.md), or do not run the experiment.
         yield Criterion("the bot took ZERO damage", ok_zero,
                         f"damage={exact_dmg} min_hp={low}")
         # The mod counts damage EVERY TICK; the sampled figure is kept beside it so the gap
