@@ -391,6 +391,21 @@ class SkeletonDodge(MobMelee):
         yield Criterion("the skeleton is dead", not alive, f"alive={alive}")
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks}")
+        # ⛔ THIS LABEL AND THIS THRESHOLD DISAGREE, AND THE THRESHOLD IS THE STRICTER ONE.
+        # min_hp >= 19.0 permits ONE point of damage. A skeleton arrow on normal difficulty does
+        # 2-5, so the arithmetic demands "no arrow ever landed" while the label says "at most one".
+        # The label is unreachable as written, and dw.rangedHits below already counts the exact
+        # thing the label describes.
+        #
+        # LEFT ALONE DELIBERATELY, with the numbers that decided it. Gating on rangedHits <= 1
+        # instead would pass 7 of these 13 runs -- it turns a red gate into a coin:
+        #     rangedHits   1 3 0 4 0 1 1 2 1 0 2 2 4
+        #     min_hp      12 8 17 4 17 13 7 2 15 12 5 12 4
+        # Relaxing a gate to a coin in the same pass that is trying to move that gate is
+        # indistinguishable from tuning to pass, however good the justification, so the decision
+        # belongs to a pass that is not holding the result. What IS established: the course's
+        # other two criteria (the skeleton dies, tungsten takes the legs) now pass in every run,
+        # so min_hp is the only thing keeping it red.
         yield Criterion("at most one arrow landed", low is not None and low >= 19.0,
                         f"min_hp={low}")
         # ⛔ THE INSTRUMENT THAT SEPARATES THE TWO CANDIDATES, AND IT ALREADY EXISTED.
