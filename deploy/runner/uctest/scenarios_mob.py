@@ -145,6 +145,24 @@ class MobTrioNoDamage(MobMelee):
     taking damage is a FAIL.
     """
 
+    # ⛔ ON THIS COURSE THE COMBAT CONTROLLER ENGAGING IS ASSOCIATED WITH *MORE* DAMAGE.
+    #
+    # Recorded here because it contradicts the premise the whole mob-policy task (G-1.80) rests on
+    # -- "wire tungsten's duelling engine into the mob fight and the damage will fall".
+    #
+    # The controller used to be unreachable here: split read 0/192 and 0/208 with ctl=0 every run,
+    # the fight running entirely on the force field. After the ground-distance positioning fix it
+    # engages sometimes, which is what made the comparison possible at all. Paired per run, n=7:
+    #     ctl      1    5    0   62   31    0    0
+    #     damage  9.0  6.0  0.0  6.0  3.0  3.0  0.0
+    # Both ZERO-damage runs are ctl=0 runs, and the heaviest engagement took 6.0. That replicates an
+    # earlier independent series (ctl 0/0/7/87 against damage 3.0/3.0/9.0/6.0), so it is now two
+    # series and about eleven runs pointing the same way.
+    #
+    # It does NOT say the controller is bad -- this course is three zombies in contact, where the
+    # force field's swat-everything-in-reach may simply suit the geometry better than spacing does.
+    # What it says is that "more controller" is not the lever here, and any G-1.80 work must carry
+    # its own damage measurement rather than assuming engagement implies improvement.
     id = "mob_trio"
     tier = "gate"
     duration = 120
