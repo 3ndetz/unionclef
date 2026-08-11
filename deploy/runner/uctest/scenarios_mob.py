@@ -223,8 +223,19 @@ class MobTrioNoDamage(MobMelee):
         ok_gs, gs = ctx.bot.py.try_call("gateStats")
         yield Criterion("swing gates (recorded, not gated)", True,
                         str(gs) if ok_gs and gs else "unreadable", gate=False)
-        yield Criterion("crowd policy (recorded, not gated)", True,
-                        f"crowd={_stat(ctx, 'crowd')} armHold/crowdEsc/crowdPlan", gate=False)
+        # ⛔ ctl IS THE DISCRIMINATOR; THE crowd= TRIO IS NOT AND NEVER WAS.
+        # armHold/crowdEsc/crowdPlan are declared in CombatController with javadoc describing what
+        # they would mean and NOTHING INCREMENTS THEM -- same shape as lastSwingMs. So crowd=0/0/0
+        # is not evidence of anything, and reading it as "the crowd policy never ran" was wrong.
+        # The aim counters are no better on their own: they sit inside `if (combatRotatesEnabled)`,
+        # so they read zero whenever that flag is off, whether or not the controller ticked.
+        #
+        # ctl (controlTicks) increments unconditionally once close-quarters control runs, and
+        # cq is its entry/no-LOS split. Those two answer the actual question: does CombatController
+        # drive this fight at all, or does the mob path belong entirely to altoclef's kill task?
+        yield Criterion("controller ran? (recorded, not gated)", True,
+                        f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} "
+                        f"lowHp={_stat(ctx, 'lowHp')} hurt={_stat(ctx, 'hurt')}", gate=False)
 
 
 class SkeletonDodge(MobMelee):
