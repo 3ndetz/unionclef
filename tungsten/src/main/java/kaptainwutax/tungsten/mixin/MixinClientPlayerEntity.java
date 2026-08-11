@@ -168,6 +168,20 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 			kaptainwutax.tungsten.task.RunAwayTask.driveAwayRaw(this.getEntityWorld(), (ClientPlayerEntity)(Object)this);
 		}
 
+		// THE ARROW DODGE HAD THE SAME DEFECT AS THE FLEE KEYS ABOVE, AND NOBODY HAD MOVED IT YET.
+		// MobDefenseChain pressed SPRINT/MOVE_FORWARD/JUMP from altoclef's task runner, which ticks
+		// BEFORE MovementQueue and the walker -- and Movement.update() releases every key and
+		// presses only what its own tick declared. So on every tick the walker drove the approach,
+		// the dodge was erased before the game read it. Four dodge hypotheses were measured against
+		// that and every one came back indistinguishable from baseline; none of them ever ran.
+		//
+		// UNLIKE the flee keys this is NOT gated on the movement exemptions. That exemption protects
+		// a planned leg from a writer that would fight it for the whole leg; this one lasts about
+		// six ticks and exists precisely to interrupt the approach while an arrow is in the air. The
+		// queue's own timeout absorbs a few overridden ticks -- it cannot absorb walking into a shot.
+		// Still BEFORE VoidGuard, so a sidestep can never carry the bot off a rim.
+		kaptainwutax.tungsten.task.ProjectileDodge.tick((ClientPlayerEntity)(Object)this);
+
 		// BowShooter added 2026-08-09: THE RANGED PHASE HAD NO VOID GUARD AT ALL.
 		// Sampling both guards every 15 s through an allround run:
 		//     t+0..60    punkActive=0     vgCalls=0      <- seventy-five seconds unguarded

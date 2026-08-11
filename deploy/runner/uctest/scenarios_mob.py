@@ -125,7 +125,8 @@ class MobMelee(Scenario):
         # from the force field. The split is printed now so that cannot pass unseen again.
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
-                        f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')}")
+                        f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
+                        f"dodgeDrive={_stat(ctx, 'dodgeDrive')}")
         # A fall is not a fight. On a flat field with a floor this should never fire, and if it
         # does the arena is wrong rather than the bot.
         yield Criterion("the bot was actually in the fight", low is not None and low < 20.0,
@@ -199,7 +200,8 @@ class MobTrioNoDamage(MobMelee):
         yield Criterion("all three are dead", killed, f"remaining={_zombie_count(ctx)}")
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
-                        f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')}")
+                        f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
+                        f"dodgeDrive={_stat(ctx, 'dodgeDrive')}")
         # THE CRITERION, MEASURED AS DAMAGE RATHER THAN AS LEFTOVER HEALTH.
         # min_hp answers "how healthy did it end up", which is not the question: a run that took
         # no damage at all failed this gate because it started on 14 hearts inherited from the
@@ -361,6 +363,17 @@ class SkeletonDodge(MobMelee):
         ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
         ctx.rcon.cmd("difficulty normal")
         ctx.rcon.cmd("kill @e[type=skeleton]")
+        # NO HEALTH TOP-UP HERE, AND THE REASON IS WORTH KEEPING. One was added on the theory that
+        # this course inherits health from the previous run -- mob_trio carries exactly that line.
+        # It is REDUNDANT: Actor normalisation already runs `effect clear` + instant_health before
+        # every course (actors.py:176), so the bot starts whole regardless.
+        #
+        # What actually produced the puzzle: dmgTaken=0.0 alongside min_hp=16.0 in the same run.
+        # That is not inherited health, it is DamageWatch UNDERCOUNTING -- the checklist already
+        # records that its total does not reconcile and is only trustworthy as a ratio between two
+        # sides measured the same way (rule 4i.4). So min_hp is the HONEST damage figure on this
+        # course and dmgTaken is not, which is the opposite of what the criterion comment below
+        # assumes. Do not re-gate this course on dmgTaken.
         ctx.bot.py.try_call("resetRunCounters")
         # Far enough that it shoots rather than melees -- the point is the arrow.
         ctx.rcon.cmd(f"summon skeleton 12.5 {STAND_Y} 0.5")
@@ -402,7 +415,8 @@ class SkeletonDodge(MobMelee):
         yield Criterion("the skeleton is dead", not alive, f"alive={alive}")
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
-                        f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')}")
+                        f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
+                        f"dodgeDrive={_stat(ctx, 'dodgeDrive')}")
         # ⛔ THIS LABEL AND THIS THRESHOLD DISAGREE, AND THE THRESHOLD IS THE STRICTER ONE.
         # min_hp >= 19.0 permits ONE point of damage. A skeleton arrow on normal difficulty does
         # 2-5, so the arithmetic demands "no arrow ever landed" while the label says "at most one".

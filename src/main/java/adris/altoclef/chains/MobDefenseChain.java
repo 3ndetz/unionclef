@@ -144,7 +144,16 @@ public class MobDefenseChain extends SingleTaskChain {
     /** How long after a hit we still count as being in a fight. */
     private static final long RECENT_DAMAGE_MS = 5000L;
     // Projectile pre-dodge (ported from autoclef, DISABLED — kept for future use)
-    private Rotation suggestedProjectileRotation;
+    /**
+     * The dodge heading, in world space, or (0,0) for "no arrow to dodge".
+     *
+     * <p>Was a {@link Rotation}, because the old executor turned the head and walked forward. The
+     * primitive that replaced it strafes in the player's own frame, so a direction is the whole
+     * requirement and the camera stays on the target.
+     */
+    private double suggestedDodgeX, suggestedDodgeZ;
+    /** How long one sidestep runs. An arrow crosses twelve blocks in about eight ticks. */
+    private static final int DODGE_HOLD_TICKS = 6;
     private final TimerGame preProjectileTimer = new TimerGame(0.3);
     private final TimerGame projectileTimer = new TimerGame(0.7);
 
@@ -484,12 +493,24 @@ public class MobDefenseChain extends SingleTaskChain {
                 // Danger zone (void/lava/edge): use baritone pathfinding to dodge safely
                 runAwayTask = new DodgeProjectilesTask(ARROW_KEEP_DISTANCE_HORIZONTAL, ARROW_KEEP_DISTANCE_VERTICAL);
                 setTask(runAwayTask);
-            } else if (suggestedProjectileRotation != null) {
-                // Safe ground: instant sprint+jump perpendicular to arrow (from autoclef)
-                LookHelper.lookAt(mod, suggestedProjectileRotation, false);
-                mod.getInputControls().tryPress(Input.SPRINT);
-                mod.getInputControls().tryPress(Input.MOVE_FORWARD);
-                mod.getInputControls().tryPress(Input.JUMP);
+            } else if (suggestedDodgeX != 0 || suggestedDodgeZ != 0) {
+                // ⛔ THESE KEY PRESSES NEVER REACHED THE GAME. This branch used to call
+                // lookAt + tryPress(SPRINT/MOVE_FORWARD/JUMP) from here, and this chain ticks
+                // BEFORE MovementQueue and BlockPathWalker, both of which release every key and
+                // press their own (Movement.update()). Every tick the walker drove the approach --
+                // which is every tick of the approach -- the dodge was wiped before it was read.
+                //
+                // That is pitfall P1, and the flee keys were fixed for exactly this a while ago:
+                // driven from RunAwayTask.tick they measured 22 hits against 23 and were filed as
+                // refuted, having never run. The dodge kept the defect, which is the best
+                // explanation on record for four dodge hypotheses that each measured flat.
+                //
+                // The heading goes to a primitive that ticks at the final-word position instead.
+                // It strafes in the player's own frame rather than turning the head, so the bot
+                // keeps facing what it is fighting -- the swing gate refuses past 40 degrees, and a
+                // dodge that looks away cannot also attack.
+                kaptainwutax.tungsten.task.ProjectileDodge.hold(
+                        suggestedDodgeX, suggestedDodgeZ, DODGE_HOLD_TICKS);
             }
             mdRet2++; return 65;
         }
@@ -732,10 +753,17 @@ public class MobDefenseChain extends SingleTaskChain {
             double prob = LookHelper.getLookingProbability(player, mod.getPlayer());
 
             if (prob > 0.96) {
-                Rotation targetRotation = LookHelper.getLookRotation(mod, player.getPos());
-                float invertedYaw = (targetRotation.getYaw() - 90) % 360;
-                if (invertedYaw < 0) invertedYaw += 360;
-                suggestedProjectileRotation = new Rotation(invertedYaw, 0f);
+                // Sidestep across the line from the player who is aiming at us. Kept as a vector
+                // for the same reason as the live path above: the primitive strafes, it does not
+                // steer. Still dead code behind `if (false &&` -- converted rather than left
+                // referring to a field that no longer exists.
+                Vec3d away = mod.getPlayer().getPos().subtract(player.getPos());
+                Vec3d flat = new Vec3d(away.x, 0, away.z);
+                if (flat.lengthSquared() > 1.0e-6) {
+                    Vec3d across = new Vec3d(-flat.z, 0, flat.x).normalize();
+                    suggestedDodgeX = across.x;
+                    suggestedDodgeZ = across.z;
+                }
                 projectileTimer.reset();
                 if (entity.getName() != null) {
                     Debug.logMessage("Dodging ranged attack from " + entity.getName().getString());
@@ -1017,12 +1045,11 @@ public class MobDefenseChain extends SingleTaskChain {
                                 ? perp
                                 : perp.add(toShooter.normalize().multiply(DODGE_PRESS_BIAS)).normalize();
 
-                        // Look where we are GOING: the caller presses MOVE_FORWARD along this yaw.
-                        Rotation targetRotation =
-                                LookHelper.getLookRotation(mod, plyPos.add(dodgeDir.multiply(4.0)));
-                        float dodgeYaw = targetRotation.getYaw() % 360;
-                        if (dodgeYaw < 0) dodgeYaw += 360;
-                        suggestedProjectileRotation = new Rotation(dodgeYaw, 0f);
+                        // The heading is kept as a VECTOR now, not a yaw. The primitive that
+                        // executes it strafes in the player's own frame, so nothing here has to
+                        // decide where the head points.
+                        suggestedDodgeX = dodgeDir.x;
+                        suggestedDodgeZ = dodgeDir.z;
 
                         if (runAwayTask == null && (mod.getClientBaritone() == null || Nav.isSafeToCancel())) {
                             if (mod.getClientBaritone() != null)
