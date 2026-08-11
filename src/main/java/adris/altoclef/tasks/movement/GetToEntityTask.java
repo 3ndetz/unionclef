@@ -203,6 +203,30 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             if (!parkourMode) return _wanderTask;
         }
 
+        // ⛔ AND SOMETHING HAS TO ACTUALLY START THE WALK. G-0 LEFT THIS METHOD WITH NO MOVER.
+        //
+        // The deleted baritone call used to drive the approach; the note above says the real driver
+        // is "the tryPathToEntity call below, on the progress-checker path". That path only runs
+        // AFTER progress has already stalled, so on the happy path this method set a debug string
+        // and returned null -- issuing no movement at all. Whether the bot ever reached an entity
+        // depended on some other task having left a path running.
+        //
+        // Measured on mine_diamond, which is what exposed it: across six runs EVERY route tungsten
+        // ever planned ended at (3,-60,0) -- the standing cell beside the ore at x=4, i.e. the
+        // MINING approach. Not one route was ever planned to a dropped item. The bot mines all
+        // three ores, the drops land 1.9 blocks away at y=-61, and nothing moves it those two
+        // blocks: closest approach 1.35, 2.45 and 3.57 blocks, never collected, three ores out of
+        // three, every run.
+        //
+        // So ask for the path on the NORMAL path too, not only after a stall. The guards inside
+        // tryPathToEntity already make this cheap and idempotent -- a cooldown, a fail counter, and
+        // a retarget interval -- and it returns false without doing anything when tungsten is
+        // already busy, which is why the two branches above return early before reaching here.
+        if (!mod.getPlayer().isInRange(_entity, _closeEnoughDistance)
+                && TungstenHelper.tryPathToEntity(_entity)) {
+            setDebugState("Walking to entity");
+            return null;
+        }
         setDebugState(parkourMode ? "Tungsten chasing entity" : "Going to entity");
         return null;
     }
