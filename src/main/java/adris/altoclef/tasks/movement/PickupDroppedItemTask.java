@@ -229,9 +229,25 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
             // right and IRRELEVANT -- the bot never gets over the hole for it to matter. Kept as a
             // correction because it was committed as the cause and it is not.
             //
-            // So the open question is NAVIGATION to a goal one block below the surface, not pickup
-            // range. getPos() already returns the item's own position; what to read next is what
-            // counts as arriving there.
+            // AND THE ARRIVAL DISTANCE IS NOT IT EITHER -- TRIED, MEASURED, REVERTED.
+            // GetToEntityTask decides "close enough" with player.isInRange(entity, 1), which is a
+            // centre-to-centre test; a player's position is its feet and an item in a one-deep hole
+            // is a full block below, so the vertical separation ALONE is exactly 1.0 and the test
+            // asks for strictly less. Unsatisfiable even standing on top of the drop. That
+            // arithmetic is right, and raising the distance to 1.75 changed nothing: diamonds=0
+            // again, still four "unreachable" lines.
+            //
+            // Because that branch does not FINISH anything. All it does is
+            //     if (isInRange) { _progress.reset(); TungstenHelper.stop(); }
+            // -- reset the checker and stop pathing. Completion is the item being COLLECTED, which
+            // is a physical collision. So a bigger radius only makes the bot stop FURTHER OUT and
+            // never touch the drop, which is worse. Reverted rather than shipped.
+            //
+            // What is left, and it is now the only candidate standing: nothing in this chain makes
+            // the bot ENTER the hole, and a collision is the only thing that ends the task. The
+            // goal is the item's own position, the navigator walks to the rim, and there it stays.
+            // Read what the navigator does with a goal one cell below the surface before touching
+            // anything -- four fixes in this file tonight, three of them real bugs, none the cause.
             //
             // ⛔ A DISCARDED ITEM ENTITY STILL HAS ITS STACK, SO THIS TEST NEVER ENDS.
             // The condition below asks "is there a drop and does it still hold something", and a
