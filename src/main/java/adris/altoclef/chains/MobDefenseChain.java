@@ -69,6 +69,25 @@ public class MobDefenseChain extends SingleTaskChain {
     public static volatile int mdFleeShooter;
     /** Committed-fight ticks where the target was beyond the 4.5 gate, and the last such gap (x1000). */
     public static volatile int mdFarTicks, mdFarGapMilli;
+    /**
+     * WHERE THE SKELETON SHOOTS FROM, which is not the same question as where its arrows land.
+     *
+     * <p>Measured on the repaired course, arrows that HIT land at a gap of 3.79-5.03 with a
+     * maximum of 6.30 — point blank, past what any dodge can beat at an arrow's speed. But a
+     * skeleton shoots from up to fifteen blocks, and the bot spends most of the fight further out
+     * than six. So one of two things is true and the landing figure cannot tell them apart:
+     * either the distant shots MISS (the bot's jitter has already been measured as a defence), or
+     * the skeleton is not shooting at range at all.
+     *
+     * <p>The difference decides what is worth fixing. If distant shots miss, the lever is TIME
+     * SPENT INSIDE the killing band and nothing else. If it holds fire until close, then the band
+     * is where it always fights and closing faster buys nothing — the lever is denying the shot.
+     *
+     * <p>onProjectileLaunched fires at the moment of release, when the gap is still the gap it was
+     * fired from. Counted in millis for the same reason mdFarGapMilli is: these are ints crossing
+     * py4j, and a mean of a few blocks needs the resolution.
+     */
+    public static volatile int mdArrows, mdArrowGapMilli, mdArrowGapMaxMilli;
     private static final double DANGER_KEEP_DISTANCE = 30;
     private static final double CREEPER_KEEP_DISTANCE = 10;
     private static final double ARROW_KEEP_DISTANCE_HORIZONTAL = 2;
@@ -756,6 +775,24 @@ public class MobDefenseChain extends SingleTaskChain {
     public void onProjectileLaunched(AltoClef mod, ProjectileEntity arrowEntity, boolean sticked) {
         if (!sticked)
             mod.getEntityTracker().addProjectile(arrowEntity);
+        // RECORD THE RANGE IT WAS FIRED FROM. See mdArrows: the landing gap says where arrows
+        // CONNECT, which is silent about the shots that missed, and the two readings imply
+        // opposite fixes. Taken from the shooter rather than the arrow so a projectile already in
+        // flight cannot be counted twice, and skipped when either end is unknown.
+        try {
+            ClientPlayerEntity self = mod.getPlayer();
+            if (self != null && arrowEntity != null) {
+                Entity shooter = arrowEntity.getOwner();
+                if (shooter != null && shooter != self) {
+                    int gap = (int) Math.round(shooter.distanceTo(self) * 1000.0);
+                    mdArrows++;
+                    mdArrowGapMilli += gap;
+                    if (gap > mdArrowGapMaxMilli) mdArrowGapMaxMilli = gap;
+                }
+            }
+        } catch (Exception ignored) {
+            // an instrument must never be the thing that breaks a fight
+        }
     }
 
     /**
