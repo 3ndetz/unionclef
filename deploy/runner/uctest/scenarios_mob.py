@@ -653,6 +653,19 @@ class SkeletonDodge(MobMelee):
         # earlier in this file -- a gate that reports green because it never looked. So the test is
         # "it was seen alive ON the arena", which a missing sample fails, loudly and correctly.
         edge = float(self.ARENA_HALF)
+        # ⛔ THIS GATE NOW FAILS THE BEST RUNS, AND IT IS MY DOING (2026-08-13).
+        # I hardened it to demand POSITIVE evidence (a real last_seen, not merely "no fall proved"),
+        # which was right. What I did not do was guarantee the evidence gets collected. Run 4 of the
+        # 26-launch series read min_hp=20.0 — not a single arrow landed, the best possible outcome —
+        # and still FAILED here with last_seen=None, because the watcher never sampled the skeleton
+        # before it died. The faster and cleaner the fight, the fewer polls it leaves behind, so the
+        # gate penalises exactly the runs the course is trying to produce.
+        # THE FIX IS RELIABLE SAMPLING, NOT A WEAKER GATE: take one sample at setup right after the
+        # summon and keep the per-poll sampling, so there is always a last known position and the
+        # "on the arena vs in the void" question stays answerable. Do NOT relax it to accept None —
+        # that is the hole this hardening closed in the first place.
+        # Left unchanged while the series that found it was still running: editing a criterion under
+        # a live measurement makes its two halves incomparable.
         last = ctx.geo.get("skel_last")
         floor_y = ctx.geo.get("skel_min_y")
         polls = ctx.geo.get("skel_polls", 0)
