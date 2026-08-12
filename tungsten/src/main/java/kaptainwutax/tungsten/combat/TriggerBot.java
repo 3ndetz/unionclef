@@ -230,6 +230,16 @@ public class TriggerBot {
                 // order as this counter (dodgeDrive 8-96 a fight against gReadyFar 20-58). A dodge
                 // that cannot beat a two-tick arrow, spending itself exactly when a swing is ready,
                 // would explain the whole thirty-tick gap. This says whether it does.
+                //
+                // ⛔ ANSWERED, 2026-08-12: IT DOES NOT. far/near/dodging over six runs —
+                //     39/5/9   19/4/0   30/5/7   31/15/11   15/6/0   32/5/4
+                // The dodge holds the legs for about 16% of the wasted ticks (and none at all in
+                // two runs). It is a real contributor and NOT the explanation: in five ticks out
+                // of six the swing is ready, the target is out of reach, and the dodge is not
+                // driving. Where the approach goes in those ticks is still unknown, and the next
+                // pass should find out rather than assume — this candidate looked obvious from
+                // the matching magnitudes of dodgeDrive and gReadyFar, and magnitudes agreeing is
+                // not a mechanism.
                 if (kaptainwutax.tungsten.task.ProjectileDodge.isActive()) gReadyFarDodging++;
             } else {
                 gReadyNear++;
