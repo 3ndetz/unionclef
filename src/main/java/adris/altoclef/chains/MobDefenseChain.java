@@ -134,6 +134,26 @@ public class MobDefenseChain extends SingleTaskChain {
      * <p>Counted from 2.5 to 7.0 blocks — from inside our own reach out past the furthest release
      * seen — so the ratio arrows/bandTicks reads as "shots per tick of exposure" and separates the
      * two effects that have been confounded all day.
+     *
+     * <p>⛔ FIRST READING, 2026-08-12:
+     * <pre>
+     *   arrows n/mean/max     draws        band   min_hp
+     *   3 / 4.53 / 5.73       3 / 60 / 20   146     17
+     *   4 / 4.97 / 6.04       4 / 80 / 20   215     16
+     *   3 / 4.33 / 5.98       3 / 60 / 21   141     16
+     *   4 / 6.63 / 10.42      5 / 85 / 20   169     16
+     *   2 / 4.09 / 5.51       3 / 42 / 20   111     16
+     *   6 / 8.49 / 14.91      7 / 121 / 22  179      9
+     *   33 / 9.44 / 12.95     33 / 661 / 22 179      4   <- never closed; shot from ~9.4
+     * </pre>
+     * The bot spends 111-215 ticks — five and a half to eleven seconds — inside the band, and takes
+     * 2-4 shots there: about 0.02 shots per tick of exposure, one every two and a half seconds,
+     * which reconciles with a 20-tick draw plus aiming.
+     *
+     * <p>THAT IS THE TARGET, stated in a measurable quantity for the first time: not "kill faster"
+     * and not "dodge", but TIME FROM ENTERING SEVEN BLOCKS TO THE KILL. Zero arrows landed needs
+     * that cut by roughly two thirds — from ~150 ticks to ~50, i.e. down to a single shot — and
+     * any change should be judged on band ticks first, arrows second.
      */
     public static volatile int mdBandTicks;
     public static volatile int mdDraws, mdDrawTicks, mdDrawMaxTicks, mdDrawGapMilli;
