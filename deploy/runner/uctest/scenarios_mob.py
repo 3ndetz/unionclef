@@ -501,7 +501,15 @@ class SkeletonDodge(MobMelee):
         # outcome the course exists to reward is worse than no criterion.
         # Armed-and-awake is the honest test of the statue bug, and it is read from the server.
         armed = "bow" in str(ctx.geo.get("equip_after", ""))
-        awake = "NoAI" not in str(ctx.geo.get("noai_after", "")) or                 "no elements" in str(ctx.geo.get("noai_after", ""))
+        # ⛔ THIS TEST USED TO BE UNABLE TO FAIL, WHICH IS WORSE THAN NOT HAVING IT.
+        # It read: "NoAI" not in readback or "no elements" in readback.
+        #   healthy -> "Found no elements matching NoAI" -> contains "NoAI", clause 1 False,
+        #              clause 2 True  -> passes. Right, but by luck.
+        #   BROKEN  -> "<name> has the following entity data: 1b" -> no "NoAI" anywhere,
+        #              clause 1 True   -> ALSO passes. Wrong: it passes exactly when it should fail.
+        # Minecraft omits default values, so NoAI ABSENT is the healthy answer and the only thing
+        # worth testing. Anything else -- including the tag coming back set -- is a statue.
+        awake = "no elements" in str(ctx.geo.get("noai_after", ""))
         yield Criterion("the skeleton was armed and awake", armed and awake,
                         f"equip={ctx.geo.get('equip_after')} noai={ctx.geo.get('noai_after')}")
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
