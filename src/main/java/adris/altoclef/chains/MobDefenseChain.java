@@ -88,6 +88,25 @@ public class MobDefenseChain extends SingleTaskChain {
      * py4j, and a mean of a few blocks needs the resolution.
      */
     public static volatile int mdArrows, mdArrowGapMilli, mdArrowGapMaxMilli;
+    /**
+     * THE BOW DRAW, which is the only warning that exists at this range.
+     *
+     * <p>At five blocks an arrow crosses in under two ticks, so a dodge triggered by the arrow
+     * cannot work — and every dodge built here has been triggered by the arrow. A skeleton's draw
+     * takes about twenty ticks and is visible client-side through isUsingItem(), so if these
+     * counters show a draw of that length before each of the 2-3 shots a fight costs, the dodge
+     * finally has something to act on.
+     *
+     * <p>What each one answers, because a single number would not settle it:
+     * mdDraws — how many draw episodes happen at all (it should track the arrow count);
+     * mdDrawMaxTicks and mdDrawTicks — how LONG the warning lasts, which is the whole question;
+     * mdDrawGapMilli — the range at the moment the draw starts, to be compared with the 4.4-5.6
+     * the shots are released from.
+     */
+    public static volatile int mdDraws, mdDrawTicks, mdDrawMaxTicks, mdDrawGapMilli;
+    private static final java.util.Map<Integer, Integer> drawTicksById =
+            java.util.Collections.synchronizedMap(new java.util.HashMap<>());
+
     public static final java.util.Set<Integer> seenArrowIds =
             java.util.Collections.synchronizedSet(new java.util.HashSet<>());
     private static final double DANGER_KEEP_DISTANCE = 30;
@@ -1069,8 +1088,46 @@ public class MobDefenseChain extends SingleTaskChain {
         }
     }
 
+    /**
+     * Watch every nearby shooter's draw, one episode at a time.
+     *
+     * <p>Counted per entity id so two skeletons cannot blur into one episode, and only for
+     * RangedAttackMob — the same vanilla property the flee guard asks — so a zombie raising a
+     * shield or a villager eating never lands in these numbers.
+     */
+    private void noticeDraws(AltoClef mod) {
+        try {
+            ClientPlayerEntity self = mod.getPlayer();
+            if (self == null) return;
+            java.util.Set<Integer> stillDrawing = new java.util.HashSet<>();
+            for (LivingEntity e : mod.getEntityTracker().getHostiles()) {
+                if (!(e instanceof net.minecraft.entity.ai.RangedAttackMob)) continue;
+                if (e == null || !e.isAlive() || !e.isUsingItem()) continue;
+                int id = e.getId();
+                stillDrawing.add(id);
+                Integer had = drawTicksById.get(id);
+                if (had == null) {
+                    // the tick the draw STARTS: record how far away it began
+                    mdDraws++;
+                    mdDrawGapMilli += (int) Math.round(e.distanceTo(self) * 1000.0);
+                    drawTicksById.put(id, 1);
+                } else {
+                    drawTicksById.put(id, had + 1);
+                }
+                mdDrawTicks++;
+                int len = drawTicksById.get(id);
+                if (len > mdDrawMaxTicks) mdDrawMaxTicks = len;
+            }
+            // a draw that stopped is an episode ended -- release or cancel, both end the warning
+            drawTicksById.keySet().removeIf(id -> !stillDrawing.contains(id));
+        } catch (Exception ignored) {
+            // an instrument must never be the thing that breaks a fight
+        }
+    }
+
     private boolean isProjectileClose(AltoClef mod) {
         noticeArrows(mod);
+        noticeDraws(mod);
         List<CachedProjectile> projectiles = mod.getEntityTracker().getProjectiles();
         Vec3d plyPos = mod.getPlayer().getPos();
         try {
