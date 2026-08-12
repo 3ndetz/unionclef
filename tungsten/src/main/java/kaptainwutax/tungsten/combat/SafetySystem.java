@@ -758,7 +758,7 @@ public class SafetySystem {
      * @param asEnemy true = simulate enemy hitting victim (use estimator), false = us hitting
      */
     private Vec3d simulateKnockback(Vec3d victimPos, Vec3d victimVel,
-                                     Vec3d attackerPos, boolean asEnemy) {
+                                     Vec3d attackerPos, boolean asEnemy, WorldView world) {
         double dx = victimPos.x - attackerPos.x;
         double dz = victimPos.z - attackerPos.z;
         double len = Math.sqrt(dx * dx + dz * dz);
@@ -776,6 +776,28 @@ public class SafetySystem {
         double px = victimPos.x, py = victimPos.y, pz = victimPos.z;
         for (int t = 0; t < KB_PREDICT_TICKS; t++) {
             px += vx; py += vy; pz += vz;
+            // ⛔ THE BODY MUST LAND. Without this the integration falls through the floor for the
+            // whole 15 ticks: vy starts at 0.4, peaks the arc at +1.15 around t=4 and ends at
+            // START MINUS 2.33 — a point below any surface the fighter was standing on. The caller
+            // then measures VoidDetector.fallHeight FROM THAT SUNKEN POINT, and DANGER_BATTLE
+            // fires at fallHeight >= 4.
+            //
+            // On ordinary terrain the sunken point sits INSIDE solid blocks, fallHeight reads 0,
+            // and the bug is invisible — which is why it was recorded for a long time as the
+            // estimate merely being "inflated on flat ground". On a THIN platform it is total:
+            // 2.33 blocks below the slab is open air, fallHeight returns MAX_SCAN_DEPTH, and the
+            // stage engages EVERY TICK no matter where the fighter stands. The whole mob bench is
+            // a floating island, so `danger` dominated `reposition` in every run (69/144/170/222/
+            // 244, and 1984 in a long one) including runs measured ten blocks clear of any edge.
+            //
+            // This is not the caution being removed — removing it was measured harmful twice
+            // (deaths 16 -> 23 and 15 -> 19) and that result stands. Being knocked over a real
+            // ledge still leaves the simulated body in open air with nothing beneath it, so the
+            // stage still fires exactly there. What stops is the stage firing on solid ground.
+            if (vy < 0 && world != null
+                    && VoidDetector.fallHeight(new Vec3d(px, py, pz), world) <= 1) {
+                break;
+            }
             vx *= 0.91;
             vy = (vy - 0.08) * 0.98;
             vz *= 0.91;
@@ -785,10 +807,10 @@ public class SafetySystem {
 
     private void analyzeKnockback(Vec3d playerPos, Vec3d playerVel,
                                    Vec3d targetPos, WorldView world) {
-        lastUsAfterKB = simulateKnockback(playerPos, playerVel, targetPos, true);
+        lastUsAfterKB = simulateKnockback(playerPos, playerVel, targetPos, true, world);
         lastFallIfHit = VoidDetector.fallHeight(lastUsAfterKB, world);
 
-        lastEnemyAfterKB = simulateKnockback(targetPos, enemyVelocity, playerPos, false);
+        lastEnemyAfterKB = simulateKnockback(targetPos, enemyVelocity, playerPos, false, world);
         lastEnemyFallIfHit = VoidDetector.fallHeight(lastEnemyAfterKB, world);
     }
 
