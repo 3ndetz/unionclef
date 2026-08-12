@@ -354,6 +354,18 @@ public class TungstenConfig {
      * against a ragged arm A (3 to 17) — whatever is really happening looks more like VARIANCE
      * being suppressed than exposure being traded, and that is the thread worth pulling next.
      */
+    /**
+     * Stop vanilla throttling this client to 10 fps for looking idle. Bench only.
+     *
+     * <p>The bot drives through the mod, not through the window, so InactivityFpsLimiter concludes
+     * nobody has touched the keyboard and drops the client to exactly 10 fps -- under the bench's
+     * 14 fps validity floor. That single condition was discarding about 40% of every series, which
+     * is why a twelve-run arm had been costing twenty launches.
+     *
+     * <p>Off by default: an idle Minecraft on a human's machine SHOULD stop burning a core.
+     */
+    public boolean botFpsNoIdleThrottle = false;
+
     public boolean combatEngageBand = false;
 
     /**
