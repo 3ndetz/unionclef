@@ -1044,6 +1044,19 @@ public class MobDefenseChain extends SingleTaskChain {
                         // distance travelled; the bias toward the shooter is what turns a dodge
                         // that merely survives into one that also closes, and closing is the only
                         // thing that ends a fight against something that outranges us.
+                        // ⛔ KNOWN EDGE CASE, RECORDED NOT PATCHED: A STEEP ARROW GIVES NO HEADING.
+                        // perp is built from the arrow's HORIZONTAL components, so for a steeply
+                        // arcing shot both approach zero and this normalize() returns Vec3d.ZERO
+                        // (Minecraft zeroes below ~1e-4). The heading then collapses, ProjectileDodge
+                        // sees fwd=0 and side=0, presses nothing, and the dodge SILENTLY does not
+                        // happen -- the same near-zero-vector instability this block was written to
+                        // remove, reappearing in a different variable.
+                        // It does not bite on this course (a skeleton at 12 blocks shoots flat), which
+                        // is why it has not shown up, and it is exactly the kind of silent no-op that
+                        // has cost this repository whole investigations. The fix is to fall back to a
+                        // heading derived from the shooter's bearing when the horizontal flight is
+                        // degenerate -- it needs a course where arrows actually arc before it can be
+                        // measured, so it is written down rather than guessed at.
                         Vec3d flight = projectile.velocity.normalize();
                         Vec3d perp = new Vec3d(-flight.z, 0, flight.x).normalize();
 
