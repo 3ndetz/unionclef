@@ -86,7 +86,20 @@ public class ProjectileDodge {
         if (holdTicks <= 0) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (player == null || mc.options == null) {
+            // ⛔ RELEASE BEFORE ABANDONING THE HOLD. This used to drop holdTicks and return with
+            // the keys still PRESSED -- a violation of checklist rule 4l in the very primitive
+            // that rule was written about.
+            //
+            // Why it matters beyond tidiness: the player reference goes away when the bot DIES,
+            // which on these courses happens mid-dodge. Sprint stays held through the respawn and
+            // the bot immediately runs off the arena again. That is a candidate mechanism for the
+            // CASCADE seen on 2026-08-12, where runs after a fall opened with the bot already at
+            // Y=-234 and every later run in the series measured a corpse.
+            // Clearing needs mc.options, so it is only attempted when that half is available.
             holdTicks = 0;
+            if (mc.options != null) {
+                clearKeys();
+            }
             return;
         }
         holdTicks--;
