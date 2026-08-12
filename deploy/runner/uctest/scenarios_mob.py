@@ -138,6 +138,11 @@ class MobMelee(Scenario):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
+                        # WHERE IT SHOOTS FROM (count/mean/max), against dw's where-they-LAND. The
+                        # mod has carried this since the release-range instrument went in and the
+                        # course did not print it — the same dead-instrument shape this file has
+                        # now been bitten by twice. A counter nobody reads does not exist.
+                        f"arrows={_stat(ctx, 'arrows')} "
                         f"dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
         # A fall is not a fight. On a flat field with a floor this should never fire, and if it
         # does the arena is wrong rather than the bot.
@@ -231,6 +236,11 @@ class MobTrioNoDamage(MobMelee):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
+                        # WHERE IT SHOOTS FROM (count/mean/max), against dw's where-they-LAND. The
+                        # mod has carried this since the release-range instrument went in and the
+                        # course did not print it — the same dead-instrument shape this file has
+                        # now been bitten by twice. A counter nobody reads does not exist.
+                        f"arrows={_stat(ctx, 'arrows')} "
                         f"dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
         # THE CRITERION, MEASURED AS DAMAGE RATHER THAN AS LEFTOVER HEALTH.
         # min_hp answers "how healthy did it end up", which is not the question: a run that took
@@ -706,6 +716,11 @@ class SkeletonDodge(MobMelee):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
+                        # WHERE IT SHOOTS FROM (count/mean/max), against dw's where-they-LAND. The
+                        # mod has carried this since the release-range instrument went in and the
+                        # course did not print it — the same dead-instrument shape this file has
+                        # now been bitten by twice. A counter nobody reads does not exist.
+                        f"arrows={_stat(ctx, 'arrows')} "
                         f"dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
         # ⛔ THIS LABEL AND THIS THRESHOLD DISAGREE, AND THE THRESHOLD IS THE STRICTER ONE.
         # min_hp >= 19.0 permits ONE point of damage. A skeleton arrow on normal difficulty does
