@@ -51,7 +51,16 @@ import shutil
 # This is the most expensive unknown in the bench: it sets the price of every A/B. The arm size for
 # a 1-arrow effect is 12 runs, so at a 50% loss that is 24 launches, and the interesting effects are
 # smaller than one arrow. Worth finding before any more hypotheses are bought at that rate.
-# First place to look: the OTHER tester client. Courses that drive one bot still leave the second
+# ⛔ THE OBVIOUS CULPRIT WAS MEASURED AND IS NOT ENOUGH. docker stats mid-run reads tester1 at 44%
+# of a core and tester2 at 32%, on a 24-core host. Two clients under one core each cannot starve a
+# third of the frame rate out of the machine, so "the second renderer eats the CPU" does not carry
+# the effect on its own, however well it fits the shape.
+# What fits better: the clients are RESTARTED between runs (the retry path says so explicitly --
+# "measured on fresh clients"), and a condition decided at client startup lasts that client's whole
+# life. That is what produces two clean clusters instead of a spread. Look at what differs between
+# a client that comes up fast and one that comes up slow -- renderer selection, a window that never
+# gains focus, a driver fallback - rather than at load on the host.
+# Earlier note kept for the record: the OTHER tester client. Courses that drive one bot still leave the second
 # container rendering, and two software renderers on one host is exactly the shape of a switch that
 # halves throughput. Test it by idling tester2 for a single-bot course and reading this number.
 HEALTHY_FPS_MIN = 14.0
