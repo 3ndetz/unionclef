@@ -103,7 +103,7 @@ def _jar_fingerprint():
 
 
 from uctest.actors import Bot                       # noqa: E402
-from uctest.arena import ArenaBuilder               # noqa: E402
+from uctest.arena import ArenaBuilder, STAND_Y      # noqa: E402
 from uctest.harness import Artifacts, Rcon, wait_for  # noqa: E402
 from uctest.scenario import Ctx, Scenario, is_flake           # noqa: E402
 from uctest.scenarios_nav import SCENARIOS as NAV   # noqa: E402
@@ -386,6 +386,34 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
 
         if failed_gates and all(_load_sensitive(c) for c in failed_gates):
             invalid = True
+
+    # ⛔⛔ FIRST, AND MOST IMPORTANT: WAS THE BOT EVEN IN THE ARENA? (checklist rule 4k)
+    #
+    # This is the check whose absence produced the worst failure in this project's log. The bot
+    # was falling into the void and dying, and EVERY counter kept reporting: PASS/FAIL, dmgTaken,
+    # min_hp and dw all described a bot 170 blocks below the world it was supposed to fight in.
+    # Two clips went to the operator as evidence of combat behaviour and showed a bot dropping
+    # into nothing. The operator caught it from the VIDEO; the numbers never said a word.
+    #
+    #     healthy runs   minY = -60.0  (STAND_Y, the floor)
+    #     broken runs    minY = -234.2, -229.2, -246.5, -180.5
+    #
+    # A fall also CASCADES: later runs opened with the bot ALREADY at -234 (min == max, never
+    # near the floor), because ensure_grounded did not recover it -- so the whole rest of the
+    # series measured a corpse. Marking this INVALID is what stops one fall poisoning an arm.
+    #
+    # The threshold is deliberately far below any legitimate course: nav descends and mines, but
+    # nothing in the suite belongs 20+ blocks under the stand floor.
+    if not invalid:
+        ys = [sm["bot"][1] for sm in ctx.samples
+              if sm.get("bot") and len(sm["bot"]) > 1]
+        if ys and min(ys) < STAND_Y - 20:
+            invalid = True
+            print(f"  => {scn.id}: INVALID — the bot LEFT THE ARENA: min Y {min(ys):.1f} against a "
+                  f"floor at {STAND_Y}. This run measured a fall, not the course, and every other "
+                  f"number it produced is void. A fall cascades -- ensure_grounded does not always "
+                  f"recover it -- so recreate the clients (deploy/deploy_jar.sh) before trusting "
+                  f"anything that follows. Checklist rule 4k.")
 
     # ⛔ SECOND SOURCE OF INVALIDITY: THE STAND ITSELF ROTTED MID-SERIES.
     #
