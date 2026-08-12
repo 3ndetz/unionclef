@@ -925,3 +925,34 @@ Stop only on: hardware failure, or everything in `TODOS.md` closed and tested.
 | [ai/audit-2026-07-27-tungsten-full.md](ai/audit-2026-07-27-tungsten-full.md) | full tungsten audit |
 | `deploy/runner/` | stand, suites, video sending |
 | [RELEASE.md](RELEASE.md) | how to release |
+
+## 4q. ⛔ A PINNED PAIR IS NOT ENOUGH — SWAP THE ARM ORDER BEFORE BELIEVING IT (2026-08-12)
+
+The same flag, `combatHoldContactOnShooter`, measured twice as a pinned same-session pair:
+
+```
+pair 1   flag off 1.42 arrows   flag on 1.94   -0.52,  1.02 sigma   (flag looks WORSE)
+pair 2   flag off 2.42 arrows   flag on 0.50   +1.92,  3.18 sigma   (flag looks REAL)
+```
+
+Opposite signs, one of them above the 2-sigma bar this checklist uses to accept a result. At least
+one is an artefact, and the design has an obvious hole: **in both pairs the baseline arm ran FIRST,
+right after the clients were recreated, and the pinned arm ran second.** Anything that drifts over
+a session — client wear, world state, host load — is therefore perfectly confounded with the flag.
+
+Two more signals said so before the replication did:
+
+1. The suspicious arm was the BASELINE, not the pinned one: 2.42 arrows against 1.19 and 1.42 in
+   every other baseline that day, including a run with nine total swings.
+2. **The mechanism counter moved the WRONG WAY.** The flag exists to stop a ready swing maturing
+   out of range; `ready` near-share went 0.205 -> 0.149, i.e. worse, while the outcome improved.
+   A fix that improves the outcome while degrading the mechanism it targets has not been understood.
+
+The rule:
+
+1. **Order-swap before accepting.** Run the pair again with the arms reversed. If the same arm wins
+   both ways, the effect survives; if the winner follows the POSITION, it was the stand.
+2. **Always read the mechanism counter next to the outcome.** Agreement is evidence; disagreement
+   means the causal story is wrong even when the p-value is pretty.
+3. A 3-sigma result that contradicts an earlier 1.8-sigma result of the opposite sign is not two
+   findings — it is one unresolved question. Resolve it before it becomes a headline.
