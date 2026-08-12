@@ -179,7 +179,18 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// a planned leg from a writer that would fight it for the whole leg; this one lasts about
 		// six ticks and exists precisely to interrupt the approach while an arrow is in the air. The
 		// queue's own timeout absorbs a few overridden ticks -- it cannot absorb walking into a shot.
-		// Still BEFORE VoidGuard, so a sidestep can never carry the bot off a rim.
+		// ⛔ CORRECTION -- I WROTE "still BEFORE VoidGuard, so a sidestep can never carry the bot
+		// off a rim" AND THAT IS FALSE. Being before the guard is worthless when the guard is
+		// not ARMED: VoidGuard.protect below is gated on RunAwayTask || PunkPlayerTask ||
+		// BowShooter, and ProjectileDodge is in none of them. So on any course where none of
+		// those is active -- every mob course -- an arrow dodge drives sprint and direction keys
+		// with NO void protection at all.
+		//
+		// It has not bitten because the mob arenas are flat fields, which is luck, not design.
+		// The fix is to add ProjectileDodge.isActive() to that condition -- but the guard's own
+		// comment warns against widening it carelessly (it must not arm during BridgeTask,
+		// PillarTask or the walker, which stand at a rim ON PURPOSE), so it wants a measurement
+		// on a course with an actual drop rather than a one-line edit made on sight.
 		kaptainwutax.tungsten.task.ProjectileDodge.tick((ClientPlayerEntity)(Object)this);
 
 		// BowShooter added 2026-08-09: THE RANGED PHASE HAD NO VOID GUARD AT ALL.
