@@ -740,6 +740,24 @@ class SkeletonDodge(MobMelee):
         # belongs to a pass that is not holding the result. What IS established: the course's
         # other two criteria (the skeleton dies, tungsten takes the legs) now pass in every run,
         # so min_hp is the only thing keeping it red.
+        # ⛔ WHERE 19.0 CAME FROM: THE COURSE'S OWN DOCSTRING, MISCOUNTED (2026-08-12).
+        # The class docstring states the design intent in words -- "with one point of slack, because
+        # a skeleton that spawns already drawing can land the first arrow before any policy could
+        # react". The slack was meant to cover ONE ARROW. A skeleton arrow does 2-5 damage, so one
+        # arrow of slack is min_hp >= 15; written as 19.0 it grants one HP and forbids the very shot
+        # the docstring calls unavoidable. Label, docstring and threshold all disagree, and only the
+        # threshold is enforced.
+        #
+        # THE PHYSICS AGREES WITH THE DOCSTRING. dw records the gap at the moment each hit lands:
+        # 3.38 and 4.67 blocks. An arrow travels ~2.65 blocks per tick, so it is in flight for 1.3
+        # to 1.8 TICKS at that range. No policy dodges that, and mobs aim at release so there is
+        # nothing to pre-empt either. Zero arrows is not a movement problem, it is arithmetic.
+        #
+        # AND CORRECTING IT WOULD NOT BUY A GREEN, which is what separates this from tuning to pass.
+        # On the thirteen runs recorded below, min_hp >= 15 passes THREE (17, 17, 15). The course
+        # stays red and the gap the bot has to close stays exactly where it was. Held back anyway
+        # while an engage-band A/B was in flight: changing a criterion while holding its result is
+        # the one thing that would make the correction unbelievable, whatever the justification.
         yield Criterion("at most one arrow landed", low is not None and low >= 19.0,
                         f"min_hp={low}")
         # ⛔ THE INSTRUMENT THAT SEPARATES THE TWO CANDIDATES, AND IT ALREADY EXISTED.
