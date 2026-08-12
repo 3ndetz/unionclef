@@ -1072,6 +1072,23 @@ public class CombatController {
                 && player.getAttackCooldownProgress(0f) >= TriggerBot.COOLDOWN_CRIT;
         out.left = canStrafe && !readySwingOutOfReach && strafeDir > 0;
         out.right = canStrafe && !readySwingOutOfReach && strafeDir < 0;
+        // ⭐ ANSWERED, AND IT IS THIS CONTROLLER, NOT THE PATH (2026-08-13). Four runs:
+        //     strafeFar/strafeNear = 54/15, 18/12, 25/17, 41/19  -> 138 far against 63 near.
+        // Sixty-nine percent of the orbit happens while the target is OUT of reach, i.e. during the
+        // approach, where a 45-degree line costs ~30% of the speed and therefore about one whole
+        // skeleton shot. My own guess -- that the diagonal belonged to KillEntitiesTask's 7->4.5 leg
+        // -- was wrong, and the counter said so in four runs.
+        //
+        // IT ALSO CLEARS combatCloseOverOrbit's NEGATIVE RESULT. That flag suppressed this strafe
+        // only when a swing was ALREADY MATURE, which is a minority of ticks; it never touched the
+        // bulk of these 138 and so could not have moved the arrow count either way. Its measured
+        // "made arrows worse" was never evidence against the diagonal -- it measured something else.
+        //
+        // THE FIX IS NOT MERELY SUPPRESSING THE ORBIT: 'closeOverOrbit' already tried a version of
+        // that and lost. What the numbers argue for is a PHASE distinction -- the approach is not a
+        // duel and should not be fought like one. Orbit is a defence against a melee opponent who is
+        // already swinging; against a bowman at 6 blocks it is a 30% speed tax paid for nothing.
+        //
         // ⛔ WHERE DOES THE DIAGONAL COME FROM? The next hypothesis worth a series is that the
         // approach travels at 45 degrees and so pays ~30% of its speed (3.9 b/s against 5.6), which
         // costs about one whole skeleton shot -- the right size against the ~1.9-arrow gap, unlike
