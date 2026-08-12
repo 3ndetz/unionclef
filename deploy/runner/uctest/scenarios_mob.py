@@ -389,6 +389,21 @@ class SkeletonDodge(MobMelee):
     than the spawn.
     """
 
+    # ⛔ HOW BIG AN ARM THIS COURSE NEEDS, COMPUTED RATHER THAN GUESSED (2026-08-12).
+    # Arrows landed = (20 - min_hp)/4. Pooling the repaired course's baseline with the fixed build,
+    # n=14: mean 1.46, sd 1.20. For a two-arm comparison at 2 sigma, n per arm = 8*sd^2/delta^2:
+    #
+    #     delta 0.3 arrows -> n >= 128      delta 0.7 -> n >= 24
+    #     delta 0.5 arrows -> n >=  46      delta 1.0 -> n >= 12
+    #
+    # THIS IS WHY SO MANY PASSES HERE "MEASURED NOTHING": at six runs an arm the smallest visible
+    # difference is about 1.4 arrows, so every subtle change was unmeasurable by construction and
+    # the readings that looked promising were noise.
+    #
+    # The consolation is that the TARGET effect is large. The gate wants min_hp >= 19, i.e. ZERO
+    # arrows, against a mean of 1.46 — so what has to be shown is a ~1.5-arrow move, and that is
+    # visible at n=12 an arm. Do not spend runs chasing 0.3; only a big effect can turn this green.
+    #
     # ⛔ THE RULER FOR THIS COURSE, CHARACTERISED AT LAST (checklist 4b step 1, never done here).
     #
     # min_hp over n=53 runs on the current build, pooled across every series:
