@@ -337,6 +337,22 @@ public class TungstenConfig {
      * <p>This is NOT a distance tweak — it changes who drives the legs during the approach on every
      * mob course, so mob_melee and mob_trio are part of its acceptance, not an afterthought. Judge
      * on BAND TICKS first and arrows second: today proved those two can move in opposite directions.
+     *
+     * <p>⛔ MEASURED, INTERLEAVED, and it fails its OWN primary criterion:
+     * <pre>
+     *   band ticks   A 77 140 116 182 138 65  (mean ~120)   B 187 217 130 306 243 160 (mean ~207)
+     *   arrows       A 1.96                                 B 1.13   (+0.83, 1.6 sigma)
+     * </pre>
+     * Exposure nearly DOUBLED. Engaging earlier does not shorten the time under fire, it lengthens
+     * it. Arrows fell, but at 1.6 sigma that is under the bar, and by the rule written above band
+     * ticks are judged first. KEPT OFF.
+     *
+     * <p>AND THE MODEL BEHIND THREE EXPERIMENTS IS NOW DEAD. "Fewer ticks in the band means fewer
+     * arrows" has been contradicted in BOTH directions: combatCloseOverOrbit cut exposure by a
+     * third and arrows got worse; this doubled exposure and arrows got better. Arrows landed is not
+     * a function of time under fire. Note also arm B is remarkably even (min_hp 16,16,16,12,16,17)
+     * against a ragged arm A (3 to 17) — whatever is really happening looks more like VARIANCE
+     * being suppressed than exposure being traded, and that is the thread worth pulling next.
      */
     public boolean combatEngageBand = false;
 
