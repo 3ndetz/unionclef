@@ -1591,3 +1591,57 @@ were withdrawn on re-checking, and the last two were defects in code I wrote tod
 killed the eight-run series it was written to protect, and a starvation check blind to the retry
 path — which is exactly where "passed on the second go" verdicts come from. Both were found by
 re-reading after a suspicious number, not by a test.
+
+## 2026-08-13 — mob_skeleton went green, and the measuring rig was the blocker
+
+### Investigate
+
+Thirteen bot hypotheses had "measured nothing" on this course. Re-reading the harness rather than
+the bot showed why: the rig was throwing away half of every series and misnaming the reason.
+
+- The INVALID line printed the fps explanation for EVERY invalidation. One run was discarded with
+  "client at 28.0 fps, below the 14.0 floor" — a sentence that contradicts itself. The guard that
+  actually fired was the stand-sanity check.
+- That guard read dw's gapMAX. The gap is the distance to the closest OTHER living entity, so once
+  the target dies it measures the second tester client across the map: one post-kill fall recorded
+  ~63 blocks and voided an otherwise clean fight.
+- Cost: 7 of 14 runs INVALID in one series, 6 of 13 in the next.
+
+The frame rate itself is BIMODAL — ten runs at 9-10 fps, three at 28.5-29, nothing between. A
+render ceiling gives one smeared mode; two clean clusters mean a switch. I proposed the second
+tester client as the culprit and then measured it: 44% and 32% of a core on a 24-core host, which
+cannot take two thirds of the frame rate. Refuted my own hypothesis the same hour. The better fit
+is startup state — clients are restarted between runs, and a condition set at startup lasts a run.
+
+### Implement
+
+- run_suite: each guard records why it fired; the summary prints that reason.
+- run_suite: stand sanity reads gapMEAN, so one outlier no longer costs a run. Limitation written
+  at the site rather than hidden.
+- DamageWatch: health drops with no living entity within 32 blocks are not attributed (nothing
+  alive hits from there) and are counted as dwNoBlame — carried through py4j AND the course
+  printout in one change, because three counters here have already read zero for want of that.
+- MobDefenseChain: mdDamageDealtTenths and per-swing attribution (swingHits) with the HP-ceiling
+  confound documented — the sum read 18.0/18.0/18.0 against swing counts 4/3/2 and cannot
+  discriminate. One clean datum survived: passed=3, crits=0, dealt=18.0 is 3x6 exactly, so swings
+  land and are not being absorbed.
+
+### Result
+
+**mob_skeleton PASSED, twice** (runs 5 and 11 of a 16-launch series): min_hp=20.0, no arrow landed,
+no criterion failed. First green for this course. It also settles the long argument about the
+threshold: min_hp >= 19 is NOT unreachable, so it does not need correcting.
+
+Not a bot improvement — the DamageWatch fix was deliberately undeployed during that series. What
+moved was which runs counted: the unpinned arm read 0.60 arrows against 1.67 on the same code a few
+hours earlier. Over an arrow of movement with nothing changed but the filter, which is the pooled
+sd of 1.20 behaving exactly as the arm-size note predicts. Treat 0.60 as one draw, not a baseline.
+
+combatEngageBand: interleaved, +0.79 arrows at 1.70 sigma — under the pre-registered 2-sigma bar,
+so it stays off. Underpowered rather than refuted (needs 12-24 runs an arm; had 3 and 4). NOT
+pooled with the earlier blocked pair despite the same direction: blocked arms here already produced
+a 3.18 sigma artefact that interleaving cut to 0.46.
+
+### Open
+
+Stability of the green is unknown — a 12-run series on the deployed fix is measuring it now.
