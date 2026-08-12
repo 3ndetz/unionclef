@@ -420,8 +420,20 @@ public class TungstenConfig {
      * <p>Combat entities only. Shearing and milking keep the old test: their interaction range is
      * not the sword's, and widening theirs would be a different change with different evidence.
      *
-     * <p>Off by default and unjudged: it rides the combat path every mob course uses, so it needs an
-     * interleaved series plus mob_melee and mob_trio watched for regression.
+     * <p>⛔ IT DOES THE OPPOSITE OF ITS PURPOSE. Halfway through its own series (8 runs, 4 an arm):
+     *     arrows 1.50 vs 1.50   band 106 -> 259   reach 26 -> 71
+     * The change was meant to CUT the ticks spent in the band unable to hit; it tripled them.
+     *
+     * <p>The reason is in the branch it guards: onEntityInteract is what hands control to tungsten's
+     * combat controller. Gating it at 3.0 instead of 4.5 takes the controller OUT of the very zone
+     * where the last blocks have to be closed, and leaves the pathing task there instead --
+     * repathing at a target that knockback keeps pushing away. The premise ("arrived and can-hit are
+     * different distances") was right; the remedy removed the only component that can cross the gap.
+     *
+     * <p>So the 34.8 ticks are real and still unexplained-by-fix: whoever takes this next should
+     * make the CONTROLLER close inside 4.5 rather than make the task wait until 3.0.
+     *
+     * <p>Off by default and staying off.
      */
     public boolean combatCloseToReach = false;
 
