@@ -821,6 +821,24 @@ public class MobDefenseChain extends SingleTaskChain {
                         mdFarTicks++;
                         mdFarGapMilli = (int) (gapToKill * 1000);
                     }
+                    // ⛔ THIS GATE IS WHY HALF THE TIME UNDER FIRE HAS NO FIGHT IN IT.
+                    // inRange reduces to distance < 4.5 on flat ground (see the note above), while
+                    // a skeleton's killing band — measured — is 2.5 to 7.0 and it releases from
+                    // 4.3-6.3. So from 7.0 down to 4.5 the bot is being SHOT AT while the combat
+                    // controller is not ticking at all: no swing gate, no cooldown-aware approach,
+                    // nothing. Measured on mob_skeleton: 129-253 ticks inside the band against
+                    // 62-89 ticks where the gate is evaluated.
+                    //
+                    // That is where the ~105 ticks of slack above the 64-tick floor live, and every
+                    // hypothesis this course has consumed was aimed at the 40% where combat DOES
+                    // run. mdTung reading 50-80 a fight was taken as healthy for weeks; against the
+                    // exposure it is the symptom of this line.
+                    //
+                    // DO NOT widen it casually: the approach from 7 to 4.5 currently belongs to
+                    // KillEntitiesTask, and handing it to tungsten changes who drives the legs on
+                    // every mob course, not just this one. Judge on band ticks first (rule: today
+                    // proved band ticks and arrows can move in opposite directions), with an
+                    // interleaved pair, and watch mob_melee and mob_trio for regression.
                     if (mod.getControllerExtras().inRange(toKill)) {
                         kaptainwutax.tungsten.combat.WeaponSelector.equipBestMelee(mod.getPlayer());
                         tungstenCombat.tick(mod.getPlayer(), toKill, mod.getWorld());
