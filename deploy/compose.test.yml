@@ -89,6 +89,12 @@ services:
       #     modes appear in the same series on the same container. The geometry is constant and the
       #     frame rate still thirds, so the switch is inside the client, not in X.
       #
+      # ⭐⭐ CONFIRMED AND FIXED (2026-08-13). Six runs with botFpsNoIdleThrottle pinned on read
+      # 29.3, 30.0, 27.5, 29.3, 29.0, 29.1 -- every one of them on the maxFps:30 cap, the 10.0
+      # cluster gone entirely, zero invalid. Against the previous rate (ten of sixteen runs at
+      # exactly 10.0) six healthy runs in a row is about a 0.4% coincidence, so this is the cause
+      # and not a lucky sample. The fix is InactivityFpsLimiterMixin; the bench should pin the flag.
+      #
       # ⭐ FOUND IT, AND THE NUMBER GIVES IT AWAY: EXACTLY 10.0 fps IS MINECRAFT'S OWN LIMITER.
       # options.txt has maxFps:30, so the healthy cluster at 28-29 is the client sitting on its cap.
       # The slow cluster reads 10.0 ten times over with a single 9.9 -- a CPU-bound rasteriser gives
