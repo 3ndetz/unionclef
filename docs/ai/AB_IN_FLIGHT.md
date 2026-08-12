@@ -30,3 +30,21 @@ arrows landed = (20 - min_hp) / 4. Compare MEAN ARROWS, never pass counts.
 
 This is the same rule that made the point-blank sidestep a clean call instead of an argument
 about a plausible mechanism. It measured 1.17 vs 1.16 and was reverted.
+
+
+---
+
+## FIRST PAIR IN (n=20 an arm) — UNSETTLED, extending to n=40
+
+    gdON  (shipped)  mean 1.10 arrows  sd 0.78  n=20  se 0.175
+    gdOFF (control)  mean 1.43 arrows  sd 0.78  n=20  se 0.175
+    difference 0.33 +- 0.248  ->  1.33 sigma
+
+Lands in the MIDDLE branch of the rule above: past the ~0.2 "does nothing" threshold, but not
+clearly better. So it is NOT shipped on and NOT reverted -- both arms extend to n=40.
+
+    second half -> /tmp/gdON2.txt and /tmp/gdOFF2.txt (same pins, same session)
+
+Pool all four files before judging. 1.33 sigma at n=20 is precisely the reading that has
+misled this work three times already: 0.77 -> 0.90 -> 1.18 on one change, and 2.1 sigma -> 1.7
+-> 0.01 on another. The rule exists so the favourable half of a pair is not read as an answer.
