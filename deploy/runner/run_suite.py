@@ -375,6 +375,12 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     # red this guard exists to prevent.
     avg_fps = ctx.geo.get("avg_fps")
     invalid = False
+    # WHY it was invalidated, set by whichever guard fires. Without this the summary printed the
+    # fps explanation for EVERY invalidation, so a run thrown out by the stand-sanity check was
+    # reported as "client at 28.0 fps, below the 14.0 floor" -- a sentence that contradicts itself
+    # and blames a floor the run was comfortably above. The comment on that message warns against
+    # inventing an attribution; it was inventing one.
+    invalid_why = None
     if not passed and avg_fps is not None and avg_fps < HEALTHY_FPS_MIN:
         failed_gates = [c for c in crits if c.gate and not c.ok]
         # THE FLAG FIRST, THE KEYWORDS ONLY AS A FALLBACK.
@@ -388,6 +394,7 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
 
         if failed_gates and all(_load_sensitive(c) for c in failed_gates):
             invalid = True
+            invalid_why = "fps"
 
     # ⛔⛔ FIRST, AND MOST IMPORTANT: WAS THE BOT EVEN IN THE ARENA? (checklist rule 4k)
     #
@@ -442,9 +449,11 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
             m = re.search(r"dw=\d+/[\d.]+/[\d.]+/([\d.]+)/", str(c.detail or ""))
             if m and float(m.group(1)) > 50.0:
                 invalid = True
+                invalid_why = "stand"
                 print(f"  => {scn.id}: INVALID — stand sanity: DamageWatch reports a hit at "
-                      f"{float(m.group(1)):.1f} blocks from the nearest living entity. The arena "
-                      f"is ~14 blocks, so it has emptied or the bot has left it. This run measured "
+                      f"{float(m.group(1)):.1f} blocks from the nearest living entity, past the "
+                      f"50-block trip wire. No arena this suite builds is that wide (the halves in "
+                      f"use are 14 and 30), so it has emptied or the bot has left it. This run measured "
                       f"the STAND, not the build. Recreate the clients (deploy/deploy_jar.sh) and "
                       f"re-run. See task #83: the stand degrades after about two runs, which makes "
                       f"long A/B arms part-measured on a rotting bench.")
@@ -462,7 +471,9 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     for c in crits:
         mark = "PASS" if c.ok else ("FAIL" if c.gate else "flag")
         print(f"  [{mark}] {c.name}  {c.detail}")
-    if invalid:
+    if invalid and invalid_why == "stand":
+        pass  # the stand-sanity guard already printed its own, accurate reason above
+    elif invalid:
         # THIS USED TO SAY "host starved ... Close whatever else is running", WHICH IT NEVER
         # MEASURED. The guard looks at fps and nothing else. Measured on 2026-08-08 while that line
         # was printing: 24 cores, ~53% in use and ~47% IDLE, with the client alone taking 383% to
