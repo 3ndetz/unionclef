@@ -208,6 +208,11 @@ public class CombatController {
      */
     /** Whether the last resolved combat tick asked the legs to go forward. */
     public static volatile boolean lastForwardPressed;
+
+    /** Strafe ticks pressed while the target is OUT of reach -- the approach, where a diagonal costs speed. */
+    public static volatile int strafeFarTicks;
+    /** Strafe ticks pressed inside reach -- the duel, where orbiting is a defence worth paying for. */
+    public static volatile int strafeNearTicks;
     private static final double KNOCKBACK_REACH = 2.0;
     /** Sprint hits carry further: max impulse measured 0.854 blocks/tick, ~2.1 blocks of carry. */
     private static final double KNOCKBACK_REACH_SPRINT = 2.2;
@@ -1067,6 +1072,19 @@ public class CombatController {
                 && player.getAttackCooldownProgress(0f) >= TriggerBot.COOLDOWN_CRIT;
         out.left = canStrafe && !readySwingOutOfReach && strafeDir > 0;
         out.right = canStrafe && !readySwingOutOfReach && strafeDir < 0;
+        // ⛔ WHERE DOES THE DIAGONAL COME FROM? The next hypothesis worth a series is that the
+        // approach travels at 45 degrees and so pays ~30% of its speed (3.9 b/s against 5.6), which
+        // costs about one whole skeleton shot -- the right size against the ~1.9-arrow gap, unlike
+        // the engage band, which measured under one arrow at full power.
+        // But it is NOT established that this controller is what bends it: the 7->4.5 leg belongs
+        // to KillEntitiesTask, and combatCloseOverOrbit (suppressing this very strafe out of reach)
+        // was measured and made arrows WORSE. So split the strafe by distance before touching
+        // anything: if strafeFar is near zero the diagonal is the PATH's, not the orbit's, and the
+        // work belongs in the approach rather than here.
+        if (out.left || out.right) {
+            if (dist > TriggerBot.REACH) strafeFarTicks++;
+            else strafeNearTicks++;
+        }
         // Neither side strafeable (a 1-wide bridge, a tiny platform) and already at strike
         // distance: keep some motion so we are not a static target, but ONLY into space we
         // have tested. Forward-pulse against the opponent is safe by construction — they are

@@ -876,7 +876,7 @@ class SkeletonDodge(MobMelee):
         # Arrows landing at gapMean 2-4 means they land after arrival, which is a different fix
         # entirely. exact dmgTaken is printed beside it because min_hp is a leftover, not a count.
         yield Criterion("where the hits landed (recorded, not gated)", True,
-                        f"dw={_stat(ctx, 'dw')} dwNoBlame={_stat(ctx, 'dwNoBlame')} dmgTaken={_stat(ctx, 'dmgTaken')}", gate=False)
+                        f"dw={_stat(ctx, 'dw')} dwNoBlame={_stat(ctx, 'dwNoBlame')} strafe={_stat(ctx, 'strafe')} dmgTaken={_stat(ctx, 'dmgTaken')}", gate=False)
         # WHICH BRANCH ATE THE TICKS? mdTung=0 says no fight was ever committed, and the chain has
         # several branches that return early -- flee, creeper, shield, dodge-projectiles -- each of
         # which starves everything below it while it holds priority. mdRet is the per-branch return
