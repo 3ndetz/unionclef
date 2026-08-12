@@ -122,7 +122,8 @@ public class TriggerBot {
      * ratio does not move, the idea is dead for good; if it does and arrows still do not, then
      * fight length is not what sets arrows and the whole chain above needs revisiting.
      */
-    public static volatile int gReadyFar, gReadyNear, gReadyFarDodging, gReadyFarWalking, gReadyFarSprintHeld, gReadyFarFwdHeld, gReadyFarStrafeHeld;
+    public static volatile int gReadyFar, gReadyNear, gReadyFarDodging, gReadyFarWalking, gReadyFarSprintHeld, gReadyFarFwdHeld, gReadyFarStrafeHeld,
+            gNotReadyFar, gNotReadyNear;
     /** Charge carried by the swings that PASSED, and how many took the early crit-window
      *  threshold. Divide the sum by gPassed for the mean -- these two are the difference between
      *  "we swing undercharged" as a theory and as a number. Note the means above (angleMean,
@@ -220,6 +221,16 @@ public class TriggerBot {
         // already surplus (landed=4 crits=3 is ~33 against 20 HP). So the bot is limited by the
         // RATE it lands hits, and a swing that matures out of range costs a full cooldown — about
         // a second, about one arrow.
+        // THE OTHER HALF OF THE DECOMPOSITION. ready=far/near covers only the ticks where the
+        // swing has matured; these two cover the rest, so the four numbers together account for
+        // EVERY combat tick and say where the exposure goes:
+        //   notReadyFar  — closing while the cooldown runs. This is time WELL spent.
+        //   notReadyNear — in position, waiting for the swing. Unavoidable, ~50 ticks a kill.
+        //   readyFar     — the waste already measured at 20-45 a fight.
+        //   readyNear    — the swing actually happening.
+        // Measured exposure is 111-215 ticks against a 64-tick floor; this splits the ~105 ticks
+        // of slack instead of leaving it as one lump.
+        if (gateCooldown) { if (gateReach) gNotReadyFar++; else gNotReadyNear++; }
         if (!gateCooldown) {
             if (gateReach) {
                 gReadyFar++;
