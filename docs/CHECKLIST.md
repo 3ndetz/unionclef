@@ -723,6 +723,29 @@ the log, queue empty:
    out of four on `last_seen=None`. Spelled "was seen alive on the arena", absence of evidence
    fails, which is the honest verdict. Same defect as the `awake` half that could not fail (4m).
 
+## 4o. ⛔ YOUR CHECK CYCLE IS SECONDS. A BENCH COURSE IS MINUTES. DO NOT POLL PER CYCLE (2026-08-12)
+
+Measured on this machine, not assumed: one `pvp` course takes **2-3 minutes**, a `--repeat 6`
+series **12-20**. A status check costs seconds. So checking once per turn shows the SAME state five
+to ten times in a row, and the transcript fills with `4/12 — chase_flat` while nothing happens.
+
+This is what produced the loop the user caught and called out — a run of turns that were all
+`STEP 2` plus a status ping, with no work between them. It also wastes the context that the actual
+analysis needs later, which is the expensive part.
+
+The rule:
+
+1. **A backgrounded run notifies you when it finishes.** That notification is the signal. Do not
+   re-check for it every turn; the loop is not making it arrive sooner.
+2. When you catch yourself about to write "still running" for the second time, **the correct move
+   is different work, not another check** — reading sources for the next pass, closing a
+   non-defect, writing the release notes for what already measured.
+3. If there is genuinely nothing to do that does not disturb the bench, say so in one line and
+   stop reporting deltas that are not deltas.
+4. Judge "is it stuck" by **file mtimes**, not by your own impatience — several of your turns fit
+   inside one course. An unchanged course name after three checks means three checks were too
+   many, not that the suite hung.
+
 ## 5. VIDEO
 
 `--record` on the run, then:
