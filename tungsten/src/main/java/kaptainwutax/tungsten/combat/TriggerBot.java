@@ -82,6 +82,17 @@ public class TriggerBot {
      * marginal, and a mean far above says the bot is simply not on target or not in range.
      */
     public static volatile double gAngleSum=0, gAngleMax=0, gReachDistSum=0, gReachDistMax=0;
+    /**
+     * Ticks where the swing was READY, split by whether the target was in reach.
+     *
+     * <p>The gates above are evaluated independently, so a tick lands in `cd` and `reach` at once
+     * and neither of them can say how often a matured swing was thrown away for distance. On
+     * mob_skeleton that is the quantity that matters: arrows landed is a function of FIGHT LENGTH
+     * (2-3 shots, one per second of bow draw, against a kill needing 3-4 landed swings at a
+     * 0.625 s cooldown), and damage is already surplus. A swing that matures out of range costs a
+     * whole cooldown — about a second, about one arrow.
+     */
+    public static volatile int gReadyFar, gReadyNear;
     /** Charge carried by the swings that PASSED, and how many took the early crit-window
      *  threshold. Divide the sum by gPassed for the mean -- these two are the difference between
      *  "we swing undercharged" as a theory and as a number. Note the means above (angleMean,
@@ -171,6 +182,15 @@ public class TriggerBot {
         if (gateClick) gClick++;
         if (gateCooldown) gCooldown++;
         if (gateReach) { gReach++; double d = Math.sqrt(distSq); gReachDistSum += d; if (d > gReachDistMax) gReachDistMax = d; }
+        // ⛔ THE ONE JOINT THE OTHER COUNTERS CANNOT SHOW. Every gate above is evaluated
+        // INDEPENDENTLY, so a tick lands in `cd` and `reach` at once and neither says how often a
+        // READY swing was thrown away for distance. That is the quantity the next fix turns on:
+        // arrows landed on this course is a function of FIGHT LENGTH (2-3 shots, one per second of
+        // draw, against a kill that needs 3-4 landed swings at a 0.625 s cooldown), and damage is
+        // already surplus (landed=4 crits=3 is ~33 against 20 HP). So the bot is limited by the
+        // RATE it lands hits, and a swing that matures out of range costs a full cooldown — about
+        // a second, about one arrow.
+        if (!gateCooldown) { if (gateReach) gReadyFar++; else gReadyNear++; }
         if (gateAngle) { gAngle++; gAngleSum += angle; if (angle > gAngleMax) gAngleMax = angle; }
         if (gateLos) gLos++;
         if (gateClick || gateCooldown || gateReach || gateAngle || gateLos) return;
