@@ -1025,6 +1025,29 @@ public class MobDefenseChain extends SingleTaskChain {
      * is time inside the killing band; if the skeleton holds fire until close, closing faster buys
      * nothing at all. The two readings point at opposite fixes, and this is the counter that
      * separates them.
+     *
+     * <p>⛔ ANSWERED, 2026-08-12 — IT HOLDS FIRE. Six runs on the repaired course:
+     * <pre>
+     *   arrows fired (n/mean/max)   min_hp   landed
+     *   2 / 5.56 / 5.58               20       0
+     *   2 / 4.36 / 6.37               16       1
+     *   3 / 5.56 / 6.15               13       2
+     *   2 / 4.54 / 5.33               13       2
+     *   3 / 5.43 / 8.48               15       1
+     *   41 / 10.38 / 13.07             4       6    <- the bot never closed (mdFar 1979)
+     * </pre>
+     * A normal fight costs the bot 2-3 shots, ALL fired from 4.4-5.6 blocks, of which 1-2 land.
+     * Nothing is fired at the approach, so every hypothesis about shortening time-under-fire while
+     * closing was aimed at a phase that does not exist — eight of them are now closed, and this is
+     * why none could have worked. The outlier is the other regime: stuck at range the skeleton
+     * fires 41 and lands 6, about 15% against 50-70% point blank, which is the bot's jitter working
+     * exactly as earlier passes measured and failing inside six blocks.
+     *
+     * <p>WHAT THAT LEAVES. At five blocks an arrow crosses in under two ticks, so reacting to the
+     * ARROW cannot work — and every dodge this repo has built reacts to the arrow. The bow draw
+     * takes TWENTY ticks and is visible client-side as the using-item flag (tracked data id 8, the
+     * same flag whose event hook was too narrow to notice arrows at all). A full second of warning
+     * is sitting there unread. The next instrument counts it; the fix after that acts on it.
      */
     private void noticeArrows(AltoClef mod) {
         try {
