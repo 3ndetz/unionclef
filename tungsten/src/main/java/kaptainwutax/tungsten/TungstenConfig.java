@@ -381,7 +381,7 @@ public class TungstenConfig {
     /**
      * Does Nav's mid-hop ground test ask for a COLLISION SHAPE instead of merely "not air"?
      *
-     * <p>OFF is the current shipped behaviour and this flag changes nothing until it is pinned on.
+     * <p>ON is the shipped behaviour. Pin it false to get the old !isAir() test back for an A/B.
      *
      * <p>The defect it addresses is real: {@code !isAir()} counts LAVA, water, tall grass, torches
      * and flowers as something to land on, so a bot falling toward lava two blocks down reads
@@ -399,7 +399,7 @@ public class TungstenConfig {
      *     run_suite.py mob --only mob_trio --repeat 20 --pin navGroundCollisionCheck=true
      * Keep it only if the pinned arm is no worse; this predicate gates about ten callers.
      */
-    public boolean navGroundCollisionCheck = false;
+    public boolean navGroundCollisionCheck = true;
 
     /** No-placing zones: [x1,y1,z1,x2,y2,z2] boxes (inclusive, any corner order).
      *  Protected areas (claims/privates) — the mod never places here. Paired with
