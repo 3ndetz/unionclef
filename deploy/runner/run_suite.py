@@ -28,6 +28,7 @@ import argparse
 import datetime
 import functools
 import os
+import re
 import subprocess
 import tempfile
 import shutil
@@ -385,6 +386,35 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
 
         if failed_gates and all(_load_sensitive(c) for c in failed_gates):
             invalid = True
+
+    # ⛔ SECOND SOURCE OF INVALIDITY: THE STAND ITSELF ROTTED MID-SERIES.
+    #
+    # The fps floor catches a starved machine. It does not catch an EMPTIED arena, and that
+    # happens: measured 2026-08-12 on a freshly recreated stand, a four-run mob_skeleton series
+    # read healthy for two runs (dw gap 2.65, then 1.83-5.15) and then broke (gap 50.9-198.5 with
+    # 4 deaths, gap 117-199 with 2). A separate occasion left tester2 GONE from the world entirely
+    # -- `data get entity tester2 playerGameType` returned "No entity was found" -- and four runs
+    # afterwards read dodgeDrive=0 and looked exactly like a flat code regression.
+    #
+    # DamageWatch's gap is the distance to the NEAREST LIVING ENTITY at the moment a hit lands. On
+    # a 14-block arena that cannot legitimately exceed ~30. A reading near 200 means there is
+    # nothing near the bot: the arena has emptied, or the bot has left it. Either way the run
+    # measured the STAND, not the build -- which is precisely what INVALID exists to say.
+    #
+    # This is deliberately generous (50) so it fires only on the unmistakable case. A silent rot
+    # is what makes a long A/B arm unreadable; a loud one costs a re-run.
+    if not invalid:
+        for c in crits:
+            m = re.search(r"dw=\d+/[\d.]+/[\d.]+/([\d.]+)/", str(c.detail or ""))
+            if m and float(m.group(1)) > 50.0:
+                invalid = True
+                print(f"  => {scn.id}: INVALID — stand sanity: DamageWatch reports a hit at "
+                      f"{float(m.group(1)):.1f} blocks from the nearest living entity. The arena "
+                      f"is ~14 blocks, so it has emptied or the bot has left it. This run measured "
+                      f"the STAND, not the build. Recreate the clients (deploy/deploy_jar.sh) and "
+                      f"re-run. See task #83: the stand degrades after about two runs, which makes "
+                      f"long A/B arms part-measured on a rotting bench.")
+                break
 
     if not passed and not invalid:
         bot.py.screenshot(art.path("fail.png"))

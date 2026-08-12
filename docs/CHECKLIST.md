@@ -538,6 +538,61 @@ The rule:
 Related in shape to 4c: a conclusion drawn from a sample selected by something other than the thing
 being studied. Here the sample was the courses on which the surviving behaviour happened to matter.
 
+## 4k. ⛔ CHECK THE BOT IS IN THE ARENA BEFORE READING ANY NUMBER FROM A RUN (2026-08-12)
+
+The most expensive failure of this project so far, and the user caught it from a VIDEO while the
+numbers were being analysed as if they meant something.
+
+**The bot was falling into the void and dying, and every counter kept reporting.** Timeline Y over
+four recorded runs:
+
+```
+healthy runs   minY = -60.0     (STAND_Y, the arena floor)
+broken runs    minY = -234.2, -229.2, -246.5, -180.5
+```
+
+Nothing in the SUMMARY said so. The course printed PASS/FAIL, `dmgTaken` counted, `min_hp` counted,
+`dw` counted — all of it describing a bot 170 blocks below the world it was supposed to be fighting
+in. Two clips were sent to the operator as evidence of combat behaviour; they showed a bot dropping
+into nothing.
+
+**The tell that WAS in the data, unread:** `dw` gapMax near 200 on a 14-block arena. DamageWatch
+measures the distance to the nearest living entity when a hit lands, so ~200 means there is nothing
+near the bot at all. It was visible for hours and read as "the stand degrades" instead of "the bot
+is not in the arena".
+
+The rule:
+
+1. **Before believing any verdict, check `min(bot Y)` against `STAND_Y`.** One line over
+   `timeline.jsonl`. If the bot left the arena, the run measured falling, not fighting — the verdict
+   is void, not merely suspicious.
+2. **A fall CASCADES and outlives its run.** Later runs opened with the bot ALREADY at -234 (min ==
+   max, never near the floor): `ensure_grounded` did not recover it, so every subsequent run in that
+   series was measuring a corpse in the void. Same shape as RULE SEVEN's spectator leak, worse
+   because the counters look plausible.
+3. **A criterion that cannot see this is not a criterion.** The gate asked "is the skeleton dead"
+   and "how much health was lost" — both answerable, wrongly, by a bot that fell. Add the arena
+   check to the SUITE, not to one course.
+4. **Watch the clip before quoting the run.** The video showed it instantly. Numbers from a bench
+   are a model of the run; the recording is the run.
+
+## 4l. ⛔ A PRIMITIVE THAT PRESSES MOVEMENT KEYS MUST GUARANTEE ITS OWN RELEASE (2026-08-12)
+
+`ProjectileDodge` presses SPRINT plus a direction. Its cleanup was changed so the keys are released
+only when no other owner is driving — reasoning that the walker releases everything each tick anyway,
+so clearing would merely stomp the walker's own presses. The reasoning is correct for the tick the
+walker runs. It is wrong for the tick the walker STOPS: nobody clears, the sprint key stays held, and
+the bot walks off the arena and into the void.
+
+Reverted after the bot was observed at Y=-234 on a floor at -60; with the revert in, minY returned
+to -60.0.
+
+The rule: **release is not someone else's job.** A primitive that takes the keys owns putting them
+back, unconditionally, on its own timeline. "Another system will overwrite it" is an assumption about
+that system's lifetime, and lifetimes end. If clearing would stomp another writer, the answer is to
+press for one fewer tick, or to record what was pressed and release exactly that — never to skip the
+release.
+
 ## 4j. WHEN THE VARIANCE LIVES *BETWEEN SERIES*, A REBUILT ARM MEASURES THE STAND (2026-08-11)
 
 Rule 4b says characterise the metric before quoting a delta. This is the failure that survives
