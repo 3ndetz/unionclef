@@ -289,6 +289,22 @@ public class TungstenConfig {
      * size the arm from the CURRENT session's arm, never from a remembered number.
      */
     public boolean combatDodgeOnDraw = false;
+
+    /**
+     * Hold sprint against a RETREATING SHOOTER until the swing, instead of dropping it at REACH.
+     *
+     * <p>RESTORED after being deleted, because the refutation judged the wrong quantity. It was
+     * measured on ARROWS LANDED — -0.50 arrows, 1.77 sigma, SE 0.51 — a coarse outcome three steps
+     * downstream, a handful of integers a run. The mechanism it targets now has its own counter:
+     * TriggerBot's ready=far/near reads about 10:1, i.e. nine ticks in ten with a matured swing are
+     * spent outside 3.0, because reach control computes its closing time from OUR speed while the
+     * skeleton retreats at the same speed and the sprint is cut inside REACH.
+     *
+     * <p>Judge it THERE. If the ratio does not move, the idea is dead for good. If it moves and
+     * arrows do not, then fight length is not what sets arrows on this course, and the chain of
+     * reasoning that produced this flag needs revisiting — which is worth knowing either way.
+     */
+    public boolean combatHoldContactOnShooter = false;
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
      *  If false, only walks (no jumps) — safer but slower. */
     public boolean followJumpingEnabled = true;

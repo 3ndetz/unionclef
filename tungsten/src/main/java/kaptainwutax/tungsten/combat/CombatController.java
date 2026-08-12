@@ -908,6 +908,17 @@ public class CombatController {
         // it was meant to close. Hence the cut-off is our REACH and not the strike band: sprint
         // across the dead zone, arrive walking, and let the hit land without the extra shove.
         out.sprint = out.forward && dist > TriggerBot.REACH;
+        // RESTORED FOR A PROPER MEASUREMENT (default off): drop sprint at the SWING rather than at
+        // REACH, against a RangedAttackMob only. The blow still lands unsprinted — that was the
+        // whole point of the cut-off, and it is what keeps crits possible — while the bot is
+        // allowed to keep pace with a target that retreats at walking speed. Judged on
+        // TriggerBot.ready=far/near, the counter for the mechanism, not on arrows landed.
+        if (kaptainwutax.tungsten.TungstenConfig.get().combatHoldContactOnShooter
+                && target instanceof net.minecraft.entity.ai.RangedAttackMob) {
+            boolean swingImminent = dist <= TriggerBot.REACH
+                    && player.getAttackCooldownProgress(0f) >= 0.85f;
+            out.sprint = out.forward && !swingImminent;
+        }
         // TRIED AND REFUTED, 2026-08-12: holding sprint against a RETREATING SHOOTER until the
         // swing instead of dropping it at REACH. The argument was sound — a skeleton retreats at
         // about a walking bot's speed, so the tick the bot crosses 3.0 and slows it falls back
