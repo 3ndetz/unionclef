@@ -174,6 +174,8 @@ public class MobDefenseChain extends SingleTaskChain {
      * pass rate toward that ceiling rather than to 12/12.
      */
     public static volatile int mdBandTicks;
+    /** Ticks the arrow-avoidance PATHING task owned the legs, and the gap while it did. */
+    public static volatile int mdDodgeTaskTicks, mdDodgeTaskGapMilli;
     public static volatile int mdDraws, mdDrawTicks, mdDrawMaxTicks, mdDrawGapMilli;
     private static final java.util.Map<Integer, Integer> drawTicksById =
             java.util.Collections.synchronizedMap(new java.util.HashMap<>());
@@ -619,6 +621,25 @@ public class MobDefenseChain extends SingleTaskChain {
             doingFunkyStuff = true;
             if (WorldHelper.isDangerZone(mod, mod.getPlayer().getBlockPos())) {
                 // Danger zone (void/lava/edge): use baritone pathfinding to dodge safely
+                // ⛔ THIS IS THE SUSPECTED FEEDBACK LOOP, AND THIS COUNTS IT.
+                // DodgeProjectilesTask is a PATHING task whose job is to hold ARROW_KEEP_DISTANCE
+                // away from projectiles — it drives the bot AWAY. Bad runs on mob_skeleton share a
+                // signature: mdFar 1979-2012, dodgeDrive 597-621, 28-42 arrows fired from a mean of
+                // ~9.5 blocks, ready~0. Six hundred ticks of dodging and no approach.
+                //
+                // The loop: an arrow arrives -> this task drives the bot away -> it never closes ->
+                // the skeleton keeps shooting -> the task fires again. Nothing breaks it until the
+                // skeleton loses interest, which is why those runs end at min_hp 3-5 while ordinary
+                // ones end at 12-17.
+                //
+                // And the dodge cannot even pay for itself here: releases come from 4.3-6.3 blocks,
+                // where an arrow crosses in under two ticks. It is buying nothing with the approach.
+                //
+                // mdDodgeTask counts the ticks it owns and the gap while it does, so the loop is a
+                // number rather than a story before anything is changed.
+                mdDodgeTaskTicks++;
+                mdDodgeTaskGapMilli += (int) Math.round(
+                        mod.getPlayer().getPos().distanceTo(projectileClosestPos(mod)) * 1000.0);
                 runAwayTask = new DodgeProjectilesTask(ARROW_KEEP_DISTANCE_HORIZONTAL, ARROW_KEEP_DISTANCE_VERTICAL);
                 setTask(runAwayTask);
             } else if (suggestedDodgeX != 0 || suggestedDodgeZ != 0) {
@@ -1239,6 +1260,23 @@ public class MobDefenseChain extends SingleTaskChain {
             if (inBand) mdBandTicks++;
         } catch (Exception ignored) {
             // an instrument must never be the thing that breaks a fight
+        }
+    }
+
+    /** Nearest living hostile's position, or our own when there is none — a zero gap then. */
+    private net.minecraft.util.math.Vec3d projectileClosestPos(AltoClef mod) {
+        try {
+            ClientPlayerEntity self = mod.getPlayer();
+            net.minecraft.util.math.Vec3d best = self.getPos();
+            double bestSq = Double.MAX_VALUE;
+            for (LivingEntity e : mod.getEntityTracker().getHostiles()) {
+                if (e == null || !e.isAlive()) continue;
+                double d = e.getPos().squaredDistanceTo(self.getPos());
+                if (d < bestSq) { bestSq = d; best = e.getPos(); }
+            }
+            return best;
+        } catch (Exception ignored) {
+            return mod.getPlayer().getPos();
         }
     }
 
