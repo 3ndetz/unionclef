@@ -133,6 +133,18 @@ public final class Nav {
             // What the guard is for is cancelling a path mid-FALL, which is a real hazard. Ground
             // within a couple of blocks means the bot is mid-hop, not mid-fall, so it keeps the
             // protection where it matters and stops vetoing every jump.
+            // ⛔ KNOWN WEAKNESS, RECORDED NOT PATCHED: !isAir() IS NOT "GROUND".
+            // The loop below counts LAVA, water, tall grass, torches and flowers as something to
+            // land on. A bot falling toward lava two blocks down therefore reads groundClose=true
+            // and this returns "safe to cancel" -- permitting the interruption of exactly the fall
+            // the guard exists to protect. Same shape as the isDangerZone one-block-down bug, and
+            // the repo already has the right idiom: the trigger's line-of-sight raycast uses
+            // COLLIDERS precisely because tall grass has no collision shape.
+            // NOT a regression -- before this method was fixed the predicate returned "safe"
+            // unconditionally, so this is an incomplete improvement rather than a new hazard. The
+            // fix is a collision-shape test instead of !isAir(), plus treating lava as never
+            // ground; it wants a course that actually falls toward a hazard before it can be
+            // measured, which nav_hazard may already provide.
             if (p != null && !p.isOnGround() && !p.isTouchingWater()) {
                 boolean groundClose = false;
                 net.minecraft.util.math.BlockPos below = p.getBlockPos();
