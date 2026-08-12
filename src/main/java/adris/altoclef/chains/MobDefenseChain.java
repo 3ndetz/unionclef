@@ -179,11 +179,21 @@ public class MobDefenseChain extends SingleTaskChain {
      * floor is the pessimistic case, not the normal one: the real floor is 14 + 37.5 = ~51 ticks,
      * about ONE shot, and the ceiling is correspondingly better than 40%.
      *
-     * <p>AND IT RELOCATES THE LAST LEVER. The bot is already OVERKILLING — measured this session:
-     * landed=4 crits=3 is ~33 damage, landed=4 crits=1 is ~27, both against a 20 HP skeleton. It
-     * swings after the target should already be dead. So the lever is not "crit more"; it is
-     * "stop swinging the moment the kill is in", because every surplus swing costs a 12.5-tick
-     * cooldown inside the band — a quarter of a shot each.
+     * <p>AND A CLAIM OF MINE FROM AN HOUR AGO, WITHDRAWN BEFORE IT WAS BUILT ON. I wrote that the
+     * bot is "already OVERKILLING" because landed=4 crits=1 computes to ~27 damage against a 20 HP
+     * skeleton. That treats gateStats' `passed` as damaging hits, and it is not: it counts swings
+     * that passed the GATE, i.e. attacks sent. Minecraft gives a mob ~10 ticks of invulnerability
+     * after a hit, and mdTung is a PAIR — the committed fight AND the force field's strike — so
+     * when both fire, one lands inside those frames and is absorbed. The damage line above says so
+     * itself ("an estimate with a soft edge"), and I then quoted it as proof.
+     *
+     * <p>So there are two live readings and they need different fixes: the bot swings after the
+     * kill is in (stop early, save a 12.5-tick cooldown inside the band), or two strikers are
+     * hitting the same mob and half the swings are eaten by i-frames (make them one). The second
+     * would ALSO explain why `landed` runs high while fights stay long.
+     *
+     * <p>TO SEPARATE THEM, and it is cheap: compare the target's health drop against swings sent.
+     * Health is client-visible; the counter for it is one line next to the ones already here.
      */
     public static volatile int mdBandTicks;
     /** Ticks the arrow-avoidance PATHING task owned the legs, and the gap while it did. */
