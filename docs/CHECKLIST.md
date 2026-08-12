@@ -538,6 +538,32 @@ The rule:
 Related in shape to 4c: a conclusion drawn from a sample selected by something other than the thing
 being studied. Here the sample was the courses on which the surviving behaviour happened to matter.
 
+## 4m. ⛔ A COUNT OF ZERO FROM A RUN THAT NEVER RAN LOOKS EXACTLY LIKE A CLEAN RESULT (2026-08-12)
+
+Caught three times in one session, twice within an hour, and each time only because the run COUNT
+was checked alongside the thing being counted.
+
+```
+python run_suite.py mob > out.txt ; grep -c "LEFT THE ARENA" out.txt   ->  0     "no falls!"
+```
+
+The suite had refused to start — `REFUSING TO START: another suite holds the bench` — because a
+previous invocation still held the lock, or because a killed foreground run left the lock stale.
+Zero falls, zero failures, zero everything: a perfect result from a suite that never executed.
+
+Same silhouette as the two worst defects in this project: a gate whose `awake` half could never
+fail, and a dodge whose keys never reached the game. **Zero from "it went well" is indistinguishable
+from zero from "nothing ran" unless you ask separately.**
+
+The rule:
+
+1. **Never read a count without reading the denominator.** `grep -cE "^  => "` for the number of
+   course verdicts, and refuse to interpret anything if it is 0.
+2. A killed foreground run (10-minute tool timeout) leaves the lock behind. The lock names the
+   invocation that holds it — `cat` it before clearing, and if it names YOUR dead run, it is stale.
+3. This is why `--repeat N` results should be reported as `k/N`, never as a bare count: N makes the
+   denominator impossible to omit.
+
 ## 4k. ⛔ CHECK THE BOT IS IN THE ARENA BEFORE READING ANY NUMBER FROM A RUN (2026-08-12)
 
 The most expensive failure of this project so far, and the user caught it from a VIDEO while the
