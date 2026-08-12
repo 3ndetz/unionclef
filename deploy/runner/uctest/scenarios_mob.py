@@ -404,6 +404,21 @@ class SkeletonDodge(MobMelee):
     # arrows, against a mean of 1.46 — so what has to be shown is a ~1.5-arrow move, and that is
     # visible at n=12 an arm. Do not spend runs chasing 0.3; only a big effect can turn this green.
     #
+    # ⛔ AND THE SAME-SESSION SPREAD IS FAR TIGHTER, WHICH MAKES PINNED PAIRS CHEAP (2026-08-12).
+    # The sd above (1.20) is POOLED ACROSS SERIES. Measured inside a single session, on the twelve
+    # runs of a pinned A/B's baseline arm:
+    #
+    #     same session, flag off   n=12   mean 1.19   sd 0.37
+    #     pooled across series     n=14   mean 1.46   sd 1.20
+    #
+    # Same course, same build — three times the spread, purely from measuring across sessions.
+    # That is rule 4j quantified, and it cuts both ways:
+    #   * a CROSS-SESSION comparison needs n>=46 an arm to see half an arrow, which is why every
+    #     build-against-build result this repo has quoted at 1.4-2.1 sigma later evaporated;
+    #   * a PINNED SAME-SESSION pair needs only n>=5 an arm for the same half arrow
+    #     (8*0.37^2/0.5^2), so an honest experiment here costs about twenty minutes, not two hours.
+    # Run pairs. Never compare a fresh build against yesterday's number.
+    #
     # ⛔ THE RULER FOR THIS COURSE, CHARACTERISED AT LAST (checklist 4b step 1, never done here).
     #
     # min_hp over n=53 runs on the current build, pooled across every series:
