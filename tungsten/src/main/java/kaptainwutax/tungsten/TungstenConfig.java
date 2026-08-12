@@ -378,6 +378,29 @@ public class TungstenConfig {
      *  this is testable at all; fix the timing, prove it on melee_basic, then turn it on. */
     public boolean combatShieldEnabled = false;
 
+    /**
+     * Does Nav's mid-hop ground test ask for a COLLISION SHAPE instead of merely "not air"?
+     *
+     * <p>OFF is the current shipped behaviour and this flag changes nothing until it is pinned on.
+     *
+     * <p>The defect it addresses is real: {@code !isAir()} counts LAVA, water, tall grass, torches
+     * and flowers as something to land on, so a bot falling toward lava two blocks down reads
+     * "ground is close" and {@code isSafeToCancel} returns SAFE -- permitting the interruption of
+     * exactly the fall the guard exists to protect. Fluids and decoration have empty collision
+     * shapes, so one test covers all of it, and it is the idiom the trigger's line-of-sight raycast
+     * already uses ("COLLIDERS only -- tall grass has no collision shape").
+     *
+     * <p>A FLAG BECAUSE THE FIRST ATTEMPT COULD NOT BE JUDGED. Built and baselined it read nav
+     * 12/12 (nav_hazard PASS) and craft 12/12 (escape_lava PASS), but mob went 3/4 -> 2/4 and a
+     * follow-up mob_trio read 0/6 -- which is INSIDE mob_trio's known range (it read 0/6 on an
+     * unchanged build earlier the same day) and therefore cannot be told apart from a regression
+     * across builds. Settle it in ONE session instead:
+     *     run_suite.py mob --only mob_trio --repeat 20
+     *     run_suite.py mob --only mob_trio --repeat 20 --pin navGroundCollisionCheck=true
+     * Keep it only if the pinned arm is no worse; this predicate gates about ten callers.
+     */
+    public boolean navGroundCollisionCheck = false;
+
     /** No-placing zones: [x1,y1,z1,x2,y2,z2] boxes (inclusive, any corner order).
      *  Protected areas (claims/privates) — the mod never places here. Paired with
      *  breakDenyZones so markProtectedArea can lock both mining and building. */

@@ -148,8 +148,14 @@ public final class Nav {
             if (p != null && !p.isOnGround() && !p.isTouchingWater()) {
                 boolean groundClose = false;
                 net.minecraft.util.math.BlockPos below = p.getBlockPos();
+                boolean useCollision = kaptainwutax.tungsten.TungstenConfig.get()
+                        .navGroundCollisionCheck;
                 for (int d = 1; d <= 3 && !groundClose; d++) {
-                    groundClose = !p.getEntityWorld().getBlockState(below.down(d)).isAir();
+                    net.minecraft.util.math.BlockPos gp = below.down(d);
+                    net.minecraft.block.BlockState st = p.getEntityWorld().getBlockState(gp);
+                    groundClose = useCollision
+                            ? !st.getCollisionShape(p.getEntityWorld(), gp).isEmpty()
+                            : !st.isAir();
                 }
                 if (!groundClose) {
                     navUnsafeAir++;
