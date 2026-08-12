@@ -137,6 +137,8 @@ WORLDS = {
 # defaults on purpose, so any pre-run write is wiped before the scenario starts. Four A/B
 # batches in one session were run that way and silently compared the build against itself.
 EXTRA_PINS = {}
+# Pins applied on alternate runs -- see --pin-alt and checklist rule 4r.
+ALT_PINS = {}
 
 VIZ_SETTINGS = {
     "renderVisualization": "true",
@@ -506,6 +508,15 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
 _LOCK = os.path.join(tempfile.gettempdir(), "uctest_suite.lock")
 
 
+def _alt_baseline(value):
+    """The other side of an alternating pin: booleans flip, anything else is left to the caller."""
+    low = str(value).strip().lower()
+    if low in ("true", "false"):
+        return "false" if low == "true" else "true"
+    raise SystemExit(f"--pin-alt only alternates booleans automatically; got {value!r}. "
+                     f"Pass the baseline explicitly if you need a non-boolean arm.")
+
+
 def _take_lock():
     try:
         if os.path.exists(_LOCK) and (time.time() - os.path.getmtime(_LOCK)) < 1200:
@@ -543,6 +554,13 @@ def _main():
     ap.add_argument("suite", nargs="?", help="suite name (pvp)")
     ap.add_argument("--only", help="scenario id, or a comma-separated list of them")
     ap.add_argument("--repeat", type=int, default=1)
+    ap.add_argument("--pin-alt", action="append", default=[], metavar="NAME=VALUE",
+                    help="INTERLEAVED A/B: apply this pin on every SECOND run of --repeat, so the "
+                         "arms alternate A,B,A,B instead of running as blocks. Blocked arms make "
+                         "'which flag' inseparable from 'when in the session' -- measured on "
+                         "mob_skeleton, the same flag gave -0.60, +1.92 and -0.31 arrows across "
+                         "three blocked pairs (checklist rule 4r). Interleaving puts any drift on "
+                         "both arms equally.")
     ap.add_argument("--record", action="store_true",
                     help="record tester1's screen per scenario (x11grab)")
     ap.add_argument("--no-early-stop", action="store_true",
@@ -560,6 +578,12 @@ def _main():
             ap.error(f"--pin expects NAME=VALUE, got {spec!r}")
         k, v = spec.split("=", 1)
         EXTRA_PINS[k.strip()] = v.strip()
+    global ALT_PINS
+    for spec in args.pin_alt:
+        if "=" not in spec:
+            ap.error(f"--pin-alt expects NAME=VALUE, got {spec!r}")
+        k, v = spec.split("=", 1)
+        ALT_PINS[k.strip()] = v.strip()
     Scenario.no_early_stop = args.no_early_stop
 
     if args.list or not args.suite:
@@ -680,6 +704,13 @@ def _main():
     results = []
     for cls in scenarios:
         for rep in range(args.repeat):
+            # INTERLEAVED ARMS (rule 4r): odd runs carry the alternate pins, even runs do not, so
+            # session drift lands on both arms equally instead of on whichever ran second.
+            arm = "B" if (ALT_PINS and rep % 2 == 1) else "A"
+            if ALT_PINS:
+                for k, v in ALT_PINS.items():
+                    EXTRA_PINS[k] = v if arm == "B" else _alt_baseline(v)
+                print(f"  ARM {arm}: " + " ".join(f"{k}={EXTRA_PINS[k]}" for k in ALT_PINS))
             # Checked BEFORE the run, not after a refresh, because a build can land at any point
             # and the next refresh is only the moment it reaches the clients.
             jar_now = _jar_fingerprint()
@@ -690,6 +721,8 @@ def _main():
                                art_root, args.record)
             if jar_now != jar0:
                 res["jar_changed"] = f"{jar0[0]} -> {jar_now[0]}"
+            if ALT_PINS:
+                res["arm"] = arm
             # Retry an fps-invalidated run ONCE on fresh clients. If it comes back invalid again,
             # the load is not ours to fix and the INVALID stands honestly.
             if res.get("invalid") and not res.get("refreshed"):
