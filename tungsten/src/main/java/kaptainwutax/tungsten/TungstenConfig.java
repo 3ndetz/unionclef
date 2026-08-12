@@ -325,6 +325,22 @@ public class TungstenConfig {
     public boolean combatCloseOverOrbit = false;
 
     /**
+     * Run combat across the whole killing band, not only inside 4.5 blocks (default off).
+     *
+     * <p>MobDefenseChain ticks tungsten only when {@code getControllerExtras().inRange(toKill)},
+     * which on flat ground is distance &lt; 4.5. A skeleton's band — measured — is 2.5 to 7.0 and it
+     * releases from 4.3-6.3. So between 7.0 and 4.5 the bot is under fire with NO combat running:
+     * no swing gate, no cooldown-aware approach. Measured: 129-253 ticks inside the band against
+     * 62-89 where the gate is evaluated, which is exactly the ~105 ticks of slack over the 64-tick
+     * floor, and the reason twelve hypotheses aimed at the other 40% all measured nothing.
+     *
+     * <p>This is NOT a distance tweak — it changes who drives the legs during the approach on every
+     * mob course, so mob_melee and mob_trio are part of its acceptance, not an afterthought. Judge
+     * on BAND TICKS first and arrows second: today proved those two can move in opposite directions.
+     */
+    public boolean combatEngageBand = false;
+
+    /**
      * Hold sprint against a RETREATING SHOOTER until the swing, instead of dropping it at REACH.
      *
      * <p>RESTORED after being deleted, because the refutation judged the wrong quantity. It was

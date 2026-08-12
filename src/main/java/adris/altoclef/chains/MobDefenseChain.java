@@ -839,7 +839,13 @@ public class MobDefenseChain extends SingleTaskChain {
                     // every mob course, not just this one. Judge on band ticks first (rule: today
                     // proved band ticks and arrows can move in opposite directions), with an
                     // interleaved pair, and watch mob_melee and mob_trio for regression.
-                    if (mod.getControllerExtras().inRange(toKill)) {
+                    // THE FIX, behind a pin: let combat run across the whole killing band, not
+                    // just the last 4.5 blocks. Off by default; judged interleaved on band ticks
+                    // first, then arrows, with mob_melee and mob_trio watched for regression.
+                    boolean engage = mod.getControllerExtras().inRange(toKill)
+                            || (kaptainwutax.tungsten.TungstenConfig.get().combatEngageBand
+                                && gapToKill <= 7.0);
+                    if (engage) {
                         kaptainwutax.tungsten.combat.WeaponSelector.equipBestMelee(mod.getPlayer());
                         tungstenCombat.tick(mod.getPlayer(), toKill, mod.getWorld());
                         tungstenDrivingMs = System.currentTimeMillis();
