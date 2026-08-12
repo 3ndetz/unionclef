@@ -792,6 +792,24 @@ class SkeletonDodge(MobMelee):
         # valid runs and B with ONE. This series says nothing whatever about combatEngageBand -
         # ab_arrows.py refuses to judge an arm of one, and so should any reader.
         #
+        # ⛔⭐ FINAL, ALL 26 RUNS: +0.88 ARROWS AT 1.90 SIGMA. STILL OFF. 1.90 IS NOT 2.00.
+        #     A (band off) n=13 mean 1.96 sd 1.25   PASSES 0
+        #     B (band on)  n=12 mean 1.08 sd 1.06   PASSES 2
+        # One invalid in 26 - the rig is healthy now.
+        #
+        # This is the hardest case the rule will ever face, and the reason it was written into
+        # ab_arrows.py before a single run existed. Everything here invites rounding up: the
+        # direction has repeated four times, the shortfall is five percent of the threshold, and
+        # BOTH course passes landed in the pinned arm against none in the baseline. Any one of those
+        # would justify calling it real. The bar does not move because the result is close to it.
+        #
+        # The pass split is not a second piece of evidence either: 2 of 12 against 0 of 13 is p~0.22
+        # on its own. Two weak signals pointing the same way do not add up to one strong one.
+        #
+        # WHAT TO DO WITH IT: this is now a well-measured small effect, not an unknown. If a future
+        # pass wants it ON, the honest route is a fresh pre-registered series at a size that can
+        # resolve 0.9 arrows (about n=20 an arm) -- not a re-reading of these numbers.
+        #
         # ⛔⭐ THE ENGAGE BAND, FINALLY MEASURED AT FULL POWER: +0.69 ARROWS AT 1.55 SIGMA, SO IT
         # STAYS OFF (2026-08-13). Twenty-four runs, ZERO invalid, TWELVE per arm -- the first time
         # this course has ever reached its own computed arm size, and it only became affordable
