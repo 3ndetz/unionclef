@@ -1070,8 +1070,16 @@ public class CombatController {
                 kaptainwutax.tungsten.TungstenConfig.get().combatCloseOverOrbit
                 && dist > TriggerBot.REACH
                 && player.getAttackCooldownProgress(0f) >= TriggerBot.COOLDOWN_CRIT;
-        out.left = canStrafe && !readySwingOutOfReach && strafeDir > 0;
-        out.right = canStrafe && !readySwingOutOfReach && strafeDir < 0;
+        // THE PHASE DISTINCTION THE COUNTERS ARGUE FOR: an approach is not a duel. Orbiting is a
+        // defence against someone already swinging at you; while the target is out of reach it buys
+        // nothing and costs ~30% of closing speed to the 45-degree line. Wider than
+        // combatCloseOverOrbit on purpose -- that one waited for a MATURE SWING, which is a minority
+        // of ticks, and so never touched the 69% of orbit ticks that happen out of reach.
+        boolean approachPhase =
+                kaptainwutax.tungsten.TungstenConfig.get().combatApproachNoOrbit
+                && dist > TriggerBot.REACH;
+        out.left = canStrafe && !readySwingOutOfReach && !approachPhase && strafeDir > 0;
+        out.right = canStrafe && !readySwingOutOfReach && !approachPhase && strafeDir < 0;
         // ⭐ ANSWERED, AND IT IS THIS CONTROLLER, NOT THE PATH (2026-08-13). Four runs:
         //     strafeFar/strafeNear = 54/15, 18/12, 25/17, 41/19  -> 138 far against 63 near.
         // Sixty-nine percent of the orbit happens while the target is OUT of reach, i.e. during the

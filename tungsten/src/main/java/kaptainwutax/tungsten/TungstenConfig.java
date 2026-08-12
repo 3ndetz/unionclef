@@ -381,6 +381,23 @@ public class TungstenConfig {
      */
     public boolean botFpsNoIdleThrottle = false;
 
+    /**
+     * Walk STRAIGHT at a target that is out of reach instead of orbiting it.
+     *
+     * <p>Measured, four runs: 69% of orbit ticks happen while the target is out of reach (138 far
+     * against 63 near). A 45-degree line costs about 30% of closing speed, which on mob_skeleton is
+     * roughly one whole skeleton shot -- the right size against a ~1.9 arrow gap, where the engage
+     * band measured 0.88 at full power and stayed off.
+     *
+     * <p>Deliberately wider than {@code combatCloseOverOrbit}, which only suppressed the strafe once
+     * a swing had matured. That is a minority of ticks, so it never touched the bulk of the orbit,
+     * and its "made arrows worse" result was never evidence against this.
+     *
+     * <p>Off by default and unjudged: it needs an interleaved series at twelve runs an arm, and the
+     * 2-sigma rule applies to it exactly as it did to the band.
+     */
+    public boolean combatApproachNoOrbit = false;
+
     public boolean combatEngageBand = false;
 
     /**
