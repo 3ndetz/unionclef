@@ -792,6 +792,24 @@ class SkeletonDodge(MobMelee):
         # valid runs and B with ONE. This series says nothing whatever about combatEngageBand -
         # ab_arrows.py refuses to judge an arm of one, and so should any reader.
         #
+        # ⛔⭐ THE ENGAGE BAND, FINALLY MEASURED AT FULL POWER: +0.69 ARROWS AT 1.55 SIGMA, SO IT
+        # STAYS OFF (2026-08-13). Twenty-four runs, ZERO invalid, TWELVE per arm -- the first time
+        # this course has ever reached its own computed arm size, and it only became affordable
+        # after the idle-limiter fix stopped the bench discarding half of every series.
+        #     A (band off) n=12 mean 1.77 sd 1.11   [3.75,1,4,1,.75,2.75,1.75,1,1,1,1,2.25]
+        #     B (band on)  n=12 mean 1.08 sd 1.06   [1,0,0,3,1,0,1.75,1,1,1,0,3.25]
+        #
+        # THE DIRECTION HAS NOW REPEATED THREE TIMES -- blocked +0.83, interleaved +0.79, powered
+        # +0.69 -- and has still never cleared the 2 sigma bar that ab_arrows.py fixed before any of
+        # this data existed. Three consistent sub-threshold results are exactly the point where one
+        # starts pooling series until the number comes out right. The rule says off; it stays off.
+        #
+        # WHAT THE POWER BUYS IS A DIFFERENT CONCLUSION THAN "UNDERPOWERED". At n=12 an arm the
+        # smallest visible effect is about 0.9 arrows, so an effect this size is now measured rather
+        # than missed: if the band helps at all it helps by well under one arrow. Getting from 1.77
+        # to zero needs a move of ~1.8. The engage band cannot be the thing that turns this course
+        # green, whatever its sign, and the next hypothesis should be sized against that gap.
+        #
         # ⛔ THE ENGAGE BAND, MEASURED INTERLEAVED: +0.79 ARROWS AT 1.70 SIGMA (2026-08-12).
         # Ten runs, arms A,B,A,B so a drifting stand cannot masquerade as an effect; three dropped by
         # the validity floor. Flag off: n=3, mean 1.67 arrows. Flag on: n=4, mean 0.88. The rule in
