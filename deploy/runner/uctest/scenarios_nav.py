@@ -126,6 +126,22 @@ class NavSteep(NavCourse):
 
 
 # ── 3. gaps ──────────────────────────────────────────────────────────────────
+# ⛔ nav_gaps HAS ITS OWN FALL RATE, AND IT IS NOT A REGRESSION FROM ANY BUILD (2026-08-12).
+# Two nav sweeps the same day each ended with one INVALID here, the bot in the void at min Y
+# -172.3 and -238.3 against a floor at -60. The evidence points both ways at once, which is what
+# a course-intrinsic flake looks like rather than a build defect:
+#     arena_nav  (A) falls 0     leak_nav (A) falls 0
+#     lava_nav   (B) falls 1     arc2_nav (B) falls 1
+#     dedicated same-session A/B on this course:  B 0/6 falls,  A 2/7 falls
+# The sweeps blame B, the A/B blames A, both n are small -- so the bot simply misses a gap jump
+# sometimes and drops out of the world.
+#
+# WHAT CHANGED IS THAT IT IS VISIBLE. Before the arena guard in run_suite (rule 4k) such a run was
+# recorded as an ordinary FAIL, or worse, contributed its numbers to whatever series it sat in --
+# which is how one fall poisoned a 12-run arm and sent a whole pass chasing a phantom "stand
+# degradation". It is now INVALID, the retry runs, and the sweep reads a truthful 12/12.
+#
+# Do NOT chase this as a bug in a build without first reproducing it on BOTH arms of a pinned pair.
 class NavGaps(NavCourse):
     """Flat parkour: 2, 3 and 4-block gaps over void, landing pads between.
     The gaps are REAL air down to the void, so a failed jump is a self-fall."""
