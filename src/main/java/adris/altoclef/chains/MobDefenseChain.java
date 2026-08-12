@@ -172,6 +172,18 @@ public class MobDefenseChain extends SingleTaskChain {
      * Worth knowing before another pass is spent expecting a deterministic green: a course whose
      * ceiling is a coin cannot be turned green by tuning alone, and the honest goal is to push the
      * pass rate toward that ceiling rather than to 12/12.
+     *
+     * <p>⛔ CORRECTION TO MY OWN FLOOR, from the crit rate rather than an assumption. Over 39 landed
+     * swings today, 15 were crits — 38%. Three swings kill on ONE crit (9+6+6 = 21 against 20 HP),
+     * and P(at least one crit in three) at that rate is 77%. So the four-swing kill I used for the
+     * floor is the pessimistic case, not the normal one: the real floor is 14 + 37.5 = ~51 ticks,
+     * about ONE shot, and the ceiling is correspondingly better than 40%.
+     *
+     * <p>AND IT RELOCATES THE LAST LEVER. The bot is already OVERKILLING — measured this session:
+     * landed=4 crits=3 is ~33 damage, landed=4 crits=1 is ~27, both against a 20 HP skeleton. It
+     * swings after the target should already be dead. So the lever is not "crit more"; it is
+     * "stop swinging the moment the kill is in", because every surplus swing costs a 12.5-tick
+     * cooldown inside the band — a quarter of a shot each.
      */
     public static volatile int mdBandTicks;
     /** Ticks the arrow-avoidance PATHING task owned the legs, and the gap while it did. */
