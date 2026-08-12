@@ -224,9 +224,15 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// the bottom of it, and read 0 on a run whose closest approach was 2.72 blocks.
 		kaptainwutax.tungsten.task.RunAwayTask.countExposure((ClientPlayerEntity)(Object)this);
 
+		// ProjectileDodge added 2026-08-12: it drives sprint and direction keys and was in NONE of
+		// the conditions that arm this guard, so on every mob course a sidestep ran with no void
+		// protection at all. It had not bitten only because the mob arenas are flat -- luck, not
+		// design. The exemption on movementOwnsTick is kept exactly as it was, which is what keeps
+		// the guard off BridgeTask, PillarTask and the walker; those stand at a rim on purpose.
 		if ((kaptainwutax.tungsten.task.RunAwayTask.isActive()
 				|| kaptainwutax.tungsten.task.PunkPlayerTask.isActive()
-				|| kaptainwutax.tungsten.task.BowShooter.isActive())
+				|| kaptainwutax.tungsten.task.BowShooter.isActive()
+				|| kaptainwutax.tungsten.task.ProjectileDodge.isActive())
 				&& !tungsten$movementOwnsTick) {
 			kaptainwutax.tungsten.combat.VoidGuard.protect((ClientPlayerEntity)(Object)this, this.getEntityWorld());
 		}
