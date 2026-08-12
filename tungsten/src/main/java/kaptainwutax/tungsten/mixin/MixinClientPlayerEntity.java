@@ -245,6 +245,15 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// sprint / etc. STUCK over the human player's control (user: sneak sticks ~5s after
 		// combat near a ledge). Release the mod-controlled keys ONCE on the driving->idle
 		// transition, so we clear the leak without fighting the user's own held keys mid-play.
+		// ⛔ ProjectileDodge IS DELIBERATELY NOT IN THIS LIST, AND ADDING IT BUYS NOTHING.
+		// It was filed as a defect on the reasoning that a key-pressing primitive should be
+		// registered here. Checked instead of assumed: this predicate has exactly one consumer --
+		// the transition below -- and that releases ONLY sneak/attack/use, deliberately leaving
+		// WASD and sprint alone so it cannot clobber held movement. ProjectileDodge presses
+		// forward/back/left/right/sprint and nothing else, so the cleanup would not touch a single
+		// key it owns. Its release is its own (rule 4l), which is the stronger arrangement anyway:
+		// a primitive that presses movement keys must not depend on someone else's transition to
+		// let go of them.
 		boolean tungsten$driving = TungstenModDataContainer.isExecutorRunning()
 				|| tungsten$movementOwnsTick
 				|| kaptainwutax.tungsten.task.BlockPathWalker.isRunning()
