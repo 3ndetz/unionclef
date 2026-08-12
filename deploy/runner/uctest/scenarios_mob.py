@@ -740,6 +740,19 @@ class SkeletonDodge(MobMelee):
         # belongs to a pass that is not holding the result. What IS established: the course's
         # other two criteria (the skeleton dies, tungsten takes the legs) now pass in every run,
         # so min_hp is the only thing keeping it red.
+        # ⛔ AND THE GREEN DID NOT HOLD: 0 of 9 valid runs passed on the very next series (2026-08-13).
+        # Twelve launches with the DamageWatch fix deployed: min_hp 12, 16, 16, 15, 16, 8, 16, 11,
+        # 16, 4 — mean 1.75 arrows, squarely in line with the historical 1.46-1.67 and nowhere near
+        # the 0.60 that produced the two passes. The green was a draw from the tail, exactly as the
+        # note below predicted, and anyone reading the PASS lines without this paragraph would
+        # conclude the course was fixed.
+        #
+        # ⭐ WHAT DID IMPROVE, MEASURABLY: the invalid rate fell from ~50% (7/14, then 6/13, then
+        # 10/16) to 2 of 11 once the mod-side fix was deployed. Runs stop being thrown away for a
+        # post-kill scratch, so a 12-run arm now costs ~15 launches instead of ~24. That is the
+        # first change all day that made the NEXT measurement cheaper rather than just better
+        # understood.
+        #
         # ⛔⭐ THE COURSE HAS BEEN GREEN. TWICE, ON THE SHIPPED BUILD (2026-08-13).
         # Runs 5 and 11 of a 16-launch series: min_hp=20.0, no arrow landed, no criterion failed,
         # "=> mob_skeleton: PASS". So the target is REACHABLE with the code as it stands, and the
