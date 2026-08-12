@@ -637,6 +637,20 @@ public class MobDefenseChain extends SingleTaskChain {
                 //
                 // mdDodgeTask counts the ticks it owns and the gap while it does, so the loop is a
                 // number rather than a story before anything is changed.
+                //
+                // ⛔ FIRST READING, 2026-08-12, and it is NOT a verdict. Six runs:
+                //     dodgeTask = 2, 8, 1, 0, 4, 0 ticks   (min_hp 20, 16, 16, 16, 12, 16)
+                // In an ordinary fight this task owns the legs for single-digit ticks, not six
+                // hundred. BUT NOT ONE OF THOSE SIX WAS A CATASTROPHIC RUN — they ended at min_hp
+                // 12-20, while the hypothesis is about the runs that end at 3-5 with thirty-odd
+                // arrows fired from ~9.5 blocks.
+                //
+                // So this reads UNTESTED, not refuted: the regime simply did not occur in the
+                // sample. Absence of the phenomenon is not evidence against a mechanism inside it,
+                // and writing "refuted" here would be the same error this file has already paid for
+                // four times today with dead counters. The counter now stands and will catch the
+                // regime when it happens — the next pass should run until at least two bad runs are
+                // in hand before judging.
                 mdDodgeTaskTicks++;
                 mdDodgeTaskGapMilli += (int) Math.round(
                         mod.getPlayer().getPos().distanceTo(projectileClosestPos(mod)) * 1000.0);
