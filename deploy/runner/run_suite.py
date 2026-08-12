@@ -446,13 +446,26 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     # is what makes a long A/B arm unreadable; a loud one costs a re-run.
     if not invalid:
         for c in crits:
-            m = re.search(r"dw=\d+/[\d.]+/[\d.]+/([\d.]+)/", str(c.detail or ""))
+            # ⛔ READ THE MEAN, NOT THE MAX -- THE MAX MADE THIS GUARD THROW AWAY GOOD RUNS.
+            # dw = hits/damage/gapMean/gapMax/rangedHits/deathsSeen, and the gap is the distance to
+            # the closest OTHER living entity (DamageWatch.nearestLivingGap). Once the skeleton is
+            # dead the closest living thing is the second tester client parked across the world, so
+            # ANY damage taken after the kill -- a fall on the arena, anything non-combat -- records
+            # a gap of about 63 blocks. Reading gapMax then voided the whole run for one post-kill
+            # scratch: seven of fourteen runs in one series came back INVALID, which is why every
+            # A/B here has been underpowered.
+            # The mean keeps what the guard was actually for. A genuinely emptied arena has EVERY
+            # hit landing far, so the mean trips; a single late outlier no longer can. Limitation,
+            # stated rather than hidden: a run that empties exactly half way through can now sit
+            # under the threshold, and the honest fix for that is recording the gap only while the
+            # target lives, which belongs in the mod.
+            m = re.search(r"dw=\d+/[\d.]+/([\d.]+)/[\d.]+/", str(c.detail or ""))
             if m and float(m.group(1)) > 50.0:
                 invalid = True
                 invalid_why = "stand"
                 print(f"  => {scn.id}: INVALID — stand sanity: DamageWatch reports a hit at "
-                      f"{float(m.group(1)):.1f} blocks from the nearest living entity, past the "
-                      f"50-block trip wire. No arena this suite builds is that wide (the halves in "
+                      f"{float(m.group(1)):.1f} blocks MEAN from the nearest living entity, past "
+                      f"the 50-block trip wire. No arena this suite builds is that wide (the halves in "
                       f"use are 14 and 30), so it has emptied or the bot has left it. This run measured "
                       f"the STAND, not the build. Recreate the clients (deploy/deploy_jar.sh) and "
                       f"re-run. See task #83: the stand degrades after about two runs, which makes "
