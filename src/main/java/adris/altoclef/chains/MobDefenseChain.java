@@ -1193,14 +1193,18 @@ public class MobDefenseChain extends SingleTaskChain {
                     if (!entity.isInRange(player, SAFE_KEEP_DISTANCE * 1.5)) continue;
                     if (mod.getBehaviour().shouldExcludeFromForcefield(entity)) continue;
                     if (!EntityHelper.isAngryAtPlayer(mod, entity)) continue;
-                    // ⛔ BOUNDARY WORTH KNOWING: this scan reaches SAFE_KEEP_DISTANCE * 1.5 = 12.0
-                    // blocks, and mob_skeleton spawns its skeleton at 12.5. So during the opening
-                    // of the very course this guard was written for, the shooter is OUTSIDE the
-                    // radius and the flee reflex is not declined. It has not bitten -- mdRet3 read
-                    // 0 in all thirteen runs, i.e. flee never fired there anyway -- but the guard
-                    // is narrower than its own test case, and a course that spawned a shooter at 14
-                    // would exercise the reflex this is supposed to suppress. Widen it against a
-                    // measurement, not on sight: the radius is shared with the danger test above.
+                    // RESOLVED, AND THE EARLIER NOTE HERE WAS WRONG -- DO NOT WIDEN THIS. It used
+                    // to read: the scan reaches SAFE_KEEP_DISTANCE * 1.5 = 12.0 while mob_skeleton
+                    // spawns at 12.5, so the guard is "narrower than its own test case" and a
+                    // shooter at 14 would exercise the reflex this is meant to suppress.
+                    //
+                    // It cannot. isInDanger's hostile scan uses `reach = (health <= 10 &&
+                    // !witchNearby) ? SAFE_KEEP_DISTANCE * 1.5 : SAFE_KEEP_DISTANCE` -- 12.0 in
+                    // exactly the state where the flee branch bids, and 8.0 otherwise. This guard
+                    // is therefore never narrower than the test it guards, and is wider in the
+                    // common case. A shooter outside 12.0 does not make isInDanger true either, so
+                    // there is no flee bid at that range for the guard to decline. Nothing to fix;
+                    // widening it would only make the two radii disagree.
                     if (entity instanceof net.minecraft.entity.ai.RangedAttackMob) {
                         sawShooter = true;
                     } else {
