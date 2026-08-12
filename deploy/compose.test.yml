@@ -89,6 +89,18 @@ services:
       #     modes appear in the same series on the same container. The geometry is constant and the
       #     frame rate still thirds, so the switch is inside the client, not in X.
       #
+      # ⭐ FOUND IT, AND THE NUMBER GIVES IT AWAY: EXACTLY 10.0 fps IS MINECRAFT'S OWN LIMITER.
+      # options.txt has maxFps:30, so the healthy cluster at 28-29 is the client sitting on its cap.
+      # The slow cluster reads 10.0 ten times over with a single 9.9 -- a CPU-bound rasteriser gives
+      # scattered values like 8.3 and 11.7, never the same round number run after run. 10 fps is
+      # vanilla's InactivityFpsLimiter, which throttles a client whose window is unfocused and whose
+      # input has gone quiet. pauseOnLostFocus:false turns off the PAUSE, not the limiter, and the
+      # bot's input arrives through the mod rather than through the window, so nothing ever resets
+      # the inactivity timer.
+      # THE FIX BELONGS IN THE MOD: keep the limiter's timer alive (or bypass it) while a course is
+      # driving, so a headless client is never mistaken for an idle one. That should collapse the
+      # 9-10 cluster entirely and with it ~40% of every series.
+      #
       # THE CANDIDATE THAT FITS: Minecraft throttles its frame rate when the window loses focus.
       # In a headless VNC session whether the window ever gains focus is decided at startup and
       # lasts that client's life -- which is exactly the shape of the data. Test it by forcing focus
