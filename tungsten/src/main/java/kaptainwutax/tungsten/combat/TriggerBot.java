@@ -242,6 +242,24 @@ public class TriggerBot {
                 // not a mechanism.
                 if (kaptainwutax.tungsten.task.ProjectileDodge.isActive()) gReadyFarDodging++;
                 if (CombatController.lastForwardPressed) gReadyFarWalking++;
+                // ⛔ ANSWERED, 2026-08-12, and it clears every consumer of suspicion:
+                //     far/near/dodging/WALKING
+                //     20/5/5/17   21/4/0/21   39/4/0/37   13/7/0/13   40/9/8/40   31/5/5/29
+                // In 95-100% of the wasted ticks the bot IS asking to go forward. Nothing is
+                // stealing the legs — the approach itself is failing.
+                //
+                // AND THAT EXPOSES A MIS-AIMED EXPERIMENT OF MINE. combatHoldContactOnShooter
+                // altered sprint only where `dist <= REACH`; the waste happens OUTSIDE reach,
+                // where the baseline rule already sprints. The flag could not touch the quantity
+                // it was measured against, which is exactly what the unmoved ratio said. Its
+                // refutation therefore says nothing about the walk-against-walk idea — only that
+                // I pointed it at the wrong side of the threshold.
+                //
+                // OPEN, and the next thing to measure: the bot is far, asking forward, and by the
+                // baseline rule sprinting — yet it does not close on a mob that walks. Either the
+                // sprint is not reaching the keys (a writer downstream strips it, the shape of
+                // pitfall P1) or the distance is not being lost to travel at all. Read what the
+                // keys actually carry on those ticks before proposing anything.
             } else {
                 gReadyNear++;
             }
