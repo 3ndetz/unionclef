@@ -104,8 +104,23 @@ public class TriggerBot {
      *
      * <p>So the target is no longer "dodge" or "close faster": it is DO NOT LET A READY SWING
      * MATURE OUT OF RANGE. combatReachControl already tries to start closing before the swing is
-     * ready, by exactly the travel time — this 10:1 says it is not achieving it, and the next pass
-     * should find out why rather than add another band.
+     * ready, by exactly the travel time — this 10:1 says it is not achieving it.
+     *
+     * <p>WHY, read out of the code rather than guessed. The arming rule is
+     * {@code ticksToClose = (dist - STRIKE_DISTANCE) / CLOSE_SPEED_PER_TICK} — a closing time
+     * computed from OUR speed alone. Against a retreating shooter that is the one assumption that
+     * does not hold: the skeleton backs away at about a walking bot's speed, and inside REACH the
+     * sprint is deliberately cut so the blow lands unsprinted. Walk against walk closes nothing,
+     * so the last half-block is never crossed and the swing matures at 3.4-3.6 against a 3.0 gate.
+     *
+     * <p>AND THAT REOPENS A CLOSED HYPOTHESIS ON BETTER TERMS. combatDodgeOnDraw's sibling,
+     * combatHoldContactOnShooter, aimed at exactly this and was refuted ON ARROWS LANDED: -0.50
+     * arrows at 1.77 sigma, SE 0.51. But arrows is a coarse outcome — a handful of integers per
+     * run — while ready=far/near is a per-tick ratio reading 10:1, with orders of magnitude more
+     * signal. The honest next experiment is to restore that flag and judge it HERE, on the
+     * mechanism it actually targets, instead of on the outcome three steps downstream. If the
+     * ratio does not move, the idea is dead for good; if it does and arrows still do not, then
+     * fight length is not what sets arrows and the whole chain above needs revisiting.
      */
     public static volatile int gReadyFar, gReadyNear;
     /** Charge carried by the swings that PASSED, and how many took the early crit-window
