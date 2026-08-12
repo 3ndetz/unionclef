@@ -473,6 +473,24 @@ public interface WorldHelper {
     }
 
     // Returns true when the area around pos is dangerous (void/lava below or very few supporting blocks).
+    /**
+     * ⛔ READ BEFORE TRUSTING THIS. Two real weaknesses, and one earlier claim about it withdrawn.
+     *
+     * <p>WITHDRAWN: this was noted during the mob_skeleton work as having a "one-block-down bug".
+     * Reading it, that is WRONG -- the scan is at {@code y - 1}, which is the floor beneath the
+     * feet position its callers pass ({@code getPlayer().getBlockPos()}). The note is retracted
+     * rather than left to mislead someone.
+     *
+     * <p>WHAT IS REAL: {@code !isAir()} counts WATER and TALL GRASS as floor, the same weakness
+     * {@code Nav.isSafeToCancel} carries -- lava is at least handled by the explicit test above it.
+     * And the threshold is very lenient: 4 or fewer solid cells out of 25 before anywhere counts as
+     * dangerous, so a three-wide bridge scores about 15 and never registers. Whether that leniency
+     * is wrong depends on the caller -- the dodge branch uses it to choose between a pathfinding
+     * dodge and a raw sidestep, and a bridge arguably IS the case that wants the careful one.
+     *
+     * <p>Neither is fixed here. Both want a course with a real drop to measure against, and this
+     * predicate feeds behaviour on courses that currently have none.
+     */
     static boolean isDangerZone(AltoClef mod, BlockPos pos) {
         int x = pos.getX(), y = pos.getY(), z = pos.getZ();
         int safeBlockCount = 0;
