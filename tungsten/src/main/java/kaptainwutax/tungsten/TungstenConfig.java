@@ -363,6 +363,21 @@ public class TungstenConfig {
      * is why a twelve-run arm had been costing twenty launches.
      *
      * <p>Off by default: an idle Minecraft on a human's machine SHOULD stop burning a core.
+     *
+     * <p>⛔ THE FLAG IS HERE BUT NOTHING READS IT YET, AND HERE IS WHY (2026-08-13). The mixin that
+     * would honour it targets net.minecraft.client.option.InactivityFpsLimiter, which exists in the
+     * 1.21.11 yarn mappings and NOT in the 1.21 base this source set compiles against -- the class
+     * arrived after the base version. A first attempt failed to compile on exactly that, twice over
+     * (the import and the annotation).
+     *
+     * <p>This repo handles such gaps with the inline preprocessor, e.g. {@code //#if MC >= 12111} as
+     * used in CameraMixin and ChatReadMixin; there is no version-specific source directory to drop
+     * the class into. So the implementation must guard the whole mixin behind that condition, and be
+     * BUILT to verify it, rather than referenced by a compile-time import. Shipping it broken would
+     * have cost more than leaving it undone.
+     *
+     * <p>The finding it serves is solid and independent of the implementation: the slow cluster is
+     * EXACTLY 10.0 fps, which is vanilla's idle limit, not a load. See the note in compose.test.yml.
      */
     public boolean botFpsNoIdleThrottle = false;
 
