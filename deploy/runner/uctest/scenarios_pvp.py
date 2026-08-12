@@ -316,6 +316,20 @@ class ChaseTerrain(Scenario):
     on baritone toward a far point; our bot must CATCH it with tungsten and
     KILL it. This is the user's definition of the bench."""
     id = "chase_terrain"
+    # ⛔ THIS COURSE IS SLOW TO START AND A ZERO-BYTE timeline.jsonl IS NOT A STALL.
+    # It is the only pvp course with world="gamer" and builds_arena=False: the clients move to the
+    # REAL world-generator server and then land is probed for. Generated chunks on a client
+    # rendering in software at 10-30 fps take minutes to arrive, and until the drive loop starts
+    # nothing is sampled — so the artifact dir sits there with an empty timeline, looking exactly
+    # like a hang.
+    #
+    # It was read as one on 2026-08-12 and the whole suite was killed at 8 minutes, losing the
+    # remaining seven courses. Both mechanisms proposed for the "hang" were then checked and
+    # neither held: every harness call is bounded (sh 30s, batch 30s, screenshot 40s, rcon 20s),
+    # and uctest-gamer-server was up and healthy the whole time. Slow, not stuck.
+    #
+    # If you suspect this course, TIME IT rather than killing it, and judge by whether the file
+    # GROWS, not by whether it exists.
     duration = 180
     world = "gamer"            # real world generator
     builds_arena = False       # play the terrain as generated
