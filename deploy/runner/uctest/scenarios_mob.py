@@ -636,6 +636,26 @@ class SkeletonDodge(MobMelee):
         # red by the very gate meant to catch a defenceless target. A criterion that punishes the
         # outcome the course exists to reward is worse than no criterion.
         # Armed-and-awake is the honest test of the statue bug, and it is read from the server.
+        # ⛔ COULD THE BOT HAVE KILLED IT AT ALL? ARITHMETIC, NOT INFERENCE.
+        # KIT_SWORD is an iron sword: 6 damage, 9 on a crit. A skeleton has 20 HP, so the kill
+        # needs FOUR plain hits, or three with a crit among them. That makes "the target is gone"
+        # checkable against what the bot actually landed — which is how the void and despawn false
+        # greens were caught (a PASS with two landed swings is 12 damage against a 20 HP mob).
+        # RECORDED, NOT GATED: Minecraft scales damage by swing charge, chargeMean runs 0.95-1.00
+        # here, and the force field can contribute — so this is an estimate with a soft edge. A
+        # hard threshold on a soft number would manufacture red runs, which is the opposite of
+        # the point. It is here to make an impossible kill VISIBLE, not to fail the run.
+        sw_txt = str(gs) if ok_gs and gs else ""
+        m_ok = re.search(r"passed=(\d+)", sw_txt)
+        if m_ok:
+            m_cr = re.search(r"crits=(\d+)", sw_txt)
+            landed = int(m_ok.group(1))
+            crits = int(m_cr.group(1)) if m_cr else 0
+            dealt = max(0, landed - crits) * 6 + crits * 9
+            yield Criterion("damage the bot can account for (recorded, not gated)", True,
+                            f"landed={landed} crits={crits} => ~{dealt} of 20 HP"
+                            + (" — SHORT, something else finished it" if dealt < 20 else ""),
+                            gate=False)
         armed = "bow" in str(ctx.geo.get("equip_after", ""))
         # ⛔ THIS TEST USED TO BE UNABLE TO FAIL, WHICH IS WORSE THAN NOT HAVING IT.
         # It read: "NoAI" not in readback or "no elements" in readback.
