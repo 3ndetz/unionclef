@@ -162,7 +162,14 @@ WORLDS = {
 # run does nothing: prepare() calls reset_config(), which resets tungsten.json to shipped
 # defaults on purpose, so any pre-run write is wiped before the scenario starts. Four A/B
 # batches in one session were run that way and silently compared the build against itself.
-EXTRA_PINS = {}
+# ⭐ ALWAYS ON FOR THE BENCH: vanilla throttles a client to exactly 10 fps once its window is
+# unfocused and its input has gone quiet, and the bot drives through the mod rather than the window.
+# That put ten of sixteen runs under the 14 fps validity floor and made every A/B here cost twice
+# what it should. With the flag pinned, six runs read 29.3, 30.0, 27.5, 29.3, 29.0, 29.1 -- all on
+# the maxFps cap, none invalid. Pinned HERE rather than defaulted in TungstenConfig because an idle
+# Minecraft on a human's machine should still throttle; only the bench wants this.
+BENCH_PINS = {"botFpsNoIdleThrottle": "true"}
+EXTRA_PINS = dict(BENCH_PINS)
 # Pins applied on alternate runs -- see --pin-alt and checklist rule 4r.
 ALT_PINS = {}
 
