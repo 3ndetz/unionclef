@@ -843,6 +843,30 @@ class SkeletonDodge(MobMelee):
         # produced a 3.18 sigma artefact that interleaving cut to 0.46, so pooling a trustworthy
         # estimate with an untrusted one imports the bias the interleaving exists to remove.
         #
+        # ⛔⭐ THE BOT IS AT THE PHYSICAL FLOOR, AND THE GATE ASKS FOR BELOW IT (2026-08-13).
+        # Two full-power interleaved series, 26 runs each, arms of 12-13, one invalid between them:
+        #     engage band      A 1.96 -> after the rig fix, baseline settles at ~1.0-1.2 arrows
+        #     approach straight A 1.02  B 1.19   (-0.17, 0.58 sigma)
+        # And the arithmetic those numbers land on:
+        #     kill = 3 clean swings x 12 ticks cooldown = 36 ticks IN THE EXCHANGE
+        #     skeleton shot cycle  = 20 draw + 20 reload = 40 ticks
+        #     => the exchange ALONE releases 0.9 shots, before any approach is counted.
+        # Measured arrows landed: 1.02 and 1.19. The bot is sitting ON that floor, not above it.
+        #
+        # THIS EXPLAINS THE WHOLE HISTORY OF THIS COURSE. Thirteen hypotheses "measured nothing" and
+        # the two measured at full power came back 0.88 and -0.17, because there was nothing left to
+        # win: you cannot spend fewer than ~40 ticks killing a 20 HP skeleton with a 6-damage sword,
+        # and 40 ticks is exactly one draw. The 1.9-arrow gap I derived earlier came from a mean of
+        # 1.96 that was itself an artefact of the bench discarding half its runs.
+        #
+        # SO THE THRESHOLD, NOT THE FIGHTER, IS WHAT IS OUT OF REACH -- which is what the label
+        # ("at most one arrow"), the class docstring ("one point of slack ... the first arrow before
+        # any policy could react") and now two independent full-power series all say. min_hp >= 15
+        # is the honest reading of all three.
+        # DELIBERATELY NOT CHANGED HERE. I have spent this pass failing to move the fighter, and a
+        # gate relaxed by the same pass that could not beat it is indistinguishable from tuning to
+        # pass, however good the argument. It belongs to a pass that is not holding this result.
+        #
         # ⛔ WHERE 19.0 CAME FROM: THE COURSE'S OWN DOCSTRING, MISCOUNTED (2026-08-12).
         # The class docstring states the design intent in words -- "with one point of slack, because
         # a skeleton that spawns already drawing can land the first arrow before any policy could
