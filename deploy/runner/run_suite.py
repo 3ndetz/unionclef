@@ -37,6 +37,23 @@ import shutil
 # local inside the judging function, and the suite loop referenced it -- which would have raised
 # NameError on the FIRST invalid run and never on a healthy one, i.e. exactly where it was needed
 # and nowhere it would be noticed.
+# ⛔ THE FRAME RATE IS BIMODAL, WHICH MEANS IT IS A SWITCH AND NOT A CEILING (2026-08-13).
+# One 16-rep mob_skeleton series measured, every run:
+#
+#     ~9-10 fps   x10        ~28.5-29 fps   x3        nothing in between
+#
+# The note further down attributes the low readings to a single-threaded render ceiling, measured
+# at 383% CPU for 5 fps. A ceiling produces ONE smeared mode; two clean clusters with an empty gap
+# produce a binary condition that is on for three runs in thirteen. Something is intermittently
+# taking the client's throughput, and while it is on, HALF of every series is thrown away by the
+# floor below -- seven of fourteen in one series, six of thirteen in the next.
+#
+# This is the most expensive unknown in the bench: it sets the price of every A/B. The arm size for
+# a 1-arrow effect is 12 runs, so at a 50% loss that is 24 launches, and the interesting effects are
+# smaller than one arrow. Worth finding before any more hypotheses are bought at that rate.
+# First place to look: the OTHER tester client. Courses that drive one bot still leave the second
+# container rendering, and two software renderers on one host is exactly the shape of a switch that
+# halves throughput. Test it by idling tester2 for a single-bot course and reading this number.
 HEALTHY_FPS_MIN = 14.0
 # How many times ONE suite invocation will rebuild the stand chasing a starved frame rate before
 # concluding the load is somebody else's. Two minutes a rebuild; a repeat-8 series could spend
