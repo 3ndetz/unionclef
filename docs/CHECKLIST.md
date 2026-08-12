@@ -746,6 +746,32 @@ The rule:
    inside one course. An unchanged course name after three checks means three checks were too
    many, not that the suite hung.
 
+## 4p. ⛔ WAITING IS NOT STOPPING — BLOCK INSIDE THE TURN, DO NOT END IT (user 2026-08-12)
+
+The user's instruction, verbatim in spirit: *"если ты ЖДЁШЬ задачи, ты не СТОПишься, а ставишь
+ОЖИДАНИЕ на N минут — чтобы не засирало контекст стоп-хуком"*.
+
+Ending a turn to wait is what makes the Stop hook fire, and every firing costs a full
+re-injection of the checklist directive plus a status line that says nothing. A single bench
+suite produced **dozens** of `summary=0` turns this way. That is not diligence, it is noise, and
+it burns the context the analysis needs later.
+
+**The rule: while waiting for a run, do not end the turn. Block in it.**
+
+```bash
+# foreground, with a timeout just under the tool's ceiling — ONE turn, no hook firings
+until [ -s "$OUT" ]; do sleep 30; done; echo "done"
+```
+
+1. Pick the timeout from what you are waiting for: a course is 2-3 minutes, a suite 20-60, a
+   two-arm A/B over an hour. Wait in blocks of several minutes, not in single ticks.
+2. If the block times out and the run is still going, **wait again**. Re-entering a wait is one
+   turn; polling the same state twenty times is twenty.
+3. Never report "still running" more than once between real events. The absence of a delta is
+   not news, and rule 4o already says the check cycle is seconds while the work is minutes.
+4. This does NOT weaken rule 8's stop conditions. Blocking is not stopping — the turn stays
+   alive and the work continues the moment the condition is met.
+
 ## 5. VIDEO
 
 `--record` on the run, then:
