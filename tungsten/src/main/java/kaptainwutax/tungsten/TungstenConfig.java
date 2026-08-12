@@ -267,8 +267,26 @@ public class TungstenConfig {
      * 6.0-9.3 blocks. A full second of warning, before every shot, starting while the bot is still
      * outside the killing band.
      *
-     * <p>Judge it on ARROWS LANDED with a pinned same-session pair — in-session sd is 0.37, so
-     * n>=5 an arm separates half an arrow and twelve is comfortable.
+     * <p>⛔ MEASURED AND REFUTED, 2026-08-12. Pinned same-session pair, twelve runs an arm:
+     * <pre>
+     *   flag off   n=12  mean 1.42 arrows  sd 1.21
+     *   flag on    n=12  mean 1.94 arrows  sd 1.29
+     *   difference -0.52, SE 0.51  ->  1.02 sigma
+     * </pre>
+     * No effect, and the sign is the wrong way round again. Kept OFF and kept here, because the
+     * MECHANISM behind it is confirmed — the draw really is a second of warning before every shot —
+     * and the failure says something the arrow counters could not:
+     *
+     * <p>A vanilla mob does not lead its target. It aims where the target IS at the moment of
+     * release, so a sidestep taken when the draw STARTS is fully compensated by the time the arrow
+     * leaves. Moving early cannot work, and moving inside the last two ticks is the same
+     * impossible reaction the arrow-triggered dodges already failed at. That closes DODGING as a
+     * family for this course; what remains is killing in fewer swings, or denying the shot.
+     *
+     * <p>AND A CORRECTION TO THE ARM-SIZE NOTE THIS FLAG SHIPPED WITH: it claimed n>=5 an arm on
+     * the strength of one session's sd of 0.37. This session read 1.21-1.29 and SE 0.51, so twelve
+     * runs separate about one arrow, not half. The spread is itself unstable between sessions —
+     * size the arm from the CURRENT session's arm, never from a remembered number.
      */
     public boolean combatDodgeOnDraw = false;
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
