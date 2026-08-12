@@ -88,6 +88,8 @@ public class MobDefenseChain extends SingleTaskChain {
      * py4j, and a mean of a few blocks needs the resolution.
      */
     public static volatile int mdArrows, mdArrowGapMilli, mdArrowGapMaxMilli;
+    public static final java.util.Set<Integer> seenArrowIds =
+            java.util.Collections.synchronizedSet(new java.util.HashSet<>());
     private static final double DANGER_KEEP_DISTANCE = 30;
     private static final double CREEPER_KEEP_DISTANCE = 10;
     private static final double ARROW_KEEP_DISTANCE_HORIZONTAL = 2;
@@ -775,24 +777,13 @@ public class MobDefenseChain extends SingleTaskChain {
     public void onProjectileLaunched(AltoClef mod, ProjectileEntity arrowEntity, boolean sticked) {
         if (!sticked)
             mod.getEntityTracker().addProjectile(arrowEntity);
-        // RECORD THE RANGE IT WAS FIRED FROM. See mdArrows: the landing gap says where arrows
-        // CONNECT, which is silent about the shots that missed, and the two readings imply
-        // opposite fixes. Taken from the shooter rather than the arrow so a projectile already in
-        // flight cannot be counted twice, and skipped when either end is unknown.
-        try {
-            ClientPlayerEntity self = mod.getPlayer();
-            if (self != null && arrowEntity != null) {
-                Entity shooter = arrowEntity.getOwner();
-                if (shooter != null && shooter != self) {
-                    int gap = (int) Math.round(shooter.distanceTo(self) * 1000.0);
-                    mdArrows++;
-                    mdArrowGapMilli += gap;
-                    if (gap > mdArrowGapMaxMilli) mdArrowGapMaxMilli = gap;
-                }
-            }
-        } catch (Exception ignored) {
-            // an instrument must never be the thing that breaks a fight
-        }
+        // ⛔ DO NOT RECORD THE RELEASE RANGE HERE — THIS HOOK BARELY FIRES.
+        // It was tried, and read arrows=0 in six runs out of six while the bot was visibly being
+        // shot. ClientPlayNetworkHandlerMixin only publishes ProjectileEvent when a tracked-data
+        // update arrives with EXACTLY one value whose id is 8 and whose payload is a Byte — the
+        // "using item" flag, which a skeleton's arrow essentially never sends. The counting now
+        // lives in noticeArrows(), off the tracker's per-tick scan, which is the same source the
+        // dodge already trusts.
     }
 
     /**
@@ -1020,7 +1011,43 @@ public class MobDefenseChain extends SingleTaskChain {
         return target;
     }
 
+    /**
+     * Count each incoming arrow ONCE, at the range it was fired from.
+     *
+     * <p>The tracker rebuilds its projectile list every tick from a world scan, so identity is
+     * what separates "a new shot" from "the same arrow, one tick later" — hence
+     * {@link CachedProjectile#entityId}. The first tick an arrow is visible is within a tick of
+     * the release, so the gap between the bot and the arrow at that moment IS the range it was
+     * shot from, without needing the shooter.
+     *
+     * <p>WHY IT MATTERS: dw already says where arrows LAND (3.79-5.03, max 6.30 — point blank).
+     * It says nothing about the shots that missed. If the distant ones miss, the only lever left
+     * is time inside the killing band; if the skeleton holds fire until close, closing faster buys
+     * nothing at all. The two readings point at opposite fixes, and this is the counter that
+     * separates them.
+     */
+    private void noticeArrows(AltoClef mod) {
+        try {
+            ClientPlayerEntity self = mod.getPlayer();
+            if (self == null) return;
+            Vec3d plyPos = self.getPos();
+            for (CachedProjectile projectile : mod.getEntityTracker().getProjectiles()) {
+                if (projectile.entityId < 0 || projectile.position == null) continue;
+                if (!seenArrowIds.add(projectile.entityId)) continue;
+                int gap = (int) Math.round(Math.sqrt(projectile.position.squaredDistanceTo(plyPos)) * 1000.0);
+                mdArrows++;
+                mdArrowGapMilli += gap;
+                if (gap > mdArrowGapMaxMilli) mdArrowGapMaxMilli = gap;
+            }
+            // The set is per-run state, and a run is bounded; clearing it on reset (with the
+            // counters) is what keeps it from growing across a whole session.
+        } catch (Exception ignored) {
+            // an instrument must never be the thing that breaks a fight
+        }
+    }
+
     private boolean isProjectileClose(AltoClef mod) {
+        noticeArrows(mod);
         List<CachedProjectile> projectiles = mod.getEntityTracker().getProjectiles();
         Vec3d plyPos = mod.getPlayer().getPos();
         try {

@@ -11,6 +11,15 @@ public class CachedProjectile {
     public Vec3d position;
     public double gravity;
     public Type projectileType;
+    /**
+     * The entity id, so a projectile can be told apart from itself a tick later.
+     *
+     * <p>Added for the release-range instrument: the tracker rebuilds this list every tick by
+     * scanning the world, so without an identity every arrow is counted once per tick of flight.
+     * The FIRST tick an arrow appears is within a tick of the shot, which is what makes the gap
+     * at that moment the range it was fired from.
+     */
+    public int entityId = -1;
     private Vec3d cachedHit;
     private boolean cacheHeld = false;
 

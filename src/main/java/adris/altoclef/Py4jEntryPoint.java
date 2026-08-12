@@ -2464,6 +2464,7 @@ public class Py4jEntryPoint {
         adris.altoclef.chains.MobDefenseChain.mdArrows = 0;
         adris.altoclef.chains.MobDefenseChain.mdArrowGapMilli = 0;
         adris.altoclef.chains.MobDefenseChain.mdArrowGapMaxMilli = 0;
+        adris.altoclef.chains.MobDefenseChain.seenArrowIds.clear();
         kaptainwutax.tungsten.task.ProjectileDodge.driveTicks = 0;
         adris.altoclef.chains.MobDefenseChain.mdAuraTungstenTicks = 0;
         adris.altoclef.chains.MobDefenseChain.mdDamageTaken = 0f;
