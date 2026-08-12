@@ -1044,8 +1044,29 @@ public class CombatController {
             }
         }
         boolean canStrafe = strafeSideSafe(player, world, strafeDir);
-        out.left = canStrafe && strafeDir > 0;
-        out.right = canStrafe && strafeDir < 0;
+        // ⛔ A READY SWING OUTRANKS THE ORBIT (behind a pin, default off).
+        //
+        // MEASURED, and it is the end of a chain four other counters could not close. On
+        // mob_skeleton a strafe key is held in ~55% of the ticks where the swing is READY and the
+        // target is OUT of reach — at the same time as forward and sprint. The bot is running
+        // DIAGONALLY, and a 45-degree diagonal leaves only ~70% of the speed pointing at the
+        // target: a 5.6 blocks/s sprint closes at ~3.9 while a skeleton retreats at about 5. The
+        // bot loses ground while honestly holding every key it should.
+        //
+        // Arrows landed on that course is a function of FIGHT LENGTH — the skeleton fires once per
+        // second of draw and does not shoot at the approach at all — so an orbit that adds seconds
+        // is paid for in arrows. Orbiting is a defence worth having; it is not worth having while a
+        // matured swing goes stale out of range.
+        //
+        // Narrow on purpose: only when the swing is ready AND the target is beyond reach. Inside
+        // reach the orbit still runs, so flanking and the rim-safe side choice are untouched, and
+        // nothing changes at all for an opponent the bot is already hitting.
+        boolean readySwingOutOfReach =
+                kaptainwutax.tungsten.TungstenConfig.get().combatCloseOverOrbit
+                && dist > TriggerBot.REACH
+                && player.getAttackCooldownProgress(0f) >= TriggerBot.COOLDOWN_CRIT;
+        out.left = canStrafe && !readySwingOutOfReach && strafeDir > 0;
+        out.right = canStrafe && !readySwingOutOfReach && strafeDir < 0;
         // Neither side strafeable (a 1-wide bridge, a tiny platform) and already at strike
         // distance: keep some motion so we are not a static target, but ONLY into space we
         // have tested. Forward-pulse against the opponent is safe by construction — they are

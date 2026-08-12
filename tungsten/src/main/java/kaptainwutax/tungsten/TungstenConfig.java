@@ -291,6 +291,24 @@ public class TungstenConfig {
     public boolean combatDodgeOnDraw = false;
 
     /**
+     * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).
+     *
+     * <p>The bot holds a strafe key in about 55% of those ticks, together with forward and sprint,
+     * so it travels DIAGONALLY: a 45-degree diagonal leaves ~70% of the speed pointing at the
+     * target, closing at ~3.9 blocks/s against a skeleton that retreats at about 5. It loses ground
+     * while holding every key correctly, which is why four earlier counters could see the waste
+     * (nine ready ticks in ten spent out of reach) and none could explain it.
+     *
+     * <p>On mob_skeleton arrows landed is a function of FIGHT LENGTH — the skeleton fires once per
+     * second of draw and never at the approach — so seconds added by orbiting are paid in arrows.
+     *
+     * <p>Judge with an INTERLEAVED pair (--pin-alt, rule 4r) on BOTH the mechanism and the outcome:
+     * ready=far/near must move, and arrows must follow. If the ratio moves and arrows do not, then
+     * fight length is not what sets arrows here and the chain needs revisiting.
+     */
+    public boolean combatCloseOverOrbit = false;
+
+    /**
      * Hold sprint against a RETREATING SHOOTER until the swing, instead of dropping it at REACH.
      *
      * <p>RESTORED after being deleted, because the refutation judged the wrong quantity. It was
