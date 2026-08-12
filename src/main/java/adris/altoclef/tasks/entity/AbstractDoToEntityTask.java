@@ -122,6 +122,17 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
             // min_hp 14.0).
 
             boolean inRange = mod.getControllerExtras().inRange(entity);
+            // ⭐ CLOSE UNTIL THE SWING GATE IS SATISFIED, NOT UNTIL inRange IS. inRange is 4.5 and
+            // the swing gate's REACH is 3.0, so the branch below used to stop the walk a block and a
+            // half short and leave the bot standing where it cannot hit -- 34.8 ticks a fight,
+            // measured. Combat entities only (maintainDistance < 0); shearing and milking keep the
+            // old arrival test, because their interaction range is not the sword's.
+            if (kaptainwutax.tungsten.TungstenConfig.get().combatCloseToReach
+                    && this.maintainDistance < 0
+                    && sqDist > kaptainwutax.tungsten.combat.TriggerBot.REACH
+                             * kaptainwutax.tungsten.combat.TriggerBot.REACH) {
+                inRange = false;
+            }
 
             // WHICH OF THE FIVE CONDITIONS IS SAYING NO?
             // The bot sat in "Approaching target" for ever with a zombie four blocks away, and the
