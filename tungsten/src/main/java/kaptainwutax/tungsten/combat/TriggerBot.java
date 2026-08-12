@@ -257,6 +257,23 @@ public class TriggerBot {
                         // ticks the orbit is the answer; if they are quiet it is something else.
                         if (mc0.options.leftKey.isPressed() || mc0.options.rightKey.isPressed())
                             gReadyFarStrafeHeld++;
+                        // ⛔ CONFIRMED, 2026-08-12. far/near/dodge/asked  held=fwd/sprint/STRAFE
+                        //   35/3/14/32 28/29/21   32/3/7/32 25/27/15   18/15/0/17 17/17/14
+                        //   22/2/3/20  18/20/4    42/4/7/42 36/36/22   23/4/4/21 22/22/18
+                        //   39/4/9/36  36/37/21
+                        // A strafe key is held in 18-78% of the wasted ticks, ~55% on average,
+                        // AT THE SAME TIME as forward and sprint. The bot is running DIAGONALLY.
+                        //
+                        // And that is fatal here, arithmetically: a 45-degree diagonal leaves only
+                        // ~70% of the speed pointing at the target, so a 5.6 blocks/s sprint closes
+                        // at ~3.9 while a skeleton retreats at about 5. The bot loses ground while
+                        // honestly holding sprint — which is exactly what every earlier counter
+                        // showed and none could explain.
+                        //
+                        // THE FIX THIS POINTS AT (not applied here — this is the counter): the
+                        // circle-strafe must yield while a swing is READY and the target is OUT of
+                        // reach. Orbiting is a defence, and it is being paid for with the one
+                        // resource this course is priced in — time inside the killing band.
                     }
                 } catch (Exception ignored) {
                     // an instrument must never be the thing that breaks a fight
