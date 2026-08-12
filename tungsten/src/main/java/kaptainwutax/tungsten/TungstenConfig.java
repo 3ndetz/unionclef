@@ -253,6 +253,24 @@ public class TungstenConfig {
      * distance tuning is exhausted. Re-measure before trusting either.
      */
     public boolean combatReachControl = true;
+
+    /**
+     * Sidestep on the BOW DRAW instead of on the arrow (default OFF, judged by a pinned pair).
+     *
+     * <p>Every dodge this project has built waits for the arrow, and at the range a skeleton
+     * actually shoots from — measured 4.3-6.3 blocks — an arrow crosses in under two ticks. No
+     * reaction can fit in that, which is the mechanism behind four "refuted" dodge experiments and
+     * the reason the eight movement hypotheses on mob_skeleton all measured nothing.
+     *
+     * <p>The draw is the window that does exist. Measured over six runs: draw count tracks arrow
+     * count one-for-one, the longest draw is exactly 20 ticks in EVERY run, and it begins at
+     * 6.0-9.3 blocks. A full second of warning, before every shot, starting while the bot is still
+     * outside the killing band.
+     *
+     * <p>Judge it on ARROWS LANDED with a pinned same-session pair — in-session sd is 0.37, so
+     * n>=5 an arm separates half an arrow and twelve is comfortable.
+     */
+    public boolean combatDodgeOnDraw = false;
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
      *  If false, only walks (no jumps) — safer but slower. */
     public boolean followJumpingEnabled = true;

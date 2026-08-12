@@ -1130,6 +1130,23 @@ public class MobDefenseChain extends SingleTaskChain {
                     mdDraws++;
                     mdDrawGapMilli += (int) Math.round(e.distanceTo(self) * 1000.0);
                     drawTicksById.put(id, 1);
+                    // ⛔ ACT ON THE DRAW, NOT ON THE ARROW (behind a pin, default off).
+                    // This is the tick the warning starts. Step ACROSS the shooter's line: the
+                    // arrow is aimed where we are now, so lateral movement is what the aim cannot
+                    // follow, and it keeps the bot facing what it is fighting — the swing gate
+                    // refuses past 40 degrees, so a dodge that turns away cannot also attack.
+                    // The side alternates with the draw count so a fight does not walk the bot
+                    // steadily off one edge of the island.
+                    if (kaptainwutax.tungsten.TungstenConfig.get().combatDodgeOnDraw) {
+                        Vec3d fromShooter = self.getPos().subtract(e.getPos());
+                        Vec3d flat = new Vec3d(fromShooter.x, 0, fromShooter.z);
+                        if (flat.lengthSquared() > 1.0e-6) {
+                            Vec3d b = flat.normalize();
+                            double side = (mdDraws % 2 == 0) ? 1.0 : -1.0;
+                            kaptainwutax.tungsten.task.ProjectileDodge.hold(
+                                    -b.z * side, b.x * side, DODGE_HOLD_TICKS);
+                        }
+                    }
                 } else {
                     drawTicksById.put(id, had + 1);
                 }
