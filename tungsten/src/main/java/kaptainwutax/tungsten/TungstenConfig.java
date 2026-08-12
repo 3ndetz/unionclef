@@ -300,9 +300,19 @@ public class TungstenConfig {
      * spent outside 3.0, because reach control computes its closing time from OUR speed while the
      * skeleton retreats at the same speed and the sprint is cut inside REACH.
      *
-     * <p>Judge it THERE. If the ratio does not move, the idea is dead for good. If it moves and
-     * arrows do not, then fight length is not what sets arrows on this course, and the chain of
-     * reasoning that produced this flag needs revisiting — which is worth knowing either way.
+     * <p>⛔ CLOSED, 2026-08-12, by an INTERLEAVED pair (A,B,A,B — checklist rule 4r):
+     * <pre>
+     *   arm A (off)  n=4  arrows 2.12   ready near-share 0.165
+     *   arm B (on)   n=6  arrows 1.83   ready near-share 0.161
+     *   difference +0.29 arrows, SE 0.64  ->  0.46 sigma
+     * </pre>
+     * Nothing, on EITHER measure. The ratio it was restored to move did not move at all, so the
+     * flag does not even do the thing it was written to do. Dead for good, by its own pre-declared
+     * test.
+     *
+     * <p>KEEP IT OFF AND KEEP THIS HISTORY: the same flag read -0.60, +1.92 (3.18 sigma, which
+     * this repo's own bar calls real) and -0.31 across three BLOCKED pairs before the interleaved
+     * one settled it at 0.46. Blocked arms would have shipped a finding here.
      */
     public boolean combatHoldContactOnShooter = false;
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
