@@ -253,34 +253,6 @@ public class TungstenConfig {
      * distance tuning is exhausted. Re-measure before trusting either.
      */
     public boolean combatReachControl = true;
-
-    /**
-     * Hold sprint against a RETREATING SHOOTER until the swing is actually about to fire, instead
-     * of dropping it at {@code TriggerBot.REACH}. Default OFF: it ships inert and is judged with
-     * {@code run_suite.py --pin combatHoldContactOnShooter=true} against the same session's
-     * baseline, because this course's variance lives BETWEEN series (rule 4j).
-     *
-     * WHY THE CURRENT RULE CANNOT HOLD CONTACT WITH A BOW MOB. The mover reads
-     * {@code out.sprint = out.forward && dist > TriggerBot.REACH} — sprint is cut inside 3.0 on
-     * purpose, so a landing blow does not carry sprint knockback (holding sprint throughout was
-     * measured worse: closest_gap 5.73 -> 7.78). Against a zombie that is correct. A skeleton
-     * RETREATS at about a walking bot's speed, so the tick the bot crosses 3.0 and drops to a
-     * walk it falls straight back out into the 3-6 band — which is exactly where its arrows land:
-     * measured gapMean 3.79-5.03, gapMax 6.30, at a flight time no dodge can beat.
-     *
-     * What this changes is only WHEN sprint is dropped: at the swing rather than at reach. The
-     * anti-knockback reason is preserved (the blow still lands unsprinted, which also keeps crits
-     * possible, since a sprinting hit cannot crit), while the bot is allowed to stay in contact.
-     *
-     * Scoped to {@code RangedAttackMob} — vanilla's own marker, the same property the flee guard
-     * asks — so mob_melee and mob_trio are untouched BY CONSTRUCTION: a zombie is not one, and a
-     * player is not one either, so the duels cannot move.
-     *
-     * JUDGE IT ON TIME UNDER FIRE (arrows landed / min_hp), not on pass count: at this course's
-     * pass rate a six-run arm cannot separate anything on verdicts alone.
-     */
-    public boolean combatHoldContactOnShooter = false;
-
     /** Allow sprint-jumping during follow (BFS walker + direct sprint).
      *  If false, only walks (no jumps) — safer but slower. */
     public boolean followJumpingEnabled = true;

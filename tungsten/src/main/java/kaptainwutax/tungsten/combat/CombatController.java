@@ -908,20 +908,26 @@ public class CombatController {
         // it was meant to close. Hence the cut-off is our REACH and not the strike band: sprint
         // across the dead zone, arrive walking, and let the hit land without the extra shove.
         out.sprint = out.forward && dist > TriggerBot.REACH;
-        // ⛔ AND AGAINST A RETREATING SHOOTER THAT CUT-OFF COSTS CONTACT (behind a pin, default off).
-        // The rule above drops sprint at REACH so the blow lands unsprinted. A skeleton retreats at
-        // about a walking bot's speed, so the tick we cross 3.0 and drop to a walk we fall back out
-        // into the 3-6 band — which is precisely where its arrows land (gapMean 3.79-5.03, gapMax
-        // 6.30), at a flight time the dodge cannot beat. Dropping sprint at the SWING instead of at
-        // REACH keeps the blow unsprinted — the whole point of the cut-off, and what keeps crits
-        // possible — while letting the bot stay in contact. RangedAttackMob is vanilla's own marker,
-        // so zombies and players keep the byte-identical old path.
-        if (kaptainwutax.tungsten.TungstenConfig.get().combatHoldContactOnShooter
-                && target instanceof net.minecraft.entity.ai.RangedAttackMob) {
-            boolean swingImminent = dist <= TriggerBot.REACH
-                    && player.getAttackCooldownProgress(0f) >= 0.85f;
-            out.sprint = out.forward && !swingImminent;
-        }
+        // TRIED AND REFUTED, 2026-08-12: holding sprint against a RETREATING SHOOTER until the
+        // swing instead of dropping it at REACH. The argument was sound — a skeleton retreats at
+        // about a walking bot's speed, so the tick the bot crosses 3.0 and slows it falls back
+        // into the 3-6 band where the arrows actually land (gapMean 3.79-5.03, gapMax 6.30, past
+        // what any dodge can beat) — and the blow would still land unsprinted, keeping crits.
+        //
+        // Measured as a PINNED SAME-SESSION PAIR on mob_skeleton, twelve runs an arm, judged on
+        // arrows landed = (20 - min_hp)/4 with the rule written before the data existed:
+        //
+        //     flag off   n=12  mean 1.19 arrows  sd 0.37
+        //     flag on    n=12  mean 1.69 arrows  sd 0.91
+        //     difference -0.50 arrows, SE 0.28 -> 1.77 sigma
+        //
+        // Below the 2-sigma bar, so "no effect at this resolution" — and the sign is the wrong
+        // way round, so there is certainly no case for shipping it. The branch is gone; this note
+        // is what remains, so the next pass does not re-derive it.
+        //
+        // Worth keeping from the exercise: within ONE session the baseline arm's spread is
+        // sd 0.37, against sd 1.20 pooled across series. That gap IS the between-series noise
+        // rule 4j warns about, measured.
 
         // Circle-strafe: orbit the target, flipping direction on a randomised cadence
         // (unpredictable, keeps flanking). If the chosen side is a drop, take the OTHER
