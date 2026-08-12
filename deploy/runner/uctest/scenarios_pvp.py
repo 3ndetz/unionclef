@@ -328,8 +328,17 @@ class ChaseTerrain(Scenario):
     # neither held: every harness call is bounded (sh 30s, batch 30s, screenshot 40s, rcon 20s),
     # and uctest-gamer-server was up and healthy the whole time. Slow, not stuck.
     #
+    # MEASURED on the re-run, so the number is known rather than estimated:
+    #     15:33  dir created, timeline.jsonl 0 bytes
+    #     15:33-15:42  NINE MINUTES at zero bytes — and the rest of the artifacts tree went quiet
+    #                  in stretches too, so "the suite is writing" is not evidence either
+    #     15:42  339 bytes, then 1737 — drive loop entered, course ran normally
+    # The kill landed at eight minutes, i.e. one minute before it would have started working.
+    #
     # If you suspect this course, TIME IT rather than killing it, and judge by whether the file
-    # GROWS, not by whether it exists.
+    # GROWS, not by whether it exists. Note also that "the suite is alive" and "THIS COURSE is
+    # alive" are different claims: during this setup phase both can be silent, so silence proves
+    # nothing in either direction. Only completion does.
     duration = 180
     world = "gamer"            # real world generator
     builds_arena = False       # play the terrain as generated
