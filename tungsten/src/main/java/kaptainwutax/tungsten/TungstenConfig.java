@@ -378,24 +378,6 @@ public class TungstenConfig {
      *  this is testable at all; fix the timing, prove it on melee_basic, then turn it on. */
     public boolean combatShieldEnabled = false;
 
-    /**
-     * Does close-quarters positioning use GROUND distance instead of eye-to-hitbox?
-     *
-     * <p>ON is the shipped behaviour. eyeToHitbox is 3D from the eye, so a hop of about 1.25 blocks
-     * turns a 3.0 ground gap into 3.25 -- and the hop counters say the bot is airborne for 78-100%
-     * of the ticks that matter, so the range control was reacting to its own altitude. TriggerBot
-     * keeps the exact 3D test either way; only the decision about where to STAND changes.
-     *
-     * <p>A FLAG BECAUSE IT IS UNPROVEN. It was kept on mechanism alone: its pass-rate evidence did
-     * not survive a follow-up series. Settle it the way the point-blank sidestep was settled --
-     * both arms in ONE session, since cross-session comparison on these courses is worthless
-     * (checklist 4j):
-     *     run_suite.py mob --only mob_skeleton --repeat 20
-     *     run_suite.py mob --only mob_skeleton --repeat 20 --pin combatGroundDistance=false
-     * If it measures nothing, REVERT it -- it also changes every pvp duel, so unproven is not free.
-     */
-    public boolean combatGroundDistance = true;
-
     /** No-placing zones: [x1,y1,z1,x2,y2,z2] boxes (inclusive, any corner order).
      *  Protected areas (claims/privates) — the mod never places here. Paired with
      *  breakDenyZones so markProtectedArea can lock both mining and building. */

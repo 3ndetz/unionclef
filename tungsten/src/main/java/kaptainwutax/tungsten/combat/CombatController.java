@@ -525,54 +525,25 @@ public class CombatController {
         }
 
         long now = System.currentTimeMillis();
-        // ⛔ POSITIONING USES GROUND DISTANCE. HITTING KEEPS THE EXACT 3D TEST.
+        // ⛔ GROUND-DISTANCE POSITIONING: TRIED, MEASURED AT n=40 AN ARM, REVERTED.
         //
-        // The argument is sound and the measurement will not carry it. eyeToHitbox is measured from
-        // the EYE, so a hop of about 1.25 blocks adds a vertical leg: a target 3.0 away on the
-        // ground reads sqrt(3.0^2 + 1.25^2) = 3.25 at the apex. The hop counters say the bot is
-        // airborne for 78-100% of the ticks that matter (hop=9/7/.., 9/8/.., 9/9/..), so this
-        // reading swings by half a block for reasons unrelated to where either fighter stands, and
-        // the range control below then presses forward and back in response to the bot's OWN jump.
+        // The argument was sound and is still sound: eyeToHitbox is 3D from the EYE, so a hop of
+        // about 1.25 blocks turns a 3.0 ground gap into 3.25, and the hop counters say the bot is
+        // airborne for 78-100% of the ticks that matter -- so the range control was reacting to its
+        // own altitude. Positioning on ground distance, with TriggerBot keeping the exact 3D test,
+        // removes that. It measured NOTHING:
         //
-        // The patch is four lines -- clamp the player's x/z into the target box and take the
-        // horizontal distance -- leaving TriggerBot's exact 3D test alone, because hitting must
-        // keep the true measure while positioning should not chase its own altitude.
+        //     first pair   ON 1.10  OFF 1.43   n=20 an arm   (0.33, 1.33 sigma -- looked real)
+        //     pooled       ON 1.22  OFF 1.33   n=40 an arm   (0.11, 0.53 sigma -- nothing)
         //
-        // JUDGED ON A FINER RULER THAN PASS/FAIL, because pass counts cannot resolve anything on
-        // this course -- the same build has produced 3/6, 0/6, 2/12 and 2/12. Two statistics with
-        // many more events per run, over n=13 an arm:
+        // Both arms same session, same clients, differing only by a pin, per checklist 4j. The
+        // first pair is the whole lesson: 1.33 sigma at n=20 with a good mechanism behind it is
+        // exactly what this work has shipped on three times and retracted three times. Doubling n
+        // halved the effect.
         //
-        //     shipped   passes 2/13   min_hp median 13   exposure ticks median 15
-        //     with this passes 5/13   min_hp median 12   exposure ticks median 12
-        //
-        // (exposure = mdRet2, ticks the dodge branch owned, i.e. time under arrow threat.) More
-        // than twice the passes on equal n with slightly lower exposure. Not significant on its
-        // own -- Fisher gives about 0.19 -- but it is the only candidate here with the mechanism
-        // AND the numbers pointing the same way, and four alternatives have been refuted outright.
-        //
-        // ⛔ AND THE FOLLOW-UP SERIES DOES NOT HOLD IT UP. A fresh n=12 on the SHIPPED build reads
-        // 1/12, against the 5/13 that justified shipping. Pooled over every series on this build the
-        // course sits at about 6/25 (~24%), and no single change here has been shown to move that
-        // rate reliably. The 5/13 was a favourable draw, which is exactly the failure mode checklist
-        // 4b describes and which the p~0.19 stated at the time already warned about.
-        //
-        // KEPT ON THE MECHANISM, NOT ON THE NUMBERS: positioning must not chase its own altitude,
-        // and eyeToHitbox provably does while the bot is airborne 78-100% of the ticks that matter.
-        // Its baselines are clean (nav 12/12, craft 11/12, melee_basic 4/5 on re-test). If a later
-        // pass finds a reason to revert it, the numbers above are the honest record -- do not quote
-        // the 5/13 alone.
-        //
-        // BLAST RADIUS, since `dist` also feeds the sprint cut-off, tooClose and kite: this changes
-        // every pvp duel too, so it does not ship without a pvp baseline. See the commit.
+        // So the eye-vs-ground asymmetry is REAL and does not matter at this bench's resolution.
+        // Do not re-open it without a course where the bot's altitude actually decides reach.
         double dist = TriggerBot.eyeToHitbox(player, target);
-        if (TungstenConfig.get().combatGroundDistance) {
-            net.minecraft.util.math.Box tb = target.getBoundingBox();
-            double px = player.getEntityPos().x, pz = player.getEntityPos().z;
-            double cx = net.minecraft.util.math.MathHelper.clamp(px, tb.minX, tb.maxX);
-            double cz = net.minecraft.util.math.MathHelper.clamp(pz, tb.minZ, tb.maxZ);
-            double dx = px - cx, dz = pz - cz;
-            dist = Math.sqrt(dx * dx + dz * dz);
-        }
 
 
 
