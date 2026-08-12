@@ -77,6 +77,26 @@ services:
       # makes is read over py4j or rcon, not off the pixels.
       DISPLAY_WIDTH: "854"
       DISPLAY_HEIGHT: "480"
+      # ⛔ AND THE RESOLUTION IS NOT THE WHOLE STORY: THE FRAME RATE IS A SWITCH (2026-08-13).
+      # Measured over one 16-run series: ten runs at 9-10 fps, three at 28.5-29, and NOTHING in
+      # between. A fill-rate ceiling gives one smeared mode; two clean clusters with an empty gap
+      # is a binary condition that is either on or off for a whole run.
+      #
+      # Two candidates measured and REFUTED, so nobody spends another session on them:
+      #   - foreign load / the second client: docker stats mid-run reads tester1 at 44% of a core
+      #     and tester2 at 32%, on a 24-core host. That cannot take two thirds of the frame rate.
+      #   - this very setting: /proc says the X server is running -geometry 854x480 while BOTH
+      #     modes appear in the same series on the same container. The geometry is constant and the
+      #     frame rate still thirds, so the switch is inside the client, not in X.
+      #
+      # THE CANDIDATE THAT FITS: Minecraft throttles its frame rate when the window loses focus.
+      # In a headless VNC session whether the window ever gains focus is decided at startup and
+      # lasts that client's life -- which is exactly the shape of the data. Test it by forcing focus
+      # (or disabling the unfocused cap) and reading avg_fps; if the 9-10 cluster disappears, the
+      # bench stops discarding ~40% of its launches and every A/B here gets twice as cheap.
+      #
+      # Worth the effort: the arm size for a 1-arrow effect is 12 runs, and at a 40% loss that is
+      # 20 launches for one arm of one hypothesis.
     ports:
       # Host ports are overridable: a dev box often already runs a real MC client
       # (which holds the in-mod MCP port) and the stand must not fight it for the
