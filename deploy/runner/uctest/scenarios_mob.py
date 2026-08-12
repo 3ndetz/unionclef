@@ -545,6 +545,20 @@ class SkeletonDodge(MobMelee):
         sx, sy, sz = float(m.group(1)), float(m.group(2)), float(m.group(3))
         ctx.geo["skel_last"] = [round(sx, 1), round(sy, 1), round(sz, 1)]
         ctx.geo["skel_polls"] = ctx.geo.get("skel_polls", 0) + 1
+        # ⛔ AND ITS HEALTH, BECAUSE "GONE" STILL DOES NOT SAY "KILLED".
+        # Three runs have now ended with the skeleton unobserved and the bot untouched while only
+        # one or two swings landed -- against a 20 HP target that does not die to that. Persistence
+        # closed the despawn path and the wider field closed the void one, so something else ends
+        # those runs. The last health reading separates the cases without any more guessing: a
+        # skeleton last seen at 6 HP was being killed, one last seen at 20 was not.
+        hp = ctx.rcon.cmd("execute in minecraft:overworld run data get entity "
+                          "@e[type=skeleton,limit=1] Health", allow_reject=True)
+        mh = re.search(r"([0-9.]+)f?\s*$", str(hp or "").strip())
+        if mh:
+            try:
+                ctx.geo["skel_last_hp"] = float(mh.group(1))
+            except ValueError:
+                pass
         lo = ctx.geo.get("skel_min_y")
         if lo is None or sy < lo:
             ctx.geo["skel_min_y"] = sy
@@ -604,8 +618,8 @@ class SkeletonDodge(MobMelee):
             last is not None and (abs(last[0]) > edge or abs(last[2]) > edge))
         yield Criterion("the skeleton died on the arena, not in the void",
                         last is not None and not fell,
-                        f"last_seen={last} min_y={floor_y} polls={polls} "
-                        f"floor={STAND_Y} edge=+-{edge}")
+                        f"last_seen={last} last_hp={ctx.geo.get('skel_last_hp')} "
+                        f"min_y={floor_y} polls={polls} floor={STAND_Y} edge=+-{edge}")
         # ⛔ THE COURSE MUST NOT PASS AGAINST A STATUE. See drive_start: an inert skeleton once
         # gave six straight passes at min_hp=20. If nothing was ever shot at us, this course
         # measured nothing, so it is GATED rather than recorded.
