@@ -122,7 +122,7 @@ public class TriggerBot {
      * ratio does not move, the idea is dead for good; if it does and arrows still do not, then
      * fight length is not what sets arrows and the whole chain above needs revisiting.
      */
-    public static volatile int gReadyFar, gReadyNear, gReadyFarDodging, gReadyFarWalking;
+    public static volatile int gReadyFar, gReadyNear, gReadyFarDodging, gReadyFarWalking, gReadyFarSprintHeld, gReadyFarFwdHeld;
     /** Charge carried by the swings that PASSED, and how many took the early crit-window
      *  threshold. Divide the sum by gPassed for the mean -- these two are the difference between
      *  "we swing undercharged" as a theory and as a number. Note the means above (angleMean,
@@ -242,6 +242,19 @@ public class TriggerBot {
                 // not a mechanism.
                 if (kaptainwutax.tungsten.task.ProjectileDodge.isActive()) gReadyFarDodging++;
                 if (CombatController.lastForwardPressed) gReadyFarWalking++;
+                // ...AND WHAT THE GAME ACTUALLY HOLDS, not what the controller resolved. The two
+                // differ exactly when a later writer strips the key -- pitfall P1, which has
+                // already invalidated four dodge experiments here by wiping presses before the
+                // game read them. Asked-vs-held is the whole question now, so read the option.
+                try {
+                    net.minecraft.client.MinecraftClient mc0 = MinecraftClient.getInstance();
+                    if (mc0 != null && mc0.options != null) {
+                        if (mc0.options.sprintKey.isPressed()) gReadyFarSprintHeld++;
+                        if (mc0.options.forwardKey.isPressed()) gReadyFarFwdHeld++;
+                    }
+                } catch (Exception ignored) {
+                    // an instrument must never be the thing that breaks a fight
+                }
                 // ⛔ ANSWERED, 2026-08-12, and it clears every consumer of suspicion:
                 //     far/near/dodging/WALKING
                 //     20/5/5/17   21/4/0/21   39/4/0/37   13/7/0/13   40/9/8/40   31/5/5/29
