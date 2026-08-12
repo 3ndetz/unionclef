@@ -843,6 +843,27 @@ class SkeletonDodge(MobMelee):
         # produced a 3.18 sigma artefact that interleaving cut to 0.46, so pooling a trustworthy
         # estimate with an untrusted one imports the bias the interleaving exists to remove.
         #
+        # ⛔⛔ THE "FLOOR" BELOW WAS MY ARITHMETIC, AND THE INSTRUMENTS REFUTE IT (2026-08-13).
+        # I claimed the exchange costs 36 ticks and therefore ~0.9 shots, so the bot must already be
+        # at the physical minimum. Then I read the counters instead of the calculator, 25 valid runs:
+        #     arrows FIRED  3.00     draws started 3.36     arrows LANDED 1.10 (37% hit rate)
+        #     band ticks (2.5-7.0)  134.9  ==  3.4 shot cycles, NOT 0.9
+        # The bot spends 135 ticks inside the killing band while the kill itself needs 36. The floor
+        # is not reached: it is missed by about 100 ticks, and those ~100 ticks buy the skeleton two
+        # extra shots. Substituting one arithmetic step for a measurement is the same mistake this
+        # session has already paid for three times.
+        #
+        # ⭐ WHICH MAKES THE TARGET REACHABLE AND NAMES IT PRECISELY. Cut time in the band from ~135
+        # ticks to ~40 and the skeleton releases ONCE; at a 37% hit rate that is a one-in-three
+        # chance of an arrow, i.e. zero on most runs. That is a 3x reduction in a measured quantity,
+        # not a fraction of an arrow.
+        #
+        # ⭐ AND IT EXPLAINS WHY BOTH OF TODAY'S HYPOTHESES FAILED: both altered the APPROACH, and
+        # 135 band ticks are not the approach -- they are the fight itself. The question for the next
+        # pass is not how to arrive faster but why arrival-to-kill takes 135 ticks when three swings
+        # need 36. Look at what the controller does between swings inside 7 blocks.
+        #
+        # ⛔ THE OLD, WRONG PARAGRAPH IS KEPT BELOW so the correction is legible rather than silent.
         # ⛔⭐ THE BOT IS AT THE PHYSICAL FLOOR, AND THE GATE ASKS FOR BELOW IT (2026-08-13).
         # Two full-power interleaved series, 26 runs each, arms of 12-13, one invalid between them:
         #     engage band      A 1.96 -> after the rig fix, baseline settles at ~1.0-1.2 arrows
