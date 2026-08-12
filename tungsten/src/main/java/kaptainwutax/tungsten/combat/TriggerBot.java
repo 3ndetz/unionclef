@@ -255,6 +255,22 @@ public class TriggerBot {
                 } catch (Exception ignored) {
                     // an instrument must never be the thing that breaks a fight
                 }
+                // ⛔ ANSWERED, 2026-08-12: THE KEYS REACH THE GAME. far/near/dodge/asked held=f/s
+                //   41/4/0/36 h=37/34   20/3/2/18 h=16/16   19/3/2/19 h=14/14
+                //   30/7/8/28 h=25/25   34/6/0/32 h=34/34   19/10/5/14 h=19/19
+                // Forward is held as often as it is asked, and SPRINT is held with it almost every
+                // tick. So pitfall P1 is cleared here: the bot really is running, at sprint, while
+                // a matured swing sits out of reach against a mob that only walks.
+                //
+                // Therefore the distance is not lost to SPEED but to DIRECTION, and one mechanism
+                // in this file does exactly that: the circle-strafe below, which orbits the target.
+                // Moving tangentially with forward held keeps the gap constant indefinitely and
+                // would produce every number above.
+                //
+                // NEXT MEASUREMENT (do not fix on this paragraph — it is a candidate, and the last
+                // two candidates that looked this good were wrong): count left/right key holds in
+                // this same branch. Orbiting shows as a strafe key held through the wasted ticks;
+                // if the strafe keys are quiet, the loss is somewhere else again.
                 // ⛔ ANSWERED, 2026-08-12, and it clears every consumer of suspicion:
                 //     far/near/dodging/WALKING
                 //     20/5/5/17   21/4/0/21   39/4/0/37   13/7/0/13   40/9/8/40   31/5/5/29
