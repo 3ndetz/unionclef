@@ -689,6 +689,40 @@ The rule:
 5. Keep the gate as it is. It answers its own question correctly; it just must not be the only number
    the comparison gets.
 
+## 4n. ⛔ A GATE THAT TESTS FOR AN ABSENCE CAN BE SATISFIED BY THINGS THAT ARE NOT SUCCESS (2026-08-12)
+
+`mob_skeleton` gated on **"the skeleton is dead"**, implemented — like its `early_stop` — as *is the
+entity gone*. Both readings are correct. Neither measures the bot.
+
+Landed swings against the verdict, one series:
+
+```
+FAIL min_hp=13   3 swings landed        FAIL min_hp=12   3 landed
+PASS min_hp=20   2 landed               FAIL min_hp=20   1 landed, never observed alive
+```
+
+A skeleton has 20 HP and does not die to one swing. **The runs scoring PERFECTLY were the runs
+where the bot barely fought.** The target was leaving on its own — over the rim of a floating
+arena, and after that was fixed, by despawning past 32 blocks while it retreated. Both removals
+also stop it shooting, so "the bot took no damage" and "the bot did nothing" produced identical
+scores. The course had been reporting its best possible result for the fight not happening.
+
+The rule, for any criterion phrased as an absence — entity gone, counter at zero, no errors in
+the log, queue empty:
+
+1. **Enumerate every way the observable can occur WITHOUT the behaviour under test.** For a dead
+   mob in Minecraft that is at minimum: killed, fell out of the world, despawned, burned in
+   daylight, killed by another mob, never spawned. Each one needs either a gate or a mechanism
+   that makes it impossible.
+2. **Prefer removing the alternative to detecting it.** `PersistenceRequired:1b` and a wider field
+   are worth more than any amount of after-the-fact classification, because they turn "gone" back
+   into "killed" by construction.
+3. **Pair the absence with a positive counter that must agree.** Swings landed against the
+   target's HP is what exposed this; the gate alone never could.
+4. **A criterion must fail on missing data.** Spelled `not fell`, the void check passed four runs
+   out of four on `last_seen=None`. Spelled "was seen alive on the arena", absence of evidence
+   fails, which is the honest verdict. Same defect as the `awake` half that could not fail (4m).
+
 ## 5. VIDEO
 
 `--record` on the run, then:
