@@ -110,6 +110,19 @@ public class ProjectileDodge {
         mc.options.sprintKey.setPressed(fwd > DEADZONE);
         driveTicks++;
 
+        // ⛔ KNOWN DEFECT, FOUND BY RE-READING, NOT YET FIXED OR MEASURED.
+        //
+        // This clear runs at the FINAL-WORD position, i.e. after MovementQueue has already pressed
+        // its keys for this tick. So on the tick a dodge expires we wipe the WALKER's movement too
+        // and the bot stalls for one tick. Same "two writers, last one wins" family as the bug this
+        // primitive exists to fix -- one layer down, and caused by the fix.
+        //
+        // Not patched blind: the obvious cure (stop setting the keys instead of clearing them)
+        // leaves them stuck pressed whenever nothing else writes them that tick, which is worse.
+        // A correct version must release only what THIS primitive pressed, and only when no other
+        // owner is driving -- and it has to be measured, because a one-tick stall a few times a
+        // fight is exactly the size of effect this course cannot resolve without a pinned
+        // same-session A/B (checklist 4j).
         if (holdTicks == 0) {
             clearKeys();
         }
