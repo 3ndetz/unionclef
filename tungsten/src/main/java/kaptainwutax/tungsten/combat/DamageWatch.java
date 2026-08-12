@@ -33,6 +33,10 @@ public final class DamageWatch {
     public static volatile double damage;
     /** Centre-to-centre gap to the nearest other living entity when a hit landed. */
     public static volatile double gapSum, gapMax;
+    /** Beyond this there is no living attacker to blame: a bow carries ~16 blocks, melee 4.5. */
+    private static final double NO_BLAME_RADIUS = 32.0;
+    /** Health drops with no living entity within {@link #NO_BLAME_RADIUS} -- falls, void, fire. */
+    public static volatile int unattributedHits;
     /** Hits that landed while the gap was already beyond melee reach — i.e. not a sword. */
     public static volatile int rangedHits;
     /**
@@ -121,6 +125,7 @@ public final class DamageWatch {
         gapSum = 0;
         gapMax = 0;
         rangedHits = 0;
+        unattributedHits = 0;
         deathsSeen = 0;
         lastHealth = -1f;
         voidTicks = 0;
@@ -151,10 +156,22 @@ public final class DamageWatch {
             winHpLost += lastHealth - hp;
             damage += lastHealth - hp;
             double gap = nearestLivingGap(player);
-            if (gap >= 0) {
+            // ⛔ A HIT WITH NOBODY NEAR IT IS NOT A LONG-RANGE HIT, IT IS NON-COMBAT DAMAGE.
+            // The gap is the distance to the closest OTHER living entity, so once the target is
+            // dead the closest living thing is whatever else the world holds -- on the bench, the
+            // second tester client parked across the map. Fall damage after a kill was therefore
+            // recorded as a hit from ~63 blocks, which the suite's stand-sanity guard read as an
+            // emptied arena and voided the run: seven of fourteen in one series.
+            // Nothing alive deals damage from 32 blocks (a bow carries ~16, melee 4.5), so beyond
+            // that there was no attacker and the sample says nothing about where the threat was.
+            // Dropped rather than recorded -- and COUNTED while dropped, because a sample that
+            // disappears silently is the same defect as a counter that silently reads zero.
+            if (gap >= 0 && gap <= NO_BLAME_RADIUS) {
                 gapSum += gap;
                 if (gap > gapMax) gapMax = gap;
                 if (gap > MELEE_REACH) rangedHits++;
+            } else {
+                unattributedHits++;
             }
         }
         lastHealth = hp;
