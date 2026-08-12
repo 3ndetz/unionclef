@@ -843,6 +843,28 @@ class SkeletonDodge(MobMelee):
         # produced a 3.18 sigma artefact that interleaving cut to 0.46, so pooling a trustworthy
         # estimate with an untrusted one imports the bias the interleaving exists to remove.
         #
+        # ⭐⭐ WHERE THE HUNDRED EXTRA TICKS GO, MEASURED OVER 25 RUNS (2026-08-13):
+        #     band ticks (2.5-7.0)      134.9
+        #     controller ticks           43.8   <- the fight only runs for a THIRD of the exposure
+        #     gate evaluations           50.6
+        #     of which  reach   34.8  |  cd 19.3  |  angle 7.8  |  los 0.0  |  passed 2.36
+        #
+        # Two distinct losses, and they need different fixes:
+        #   (1) ~91 ticks are spent INSIDE the killing band with the combat controller not ticking at
+        #       all -- the gap between the band (2.5-7.0) and the engage test (inRange, 4.5).
+        #   (2) inside the 44 ticks it does run, the single biggest refusal is REACH: 34.8 ticks of
+        #       "controller running, target not reachable". The bot is sitting at 4.5-7 blocks and
+        #       not closing the last two and a half.
+        #
+        # ⛔ THIS IS ALSO WHY combatEngageBand DID NOT WORK DESPITE AIMING AT THE RIGHT PLACE. It
+        # switched the controller ON across those 91 ticks -- but the controller does not CLOSE, it
+        # STRIKES. Running it where the target is out of reach only moves the waiting from one
+        # counter to another, which is exactly what +0.88 arrows at 1.90 sigma looks like.
+        #
+        # THE NEXT PASS'S TARGET IS THE 34.8: who is responsible for the last 2.5 blocks, and why
+        # does the bot hold at the outer edge of the band instead of stepping in. Not the approach
+        # (measured, refuted twice today), not the swing quality (3 swings = 18 damage exactly).
+        #
         # ⛔⛔ THE "FLOOR" BELOW WAS MY ARITHMETIC, AND THE INSTRUMENTS REFUTE IT (2026-08-13).
         # I claimed the exchange costs 36 ticks and therefore ~0.9 shots, so the bot must already be
         # at the physical minimum. Then I read the counters instead of the calculator, 25 valid runs:
