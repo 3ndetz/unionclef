@@ -740,6 +740,26 @@ class SkeletonDodge(MobMelee):
         # belongs to a pass that is not holding the result. What IS established: the course's
         # other two criteria (the skeleton dies, tungsten takes the legs) now pass in every run,
         # so min_hp is the only thing keeping it red.
+        # ⛔⭐ THE COURSE HAS BEEN GREEN. TWICE, ON THE SHIPPED BUILD (2026-08-13).
+        # Runs 5 and 11 of a 16-launch series: min_hp=20.0, no arrow landed, no criterion failed,
+        # "=> mob_skeleton: PASS". So the target is REACHABLE with the code as it stands, and the
+        # threshold below - the one whose arithmetic reads as unreachable - is not what is holding
+        # the course red. That settles a question this file has argued with itself about for days.
+        #
+        # WHAT IT IS NOT: it is not a bot change. The DamageWatch fix of the same day was
+        # deliberately not deployed while the series ran, so all sixteen launches used the jar that
+        # had been failing. Nothing about the fighter improved between 1.67 arrows and 0.60.
+        #
+        # WHAT MOVED: six of sixteen launches survived validity, and in them the unpinned arm reads
+        # mean 0.60 arrows [1,1,0,1,0] against 1.67 [1.75,1.0,2.25] in the previous series on the
+        # same code. That is over an arrow of movement with nothing changed but which runs counted,
+        # which is the pooled sd of 1.20 doing exactly what the arm-size note predicts. Treat 0.60
+        # as one more draw from a wide distribution, not as a new baseline.
+        #
+        # THE ARMS COLLAPSED: the invalids fell almost entirely on one side, leaving A with five
+        # valid runs and B with ONE. This series says nothing whatever about combatEngageBand -
+        # ab_arrows.py refuses to judge an arm of one, and so should any reader.
+        #
         # ⛔ THE ENGAGE BAND, MEASURED INTERLEAVED: +0.79 ARROWS AT 1.70 SIGMA (2026-08-12).
         # Ten runs, arms A,B,A,B so a drifting stand cannot masquerade as an effect; three dropped by
         # the validity floor. Flag off: n=3, mean 1.67 arrows. Flag on: n=4, mean 0.88. The rule in
