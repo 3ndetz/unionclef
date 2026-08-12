@@ -1173,6 +1173,14 @@ public class MobDefenseChain extends SingleTaskChain {
                     if (!entity.isInRange(player, SAFE_KEEP_DISTANCE * 1.5)) continue;
                     if (mod.getBehaviour().shouldExcludeFromForcefield(entity)) continue;
                     if (!EntityHelper.isAngryAtPlayer(mod, entity)) continue;
+                    // ⛔ BOUNDARY WORTH KNOWING: this scan reaches SAFE_KEEP_DISTANCE * 1.5 = 12.0
+                    // blocks, and mob_skeleton spawns its skeleton at 12.5. So during the opening
+                    // of the very course this guard was written for, the shooter is OUTSIDE the
+                    // radius and the flee reflex is not declined. It has not bitten -- mdRet3 read
+                    // 0 in all thirteen runs, i.e. flee never fired there anyway -- but the guard
+                    // is narrower than its own test case, and a course that spawned a shooter at 14
+                    // would exercise the reflex this is supposed to suppress. Widen it against a
+                    // measurement, not on sight: the radius is shared with the danger test above.
                     if (entity instanceof net.minecraft.entity.ai.RangedAttackMob) {
                         sawShooter = true;
                     } else {
