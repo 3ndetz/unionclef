@@ -565,7 +565,7 @@ public class CombatController {
         // BLAST RADIUS, since `dist` also feeds the sprint cut-off, tooClose and kite: this changes
         // every pvp duel too, so it does not ship without a pvp baseline. See the commit.
         double dist = TriggerBot.eyeToHitbox(player, target);
-        {
+        if (TungstenConfig.get().combatGroundDistance) {
             net.minecraft.util.math.Box tb = target.getBoundingBox();
             double px = player.getEntityPos().x, pz = player.getEntityPos().z;
             double cx = net.minecraft.util.math.MathHelper.clamp(px, tb.minX, tb.maxX);
