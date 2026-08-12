@@ -102,6 +102,25 @@ public class MobDefenseChain extends SingleTaskChain {
      * mdDrawMaxTicks and mdDrawTicks — how LONG the warning lasts, which is the whole question;
      * mdDrawGapMilli — the range at the moment the draw starts, to be compared with the 4.4-5.6
      * the shots are released from.
+     *
+     * <p>⛔ ANSWERED, 2026-08-12, and the warning is real. Six runs:
+     * <pre>
+     *   arrows n/mean/max      draws n/ticks/MAX/meanGap     min_hp
+     *   4 / 5.62 / 6.28        4 / 79  / 20 / 7.30            11
+     *   7 / 6.27 / 8.19        8 / 151 / 20 / 6.05            17
+     *   20 / 9.45 / 12.30      21 / 409 / 20 / 9.25           16
+     *   4 / 4.61 / 5.22        5 / 87  / 20 / 6.40             8
+     *   2 / 4.30 / 5.42        3 / 45  / 20 / 7.57            16
+     *   6 / 5.30 / 6.35        6 / 120 / 20 / 6.47            16
+     * </pre>
+     * Draw count tracks arrow count, so EVERY shot is preceded by a draw. The longest draw is
+     * exactly 20 ticks in all six runs — a full second, every time, not a lucky sample. And it
+     * BEGINS at 6.0-9.3 blocks while the shot leaves at 4.3-6.3: the skeleton starts aiming while
+     * the bot is still out, and the bot closes under an already-drawn bow.
+     *
+     * <p>So the reaction window is one second wide and starts at a comfortable range, against the
+     * under-two-ticks a fired arrow allows. That is the difference between a dodge that cannot
+     * work and one that can.
      */
     public static volatile int mdDraws, mdDrawTicks, mdDrawMaxTicks, mdDrawGapMilli;
     private static final java.util.Map<Integer, Integer> drawTicksById =
