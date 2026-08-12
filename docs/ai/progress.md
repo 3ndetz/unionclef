@@ -1,5 +1,51 @@
 # Progress
 
+## SESSION 2026-08-12 (later) — the course was invalid, and the retreat stage was on all fight
+
+INVESTIGATE: started by applying this repo's own rule 4k for the first time — opening `fail.png`
+instead of reading more counters. The arena turned out to be a **floating island over the void**,
+which is not visible in any number the suite prints.
+
+That one look unlocked the chain:
+
+1. **The course scored its BEST result when the fight did not happen.** "The skeleton is dead" and
+   `early_stop` both test *is the entity gone*, and vanilla offers two ways to be gone without
+   losing: falling off the island (last seen x=13.7 with the rim at 14, every run) and despawning
+   past 32 blocks. Both also stop it shooting, so `min_hp` read 20. Proof was landed swings against
+   a 20 HP target: the PASSes had 1-2 landed, the honest fights had 3.
+   Found only because the position sampler — dead since it was written, printing `closest_gap=None`
+   for several sessions — was moved off `drive_tick`'s 2 s cadence onto `early_stop`'s poll.
+   Fixed: own arena at half=30, `PersistenceRequired:1b`, and a void gate that demands POSITIVE
+   evidence (spelled `not fell` it passed 4/4 on `last_seen=None` — the dead-`awake` shape again).
+   Honest baseline on the repaired course: **1/6**.
+
+2. **`danger` still dominated `reposition` on the widened field** (69/144/170/222/244, 1984 once),
+   ten blocks clear of any edge — so "the bot reacts to the rim" was wrong. Reading the estimate
+   found the real cause: `simulateKnockback` integrates 15 ticks of gravity with **no collision**.
+   Replaying it: the arc peaks at +1.153 and ends at **-2.331**, and `fallHeight` is then measured
+   from that sunken point. On solid ground it lands inside blocks and reads 0 — invisible. On a thin
+   slab it is 2.33 below the floor with void underneath, so `DANGER_BATTLE` was engaged EVERY TICK,
+   steering the bot along `getRetreatPath()` — away from the target — for the whole fight.
+   Fixed by letting the simulated body land. Measured, same course, same arena both arms:
+   `danger` 69-1984 -> **0 in all six**, `reposition` 39-92 -> **0**, aim owner `enemy` 0-9 -> 55-76.
+   **Score 1/6 -> 1/6.** A real defect, and not the one keeping this red — both halves recorded.
+
+3. **Where the damage actually comes from**, fixed build, n=6: arrows land at `gapMean` 3.79-5.03,
+   `gapMax` 6.30, with `dodgeDrive` 10-39. The dodge fires and cannot beat the flight time at four
+   blocks. So the lever is not the dodge; it is not being in that band. Mechanism: sprint is cut
+   inside REACH so the blow lands unsprinted, but a skeleton retreats at a walking bot's speed, so
+   the tick the bot slows it falls back into the 3-6 band. Written behind
+   `combatHoldContactOnShooter` (default OFF, unmeasured) — drops sprint at the SWING instead of at
+   REACH, scoped to `RangedAttackMob` so zombies and duels are byte-identical.
+
+AUDIT — two of six "defects" from the earlier code-reading pass were defects only in the reading
+(the shooter guard's radius, and registering `ProjectileDodge` in `tungsten$driving`). Both closed
+with the reasoning left at the site. Worth remembering the next time a reading pass yields a list.
+
+Rules added: **4n** (a gate testing an ABSENCE can be satisfied by things that are not success) and
+**4o** (a check cycle is seconds, a bench course is minutes — stop polling; written from my own
+loop this session).
+
 ## SESSION 2026-08-11/12 — mob_skeleton: from 0/N to passing, and four wrong headlines
 
 INVESTIGATE: the course had never passed since it was written. Instrumented the swing gate, the
