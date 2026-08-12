@@ -956,3 +956,33 @@ The rule:
    means the causal story is wrong even when the p-value is pretty.
 3. A 3-sigma result that contradicts an earlier 1.8-sigma result of the opposite sign is not two
    findings — it is one unresolved question. Resolve it before it becomes a headline.
+
+## 4r. ⛔ BLOCKED ARMS CONFOUND THE FLAG WITH TIME — INTERLEAVE THEM (2026-08-12)
+
+Rule 4q said to order-swap before believing a pinned pair. Doing that produced the answer, and it is
+worse than a confounded order: the SAME flag measured three times, honestly, same session each time:
+
+```
+pair 1   A first, B second     off 0.79   on 1.40   -0.60 arrows
+pair 2   A first, B second     off 2.42   on 0.50   +1.92 arrows   (3.18 sigma, "real")
+pair 3   B FIRST, A second     off 2.00   on 2.31   -0.31 arrows
+```
+
+Three answers, two signs, a fourfold spread — and the winner does not even follow position (second
+arm worse in pair 1, better in pairs 2 and 3). There is no effect here; there is DRIFT BETWEEN
+ARMS large enough to swamp anything the flag does.
+
+The design is what failed, and it was mine: the arms ran as BLOCKS — six runs of A, then six of B —
+so "which flag" is inseparable from "when in the session". Every pinned pair in this repo has been
+run that way, including the two that were reported today.
+
+The rule:
+
+1. **INTERLEAVE the arms: A, B, A, B, ...** Then any drift over the session lands on both arms
+   equally and subtracts out. Blocked arms cannot do this, however large n is.
+2. **A single pair is a hypothesis, not a result.** Replicate before reporting — the 3.18-sigma
+   figure above would have shipped as a finding on any one pair.
+3. When three honest measurements disagree, the answer is not "take the best one" or "average
+   them". It is: the instrument cannot resolve the question yet, and saying so is the result.
+4. This does NOT retire pinning. Pinning removed the build-to-build confound, which was real and
+   worse. It removed one confound and left another standing.
