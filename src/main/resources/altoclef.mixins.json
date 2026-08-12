@@ -28,6 +28,7 @@
     "WorldBlockModifiedMixin"
   ],
   "client": [
+    "InactivityFpsLimiterMixin",
     "CameraMixin",
     "ConfirmScreenAccessor",
     "ChatInputMixin",
