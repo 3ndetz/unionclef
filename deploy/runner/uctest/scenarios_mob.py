@@ -312,8 +312,13 @@ class MobTrioNoDamage(MobMelee):
 # in close quarters. And closest_gap reads 4.31, 5.19, 5.57, 7.53: over a whole run the bot never
 # gets near a skeleton it was sent to kill, with kaTung=0/0/0/0 — the kill task never engages.
 #
-# WHICH BRANCH DOES IT. This arena is flat_field(half=14) and the skeleton spawns at 12.5, so the
-# fight happens NEAR THE RIM — and WorldHelper.isDangerZone returns true wherever fewer than five
+# WHICH BRANCH DOES IT. (SUPERSEDED as of the ARENA_HALF=30 change below — this paragraph
+# describes the course as it was at half=14, where the fight happened at the rim by construction.
+# It is kept because it is how the danger-zone arm was identified, and the reading was confirmed
+# later by `danger` dominating `reposition` in every run. Whether the arm still drives the bot on
+# the widened field is now an open question, not a settled one.)
+# That arena was flat_field(half=14) and the skeleton spawns at 12.5, so the
+# fight happened NEAR THE RIM — and WorldHelper.isDangerZone returns true wherever fewer than five
 # of the twenty-five blocks under a 5x5 around the feet are solid. So the danger-zone arm of the
 # dodge is the live one, and it hands control to DodgeProjectilesTask, a PATHING task whose whole
 # job is to hold ARROW_KEEP_DISTANCE away from projectiles. The bot is not failing to close; it is
@@ -407,6 +412,46 @@ class SkeletonDodge(MobMelee):
     tier = "gate"
     duration = 120
 
+    # ⛔ THIS COURSE NEEDS A WIDER ISLAND THAN THE MELEE ONE, AND THE INHERITED half=14 WAS
+    # CORRUPTING BOTH SIDES OF THE MEASUREMENT.
+    #
+    # The skeleton spawns at x=12.5 and the inherited rim sits at 14 -- one and a half blocks
+    # behind it -- on a platform floating over the void. Measured on four runs once the sampler
+    # was fixed, the skeleton's last known position was x=13.7 in EVERY run where it was seen at
+    # all: a bow mob backs away from an approaching enemy, and here "away" ends at the edge.
+    #
+    # Two separate corruptions follow, and they push the score in OPPOSITE directions:
+    #
+    #  1. THE SKELETON LEAVES INSTEAD OF LOSING. Landed swings against the verdict, same series:
+    #         FAIL min_hp=13   3 landed        FAIL min_hp=12   3 landed
+    #         PASS min_hp=20   2 landed        FAIL min_hp=20   1 landed, never observed alive
+    #     A skeleton has 20 HP and does not die to one swing. The runs scoring a PERFECT min_hp
+    #     are the runs where the bot barely touched it -- it went over the edge, and a skeleton
+    #     in freefall cannot shoot. The course's own pass condition was being met by the target's
+    #     removal, which is the opposite of what it claims to measure.
+    #
+    #  2. THE BOT FIGHTS THE RIM, NOT THE ARCHER. WorldHelper.isDangerZone is true wherever fewer
+    #     than five of the twenty-five blocks under a 5x5 around the feet are solid, so it is true
+    #     along the whole edge. In the aim stats, `reposition` is fed by `danger` in every run:
+    #         danger = 218 / 98 / 83 / 76
+    #     The bot's movement here is dominated by edge avoidance, correctly, and any dodge policy
+    #     measured on this course was being scored through that.
+    #
+    # So the field is widened for THIS course only -- the approach stays exactly 12 blocks and the
+    # kit, spawn, timings and gates are all untouched -- purely so the fight happens in open ground
+    # instead of against a cliff. mob_melee and mob_trio keep half=14 deliberately: they are melee
+    # courses whose numbers are already characterised at that size.
+    #
+    # ⛔ RULE 4j APPLIES TO THIS CHANGE: it alters the course, so every number recorded on
+    # mob_skeleton BEFORE this line -- including the 17% pass rate and the 53-run ruler above --
+    # is measured on a different course and must NOT be compared against runs after it.
+    ARENA_HALF = 30
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=self.ARENA_HALF, grass=False)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+        ctx.geo["fps"] = []
+
     def drive_start(self, ctx):
         ctx.rcon.cmd("time set midnight")
         ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
@@ -448,8 +493,18 @@ class SkeletonDodge(MobMelee):
         #     with {NoAI:1b}      Found no elements matching equipment
         # That is how this course briefly went 6/6 at min_hp=20 against something that could not
         # shoot. The "actually fought back" gate below now makes that failure loud instead of green.
+        # ⛔ PersistenceRequired STOPS THE TARGET FROM SIMPLY LEAVING.
+        # "The skeleton is dead" and early_stop both test one thing: has the entity stopped
+        # existing. Vanilla gives a hostile mob two ways to do that WITHOUT losing a fight -- the
+        # void, and DESPAWNING beyond 32 blocks from the player. Widening this arena removed the
+        # first and made the second MORE likely, because the skeleton now has room to keep backing
+        # away (last seen at x=20.5 in one run, from a spawn at 12.5). The signature is a run that
+        # scores perfectly while the bot barely fought: min_hp=20 with only TWO swings landing,
+        # against a 20 HP target that does not die to two. PersistenceRequired:1b removes the
+        # despawn path outright, so a skeleton that is gone was killed.
         ctx.rcon.cmd(f"summon skeleton 12.5 {STAND_Y} 0.5 "
-                     '{NoAI:1b,equipment:{mainhand:{id:"minecraft:bow",count:1}}}')
+                     '{NoAI:1b,PersistenceRequired:1b,'
+                     'equipment:{mainhand:{id:"minecraft:bow",count:1}}}')
         time.sleep(2)
         # `@test kill` targets ZOMBIES only, so it started nothing here and the bot stood and
         # was shot with every defence-chain counter at zero. This one takes the nearest hostile.
@@ -464,30 +519,62 @@ class SkeletonDodge(MobMelee):
             "data get entity @e[type=skeleton,limit=1] NoAI", allow_reject=True))
         ctx.geo["equip_after"] = str(ctx.rcon.cmd(
             "data get entity @e[type=skeleton,limit=1] equipment", allow_reject=True))
+        # Read the despawn guard back too. Unlike NoAI, this one is only healthy when PRESENT --
+        # 1b is not the default, so it survives the readback as an explicit value.
+        ctx.geo["persist_after"] = str(ctx.rcon.cmd(
+            "data get entity @e[type=skeleton,limit=1] PersistenceRequired", allow_reject=True))
+
+    def _watch_skeleton(self, ctx):
+        """Record where the skeleton is. Returns its position, or None if it could not be read.
+
+        ⛔ THIS LIVES OFF early_stop's POLL, NOT off drive_tick's two-second cadence.
+        The first version of this sampler hung off `drive_tick` behind `int(elapsed) % 2`, and it
+        produced NOTHING: every run printed `closest_gap=None`, and the void check below read
+        `last_seen=None min_y=None`. These runs early-stop as soon as the skeleton dies -- `fps
+        samples=1` -- so a two-second sampler frequently never fires at all. An instrument that
+        silently collects no data is worse than no instrument: `closest_gap=None` was read for
+        several sessions as "the bot never gets close" when it actually meant "never measured".
+        early_stop polls continuously for as long as the skeleton exists, so hanging the sample
+        there gives a fresh last-known position right up to the tick it vanishes.
+        """
+        out = ctx.rcon.cmd("execute in minecraft:overworld run data get entity "
+                           "@e[type=skeleton,limit=1] Pos", allow_reject=True)
+        m = re.search(r"\[([-0-9.]+)d, ([-0-9.]+)d, ([-0-9.]+)d\]", str(out or ""))
+        if not m:
+            return None
+        sx, sy, sz = float(m.group(1)), float(m.group(2)), float(m.group(3))
+        ctx.geo["skel_last"] = [round(sx, 1), round(sy, 1), round(sz, 1)]
+        ctx.geo["skel_polls"] = ctx.geo.get("skel_polls", 0) + 1
+        lo = ctx.geo.get("skel_min_y")
+        if lo is None or sy < lo:
+            ctx.geo["skel_min_y"] = sy
+        return (sx, sy, sz)
 
     def drive_tick(self, ctx, elapsed):
         super().drive_tick(ctx, elapsed)
         # DOES THE BOT EVER CLOSE? dte says inRange was false on all 1948 evaluations, which splits
         # into two completely different faults: the approach never moves the body, or it does and the
         # reach test is wrong. Sampling the actual gap answers it without touching any code.
-        if int(elapsed) % 2 != 0:
-            return
-        out = ctx.rcon.cmd("execute in minecraft:overworld run data get entity "
-                           "@e[type=skeleton,limit=1] Pos", allow_reject=True)
-        m = re.search(r"\[([-0-9.]+)d, ([-0-9.]+)d, ([-0-9.]+)d\]", str(out or ""))
+        pos = self._watch_skeleton(ctx)
         s_ = ctx.samples[-1] if ctx.samples else None
         b = s_.get("bot") if s_ else None
-        if not m or not b:
+        if not pos or not b:
             return
-        sx, sy, sz = float(m.group(1)), float(m.group(2)), float(m.group(3))
+        sx, sy, sz = pos
         d = ((b[0] - sx) ** 2 + (b[1] - sy) ** 2 + (b[2] - sz) ** 2) ** 0.5
         best = ctx.geo.get("min_gap")
         if best is None or d < best:
             ctx.geo["min_gap"] = d
+        # (Where it was standing is recorded by _watch_skeleton above, for the void gate in judge.)
 
     def early_stop(self, ctx):
-        return "Count:" not in ctx.rcon.cmd("execute if entity @e[type=skeleton]",
+        gone = "Count:" not in ctx.rcon.cmd("execute if entity @e[type=skeleton]",
                                             allow_reject=True)
+        # Sample while it still exists: the poll immediately before it vanishes is the evidence
+        # that decides whether it was killed on the arena or fell off the island.
+        if not gone:
+            self._watch_skeleton(ctx)
+        return gone
 
     def judge(self, ctx):
         alive = "Count:" in ctx.rcon.cmd("execute if entity @e[type=skeleton]", allow_reject=True)
@@ -496,6 +583,29 @@ class SkeletonDodge(MobMelee):
         low = min(hps) if hps else None
 
         yield Criterion("the skeleton is dead", not alive, f"alive={alive}")
+        # ⛔ "DEAD" AND "FELL OFF THE ISLAND" ARE THE SAME OBSERVATION, AND ONLY ONE OF THEM COUNTS.
+        # The gate above and early_stop both ask a single question -- has the entity stopped
+        # existing -- and the void answers it just as well as the bot's sword does. See drive_tick:
+        # the skeleton spawns 1.5 blocks from the rim of a floating platform and backs away from an
+        # approaching enemy. A skeleton that walked off scores this course GREEN at min_hp=20,
+        # because a skeleton in freefall does not shoot. That is a fight that never happened being
+        # recorded as the best possible outcome, so it is GATED rather than merely noted.
+        # ⛔ AND IT DEMANDS POSITIVE EVIDENCE -- "no data" IS NOT A PASS.
+        # Written the obvious way (`not fell`) this criterion could not fail: the first version
+        # sampled from drive_tick, collected nothing on these short runs, and passed four runs out
+        # of four on `last_seen=None`. That is the same shape as the dead `awake` half fixed
+        # earlier in this file -- a gate that reports green because it never looked. So the test is
+        # "it was seen alive ON the arena", which a missing sample fails, loudly and correctly.
+        edge = float(self.ARENA_HALF)
+        last = ctx.geo.get("skel_last")
+        floor_y = ctx.geo.get("skel_min_y")
+        polls = ctx.geo.get("skel_polls", 0)
+        fell = (floor_y is not None and floor_y < STAND_Y - 3.0) or (
+            last is not None and (abs(last[0]) > edge or abs(last[2]) > edge))
+        yield Criterion("the skeleton died on the arena, not in the void",
+                        last is not None and not fell,
+                        f"last_seen={last} min_y={floor_y} polls={polls} "
+                        f"floor={STAND_Y} edge=+-{edge}")
         # ⛔ THE COURSE MUST NOT PASS AGAINST A STATUE. See drive_start: an inert skeleton once
         # gave six straight passes at min_hp=20. If nothing was ever shot at us, this course
         # measured nothing, so it is GATED rather than recorded.
@@ -522,8 +632,13 @@ class SkeletonDodge(MobMelee):
         # Minecraft omits default values, so NoAI ABSENT is the healthy answer and the only thing
         # worth testing. Anything else -- including the tag coming back set -- is a statue.
         awake = "no elements" in str(ctx.geo.get("noai_after", ""))
-        yield Criterion("the skeleton was armed and awake", armed and awake,
-                        f"equip={ctx.geo.get('equip_after')} noai={ctx.geo.get('noai_after')}")
+        # And it must be unable to walk out of the test: see the summon. "1b" present is healthy,
+        # "no elements" means the flag did not take and a disappearance proves nothing.
+        persistent = "1b" in str(ctx.geo.get("persist_after", ""))
+        yield Criterion("the skeleton was armed, awake and could not despawn",
+                        armed and awake and persistent,
+                        f"equip={ctx.geo.get('equip_after')} noai={ctx.geo.get('noai_after')} "
+                        f"persist={ctx.geo.get('persist_after')}")
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
