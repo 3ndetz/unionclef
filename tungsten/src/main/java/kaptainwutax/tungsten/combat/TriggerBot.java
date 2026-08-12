@@ -122,7 +122,7 @@ public class TriggerBot {
      * ratio does not move, the idea is dead for good; if it does and arrows still do not, then
      * fight length is not what sets arrows and the whole chain above needs revisiting.
      */
-    public static volatile int gReadyFar, gReadyNear, gReadyFarDodging;
+    public static volatile int gReadyFar, gReadyNear, gReadyFarDodging, gReadyFarWalking;
     /** Charge carried by the swings that PASSED, and how many took the early crit-window
      *  threshold. Divide the sum by gPassed for the mean -- these two are the difference between
      *  "we swing undercharged" as a theory and as a number. Note the means above (angleMean,
@@ -241,6 +241,7 @@ public class TriggerBot {
                 // the matching magnitudes of dodgeDrive and gReadyFar, and magnitudes agreeing is
                 // not a mechanism.
                 if (kaptainwutax.tungsten.task.ProjectileDodge.isActive()) gReadyFarDodging++;
+                if (CombatController.lastForwardPressed) gReadyFarWalking++;
             } else {
                 gReadyNear++;
             }

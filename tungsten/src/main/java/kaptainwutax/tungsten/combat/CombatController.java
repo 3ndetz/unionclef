@@ -206,6 +206,8 @@ public class CombatController {
      * fall already in progress, so that figure is part cause and part consequence and is not what
      * this constant should be set from.
      */
+    /** Whether the last resolved combat tick asked the legs to go forward. */
+    public static volatile boolean lastForwardPressed;
     private static final double KNOCKBACK_REACH = 2.0;
     /** Sprint hits carry further: max impulse measured 0.854 blocks/tick, ~2.1 blocks of carry. */
     private static final double KNOCKBACK_REACH_SPRINT = 2.2;
@@ -460,6 +462,12 @@ public class CombatController {
             // Did the request to close survive arbitration? The safety intent can win, and
             // the void guard can veto after that — this counts what actually reaches the keys.
             if (resolved.forward) fwdPressed++;
+            // Published for TriggerBot's wasted-swing split: at a tick where the swing is ready and
+            // the target is out of reach, is the bot even ASKING to walk forward? If it is, the
+            // approach is failing on speed or geometry; if it is not, some other consumer owns the
+            // legs and should be named rather than guessed at. The dodge was the obvious guess and
+            // accounted for only a sixth of them.
+            lastForwardPressed = resolved.forward;
             resolved.writeKeys(MinecraftClient.getInstance());
         }
 
