@@ -154,6 +154,24 @@ public class MobDefenseChain extends SingleTaskChain {
      * and not "dodge", but TIME FROM ENTERING SEVEN BLOCKS TO THE KILL. Zero arrows landed needs
      * that cut by roughly two thirds — from ~150 ticks to ~50, i.e. down to a single shot — and
      * any change should be judged on band ticks first, arrows second.
+     *
+     * <p>⛔ HOW MUCH ROOM THERE IS, AND WHAT "GREEN" CAN EVEN MEAN HERE. From measured constants
+     * only — vanilla sprint 5.6 blocks/s, an iron sword's 6 damage against 20 HP, a 0.625 s
+     * cooldown:
+     * <pre>
+     *   closing 7.0 -> 3.0 at sprint        14 ticks
+     *   four swings at 0.625 s              50 ticks
+     *   THEORETICAL FLOOR                   64 ticks in band  -> ~1.3 shots
+     *   measured                           111-215, median 169 -> ~3.4 shots
+     * </pre>
+     * There is enormous room — the bot spends 2.6x the floor, about five seconds of slack. But the
+     * floor itself still costs ABOUT ONE SHOT, and a close shot lands 50-70% of the time.
+     *
+     * <p>So this gate, which demands ZERO arrows landed, is a COIN at roughly 40% even for perfect
+     * execution, unless the bot also kills in three swings (one crit) or denies that last shot.
+     * Worth knowing before another pass is spent expecting a deterministic green: a course whose
+     * ceiling is a coin cannot be turned green by tuning alone, and the honest goal is to push the
+     * pass rate toward that ceiling rather than to 12/12.
      */
     public static volatile int mdBandTicks;
     public static volatile int mdDraws, mdDrawTicks, mdDrawMaxTicks, mdDrawGapMilli;
