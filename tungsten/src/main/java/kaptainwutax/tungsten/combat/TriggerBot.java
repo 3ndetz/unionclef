@@ -230,6 +230,21 @@ public class TriggerBot {
         //   readyNear    — the swing actually happening.
         // Measured exposure is 111-215 ticks against a 64-tick floor; this splits the ~105 ticks
         // of slack instead of leaving it as one lump.
+        // ⛔ FIRST READING, 2026-08-12, and it moved the question somewhere else entirely:
+        //   ready far/near   wait far/near   COMBAT TICKS   band ticks
+        //   34/4             14/10                62           253
+        //   54/9             17/9                 89           186
+        //   45/4              6/16                71           187
+        //   36/4              9/21                70           134
+        //   39/4             15/15                73           129
+        // The four states sum to 62-89 ticks, while the bot is INSIDE THE BAND for 129-253. So for
+        // more than half of its time under fire the swing gate is not evaluated at all — the fight
+        // is not running. That, not slow closing and not the orbit, is where the ~105 ticks of
+        // slack above the 64-tick floor actually go.
+        //
+        // The next question is therefore not "how to kill faster" but "why is the fight not running
+        // while the bot stands in range". mdTung has been reading 50-80 ticks a fight all along and
+        // was taken as a healthy number; against 129-253 ticks of exposure it is not.
         if (gateCooldown) { if (gateReach) gNotReadyFar++; else gNotReadyNear++; }
         if (!gateCooldown) {
             if (gateReach) {
