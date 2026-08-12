@@ -302,9 +302,25 @@ public class TungstenConfig {
      * <p>On mob_skeleton arrows landed is a function of FIGHT LENGTH — the skeleton fires once per
      * second of draw and never at the approach — so seconds added by orbiting are paid in arrows.
      *
-     * <p>Judge with an INTERLEAVED pair (--pin-alt, rule 4r) on BOTH the mechanism and the outcome:
-     * ready=far/near must move, and arrows must follow. If the ratio moves and arrows do not, then
-     * fight length is not what sets arrows here and the chain needs revisiting.
+     * <p>⛔ MEASURED, INTERLEAVED, 2026-08-12 — and it took the pre-declared branch:
+     * <pre>
+     *   strafe held during wasted ticks   A 30/17/21/16/29/37   B 0/0/0/0/4/6
+     *   wasted ticks, total               A 231                 B 156
+     *   ready near-share                  A 0.133               B 0.184
+     *   arrows landed                     A 1.38                B 1.92   (-0.54, 1.48 sigma)
+     * </pre>
+     * The change DOES what it was written to do — the orbit is gone, the bot wastes a third fewer
+     * ticks, and the near-share rises by 38% relative. The outcome moved the OTHER way.
+     *
+     * <p>So the last link of the chain is wrong, and the explanation is already in the earlier
+     * measurements: the skeleton only shoots inside 4-6 blocks, where it hits 50-70%, against ~15%
+     * at range. The orbit was holding the bot at the EDGE of that band. Removing it shortens the
+     * fight and simultaneously drives the bot deeper under fire — the two effects oppose, and the
+     * bench cannot tell them apart at this n.
+     *
+     * <p>KEPT OFF. The next experiment is not another movement flag: it is to measure exposure
+     * directly — ticks spent inside 4-6 blocks, and shots fired per those ticks — because "shorter
+     * fight" and "less exposure" have now been shown to be different quantities on this course.
      */
     public boolean combatCloseOverOrbit = false;
 
