@@ -122,7 +122,7 @@ public class TriggerBot {
      * ratio does not move, the idea is dead for good; if it does and arrows still do not, then
      * fight length is not what sets arrows and the whole chain above needs revisiting.
      */
-    public static volatile int gReadyFar, gReadyNear;
+    public static volatile int gReadyFar, gReadyNear, gReadyFarDodging;
     /** Charge carried by the swings that PASSED, and how many took the early crit-window
      *  threshold. Divide the sum by gPassed for the mean -- these two are the difference between
      *  "we swing undercharged" as a theory and as a number. Note the means above (angleMean,
@@ -220,7 +220,21 @@ public class TriggerBot {
         // already surplus (landed=4 crits=3 is ~33 against 20 HP). So the bot is limited by the
         // RATE it lands hits, and a swing that matures out of range costs a full cooldown — about
         // a second, about one arrow.
-        if (!gateCooldown) { if (gateReach) gReadyFar++; else gReadyNear++; }
+        if (!gateCooldown) {
+            if (gateReach) {
+                gReadyFar++;
+                // ...AND WHO OWNS THE LEGS WHILE THAT SWING GOES TO WASTE. Holding sprint to the
+                // swing did not move the far/near ratio at all (0.165 -> 0.161), so the swing is
+                // not being lost to closing SPEED — which leaves "the bot is not closing at all".
+                // ProjectileDodge takes the legs whenever it drives, and its budget is the same
+                // order as this counter (dodgeDrive 8-96 a fight against gReadyFar 20-58). A dodge
+                // that cannot beat a two-tick arrow, spending itself exactly when a swing is ready,
+                // would explain the whole thirty-tick gap. This says whether it does.
+                if (kaptainwutax.tungsten.task.ProjectileDodge.isActive()) gReadyFarDodging++;
+            } else {
+                gReadyNear++;
+            }
+        }
         if (gateAngle) { gAngle++; gAngleSum += angle; if (angle > gAngleMax) gAngleMax = angle; }
         if (gateLos) gLos++;
         if (gateClick || gateCooldown || gateReach || gateAngle || gateLos) return;
