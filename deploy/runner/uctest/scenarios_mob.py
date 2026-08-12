@@ -740,6 +740,21 @@ class SkeletonDodge(MobMelee):
         # belongs to a pass that is not holding the result. What IS established: the course's
         # other two criteria (the skeleton dies, tungsten takes the legs) now pass in every run,
         # so min_hp is the only thing keeping it red.
+        # ⛔ THE ENGAGE BAND, MEASURED INTERLEAVED: +0.79 ARROWS AT 1.70 SIGMA (2026-08-12).
+        # Ten runs, arms A,B,A,B so a drifting stand cannot masquerade as an effect; three dropped by
+        # the validity floor. Flag off: n=3, mean 1.67 arrows. Flag on: n=4, mean 0.88. The rule in
+        # ab_arrows.py, written before the data existed, calls anything under 2 sigma no effect -- so
+        # the flag stays off.
+        #
+        # But the arm-size arithmetic above says an effect of 0.7-1.0 arrows needs 12-24 runs an arm,
+        # and this had three and four. That is not evidence of no effect, it is a measurement too
+        # small to have an opinion, and the prescribed answer is more runs rather than a verdict.
+        #
+        # A blocked pair earlier read the same direction (1.96 -> 1.13, ~1.6 sigma). Combining the
+        # two would clear 2 sigma arithmetically. Deliberately NOT done: blocked arms in this repo
+        # produced a 3.18 sigma artefact that interleaving cut to 0.46, so pooling a trustworthy
+        # estimate with an untrusted one imports the bias the interleaving exists to remove.
+        #
         # ⛔ WHERE 19.0 CAME FROM: THE COURSE'S OWN DOCSTRING, MISCOUNTED (2026-08-12).
         # The class docstring states the design intent in words -- "with one point of slack, because
         # a skeleton that spawns already drawing can land the first arrow before any policy could
