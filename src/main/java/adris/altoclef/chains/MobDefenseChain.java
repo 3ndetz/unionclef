@@ -224,9 +224,13 @@ public class MobDefenseChain extends SingleTaskChain {
      */
     public static volatile int mdDamageDealtTenths;
 
+    /** Health drops that followed one of our swings closely enough to be ours. */
+    public static volatile int mdSwingHits;
+
     /** Zeroes the damage ledger between bench runs; the per-entity map must go with it. */
     public static void resetDamageLedger() {
         mdDamageDealtTenths = 0;
+        mdSwingHits = 0;
         lastTargetHp.clear();
     }
     private static final java.util.Map<Integer, Float> lastTargetHp =
@@ -1295,6 +1299,14 @@ public class MobDefenseChain extends SingleTaskChain {
                 Float prev = lastTargetHp.put(e.getId(), e.getHealth());
                 if (prev != null && prev > e.getHealth()) {
                     mdDamageDealtTenths += (int) Math.round((prev - e.getHealth()) * 10.0);
+                    // ATTRIBUTION: a drop arriving within ~3 ticks of our swing is our swing. This
+                    // is the ceiling-free half of the ledger -- mdSwingHits over gPassed is the
+                    // fraction of swings that actually removed health, and unlike the sum it keeps
+                    // moving after the target is nearly dead.
+                    if (System.currentTimeMillis()
+                            - kaptainwutax.tungsten.combat.TriggerBot.lastSwingMs <= 150) {
+                        mdSwingHits++;
+                    }
                 }
                 if (!e.isUsingItem()) continue;
                 int id = e.getId();

@@ -25,6 +25,10 @@ import net.minecraft.world.RaycastContext;
  */
 public class TriggerBot {
 
+    /** Wall clock of the last gate-passed swing; read by the damage attribution in MobDefenseChain. */
+    public static volatile long lastSwingMs;
+
+
     private static final float COOLDOWN_FULL = 0.95f;
     // Package-visible: CombatController's reach control holds its distance against the same
     // threshold this gate fires at, so the mover and the swing cannot disagree about "armed".
@@ -360,6 +364,11 @@ public class TriggerBot {
             return;
         }
         gPassed++;
+        // Stamped so damage can be ATTRIBUTED to a swing instead of summed. The sum of a target's
+        // health drops is bounded by its max HP and the target always dies, so it reads the same
+        // number whatever the swings do; a drop that follows a swing within a couple of ticks is
+        // not bounded by anything and answers "did this swing land" directly.
+        lastSwingMs = System.currentTimeMillis();
 
         // Count the swing BEFORE it lands — the state that decides a crit is the one we are in
         // as we click. These increments were lost in a revert during an A/B and nothing put

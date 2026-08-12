@@ -144,7 +144,7 @@ class MobMelee(Scenario):
                         # now been bitten by twice. A counter nobody reads does not exist.
                         f"arrows={_stat(ctx, 'arrows')} draws={_stat(ctx, 'draws')} "
                         f"band={_stat(ctx, 'band')} dodgeTask={_stat(ctx, 'dodgeTask')} "
-                        f"dealt={_stat(ctx, 'dealt')} dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
+                        f"dealt={_stat(ctx, 'dealt')} swingHits={_stat(ctx, 'swingHits')} dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
         # A fall is not a fight. On a flat field with a floor this should never fire, and if it
         # does the arena is wrong rather than the bot.
         yield Criterion("the bot was actually in the fight", low is not None and low < 20.0,
@@ -243,7 +243,7 @@ class MobTrioNoDamage(MobMelee):
                         # now been bitten by twice. A counter nobody reads does not exist.
                         f"arrows={_stat(ctx, 'arrows')} draws={_stat(ctx, 'draws')} "
                         f"band={_stat(ctx, 'band')} dodgeTask={_stat(ctx, 'dodgeTask')} "
-                        f"dealt={_stat(ctx, 'dealt')} dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
+                        f"dealt={_stat(ctx, 'dealt')} swingHits={_stat(ctx, 'swingHits')} dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
         # THE CRITERION, MEASURED AS DAMAGE RATHER THAN AS LEFTOVER HEALTH.
         # min_hp answers "how healthy did it end up", which is not the question: a run that took
         # no damage at all failed this gate because it started on 14 hearts inherited from the
@@ -724,7 +724,7 @@ class SkeletonDodge(MobMelee):
                         # now been bitten by twice. A counter nobody reads does not exist.
                         f"arrows={_stat(ctx, 'arrows')} draws={_stat(ctx, 'draws')} "
                         f"band={_stat(ctx, 'band')} dodgeTask={_stat(ctx, 'dodgeTask')} "
-                        f"dealt={_stat(ctx, 'dealt')} dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
+                        f"dealt={_stat(ctx, 'dealt')} swingHits={_stat(ctx, 'swingHits')} dodgeDrive={_stat(ctx, 'dodgeDrive')} hop={_stat(ctx, 'hop')}")
         # ⛔ THIS LABEL AND THIS THRESHOLD DISAGREE, AND THE THRESHOLD IS THE STRICTER ONE.
         # min_hp >= 19.0 permits ONE point of damage. A skeleton arrow on normal difficulty does
         # 2-5, so the arithmetic demands "no arrow ever landed" while the label says "at most one".
