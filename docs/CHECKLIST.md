@@ -986,3 +986,46 @@ The rule:
    them". It is: the instrument cannot resolve the question yet, and saying so is the result.
 4. This does NOT retire pinning. Pinning removed the build-to-build confound, which was real and
    worse. It removed one confound and left another standing.
+
+## 4s. ⛔ BACKTICKS IN A COMMIT MESSAGE ARE EXECUTED, AND THE WORDS VANISH (2026-08-12)
+
+`git commit -m "... gateStats' \`passed\` ..."` inside a double-quoted shell string runs `passed`
+as a command and substitutes its output — nothing. The message reaches the history with a hole in
+it, no error, and the reader of the log sees a sentence that no longer says what it meant:
+
+```
+That reads gateStats'  as damaging hits.        <- the identifier is gone
+```
+
+Same silhouette as the cp1251 print that killed an eight-run measurement: a formatting detail
+quietly destroying a record rather than failing loudly.
+
+The rule: **write commit messages through a heredoc**, which this repo already does elsewhere:
+
+```bash
+git commit -F - <<'MSG'
+...anything, including `backticks`, $vars and quotes...
+
+
+## 4s. BACKTICKS IN A COMMIT MESSAGE ARE EXECUTED, AND THE WORDS VANISH (2026-08-12)
+
+Writing a message with `git commit -m "... gateStats' PASSED ..."` where PASSED is wrapped in
+shell backticks makes the shell RUN it as a command and substitute its output — nothing. The
+message reaches history with a hole in it, no error, and the log now shows a sentence that no
+longer says what it meant:
+
+    That reads gateStats'  as damaging hits.        <- the identifier is gone
+
+It happened twice in five minutes: once in the commit itself, and again while writing THIS rule,
+because the heredoc carrying it was still parsed by the outer shell. Same silhouette as the
+cp1251 print that killed an eight-run measurement — a formatting detail quietly destroying a
+record instead of failing loudly.
+
+The rule:
+
+1. Write any message containing backticks, dollars or quotes through a FILE, not through -m and
+   not through a heredoc nested in another command. Python writing the file, then commit -F.
+2. Do not repair a mangled message by force-pushing a shared branch. The loss is two words; a
+   rewritten history in front of parallel work is worse. Note it and move on.
+3. If a record can be silently damaged by the tool that writes it, that is the same class of
+   defect as a counter that silently reads zero — and this repo has now paid for both.
