@@ -920,6 +920,19 @@ public class CombatController {
         // and the chase restarts, so sprinting all the way through the swing enlarges the very gap
         // it was meant to close. Hence the cut-off is our REACH and not the strike band: sprint
         // across the dead zone, arrive walking, and let the hit land without the extra shove.
+        // ⛔ READ THIS BLOCK BEFORE ATTEMPTING THE REACH REFUSALS A FOURTH TIME (2026-08-13).
+        // The 34.8 ticks a fight of "controller running, target unreachable" are real and still
+        // unsolved, but THREE attempts on them are now recorded and each failed differently:
+        //   1. hold sprint while approaching        -> WORSE, closest_gap 5.73 -> 7.78 (knockback)
+        //   2. combatHoldContactOnShooter           -> refuted; and note it cannot even touch the
+        //      out-of-reach ticks, since swingImminent is false there and line 923 already sprints
+        //   3. combatCloseToReach (in altoclef)     -> tripled the quantity it targeted, because
+        //      gating onEntityInteract at 3.0 takes THIS controller out of the closing zone
+        // The common shape: every remedy that pushes harder into contact pays for it in knockback,
+        // and every remedy that delays the handover pays for it in the controller not running.
+        // A fourth attempt needs a mechanism that does neither -- or evidence that the 34.8 ticks
+        // are not costing arrows at all, which is entirely possible: two of the three attempts moved
+        // their mechanism counters cleanly and moved arrows not at all.
         out.sprint = out.forward && dist > TriggerBot.REACH;
         // RESTORED FOR A PROPER MEASUREMENT (default off): drop sprint at the SWING rather than at
         // REACH, against a RangedAttackMob only. The blow still lands unsprinted — that was the
