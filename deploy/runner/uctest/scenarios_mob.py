@@ -553,6 +553,12 @@ class SkeletonDodge(MobMelee):
         ctx.bot.cmd("@test killhostile")
         ctx.rcon.cmd("data merge entity @e[type=skeleton,limit=1] {NoAI:0b}",
                      allow_reject=True)
+        # ⛔ ONE GUARANTEED SAMPLE, BEFORE THE FIGHT CAN END. The void gate below demands a real
+        # last-known position rather than "no fall proved", which is right — but the sampling that
+        # feeds it is opportunistic, and a fast clean kill leaves no polls at all. A run that landed
+        # min_hp=20.0, the best outcome this course can produce, was failed for last_seen=None.
+        # Sampling here means there is ALWAYS evidence: the fight cannot end before the summon.
+        self._watch_skeleton(ctx)
         # PROVE THE AI CAME BACK ON. A false green already happened here once: the skeleton was
         # summoned inert, the re-enable silently did not take, and six runs passed at min_hp=20
         # against a statue (dw=0/0/0/0/0/0, dodgeDrive=0). NoAI reads back ABSENT when false --
