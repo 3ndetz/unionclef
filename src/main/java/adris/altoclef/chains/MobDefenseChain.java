@@ -1069,10 +1069,17 @@ public class MobDefenseChain extends SingleTaskChain {
                         Vec3d toShooter = projectile.position.subtract(plyPos);
                         toShooter = new Vec3d(toShooter.x, 0, toShooter.z);
                         double shotRange = toShooter.length();
-                        boolean pointBlankPure = kaptainwutax.tungsten.TungstenConfig.get()
-                                .combatDodgePointBlank;
-                        double bias = (pointBlankPure && shotRange <= DODGE_PRESS_MIN_RANGE)
-                                ? 0.0 : DODGE_PRESS_BIAS;
+                        // ⛔ REVERTED ON A PROPERLY CONTROLLED A/B. The point-blank special case
+                        // -- drop the closing bias inside melee reach, on the argument that an
+                        // arrow fired that close arrives in under a tick and only lateral speed can
+                        // make it miss -- measured as NOTHING when both arms ran in ONE session:
+                        //     with it     mean 1.17 arrows  sd 1.07  n=21
+                        //     without it  mean 1.16 arrows  sd 0.87  n=22
+                        // A difference of 0.01. The "2.1 sigma" it was once shipped on, and the 1.7
+                        // it was corrected to, were BOTH artefacts of comparing arms built hours
+                        // apart -- exactly what checklist rule 4j was written for, and the cleanest
+                        // demonstration of it in the repository.
+                        double bias = DODGE_PRESS_BIAS;
                         Vec3d dodgeDir = toShooter.lengthSquared() < 1.0e-6
                                 ? perp
                                 : perp.add(toShooter.normalize().multiply(bias)).normalize();
