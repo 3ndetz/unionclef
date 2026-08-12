@@ -1059,6 +1059,24 @@ public class MobDefenseChain extends SingleTaskChain {
                         // measured, so it is written down rather than guessed at.
                         Vec3d flight = projectile.velocity.normalize();
                         Vec3d perp = new Vec3d(-flight.z, 0, flight.x).normalize();
+                        // A STEEP ARROW HAS NO HORIZONTAL FLIGHT, AND perp THEN COLLAPSES TO ZERO.
+                        // Minecraft's normalize() returns Vec3d.ZERO below ~1e-4, so on an arcing
+                        // shot fwd and side both come out 0, ProjectileDodge presses nothing, and
+                        // the dodge SILENTLY does not happen -- the same near-zero-vector failure
+                        // this block was written to remove, in a different variable.
+                        // The bearing from the shooter is well-conditioned whenever the arrow is
+                        // anywhere but exactly on top of us, so it is the honest fallback.
+                        // STRICTLY DOMINANT: this branch can only run where the code above produced
+                        // NO heading at all, so no working case changes. That is why it ships
+                        // without its own A/B -- there is no arm for it to lose.
+                        if (perp.lengthSquared() < 1.0e-6) {
+                            Vec3d fromShooter = plyPos.subtract(projectile.position);
+                            Vec3d flat = new Vec3d(fromShooter.x, 0, fromShooter.z);
+                            if (flat.lengthSquared() > 1.0e-6) {
+                                Vec3d b = flat.normalize();
+                                perp = new Vec3d(-b.z, 0, b.x);
+                            }
+                        }
 
                         // Which side? Keep going the way we are already off the line -- that is the
                         // shorter way out of it. When the arrow is dead-on that offset is the same
