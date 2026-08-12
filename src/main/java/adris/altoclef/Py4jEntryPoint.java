@@ -2107,7 +2107,7 @@ public class Py4jEntryPoint {
         int ga = kaptainwutax.tungsten.combat.TriggerBot.gAngle;
         int gr = kaptainwutax.tungsten.combat.TriggerBot.gReach;
         int gp = kaptainwutax.tungsten.combat.TriggerBot.gPassed;
-        return String.format("total=%d click=%d cd=%d reach=%d ready=%d/%d/%d/%d held=%d/%d angle=%d los=%d passed=%d"
+        return String.format("total=%d click=%d cd=%d reach=%d ready=%d/%d/%d/%d held=%d/%d/%d angle=%d los=%d passed=%d"
                         + " | chargeMean=%.3f critWindowSwings=%d crits=%d weaponMean=%.2f noWeapon=%d deferred=%d"
                         + " | angleMean=%.1f angleMax=%.1f (thr 40) reachMean=%.2f reachMax=%.2f (thr 3.0)"
                         + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d escape=%d imm=%d forced=%d timer=%d) path=%d none=%d bowYield=%d",
@@ -2121,6 +2121,7 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.combat.TriggerBot.gReadyFarWalking,
                 kaptainwutax.tungsten.combat.TriggerBot.gReadyFarFwdHeld,
                 kaptainwutax.tungsten.combat.TriggerBot.gReadyFarSprintHeld,
+                kaptainwutax.tungsten.combat.TriggerBot.gReadyFarStrafeHeld,
                 kaptainwutax.tungsten.combat.TriggerBot.gAngle,
                 kaptainwutax.tungsten.combat.TriggerBot.gLos,
                 kaptainwutax.tungsten.combat.TriggerBot.gPassed,
@@ -2536,6 +2537,7 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.combat.TriggerBot.gReadyFarWalking = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gReadyFarFwdHeld = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gReadyFarSprintHeld = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.gReadyFarStrafeHeld = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gAngle = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gLos = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gPassed = 0;
