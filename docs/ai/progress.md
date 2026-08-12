@@ -1,5 +1,47 @@
 # Progress
 
+## SESSION 2026-08-12 (night) — the root cause found, and the model behind twelve fixes refuted
+
+INVESTIGATE — instrument, never argue. Eight counters built: release range (arrows=n/mean/max), bow
+draw (draws=n/ticks/max/gap), exposure (band=), the four-way swing split (ready=far/near +
+wait=far/near), key ownership (held=fwd/sprint/strafe), and the arrow-avoidance task's grip
+(dodgeTask=). Two of them were BORN DEAD and read zero while the bot was visibly being shot —
+caught before either was quoted.
+
+WHAT THEY ESTABLISHED, in order, each step forced by the previous one:
+
+1. The skeleton does NOT shoot at the approach. 2-3 shots a fight, ALL released from 4.3-6.3
+   blocks. Eight movement hypotheses had been aimed at a phase that does not exist.
+2. Every shot is preceded by a 20-tick draw beginning at 6.0-9.3 blocks. Acting on it failed,
+   because a vanilla mob aims where the target IS at release — it does not lead. DODGING is closed
+   as a family; at five blocks an arrow crosses in under two ticks.
+3. Nine ready-swing ticks in ten are spent out of reach. Not the dodge (16%), not closing speed
+   (a flag moved the ratio 0.165 -> 0.161), not stolen legs (the bot asks forward 95-100% of those
+   ticks and the keys DO reach the game).
+4. It travels DIAGONALLY: a strafe key is held in ~55% of them. A 45-degree diagonal leaves ~70% of
+   the speed pointing at the target — 3.9 blocks/s against a skeleton retreating at ~5.
+5. ROOT CAUSE: combat only ticks inside 4.5 blocks (`inRange`), while the killing band is 2.5-7.0.
+   129-253 ticks inside the band against 62-89 gate evaluations — for more than half its time under
+   fire the fight is not running at all. Every hypothesis today addressed the other 40%.
+
+THE MODEL THAT DIED — and it underpinned three of the fixes: "fewer band ticks means fewer arrows".
+Refuted in BOTH directions: suppressing the orbit cut exposure 33% and made arrows WORSE
+(1.38 -> 1.92); engaging across the band raised exposure 73% and made them BETTER (1.96 -> 1.13,
+1.6 sigma). Arrows landed is not a function of time under fire.
+
+THE CEILING, from measured constants: 14 ticks closing + 50 swinging = a 64-tick floor ~ 1.3 shots,
+and a close shot lands 50-70%. A gate demanding ZERO arrows is a COIN at ~40% for perfect play.
+12/12 was never available on this course, and saying so is part of the result.
+
+METHOD FIXED, and it invalidates the repo's history: A/B arms ran as BLOCKS, confounding the flag
+with session drift. The same flag read -0.60, +1.92 (3.18 sigma — above the acceptance bar) and
+-0.31 across three blocked pairs; interleaved it settled at 0.46. `--pin-alt` now alternates
+A,B,A,B. Rules 4n-4r written. Every pre-2026-08-12 "measured improvement" is unverified.
+
+ASSESS — thirteen hypotheses closed, zero score movement, and five of my own claims withdrawn:
+the pvp "hang", the course being unmeasurable at 9.7 fps, `danger` coming from the rim, arm sizing
+from one session's sd, and a 3.18-sigma result that a proper design turned into 0.46.
+
 ## SESSION 2026-08-12 (later) — the course was invalid, and the retreat stage was on all fight
 
 INVESTIGATE: started by applying this repo's own rule 4k for the first time — opening `fail.png`
