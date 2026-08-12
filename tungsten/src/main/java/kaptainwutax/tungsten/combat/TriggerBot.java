@@ -91,6 +91,21 @@ public class TriggerBot {
      * (2-3 shots, one per second of bow draw, against a kill needing 3-4 landed swings at a
      * 0.625 s cooldown), and damage is already surplus. A swing that matures out of range costs a
      * whole cooldown — about a second, about one arrow.
+     *
+     * <p>⛔ MEASURED 2026-08-12, and it is the strongest number this course has produced:
+     * <pre>
+     *   ready = far/near   33/3   31/3   44/4   28/9   9/5   38/4   39/4
+     * </pre>
+     * ABOUT NINE TICKS IN TEN WITH A MATURED SWING ARE SPENT OUT OF REACH. After each cooldown the
+     * bot waits roughly a second and a half to be inside 3.0 again, and only three or four ticks of
+     * that window are usable. Against a kill needing 3-4 landed swings that is where the fight's
+     * length comes from — and the fight's length is what decides arrows landed, since the skeleton
+     * fires once per second of draw and does not shoot at the approach at all.
+     *
+     * <p>So the target is no longer "dodge" or "close faster": it is DO NOT LET A READY SWING
+     * MATURE OUT OF RANGE. combatReachControl already tries to start closing before the swing is
+     * ready, by exactly the travel time — this 10:1 says it is not achieving it, and the next pass
+     * should find out why rather than add another band.
      */
     public static volatile int gReadyFar, gReadyNear;
     /** Charge carried by the swings that PASSED, and how many took the early crit-window
