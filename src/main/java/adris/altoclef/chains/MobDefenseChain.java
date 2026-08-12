@@ -198,6 +198,39 @@ public class MobDefenseChain extends SingleTaskChain {
     public static volatile int mdBandTicks;
     /** Ticks the arrow-avoidance PATHING task owned the legs, and the gap while it did. */
     public static volatile int mdDodgeTaskTicks, mdDodgeTaskGapMilli;
+    /**
+     * Damage ACTUALLY taken off the target, in tenths, against the swings we sent.
+     *
+     * <p>gateStats' passed count is attacks SENT, not damaging hits, and I quoted it as damage once
+     * already. Minecraft grants a mob ~10 invulnerability ticks after a hit, and mdTung is a pair —
+     * the committed fight AND the force field — so when both fire, one swing is absorbed. That
+     * gives two very different readings of the same "landed=4 against 20 HP": the bot swings after
+     * the kill is in, or half its swings are eaten.
+     *
+     * <p>Summing the target's health DROPS settles it without a theory: damage/swings near the
+     * weapon's 6 means the swings land, far below it means they are being absorbed.
+     *
+     * <p>⛔ READ THE CONFOUND BEFORE QUOTING THIS. The sum is bounded by the target's 20 HP and the
+     * target always dies, so the total is near-constant BY CONSTRUCTION -- first three runs read
+     * 18.0, 18.0, 18.0 against swing counts 4, 3, 2 and crit counts 2, 0, 1. A quantity that does
+     * not move when its inputs move is not measuring those inputs. It gave exactly ONE clean datum:
+     * the run with passed=3, crits=0, dealt=18.0 is 3 x 6 exactly, so in that run every swing
+     * landed and none was eaten by invulnerability.
+     *
+     * <p>The non-degenerate version is ATTRIBUTION, not a sum: mark each swing and check whether a
+     * health drop follows it within ~2 ticks, then report hits/swings. That number is free of the
+     * HP ceiling because it never adds past the individual swing. Build that before making any
+     * claim about swing efficiency; do not resolve the absorption question with this field.
+     */
+    public static volatile int mdDamageDealtTenths;
+
+    /** Zeroes the damage ledger between bench runs; the per-entity map must go with it. */
+    public static void resetDamageLedger() {
+        mdDamageDealtTenths = 0;
+        lastTargetHp.clear();
+    }
+    private static final java.util.Map<Integer, Float> lastTargetHp =
+            java.util.Collections.synchronizedMap(new java.util.HashMap<>());
     public static volatile int mdDraws, mdDrawTicks, mdDrawMaxTicks, mdDrawGapMilli;
     private static final java.util.Map<Integer, Integer> drawTicksById =
             java.util.Collections.synchronizedMap(new java.util.HashMap<>());
@@ -1258,6 +1291,11 @@ public class MobDefenseChain extends SingleTaskChain {
                 if (e == null || !e.isAlive()) continue;
                 double gap = e.distanceTo(self);
                 if (gap >= 2.5 && gap <= 7.0) inBand = true;
+                // Health drops, summed per entity: what our swings ACTUALLY removed.
+                Float prev = lastTargetHp.put(e.getId(), e.getHealth());
+                if (prev != null && prev > e.getHealth()) {
+                    mdDamageDealtTenths += (int) Math.round((prev - e.getHealth()) * 10.0);
+                }
                 if (!e.isUsingItem()) continue;
                 int id = e.getId();
                 stillDrawing.add(id);
