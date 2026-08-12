@@ -122,6 +122,20 @@ public class MobDefenseChain extends SingleTaskChain {
      * under-two-ticks a fired arrow allows. That is the difference between a dodge that cannot
      * work and one that can.
      */
+    /**
+     * EXPOSURE: ticks spent inside the band a shooter actually fires from.
+     *
+     * <p>Measured today and it is the quantity that decides this course, not fight length. A
+     * skeleton releases only from 4.3-6.3 blocks and hits 50-70% there, against ~15% at ten. So
+     * "shorter fight" and "less time under fire" are DIFFERENT numbers here, and they can move in
+     * opposite directions: removing the circle-strafe cut wasted swing ticks by a third and made
+     * arrows WORSE, because the orbit had been holding the bot at the band's edge.
+     *
+     * <p>Counted from 2.5 to 7.0 blocks — from inside our own reach out past the furthest release
+     * seen — so the ratio arrows/bandTicks reads as "shots per tick of exposure" and separates the
+     * two effects that have been confounded all day.
+     */
+    public static volatile int mdBandTicks;
     public static volatile int mdDraws, mdDrawTicks, mdDrawMaxTicks, mdDrawGapMilli;
     private static final java.util.Map<Integer, Integer> drawTicksById =
             java.util.Collections.synchronizedMap(new java.util.HashMap<>());
@@ -1119,9 +1133,13 @@ public class MobDefenseChain extends SingleTaskChain {
             ClientPlayerEntity self = mod.getPlayer();
             if (self == null) return;
             java.util.Set<Integer> stillDrawing = new java.util.HashSet<>();
+            boolean inBand = false;
             for (LivingEntity e : mod.getEntityTracker().getHostiles()) {
                 if (!(e instanceof net.minecraft.entity.ai.RangedAttackMob)) continue;
-                if (e == null || !e.isAlive() || !e.isUsingItem()) continue;
+                if (e == null || !e.isAlive()) continue;
+                double gap = e.distanceTo(self);
+                if (gap >= 2.5 && gap <= 7.0) inBand = true;
+                if (!e.isUsingItem()) continue;
                 int id = e.getId();
                 stillDrawing.add(id);
                 Integer had = drawTicksById.get(id);
@@ -1156,6 +1174,7 @@ public class MobDefenseChain extends SingleTaskChain {
             }
             // a draw that stopped is an episode ended -- release or cancel, both end the warning
             drawTicksById.keySet().removeIf(id -> !stillDrawing.contains(id));
+            if (inBand) mdBandTicks++;
         } catch (Exception ignored) {
             // an instrument must never be the thing that breaks a fight
         }
