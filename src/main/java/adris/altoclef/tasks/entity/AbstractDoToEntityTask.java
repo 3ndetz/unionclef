@@ -137,6 +137,24 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
 
             // Interact when in range. Only gate on inRange (canHitEntity) — the old raycast check
             // was "basically useless" and blocked interaction most of the time.
+            // ⛔⭐ THE 34.8 TICKS OF "IN THE BAND, OUT OF REACH" ARE BORN ON THIS LINE (2026-08-13).
+            // Approaching and striking are EXCLUSIVE branches of one if. While inRange is false the
+            // task returns GetToEntityTask and the body walks; the moment inRange turns true it
+            // returns the interaction instead, and CLOSING STOPS.
+            //
+            // But inRange is distance < 4.5 (ControllerExtras) while the swing gate's REACH is 3.0.
+            // Between them lies a block and a half in which the bot counts as "arrived" and stops
+            // walking, yet cannot hit anything. Measured on mob_skeleton over 25 runs: 34.8 ticks
+            // per fight of "controller running, target not reachable" -- the single largest swing
+            // refusal, ahead of cooldown at 19.3.
+            //
+            // It is not a constant that wants nudging: "arrived" and "can hit" are two different
+            // distances and this code treats them as one. Whoever fixes it should keep closing
+            // until the SWING gate is satisfied, not until inRange is.
+            //
+            // This also finishes off combatEngageBand (+0.88 arrows, 1.90 sigma, off): it started
+            // the fight earlier across the band, but closing still stopped at 4.5, so the bot simply
+            // waited inside a different counter.
             if (inRange && !mod.getFoodChain().needsToEat() &&
                     !mod.getMLGBucketChain().isFalling(mod) && mod.getMLGBucketChain().doneMLG() &&
                     !mod.getMLGBucketChain().isChorusFruiting() &&
