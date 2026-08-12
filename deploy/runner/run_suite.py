@@ -404,7 +404,11 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     #
     # The threshold is deliberately far below any legitimate course: nav descends and mines, but
     # nothing in the suite belongs 20+ blocks under the stand floor.
-    if not invalid:
+    # ...EXCEPT where the course scores falls itself. See Scenario.scores_own_falls: a duel at a
+    # rim treats a knockback fall as a normal outcome and gates only SELF-falls, so voiding those
+    # runs throws away good data. Measured: all four flagged runs on the 0.84.0 pvp line read
+    # `self=0 knockback=1` — the bot was hit off, never walked off.
+    if not invalid and not getattr(scn, "scores_own_falls", False):
         ys = [sm["bot"][1] for sm in ctx.samples
               if sm.get("bot") and len(sm["bot"]) > 1]
         if ys and min(ys) < STAND_Y - 20:

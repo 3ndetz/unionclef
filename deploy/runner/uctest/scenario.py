@@ -428,6 +428,21 @@ class Scenario:
     world = "flat"
     builds_arena = True        # False = play the world as generated (real terrain)
 
+    # ⛔ SOME COURSES SCORE FALLS THEMSELVES, AND THE GENERIC ARENA GUARD MUST NOT OVERRIDE THEM.
+    # run_suite's guard (checklist 4k) marks a run INVALID when the bot ends up far below the
+    # floor. That is exactly right where a fall means a BUG — it was written after a key leak
+    # walked the bot off the mob island and the numbers kept reporting on a corpse.
+    #
+    # On a duel at a rim, being knocked into the void is a NORMAL outcome of the course, and
+    # those scenarios already separate the two cases: `self-falls == 0` gates the bot walking
+    # off under its own power, while `knockback` falls are counted and tolerated. Measured on
+    # the 0.84.0 pvp line, every one of the four flagged runs read `self=0 knockback=1`: the bot
+    # never left on its own, it was hit off — and the guard voided the runs anyway, costing three
+    # INVALIDs and about twenty minutes of re-runs.
+    #
+    # So a course that does its own fall accounting sets this and keeps its verdict.
+    scores_own_falls = False
+
     def build(self, arena, ctx):
         raise NotImplementedError
 

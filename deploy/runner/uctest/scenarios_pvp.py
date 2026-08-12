@@ -124,6 +124,7 @@ class MeleeBasic(Scenario):
 class EdgeDuel(Scenario):
     """5x5 platform over void — RW-1 'both keep footing 1 block from drop'."""
     id = "edge_duel"
+    scores_own_falls = True   # gates self-falls itself; knockback falls are normal here
     # ⛔ THIS COURSE WAS A MIRROR, AND IT WAS BEING USED AS A REGRESSION GUARD.
     # victim_settings defaults to {}, so without this line the opponent ran the SAME build, the
     # same settings and the same kit -- and a symmetric engine change went to both sides and
@@ -200,6 +201,7 @@ class NarrowBridgeDuel(Scenario):
     """Two islands + 1-wide bridge over void (bedwars walkway). Spawns force
     the fight ONTO the bridge."""
     id = "narrow_bridge_duel"
+    scores_own_falls = True   # gates self-falls itself; knockback falls are normal here
     # The opponent fights on the BASELINE engine so this duel measures our changes
     # rather than cancelling them — see Scenario.victim_settings.
     victim_settings = {"combatReachControl": "false"}
@@ -558,6 +560,7 @@ class BowFlee(Scenario):
     aim every tick (no arbiter), so flee+shoot cannot work today — this
     scenario records the gap and gets promoted with the kite lever."""
     id = "bow_flee"
+    scores_own_falls = True   # gates self-falls itself; knockback falls are normal here
     tier = "info"
     duration = 60
     bot_kit = KIT_BOW
@@ -786,6 +789,7 @@ class BridgeAssault(Scenario):
     """No bridge exists: bridgeTo across a 9-gap void, cross, then punk the
     defender. Placement rate recorded as the anti-cheaty proxy (RW-2/RW-3)."""
     id = "bridge_assault"
+    scores_own_falls = True   # gates self-falls itself; knockback falls are normal here
     duration = 120
     settings = {"combatMovementsEnabled": "true"}
     bot_kit = KIT_BRIDGER
