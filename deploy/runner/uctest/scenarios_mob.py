@@ -57,6 +57,18 @@ def _tung_ticks(ctx):
     return total
 
 
+# ⛔ THE MOB ARENA IS A FLOATING PLATFORM OVER THE VOID, AND IT HAS NO SAFETY MARGIN.
+# Seen for the first time on 2026-08-12 by opening a fail.png instead of reading more numbers: the
+# flat_field is a thin strip of blocks with stars ABOVE AND BELOW it. Past the edge there is
+# nothing -- the stand's world is carved to air from the void bottom up to y=-40 (see this file's
+# header), so the field is an island at y=-60.
+#
+# CONSEQUENCE FOR EVERY MOVEMENT PRIMITIVE TESTED HERE: an overshoot is not a bad step, it is a
+# death. A held sprint key killed the bot within a run and the fall CASCADED into later runs
+# (rule 4l, and the void incident it was written for). nav_gaps drops the bot for the same reason.
+# Any change that presses movement keys must be judged against this arena, not against an
+# imagined open field -- and the arena guard in run_suite (rule 4k) is what makes such a death
+# visible instead of silently poisoning the numbers.
 class MobMelee(Scenario):
     """One zombie, one armed bot, flat ground at night. It should die, and to tungsten."""
 
