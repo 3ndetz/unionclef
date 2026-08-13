@@ -28,6 +28,9 @@ import java.util.Optional;
 public class UnstuckChain extends SingleTaskChain {
 
     private final LinkedList<Vec3d> posHistory = new LinkedList<>();
+
+    /** Times the chain acted on a bot that had a goal, no path and had not moved. */
+    public static volatile int strandedRescues;
     private boolean isProbablyStuck = false;
     private int eatingTicks = 0;
     private boolean interruptedEating = false;
@@ -158,7 +161,35 @@ public class UnstuckChain extends SingleTaskChain {
         //    search, a craft, a menu) — a shimmy there is pure damage.
         if (isInCombat(mod)) { posHistory.clear(); return; }
         if (adris.altoclef.util.helpers.TungstenHelper.isActive()) { posHistory.clear(); return; }
-        if (!isTryingToMove()) { posHistory.clear(); return; }
+        // !! "PRESSES NO KEYS" CONFLATES TWO STATES, AND ONE OF THEM IS BEING STUCK.
+        //
+        // The guard below is right about waiting on purpose -- shimmying at an open chest or
+        // mid-craft is worse than standing still, and that is why it exists. But a bot that has a
+        // GOAL and no PATH also presses nothing, and it is not waiting: it is stranded.
+        //
+        // Measured on mine_stone: the bot digs a pit, climbs out onto the arena rim wall at y=-57
+        // and stands there for the rest of the run with path=-1 and nothing in reach. In the n=20
+        // baseline that is six runs of ZERO against eight of 8-9 -- the whole remaining failure of
+        // the rung. UnstuckChain is what should recover it and never runs, because this guard, the
+        // TungstenHelper one above and Nav.isPathing() below are ALL true in exactly that state.
+        //
+        // So distinguish the two rather than remove the guard: a goal that exists, a position that
+        // has not moved for the whole history window, and no keys, is stranded, not patient.
+        // Everything the guard protects -- chests, crafting, menus, combat -- is still excluded by
+        // the checks around it, which are unchanged.
+        boolean strandedWithGoal = false;
+        if (kaptainwutax.tungsten.TungstenConfig.get().unstuckWhenGoalButNoPath
+                && !isTryingToMove() && posHistory.size() >= 200) {
+            Vec3d first = posHistory.getFirst();
+            boolean frozen = true;
+            for (Vec3d v : posHistory) {
+                if (v.squaredDistanceTo(first) > 0.25) { frozen = false; break; }
+            }
+            boolean hasGoal = mod.getUserTaskChain() != null && mod.getUserTaskChain().isActive();
+            strandedWithGoal = frozen && hasGoal;
+            if (strandedWithGoal) strandedRescues++;
+        }
+        if (!isTryingToMove() && !strandedWithGoal) { posHistory.clear(); return; }
 
         // Don't trigger when baritone is actively pathfinding (calculating a path)
         if (Nav.isPathing()) {

@@ -408,6 +408,26 @@ public class TungstenConfig {
     public boolean mineAvoidUnderfoot = false;
 
     /**
+     * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
+     *
+     * <p>UnstuckChain skips any bot pressing no movement keys, on the sound reasoning that
+     * standing still is usually deliberate -- crafting, a menu, waiting on a search -- and
+     * shimmying through that breaks the action. But a stranded bot presses nothing either.
+     *
+     * <p>Measured on mine_stone: it digs a pit, climbs onto the arena wall at y=-57 and stands
+     * there to the end of the run. In the n=20 baseline that is six ZEROS against eight runs of
+     * 8-9 -- the entire remaining failure of the rung. All three of UnstuckChain's early guards
+     * are true in that state, so the rescue can never fire.
+     *
+     * <p>This does not remove a guard; it separates two states the guard treats as one. Chests,
+     * crafting, menus and combat are still excluded by the checks around it.
+     *
+     * <p>Off by default. Judged against the measured 8/20 baseline on mine_stone, with
+     * strandedRescues as the mechanism gate and the craft ladder watched for regression.
+     */
+    public boolean unstuckWhenGoalButNoPath = false;
+
+    /**
      * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).
      *
      * <p>The bot holds a strafe key in about 55% of those ticks, together with forward and sprint,
