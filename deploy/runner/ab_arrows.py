@@ -1,4 +1,30 @@
-"""*** WHAT THIS COURSE ACTUALLY MEASURES (2026-08-13, derived then confirmed on 167 runs).
+"""PRE-REGISTRATION #5, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, combatDodgeOnDraw).
+
+The model above says the pass rate IS the rate at which the skeleton misses, and that lateral
+velocity at release is the only thing that changes it. Exactly one flag in the tree targets that,
+and it is off on evidence that no longer counts: n=12, 1.42 vs 1.94 arrows at 1.02 sigma, taken in
+the era when ~50% of every series was being discarded and the invalid guard was misfiring.
+
+  * 40 launches, interleaved, --pin-alt combatDodgeOnDraw=true, ~20 an arm;
+  * STATISTIC: MEAN ARROWS LANDED, 2 sigma. The zero-rate is recorded but NOT promoted -- #4 is
+    what promoting it after the fact costs;
+  * MECHANISM GATE, and note it points the OTHER WAY this time: dodgeDrive must RISE in the pinned
+    arm, because this flag ADDS dodge episodes (one per draw) rather than shortening them. Judged
+    on the MEDIAN, per rule 4t, since the mean of that counter is what broke #4;
+  * secondary, recorded not gated: arrows FIRED (the flag must not simply make fights longer) and
+    bandToSwing (it must not wreck the approach to buy the dodge);
+  * if it clears: mob_melee and mob_trio before shipping -- the draw test is on RangedAttackMob, so
+    zombie courses should be inert by construction, and that is a PREDICTION worth checking rather
+    than an assumption;
+  * if it fails: the arrow-avoidance lever is closed too, and what remains is that this course's
+    gate asks for a skeleton to miss every shot in a 12-block open field. That would be a statement
+    about the COURSE, and it belongs in TODOS as one -- not as another bot hypothesis.
+
+HONEST PRIOR, recorded before the run as in #3: the earlier measurement was negative, and the
+mechanism argument for re-testing is that the stand was broken then, not that the idea has improved.
+A null here is a real null and closes the line.
+
+*** WHAT THIS COURSE ACTUALLY MEASURES (2026-08-13, derived then confirmed on 167 runs).
 
 Every pass is an arrow MISSING. Not one is an arrow being outrun.
 
