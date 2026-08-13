@@ -1,4 +1,45 @@
-"""THE 5-BLOCK EQUILIBRIUM IS THE SKELETON'S, NOT THE BOT'S (2026-08-13). TWO HYPOTHESES, BOTH FREE.
+"""*** THE CLOSING BUDGET, IN BLOCKS RATHER THAN TICKS (2026-08-13). AND TWO OF MY OWN CORRECTIONS.
+
+Measured with REAL per-tick displacement (position delta), pooled over four traced fights.
+
+!! CORRECTION 1: "the bot makes 54% of sprint speed" was an artefact of reading
+ClientPlayerEntity.getVelocity(), which does not track travel for the LOCAL player -- the client
+applies movement to position directly. Real displacement while genuinely sprinting is 0.228-0.244
+b/t, i.e. 81-87% of sprint, not 54%. Checked before building on it, which is the only reason it did
+not become a fix.
+
+!! CORRECTION 2: "the circle-strafe is the difference between closing and losing ground" held in
+ONE fight (0.237 vs 0.212) and DIED on pooling: 0.244 vs 0.241, -0.003 at 0.30 sigma over four
+fights, n=123/95. The orbit costs nothing measurable. Flagged as needing pooling when it was found,
+so nothing was built on it either.
+
+THE BUDGET THAT SURVIVES, and it is the whole course in four numbers:
+
+    clean sprint tick   step 0.244 b/t     net vs retreat  +0.029
+    idle tick (no keys) step 0.067 b/t     net             -0.148
+    dodge-driven tick   step 0.179 b/t     net             -0.036
+    skeleton retreat         0.215 b/t
+
+AN IDLE TICK LOSES FIVE TIMES WHAT A SPRINT TICK GAINS. That is why the tick COUNT was the wrong
+ruler: at 47% idle during re-approach the average is 0.53*0.244 + 0.47*0.067 = 0.160 b/t, BELOW the
+skeleton's 0.215 retreat, so the bot loses ground on average and settles at the ~5-block equilibrium
+the histogram shows. At 0% idle the average is 0.244 and it gains.
+
+!! WHICH MAKES MY EARLIER DISMISSAL WRONG. "The re-plan window is 15% of engagement, median 1 tick,
+~0.56 extra shots a fight -- not the dominant term" counted TICKS. In BLOCKS those ticks dominate
+the closing budget, because the margin they are spent against is only +0.029. A one-tick key
+release is not one tick of lost progress; it is about five.
+
+SO THE FIX IS NAMED AND SIZED: keep the legs driven during the re-plan gaps. Removing the idle
+ticks moves re-approach from -0.055 b/t (losing) to +0.029 (gaining), which is the difference
+between a fight that ends and one that runs until the skeleton has fired four arrows.
+
+⛔ NOT ATTEMPTED IN THIS SESSION, DELIBERATELY. It is a change to executor/walker key handling on
+the hot path of every course, and the repo's own note on the planner task says the regression-
+dangerous work must not be started at the end of a long session. The measurement is the deliverable;
+the fix wants a fresh pass with nav + mob baselines around it.
+
+THE 5-BLOCK EQUILIBRIUM IS THE SKELETON'S, NOT THE BOT'S (2026-08-13). TWO HYPOTHESES, BOTH FREE.
 
 Hypothesis: the 9%-of-runs stall is CHATTERING at the 4.5 inRange switch -- two controllers sharing
 a threshold with no hysteresis, which would park the bot on the boundary. The stalled runs' lastGap

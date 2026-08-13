@@ -77,12 +77,14 @@ public final class CombatTrace {
     private static int head;
     private static int count;
     private static int tick;
+    private static double lastX = Double.MAX_VALUE, lastZ;
 
     /** Cleared per run alongside the other counters, so one run's trace is one run's trace. */
     public static synchronized void reset() {
         head = 0;
         count = 0;
         tick = 0;
+        lastX = Double.MAX_VALUE;
         java.util.Arrays.fill(RING, null);
     }
 
@@ -122,6 +124,11 @@ public final class CombatTrace {
                 return;
             }
             tick++;
+            double px = player.getX(), pz = player.getZ();
+            double step = lastX == Double.MAX_VALUE ? 0.0
+                    : Math.sqrt((px - lastX) * (px - lastX) + (pz - lastZ) * (pz - lastZ));
+            lastX = px;
+            lastZ = pz;
             // The SAME metric the swing gate uses. Recording centre-to-centre here and comparing it
             // against a 3.0 eye-to-hitbox threshold is how this course once concluded the bot was
             // holding a distance at which it could never hit -- true, but off by the metric.
@@ -153,7 +160,7 @@ public final class CombatTrace {
             boolean exec = kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning();
             RING[head] = String.format(
                     "%d dist=%.2f keys=%s dodge=%d ctl=%d cqe=%d swings=%d stage=%s vel=%.3f hurt=%d "
-                            + "walk=%d que=%d exec=%d path=%d prio=%.0f task=%s",
+                            + "walk=%d que=%d exec=%d path=%d prio=%.0f task=%s spr=%d gnd=%d snk=%d step=%.3f",
                     tick, dist, keys,
                     kaptainwutax.tungsten.task.ProjectileDodge.isActive() ? 1 : 0,
                     CombatController.controlTicks,
@@ -164,7 +171,25 @@ public final class CombatTrace {
                             + player.getVelocity().z * player.getVelocity().z),
                     player.hurtTime,
                     walker ? 1 : 0, queue ? 1 : 0, exec ? 1 : 0,
-                    hostPathing ? 1 : 0, hostPrio, hostTask);
+                    hostPathing ? 1 : 0, hostPrio, hostTask,
+                    // ⛔ THE KEY IS NOT THE STATE. Pooled over 795 re-approach ticks the bot
+                    // moves 0.151 b/t while forward AND sprint are both held -- 54% of sprint
+                    // (0.28) and BELOW walking (0.215) -- while a retreating skeleton makes
+                    // 0.215, so the net closing rate is NEGATIVE even at full throttle. Either
+                    // the sprint key never becomes isSprinting(), or something else is eating
+                    // the speed. These three separate those: sprint state, ground contact (air
+                    // control is a fraction of ground), and sneak (which caps speed outright and
+                    // is pressed by the edge guard as a LAYER, so it can ride along unnoticed).
+                    player.isSprinting() ? 1 : 0,
+                    player.isOnGround() ? 1 : 0,
+                    player.isSneaking() ? 1 : 0,
+                    // ⛔ getVelocity() IS NOT TRAVEL SPEED FOR THE LOCAL PLAYER. The client applies
+                    // its own movement to POSITION and the velocity field does not reliably follow,
+                    // so a conclusion drawn from it ("the bot makes 54% of sprint speed") can be an
+                    // artefact of reading the wrong field. step is the actual horizontal
+                    // displacement since the previous sampled tick, which is what "how fast is it
+                    // closing" actually means.
+                    step);
             head = (head + 1) % CAP;
             if (count < CAP) {
                 count++;
