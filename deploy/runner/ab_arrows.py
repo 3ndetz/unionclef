@@ -1,4 +1,37 @@
-"""OUTCOME OF #5 (2026-08-13). NULL ON ARROWS -- AND THE FIRST INTERVENTION THAT MOVED THE VARIABLE.
+"""OUTCOME OF THE DRAW-DODGE RE-TEST (2026-08-13), AFTER GIVING THAT HEADING ITS CLOSING BIAS.
+
+40 launches, 0 invalid, 20 an arm. Gate passes on the median: dodgeDrive 21 -> 39.
+
+    arrows landed   A 1.20 (sd 0.87)   B 1.31 (sd 1.31)   -0.11, SE 0.35, 0.32 sigma
+    passes          A 4/20             B 6/20
+
+Null. THE FLAG STAYS OFF. Six pre-registered series on this course, six nulls.
+
+THE PREDICTION WRITTEN BEFORE THE RUN, SCORED HONESTLY. It said: if the fix preserves the
+approach and the hit rate stays near 18%, landed drops to ~0.5 and the gate becomes reachable; if
+the hit rate was low only BECAUSE the bot was far and slow, it climbs back toward 57%.
+
+    the fix worked mechanically   toSwing 50.7 -> 106.7 became 61.9 -> 58.8, approach RESTORED
+    the hit rate did NOT revert   24% against this series' 38% baseline, not back to 57%
+    but exposure stayed up        arrows fired 3.15 -> 5.55, and that is what cancels it
+
+So half right, and the wrong half is the informative one. Avoidance is NOT merely an artefact of
+standing far away -- at a restored approach speed the sidestep still cuts the hit rate by about a
+third. What did not follow is exposure: the bot still eats 76% more shots, which exactly undoes a
+37% better miss rate. Reaching first contact on time is no longer the problem; the fight AFTER
+contact is still long enough to be shot through.
+
+NOTE THE BASELINE MOVED AGAIN: arm A's hit rate reads 38% here against 57% in the previous series
+on identical behaviour. Between-series drift of that size is why rule 4r interleaves arms, and why
+none of the cross-series comparisons in this file are quoted as effects.
+
+WHAT THIS LEAVES, stated as a target rather than a hypothesis: exposure after first contact. The
+approach is solved; the kill is not. A skeleton at 20 HP takes 3-4 sword hits at a 12-tick
+cooldown, and every hit knocks it 2.78 blocks away (measured), so the bot re-closes 3-4 times per
+kill. THAT is where the extra shots are bought, and it is the one segment of the fight nothing has
+measured yet.
+
+OUTCOME OF #5 (2026-08-13). NULL ON ARROWS -- AND THE FIRST INTERVENTION THAT MOVED THE VARIABLE.
 
 40 launches, 0 invalid, 20 an arm. Mechanism gate PASSES on the median, as required by rule 4t:
 median dodgeDrive 18 -> 64.
