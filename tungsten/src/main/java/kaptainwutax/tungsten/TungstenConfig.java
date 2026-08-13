@@ -314,6 +314,18 @@ public class TungstenConfig {
      *
      * <p>Off by default. Tested with combatDodgeOnDraw pinned in BOTH arms so the yield is the only
      * difference.
+     *
+     * <p>⛔ IT CANNOT FIRE OFTEN ENOUGH TO BE WORTH TESTING, AND THE PREMISE IS DEAD.
+     * First guard (target inside REACH during a draw): fired ZERO times in 20 runs -- the series
+     * was voided by its own mechanism gate. Corrected to REACH + 1.5 = 4.5 and smoke-tested:
+     * dodgeYield read 1 in one fight and 0 in the next. Skeletons draw at a mean gap of 5.6 blocks
+     * and back away as the bot closes, so an ACTIVE DRAW and a CHARGED SWING almost never coincide
+     * at any threshold that still means "close enough to strike".
+     *
+     * <p>So the draw-dodge is not raising exposure by stealing swings -- it is hardly ever armed
+     * when a swing was available. Kept, off, so the next person does not rediscover the idea and
+     * spend a series on it. If it is ever revisited, check dodgeYield in a SMOKE TEST first: five
+     * minutes there saved a hundred here.
      */
     public boolean combatDodgeYieldsToSwing = false;
 
