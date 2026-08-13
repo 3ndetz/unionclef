@@ -248,8 +248,32 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
     ctx = Ctx(bot, victim if scn.needs_victim else None, rcon, art)
     print(f"\n--- {scn.id} ({scn.tier}, {scn.duration}s, world={scn.world}) ---")
     try:
-        wait_for(f"{world['container']} rcon", lambda: "players" in rcon.cmd("list"),
-                 300, 5)
+        # !! A DEAD SERVER IS NOT A FAILING COURSE, AND IT USED TO BE SCORED AS FIVE OF THEM.
+        #
+        # uctest-server stalls: rcon stops answering for minutes, then recovers. Measured FOUR
+        # times in one session, always mid-sweep. Each time this wait raised after 300s, the course
+        # was recorded as FAILED, and so was the next, and the next -- one stall wrote off five to
+        # seven courses in a row as bot failures:
+        #     craft  6/12  -- 7 courses lost to rcon
+        #     nav    5/12  -- 6 courses lost to rcon, none failing before the stall
+        # At rest the server looks healthy (forceload bounded at 36 chunks, 1.5 GiB of 47, rcon
+        # answering in a second), so it is a transient stall and a restart clears it -- exactly the
+        # shape the client refresh below already handles for CLIENTS.
+        #
+        # So do for the server what this suite already does for the clients: restart once and wait
+        # again. A course that then runs is a course measured; only a server that will not come
+        # back at all is allowed to fail the run.
+        try:
+            wait_for(f"{world['container']} rcon", lambda: "players" in rcon.cmd("list"),
+                     300, 5)
+        except Exception as first:
+            print(f"  [!] {world['container']} rcon not answering ({str(first)[:70]}) - "
+                  f"restarting it once before believing the course failed", flush=True)
+            subprocess.run(["docker", "restart", world["container"]],
+                           capture_output=True, timeout=180)
+            wait_for(f"{world['container']} rcon (after restart)",
+                     lambda: "players" in rcon.cmd("list"), 300, 5)
+            print(f"  [ok] {world['container']} came back after a restart", flush=True)
         bot.ensure_in_game(world["host"], rcon=rcon)
         if scn.needs_victim:
             victim.ensure_in_game(world["host"], rcon=rcon)
