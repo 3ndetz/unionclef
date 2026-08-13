@@ -170,7 +170,7 @@ class MobMelee(Scenario):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
-                        f"{_close_stats(ctx)} "
+                        f"{_close_stats(ctx)} dodgeYield={_stat(ctx, 'dodgeYield')} "
                         # WHERE IT SHOOTS FROM (count/mean/max), against dw's where-they-LAND. The
                         # mod has carried this since the release-range instrument went in and the
                         # course did not print it — the same dead-instrument shape this file has
@@ -270,7 +270,7 @@ class MobTrioNoDamage(MobMelee):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
-                        f"{_close_stats(ctx)} "
+                        f"{_close_stats(ctx)} dodgeYield={_stat(ctx, 'dodgeYield')} "
                         # WHERE IT SHOOTS FROM (count/mean/max), against dw's where-they-LAND. The
                         # mod has carried this since the release-range instrument went in and the
                         # course did not print it — the same dead-instrument shape this file has
@@ -771,7 +771,7 @@ class SkeletonDodge(MobMelee):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
-                        f"{_close_stats(ctx)} "
+                        f"{_close_stats(ctx)} dodgeYield={_stat(ctx, 'dodgeYield')} "
                         # WHERE IT SHOOTS FROM (count/mean/max), against dw's where-they-LAND. The
                         # mod has carried this since the release-range instrument went in and the
                         # course did not print it — the same dead-instrument shape this file has

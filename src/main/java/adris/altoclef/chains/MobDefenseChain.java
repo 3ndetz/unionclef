@@ -219,6 +219,9 @@ public class MobDefenseChain extends SingleTaskChain {
      * A counter that cannot be stamped honestly is the dead-instrument problem with extra steps.
      */
     public static volatile int mdBandToFirstSwing = -1;
+    /** Draw-dodge ticks declined because a swing was in hand. The mechanism gate for
+     *  {@link kaptainwutax.tungsten.TungstenConfig#combatDodgeYieldsToSwing}. */
+    public static volatile int mdDodgeYielded;
     /** Ticks the arrow-avoidance PATHING task owned the legs, and the gap while it did. */
     public static volatile int mdDodgeTaskTicks, mdDodgeTaskGapMilli;
     /**
@@ -1380,7 +1383,25 @@ public class MobDefenseChain extends SingleTaskChain {
                     // refuses past 40 degrees, so a dodge that turns away cannot also attack.
                     // The side alternates with the draw count so a fight does not walk the bot
                     // steadily off one edge of the island.
-                    if (kaptainwutax.tungsten.TungstenConfig.get().combatDodgeOnDraw) {
+                    // A SWING IN HAND OUTRANKS A SIDESTEP. The dodge is buying misses with
+                    // swings: it reaches 24% hit rate against a 38% baseline, and still does not
+                    // pay because arrows FIRED go 3.15 -> 5.55 with the approach unchanged, i.e.
+                    // the fight runs longer after contact. Intervals between our own swings read
+                    // 19-22 ticks when contact holds and 90-123 when it does not, against a
+                    // 12-tick cooldown.
+                    //
+                    // Declining the sidestep only where the swing is actually available costs
+                    // little avoidance -- a skeleton draws for 20 ticks and our cooldown is 12, so
+                    // these are a minority of draw ticks -- and stops the dodge walking the bot
+                    // out of its own attack.
+                    boolean swingInHand = false;
+                    if (kaptainwutax.tungsten.TungstenConfig.get().combatDodgeYieldsToSwing) {
+                        swingInHand = self.getAttackCooldownProgress(0f) > 0.9f
+                                && kaptainwutax.tungsten.combat.TriggerBot.eyeToHitbox(self, e)
+                                        <= kaptainwutax.tungsten.combat.TriggerBot.REACH;
+                    }
+                    if (swingInHand) mdDodgeYielded++;
+                    if (kaptainwutax.tungsten.TungstenConfig.get().combatDodgeOnDraw && !swingInHand) {
                         Vec3d fromShooter = self.getPos().subtract(e.getPos());
                         Vec3d flat = new Vec3d(fromShooter.x, 0, fromShooter.z);
                         if (flat.lengthSquared() > 1.0e-6) {

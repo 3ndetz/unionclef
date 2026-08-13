@@ -291,6 +291,33 @@ public class TungstenConfig {
     public boolean combatDodgeOnDraw = false;
 
     /**
+     * Lets a ready swing outrank the draw-dodge, instead of the dodge walking the bot out of its
+     * own attack.
+     *
+     * <p>WHAT IT IS FOR, MEASURED. {@link #combatDodgeOnDraw} works on the variable that decides
+     * mob_skeleton -- it cut the skeleton hit rate from 57% to 18%, and after its heading was given
+     * the closing bias it still reached 24% against a 38% baseline. It has never paid, because it
+     * also raises EXPOSURE: arrows fired went 3.15 -> 5.55 even once the approach was restored
+     * (bandToSwing 61.9 -> 58.8), so the fight is longer AFTER first contact. The trace says why --
+     * intervals between our own swings run 19-22 ticks when contact holds and 90-123 when it does
+     * not, against a 12-tick cooldown.
+     *
+     * <p>So the dodge is buying misses with swings. This declines the sidestep on the ticks where
+     * the swing is actually available -- cooldown charged and the target inside reach -- and leaves
+     * it armed everywhere else. Those ticks are a small fraction of a draw (a skeleton draws for 20
+     * and our cooldown is 12), so most of the avoidance should survive.
+     *
+     * <p>⛔ "Yield the dodge to the kill order" appears in ProjectileDodge's javadoc as one of four
+     * dodge hypotheses that each measured flat -- and that same javadoc explains why none of them
+     * counts: the dodge keys were being erased before the game read them, so none of the four ever
+     * ran. This is the first test of the idea with a dodge that actually reaches the keys.
+     *
+     * <p>Off by default. Tested with combatDodgeOnDraw pinned in BOTH arms so the yield is the only
+     * difference.
+     */
+    public boolean combatDodgeYieldsToSwing = false;
+
+    /**
      * Ends a sidestep when the arrow has actually arrived, instead of six ticks later.
      *
      * <p>THE DEFECT IS A UNIT MISMATCH, not a policy. {@code DODGE_HOLD_TICKS = 6} carries the
