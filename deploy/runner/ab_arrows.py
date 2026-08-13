@@ -1,4 +1,40 @@
-"""THE IDLE TICKS ARE A RE-PLAN WINDOW (2026-08-13). NAMED, WITH THE LAYER THAT OWNS IT.
+"""...AND THE RE-PLAN WINDOW IS TOO SMALL TO MATTER. SIZED BEFORE BUILDING, WHICH IS THE POINT.
+
+The commit above promised the window would be sized from traces on disk before anything was
+implemented. Sized, over three traced fights, EXCLUDING the harness's NoAI setup window (the bot
+stands still for 52-55 ticks before the fight is ordered, and nothing is shooting):
+
+    engagement ticks           437 across 3 fights
+    idle ticks                  67 = 15% of engagement
+    windows                     27, MEDIAN 1 tick, max 18
+    windows >= 5 ticks           2 in three fights, 29 ticks total (7%)
+    => cost                    ~0.56 extra shots a fight
+
+Not the dominant term, and not worth a series. Most "idle windows" are a single tick of key
+release between path segments, which is normal.
+
+!! AND THE 47% FIGURE FROM THE PREVIOUS ENTRY NEEDS ITS DENOMINATOR SAID OUT LOUD. It was computed
+over RE-APPROACH ticks -- a subset chosen precisely because idling concentrates there. Over the
+whole engagement the same data reads 15%. Both numbers are correct and only one of them is a
+measure of how much the defect COSTS. That is the fourth denominator mistake of the day and the
+first one I caught before spending anything on it, which is the only difference that matters.
+
+WHERE THAT LEAVES THE COURSE, arithmetically rather than hopefully. A fight runs ~150 ticks, a
+skeleton shot cycle is ~40, so it fires 3-4 arrows; at the ~30-38% hit rate the baseline shows,
+about one lands. The gate allows NONE. To pass, every arrow in the fight has to miss.
+
+    P(pass) = P(all 3-4 arrows miss) ~ 20%   <- and the measured pass rate is 20%, over 287 runs
+
+So the course is behaving exactly as its own arithmetic predicts, and the bot is not obviously
+failing at anything. Closing it needs either a much shorter fight (the floor is ~24 ticks to close
+plus three swings at a 12-tick cooldown, about 60 ticks, i.e. 2 arrows) or a hit rate near zero.
+The draw-dodge reached 24% and that is not enough.
+
+THIS IS NOW A STATEMENT ABOUT THE COURSE, and pre-registration #5 said in advance that if the
+avoidance lever failed, such a statement belongs in TODOS as a course-level item rather than as
+another bot hypothesis. It is going there.
+
+THE IDLE TICKS ARE A RE-PLAN WINDOW (2026-08-13). NAMED, WITH THE LAYER THAT OWNS IT.
 
 CombatTrace now also carries what tungsten cannot see -- MobDefenseChain publishes Nav.isPathing(),
 the chain priority and the holding task every tick. Pooled over three traced fights, 24 idle
