@@ -1853,3 +1853,64 @@ Confirm both across several traces before building on one run, then the obvious 
 skeleton has no melee reach to be "too close" to. The file already makes exactly this argument for
 the recharge stand-off, which is skipped for RangedAttackMob -- the base band is not, and that is
 what pressed `back` here. n=1 so far; it is a hypothesis with a trace behind it, not a result.
+
+
+## 2026-08-13 (end) — eight series, one model, and the noise floor that explains them
+
+### The model that closed the question
+
+Every pass on mob_skeleton is an arrow MISSING; none is an arrow outrun. All 33 passing runs of the
+first 167 were shot at (mean 3.97 arrows fired) and took nothing. The arithmetic forces it: the
+skeleton spawns twelve blocks out, draws for 20 ticks, and its arrow crosses that in ~4.5, so the
+first shot lands at ~24-25 ticks -- while the fastest traced approach covered 11.57 -> 3.60 blocks
+in 24 ticks, about what sprint allows. One 4-damage arrow puts min_hp at 16 against a gate of 19.
+
+    fight ~150 ticks / shot cycle ~40  =>  3-4 arrows fired
+    hit rate 27-38%                    =>  about one lands
+    the gate allows NONE
+    P(pass) = P(all miss) ~ 20%        <- and the measured rate is 20% over 287 runs
+
+The course behaves exactly as its own design predicts. Filed as TODOS G-1.82, with the note that
+relaxing a gate in the same pass that is trying to move it is indistinguishable from tuning to
+pass, so that decision is the user's.
+
+### The null-control, obtained by accident and worth more than any flag
+
+The last series' flag never fired -- its guard required the target inside REACH while a skeleton
+was DRAWING, and skeletons draw at range while backing away. The mechanism gate caught it and the
+series is VOID. Which means both arms were the SAME BOT, interleaved, 20 runs each:
+
+    arrows landed  A 1.38  B 1.36   +0.01, 0.05 sigma   <- the pre-registered primary is exact
+    passes         A 5/20  B 2/20
+    arrows fired   A 5.10  B 3.45
+    hit rate       A 27%   B 39%
+    toSwing        A 85.3  B 67.2
+
+At n=20 an arm, with nothing changed, pass counts swing by 3, hit rate by 12 points and toSwing by
+18 ticks. That is the noise floor, measured at last, and it re-reads the whole day: the draw-dodge's
+57% -> 18% (39 points) survives as real; the 38% -> 24% after the heading fix (14 points) is
+suggestive only; toSwing differences under ~20 ticks mean nothing.
+
+**The consequence is the honest answer to why eight careful series produced eight nulls: the
+effects available on this course are the same size as the noise at affordable n.** Separating them
+needs 50-100 runs an arm, four to eight hours a series. That is a reason to stop running
+underpowered series, not to run a ninth.
+
+### What was actually fixed (bot behaviour unchanged — every flag defaults off)
+
+- The draw-dodge passed a pure perpendicular while the in-flight dodge blends DODGE_PRESS_BIAS=0.6.
+  The constant's own javadoc predicts the cost of 0 -- "holds the range open for ever... a draw the
+  bot always loses on damage" -- and that is what the counters showed. Corrected.
+- run_suite stamped the A/B arm label above BOTH retry paths, each of which replaces the result
+  object, so runs a client refresh had just rescued came out unlabelled.
+- ab_arrows counted runs the harness itself had marked "not comparable", and now splits a summary
+  by the pins actually applied.
+- closeStats (fourth dead instrument), dirAsked/dirBlockedFwd reset, mdBandToFirstSwing,
+  cqTookFromPursue, mdDodgeYielded (fifth dead instrument, caught by looking), and CombatTrace.
+- A duplicate checklist rule whose first copy recommended the very thing that had failed.
+
+### Process
+
+Rule 4t: a gate metric must be a RATE or a MEDIAN, never a total. Four confounded totals in one
+day -- band ticks, strafeFar (an identity: corr came out exactly -1.00), and dodgeDrive twice, one
+of those inside a pre-registration written to prevent exactly this.
