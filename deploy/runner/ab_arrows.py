@@ -1,4 +1,40 @@
-"""OUTCOME OF THE PRE-REGISTERED SERIES BELOW (2026-08-13). THE FLAG IS FINISHED.
+"""*** WHAT THIS COURSE ACTUALLY MEASURES (2026-08-13, derived then confirmed on 167 runs).
+
+Every pass is an arrow MISSING. Not one is an arrow being outrun.
+
+    167 runs, 33 passes (20%)
+    arrows FIRED at the bot in PASSING runs:  mean 3.97, min 1, and ZERO of the 33 had none
+    arrows FIRED at the bot in FAILING runs:  mean 4.86, min 1
+
+All 33 passing runs were shot at and took nothing. The arithmetic says why the approach cannot
+help: the skeleton spawns at x=12.5 against a bot at ~0.5, its draw is 20 ticks, and an arrow
+covers twelve blocks in ~4.5 -- so the first shot lands about 24-25 ticks after the AI wakes. The
+best traced approach crossed 11.57 -> 3.60 blocks in 24 ticks at 0.33 blocks/tick, which is about
+what sprint allows. It arrived exactly as the arrow did. One 4-damage arrow puts min_hp at 16 and
+the gate wants 19, so PASSING REQUIRES THE FIRST ARROW TO MISS -- and the pass rate is simply the
+rate at which the skeleton misses.
+
+THIS RETIRES THE ENTIRE APPROACH LINE, and explains all five nulls in one sentence: they were
+tuning a variable that does not determine the outcome. combatCloseToReach, combatApproachNoOrbit,
+combatEngageBand, combatCloseOwnsBand and combatDodgeHoldByRange each shaved ticks off a 32-tick
+approach that would have to beat 24, and none of them could have closed that gap even if they had
+worked perfectly. The one that DID work perfectly (combatCloseOwnsBand, mechanism gate passed)
+still measured nothing, which is exactly what this model predicts.
+
+It also explains the bimodality that produced the false 2.65-sigma finding: outcomes are "the
+first arrow missed" or "it did not", and a hit costs 2.78 blocks of knockback (measured over 7
+hurt events) which buys the skeleton another shot -- so a miss tends to stay a miss and a hit
+tends to compound.
+
+WHAT IS LEFT, and it is the only thing: make the arrows miss. A mob aims at RELEASE, so lateral
+velocity AFTER release is what defeats it. At twelve blocks the flight is ~4.5 ticks, in which a
+sprinting bot covers ~1.2 blocks against a 0.6-block hitbox -- comfortably enough. At five blocks
+the flight is under two ticks and nothing can be done, which is why the in-flight dodge measured
+nothing and why shortening its hold measured nothing either.
+
+
+
+OUTCOME OF THE PRE-REGISTERED SERIES BELOW (2026-08-13). THE FLAG IS FINISHED.
 
 40 launches, interleaved, 0 invalid. Scored twice -- by this tool on the summary, and by splitting
 the console log on its per-run `PIN combatEngageBand=` lines -- and the two agree exactly:
@@ -10,7 +46,7 @@ the console log on its per-run `PIN combatEngageBand=` lines -- and the two agre
 Under the 2-sigma bar, and in the WORSE direction. The rule below said a third sub-threshold
 result finishes the idea, so it is finished and the flag stays off.
 
-⭐ THE PART WORTH KEEPING. The two earlier series read +0.83 and +0.88, both favouring the flag.
+* THE PART WORTH KEEPING. The two earlier series read +0.83 and +0.88, both favouring the flag.
 This one -- the largest, at n=20 an arm against their 3-6 -- reversed the sign. Three careful
 series, and the direction was not stable until the n was. That is the fourth time on this course
 that a promising sub-threshold reading turned out to be noise, and the first time the reversal was
@@ -30,7 +66,7 @@ PRE-REGISTERED STATISTIC (zero-arrow rate):  A 5/23 = 0.22   B 3/24 = 0.12
 Pooled with #3 it is 6/43 vs 11/44, +0.11 at 1.30 sigma. Series #3's 2.65 sigma was noise, which
 is what the caution written beside it said it probably was. The flag stays off.
 
-⛔ AND THE MECHANISM GATE I WROTE WAS ITSELF A CONFOUNDED TOTAL -- the fourth of these in one day.
+!! AND THE MECHANISM GATE I WROTE WAS ITSELF A CONFOUNDED TOTAL -- the fourth of these in one day.
 The gate said "mean dodgeDrive must FALL in the pinned arm". It ROSE: 35.3 -> 108.2, which by the
 letter voids the series. But dodgeDrive is a per-run TOTAL, and a run where the bot never engages
 accumulates it for two thousand ticks. De-confounded:
@@ -49,7 +85,7 @@ The verdict does not depend on resolving the void. The secondary mean reads A 1.
 points the same way, so the flag stays off under all of them; there is no rescue here that would
 turn it on, which is the only kind of re-reading worth distrusting.
 
-⭐⭐ WHAT THE DIAGNOSIS FOUND, WHICH IS WORTH MORE THAN THE FLAG: A CATASTROPHIC STALL, 9% OF RUNS.
+** WHAT THE DIAGNOSIS FOUND, WHICH IS WORTH MORE THAN THE FLAG: A CATASTROPHIC STALL, 9% OF RUNS.
 Across all 167 runs of the four series, 15 have the skeleton firing 8-42 arrows while the bot sits
 beyond 4.5 blocks for 333-2094 ticks -- up to 104 seconds of a 120-second course. In most of them
 mdTung is 13-69, so the combat controller is barely ticking: the bot is parked just OUTSIDE the
@@ -73,7 +109,7 @@ say why the arithmetic did not pay: the returned ticks did not go into closing. 
 40.1, inReachRate 0.36 -> 0.35, reachMean 3.53 -> 3.58 -- all flat. Whatever the dodge was
 costing, the approach did not pick it up.
 
-⭐ BUT THE DISTRIBUTIONS ARE NOT THE SAME DISTRIBUTION, and the course is gated on their left tail:
+* BUT THE DISTRIBUTIONS ARE NOT THE SAME DISTRIBUTION, and the course is gated on their left tail:
 
     arm A (off)  0.0 x1,  0.75 x3,  1.0 x10, 1.75 x2, 2.0 x4
     arm B (on)   0.0 x8,  0.75 x1,  1.0 x4,  1.5 x1, 1.75 x1, 2.0 x2, 3.0 x1, 3.25 x1, 4.25 x1
@@ -83,7 +119,7 @@ costing, the approach did not pick it up.
 Same mean, opposite shape: half of arm A lands on exactly one arrow, while arm B either takes
 nothing or takes a beating. 8/20 would be the best pass rate this course has produced.
 
-⛔ THIS IS POST-HOC AND IS NOT A RESULT. The statistic was declared as the MEAN before the run,
+!! THIS IS POST-HOC AND IS NOT A RESULT. The statistic was declared as the MEAN before the run,
 the mean read 0.21 sigma, and finding a better statistic afterwards is the move that produced
 "+0.83 and +0.88" and then reversed at n=20. Two further reasons for caution, both against the
 finding: arm A's sd of 0.53 is the tightest of any arm measured today (0.79, 0.76, 0.53), so the
@@ -127,7 +163,7 @@ flight at 2.65 blocks a tick. Four of the six ticks sidestep an arrow that has a
 while the primitive overrides the approach at the final-word position for every one of them. The
 change is clamped to [2, 6], so it can only return ticks and never extend a dodge.
 
-⛔ AND THE HONEST PRIOR: the effect is small. About 4 wasted ticks per arrow at ~4.5 arrows a run
+!! AND THE HONEST PRIOR: the effect is small. About 4 wasted ticks per arrow at ~4.5 arrows a run
 is ~18 ticks against a 109-tick band -- perhaps 0.3 arrows, right at the edge of what n=20 an arm
 resolves. A null result here is genuinely uninformative about the mechanism, and that is recorded
 NOW so a null is not later written up as a refutation of the arithmetic.
@@ -147,7 +183,7 @@ OUTCOME OF PRE-REGISTRATION #2 (2026-08-13). REFUTED, AND THE LINE IS CLOSED AS 
 The pre-registration said that if this failed, the whole "the controller should own the approach"
 line closes and both flags stay off. It failed. They stay off.
 
-⭐ THE RESULT IS BIGGER THAN THE VERDICT, and it is the opposite of the hypothesis: closeQuarters()
+* THE RESULT IS BIGGER THAN THE VERDICT, and it is the opposite of the hypothesis: closeQuarters()
 is a WORSE closer than the BFS pursue walk it was written to displace. Every closing metric moved
 the wrong way when it took the legs. The premise -- that a path-follower cannot close because it
 chases a vacated square -- was simply wrong on this course.
@@ -156,7 +192,7 @@ What survives as a target: corr(inReachRate, arrows) = -0.40 over the 40 runs an
 B. The share of control ticks spent inside reach predicts the result, and the pathfinder is what
 maximises it.
 
-⛔ ONE NUMBER FROM THIS SERIES IS NOT EVIDENCE AND MUST NOT BE QUOTED. corr(strafeFar, reachMean)
+!! ONE NUMBER FROM THIS SERIES IS NOT EVIDENCE AND MUST NOT BE QUOTED. corr(strafeFar, reachMean)
 = +0.93 looked like the circle-strafe diluting the approach -- a clean mechanism, nearly a fourth
 hypothesis. It is an IDENTITY: strafeFarTicks counts strafe ticks taken beyond reach, so per
 control tick it is one minus the in-reach rate, and corr(strafeRate, inReachRate) came out exactly
@@ -287,7 +323,7 @@ def split_on_pin(rows, pin):
     if all(pin in r.get("pins", {}) for r in rows):
         key, basis = (lambda r: _truthy(r["pins"][pin])), "pins"
     elif all(r.get("arm") in ("A", "B") for r in rows):
-        # ⛔ AND THE NAME IS NOT CONFIRMED ON THIS PATH, so the report must not print it as though
+        # !! AND THE NAME IS NOT CONFIRMED ON THIS PATH, so the report must not print it as though
         # it were. A summary from before pin recording says which arm a run was in and NOTHING
         # about which flag the series varied -- feed it the wrong name and the arms come out
         # confidently labelled with a flag that series never touched. Caught by doing exactly that
