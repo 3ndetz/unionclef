@@ -1394,11 +1394,21 @@ public class MobDefenseChain extends SingleTaskChain {
                     // little avoidance -- a skeleton draws for 20 ticks and our cooldown is 12, so
                     // these are a minority of draw ticks -- and stops the dodge walking the bot
                     // out of its own attack.
+                    // ⛔ THE FIRST VERSION OF THIS GUARD NEVER FIRED ONCE IN 20 RUNS, and the
+                    // mechanism gate is the only reason that was noticed rather than reported as a
+                    // null. It required the target inside REACH (3.0) while a skeleton was DRAWING
+                    // -- and a skeleton draws at range and backs away as you close, mean gap 5.6
+                    // blocks at draw. The condition was close to unreachable by construction.
+                    //
+                    // The zone that matters is not "can hit right now" but "close enough that a
+                    // sidestep costs a swing", which is the same 4.5 the rest of this file already
+                    // uses for inRange. Charged cooldown still required: yielding while the swing
+                    // is recharging would give up avoidance for nothing.
                     boolean swingInHand = false;
                     if (kaptainwutax.tungsten.TungstenConfig.get().combatDodgeYieldsToSwing) {
                         swingInHand = self.getAttackCooldownProgress(0f) > 0.9f
                                 && kaptainwutax.tungsten.combat.TriggerBot.eyeToHitbox(self, e)
-                                        <= kaptainwutax.tungsten.combat.TriggerBot.REACH;
+                                        <= kaptainwutax.tungsten.combat.TriggerBot.REACH + 1.5;
                     }
                     if (swingInHand) mdDodgeYielded++;
                     if (kaptainwutax.tungsten.TungstenConfig.get().combatDodgeOnDraw && !swingInHand) {

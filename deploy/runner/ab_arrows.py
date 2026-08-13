@@ -1,4 +1,25 @@
-"""VOID BY ITS OWN GATE -- AND AN ACCIDENTAL NULL-CONTROL WORTH MORE THAN THE FLAG (2026-08-13).
+"""THE YIELD PREMISE IS DEAD, AND A FIVE-MINUTE SMOKE TEST KILLED IT INSTEAD OF A HUNDRED-MINUTE SERIES.
+
+The guard was corrected after the void series -- from "target inside REACH (3.0) during a draw",
+which is unreachable, to "inside REACH + 1.5 = 4.5", the same threshold the rest of the file uses
+for inRange, with the charged-cooldown condition kept. Smoke-tested BEFORE committing a series:
+
+    dodgeYield = 1 in one fight, 0 in the next
+
+Still essentially never. Skeletons draw at a mean gap of 5.6 blocks and back away as the bot
+closes, so an ACTIVE DRAW and a CHARGED SWING almost never coincide -- at any threshold that still
+means "close enough to strike".
+
+SO THE PREMISE ITSELF IS WRONG, not just the constant. The draw-dodge cannot be raising exposure by
+stealing swings, because it is almost never armed at a moment when a swing was available. Whatever
+makes arrows FIRED go 3.15 -> 5.55 is something else -- and the null-control says even that figure
+is only 2.4 against a 1.65 swing between IDENTICAL arms, so it may not need explaining at all.
+
+No series was run. The five minutes this cost were the whole point of having a mechanism gate:
+three times today it separated "did not work" from "never ran", and this time it did it before the
+hundred minutes rather than after.
+
+VOID BY ITS OWN GATE -- AND AN ACCIDENTAL NULL-CONTROL WORTH MORE THAN THE FLAG (2026-08-13).
 
 combatDodgeYieldsToSwing, 40 launches, combatDodgeOnDraw pinned in BOTH arms so the yield was the
 only difference. Gate: mdDodgeYielded must be 0 in arm A and >0 in arm B.
