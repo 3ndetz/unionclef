@@ -1,4 +1,36 @@
-"""*** THE CLOSING BUDGET, IN BLOCKS RATHER THAN TICKS (2026-08-13). AND TWO OF MY OWN CORRECTIONS.
+"""PRE-REGISTRATION #6, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, combatApproachLatch).
+
+The first fix on this course aimed at the closing BUDGET rather than at who owns the legs.
+ApproachLatch presses forward+sprint toward a committed target ONLY on ticks where no other writer
+pressed a direction -- no band, no strafe, no back-off, so it cannot fight the controller because
+it never runs on a tick the controller drove.
+
+  * 40 launches, interleaved, --pin-alt combatApproachLatch=true, ~20 an arm;
+  * STATISTIC: MEAN ARROWS LANDED, 2 sigma. Zero-rate recorded, NOT promoted (#4 is what promoting
+    it after the fact costs);
+  * MECHANISM GATE: latched must be 0 in arm A and > 0 in arm B, or the series is VOID rather than
+    negative. Smoke test already read latch=28/54, so it fires;
+  * secondary, and this is the one that says whether the MODEL is right: arrows FIRED. The whole
+    claim is that a faster close means fewer shot cycles. If arrows landed improves while arrows
+    fired does not, the explanation is wrong even if the number is good;
+  * if it clears: mob_melee and mob_trio before shipping. The latch is not skeleton-specific -- it
+    fires on any committed kill -- so a zombie course is where it could regress, and "it only fires
+    on empty ticks" is a PREDICTION to check, not an assumption;
+  * if it fails: the closing-budget line is closed too, and what remains is G-1.82's course-level
+    statement.
+
+WHY THIS IS NOT A SIXTH GUESS. The five refuted flags all moved WHO drives. This one was derived
+from a measured budget in blocks: an idle tick covers 0.067 against a sprint tick's 0.244 while the
+skeleton retreats at 0.215, so 47% idle turns a +0.029 close into a -0.055 loss. The smoke test
+then confirmed the mechanism directly in a trace -- re-approach idle 24% -> 0%, meanStep 0.167 ->
+0.218, net -0.048 -> +0.003 -- BEFORE any arrows were counted.
+
+HONEST PRIOR: the noise floor here is 3 passes and 12 hit-rate points at n=20 an arm, and the model
+says a faster close buys at most one fewer arrow fired. That is about 0.3 arrows landed -- close to
+the resolution limit. A null would NOT refute the budget arithmetic, only its size, and that is
+recorded now so a null cannot later be written up as one.
+
+*** THE CLOSING BUDGET, IN BLOCKS RATHER THAN TICKS (2026-08-13). AND TWO OF MY OWN CORRECTIONS.
 
 Measured with REAL per-tick displacement (position delta), pooled over four traced fights.
 

@@ -197,6 +197,12 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// than the ones some layer asked for. That distinction is the whole history of this method:
 		// the flee keys and the arrow dodge were both measured as refuted while being erased before
 		// the game ever saw them. No-op unless combatTrace is pinned.
+		// LAST, AND ONLY INTO AN EMPTY TICK. Everything above has had its say; if none of them
+		// pressed a direction the tick would reach the game with the legs idle, and an idle tick
+		// costs five times what a sprint tick gains (ApproachLatch). Placed BEFORE the trace so the
+		// trace records what the game will actually read.
+		kaptainwutax.tungsten.combat.ApproachLatch.tick((ClientPlayerEntity)(Object)this);
+
 		kaptainwutax.tungsten.combat.CombatTrace.sample((ClientPlayerEntity)(Object)this);
 
 		// BowShooter added 2026-08-09: THE RANGED PHASE HAD NO VOID GUARD AT ALL.

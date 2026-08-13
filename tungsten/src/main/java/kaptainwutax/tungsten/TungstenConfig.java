@@ -372,6 +372,20 @@ public class TungstenConfig {
     public boolean combatTrace = false;
 
     /**
+     * Keeps the bot walking at a committed target on ticks where nothing else drives the legs.
+     *
+     * <p>See {@link kaptainwutax.tungsten.combat.ApproachLatch} for the measurement. In short:
+     * 47% of re-approach ticks reach the game with no movement key at all, because the pathfinder
+     * is mid-search; an idle tick covers 0.067 blocks against a sprint tick's 0.244, while the
+     * skeleton retreats at 0.215, so those ticks are what turns a +0.029 b/t close into a -0.055
+     * b/t loss and parks the bot at five blocks.
+     *
+     * <p>Off by default. Judged on mean arrows at 2 sigma, with latched > 0 as the mechanism gate
+     * and mean per-tick displacement as the secondary that says WHY.
+     */
+    public boolean combatApproachLatch = false;
+
+    /**
      * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).
      *
      * <p>The bot holds a strafe key in about 55% of those ticks, together with forward and sprint,

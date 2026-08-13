@@ -1005,6 +1005,10 @@ public class MobDefenseChain extends SingleTaskChain {
                         mdTungstenTicks++;
                     }
 
+                    // Tell the approach latch what we are committed to. It only fires on ticks
+                    // where nothing else drove the legs, and only for a few ticks after this
+                    // stamp, so it dies with the fight instead of lingering.
+                    kaptainwutax.tungsten.combat.ApproachLatch.stamp(toKill.getPos());
                     setTask(new KillEntitiesTask(toKill.getClass()));
                     mdRet6++; return 65;
                 } else {
