@@ -160,7 +160,27 @@ public class UnstuckChain extends SingleTaskChain {
         //  - NOTHING PRESSED means the bot is deliberately standing (waiting for a
         //    search, a craft, a menu) — a shimmy there is pure damage.
         if (isInCombat(mod)) { posHistory.clear(); return; }
-        if (adris.altoclef.util.helpers.TungstenHelper.isActive()) { posHistory.clear(); return; }
+        // !! THE DISCRIMINATOR MUST COME BEFORE THIS GUARD, NOT AFTER IT.
+        // TungstenHelper.isActive() is true while PATHFINDER.active -- which is EXACTLY the
+        // stranded state, a search spinning with no path to show for it. Placed after it, the
+        // stranded check could never run: measured as stranded=0 with the flag pinned ON, i.e. a
+        // flag that could not fire and a 40-launch series that was void by its own mechanism gate.
+        boolean strandedWithGoal = false;
+        if (kaptainwutax.tungsten.TungstenConfig.get().unstuckWhenGoalButNoPath
+                && !isTryingToMove() && posHistory.size() >= 200) {
+            Vec3d first = posHistory.getFirst();
+            boolean frozen = true;
+            for (Vec3d v : posHistory) {
+                if (v.squaredDistanceTo(first) > 0.25) { frozen = false; break; }
+            }
+            boolean hasGoal = mod.getUserTaskChain() != null && mod.getUserTaskChain().isActive();
+            strandedWithGoal = frozen && hasGoal;
+            if (strandedWithGoal) strandedRescues++;
+        }
+        if (adris.altoclef.util.helpers.TungstenHelper.isActive() && !strandedWithGoal) {
+            posHistory.clear();
+            return;
+        }
         // !! "PRESSES NO KEYS" CONFLATES TWO STATES, AND ONE OF THEM IS BEING STUCK.
         //
         // The guard below is right about waiting on purpose -- shimmying at an open chest or
@@ -177,18 +197,6 @@ public class UnstuckChain extends SingleTaskChain {
         // has not moved for the whole history window, and no keys, is stranded, not patient.
         // Everything the guard protects -- chests, crafting, menus, combat -- is still excluded by
         // the checks around it, which are unchanged.
-        boolean strandedWithGoal = false;
-        if (kaptainwutax.tungsten.TungstenConfig.get().unstuckWhenGoalButNoPath
-                && !isTryingToMove() && posHistory.size() >= 200) {
-            Vec3d first = posHistory.getFirst();
-            boolean frozen = true;
-            for (Vec3d v : posHistory) {
-                if (v.squaredDistanceTo(first) > 0.25) { frozen = false; break; }
-            }
-            boolean hasGoal = mod.getUserTaskChain() != null && mod.getUserTaskChain().isActive();
-            strandedWithGoal = frozen && hasGoal;
-            if (strandedWithGoal) strandedRescues++;
-        }
         if (!isTryingToMove() && !strandedWithGoal) { posHistory.clear(); return; }
 
         // Don't trigger when baritone is actively pathfinding (calculating a path)

@@ -227,13 +227,17 @@ class MineStone(CraftTable):
         # decision; breakFailOutOfReach is the half that the reach test already refuses. Both
         # existed as counters with no reader -- the sixth dead instrument found today.
         ok_bf, bf_stats = ctx.bot.py.try_call("placeStats")
-        bf = "unread"
+        parts = []
         if ok_bf and bf_stats:
             for tok in str(bf_stats).split():
-                if tok.startswith("breakFail="):
-                    bf = tok.split("=", 1)[1]
-        yield Criterion("break-fail bans (recorded, not gated)", True,
-                        f"breakFail={bf}", gate=False)
+                if tok.startswith("breakFail=") or tok.startswith("stranded="):
+                    parts.append(tok)
+        # stranded= is the mechanism gate for unstuckWhenGoalButNoPath. It was DECLARED as
+        # that gate in pre-registration #8 and then not exposed at all, which made the
+        # 40-launch series VOID by its own rule -- there was no way to tell whether the flag
+        # had fired. Printed here so that cannot happen to it twice.
+        yield Criterion("break-fail bans / stranded rescues (recorded, not gated)", True,
+                        " ".join(parts) if parts else "unread", gate=False)
 
 
 class SmeltIron(CraftTable):
