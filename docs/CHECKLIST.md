@@ -772,6 +772,34 @@ until [ -s "$OUT" ]; do sleep 30; done; echo "done"
 4. This does NOT weaken rule 8's stop conditions. Blocking is not stopping — the turn stays
    alive and the work continues the moment the condition is met.
 
+## 4t. A GATE METRIC MUST BE A RATE OR A MEDIAN, NOT A TOTAL (2026-08-13)
+
+Four times in one day a per-run TOTAL was read as if it described intensity, and every time the
+confound was fight length -- a run that goes badly lasts longer and accumulates more of whatever
+is being counted.
+
+1. corr(band ticks, arrows) = +0.43 was read as "the controller is starved of band ticks". A
+   longer fight has more band ticks AND more arrows. That reading cost a 40-launch series.
+2. corr(strafeFar, reachMean) = +0.93 looked like the circle-strafe diluting the approach.
+   strafeFarTicks counts strafe ticks taken BEYOND reach, so per control tick it is one minus the
+   in-reach rate: corr(strafeRate, inReachRate) came out exactly -1.00. An identity.
+3. dodgeDrive was used as a pre-registered MECHANISM GATE -- the one device meant to stop exactly
+   this -- and inverted: 35.3 -> 108.2, apparently voiding the series. Median 21 -> 15 and
+   per-arrow 8.79 -> 6.65 both showed the flag firing as designed. Five runs where the bot never
+   engaged, accumulating dodge ticks for two thousand ticks each, carried the mean over the gate.
+
+**The rule: a gate or a correlation takes a RATE (per control tick, per arrow, per episode) or a
+MEDIAN, unless the denominator is fixed by construction.** A total is only safe when every run
+has the same length, and on an event-terminated course no run does.
+
+Two cheap tells, both free to check before believing anything:
+
+- a correlation of exactly +/-1.00 between two derived quantities is an identity, not a discovery;
+- if the mean and the median of the same counter disagree in DIRECTION between arms, the mean is
+  being carried by a tail, and the tail is usually a different failure mode rather than more of
+  the same one. Look at the tail before reading the mean -- it is often the more interesting find.
+  The 9%-of-runs stall on mob_skeleton was found exactly this way, while diagnosing a broken gate.
+
 ## 5. VIDEO
 
 `--record` on the run, then:
