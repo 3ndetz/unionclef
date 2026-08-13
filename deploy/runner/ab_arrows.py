@@ -21,6 +21,35 @@ WHAT THE COUNTERS SAID, which the arrows could not: the flag's mechanism fired e
 corr(controller ticks, reachMean) = +0.91. The cause is an arbitration line, not this flag --
 see TungstenConfig#combatCloseOwnsBand.
 
+PRE-REGISTRATION #3, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, combatDodgeHoldByRange).
+
+40 launches, interleaved, --pin-alt combatDodgeHoldByRange=true. Declared now:
+
+  * statistic: MEAN ARROWS LANDED. Bar: 2 sigma. Not pooled with anything else here;
+  * MECHANISM GATE, checked before the arrows are read: dodgeDrive must be LOWER in the pinned arm.
+    The flag shortens a hold, so if dodgeDrive does not fall it did not fire and the series is VOID
+    rather than negative. Same gate that made #2 readable;
+  * secondary, recorded not gated: bandToSwing and inReachRate. The whole claim is that returned
+    ticks go into closing, so if arrows move while those two do not, the explanation is wrong even
+    if the number is good;
+  * if it clears the bar: mob_melee and mob_trio re-run before it ships. The dodge is not
+    skeleton-specific and a shorter hold changes every course where something shoots;
+  * if it does not: the flag stays off and the dodge overhang is closed as a lever. What would
+    remain is the ~2 ticks that ARE flight time, and those are not recoverable by tuning.
+
+WHY THIS IS A DEFECT AND NOT ANOTHER POLICY GUESS. The three flags closed above were all
+hypotheses about who SHOULD own the approach. This is a unit mismatch with the arithmetic on
+record: DODGE_HOLD_TICKS = 6 carries the comment "an arrow crosses twelve blocks in about eight
+ticks", and this course's shots are released at a mean of 5.4-5.7 blocks -- about two ticks of
+flight at 2.65 blocks a tick. Four of the six ticks sidestep an arrow that has already arrived,
+while the primitive overrides the approach at the final-word position for every one of them. The
+change is clamped to [2, 6], so it can only return ticks and never extend a dodge.
+
+⛔ AND THE HONEST PRIOR: the effect is small. About 4 wasted ticks per arrow at ~4.5 arrows a run
+is ~18 ticks against a 109-tick band -- perhaps 0.3 arrows, right at the edge of what n=20 an arm
+resolves. A null result here is genuinely uninformative about the mechanism, and that is recorded
+NOW so a null is not later written up as a refutation of the arithmetic.
+
 OUTCOME OF PRE-REGISTRATION #2 (2026-08-13). REFUTED, AND THE LINE IS CLOSED AS PROMISED.
 
 40 interleaved launches, 0 invalid. The mechanism gate passed cleanly -- cqTookFromPursue 0 in all

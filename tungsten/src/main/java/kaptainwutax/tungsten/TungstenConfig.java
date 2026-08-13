@@ -291,6 +291,32 @@ public class TungstenConfig {
     public boolean combatDodgeOnDraw = false;
 
     /**
+     * Ends a sidestep when the arrow has actually arrived, instead of six ticks later.
+     *
+     * <p>THE DEFECT IS A UNIT MISMATCH, not a policy. {@code DODGE_HOLD_TICKS = 6} carries the
+     * comment "an arrow crosses twelve blocks in about eight ticks" -- it was derived for a
+     * twelve-block shot. On mob_skeleton the shots are released at a mean of 5.4-5.7 blocks, and an
+     * arrow covers ~2.65 blocks a tick, so the flight is about two ticks. Four of the six are spent
+     * sidestepping something that has already arrived or already missed.
+     *
+     * <p>Those ticks are not free. {@code ProjectileDodge} ticks at the final-word position and its
+     * javadoc says outright that its purpose is to override the approach while an arrow is in the
+     * air; it presses forward/back/left/right/sprint from the dodge heading and wipes whatever the
+     * approach wanted. dodgeDrive runs ~43 ticks a fight against ~52 ticks of combat control and
+     * ~109 band ticks, so the overhang is a large share of the approach, not a rounding error.
+     *
+     * <p>The hold is clamped to [2, DODGE_HOLD_TICKS], so this can only ever RETURN ticks to the
+     * approach and never extend a dodge past today's behaviour. The floor of 2 is deliberate: the
+     * sidestep has to be moving BEFORE the arrow lands to make it miss, so a sub-tick flight still
+     * gets one tick of margin.
+     *
+     * <p>Judged on arrows at 2 sigma, n=20 an arm, interleaved, with dodgeDrive as the mechanism
+     * gate -- it must FALL in the pinned arm, or the flag did nothing and the arrows are about
+     * something else. Off by default until then.
+     */
+    public boolean combatDodgeHoldByRange = false;
+
+    /**
      * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).
      *
      * <p>The bot holds a strafe key in about 55% of those ticks, together with forward and sprint,

@@ -366,6 +366,27 @@ public class MobDefenseChain extends SingleTaskChain {
     private double suggestedDodgeX, suggestedDodgeZ;
     /** How long one sidestep runs. An arrow crosses twelve blocks in about eight ticks. */
     private static final int DODGE_HOLD_TICKS = 6;
+    /**
+     * How long THIS sidestep should run, derived from how far the arrow actually has to travel.
+     *
+     * <p>⛔ THE CONSTANT ABOVE WAS DERIVED FOR TWELVE BLOCKS AND IS APPLIED AT FIVE. Its own comment
+     * says so: "an arrow crosses twelve blocks in about eight ticks". On mob_skeleton the shots are
+     * released at a mean of 5.4-5.7 blocks (the arrows= counter), and an arrow covers ~2.65 blocks a
+     * tick, so the flight is about two ticks. The hold is six. The remaining four are spent
+     * sidestepping something that has already arrived or already missed -- and the dodge primitive
+     * OVERRIDES the approach for every one of them, by design and at the final-word position.
+     *
+     * <p>Measured scale: dodgeDrive runs ~43 ticks a fight against ~52 ticks of combat control and
+     * ~109 band ticks, so this is not a rounding error in the approach; it is a large share of it.
+     *
+     * <p>Clamped so it can only ever RETURN ticks: never longer than {@link #DODGE_HOLD_TICKS},
+     * never shorter than 2 (one tick of margin on a sub-tick flight, since the sidestep has to be
+     * moving BEFORE the arrow arrives to make it miss). Behind
+     * {@link kaptainwutax.tungsten.TungstenConfig#combatDodgeHoldByRange} and off by default.
+     */
+    private int suggestedDodgeTicks = DODGE_HOLD_TICKS;
+    /** Blocks an arrow covers per tick, measured on this bench rather than assumed. */
+    private static final double ARROW_BLOCKS_PER_TICK = 2.65;
     private final TimerGame preProjectileTimer = new TimerGame(0.3);
     private final TimerGame projectileTimer = new TimerGame(0.7);
 
@@ -755,7 +776,7 @@ public class MobDefenseChain extends SingleTaskChain {
                 // keeps facing what it is fighting -- the swing gate refuses past 40 degrees, and a
                 // dodge that looks away cannot also attack.
                 kaptainwutax.tungsten.task.ProjectileDodge.hold(
-                        suggestedDodgeX, suggestedDodgeZ, DODGE_HOLD_TICKS);
+                        suggestedDodgeX, suggestedDodgeZ, suggestedDodgeTicks);
             }
             mdRet2++; return 65;
         }
@@ -1536,6 +1557,13 @@ public class MobDefenseChain extends SingleTaskChain {
                         // decide where the head points.
                         suggestedDodgeX = dodgeDir.x;
                         suggestedDodgeZ = dodgeDir.z;
+                        // shotRange is already computed above for the press bias; the hold length
+                        // is the one other thing it can answer, and until now nothing asked.
+                        suggestedDodgeTicks = kaptainwutax.tungsten.TungstenConfig.get()
+                                .combatDodgeHoldByRange
+                                ? Math.max(2, Math.min(DODGE_HOLD_TICKS,
+                                        (int) Math.ceil(shotRange / ARROW_BLOCKS_PER_TICK) + 1))
+                                : DODGE_HOLD_TICKS;
 
                         if (runAwayTask == null && (mod.getClientBaritone() == null || Nav.isSafeToCancel())) {
                             if (mod.getClientBaritone() != null)
