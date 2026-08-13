@@ -1,4 +1,41 @@
-"""THE YIELD PREMISE IS DEAD, AND A FIVE-MINUTE SMOKE TEST KILLED IT INSTEAD OF A HUNDRED-MINUTE SERIES.
+"""THE 5-BLOCK EQUILIBRIUM IS THE SKELETON'S, NOT THE BOT'S (2026-08-13). TWO HYPOTHESES, BOTH FREE.
+
+Hypothesis: the 9%-of-runs stall is CHATTERING at the 4.5 inRange switch -- two controllers sharing
+a threshold with no hysteresis, which would park the bot on the boundary. The stalled runs' lastGap
+values did look like it: 4.51, 4.53, 4.51, 4.55, 4.53, 4.68, 4.64, 4.70.
+
+REFUTED from traces already on disk, at no cost. Pooled distance histogram, 1857 fight ticks:
+
+     2.5   90 ###########
+     3.0  145 ##################   <- REACH
+     3.5  188 ########################
+     4.0  157 ####################
+     4.5  124 ################     <- the inRange switch: a DIP, not a spike
+     5.0  213 ###########################
+     5.5  185 ########################
+     6.0   75 #########
+
+Only 5.5% of ticks fall in the 4.3-4.7 band. There is no pile-up at the switch, so no chattering,
+and the hysteresis fix that would have followed is unnecessary. Two minutes of arithmetic against a
+build-deploy-series cycle.
+
+*** WHAT THE HISTOGRAM DOES SAY, and it is the physical reason this course is hard: the mode is
+5.0-5.5 blocks, and only 9.8% of fight ticks are inside REACH at all. A vanilla skeleton BACKS AWAY
+when the player closes inside about five blocks, so that equilibrium is maintained by the TARGET,
+not chosen by the bot. The bot can only beat a retreating skeleton by sprinting continuously, and
+the trace says it holds sprint on 51% of re-approach ticks.
+
+That reframes every "closing" hypothesis in this file: the bot is not choosing to stand at 5
+blocks, it is being HELD there, and the only counter is uninterrupted sprint. Which is also why
+anything that interrupts the legs -- dodge, strafe, knockback, a re-plan -- costs contact
+disproportionately to its tick count.
+
+And it is why "hold sprint while approaching" was measured WORSE once already (closest_gap
+5.73 -> 7.78): sprint-hits add knockback, so sprinting THROUGH the strike re-opens the gap the
+sprint just closed. The lever is sprinting up to reach and arriving unsprinted, which is what the
+shipped code already does -- so this is an explanation, not an outstanding fix.
+
+THE YIELD PREMISE IS DEAD, AND A FIVE-MINUTE SMOKE TEST KILLED IT INSTEAD OF A HUNDRED-MINUTE SERIES.
 
 The guard was corrected after the void series -- from "target inside REACH (3.0) during a draw",
 which is unreachable, to "inside REACH + 1.5 = 4.5", the same threshold the rest of the file uses
