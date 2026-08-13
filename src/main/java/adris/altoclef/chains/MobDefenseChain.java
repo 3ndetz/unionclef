@@ -1374,8 +1374,33 @@ public class MobDefenseChain extends SingleTaskChain {
                         if (flat.lengthSquared() > 1.0e-6) {
                             Vec3d b = flat.normalize();
                             double side = (mdDraws % 2 == 0) ? 1.0 : -1.0;
+                            // ⛔ THIS PATH PASSED A PURE PERPENDICULAR AND THE OTHER ONE DOES NOT,
+                            // AND DODGE_PRESS_BIAS's OWN JAVADOC PREDICTS WHAT THAT COSTS: "at 0 the
+                            // sidestep is purely perpendicular: it survives the arrow and holds the
+                            // range open for ever, which against a ranged mob is a draw the bot
+                            // always loses on damage." The in-flight dodge blends the bias in; this
+                            // one never did, so the two dodges disagreed about the same question.
+                            //
+                            // MEASURED, 40 launches, 20 an arm, mechanism gate passed on the median
+                            // (dodgeDrive 18 -> 64):
+                            //     arrows fired at the bot   2.65 -> 7.80    three times the exposure
+                            //     arrows landed             1.51 -> 1.44    unchanged
+                            //     => skeleton hit rate       57% -> 18%     the sidestep WORKS
+                            //     ticks to first swing      50.7 -> 106.7   and the approach doubles
+                            // Exactly the draw the javadoc describes: the arrows miss, and the bot
+                            // stands in the open long enough to be shot three times as often.
+                            //
+                            // So the heading gets the same closing component the in-flight dodge
+                            // has. The perpendicular stays dominant at 0.6, so leaving the line is
+                            // still the primary motion and the approach is what it does with the
+                            // rest -- which is the constant's stated design, applied where it was
+                            // missing rather than re-tuned.
+                            Vec3d perp = new Vec3d(-b.z * side, 0, b.x * side);
+                            Vec3d dodgeDir = perp
+                                    .add(b.multiply(-DODGE_PRESS_BIAS))   // b points AWAY; close in
+                                    .normalize();
                             kaptainwutax.tungsten.task.ProjectileDodge.hold(
-                                    -b.z * side, b.x * side, DODGE_HOLD_TICKS);
+                                    dodgeDir.x, dodgeDir.z, DODGE_HOLD_TICKS);
                         }
                     }
                 } else {
