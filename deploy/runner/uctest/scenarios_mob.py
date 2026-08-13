@@ -42,6 +42,38 @@ def _stat(ctx, name):
     return None
 
 
+def _close_stats(ctx):
+    """Who owns the legs, and whether the ask to close survives to the keys.
+
+    ⛔ THE FOURTH DEAD INSTRUMENT. closeStats() has been in Py4jEntryPoint since the closing
+    telemetry went in, is read by scenarios_pvp, and was read by none of the mob courses -- whose
+    whole result is decided by distance. The cost: three hypotheses were spent on the last 1.5
+    blocks of this approach without once checking whether `forward` reached the keys.
+
+    WHAT MADE IT URGENT (2026-08-13, engage-band series, n=7 an arm). CombatController's
+    arbitration hands the legs to the safety stage whenever the target is further than
+    REACH+1.0 = 4.0, and closeQuarters -- the ONLY code that presses toward strike distance --
+    runs solely in the `else`. Counted per run as (mdTung - cqEntry):
+
+        flag off   safety won  5-10 of 32-83 ticks     9-20%   reachMean 3.36-3.69
+        flag on    safety won  6-205 of 67-249 ticks   9-82%   reachMean 3.74-5.08
+
+    and corr(controller ticks, reachMean) = +0.91 across the twelve. Ticking the controller EARLIER
+    makes the bot stand FURTHER OUT, because the extra ticks land on the far side of that 4.0 test,
+    where combat does not drive. reposition=0 and brake=0 in every one of those runs, so what beats
+    combat to the legs is not a safety event at all -- it is the plain pursue walk, holding a claim
+    it does not need against the code that owns strike distance.
+
+    wanted/asked/pressed splits the failure three ways, and the next fix is judged on it:
+    wanted > asked means the edge guard refused; asked > pressed means arbitration overrode it; and
+    wanted == pressed with the distance still 4.5 means the approach is losing a footrace to a
+    retreating skeleton and neither of the above is the defect.
+    """
+    ok_cs, cs = ctx.bot.py.try_call("closeStats")
+    ok_db, db = ctx.bot.py.try_call("dirBlockedFwd")
+    return f"close=[{cs if ok_cs else 'unread'}] blockedFwd={db if ok_db else '?'}"
+
+
 def _tung_ticks(ctx):
     """Ticks the fight spent inside tungsten, across BOTH paths.
 
@@ -138,6 +170,7 @@ class MobMelee(Scenario):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
+                        f"{_close_stats(ctx)} "
                         # WHERE IT SHOOTS FROM (count/mean/max), against dw's where-they-LAND. The
                         # mod has carried this since the release-range instrument went in and the
                         # course did not print it — the same dead-instrument shape this file has
@@ -237,6 +270,7 @@ class MobTrioNoDamage(MobMelee):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
+                        f"{_close_stats(ctx)} "
                         # WHERE IT SHOOTS FROM (count/mean/max), against dw's where-they-LAND. The
                         # mod has carried this since the release-range instrument went in and the
                         # course did not print it — the same dead-instrument shape this file has
@@ -737,6 +771,7 @@ class SkeletonDodge(MobMelee):
         yield Criterion("reached striking distance (tungsten took the legs)", ticks > 0,
                         f"mdTung total={ticks} split={_stat(ctx, 'mdTung')} "
                         f"ctl={_stat(ctx, 'ctl')} cq={_stat(ctx, 'cq')} mdFar={_stat(ctx, 'mdFar')} "
+                        f"{_close_stats(ctx)} "
                         # WHERE IT SHOOTS FROM (count/mean/max), against dw's where-they-LAND. The
                         # mod has carried this since the release-range instrument went in and the
                         # course did not print it — the same dead-instrument shape this file has

@@ -2527,6 +2527,13 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.combat.CombatController.fwdWanted = 0;
         kaptainwutax.tungsten.combat.CombatController.fwdAsked = 0;
         kaptainwutax.tungsten.combat.CombatController.fwdPressed = 0;
+        // SEVEN, NOT FIVE. dirAsked/dirBlockedFwd answer "did the edge guard refuse the step
+        // forward" -- the question directly beneath fwdWanted vs fwdAsked -- and they sat two lines
+        // from this reset without being in it. Found while wiring closeStats into the mob courses,
+        // which would have printed a container-lifetime total beside per-run counters and invited
+        // the very comparison the paragraph above says cannot be true.
+        kaptainwutax.tungsten.combat.CombatController.dirAsked = 0;
+        kaptainwutax.tungsten.combat.CombatController.dirBlockedFwd = 0;
         kaptainwutax.tungsten.task.BowShooter.noSolution = 0;
         kaptainwutax.tungsten.task.BowShooter.restarts = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gSwingChargeSum = 0;
