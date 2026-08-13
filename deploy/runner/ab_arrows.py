@@ -21,6 +21,47 @@ WHAT THE COUNTERS SAID, which the arrows could not: the flag's mechanism fired e
 corr(controller ticks, reachMean) = +0.91. The cause is an arbitration line, not this flag --
 see TungstenConfig#combatCloseOwnsBand.
 
+OUTCOME OF #4 (2026-08-13). THE POST-HOC FINDING DID NOT REPLICATE, AND MY OWN GATE WAS CONFOUNDED.
+
+48 launches, 0 invalid, 23/24 an arm.
+
+PRE-REGISTERED STATISTIC (zero-arrow rate):  A 5/23 = 0.22   B 3/24 = 0.12
+                                             -0.09, SE 0.11, 0.84 sigma -- DOES NOT REPLICATE.
+Pooled with #3 it is 6/43 vs 11/44, +0.11 at 1.30 sigma. Series #3's 2.65 sigma was noise, which
+is what the caution written beside it said it probably was. The flag stays off.
+
+⛔ AND THE MECHANISM GATE I WROTE WAS ITSELF A CONFOUNDED TOTAL -- the fourth of these in one day.
+The gate said "mean dodgeDrive must FALL in the pinned arm". It ROSE: 35.3 -> 108.2, which by the
+letter voids the series. But dodgeDrive is a per-run TOTAL, and a run where the bot never engages
+accumulates it for two thousand ticks. De-confounded:
+
+    median dodgeDrive        A 21     B 15
+    dodgeDrive per arrow     A 8.79   B 6.65
+
+Both lower in the pinned arm. The flag fired exactly as designed; five catastrophic runs in arm B
+(dodgeDrive 334-503) dragged the mean over the gate. Band ticks, strafeFar, and now this: three
+totals read as rates, and this one was in a gate I had pre-registered specifically to keep myself
+honest. THE RULE THAT FOLLOWS: a gate metric must be a RATE or a MEDIAN unless the denominator is
+fixed by construction.
+
+The verdict does not depend on resolving the void. The secondary mean reads A 1.14 vs B 2.07 --
+2.78 sigma WORSE -- and the arm B tail is 4.25, 4.5, 4.75, 4.75. Every reading of this series
+points the same way, so the flag stays off under all of them; there is no rescue here that would
+turn it on, which is the only kind of re-reading worth distrusting.
+
+⭐⭐ WHAT THE DIAGNOSIS FOUND, WHICH IS WORTH MORE THAN THE FLAG: A CATASTROPHIC STALL, 9% OF RUNS.
+Across all 167 runs of the four series, 15 have the skeleton firing 8-42 arrows while the bot sits
+beyond 4.5 blocks for 333-2094 ticks -- up to 104 seconds of a 120-second course. In most of them
+mdTung is 13-69, so the combat controller is barely ticking: the bot is parked just OUTSIDE the
+inRange test that would let it fight, and it stays there. lastGap clusters at 4.5-5.0, with
+outliers at 7.9 and 20.6.
+
+That is a stall state, not a tuning question, and it is the same 4.5-block line three refuted flags
+were built around -- approached from the failure side this time. Sizing it honestly before anyone
+spends a series on it: at 9% of runs it caps the pass rate at 91%, while the current rate is ~20%,
+so it is NOT what keeps the course red. The binding constraint is still that an ordinary run takes
+about one arrow and the gate allows none. Fix it as a defect, not as a lever on this gate.
+
 OUTCOME OF #3, AND PRE-REGISTRATION #4 (2026-08-13). THE MEAN SAID NOTHING; THE SHAPE DID NOT.
 
 40 launches, 0 invalid. The mechanism gate passed -- dodgeDrive 31.1 -> 18.9 -- so the flag fired.
