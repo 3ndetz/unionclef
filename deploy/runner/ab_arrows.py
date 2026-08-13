@@ -19,6 +19,29 @@ stranding on the wall) that is not the binding CAUSE of the remaining failures -
 underfoot block changes nothing measurable. What is left is throughput: the gate wants 8 in 120 s
 and the bot averages 5.
 
+PRE-REGISTRATION #8, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, unstuckWhenGoalButNoPath).
+
+Target: the strandings that are ALL of mine_stone's remaining failures. The n=20 baseline is
+bimodal -- eight runs at 8-9 cobblestone and six ZEROS -- and the zeros are the bot on the arena
+wall at y=-57 with a goal, no path and no keys pressed, which UnstuckChain skips by construction.
+
+  * 40 launches, interleaved, --pin-alt unstuckWhenGoalButNoPath=true, ~20 an arm;
+  * STATISTIC: MEAN COBBLESTONE, 2 sigma, against the measured baseline of 5.05 / 8 passes;
+  * SECOND STATISTIC, declared now rather than chosen later: the ZERO RATE. This flag targets the
+    zeros specifically, so "fewer zeros with the mean unmoved" is a real outcome and not a
+    consolation -- but it only counts because it is written here BEFORE the data;
+  * MECHANISM GATE: strandedRescues > 0 in the pinned arm and 0 in the baseline, else VOID;
+  * REGRESSION GATE: the craft ladder must still read 11/12 afterwards. This touches a chain that
+    runs on every course, and shimmying a bot that was waiting on purpose is the harm the guard
+    exists to prevent;
+  * if both fail, the stranding line is closed and the rung's remaining 60% is a throughput
+    question, not a recovery one.
+
+HONEST PRIOR: five runs with the flag on read 5, 6, 0, 8, 9 before a server stall cut the series.
+Two passes in five is indistinguishable from 8 in 20, and a zero still appeared WITH the flag on --
+which is evidence against, and is recorded here so it cannot be forgotten if the full series looks
+better.
+
 PRE-REGISTRATION #7, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, mineAvoidUnderfoot).
 
 First pre-registration on the PLAYTHROUGH ladder rather than the mob course. Statistic differs
