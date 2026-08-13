@@ -1721,3 +1721,78 @@ test.
   a run. The arbitration hole does not obviously account for that. closeStats is now wired to split
   it: wanted > asked is the edge guard refusing, asked > pressed is arbitration, and wanted ==
   pressed at 4.5 blocks means the approach is losing a footrace to a retreating skeleton.
+
+
+## 2026-08-13 (later) — the approach was never the pathfinder's failure
+
+### Result
+
+Both combat flags are refuted and the "the controller should own the approach" line is CLOSED, as
+pre-registered before either series ran.
+
+**combatEngageBand**, 40 interleaved launches, 0 invalid, scored twice (summary + console log split
+on per-run PIN lines, agreeing exactly):
+
+    arm A (off)  n=20  mean 1.32 arrows  sd 0.79
+    arm B (on)   n=20  mean 1.62 arrows  sd 0.93
+    difference  -0.30   SE 0.27   1.10 sigma
+
+Under the 2-sigma bar and in the WORSE direction. The two earlier series read +0.83 and +0.88 at
+3-6 runs an arm, both favouring the flag; at 20 an arm the sign REVERSED. Three careful series and
+the direction was not stable until the n was.
+
+**combatCloseOwnsBand + combatEngageBand as a pair**, 40 interleaved launches, 0 invalid, with a
+mechanism gate declared in advance -- cqTookFromPursue must be 0 in arm A and >0 in arm B, so a
+series where nothing fired would come out VOID rather than negative. The gate passed: 0 in all 20
+arm-A runs, 8-213 in all 20 arm-B runs.
+
+    arrows       A 0.88   B 1.23    -0.35, SE 0.32, 1.11 sigma  (under the bar, WORSE)
+    passes       A 6/20   B 6/20
+    ctl          A 52     B 166     combat drove 3x more
+    reachMean    A 3.53   B 4.71    ...and stood a FULL BLOCK further out
+    inReachRate  A 0.375  B 0.143   share of control ticks inside 3.0, more than halved
+    bandToSwing  A 53     B 84      longer before the first swing landed
+
+### The finding, which is larger than the verdict
+
+`closeQuarters()` is a WORSE closer than the BFS pursue walk it was written to displace. The
+hypothesis was that a path-follower cannot close because it chases the square the target has
+already left; in fact it closes better than the range-band controller on every closing metric, by
+a wide margin. The approach was never the pathfinder's failure, and three flags aimed at handing
+combat more of it (combatCloseToReach, combatEngageBand, combatCloseOwnsBand) have now each made
+things worse in their own instrument.
+
+What replaces the target: corr(inReachRate, arrows) = -0.40 over 40 runs, -0.52 within arm B. The
+SHARE of control ticks spent inside reach predicts the result, and the pathfinder is what maximises
+it.
+
+### One number recorded as NOT evidence
+
+corr(strafeFar, reachMean) = +0.93 looked like the circle-strafe diluting the approach -- a clean
+mechanism, and very nearly a fourth hypothesis. It is an identity: `strafeFarTicks` counts strafe
+ticks taken BEYOND reach, so per control tick it is one minus the in-reach rate, and
+corr(strafeRate, inReachRate) came out exactly -1.00. A correlation of exactly +/-1.00 between two
+derived quantities is the signature of an identity, not a discovery. That counter measures
+distance, not strafing, and cannot test the orbit at all.
+
+Same lesson one level up: the FIRST pre-registration rested on corr(band ticks, arrows) = +0.43,
+read causally. A longer fight has both more band ticks and more arrows. Two confounded correlations
+in one day, one caught before it cost a series and one after.
+
+### Calibration worth keeping
+
+Arm A of the second series is the shipped behaviour and read 0.88 arrows; arm A of the first read
+1.32, on behaviour that is identical (both flags default false, and with them off the arbitration
+condition is the old one exactly). 0.44 arrows apart, about 1.8 SE. Interleaving makes the
+within-series comparison immune to this, which is why it is the rule -- but it says plainly what a
+single 20-run arm quoted across sessions is worth.
+
+### Open
+
+- The residual: even in arm A the bot is inside reach on 37.5% of control ticks and takes 53 band
+  ticks to land its first swing -- at a ~40-tick shot cycle, more than one free shot spent closing
+  the last four blocks.
+- The next candidate, and the first one in a while that is not defined in terms of distance:
+  `dodgeDrive` reads ~43 ticks a run against arm A's 52 control ticks, and corr(dodgeDrive,
+  reachMean) = +0.57. The arrow dodge may be costing more arrows in delay than it avoids in
+  flight. It needs its own pre-registration and a counter that is not an identity.
