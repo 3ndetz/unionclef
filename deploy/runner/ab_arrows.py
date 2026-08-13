@@ -1,4 +1,41 @@
-"""...AND THE RE-PLAN WINDOW IS TOO SMALL TO MATTER. SIZED BEFORE BUILDING, WHICH IS THE POINT.
+"""VOID BY ITS OWN GATE -- AND AN ACCIDENTAL NULL-CONTROL WORTH MORE THAN THE FLAG (2026-08-13).
+
+combatDodgeYieldsToSwing, 40 launches, combatDodgeOnDraw pinned in BOTH arms so the yield was the
+only difference. Gate: mdDodgeYielded must be 0 in arm A and >0 in arm B.
+
+    arm A max 0        arm B: ZERO in 20 of 20 runs      GATE FAILS -> SERIES VOID
+
+The guard required the target inside REACH (3.0) while a skeleton was DRAWING. Skeletons draw at
+range and back away as you close, so that condition is close to unreachable and the yield never
+fired once. A design error in the guard, caught by the gate rather than by a null.
+
+*** SO THE TWO ARMS WERE BEHAVIOURALLY IDENTICAL, WHICH MAKES THIS THE NULL-CONTROL THIS COURSE
+HAS NEVER HAD. Twenty runs an arm of exactly the same bot, interleaved, same session:
+
+    arrows landed   A 1.38   B 1.36    +0.01, 0.05 sigma      <- the primary behaves perfectly
+    passes          A 5/20   B 2/20    <- a 3-pass gap from nothing at all
+    arrows fired    A 5.10   B 3.45    <- 1.65 apart from nothing at all
+    hit rate        A 27%    B 39%     <- 12 points apart from nothing at all
+    toSwing         A 85.3   B 67.2    <- 18 ticks apart from nothing at all
+
+The pre-registered statistic came back at 0.05 sigma, exactly as it should against no difference.
+Every SECONDARY moved by about as much as the real effects claimed for them earlier today.
+
+THAT IS THE CALIBRATION EVERY SECONDARY IN THIS FILE NEEDED. At n=20 an arm, pass counts swing by
+3, hit rate by 12 points and toSwing by 18 ticks with NOTHING changed. So:
+  * "passes A 1/20 B 8/20" from series #3 is 5 passes -- larger than this, and it still failed to
+    replicate, which is now doubly explained;
+  * the 57% -> 18% hit-rate shift from the draw-dodge is 39 points, well outside this noise, and
+    survives as a real effect;
+  * the 38% -> 24% after the heading fix is 14 points -- barely outside it, and should be treated
+    as suggestive rather than established;
+  * toSwing differences under ~20 ticks mean nothing at this n.
+
+Nothing here changes a verdict, because every verdict was taken on the pre-registered primary and
+the primary is the one thing this control shows to be well behaved. It changes how much weight the
+supporting numbers can carry, and that is worth a void series.
+
+...AND THE RE-PLAN WINDOW IS TOO SMALL TO MATTER. SIZED BEFORE BUILDING, WHICH IS THE POINT.
 
 The commit above promised the window would be sized from traces on disk before anything was
 implemented. Sized, over three traced fights, EXCLUDING the harness's NoAI setup window (the bot
