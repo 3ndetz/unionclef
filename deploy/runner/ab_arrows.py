@@ -1,4 +1,50 @@
-"""OUTCOME OF THE DRAW-DODGE RE-TEST (2026-08-13), AFTER GIVING THAT HEADING ITS CLOSING BIAS.
+"""POST-CONTACT EXPOSURE, MEASURED (2026-08-13). AND A CORRECTION TO MY OWN TARGET.
+
+!! FIRST, THE CORRECTION. Two commits earlier I wrote that "every hit knocks the skeleton 2.78
+blocks away, so the bot re-closes 3-4 times per kill" and named that the next target. THE 2.78 WAS
+THE BOT BEING KNOCKED BACK BY ARROWS -- it came from player.hurtTime events -- not the skeleton
+being knocked back by our sword. Measured properly, over 8 landed swings in 4 traced fights:
+
+    skeleton pushed by our sword:  mean 1.37 blocks, and the bot is back inside reach in 1 TICK
+
+So sword knockback costs nothing and the target I named was wrong. It is corrected here rather
+than quietly dropped, because it was committed.
+
+WHAT POST-CONTACT EXPOSURE ACTUALLY IS. Intervals between our own successive swings, 4 traced
+fights, against a ~12-tick attack cooldown:
+
+    19 and 22 ticks   -- in reach 32-36% of the interval   (near-optimal)
+    90 and 123 ticks  -- in reach 4-6% of the interval     (contact lost entirely)
+
+The long ones are the whole cost. Walking through the 123-tick case: the bot swings at 2.99, the
+dodge fires and puts it at 4.25, an arrow lands and it drifts to 7.98 PRESSING NOTHING, re-closes
+intermittently, gets to 3.87, dodge and arrow again, out to 5.77, and finally swings at +123.
+Through all of it ctl advanced 17 of 123 ticks: the combat controller is beyond its 4.5-block gate
+for 86% of the interval.
+
+THE NUMBER THAT NAMES THE DEFECT. Over every RE-APPROACH segment in the four traces -- beyond 4.5
+blocks, after the bot had already been inside reach once -- 365 ticks in 8 segments:
+
+    forward pressed     38%
+    sprint pressed      51%
+    NO KEYS AT ALL      47%
+    dodge driving       12%
+    being shot           6%
+
+The legs are idle on 47% of the ticks the bot spends getting back into a fight it had already
+reached. Dodge and knockback together account for 18% of it, so they are not the explanation.
+
+This is the 4.5-block line for the fourth time, and for the first time it is characterised rather
+than guessed at: beyond it the combat controller does not run BY DESIGN, and the pathfinder that
+owns the legs there presses nothing half the time.
+
+!! AND NOTE WHAT THIS DOES NOT LICENCE. "Give combat the legs out there" was combatCloseOwnsBand,
+and it was measured WORSE (reachMean 3.53 -> 4.71, inReachRate 0.375 -> 0.143) because
+closeQuarters orbits and holds a band rather than closing. The fix is not to hand these ticks to
+the controller; it is to find out why the PATHFINDER idles on them. That wants the same treatment
+the approach got -- instrument it and read it -- not another flag.
+
+OUTCOME OF THE DRAW-DODGE RE-TEST (2026-08-13), AFTER GIVING THAT HEADING ITS CLOSING BIAS.
 
 40 launches, 0 invalid, 20 an arm. Gate passes on the median: dodgeDrive 21 -> 39.
 
