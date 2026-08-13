@@ -193,6 +193,12 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		// on a course with an actual drop rather than a one-line edit made on sight.
 		kaptainwutax.tungsten.task.ProjectileDodge.tick((ClientPlayerEntity)(Object)this);
 
+		// AFTER every writer, so the keys recorded are the ones the game is about to read rather
+		// than the ones some layer asked for. That distinction is the whole history of this method:
+		// the flee keys and the arrow dodge were both measured as refuted while being erased before
+		// the game ever saw them. No-op unless combatTrace is pinned.
+		kaptainwutax.tungsten.combat.CombatTrace.sample((ClientPlayerEntity)(Object)this);
+
 		// BowShooter added 2026-08-09: THE RANGED PHASE HAD NO VOID GUARD AT ALL.
 		// Sampling both guards every 15 s through an allround run:
 		//     t+0..60    punkActive=0     vgCalls=0      <- seventy-five seconds unguarded

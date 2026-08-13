@@ -2098,6 +2098,17 @@ public class Py4jEntryPoint {
     }
 
     public int dirAsked() { return kaptainwutax.tungsten.combat.CombatController.dirAsked; }
+
+    /**
+     * The tick-by-tick fight trace: one line per tick, oldest first, with distance, the keys that
+     * actually reached the game, whether the dodge was driving, the running control counters and
+     * the safety stage.
+     *
+     * <p>Empty unless {@code combatTrace} is pinned. The control counters are RUNNING TOTALS and
+     * are meant to be diffed between consecutive lines -- see CombatTrace for why a per-tick flag
+     * could not be used here.
+     */
+    public String combatTrace() { return kaptainwutax.tungsten.combat.CombatTrace.dump(); }
     public int dirBlockedFwd() { return kaptainwutax.tungsten.combat.CombatController.dirBlockedFwd; }
 
     /** Which trigger gate refuses the swing, counted rather than sampled. */
@@ -2273,6 +2284,7 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.combat.CombatController.controlTicks = 0;
         kaptainwutax.tungsten.combat.CombatController.cqEntry = 0;
         kaptainwutax.tungsten.combat.CombatController.cqTookFromPursue = 0;
+        kaptainwutax.tungsten.combat.CombatTrace.reset();
         kaptainwutax.tungsten.combat.CombatController.cqNoLos = 0;
         kaptainwutax.tungsten.combat.SafetySystem.losCalls = 0;
         kaptainwutax.tungsten.combat.SafetySystem.losClosest = 0;

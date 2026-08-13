@@ -317,6 +317,22 @@ public class TungstenConfig {
     public boolean combatDodgeHoldByRange = false;
 
     /**
+     * Records a tick-by-tick trace of the fight -- distance, the keys that actually reached the
+     * game, who owned the legs -- into {@link kaptainwutax.tungsten.combat.CombatTrace}.
+     *
+     * <p>Diagnostic only: it changes no behaviour and is read through py4j. Off by default because
+     * it formats a string every tick, which is not a cost a real game should pay to answer a
+     * question the bench is asking.
+     *
+     * <p>WHY IT WAS BUILT. Five pre-registered hypotheses about this approach returned null, each
+     * judged on an aggregate, and aggregates produced four confounded totals in one day. The
+     * quantity that decides the course is ~38 ticks between entering the killing band and landing
+     * the first swing, and nothing on record said where they go. The surviving candidates each
+     * predict a different trace, so one run separates what five series could not.
+     */
+    public boolean combatTrace = false;
+
+    /**
      * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).
      *
      * <p>The bot holds a strafe key in about 55% of those ticks, together with forward and sprint,

@@ -155,6 +155,9 @@ public class CombatController {
     /** True on ticks where the close-quarters controller actually ran — lets DamageWatch report
      *  what share of the hurt window this branch even sees. */
     public static volatile boolean controlledThisTick;
+    /** The safety stage this tick, published so {@link CombatTrace} can name who held the legs
+     *  without re-deriving it from a private field. */
+    public static volatile CombatStage lastStage;
     /** THE CONTROL FOR "controlled=0 during 166 hurt ticks". Without a total, that zero cannot tell
      *  "the controller runs but never while hit" from "the controller barely runs at all" — two very
      *  different diagnoses.
@@ -489,6 +492,7 @@ public class CombatController {
             // where closing is a straight walk and a path around scenery is not. Braking,
             // repositioning, narrow terrain and escape are untouched -- only a plain chase is
             // declined.
+            lastStage = safety.getStage();
             boolean plainPursue = safety.getStage() == CombatStage.PURSUE
                     && !safety.isBraking() && !safety.isRepositioning();
             boolean combatOwnsBandHere = cfg.combatCloseOwnsBand && plainPursue && safety.hasLOS()
