@@ -920,6 +920,16 @@ public class CombatController {
         // and the chase restarts, so sprinting all the way through the swing enlarges the very gap
         // it was meant to close. Hence the cut-off is our REACH and not the strike band: sprint
         // across the dead zone, arrive walking, and let the hit land without the extra shove.
+        // ⭐⭐ AND THE FOURTH ATTEMPT IS UNNECESSARY: THE REACH TICKS DO NOT COST ARROWS.
+        // Pooled over 33 valid runs from two series, correlation against arrows landed:
+        //     reach ticks  +0.17   (nothing; n=33 puts that well inside noise)
+        //     band  ticks  +0.43   (real at this n)
+        // So the quantity three attempts fought over does not predict the outcome, while TOTAL time
+        // in the band does -- and the bulk of that is the ~91 ticks where the controller is not
+        // ticking at all, not the 34.8 where it ticks out of reach.
+        // One correlation would have retired this branch before any of the three code changes. That
+        // is the cheaper instrument and it existed the whole time.
+        //
         // ⛔ READ THIS BLOCK BEFORE ATTEMPTING THE REACH REFUSALS A FOURTH TIME (2026-08-13).
         // The 34.8 ticks a fight of "controller running, target unreachable" are real and still
         // unsolved, but THREE attempts on them are now recorded and each failed differently:
