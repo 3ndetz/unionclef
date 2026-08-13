@@ -111,7 +111,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
     private BlockPos _lastBrokenBlockPos = null;
 
     /** Failed breaks judged out of reach (no ban) versus treated as a claim (ban). Read as brkFail=far/claim. */
-    public static volatile int breakFailOutOfReach, breakFailClaimed;
+    public static volatile int breakFailOutOfReach, breakFailClaimed, breakFailBuried;
     private final TimerGame _blockBreakCheckTimer = new TimerGame(0.5);
     private final TimerGame _breakAvoidTimer = new TimerGame(BREAK_AVOID_TIMEOUT);
     private boolean _isAvoidingBlockBreak = false;
@@ -368,7 +368,35 @@ public class WorldSurvivalChain extends SingleTaskChain {
                             net.minecraft.util.math.Vec3d.ofCenter(_lastBrokenBlockPos));
                     wasInReach = d <= (reach + 1) * (reach + 1);
                 }
-                if (!wasInReach) {
+                // A BREAK THAT FAILED BECAUSE THE BLOCK IS BURIED SAYS NOTHING ABOUT A CLAIM.
+                // Sibling of the reach test below, found the same way and costing the same thing.
+                //
+                // MEASURED on mine_stone, from the bot's own chat in a clean run:
+                //     Block at {x=1, y=-62, z=0} failed to break! Maybe private area...
+                //     Adding temporary block avoidance for block breaking.
+                //     Mining aborted (denied by break rules)  /  Ran out of nodes!
+                //     Search gave up: goal unreachable after 20s without progress
+                // Probed by rcon, every neighbour of that block is stone -- above, below and all
+                // four sides. It is FULLY BURIED, so no face can be struck and the break cannot
+                // succeed no matter who owns the land. Reading that as a claim bans a radius-50
+                // region, which empties the minable list and idles the bot for the rest of the run.
+                //
+                // This is why the course scored 0-8 at random and why shrinking the radius did not
+                // help: at any radius the ban is centred one block from the bot and still covers
+                // everything within its 4.5-block reach. The radius was never the defect; believing
+                // the failure was.
+                boolean hasExposedFace = false;
+                for (net.minecraft.util.math.Direction d : net.minecraft.util.math.Direction.values()) {
+                    if (WorldHelper.isAir(_lastBrokenBlockPos.offset(d))) {
+                        hasExposedFace = true;
+                        break;
+                    }
+                }
+                if (!hasExposedFace) {
+                    breakFailBuried++;
+                    Debug.logMessage("Block at " + _lastBrokenBlockPos
+                            + " did not break, but it is BURIED (no exposed face) - not a claim.");
+                } else if (!wasInReach) {
                     breakFailOutOfReach++;
                     Debug.logMessage("Block at " + _lastBrokenBlockPos
                             + " did not break, but it was OUT OF REACH — not treating that as a claim.");
