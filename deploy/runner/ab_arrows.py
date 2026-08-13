@@ -21,6 +21,47 @@ WHAT THE COUNTERS SAID, which the arrows could not: the flag's mechanism fired e
 corr(controller ticks, reachMean) = +0.91. The cause is an arbitration line, not this flag --
 see TungstenConfig#combatCloseOwnsBand.
 
+OUTCOME OF #3, AND PRE-REGISTRATION #4 (2026-08-13). THE MEAN SAID NOTHING; THE SHAPE DID NOT.
+
+40 launches, 0 invalid. The mechanism gate passed -- dodgeDrive 31.1 -> 18.9 -- so the flag fired.
+
+    arrows   A 1.19 (sd 0.53)   B 1.12 (sd 1.23)   +0.06, SE 0.30, 0.21 sigma
+
+Nothing, on the pre-registered statistic. THE FLAG STAYS OFF, as declared. The secondary checks
+say why the arithmetic did not pay: the returned ticks did not go into closing. toSwing 38.1 ->
+40.1, inReachRate 0.36 -> 0.35, reachMean 3.53 -> 3.58 -- all flat. Whatever the dodge was
+costing, the approach did not pick it up.
+
+⭐ BUT THE DISTRIBUTIONS ARE NOT THE SAME DISTRIBUTION, and the course is gated on their left tail:
+
+    arm A (off)  0.0 x1,  0.75 x3,  1.0 x10, 1.75 x2, 2.0 x4
+    arm B (on)   0.0 x8,  0.75 x1,  1.0 x4,  1.5 x1, 1.75 x1, 2.0 x2, 3.0 x1, 3.25 x1, 4.25 x1
+    zero-arrow rate  A 0.05   B 0.40    +0.35, SE 0.13, 2.65 sigma
+    passes           A 1/20   B 8/20
+
+Same mean, opposite shape: half of arm A lands on exactly one arrow, while arm B either takes
+nothing or takes a beating. 8/20 would be the best pass rate this course has produced.
+
+⛔ THIS IS POST-HOC AND IS NOT A RESULT. The statistic was declared as the MEAN before the run,
+the mean read 0.21 sigma, and finding a better statistic afterwards is the move that produced
+"+0.83 and +0.88" and then reversed at n=20. Two further reasons for caution, both against the
+finding: arm A's sd of 0.53 is the tightest of any arm measured today (0.79, 0.76, 0.53), so the
+ANOMALOUS arm may be the baseline rather than the treatment; and a variance difference is exactly
+what small samples manufacture.
+
+So it is tested prospectively instead. PRE-REGISTRATION #4, written before its data exists:
+
+  * 48 launches, interleaved, --pin-alt combatDodgeHoldByRange=true, ~24 an arm;
+  * STATISTIC: THE ZERO-ARROW RATE (equivalently the pass rate), declared in advance this time.
+    It is the quantity the gate is made of, and checklist rule 4i says the gate's statistic is
+    rarely the measurement's -- here they came apart by 2.4 sigma in one series;
+  * bar: 2 sigma on the pooled SE of the difference in proportions;
+  * mechanism gate, unchanged: dodgeDrive must be lower in the pinned arm or the series is VOID;
+  * the MEAN is recorded too. If the zero-rate clears and the mean does not, that is what shipping
+    would buy: more zeros AND more disasters, better against a gate that counts only zeros, worse
+    for a bot that has to survive. That trade gets stated in the release notes rather than hidden;
+  * if it fails to replicate, the flag stays off and the dodge overhang is closed for good.
+
 PRE-REGISTRATION #3, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, combatDodgeHoldByRange).
 
 40 launches, interleaved, --pin-alt combatDodgeHoldByRange=true. Declared now:
