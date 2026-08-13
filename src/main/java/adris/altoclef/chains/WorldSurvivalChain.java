@@ -67,7 +67,6 @@ public class WorldSurvivalChain extends SingleTaskChain {
      * because the bot stops trying its immediate neighbourhood. It no longer takes the whole world
      * with it. On a real server a claim is regional, but a bot that bans a hundred-block cube on
      * one refusal denies itself far more than any claim would.
-     */
      * <p>⛔⛔ CUT TO 3 AND REVERTED THE SAME DAY: IT IS NOT THE CAUSE OF mine_stone.
      * With the radius at 3 the rung read 2 of 3, which looked like a fix, and then 1 of 6 with
      * five ZEROS on the very next series -- i.e. unchanged from the 1-of-3 it started at. The 2/3
