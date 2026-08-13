@@ -1,4 +1,43 @@
-"""THE IDLE TICKS ARE A STOPPED PATHFINDER, NOT A FAILING ONE (2026-08-13).
+"""THE IDLE TICKS ARE A RE-PLAN WINDOW (2026-08-13). NAMED, WITH THE LAYER THAT OWNS IT.
+
+CombatTrace now also carries what tungsten cannot see -- MobDefenseChain publishes Nav.isPathing(),
+the chain priority and the holding task every tick. Pooled over three traced fights, 24 idle
+re-approach ticks (beyond 4.5 blocks, after having been inside reach, no key reaching the game):
+
+    altoclef Nav.isPathing()  TRUE   24/24  (100%)      and 100% on moving ticks too
+    chain claimed the bot            24/24  (prio 65)
+    task holding                     KillEntitiesTask, all 24
+    tungsten walker / queue           0/24 / 0/24
+    tungsten physics executor         8/24  (33%)       against 72% on moving ticks
+    dodge driving                     0/24
+
+The executor is the only signal that discriminates. Nav.isPathing() says "yes" on every tick of
+both kinds, so it cannot be used to tell a moving bot from a standing one -- worth knowing on its
+own, given how many gates hang off it.
+
+FOLLOWING IT ONE LAYER DOWN NAMES THE WINDOW. Nav.isPathing() is true here via
+TungstenHelper.isActive(), which returns busy when {@code PATHFINDER.active || isExecutorRunning()}.
+The executor is off on these ticks, so what is true is PATHFINDER.active: the pathfinder is
+SEARCHING. The bot is standing still inside a re-plan, in the open, being shot at, in a fight it
+had already reached.
+
+That was candidate #1 of the three written down before looking ("a re-plan gap, an arrived test
+satisfied outside reach, or the chain never ticking the kill task"). The other two are excluded by
+the same table: the chain claims the bot on all 24 ticks and KillEntitiesTask holds it on all 24.
+
+WHY THIS IS THE FIRST TARGET HERE THAT IS NEITHER PHYSICS NOR ARBITRATION. Knockback is physics and
+the bot recovers from it in one tick. Arbitration was five flags and all five are refuted -- and
+could not have helped, because on these ticks there is no competing claim to arbitrate, only an
+absence. A re-plan that stops the legs is a plain defect with an obvious shape to its fix: keep
+moving toward the target while the search runs, at least where line of sight is clear and a
+straight step is safe.
+
+NOT IMPLEMENTED YET, deliberately. This course has spent six series on changes made before their
+mechanism was pinned down, and the next one gets pinned down first: how LONG is a re-plan window,
+how often does one open per fight, and what fraction of total exposure do they add up to? The trace
+can answer all three from runs already on disk.
+
+THE IDLE TICKS ARE A STOPPED PATHFINDER, NOT A FAILING ONE (2026-08-13).
 
 CombatTrace extended with the three signals that say whether anything is trying to move the bot:
 BlockPathWalker.isRunning, MovementQueue.isRunning, TungstenModDataContainer.isExecutorRunning.

@@ -51,6 +51,25 @@ public final class CombatTrace {
     private CombatTrace() {
     }
 
+    /**
+     * State published BY altoclef, because tungsten cannot see it.
+     *
+     * <p>The trace showed that on 82% of idle re-approach ticks the walker, the movement queue and
+     * the executor are ALL false -- nothing is trying to move the bot. The three candidates for why
+     * (a re-plan gap, an "arrived" test satisfied outside reach, or the chain never ticking the kill
+     * task) all live on the altoclef side of the module boundary, so they cannot be distinguished
+     * from here. MobDefenseChain.getPriority runs every tick and writes them in.
+     *
+     * <p>Plain volatiles rather than a callback: this is an instrument, and an instrument that
+     * introduces an ordering dependency between two modules is how controlledThisTick became
+     * unusable for exactly this job.
+     */
+    public static volatile boolean hostPathing;
+    /** The altoclef task holding the chain this tick, or "-" when there is none. */
+    public static volatile String hostTask = "-";
+    /** The priority the defence chain returned this tick -- 0 means it did not claim the bot. */
+    public static volatile float hostPrio;
+
     /** Ticks retained. 400 is ~20 s, long enough for an engagement and bounded for a stall. */
     private static final int CAP = 400;
 
@@ -134,7 +153,7 @@ public final class CombatTrace {
             boolean exec = kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning();
             RING[head] = String.format(
                     "%d dist=%.2f keys=%s dodge=%d ctl=%d cqe=%d swings=%d stage=%s vel=%.3f hurt=%d "
-                            + "walk=%d que=%d exec=%d",
+                            + "walk=%d que=%d exec=%d path=%d prio=%.0f task=%s",
                     tick, dist, keys,
                     kaptainwutax.tungsten.task.ProjectileDodge.isActive() ? 1 : 0,
                     CombatController.controlTicks,
@@ -144,7 +163,8 @@ public final class CombatTrace {
                     Math.sqrt(player.getVelocity().x * player.getVelocity().x
                             + player.getVelocity().z * player.getVelocity().z),
                     player.hurtTime,
-                    walker ? 1 : 0, queue ? 1 : 0, exec ? 1 : 0);
+                    walker ? 1 : 0, queue ? 1 : 0, exec ? 1 : 0,
+                    hostPathing ? 1 : 0, hostPrio, hostTask);
             head = (head + 1) % CAP;
             if (count < CAP) {
                 count++;

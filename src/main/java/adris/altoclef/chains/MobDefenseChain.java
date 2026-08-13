@@ -528,6 +528,18 @@ public class MobDefenseChain extends SingleTaskChain {
         if (cachedLastPriority > 0) mdWon++;
         // If no task was set but a non-zero priority was returned, that's an inconsistent
         // state — drop priority so we don't claim control without doing anything.
+        // PUBLISH WHAT TUNGSTEN CANNOT SEE. The trace proved the legs are idle on 47% of
+        // re-approach ticks with every tungsten-side driver false; these three say whether
+        // altoclef thinks it is pathing, which task holds the chain, and whether the chain
+        // claimed the bot at all. Diagnostic only -- read through combatTrace().
+        try {
+            kaptainwutax.tungsten.combat.CombatTrace.hostPathing = adris.altoclef.control.Nav.isPathing();
+            kaptainwutax.tungsten.combat.CombatTrace.hostPrio = cachedLastPriority;
+            kaptainwutax.tungsten.combat.CombatTrace.hostTask =
+                    mainTask == null ? "-" : mainTask.getClass().getSimpleName();
+        } catch (Exception ignored) {
+            // an instrument must never be the thing that breaks a fight
+        }
         if (mainTask == null && cachedLastPriority > 0) {
             cachedLastPriority = 0;
         }
