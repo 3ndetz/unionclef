@@ -1,4 +1,38 @@
-"""PRE-REGISTRATION #5, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, combatDodgeOnDraw).
+"""OUTCOME OF #5 (2026-08-13). NULL ON ARROWS -- AND THE FIRST INTERVENTION THAT MOVED THE VARIABLE.
+
+40 launches, 0 invalid, 20 an arm. Mechanism gate PASSES on the median, as required by rule 4t:
+median dodgeDrive 18 -> 64.
+
+    arrows landed   A 1.51 (sd 0.76)   B 1.44 (sd 1.09)   +0.07, SE 0.30, 0.25 sigma
+
+Nothing on the pre-registered statistic. THE FLAG STAYS OFF. But the secondaries are the most
+informative numbers of the day:
+
+    arrows FIRED at the bot   A 2.65    B 7.80     <- three times the exposure
+    arrows LANDED             A 1.51    B 1.44
+    => SKELETON HIT RATE      A 57%     B 18%      <- the dodge WORKS
+    ticks to first swing      A 50.7    B 106.7    <- and it wrecks the approach to do it
+
+The model said the pass rate is the rate at which the skeleton misses, and that lateral velocity
+at release is the only lever on it. This is the first intervention that moved that lever, and it
+moved it a long way: 57% to 18%. The reason the arrows did not follow is equally plain -- the dodge
+buys avoidance by overriding the legs, so the approach more than doubles, and three times as many
+shots at a third of the hit rate is the same number of hits.
+
+THAT IS A COUPLING, NOT A CEILING, and it is the first target on this course that is not a guess.
+ProjectileDodge presses a heading that REPLACES forward motion. It already has the seam for the
+fix: DODGE_PRESS_BIAS blends a closing component into the dodge heading, and the point-blank
+special case that removed that bias was measured and reverted. So the question is whether the
+dodge can keep its lateral velocity while still advancing -- sidestep across the shot without
+stopping the approach -- rather than trading one for the other.
+
+Predicted, before that is built or run, so it can be wrong on the record: if a dodge that preserves
+the approach holds the hit rate near 18% while keeping arrows fired near 3, the landed count goes
+to roughly 0.5 and the gate becomes reachable for the first time. If the hit rate is only low
+BECAUSE the bot is far away and slow, it will climb back toward 57% as the approach is restored,
+and the lever is an illusion produced by distance.
+
+PRE-REGISTRATION #5, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, combatDodgeOnDraw).
 
 The model above says the pass rate IS the rate at which the skeleton misses, and that lateral
 velocity at release is the only thing that changes it. Exactly one flag in the tree targets that,
