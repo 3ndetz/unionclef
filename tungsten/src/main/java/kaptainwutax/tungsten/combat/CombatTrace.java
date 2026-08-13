@@ -120,8 +120,21 @@ public final class CombatTrace {
             // ordering between two subsystems that neither one documents. Recording the running
             // totals instead means the reader sees "this tick incremented ctl" by subtracting the
             // previous line, and no ordering assumption enters the instrument at all.
+            // WHO IS SUPPOSED TO BE DRIVING, on the ticks where nothing is.
+            // Measured over 365 re-approach ticks in four traced fights: beyond 4.5 blocks, after
+            // the bot had already been inside reach once, the legs are IDLE on 47% of ticks. The
+            // dodge accounts for 12% and being shot for 6%, so neither explains it. Out there the
+            // combat controller does not run by design (the inRange gate), which leaves the
+            // pathfinder -- and these three say whether it thinks it is working: the walker, the
+            // movement queue, and the physics executor. An idle tick with all three false is a
+            // pathfinder that has stopped; with any of them true it is one that is running and
+            // still not pressing anything, and those are very different defects.
+            boolean walker = kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
+            boolean queue = kaptainwutax.tungsten.path.movements.MovementQueue.isRunning();
+            boolean exec = kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning();
             RING[head] = String.format(
-                    "%d dist=%.2f keys=%s dodge=%d ctl=%d cqe=%d swings=%d stage=%s vel=%.3f hurt=%d",
+                    "%d dist=%.2f keys=%s dodge=%d ctl=%d cqe=%d swings=%d stage=%s vel=%.3f hurt=%d "
+                            + "walk=%d que=%d exec=%d",
                     tick, dist, keys,
                     kaptainwutax.tungsten.task.ProjectileDodge.isActive() ? 1 : 0,
                     CombatController.controlTicks,
@@ -130,7 +143,8 @@ public final class CombatTrace {
                     CombatController.lastStage == null ? "-" : CombatController.lastStage.name(),
                     Math.sqrt(player.getVelocity().x * player.getVelocity().x
                             + player.getVelocity().z * player.getVelocity().z),
-                    player.hurtTime);
+                    player.hurtTime,
+                    walker ? 1 : 0, queue ? 1 : 0, exec ? 1 : 0);
             head = (head + 1) % CAP;
             if (count < CAP) {
                 count++;

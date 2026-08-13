@@ -1,4 +1,33 @@
-"""POST-CONTACT EXPOSURE, MEASURED (2026-08-13). AND A CORRECTION TO MY OWN TARGET.
+"""THE IDLE TICKS ARE A STOPPED PATHFINDER, NOT A FAILING ONE (2026-08-13).
+
+CombatTrace extended with the three signals that say whether anything is trying to move the bot:
+BlockPathWalker.isRunning, MovementQueue.isRunning, TungstenModDataContainer.isExecutorRunning.
+One traced fight, 222 ticks; 66 of them re-approach (beyond 4.5 blocks after having been in reach),
+22 of those idle:
+
+    ON THE IDLE TICKS      walker 0/22    queue 0/22    executor 4/22
+                           ALL THREE FALSE on 18 of 22 (82%)
+    on the moving ticks    walker 0/44    queue 0/44    executor 25/44
+
+So the bot is not a pathfinder that is running and failing to press keys. It is a pathfinder that
+has STOPPED, while the bot stands at 5.1-5.8 blocks from a live skeleton in the middle of a fight
+it has already joined. The executor is the only one of the three that ever runs here, and it is
+off for most of the gap.
+
+That is a different defect from everything tried on this course. Five flags argued about WHO should
+own the legs; the answer on these ticks is nobody, and no arbitration change can help because there
+is no competing claim to arbitrate.
+
+Saved: docs/traces/mob_skeleton-pathstate-2026-08-13.txt
+
+NEXT, precisely: find why the executor stops mid-approach. The candidates are a re-plan gap (the
+task asks for a new path and nothing drives while it is computed), an "arrived" test satisfied at a
+distance that is NOT inside reach, or the chain not giving the kill task a tick at all. Those are
+distinguishable by instrumenting the altoclef side -- Nav.isPathing() and the kill task's own state
+-- which CombatTrace cannot see from tungsten. Instrument first; this course has now paid six times
+for going the other way round.
+
+POST-CONTACT EXPOSURE, MEASURED (2026-08-13). AND A CORRECTION TO MY OWN TARGET.
 
 !! FIRST, THE CORRECTION. Two commits earlier I wrote that "every hit knocks the skeleton 2.78
 blocks away, so the bot re-closes 3-4 times per kill" and named that the next target. THE 2.78 WAS
