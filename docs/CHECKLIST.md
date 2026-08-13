@@ -987,26 +987,6 @@ The rule:
 4. This does NOT retire pinning. Pinning removed the build-to-build confound, which was real and
    worse. It removed one confound and left another standing.
 
-## 4s. ⛔ BACKTICKS IN A COMMIT MESSAGE ARE EXECUTED, AND THE WORDS VANISH (2026-08-12)
-
-`git commit -m "... gateStats' \`passed\` ..."` inside a double-quoted shell string runs `passed`
-as a command and substitutes its output — nothing. The message reaches the history with a hole in
-it, no error, and the reader of the log sees a sentence that no longer says what it meant:
-
-```
-That reads gateStats'  as damaging hits.        <- the identifier is gone
-```
-
-Same silhouette as the cp1251 print that killed an eight-run measurement: a formatting detail
-quietly destroying a record rather than failing loudly.
-
-The rule: **write commit messages through a heredoc**, which this repo already does elsewhere:
-
-```bash
-git commit -F - <<'MSG'
-...anything, including `backticks`, $vars and quotes...
-
-
 ## 4s. BACKTICKS IN A COMMIT MESSAGE ARE EXECUTED, AND THE WORDS VANISH (2026-08-12)
 
 Writing a message with `git commit -m "... gateStats' PASSED ..."` where PASSED is wrapped in
