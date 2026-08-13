@@ -261,7 +261,8 @@ public class Py4jEntryPoint {
     public String taskRunnerState() {
         try {
             var r = _mod.getTaskRunner();
-            return "active=" + r.isActive() + " report=" + r.statusReport;
+            return "active=" + r.isActive() + " report=" + r.statusReport
+                    + " lastDisableBy=" + adris.altoclef.tasksystem.TaskRunner.lastDisableCaller;
         } catch (Exception e) {
             return "active=? report=" + e;
         }

@@ -85,7 +85,31 @@ public class TaskRunner {
         active = true;
     }
 
+    /**
+     * WHO switched the runner off, and when. Diagnostic only.
+     *
+     * <p>⛔ WHY THIS EXISTS. On mine_stone the runner reads active=true / UserTaskChain and then
+     * active=false / "(no chain running)" for the rest of the window, with the bot standing still
+     * and the goal unmet. Three callers can do that -- UserTaskChain.onTaskFinish (re-arms
+     * exhausted), UserTaskChain.cancel, SupervisorTaskChain.onTaskFinish -- and two confident
+     * guesses about which one have already been refuted by measurement, one of them after a core
+     * change that had to be reverted. One line naming the caller is worth more than a fourth guess.
+     */
+    public static volatile String lastDisableCaller = "-";
+
     public void disable() {
+        try {
+            StackTraceElement[] st = Thread.currentThread().getStackTrace();
+            StringBuilder sb = new StringBuilder();
+            for (int i = 2; i < Math.min(st.length, 6); i++) {
+                if (sb.length() > 0) sb.append('<');
+                String cn = st[i].getClassName();
+                sb.append(cn.substring(cn.lastIndexOf('.') + 1)).append('.').append(st[i].getMethodName());
+            }
+            lastDisableCaller = sb.toString();
+        } catch (Exception ignored) {
+            lastDisableCaller = "?";
+        }
         if (active) {
             mod.getBehaviour().pop();
             Debug.logMessage("Stopped");
