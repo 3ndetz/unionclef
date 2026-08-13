@@ -1,4 +1,55 @@
-"""PRE-REGISTRATION, WRITTEN BEFORE THE DATA EXISTS (2026-08-13, third engage-band series).
+"""OUTCOME OF THE PRE-REGISTERED SERIES BELOW (2026-08-13). THE FLAG IS FINISHED.
+
+40 launches, interleaved, 0 invalid. Scored twice -- by this tool on the summary, and by splitting
+the console log on its per-run `PIN combatEngageBand=` lines -- and the two agree exactly:
+
+    arm A (off)  n=20  mean 1.32  sd 0.79
+    arm B (on)   n=20  mean 1.62  sd 0.93
+    difference  -0.30 arrows   SE 0.27   1.10 sigma
+
+Under the 2-sigma bar, and in the WORSE direction. The rule below said a third sub-threshold
+result finishes the idea, so it is finished and the flag stays off.
+
+⭐ THE PART WORTH KEEPING. The two earlier series read +0.83 and +0.88, both favouring the flag.
+This one -- the largest, at n=20 an arm against their 3-6 -- reversed the sign. Three careful
+series, and the direction was not stable until the n was. That is the fourth time on this course
+that a promising sub-threshold reading turned out to be noise, and the first time the reversal was
+large enough to be unmissable.
+
+WHAT THE COUNTERS SAID, which the arrows could not: the flag's mechanism fired exactly as designed
+(controller ticks 55 -> 175) and made the bot stand FURTHER OUT, reachMean 3.55 -> 4.56, with
+corr(controller ticks, reachMean) = +0.91. The cause is an arbitration line, not this flag --
+see TungstenConfig#combatCloseOwnsBand.
+
+PRE-REGISTRATION #2, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, the PAIR).
+
+Next series: 40 launches, interleaved, both combatEngageBand and combatCloseOwnsBand pinned on in
+arm B, both off in arm A. Declared now:
+
+  * statistic: MEAN ARROWS LANDED. Bar: 2 sigma. Not pooled with anything above;
+  * A GATE BEFORE THE ARROWS ARE READ AT ALL: cqTookFromPursue must be > 0 in arm B and 0 in arm A.
+    That counter is the mechanism. If it reads 0 in arm B the flag did nothing, the arrows are
+    about something else, and the series is void rather than negative -- exactly the error that
+    let combatCloseToReach be argued about for three passes;
+  * secondary, recorded but not gated: reachMean, and band ticks to the first swing. If arrows move
+    and reachMean does not, the explanation is wrong even if the number is good;
+  * if it clears 2 sigma: mob_melee and mob_trio are re-run BEFORE it ships, because this changes
+    who drives the legs on every mob course;
+  * if it does not: the whole "the controller should own the approach" line is closed, both flags
+    stay off, and the next pass goes at the residual instead -- reachMean sits at 3.4-3.7 against a
+    3.0 reach even when closeQuarters already owns 80-90% of ticks, and that is a different defect.
+
+THE OBJECTION, STATED RATHER THAN AVOIDED. combatEngageBand was just refuted, and here it is
+switched on again inside the very next experiment. That looks like measuring until it passes, so
+the distinction has to be load-bearing rather than rhetorical: the refuted claim was "ticking the
+controller earlier is worth arrows", and it is dead -- the sign reversed at n=20 an arm. The new
+claim is about a DIFFERENT line of code, found afterwards and from counters rather than from a
+hunch: past REACH+1.0 the legs go to the pursue walk, so the earlier ticks were never able to
+drive. combatEngageBand appears in arm B as a PRECONDITION of the thing under test, not as the
+thing under test. If the pair fails, both are finished together and the line is closed for good --
+that is the commitment that makes this a test and not a retry.
+
+PRE-REGISTRATION, WRITTEN BEFORE THE DATA EXISTS (2026-08-13, third engage-band series).
 
 Running 40 launches, interleaved, --pin-alt combatEngageBand=true, expecting ~20 valid an arm.
 Declared NOW so the result cannot be reinterpreted afterwards:

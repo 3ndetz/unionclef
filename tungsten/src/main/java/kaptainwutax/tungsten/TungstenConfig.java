@@ -439,6 +439,32 @@ public class TungstenConfig {
 
     public boolean combatApproachNoOrbit = false;
 
+    /**
+     * Lets the combat controller tick across the whole killing band (7.0 blocks) instead of only
+     * inside {@code inRange}, ~4.5.
+     *
+     * <p>⛔ REFUTED AND CLOSED, 2026-08-13, after three series. The last was 40 interleaved
+     * launches with 0 invalid, scored twice (summary and console log, agreeing exactly):
+     * <pre>
+     *     arm A (off)  n=20  mean 1.32 arrows  sd 0.79
+     *     arm B (on)   n=20  mean 1.62 arrows  sd 0.93
+     *     difference  -0.30   SE 0.27   1.10 sigma
+     * </pre>
+     * Under the pre-registered 2-sigma bar and in the WORSE direction. The two earlier series read
+     * +0.83 and +0.88 at n=3-6 an arm; the sign REVERSED once n reached 20. Do not reopen this on
+     * the strength of those two -- they are what a sub-threshold reading looks like when it is
+     * noise, and this course has now produced four of them.
+     *
+     * <p>THE MECHANISM FIRED AND WAS THE WRONG ONE. Controller ticks went 55 -> 175 exactly as the
+     * flag intends, and the bot ended up FURTHER from the target: reachMean 3.55 -> 4.56,
+     * corr(controller ticks, reachMean) = +0.91, skeleton shots 2.3 -> 4.0. Every added tick landed
+     * beyond the REACH+1.0 arbitration line in CombatController, where the legs belong to the
+     * pursue walk and combat does not drive. So the flag supplied ticks that could not be used.
+     *
+     * <p>It is kept, off, because {@link #combatCloseOwnsBand} needs it: that one makes the ticks
+     * drivable, and is inert without ticks to drive. They are tested as a PAIR, and that pair is a
+     * different hypothesis from this flag alone -- which is refuted.
+     */
     public boolean combatEngageBand = false;
 
     /**
