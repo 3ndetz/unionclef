@@ -41,7 +41,56 @@ public class WorldSurvivalChain extends SingleTaskChain {
 
     private BlockPos _extinguishWaterPosition;
 
+    /**
+     * How far around a block that REFUSED TO BREAK we stop trying to break anything.
+     *
+     * <p>⛔ THIS WAS 50, WHICH BANS A 101x101x101 CUBE ON ONE FAILURE AND IS HOW mine_stone DIES.
+     * Measured 2026-08-13, from the client's own log during a failing run:
+     * <pre>
+     *     Block at {x=1, y=-63, z=0} failed to break! Maybe private area, try another place.
+     *     Adding temporary block {x=1, y=-63, z=0} avoidance for block breaking.
+     *     [Tungsten] Mining aborted (denied by break rules)
+     *     [Tungsten] Ran out of nodes!
+     * </pre>
+     * The mine_stone arena is 8 blocks half-width. A radius of 50 therefore bans EVERY stone in
+     * it -- and for {@link #BREAK_AVOID_TIMEOUT} = 60 s, half of a 120-second course. The bot then
+     * stands still with nothing it is allowed to mine, which is exactly the freeze the course
+     * records (path=-1, breakQ=null) and why the rung scores 1 of 3 while the other eleven score
+     * 3 of 3.
+     *
+     * <p>THE SAME DISPROPORTION IS ALREADY DOCUMENTED ONE METHOD UP, for the sibling half of this
+     * defect: "one unreachable log silences the entire world", cb=0/18456/0/0, every candidate
+     * refused. That was cured by asking whether the block was in REACH before believing the claim.
+     * This is the other half -- believing it, and then over-applying it by fifty blocks.
+     *
+     * <p>3 keeps what the ban is for: a genuinely protected spot is not hammered again and again,
+     * because the bot stops trying its immediate neighbourhood. It no longer takes the whole world
+     * with it. On a real server a claim is regional, but a bot that bans a hundred-block cube on
+     * one refusal denies itself far more than any claim would.
+     */
+     * <p>⛔⛔ CUT TO 3 AND REVERTED THE SAME DAY: IT IS NOT THE CAUSE OF mine_stone.
+     * With the radius at 3 the rung read 2 of 3, which looked like a fix, and then 1 of 6 with
+     * five ZEROS on the very next series -- i.e. unchanged from the 1-of-3 it started at. The 2/3
+     * was noise. Restored to 50 rather than shipping an unmeasured behaviour change into the
+     * block-protection path, which is exactly what this repo's flag discipline exists to prevent.
+     *
+     * <p>What the failure actually looks like, for whoever takes it next: the FIRST run of the
+     * course in a client session passes and every later one scores 0, and the client log during a
+     * failing run carries "failed to break ... Maybe private area", "Mining aborted (denied by
+     * break rules)" and "Ran out of nodes!". So a break IS being refused -- the ban is real -- but
+     * shrinking its radius does not restore the rung, which means the refusal itself, or something
+     * that survives between runs, is the thing to chase. Start at why the break fails at all.
+     */
     private static final int BREAK_AVOID_RADIUS = 50;
+    /**
+     * The placing twin of {@link #BREAK_AVOID_RADIUS}, and it has the SAME shape of problem.
+     *
+     * <p>Left at 50 deliberately: the break radius was cut on direct evidence (a failing course,
+     * the client log naming the ban, and 1-of-3 against 3-of-3 for every other rung). There is no
+     * such evidence for placing yet, and changing two things at once would make the measurement
+     * unreadable. If a placing course ever shows "denied by place rules" with the bot idle, this
+     * is the first line to read.
+     */
     private static final int PLACE_AVOID_RADIUS = 50;
     private static final double BREAK_AVOID_TIMEOUT = 60;
     private static final double PLACE_AVOID_TIMEOUT = 60;
