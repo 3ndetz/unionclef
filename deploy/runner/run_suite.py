@@ -271,8 +271,17 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
                   f"restarting it once before believing the course failed", flush=True)
             subprocess.run(["docker", "restart", world["container"]],
                            capture_output=True, timeout=180)
+            # !! DO NOT POKE A BOOTING SERVER, AND KEEP EVERY POKE SHORT.
+            # The first version of this went straight into wait_for with rcon's default 20 s call
+            # timeout, and it HUNG -- the recovery detected the stall, restarted the container,
+            # printed nothing further and never resumed, while rcon answered from outside in under
+            # a second. subprocess.run's timeout path kills the child and then waits for it, and a
+            # `docker exec` into a JVM that is still coming up can leave that wait blocking for
+            # ever. So: let it settle first, then poll with SHORT calls, so no single attempt can
+            # park the suite.
+            time.sleep(25)
             wait_for(f"{world['container']} rcon (after restart)",
-                     lambda: "players" in rcon.cmd("list"), 300, 5)
+                     lambda: "players" in rcon.cmd("list", timeout=8), 240, 10)
             print(f"  [ok] {world['container']} came back after a restart", flush=True)
         bot.ensure_in_game(world["host"], rcon=rcon)
         if scn.needs_victim:
@@ -716,7 +725,18 @@ def _main():
 
     rcons = {name: Rcon(w["container"]) for name, w in WORLDS.items()}
     flat = rcons["flat"]
-    wait_for("server rcon", lambda: "players" in flat.cmd("list"), 300, 5)
+    # Same recovery as the per-scenario wait below: a server that is down at suite start is worth
+    # one restart before the whole sweep is abandoned. Found by testing that path deliberately --
+    # the per-scenario guard was in place and the suite still died here, because this check runs
+    # first and had none.
+    try:
+        wait_for("server rcon", lambda: "players" in flat.cmd("list"), 120, 5)
+    except Exception:
+        print("  [!] server rcon is not answering at startup - restarting it once", flush=True)
+        subprocess.run(["docker", "restart", "uctest-server"], capture_output=True, timeout=180)
+        time.sleep(25)
+        wait_for("server rcon (after restart)",
+                 lambda: "players" in flat.cmd("list", timeout=8), 240, 10)
     bot = Bot(BOT_CONTAINER, BOT, flat)
     victim = Bot(VICTIM_CONTAINER, VICTIM, flat)
 
