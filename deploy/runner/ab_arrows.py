@@ -22,7 +22,8 @@ when the first two series were run, and it is what changed -- not the appetite f
 
 """Score a two-arm mob_skeleton A/B on ARROWS LANDED, with the rule fixed in advance.
 
-Usage:  python ab_arrows.py <arm-A-summary.json> <arm-B-summary.json>
+Usage:  python ab_arrows.py <summary.json> <pinName>              interleaved, one file
+        python ab_arrows.py <arm-A.json> <arm-B.json>             two separate series
 
 WHY THIS EXISTS. This course's pass count cannot separate arms at any affordable n — the ruler is
 min_hp, and arrows = (20 - min_hp)/4, a small integer per run. Pooled n=14 on the repaired course
@@ -43,21 +44,69 @@ THE DECISION RULE, written before the numbers exist so it cannot be fitted to th
 """
 import io
 import json
+import os
 import sys
 
+# Every reason a completed run is not evidence. `invalid` is the harness's own verdict; the other
+# three are runs it let through as verdicts while printing "NOT comparable against a healthy
+# baseline" next to them. Counting those was a hole in this scorer: a starved run PASSES the
+# validity check, enters an arm, and drags a mean built to resolve 1.5 arrows. They are dropped
+# here and the count is PRINTED -- a scorer that quietly discards half an arm reads exactly like
+# one that had a small effect to report.
+DROP_REASONS = ("invalid", "starved", "drift_from", "jar_changed")
 
-def arms(path):
-    rows = json.load(io.open(path, encoding="utf-8"))
-    rows = rows if isinstance(rows, list) else [rows]
-    out = []
+
+def _truthy(v):
+    return str(v).strip().lower() in ("true", "1", "yes", "on")
+
+
+def arrows(rows):
+    """Arrows landed per run, plus a tally of what was thrown away and why."""
+    out, dropped = [], {}
     for r in rows:
-        if r.get("invalid"):
+        why = next((k for k in DROP_REASONS if r.get(k)), None)
+        if why:
+            dropped[why] = dropped.get(why, 0) + 1
             continue
         for c in r.get("criteria", []):
             if c["name"] == "at most one arrow landed":
                 hp = float(c["detail"].split("min_hp=")[1].split()[0])
                 out.append((20.0 - hp) / 4.0)
-    return out
+    return out, dropped
+
+
+def load(path):
+    rows = json.load(io.open(path, encoding="utf-8"))
+    return rows if isinstance(rows, list) else [rows]
+
+
+def split_on_pin(rows, pin):
+    """Separate an INTERLEAVED series into arms, preferring what was APPLIED over what was meant.
+
+    `pins` records the flags the run actually carried; `arm` records the letter the loop intended.
+    They agree except where a run was retried on fresh clients -- and before the pins were recorded
+    the label was stamped on the attempt that got thrown away, so on exactly those runs the letter
+    is the less trustworthy of the two. Prefer `pins`, fall back to `arm` for summaries written
+    before the recording existed, and say out loud which one was used: the fallback is scoring a
+    series by the loop's intention.
+    """
+    if all(pin in r.get("pins", {}) for r in rows):
+        key, basis = (lambda r: _truthy(r["pins"][pin])), "pins"
+    elif all(r.get("arm") in ("A", "B") for r in rows):
+        # ⛔ AND THE NAME IS NOT CONFIRMED ON THIS PATH, so the report must not print it as though
+        # it were. A summary from before pin recording says which arm a run was in and NOTHING
+        # about which flag the series varied -- feed it the wrong name and the arms come out
+        # confidently labelled with a flag that series never touched. Caught by doing exactly that
+        # to a real 26-run file while testing this. The letters are all this data supports.
+        print("[!] no `pins` recorded -- splitting on the arm LETTER. That is what the loop "
+              "intended rather than what each run carried (retried runs may be mislabelled), and "
+              f"it does NOT confirm the series varied {pin!r}. Check the console log.")
+        key, basis = (lambda r: r["arm"] == "B"), "arm"
+    else:
+        raise SystemExit(
+            f"cannot split this summary: rows carry neither a `pins` entry for {pin!r} nor an "
+            f"arm letter. Was it run with --pin-alt?")
+    return [r for r in rows if not key(r)], [r for r in rows if key(r)], basis
 
 
 def stats(xs):
@@ -69,15 +118,31 @@ def stats(xs):
     return n, m, var ** 0.5
 
 
+def _report(label, xs, dropped):
+    n, m, s = stats(xs)
+    lost = "  ".join(f"-{v} {k}" for k, v in sorted(dropped.items())) or "none dropped"
+    print(f"{label}: n={n}  mean arrows={m:.2f}  sd={s:.2f}  ({lost})  {xs}")
+    return n, m, s
+
+
 def main():
     if len(sys.argv) != 3:
         print(__doc__)
         return 2
-    a, b = arms(sys.argv[1]), arms(sys.argv[2])
-    na, ma, sa = stats(a)
-    nb, mb, sb = stats(b)
-    print(f"arm A (flag off): n={na}  mean arrows={ma:.2f}  sd={sa:.2f}  {a}")
-    print(f"arm B (pinned)  : n={nb}  mean arrows={mb:.2f}  sd={sb:.2f}  {b}")
+    first, second = sys.argv[1], sys.argv[2]
+    if os.path.exists(second):
+        rows_a, rows_b = load(first), load(second)
+        label_a, label_b = "arm A (flag off)", "arm B (pinned)  "
+    else:
+        rows_a, rows_b, basis = split_on_pin(load(first), second)
+        if basis == "pins":
+            label_a, label_b = f"arm A ({second}=false)", f"arm B ({second}=true) "
+        else:
+            label_a, label_b = "arm A (baseline, unverified)", "arm B (alternate, unverified)"
+    a, drop_a = arrows(rows_a)
+    b, drop_b = arrows(rows_b)
+    na, ma, sa = _report(label_a, a, drop_a)
+    nb, mb, sb = _report(label_b, b, drop_b)
     if na < 2 or nb < 2:
         print("REFUSING TO JUDGE: an arm has fewer than two valid runs.")
         return 1

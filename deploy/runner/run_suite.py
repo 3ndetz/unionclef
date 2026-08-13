@@ -778,8 +778,6 @@ def _main():
                                art_root, args.record)
             if jar_now != jar0:
                 res["jar_changed"] = f"{jar0[0]} -> {jar_now[0]}"
-            if ALT_PINS:
-                res["arm"] = arm
             # Retry an fps-invalidated run ONCE on fresh clients. If it comes back invalid again,
             # the load is not ours to fix and the INVALID stands honestly.
             if res.get("invalid") and not res.get("refreshed"):
@@ -869,6 +867,21 @@ def _main():
                                     f"(rebuild {starve_refreshes[0]}/{MAX_STARVE_REFRESHES})")
             if fps_final is not None:
                 course_best_fps[cls.id] = max(ref or 0.0, fps_final)
+            # ⛔ LABEL THE ROW THAT IS KEPT, NOT THE FIRST ATTEMPT.
+            # `arm` used to be stamped straight after the first run_scenario -- above BOTH retry
+            # paths, each of which REPLACES res wholesale (`res = run_scenario(...)` on the invalid
+            # retry, `res = again` on the flake retry). The label went with the discarded object, so
+            # exactly the runs a client refresh RESCUED came out unlabelled, and a scorer splitting
+            # on `arm` would silently drop them from both arms. Rescued runs are not a rare corner:
+            # they are why the refresh exists.
+            #
+            # The pins are recorded alongside, so the summary says what was actually applied rather
+            # than which letter the loop intended. Splitting an A/B on the flag itself needs no
+            # cross-referencing against a console log, which is how these arms were separated
+            # before -- by text-matching `PIN <name>=` blocks in a saved scroll.
+            if ALT_PINS:
+                res["arm"] = arm
+            res["pins"] = dict(EXTRA_PINS)
             results.append(res)
 
     print("\n================ SUMMARY ================")
