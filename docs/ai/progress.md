@@ -1796,3 +1796,60 @@ single 20-run arm quoted across sessions is worth.
   `dodgeDrive` reads ~43 ticks a run against arm A's 52 control ticks, and corr(dodgeDrive,
   reachMean) = +0.57. The arrow dodge may be costing more arrows in delay than it avoids in
   flight. It needs its own pre-registration and a counter that is not an identity.
+
+
+## 2026-08-13 (late) — the approach is fast; it is the HOLDING that fails
+
+### Why a trace
+
+Five pre-registered hypotheses about this approach returned null (engage band, the pair, close-to-
+reach, no-orbit, dodge hold). Each was plausible, each had a mechanism, each was judged on an
+AGGREGATE -- and aggregates produced four confounded totals in one day (checklist rule 4t). No
+aggregate can say WHERE a fight's time goes, only how much of it there was. So: CombatTrace, one
+line per tick, sampled at the final-word position after every writer, recording the keys the game is
+about to read rather than the ones some layer asked for.
+
+Saved: `docs/traces/mob_skeleton-2026-08-13.txt`.
+
+### The first read was wrong, and checking it took two minutes
+
+The raw trace says the bot presses NO KEYS on 48% of pre-swing ticks and stands still for 54 of
+them at 11.7 blocks. That is the harness: the skeleton is summoned `{NoAI:1b}` and stays a statue
+until `@test killhostile` and the `NoAI:0b` merge. Those 54 ticks cost nothing, because nothing is
+shooting. Had it gone unchecked it would have been the sixth confounded number of the day.
+
+### The engagement, 97 ticks from first movement to first swing
+
+    +0  -> +24   11.57 -> 3.60 blocks, sprinting, 0.33 blocks/tick   THE APPROACH IS FAST
+    +24          hurt=10 -- takes a hit, knocked back
+    +28 -> +36   4.57 -> 5.77, PRESSING NOTHING                      knockback, no re-approach
+    +40 -> +68   5.80 -> 2.58, re-closes                             inside reach at last
+    +68          keys = .BL...  -- BACK and left
+    +72 -> +84   2.84 -> 4.47, backing out of its own reach
+    +88 -> +97   4.18 -> 3.04, closes a third time, first swing
+
+    28% of engagement ticks LOSE ground; 41% of those press nothing at all.
+
+The bot reaches strike distance at tick 24 of 97 and spends the other 73 being pushed out and
+re-closing, twice. Every flag tried so far aimed at the approach. The approach was never the
+problem.
+
+### Two mechanisms, both visible in one run
+
+1. **Knockback recovery presses nothing.** A hit throws the bot from 3.60 to 5.77 and for the next
+   several ticks no key reaches the game at all. The pathfinder considers itself arrived (inRange is
+   4.5) and the combat controller does not engage out there, so during the recovery nobody owns the
+   legs. This is the 4.5-block line again -- met from the knockback side rather than the approach
+   side, and the two flags that attacked it from the approach side were both refuted.
+
+2. **The back-off overshoots its own band by seven times.** MOB_BACK_OFF_DISTANCE is REACH - 0.35 =
+   2.65 and MOB_STRIKE_DISTANCE is REACH - 0.1 = 2.9, a band 0.25 blocks wide. At +68 the bot is at
+   2.58 -- 0.07 inside the floor -- presses back, and travels to 4.47 before closing again. About 30
+   ticks, most of a skeleton's shot cycle, spent leaving a range it had just paid 44 ticks to reach.
+
+### Next
+
+Confirm both across several traces before building on one run, then the obvious core question: a
+skeleton has no melee reach to be "too close" to. The file already makes exactly this argument for
+the recharge stand-off, which is skipped for RangedAttackMob -- the base band is not, and that is
+what pressed `back` here. n=1 so far; it is a hypothesis with a trace behind it, not a result.

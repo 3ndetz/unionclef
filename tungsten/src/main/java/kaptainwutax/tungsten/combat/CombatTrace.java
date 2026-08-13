@@ -80,7 +80,6 @@ public final class CombatTrace {
             if (player == null || mc == null || mc.options == null || mc.world == null) {
                 return;
             }
-            tick++;
             Entity nearest = null;
             double bestSq = Double.MAX_VALUE;
             for (Entity e : mc.world.getEntities()) {
@@ -93,10 +92,21 @@ public final class CombatTrace {
                     nearest = e;
                 }
             }
+            // ⛔ ONLY FIGHT TICKS GO IN THE RING, and the first version of this did not do that.
+            // Sampling every tick meant a 400-tick buffer full of post-kill idling: the first
+            // capture read 400 lines of dist=-1 with no hostile alive, and the engagement it was
+            // built to show had been overwritten by the wait that followed it. Skipping the ticks
+            // with nothing to fight makes the buffer hold the LAST 400 ticks OF A FIGHT, which is
+            // the window every question here is about, and it freezes automatically once the target
+            // dies rather than needing a stop signal.
+            if (nearest == null) {
+                return;
+            }
+            tick++;
             // The SAME metric the swing gate uses. Recording centre-to-centre here and comparing it
             // against a 3.0 eye-to-hitbox threshold is how this course once concluded the bot was
             // holding a distance at which it could never hit -- true, but off by the metric.
-            double dist = nearest == null ? -1.0 : TriggerBot.eyeToHitbox(player, nearest);
+            double dist = TriggerBot.eyeToHitbox(player, nearest);
             String keys = ""
                     + (mc.options.forwardKey.isPressed() ? "F" : ".")
                     + (mc.options.backKey.isPressed() ? "B" : ".")
