@@ -442,6 +442,45 @@ public class TungstenConfig {
     public boolean combatEngageBand = false;
 
     /**
+     * Lets close-quarters combat own the legs across the killing band, instead of surrendering them
+     * to the pursue walk at 4.0 blocks.
+     *
+     * <p>THE LINE THIS CHANGES. {@code CombatController.tick} hands movement to the safety stage
+     * whenever {@code eyeToHitbox > REACH + 1.0}, and {@code closeQuarters()} -- the only code that
+     * presses toward strike distance, sprints, and knows what REACH means -- runs solely in the
+     * else. Above 4.0 blocks the legs therefore belong to a BFS path-follower walking at the block
+     * the target occupied when the path was computed. It has no notion of strike distance and it is
+     * chasing a square a retreating skeleton has already left.
+     *
+     * <p>MEASURED, engage-band series, n=7 an arm, counting (mdTung - cqEntry) per run:
+     * <pre>
+     *     flag off   safety won  5-10 of 32-83     9-20%   reachMean 3.36-3.69
+     *     flag on    safety won  6-205 of 67-249   9-82%   reachMean 3.74-5.08
+     * </pre>
+     * corr(controller ticks, reachMean) = +0.91. Ticking the controller earlier made the bot stand
+     * FURTHER OUT, because every added tick landed on the far side of the 4.0 test. reposition=0
+     * and brake=0 throughout, so the claim beating combat to the legs was never a safety event --
+     * it was the plain PURSUE walk, holding a claim it does not need.
+     *
+     * <p>This also explains three sub-threshold {@link #combatEngageBand} series (+0.83, +0.88 at
+     * 1.90 sigma). That flag widens WHEN the controller ticks; this one decides WHETHER those ticks
+     * can drive. On its own the first was inert by construction, and the two belong together.
+     *
+     * <p>SCOPED, because PURSUE is not useless -- it is the obstacle avoidance. It keeps the legs
+     * unless there is line of sight and the target is inside the killing band, which is where a
+     * straight approach is what closing means and a path around scenery is not. Genuine safety
+     * stages (braking, repositioning, narrow terrain, escape) are untouched: this only declines the
+     * claim of a plain chase.
+     *
+     * <p>It is the fix {@link #combatCloseToReach}'s javadoc asked for in as many words -- "make the
+     * CONTROLLER close inside 4.5 rather than make the task wait until 3.0" -- once the reason the
+     * controller could not was found. Off by default until a 40-launch interleaved series says
+     * otherwise; the bar is 2 sigma on mean arrows, and mob_melee and mob_trio are re-run before it
+     * ships, because this changes who drives the legs on every mob course.
+     */
+    public boolean combatCloseOwnsBand = false;
+
+    /**
      * Hold sprint against a RETREATING SHOOTER until the swing, instead of dropping it at REACH.
      *
      * <p>RESTORED after being deleted, because the refutation judged the wrong quantity. It was

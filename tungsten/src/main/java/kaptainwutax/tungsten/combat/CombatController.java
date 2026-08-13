@@ -184,6 +184,24 @@ public class CombatController {
      *  branch is starved has to show it HERE, because this is the number the stage arbitration in
      *  {@code tick()} actually moves. */
     public static volatile int cqEntry, cqNoLos;
+    /**
+     * Ticks where {@link kaptainwutax.tungsten.TungstenConfig#combatCloseOwnsBand} declined the
+     * pursue walk's claim and gave the legs to close-quarters instead.
+     *
+     * <p>Exists so the flag cannot be judged on its outcome alone. Three combat hypotheses on this
+     * course were argued about after the fact without anyone knowing whether the mechanism had
+     * fired at all; one of them turned out to be inert by construction. If this reads 0, the flag
+     * did nothing and the arrows are about something else.
+     */
+    public static volatile int cqTookFromPursue;
+    /**
+     * How far out close-quarters may take the legs from a plain chase, blocks eye-to-hitbox.
+     *
+     * <p>The skeleton's killing band, measured: it shoots from 4.3-6.3 and its band runs 2.5-7.0,
+     * so 7.0 is where being shot at starts and therefore where closing is the whole job. Beyond it
+     * the walk is travel, which is what PURSUE is for and does better.
+     */
+    private static final double CLOSE_OWN_BAND = 7.0;
 
     // ── dynamic combat movement state (circle-strafe + range + crit-jumps) ──────
     private int strafeDir = 1;              // +1 = left, -1 = right
@@ -453,7 +471,37 @@ public class CombatController {
             // Let the stage keep its claim at distance, and let close combat own the legs in reach.
             double claimDist = TriggerBot.eyeToHitbox(player, target);
             boolean stageOverridesInReach = claimDist > TriggerBot.REACH + 1.0;
-            if (safetyClaims && safetyWantsLegs && stageOverridesInReach) {
+            // ⛔ AND THE THIRD TIME IS THE PURSUE WALK ITSELF. Both notes above end at the same
+            // place -- a claim that should have been a layer was arbitrating instead -- and both
+            // stopped at the 4.0 line, treating everything beyond it as the stage's by right.
+            // Beyond it, movement belongs to a BFS path-follower aimed at the block the target
+            // occupied when the path was built. It does not know what REACH is, it never sprints
+            // to close, and against something that backs away it is chasing a square that has
+            // already been vacated. closeQuarters knows all three things and is locked out.
+            //
+            // Measured on the engage-band series (n=7 an arm, counters at TungstenConfig
+            // #combatCloseOwnsBand): corr(controller ticks, reachMean) = +0.91 -- MORE combat
+            // ticks, further OUT -- with reposition=0 and brake=0 in every run, so the claim that
+            // won was a plain chase and not a safety event.
+            //
+            // The scope is deliberate: PURSUE is the obstacle avoidance and keeps the legs unless
+            // there is line of sight and the target is inside the killing band, which is exactly
+            // where closing is a straight walk and a path around scenery is not. Braking,
+            // repositioning, narrow terrain and escape are untouched -- only a plain chase is
+            // declined.
+            boolean plainPursue = safety.getStage() == CombatStage.PURSUE
+                    && !safety.isBraking() && !safety.isRepositioning();
+            boolean combatOwnsBandHere = cfg.combatCloseOwnsBand && plainPursue && safety.hasLOS()
+                    && claimDist <= CLOSE_OWN_BAND;
+            // COUNT THE TICKS ACTUALLY TAKEN, NOT THE TICKS ELIGIBLE. Incrementing on
+            // combatOwnsBandHere alone would also count ticks where the stage was not claiming and
+            // close-quarters was going to run regardless -- a counter that reports the flag working
+            // hard while it changed nothing. Same overstatement the hurtBackingOff note further
+            // down had to be corrected for. This fires only where the old code would have copied
+            // the safety intent and this one does not.
+            boolean stageWouldHaveWon = safetyClaims && safetyWantsLegs && stageOverridesInReach;
+            if (stageWouldHaveWon && combatOwnsBandHere) cqTookFromPursue++;
+            if (stageWouldHaveWon && !combatOwnsBandHere) {
                 resolved.copyFrom(safetyIntent);
             } else {
                 closeQuarters(player, target, world, resolved);
