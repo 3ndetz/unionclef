@@ -261,6 +261,15 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
         # DRAWING FOR NOBODY IS COST WITHOUT BENEFIT.
         # Visualisation belongs ON for a recording -- that is what the clip is for -- and it is a
         # pure cost for every other run, so unrecorded runs turn it off.
+        # ⭐ NOW ESTABLISHED, ON A CLEAN PAIR (2026-08-13). The paragraph below said the cost of the
+        # overlays was NOT established; it is now, and it is large. Same course, same jar, same
+        # session, differing only by --record:
+        #     recorded    avg_fps 15.6, 17.8    cobblestone 0, 0
+        #     unrecorded  avg_fps 28.8-29.5     cobblestone 5, 3, 6, 7, 7
+        # Recording roughly HALVES the frame rate, and mine_stone is throughput-limited (eight
+        # cobblestone in 120 s), so a recorded run of it fails for the recording, not for the bot.
+        # CONSEQUENCE: a clip of a throughput-gated course is not evidence about that course, and a
+        # recorded run must never be quoted in a before/after table beside unrecorded ones.
         # WHAT IS AND IS NOT MEASURED: one A/B on this stand read 12 fps with the overlays on and
         # 16 with them off, which looked like the lever the perf notes promise. Two later runs WITH
         # the pins in place read 10. So the effect is NOT established -- that first pair was the
