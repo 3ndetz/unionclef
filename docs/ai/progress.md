@@ -1645,3 +1645,79 @@ a 3.18 sigma artefact that interleaving cut to 0.46.
 ### Open
 
 Stability of the green is unknown — a 12-run series on the deployed fix is measuring it now.
+
+
+## 2026-08-13 — the pursue walk owns the last three blocks, and combat is locked out
+
+### Investigate
+
+The third engage-band series was pre-registered before its data existed (`deploy/runner/ab_arrows.py`)
+on a mechanism argument: pooled over 33 runs arrows correlate with total band time (+0.43) and not
+with reach refusals (+0.17), and the controller ticked for only 44 of 135 band ticks. At a 12-tick
+cooldown those 44 permit about three swings; the missing 91 would permit eleven.
+
+**That premise is now falsified, by the series measuring it.** At n=7 an arm the flag delivered the
+missing ticks -- controller ticks 55 -> 175, a 3.2x increase -- and bought 2.7 swings against 2.5.
+
+What the counters said instead, per run, with `(mdTung - cqEntry)` counting ticks where combat did
+NOT own the legs:
+
+    flag off   safety won  5-10 of 32-83     9-20%   reachMean 3.36-3.69   arrows 1.12
+    flag on    safety won  6-205 of 67-249   9-82%   reachMean 3.74-5.08   arrows 1.58
+
+    corr(controller ticks, reachMean) = +0.91
+    corr(reachMean, arrows)           = +0.49
+    skeleton shots fired               4.0 vs 2.3
+
+Ticking the combat controller EARLIER makes the bot stand FURTHER OUT, almost deterministically.
+
+### The line
+
+`CombatController.tick` hands movement to the safety stage whenever `eyeToHitbox > REACH + 1.0`
+= 4.0, and `closeQuarters()` -- the only code that presses toward strike distance, sprints, and
+knows what REACH means -- runs solely in the `else`. Above 4.0 blocks the legs belong to a BFS
+path-follower walking at the block the target occupied when the path was computed. It has no notion
+of strike distance, and against something that backs away it is chasing a vacated square.
+
+`reposition=0` and `brake=0` in every one of the fourteen runs, so the claim that beats combat to
+the legs is not a safety event: it is the plain PURSUE walk holding a claim it does not need. This
+is the THIRD instance of one shape in that file -- the sneak claim and the in-reach danger claim
+were both converted from vetoes to layers, and both stopped at the 4.0 line.
+
+It also explains combatEngageBand's three sub-threshold results (+0.83, +0.88 at 1.90 sigma, and
+this one). That flag widens WHEN the controller ticks; it does not decide WHETHER those ticks may
+drive. Alone it was inert by construction -- every tick it added landed on the far side of the 4.0
+test.
+
+### Implement
+
+- `combatCloseOwnsBand` (off by default): within the 7.0 killing band, with line of sight, a plain
+  PURSUE claim no longer outranks close-quarters. Braking, repositioning, narrow terrain and escape
+  are untouched; PURSUE keeps the legs outside the band, where it is doing travel and obstacle
+  avoidance and does them better. This is what `combatCloseToReach`'s javadoc asked for in July --
+  "make the CONTROLLER close inside 4.5 rather than make the task wait until 3.0".
+- `cqTookFromPursue`, reset per run, printed as the third field of `cq=`. Counts only ticks where
+  the stage WOULD have won and no longer does -- not every eligible tick, which would report the
+  flag working hard while changing nothing.
+- `closeStats()` wired into all three mob courses. It had existed in Py4jEntryPoint since the
+  closing telemetry went in and was read only by scenarios_pvp -- the FOURTH dead instrument here.
+  Three hypotheses were spent on the last 1.5 blocks without once checking whether `forward` reached
+  the keys. `dirAsked`/`dirBlockedFwd` were two lines from the per-run reset without being in it.
+- `run_suite` stamped `res["arm"]` above both retry paths, each of which replaces `res` wholesale,
+  so runs a client refresh had just RESCUED came out unlabelled. Label and applied pins now go on
+  the row that is kept. `ab_arrows` splits a summary itself and drops starved / drift / jar-changed
+  rows with a printed tally.
+
+### Open
+
+- The 40-launch series is still running and its verdict is judged by the pre-registration verbatim,
+  not by this finding. Stopping it early because the answer now looks knowable is the exact failure
+  pre-registration exists to prevent.
+- Then: build, deploy, and a 40-launch interleaved series pinning `combatEngageBand` AND
+  `combatCloseOwnsBand` together against both off. Check `cqTookFromPursue > 0` first -- a zero
+  there means the mechanism never fired and the arrows are about something else.
+- Residual, separate and unexplained: even in the flag-off arm, where closeQuarters owns 80-90% of
+  ticks, reachMean sits at 3.4-3.7 against a 3.0 reach and the swing gate refuses on reach ~41 times
+  a run. The arbitration hole does not obviously account for that. closeStats is now wired to split
+  it: wanted > asked is the edge guard refusing, asked > pressed is arbitration, and wanted ==
+  pressed at 4.5 blocks means the approach is losing a footrace to a retreating skeleton.
