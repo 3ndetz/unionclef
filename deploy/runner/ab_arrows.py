@@ -1,3 +1,25 @@
+"""PRE-REGISTRATION, WRITTEN BEFORE THE DATA EXISTS (2026-08-13, third engage-band series).
+
+Running 40 launches, interleaved, --pin-alt combatEngageBand=true, expecting ~20 valid an arm.
+Declared NOW so the result cannot be reinterpreted afterwards:
+
+  * statistic: MEAN ARROWS LANDED, as always;
+  * the bar is 2 sigma, unchanged. Two earlier series read +0.83 and +0.88 (1.90 sigma) and the
+    flag stayed OFF both times. If this one lands under 2 sigma again, it stays off and the
+    engage-band idea is finished -- three sub-threshold results are not evidence, they are a
+    quantity too small to matter;
+  * arms are NOT pooled with the earlier series. This stands or falls alone;
+  * if it clears the bar, the flag goes ON and mob_melee and mob_trio are re-run before anything
+    else, because widening the engage test changes who drives the legs on every mob course.
+
+WHY THIS SERIES IS JUSTIFIED AND NOT MEASURING-UNTIL-IT-PASSES. The mechanism was confirmed
+independently of the flag: pooled over 33 runs, arrows correlate with TOTAL band time (+0.43) and
+not with reach refusals (+0.17), and the counters show the combat controller ticking for only 44 of
+135 band ticks. At a 12-tick cooldown those 44 ticks permit about three swings; the missing 91 would
+permit eleven. The engage test is what gates them. That is a mechanism argument that did not exist
+when the first two series were run, and it is what changed -- not the appetite for a positive.
+"""
+
 """Score a two-arm mob_skeleton A/B on ARROWS LANDED, with the rule fixed in advance.
 
 Usage:  python ab_arrows.py <arm-A-summary.json> <arm-B-summary.json>
