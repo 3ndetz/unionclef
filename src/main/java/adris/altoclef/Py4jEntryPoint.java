@@ -244,6 +244,29 @@ public class Py4jEntryPoint {
         return Objects.requireNonNullElse(AltoClef.getPipeline(), Pipeline.None).getDescription();
     }
 
+    /**
+     * Whether the task RUNNER is switched on, and what it last reported.
+     *
+     * <p>⛔ WHY THIS EXISTS. {@link #getTaskChainString()} reads
+     * {@code TaskRunner.cachedCurrentTaskChain}, and {@code TaskRunner.tick()} opens with
+     * {@code if (!active) return;} -- BEFORE that cache is ever written. So its "No tasks. Time to
+     * add new!" means either "there is no task" or "there is one, the runner is off and has never
+     * ticked", and nothing downstream can tell those apart. A whole diagnosis of the mine_stone
+     * failure was written on the first reading before this was noticed, and checklist rule 2
+     * records an earlier case where three independent witnesses agreed on a conclusion that was
+     * wrong for exactly this reason -- the runner was switched off.
+     *
+     * <p>Returns {@code active=<bool> report=<the runner's own statusReport>}.
+     */
+    public String taskRunnerState() {
+        try {
+            var r = _mod.getTaskRunner();
+            return "active=" + r.isActive() + " report=" + r.statusReport;
+        } catch (Exception e) {
+            return "active=? report=" + e;
+        }
+    }
+
     public String getTaskChainString() {
         StringBuilder tasks_string = null;
 
