@@ -220,6 +220,7 @@ public class MineAndCollectTask extends ResourceTask {
         /** Candidates the block filter saw: accepted / rejected as unreachable / rejected as unbreakable.
          *  Read as scan=ok/unreach/nobreak. */
         public static volatile int scanAccepted, scanUnreachable, scanNoBreak;
+        public static volatile int scanUnderfoot;
 
         public static Pair<Double, Optional<ItemEntity>> getClosestItemDrop(AltoClef mod,Vec3d pos, ItemTarget... items) {
             Optional<ItemEntity> closestDrop = Optional.empty();
@@ -237,6 +238,36 @@ public class MineAndCollectTask extends ResourceTask {
         }
 
         public static Pair<Double,Optional<BlockPos> > getClosestBlock(AltoClef mod,Vec3d pos ,Block... blocks) {
+
+            // !! DIGGING THE BLOCK UNDER YOUR OWN FEET IS HOW A BOT BURIES ITSELF.
+            //
+            // DestroyBlockTask.canClear already refuses exactly this, and says why in as many
+            // words -- "clearing that is how a bot digs itself into a hole while trying to see a
+            // tree" -- but that guard governs clearing an OBSTRUCTION, not choosing a TARGET.
+            // Target selection never knew the rule, so on mine_stone the bot standing at y=-60
+            // takes the nearest stone, which is directly beneath it, digs down to -63, lands in a
+            // pit, climbs out onto the arena wall at y=-57 and strands itself where nothing is
+            // reachable. Traced by polling its position once a second through a run.
+            //
+            // REFUSING IT OUTRIGHT WOULD BREAK DESCENDING, and mine_diamond is green today
+            // precisely because the bot can dig down to reach ore. So this PREFERS anything else
+            // and falls back to the underfoot block when it is genuinely the only candidate:
+            // the exclusion runs first, and an empty result retries without it.
+            BlockPos underfoot = mod.getPlayer() == null ? null : mod.getPlayer().getBlockPos().down();
+            if (kaptainwutax.tungsten.TungstenConfig.get().mineAvoidUnderfoot && underfoot != null) {
+                Optional<BlockPos> preferred = mod.getBlockScanner().getNearestBlock(pos, check -> {
+                    if (check.equals(underfoot)) {
+                        scanUnderfoot++;
+                        return false;
+                    }
+                    if (mod.getBlockScanner().isUnreachable(check)) return false;
+                    if (!WorldHelper.canBreak(check)) return false;
+                    return true;
+                }, blocks);
+                if (preferred.isPresent()) {
+                    return new Pair<>(BlockPosVer.getSquaredDistance(preferred.get(), pos), preferred);
+                }
+            }
             Optional<BlockPos> closestBlock = mod.getBlockScanner().getNearestBlock(pos, check -> {
 
                 // WHY IS THERE NOTHING TO MINE? MEASURE IT, DO NOT GUESS AGAIN.

@@ -386,6 +386,28 @@ public class TungstenConfig {
     public boolean combatApproachLatch = false;
 
     /**
+     * Prefers a mining target that is NOT the block under the bot's own feet.
+     *
+     * <p>DestroyBlockTask.canClear already refuses the underfoot block and says why -- "clearing
+     * that is how a bot digs itself into a hole" -- but that guard governs clearing an OBSTRUCTION,
+     * not choosing a TARGET. Target selection never knew the rule.
+     *
+     * <p>Traced on mine_stone by polling the bot's position once a second: it works at y=-60, digs
+     * down to -63, and from t+60s sits at y=-57 -- the top of the arena rim wall -- frozen for the
+     * rest of the run with path=-1 and nothing in reach. The wall is barrier, so it cannot dig back
+     * down. The whole residual failure of that rung follows from the pit it dug itself.
+     *
+     * <p>It PREFERS rather than forbids: refusing the underfoot block outright would break
+     * descending, and mine_diamond passes today precisely because the bot can dig down to ore. The
+     * exclusion runs first and an empty result retries without it, so digging down survives
+     * wherever it is genuinely the only way.
+     *
+     * <p>Off by default. Judged on mine_stone with mine_diamond watched for regression, now that
+     * sweeps survive to the end again.
+     */
+    public boolean mineAvoidUnderfoot = false;
+
+    /**
      * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).
      *
      * <p>The bot holds a strafe key in about 55% of those ticks, together with forward and sprint,

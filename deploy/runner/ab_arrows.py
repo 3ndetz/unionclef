@@ -1,4 +1,27 @@
-"""PRE-REGISTRATION #6, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, combatApproachLatch).
+"""PRE-REGISTRATION #7, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, mineAvoidUnderfoot).
+
+First pre-registration on the PLAYTHROUGH ladder rather than the mob course. Statistic differs
+because the ruler differs: mine_stone counts cobblestone gathered in 120 s, gate at 8.
+
+  * 40 launches, interleaved, --pin-alt mineAvoidUnderfoot=true, ~20 an arm;
+  * STATISTIC: MEAN COBBLESTONE GATHERED, 2 sigma. The PASS RATE is recorded but not promoted --
+    #4 on the mob course is what promoting a secondary after the fact costs;
+  * MECHANISM GATE: scanUnderfoot must be > 0 in the pinned arm and 0 in the baseline, or the
+    series is VOID rather than negative;
+  * REGRESSION GATE, and it is the reason this is a flag at all: mine_diamond must still PASS.
+    The bot descends by digging down, so a preference against the underfoot block could break
+    exactly the rung that is green today;
+  * if it clears: ship the flag on, re-run the full craft ladder, and only then call the rung fixed;
+  * if it does not: the flag stays off and the pit-digging explanation stays a description rather
+    than a cause -- the trace shows the bot DOES bury itself, but showing that it costs the gate
+    is a different claim and would remain unproven.
+
+HONEST PRIOR: a first look at n=4 read 7, 0, 8, 6 (mean 5.25, one pass) against 5, 3, 6, 7, 7, 0
+(mean 4.67, no passes) without it. That is suggestive and nothing more -- this course has produced
+0 and 8 from identical builds, and four runs cannot separate a spread that wide. Recorded now so
+the n=4 cannot later be quoted as the result.
+
+PRE-REGISTRATION #6, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, combatApproachLatch).
 
 The first fix on this course aimed at the closing BUDGET rather than at who owns the legs.
 ApproachLatch presses forward+sprint toward a committed target ONLY on ticks where no other writer
