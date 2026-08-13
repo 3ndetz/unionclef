@@ -196,6 +196,29 @@ public class MobDefenseChain extends SingleTaskChain {
      * Health is client-visible; the counter for it is one line next to the ones already here.
      */
     public static volatile int mdBandTicks;
+    /**
+     * Band ticks elapsed before our FIRST swing passed the gate. -1 until it happens.
+     *
+     * <p>⛔ WHY THIS AND NOT mdBandTicks. The third engage-band series was pre-registered on
+     * corr(band ticks, arrows) = +0.43 over 33 runs, read as "the controller is starved of band
+     * ticks, give it more". The trivial reading was never excluded: a fight that takes longer has
+     * both more band ticks AND more arrows, because the skeleton keeps shooting throughout. The
+     * series then settled it -- the flag tripled controller ticks, band ticks went 122 -> 192, and
+     * arrows went 1.12 -> 1.58. Band time is a CONSEQUENCE of a slow kill, not a lever on it, and
+     * a correlation with a shared cause is what it looks like.
+     *
+     * <p>What the gate actually prices is time the skeleton shoots for free. A kill needs about
+     * three swings at a ~12-tick cooldown, so the fight itself is ~36 ticks; anything beyond that
+     * is approach, and at 40 ticks a shot cycle every extra 40 is another arrow. Ticks-to-first-
+     * swing measures exactly that and cannot be inflated by a long fight after contact, which is
+     * the confound that made the other number unreadable.
+     *
+     * <p>A companion "band ticks to the KILL" was drafted and dropped: this loop iterates living
+     * hostiles, so the target's death is exactly when it stops being visible here, and stamping it
+     * would have needed state this instrument does not carry. The course already times the kill.
+     * A counter that cannot be stamped honestly is the dead-instrument problem with extra steps.
+     */
+    public static volatile int mdBandToFirstSwing = -1;
     /** Ticks the arrow-avoidance PATHING task owned the legs, and the gap while it did. */
     public static volatile int mdDodgeTaskTicks, mdDodgeTaskGapMilli;
     /**
@@ -1344,6 +1367,12 @@ public class MobDefenseChain extends SingleTaskChain {
             // a draw that stopped is an episode ended -- release or cancel, both end the warning
             drawTicksById.keySet().removeIf(id -> !stillDrawing.contains(id));
             if (inBand) mdBandTicks++;
+            // Stamped from the SAME tick loop that owns mdBandTicks, so the two share a clock.
+            // Reading a per-run counter against one that resets elsewhere is how "in reach 259
+            // ticks but only 71 evaluations" was once taken as evidence of a broken offence.
+            if (mdBandToFirstSwing < 0 && kaptainwutax.tungsten.combat.TriggerBot.gPassed > 0) {
+                mdBandToFirstSwing = mdBandTicks;
+            }
         } catch (Exception ignored) {
             // an instrument must never be the thing that breaks a fight
         }
