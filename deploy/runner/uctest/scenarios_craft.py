@@ -222,6 +222,18 @@ class MineStone(CraftTable):
         yield Criterion("eight cobblestone in the pack", got >= 8, f"cobblestone={got}")
         yield Criterion("the pickaxe survived (recorded)", True,
                         f"pickaxe={_has(ctx, 'wooden_pickaxe')}", gate=False)
+        # THE BAN THAT EMPTIES THE MINABLE LIST, counted at last. breakFailClaimed is the
+        # "block did not turn to air -> treat as a private area -> ban a radius-50 cube for 60s"
+        # decision; breakFailOutOfReach is the half that the reach test already refuses. Both
+        # existed as counters with no reader -- the sixth dead instrument found today.
+        ok_bf, bf_stats = ctx.bot.py.try_call("placeStats")
+        bf = "unread"
+        if ok_bf and bf_stats:
+            for tok in str(bf_stats).split():
+                if tok.startswith("breakFail="):
+                    bf = tok.split("=", 1)[1]
+        yield Criterion("break-fail bans (recorded, not gated)", True,
+                        f"breakFail={bf}", gate=False)
 
 
 class SmeltIron(CraftTable):
