@@ -503,6 +503,37 @@ public class TungstenConfig {
      * controller could not was found. Off by default until a 40-launch interleaved series says
      * otherwise; the bar is 2 sigma on mean arrows, and mob_melee and mob_trio are re-run before it
      * ships, because this changes who drives the legs on every mob course.
+     *
+     * <p>⛔⛔ REFUTED, 2026-08-13, AND IT REFUTES MORE THAN ITSELF. 40 interleaved launches, 0
+     * invalid, the pre-registered mechanism gate passed cleanly (cqTookFromPursue 0 in all 20 arm-A
+     * runs, 8-213 in all 20 arm-B runs), so the flag did exactly what it was written to do:
+     * <pre>
+     *     arrows       A 0.88  B 1.23    -0.35, SE 0.32, 1.11 sigma   (under the bar, WORSE)
+     *     passes       A 6/20  B 6/20
+     *     ctl          A 52    B 166     combat drove 3x more
+     *     cqTookFrom-  A 0     B 113     the pursue claim was declined this often
+     *     reachMean    A 3.53  B 4.71    ...and the bot stood a FULL BLOCK further out
+     *     inReachRate  A 0.375 B 0.143   fraction of control ticks inside 3.0 -- more than halved
+     *     bandToSwing  A 53    B 84      longer before the first swing landed
+     * </pre>
+     *
+     * <p>THE FINDING IS THE OPPOSITE OF THE HYPOTHESIS, and it is much larger than the arrows
+     * result: {@code closeQuarters()} is a WORSE closer than the BFS pursue walk it was written to
+     * displace. Every closing metric moved the wrong way when it took the legs. The premise -- that
+     * the path-follower cannot close because it chases a vacated square -- is simply wrong: it
+     * closes better than the range-band controller does, on this course, by a wide margin.
+     *
+     * <p>So the whole "the controller should own the approach" line is closed, as pre-registered.
+     * Both this and {@link #combatEngageBand} stay off. What replaces it: the quantity that
+     * actually predicts the result is the share of control ticks spent inside reach --
+     * corr(inReachRate, arrows) = -0.40 over 40 runs, -0.52 within arm B -- and the approach that
+     * maximises it is the pathfinder, not this.
+     *
+     * <p>⛔ AND ONE NUMBER FROM THIS SERIES MUST NOT BE QUOTED: corr(strafeFar, reachMean) = +0.93
+     * looked like the circle-strafe diluting the approach. It is an identity.
+     * {@code strafeFarTicks} counts strafe ticks taken BEYOND reach, so per control tick it is one
+     * minus the in-reach rate -- corr(strafeRate, inReachRate) came out exactly -1.00, which is the
+     * giveaway. It measures distance, not strafing, and cannot test the orbit at all.
      */
     public boolean combatCloseOwnsBand = false;
 

@@ -21,6 +21,38 @@ WHAT THE COUNTERS SAID, which the arrows could not: the flag's mechanism fired e
 corr(controller ticks, reachMean) = +0.91. The cause is an arbitration line, not this flag --
 see TungstenConfig#combatCloseOwnsBand.
 
+OUTCOME OF PRE-REGISTRATION #2 (2026-08-13). REFUTED, AND THE LINE IS CLOSED AS PROMISED.
+
+40 interleaved launches, 0 invalid. The mechanism gate passed cleanly -- cqTookFromPursue 0 in all
+20 arm-A runs and 8-213 in all 20 arm-B runs -- so this is a real negative and not a void series.
+
+    arrows       A 0.88   B 1.23    -0.35, SE 0.32, 1.11 sigma  (under the bar, WORSE)
+    passes       A 6/20   B 6/20
+    ctl          A 52     B 166     combat drove 3x more
+    reachMean    A 3.53   B 4.71    ...and stood a FULL BLOCK further out
+    inReachRate  A 0.375  B 0.143   share of control ticks inside 3.0, more than halved
+    bandToSwing  A 53     B 84      longer before the first swing landed
+
+The pre-registration said that if this failed, the whole "the controller should own the approach"
+line closes and both flags stay off. It failed. They stay off.
+
+⭐ THE RESULT IS BIGGER THAN THE VERDICT, and it is the opposite of the hypothesis: closeQuarters()
+is a WORSE closer than the BFS pursue walk it was written to displace. Every closing metric moved
+the wrong way when it took the legs. The premise -- that a path-follower cannot close because it
+chases a vacated square -- was simply wrong on this course.
+
+What survives as a target: corr(inReachRate, arrows) = -0.40 over the 40 runs and -0.52 within arm
+B. The share of control ticks spent inside reach predicts the result, and the pathfinder is what
+maximises it.
+
+⛔ ONE NUMBER FROM THIS SERIES IS NOT EVIDENCE AND MUST NOT BE QUOTED. corr(strafeFar, reachMean)
+= +0.93 looked like the circle-strafe diluting the approach -- a clean mechanism, nearly a fourth
+hypothesis. It is an IDENTITY: strafeFarTicks counts strafe ticks taken beyond reach, so per
+control tick it is one minus the in-reach rate, and corr(strafeRate, inReachRate) came out exactly
+-1.00. A correlation of exactly +/-1.00 between two derived quantities is the signature of an
+identity, not of a discovery. That counter measures distance, not strafing, and cannot test the
+orbit at all.
+
 PRE-REGISTRATION #2, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, the PAIR).
 
 Next series: 40 launches, interleaved, both combatEngageBand and combatCloseOwnsBand pinned on in
