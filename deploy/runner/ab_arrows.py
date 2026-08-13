@@ -1,4 +1,25 @@
-"""PRE-REGISTRATION #7, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, mineAvoidUnderfoot).
+"""OUTCOME OF #7 (2026-08-13). NO EFFECT -- AND THE BASELINE ARM IS THE REAL RESULT.
+
+40 launches, interleaved, 20 an arm, 0 rcon stalls (the server-restart recovery held).
+
+    arm A (off)  mean 5.05 cobblestone   passes 8/20
+    arm B (on)   mean 4.60 cobblestone   passes 7/20
+    difference  -0.45   SE 1.11   0.40 sigma      -> NO EFFECT. THE FLAG STAYS OFF.
+
+The n=4 preview read 7, 0, 8, 6 and looked promising; the pre-registration said in advance that
+four runs cannot separate a spread this wide, and it was right. mineAvoidUnderfoot buys nothing.
+
+*** WHAT THE BASELINE ARM SAYS IS WORTH MORE THAN THE VERDICT. Arm A is the SHIPPED bot, and it
+scores 5.05 with 8 passes in 20. Before today's buried-block fix the same rung read 0, 0, 0, 0, 5,
+0 -- roughly one pass in six at best, usually a total shutdown. The rung has gone from dead to a
+coin-flip, and that is the buried-block fix alone, measured here at n=20 without meaning to.
+
+So the pit-digging story remains a true DESCRIPTION (the trace shows the bot burying itself and
+stranding on the wall) that is not the binding CAUSE of the remaining failures -- refusing the
+underfoot block changes nothing measurable. What is left is throughput: the gate wants 8 in 120 s
+and the bot averages 5.
+
+PRE-REGISTRATION #7, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, mineAvoidUnderfoot).
 
 First pre-registration on the PLAYTHROUGH ladder rather than the mob course. Statistic differs
 because the ruler differs: mine_stone counts cobblestone gathered in 120 s, gate at 8.
