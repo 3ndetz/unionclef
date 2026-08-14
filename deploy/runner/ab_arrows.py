@@ -1231,3 +1231,32 @@ PREDICTION: the pinned arm blacklists unreachable drops and resumes mining, so t
 the pass rate rises. I am NOT predicting the mean -- an inert flag already moved that by 6.25
 (#12), so the mean is not evidence on this course at this n. What would falsify this cleanly is
 navSearchOnly reading ~0.
+
+RESULT OF #13 -- REFUTED BY ITS OWN MECHANISM GATE, BEFORE THE OUTCOME COULD TEMPT ME.
+
+    false  n=6  mean 5.33  pass 3/6   searchOnly = 0,0,0,0,0,0
+    true   n=5  mean 6.60  pass 4/5   searchOnly = 5,0,0,0,0
+
+navSearchOnly is the ticks where a search was running and no route was. The premise needs it in the
+HUNDREDS -- a 50-90 s stall at 20 tps -- and it reads 5 once and 0 otherwise. It CAN be non-zero,
+which is the check that separates a real zero from a dead instrument, and it passes that.
+
+So isPathing() is NOT perpetually true during the stall, and that reset line was never what kept
+the give-up path dead. The reading of the source was correct about what the code DOES and wrong
+about what happens at run time -- which is rule ZERO in this file, "prove by experiment that the
+code runs", applied to a line I proved could not run and never checked whether its guard was true.
+
+The outcome, 4/5 against 3/6, is exactly the kind of number #12 showed an INERT flag produces here
+(3/4 against 0/3). It is not evidence and I am not banking it. Flag stays off.
+
+ONE OBSERVATION WORTH KEEPING, stated as an observation and not a claim. The CONTROL arms of
+today's three series -- all flags off, current HEAD -- pool to mean 5.59, 9 passes in 17, against
+the shipped baseline of 4.32 (n=60) and its ~2-in-9. That is 1.28 sigma across sessions, so it
+proves nothing by this file's own rules (4j: between-series drift is the confound). It is
+consistent with navStopOnTaskEnd, the one behaviour change shipped ON today, and it needs a proper
+same-session pinned pair before anyone repeats it as fact.
+
+THE STANDING INSTRUCTION FOR THE NEXT PASS, now written for the second time and overridden once:
+CLASSIFY THE RUNS FIRST. towered / banned / never-dug / clean. Every input is already in the
+verdict. Five mechanisms have now been proposed for this course and four are refuted; the sixth
+guess is worth less than knowing which of the four modes each failing run is in.
