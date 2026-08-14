@@ -510,6 +510,30 @@ public class TungstenConfig {
     public boolean navStopOnTaskEnd = true;
 
     /**
+     * A refused break bans that BLOCK; only several agreeing refusals ban a region.
+     *
+     * <p>Today one failed break installs a ban on a 101x101x101 cube centred a block from the bot.
+     * Traced on mine_stone: {@code breakFail=1/0/0} with {@code cb=0/260992/0/0} -- one claim, a
+     * quarter of a million candidates refused after it, and the bot standing in the corner of the
+     * arena for the last fifty seconds of the run with nothing it was permitted to mine. There are
+     * no land claims on this stand, so every claim it has made here is a false positive.
+     *
+     * <p>The radius was cut 50 -> 3 once and reverted, and the note explaining why it could not
+     * work is still at the constant: at ANY radius the ban is centred one block from the bot and
+     * covers everything inside its 4.5-block reach. Radius is the wrong dial. The right one is how
+     * much a single observation is allowed to imply.
+     *
+     * <p>Anti-grief behaviour is unchanged where it matters: on genuinely protected land every
+     * attempt is refused, three distinct positions fail within seconds, and the regional ban
+     * installs itself as before. Only the cost of being wrong ONCE changes.
+     *
+     * <p>Off by default. Mechanism gate: cbAvoid, which reads 260992 on a run this fires in and
+     * must collapse to near zero -- an effect size the gate metric cannot come close to, which is
+     * the point after two series died on that gate's sd of 3.6.
+     */
+    public boolean breakBanEscalates = false;
+
+    /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
      *
      * <p>UnstuckChain skips any bot pressing no movement keys, on the sound reasoning that

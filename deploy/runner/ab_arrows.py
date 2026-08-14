@@ -1108,3 +1108,36 @@ ninety seconds on "Approach entity item / Tungsten pathfinding" and finished wit
 
 That is a mechanism, it is measurable per run (dropSeen against dropAsked), and it explains the
 majority mode the pillar cannot. Read it before proposing anything else.
+
+PRE-REGISTRATION #12 -- breakBanEscalates (2026-08-14). Written BEFORE the run.
+
+THE MODE I HAD NEVER MEASURED, caught by adding an item dump to the tracer:
+
+    cb=0/260992/0/0        cbAvoid -- a quarter of a million candidates refused
+    breakFail=1/0/0        exactly ONE break-fail believed to be a claim
+    bot frozen at (-4.26,-60,5.26) for the last 50 s, cobblestone=0
+
+One failed break installs a ban on a 101x101x101 cube centred a block from the bot, which on a
+13x13 arena is the whole world. There are no land claims on this stand, so every claim it has ever
+made here is a false positive. This is the SAME signature the repo already recorded for
+chop_canopy (cb=0/18456/0/0) and the rule ONE entry written from it.
+
+WHY THE OBVIOUS FIX FAILED BEFORE. The radius was cut 50 -> 3 and reverted, and the note at the
+constant says why it could not work: at ANY radius the ban is centred one block from the bot and
+still covers everything inside its 4.5-block reach. Radius is the wrong dial.
+
+THE CHANGE. How much ONE observation is allowed to imply. A refused break bans that BLOCK; three
+distinct refusals inside the window ban the region as before. On genuinely protected land every
+attempt is refused, so the wide ban still arrives within seconds -- only the cost of being wrong
+once changes.
+
+MECHANISM GATE: cbAvoid. It reads 260992 on a run this fires in and must collapse to near zero.
+That is an effect the gate metric cannot come close to, which is the entire point after two series
+died on the gate's sd of 3.6. breakFail gains a 4th field, breakBanWide, so the escalation path
+proves it can still fire rather than being assumed dead.
+
+PREDICTION: cbAvoid falls by orders of magnitude on the pinned arm. Whether the SCORE moves is a
+separate question and I am not predicting it -- the previous two series say this course has more
+than one failure mode, and removing one of three need not show up in the mean.
+
+ARMS: interleaved, --repeat 8, one invocation.

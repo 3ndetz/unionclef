@@ -128,6 +128,20 @@ def main():
         print(f"  y={by:4d}  {row}")
     print(f"  (column centred on the bot's final x={px} z={pz})")
 
+    # WHERE ARE THE DROPS? The run that stalled ninety seconds on "Approach entity item" ended with
+    # a placed cobblestone at (0,-61,0) and AIR below it -- a capped shaft. If the bot seals its own
+    # drops in while climbing out, then it is pathing to items it has walled in, and no amount of
+    # work on the pathing or the tracker can matter. This is the question that decides that, and it
+    # is one rcon call: the tracker's opinion is not needed, the server knows where the entities are.
+    print("\n=== item entities still lying in the arena")
+    ents = rcon.cmd("execute as @e[type=minecraft:item] run data get entity @s Pos",
+                    allow_reject=True)
+    for line in str(ents).splitlines():
+        if "[" in line:
+            print("  " + line.strip()[-90:])
+    if "[" not in str(ents):
+        print("  (none)")
+
     print("\n=== the surface layer, 9x9 around the bot (S=stone, .=air, c=cobble, ?=other)")
     sym = {"stone": "S", "air": ".", "cave_air": ".", "cobblestone": "c", "barrier": "#"}
     for dz in range(-4, 5):

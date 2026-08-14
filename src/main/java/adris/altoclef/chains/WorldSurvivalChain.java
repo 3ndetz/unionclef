@@ -414,6 +414,10 @@ public class WorldSurvivalChain extends SingleTaskChain {
         }
         if (_isAvoidingBlockBreak && _breakAvoidTimer.elapsed()) {
             _isAvoidingBlockBreak = false;
+            // The refusals expire WITH the ban they justify. Left standing they would accumulate
+            // across a session and reach CLAIM_CONFIRM_COUNT from three unrelated failures minutes
+            // apart, which is the wide ban arriving by the back door.
+            _breakRefusals.clear();
             mod.getBehaviour().resetAvoidBlockBreakingExtra();
             Debug.logMessage("Removed temporary block avoidance for block breaking.");
         }
@@ -430,12 +434,74 @@ public class WorldSurvivalChain extends SingleTaskChain {
         _placeAvoidTimer.reset();
     }
 
+    /** Positions whose break was refused inside the current window. Cleared when the window ends. */
+    private final java.util.List<BlockPos> _breakRefusals = new java.util.ArrayList<>();
+
+    /**
+     * Distinct refusals needed before ONE block's failure is believed to mean a REGION is claimed.
+     *
+     * <p>Three, because a real claim refuses everything you try inside it -- so on protected land
+     * this is reached within seconds and the wide ban still arrives. A false positive costs one
+     * block instead of the world.
+     */
+    private static final int CLAIM_CONFIRM_COUNT = 3;
+
+    /** Times the ban widened from single blocks to a region. Read as breakFail's 4th field. */
+    public static volatile int breakBanWide;
+
+    /**
+     * Ban what the evidence supports: ONE BLOCK, until several failures agree it is a region.
+     *
+     * <h2>The disproportion, measured</h2>
+     *
+     * A single failed break used to install a ban on a 101x101x101 cube centred one block from the
+     * bot. Traced on mine_stone: {@code breakFail=1/0/0} with {@code cb=0/260992/0/0} -- ONE claim,
+     * and a quarter of a million candidate blocks refused after it. The bot stood in a corner of
+     * the arena for the last fifty seconds of the run with nothing it was allowed to mine, and
+     * scored zero. There are no land claims on this stand at all, so every claim it has ever made
+     * here is a false positive.
+     *
+     * <h2>Why shrinking the radius was the wrong fix, twice</h2>
+     *
+     * It was cut 50 -> 3 and reverted, and the note left behind says why it could not work: at any
+     * radius the ban is centred one block from the bot and still covers everything inside its
+     * 4.5-block reach. Radius is the wrong dial. The right one is HOW MUCH a single observation is
+     * allowed to imply -- one failed break is evidence about one block, and nothing else.
+     *
+     * <p>The anti-grief purpose survives intact. On genuinely protected land every attempt is
+     * refused, so three distinct positions fail almost immediately and the regional ban installs
+     * itself exactly as before. What changes is only the cost of being WRONG once.
+     */
     private void addTemporaryBreakAvoidance(AltoClef mod, BlockPos center) {
         BlockPos finalCenter = center;
+        if (!kaptainwutax.tungsten.TungstenConfig.get().breakBanEscalates) {
+            mod.getBehaviour().avoidBlockBreakingExtra(blockPos ->
+                Math.abs(blockPos.getX() - finalCenter.getX()) <= BREAK_AVOID_RADIUS &&
+                Math.abs(blockPos.getY() - finalCenter.getY()) <= BREAK_AVOID_RADIUS &&
+                Math.abs(blockPos.getZ() - finalCenter.getZ()) <= BREAK_AVOID_RADIUS
+            );
+            _isAvoidingBlockBreak = true;
+            _breakAvoidTimer.reset();
+            return;
+        }
+        if (!_breakRefusals.contains(center)) {
+            _breakRefusals.add(center);
+        }
+        // The region is only inferred once enough DISTINCT positions have refused. Copy the list
+        // into the predicate rather than closing over the mutable field: the predicate is consulted
+        // from the block filter thousands of times a second, and a list being appended to under it
+        // is how a concurrent modification reaches a hot path.
+        final java.util.List<BlockPos> refused = java.util.List.copyOf(_breakRefusals);
+        final BlockPos region = _breakRefusals.size() >= CLAIM_CONFIRM_COUNT ? finalCenter : null;
+        if (region != null) {
+            breakBanWide++;
+        }
         mod.getBehaviour().avoidBlockBreakingExtra(blockPos ->
-            Math.abs(blockPos.getX() - finalCenter.getX()) <= BREAK_AVOID_RADIUS &&
-            Math.abs(blockPos.getY() - finalCenter.getY()) <= BREAK_AVOID_RADIUS &&
-            Math.abs(blockPos.getZ() - finalCenter.getZ()) <= BREAK_AVOID_RADIUS
+            refused.contains(blockPos)
+            || (region != null
+                && Math.abs(blockPos.getX() - region.getX()) <= BREAK_AVOID_RADIUS
+                && Math.abs(blockPos.getY() - region.getY()) <= BREAK_AVOID_RADIUS
+                && Math.abs(blockPos.getZ() - region.getZ()) <= BREAK_AVOID_RADIUS)
         );
         _isAvoidingBlockBreak = true;
         _breakAvoidTimer.reset();
