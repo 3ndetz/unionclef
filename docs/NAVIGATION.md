@@ -242,6 +242,25 @@ degrades the stand ("the last full sequential run reported 6/10"), and it went e
 The load that produced 9-10 fps on the craft ladder an hour earlier was still on the box.
 
 
+### CRAFT AUDIT 2026-08-14 (LATER) — **12/12 PASS, 0 INVALID**, on the shipped defaults
+
+```
+craft_table craft_wood_pickaxe craft_stone_pickaxe mine_stone smelt_iron craft_iron_pickaxe
+wander_recovery craft_at_distant_table chop_tree chop_canopy mine_diamond escape_lava   12 PASS
+```
+
+First time this ladder has been fully green. Run with `gotoResumeNeedsRealTarget`,
+`breakBanEscalates` and `barrenLockCountsAsFailure` all ON by default.
+
+⚠️ **`mine_diamond` PASSED HERE AND FAILED THE SWEEP AN HOUR EARLIER, AND THAT IS NOT RESOLVED.**
+One run each way is a coin flip on a course whose own code carries a measured note that the bot
+mines all three ores and collects none. Do not read this 12/12 as "mine_diamond is fixed" — read it
+as "the suite was green on this pass". It needs n>=8 an arm before anyone claims anything.
+
+Regression clearance for the three flags, taken separately with both new ones pinned ON:
+`mine_stone craft_stone_pickaxe smelt_iron` 3/3 and `nav_flat staircase descend break wall2 bridge`
+6/6, 27.0-29.5 fps, 0 invalid. nav_break is the load-bearing one — it MINES and then continues.
+
 ### CRAFT AUDIT 2026-08-14 — 11/12 PASS, 0 INVALID, and mine_stone is GREEN
 
 ```
