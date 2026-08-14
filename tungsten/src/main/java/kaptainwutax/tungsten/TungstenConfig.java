@@ -544,11 +544,29 @@ public class TungstenConfig {
      * attempt is refused, three distinct positions fail within seconds, and the regional ban
      * installs itself as before. Only the cost of being wrong ONCE changes.
      *
-     * <p>Off by default. Mechanism gate: cbAvoid, which reads 260992 on a run this fires in and
+     * <h2>IT IS THE PLAYTHROUGH'S WALL, MEASURED ON THE REAL WORLD (2026-08-14)</h2>
+     *
+     * Filed this morning as "correct by inspection, never exercised" -- mine_stone's arena barely
+     * triggers it. A 14-minute @gamer window on the survival world says otherwise:
+     *
+     * <pre>
+     *   breakFail=2/0/0/0        TWO failed breaks believed to be claims
+     *   cb=90/842176/5318/103    cbAvoid -- 842,176 candidates refused
+     *   scan=1122936/63647/847492/0/0/0   scanNoBreak 847,492, which is the same blocks
+     * </pre>
+     *
+     * The ladder climbs five rungs in 5.5 minutes -- wood, first craft, crafting, wood tools, stone
+     * tools -- and then stalls for 160 seconds of DAYLIGHT on
+     * {@code Gathering resource: [minecraft:coal] -> Mine And Collect: [[coal]]} with every drive
+     * counter at zero: pdEnter+0, dbTick+0, mqStart+0. Nothing is running because nothing is
+     * allowed to be mined. Two break failures banned two 101x101x101 cubes and took the coal with
+     * them.
+     *
+     * <p>ON by default from here. Mechanism gate: cbAvoid, which reads 260992 on a run this fires in and
      * must collapse to near zero -- an effect size the gate metric cannot come close to, which is
      * the point after two series died on that gate's sd of 3.6.
      */
-    public boolean breakBanEscalates = false;
+    public boolean breakBanEscalates = true;
 
     /**
      * A progress check counts a route being FOLLOWED as progress, not a search merely running.
