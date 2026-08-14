@@ -1175,3 +1175,26 @@ rather than per series.
 
 #12 itself is unjudged: correct by inspection, never exercised. It needs a run in which a claim
 actually fires (one diag run in four), so it stays off with its mechanism gate now printed.
+
+#11 FINAL -- REFUTED ON THE DETERMINISTIC RULER AS WELL (2026-08-14).
+
+    off   n=7   mean 5.43   pass 3/7   TOWERED 1/7
+    on    n=7   mean 4.71   pass 3/7   TOWERED 2/7
+
+Judged on the tower -- a fact read out of the world, not the count that a provably inert flag
+already "moved" by 6.25 -- and it does not move. mineStayOnSurface stays off. The rewritten rule is
+still better than the one that ratcheted, and it does keep the bot out of a 1x1 shaft; it just does
+not decide this course.
+
+AND THE SERIES KILLS THE FRAMING OUTRIGHT. Only 3 of 14 runs towered at all. Runs score zero with
+tower=0, and one control run scored zero with dug=0 -- it never broke the spawn column at all.
+Overall pass 6/14, which is the same 4.32-of-8 this course has always had. So across today:
+
+    the zombie route      real, fixed, shipped     explains SOME zero runs
+    the 1x1 shaft/tower   real                      3 of 14 runs
+    the radius-50 ban     real, fix unexercised     1 of 4 diag runs
+    ...and there are still zero-runs with none of the three.
+
+Every one of those was, at the moment I found it, "the root cause". The register should read: this
+course has a long tail of independent stalls, and the honest next step is to CLASSIFY every run
+automatically -- towered / banned / never-dug / clean -- rather than propose a fourth root cause.

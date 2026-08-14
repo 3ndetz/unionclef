@@ -460,6 +460,23 @@ public class TungstenConfig {
      * fails half its runs (1, 0, 3, 3) -- so something else dominates, and until that is found the
      * outcome metric cannot resolve a 2-cobblestone difference against its own sd of 3.6.
      *
+     * <h2>REFUTED ON THE DETERMINISTIC RULER TOO (2026-08-14) -- STAYS OFF</h2>
+     *
+     * <pre>
+     *   off   n=7   mean 5.43   pass 3/7   TOWERED 1/7
+     *   on    n=7   mean 4.71   pass 3/7   TOWERED 2/7
+     * </pre>
+     *
+     * Judged on whether the bot built a tower -- a yes/no fact read out of the world afterwards,
+     * not the noisy count -- and it does not move. The rewritten rule is still a BETTER rule than
+     * the one that ratcheted, and it demonstrably keeps the bot out of a 1x1 shaft; it simply does
+     * not decide this course.
+     *
+     * <p>The same series says why the whole framing was wrong: only 3 of 14 runs towered at all,
+     * and runs score zero with tower=0 and even dug=0 -- one control run never broke the spawn
+     * column at all. The tower is a mode, not the mode. Overall pass rate 6/14, which is the 4.32
+     * of 8 this course has always had.
+     *
      * <p>Off by default. Mechanism gate: the WORLD after the run -- a shaft
      * at the spawn column or no shaft. That has no spread at all, which beats eight noisy runs
      * (checklist 4b #4). Watched for regression: mine_diamond, which must still dig down.
