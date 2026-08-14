@@ -242,6 +242,49 @@ degrades the stand ("the last full sequential run reported 6/10"), and it went e
 The load that produced 9-10 fps on the craft ladder an hour earlier was still on the box.
 
 
+### CRAFT AUDIT 2026-08-14 — 11/12 PASS, 0 INVALID, and mine_stone is GREEN
+
+```
+craft_table craft_wood_pickaxe craft_stone_pickaxe mine_stone smelt_iron craft_iron_pickaxe
+wander_recovery craft_at_distant_table chop_tree chop_canopy escape_lava        11 PASS
+mine_diamond                                        FAIL (diamonds=1 of 2, 29.4 fps, full run)
+```
+
+Supersedes the "10 PASS / 2 INVALID" line below it: nothing went INVALID this time, so the two
+courses recorded there as unmeasurable on this host are measurable now.
+
+**mine_stone was the last red rung and it was red for a DEBUG CONSTANT.**
+`TungstenMod.TARGET` — the module-global goto destination — is initialised to `(0.5, 10.0, 0.5)`,
+a leftover from when the mod was driven by hand. It is written by `;goto`, the create-goal
+keybinding, follow-entity and a few py4j primitives, and by NOTHING else: the altoclef task drive
+calls `FastNavigator.start(gp)` directly. So through any altoclef-driven run it holds y=10.
+
+`PathExecutor.resumeGotoAfterMining` reads it every time a mining segment completes, so every task
+that breaks a block aims the navigator at that constant:
+
+```
+[Tungsten] Mining done - passage open
+MovementQueue: 9 movement(s) 0,-63,0 -> 0,-54,0 CLIMB+9 for goal=(0.5,10.0,0.5)
+```
+
+From the bottom of its own pit the only way toward y=10 is up, so the bot spent the cobblestone it
+had just mined building a tower and stood on it for the rest of the run. Measured both ways round
+the arms: off 5.70 sd 3.97 (6/10 pass, towered 3/10); on 9.00 **sd 0.00** (10/10, towered 0/10).
+
+⭐ **AND THE METHOD, WHICH IS THE PART WORTH COPYING.** Six mechanisms were proposed for that tower
+in one day and five refuted, each by its own pre-registered gate — the pillar trigger, a zombie
+route, the 1x1 shaft, a radius-50 break ban, a progress check, the flee goal. What ended it was not
+a seventh guess but three lines of INSTRUMENT: print the goal beside the route, then the goal the
+route was ARMED for, then the goal's own inputs. The flee goal being served at the same instant
+reads `away=0.5,-60.0,-4.5` — entirely sensible — and it was blamed twice. **When a route does
+something inexplicable, make the route say what it is aimed at before theorising about who aimed
+it.**
+
+One further caution earned the same day: an INERT flag (its only method never called) measured
+`control 6.25 / arm 0.00, pass 3/4 vs 0/3` on this course. Any mine_stone A/B at n<=5 an arm is
+incapable of its own claim; judge it on the world afterwards — `dug` and `tower` — which have no
+spread.
+
 ### The craft ladder — TWELVE courses (started at 5, added 2026-08-07)
 
 A second suite, `run_suite.py craft`, on the FLAT arena rather than a survival world. It exists
