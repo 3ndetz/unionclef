@@ -34,6 +34,14 @@ public class UnstuckChain extends SingleTaskChain {
     /** Which guard last stopped checkGenerallyStuck, and the history size when it did.
      *  Three placement fixes were spent guessing this; naming it is cheaper. */
     public static volatile String lastSkip = "-";
+    /** The last skip that was NOT "tooShort". lastSkip alone is useless: after a guard clears the
+     *  history, every following tick writes tooShort over it, which is how I concluded the check
+     *  "never runs" when it runs, fires a guard and rebuilds. */
+    public static volatile String lastRealSkip = "-";
+    /** Why getPriority() returned BEFORE appending a position: notInGame/paused/noUserTask/
+     *  container, against the ticks where it did append. The history never reaches its 200-tick
+     *  threshold and no clear can run below it, so the append path is the only suspect left. */
+    public static volatile int gpNotInGame, gpPaused, gpNoUserTask, gpContainer, gpAppended;
     private boolean isProbablyStuck = false;
     private int eatingTicks = 0;
     private boolean interruptedEating = false;
@@ -162,7 +170,7 @@ public class UnstuckChain extends SingleTaskChain {
         //    tungsten segment (follow, punk approach, ;goto) could be shimmied into.
         //  - NOTHING PRESSED means the bot is deliberately standing (waiting for a
         //    search, a craft, a menu) — a shimmy there is pure damage.
-        if (isInCombat(mod)) { lastSkip = "combat/" + posHistory.size(); posHistory.clear(); return; }
+        if (isInCombat(mod)) { lastRealSkip = lastSkip = "combat/" + posHistory.size(); posHistory.clear(); return; }
         // !! THE DISCRIMINATOR MUST COME BEFORE THIS GUARD, NOT AFTER IT.
         // TungstenHelper.isActive() is true while PATHFINDER.active -- which is EXACTLY the
         // stranded state, a search spinning with no path to show for it. Placed after it, the
@@ -181,7 +189,7 @@ public class UnstuckChain extends SingleTaskChain {
             if (strandedWithGoal) strandedRescues++;
         }
         if (adris.altoclef.util.helpers.TungstenHelper.isActive() && !strandedWithGoal) {
-            lastSkip = "tungsten/" + posHistory.size();
+            lastRealSkip = lastSkip = "tungsten/" + posHistory.size();
             posHistory.clear();
             return;
         }
@@ -214,7 +222,7 @@ public class UnstuckChain extends SingleTaskChain {
         // menu, combat -- clears as before.
         if (!isTryingToMove() && !strandedWithGoal) {
             boolean goalLive = mod.getUserTaskChain() != null && mod.getUserTaskChain().isActive();
-            lastSkip = "noKeys/" + posHistory.size() + "/goal=" + goalLive;
+            lastRealSkip = lastSkip = "noKeys/" + posHistory.size() + "/goal=" + goalLive;
             if (!goalLive) {
                 posHistory.clear();
             }
@@ -317,14 +325,17 @@ public class UnstuckChain extends SingleTaskChain {
 
         AltoClef mod = AltoClef.getInstance();
 
-        if (!AltoClef.inGame() || MinecraftClient.getInstance().isPaused() || !mod.getUserTaskChain().isActive())
-            return Float.NEGATIVE_INFINITY;
+        if (!AltoClef.inGame()) { gpNotInGame++; return Float.NEGATIVE_INFINITY; }
+        if (MinecraftClient.getInstance().isPaused()) { gpPaused++; return Float.NEGATIVE_INFINITY; }
+        if (!mod.getUserTaskChain().isActive()) { gpNoUserTask++; return Float.NEGATIVE_INFINITY; }
 
         if (StorageHelper.isBlastFurnaceOpen() || StorageHelper.isSmokerOpen() || StorageHelper.isChestOpen() || StorageHelper.isBigCraftingOpen()) {
+            gpContainer++;
             return Float.NEGATIVE_INFINITY;
         }
 
         PlayerEntity player = mod.getPlayer();
+        gpAppended++;
         posHistory.addFirst(player.getPos());
         if (posHistory.size() > 500) {
             posHistory.removeLast();
