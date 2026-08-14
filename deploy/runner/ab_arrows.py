@@ -1081,3 +1081,30 @@ which says something else dominates.
 SO THE RULER CHANGES, not the target. mine_stone now records `shaft=N deep, tower=N high` from the
 world after every run: a YES/NO fact with no spread, against a gate whose sd is 3.6 on a mean of 4.
 Two series have now died on that sd. The next pass reads the shaft counter, not the mean.
+
+THE NO-SPREAD RULER ANSWERED, AND IT KILLED MY OWN FRAMING (2026-08-14).
+
+First reading of `tower=N high` over six interleaved runs:
+
+    flag=false   cobble 5, 0, 7     tower 1, 0, 0     towered 1/3
+    flag=true    cobble 0, 2, 0     tower 6, 0, 0     towered 1/3
+
+FOUR OF SIX RUNS BUILT NO TOWER AT ALL AND STILL SCORED 0-2. So the pillar is not the dominant
+failure mode -- it is the mode of the runs I happened to trace, three times, which is how it came
+to look like THE cause. Same lesson as rule 5 in a new costume: three traces are three samples.
+
+AND THE PROBE ITSELF WAS WRONG FIRST TIME. It asked whether the spawn column was AIR and read
+shaft=0 on the very run whose tower was six blocks high -- because the bot BACKFILLS the shaft on
+its way out, so the hole is full of the cobblestone that came out of it. "Is it air" cannot tell
+"never dug" from "dug and filled in". It now asks whether the STONE IS STILL THERE.
+
+WHERE THE NEXT PASS GOES, and the repo already wrote this down once. scenarios_craft carries a
+comment from the day mine_stone was built: the stand carves everything under the floor to air, so
+a cobblestone dropped into a hole over the void hangs with onGround=false, the tracker refuses it
+for ever and the pickup never starts. The arena was given three extra layers to fix that. The bot
+digs THROUGH all four and mines the bottom one -- `Destroy block at 0,-64,-1` is in every trace --
+and at that point the drops are over the void again. dropAsked=273 dropSeen=0 in the run that sat
+ninety seconds on "Approach entity item / Tungsten pathfinding" and finished with nothing.
+
+That is a mechanism, it is measurable per run (dropSeen against dropAsked), and it explains the
+majority mode the pillar cannot. Read it before proposing anything else.

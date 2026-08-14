@@ -256,13 +256,17 @@ class MineStone(CraftTable):
         #
         # Checklist 4b #4: prefer a metric with no spread when one exists. This is that metric.
         # Recorded, never gated -- a course must not start failing on a diagnostic.
-        depth = 0
+        # ASK WHAT IS MISSING, NOT WHAT IS AIR. The first version of this probe tested the column
+        # for air and read shaft=0 on a run whose tower was six blocks high -- because the bot
+        # BACKFILLS the shaft on its way out of it, so by the time the run ends the hole it dug is
+        # full of the cobblestone it dug out. "Is it air" cannot tell "never dug" from "dug and
+        # filled in". "Is the stone still there" can, and that is the question anyway.
+        dug = 0
         for dy in range(1, 5):
-            probe = ctx.rcon.cmd(f"execute if block 0 {STAND_Y - dy} 0 minecraft:air",
+            probe = ctx.rcon.cmd(f"execute if block 0 {STAND_Y - dy} 0 minecraft:stone",
                                  allow_reject=True).lower()
             if "passed" not in probe:
-                break
-            depth = dy
+                dug += 1
         tower = 0
         for dy in range(0, 8):
             probe = ctx.rcon.cmd(f"execute if block 0 {STAND_Y + dy} 0 minecraft:cobblestone",
@@ -271,7 +275,7 @@ class MineStone(CraftTable):
                 break
             tower = dy + 1
         yield Criterion("the spawn column afterwards (recorded, not gated)", True,
-                        f"shaft={depth} deep, tower={tower} high", gate=False)
+                        f"dug={dug}/4 of the spawn column, tower={tower} high", gate=False)
 
 
 class SmeltIron(CraftTable):
