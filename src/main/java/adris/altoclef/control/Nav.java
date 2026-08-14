@@ -166,6 +166,51 @@ public final class Nav {
         return b != null && b.getPathingBehavior().isPathing();
     }
 
+    /** Times {@link #isExecutingRoute} said no while {@link #isPathing} said yes. Read as navSearchOnly. */
+    public static volatile int navSearchOnly;
+
+    /**
+     * Is a route being FOLLOWED right now -- as opposed to merely searched for?
+     *
+     * <h2>Why the distinction is worth a second method</h2>
+     *
+     * {@link #isPathing()} answers "is the body committed to a route", and it says YES while a
+     * SEARCH is running, because {@code TungstenHelper.isActive()} includes
+     * {@code PATHFINDER.active}. For most of its ~35 callers that is right: do not mine, place or
+     * open the inventory while navigation owns the body.
+     *
+     * <p>It is exactly wrong for a progress check. Both give-up paths in this codebase open with
+     *
+     * <pre>
+     *   if (Nav.isPathing()) { progressChecker.reset(); }
+     *   if (... &amp;&amp; !progressChecker.check(mod)) { blacklist the target; try something else; }
+     * </pre>
+     *
+     * and a search that fails and restarts keeps the first line true for ever, so the second can
+     * NEVER fire. The checker exists to notice "the engine is busy and the body is not moving", and
+     * it was being reset for precisely that reason.
+     *
+     * <p>Measured on mine_stone, in every failing trace: the bot stands on one spot for 50-90
+     * seconds of a 120-second run with the task reading {@code Approach entity item -- Tungsten
+     * pathfinding (29s left)}, the countdown restarting each time it expires. The drop is never
+     * blacklisted, the wander never starts, mining never resumes, and the run scores 0. The
+     * blacklist machinery below it is elaborate, correct, and unreachable -- three separate bugs
+     * were found and fixed INSIDE it on mine_diamond while this line kept the whole block dead.
+     *
+     * <p>Same silhouette as this repo's two most expensive defects: a gate whose {@code awake} half
+     * could never fail, and a dodge whose keys never reached the game. The capability is present and
+     * cannot execute.
+     */
+    public static boolean isExecutingRoute() {
+        boolean executing = kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()
+                || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()
+                || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning();
+        if (!executing && isPathing()) {
+            navSearchOnly++;
+        }
+        return executing;
+    }
+
     /** Times the answer was NO because tungsten had the body in the air. Read as navUnsafeAir. */
     public static volatile int navUnsafeAir;
 

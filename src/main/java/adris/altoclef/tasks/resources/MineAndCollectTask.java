@@ -388,7 +388,12 @@ public class MineAndCollectTask extends ResourceTask {
         protected Task onTick() {
             AltoClef mod = AltoClef.getInstance();
 
-            if (Nav.isPathing()) {
+            // A SEARCH IS NOT PROGRESS -- the identical defect as in PickupDroppedItemTask, and the
+            // identical two lines. While the pathfinder merely LOOKS, isPathing() is true, so this
+            // reset fires every tick and the "failed to mine, suggest unreachable, blacklist, pick
+            // another block" branch below can never be reached. See Nav.isExecutingRoute.
+            if (kaptainwutax.tungsten.TungstenConfig.get().progressCheckIgnoresSearch
+                    ? Nav.isExecutingRoute() : Nav.isPathing()) {
                 progressChecker.reset();
             }
             if (miningPos != null && !progressChecker.check(mod)) {

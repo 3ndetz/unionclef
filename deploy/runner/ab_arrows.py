@@ -1198,3 +1198,36 @@ Overall pass 6/14, which is the same 4.32-of-8 this course has always had. So ac
 Every one of those was, at the moment I found it, "the root cause". The register should read: this
 course has a long tail of independent stalls, and the honest next step is to CLASSIFY every run
 automatically -- towered / banned / never-dug / clean -- rather than propose a fourth root cause.
+
+PRE-REGISTRATION #13 -- progressCheckIgnoresSearch (2026-08-14). Written BEFORE the run.
+
+FOUND BY READING, NOT BY MEASURING, which is what the last five series should have been. Both
+give-up paths in altoclef open with the same two lines:
+
+    if (Nav.isPathing()) { progressChecker.reset(); }
+    if (... && !progressChecker.check(mod)) { blacklist the target; try something else; }
+
+isPathing() is TRUE while the pathfinder is merely LOOKING -- TungstenHelper.isActive() includes
+PATHFINDER.active -- and a search that fails and restarts keeps it true for ever. So the reset
+fires every tick and the branch beneath it CAN NEVER EXECUTE. The checker exists to notice "the
+engine is busy and the body is not moving", and it was being reset for exactly that reason.
+
+This is the invariant every failing trace shares, and I walked past it four times. The bot stands
+on ONE SPOT for 50-90 s of a 120-second run, task reading "Approach entity item -- Tungsten
+pathfinding (29s left)", countdown restarting as it expires. The drop is never blacklisted, the
+wander never starts, mining never resumes, the run scores 0. Same two lines in MineOrCollectTask,
+so the block path cannot give up either.
+
+The machinery it disables is elaborate and CORRECT: three separate bugs were found and fixed inside
+that blacklist branch on mine_diamond -- a ghost DISCARDED entity, a target never re-selected, a
+limit of three exceeded 1920 times -- while this one line kept the whole block dead. Same silhouette
+as the two most expensive defects here: a gate whose awake half could never fail, and a dodge whose
+keys never reached the game.
+
+MECHANISM GATE: navSearchOnly -- ticks where a search was running and no route was. It must be
+LARGE, or the premise is wrong and the series says so before the outcome does.
+
+PREDICTION: the pinned arm blacklists unreachable drops and resumes mining, so the stalls end and
+the pass rate rises. I am NOT predicting the mean -- an inert flag already moved that by 6.25
+(#12), so the mean is not evidence on this course at this n. What would falsify this cleanly is
+navSearchOnly reading ~0.

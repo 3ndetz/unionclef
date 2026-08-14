@@ -551,6 +551,37 @@ public class TungstenConfig {
     public boolean breakBanEscalates = false;
 
     /**
+     * A progress check counts a route being FOLLOWED as progress, not a search merely running.
+     *
+     * <p>Both give-up paths in altoclef open with the same two lines:
+     *
+     * <pre>
+     *   if (Nav.isPathing()) { progressChecker.reset(); }
+     *   if (... &amp;&amp; !progressChecker.check(mod)) { blacklist the target; try something else; }
+     * </pre>
+     *
+     * {@code isPathing()} is true while the pathfinder is only LOOKING, and a search that fails and
+     * restarts keeps it true for ever -- so the reset fires every tick and the branch beneath it can
+     * never execute. The checker exists to notice "the engine is busy and the body is not moving",
+     * and it was being reset for exactly that reason.
+     *
+     * <p>Measured on mine_stone in every failing trace: the bot stands on ONE SPOT for 50-90 s of a
+     * 120-second run, the task reading {@code Approach entity item -- Tungsten pathfinding (29s
+     * left)} with the countdown restarting as it expires. The drop is never blacklisted, the wander
+     * never starts, mining never resumes, the run scores 0.
+     *
+     * <p>The machinery it disables is elaborate and correct -- three separate bugs were found and
+     * fixed INSIDE that blacklist branch on mine_diamond while this one line kept the whole block
+     * dead. Same silhouette as the two most expensive defects in this repo: a gate whose awake half
+     * could never fail, and a dodge whose keys never reached the game.
+     *
+     * <p>Off by default. Mechanism gate: navSearchOnly, the number of ticks where a search was
+     * running and no route was -- it must be large, or the premise is wrong. The OUTCOME gate is
+     * whether the bot resumes mining after a failed pickup, which the pass rate should show.
+     */
+    public boolean progressCheckIgnoresSearch = false;
+
+    /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
      *
      * <p>UnstuckChain skips any bot pressing no movement keys, on the sound reasoning that

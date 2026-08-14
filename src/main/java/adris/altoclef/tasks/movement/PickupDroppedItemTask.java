@@ -168,7 +168,14 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
         }
         AltoClef mod = AltoClef.getInstance();
 
-        if (Nav.isPathing()) {
+        // A SEARCH IS NOT PROGRESS. isPathing() is true while the pathfinder is merely LOOKING, and
+        // a search that fails and restarts keeps it true for ever -- so this line reset the very
+        // checker that the give-up path below depends on, and that path could never run. Measured:
+        // the bot stands on one spot for 50-90 s of a 120-second run with "Approach entity item --
+        // Tungsten pathfinding (29s left)" restarting, never blacklisting the drop, never
+        // wandering, never mining again. See Nav.isExecutingRoute.
+        if (kaptainwutax.tungsten.TungstenConfig.get().progressCheckIgnoresSearch
+                ? Nav.isExecutingRoute() : Nav.isPathing()) {
             progressChecker.reset();
         }
         if (unstuckTask != null && unstuckTask.isActive() && !unstuckTask.isFinished() && stuckInBlock(mod) != null) {
