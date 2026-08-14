@@ -128,6 +128,14 @@ public class TungstenHelper {
             lastStartTime = now;
             lastRetargetTime = now;
             lockUntil = now + LOCK_DURATION_MS;
+            // Latch how far away the target is, so the lock can be JUDGED when it expires rather
+            // than silently renewed. See isLocked().
+            try {
+                lockStartDist = lockedEntity != null && !lockedEntity.isRemoved()
+                        ? player.getPos().distanceTo(lockedEntity.getPos()) : -1;
+            } catch (Exception ignored) {
+                lockStartDist = -1;
+            }
             active = true;
 
             Debug.logInternal("[TungstenHelper] LOCKED for 30s, pathfinding to " + formatVec(target));
@@ -163,14 +171,77 @@ public class TungstenHelper {
         return lockUntil;
     }
 
-    /** Is Tungsten currently in its exclusive 30s window? */
+    /** Distance to the target when the current lock was taken, and counters for the A/B. */
+    private static double lockStartDist = -1;
+    /** Locks that expired without the bot getting closer, and locks that made progress. */
+    public static volatile int lockBarren, lockProductive;
+
+    /** How much closer the bot must get during a 30s lock for that lock to count as working. */
+    private static final double LOCK_PROGRESS_BLOCKS = 0.5;
+
+    /**
+     * Is Tungsten currently in its exclusive 30s window?
+     *
+     * <h2>The window renews itself forever, and the guard against that cannot fire</h2>
+     *
+     * When the lock expires this returns false, and on the very next tick {@code GetToEntityTask}
+     * sees no lock and no active search, calls {@code tryPathToEntity} again, and takes a FRESH
+     * thirty seconds. Nothing in between asks whether the last thirty accomplished anything. While
+     * locked the task returns null every tick after resetting its progress checker, so it drives
+     * nothing and cannot give up either.
+     *
+     * <p>That is the countdown in every stall this project has traced -- {@code Tungsten
+     * pathfinding (29s left)} ticking down and starting over. On mine_stone it held the bot on one
+     * spot for 90 seconds of a 120-second run; on the @gamer playthrough, 160 seconds of daylight on
+     * {@code Mine And Collect: [[coal]]} with every drive counter at zero.
+     *
+     * <p>{@code MAX_FAIL_COUNT} exists for exactly this and is unreachable: {@code failCount++}
+     * appears only in {@code tryPathTo}'s catch block, so it counts EXCEPTIONS. A search that
+     * honestly finds no path is not an exception, so the limit never sees the failure it was
+     * written for -- the same shape as a gate whose awake half could never fail, which this repo has
+     * now paid for three times.
+     *
+     * <p>So a lock that expires without the bot getting closer is counted as a failure here, which
+     * is what makes the existing limit live. After {@code MAX_FAIL_COUNT} barren locks
+     * {@code tryPathTo} returns false, the caller stops being told "tungsten has it", and the
+     * give-up path it already owns -- progress checker, wander, blacklist -- can finally run.
+     */
     public static boolean isLocked() {
         if (lockUntil == 0) return false;
         if (System.currentTimeMillis() > lockUntil) {
             lockUntil = 0;
+            if (kaptainwutax.tungsten.TungstenConfig.get().barrenLockCountsAsFailure) {
+                scoreExpiredLock();
+            }
             return false;
         }
         return true;
+    }
+
+    /** Did the lock that just expired get us anywhere? Never throws; an instrument must not. */
+    private static void scoreExpiredLock() {
+        try {
+            if (lockStartDist < 0 || lockedEntity == null || lockedEntity.isRemoved()) {
+                return;
+            }
+            var player = AltoClef.getInstance().getPlayer();
+            if (player == null) return;
+            double now = player.getPos().distanceTo(lockedEntity.getPos());
+            if (lockStartDist - now < LOCK_PROGRESS_BLOCKS) {
+                lockBarren++;
+                failCount++;
+            } else {
+                lockProductive++;
+                // Real progress spends the escalation, the same rule PickupDroppedItemTask applies
+                // to its wander radius: being stuck on THIS target is what should accumulate, and a
+                // lock that closed ground is not stuck.
+                failCount = 0;
+            }
+        } catch (Exception ignored) {
+            // never let the accounting be the thing that breaks navigation
+        } finally {
+            lockStartDist = -1;
+        }
     }
 
     /** Stop Tungsten pathfinding if it's running. Also clears the lock. */
@@ -183,6 +254,7 @@ public class TungstenHelper {
             active = false;
             lockUntil = 0;
             lockedEntity = null;
+            lockStartDist = -1;
             Debug.logInternal("[TungstenHelper] Stopped (lock cleared)");
         } catch (Exception e) {
             Debug.logWarning("[TungstenHelper] Failed to stop: " + e.getMessage());

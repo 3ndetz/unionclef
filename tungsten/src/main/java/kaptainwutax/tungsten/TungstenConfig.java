@@ -686,6 +686,36 @@ public class TungstenConfig {
     public boolean gotoResumeNeedsRealTarget = true;
 
     /**
+     * A 30-second navigation lock that got nowhere counts as a FAILURE, so the existing limit works.
+     *
+     * <p>{@code TungstenHelper} takes an exclusive 30s lock to path at something. While it holds,
+     * {@code GetToEntityTask} returns null every tick after resetting its progress checker: it
+     * drives nothing and cannot give up. When the lock expires, the very next tick sees no lock and
+     * takes a FRESH thirty seconds. Nothing asks whether the last thirty accomplished anything.
+     *
+     * <p>That renewal is the countdown in every stall traced on this project -- {@code Tungsten
+     * pathfinding (29s left)} ticking down and starting over. 90 seconds of a 120-second mine_stone
+     * run; 160 seconds of daylight on the @gamer playthrough, on
+     * {@code Mine And Collect: [[coal]]}, with pdEnter+0 dbTick+0 mqStart+0.
+     *
+     * <p>{@code MAX_FAIL_COUNT = 5} exists for exactly this and CANNOT FIRE: {@code failCount++}
+     * appears only in a catch block, so it counts exceptions, and a search that honestly finds no
+     * path is not an exception. The limit never sees the failure it was written for -- the same
+     * shape as a gate whose awake half could never fail, which this repo has paid for three times.
+     *
+     * <p>With this on, a lock that expires without the bot getting at least half a block closer
+     * increments that counter, and real progress resets it. After five barren locks tryPathTo
+     * returns false, the caller stops being told "tungsten has it", and the give-up path it already
+     * owns -- progress checker, wander, blacklist -- can finally run.
+     *
+     * <p>Off by default and UNMEASURED: the box is at ~600-750% from another project and the last
+     * confirming window came back INVALID at 8 fps, so rule ZERO says it does not ship today.
+     * Mechanism gate when it can be run: lock=barren/productive, which must show barren>0 on a
+     * stalling course.
+     */
+    public boolean barrenLockCountsAsFailure = false;
+
+    /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
      *
      * <p>UnstuckChain skips any bot pressing no movement keys, on the sound reasoning that
