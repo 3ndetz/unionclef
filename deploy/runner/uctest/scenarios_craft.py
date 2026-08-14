@@ -230,7 +230,13 @@ class MineStone(CraftTable):
         parts = []
         if ok_bf and bf_stats:
             for tok in str(bf_stats).split():
-                if tok.startswith("breakFail=") or tok.startswith("stranded="):
+                # navStop=ran/live is the mechanism gate for navStopOnTaskEnd. The `live` half is
+                # the defect itself counted: a route still driving at the moment the goal stopped
+                # existing. It is what turned this course from "the bot cannot mine" into "the bot
+                # mines its eight in 29 s and then spends them pillaring", so it prints whether the
+                # flag is on or off -- with the flag off it must read 0/0, which is the control.
+                if (tok.startswith("breakFail=") or tok.startswith("stranded=")
+                        or tok.startswith("navStop=")):
                     parts.append(tok)
         # stranded= is the mechanism gate for unstuckWhenGoalButNoPath. It was DECLARED as
         # that gate in pre-registration #8 and then not exposed at all, which made the

@@ -965,3 +965,39 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
+PRE-REGISTRATION #10 -- navStopOnTaskEnd (2026-08-14). Written BEFORE the run.
+
+THE FINDING THIS COMES FROM, because it inverts everything filed about mine_stone above.
+The bot does not fail to mine. Polled once a second, with the client log beside it:
+
+    29.0s  cobble=8  "No tasks. Time to add new!"        the eight are IN THE PACK
+    05:15:04  [Alto Clef] task FINISHED in 29.5 s
+    05:15:06  [Tungsten] MovementQueue: 8 movement(s) 0,-63,0 -> 0,-55,0
+    33.7s  y=-57.25 cobble=2
+    36.0s  y=-55.00 cobble=0     and it stands there for the remaining 84 seconds
+
+A search still in flight when the task ended landed two seconds later, and its route was eight
+MovementPillar steps. The bot spent the whole haul building a tower out of its own pit. The world
+read back afterwards shows cobblestone at every y from -63 to -56 in the bot's column and nothing
+placed anywhere else. So every earlier entry here that treats mine_stone as a MINING problem was
+measuring the wrong half of the run.
+
+THE CHANGE. Nav.cancelAll() -- stop every navigation engine, called where the goal ceases to
+exist: UserTaskChain.onTaskFinish next to the runner disable, and AltoClef.stopTasks(). Gated by
+TungstenConfig.navStopOnTaskEnd, default TRUE, so the control arm is the one that pins it false.
+
+PREDICTION, and it is a strong one for once, because the mechanism is not statistical: with the
+flag on the bot keeps what it gathered. The gate is 8 and it reaches 8 by ~30 s, so the arm should
+PASS rather than merely score higher. If it scores 4-5 and fails, the pillar was not the only
+thing spending the haul and this entry is wrong.
+
+MECHANISM GATE: navStop=ran/live. `live` counts teardowns that found a route still driving --
+the defect itself. Flag off must read 0/0. If the on-arm shows live=0 the flag did not reach the
+behaviour and the series is VOID, the same rule that voided the stranded series.
+
+REGRESSION WATCH, because this fires at the END of every task on every course: nav_flat,
+nav_bridge, nav_wall2. Those END on arrival, so if stopping navigation at task end ever cuts a
+live leg short they are where it shows.
+
+ARMS: interleaved (rule 4r), --repeat 6 an arm, one invocation each, no rebuild between them.

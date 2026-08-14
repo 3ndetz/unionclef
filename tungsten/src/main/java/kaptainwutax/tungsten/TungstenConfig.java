@@ -428,6 +428,49 @@ public class TungstenConfig {
     public boolean mineStayOnSurface = false;
 
     /**
+     * When an altoclef task ends, stop NAVIGATING as well. On by default; pin it false for the
+     * control arm of the A/B.
+     *
+     * <h2>The bug, traced end to end on mine_stone</h2>
+     *
+     * The task finishing and the search finishing are two different events, and nothing joined
+     * them. One run, polled once a second, with the client log beside it:
+     *
+     * <pre>
+     *   29.0s  cobble=8   "No tasks. Time to add new!"      the job is DONE
+     *   05:15:04  [Alto Clef] Поставленная задача ЗАВЕРШЕНА за 29.5 сек.
+     *   05:15:06  [Tungsten] MovementQueue: 8 movement(s) 0,-63,0 -> 0,-55,0
+     *   33.7s  y=-57.25  cobble=2
+     *   36.0s  y=-55.00  cobble=0    and it stands there for the remaining 84 seconds
+     * </pre>
+     *
+     * A search that was still in flight when the task ended landed TWO SECONDS LATER, and its route
+     * was eight {@code MovementPillar} steps. The bot spent the entire haul it had just gathered
+     * building a tower out of its own pit, and the course reads the pack at the end, so a run that
+     * met its target in 29 seconds scores zero. The world confirms it: cobblestone at every y from
+     * -63 to -56 in the bot's column, and nothing else placed anywhere.
+     *
+     * <h2>Why this is not a mine_stone fix</h2>
+     *
+     * Nothing above is about mining. Any task that ends while a search is in flight leaves a route
+     * driving a bot that has no goal, and {@code MovementQueue} suppresses every other driver while
+     * it runs -- so the zombie route also holds off whatever comes next. On a playthrough that is
+     * blocks and seconds burnt between every pair of tasks.
+     *
+     * <p>Same shape as two defects this repo has already paid for: {@code ProjectileDodge} leaving
+     * SPRINT held because "the walker releases the keys anyway" (checklist 4l -- release is not
+     * someone else's job), and {@code TaskRunner.tick()} returning before it updates the state
+     * everything else reads. A lifetime that ends without the things it owns being told.
+     *
+     * <p>Judged on mine_stone against the pooled baseline of 4.32 cobblestone (n=60, sd 3.6), with
+     * nav_bridge / nav_wall2 / nav_flat watched -- those courses END on arrival, so if stopping
+     * navigation at task end ever cuts a live leg short, they are where it shows. Mechanism gate:
+     * navStopped must be non-zero, and navStoppedLive counts the times it tore down a route that
+     * was still running -- the bug itself, counted.
+     */
+    public boolean navStopOnTaskEnd = true;
+
+    /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
      *
      * <p>UnstuckChain skips any bot pressing no movement keys, on the sound reasoning that

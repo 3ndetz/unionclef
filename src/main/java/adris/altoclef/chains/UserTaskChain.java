@@ -148,6 +148,13 @@ public class UserTaskChain extends SingleTaskChain {
         if (!shouldIdle) {
             // Stop.
             mod.getTaskRunner().disable();
+            // AND STOP WALKING. Disabling the runner ends the DECIDING, not the MOVING: a search
+            // that was in flight when the task finished still lands, and its route is executed
+            // against a bot with no goal. Measured on mine_stone -- the task reported done at
+            // 29.5 s with its eight cobblestone, a route arrived two seconds later, and the bot
+            // spent all eight building a tower out of its own pit and stood on it for the rest of
+            // the run. See Nav.cancelAll for the trace and for why this is not cancel().
+            adris.altoclef.control.Nav.cancelAll();
             // Extra reset. Sometimes baritone is laggy and doesn't properly reset our press
             if (mod.getClientBaritone() != null)
                 mod.getInputControls().releaseAll();

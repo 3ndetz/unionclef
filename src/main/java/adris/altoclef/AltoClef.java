@@ -644,6 +644,11 @@ public class AltoClef implements ModInitializer {
         if (taskRunner.getCurrentTaskChain() != null) {
             taskRunner.getCurrentTaskChain().stop();
         }
+        // "Stop all automation" has never included the thing walking the body. This method cancels
+        // the CHAIN and has never spoken to a pathfinder, so `@stop` left whatever route was in
+        // flight steering the bot -- which is why the bench has to send `;stop` separately after
+        // every `@stop`, a workaround for a gap rather than a second concern.
+        adris.altoclef.control.Nav.cancelAll();
         commandStatusOverlay.resetTimer();
     }
 

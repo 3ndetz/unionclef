@@ -47,6 +47,71 @@ public final class Nav {
         }
     }
 
+    /** Times {@link #cancelAll} ran, and times it found a route still running. Read as navStop. */
+    public static volatile int navStopped, navStoppedLive;
+
+    /**
+     * Stop navigating on EVERY engine, because there is no goal any more.
+     *
+     * <h2>Why this is a second method and not a stronger {@link #cancel()}</h2>
+     *
+     * They answer different questions, and this file's own header says so: {@code cancel()} means
+     * "abandon this attempt" and is called by the stuck-handler every time the progress checker
+     * trips, so tearing tungsten down inside it would abort a healthy leg. This one means "there is
+     * nothing left to walk to", which is true in exactly two places -- the user cancelled
+     * everything, or the task finished and the runner was switched off.
+     *
+     * <h2>What it was for</h2>
+     *
+     * A search in flight outlives the task that asked for it. Traced on mine_stone: the task ended
+     * at 29.5 s with its eight cobblestone gathered, and two seconds later a route arrived --
+     * {@code MovementQueue: 8 movement(s) 0,-63,0 -> 0,-55,0} -- and the bot spent every block it
+     * had just mined building a tower out of its own pit. It then stood on top of that tower for
+     * the remaining 84 seconds, with an empty pack, while the course read the pack.
+     *
+     * <p>Neither existing stop covered it. {@code AltoClef.stopTasks()} cancels the CHAIN and never
+     * speaks to tungsten at all, and tungsten's own {@code ;stop} is a separate command the bot
+     * never issues to itself. So between "the job is done" and "something is walking me" there was
+     * no connection in either direction.
+     *
+     * <h2>Deliberately navigation only</h2>
+     *
+     * {@code TungstenMod.resetAllState()} exists and is the hard reset -- but it also stops the
+     * punk task, the bow and the aim, and clears every key. That is right on a disconnect and wrong
+     * here: the agent drives tungsten primitives DIRECTLY over py4j (that is the whole design), so
+     * an altoclef task ending must not silently kill a shot the agent lined up. What ends when the
+     * goal ends is the route: the navigator (which cascades to the movement queue), the waypoint
+     * walker, the physics search and its executor, and the two building manoeuvres that only ever
+     * exist to serve a route.
+     */
+    public static void cancelAll() {
+        if (!kaptainwutax.tungsten.TungstenConfig.get().navStopOnTaskEnd) {
+            return;
+        }
+        navStopped++;
+        // COUNT THE BUG, NOT JUST THE CALL. A counter that only says "the teardown ran" cannot
+        // tell a fix from a no-op; this half says a route was ACTUALLY still driving when the goal
+        // stopped existing, which is the defect itself and the mechanism gate for the A/B.
+        if (isPathing()) {
+            navStoppedLive++;
+        }
+        cancel();
+        try {
+            // FastNavigator.stop() cascades into MovementQueue.stop(); the queue is the driver the
+            // mixin lets outrank every other one, so it is the one that must not be left behind.
+            kaptainwutax.tungsten.task.FastNavigator.stop();
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            kaptainwutax.tungsten.task.BridgeTask.stop();
+            kaptainwutax.tungsten.task.PillarTask.stop();
+            var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
+            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (pf != null) pf.stop.set(true);
+            if (ex != null) ex.stop = true;
+        } catch (Exception e) {
+            adris.altoclef.Debug.logMessage("Nav.cancelAll: " + e);
+        }
+    }
+
     /**
      * Is a route being followed right now?
      *

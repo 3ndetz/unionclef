@@ -75,6 +75,16 @@ public class TungstenMod implements ClientModInitializer {
 	public static void resetAllState() {
 		try {
 			kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+			// THE NAVIGATOR AND ITS QUEUE WERE MISSING FROM A METHOD THAT SAYS "ALL STATE".
+			// FastNavigator keeps planning and keeps handing legs to MovementQueue, and the queue
+			// SUPPRESSES every other driver while it runs -- walker, bridge, pillar and the physics
+			// executor are all held off by the mixin as long as it owns the tick. So stopping the
+			// six tasks below while leaving these two alive does not stop the bot; it leaves the
+			// one driver that outranks them all still steering. ;stop already learnt this (see
+			// StopCommand: "MovementQueue.stop() had a single caller in the whole repo"), and this
+			// method -- the DISCONNECT handler -- never did. FastNavigator.stop() cascades to the
+			// queue, so one call covers both.
+			kaptainwutax.tungsten.task.FastNavigator.stop();
 			kaptainwutax.tungsten.task.BlockPathWalker.stop();
 			kaptainwutax.tungsten.task.BridgeTask.stop();
 			kaptainwutax.tungsten.task.PillarTask.stop();
