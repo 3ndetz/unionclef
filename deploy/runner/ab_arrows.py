@@ -1304,3 +1304,33 @@ the gate silently unable to fire. That is the same defect as the gate I declared
 
 NOT PREDICTING THE MEAN. #12 established that an inert flag moves it by 6.25 here. The prediction is
 about the MODE: towered runs should fall from 13-in-19 toward zero on the pinned arm.
+
+RESULT OF #15 -- gotoResumeNeedsRealTarget. mine_stone IS GREEN (2026-08-14).
+
+    pair 1, control first    off 4.80 (2/5, towered 2/5)   on 9.00 (5/5, towered 0/5)
+    pair 2, ARM first        off 6.60 (4/5, towered 1/5)   on 9.00 (5/5, towered 0/5)
+    pooled n=10 an arm       off 5.70 sd 3.97 (6/10)       on 9.00 sd 0.00 (10/10)
+                                                           +3.30, 2.63 sigma
+
+Ten runs with the fix, ten passes, STANDARD DEVIATION ZERO -- every one scored exactly 9. The
+winner follows the flag through the order swap, which is what killed the last headline. fps
+27.8-29.8 on every run of both arms.
+
+THE SIGMA IS THE LEAST INTERESTING NUMBER. The pre-registered mechanism gate was the tower in the
+world afterwards, which has no spread: 3/10 -> 0/10. And the control arm stays BIMODAL (sd 3.97)
+while the fixed arm is a constant. That is what removing a failure mode looks like, as opposed to a
+mean wobbling -- which matters here more than anywhere, because #12 showed an INERT flag "moving"
+this course by 6.25.
+
+REGRESSIONS, all green:
+    nav_flat nav_staircase nav_descend nav_break nav_wall2 nav_bridge   6/6 PASS
+    mine_diamond chop_tree craft_stone_pickaxe                          3/3 PASS
+nav_break is the important one -- it MINES and then continues, which is the exact path
+resumeGotoAfterMining serves -- and mine_diamond is the course that must still dig DOWN.
+
+HOW IT WAS FOUND, because the method is the transferable part. Six mechanisms were proposed for
+this tower and five refuted, each by its own pre-registered gate. What ended it was three lines of
+INSTRUMENT rather than a seventh guess: print the goal beside the route, then the goal the route was
+ARMED for, then the goal's own inputs. The flee goal being served at the same instant reads
+away=0.5,-60.0,-4.5 -- entirely sensible -- and I blamed it twice before the route was made to say
+what it was actually aimed at: (0.5, 10.0, 0.5), a debug constant.

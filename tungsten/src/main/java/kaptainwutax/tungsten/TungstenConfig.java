@@ -632,9 +632,22 @@ public class TungstenConfig {
      * the goal was never printed beside the route. The flee goal being served at the same instant
      * reads {@code away=0.5,-60.0,-4.5}, which is perfectly sensible, and it was blamed twice.
      *
-     * <p>Off by default. Mechanism gate: the WORLD after the run. tower must go to 0.
+     * <h2>MEASURED (2026-08-14), interleaved, fps 27.8-29.8 on every run of both arms</h2>
+     *
+     * <pre>
+     *   off   n=5   mean 4.80   pass 2/5   TOWERED 2/5   cobble = 0, 8, 0, 9, 7
+     *   on    n=5   mean 9.00   pass 5/5   TOWERED 0/5   cobble = 9, 9, 9, 9, 9
+     * </pre>
+     *
+     * The sigma (2.12) is the least interesting number there. The pre-registered MECHANISM gate --
+     * a tower in the world afterwards, which has no spread at all -- went 2/5 to 0/5, and the arm
+     * has ZERO variance: five runs, all nine. That is what removing a bimodal failure looks like,
+     * as against the mean wobbling, and this course has already killed two series measured on its
+     * mean (an inert flag once "moved" it by 6.25).
+     *
+     * <p>ON by default after the order-swapped replication.
      */
-    public boolean gotoResumeNeedsRealTarget = false;
+    public boolean gotoResumeNeedsRealTarget = true;
 
     /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
