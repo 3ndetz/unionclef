@@ -319,10 +319,16 @@ wander_recovery craft_at_distant_table chop_tree chop_canopy mine_diamond escape
 First time this ladder has been fully green. Run with `gotoResumeNeedsRealTarget`,
 `breakBanEscalates` and `barrenLockCountsAsFailure` all ON by default.
 
-⚠️ **`mine_diamond` PASSED HERE AND FAILED THE SWEEP AN HOUR EARLIER, AND THAT IS NOT RESOLVED.**
-One run each way is a coin flip on a course whose own code carries a measured note that the bot
-mines all three ores and collects none. Do not read this 12/12 as "mine_diamond is fixed" — read it
-as "the suite was green on this pass". It needs n>=8 an arm before anyone claims anything.
+⚠️ **`mine_diamond` IS ~5/6, NOT A COIN FLIP — MEASURED AFTERWARDS, AND IT CORRECTS THIS PAGE.**
+An earlier version of this note said the course was unresolved because it passed one sweep and
+failed another, and demanded n>=8 before anyone claimed anything. Fair at the time; so here is the
+measurement: **5 PASS / 1 FAIL of 6**, `diamonds` = 2,1,2,2,2,2, at 23-30 fps. The single failure
+was the slowest run of the six.
+
+So the 12/12 above was not luck on that course. But a course that passes 83% of the time still
+fails about one sweep in six, which is exactly what happened an hour before — and that, not a
+regression, is why the earlier audit read 11/12. Six runs is a rate with a wide interval; it is
+enough to rule out a coin flip and not enough to call it solid.
 
 Regression clearance for the three flags, taken separately with both new ones pinned ON:
 `mine_stone craft_stone_pickaxe smelt_iron` 3/3 and `nav_flat staircase descend break wall2 bridge`
