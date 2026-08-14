@@ -1334,3 +1334,20 @@ INSTRUMENT rather than a seventh guess: print the goal beside the route, then th
 ARMED for, then the goal's own inputs. The flee goal being served at the same instant reads
 away=0.5,-60.0,-4.5 -- entirely sensible -- and I blamed it twice before the route was made to say
 what it was actually aimed at: (0.5, 10.0, 0.5), a debug constant.
+
+mine_diamond AGAINST THE SHIPPED FLAG -- UNRESOLVED AT THIS n, AND SAID SO (2026-08-14).
+
+    on   diamonds 1, 1   0/2
+    off  diamonds 2, 1   1/2      arm first, fps 29.2-29.5 throughout
+
+Two runs an arm. 1/2 against 0/2 is a coin flip and cannot support "no regression" OR "regression";
+the same build passed this course in isolation earlier the same day with the flag ON. So the honest
+entry is that it is not resolved, not that it is clean -- which matters because I have shipped the
+flag as a default.
+
+What IS known about this course is older than today and unrelated to the flag: PickupDroppedItemTask
+carries a measured note that the bot mines all three ores and collects none of them, closing to
+1.35 / 2.45 / 3.57 blocks and never touching them. diamonds=1 is that defect, not a new one.
+
+WATCH ITEM, not a blocker: if mine_diamond is still failing after the playthrough pass, A/B it at
+n>=8 an arm before touching anything, because at 300 s a run that is 20 minutes of bench per arm.
