@@ -143,10 +143,42 @@ public class UnstuckChain extends SingleTaskChain {
     private void checkGenerallyStuck() {
         if (posHistory.size() < 200) { lastSkip = "tooShort/" + posHistory.size(); return; }
 
+        boolean strandedWithGoal = false;
+        if (kaptainwutax.tungsten.TungstenConfig.get().unstuckWhenGoalButNoPath
+                && !isTryingToMove() && posHistory.size() >= 200) {
+            Vec3d first = posHistory.getFirst();
+            boolean frozen = true;
+            for (Vec3d v : posHistory) {
+                if (v.squaredDistanceTo(first) > 0.25) { frozen = false; break; }
+            }
+            AltoClef ac = AltoClef.getInstance();
+            boolean hasGoal = ac != null && ac.getUserTaskChain() != null
+                    && ac.getUserTaskChain().isActive();
+            strandedWithGoal = frozen && hasGoal;
+            if (strandedWithGoal) strandedRescues++;
+        }
+
+
         // Tungsten-primary (drop-in swap): tungsten drives movement and handles
         // its own stuck recovery (executor). The shimmy would preempt the user
         // task chain every tick, starving the tungsten-primary hook — never fire.
-        if (adris.altoclef.util.helpers.TungstenHelper.isPrimary()) {
+        // !! THIS EXEMPTION IS WHY NOTHING EVER RESCUES A STRANDED BOT.
+        // Its reasoning is sound and stays: tungsten drives movement, so a shimmy here would
+        // preempt the user chain every tick. But it rests on "tungsten handles its own stuck
+        // recovery", and on mine_stone that does not happen -- the bot climbs onto the arena wall
+        // at y=-57 and stands there to the end of the run, in ~30% of runs.
+        //
+        // Established by elimination rather than by guessing, after three blind patches that
+        // deserved none of the time: gp=370/0/0/0/0 (getPriority appended 370 positions, zero early
+        // returns) against a history of 75-149 proved the history WAS reaching 200 and being
+        // cleared, and lastRealSkip="-" ruled out combat, tungsten-isActive and no-keys. This was
+        // the only early return left.
+        //
+        // So the exemption keeps its job and gains the one exception it lacked: a bot with a live
+        // goal, no path and a position frozen across the whole window is not something tungsten is
+        // about to recover -- it has already had ten seconds to.
+        if (adris.altoclef.util.helpers.TungstenHelper.isPrimary() && !strandedWithGoal) {
+            lastRealSkip = lastSkip = "primary/" + posHistory.size();
             posHistory.clear();
             startedShimmying = false;
             consecutiveStuckDetections = 0;
@@ -176,18 +208,6 @@ public class UnstuckChain extends SingleTaskChain {
         // stranded state, a search spinning with no path to show for it. Placed after it, the
         // stranded check could never run: measured as stranded=0 with the flag pinned ON, i.e. a
         // flag that could not fire and a 40-launch series that was void by its own mechanism gate.
-        boolean strandedWithGoal = false;
-        if (kaptainwutax.tungsten.TungstenConfig.get().unstuckWhenGoalButNoPath
-                && !isTryingToMove() && posHistory.size() >= 200) {
-            Vec3d first = posHistory.getFirst();
-            boolean frozen = true;
-            for (Vec3d v : posHistory) {
-                if (v.squaredDistanceTo(first) > 0.25) { frozen = false; break; }
-            }
-            boolean hasGoal = mod.getUserTaskChain() != null && mod.getUserTaskChain().isActive();
-            strandedWithGoal = frozen && hasGoal;
-            if (strandedWithGoal) strandedRescues++;
-        }
         if (adris.altoclef.util.helpers.TungstenHelper.isActive() && !strandedWithGoal) {
             lastRealSkip = lastSkip = "tungsten/" + posHistory.size();
             posHistory.clear();
