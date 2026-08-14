@@ -49,6 +49,31 @@ public class TungstenHelper {
     public static boolean isPrimary() { return primary; }
 
     private static final int MAX_FAIL_COUNT = 5;
+
+    /**
+     * Consecutive BARREN locks tolerated before navigation stops claiming it has this target.
+     *
+     * <h2>Why this is not MAX_FAIL_COUNT</h2>
+     *
+     * They guard different failures with different costs. {@code MAX_FAIL_COUNT} counts EXCEPTIONS
+     * -- something threw -- and five of those is a reasonable patience because each is instant. A
+     * barren lock costs THIRTY SECONDS of a bot standing still, so the same five means
+     * <b>150 seconds</b> of doing nothing before anything reconsiders.
+     *
+     * <p>That is too lax twice over. As behaviour, two and a half minutes of no progress is not
+     * patience, it is a hang. And as a TESTABLE guard it is worse: the craft courses run 90, 120,
+     * 150, 180, 240 and 300 seconds, so at 150 s the guard cannot fire at all on the first four --
+     * including mine_stone, the course this was found on. A guard that no course can exercise is
+     * one this repo has now shipped three times, and it is the reason for two of the day's refuted
+     * series.
+     *
+     * <p>Two barren locks is sixty seconds of getting nowhere toward one target, which is already
+     * generous, and it is inside every course on the bench.
+     */
+    private static final int MAX_BARREN_LOCKS = 2;
+
+    /** Consecutive barren locks for the CURRENT target; reset by any lock that closed ground. */
+    private static int barrenStreak = 0;
     private static final long COOLDOWN_MS = 1000;
     private static final long LOCK_DURATION_MS = 30_000; // 30 sec exclusive control
     private static final long RETARGET_INTERVAL_MS = 3000; // re-send target every 3 sec
@@ -89,6 +114,12 @@ public class TungstenHelper {
     public static boolean tryPathTo(Vec3d target) {
         if (!isTungstenLoaded()) return false;
         if (failCount >= MAX_FAIL_COUNT) return false;
+        // Refuse to take a fresh 30-second window when the last two got nowhere. Without this the
+        // window renews for ever and the caller is told "tungsten has it" while nothing moves.
+        if (kaptainwutax.tungsten.TungstenConfig.get().barrenLockCountsAsFailure
+                && barrenStreak >= MAX_BARREN_LOCKS && !isLocked()) {
+            return false;
+        }
 
         long now = System.currentTimeMillis();
         if (now - lastStartTime < COOLDOWN_MS && !isLocked()) return false;
@@ -150,6 +181,13 @@ public class TungstenHelper {
     /** Try Tungsten pathfinding to an entity (with lock + retargeting). */
     public static boolean tryPathToEntity(Entity entity) {
         if (entity == null || entity.isRemoved()) return false;
+        // A NEW TARGET IS A NEW PROBLEM. The streak is earned against ONE thing we could not get
+        // to; carrying it to the next drop would refuse navigation to a target we have never tried.
+        // Same reasoning as PickupDroppedItemTask spending its wander escalation when the drop
+        // changes, and the same bug if it is omitted.
+        if (!entity.equals(lockedEntity)) {
+            barrenStreak = 0;
+        }
         lockedEntity = entity;
         return tryPathTo(entity.getPos());
     }
@@ -231,16 +269,15 @@ public class TungstenHelper {
             var player = AltoClef.getInstance().getPlayer();
             if (player == null) return;
             double now = player.getPos().distanceTo(lockedEntity.getPos());
-            boolean act = kaptainwutax.tungsten.TungstenConfig.get().barrenLockCountsAsFailure;
             if (lockStartDist - now < LOCK_PROGRESS_BLOCKS) {
                 lockBarren++;
-                if (act) failCount++;
+                barrenStreak++;
             } else {
-                lockProductive++;
                 // Real progress spends the escalation, the same rule PickupDroppedItemTask applies
                 // to its wander radius: being stuck on THIS target is what should accumulate, and a
                 // lock that closed ground is not stuck.
-                if (act) failCount = 0;
+                lockProductive++;
+                barrenStreak = 0;
             }
         } catch (Exception ignored) {
             // never let the accounting be the thing that breaks navigation
@@ -260,6 +297,7 @@ public class TungstenHelper {
             lockUntil = 0;
             lockedEntity = null;
             lockStartDist = -1;
+            barrenStreak = 0;
             Debug.logInternal("[TungstenHelper] Stopped (lock cleared)");
         } catch (Exception e) {
             Debug.logWarning("[TungstenHelper] Failed to stop: " + e.getMessage());

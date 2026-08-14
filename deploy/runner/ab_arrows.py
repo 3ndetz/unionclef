@@ -1378,3 +1378,29 @@ an observation, the flag is the behaviour.
 STILL UNMEASURED AS AN EFFECT, and not shipped. Rule ZERO: the last confirming window came back
 INVALID at 8 fps. What is established is that the mechanism fires; what is not is that stopping it
 helps. Those are different claims and the register should not blur them.
+
+#16 CORRECTED BEFORE IT COST A QUIET WINDOW: THE GUARD COULD NOT FIRE ON MOST COURSES (2026-08-14).
+
+The parked fix reused MAX_FAIL_COUNT = 5. A barren lock costs THIRTY SECONDS, so five of them is
+150 seconds of a bot standing still before anything reconsiders. Course durations on this bench:
+
+    90, 120 (mine_stone), 150, 180, 240, 300
+
+At 150 s the guard cannot fire on the first four AT ALL -- including mine_stone, the course it was
+found on. I had parked a fix that no course I could run was capable of exercising, which is the
+same defect as the gate whose awake half could never fail and as navSearchOnly, and would have
+burned the next quiet window discovering it.
+
+Barren locks now have their OWN limit, MAX_BARREN_LOCKS = 2, because they guard a different failure
+from MAX_FAIL_COUNT: that one counts EXCEPTIONS, which are instant, so five is reasonable patience;
+this one counts thirty-second holds. Sixty seconds of getting nowhere toward ONE target is already
+generous and it fits inside every course on the bench. The streak is scoped to its target and
+cleared when the target changes -- carrying it over would refuse navigation to a drop never tried,
+which is the same bug PickupDroppedItemTask fixed for its wander radius.
+
+VERIFIED ON A HEALTHY COURSE, flag pinned ON: lock=1/0. One barren lock, streak never reaches two,
+guard does not fire. mine_stone no longer stalls since the tower fix, so it takes a single lock --
+exactly the case where nothing should change, and nothing does.
+
+THE EFFECT REMAINS UNMEASURED, and can only be measured where the stall is: the @gamer playthrough,
+160 s on Mine And Collect: [[coal]], which needs a quiet box. Still off, still not shipped.
