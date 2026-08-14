@@ -1026,3 +1026,34 @@ ALSO, and it changes what this course is: run 1 failed a DIFFERENT way from the 
 froze at [-0.14,-60,1.96] -- on the floor, not on a pillar -- with pfActive=true and path=-1 for
 the last ~60 s, and scored 0. The traced run reached 8 by 29 s and pillared them away. Two failure
 modes, which is what a mean of 4.32 with sd 3.6 was telling me all along and I read as noise.
+
+PRE-REGISTRATION #11 -- mineStayOnSurface, REWRITTEN (2026-08-14). Result of pair 1 below it,
+and the swapped replication was launched before the result was interpreted.
+
+WHY THE OLD VERSION MEASURED NOTHING. It tested `check.getY() < feetY - 1`. That is relative to
+where the bot STANDS, and the floor is always feetY-1, so the block under its own feet always
+passed. Break it, fall one, the test re-anchors a level lower and passes the next one too. It
+ratcheted down with the bot. The 0.85 sigma I recorded as "the idea does not help" was never a
+test of the idea.
+
+The rule now asks whether the bot is IN A HOLE -- solid ground on all four cardinals at its own
+feet level -- rather than how far down it has got. Stateless, releases as soon as it is not
+enclosed, cannot ratchet.
+
+PAIR 1, interleaved (rule 4r), one invocation, fps 28.5-29.5 on every run of both arms:
+
+    OFF (control):  5, 0, 0, 6, 0     mean 2.20  median 0  pass 0/5
+    ON  (fix)    :  8, 8, 3, 3, 7     mean 5.80  median 7  pass 2/5
+                                      delta +3.60 cobblestone, 2.02 sigma
+
+The control arm ran FIRST in every pair, which is exactly the hole rule 4q was written about, so
+this is a hypothesis and not yet a result. PAIR 2 swaps the positions: default flipped to true and
+--pin-alt pins FALSE on alternate runs, so the ARM runs first. If the winner follows the flag it
+survives; if it follows the position it was the stand.
+
+WHAT IT DOES NOT CLAIM. The course is still RED. 2/5 is not green, and two runs in the arm scored
+3. The shaft is one cause and the evidence says it is the big one; it is not the only one.
+
+REGRESSION STILL OWED: mine_diamond, the course that must still dig DOWN. The fallback is written
+(the restricted search runs first, an empty result retries unrestricted) but written is not
+measured, and shipping a default flip without that is the kind of debt rule 4 forbids.

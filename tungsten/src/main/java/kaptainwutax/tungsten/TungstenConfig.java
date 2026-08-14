@@ -442,11 +442,11 @@ public class TungstenConfig {
      * of those and you can step out. Stateless, so it releases the moment the bot is not enclosed,
      * and it cannot ratchet because it is a question about the world rather than about the bot.
      *
-     * <p>Off by default, pinned true for the arm. Mechanism gate: the WORLD after the run -- a shaft
+     * <p>ON by default since the interleaved series below. Mechanism gate: the WORLD after the run -- a shaft
      * at the spawn column or no shaft. That has no spread at all, which beats eight noisy runs
      * (checklist 4b #4). Watched for regression: mine_diamond, which must still dig down.
      */
-    public boolean mineStayOnSurface = false;
+    public boolean mineStayOnSurface = true;
 
     /**
      * When an altoclef task ends, stop NAVIGATING as well. On by default; pin it false for the
