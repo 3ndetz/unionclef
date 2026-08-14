@@ -90,23 +90,32 @@ public final class Nav {
         }
         navStopped++;
         // COUNT THE BUG, NOT JUST THE CALL. A counter that only says "the teardown ran" cannot
-        // tell a fix from a no-op; this half says a route was ACTUALLY still driving when the goal
-        // stopped existing, which is the defect itself and the mechanism gate for the A/B.
-        if (isPathing()) {
-            navStoppedLive++;
+        // tell a fix from a no-op; this half says something was ACTUALLY still navigating when the
+        // goal stopped existing, which is the defect itself and the mechanism gate for the A/B.
+        //
+        // NOT isPathing(): that asks whether a route is being FOLLOWED, and the defect starts one
+        // step earlier -- a SEARCH still running, whose result arrives after the task is gone. The
+        // traced instance had exactly that shape (the route landed two seconds after "task
+        // FINISHED"), so isPathing() would have read false at the moment of teardown and reported
+        // the bug as absent. It also routes through TungstenHelper.isActive(), which returns false
+        // outright when its own `active` flag is down, whatever the engines are doing. Ask the
+        // engines.
+        try {
+            if (isPathing()
+                    || kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
+                    || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()
+                    || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
+                navStoppedLive++;
+            }
+        } catch (Exception ignored) {
+            // an instrument must never be the thing that breaks a stop
         }
         cancel();
         try {
-            // FastNavigator.stop() cascades into MovementQueue.stop(); the queue is the driver the
-            // mixin lets outrank every other one, so it is the one that must not be left behind.
-            kaptainwutax.tungsten.task.FastNavigator.stop();
-            kaptainwutax.tungsten.task.BlockPathWalker.stop();
-            kaptainwutax.tungsten.task.BridgeTask.stop();
-            kaptainwutax.tungsten.task.PillarTask.stop();
-            var pf = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
-            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
-            if (pf != null) pf.stop.set(true);
-            if (ex != null) ex.stop = true;
+            // ONE implementation, in tungsten, shared with `;stop` and with the disconnect reset.
+            // Listing the engines here instead would be a fourth teardown that drifts out of step
+            // with the other three -- which is precisely the defect this method exists to fix.
+            kaptainwutax.tungsten.TungstenMod.stopNavigation();
         } catch (Exception e) {
             adris.altoclef.Debug.logMessage("Nav.cancelAll: " + e);
         }

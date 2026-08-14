@@ -1001,3 +1001,28 @@ nav_bridge, nav_wall2. Those END on arrival, so if stopping navigation at task e
 live leg short they are where it shows.
 
 ARMS: interleaved (rule 4r), --repeat 6 an arm, one invocation each, no rebuild between them.
+
+AMENDMENT to #10, written while run 1 of the series was on screen, because the rule I wrote two
+paragraphs up would have thrown the series away for the wrong reason.
+
+Run 1 (flag ON) read navStop=3/0: the teardown RAN three times and found a live route none of
+them. By the letter of the pre-registration that is "the flag did not reach the behaviour, VOID".
+It is not. Two things separate a broken FLAG from a broken GATE, and both say the flag is fine:
+
+  - the runner PINS and READS BACK, and printed `PIN navStopOnTaskEnd=true`;
+  - navStop`s first half is non-zero, so Nav.cancelAll executed. That is the "prove it ran" test.
+
+The `live` half is what is wrong, and it is my own instrument being too narrow. isPathing() asks
+whether a route is being FOLLOWED; the defect begins one step earlier, with a SEARCH still running
+whose result lands after the task is gone -- the traced case exactly, where the route arrived two
+seconds after "task FINISHED". So it reads false at the moment of teardown even when the bug is
+present. Widened to ask the engines directly (PATHFINDER.active, the executor, MovementQueue).
+
+THE SERIES CONTINUES on the outcome metric, which is unaffected. The distinction worth keeping: a
+mechanism gate that CANNOT fire does not void a series, it voids ITSELF. What voids a series is a
+gate that could have fired and did not.
+
+ALSO, and it changes what this course is: run 1 failed a DIFFERENT way from the traced run. It
+froze at [-0.14,-60,1.96] -- on the floor, not on a pillar -- with pfActive=true and path=-1 for
+the last ~60 s, and scored 0. The traced run reached 8 by 29 s and pillared them away. Two failure
+modes, which is what a mean of 4.32 with sd 3.6 was telling me all along and I read as noise.

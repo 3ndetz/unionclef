@@ -66,6 +66,43 @@ public class TungstenMod implements ClientModInitializer {
 	}
 
 	/**
+	 * Stop everything that can be STEERING the body along a route. The one implementation.
+	 *
+	 * <h2>Why this is its own method</h2>
+	 *
+	 * There were three teardowns and no two agreed. {@code ;stop} stopped the movement queue, the
+	 * pathfinder and the executor but not the NAVIGATOR -- which re-plans and hands the queue a
+	 * fresh leg within a tick or two, so the stop did not hold. {@link #resetAllState()}, whose
+	 * javadoc promises ALL state and which runs on DISCONNECT, stopped six tasks and neither the
+	 * navigator nor its queue. And altoclef had no way to reach any of it: {@code AltoClef.stopTasks()}
+	 * cancels the task chain and never speaks to a pathfinder at all.
+	 *
+	 * <p>What that cost, traced on mine_stone: an altoclef task finished with its eight cobblestone
+	 * gathered, a search still in flight landed two seconds later, and its route was eight
+	 * {@code MovementPillar} steps. The bot spent the whole haul building a tower and stood on it
+	 * for the rest of the run.
+	 *
+	 * <h2>Order matters here</h2>
+	 *
+	 * {@code FastNavigator.stop()} cascades into {@code MovementQueue.stop()} -- and the queue is
+	 * the driver the mixin lets outrank every other one, so stopping the walker or the pillar while
+	 * the queue still runs stops nothing. Kill the planner first, then its executors.
+	 *
+	 * <p>Deliberately NOT combat: the punk task, the bow and the aim are not routes, and altoclef
+	 * calls this when a task ends, where killing a shot the agent lined up would be wrong.
+	 */
+	public static void stopNavigation() {
+		kaptainwutax.tungsten.task.FastNavigator.stop();
+		kaptainwutax.tungsten.task.BlockPathWalker.stop();
+		kaptainwutax.tungsten.task.BridgeTask.stop();
+		kaptainwutax.tungsten.task.PillarTask.stop();
+		var pf = TungstenModDataContainer.PATHFINDER;
+		var ex = TungstenModDataContainer.EXECUTOR;
+		if (pf != null) pf.stop.set(true);
+		if (ex != null) ex.stop = true;
+	}
+
+	/**
 	 * Reset ALL tungsten client-side state. Called on disconnect / world change so
 	 * nothing survives a re-join: a frozen mine/combat aim, a running task, a stuck
 	 * break, a live pathfinder/executor. Static singletons don't reset on world unload
@@ -75,26 +112,12 @@ public class TungstenMod implements ClientModInitializer {
 	public static void resetAllState() {
 		try {
 			kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
-			// THE NAVIGATOR AND ITS QUEUE WERE MISSING FROM A METHOD THAT SAYS "ALL STATE".
-			// FastNavigator keeps planning and keeps handing legs to MovementQueue, and the queue
-			// SUPPRESSES every other driver while it runs -- walker, bridge, pillar and the physics
-			// executor are all held off by the mixin as long as it owns the tick. So stopping the
-			// six tasks below while leaving these two alive does not stop the bot; it leaves the
-			// one driver that outranks them all still steering. ;stop already learnt this (see
-			// StopCommand: "MovementQueue.stop() had a single caller in the whole repo"), and this
-			// method -- the DISCONNECT handler -- never did. FastNavigator.stop() cascades to the
-			// queue, so one call covers both.
-			kaptainwutax.tungsten.task.FastNavigator.stop();
-			kaptainwutax.tungsten.task.BlockPathWalker.stop();
-			kaptainwutax.tungsten.task.BridgeTask.stop();
-			kaptainwutax.tungsten.task.PillarTask.stop();
+			stopNavigation();
 			kaptainwutax.tungsten.task.PunkPlayerTask.stop();
 			kaptainwutax.tungsten.task.RunAwayTask.stop();
 			kaptainwutax.tungsten.task.BowShooter.stop();
-			var pf = TungstenModDataContainer.PATHFINDER;
 			var ex = TungstenModDataContainer.EXECUTOR;
-			if (pf != null) pf.stop.set(true);
-			if (ex != null) { ex.stop = true; ex.breakQueue = null; }
+			if (ex != null) ex.breakQueue = null;
 			MinecraftClient m = MinecraftClient.getInstance();
 			if (m.options != null) {
 				m.options.attackKey.setPressed(false);

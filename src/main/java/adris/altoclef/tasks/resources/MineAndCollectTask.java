@@ -239,6 +239,37 @@ public class MineAndCollectTask extends ResourceTask {
             );
         }
 
+        /** Times the bot was found standing in a hole, and times it was not. Read as scan's 4th/5th. */
+        public static volatile int scanEnclosed;
+
+        /**
+         * Is the bot standing in a hole -- solid ground on every side at its OWN feet level?
+         *
+         * <p>Four cardinals only. A diagonal is not what traps you: you can leave a pit through a
+         * cardinal gap and cannot leave through a diagonal one, because the body is a box. The
+         * 1x1 shaft this exists for is enclosed on all four.
+         */
+        private static boolean enclosedAtFeet(AltoClef mod, int feetY) {
+            try {
+                BlockPos feet = new BlockPos(mod.getPlayer().getBlockPos().getX(), feetY,
+                        mod.getPlayer().getBlockPos().getZ());
+                for (net.minecraft.util.math.Direction d
+                        : new net.minecraft.util.math.Direction[]{
+                        net.minecraft.util.math.Direction.NORTH,
+                        net.minecraft.util.math.Direction.SOUTH,
+                        net.minecraft.util.math.Direction.EAST,
+                        net.minecraft.util.math.Direction.WEST}) {
+                    if (!WorldHelper.isSolidBlock(feet.offset(d))) {
+                        return false;
+                    }
+                }
+                scanEnclosed++;
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
         public static Pair<Double,Optional<BlockPos> > getClosestBlock(AltoClef mod,Vec3d pos ,Block... blocks) {
 
             // !! DIGGING THE BLOCK UNDER YOUR OWN FEET IS HOW A BOT BURIES ITSELF.
@@ -269,8 +300,32 @@ public class MineAndCollectTask extends ResourceTask {
             int feetY = mod.getPlayer() == null ? Integer.MIN_VALUE : mod.getPlayer().getBlockPos().getY();
             if (kaptainwutax.tungsten.TungstenConfig.get().mineStayOnSurface
                     && feetY != Integer.MIN_VALUE) {
+                // !! THE RULE ABOVE RATCHETED, WHICH IS WHY IT MEASURED NOTHING.
+                //
+                // `check.getY() < feetY - 1` is relative to where the bot is STANDING, and the
+                // floor is always feetY-1 -- so the block under its own feet always passes. Break
+                // it, fall one, and the test re-anchors one level lower and passes the next one
+                // too. The guard descends WITH the bot, one level per swing, exactly as if it were
+                // not there. Traced three times: 0,-61,0 at t=0, y=-62 at 4.4 s, y=-63 at 6.6 s,
+                // then `BFS stuck at 0,-63,0` with all eight neighbours feetBlocked=stone.
+                //
+                // What that costs is not the four blocks. It is that a bot at the bottom of a 1x1
+                // shaft has NO lateral move -- the only direction the search can expand is up --
+                // and it has just mined the blocks that make pillaring affordable. So it towers out
+                // to y=-55, six blocks above the floor, spending the whole haul, and the run ends
+                // with the bot standing on a cobblestone column with an empty pack. Every failure
+                // mode this course has follows from the shaft.
+                //
+                // THE FIX IS TO ASK WHETHER WE ARE IN A HOLE, not how deep we have got. Standing on
+                // open ground, digging down is ordinary and stays allowed -- mine_diamond needs it.
+                // Standing in a pit, with solid ground on every side at our own feet level, digging
+                // down deepens a shaft we already cannot walk out of, and the blocks at our feet
+                // level are its walls: mine one of those instead and we can step out. Stateless, so
+                // it releases the moment the bot is not enclosed, and it cannot ratchet because it
+                // is a question about the WORLD rather than about how far we have fallen.
+                int limit = enclosedAtFeet(mod, feetY) ? feetY : feetY - 1;
                 Optional<BlockPos> onSurface = mod.getBlockScanner().getNearestBlock(pos, check -> {
-                    if (check.getY() < feetY - 1) {
+                    if (check.getY() < limit) {
                         scanBelowFeet++;
                         return false;
                     }

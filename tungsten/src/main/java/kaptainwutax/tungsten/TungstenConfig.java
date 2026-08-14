@@ -422,8 +422,29 @@ public class TungstenConfig {
      * <p>Descending still works when the surface runs out: the restricted search runs first and an
      * empty result retries without it. mine_diamond depends on that and is watched for regression.
      *
-     * <p>Off by default. Judged against the pooled baseline of 4.32 cobblestone (n=60, sd 3.6),
-     * 2 sigma at 20 an arm, with scanBelowFeet as the mechanism gate.
+     * <h2>REWRITTEN 2026-08-14 -- the first version RATCHETED and that is why it measured 0.85 sigma</h2>
+     *
+     * It tested {@code check.getY() < feetY - 1}, which is relative to where the bot is STANDING,
+     * and the floor is always feetY-1 -- so the block under its own feet always passed. Break it,
+     * fall one, and the test re-anchors a level lower and passes the next one too. The guard
+     * descended WITH the bot, one level per swing, which is indistinguishable from not being there.
+     *
+     * <p>Traced three times, once a second: {@code Destroy block at 0,-61,0} at t=0, y=-62 at 4.4 s,
+     * y=-63 at 6.6 s, then {@code BFS stuck at 0,-63,0} with all eight neighbours
+     * {@code feetBlocked=stone}. From the bottom of a 1x1 shaft there is no lateral move at all --
+     * the only direction the search can expand is UP -- and the bot has just mined the blocks that
+     * make pillaring affordable. It towers out to y=-55, six blocks above the floor, spending the
+     * whole haul, and the run ends with it standing on a cobblestone column with an empty pack.
+     *
+     * <p>It now asks whether the bot is IN A HOLE rather than how far down it has got: solid ground
+     * on all four cardinals at its own feet level. On open ground digging down stays ordinary, which
+     * is what mine_diamond needs. In a pit, the blocks at feet level are the pit WALLS -- mine one
+     * of those and you can step out. Stateless, so it releases the moment the bot is not enclosed,
+     * and it cannot ratchet because it is a question about the world rather than about the bot.
+     *
+     * <p>Off by default, pinned true for the arm. Mechanism gate: the WORLD after the run -- a shaft
+     * at the spawn column or no shaft. That has no spread at all, which beats eight noisy runs
+     * (checklist 4b #4). Watched for regression: mine_diamond, which must still dig down.
      */
     public boolean mineStayOnSurface = false;
 

@@ -34,7 +34,14 @@ public class StopCommand extends Command {
 				// physics executor all stay suppressed by the mixin while the old chain keeps
 				// writing keys and camera until it completes or times out — including straight
 				// through the next test scenario's setup.
-				kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+				//
+				// AND STOPPING THE QUEUE ALONE DID NOT HOLD. FastNavigator was left running by
+				// this command, so it re-planned and handed the queue a fresh leg a tick or two
+				// later — the stop looked like it worked and the bot kept walking. Same for the
+				// walker, the bridge and the pillar, none of which this ever touched. All of it
+				// now lives in one place, because three teardowns that disagreed is what produced
+				// the defect this was written for.
+				TungstenMod.stopNavigation();
 
 				// Stop punk task first (it manages its own follow internally)
 				if (PunkPlayerTask.isActive()) {
@@ -48,9 +55,8 @@ public class StopCommand extends Command {
 					FollowEntityTask.stop();
 				}
 
-				// Stop standalone pathfinder/executor (e.g., ;goto)
-				TungstenModDataContainer.PATHFINDER.stop.set(true);
-				TungstenModDataContainer.EXECUTOR.stop = true;
+				// The standalone pathfinder/executor (e.g. ;goto) are stopped by
+				// stopNavigation() above -- they used to be repeated here.
 
 				Debug.logMessage(hadSomething ? "Stopped!" : "Nothing to stop.");
 			} catch (Exception e) {

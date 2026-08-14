@@ -86,6 +86,18 @@ def main():
 
     rcon.cmd("time set day")
     rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+    # Pins go through tungstenSetting, not chat: ";settings k v" runs on a later tick and a
+    # read-back straight after shows the OLD value, so an A/B can silently measure the build
+    # against itself. This applies and RETURNS the resolved field, so both name and value are
+    # checked -- findSettingField falls back to a substring match, and a guard that compared only
+    # the value would confirm a pin that landed on the wrong field.
+    for pin in sys.argv[1:]:
+        k, _, v = pin.partition("=")
+        ok, got = bot.py.try_call("tungstenSetting", k, v)
+        name, _, read = str(got).partition("=")
+        if not ok or name != k or read != v:
+            raise SystemExit(f"--pin {k}={v} did not apply (got {got!r}); refusing to run")
+        print(f"  PIN {got}")
     bot.py.try_call("resetRunCounters")
     time.sleep(1)
     print(f"=== mine_stone trace: floor at y={y}, stone down to y={y - 3}, bot at y={STAND_Y}")
