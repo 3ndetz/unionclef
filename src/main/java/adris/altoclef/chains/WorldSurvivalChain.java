@@ -79,6 +79,22 @@ public class WorldSurvivalChain extends SingleTaskChain {
      * break rules)" and "Ran out of nodes!". So a break IS being refused -- the ban is real -- but
      * shrinking its radius does not restore the rung, which means the refusal itself, or something
      * that survives between runs, is the thing to chase. Start at why the break fails at all.
+     *
+     * <h2>⛔ SUPERSEDED 2026-08-14: THE RADIUS WAS NEVER THE DIAL. READ addTemporaryBreakAvoidance</h2>
+     *
+     * Everything above is kept because the reasoning is still worth reading, and because it records
+     * a dead end honestly. But the question it argues about -- 50 or 3 -- is the wrong question, and
+     * the note two paragraphs up already says why without following it: at ANY radius the ban is
+     * centred one block from the bot and still covers everything inside its 4.5-block reach.
+     *
+     * <p>What decides it is HOW MUCH ONE OBSERVATION IS ALLOWED TO IMPLY. One failed break is
+     * evidence about one block. That is what {@code breakBanEscalates} changes, and the playthrough
+     * is where the cost shows: {@code breakFail=2/0/0/0} with {@code cb=90/842176/5318/103} -- TWO
+     * failures, 842,176 candidates refused, and the @gamer ladder stalling 160 seconds of daylight
+     * on {@code Mine And Collect: [[coal]]} with nothing left it was permitted to mine.
+     *
+     * <p>This constant stays 50: it is still the right size for a CONFIRMED region, which is what it
+     * now describes.
      */
     private static final int BREAK_AVOID_RADIUS = 50;
     /**
@@ -110,7 +126,11 @@ public class WorldSurvivalChain extends SingleTaskChain {
     private boolean _lastBrokenBlock = false;
     private BlockPos _lastBrokenBlockPos = null;
 
-    /** Failed breaks judged out of reach (no ban) versus treated as a claim (ban). Read as brkFail=far/claim. */
+    /**
+     * Why a failed break was NOT believed, split by reason, plus the times a ban went regional.
+     * Read as {@code breakFail=claimed/outOfReach/buried/wide} -- four fields, and the doc here said
+     * two long after there were three, which is the same rot this file's other comments record.
+     */
     public static volatile int breakFailOutOfReach, breakFailClaimed, breakFailBuried;
     private final TimerGame _blockBreakCheckTimer = new TimerGame(0.5);
     private final TimerGame _breakAvoidTimer = new TimerGame(BREAK_AVOID_TIMEOUT);
@@ -435,7 +455,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
     }
 
     /** Positions whose break was refused inside the current window. Cleared when the window ends. */
-    private final java.util.List<BlockPos> _breakRefusals = new java.util.ArrayList<>();
+    private final java.util.Set<BlockPos> _breakRefusals = new java.util.LinkedHashSet<>();
 
     /**
      * Distinct refusals needed before ONE block's failure is believed to mean a REGION is claimed.
@@ -484,14 +504,23 @@ public class WorldSurvivalChain extends SingleTaskChain {
             _breakAvoidTimer.reset();
             return;
         }
-        if (!_breakRefusals.contains(center)) {
-            _breakRefusals.add(center);
-        }
+        _breakRefusals.add(center);
         // The region is only inferred once enough DISTINCT positions have refused. Copy the list
         // into the predicate rather than closing over the mutable field: the predicate is consulted
         // from the block filter thousands of times a second, and a list being appended to under it
         // is how a concurrent modification reaches a hot path.
-        final java.util.List<BlockPos> refused = java.util.List.copyOf(_breakRefusals);
+        // ⛔ A SET, NOT A LIST, BECAUSE THIS PREDICATE IS THE HOTTEST PATH IN THE MOD.
+        // avoidBlockBreakingExtra is consulted by the block filter for EVERY candidate: one
+        // @gamer window recorded scan=1122936 and cbAvoid=842176, so this runs about a million
+        // times a run. The predicate it replaces was six arithmetic comparisons with no
+        // allocation and no dereference; a linear scan in front of that is a regression in the
+        // search's inner loop, which is where this project has already lost a session once
+        // (the search burning its budget writing chat from inside the loop).
+        //
+        // Copied rather than closed over: the predicate is read from the filter while this list
+        // is appended to on the client tick, and a collection being mutated under a hot reader is
+        // how a ConcurrentModificationException reaches a path that must never throw.
+        final java.util.Set<BlockPos> refused = java.util.Set.copyOf(_breakRefusals);
         final BlockPos region = _breakRefusals.size() >= CLAIM_CONFIRM_COUNT ? finalCenter : null;
         if (region != null) {
             breakBanWide++;
