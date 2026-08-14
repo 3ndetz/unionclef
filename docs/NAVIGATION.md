@@ -242,6 +242,30 @@ degrades the stand ("the last full sequential run reported 6/10"), and it went e
 The load that produced 9-10 fps on the craft ladder an hour earlier was still on the box.
 
 
+### PVP SWEEP 2026-08-14 — 7 PASS / 4 FAIL of 11 measured, ALL FOUR failures pre-existing
+
+```
+PASS  melee_basic  narrow_bridge_duel  chase_flat  chase_terrain  ranged_moving
+      bridge_assault  bridge_assault_defended
+FAIL  edge_duel (x2)  bow_flee  bow_flee_hard  allround
+```
+
+The sweep was killed by a process exit before the twelfth course; eleven verdicts is enough for the
+question it was asked, which was whether the three fixes shipped today regress combat. They do not:
+every failure is already on the register.
+
+- `edge_duel` — checklist rule 4f: a MIRROR duel with no `victim_settings` pin, so a symmetric
+  change is handed to both fighters and cancels. That rule records its historical 4/4 as luck at a
+  coin-flip pass rate. It cannot see a change like these at all, whatever it prints.
+- `bow_flee`, `bow_flee_hard` — the open BOW entry in TODOS, two red courses failing for different
+  reasons, one of which does not shoot at all.
+- `allround` — a gate failure in the 2026-08-10 sweep too, and checklist rule 4h is about this exact
+  course: it is `early_stop: kills >= 1`, so a naive read measures the approach phase, not the fight.
+
+`chase_terrain` is worth reading as an instrument success: INVALID at 13.6 fps, retried, FAIL, then
+PASS on fresh clients, and the runner labelled both retries itself — "the INVALID was the suite's
+wear, not the course".
+
 ### MOB SUITE 2026-08-14 — 2/4, and NEITHER failure is from today's changes
 
 ```
