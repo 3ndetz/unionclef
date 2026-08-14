@@ -442,11 +442,29 @@ public class TungstenConfig {
      * of those and you can step out. Stateless, so it releases the moment the bot is not enclosed,
      * and it cannot ratchet because it is a question about the world rather than about the bot.
      *
-     * <p>ON by default since the interleaved series below. Mechanism gate: the WORLD after the run -- a shaft
+     * <h2>MEASURED TWICE, AND THE SECOND PAIR REFUTED THE FIRST -- OFF BY DEFAULT</h2>
+     *
+     * <pre>
+     *   pair 1, CONTROL first    off 2.20 (0/5 pass)   on 5.80 (2/5)   +3.60   2.02 sigma
+     *   pair 2, ARM first        off 5.00 (3/5 pass)   on 5.20 (3/5)   +0.20   nothing
+     *   pooled n=10 an arm       off 3.60              on 5.50         +1.90   1.16 sigma
+     * </pre>
+     *
+     * Both pairs interleaved, one invocation each, 25-29 fps throughout. The winner follows the
+     * POSITION rather than the flag -- whichever arm ran second scored better -- which is the exact
+     * failure rule 4q exists to catch, and it caught a default flip I had already made on pair 1.
+     *
+     * <p>What that does and does not say. The SHAFT is not in doubt: three traces show the bot
+     * walling itself into a 1x1 hole and towering out of it on its own haul, and this rule provably
+     * stops that. What is not established is that stopping it moves this course, and the arm still
+     * fails half its runs (1, 0, 3, 3) -- so something else dominates, and until that is found the
+     * outcome metric cannot resolve a 2-cobblestone difference against its own sd of 3.6.
+     *
+     * <p>Off by default. Mechanism gate: the WORLD after the run -- a shaft
      * at the spawn column or no shaft. That has no spread at all, which beats eight noisy runs
      * (checklist 4b #4). Watched for regression: mine_diamond, which must still dig down.
      */
-    public boolean mineStayOnSurface = true;
+    public boolean mineStayOnSurface = false;
 
     /**
      * When an altoclef task ends, stop NAVIGATING as well. On by default; pin it false for the

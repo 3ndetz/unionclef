@@ -1057,3 +1057,27 @@ WHAT IT DOES NOT CLAIM. The course is still RED. 2/5 is not green, and two runs 
 REGRESSION STILL OWED: mine_diamond, the course that must still dig DOWN. The fallback is written
 (the restricted search runs first, an empty result retries unrestricted) but written is not
 measured, and shipping a default flip without that is the kind of debt rule 4 forbids.
+
+RESULT OF #11 -- PAIR 2 REFUTED PAIR 1. The flag goes back OFF (2026-08-14).
+
+    pair 1, CONTROL first    off 2.20 (0/5 pass)   on 5.80 (2/5)   +3.60   2.02 sigma
+    pair 2, ARM first        off 5.00 (3/5 pass)   on 5.20 (3/5)   +0.20   nothing
+    pooled, n=10 an arm      off 3.60              on 5.50         +1.90   1.16 sigma
+
+Both interleaved, one invocation each, 25-29 fps on every run of both arms. The winner follows the
+POSITION, not the flag: whichever arm ran second scored better. That is precisely rule 4q, and it
+caught a default flip I had ALREADY MADE on the strength of pair 1 -- reverted.
+
+Worth stating plainly because I nearly did the opposite: pair 1 was not a lie and pair 2 is not the
+truth. Two honest measurements disagree, so the answer is that the instrument cannot resolve the
+question, and saying so IS the result (rule 4r #3).
+
+WHAT IS NOT IN DOUBT. The shaft. Three traces show the bot mining the block under its own feet,
+falling in, repeating, and ending at the bottom of a 1x1 hole where the only expandable move is up
+-- so it towers out on the cobblestone it came for. The rewritten rule provably stops that. What is
+unproven is that stopping it moves the SCORE, and the arm still failed half its runs (1, 0, 3, 3),
+which says something else dominates.
+
+SO THE RULER CHANGES, not the target. mine_stone now records `shaft=N deep, tower=N high` from the
+world after every run: a YES/NO fact with no spread, against a gate whose sd is 3.6 on a mean of 4.
+Two series have now died on that sd. The next pass reads the shaft counter, not the mean.

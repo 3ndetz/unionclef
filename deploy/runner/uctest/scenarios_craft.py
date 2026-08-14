@@ -244,6 +244,34 @@ class MineStone(CraftTable):
         # had fired. Printed here so that cannot happen to it twice.
         yield Criterion("break-fail bans / stranded rescues (recorded, not gated)", True,
                         " ".join(parts) if parts else "unread", gate=False)
+        # DID THE BOT BURY ITSELF? A METRIC WITH NO SPREAD, WHICH IS WHY IT IS HERE.
+        #
+        # The gate -- cobblestone gathered -- carries an sd of 3.6 on a mean near 4, so it cannot
+        # resolve a 2-block difference without ~18 runs an arm, and two interleaved series have
+        # already disagreed on exactly that (+3.60 then +0.20). Meanwhile the mechanism under study
+        # is a YES/NO fact about the world that survives the run: three traces show the bot mining
+        # the block under its own feet, falling in, repeating, and ending at the bottom of a 1x1
+        # shaft from which the only expandable move is UP -- so it towers out on the very
+        # cobblestone it came for and finishes with an empty pack on top of a column.
+        #
+        # Checklist 4b #4: prefer a metric with no spread when one exists. This is that metric.
+        # Recorded, never gated -- a course must not start failing on a diagnostic.
+        depth = 0
+        for dy in range(1, 5):
+            probe = ctx.rcon.cmd(f"execute if block 0 {STAND_Y - dy} 0 minecraft:air",
+                                 allow_reject=True).lower()
+            if "passed" not in probe:
+                break
+            depth = dy
+        tower = 0
+        for dy in range(0, 8):
+            probe = ctx.rcon.cmd(f"execute if block 0 {STAND_Y + dy} 0 minecraft:cobblestone",
+                                 allow_reject=True).lower()
+            if "passed" not in probe:
+                break
+            tower = dy + 1
+        yield Criterion("the spawn column afterwards (recorded, not gated)", True,
+                        f"shaft={depth} deep, tower={tower} high", gate=False)
 
 
 class SmeltIron(CraftTable):
