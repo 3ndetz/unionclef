@@ -98,14 +98,41 @@ public final class FastNavigator {
         exactCell = cell;
     }
 
+    /** Whose altoclef goal this navigator run was armed for. Diagnostic only. */
+    private static String startedFor = "-";
+
+    /** The goal description captured when {@link #start} was last called. */
+    public static String startedFor() {
+        return startedFor;
+    }
+
     public static void start(Vec3d target) {
         stop();
+        // WHOSE goal is this route serving? The drive publishes the altoclef goal every tick, but
+        // a route outlives the tick that started it -- so the CURRENT goal and the goal a running
+        // route was armed for can differ, and on mine_stone they do: the drive reads flee(...)
+        // while the navigator climbs toward (0.5,10.0,0.5). Stamping it at start is the only way
+        // to tell a stale route from a live one.
+        startedFor = kaptainwutax.tungsten.combat.CombatTrace.hostGoal;
         goal = target;
         active = true;
         stallTicks = 0;
         lastDist = Double.MAX_VALUE;
         planAhead(TungstenMod.mc.player != null
                 ? TungstenMod.mc.player.getBlockPos() : BlockPos.ofFloored(target));
+    }
+
+    /**
+     * The goal being served right now, for diagnostics. "-" when the navigator is idle.
+     *
+     * <p>Exists so a route can say WHY it exists at the moment it starts, rather than being
+     * reasoned about afterwards. Six mechanisms were proposed for one climbing route on mine_stone
+     * and five were refuted; none of them could have been proposed at all if the goal had been
+     * printed next to the route.
+     */
+    public static String goalDescription() {
+        Vec3d g = goal;
+        return g == null ? "-" : String.format("(%.1f,%.1f,%.1f)", g.x, g.y, g.z);
     }
 
     public static void stop() {

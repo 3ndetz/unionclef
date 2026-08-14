@@ -335,7 +335,12 @@ public interface AltoGoal {
 
         @Override
         public String toString() {
-            return "flee(" + from.size() + " danger(s), d=" + distance + ")";
+            // PRINT THE INPUTS, NOT THE SHAPE. "flee(1 danger(s), d=3.0)" named the goal and
+            // still could not say why the route climbed to y=10 -- the away point and the danger
+            // it was computed from are the two numbers that decide that, and neither was shown.
+            return "flee(from=" + (from.isEmpty() ? "-" : from.get(0).toShortString())
+                    + " away=" + String.format("%.1f,%.1f,%.1f", away.x, away.y, away.z)
+                    + " n=" + from.size() + " d=" + distance + ")";
         }
     }
 

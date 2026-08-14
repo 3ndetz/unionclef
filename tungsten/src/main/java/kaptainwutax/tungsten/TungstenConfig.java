@@ -606,6 +606,37 @@ public class TungstenConfig {
     public boolean fleePicksStandableSpot = false;
 
     /**
+     * Only resume a goto after mining when a goto was actually REQUESTED.
+     *
+     * <p>{@code TungstenMod.TARGET} is the module-global goto destination and it is INITIALISED to
+     * {@code (0.5, 10.0, 0.5)} -- a leftover from when the mod was driven by hand. It is written by
+     * ;goto, the create-goal keybinding, follow-entity and a few py4j primitives, and by nothing
+     * else. The altoclef task drive never writes it: it calls {@code FastNavigator.start(gp)}
+     * directly. So through an entire altoclef-driven run TARGET holds y=10, seventy-one blocks above
+     * the arena floor.
+     *
+     * <p>{@code PathExecutor.resumeGotoAfterMining} fires whenever a mining segment completes, so
+     * EVERY task that breaks a block hands the navigator that constant. Traced three times,
+     * identical each run:
+     *
+     * <pre>
+     *   [Tungsten] Mining done - passage open
+     *   MovementQueue: 9 movement(s) 0,-63,0 -> 0,-54,0 CLIMB+9 for goal=(0.5,10.0,0.5)
+     * </pre>
+     *
+     * From the bottom of its own pit the only way toward y=10 is up, so the bot spends the
+     * cobblestone it just mined building a tower and stands on it for the rest of the run.
+     * Classified over 35 runs: 13 of the 19 failures end exactly like that, every one scoring zero.
+     *
+     * <p>Six mechanisms were proposed for that tower and five refuted, none of them this -- because
+     * the goal was never printed beside the route. The flee goal being served at the same instant
+     * reads {@code away=0.5,-60.0,-4.5}, which is perfectly sensible, and it was blamed twice.
+     *
+     * <p>Off by default. Mechanism gate: the WORLD after the run. tower must go to 0.
+     */
+    public boolean gotoResumeNeedsRealTarget = false;
+
+    /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
      *
      * <p>UnstuckChain skips any bot pressing no movement keys, on the sound reasoning that

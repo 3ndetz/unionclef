@@ -545,12 +545,25 @@ public final class MovementQueue {
         } catch (Throwable t) {
             chainStartFeet = null;
         }
+        // ⛔ NAME THE CALLER. Six mechanisms have now been proposed for the cobblestone tower that
+        // loses mine_stone -- the pillar trigger, the zombie route, the shaft, the break ban, the
+        // progress check, the flee goal -- and five are refuted by their own gates. Every one was a
+        // guess about WHO asks for a route that climbs eight blocks into empty air. This prints it
+        // instead: the goal the navigator is serving and the altoclef task holding the chain, at the
+        // instant the chain starts, and only for chains that actually climb.
+        //
+        // The technique is not new here; it is the one that worked three times when reasoning did
+        // not (lastDisableBy, lastSkip, lastBrokenBlockPos). It costs one string on a rare path.
+        int rise = cells.get(movements.size()).getY() - cells.get(0).getY();
         Debug.logMessage("MovementQueue: " + movements.size() + " movement(s) "
                 + cells.get(0).getX() + "," + cells.get(0).getY() + "," + cells.get(0).getZ()
                 // the chain may have been truncated, so report where it will ACTUALLY end
                 + " -> " + cells.get(movements.size()).getX() + ","
                 + cells.get(movements.size()).getY() + ","
-                + cells.get(movements.size()).getZ());
+                + cells.get(movements.size()).getZ()
+                + (rise >= 3 ? " CLIMB+" + rise + " for goal=" + kaptainwutax.tungsten.task.FastNavigator.goalDescription()
+                        + " nowServing=" + kaptainwutax.tungsten.combat.CombatTrace.hostGoal
+                        + " routeArmedFor=" + kaptainwutax.tungsten.task.FastNavigator.startedFor() : ""));
         return movements.size();
     }
 

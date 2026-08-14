@@ -40,6 +40,7 @@ public class GotoCommand extends Command {
 	        		Vec3d targetVec = kaptainwutax.tungsten.path.GoalSnap.snap(
 	        				target.getVec3d().add(0.5, 0, 0.5), TungstenMod.mc.world);
 	        		TungstenMod.TARGET = targetVec;
+	        		TungstenMod.markGotoTarget();
 	        		startWithRetry(targetVec, 0);
 	    		} else {
 	    			Debug.logWarning("Already running!");

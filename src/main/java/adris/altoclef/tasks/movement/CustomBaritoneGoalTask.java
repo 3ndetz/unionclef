@@ -466,6 +466,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 gp = new net.minecraft.util.math.Vec3d(gp.x, mod.getPlayer().getY(), gp.z);
             }
             gp = snapGoalToStandable(gp, mod);
+            // Publish WHOSE goal this is, so a climbing route can name its caller (CombatTrace).
+            kaptainwutax.tungsten.combat.CombatTrace.hostGoal = String.valueOf(goal);
         }
         if (gp == null) {
             // NAME THE TYPE, DO NOT GUESS IT. Extending the translator from two goal types to six

@@ -3689,6 +3689,7 @@ public class Py4jEntryPoint {
             // Point the mining-resume at the bot itself so it doesn't wander to a stale goal.
             // getPos() (not getEntityPos()) — version-safe across 1.21.1..1.21.11 shared src.
             kaptainwutax.tungsten.TungstenMod.TARGET = mc.player.getPos();
+            kaptainwutax.tungsten.TungstenMod.markGotoTarget();
             ex.setPath(new java.util.ArrayList<>());
             ex.startBreaking(queue);
             ex.stop = false;
@@ -3727,6 +3728,7 @@ public class Py4jEntryPoint {
             if (scaffold.isEmpty()) { out.put("ok", true); out.put("queued", 0);
                 out.put("reason", "no scaffold recorded"); return out; }
             kaptainwutax.tungsten.TungstenMod.TARGET = mc.player.getPos();
+            kaptainwutax.tungsten.TungstenMod.markGotoTarget();
             ex.setPath(new java.util.ArrayList<>());
             ex.startBreaking(scaffold);
             ex.stop = false;
@@ -3778,6 +3780,7 @@ public class Py4jEntryPoint {
             _replaceToName = toName;
             // point mining-resume at the bot so it doesn't wander to a stale goal
             kaptainwutax.tungsten.TungstenMod.TARGET = client.player.getPos();
+            kaptainwutax.tungsten.TungstenMod.markGotoTarget();
             ex.setPath(new java.util.ArrayList<>());
             ex.startBreaking(cells);
             out.put("ok", true); out.put("matched", cells.size()); out.put("phase", "breaking");
@@ -4051,6 +4054,7 @@ public class Py4jEntryPoint {
                 if (!"air".equals(c.get(3))) rebuild.add(o);
             }
             kaptainwutax.tungsten.TungstenMod.TARGET = client.player.getPos();
+            kaptainwutax.tungsten.TungstenMod.markGotoTarget();
             ex.setPath(new java.util.ArrayList<>());
             ex.startBreaking(breakAll);
             ex.stop = false;

@@ -67,6 +67,17 @@ public final class CombatTrace {
     public static volatile boolean hostPathing;
     /** The altoclef task holding the chain this tick, or "-" when there is none. */
     public static volatile String hostTask = "-";
+
+    /**
+     * The altoclef GOAL the drive is serving, as its own toString, or "-".
+     *
+     * <p>Published for one reason: a route that climbs nine blocks into empty air needs to say
+     * WHOSE goal it is at the moment it starts. Six mechanisms were proposed for that route on
+     * mine_stone and five were refuted; printing the goal beside the route is what ended the
+     * guessing. Coordinates alone were not enough -- (0.5,10.0,0.5) is a number, "y(10)" is a
+     * caller.
+     */
+    public static volatile String hostGoal = "-";
     /** The priority the defence chain returned this tick -- 0 means it did not claim the bot. */
     public static volatile float hostPrio;
 

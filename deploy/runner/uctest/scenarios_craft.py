@@ -242,7 +242,8 @@ class MineStone(CraftTable):
                 # printed is not a gate -- the same defect as declaring `stranded` a gate and never
                 # exposing it, which voided a 40-launch series by its own rule.
                 if (tok.startswith("breakFail=") or tok.startswith("stranded=")
-                        or tok.startswith("navStop=") or tok.startswith("cb=")):
+                        or tok.startswith("navStop=") or tok.startswith("cb=")
+                        or tok.startswith("fleeSpot=")):
                     parts.append(tok)
         # stranded= is the mechanism gate for unstuckWhenGoalButNoPath. It was DECLARED as
         # that gate in pre-registration #8 and then not exposed at all, which made the

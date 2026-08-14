@@ -489,6 +489,7 @@ public class FollowEntityTask {
         tickCounter   = 0;
         lastTargetPos = target;
         TungstenMod.TARGET = target;
+        TungstenMod.markGotoTarget();
 
         // ── THE BLOCK ROUTE, FROM THE PLANNER THAT CAN ACTUALLY REACH ────────────────
         // This branch used CombatPathfinder, whose search is capped at MAX_RADIUS = 25 blocks

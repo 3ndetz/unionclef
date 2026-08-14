@@ -46,6 +46,27 @@ public class TungstenMod implements ClientModInitializer {
     public static PlayerEntity player = null;
     public static WorldView world = null;
 	public static Vec3d TARGET = new Vec3d(0.5D, 10.0D, 0.5D);
+
+	/**
+	 * Has anything actually ASKED for a goto, or is TARGET still the debug default?
+	 *
+	 * <p>TARGET is initialised to (0.5, 10.0, 0.5) and written only by ;goto, the create-goal
+	 * keybinding, follow-entity and a few py4j primitives. The altoclef task drive never writes it --
+	 * it calls FastNavigator.start(gp) directly -- so during any altoclef-driven run it holds that
+	 * constant for the whole session. Anything that RESUMES a goto therefore has to ask whether there
+	 * is a goto to resume, or it aims the bot at y=10.
+	 */
+	private static volatile boolean targetIsReal = false;
+
+	/** Record that a real destination was requested. Called wherever TARGET is written. */
+	public static void markGotoTarget() {
+		targetIsReal = true;
+	}
+
+	/** Cleared when navigation is torn down: the next resume must not inherit the last goto. */
+	public static boolean hasRealGotoTarget() {
+		return targetIsReal;
+	}
 	public static clickModeEnum clickMode = clickModeEnum.OFF;
 	public static final Logger LOG;
 	public static VoxelWorld WORLD;
@@ -92,6 +113,8 @@ public class TungstenMod implements ClientModInitializer {
 	 * calls this when a task ends, where killing a shot the agent lined up would be wrong.
 	 */
 	public static void stopNavigation() {
+		// A goto that has been stopped is not a goto to resume.
+		targetIsReal = false;
 		kaptainwutax.tungsten.task.FastNavigator.stop();
 		kaptainwutax.tungsten.task.BlockPathWalker.stop();
 		kaptainwutax.tungsten.task.BridgeTask.stop();

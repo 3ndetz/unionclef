@@ -838,6 +838,30 @@ public class PathExecutor {
      */
     private void resumeGotoAfterMining(ClientPlayerEntity player) {
         Vec3d goal = TungstenMod.TARGET;
+        // ⛔ THERE MAY BE NO GOTO TO RESUME, AND THEN THIS AIMS AT A DEBUG CONSTANT.
+        //
+        // TungstenMod.TARGET is the module-global goto destination, and it is INITIALISED to
+        // (0.5, 10.0, 0.5) -- a leftover default from when the mod was driven by hand. It is only
+        // ever written by ;goto, the create-goal keybinding, follow-entity and a few py4j
+        // primitives. The altoclef task drive never writes it: it calls FastNavigator.start(gp)
+        // directly. So on a bench, and during any altoclef-driven playthrough, TARGET holds y=10
+        // for the whole session -- seventy-one blocks above the arena floor.
+        //
+        // This method fires whenever a mining segment completes ("Mining done - passage open"), so
+        // every task that breaks a block hands the navigator that constant. Traced on mine_stone,
+        // three runs, identical every time:
+        //   MovementQueue: 9 movement(s) 0,-63,0 -> 0,-54,0 CLIMB+9 for goal=(0.5,10.0,0.5)
+        // From the bottom of its own pit the only way toward y=10 is up, so the bot spends the
+        // cobblestone it just mined building a tower and stands on top of it for the rest of the
+        // run. Classified over 35 runs: 13 of the 19 failures end exactly like that, scoring zero.
+        //
+        // Six mechanisms were proposed for that tower and five were refuted. None of them was this,
+        // because the goal was never printed next to the route -- the flee goal being served at the
+        // same moment reads away=0.5,-60.0,-4.5, which is perfectly sensible, and was blamed twice.
+        if (kaptainwutax.tungsten.TungstenConfig.get().gotoResumeNeedsRealTarget
+                && !TungstenMod.hasRealGotoTarget()) {
+            return;
+        }
         if (goal == null || player.getEntityPos().distanceTo(goal) < 2.0) return;
         // THE NAVIGATOR DOES NOT NEED THE PHYSICS THREAD DEAD. Waiting for it costs up to
         // FIVE SECONDS per resume, and a bridge is a loop: place, resume, walk, place. That
