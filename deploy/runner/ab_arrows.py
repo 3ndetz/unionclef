@@ -19,6 +19,33 @@ stranding on the wall) that is not the binding CAUSE of the remaining failures -
 underfoot block changes nothing measurable. What is left is throughput: the gate wants 8 in 120 s
 and the bot averages 5.
 
+OUTCOME OF #9 (2026-08-14). NO EFFECT. THE PIT IS A TRUE DESCRIPTION AND NOT A LEVER.
+
+40 launches, interleaved, 20/19 an arm.
+
+    arm A (off)  mean 3.50  zeros 8/20  passes 3
+    arm B (on)   mean 4.42  zeros 7/19  passes 7
+    PRIMARY  +0.92  SE 1.08  0.85 sigma   -> no effect
+    SECOND   zero rate -0.03, 0.20 sigma  -> no effect
+
+THE FLAG STAYS OFF, and with it the pit line closes as a LEVER. It remains true as a description --
+the position trace really does show 75 of 120 seconds spent inside the excavation, and the wall
+strandings really do start there -- but keeping targets on the surface does not convert that into
+cobblestone, and neither did forbidding the block underfoot (#7, 0.40 sigma).
+
+⛔ ONE HONEST WRINKLE ABOUT THE GATE. Scored from the run log, scanBelowFeet reads 0 in BOTH arms,
+which looks like a void series. It is a parser artefact of mine: `scan=` is never printed to the
+log -- the craft courses print only breakFail= and stranded= -- so the regex found nothing. The
+mechanism WAS verified out of band before the series, by reading placeStats over py4j directly:
+944 rejections in a single run. So the series is readable, but the gate did not do its job here,
+and the fix for next time is to print the token the gate depends on, not merely to expose it.
+
+WHAT IS LEFT ON THIS RUNG, stated plainly after nine pre-registrations: the gate wants 8
+cobblestone in 120 s, the shipped bot averages 4.32 (n=60, sd 3.61), and five separate
+interventions -- ban radius, re-arm budget, underfoot, stranded rescue, surface-only -- have each
+measured nothing. The remaining gap is raw mining throughput and nobody has yet measured WHERE the
+seconds go in a healthy, non-stranded run. That measurement, not another flag, is the next step.
+
 PRE-REGISTRATION #9, WRITTEN BEFORE ITS DATA EXISTS (2026-08-14, mineStayOnSurface).
 
 Aimed at the PIT, which the day's measurements make the single cause of both of mine_stone's
