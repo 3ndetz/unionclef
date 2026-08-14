@@ -562,7 +562,30 @@ public class TungstenConfig {
      * allowed to be mined. Two break failures banned two 101x101x101 cubes and took the coal with
      * them.
      *
-     * <h2>⛔ PARKED OFF, AND THE REASON IS THE MACHINE (2026-08-14)</h2>
+     * <h2>UNPARKED AND SHIPPED ON, WITH THE RISK MEASURED AND THE BENEFIT STILL OPEN (2026-08-14)</h2>
+     *
+     * <pre>
+     *   craft: mine_stone, craft_stone_pickaxe, smelt_iron                 3/3 PASS
+     *   nav:   flat staircase descend break wall2 bridge                   6/6 PASS
+     *   both flags pinned ON, 27.0-29.5 fps throughout, 0 invalid
+     * </pre>
+     *
+     * It was parked because the ON default had never been regression-tested. It has been now, and
+     * the courses that matter most are in it: nav_break MINES and then continues, nav_wall2 and
+     * nav_bridge BUILD.
+     *
+     * <p>WHAT IS STILL NOT PROVEN, said plainly: that the LADDER moves. The benefit rests on a
+     * counter chain on the real world -- two failed breaks, 842,176 candidates refused, the coal
+     * rung starving for 160 seconds of daylight -- and not on a measured ladder improvement, because
+     * the survival client cannot start below 12 fps and the box is held by another project. The
+     * next quiet window must confirm the ladder passes stone tools. If it does not, this comes back
+     * off.
+     *
+     * <p>And no bench here has real land claims, so the anti-grief half is argued rather than
+     * measured: on protected land every attempt is refused, so three distinct positions fail within
+     * seconds and the regional ban installs itself as before.
+     *
+     * <h2>The original park, kept because the reasoning stands (2026-08-14)</h2>
      *
      * It was flipped ON to measure exactly that, and the confirming window came back
      * {@code INVALID - client at 8 fps before the run even starts (< 12.0)}: another project's
@@ -584,7 +607,7 @@ public class TungstenConfig {
      * must collapse to near zero -- an effect size the gate metric cannot come close to, which is
      * the point after two series died on that gate's sd of 3.6.
      */
-    public boolean breakBanEscalates = false;
+    public boolean breakBanEscalates = true;
 
     /**
      * A progress check counts a route being FOLLOWED as progress, not a search merely running.
@@ -713,7 +736,7 @@ public class TungstenConfig {
      * Mechanism gate when it can be run: lock=barren/productive, which must show barren>0 on a
      * stalling course.
      */
-    public boolean barrenLockCountsAsFailure = false;
+    public boolean barrenLockCountsAsFailure = true;
 
     /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
