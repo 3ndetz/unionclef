@@ -235,8 +235,14 @@ class MineStone(CraftTable):
                 # existing. It is what turned this course from "the bot cannot mine" into "the bot
                 # mines its eight in 29 s and then spends them pillaring", so it prints whether the
                 # flag is on or off -- with the flag off it must read 0/0, which is the control.
+                # cb=hardness/avoid/plausible/reach is the MECHANISM GATE for breakBanEscalates,
+                # and it was missing from this list while being the number the whole diagnosis
+                # turned on: one traced run read cb=0/260992/0/0, a quarter of a million candidates
+                # refused by the ban that one failed break installed. A gate metric that is not
+                # printed is not a gate -- the same defect as declaring `stranded` a gate and never
+                # exposing it, which voided a 40-launch series by its own rule.
                 if (tok.startswith("breakFail=") or tok.startswith("stranded=")
-                        or tok.startswith("navStop=")):
+                        or tok.startswith("navStop=") or tok.startswith("cb=")):
                     parts.append(tok)
         # stranded= is the mechanism gate for unstuckWhenGoalButNoPath. It was DECLARED as
         # that gate in pre-registration #8 and then not exposed at all, which made the

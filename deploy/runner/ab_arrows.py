@@ -1141,3 +1141,37 @@ separate question and I am not predicting it -- the previous two series say this
 than one failure mode, and removing one of three need not show up in the mean.
 
 ARMS: interleaved, --repeat 8, one invocation.
+
+RESULT OF #12 -- AND IT IS A NEGATIVE CONTROL, WHICH IS WORTH MORE THAN THE FIX (2026-08-14).
+
+    control (off):  8, 0, 9, 8    mean 6.25   pass 3/4   towered 1/4
+    arm     (on):   0, 0, 0       mean 0.00   pass 0/3   towered 3/3
+
+AND THE FLAG NEVER EXECUTED. breakFail reads claimed=0 in every run of both arms, so
+addTemporaryBreakAvoidance -- the only method the flag touches -- was never called once. The arm
+and the control were running IDENTICAL code.
+
+So an inert change "moved" this course by 6.25 cobblestone, 3/4 pass against 0/3. That is not a
+result about the flag; it is the definitive measurement of what this course's score can and cannot
+support, and it was obtained by accident from a series designed to test something else.
+
+WHAT IT SETTLES, RETROSPECTIVELY:
+
+  - #11 pair 1 (+3.60, 2.02 sigma) is fully explained without any effect at all. Retracting it on
+    the order-swap was right, and this says it was not merely unproven but comfortably inside what
+    an inert flag produces here.
+  - Every A/B ever run on mine_stone at n<=5 an arm, including the four I ran today, is incapable
+    of the claim it was built to make. Two series disagreeing was never a puzzle.
+  - Rule 4i, in one line: the gate's statistic is not the measurement's statistic. Here the gate is
+    BIMODAL -- a run either finishes in ~30 s with 8-9 and no tower, or towers and scores 0 -- so
+    the mean is a coin-flip weighting of two outcomes and the sd of 3.6 was never noise around a
+    central value at all.
+
+THE MODE IS THE MEASUREMENT, NOT THE MEAN. Every zero-scoring run in this series has tower 5-6 and
+every passing run has tower 0. dug=3/4 in ALL of them, passing and failing alike -- so digging into
+the column is not what separates them. What separates them is whether the bot leaves the hole by
+WALKING or by BUILDING. That is the question the next pass answers, and it is answerable per run
+rather than per series.
+
+#12 itself is unjudged: correct by inspection, never exercised. It needs a run in which a claim
+actually fires (one diag run in four), so it stays off with its mechanism gate now printed.
