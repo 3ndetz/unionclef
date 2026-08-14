@@ -221,6 +221,8 @@ public class MineAndCollectTask extends ResourceTask {
          *  Read as scan=ok/unreach/nobreak. */
         public static volatile int scanAccepted, scanUnreachable, scanNoBreak;
         public static volatile int scanUnderfoot;
+        /** Candidates rejected for being below standing height while the surface still had some. */
+        public static volatile int scanBelowFeet;
 
         public static Pair<Double, Optional<ItemEntity>> getClosestItemDrop(AltoClef mod,Vec3d pos, ItemTarget... items) {
             Optional<ItemEntity> closestDrop = Optional.empty();
@@ -253,6 +255,33 @@ public class MineAndCollectTask extends ResourceTask {
             // precisely because the bot can dig down to reach ore. So this PREFERS anything else
             // and falls back to the underfoot block when it is genuinely the only candidate:
             // the exclusion runs first, and an empty result retries without it.
+            // !! THE PIT IS THE DEFECT, NOT THE ONE BLOCK UNDER THE FEET.
+            // mineAvoidUnderfoot forbade exactly one position and measured 0.40 sigma, because the
+            // bot descends anyway: it takes a block a step aside, follows it down, and ends up in a
+            // hole. Polling the position through a run shows where the time actually goes --
+            // 75 of 120 seconds oscillating at y=-62/-63 inside its own excavation, four blocks
+            // mined -- and the same pit is what it later climbs out of onto the arena wall, which
+            // is the other 35-45% of runs. One cause, both failure modes.
+            //
+            // So the rule is about the SURFACE, not about a block: while enough candidates remain
+            // at or above standing height, do not choose one below it. Descending still works when
+            // the surface runs out, which is what mine_diamond needs and why it stays green.
+            int feetY = mod.getPlayer() == null ? Integer.MIN_VALUE : mod.getPlayer().getBlockPos().getY();
+            if (kaptainwutax.tungsten.TungstenConfig.get().mineStayOnSurface
+                    && feetY != Integer.MIN_VALUE) {
+                Optional<BlockPos> onSurface = mod.getBlockScanner().getNearestBlock(pos, check -> {
+                    if (check.getY() < feetY - 1) {
+                        scanBelowFeet++;
+                        return false;
+                    }
+                    if (mod.getBlockScanner().isUnreachable(check)) return false;
+                    if (!WorldHelper.canBreak(check)) return false;
+                    return true;
+                }, blocks);
+                if (onSurface.isPresent()) {
+                    return new Pair<>(BlockPosVer.getSquaredDistance(onSurface.get(), pos), onSurface);
+                }
+            }
             BlockPos underfoot = mod.getPlayer() == null ? null : mod.getPlayer().getBlockPos().down();
             if (kaptainwutax.tungsten.TungstenConfig.get().mineAvoidUnderfoot && underfoot != null) {
                 Optional<BlockPos> preferred = mod.getBlockScanner().getNearestBlock(pos, check -> {

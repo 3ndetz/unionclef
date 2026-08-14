@@ -19,6 +19,30 @@ stranding on the wall) that is not the binding CAUSE of the remaining failures -
 underfoot block changes nothing measurable. What is left is throughput: the gate wants 8 in 120 s
 and the bot averages 5.
 
+PRE-REGISTRATION #9, WRITTEN BEFORE ITS DATA EXISTS (2026-08-14, mineStayOnSurface).
+
+Aimed at the PIT, which the day's measurements make the single cause of both of mine_stone's
+failure modes: 75 of 120 seconds spent oscillating inside its own excavation (slow runs), and
+climbing out of it onto the arena wall (the 35-45% of runs scoring zero).
+
+  * 40 launches, interleaved, --pin-alt mineStayOnSurface=true, ~20 an arm;
+  * STATISTIC: MEAN COBBLESTONE, 2 sigma, against the pooled baseline 4.32 (n=60, sd 3.61);
+  * MECHANISM GATE: scanBelowFeet > 0 in the pinned arm, 0 in the baseline. Already verified in a
+    smoke test -- 944 rejections in one run -- because a gate declared and not exposed is what made
+    series #8 void, and this one was wired WITH the flag rather than after it;
+  * SECOND STATISTIC, declared now: the zero rate. The flag targets the pit, and the zeros are the
+    pit's other consequence, so a drop there with the mean unmoved is a real outcome;
+  * REGRESSION GATE: mine_diamond must still PASS. It is green precisely because the bot can
+    descend to ore, and this restricts descending -- the fallback (retry unrestricted when the
+    surface is empty) exists for exactly that, and this is where it gets checked rather than
+    assumed;
+  * if it fails, the pit line is closed as a LEVER while remaining true as a description, and the
+    rung's gap goes back to raw throughput.
+
+HONEST PRIOR: six smoke runs read 0, 0, 0, 7, 8, 8 -- mean 3.83, two passes, which is
+indistinguishable from the 4.32 baseline at that n. The opening two zeros looked alarming and were
+a bad draw. Recorded so neither half of that can be quoted later.
+
 THERE IS NO BASELINE DRIFT ON mine_stone, AND THE POOLED FLOOR IS 4.32 (2026-08-13).
 
 I wrote in a commit that the shipped arm was drifting down -- 5.05, then 4.25, then 3.65 across

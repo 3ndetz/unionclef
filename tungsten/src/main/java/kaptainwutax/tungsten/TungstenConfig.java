@@ -408,6 +408,26 @@ public class TungstenConfig {
     public boolean mineAvoidUnderfoot = false;
 
     /**
+     * Keeps mining targets at or above standing height while the surface still has candidates.
+     *
+     * <p>The generalisation of {@link #mineAvoidUnderfoot}, which measured 0.40 sigma because it
+     * forbade exactly ONE position: the bot descends anyway by taking a block a step aside and
+     * following it down.
+     *
+     * <p>Polling the position through a mine_stone run shows the cost -- 75 of 120 seconds spent
+     * oscillating at y=-62/-63 inside its own excavation, four blocks mined -- and the same pit is
+     * what it climbs out of onto the arena wall in the other 35-45% of runs, where it strands. One
+     * cause, both failure modes, which is why this is aimed at the pit rather than at either.
+     *
+     * <p>Descending still works when the surface runs out: the restricted search runs first and an
+     * empty result retries without it. mine_diamond depends on that and is watched for regression.
+     *
+     * <p>Off by default. Judged against the pooled baseline of 4.32 cobblestone (n=60, sd 3.6),
+     * 2 sigma at 20 an arm, with scanBelowFeet as the mechanism gate.
+     */
+    public boolean mineStayOnSurface = false;
+
+    /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
      *
      * <p>UnstuckChain skips any bot pressing no movement keys, on the sound reasoning that
