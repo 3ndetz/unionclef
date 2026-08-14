@@ -247,6 +247,28 @@ def main():
             spawn = f"{base[0] + x2 * 300} {base[1]} {base[2] + z2 * 300}"
         if skipped:
             print(f"  skipped {skipped} treeless start(s)")
+        # ⛔ RUNNING OUT OF ATTEMPTS IS NOT THE SAME AS FINDING A FOREST.
+        #
+        # This loop hardened its INNER checks three times -- a count that could not fail, an
+        # unreadable count accepted as a forest, twelve logs called a forest -- and never handled
+        # exhausting the spiral. It fell out of the while and started the run from the LAST
+        # spawn, the one it had just rejected, printing nothing but an informational line.
+        #
+        # So the run measures the BIOME and reports it as the bot. Measured 2026-08-14: eight
+        # skips, pinned at 5392,-3538 with "no trees ... (0 logs)" on that very spot, and the bot
+        # spent the window walking 70+ blocks on rung one with items=0 and HP falling 15 -> 5 to
+        # hostiles. Read naively that is "the playthrough regressed to nothing"; it is a treeless
+        # start. The block above already records this happening once before, in an ancient city
+        # at y=-45 -- "recorded as the bot failing to reach the wood rung".
+        #
+        # A world that cannot host the test is the same verdict as a client that cannot: INVALID,
+        # not FAIL. Failing open in the direction that blames the bot is the defect this file
+        # keeps paying for.
+        if skipped >= 8:
+            raise StandDown(
+                f"no forest within {skipped} spiral steps of the pinned base -- the WORLD cannot "
+                f"host this run, so its ladder would measure the biome. Delete "
+                f"deploy/runner/gamer_spawn.txt to re-seed the search from a new base.")
     elif spawn:
         grcon(f"tp {BOT} {spawn}")
         time.sleep(2)
