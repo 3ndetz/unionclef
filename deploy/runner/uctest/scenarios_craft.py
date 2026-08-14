@@ -774,6 +774,100 @@ class MineDiamond(CraftTable):
                         f"pickaxe={_has(ctx, 'iron_pickaxe')}", gate=False)
 
 
+class MineCoal(CraftTable):
+    """The rung the PLAYTHROUGH actually dies on, brought onto a bench that works.
+
+    A 14-minute @gamer window reached wood, first craft, crafting, wood tools and stone tools -- and
+    then stopped for 160 seconds of daylight on
+
+        Gathering resource: [minecraft:coal] -> Mine And Collect: [[coal]]
+
+    with every drive counter at zero: pdEnter+0, dbTick+0, mqStart+0. The task was ticking and
+    finding nothing it was allowed to mine, because two failed breaks had banned two 101x101x101
+    cubes: breakFail=2/0/0/0 with cb=90/842176/5318/103, i.e. 842,176 candidates refused.
+
+    That wall could only be measured on the survival world, which needs a quiet machine and has not
+    had one -- the client sits at 7-8 fps against a floor of 12 while another project holds the box.
+    So the rung comes to the arena instead, where the client holds 28. This is the repo's own rule
+    about unmeasurable capabilities, applied to a rung rather than a port stub: do not audit it by
+    reading, write the course that needs it and let it fail.
+
+    THE ORE IS PLACED FAR, ON PURPOSE. mine_stone's is underfoot, so it never tests the join between
+    navigation and mining -- and that join is what a break ban destroys, by emptying the minable list
+    while the bot is walking to it. Eight, fourteen and twenty blocks out means the bot must path,
+    arrive, and mine, three times.
+
+    WHAT A FAILURE HERE WOULD MEAN, stated in advance so the result cannot be reinterpreted after the
+    fact: if this goes red with cb's second field in the hundreds of thousands, the playthrough wall
+    reproduces on a cheap bench and can be worked without a quiet machine. If it goes green, the wall
+    is specific to the survival world -- real terrain, real distances -- and the arena cannot stand in
+    for it, which is worth knowing before another day is spent trying.
+
+    <h2>FIRST RESULT, 3 runs: 2 PASS / 1 FAIL -- and the fork above resolves the SECOND way</h2>
+
+    <pre>
+      PASS  coal=3  scan=400   lock=0/0  cb=0/0/0/0  breakFail=0/0/0/0   early stop, ~30 s
+      FAIL  coal=0  scan=3771  lock=1/0  cb=0/0/0/0  breakFail=0/0/0/0   full 180 s
+      PASS  coal=3  scan=350   lock=0/0  cb=0/0/0/0  breakFail=0/0/0/0   early stop, ~30 s
+    </pre>
+
+    THE BAN DOES NOT REPRODUCE HERE. cb is zero across all three and no break ever failed, so the
+    playthrough's 842,176-candidate wall belongs to the survival world -- real terrain, real
+    distances, and whatever makes a break fail out there -- and this arena cannot stand in for it.
+    That was worth one course to learn rather than another day of trying.
+
+    WHAT DID REPRODUCE is a different stall, and cheaply: the failing run is a FULL-DURATION ZERO
+    carrying one barren lock and a block search that ran ten times harder than the passing ones
+    (scan 3771 against 400). One barren lock does not trip MAX_BARREN_LOCKS = 2, so the guard
+    correctly stayed out of it -- this is not that failure mode either. A 1-in-3 red on a 180-second
+    course is a far better instrument for the coal rung than a 14-minute survival window that needs a
+    quiet machine, and it is what the next pass on this rung should use.
+    """
+
+    id = "mine_coal"
+    duration = 180
+    bot_kit = ["give {name} stone_pickaxe 1"]
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=24, grass=False)
+        y = STAND_Y - 1
+        ctx.rcon.cmd(f"fill -26 {y - 3} -26 26 {y - 1} 26 minecraft:stone", allow_reject=True)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        # Three ores at increasing distance, each needing a walk rather than a reach.
+        for x, z in ((8, 0), (14, 4), (20, -4)):
+            ctx.rcon.cmd(f"setblock {x} {STAND_Y - 1} {z} minecraft:coal_ore", allow_reject=True)
+        ctx.geo["fps"] = []
+        time.sleep(1)
+        for line in self.bot_kit:
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        ctx.bot.cmd("@get coal 3")
+
+    def early_stop(self, ctx):
+        return _count(ctx, "coal") >= 3
+
+    def judge(self, ctx):
+        got = _count(ctx, "coal")
+        yield Criterion("three coal in the pack", got >= 3,
+                        f"coal={got} pickaxe={_has(ctx, 'stone_pickaxe')}")
+        # THE BAN COUNTERS ARE THE POINT OF THIS COURSE, so they are printed whatever the verdict.
+        # cb=hardness/avoid/plausible/reach -- the second field is the no-break ban, and it read
+        # 842,176 on the playthrough window this course exists to reproduce. breakFail is
+        # claimed/outOfReach/buried/wide: `claimed` is a failed break believed to be a land claim,
+        # and on a bench with no claims at all every one of them is a false positive.
+        ok, stats = ctx.bot.py.try_call("placeStats")
+        parts = [t for t in str(stats or "").split()
+                 if t.startswith(("cb=", "breakFail=", "scan=", "lock=", "navStop="))]
+        yield Criterion("ban and lock counters (recorded, not gated)", True,
+                        " ".join(parts) if parts else "unread", gate=False)
+
+
 class EscapeLava(CraftTable):
     """Standing in lava, with water three steps one way and dry ground the other.
 
@@ -1061,4 +1155,4 @@ class EscapeLava(CraftTable):
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
-             ChopTree, ChopCanopy, MineDiamond, EscapeLava]
+             ChopTree, ChopCanopy, MineDiamond, MineCoal, EscapeLava]
