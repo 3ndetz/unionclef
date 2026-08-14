@@ -449,6 +449,54 @@ public interface AltoGoal {
      *
      * @param maintainY hold this height, or null to keep the player's own (NaN, filled by the drive)
      */
+    /** Times the flee point had to be moved to reach standable ground, and times none was found. */
+    java.util.concurrent.atomic.AtomicInteger FLEE_RELOCATED = new java.util.concurrent.atomic.AtomicInteger();
+    java.util.concurrent.atomic.AtomicInteger FLEE_NO_SPOT = new java.util.concurrent.atomic.AtomicInteger();
+
+    /**
+     * Walk outward along the away heading and return the first cell the bot could actually STAND in.
+     *
+     * <h2>What this restores</h2>
+     *
+     * Upstream's {@code GoalRunAway} is a HEURISTIC over the whole search space -- every cell far
+     * enough from the danger satisfies it -- so the search picks a reachable one by itself. Porting
+     * it to "the caller computes a finished point" collapsed that to a single projected coordinate,
+     * and the note on {@link Flee} says as much: fleeing is a direction, but a drive steers at
+     * something. What it did not say is what happens when the something is inside a wall.
+     *
+     * <p>Which is the ordinary case for the caller that matters. {@code DestroyBlockTask} flees the
+     * block it has just mined and passes that block's Y as maintainY, so a bot at the bottom of a
+     * pit is sent "three blocks that way, at the depth I am digging" -- a point inside solid stone,
+     * with the void underneath it. The search cannot reach it, burns its budget, restarts, and from
+     * a 1x1 shaft the only direction a best-effort route can expand is UP. Measured over 35 runs of
+     * mine_stone: 13 of 19 failures end with the bot on a cobblestone tower scoring exactly zero.
+     *
+     * <p>Vertical spread before horizontal: climbing out of the hole you are fleeing is usually one
+     * step, and it is what a person would do. Beyond that it keeps walking outward, which is the
+     * heuristic's own preference -- further away is better.
+     */
+    private static Vec3d firstStandableAlong(double cx, double cz, double ux, double uz,
+                                             double reach, double baseY) {
+        try {
+            for (int r = (int) Math.ceil(reach); r <= reach + 12; r++) {
+                for (int dy : new int[]{0, 1, -1, 2, -2, 3, 4}) {
+                    int x = (int) Math.floor(cx + ux * r);
+                    int y = (int) baseY + dy;
+                    int z = (int) Math.floor(cz + uz * r);
+                    BlockPos feet = new BlockPos(x, y, z);
+                    if (adris.altoclef.util.helpers.WorldHelper.isSolidBlock(feet.down())
+                            && !adris.altoclef.util.helpers.WorldHelper.isSolidBlock(feet)
+                            && !adris.altoclef.util.helpers.WorldHelper.isSolidBlock(feet.up())) {
+                        return new Vec3d(x + 0.5, y, z + 0.5);
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // a goal must never be the thing that throws; the projected point is still returned
+        }
+        return null;
+    }
+
     static AltoGoal flee(Vec3d standingAt, java.util.List<BlockPos> from, double distance,
                          Integer maintainY) {
         double cx = 0, cz = 0;
@@ -469,9 +517,30 @@ public interface AltoGoal {
         }
         // Aim past the ring, so arriving at the point means the reached() test is satisfied.
         double reach = distance + 2;
+        // NaN here is the file's CONVENTION, not a bug -- Xz, YLevel, Chunk and Direction all name
+        // an absent axis that way and the drive fills it in from the player. It is left exactly as
+        // it was. The scan below still needs a concrete height to start from, so it takes the
+        // player's own when the caller named none.
+        double baseY = maintainY != null ? maintainY : Math.floor(standingAt.y);
         Vec3d away = new Vec3d(cx + dx / len * reach,
                 maintainY != null ? maintainY : Double.NaN,
                 cz + dz / len * reach);
+        if (kaptainwutax.tungsten.TungstenConfig.get().fleePicksStandableSpot) {
+            Vec3d standable = firstStandableAlong(cx, cz, dx / len, dz / len, reach, baseY);
+            if (standable != null) {
+                // Compare in XZ and on the scan base, never against away.y -- that is NaN by
+                // convention when the caller named no height, and every comparison through NaN
+                // is false, which would silently stop this counter ever incrementing.
+                double dxr = standable.x - (cx + dx / len * reach);
+                double dzr = standable.z - (cz + dz / len * reach);
+                if (dxr * dxr + dzr * dzr > 0.5 || Math.abs(standable.y - baseY) > 0.5) {
+                    FLEE_RELOCATED.incrementAndGet();
+                }
+                away = standable;
+            } else {
+                FLEE_NO_SPOT.incrementAndGet();
+            }
+        }
         return new Flee(away, java.util.List.copyOf(from), distance);
     }
 

@@ -582,6 +582,30 @@ public class TungstenConfig {
     public boolean progressCheckIgnoresSearch = false;
 
     /**
+     * A flee destination must be somewhere the bot can STAND, not a projected coordinate.
+     *
+     * <p>Upstream's GoalRunAway is a heuristic over the whole search space -- any cell far enough
+     * from the danger satisfies it -- so the search finds a reachable one itself. The port collapsed
+     * that to one computed point, and AltoGoal.Flee's own note admits the tension: fleeing is a
+     * DIRECTION, but a drive steers at something. What it did not say is what happens when the
+     * something is inside a wall.
+     *
+     * <p>Which is the ordinary case for the caller that matters. DestroyBlockTask flees the block it
+     * has just mined and passes that block's Y, so a bot at the bottom of its pit is sent "three
+     * blocks that way, at the depth I am digging" -- inside solid stone, with void beneath. The
+     * search cannot reach it, burns its budget, restarts; and from a 1x1 shaft the only direction a
+     * best-effort route can expand is UP.
+     *
+     * <p>Classified over 35 mine_stone runs: 16 clean passes, 13 TOWERED, 5 partial, 1 banned.
+     * Every towered run scores exactly zero, so 13 of the 19 failures are this.
+     *
+     *
+     * <p>Off by default. Mechanism gate: fleeSpot=relocated/none. Relocated must be non-zero or the
+     * projected point was already standable and the premise is wrong.
+     */
+    public boolean fleePicksStandableSpot = false;
+
+    /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
      *
      * <p>UnstuckChain skips any bot pressing no movement keys, on the sound reasoning that

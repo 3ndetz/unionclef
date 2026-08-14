@@ -1260,3 +1260,47 @@ THE STANDING INSTRUCTION FOR THE NEXT PASS, now written for the second time and 
 CLASSIFY THE RUNS FIRST. towered / banned / never-dug / clean. Every input is already in the
 verdict. Five mechanisms have now been proposed for this course and four are refuted; the sixth
 guess is worth less than knowing which of the four modes each failing run is in.
+
+THE CLASSIFIER, RUN OVER 35 LOGGED RUNS -- no new runs needed, every field was already recorded.
+
+    16  CLEAN PASS
+    13  towered        <- 13 of the 19 FAILURES, and every one scores exactly 0
+     5  partial
+     1  banned
+
+This reverses what I wrote from ab15 alone ("only 3 of 14 towered"). Over 35 runs the tower is the
+dominant failure by a wide margin, and it is perfectly deterministic: tower>0 <=> cobble=0, and
+every towered run has dug=3. Which is the lesson of rule 5 for the third time today -- ab15 was
+fourteen samples and I read a rate off it.
+
+PRE-REGISTRATION #14 -- fleePicksStandableSpot (2026-08-14). Written BEFORE the run.
+
+WHAT BUILDS THE TOWER, found by reading AltoGoal end to end rather than guessing a sixth time:
+
+    Vec3d away = new Vec3d(cx + dx/len*reach, maintainY, cz + dz/len*reach);
+
+DestroyBlockTask flees the block it has just mined and passes THAT BLOCK'S Y as maintainY. So a bot
+at the bottom of its pit is told "three blocks that way, at the depth I am digging" -- a point
+inside solid stone with the void underneath it. Unreachable, so the search burns its budget and
+restarts, which is the "Tungsten pathfinding (29s left)" cycle in every failing trace; and from a
+1x1 shaft the only direction a best-effort route can expand is UP.
+
+IT IS A PORT DEFECT, and the file says so about itself without noticing: upstream GoalRunAway is a
+HEURISTIC over the whole search space -- any cell far enough away satisfies it -- so the search
+picks a reachable one. AltoGoal.Flee's own note reads "fleeing is a DIRECTION, not a place... a
+drive cannot [work with that] -- it steers at something". Collapsing the heuristic to one projected
+coordinate is what destroyed the property that made it work.
+
+THE CHANGE: walk outward along the away heading and take the first cell the bot could STAND in
+(solid below, clear at feet and head), vertical spread before horizontal because climbing out of
+the hole you are fleeing is usually one step. Falls back to the projected point when nothing is
+standable, so no behaviour is lost.
+
+MECHANISM GATE: fleeSpot=relocated/none. relocated must be NON-ZERO -- if the projected point was
+already standable, the premise is wrong and the series says so before the outcome does. Note the
+counter compares in XZ and against the scan base, never against away.y: that is NaN by this file's
+convention when no height is named, and a comparison through NaN is false, which would have made
+the gate silently unable to fire. That is the same defect as the gate I declared and never exposed.
+
+NOT PREDICTING THE MEAN. #12 established that an inert flag moves it by 6.25 here. The prediction is
+about the MODE: towered runs should fall from 13-in-19 toward zero on the pinned arm.
