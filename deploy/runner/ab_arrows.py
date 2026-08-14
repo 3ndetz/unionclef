@@ -19,6 +19,29 @@ stranding on the wall) that is not the binding CAUSE of the remaining failures -
 underfoot block changes nothing measurable. What is left is throughput: the gate wants 8 in 120 s
 and the bot averages 5.
 
+OUTCOME OF #8, RE-RUN AFTER THE FLAG WAS MADE TO ACTUALLY FIRE (2026-08-13). REFUTED.
+
+The first attempt at #8 was VOID: strandedRescues was declared as its mechanism gate and never
+exposed, and once exposed it read 0 -- the flag could not fire at all. Three placement fixes later
+(the discriminator had to sit above BOTH the tungsten-isActive guard and the isPrimary exemption,
+and the no-keys guard had to stop wiping the very history the check needs) it fires. Then:
+
+    MECHANISM GATE   arm A fired 0/20 runs, arm B 12/19        -> PASSES, this is a real negative
+    arrows/cobble    A mean 3.65   B mean 2.21   -1.44, 1.27 sigma  -> no effect, WORSE direction
+    zero rate        A 0.45        B 0.68        +0.23, 1.47 sigma  -> MORE zeros with it on
+    passes           A 7/20        B 3/19
+
+Both declared statistics point the wrong way. THE FLAG STAYS OFF, and the stranding line is closed
+exactly as the pre-registration said it would be: "if both fail, the rung's remaining 60% is a
+throughput question, not a recovery one."
+
+WHAT IT COST AND WHAT IT BOUGHT. Four instruments (strandedRescues, lastSkip, lastRealSkip, the
+getPriority early-return counters), three blind placement patches, and a void 40-launch series.
+What it bought is worth keeping: UnstuckChain is deliberately inert under tungsten by an exemption
+whose comment assumes "tungsten handles its own stuck recovery" -- and now we know that shimmying
+those ticks does not help either, so the assumption's REPLACEMENT is not a shimmy. Whatever fixes
+stranding has to be something else.
+
 PRE-REGISTRATION #8, WRITTEN BEFORE ITS DATA EXISTS (2026-08-13, unstuckWhenGoalButNoPath).
 
 Target: the strandings that are ALL of mine_stone's remaining failures. The n=20 baseline is
