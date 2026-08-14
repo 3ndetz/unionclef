@@ -19,6 +19,28 @@ stranding on the wall) that is not the binding CAUSE of the remaining failures -
 underfoot block changes nothing measurable. What is left is throughput: the gate wants 8 in 120 s
 and the bot averages 5.
 
+THERE IS NO BASELINE DRIFT ON mine_stone, AND THE POOLED FLOOR IS 4.32 (2026-08-13).
+
+I wrote in a commit that the shipped arm was drifting down -- 5.05, then 4.25, then 3.65 across
+three series on unchanged code -- and called it "unexplained and the thing to watch". Checked
+rather than left standing:
+
+    frame rate    29.6, 29.4, 29.4 (range 28-30)   flat, so not starvation
+    ab16 arm A    n=20  mean 5.05  sd 3.47  SE 0.78
+    ab17 arm A    n=20  mean 4.25  sd 3.56  SE 0.80
+    ab18 arm A    n=20  mean 3.65  sd 3.66  SE 0.82
+    first vs last +1.40, SE 1.13, 1.24 sigma
+    all pooled    n=60  mean 4.32  sd 3.61
+
+Three means within about one SE of the pooled value. That is ONE population, not a decline -- I
+was pattern-matching on three numbers that agree. Recorded because the previous wording would have
+sent the next pass hunting a phantom, which is the specific waste this file exists to prevent.
+
+*** USE 4.32 +/- 0.47 (n=60) AS THE SHIPPED BASELINE, not any single series. The course's own
+spread is sd 3.6 -- it produces 0 and 9 from identical builds -- so a 20-run arm carries SE 0.8 and
+two arms differ by 1.1 before anything real has happened. That is why every flag tried on this rung
+needed 2 sigma on 20 an arm, and why the n=4 and n=5 previews during the day were worthless.
+
 OUTCOME OF #8, RE-RUN AFTER THE FLAG WAS MADE TO ACTUALLY FIRE (2026-08-13). REFUTED.
 
 The first attempt at #8 was VOID: strandedRescues was declared as its mechanism gate and never
