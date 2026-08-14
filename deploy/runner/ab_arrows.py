@@ -1404,3 +1404,31 @@ exactly the case where nothing should change, and nothing does.
 
 THE EFFECT REMAINS UNMEASURED, and can only be measured where the stall is: the @gamer playthrough,
 160 s on Mine And Collect: [[coal]], which needs a quiet box. Still off, still not shipped.
+
+A RUN IN WHICH THE BUG DOES NOT HAPPEN CANNOT VALIDATE THE FIX FOR IT (2026-08-14).
+
+The survival client came back above the floor (15.0 fps, a VALID window) and the counters read:
+
+                          14-min run, flags OFF      8-min run, flags ON
+    scanNoBreak           847,492                    0
+    cbAvoid               842,176                    9,630
+    breakFail claimed     2                          0
+    lock barren           1                          0
+
+That is a 99% collapse in exactly the number I pre-registered as the mechanism gate, and it is NOT
+evidence. breakFail=0 says no break failed in the second run, so the escalating ban never had to
+act; lock=0/0 says the bot never stalled, so the barren-lock guard never fired either. NEITHER FIX
+WAS EXERCISED. The collapse is a run without the trigger.
+
+Banking it would have been the most attractive mistake available today: the number is huge, it
+points the right way, and it matches the prediction. The gate says "cbAvoid must collapse ON A RUN
+WHERE THE BAN FIRES", and the second clause is the whole gate.
+
+The two runs are not comparable anyway -- 8 minutes against 14, 15 fps against a healthier client,
+a spawn 5000 blocks away and an inventory carried over from the previous run, so "wood" counted as
+pre-existing and the ladder started mid-way. It reached first craft and crafting at 22.4s and no
+further.
+
+WHAT IS STILL OWED: a survival window in which breakFail>0, so the ban actually fires and the gate
+can read. Until then the two flags are shipped on REGRESSION evidence only (craft 12/12, nav 6/6,
+0 invalid) with the benefit unproven, which is what their javadoc says.
