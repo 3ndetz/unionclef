@@ -31,6 +31,9 @@ public class UnstuckChain extends SingleTaskChain {
 
     /** Times the chain acted on a bot that had a goal, no path and had not moved. */
     public static volatile int strandedRescues;
+    /** Which guard last stopped checkGenerallyStuck, and the history size when it did.
+     *  Three placement fixes were spent guessing this; naming it is cheaper. */
+    public static volatile String lastSkip = "-";
     private boolean isProbablyStuck = false;
     private int eatingTicks = 0;
     private boolean interruptedEating = false;
@@ -130,7 +133,7 @@ public class UnstuckChain extends SingleTaskChain {
     }
 
     private void checkGenerallyStuck() {
-        if (posHistory.size() < 200) return; // ~10 seconds of ticks
+        if (posHistory.size() < 200) { lastSkip = "tooShort/" + posHistory.size(); return; }
 
         // Tungsten-primary (drop-in swap): tungsten drives movement and handles
         // its own stuck recovery (executor). The shimmy would preempt the user
@@ -159,7 +162,7 @@ public class UnstuckChain extends SingleTaskChain {
         //    tungsten segment (follow, punk approach, ;goto) could be shimmied into.
         //  - NOTHING PRESSED means the bot is deliberately standing (waiting for a
         //    search, a craft, a menu) — a shimmy there is pure damage.
-        if (isInCombat(mod)) { posHistory.clear(); return; }
+        if (isInCombat(mod)) { lastSkip = "combat/" + posHistory.size(); posHistory.clear(); return; }
         // !! THE DISCRIMINATOR MUST COME BEFORE THIS GUARD, NOT AFTER IT.
         // TungstenHelper.isActive() is true while PATHFINDER.active -- which is EXACTLY the
         // stranded state, a search spinning with no path to show for it. Placed after it, the
@@ -178,6 +181,7 @@ public class UnstuckChain extends SingleTaskChain {
             if (strandedWithGoal) strandedRescues++;
         }
         if (adris.altoclef.util.helpers.TungstenHelper.isActive() && !strandedWithGoal) {
+            lastSkip = "tungsten/" + posHistory.size();
             posHistory.clear();
             return;
         }
@@ -197,7 +201,25 @@ public class UnstuckChain extends SingleTaskChain {
         // has not moved for the whole history window, and no keys, is stranded, not patient.
         // Everything the guard protects -- chests, crafting, menus, combat -- is still excluded by
         // the checks around it, which are unchanged.
-        if (!isTryingToMove() && !strandedWithGoal) { posHistory.clear(); return; }
+        // !! AND THE CLEAR IS WHAT DESTROYS THE EVIDENCE THE CHECK NEEDS.
+        // strandedWithGoal cannot be true until posHistory has 200 entries (~10 s), and while the
+        // bot is stranded !isTryingToMove() is true every tick -- so this line cleared the history
+        // on every one of them and it never reached 200. Chicken and egg: the guard wiped the very
+        // record its own exception depends on, which is why the flag measured stranded=0 with the
+        // counter pinned on and two placement fixes already spent.
+        //
+        // So while a goal is live, RETURN without clearing. The bot still does nothing (this chain
+        // takes no action on that path), but the position record survives long enough for
+        // "frozen with a goal and no path" to become decidable. Everything else -- no goal, a
+        // menu, combat -- clears as before.
+        if (!isTryingToMove() && !strandedWithGoal) {
+            boolean goalLive = mod.getUserTaskChain() != null && mod.getUserTaskChain().isActive();
+            lastSkip = "noKeys/" + posHistory.size() + "/goal=" + goalLive;
+            if (!goalLive) {
+                posHistory.clear();
+            }
+            return;
+        }
 
         // Don't trigger when baritone is actively pathfinding (calculating a path)
         if (Nav.isPathing()) {
