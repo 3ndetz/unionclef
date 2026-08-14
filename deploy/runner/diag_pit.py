@@ -120,7 +120,7 @@ def main():
 
     print("\n=== counters")
     print(stat_tokens(bot, ("scan=", "pd", "breakFail=", "cb=", "srch=", "drop=",
-                      "fleeSpot=", "navStop=")))
+                      "fleeSpot=", "navStop=", "lock=")))
 
     print("\n=== the column the bot stands in, and its neighbours (x from -2 to 2, z=0)")
     px, _, pz = [int(v // 1) for v in bot.pos()]

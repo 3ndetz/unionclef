@@ -1351,3 +1351,30 @@ carries a measured note that the bot mines all three ores and collects none of t
 
 WATCH ITEM, not a blocker: if mine_diamond is still failing after the playthrough pass, A/B it at
 n>=8 an arm before touching anything, because at 300 s a run that is 20 minutes of bench per arm.
+
+PRE-REGISTRATION #16 -- barrenLockCountsAsFailure, WITH ITS PREMISE ALREADY CONFIRMED (2026-08-14).
+
+THE PREMISE, tested first and cheaply, because a counter reading is not a load-sensitive
+comparison and the box is at ~580% from another project:
+
+    lock=1/0        one BARREN lock, ZERO productive, in a single 120 s mine_stone run
+
+A barren lock is a 30-second exclusive navigation window that expired without the bot getting even
+half a block closer to its target. One of those costs a quarter of this course's clock, on a course
+that now PASSES -- and not one lock in the run was productive.
+
+THE ARITHMETIC THAT MAKES IT MATTER. The @gamer playthrough stalls 160 seconds of daylight on
+Mine And Collect: [[coal]]. 160 / 30 = 5.3 locks, and MAX_FAIL_COUNT is 5. So with this on, that
+stall terminates at about 150 seconds instead of running to the end of the window, and the give-up
+path -- progress checker, wander, blacklist -- gets to run for the first time.
+
+THE INSTRUMENT WAS FIXED BEFORE IT WAS READ, and this is the third time today. The counter first
+incremented only when the flag was ON, which makes "barren locks with the fix off" zero by
+construction -- the number the entire premise rests on. Same defect as the stranded gate that was
+declared and never exposed (voiding forty launches by its own rule) and as navSearchOnly reading 0
+whether or not the bug was there. It now COUNTS always and only ACTS when flagged: the counter is
+an observation, the flag is the behaviour.
+
+STILL UNMEASURED AS AN EFFECT, and not shipped. Rule ZERO: the last confirming window came back
+INVALID at 8 fps. What is established is that the mechanism fires; what is not is that stopping it
+helps. Those are different claims and the register should not blur them.

@@ -210,9 +210,13 @@ public class TungstenHelper {
         if (lockUntil == 0) return false;
         if (System.currentTimeMillis() > lockUntil) {
             lockUntil = 0;
-            if (kaptainwutax.tungsten.TungstenConfig.get().barrenLockCountsAsFailure) {
-                scoreExpiredLock();
-            }
+            // COUNT ALWAYS, ACT ONLY WHEN FLAGGED. Gating the COUNTER on the flag would make it
+            // unreadable in the control arm -- "barren locks with the fix off" is the number the
+            // whole premise rests on, and it would always be 0 by construction. That is exactly how
+            // a mechanism gate was declared for the stranded series and never exposed, voiding
+            // forty launches by its own rule, and how navSearchOnly read 0 today whether or not the
+            // bug was present. The counter is an observation; the flag decides the BEHAVIOUR.
+            scoreExpiredLock();
             return false;
         }
         return true;
@@ -227,15 +231,16 @@ public class TungstenHelper {
             var player = AltoClef.getInstance().getPlayer();
             if (player == null) return;
             double now = player.getPos().distanceTo(lockedEntity.getPos());
+            boolean act = kaptainwutax.tungsten.TungstenConfig.get().barrenLockCountsAsFailure;
             if (lockStartDist - now < LOCK_PROGRESS_BLOCKS) {
                 lockBarren++;
-                failCount++;
+                if (act) failCount++;
             } else {
                 lockProductive++;
                 // Real progress spends the escalation, the same rule PickupDroppedItemTask applies
                 // to its wander radius: being stuck on THIS target is what should accumulate, and a
                 // lock that closed ground is not stuck.
-                failCount = 0;
+                if (act) failCount = 0;
             }
         } catch (Exception ignored) {
             // never let the accounting be the thing that breaks navigation
