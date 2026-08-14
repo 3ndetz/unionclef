@@ -562,11 +562,29 @@ public class TungstenConfig {
      * allowed to be mined. Two break failures banned two 101x101x101 cubes and took the coal with
      * them.
      *
-     * <p>ON by default from here. Mechanism gate: cbAvoid, which reads 260992 on a run this fires in and
+     * <h2>⛔ PARKED OFF, AND THE REASON IS THE MACHINE (2026-08-14)</h2>
+     *
+     * It was flipped ON to measure exactly that, and the confirming window came back
+     * {@code INVALID - client at 8 fps before the run even starts (< 12.0)}: another project's
+     * containers were taking ~750% of this box (one streamer at 431%, another at 222%, four MC
+     * servers besides). That is rule ZERO, and the guard did its job by refusing to produce a
+     * number rather than producing a bad one.
+     *
+     * <p>So the ON default has never been regression-tested -- the 11/12 craft sweep and the 6/6 nav
+     * sweep both ran with it OFF -- and rule ZERO's mirror says a behaviour change that cannot be
+     * measured today does not ship today. Parked here with its patch, its blast radius and its
+     * reason, which is what that rule asks for.
+     *
+     * <p>Blast radius if turned on: every break refusal anywhere, on every course and in the
+     * playthrough. It NARROWS a ban, so the risk is under-banning on genuinely protected land, and
+     * the escalation to the old radius after three distinct refusals is what bounds that.
+     *
+     * <p>To take it off the shelf: check {@code docker stats} is quiet, then run the craft sweep and
+     * a @gamer window with it pinned true. Mechanism gate: cbAvoid, which reads 260992 on a run this fires in and
      * must collapse to near zero -- an effect size the gate metric cannot come close to, which is
      * the point after two series died on that gate's sd of 3.6.
      */
-    public boolean breakBanEscalates = true;
+    public boolean breakBanEscalates = false;
 
     /**
      * A progress check counts a route being FOLLOWED as progress, not a search merely running.
