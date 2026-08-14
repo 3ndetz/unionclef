@@ -242,6 +242,28 @@ degrades the stand ("the last full sequential run reported 6/10"), and it went e
 The load that produced 9-10 fps on the craft ladder an hour earlier was still on the box.
 
 
+### MOB SUITE 2026-08-14 — 2/4, and NEITHER failure is from today's changes
+
+```
+mob_melee PASS   mob_weapon_swap PASS
+mob_trio  FAIL   "the bot took ZERO damage"  damage=3.0 min_hp=11.0 / damage=7.0 min_hp=4.0
+mob_skeleton FAIL  (PARKED BY THE USER 2026-08-14 -- explained, not green)
+```
+
+**mob_trio is not a regression, and it was checked rather than assumed.** With all three of today's
+flags pinned OFF it fails the same way: `damage=15.0 min_hp=5.0` and `damage=12.0 min_hp=8.0`. The
+last recorded audit has it INVALID, never passing.
+
+Note what the gate asks: ZERO damage while fighting three mobs. The bot survives both runs (min_hp
+11 and 4) and is simply hurt. Whether that gate is the right question is a separate matter from
+whether the bot regressed -- and the gate is NOT being loosened to make it green, because that is
+the nav_water rim mistake this file already records: a course weakened to pass stops measuring the
+thing it was built for.
+
+⚠️ The damage was LOWER with the flags on (3, 7) than off (15, 12). That is n=2 a side on a noisy
+combat gate and it is NOT a claim -- an inert flag was shown today to move a course by 6.25 on this
+very bench. Recorded only so nobody reads the 2/4 as "combat got worse".
+
 ### FULL SWEEP 2026-08-14 — **nav 12/12 AND craft 12/12**, 0 invalid on either
 
 ```
