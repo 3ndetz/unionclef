@@ -1432,3 +1432,32 @@ further.
 WHAT IS STILL OWED: a survival window in which breakFail>0, so the ban actually fires and the gate
 can read. Until then the two flags are shipped on REGRESSION evidence only (craft 12/12, nav 6/6,
 0 invalid) with the benefit unproven, which is what their javadoc says.
+
+THE PLAYTHROUGH INSTRUMENT WAS BROKEN IN TWO PLACES, AND BOTH ARE FIXED AND VERIFIED (2026-08-14).
+
+1. THE SPIRAL NEVER CAME BACK. The run index is monotonic across every run ever taken, 300 blocks a
+   step, so the search only ever marched outward. Found at 968 -- about NINE THOUSAND BLOCKS from
+   base. Three windows in one day started at 94,-44 then 1492,-5038 then 5392,-3538. Capped at 64
+   steps, a ring of roughly 1200 blocks around the base.
+
+2. EXHAUSTING THE SEARCH STARTED THE RUN ANYWAY. `while skipped < 8` fell out of the loop and used
+   the LAST spawn -- the one it had just rejected -- printing only an informational line. That is
+   what produced "items=0 at t=485s, HP 15 -> 5, still on rung one", which reads as a catastrophic
+   regression and is a treeless biome. Now StandDown -> INVALID, like a starved client.
+
+VERIFIED ON THE NEXT RUN, first try:
+
+    fresh start #8: 892 150 -839
+    start has 188 log blocks within 40
+
+against eight treeless skips an hour earlier. The instrument finds a forest immediately now.
+
+AND THE RUN STILL COULD NOT BE TAKEN: client at 7.0 fps, INVALID. The arena clients hold 28-29 and
+the craft suite is 12/12; it is the heavier survival world that cannot start while another project
+holds ~600% of this box. So acceptance criterion #1 stands where it stood: the ladder reached STONE
+TOOLS at 328.9s on the last valid window, and whether the two shipped flags move it past coal is
+still unmeasured.
+
+⭐ WORTH KEEPING: both of these were INSTRUMENT bugs that manufacture false REDS, and each was one
+line. Today they would have been read as "the playthrough regressed to nothing". Two of the three
+nastiest defects this session were in the measuring apparatus, not the bot.
