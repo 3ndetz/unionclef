@@ -2913,7 +2913,8 @@ public class Py4jEntryPoint {
                 adris.altoclef.chains.WorldSurvivalChain.breakFailOutOfReach,
                 adris.altoclef.chains.WorldSurvivalChain.breakFailBuried,
                 adris.altoclef.chains.UnstuckChain.strandedRescues,
-                adris.altoclef.chains.UnstuckChain.lastSkip,
+                adris.altoclef.chains.UnstuckChain.lastSkip
+                        + "@" + adris.altoclef.chains.UnstuckChain.lastSkipSize,
                 adris.altoclef.chains.UnstuckChain.lastRealSkip,
                 adris.altoclef.chains.UnstuckChain.gpAppended,
                 adris.altoclef.chains.UnstuckChain.gpNotInGame,

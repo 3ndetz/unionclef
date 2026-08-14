@@ -34,6 +34,8 @@ public class UnstuckChain extends SingleTaskChain {
     /** Which guard last stopped checkGenerallyStuck, and the history size when it did.
      *  Three placement fixes were spent guessing this; naming it is cheaper. */
     public static volatile String lastSkip = "-";
+    /** History size at the last "too short" bail. An int, because this is written every tick. */
+    public static volatile int lastSkipSize;
     /** The last skip that was NOT "tooShort". lastSkip alone is useless: after a guard clears the
      *  history, every following tick writes tooShort over it, which is how I concluded the check
      *  "never runs" when it runs, fires a guard and rebuilds. */
@@ -141,7 +143,12 @@ public class UnstuckChain extends SingleTaskChain {
     }
 
     private void checkGenerallyStuck() {
-        if (posHistory.size() < 200) { lastSkip = "tooShort/" + posHistory.size(); return; }
+        // !! AN INSTRUMENT MUST NOT COST THE THING IT MEASURES -- and this one did.
+        // The first version built "tooShort/" + size on EVERY tick of EVERY course, unconditionally,
+        // i.e. a string allocation per tick in the shipped path just to record a diagnostic nobody
+        // reads unless a flag is on. TaskRunner's own note says the same thing one file over.
+        // Now the number is an int (free) and the string is only assembled when someone asks.
+        if (posHistory.size() < 200) { lastSkipSize = posHistory.size(); return; }
 
         boolean strandedWithGoal = false;
         if (kaptainwutax.tungsten.TungstenConfig.get().unstuckWhenGoalButNoPath
