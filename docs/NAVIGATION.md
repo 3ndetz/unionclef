@@ -242,6 +242,27 @@ degrades the stand ("the last full sequential run reported 6/10"), and it went e
 The load that produced 9-10 fps on the craft ladder an hour earlier was still on the box.
 
 
+### FULL SWEEP 2026-08-14 — **nav 12/12 AND craft 12/12**, 0 invalid on either
+
+```
+nav:   flat staircase steep gaps descend water ladder slime break wall2 bridge hazard   12 PASS
+craft: table wood_pick stone_pick mine_stone smelt iron_pick wander distant_table tree
+       canopy diamond escape_lava                                                        12 PASS
+```
+
+Both on the shipped defaults, with `gotoResumeNeedsRealTarget`, `breakBanEscalates` and
+`barrenLockCountsAsFailure` all ON. 24 of 24.
+
+⛔ **`nav_slime` IS NOT RED ANY MORE, AND THE LONG SECTION BELOW SAYING SO IS STALE.** It was the
+last red nav course and this file still carries pages of analysis concluding the course is
+unwinnable by bouncing. Run to the standard that section itself demands — *"never conclude from
+fewer than three"* — it is **3 PASS of 3**. So are `nav_water` (3/3) and `nav_ladder` (3/3), both
+also recorded red at various points below.
+
+The reasoning in those sections is still worth reading and is left in place; the VERDICTS in them
+are not current. That is the same rot this file documents about its own "nav 11/11" line, and it is
+exactly how a session gets sent to re-derive a solved problem.
+
 ### CRAFT AUDIT 2026-08-14 (LATER) — **12/12 PASS, 0 INVALID**, on the shipped defaults
 
 ```
