@@ -183,6 +183,23 @@ def main():
             except ValueError:
                 idx = 0
         RUN_INDEX_FILE.write_text(str(idx + 1), encoding="utf-8")
+        # ⛔ THE SPIRAL MARCHES AWAY FROM THE BASE FOR EVER, AND NOBODY BOUNDED IT.
+        #
+        # The index is monotonic across every run ever taken and each step is 300 blocks, so it
+        # only ever gets further out. Found at 968: the spiral radius is ~31 steps, i.e. NINE
+        # THOUSAND BLOCKS from the recorded base, landing in whatever the world has there. Three
+        # windows in one day started at 94,-44 then 1492,-5038 then 5392,-3538, and the last of
+        # those was treeless -- so the acceptance-criterion instrument has been degrading with
+        # every run since it was written, and the degradation is invisible because each run only
+        # prints its own coordinates.
+        #
+        # Variety WAS the point ("a 300-block step lands in whatever biome is there... the metric
+        # was reading the biome"), and it still is. Variety inside a bounded neighbourhood is
+        # variety; marching to the edge of the world is drift. Capped so runs cycle through a
+        # ring around the base instead of leaving it behind: 64 steps is a radius of about four,
+        # roughly 1200 blocks, which is plenty of biomes and always comes back.
+        SPIRAL_CAP = 64
+        idx %= SPIRAL_CAP
         # square spiral: right, up, left, down, growing every two legs
         dx, dz, leg, step = 1, 0, 1, 0
         x, z = 0, 0
@@ -235,7 +252,7 @@ def main():
                 print(f"  could not count logs at {spawn} ({logs}) — stepping on rather than guessing")
             skipped += 1
             print(f"  no trees at {spawn} ({logs} logs) — stepping on")
-            idx += 1
+            idx = (idx + 1) % 64
             RUN_INDEX_FILE.write_text(str(idx + 1), encoding="utf-8")
             dx2, dz2, leg2, step2, x2, z2 = 1, 0, 1, 0, 0, 0
             for _ in range(idx):
