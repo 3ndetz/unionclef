@@ -1649,3 +1649,31 @@ WorldSurvivalChain's addTemporaryBreakAvoidance -- NOT a fresh registration from
 WHAT WOULD REFUTE IT: pred=0 with set>0 (something protecting positions instead), or a caller stamp
 naming any task other than the survival chain. Written now because a prediction made afterwards is
 not a prediction, and this is the fourth mechanism proposed for these 818 refusals.
+
+
+clearBansOnTaskEnd WAS NECESSARY BUT NOT SUFFICIENT, AND READING CAUGHT IT BEFORE THE A/B DID
+(2026-08-16).
+
+The fix clears `_extraAvoidBlockBreaking` when a task ends. Checking it rather than assuming:
+resetAvoidBlockBreakingExtra() nulls the slot and calls applyState(), which rebuilds the live list
+from the CURRENT STATE's toAvoidBreaking -- and readExtraState() fills that by copying the LIVE
+list at push time:
+
+    toAvoidBreaking = new ArrayList<>(settings.getBreakAvoiders());   // includes the extra
+
+applyState() appends the extra to the live list every time, so ANY push taken while a ban is active
+bakes a copy of that ban into the pushed state. From there the reset cannot reach it: it nulls the
+slot and rebuilds from a list that now holds its own copy. MineAndCollectTask.onResourceStart pushes
+on every resource task, so this is the ordinary path, not a corner.
+
+Fixed by excluding the extra from the copy in readExtraState -- which is what makes BotBehaviour's
+own comment ("Persistent extra predicate, outside push/pop stack") true -- and the same for the
+placing twin.
+
+⭐ THE POINT WORTH CARRYING: A FIX THAT MEASURES FLAT IS NOT ALWAYS REFUTED. IT IS SOMETIMES ONLY
+HALF-INSTALLED. This was found by reading while the A/B for the first half was still running; had
+the series come back flat first, the honest-looking conclusion would have been "the leak is not the
+cause" and the real defect would have been buried under a refutation.
+
+(Recorded here because the code change was swept into another worker's commit by `git add -A` --
+checklist rule 4v -- so no commit message carries the reasoning. The comment at the site does.)
