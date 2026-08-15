@@ -164,12 +164,20 @@ public class UserTaskChain extends SingleTaskChain {
             // the NEXT job inherits it -- BotBehaviour keeps it explicitly "outside push/pop stack"
             // and applyState() re-adds it every time, so nothing else drops it either.
             //
-            // Measured on mine_coal, on a run that PASSED: avoidSrc=0/0/1/0, i.e. one break-avoider
-            // predicate present with ZERO registrations this run. It refused nothing that time
-            // because the leaked ban was centred elsewhere; when it lands near the arena the same
-            // course reads cb=0/818/0/0 with breakFail=0/0/0/0/0 -- 818 blocks refused as
-            // unbreakable with no break having failed at all. That combination is unexplainable
-            // until you know the ban is inherited.
+            // Measured on mine_coal, on a run that PASSED: avoidSrc=0/0/1/0. Decoded, that is
+            // avoidHitSet/avoidHitPred/avoidPredCount/breakAvoidersRegistered -- so ONE predicate
+            // was present while ZERO were registered during the run. Present but not registered
+            // here is what "inherited" means, and it is the evidence this clear-up rests on.
+            //
+            // ⛔ CORRECTION TO AN EARLIER VERSION OF THIS COMMENT, which cited the wrong run.
+            // It offered cb=0/818/0/0 with breakFail=0/0/0/0/0 as the proof of inheritance. It is
+            // not: BotBehaviour records that avoidSrc narrowed THAT case to a predicate registered
+            // DURING the run, i.e. explicitly not inherited and not a push/pop leak. Two different
+            // runs were being cited as one, and the more dramatic number was the wrong one.
+            //
+            // The clear-up still stands on the 0/0/1/0 reading, and the 818-refusal case remains a
+            // SEPARATE open question with its own live instrument: lastBreakAvoiderBy stamps the
+            // caller at registration, which is the question that case actually poses.
             //
             // Same shape as RULE SEVEN's spectator leak, which survived a rebuild and two later
             // runs and looked exactly like a broken bot. A temporary ban must not outlive the job
