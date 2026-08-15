@@ -1705,3 +1705,26 @@ that has now spent six runs saying nothing.
 CAUSE THE TRIGGER RATHER THAN WAIT FOR IT. Rule 4n says a criterion phrased as an absence can be
 satisfied by things that are not success; this is its sibling -- a criterion that waits for a rare
 event is satisfied by the event not happening, which looks identical to a fix that works.
+
+CORRECTION: THE BAN CLEAR-UP IS FLAGGED, AND I SAID OTHERWISE (2026-08-16).
+
+I committed the task-end ban clear-up describing it as "UNFLAGGED, unlike everything else shipped
+today", and justified that at length. It is not. The tree reads:
+
+    if (TungstenConfig.get().clearBansOnTaskEnd) {   // default false
+        mod.getBehaviour().resetAvoidBlockBreakingExtra();
+
+The claim came from reading my own diff with `tail -30`, which cut the `if` guard sitting above the
+lines I looked at. Truncating a diff and then asserting what the code does is the same error I have
+spent this session catching in other people's notes -- and the justification I wrote for shipping
+unflagged was therefore an argument for something nobody had done.
+
+The discipline held; only my description of it did not. Default off, and an interleaved A/B on
+clearBansOnTaskEnd is running as this is written, which pays the measurement debt I said it owed.
+
+ALSO OBSERVED, and not yet a finding: a run reads avoidSrc=0/0/1/0@-/- -- one predicate present,
+zero registered, and BOTH stamps "-", including the persistent one added an hour ago. That is
+expected rather than broken: the predicate was installed before the jar carrying the new stamp
+existed, so nothing could have recorded it. The stamp cannot be judged until a ban is installed
+under a build that has it, which is the "a counter at zero is ambiguous until you know it CAN be
+non-zero" corollary from RULE ONE, applying to my own newest instrument.
