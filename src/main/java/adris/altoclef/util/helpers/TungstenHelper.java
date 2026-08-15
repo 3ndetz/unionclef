@@ -175,9 +175,17 @@ public class TungstenHelper {
             // could never fail, a dodge whose keys never reached the game, a stop that did not hold.
             // A caller acting on a success the callee never reported.
             boolean started = pf.find(world, target, player);
-            if (kaptainwutax.tungsten.TungstenConfig.get().pathStartMustSucceed && !started) {
+            // COUNT ALWAYS, ACT ONLY WHEN FLAGGED -- and this is the THIRD time today I have had to
+            // make that correction (navSearchOnly, lockBarren, now this). Gating the COUNTER on the
+            // flag makes "how often does find() refuse with the fix OFF" zero by construction, and
+            // that is the number the premise rests on. The counter is an OBSERVATION; the flag
+            // decides the BEHAVIOUR. Writing it the other way round is how a mechanism gate gets
+            // declared and never exposed, which voided a forty-launch series by its own rule.
+            if (!started) {
                 findRefused++;
-                return false;
+                if (kaptainwutax.tungsten.TungstenConfig.get().pathStartMustSucceed) {
+                    return false;
+                }
             }
             lastStartTime = now;
             lastRetargetTime = now;
