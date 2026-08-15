@@ -1592,3 +1592,35 @@ and first_death=5.8s. The bow is never engaged because the bot is dead before it
 ⭐ THE INSTRUMENT PAID FOR ITSELF IN ONE RUN. Two courses had been red for weeks with "2 of ~20
 requested" and no way to say why; printing six counters that already existed answered both, and
 retired "one of them does not shoot at all" as true-but-for-the-wrong-reason.
+
+THE FLEE NUMBERS ARE THE KNOWN OPERATING POINT, NOT A NEW DEFECT (2026-08-15).
+
+    flee = held 89 / search 312 / ran 939 / plans 142 / driveTicks 346 / driveBlocked 0
+
+On a ~1200-tick course that is 312 ticks -- 15.6 seconds, a quarter of the run -- standing still
+with a search in flight, and 142 replans, one every eight ticks. It reads like an obvious defect,
+and I was one edit from proposing replan-on-need.
+
+IT IS ALREADY MEASURED, AND THE ALTERNATIVE LOST. The guard carries its own A/B:
+
+    clock (current)     avg_dist 7.32 / 7.10 / 9.43    3 of 3 above the gate
+    replan-on-need      avg_dist 6.11 / 4.84 / 8.39    1 of 3
+
+and the note adds that search ticks stayed at 250-330 either way while plans halved -- "the searches
+simply got longer instead of fewer, and the flee lost the thing the cadence was really providing, a
+direction that stays fresh while the threat keeps moving". My 312 sits inside that range.
+
+Fourth time today that reading an existing note stopped a wasted pass. The checklist already says
+it -- read the CLOSED work before instrumenting, because closed often means "described and not yet
+fixed" -- and here it was stronger than that: described, A/B'd, and the tempting arm refuted.
+
+SO WHERE bow_flee ACTUALLY STANDS, with everything now measured rather than assumed:
+  - shooting is fine: noSol=0, aimTO=0, drawTO=0, and 3 aimed + 6 wild + 9 refused accounts for ~20
+  - the flee runs, at the better of the two cadences anyone has measured
+  - md* counters cannot be read here at all (mdCalls=0, the defence chain does not tick)
+  - and the bot still cannot hold 7 blocks: deaths 4-5, avg 5.57
+
+BowShooter's own javadoc says why that may be unwinnable as posed: 1.47 blocks/s surrendered while
+facing, a 22-tick draw by vanilla construction, so "shooting that often and holding distance are
+mutually unsatisfiable". That is a COURSE DESIGN question -- can a kiting archer satisfy both gates
+at once -- and not a bug to hunt. Filing it that way instead of opening an eighth hypothesis.
