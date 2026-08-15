@@ -1677,3 +1677,31 @@ cause" and the real defect would have been buried under a refutation.
 
 (Recorded here because the code change was swept into another worker's commit by `git add -A` --
 checklist rule 4v -- so no commit message carries the reasoning. The comment at the site does.)
+
+
+mine_coal IS A POOR GATE FOR THE BAN LEAK, AND THE REASON IS STRUCTURAL (2026-08-16).
+
+    arm    coal   predsPresent  registered
+    None     3          1            0        <- the leak, observed once
+    true     3          0            0
+    false    3          0            0
+    true     3          0            0
+
+The CONTROL arm reads predsPresent=0 as well, so the gate cannot discriminate. Third time today
+that a series could not judge a fix because the bug did not occur in it.
+
+THE REASON IS NOT BAD LUCK. The leak needs a ban INHERITED from an earlier run, which needs a break
+to have FAILED in that earlier run -- and on a clean arena breaks do not fail. breakFail has read
+0/0/0/0/0 in every mine_coal run tonight. So the trigger is rare by construction, and waiting for it
+to appear in an A/B is waiting on something the course does not produce.
+
+WHAT WOULD ACTUALLY TEST IT, and it needs no statistics at all: install a ban deliberately, then
+read predsPresent at the START of the next run. One rcon-placed unbreakable block (bedrock in the
+mining area) makes a break fail on demand; the ban installs; the run ends; the next run either
+inherits a predicate or does not. That is a two-run deterministic check against a rare-event A/B
+that has now spent six runs saying nothing.
+
+⭐ THE GENERAL FORM, worth more than this instance: WHEN A FIX TARGETS A RARE TRIGGER, THE GATE MUST
+CAUSE THE TRIGGER RATHER THAN WAIT FOR IT. Rule 4n says a criterion phrased as an absence can be
+satisfied by things that are not success; this is its sibling -- a criterion that waits for a rare
+event is satisfied by the event not happening, which looks identical to a fix that works.
