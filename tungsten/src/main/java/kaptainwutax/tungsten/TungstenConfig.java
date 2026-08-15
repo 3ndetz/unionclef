@@ -804,6 +804,28 @@ public class TungstenConfig {
     public boolean pathStartMustSucceed = false;
 
     /**
+     * Look twice before believing a failed break is a land claim.
+     *
+     * <p>The claim test is a LATENCY RACE. {@code onBlockBroken} fires from a mixin on
+     * {@code Block.onBreak}, which the client runs optimistically, and the verdict is taken half a
+     * second later by asking whether the block is air. A slow round-trip, a chunk still loading or a
+     * server resync are all indistinguishable from a claim through that test.
+     *
+     * <p>On the flat arena -- local server, 28 fps, no terrain to stream -- the block is always air
+     * in time and {@code breakFail} reads 0/0/0/0 across every run. On the survival world the same
+     * code read {@code breakFail=2}, and those two false claims banned 842,176 candidate blocks
+     * ({@code cb=90/842176/5318/103}) out from under {@code Mine And Collect: [[coal]]} -- which is
+     * exactly where the @gamer ladder stops.
+     *
+     * <p>So the first failure only re-arms the timer; the claim is made on the SECOND look. One
+     * extra half-second on a rare path against a hundred-block ban on a common one.
+     *
+     * <p>Off by default. Mechanism gate: breakFail's fifth field, breakFailRetried -- it must be
+     * non-zero where claims occur, and where it is non-zero, breakFailClaimed should fall.
+     */
+    public boolean claimNeedsSecondLook = false;
+
+    /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
      *
      * <p>UnstuckChain skips any bot pressing no movement keys, on the sound reasoning that

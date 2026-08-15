@@ -420,6 +420,27 @@ public class WorldSurvivalChain extends SingleTaskChain {
                     breakFailOutOfReach++;
                     Debug.logMessage("Block at " + _lastBrokenBlockPos
                             + " did not break, but it was OUT OF REACH — not treating that as a claim.");
+                } else if (kaptainwutax.tungsten.TungstenConfig.get().claimNeedsSecondLook
+                        && !_breakSecondLook) {
+                    // ⛔ HALF A SECOND IS A LATENCY RACE, NOT A PERMISSION TEST.
+                    //
+                    // onBlockBroken fires from a mixin on Block.onBreak, which the CLIENT runs
+                    // optimistically, and the verdict is taken 0.5 s later by asking whether the
+                    // block is air. On the flat arena -- local server, 28 fps, no terrain to load --
+                    // it always is, and breakFail reads 0/0/0/0 across every run. On the survival
+                    // world the same code read breakFail=2, and TWO of those false claims banned
+                    // 842,176 candidate blocks (cb=90/842176/5318/103) out from under
+                    // "Mine And Collect: [[coal]]", which is where the playthrough ladder stops.
+                    //
+                    // A slow round-trip, a chunk still loading, or a server resync all look
+                    // identical to a land claim through this test. So do not decide on ONE sample:
+                    // re-arm and look again. This is the repo's own "one good run is not a result"
+                    // applied to a single observation, and it costs one extra half-second on the
+                    // rare path rather than a hundred-block ban on the common one.
+                    _breakSecondLook = true;
+                    breakFailRetried++;
+                    _blockBreakCheckTimer.reset();
+                    return;
                 } else {
                     Debug.logWarning("Block at " + _lastBrokenBlockPos + " failed to break! Maybe private area, try another place.");
                     if (!_isAvoidingBlockBreak || _breakAvoidTimer.elapsed()) {
@@ -431,6 +452,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
             }
             _lastBrokenBlock = false;
             _lastBrokenBlockPos = null;
+            _breakSecondLook = false;
         }
         if (_isAvoidingBlockBreak && _breakAvoidTimer.elapsed()) {
             _isAvoidingBlockBreak = false;
@@ -468,6 +490,11 @@ public class WorldSurvivalChain extends SingleTaskChain {
 
     /** Times the ban widened from single blocks to a region. Read as breakFail's 4th field. */
     public static volatile int breakBanWide;
+
+    /** A failed break given a second look before being believed. Read as breakFail's 5th. */
+    public static volatile int breakFailRetried;
+    /** True while the current failed break is awaiting its second look. */
+    private boolean _breakSecondLook = false;
 
     /**
      * Ban what the evidence supports: ONE BLOCK, until several failures agree it is a region.
