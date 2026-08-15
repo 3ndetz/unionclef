@@ -191,10 +191,16 @@ nav    12 courses   12 PASS   0 gate failures   0 INVALID
 craft  12 courses   12 PASS   0 gate failures   0 INVALID   (+ mine_coal added, 13th)
 mob     4 courses    2 PASS   mob_skeleton (parked by the user), mob_trio (pre-existing)
 pvp    12 courses    7 PASS / 4 FAIL of 11 measured; all four already on the register
-end     3 courses    NOT RE-RUN against these changes — the one gap in the sweep
+end     3 courses    NOT re-run — but assessed by reading, and LOW RISK (see below)
 ```
 
 Run with `gotoResumeNeedsRealTarget`, `breakBanEscalates` and `barrenLockCountsAsFailure` on.
+⭐ **THE `end` GAP IS ASSESSED, NOT MERELY OPEN.** Those courses drive through the py4j `gotoXYZ`
+primitive, which sends `;goto` as chat, which lands in tungsten's `GotoCommand` — one of the four
+writers that now call `markGotoTarget()`. So `gotoResumeNeedsRealTarget` sees a genuine goto and
+permits the resume. And no end course MINES, so `resumeGotoAfterMining` cannot fire on them at all.
+Doubly unaffected. Worth re-running when the bench is free, but it is not an urgent unknown.
+
 `mine_diamond` measures 5 passes in 6, so craft will still drop a sweep roughly one time in six —
 that is the course's rate, not a regression. `nav_slime`, `nav_water` and `nav_ladder` are 3/3 each.
 
