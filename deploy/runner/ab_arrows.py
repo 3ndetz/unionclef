@@ -1461,3 +1461,33 @@ still unmeasured.
 ⭐ WORTH KEEPING: both of these were INSTRUMENT bugs that manufacture false REDS, and each was one
 line. Today they would have been read as "the playthrough regressed to nothing". Two of the three
 nastiest defects this session were in the measuring apparatus, not the bot.
+
+PREDICTING MY OWN FIX WILL MEASURE NOTHING, WRITTEN BEFORE THE SERIES ENDS (2026-08-15).
+
+pathStartMustSucceed rests on find() refusing often enough to matter. Reading PathFinder's thread
+teardown says it does not:
+
+    active.set(false);      // first
+    this.thread = null;     // second
+
+find() refuses on `active.get() || thread != null`, so the only window in which a caller sees "not
+busy" and is then refused is BETWEEN THOSE TWO STATEMENTS. Nanoseconds. Everywhere else the two
+conditions agree, because the whole search runs with both set.
+
+And the series agrees so far: findRefused = 0 on BOTH arms, two runs in. That zero is meaningful
+now -- the counter was fixed to increment with the flag off -- so it is a real zero rather than one
+by construction, which is the trap I fell into three times today.
+
+So I expect the outcome to be flat and the gate to read 0. Saying it now rather than after, because
+a prediction written afterwards is not a prediction. The fix is harmless -- it only acts when find()
+genuinely declines -- but "harmless" is not "useful", and it should not be shipped as if the stall
+were explained.
+
+WHAT THIS DOES NOT EXCUSE: the 1.17-block park is still unexplained. The bot was outside the 1.0
+stop distance with a drop it could see, and neither the pickup radius (refuted, 2/4 vs 4/4) nor this
+accounts for it. That is where the next pass goes.
+
+ONE THING NOTED AND DELIBERATELY NOT SHIPPED: the teardown would be strictly safer as
+`thread = null` THEN `active.set(false)`, which closes the window entirely. It is two lines and
+obviously correct -- and it cannot be shown to matter, so by rule ZERO's mirror it does not ship
+today. Recorded here so the next person does not have to re-derive it.
