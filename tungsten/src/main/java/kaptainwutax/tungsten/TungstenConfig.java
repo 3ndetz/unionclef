@@ -804,6 +804,32 @@ public class TungstenConfig {
     public boolean pathStartMustSucceed = false;
 
     /**
+     * A temporary break/place ban does not outlive the job that learnt it.
+     *
+     * <p>The ban installed on a suspected land claim is TEMPORARY by design -- WorldSurvivalChain
+     * clears it when a 60-second timer elapses. That timer is consulted only inside getPriority(),
+     * and chains do not tick while the task runner is off (checklist RULE TWO). So a ban installed
+     * near the end of a job is never cleared, and the next job inherits it: BotBehaviour keeps it
+     * explicitly "outside push/pop stack" and applyState() re-adds it every time.
+     *
+     * <p>Measured on mine_coal, on a run that PASSED: {@code avoidSrc=0/0/1/0} -- one break-avoider
+     * predicate present with ZERO registrations that run. It refused nothing then, because the
+     * leaked ban was centred elsewhere. When it lands near the arena the same course reads
+     * {@code cb=0/818/0/0} with {@code breakFail=0/0/0/0/0}: 818 blocks refused as unbreakable with
+     * no break having failed at all -- a combination that is unexplainable until you know the ban is
+     * inherited from an earlier run.
+     *
+     * <p>Same shape as RULE SEVEN's spectator leak, which survived a rebuild and two later runs and
+     * looked exactly like a broken bot. Re-learning a real claim costs one failed break, which is
+     * what it cost the first time.
+     *
+     * <p>Off by default. Mechanism gate: {@code avoidSrc}'s third field (predicates registered) must
+     * be 0 at the START of every run; today it is intermittently 1 with a caller stamp of "-",
+     * which is the leak's signature -- present but registered by nobody this run.
+     */
+    public boolean clearBansOnTaskEnd = false;
+
+    /**
      * Look twice before believing a failed break is a land claim.
      *
      * <p>The claim test is a LATENCY RACE. {@code onBlockBroken} fires from a mixin on

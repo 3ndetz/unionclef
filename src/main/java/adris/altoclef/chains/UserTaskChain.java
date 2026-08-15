@@ -175,8 +175,10 @@ public class UserTaskChain extends SingleTaskChain {
             // runs and looked exactly like a broken bot. A temporary ban must not outlive the job
             // that learnt it: re-learning costs one failed break, which is what it cost the first
             // time.
-            mod.getBehaviour().resetAvoidBlockBreakingExtra();
-            mod.getBehaviour().resetAvoidBlockPlacingExtra();
+            if (kaptainwutax.tungsten.TungstenConfig.get().clearBansOnTaskEnd) {
+                mod.getBehaviour().resetAvoidBlockBreakingExtra();
+                mod.getBehaviour().resetAvoidBlockPlacingExtra();
+            }
             // Extra reset. Sometimes baritone is laggy and doesn't properly reset our press
             if (mod.getClientBaritone() != null)
                 mod.getInputControls().releaseAll();
