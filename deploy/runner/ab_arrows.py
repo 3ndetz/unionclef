@@ -1491,3 +1491,27 @@ ONE THING NOTED AND DELIBERATELY NOT SHIPPED: the teardown would be strictly saf
 `thread = null` THEN `active.set(false)`, which closes the window entirely. It is two lines and
 obviously correct -- and it cannot be shown to matter, so by rule ZERO's mirror it does not ship
 today. Recorded here so the next person does not have to re-derive it.
+
+
+RESULT: THE PREDICTION HELD, AND pathStartMustSucceed MEASURES NOTHING (2026-08-15).
+
+    control  coal 3, 3, 3   3/3   findRefused = 0, 0, 0
+    fix      coal 3, 3, 3   3/3   findRefused = 0, 0, 1
+
+Flat, exactly as written above before the series ended. findRefused is a real zero now -- the
+counter increments with the flag off since b9f452a2 -- so this is the gate answering, not the gate
+being unable to fire.
+
+AND THE SERIES CANNOT SAY MORE THAN THAT, for a reason worth naming: NOT ONE RUN STALLED. All six
+scored 3/3. A fix for a stall cannot be judged by runs in which the stall did not occur, which is
+the identical trap as this morning's 99% cbAvoid collapse on a window where no break ever failed.
+The honest reading is "no effect observed, and no opportunity for one either".
+
+So the flag stays OFF and unshipped. It is correct by inspection -- a caller should not act on a
+success the callee never reported -- and it is not shown to matter. Those are different claims and
+the register keeps them apart.
+
+STILL UNEXPLAINED, and this is the open thread: the 1.17-block park. The bot was OUTSIDE the 1.0
+stop distance with a drop it could see (tracker reporting it 2393 times) and did not close. Neither
+the pickup radius (refuted, 2/4 against 4/4) nor the refused search accounts for it. Next pass
+starts there, and the cheap reproduction exists: mine_coal with diag_pit.
