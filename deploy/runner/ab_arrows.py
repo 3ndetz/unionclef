@@ -1728,3 +1728,34 @@ expected rather than broken: the predicate was installed before the jar carrying
 existed, so nothing could have recorded it. The stamp cannot be judged until a ban is installed
 under a build that has it, which is the "a counter at zero is ambiguous until you know it CAN be
 non-zero" corollary from RULE ONE, applying to my own newest instrument.
+
+RESULT OF clearBansOnTaskEnd: INCONCLUSIVE, AND THE GATE CANNOT SETTLE IT (2026-08-16).
+
+    true   coal=3  predCount=1  registered=0
+    false  coal=3  predCount=0  registered=0
+    true   coal=3  predCount=0  registered=0
+    false  coal=3  predCount=0  registered=0
+    true   coal=3  predCount=1  registered=0
+
+Five verdicts, ALL PASS on both arms, so the outcome cannot separate them -- mine_coal has now
+passed 5/5, 6/7, 4/4 and 2/3 across four series and is simply not a red course.
+
+⛔ AND THE MECHANISM COUNTER CANNOT SETTLE IT EITHER, which is the part worth keeping.
+avoidPredCount is assigned inside shouldAvoidBreaking() -- it updates only when the predicate list
+is CONSULTED. So it is a LAGGING indicator: if the clear happens after the last block test of the
+run, the value judged at the end is the one from before the clear. predCount=1 on a flag-ON run
+therefore does not mean the clear failed, and predCount=0 on a flag-OFF run does not mean there was
+nothing to clear.
+
+registered=0 on every run says no ban was installed during any of them, so the fix had nothing of
+its own to clean up and the whole series was measuring an inherited leftover through a counter that
+only refreshes on consultation.
+
+FOURTH instrument limitation found today, and the same family as the other three: a number that
+cannot answer the question being asked of it. To measure this properly the counter has to be
+sampled at a defined moment -- read the list size directly at judge time rather than inheriting
+whatever the last block test happened to leave behind.
+
+So clearBansOnTaskEnd stays OFF and stays unmeasured. Its reasoning is sound and its evidence
+(predCount>0 with registered=0 is an inherited predicate) still stands; what is missing is a bench
+that can see the difference, and this one demonstrably cannot.

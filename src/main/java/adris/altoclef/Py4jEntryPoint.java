@@ -2053,6 +2053,55 @@ public class Py4jEntryPoint {
             return true;
         } catch (Exception e) { return false; }
     }
+    /**
+     * Refuse to BREAK anything inside a cube, from now until the bot is told otherwise.
+     *
+     * <p>WHAT IT IS FOR. On a server with land claims the agent often knows a region is protected
+     * before the bot has wasted a swing finding out -- a spawn area, someone's base, a plot border.
+     * The mod already has the machinery (the survival chain installs exactly this when it believes a
+     * break was refused); it simply had no lever the agent could pull. This is the lever: the agent
+     * decides WHERE, the mod enforces it.
+     *
+     * <p>WHAT IT DOES NOT DO. It does not expire on its own and it does not stack -- installing a
+     * new region REPLACES the previous one, because this uses the single "extra" avoid slot rather
+     * than the push/pop stack. Clear it with {@link #allowBreakingAnywhere()}. A task ending also
+     * clears it when {@code clearBansOnTaskEnd} is on, which is the point of that flag.
+     *
+     * <p>SECOND USE, and the reason it exists today: it makes a rare bug testable on demand. The
+     * temporary ban leaking between runs needs a ban to have been installed in an earlier run, which
+     * needs a break to have FAILED -- and on a clean arena breaks do not fail, so an A/B waits for a
+     * trigger the course never produces. With this the trigger is caused rather than awaited: install
+     * a region, end the task, and read whether the next task inherits it.
+     *
+     * @return the region and the resulting predicate count, so the caller can verify it applied
+     *         rather than assume -- a setting that silently fails to apply is how an A/B ends up
+     *         measuring a build against itself.
+     */
+    public Map<String, Object> avoidBreakingRegion(int x, int y, int z, int radius) {
+        final net.minecraft.util.math.BlockPos centre =
+                new net.minecraft.util.math.BlockPos(x, y, z);
+        final int r = Math.max(0, radius);
+        _mod.getBehaviour().avoidBlockBreakingExtra(pos ->
+                Math.abs(pos.getX() - centre.getX()) <= r
+                        && Math.abs(pos.getY() - centre.getY()) <= r
+                        && Math.abs(pos.getZ() - centre.getZ()) <= r);
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true);
+        out.put("centre", x + "," + y + "," + z);
+        out.put("radius", r);
+        out.put("predicatesNow", baritone.altoclef.AltoClefSettings.avoidPredCount);
+        return out;
+    }
+
+    /** Drop the region installed by {@link #avoidBreakingRegion}. Safe when none is installed. */
+    public Map<String, Object> allowBreakingAnywhere() {
+        _mod.getBehaviour().resetAvoidBlockBreakingExtra();
+        Map<String, Object> out = new HashMap<>();
+        out.put("ok", true);
+        out.put("predicatesNow", baritone.altoclef.AltoClefSettings.avoidPredCount);
+        return out;
+    }
+
     public boolean pillarActive() { return kaptainwutax.tungsten.task.PillarTask.isActive(); }
 
     /**
