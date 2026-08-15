@@ -146,7 +146,21 @@ public class TungstenHelper {
             // If locked but Tungsten finished a segment, restart it
             if (isLocked()) {
                 applyFallbackTuning(pf);
-                pf.find(world, target, player);
+                // ⛔ AND THIS BRANCH IS THE WORSE HALF OF THE SAME DEFECT, which the first pass at
+                // it missed. It runs when we are LOCKED and tungsten is NOT busy -- precisely the
+                // parked state the trace shows. If find() declines here, returning true tells the
+                // caller navigation has the target while nothing is running, and the lock keeps the
+                // bot standing there for the remainder of its thirty seconds.
+                //
+                // The branch above (locked AND busy) may keep returning true: tungsten genuinely is
+                // working there, so a declined retarget is harmless.
+                boolean restarted = pf.find(world, target, player);
+                if (!restarted) {
+                    findRefused++;
+                    if (kaptainwutax.tungsten.TungstenConfig.get().pathStartMustSucceed) {
+                        return false;
+                    }
+                }
                 lastStartTime = now;
                 lastRetargetTime = now;
                 Debug.logInternal("[TungstenHelper] Lock active, restarting path to " + formatVec(target));
