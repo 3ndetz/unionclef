@@ -100,11 +100,30 @@ public class AltoClefSettings {
         return shouldAvoidBreaking(new BlockPos(x, y, z));
     }
 
+    /**
+     * WHICH SOURCE refused, counted separately. Read as {@code avoidSrc=set/pred/preds}.
+     *
+     * <p>mine_coal produced {@code cb=0/818/0/0} with {@code breakFail=0/0/0/0/0}: 818 candidates
+     * refused as unbreakable while no break had failed and no ban had been installed. "Something is
+     * in the avoid state" is not a diagnosis -- this says whether it is the explicit POSITION set or
+     * a PREDICATE, and how many predicates are registered at all. Those have different causes: a
+     * position set is somebody protecting a block, a predicate is somebody banning a region, and a
+     * predicate COUNT that grows is a push/pop leak.
+     */
+    public static volatile int avoidHitSet, avoidHitPred, avoidPredCount;
+
     public boolean shouldAvoidBreaking(BlockPos pos) {
         synchronized (breakMutex) {
-            if (_blocksToAvoidBreaking.contains(pos))
+            avoidPredCount = _breakAvoiders.size();
+            if (_blocksToAvoidBreaking.contains(pos)) {
+                avoidHitSet++;
                 return true;
-            return (_breakAvoiders.stream().anyMatch(pred -> pred.test(pos)));
+            }
+            boolean pred = _breakAvoiders.stream().anyMatch(p -> p.test(pos));
+            if (pred) {
+                avoidHitPred++;
+            }
+            return pred;
         }
     }
 

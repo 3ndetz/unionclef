@@ -1532,3 +1532,32 @@ those pull in opposite directions.
 
 Noting it now rather than after the numbers, because adjusting the reasoning once the result is
 visible is how a prediction turns into a rationalisation.
+
+RESULT OF pathStartMustSucceed: NO EFFECT, AND THE PREDICTION WAS WRITTEN FIRST (2026-08-15).
+
+    control (off)  3, 3, 3, 2    3/4 pass  mean 2.75   findRefused 2 across 4 runs
+    fix     (on)   3, 3, 3       3/3 pass  mean 3.00   findRefused 1 across 3 runs
+
+Seven verdicts, not eight -- one run was lost when the earlier invocation was killed.
+
+THE GATE ANSWERED HONESTLY IN BOTH DIRECTIONS, which is the point. findRefused is non-zero on both
+arms, so the refusal is REAL: find() does decline, about 0.4 times a run. And the course passes 6 of
+7 across both arms, so there is no failure for the fix to prevent. Rare, and nothing to catch.
+
+I predicted "this will measure nothing" from PathFinder's teardown before the series ended --
+`active.set(false)` then `thread = null`, a window two statements wide -- and then corrected the
+reasoning, because rarity alone was not the argument: a refusal in the fresh-start branch costs a
+thirty-second lock, so rate times cost mattered. The final numbers settle it: ~0.4 refusals a run,
+no stalls to attribute to them.
+
+FLAG STAYS OFF. The change is still correct -- a caller should not be told a search started when it
+did not -- but correct is not the same as useful, and it must not ship as though the stall were
+explained. It is not.
+
+AND THE COURSE IS THE OTHER FINDING. mine_coal has now read 2/3, 4/4, 4/4 and 6/7 across four
+series. It is NOT reliably red, so "red 1 in 3" was thin evidence and I built a hypothesis on it.
+Anything measured here needs the failure to be reproducible first; right now it is not.
+
+STILL UNEXPLAINED, and this is the seventh hypothesis to leave it standing: the bot parked 1.17
+blocks from a drop it could see 2393 times, OUTSIDE the 1.0 stop distance, with no ban, no barren
+lock and no refused search. None of the seven accounts for it.
