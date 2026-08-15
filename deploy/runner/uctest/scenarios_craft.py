@@ -863,7 +863,8 @@ class MineCoal(CraftTable):
         # and on a bench with no claims at all every one of them is a false positive.
         ok, stats = ctx.bot.py.try_call("placeStats")
         parts = [t for t in str(stats or "").split()
-                 if t.startswith(("cb=", "breakFail=", "scan=", "lock=", "navStop="))]
+                 if t.startswith(("cb=", "breakFail=", "scan=", "lock=", "navStop=",
+                                  "avoidSrc="))]
         yield Criterion("ban and lock counters (recorded, not gated)", True,
                         " ".join(parts) if parts else "unread", gate=False)
 

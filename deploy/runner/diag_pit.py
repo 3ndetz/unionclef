@@ -131,7 +131,7 @@ def main():
 
     print("\n=== counters")
     print(stat_tokens(bot, ("scan=", "pd", "breakFail=", "cb=", "srch=", "drop=",
-                      "fleeSpot=", "navStop=", "lock=")))
+                      "fleeSpot=", "navStop=", "lock=", "avoidSrc=")))
 
     print("\n=== the column the bot stands in, and its neighbours (x from -2 to 2, z=0)")
     # bot.pos() RETURNS None WHEN RCON HICCUPS OR THE BOT IS DEAD, and this used it unguarded --

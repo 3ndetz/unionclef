@@ -1561,3 +1561,34 @@ Anything measured here needs the failure to be reproducible first; right now it 
 STILL UNEXPLAINED, and this is the seventh hypothesis to leave it standing: the bot parked 1.17
 blocks from a drop it could see 2393 times, OUTSIDE the 1.0 stop distance, with no ban, no barren
 lock and no refused search. None of the seven accounts for it.
+
+THE BOW COURSES, NAMED BY THE COUNTERS ON THE FIRST RUN THAT PRINTED THEM (2026-08-15).
+
+    bow_flee       bowShots=3 bowWild=6   noSol=0 aimTO=0 drawTO=0 facing=162 noRoom=9 bestMiss=0.34
+    bow_flee_hard  bowShots=0 bowWild=0   every counter 0, bestMiss=-1.00, first_death=5.8s
+
+⛔ AND I MISREAD ONE OF THEM FIRST, so it is recorded before the conclusion. `facing` is NOT a
+refusal count -- BowShooter increments it as `facingTicks++` with the comment "the camera is claimed
+for the whole shot -- this IS the kiting cost". 162 is TICKS, about 8 seconds of a 60-second run,
+not 162 refused shots. I nearly built a fix on the counter's NAME. Caught by opening the file.
+
+THE REAL ARITHMETIC CLOSES. bowNoRoom is the refusal counter -- "shots refused because a live flee
+order had no distance to spare" -- and:
+
+    ~20 requested = 3 aimed + 6 wild + 9 refused = 18
+
+Nothing unaccounted for. noSol=0, aimTO=0, drawTO=0: ballistics found a solution EVERY time, the
+turn always reached the cone, the draw never timed out. The bow subsystem is not broken.
+
+SO THE COURSE FAILS ON SURVIVAL, NOT ON SHOOTING: deaths=4, avg dist 5.57 against a required 7. And
+BowShooter's own javadoc already says why that is hard -- 1.47 blocks/s lost while facing, a
+22-tick draw by vanilla construction, so "shooting that often and holding distance are mutually
+unsatisfiable". That is a documented design tension, not an undiscovered defect.
+
+bow_flee_hard is the other half and the register was RIGHT about it: it never shoots. But not
+because shooting is broken -- every counter is zero including the never-computed bestMiss sentinel,
+and first_death=5.8s. The bow is never engaged because the bot is dead before it could be.
+
+⭐ THE INSTRUMENT PAID FOR ITSELF IN ONE RUN. Two courses had been red for weeks with "2 of ~20
+requested" and no way to say why; printing six counters that already existed answered both, and
+retired "one of them does not shoot at all" as true-but-for-the-wrong-reason.
