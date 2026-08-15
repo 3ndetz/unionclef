@@ -739,6 +739,30 @@ public class TungstenConfig {
     public boolean barrenLockCountsAsFailure = true;
 
     /**
+     * Keep walking at a dropped item until it is TOUCHED, instead of stopping a block short.
+     *
+     * <p>{@code GetToEntityTask} stops driving as soon as {@code isInRange(entity, closeEnough)} is
+     * true, and the default is 1.0. Collection is a physical collision, so stopping at one block
+     * guarantees the collision never happens -- the bot parks on the rim and waits for something
+     * that can only occur if it keeps walking.
+     *
+     * <p>Traced on mine_coal, the course written for the rung the playthrough dies on. Ore at
+     * (14,-61,4); bot frozen at (14.79,-60.00,5.03), about 1.17 blocks from the drop in the hole it
+     * had just mined, from t=78s to the end of the run. coal=0, and the tracker reported the drop
+     * 2393 times ({@code drop=2438/2393}). No ban, no barren lock, {@code cb=0/0/0/0}. It could see
+     * the coal throughout and had simply stopped being driven at it.
+     *
+     * <p>The opposite direction is already on record as tried and useless: raising the radius to
+     * 1.75 changed nothing, and that note concluded "a bigger radius only makes the bot stop FURTHER
+     * OUT and never touch the drop". Vanilla collects on box overlap, roughly a third of a block.
+     *
+     * <p>Off by default -- it changes every pickup approach in the mod. Gates: mine_coal, red 1 run
+     * in 3 today, and mine_diamond, whose recorded failure is the same shape ("closest approach
+     * 1.35, 2.45 and 3.57 blocks, never collected, three ores of three").
+     */
+    public boolean pickupClosesToContact = false;
+
+    /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
      *
      * <p>UnstuckChain skips any bot pressing no movement keys, on the sound reasoning that

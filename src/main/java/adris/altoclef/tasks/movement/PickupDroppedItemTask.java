@@ -396,7 +396,30 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
                 }
             }
         }
-        return new GetToEntityTask(itemEntity);
+        // ⛔ A DROP IS COLLECTED BY TOUCHING IT, SO "CLOSE ENOUGH" MUST NOT BE ONE BLOCK.
+        //
+        // GetToEntityTask stops driving the moment isInRange(entity, closeEnough) is true, and the
+        // default is 1.0. Collection is a physical collision, so stopping at one block GUARANTEES
+        // the collision never happens: the bot parks on the rim and waits for something that can
+        // only occur if it keeps walking.
+        //
+        // Traced on mine_coal, the new course for the rung the playthrough dies on. The ore was at
+        // (14,-61,4); the bot froze at (14.79,-60.00,5.03) -- about 1.17 blocks from the drop lying
+        // in the hole it had just mined -- from t=78s to the end of the run, with coal=0 and the
+        // tracker reporting the drop 2393 times (drop=2438/2393). No ban, no barren lock,
+        // cb=0/0/0/0. It could see the coal the whole time and had stopped being driven toward it.
+        //
+        // The file already records the OTHER direction being tried: raising this to 1.75 changed
+        // nothing and the note concluded "a bigger radius only makes the bot stop FURTHER OUT and
+        // never touch the drop". Tighter is the untried direction and the one the physics argues
+        // for -- vanilla picks an item up on box overlap, roughly a third of a block, not one.
+        //
+        // Behind a flag because it changes every pickup approach in the mod. Gate: mine_coal, which
+        // is red 1 run in 3 today, and mine_diamond, whose recorded failure is this same shape
+        // ("closest approach 1.35, 2.45 and 3.57 blocks, never collected, three ores of three").
+        return kaptainwutax.tungsten.TungstenConfig.get().pickupClosesToContact
+                ? new GetToEntityTask(itemEntity, 0.1)
+                : new GetToEntityTask(itemEntity);
     }
 
     @Override

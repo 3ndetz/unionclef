@@ -76,13 +76,24 @@ def main():
     bot = Bot(CONTAINER, NAME, rcon)
     bot.ensure_in_game(rcon=rcon)
 
+    # TWO RUNGS, ONE TRACER. mine_stone digs underfoot; mine_coal must WALK to its ore, which is the
+    # join a stalled navigation breaks. The polling, the world dump and the counter read are
+    # identical questions for both, so they share the instrument rather than growing a second copy
+    # of it that drifts -- this repo has paid for duplicated benches before.
+    coal = any(a == "coal" for a in sys.argv[1:])
     arena = ArenaBuilder(rcon)
-    arena.prepare(half=20)
-    arena.flat_field(half=6, grass=False)
+    arena.prepare(half=30 if coal else 20)
     y = STAND_Y - 1
-    rcon.cmd(f"fill -8 {y - 3} -8 8 {y - 1} 8 minecraft:stone", allow_reject=True)
+    if coal:
+        arena.flat_field(half=24, grass=False)
+        rcon.cmd(f"fill -26 {y - 3} -26 26 {y - 1} 26 minecraft:stone", allow_reject=True)
+        for ox, oz in ((8, 0), (14, 4), (20, -4)):
+            rcon.cmd(f"setblock {ox} {y} {oz} minecraft:coal_ore", allow_reject=True)
+    else:
+        arena.flat_field(half=6, grass=False)
+        rcon.cmd(f"fill -8 {y - 3} -8 8 {y - 1} 8 minecraft:stone", allow_reject=True)
     spawn = f"0.5 {STAND_Y} 0.5 -90 0"
-    bot.fresh_reset(spawn, kit=[f"give {NAME} wooden_pickaxe 1"])
+    bot.fresh_reset(spawn, kit=[f"give {NAME} " + ("stone_pickaxe 1" if coal else "wooden_pickaxe 1")])
 
     rcon.cmd("time set day")
     rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
@@ -91,7 +102,7 @@ def main():
     # against itself. This applies and RETURNS the resolved field, so both name and value are
     # checked -- findSettingField falls back to a substring match, and a guard that compared only
     # the value would confirm a pin that landed on the wrong field.
-    for pin in sys.argv[1:]:
+    for pin in [a for a in sys.argv[1:] if "=" in a]:
         k, _, v = pin.partition("=")
         ok, got = bot.py.try_call("tungstenSetting", k, v)
         name, _, read = str(got).partition("=")
@@ -100,15 +111,15 @@ def main():
         print(f"  PIN {got}")
     bot.py.try_call("resetRunCounters")
     time.sleep(1)
-    print(f"=== mine_stone trace: floor at y={y}, stone down to y={y - 3}, bot at y={STAND_Y}")
-    bot.cmd("@get cobblestone 8")
+    print(f"=== {'mine_coal' if coal else 'mine_stone'} trace: floor y={y}, bot y={STAND_Y}")
+    bot.cmd("@get coal 3" if coal else "@get cobblestone 8")
 
     t0 = time.time()
     last_task = ""
     while time.time() - t0 < DURATION:
         el = time.time() - t0
         pos = bot.pos() or [float("nan")] * 3
-        cob = inv_count(bot, "cobblestone")
+        cob = inv_count(bot, "coal" if coal else "cobblestone")
         ok_task, chain = bot.py.try_call("getTaskChainString")
         task = " ".join(str(chain or "").split())[-110:] if ok_task else "?"
         line = f"{el:5.1f}s pos=({pos[0]:.2f},{pos[1]:.2f},{pos[2]:.2f}) cobble={cob}"
