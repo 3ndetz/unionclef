@@ -18,8 +18,11 @@
       "Bash(mv *)",
       "Bash(gh *)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "bypassPermissions"
   },
+  "skipWorkflowUsageWarning": true,
+  "skipDangerousModePermissionPrompt": true,
   "hooks": {
     "Stop": [
       {

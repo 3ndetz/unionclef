@@ -155,7 +155,30 @@ public class TungstenHelper {
 
             // Fresh start — acquire lock
             applyFallbackTuning(pf);
-            pf.find(world, target, player);
+            // ⛔ find() CAN REFUSE, AND THIS TOLD THE CALLER IT HAD SUCCEEDED ANYWAY.
+            //
+            // PathFinder.find opens with `if (active.get() || thread != null) return false;` -- it
+            // will not start while a previous search thread is still alive, and TungstenHelper.stop()
+            // sets the stop flag without joining that thread. So there is a window, after every
+            // stop and every finished search, in which find() simply declines.
+            //
+            // The return value was discarded. This method then took a THIRTY-SECOND exclusive lock
+            // and returned true, so GetToEntityTask was told "tungsten has it", returned null, and
+            // drove nothing -- for a search that never started. Both of its walk branches are
+            // guarded on this method returning true, so a false yes stops the bot dead.
+            //
+            // Traced on mine_coal: the bot parked 1.17 blocks from a drop it could see (the tracker
+            // reported it 2393 times) and never closed, with no ban, no barren lock and nothing
+            // wrong with the search itself.
+            //
+            // Same shape as the defects this repo has already paid for -- a gate whose awake half
+            // could never fail, a dodge whose keys never reached the game, a stop that did not hold.
+            // A caller acting on a success the callee never reported.
+            boolean started = pf.find(world, target, player);
+            if (kaptainwutax.tungsten.TungstenConfig.get().pathStartMustSucceed && !started) {
+                findRefused++;
+                return false;
+            }
             lastStartTime = now;
             lastRetargetTime = now;
             lockUntil = now + LOCK_DURATION_MS;
@@ -213,6 +236,9 @@ public class TungstenHelper {
     private static double lockStartDist = -1;
     /** Locks that expired without the bot getting closer, and locks that made progress. */
     public static volatile int lockBarren, lockProductive;
+
+    /** Times find() declined to start and this method reported the refusal. Read as lock's 3rd. */
+    public static volatile int findRefused;
 
     /** How much closer the bot must get during a 30s lock for that lock to count as working. */
     private static final double LOCK_PROGRESS_BLOCKS = 0.5;

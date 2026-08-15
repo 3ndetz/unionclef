@@ -782,6 +782,28 @@ public class TungstenConfig {
     public boolean pickupClosesToContact = false;
 
     /**
+     * A refused search is not a started one: {@code tryPathTo} returns false instead of locking.
+     *
+     * <p>{@code PathFinder.find} opens with {@code if (active.get() || thread != null) return false}
+     * -- it will not start while a previous search thread is alive, and {@code TungstenHelper.stop()}
+     * raises the stop flag without joining that thread. So after every stop and every completed
+     * search there is a window in which find() simply declines.
+     *
+     * <p>That return value was discarded. {@code tryPathTo} took a THIRTY-SECOND exclusive lock and
+     * returned true regardless, so {@code GetToEntityTask} was told "tungsten has it", returned null
+     * and drove nothing -- on behalf of a search that never started. Both of its walk branches are
+     * guarded on this method returning true, so one false yes stops the bot dead for the lock.
+     *
+     * <p>Traced on mine_coal: the bot parked 1.17 blocks from a drop it could see -- the tracker
+     * reported it 2393 times -- and never closed, with no ban, no barren lock, and nothing wrong
+     * with the search itself.
+     *
+     * <p>Off by default. Mechanism gate: {@code lock}'s third field, findRefused, which must be
+     * non-zero on a stalling run or the premise is wrong and the series says so before the outcome.
+     */
+    public boolean pathStartMustSucceed = false;
+
+    /**
      * Lets the unstuck chain act on a bot that has a GOAL, no PATH and has not moved.
      *
      * <p>UnstuckChain skips any bot pressing no movement keys, on the sound reasoning that
