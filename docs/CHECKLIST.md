@@ -857,6 +857,25 @@ Two cheap tells, both free to check before believing anything:
   the same one. Look at the tail before reading the mean -- it is often the more interesting find.
   The 9%-of-runs stall on mob_skeleton was found exactly this way, while diagnosing a broken gate.
 
+## 4w. TWO WORKERS CONVERGED ON THE SAME DEFECT AND HALF THE EFFORT WAS WASTED (2026-08-16)
+
+The break-ban leak was found, fixed and committed TWICE within minutes -- `636f7072` by one worker,
+`85b2a3ca` by the other -- because both were reading the same failing course at the same time. The
+code is fine (one flagged block, no doubling), but an hour of the second worker's reading bought
+nothing that the first had not already bought.
+
+Rule 4v is about the shared TREE. This is about the shared QUEUE, and it is cheaper to avoid:
+
+1. **Claim the thread in the register before starting it, not after finishing.** `TODOS.md` is the
+   only channel both workers read. A one-line entry saying "taking G-1.95 now" costs nothing and is
+   the difference between two people finding a bug and two people finding the same bug.
+2. **Read the last ten commits before picking work, not only before reporting.** STEP 2 of the
+   autonomy loop already makes you run `git log`; the other worker's subject lines are right there,
+   and today they said exactly what was being worked on.
+3. Duplication is not always waste -- an independent confirmation of a mechanism is worth
+   something. It is waste when it is UNKNOWING, because then neither worker treats it as
+   replication and neither records it as such.
+
 ## 4v. ⛔ TWO WORKERS, ONE WORKING TREE: `git add -A` SWEEPS UP THE OTHER ONE (2026-08-15)
 
 Parallel work on this repo is expected -- AGENTS.md says so, and tells you to pull often. What it
