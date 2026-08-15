@@ -66,6 +66,22 @@ public class AltoClefSettings {
         }
     }
 
+    /**
+     * ⛔ THIS APPENDS, AND NOTHING IN THIS FILE EVER REMOVES -- WHICH DOES NOT MEAN IT LEAKS.
+     *
+     * <p>Grepping this file for {@code _breakAvoiders.clear} or {@code .remove} finds nothing, and
+     * that reads exactly like an append-only leak: {@code avoidPredCount} would only ever grow, and
+     * this class's own note says "a predicate COUNT that grows is a push/pop leak". I concluded
+     * precisely that, and it is WRONG.
+     *
+     * <p>The list is rebuilt wholesale by {@code BotBehaviour.applyState}, through the accessor:
+     * {@code getBreakAvoiders().clear()} then {@code addAll(toAvoidBreaking)}, plus the persistent
+     * extra predicate when one is set. So the mutation that bounds this list lives in ANOTHER FILE
+     * and is invisible to any search of this one.
+     *
+     * <p>The lesson is about searching, not about avoiders: absence of a mutation in the file that
+     * OWNS the collection is not absence of the mutation. Ask who holds the accessor.
+     */
     public void avoidBlockBreak(Predicate<BlockPos> avoider) {
         synchronized (breakMutex) {
             _breakAvoiders.add(avoider);
