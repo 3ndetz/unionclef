@@ -461,6 +461,20 @@ The rule:
    kept the naive line. A fix applied to one course is not applied to the suite — grep for the
    pattern.
 
+⭐ **FOLLOWED UP 2026-08-15, AND POINT 4 NOW OVER-REACHES.** `allround` has since been fixed and
+says so at the site. Two courses still carry the bare `return ctx.kills() >= 1`, and they should:
+the test is not "does it stop on an event" but **whether the gate ACCUMULATES past that event**.
+
+- `allround` — the kill was INCIDENTAL to a 120-second fight, so stopping at it truncated the very
+  thing being measured. Fixed, correctly.
+- the chase course (`ran >= 30 blocks`) and `bridge_assault` (`crossed`, `kill <= 120s`,
+  `self-falls == 0`) — the kill IS the objective. The run is COMPLETE when it lands, and running on
+  would measure post-objective wandering rather than the course.
+
+So grepping for the pattern and "fixing" all of them would slow two courses and change what they
+mean. Grep for the pattern, then ask of each hit: does anything I gate on keep accumulating after
+the stopping event? If not, the naive line is the right line.
+
 ## 4g. A CHANGE THAT MAKES A RARE PATH COMMON PUTS UNTESTED CODE ON THE HOT PATH (2026-08-10)
 
 Rare code is unverified *because* it is rare. Raise its frequency and its faults surface immediately
