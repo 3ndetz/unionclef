@@ -721,6 +721,22 @@ class BowFlee(Scenario):
                         f" noRoom={_stat(ctx, 'bowNoRoom')} restart={_stat(ctx, 'bowRestart')}"
                         f" bestMiss={_stat(ctx, 'bowBestMiss')}",
                         gate=False)
+
+        # ⛔ AND THE COUNTERS FOR WHAT ACTUALLY FAILS. The bow split answered its own question on
+        # its first run -- ~20 requested = 3 aimed + 6 wild + 9 refused, with noSol/aimTO/drawTO all
+        # zero -- so the shooting is not broken. Both courses fail on DISTANCE: bow_flee at deaths=4
+        # and avg 5.57 against a required 7, bow_flee_hard at first_death=5.8s with the bow never
+        # engaged at all. That is the flee, and its counters exist and were never printed here
+        # either. Same one-line move, now aimed by the diagnosis rather than at random.
+        #   flee=...      the flee state machine's own tallies
+        #   fleeStuck     the flee ran and could not get anywhere
+        #   fleeShooter   it recognised a SHOOTER as the thing to run from
+        #   mdFar         the defence chain's far-range decisions
+        yield Criterion("did the flee even run (recorded, not gated)", True,
+                        f"flee={_stat(ctx, 'flee')} fleeStuck={_stat(ctx, 'mdFleeStuck')}"
+                        f" fleeShooter={_stat(ctx, 'mdFleeShooter')} mdFar={_stat(ctx, 'mdFar')}"
+                        f" mdFlee={_stat(ctx, 'mdFlee')} mdBow={_stat(ctx, 'mdBow')}",
+                        gate=False)
         yield Criterion("self-falls == 0", ctx.self_falls == 0,
                         f"self={ctx.self_falls}")
         avg = ctx.avg_dist()
@@ -769,6 +785,22 @@ class BowFleeHard(BowFlee):
                         f" drawTO={_stat(ctx, 'bowDrawTO')} facing={_stat(ctx, 'bowFacing')}"
                         f" noRoom={_stat(ctx, 'bowNoRoom')} restart={_stat(ctx, 'bowRestart')}"
                         f" bestMiss={_stat(ctx, 'bowBestMiss')}",
+                        gate=False)
+
+        # ⛔ AND THE COUNTERS FOR WHAT ACTUALLY FAILS. The bow split answered its own question on
+        # its first run -- ~20 requested = 3 aimed + 6 wild + 9 refused, with noSol/aimTO/drawTO all
+        # zero -- so the shooting is not broken. Both courses fail on DISTANCE: bow_flee at deaths=4
+        # and avg 5.57 against a required 7, bow_flee_hard at first_death=5.8s with the bow never
+        # engaged at all. That is the flee, and its counters exist and were never printed here
+        # either. Same one-line move, now aimed by the diagnosis rather than at random.
+        #   flee=...      the flee state machine's own tallies
+        #   fleeStuck     the flee ran and could not get anywhere
+        #   fleeShooter   it recognised a SHOOTER as the thing to run from
+        #   mdFar         the defence chain's far-range decisions
+        yield Criterion("did the flee even run (recorded, not gated)", True,
+                        f"flee={_stat(ctx, 'flee')} fleeStuck={_stat(ctx, 'mdFleeStuck')}"
+                        f" fleeShooter={_stat(ctx, 'mdFleeShooter')} mdFar={_stat(ctx, 'mdFar')}"
+                        f" mdFlee={_stat(ctx, 'mdFlee')} mdBow={_stat(ctx, 'mdBow')}",
                         gate=False)
 
 
