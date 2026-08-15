@@ -704,6 +704,23 @@ class BowFlee(Scenario):
                         f"bowShots={_stat(ctx, 'bowShots')} bowWild={_stat(ctx, 'bowWild')}"
                         f" requested~{int(self.duration / 3)}",
                         gate=False)
+        # ⛔ AND WHY THE OTHER EIGHTEEN NEVER HAPPENED. The line above says HOW MANY arrows were
+        # loosed and cannot say why the rest were not, so every reading of it has ended in a guess.
+        # Both bow courses measured bowShots=2 of ~20 requested in the last sweep -- 90% of shot
+        # requests producing no arrow -- and the counters that split that reason ALREADY EXIST in
+        # placeStats and were simply never printed here:
+        #   bowNoSol   no firing solution -- ballistics could not reach the target
+        #   bowAimTO   the turn never got inside the draw cone, so the bow was never drawn
+        #   bowDrawTO  drawn and fully charged, but no tick ever predicted a hit
+        #   bowFacing / bowNoRoom / bowRestart   the remaining refusals
+        # Those four have completely different fixes. This is the third diagnostic today found to
+        # exist and not be exposed -- a gate that is not printed is not a gate.
+        yield Criterion("why the rest never loosed (recorded, not gated)", True,
+                        f"noSol={_stat(ctx, 'bowNoSol')} aimTO={_stat(ctx, 'bowAimTO')}"
+                        f" drawTO={_stat(ctx, 'bowDrawTO')} facing={_stat(ctx, 'bowFacing')}"
+                        f" noRoom={_stat(ctx, 'bowNoRoom')} restart={_stat(ctx, 'bowRestart')}"
+                        f" bestMiss={_stat(ctx, 'bowBestMiss')}",
+                        gate=False)
         yield Criterion("self-falls == 0", ctx.self_falls == 0,
                         f"self={ctx.self_falls}")
         avg = ctx.avg_dist()
@@ -735,6 +752,23 @@ class BowFleeHard(BowFlee):
         yield Criterion("arrows actually loosed (recorded, not gated)", True,
                         f"bowShots={_stat(ctx, 'bowShots')} bowWild={_stat(ctx, 'bowWild')}"
                         f" requested~{int(self.duration / 3)}",
+                        gate=False)
+        # ⛔ AND WHY THE OTHER EIGHTEEN NEVER HAPPENED. The line above says HOW MANY arrows were
+        # loosed and cannot say why the rest were not, so every reading of it has ended in a guess.
+        # Both bow courses measured bowShots=2 of ~20 requested in the last sweep -- 90% of shot
+        # requests producing no arrow -- and the counters that split that reason ALREADY EXIST in
+        # placeStats and were simply never printed here:
+        #   bowNoSol   no firing solution -- ballistics could not reach the target
+        #   bowAimTO   the turn never got inside the draw cone, so the bow was never drawn
+        #   bowDrawTO  drawn and fully charged, but no tick ever predicted a hit
+        #   bowFacing / bowNoRoom / bowRestart   the remaining refusals
+        # Those four have completely different fixes. This is the third diagnostic today found to
+        # exist and not be exposed -- a gate that is not printed is not a gate.
+        yield Criterion("why the rest never loosed (recorded, not gated)", True,
+                        f"noSol={_stat(ctx, 'bowNoSol')} aimTO={_stat(ctx, 'bowAimTO')}"
+                        f" drawTO={_stat(ctx, 'bowDrawTO')} facing={_stat(ctx, 'bowFacing')}"
+                        f" noRoom={_stat(ctx, 'bowNoRoom')} restart={_stat(ctx, 'bowRestart')}"
+                        f" bestMiss={_stat(ctx, 'bowBestMiss')}",
                         gate=False)
 
 
