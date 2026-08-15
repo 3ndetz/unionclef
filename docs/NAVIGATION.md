@@ -191,7 +191,7 @@ nav    12 courses   12 PASS   0 gate failures   0 INVALID
 craft  12 courses   12 PASS   0 gate failures   0 INVALID   (+ mine_coal added, 13th)
 mob     4 courses    2 PASS   mob_skeleton (parked by the user), mob_trio (pre-existing)
 pvp    12 courses    7 PASS / 4 FAIL of 11 measured; all four already on the register
-end     3 courses    end_walk PASS, end_gateway PASS (end_dragon gates nothing) — GAP CLOSED
+end     3 courses    3/3 ok, 0 gate failures — end_dragon reads FAIL but is tier=info
 ```
 
 Run with `gotoResumeNeedsRealTarget`, `breakBanEscalates` and `barrenLockCountsAsFailure` on.

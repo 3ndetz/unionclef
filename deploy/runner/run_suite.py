@@ -640,6 +640,13 @@ def _release_lock():
 
 
 def main():
+    # LISTING TOUCHES NOTHING, SO IT MUST NOT NEED THE BENCH. `--list` prints the scenario table
+    # and exits; it starts no containers, sends no rcon and reads no client. Taking the lock for it
+    # means that while any suite is running you cannot even ask what the courses ARE -- which is
+    # exactly when you want to, because you are deciding what to run next. Measured tonight: a
+    # newly added course could not be confirmed registered because another worker held the bench.
+    if "--list" in sys.argv:
+        return _main()
     if not _take_lock():
         return 2
     try:

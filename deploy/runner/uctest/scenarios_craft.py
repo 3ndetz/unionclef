@@ -774,6 +774,87 @@ class MineDiamond(CraftTable):
                         f"pickaxe={_has(ctx, 'iron_pickaxe')}", gate=False)
 
 
+class GotoThenMine(CraftTable):
+    """Walk somewhere with `;goto`, then mine -- does the bot stay, or wander back?
+
+    WHY THIS EXISTS. Two defects on this ladder have now had the same shape: a stale destination
+    resumed after a mining segment. The first was TungstenMod.TARGET still holding its debug
+    initialiser of y=10, which sent the bot up a cobblestone tower it built from its own haul. The
+    second is a goto that has COMPLETED: FastNavigator stops, but TARGET keeps the destination and
+    the "a real goto was requested" flag keeps saying yes, so the next mining segment re-arms the
+    navigator toward a place the bot already reached.
+
+    Neither was catchable here, because NO course on this bench issues `;goto` and then mines. The
+    first was found by tracing a failure and reading a log line; the second only by reading. A class
+    of bug that two separate instances have belonged to deserves a course rather than a third lucky
+    read -- which is the same argument that produced mine_coal, and that one caught a real stall on
+    its first outing.
+
+    THE SHAPE. Send the bot 20 blocks out with `;goto`, wait for it to arrive, then ask for
+    cobblestone that is under its FEET where it now stands. A bot that mines where it is passes. A
+    bot that walks back toward the old goto destination fails, and the distance it ends at says so.
+
+    The gate is deliberately POSITION, not just the item: collecting the cobblestone proves mining
+    works, and staying put is the thing this course exists to measure. Both are checked, and the
+    position one is what the stale-target bugs break.
+    """
+
+    id = "goto_then_mine"
+    duration = 150
+    bot_kit = ["give {name} stone_pickaxe 1"]
+    GOTO_X = 20
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=26, grass=False)
+        y = STAND_Y - 1
+        ctx.rcon.cmd(f"fill -28 {y - 3} -28 28 {y - 1} 28 minecraft:stone", allow_reject=True)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        ctx.geo["fps"] = []
+        time.sleep(1)
+        for line in self.bot_kit:
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        # A REAL ;goto, through the tungsten command, because that is what sets TungstenMod.TARGET
+        # and marks it as a genuine destination. Driving with @get would not arm the thing under test.
+        prefix = ctx.bot.py.try_call("tungstenPrefix")[1] or ";"
+        ctx.bot.chat(f"{prefix}goto {self.GOTO_X} {STAND_Y} 0")
+        # Give it time to walk 20 blocks and ARRIVE -- arrival is the state that was never cleared.
+        for _ in range(30):
+            time.sleep(2)
+            pos = ctx.rcon.entity_pos(ctx.bot.name)
+            if pos and abs(pos[0] - self.GOTO_X) < 3:
+                break
+        ctx.geo["arrived_x"] = (ctx.rcon.entity_pos(ctx.bot.name) or [0, 0, 0])[0]
+        ctx.bot.cmd("@get cobblestone 3")
+
+    def early_stop(self, ctx):
+        return _count(ctx, "cobblestone") >= 3
+
+    def judge(self, ctx):
+        got = _count(ctx, "cobblestone")
+        pos = ctx.rcon.entity_pos(ctx.bot.name) or [999, 0, 0]
+        arrived = ctx.geo.get("arrived_x", 0)
+        # DID IT STAY? Mining happens where the bot stands, so a bot that mined here is still here.
+        # Walking back toward the goto origin is the failure this course was written for, and the
+        # distance from where it ARRIVED is the number that shows it.
+        drift = abs(pos[0] - arrived)
+        yield Criterion("three cobblestone in the pack", got >= 3,
+                        f"cobblestone={got} arrivedX={arrived:.1f} finalX={pos[0]:.1f}")
+        yield Criterion("it mined where it stood, not back at the start", drift < 8.0,
+                        f"drift={drift:.1f} blocks from where the goto ended")
+        ok, stats = ctx.bot.py.try_call("placeStats")
+        parts = [t for t in str(stats or "").split()
+                 if t.startswith(("pdEnter=", "navStop=", "lock=", "avoidSrc="))]
+        yield Criterion("drive counters (recorded, not gated)", True,
+                        " ".join(parts) if parts else "unread", gate=False)
+
+
 class MineCoal(CraftTable):
     """The rung the PLAYTHROUGH actually dies on, brought onto a bench that works.
 
@@ -1165,4 +1246,4 @@ class EscapeLava(CraftTable):
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
-             ChopTree, ChopCanopy, MineDiamond, MineCoal, EscapeLava]
+             ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava]

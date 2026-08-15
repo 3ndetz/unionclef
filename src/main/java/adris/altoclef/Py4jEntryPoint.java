@@ -2102,6 +2102,19 @@ public class Py4jEntryPoint {
         return out;
     }
 
+    /**
+     * The prefix tungsten commands are typed with, e.g. ";" for {@code ;goto}.
+     *
+     * <p>An agent (or a bench course) driving tungsten by chat has to know this, and until now the
+     * only way to get it was to hardcode the character and hope -- {@code stopPathing} reads it
+     * from {@code TungstenMod.getCommandPrefix()} on the Java side, but nothing exposed it. A
+     * hardcoded prefix is a silent failure the day it changes: the chat line simply is not a
+     * command any more, and nothing reports that.
+     */
+    public String tungstenPrefix() {
+        return kaptainwutax.tungsten.TungstenMod.getCommandPrefix();
+    }
+
     public boolean pillarActive() { return kaptainwutax.tungsten.task.PillarTask.isActive(); }
 
     /**
