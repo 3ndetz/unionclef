@@ -872,7 +872,14 @@ Rule 4v is about the shared TREE. This is about the shared QUEUE, and it is chea
 2. **Read the last ten commits before picking work, not only before reporting.** STEP 2 of the
    autonomy loop already makes you run `git log`; the other worker's subject lines are right there,
    and today they said exactly what was being worked on.
-3. Duplication is not always waste -- an independent confirmation of a mechanism is worth
+3. **AND YOU CAN COLLIDE WITH YOURSELF.** Launching a background series, then launching the SAME
+   series again before the first reports, produces exactly the same refusal -- and the lock names
+   your own invocation, which reads at a glance like the other worker holding the bench. Worse, if
+   both redirect to one log file the second truncates it and the refusal is all you see, so the
+   run that IS working looks like it produced nothing. Read `verdict.json` under the newest
+   artifacts directory rather than the tee'd log when that happens; the verdict is authoritative
+   and nobody else is writing it.
+4. Duplication is not always waste -- an independent confirmation of a mechanism is worth
    something. It is waste when it is UNKNOWING, because then neither worker treats it as
    replication and neither records it as such.
 
