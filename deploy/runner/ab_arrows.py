@@ -1515,3 +1515,20 @@ STILL UNEXPLAINED, and this is the open thread: the 1.17-block park. The bot was
 stop distance with a drop it could see (tracker reporting it 2393 times) and did not close. Neither
 the pickup radius (refuted, 2/4 against 4/4) nor the refused search accounts for it. Next pass
 starts there, and the cheap reproduction exists: mine_coal with diag_pit.
+
+CORRECTION TO THAT PREDICTION, BEFORE THE RESULT LANDS: RARITY IS NOT THE WHOLE ARGUMENT.
+
+findRefused read 1 on a control run, so refusals DO occur -- rare, as a two-statement window
+predicts, but not zero. I argued "this will measure nothing" from frequency alone, and that
+reasoning is incomplete: what matters is rate TIMES cost, and the cost here is not one tick.
+
+In the fresh-start branch a refusal means a THIRTY-SECOND lock is taken for a search that never
+began. One such event is 30 s of a 180 s course -- seventeen per cent -- so a rate of about one per
+run is not obviously negligible. In the other branch it costs a single tick and is negligible.
+
+So the honest prediction is weaker than the one I wrote an hour ago: flat is still the most likely
+outcome, but "rare" was doing work it cannot do on its own. The event is rare AND expensive, and
+those pull in opposite directions.
+
+Noting it now rather than after the numbers, because adjusting the reasoning once the result is
+visible is how a prediction turns into a rationalisation.
