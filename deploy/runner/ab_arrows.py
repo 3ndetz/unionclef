@@ -1624,3 +1624,28 @@ BowShooter's own javadoc says why that may be unwinnable as posed: 1.47 blocks/s
 facing, a 22-tick draw by vanilla construction, so "shooting that often and holding distance are
 mutually unsatisfiable". That is a COURSE DESIGN question -- can a kiting archer satisfy both gates
 at once -- and not a bug to hunt. Filing it that way instead of opening an eighth hypothesis.
+
+
+PREDICTION BEFORE THE RESULT: THE BREAK BAN LEAKS ACROSS RUNS (2026-08-15).
+
+mine_coal showed cb=0/818/0/0 with breakFail=0/0/0/0/0 -- 818 refusals, no failed break, no ban
+installed THIS run. Reading BotBehaviour end to end gives a mechanism that fits every part of that:
+
+  1. `_extraAvoidBlockBreaking` is, in the code's own words, a "Persistent extra predicate (outside
+     push/pop stack)". applyState() re-adds it every time, so push/pop cannot drop it.
+  2. Only resetAvoidBlockBreakingExtra() clears it, called from WorldSurvivalChain when its
+     60-second timer elapses.
+  3. That timer is only consulted inside getPriority(), which only runs while the TASK RUNNER IS
+     ACTIVE -- and between runs it is not (checklist RULE TWO: an idle bot ticks no chains).
+
+So a ban installed late in run N is never cleared, run N+1 inherits it, and resetRunCounters wipes
+breakFail to 0 -- producing exactly "hundreds of refusals with no failed break". Same shape as RULE
+SEVEN's spectator leak, which survived a rebuild and two later runs and looked precisely like a
+broken bot.
+
+PREDICTION: the failing run reads avoidSrc with pred non-zero and the caller stamp naming
+WorldSurvivalChain's addTemporaryBreakAvoidance -- NOT a fresh registration from the coal task.
+
+WHAT WOULD REFUTE IT: pred=0 with set>0 (something protecting positions instead), or a caller stamp
+naming any task other than the survival chain. Written now because a prediction made afterwards is
+not a prediction, and this is the fourth mechanism proposed for these 818 refusals.
