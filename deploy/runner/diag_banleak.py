@@ -90,10 +90,30 @@ def main():
     print(f"  installed: {got}")
     print(f"  predicates during task one: {preds_now(bot)}")
 
-    # Let it finish or stop it; either way the chain reaches onTaskFinish.
-    time.sleep(10)
-    bot.py.try_call("ExecuteCommand", "@stop")
-    time.sleep(3)
+    # ⛔ @stop DOES NOT RELIABLY REACH THE CLEAR, so wait for a real COMPLETION instead.
+    #
+    # onTaskFinish opens by RE-ARMING an interrupted task -- "stopped is not finished, and a goal
+    # does not expire because we died on the way" -- up to MAX_REARM_ATTEMPTS times, returning
+    # before it ever reaches the runner disable and the ban clear. A stopped task therefore may run
+    # none of the teardown this check is about, and the fixed arm would report "leak present" for
+    # a reason that has nothing to do with the leak.
+    #
+    # @get cobblestone 2 finishes on its own in seconds, so the honest end is to WAIT for it and
+    # verify the runner actually went idle before reading anything.
+    for _ in range(40):
+        time.sleep(2)
+        ok, chain = bot.py.try_call("getTaskChainString")
+        if ok and "No tasks" in str(chain):
+            break
+    ok, chain = bot.py.try_call("getTaskChainString")
+    finished = ok and "No tasks" in str(chain)
+    print(f"  task one reached idle: {finished}")
+    if not finished:
+        print("  ⛔ task one never finished -- this run cannot answer, and is not being read as if"
+              " it could")
+        bot.py.try_call("allowBreakingAnywhere")
+        bot.stop_all()
+        return
     print(f"  predicates after task one ended: {preds_now(bot)}")
 
     # TASK TWO: the question. Does a fresh job inherit the previous job's ban?
