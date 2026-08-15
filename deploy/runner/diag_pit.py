@@ -134,7 +134,16 @@ def main():
                       "fleeSpot=", "navStop=", "lock=")))
 
     print("\n=== the column the bot stands in, and its neighbours (x from -2 to 2, z=0)")
-    px, _, pz = [int(v // 1) for v in bot.pos()]
+    # bot.pos() RETURNS None WHEN RCON HICCUPS OR THE BOT IS DEAD, and this used it unguarded --
+    # so a trace that had already collected its whole timeline threw at the dump and printed a
+    # traceback instead of the data. Guarded in the poll loop and not here, which is the same
+    # one-sided hardening this project keeps finding in its own instruments.
+    final = bot.pos()
+    if final is None:
+        print("  (no position at teardown -- skipping the world dump; the timeline above stands)")
+        bot.stop_all()
+        return
+    px, _, pz = [int(v // 1) for v in final]
     for by in range(STAND_Y + 4, STAND_Y - 5, -1):
         row = " ".join(f"{block_at(rcon, px + dx, by, pz):>11}" for dx in (-2, -1, 0, 1, 2))
         print(f"  y={by:4d}  {row}")

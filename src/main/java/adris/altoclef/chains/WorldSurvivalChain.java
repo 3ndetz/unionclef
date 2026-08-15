@@ -574,6 +574,14 @@ public class WorldSurvivalChain extends SingleTaskChain {
 
     public void onBlockBroken(AltoClef mod, BlockPos pos, BlockState block, PlayerEntity player) {
         if (mod.getPlayer() != null && player != null && player.equals(mod.getPlayer())) {
+            // THE SECOND LOOK BELONGS TO A BLOCK, NOT TO THIS CHAIN. Without clearing it here, a
+            // break that starts while an earlier one is still awaiting its second look would have
+            // its FIRST failure judged as a second -- an immediate claim, which is the exact
+            // behaviour the second look exists to prevent. Found by re-reading the change before
+            // it was ever deployed; the position is per-break, so the flag has to be too.
+            if (!pos.equals(_lastBrokenBlockPos)) {
+                _breakSecondLook = false;
+            }
             _lastBrokenBlock = true;
             _lastBrokenBlockPos = pos;
             _blockBreakCheckTimer.reset();
