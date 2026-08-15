@@ -772,6 +772,49 @@ until [ -s "$OUT" ]; do sleep 30; done; echo "done"
 4. This does NOT weaken rule 8's stop conditions. Blocking is not stopping — the turn stays
    alive and the work continues the moment the condition is met.
 
+## 4u. A COUNTER GATED ON ITS OWN FLAG READS ZERO IN THE CONTROL ARM BY CONSTRUCTION (2026-08-15)
+
+Made THREE TIMES IN ONE DAY, by someone who had already corrected it twice that same day. It is the
+most repeatable mistake in this file, so it gets its own rule rather than a third apology.
+
+The shape is always this:
+
+    if (myFlag && somethingWentWrong) {      // the counter lives INSIDE the flag guard
+        myMechanismCounter++;
+        doTheFix();
+    }
+
+Now run the A/B. The pinned arm reports the counter; the CONTROL arm reports zero -- not because the
+problem is absent, but because the line cannot execute. And "how often does this happen WITHOUT the
+fix" is the number the entire premise rests on. The series is half-blind and looks perfectly healthy.
+
+The three instances, all 2026-08-14/15:
+
+- `navSearchOnly` -- read 0, and the hypothesis was filed as REFUTED on that basis. It could not
+  have read anything else.
+- `lockBarren` -- caught before its series, corrected with the words "count always, act only when
+  flagged".
+- `findRefused` -- written the broken way AGAIN, an hour after writing that sentence, and caught
+  only because the first verdict of the series happened to be a control run.
+
+Same family as declaring `stranded` a mechanism gate and never exposing it, which voided a
+forty-launch series by its own rule, and as `dteUnsafe` reading 0 for a condition that could not
+occur.
+
+**The rule: THE COUNTER IS AN OBSERVATION, THE FLAG IS THE BEHAVIOUR. Separate them.**
+
+    if (somethingWentWrong) {
+        myMechanismCounter++;                // always
+        if (myFlag) { doTheFix(); }          // only the ACTION is gated
+    }
+
+Two checks before any A/B, both free:
+
+1. Ask "what will this counter read in the CONTROL arm?" If the answer is "zero, always", the GATE
+   is broken, not the hypothesis.
+2. A counter at zero is ambiguous until you know it CAN be non-zero. RULE ONE already says so; this
+   is the commonest way of manufacturing exactly that ambiguity.
+
 ## 4t. A GATE METRIC MUST BE A RATE OR A MEDIAN, NOT A TOTAL (2026-08-13)
 
 Four times in one day a per-run TOTAL was read as if it described intensity, and every time the
