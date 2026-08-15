@@ -119,12 +119,49 @@ public class BotBehaviour {
         // apply not needed
     }
 
+    /**
+     * WHO last registered a break-avoider, and how many have been registered at all.
+     *
+     * <p>mine_coal produced {@code cb=0/818/0/0} with {@code breakFail=0/0/0/0/0}: 818 candidates
+     * refused as unbreakable while no break had failed and no ban had ever been installed.
+     * {@code avoidSrc} then narrowed it to "a predicate registered DURING the run" -- a clean run
+     * reads zero predicates, so it is not inherited state and not a push/pop leak.
+     *
+     * <p>That still leaves "which caller", and this repo has answered that question the same way
+     * three times today and got it right every time: stamp the caller at the registration site
+     * instead of reasoning about who it might be. Registration is RARE -- a handful of calls per
+     * run -- so walking a stack trace here costs nothing, unlike the predicate TEST, which runs a
+     * million times a run and must stay arithmetic.
+     */
+    public static volatile String lastBreakAvoiderBy = "-";
+    public static volatile int breakAvoidersRegistered;
+
+    /** First frame outside this class, so the tag names the CALLER rather than this method. */
+    private static String callerTag() {
+        try {
+            for (StackTraceElement f : new Throwable().getStackTrace()) {
+                if (!f.getClassName().endsWith("BotBehaviour")) {
+                    String cls = f.getClassName();
+                    return cls.substring(cls.lastIndexOf('.') + 1) + "." + f.getMethodName()
+                            + ":" + f.getLineNumber();
+                }
+            }
+        } catch (Exception ignored) {
+            // an instrument must never be the thing that breaks a registration
+        }
+        return "?";
+    }
+
     public void avoidBlockBreaking(BlockPos pos) {
+        lastBreakAvoiderBy = "pos@" + callerTag();
+        breakAvoidersRegistered++;
         current().blocksToAvoidBreaking.add(pos);
         current().applyState();
     }
 
     public void avoidBlockBreaking(Predicate<BlockPos> pred) {
+        lastBreakAvoiderBy = "pred@" + callerTag();
+        breakAvoidersRegistered++;
         current().toAvoidBreaking.add(pred);
         current().applyState();
     }
@@ -145,6 +182,8 @@ public class BotBehaviour {
     }
 
     public void avoidBlockBreakingExtra(Predicate<BlockPos> pred) {
+        lastBreakAvoiderBy = "extra@" + callerTag();
+        breakAvoidersRegistered++;
         _extraAvoidBlockBreaking = pred;
         current().applyState();
     }

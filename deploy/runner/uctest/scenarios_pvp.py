@@ -732,10 +732,21 @@ class BowFlee(Scenario):
         #   fleeStuck     the flee ran and could not get anywhere
         #   fleeShooter   it recognised a SHOOTER as the thing to run from
         #   mdFar         the defence chain's far-range decisions
+        # ⛔ md* COUNTERS ARE STRUCTURALLY ZERO ON THIS COURSE -- DO NOT PUT THEM HERE.
+        # The first version of this line printed mdFlee, mdBow, mdFar, mdFleeStuck and
+        # mdFleeShooter, and every one read 0. Querying the mod directly says why: mdCalls=0.
+        # MobDefenseChain.getPriority() never ticks on the bow courses, so everything hanging off
+        # it cannot be non-zero, and "the flee never recognised a shooter" would have been read
+        # straight out of an instrument that was switched off. That is the checklist entry about
+        # dmgTaken=0.0 on a course where the bot died five times, and rule 4u's cousin: zero by
+        # construction, chain-gated rather than flag-gated. Caught within minutes of adding it, by
+        # asking the discriminating question the checklist names -- what does mdCalls read.
+        #
+        # flee= is tungsten-side and DOES tick here, so it is the half worth printing. mdCalls is
+        # printed beside it so the zero can never be misread as a finding again.
         yield Criterion("did the flee even run (recorded, not gated)", True,
-                        f"flee={_stat(ctx, 'flee')} fleeStuck={_stat(ctx, 'mdFleeStuck')}"
-                        f" fleeShooter={_stat(ctx, 'mdFleeShooter')} mdFar={_stat(ctx, 'mdFar')}"
-                        f" mdFlee={_stat(ctx, 'mdFlee')} mdBow={_stat(ctx, 'mdBow')}",
+                        f"flee={_stat(ctx, 'flee')} mdCalls={_stat(ctx, 'mdCalls')}"
+                        f" (md* are 0 here by construction: the defence chain does not tick)",
                         gate=False)
         yield Criterion("self-falls == 0", ctx.self_falls == 0,
                         f"self={ctx.self_falls}")
@@ -797,10 +808,21 @@ class BowFleeHard(BowFlee):
         #   fleeStuck     the flee ran and could not get anywhere
         #   fleeShooter   it recognised a SHOOTER as the thing to run from
         #   mdFar         the defence chain's far-range decisions
+        # ⛔ md* COUNTERS ARE STRUCTURALLY ZERO ON THIS COURSE -- DO NOT PUT THEM HERE.
+        # The first version of this line printed mdFlee, mdBow, mdFar, mdFleeStuck and
+        # mdFleeShooter, and every one read 0. Querying the mod directly says why: mdCalls=0.
+        # MobDefenseChain.getPriority() never ticks on the bow courses, so everything hanging off
+        # it cannot be non-zero, and "the flee never recognised a shooter" would have been read
+        # straight out of an instrument that was switched off. That is the checklist entry about
+        # dmgTaken=0.0 on a course where the bot died five times, and rule 4u's cousin: zero by
+        # construction, chain-gated rather than flag-gated. Caught within minutes of adding it, by
+        # asking the discriminating question the checklist names -- what does mdCalls read.
+        #
+        # flee= is tungsten-side and DOES tick here, so it is the half worth printing. mdCalls is
+        # printed beside it so the zero can never be misread as a finding again.
         yield Criterion("did the flee even run (recorded, not gated)", True,
-                        f"flee={_stat(ctx, 'flee')} fleeStuck={_stat(ctx, 'mdFleeStuck')}"
-                        f" fleeShooter={_stat(ctx, 'mdFleeShooter')} mdFar={_stat(ctx, 'mdFar')}"
-                        f" mdFlee={_stat(ctx, 'mdFlee')} mdBow={_stat(ctx, 'mdBow')}",
+                        f"flee={_stat(ctx, 'flee')} mdCalls={_stat(ctx, 'mdCalls')}"
+                        f" (md* are 0 here by construction: the defence chain does not tick)",
                         gate=False)
 
 
