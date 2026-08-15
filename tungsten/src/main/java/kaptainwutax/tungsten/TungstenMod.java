@@ -63,7 +63,19 @@ public class TungstenMod implements ClientModInitializer {
 		targetIsReal = true;
 	}
 
-	/** Cleared when navigation is torn down: the next resume must not inherit the last goto. */
+	/**
+	 * A goto that has been COMPLETED is no longer a goto to resume.
+	 *
+	 * <p>stopNavigation() already clears this when a goto is STOPPED. Arriving was not covered, so
+	 * TARGET kept its destination and the flag kept saying "real" -- and the next mining segment
+	 * handed resumeGotoAfterMining a goto that had already finished. Harmless straight after arrival
+	 * (that method returns inside 2 blocks) and not harmless once the bot has walked off to mine,
+	 * when it walks BACK to a place it already reached.
+	 */
+	public static void clearGotoTarget() {
+		targetIsReal = false;
+	}
+
 	public static boolean hasRealGotoTarget() {
 		return targetIsReal;
 	}

@@ -176,6 +176,20 @@ public final class FastNavigator {
         if (arrived) {
             Debug.logMessage("FastNavigator: arrived (" + String.format("%.1f", dist) + ")");
             BlockPathWalker.stop();
+            // ⛔ A FINISHED GOTO IS NOT A GOTO TO RESUME, ANY MORE THAN A STOPPED ONE IS.
+            //
+            // stopNavigation() clears the "a real goto was requested" flag and says exactly that
+            // about STOPPING. Arriving was never covered: TungstenMod.TARGET keeps the destination
+            // and the flag keeps saying real, so the next mining segment hands
+            // resumeGotoAfterMining a goto that has already been completed.
+            //
+            // Harmless immediately after arrival -- that method returns when the goal is within 2
+            // blocks -- and NOT harmless later: once the bot has walked away to mine, the distance
+            // is large again and it walks BACK to a destination it already reached. That is the
+            // same defect as the debug constant y=10 that built cobblestone towers on mine_stone,
+            // with a stale real target instead of a stale default one, and the fix for that case
+            // did not cover this one.
+            TungstenMod.clearGotoTarget();
             stop();
             return;
         }
