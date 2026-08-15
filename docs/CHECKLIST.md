@@ -843,6 +843,32 @@ Two cheap tells, both free to check before believing anything:
   the same one. Look at the tail before reading the mean -- it is often the more interesting find.
   The 9%-of-runs stall on mob_skeleton was found exactly this way, while diagnosing a broken gate.
 
+## 4v. ⛔ TWO WORKERS, ONE WORKING TREE: `git add -A` SWEEPS UP THE OTHER ONE (2026-08-15)
+
+Parallel work on this repo is expected -- AGENTS.md says so, and tells you to pull often. What it
+does not say is that the two workers share a WORKING TREE, not just a branch.
+
+Measured today: a change to `BotBehaviour` was written, built, and then found already committed --
+inside `f4971a89 bench: md* counters are zero BY CONSTRUCTION on the bow courses`, a commit about
+something else entirely, made by the other worker's `git add -A`. Nothing was lost and the code is
+correct, but the history now attributes it to the wrong change and the message does not mention it.
+
+Two consequences, both cheap to avoid:
+
+1. **Commit narrowly when a parallel worker is live**: `git add <paths>` for the files you actually
+   touched, not `-A`. A sweep is convenient alone and lossy in company.
+2. **A clean tree is not proof your commit landed.** `git status` said clean and `main...origin/main`
+   said in sync while the commit I intended did not exist. Check `git log -- <path>`, not the tree.
+
+AND THE SHARPER ONE, because it can destroy a measurement rather than muddle a message:
+
+⛔ **THE BENCH LOCK DOES NOT PROTECT AGAINST A REDEPLOY.** `run_suite` refuses to start while
+another suite holds the lock -- good -- but `deploy/deploy_jar.sh` RECREATES the tester containers
+and asks no one. Running it while another worker's suite is mid-flight kills their run, and the
+symptom on their side is a course dying for no reason. BUILD is safe during another suite; DEPLOY is
+not. Check the lock (`%TEMP%/uctest_suite.lock`, which names its holder) before deploying, exactly
+as you would before starting a suite.
+
 ## 5. VIDEO
 
 `--record` on the run, then:
