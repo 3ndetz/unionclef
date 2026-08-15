@@ -133,6 +133,21 @@ public class BotBehaviour {
      * run -- so walking a stack trace here costs nothing, unlike the predicate TEST, which runs a
      * million times a run and must stay arithmetic.
      */
+    /**
+     * ⛔ THIS STAMP CANNOT NAME AN INHERITED BAN, AND THAT IS WORTH KNOWING BEFORE WAITING FOR ONE.
+     *
+     * <p>It is cleared by {@code resetRunCounters} at the start of every course, so it can only ever
+     * name a caller that registered DURING the run being measured. A predicate carried over from an
+     * earlier job was registered before the reset, so this reads "-" for it, permanently.
+     *
+     * <p>Measured on four mine_coal runs: three read {@code avoidSrc=0/0/0/0@-} (clean), and one
+     * read {@code avoidSrc=0/0/1/0@-} -- a predicate PRESENT, zero registered this run, and no
+     * caller. The "-" there is not a missing stamp, it IS the finding: nothing registered it here.
+     *
+     * <p>So the two cases are told apart by the COUNTERS, not by this string: predCount>0 with
+     * registered=0 is inherited; registered>0 names its caller here. Anyone chasing the separate
+     * 818-refusal case wants the second, and will wait for ever if they expect the first to speak.
+     */
     public static volatile String lastBreakAvoiderBy = "-";
     public static volatile int breakAvoidersRegistered;
 
