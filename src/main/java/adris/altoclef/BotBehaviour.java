@@ -151,6 +151,29 @@ public class BotBehaviour {
     public static volatile String lastBreakAvoiderBy = "-";
     public static volatile int breakAvoidersRegistered;
 
+    /**
+     * The same stamp, but NEVER cleared by {@code resetRunCounters} -- so an INHERITED ban can be
+     * named at last.
+     *
+     * <p>{@link #lastBreakAvoiderBy} answers "who registered during THIS run", which is the right
+     * question for a ban installed here and the wrong one for a ban carried over: that predicate was
+     * registered before the reset, so the per-run stamp reads "-" for it permanently, however many
+     * runs are spent waiting. Measured: {@code avoidSrc=0/0/1/0@-}, a predicate present with zero
+     * registrations and no caller.
+     *
+     * <p>This one persists for the life of the client, so the pair reads:
+     * <ul>
+     *   <li>{@code registered>0} -- installed this run, and lastBreakAvoiderBy names it;</li>
+     *   <li>{@code predCount>0, registered=0} -- INHERITED, and THIS field names the caller and run
+     *       that installed it.</li>
+     * </ul>
+     *
+     * <p>An instrument that cannot answer the question being asked of it is the defect this repo has
+     * paid for most often. This is the one line that lets the separate 818-refusal case be traced
+     * rather than guessed at.
+     */
+    public static volatile String breakAvoiderInstalledBy = "-";
+
     /** First frame outside this class, so the tag names the CALLER rather than this method. */
     private static String callerTag() {
         try {
@@ -169,6 +192,7 @@ public class BotBehaviour {
 
     public void avoidBlockBreaking(BlockPos pos) {
         lastBreakAvoiderBy = "pos@" + callerTag();
+        breakAvoiderInstalledBy = lastBreakAvoiderBy;  // survives resetRunCounters
         breakAvoidersRegistered++;
         current().blocksToAvoidBreaking.add(pos);
         current().applyState();
@@ -176,6 +200,7 @@ public class BotBehaviour {
 
     public void avoidBlockBreaking(Predicate<BlockPos> pred) {
         lastBreakAvoiderBy = "pred@" + callerTag();
+        breakAvoiderInstalledBy = lastBreakAvoiderBy;  // survives resetRunCounters
         breakAvoidersRegistered++;
         current().toAvoidBreaking.add(pred);
         current().applyState();
@@ -198,6 +223,7 @@ public class BotBehaviour {
 
     public void avoidBlockBreakingExtra(Predicate<BlockPos> pred) {
         lastBreakAvoiderBy = "extra@" + callerTag();
+        breakAvoiderInstalledBy = lastBreakAvoiderBy;  // survives resetRunCounters
         breakAvoidersRegistered++;
         _extraAvoidBlockBreaking = pred;
         current().applyState();
@@ -468,8 +494,31 @@ public class BotBehaviour {
             synchronized (settings.getBreakMutex()) {
                 synchronized (settings.getPlaceMutex()) {
                     blocksToAvoidBreaking = new HashSet<>(settings.getBlocksToAvoidBreaking());
+                    // ⛔ DO NOT COPY THE PERSISTENT EXTRA INTO THE STACK IT LIVES OUTSIDE OF.
+                    //
+                    // applyState() appends _extraAvoidBlockBreaking to the live list every time,
+                    // and this reads that live list back when a state is pushed. So a push taken
+                    // while a ban is active BAKES the ban into that state's own toAvoidBreaking --
+                    // and from there resetAvoidBlockBreakingExtra() can never remove it, because
+                    // that method nulls the extra slot and rebuilds from the state list which now
+                    // contains a copy.
+                    //
+                    // MineAndCollectTask.onResourceStart pushes on every resource task, so this is
+                    // the ordinary path, not a corner. It is also why clearing the extra at task
+                    // end -- the fix committed an hour ago -- is necessary but NOT sufficient on
+                    // its own: the copy survives the clear.
+                    //
+                    // The extra is documented as living "outside push/pop stack". Excluding it here
+                    // is what makes that comment true.
                     toAvoidBreaking = new ArrayList<>(settings.getBreakAvoiders());
+                    if (_extraAvoidBlockBreaking != null) {
+                        toAvoidBreaking.remove(_extraAvoidBlockBreaking);
+                    }
+                    // Same for the placing twin, for the same reason.
                     toAvoidPlacing = new ArrayList<>(settings.getPlaceAvoiders());
+                    if (_extraAvoidBlockPlacing != null) {
+                        toAvoidPlacing.remove(_extraAvoidBlockPlacing);
+                    }
                     protectedItems = new HashSet<>(settings.getProtectedItems());
                     synchronized (settings.getPropertiesMutex()) {
                         allowWalking = new ArrayList<>(settings.getForceWalkOnPredicates());
