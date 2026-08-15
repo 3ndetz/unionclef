@@ -184,6 +184,26 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ## Course status
 
+### CURRENT TALLY — 2026-08-14/15, on the shipped defaults
+
+```
+nav    12 courses   12 PASS   0 gate failures   0 INVALID
+craft  12 courses   12 PASS   0 gate failures   0 INVALID   (+ mine_coal added, 13th)
+mob     4 courses    2 PASS   mob_skeleton (parked by the user), mob_trio (pre-existing)
+pvp    12 courses    7 PASS / 4 FAIL of 11 measured; all four already on the register
+end     3 courses    NOT RE-RUN against these changes — the one gap in the sweep
+```
+
+Run with `gotoResumeNeedsRealTarget`, `breakBanEscalates` and `barrenLockCountsAsFailure` on.
+`mine_diamond` measures 5 passes in 6, so craft will still drop a sweep roughly one time in six —
+that is the course's rate, not a regression. `nav_slime`, `nav_water` and `nav_ladder` are 3/3 each.
+
+⛔ **THE 2026-08-08 BLOCK BELOW IS SUPERSEDED IN FOUR OF ITS FIVE LINES.** It is kept because this
+file keeps superseded reasoning rather than deleting it — but it was the FIRST thing a reader met
+under "Course status", and it said craft was 10 PASS / 2 INVALID and mob_trio INVALID long after
+both had moved. That is precisely the rot this file already documents against its own "nav 11/11"
+line, and it caught me twice today on comments that were true when written.
+
 ### FULL AUDIT — 2026-08-08, all five suites
 
 ```
