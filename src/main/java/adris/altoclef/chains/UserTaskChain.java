@@ -155,6 +155,28 @@ public class UserTaskChain extends SingleTaskChain {
             // spent all eight building a tower out of its own pit and stood on it for the rest of
             // the run. See Nav.cancelAll for the trace and for why this is not cancel().
             adris.altoclef.control.Nav.cancelAll();
+            // AND LET GO OF THE TEMPORARY BANS, which outlive the run that created them.
+            //
+            // The break/place avoidance installed on a suspected land claim is TEMPORARY by design:
+            // WorldSurvivalChain clears it when a 60-second timer elapses. But that timer is only
+            // consulted inside getPriority(), and chains do not tick while the task runner is off
+            // (checklist RULE TWO). So a ban installed near the end of a job is never cleared, and
+            // the NEXT job inherits it -- BotBehaviour keeps it explicitly "outside push/pop stack"
+            // and applyState() re-adds it every time, so nothing else drops it either.
+            //
+            // Measured on mine_coal, on a run that PASSED: avoidSrc=0/0/1/0, i.e. one break-avoider
+            // predicate present with ZERO registrations this run. It refused nothing that time
+            // because the leaked ban was centred elsewhere; when it lands near the arena the same
+            // course reads cb=0/818/0/0 with breakFail=0/0/0/0/0 -- 818 blocks refused as
+            // unbreakable with no break having failed at all. That combination is unexplainable
+            // until you know the ban is inherited.
+            //
+            // Same shape as RULE SEVEN's spectator leak, which survived a rebuild and two later
+            // runs and looked exactly like a broken bot. A temporary ban must not outlive the job
+            // that learnt it: re-learning costs one failed break, which is what it cost the first
+            // time.
+            mod.getBehaviour().resetAvoidBlockBreakingExtra();
+            mod.getBehaviour().resetAvoidBlockPlacingExtra();
             // Extra reset. Sometimes baritone is laggy and doesn't properly reset our press
             if (mod.getClientBaritone() != null)
                 mod.getInputControls().releaseAll();
