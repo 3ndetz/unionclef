@@ -756,7 +756,26 @@ public class TungstenConfig {
      * 1.75 changed nothing, and that note concluded "a bigger radius only makes the bot stop FURTHER
      * OUT and never touch the drop". Vanilla collects on box overlap, roughly a third of a block.
      *
-     * <p>Off by default -- it changes every pickup approach in the mod. Gates: mine_coal, red 1 run
+     * <h2>⛔ REFUTED ON ITS FIRST A/B, AND THE HARM HAS A MECHANISM (2026-08-15)</h2>
+     *
+     * <pre>
+     *   control (1.0)   coal 3, 3, 3, 3    4/4 pass
+     *   fix     (0.1)   coal 1, 2, 3, 3    2/4 pass
+     * </pre>
+     *
+     * Interleaved, same invocation. Tighter is WORSE, and the reason is in the same method the
+     * diagnosis came from: that distance is not only a stop condition, it is what triggers
+     * {@code TungstenHelper.stop()}. At 0.1 the bot essentially never reaches it, so it keeps
+     * re-pathing at a target it is already standing on instead of holding still long enough for the
+     * collision to happen. The stop was doing work I had read as pure obstruction.
+     *
+     * <p>So the 1.17-block park is NOT this. The bot was outside 1.0 and the walk branch should have
+     * been firing; why it was not is still open, and the next pass starts there rather than here.
+     *
+     * <p>NOTE ON THE BASELINE: the control arm was 4/4 in this series and the course read 2/3 an
+     * hour earlier. Its own rate is not established, so "red 1 in 3" was itself thin evidence.
+     *
+     * <p>Stays off. Gates were: mine_coal, red 1 run
      * in 3 today, and mine_diamond, whose recorded failure is the same shape ("closest approach
      * 1.35, 2.45 and 3.57 blocks, never collected, three ores of three").
      */
