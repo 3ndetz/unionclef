@@ -87,9 +87,39 @@ public class MineAndCollectTask extends ResourceTask {
         return true;
     }
 
+    /** Times the tool gate was skipped because the target was already lying on the floor. */
+    public static volatile int toolGateSkipped;
+
     @Override
     protected Task onResourceTick(AltoClef mod) {
+        // ⛔ A DROP ON THE FLOOR NEEDS NO PICKAXE, AND THIS GATE MADE THE BOT BLIND TO ONE.
+        //
+        // Two lines in this class disagree, and between them they hide a drop completely:
+        //
+        //   shouldAvoidPickingUp() returns TRUE, on the grounds that "picking up is controlled by
+        //   a separate task here" -- which switches OFF ResourceTask's own pickup block; and
+        //   this gate returns SatisfyMiningRequirementTask BEFORE that separate task (_subtask,
+        //   the MineOrCollectTask that actually considers drops) ever gets to run.
+        //
+        // So while the requirement is unmet the bot has no pickup path at all. Measured on
+        // pickup_pit, a course built for exactly this: RTGATE targets=[[diamond]] avoid=true
+        // dropped=true -- the tracker HAD the diamond and the pickup block was skipped anyway --
+        // with idrop=0/0/0/0 and scan=0 confirming the separate task never ran. The bot spent the
+        // whole run trying to craft an iron pickaxe, hunting wood on a stone arena, while the
+        // diamond it had been sent for lay eight blocks away (et=1247/1247, seen every tick).
+        //
+        // On the playthrough this is worse than a lost course: every ore the bot mines drops an
+        // item, and any interruption that leaves the requirement unmet makes those drops invisible.
+        //
+        // The rule is simply that a tool is needed to BREAK a block, not to walk over a drop. If
+        // the thing we were sent for is already on the ground, collect it and let the tool wait.
         if (!StorageHelper.miningRequirementMet(_requirement)) {
+            if (kaptainwutax.tungsten.TungstenConfig.get().collectDropsBeforeTools
+                    && mod.getEntityTracker().itemDropped(itemTargets)) {
+                toolGateSkipped++;
+                setDebugState("Collecting a drop instead of crafting a tool for it");
+                return _subtask;
+            }
             return new SatisfyMiningRequirementTask(_requirement);
         }
 

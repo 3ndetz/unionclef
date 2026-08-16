@@ -1357,7 +1357,7 @@ class PickupDrop(CraftTable):
         ok, stats = ctx.bot.py.try_call("placeStats")
         parts = [t for t in str(stats or "").split()
                  if t.startswith(("entityReleased=", "drop=", "scan=", "lock=", "navStop=",
-                                  "et=", "idrop="))]
+                                  "et=", "idrop=", "rt="))]
         yield Criterion("approach counters (recorded, not gated)", True,
                         (" ".join(parts) if parts else "unread"), gate=False)
 

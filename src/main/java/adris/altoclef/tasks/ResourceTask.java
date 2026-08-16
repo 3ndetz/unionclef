@@ -1,6 +1,7 @@
 package adris.altoclef.tasks;
 
 import adris.altoclef.AltoClef;
+import adris.altoclef.Debug;
 import net.minecraft.item.ItemStack;
 import adris.altoclef.BotBehaviour;
 import adris.altoclef.multiversion.blockpos.BlockPosVer;
@@ -41,6 +42,10 @@ import java.util.Optional;
  * If the target item is on the ground or in a chest, will grab from those sources first.
  */
 public abstract class ResourceTask extends Task implements ITaskCanForce {
+
+    /** Pickup-gate accounting; read as rt=reached/avoided/dropped in placeStats. */
+    public static volatile int rtReached, rtAvoided, rtDropped;
+
 
     protected final ItemTarget[] itemTargets;
 
@@ -137,9 +142,28 @@ public abstract class ResourceTask extends Task implements ITaskCanForce {
             return null;
         }
 
+        // WHY THE PICKUP GATE COUNTS ITSELF.
+        // pickup_pit: the main task is <Mine And Collect: [[diamond]]>, a ResourceTask, so THIS
+        // block should run and see the diamond lying eight blocks away. It never pursues it --
+        // idrop=0/0/0/0 says getClosestItemDrop is not called even once -- while the tracker holds
+        // that drop on every tick of the run (et=1246/1246). Four readings of this file failed to
+        // say which of the three gates below closes, so each one answers for itself now.
+        // Read as rt=reached/avoided/dropped.
+        rtReached++;
+        if (shouldAvoidPickingUp(mod)) rtAvoided++;
+        // WHICH task is asking, and what the tracker tells IT. rt=.../0 says no ResourceTask ever
+        // saw a drop, while the tracker held a diamond every tick and never blacklisted it. Those
+        // cannot both be true, so print the targets alongside the answer. Rate-limited hard: this
+        // runs ~13 times per game tick across the whole nest of resource tasks.
+        if (rtReached % 400 == 0) {
+            Debug.logMessage("RTGATE targets=" + java.util.Arrays.toString(itemTargets)
+                    + " avoid=" + shouldAvoidPickingUp(mod)
+                    + " dropped=" + mod.getEntityTracker().itemDropped(itemTargets));
+        }
         if (!shouldAvoidPickingUp(mod)) {
             // Check if items are on the floor. If so, pick em up.
             if (mod.getEntityTracker().itemDropped(itemTargets)) {
+                rtDropped++;
 
                 // If we're picking up a pickaxe (we can't go far underground or mine much)
                 if (PickupDroppedItemTask.isIsGettingPickaxeFirst(mod)) {

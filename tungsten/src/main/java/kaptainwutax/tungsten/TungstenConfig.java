@@ -700,6 +700,24 @@ public class TungstenConfig {
     public boolean barrenStreakPerEntity = false;
 
     /**
+     * Collect a target that is already lying on the floor instead of first crafting the tool that
+     * would be needed to MINE it.
+     *
+     * <p>MineAndCollectTask turns ResourceTask's pickup block off ("picking up is controlled by a
+     * separate task here") and then returns SatisfyMiningRequirementTask before that separate task
+     * can run. While the requirement is unmet the bot therefore has NO pickup path at all.
+     *
+     * <p>Measured on pickup_pit: RTGATE targets=[[diamond]] avoid=true dropped=true -- the tracker
+     * held the diamond and the pickup block was skipped anyway -- with idrop=0/0/0/0 and scan=0
+     * proving the separate task never ran, while the bot hunted wood on a stone arena for a whole
+     * run to craft an iron pickaxe it did not need.
+     *
+     * <p>GATE: pickup_flat, pickup_side and pickup_pit, which fail today for this reason; the three
+     * green nav baselines must not move. Proof it ran: MineAndCollectTask.toolGateSkipped.
+     */
+    public boolean collectDropsBeforeTools = false;
+
+    /**
      * A flee destination must be somewhere the bot can STAND, not a projected coordinate.
      *
      * <p>Upstream's GoalRunAway is a heuristic over the whole search space -- any cell far enough

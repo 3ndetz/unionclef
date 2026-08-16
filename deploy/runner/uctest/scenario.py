@@ -119,7 +119,12 @@ class Ctx:
         if bp and prev and sum((a - b) ** 2 for a, b in zip(bp, prev)) < 0.01:
             ok, chain = self.bot.py.try_call("getTaskChainString")
             if ok and chain:
-                rec["task"] = " | ".join(str(chain).splitlines())[-500:]
+                # KEEP BOTH ENDS. The HEAD names the main task -- which is the question when a
+                # bot is off doing something unrelated -- and the tail names the active leaf. The
+                # first capture kept only the tail, so a run that had gone hunting wood instead of
+                # the diamond it was sent for showed its leaf and hid its reason.
+                _c = " | ".join(str(chain).splitlines())
+                rec["task"] = _c if len(_c) <= 700 else (_c[:350] + " ... " + _c[-350:])
             ok, runner = self.bot.py.try_call("getRunnerStatus")
             if ok and runner:
                 rec["runner"] = str(runner)[:200]
