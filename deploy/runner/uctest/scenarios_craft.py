@@ -1299,6 +1299,26 @@ class PickupDrop(CraftTable):
     govern is not even engaged in the pure reproduction. Those were built against mine_diamond,
     where a lock IS present, and that is a different failure wearing the same clothes.
 
+    ⭐⭐⭐ ANSWERED, AND IT IS NARROWER THAN ANY OF THE FIVE GUESSES. The drop is TRACKED and never
+    SELECTED:
+
+        pit    et=1224/1224   no pickup attempt at all, no blacklist, no log line   FAIL
+        flat   et=232/232     walks straight down z=0.5 to x=8.5 and collects it     PASS
+
+    et is etItemsSeen/etItemsGrounded, so the pit drop passes the grounded check on every one of
+    1224 ticks -- the tracker holds it the whole run. "Failed to pick up drop, suggesting it is
+    unreachable" appears ZERO times in the client log, so the bot never tried and gave up either;
+    it never tried. And the flat arm is genuine pursuit rather than a lucky wander: the bot walks
+    0.5 -> 3.88 -> 7.26 straight along z=0.5 at the drop.
+
+    So the defect is between TRACKED and SELECTED. Not navigation, not the tungsten lock
+    (lock=0/0/0 on every run), not the grounded filter. Look at what stands between
+    EntityTracker.getClosestItemDrop and the resource task that should have asked for it -- the
+    acceptPredicate the caller passes, and whatever makes @get choose the craft-an-iron-pickaxe
+    branch instead: with no trees on a stone arena that branch wanders for ever, which is the
+    "Wander for Infinity blocks" the timeline ends on.
+
+    OLD NEXT QUESTION, kept because it is how the above was reached:
     NEXT QUESTION, and it is now cheap to ask: WHY is the drop rejected as a target? The bot sees
     it 1262 times over the run (against ~255 on flat, where it simply walks over and collects) and
     never selects it. Look at what filters an ItemEntity out of the pursuit -- reachability marking
@@ -1354,7 +1374,8 @@ class PickupDrop(CraftTable):
                         f"diamond={got} pit={self.pit}")
         ok, stats = ctx.bot.py.try_call("placeStats")
         parts = [t for t in str(stats or "").split()
-                 if t.startswith(("entityReleased=", "drop=", "scan=", "lock=", "navStop="))]
+                 if t.startswith(("entityReleased=", "drop=", "scan=", "lock=", "navStop=",
+                                  "et="))]
         yield Criterion("approach counters (recorded, not gated)", True,
                         (" ".join(parts) if parts else "unread"), gate=False)
 
