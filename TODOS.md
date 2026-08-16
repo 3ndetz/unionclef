@@ -90,7 +90,27 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
   • Утечка временного бана между задачами — правка `clearBansOnTaskEnd` + `readExtraState`
     (полуустановленную половину нашёл чтением). Детерминированная проверка: `diag_banleak.py`.
   • Класс «протухшая цель после добычи» — правка на ПРИБЫТИИ гото + новый курс `goto_then_mine`.
-  • Парковка в 1.17 блока от дропа — ОТКРЫТО, механизм неизвестен, две гипотезы опровергнуты.
+  • Parking 1.17 blocks from a drop — **MECHANISM FOUND 2026-08-16, fix under measurement.**
+
+    `GetToEntityTask.onTick`, on the `TungstenHelper.isActive()` branch, does two things and both
+    are wrong when no route is being followed: it resets the progress checker every tick (so the
+    stall can never be noticed) and it returns early (so the recovery below it is unreachable).
+    `isActive()` is `PATHFINDER.active` OR `isExecutorRunning()`, i.e. TRUE while the pathfinder
+    is merely LOOKING.
+
+    That is also why both radius attempts measured nothing. The radius decides when to STOP
+    driving, and the bot here is not driving at all; with the recovery switched off there is
+    nothing for any radius to act on. 1.75 gave "stops further out and never touches", and 0.1
+    (`pickupClosesToContact`) was refuted on its own A/B.
+
+    Measured: three stalls on the playthrough, all in the same place — "Approach entity ->
+    Tungsten pathfinding..." — 70-90 s motionless, once for a whole run that reached no rung.
+
+    Fix: flag `entitySearchMustMove` (its OWN switch, deliberately not `progressCheckIgnoresSearch`
+    — that one governs MineAndCollectTask, and turning it on for this would change two behaviours
+    in one measurement). A search that has not moved the body for 6 s — MovementProgressChecker's
+    own default — is released via `TungstenHelper.stop()` so the approach can be planned afresh.
+    Proof it ran: `entityReleased` in placeStats.
 
 **Свободно / не трогаю:** лук (`bow_flee`, `bow_flee_hard`), `mob_trio`, сюита `end`, всё боевое —
 по коммитам видно, что этим занят второй воркер.
