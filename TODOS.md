@@ -112,6 +112,38 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
     own default — is released via `TungstenHelper.stop()` so the approach can be planned afresh.
     Proof it ran: `entityReleased` in placeStats.
 
+    ⭐⭐ **2026-08-16, FOURTH PASS — THE BRANCH IS NOW SEEN, NOT INFERRED, AND THE GUARD IS**
+    **DEFEATED BY AN ALTERNATING TARGET.**
+
+    The craft suite now records the task chain whenever the body is stationary, and the first
+    captured mine_diamond failure names the stall outright:
+
+        Mine And Collect: [[diamond] x 2]
+         -> Pickup Dropped Items: [[diamond] x 2]
+            -> Approach entity entity.minecraft.item   "Tungsten pathfinding (21s left)" 16s 10s 2s
+
+    So it is GetToEntityTask in the LOCK branch, counting a 30 s window down with the bot parked
+    at (4.7,-61.0,0.5). `entitySearchMustMove` releases that lock after 6 s and MEASURABLY fires
+    (entityReleased=49), and the course does not move -- because the same lock is simply retaken.
+
+    ⛔ WHY THE EXISTING ESCALATION NEVER STOPS IT. `barrenLockCountsAsFailure` is ON by default and
+    MAX_BARREN_LOCKS is 2, so two barren locks should make tryPathTo refuse. The run read
+    lock=49/0/50 -- FORTY-NINE barren locks and no refusal. The cause is in tryPathToEntity:
+
+        if (!entity.equals(lockedEntity)) barrenStreak = 0;   // "a new target is a new problem"
+
+    This course wants TWO diamonds. Alternating between two drops it cannot reach resets the streak
+    on every switch, so the escalation can never reach 2. The comment is right that a NEW target is
+    a new problem; a RETURNING target is not, and that is the hole.
+
+    NEXT PASS (do not re-derive the above): make the barren count per-ENTITY rather than a single
+    streak on the last target, so alternating cannot wipe it. Then release + refuse + wander form a
+    closed loop instead of three switches that each cancel the next.
+
+    ⚠ MEASURE IT SOMEWHERE ELSE, OR WITH FAR MORE RUNS. mine_diamond fails ~25-30% and its noise
+    floor is a full run in eight: a flag that provably did nothing (entityReleased=0/0 on every
+    run) moved it 6/8 -> 5/8. Nothing smaller than that is readable at n=8.
+
 **Свободно / не трогаю:** лук (`bow_flee`, `bow_flee_hard`), `mob_trio`, сюита `end`, всё боевое —
 по коммитам видно, что этим занят второй воркер.
 
