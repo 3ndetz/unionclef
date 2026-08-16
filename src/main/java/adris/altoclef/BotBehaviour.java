@@ -190,11 +190,45 @@ public class BotBehaviour {
         return "?";
     }
 
+    /**
+     * ⛔ RE-BANNING AN ALREADY-BANNED POSITION IS NOT FREE, AND IT WAS BEING DONE THOUSANDS OF
+     * TIMES A RUN -- ON THE LOCK THE PATHFINDER NEEDS.
+     *
+     * <p>Measured on a playthrough run: {@code avoidSrc=57/0/2/5212}, i.e. 5212 registrations
+     * against 2 predicates actually present. The caller is not doing anything unreasonable --
+     * {@code DoCraftInTableTask.onTick} re-asserts "do not break my crafting tables" every tick
+     * over every table the scanner knows, which is the correct intent. What made it expensive is
+     * that every one of those calls, for a position already in the set, paid:
+     *
+     * <ul>
+     *   <li>{@code new Throwable().getStackTrace()} in {@link #callerTag()} -- a FULL stack
+     *       capture, per call, purely to stamp an instrument;</li>
+     *   <li>{@link State#applyState} -- three nested mutexes, eight collections cleared and
+     *       refilled wholesale, to reproduce a state that was already correct.</li>
+     * </ul>
+     *
+     * <p>The third item is the one that hurts: {@code applyState} takes {@code breakMutex}, and
+     * {@code AltoClefSettings.shouldAvoidBreaking} takes the SAME mutex on the pathfinder's
+     * hottest path -- roughly a million calls a run. So this was not merely wasted work, it was
+     * thousands of lock acquisitions a run contending directly with pathfinding, on a client that
+     * this bench has just established is fps-bound.
+     *
+     * <p>{@code HashSet.add} already answers "did anything change": it returns false when the
+     * position was present. If nothing changed there is nothing to apply, so return before doing
+     * any of the above. The set ends up identical either way, and the invariant that makes this
+     * safe is that the live settings always reflect {@code current()} -- {@code push()} copies the
+     * state it inherits and {@code pop()} re-applies, so a no-op add cannot leave settings stale.
+     *
+     * <p>NOTE, because it changes what an instrument MEANS: the counters below now count DISTINCT
+     * bans rather than calls, and {@code lastBreakAvoiderBy} names whoever first installed a
+     * position rather than whoever last re-asserted it. That is the more useful reading of both --
+     * 5212 was never "how many bans exist", it was "how many times we asked".
+     */
     public void avoidBlockBreaking(BlockPos pos) {
+        if (!current().blocksToAvoidBreaking.add(pos)) return;   // already banned: nothing changed
         lastBreakAvoiderBy = "pos@" + callerTag();
         breakAvoiderInstalledBy = lastBreakAvoiderBy;  // survives resetRunCounters
         breakAvoidersRegistered++;
-        current().blocksToAvoidBreaking.add(pos);
         current().applyState();
     }
 
