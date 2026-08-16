@@ -28,7 +28,67 @@ cp "$JAR" deploy/run/mods/
 echo "deployed: $(basename "$JAR")"
 
 CONTAINERS="${*:-uctest-mc-tester1 uctest-mc-tester2}"
-for c in $CONTAINERS; do
+# ---------------------------------------------------------------------------------------
+# GPU, IF THERE IS ONE. The image pins LIBGL_ALWAYS_SOFTWARE=1 and GALLIUM_DRIVER=llvmpipe,
+# so the clients rasterise on the CPU. That is the bench's ceiling: the flat arena holds
+# 28-30 fps because there is nothing to draw, while the survival world falls to 7-8 against a
+# validity floor of 12 -- which is why the playthrough has been unmeasurable all week.
+#
+# deploy/compose.gpu.yml flips those two variables and asks for the device. It is a SEPARATE
+# file on purpose: `deploy.resources.reservations.devices` makes compose FAIL on a host with
+# no GPU rather than degrade, so it must never be in the always-loaded file.
+#
+# The probe is the honest one -- actually run nvidia-smi inside a throwaway container. Asking
+# `docker info` for the runtime only proves the runtime is INSTALLED, which on a laptop with
+# no card is exactly the false yes that would break every CPU-only run.
+#
+# AND IT PROBES THE RUNTIME, NOT ONLY THE CARD. A present GPU is not a working renderer:
+# Mesa's d3d12 driver needs libd3d12core.so, the image ships only libdxcore.so, and with the
+# card visible but the runtime missing the client dies at GL context creation with no error
+# at all -- the log simply stops at `Backend library: LWJGL version 3.3.3-snapshot` and the
+# JVM is gone. That is precisely the false yes this second check exists to catch, and it cost
+# a broken bench to learn. The runtime is mounted from the Docker Desktop VM (compose.gpu.yml).
+#
+#   UCTEST_GPU=0  never use it.   UCTEST_GPU=1  insist (and fail loudly if it is not there).
+#
+# AND IT REMEMBERS A NO. The probe cannot answer the question that actually matters -- "can this
+# client create a GL context on it" -- without starting a client, which takes minutes. So the
+# deploy answers it the only honest way, by trying, and then WRITES DOWN the answer: if the
+# clients fail to come up on the GPU, deploy/.gpu_unusable is created and later deploys skip
+# straight to the CPU. Without that marker every single deploy pays the same failed attempt
+# (300 s and a double recreate) to relearn a fact about the machine that has not changed.
+# Delete the marker to try again (after a driver update, or another rendering path):
+#     rm deploy/.gpu_unusable
+# UCTEST_GPU=1 ignores the marker.
+GPU_MARK="deploy/.gpu_unusable"
+GPU_ARGS=""
+if [ -f "$GPU_MARK" ] && [ "${UCTEST_GPU:-auto}" != "1" ]; then
+    echo "GPU: skipped -- $GPU_MARK says a client could not render on it here"
+    echo "GPU:   ($(cat "$GPU_MARK" 2>/dev/null | head -1))"
+elif [ "${UCTEST_GPU:-auto}" != "0" ]; then
+    # MSYS_NO_PATHCONV: under Git Bash on Windows, /usr/lib/... in an ARGUMENT is rewritten to a
+    # Windows path before docker ever sees it, and the probe fails with a baffling
+    # "mkdir C:\Program Files\Git\usr\lib\wsl: Access is denied". It is a no-op elsewhere, and
+    # compose is unaffected because it parses the volume out of the YAML rather than the shell.
+    if MSYS_NO_PATHCONV=1 timeout 90 docker run --rm --gpus all -v /usr/lib/wsl/lib:/wsl:ro mineswarm-mc:amd64 \
+           sh -c 'nvidia-smi -L >/dev/null 2>&1 && [ -f /wsl/libd3d12core.so ]' >/dev/null 2>&1; then
+        GPU_ARGS="-f deploy/compose.gpu.yml"
+        echo "GPU: detected with a usable D3D12 runtime, clients will render on it"
+    elif [ "${UCTEST_GPU:-auto}" = "1" ]; then
+        echo "ERROR: UCTEST_GPU=1 but no GPU + D3D12 runtime answered from a container" >&2; exit 1
+    else
+        echo "GPU: none usable, clients stay on llvmpipe (CPU) -- this is fine, just slower"
+    fi
+fi
+# RECREATING AND WAITING ARE FUNCTIONS BECAUSE THE GPU PATH HAS TO BE RETRACTABLE.
+# Rendering on the GPU is an optimisation, and an optimisation must never be able to leave the
+# bench without clients. So the deploy TRIES the GPU, checks whether py4j actually answered,
+# and if it did not, puts the clients back on the CPU by itself. The requirement is that a
+# machine with only a CPU works -- and the same code path covers a machine whose GPU is
+# present but unusable, which is the harder case and the one that actually bit.
+recreate_clients() {
+  _gpu="$1"
+  for c in $CONTAINERS; do
     # A STOPPED CLIENT IS NOT A CLIENT TO SKIP -- IT IS ONE TO BRING BACK.
     # This loop only acted on RUNNING containers, so once the clients were stopped (which is the
     # right thing to do between runs: they burn ~390% CPU each even idle) deploy became a no-op for
@@ -65,26 +125,67 @@ for c in $CONTAINERS; do
         # course sets itself.
         docker exec "$c" sh -c 'rm -f /mc-data/altoclef/altoclef_settings.json' 2>/dev/null || true
         svc=$(echo "$c" | sed 's/^uctest-//')
-        if ! UCTEST_MCP_PORT="${UCTEST_MCP_PORT:-25350}" docker compose -f deploy/compose.test.yml                 up -d --force-recreate "$svc" >/dev/null 2>&1; then
+        if ! UCTEST_MCP_PORT="${UCTEST_MCP_PORT:-25350}" docker compose -f deploy/compose.test.yml $_gpu up -d --force-recreate "$svc" >/dev/null 2>&1; then
             # The in-mod MCP port is often taken on a dev box (a local Minecraft client binds
             # the same one). Fall back to a free host port — the harness talks py4j through
             # `docker exec`, so nothing in the tests depends on that mapping.
             alt=$((25350 + $$ % 100 + 1))
             echo "  MCP port busy — recreating $svc with UCTEST_MCP_PORT=$alt"
-            UCTEST_MCP_PORT="$alt" docker compose -f deploy/compose.test.yml                 up -d --force-recreate "$svc" >/dev/null
+            UCTEST_MCP_PORT="$alt" docker compose -f deploy/compose.test.yml $_gpu up -d --force-recreate "$svc" >/dev/null
         fi
         echo "recreated: $c"
     fi
-done
+  done
+}
 
-# wait for the py4j bridge so callers can run a suite straight after
-for c in $CONTAINERS; do
+# Wait for the py4j bridge so callers can run a suite straight after.
+#
+# ⛔ BOUNDED, because the loop used to be `until ...; do sleep 10; done` with no way out. A
+# client that never comes up is not a slow client, and waiting for it for ever turns a broken
+# deploy into a hung terminal with no diagnosis -- which is exactly what the first GPU attempt
+# did. Returning non-zero is what makes the fallback below possible at all.
+#   $1 = seconds to allow. Startup is ~90 s on an idle box, and this machine is often not idle.
+wait_py4j() {
+  _budget="$1"
+  for c in $CONTAINERS; do
     docker ps --format '{{.Names}}' | grep -qx "$c" || continue
     printf "waiting for %s py4j" "$c"
+    _waited=0
     until docker exec "$c" python3 -c "
 from py4j.java_gateway import JavaGateway, GatewayParameters
 gw=JavaGateway(gateway_parameters=GatewayParameters(address='127.0.0.1',port=25333,auto_convert=True))
 gw.entry_point.getGameState(); gw.close()
-" >/dev/null 2>&1; do printf "."; sleep 10; done
+" >/dev/null 2>&1; do
+        if [ "$_waited" -ge "$_budget" ]; then
+            echo " NO ANSWER after ${_budget}s"
+            return 1
+        fi
+        printf "."; sleep 10; _waited=$((_waited + 10))
+    done
     echo " up"
-done
+  done
+  return 0
+}
+
+# GPU gets a shorter leash than CPU: if it is going to fail it fails at GL context creation,
+# seconds in, so a long budget only delays the fallback. The CPU attempt gets the generous one
+# because a loaded box genuinely is slow to start a client, and there is nothing to retreat to.
+recreate_clients "$GPU_ARGS"
+if ! wait_py4j "${UCTEST_PY4J_WAIT:-$([ -n "$GPU_ARGS" ] && echo 300 || echo 600)}"; then
+    if [ -n "$GPU_ARGS" ]; then
+        echo "GPU: clients did not come up on it -- retreating to CPU and recreating."
+        echo "GPU:   (rendering is an optimisation; it does not get to break the bench)"
+        printf 'no client came up on the GPU here; see docs/AUTOTESTING.md (GLX/Xvfb)
+' > "$GPU_MARK"
+        GPU_ARGS=""
+        recreate_clients ""
+        if ! wait_py4j "${UCTEST_PY4J_WAIT:-600}"; then
+            echo "ERROR: clients did not come up on the CPU either -- the stand is broken" >&2
+            exit 1
+        fi
+        echo "clients are up on llvmpipe (CPU). Bench is usable; the GPU override stayed off."
+    else
+        echo "ERROR: clients did not come up -- the stand is broken" >&2
+        exit 1
+    fi
+fi

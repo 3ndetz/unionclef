@@ -46,3 +46,6 @@ shredder/.classpath
 .claude/.autonomy_block_count
 deploy/runner/artifacts/
 *.srchash
+
+# per-machine: the GPU probe wrote down that a client cannot render here
+deploy/.gpu_unusable

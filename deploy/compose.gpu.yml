@@ -1,0 +1,92 @@
+# GPU override for the tester clients — applied ONLY when a usable GPU is detected.
+#
+# WHY THIS EXISTS. The clients render under Xvfb on llvmpipe, and the image forces that
+# explicitly:
+#
+#     LIBGL_ALWAYS_SOFTWARE=1
+#     GALLIUM_DRIVER=llvmpipe
+#
+# So the GPU was never unavailable — it was switched off. That software ceiling is what
+# caps the bench: the flat arena holds 28-30 fps because there is almost nothing to
+# rasterise, while the survival world (real terrain, real draw distance) collapses to
+# 7-8 fps against a validity floor of 12. Every attempt to measure the playthrough this
+# week has been refused by that floor, so the acceptance criterion has been unmeasurable
+# for a reason that is a settings line rather than a hardware limit.
+#
+# WHAT MAKES IT WORK HERE, all three already present, nothing to install:
+#   /dev/dxg                                    the WSL2 GPU device, appears with --gpus all
+#   .../dri/d3d12_dri.so                        Mesa's D3D12 gallium driver, already in the image
+#   /usr/lib/wsl/lib                            the D3D12 RUNTIME -- mounted, NOT in the image
+#
+# ⛔ THAT LAST ONE IS WHAT BROKE THE FIRST ATTEMPT, AND IT FAILS SILENTLY.
+# Flipping GALLIUM_DRIVER alone kills the client: the log stops dead at
+# `Backend library: LWJGL version 3.3.3-snapshot` -- the exact line where the GL context is
+# created -- and the JVM is simply gone. No stack trace, no GL error, nothing to grep for.
+# The cause is that d3d12_dri.so needs libd3d12core.so, and the image ships libdxcore.so
+# WITHOUT it, so the driver cannot initialise and takes the process with it.
+#
+# The Docker Desktop VM does carry the whole set -- libd3d12.so, libd3d12core.so, libdxcore.so,
+# libcuda.so -- at /usr/lib/wsl/lib, so it is mounted in and put on the loader path below.
+# Without both the mount AND LD_LIBRARY_PATH the client dies at startup, which is why this
+# override must be all-or-nothing rather than a couple of env vars.
+#
+# Docker Desktop's nvidia runtime passes an RTX 3090 through: `nvidia-smi` answers from
+# inside a container today. It injects COMPUTE only — no libGLX_nvidia, no Vulkan ICD —
+# which is why the graphics path is D3D12 through /dev/dxg rather than the usual NVIDIA
+# GLX one. Overriding GALLIUM_DRIVER is therefore the whole fix.
+#
+# ⛔ WHY A SEPARATE FILE RATHER THAN EDITING compose.test.yml.
+# `deploy.resources.reservations.devices` makes `docker compose up` FAIL OUTRIGHT on a
+# host with no GPU — it does not degrade, it refuses. Putting it in the main file would
+# break every CPU-only machine, which is exactly what must not happen. As an override it
+# is added only when deploy_jar.sh has confirmed a GPU answers, and a CPU-only host never
+# sees these lines at all.
+#
+# To force either mode by hand:
+#     UCTEST_GPU=0 sh deploy/deploy_jar.sh     # never use the GPU
+#     UCTEST_GPU=1 sh deploy/deploy_jar.sh     # insist on it (fails loudly if absent)
+
+services:
+  mc-tester1:
+    environment:
+      # Undo the image's software-render pins. Mesa then loads d3d12_dri.so and renders
+      # on the host GPU through /dev/dxg.
+      LIBGL_ALWAYS_SOFTWARE: "0"
+      GALLIUM_DRIVER: "d3d12"
+      # The mounted WSL runtime must be findable by the dynamic loader, or d3d12_dri.so
+      # silently fails to initialise and the client dies at GL context creation.
+      LD_LIBRARY_PATH: "/usr/lib/wsl/lib"
+      # The D3D12 driver picks an adapter by name; unset means "the default one", which is
+      # what a single-GPU host wants. Left here named rather than silent because a
+      # multi-GPU box is where this would otherwise pick the wrong one.
+      # MESA_D3D12_DEFAULT_ADAPTER_NAME: "NVIDIA"
+      NVIDIA_DRIVER_CAPABILITIES: "all"
+      NVIDIA_VISIBLE_DEVICES: "all"
+    volumes:
+      # The D3D12 runtime lives in the Docker Desktop VM, not in the image.
+      - /usr/lib/wsl/lib:/usr/lib/wsl/lib:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  mc-tester2:
+    environment:
+      LIBGL_ALWAYS_SOFTWARE: "0"
+      GALLIUM_DRIVER: "d3d12"
+      LD_LIBRARY_PATH: "/usr/lib/wsl/lib"
+      NVIDIA_DRIVER_CAPABILITIES: "all"
+      NVIDIA_VISIBLE_DEVICES: "all"
+    volumes:
+      # The D3D12 runtime lives in the Docker Desktop VM, not in the image.
+      - /usr/lib/wsl/lib:/usr/lib/wsl/lib:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

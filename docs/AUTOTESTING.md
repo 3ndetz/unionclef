@@ -128,6 +128,84 @@ mc-test-1:
 `../mineswarm/game/minecraft/mods/` (fabric-api обязателен; sodium/lithium — по вкусу,
 на софтверном рендере лучше оставить).
 
+#### Rendering: llvmpipe by default, GPU when there is a usable one
+
+The image pins `LIBGL_ALWAYS_SOFTWARE=1` and `GALLIUM_DRIVER=llvmpipe`, so by default the
+clients rasterise on the CPU. That is the bench's ceiling. The flat course arena holds 28-30
+fps because there is almost nothing to draw, but the survival world — real terrain, real draw
+distance — falls to 7-8 fps against `gamer_smoke`'s floor of `SANE_REF_FPS = 12.0`, and the
+playthrough (acceptance criterion #1) is simply refused before it starts.
+
+`deploy/compose.gpu.yml` is an override that undoes those two pins and asks for the device.
+`deploy_jar.sh` adds it only when a probe confirms a GPU, and never otherwise.
+
+Three things have to be true, and the third is the one that bites:
+
+| piece | where it comes from |
+|---|---|
+| `/dev/dxg` | appears with `--gpus all` on Docker Desktop / WSL2 |
+| `d3d12_dri.so` | Mesa's D3D12 gallium driver, already in the image |
+| `libd3d12core.so` | the D3D12 **runtime** — NOT in the image, mounted from `/usr/lib/wsl/lib` |
+
+Docker Desktop's nvidia runtime injects COMPUTE only: `nvidia-smi` answers, but there is no
+`libGLX_nvidia` and no Vulkan ICD, so the graphics path is D3D12 through `/dev/dxg` rather
+than the usual NVIDIA GLX one.
+
+⛔ **A present GPU is not a working renderer, and the difference is silent.** With the card
+visible but the runtime missing, the client dies during GL context creation: the log stops
+dead at `Backend library: LWJGL version 3.3.3-snapshot`, the JVM is gone, and there is no
+stack trace and no GL error to grep for. So the probe checks the runtime as well as the card,
+and — more importantly — the deploy does not trust the probe:
+
+**STATUS ON THIS MACHINE (2026-08-16): the GPU is reachable, and the clients still cannot
+render on it.** With all three pieces in place the failure stops being silent and names
+itself:
+
+```
+GLFW error 65543: GLX: Failed to create context: GLXBadFBConfig
+    at org.lwjgl.glfw.GLFW.glfwCreateWindow
+```
+
+That is not a missing driver — it is the **display server**. The client asks for its context
+through GLX, and GLX hands out framebuffer configs from the X server it is talking to, which
+here is **Xvfb**. Xvfb has no DRI: it cannot expose a hardware FBConfig no matter which
+gallium driver the client-side Mesa has loaded, so a core-profile context on the GPU is not
+something it can grant. Setting `GALLIUM_DRIVER=d3d12` swaps the driver under a GLX stack
+that still has nowhere to render.
+
+So the remaining work is a **rendering path that does not go through Xvfb's GLX** — EGL
+(surfaceless / device platform), or an X server that actually has DRI3. Recorded rather than
+guessed: the error above is the measurement, taken with the runtime mounted and `/dev/dxg`
+present.
+
+```
+recreate_clients "$GPU_ARGS"          # try it
+wait_py4j 300                    ||   # did a client actually answer?
+    { GPU_ARGS=""; recreate_clients ""; wait_py4j 600; }   # no: put it back on the CPU
+```
+
+**Rendering is an optimisation, and an optimisation does not get to break the bench.** The
+`wait_py4j` loop is bounded for exactly this reason — it used to be an unbounded `until`, so a
+client that never came up hung the deploy for ever instead of being diagnosed. Any failure of
+the GPU path lands on llvmpipe with a message saying so, which is also what covers a
+CPU-only machine: it simply never enables the override in the first place.
+
+A failed attempt is also **written down**. `deploy/.gpu_unusable` (git-ignored, per machine) is
+created when the fallback fires, and later deploys skip straight to the CPU — otherwise every
+deploy pays the same 300 s and double recreate to relearn a fact about the box that has not
+changed. Delete it to try again after a driver update or a new rendering path:
+
+```
+rm deploy/.gpu_unusable
+```
+
+Forcing either mode by hand:
+
+```
+UCTEST_GPU=0 sh deploy/deploy_jar.sh     # never use the GPU
+UCTEST_GPU=1 sh deploy/deploy_jar.sh     # insist (ignores the marker), fail loudly if absent
+```
+
 ### deploy/runner
 
 Python + uv (как в `scripts/`). Цикл на каждый клиент:
