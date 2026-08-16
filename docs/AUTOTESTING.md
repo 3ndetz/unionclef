@@ -173,10 +173,45 @@ gallium driver the client-side Mesa has loaded, so a core-profile context on the
 something it can grant. Setting `GALLIUM_DRIVER=d3d12` swaps the driver under a GLX stack
 that still has nowhere to render.
 
-So the remaining work is a **rendering path that does not go through Xvfb's GLX** — EGL
-(surfaceless / device platform), or an X server that actually has DRI3. Recorded rather than
-guessed: the error above is the measurement, taken with the runtime mounted and `/dev/dxg`
-present.
+EGL was the obvious other door, and it is shut too — for the reason that turns out to be the
+real one. A ctypes EGL probe (no mesa-utils needed) run inside the image:
+
+| `GALLIUM_DRIVER` | result |
+|---|---|
+| `llvmpipe` | context OK — `GL_RENDERER = llvmpipe`, GL 4.5 |
+| `d3d12` | `eglInitialize failed (0x3001)`, `egl: failed to create dri2 screen` |
+
+The llvmpipe arm is the control: the probe is sound, and d3d12 specifically fails. Mesa's own
+debug output names the cause — `DRI2: failed to load driver` / **`Falling back to surfaceless
+swrast without DRM`** — and the container confirms it:
+
+```
+ls /dev/dri   ->  No such file or directory
+ls /dev/dxg   ->  crw-rw-rw- 1 root root 10, 125
+```
+
+⛔ **There is no DRM device, so no Mesa path can make a GPU screen.** DRI2, GLX and
+surfaceless-EGL all instantiate a screen from a DRM node. WSL2 does not expose one: the GPU
+arrives through dxgkrnl as `/dev/dxg`. Only the Mesa Microsoft ships inside WSLg can drive
+that, via a DXCore winsys tied to WSLg's own display stack. Docker Desktop's VM is a WSL
+distro **without** WSLg, so a container gets the device node and nothing able to talk to it.
+
+Checked and ruled out along the way, so nobody repeats them:
+
+- **Mesa version.** `deploy/gpu-image/Dockerfile` builds a derived image with Mesa **25.0.7**
+  from trixie (Debian 12 pins 22.3.6 and offers nothing newer). Identical failure. The driver
+  file is fine — `d3d12_dri.so` is a symlink to `libdril_dri.so`, it dlopens cleanly, and all
+  its dependencies resolve. There is simply no winsys under it.
+- **NVIDIA's own GLX.** Not available: on Docker Desktop + WSL2 the nvidia runtime injects
+  compute and encode only (`libnvidia-encode`, `-ml`, `-ngx`, `-opticalflow`). No
+  `libGLX_nvidia`, no `libEGL_nvidia`, and `/usr/share/glvnd/egl_vendor.d` holds only
+  `50_mesa.json`.
+
+This is host topology, not configuration, and no env-var tuning reaches it. What would change
+the answer: running the bench containers under a **WSLg-enabled WSL distro** instead of Docker
+Desktop's VM; a Docker Desktop that exposes a DRM node; or any ordinary Linux host with a real
+`/dev/dri`. That is an infrastructure choice for the owner of the box, which is why the deploy
+records the no and stays on the CPU rather than trying to be clever.
 
 ```
 recreate_clients "$GPU_ARGS"          # try it
