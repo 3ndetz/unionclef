@@ -2332,6 +2332,7 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdWalking = 0;
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdNear = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.entityReleased = 0;
+        adris.altoclef.tasks.movement.GetToEntityTask.entityWandered = 0;
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdNoGoal = 0;
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdFinished = 0;
         adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdNoVec = 0;
@@ -2768,7 +2769,7 @@ public class Py4jEntryPoint {
                         + " sprint=%d/%d lowHp=%d/%d standOff=%d hurt=%d/%d/%d hurtWin=%d/%d diseng=%d/%d ctl=%d cq=%d/%d/%d los=%d/%d/%d/%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdFleeStuck=%d mdFleeShooter=%d mdFar=%d/%d arrows=%d/%.2f/%.2f draws=%d/%d/%d/%.2f band=%d/%d dodgeYield=%d latch=%d/%d breakFail=%d/%d/%d/%d/%d stranded=%d/%s/%s gp=%d/%d/%d/%d/%d dodgeTask=%d/%.2f dealt=%.1f swingHits=%d dodgeDrive=%d hop=%d/%d/%d/%d/%d/%d/%d mdPillarD=%d dmgTaken=%.1f dw=%d/%.1f/%.2f/%.2f/%d/%d dwNoBlame=%d strafe=%d/%d voidEntries=%d voidTicks=%d lastFall=[%s] hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d bowShots=%d bowWild=%d bowNoSol=%d bowRestart=%d bowAimTO=%d bowDrawTO=%d bowBestMiss=%.2f bowFacing=%d bowNoRoom=%d flee=%d/%d/%d/%d/%d/%d qBurn=%d qTp=%d qNoMove=%d staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
                         + " | gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d"
-                        + " entityReleased=%d",
+                        + " entityReleased=%d/%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
                 kaptainwutax.tungsten.path.PathExecutor.placeDeferred,
                 kaptainwutax.tungsten.path.PathExecutor.placeInRange,
@@ -3129,7 +3130,8 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued(),
                 kaptainwutax.tungsten.helpers.BlockPlaceHelper.placedFromQueue(),
                 // Rule ONE for the entity-approach release: proof it RAN, not that it compiled.
-                adris.altoclef.tasks.movement.GetToEntityTask.entityReleased);
+                adris.altoclef.tasks.movement.GetToEntityTask.entityReleased,
+                adris.altoclef.tasks.movement.GetToEntityTask.entityWandered);
     }
 
     public int critHits() { return kaptainwutax.tungsten.combat.TriggerBot.lifetimeCrits; }

@@ -23,6 +23,13 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
      */
     public static volatile int entityReleased;
 
+    /**
+     * Times the approach wandered because navigation had REFUSED and the body was not moving.
+     *
+     * <p>Read together with {@link #entityReleased} as {@code entityReleased=released/wandered}.
+     */
+    public static volatile int entityWandered;
+
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
     private final MovementProgressChecker _progress = new MovementProgressChecker();
     private final TimeoutWanderTask _wanderTask = new TimeoutWanderTask(5);
@@ -210,7 +217,11 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             }
             entityReleased++;
             TungstenHelper.releaseIdleLock();
-            _progress.reset();
+            // ⛔ DO NOT RESET THE PROGRESS CHECKER HERE. Releasing a lock is not the body moving,
+            // and resetting wipes the one piece of evidence the wander recovery below needs.
+            // Measured: with both halves on, entityReleased read 49/0 -- released 49 times, wandered
+            // ZERO -- because every release cleared the checker before the wander site could see it.
+            // The two fixes cancelled each other, which is a thing only the paired counter shows.
             stuckCheck.reset();
             setDebugState("Tungsten lock moved nothing — released");
             return null;
@@ -260,7 +271,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             }
             entityReleased++;
             TungstenHelper.stop();
-            _progress.reset();
+            // Same reason as the lock branch: a release is not movement, so the checker stands.
             stuckCheck.reset();
             setDebugState("Tungsten searched without moving — released");
             return null;
@@ -292,6 +303,32 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
                 Nav.cancel();
                 setDebugState(parkourMode ? "Tungsten retrying" : "Baritone stuck → Tungsten locked for 30s");
                 return null;
+            }
+            // ⛔ A REFUSAL WITH NOWHERE TO GO IS HOW THIS TASK FREEZES FOR THE REST OF THE RUN.
+            //
+            // tryPathTo returns false PERMANENTLY once failCount reaches MAX_FAIL_COUNT -- it is the
+            // first line of the method -- and failCount only clears on reset(). So after five failed
+            // attempts navigation refuses every tick for the remainder of the task. The wander below
+            // is the recovery for exactly that, and `!parkourMode` made it unreachable in the mode
+            // that SHIPS: tungsten is primary on the bench, so parkourMode is true and the branch is
+            // skipped. What follows is a second tryPathToEntity that refuses for the same reason, a
+            // setDebugState, and `return null` -- no movement, every tick, for ever.
+            //
+            // Measured on mine_diamond, a captured failing run: the bot froze at (6.7,-61.0,0.4) at
+            // t=8.5s and did not move again for the remaining ~290 s, 76 polls and three distinct
+            // positions, with the ore still standing in the ground in the end-of-run screenshot.
+            // Its counters say lock=0/1/0 -- ONE lock, scored PRODUCTIVE, no barren ones -- so
+            // nothing was thrashing; navigation had simply stopped being asked and MineOrCollectTask
+            // went on scanning (scan=6123 against ~180 on a pass, drop seen 6033 times).
+            //
+            // The guard was there so a wander would not interrupt tungsten while it drives. That
+            // reasoning does not reach this line: we are here because tungsten REFUSED, so there is
+            // nothing to interrupt. Wandering resets the situation, and the cooldown and fail count
+            // get their chance to clear, which is the recovery this task already owns.
+            if (kaptainwutax.tungsten.TungstenConfig.get().entityWanderWhenNavRefuses) {
+                entityWandered++;
+                setDebugState("Navigation refused and nothing moved — wandering");
+                return _wanderTask;
             }
             if (!parkourMode) return _wanderTask;
         }

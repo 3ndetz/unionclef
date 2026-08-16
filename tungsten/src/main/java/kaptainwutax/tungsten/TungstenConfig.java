@@ -662,6 +662,25 @@ public class TungstenConfig {
     public boolean entitySearchMustMove = false;
 
     /**
+     * When navigation REFUSES an entity approach and the body is not moving, wander instead of
+     * standing there for the rest of the run.
+     *
+     * <p>{@code TungstenHelper.tryPathTo} returns false permanently once {@code failCount} reaches
+     * {@code MAX_FAIL_COUNT}, and GetToEntityTask gated its wander recovery behind
+     * {@code !parkourMode} -- true on this bench, so the recovery never ran in the mode that ships.
+     * The remaining path is a second refusal, a debug string and {@code return null}: no movement,
+     * every tick, for ever.
+     *
+     * <p>Measured on a captured failing mine_diamond run: frozen at (6.7,-61.0,0.4) from t=8.5s for
+     * the remaining ~290 s, ore still in the ground, lock=0/1/0 (one lock, scored productive, none
+     * barren) while MineOrCollectTask scanned 6123 times against ~180 on a pass.
+     *
+     * <p>GATE: mine_diamond, whose recorded failure is this freeze. Proof it ran: the second field
+     * of {@code entityReleased=released/wandered} in placeStats.
+     */
+    public boolean entityWanderWhenNavRefuses = false;
+
+    /**
      * A flee destination must be somewhere the bot can STAND, not a projected coordinate.
      *
      * <p>Upstream's GoalRunAway is a heuristic over the whole search space -- any cell far enough
