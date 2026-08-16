@@ -526,7 +526,7 @@ def main():
                                 "", "FULL COUNTERS:", py4j("stats").get("s") or "",
                                 "", "RUNNER:", str(py4j("task").get("runner", "")),
                                 "", "CHAIN:", str(py4j("task").get("chain", "")),
-                                "", "THREADS:", py4j("tdump", f="Render")["d"] or ""]
+                                "", "THREADS:", py4j("tdump", f="PathFinder,Tungsten,Baritone,Render")["d"] or ""]
                         fn = os.path.join(FREEZE_DIR, "stall_run%d.txt" % RUN_SEQ[0])
                         io.open(fn, "w", encoding="utf-8").write(chr(10).join(blob))
                         print(f"  stall evidence written to {fn}")
@@ -556,7 +556,7 @@ def main():
                         # threads over in no useful order: the first capture spent all of it on
                         # netty and ForkJoin workers parked in the usual places and never reached
                         # the one thread that matters. The client ticks on "Render thread".
-                        d = py4j("tdump", f="Render")["d"] or ""
+                        d = py4j("tdump", f="Render,PathFinder,Tungsten,Baritone")["d"] or ""
                         if len(d) < 40:
                             d = py4j("tdump", f="")["d"] or ""
                         fn = os.path.join(FREEZE_DIR, "freeze_run%d.txt" % RUN_SEQ[0])

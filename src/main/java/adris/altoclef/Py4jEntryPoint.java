@@ -372,15 +372,33 @@ public class Py4jEntryPoint {
      * @param filter only threads whose name contains this (empty for all)
      */
     public String threadDump(String filter) {
+        // ⛔ THE FILTER IS A LIST, IN PRIORITY ORDER, BECAUSE ONE NAME CAPTURED THE WRONG THREADS.
+        //
+        // This took a single substring, and gamer_smoke asked it for "Render". So every stall
+        // capture in the repo holds four render threads and NOTHING ELSE -- and the question a
+        // navigation stall actually poses is what the PATHFINDER is doing. Today that absence was
+        // briefly read as "no search was running", which the dump cannot support: the search thread
+        // was never eligible to appear in it.
+        //
+        // Callers truncate the result, so ORDER decides what survives: parts are emitted in the
+        // order given, which lets a caller put the nav threads ahead of a dozen chunk-render ones.
         StringBuilder sb = new StringBuilder();
         try {
-            for (Map.Entry<Thread, StackTraceElement[]> e : Thread.getAllStackTraces().entrySet()) {
-                Thread t = e.getKey();
-                if (filter != null && !filter.isEmpty() && !t.getName().contains(filter)) continue;
-                sb.append('"').append(t.getName()).append("\" ").append(t.getState()).append(System.lineSeparator());
-                StackTraceElement[] st = e.getValue();
-                for (int i = 0; i < Math.min(st.length, 18); i++) {
-                    sb.append("    at ").append(st[i]).append(System.lineSeparator());
+            Map<Thread, StackTraceElement[]> all = Thread.getAllStackTraces();
+            java.util.Set<Thread> seen = new java.util.HashSet<>();
+            String[] parts = (filter == null || filter.isEmpty())
+                    ? new String[]{""} : filter.split(",");
+            for (String raw : parts) {
+                String part = raw.trim();
+                for (Map.Entry<Thread, StackTraceElement[]> e : all.entrySet()) {
+                    Thread t = e.getKey();
+                    if (!part.isEmpty() && !t.getName().contains(part)) continue;
+                    if (!seen.add(t)) continue;
+                    sb.append('"').append(t.getName()).append("\" ").append(t.getState()).append(System.lineSeparator());
+                    StackTraceElement[] st = e.getValue();
+                    for (int i = 0; i < Math.min(st.length, 18); i++) {
+                        sb.append("    at ").append(st[i]).append(System.lineSeparator());
+                    }
                 }
             }
         } catch (Exception ex) {
