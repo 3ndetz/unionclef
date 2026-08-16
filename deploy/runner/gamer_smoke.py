@@ -67,6 +67,44 @@ def py4j(op,t=30,**kw):
     if r.returncode!=0: raise RuntimeError(f"{op}: {r.stderr.strip()[-200:]}")
     return json.loads(r.stdout.strip().splitlines()[-1])
 def grcon(c,t=20): return sh(["docker","exec",GSERVER,"rcon-cli",c],t).stdout.strip()
+
+def quiet_the_box():
+    """Stop the tester clients THIS run does not use, and return them so they can be put back.
+
+    ⛔ THIS IS WHAT MAKES THE PLAYTHROUGH MEASURABLE AT ALL, and it is one docker stop.
+
+    The playthrough uses tester1 only. tester2 sits on the flat arena doing nothing and still
+    burns ~110% of a core doing it, because an idle MC client is not an idle process -- it
+    renders. On this box that was the difference between a run and no run:
+
+        both clients up    7.0 fps  ->  INVALID, refused before the run even starts
+        tester2 stopped   11.0 fps  ->  PASS, ladder to wood tools@185.4s
+
+    The floor is 12 and the survival world is fps-bound, so the fps every other container is
+    NOT using is the whole budget. Worth stating because a week of "the playthrough cannot be
+    measured on this machine" was really "the bench was competing with itself", and the fix was
+    never the GPU -- which on this host cannot render at all (docs/AUTOTESTING.md).
+
+    Derived from what is actually running rather than a hardcoded name, so a third tester or a
+    renamed one needs no edit here.
+    """
+    running = sh(["docker", "ps", "--format", "{{.Names}}"], t=30).stdout.split()
+    peers = [n for n in running if n.startswith("uctest-mc-tester") and n != CLIENT]
+    for p in peers:
+        sh(["docker", "stop", p], t=90)
+    if peers:
+        print(f"  quieted for the run: {', '.join(peers)} (idle clients still cost ~110% CPU each)")
+    return peers
+
+def unquiet_the_box(peers):
+    """Put back whatever quiet_the_box stopped. Best-effort: never fail a finished run over it."""
+    for p in peers or []:
+        try:
+            sh(["docker", "start", p], t=90)
+        except Exception as e:                       # noqa: BLE001 -- teardown must not mask a result
+            print(f"  note: could not restart {p}: {str(e)[:80]}")
+    if peers:
+        print(f"  restarted after the run: {', '.join(peers)}")
 def wait_for(desc,fn,ts,iv=4):
     t0=time.time(); last=None
     while time.time()-t0<ts:
@@ -686,8 +724,14 @@ if __name__ == "__main__":
     # EXIT 2 MEANS "ASK AGAIN LATER", NOT "THE BOT IS BROKEN".
     # sweep() already treats a stand-down as invalid; a single run used to let the exception out as
     # a traceback, which reads like a crash in the bench itself.
+    # Quiet the box for the WHOLE invocation, including a --repeat sweep, and put it back
+    # whatever happens -- a stand-down, a failure or a KeyboardInterrupt must not leave the
+    # bench with a client missing, because run_suite needs both of them.
+    _peers = quiet_the_box()
     try:
         sys.exit(0 if (sweep(rep, need) if rep > 1 else main()) else 1)
     except StandDown as e:
         print(f"  GAMER_SMOKE: INVALID — {e}")
         sys.exit(2)
+    finally:
+        unquiet_the_box(_peers)
