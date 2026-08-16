@@ -138,6 +138,33 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
       PlaceObsidianBucket, CraftInTable, SmeltInBlastFurnace, и `Playground.java:302`, который
       регистрирует предикат на КУБ 2000×2000.
 
+      ⛔⛔ **THE GATE WAS RUN AND IT REFUTES THE BAN THEORY FOR TODAY'S FAILURE (2026-08-16).**
+      That red run was asked for and obtained -- `mine_coal --repeat 4 --no-early-stop`, 3 PASS /
+      1 FAIL -- and the pre-registered reading came back EMPTY on the failing arm:
+
+          FAIL   coal=0   avoidSrc=0/0/0/0   cb=0/0/0/0   breakFail=0/0/0/0/0
+                          scan=3766/0/0/0/0/0   pdEnter=28  pdWalking=11  lock=0/1/0
+          PASS   coal=3   avoidSrc=0/0/0/0   cb=0/0/0/0   scan=287/0/0/0/0/0   pdEnter=39
+          PASS   coal=3   scan=342/0/0/0/0/0  pdEnter=85
+          PASS   coal=3   scan=345/0/0/0/0/0  pdEnter=85
+
+      Every ban counter is ZERO on the failure, so nothing was refused, nothing was banned and no
+      break failed. Whatever kills this course today, it is NOT the avoid state, and the 818 case
+      remains a SEPARATE historical question rather than the live one. `lastBreakAvoiderBy` names
+      `PlaceBedAndSetSpawnTask.onStart:147` on every arm including the passes, i.e. the ordinary
+      bed-protection predicate, not a culprit.
+
+      ⭐ WHAT THE MEASUREMENT DOES POINT AT, and it is a different mechanism entirely: `scan` is
+      `accepted/unreachable/noBreak/belowFeet/underfoot/enclosed`, so the failing run ACCEPTED
+      3766 candidates -- ten times any passing run -- while rejecting none, and still mined
+      nothing. Candidates existed, passed both filters, and were never reached: `pdEnter=28`
+      against 85 on a pass, i.e. the primary drive was barely ENTERED at all.
+
+      That is the same shape as the post-stone stall on the playthrough (70-90 s motionless with
+      `pdEnter+0` and `dbTick+0` per poll). Both say the search keeps re-running while the drive
+      is not being ticked, which is upstream of every fix attempted here so far. NEXT: per-second
+      trace (`diag_pit.py coal`) to name what owns the tick while the drive is idle.
+
       ⛔ СЕЙЧАС НЕ СДЕЛАНО НЕ ИЗ-ЗА БОТА: стенд занят параллельным воркером (`pvp --only
       bow_flee,bow_flee_hard`), и замок честно отказал моему запуску. Два сюита на одной паре
       контейнеров дают числа, которым нельзя верить, — это ровно то, для чего замок и написан.
