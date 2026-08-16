@@ -681,6 +681,25 @@ public class TungstenConfig {
     public boolean entityWanderWhenNavRefuses = false;
 
     /**
+     * Count barren locks PER TARGET rather than as one streak on the last entity.
+     *
+     * <p>{@code tryPathToEntity} zeroes {@code barrenStreak} when the entity changes, which is
+     * right for a genuinely new target and wrong for one the bot keeps returning to. mine_diamond
+     * wants TWO diamonds: alternating between two drops it cannot reach wipes the streak on every
+     * switch, so {@code MAX_BARREN_LOCKS} is never reached and navigation never refuses. Measured
+     * lock=49/0/50 -- forty-nine barren locks, no refusal -- with the bot parked and the run lost.
+     *
+     * <p>This is the half that makes the other two add up: with the streak surviving alternation,
+     * {@code entitySearchMustMove} releases an idle lock, the escalation actually converges, and
+     * {@code entityWanderWhenNavRefuses} finally has a refusal to react to.
+     *
+     * <p>GATE (mechanism, readable at small n unlike this course pass rate): barren locks should
+     * collapse from ~49 to single figures and the second field of {@code entityReleased} should
+     * stop being zero.
+     */
+    public boolean barrenStreakPerEntity = false;
+
+    /**
      * A flee destination must be somewhere the bot can STAND, not a projected coordinate.
      *
      * <p>Upstream's GoalRunAway is a heuristic over the whole search space -- any cell far enough

@@ -88,6 +88,26 @@ public class TungstenHelper {
     private static Entity lockedEntity = null; // entity we're chasing during lock
 
     /**
+     * Barren-lock streaks kept PER TARGET, because one shared streak is wiped by alternation.
+     *
+     * <p>tryPathToEntity zeroes {@code barrenStreak} whenever the entity changes -- right for a
+     * genuinely new target, wrong for one we keep coming back to. mine_diamond wants TWO diamonds,
+     * so a bot cycling between two drops it cannot reach resets the streak on every switch and
+     * MAX_BARREN_LOCKS is never reached. Measured: lock=49/0/50, forty-nine barren locks and not
+     * one refusal, while the bot sat parked and the run failed.
+     *
+     * <p>Access-ordered and bounded: a run can see many drops, and this only needs the handful it
+     * is currently failing against.
+     */
+    private static final java.util.Map<Integer, Integer> barrenByEntity =
+            new java.util.LinkedHashMap<>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(java.util.Map.Entry<Integer, Integer> eldest) {
+                    return size() > 8;
+                }
+            };
+
+    /**
      * Tungsten is compiled into this mod, so the only real question is whether the
      * client-side singletons have been created yet ({@code EXECUTOR} is assigned in
      * {@code TungstenMod.onInitializeClient}, so it is null very early in startup).
@@ -230,7 +250,11 @@ public class TungstenHelper {
         // to; carrying it to the next drop would refuse navigation to a target we have never tried.
         // Same reasoning as PickupDroppedItemTask spending its wander escalation when the drop
         // changes, and the same bug if it is omitted.
-        if (!entity.equals(lockedEntity)) {
+        if (kaptainwutax.tungsten.TungstenConfig.get().barrenStreakPerEntity) {
+            // Carry THIS entity's own streak back in, so returning to a target we already failed
+            // against resumes its escalation instead of starting it again from zero.
+            barrenStreak = barrenByEntity.getOrDefault(entity.getId(), 0);
+        } else if (!entity.equals(lockedEntity)) {
             barrenStreak = 0;
         }
         lockedEntity = entity;
@@ -320,12 +344,18 @@ public class TungstenHelper {
             if (lockStartDist - now < LOCK_PROGRESS_BLOCKS) {
                 lockBarren++;
                 barrenStreak++;
+                if (kaptainwutax.tungsten.TungstenConfig.get().barrenStreakPerEntity) {
+                    barrenByEntity.put(lockedEntity.getId(), barrenStreak);
+                }
             } else {
                 // Real progress spends the escalation, the same rule PickupDroppedItemTask applies
                 // to its wander radius: being stuck on THIS target is what should accumulate, and a
                 // lock that closed ground is not stuck.
                 lockProductive++;
                 barrenStreak = 0;
+                if (kaptainwutax.tungsten.TungstenConfig.get().barrenStreakPerEntity) {
+                    barrenByEntity.remove(lockedEntity.getId());
+                }
             }
         } catch (Exception ignored) {
             // never let the accounting be the thing that breaks navigation
