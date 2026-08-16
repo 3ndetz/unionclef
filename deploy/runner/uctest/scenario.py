@@ -60,6 +60,7 @@ class Ctx:
         # the bots had even closed). Everything below is reported as a DELTA from the
         # values seen at scenario start, which is correct regardless of server history.
         self._k0 = None
+        self._last_bp = None
         self._d0 = None
         self._vd0 = None
 
@@ -107,6 +108,21 @@ class Ctx:
         if track_bridge:
             ok, placed = self.bot.py.try_call("bridgePlaced")
             rec["bridge_placed"] = placed if ok else None
+        # WHEN THE BODY STOPS, RECORD WHAT IS HOLDING THE TICK.
+        # The timeline has always said WHERE the bot was and never WHAT was running, so a freeze
+        # read as "76 polls, three distinct positions" and nothing else. Three passes on the
+        # mine_diamond freeze were then spent inferring the task from totals -- and two of those
+        # inferences were wrong, one refuted by a log grep and one by its own counter.
+        # Sampled ONLY while the body is stationary: on a healthy run this never fires, so it adds
+        # no py4j traffic to the runs whose timing we care about.
+        prev, self._last_bp = self._last_bp, bp
+        if bp and prev and sum((a - b) ** 2 for a, b in zip(bp, prev)) < 0.01:
+            ok, chain = self.bot.py.try_call("getTaskChainString")
+            if ok and chain:
+                rec["task"] = " | ".join(str(chain).splitlines())[-500:]
+            ok, runner = self.bot.py.try_call("getRunnerStatus")
+            if ok and runner:
+                rec["runner"] = str(runner)[:200]
         self._detect(rec, floor_y)
         self.samples.append(rec)
         self.art.sample(rec)
