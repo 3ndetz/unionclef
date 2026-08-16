@@ -715,7 +715,7 @@ public class TungstenConfig {
      * <p>GATE: pickup_flat, pickup_side and pickup_pit, which fail today for this reason; the three
      * green nav baselines must not move. Proof it ran: MineAndCollectTask.toolGateSkipped.
      */
-    public boolean collectDropsBeforeTools = false;
+    public boolean collectDropsBeforeTools = true;
 
     /**
      * A flee destination must be somewhere the bot can STAND, not a projected coordinate.
