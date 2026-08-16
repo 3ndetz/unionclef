@@ -1279,50 +1279,29 @@ class PickupDrop(CraftTable):
     If BOTH are green, this geometry is not what freezes the bot and the five passes were chasing
     the wrong shape, which is worth knowing before a sixth.
 
-    ⭐⭐ FIRST RESULT, AND IT SEPARATES COMPLETELY -- 4/4 flat, 0/4 pit, drop verified present on
-    all eight. But read the failure before building on it, because it is NOT "the bot walks up and
-    cannot step down":
+    ⛔⛔ RETRACTION, SAME DAY. The first outing read 4/4 flat against 0/4 pit and I called it a
+    complete separation. IT IS NOT ONE. A later run of the UNCHANGED flat arm went 0/2, and the
+    counter had been saying so the whole time: idrop=0/0/0/0 on every run of both arms means
+    EntityTracker.getClosestItemDrop is NEVER CALLED. Nothing in the bot pursues these drops at
+    all. The flat passes were vanilla CONTACT pickup -- the drop sits at (8.5, 0.5), squarely on
+    the eastward line out of spawn, so a bot wandering that way collects it by walking over it.
+    pickup_side puts the same drop perpendicular to that line and fails, which is the check that
+    should have been written before the claim.
 
-        t= 1.0  bot=[0.5, -60.0,   0.5]      the drop is at (8.5, -61, 0.5)
-        t=12.9  bot=[0.5, -58.75, -7.61]
-        t=57.5  bot=[7.39, -60.0, -22.39]
-        TASK: <Mining or Collecting> ... <Wander for Infinity blocks> Exploring.
+    So the honest reading of all three courses is ONE finding, and it is bigger than the pit:
 
-    It never approaches the pit AT ALL. It abandons the drop, falls through to the full "acquire a
-    diamond from scratch" chain -- the task text lists LOGS -- and wanders a bare stone arena
-    looking for trees that are not there. So the drop in a pit is never PURSUED, not merely never
-    reached.
+        @get diamond 1 never asks whether a diamond is already lying on the ground.
 
-    ⛔ AND THAT RETIRES FIVE PASSES OF WORK IN ONE READING. Every run here shows lock=0/0/0 and
-    entityReleased=0/0 on BOTH arms: no tungsten lock is ever taken, so the lock-release, the
-    wander-on-refusal and the per-entity barren streak cannot be the fix -- the machinery they
-    govern is not even engaged in the pure reproduction. Those were built against mine_diamond,
-    where a lock IS present, and that is a different failure wearing the same clothes.
+    et=1246/1246 -- the tracker holds the drop, grounded, on every tick of the run. drop=1246/0 --
+    MineAndCollectTask asked about drops 1246 times and itemDropped() said no every time, because
+    it was asking about LOGS: the task went down the craft-an-iron-pickaxe branch and spent the run
+    hunting wood on a stone arena ("Wander for Infinity blocks"). The diamond it was sent to fetch
+    lay eight blocks away the entire time and was never once considered.
 
-    ⭐⭐⭐ ANSWERED, AND IT IS NARROWER THAN ANY OF THE FIVE GUESSES. The drop is TRACKED and never
-    SELECTED:
-
-        pit    et=1224/1224   no pickup attempt at all, no blacklist, no log line   FAIL
-        flat   et=232/232     walks straight down z=0.5 to x=8.5 and collects it     PASS
-
-    et is etItemsSeen/etItemsGrounded, so the pit drop passes the grounded check on every one of
-    1224 ticks -- the tracker holds it the whole run. "Failed to pick up drop, suggesting it is
-    unreachable" appears ZERO times in the client log, so the bot never tried and gave up either;
-    it never tried. And the flat arm is genuine pursuit rather than a lucky wander: the bot walks
-    0.5 -> 3.88 -> 7.26 straight along z=0.5 at the drop.
-
-    So the defect is between TRACKED and SELECTED. Not navigation, not the tungsten lock
-    (lock=0/0/0 on every run), not the grounded filter. Look at what stands between
-    EntityTracker.getClosestItemDrop and the resource task that should have asked for it -- the
-    acceptPredicate the caller passes, and whatever makes @get choose the craft-an-iron-pickaxe
-    branch instead: with no trees on a stone arena that branch wanders for ever, which is the
-    "Wander for Infinity blocks" the timeline ends on.
-
-    OLD NEXT QUESTION, kept because it is how the above was reached:
-    NEXT QUESTION, and it is now cheap to ask: WHY is the drop rejected as a target? The bot sees
-    it 1262 times over the run (against ~255 on flat, where it simply walks over and collects) and
-    never selects it. Look at what filters an ItemEntity out of the pursuit -- reachability marking
-    on the scanner, and PickupDroppedItemTask.isValid -- rather than at anything downstream.
+    WHAT THESE COURSES ARE GOOD FOR, stated honestly: they are a sharp, 60-second test of whether
+    the acquisition path consults existing drops. All three should go green when it does. They are
+    NOT, as first claimed, a test of stepping into a pit -- that question cannot even be asked
+    until something pursues the drop in the first place.
     Deliberately short and cheap: 60 seconds, one item, no mining. A fix that works should show at
     n=4 instead of needing sixteen runs to maybe show at all.
     """
@@ -1330,6 +1309,8 @@ class PickupDrop(CraftTable):
     id = "pickup_flat"
     duration = 60
     pit = False
+    drop_x = 8.5
+    drop_z = 0.5
 
     def build(self, arena, ctx):
         arena.flat_field(half=24, grass=False)
@@ -1346,10 +1327,11 @@ class PickupDrop(CraftTable):
         # THE PIT IS ONE BLOCK OF THE FLOOR REMOVED, so the drop rests a block below the surface
         # and the bot has to step down to touch it -- the geometry of every captured freeze.
         if self.pit:
-            ctx.rcon.cmd(f"setblock 8 {STAND_Y - 1} 0 minecraft:air", allow_reject=True)
+            ctx.rcon.cmd(f"setblock {int(self.drop_x)} {STAND_Y - 1} {int(self.drop_z)} minecraft:air",
+                         allow_reject=True)
         drop_y = (STAND_Y - 1) if self.pit else STAND_Y
         ctx.rcon.cmd(
-            f'summon minecraft:item 8.5 {drop_y} 0.5 '
+            f'summon minecraft:item {self.drop_x} {drop_y} {self.drop_z} '
             f'{{Item:{{id:"minecraft:diamond",count:1}},PickupDelay:0s}}', allow_reject=True)
         ctx.geo["fps"] = []
         time.sleep(2)
@@ -1371,13 +1353,32 @@ class PickupDrop(CraftTable):
                         f"drop_ok={ctx.geo.get('drop_ok')} -- a rejected summon is an INVALID run,"
                         f" not a navigation failure")
         yield Criterion("the diamond is in the pack", got >= 1,
-                        f"diamond={got} pit={self.pit}")
+                        f"diamond={got} pit={self.pit} at=({self.drop_x},{self.drop_z})")
         ok, stats = ctx.bot.py.try_call("placeStats")
         parts = [t for t in str(stats or "").split()
                  if t.startswith(("entityReleased=", "drop=", "scan=", "lock=", "navStop=",
-                                  "et="))]
+                                  "et=", "idrop="))]
         yield Criterion("approach counters (recorded, not gated)", True,
                         (" ".join(parts) if parts else "unread"), gate=False)
+
+
+class PickupDropSide(PickupDrop):
+    """The flat drop moved OFF the line the bot walks, to check the control is a control.
+
+    pickup_flat passes -- and idrop=0/0/0/0 says EntityTracker.getClosestItemDrop is never called
+    in either course, so nothing in the bot ever pursued that drop. It sits at (8.5, 0.5), exactly
+    on the eastward line from spawn, so the pass may be nothing but vanilla contact pickup while
+    the bot walks past on other business.
+
+    This is the same drop at the same distance, perpendicular to that line. If it FAILS, the flat
+    arm was incidental and the pit/flat contrast measures "does the bot happen to walk over it",
+    not "does it go and get it" -- which would make the pair honest but far weaker than claimed.
+    If it PASSES, there is real pursuit and the pit is a genuine navigation failure.
+    """
+
+    id = "pickup_side"
+    drop_x = 0.5
+    drop_z = 8.5
 
 
 class PickupDropPit(PickupDrop):
@@ -1390,4 +1391,4 @@ class PickupDropPit(PickupDrop):
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
              ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava,
-             PickupDrop, PickupDropPit]
+             PickupDrop, PickupDropSide, PickupDropPit]

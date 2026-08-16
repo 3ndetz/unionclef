@@ -120,13 +120,30 @@ public class EntityTracker extends Tracker {
         return getClosestItemDrop(position, acceptPredicate, tempTargetList);
     }
 
+    /**
+     * WHY THE SELECTION IS COUNTED SEPARATELY FROM THE TRACKING.
+     *
+     * <p>pickup_pit reads {@code et=1224/1224} -- the tracker held the drop, grounded, on every
+     * tick -- while the caller read {@code drop=1224/0}: asked 1224 times, given a drop ZERO
+     * times. Both cannot be innocent, and three separate readings of this file failed to say
+     * which. So the junction counts itself: how many candidates were in the map, how many the
+     * blacklist removed, and how many times a drop was actually handed back.
+     *
+     * <p>Read as {@code idrop=asked/noneTracked/blacklisted/returned}. noneTracked means
+     * itemDropped() said the map holds nothing for these targets; blacklisted means it held
+     * something and the unreachable set removed it. Those are different bugs.
+     */
+    public static volatile int idAsked, idNoneTracked, idBlacklisted, idReturned;
+
     public Optional<ItemEntity> getClosestItemDrop(Vec3d position, Predicate<ItemEntity> acceptPredicate, ItemTarget... targets) {
         ensureUpdated();
         if (targets.length == 0) {
             Debug.logError("You asked for the drop position of zero items... Most likely a typo.");
             return Optional.empty();
         }
+        idAsked++;
         if (!itemDropped(targets)) {
+            idNoneTracked++;
             return Optional.empty();
         }
 
@@ -136,7 +153,7 @@ public class EntityTracker extends Tracker {
             for (Item item : target.getMatches()) {
                 if (!itemDropped(item)) continue;
                 for (ItemEntity entity : itemDropLocations.get(item)) {
-                    if (entityBlacklist.unreachable(entity)) continue;
+                    if (entityBlacklist.unreachable(entity)) { idBlacklisted++; continue; }
                     if (!entity.getStack().getItem().equals(item)) continue;
                     if (!acceptPredicate.test(entity)) continue;
 
@@ -148,6 +165,7 @@ public class EntityTracker extends Tracker {
                 }
             }
         }
+        if (closestEntity != null) idReturned++;
         return Optional.ofNullable(closestEntity);
     }
 
