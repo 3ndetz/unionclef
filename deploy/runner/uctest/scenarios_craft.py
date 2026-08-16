@@ -1279,6 +1279,30 @@ class PickupDrop(CraftTable):
     If BOTH are green, this geometry is not what freezes the bot and the five passes were chasing
     the wrong shape, which is worth knowing before a sixth.
 
+    ⭐⭐ FIRST RESULT, AND IT SEPARATES COMPLETELY -- 4/4 flat, 0/4 pit, drop verified present on
+    all eight. But read the failure before building on it, because it is NOT "the bot walks up and
+    cannot step down":
+
+        t= 1.0  bot=[0.5, -60.0,   0.5]      the drop is at (8.5, -61, 0.5)
+        t=12.9  bot=[0.5, -58.75, -7.61]
+        t=57.5  bot=[7.39, -60.0, -22.39]
+        TASK: <Mining or Collecting> ... <Wander for Infinity blocks> Exploring.
+
+    It never approaches the pit AT ALL. It abandons the drop, falls through to the full "acquire a
+    diamond from scratch" chain -- the task text lists LOGS -- and wanders a bare stone arena
+    looking for trees that are not there. So the drop in a pit is never PURSUED, not merely never
+    reached.
+
+    ⛔ AND THAT RETIRES FIVE PASSES OF WORK IN ONE READING. Every run here shows lock=0/0/0 and
+    entityReleased=0/0 on BOTH arms: no tungsten lock is ever taken, so the lock-release, the
+    wander-on-refusal and the per-entity barren streak cannot be the fix -- the machinery they
+    govern is not even engaged in the pure reproduction. Those were built against mine_diamond,
+    where a lock IS present, and that is a different failure wearing the same clothes.
+
+    NEXT QUESTION, and it is now cheap to ask: WHY is the drop rejected as a target? The bot sees
+    it 1262 times over the run (against ~255 on flat, where it simply walks over and collects) and
+    never selects it. Look at what filters an ItemEntity out of the pursuit -- reachability marking
+    on the scanner, and PickupDroppedItemTask.isValid -- rather than at anything downstream.
     Deliberately short and cheap: 60 seconds, one item, no mining. A fix that works should show at
     n=4 instead of needing sixteen runs to maybe show at all.
     """
