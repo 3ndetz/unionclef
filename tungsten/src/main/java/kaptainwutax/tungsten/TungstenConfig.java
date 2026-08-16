@@ -641,6 +641,27 @@ public class TungstenConfig {
     public boolean progressCheckIgnoresSearch = false;
 
     /**
+     * A tungsten search that owns the approach to an ENTITY must move the body or be released.
+     *
+     * <p>Same defect as {@link #progressCheckIgnoresSearch} and deliberately a SEPARATE switch.
+     * That one governs MineAndCollectTask; turning it on to test this would change two behaviours
+     * in one measurement, which is how a result stops meaning anything.
+     *
+     * <p>GetToEntityTask resets its progress checker and returns early whenever
+     * {@code TungstenHelper.isActive()}, which is true while the pathfinder is merely LOOKING. So a
+     * search that follows no route both hides the stall and skips the recovery below it. Measured
+     * three times on the playthrough, always as "Approach entity -> Tungsten pathfinding...",
+     * motionless for 70-90 s, once for a whole run that reached no rung; and it is the recorded
+     * "parks 1.17 blocks from the drop" case, the drop one block below in the hole just mined.
+     *
+     * <p>With this on, such a search gets MovementProgressChecker's ordinary 6 seconds and is then
+     * stopped so the approach can be planned afresh. Ordinary searches finish well inside that and
+     * are untouched. GATE: the playthrough ladder, and mine_coal/mine_diamond whose recorded
+     * failures are this same shape. Proof it ran: {@code entityReleased} in placeStats.
+     */
+    public boolean entitySearchMustMove = false;
+
+    /**
      * A flee destination must be somewhere the bot can STAND, not a projected coordinate.
      *
      * <p>Upstream's GoalRunAway is a heuristic over the whole search space -- any cell far enough

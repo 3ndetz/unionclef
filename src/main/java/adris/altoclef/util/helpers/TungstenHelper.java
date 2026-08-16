@@ -334,6 +334,30 @@ public class TungstenHelper {
         }
     }
 
+    /**
+     * Release a lock that is holding the body STILL, and count it as barren while doing so.
+     *
+     * <p>WHY THIS IS NOT JUST {@code stop()}. The barren-lock accounting only runs when a lock
+     * EXPIRES ({@link #isLocked} calls {@link #scoreExpiredLock} on timeout), and {@code stop()}
+     * additionally zeroes {@code barrenStreak}. So releasing early with a plain {@code stop()}
+     * would make the lock invisible to the escalation that exists to stop this repeating, and the
+     * caller could release and re-lock for ever without {@code MAX_BARREN_LOCKS} ever converging.
+     *
+     * <p>Measured, and it is why the early release is wanted at all: on mine_diamond the failing
+     * runs read {@code lock=1/0/0} -- ONE barren lock -- with the drop seen roughly 6000 times and
+     * never collected. One barren lock is thirty seconds of a run spent frozen, and the limit needs
+     * TWO before it acts, so on this course the guard can never fire. Noticing at six seconds that
+     * the body has not moved is the same judgement, made before the thirty seconds are spent.
+     *
+     * <p>So: score it, stop it, and put the escalation back that {@code stop()} cleared.
+     */
+    public static void releaseIdleLock() {
+        scoreExpiredLock();
+        int keepStreak = barrenStreak;
+        stop();
+        barrenStreak = keepStreak;
+    }
+
     /** Stop Tungsten pathfinding if it's running. Also clears the lock. */
     public static void stop() {
         if (!isTungstenLoaded()) return;

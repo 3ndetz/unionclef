@@ -772,6 +772,16 @@ class MineDiamond(CraftTable):
         # ore, which drops nothing and would look identical to "never found it".
         yield Criterion("the iron pickaxe is still held", True,
                         f"pickaxe={_has(ctx, 'iron_pickaxe')}", gate=False)
+        # THIS COURSE'S RECORDED FAILURE IS AN APPROACH THAT NEVER TOUCHES THE DROP -- "closest
+        # approach 1.35, 2.45 and 3.57 blocks, never collected, three ores of three". entityReleased
+        # is how many times a tungsten search that was moving nothing got released so the approach
+        # could be replanned, so it is the one number that says whether that fix ran here at all.
+        # Reading zero with the flag ON means the stall being blamed is a different one.
+        ok, stats = ctx.bot.py.try_call("placeStats")
+        parts = [t for t in str(stats or "").split()
+                 if t.startswith(("entityReleased=", "scan=", "lock=", "navStop=", "drop="))]
+        yield Criterion("approach counters (recorded, not gated)", True,
+                        (" ".join(parts) if parts else "unread"), gate=False)
 
 
 class GotoThenMine(CraftTable):
@@ -944,7 +954,7 @@ class MineCoal(CraftTable):
         # and on a bench with no claims at all every one of them is a false positive.
         ok, stats = ctx.bot.py.try_call("placeStats")
         parts = [t for t in str(stats or "").split()
-                 if t.startswith(("cb=", "breakFail=", "scan=", "lock=", "navStop=",
+                 if t.startswith(("cb=", "breakFail=", "scan=", "lock=", "navStop=", "entityReleased=",
                                   "avoidSrc="))]
         # A POSITIONAL COUNTER GETS MISREAD, AND THIS ONE WAS -- TWICE IN AN HOUR, BY TWO PEOPLE.
         # avoidSrc=0/0/1/0@- is set/pred/preds/registered@caller, and both of its first readings

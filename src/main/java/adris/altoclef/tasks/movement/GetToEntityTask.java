@@ -14,6 +14,15 @@ import net.minecraft.entity.Entity;
 import net.minecraft.util.math.BlockPos;
 
 public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
+    /**
+     * Times a tungsten search that was owning the approach without moving the body was released.
+     *
+     * <p>Rule ONE: a fix that cannot be shown to have RUN is a fix nobody can argue about. This
+     * reads zero when the flag is off, and reading zero with the flag ON means the stall being
+     * blamed is not this one -- which is the answer the counter exists to be able to give.
+     */
+    public static volatile int entityReleased;
+
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
     private final MovementProgressChecker _progress = new MovementProgressChecker();
     private final TimeoutWanderTask _wanderTask = new TimeoutWanderTask(5);
@@ -109,7 +118,20 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
-        if (Nav.isPathing()) {
+        // ⛔ ASK WHETHER THE BODY MOVED, NOT WHETHER NAVIGATION SAYS IT IS BUSY.
+        //
+        // This reset was first made conditional on Nav.isExecutingRoute() -- "a route is really
+        // being followed" rather than "a search is running". That was still wrong, and the counter
+        // proved it: entityReleased read 0 across two full A/Bs with the flag ON, because
+        // isExecutingRoute() is MovementQueue/BlockPathWalker/executor RUNNING, and an executor can
+        // sit there replaying inputs that move the bot nowhere. Nav was reporting progress that the
+        // position did not show.
+        //
+        // MovementProgressChecker already answers the real question -- 0.1 blocks in 6 seconds --
+        // so with this flag on, nothing resets it on navigation state at all. It measures the body,
+        // which is the only witness that cannot be talked round.
+        boolean mustMove = kaptainwutax.tungsten.TungstenConfig.get().entitySearchMustMove;
+        if (!mustMove && Nav.isPathing()) {
             _progress.reset();
         }
         if (WorldHelper.isInNetherPortal()) {
@@ -157,19 +179,90 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
         }
 
         // ── Tungsten lock: exclusive 30s control, Baritone stays off ──
+        //
+        // ⛔ AND THE LOCK IS THE BRANCH THAT ACTUALLY STALLS THIS COURSE. MEASURED, NOT ASSUMED.
+        //
+        // The same fix was first written only for the isActive() branch below, on the reasoning
+        // that barren locks already have their own guard. The A/B said otherwise: entityReleased
+        // read 0 on all eight runs INCLUDING the pinned arm -- the patched branch was never reached
+        // -- while both failures carried lock=1/0/0 (barren/productive/findRefused) with the drop
+        // seen ~6000 times against ~100 on every pass. So the stall goes through the LOCK, and
+        // without that counter the first A/B's PASS/FAIL pattern would have been read as a win.
+        //
+        // The existing guard cannot help here: it scores a lock only when the lock EXPIRES, and it
+        // takes MAX_BARREN_LOCKS = 2 before it refuses. One barren lock per course is thirty
+        // seconds already spent, and the second never comes. Asking at six seconds whether the body
+        // has moved is the same judgement made before the thirty seconds are gone -- and
+        // releaseIdleLock still counts it as barren, so the escalation converges rather than
+        // letting this release and re-lock for ever.
         if (TungstenHelper.isLocked()) {
             TungstenHelper.tickLock();
             Nav.cancel();
-            _progress.reset();
             long remaining = Math.max(0, (TungstenHelper.lockUntilMs() - System.currentTimeMillis()) / 1000);
-            setDebugState("Tungsten pathfinding (" + remaining + "s left)");
+            if (!mustMove) {
+                _progress.reset();
+                setDebugState("Tungsten pathfinding (" + remaining + "s left)");
+                return null;
+            }
+            if (_progress.check(mod)) {
+                setDebugState("Tungsten locked (" + remaining + "s left)");
+                return null;
+            }
+            entityReleased++;
+            TungstenHelper.releaseIdleLock();
+            _progress.reset();
+            stuckCheck.reset();
+            setDebugState("Tungsten lock moved nothing — released");
             return null;
         }
 
-        // If Tungsten is actively pathfinding (outside lock), let it finish
+        // ⛔ A SEARCH IS NOT PROGRESS, AND THIS IS WHERE THE APPROACH TO A DROP DIES.
+        //
+        // This branch fires on TungstenHelper.isActive(), which is `PATHFINDER.active` OR
+        // `isExecutorRunning()` -- i.e. it is TRUE while tungsten is merely LOOKING. It then does
+        // two things, and both are wrong when nothing is being followed: it resets the progress
+        // checker every tick, so the stall can never be noticed, and it returns early, so the
+        // recovery below (retry the path, then wander) is unreachable even if it were noticed.
+        //
+        // The result is a permanent park. Measured three times on the playthrough, always in the
+        // same place -- "Pickup Dropped Items -> Approach entity -> Tungsten pathfinding..." --
+        // motionless for 70-90 seconds with every drive counter flat at zero, and once for a whole
+        // run that reached no rung at all. It is also the recorded "parks 1.17 blocks from the
+        // drop" case: ore at (14,-61,4), bot stopped at (14.79,-60.00,5.03) with the drop lying one
+        // block BELOW it in the hole it had just mined, seeing it 2393 times and never stepping in.
+        //
+        // ⭐ AND IT IS WHY BOTH RADIUS ATTEMPTS MEASURED NOTHING. closeEnough was raised to 1.75
+        // ("stops further out and never touches") and cut to 0.1 (`pickupClosesToContact`, refuted
+        // on its own A/B, tighter is worse). Neither could work: the radius decides when to STOP
+        // driving, and the bot here is not driving at all. With the recovery switched off, no
+        // choice of radius has anything to act on.
+        //
+        // The repo already names this defect and already has the tool for it -- MineAndCollectTask
+        // carries the identical two lines with `progressCheckIgnoresSearch` and
+        // `Nav.isExecutingRoute()`, which is MovementQueue/BlockPathWalker/executor actually
+        // running. Same flag on purpose: one defect, one switch, no second source of truth.
+        //
+        // Releasing is the part that matters. Falling through alone would not help, because
+        // tryPathToEntity refuses while tungsten is busy -- so a search that has moved the body
+        // nowhere for six seconds is STOPPED, and the next tick may plan afresh. Six seconds is
+        // MovementProgressChecker's own default (0.1 blocks in 6 s), so an ordinary search that
+        // finishes in time is untouched; only a search that owns the approach and goes nowhere is.
         if (TungstenHelper.isActive()) {
+            if (!mustMove) {
+                _progress.reset();
+                setDebugState("Tungsten pathfinding...");
+                return null;
+            }
+            if (_progress.check(mod)) {
+                // active, body still: allowed, but on the clock rather than for ever
+                setDebugState("Tungsten active (body still)");
+                return null;
+            }
+            entityReleased++;
+            TungstenHelper.stop();
             _progress.reset();
-            setDebugState("Tungsten pathfinding...");
+            stuckCheck.reset();
+            setDebugState("Tungsten searched without moving — released");
             return null;
         }
 
