@@ -1253,7 +1253,96 @@ class EscapeLava(CraftTable):
                         f"{went} at={ctx.geo.get('escaped_at')}s pos=({ex},{ez})", gate=False)
 
 
+class PickupDrop(CraftTable):
+    """Walk to ONE dropped item and touch it. Nothing else -- no ore, no crafting, no tools.
+
+    WHY THIS EXISTS. Five passes on the drop-approach freeze were measured on mine_diamond, and
+    every one of them drowned: that course fails 25-30% of the time and its noise floor is a full
+    run in eight -- a flag that provably did NOTHING (entityReleased=0/0 on every run) moved it
+    6/8 to 5/8. Four A/Bs at eight runs each, eighty minutes apiece, and not one could separate a
+    real effect from the spread. The problem was never the hypotheses; it was asking a noisy
+    course a question it cannot answer.
+
+    So this reproduces the captured geometry and nothing else. A failing mine_diamond run was
+    caught with the task chain recorded, and it froze at (6.7,-61.0,0.4) at t=8.5s -- motionless
+    for the remaining ~290 seconds -- sitting in:
+
+        Mine And Collect -> Pickup Dropped Items -> Approach entity   "Tungsten pathfinding (21s left)"
+
+    with the drop lying ONE BLOCK BELOW it in the hole it had just mined. The recorded 1.17-block
+    parking case has the same shape: ore at (14,-61,4), bot stopped at (14.79,-60.00,5.03).
+
+    THE PAIR IS THE POINT. pickup_pit puts the drop at the bottom of a one-deep pit, so reaching it
+    needs a step DOWN and back out. pickup_flat puts the same drop on open ground eight blocks away.
+    Same distance, same item, same task -- the only difference is the step. If flat is green and pit
+    is red, the step into a pit is the defect and any fix has a sharp instrument to prove itself on.
+    If BOTH are green, this geometry is not what freezes the bot and the five passes were chasing
+    the wrong shape, which is worth knowing before a sixth.
+
+    Deliberately short and cheap: 60 seconds, one item, no mining. A fix that works should show at
+    n=4 instead of needing sixteen runs to maybe show at all.
+    """
+
+    id = "pickup_flat"
+    duration = 60
+    pit = False
+
+    def build(self, arena, ctx):
+        arena.flat_field(half=24, grass=False)
+        y = STAND_Y - 1
+        ctx.rcon.cmd(f"fill -26 {y - 3} -26 26 {y - 1} 26 minecraft:stone", allow_reject=True)
+        ctx.geo["bot_spawn"] = f"0.5 {STAND_Y} 0.5 -90 0"
+
+    def drive_start(self, ctx):
+        ctx.rcon.cmd("time set day")
+        ctx.rcon.cmd("gamerule spawn_monsters false", allow_reject=True)
+        ctx.rcon.cmd("gamerule randomTickSpeed 0", allow_reject=True)
+        ctx.rcon.cmd(f"clear {ctx.bot.name}", allow_reject=True)
+        ctx.rcon.cmd("kill @e[type=item]", allow_reject=True)
+        # THE PIT IS ONE BLOCK OF THE FLOOR REMOVED, so the drop rests a block below the surface
+        # and the bot has to step down to touch it -- the geometry of every captured freeze.
+        if self.pit:
+            ctx.rcon.cmd(f"setblock 8 {STAND_Y - 1} 0 minecraft:air", allow_reject=True)
+        drop_y = (STAND_Y - 1) if self.pit else STAND_Y
+        ctx.rcon.cmd(
+            f'summon minecraft:item 8.5 {drop_y} 0.5 '
+            f'{{Item:{{id:"minecraft:diamond",count:1}},PickupDelay:0s}}', allow_reject=True)
+        ctx.geo["fps"] = []
+        time.sleep(2)
+        # PROVE THE DROP EXISTS BEFORE BLAMING THE BOT. A summon whose syntax the server rejected
+        # would leave nothing to collect, and the course would read as a navigation failure --
+        # exactly the false red this repo has paid for before.
+        found = ctx.rcon.cmd("execute if entity @e[type=item,distance=..40]", allow_reject=True)
+        ctx.geo["drop_ok"] = "1" in str(found or "") or "Test passed" in str(found or "")
+        ctx.bot.py.try_call("resetRunCounters")
+        time.sleep(1)
+        ctx.bot.cmd("@get diamond 1")
+
+    def early_stop(self, ctx):
+        return _count(ctx, "diamond") >= 1
+
+    def judge(self, ctx):
+        got = _count(ctx, "diamond")
+        yield Criterion("the drop was summoned", bool(ctx.geo.get("drop_ok")),
+                        f"drop_ok={ctx.geo.get('drop_ok')} -- a rejected summon is an INVALID run,"
+                        f" not a navigation failure")
+        yield Criterion("the diamond is in the pack", got >= 1,
+                        f"diamond={got} pit={self.pit}")
+        ok, stats = ctx.bot.py.try_call("placeStats")
+        parts = [t for t in str(stats or "").split()
+                 if t.startswith(("entityReleased=", "drop=", "scan=", "lock=", "navStop="))]
+        yield Criterion("approach counters (recorded, not gated)", True,
+                        (" ".join(parts) if parts else "unread"), gate=False)
+
+
+class PickupDropPit(PickupDrop):
+    """The same drop, at the bottom of a one-deep pit: the step is the only difference."""
+
+    id = "pickup_pit"
+    pit = True
+
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
-             ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava]
+             ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava,
+             PickupDrop, PickupDropPit]
