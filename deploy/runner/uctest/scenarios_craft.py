@@ -185,6 +185,44 @@ class CraftPickaxeMixedWood(CraftWoodPickaxe):
     id = "craft_pickaxe_mixed"
     bot_kit = ["give {name} oak_log 8", "give {name} dark_oak_log 8"]
 
+class CraftFullInventory(CraftWoodPickaxe):
+    """The same pickaxe, with the pack FULL -- the one variable the arena never had.
+
+    Four reproductions of survival-world failures have come back green today, each copying one
+    variable across. This is the fifth, and it comes from reading the mover rather than guessing
+    at the world: MoveItemToSlotTask, holding the wrong item, first tries
+
+        getSlotThatCanFitInPlayerInventory(currentHeld, true)
+
+    to put down what it is carrying. On a FULL pack that returns empty, so it falls through to
+    "if all else fails, just swap it" -- and a swap puts the unwanted item back into the pack while
+    taking the wanted one, which is a shuffle rather than a delivery.
+
+    Every craft course on this bench runs with a nearly empty inventory: the kit is 16 logs and
+    nothing else. The playthrough bot is carrying a run's worth of everything, and its stall reads
+    MOVEMISMATCH holding=planks want=[stick] with mcFilled=3080 against ciReceive=25.
+
+    So this course is that difference: the same logs, the same command, and thirty stacks of junk
+    filling every other slot. Red here means the crafting wall finally has a deterministic
+    reproduction. Green means a full pack is not it either, and the arena/survival gap is somewhere
+    else again -- which is worth one course to learn, as it was the other four times.
+
+    ⛔ RESULT: GREEN, 4/4, AND THAT IS FIVE. pickup_pit, pickup_vs_mine, pickup_after_goto,
+    craft_pickaxe_mixed and now this one -- five reproductions built by copying a single variable
+    from a survival failure onto the arena, and every one of them passes.
+
+    Five is no longer a run of bad luck, it is the finding: copying ONE variable does not carry the
+    failure across, so whatever the survival world does differently is not any single one of the
+    pit, the mine-or-collect choice, a completed goto, mixed wood, or a full pack. The next attempt
+    has to be structurally different rather than a sixth variable -- run the real @gamer task
+    against an arena world, or take more state out of the survival stall itself -- and the arena
+    should stop being asked this question in the meantime.
+    """
+
+    id = "craft_full_inventory"
+    duration = 180
+    bot_kit = ["give {name} oak_log 16", "give {name} dirt 64", "give {name} cobblestone 64", "give {name} gravel 64", "give {name} sand 64", "give {name} andesite 64", "give {name} diorite 64", "give {name} granite 64", "give {name} tuff 64", "give {name} deepslate 64", "give {name} clay_ball 64", "give {name} flint 64", "give {name} charcoal 64", "give {name} apple 64", "give {name} wheat_seeds 64", "give {name} bone 64", "give {name} string 64", "give {name} feather 64", "give {name} leather 64", "give {name} rotten_flesh 64", "give {name} paper 64", "give {name} brick 64", "give {name} sugar 64", "give {name} kelp 64", "give {name} bamboo 64", "give {name} coal 64", "give {name} raw_copper 64", "give {name} raw_iron 64", "give {name} redstone 64", "give {name} quartz 64", "give {name} calcite 64"]
+
 class CraftStonePickaxe(CraftTable):
     """The third rung, with the stone handed over rather than mined.
 
@@ -1534,7 +1572,7 @@ class PickupDropPit(PickupDrop):
     pit = True
 
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
-SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftPickaxeMixedWood, CraftStonePickaxe, MineStone, SmeltIron,
+SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftPickaxeMixedWood, CraftFullInventory, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
              ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava,
              PickupDrop, PickupDropSide, PickupDropLedge, PickupDropPit,
