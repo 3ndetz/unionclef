@@ -192,13 +192,19 @@ craft  18 courses   18/18 with the approach-recovery flags pinned; 17/18 on a la
 gamer   playthrough  3/3 with the flags on, against 1/3 off -- interleaved, same session
 ```
 
-⛔ TWO COURSES ARE FLAKES, NOT WALLS, and neither should be read at small n:
+⭐⭐ mine_diamond WAS the flake of this file and it is NOT any more. Measured 8/8 on the shipped
+defaults, diamonds=2 on every run, straight after the approach-recovery flags went on:
 
-    mine_diamond      6/8, 6/8, 5/8, 4/8 across four interleaved A/Bs in one day
-    goto_then_mine    4/5
+    before (flags off)   6/8, 6/8, 5/8, 4/8 across four interleaved A/Bs in one day
+    after  (shipped)     8/8
 
-A flag that provably did nothing moved mine_diamond 6/8 -> 5/8, which is the noise floor written
-down. Whichever of the two lands decides whether a craft sweep reads 18/18 or 17/18.
+That course had been red or flaky for as long as this file has tracked it, and the fixes that
+cured it were measured on the PLAYTHROUGH, not on it -- they were refuted on mine_diamond itself
+because the arena never carried their signature (lock=0/0/0 there). Worth remembering next time a
+course refuses to move: the mechanism may be real and the course may be the wrong witness.
+
+⛔ goto_then_mine remains a flake at 4/5, and it is what decides whether a craft sweep reads 18/18
+or 17/18 now. Do not read small differences on it until that is fixed.
 
 THE PLAYTHROUGH IS MEASURABLE AGAIN, and twice over. Quieting the unused tester client took the
 survival world from 7 fps (below the floor of 12, refused before starting) to 17-27. And
