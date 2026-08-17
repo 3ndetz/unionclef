@@ -58,6 +58,15 @@ elif op=="zero": out={"r": str(mc.resetRunCounters())}
 elif op=="wdbg": out={"r": str(mc.setWalkerDebug(bool(req.get("on"))))}
 elif op=="task": out={"chain": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-1400:], "runner": str(mc.getRunnerStatus() or "")[:300]}
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(int(req.get("n",8)))]}
+elif op=="screen":
+    sc=dict(mc.getOpenScreen()); items=[]
+    try:
+        for sl in sc.get("slots") or []:
+            sd=dict(sl)
+            if not sd.get("empty"):
+                items.append(str(sd.get("index"))+":"+str(sd.get("item")).replace("minecraft:","")+"x"+str(sd.get("count")))
+    except Exception: pass
+    out={"open":sc.get("open"),"screen":sc.get("screen"),"slots":items[:40]}
 elif op=="hasTask": out={"busy":mc.hasActiveTask()}
 print(json.dumps(out,default=str)); gw.close()
 """
@@ -558,6 +567,14 @@ def main():
                                 "", "FULL COUNTERS:", py4j("stats").get("s") or "",
                                 "", "RUNNER:", str(py4j("task").get("runner", "")),
                                 "", "CHAIN:", str(py4j("task").get("chain", "")),
+                                # ⛔ WHAT IS ACTUALLY IN THE GRID. Five arena reproductions failed to
+                                # carry the crafting wall across, so the remaining route is to take
+                                # more state out of the survival stall itself -- and this is the piece
+                                # every capture has been missing. ciGrid=0 claims nothing lands in the
+                                # grid while MOVEMISMATCH says the mover holds the wrong item; the
+                                # screen's own slots settle that without inference. getOpenScreen
+                                # already existed, the capture simply never asked it.
+                                "", "SCREEN:", str(py4j("screen")),
                                 "", "THREADS:", py4j("tdump", f="PathFinder,Tungsten,Baritone,Render")["d"] or ""]
                         fn = os.path.join(FREEZE_DIR, "stall_run%d.txt" % RUN_SEQ[0])
                         io.open(fn, "w", encoding="utf-8").write(chr(10).join(blob))
