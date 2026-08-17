@@ -56,8 +56,25 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     };
     private Task _unstuckTask = null;
 
-    /** Close enough that a route is pointless and a straight walk collects it. */
-    private static final double CLOSE_WALK_RANGE = 3.5;
+    /**
+     * Close enough that a route is pointless and a straight walk collects it.
+     *
+     * <p>⛔ THIS WAS 3.5 AND THAT NUMBER WAS A GUESS MADE BEFORE THE DISTANCE WAS MEASURED, which
+     * is why the branch fired on ONE run in sixteen and the A/B came back "not established". The
+     * failures were never at 3.5 blocks. Two captures, with the drop position finally recorded:
+     *
+     * <pre>
+     *   bot=[25.02,-60.0,-3.01]   drop=[20.875,-61.0,0.539]   ~5.5 blocks
+     *   bot=[24.29,-60.0, 5.29]   drop=[20.398,-61.0,0.125]   ~6.6 blocks
+     * </pre>
+     *
+     * The drop lies one block below the surface in the hole the bot just dug, and the bot ends up
+     * five to seven blocks away on top of it, pursuing it for the whole run (idrop about 3690, a
+     * drop handed over on every ask) and never arriving. Eight blocks covers that and is still
+     * short enough that a straight walk is a sane thing to do -- and it only ever runs after the
+     * progress checker says the body is not moving.
+     */
+    private static final double CLOSE_WALK_RANGE = 8.0;
 
     public GetToEntityTask(Entity entity, double closeEnoughDistance) {
         _entity = entity;
