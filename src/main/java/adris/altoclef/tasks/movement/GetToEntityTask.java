@@ -58,6 +58,19 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
      */
     public static volatile int entityCloseWalkCloser;
 
+    /**
+     * Ticks where the bot was actually FACING the target at the START of the tick.
+     *
+     * <p>Read as entityCloseWalk=ticks/moved/closer/aimed. LookHelper.lookAt SNAPS yaw and pitch
+     * (setYaw/setPitch, no smoothing, no baritone path), so after this branch runs the bot is
+     * pointed at the drop by construction. If the yaw is still wrong when the NEXT tick begins,
+     * something overwrote it in between and hold(MOVE_FORWARD) has been carrying the bot off in
+     * whatever direction that something chose -- which would explain 462 moving ticks yielding 33
+     * closer. If the yaw is right and it still does not close, the body is blocked and the fault is
+     * geometric. Those are the last two candidates and this tells them apart.
+     */
+    public static volatile int entityCloseWalkAimed;
+
     private net.minecraft.util.math.Vec3d closeWalkLastPos = null;
     private double closeWalkLastDist = -1;
 
@@ -373,6 +386,13 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             net.minecraft.util.math.Vec3d nowPos = mod.getPlayer().getPos();
             if (closeWalkLastPos != null && closeWalkLastPos.squaredDistanceTo(nowPos) > 0.0025) {
                 entityCloseWalkMoved++;
+            }
+            // Measured BEFORE this tick's snap, so it reports what the previous tick left behind.
+            net.minecraft.util.math.Vec3d toTarget = _entity.getPos().subtract(nowPos);
+            float wantYaw = (float) Math.toDegrees(-Math.atan2(toTarget.x, toTarget.z));
+            if (Math.abs(net.minecraft.util.math.MathHelper.wrapDegrees(
+                    wantYaw - mod.getPlayer().getYaw())) < 20.0f) {
+                entityCloseWalkAimed++;
             }
             double nowDist = nowPos.distanceTo(_entity.getPos());
             if (closeWalkLastDist >= 0 && nowDist < closeWalkLastDist - 0.01) {
