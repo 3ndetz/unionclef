@@ -1336,6 +1336,10 @@ class PickupDrop(CraftTable):
     ledge = False
     drop_x = 8.5
     drop_z = 0.5
+    item = "diamond"
+    want = 1
+    kit = None
+    goto_first = 0
 
     def build(self, arena, ctx):
         arena.flat_field(half=24, grass=False)
@@ -1362,7 +1366,7 @@ class PickupDrop(CraftTable):
         drop_y = (STAND_Y - 1) if self.pit else ((STAND_Y + 1) if self.ledge else STAND_Y)
         ctx.rcon.cmd(
             f'summon minecraft:item {self.drop_x} {drop_y} {self.drop_z} '
-            f'{{Item:{{id:"minecraft:diamond",count:1}},PickupDelay:0s}}', allow_reject=True)
+            f'{{Item:{{id:"minecraft:{self.item}",count:{self.want}}},PickupDelay:0s}}', allow_reject=True)
         ctx.geo["fps"] = []
         time.sleep(2)
         # PROVE THE DROP EXISTS BEFORE BLAMING THE BOT. A summon whose syntax the server rejected
@@ -1372,18 +1376,32 @@ class PickupDrop(CraftTable):
         ctx.geo["drop_ok"] = "1" in str(found or "") or "Test passed" in str(found or "")
         ctx.bot.py.try_call("resetRunCounters")
         time.sleep(1)
-        ctx.bot.cmd("@get diamond 1")
+        for line in (self.kit or []):
+            ctx.rcon.cmd(line.format(name=ctx.bot.name), allow_reject=True)
+        # A REAL ;goto first, when the variant asks for one. This is the last thing
+        # goto_then_mine does that no pickup course does, and it is the thing that course was
+        # built to catch: a goto that has COMPLETED but whose destination is still held.
+        if self.goto_first:
+            prefix = ctx.bot.py.try_call("tungstenPrefix")[1] or ";"
+            ctx.bot.chat(f"{prefix}goto {self.goto_first} {STAND_Y} 0")
+            for _ in range(30):
+                time.sleep(2)
+                pos = ctx.rcon.entity_pos(ctx.bot.name)
+                if pos and abs(pos[0] - self.goto_first) < 3:
+                    break
+            ctx.bot.py.try_call("resetRunCounters")
+        ctx.bot.cmd(f"@get {self.item} {self.want}")
 
     def early_stop(self, ctx):
-        return _count(ctx, "diamond") >= 1
+        return _count(ctx, self.item) >= self.want
 
     def judge(self, ctx):
-        got = _count(ctx, "diamond")
+        got = _count(ctx, self.item)
         yield Criterion("the drop was summoned", bool(ctx.geo.get("drop_ok")),
                         f"drop_ok={ctx.geo.get('drop_ok')} -- a rejected summon is an INVALID run,"
                         f" not a navigation failure")
-        yield Criterion("the diamond is in the pack", got >= 1,
-                        f"diamond={got} pit={self.pit} at=({self.drop_x},{self.drop_z})")
+        yield Criterion(f"the {self.item} is in the pack", got >= self.want,
+                        f"{self.item}={got} pit={self.pit} at=({self.drop_x},{self.drop_z})")
         ok, stats = ctx.bot.py.try_call("placeStats")
         parts = [t for t in str(stats or "").split()
                  if t.startswith(("entityReleased=", "drop=", "scan=", "lock=", "navStop=",
@@ -1409,6 +1427,54 @@ class PickupDropSide(PickupDrop):
     id = "pickup_side"
     drop_x = 0.5
     drop_z = 8.5
+
+
+class PickupMinableDrop(PickupDrop):
+    """A drop in a one-deep pit WHILE the same resource is minable everywhere.
+
+    This is goto_then_mine's geometry set up directly instead of waited for. That course fails
+    15-25% and four passes could not move it, because its batch rates (8/8, 5/8, 6/8, 12/14, 6/6,
+    8/8) swamp anything an eight-run arm can show. Its failures are fully characterised: the drop
+    lies ONE BLOCK BELOW the surface in the hole the bot just dug, the bot ends 5-7 blocks away on
+    top of it, and it pursues that drop for the whole run -- idrop 3700-6200, a drop handed back on
+    every ask -- without ever arriving.
+
+    pickup_pit ALREADY passes with a drop in a one-deep pit eight blocks out, so the pit is not the
+    difference. THIS is: there, collecting the drop is the only way to satisfy the task. Here the
+    bot is asked for cobblestone while standing on a stone field it could simply mine, so the
+    choice between MINING and COLLECTING is live on every tick -- exactly as in goto_then_mine, and
+    exactly what pickup_pit never exercises.
+
+    Red here means the flake has a deterministic reproduction and any real fix shows at n=4 instead
+    of drowning. Green means the choice is not the difference either, and what is left is the bot
+    having DUG the hole itself.
+    """
+
+    id = "pickup_vs_mine"
+    pit = True
+    item = "cobblestone"
+    want = 3
+    kit = ["give {name} stone_pickaxe 1"]
+
+
+class PickupAfterGoto(PickupMinableDrop):
+    """The same pit drop, but reached only AFTER a completed ;goto -- the last untested variable.
+
+    pickup_pit (drop in a pit) passes. pickup_vs_mine (same, with the resource also minable) passes.
+    So neither the pit nor the mine-or-collect choice is what breaks goto_then_mine. What is left,
+    and what no pickup course does, is the ;goto that runs first -- and a stale destination
+    surviving a COMPLETED goto is precisely the bug class goto_then_mine exists to catch, and one
+    that has already bitten this ladder twice (TungstenMod.TARGET's y=10 debug initialiser, then a
+    goto that finished while TARGET kept its destination).
+
+    The drop sits past the goto destination so the approach must happen after arrival, which is the
+    state that was never cleared.
+    """
+
+    id = "pickup_after_goto"
+    goto_first = 14
+    drop_x = 20.5
+    drop_z = 0.5
 
 
 class PickupDropLedge(PickupDrop):
@@ -1437,4 +1503,5 @@ class PickupDropPit(PickupDrop):
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
              ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava,
-             PickupDrop, PickupDropSide, PickupDropLedge, PickupDropPit]
+             PickupDrop, PickupDropSide, PickupDropLedge, PickupDropPit,
+             PickupMinableDrop, PickupAfterGoto]
