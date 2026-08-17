@@ -33,6 +33,21 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     /** Ticks spent walking straight at a target that navigation would not deliver. */
     public static volatile int entityCloseWalk;
 
+    /**
+     * Of those ticks, how many the BODY ACTUALLY MOVED on. Read as entityCloseWalk=ticks/moved.
+     *
+     * <p>This is the one datum that splits the two surviving explanations of goto_then_mine, and
+     * it needs no failure to be caught. Holding forward at a drop for 482 ticks does not collect
+     * it -- measured -- and there are only two ways that can be true. Either the keys are held and
+     * the body does not move, in which case something else owns the inputs and the walk was never
+     * real; or the body moves and the drop still is not collected, in which case it cannot be
+     * reached from above and the bot needs to get INTO its own excavation. Counting the ticks the
+     * position changed on says which, from any run where the branch fires at all -- pass or fail.
+     */
+    public static volatile int entityCloseWalkMoved;
+
+    private net.minecraft.util.math.Vec3d closeWalkLastPos = null;
+
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
     private final MovementProgressChecker _progress = new MovementProgressChecker();
     private final TimeoutWanderTask _wanderTask = new TimeoutWanderTask(5);
@@ -342,6 +357,11 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
                 && mod.getPlayer().isInRange(_entity, CLOSE_WALK_RANGE)
                 && !mod.getPlayer().isInRange(_entity, _closeEnoughDistance)) {
             entityCloseWalk++;
+            net.minecraft.util.math.Vec3d nowPos = mod.getPlayer().getPos();
+            if (closeWalkLastPos != null && closeWalkLastPos.squaredDistanceTo(nowPos) > 0.0025) {
+                entityCloseWalkMoved++;
+            }
+            closeWalkLastPos = nowPos;
             TungstenHelper.stop();
             Nav.cancel();
             adris.altoclef.util.helpers.LookHelper.lookAt(mod, _entity.getPos());
