@@ -114,6 +114,36 @@ the inner craft's output can keep bouncing while the outer craft re-asks. The qu
 first is WHO put the planks in the cursor, and whether the outer craft should be suspended while a
 nested one owns the grid.
 
+## THE PLAYTHROUGH HAS TWO WALLS, NOT ONE (2026-08-17, measured)
+
+Runs differ in WHICH wall they meet, which is why ladder depth swings from five rungs to nothing
+on identical settings. They are distinct in the counters, so a capture always says which:
+
+    WALL 1, the crafting grid      mc=3080/0/0/2/0  ciReceive=25  mcFlight=73
+                                   MOVEMISMATCH holding=planks want=[stick] slot 4
+                                   15x CURSORBACK manualTail holding=stick
+
+    WALL 2, collect forever        ciTick=8134  ciCollect=8134  ciReceive=0  ciGrid=0
+                                   mc=0/0/0/0/0 -- the manual craft NEVER RUNS
+                                   twelve minutes gathering for a craft never begun; ladder: nothing
+
+HYPOTHESIS FOR WALL 1, with its counter now shipped (mcSwitch): the loop returns a mover for the
+FIRST unsatisfied slot, and when that slot's ingredient is in the CURSOR, hasItemInventoryOnly is
+false for it, the guard continues past, and a LATER slot gets the mover instead. The new mover
+finds the wrong item held, puts it away, and the first slot is empty again next tick. mcInFlight
+exists to stop exactly that and fired on 73 of 3080 ticks. If mcSwitch is non-zero, the fix is to
+HOLD THE SLOT until the move finishes -- not to keep the cursor, which was measured and did not
+help (9-minute A/B: on 3/1/4 rungs, off 5/1/5, off went deeper).
+
+WALL 2 IS UNTOUCHED and has no hypothesis yet. ciCollect==ciTick means every single tick took the
+collect branch. Read CraftInInventoryTask's collect path first: what it is waiting for, and why
+the materials never satisfy it.
+
+⛔ AND THE ARENA WILL NOT REPRODUCE EITHER. Four courses were built today to copy one variable at a
+time -- pickup_pit, pickup_vs_mine, pickup_after_goto, craft_pickaxe_mixed -- and all four are
+green. Same conclusion mine_coal reached about the break ban: these failures belong to the survival
+world, and measuring them means long windows and many runs, not a fifth course.
+
 ## goto_then_mine — MEASURED TO DEATH, AND THE COURSE IS THE PROBLEM (2026-08-17)
 
 Four passes went into this course and none of them moved it. Everything below is measured, so
