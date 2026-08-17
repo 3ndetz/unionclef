@@ -77,6 +77,49 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
 <!-- CLAIMS -->
+## goto_then_mine — MEASURED TO DEATH, AND THE COURSE IS THE PROBLEM (2026-08-17)
+
+Four passes went into this course and none of them moved it. Everything below is measured, so
+the next pass can start from the evidence instead of repeating the A/Bs.
+
+WHAT THE FAILURE IS, with the drop position finally recorded:
+
+    bot=[25.02,-60.0,-3.01]   drop=[20.875,-61.0,0.539]   ~5.5 blocks apart
+    bot=[24.29,-60.0, 5.29]   drop=[20.398,-61.0,0.125]   ~6.6 blocks apart
+    FAIL  idrop=6122, 6172, 3688, 3698   drop=16-17/0   lock=1-2/0/0-1   navStop=3/0-2/0
+    PASS  idrop=56-111                   drop=51/0      lock=0/0/0
+
+The drop lies ONE BLOCK BELOW the surface, in the hole the bot has just dug. The bot ends five to
+seven blocks away on top of it and pursues it for the whole run -- the tracker hands a drop back
+on every one of ~3700-6200 asks -- and never arrives. MineOrCollect meanwhile drops from 51 asks
+to 17: it stops even asking about mining.
+
+WHAT HAS BEEN TRIED AND REFUTED, each with the mechanism counter proving it ran:
+
+  - entitySearchMustMove blamed and CLEARED. Failures and releases landed on the same runs 6/6
+    then 3/3, and an A/B read 5/8 on against 8/8 off -- but with it off BY DEFAULT the course
+    still failed 2/8 with entityReleased=0/0 on both failures. The release is a passenger.
+  - entityWanderWhenNavRefuses: 5/8 against 5/8. No effect.
+  - entityCloseRangeWalk at 3.5 blocks: fired on 1 run in 16 (the range was a guess made before
+    the distance was known). At 8.0 it fires properly -- 241, 482, 482, 361, 361 ticks -- and
+    still does not fix it: 5/8 on against 6/8 off, and one run that fired 482 ticks PASSED while
+    another that fired 482 FAILED.
+
+⛔ THE COURSE CANNOT ANSWER THESE QUESTIONS. Batch rates today: 8/8, 5/8, 6/8, 12/14, 6/6, 8/8.
+That spread swamps any effect an eight-run arm can show, which is the same wall mine_diamond hit
+-- and there the answer was NOT another A/B, it was pickup_pit: a course that reproduced the
+geometry deterministically and turned a 25% flake into a 0/4 that any real fix would move.
+
+NEXT PASS: build that course here. Bot on the surface, drop already lying in a one-deep hole five
+to seven blocks away -- the post-failure geometry, set up directly instead of waited for. Note
+that pickup_pit ALREADY passes with a drop in a one-deep pit eight blocks out, so the difference
+is something about the bot having dug the hole itself, and finding what that is IS the fix.
+
+One fact worth having first, and it is one run: catch a failure with entityCloseRangeWalk on and
+read the timeline to see whether the body MOVES during those 482 ticks. If it does not, something
+else owns the movement keys; if it does, the drop cannot be reached from above. That splits the
+two remaining cases and costs nothing.
+
 ## ⚙️ КТО ЧТО ВЗЯЛ ПРЯМО СЕЙЧАС (доска заявок для параллельных воркеров)
 
 Правила 4v/4w: два воркера делят не только ветку, но и РАБОЧЕЕ ДЕРЕВО, стенд и очередь задач. За
