@@ -77,6 +77,43 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
 <!-- CLAIMS -->
+## ⭐⭐⭐ THE PLAYTHROUGH WALL IS THE CRAFTING GRID (2026-08-17, measured)
+
+Acceptance criterion #1 says a course is a proxy and the playthrough is the fact. A 14-minute
+window went SHALLOWER than the 5-minute ones -- wood tools@227.2s, then NOTHING for ten minutes --
+so it is a wall, not a clock. The stall capture walks straight down the instruments earlier
+sessions planted, and every one of them answers.
+
+    CHAIN  Collecting [[wooden_pickaxe]] -> {stick x 2} -> Craft 2x2 {dark_oak_planks x 2}
+           -> "Moving item to slot..."      six levels deep, in the GRID, not in navigation
+
+    mc=3080/0/0/2/0    fill/short/out/wait/invalid -- it FILLS, 3080 times
+    mcFlight=73        NON-ZERO
+    ciTick=6698  ciReceive=25  ciGrid=0    cgTick=0  cgSent=0
+
+CraftGenericManuallyTask asked "which of the five it does every tick decides what to read next,
+and nothing currently said". It says FILL, at three times the 1051 recorded there. mcInFlight said
+a NON-ZERO reading "is proof that the carousel condition really does occur" -- it is 73.
+
+That pointed at MoveItemToSlotTask, whose MOVEMISMATCH line is called "the last place left to
+guess". It fired:
+
+    MOVEMISMATCH holding=dark_oak_planks want=[stick] dest=CraftingTableSlot{slot 4}
+    MOVEMISMATCH holding=oak_planks      want=[stick] dest=CraftingTableSlot{slot 4}
+
+The bot holds PLANKS in the cursor while the grid slot wants a STICK.
+
+READING (a reading, not a proof): a wooden pickaxe needs planks AND sticks; the bot has no sticks,
+so it nests a craft to make sticks from planks, and the outer craft and the inner one contend for
+the same grid and the same cursor. The codebase already knows this shape exists --
+ITaskUsesCraftingGrid and EnsureFreePlayerCraftingGridTask -- and that is where a fix belongs.
+
+NEXT PASS: read MoveItemToSlotTask lines 71-91 with that in mind. When the held item is wrong it
+tries getSlotThatCanFitInPlayerInventory(held) and otherwise SWAPS, which is how a cursor holding
+the inner craft's output can keep bouncing while the outer craft re-asks. The question to settle
+first is WHO put the planks in the cursor, and whether the outer craft should be suspended while a
+nested one owns the grid.
+
 ## goto_then_mine — MEASURED TO DEATH, AND THE COURSE IS THE PROBLEM (2026-08-17)
 
 Four passes went into this course and none of them moved it. Everything below is measured, so
