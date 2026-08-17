@@ -101,6 +101,11 @@ public class CraftGenericManuallyTask extends Task implements adris.altoclef.tas
      * back would undo work the next tick has to redo.
      */
     private boolean slotStillWants(Item held, int requiredPerSlot, boolean bigCrafting) {
+        return firstSlotWanting(held, requiredPerSlot, bigCrafting) >= 0;
+    }
+
+    /** Index of the first UNSATISFIED slot that wants {@code held}, or -1. */
+    private int firstSlotWanting(Item held, int requiredPerSlot, boolean bigCrafting) {
         try {
             for (int i = 0; i < target.getRecipe().getSlotCount(); ++i) {
                 ItemTarget want = target.getRecipe().getSlot(i);
@@ -110,12 +115,12 @@ public class CraftGenericManuallyTask extends Task implements adris.altoclef.tas
                         : PlayerSlot.getCraftInputSlot(i);
                 ItemStack there = StorageHelper.getItemStackInSlot(slot);
                 boolean satisfied = want.matches(there.getItem()) && there.getCount() >= requiredPerSlot;
-                if (!satisfied) return true;
+                if (!satisfied) return i;
             }
         } catch (Exception ignored) {
             // a guard must never be the thing that breaks a craft
         }
-        return false;
+        return -1;
     }
 
     private final RecipeTarget target;
@@ -169,6 +174,41 @@ public class CraftGenericManuallyTask extends Task implements adris.altoclef.tas
         // plank recipe results in 4 sticks
         // this means 3 planks per slot
         int requiredPerSlot = (int) Math.ceil((double) target.getTargetCount() / target.getRecipe().outputCount());
+
+        // ⛔ FINISH THE MOVE THAT IS ALREADY IN FLIGHT BEFORE PICKING A DIFFERENT SLOT.
+        //
+        // The loop below hands a mover to the FIRST unsatisfied slot. When that slot's ingredient
+        // is already in the CURSOR -- picked up last tick, halfway to the grid --
+        // hasItemInventoryOnly is false for it, the guard inside takes its `continue`, and a LATER
+        // slot gets the mover instead. That mover finds the wrong item held, puts it away, and the
+        // first slot is empty again next tick. Round and round.
+        //
+        // Every reading of the stalled playthrough fits that and nothing else: mcFilled=3080
+        // against ciReceive=25, MOVEMISMATCH holding=planks want=[stick] on slot 4, and CURSORBACK
+        // handing back stick, planks and log by turns. mcInFlight is the guard meant to prevent it
+        // and fired on 73 of those 3080 ticks -- it catches the case only when the loop happens to
+        // reach the right slot first, which is precisely what goes wrong.
+        //
+        // So ask the question the other way round: not "which slot is unsatisfied" but "does what
+        // I am already holding belong somewhere". If it does, put it THERE and finish the move.
+        // Keeping the cursor instead was tried and measured no benefit (9-minute A/B, off arm went
+        // deeper), because that fixes the symptom while the target keeps moving.
+        if (kaptainwutax.tungsten.TungstenConfig.get().craftFinishMoveInFlight) {
+            ItemStack held = StorageHelper.getItemStackInCursorSlot();
+            if (!held.isEmpty()) {
+                int wants = firstSlotWanting(held.getItem(), requiredPerSlot, bigCrafting);
+                if (wants >= 0) {
+                    Slot dest = bigCrafting
+                            ? CraftingTableSlot.getInputSlot(wants, target.getRecipe().isBig())
+                            : PlayerSlot.getCraftInputSlot(wants);
+                    mcFilled++;
+                    mcInFlight++;
+                    setDebugState("Finishing the move already in flight...");
+                    return new MoveItemToSlotFromInventoryTask(
+                            new ItemTarget(target.getRecipe().getSlot(wants), requiredPerSlot), dest);
+                }
+            }
+        }
 
         // For each slot in table
         for (int craftSlot = 0; craftSlot < target.getRecipe().getSlotCount(); ++craftSlot) {

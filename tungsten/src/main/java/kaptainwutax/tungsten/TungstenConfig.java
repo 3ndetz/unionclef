@@ -767,6 +767,27 @@ public class TungstenConfig {
     public boolean craftKeepWantedCursor = false;
 
     /**
+     * Put what the cursor is ALREADY holding into the slot that wants it, before choosing another.
+     *
+     * <p>CraftGenericManuallyTask hands its mover to the first UNSATISFIED slot. When that slot's
+     * ingredient is in the cursor -- picked up last tick, halfway to the grid --
+     * {@code hasItemInventoryOnly} reads false for it, the guard continues past, and a LATER slot
+     * gets the mover. That mover finds the wrong item held, puts it away, and the first slot is
+     * empty again. The craft rides that round and round.
+     *
+     * <p>Measured on the stalled playthrough: mcFilled=3080 against ciReceive=25, MOVEMISMATCH
+     * holding=planks want=[stick] on slot 4, CURSORBACK returning stick, planks and log by turns,
+     * and mcInFlight -- the guard written for this -- catching only 73 of those 3080 ticks.
+     *
+     * <p>Distinct from {@link #craftKeepWantedCursor}, which held the cursor instead of moving the
+     * target and measured no benefit on nine-minute windows. This moves the TARGET to the cursor.
+     *
+     * <p>GATE: craft 20/20 unchanged, and the playthrough ladder. Proof it ran: mcFlight, which
+     * this path also increments.
+     */
+    public boolean craftFinishMoveInFlight = false;
+
+    /**
      * A flee destination must be somewhere the bot can STAND, not a projected coordinate.
      *
      * <p>Upstream's GoalRunAway is a heuristic over the whole search space -- any cell far enough
