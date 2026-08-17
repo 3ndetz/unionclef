@@ -77,6 +77,38 @@ def py4j(op,t=30,**kw):
     return json.loads(r.stdout.strip().splitlines()[-1])
 def grcon(c,t=20): return sh(["docker","exec",GSERVER,"rcon-cli",c],t).stdout.strip()
 
+# How long the ladder may sit still before that counts as a stall in its own right. The slowest
+# legitimate gap between rungs measured across today's runs is about ninety seconds (wood tools at
+# 227.2s after crafting at 136.7s), so 150 does not fire on a merely slow run.
+LADDER_STALL_S = 150
+
+
+def write_stall_evidence(reason, tag=""):
+    """Everything worth having about a stalled run, written once to freezes/stall_run<N><tag>.txt.
+
+    Shared by BOTH triggers -- a frozen position and a ladder that has stopped climbing -- because
+    the evidence wanted is identical and only the reason differs. It used to live inline under the
+    position trigger, which is exactly why no crafting stall has ever produced a capture.
+    """
+    try:
+        blob = [reason,
+                "", "FULL COUNTERS:", py4j("stats").get("s") or "",
+                "", "RUNNER:", str(py4j("task").get("runner", "")),
+                "", "CHAIN:", str(py4j("task").get("chain", "")),
+                # ⛔ WHAT IS ACTUALLY IN THE GRID. Five arena reproductions failed to carry the
+                # crafting wall across, so the remaining route is more state out of the survival
+                # stall itself. ciGrid=0 claims nothing lands in the grid while MOVEMISMATCH says
+                # the mover holds the wrong item; the screen's own slots settle that without
+                # inference. getOpenScreen already existed, the capture simply never asked it.
+                "", "SCREEN:", str(py4j("screen")),
+                "", "THREADS:", py4j("tdump", f="PathFinder,Tungsten,Baritone,Render")["d"] or ""]
+        fn = os.path.join(FREEZE_DIR, "stall_run%d%s.txt" % (RUN_SEQ[0], tag))
+        io.open(fn, "w", encoding="utf-8").write(chr(10).join(blob))
+        print(f"  stall evidence written to {fn}")
+    except Exception as e:
+        print(f"  stall evidence failed: {str(e)[:70]}")
+
+
 def quiet_the_box():
     """Stop the tester clients THIS run does not use, and return them so they can be put back.
 
@@ -470,7 +502,7 @@ def main():
         print("  already held at start (cannot count):", ", ".join(sorted(preexisting)))
     ctx_last_chain = [None]
     prev_stats = {}
-    stall = [None, 0]
+    stall = [None, 0, False, time.time()]
     froze = [0, False]   # consecutive frozen polls, and whether this run already dumped
 
     # MARK WHERE THE RUN STARTS IN THE SERVER LOG.
@@ -514,6 +546,7 @@ def main():
                 if rung in reached or rung in preexisting: continue
                 if any(any(nd in i for nd in needles) for i in inv.get("ids") or []):
                     reached[rung] = round(time.time()-t0, 1)
+                    stall[3] = time.time()
                     print(f"  RUNG '{rung}' at {reached[rung]}s")
             responsive+=1
             # HOW FAST WAS THE CLIENT WHILE IT TRIED? The nav suite has asked this since the day a
@@ -551,6 +584,27 @@ def main():
             # that replaced it: the movement queue taking 110 steps a poll while the bot does not
             # shift a single block. Position is the honest signal, whatever the counters say.
             here = str(pos)
+            # ⛔ AND A LADDER THAT STOPS CLIMBING IS A STALL TOO, EVEN WHILE THE BOT WALKS.
+            #
+            # The trigger below is an unchanged POSITION. That catches a navigation stall and cannot
+            # catch the playthrough's other wall at all: a crafting stall does not stand still --
+            # the bot walks to the table, back to a tree, round again, moving the whole time while
+            # the ladder goes nowhere. Which is why every capture on disk is a navigation stall, and
+            # why the crafting wall, the one that ends most runs, has never produced evidence of its
+            # own. Measured tonight: a nine-minute run reached first craft@22.1s and nothing after,
+            # and wrote no capture, because the bot never stopped moving.
+            #
+            # ⛔ AND `and reached` HERE WOULD EXEMPT THE WORST RUN OF ALL. Written that way first, it
+            # could only fire once a rung existed, so a run that climbed NOTHING -- the failure most
+            # worth capturing -- was the one case it could not catch. stall[3] starts at run start,
+            # so the clock runs from the beginning whether or not a rung ever lands.
+            if not stall[2] and (time.time() - stall[3]) > LADDER_STALL_S:
+                stall[2] = True
+                last = sorted(reached, key=reached.get)[-1] if reached else "-"
+                print(f"  LADDER STALLED: no new rung for {LADDER_STALL_S}s (last: {last})")
+                write_stall_evidence(
+                    f"LADDER STALLED: no new rung for {LADDER_STALL_S}s; last rung {last}",
+                    tag="_ladder")
             if here == stall[0] and here != "None":
                 stall[1] += 1
                 if stall[1] == 3:
@@ -562,25 +616,7 @@ def main():
                     # A stalled bot is still ticking, so the useful evidence here is WHICH exit
                     # the drive keeps taking: the six printed deltas cannot say, and the full
                     # counter string can.
-                    try:
-                        blob = ["position stalled at %s" % here,
-                                "", "FULL COUNTERS:", py4j("stats").get("s") or "",
-                                "", "RUNNER:", str(py4j("task").get("runner", "")),
-                                "", "CHAIN:", str(py4j("task").get("chain", "")),
-                                # ⛔ WHAT IS ACTUALLY IN THE GRID. Five arena reproductions failed to
-                                # carry the crafting wall across, so the remaining route is to take
-                                # more state out of the survival stall itself -- and this is the piece
-                                # every capture has been missing. ciGrid=0 claims nothing lands in the
-                                # grid while MOVEMISMATCH says the mover holds the wrong item; the
-                                # screen's own slots settle that without inference. getOpenScreen
-                                # already existed, the capture simply never asked it.
-                                "", "SCREEN:", str(py4j("screen")),
-                                "", "THREADS:", py4j("tdump", f="PathFinder,Tungsten,Baritone,Render")["d"] or ""]
-                        fn = os.path.join(FREEZE_DIR, "stall_run%d.txt" % RUN_SEQ[0])
-                        io.open(fn, "w", encoding="utf-8").write(chr(10).join(blob))
-                        print(f"  stall evidence written to {fn}")
-                    except Exception as e:
-                        print(f"  stall evidence failed: {str(e)[:70]}")
+                    write_stall_evidence("position stalled at %s" % here)
             else:
                 stall[0] = here
                 stall[1] = 0
