@@ -377,6 +377,38 @@ def main():
     if fps_ref is not None and fps_ref < SANE_REF_FPS:
         raise StandDown(f"client at {fps_ref:.0f} fps before the run even starts"
                         f" (< {SANE_REF_FPS}) — the machine cannot answer today")
+    # ⛔ THE PLAYTHROUGH COULD NOT MEASURE A FLAG, WHICH IS WHY FLAGS GOT MEASURED IN THE WRONG
+    # PLACE. run_suite has --pin; this had nothing, so every tungsten setting was only ever A/B'd
+    # on arena courses. Three recovery flags were built for the "search owns the approach and the
+    # body does not move" signature, refuted on mine_diamond, and shipped OFF -- and mine_diamond
+    # turns out not to carry that signature at all (lock=0/0/0 there), while the survival run does
+    # (idrop=3574/0/0/3574, pdEnter=92 with pdWalking=0). They were judged where the mechanism was
+    # absent. Same idiom as run_suite: --pin NAME=VALUE, repeatable, applied before @gamer starts.
+    # --pin-alt alternates the value by RUN INDEX (rule 4r). Blocked arms on a course this
+    # variable make "which flag" inseparable from "when in the session": the playthrough's ladder
+    # already swings from five rungs to one between neighbouring runs on identical settings.
+    _alt = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--pin-alt"]
+    _arm_b = (RUN_SEQ[0] % 2) == 1
+    print(f"  ARM {'B' if _arm_b else 'A'}" if _alt else "", end="" if _alt else "")
+    if _alt:
+        print()
+    for _spec in ([sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--pin"]
+                  + (_alt if _arm_b else [])):
+        if "=" not in _spec:
+            raise SystemExit(f"--pin expects NAME=VALUE, got {_spec!r}")
+        _k, _v = _spec.split("=", 1)
+        py4j("chatcmd", c=f";settings {_k} {_v}")
+        time.sleep(0.3)
+        print(f"  PIN {_k}={_v}")
+    for _spec in (_alt if not _arm_b else []):
+        # The control arm must SET the baseline explicitly, not merely omit the pin: settings
+        # persist in tungsten.json across runs, so an omitted pin inherits whatever the previous
+        # arm left behind and both arms end up measuring the same thing.
+        _k, _v = _spec.split("=", 1)
+        _base = "false" if _v.strip().lower() == "true" else "true"
+        py4j("chatcmd", c=f";settings {_k} {_base}")
+        time.sleep(0.3)
+        print(f"  PIN {_k}={_base}")
     st = py4j("swapstate")
     print("  shipped pathing flags:", st)
     if not st.get("tungstenPrimary"):
