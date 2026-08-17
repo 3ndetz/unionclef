@@ -30,6 +30,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
      */
     public static volatile int entityWandered;
 
+    /** Ticks spent walking straight at a target that navigation would not deliver. */
+    public static volatile int entityCloseWalk;
+
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
     private final MovementProgressChecker _progress = new MovementProgressChecker();
     private final TimeoutWanderTask _wanderTask = new TimeoutWanderTask(5);
@@ -52,6 +55,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             Blocks.SWEET_BERRY_BUSH
     };
     private Task _unstuckTask = null;
+
+    /** Close enough that a route is pointless and a straight walk collects it. */
+    private static final double CLOSE_WALK_RANGE = 3.5;
 
     public GetToEntityTask(Entity entity, double closeEnoughDistance) {
         _entity = entity;
@@ -297,6 +303,35 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             TungstenHelper.stop();
         }
 
+        // ⛔ AT TWO BLOCKS THE ANSWER IS TO WALK AT IT, NOT TO ABANDON IT.
+        //
+        // This is my own recovery making a case WORSE, caught on goto_then_mine. The bot mines its
+        // cobblestone, the drops land at its feet, the approach stalls, and entityWanderWhenNavRefuses
+        // fires -- moving it from (21.1, 1.5), where it was standing ON the drops, out to
+        // (24.3, 5.3), where it froze for the rest of the run. Final verdict cobblestone=0, with
+        // idrop=3697/0/0/3697 (the tracker handed over a drop on every single ask) and
+        // entityReleased=2/2 (both releases and both wanders fired). The recovery is right that
+        // navigation has given up; it is wrong about what to do next when the thing is RIGHT THERE.
+        //
+        // A drop is collected by TOUCHING it, so inside a couple of blocks the useful primitive is
+        // the one a human uses: face it and hold forward. No search, no route, no lock. That is
+        // also why the radius attempts on closeEnoughDistance measured nothing -- they moved the
+        // line at which the bot stops DRIVING, and nothing was driving.
+        //
+        // Deliberately last-resort: it runs only once the progress checker says the body is not
+        // moving, so a healthy approach is untouched.
+        if (kaptainwutax.tungsten.TungstenConfig.get().entityCloseRangeWalk
+                && !_progress.check(mod)
+                && mod.getPlayer().isInRange(_entity, CLOSE_WALK_RANGE)
+                && !mod.getPlayer().isInRange(_entity, _closeEnoughDistance)) {
+            entityCloseWalk++;
+            TungstenHelper.stop();
+            Nav.cancel();
+            adris.altoclef.util.helpers.LookHelper.lookAt(mod, _entity.getPos());
+            mod.getInputControls().hold(Input.MOVE_FORWARD);
+            setDebugState("Walking straight at it (navigation would not)");
+            return null;
+        }
         if (!_progress.check(mod)) {
             // Baritone failed — try Tungsten (acquires 30s lock)
             if (TungstenHelper.tryPathToEntity(_entity)) {

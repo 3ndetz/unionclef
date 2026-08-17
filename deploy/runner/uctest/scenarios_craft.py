@@ -865,7 +865,8 @@ class GotoThenMine(CraftTable):
                                   # lock=2/0/0 with pdEnter=0 -- two barren locks and a drive that
                                   # never ran -- which is the signature those flags address, so
                                   # whether they engaged is the first thing to know.
-                                  "entityReleased=", "drop=", "idrop="))]
+                                  "entityReleased=", "drop=", "idrop=",
+                                  "entityCloseWalk="))]
         yield Criterion("drive counters (recorded, not gated)", True,
                         " ".join(parts) if parts else "unread", gate=False)
 

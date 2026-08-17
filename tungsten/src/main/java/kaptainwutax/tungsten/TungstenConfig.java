@@ -681,6 +681,25 @@ public class TungstenConfig {
     public boolean entityWanderWhenNavRefuses = true;
 
     /**
+     * Within a few blocks of a target entity that navigation will not deliver, face it and hold
+     * forward instead of wandering away from it.
+     *
+     * <p>Caught on goto_then_mine, and it is {@link #entityWanderWhenNavRefuses} making a case
+     * worse: the bot mines its cobblestone, the drops land at its feet, the approach stalls, and
+     * the wander moves it from (21.1, 1.5) -- standing ON the drops -- out to (24.3, 5.3), where
+     * it freezes for the rest of the run. cobblestone=0, idrop=3697/0/0/3697 (a drop handed over
+     * on every ask), entityReleased=2/2 (both recoveries fired).
+     *
+     * <p>A drop is collected by TOUCHING it, so at this range the useful primitive is the one a
+     * human uses. It runs only after the progress checker says the body is not moving, so a
+     * healthy approach never reaches it.
+     *
+     * <p>GATE: goto_then_mine (7/8, and its failures are this) plus the four pickup courses, which
+     * must not move. Proof it ran: GetToEntityTask.entityCloseWalk.
+     */
+    public boolean entityCloseRangeWalk = false;
+
+    /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
      *
      * <p>{@code tryPathToEntity} zeroes {@code barrenStreak} when the entity changes, which is
