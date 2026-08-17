@@ -659,7 +659,7 @@ public class TungstenConfig {
      * are untouched. GATE: the playthrough ladder, and mine_coal/mine_diamond whose recorded
      * failures are this same shape. Proof it ran: {@code entityReleased} in placeStats.
      */
-    public boolean entitySearchMustMove = false;
+    public boolean entitySearchMustMove = true;
 
     /**
      * When navigation REFUSES an entity approach and the body is not moving, wander instead of
@@ -678,7 +678,7 @@ public class TungstenConfig {
      * <p>GATE: mine_diamond, whose recorded failure is this freeze. Proof it ran: the second field
      * of {@code entityReleased=released/wandered} in placeStats.
      */
-    public boolean entityWanderWhenNavRefuses = false;
+    public boolean entityWanderWhenNavRefuses = true;
 
     /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
@@ -697,7 +697,7 @@ public class TungstenConfig {
      * collapse from ~49 to single figures and the second field of {@code entityReleased} should
      * stop being zero.
      */
-    public boolean barrenStreakPerEntity = false;
+    public boolean barrenStreakPerEntity = true;
 
     /**
      * Collect a target that is already lying on the floor instead of first crafting the tool that
