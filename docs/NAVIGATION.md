@@ -188,8 +188,23 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ```
 nav    12 courses   12 PASS   0 gate failures   0 INVALID
-craft  18 courses   16 PASS of 17 run   the one FAIL is mine_diamond, its own 25-30% flake
+craft  18 courses   18/18 with the approach-recovery flags pinned; 17/18 on a later sweep
+gamer   playthrough  3/3 with the flags on, against 1/3 off -- interleaved, same session
 ```
+
+⛔ TWO COURSES ARE FLAKES, NOT WALLS, and neither should be read at small n:
+
+    mine_diamond      6/8, 6/8, 5/8, 4/8 across four interleaved A/Bs in one day
+    goto_then_mine    4/5
+
+A flag that provably did nothing moved mine_diamond 6/8 -> 5/8, which is the noise floor written
+down. Whichever of the two lands decides whether a craft sweep reads 18/18 or 17/18.
+
+THE PLAYTHROUGH IS MEASURABLE AGAIN, and twice over. Quieting the unused tester client took the
+survival world from 7 fps (below the floor of 12, refused before starting) to 17-27. And
+gamer_smoke now takes --pin/--pin-alt, so a tungsten flag can finally be A/B'd where the
+mechanism lives rather than only on arena courses -- which is how three flags came to be refuted
+on a course that never carried their signature.
 
 craft gained FOUR courses on 2026-08-17 -- pickup_flat, pickup_side, pickup_ledge, pickup_pit --
 which ask one question each: is a dropped item that the bot was SENT for actually collected? Three
