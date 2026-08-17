@@ -751,6 +751,22 @@ public class TungstenConfig {
     public boolean collectDropsBeforeTools = true;
 
     /**
+     * Do not put an ingredient back in the pack while a crafting slot is still waiting for it.
+     *
+     * <p>CraftGenericManuallyTask ends its tick by clearing the cursor whenever it does not stack
+     * with the output. If the cursor holds an ingredient the grid still wants, that IS the carousel
+     * the class documents: picked up, put back, picked up again.
+     *
+     * <p>Measured on a 14-minute playthrough that reached wood tools and then did nothing for ten
+     * minutes: mc=3080/0/0/2/0 -- it FILLS three thousand times -- with ciReceive=25, mcFlight=73,
+     * and CURSORBACK manualTail firing on the exact ingredient wanted (15x stick, 10x planks)
+     * while MOVEMISMATCH read holding=planks want=[stick] on the same slot.
+     *
+     * <p>GATE: the playthrough ladder, plus craft 20/20 unchanged. Proof it ran: mcKept.
+     */
+    public boolean craftKeepWantedCursor = false;
+
+    /**
      * A flee destination must be somewhere the bot can STAND, not a projected coordinate.
      *
      * <p>Upstream's GoalRunAway is a heuristic over the whole search space -- any cell far enough

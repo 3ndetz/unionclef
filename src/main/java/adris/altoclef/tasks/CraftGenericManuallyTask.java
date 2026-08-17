@@ -11,6 +11,7 @@ import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.slots.CraftingTableSlot;
 import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.slots.Slot;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.screen.slot.SlotActionType;
@@ -68,6 +69,33 @@ public class CraftGenericManuallyTask extends Task implements adris.altoclef.tas
      * is proof that the carousel condition really does occur.
      */
     public static volatile int mcInFlight;
+
+    /** Ticks the tail KEPT a cursor because a grid slot still wanted it. Read as mcKept. */
+    public static volatile int mcKeptCursor;
+
+    /**
+     * Does any UNSATISFIED slot of this recipe still want {@code held}?
+     *
+     * <p>Asked of the recipe rather than of the grid, so it is true exactly when putting the item
+     * back would undo work the next tick has to redo.
+     */
+    private boolean slotStillWants(Item held, int requiredPerSlot, boolean bigCrafting) {
+        try {
+            for (int i = 0; i < target.getRecipe().getSlotCount(); ++i) {
+                ItemTarget want = target.getRecipe().getSlot(i);
+                if (want == null || want.isEmpty() || !want.matches(held)) continue;
+                Slot slot = bigCrafting
+                        ? CraftingTableSlot.getInputSlot(i, target.getRecipe().isBig())
+                        : PlayerSlot.getCraftInputSlot(i);
+                ItemStack there = StorageHelper.getItemStackInSlot(slot);
+                boolean satisfied = want.matches(there.getItem()) && there.getCount() >= requiredPerSlot;
+                if (!satisfied) return true;
+            }
+        } catch (Exception ignored) {
+            // a guard must never be the thing that breaks a craft
+        }
+        return false;
+    }
 
     private final RecipeTarget target;
 
@@ -211,6 +239,27 @@ public class CraftGenericManuallyTask extends Task implements adris.altoclef.tas
         // Ensure our cursor is empty/can receive our item
         ItemStack cursor = StorageHelper.getItemStackInCursorSlot();
         if (!ItemHelper.canStackTogether(StorageHelper.getItemStackInSlot(outputSlot), cursor)) {
+            // ⛔ DO NOT PUT BACK AN INGREDIENT A SLOT IS STILL WAITING FOR. That is the carousel
+            // this class already describes: the mover picks the ingredient up, the loop above ends
+            // without returning, and this tail posts it straight back to the pack -- so next tick
+            // it is picked up again, for ever.
+            //
+            // Measured on a 14-minute playthrough that reached wood tools and then did nothing for
+            // ten minutes: mc=3080/0/0/2/0 (it FILLS, three thousand times), ciReceive=25, and the
+            // tag below firing with the exact ingredient the grid wanted --
+            //     15x CURSORBACK manualTail holding=minecraft:stick
+            //     10x CURSORBACK manualTail holding=minecraft:dark_oak_planks
+            // while MOVEMISMATCH reported holding=planks want=[stick] on the same slot.
+            //
+            // Keeping it costs nothing: the next tick's fill places it, and the guard only skips a
+            // DUMP -- it never clicks, so it cannot strand the cursor somewhere new. If no slot
+            // wants it the old behaviour runs unchanged.
+            if (!cursor.isEmpty() && kaptainwutax.tungsten.TungstenConfig.get().craftKeepWantedCursor
+                    && slotStillWants(cursor.getItem(), requiredPerSlot, bigCrafting)) {
+                mcKeptCursor++;
+                setDebugState("Holding an ingredient a slot still wants");
+                return null;
+            }
             // The twin of the tag in CraftInInventoryTask.onResourceStop -- see the note there.
             if (!cursor.isEmpty()) {
                 adris.altoclef.Debug.logMessage("CURSORBACK manualTail holding=" + cursor.getItem());
