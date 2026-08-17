@@ -114,6 +114,29 @@ the inner craft's output can keep bouncing while the outer craft re-asks. The qu
 first is WHO put the planks in the cursor, and whether the outer craft should be suspended while a
 nested one owns the grid.
 
+## ⛔ THE PLAYTHROUGH HAS A FAMILY OF WALLS — "TWO" WAS MY UNDERCOUNT (2026-08-18, corpus)
+
+Four nine-minute runs, the ladder-stall trigger firing in each, classified by ACTIVE LEAF:
+
+    run1  <Mining or Collecting> -> <Wander for 10.0 blocks>          mc=0    lock=2/0/0  scan=514228
+    run2  <Getting planks x 3>   -> <Approach entity item> locked     mc=16   lock=9/7/0  scan=95823
+    run3  <Destroy block>        -> Tungsten (primary) pathfinding    mc=271  lock=4/0/0  scan=1346059
+    run4  <Mining or Collecting> -> <Destroy block> in range, mining  mc=0    lock=3/2/4  scan=136154
+
+A wander, a drop approach, a walk to a block, and a mine already in range -- and NOT ONE crafting
+grid stall, against the mc=3080 capture that produced two refuted crafting fixes. So the ladder
+depth swinging from five rungs to nothing is not one bug being flaky: each run meets whichever wall
+it meets. No single fix was ever going to move it, and no single capture can support a claim that
+one did. Three fixes today were built from one capture each and all three were refuted -- that is
+the same lesson arriving a fourth time.
+
+THE ONE THING ALL FOUR SHARE is an enormous block scan: 95k to 1.35 MILLION accepted candidates,
+against 200-400 on a passing arena course. Cause or merely what a nine-minute survival run looks
+like is NOT established -- but it is the only signal common to every wall rather than to one, so
+it is the first thing to measure next.
+
+The old two-wall note follows, kept because its readings are still good for the walls it names.
+
 ## THE PLAYTHROUGH HAS TWO WALLS, NOT ONE (2026-08-17, measured)
 
 Runs differ in WHICH wall they meet, which is why ladder depth swings from five rungs to nothing
