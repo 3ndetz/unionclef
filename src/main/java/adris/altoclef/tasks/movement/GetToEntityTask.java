@@ -46,7 +46,20 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
      */
     public static volatile int entityCloseWalkMoved;
 
+    /**
+     * Of the moving ticks, how many actually got CLOSER. Read as entityCloseWalk=ticks/moved/closer.
+     *
+     * <p>"The body moved" is not "the body approached", and reading the first as the second is an
+     * error I made and had to take back: 241/180 says it moved on 180 ticks, while the capture has
+     * the bot finishing 5.5 blocks from the drop rather than at the lip of the hole. Moving without
+     * closing means the WALK IS AIMED WRONG -- something else owning the camera while
+     * hold(MOVE_FORWARD) carries the bot off in whatever direction it happens to face -- which is a
+     * different bug from a drop that cannot be reached. This counter separates them.
+     */
+    public static volatile int entityCloseWalkCloser;
+
     private net.minecraft.util.math.Vec3d closeWalkLastPos = null;
+    private double closeWalkLastDist = -1;
 
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
     private final MovementProgressChecker _progress = new MovementProgressChecker();
@@ -361,6 +374,11 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             if (closeWalkLastPos != null && closeWalkLastPos.squaredDistanceTo(nowPos) > 0.0025) {
                 entityCloseWalkMoved++;
             }
+            double nowDist = nowPos.distanceTo(_entity.getPos());
+            if (closeWalkLastDist >= 0 && nowDist < closeWalkLastDist - 0.01) {
+                entityCloseWalkCloser++;
+            }
+            closeWalkLastDist = nowDist;
             closeWalkLastPos = nowPos;
             TungstenHelper.stop();
             Nav.cancel();
