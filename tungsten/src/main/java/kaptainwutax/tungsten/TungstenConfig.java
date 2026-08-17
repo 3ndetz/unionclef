@@ -782,8 +782,22 @@ public class TungstenConfig {
      * <p>Distinct from {@link #craftKeepWantedCursor}, which held the cursor instead of moving the
      * target and measured no benefit on nine-minute windows. This moves the TARGET to the cursor.
      *
-     * <p>GATE: craft 20/20 unchanged, and the playthrough ladder. Proof it ran: mcFlight, which
-     * this path also increments.
+     * <p>⛔ MEASURED AND HARMFUL, KEEP IT OFF. Nine-minute windows, arms interleaved, three each:
+     *
+     * <pre>
+     *   ARM A off   5 rungs / 5 rungs / 5 rungs    stone tools in ALL THREE
+     *   ARM B on    1 rung  / 3 rungs / FAIL       stone tools in NONE
+     * </pre>
+     *
+     * That is the clearest arm separation measured on this course all day, and it runs against the
+     * fix. craft stayed 20/21 with it pinned on (the one red being goto_then_mine's own flake), so
+     * it breaks nothing on the arena -- it simply makes the survival ladder worse. The reading:
+     * forcing the held item into whichever slot wants it overrides the order the craft intended,
+     * and a 3x3 recipe cares about which slot gets what.
+     *
+     * <p>The MECHANISM it was built from is still real and still unfixed -- mcFilled=3080 against
+     * ciReceive=25 with MOVEMISMATCH holding=planks want=[stick] -- but neither holding the cursor
+     * (craftKeepWantedCursor) nor moving the target (this) is the answer.
      */
     public boolean craftFinishMoveInFlight = false;
 
