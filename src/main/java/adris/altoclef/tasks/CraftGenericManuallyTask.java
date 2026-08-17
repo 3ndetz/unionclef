@@ -74,6 +74,27 @@ public class CraftGenericManuallyTask extends Task implements adris.altoclef.tas
     public static volatile int mcKeptCursor;
 
     /**
+     * Times the slot being filled CHANGED from one tick to the next while the cursor was full.
+     *
+     * <p>The hypothesis every measurement so far fits, and the one thing never tested. This loop
+     * returns a mover for the FIRST unsatisfied slot. When that slot's ingredient is already in the
+     * cursor -- in flight, picked up last tick -- {@code hasItemInventoryOnly} is false for it, so
+     * the guard above takes its {@code continue} and the loop hands back a mover for a LATER slot
+     * instead. The new mover finds the wrong item held, puts it away, and the old slot is unfilled
+     * again next tick.
+     *
+     * <p>That is exactly what the capture shows: MOVEMISMATCH holding=planks want=[stick] on slot
+     * 4, mcFilled=3080 against ciReceive=25, and CURSORBACK returning stick, planks and log by
+     * turns. mcInFlight is the guard meant to stop it and fired on only 73 of those 3080 ticks.
+     *
+     * <p>Non-zero here means the craft is switching targets underneath its own mover, and the fix
+     * is to hold the slot until the move completes rather than to keep the cursor.
+     */
+    public static volatile int mcSlotSwitched;
+
+    private int lastAskedSlot = -1;
+
+    /**
      * Does any UNSATISFIED slot of this recipe still want {@code held}?
      *
      * <p>Asked of the recipe rather than of the grid, so it is true exactly when putting the item
@@ -225,6 +246,11 @@ public class CraftGenericManuallyTask extends Task implements adris.altoclef.tas
 
                     setDebugState("Moving item to slot...");
                     mcFilled++;
+                    if (lastAskedSlot != -1 && lastAskedSlot != craftSlot
+                            && !StorageHelper.getItemStackInCursorSlot().isEmpty()) {
+                        mcSlotSwitched++;
+                    }
+                    lastAskedSlot = craftSlot;
                     return new MoveItemToSlotFromInventoryTask(new ItemTarget(toFill, requiredPerSlot), currentCraftSlot);
                 }
                 // We could be OVER satisfied
