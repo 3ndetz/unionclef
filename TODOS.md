@@ -115,9 +115,23 @@ to seven blocks away -- the post-failure geometry, set up directly instead of wa
 that pickup_pit ALREADY passes with a drop in a one-deep pit eight blocks out, so the difference
 is something about the bot having dug the hole itself, and finding what that is IS the fix.
 
-⭐ THAT FACT IS NOW IN: entityCloseWalk counts ticks/moved, and it read **241/180**. The body
-moved on 180 of 241 ticks, so the walk is real and nothing is stealing the inputs. One of the two
-cases is dead; what remains is that the drop CANNOT BE REACHED FROM ABOVE.
+⭐⭐ THE FACT IS IN, AND THE FIRST READING OF IT WAS WRONG. entityCloseWalk now counts
+ticks/moved/**closer**:
+
+    FAIL   724/462/33    moved on 462 ticks, got CLOSER on 33 of them   (7%)
+    PASS   241/123/6     moved on 123, closer on 6                      (5%)
+    PASS   5/4/4         moved on 4, closer on 4                       (100%)
+
+A brief firing closes distance on every tick and the run passes. A long one moves constantly and
+closes on one tick in fifteen. So the bot WALKS AND DOES NOT APPROACH -- which is a third thing,
+and neither of the two candidates I had. Not "the inputs are stolen" (it moves) and not "the drop
+is unreachable from above" (a short walk reaches it fine). Either the aim is overwritten each tick
+so hold(MOVE_FORWARD) carries it wherever it faces, or it is pressed against geometry and sliding
+along it -- 462 moving ticks for 33 closer looks like sliding on a wall.
+
+It also condemns the close-walk as a TOOL here: a blind forward hold cannot fix an approach that
+fails for a geometric reason. The bot needs a real short-range route that steps DOWN into its own
+excavation -- core movement work, not another input hack.
 
 Everything measured now agrees on that. pickup_pit passes because its pit is a clean 1x1 in flat
 ground the bot can walk down into; the failing course's hole is whatever its own mining left, and
