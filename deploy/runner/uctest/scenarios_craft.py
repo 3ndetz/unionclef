@@ -869,6 +869,24 @@ class GotoThenMine(CraftTable):
                                   "entityCloseWalk="))]
         yield Criterion("drive counters (recorded, not gated)", True,
                         " ".join(parts) if parts else "unread", gate=False)
+        # ⛔ WHERE IS THE DROP, AND WHERE IS THE BOT? The one fact that would settle this course's
+        # failures and the only one never recorded. Every capture reads the same:
+        #     FAIL  idrop=6122, 6172  drop=17/0  lock=1/0/0  navStop=3/2/0
+        #     PASS  idrop=56-111      drop=51/0  lock=0/0/0  navStop=3/0-1/0
+        # i.e. the tracker hands over a drop on ~6150 consecutive asks because the bot spends the
+        # whole run pursuing one it never reaches. Whether that drop is UNREACHABLE (walled in by
+        # the bot's own mining, or below a lip) or merely NOT APPROACHED decides which half of the
+        # code is at fault, and the server knows the answer without asking the tracker.
+        #
+        # Three passes have now been spent inferring this from totals. The next failure should
+        # explain itself instead: positions of every item entity, and the bot beside them.
+        ents = ctx.rcon.cmd("execute as @e[type=minecraft:item] run data get entity @s Pos",
+                            allow_reject=True)
+        drops = [ln.strip()[-70:] for ln in str(ents).splitlines() if "[" in ln][:4]
+        bot_pos = ctx.rcon.entity_pos(ctx.bot.name)
+        yield Criterion("drops left lying, and where the bot ended (recorded, not gated)", True,
+                        f"bot={[round(v, 2) for v in (bot_pos or [])]} drops={drops or 'none'}",
+                        gate=False)
 
 
 class MineCoal(CraftTable):
