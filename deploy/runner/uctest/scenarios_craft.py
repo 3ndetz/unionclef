@@ -1309,6 +1309,7 @@ class PickupDrop(CraftTable):
     id = "pickup_flat"
     duration = 60
     pit = False
+    ledge = False
     drop_x = 8.5
     drop_z = 0.5
 
@@ -1329,7 +1330,12 @@ class PickupDrop(CraftTable):
         if self.pit:
             ctx.rcon.cmd(f"setblock {int(self.drop_x)} {STAND_Y - 1} {int(self.drop_z)} minecraft:air",
                          allow_reject=True)
-        drop_y = (STAND_Y - 1) if self.pit else STAND_Y
+        # A FELLED LOG DOES NOT LAND ON THE FLOOR. It rests on a stump, on leaves, on whatever is
+        # under the tree -- so the playthrough's rung-zero drop is ELEVATED, the mirror of the pit.
+        if self.ledge:
+            ctx.rcon.cmd(f"setblock {int(self.drop_x)} {STAND_Y} {int(self.drop_z)} minecraft:stone",
+                         allow_reject=True)
+        drop_y = (STAND_Y - 1) if self.pit else ((STAND_Y + 1) if self.ledge else STAND_Y)
         ctx.rcon.cmd(
             f'summon minecraft:item {self.drop_x} {drop_y} {self.drop_z} '
             f'{{Item:{{id:"minecraft:diamond",count:1}},PickupDelay:0s}}', allow_reject=True)
@@ -1381,6 +1387,22 @@ class PickupDropSide(PickupDrop):
     drop_z = 8.5
 
 
+class PickupDropLedge(PickupDrop):
+    """The drop resting one block UP, on a pillar -- the mirror of the pit, and the playthrough case.
+
+    pickup_pit is fixed, so a drop BELOW the floor is collected. A felled log does not lie on the
+    floor either: it rests on the stump or on leaves, one or more blocks up. The playthrough's
+    failing run died at rung ZERO on exactly that -- <Mine And Collect: [[...log...]]> ->
+    <Pickup Dropped Items> -> <Approach entity> "Tungsten pathfinding...", never collecting the
+    wood it had just chopped, at 26 fps with the machine quiet.
+
+    Same item, same distance, same task as pickup_flat. The only difference is one block of step UP.
+    """
+
+    id = "pickup_ledge"
+    ledge = True
+
+
 class PickupDropPit(PickupDrop):
     """The same drop, at the bottom of a one-deep pit: the step is the only difference."""
 
@@ -1391,4 +1413,4 @@ class PickupDropPit(PickupDrop):
 SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
              ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava,
-             PickupDrop, PickupDropSide, PickupDropPit]
+             PickupDrop, PickupDropSide, PickupDropLedge, PickupDropPit]

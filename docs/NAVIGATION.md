@@ -184,7 +184,24 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ## Course status
 
-### CURRENT TALLY — 2026-08-14/15, on the shipped defaults
+### CURRENT TALLY — 2026-08-17, on the shipped defaults
+
+```
+nav    12 courses   12 PASS   0 gate failures   0 INVALID
+craft  18 courses   16 PASS of 17 run   the one FAIL is mine_diamond, its own 25-30% flake
+```
+
+craft gained FOUR courses on 2026-08-17 -- pickup_flat, pickup_side, pickup_ledge, pickup_pit --
+which ask one question each: is a dropped item that the bot was SENT for actually collected? Three
+of them were red the day they were written and are green now (`collectDropsBeforeTools`).
+
+⛔ mine_diamond is the only red, and it is a FLAKE rather than a wall: measured 6/8, 6/8, 5/8 and
+4/8 across four interleaved A/Bs in one day, with a noise floor of one to two runs in eight. A
+flag that provably did nothing moved it 6/8 -> 5/8, so do not read small differences on it.
+
+The tally below is the previous one, kept for the drift it documents.
+
+### PREVIOUS TALLY — 2026-08-14/15, on the shipped defaults
 
 ```
 nav    12 courses   12 PASS   0 gate failures   0 INVALID
