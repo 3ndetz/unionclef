@@ -188,11 +188,11 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ```
 nav    12 courses   12 PASS   0 gate failures   0 INVALID
-craft  20 courses   20/20 on the shipped defaults, 0 gate failures, 0 invalid
+craft  22 courses   22/22 on the shipped defaults, 0 gate failures, 0 invalid
 gamer   playthrough  3/3 with the approach-recovery flags on, against 1/3 off -- interleaved
 ```
 
-craft gained EIGHT courses on 2026-08-16/17 and still sweeps clean. Four ask whether a dropped
+craft gained TEN courses on 2026-08-16/17 and still sweeps clean. Four ask whether a dropped
 item the bot was SENT for is actually collected (pickup_flat / _side / _ledge / _pit); three more
 were built to reproduce goto_then_mine's flake one variable at a time (pickup_vs_mine adds a
 minable resource, pickup_after_goto adds a completed ;goto) and all three came back GREEN --
