@@ -151,6 +151,40 @@ class CraftWoodPickaxe(CraftTable):
                         f"table={_has(ctx, 'crafting_table')} sticks={_has(ctx, 'stick')}")
 
 
+class CraftPickaxeMixedWood(CraftWoodPickaxe):
+    """The same pickaxe, from a MIXTURE of log types -- what the survival world actually hands it.
+
+    craft_wood_pickaxe passes, and it runs the identical chain (logs -> planks -> sticks ->
+    pickaxe) that the playthrough stalls in. The one thing the arena never gives it is MIXED wood:
+    the kit is 16 oak logs, so every plank is an oak plank.
+
+    The playthrough is not so tidy, and the stall capture shows it. The recipe targets list every
+    plank type in the game, and MOVEMISMATCH fired on TWO of them against the same slot:
+
+        MOVEMISMATCH holding=minecraft:dark_oak_planks want=[stick] dest=CraftingTableSlot{slot 4}
+        MOVEMISMATCH holding=minecraft:oak_planks      want=[stick] dest=CraftingTableSlot{slot 4}
+
+    Two plank types in one craft is the difference between the course that passes and the run that
+    hangs, so this course is that difference and nothing else: half the logs oak, half dark oak.
+
+    ⛔ RESULT: GREEN, 4/4. Mixed wood is NOT the difference, and this is the FOURTH arena
+    reproduction of a survival-world failure to come back green today -- after pickup_pit,
+    pickup_vs_mine and pickup_after_goto, which between them eliminated the pit, the mine-or-collect
+    choice and a completed ;goto for the drop-approach bug.
+
+    That is worth stating as its own finding, because it is the same conclusion mine_coal reached
+    about the break ban: some failures belong to the SURVIVAL WORLD -- real terrain, a deep nested
+    task chain, a full inventory, recipe targets listing every wood type in the game -- and the
+    arena cannot stand in for them however carefully one variable is copied across. Four attempts
+    is enough evidence for that to be the working assumption rather than a surprise each time.
+
+    Kept as a cheap regression guard: crafting from two wood types is worth never breaking, and it
+    costs 150 seconds.
+    """
+
+    id = "craft_pickaxe_mixed"
+    bot_kit = ["give {name} oak_log 8", "give {name} dark_oak_log 8"]
+
 class CraftStonePickaxe(CraftTable):
     """The third rung, with the stone handed over rather than mined.
 
@@ -1500,7 +1534,7 @@ class PickupDropPit(PickupDrop):
     pit = True
 
 # The registry instantiates each entry itself (run_suite: `scn = cls()`), so export the CLASS.
-SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftStonePickaxe, MineStone, SmeltIron,
+SCENARIOS = [CraftTable, CraftWoodPickaxe, CraftPickaxeMixedWood, CraftStonePickaxe, MineStone, SmeltIron,
              CraftIronPickaxe, WanderRecovery, CraftAtDistantTable,
              ChopTree, ChopCanopy, MineDiamond, MineCoal, GotoThenMine, EscapeLava,
              PickupDrop, PickupDropSide, PickupDropLedge, PickupDropPit,
