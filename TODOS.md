@@ -129,9 +129,24 @@ is unreachable from above" (a short walk reaches it fine). Either the aim is ove
 so hold(MOVE_FORWARD) carries it wherever it faces, or it is pressed against geometry and sliding
 along it -- 462 moving ticks for 33 closer looks like sliding on a wall.
 
-It also condemns the close-walk as a TOOL here: a blind forward hold cannot fix an approach that
-fails for a geometric reason. The bot needs a real short-range route that steps DOWN into its own
-excavation -- core movement work, not another input hack.
+And the fourth field settles WHY, ticks/moved/closer/aimed (aimed read at the start of a tick, so
+it reports what the previous tick left behind; lookAt SNAPS yaw, so the bot points at the drop by
+construction after this branch runs):
+
+    FAIL   482/323/6/321    aimed on 321 of 482, moved 323, closed 6
+    FAIL   241/237/3/6      aimed on 6 of 241, moved 237, closed 3
+    PASS   362/183/4/182    aimed 182, moved 183, closed 4
+
+The first line is the answer: CORRECTLY AIMED, MOVING, AND NOT CLOSING. 321 aimed ticks and 323
+moving ticks produced six that got nearer. A body that faces its target, walks, and does not
+arrive is pressed against geometry and sliding along it. The second line is a second mode, where
+the yaw is overwritten almost entirely (6 of 241) and holding forward carries the bot wherever
+that leaves it facing.
+
+⛔ SO THE APPROACH DOES NOT FAIL BY DECIDING WRONGLY, AND NO INPUT HACK CAN FIX IT. Walking is not
+a route. The drop sits one block below the surface in the hole the bot just dug, and reaching it
+needs a real short-range path that DESCENDS into that excavation. That is core movement work and
+it is the honest next task -- not a sixth flag on GetToEntityTask.
 
 Everything measured now agrees on that. pickup_pit passes because its pit is a clean 1x1 in flat
 ground the bot can walk down into; the failing course's hole is whatever its own mining left, and
