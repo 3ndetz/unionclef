@@ -115,10 +115,21 @@ to seven blocks away -- the post-failure geometry, set up directly instead of wa
 that pickup_pit ALREADY passes with a drop in a one-deep pit eight blocks out, so the difference
 is something about the bot having dug the hole itself, and finding what that is IS the fix.
 
-One fact worth having first, and it is one run: catch a failure with entityCloseRangeWalk on and
-read the timeline to see whether the body MOVES during those 482 ticks. If it does not, something
-else owns the movement keys; if it does, the drop cannot be reached from above. That splits the
-two remaining cases and costs nothing.
+⭐ THAT FACT IS NOW IN: entityCloseWalk counts ticks/moved, and it read **241/180**. The body
+moved on 180 of 241 ticks, so the walk is real and nothing is stealing the inputs. One of the two
+cases is dead; what remains is that the drop CANNOT BE REACHED FROM ABOVE.
+
+Everything measured now agrees on that. pickup_pit passes because its pit is a clean 1x1 in flat
+ground the bot can walk down into; the failing course's hole is whatever its own mining left, and
+a horizontal walk at a drop sitting one block below the surface just carries the bot across the
+top of it. So the fix belongs in how the approach DESCENDS into an excavation -- not in whether it
+decides to approach, which is where all four earlier passes were looking.
+
+Also eliminated by building the geometry directly, one variable at a time, all green:
+    pickup_pit         drop in a one-deep pit                      4/4
+    pickup_vs_mine     + the resource also minable everywhere      4/4
+    pickup_after_goto  + a completed ;goto first                   4/4
+The only thing left that these do not do is that the bot DIGS THE HOLE ITSELF.
 
 ## ⚙️ КТО ЧТО ВЗЯЛ ПРЯМО СЕЙЧАС (доска заявок для параллельных воркеров)
 
