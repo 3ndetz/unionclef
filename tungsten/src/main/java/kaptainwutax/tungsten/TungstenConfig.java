@@ -659,6 +659,20 @@ public class TungstenConfig {
      * are untouched. GATE: the playthrough ladder, and mine_coal/mine_diamond whose recorded
      * failures are this same shape. Proof it ran: {@code entityReleased} in placeStats.
      */
+    // ⛔ I CONVICTED THIS FLAG OF A REGRESSION AND THE CONVICTION WAS WRONG (2026-08-17).
+    //
+    // Two batches showed failures and releases landing on exactly the same runs -- 6 of 6, then
+    // 3 of 3 -- and an A/B read 5/8 on against 8/8 off. That looked conclusive. It was not: with
+    // the flag OFF BY DEFAULT the course still failed 2 of 8, and entityReleased read 0/0 on every
+    // run INCLUDING both failures. So the release fires BECAUSE a run is already in trouble; it
+    // does not cause the trouble. Same symptom-correlation trap already named on mine_diamond, and
+    // I walked into it again -- the 8/8 was noise on a course whose base rate is around 75%.
+    //
+    // The real discriminator, identical in every captured failure and absent from every pass:
+    //     FAIL   idrop=6122, 6172   drop=17/0   lock=1/0/0   navStop=3/2/0
+    //     PASS   idrop=56-111       drop=51/0   lock=0/0/0   navStop=3/0-1/0
+    // i.e. the tracker is asked ~6150 times and hands over a drop EVERY time, because the bot
+    // spends the whole run pursuing one drop it never reaches. That is the thing to fix.
     public boolean entitySearchMustMove = true;
 
     /**
