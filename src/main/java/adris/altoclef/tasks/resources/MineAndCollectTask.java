@@ -247,6 +247,14 @@ public class MineAndCollectTask extends ResourceTask {
          *  pickup task never ticks -- so whether the tracker AGREES that a drop exists is the question. */
         public static volatile int dropAsked, dropSeen;
 
+        /** Squared distance inside which a drop is "already here" and needs no anti-ping-pong tax. */
+        private static final double NEAR_DROP_SQ = 9.0;
+        /** The historical handicap, kept for drops far enough away that walking to them costs time. */
+        private static final double DROP_MINING_PENALTY = 10.0;
+
+        /** Times the near-drop exemption actually changed the comparison. Read as drop's 3rd. */
+        public static volatile int dropNearExempt;
+
         /** Candidates the block filter saw: accepted / rejected as unreachable / rejected as unbreakable.
          *  Read as scan=ok/unreach/nobreak. */
         public static volatile int scanAccepted, scanUnreachable, scanNoBreak;
@@ -262,9 +270,36 @@ public class MineAndCollectTask extends ResourceTask {
                 closestDrop = mod.getEntityTracker().getClosestItemDrop(pos, items);
             }
 
+            // ⛔ THE +10 IS A HANDICAP IN SQUARED-DISTANCE SPACE, AND IT IS WHY A DROP AT THE BOT'S
+            // FEET LOSES TO AN ORE FOUR BLOCKS AWAY.
+            //
+            // getClosestTo below compares `dropSq <= blockSq` with this penalty already added to
+            // the drop and nothing added to the block. Ten in SQUARED space is not a small nudge:
+            // a drop lying 2.6 blocks away (h=2.4, dy=-1.0, the geometry measured on every failing
+            // mine_coal run) scores 16.8, so any ore inside 4.1 blocks beats it. On a course whose
+            // ore sits in a cluster there is always such an ore, so collection is deferred to the
+            // end of the run every time -- which is precisely when the drops are lying in the holes
+            // the bot has just dug, and when the barren locks happen.
+            //
+            // The penalty's stated purpose -- "stop the bot ping-ponging away from its mining spot
+            // for every item" -- is real, and it is about drops far enough away that walking there
+            // costs something. It has no business applying to a drop the bot could TOUCH by taking
+            // one step, where collecting costs a step and zero mining time, and where the drop is
+            // the actual objective rather than a distraction from it.
+            //
+            // NEAR_DROP_SQ is 9 (three blocks). Eleven of the thirteen recorded failure geometries
+            // sit at or under 2.4 blocks horizontal, so this covers the trunk of the distribution
+            // and deliberately leaves the far tail alone.
+            final boolean exempt = kaptainwutax.tungsten.TungstenConfig.get().dropNoPenaltyWhenNear;
             return new Pair<>(
-                    // + 5 to make the bot stop mining a bit less
-                    closestDrop.map(itemEntity -> itemEntity.squaredDistanceTo(pos) + 10).orElse(Double.POSITIVE_INFINITY),
+                    closestDrop.map(itemEntity -> {
+                        double trueSq = itemEntity.squaredDistanceTo(pos);
+                        if (trueSq > NEAR_DROP_SQ) return trueSq + DROP_MINING_PENALTY;
+                        // COUNT ALWAYS, ACT ONLY WHEN FLAGGED -- otherwise the control arm reads
+                        // zero by construction and the counter cannot say the arms differed.
+                        dropNearExempt++;
+                        return trueSq + (exempt ? 0.0 : DROP_MINING_PENALTY);
+                    }).orElse(Double.POSITIVE_INFINITY),
                     closestDrop
             );
         }

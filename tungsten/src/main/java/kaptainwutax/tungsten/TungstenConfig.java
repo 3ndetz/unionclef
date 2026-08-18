@@ -727,6 +727,26 @@ public class TungstenConfig {
     public boolean entityCloseRangeWalk = true;
 
     /**
+     * A drop within three blocks does not pay the anti-ping-pong tax when competing with an ore.
+     *
+     * <p>MineOrCollectTask.getClosestTo compares `dropSq <= blockSq` with +10 already added to the
+     * DROP in squared-distance space and nothing added to the block. Ten squared is not a nudge: a
+     * drop 2.6 blocks away -- the geometry measured on every failing mine_coal run -- scores 16.8,
+     * so any ore within 4.1 blocks wins. Where the ore sits in a cluster, as it does here, that is
+     * always true, so collection is deferred to the end of the run: exactly when the drops are
+     * lying in the holes the bot just dug, which is when the barren locks happen.
+     *
+     * <p>The tax is right for a drop far enough away that walking to it costs mining time. It is
+     * wrong for one the bot could touch in a step, where collecting costs a step and nothing else,
+     * and where the drop is the objective rather than a distraction from it.
+     *
+     * <p>GATE: mine_coal (7/8 today, and its failures end coal=1 or coal=2 of 3 -- drops mined and
+     * left behind). mine_stone and mine_diamond must not move. Proof it ran: drop's third field,
+     * dropNearExempt, which counts ALWAYS and so reads non-zero in the control arm too.
+     */
+    public boolean dropNoPenaltyWhenNear = false;
+
+    /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
      *
      * <p>{@code tryPathToEntity} zeroes {@code barrenStreak} when the entity changes, which is
