@@ -92,6 +92,41 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.955 -->
+## ⛔ pathAvoidsFallDamage REFUTED, AND MY OWN TWO EARLIER READINGS OF IT WERE WRONG (2026-08-18)
+
+The fall-damage guard exists, is complete, and ships disabled. That looked like a bug. It is not:
+turning it on is WORSE, measured with both arms verified.
+
+    guard ON    5/7 PASS   mean rungs 1.7
+    guard OFF   6/6 PASS   mean rungs 3.3
+
+⛔ AND THE PART THAT MATTERS MORE THAN THE RESULT: I reported a separation twice before this, and
+both times it dissolved under verification.
+  * "3/3 vs 2/3, mean 5.0 vs 3.0 rungs" -- taken before per-run counter resets existed, so the
+    counters were the previous run's.
+  * "6/6 vs 4/6" -- taken before pin verification, and the control arm was contaminated: a run
+    pinned pathAvoidsFallDamage=false reported fallRetry=0/1387, i.e. 1387 moves rejected by a
+    guard that cannot reject anything when the flag is false. The pin had silently not landed and
+    tungsten.json kept the previous arm's value.
+Only after readFlag verified every pin, and resetstats zeroed counters per run, did the arms
+actually differ -- and then the effect reversed. Two instruments, both of which read like they were
+measuring and were not. That is three this session, with the stale jar and the broken format string.
+
+⭐ WHAT SURVIVES AND IS WORTH KEEPING:
+  * the guard no longer TRUNCATES the fall simulation mid-air (it rejected the move instead), which
+    was a real bug -- with it, guard-on froze the bot solid at one position for whole runs;
+  * nav_cliff, the only course with a drop past the 2.75 threshold;
+  * per-run counter reset and pin verification in gamer_smoke, without which no playthrough A/B
+    could have been trusted -- including every playthrough A/B taken before today.
+
+⛔ WHERE THE DAMAGE ACTUALLY COMES FROM IS STILL OPEN, and it is large: the control arm took 6.0,
+40.5, 70.7 and 14.7 damage across four runs. The guard does not reduce it (53.7, 18.0, 32.3 with it
+on), and nav_cliff shows the planner does not choose damaging falls even when offered one. So the
+plan is not what hurts the bot. The strongest remaining candidate is EXECUTION diverging from the
+plan -- the route is safe and the body does not follow it -- and that is the next thread, not
+another flag.
+
 <!-- G-1.96 -->
 ## ⛔ A FIFTH PLAYTHROUGH WALL, AND IT IS NOT A TASK AT ALL: THE BOT IS NEARLY DEAD (2026-08-18)
 
