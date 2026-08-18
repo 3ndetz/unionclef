@@ -19,11 +19,33 @@ github.token=ghp_your_token_here
 
 ## Release workflow
 
+## ⛔⛔ RULE ZERO: IN AUTONOMOUS WORK, A PUBLIC RELEASE IS RELEASED AUTONOMOUSLY (user 2026-08-18)
+
+**Do NOT hold a finished, tested release waiting for the user to bless it.** "It is a public tag,
+so I will wait for your go-ahead" is NOT caution, it is the work not being delivered — during a
+long autonomous run the user is not there to click yes, which is the entire point of the run.
+
+If the work is tested and the suite is green, you: write the notes, bump `mod_version`, run
+`gradlew :1.21.11:githubRelease`, and VERIFY the asset landed. No asking.
+
+The only things that block a release remain the technical ones already in this file: an untested
+change, a red suite, or a version tag already taken by another MC-version line.
+
+## ⛔ RULE ONE: THE NOTES MUST SAY HOW TO TEST WHAT WAS ADDED (user 2026-08-18)
+
+Every release note names, for each shipped item, **the commands that exercise it** — which
+`@command` to run, which course reproduces it, what a good result looks like. A note that lists
+what changed without saying how to see it is a changelog for the author, not a release for a user.
+
+Format per item: what changed, what it fixes, and `HOW TO TEST:` with the concrete steps.
+
 ### 0. Write release notes
 
 Create `docs/releases/<version>.md` (e.g. `docs/releases/0.20.3.md`) —
 gradle reads it as the GitHub release body based on `mod_version` from
 `gradle.properties`. Falls back to `latest.md` if no versioned file found.
+
+Must contain the `HOW TO TEST` blocks required by RULE ONE above.
 
 ### 1. Tag — DO NOT do this by hand
 

@@ -1051,7 +1051,7 @@ class MineCoal(CraftTable):
         ok, stats = ctx.bot.py.try_call("placeStats")
         parts = [t for t in str(stats or "").split()
                  if t.startswith(("cb=", "breakFail=", "scan=", "lock=", "navStop=", "entityReleased=",
-                                  "entityCloseWalk=",
+                                  "entityCloseWalk=", "dc=",
                                   "avoidSrc="))]
         # A POSITIONAL COUNTER GETS MISREAD, AND THIS ONE WAS -- TWICE IN AN HOUR, BY TWO PEOPLE.
         # avoidSrc=0/0/1/0@- is set/pred/preds/registered@caller, and both of its first readings
@@ -1061,6 +1061,7 @@ class MineCoal(CraftTable):
         # a verdict does not have to remember the order or go and find the format string.
         legend = ("  [cb=hardness/avoid/plausible/reach  avoidSrc=setHits/predHits/predsPresent/"
                   "registeredThisRun@lastCaller  lock=barren/productive/findRefused@what:start>end,bodyMoved,horiz,dy"
+                  "  dc=ticks/newPursuit/retryOld/hold/.."
                   "  breakFail=claimed/outOfReach/buried/wide/-]")
         yield Criterion("ban and lock counters (recorded, not gated)", True,
                         (" ".join(parts) if parts else "unread") + legend, gate=False)
