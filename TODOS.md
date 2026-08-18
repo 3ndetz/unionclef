@@ -76,6 +76,40 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.98 -->
+## ⭐⭐ NEXT BIG GOAL AFTER THE PLAYTHROUGH: A SERIOUS STEP UP IN PvP (user 2026-08-18)
+
+Ordering is explicit and comes from the user: acceptance criterion #1 (the full-game playthrough on
+tungsten) stays first. This is what gets picked up AFTER it, and it is a big goal, not a fix.
+
+REFERENCE THE USER HANDED OVER: https://github.com/Lumitani-pixel/blockfighter
+Fabric, Java, a combat-automation mod with a module ("tool") per technique and its own fight bot.
+It is a learning project rather than a polished one -- 119 commits, no releases -- so it is a SOURCE
+OF TECHNIQUES AND STRUCTURE to read, not a dependency to take, and not something to copy wholesale.
+Same rule as `baritone/` in this repo: reference material, never compiled in.
+
+WHAT IT HAS THAT WE DO NOT (checked against our source, 2026-08-18 -- each is its own focused pass):
+
+    AutoShieldTool        we have no shield logic at all. Nothing in src matches "Shield".
+    AutoClutchTool        no clutch (water/block save on a fall). Nothing matches "Clutch".
+    AutoWindChargeTool    wind charge as a mobility/knockback primitive -- absent.
+    AutoWebTool/AntiWeb   cobweb as a weapon and as a hazard to escape -- absent.
+    TargetStrafeTool      we count strafe but have no strafe-around-target controller.
+    TargetFilteringTool   we have target selection, but no explicit filter policy layer.
+    Crystal / mace combat we have neither as a combat style (the two matches in our tree are the
+                          ender dragon fight and a Playground scratch file, not PvP).
+
+WHAT WE ALREADY HAVE AND SHOULD NOT REGRESS: the force-field kill aura, bow ballistics with its own
+measured gates, `combatReachControl` (measured, +3.55 on edge_duel, shipped 0.77.0), dodge-on-draw,
+projectile dodging, and a twelve-course pvp suite that is the thing any of this must be judged on.
+
+⛔ AND THE FIRST THING THIS GOAL NEEDS IS NOT A FEATURE. The pvp suite does not record fps at all
+(`avg_fps = None` on all twelve courses), which means the seven `load_sensitive` flags on pvp gates
+are inert RIGHT NOW -- proven from the condition, not from a run. Any PvP work measured before that
+is fixed is measured on a suite that cannot tell a real regression from a slow host. Fix the fps
+recording FIRST, then take the modules above one at a time, each with its own course and its own
+pre-registered gate.
+
 <!-- G-1.99 -->
 ## ⛔⛔ AUTONOMOUS WORK RELEASES AUTONOMOUSLY (user 2026-08-18, angry, and rightly)
 
