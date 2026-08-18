@@ -92,6 +92,34 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.96 -->
+## ⛔ A FIFTH PLAYTHROUGH WALL, AND IT IS NOT A TASK AT ALL: THE BOT IS NEARLY DEAD (2026-08-18)
+
+The four recorded walls are all task-shaped -- a wander, a drop approach, a walk to a block, a mine
+already in range. This run's is not. The health column is the whole story:
+
+    t=68s   hp=20.0  y=134.8  items=10        t=205s  hp=5.5  y=60.0
+    t=91s   hp=20.0  y=131.5  items=30        t=274s  hp=3.5  y=58.0
+    t=114s  hp=8.0   y=134.0  items=30        t=298s  hp=1.5  y=61.6
+    t=137s  hp=5.5   y=118.0  items=30        t=321s  hp=1.5  y=61.9
+
+Twelve health gone in one sample at t=114, then a descent from y=134 to y=60 -- seventy-four
+blocks -- and the last 150 seconds spent chipping at stone on 1.5 hp with Mob Defense preempting at
+priority 70. It reached WOOD tools and stalled there. The ladder trigger fired correctly.
+
+⛔ NOT YET ESTABLISHED, and deliberately not claimed: whether that 12 hp was a fall or a mob. The
+counters that answer it -- dmgTaken, lastFall, dw= -- exist and were DARK for this run, because I
+had just broken placeStats with a bad substring replace (see the commit; gamer_smoke reported
+"stall evidence failed: stats:" and then died on the same call). The instrument is fixed and the
+re-run is what decides it.
+
+WHY IT MATTERS BEYOND ONE RUN: the seed starts the bot at y=134 and the work is at y=60. If the
+descent is what costs the health, then every run on this world pays it before it ever reaches the
+stone-tools rung, and the four task-shaped walls may be what a bot does when it is too hurt to
+commit to anything -- which would make this the common cause the corpus was looking for, rather
+than the fifth entry in a list. That is a HYPOTHESIS with one run behind it. RULE FIVE applies: it
+needs 5-6 runs and the damage counters before it is anything more.
+
 <!-- G-1.97 -->
 ## ⭐⭐ EVERY BARREN LOCK ALL DAY IS A DROP EXACTLY ONE BLOCK DOWN (2026-08-18, n=21)
 
