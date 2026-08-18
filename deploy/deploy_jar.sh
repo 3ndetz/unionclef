@@ -17,6 +17,26 @@ JAR_DIR="versions/1.21.11/build/libs"
 JAR=$(ls -t "$JAR_DIR"/unionclef-1.21.11-*.jar 2>/dev/null | grep -v -- '-all\|-sources' | head -1)
 [ -n "$JAR" ] || { echo "no jar in $JAR_DIR — build first"; exit 1; }
 
+# ...AND THE JAR MUST BE NEWER THAN THE SOURCE IT CLAIMS TO CARRY.
+#
+# deploy_jar.sh does not build; it ships the newest jar in build/libs. `gradlew compileJava`
+# produces CLASSES and no jar, so a session that compiles-then-deploys ships whatever jar was
+# lying there -- and the bench reports clean results for code that was never loaded. That cost a
+# ten-run mine_coal batch measured against a three-hour-old jar, whose new counter simply never
+# appeared; the run looked normal, because a stale jar looks exactly like a fresh one.
+#
+# Same failure family as the nested-jar check below, one level further out. Refusing is the right
+# default for a MEASUREMENT bench: a loud stop costs a build, a silent stale deploy costs a
+# conclusion. UCTEST_ALLOW_STALE=1 for the rare deliberate replay of an older jar.
+NEWEST_SRC=$(find src tungsten/src shredder/src -name '*.java' -newer "$JAR" -print -quit 2>/dev/null)
+if [ -n "$NEWEST_SRC" ]; then
+    echo "STALE JAR: $JAR is older than $NEWEST_SRC" >&2
+    echo "  the bench would measure code you did not build -- run:  ./gradlew :1.21.11:build" >&2
+    echo "  (set UCTEST_ALLOW_STALE=1 to deploy the old jar deliberately)" >&2
+    [ "${UCTEST_ALLOW_STALE:-0}" = "1" ] || exit 1
+    echo "  UCTEST_ALLOW_STALE=1 -- continuing with the stale jar" >&2
+fi
+
 # ...AND THE SAME CHECK FOR THE JARS INSIDE IT. A fresh outer jar can still carry a stale
 # shredder/tungsten nested jar, which is how a client-tick freeze fix was measured as failed
 # while the deployed bytecode still had the unbounded join it removed. See check_nested_fresh.py.
