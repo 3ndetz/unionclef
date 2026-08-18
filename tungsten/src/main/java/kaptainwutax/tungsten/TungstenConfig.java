@@ -789,9 +789,27 @@ public class TungstenConfig {
      * why: an edge that dispatch understands but admission does not still ends the prefix, so
      * wiring one half buys nothing.
      *
-     * <p>GATE: nav_gaps and nav_steep, which are the courses made of jumps, plus the three
-     * baselines; then the playthrough, which is what this is for. Proof it ran: mqNoClass should
-     * FALL and mqSteps should rise -- and MovementQueue.qParkour counts the class directly.
+     * <p>GATE: nav_gaps and nav_steep, plus the three baselines -- ALL PASS with this on. Then the
+     * playthrough, which is what it was for.
+     *
+     * <p>⛔ MEASURED AND NOT SHIPPED. Twelve playthrough runs, arms interleaved and every pin
+     * verified:
+     * <pre>
+     *   parkour ON    3/6 PASS   mean rungs 2.0   mqSteps 44   mqNoClass 3
+     *   parkour OFF   5/6 PASS   mean rungs 1.8   mqSteps 31   mqNoClass 672
+     * </pre>
+     * The class does precisely what it was built to do -- truncations collapse from 672 to 3 and
+     * the queue advances 42% more steps -- and the VERDICT does not improve: rungs move 1.8 to 2.0,
+     * which is noise at this spread, while PASS goes 5/6 to 3/6.
+     *
+     * <p>⭐ AND THAT IS THE FINDING, not the flag. mqNoClass averaging 672 in the control arm is
+     * twenty-five times the single capture this work was built on, so truncation is far more
+     * pervasive than one stalled run suggested -- and removing almost all of it did not convert
+     * into rungs. The missing movement class was therefore NOT the binding constraint on the
+     * playthrough. Something downstream of "the queue can play the route" is.
+     *
+     * <p>Same standing as MovementAscend had for a while: a complete, compiling, gated port that
+     * waits for the rest of the picture rather than shipping on a mechanism that does not pay.
      */
     public boolean queueParkour = false;
 
