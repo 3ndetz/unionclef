@@ -49,6 +49,7 @@ elif op=="inv":
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
+elif op=="resetstats": mc.resetValues(); out={"ok":True}
 elif op=="perf": out={"p": dict(mc.getPerfStats())}
 elif op=="tdump": out={"d": str(mc.threadDump(str(req.get("f",""))))[:4000]}
 elif op=="logs": out={"n": int(mc.countLogsNear(int(req.get("r",40))))}
@@ -450,6 +451,17 @@ def main():
         py4j("chatcmd", c=f";settings {_k} {_base}")
         time.sleep(0.3)
         print(f"  PIN {_k}={_base}")
+    # ⛔ ZERO THE COUNTERS PER RUN, or an A/B reads the previous arm's numbers.
+    # run_suite resets between courses; this harness never did, so across a --repeat sweep the
+    # tungsten counters carried over and the arms could not be told apart. Caught on the fall-guard
+    # A/B: the CONTROL arm, with the guard explicitly off, printed fallRetry=0/1374 -- 1374 moves
+    # rejected by a guard that was not running. dmgTaken looked sane only because DamageWatch has
+    # its own per-run reset; everything without one was cross-contaminated.
+    # Placed after the pins so it also clears anything the pin commands themselves touched.
+    try:
+        py4j("resetstats")
+    except Exception as _e:                       # noqa: BLE001 -- never fail a run over an instrument
+        print(f"  (counter reset unavailable: {str(_e)[:80]})")
     st = py4j("swapstate")
     print("  shipped pathing flags:", st)
     if not st.get("tungstenPrimary"):
