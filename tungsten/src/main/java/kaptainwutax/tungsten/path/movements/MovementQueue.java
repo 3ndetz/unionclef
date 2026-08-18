@@ -10,6 +10,8 @@ import kaptainwutax.tungsten.world.BetterBlockPos;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
+import net.minecraft.world.WorldView;
 
 /**
  * What the planner hands over: an ORDERED chain of {@link Movement}s, of which exactly one is
@@ -103,6 +105,9 @@ public final class MovementQueue {
     public static volatile int qLost, qStatusFail, qRefused;
     /** Edges dropped because no movement class matches their shape (a running jump, today). */
     public static volatile int qNoClass;
+
+    /** Parkour edges DISPATCHED as a running jump. Read as the 4th of mq's parkour triple. */
+    public static volatile int qParkour;
     /** {@link #qRefused} split by cause: the route was shorter than two cells, or the vetting
      *  left nothing executable. Same reasoning as the split above — one number, two fixes. */
     public static volatile int qShort, qVetoed;
@@ -304,6 +309,59 @@ public final class MovementQueue {
      * axes. With traverse, ascend and descend wired the contiguous prefix now breaks here, and open
      * ground is mostly diagonals.
      */
+    /**
+     * A RUNNING JUMP — {@link MovementParkour}. Straight along one cardinal, two to four cells,
+     * level or one up, with the cells in between not walkable.
+     *
+     * <p>This is the shape {@code mqNoClass} was counting. Measured on a stalled playthrough run:
+     * 27 of 28 chains truncated, 25 steps advanced in 160 seconds, the route replanned identically
+     * each time. The queue's own comment already named the case from a live run --
+     * {@code {90,134,-36} -> {86,135,-34}}, four across and one up -- and there was no class for it.
+     *
+     * <p>THE GAP IS CHECKED, not assumed. A straight two-to-four cell edge over SOLID ground is not
+     * a jump, it is a route the planner shortened, and handing that to a jump would launch the bot
+     * over ground it could have walked. So every intermediate cell must be non-walkable for this to
+     * claim the edge.
+     */
+    private static boolean isParkourShape(BlockPos a, BlockPos b) {
+        int dy = b.getY() - a.getY();
+        if (dy != 0 && dy != 1) {
+            return false;
+        }
+        int dx = b.getX() - a.getX();
+        int dz = b.getZ() - a.getZ();
+        if (dx != 0 && dz != 0) {
+            return false;                       // straight cardinals only
+        }
+        int d = Math.abs(dx) + Math.abs(dz);
+        return d >= 2 && d <= MovementParkour.MAX_DIST;
+    }
+
+    /**
+     * The shape AND the gap. Admission ({@link #isSupportedEdge}) has no world and asks only the
+     * shape; dispatch asks this, because a straight two-to-four cell edge over SOLID ground is not
+     * a jump -- it is a route the planner shortened, and launching the bot over ground it could
+     * have walked is how a fix becomes a regression.
+     */
+    private static boolean isParkourEdge(WorldView world, BlockPos a, BlockPos b) {
+        if (!isParkourShape(a, b)) {
+            return false;
+        }
+        int dx = b.getX() - a.getX();
+        int dz = b.getZ() - a.getZ();
+        int d = Math.abs(dx) + Math.abs(dz);
+        Direction dir = dx != 0
+                ? (dx > 0 ? Direction.EAST : Direction.WEST)
+                : (dz > 0 ? Direction.SOUTH : Direction.NORTH);
+        for (int i = 1; i < d; i++) {
+            BlockPos mid = a.offset(dir, i);
+            if (MovementHelperB.canWalkOn(world, mid.down(), world.getBlockState(mid.down()))) {
+                return false;                   // walkable ground in between: not a gap
+            }
+        }
+        return true;
+    }
+
     private static boolean isDiagonalEdge(BlockPos a, BlockPos b) {
         int dy = b.getY() - a.getY();
         if (dy < -1 || dy > 1) {
@@ -333,6 +391,10 @@ public final class MovementQueue {
         // queueWholeRoute on. That is also why ladders were unclimbable through the queue:
         // MovementPillar owns ladders and vines too.
         if (isPillarEdge(a, b)) return true;
+        // A PARKOUR EDGE MUST BE ADMITTED, NOT ONLY DISPATCHABLE -- the same lesson as the pillar
+        // note directly above. mqNoClass=27 of 28 chains truncated at this shape; wiring only the
+        // dispatch would leave the prefix ending in exactly the same place.
+        if (kaptainwutax.tungsten.TungstenConfig.get().queueParkour && isParkourShape(a, b)) return true;
         if (cfg.queueClimbs && (isAscendEdge(a, b) || isDescendEdge(a, b))) return true;
         // FALLS ARE ADMITTED AGAIN. They were pulled for one build after 25 of 26 chains died on
         // the timeout with the feet never leaving the lip — but MovementFall was not the culprit:
@@ -413,6 +475,10 @@ public final class MovementQueue {
                 movements.add(new MovementFall(from, to));
             } else if (isTraverseEdge(from, to)) {
                 movements.add(new MovementTraverse(from, to));
+            } else if (kaptainwutax.tungsten.TungstenConfig.get().queueParkour
+                    && isParkourEdge(world, from, to)) {
+                qParkour++;
+                movements.add(new MovementParkour(from, to));
             } else {
                 // AN EDGE WITH NO CLASS IS NOT THIS QUEUE'S WORK -- KEEP THE HEAD, HAND BACK THE REST.
                 // The route comes from CombatPathfinder with parkour enabled, so it contains running

@@ -773,6 +773,29 @@ public class TungstenConfig {
     public boolean pathAvoidsFallDamage = false;
 
     /**
+     * Let the movement queue admit and play a RUNNING JUMP -- {@link
+     * kaptainwutax.tungsten.path.movements.MovementParkour}.
+     *
+     * <p>THE LAST MISSING EDGE SHAPE, and on real terrain it is the one that decides the run.
+     * Measured on a stalled playthrough, chain on {@code <Getting to block 74,127,-57>}:
+     * <pre>
+     *   mqStarted=28   mqSteps=25   mqTicks=3207   qNoMove=25   mqNoClass=27
+     * </pre>
+     * 27 of 28 chains truncated at an edge with no movement class, 25 steps advanced in 160
+     * seconds, the identical route replanned each time. The shape was already recorded in the
+     * queue from a live run: {@code {90,134,-36} -> {86,135,-34}}, four across and one up.
+     *
+     * <p>Both ADMISSION and dispatch are gated together. The pillar note in isSupportedEdge records
+     * why: an edge that dispatch understands but admission does not still ends the prefix, so
+     * wiring one half buys nothing.
+     *
+     * <p>GATE: nav_gaps and nav_steep, which are the courses made of jumps, plus the three
+     * baselines; then the playthrough, which is what this is for. Proof it ran: mqNoClass should
+     * FALL and mqSteps should rise -- and MovementQueue.qParkour counts the class directly.
+     */
+    public boolean queueParkour = false;
+
+    /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
      *
      * <p>{@code tryPathToEntity} zeroes {@code barrenStreak} when the entity changes, which is
