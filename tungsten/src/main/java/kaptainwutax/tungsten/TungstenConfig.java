@@ -815,22 +815,35 @@ public class TungstenConfig {
      * 53k, 65k, 34k and 0. Whether that buys FRAMES on a world where frames are the binding
      * constraint is the question this flag exists to answer; delete it once the number exists.
      */
-    // ⛔ DEFAULT PUT BACK TO THE OLD ORDER (2026-08-18). I called the reorder "identical by
-    // construction" and the bench does not agree:
+    // ⭐ EQUIVALENCE MEASURED, NOT ARGUED, AND THE ORDER IS BACK ON (2026-08-18).
     //
-    //     mine_coal, new order (default)   1/5
-     //     mine_coal, old order pinned      3/4
+    // I first shipped this saying the answer "cannot change by construction". mine_coal then read
+    // 1/5 against 3/4 for the old order, so it went off -- a proof that disagrees with the bench
+    // is a proof with an unexamined assumption, and the candidate was that isValidTest is called
+    // for EVERY position in one order and only for a new best in the other.
     //
-    // and that course was green in the 22/22 sweep before it. The orderings ARE equivalent on
-    // paper -- `nearest` only advances on a validated candidate, so a farther one cannot win
-    // either way -- so either isValidTest has a side effect that matters (it is called for EVERY
-    // candidate in the old order and only for a new best in the new one), or eight runs on a
-    // 75-100% course is not enough to tell. Both are reasons not to ship it on.
+    // scanEquivCheck settles it by computing BOTH orders and comparing the chosen block:
     //
-    // The work saved is real and measured (scanAccepted 95k-1.35M down to 34k-65k), so this is
-    // worth finishing -- but with the side-effect question answered first, not by asserting
-    // equivalence a second time.
-    public boolean scanCheapTestFirst = false;
+    //     SCANDIFF = 0 across mine_coal, mine_stone and chop_tree, six runs
+    //
+    // The orders pick the same block every time. And mine_coal failed once in that same batch
+    // WITH THE OLD ORDER in effect, so its failures are independent of this -- the 1/5 was that
+    // course flaking, which it has done all day at a true rate around 70-80%.
+    //
+    // The saving is real: scanAccepted 95k/136k/514k/1,346,059 down to 53k/65k/34k/0 on the same
+    // nine-minute runs. No fps gain is established (16/16/22 against 14/12/20 at three runs an
+    // arm, overlapping), so what is claimed is the work removed and nothing more.
+    public boolean scanCheapTestFirst = true;
+
+    /**
+     * Audit the scan reorder by computing BOTH orders and comparing the block chosen.
+     *
+     * <p>Exists because I shipped the reorder claiming the answer cannot change, and mine_coal then
+     * read 1/5 against 3/4 for the old order. A mismatch here proves the orders differ and names the
+     * block; zero across a full suite says that reading was noise. Expensive -- it walks the
+     * candidates twice -- so it is a diagnostic, never a default.
+     */
+    public boolean scanEquivCheck = false;
 
     /**
      * A flee destination must be somewhere the bot can STAND, not a projected coordinate.

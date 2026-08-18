@@ -224,8 +224,48 @@ public class BlockScanner {
             pos = p;
         }
 
+        // ⛔ SETTLE THE EQUIVALENCE CLAIM BY MEASURING IT, NOT BY ARGUING IT AGAIN.
+        //
+        // I shipped the reorder saying the answer "cannot change by construction", and mine_coal
+        // then read 1/5 against 3/4 for the old order. The proof still looks right -- `nearest`
+        // only advances on a validated candidate -- but a proof that disagrees with the bench is
+        // a proof with an unexamined assumption, and the obvious candidate is that isValidTest is
+        // called for EVERY position in one order and only for a new best in the other.
+        //
+        // So compute BOTH and compare the chosen block. A mismatch proves the orders differ and
+        // says on which block; zero mismatches across a full suite says the 1/5 was noise and the
+        // optimisation is safe to ship. Off by default -- it does the expensive walk twice.
+        if (kaptainwutax.tungsten.TungstenConfig.get().scanEquivCheck) {
+            BlockPos other = null;
+            double otherNearest = Double.POSITIVE_INFINITY;
+            for (BlockPos p : trackedBlocks.get(block)) {
+                if (cheapFirst) {
+                    // the OTHER order: validate everything, then compare
+                    if (!mod.getWorld().getBlockState(p).getBlock().equals(block)) continue;
+                    if (!isValidTest.test(p) || isUnreachable(p)) continue;
+                    double d = BaritoneHelper.calculateGenericHeuristic(fromPos, WorldHelper.toVec3d(p));
+                    if (d < otherNearest) { otherNearest = d; other = p; }
+                } else {
+                    double d = BaritoneHelper.calculateGenericHeuristic(fromPos, WorldHelper.toVec3d(p));
+                    if (d >= otherNearest) continue;
+                    if (!mod.getWorld().getBlockState(p).getBlock().equals(block)) continue;
+                    if (!isValidTest.test(p) || isUnreachable(p)) continue;
+                    otherNearest = d; other = p;
+                }
+            }
+            scanEquivChecked++;
+            if (!java.util.Objects.equals(pos, other)) {
+                scanEquivMismatch++;
+                adris.altoclef.Debug.logMessage("SCANDIFF block=" + block + " cheapFirst=" + cheapFirst
+                        + " chose=" + pos + " other=" + other);
+            }
+        }
+
         return pos != null ? Optional.of(pos) : Optional.empty();
     }
+
+    /** Equivalence audit for the scan reorder. Read as scanEquiv=checked/mismatched. */
+    public static volatile int scanEquivChecked, scanEquivMismatch;
 
     public boolean anyFoundWithinDistance(double distance, Block... blocks) {
         return anyFoundWithinDistance(mod.getPlayer().getPos().add(0, 0.6f, 0), distance, blocks);
