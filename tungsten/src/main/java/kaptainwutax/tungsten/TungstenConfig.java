@@ -802,6 +802,37 @@ public class TungstenConfig {
     public boolean craftFinishMoveInFlight = false;
 
     /**
+     * Test the DISTANCE before the chunk lookup when scanning for the nearest block.
+     *
+     * <p>Both orders return the same answer -- {@code nearest} only advances on a candidate that
+     * passed every check, so anything at or beyond it cannot win either way -- so this is not a
+     * behaviour switch. It exists so the SAVING can be measured, because a semantically identical
+     * change has nothing to A/B against otherwise.
+     *
+     * <p>The old order did a world getBlockState per tracked position, per block type, per tick.
+     * Measured on the playthrough stall corpus: scanAccepted 95k, 136k, 514k and 1,346,059 in
+     * nine-minute runs, against 200-400 on a passing arena course. Reordering took the same runs to
+     * 53k, 65k, 34k and 0. Whether that buys FRAMES on a world where frames are the binding
+     * constraint is the question this flag exists to answer; delete it once the number exists.
+     */
+    // ⛔ DEFAULT PUT BACK TO THE OLD ORDER (2026-08-18). I called the reorder "identical by
+    // construction" and the bench does not agree:
+    //
+    //     mine_coal, new order (default)   1/5
+     //     mine_coal, old order pinned      3/4
+    //
+    // and that course was green in the 22/22 sweep before it. The orderings ARE equivalent on
+    // paper -- `nearest` only advances on a validated candidate, so a farther one cannot win
+    // either way -- so either isValidTest has a side effect that matters (it is called for EVERY
+    // candidate in the old order and only for a new best in the new one), or eight runs on a
+    // 75-100% course is not enough to tell. Both are reasons not to ship it on.
+    //
+    // The work saved is real and measured (scanAccepted 95k-1.35M down to 34k-65k), so this is
+    // worth finishing -- but with the side-effect question answered first, not by asserting
+    // equivalence a second time.
+    public boolean scanCheapTestFirst = false;
+
+    /**
      * A flee destination must be somewhere the bot can STAND, not a projected coordinate.
      *
      * <p>Upstream's GoalRunAway is a heuristic over the whole search space -- any cell far enough

@@ -179,6 +179,10 @@ public class BlockScanner {
             return Optional.empty();
         }
 
+        // Read ONCE, not per candidate. Putting a config lookup inside the innermost loop of the
+        // very thing being optimised would have handed some of the saving straight back.
+        final boolean cheapFirst = kaptainwutax.tungsten.TungstenConfig.get().scanCheapTestFirst;
+
         for (BlockPos p : trackedBlocks.get(block)) {
             // ⛔ CHEAPEST TEST FIRST. This walked EVERY tracked position of the block and did a
             // world getBlockState -- a chunk lookup -- plus the caller's predicate and the
@@ -196,6 +200,19 @@ public class BlockScanner {
             // so far. RESULTS ARE IDENTICAL: `nearest` only ever advances on a candidate that
             // passed every check, so anything at or beyond it cannot win regardless of whether it
             // would have passed. Same answer, a fraction of the work.
+            // The old order is kept behind a flag ONLY so the saving can be measured. The two
+            // branches return the same answer -- that is the whole point -- so this is not a
+            // behaviour gate, it is the control arm for an fps A/B on the survival world, where
+            // frames are the binding constraint and a scan of a million candidates might be worth
+            // some of them. Delete the flag once that number exists.
+            if (!cheapFirst) {
+                if (!mod.getWorld().getBlockState(p).getBlock().equals(block)) continue;
+                if (!isValidTest.test(p) || isUnreachable(p)) continue;
+                double old = BaritoneHelper.calculateGenericHeuristic(fromPos, WorldHelper.toVec3d(p));
+                if (old < nearest) { nearest = old; pos = p; }
+                continue;
+            }
+
             double dist = BaritoneHelper.calculateGenericHeuristic(fromPos, WorldHelper.toVec3d(p));
             if (dist >= nearest) continue;
 
