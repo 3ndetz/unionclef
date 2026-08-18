@@ -92,6 +92,41 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.94 -->
+## ⛔ "inRange=2222 clicked=0" WAS A LIFETIME TOTAL, NOT A RUN (2026-08-19)
+
+Every stall capture in the repo carries the same alarming pair -- the place path reaching "in
+range" hundreds or thousands of times and clicking ZERO:
+
+    called=1448 inRange=1446 clicked=0      called=963  inRange=606  clicked=0
+    called=409  inRange=404  clicked=0      called=2579 inRange=2222 clicked=0
+
+Three sessions read that as a live defect and could not explain it. It is not one. The PathExecutor
+place block was NEVER reset -- those were client-LIFETIME totals, so a capture taken during the
+playthrough was quoting work done by some earlier course, and the ratio was never a per-run
+quantity at all.
+
+With per-run resets in place, measured rather than argued:
+
+    four playthrough runs          called=0  inRange=0  clicked=0  noSup=0/0/0
+    nav_bridge (PASS)              called=0
+    bridge_assault (PASS, bridges a 9-block void gap)   called=0
+
+⭐ SO THE EXECUTOR'S BRIDGE PATH IS DORMANT in every course we run and in the playthrough. Courses
+that build go through the movement classes' own placement (Movement.placeClicked), which is a
+different counter. Where the historical totals came from is NOT established and is not guessed at
+here; what is established is that no current course reproduces them.
+
+⛔ THE INSTRUMENT WAS STILL WORTH BUILDING, and it stays: the one silent return on that path
+(`against == null`, "no clickable neighbour") now counts and splits policy refusals from shape
+refusals. If the path is ever live again, it will say why instead of going quiet -- which is the
+whole reason clicked=0 survived three sessions unexplained.
+
+⛔ AND THE LESSON IS THE ONE OF THE DAY, for the fourth time: a counter that outlives its run reads
+exactly like a live defect. Today that pattern also produced a jar three hours stale, a pinned flag
+that never landed, and an A/B whose control arm ran the treatment. Every one of them looked like a
+measurement and was not.
+
 <!-- G-1.95a -->
 ## ⭐⭐⭐ THE PLAYTHROUGH'S WALL, MEASURED: 27 OF 28 ROUTES ARE TRUNCATED FOR A MISSING MOVEMENT
 
