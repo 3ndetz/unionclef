@@ -76,6 +76,29 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.99 -->
+## ⛔⛔ AUTONOMOUS WORK RELEASES AUTONOMOUSLY (user 2026-08-18, angry, and rightly)
+
+I finished 0.86.0's notes, tested the work, and then PARKED the release with "it is a public tag,
+I am waiting for your go-ahead". That is the work not being delivered. In a long autonomous run
+there is nobody there to say yes -- that is the entire point of the run -- so waiting for
+permission converts a finished release into an indefinite hold.
+
+Written into docs/RELEASE.md as RULE ZERO and RULE ONE:
+
+  RULE ZERO  tested work + green suite -> write notes, bump mod_version, run
+             `gradlew :1.21.11:githubRelease`, VERIFY the asset. No asking. The only blockers are
+             technical: an untested change, a red suite, or a tag taken by another MC-version line.
+
+  RULE ONE   every note carries a HOW TO TEST block PER ITEM -- which @command exercises it, which
+             course reproduces it, what a good result looks like. Notes without that are a
+             changelog for the author, not a release for a user.
+
+0.86.0 shipped under both rules: six items each with HOW TO TEST, a Known bugs section naming the
+playthrough's family of walls, mine_coal at 7/8 and the pvp fps hole, and the 1.21.11 branch
+fast-forwarded to main BEFORE tagging (it had drifted 739 commits, so the tag would have landed on
+stale source while the attached jar was current).
+
 <!-- CLAIMS -->
 ## ⭐⭐⭐ THE PLAYTHROUGH WALL IS THE CRAFTING GRID (2026-08-17, measured)
 
