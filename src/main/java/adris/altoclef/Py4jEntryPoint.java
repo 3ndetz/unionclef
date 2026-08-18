@@ -2566,6 +2566,11 @@ public class Py4jEntryPoint {
         adris.altoclef.util.helpers.TungstenHelper.lockBarren = 0;
         adris.altoclef.util.helpers.TungstenHelper.lockProductive = 0;
         adris.altoclef.util.helpers.TungstenHelper.findRefused = 0;
+        // AND THE GEOMETRY WITH THEM. Its first run reported two barren locks on a PASSING course
+        // whose lockBarren read 0 -- the entries were the previous run's, carried over because the
+        // deque was not in this reset. A recording that survives the run it describes is the same
+        // lying instrument as a counter that never zeroes, and this file has paid for that before.
+        adris.altoclef.util.helpers.TungstenHelper.clearBarrenGeometry();
         adris.altoclef.util.helpers.WorldHelper.BreakStats.cbHardness = 0;
         adris.altoclef.util.helpers.WorldHelper.BreakStats.cbAvoid = 0;
         adris.altoclef.util.helpers.WorldHelper.BreakStats.cbPlausible = 0;

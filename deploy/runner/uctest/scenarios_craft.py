@@ -1051,6 +1051,7 @@ class MineCoal(CraftTable):
         ok, stats = ctx.bot.py.try_call("placeStats")
         parts = [t for t in str(stats or "").split()
                  if t.startswith(("cb=", "breakFail=", "scan=", "lock=", "navStop=", "entityReleased=",
+                                  "entityCloseWalk=",
                                   "avoidSrc="))]
         # A POSITIONAL COUNTER GETS MISREAD, AND THIS ONE WAS -- TWICE IN AN HOUR, BY TWO PEOPLE.
         # avoidSrc=0/0/1/0@- is set/pred/preds/registered@caller, and both of its first readings

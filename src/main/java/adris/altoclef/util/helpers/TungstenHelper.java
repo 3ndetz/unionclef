@@ -399,6 +399,11 @@ public class TungstenHelper {
         }
     }
 
+    /** Drop the recorded geometry; called by the per-run counter reset so it cannot outlive its run. */
+    public static void clearBarrenGeometry() {
+        barrenGeom.clear();
+    }
+
     /** The last three barren locks as {@code type:start>end,moved}, or "-" if there were none. */
     public static String barrenGeometry() {
         return barrenGeom.isEmpty() ? "-" : String.join(";", barrenGeom);
