@@ -28,9 +28,14 @@ JAR=$(ls -t "$JAR_DIR"/unionclef-1.21.11-*.jar 2>/dev/null | grep -v -- '-all\|-
 # Same failure family as the nested-jar check below, one level further out. Refusing is the right
 # default for a MEASUREMENT bench: a loud stop costs a build, a silent stale deploy costs a
 # conclusion. UCTEST_ALLOW_STALE=1 for the rare deliberate replay of an older jar.
-NEWEST_SRC=$(find src tungsten/src shredder/src -name '*.java' -newer "$JAR" -print -quit 2>/dev/null)
-if [ -n "$NEWEST_SRC" ]; then
-    echo "STALE JAR: $JAR is older than $NEWEST_SRC" >&2
+# Compared against the compiled CLASSES, not the .java sources. Gradle's up-to-date check is
+# content-hashed, so a touch or a git checkout rewinds no bytecode and must not raise an alarm --
+# a guard that cries wolf is one that gets switched off. Classes are rewritten only when the code
+# actually changed, which makes "classes newer than jar" exactly the compileJava-then-deploy case
+# this exists to catch, and nothing else.
+NEWEST_CLS=$(find versions/*/build/classes build/classes tungsten/build/classes shredder/build/classes     -name '*.class' -newer "$JAR" -print -quit 2>/dev/null)
+if [ -n "$NEWEST_CLS" ]; then
+    echo "STALE JAR: $JAR is older than compiled bytecode ($NEWEST_CLS)" >&2
     echo "  the bench would measure code you did not build -- run:  ./gradlew :1.21.11:build" >&2
     echo "  (set UCTEST_ALLOW_STALE=1 to deploy the old jar deliberately)" >&2
     [ "${UCTEST_ALLOW_STALE:-0}" = "1" ] || exit 1
