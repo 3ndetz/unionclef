@@ -126,6 +126,8 @@ public final class DamageWatch {
         gapMax = 0;
         rangedHits = 0;
         unattributedHits = 0;
+        dmgFall = 0; dmgLava = 0; dmgFire = 0; dmgDrown = 0; dmgOther = 0;
+        worstFallHeight = 0f;
         deathsSeen = 0;
         lastHealth = -1f;
         voidTicks = 0;
@@ -141,6 +143,45 @@ public final class DamageWatch {
     }
 
     /** Called every client tick from MixinClientPlayerEntity, before anything can decline to run. */
+    /**
+     * WHAT actually hurt the bot, asked at the moment the health drops.
+     *
+     * <p>⛔ THE EXISTING ATTRIBUTION ONLY ASKS WHETHER SOMETHING ALIVE WAS NEARBY. That answered
+     * "not a mob" and stopped there, and "not a mob" was then read as "a fall" for a whole
+     * session -- which the fall-damage guard was built on and which its own A/B went on to refute
+     * (guard ON 5/7 and 1.7 rungs, guard OFF 6/6 and 3.3). nav_cliff independently showed the
+     * planner does not choose damaging drops even when offered one.
+     *
+     * <p>So the question worth instrumenting is not "was anyone near" but "what was the body
+     * DOING": falling (and from how high), burning, drowning, standing in lava. The playthrough's
+     * control arm took 6.0, 40.5, 70.7 and 14.7 damage across four runs -- large enough that
+     * whatever this says will matter, and cheap enough to ask on the tick that already runs.
+     *
+     * <p>Read as dmgWhy=fall/lava/fire/drown/other@worstFallHeight.
+     */
+    public static volatile int dmgFall, dmgLava, dmgFire, dmgDrown, dmgOther;
+    public static volatile float worstFallHeight;
+
+    private static void classifyDamage(ClientPlayerEntity player, float lost) {
+        try {
+            float fd = (float) player.fallDistance;   // double in 1.21.11, float in earlier lines
+            if (fd > 3.0f) {
+                dmgFall++;
+                if (fd > worstFallHeight) worstFallHeight = fd;
+            } else if (player.isInLava()) {
+                dmgLava++;
+            } else if (player.isOnFire()) {
+                dmgFire++;
+            } else if (player.isSubmergedInWater() && player.getAir() <= 0) {
+                dmgDrown++;
+            } else {
+                dmgOther++;
+            }
+        } catch (Exception ignored) {
+            // an instrument never breaks the tick it rides on
+        }
+    }
+
     public static void tick(ClientPlayerEntity player) {
         if (player == null) {
             lastHealth = -1f;
@@ -155,6 +196,7 @@ public final class DamageWatch {
             winTaken++;
             winHpLost += lastHealth - hp;
             damage += lastHealth - hp;
+            classifyDamage(player, lastHealth - hp);
             double gap = nearestLivingGap(player);
             // ⛔ A HIT WITH NOBODY NEAR IT IS NOT A LONG-RANGE HIT, IT IS NON-COMBAT DAMAGE.
             // The gap is the distance to the closest OTHER living entity, so once the target is
