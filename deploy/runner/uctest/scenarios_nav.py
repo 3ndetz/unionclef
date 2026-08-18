@@ -371,5 +371,96 @@ class NavHazard(NavCourse):
                         f"min_hp={low}")
 
 
-SCENARIOS = [NavFlat, NavStaircase, NavSteep, NavGaps, NavDescend,
+
+
+class NavCliff(NavCourse):
+    """A SIX-block drop straight ahead, and a safe stepped way down beside it.
+
+    ⛔ THIS COURSE EXISTS BECAUSE NOTHING COULD SEE A WHOLE CLASS OF BUG. The pathfinder carries a
+    complete fall-damage guard -- PathFinder.checkForFallDamage, plus six more checks in Node,
+    BlockNode and the special moves -- and it was DISABLED by default for as long as the port has
+    existed. Twelve nav courses stayed green throughout, because the deepest drop any of them
+    offers is three blocks and the guard's threshold is 2.75. A course that only offers SAFE drops
+    cannot test a guard against unsafe ones; it passes identically whether the guard runs or not.
+
+    Measured on the playthrough instead, which is a nine-minute run on a live world and therefore
+    the worst possible place to learn it: the bot descended from y=134 to y=60 and took 25.3
+    damage, four of four events attributed to no living entity at all (falls, void, fire). One run
+    reached wood tools and spent its last 150 seconds chipping stone on 1.5 hp.
+
+    The layout gives the bot a CHOICE, which is what makes the verdict mean something:
+      * straight ahead, a six-block cliff onto the lower shelf -- fast, and it hurts;
+      * one row to the side, three two-block steps down to the same shelf -- safe.
+    Both reach the goal, so 'reached' cannot distinguish them and the HEALTH is the measurement.
+
+    ⛔ WHAT THIS COURSE DOES **NOT** MEASURE, recorded because I built it expecting otherwise.
+    It does not discriminate the fall-damage flag. Three builds were tried -- a 6-block drop with
+    stairs beside it, a 10-block drop with a detour, and the 5-block drop that ships here -- and on
+    an arena the bot reaches the goal with min_hp=20.0 in EVERY one of them, guard on or off. At
+    ten blocks it stopped reaching the goal at all (final_dist=19.4, freezes=15) with the guard
+    OFF, so that depth is past what the planner will take regardless. The bot does not choose a
+    damaging fall here, which means the playthrough's 25.3 damage is NOT explained by "the planner
+    picks damaging drops" -- that model is unsupported and is not claimed.
+
+    ⭐ WHAT IT DOES MEASURE, and why it earns its place: it is the only course with a drop past the
+    guard's 2.75 threshold, so it is the only one that exercises the guard's code path at all. That
+    is enough to catch the bug that motivated it -- the guard used to TRUNCATE the fall simulation
+    mid-air instead of rejecting the move, and a bot with the guard on froze solid. With the fix,
+    guard on reaches the goal in 8.3s against 12.2s with it off. Before the fix that arm would not
+    have arrived.
+
+    Gates: reach the goal, no freezes, and arrive with full health.
+    """
+    id = "nav_cliff"
+    duration = 120
+    start_y = STAND_Y + 8
+
+    def build(self, arena, ctx):
+        arena._fill(self.PAD_X0, FLOOR_Y + 8, -3, self.PAD_X1, FLOOR_Y + 8, 3, "stone")
+        goal = self.course(arena, ctx)
+        ctx.geo["goal"] = goal
+        ctx.geo["bot_spawn"] = f"0.5 {self.start_y} 0.5 -90 0"
+        ctx.geo["min_hp"] = 20.0
+
+    def course(self, arena, ctx):
+        # ⛔ FIRST BUILD OF THIS COURSE MEASURED NOTHING, and it is worth saying why. The drop was
+        # six blocks with the safe steps immediately beside it, and the bot came down unhurt on the
+        # SHIPPED DEFAULT (min_hp=20.0, goal at t=9.1s) -- a stepped route that close is simply the
+        # better path, so both arms behave the same and the course has no verdict to give.
+        #
+        # A choice is only a choice when the options cost different amounts. So: the drop is now
+        # TEN blocks (seven damage in vanilla, which no sampling interval can miss) and lies
+        # straight along the route, while the safe stairs are a detour twelve blocks to the side
+        # and back. A planner that ignores fall damage takes the cliff because it is shorter; one
+        # that respects it pays the detour.
+        top = FLOOR_Y + 12
+        low = top - 5
+        arena._fill(7, top, -3, 12, top, 3, "stone")
+        # The detour: out to +z, down in five 2-block steps, and back to the shelf.
+        arena._fill(10, top, 4, 12, top, 14, "stone")
+        h = top
+        z = 15
+        for _ in range(2):
+            h -= 2
+            arena._fill(10, h, z, 12, h, z + 1, "stone")
+            z += 2
+        arena._fill(10, low, 4, 12, low, z, "stone")
+        # The lower shelf, reached either way -- straight off the cliff, or round the detour.
+        arena._fill(13, low, -3, 26, low, 3, "stone")
+        return (24, low + 1, 0)
+
+    def drive_tick(self, ctx, elapsed):
+        super().drive_tick(ctx, elapsed)
+        hp = ctx.bot.health()
+        if hp is not None:
+            ctx.geo["min_hp"] = min(ctx.geo.get("min_hp", 20.0), float(hp))
+
+    def judge(self, ctx):
+        yield from super().judge(ctx)
+        low = ctx.geo.get("min_hp", 20.0)
+        yield Criterion("no fall damage on the way down", low >= 20.0,
+                        f"min_hp={low}")
+
+
+SCENARIOS = [NavFlat, NavStaircase, NavSteep, NavGaps, NavDescend, NavCliff,
              NavWater, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge, NavHazard]
