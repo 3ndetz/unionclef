@@ -114,6 +114,9 @@ public class PathFinder {
 	 *  fix that re-seeds the next search at the player could only be called "suggestive" — the
 	 *  before and after were greps of a channel neither run controlled. */
 	public static volatile int staleRootRejections;
+	/** Searches that exhausted with the fall guard on and were retried with it relaxed. */
+	public static volatile int fallGuardRetries;
+
 	/** Times the PHYSICS search exhausted its open set. Read as srch=physOut/blockOut.
 	 *  Which of the two searches is even trying on a course is not obvious from the outside:
 	 *  nav_water's failing runs print 828 bare "Ran out of nodes!" (this file) and NOT ONE of
@@ -607,6 +610,31 @@ public class PathFinder {
 				Node lastNode = TungstenModDataContainer.EXECUTOR.getPath().getLast();
 
 				search(world, lastNode, target, player, failedAttempts+1);
+				return;
+			}
+			// ⛔ AN EXHAUSTED SEARCH WITH THE FALL GUARD ON MEANS "NO SAFE ROUTE", NOT "NO ROUTE".
+			//
+			// Measured: with pathAvoidsFallDamage on, two playthrough runs froze at exactly
+			// (71.7, 120.0, -70.7), items=0, for their whole duration -- pdEnter+460 and mqSteps+0,
+			// so the driver kept asking and the queue never advanced a single step. Zero damage
+			// taken, because the bot never moved. That is why the guard shipped disabled: it is
+			// correct, and on its own it is fatal on real terrain.
+			//
+			// The guard should express a PREFERENCE, not a veto. A player does not stand on a hill
+			// for five minutes rather than take three hearts. So: search safely first, and if that
+			// exhausts, retry once with the guard relaxed and take the damaging route. The relax is
+			// cleared immediately after, so the NEXT search starts safe again.
+			if (!TungstenModDataContainer.searchIgnoresFallDamage()) {
+				fallGuardRetries++;
+				TungstenModDataContainer.fallGuardRelaxed = true;
+				try {
+					RenderHelper.clearRenderers();
+					closed.clear();
+					PathFinder.blockPath = Optional.empty();
+					search(world, start, target, player, failedAttempts);
+				} finally {
+					TungstenModDataContainer.fallGuardRelaxed = false;
+				}
 				return;
 			}
 			physicsRanOut++;

@@ -42,8 +42,23 @@ public class TungstenModDataContainer {
      * turns the guard ON. Default stays OFF until the measurement says otherwise.
      */
     public static boolean searchIgnoresFallDamage() {
-        return ignoreFallDamage && !TungstenConfig.get().pathAvoidsFallDamage;
+        return fallGuardRelaxed || (ignoreFallDamage && !TungstenConfig.get().pathAvoidsFallDamage);
     }
+
+    /**
+     * Set for the RETRY of a search that exhausted its open set with the guard active.
+     *
+     * <p>SAFETY-FIRST, NOT SAFETY-ONLY. Turning the guard on and leaving it on was measured and it
+     * does not work: two playthrough runs froze at exactly (71.7, 120.0, -70.7) with items=0 for
+     * their whole duration, path driver entered 460 times, movement queue advanced ZERO steps. The
+     * bot took no fall damage because it never moved. That is the whole reason the field above
+     * shipped as true -- the guard is correct and, alone, it is fatal on real terrain.
+     *
+     * <p>A human does not stand on a hill for five minutes rather than take three hearts. Prefer a
+     * route with no fall damage; if there is NO such route, take the damaging one. So the guard
+     * runs first, and an exhausted search retries once with it relaxed.
+     */
+    public static volatile boolean fallGuardRelaxed = false;
     public static GameRenderer gameRenderer = null;
 
     /**
