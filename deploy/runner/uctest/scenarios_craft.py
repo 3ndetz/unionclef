@@ -1060,7 +1060,7 @@ class MineCoal(CraftTable):
         # positional because scripts parse them; the LEGEND travels with the line so a human reading
         # a verdict does not have to remember the order or go and find the format string.
         legend = ("  [cb=hardness/avoid/plausible/reach  avoidSrc=setHits/predHits/predsPresent/"
-                  "registeredThisRun@lastCaller  lock=barren/productive/findRefused@what:start>end,bodyMoved,horiz,dy"
+                  "registeredThisRun@lastCaller  lock=barren/productive/findRefused@what:start>end,bodyMoved,horiz,dy|owningTask"
                   "  dc=ticks/newPursuit/retryOld/hold/.."
                   "  breakFail=claimed/outOfReach/buried/wide/-]")
         yield Criterion("ban and lock counters (recorded, not gated)", True,

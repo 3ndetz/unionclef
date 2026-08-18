@@ -403,8 +403,25 @@ public class TungstenHelper {
             var lp = lockedEntity.getPos();
             double dy = lp.y - player.getPos().y;
             double horiz = Math.hypot(lp.x - player.getPos().x, lp.z - player.getPos().z);
-            barrenGeom.addLast(String.format(java.util.Locale.ROOT, "%s:%.1f>%.1f,m%.1f,h%.1f,dy%+.1f",
-                    what, lockStartDist, endDist, moved, horiz, dy));
+            // ⛔ AND NAME THE TASK THAT OWNED THE BOT. dy=-1.0 in all twenty-one barren locks made
+            // the geometry look like the answer, and then the control refused it: pickup_pit is the
+            // SAME drop-one-block-down geometry and reads lock=0/0/0 over four runs -- not a barren
+            // lock in sight. So the geometry is not what breaks it; what mine_coal adds is that the
+            // bot MINED the block first. That difference lives in the task chain, so record the
+            // chain rather than argue about which half of it matters.
+            String owner = "?";
+            try {
+                var chain = AltoClef.getInstance().getTaskRunner().getCurrentTaskChain();
+                if (chain != null && !chain.getTasks().isEmpty()) {
+                    owner = chain.getTasks().get(chain.getTasks().size() - 1).toString();
+                    if (owner.length() > 44) owner = owner.substring(0, 44);
+                    owner = owner.replace(' ', '_');
+                }
+            } catch (Exception ignored) {
+                // an instrument never breaks navigation
+            }
+            barrenGeom.addLast(String.format(java.util.Locale.ROOT, "%s:%.1f>%.1f,m%.1f,h%.1f,dy%+.1f|%s",
+                    what, lockStartDist, endDist, moved, horiz, dy, owner));
             while (barrenGeom.size() > 3) barrenGeom.removeFirst();
         } catch (Exception ignored) {
             // the accounting must never be the thing that breaks navigation
