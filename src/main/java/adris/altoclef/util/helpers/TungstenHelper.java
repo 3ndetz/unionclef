@@ -229,8 +229,10 @@ public class TungstenHelper {
             try {
                 lockStartDist = lockedEntity != null && !lockedEntity.isRemoved()
                         ? player.getPos().distanceTo(lockedEntity.getPos()) : -1;
+                lockStartPlayerPos = player.getPos();
             } catch (Exception ignored) {
                 lockStartDist = -1;
+                lockStartPlayerPos = null;
             }
             active = true;
 
@@ -280,6 +282,21 @@ public class TungstenHelper {
 
     /** Distance to the target when the current lock was taken, and counters for the A/B. */
     private static double lockStartDist = -1;
+
+    /**
+     * Where the BODY was when the lock was taken, and a rolling note of what each barren lock was
+     * reaching for.
+     *
+     * <p>Two hypotheses about mine_coal have now been refuted by A/B -- the scan reorder and the
+     * per-entity streak -- and both were guesses about a mechanism the counters could not see. What
+     * the counters DO say is unambiguous: every passing run reads {@code lock=0/0/0} and every
+     * failing one carries at least one barren lock. So the next question is not "which flag" but
+     * "what was the bot reaching for, and did it move at all", and that is a recording, not a
+     * behaviour change: {@code type:startDist>endDist,body-moved}. Three entries is enough to see
+     * whether the barren locks are one target refusing repeatedly or a different one each time.
+     */
+    private static net.minecraft.util.math.Vec3d lockStartPlayerPos = null;
+    private static final java.util.Deque<String> barrenGeom = new java.util.ArrayDeque<>();
     /** Locks that expired without the bot getting closer, and locks that made progress. */
     public static volatile int lockBarren, lockProductive;
 
@@ -343,6 +360,7 @@ public class TungstenHelper {
             double now = player.getPos().distanceTo(lockedEntity.getPos());
             if (lockStartDist - now < LOCK_PROGRESS_BLOCKS) {
                 lockBarren++;
+                recordBarrenGeometry(player, now);
                 barrenStreak++;
                 if (kaptainwutax.tungsten.TungstenConfig.get().barrenStreakPerEntity) {
                     barrenByEntity.put(lockedEntity.getId(), barrenStreak);
@@ -362,6 +380,28 @@ public class TungstenHelper {
         } finally {
             lockStartDist = -1;
         }
+    }
+
+    /** What did this barren lock reach for, and did the body move? Never throws; an instrument. */
+    private static void recordBarrenGeometry(net.minecraft.entity.player.PlayerEntity player, double endDist) {
+        try {
+            double moved = lockStartPlayerPos == null ? -1 : player.getPos().distanceTo(lockStartPlayerPos);
+            String what = lockedEntity instanceof net.minecraft.entity.ItemEntity item
+                    ? item.getStack().getItem().toString() : lockedEntity.getType().toString();
+            // Trim the namespace so a course line stays readable next to twenty other counters.
+            int dot = what.lastIndexOf('.');
+            if (dot >= 0) what = what.substring(dot + 1);
+            barrenGeom.addLast(String.format(java.util.Locale.ROOT, "%s:%.1f>%.1f,m%.1f",
+                    what, lockStartDist, endDist, moved));
+            while (barrenGeom.size() > 3) barrenGeom.removeFirst();
+        } catch (Exception ignored) {
+            // the accounting must never be the thing that breaks navigation
+        }
+    }
+
+    /** The last three barren locks as {@code type:start>end,moved}, or "-" if there were none. */
+    public static String barrenGeometry() {
+        return barrenGeom.isEmpty() ? "-" : String.join(";", barrenGeom);
     }
 
     /**
