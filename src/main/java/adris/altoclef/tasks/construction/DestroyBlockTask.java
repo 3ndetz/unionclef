@@ -384,8 +384,27 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         if (!reach.isPresent() && distSqNow <= 16.0) {
             net.minecraft.util.math.BlockPos blocking =
                     kaptainwutax.tungsten.path.movements.RotationHelper.blockedPos;
+            // ⛔ WHY THE CLEAR NEVER FIRES -- SPLIT IT, DO NOT GUESS. A stall capture reads
+            // rayOther=3091 with blockedBy=minecraft:grass_block and leafCleared=0: the ray to the
+            // target is stopped three thousand times and nothing is ever cleared. Three different
+            // refusals can produce that and they want different fixes, so each is counted:
+            //   self-floor  the obstruction IS the block under our own feet, which canClear
+            //               rightly refuses -- digging it drops us. The answer there is to MOVE so
+            //               the line opens, not to dig.
+            //   unclearable canClear said no for another reason (bedrock, fluid, air).
+            //   noReach     it is clearable but we cannot even look at IT.
+            if (blocking != null && !blocking.equals(pos)) {
+                if (blocking.equals(mod.getPlayer().getBlockPos().down())) {
+                    dbBlockedSelfFloor++;
+                } else if (!canClear(mod, blocking)) {
+                    dbBlockedUnclearable++;
+                }
+            }
             if (blocking != null && !blocking.equals(pos) && canClear(mod, blocking)) {
                 Optional<Rotation> clearReach = LookHelper.getReach(blocking);
+                if (!clearReach.isPresent()) {
+                    dbBlockedNoReach++;
+                }
                 if (clearReach.isPresent()) {
                     dbLeafCleared++;
                     _moveChecker.reset();   // clearing a path IS progress
@@ -543,6 +562,9 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
      *       while trying to see a tree.</li>
      * </ul>
      */
+    /** Why the line-of-sight clear did not fire. Read as dbBlocked=selfFloor/unclearable/noReach. */
+    public static volatile int dbBlockedSelfFloor, dbBlockedUnclearable, dbBlockedNoReach;
+
     private boolean canClear(AltoClef mod, net.minecraft.util.math.BlockPos blocking) {
         net.minecraft.block.BlockState st = mod.getWorld().getBlockState(blocking);
         if (st.isAir() || !st.getFluidState().isEmpty()) {
