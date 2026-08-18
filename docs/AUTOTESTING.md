@@ -315,6 +315,36 @@ Python + uv (как в `scripts/`). Цикл на каждый клиент:
 Фазы 1+ — это регрессионная сетка для TODO 1.6.3, где каждый фикс симуляции требует
 перетеста pathfinder'а: без автотеста этот пункт практически невыполним.
 
+## Two ways the bench measures code that was never loaded (both fixed, 2026-08-18)
+
+Both were found in one morning, and both produce the same symptom: a run that looks completely
+normal and reports a result for bytecode that is not what you wrote.
+
+**1. `deploy_jar.sh` does not build.** It ships the newest jar in `versions/1.21.11/build/libs`.
+`gradlew compileJava` produces *classes* and no jar, so compile-then-deploy silently ships whatever
+jar was lying there -- once, a three-hour-old one, and a ten-run `mine_coal` batch was measured
+against code that had never been loaded. The only reason it was caught is that the change under
+test added a *new counter*, and the counter did not appear; with any change that merely alters
+behaviour, the batch would have gone into the register as a real measurement.
+
+The script now refuses when compiled bytecode is newer than the jar, naming the class, with
+`UCTEST_ALLOW_STALE=1` as the deliberate escape. It compares against **classes, not sources**:
+gradle's up-to-date check is content-hashed, so a `touch` or a branch switch rewinds no bytecode
+and must not raise an alarm. The first cut of the guard compared against `.java` and refused a jar
+that was entirely current -- which is worse than no guard, because a check that fires on a correct
+state teaches you to keep the override switched on permanently.
+
+**2. `deploy_jar.sh | tail -4 && run_suite.py` runs the suite even when the deploy dies.** A
+pipeline's exit status is the exit status of its LAST command, and that is `tail`, which succeeds.
+A deploy that failed on a syntax error therefore returned 0 and `&&` handed the bench to a full
+ten-run suite against a half-deployed stand. Run the deploy on its own line and check `$?`, or set
+`pipefail` -- do not pipe a step whose success gates the next one.
+
+Related: `TaskStop` kills the shell, not its children. The orphaned suite kept the bench lock and
+ran for seventeen more minutes with its stdout attached to a dead shell, so nothing it produced
+could ever be read. After killing a suite, check for surviving `run_suite.py` processes and clear
+`%TEMP%/uctest_suite.lock` if it names your own dead run.
+
 ## Риски и честные оговорки
 
 - **Софтверный рендер + Rosetta = 10–25 FPS.** Игровая логика тикается на 20 TPS и от FPS
