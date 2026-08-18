@@ -48,6 +48,9 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.WorldView;
 
 public class Node {
+	/** Moves discarded because the completed fall simulation landed harder than the guard allows. */
+	public static volatile int fallMovesRejected;
+
 
 	public Node parent;
 	public Agent agent;
@@ -388,8 +391,23 @@ public class Node {
 	    boolean shouldAllowWalkingOnLowerBlock = !world.getBlockState(agent.getBlockPos().up(2)).isAir() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 3;
 	    boolean slimeBelow = MovementHelper.isSlimeColumnBelow(world, newNode.agent.getBlockPos(), 32);
 	    double minY = isBelowClosedTrapDoor ? nextBlockNode.getPos(true).y - 1 : nextBlockNode.getBlockPos().getY() - (shouldAllowWalkingOnLowerBlock ? 1.4 : 0.4);
-	    while (!newNode.agent.onGround && !newNode.agent.isClimbing(world) && newNode.agent.getPos().y >= minY
-	    		&& (TungstenModDataContainer.searchIgnoresFallDamage() || slimeBelow || DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY) > -3)) {
+	    // ⛔ A FALL GUARD MUST REJECT THE MOVE, NOT TRUNCATE THE SIMULATION.
+	    //
+	    // This loop simulates the body FALLING until it lands. The guard used to sit in the loop
+	    // CONDITION, so with it active the simulation stopped the moment the drop passed three
+	    // blocks -- and the node that came out was still IN MID-AIR. An airborne node cannot be
+	    // executed, so the physics layer produced nothing the movement queue could use, while the
+	    // search neither exhausted nor timed out. Measured with pathAvoidsFallDamage on: two
+	    // playthrough runs frozen at exactly (71.7, 120.0, -70.7), items=0, pdEnter+460 and
+	    // mqSteps+0, and srch=0/0/0 -- no exhaustion anywhere to explain it. My first fix put a
+	    // retry on the exhaustion branch and fallRetry read 0, which is what said the branch was
+	    // wrong rather than the idea.
+	    //
+	    // So: always simulate to the ground, and decide afterwards. A move that lands too hard is
+	    // DISCARDED, leaving the search to find another route or the caller to relax the guard --
+	    // both of which are answers. A half-simulated node is not.
+	    final boolean fallGuardActive = !TungstenModDataContainer.searchIgnoresFallDamage() && !slimeBelow;
+	    while (!newNode.agent.onGround && !newNode.agent.isClimbing(world) && newNode.agent.getPos().y >= minY) {
 	    	if (i > 60) break;
 	    	i++;
 			double addNodeCost = calculateNodeCost(forward, true, false, false, newNode.agent);
@@ -401,6 +419,14 @@ public class Node {
                 new Color(0, 255, 255), this.cost + addNodeCost + (this.agent.canSprint() ? 1 : 8));
 
         if (newNode.agent.getPos().distanceTo(this.agent.getPos()) < 1.05) return;
+	    // The drop is judged on the COMPLETED simulation, so the number is the real landing depth
+	    // rather than wherever a truncated loop happened to stop.
+	    if (fallGuardActive
+	            && DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY) <= -3
+	            && !newNode.agent.touchingWater) {
+	        fallMovesRejected++;
+	        return;
+	    }
 	    nodes.add(newNode);
 	}
 	
