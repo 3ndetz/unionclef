@@ -78,6 +78,10 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     public static volatile int entityCloseWalkYawKept;
     private static Float closeWalkSetYaw = null;
 
+    /** Close-walk ticks whose target is a DIFFERENT entity than the previous close-walk tick. */
+    public static volatile int entityCloseWalkRetarget;
+    private static Integer closeWalkLastEntityId = null;
+
     private net.minecraft.util.math.Vec3d closeWalkLastPos = null;
     private double closeWalkLastDist = -1;
 
@@ -437,6 +441,18 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
                             closeWalkSetYaw - mod.getPlayer().getYaw())) < 1.0f) {
                 entityCloseWalkYawKept++;
             }
+            // ⛔ AND IS IT THE SAME DROP AS LAST TICK? This is the only reading left that makes the
+            // other two agree. The yaw we set survives the tick 240 times in 241, and the aim
+            // formula here is byte-identical to the one lookAt uses -- yet the aim reads 9 of 241.
+            // Both can be true at once if the two numbers are about DIFFERENT TARGETS: the counters
+            // are static, the task is rebuilt every tick by its parent, and mine_coal drops THREE
+            // pieces of coal. A bot alternating between two of them would snap at one, be measured
+            // against the other, and walk a zigzag that moves the body without ever closing on
+            // either -- which is exactly the 241/239/8 shape.
+            if (closeWalkLastEntityId != null && closeWalkLastEntityId != _entity.getId()) {
+                entityCloseWalkRetarget++;
+            }
+            closeWalkLastEntityId = _entity.getId();
             TungstenHelper.stop();
             Nav.cancel();
             adris.altoclef.util.helpers.LookHelper.lookAt(mod, _entity.getPos());
