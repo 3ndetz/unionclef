@@ -391,8 +391,20 @@ public class TungstenHelper {
             // Trim the namespace so a course line stays readable next to twenty other counters.
             int dot = what.lastIndexOf('.');
             if (dot >= 0) what = what.substring(dot + 1);
-            barrenGeom.addLast(String.format(java.util.Locale.ROOT, "%s:%.1f>%.1f,m%.1f",
-                    what, lockStartDist, endDist, moved));
+            // SPLIT THE DISTANCE, because a 3D number cannot tell the two failures apart.
+            //
+            // The close walk holds MOVE_FORWARD along the yaw, which closes HORIZONTAL ground only.
+            // A drop one block down in the hole the bot just dug sits at roughly h=0.5, dy=-1.0 --
+            // 1.7 blocks away in 3D and unreachable by walking, because the gap that matters is the
+            // one walking cannot close. It also explains an aim that will not settle: with the
+            // target nearly underfoot the horizontal bearing is ill-conditioned, and a fifth of a
+            // block of drift swings the wanted yaw by ninety degrees. Measured: aimed on 88 of 241
+            // ticks, closer on 9.
+            var lp = lockedEntity.getPos();
+            double dy = lp.y - player.getPos().y;
+            double horiz = Math.hypot(lp.x - player.getPos().x, lp.z - player.getPos().z);
+            barrenGeom.addLast(String.format(java.util.Locale.ROOT, "%s:%.1f>%.1f,m%.1f,h%.1f,dy%+.1f",
+                    what, lockStartDist, endDist, moved, horiz, dy));
             while (barrenGeom.size() > 3) barrenGeom.removeFirst();
         } catch (Exception ignored) {
             // the accounting must never be the thing that breaks navigation

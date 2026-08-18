@@ -74,6 +74,10 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     /** Close-walk ticks during which a WindMouse aim LEASE was live, i.e. a second camera owner. */
     public static volatile int entityCloseWalkLeased;
 
+    /** Close-walk ticks on which the yaw we snapped last tick was still there this tick. */
+    public static volatile int entityCloseWalkYawKept;
+    private static Float closeWalkSetYaw = null;
+
     private net.minecraft.util.math.Vec3d closeWalkLastPos = null;
     private double closeWalkLastDist = -1;
 
@@ -419,10 +423,25 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             if (kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.hasTarget()) {
                 entityCloseWalkLeased++;
             }
+            // ⛔ DID OUR OWN SNAP SURVIVE THE TICK? The aim reads 9 of 241, and there are exactly
+            // two ways to get that number, wanting opposite fixes:
+            //   1. something overwrites the yaw between ticks -- then find and arbitrate the owner;
+            //   2. the aim COUNTER is wrong -- then the bot was aimed all along and the reason it
+            //      does not arrive is somewhere else entirely, and one more fix would have been
+            //      built on a broken instrument.
+            // The lease was the obvious candidate for (1) and measured zero, so guessing again is
+            // not the move. This compares the yaw we SET last tick with the yaw we find now: if it
+            // survived, the aim counter is the thing that is lying.
+            if (closeWalkSetYaw != null
+                    && Math.abs(net.minecraft.util.math.MathHelper.wrapDegrees(
+                            closeWalkSetYaw - mod.getPlayer().getYaw())) < 1.0f) {
+                entityCloseWalkYawKept++;
+            }
             TungstenHelper.stop();
             Nav.cancel();
             adris.altoclef.util.helpers.LookHelper.lookAt(mod, _entity.getPos());
             mod.getInputControls().hold(Input.MOVE_FORWARD);
+            closeWalkSetYaw = mod.getPlayer().getYaw();   // what the snap actually left behind
             setDebugState("Walking straight at it (navigation would not)");
             return null;
         }
