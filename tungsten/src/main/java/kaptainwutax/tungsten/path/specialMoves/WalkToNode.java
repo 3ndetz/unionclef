@@ -56,7 +56,7 @@ public class WalkToNode {
 			if (newNode.agent.onGround || lastHigheastNodeSinceGround != null && lastHigheastNodeSinceGround.agent.getPos().y < newNode.agent.getPos().y) {
 				lastHigheastNodeSinceGround = newNode;
 			} else if (lastHigheastNodeSinceGround != null
-					&& (!TungstenModDataContainer.ignoreFallDamage
+					&& (!TungstenModDataContainer.searchIgnoresFallDamage()
 					&& !BlockStateChecker.isAnyWater(world.getBlockState(newNode.agent.getLandingPos(world))))
 					&& DistanceCalculator.getJumpHeight(lastHigheastNodeSinceGround.agent.getPos().y, newNode.agent.getPos().y) < -3) {
 				newNode = new Node(newNode, world, new PathInput(true, false, false, false, false, false, false, parent.agent.pitch, desiredYaw),

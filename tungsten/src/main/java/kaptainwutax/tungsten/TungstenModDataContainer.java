@@ -18,6 +18,32 @@ public class TungstenModDataContainer {
     }
 	public static World world;
     public static boolean ignoreFallDamage = true;
+
+    /**
+     * Does the SEARCH get to ignore fall damage? Ask this, never the raw field.
+     *
+     * <p>⛔ The field above is {@code true} by default, which switches off a fall-damage guard that
+     * is otherwise complete and correct: PathFinder.checkForFallDamage walks the parent chain,
+     * rejects any segment steeper than 2.75 blocks, and already exempts water, slime columns and
+     * slime bounces. All of it sits behind an early return that is taken on every search.
+     *
+     * <p>Measured on the playthrough, 2026-08-18: the bot descends from y=134 to y=60 and takes
+     * 25.3 damage, of which the damage witness attributes FOUR events out of four to no living
+     * entity at all -- dw=4/25.3/27.08/30.05/4/1, and unattributedHits is documented as "falls,
+     * void, fire". One run reached wood tools and spent its last 150 seconds chipping stone on
+     * 1.5 hp; the next reached no rung at all.
+     *
+     * <p>WHY NO COURSE CAUGHT IT: nav_descend offers drops of 1, 2 and 3 blocks. Every one of them
+     * is under the 2.75 threshold, so the course is green whether the guard runs or not. A course
+     * that only offers safe drops cannot test the guard against unsafe ones -- the same blind spot
+     * as a course that hands the bot a weapon already in its hand.
+     *
+     * <p>Flagged rather than flipped, so the two arms can be interleaved: pathAvoidsFallDamage=true
+     * turns the guard ON. Default stays OFF until the measurement says otherwise.
+     */
+    public static boolean searchIgnoresFallDamage() {
+        return ignoreFallDamage && !TungstenConfig.get().pathAvoidsFallDamage;
+    }
     public static GameRenderer gameRenderer = null;
 
     /**

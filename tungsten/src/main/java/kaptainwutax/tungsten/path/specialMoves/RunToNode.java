@@ -62,10 +62,10 @@ public class RunToNode {
 
 			if (newNode.agent.onGround || lastHigheastNodeSinceGround == null || lastHigheastNodeSinceGround.agent.getPos().y < newNode.agent.getPos().y) {
 				lastHigheastNodeSinceGround = newNode;
-			} else if ((!TungstenModDataContainer.ignoreFallDamage
+			} else if ((!TungstenModDataContainer.searchIgnoresFallDamage()
 					&& !BlockStateChecker.isAnyWater(world.getBlockState(newNode.agent.getLandingPos(world))))
 					&& DistanceCalculator.getJumpHeight(lastHigheastNodeSinceGround.agent.getPos().y, newNode.agent.getPos().y) < -3
-					|| !TungstenModDataContainer.ignoreFallDamage && newNode.agent.isDamaged) {
+					|| !TungstenModDataContainer.searchIgnoresFallDamage() && newNode.agent.isDamaged) {
 				newNode = new Node(newNode, world, new PathInput(true, false, false, false, false, false, true, parent.agent.pitch, desiredYaw),
 	            		new Color(24, 17, 222), newNode.cost + 3);
 				break;

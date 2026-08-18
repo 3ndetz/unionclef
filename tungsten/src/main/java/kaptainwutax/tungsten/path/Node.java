@@ -389,7 +389,7 @@ public class Node {
 	    boolean slimeBelow = MovementHelper.isSlimeColumnBelow(world, newNode.agent.getBlockPos(), 32);
 	    double minY = isBelowClosedTrapDoor ? nextBlockNode.getPos(true).y - 1 : nextBlockNode.getBlockPos().getY() - (shouldAllowWalkingOnLowerBlock ? 1.4 : 0.4);
 	    while (!newNode.agent.onGround && !newNode.agent.isClimbing(world) && newNode.agent.getPos().y >= minY
-	    		&& (TungstenModDataContainer.ignoreFallDamage || slimeBelow || DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY) > -3)) {
+	    		&& (TungstenModDataContainer.searchIgnoresFallDamage() || slimeBelow || DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY) > -3)) {
 	    	if (i > 60) break;
 	    	i++;
 			double addNodeCost = calculateNodeCost(forward, true, false, false, newNode.agent);

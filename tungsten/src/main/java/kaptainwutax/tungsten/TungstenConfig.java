@@ -747,6 +747,32 @@ public class TungstenConfig {
     public boolean dropNoPenaltyWhenNear = false;
 
     /**
+     * Turn the search's fall-damage guard back ON. It is complete, correct, and switched off.
+     *
+     * <p>PathFinder.checkForFallDamage walks the parent chain of a candidate, rejects any segment
+     * steeper than 2.75 blocks, and already exempts water, slime columns and slime bounces. Its
+     * SECOND line is `if (ignoreFallDamage) return false`, and that field defaults to true -- so
+     * the whole guard is skipped on every search, and the same field gates six other checks in
+     * Node, BlockNode, RunToNode, SprintJumpMove and WalkToNode.
+     *
+     * <p>Measured on the playthrough: the bot goes from y=134 to y=60 and takes 25.3 damage, with
+     * the damage witness attributing FOUR of four events to no living entity -- unattributedHits,
+     * documented as falls, void and fire. dw=4/25.3/27.08/30.05/4/1. One run reached wood tools and
+     * spent its last 150 s chipping stone on 1.5 hp; the next reached no rung at all.
+     *
+     * <p>WHY NO COURSE CAUGHT IT: nav_descend offers drops of 1, 2 and 3, all under the 2.75
+     * threshold, so it is green either way. A course that only offers safe drops cannot test a
+     * guard against unsafe ones.
+     *
+     * <p>GATE: the whole nav suite must not move (nav_gaps and nav_slime are the ones with a
+     * plausible route through the air, and both have explicit exemptions in the guard), craft must
+     * not move, and the playthrough's dmgTaken/unattributedHits should FALL. Proof it ran: turning
+     * this on can only ever REMOVE candidate paths, so a search that used to fall and now does not
+     * shows up as fewer unattributed damage events.
+     */
+    public boolean pathAvoidsFallDamage = false;
+
+    /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
      *
      * <p>{@code tryPathToEntity} zeroes {@code barrenStreak} when the entity changes, which is

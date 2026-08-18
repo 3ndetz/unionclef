@@ -206,7 +206,7 @@ public class PathFinder {
 	
 	private boolean checkForFallDamage(Node n, WorldView world) {
 		if (this.stop.get()) return false;
-		if (TungstenModDataContainer.ignoreFallDamage) return false;
+		if (TungstenModDataContainer.searchIgnoresFallDamage()) return false;
 		if (BlockStateChecker.isAnyWater(world.getBlockState(n.agent.getBlockPos()))) return false;
 		// Landing on slime bounces instead of hurting — any fall height is safe.
 		if (MovementHelper.isSlimeColumnBelow(world, n.agent.getBlockPos(), 32)) return false;
