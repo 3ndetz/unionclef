@@ -71,6 +71,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
      */
     public static volatile int entityCloseWalkAimed;
 
+    /** Close-walk ticks during which a WindMouse aim LEASE was live, i.e. a second camera owner. */
+    public static volatile int entityCloseWalkLeased;
+
     private net.minecraft.util.math.Vec3d closeWalkLastPos = null;
     private double closeWalkLastDist = -1;
 
@@ -400,6 +403,22 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             }
             closeWalkLastDist = nowDist;
             closeWalkLastPos = nowPos;
+            // ⛔ WHO ELSE IS STEERING THIS CAMERA?
+            //
+            // LookHelper.lookAt is a hard snap -- it calls setYaw directly -- so after this branch
+            // runs, the yaw IS the yaw of the item. Yet the aim measured at the TOP of the next
+            // tick was within 20 degrees on only 208 of 482 ticks in the arm where this walk fired,
+            // and the body moved without approaching: 286 ticks moved, 13 closer, net 2.5 blocks in
+            // roughly twenty-four seconds. A snap that does not survive the tick means a second
+            // owner is putting the camera back.
+            //
+            // WindMouseRotation is a LEASE: it holds a target for 600 ms and steers the camera back
+            // to it every render frame. LookHelper's own comment warns that arming it from a snap
+            // would fight the snap path on the same camera. If a lease is live while we walk, that
+            // fight is the mechanism -- so count it rather than assume it.
+            if (kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.hasTarget()) {
+                entityCloseWalkLeased++;
+            }
             TungstenHelper.stop();
             Nav.cancel();
             adris.altoclef.util.helpers.LookHelper.lookAt(mod, _entity.getPos());
