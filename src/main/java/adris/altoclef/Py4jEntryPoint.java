@@ -3572,6 +3572,27 @@ public class Py4jEntryPoint {
     }
 
     /** Read the current pathing-delegation mode (goal 13). */
+    /**
+     * Read a TungstenConfig boolean back by NAME, so a pinned flag can be PROVEN to have landed.
+     *
+     * <p>⛔ WHY: the bench pins a flag by sending {@code ;settings NAME VALUE} and prints the line
+     * it sent. That proves the command was SENT, not that it took effect -- and settings persist
+     * in tungsten.json across runs, so a pin that quietly fails leaves the PREVIOUS arm's value in
+     * place and both arms measure the same thing. Caught on the fall-guard A/B: a control run with
+     * pathAvoidsFallDamage pinned false reported 1387 moves rejected by the guard, which is only
+     * possible if the guard was on. Another control run in the same sweep read 0. An A/B whose
+     * arms cannot be shown to differ is not a measurement.
+     */
+    public Map<String, Object> readFlag(String name) {
+        try {
+            java.lang.reflect.Field f = kaptainwutax.tungsten.TungstenConfig.class.getField(name);
+            return Map.of("ok", true, "name", name,
+                    "value", String.valueOf(f.get(kaptainwutax.tungsten.TungstenConfig.get())));
+        } catch (Exception e) {
+            return Map.of("ok", false, "name", name, "reason", String.valueOf(e.getMessage()));
+        }
+    }
+
     public Map<String, Object> pathingMode() {
         Map<String, Object> out = new HashMap<>();
         try {

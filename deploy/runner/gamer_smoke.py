@@ -50,6 +50,7 @@ elif op=="inv":
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
 elif op=="resetstats": mc.resetValues(); out={"ok":True}
+elif op=="readflag": out=dict(mc.readFlag(req["n"]))
 elif op=="perf": out={"p": dict(mc.getPerfStats())}
 elif op=="tdump": out={"d": str(mc.threadDump(str(req.get("f",""))))[:4000]}
 elif op=="logs": out={"n": int(mc.countLogsNear(int(req.get("r",40))))}
@@ -442,6 +443,11 @@ def main():
         py4j("chatcmd", c=f";settings {_k} {_v}")
         time.sleep(0.3)
         print(f"  PIN {_k}={_v}")
+        _got = py4j("readflag", n=_k)
+        print(f"  PIN VERIFIED {_k}={_got.get('value')}")
+        if str(_got.get("value")).lower() != _v.strip().lower():
+            raise StandDown(f"pin {_k}={_v} did not land (reads {_got.get('value')}) "
+                            f"-- both arms would measure the same thing")
     for _spec in (_alt if not _arm_b else []):
         # The control arm must SET the baseline explicitly, not merely omit the pin: settings
         # persist in tungsten.json across runs, so an omitted pin inherits whatever the previous
@@ -451,6 +457,10 @@ def main():
         py4j("chatcmd", c=f";settings {_k} {_base}")
         time.sleep(0.3)
         print(f"  PIN {_k}={_base}")
+        _got = py4j("readflag", n=_k)
+        print(f"  PIN VERIFIED {_k}={_got.get('value')}")
+        if str(_got.get("value")).lower() != _base.lower():
+            raise StandDown(f"control pin {_k}={_base} did not land (reads {_got.get('value')})")
     # ⛔ ZERO THE COUNTERS PER RUN, or an A/B reads the previous arm's numbers.
     # run_suite resets between courses; this harness never did, so across a --repeat sweep the
     # tungsten counters carried over and the arms could not be told apart. Caught on the fall-guard
