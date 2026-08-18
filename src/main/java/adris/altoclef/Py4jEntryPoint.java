@@ -2609,6 +2609,16 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.path.movements.Movement.placeOnCooldown = 0;
         kaptainwutax.tungsten.path.movements.Movement.placeNoHit = 0;
         kaptainwutax.tungsten.path.movements.Movement.placeClicked = 0;
+        // The PathExecutor place block was NEVER reset -- these were client-lifetime totals,
+        // which is why captures read called=2579 and grew across a sweep. Per-run now, so the
+        // inRange-to-clicked ratio means something within one run.
+        kaptainwutax.tungsten.path.PathExecutor.placeCalled = 0;
+        kaptainwutax.tungsten.path.PathExecutor.placeDeferred = 0;
+        kaptainwutax.tungsten.path.PathExecutor.placeInRange = 0;
+        kaptainwutax.tungsten.path.PathExecutor.placeClicked = 0;
+        kaptainwutax.tungsten.path.PathExecutor.placeNoSupport = 0;
+        kaptainwutax.tungsten.path.PathExecutor.placeDeniedPolicy = 0;
+        kaptainwutax.tungsten.path.PathExecutor.placeDeniedShape = 0;
         kaptainwutax.tungsten.path.movements.Movement.motionSteered = 0;
         kaptainwutax.tungsten.path.movements.Movement.sprintTicks = 0;
         kaptainwutax.tungsten.path.movements.Movement.moveTicks = 0;
@@ -2804,7 +2814,7 @@ public class Py4jEntryPoint {
         // timeouts, ticks owned), mv* is the one and only promotion to a click — a movement asked for
         // CLICK_RIGHT because its live crosshair agreed, and interactBlock said SUCCESS.
         return String.format(
-                "called=%d deferred=%d inRange=%d clicked=%d"
+                "called=%d deferred=%d inRange=%d clicked=%d noSup=%d/%d/%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
                         + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d pdLegacy=%d exArrived=%d exRanOut=%d exSprint=%d/%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d vgFall=%d/%d/%d/%d rimBack=%d kbThrow=%d/%d/%d/%d kbImp=%d/%d/%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d mqParkour=%d mqNull=%d gaveUp=%d/%d dc=%d/%d/%d/%d/%d mc=%d/%d/%d/%d/%d mcFlight=%d mcSwitch=%d toolSwap=%d recipesKnown=%d wander=%d wanderMoved=%d wanderChk=%d/%d wanderFail=%d lavaEsc=%d lavaCond=%d/%d surv=%d/%d tbl=%d/%d@%d bs=%d/%d/%d/%d@%dms navUnsafeAir=%d sm=%d/%d smWater=%d srch=%d/%d/%d fallRetry=%d/%d drop=%d/%d/%d scan=%d/%d/%d/%d/%d/%d navStop=%d/%d/%d fleeSpot=%d/%d lock=%d/%d/%d@%s cb=%d/%d/%d/%d avoidSrc=%d/%d/%d/%d@%s/%s et=%d/%d"
@@ -2816,6 +2826,9 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.path.PathExecutor.placeDeferred,
                 kaptainwutax.tungsten.path.PathExecutor.placeInRange,
                 kaptainwutax.tungsten.path.PathExecutor.placeClicked,
+                kaptainwutax.tungsten.path.PathExecutor.placeNoSupport,
+                kaptainwutax.tungsten.path.PathExecutor.placeDeniedPolicy,
+                kaptainwutax.tungsten.path.PathExecutor.placeDeniedShape,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qStarted,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qSteps,
                 kaptainwutax.tungsten.path.movements.MovementQueue.qUnreachable,

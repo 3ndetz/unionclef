@@ -101,6 +101,8 @@ public class PathExecutor {
      */
     public volatile boolean placingNow = false;
     public static volatile int placeCalled=0, placeDeferred=0, placeInRange=0, placeClicked=0;
+    /** Ticks the place path found NO clickable neighbour, split by which check refused. */
+    public static volatile int placeNoSupport=0, placeDeniedPolicy=0, placeDeniedShape=0;
     /** How a replayed path ended: within 1.5 blocks of its last cell, or simply out of ticks. */
     public static volatile int execArrived=0, execRanOut=0;
     /** Ticks the executor replayed, and how many of them requested SPRINT — see the tick loop. */
@@ -714,8 +716,34 @@ public class PathExecutor {
             if (kaptainwutax.tungsten.helpers.RealPlacement.canPlaceAgainst(world, n)) {
                 against = n; side = dir.getOpposite(); break;
             }
+            // WHY was it refused? Split the two reasons, because they want opposite fixes: a
+            // POLICY refusal is altoclef's place-avoider set saying "not here" (a bug in what got
+            // registered), a SHAPE refusal is "there is nothing solid to click" (a bug in where we
+            // were asked to build, or in the route that put us here).
+            if (!kaptainwutax.tungsten.path.PlaceRules.allowedByPolicy(n)) {
+                placeDeniedPolicy++;
+            } else {
+                placeDeniedShape++;
+            }
         }
-        if (against == null) return true;           // no support yet — wait a tick
+        // ⛔ THE ONLY SILENT RETURN ON THIS PATH, AND IT IS THE ONE THAT WAS FIRING.
+        //
+        // Measured across six stall captures: called=409..2579 with inRange=404..2222 and
+        // clicked=ZERO in every one. Turning on the verbose flag printed neither PLACEAIM nor
+        // PLACEWAIT -- the two diagnostics that sit further down -- which leaves exactly this
+        // line, the one with no diagnostic at all. Three sessions read "clicked=0" and could not
+        // explain it, because the branch that explains it says nothing when it is taken.
+        if (against == null) {
+            placeNoSupport++;
+            if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging
+                    && (placingTicks % 20 == 0)) {
+                Debug.logMessage(String.format(
+                        "PLACENOSUPPORT want=%s policyRefused=%d shapeRefused=%d feet=%s",
+                        target.toShortString(), placeDeniedPolicy, placeDeniedShape,
+                        player.getBlockPos().toShortString()));
+            }
+            return true;                            // no support yet — wait a tick
+        }
 
         options.attackKey.setPressed(false);
         // SNEAK WHILE BRIDGING — PORTED FROM BARITONE, NOT INVENTED. MovementTraverse holds
