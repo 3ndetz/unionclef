@@ -180,16 +180,31 @@ public class BlockScanner {
         }
 
         for (BlockPos p : trackedBlocks.get(block)) {
+            // ⛔ CHEAPEST TEST FIRST. This walked EVERY tracked position of the block and did a
+            // world getBlockState -- a chunk lookup -- plus the caller's predicate and the
+            // unreachable set, before finally computing a distance that throws most of them away.
+            // Called every tick, over every type in the list (a "wood" target is fourteen), across
+            // everything the scanner has ever seen.
+            //
+            // Measured on the playthrough stall corpus: scanAccepted reads 95k, 136k, 514k and
+            // 1,346,059 accepted candidates in nine-minute runs, against 200-400 on a passing
+            // arena course -- the ONE signal common to all four stall families rather than to any
+            // single one. On a client this bench has established is fps-bound, that is real CPU.
+            //
+            // The distance is arithmetic on two vectors and rejects almost everything, so it goes
+            // first, and the expensive checks run only for a candidate that is actually the best
+            // so far. RESULTS ARE IDENTICAL: `nearest` only ever advances on a candidate that
+            // passed every check, so anything at or beyond it cannot win regardless of whether it
+            // would have passed. Same answer, a fraction of the work.
+            double dist = BaritoneHelper.calculateGenericHeuristic(fromPos, WorldHelper.toVec3d(p));
+            if (dist >= nearest) continue;
+
             //ensure the block is there (can change upon rescan)
             if (!mod.getWorld().getBlockState(p).getBlock().equals(block)) continue;
             if (!isValidTest.test(p) || isUnreachable(p)) continue;
 
-            double dist = BaritoneHelper.calculateGenericHeuristic(fromPos, WorldHelper.toVec3d(p));
-
-            if (dist < nearest) {
-                nearest = dist;
-                pos = p;
-            }
+            nearest = dist;
+            pos = p;
         }
 
         return pos != null ? Optional.of(pos) : Optional.empty();
