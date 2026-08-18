@@ -710,8 +710,21 @@ public class TungstenConfig {
      *
      * <p>GATE: goto_then_mine (7/8, and its failures are this) plus the four pickup courses, which
      * must not move. Proof it ran: GetToEntityTask.entityCloseWalk.
+     *
+     * <p>⭐ ON by default 2026-08-18, on mine_coal, sixteen runs interleaved in one invocation:
+     * <pre>
+     *   off  4/8      on  7/8
+     * </pre>
+     * Pooled with the earlier six-pair series on the same jar: off 9/14, on 12/14. The counter
+     * reads 0 in every single control-arm run, so the arms really were different code.
+     *
+     * <p>WHAT THE COURSE LOOKS LIKE WHEN IT FAILS, which is what finally justified this: every
+     * barren lock is a coal drop ONE BLOCK DOWN in the hole the bot just dug -- h=0.7 to 2.5,
+     * dy=-1.0 without exception -- and with this off the body does not move at all, m0.0, for the
+     * full thirty seconds. Worst recorded control run: coal=0 of 3, four barren locks, two minutes
+     * spent standing next to its own coal.
      */
-    public boolean entityCloseRangeWalk = false;
+    public boolean entityCloseRangeWalk = true;
 
     /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
