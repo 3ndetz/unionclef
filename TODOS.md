@@ -92,6 +92,39 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.95a -->
+## ⭐⭐⭐ THE PLAYTHROUGH'S WALL, MEASURED: 27 OF 28 ROUTES ARE TRUNCATED FOR A MISSING MOVEMENT
+
+Full counter capture from a stalled playthrough run (deploy/runner/freezes/stall_run4_ladder.txt),
+task chain sitting on {@code <Getting to block 74,127,-57> Tungsten (primary) walking terrain}:
+
+    mqStarted=28   mqSteps=25   mqTicks=3207   qNoMove=25   mqNoClass=27
+    pdEnter=3227   pdStuck=10   pdStallReset=30   srch=0/0/0   scan=47851
+
+The movement queue started 28 times and advanced 25 steps in 160 seconds -- about ONE step per
+start -- and {@code mqNoClass=27} says why: 27 of those 28 chains were TRUNCATED because an edge in
+the route had no movement class. MovementQueue classifies each edge as swim / pillar / diagonal /
+ascend / descend / fall / traverse, and anything else is handed back. What falls through is
+PARKOUR -- a running jump. The file records the measured shape from a live @gamer run:
+{90,134,-36} -> {86,135,-34}, four blocks across and one up.
+
+So the block-space search plans routes the physics executor cannot play. The queue honestly runs
+the prefix it has movements for -- usually one step -- stops, the route is replanned identically,
+and the bot spends its run re-walking the same first step. That is not "the bot is stuck", not
+"the search is slow" (bs=29/29/170/170@4265ms is the BlockScanner's total rescan cost for the whole
+run, ~147 ms each, and I misread it as per-search before checking), and not damage (dmgWhy read
+0/0/0/0/0 with dmgTaken=0.0 on two of the failing runs).
+
+⭐ THE FIX IS A CAPABILITY, NOT A PATCH: implement MovementParkour so the queue can execute the
+edges the search already emits. The alternative -- teach the search not to emit them -- throws away
+routes that are genuinely the only way across, and the file's own comment says the truncation was
+meant to hand off to the walker, which measurably is not getting there.
+
+WHY nav_gaps IS GREEN AND THIS IS NOT: nav_gaps offers 2, 3 and 4-block gaps on a FLAT arena, where
+the route can be a straight line of traverse edges and the walker's sprint-jump covers the rest.
+Real terrain puts the jump in the middle of a route with height changes on both sides, which is the
+shape that has no class.
+
 <!-- G-1.955 -->
 ## ⛔ pathAvoidsFallDamage REFUTED, AND MY OWN TWO EARLIER READINGS OF IT WERE WRONG (2026-08-18)
 
