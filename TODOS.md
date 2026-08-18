@@ -76,6 +76,37 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.97 -->
+## ⭐⭐ EVERY BARREN LOCK ALL DAY IS A DROP EXACTLY ONE BLOCK DOWN (2026-08-18, n=21)
+
+The barren-lock geometry recorder was added today to stop mine_coal being diagnosed by guesswork
+(three hypotheses had already died: the scan reorder, the per-entity streak, the WindMouse aim
+lease, and a fourth -- target thrash between drops -- died after with retarget=0 over 389 ticks).
+Pooling every barren lock it recorded across the day:
+
+    FAIL (n=13)   h = 0.7 1.6 1.6 1.6 2.2 2.2 2.3 2.3 2.4 2.4 5.3 8.3 8.3
+    PASS (n=8)    h = 0.6 0.9 1.1 1.2 1.3 1.4 2.5 5.9
+    dy = -1.0     in ALL TWENTY-ONE, without a single exception
+
+The horizontal distance is scattered over an order of magnitude and separates nothing. The vertical
+offset is not a distribution at all -- it is a constant. Every navigation lock that got nowhere
+today was aimed at a drop ONE BLOCK BELOW the bot: the ore was in the floor, it broke, and the item
+fell into the hole the bot had just made.
+
+⛔ SO DO NOT RAISE `CLOSE_WALK_RANGE`. The one failure at h=8.3 sits just past the 8.0 cap and is
+the obvious thing to reach for, and it is 2 cases out of 21 -- the tail, not the trunk. Moving a
+constant on the strength of the newest sample is exactly the mistake this course has already
+punished four times today.
+
+⛔ AND THE CONTROL THAT MAKES THIS SHARP: `pickup_pit` -- a drop at the bottom of a one-deep pit,
+the SAME dy=-1.0 geometry -- is GREEN, and has been all day, including in the 22/22 audit. So the
+bot can reach a drop one block down when that is the whole task. What mine_coal adds is that it
+MINED the block first. The next pass compares those two courses directly rather than theorising
+about which of the two differences matters.
+
+STATUS: the course is 7/8 (and 9/10 on the released 0.86.0 jar), up from 4/8, via the close-range
+walk. This entry is about the part that is NOT fixed.
+
 <!-- G-1.98 -->
 ## ⭐⭐ NEXT BIG GOAL AFTER THE PLAYTHROUGH: A SERIOUS STEP UP IN PvP (user 2026-08-18)
 
