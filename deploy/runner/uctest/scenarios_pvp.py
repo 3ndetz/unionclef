@@ -1040,6 +1040,20 @@ class AllRound(Scenario):
     #   call     if arm B's per-swing damage clearly exceeds arm A's, reach control is costing
     #            the connection and is the fix. If the two arms are indistinguishable, reach
     #            control is exonerated and the cause is elsewhere -- record that and move on.
+    #
+    # ⛔ ANSWERED, AND IT IS THE SECOND CALL: REACH CONTROL IS EXONERATED. Six interleaved runs:
+    #     arm A (ours, true)       dealt/swing 3.06   [2.99, 3.04, 3.14]   margin -3.3
+    #     arm B (opponent's, false) dealt/swing 2.94  [3.10, 2.83, 2.88]   margin -3.7
+    # The difference is -0.12 against arm spreads of 0.16 and 0.27 -- smaller than either arm's
+    # own noise, and pointing the wrong way. The bot fighting on the opponent's exact setting
+    # loses by the same margin, so the one configured difference between the fighters is not
+    # what decides this course. Do not re-run it; five suspects are now priced.
+    #
+    # The ledger also disagrees with the victim's own `dw` by about 30% (dealt 200 against took
+    # 260) and BOTH causes are understood and one-directional: arrow hits land beyond the
+    # ledger's 20-block range on a 48-block arena, and a killing blow is truncated at the hp
+    # floor, so overkill is never booked. Both bias every arm the same way, which is why the
+    # A/B above still stands -- but neither figure should be quoted as absolute damage.
 
     # ⛔ AND NEITHER IS THE WOUNDED KITE, WHICH IS LIVE ONLY HERE. This is the one pvp kit with a
     # bow, so hasRangedOption is true and CombatController's low-health branch actually FIRES --
