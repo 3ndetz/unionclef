@@ -441,6 +441,19 @@ public abstract class Movement {
                 player.isOnGround(), player.isInSneakingPose()));
     }
 
+    /** Consecutive prepping ticks spent clicking at a block we cannot aim at. */
+    private int blindPrepTicks = 0;
+
+    /**
+     * Three seconds -- past any honest aim-and-swing, and under the six after which MovementQueue
+     * abandons the whole chain, so this speaks first and the planner gets to route around instead
+     * of returning the identical route.
+     */
+    private static final int BLIND_PREP_LIMIT = 60;
+
+    /** Movements that gave up because the thing in the way could never be aimed at. */
+    public static volatile int blindPrepGaveUp;
+
     protected boolean prepared(MovementState state) {
         if (state.getStatus() == MovementStatus.WAITING) {
             return true;
@@ -474,6 +487,31 @@ public abstract class Movement {
                         state.setInput(Input.CLICK_LEFT, true);
                     }
                     return false;
+                }
+                // ⛔⛔ CLICKING AT A BLOCK WE CANNOT EVEN AIM AT IS THE LIVELOCK, AND THE BRANCH
+                // MEANT TO CATCH IT IS DEAD CODE. `somethingInTheWay` is set above and BOTH paths
+                // return false, so the `if (somethingInTheWay) -> UNREACHABLE` after the loop can
+                // only be reached with the flag still false -- checked against all three
+                // occurrences in this file. A movement can never report UNREACHABLE for an
+                // obstruction it cannot clear.
+                //
+                // Measured cost: reachable is EMPTY here, so we aim at the block centre and hold
+                // CLICK_LEFT at something the crosshair does not land on -- the same blocked ray
+                // the captures show as rayOther=3091, blockedBy=minecraft:grass_block. The block
+                // never breaks, prepared() never returns true, and since updateState returns
+                // before every subclass's logic the step neither arrives nor fails. Six seconds
+                // later qNoMove drops the chain, the planner returns the identical route, and the
+                // run is spent on that loop: 44 qNoMove per zero-rung run against 0 per scoring
+                // one, the body never leaving a seven-block patch at one altitude.
+                //
+                // Mining a block we CAN see is untouched. Only the blind case changes, and it
+                // changes to what the dead branch intended.
+                blindPrepTicks++;
+                if (kaptainwutax.tungsten.TungstenConfig.get().prepFailsWhenBlind
+                        && blindPrepTicks > BLIND_PREP_LIMIT) {
+                    blindPrepGaveUp++;
+                    state.setStatus(MovementStatus.UNREACHABLE);
+                    return true;
                 }
                 //get rekt minecraft
                 //i'm doing it anyway

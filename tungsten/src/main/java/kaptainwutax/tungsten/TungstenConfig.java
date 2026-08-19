@@ -890,6 +890,29 @@ public class TungstenConfig {
     public boolean breakGoalIsReach = false;
 
     /**
+     * A movement gives up when the thing in its way can never be aimed at.
+     *
+     * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on
+     * BOTH paths, so the {@code if (somethingInTheWay) -> UNREACHABLE} after the loop is dead code.
+     * A movement therefore cannot report UNREACHABLE for an obstruction it cannot clear: it aims
+     * at the block centre, holds CLICK_LEFT at something the crosshair does not land on, and stays
+     * PREPPING for ever. In PREPPING every subclass returns before its own logic, so the body is
+     * held without a single movement key.
+     *
+     * <p>That is the measured zero-rung run: 44 qNoMove per failing run against 0 per scoring one,
+     * body inside a seven-block patch at ONE altitude, empty inventory after five minutes, and a
+     * captured scene reading Descend/PREPPING/idx0of4 with fwd:n on open ground.
+     *
+     * <p>Only the BLIND case changes -- mining a block we can see is untouched. Three seconds is
+     * past any honest swing and under MovementQueue's six-second chain timeout, so this speaks
+     * first and the planner gets to route around instead of returning the same route.
+     *
+     * <p>GATE: nav_break and nav_wall2 (the courses whose whole job is breaking a way through),
+     * plus the three baselines, then the playthrough on arrival rate. Proof it ran: blindPrepGaveUp.
+     */
+    public boolean prepFailsWhenBlind = false;
+
+    /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
      *
      * <p>{@code tryPathToEntity} zeroes {@code barrenStreak} when the entity changes, which is
