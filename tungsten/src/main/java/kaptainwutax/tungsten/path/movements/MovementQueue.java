@@ -111,6 +111,9 @@ public final class MovementQueue {
 
     /** Edges DISPATCHED that admission would have refused. Any non-zero value is a contradiction. */
     public static volatile int qAdmitMismatch;
+
+    /** Ticks the head movement spent PREPPING (pressing nothing) against RUNNING. Read as qPrep. */
+    public static volatile int qPrepTicks, qRunTicks;
     /** {@link #qRefused} split by cause: the route was shorter than two cells, or the vetting
      *  left nothing executable. Same reasoning as the split above — one number, two fixes. */
     public static volatile int qShort, qVetoed;
@@ -920,7 +923,17 @@ public final class MovementQueue {
 
             MovementStatus status;
             try {
+                // ⛔ HOW MUCH OF A RUN IS SPENT NOT MOVING BY DESIGN? A movement in PREPPING
+                // presses NOTHING: every updateState begins with
+                //     super.updateState(state); if (status != RUNNING) return state;
+                // and Movement.tick then applies an empty input map. So a movement that never
+                // leaves PREPPING holds the body without a single key, which is exactly the state
+                // one captured stuck scene shows -- Descend/PREPPING/idx0of4, fwd:n, on solid
+                // ground with air at feet and head. One scene is a sample, not a rate, so count
+                // the ticks instead: this fires on every run, failing or not.
                 status = movement.update();
+                if (status == MovementStatus.PREPPING) qPrepTicks++;
+                else if (status == MovementStatus.RUNNING) qRunTicks++;
                 try {
                     var o = net.minecraft.client.MinecraftClient.getInstance().options;
                     lastTickKeys = "sneak:" + (o.sneakKey.isPressed() ? "Y" : "n")
