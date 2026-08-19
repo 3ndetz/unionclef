@@ -92,6 +92,34 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.912 -->
+## ⛔ CORRECTION TO THE ENTRY BELOW: MORE SAMPLES ARE NOT MORE POWER (2026-08-19)
+
+The entry below says to judge playthrough work on the per-target arrival rate rather than the rung
+count, because it yields ten to eighteen samples per run instead of one. The first real use of it
+shows that HALF of that claim is wrong, and the wrong half is the important one.
+
+queueParkour, third sweep, judged on arrival rate:
+
+    ON    47/89  targets = 53%    per-run rates  88%  0%   7%  60%   median 34%
+    OFF   182/275 targets = 66%   per-run rates  35% 87%  10%  97%   median 61%
+
+    targets per run:  ON 16, 5, 15, 53      OFF 26, 150, 61, 38
+
+⛔ TARGETS INSIDE ONE RUN ARE NOT INDEPENDENT. They share a world, a start point, a session and a
+frame rate, and one run contributed 150 of the control arm's 275 targets -- so the pooled 66% is
+mostly one run's opinion. The per-run rates span 0-88% and 10-97%; the spread that swamped the rung
+count is still there, one level down. The effective sample size is still the number of RUNS.
+
+⭐ WHAT THE METRIC IS STILL GOOD FOR, and it is not nothing: it is CONTINUOUS and it is close to the
+mechanism, so a per-run rate is a far better outcome variable than "how many rungs" -- it separated
+PASS from FAIL 6/6 where rungs separated nothing. Use it as the outcome. Do NOT treat 89 targets as
+n=89.
+
+⛔ AND queueParkour NOW HAS THREE SWEEPS AND THREE ANSWERS: rungs said OFF, distance said ON
+emphatically, arrival rate says OFF. Two of three favour OFF and that is where it ships. It is not
+established either way, and no single sweep of it should be quoted.
+
 <!-- G-1.913 -->
 ## ⭐⭐⭐ TEN TO EIGHTEEN SAMPLES PER RUN INSTEAD OF ONE (dbTargets, 2026-08-19)
 
