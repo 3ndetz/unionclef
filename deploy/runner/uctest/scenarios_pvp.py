@@ -1041,6 +1041,19 @@ class AllRound(Scenario):
     #            the connection and is the fix. If the two arms are indistinguishable, reach
     #            control is exonerated and the cause is elsewhere -- record that and move on.
     #
+    # ⛔ AND THE NEXT "ASYMMETRY" IN THE SAME READOUT IS NOT ONE. punk prints called=290 for the
+    # bot against 2702 for the victim, which reads as the bot's melee driver getting a ninth of
+    # the ticks its opponent gets -- a mechanical cause for missing swings, and completely false.
+    # PunkPlayerTask.start() calls resetCounters(), and THIS COURSE re-issues punk on every melee
+    # entry while the victim is given punk exactly once at drive_start. So the victim's number
+    # spans the whole run and the bot's spans only since its last melee entry:
+    #     victim 2702 / 120s = 22.5/s, the client tick rate
+    #     bot     290 at that rate = 12.9s of coverage -> also 22.5/s
+    # Identical. The class's own javadoc says it in advance -- "a counter is only a measurement if
+    # you know its zero" -- and the two fighters here do not share one. Compare punk counters
+    # between fighters only as RATES, and only when both tasks were started the same number of
+    # times; the ledger's tick count is the honest denominator because nothing resets it mid-run.
+    #
     # ⛔ ANSWERED, AND IT IS THE SECOND CALL: REACH CONTROL IS EXONERATED. Six interleaved runs:
     #     arm A (ours, true)       dealt/swing 3.06   [2.99, 3.04, 3.14]   margin -3.3
     #     arm B (opponent's, false) dealt/swing 2.94  [3.10, 2.83, 2.88]   margin -3.7
