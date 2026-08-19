@@ -259,11 +259,15 @@ public class MobDefenseChain extends SingleTaskChain {
     /** Ticks the ledger actually ran: a zero above means nothing if this is zero too. */
     public static volatile int mdLedgerTicks;
 
+    /** Attributed hits by SIZE: chip / partial / a flat sword blow / a crit. */
+    public static volatile int mdDropTiny, mdDropPartial, mdDropFlat, mdDropCrit;
+
     /** Zeroes the damage ledger between bench runs; the per-entity map must go with it. */
     public static void resetDamageLedger() {
         mdDamageDealtTenths = 0;
         mdDamageSeenTenths = 0;
         mdLedgerTicks = 0;
+        mdDropTiny = mdDropPartial = mdDropFlat = mdDropCrit = 0;
         mdSwingHits = 0;
         lastTargetHp.clear();
     }
@@ -1408,6 +1412,14 @@ public class MobDefenseChain extends SingleTaskChain {
                         <= SWING_ATTRIBUTION_MS) {
                     mdDamageDealtTenths += tenths;
                     mdSwingHits++;
+                    // WHAT DOES ONE OF OUR HITS LOOK LIKE? A mean cannot tell "every hit lands
+                    // flat and the crits are not being granted" from "half the hits are partial",
+                    // and those want opposite fixes. A full-charge iron_sword is 60 tenths and a
+                    // crit 90, so the buckets are the vanilla quantities themselves.
+                    if (tenths < 20) mdDropTiny++;
+                    else if (tenths < 54) mdDropPartial++;
+                    else if (tenths <= 66) mdDropFlat++;
+                    else mdDropCrit++;
                 }
             }
             // Forget whoever left, or the map grows for the whole session AND a target that

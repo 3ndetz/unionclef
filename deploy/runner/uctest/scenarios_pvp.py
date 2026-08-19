@@ -1276,9 +1276,44 @@ class AllRound(Scenario):
             _per = "?"
         _note = ("  LEDGER NEVER TICKED -- a zero here is wiring, not a fight"
                  if _ticks in ("0", "?") else "")
+        # THE CONNECT RATE, BOTH SIDES, SAME INSTRUMENT. Everything else on this course has come
+        # out equal between the fighters, and the one thing left unmeasured was what fraction of
+        # each side's swings actually arrives -- which needs the ledger read off BOTH clients,
+        # divided by each one's own swings issued. Nothing above could do that.
+        _vmine = ((_stat(ctx, "dealt", ctx.victim) or "").split("/") + ["?"])[0]
+        _vhits = _stat(ctx, "swingHits", ctx.victim) or "0"
+
+        def _rate(hits, passed):
+            try:
+                return f"{100 * int(hits) / int(passed):.0f}%"
+            except (ValueError, ZeroDivisionError, TypeError):
+                return "?"
+
         yield Criterion("damage DEALT vs the victim's damage TAKEN (recorded, not gated)", True,
                         f"dealt={_mine} seen={_seen} hits={_hits} perHit={_per} ticks={_ticks}"
                         f" | victim took {_vtook}{_note}", gate=False)
+        yield Criterion("connect rate, both fighters (recorded, not gated)", True,
+                        f"bot hits={_hits} dealt={_mine} | victim hits={_vhits} dealt={_vmine}"
+                        f"   [divide each by that fighter's own passed= above]", gate=False)
+        # WHAT ONE HIT LOOKS LIKE, per fighter. The means say 4.42 against 6.15 on the same
+        # sword at the same charge, and a mean cannot separate "every blow lands flat and our
+        # crits are not being granted" from "half our blows arrive partial" -- which want
+        # opposite fixes. Buckets are the vanilla quantities: a full iron_sword blow is 6.0
+        # and a crit 9.0, so flat and crit are the two that should carry the count.
+        yield Criterion("hit sizes chip/partial/flat/crit (recorded, not gated)", True,
+                        f"bot {_stat(ctx, 'hitSize')} | victim {_stat(ctx, 'hitSize', ctx.victim)}",
+                        gate=False)
+        # THE CHIPS ARE NOT COINCIDENCE, so name what makes them. The bot passes ~0.54 swings a
+        # second, so the 150ms attribution window covers 8% of the run: collecting twelve stray
+        # hits inside it by chance would need about 150 arrow hits. Something removes ~1 hp
+        # RELIABLY just after our swing, and vanilla has one rule that produces exactly that --
+        # a target inside its 10-tick invulnerability takes only the DIFFERENCE above the last
+        # damage it took. An arrow of ours landing ~5 just before a 6-damage blow leaves 1, and
+        # eats the blow. If bowShots tracks the chip count, that is the mechanism.
+        yield Criterion("arrows, against the chip count (recorded, not gated)", True,
+                        f"bowShots={_stat(ctx, 'bowShots')} bowWild={_stat(ctx, 'bowWild')}"
+                        f" mdBow={_stat(ctx, 'mdBow')} voidEntries={_stat(ctx, 'voidEntries')}",
+                        gate=False)
         # WHAT IS IN THE HAND WHEN WE SWING. TriggerBot has counted this for a while and, like
         # `dealt`, no course ever printed it -- so the theory written at the swing site (this
         # course puts a BOW in slot 0, WeaponSelector rechecks only every 20 ticks, and every
