@@ -92,6 +92,40 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.93 -->
+## ⭐⭐⭐ SIXTY-FOUR PLAYTHROUGH RUNS, SIX FLAGS, AND NOT ONE MOVED IT (2026-08-19)
+
+Every run measured today, pooled:
+
+    64 runs        PASS 46/64 (72%)
+    rungs          mean 2.3   median 3   max 6
+    distribution   0:18  1:9  2:4  3:12  4:14  5:6  6:1
+
+Six mechanisms were built, gated and A/B'd against this, each with a counter proving it executed
+and reading zero in its own control arm:
+
+    pathAvoidsFallDamage   ON 5/7   OFF 6/6     (worse)
+    queueParkour           ON 3/6   OFF 5/6     mqNoClass 672 -> 3, mqSteps +42%
+    breakNeedsApproach     ON 4/6   OFF 4/6     fired 5/6 vs 0/6
+    entityCloseRangeWalk   shipped -- moved mine_coal, not the playthrough
+    collectDropsBeforeTools / three recovery flags -- shipped earlier, same story
+
+⛔ THE CONCLUSION IS ABOUT THE SHAPE OF THE PROBLEM, NOT ABOUT THE FLAGS. Each of these fixed a
+REAL, measured defect -- routes truncated at an unplayable edge, a task that cannot tell moving
+from approaching, a fall guard that truncated its own simulation -- and the ladder still sits at
+two to three rungs. Whatever caps the playthrough is not any single one of them, and the
+distribution says why it is hard to see: eighteen runs reach ZERO rungs and one reaches six, on
+identical settings. The spread between neighbouring runs is larger than any effect measured today.
+
+⛔ SO THE NEXT PASS SHOULD NOT BE A SEVENTH FLAG. Two things follow from the numbers:
+  1. n=6 per arm cannot resolve anything smaller than a ~2x change on this bench. Either the
+     measurement gets cheaper (shorter runs, a tighter gate than "rungs reached") or arms need
+     n=20+, which is four hours per question.
+  2. The 0-rung runs are 28% of all runs and they are a different failure from the 3-4 rung ones.
+     Splitting THOSE by cause -- rather than averaging them together -- is where the next signal
+     is, because a fix for the median run is being judged against a population that contains a
+     quarter of runs that never started.
+
 <!-- G-1.94 -->
 ## ⛔ "inRange=2222 clicked=0" WAS A LIFETIME TOTAL, NOT A RUN (2026-08-19)
 
