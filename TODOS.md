@@ -170,10 +170,22 @@ Both connect about seventy times and the BOT CRITS MORE, and it still converts 1
 16-17 deaths. Sixty-eight connects with twenty-nine crits is arithmetically about seventeen kills
 against a twenty-HP target; the bot books eleven.
 
-So either a "landed" swing is not the same thing as damage delivered, or the bot's hits are worth
-materially less than the victim's. That is the next measurement and it is narrow: damage per landed
-hit. Eight behaviours have already been eliminated with counters here, and a ninth behaviour is not
-what these numbers are asking for.
+⭐⭐ ANSWERED FROM THE SOURCE, AND IT IS THE FIRST HALF: a "landed" swing is NOT a hit. TriggerBot:
+
+    lifetimeHits++;
+    mc.interactionManager.attackEntity(player, target);
+
+The counter increments BEFORE the attack is sent, so it counts swings ISSUED -- misses, swings out
+of reach and swings into air all included. `crits` likewise counts swings made in a crit condition,
+not crit damage delivered.
+
+So "both connect about seventy times and the bot crits more" is not evidence about damage at all.
+It is the same class of error as angleMean: a counter whose name promises more than it measures,
+and the FIFTH such counter caught this session.
+
+⛔ THEREFORE the real damage question is still unmeasured, and the counter for it already exists --
+`dealt` in placeStats, which the course does not print. Adding it to allround's readout is the next
+step; no behaviour needs touching to learn this.
 
 So what loses allround is still open, and it is NOT: the aim (angle refused 5 swings of 566), the
 approach (forward pressed on 64 of 77 ready-far ticks), the bow's camera, the bow's draw, reach
