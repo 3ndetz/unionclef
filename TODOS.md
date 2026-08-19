@@ -161,9 +161,19 @@ and with it the last "difference still standing" on this course.
 
 ⛔ EIGHT CANDIDATES NOW ELIMINATED WITH NUMBERS on allround: aim, approach, the bow's camera, the
 bow's draw, reach control, standing still while drawing, the weapon in hand, and contact time. What
-is left is the damage race itself -- the bot lands MORE crits (40 against 28) and similar swings,
-and still dies 16-17 times against 11-12 kills. The next measurement is damage dealt against damage
-taken per life, not another behaviour.
+is left is the damage race, and the numbers there are a paradox worth stating plainly:
+
+    bot      landed=68  crits=29    ready=42/68/0/36
+    victim   landed=71  crits=24    ready=132/81/0/128
+
+Both connect about seventy times and the BOT CRITS MORE, and it still converts 11-12 kills against
+16-17 deaths. Sixty-eight connects with twenty-nine crits is arithmetically about seventeen kills
+against a twenty-HP target; the bot books eleven.
+
+So either a "landed" swing is not the same thing as damage delivered, or the bot's hits are worth
+materially less than the victim's. That is the next measurement and it is narrow: damage per landed
+hit. Eight behaviours have already been eliminated with counters here, and a ninth behaviour is not
+what these numbers are asking for.
 
 So what loses allround is still open, and it is NOT: the aim (angle refused 5 swings of 566), the
 approach (forward pressed on 64 of 77 ready-far ticks), the bow's camera, the bow's draw, reach
