@@ -184,12 +184,19 @@ public final class MovementQueue {
                         .getId(world.getBlockState(bp).getBlock()).getPath();
                 return id.length() > 14 ? id.substring(0, 14) : id;
             };
-            BlockPos want = index < movements.size() && movements.get(index) != null
-                    ? movements.get(index).dest : null;
+            // ⛔ THE DIRECTION MUST BE THE EDGE, NOT THE BODY'S OFFSET FROM IT. The first version
+            // measured dest MINUS FEET, so a body that had drifted one cell reported a shape the
+            // route never contained -- it read "EN-", a diagonal descend, for what may well have
+            // been a plain descend walked from one step to the side. The class name comes from the
+            // movement itself and is trustworthy; this label was not, and a contract violation was
+            // nearly concluded from it. src -> dest is the edge as planned.
+            Movement cur = index < movements.size() ? movements.get(index) : null;
+            BlockPos want = cur != null ? cur.dest : null;
+            BlockPos from = cur != null ? cur.src : null;
             String dir = "-";
-            if (want != null) {
-                int dx = want.getX() - feet.getX(), dz = want.getZ() - feet.getZ();
-                int dy = want.getY() - feet.getY();
+            if (want != null && from != null) {
+                int dx = want.getX() - from.getX(), dz = want.getZ() - from.getZ();
+                int dy = want.getY() - from.getY();
                 dir = (dx != 0 ? (dx > 0 ? "E" : "W") : "") + (dz != 0 ? (dz > 0 ? "S" : "N") : "")
                         + (dy != 0 ? (dy > 0 ? "+" : "-") : "=");
                 if (dir.isEmpty()) dir = "same";
@@ -217,7 +224,7 @@ public final class MovementQueue {
             // movement that is running and simply declines to press.
             String who = "-";
             try {
-                Movement m = index < movements.size() ? movements.get(index) : null;
+                Movement m = cur;
                 if (m != null) {
                     String cn = m.getClass().getSimpleName();
                     who = cn.replace("Movement", "") + "/" + m.statusForDiagnostics()
