@@ -184,13 +184,27 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ## Course status
 
-### CURRENT TALLY — 2026-08-17, on the shipped defaults
+### CURRENT TALLY — 2026-08-19, on the shipped defaults, all three suites re-run end to end
 
 ```
-nav    12 courses   12 PASS   0 gate failures   0 INVALID
-craft  22 courses   22/22 on the shipped defaults, 0 gate failures, 0 invalid
-gamer   playthrough  3/3 with the approach-recovery flags on, against 1/3 off -- interleaved
+nav    13 courses   13 PASS   0 gate failures   0 INVALID      (nav_cliff is the new one)
+craft  22 courses   22 PASS   0 gate failures   0 INVALID
+pvp    12 courses   10 ok     1 gate failure (allround)  1 INVALID (chase_terrain, host starved)
+gamer   playthrough  46/64 PASS pooled over every run measured on 2026-08-19,
+                     mean 2.3 rungs, median 3, max 6 -- see TODOS for why that spread
+                     is wider than any effect measured against it
 ```
+
+⭐ THIS IS AN AUDIT, NOT A CARRY-OVER. Roughly thirty jars were built and deployed on 2026-08-19
+and craft and nav were re-run whole afterwards: nothing regressed. pvp was run whole for the FIRST
+time since its fps hole was closed that morning -- until then its gates were inert (avg_fps=None
+on all twelve, and the starvation guard opens with `avg_fps is not None`), so `allround` failing is
+not a new regression, it is the first honest reading that suite has produced.
+
+⛔ AND THE ONE COURSE THAT MOVED: mine_coal went 4/8 -> 19/20 on the shipped default via the
+close-range walk. Every other flag tried against the playthrough that day measured neutral or
+worse and none shipped; the details, including three verdicts that reversed on a bigger sample,
+are in TODOS.
 
 craft gained TEN courses on 2026-08-16/17 and still sweeps clean. Four ask whether a dropped
 item the bot was SENT for is actually collected (pickup_flat / _side / _ledge / _pit); three more
