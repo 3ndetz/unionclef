@@ -163,6 +163,15 @@ public final class MovementQueue {
      */
     private static final java.util.Deque<String> stuckScenes = new java.util.ArrayDeque<>();
 
+    /** Key state latched AFTER the movement applied its inputs, i.e. what the body ticked with. */
+    private static volatile String lastTickKeys = "?";
+
+    /** Drop the recorded scenes; called by the per-run counter reset so they cannot outlive a run. */
+    public static void clearStuckScenes() {
+        stuckScenes.clear();
+        lastTickKeys = "?";
+    }
+
     private static void recordStuckScene(BetterBlockPos feet) {
         try {
             var world = kaptainwutax.tungsten.TungstenModDataContainer.world;
@@ -189,10 +198,14 @@ public final class MovementQueue {
             // forward is held: SNEAK. This file already records the leak that would cause it --
             // "a task can setPressed(true) and end without releasing, leaving SHIFT stuck" -- and
             // the failing runs never change altitude at all (vertical extent 1 block against 13).
-            var opts = net.minecraft.client.MinecraftClient.getInstance().options;
-            String keys = "sneak:" + (opts.sneakKey.isPressed() ? "Y" : "n")
-                    + " fwd:" + (opts.forwardKey.isPressed() ? "Y" : "n")
-                    + " spr:" + (opts.sprintKey.isPressed() ? "Y" : "n");
+            // ⛔ AND THE KEYS MUST BE READ WHERE THEY ARE PRESSED, NOT WHERE THEY ARE CLEARED.
+            // The first version sampled them right here, and here is line 772 -- the movement
+            // applies its inputs in movement.update() a hundred lines LATER, and Movement.tick
+            // clears the map at the end of every tick. So the sample landed in the gap and read
+            // fwd:n on every single scene, which would have "proved" that no movement key is ever
+            // pressed. That is the artefact, not the finding. The keys are latched AFTER
+            // update() instead, so what is reported is the state the body actually ticked with.
+            String keys = lastTickKeys;
             stuckScenes.addLast("on:" + name.apply(feet.down()) + " in:" + name.apply(feet)
                     + " head:" + name.apply(feet.above()) + " go:" + dir + " " + keys);
             while (stuckScenes.size() > 4) stuckScenes.removeFirst();
@@ -871,6 +884,14 @@ public final class MovementQueue {
             MovementStatus status;
             try {
                 status = movement.update();
+                try {
+                    var o = net.minecraft.client.MinecraftClient.getInstance().options;
+                    lastTickKeys = "sneak:" + (o.sneakKey.isPressed() ? "Y" : "n")
+                            + " fwd:" + (o.forwardKey.isPressed() ? "Y" : "n")
+                            + " spr:" + (o.sprintKey.isPressed() ? "Y" : "n");
+                } catch (Exception ignored) {
+                    // an instrument never breaks the tick it rides on
+                }
             } catch (RuntimeException e) {
                 Debug.logWarning("MovementQueue: " + movement.getClass().getSimpleName() + " threw: " + e);
                 qUnreachable++;
