@@ -92,6 +92,36 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.915 -->
+## ⛔ TWO SWEEPS OF THE SAME FLAG DISAGREE, AND THAT IS THE RESULT (queueParkour, 2026-08-19)
+
+Re-judged against dbBestDist, as the entry below says to. The second sweep is emphatic:
+
+    sweep 2 (n=8/arm)   ON  7/8 PASS  2.5 rungs  median closest 0.7  arrived 6/8
+                        OFF 3/8 PASS  0.4 rungs  median closest 3.4  arrived 3/8
+
+and the FIRST sweep, same code, same bench, same day, said the opposite:
+
+    sweep 1 (n=6/arm)   ON  3/6 PASS  2.0 rungs
+                        OFF 5/6 PASS  1.8 rungs
+
+Pooled on the only measure both sweeps carry: ON 10/14, OFF 8/14. Nothing behavioural changed
+between them -- only instrumentation, all of it default-off or read-only.
+
+⛔ SO THE FLAG IS NOT SHIPPED, and the reason is worth more than the flag. If I had run only the
+second sweep I would have shipped a 7/8-vs-3/8 result with a clean mechanism story behind it
+(mqNoClass 672 -> 3, mqSteps +42%, median approach 0.7 vs 3.4) and it would have looked airtight.
+The first sweep is what says that story is not established. Eight runs per arm is still not enough
+on this bench -- which is exactly what the pooled-64 entry predicted, and now it has cost a
+reversal in both directions.
+
+⭐ WHAT THIS DOES SETTLE: dbBestDist is worth having. It separated PASS from FAIL 6/6 on the
+shipped default and it separates the arms here far more sharply than rungs do (0.7 vs 3.4 against
+2.5 vs 0.4). It is the right gate; there is simply not yet enough of it.
+
+NEXT: this flag needs n=20+ per arm, or a cheaper proxy than a nine-minute run, before it can be
+shipped or buried. Do NOT quote either sweep alone.
+
 <!-- G-1.92 -->
 ## ⭐⭐⭐ A GATE THAT SEPARATES 6/6: HOW CLOSE THE BOT GETS TO THE BLOCK IT WANTS
 
