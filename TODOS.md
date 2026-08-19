@@ -92,6 +92,41 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.898 -->
+## ⛔ allround: FOUR LEVERS ELIMINATED, AND THE STANDING-STILL MECHANISM IS REFUTED (2026-08-19)
+
+The one red gate in pvp, and it fails in EVERY run measured -- kills 12-14 against deaths 16-18,
+across roughly fourteen runs. Four levers tried, each with a counter proving it ran or proving it
+did not:
+
+    bowYieldsInsideMelee   camera handed back inside 3.0    neutral, red in all four runs
+    bowRefusesWhenClosing  refuse the DRAW inside 8.0        INERT -- the course's own driver
+                                                            already stops shooting at 10, so the
+                                                            threshold sat inside another gate
+    combatReachControl     pinned OFF, as the victim has it  12-13/17-18 both arms, no change
+    kbLandsOnSurface       (knockback estimate)              not established either way, leans bad
+
+⭐⭐ AND THE MECHANISM THE COMBAT FILE HAS CARRIED FOR MONTHS IS REFUTED. It reads: "the bot is not
+out-fought, it is out-TICKED: it spends the run standing still to shoot while an opponent that
+never stops walks in with the initiative." Measured directly, ticks spent drawing split by whether
+the legs were still closing:
+
+    drawMove = 97/22      81% of draw ticks moving
+    drawMove = 122/12     91% moving
+
+The bot CLOSES while it draws. And the whole bow phase is about 130 ticks of a 2400-tick run --
+roughly six seconds in two minutes. The bow is not where the exchange is lost.
+
+⛔ TWO OF MY OWN READINGS RETRACTED WITH IT: "the bot stands still to shoot" (refuted above) and
+"the course's strategy costs it two thirds of the run" -- that came from the punk task's `called`
+counter reading 785 against the victim's 2774, which counts something other than wall-clock share.
+Draw ticks say the ranged phase is 5% of the run, not 65%.
+
+So what loses allround is still open, and it is NOT: the aim (angle refused 5 swings of 566), the
+approach (forward pressed on 64 of 77 ready-far ticks), the bow's camera, the bow's draw, reach
+control, or standing still. That is a lot of the space eliminated with numbers, which is what the
+next pass should start from.
+
 <!-- G-1.899 -->
 ## ⭐⭐⭐ ANSWERED: THE KNOCKBACK DANGER IS NOT EARNED -- IT SATURATES AT THE SCAN LIMIT (2026-08-19)
 

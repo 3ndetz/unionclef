@@ -94,6 +94,21 @@ public class BowShooter {
     public static volatile int declinedClosing = 0;
 
     /**
+     * Ticks spent DRAWING, split by whether the legs were still closing.
+     *
+     * <p>⛔ THE LAST MOD-SIDE QUESTION ON allround, and the one the course cannot be blamed for.
+     * The course's own drive gives the bot a bow phase outside twelve blocks -- measured, the bot's
+     * punk task runs 785 ticks against the victim's 2774, so two thirds of the run is that phase by
+     * design. What the MOD decides is whether those ticks are also spent CLOSING.
+     *
+     * <p>The combat note says the two want nearly the same yaw and "the keys below keep running",
+     * so forward is expected to be held. If it is not, the bot is paying a second of standing still
+     * per arrow while a pure-melee opponent walks in -- which is the documented 'out-TICKED'
+     * mechanism, and a real defect independent of the course's strategy. Read as draws' 5th/6th.
+     */
+    public static volatile int drawTicksMoving = 0, drawTicksStill = 0;
+
+    /**
      * Inside this range a swing beats an arrow, because a draw costs about a second of standing
      * still and a swing costs a 0.625 s cooldown while walking. Eight blocks is two to three
      * seconds of an opponent's approach -- long enough that a shot started now is finished into a
@@ -307,6 +322,8 @@ public class BowShooter {
     /** Zero the shot tally so a bench run measures its own shots, not the stand's history.
      *  Called from resetRunCounters alongside every other per-run counter. */
     public static void resetShotsFired() {
+        drawTicksMoving = 0;
+        drawTicksStill = 0;
         shotsFired = 0;
         wildShots = 0;
         aimTimeouts = 0;
@@ -451,6 +468,10 @@ public class BowShooter {
         }
         mc.options.useKey.setPressed(true);
         chargeTicks++;
+        // ARE THE LEGS STILL CLOSING WHILE THIS DRAW RUNS? See the counter's own note: the course
+        // gives the bot a bow phase by design, but whether that phase is ALSO spent walking is the
+        // mod's decision, and it is the difference between a paid second and a wasted one.
+        if (mc.options.forwardKey.isPressed()) drawTicksMoving++; else drawTicksStill++;
 
         // RELEASE ON PREDICTED IMPACT, NOT ON AN ANGLE. What matters is where the arrow lands, and
         // the same simulator that solved the shot can answer that from the CURRENT aim. An angular
