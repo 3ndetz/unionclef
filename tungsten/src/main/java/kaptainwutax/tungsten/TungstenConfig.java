@@ -985,16 +985,21 @@ public class TungstenConfig {
      * <p>GATE: edge_duel and narrow_bridge_duel -- the two courses fought over a real drop, where a
      * wrongly-shortened estimate would cost lives -- then allround, which is the one it is for.
      *
-     * <p>⛔⛔ MEASURED HARMFUL AND NOT SHIPPED. edge_duel passed, and narrow_bridge_duel -- the fight
-     * on a one-wide bridge over void -- did this, interleaved:
+     * <p>⛔ NOT SHIPPED, AND THE FIRST VERDICT ON IT WAS OVERSTATED. I recorded "measured harmful"
+     * on this, and the second batch withdrew it:
      * <pre>
-     *   ON   1/3 PASS
-     *   OFF  3/3 PASS
+     *   sweep 1 (n=3/arm)   ON 1/3 PASS   OFF 3/3 PASS
+     *   sweep 2 (n=2/arm)   ON 2/2 PASS   OFF 2/2 PASS
+     *   pooled              ON 3/5        OFF 5/5
      * </pre>
-     * The gate was chosen precisely because a wrongly-shortened estimate costs lives there, and it
-     * caught exactly that. This file already records the same shape twice over: removing the
-     * caution measured deaths 16->23 and 15->19. Landing the body early is a weaker form of the
-     * same removal, and the bridge is where the difference is paid.
+     * narrow_bridge_duel is FLAKY -- it went FAIL then PASS on its retry inside the full pvp suite
+     * the same day -- so three runs of it cannot carry a verdict. Pooled it still leans against the
+     * flag, and that is all that can be said. NOT established as harmful, NOT established as safe.
+     *
+     * <p>The concern remains the reason to leave it off: this file records that removing the
+     * caution measured deaths 16->23 and 15->19, and landing the body early is a weaker form of the
+     * same removal. A flag that leans the wrong way on the one course fought over a real drop does
+     * not ship on a tie.
      *
      * <p>⭐ THE DEFECT IT WAS BUILT FOR IS STILL REAL AND STILL UNFIXED: the estimate saturates at
      * the 30-block scan cap on flat ground (pred 30.0 against 1.0-1.5 of true drop, body flying
