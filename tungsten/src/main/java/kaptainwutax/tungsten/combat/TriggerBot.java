@@ -431,6 +431,18 @@ public class TriggerBot {
         // it -- exactly the failure PunkPlayerTask's own comment warns about ("kept fighting with
         // the bow (2 dmg/hit) while a sword sat in the hotbar and it lost the fight").
         // Mixing 6-damage sword hits with ~1-damage bow hits averages 3.5 at a 50/50 split.
+        //
+        // ⛔ REFUTED, AND BY A COUNTER THAT WAS ALREADY RUNNING WHILE THE THEORY WAS WRITTEN.
+        // gMeleeWithBow/gMeleeArmed reads 0/424 on allround: inside four blocks the bot is never
+        // holding the bow, so there is no 50/50 split to average and the bow window this theory
+        // needs does not exist. WeaponSelector's 20-tick recheck evidently beats the approach.
+        //
+        // Which puts the 3.50-against-5.17 figure itself under suspicion, because it is the only
+        // thing left standing. It comes from `dw`, whose own javadoc admits the total does not
+        // reconcile with deaths x 20 -- it undercounts, and nothing established that it
+        // undercounts EQUALLY on both fighters, which is the assumption the whole comparison
+        // rests on. The hp-drop ledger reconciles to 206 of an expected 240 over twelve kills,
+        // so check the damage gap against THAT before spending another pass on its cause.
         // So count it rather than believe it: the mean weapon score across swings, and how many
         // swings went out with nothing that deserves the name.
         double ws = kaptainwutax.tungsten.combat.WeaponSelector.meleeScore(player.getMainHandStack());
