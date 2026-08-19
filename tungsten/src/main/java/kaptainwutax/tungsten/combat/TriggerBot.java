@@ -270,6 +270,19 @@ public class TriggerBot {
                 // pass should find out rather than assume — this candidate looked obvious from
                 // the matching magnitudes of dodgeDrive and gReadyFar, and magnitudes agreeing is
                 // not a mechanism.
+                // ⛔ ANSWERED, 2026-08-19, on allround with the pvp suite finally gated: THE BOT IS
+                // WALKING. One run of the failing course reads ready=77/76/0/64 -- of the 77 ticks
+                // where the swing was ready and the target out of reach, the dodge held the legs
+                // ZERO times and FORWARD was pressed on 64. So the approach in those ticks is not
+                // lost to the dodge, not lost to an orbit, and not lost to a competing driver: the
+                // bot is closing, and the distance is simply not closed yet.
+                //
+                // That retires the question above ("where the approach goes in those ticks is
+                // still unknown") and moves it: closing is happening, so the swing is being made
+                // ready TOO EARLY relative to the gap, or the gap is being opened as fast as it is
+                // closed. readyNear=76 against readyFar=77 says the bot spends about half its
+                // ready ticks in range -- it is not starved of contact, it is trading evenly and
+                // losing on the margin (kills 12-13 against deaths 14-17 across four runs).
                 if (kaptainwutax.tungsten.task.ProjectileDodge.isActive()) gReadyFarDodging++;
                 if (CombatController.lastForwardPressed) gReadyFarWalking++;
                 // ...AND WHAT THE GAME ACTUALLY HOLDS, not what the controller resolved. The two
