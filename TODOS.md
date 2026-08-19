@@ -131,9 +131,15 @@ round" was a good candidate. Measured:
     bot     meleeBow = 7/333     seven melee ticks with a bow out of 340 -- two per cent
     victim  meleeBow = 0/414
 
-⭐ AND THE SAME READING LEAVES THE ONE DIFFERENCE STILL STANDING: the victim is inside melee range
-414 ticks against the bot's 333. It commits about a quarter longer. Everything about HOW the bot
-fights has now been eliminated with numbers; what is left is HOW LONG it stays in contact.
+⭐ AND THE SAME READING LEAVES ONE DIFFERENCE STANDING: the victim is inside melee range 414 ticks
+against the bot's 333, about a quarter longer.
+
+⛔ BUT THAT NUMBER IS CONFOUNDED WITH THE DEATH COUNT AND MUST NOT BE CHASED AS A CAUSE. The bot
+dies 16-17 times against the victim's 12, and every death removes it from contact for a respawn and
+the walk back. Seventeen deaths at a couple of seconds each IS the missing quarter. So less contact
+is most likely an EFFECT of losing rather than the reason for it, and "make the bot hold contact
+longer" would be treating the symptom. Anyone starting here must first separate contact time from
+death count -- e.g. contact ticks per LIFE rather than per run.
 
 So what loses allround is still open, and it is NOT: the aim (angle refused 5 swings of 566), the
 approach (forward pressed on 64 of 77 ready-far ticks), the bow's camera, the bow's draw, reach
