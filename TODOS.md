@@ -92,6 +92,43 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.90 -->
+## ⭐⭐ allround IS THE ONE RED GATE, AND THE ASYMMETRY IS REPOSITIONING (2026-08-19)
+
+pvp ran end to end for the first time since its fps hole was closed that morning -- until then its
+gates were inert (avg_fps=None on all twelve, and the guard opens with `avg_fps is not None`), so
+this is the suite's first honest reading: **10/12, one gate failure (allround), one INVALID
+(chase_terrain, host starved)**.
+
+allround fails on exactly one criterion -- "won the exchange (kills >= deaths)" -- with every other
+criterion on the course green. Four interleaved runs: kills 12-13 against deaths 14-17.
+
+⭐ THE ASYMMETRY, and it repeats across all four runs rather than appearing once:
+
+    bot     reposition   0   0   29   0
+    victim  reposition  37  27   63   0      (danger 48, 38, 25)
+
+rpDanger fires in CombatStage.DANGER_BATTLE when knockback would drop the bot and a retreat path
+exists. The victim reacts to that tens of times a fight; the bot almost never does. Both sides run
+the SAME controller on the same flat walled arena, so the terrain is not the difference. What the
+course does differ in is the kit and two settings: the bot gets a bow in hotbar 0 plus
+combatMovementsEnabled=true, the victim gets a sword and combatReachControl=false.
+
+⛔ WHAT IS NOT THE ANSWER, each checked rather than assumed:
+  * NOT the aim. The counts say angle refused 5 swings of 566 while reach refused 300 and cooldown
+    413. (angleMean/reachMean are means over REFUSED swings only -- TriggerBot says so in as many
+    words, and misreading them as "the crosshair is 78 degrees off" is a mistake this project has
+    now made four times, mine included.)
+  * NOT the bow owning the camera. bowYieldsInsideMelee was built and A/B'd: neutral, marginally
+    worse on deaths, red in all four runs of both arms.
+  * NOT a lost approach. ready=77/76/0/64 -- of 77 ticks with the swing ready and the target out of
+    reach, the dodge held the legs ZERO times and forward was pressed on 64. The bot is closing.
+    That retires the open question TriggerBot has carried since 2026-08-12.
+
+So the bot trades evenly and loses on the margin, and the one behaviour it does not perform is the
+one the winner performs constantly. Why DANGER_BATTLE never fires for it is the next question, and
+it is a narrow one.
+
 <!-- G-1.905 -->
 ## ⛔ CAVEAT TO THE 44-vs-0 SPLIT BELOW: IT DID NOT REPRODUCE HOURS LATER (2026-08-19)
 
