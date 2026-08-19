@@ -868,7 +868,24 @@ public class TungstenConfig {
      * that this file's own near-accounting has always used.
      *
      * <p>GATE: the four courses whose whole job is breaking blocks -- chop_tree, chop_canopy,
-     * mine_coal, mine_stone -- then the playthrough on arrival rate. Proof it ran: dbReachGoal.
+     * mine_coal, mine_stone -- ALL PASS with this on. Then the playthrough on arrival rate.
+     *
+     * <p>⛔ MEASURED NEUTRAL AT n=8, and my own framing above needed correcting to explain why.
+     * <pre>
+     *   ON    arrival median 20%   0 0 7 9 31 54 79 86    6/8 PASS   mean rungs 1.5
+     *   OFF   arrival median 16%   0 0 12 15 16 23 39 50  7/8 PASS   mean rungs 1.4
+     * </pre>
+     * A lead at n=4 (16% vs 8%) did not survive doubling -- the third time that has happened today.
+     *
+     * <p>THE CORRECTION: the occupy-the-cell goal is not IMPOSSIBLE, it is unreachable UNTIL THE
+     * BLOCK IS BROKEN, and the block gets broken whenever the route happens to carry the bot within
+     * reach on its way. So the old goal arrives by side effect often enough, which is exactly why
+     * replacing it measures neutral rather than transformative. The defect is real -- a goal that
+     * cannot be satisfied at the moment it is set is wrong, and it is why arrival looks accidental
+     * -- but it is not the thing capping the playthrough.
+     *
+     * <p>Stays OFF: neutral on the target, one PASS worse on a thin sample, and this project does
+     * not ship on principle without a number.
      */
     public boolean breakGoalIsReach = false;
 
