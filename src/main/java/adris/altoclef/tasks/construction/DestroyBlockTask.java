@@ -80,6 +80,29 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
      */
     public static volatile int dbBestDistTenths = Integer.MAX_VALUE;
 
+    /**
+     * PER-TARGET arrival, which is what makes playthrough questions affordable at all.
+     *
+     * <p>⛔ MEASURED: a run is 350 s and 89% of it is the watch window (rcon 1 s, connect 22 s,
+     * reset 11 s, start 4 s, watch 313 s). There is no overhead to cut and halving the window was
+     * already tried and lost the signal, so a per-RUN sample costs six minutes and cannot be made
+     * cheaper. n=20 per arm is four hours for one question, which is why six flags were each judged
+     * on six runs and three of those verdicts later reversed.
+     *
+     * <p>A run does not attempt ONE block, it attempts dozens. Each target is its own sample of the
+     * question that actually separates PASS from FAIL -- did the bot get inside reach of it. Counted
+     * per target, one five-minute run yields tens of samples instead of one, and the arrival RATE
+     * is comparable between arms without waiting four hours.
+     *
+     * <p>Read as dbTargets=seen/reached. A target counts as reached the moment the bot is inside
+     * 4.5 blocks of it -- vanilla reach, the same line the verdict already turns on.
+     */
+    public static volatile int dbTargetsSeen, dbTargetsReached;
+
+    /** The target this task is currently accounting for, so each is counted exactly once. */
+    private net.minecraft.util.math.BlockPos _accountedTarget = null;
+    private boolean _accountedReached = false;
+
     /** Times a block was given up on for NO APPROACH while the body kept moving. */
     public static volatile int dbApproachStalled;
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
@@ -380,6 +403,16 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         long nowMs = System.currentTimeMillis();
         if (_lastApproachMs == 0) {
             _lastApproachMs = nowMs;
+        }
+        // One sample per TARGET: opened when the target changes, closed by getting inside reach.
+        if (!pos.equals(_accountedTarget)) {
+            _accountedTarget = pos;
+            _accountedReached = false;
+            dbTargetsSeen++;
+        }
+        if (!_accountedReached && distSqNow <= 4.5 * 4.5) {
+            _accountedReached = true;
+            dbTargetsReached++;
         }
         int tenths = (int) Math.round(Math.sqrt(distSqNow) * 10.0);
         if (tenths < dbBestDistTenths) {

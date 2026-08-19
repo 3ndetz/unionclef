@@ -79,6 +79,32 @@ def py4j(op,t=30,**kw):
     return json.loads(r.stdout.strip().splitlines()[-1])
 def grcon(c,t=20): return sh(["docker","exec",GSERVER,"rcon-cli",c],t).stdout.strip()
 
+# WHERE DOES A RUN ACTUALLY GO? Halving the watch window was tried and lost the signal for only
+# a 2x saving, because connect, reset, start-search and teardown are FIXED costs a shorter window
+# cannot touch. Before cutting any of them, measure which one dominates -- the same rule every
+# other question here gets.
+PHASE_T = {"last": None, "spans": []}
+
+
+def phase(name):
+    import time as _t
+    now = _t.time()
+    if PHASE_T["last"] is not None:
+        PHASE_T["spans"].append((PHASE_T["last"][0], now - PHASE_T["last"][1]))
+    PHASE_T["last"] = (name, now)
+
+
+def phase_report():
+    if PHASE_T["last"] is not None:
+        import time as _t
+        PHASE_T["spans"].append((PHASE_T["last"][0], _t.time() - PHASE_T["last"][1]))
+    total = sum(d for _, d in PHASE_T["spans"]) or 1.0
+    parts = " ".join(f"{n}={d:.0f}s({100*d/total:.0f}%)" for n, d in PHASE_T["spans"])
+    print(f"  PHASES total={total:.0f}s {parts}")
+    PHASE_T["last"] = None
+    PHASE_T["spans"] = []
+
+
 # How long the ladder may sit still before that counts as a stall in its own right. The slowest
 # legitimate gap between rungs measured across today's runs is about ninety seconds (wood tools at
 # 227.2s after crafting at 136.7s), so 150 does not fire on a merely slow run.
@@ -159,13 +185,13 @@ def wait_for(desc,fn,ts,iv=4):
     raise TimeoutError(f"{desc}: {ts}s ({last})")
 
 def main():
-    print("[1] wait gamer-server rcon...")
+    phase("rcon"); print("[1] wait gamer-server rcon...")
     try:
         wait_for("gamer rcon", lambda: "players" in grcon("list"), 120, 6)
     except TimeoutError as e:
         raise StandDown(f"gamer-server rcon never answered: {e}")
     grcon("difficulty easy"); grcon("gamerule doDaylightCycle true")
-    print("[2] connect bot to gamer-server...")
+    phase("connect"); print("[2] connect bot to gamer-server...")
     if True:
         # ALWAYS CONNECT, AND SAY SO RATHER THAN HIDING IT BEHIND A DEAD CONDITION.
         # This used to read `if not py4j("state")["inGame"] or True:` -- a condition welded open,
@@ -231,7 +257,7 @@ def main():
     # pdEnter=192 and then pdEnter=0, because the bot was simply doing different things. Death
     # and respawn is vanilla's own "put me back at world spawn", and it is what the nav suite's
     # hard reset uses for exactly this reason (uctest/actors.py fresh_reset).
-    print("[2b] reset to a known start (kill -> respawn -> empty -> heal -> day)...")
+    phase("reset"); print("[2b] reset to a known start (kill -> respawn -> empty -> heal -> day)...")
     grcon(f"gamerule keepInventory false")
     grcon(f"kill {BOT}")
     time.sleep(3)
@@ -376,7 +402,7 @@ def main():
         SPAWN_FILE.write_text(got.replace(",", " "), encoding="utf-8")
         print("  recorded start point for later runs:", got)
     print("  start pos:", pos, "(pinned)" if spawn else "(first run — recording)")
-    print("[3] tungsten-primary (SHIPPED DEFAULT) + @gamer...")
+    phase("start"); print("[3] tungsten-primary (SHIPPED DEFAULT) + @gamer...")
     # MEASURE WHAT SHIPS. This used to call setTungstenPathing(True), which turned on four flags
     # at once -- including smartMoves, which is NOT a shipped default (it costs the search its
     # water moves; see nav_water 3/3). So the bench measured a configuration no user ever ran.
@@ -532,7 +558,7 @@ def main():
     # all zero still reported "6 deaths, 4 falls" -- deaths from some earlier run entirely. Counters
     # and deaths were measuring different spans of time and being compared as if they were not.
     log_mark = len(sh(["docker", "logs", "--tail", "2000", GSERVER]).stdout.splitlines())
-    print(f"[4] watching {MINUTES} min for progress...")
+    phase("watch"); print(f"[4] watching {MINUTES} min for progress...")
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
     fps_samples = []
     while time.time()-t0 < MINUTES*60:
@@ -765,6 +791,7 @@ def main():
                         f" — this measured the MACHINE, not the bot")
     if med_fps is not None:
         print(f"  client fps (median): {med_fps:.1f} over {len(fps_samples)} samples")
+    phase_report()
     print("  GAMER_SMOKE:", "PASS" if ok else "FAIL (or no early progress in window)")
     return ok
 
