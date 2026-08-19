@@ -92,6 +92,45 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.91 -->
+## ⭐⭐⭐ THE ZERO-RUNG RUNS ARE A BODY THAT WILL NOT LEAVE ITS CELL (n=124, 2026-08-19)
+
+Seven flags were A/B'd on the playthrough today and every one came back neutral or worse, because
+each was judged on six to eight runs. Pooling ALL 124 runs measured today and splitting them by
+outcome instead answers in one pass what no A/B could:
+
+    counter        ZERO-rung (n=39)   scoring (n=85)
+    qNoMove                44                0        <-- near-perfect separator
+    mqNoClass              48               12
+    mqStarted              53               20
+    mqSteps                30               47
+    pdEnter              6203             2908
+    roamed (x/z)      7 blocks         26 blocks
+    vertical extent   1 block          13 blocks
+    end inventory     0 items          8 items
+    idrop asked          9560             5997
+
+qNoMove is documented in MovementQueue as "chains abandoned because the body would not leave its
+cell", and it fires after the body has stayed in one cell for 120 ticks WHILE THE QUEUE IS
+STEERING. Forty-four of those per failing run against ZERO in every run that scored.
+
+⭐ SO THE FAILING RUN IS NOT LOST, MISROUTED OR HURT. It plans constantly (53 chains against 20),
+advances a quarter as far per chain (0.57 steps against 2.35), never leaves a seven-block patch at
+one altitude, and finishes with an EMPTY INVENTORY after five minutes -- while asking the drop
+tracker MORE often than the runs that work. It never obtains a single log, which is why 89% of
+these runs sit in "Crafting 2 sticks" in their first seventy seconds.
+
+⛔ AND THE STAND IS EXONERATED, checked rather than assumed, on the same 124 runs: start-site wood
+is 133 logs median on failing runs against 153 on scoring ones (minimum 41 anywhere), and frame
+rate is 28.0 median against 27.0. Same wood, same fps, same code, opposite outcome.
+
+⛔ NEXT, AND IT IS A NARROW QUESTION NOW: why does the body not move while the keys are being
+pressed? The file's own comment records the same symptom from an earlier session -- mvSteered=4810
+and moveTicks=5352 with the bot not moving a single block in ninety seconds -- and the Movement
+base class documents the hazard it points at: "whatever ticks a Movement MUST suppress every other
+input/aim writer for that tick". A second per-tick writer of the input map is the standing
+suspect, and it is now measurable against a 44-vs-0 split rather than against a rung count.
+
 <!-- G-1.912 -->
 ## ⛔ CORRECTION TO THE ENTRY BELOW: MORE SAMPLES ARE NOT MORE POWER (2026-08-19)
 
