@@ -103,6 +103,9 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     private net.minecraft.util.math.BlockPos _accountedTarget = null;
     private boolean _accountedReached = false;
 
+    /** Times the approach was issued as a REACH goal instead of an occupy-the-cell goal. */
+    public static volatile int dbReachGoal;
+
     /** Times a block was given up on for NO APPROACH while the body kept moving. */
     public static volatile int dbApproachStalled;
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
@@ -554,6 +557,27 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             // (mqStarted=0, called=0, staleRoot=0) and the bot did not move for ten minutes.
             // GetToBlockTask extends CustomBaritoneGoalTask, so returning it here puts the walk on
             // the tungsten-primary driver like the rest of navigation.
+            // ⛔⛔ THE GOAL WAS TO STAND INSIDE THE BLOCK IT IS TRYING TO BREAK.
+            //
+            // GetToBlockTask goals to AltoGoal.block(pos), whose arrival test is
+            //     at.getX() == pos.getX() && at.getY() == pos.getY() && at.getZ() == pos.getZ()
+            // -- the bot has arrived when it OCCUPIES the cell. While the block is still solid that
+            // is impossible, so navigation can never report arrival, the route is planned into an
+            // occupied cell, and the bot circles it for the rest of the run.
+            //
+            // That is exactly the measured failure. Of eighteen playthrough runs that reached ZERO
+            // rungs, fifteen ended on this leaf at FULL HEALTH, and closest approach splits the
+            // outcome 6/6 with no overlap: every passing run got inside 1.3 blocks, no failing run
+            // ever got inside 4.4 -- i.e. never inside the 4.5 reach. dbTick=5791 with
+            // dbNearTick=0 says the same from the other side.
+            //
+            // Breaking a block needs REACH, not occupancy, and the task for that already exists.
+            // Range 3 keeps the bot inside the 4.5 reach with room for the body, and it is the
+            // same distance this file's own near-accounting has always used (distSq <= 16).
+            if (kaptainwutax.tungsten.TungstenConfig.get().breakGoalIsReach) {
+                dbReachGoal++;
+                return new adris.altoclef.tasks.movement.GetWithinRangeOfBlockTask(pos, 3);
+            }
             return new GetToBlockTask(pos, false);
         }
         return null;

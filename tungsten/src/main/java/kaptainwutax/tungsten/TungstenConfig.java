@@ -850,6 +850,29 @@ public class TungstenConfig {
     public boolean breakNeedsApproach = false;
 
     /**
+     * Approach a block to be BROKEN by getting within reach of it, not by standing inside it.
+     *
+     * <p>⛔ DestroyBlockTask navigates with GetToBlockTask, which goals to AltoGoal.block(pos), and
+     * that goal is reached only when the bot OCCUPIES the cell:
+     * {@code at.getX()==pos.getX() && at.getY()==pos.getY() && at.getZ()==pos.getZ()}. While the
+     * block is solid that cannot happen, so arrival is never reported, the route is planned into an
+     * occupied cell, and the bot circles it.
+     *
+     * <p>MEASURED, and it is the sharpest split found on the playthrough: closest approach to the
+     * target separates PASS from FAIL 6/6 with no overlap -- every passing run inside 1.3 blocks,
+     * no failing run ever inside 4.4, i.e. never inside the 4.5 reach. Fifteen of the eighteen
+     * zero-rung runs ended on this leaf at full health. dbTick=5791 with dbNearTick=0 says it from
+     * the other side: thousands of ticks, never within four blocks.
+     *
+     * <p>Range 3 keeps the body inside the 4.5 reach with room to stand, and matches the distSq<=16
+     * that this file's own near-accounting has always used.
+     *
+     * <p>GATE: the four courses whose whole job is breaking blocks -- chop_tree, chop_canopy,
+     * mine_coal, mine_stone -- then the playthrough on arrival rate. Proof it ran: dbReachGoal.
+     */
+    public boolean breakGoalIsReach = false;
+
+    /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
      *
      * <p>{@code tryPathToEntity} zeroes {@code barrenStreak} when the entity changes, which is
