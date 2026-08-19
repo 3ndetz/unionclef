@@ -1026,8 +1026,21 @@ public class TungstenConfig {
      * draw itself, before any state is disturbed, so a draw already in flight at long range is
      * untouched.
      *
-     * <p>GATE: allround (the failing one), ranged_moving and bow_flee -- the courses whose whole
-     * point is shooting, which must not move. Proof it ran: BowShooter.declinedClosing.
+     * <p>⛔ INERT AS WRITTEN, AND THE REASON WAS IN THE COURSE DESCRIPTION ALL ALONG. Four
+     * interleaved runs on allround: declinedClosing read 0, 0, 2, 0 -- the refusal essentially
+     * never fires, so both arms ran identical code and all four runs failed at kills=12 against
+     * deaths 16-17.
+     *
+     * <p>allround's own description says the driver "shootArrowAt while the closing enemy is FAR,
+     * punk once he is inside 10 blocks". The caller already stops shooting at ten; a refusal at
+     * eight sits INSIDE that gate and can never trigger. Reading the course before choosing the
+     * threshold would have caught it in a minute, and did not.
+     *
+     * <p>⭐ WHAT THAT SETTLES ANYWAY: the bot does NOT shoot at melee range on this course, so
+     * "it stands still shooting while the opponent walks in" cannot be what loses the exchange in
+     * the form I assumed. Any remaining cost of the bow is paid at range, while the enemy closes --
+     * a question about TIME TO CONTACT against draw length, not about distance. That is the shape
+     * a third attempt would have to take, and it needs the draw/approach timings measured first.
      */
     public boolean bowRefusesWhenClosing = false;
 
