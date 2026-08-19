@@ -89,6 +89,17 @@ public class BowShooter {
     private static int facingTicks = 0;
     /** Shots refused because a live flee order had no distance to spare — see {@link #shootAt}. */
     private static int declinedTooClose = 0;
+
+    /** Draws refused because the target was close enough that melee is the better trade. */
+    public static volatile int declinedClosing = 0;
+
+    /**
+     * Inside this range a swing beats an arrow, because a draw costs about a second of standing
+     * still and a swing costs a 0.625 s cooldown while walking. Eight blocks is two to three
+     * seconds of an opponent's approach -- long enough that a shot started now is finished into a
+     * melee that has already begun.
+     */
+    private static final double MELEE_PREFERRED_RANGE = 8.0;
     /** Closest predicted impact (blocks) seen during the last draw — how near the gate we got. */
     private static double bestMiss = -1;
 
@@ -131,6 +142,29 @@ public class BowShooter {
             if (gap >= 0 && gap < RunAwayTask.getKeepDistance() * SHOOT_ABOVE_FRACTION) {
                 declinedTooClose++;
                 return false;                     // no room to pay for a shot — keep running
+            }
+        }
+        // ⛔ DO NOT START A DRAW AT A CLOSING OPPONENT. A draw is roughly a second of standing
+        // still, and this file's combat note already names what that costs: "the bot is not
+        // out-fought, it is out-TICKED: it spends the run standing still to shoot while an
+        // opponent that never stops walks in with the initiative."
+        //
+        // MEASURED on allround, the one pvp gate that fails and fails in EVERY run seen -- six of
+        // six, kills 12-13 against deaths 14-17. The bot books bowYield 25-54 a run and the victim
+        // zero; the victim carries no bow and wins.
+        //
+        // The earlier attempt (bowYieldsInsideMelee) moved only the CAMERA and left the draw
+        // running, and measured neutral -- which is consistent: handing the aim back does not give
+        // the second back. This refuses the draw itself while the target is inside a range where
+        // melee is the better trade, and does it BEFORE any state is disturbed, so a draw already
+        // in flight at long range is untouched.
+        //
+        // The threshold is the bow's own: below it the shot is not worth the second it costs.
+        if (self != null && kaptainwutax.tungsten.TungstenConfig.get().bowRefusesWhenClosing) {
+            double gap = self.distanceTo(entity);
+            if (gap <= MELEE_PREFERRED_RANGE) {
+                declinedClosing++;
+                return false;
             }
         }
         // THE SECOND INVISIBLE EXIT: a new request silently discards a draw in progress.

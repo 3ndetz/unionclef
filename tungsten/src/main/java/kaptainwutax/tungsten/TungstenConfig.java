@@ -1011,6 +1011,27 @@ public class TungstenConfig {
     public boolean kbLandsOnSurface = false;
 
     /**
+     * The bow refuses to START a draw at an opponent already inside melee-preferred range.
+     *
+     * <p>A draw is about a second of standing still. The combat file names the cost directly: "the
+     * bot is not out-fought, it is out-TICKED: it spends the run standing still to shoot while an
+     * opponent that never stops walks in with the initiative."
+     *
+     * <p>MEASURED on allround -- the one pvp gate that fails, and it fails in EVERY run seen, six
+     * of six, kills 12-13 against deaths 14-17. The bot books bowYield 25-54 a run; the victim
+     * carries no bow, books zero, and wins.
+     *
+     * <p>DISTINCT FROM bowYieldsInsideMelee, which moved only the CAMERA and left the draw running,
+     * and measured neutral. Handing the aim back does not give the second back. This refuses the
+     * draw itself, before any state is disturbed, so a draw already in flight at long range is
+     * untouched.
+     *
+     * <p>GATE: allround (the failing one), ranged_moving and bow_flee -- the courses whose whole
+     * point is shooting, which must not move. Proof it ran: BowShooter.declinedClosing.
+     */
+    public boolean bowRefusesWhenClosing = false;
+
+    /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
      *
      * <p>{@code tryPathToEntity} zeroes {@code barrenStreak} when the entity changes, which is

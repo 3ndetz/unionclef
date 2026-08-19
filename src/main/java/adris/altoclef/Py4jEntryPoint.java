@@ -2225,7 +2225,7 @@ public class Py4jEntryPoint {
         return String.format("total=%d click=%d cd=%d reach=%d ready=%d/%d/%d/%d held=%d/%d/%d wait=%d/%d angle=%d los=%d passed=%d"
                         + " | chargeMean=%.3f critWindowSwings=%d crits=%d weaponMean=%.2f noWeapon=%d deferred=%d"
                         + " | angleMean=%.1f angleMax=%.1f (thr 40) reachMean=%.2f reachMax=%.2f (thr 3.0)"
-                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d(pred%.1f/true%.1f/flat%d/fly%.1f/land%d) escape=%d imm=%d forced=%d timer=%d) path=%d none=%d bowYield=%d bowGaveBack=%d",
+                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d(pred%.1f/true%.1f/flat%d/fly%.1f/land%d) escape=%d imm=%d forced=%d timer=%d) path=%d none=%d bowYield=%d bowGaveBack=%d bowNoDraw=%d",
                 kaptainwutax.tungsten.combat.TriggerBot.gTotal,
                 kaptainwutax.tungsten.combat.TriggerBot.gClick,
                 kaptainwutax.tungsten.combat.TriggerBot.gCooldown,
@@ -2275,7 +2275,8 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.combat.CombatController.aimPath,
                 kaptainwutax.tungsten.combat.CombatController.aimNone,
                 kaptainwutax.tungsten.combat.CombatController.aimYieldedToBow,
-                kaptainwutax.tungsten.task.BowShooter.aimReleasedTooClose);
+                kaptainwutax.tungsten.task.BowShooter.aimReleasedTooClose,
+                kaptainwutax.tungsten.task.BowShooter.declinedClosing);
     }
 
     /**
@@ -2733,6 +2734,7 @@ public class Py4jEntryPoint {
         // control arm of its own A/B printed bowGaveBack=9 with the flag OFF -- the seventh
         // counter this session to outlive the thing it describes.
         kaptainwutax.tungsten.task.BowShooter.aimReleasedTooClose = 0;
+        kaptainwutax.tungsten.task.BowShooter.declinedClosing = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qBurnedInPlace = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qTeleported = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qStuckNoMove = 0;
