@@ -92,6 +92,35 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.899 -->
+## ⭐⭐⭐ ANSWERED: THE KNOCKBACK DANGER IS NOT EARNED -- IT SATURATES AT THE SCAN LIMIT (2026-08-19)
+
+The entry below required this before anything was built on the allround asymmetry: establish
+whether the victim's 24-48 danger repositions a fight are EARNED. Measured at the instant the
+branch fires, predicted drop against the real drop under the body:
+
+    danger=3   pred 30.0   true 2.0   flat 0
+    danger=9   pred 30.0   true 1.3   flat 0
+    danger=1   pred 30.0   true 1.0   flat 0
+    danger=13  pred 30.0   true 1.5   flat 0
+
+⛔ THE PREDICTION IS 30.0 EVERY SINGLE TIME while the ground under the fighter is one to two
+blocks. Thirty is the scan limit: the estimate SATURATES, and DANGER_BATTLE is being entered on a
+number that carries no information about the actual arena. Wrong by a factor of twenty.
+
+⭐ SO THE OBVIOUS FIX WAS THE WRONG ONE, AND THE CAVEAT PAID FOR ITSELF. "The victim repositions
+and the bot does not, so make the bot reposition" would have copied a spurious behaviour into the
+one arm that currently avoids it. The bot NOT repositioning is correct. That inference was written
+down as forbidden BEFORE the measurement, and the measurement confirmed it -- which is the process
+working rather than luck.
+
+⛔ AND IT LEAVES A REAL DEFECT, now quantified rather than suspected: lastFallIfHit reads 30.0 on a
+flat walled arena with a 1-2 block drop. SafetySystem carries a "THE BODY MUST LAND" fix for the
+integration falling through the floor, and the saturation survives it, so either that landing check
+does not cover this path or the cap is reached another way. That is the next thing to read -- and
+it matters beyond allround, because every DANGER_BATTLE decision in every fight rests on this
+number.
+
 <!-- G-1.90 -->
 ## ⭐⭐ allround IS THE ONE RED GATE, AND THE ASYMMETRY IS REPOSITIONING (2026-08-19)
 
