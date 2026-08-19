@@ -984,7 +984,24 @@ public class TungstenConfig {
      *
      * <p>GATE: edge_duel and narrow_bridge_duel -- the two courses fought over a real drop, where a
      * wrongly-shortened estimate would cost lives -- then allround, which is the one it is for.
-     * Proof it ran: SafetySystem.kbLandedOnSurface, and danger's pred should stop reading 30.0.
+     *
+     * <p>⛔⛔ MEASURED HARMFUL AND NOT SHIPPED. edge_duel passed, and narrow_bridge_duel -- the fight
+     * on a one-wide bridge over void -- did this, interleaved:
+     * <pre>
+     *   ON   1/3 PASS
+     *   OFF  3/3 PASS
+     * </pre>
+     * The gate was chosen precisely because a wrongly-shortened estimate costs lives there, and it
+     * caught exactly that. This file already records the same shape twice over: removing the
+     * caution measured deaths 16->23 and 15->19. Landing the body early is a weaker form of the
+     * same removal, and the bridge is where the difference is paid.
+     *
+     * <p>⭐ THE DEFECT IT WAS BUILT FOR IS STILL REAL AND STILL UNFIXED: the estimate saturates at
+     * the 30-block scan cap on flat ground (pred 30.0 against 1.0-1.5 of true drop, body flying
+     * 7.0-7.6 blocks against a real knockback of two to three). What is now also known is that the
+     * obvious correction is not the answer. A second guess is NOT to be stacked on this one --
+     * whatever comes next has to explain why the bridge case behaves differently, before it is
+     * built.
      */
     public boolean kbLandsOnSurface = false;
 
