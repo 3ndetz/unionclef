@@ -73,6 +73,9 @@ public class TriggerBot {
     // reset() when combat ends, so reading them after a scenario always gave 0 — the
     // instrument reported "no swings" for a run that had just dealt 12 damage.
     public static volatile int lifetimeHits = 0;
+    /** Ticks inside melee range holding a BOW, against ticks holding something else. */
+    public static volatile int gMeleeWithBow = 0, gMeleeArmed = 0;
+
     public static volatile int gTotal=0, gClick=0, gCooldown=0, gReach=0, gAngle=0, gLos=0, gPassed=0;
     /**
      * HOW FAR OFF the crosshair is when the angle gate refuses, and how far the target is when
@@ -213,6 +216,24 @@ public class TriggerBot {
         // reachMean as "the bot holds at 4 blocks"), each time turning a conditional statistic into
         // a claim about the fight. The counts (gReach, gAngle) are the honest half; the means only
         // describe the misses.
+        // ⛔ IS THERE A SWORD IN THE HAND AT MELEE RANGE? allround gives the bot a bow in hotbar
+        // 0 and a sword in hotbar 1 and STARTS on the bow, while the victim gets its sword in
+        // weapon.mainhand -- always held. The phase switch is the course's drive, whose own comment
+        // records that one sample iteration can cost ~7.5 s of blocking rcon. With twelve to
+        // sixteen rounds a run, even a second of each spent swinging a BOW at melee range is a
+        // damage difference no aim or approach fix can reach: 1 against 6 per hit.
+        // Counted rather than assumed, because four levers on this course have already been
+        // eliminated by counters and a fifth guess is not wanted.
+        try {
+            if (distSq <= 16.0) {
+                net.minecraft.item.ItemStack held =
+                        net.minecraft.client.MinecraftClient.getInstance().player.getMainHandStack();
+                if (held.getItem() instanceof net.minecraft.item.BowItem) gMeleeWithBow++;
+                else gMeleeArmed++;
+            }
+        } catch (Exception ignored) {
+            // an instrument never breaks the combat tick
+        }
         gTotal++;
         if (gateClick) gClick++;
         if (gateCooldown) gCooldown++;

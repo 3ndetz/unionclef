@@ -2225,7 +2225,7 @@ public class Py4jEntryPoint {
         return String.format("total=%d click=%d cd=%d reach=%d ready=%d/%d/%d/%d held=%d/%d/%d wait=%d/%d angle=%d los=%d passed=%d"
                         + " | chargeMean=%.3f critWindowSwings=%d crits=%d weaponMean=%.2f noWeapon=%d deferred=%d"
                         + " | angleMean=%.1f angleMax=%.1f (thr 40) reachMean=%.2f reachMax=%.2f (thr 3.0)"
-                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d(pred%.1f/true%.1f/flat%d/fly%.1f/land%d) escape=%d imm=%d forced=%d timer=%d) path=%d none=%d bowYield=%d bowGaveBack=%d bowNoDraw=%d drawMove=%d/%d",
+                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d(pred%.1f/true%.1f/flat%d/fly%.1f/land%d) escape=%d imm=%d forced=%d timer=%d) path=%d none=%d bowYield=%d bowGaveBack=%d bowNoDraw=%d drawMove=%d/%d meleeBow=%d/%d",
                 kaptainwutax.tungsten.combat.TriggerBot.gTotal,
                 kaptainwutax.tungsten.combat.TriggerBot.gClick,
                 kaptainwutax.tungsten.combat.TriggerBot.gCooldown,
@@ -2278,7 +2278,9 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.task.BowShooter.aimReleasedTooClose,
                 kaptainwutax.tungsten.task.BowShooter.declinedClosing,
                 kaptainwutax.tungsten.task.BowShooter.drawTicksMoving,
-                kaptainwutax.tungsten.task.BowShooter.drawTicksStill);
+                kaptainwutax.tungsten.task.BowShooter.drawTicksStill,
+                kaptainwutax.tungsten.combat.TriggerBot.gMeleeWithBow,
+                kaptainwutax.tungsten.combat.TriggerBot.gMeleeArmed);
     }
 
     /**
@@ -2727,6 +2729,8 @@ public class Py4jEntryPoint {
         // The gate ACCUMULATORS need zeroing with everything else, and the instrument caught its
         // own omission the first time it ran: angleMean=258 with angleMax=172 is impossible, and
         // only a sum carried over from a previous run can produce it.
+        kaptainwutax.tungsten.combat.TriggerBot.gMeleeWithBow = 0;
+        kaptainwutax.tungsten.combat.TriggerBot.gMeleeArmed = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gAngleSum = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gAngleMax = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gReachDistSum = 0;

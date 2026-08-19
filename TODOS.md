@@ -122,10 +122,23 @@ roughly six seconds in two minutes. The bow is not where the exchange is lost.
 counter reading 785 against the victim's 2774, which counts something other than wall-clock share.
 Draw ticks say the ranged phase is 5% of the run, not 65%.
 
+⛔ FIFTH LEVER ELIMINATED: the bot is NOT fighting with a bow in its hand. The course puts the bow
+in hotbar 0 and the sword in hotbar 1 and starts on the bow, while the victim's sword goes straight
+to weapon.mainhand -- and the phase switch is the drive's, whose own comment records a sample
+iteration costing up to 7.5 s of blocking rcon. So "it swings a bow for the first second of every
+round" was a good candidate. Measured:
+
+    bot     meleeBow = 7/333     seven melee ticks with a bow out of 340 -- two per cent
+    victim  meleeBow = 0/414
+
+⭐ AND THE SAME READING LEAVES THE ONE DIFFERENCE STILL STANDING: the victim is inside melee range
+414 ticks against the bot's 333. It commits about a quarter longer. Everything about HOW the bot
+fights has now been eliminated with numbers; what is left is HOW LONG it stays in contact.
+
 So what loses allround is still open, and it is NOT: the aim (angle refused 5 swings of 566), the
 approach (forward pressed on 64 of 77 ready-far ticks), the bow's camera, the bow's draw, reach
-control, or standing still. That is a lot of the space eliminated with numbers, which is what the
-next pass should start from.
+control, standing still, or the weapon in hand. That is a lot of the space eliminated with numbers,
+which is what the next pass should start from -- beginning with the contact-time gap above.
 
 <!-- G-1.899 -->
 ## ⭐⭐⭐ ANSWERED: THE KNOCKBACK DANGER IS NOT EARNED -- IT SATURATES AT THE SCAN LIMIT (2026-08-19)
