@@ -139,7 +139,17 @@ dies 16-17 times against the victim's 12, and every death removes it from contac
 the walk back. Seventeen deaths at a couple of seconds each IS the missing quarter. So less contact
 is most likely an EFFECT of losing rather than the reason for it, and "make the bot hold contact
 longer" would be treating the symptom. Anyone starting here must first separate contact time from
-death count -- e.g. contact ticks per LIFE rather than per run.
+death count. I tried the two obvious normalisations on the numbers already in hand and they
+DISAGREE, so neither settles it:
+
+    per life        bot 333/18 = 18.5 ticks     victim 414/13 = 31.8    (victim ahead)
+    per task tick   bot 333/785 = 42%           victim 414/2774 = 15%   (bot ahead)
+
+Dividing by lives is itself a function of who dies faster, and the punk task's `called` plainly
+measures something different for the two sides -- 2774 against 785 in the same run. The available
+counters cannot answer it; what is needed is an explicit ALIVE-AND-FIGHTING tick count, and until
+that exists this lead must not be built on in either direction. Quoting either figure alone would
+support either conclusion, which is exactly why neither is quotable.
 
 So what loses allround is still open, and it is NOT: the aim (angle refused 5 swings of 566), the
 approach (forward pressed on 64 of 77 ready-far ticks), the bow's camera, the bow's draw, reach
