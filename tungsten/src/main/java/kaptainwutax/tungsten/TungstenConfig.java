@@ -814,6 +814,28 @@ public class TungstenConfig {
     public boolean queueParkour = false;
 
     /**
+     * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
+     *
+     * <p>The task resets its progress checker when the distance improves -- correct -- but the only
+     * thing that can DECLARE failure is MovementProgressChecker, which asks whether the body moved
+     * 0.1 blocks in six seconds. A bot circling a target satisfies that for ever, so the
+     * approach-based reset never gets to matter and the block is never given up on.
+     *
+     * <p>Measured on the playthrough: dbTick=5791 with dbNearTick=0 (never once inside four blocks
+     * of the target) and dbUnreachMove=0 (the checker never called it stuck). The run ends inside
+     * this task. Same shape mine_coal showed from the other side: 482 close-walk ticks, 286 with
+     * movement, thirteen that closed ground.
+     *
+     * <p>Window is three times the checker's own, deliberately generous: this file records that
+     * over-eager giving-up cost 21 blacklistings in eight minutes with the bot touring eighteen
+     * good trees and felling none.
+     *
+     * <p>GATE: the playthrough. Regression watch: chop_tree and chop_canopy, the courses that
+     * blacklisting hurt last time, plus mine_coal and mine_diamond. Proof it ran: dbApproachStalled.
+     */
+    public boolean breakNeedsApproach = false;
+
+    /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
      *
      * <p>{@code tryPathToEntity} zeroes {@code barrenStreak} when the entity changes, which is

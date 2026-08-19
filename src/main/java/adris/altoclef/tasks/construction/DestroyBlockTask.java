@@ -37,6 +37,34 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             dbNearTick, dbNearNoReach, dbNearAirborne, dbNearHungry, dbNearUnsafe, dbTargetAir, dbLeafCleared;
     /** Closest we have been to this task's block, squared; the yardstick for real progress. */
     private double _bestDistSq = Double.MAX_VALUE;
+
+    /**
+     * When the bot last got genuinely CLOSER to this block.
+     *
+     * <p>⛔ THE TASK ASKS TWO DIFFERENT QUESTIONS AND ONLY ONE OF THEM CAN FAIL. The reset below
+     * is on APPROACH -- distSq improving -- which is right. But the thing that can declare failure
+     * is {@code MovementProgressChecker.check}, and that asks whether the BODY MOVED (0.1 blocks
+     * in 6 s). A bot that walks in circles satisfies it for ever, so the approach-based reset never
+     * gets to matter.
+     *
+     * <p>Measured on the playthrough: DestroyBlockTask ticks 5791 times with dbNearTick=0 -- never
+     * once within four blocks of its target -- and dbUnreachMove=0, so the checker never once
+     * called it stuck. Thousands of ticks moving, no approach, and no failure declared, so the
+     * block is never given up on and the run ends inside this task. It is the same shape mine_coal
+     * showed this morning from the other side: 482 close-walk ticks, 286 with movement, THIRTEEN
+     * that closed any ground.
+     *
+     * <p>Generous on purpose -- three times the checker's own six-second window. This file already
+     * records what over-eager giving-up costs: 21 blacklistings in eight minutes, every target a
+     * real log within fifteen blocks, and the bot touring eighteen trees without felling one.
+     */
+    private long _lastApproachMs = 0;
+
+    /** Three times MovementProgressChecker's own distance window (6 s), in millis. */
+    private static final long APPROACH_STALL_MS = 18_000L;
+
+    /** Times a block was given up on for NO APPROACH while the body kept moving. */
+    public static volatile int dbApproachStalled;
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
     private final MovementProgressChecker _moveChecker = new MovementProgressChecker();
     private final BlockPos pos;
@@ -332,11 +360,24 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         // only gets to condemn a block the bot has genuinely stopped closing on.
         double distSqNow = mod.getPlayer().getPos().squaredDistanceTo(
                 pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        long nowMs = System.currentTimeMillis();
+        if (_lastApproachMs == 0) {
+            _lastApproachMs = nowMs;
+        }
         if (distSqNow < _bestDistSq - 0.5) {
             _bestDistSq = distSqNow;
             _moveChecker.reset();
+            _lastApproachMs = nowMs;
         }
-        if (!_moveChecker.check(mod)) {
+        // MOVING IS NOT APPROACHING, AND ONLY ONE OF THEM IS THE JOB.
+        boolean approachStalled =
+                kaptainwutax.tungsten.TungstenConfig.get().breakNeedsApproach
+                        && nowMs - _lastApproachMs > APPROACH_STALL_MS;
+        if (approachStalled) {
+            dbApproachStalled++;
+            _lastApproachMs = nowMs;      // one verdict per window, not one per tick
+        }
+        if (!_moveChecker.check(mod) || approachStalled) {
             dbUnreachMove++;
             // FAR OR NEAR? Those need opposite fixes. Far means the bot never got there at all;
             // near means it arrived and something stops it finishing. One number tells them apart.
