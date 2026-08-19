@@ -934,9 +934,26 @@ public class TungstenConfig {
      * not a number invented for this. BowShooter already has a "too close" idea but it only
      * applies while a flee order is live, which is not this case.
      *
-     * <p>GATE: allround (the failing one), plus melee_basic and edge_duel which must not move, and
-     * ranged_moving which is the course that would suffer if the bow gave up too eagerly. Proof it
-     * ran: BowShooter.aimReleasedTooClose, and bowYield should fall.
+     * <p>⛔ MEASURED NEUTRAL, AND THE READING THAT MOTIVATED IT WAS A MISREAD. Four interleaved
+     * runs on allround, control arm clean at bowGaveBack=0:
+     * <pre>
+     *   OFF   kills=13 deaths=14   kills=12 deaths=17    gaveBack 0, 0
+     *   ON    kills=13 deaths=16   kills=13 deaths=16    gaveBack 14, 8
+     * </pre>
+     * No improvement, marginally worse on deaths, and the course is red in all four runs of both
+     * arms -- so the bow yield is not what makes allround fail.
+     *
+     * <p>⛔ AND THE PREMISE WAS WRONG IN THE WAY TriggerBot ALREADY WARNS ABOUT. I read
+     * "angleMean 77.6 against a threshold of 40" as "the crosshair is 78 degrees off", and
+     * "reachMean 4.25" as "it fights at 4.25 blocks". TriggerBot's own comment says every one of
+     * those sums accumulates INSIDE ITS OWN FAILURE BRANCH, so they are means over REFUSED swings
+     * and describe only the misses. The honest half is the counts: angle refused 5 swings of 566,
+     * reach refused 300, cooldown 413. Aim is very nearly never the reason -- distance and
+     * cooldown are. That comment records the same misreading happening three times in one earlier
+     * session; this is the fourth.
+     *
+     * <p>Stays OFF. Kept, with its numbers, because the range-blind aim arbiter is still a real
+     * thing and the next attempt should start from the counts rather than from the means.
      */
     public boolean bowYieldsInsideMelee = false;
 
