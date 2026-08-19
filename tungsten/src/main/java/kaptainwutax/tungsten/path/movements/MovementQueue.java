@@ -182,8 +182,19 @@ public final class MovementQueue {
                         + (dy != 0 ? (dy > 0 ? "+" : "-") : "=");
                 if (dir.isEmpty()) dir = "same";
             }
+            // ⛔ AND THE KEYS, because the scene so far says nothing is in the way. Twelve stuck
+            // scenes out of twelve wanted a step DOWNWARD, standing on solid ground with air at
+            // the feet and air at the head -- nothing blocking, and the body still would not go.
+            // Vanilla has exactly one mechanism that holds a body at the lip of a drop while
+            // forward is held: SNEAK. This file already records the leak that would cause it --
+            // "a task can setPressed(true) and end without releasing, leaving SHIFT stuck" -- and
+            // the failing runs never change altitude at all (vertical extent 1 block against 13).
+            var opts = net.minecraft.client.MinecraftClient.getInstance().options;
+            String keys = "sneak:" + (opts.sneakKey.isPressed() ? "Y" : "n")
+                    + " fwd:" + (opts.forwardKey.isPressed() ? "Y" : "n")
+                    + " spr:" + (opts.sprintKey.isPressed() ? "Y" : "n");
             stuckScenes.addLast("on:" + name.apply(feet.down()) + " in:" + name.apply(feet)
-                    + " head:" + name.apply(feet.above()) + " go:" + dir);
+                    + " head:" + name.apply(feet.above()) + " go:" + dir + " " + keys);
             while (stuckScenes.size() > 4) stuckScenes.removeFirst();
         } catch (Exception ignored) {
             // an instrument never breaks the tick it rides on
