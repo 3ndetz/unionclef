@@ -340,6 +340,44 @@ A deploy that failed on a syntax error therefore returned 0 and `&&` handed the 
 ten-run suite against a half-deployed stand. Run the deploy on its own line and check `$?`, or set
 `pipefail` -- do not pipe a step whose success gates the next one.
 
+## A third way: the counter runs, but not in the course you are testing (2026-08-20)
+
+The two above ship the wrong bytecode. This one ships the right bytecode and still reports a
+number that has nothing to do with the run -- and it reads like a finding, not like a fault.
+
+`dealt` (damage the bot's swings removed) printed **0.0 through a pvp fight with seventy swings
+and twelve kills in it**. Three separate wirings, each a smaller audience than the last:
+
+1. the counter lived inside `noticeDraws`, whose first loop line is
+   `if (!(e instanceof RangedAttackMob)) continue;` -- skeletons only, so damage to a zombie was
+   invisible and a player was never enumerated at all;
+2. moved out, it still sat behind that method's **call site**, inside `isProjectileClose` -- a
+   predicate about arrows, which a melee fight never asks;
+3. moved to `MobDefenseChain.getPriority` -- the chain's real per-tick entry -- it *still* read
+   zero, because the pvp courses do not tick that chain.
+
+Every one of those zeroes reads exactly like "the bot deals no damage", which is a plausible,
+publishable, completely wrong conclusion. It now ticks from `AltoClef.onClientTick` and nowhere
+else.
+
+**The rule this gives:** an instrument must not hang off whoever happens to be asking a question
+nearby, and every counter needs something beside it that **cannot be zero if it ran**. Two forms,
+both cheap:
+
+- a **tick counter** -- `dealt=206.0/230.0/2593` prints ours / all / ledger ticks, so "never ran"
+  can never again be read as "found nothing";
+- a **denominator that cannot be zero** -- the `seen` total counts *every* hp drop near the bot,
+  ours or not. That is what actually caught this: a zero there while the opponent was dying twelve
+  times is impossible, and it turned a finding back into a bug.
+
+Note also that the counter's *scope* changed with the fix: `dealt` and `swingHits` previously saw
+ranged mobs only, so figures in artifacts from before this date are not comparable with later ones.
+
+Related, and it cost a build: **`set -o pipefail` plus `grep -q` manufactures a false negative.**
+`unzip -p jar cls | grep -qa "literal"` -- grep exits at the first match, unzip takes SIGPIPE, the
+pipeline status is non-zero and the jar verification reports the literal MISSING from a jar that
+contains it. Drop `-q`, or drop `pipefail` for that one check.
+
 Related: `TaskStop` kills the shell, not its children. The orphaned suite kept the bench lock and
 ran for seventeen more minutes with its stdout attached to a dead shell, so nothing it produced
 could ever be read. After killing a suite, check for surviving `run_suite.py` processes and clear
