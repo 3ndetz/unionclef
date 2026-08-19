@@ -1014,6 +1014,33 @@ class AllRound(Scenario):
         ctx.bot.py.call("selectHotbar", 0)  # bow in hand for the ranged phase
         ctx.victim.py.call("punk", ctx.bot.name)
 
+    # ⛔ WHAT THIS COURSE ACTUALLY SAYS, ONCE ALL FOUR SUSPECTS ARE PRICED (2026-08-20).
+    # Both fighters, same run, same jar, from the counters rather than from a theory:
+    #
+    #     swings issued   bot 71   victim 74      (equal)
+    #     weaponMean      bot 75   victim 75      (equal -- and 75 is the sword; the bow theory
+    #                                              is dead on both sides, meleeBow 7/394 vs 0/424)
+    #     chargeMean      bot 0.999 victim 0.999  (equal -- undercharge is dead)
+    #     crits           bot 23   victim 25      (equal -- the aim arbiter did close this)
+    #
+    # A fully charged iron_sword is 6, a crit 9, so 71 swings with 23 crits is 495 hp if every
+    # one connects. The ledger says the bot removed 203.1 -- 41%. The bot loses ~340 hp over 17
+    # deaths against the victim's 519 theoretical, ~66%, and even discounting the 14% of deaths
+    # the server log attributes to falls it stays clearly above ours.
+    #
+    # So the gap is CONNECTION, not weapon, charge or crits: the bot's swings go out at the same
+    # rate and arrive far less often. The one configured difference between the two fighters is
+    # victim_settings -- combatReachControl is OFF for the opponent and ON for us.
+    #
+    # PRE-REGISTERED before the runs, so the reading cannot be picked after seeing them:
+    #   metric   dealt / swings issued, from the hp-drop ledger. Continuous, and far tighter
+    #            than kills-minus-deaths, whose sd is about 2.7 on ~27 exchanges.
+    #   arms     --repeat 6 --pin-alt combatReachControl=false (interleaved, rule 4r); pins go
+    #            to the BOT only, so arm B is the bot fighting on the opponent's own settings.
+    #   call     if arm B's per-swing damage clearly exceeds arm A's, reach control is costing
+    #            the connection and is the fix. If the two arms are indistinguishable, reach
+    #            control is exonerated and the cause is elsewhere -- record that and move on.
+
     # ⛔ AND NEITHER IS THE WOUNDED KITE, WHICH IS LIVE ONLY HERE. This is the one pvp kit with a
     # bow, so hasRangedOption is true and CombatController's low-health branch actually FIRES --
     # lowHp reads 56/0 and 75/0 here against 0/xx everywhere else, i.e. 56-75 ticks a run spent
@@ -1236,7 +1263,7 @@ class AllRound(Scenario):
                         f"weaponMean={_stat(ctx, 'weaponMean')} noWeapon={_stat(ctx, 'noWeapon')}"
                         f" chargeMean={_stat(ctx, 'chargeMean')}"
                         f" | victim weaponMean={_stat(ctx, 'weaponMean', ctx.victim)}"
-                        f"   [iron_sword scores 6; a bow is about 1]", gate=False)
+                        f"   [WeaponSelector's scale, NOT damage: iron_sword reads 75.00]", gate=False)
         yield Criterion("swings ISSUED (recorded, not gated)", True,
                         f"issued={ctx.landed_swings()} critCond={ctx.crit_swings()}"
                         f"   [issued counts attacks SENT, not hits -- see comment]", gate=False)
