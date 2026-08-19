@@ -259,6 +259,9 @@ public class CombatController {
      * <p>Counting the branches is the only way to say which. Three guesses at this aim have
      * already been built and reverted; this is the measurement that should have come first.
      */
+    /** Ticks the fight was actually running against a live target -- the contact denominator. */
+    public static volatile int fightTicks = 0;
+
     public static volatile int aimBrake=0, aimReposition=0, aimEnemy=0, aimPath=0, aimNone=0;
     /** Ticks this controller handed the camera to a bow on the critical stretch of its aim.
      *  Zero on a sword-only course by construction; on allround it is the measure of how much
@@ -267,11 +270,24 @@ public class CombatController {
 
     public static void resetAimCounters() {
         aimBrake = 0; aimReposition = 0; aimEnemy = 0; aimPath = 0; aimNone = 0; aimYieldedToBow = 0;
+        fightTicks = 0;
         hopWind = 0; hopAir = 0; hopEdge = 0; hopInterval = 0; hopUnsafe = 0; hopFired = 0; hopDodge = 0; hopFar = 0;
     }
 
     public boolean tick(ClientPlayerEntity player, Entity target, WorldView world) {
         if (target == null || target.isRemoved() || !target.isAlive()) return false;
+
+        // ⛔ THE DENOMINATOR THE CONTACT LEAD NEEDS. TriggerBot counts ticks spent INSIDE melee
+        // range (gMeleeArmed 333 for the bot against 414 for the victim on allround), and the two
+        // obvious ways to normalise that disagree: per life the victim leads 31.8 to 18.5, per
+        // punk-task tick the bot leads 42% to 15%. Dividing by lives is a function of who dies
+        // faster, and the punk task's `called` measures something different for the two sides --
+        // 2774 against 785 in one run. Neither is quotable.
+        //
+        // This is the honest denominator: ticks with a LIVE target and the fight actually running,
+        // counted at the single entry every fight passes through. Contact fraction is then
+        // gMeleeArmed / fightTicks, and it means the same thing for both fighters.
+        fightTicks++;
 
         TungstenConfig cfg = TungstenConfig.get();
 
