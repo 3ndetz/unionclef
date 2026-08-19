@@ -1194,8 +1194,24 @@ class AllRound(Scenario):
         # nothing about that, so nobody could see the fight was lost on output rather than luck.
         # Recorded, never a gate: it is a count, so unlike a timing gate it stays readable at the
         # 5-9 fps this stand runs at.
-        yield Criterion("swings landed (recorded, not gated)", True,
-                        f"landed={ctx.landed_swings()} crits={ctx.crit_swings()}", gate=False)
+        # ⛔ "landed" IS A LIE OF NAMING AND THE READOUT MUST NOT REPEAT IT. TriggerBot does
+        # `lifetimeHits++` immediately BEFORE `attackEntity`, so the number counts swings ISSUED --
+        # misses, swings out of reach and swings into air included -- and `crits` counts swings
+        # made in a crit condition, not crit damage delivered. Read as hits, it produced a
+        # paradox that consumed a whole pass: "both sides connect about seventy times and the bot
+        # crits more, yet converts eleven kills against seventeen deaths".
+        #
+        # DAMAGE is the quantity that decides this course, and the mod has counted it all along --
+        # `dealt` in placeStats, which this readout simply never printed. Printing it costs nothing
+        # and is the difference between measuring the fight and measuring the button presses.
+        _ok, _st = ctx.bot.py.try_call("placeStats")
+        _dealt = "?"
+        for _t in str(_st or "").split():
+            if _t.startswith("dealt="):
+                _dealt = _t[len("dealt="):]
+        yield Criterion("swings ISSUED and damage DEALT (recorded, not gated)", True,
+                        f"issued={ctx.landed_swings()} critCond={ctx.crit_swings()} dealt={_dealt}"
+                        f"   [issued counts attacks SENT, not hits -- see comment]", gate=False)
         # WHERE THE PUNK TASK SPENDS ITS TICKS. This course drives with `punk`, which is
         # tungsten's PunkPlayerTask — NOT MobDefenseChain and NOT AbstractKillEntityTask.
         #

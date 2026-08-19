@@ -253,9 +253,13 @@ public class MobDefenseChain extends SingleTaskChain {
     /** Health drops that followed one of our swings closely enough to be ours. */
     public static volatile int mdSwingHits;
 
+    /** EVERY health drop on a tracked target, ours or not -- the denominator for the above. */
+    public static volatile int mdDamageSeenTenths;
+
     /** Zeroes the damage ledger between bench runs; the per-entity map must go with it. */
     public static void resetDamageLedger() {
         mdDamageDealtTenths = 0;
+        mdDamageSeenTenths = 0;
         mdSwingHits = 0;
         lastTargetHp.clear();
     }
@@ -1340,6 +1344,60 @@ public class MobDefenseChain extends SingleTaskChain {
         }
     }
 
+    /** A drop this soon after our swing is ours; ~3 ticks, the window the ledger already used. */
+    private static final long SWING_ATTRIBUTION_MS = 150;
+    /** Only targets we could plausibly have hit are tracked, which keeps the HP map bounded. */
+    private static final double LEDGER_RANGE_SQ = 20 * 20;
+
+    /**
+     * Damage our swings actually removed -- from ANY target, players included.
+     *
+     * <p>This ledger used to live inside {@link #noticeDraws}, whose first loop line is
+     * {@code if (!(e instanceof RangedAttackMob)) continue;}. So it only ever saw skeletons:
+     * damage to a zombie was invisible, and in a PvP course -- where the opponent is a player,
+     * absent from getHostiles() altogether -- {@code dealt} read 0.0 however the fight went. That
+     * zero is structural, not a measurement, and it is why the one question the allround course
+     * could not answer (does the bot remove less health than it loses?) stayed unanswerable: not
+     * for want of a counter, but because the counter was parasitic on someone else's filter.
+     *
+     * <p>The attribution rule is unchanged and deliberately narrow: a health DROP is ours only if
+     * one of our swings went out within {@link #SWING_ATTRIBUTION_MS}. Everything else the target
+     * loses -- fall, fire, another player -- goes to the SEEN total instead, so the pair answers
+     * both "how hard do we hit" and "how much of this fight was actually us".
+     *
+     * <p>⛔ The HP-ceiling confound on the first half still applies and is written out at
+     * {@link #mdDamageDealtTenths}: against a target that always dies, a SUM is bounded by its
+     * health and barely moves. Compare the two sides of a fight, or use mdSwingHits, not the sum
+     * against itself.
+     */
+    private void noticeDamageDealt(AltoClef mod) {
+        try {
+            ClientPlayerEntity self = mod.getPlayer();
+            if (self == null) return;
+            net.minecraft.client.world.ClientWorld world =
+                    net.minecraft.client.MinecraftClient.getInstance().world;
+            if (world == null) return;
+            for (net.minecraft.entity.Entity raw : world.getEntities()) {
+                if (!(raw instanceof LivingEntity)) continue;
+                LivingEntity e = (LivingEntity) raw;
+                if (e == self || !e.isAlive()) continue;
+                if (e.squaredDistanceTo(self) > LEDGER_RANGE_SQ) continue;
+                Float prev = lastTargetHp.put(e.getId(), e.getHealth());
+                if (prev == null || prev <= e.getHealth()) continue;
+                int tenths = (int) Math.round((prev - e.getHealth()) * 10.0);
+                mdDamageSeenTenths += tenths;
+                if (System.currentTimeMillis()
+                        - kaptainwutax.tungsten.combat.TriggerBot.lastSwingMs
+                        <= SWING_ATTRIBUTION_MS) {
+                    mdDamageDealtTenths += tenths;
+                    mdSwingHits++;
+                }
+            }
+        } catch (Exception ignored) {
+            // an instrument must never be the thing that breaks a fight
+        }
+    }
+
     /**
      * Watch every nearby shooter's draw, one episode at a time.
      *
@@ -1358,19 +1416,7 @@ public class MobDefenseChain extends SingleTaskChain {
                 if (e == null || !e.isAlive()) continue;
                 double gap = e.distanceTo(self);
                 if (gap >= 2.5 && gap <= 7.0) inBand = true;
-                // Health drops, summed per entity: what our swings ACTUALLY removed.
-                Float prev = lastTargetHp.put(e.getId(), e.getHealth());
-                if (prev != null && prev > e.getHealth()) {
-                    mdDamageDealtTenths += (int) Math.round((prev - e.getHealth()) * 10.0);
-                    // ATTRIBUTION: a drop arriving within ~3 ticks of our swing is our swing. This
-                    // is the ceiling-free half of the ledger -- mdSwingHits over gPassed is the
-                    // fraction of swings that actually removed health, and unlike the sum it keeps
-                    // moving after the target is nearly dead.
-                    if (System.currentTimeMillis()
-                            - kaptainwutax.tungsten.combat.TriggerBot.lastSwingMs <= 150) {
-                        mdSwingHits++;
-                    }
-                }
+                // (the damage ledger moved to noticeDamageDealt -- see there for why)
                 if (!e.isUsingItem()) continue;
                 int id = e.getId();
                 stillDrawing.add(id);
@@ -1491,6 +1537,7 @@ public class MobDefenseChain extends SingleTaskChain {
     private boolean isProjectileClose(AltoClef mod) {
         noticeArrows(mod);
         noticeDraws(mod);
+        noticeDamageDealt(mod);
         List<CachedProjectile> projectiles = mod.getEntityTracker().getProjectiles();
         Vec3d plyPos = mod.getPlayer().getPos();
         try {
