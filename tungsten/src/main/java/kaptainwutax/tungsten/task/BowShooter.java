@@ -225,8 +225,49 @@ public class BowShooter {
      * costs the camera only and the bot keeps sprinting; and a shot that does happen pays the draw
      * for the ~22 ticks it actually needs.
      */
+    /** Ticks the bow released the camera because the target was already inside melee reach. */
+    public static volatile int aimReleasedTooClose = 0;
+
+    /**
+     * Does the bow own the camera this tick?
+     *
+     * <p>⛔ IT USED TO SAY "YES, WHENEVER I AM ACTIVE" -- with no notion of how far the target is.
+     * CombatController hands the aim over on that answer, and this file's own note already named
+     * the consequence: "the bot is not out-fought, it is out-TICKED: it spends the run standing
+     * still to shoot while an opponent that never stops walks in with the initiative."
+     *
+     * <p>Measured on allround, the one gate the pvp suite fails -- kills=12 against deaths=16,
+     * with everything else on the course green. The two sides run the SAME controller and differ
+     * in exactly two counters:
+     * <pre>
+     *   bot     aim: enemy=504 reposition=1  bowYield=61   reachMean=4.25
+     *   victim  aim: enemy=586 reposition=48 bowYield=0    reachMean=4.22
+     * </pre>
+     * Same distance, same aim angle, and the side that never yields its camera to a bow wins.
+     *
+     * <p>So the bow keeps the camera at range and gives it up inside {@link AttackTiming#REACH} --
+     * 3.0, the same distance the swing gate judges against, not a number invented here. There is
+     * already a "too close" idea in this class ({@code declinedTooClose}) but it only applies while
+     * a flee order is live, which is not this case.
+     */
     public static boolean isAimCritical() {
-        return active;
+        if (!active) {
+            return false;
+        }
+        if (kaptainwutax.tungsten.TungstenConfig.get().bowYieldsInsideMelee) {
+            try {
+                ClientPlayerEntity self = MinecraftClient.getInstance().player;
+                Entity t = target;
+                if (self != null && t != null && t.isAlive()
+                        && self.distanceTo(t) <= kaptainwutax.tungsten.combat.AttackTiming.reach()) {
+                    aimReleasedTooClose++;
+                    return false;
+                }
+            } catch (Exception ignored) {
+                // an aim arbiter must never throw into the tick
+            }
+        }
+        return true;
     }
 
     /** Zero the shot tally so a bench run measures its own shots, not the stand's history.

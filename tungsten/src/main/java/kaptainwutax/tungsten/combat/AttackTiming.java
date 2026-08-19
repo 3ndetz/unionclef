@@ -11,6 +11,11 @@ import net.minecraft.util.math.Vec3d;
 public final class AttackTiming {
 
     private static final double REACH = 3.0;
+
+    /** The distance a swing is judged against, so other arbiters can use it instead of a copy. */
+    public static double reach() {
+        return REACH;
+    }
     private static final float MIN_COOLDOWN = 0.9f;
 
     private AttackTiming() {}

@@ -913,6 +913,34 @@ public class TungstenConfig {
     public boolean prepFailsWhenBlind = false;
 
     /**
+     * The bow gives the camera back once the target is inside melee reach.
+     *
+     * <p>BowShooter.isAimCritical() answered "yes, whenever I am active", with no notion of range,
+     * and CombatController hands the aim over on that answer. The combat file's own note already
+     * named the consequence: "the bot is not out-fought, it is out-TICKED: it spends the run
+     * standing still to shoot while an opponent that never stops walks in with the initiative."
+     *
+     * <p>MEASURED on allround -- the ONE gate the pvp suite fails, kills=12 against deaths=16 with
+     * every other criterion on the course green. Both sides run the same controller and differ in
+     * exactly two counters:
+     * <pre>
+     *   bot     aim: enemy=504 reposition=1  bowYield=61  reachMean=4.25  swings passed 72/566
+     *   victim  aim: enemy=586 reposition=48 bowYield=0   reachMean=4.22  swings passed 75/636
+     * </pre>
+     * Same distance, same aim angle (77.6 against 78.9, both far past the 40 threshold), and the
+     * side that never hands its camera to a bow is the side that wins the exchange.
+     *
+     * <p>Threshold is AttackTiming.reach() = 3.0, the same distance the swing gate judges against,
+     * not a number invented for this. BowShooter already has a "too close" idea but it only
+     * applies while a flee order is live, which is not this case.
+     *
+     * <p>GATE: allround (the failing one), plus melee_basic and edge_duel which must not move, and
+     * ranged_moving which is the course that would suffer if the bow gave up too eagerly. Proof it
+     * ran: BowShooter.aimReleasedTooClose, and bowYield should fall.
+     */
+    public boolean bowYieldsInsideMelee = false;
+
+    /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
      *
      * <p>{@code tryPathToEntity} zeroes {@code barrenStreak} when the entity changes, which is
