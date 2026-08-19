@@ -626,6 +626,7 @@ public class AltoClef implements ModInitializer {
         trackerManager.tick();
         blockScanner.tick();
         damageTracker.tick();
+        adris.altoclef.chains.MobDefenseChain.tickDamageLedger(this);
         taskRunner.tick();
 
         if (taskRunner.gameMenuTaskChain != null) {

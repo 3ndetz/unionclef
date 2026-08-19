@@ -256,10 +256,14 @@ public class MobDefenseChain extends SingleTaskChain {
     /** EVERY health drop on a tracked target, ours or not -- the denominator for the above. */
     public static volatile int mdDamageSeenTenths;
 
+    /** Ticks the ledger actually ran: a zero above means nothing if this is zero too. */
+    public static volatile int mdLedgerTicks;
+
     /** Zeroes the damage ledger between bench runs; the per-entity map must go with it. */
     public static void resetDamageLedger() {
         mdDamageDealtTenths = 0;
         mdDamageSeenTenths = 0;
+        mdLedgerTicks = 0;
         mdSwingHits = 0;
         lastTargetHp.clear();
     }
@@ -1350,6 +1354,15 @@ public class MobDefenseChain extends SingleTaskChain {
     private static final double LEDGER_RANGE_SQ = 20 * 20;
 
     /**
+     * ⛔ CALLED FROM AltoClef.onClientTick AND NOWHERE ELSE, and the tick counter printed
+     * beside the totals exists so that can be CHECKED rather than assumed. This instrument was
+     * hung off a narrower caller three times, and each time it answered a seventy-swing fight
+     * with a structural zero that reads exactly like "the bot deals no damage": inside
+     * noticeDraws (ranged mobs only), then at that method's own call site inside
+     * isProjectileClose (a predicate about ARROWS, which a melee fight never asks), then at
+     * MobDefenseChain.getPriority, which the pvp courses turn out not to tick at all. A
+     * measurement must not depend on who happens to be asking a question nearby.
+     *
      * Damage our swings actually removed -- from ANY target, players included.
      *
      * <p>This ledger used to live inside {@link #noticeDraws}, whose first loop line is
@@ -1370,18 +1383,22 @@ public class MobDefenseChain extends SingleTaskChain {
      * health and barely moves. Compare the two sides of a fight, or use mdSwingHits, not the sum
      * against itself.
      */
-    private void noticeDamageDealt(AltoClef mod) {
+    public static void tickDamageLedger(AltoClef mod) {
         try {
+            if (mod == null) return;
+            mdLedgerTicks++;
             ClientPlayerEntity self = mod.getPlayer();
             if (self == null) return;
             net.minecraft.client.world.ClientWorld world =
                     net.minecraft.client.MinecraftClient.getInstance().world;
             if (world == null) return;
+            java.util.Set<Integer> present = new java.util.HashSet<>();
             for (net.minecraft.entity.Entity raw : world.getEntities()) {
                 if (!(raw instanceof LivingEntity)) continue;
                 LivingEntity e = (LivingEntity) raw;
                 if (e == self || !e.isAlive()) continue;
                 if (e.squaredDistanceTo(self) > LEDGER_RANGE_SQ) continue;
+                present.add(e.getId());
                 Float prev = lastTargetHp.put(e.getId(), e.getHealth());
                 if (prev == null || prev <= e.getHealth()) continue;
                 int tenths = (int) Math.round((prev - e.getHealth()) * 10.0);
@@ -1393,6 +1410,10 @@ public class MobDefenseChain extends SingleTaskChain {
                     mdSwingHits++;
                 }
             }
+            // Forget whoever left, or the map grows for the whole session AND a target that
+            // wandered out of range and back reports the damage it took while away as one drop
+            // of ours. Re-baselining on return is the same fix for both.
+            lastTargetHp.keySet().retainAll(present);
         } catch (Exception ignored) {
             // an instrument must never be the thing that breaks a fight
         }
@@ -1537,7 +1558,6 @@ public class MobDefenseChain extends SingleTaskChain {
     private boolean isProjectileClose(AltoClef mod) {
         noticeArrows(mod);
         noticeDraws(mod);
-        noticeDamageDealt(mod);
         List<CachedProjectile> projectiles = mod.getEntityTracker().getProjectiles();
         Vec3d plyPos = mod.getPlayer().getPos();
         try {

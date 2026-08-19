@@ -1209,6 +1209,19 @@ class AllRound(Scenario):
         for _t in str(_st or "").split():
             if _t.startswith("dealt="):
                 _dealt = _t[len("dealt="):]
+        # CROSS-CHECK FROM THE BENCH, which does not share the mod counter's wiring. Three times
+        # running the mod-side ledger answered this fight with a structural zero because it was
+        # hung off a narrower caller; a second source computed from data already sampled would
+        # have caught that on the first run instead of the third.
+        #
+        # ⛔ IT ALIASES, AND BY MORE THAN THE FIGURE IT REPORTS. One sample costs ~7.5s, so a
+        # death and respawn inside one interval leaves HP back at 20 and is INVISIBLE here.
+        # Read it for the RATIO between two identically-aliased sides, never as damage totals.
+        _bd = sum(a for _, a, _ in ctx.hp_drop_events(who="bot"))
+        _vd = sum(a for _, a, _ in ctx.hp_drop_events(who="victim"))
+        yield Criterion("hp removed, bench-sampled ratio (recorded, not gated)", True,
+                        f"botLost={_bd:.0f} victimLost={_vd:.0f}"
+                        f"   [aliased by the 7.5s sample -- ratio only, not totals]", gate=False)
         yield Criterion("swings ISSUED and damage DEALT (recorded, not gated)", True,
                         f"issued={ctx.landed_swings()} critCond={ctx.crit_swings()} dealt={_dealt}"
                         f"   [issued counts attacks SENT, not hits -- see comment]", gate=False)
