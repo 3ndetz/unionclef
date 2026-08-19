@@ -92,6 +92,34 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.913 -->
+## ⭐⭐⭐ TEN TO EIGHTEEN SAMPLES PER RUN INSTEAD OF ONE (dbTargets, 2026-08-19)
+
+The cost of a playthrough question was the whole problem: six flags were each judged on six runs
+and three of those verdicts later reversed. Two ways out were tried and both refused by
+measurement -- halving the watch window (loses the signal, saves 2x) and cutting per-run overhead
+(there is none: a 350 s run is rcon 1 s, connect 22 s, reset 11 s, start 4 s, WATCH 313 s = 89%).
+
+The third way is in the same numbers: a run does not attempt one block, it attempts dozens.
+
+    FAIL   closest 9.8   dbTargets=10/0    arrival  0%
+    PASS   closest 4.2   dbTargets=18/2    arrival 11%
+    PASS   closest 0.7   dbTargets=14/8    arrival 57%
+
+Ten to eighteen targets per run, and the arrival rate tracks the verdict monotonically. Three runs
+now yield about forty samples instead of three, so six runs per arm is roughly ninety samples per
+arm -- which is the difference between "this flag needs four hours" and "this flag can be answered
+this afternoon".
+
+A target counts as REACHED the moment the bot is inside 4.5 blocks of it: vanilla reach, the same
+line PASS and FAIL already turn on (no failing run today ever got inside 4.4, every passing one got
+inside 1.3).
+
+⛔ USE THIS, NOT THE RUNG COUNT, for anything judged on the playthrough from here. The rung count
+is one coarse number per six minutes on a population whose spread swamps every effect measured
+today; this is tens of numbers from the same six minutes, on the exact quantity that separates a
+run that works from one that does not.
+
 <!-- G-1.914 -->
 ## ⛔ THE CHEAP PROXY DOES NOT WORK: HALVING THE RUN LOSES THE SIGNAL (2026-08-19)
 
