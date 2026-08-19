@@ -1204,26 +1204,41 @@ class AllRound(Scenario):
         # DAMAGE is the quantity that decides this course, and the mod has counted it all along --
         # `dealt` in placeStats, which this readout simply never printed. Printing it costs nothing
         # and is the difference between measuring the fight and measuring the button presses.
-        _ok, _st = ctx.bot.py.try_call("placeStats")
-        _dealt = "?"
-        for _t in str(_st or "").split():
-            if _t.startswith("dealt="):
-                _dealt = _t[len("dealt="):]
-        # CROSS-CHECK FROM THE BENCH, which does not share the mod counter's wiring. Three times
-        # running the mod-side ledger answered this fight with a structural zero because it was
-        # hung off a narrower caller; a second source computed from data already sampled would
-        # have caught that on the first run instead of the third.
-        #
-        # ⛔ IT ALIASES, AND BY MORE THAN THE FIGURE IT REPORTS. One sample costs ~7.5s, so a
-        # death and respawn inside one interval leaves HP back at 20 and is INVISIBLE here.
-        # Read it for the RATIO between two identically-aliased sides, never as damage totals.
-        _bd = sum(a for _, a, _ in ctx.hp_drop_events(who="bot"))
-        _vd = sum(a for _, a, _ in ctx.hp_drop_events(who="victim"))
-        yield Criterion("hp removed, bench-sampled ratio (recorded, not gated)", True,
-                        f"botLost={_bd:.0f} victimLost={_vd:.0f}"
-                        f"   [aliased by the 7.5s sample -- ratio only, not totals]", gate=False)
-        yield Criterion("swings ISSUED and damage DEALT (recorded, not gated)", True,
-                        f"issued={ctx.landed_swings()} critCond={ctx.crit_swings()} dealt={_dealt}"
+        # TWO INSTRUMENTS ON THE SAME EVENT, WHICH IS THE POINT. `dealt` is damage OUR swings
+        # removed, read off the bot; `dw` is damage TAKEN, read off each fighter -- and _ledger
+        # above already prints the taken half for both sides. In a duel the bot's dealt must
+        # come out near the victim's dw damage, because they describe one exchange from either
+        # end. Agreement validates both; a gap means one of them is wired to something that is
+        # not the fight, which is exactly the failure this readout was built to catch.
+        _d = _stat(ctx, "dealt") or ""
+        _bits = _d.split("/")
+        _mine, _seen, _ticks = (_bits + ["?", "?", "?"])[:3]
+        _vdw = (_stat(ctx, "dw", ctx.victim) or "").split("/")
+        _vtook = _vdw[1] if len(_vdw) > 1 else "?"
+        _hits = _stat(ctx, "swingHits") or "0"
+        try:
+            _per = f"{float(_mine) / int(_hits):.2f}" if int(_hits) else "?"
+        except (ValueError, ZeroDivisionError):
+            _per = "?"
+        _note = ("  LEDGER NEVER TICKED -- a zero here is wiring, not a fight"
+                 if _ticks in ("0", "?") else "")
+        yield Criterion("damage DEALT vs the victim's damage TAKEN (recorded, not gated)", True,
+                        f"dealt={_mine} seen={_seen} hits={_hits} perHit={_per} ticks={_ticks}"
+                        f" | victim took {_vtook}{_note}", gate=False)
+        # WHAT IS IN THE HAND WHEN WE SWING. TriggerBot has counted this for a while and, like
+        # `dealt`, no course ever printed it -- so the theory written at the swing site (this
+        # course puts a BOW in slot 0, WeaponSelector rechecks only every 20 ticks, and every
+        # respawn starts holding it, so part of each life is fought with a 1-damage weapon)
+        # has never actually been read. chargeMean is here as the CONTROL: it came back 1.000,
+        # which is what killed the undercharged-swing theory, and it must stay there -- if it
+        # drifts, the damage figure above has a second cause and neither can be quoted alone.
+        yield Criterion("weapon in hand at the swing (recorded, not gated)", True,
+                        f"weaponMean={_stat(ctx, 'weaponMean')} noWeapon={_stat(ctx, 'noWeapon')}"
+                        f" chargeMean={_stat(ctx, 'chargeMean')}"
+                        f" | victim weaponMean={_stat(ctx, 'weaponMean', ctx.victim)}"
+                        f"   [iron_sword scores 6; a bow is about 1]", gate=False)
+        yield Criterion("swings ISSUED (recorded, not gated)", True,
+                        f"issued={ctx.landed_swings()} critCond={ctx.crit_swings()}"
                         f"   [issued counts attacks SENT, not hits -- see comment]", gate=False)
         # WHERE THE PUNK TASK SPENDS ITS TICKS. This course drives with `punk`, which is
         # tungsten's PunkPlayerTask — NOT MobDefenseChain and NOT AbstractKillEntityTask.
