@@ -831,7 +831,21 @@ public class TungstenConfig {
      * good trees and felling none.
      *
      * <p>GATE: the playthrough. Regression watch: chop_tree and chop_canopy, the courses that
-     * blacklisting hurt last time, plus mine_coal and mine_diamond. Proof it ran: dbApproachStalled.
+     * blacklisting hurt last time, plus mine_coal -- ALL PASS with this on.
+     *
+     * <p>⛔ MEASURED AND REFUTED. Twelve playthrough runs, interleaved, pins verified:
+     * <pre>
+     *   ON    4/6 PASS   mean rungs 1.8   fired in 5 of 6 runs
+     *   OFF   4/6 PASS   mean rungs 1.7   fired in 0 of 6 runs
+     * </pre>
+     * The condition is live -- it fires in five runs out of six and never once in the control, so
+     * the arms genuinely differ -- and the outcome does not move. The defect it names is real
+     * (dbTick=5791 with dbNearTick=0 and dbUnreachMove=0: thousands of ticks, never within four
+     * blocks, never called stuck) and fixing it changes nothing about how far the run gets.
+     *
+     * <p>Stays OFF. The mechanism and its refutation both belong here, because 'moving is not
+     * approaching' is measured in two places now and remains worth knowing even though acting on
+     * it here buys nothing.
      */
     public boolean breakNeedsApproach = false;
 
