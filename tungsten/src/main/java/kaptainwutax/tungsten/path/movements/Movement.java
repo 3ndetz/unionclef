@@ -171,6 +171,11 @@ public abstract class Movement {
 
     private MovementState currentState = new MovementState().setStatus(MovementStatus.PREPPING);
 
+    /** Read-only view of the status, for the queue's stuck-scene recorder. Same package only. */
+    MovementStatus statusForDiagnostics() {
+        return currentState.getStatus();
+    }
+
     protected final BetterBlockPos src;
 
     protected final BetterBlockPos dest;

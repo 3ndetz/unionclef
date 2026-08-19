@@ -206,8 +206,25 @@ public final class MovementQueue {
             // pressed. That is the artefact, not the finding. The keys are latched AFTER
             // update() instead, so what is reported is the state the body actually ticked with.
             String keys = lastTickKeys;
+            // ⛔ AND WHICH MOVEMENT, IN WHICH STATE. The corrected key sample still reads fwd:n --
+            // taken AFTER movement.update() this time, so the keys really are not pressed. Movement
+            // .tick only applies inputs when the status is NOT complete, so a movement that reports
+            // SUCCESS or FAILED and is not retired by the queue would press nothing and hold the
+            // body exactly like this. Naming the class and the status separates that from a
+            // movement that is running and simply declines to press.
+            String who = "-";
+            try {
+                Movement m = index < movements.size() ? movements.get(index) : null;
+                if (m != null) {
+                    String cn = m.getClass().getSimpleName();
+                    who = cn.replace("Movement", "") + "/" + m.statusForDiagnostics()
+                            + "/idx" + index + "of" + movements.size();
+                }
+            } catch (Exception ignored) {
+                // an instrument never breaks the tick it rides on
+            }
             stuckScenes.addLast("on:" + name.apply(feet.down()) + " in:" + name.apply(feet)
-                    + " head:" + name.apply(feet.above()) + " go:" + dir + " " + keys);
+                    + " head:" + name.apply(feet.above()) + " go:" + dir + " " + keys + " " + who);
             while (stuckScenes.size() > 4) stuckScenes.removeFirst();
         } catch (Exception ignored) {
             // an instrument never breaks the tick it rides on
