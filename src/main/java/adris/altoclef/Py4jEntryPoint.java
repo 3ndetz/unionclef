@@ -2713,6 +2713,10 @@ public class Py4jEntryPoint {
         kaptainwutax.tungsten.combat.TriggerBot.gReachDistSum = 0;
         kaptainwutax.tungsten.combat.TriggerBot.gReachDistMax = 0;
         kaptainwutax.tungsten.combat.CombatController.resetAimCounters();
+        // The give-back counter must die with its run like every other. It did not, and the
+        // control arm of its own A/B printed bowGaveBack=9 with the flag OFF -- the seventh
+        // counter this session to outlive the thing it describes.
+        kaptainwutax.tungsten.task.BowShooter.aimReleasedTooClose = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qBurnedInPlace = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qTeleported = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qStuckNoMove = 0;
