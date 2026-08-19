@@ -126,8 +126,22 @@ combatMovementsEnabled=true, the victim gets a sword and combatReachControl=fals
     That retires the open question TriggerBot has carried since 2026-08-12.
 
 So the bot trades evenly and loses on the margin, and the one behaviour it does not perform is the
-one the winner performs constantly. Why DANGER_BATTLE never fires for it is the next question, and
-it is a narrow one.
+one the winner performs constantly.
+
+⛔⛔ AND THE OBVIOUS INFERENCE FROM THAT IS THE ONE TO DISTRUST -- from this file's own record.
+SafetySystem documents that the knockback estimate used to integrate THROUGH the floor, leaving the
+simulated body 2.33 blocks under the surface; on a thin platform that reads as open air and
+DANGER_BATTLE then engages every tick regardless of where the fighter stands. Its measured
+signature is exactly high danger dominating reposition -- "69/144/170/222/244, and 1984 in a long
+one, including runs measured ten blocks clear of any edge".
+
+So the victim's danger=24-48 may be that spurious pattern rather than a virtue, in which case the
+bot NOT repositioning is the correct behaviour and copying the victim would make things worse.
+Nothing in these numbers separates the two readings. The next pass must establish whether the
+victim's repositioning is EARNED -- e.g. by checking lastFallIfHit against the arena's actual
+geometry on a run -- BEFORE treating "reposition more" as the fix. Reading a counter's magnitude as
+a recommendation is the mistake this project has paid for repeatedly, and the entry above would be
+the next instance if it were acted on as written.
 
 <!-- G-1.905 -->
 ## ⛔ CAVEAT TO THE 44-vs-0 SPLIT BELOW: IT DID NOT REPRODUCE HOURS LATER (2026-08-19)
