@@ -106,8 +106,11 @@ public class SafetySystem {
      * the body at the same instant, plus how many fired with solid ground beneath.
      * Read as rpDanger=fired/predMean/trueMean/onFlat.
      */
-    public static volatile double rpDangerPredSum = 0, rpDangerTrueSum = 0;
+    public static volatile double rpDangerPredSum = 0, rpDangerTrueSum = 0, rpDangerFlySum = 0;
     public static volatile int rpDangerOnFlat = 0;
+
+    /** Knockback simulations stopped because the body landed back on the surface it left. */
+    public static volatile int kbLandedOnSurface = 0;
     /**
      * NARROW_BATTLE turned out to be a SYMPTOM: it is pinned for 200 frames whenever DANGER_IMMINENT
      * fires 3 times in a 120-frame window (:467, :479). Measured on allround: narrow=323 against
@@ -350,6 +353,17 @@ public class SafetySystem {
                             rpDangerPredSum += lastFallIfHit;
                             rpDangerTrueSum += trueDrop;
                             if (trueDrop < 1.0) rpDangerOnFlat++;
+                            // ⛔ HOW FAR DOES THE SIMULATED BODY FLY? pred reads 30.0 -- the scan
+                            // cap -- on every single firing while the ground under the fighter is
+                            // 1-2 blocks, so the landing point is somewhere the arena is not. The
+                            // horizontal velocity is set once and decayed by 0.91 a tick for
+                            // fifteen ticks, which sums to roughly 0.8/(1-0.91) = SIX TO NINE
+                            // BLOCKS of travel. Real knockback moves a body two to three. If the
+                            // estimate throws it seven blocks it leaves any platform from the
+                            // middle, and DANGER_BATTLE then fires wherever the fight stands.
+                            // This says whether that is what happens, instead of inferring it.
+                            rpDangerFlySum += Math.sqrt(
+                                    lastUsAfterKB.squaredDistanceTo(playerPosTick));
                         } catch (Exception ignored) {
                             // an instrument never breaks the combat tick
                         }
@@ -805,6 +819,7 @@ public class SafetySystem {
         double vz = victimVel.z * 0.5 + nz * kbStrength;
 
         double px = victimPos.x, py = victimPos.y, pz = victimPos.z;
+        final double startY = victimPos.y;
         for (int t = 0; t < KB_PREDICT_TICKS; t++) {
             px += vx; py += vy; pz += vz;
             // ⛔ THE BODY MUST LAND. Without this the integration falls through the floor for the
@@ -825,6 +840,30 @@ public class SafetySystem {
             // (deaths 16 -> 23 and 15 -> 19) and that result stands. Being knocked over a real
             // ledge still leaves the simulated body in open air with nothing beneath it, so the
             // stage still fires exactly there. What stops is the stage firing on solid ground.
+            // THE EXIT IS DEFEATED BY THE VERY CASE IT EXISTS FOR. "Stop once the body is within
+            // a block of the ground" asks fallHeight AT THE FLYING POINT; the instant that point
+            // clears a platform edge, fallHeight there is the scan maximum, the test can never be
+            // satisfied, and the body flies the full fifteen ticks.
+            //
+            // MEASURED on allround at every DANGER_BATTLE firing: pred 30.0 (the cap) against
+            // 1.0-1.5 blocks of real ground under the fighter, simulated body travelling 7.0-7.6
+            // blocks. Real knockback moves a player two to three. Horizontal velocity is set once
+            // and decayed by AIR friction 0.91 every tick, summing to about 0.8/(1-0.91) -- six to
+            // nine blocks. Predicted from that arithmetic BEFORE measuring; the measurement landed
+            // inside it.
+            //
+            // A body knocked along a surface LANDS when it returns to the height it left, provided
+            // there is still surface under it. That is a question about the COLUMN, and it stays
+            // true over a real ledge -- there the column is empty, the body keeps going, and the
+            // estimate reports the genuine fall. Not the caution removed (removing it measured
+            // harmful twice: deaths 16->23 and 15->19) -- the caution given a number it can act on.
+            if (kaptainwutax.tungsten.TungstenConfig.get().kbLandsOnSurface
+                    && vy < 0 && py <= startY && world != null
+                    && VoidDetector.fallHeight(new Vec3d(px, startY, pz), world) <= 1) {
+                py = startY;
+                kbLandedOnSurface++;
+                break;
+            }
             if (vy < 0 && world != null
                     && VoidDetector.fallHeight(new Vec3d(px, py, pz), world) <= 1) {
                 break;

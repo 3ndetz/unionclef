@@ -958,6 +958,37 @@ public class TungstenConfig {
     public boolean bowYieldsInsideMelee = false;
 
     /**
+     * A knockback simulation ends when the body lands back on the surface it left.
+     *
+     * <p>⛔ The existing exit asks {@code fallHeight} AT THE FLYING POINT: "stop once the body is
+     * within a block of the ground". The instant that point clears a platform edge, fallHeight
+     * there is the scan maximum, the test can never be satisfied, and the body flies the full
+     * fifteen ticks. The exit is defeated by exactly the case it exists for.
+     *
+     * <p>MEASURED on allround, every DANGER_BATTLE firing:
+     * <pre>
+     *   danger=32  pred 30.0  true 1.4  fly 7.2
+     *   danger=10  pred 30.0  true 1.0  fly 7.6
+     *   danger=42  pred 30.0  true 1.5  fly 7.0
+     * </pre>
+     * The prediction saturates at the 30-block scan cap while the ground under the fighter is one
+     * to one-and-a-half blocks, and the simulated body travels seven. Real knockback moves a player
+     * two to three. The horizontal velocity is set once and decayed by AIR friction 0.91 every
+     * tick, summing to roughly 0.8/(1-0.91) = six to nine blocks -- predicted from the arithmetic
+     * before the measurement, and the measurement landed inside it.
+     *
+     * <p>The fix asks about the COLUMN the body is over at the height it left. Over a real ledge
+     * that column is empty, the body keeps going, and the estimate reports the genuine fall -- so
+     * this is not the caution being removed (removing it measured harmful twice: deaths 16 to 23
+     * and 15 to 19). It is the caution being given a number it can act on.
+     *
+     * <p>GATE: edge_duel and narrow_bridge_duel -- the two courses fought over a real drop, where a
+     * wrongly-shortened estimate would cost lives -- then allround, which is the one it is for.
+     * Proof it ran: SafetySystem.kbLandedOnSurface, and danger's pred should stop reading 30.0.
+     */
+    public boolean kbLandsOnSurface = false;
+
+    /**
      * Count barren locks PER TARGET rather than as one streak on the last entity.
      *
      * <p>{@code tryPathToEntity} zeroes {@code barrenStreak} when the entity changes, which is
