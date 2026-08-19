@@ -108,6 +108,9 @@ public final class MovementQueue {
 
     /** Parkour edges DISPATCHED as a running jump. Read as the 4th of mq's parkour triple. */
     public static volatile int qParkour;
+
+    /** Edges DISPATCHED that admission would have refused. Any non-zero value is a contradiction. */
+    public static volatile int qAdmitMismatch;
     /** {@link #qRefused} split by cause: the route was shorter than two cells, or the vetting
      *  left nothing executable. Same reasoning as the split above — one number, two fixes. */
     public static volatile int qShort, qVetoed;
@@ -551,6 +554,16 @@ public final class MovementQueue {
             // bot was told to build a tower under itself while floating. Measured: 34 hand-backs
             // in one run, every one of them MovementPillar (-177,62,290)->(-177,63,290), with
             // rcon confirming the source is water and the destination is the air above it.
+            // ⛔ DOES DISPATCH AGREE WITH ADMISSION? A stuck scene names Diagonal/RUNNING/idx0of2
+            // -- a MovementDiagonal as the FIRST movement of a chain -- while queueDiagonals reads
+            // false on the live stand (checked, not assumed, along with queueWholeRoute=false, so
+            // no pinned experiment leaked into the baseline). Admission should have refused that
+            // edge and left the chain empty. Dispatch built it anyway, or admission accepted it by
+            // a clause that does not match what it advertises. Those are different bugs; count the
+            // disagreement instead of arguing from either side.
+            if (!wholeRoute && !isSupportedEdge(from, to)) {
+                qAdmitMismatch++;
+            }
             if (MovementHelperB.isLiquid(world, from) || MovementHelperB.isLiquid(world, to)) {
                 movements.add(new MovementSwim(from, to));
             } else if (isPillarEdge(from, to)) {
