@@ -147,9 +147,23 @@ DISAGREE, so neither settles it:
 
 Dividing by lives is itself a function of who dies faster, and the punk task's `called` plainly
 measures something different for the two sides -- 2774 against 785 in the same run. The available
-counters cannot answer it; what is needed is an explicit ALIVE-AND-FIGHTING tick count, and until
-that exists this lead must not be built on in either direction. Quoting either figure alone would
-support either conclusion, which is exactly why neither is quotable.
+counters cannot answer it; what is needed is an explicit ALIVE-AND-FIGHTING tick count.
+
+⭐⭐ BUILT, AND IT CLOSES THE LEAD. fightTicks counts ticks with a live target at the single entry
+every fight passes through, so contact fraction means the same thing for both fighters:
+
+    bot      contact 330 of 460 fight ticks = 72%
+    victim   contact 434 of 586             = 74%
+
+Identical. The raw 333-against-414 gap was only that the victim's fight RAN LONGER -- 586 ticks
+against 460 -- which is itself downstream of the bot dying more. So the contact lead is refuted,
+and with it the last "difference still standing" on this course.
+
+⛔ EIGHT CANDIDATES NOW ELIMINATED WITH NUMBERS on allround: aim, approach, the bow's camera, the
+bow's draw, reach control, standing still while drawing, the weapon in hand, and contact time. What
+is left is the damage race itself -- the bot lands MORE crits (40 against 28) and similar swings,
+and still dies 16-17 times against 11-12 kills. The next measurement is damage dealt against damage
+taken per life, not another behaviour.
 
 So what loses allround is still open, and it is NOT: the aim (angle refused 5 swings of 566), the
 approach (forward pressed on 64 of 77 ready-far ticks), the bow's camera, the bow's draw, reach
