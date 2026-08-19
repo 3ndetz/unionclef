@@ -92,6 +92,30 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.914 -->
+## ⛔ THE CHEAP PROXY DOES NOT WORK: HALVING THE RUN LOSES THE SIGNAL (2026-08-19)
+
+The entry below says this flag needs n=20+ per arm "or a cheaper proxy than a nine-minute run".
+The obvious proxy -- halve the watch window -- was tried and refused by measurement.
+
+    standard runs (5 min)   closest approach 0.2 0.3 1.3 4.4 6.0 12.3   arrived(<2) 3/6
+    halved runs (2.5 min)   closest approach 1.6 3.6 4.3 4.7 4.9 5.3 6.3 6.7   arrived(<2) 1/8
+
+The short runs collapse toward one side: the distribution stops being "some runs arrive, some
+never do" and becomes "almost nothing has arrived YET". That is a different quantity -- it measures
+how far the bot has got by 2.5 minutes, not whether it can get there at all -- so a flag judged on
+it would be judged on run-up speed rather than on capability.
+
+And the saving is smaller than it looks: eight 2.5-minute runs took 25.8 minutes wall clock against
+roughly 50 for eight full ones, because connect, reset and teardown dominate a short run. Half the
+cost for a metric that no longer answers the question is not a trade worth making.
+
+⭐ WHAT WOULD ACTUALLY BE CHEAPER, recorded for the next attempt rather than tried blind: cut the
+PER-RUN OVERHEAD, not the watch window. A sweep pays connect + kill/respawn/heal + fresh-start
+search + teardown on every single run, and those are fixed costs that a shorter window cannot
+touch. Reusing one client session across several samples would cut more than halving the window
+does, and without changing what is being measured.
+
 <!-- G-1.915 -->
 ## ⛔ TWO SWEEPS OF THE SAME FLAG DISAGREE, AND THAT IS THE RESULT (queueParkour, 2026-08-19)
 
