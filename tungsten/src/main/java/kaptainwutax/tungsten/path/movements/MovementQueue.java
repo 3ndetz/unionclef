@@ -146,6 +146,55 @@ public final class MovementQueue {
      * slowest honest movement and far below the point where a run is lost.
      */
     private static final int MAX_TICKS_NOT_MOVING = 120;
+    /**
+     * WHAT IS THE BODY STANDING IN WHEN IT WILL NOT MOVE? The counter alone cannot say.
+     *
+     * <p>⛔ qNoMove is the sharpest split found on the playthrough: pooled over 124 runs, the ones
+     * that reach ZERO rungs read 44 of these and the ones that score read ZERO. Same start-site
+     * wood (133 vs 153 logs), same frame rate (28.0 vs 27.0), same code. The failing bot plans
+     * three times as often, advances a quarter as far per chain, never leaves a seven-block patch
+     * at ONE altitude, and finishes with an empty inventory.
+     *
+     * <p>Everything measured so far says the body is held; nothing says by WHAT. The keys are being
+     * pressed (mvSteered 90) and the driver knows it is stuck (pdStuck 17 against 1), so the next
+     * question is the scene at the moment the chain is dropped -- what is at the feet, what is in
+     * front, and which way the step wanted to go. Recorded as a small rolling note rather than a
+     * count, because the shape of the obstruction is the answer and a tally cannot carry it.
+     */
+    private static final java.util.Deque<String> stuckScenes = new java.util.ArrayDeque<>();
+
+    private static void recordStuckScene(BetterBlockPos feet) {
+        try {
+            var world = kaptainwutax.tungsten.TungstenModDataContainer.world;
+            if (world == null || feet == null) return;
+            java.util.function.Function<BlockPos, String> name = bp -> {
+                String id = net.minecraft.registry.Registries.BLOCK
+                        .getId(world.getBlockState(bp).getBlock()).getPath();
+                return id.length() > 14 ? id.substring(0, 14) : id;
+            };
+            BlockPos want = index < movements.size() && movements.get(index) != null
+                    ? movements.get(index).dest : null;
+            String dir = "-";
+            if (want != null) {
+                int dx = want.getX() - feet.getX(), dz = want.getZ() - feet.getZ();
+                int dy = want.getY() - feet.getY();
+                dir = (dx != 0 ? (dx > 0 ? "E" : "W") : "") + (dz != 0 ? (dz > 0 ? "S" : "N") : "")
+                        + (dy != 0 ? (dy > 0 ? "+" : "-") : "=");
+                if (dir.isEmpty()) dir = "same";
+            }
+            stuckScenes.addLast("on:" + name.apply(feet.down()) + " in:" + name.apply(feet)
+                    + " head:" + name.apply(feet.above()) + " go:" + dir);
+            while (stuckScenes.size() > 4) stuckScenes.removeFirst();
+        } catch (Exception ignored) {
+            // an instrument never breaks the tick it rides on
+        }
+    }
+
+    /** The last four stuck scenes, or "-" if the body has never refused to move. */
+    public static String stuckScenes() {
+        return stuckScenes.isEmpty() ? "-" : String.join(";", stuckScenes);
+    }
+
     /** Chains abandoned because the body was MOVED rather than walked. Read as qTeleport. */
     public static volatile int qTeleported;
     /**
@@ -709,6 +758,7 @@ public final class MovementQueue {
                             + ticksNotMoving + " ticks while steering — dropping the chain"
                             + " (step " + index + "/" + movements.size() + ")");
                     qStuckNoMove++;
+                    recordStuckScene(feet);
                     ticksNotMoving = 0;
                     lastTickFeet = feet;
                     stop();
