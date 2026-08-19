@@ -63,6 +63,23 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     /** Three times MovementProgressChecker's own distance window (6 s), in millis. */
     private static final long APPROACH_STALL_MS = 18_000L;
 
+    /**
+     * CLOSEST the bot ever got to the block it is destroying, in TENTHS of a block.
+     *
+     * <p>⛔ THE ONE NUMBER THAT SPLITS TWO OPPOSITE FIXES, and it was not being recorded. Of the
+     * eighteen playthrough runs that reached ZERO rungs today, FIFTEEN ended sitting on
+     * {@code Destroy block} -- at full health (median min hp 20.0, one run of eighteen below 10) --
+     * so the run dies on its first tree with nothing else wrong. What is not known is whether the
+     * bot NEVER ARRIVES or arrives and CANNOT MINE, and those want opposite work.
+     *
+     * <p>The existing distance counters cannot answer it: dbUnreachNear/Far/DistSum only write when
+     * MovementProgressChecker declares a stall, and it never does (dbUnreachMove=0 across the
+     * captures), so they read zero on exactly the runs worth reading.
+     *
+     * <p>Unconditional, one number, cheapest possible: the minimum of _bestDistSq per run.
+     */
+    public static volatile int dbBestDistTenths = Integer.MAX_VALUE;
+
     /** Times a block was given up on for NO APPROACH while the body kept moving. */
     public static volatile int dbApproachStalled;
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
@@ -363,6 +380,10 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         long nowMs = System.currentTimeMillis();
         if (_lastApproachMs == 0) {
             _lastApproachMs = nowMs;
+        }
+        int tenths = (int) Math.round(Math.sqrt(distSqNow) * 10.0);
+        if (tenths < dbBestDistTenths) {
+            dbBestDistTenths = tenths;
         }
         if (distSqNow < _bestDistSq - 0.5) {
             _bestDistSq = distSqNow;
