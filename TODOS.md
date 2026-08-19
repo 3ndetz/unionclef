@@ -92,6 +92,30 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.905 -->
+## ⛔ CAVEAT TO THE 44-vs-0 SPLIT BELOW: IT DID NOT REPRODUCE HOURS LATER (2026-08-19)
+
+The entry below is the strongest finding of the session -- qNoMove reading 44 on zero-rung runs and
+0 on scoring ones, pooled over 124 runs. A later batch of eight runs on the same bench reads:
+
+    qNoMove = 0 on EVERY run, in both arms, INCLUDING the ones that failed
+
+So the signature is not a standing property of a failing run. Either it is world- or seed-dependent
+(gamer_smoke advances a spiral start point every run, so a batch samples a different neighbourhood),
+or something shipped between the two batches changed it. Which of those is NOT established.
+
+⛔ WHAT THIS MEANS FOR ANYONE READING THE ENTRY BELOW: the 124-run split was real for that pooled
+set and the reasoning from it is sound, but "a failing run reads qNoMove=44" must not be quoted as
+a fact about failing runs in general. Re-measure it before building on it.
+
+⭐ AND THE FLAG BUILT FOR IT IS UNTESTED, NOT REFUTED. prepFailsWhenBlind A/B, eight runs:
+    ON  1/4 PASS   gaveUp = 0 0 0 0
+    OFF 3/4 PASS   gaveUp = 0 0 0 0
+The escape never fired once, so the arms were identical code and 1/4 against 3/4 is noise. The dead
+branch it fixes is still provably dead -- somethingInTheWay is set and both paths return false, so
+the UNREACHABLE after the loop cannot be reached -- and the fix is still correct in principle. It
+simply has no evidence behind it yet, and it stays OFF until its own trigger is observed firing.
+
 <!-- G-1.91 -->
 ## ⭐⭐⭐ THE ZERO-RUNG RUNS ARE A BODY THAT WILL NOT LEAVE ITS CELL (n=124, 2026-08-19)
 
