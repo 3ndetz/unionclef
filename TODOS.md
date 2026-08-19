@@ -92,6 +92,33 @@ PASS (флаг может только РАСШИРИТЬ прощаемое, п
 ⛔ Не сделано сейчас только потому, что стенд занят финальным аудитом; курс нав-овый, а нав на этом
 хосте судится нормально — то есть, в отличие от боевых пунктов, ЭТОТ измерим.
 
+<!-- G-1.92 -->
+## ⭐⭐⭐ A GATE THAT SEPARATES 6/6: HOW CLOSE THE BOT GETS TO THE BLOCK IT WANTS
+
+Six playthrough runs on the shipped default, closest approach to the block DestroyBlockTask is
+working on, against the verdict:
+
+    PASS  5 rungs   1.3 blocks        FAIL  0 rungs   12.3 blocks
+    PASS  5 rungs   0.3 blocks        FAIL  0 rungs    6.0 blocks
+    PASS  3 rungs   0.2 blocks        FAIL  0 rungs    4.4 blocks
+
+No overlap. Every passing run arrives inside 1.3 blocks; no failing run ever gets inside 4.4 --
+i.e. never inside the 4.5 reach, for the whole run. The zero-rung failure is "never arrives",
+full stop. It is NOT "arrives and cannot mine", which is what the blocked-ray counters
+(rayOther in the thousands) had suggested and which would have wanted the opposite fix.
+
+⭐⭐ AND THIS IS THE MEASUREMENT PROBLEM SOLVED, WHICH MATTERS MORE THAN THE FINDING. The entry
+above records that six flags were A/B'd at n=6 and none separated, because rungs-reached is a
+coarse count on a population whose spread swamps any effect. dbBestDist is CONTINUOUS, it is
+recorded every run, and it separates cleanly at n=6. Future playthrough work is judged against
+this rather than against the ladder: it answers in six runs what the rung count could not answer
+in sixty-four.
+
+⛔ WHAT IS NOT YET KNOWN: why the approach never happens on those runs. All the pathing flags
+tried today (fall guard, parkour, approach-stall) were judged on rungs and read as noise; several
+of them should now be RE-JUDGED against dbBestDist before being written off, because an effect
+that moves 12.3 blocks to 6.0 is real progress and would have been invisible in a rung count.
+
 <!-- G-1.93 -->
 ## ⭐⭐⭐ SIXTY-FOUR PLAYTHROUGH RUNS, SIX FLAGS, AND NOT ONE MOVED IT (2026-08-19)
 
