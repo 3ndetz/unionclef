@@ -2225,7 +2225,7 @@ public class Py4jEntryPoint {
         return String.format("total=%d click=%d cd=%d reach=%d ready=%d/%d/%d/%d held=%d/%d/%d wait=%d/%d angle=%d los=%d passed=%d"
                         + " | chargeMean=%.3f critWindowSwings=%d crits=%d weaponMean=%.2f noWeapon=%d deferred=%d"
                         + " | angleMean=%.1f angleMax=%.1f (thr 40) reachMean=%.2f reachMax=%.2f (thr 3.0)"
-                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d escape=%d imm=%d forced=%d timer=%d) path=%d none=%d bowYield=%d bowGaveBack=%d",
+                        + " | aim: enemy=%d brake=%d reposition=%d(narrow=%d danger=%d(pred%.1f/true%.1f/flat%d) escape=%d imm=%d forced=%d timer=%d) path=%d none=%d bowYield=%d bowGaveBack=%d",
                 kaptainwutax.tungsten.combat.TriggerBot.gTotal,
                 kaptainwutax.tungsten.combat.TriggerBot.gClick,
                 kaptainwutax.tungsten.combat.TriggerBot.gCooldown,
@@ -2257,6 +2257,13 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.combat.CombatController.aimReposition,
                 kaptainwutax.tungsten.combat.SafetySystem.rpNarrow,
                 kaptainwutax.tungsten.combat.SafetySystem.rpDanger,
+                kaptainwutax.tungsten.combat.SafetySystem.rpDanger == 0 ? 0.0
+                        : kaptainwutax.tungsten.combat.SafetySystem.rpDangerPredSum
+                                / kaptainwutax.tungsten.combat.SafetySystem.rpDanger,
+                kaptainwutax.tungsten.combat.SafetySystem.rpDanger == 0 ? 0.0
+                        : kaptainwutax.tungsten.combat.SafetySystem.rpDangerTrueSum
+                                / kaptainwutax.tungsten.combat.SafetySystem.rpDanger,
+                kaptainwutax.tungsten.combat.SafetySystem.rpDangerOnFlat,
                 kaptainwutax.tungsten.combat.SafetySystem.rpEscape,
                 kaptainwutax.tungsten.combat.SafetySystem.rpImminent,
                 kaptainwutax.tungsten.combat.SafetySystem.rpForcedNarrow,
@@ -2382,6 +2389,9 @@ public class Py4jEntryPoint {
         // tonight. These land here the same day they are born.
         kaptainwutax.tungsten.combat.SafetySystem.rpNarrow = 0;
         kaptainwutax.tungsten.combat.SafetySystem.rpDanger = 0;
+        kaptainwutax.tungsten.combat.SafetySystem.rpDangerPredSum = 0;
+        kaptainwutax.tungsten.combat.SafetySystem.rpDangerTrueSum = 0;
+        kaptainwutax.tungsten.combat.SafetySystem.rpDangerOnFlat = 0;
         kaptainwutax.tungsten.combat.SafetySystem.rpEscape = 0;
         kaptainwutax.tungsten.combat.SafetySystem.rpImminent = 0;
         kaptainwutax.tungsten.combat.SafetySystem.rpForcedNarrow = 0;

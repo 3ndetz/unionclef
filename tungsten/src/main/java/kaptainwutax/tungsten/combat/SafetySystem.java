@@ -100,6 +100,14 @@ public class SafetySystem {
      * result settled nothing either way. Count them apart and the branch becomes measurable.
      */
     public static volatile int rpNarrow = 0, rpDanger = 0, rpEscape = 0;
+
+    /**
+     * Is a DANGER_BATTLE reposition EARNED? Predicted knockback drop against the real drop under
+     * the body at the same instant, plus how many fired with solid ground beneath.
+     * Read as rpDanger=fired/predMean/trueMean/onFlat.
+     */
+    public static volatile double rpDangerPredSum = 0, rpDangerTrueSum = 0;
+    public static volatile int rpDangerOnFlat = 0;
     /**
      * NARROW_BATTLE turned out to be a SYMPTOM: it is pinned for 200 frames whenever DANGER_IMMINENT
      * fires 3 times in a 120-frame window (:467, :479). Measured on allround: narrow=323 against
@@ -322,6 +330,29 @@ public class SafetySystem {
                     if (kbDanger.isSerious() && retreat.size() >= 2) {
                         repositioning = true;
                         rpDanger++;
+                        // ⛔ IS THIS DANGER EARNED, OR IS IT THE ESTIMATE FALLING THROUGH THE FLOOR?
+                        //
+                        // The note further down this file records that the knockback integration
+                        // used to end 2.33 blocks BELOW the surface, which on a thin platform reads
+                        // as open air and engages this stage every tick wherever the fighter
+                        // stands -- measured signature: danger dominating reposition at
+                        // 69/144/170/222/244, once 1984, including runs ten blocks clear of an edge.
+                        //
+                        // On allround the VICTIM books 24-48 of these a fight and the bot almost
+                        // none, and the tempting reading is that the bot should copy it. That is
+                        // only true if the danger is real. So record both numbers at the moment it
+                        // fires: what the estimate PREDICTS, and what is ACTUALLY under the body.
+                        // Predicted large with the true drop at zero is a spurious stage, and then
+                        // the bot not repositioning is the correct behaviour, not the defect.
+                        try {
+                            double trueDrop = kaptainwutax.tungsten.combat.VoidDetector.fallHeight(
+                                    playerPosTick, player.getEntityWorld());
+                            rpDangerPredSum += lastFallIfHit;
+                            rpDangerTrueSum += trueDrop;
+                            if (trueDrop < 1.0) rpDangerOnFlat++;
+                        } catch (Exception ignored) {
+                            // an instrument never breaks the combat tick
+                        }
                         net.minecraft.util.math.BlockPos waypoint = retreat.get(Math.min(2, retreat.size() - 1));
                         Vec3d wpPos = Vec3d.ofBottomCenter(waypoint);
                         brakeYaw = AttackTiming.yawTo(playerPosTick, wpPos);
