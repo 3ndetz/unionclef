@@ -898,6 +898,32 @@ public class TungstenConfig {
     public int navQueueMinSteps = 1;
 
     /**
+     * A stall checker may only be reset by the body MOVING, not by Nav claiming to be pathing.
+     *
+     * <p>⛔ THE SAME LINE APPEARS IN TWO TASKS AND DISARMS BOTH OF THEM:
+     * <pre>
+     *   if (Nav.isPathing()) progressChecker.reset();
+     * </pre>
+     * A stall is precisely the state where Nav believes it is pathing and the body does not move,
+     * so the condition that defines the failure is also the condition that wipes its detector
+     * every tick. Neither task can ever declare itself stuck, so neither ever hands control back.
+     *
+     * <p>Measured on the playthrough, both classes of stall this produces:
+     * <pre>
+     *   TimeoutWanderTask   wander=4406 wanderMoved=1063 wanderFail=0
+     *                       4406 ticks -- 220 seconds -- to travel 10.6 blocks, and never once
+     *                       called itself stuck. A healthy run reads wander=56 for 7.7 blocks,
+     *                       so this is about 57x slower with the same code.
+     *   DestroyBlockTask    dbTick=7568 dbUnreachMove=0 dbApproachStall=0 dbNear=0 dbFar=0
+     *                       7568 ticks, every instrumented branch zero.
+     * </pre>
+     *
+     * <p>With this on, the reset needs the body to have moved within {@link #STALL_MOVE_GRACE}
+     * ticks. Nav may still say what it likes; the odometer decides.
+     */
+    public boolean stallCheckNeedsMovement = false;
+
+    /**
      * Trigger the wounded disengage on LOSING THE EXCHANGE instead of on hp &lt;= LOW_HP.
      *
      * <p>The guards stay exactly as measured -- out past reach only, and only with something to

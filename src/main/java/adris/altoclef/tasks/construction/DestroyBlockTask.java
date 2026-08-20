@@ -32,6 +32,16 @@ import java.util.Optional;
 public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
 
     /** Ticks, and each way this task gives up on its block; read over py4j in placeStats(). */
+    /** Ticks the body has not moved; the odometer that replaces "Nav says it is pathing". */
+    private int _ticksSinceMoved = 0;
+    private net.minecraft.util.math.Vec3d _lastMoveTickPos = null;
+
+    /** How long the body may be still before a pathing claim stops counting as progress. */
+    private static final int STALL_MOVE_GRACE = 40;
+
+    /** Resets REFUSED because the body had not moved; reads 0 with the flag off. */
+    public static volatile int dbResetDenied;
+
     public static volatile int dbTick, dbUnreachMove, dbUnreachWater, dbUnreachPillager,
             dbUnreachNear, dbUnreachFar, dbUnreachDistSum,
             dbNearTick, dbNearNoReach, dbNearAirborne, dbNearHungry, dbNearUnsafe, dbTargetAir, dbLeafCleared;
@@ -347,9 +357,27 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             }
         }
 
-        // Reset the move checker if Baritone is currently pathing
+        // ⛔ PATHING IS NOT PROGRESS -- the same line disarms TimeoutWanderTask, and for the same
+        // reason: a stall IS the state where Nav claims to be pathing while the body stands still,
+        // so this reset wipes the detector exactly when it is needed. dbTick=7568 with
+        // dbUnreachMove=0 and every other branch at zero is what it looks like from outside.
+        if (mod.getPlayer() != null) {
+            if (_lastMoveTickPos != null
+                    && mod.getPlayer().getPos().squaredDistanceTo(_lastMoveTickPos) > 0.0004) {
+                _ticksSinceMoved = 0;
+                _lastMoveTickPos = mod.getPlayer().getPos();
+            } else {
+                _ticksSinceMoved++;
+                if (_lastMoveTickPos == null) _lastMoveTickPos = mod.getPlayer().getPos();
+            }
+        }
         if (Nav.isPathing()) {
-            _moveChecker.reset();
+            if (!kaptainwutax.tungsten.TungstenConfig.get().stallCheckNeedsMovement
+                    || _ticksSinceMoved < STALL_MOVE_GRACE) {
+                _moveChecker.reset();
+            } else {
+                dbResetDenied++;
+            }
         }
 
         // Check if the player is in a Nether portal

@@ -185,8 +185,27 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
             lastTickPos = self.getPos();
         }
 
+        // ⛔ PATHING IS NOT PROGRESS. See TungstenConfig.stallCheckNeedsMovement: a stall IS the
+        // state where Nav says it is pathing and the body does not move, so resetting on that
+        // condition wipes the detector exactly when it is needed. wanderFail=0 across 4406 ticks
+        // that covered 10.6 blocks is what that looks like from the outside.
+        if (self != null) {
+            if (_lastMoveTickPos != null
+                    && self.getPos().squaredDistanceTo(_lastMoveTickPos) > 0.0004) {
+                _ticksSinceMoved = 0;
+                _lastMoveTickPos = self.getPos();
+            } else {
+                _ticksSinceMoved++;
+                if (_lastMoveTickPos == null) _lastMoveTickPos = self.getPos();
+            }
+        }
         if (Nav.isPathing()) {
-            progressChecker.reset();
+            if (!kaptainwutax.tungsten.TungstenConfig.get().stallCheckNeedsMovement
+                    || _ticksSinceMoved < STALL_MOVE_GRACE) {
+                progressChecker.reset();
+            } else {
+                wanderResetDenied++;
+            }
         }
         if (WorldHelper.isInNetherPortal()) {
             if (!Nav.isPathing()) {
@@ -294,6 +313,16 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
 
     /** Ticks this task spent running. Read as wander. */
     public static volatile int wanderTicks;
+
+    /** Ticks the body has not moved; the odometer that replaces "Nav says it is pathing". */
+    private int _ticksSinceMoved = 0;
+    private net.minecraft.util.math.Vec3d _lastMoveTickPos = null;
+
+    /** How long the body may be still before a pathing claim stops counting as progress. */
+    private static final int STALL_MOVE_GRACE = 40;
+
+    /** Resets REFUSED because the body had not moved; reads 0 with the flag off. */
+    public static volatile int wanderResetDenied;
 
     /**
      * What the give-up machinery actually saw. Read as wanderChk=ok/trip and wanderFail=peak.
