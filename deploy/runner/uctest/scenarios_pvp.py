@@ -1035,7 +1035,38 @@ class AllRound(Scenario):
     bot_kit = ["item replace entity {name} hotbar.0 with bow",
                "item replace entity {name} hotbar.1 with iron_sword",
                "give {name} arrow 64"]
-    victim_kit = KIT_SWORD
+    # ⛔ THE KIT IS THE COURSE'S OWN ASYMMETRY, AND IT IS TESTABLE. The bot carries a bow in
+    # hotbar 0 and a sword in hotbar 1; the victim gets an iron_sword welded into weapon.mainhand
+    # and never touches an inventory. Both fighters run the SAME engine, so every symmetric
+    # improvement cancels here -- six A/Bs in a row measured neutral for that reason, and the
+    # shipped sprint reset, worth +1.0 kills a run when one side had it, moves this margin by
+    # nothing now that both do. --swap-alt then showed the handicap travels with the ROLE and not
+    # with the container, so it is the kit and the driver or it is nothing.
+    #
+    # ⭐ MEASURED, AND IT WAS THE WHOLE DEFICIT. Six interleaved runs:
+    #
+    #     victim gets a sword welded into mainhand   margin -5, -8, -5   deaths 19.67   gate 0/3
+    #     victim gets the BOT'S OWN kit              margin +2, -4, +1   deaths 15.00   gate 2/3
+    #
+    # +5.67 margin at t=2.69 and deaths down 4.7 at t=-3.88, both over the 2-sigma bar this repo
+    # uses. The gate needs zero and the handicap was six, so this was not one contributor among
+    # many -- it was the course.
+    #
+    # THE VICTIM WAS NEVER A BASELINE, IT WAS A BETTER-EQUIPPED OPPONENT. `KIT_SWORD` writes an
+    # iron_sword straight into weapon.mainhand, so it starts armed, never selects a slot and
+    # never pays a switch. The bot starts on hotbar 0 holding a bow and pays for every switch --
+    # in swings resolved by a server that is a packet behind, measured earlier as ~20 hits a run
+    # landing 1.0 instead of 6.0.
+    #
+    # So the default is now the MIRROR: same kit, both sides. The course still benches exactly
+    # what its docstring claims, because only the BOT is driven through the ranged phase --
+    # punk never shoots, so the victim carrying a bow it does not use is precisely the baseline
+    # this course wanted, minus a free weapon-handling advantage nobody intended to grant.
+    # --scn-alt legacy_victim_kit=1 restores the old asymmetry for comparison.
+    @property
+    def victim_kit(self):
+        import uctest.scenario as _s
+        return KIT_SWORD if _s.SCENARIO_GEO.get("legacy_victim_kit") else self.bot_kit
 
     # ⛔ SUPERSEDED — AT PLAYABLE FRAME RATES THESE DEATHS ARE LOST FIGHTS, NOT VOID FALLS.
     # Re-measured from the server log on the 29 fps jar: tester1 slain 25 / fell out of the world 4,
