@@ -36,6 +36,19 @@ SAMPLE = re.compile(r"t=(\d+)s .*?pos=(-?[\d.]+),(-?[\d.]+),(-?[\d.]+)")
 GROUND = re.compile(r"pair ground (?:saved|REUSED): ([-0-9 ]+)")
 
 
+def sampled_span(body):
+    """Seconds between the first and last position sample.
+
+    ⛔ WITHOUT THIS, STALL SECONDS MEASURE RUN LENGTH. A run that ends early has less time in
+    which to stall, so a change that shortens runs would read as a change that removes stalls --
+    and one pair showed exactly the shape that raises the question: 334s of stall in the control
+    against 0 in the fix arm, on the same ground, with the mechanism counter at 0 in both.
+    Report the span beside the stall so the two can never be confused, and compare the SHARE.
+    """
+    ts = [int(m.group(1)) for m in re.finditer(r"t=(\d+)s .*?pos=", body)]
+    return (ts[-1] - ts[0]) if len(ts) > 1 else 0
+
+
 def stall_seconds(body):
     """Seconds across all episodes where the sampled position did not change."""
     prev, streak, total = None, [], 0
@@ -92,22 +105,30 @@ def main():
             got = re.findall(rf"{re.escape(args.counter)}=(\d+)", body)
             mech = got[-1] if got else "?"
         pairs.setdefault(grounds[-1].strip(), {})[arm] = (
-            len(re.findall(r"RUNG '", body)), stall_seconds(body), mech, int(parts[i]))
+            len(re.findall(r"RUNG '", body)), stall_seconds(body), mech, int(parts[i]),
+            sampled_span(body))
 
-    rung_d, stall_d, dirty = [], [], []
-    print(f"{'ground':<17} {'rungs fix/ctrl':>15} {'stall fix/ctrl':>16}   mech")
+    rung_d, stall_d, share_d, dirty, short = [], [], [], [], []
+    print(f"{'ground':<17} {'rungs':>11} {'stall/span fix':>16} {'ctrl':>14}   mech")
     for ground, arms in pairs.items():
         if "A" not in arms or "B" not in arms:
             continue
         b, a = arms["B"], arms["A"]
         rung_d.append(b[0] - a[0])
         stall_d.append(b[1] - a[1])
+        bs = (100.0 * b[1] / b[4]) if b[4] else 0.0
+        as_ = (100.0 * a[1] / a[4]) if a[4] else 0.0
+        share_d.append(bs - as_)
         if args.counter and a[2] not in ("0", "-", "?"):
             dirty.append((ground, a[2]))
-        print(f"{ground:<17} {b[0]:>7} /{a[0]:<6} {b[1]:>8}s /{a[1]:<6}s   {b[2]}/{a[2]}")
+        if b[4] and a[4] and abs(b[4] - a[4]) > 0.25 * max(b[4], a[4]):
+            short.append((ground, b[4], a[4]))
+        print(f"{ground:<17} {b[0]:>4} /{a[0]:<4} {b[1]:>6}s/{b[4]:<4}s ({bs:3.0f}%) "
+              f"{a[1]:>5}s/{a[4]:<4}s ({as_:3.0f}%)   {b[2]}/{a[2]}")
 
     for label, deltas, unit, better in (("rungs", rung_d, "", "higher"),
-                                        ("stall time", stall_d, "s", "lower")):
+                                        ("stall time", stall_d, "s", "lower"),
+                                        ("stall share", share_d, "%", "lower")):
         s = stats(deltas)
         if not s:
             continue
@@ -121,6 +142,12 @@ def main():
         elif abs(t) < 2:
             print("            NOT ESTABLISHED at the 2-sigma bar this repo uses.")
 
+    if short:
+        print("")
+        print("ARMS DID NOT RUN FOR COMPARABLE LENGTHS -- absolute stall seconds are not")
+        print("   comparable here; read the SHARE column instead:")
+        for ground, bspan, aspan in short:
+            print(f"   {ground}: fix {bspan}s vs ctrl {aspan}s of sampled time")
     if dirty:
         print("\n⛔ CONTROL ARM IS NOT CLEAN -- the mechanism counter should read 0 there:")
         for ground, val in dirty:
