@@ -123,6 +123,9 @@ public class CombatController {
      *  number rather than an impression. */
     public static volatile int lowHpTicks;
 
+    /** Ticks a bow-carrying wounded bot held its ground instead of kiting; 0 with the flag off. */
+    public static volatile int lowHpHeldWithBow;
+
     /** Of those, the ones the LOSING trigger fired; reads 0 with the flag off. */
     public static volatile int lowHpByLosing;
     /**
@@ -798,7 +801,8 @@ public class CombatController {
                     ? kaptainwutax.tungsten.combat.DamageWatch.losingNow
                     : hp <= LOW_HP;
             if (wounded && dist > TriggerBot.REACH) {
-                if (!WeaponSelector.hasRangedOption(player)) {
+                if (!WeaponSelector.hasRangedOption(player)
+                        || kaptainwutax.tungsten.TungstenConfig.get().woundedHoldsInsteadOfKiting) {
                     // ⛔ THE OLD BRANCH DID TWO THINGS, AND ONLY ONE OF THEM WAS WRONG.
                     // Removing it whole cost edge_duel: n=8 on a healthy stand came back
                     // +1,-1,+1,-3,-4,+1,-2,-5 -- median -1.5, 3 passes in 8 -- on a course that
@@ -816,6 +820,11 @@ public class CombatController {
                     // return, because that return also skips the circle-strafe, the crit hop and
                     // the trigger -- and melee_basic's gain rests on those still running.
                     lowHpDeclined++;          // the ticks this predicate gave back to the fight
+                    if (kaptainwutax.tungsten.TungstenConfig.get().woundedHoldsInsteadOfKiting
+                            && WeaponSelector.hasRangedOption(player)) {
+                        // ticks the HOLD took from a bot that DID have a bow -- 0 with the flag off
+                        lowHpHeldWithBow++;
+                    }
                 } else {
                     lowHpTicks++;
                     if (kaptainwutax.tungsten.TungstenConfig.get().disengageOnLosingExchange) {

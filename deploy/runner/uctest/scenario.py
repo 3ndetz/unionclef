@@ -6,6 +6,10 @@ import time
 from .arena import FLOOR_Y
 
 
+# Values injected by run_suite --scn-alt, copied into every ctx.geo at construction.
+SCENARIO_GEO = {}
+
+
 class Criterion:
     """One check in a verdict.
 
@@ -39,7 +43,10 @@ class Ctx:
 
     def __init__(self, bot, victim, rcon, art, log=print):
         self.bot, self.victim, self.rcon, self.art, self.log = bot, victim, rcon, art, log
-        self.geo = {}
+        # Seeded from SCENARIO_GEO so an interleaved arm can alternate the SCENARIO's strategy
+        # (see run_suite --scn-alt), not just the mod's settings. A driver is a thing under test
+        # on the pvp courses, and there was no way to A/B one before this.
+        self.geo = dict(SCENARIO_GEO)
         self.samples = []
         self.freeze_windows = 0
         self.standstill_windows = 0

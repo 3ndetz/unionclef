@@ -67,6 +67,8 @@ def _hit_shape(ctx):
                          f" stray={_stat(ctx, 'stray')}"
                          f" heldSwing={_stat(ctx, 'heldSwing')}"
                          f" loseKite={_stat(ctx, 'loseKite')}"
+                         f" holdBow={_stat(ctx, 'holdBow')}"
+                         f" punkKept={_stat(ctx, 'punkKept')}"
                          f"   [slotSync MUST read 0 in the control arm]", gate=False))
     held = ctx.geo.get("server_held")
     if held is not None:
@@ -1197,6 +1199,15 @@ class AllRound(Scenario):
         if not ctx.geo.get("punk_running"):
             ctx.geo["punk_running"] = True
             ctx.bot.py.call("punk", ctx.victim.name)
+        # ⛔ AND THE KNOB HAS TO SIT HERE, NOT BELOW THE SWITCH. The first attempt put it after
+        # selectHotbar(0), so arm B still CARRIED the bow and only stopped shooting -- it tested
+        # the arrows, which an older control had already cleared, and came back neutral again
+        # (-7.33 against -7.0). What is actually asymmetric on this course is the HAND: the
+        # opponent's kit puts an iron_sword straight into weapon.mainhand and it never leaves,
+        # while the bot's sits in hotbar 1 under a bow that the drive keeps selecting. rcon says
+        # the server sees that bow on 2-4 of every 7 samples.
+        if ctx.geo.get("no_ranged"):
+            return
         if ctx.geo["melee_started"]:
             # Back to range — a respawn puts the fighters apart again, and the course is meant
             # to measure the bow phase every round, not only the first one.
@@ -1220,6 +1231,15 @@ class AllRound(Scenario):
             # the primitives refused to support until today, which is the point of the toolkit.
             ctx.geo["melee_started"] = False
             ctx.bot.py.call("selectHotbar", 0)
+        # ⛔ THE ONE ASYMMETRY LEFT, AND IT IS A THIRD OF THE FIGHT. rcon says the SERVER has a
+        # bow in the bot's hand on 2-4 of every 7 samples taken during a run, while the opponent
+        # carries a sword the whole time. Everything the MOD does symmetrically cancels here --
+        # the opponent runs the same engine, which is why four combat-policy A/Bs in a row came
+        # back neutral -- so the strategy is the only thing that can move this course.
+        #
+        # An older control raised the melee threshold and read "no change", but it ran in the
+        # early-stop regime where a run lasted ~20s and margins were -2 rather than -5, and it
+        # ran as BLOCKED arms. --scn-alt exists so this can be interleaved properly.
         if t - ctx.geo["last_shot"] >= 2.5:
             ctx.geo["last_shot"] = t
             ctx.bot.py.try_call("shootArrowAt", ctx.victim.name)

@@ -877,6 +877,36 @@ public class TungstenConfig {
     public boolean disengageOnLosingExchange = false;
 
     /**
+     * A wounded bot HOLDS instead of kiting, even when it has a bow.
+     *
+     * <p>The branch already takes this path for sword-only kits, and its comment calls that half
+     * sound: "hold, do not withdraw" -- stop walking into a fight you are losing, but do not step
+     * out to a range where you deal nothing. What it never asked is whether OWNING a bow is
+     * enough to make stepping out worth it.
+     *
+     * <p>On allround the answer looks like no, and the evidence is the opponent. It is the same
+     * engine with a sword-only kit, so this branch declines for it (lowHp 0/0 against the bot's
+     * 83-90 ticks) -- the ONLY fighter that kites is the one that loses, and the one forced to
+     * fight wins. Separately, deleting the bow economy entirely was measured to change nothing on
+     * this course, so the range the kite retreats to is not paying for itself.
+     *
+     * <p>An old control refuted this by removing the ARROWS, which also removes the bow's value
+     * and everything else it does; and it ran in the early-stop regime where margins were -2
+     * rather than -5. This isolates the kite alone, at full duration.
+     */
+    public boolean woundedHoldsInsteadOfKiting = false;
+
+    /**
+     * Re-issuing punk on the target we are already fighting carries on instead of restarting.
+     *
+     * <p>See PunkPlayerTask.start: a restart calls stop(), zeroes the counters and returns the
+     * mode to APPROACH, so a driver that re-issues on every melee entry throws the fight away and
+     * walks back in a dozen times a run. Keeping the fight is what the opponent gets for free by
+     * being given punk exactly once.
+     */
+    public boolean punkRestartKeepsFight = false;
+
+    /**
      * A drop within three blocks does not pay the anti-ping-pong tax when competing with an ore.
      *
      * <p>MineOrCollectTask.getClosestTo compares `dropSq <= blockSq` with +10 already added to the

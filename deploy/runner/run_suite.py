@@ -128,6 +128,7 @@ def _jar_fingerprint():
     return (os.path.basename(p), f"{st.st_size}B@{int(st.st_mtime)}")
 
 
+import uctest.scenario                             # noqa: E402
 from uctest.actors import Bot                       # noqa: E402
 from uctest.arena import ArenaBuilder, STAND_Y      # noqa: E402
 from uctest.harness import Artifacts, Rcon, wait_for  # noqa: E402
@@ -609,6 +610,12 @@ _LOCK = os.path.join(tempfile.gettempdir(), "uctest_suite.lock")
 
 ALT_BASELINES = {}
 
+# Interleaved arms for the SCENARIO's own strategy, not the mod's settings. allround's driver is
+# the thing under test on that course -- it is the agent-style composition -- and until this
+# existed there was no way to alternate it, so the one measurement that mattered (does the ranged
+# phase pay for itself?) could only be run as blocked arms, which rule 4r forbids.
+SCN_ALT = {}
+
 
 def _alt_baseline(name, value):
     """The other side of an alternating pin.
@@ -678,6 +685,10 @@ def _main():
                          "mob_skeleton, the same flag gave -0.60, +1.92 and -0.31 arrows across "
                          "three blocked pairs (checklist rule 4r). Interleaving puts any drift on "
                          "both arms equally.")
+    ap.add_argument("--scn-alt", action="append", default=[], metavar="NAME=VALUE",
+                    help="INTERLEAVED A/B on the SCENARIO's own strategy: sets ctx.geo[NAME] to "
+                         "VALUE on every second run and to None on the others. For benching a "
+                         "driver rather than a mod setting.")
     ap.add_argument("--pin-base", action="append", default=[], metavar="NAME=VALUE",
                     help="the arm-A value for a non-boolean --pin-alt, e.g. --pin-alt "
                          "holdSwingTicksAfterSwitch=3 --pin-base holdSwingTicksAfterSwitch=0")
@@ -698,6 +709,12 @@ def _main():
             ap.error(f"--pin expects NAME=VALUE, got {spec!r}")
         k, v = spec.split("=", 1)
         EXTRA_PINS[k.strip()] = v.strip()
+    global SCN_ALT
+    for spec in args.scn_alt:
+        if "=" not in spec:
+            ap.error(f"--scn-alt expects NAME=VALUE, got {spec!r}")
+        k, v = spec.split("=", 1)
+        SCN_ALT[k.strip()] = v.strip()
     global ALT_BASELINES
     for spec in args.pin_base:
         if "=" not in spec:
@@ -843,7 +860,14 @@ def _main():
         for rep in range(args.repeat):
             # INTERLEAVED ARMS (rule 4r): odd runs carry the alternate pins, even runs do not, so
             # session drift lands on both arms equally instead of on whichever ran second.
-            arm = "B" if (ALT_PINS and rep % 2 == 1) else "A"
+            # SCN_ALT alternates too, or a --scn-alt-only series runs six arm-A runs and
+            # reports them as an A/B. Cost that mistake three runs before it showed.
+            arm = "B" if ((ALT_PINS or SCN_ALT) and rep % 2 == 1) else "A"
+            if SCN_ALT:
+                for k, v in SCN_ALT.items():
+                    uctest.scenario.SCENARIO_GEO[k] = v if arm == "B" else None
+                print(f"  ARM {arm} (scenario): "
+                      + " ".join(f"{k}={uctest.scenario.SCENARIO_GEO[k]}" for k in SCN_ALT))
             if ALT_PINS:
                 for k, v in ALT_PINS.items():
                     EXTRA_PINS[k] = v if arm == "B" else _alt_baseline(k, v)

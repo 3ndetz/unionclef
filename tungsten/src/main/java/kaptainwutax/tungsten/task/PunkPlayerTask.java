@@ -66,6 +66,7 @@ public class PunkPlayerTask {
      */
     public static void resetCounters() {
         pCalled = pInactive = pNoTarget = pLastKnown = pArmedEarly = 0;
+        pRestartKept = 0;
         kaptainwutax.tungsten.task.BlockPathWalker.tickOff = 0;
         kaptainwutax.tungsten.task.BlockPathWalker.tickBfs = 0;
         kaptainwutax.tungsten.task.BlockPathWalker.tickDir = 0;
@@ -74,7 +75,29 @@ public class PunkPlayerTask {
         FollowEntityTask.tickCalled = FollowEntityTask.tickInactive = FollowEntityTask.tickActive = 0;
     }
 
+    /** Re-issues of punk that were answered by keeping the fight running; 0 with the flag off. */
+    public static volatile int pRestartKept = 0;
+
+    /**
+     * Start punking, or -- if we are already punking exactly this target -- carry on.
+     *
+     * <p>⛔ WHY THE EARLY RETURN EXISTS. start() calls stop(), zeroes the counters and puts the
+     * mode back to APPROACH, so re-issuing punk on a target we are already fighting throws away
+     * the combat state and re-enters the approach mid-trade. A driver that re-issues on every
+     * melee entry therefore pays that a dozen times a fight.
+     *
+     * <p>That is the last ASYMMETRY left on allround, and it matters because everything the mod
+     * does symmetrically cancels there: the opponent runs this same engine, so a change that
+     * helps both fighters cannot move the margin. Three combat-policy changes measured neutral
+     * for exactly that reason. The opponent is given punk ONCE and keeps it for the whole run;
+     * the bot's driver re-issues it on every melee entry.
+     */
     public static void start(String name) {
+        if (kaptainwutax.tungsten.TungstenConfig.get().punkRestartKeepsFight
+                && active && !anyMode && name != null && name.equals(targetName)) {
+            pRestartKept++;
+            return;
+        }
         stop();
         RunAwayTask.stop();   // can't hunt and flee at once
         targetName = name;
