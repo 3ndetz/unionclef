@@ -24,6 +24,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     /** Entry and early-exit tallies for the tungsten branch; read over py4j in placeStats(). */
     public static volatile int pdEnter, pdNotPrimary, pdPillar, pdBridge, pdStuckGiveUp,
             pdWalking, pdNear, pdNoGoal, pdFinished, pdNoVec, pdStallWalker, pdStallReset, pdNearBusy, pdNearFind, pdPlanning, pdPlanGiveUp;
+
+    /** Routes handed back to the walker because the queue could only admit a stub; 0 at minSteps=1. */
+    public static volatile int pdQueueTooShort;
     /** When the "no route" line last printed; the state repeats every tick otherwise. */
     private long twLastNoRouteLogMs = 0L;
     /** When the near-goal branch last issued a search; see the rate gate at its site. */
@@ -711,8 +714,19 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     boolean queuedRoute = false;
                     if (kaptainwutax.tungsten.TungstenConfig.get().navUsesQueue
                             && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
-                        queuedRoute = kaptainwutax.tungsten.path.movements.MovementQueue
-                                .start(bfs, true) > 0;
+                        int admitted = kaptainwutax.tungsten.path.movements.MovementQueue
+                                .start(bfs, true);
+                        // A ROUTE THE QUEUE CAN BARELY START IS A ROUTE IT SHOULD NOT KEEP.
+                        // See TungstenConfig.navQueueMinSteps: accepting a prefix of two steps out
+                        // of ten denies the whole route to the walker, which sprint-jumps and could
+                        // have crossed the edge that stopped the queue.
+                        int minSteps = kaptainwutax.tungsten.TungstenConfig.get().navQueueMinSteps;
+                        if (admitted > 0 && admitted < minSteps) {
+                            kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+                            pdQueueTooShort++;
+                            admitted = 0;
+                        }
+                        queuedRoute = admitted > 0;
                     }
                     if (!queuedRoute
                             && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {

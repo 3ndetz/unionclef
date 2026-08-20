@@ -854,6 +854,29 @@ public class TungstenConfig {
     public boolean equipMeleeOnApproach = false;
 
     /**
+     * Fewest steps the movement queue must be able to admit before it is allowed to KEEP a route.
+     *
+     * <p>1 preserves today's behaviour: the queue takes anything it can start.
+     *
+     * <p>⛔ WHY THAT IS WRONG, MEASURED. navUsesQueue gives the queue first refusal on every route,
+     * and the queue accepts a route it can only PARTLY execute -- it runs the prefix it has
+     * movements for and hands the rest back. The documented stall is exactly that: 28 starts, 25
+     * steps, 27 of the 28 chains truncated at an edge with no movement class. About one step per
+     * plan, and the route is replanned identically next tick.
+     *
+     * <p>The walker never sees those routes. It only gets one whose FIRST edge is unclassifiable,
+     * because anything else the queue keeps. So a route that is walkable end-to-end by a thing
+     * that sprint-jumps is handed instead to a thing that will stop at edge three -- and the
+     * sprint-jump is precisely what clears the gap that stopped it.
+     *
+     * <p>Set above 1 and a route the queue can barely start is DECLINED whole, so BlockPathWalker
+     * gets it. That is the alternative to teaching the queue parkour (queueParkour), not a
+     * duplicate of it: one adds a capability, this one routes around the missing capability. Both
+     * target the same wall and they should be measured against each other.
+     */
+    public int navQueueMinSteps = 1;
+
+    /**
      * Trigger the wounded disengage on LOSING THE EXCHANGE instead of on hp &lt;= LOW_HP.
      *
      * <p>The guards stay exactly as measured -- out past reach only, and only with something to
