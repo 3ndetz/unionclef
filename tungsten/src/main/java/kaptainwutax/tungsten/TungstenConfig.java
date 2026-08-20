@@ -759,8 +759,26 @@ public class TungstenConfig {
      *
      * <p>This is what human pvp calls a sprint reset, and the honest cost is that the tick loses
      * its sprint knockback. Which of those is worth more is exactly what the A/B is for.
+     *
+     * <p>⭐ SHIPPED ON. Twelve interleaved runs of allround, six an arm (rule 4r), read from the
+     * victim's OWN client:
+     *
+     * <pre>
+     *   crit-sized hits   off [2, 3, 3, 0, 0, 1]  mean 1.5   on [10, 5, 8, 10, 9, 5]  mean 7.8
+     *   kills             off [12,13,13,13,12,12] mean 12.5  on [13,13,14,14,14,13]   mean 13.5
+     *   margin            off -4.00 (sd 1.10)                on -2.83 (sd 1.17)
+     *   damage into them  off 267.7                          on 283.3
+     * </pre>
+     *
+     * <p>Kills carry it: +1.0 a run at t=3.16, over this repo's 2-sigma bar, and the two series
+     * touch only at 13. Margin (+1.17, t=1.78) and damage (+15.7, t=1.86) agree in direction and
+     * are NOT claimed -- deaths add variance the kill count does not have. Nothing measured
+     * negative on any metric, and total BLOWS are flat (38.0 against 37.3), which is the check
+     * that these are the same swings upgraded rather than a different fight.
+     *
+     * <p>The counter reads 0 in every control arm, so the flag is what did it.
      */
-    public boolean critReleasesSprint = false;
+    public boolean critReleasesSprint = true;
 
     /**
      * A drop within three blocks does not pay the anti-ping-pong tax when competing with an ore.
