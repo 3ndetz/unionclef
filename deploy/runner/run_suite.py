@@ -685,6 +685,10 @@ def _main():
                          "mob_skeleton, the same flag gave -0.60, +1.92 and -0.31 arrows across "
                          "three blocked pairs (checklist rule 4r). Interleaving puts any drift on "
                          "both arms equally.")
+    ap.add_argument("--swap-alt", action="store_true",
+                    help="INTERLEAVED role swap: on every second run the victim container plays "
+                         "the bot and vice versa. Tells a code asymmetry from a stand asymmetry "
+                         "on the mirror courses.")
     ap.add_argument("--scn-alt", action="append", default=[], metavar="NAME=VALUE",
                     help="INTERLEAVED A/B on the SCENARIO's own strategy: sets ctx.geo[NAME] to "
                          "VALUE on every second run and to None on the others. For benching a "
@@ -862,7 +866,18 @@ def _main():
             # session drift lands on both arms equally instead of on whichever ran second.
             # SCN_ALT alternates too, or a --scn-alt-only series runs six arm-A runs and
             # reports them as an A/B. Cost that mistake three runs before it showed.
-            arm = "B" if ((ALT_PINS or SCN_ALT) and rep % 2 == 1) else "A"
+            arm = "B" if ((ALT_PINS or SCN_ALT or args.swap_alt) and rep % 2 == 1) else "A"
+            # ⛔ SWAP THE ROLES, because the last unexamined asymmetry on a mirror course is the
+            # STAND. tester1 and tester2 are two containers on one host; if they are not equal in
+            # frame rate or input latency, the same engine loses to itself and every A/B on that
+            # course comes back neutral -- which is exactly what six of them did. If the margin
+            # follows the CONTAINER rather than the role, the course is measuring the machine.
+            bot_a, vic_a = state["bot"], state["victim"]
+            if args.swap_alt and arm == "B":
+                bot_a, vic_a = vic_a, bot_a
+                print(f"  ARM B (roles): bot={bot_a.name} victim={vic_a.name}")
+            elif args.swap_alt:
+                print(f"  ARM A (roles): bot={bot_a.name} victim={vic_a.name}")
             if SCN_ALT:
                 for k, v in SCN_ALT.items():
                     uctest.scenario.SCENARIO_GEO[k] = v if arm == "B" else None
@@ -878,7 +893,7 @@ def _main():
             if jar_now != jar0:
                 print(f"  [!] the build output changed under this series: {jar0} -> {jar_now}. "
                       f"Runs from here are NOT the same code as the ones before it")
-            res = run_scenario(cls, state["rcons"], state["bot"], state["victim"],
+            res = run_scenario(cls, state["rcons"], bot_a, vic_a,
                                art_root, args.record)
             if jar_now != jar0:
                 res["jar_changed"] = f"{jar0[0]} -> {jar_now[0]}"
