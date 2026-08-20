@@ -176,6 +176,50 @@ public final class DamageWatch {
      * refutations above were all answers to the wrong question.
      */
     public static volatile int takeTiny, takePartial, takeFlat, takeBig;
+
+    /**
+     * ⛔ STOP GUESSING WHAT HIT US -- VANILLA WILL SAY. getRecentDamageSource() carries the real
+     * DamageSource on the client that took the hit, so the size and the CAUSE can be read
+     * together. Four candidates for allround's exactly-1.0hp hits were built and refuted on
+     * inference alone (the bow in hand, the vanilla sweep, arrows, a stale hotbar slot); each
+     * cost a build and a batch, and one of them was answering a misread instrument. This field
+     * would have ended all four on the first run.
+     *
+     * <p>Kept as a compact tally of "cause x size" for the small hits only -- the big ones are
+     * not in question -- so it stays readable in a stats line.
+     */
+    private static final java.util.Map<String, Integer> smallHitCauses =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+
+    /**
+     * The PREVIOUS drop and how long ago, because that is what decides whether a small hit is a
+     * residual. Vanilla gives a hurt entity 20 ticks of regen-immunity in which a further blow
+     * lands only its EXCESS over the damage that started them; a 6.0 arriving 4 ticks after a
+     * 5.0 therefore shows up as 1.0. The sizes seen -- 1.0, 1.5, 0.5, 1.2, 1.1, 1.7 -- are a
+     * SPREAD, which no fixed-damage source produces, and a spread is exactly what a difference
+     * of two blows looks like. Pairing it with the gap is what turns that from a story into a
+     * measurement.
+     */
+    private static volatile int lastDropTenths = -1;
+    private static volatile long lastDropTick = -1;
+    private static volatile long tickNo = 0;
+
+    /** Causes of every sub-2hp hit we took this run, most common first. */
+    public static String smallHitCauses() {
+        synchronized (smallHitCauses) {
+            return smallHitCauses.entrySet().stream()
+                    .sorted((a, b) -> b.getValue() - a.getValue())
+                    .limit(6)
+                    .map(e -> e.getKey() + "x" + e.getValue())
+                    .reduce((a, b) -> a + " " + b).orElse("(none)");
+        }
+    }
+
+    public static void clearSmallHitCauses() {
+        synchronized (smallHitCauses) {
+            smallHitCauses.clear();
+        }
+    }
     public static volatile float worstFallHeight;
 
     private static void classifyDamage(ClientPlayerEntity player, float lost) {
@@ -199,6 +243,7 @@ public final class DamageWatch {
     }
 
     public static void tick(ClientPlayerEntity player) {
+        tickNo++;
         if (player == null) {
             lastHealth = -1f;
             return;
@@ -213,11 +258,31 @@ public final class DamageWatch {
             winHpLost += lastHealth - hp;
             damage += lastHealth - hp;
             classifyDamage(player, lastHealth - hp);
+            final int prevTenths = lastDropTenths;
+            final long prevTick = lastDropTick;
             int lostTenths = Math.round((lastHealth - hp) * 10.0f);
-            if (lostTenths < 20) takeTiny++;
+            if (lostTenths < 20) {
+                takeTiny++;
+                try {
+                    net.minecraft.entity.damage.DamageSource src = player.getRecentDamageSource();
+                    String who = src == null ? "unknown" : src.getName();
+                    net.minecraft.entity.Entity att = src == null ? null : src.getAttacker();
+                    String key = who + "@" + (lostTenths / 10.0f)
+                            + "/after" + (prevTenths < 0 ? "?" : String.valueOf(prevTenths / 10.0f))
+                            + "/gap" + (prevTick < 0 ? "?" : String.valueOf(tickNo - prevTick))
+                            + (att == null ? "" : "/" + att.getType().getUntranslatedName());
+                    synchronized (smallHitCauses) {
+                        smallHitCauses.merge(key, 1, Integer::sum);
+                    }
+                } catch (Exception ignored) {
+                    // naming the cause must never break the tick that counts it
+                }
+            }
             else if (lostTenths < 54) takePartial++;
             else if (lostTenths <= 66) takeFlat++;
             else takeBig++;
+            lastDropTenths = lostTenths;
+            lastDropTick = tickNo;
             double gap = nearestLivingGap(player);
             // ⛔ A HIT WITH NOBODY NEAR IT IS NOT A LONG-RANGE HIT, IT IS NON-COMBAT DAMAGE.
             // The gap is the distance to the closest OTHER living entity, so once the target is

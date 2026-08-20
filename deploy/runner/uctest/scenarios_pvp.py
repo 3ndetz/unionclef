@@ -44,7 +44,13 @@ def _hit_shape(ctx):
                          f" bot {_stat(ctx, 'takeSize')} | victim {_stat(ctx, 'takeSize', ctx.victim)}"
                          f" | slotSync={_stat(ctx, 'slotSync')}"
                          f" critReset={_stat(ctx, 'critReset')}"
+                         f" stray={_stat(ctx, 'stray')}"
                          f"   [slotSync MUST read 0 in the control arm]", gate=False))
+    okv, vc = ctx.victim.py.try_call("smallHitCauses") if ctx.victim else (False, None)
+    okb, bc = ctx.bot.py.try_call("smallHitCauses")
+    out.append(Criterion("what the SMALL hits actually were, named by vanilla", True,
+                         f"victim took: {vc if okv and vc else '(none)'}"
+                         f"  ||  bot took: {bc if okb and bc else '(none)'}", gate=False))
     ok, cs = ctx.bot.py.try_call("chipScenes")
     out.append(Criterion("what a 1hp hit actually was (recorded, not gated)", True,
                          f"{cs if ok and cs else '(none)'}"

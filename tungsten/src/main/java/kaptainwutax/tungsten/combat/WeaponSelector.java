@@ -165,6 +165,104 @@ public final class WeaponSelector {
      */
     public static void syncSlot(net.minecraft.client.network.ClientPlayerEntity player, int slot) {
         if (!kaptainwutax.tungsten.TungstenConfig.get().syncSlotToServer) return;
+        sendSlot(player, slot);
+    }
+
+    /**
+     * Ticks the ATTACK KEY was held while the crosshair sat on a living entity.
+     *
+     * <p>Movement presses that key to break blocks on the way. Vanilla answers a press by
+     * attacking whatever the crosshair is on, with whatever is in the hand and whatever the
+     * cooldown happens to be -- entirely outside TriggerBot, its weapon check and its gates. A
+     * press aimed at an entity cannot mine anything, so every one of these is either nothing or
+     * a stray weak hit.
+     *
+     * <p>This is the only candidate left for allround's ~19 hits a run of 0.4 to 1.5 hp from a
+     * PLAYER attack, and it also explains why the recorder said "iron_sword at the swing": that
+     * field is written by TriggerBot, so on an attack TriggerBot never made it holds the last
+     * value -- it was STALE, not wrong about a swing.
+     */
+    public static volatile int strayAttackTicks = 0;
+    public static volatile int strayAttackWithNonWeapon = 0;
+    // ⛔ REFUTED: reads 0/0. The attack key is never held while the crosshair is on a living
+    // entity, so there is no second attacker and this is the SIXTH candidate to die here.
+    //
+    // THE FULL LIST, so nobody pays for one of these twice. allround, ~19 hits a run of 0.4 to
+    // 1.5 hp, named `player` by vanilla's own DamageSource on the receiving client:
+    //   bow in hand        weaponMean is EXACTLY 75.00 over 68 swings; one bow swing would make
+    //                      it 73.9. Every swing TriggerBot sends carries the sword.
+    //   the vanilla sweep  1.0 is its damage, but it never touches the primary target.
+    //   arrows             removed from the kit, and fresh_reset runs `clear` first so the
+    //                      inventory really was empty of them. The hits persisted at 9.
+    //   stale hotbar slot  packet sent at the switch: neutral over six interleaved runs.
+    //   respawn desync     slot re-asserted on every new body (19-25 a run): chips 20.5 -> 19.0,
+    //                      inside the noise.
+    //   invulnerability    residuals land inside 10 ticks; these arrive 22-106 ticks after the
+    //                      previous drop, so they are isolated blows.
+    //   a second attacker  this counter.
+    //
+    // WHAT SURVIVES: the correlation is perfect and unexplained. Only the fighter with a BOW in
+    // its hotbar produces them -- melee_basic, one sword and no bow, reads 0 chips on both sides
+    // while allround reads ~19 on the bow side and 0 on the other. And 1.0/1.5 are exactly a
+    // 1-damage item and its crit.
+    //
+    // NEXT, AND IT NEEDS NO MOD CHANGE: ask the SERVER what the bot is holding. Every instrument
+    // so far reads the client, and the whole hypothesis is that the two disagree -- so the client
+    // cannot settle it, by construction. The bench has rcon:
+    //     /data get entity tester1 SelectedItem
+    // sampled through a fight and compared against the client's own view.
+
+    /** Watch for attack-key presses aimed at a living entity. Diagnostic only. */
+    public static void noticeStrayAttacks(net.minecraft.client.network.ClientPlayerEntity player) {
+        try {
+            net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+            if (player == null || !mc.options.attackKey.isPressed()) return;
+            if (!(mc.crosshairTarget instanceof net.minecraft.util.hit.EntityHitResult ehr)) return;
+            if (!(ehr.getEntity() instanceof net.minecraft.entity.LivingEntity)) return;
+            strayAttackTicks++;
+            if (meleeScore(player.getMainHandStack()) <= 1.0) strayAttackWithNonWeapon++;
+        } catch (Exception ignored) {
+            // a watcher never breaks the tick it rides on
+        }
+    }
+
+    /** Slots re-asserted to the server after a respawn; reads 0 with the flag off. */
+    public static volatile int slotReasserted = 0;
+
+    private static java.lang.ref.WeakReference<net.minecraft.client.network.ClientPlayerEntity>
+            lastBody = new java.lang.ref.WeakReference<>(null);
+
+    /**
+     * Tell the server what we hold again after a respawn, because nothing else will.
+     *
+     * <p>A respawn gives the server a fresh player and its own idea of the held slot, while the
+     * client keeps the slot it had. Neither side calls setSelectedSlot, so vanilla's sync -- which
+     * only fires when the CLIENT's slot changes -- never sends anything, and the two stay
+     * disagreed for as long as the client does not switch.
+     *
+     * <p>What that costs is measured, not assumed. On allround the victim's own client reports
+     * ~19 hits a run of exactly 1.0 and 1.5 hp from a PLAYER attack, arriving 30-106 ticks apart
+     * (so not residuals inside invulnerability), while the attacking client recorded an
+     * iron_sword in hand AT the swing. 1.0 and 1.5 are a bow used as a melee weapon and its crit
+     * -- and this course puts a bow in hotbar 0, which is exactly where a respawn lands.
+     *
+     * <p>An earlier control removed the ARROWS and the 1.0s survived, which was read as clearing
+     * the bow. It cleared nothing: a bow with no arrows is still a 1-damage club.
+     */
+    public static void reassertSlotAfterRespawn(net.minecraft.client.network.ClientPlayerEntity player) {
+        if (!kaptainwutax.tungsten.TungstenConfig.get().reassertSlotOnRespawn) return;
+        if (player == null) return;
+        if (lastBody.get() == player) return;
+        lastBody = new java.lang.ref.WeakReference<>(player);
+        try {
+            sendSlot(player, player.getInventory().getSelectedSlot());
+            slotReasserted++;
+        } catch (Exception ignored) {
+            // re-asserting must never be the thing that breaks a respawn
+        }
+    }
+
+    private static void sendSlot(net.minecraft.client.network.ClientPlayerEntity player, int slot) {
         try {
             if (player.networkHandler == null) return;
             player.networkHandler.sendPacket(

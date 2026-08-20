@@ -781,6 +781,15 @@ public class TungstenConfig {
     public boolean critReleasesSprint = true;
 
     /**
+     * Re-send the held slot after every respawn, so the server stops swinging our bow for us.
+     *
+     * <p>See WeaponSelector.reassertSlotAfterRespawn for the measurement this comes from: ~19
+     * hits a run landing 1.0 and 1.5 hp -- a bow and a bow crit -- while the attacking client
+     * had an iron_sword in hand at the swing.
+     */
+    public boolean reassertSlotOnRespawn = false;
+
+    /**
      * A drop within three blocks does not pay the anti-ping-pong tax when competing with an ore.
      *
      * <p>MineOrCollectTask.getClosestTo compares `dropSq <= blockSq` with +10 already added to the
