@@ -797,6 +797,25 @@ public class TungstenConfig {
      * 1.0 instead of 6.0. Sending the slot packet at the switch only wins the race more often;
      * waiting a tick removes it. The cost is at most two ticks of delay on the first blow after
      * a switch, against a blow worth a sixth of what it should be.
+     *
+     * <p>⛔ IT WORKS AND IT BUYS NOTHING, WHICH IS THE USEFUL RESULT. Six interleaved runs at 3
+     * ticks, from the victim's own client:
+     *
+     * <pre>
+     *              chips  partial   flat   crit  |  damage   kills   margin
+     *   hold 0      20.3      3.7   26.7    6.3  |   250.2   12.33    -7.67
+     *   hold 3       1.0     14.3   20.0    9.0  |   252.2   12.00   -10.00
+     * </pre>
+     *
+     * <p>The 1.0s are GONE, 20.3 to 1.0, so the diagnosis is proven: they were swings sent into
+     * the window where the server still held the bow. But the damage is identical -- 250.2
+     * against 252.2 -- because the withheld swings come back as PARTIALS (3.7 to 14.3) while flat
+     * blows fall (26.7 to 20.0). The 1.0 hits were never lost damage; they were swings the fight
+     * could not afford to place better, and delaying them costs exactly what they were worth.
+     *
+     * <p>So the fix is not a gate on the swing. It is to have the right weapon in hand BEFORE
+     * contact, so no swing is ever near a switch -- WeaponSelector's timing, not TriggerBot's.
+     * Default 0. Do not raise it expecting damage.
      */
     public int holdSwingTicksAfterSwitch = 0;
 

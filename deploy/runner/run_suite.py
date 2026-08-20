@@ -607,13 +607,24 @@ def run_scenario(cls, rcons, bot, victim, art_root, record=False):
 _LOCK = os.path.join(tempfile.gettempdir(), "uctest_suite.lock")
 
 
-def _alt_baseline(value):
-    """The other side of an alternating pin: booleans flip, anything else is left to the caller."""
+ALT_BASELINES = {}
+
+
+def _alt_baseline(name, value):
+    """The other side of an alternating pin.
+
+    Booleans flip on their own. Anything else needs its baseline named, via
+    `--pin-alt NAME=B --pin-base NAME=A` -- and until this took the baselines map, the error told
+    the caller to "pass the baseline explicitly" with no flag that could. That cost a six-run
+    batch: the suite refused after the containers had already been reset. An error that names a
+    capability has to be able to point at it."""
+    if name in ALT_BASELINES:
+        return ALT_BASELINES[name]
     low = str(value).strip().lower()
     if low in ("true", "false"):
         return "false" if low == "true" else "true"
-    raise SystemExit(f"--pin-alt only alternates booleans automatically; got {value!r}. "
-                     f"Pass the baseline explicitly if you need a non-boolean arm.")
+    raise SystemExit(f"--pin-alt alternates booleans on its own; {name}={value!r} is not one. "
+                     f"Give the other arm with --pin-base {name}=<baseline>.")
 
 
 def _take_lock():
@@ -667,6 +678,9 @@ def _main():
                          "mob_skeleton, the same flag gave -0.60, +1.92 and -0.31 arrows across "
                          "three blocked pairs (checklist rule 4r). Interleaving puts any drift on "
                          "both arms equally.")
+    ap.add_argument("--pin-base", action="append", default=[], metavar="NAME=VALUE",
+                    help="the arm-A value for a non-boolean --pin-alt, e.g. --pin-alt "
+                         "holdSwingTicksAfterSwitch=3 --pin-base holdSwingTicksAfterSwitch=0")
     ap.add_argument("--record", action="store_true",
                     help="record tester1's screen per scenario (x11grab)")
     ap.add_argument("--no-early-stop", action="store_true",
@@ -684,6 +698,12 @@ def _main():
             ap.error(f"--pin expects NAME=VALUE, got {spec!r}")
         k, v = spec.split("=", 1)
         EXTRA_PINS[k.strip()] = v.strip()
+    global ALT_BASELINES
+    for spec in args.pin_base:
+        if "=" not in spec:
+            ap.error(f"--pin-base expects NAME=VALUE, got {spec!r}")
+        k, v = spec.split("=", 1)
+        ALT_BASELINES[k.strip()] = v.strip()
     global ALT_PINS
     for spec in args.pin_alt:
         if "=" not in spec:
@@ -826,7 +846,7 @@ def _main():
             arm = "B" if (ALT_PINS and rep % 2 == 1) else "A"
             if ALT_PINS:
                 for k, v in ALT_PINS.items():
-                    EXTRA_PINS[k] = v if arm == "B" else _alt_baseline(v)
+                    EXTRA_PINS[k] = v if arm == "B" else _alt_baseline(k, v)
                 print(f"  ARM {arm}: " + " ".join(f"{k}={EXTRA_PINS[k]}" for k in ALT_PINS))
             # Checked BEFORE the run, not after a refresh, because a build can land at any point
             # and the next refresh is only the moment it reaches the clients.
