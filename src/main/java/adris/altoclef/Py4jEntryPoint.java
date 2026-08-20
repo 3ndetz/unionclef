@@ -2171,7 +2171,7 @@ public class Py4jEntryPoint {
         // edgeSneak/edgeAir separate the two ways a duel ends in the void: the guard firing on the
         // ground, versus being near the edge AIRBORNE where sneak holds nothing. allround dies to
         // `fell out of the world` thirteen times a run and this is how we tell which one it is.
-        return String.format("called=%d inactive=%d noTarget=%d voidHold=%d combat=%d approachRestart=%d"
+        return String.format("called=%d inactive=%d noTarget=%d voidHold=%d combat=%d approachRestart=%d armedEarly=%d"
                         + " edgeSneak=%d edgeAir=%d edgeSkipExec=%d",
                 kaptainwutax.tungsten.task.PunkPlayerTask.pCalled,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pInactive,
@@ -2179,6 +2179,7 @@ public class Py4jEntryPoint {
                 kaptainwutax.tungsten.task.PunkPlayerTask.pVoidHold,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pCombat,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pApproach,
+                kaptainwutax.tungsten.task.PunkPlayerTask.pArmedEarly,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeSneak,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeAir,
                 kaptainwutax.tungsten.task.PunkPlayerTask.pEdgeSkipExec);

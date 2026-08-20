@@ -820,6 +820,17 @@ public class TungstenConfig {
     public int holdSwingTicksAfterSwitch = 0;
 
     /**
+     * Equip the melee weapon while still APPROACHING, instead of on the tick contact begins.
+     *
+     * <p>The prediction that separates this from holdSwingTicksAfterSwitch, written before the
+     * runs: both should remove the 1.0 hits, but the hold does it by throwing swings away, so
+     * flat blows fell with it (26.7 to 20.0) and the damage did not move. Arming early throws
+     * nothing away, so flat blows should HOLD while the chips go -- and if they do not, the
+     * mechanism is not what either of us thinks.
+     */
+    public boolean equipMeleeOnApproach = false;
+
+    /**
      * A drop within three blocks does not pay the anti-ping-pong tax when competing with an ore.
      *
      * <p>MineOrCollectTask.getClosestTo compares `dropSq <= blockSq` with +10 already added to the

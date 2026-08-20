@@ -65,7 +65,7 @@ public class PunkPlayerTask {
      * the zero.
      */
     public static void resetCounters() {
-        pCalled = pInactive = pNoTarget = pLastKnown = 0;
+        pCalled = pInactive = pNoTarget = pLastKnown = pArmedEarly = 0;
         kaptainwutax.tungsten.task.BlockPathWalker.tickOff = 0;
         kaptainwutax.tungsten.task.BlockPathWalker.tickBfs = 0;
         kaptainwutax.tungsten.task.BlockPathWalker.tickDir = 0;
@@ -169,6 +169,12 @@ public class PunkPlayerTask {
     public static volatile int pEdgeSneak = 0, pEdgeAir = 0;
     /** Ticks the executor was driving — where the guard used to switch itself off entirely. */
     public static volatile int pEdgeSkipExec = 0;
+
+    /** Weapon switches made on the APPROACH rather than on contact; 0 with the flag off. */
+    public static volatile int pArmedEarly = 0;
+
+    /** Close enough that the fight is about to start, so the sword should already be out. */
+    private static final double APPROACH_ARM_RANGE_SQ = 8.0 * 8.0;
 
     public static void tick(WorldView world, ClientPlayerEntity player) {
         pCalled++;
@@ -392,6 +398,23 @@ public class PunkPlayerTask {
                     && CombatController.safety.getStage() != kaptainwutax.tungsten.combat.CombatStage.ESCAPE))) {
             // too far OR no hits for 5 sec → re-approach with A* pathfinding
             enterApproach();
+        }
+
+        // ⛔ DRAW THE SWORD ON THE WAY IN, NOT ON ARRIVAL. equipBestMelee is called only in
+        // COMBAT below -- the same tick the bot starts swinging -- so the switch and the first
+        // blow land together and the SERVER, which is a packet behind, resolves that blow with
+        // whatever it still holds. Measured over rcon during a fight: `data get entity <bot>
+        // SelectedItem` says BOW on 2-4 of every 7 samples, and a bow swung as a club deals
+        // exactly the 1.0 that ~20 hits a run land for.
+        //
+        // Gating the SWING on the switch (holdSwingTicksAfterSwitch) removes those 1.0s
+        // completely -- 20.3 to 1.0 -- and buys nothing: they come back as partials while flat
+        // blows fall, damage 250.2 against 252.2. Delay is not the answer; being armed before
+        // contact is, because then no swing is ever near a switch.
+        if (kaptainwutax.tungsten.TungstenConfig.get().equipMeleeOnApproach
+                && mode != Mode.COMBAT && targetEntity != null
+                && player.squaredDistanceTo(targetEntity) <= APPROACH_ARM_RANGE_SQ) {
+            if (kaptainwutax.tungsten.combat.WeaponSelector.equipBestMelee(player)) pArmedEarly++;
         }
 
         // ── execute ──────────────────────────────────────────────────────
