@@ -289,7 +289,25 @@ def main():
                 idx = int(RUN_INDEX_FILE.read_text(encoding="utf-8").strip())
             except ValueError:
                 idx = 0
-        RUN_INDEX_FILE.write_text(str(idx + 1), encoding="utf-8")
+        # AN A/B PAIR MUST SHARE ITS TERRAIN, OR THE ARMS ARE NOT COMPARABLE.
+        # Each run steps 300 blocks along a spiral, and this file already records that the ground
+        # decides the metric: "first log in 21 seconds on one patch, never on another, same build
+        # -- so the metric was reading the biome". Interleaving by run index then hands arm A every
+        # EVEN spiral point and arm B every ODD one: two disjoint fixed sets of terrain, which is
+        # the opposite of what rule 4r interleaving exists to do.
+        #
+        # Measured today, CONTROL ARM ALONE: rungs 4, 1, 4, 1 across its four runs. That is the
+        # spiral alternating good and bad patches, not the flag doing anything -- and it is very
+        # probably why two sweeps of queueParkour disagreed at n=6 and n=8 on this harness.
+        #
+        # With --pin-alt live the index now advances every SECOND run, so the pair (A, B) starts on
+        # the same ground and the comparison is paired instead of confounded.
+        _paired = any(a == "--pin-alt" for a in sys.argv)
+        _next = idx + 1 if (not _paired or (RUN_SEQ[0] % 2) == 1) else idx
+        RUN_INDEX_FILE.write_text(str(_next), encoding="utf-8")
+        if _paired:
+            print(f"  paired A/B start: spiral #{idx}"
+                  + ("  (held for the B arm)" if _next == idx else "  (advancing)"))
         # ⛔ THE SPIRAL MARCHES AWAY FROM THE BASE FOR EVER, AND NOBODY BOUNDED IT.
         #
         # The index is monotonic across every run ever taken and each step is 300 blocks, so it
