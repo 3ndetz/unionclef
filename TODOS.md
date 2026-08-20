@@ -1,7 +1,42 @@
 # TODOs
 
-<!-- PRIORITY -->
-## ⛔⛔⛔ ПРИОРИТЕТЫ (юзер 2026-08-20, прямое указание — ВЫШЕ ВСЕГО ОСТАЛЬНОГО В ФАЙЛЕ)
+<!-- P3-INVENTORY -->
+## ⭐⭐⭐ P3 ИЗМЕРЕН: ВЫПИЛ BARITONE — ЭТО 5 ФАЙЛОВ, И БЛОКЕР НЕ В КОДЕ (2026-08-20)
+
+Инвентаризация вместо оценки на глаз. Весь altoclef берёт из `baritone.*` (то есть из shredder,
+потому что `baritone/` не компилируется) ровно **11 импортов в 5 файлах**:
+
+    AltoClef.java              Baritone, BaritoneAPI, api.Settings, altoclef.AltoClefSettings
+    BotBehaviour.java          api.Settings, altoclef.AltoClefSettings, api.utils.RayTraceUtils
+    TabCompleter.java          TabCompleteHelper, TabCompleteEvent, AbstractGameEventListener
+    ClientTickMixin.java       BaritoneAPI, WorldEvent, EventState
+    CustomBaritoneGoalTask.java  api.pathing.goals.Goal
+
+И только ОДИН из пяти имеет отношение к поиску пути:
+
+  - `ClientTickMixin` только прокидывает WorldEvent в обработчик shredder, чтобы его кэш чанков
+    оставался живым. Умрёт вместе с shredder, замены не требует.
+  - `TabCompleter` — автодополнение команд. К пасфайндингу отношения ноль.
+  - `BotBehaviour` / `AltoClef` — настройки (`initializeBaritoneSettings`, синхронизация
+    `acceptableThrowawayItems`) плюс одна утилита `RayTraceUtils`. Плумбинг, не движок.
+  - `CustomBaritoneGoalTask` — единственный настоящий: держит ОБА типа цели, `Goal cachedGoal`
+    (baritone) и `AltoGoal cachedAlto` (tungsten). То есть tungsten-ветка там уже есть, а
+    baritone-ветка — легаси-половина двухпутевого класса.
+
+⭐ **ГЛАВНОЕ: SHREDDER УЖЕ НЕ ВЕДЁТ БОТА.** В этом же классе заведён счётчик `pdLegacy` —
+«тики, когда цель отдали ЛЕГАСИ-движку, потому что tungsten отказался». Во всех прогонах этого
+захода он читается **`pdLegacy=0`**: на аренах shredder не получает цель ни разу.
+
+⛔ **ПОЭТОМУ БЛОКЕР P3 — НЕ РЕФАКТОРИНГ, А P1/P2.** Удалить пять файлов недорого; опасно другое —
+удалить фоллбек, на который бот ляжет там, где tungsten откажется. Значит порядок такой:
+
+    1. подтвердить pdLegacy=0 на ПРОХОДЕ (реальный ландшафт), а не только на аренах.
+       Идёт бесплатно вместе со свипом queueParkour — счётчик уже печатается.
+    2. закрыть классы движений, из-за которых tungsten отказывается (P2, паркур первым).
+    3. только потом снимать shredder: сначала выключить фоллбек флагом и прогнать всё,
+       и лишь затем удалять код.
+
+<!-- PRIORITY -->## ⛔⛔⛔ ПРИОРИТЕТЫ (юзер 2026-08-20, прямое указание — ВЫШЕ ВСЕГО ОСТАЛЬНОГО В ФАЙЛЕ)
 
 **ГЛАВНАЯ И ПЕРВАЯ ЦЕЛЬ — ПРОХОД ИГРЫ НА TUNGSTEN С ПОЛНОСТЬЮ ВЫПИЛЕННЫМ BARITONE.**
 Всё остальное — производное. Дуэли/pvp НЕ приоритет и берутся только когда P1-P3 закрыты
