@@ -920,6 +920,33 @@ public class TungstenConfig {
      *
      * <p>With this on, the reset needs the body to have moved within {@link #STALL_MOVE_GRACE}
      * ticks. Nav may still say what it likes; the odometer decides.
+     *
+     * <p>FIRST PAIRED SERIES, six pairs, each arm on the same resolved ground:
+     *
+     * <pre>
+     *   ground           fix  ctrl  delta  wanderDenied (fix/ctrl)
+     *   592 150 -239      0    1     -1     56 / 0
+     *   292 150 -539      0    0     +0      0 / 0
+     *   292 150 -839      4    0     +4   3386 / 0
+     *   592 150 -839      3    0     +3    216 / 0
+     *   1192 150 -839     0    0     +0      0 / 0
+     *   1192 150 -539     0    3     -3      0 / 0
+     * </pre>
+     *
+     * <p>As-run: +0.50 over six pairs, sd 2.59, t=0.47. NOT established.
+     *
+     * <p>⛔ AND THE HONEST REFINEMENT, WITH ITS OWN CAVEAT. Three of those pairs have
+     * wanderDenied=0 in the FIX arm -- the branch never fired, so they cannot say anything about
+     * the flag, and that includes the -3. Restricted to the three pairs where it did fire the
+     * mean is +2.00 (-1, +4, +3). That is per-protocol reasoning and it is a real statistical
+     * risk: conditioning on anything after the fact can bias. It is defensible only because
+     * wanderDenied is a MECHANISM counter and not the outcome, and it is recorded next to the
+     * as-run number rather than instead of it.
+     *
+     * <p>Both readings sit on n=3-6 with a spread of 2.6. More pairs, then decide.
+     *
+     * <p>The two pairs it won are the interesting ones: the control scored ZERO on that ground
+     * and the fix scored 4 and 3.
      */
     public boolean stallCheckNeedsMovement = false;
 
