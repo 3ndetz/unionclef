@@ -33,6 +33,11 @@ def episodes(path):
     for line in open(path, encoding="utf-8", errors="replace"):
         m = RUN.search(line)
         if m:
+            # FLUSH BEFORE RESETTING. A stall that was still open when the run ended used to be
+            # dropped here, and that is the most interesting stall there is -- the one the run
+            # died on. Cost the corpus its first episode before it was noticed.
+            if len(streak) >= 2:
+                out.append((run, streak, last_task, prev))
             run = int(m.group(1))
             prev, streak = None, []
             continue
