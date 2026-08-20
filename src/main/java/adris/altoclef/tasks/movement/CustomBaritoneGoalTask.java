@@ -62,6 +62,24 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     // The walker can't parkour (gap jumps / wall climbs). When it stalls we hand the
     // segment to the physics executor (which can) for a window, then re-try the walker.
     private long twPreferExecutorUntilMs = 0L;
+
+    /**
+     * Until when the QUEUE is not to be offered a route, after it turned one down as too short.
+     *
+     * <p>⛔ WITHOUT THIS THE DECLINE IS WORSE THAN THE DISEASE, and it was measured that way on a
+     * live playthrough: pdEnter+448, mqStart+446, mqSteps+0 in twenty-two seconds. The queue was
+     * started EVERY TICK and took no step at all -- stopping it leaves isRunning() false, the
+     * walker starts, the walker stops itself the moment the executor runs, and the next tick
+     * offers the queue the same route again. 446 starts, zero steps, the body never moved: worse
+     * than the 28 starts and 25 steps the untouched code manages.
+     *
+     * <p>A decline has to buy the walker a WINDOW, not a tick. Same shape as
+     * twPreferExecutorUntilMs above, which exists for the mirror-image problem.
+     */
+    private long twPreferQueueAfterMs = 0L;
+
+    /** How long the walker owns the route after the queue turns it down. */
+    private static final long QUEUE_DECLINE_COOLDOWN_MS = 6000L;
     // Net-progress-toward-goal tracking, to give up on genuinely UNREACHABLE goals
     // (e.g. a tree top needing place/break we don't plan yet) instead of searching
     // forever. Keyed on distance to goal, not raw movement — a bot wandering in place
@@ -713,7 +731,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     // FollowEntityTask.
                     boolean queuedRoute = false;
                     if (kaptainwutax.tungsten.TungstenConfig.get().navUsesQueue
-                            && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
+                            && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()
+                            && nowMs >= twPreferQueueAfterMs) {
                         int admitted = kaptainwutax.tungsten.path.movements.MovementQueue
                                 .start(bfs, true);
                         // A ROUTE THE QUEUE CAN BARELY START IS A ROUTE IT SHOULD NOT KEEP.
@@ -724,6 +743,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                         if (admitted > 0 && admitted < minSteps) {
                             kaptainwutax.tungsten.path.movements.MovementQueue.stop();
                             pdQueueTooShort++;
+                            // Buy the walker a WINDOW: without it the queue is re-offered the
+                            // same route next tick and the two churn at 20 restarts a second.
+                            twPreferQueueAfterMs = nowMs + QUEUE_DECLINE_COOLDOWN_MS;
                             admitted = 0;
                         }
                         queuedRoute = admitted > 0;
@@ -766,7 +788,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     // FollowEntityTask.
                     boolean queuedRoute = false;
                     if (kaptainwutax.tungsten.TungstenConfig.get().navUsesQueue
-                            && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
+                            && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()
+                            && nowMs >= twPreferQueueAfterMs) {
                         queuedRoute = kaptainwutax.tungsten.path.movements.MovementQueue
                                 .start(wps, true) > 0;
                     }
