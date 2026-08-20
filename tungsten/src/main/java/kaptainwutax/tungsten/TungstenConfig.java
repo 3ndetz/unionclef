@@ -777,6 +777,17 @@ public class TungstenConfig {
      * that these are the same swings upgraded rather than a different fight.
      *
      * <p>The counter reads 0 in every control arm, so the flag is what did it.
+     *
+     * <p>⭐ AND IT SURVIVES THE COURSE THAT SHOULD HAVE PUNISHED IT. Dropping sprint costs sprint
+     * KNOCKBACK, and edge_duel is a 5x5 platform over void where knockback is how kills happen --
+     * so if this trade is ever wrong, it is wrong there. Six interleaved runs on edge_duel:
+     *
+     * <pre>
+     *   ON  (shipped)   margin -1, 0, +5    mean +1.33   gate 2/3   kills 9.67
+     *   OFF (control)   margin -4, +1, -2   mean -1.67   gate 1/3   kills 7.33
+     * </pre>
+     *
+     * <p>Better, not worse. The crit is worth more than the knockback it costs even there.
      */
     public boolean critReleasesSprint = true;
 
