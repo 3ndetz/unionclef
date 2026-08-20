@@ -347,6 +347,54 @@ leaves an artifacts directory containing one empty `timeline.jsonl`. That looks 
 course that crashed on entry, and it will be diagnosed as a bot bug. Symptom to recognise: the
 log stops right after the `--- <course> ---` banner and the process is already gone.
 
+## 4a. ⛔ ON THE PLAYTHROUGH, PAIR THE ARMS ON THE SAME GROUND (2026-08-20)
+
+`gamer_smoke` starts every run 300 blocks further along a square spiral, and the ground decides
+the metric -- its own comment records "first log in 21 seconds on one patch, never on another,
+same build". So interleaving arms by RUN INDEX gives arm A every even spiral point and arm B
+every odd one: two disjoint fixed sets of terrain, permanently, which is the opposite of what
+rule 4r interleaving is for.
+
+It is visible without any flag. One series' CONTROL ARM alone scored rungs **4, 1, 4, 1** with
+nothing alternating but the spiral. This is very probably why two sweeps of the same flag
+disagreed at n=6 and n=8, and it makes the conclusion drawn there ("eight per arm is not
+enough") wrong in its diagnosis: no amount of n fixes a design where the arms sample different
+populations.
+
+**Every `--pin-alt` result on the playthrough taken before 2026-08-20 is UNMEASURED, not
+refuted.** Re-measure the ones current work depends on.
+
+Fixed in the harness: with `--pin-alt` live the first arm of a pair saves its RESOLVED spawn and
+the second teleports to it. Holding the spiral index alone is not enough -- the treeless-start
+skip walks it forward by however much the ground requires, and the arms still landed five steps
+apart. Score with `deploy/runner/paired_ab.py`.
+
+⛔ **AND DO NOT "FIX" THE VARIANCE BY PINNING THE START.** It is the obvious next idea and the
+harness refutes it: the world is never wiped, the bot fells the trees around wherever it starts,
+and a fixed point gets harder every run -- 21.5s to first log on untouched ground against
+300-585 seconds, or never, at a spot the bot had been working all session. That decay was read
+as code regressions for hours. The spiral exists to prevent it.
+
+## 4a1. A PAIR WHERE THE MECHANISM NEVER FIRED MEASURED NOTHING (2026-08-20)
+
+Print a mechanism counter with every flag and check it in BOTH arms:
+
+- **control arm must read 0** -- otherwise the flag is not what differs (rule 4u);
+- **fix arm must read non-zero** -- otherwise that pair says nothing about the flag, however
+  large its outcome delta.
+
+Three of six pairs in one series had the counter at 0 in the FIX arm, including the pair whose
+-3 dragged the mean. Report those pairs, do not delete them, and say which reading is which:
+as-run over all pairs first, mechanism-fired second, with the caveat that conditioning after the
+fact can bias.
+
+## 4a2. FOR A STALL FIX, THE OUTCOME IS STALL TIME, NOT RUNGS (2026-08-20)
+
+Rungs are 0-5 with a pair spread near 3, so they cannot resolve anything smaller than a whole
+rung without dozens of pairs. Seconds the body spent not moving is continuous and is the
+quantity a stall fix actually changes. On identical runs it read t=-1.51 where rungs managed
++0.93. `paired_ab.py` reports both; quote the one that matches what the change does.
+
 ## 4b. MEASURE THE SPREAD BEFORE YOU COMPARE MEANS (2026-08-10)
 
 A metric you have not characterised cannot support a before/after claim, and most bench metrics
