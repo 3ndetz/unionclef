@@ -827,6 +827,18 @@ public class TungstenConfig {
      * flat blows fell with it (26.7 to 20.0) and the damage did not move. Arming early throws
      * nothing away, so flat blows should HOLD while the chips go -- and if they do not, the
      * mechanism is not what either of us thinks.
+     *
+     * <p>⛔ IT DOES NOT FIRE, SO THIS A/B MEASURED NOTHING AND ITS OUTCOME IS NOT QUOTED.
+     * armedEarly reads 2 and 0 across the ON arm. equipBestMelee returns false when the best
+     * weapon is already held, so a zero here says the bot was ALREADY holding the sword on the
+     * approach -- which makes the PREMISE of this flag wrong, not its implementation. (The
+     * counter counts SWITCHES rather than attempts, so on its own it cannot separate "never ran"
+     * from "nothing to do"; here the rcon evidence settles it, but the next version should
+     * count both.)
+     *
+     * <p>Which leaves the bow being held somewhere punk's approach never sees. The server still
+     * reports it on 2-4 of every 7 samples, and the drive selects slot 0 explicitly when it
+     * leaves melee -- so look at the phases where punk is not driving at all.
      */
     public boolean equipMeleeOnApproach = false;
 
