@@ -457,6 +457,10 @@ def main():
     # variable make "which flag" inseparable from "when in the session": the playthrough's ladder
     # already swings from five rungs to one between neighbouring runs on identical settings.
     _alt = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--pin-alt"]
+    _PIN_BASES = dict(
+        _s.split("=", 1) for _s in
+        [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--pin-base"] if "=" in _s
+    )
     _arm_b = (RUN_SEQ[0] % 2) == 1
     print(f"  ARM {'B' if _arm_b else 'A'}" if _alt else "", end="" if _alt else "")
     if _alt:
@@ -479,7 +483,18 @@ def main():
         # persist in tungsten.json across runs, so an omitted pin inherits whatever the previous
         # arm left behind and both arms end up measuring the same thing.
         _k, _v = _spec.split("=", 1)
-        _base = "false" if _v.strip().lower() == "true" else "true"
+        # ⛔ BOOLEANS FLIP THEMSELVES; ANYTHING ELSE MUST BE NAMED. run_suite grew --pin-base
+        # for exactly this and this harness did not, so a numeric A/B here would have set the
+        # control arm to the string "true" and pinned a number to nonsense -- silently, because
+        # the verifier only checks that what was asked for is what came back.
+        _low = _v.strip().lower()
+        if _low in ("true", "false"):
+            _base = "false" if _low == "true" else "true"
+        elif _k in _PIN_BASES:
+            _base = _PIN_BASES[_k]
+        else:
+            raise SystemExit(f"--pin-alt {_k}={_v} is not a boolean; give the other arm with "
+                             f"--pin-base {_k}=<baseline>")
         py4j("chatcmd", c=f";settings {_k} {_base}")
         time.sleep(0.3)
         print(f"  PIN {_k}={_base}")
