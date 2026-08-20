@@ -160,6 +160,22 @@ public final class DamageWatch {
      * <p>Read as dmgWhy=fall/lava/fire/drown/other@worstFallHeight.
      */
     public static volatile int dmgFall, dmgLava, dmgFire, dmgDrown, dmgOther;
+
+    /**
+     * Incoming hits by SIZE, from the only client that cannot be wrong about them: our own.
+     *
+     * <p>The attacker's ledger watches its target's health through the ENTITY TRACKER, and on
+     * allround it books ~11 hits of exactly 1.0 hp a run that no candidate explains -- not the
+     * bow (the sword is in hand AT the swing), not the sweep (they land on the primary target,
+     * which a sweep never touches), not arrows (they persist with the arrows removed from the
+     * kit), not a stale hotbar slot (sending the packet at the switch changed nothing).
+     *
+     * <p>Every one of those candidates assumed the 1.0 is a real damage EVENT. This says whether
+     * it is: a player's own client knows its health exactly, so if the receiving side never sees
+     * a 1.0 the number is an artefact of how health arrives over the wire, and the four
+     * refutations above were all answers to the wrong question.
+     */
+    public static volatile int takeTiny, takePartial, takeFlat, takeBig;
     public static volatile float worstFallHeight;
 
     private static void classifyDamage(ClientPlayerEntity player, float lost) {
@@ -197,6 +213,11 @@ public final class DamageWatch {
             winHpLost += lastHealth - hp;
             damage += lastHealth - hp;
             classifyDamage(player, lastHealth - hp);
+            int lostTenths = Math.round((lastHealth - hp) * 10.0f);
+            if (lostTenths < 20) takeTiny++;
+            else if (lostTenths < 54) takePartial++;
+            else if (lostTenths <= 66) takeFlat++;
+            else takeBig++;
             double gap = nearestLivingGap(player);
             // ⛔ A HIT WITH NOBODY NEAR IT IS NOT A LONG-RANGE HIT, IT IS NON-COMBAT DAMAGE.
             // The gap is the distance to the closest OTHER living entity, so once the target is

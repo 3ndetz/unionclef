@@ -28,6 +28,19 @@ public class TriggerBot {
     /** Wall clock of the last gate-passed swing; read by the damage attribution in MobDefenseChain. */
     public static volatile long lastSwingMs;
 
+    /**
+     * What was in the hand, and who was aimed at, AT THE SWING.
+     *
+     * <p>The chip recorder read the hand when the health DROP was observed, one or two ticks
+     * later, by which time WeaponSelector may already have switched -- so it reported
+     * "iron_sword" for swings that may have gone out with something else, and a slot-sync fix
+     * was built and refuted on that reading. The target id separates the other candidate: if
+     * the entity that lost 1.0 hp is not the one the swing was aimed at, the 1.0 is vanilla's
+     * un-enchanted sweep, which by definition never touches the primary target.
+     */
+    public static volatile String lastSwingHand = "?";
+    public static volatile int lastSwingTargetId = -1;
+
 
     private static final float COOLDOWN_FULL = 0.95f;
     // Package-visible: CombatController's reach control holds its distance against the same
@@ -403,6 +416,13 @@ public class TriggerBot {
         // number whatever the swings do; a drop that follows a swing within a couple of ticks is
         // not bounded by anything and answers "did this swing land" directly.
         lastSwingMs = System.currentTimeMillis();
+        try {
+            lastSwingHand = net.minecraft.registry.Registries.ITEM
+                    .getId(player.getMainHandStack().getItem()).getPath();
+            lastSwingTargetId = target == null ? -1 : target.getId();
+        } catch (Exception ignored) {
+            lastSwingHand = "?";
+        }
 
         // Count the swing BEFORE it lands — the state that decides a crit is the one we are in
         // as we click. These increments were lost in a revert during an A/B and nothing put

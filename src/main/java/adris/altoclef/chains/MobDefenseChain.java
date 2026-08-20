@@ -1437,7 +1437,8 @@ public class MobDefenseChain extends SingleTaskChain {
                         synchronized (chipScenes) {
                             if (chipScenes.size() < 10) {
                                 chipScenes.addLast(String.format(java.util.Locale.ROOT,
-                                        "%.1fhp(%.1f>%.1f)/dt%d/hurt%d/g%s/d%.1f/hand:%s/spr%s",
+                                        "%.1fhp(%.1f>%.1f)/dt%d/hurt%d/d%.1f"
+                                                + "/swungWith:%s/atMe:%s/handNow:%s/spr%s",
                                         tenths / 10.0,
                                         prev,
                                         e.getHealth(),
@@ -1451,8 +1452,17 @@ public class MobDefenseChain extends SingleTaskChain {
                                         // it is a distinct 1.0 source, and with a sword in hand
                                         // and no sprint that is vanilla's un-enchanted sweep.
                                         e.hurtTime,
-                                        e.isOnGround() ? "Y" : "n",
                                         Math.sqrt(e.squaredDistanceTo(self)),
+                                        // AT THE SWING, not when the drop was seen: the hand can
+                                        // change in the tick between, and it did -- that is how a
+                                        // slot-sync fix got built on a hand read too late.
+                                        kaptainwutax.tungsten.combat.TriggerBot.lastSwingHand,
+                                        // and WHO the swing was aimed at. Vanilla's sweep never
+                                        // touches the primary target, so "the one that lost 1.0hp
+                                        // is not the one we swung at" IS the sweep, and "it is"
+                                        // rules the sweep out for good.
+                                        kaptainwutax.tungsten.combat.TriggerBot.lastSwingTargetId
+                                                == e.getId() ? "Y" : "n",
                                         // EXACTLY 1.0 EVERY TIME is a fixed source, not a
                                         // truncated killing blow, and vanilla's fixed 1.0s are a
                                         // bare hand, a non-weapon, and the un-enchanted sweep --

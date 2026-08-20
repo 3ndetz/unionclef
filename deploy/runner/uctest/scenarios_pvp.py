@@ -40,6 +40,8 @@ def _hit_shape(ctx):
     out = []
     out.append(Criterion("hit sizes chip/partial/flat/crit (recorded, not gated)", True,
                          f"bot {_stat(ctx, 'hitSize')} | victim {_stat(ctx, 'hitSize', ctx.victim)}"
+                         f"  || TAKEN, from the receiving client (exact):"
+                         f" bot {_stat(ctx, 'takeSize')} | victim {_stat(ctx, 'takeSize', ctx.victim)}"
                          f" | slotSync={_stat(ctx, 'slotSync')}"
                          f"   [slotSync MUST read 0 in the control arm]", gate=False))
     ok, cs = ctx.bot.py.try_call("chipScenes")
