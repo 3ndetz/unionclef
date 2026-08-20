@@ -89,6 +89,10 @@ def main():
     ap.add_argument("log")
     ap.add_argument("--flag", required=True, help="the pinned setting name; picks arm B")
     ap.add_argument("--counter", help="mechanism counter that must read 0 in the control arm")
+    ap.epilog = ("⛔ SCORE A FINISHED SERIES. A run still in progress has a short sampled span, "
+                 "so the exclusion below fires on it and drops a pair that is perfectly good -- "
+                 "observed: a pair excluded at 'ctrl 89s' mid-series came back at full length "
+                 "once that run finished, and its +5 rung delta returned with it.")
     args = ap.parse_args()
 
     txt = open(args.log, encoding="utf-8", errors="replace").read()

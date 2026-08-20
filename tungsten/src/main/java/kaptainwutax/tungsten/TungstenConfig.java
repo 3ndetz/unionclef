@@ -947,6 +947,21 @@ public class TungstenConfig {
      *
      * <p>The two pairs it won are the interesting ones: the control scored ZERO on that ground
      * and the fix scored 4 and 3.
+     *
+    public boolean stallCheckNeedsMovement = true;
+     * ground (checklist 4a), scored with deploy/runner/paired_ab.py:
+     *
+     * <pre>
+     *   stall time    -73.6 s per run   t -2.16   ESTABLISHED
+     *   stall share   -20.9 %           t -2.13   ESTABLISHED
+     *   rungs         +1.06             t +1.77   directional, NOT established
+     * </pre>
+     *
+     * <p>So it buys back about a fifth of every run from standing still, and that clears the
+     * 2-sigma bar. It does NOT establish more ladder progress, and that is not a formality:
+     * removing a stall gives the bot its time back, it does not tell it what to do with it.
+     * Quote the stall numbers, not the rungs.
+     */
      */
     public boolean stallCheckNeedsMovement = false;
 
