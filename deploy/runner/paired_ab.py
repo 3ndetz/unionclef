@@ -114,6 +114,14 @@ def main():
         if "A" not in arms or "B" not in arms:
             continue
         b, a = arms["B"], arms["A"]
+        # A PAIR WHERE ONE ARM BARELY RAN CANNOT INFORM EITHER METRIC.
+        # The length warning below used to cover stall seconds only, so a control that sampled 67
+        # seconds against the fix's 359 still contributed its 0 rungs as a +5 delta -- the largest
+        # in the series, and meaningless: that run had no time to earn a rung either.
+        if b[4] and a[4] and min(b[4], a[4]) < 0.75 * max(b[4], a[4]):
+            short.append((ground, b[4], a[4]))
+            print(f"{ground:<17} {b[0]:>4} /{a[0]:<4}   EXCLUDED: spans {b[4]}s vs {a[4]}s")
+            continue
         rung_d.append(b[0] - a[0])
         stall_d.append(b[1] - a[1])
         bs = (100.0 * b[1] / b[4]) if b[4] else 0.0
@@ -121,8 +129,6 @@ def main():
         share_d.append(bs - as_)
         if args.counter and a[2] not in ("0", "-", "?"):
             dirty.append((ground, a[2]))
-        if b[4] and a[4] and abs(b[4] - a[4]) > 0.25 * max(b[4], a[4]):
-            short.append((ground, b[4], a[4]))
         print(f"{ground:<17} {b[0]:>4} /{a[0]:<4} {b[1]:>6}s/{b[4]:<4}s ({bs:3.0f}%) "
               f"{a[1]:>5}s/{a[4]:<4}s ({as_:3.0f}%)   {b[2]}/{a[2]}")
 
@@ -144,8 +150,7 @@ def main():
 
     if short:
         print("")
-        print("ARMS DID NOT RUN FOR COMPARABLE LENGTHS -- absolute stall seconds are not")
-        print("   comparable here; read the SHARE column instead:")
+        print("PAIRS EXCLUDED -- one arm barely ran, so neither metric is comparable:")
         for ground, bspan, aspan in short:
             print(f"   {ground}: fix {bspan}s vs ctrl {aspan}s of sampled time")
     if dirty:
