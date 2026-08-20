@@ -15,6 +15,16 @@ Reports both outcomes, because they disagree in power and it matters which one i
 A pair only counts when BOTH arms ran on the same resolved ground, which is what
 gamer_smoke prints as "pair ground saved/REUSED".
 
+⛔ DO NOT "FIX" THE VARIANCE BY PINNING THE START. It is the obvious idea and gamer_smoke's own
+comment refutes it: the world is never wiped and the bot fells the trees around wherever it
+starts, so a fixed point gets harder every run -- measured 21.5s to first log on untouched
+ground against 300-585 seconds, or never, at a spot the bot had been working all session, and
+that decay was read as code regressions for hours. The spiral exists to avoid exactly that.
+
+The price is that some pairs are uninformative: the run dies of something else before it ever
+reaches the state the flag changes, which shows up as the mechanism counter reading 0 in the FIX
+arm. Report those, do not delete them, and do not pin.
+
     python deploy/runner/paired_ab.py <log> --flag stallCheckNeedsMovement [--counter airProg]
 """
 import argparse
