@@ -106,6 +106,27 @@ public final class MovementQueue {
     /** Edges dropped because no movement class matches their shape (a running jump, today). */
     public static volatile int qNoClass;
 
+    /** Signed dx,dy,dz of every edge truncated for want of a movement class, tallied by shape. */
+    private static final java.util.Map<String, Integer> noClassShapes =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+
+    /** The truncating shapes this run, commonest first -- the queue's own to-do list. */
+    public static String noClassShapes() {
+        synchronized (noClassShapes) {
+            return noClassShapes.entrySet().stream()
+                    .sorted((x, y) -> y.getValue() - x.getValue())
+                    .limit(8)
+                    .map(e -> e.getKey() + "x" + e.getValue())
+                    .reduce((x, y) -> x + " " + y).orElse("(none)");
+        }
+    }
+
+    public static void clearNoClassShapes() {
+        synchronized (noClassShapes) {
+            noClassShapes.clear();
+        }
+    }
+
     /** Parkour edges DISPATCHED as a running jump. Read as the 4th of mq's parkour triple. */
     public static volatile int qParkour;
 
@@ -605,6 +626,21 @@ public final class MovementQueue {
                 // sends it to the walker -- the thing that sprint-jumps toward a waypoint and can
                 // actually clear the gap.
                 qNoClass++;
+                // ⛔ COUNT IS NOT A CORPUS. qNoClass says 27 of 28 chains were truncated; it does
+                // NOT say what shape did it, so "the missing class is parkour" rests on one edge
+                // read by hand out of one stalled run ({90,134,-36}->{86,135,-34}). If a second
+                // shape is also falling through, that single sample cannot show it, and a whole
+                // pass could be spent implementing the wrong movement.
+                //
+                // So tally the SHAPES, by their signed offsets. Whatever tops this table is the
+                // movement worth writing next, and the table costs nothing to keep.
+                synchronized (noClassShapes) {
+                    if (noClassShapes.size() < 64) {
+                        String key = (to.getX() - from.getX()) + "," + (to.getY() - from.getY())
+                                + "," + (to.getZ() - from.getZ());
+                        noClassShapes.merge(key, 1, Integer::sum);
+                    }
+                }
                 break;
             }
         }

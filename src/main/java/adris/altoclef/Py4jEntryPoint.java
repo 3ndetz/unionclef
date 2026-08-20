@@ -2162,6 +2162,12 @@ public class Py4jEntryPoint {
         return kaptainwutax.tungsten.combat.DamageWatch.smallHitCauses();
     }
 
+    /** Shapes of the route edges the movement queue had to truncate, commonest first.
+     *  Read as dx,dy,dz -- whatever tops this list is the movement class worth writing next. */
+    public String noClassShapes() {
+        return kaptainwutax.tungsten.path.movements.MovementQueue.noClassShapes();
+    }
+
     public String chipScenes() {
         return adris.altoclef.chains.MobDefenseChain.chipScenes();
     }
