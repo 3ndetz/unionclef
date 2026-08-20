@@ -744,6 +744,25 @@ public class TungstenConfig {
     public boolean syncSlotToServer = false;
 
     /**
+     * Drop sprint for the tick of a falling swing, so vanilla will actually GRANT the crit.
+     *
+     * <p>Vanilla's condition is cooldown > 0.9, fallDistance > 0, off the ground, not climbing,
+     * not in water, not blind, not riding -- AND NOT SPRINTING. AttackTiming.isCrit checks
+     * neither of the last two: it tests velocity.y &lt; 0 instead of fallDistance, and never asks
+     * about sprint. So the bot counts a crit whenever it swings on the way down, and the server
+     * grants none, because a bot closing distance is sprinting.
+     *
+     * <p>Measured, not deduced. Hit sizes on allround, bucketed by the vanilla quantities and
+     * read from the RECEIVING client, which knows its own health exactly: crit-sized hits are
+     * 0 and 1 per run against 22-27 swings the counter calls crits. Neither fighter collects
+     * the 50%, so it costs this duel nothing -- and it is worth 50% to whoever takes it first.
+     *
+     * <p>This is what human pvp calls a sprint reset, and the honest cost is that the tick loses
+     * its sprint knockback. Which of those is worth more is exactly what the A/B is for.
+     */
+    public boolean critReleasesSprint = false;
+
+    /**
      * A drop within three blocks does not pay the anti-ping-pong tax when competing with an ore.
      *
      * <p>MineOrCollectTask.getClosestTo compares `dropSq <= blockSq` with +10 already added to the

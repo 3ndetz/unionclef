@@ -43,6 +43,7 @@ def _hit_shape(ctx):
                          f"  || TAKEN, from the receiving client (exact):"
                          f" bot {_stat(ctx, 'takeSize')} | victim {_stat(ctx, 'takeSize', ctx.victim)}"
                          f" | slotSync={_stat(ctx, 'slotSync')}"
+                         f" critReset={_stat(ctx, 'critReset')}"
                          f"   [slotSync MUST read 0 in the control arm]", gate=False))
     ok, cs = ctx.bot.py.try_call("chipScenes")
     out.append(Criterion("what a 1hp hit actually was (recorded, not gated)", True,

@@ -192,6 +192,50 @@ approach (forward pressed on 64 of 77 ready-far ticks), the bow's camera, the bo
 control, standing still, or the weapon in hand. That is a lot of the space eliminated with numbers,
 which is what the next pass should start from -- beginning with the contact-time gap above.
 
+<!-- G-1.900 -->
+## ⭐⭐⭐ allround MEASURED FROM BOTH ENDS: THE GAP IS BLOWS LANDED, AND NOBODY GETS CRITS (2026-08-20)
+
+`dealt` was printed, as the entry above said to do, and read 0.0 through a fight with seventy
+swings and twelve kills in it -- three times over, because the ledger was wired to a caller no pvp
+course runs: first inside `noticeDraws` (ranged mobs only), then behind its call site in
+`isProjectileClose` (a predicate about ARROWS), then at `MobDefenseChain.getPriority` (a chain
+these courses never tick). It runs from `AltoClef.onClientTick` now, with a tick count printed
+beside it so "never ran" can never again be read as "found nothing".
+
+With it alive, the duel measured from BOTH clients -- the attacker's ledger through the entity
+tracker, and DamageWatch reading each client's OWN health, which cannot be wrong:
+
+    dealt (tracker)   bot 10/1/29/0  13/1/31/1      victim 0/0/50/0  0/0/48/0
+    TAKEN (own hp)    bot  0/15/50/0  0/16/48/0     victim 17/5/36/1 21/4/37/1
+                      (chip <2hp / partial / a flat 6hp blow / crit-sized)
+
+Both reconcile with the deaths they must explain (352 against the bot's 340 over 17 deaths, 259
+against the victim's 240 over 12), which is what says the instruments are honest.
+
+TWO FACTS, and the second is worth more than this course:
+
+1. THE BOT LANDS FEWER BLOWS, not weaker ones. Flat 6hp blows: 36-37 delivered against 48-50
+   taken, on 68 swings against 76. Everything else is equal between the fighters and was measured
+   so, one at a time: weapon (75.00 both), charge (0.999 both), crit count, the bow economy, and
+   reach control -- the last by six interleaved runs, -0.12 dmg/swing against arm spreads of 0.16
+   and 0.27, pointing the wrong way. See scenarios_pvp for each.
+
+2. ⭐ NEITHER FIGHTER IS GRANTED A SINGLE CRIT. Crit-sized hits read 0-1 a run against 22-27
+   swings the counters call crits. Vanilla wants fallDistance > 0 and NOT SPRINTING; our
+   AttackTiming.isCrit asks for neither -- it tests velocity.y < 0 and never mentions sprint, and
+   a bot closing distance sprints. So the 50% is left on the table by BOTH sides, which is why it
+   does not show up in this duel's margin, and why it is worth taking anyway: against anything
+   that is not a copy of ourselves it is a straight 50% on every falling swing. critReleasesSprint
+   implements the human sprint-reset and is being A/B'd now; its honest cost is the sprint
+   knockback on that tick.
+
+STILL OPEN and NOT explained: the ~11 chips a run. They are REAL (the victim's own client books
+17-21 hits under 2hp) and four causes are refuted -- bow in hand (swungWith records iron_sword AT
+the swing), the vanilla sweep (it never touches the primary target; atMe reads Y), arrows (removed
+from the kit, chips persisted), and a stale hotbar slot (packet sent at the switch: neutral over
+six interleaved runs). The bot takes NO chips and 15-16 partials instead, so whatever this is, it
+is not symmetric. Worth ~55hp a run if every chip is a 6hp blow that arrived as 1.
+
 <!-- G-1.899 -->
 ## ⭐⭐⭐ ANSWERED: THE KNOCKBACK DANGER IS NOT EARNED -- IT SATURATES AT THE SCAN LIMIT (2026-08-19)
 

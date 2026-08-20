@@ -89,6 +89,9 @@ public class TriggerBot {
     /** Ticks inside melee range holding a BOW, against ticks holding something else. */
     public static volatile int gMeleeWithBow = 0, gMeleeArmed = 0;
 
+    /** Swings where sprint was dropped to buy the crit; reads 0 with the flag off. */
+    public static volatile int gCritSprintReleased = 0;
+
     public static volatile int gTotal=0, gClick=0, gCooldown=0, gReach=0, gAngle=0, gLos=0, gPassed=0;
     /**
      * HOW FAR OFF the crosshair is when the angle gate refuses, and how far the target is when
@@ -396,6 +399,38 @@ public class TriggerBot {
         if (gateAngle) { gAngle++; gAngleSum += angle; if (angle > gAngleMax) gAngleMax = angle; }
         if (gateLos) gLos++;
         if (gateClick || gateCooldown || gateReach || gateAngle || gateLos) return;
+        // ⛔ THE SWING IS COMMITTED FROM HERE, so this is the last moment the crit can be bought.
+        // Vanilla refuses a crit to a SPRINTING attacker, and it wants fallDistance > 0 rather
+        // than merely a downward velocity -- neither of which AttackTiming.isCrit asks. Drop the
+        // sprint for this one tick when everything else vanilla wants is already true.
+        //
+        // The packet is sent explicitly rather than left to the movement sync, for the same
+        // reason the slot fix sends its own: the server applies packets in order, so one queued
+        // before the attack is guaranteed to be seen first, and one left to the next tick is not.
+        if (kaptainwutax.tungsten.TungstenConfig.get().critReleasesSprint) {
+            try {
+                if (player.isSprinting()
+                        && player.fallDistance > 0.0
+                        && !player.isOnGround()
+                        && !player.isClimbing()
+                        && !player.isTouchingWater()
+                        && !player.hasVehicle()
+                        && !player.hasStatusEffect(net.minecraft.entity.effect.StatusEffects.BLINDNESS)) {
+                    if (player.networkHandler != null) {
+                        player.networkHandler.sendPacket(
+                                new net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket(
+                                        player,
+                                        net.minecraft.network.packet.c2s.play.ClientCommandC2SPacket
+                                                .Mode.STOP_SPRINTING));
+                    }
+                    player.setSprinting(false);
+                    MinecraftClient.getInstance().options.sprintKey.setPressed(false);
+                    gCritSprintReleased++;
+                }
+            } catch (Exception ignored) {
+                // buying a crit must never be the thing that breaks the swing
+            }
+        }
         // DO NOT SPEND THE SWING ON THE WRONG ITEM.
         // Forcing a weapon re-check when combat starts took bow swings from 21% of all swings to
         // 9%, not to zero, because a slot switch is not instantaneous: equipBestMelee sets the
