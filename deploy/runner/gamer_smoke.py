@@ -387,6 +387,24 @@ def main():
                     dx2, dz2 = -dz2, dx2
                     if dz2 == 0: leg2 += 1
             spawn = f"{base[0] + x2 * 300} {base[1]} {base[2] + z2 * 300}"
+        # PAIR ON THE RESOLVED SPAWN, NOT ON THE SPIRAL INDEX.
+        # Holding the index was not enough: the treeless skip above walks it forward until it finds
+        # a forest, so the two arms of a pair still landed 5 spiral steps apart (measured: #30 then
+        # #35). What must be shared is the point this loop ENDED on, so the second arm of a pair
+        # reuses it verbatim and the comparison is finally on one piece of ground.
+        try:
+            _pairfile = os.path.join(os.path.dirname(SPAWN_FILE), 'gamer_pair_spawn.txt')
+            if any(a == '--pin-alt' for a in sys.argv):
+                if (RUN_SEQ[0] % 2) == 1:
+                    open(_pairfile, 'w', encoding='utf-8').write(spawn)
+                    print(f'  pair ground saved: {spawn}')
+                elif os.path.exists(_pairfile):
+                    spawn = open(_pairfile, encoding='utf-8').read().strip()
+                    grcon(f'tp {BOT} {spawn}')
+                    time.sleep(2)
+                    print(f'  pair ground REUSED: {spawn}')
+        except Exception as _e:
+            print(f'  (pair ground unavailable: {str(_e)[:70]})')
         if skipped:
             print(f"  skipped {skipped} treeless start(s)")
         # ⛔ RUNNING OUT OF ATTEMPTS IS NOT THE SAME AS FINDING A FOREST.
