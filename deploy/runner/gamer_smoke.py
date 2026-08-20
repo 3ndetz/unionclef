@@ -303,7 +303,7 @@ def main():
         # With --pin-alt live the index now advances every SECOND run, so the pair (A, B) starts on
         # the same ground and the comparison is paired instead of confounded.
         _paired = any(a == "--pin-alt" for a in sys.argv)
-        _next = idx + 1 if (not _paired or (RUN_SEQ[0] % 2) == 1) else idx
+        _next = idx if (_paired and (RUN_SEQ[0] % 2) == 1) else idx + 1
         RUN_INDEX_FILE.write_text(str(_next), encoding="utf-8")
         if _paired:
             print(f"  paired A/B start: spiral #{idx}"
