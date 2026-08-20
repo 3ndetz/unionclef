@@ -52,7 +52,12 @@ def stats(deltas):
         return None
     mean = sum(deltas) / len(deltas)
     sd = (sum((d - mean) ** 2 for d in deltas) / (len(deltas) - 1)) ** 0.5
-    t = mean / (sd / math.sqrt(len(deltas))) if sd else float("inf")
+    # ⛔ ZERO SPREAD IS NOT INFINITE CONFIDENCE. Six identical deltas of 0 gave "t +inf", which
+    # reads like the strongest result in the file and means the arms did nothing at all -- the
+    # exact case where the mechanism counter is also 0 and the pairs carry no information.
+    if not sd:
+        return mean, sd, (float("inf") if mean else 0.0)
+    t = mean / (sd / math.sqrt(len(deltas)))
     return mean, sd, t
 
 
@@ -100,7 +105,10 @@ def main():
         print(f"\n{label:<11} {mean:+.2f}{unit} per run over {len(deltas)} pairs   "
               f"sd {sd:.2f}   t {t:+.2f}   ({better} is better for the fix)")
         print(f"            {deltas}")
-        if abs(t) < 2:
+        if sd == 0 and mean == 0:
+            print("            EVERY PAIR IDENTICAL -- the arms did not differ. Check the "
+                  "mechanism counter: if it reads 0 in the fix arm these pairs measured nothing.")
+        elif abs(t) < 2:
             print("            NOT ESTABLISHED at the 2-sigma bar this repo uses.")
 
     if dirty:
