@@ -1,7 +1,7 @@
-LADDER STALLED: no new rung for 150s; last rung first craft
+position stalled at 64.3,108.0,-115.0
 
 FULL COUNTERS:
-called=0 deferred=0 inRange=0 clicked=0 noSup=0/0/0 | mqStarted=18 mqSteps=56 mqBack=3 mqTimeout=0 mqTicks=454 step=0/0 pdEnter=2269 pdNotPrim=0 pdPillar=0 pdBridge=0 pdStuck=0 pdWalking=1742 pdNear=13 pdNoGoal=0 pdFinished=0 pdNoVec=0 pdStallWalk=0 pdStallReset=0 pdQueueShort=0 pdNearBusy=12 pdNearFind=1 pdPlan=13/0 pdLegacy=0 exArrived=0 exRanOut=9 exSprint=0/0 unknownGoal=- dbTick=2467 dbUnreachMove=0 dbUnreachWater=0 dbUnreachPillager=0 dbNear=0 dbFar=0 dbDistSum=0 dbNearTick=92 noReach=0 air=26 hungry=0 unsafe=0 blockedBy=MISS dbTargetAir=0 rayLeaves=166 rayOther=1327 rayMiss=723 leafCleared=0 dbBlocked=0/0/0 dbApproachStall=0 dbBestDist=17 dbTargets=44/4 dbReachGoal=0 cgTick=0 cgBig=0 cgInv=0 cgNoScreen=0 cgSent=0 cgOutReady=0 cgLastSent=- cgCraftable=0 cgNotCraftable=0 cgBookOk=0 cgBookNone=0 cgSmall=0 cgScreen=- ciTick=2056 ciCollect=2022 ciReceive=10 ciGrid=0 mdCalls=5416 mdWon=0 mdFlee=0 mdFight=0 mdRet=0/0/0/0/0/0/0/0/0/0 vgCalls=0 vgEdge=0 vgFall=0/0/0/0 rimBack=0 kbThrow=0/0/0/0 kbImp=0/0/0 shIssued=660 shDropped=90 shBlack=0 shThrown=4 gmDisc=0 gmRecSet=0 gmGuard=0 gmConn=0 shLastBlackSlot=-1 slotYeet=0 mqLost=0 mqStatusFail=3 mqRefused=46(short=0 vetoed=0) mqNoClass=44 mqParkour=0 mqAdmitMismatch=0 qPrep=0/436 blindPrep=0 mqNull=14 gaveUp=0/0 dc=5659/43/17/0/0 mc=19/0/0/0/0 mcFlight=18 mcSwitch=1 toolSwap=0 recipesKnown=917 wander=2620 wanderMoved=0 wanderChk=2620/0 wanderFail=0 wanderDenied=0 dbDenied=0 airProg=0 lavaEsc=0 lavaCond=0/5416 surv=5416/5416 tbl=0/0@0 bs=53/53/157/157@4072ms navUnsafeAir=0 sm=0/0 smWater=0 srch=10/10/0 fallRetry=0/0 drop=10721/2993/2863 scan=72914/0/0/0/0/0 navStop=0/0/0 fleeSpot=0/0 lock=1/0/0@minecraft:dark_oak_log:2.3>3.0,m0.0,h3.0,dy+0.0|<Approach_entity_entity.minecraft.item>_Tung cb=0/0/3/0 avoidSrc=30/0/2/26@pos@DoCraftInTableTask.onTick:312/pos@DoCraftInTableTask.onTick:312 et=18115/18081 sprint=139/436 lowHp=0/0 standOff=0 hurt=0/0/0 hurtWin=40/0 diseng=0/0 ctl=0 cq=0/0/0 los=0/0/0/0 kaTung=0/0/0/0 dte=0/0/0/0/0/0 mdTung=0/0 mdFleeStuck=0 mdFleeShooter=0 mdFar=0/0 arrows=0/0.00/0.00 draws=0/0/0/0.00 band=0/-1 dodgeYield=0 latch=0/0 breakFail=0/0/0/0/0 stranded=0/primary/200@70/primary/200 gp=5416/0/0/0/0 dodgeTask=0/0.00 dealt=0.0/0.0/5433 hitSize=0/0/0/0 takeSize=3/1/0/0 slotSync=0/0 critReset=0 stray=0/0 heldSwing=0 loseKite=0 holdBow=0 punkKept=0 swingHits=0 dodgeDrive=0 hop=0/0/0/0/0/0/0 mdPillarD=0 dmgTaken=6.0 dw=4/6.0/20.33/30.61/4/0 dwNoBlame=0 dmgWhy=0/0/0/0/4@0.0 strafe=0/0 voidEntries=0 voidTicks=0 lastFall=[] hits=1/2/1/0 hitRange=20.49/31.26 mdBow=0 bowShots=0 bowWild=0 bowNoSol=0 bowRestart=0 bowAimTO=0 bowDrawTO=0 bowBestMiss=-1.00 bowFacing=0 bowNoRoom=0 flee=0/0/0/0/0/0 qBurn=0 qTp=3 qNoMove=0 stuck=[-] staleRoot=0 | mvRequested=0 mvCooldown=0 mvNoHit=0 mvClicked=0 mvSteered=145 | gateThrough=20 gateHeld=4181 queued=0 queuePlaced=0 entityReleased=1/0 idrop=3279/0/0/3279 rt=25672/5373/0 entityCloseWalk=120/0/0/79/120/5/1
+called=0 deferred=0 inRange=0 clicked=0 noSup=0/0/0 | mqStarted=18 mqSteps=56 mqBack=3 mqTimeout=0 mqTicks=454 step=0/0 pdEnter=2269 pdNotPrim=0 pdPillar=0 pdBridge=0 pdStuck=0 pdWalking=1742 pdNear=13 pdNoGoal=0 pdFinished=0 pdNoVec=0 pdStallWalk=0 pdStallReset=0 pdQueueShort=0 pdNearBusy=12 pdNearFind=1 pdPlan=13/0 pdLegacy=0 exArrived=0 exRanOut=4 exSprint=0/0 unknownGoal=- dbTick=2467 dbUnreachMove=0 dbUnreachWater=0 dbUnreachPillager=0 dbNear=0 dbFar=0 dbDistSum=0 dbNearTick=92 noReach=0 air=26 hungry=0 unsafe=0 blockedBy=MISS dbTargetAir=0 rayLeaves=166 rayOther=1327 rayMiss=723 leafCleared=0 dbBlocked=0/0/0 dbApproachStall=0 dbBestDist=17 dbTargets=44/4 dbReachGoal=0 cgTick=0 cgBig=0 cgInv=0 cgNoScreen=0 cgSent=0 cgOutReady=0 cgLastSent=- cgCraftable=0 cgNotCraftable=0 cgBookOk=0 cgBookNone=0 cgSmall=0 cgScreen=- ciTick=2056 ciCollect=2022 ciReceive=10 ciGrid=0 mdCalls=4058 mdWon=0 mdFlee=0 mdFight=0 mdRet=0/0/0/0/0/0/0/0/0/0 vgCalls=0 vgEdge=0 vgFall=0/0/0/0 rimBack=0 kbThrow=0/0/0/0 kbImp=0/0/0 shIssued=516 shDropped=90 shBlack=0 shThrown=4 gmDisc=0 gmRecSet=0 gmGuard=0 gmConn=0 shLastBlackSlot=-1 slotYeet=0 mqLost=0 mqStatusFail=3 mqRefused=46(short=0 vetoed=0) mqNoClass=44 mqParkour=0 mqAdmitMismatch=0 qPrep=0/436 blindPrep=0 mqNull=14 gaveUp=0/0 dc=4301/43/17/0/0 mc=19/0/0/0/0 mcFlight=18 mcSwitch=1 toolSwap=0 recipesKnown=917 wander=1262 wanderMoved=0 wanderChk=1262/0 wanderFail=0 wanderDenied=0 dbDenied=0 airProg=0 lavaEsc=0 lavaCond=0/4058 surv=4058/4058 tbl=0/0@0 bs=39/40/157/157@3985ms navUnsafeAir=0 sm=0/0 smWater=0 srch=5/5/0 fallRetry=0/0 drop=8005/1635/1505 scan=56618/0/0/0/0/0 navStop=0/0/0 fleeSpot=0/0 lock=1/0/0@minecraft:dark_oak_log:2.3>3.0,m0.0,h3.0,dy+0.0|<Approach_entity_entity.minecraft.item>_Tung cb=0/0/3/0 avoidSrc=12/0/2/26@pos@DoCraftInTableTask.onTick:312/pos@DoCraftInTableTask.onTick:312 et=9651/9619 sprint=139/436 lowHp=0/0 standOff=0 hurt=0/0/0 hurtWin=40/0 diseng=0/0 ctl=0 cq=0/0/0 los=0/0/0/0 kaTung=0/0/0/0 dte=0/0/0/0/0/0 mdTung=0/0 mdFleeStuck=0 mdFleeShooter=0 mdFar=0/0 arrows=0/0.00/0.00 draws=0/0/0/0.00 band=0/-1 dodgeYield=0 latch=0/0 breakFail=0/0/0/0/0 stranded=0/primary/200@112/primary/200 gp=4058/0/0/0/0 dodgeTask=0/0.00 dealt=0.0/0.0/4075 hitSize=0/0/0/0 takeSize=3/1/0/0 slotSync=0/0 critReset=0 stray=0/0 heldSwing=0 loseKite=0 holdBow=0 punkKept=0 swingHits=0 dodgeDrive=0 hop=0/0/0/0/0/0/0 mdPillarD=0 dmgTaken=6.0 dw=4/6.0/20.33/30.61/4/0 dwNoBlame=0 dmgWhy=0/0/0/0/4@0.0 strafe=0/0 voidEntries=0 voidTicks=0 lastFall=[] hits=1/2/1/0 hitRange=20.49/31.26 mdBow=0 bowShots=0 bowWild=0 bowNoSol=0 bowRestart=0 bowAimTO=0 bowDrawTO=0 bowBestMiss=-1.00 bowFacing=0 bowNoRoom=0 flee=0/0/0/0/0/0 qBurn=0 qTp=3 qNoMove=0 stuck=[-] staleRoot=0 | mvRequested=0 mvCooldown=0 mvNoHit=0 mvClicked=0 mvSteered=145 | gateThrough=20 gateHeld=4181 queued=0 queuePlaced=0 entityReleased=1/0 idrop=1921/0/0/1921 rt=20240/4015/0 entityCloseWalk=120/0/0/79/120/5/1
 
 RUNNER:
 active=true | Chain: UserTaskChain, priority: 50.0 | Game Menu Chain(on=true,p=-Infinity) UserTaskChain(on=true,p=50.0) Mob Defense(on=true,p=0.0) Death Menu Respawn Handling(on=true,p=-Infinity) Hand Stack Fix Chain(on=true,p=-Infinity) MLG Water Bucket Fall Chain(on=true,p=-Infinity) Unstuck Chain
@@ -44,20 +44,19 @@ THREADS:
     at java.base@21.0.11/java.lang.Thread.runWith(Unknown Source)
     at java.base@21.0.11/java.lang.Thread.run(Unknown Source)
 "Render thread" RUNNABLE
-    at knot//org.lwjgl.system.JNI.invokePV(Native Method)
-    at knot//org.lwjgl.glfw.GLFW.glfwSwapBuffers(GLFW.java:4937)
-    at knot//com.mojang.blaze3d.systems.RenderSystem.flipFrame(RenderSystem.java:141)
-    at knot//net.minecraft.class_1041.method_15998(class_1041.java:313)
-    at knot//net.minecraft.class_310.method_1523(class_310.java:1411)
-    at knot//net.minecraft.class_310.method_1514(class_310.java:966)
-    at knot//net.minecraft.client.main.Main.main(Main.java:250)
-    at java.base@21.0.11/java.lang.invoke.LambdaForm$DMH/0x0000729eec020400.invokeStaticInit(LambdaForm$DMH)
-    at java.base@21.0.11/java.lang.invoke.LambdaForm$MH/0x0000729eec230c00.invokeExact_MT(LambdaForm$MH)
-    at app//net.fabricmc.loader.impl.game.minecraft.MinecraftGameProvider.launch(MinecraftGameProvider.java:514)
-    at app//net.fabricmc.loader.impl.launch.knot.Knot.launch(Knot.java:72)
-    at app//net.fabricmc.loader.impl.launch.knot.KnotClient.main(KnotClient.java:23)
-"Chunk Render Task Executor #1" WAITING
-    at java.base@21.0.11/jdk.internal.misc.Unsafe.park(Native Method)
-    at java.base@21.0.11/java.util.concurrent.locks.LockSupport.park(Unknown Source)
-    at java.base@21.0.11/java.util.concurrent.locks.AbstractQueuedSynchronizer.acquire(Unknown Source)
-    at java.base@21.0.11/java.util.conc
+    at knot//org.lwjgl.opengl.GL11C.nglDrawElements(Native Method)
+    at knot//org.lwjgl.opengl.GL11C.glDrawElements(GL11C.java:543)
+    at knot//org.lwjgl.opengl.GL11.glDrawElements(GL11.java:1870)
+    at knot//com.mojang.blaze3d.opengl.GlStateManager._drawElements(GlStateManager.java:470)
+    at knot//net.minecraft.class_10860.method_68353(class_10860.java:669)
+    at knot//net.minecraft.class_10860.method_68352(class_10860.java:652)
+    at knot//net.minecraft.class_10866.drawIndexed(class_10866.java:159)
+    at knot//net.minecraft.class_1921.method_60895(class_1921.java:95)
+    at knot//net.minecraft.class_4597$class_4598.method_60893(class_4597.java:96)
+    at knot//net.raphimc.immediatelyfast.feature.core.BatchableBufferSource.drawDirect(BatchableBufferSource.java:178)
+    at knot//net.raphimc.immediatelyfast.feature.core.BatchableBufferSource.method_22994(BatchableBufferSource.java:148)
+    at knot//net.raphimc.immediatelyfast.feature.core.BatchableBufferSource.method_37104(BatchableBufferSource.java:125)
+    at knot//net.minecraft.class_11684.handler$beb000$immediatelyfast$drawBatch(class_11684.java:541)
+    at knot//net.minecraft.class_11684.method_73002(class_11684.java:48)
+    at knot//net.minecraft.class_759.method_22976(class_759.java:422)
+    at knot//net.minecraft.class_75
