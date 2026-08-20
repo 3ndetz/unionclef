@@ -153,6 +153,28 @@ public final class WeaponSelector {
     private WeaponSelector() {}
 
     /** Melee score of a stack; 0 means "not a weapon". */
+    /** Slot changes we told the server about; reads 0 with the flag off. */
+    public static volatile int slotSyncSent = 0;
+
+    /**
+     * Send the slot change NOW instead of waiting for vanilla's per-tick sync.
+     *
+     * <p>Cheap, idempotent and ORDERED, which is the point: the server applies packets in the
+     * order they arrive, so a swing queued after this one can no longer be resolved with the
+     * item we just put away. Vanilla sends its own copy on the next tick and it changes nothing.
+     */
+    public static void syncSlot(net.minecraft.client.network.ClientPlayerEntity player, int slot) {
+        if (!kaptainwutax.tungsten.TungstenConfig.get().syncSlotToServer) return;
+        try {
+            if (player.networkHandler == null) return;
+            player.networkHandler.sendPacket(
+                    new net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket(slot));
+            slotSyncSent++;
+        } catch (Exception ignored) {
+            // a sync must never be the thing that breaks a fight
+        }
+    }
+
     public static double meleeScore(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return 0;
         Double score = MELEE_SCORE.get(stack.getItem());
@@ -184,6 +206,7 @@ public final class WeaponSelector {
         if (meleeScore(player.getInventory().getStack(selected)) >= bestScore) return false;
 
         player.getInventory().setSelectedSlot(bestSlot);
+        syncSlot(player, bestSlot);
         return true;
     }
 

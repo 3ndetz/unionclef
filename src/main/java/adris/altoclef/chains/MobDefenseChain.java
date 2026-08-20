@@ -262,12 +262,23 @@ public class MobDefenseChain extends SingleTaskChain {
     /** Attributed hits by SIZE: chip / partial / a flat sword blow / a crit. */
     public static volatile int mdDropTiny, mdDropPartial, mdDropFlat, mdDropCrit;
 
+    /** The first few chip drops with their context, so "what is a 1hp hit" stops being a guess. */
+    private static final java.util.ArrayDeque<String> chipScenes = new java.util.ArrayDeque<>();
+
+    /** Chip-drop scenes for this run, oldest first. */
+    public static String chipScenes() {
+        synchronized (chipScenes) {
+            return String.join(" ", chipScenes);
+        }
+    }
+
     /** Zeroes the damage ledger between bench runs; the per-entity map must go with it. */
     public static void resetDamageLedger() {
         mdDamageDealtTenths = 0;
         mdDamageSeenTenths = 0;
         mdLedgerTicks = 0;
         mdDropTiny = mdDropPartial = mdDropFlat = mdDropCrit = 0;
+        synchronized (chipScenes) { chipScenes.clear(); }
         mdSwingHits = 0;
         lastTargetHp.clear();
     }
@@ -1416,7 +1427,45 @@ public class MobDefenseChain extends SingleTaskChain {
                     // flat and the crits are not being granted" from "half the hits are partial",
                     // and those want opposite fixes. A full-charge iron_sword is 60 tenths and a
                     // crit 90, so the buckets are the vanilla quantities themselves.
-                    if (tenths < 20) mdDropTiny++;
+                    if (tenths < 20) {
+                        mdDropTiny++;
+                        // RECORD THE SCENE, do not theorise about it. Arrows were the obvious
+                        // candidate and bowShots came back 5-6 against 10-11 chips, so at best
+                        // half. What a 1hp hit actually is has to come from the hit itself:
+                        // how long after our swing, whether the target was falling, and how far
+                        // away it was. Capped, and cleared with the counters.
+                        synchronized (chipScenes) {
+                            if (chipScenes.size() < 10) {
+                                chipScenes.addLast(String.format(java.util.Locale.ROOT,
+                                        "%.1fhp(%.1f>%.1f)/dt%d/hurt%d/g%s/d%.1f/hand:%s/spr%s",
+                                        tenths / 10.0,
+                                        prev,
+                                        e.getHealth(),
+                                        System.currentTimeMillis()
+                                                - kaptainwutax.tungsten.combat.TriggerBot.lastSwingMs,
+                                        // ⛔ THE FIELD THAT DECIDES IT. Vanilla gives a hurt
+                                        // entity 10 invulnerable ticks in which it takes only the
+                                        // EXCESS over the damage that started them. hurtTime > 0
+                                        // here means this 1.0 is the residue of a blow that was
+                                        // mostly absorbed -- a wasted swing. hurtTime == 0 means
+                                        // it is a distinct 1.0 source, and with a sword in hand
+                                        // and no sprint that is vanilla's un-enchanted sweep.
+                                        e.hurtTime,
+                                        e.isOnGround() ? "Y" : "n",
+                                        Math.sqrt(e.squaredDistanceTo(self)),
+                                        // EXACTLY 1.0 EVERY TIME is a fixed source, not a
+                                        // truncated killing blow, and vanilla's fixed 1.0s are a
+                                        // bare hand, a non-weapon, and the un-enchanted sweep --
+                                        // the first two of which are just "what is in the hand".
+                                        // weaponMean says 75.00, but that is a mean over swings
+                                        // that passed TriggerBot's gates; a swing sent by any
+                                        // other path would never appear in it.
+                                        net.minecraft.registry.Registries.ITEM
+                                                .getId(self.getMainHandStack().getItem()).getPath(),
+                                        self.isSprinting() ? "Y" : "n"));
+                            }
+                        }
+                    }
                     else if (tenths < 54) mdDropPartial++;
                     else if (tenths <= 66) mdDropFlat++;
                     else mdDropCrit++;

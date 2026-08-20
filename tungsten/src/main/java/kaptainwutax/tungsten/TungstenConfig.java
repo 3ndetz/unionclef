@@ -727,6 +727,23 @@ public class TungstenConfig {
     public boolean entityCloseRangeWalk = true;
 
     /**
+     * Tell the server the hotbar slot CHANGED before swinging with it.
+     *
+     * <p>setSelectedSlot writes the field on the client and leaves the packet to vanilla's own
+     * per-tick sync. A swing sent in that same tick therefore reaches the server while it still
+     * holds the PREVIOUS slot, and is resolved with the previous item -- on allround, a bow,
+     * whose attack damage is exactly 1.0.
+     *
+     * <p>Measured rather than reasoned: the bot books ~12 hits of exactly 1.0 hp a run there,
+     * with an iron_sword drawn on the client, no sprint, and the target's hurtTime at 10 (a
+     * FRESH damage event, so not the residue of a blow absorbed inside invulnerability). On
+     * melee_basic, whose kit is one sword and never switches slots, the same instrument reads
+     * 0 chips for both fighters and 35 flat blows against the opponent's 33 -- dead even. The
+     * chips exist only where slots are switched, and only for the fighter switching them.
+     */
+    public boolean syncSlotToServer = false;
+
+    /**
      * A drop within three blocks does not pay the anti-ping-pong tax when competing with an ore.
      *
      * <p>MineOrCollectTask.getClosestTo compares `dropSq <= blockSq` with +10 already added to the

@@ -60,12 +60,23 @@ public class PlayerVer {
         //#endif
     }
 
+    /**
+     * ⛔ SYNCS THE SLOT TO THE SERVER TOO, because every caller here is one swing away from the
+     * race this shim used to hide: the field is written locally and vanilla posts the packet on
+     * its own tick, so anything acting in the same tick acts with the PREVIOUS item. Measured on
+     * allround as ~12 hits of exactly 1.0 hp a run -- a bow's attack damage -- with an iron_sword
+     * drawn on the client. Behind syncSlotToServer while it is being measured.
+     */
     public static void setSelectedSlot(net.minecraft.entity.player.PlayerInventory inv, int slot) {
         //#if MC >= 12111
         //$$ inv.setSelectedSlot(slot);
         //#else
         inv.selectedSlot = slot;
         //#endif
+        net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
+        if (mc.player != null && mc.player.getInventory() == inv) {
+            kaptainwutax.tungsten.combat.WeaponSelector.syncSlot(mc.player, slot);
+        }
     }
 
 }

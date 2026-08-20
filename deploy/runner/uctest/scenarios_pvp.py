@@ -30,6 +30,26 @@ def _stat(ctx, name, actor=None):
     return None
 
 
+def _hit_shape(ctx):
+    """Hit-size buckets and chip forensics for BOTH fighters, as recorded criteria.
+
+    Shared because the question these answer -- why does one fighter's blow land 6.0 and the
+    other's 1.0 with the same sword -- is only decidable by asking it on a course where the
+    suspected cause is ABSENT. allround switches hotbar slots between a bow and a sword all
+    fight; melee_basic never switches. Same instrument on both is the whole test."""
+    out = []
+    out.append(Criterion("hit sizes chip/partial/flat/crit (recorded, not gated)", True,
+                         f"bot {_stat(ctx, 'hitSize')} | victim {_stat(ctx, 'hitSize', ctx.victim)}"
+                         f" | slotSync={_stat(ctx, 'slotSync')}"
+                         f"   [slotSync MUST read 0 in the control arm]", gate=False))
+    ok, cs = ctx.bot.py.try_call("chipScenes")
+    out.append(Criterion("what a 1hp hit actually was (recorded, not gated)", True,
+                         f"{cs if ok and cs else '(none)'}"
+                         f"   [size(before>after)/ms since our swing/target hurtTime/on ground"
+                         f"/range/our hand/sprinting]", gate=False))
+    return out
+
+
 def _ledger(ctx):
     """Blows and damage taken by EACH fighter, from the same instrument on both sides.
 
@@ -95,6 +115,16 @@ class MeleeBasic(Scenario):
         # Kept for the record, no longer a gate: it cannot attribute.
         yield Criterion("victim hp dropped >= 8 (unattributed)", True,
                         f"damage={ctx.victim_damage():.1f}", gate=False)
+        # ⛔ THE CONTROL FOR allround's 1hp HITS, AND THE REASON IT IS ASKED HERE.
+        # On allround the bot books ~12 hits of EXACTLY 1.0 hp a run where its opponent books
+        # none, with an iron_sword on the client, no sprint, and the target's hurtTime at 10 --
+        # a FRESH damage event, so not the residue of a blow absorbed inside invulnerability.
+        # Exactly 1.0 with a sword showing is what a server sees when the hand it has is not the
+        # hand the client is drawing, and the one thing allround does that this course never
+        # does is switch hotbar slots between a bow and a sword all fight long.
+        # This kit has one sword and no switching. If the chips are absent here, the slot is the
+        # cause; if they are present, it is not, and the bow is exonerated a second time.
+        yield from _hit_shape(ctx)
         # WITNESS FOR THE SWORD-ONLY DISENGAGE, as fired/declined. The first number is ticks spent
         # kiting a wounded bot back out of reach -- a retreat justified by "out there the bow is
         # the weapon" -- and THIS KIT HAS NO BOW, so it must read 0. The second is the ticks where
@@ -1300,16 +1330,7 @@ class AllRound(Scenario):
         # crits are not being granted" from "half our blows arrive partial" -- which want
         # opposite fixes. Buckets are the vanilla quantities: a full iron_sword blow is 6.0
         # and a crit 9.0, so flat and crit are the two that should carry the count.
-        yield Criterion("hit sizes chip/partial/flat/crit (recorded, not gated)", True,
-                        f"bot {_stat(ctx, 'hitSize')} | victim {_stat(ctx, 'hitSize', ctx.victim)}",
-                        gate=False)
-        # THE CHIPS ARE NOT COINCIDENCE, so name what makes them. The bot passes ~0.54 swings a
-        # second, so the 150ms attribution window covers 8% of the run: collecting twelve stray
-        # hits inside it by chance would need about 150 arrow hits. Something removes ~1 hp
-        # RELIABLY just after our swing, and vanilla has one rule that produces exactly that --
-        # a target inside its 10-tick invulnerability takes only the DIFFERENCE above the last
-        # damage it took. An arrow of ours landing ~5 just before a 6-damage blow leaves 1, and
-        # eats the blow. If bowShots tracks the chip count, that is the mechanism.
+        yield from _hit_shape(ctx)
         yield Criterion("arrows, against the chip count (recorded, not gated)", True,
                         f"bowShots={_stat(ctx, 'bowShots')} bowWild={_stat(ctx, 'bowWild')}"
                         f" mdBow={_stat(ctx, 'mdBow')} voidEntries={_stat(ctx, 'voidEntries')}",
