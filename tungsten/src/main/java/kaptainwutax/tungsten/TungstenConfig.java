@@ -790,6 +790,17 @@ public class TungstenConfig {
     public boolean reassertSlotOnRespawn = false;
 
     /**
+     * Ticks to hold the swing after a weapon switch, so the server has applied it first.
+     *
+     * <p>0 disables. See WeaponSelector.lastSwitchTick: the server reports a BOW in hand on 2-4
+     * of every 7 rcon samples during an allround fight, and swinging into that window delivers
+     * 1.0 instead of 6.0. Sending the slot packet at the switch only wins the race more often;
+     * waiting a tick removes it. The cost is at most two ticks of delay on the first blow after
+     * a switch, against a blow worth a sixth of what it should be.
+     */
+    public int holdSwingTicksAfterSwitch = 0;
+
+    /**
      * A drop within three blocks does not pay the anti-ping-pong tax when competing with an ore.
      *
      * <p>MineOrCollectTask.getClosestTo compares `dropSq <= blockSq` with +10 already added to the

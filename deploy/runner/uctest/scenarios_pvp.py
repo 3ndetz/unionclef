@@ -45,7 +45,14 @@ def _hit_shape(ctx):
                          f" | slotSync={_stat(ctx, 'slotSync')}"
                          f" critReset={_stat(ctx, 'critReset')}"
                          f" stray={_stat(ctx, 'stray')}"
+                         f" heldSwing={_stat(ctx, 'heldSwing')}"
                          f"   [slotSync MUST read 0 in the control arm]", gate=False))
+    held = ctx.geo.get("server_held")
+    if held is not None:
+        out.append(Criterion("what the SERVER says is in our hand (recorded, not gated)", True,
+                             " ".join(f"{k}x{v}" for k, v in
+                                      sorted(held.items(), key=lambda kv: -kv[1]))
+                             or "(never sampled)", gate=False))
     okv, vc = ctx.victim.py.try_call("smallHitCauses") if ctx.victim else (False, None)
     okb, bc = ctx.bot.py.try_call("smallHitCauses")
     out.append(Criterion("what the SMALL hits actually were, named by vanilla", True,
@@ -1194,6 +1201,21 @@ class AllRound(Scenario):
         if t - ctx.geo["last_shot"] >= 2.5:
             ctx.geo["last_shot"] = t
             ctx.bot.py.try_call("shootArrowAt", ctx.victim.name)
+
+        # ⛔ ASK THE SERVER WHAT WE ARE HOLDING, because every instrument that has looked at this
+        # reads the CLIENT and the surviving hypothesis is that the two disagree. Six candidates
+        # for the ~19 hits a run of 0.4-1.5 hp died on client-side evidence; this is the one view
+        # nobody has taken. rcon is slow, so it rides the drive tick that is already paying for
+        # round trips rather than adding a loop of its own.
+        try:
+            held = ctx.bot.rcon.cmd(f"data get entity {ctx.bot.name} SelectedItem")
+            tally = ctx.geo.setdefault("server_held", {})
+            key = "empty"
+            if held and "minecraft:" in held:
+                key = held.split("minecraft:", 1)[1].split('"', 1)[0].split("'", 1)[0].strip()
+            tally[key] = tally.get(key, 0) + 1
+        except Exception:
+            pass
 
     def early_stop(self, ctx):
         # ⛔ DO NOT END A 120s COURSE AT THE FIRST KILL.

@@ -212,8 +212,20 @@ public final class WeaponSelector {
     //     /data get entity tester1 SelectedItem
     // sampled through a fight and compared against the client's own view.
 
+    /**
+     * The tick we last changed weapon, and the client's own tick count.
+     *
+     * <p>Asked by TriggerBot so a swing is never sent in the window where the server still holds
+     * the item we just put away. The server SAYS it holds the bow on 2-4 of every 7 samples taken
+     * over rcon during a fight, and a bow swung as a club deals exactly the 1.0 -- and 1.5 on a
+     * crit -- that ~19 hits a run land for. Sending the slot packet earlier only makes us win the
+     * race more often; not swinging into it removes the race.
+     */
+    public static volatile long clientTick = 0, lastSwitchTick = -100;
+
     /** Watch for attack-key presses aimed at a living entity. Diagnostic only. */
     public static void noticeStrayAttacks(net.minecraft.client.network.ClientPlayerEntity player) {
+        clientTick++;
         try {
             net.minecraft.client.MinecraftClient mc = net.minecraft.client.MinecraftClient.getInstance();
             if (player == null || !mc.options.attackKey.isPressed()) return;
@@ -305,6 +317,7 @@ public final class WeaponSelector {
 
         player.getInventory().setSelectedSlot(bestSlot);
         syncSlot(player, bestSlot);
+        lastSwitchTick = clientTick;
         return true;
     }
 

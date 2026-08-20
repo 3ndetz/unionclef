@@ -92,6 +92,9 @@ public class TriggerBot {
     /** Swings where sprint was dropped to buy the crit; reads 0 with the flag off. */
     public static volatile int gCritSprintReleased = 0;
 
+    /** Swings withheld because the weapon had just changed; reads 0 with the hold at 0. */
+    public static volatile int gSwingHeldForSwitch = 0;
+
     public static volatile int gTotal=0, gClick=0, gCooldown=0, gReach=0, gAngle=0, gLos=0, gPassed=0;
     /**
      * HOW FAR OFF the crosshair is when the angle gate refuses, and how far the target is when
@@ -399,6 +402,14 @@ public class TriggerBot {
         if (gateAngle) { gAngle++; gAngleSum += angle; if (angle > gAngleMax) gAngleMax = angle; }
         if (gateLos) gLos++;
         if (gateClick || gateCooldown || gateReach || gateAngle || gateLos) return;
+        // DO NOT SWING INTO THE SWITCH. See TungstenConfig.holdSwingTicksAfterSwitch.
+        int holdTicks = kaptainwutax.tungsten.TungstenConfig.get().holdSwingTicksAfterSwitch;
+        if (holdTicks > 0
+                && kaptainwutax.tungsten.combat.WeaponSelector.clientTick
+                        - kaptainwutax.tungsten.combat.WeaponSelector.lastSwitchTick < holdTicks) {
+            gSwingHeldForSwitch++;
+            return;
+        }
         // ⛔ THE SWING IS COMMITTED FROM HERE, so this is the last moment the crit can be bought.
         // Vanilla refuses a crit to a SPRINTING attacker, and it wants fallDistance > 0 rather
         // than merely a downward velocity -- neither of which AttackTiming.isCrit asks. Drop the
