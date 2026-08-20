@@ -30,6 +30,26 @@ def _stat(ctx, name, actor=None):
     return None
 
 
+def _defence_shape(ctx):
+    """Every defensive counter, BOTH fighters, side by side.
+
+    The gate on this course is kills >= deaths and the bot loses it on the DEATHS half -- it takes
+    50 flat blows to its opponent's 36 -- yet every pass so far has been spent on the offence.
+    Both fighters run the same mod, so any counter that differs between them is something the bot
+    is doing differently, and that is the shortest path to the mechanism.
+    """
+    keys = ["sprint", "lowHp", "standOff", "hurt", "hurtWin", "diseng", "band", "dodgeYield",
+            "dodgeTask", "dodgeDrive", "strafe", "flee", "voidEntries", "voidTicks", "dmgTaken",
+            "hop", "mdFar", "gp"]
+    rows = []
+    for who, actor in (("bot", ctx.bot), ("victim", ctx.victim)):
+        if actor is None:
+            continue
+        rows.append(who + " " + " ".join(f"{k}={_stat(ctx, k, actor)}" for k in keys))
+    return [Criterion("defence, both fighters (recorded, not gated)", True,
+                      "  ||  ".join(rows), gate=False)]
+
+
 def _hit_shape(ctx):
     """Hit-size buckets and chip forensics for BOTH fighters, as recorded criteria.
 
@@ -46,6 +66,7 @@ def _hit_shape(ctx):
                          f" critReset={_stat(ctx, 'critReset')}"
                          f" stray={_stat(ctx, 'stray')}"
                          f" heldSwing={_stat(ctx, 'heldSwing')}"
+                         f" loseKite={_stat(ctx, 'loseKite')}"
                          f"   [slotSync MUST read 0 in the control arm]", gate=False))
     held = ctx.geo.get("server_held")
     if held is not None:
@@ -141,6 +162,7 @@ class MeleeBasic(Scenario):
         # This kit has one sword and no switching. If the chips are absent here, the slot is the
         # cause; if they are present, it is not, and the bow is exonerated a second time.
         yield from _hit_shape(ctx)
+        yield from _defence_shape(ctx)
         # WITNESS FOR THE SWORD-ONLY DISENGAGE, as fired/declined. The first number is ticks spent
         # kiting a wounded bot back out of reach -- a retreat justified by "out there the bow is
         # the weapon" -- and THIS KIT HAS NO BOW, so it must read 0. The second is the ticks where
@@ -1362,6 +1384,7 @@ class AllRound(Scenario):
         # opposite fixes. Buckets are the vanilla quantities: a full iron_sword blow is 6.0
         # and a crit 9.0, so flat and crit are the two that should carry the count.
         yield from _hit_shape(ctx)
+        yield from _defence_shape(ctx)
         yield Criterion("arrows, against the chip count (recorded, not gated)", True,
                         f"bowShots={_stat(ctx, 'bowShots')} bowWild={_stat(ctx, 'bowWild')}"
                         f" mdBow={_stat(ctx, 'mdBow')} voidEntries={_stat(ctx, 'voidEntries')}",

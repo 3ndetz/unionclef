@@ -843,6 +843,40 @@ public class TungstenConfig {
     public boolean equipMeleeOnApproach = false;
 
     /**
+     * Trigger the wounded disengage on LOSING THE EXCHANGE instead of on hp &lt;= LOW_HP.
+     *
+     * <p>The guards stay exactly as measured -- out past reach only, and only with something to
+     * shoot -- because both were established by A/B and both are load-bearing. Only the trigger
+     * changes, and the reason is written at the branch itself: with natural regeneration off and
+     * no food, health inside one life never rises, so {@code hp <= LOW_HP} is not a threshold but
+     * a ONE-WAY LATCH. Two or three hits put the bot under half, and every remaining tick of that
+     * life returns to the kite whether or not it is actually behind.
+     *
+     * <p>DamageWatch's `losing` is the trigger that branch has been waiting for: a ROLLING window
+     * of hits taken against hits landed, so it switches off again the moment the bot is ahead. On
+     * allround it reads 261 ticks over 11 spells for the fighter that loses and 7 over 7 for the
+     * one that wins -- it discriminates, on the same jar in the same run, which is what a trigger
+     * has to do before anything is hung on it.
+     *
+     * <p>⛔ MEASURED AND WORSE, so the answer to the javadoc's open question is a NEGATIVE.
+     * Six interleaved runs of allround:
+     *
+     * <pre>
+     *   latch (hp &lt;= LOW_HP)     margin -5, -5, -6    kite ticks 90, 83, 85
+     *   rolling (losing)         margin -8, -4, -10   kite ticks 65, 21, 51
+     * </pre>
+     *
+     * <p>The trigger does exactly what it was built to do -- it fires and it LETS GO, so the bot
+     * kites a third to a quarter as long. And it loses more. The control arm is unusually tight
+     * (-5, -5, -6), which makes the -8 and -10 real rather than spread.
+     *
+     * <p>Which says the latch's stubbornness is not the defect it looks like. A rolling trigger
+     * re-enters the fight the moment the window turns, i.e. exactly when the opponent is still
+     * mid-combo, and pays for it. Whatever fixes this course is not a better disengage TRIGGER.
+     */
+    public boolean disengageOnLosingExchange = false;
+
+    /**
      * A drop within three blocks does not pay the anti-ping-pong tax when competing with an ore.
      *
      * <p>MineOrCollectTask.getClosestTo compares `dropSq <= blockSq` with +10 already added to the

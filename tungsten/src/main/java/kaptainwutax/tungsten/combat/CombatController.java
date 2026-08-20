@@ -122,6 +122,9 @@ public class CombatController {
     /** Telemetry: ticks spent kiting because of health. Counted so "does it disengage" is a
      *  number rather than an impression. */
     public static volatile int lowHpTicks;
+
+    /** Of those, the ones the LOSING trigger fired; reads 0 with the flag off. */
+    public static volatile int lowHpByLosing;
     /**
      * Ticks where the wounded retreat WOULD have fired and was declined for having nothing to
      * shoot with.
@@ -788,7 +791,13 @@ public class CombatController {
             // and fps all pass: 5:6, 5:6 and 12:15, 11:17. edge_duel carries the same kit, fires
             // this branch far less because a 5x5 platform has nowhere to retreat TO, and wins 4/4
             // on the same jar. A wounded fighter with no ranged option has to fight.
-            if (hp <= LOW_HP && dist > TriggerBot.REACH) {
+            // ⛔ THE TRIGGER, NOT THE GUARDS. See TungstenConfig.disengageOnLosingExchange:
+            // hp <= LOW_HP is a one-way latch on a bench with no regeneration, so it surrenders
+            // the back half of every life. `losing` is a rolling window and lets go again.
+            boolean wounded = kaptainwutax.tungsten.TungstenConfig.get().disengageOnLosingExchange
+                    ? kaptainwutax.tungsten.combat.DamageWatch.losingNow
+                    : hp <= LOW_HP;
+            if (wounded && dist > TriggerBot.REACH) {
                 if (!WeaponSelector.hasRangedOption(player)) {
                     // ⛔ THE OLD BRANCH DID TWO THINGS, AND ONLY ONE OF THEM WAS WRONG.
                     // Removing it whole cost edge_duel: n=8 on a healthy stand came back
@@ -809,6 +818,9 @@ public class CombatController {
                     lowHpDeclined++;          // the ticks this predicate gave back to the fight
                 } else {
                     lowHpTicks++;
+                    if (kaptainwutax.tungsten.TungstenConfig.get().disengageOnLosingExchange) {
+                        lowHpByLosing++;
+                    }
                     kite(out, player, world, dist);
                     return;
                 }

@@ -94,6 +94,16 @@ public final class DamageWatch {
      * it. Nothing reads these yet, on purpose.
      */
     public static volatile int disengageTicks, disengageSpells;
+
+    /**
+     * The same signal, readable while it is true, so combat can act on it.
+     *
+     * <p>This javadoc has said for months that "nothing reads these yet, on purpose" and named the
+     * order of work: add a real trigger, prove it fires at sensible moments, THEN correct the fake
+     * one. It fires at sensible moments -- 261 ticks over 11 spells for the losing fighter on
+     * allround against 7 over 7 for the winning one, both on the same jar in the same run.
+     */
+    public static volatile boolean losingNow;
     private static int winTaken, winLanded, winAge;
     private static double winHpLost;
     private static boolean losingPrev;
@@ -309,6 +319,7 @@ public final class DamageWatch {
         if (landedNow > lastLanded) winLanded += landedNow - lastLanded;
         lastLanded = landedNow;
         boolean losing = winHpLost >= LOSING_HP && winTaken > winLanded;
+        losingNow = losing;
         if (losing) {
             disengageTicks++;
             if (!losingPrev) disengageSpells++;
