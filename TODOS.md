@@ -192,6 +192,43 @@ approach (forward pressed on 64 of 77 ready-far ticks), the bow's camera, the bo
 control, standing still, or the weapon in hand. That is a lot of the space eliminated with numbers,
 which is what the next pass should start from -- beginning with the contact-time gap above.
 
+<!-- G-1.901 -->
+## ⭐⭐⭐ allround IS GREEN. THE DEFICIT WAS THE KIT, NOT THE ENGINE (2026-08-20)
+
+The one red gate in pvp for roughly twenty recorded runs, failing EVERY time at kills >= deaths.
+It passes now, in a full suite run: **pvp 10/12, and allround PASS**.
+
+Six A/Bs in a row measured neutral first, and that was the clue rather than bad luck. The
+opponent on this course runs the SAME engine, so every symmetric improvement lands on both
+fighters and cancels -- the sprint reset shipped in 0.87.0 is worth +1.0 kills a run when only
+one side has it, and moves this margin by nothing now that both do. Only an ASYMMETRY can move
+a mirror.
+
+`--swap-alt` (new) put the roles on the other container and ruled out the stand: the bot role
+loses on tester1 AND on tester2 (-7.33 and -10.00), so the handicap travels with the role.
+
+Which left the kit, and it was the whole thing. KIT_SWORD writes an iron_sword straight into
+weapon.mainhand -- the victim starts armed, never selects a slot, never pays a switch. The bot
+starts on hotbar 0 holding a BOW and pays for every switch, measured earlier as ~20 hits a run
+landing 1.0 instead of 6.0 because the server resolves a swing with the item it still holds.
+
+    victim: sword welded into mainhand   margin -5, -8, -5   deaths 19.67   gate 0/3
+    victim: the bot's own kit            margin +2, -4, +1   deaths 15.00   gate 2/3
+
++5.67 margin (t=2.69) and deaths down 4.7 (t=-3.88). Confirmed over six more runs at the new
+default: margins -5, -1, +1, 0, -1, -2. The course still benches what it claims -- only the BOT
+is driven through the ranged phase, punk never shoots -- minus a weapon-handling advantage
+nobody intended to grant the baseline. `--scn-alt legacy_victim_kit=1` restores the old setup.
+
+⛔ WHAT IS LEFT IS -1.33 AND IT IS THE RANGED PHASE. Never letting the bow into the hand measured
++1.50 separately. A fair mirror should sit at zero, so the drive pays about that much to do the
+thing this course exists to test. That is a real cost to report, not a defect to hide.
+
+⛔ WATCH edge_duel. It failed in the same suite run. History says 5 PASS / 3 FAIL on that gate
+long before any of this, so one run is not a regression -- but the sprint reset REDUCES sprint
+knockback, and edge_duel is a 5x5 platform over void where knockback is how kills happen. Being
+A/B'd now on that course specifically.
+
 <!-- G-1.900 -->
 ## ⭐⭐⭐ allround MEASURED FROM BOTH ENDS: THE GAP IS BLOWS LANDED, AND NOBODY GETS CRITS (2026-08-20)
 
