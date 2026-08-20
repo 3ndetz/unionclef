@@ -948,7 +948,7 @@ public class TungstenConfig {
      * <p>The two pairs it won are the interesting ones: the control scored ZERO on that ground
      * and the fix scored 4 and 3.
      *
-    public boolean stallCheckNeedsMovement = true;
+     * <p>⭐ SHIPPED ON. Seventeen PAIRED runs across two series, each arm on the same resolved
      * ground (checklist 4a), scored with deploy/runner/paired_ab.py:
      *
      * <pre>
@@ -962,8 +962,7 @@ public class TungstenConfig {
      * removing a stall gives the bot its time back, it does not tell it what to do with it.
      * Quote the stall numbers, not the rungs.
      */
-     */
-    public boolean stallCheckNeedsMovement = false;
+    public boolean stallCheckNeedsMovement = true;
 
     /**
      * Trigger the wounded disengage on LOSING THE EXCHANGE instead of on hp &lt;= LOW_HP.
