@@ -972,9 +972,21 @@ public final class MovementQueue {
                 else if (status == MovementStatus.RUNNING) qRunTicks++;
                 try {
                     var o = net.minecraft.client.MinecraftClient.getInstance().options;
+                    // ⛔ THE MISSING KEY WAS THE ONE THE PATHOLOGY USES. This latched sneak,
+                    // forward and sprint only, so a movement sitting in PREPPING while it MINES
+                    // an obstruction recorded as "sneak:n fwd:n spr:n" -- and read as "pressing
+                    // nothing at all". Movement.prepared() holds CLICK_LEFT at whatever blocks
+                    // the step and returns false, which is exactly the livelock this scene was
+                    // built to identify; the scene could not tell it from an idle movement.
+                    //
+                    // Captured live on the playthrough: Descend/PREPPING/idx0of3 with
+                    // "in:air head:air", which does NOT rule the obstruction out either --
+                    // positionsToBreak is not the body and head cells.
                     lastTickKeys = "sneak:" + (o.sneakKey.isPressed() ? "Y" : "n")
                             + " fwd:" + (o.forwardKey.isPressed() ? "Y" : "n")
-                            + " spr:" + (o.sprintKey.isPressed() ? "Y" : "n");
+                            + " spr:" + (o.sprintKey.isPressed() ? "Y" : "n")
+                            + " mine:" + (o.attackKey.isPressed() ? "Y" : "n")
+                            + " jump:" + (o.jumpKey.isPressed() ? "Y" : "n");
                 } catch (Exception ignored) {
                     // an instrument never breaks the tick it rides on
                 }
