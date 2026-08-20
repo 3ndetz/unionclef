@@ -873,6 +873,27 @@ public class TungstenConfig {
      * gets it. That is the alternative to teaching the queue parkour (queueParkour), not a
      * duplicate of it: one adds a capability, this one routes around the missing capability. Both
      * target the same wall and they should be measured against each other.
+     *
+     * <p>⛔ MEASURED PAIRED AND NEGATIVE -- KEEP IT AT 1. Five pairs, each arm on the same
+     * resolved ground, differing in this value alone:
+     *
+     * <pre>
+     *   ground            fix(4)  ctrl(1)  delta
+     *   1792 150 361         1       4      -3
+     *   1192 150 661         0       0      +0
+     *   592  150 661         0       0      +0
+     *   292  150 661         0       0      +0
+     *   -308 150 661         0       1      -1
+     *   mean -0.80, never once positive
+     * </pre>
+     *
+     * <p>The reasoning still looks right -- a route the queue can only stub SHOULD go to the
+     * walker -- and it measures worse anyway, which is the whole reason this bench exists. Two
+     * things are worth keeping from it. First, the naive version was strictly WORSE than the wall
+     * it aimed at: stopping the queue every tick produced 446 starts and 0 steps against the untouched
+     * code's 28 and 25, until a six-second walker window was added. Second, even with the window
+     * the decline barely fires (short=4-29 a run against 369-6058 before), so what is left is a
+     * change that rarely acts and loses when it does.
      */
     public int navQueueMinSteps = 1;
 
