@@ -39,6 +39,10 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
      */
     public static volatile int closeWalkBelow, closeWalkAbove, closeWalkOnTop, closeWalkBeside;
 
+    /** Ticks our forward press was still down on entry, and ticks something had released it. */
+    public static volatile int closeWalkFwdKept, closeWalkFwdLost;
+    private static boolean closeWalkHeldLast = false;
+
     public static volatile int entityCloseWalk;
 
     /**
@@ -207,6 +211,25 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     @Override
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
+
+        // ⛔ SAMPLE THE KEY BEFORE THIS METHOD TOUCHES IT. The first version of this probe sat
+        // inside the close-walk block -- which runs AFTER the Nav.isPathing() release below -- and
+        // read 0 kept of 120. That number cannot distinguish "someone else released it" from
+        // "this very method released it four lines earlier", and I nearly reported the first.
+        // Here it reports what the PREVIOUS tick left behind, which is the question.
+        if (closeWalkHeldLast) {
+            try {
+                if (net.minecraft.client.MinecraftClient.getInstance()
+                        .options.forwardKey.isPressed()) {
+                    closeWalkFwdKept++;
+                } else {
+                    closeWalkFwdLost++;
+                }
+            } catch (Exception ignored) {
+                // an instrument never breaks the tick it rides on
+            }
+            closeWalkHeldLast = false;
+        }
 
         // ⛔ ASK WHETHER THE BODY MOVED, NOT WHETHER NAVIGATION SAYS IT IS BUSY.
         //
@@ -402,17 +425,13 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
                 && mod.getPlayer().isInRange(_entity, CLOSE_WALK_RANGE)
                 && !mod.getPlayer().isInRange(_entity, _closeEnoughDistance)) {
             entityCloseWalk++;
-            // ⛔ WHERE IS THE DROP, RELATIVE TO US? The aim is now proven good -- 480 of 481 ticks
-            // aimed and 392 yaw-kept -- and the BODY still moves on 14. So the camera is not the
-            // problem and the next question is geometry, which nothing here records.
-            //
-            // wantYaw below is atan2 over x and z ONLY. A drop lying almost directly BELOW makes
-            // that horizontal direction degenerate, and "hold forward" then walks at nothing.
-            // That shape is not hypothetical: the barren-lock recorder measured dy=-1.0 on all 21
-            // locks it caught this session -- every one a drop in the hole the bot had just dug.
-            //
-            // Tally it as a shape rather than a mean, because "mostly below" and "mostly beside"
-            // want opposite fixes and an average of the two is neither.
+            net.minecraft.util.math.Vec3d nowPos = mod.getPlayer().getPos();
+            if (closeWalkLastPos != null && closeWalkLastPos.squaredDistanceTo(nowPos) > 0.0025) {
+                entityCloseWalkMoved++;
+            }
+            // WHERE is the drop? "mostly below" and "mostly beside" want opposite fixes, so tally
+            // the shape rather than an average of the two. Measured: beside on 963 of 963, which
+            // is what refuted the degenerate-direction theory this counter was added to test.
             try {
                 double hdx = _entity.getX() - mod.getPlayer().getX();
                 double hdz = _entity.getZ() - mod.getPlayer().getZ();
@@ -424,10 +443,6 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
                 else closeWalkBeside++;
             } catch (Exception ignored) {
                 // an instrument never breaks the tick it rides on
-            }
-            net.minecraft.util.math.Vec3d nowPos = mod.getPlayer().getPos();
-            if (closeWalkLastPos != null && closeWalkLastPos.squaredDistanceTo(nowPos) > 0.0025) {
-                entityCloseWalkMoved++;
             }
             // Measured BEFORE this tick's snap, so it reports what the previous tick left behind.
             net.minecraft.util.math.Vec3d toTarget = _entity.getPos().subtract(nowPos);
@@ -488,6 +503,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             Nav.cancel();
             adris.altoclef.util.helpers.LookHelper.lookAt(mod, _entity.getPos());
             mod.getInputControls().hold(Input.MOVE_FORWARD);
+            closeWalkHeldLast = true;
             closeWalkSetYaw = mod.getPlayer().getYaw();   // what the snap actually left behind
             setDebugState("Walking straight at it (navigation would not)");
             return null;
