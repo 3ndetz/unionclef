@@ -42,6 +42,10 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     /** Of the "below" ticks, how deep: one block, two, or three-plus. */
     public static volatile int closeWalkBelow1, closeWalkBelow2, closeWalkBelow3;
 
+    /** Jumps the close walk issued after the body sat still; 0 with the flag off. */
+    public static volatile int closeWalkJumped;
+    private static int closeWalkStillTicks = 0;
+
     /** Ticks our forward press was still down on entry, and ticks something had released it. */
     public static volatile int closeWalkFwdKept, closeWalkFwdLost;
 
@@ -547,6 +551,23 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             Nav.cancel();
             adris.altoclef.util.helpers.LookHelper.lookAt(mod, _entity.getPos());
             mod.getInputControls().hold(Input.MOVE_FORWARD);
+            // ⛔ A BODY THAT IS AIMED, PRESSING FORWARD AND NOT MOVING IS AGAINST SOMETHING.
+            // See TungstenConfig.closeWalkJumpsWhenStuck. Walking cannot clear a lip; a step up
+            // can, and every other mover here does exactly that. Only after a few wasted ticks,
+            // so a healthy approach never jumps.
+            if (kaptainwutax.tungsten.TungstenConfig.get().closeWalkJumpsWhenStuck) {
+                if (closeWalkLastPos != null
+                        && closeWalkLastPos.squaredDistanceTo(mod.getPlayer().getPos()) <= 0.0025) {
+                    closeWalkStillTicks++;
+                } else {
+                    closeWalkStillTicks = 0;
+                }
+                if (closeWalkStillTicks >= 6) {
+                    mod.getInputControls().hold(Input.JUMP);
+                    closeWalkJumped++;
+                    closeWalkStillTicks = 0;
+                }
+            }
             closeWalkHeldLast = true;
             closeWalkProbePending = true;
             closeWalkSetYaw = mod.getPlayer().getYaw();   // what the snap actually left behind

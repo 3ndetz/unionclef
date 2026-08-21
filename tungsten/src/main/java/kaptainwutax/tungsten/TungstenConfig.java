@@ -726,6 +726,24 @@ public class TungstenConfig {
      */
     public boolean closeWalkKeepsKeys = false;
 
+    /**
+     * The close walk JUMPS when the body will not move, instead of only pressing forward.
+     *
+     * <p>Measured shape of the wall, pooled over a series rather than read off one run: the drop
+     * is BESIDE the bot on 721 ticks against 2 below, so this is not a vertical problem and
+     * steering is not the problem either -- the aim reads 480 of 481 with 392 yaw-kept. The body
+     * simply does not move: entityCloseWalkMoved is 14 of 481.
+     *
+     * <p>A target beside you at 0.8+ blocks, correctly aimed, with forward held, that does not
+     * get closer, is a body against something. Walking cannot solve that; a step up can, and it
+     * is what every other mover in this codebase does at a lip. So press JUMP once the walk has
+     * spent a few ticks going nowhere.
+     *
+     * <p>⛔ An earlier correction belongs here: "the drop is directly below on 39% of ticks" was
+     * quoted from ONE run and did not survive the series. One run is a sample.
+     */
+    public boolean closeWalkJumpsWhenStuck = false;
+
     public boolean entitySearchMustMove = true;
 
     /**
