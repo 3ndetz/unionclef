@@ -226,6 +226,12 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
         // close walk is driving -- so the measurement silently disabled the fix and the A/B ran
         // with closeWalkKeysKept=0 in BOTH arms. The probe gets its own one-shot flag; the drive
         // latch is owned by the drive.
+        // ⛔ CLEAR THE DRIVE LATCH EVERY TICK. It is a static, so leaving it set meant that once
+        // the close walk had fired ONCE, the key release below was suppressed for every entity
+        // approach afterwards -- in that run and in every later one. The counter is what showed
+        // it: keysKept=1765 on a run whose close walk never ran at all (kept=0 lost=0).
+        boolean droveLastTick = closeWalkHeldLast;
+        closeWalkHeldLast = false;
         if (closeWalkProbePending) {
             try {
                 if (net.minecraft.client.MinecraftClient.getInstance()
@@ -274,7 +280,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             // had just pressed, on half its ticks: closeWalkFwd=241/240, measured at the top of the
             // tick before this method touches the key.
             boolean walkDrove = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKeys
-                    && closeWalkHeldLast;
+                    && droveLastTick;
             if (Nav.isPathing() && !walkDrove) {
                 mod.getInputControls().release(Input.SNEAK);
                 mod.getInputControls().release(Input.MOVE_BACK);
