@@ -269,9 +269,18 @@ public final class MovementQueue {
                     double ddx = (cur.dest.x + 0.5) - pl.getX();
                     double ddz = (cur.dest.z + 0.5) - pl.getZ();
                     float wantYawDeg = (float) Math.toDegrees(-Math.atan2(ddx, ddz));
-                    look = String.format(java.util.Locale.ROOT, "%+.0f",
+                    // ⛔ AND THE TWO FIELDS THAT SEPARATE "BLOCKED" FROM "PRESSED AND NOT
+                    // MOVING". The scene now shows a perfectly aimed diagonal (off:+0) with
+                    // forward and sprint held, air at the feet and head, an ASCENDING step, and
+                    // jump:n -- and MovementDiagonal only jumps when player.horizontalCollision
+                    // is true. So either the body is against something the block names do not
+                    // show, or it is against nothing and simply is not moving. Those want
+                    // opposite fixes and the scene cannot currently tell them apart.
+                    look = String.format(java.util.Locale.ROOT, "%+.0f coll:%s v:%.2f",
                             net.minecraft.util.math.MathHelper.wrapDegrees(
-                                    wantYawDeg - pl.getYaw()));
+                                    wantYawDeg - pl.getYaw()),
+                            pl.horizontalCollision ? "Y" : "n",
+                            Math.hypot(pl.getVelocity().x, pl.getVelocity().z));
                 }
             } catch (Exception ignored) {
                 // an instrument never breaks the tick it rides on
