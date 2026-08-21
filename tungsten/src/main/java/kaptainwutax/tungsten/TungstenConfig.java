@@ -706,6 +706,23 @@ public class TungstenConfig {
      * <p>With this on, that release is skipped on a tick where the close walk drove last time.
      * Nothing else changes: the walk still only runs when the progress checker says the body is
      * not moving, so a healthy approach never reaches it.
+     *
+     * <p>⛔ MEASURED PAIRED AND IT DOES NOT PAY. Five pairs, each arm on the same ground:
+     *
+     * <pre>
+     *   rungs        -0.40   t -0.59    [0, +1, -3, 0, 0]
+     *   stall time  +55.6s   t +1.41    the fix stands still MORE, not less
+     * </pre>
+     *
+     * <p>Both metrics point the same way and neither is established. The diagnosis behind it is
+     * solid -- TimeoutWanderTask really does release the press, named by instrument at
+     * "TimeoutWanderTask:225 x267" against closeWalkFwd=0/240/0 -- so the key IS being taken. It
+     * simply does not follow that keeping it helps: holding MOVE_FORWARD into whatever stopped
+     * the bot is not obviously better than letting go, and the stall numbers suggest it is worse.
+     *
+     * <p>Which points the next attempt at the OTHER half of this wall rather than at this one:
+     * the drop lies directly BELOW the bot on 39% of close-walk ticks (closeWalkGeom=189/0/0/292),
+     * where steering by atan2(x, z) is degenerate and no amount of forward can help.
      */
     public boolean closeWalkKeepsKeys = false;
 
