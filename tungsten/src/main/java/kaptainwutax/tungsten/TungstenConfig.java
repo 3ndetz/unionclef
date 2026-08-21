@@ -741,6 +741,24 @@ public class TungstenConfig {
      *
      * <p>⛔ An earlier correction belongs here: "the drop is directly below on 39% of ticks" was
      * quoted from ONE run and did not survive the series. One run is a sample.
+     *
+     * <p>⛔ MEASURED PAIRED AND IT DOES NOT PAY EITHER. Five comparable pairs, one excluded:
+     *
+     * <pre>
+     *   rungs        -0.60   t -0.51   [+2, 0, 0, 0, -5]
+     *   stall time  +78.0s   t +1.37   the fix stands still MORE
+     *   stall share +22.7%   t +1.37
+     * </pre>
+     *
+     * <p>Nothing established, everything pointing the same way. A jump in place appears to swap
+     * one dead end for another: the bot hops against whatever stopped it instead of letting the
+     * wander take the tick and try somewhere else.
+     *
+     * <p>THREE remedies for this wall are now eliminated with numbers -- keeping the close walk's
+     * keys, jumping when stuck, and progressCheckIgnoresSearch -- while the DIAGNOSIS survives
+     * all three: the walk aims correctly (480 of 481, 392 yaw-kept), the body moves on 14 ticks,
+     * the drop is beside rather than below (721 against 2), and TimeoutWanderTask really does
+     * take the forward key back 267 times. Something stops the body that none of these touch.
      */
     public boolean closeWalkJumpsWhenStuck = false;
 
