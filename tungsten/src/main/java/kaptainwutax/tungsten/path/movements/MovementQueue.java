@@ -257,8 +257,28 @@ public final class MovementQueue {
             } catch (Exception ignored) {
                 // an instrument never breaks the tick it rides on
             }
+            // ⛔ FORWARD GOES WHERE YOU LOOK, NOT WHERE THE EDGE POINTS. The scene already says
+            // the step wants ES and that fwd is held with nothing in the way -- and the body does
+            // not move. The one thing it never said is whether the CAMERA agrees with the edge.
+            // The same question, asked of the close walk, is what exonerated its aim (480 of 481)
+            // and sent that investigation somewhere useful; here it has never been asked at all.
+            String look = "?";
+            try {
+                var pl = net.minecraft.client.MinecraftClient.getInstance().player;
+                if (pl != null && cur != null) {
+                    double ddx = (cur.dest.x + 0.5) - pl.getX();
+                    double ddz = (cur.dest.z + 0.5) - pl.getZ();
+                    float wantYawDeg = (float) Math.toDegrees(-Math.atan2(ddx, ddz));
+                    look = String.format(java.util.Locale.ROOT, "%+.0f",
+                            net.minecraft.util.math.MathHelper.wrapDegrees(
+                                    wantYawDeg - pl.getYaw()));
+                }
+            } catch (Exception ignored) {
+                // an instrument never breaks the tick it rides on
+            }
             stuckScenes.addLast("on:" + name.apply(feet.down()) + " in:" + name.apply(feet)
-                    + " head:" + name.apply(feet.above()) + " go:" + dir + " " + keys + " " + who);
+                    + " head:" + name.apply(feet.above()) + " go:" + dir + " off:" + look
+                    + " " + keys + " " + who);
             while (stuckScenes.size() > 4) stuckScenes.removeFirst();
         } catch (Exception ignored) {
             // an instrument never breaks the tick it rides on
