@@ -115,6 +115,25 @@ public class InputControls {
      * which is also how two systems end up disagreeing about whether a key is down.
      */
     public void releaseAll() {
+        // ⛔ THE HOLE IN THE FIRST VERSION OF THIS INSTRUMENT. release(MOVE_FORWARD) was named
+        // and releaseAll() was not, so every caller that drops all keys at once -- and there are
+        // many -- would have shown up as "(none)" and been read as "nobody takes the key".
+        if (adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDrivingNow()) {
+            try {
+                for (StackTraceElement el : new Throwable().getStackTrace()) {
+                    String cn = el.getClassName();
+                    if (cn.endsWith("InputControls")) continue;
+                    String key = "ALL:" + cn.substring(cn.lastIndexOf('.') + 1)
+                            + ":" + el.getLineNumber();
+                    synchronized (forwardStealers) {
+                        forwardStealers.merge(key, 1, Integer::sum);
+                    }
+                    break;
+                }
+            } catch (Exception ignored) {
+                // naming the caller must never break the control it rides on
+            }
+        }
         for (Input input : Input.values()) {
             release(input);
         }
