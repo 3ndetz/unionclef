@@ -41,6 +41,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
 
     /** Ticks our forward press was still down on entry, and ticks something had released it. */
     public static volatile int closeWalkFwdKept, closeWalkFwdLost;
+
+    /** Ticks the release was skipped because the close walk was driving; 0 with the flag off. */
+    public static volatile int closeWalkKeysKept;
     private static boolean closeWalkHeldLast = false;
 
     public static volatile int entityCloseWalk;
@@ -259,10 +262,19 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
                 mod.getInputControls().release(Input.MOVE_FORWARD);
             }
         } else {
-            if (Nav.isPathing()) {
+            // ⛔ DO NOT TAKE THE KEYS OFF THE THING THAT IS DRIVING. isPathing() is true while the
+            // pathfinder merely SEARCHES, and it searches all through a close walk -- the walk only
+            // runs because navigation already failed. So this released the MOVE_FORWARD the walk
+            // had just pressed, on half its ticks: closeWalkFwd=241/240, measured at the top of the
+            // tick before this method touches the key.
+            boolean walkDrove = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKeys
+                    && closeWalkHeldLast;
+            if (Nav.isPathing() && !walkDrove) {
                 mod.getInputControls().release(Input.SNEAK);
                 mod.getInputControls().release(Input.MOVE_BACK);
                 mod.getInputControls().release(Input.MOVE_FORWARD);
+            } else if (Nav.isPathing()) {
+                closeWalkKeysKept++;
             }
         }
         if (_unstuckTask != null && _unstuckTask.isActive() && !_unstuckTask.isFinished() && stuckInBlock(mod) != null) {

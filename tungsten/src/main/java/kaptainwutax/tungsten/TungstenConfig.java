@@ -691,6 +691,24 @@ public class TungstenConfig {
     //     PASS   idrop=56-111       drop=51/0   lock=0/0/0   navStop=3/0-1/0
     // i.e. the tracker is asked ~6150 times and hands over a drop EVERY time, because the bot
     // spends the whole run pursuing one drop it never reaches. That is the thing to fix.
+    /**
+     * The close walk keeps the keys it pressed, instead of having them released under it.
+     *
+     * <p>GetToEntityTask ends its close-range walk with hold(MOVE_FORWARD) and returns. The NEXT
+     * tick begins by releasing SNEAK, MOVE_BACK and MOVE_FORWARD whenever {@code Nav.isPathing()}
+     * -- and that is true while the pathfinder is merely SEARCHING, which it does constantly
+     * while the walk is running precisely because the walk only fires when navigation has failed.
+     *
+     * <p>Measured at the top of the tick, before this method touches the key:
+     * {@code closeWalkFwd=241/240} -- the press survives on half the ticks and is taken away on
+     * the other half, which is why 481 ticks of a correctly aimed walk moved the body on 14.
+     *
+     * <p>With this on, that release is skipped on a tick where the close walk drove last time.
+     * Nothing else changes: the walk still only runs when the progress checker says the body is
+     * not moving, so a healthy approach never reaches it.
+     */
+    public boolean closeWalkKeepsKeys = false;
+
     public boolean entitySearchMustMove = true;
 
     /**
