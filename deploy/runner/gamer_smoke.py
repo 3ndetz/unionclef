@@ -50,6 +50,7 @@ elif op=="inv":
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
 elif op=="stealers": out={"r": str(mc.forwardStealers() or "")}
+elif op=="blocked": out={"r": str(mc.blockedScenes() or "")}
 elif op=="resetstats": mc.resetValues(); out={"ok":True}
 elif op=="readflag": out=dict(mc.readFlag(req["n"]))
 elif op=="perf": out={"p": dict(mc.getPerfStats())}
@@ -122,6 +123,8 @@ def write_stall_evidence(reason, tag=""):
     try:
         blob = [reason,
                 "", "FULL COUNTERS:", py4j("stats").get("s") or "",
+                "", "WHAT THE CLOSE WALK WAS UP AGAINST:",
+                str((py4j("blocked") or {}).get("r", "?")),
                 "", "WHO RELEASED MOVE_FORWARD UNDER THE CLOSE WALK:",
                 str((py4j("stealers") or {}).get("r", "?")),
                 "", "RUNNER:", str(py4j("task").get("runner", "")),

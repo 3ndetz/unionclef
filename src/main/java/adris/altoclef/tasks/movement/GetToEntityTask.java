@@ -44,6 +44,61 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
 
     /** Jumps the close walk issued after the body sat still; 0 with the flag off. */
     public static volatile int closeWalkJumped;
+
+    /**
+     * WHAT IS THE BODY AGAINST? Three remedies for this wall were built and measured away --
+     * keeping the keys, jumping when stuck, ignoring a search in the progress check -- and the
+     * diagnosis survived all three: aimed on 480 of 481 ticks, moving on 14, drop beside rather
+     * than below, forward key genuinely taken back 267 times. Something stops the body that none
+     * of them touch, and nothing has ever looked at WHAT.
+     *
+     * <p>So read the scene instead of proposing a fourth remedy: the block at the feet, the block
+     * at head height in the direction of travel, what is underfoot, and how far the drop is. That
+     * is the same move that named the key thief, and it took one capture.
+     */
+    private static final java.util.ArrayDeque<String> blockedScenes = new java.util.ArrayDeque<>();
+
+    /** Scenes of the close walk against something, oldest first. */
+    public static String blockedScenes() {
+        synchronized (blockedScenes) {
+            return String.join(" | ", blockedScenes);
+        }
+    }
+
+    /** Name what the body is up against: feet, head, floor, and the drop's offset. */
+    private void recordBlockedScene(AltoClef mod) {
+        try {
+            var p = mod.getPlayer();
+            var w = mod.getWorld();
+            if (p == null || w == null || _entity == null) return;
+            net.minecraft.util.math.Vec3d dir = _entity.getPos().subtract(p.getPos());
+            int sx = (int) Math.signum(Math.abs(dir.x) > Math.abs(dir.z) ? dir.x : 0);
+            int sz = (int) Math.signum(Math.abs(dir.z) >= Math.abs(dir.x) ? dir.z : 0);
+            net.minecraft.util.math.BlockPos feet = p.getBlockPos();
+            net.minecraft.util.math.BlockPos ahead = feet.add(sx, 0, sz);
+            String at = w.getBlockState(ahead).getBlock().getTranslationKey();
+            String head = w.getBlockState(ahead.up()).getBlock().getTranslationKey();
+            String floor = w.getBlockState(feet.down()).getBlock().getTranslationKey();
+            String scene = String.format(java.util.Locale.ROOT,
+                    "ahead:%s head:%s floor:%s d%.1f dy%+.1f",
+                    at.substring(at.lastIndexOf('.') + 1),
+                    head.substring(head.lastIndexOf('.') + 1),
+                    floor.substring(floor.lastIndexOf('.') + 1),
+                    p.getPos().distanceTo(_entity.getPos()),
+                    _entity.getY() - p.getY());
+            synchronized (blockedScenes) {
+                if (blockedScenes.size() < 8) blockedScenes.addLast(scene);
+            }
+        } catch (Exception ignored) {
+            // an instrument never breaks the tick it rides on
+        }
+    }
+
+    public static void clearBlockedScenes() {
+        synchronized (blockedScenes) {
+            blockedScenes.clear();
+        }
+    }
     private static int closeWalkStillTicks = 0;
 
     /** Ticks our forward press was still down on entry, and ticks something had released it. */
@@ -561,6 +616,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
                     closeWalkStillTicks++;
                 } else {
                     closeWalkStillTicks = 0;
+                }
+                if (closeWalkStillTicks == 6) {
+                    recordBlockedScene(mod);
                 }
                 if (closeWalkStillTicks >= 6) {
                     mod.getInputControls().hold(Input.JUMP);

@@ -2173,6 +2173,11 @@ public class Py4jEntryPoint {
         return adris.altoclef.control.InputControls.forwardStealers();
     }
 
+    /** What the close walk was up against when the body stopped moving. */
+    public String blockedScenes() {
+        return adris.altoclef.tasks.movement.GetToEntityTask.blockedScenes();
+    }
+
     public String chipScenes() {
         return adris.altoclef.chains.MobDefenseChain.chipScenes();
     }
@@ -2665,6 +2670,7 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkBelow2 = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkBelow3 = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkJumped = 0;
+        adris.altoclef.tasks.movement.GetToEntityTask.clearBlockedScenes();
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkFwdKept = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkFwdLost = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkKeysKept = 0;
