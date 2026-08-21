@@ -787,6 +787,20 @@ public class TungstenConfig {
      */
     public boolean queueSkipsNullEdges = false;
 
+    /**
+     * Drop repeated cells from a route as it enters the movement queue.
+     *
+     * <p>Shipped ON: a route that repeats a cell is malformed, the queue types every edge, and an
+     * edge from a block to itself has no type -- so the chain was truncated on it and every step
+     * after it handed back. Measured on the navigation stall's 60-second reproduction: 601
+     * truncations of shape 0,0,0, all at index 1, replaced by five real edges a run.
+     *
+     * <p>The switch exists because it went out unconditional and mine_coal then read 3/5 where it
+     * had been 19/20. A shipped change that cannot be turned off cannot be A/B'd against the
+     * course it may have broken, and "probably unrelated" is not a measurement.
+     */
+    public boolean queueDedupesRoute = true;
+
     public boolean entitySearchMustMove = true;
 
     /**

@@ -600,7 +600,8 @@ public final class MovementQueue {
         // others, because more than one caller does it. This is the single point they all pass
         // through, so it belongs here and it is unconditional: there is no reading of "walk from
         // a block to itself" worth preserving.
-        if (cells != null && cells.size() > 1) {
+        if (cells != null && cells.size() > 1
+                && kaptainwutax.tungsten.TungstenConfig.get().queueDedupesRoute) {
             List<BlockPos> tidy = new java.util.ArrayList<>(cells.size());
             for (BlockPos c : cells) {
                 if (tidy.isEmpty() || !tidy.get(tidy.size() - 1).equals(c)) tidy.add(c);
