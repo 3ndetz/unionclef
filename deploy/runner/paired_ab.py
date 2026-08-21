@@ -150,6 +150,18 @@ def main():
         print(f"\n{label:<11} {mean:+.2f}{unit} per run over {len(deltas)} pairs   "
               f"sd {sd:.2f}   t {t:+.2f}   ({better} is better for the fix)")
         print(f"            {deltas}")
+        # ⛔ "t >= 2" IS A NORMAL APPROXIMATION AND THESE SERIES ARE SMALL. At n=3 the t
+        # distribution needs |t| > 4.30 for the same confidence, at n=4 > 3.18, at n=6 > 2.57.
+        # Quoting the flat bar on three pairs would have called a result ESTABLISHED at t=2.54
+        # that the right critical value rejects. The bar is kept -- it is what this repo uses --
+        # but the critical value for the actual n is printed beside it.
+        crit = {2: 4.30, 3: 3.18, 4: 2.78, 5: 2.57, 6: 2.45, 7: 2.36, 8: 2.31,
+                9: 2.26, 10: 2.23, 11: 2.20, 12: 2.18}.get(len(deltas) - 1, 2.05)
+        if abs(t) >= crit:
+            print(f"            CLEARS the two-sided 95% bar for n={len(deltas)} (|t| > {crit})")
+        elif abs(t) >= 2:
+            print(f"            t is over 2 but NOT over {crit}, which is what n={len(deltas)} "
+                  f"actually requires. Not established.")
         if sd == 0 and mean == 0:
             print("            EVERY PAIR IDENTICAL -- the arms did not differ. Check the "
                   "mechanism counter: if it reads 0 in the fix arm these pairs measured nothing.")
