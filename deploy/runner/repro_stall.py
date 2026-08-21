@@ -34,6 +34,9 @@ if   op=="gs":    out={"self": str(dict(mc.getGameState()).get("self"))}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
 elif op=="chatcmd": mc.ChatMessage(req["c"]); out={"ok":True}
 elif op=="resetstats": mc.resetValues(); out={"ok":True}
+elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
+elif op=="state": out={"inGame": bool(mc.inGame())}
+elif op=="shapes": out={"r": str(mc.noClassShapes() or "")}
 elif op=="task":  out={"chain": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-800:]}
 else: out={"err":"?"}
 print(json.dumps(out))
@@ -76,6 +79,16 @@ def main():
         # Default: a few blocks short of the target, on the same level.
         start = f"{tx + 6} {ty} {tz + 6}"
 
+    # ⛔ CONNECT FIRST. A deploy restarts the client, so the bot is in no world at all and every
+    # counter reads 0 -- which looks exactly like "the fix changed nothing" and is not.
+    if not py4j("state").get("inGame"):
+        print("[0] bot is not in a world, connecting to gamer-server")
+        py4j("connect", ip="gamer-server")
+        for _ in range(12):
+            time.sleep(5)
+            if py4j("state").get("inGame"):
+                break
+        print("    in game:", py4j("state").get("inGame"))
     print(f"[1] teleport to {start}, target {tx} {ty} {tz}")
     grcon(f"tp {BOT} {start}")
     time.sleep(2)
@@ -83,7 +96,7 @@ def main():
     before = py4j("gs").get("self")
 
     print("[2] issue the goto")
-    py4j("chatcmd", c=f";goto {tx} {ty} {tz}")
+    py4j("chatcmd", c=f"@goto {tx} {ty} {tz}")
 
     for step in range(secs // 10):
         time.sleep(10)
@@ -95,6 +108,12 @@ def main():
     print(f"\nstart {before}\nend   {after}")
     for k in ("mqStarted", "mqSteps", "mqNoClass", "qNoMove", "pdEnter", "pdWalking", "stuck"):
         print(f"  {k}={field(stats, k)}")
+    # WHICH SHAPE IS BEING TRUNCATED? mqNoClass counts them and never says what they are, and
+    # this repro just showed queueParkour changing that count by nothing (477 against 479, the
+    # flag verified on both sides). So the missing class here is NOT parkour, and this tally is
+    # the only thing that can name what it is.
+    print("")
+    print("truncated edge shapes (dx,dy,dz):", py4j("shapes").get("r", "?"))
     print("\ntask:", py4j("task").get("chain", "")[-300:])
 
 

@@ -762,6 +762,31 @@ public class TungstenConfig {
      */
     public boolean closeWalkJumpsWhenStuck = false;
 
+    /**
+     * Skip a route edge that goes nowhere instead of truncating the chain on it.
+     *
+     * <p>⛔ THE ROUTE CONTAINS EDGES FROM A CELL TO ITSELF, AND THEY ARE THE DOMINANT CAUSE OF
+     * TRUNCATION. Named by tallying the SHAPES of every edge the queue could not classify, on a
+     * 60-second reproduction of the navigation stall:
+     *
+     * <pre>
+     *   0,0,0   x601      an edge with zero displacement
+     *   0,0,-2  x166
+     *   0,0,-3  x94
+     *   0,0,-4  x17
+     *   +-3,0,0 x35 total
+     * </pre>
+     *
+     * <p>No movement class can execute "stay where you are", so the queue does the honest thing
+     * and hands the rest of the route back -- 601 times. That is not a missing capability, it is
+     * a malformed route, and it explains why queueParkour moved mqNoClass by nothing on this
+     * terrain (477 against 479 with the flag verified on both sides) while the note that first
+     * proposed it expected 672 -> 3.
+     *
+     * <p>With this on, a zero-length edge is stepped over and the chain continues.
+     */
+    public boolean queueSkipsNullEdges = false;
+
     public boolean entitySearchMustMove = true;
 
     /**

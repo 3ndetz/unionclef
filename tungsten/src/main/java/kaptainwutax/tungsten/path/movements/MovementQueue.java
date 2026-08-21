@@ -106,6 +106,9 @@ public final class MovementQueue {
     /** Edges dropped because no movement class matches their shape (a running jump, today). */
     public static volatile int qNoClass;
 
+    /** Zero-length route edges stepped over; reads 0 with queueSkipsNullEdges off. */
+    public static volatile int qNullEdge;
+
     /** Signed dx,dy,dz of every edge truncated for want of a movement class, tallied by shape. */
     private static final java.util.Map<String, Integer> noClassShapes =
             java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
@@ -654,6 +657,14 @@ public final class MovementQueue {
                 // movements for, and a route whose FIRST edge is a jump is refused outright, which
                 // sends it to the walker -- the thing that sprint-jumps toward a waypoint and can
                 // actually clear the gap.
+                // A ROUTE EDGE THAT GOES NOWHERE IS NOT A MISSING MOVEMENT CLASS.
+                // See TungstenConfig.queueSkipsNullEdges: 601 of the truncating shapes on the
+                // reproduced stall were 0,0,0. Truncating on one throws away every step after it.
+                if (kaptainwutax.tungsten.TungstenConfig.get().queueSkipsNullEdges
+                        && from.equals(to)) {
+                    qNullEdge++;
+                    continue;
+                }
                 qNoClass++;
                 // ⛔ COUNT IS NOT A CORPUS. qNoClass says 27 of 28 chains were truncated; it does
                 // NOT say what shape did it, so "the missing class is parkour" rests on one edge
