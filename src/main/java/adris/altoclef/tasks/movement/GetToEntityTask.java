@@ -45,6 +45,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     /** Ticks the release was skipped because the close walk was driving; 0 with the flag off. */
     public static volatile int closeWalkKeysKept;
     private static boolean closeWalkHeldLast = false;
+    private static boolean closeWalkProbePending = false;
 
     public static volatile int entityCloseWalk;
 
@@ -220,7 +221,12 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
         // read 0 kept of 120. That number cannot distinguish "someone else released it" from
         // "this very method released it four lines earlier", and I nearly reported the first.
         // Here it reports what the PREVIOUS tick left behind, which is the question.
-        if (closeWalkHeldLast) {
+        // ⛔ THE PROBE AND THE FIX NEED SEPARATE LATCHES. This block used to clear
+        // closeWalkHeldLast, which the key-retention branch below reads to decide whether the
+        // close walk is driving -- so the measurement silently disabled the fix and the A/B ran
+        // with closeWalkKeysKept=0 in BOTH arms. The probe gets its own one-shot flag; the drive
+        // latch is owned by the drive.
+        if (closeWalkProbePending) {
             try {
                 if (net.minecraft.client.MinecraftClient.getInstance()
                         .options.forwardKey.isPressed()) {
@@ -231,7 +237,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             } catch (Exception ignored) {
                 // an instrument never breaks the tick it rides on
             }
-            closeWalkHeldLast = false;
+            closeWalkProbePending = false;
         }
 
         // ⛔ ASK WHETHER THE BODY MOVED, NOT WHETHER NAVIGATION SAYS IT IS BUSY.
@@ -516,6 +522,7 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             adris.altoclef.util.helpers.LookHelper.lookAt(mod, _entity.getPos());
             mod.getInputControls().hold(Input.MOVE_FORWARD);
             closeWalkHeldLast = true;
+            closeWalkProbePending = true;
             closeWalkSetYaw = mod.getPlayer().getYaw();   // what the snap actually left behind
             setDebugState("Walking straight at it (navigation would not)");
             return null;
