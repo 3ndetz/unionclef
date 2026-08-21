@@ -219,10 +219,25 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 mod.getInputControls().release(Input.MOVE_FORWARD);
             }
         } else {
-            if (Nav.isPathing()) {
+            // ⛔ THIS LINE TAKES THE FORWARD KEY OFF A WALK RUNNING IN ANOTHER TASK.
+            // GetToEntityTask's close-range walk presses MOVE_FORWARD and returns; this task runs
+            // as the pickup's fallback in the same tick and releases it again whenever
+            // Nav.isPathing() -- which is true while the pathfinder merely SEARCHES, and it
+            // searches throughout, because the close walk only exists for when navigation failed.
+            //
+            // Named rather than guessed: the release inside GetToEntityTask was the obvious
+            // suspect, was gated behind a flag, and its counter read ZERO while the press was
+            // still lost 118 times. Instrumenting InputControls to name the caller produced
+            // "TimeoutWanderTask:225 x267" against closeWalkFwd=0/240/0 -- this line, this many
+            // times, on the run where the press was lost that many times.
+            boolean walkDriving = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKeys
+                    && adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDrivingNow();
+            if (Nav.isPathing() && !walkDriving) {
                 mod.getInputControls().release(Input.SNEAK);
                 mod.getInputControls().release(Input.MOVE_BACK);
                 mod.getInputControls().release(Input.MOVE_FORWARD);
+            } else if (Nav.isPathing()) {
+                wanderKeysKept++;
             }
         }
         if (_unstuckTask != null && _unstuckTask.isActive() && !_unstuckTask.isFinished() && stuckInBlock(mod) != null) {
@@ -323,6 +338,9 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
 
     /** Resets REFUSED because the body had not moved; reads 0 with the flag off. */
     public static volatile int wanderResetDenied;
+
+    /** Ticks this task did NOT take the keys off a close walk; 0 with closeWalkKeepsKeys off. */
+    public static volatile int wanderKeysKept;
 
     /**
      * What the give-up machinery actually saw. Read as wanderChk=ok/trip and wanderFail=peak.
