@@ -122,7 +122,11 @@ def main():
         # The length warning below used to cover stall seconds only, so a control that sampled 67
         # seconds against the fix's 359 still contributed its 0 rungs as a +5 delta -- the largest
         # in the series, and meaningless: that run had no time to earn a rung either.
-        if b[4] and a[4] and min(b[4], a[4]) < 0.75 * max(b[4], a[4]):
+        # ⛔ A ZERO SPAN IS THE WORST CASE, NOT AN EXEMPT ONE. Written as `if b[4] and a[4]`,
+        # this skipped the check whenever an arm produced NO samples at all -- and then counted
+        # that arm's 0 rungs as a clean delta. Two pairs went in at +3 and +4 against control
+        # runs that never ran.
+        if min(b[4], a[4]) <= 0 or min(b[4], a[4]) < 0.75 * max(b[4], a[4]):
             short.append((ground, b[4], a[4]))
             print(f"{ground:<17} {b[0]:>4} /{a[0]:<4}   EXCLUDED: spans {b[4]}s vs {a[4]}s")
             continue

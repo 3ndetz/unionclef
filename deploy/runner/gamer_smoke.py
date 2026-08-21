@@ -512,11 +512,24 @@ def main():
         py4j("chatcmd", c=f";settings {_k} {_v}")
         time.sleep(0.3)
         print(f"  PIN {_k}={_v}")
+        # ⛔ RETRY BEFORE STANDING DOWN. The write itself is fine; something reloads the config
+        # after the pin and the value on disk -- left by the PREVIOUS arm -- comes back. That is
+        # why a control arm asking for false could read true while the B arm asking for true
+        # always verified: only a value that differs from what is stored can lose this race.
+        # Standing down was correct and cost a whole run each time; re-applying costs a second.
         _got = py4j("readflag", n=_k)
+        for _try in range(3):
+            if str(_got.get("value")).lower() == _v.strip().lower():
+                break
+            time.sleep(1.0)
+            py4j("chatcmd", c=f";settings {_k} {_v}")
+            time.sleep(0.4)
+            _got = py4j("readflag", n=_k)
+            print(f"  PIN RETRY {_try + 1} {_k}={_got.get('value')}")
         print(f"  PIN VERIFIED {_k}={_got.get('value')}")
         if str(_got.get("value")).lower() != _v.strip().lower():
-            raise StandDown(f"pin {_k}={_v} did not land (reads {_got.get('value')}) "
-                            f"-- both arms would measure the same thing")
+            raise StandDown(f"pin {_k}={_v} did not land after 3 retries "
+                            f"(reads {_got.get('value')}) -- both arms would measure the same thing")
     for _spec in (_alt if not _arm_b else []):
         # The control arm must SET the baseline explicitly, not merely omit the pin: settings
         # persist in tungsten.json across runs, so an omitted pin inherits whatever the previous
@@ -538,9 +551,18 @@ def main():
         time.sleep(0.3)
         print(f"  PIN {_k}={_base}")
         _got = py4j("readflag", n=_k)
+        for _try in range(3):
+            if str(_got.get("value")).lower() == _base.lower():
+                break
+            time.sleep(1.0)
+            py4j("chatcmd", c=f";settings {_k} {_base}")
+            time.sleep(0.4)
+            _got = py4j("readflag", n=_k)
+            print(f"  CONTROL PIN RETRY {_try + 1} {_k}={_got.get('value')}")
         print(f"  PIN VERIFIED {_k}={_got.get('value')}")
         if str(_got.get("value")).lower() != _base.lower():
-            raise StandDown(f"control pin {_k}={_base} did not land (reads {_got.get('value')})")
+            raise StandDown(f"control pin {_k}={_base} did not land after 3 retries "
+                            f"(reads {_got.get('value')})")
     # ⛔ ZERO THE COUNTERS PER RUN, or an A/B reads the previous arm's numbers.
     # run_suite resets between courses; this harness never did, so across a --repeat sweep the
     # tungsten counters carried over and the arms could not be told apart. Caught on the fall-guard
