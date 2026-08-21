@@ -637,6 +637,24 @@ public class TungstenConfig {
      * <p>Off by default. Mechanism gate: navSearchOnly, the number of ticks where a search was
      * running and no route was -- it must be large, or the premise is wrong. The OUTCOME gate is
      * whether the bot resumes mining after a failed pickup, which the pass rate should show.
+     *
+     * <p>⛔ MEASURED PAIRED (2026-08-21) AND IT DOES NOT PAY. Five comparable pairs, each arm on
+     * the same resolved ground, one excluded for a 89s control run:
+     *
+     * <pre>
+     *   rungs        -0.80   t -0.64    [-4, 0, -3, +3, 0]
+     *   stall time   -45.0s  t -0.98
+     *   stall share  -13.3%  t -0.97
+     * </pre>
+     *
+     * <p>Not established in either direction, and the spread is the story: one pair lost four
+     * rungs and another won three, on a flag whose premise (a search is not progress) is the
+     * same one that DID pay as stallCheckNeedsMovement. So the idea is not wrong -- this
+     * particular application of it is not measurable at this cost.
+     *
+     * <p>The mechanism gate this javadoc asked for does fire: srch read 314/66/0 on a run that
+     * reached the state, and 0/0/0 on ones that did not. So the pairs are real, the effect is
+     * simply not separable from the noise. Stays OFF.
      */
     public boolean progressCheckIgnoresSearch = false;
 
