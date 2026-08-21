@@ -47,6 +47,12 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     private static boolean closeWalkHeldLast = false;
     private static boolean closeWalkProbePending = false;
 
+    /** True while the close walk is the thing driving, so the input layer can name whoever
+     *  releases the key it just pressed. */
+    public static boolean closeWalkDrivingNow() {
+        return closeWalkHeldLast || closeWalkProbePending;
+    }
+
     public static volatile int entityCloseWalk;
 
     /**

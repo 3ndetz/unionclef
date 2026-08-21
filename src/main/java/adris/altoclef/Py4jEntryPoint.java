@@ -2168,6 +2168,11 @@ public class Py4jEntryPoint {
         return kaptainwutax.tungsten.path.movements.MovementQueue.noClassShapes();
     }
 
+    /** Who released MOVE_FORWARD while the close walk was driving, commonest first. */
+    public String forwardStealers() {
+        return adris.altoclef.control.InputControls.forwardStealers();
+    }
+
     public String chipScenes() {
         return adris.altoclef.chains.MobDefenseChain.chipScenes();
     }

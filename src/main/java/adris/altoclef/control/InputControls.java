@@ -60,7 +60,47 @@ public class InputControls {
         inputToKeyBinding(input).setPressed(true);
     }
 
+    /**
+     * WHO TAKES THE FORWARD KEY OFF THE CLOSE WALK? Ten call sites release MOVE_FORWARD and
+     * guessing among them has already cost one wrong fix: the release inside GetToEntityTask
+     * looked obvious, was gated behind a flag, and the counter then showed it firing zero times
+     * while the press was still lost 118 times in the same run.
+     *
+     * <p>This is the one choke point every release passes through, so it can name the caller
+     * instead. Only sampled on the ticks that matter -- MOVE_FORWARD, while the close walk is the
+     * thing driving -- because a stack walk per release would not be free otherwise.
+     */
+    public static final java.util.Map<String, Integer> forwardStealers =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+
+    /** Who released MOVE_FORWARD under the close walk, commonest first. */
+    public static String forwardStealers() {
+        synchronized (forwardStealers) {
+            return forwardStealers.entrySet().stream()
+                    .sorted((a, b) -> b.getValue() - a.getValue())
+                    .limit(5)
+                    .map(e -> e.getKey() + "x" + e.getValue())
+                    .reduce((a, b) -> a + " " + b).orElse("(none)");
+        }
+    }
+
     public void release(Input input) {
+        if (input == Input.MOVE_FORWARD
+                && adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDrivingNow()) {
+            try {
+                for (StackTraceElement el : new Throwable().getStackTrace()) {
+                    String cn = el.getClassName();
+                    if (cn.endsWith("InputControls")) continue;
+                    String key = cn.substring(cn.lastIndexOf('.') + 1) + ":" + el.getLineNumber();
+                    synchronized (forwardStealers) {
+                        forwardStealers.merge(key, 1, Integer::sum);
+                    }
+                    break;
+                }
+            } catch (Exception ignored) {
+                // naming the caller must never break the control it rides on
+            }
+        }
         inputToKeyBinding(input).setPressed(false);
     }
 
