@@ -39,6 +39,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
      */
     public static volatile int closeWalkBelow, closeWalkAbove, closeWalkOnTop, closeWalkBeside;
 
+    /** Of the "below" ticks, how deep: one block, two, or three-plus. */
+    public static volatile int closeWalkBelow1, closeWalkBelow2, closeWalkBelow3;
+
     /** Ticks our forward press was still down on entry, and ticks something had released it. */
     public static volatile int closeWalkFwdKept, closeWalkFwdLost;
 
@@ -467,7 +470,18 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
                 double hdz = _entity.getZ() - mod.getPlayer().getZ();
                 double horiz = Math.sqrt(hdx * hdx + hdz * hdz);
                 double dy = _entity.getY() - mod.getPlayer().getY();
-                if (horiz < 0.8 && dy < -0.4) closeWalkBelow++;
+                if (horiz < 0.8 && dy < -0.4) {
+                    closeWalkBelow++;
+                    // ⛔ HOW FAR BELOW? The bucket above counts -0.5 and -3.0 alike, and those
+                    // want different work: a drop one block down is inside the pickup radius and
+                    // should never have needed a walk at all, while three blocks down needs a way
+                    // DOWN and no amount of steering will do it. Splitting them is the difference
+                    // between fixing the approach and fixing the descent.
+                    int d = (int) Math.round(-dy);
+                    if (d <= 1) closeWalkBelow1++;
+                    else if (d == 2) closeWalkBelow2++;
+                    else closeWalkBelow3++;
+                }
                 else if (horiz < 0.8 && dy > 0.4) closeWalkAbove++;
                 else if (horiz < 0.8) closeWalkOnTop++;
                 else closeWalkBeside++;
