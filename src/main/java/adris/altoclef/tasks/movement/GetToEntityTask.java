@@ -31,6 +31,14 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     public static volatile int entityWandered;
 
     /** Ticks spent walking straight at a target that navigation would not deliver. */
+    /**
+     * WHERE the drop sits when the close walk cannot reach it: below / above / on top / beside.
+     *
+     * <p>Read as closeWalkGeom=below/above/onTop/beside. A large "below" means the walk is
+     * steering horizontally at something under its feet, which no amount of forward can fix.
+     */
+    public static volatile int closeWalkBelow, closeWalkAbove, closeWalkOnTop, closeWalkBeside;
+
     public static volatile int entityCloseWalk;
 
     /**
@@ -394,6 +402,29 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
                 && mod.getPlayer().isInRange(_entity, CLOSE_WALK_RANGE)
                 && !mod.getPlayer().isInRange(_entity, _closeEnoughDistance)) {
             entityCloseWalk++;
+            // ⛔ WHERE IS THE DROP, RELATIVE TO US? The aim is now proven good -- 480 of 481 ticks
+            // aimed and 392 yaw-kept -- and the BODY still moves on 14. So the camera is not the
+            // problem and the next question is geometry, which nothing here records.
+            //
+            // wantYaw below is atan2 over x and z ONLY. A drop lying almost directly BELOW makes
+            // that horizontal direction degenerate, and "hold forward" then walks at nothing.
+            // That shape is not hypothetical: the barren-lock recorder measured dy=-1.0 on all 21
+            // locks it caught this session -- every one a drop in the hole the bot had just dug.
+            //
+            // Tally it as a shape rather than a mean, because "mostly below" and "mostly beside"
+            // want opposite fixes and an average of the two is neither.
+            try {
+                double hdx = _entity.getX() - mod.getPlayer().getX();
+                double hdz = _entity.getZ() - mod.getPlayer().getZ();
+                double horiz = Math.sqrt(hdx * hdx + hdz * hdz);
+                double dy = _entity.getY() - mod.getPlayer().getY();
+                if (horiz < 0.8 && dy < -0.4) closeWalkBelow++;
+                else if (horiz < 0.8 && dy > 0.4) closeWalkAbove++;
+                else if (horiz < 0.8) closeWalkOnTop++;
+                else closeWalkBeside++;
+            } catch (Exception ignored) {
+                // an instrument never breaks the tick it rides on
+            }
             net.minecraft.util.math.Vec3d nowPos = mod.getPlayer().getPos();
             if (closeWalkLastPos != null && closeWalkLastPos.squaredDistanceTo(nowPos) > 0.0025) {
                 entityCloseWalkMoved++;
