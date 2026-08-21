@@ -775,7 +775,24 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                             bp.isPresent(), bp.map(java.util.List::size).orElse(0), fresh));
                 if (bp.isPresent() && bp.get().size() >= 2 && fresh) {
                     java.util.List<net.minecraft.util.math.BlockPos> wps = new java.util.ArrayList<>();
-                    for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : bp.get()) wps.add(n.getBlockPos());
+                    for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : bp.get()) {
+                        net.minecraft.util.math.BlockPos bpos = n.getBlockPos();
+                        // ⛔ DO NOT HAND ON A ROUTE THAT REPEATS A CELL. The movement queue types
+                        // every edge and an edge from a cell to itself has no type, so it
+                        // truncated the chain there and gave back every step after it. Measured on
+                        // a 60-second reproduction of the navigation stall: the truncating shape
+                        // was 0,0,0 on 601 of them, and EVERY ONE sat at index 1 -- the first edge
+                        // of the chain, i.e. this list starting with the same block twice.
+                        //
+                        // Fixed here, at the assembly, rather than only guarded in the queue:
+                        // a repeated cell is malformed data, and the consumer-side skip
+                        // (queueSkipsNullEdges) exists to prove it and to cover any other producer.
+                        if (kaptainwutax.tungsten.TungstenConfig.get().queueSkipsNullEdges
+                                && !wps.isEmpty() && wps.get(wps.size() - 1).equals(bpos)) {
+                            continue;
+                        }
+                        wps.add(bpos);
+                    }
                     if (ex != null) ex.stop = true;   // don't let the executor drift-replay
                     // THE PORTED MOVEMENTS GET FIRST REFUSAL ON THE ROUTE.
                     // MovementQueue.start() had two callers, neither of them on this path: the

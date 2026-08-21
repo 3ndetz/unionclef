@@ -660,10 +660,20 @@ public final class MovementQueue {
                 // A ROUTE EDGE THAT GOES NOWHERE IS NOT A MISSING MOVEMENT CLASS.
                 // See TungstenConfig.queueSkipsNullEdges: 601 of the truncating shapes on the
                 // reproduced stall were 0,0,0. Truncating on one throws away every step after it.
-                if (kaptainwutax.tungsten.TungstenConfig.get().queueSkipsNullEdges
-                        && from.equals(to)) {
-                    qNullEdge++;
-                    continue;
+                if (from.equals(to)) {
+                    // ⛔ WHERE IN THE ROUTE DOES IT SIT? Skipping the edge is a fix at the
+                    // CONSUMER; the planner should not emit it at all. If the index is always 1
+                    // the culprit is the route including the cell the bot already stands on --
+                    // and that is a one-line fix at the producer instead of a guard here.
+                    synchronized (noClassShapes) {
+                        if (noClassShapes.size() < 64) {
+                            noClassShapes.merge("null@i" + i, 1, Integer::sum);
+                        }
+                    }
+                    if (kaptainwutax.tungsten.TungstenConfig.get().queueSkipsNullEdges) {
+                        qNullEdge++;
+                        continue;
+                    }
                 }
                 qNoClass++;
                 // ⛔ COUNT IS NOT A CORPUS. qNoClass says 27 of 28 chains were truncated; it does
