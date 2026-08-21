@@ -591,6 +591,23 @@ public final class MovementQueue {
      * global switch and becomes the caller's choice.
      */
     public static synchronized int start(List<BlockPos> cells, boolean wholeRoute) {
+        // ⛔ A ROUTE THAT REPEATS A CELL IS MALFORMED, WHOEVER BUILT IT. Every edge here gets a
+        // movement class and an edge from a cell to itself has none, so the chain was truncated
+        // on it and every step after it handed back. Measured on a reproduction of the navigation
+        // stall: 601 truncations of shape 0,0,0, ALL at index 1 -- the first edge.
+        //
+        // Deduping one producer (the block-space wps list) removed them from some runs and not
+        // others, because more than one caller does it. This is the single point they all pass
+        // through, so it belongs here and it is unconditional: there is no reading of "walk from
+        // a block to itself" worth preserving.
+        if (cells != null && cells.size() > 1) {
+            List<BlockPos> tidy = new java.util.ArrayList<>(cells.size());
+            for (BlockPos c : cells) {
+                if (tidy.isEmpty() || !tidy.get(tidy.size() - 1).equals(c)) tidy.add(c);
+                else qNullEdge++;
+            }
+            cells = tidy;
+        }
         int covered = wholeRoute ? (cells == null ? 0 : cells.size()) : traversePrefix(cells);
         if (covered < 2) {
             qRefused++;
