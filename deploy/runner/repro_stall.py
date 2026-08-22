@@ -81,17 +81,71 @@ def main():
 
     # ⛔ CONNECT FIRST. A deploy restarts the client, so the bot is in no world at all and every
     # counter reads 0 -- which looks exactly like "the fix changed nothing" and is not.
-    if not py4j("state").get("inGame"):
-        print("[0] bot is not in a world, connecting to gamer-server")
+    # ALWAYS CONNECT -- inGame means the bot is in A world, not in the GAMER one.
+    # This used to skip the connect whenever the client was already in a game, and after a suite
+    # run it always is: it sits on the flat test arena at y=-60. The rcon teleport below then goes
+    # to a server the bot is not on, does nothing, and the repro measures featureless flat ground
+    # with every counter honestly zero. gamer_smoke learned this already and connects
+    # unconditionally with retries; this is the same routine, for the same reason.
+    print("[0] connecting to gamer-server (always, not only when out of a world)")
+    joined = False
+    for attempt in range(4):
+        py4j("connect", ip="gamer-server")
+        for _ in range(12):
+            time.sleep(5)
+            if py4j("state").get("inGame"):
+                joined = True
+                break
+        if joined:
+            break
+        print(f"    connect attempt {attempt + 1} did not land, retrying")
+    if not joined:
+        print("    STAND DOWN: client would not join the gamer server")
+        sys.exit(3)
+    print("    in game:", joined)
+    # ⛔ "IN A WORLD" IS NOT "IN THE RIGHT WORLD" -- CHECKLIST RULE 4k.
+    # The gate above only asked whether the client was in SOME game, and after a suite run it is:
+    # it sits on the flat test arena at y=-60. The teleport below goes over rcon to the GAMER
+    # server, which the bot is not on, so it silently does nothing and the whole repro then
+    # measures a bot standing on featureless flat ground -- no holes, no terrain, every counter
+    # honestly zero. Four arms of an A/B were read that way before the coordinates gave it away.
+    # Verify by RESULT rather than by belief: teleport, read the position back, and if the bot did
+    # not land near the start it is on the wrong server -- reconnect and try again.
+    print(f"[1] teleport to {start}, target {tx} {ty} {tz}")
+    _want = [float(v) for v in start.split()]
+    for _attempt in range(3):
+        grcon(f"tp {BOT} {start}")
+        time.sleep(2)
+        # The gs op stringifies the whole map (see the snippet above: str(...)), so "self" is
+        # ALWAYS text that merely LOOKS like a dict -- never a dict. Reading it with .get() was
+        # wrong in both of its earlier forms: once as an AttributeError, then as an isinstance
+        # check that could not ever be true, which reported "did not land" on a bot that had
+        # landed perfectly well. Pull the field out of the text.
+        _self = str(py4j("gs").get("self"))
+        _mark = "'pos': '"
+        _p = ""
+        if _mark in _self:
+            _p = _self.split(_mark, 1)[1].split("'", 1)[0]
+        try:
+            _got = [float(v) for v in str(_p).split(",")]
+        except ValueError:
+            _got = None
+        # HORIZONTAL ONLY, AND GENEROUSLY. The question this check exists to answer is "is the
+        # bot on the server the teleport was sent to", not "is it standing exactly there". Two
+        # seconds after landing at 74,127,-54 the bot has already fallen seven blocks -- the spot
+        # is above ground -- so a 3D tolerance rejected a teleport that had worked perfectly and
+        # sent the run into a reconnect loop. X and Z do not lie about which world we are in.
+        if _got and ((_got[0] - _want[0]) ** 2 + (_got[2] - _want[2]) ** 2) < 36.0:
+            break
+        print(f"    teleport did not land (at {_p}) -- reconnecting to gamer-server")
         py4j("connect", ip="gamer-server")
         for _ in range(12):
             time.sleep(5)
             if py4j("state").get("inGame"):
                 break
-        print("    in game:", py4j("state").get("inGame"))
-    print(f"[1] teleport to {start}, target {tx} {ty} {tz}")
-    grcon(f"tp {BOT} {start}")
-    time.sleep(2)
+    else:
+        print("    STAND DOWN: could not put the bot on the gamer server; numbers would be void")
+        sys.exit(3)
     # PIN A FLAG BEFORE THE STATS ARE ZEROED, so the run measures the setting it names.
     # ";settings" is tungsten's own chat command and needs ChatMessage, not ExecuteCommand.
     # Both arms SET the value explicitly -- omitting the pin measures whatever the last run
@@ -116,7 +170,7 @@ def main():
     after = py4j("gs").get("self")
     print(f"\nstart {before}\nend   {after}")
     for k in ("mqStarted", "mqSteps", "mqNoClass", "mqExpand", "mqRefused", "qNoMove",
-              "navBridgeRescued", "pdEnter", "pdWalking", "stuck"):
+              "navBridgeRescued", "walkerHoleHeld", "pdEnter", "pdWalking", "stuck"):
         print(f"  {k}={field(stats, k)}")
     # WHICH SHAPE IS BEING TRUNCATED? mqNoClass counts them and never says what they are, and
     # this repro just showed queueParkour changing that count by nothing (477 against 479, the
