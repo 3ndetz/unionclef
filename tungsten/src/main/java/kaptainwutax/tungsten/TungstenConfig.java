@@ -1554,6 +1554,26 @@ public class TungstenConfig {
     public boolean farGiveUpRetriesFirst = false;
 
     /**
+     * Never hand a goal to the legacy engine. Ask tungsten for it instead, or wait a tick.
+     *
+     * <p>CustomBaritoneGoalTask has one line left where shredder still moves the bot: when the
+     * tungsten drive declines a tick, the goal goes to getCustomGoalProcess().setGoalAndPath. The
+     * comment there reasoned the count was inflated by finished tasks poking it on the way out --
+     * true, and not the whole story. Nine genuine hand-offs remain on a twenty-minute playthrough
+     * (pdLegacy=9), and they are visible in a recording: the bot switches to shredder's own route
+     * in the middle of a tungsten run.
+     *
+     * <p>Deleting the legacy engine is the point of this project, so this is not a better fallback
+     * but no fallback. The goal is offered to TungstenHelper.tryPathTo -- the same call the
+     * stuck-recovery path above already makes -- and if tungsten will not take it, the tick is
+     * spent waiting rather than moving on the engine being removed.
+     *
+     * <p>Read pdLegacyToTungsten and pdLegacyDeclined: the first is the hand-off saved, the second
+     * is tungsten refusing as well, which is the number that says whether waiting costs anything.
+     */
+    public boolean neverHandOffToLegacy = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only

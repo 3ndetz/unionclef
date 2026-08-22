@@ -43,6 +43,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     /** Ticks the LEGACY engine was handed the goal because tungsten declined. Read as pdLegacy;
      *  the whole of "can baritone go" is whether this stays at zero on a real run. */
     public static volatile int pdLegacyPath;
+    /** Legacy hand-offs re-routed to tungsten, and ones tungsten would not take either. */
+    public static volatile int pdLegacyToTungsten, pdLegacyDeclined;
     /** Simple name of the last goal type goalToVec could not translate; read over py4j. */
     public static volatile String pdLastUnknownGoal = "-";
 
@@ -294,7 +296,34 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // The other two declines are already handled by the guard below: pdWalking and
             // pdNear both leave TungstenHelper.isActive() true, so those ticks never reach here.
             pdLegacyPath++;
-            mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(cachedGoal);
+            // ⛔ THE USER WATCHED A RUN AND SAW THIS: "постоянно активируется баритон и ломает
+            // маршрут". They are right, and a counter I had all along says so -- pdLegacy=9 on a
+            // twenty-minute playthrough. The comment above this line reasoned that the number was
+            // large only because finished tasks poked it on the way out; that was true and it was
+            // not the whole story. Nine entries remain where tungsten genuinely declined the tick
+            // and the goal was handed to shredder, which then walks the bot on its own route --
+            // visibly, in the middle of a tungsten run.
+            //
+            // Removing baritone is the entire point of this project, so the answer here is not a
+            // better fallback, it is no fallback: ask TUNGSTEN for the same goal, exactly as the
+            // stuck-recovery path thirty lines above already does. If tungsten will not take it,
+            // do nothing and let the task ask again next tick -- a tick spent waiting for the
+            // engine we are keeping beats a tick spent moving on the engine we are deleting.
+            if (kaptainwutax.tungsten.TungstenConfig.get().neverHandOffToLegacy) {
+                net.minecraft.util.math.Vec3d legacyPos = null;
+                if (cachedGoal instanceof baritone.api.pathing.goals.GoalBlock gb2) {
+                    legacyPos = new net.minecraft.util.math.Vec3d(gb2.x, gb2.y, gb2.z);
+                } else if (cachedGoal instanceof baritone.api.pathing.goals.GoalGetToBlock gg2) {
+                    legacyPos = new net.minecraft.util.math.Vec3d(gg2.x, gg2.y, gg2.z);
+                }
+                if (legacyPos != null && TungstenHelper.tryPathTo(legacyPos)) {
+                    pdLegacyToTungsten++;
+                } else {
+                    pdLegacyDeclined++;
+                }
+            } else {
+                mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(cachedGoal);
+            }
         }
         setDebugState("Completing goal.");
         return null;
