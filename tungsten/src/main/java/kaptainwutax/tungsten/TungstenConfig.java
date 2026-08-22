@@ -1644,6 +1644,24 @@ public class TungstenConfig {
     public boolean closeWalkClearsCameraLease = false;
 
     /**
+     * Let the close walk CLAIM the aim, so BlockPathWalker stops steering at its own waypoint.
+     *
+     * <p>Clearing the lease was tried first and is useless: with that pinned on, cwLease read 120
+     * of 120 ticks -- it fired every tick -- and the lease still read LIVE on all 120, with the
+     * body moving zero times. The owner puts its target back between our snaps, so taking it down
+     * once a tick buys nothing.
+     *
+     * <p>The owner is BlockPathWalker. It already knows how to stand aside: it yields to the placer
+     * and, since today, to the miner. This makes the close walk claim the aim the same way, through
+     * the same timestamp, so the walk that is trying to reach a drop is the one owner of the camera
+     * for that tick. Requires walkerYieldsToMiner, which is what reads the claim.
+     *
+     * <p>Read closeWalkAimClaimed for proof it ran, and entityCloseWalk's fifth slot (leased) for
+     * whether the contention actually falls.
+     */
+    public boolean closeWalkClaimsAim = false;
+
+    /**
      * Stop TimeoutWanderTask taking MOVE_FORWARD out of BlockPathWalker's hands.
      *
      * <p>That task releases SNEAK, MOVE_BACK and MOVE_FORWARD whenever Nav.isPathing(), guarded by

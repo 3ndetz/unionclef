@@ -51,6 +51,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     /** Ticks the close walk took down a camera lease that would have pulled the aim off the drop. */
     public static volatile int closeWalkLeaseCleared;
 
+    /** Ticks the close walk claimed the aim so the walker would stop steering at its own waypoint. */
+    public static volatile int closeWalkAimClaimed;
+
     /**
      * WHAT IS THE BODY AGAINST? Three remedies for this wall were built and measured away --
      * keeping the keys, jumping when stuck, ignoring a search in the progress check -- and the
@@ -641,6 +644,22 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             // snap would fight the snap path on the same camera; this is that fight, seen from the
             // other side. Take the lease down before snapping, so there is one owner of the aim
             // for the tick that matters.
+            // ⛔ CLEARING THE LEASE IS USELESS, BECAUSE ITS OWNER RE-ARMS IT EVERY TICK.
+            //
+            // Measured with the clear pinned on: cwLease=120 of 120 ticks -- it fired every single
+            // tick -- and the lease still read LIVE on all 120 (entityCloseWalk=120/0/0/120/120/79/1,
+            // fifth slot). The body moved zero times. So the target is put back between our snaps,
+            // and taking it down once a tick buys nothing.
+            //
+            // The owner is BlockPathWalker, steering at its own waypoint. It already knows how to
+            // stand aside -- it yields to the placer, and as of today to the miner -- so the close
+            // walk claims the aim the same way instead of fighting for it. One owner per tick is
+            // the whole point of BARITONE-PORT-SPEC pitfall P1.
+            if (kaptainwutax.tungsten.TungstenConfig.get().closeWalkClaimsAim) {
+                kaptainwutax.tungsten.TungstenModDataContainer.minerAimUntilMs =
+                        System.currentTimeMillis() + 300;
+                closeWalkAimClaimed++;
+            }
             if (kaptainwutax.tungsten.TungstenConfig.get().closeWalkClearsCameraLease
                     && kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.hasTarget()) {
                 kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
