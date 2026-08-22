@@ -209,6 +209,39 @@ def place_at(spawn):
     time.sleep(3)
 
 
+def rec_start(secs):
+    """Film the playthrough from inside the bot's own client, the way run_suite films a course.
+
+    The arena runner has had this for a long time and the playthrough never did, so the one run
+    anybody actually wants to watch was the one with no picture. Fragmented mp4 with a keyframe a
+    second, because the capture is stopped by a signal and a plain mp4 only writes its index on a
+    clean exit -- a killed capture is an unplayable "moov atom not found".
+    """
+    subprocess.run(["docker", "exec", CLIENT, "sh", "-c",
+                    "pkill -INT ffmpeg 2>/dev/null; sleep 0.3; true"], capture_output=True)
+    subprocess.Popen(["docker", "exec", "-d", CLIENT, "ffmpeg", "-y",
+                      "-f", "x11grab", "-framerate", "15", "-i", ":0",
+                      "-t", str(int(secs) + 8),
+                      "-c:v", "libx264", "-preset", "ultrafast", "-g", "15",
+                      "-b:v", "1100k", "-maxrate", "1400k", "-bufsize", "2M",
+                      "-pix_fmt", "yuv420p",
+                      "-movflags", "+frag_keyframe+empty_moov+default_base_moof",
+                      "/mc-data/rec_gamer.mp4"])
+    time.sleep(1.0)
+
+
+def rec_stop(dst):
+    subprocess.run(["docker", "exec", CLIENT, "pkill", "-INT", "ffmpeg"], capture_output=True)
+    time.sleep(3.5)
+    subprocess.run(["docker", "cp", f"{CLIENT}:/mc-data/rec_gamer.mp4", dst], capture_output=True)
+    import os as _os
+    if _os.path.exists(dst) and _os.path.getsize(dst) > 1000:
+        print(f"  recorded: {dst} ({_os.path.getsize(dst) // 1024} KB)")
+        return dst
+    print("  recording produced nothing usable")
+    return None
+
+
 def main():
     phase("rcon"); print("[1] wait gamer-server rcon...")
     try:
@@ -778,6 +811,9 @@ def main():
     # and deaths were measuring different spans of time and being compared as if they were not.
     log_mark = len(sh(["docker", "logs", "--tail", "2000", GSERVER]).stdout.splitlines())
     phase("watch"); print(f"[4] watching {MINUTES} min for progress...")
+    _recording = any(a == "--record" for a in sys.argv)
+    if _recording:
+        rec_start(MINUTES * 60)
     t0=time.time(); best_items=inv0.get("items",0); moved=set(); last_pos=None; responsive=0; busy_cnt=0
     fps_samples = []
     while time.time()-t0 < MINUTES*60:
@@ -948,6 +984,11 @@ def main():
 
     gained = best_items - inv0.get("items",0)
     distinct_pos = len(moved)
+    if _recording:
+        # Stop before the verdict is printed, so a run that stands down still leaves a clip --
+        # a failed playthrough is the one worth watching.
+        rec_stop(str(pathlib.Path(__file__).parent / 'artifacts' /
+                     f'gamer_run{RUN_SEQ[0]}.mp4'))
     print("\n=== RESULTS ===")
     print(f"  responsive polls: {responsive}, busy polls: {busy_cnt}, distinct positions: {distinct_pos}, items gained: {gained}")
     if reached:
