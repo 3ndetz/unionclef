@@ -1574,6 +1574,24 @@ public class TungstenConfig {
     public boolean neverHandOffToLegacy = false;
 
     /**
+     * Let BlockPathWalker stand aside while a block-breaking task owns the aim and the keys.
+     *
+     * <p>The placer already has this claim (EXECUTOR.placingNow) and the walker honours it. The
+     * miner never did. Reported from a RECORDING, not a counter, which is why it survived a whole
+     * session of reading numbers: the camera swings toward the walker's waypoint while the block
+     * being broken is elsewhere, and the body shuffles on the spot because DestroyBlockTask holds
+     * MOVE_BACK and SNEAK within two blocks of its target while the walker holds MOVE_FORWARD in
+     * the same tick. Two writers, last one wins, every tick -- pitfall P1 of
+     * docs/BARITONE-PORT-SPEC.md, in the half of the code the mixin's early return does not cover.
+     *
+     * <p>The claim is a TIMESTAMP, not a latch, so an interrupted mine lapses on its own instead of
+     * freezing the walk for the rest of the run.
+     *
+     * <p>Read walkerYieldedToMiner: zero means the two never contended and this changed nothing.
+     */
+    public boolean walkerYieldsToMiner = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only

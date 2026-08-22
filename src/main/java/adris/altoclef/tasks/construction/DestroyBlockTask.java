@@ -582,6 +582,13 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             setDebugState("Block in range, mining...");
             stuckCheck.reset();
             isMining = true;
+            // CLAIM THE AIM AND THE KEYS FOR THIS TICK, the way the placer already does.
+            // Without this the walker steers the camera at its own waypoint in the same tick that
+            // this task aims at the block, and a viewer sees the crosshair pointing one way while
+            // a block breaks somewhere else. Stamped rather than latched: it lapses on its own if
+            // this task stops running, so an interrupted mine cannot freeze the walker.
+            kaptainwutax.tungsten.TungstenModDataContainer.minerAimUntilMs =
+                    System.currentTimeMillis() + 300;
             mod.getInputControls().release(Input.SNEAK);
             mod.getInputControls().release(Input.MOVE_BACK);
             mod.getInputControls().release(Input.MOVE_FORWARD);
@@ -606,6 +613,11 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             if (isCloseToMoveBack) {
                 if (!Nav.isPathing() && !mod.getPlayer().isTouchingWater() &&
                         !mod.getFoodChain().needsToEat()) {
+                    // BACKING OFF IS A CLAIM ON THE BODY TOO. The walker pushes MOVE_FORWARD at
+                    // its waypoint in the same tick this pushes MOVE_BACK, and the bot shuffles on
+                    // the spot -- which is exactly what the recording shows.
+                    kaptainwutax.tungsten.TungstenModDataContainer.minerAimUntilMs =
+                            System.currentTimeMillis() + 300;
                     mod.getInputControls().hold(Input.MOVE_BACK);
                     mod.getInputControls().hold(Input.SNEAK);
                 } else {

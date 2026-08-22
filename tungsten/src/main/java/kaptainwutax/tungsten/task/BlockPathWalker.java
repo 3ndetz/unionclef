@@ -88,6 +88,9 @@ public class BlockPathWalker {
     /** Ticks the walker shut itself down because the physics executor claimed the body. */
     public static volatile int walkerYieldedToExecutor = 0;
 
+    /** Ticks the walk stood aside because a block-breaking task owned the aim and the keys. */
+    public static volatile int walkerYieldedToMiner = 0;
+
     public static volatile int bfsTicks = 0;
     public static volatile int slimeWpSeen = 0;
     private static int dbgN = 0;
@@ -537,7 +540,19 @@ public class BlockPathWalker {
         // outright (11.6 blocks short, twice) while both owners fight for it. Keep WALKING —
         // only the steering is yielded; an earlier attempt returned outright here and was worse.
         var execAim = TungstenModDataContainer.EXECUTOR;
-        boolean placerOwnsAim = execAim != null && execAim.placingNow;
+        // THE MINER GETS THE SAME COURTESY THE PLACER ALREADY HAS.
+        // The placer's claim is honoured below and the miner's never was, which is what a viewer
+        // sees as the camera looking one way while a block breaks in another, and as the bot
+        // shuffling on the spot: DestroyBlockTask holds MOVE_BACK and SNEAK within two blocks of
+        // its target while this method holds MOVE_FORWARD toward a waypoint in the same tick.
+        // Two writers, last one wins, every tick. Reported from a recording rather than a counter,
+        // which is why it survived a whole session of reading numbers.
+        boolean placerOwnsAim = (execAim != null && execAim.placingNow)
+                || (TungstenConfig.get().walkerYieldsToMiner
+                    && TungstenModDataContainer.minerOwnsAim());
+        if (TungstenConfig.get().walkerYieldsToMiner && TungstenModDataContainer.minerOwnsAim()) {
+            walkerYieldedToMiner++;
+        }
         // ONE OWNER OF THE BODY, NOT JUST THE CAMERA. The backplace manoeuvre has to creep the
         // body ~0.3 past the lip — sneaking allows exactly that much, since the box's rear
         // stays supported — and it is the only position from which the block's SIDE face is

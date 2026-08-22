@@ -10,6 +10,28 @@ public class TungstenModDataContainer {
 	public static PlayerEntity player;
     public static final boolean LOG_DEBUG_DATA = false;
     public static PathExecutor EXECUTOR;
+
+    /**
+     * When the MINER owns the aim and the keys, stamped by the task that is breaking a block.
+     *
+     * <p>The placer already has this, as EXECUTOR.placingNow, and the walker yields to it. The
+     * miner never did, and a recording shows what that costs: the camera swings toward the walker's
+     * waypoint while the block being broken is somewhere else, and the body shuffles because
+     * DestroyBlockTask holds MOVE_BACK within two blocks of its target while the walker holds
+     * MOVE_FORWARD in the same tick. Two writers, last one wins, every tick.
+     *
+     * <p>A TIMESTAMP RATHER THAN A BOOLEAN, deliberately. A flag that is set and then not cleared
+     * -- because the task was interrupted, or threw, or simply stopped being ticked -- would freeze
+     * the walker for the rest of the run. This expires on its own a few ticks after the miner stops
+     * refreshing it, so the failure mode is "yielded slightly too long" rather than "never walks
+     * again".
+     */
+    public static volatile long minerAimUntilMs = 0L;
+
+    /** True while a block-breaking task has claimed the aim and the keys this tick. */
+    public static boolean minerOwnsAim() {
+        return System.currentTimeMillis() < minerAimUntilMs;
+    }
 	public static PathFinder PATHFINDER = new PathFinder();
 
     /** Safe check — EXECUTOR may be null before TungstenMod.onInitializeClient */
