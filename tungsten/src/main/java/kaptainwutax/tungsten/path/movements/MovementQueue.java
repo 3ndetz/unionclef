@@ -324,6 +324,8 @@ public final class MovementQueue {
      */
     private static final double TELEPORT_JUMP = 8.0;
     private static int ticksOnCurrent = 0;
+    /** Where the body was when it last advanced horizontally -- see the bouncing note in tick(). */
+    private static double lastTickX = Double.NaN, lastTickZ = Double.NaN;
     private static int ticksAway = 0;
     /** {@code costEstimateIndex} (PathExecutor.java:68): -1 = "no estimate read yet". */
     private static int costEstimateIndex = -1;
@@ -1026,7 +1028,31 @@ public final class MovementQueue {
             // Same cell as last tick while we are steering means no progress, whatever the step
             // counter says: rewinds replay steps and reset their timers, so the only honest
             // yardstick is the body itself.
-            if (feet != null && feet.equals(lastTickFeet)) {
+            // ⛔ A BOUNCING BOT CHANGES CELLS WITHOUT GOING ANYWHERE, AND THIS TEST BELIEVED IT.
+            // Feet-cell equality is defeated by a body that hops in place: traced on a repro that
+            // pins the bot at 85.3,-53.7, the y reads 125.2, 124.8, 124.5, 124.0, 125.3, so the
+            // feet cell alternates between (85,124,-54) and (85,125,-54) and ticksNotMoving is
+            // reset every other tick. The chain then never drops, and while it is RUNNING the
+            // mixin's early return means NOTHING else ticks -- not the walker, not the build
+            // primitives, not the physics executor -- and FastNavigator's watchdog counts
+            // isRunning() as "building" and never replans. One wedged chain freezes every engine.
+            // Measured on the repro: 36 chains started, ZERO steps taken, walker ticked 36 times
+            // and was inactive on all of them, pdWalking=0 against pdEnter=733.
+            // Horizontal position is the honest yardstick, and it costs nothing when the body is
+            // genuinely moving.
+            boolean tungstenStill;
+            if (kaptainwutax.tungsten.TungstenConfig.get().queueStallIsHorizontal) {
+                double px = player.getEntityPos().x;
+                double pz = player.getEntityPos().z;
+                tungstenStill = Math.abs(px - lastTickX) < 0.05 && Math.abs(pz - lastTickZ) < 0.05;
+                if (!tungstenStill) {
+                    lastTickX = px;
+                    lastTickZ = pz;
+                }
+            } else {
+                tungstenStill = feet != null && feet.equals(lastTickFeet);
+            }
+            if (tungstenStill) {
                 if (++ticksNotMoving > MAX_TICKS_NOT_MOVING) {
                     Debug.logMessage("MovementQueue: body has not left " + feet + " for "
                             + ticksNotMoving + " ticks while steering — dropping the chain"

@@ -85,6 +85,9 @@ public class BlockPathWalker {
      */
     public static volatile int walkerHoleHeld = 0;
 
+    /** Ticks the walker shut itself down because the physics executor claimed the body. */
+    public static volatile int walkerYieldedToExecutor = 0;
+
     public static volatile int bfsTicks = 0;
     public static volatile int slimeWpSeen = 0;
     private static int dbgN = 0;
@@ -230,6 +233,13 @@ public class BlockPathWalker {
         // OWNS movement — FollowEntityTask has explicitly stopped the executor — so a
         // 1-tick transient "executor still running" must not yank the walker off.
         if (!liveMode && !owningMovement && TungstenModDataContainer.isExecutorRunning()) {
+            // COUNT THE YIELD. When the MovementQueue refuses a leg the navigator hands it here,
+            // so this is the component that is supposed to move the bot -- and on the repro it
+            // never does: pdEnter=861 with pdWalking=0, meaning isRunning() was false on every
+            // one of 861 driver ticks. If the walker is being started and then yanked off on its
+            // very next tick by a physics executor that is itself getting nowhere, that is the
+            // whole stall, and it is invisible without a number here.
+            walkerYieldedToExecutor++;
             stop();
             return;
         }

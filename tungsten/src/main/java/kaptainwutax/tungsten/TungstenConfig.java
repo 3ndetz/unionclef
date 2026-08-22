@@ -1431,6 +1431,25 @@ public class TungstenConfig {
     public boolean stallWatchdogNeedsMotion = false;
 
     /**
+     * Measure the MovementQueue's "body will not leave its cell" stall HORIZONTALLY.
+     *
+     * <p>The check compares the feet CELL against last tick's, and a body that hops in place
+     * defeats it: on a repro that pins the bot at 85.3,-53.7 the y reads 125.2, 124.8, 124.5,
+     * 124.0, 125.3, so the feet cell alternates between (85,124,-54) and (85,125,-54) and
+     * ticksNotMoving resets every other tick. The chain is therefore never dropped.
+     *
+     * <p>That matters far more than one chain, because of who else is waiting. While a chain is
+     * RUNNING the mixin returns early and NOTHING else ticks -- not BlockPathWalker, not the build
+     * primitives, not the physics executor -- and FastNavigator counts isRunning() as "building"
+     * and so never replans either. One wedged chain freezes every engine at once. Measured on the
+     * repro: 36 chains started, ZERO steps taken, the walker ticked 36 times and was inactive on
+     * every one, pdWalking=0 against pdEnter=733.
+     *
+     * <p>Costs nothing while the body is genuinely moving; MAX_TICKS_NOT_MOVING is unchanged.
+     */
+    public boolean queueStallIsHorizontal = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only
