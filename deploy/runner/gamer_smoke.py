@@ -809,7 +809,18 @@ def main():
     # Deaths were being read from a --tail window WIDER than the run, so a run whose counters were
     # all zero still reported "6 deaths, 4 falls" -- deaths from some earlier run entirely. Counters
     # and deaths were measuring different spans of time and being compared as if they were not.
-    log_mark = len(sh(["docker", "logs", "--tail", "2000", GSERVER]).stdout.splitlines())
+    # A SLIDING WINDOW IS NOT A BOOKMARK, AND THIS ONE ERASED EVERY DEATH.
+    # This used to record len(docker logs --tail 2000) and later slice all_lines[log_mark:].
+    # --tail returns the LAST 2000 lines, so the window SLIDES: by the end of a busy run the mark
+    # points past the end and the slice is empty. The result is a death count of zero -- reported
+    # exactly when the server was busiest, which is when the bot is dying.
+    # Measured: a twenty-minute run printed "deaths this run: 0" while the server log held
+    #     tester1 was slain by Zombie   x6 in seven minutes
+    # and the bot's inventory went 10 items to 0 with its position back at world spawn. Every
+    # conclusion drawn about that run -- "the ladder stops after wood tools" -- was drawn without
+    # knowing the bot had been killed six times.
+    # Mark the TIME instead; docker logs --since is not affected by how much the server says.
+    log_since = time.time()
     phase("watch"); print(f"[4] watching {MINUTES} min for progress...")
     _recording = any(a == "--record" for a in sys.argv)
     if _recording:
@@ -966,8 +977,9 @@ def main():
     # and counting it put the figure at twenty-two a run when sixty-one of some eighty-nine log
     # entries were simply the reset. Drop it, and report the rest BY CAUSE -- because the split
     # is the finding: falls outnumber any single mob, and a fall is a movement failure.
-    all_lines = sh(["docker", "logs", "--tail", "2000", GSERVER]).stdout.splitlines()
-    raw = [ln for ln in all_lines[log_mark:]
+    _elapsed = max(1, int(time.time() - log_since) + 5)
+    all_lines = sh(["docker", "logs", "--since", f"{_elapsed}s", GSERVER]).stdout.splitlines()
+    raw = [ln for ln in all_lines
            if BOT in ln and (" was " in ln or " died" in ln or " fell " in ln)]
     deaths = [ln for ln in raw if "was killed" not in ln or " by " in ln]
     causes = {}
