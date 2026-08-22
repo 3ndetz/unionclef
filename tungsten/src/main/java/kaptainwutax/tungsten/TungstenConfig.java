@@ -1287,8 +1287,32 @@ public class TungstenConfig {
      * <p>This is why {@link #queueParkour} was measured as worthless (mqNoClass 477 against 479):
      * it added a capability for a shape that was not the one arriving. The cells are.
      *
-     * <p>Expansion is refused wherever an intermediate cell lacks footing or headroom, so a
-     * genuine leap across a gap is still left unclassified instead of being walked into.
+     * <p>Expansion is refused wherever an intermediate cell has no headroom, so a cell buried in
+     * rock is still left unclassified instead of being walked into.
+     *
+     * <h2>MEASURED AND REFUTED. It stays off.</h2>
+     *
+     * First guard also demanded a floor under every cell and refused ONE HUNDRED PERCENT of the
+     * runs it saw, which measures nothing; relaxed to headroom only, matching isTraverseEdge,
+     * which admits a unit step on geometry alone because MovementTraverse bridges and breaks its
+     * own way. Then, on the first A/B taken after the counters were made to reset at all:
+     *
+     *     expand=false   mqStarted=0     mqSteps=1    mqNoClass=0
+     *     expand=true    mqStarted=730   mqSteps=18   mqExpand=6555/2918/0/5100
+     *     expand=false   mqStarted=0     mqSteps=1    mqNoClass=0
+     *     expand=true    mqStarted=863   mqSteps=3    mqNoClass=863
+     *
+     * With it off the queue is not used at all on this ground -- the drive is the walker, and
+     * mqStarted is zero. With it on, six thousand cells are expanded, seven hundred routes start,
+     * and eighteen steps come out. Four fifths of the expanded cells have no floor (the fourth
+     * number), so the queue is handed a corridor of bridges the executor must build with an empty
+     * inventory. Busier is not closer.
+     *
+     * <p>What it did establish is worth keeping: the truncating shapes are NOT parkour. They are
+     * straight multi-block runs and short ascending hops over gaps, which means the planner is
+     * handing the queue coarse waypoints and the queue is right to refuse them. The next question
+     * is therefore not "teach the queue another movement class" but "why does BlockPathWalker,
+     * which correctly gets the route instead, fail to arrive" -- and that is where to look next.
      */
     public boolean queueExpandsStraightRuns = false;
 
