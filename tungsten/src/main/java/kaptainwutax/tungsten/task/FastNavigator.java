@@ -410,11 +410,33 @@ public final class FastNavigator {
             boolean queued = false;
             if (nextLegMovement) {
                 nextLegMovement = false;
-                nextLegBridge = false;
-                queued = kaptainwutax.tungsten.path.movements.MovementQueue.start(leg) > 0;
+                // ⛔ DO NOT FORGET THIS IS A BRIDGE UNTIL THE QUEUE HAS ACTUALLY TAKEN IT.
+                //
+                // nextLegBridge used to be cleared HERE, one line before the queue was asked. So
+                // for a leg that is both a movement leg and a build, a refusal fell through to the
+                // `if (nextLegBridge)` below with the flag already false, and the route went to
+                // BlockPathWalker -- a component that walks the cells it is given and cannot place
+                // a block. The cells of a bridge are, by construction, the ones with nothing under
+                // them: measured on the expansion probe, four fifths of the cells inside these
+                // legs have no floor. The walker sprints along them and the bot falls. On the
+                // navigation repro that reads as a fall from y=127 to y=118 with health going 20
+                // to 5.5 in fifty seconds, while the target sat at y=127 the whole time.
+                //
+                // The comment that used to sit here said a refusal means "the plan changed shape
+                // under us", implying it is rare. It is not: single runs measure qShort=4397 and
+                // qNoClass=1204 against ten accepted starts. Refusal is the common case, so the
+                // fallback is not an edge path -- it is the main one, and it was routing bridges
+                // to the one component that cannot build them.
+                boolean tookIt =
+                        kaptainwutax.tungsten.path.movements.MovementQueue.start(leg) > 0;
+                queued = tookIt;
+                if (tookIt || !kaptainwutax.tungsten.TungstenConfig.get()
+                        .navBridgeSurvivesQueueRefusal) {
+                    nextLegBridge = false;
+                } else if (nextLegBridge) {
+                    navBridgeRescued++;
+                }
                 if (!queued) {
-                    // traversePrefix already vetted this leg on the planning thread, so a refusal
-                    // here means the plan changed shape under us. Walk it instead of standing still.
                     Debug.logWarning("FastNavigator: MovementQueue refused the leg, walking it");
                 }
             }
@@ -474,6 +496,12 @@ public final class FastNavigator {
         var p = TungstenMod.mc.player;
         if (p != null && !planning) planAhead(p.getBlockPos());
     }
+
+    /**
+     * Bridge legs that reached BridgeTask because the flag was no longer being thrown away when
+     * the queue refused them. Zero means the fix never fired and any comparison using it is empty.
+     */
+    public static volatile int navBridgeRescued = 0;
 
     private static void planAhead(BlockPos from) {
         if (planning || goal == null) return;

@@ -1317,6 +1317,24 @@ public class TungstenConfig {
     public boolean queueExpandsStraightRuns = false;
 
     /**
+     * Keep a leg's "this is a bridge" flag alive until the MovementQueue has actually taken it.
+     *
+     * <p>FastNavigator cleared nextLegBridge one line BEFORE asking the queue, so a refused build
+     * leg arrived at the fallback with the flag already false and went to BlockPathWalker instead
+     * of BridgeTask. The walker walks the cells it is handed and cannot place a block, and the
+     * cells of a bridge are exactly the ones with nothing underneath: four fifths of them measured
+     * floorless. The bot sprints along them and falls -- y=127 down to y=118, health 20 to 5.5, in
+     * one fifty-second repro, with the target at y=127 throughout.
+     *
+     * <p>The old comment there treated refusal as a rare race ("the plan changed shape under us").
+     * Single runs measure qShort=4397 and qNoClass=1204 against ten accepted starts, so refusal is
+     * the ordinary case and that fallback is the main path, not an edge one.
+     *
+     * <p>Read navBridgeRescued to check the fix fired at all before believing any comparison.
+     */
+    public boolean navBridgeSurvivesQueueRefusal = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only

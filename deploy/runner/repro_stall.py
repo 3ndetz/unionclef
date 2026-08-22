@@ -116,7 +116,7 @@ def main():
     after = py4j("gs").get("self")
     print(f"\nstart {before}\nend   {after}")
     for k in ("mqStarted", "mqSteps", "mqNoClass", "mqExpand", "mqRefused", "qNoMove",
-              "pdEnter", "pdWalking", "stuck"):
+              "navBridgeRescued", "pdEnter", "pdWalking", "stuck"):
         print(f"  {k}={field(stats, k)}")
     # WHICH SHAPE IS BEING TRUNCATED? mqNoClass counts them and never says what they are, and
     # this repro just showed queueParkour changing that count by nothing (477 against 479, the
