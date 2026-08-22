@@ -118,6 +118,14 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
 
     /** Times a block was given up on for NO APPROACH while the body kept moving. */
     public static volatile int dbApproachStalled;
+
+    /** The target the last FAR give-up was about, and how many in a row it has had. */
+    private BlockPos _farGiveUpTarget = null;
+    private int _farGiveUpCount = 0;
+    /** Three strikes: a stumble on the walk is forgiven, a block that keeps failing is not. */
+    private static final int FAR_GIVE_UPS_BEFORE_BLACKLIST = 3;
+    /** Far give-ups that bought a retry instead of a blacklisting, and ones that ran out of them. */
+    public static volatile int dbFarRetried, dbFarCondemned;
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
     private final MovementProgressChecker _moveChecker = new MovementProgressChecker();
     private final BlockPos pos;
@@ -470,6 +478,36 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             dbUnreachDistSum += d;
             if (d <= 4) dbUnreachNear++; else dbUnreachFar++;
             _moveChecker.reset();
+            // ⛔ "I NEVER GOT THERE" IS NOT "IT CANNOT BE REACHED", AND BOTH USED TO BLACKLIST.
+            //
+            // The split above was added to tell the two apart and then both fell into the same
+            // call. Measured on the playthrough, and it is not close: dbFar=18 against dbNear=0,
+            // with the give-ups landing at a MEAN DISTANCE OF 46 BLOCKS. The bot loses its
+            // progress check somewhere out on the walk -- a detour round an obstacle is enough,
+            // since the checker wants the distance to keep shrinking -- and condemns a perfectly
+            // good tree it has never stood next to.
+            //
+            // That is a cascade, not one lost tree. The scanner then hands back the next-nearest
+            // log, which is further, so the walk is longer and the checker is likelier to trip
+            // again. One run burned through TWENTY-SIX targets and reached NONE of them
+            // (dbTargets=26/0), ending up aimed at a log fifty-eight blocks away while standing in
+            // a forest with a hundred and fifty within forty.
+            //
+            // So a far give-up buys a RETRY, not a verdict. A block is only condemned when the bot
+            // keeps failing on the SAME one -- which is what a genuinely unreachable block looks
+            // like -- so a real dead end still gets dropped, just not on the first stumble.
+            boolean farAway = d > 4;
+            if (farAway && kaptainwutax.tungsten.TungstenConfig.get().farGiveUpRetriesFirst) {
+                if (!pos.equals(_farGiveUpTarget)) {
+                    _farGiveUpTarget = pos;
+                    _farGiveUpCount = 0;
+                }
+                if (++_farGiveUpCount < FAR_GIVE_UPS_BEFORE_BLACKLIST) {
+                    dbFarRetried++;
+                    return null;
+                }
+                dbFarCondemned++;
+            }
             // Request the block at the position to be marked as unreachable
             mod.getBlockScanner().requestBlockUnreachable(pos);
         }

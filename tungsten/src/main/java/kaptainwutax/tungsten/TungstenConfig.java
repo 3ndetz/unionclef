@@ -1534,6 +1534,26 @@ public class TungstenConfig {
     public boolean gridBfsRefusesCornerCut = true;
 
     /**
+     * A give-up FAR from a target block buys a retry, not a blacklisting.
+     *
+     * <p>DestroyBlockTask already split its give-ups into near and far -- "those need opposite
+     * fixes" -- and then sent both to requestBlockUnreachable. Measured on the playthrough:
+     * dbFar=18 against dbNear=0, with the give-ups landing at a MEAN DISTANCE OF 46 BLOCKS. The
+     * bot loses its progress check out on the walk (a detour round an obstacle is enough, since
+     * the checker wants the distance to keep shrinking) and condemns a tree it has never stood
+     * next to.
+     *
+     * <p>It cascades. The scanner hands back the next-nearest log, which is further, so the walk is
+     * longer and the checker is likelier to trip again. One run burned through TWENTY-SIX targets
+     * and reached NONE (dbTargets=26/0), ending up aimed at a log fifty-eight blocks away while
+     * standing in a forest with a hundred and fifty within forty.
+     *
+     * <p>Three strikes on the SAME block before it is condemned, so a genuine dead end is still
+     * dropped -- just not on the first stumble. Read dbFarRetried and dbFarCondemned.
+     */
+    public boolean farGiveUpRetriesFirst = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only
