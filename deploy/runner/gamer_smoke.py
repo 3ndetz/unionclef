@@ -990,9 +990,22 @@ def main():
     print(f"  deaths this run: {len(deaths)} (bench /kill excluded: {len(raw) - len(deaths)})")
     for k, v in sorted(causes.items(), key=lambda kv: -kv[1])[:5]:
         print(f"    {v}x {k}")
-    print("  end inv:", py4j("inv"))
-    print("  queue stats:", py4j("stats").get("s"))
-    print("  recent chat:", py4j("chat", n=10).get("chat"))
+    # A DIAGNOSTIC MUST NOT THROW AWAY THE RUN IT IS DESCRIBING.
+    # These three calls are for the reader; the verdict does not depend on any of them. They ran
+    # bare, and py4j() raises on a non-zero docker exec, so a client that was momentarily busy at
+    # the end discarded a COMPLETED ten-minute run with "RuntimeError: inv:" and no ladder line at
+    # all. Report what answers and say plainly what did not.
+    for _label, _op, _kw in (("end inv", "inv", {}), ("queue stats", "stats", {}),
+                             ("recent chat", "chat", {"n": 10})):
+        try:
+            _r = py4j(_op, **_kw)
+            if _op == "stats":
+                _r = _r.get("s")
+            elif _op == "chat":
+                _r = _r.get("chat")
+            print(f"  {_label}:", _r)
+        except Exception as _de:                  # noqa: BLE001 -- never lose a run over a readout
+            print(f"  {_label}: unavailable ({str(_de)[:70]})")
 
     gained = best_items - inv0.get("items",0)
     distinct_pos = len(moved)
