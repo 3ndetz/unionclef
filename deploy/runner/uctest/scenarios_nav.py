@@ -462,5 +462,65 @@ class NavCliff(NavCourse):
                         f"min_hp={low}")
 
 
+class NavNotch(NavCourse):
+    """A diagonal whose BOTH corner columns are solid: the bot must route around, not into it.
+
+    HONEST LABEL FIRST: this course does NOT reproduce the playthrough stall it was built for.
+    It passes in about seven seconds, which is the bot routing around the notch exactly as it
+    should. Shipping it with a docstring claiming otherwise would repeat the mistake nav_hazard
+    records two courses down -- a course that passed four of four with its hazard counter at zero,
+    i.e. for the wrong reason.
+
+    WHAT IT DOES GUARD is worth keeping: a diagonal step whose two corner columns are both full
+    cannot be squeezed through in vanilla, and a router that commits to one stands in it until the
+    clock runs out. The layout offers the blocked diagonal as the SHORT way and an open lane one
+    row over as the long one, so arriving means the route declined the impossible step.
+
+    WHY THE REAL STALL NEEDS MORE THAN THIS GEOMETRY, traced on the live world block by block:
+
+        src        (85,124,-54)  AIR          the cell the movement was built from
+        srcAbove   (85,125,-54)  air          where the feet actually are
+        cornerA    (85,125,-55)  grass_block  SOLID, at the body's real level
+        cornerB    (84,125,-54)  dirt         SOLID, at the body's real level
+        cornerAlow (85,124,-55)  air          and THIS is the corner that got vetted
+
+    The trigger is not the notch, it is that the movement was built from a cell one block BELOW
+    the body, so MovementDiagonal vetted its corners a level down where one of them is open. That
+    off-by-one comes from the route, not from the terrain, and terrain alone cannot force it --
+    which is why this course is green and the stall is not fixed.
+
+    It then holds forward at v=0.00 and never completes, and that is not one lost step: while a
+    chain is RUNNING the mixin returns early and NOTHING else ticks -- not BlockPathWalker, not
+    the build primitives, not the physics executor -- while FastNavigator counts isRunning() as
+    "building" and never replans. Measured on a five-minute run: mqStarted=64 against mqSteps=9,
+    dbTargets=12/0, no rungs at all.
+
+    The course lives in the arena rather than on the live world deliberately (checklist rule
+    4a3): the earlier repro sat on real terrain and the bot DUG IT AWAY -- grass_block and dirt at
+    those corners both read air a few dozen runs later, after which it stopped reproducing in both
+    arms and measured nothing while looking exactly like a fix. An arena course is rebuilt every
+    run, so it cannot be eaten.
+    """
+    id = "nav_notch"
+    duration = 120
+    settings = {"verboseDebugLogging": "true"}
+
+    def course(self, arena, ctx):
+        arena.floor(7, -3, 26, 3, "stone")
+        # The notch. Two pillars placed so the step from (15,z=1) to (16,z=0) -- the diagonal a
+        # beeline wants -- has both of its corner columns full. Two blocks tall so the head is
+        # blocked as well as the feet; one block tall would merely be a step up.
+        arena._fill(15, STAND_Y, 0, 15, STAND_Y + 1, 0, "stone")
+        arena._fill(16, STAND_Y, 1, 16, STAND_Y + 1, 1, "stone")
+        # Close the -z side so the diagonal really is the tempting one, and leave z=2..3 open as
+        # the honest way past. Barrier, not stone, so nothing here is mineable: this course asks
+        # about routing, not about digging.
+        arena._fill(15, STAND_Y, -3, 16, STAND_Y + 3, -1, "barrier")
+        arena._fill(7, STAND_Y, -4, 26, STAND_Y + 3, -4, "barrier")
+        arena._fill(7, STAND_Y, 4, 26, STAND_Y + 3, 4, "barrier")
+        return (23, STAND_Y, 0)
+
+
 SCENARIOS = [NavFlat, NavStaircase, NavSteep, NavGaps, NavDescend, NavCliff,
-             NavWater, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge, NavHazard]
+             NavWater, NavLadder, NavSlime, NavBreak, NavWall2, NavBridge, NavHazard,
+             NavNotch]
