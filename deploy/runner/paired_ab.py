@@ -174,7 +174,7 @@ def main():
         for ground, bspan, aspan in short:
             print(f"   {ground}: fix {bspan}s vs ctrl {aspan}s of sampled time")
     if dirty:
-        print("\n⛔ CONTROL ARM IS NOT CLEAN -- the mechanism counter should read 0 there:")
+        print("\nCONTROL ARM IS NOT CLEAN -- the mechanism counter should read 0 there:")
         for ground, val in dirty:
             print(f"   {ground}: {args.counter}={val}")
 

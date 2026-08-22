@@ -416,6 +416,22 @@ def main():
                     grcon(f'tp {BOT} {spawn}')
                     time.sleep(2)
                     print(f'  pair ground REUSED: {spawn}')
+                    # VERIFY BY RESULT. A run printed "pair ground REUSED: 1192 150 -239" and then
+                    # started at 93.5,135.0,-32.5 -- nowhere near it. The teleport is fire and
+                    # forget, so a pair can be reported as sharing ground while the two arms are
+                    # six hundred blocks apart, which is worse than not pairing at all: the
+                    # comparison looks valid and is not. Read the position back and say so.
+                    _wx, _, _wz = (float(v) for v in spawn.split())
+                    _sp = py4j('gs').get('self')
+                    _txt = str(_sp)
+                    _mark = "'pos': '"
+                    if _mark in _txt:
+                        _p = _txt.split(_mark, 1)[1].split("'", 1)[0]
+                        _px, _py, _pz = (float(v) for v in _p.split(','))
+                        if (_px - _wx) ** 2 + (_pz - _wz) ** 2 > 400.0:
+                            print(f'  PAIR GROUND DID NOT LAND: asked {spawn}, bot is at {_p}.'
+                                  f' The arms are not on one piece of ground; treat this pair as'
+                                  f' UNMEASURED.')
                     # ⛔ THE SAME GROUND IS NOT THE SAME FOREST. THE FIRST ARM ATE IT.
                     # Pairing on the resolved spawn was meant to put both arms on one piece of
                     # ground, and it does -- but the world PERSISTS and the first arm spent five
@@ -438,7 +454,7 @@ def main():
                         print(f'  pair wood: arm1 {_before} -> arm2 {_after}'
                               f' ({100 * _after // max(1, _before)}%)')
                         if _after < 0.75 * _before:
-                            print('  ⛔ PAIR IS NOT COMPARABLE: the first arm removed more than a'
+                            print('  PAIR IS NOT COMPARABLE: the first arm removed more than a'
                                   ' quarter of the wood this course grades on. Treat this pair as'
                                   ' UNMEASURED rather than as a result (checklist rule 4a3).')
                     else:

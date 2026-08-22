@@ -109,7 +109,7 @@ def main():
     finished = ok and "No tasks" in str(chain)
     print(f"  task one reached idle: {finished}")
     if not finished:
-        print("  ⛔ task one never finished -- this run cannot answer, and is not being read as if"
+        print("  task one never finished -- this run cannot answer, and is not being read as if"
               " it could")
         bot.py.try_call("allowBreakingAnywhere")
         bot.stop_all()
