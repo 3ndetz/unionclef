@@ -111,6 +111,31 @@ def main():
     # honestly zero. Four arms of an A/B were read that way before the coordinates gave it away.
     # Verify by RESULT rather than by belief: teleport, read the position back, and if the bot did
     # not land near the start it is on the wrong server -- reconnect and try again.
+    # ⛔ A TERRAIN REPRO ON A PERSISTENT WORLD IS CONSUMED BY THE RUNS THAT USE IT.
+    # The stall this tool exists for is a NOTCH: two solid corners at the body's level with the
+    # route threading between them. The bot's job at that moment is to mine wood, and over a few
+    # dozen runs it simply DUG THE NOTCH AWAY. Read before and after the same session:
+    #
+    #     cornerA (85,125,-55)  grass_block  ->  air
+    #     cornerB (84,125,-54)  dirt         ->  air
+    #     underDest (84,124,-55) grass_block ->  air
+    #
+    # After that the wedge stopped happening in BOTH arms and the repro measured nothing while
+    # looking exactly like a fix. Worse, the arms run in sequence, so the second arm of every pair
+    # always got more-eroded ground -- a bias pointing the same way every time.
+    #
+    # So restore the cells that define the geometry before each run. --restore takes a JSON file of
+    # {"x,y,z": "minecraft:block"} and sets each one over rcon.
+    _rest = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--restore"]
+    if _rest:
+        with open(_rest[0], encoding="utf-8") as fh:
+            cells = json.load(fh)
+        for key, blk in cells.items():
+            bx, by, bz = key.split(",")
+            grcon(f"setblock {bx} {by} {bz} {blk} replace")
+        print(f"    restored {len(cells)} cells from {_rest[0]}")
+        time.sleep(1.0)
+
     print(f"[1] teleport to {start}, target {tx} {ty} {tz}")
     _want = [float(v) for v in start.split()]
     for _attempt in range(3):

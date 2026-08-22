@@ -403,12 +403,46 @@ def main():
             if any(a == '--pin-alt' for a in sys.argv):
                 if (RUN_SEQ[0] % 2) == 1:
                     open(_pairfile, 'w', encoding='utf-8').write(spawn)
+                    # Record what the ground was WORTH, not only where it was, so the second arm
+                    # can say whether it inherited the same course or a clearing.
+                    try:
+                        open(_pairfile + '.logs', 'w', encoding='utf-8').write(
+                            str(py4j('logs', r=40).get('n')))
+                    except Exception as _le:
+                        print(f'  (pair wood reading unavailable: {str(_le)[:60]})')
                     print(f'  pair ground saved: {spawn}')
                 elif os.path.exists(_pairfile):
                     spawn = open(_pairfile, encoding='utf-8').read().strip()
                     grcon(f'tp {BOT} {spawn}')
                     time.sleep(2)
                     print(f'  pair ground REUSED: {spawn}')
+                    # ⛔ THE SAME GROUND IS NOT THE SAME FOREST. THE FIRST ARM ATE IT.
+                    # Pairing on the resolved spawn was meant to put both arms on one piece of
+                    # ground, and it does -- but the world PERSISTS and the first arm spent five
+                    # minutes chopping the trees this course grades on. So the second arm of every
+                    # pair starts in a clearing the first arm made, and the bias points the same
+                    # way every time. This was found the hard way on a terrain repro, where the
+                    # bot dug the very notch under test out of existence:
+                    #     cornerA (85,125,-55)  grass_block -> air
+                    #     cornerB (84,125,-54)  dirt        -> air
+                    # after which the stall stopped reproducing in BOTH arms and the tool measured
+                    # nothing while looking exactly like a fix.
+                    # Measure it rather than assume it either way: the same probe that qualified
+                    # the ground for arm one, run again for arm two.
+                    try:
+                        _before = int(open(_pairfile + '.logs', encoding='utf-8').read().strip())
+                    except Exception:
+                        _before = None
+                    _after = py4j('logs', r=40).get('n')
+                    if _before:
+                        print(f'  pair wood: arm1 {_before} -> arm2 {_after}'
+                              f' ({100 * _after // max(1, _before)}%)')
+                        if _after < 0.75 * _before:
+                            print('  ⛔ PAIR IS NOT COMPARABLE: the first arm removed more than a'
+                                  ' quarter of the wood this course grades on. Treat this pair as'
+                                  ' UNMEASURED rather than as a result (checklist rule 4a3).')
+                    else:
+                        print(f'  pair wood: arm2 {_after} (no arm1 reading)')
         except Exception as _e:
             print(f'  (pair ground unavailable: {str(_e)[:70]})')
         if skipped:

@@ -395,6 +395,45 @@ rung without dozens of pairs. Seconds the body spent not moving is continuous an
 quantity a stall fix actually changes. On identical runs it read t=-1.51 where rungs managed
 +0.93. `paired_ab.py` reports both; quote the one that matches what the change does.
 
+## 4a3. ⛔ THE BOT EATS THE COURSE IT IS BEING GRADED ON (2026-08-22)
+
+Rule 4a says pair the arms on the same ground. That is right and it is not sufficient, because
+the world PERSISTS between runs and the bot's whole job is to change it.
+
+Found on a terrain repro that reproduced a stall reliably -- until it did not. The stall is a
+NOTCH: two solid corners at the body's level with the route threading between them. The bot's
+task at that moment is to mine wood, and over a few dozen runs it simply dug the notch away:
+
+```
+cornerA   (85,125,-55)   grass_block  ->  air
+cornerB   (84,125,-54)   dirt         ->  air
+underDest (84,124,-55)   grass_block  ->  air
+```
+
+After that the wedge stopped happening in BOTH arms, and the tool measured nothing while looking
+exactly like a fix -- five runs of five walked away cleanly with the flag on, and so did the
+control.
+
+**The bias is not random, it is directional.** Arms run in sequence, so the SECOND arm of every
+pair always inherits the ground the first arm degraded. On the playthrough that is literal: the
+pair reuses the resolved spawn, and the course grades on "log blocks within 40" -- which the
+control arm spent five minutes chopping down.
+
+**What to do.**
+
+- For an arena course: rebuild the geometry every run. That is what the `nav_*` courses already do
+  and it is why they do not suffer from this.
+- For a persistent world: RESTORE the cells the test depends on before each run.
+  `repro_stall.py --restore <file.json>` takes `{"x,y,z": "minecraft:block"}` and sets each one.
+- For the playthrough, where restoring a forest is not practical: MEASURE the erosion and say so.
+  gamer_smoke now records the wood count when it saves a pair's ground and re-reads it for the
+  second arm, printing `pair wood: arm1 N -> arm2 M` and declaring the pair UNMEASURED when more
+  than a quarter is gone.
+
+**And treat past results accordingly.** Every paired playthrough A/B taken before this was run
+with the alt arm on poorer ground than its control. That does not flip a result by itself, but it
+is a systematic effect pointing one way, and any narrow margin measured that way is not safe.
+
 ## 4b. MEASURE THE SPREAD BEFORE YOU COMPARE MEANS (2026-08-10)
 
 A metric you have not characterised cannot support a before/after claim, and most bench metrics

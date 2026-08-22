@@ -1,0 +1,12 @@
+{
+  "85,124,-54": "minecraft:air",
+  "85,125,-54": "minecraft:air",
+  "85,126,-54": "minecraft:air",
+  "84,125,-55": "minecraft:air",
+  "84,126,-55": "minecraft:air",
+  "85,125,-55": "minecraft:grass_block",
+  "84,125,-54": "minecraft:dirt",
+  "85,124,-55": "minecraft:air",
+  "84,124,-54": "minecraft:dirt",
+  "84,124,-55": "minecraft:grass_block"
+}
