@@ -811,6 +811,25 @@ public class TungstenConfig {
      * longer truncated the QUEUE owns more of the path and the walker less, so anything the walker
      * did better is now done by the queue. If mine_coal drifts again, that interaction -- not this
      * dedupe -- is where to look.
+     *
+     * <p>⛔ AND ON THE PLAYTHROUGH IT IS NEUTRAL, WHICH IS THE HONEST HEADLINE. Five comparable
+     * pairs, arms on the same ground:
+     *
+     * <pre>
+     *   rungs        +0.20 for OFF   t 0.13    [0, +2, +4, 0, -5]
+     *   stall time  +11.8s for OFF   t 0.26
+     * </pre>
+     *
+     * <p>Through four pairs it looked like a clear trade -- the dedupe stalling ~50s less a run
+     * and losing ~1.5 rungs for it -- and the fifth pair reversed both at once (5 rungs against 0
+     * while stalling MORE). Quoting the trend at n=4 would have produced a confident story about
+     * the queue owning too much of the path. It is noise.
+     *
+     * <p>So: the fix is correct (a route that repeats a cell is malformed), it clears a
+     * DETERMINISTIC navigation stall on the 60-second repro, the suites stay green -- and it does
+     * not move the ladder. That is the second time this session that removing a stall bought time
+     * the bot then failed to convert; the first was stallCheckNeedsMovement, established on stall
+     * seconds and flat on rungs. Whatever limits the playthrough is downstream of standing still.
      */
     public boolean queueDedupesRoute = true;
 
