@@ -355,6 +355,40 @@ def main():
         while skipped < 8:
             grcon(f"tp {BOT} {spawn}")
             time.sleep(3)
+            # COUNT THE TREES WHERE THE BOT WAS SENT, NOT WHERE IT ENDED UP.
+            # The log count below is taken at the BOT's position, and the teleport is fire and
+            # forget. A spawn point at y=150 is air: the bot falls, and if it dies it respawns at
+            # world spawn -- where this loop then counts a perfectly good forest and accepts a spot
+            # the bot has never visited. Measured: a sweep printed "fresh start #7: 592 150 -839"
+            # and "start has 122 log blocks within 40" while every run actually began within a few
+            # blocks of 93,135,-32, the world spawn, six hundred blocks away.
+            # That is how six runs produced one comparable pair: the arms were never on the ground
+            # the log said they were.
+            _here = str((py4j("gs").get("self") or {}).get("pos") or "")
+            _ok = False
+            if _here:
+                try:
+                    _wx, _, _wz = (float(v) for v in str(spawn).split())
+                    _px, _, _pz = (float(v) for v in _here.split(","))
+                    _ok = (_px - _wx) ** 2 + (_pz - _wz) ** 2 <= 400.0
+                except ValueError:
+                    _ok = False
+            if not _ok:
+                print(f"  spot {spawn} unreachable (bot is at {_here or '?'}) -- stepping on")
+                skipped += 1
+                idx += 1
+                x, z, dx, dz, leg, step = 0, 0, 1, 0, 1, 0
+                for _ in range(idx):
+                    x += dx
+                    z += dz
+                    step += 1
+                    if step == leg:
+                        step = 0
+                        dx, dz = -dz, dx
+                        if dz == 0:
+                            leg += 1
+                spawn = f"{base[0] + x * 300} {base[1]} {base[2] + z * 300}"
+                continue
             try:
                 logs = py4j("logs", r=40).get("n", -1)
             except Exception:
