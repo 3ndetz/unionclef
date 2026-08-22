@@ -109,6 +109,19 @@ public final class MovementQueue {
     /** Zero-length route edges stepped over; reads 0 with queueSkipsNullEdges off. */
     public static volatile int qNullEdge;
 
+    /**
+     * Straight runs put back into a compressed route: cells added, runs expanded, and runs left
+     * alone because the ground under them was not there. The third number is the guard doing its
+     * job, and a high one means the planner really is asking for leaps rather than corridors.
+     */
+    public static volatile int qExpandedCells, qExpandedRuns, qExpandRefused;
+
+    /** Expanded cells that had no floor under them -- each one is a bridge the executor must build. */
+    public static volatile int qExpandNoFloor;
+
+    /** One worked example of a floorless expansion: the edge, and the cell whose floor is missing. */
+    public static volatile String qExpandSample = "-";
+
     /** Signed dx,dy,dz of every edge truncated for want of a movement class, tallied by shape. */
     private static final java.util.Map<String, Integer> noClassShapes =
             java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
@@ -608,6 +621,99 @@ public final class MovementQueue {
                 else qNullEdge++;
             }
             cells = tidy;
+        }
+        // A STRAIGHT RUN IS NOT A LEAP, AND THE QUEUE WAS READING IT AS ONE.
+        //
+        // The shapes that truncate a chain were finally counted instead of guessed, on the
+        // navigation repro, and they are not what three earlier notes assumed:
+        //
+        //     0,0,-6 x208   0,0,-4 x13   0,0,4 x8   -4,0,0 x8
+        //     -2,0,0 x5     -3,1,0 x5    4,0,0 x5   2,0,0 x3
+        //
+        // Every one of them is a straight line along a single axis, and all but one is flat.
+        // The dominant shape is SIX BLOCKS in one hop -- and there is no six-block jump in this
+        // game, so that edge is not a movement at all. It is a compressed route: the planner
+        // handed over waypoints with the cells between them left out, and the queue, which
+        // classifies one edge at a time and only knows unit steps, had no class for any of them.
+        // That is why queueParkour moved mqNoClass by nothing (477 against 479): the missing
+        // capability was never parkour, it was the cells themselves.
+        //
+        // So put them back. Each intermediate cell lies on the straight line between two cells
+        // the planner already accepted, and a run of MovementTraverse is exactly what walking
+        // down a corridor is.
+        //
+        // ⛔ ONLY WHERE THE GROUND IS ACTUALLY THERE. A flat multi-block edge is USUALLY a
+        // compressed run, but it can honestly be a leap across a gap, and inventing floor under
+        // one would walk the bot into the hole. Every intermediate cell is checked for footing
+        // and headroom; if any of them fails, the edge is left exactly as it was and still counts
+        // as unclassified. This adds cells where the walk is real and changes nothing elsewhere.
+        if (cells != null && cells.size() > 1
+                && kaptainwutax.tungsten.TungstenConfig.get().queueExpandsStraightRuns) {
+            net.minecraft.world.WorldView w =
+                    net.minecraft.client.MinecraftClient.getInstance().world;
+            if (w != null) {
+                List<BlockPos> run = new java.util.ArrayList<>(cells.size());
+                run.add(cells.get(0));
+                for (int i = 1; i < cells.size(); i++) {
+                    BlockPos a = run.get(run.size() - 1);
+                    BlockPos b = cells.get(i);
+                    int dx = b.getX() - a.getX();
+                    int dy = b.getY() - a.getY();
+                    int dz = b.getZ() - a.getZ();
+                    int adx = Math.abs(dx), adz = Math.abs(dz);
+                    boolean straight = dy == 0
+                            && ((adx > 1 && dz == 0) || (adz > 1 && dx == 0));
+                    if (straight) {
+                        int n = Math.max(adx, adz);
+                        int sx = Integer.signum(dx), sz = Integer.signum(dz);
+                        List<BlockPos> mid = new java.util.ArrayList<>(n);
+                        boolean walkable = true;
+                        for (int k = 1; k <= n; k++) {
+                            BlockPos m = a.add(sx * k, 0, sz * k);
+                            // MATCH THE STANDARD THE QUEUE ITSELF ADMITS BY, NOT A STRICTER ONE.
+                            // The first guard here also demanded a floor under every intermediate
+                            // cell, and it refused ONE HUNDRED PERCENT of the straight runs it saw
+                            // across three repro runs (mqExpand=0/0/6, 0/0/6, 0/0/11) -- an
+                            // expansion that never expands measures nothing. isTraverseEdge, which
+                            // is how a unit step gets admitted three hundred lines below, tests
+                            // geometry and nothing else, because MovementTraverse handles its own
+                            // ground: it BRIDGES a missing floor and BREAKS what is in the way.
+                            // Demanding intact floor was inventing a requirement the executor does
+                            // not have. What it genuinely cannot do is walk through solid rock, so
+                            // that -- headroom for body and head -- is what stays.
+                            if (!MovementHelperB.canWalkThrough(w, m)
+                                    || !MovementHelperB.canWalkThrough(w, m.up())) {
+                                walkable = false;
+                                break;
+                            }
+                            // Counted, not assumed: a cell with no floor is a bridge the executor
+                            // must build, and early game it may have nothing to build with. If
+                            // this number is large the expansion is buying stalls, not steps.
+                            if (!MovementHelperB.canWalkOn(w, m.down())) {
+                                qExpandNoFloor++;
+                                // A COUNTER SAYS HOW MANY, NEVER WHERE, and "every cell is
+                                // floorless" is exactly the shape a misread world produces as
+                                // well as a real cliff. Keep one example with its coordinates so
+                                // the claim can be checked against the actual block.
+                                qExpandSample = a.getX() + "," + a.getY() + "," + a.getZ()
+                                        + " -> " + b.getX() + "," + b.getY() + "," + b.getZ()
+                                        + " nofloor@" + m.getX() + "," + (m.getY() - 1)
+                                        + "," + m.getZ();
+                            }
+                            mid.add(m);
+                        }
+                        if (walkable) {
+                            run.addAll(mid);
+                            qExpandedCells += n - 1;
+                            qExpandedRuns++;
+                            continue;
+                        }
+                        qExpandRefused++;
+                    }
+                    run.add(b);
+                }
+                cells = run;
+            }
         }
         int covered = wholeRoute ? (cells == null ? 0 : cells.size()) : traversePrefix(cells);
         if (covered < 2) {

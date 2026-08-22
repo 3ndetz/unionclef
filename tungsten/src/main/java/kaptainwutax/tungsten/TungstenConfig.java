@@ -1276,6 +1276,23 @@ public class TungstenConfig {
     public boolean queueParkour = false;
 
     /**
+     * Put the missing cells back into a compressed route before the queue tries to classify it.
+     *
+     * <p>The shapes that truncate a chain were counted rather than assumed, and every one of them
+     * is a straight line along one axis: 0,0,-6 two hundred and eight times, then 0,0,-4, 0,0,4,
+     * -4,0,0 and the rest. A six-block hop is not a move this game has, so those edges were never
+     * movements -- they are waypoints with the corridor between them omitted, handed to a queue
+     * that only knows unit steps.
+     *
+     * <p>This is why {@link #queueParkour} was measured as worthless (mqNoClass 477 against 479):
+     * it added a capability for a shape that was not the one arriving. The cells are.
+     *
+     * <p>Expansion is refused wherever an intermediate cell lacks footing or headroom, so a
+     * genuine leap across a gap is still left unclassified instead of being walked into.
+     */
+    public boolean queueExpandsStraightRuns = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only

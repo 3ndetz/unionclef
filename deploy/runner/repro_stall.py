@@ -33,7 +33,7 @@ op=req["op"]
 if   op=="gs":    out={"self": str(dict(mc.getGameState()).get("self"))}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
 elif op=="chatcmd": mc.ChatMessage(req["c"]); out={"ok":True}
-elif op=="resetstats": mc.resetValues(); out={"ok":True}
+elif op=="resetstats": mc.resetValues(); mc.resetRunCounters(); out={"ok":True}  # resetValues() only rewrites three server dict entries -- resetRunCounters() is the one that zeroes the counters, and for a long time this op called only the former
 elif op=="connect": mc.ConnectToServer(req["ip"]); out={"ok":True}
 elif op=="state": out={"inGame": bool(mc.inGame())}
 elif op=="shapes": out={"r": str(mc.noClassShapes() or "")}
@@ -92,6 +92,15 @@ def main():
     print(f"[1] teleport to {start}, target {tx} {ty} {tz}")
     grcon(f"tp {BOT} {start}")
     time.sleep(2)
+    # PIN A FLAG BEFORE THE STATS ARE ZEROED, so the run measures the setting it names.
+    # ";settings" is tungsten's own chat command and needs ChatMessage, not ExecuteCommand.
+    # Both arms SET the value explicitly -- omitting the pin measures whatever the last run
+    # happened to leave behind, which is how a pinned experiment leaks into a baseline.
+    for _p in [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--pin"]:
+        _k, _, _v = _p.partition("=")
+        py4j("chatcmd", c=f";settings {_k} {_v}")
+        print(f"    pinned {_k}={_v}")
+    time.sleep(1.0)
     py4j("resetstats")
     before = py4j("gs").get("self")
 
@@ -106,7 +115,8 @@ def main():
     stats = py4j("stats").get("s") or ""
     after = py4j("gs").get("self")
     print(f"\nstart {before}\nend   {after}")
-    for k in ("mqStarted", "mqSteps", "mqNoClass", "qNoMove", "pdEnter", "pdWalking", "stuck"):
+    for k in ("mqStarted", "mqSteps", "mqNoClass", "mqExpand", "mqRefused", "qNoMove",
+              "pdEnter", "pdWalking", "stuck"):
         print(f"  {k}={field(stats, k)}")
     # WHICH SHAPE IS BEING TRUNCATED? mqNoClass counts them and never says what they are, and
     # this repro just showed queueParkour changing that count by nothing (477 against 479, the

@@ -51,7 +51,7 @@ elif op=="inv":
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
 elif op=="stealers": out={"r": str(mc.forwardStealers() or "")}
 elif op=="blocked": out={"r": str(mc.blockedScenes() or "")}
-elif op=="resetstats": mc.resetValues(); out={"ok":True}
+elif op=="resetstats": mc.resetValues(); mc.resetRunCounters(); out={"ok":True}  # resetValues() only rewrites three server dict entries -- resetRunCounters() is the one that zeroes the counters, and for a long time this op called only the former
 elif op=="readflag": out=dict(mc.readFlag(req["n"]))
 elif op=="perf": out={"p": dict(mc.getPerfStats())}
 elif op=="tdump": out={"d": str(mc.threadDump(str(req.get("f",""))))[:4000]}
