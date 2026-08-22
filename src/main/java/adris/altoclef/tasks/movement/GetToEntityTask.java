@@ -598,6 +598,23 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             // pieces of coal. A bot alternating between two of them would snap at one, be measured
             // against the other, and walk a zigzag that moves the body without ever closing on
             // either -- which is exactly the 241/239/8 shape.
+            //
+            // ⛔ MEASURED, AND THAT EXPLANATION IS REFUTED (2026-08-22). The retarget counter this
+            // note asked for reads ONE in two hundred and forty-one ticks:
+            //
+            //     entityCloseWalk=241/125/9/126/0/240/1
+            //                                         ^ retarget
+            //
+            // The bot is not alternating between drops. The same run also settles whether the aim
+            // counter lies: the yaw we set survives the tick 240 times of 241 while "aimed" reads
+            // 126, and both are true -- aimed is sampled at the TOP of the tick, before this branch
+            // snaps, so it reports the PREVIOUS tick's aim. The counter is early, not broken.
+            //
+            // What is left is the uncomfortable reading: the bot is aimed at the right drop, does
+            // not change its mind, moves on 125 ticks and closes on 9. Aimed, moving, and not
+            // approaching means something stops the body -- and the drop sits one block DOWN, 1.8
+            // across, in the hole the bot just dug. That is the next thing to look at, and it is
+            // not another camera owner.
             if (closeWalkLastEntityId != null && closeWalkLastEntityId != _entity.getId()) {
                 entityCloseWalkRetarget++;
             }
