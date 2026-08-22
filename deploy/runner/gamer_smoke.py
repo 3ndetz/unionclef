@@ -190,6 +190,25 @@ def wait_for(desc,fn,ts,iv=4):
         time.sleep(iv)
     raise TimeoutError(f"{desc}: {ts}s ({last})")
 
+def place_at(spawn):
+    """Put the bot ON THE GROUND at a spawn point, instead of dropping it from the sky.
+
+    Spawn points carry y=150 because the spiral does not know the terrain height, and a plain tp
+    to y=150 is a ninety-block fall. Sometimes the bot survives it; usually it dies and respawns at
+    world spawn, and every later check -- the tree count, the pair ground, the ladder -- then
+    describes a place the bot has never been. Measured: six consecutive spiral points reported
+    unreachable, with the bot sitting within twenty blocks of world spawn each time.
+
+    spreadplayers is the vanilla command for "put this player somewhere sane at these coordinates":
+    it lands them on the surface. Range 1 with spread 0 means "at this spot", not scattered.
+    """
+    parts = str(spawn).split()
+    if len(parts) != 3:
+        return
+    grcon(f"spreadplayers {parts[0]} {parts[2]} 0 1 false {BOT}")
+    time.sleep(3)
+
+
 def main():
     phase("rcon"); print("[1] wait gamer-server rcon...")
     try:
@@ -353,8 +372,7 @@ def main():
         base = [int(v) for v in SPAWN_FILE.read_text(encoding="utf-8").split()]
         skipped = 0
         while skipped < 8:
-            grcon(f"tp {BOT} {spawn}")
-            time.sleep(3)
+            place_at(spawn)
             # COUNT THE TREES WHERE THE BOT WAS SENT, NOT WHERE IT ENDED UP.
             # The log count below is taken at the BOT's position, and the teleport is fire and
             # forget. A spawn point at y=150 is air: the bot falls, and if it dies it respawns at
@@ -447,8 +465,7 @@ def main():
                     print(f'  pair ground saved: {spawn}')
                 elif os.path.exists(_pairfile):
                     spawn = open(_pairfile, encoding='utf-8').read().strip()
-                    grcon(f'tp {BOT} {spawn}')
-                    time.sleep(2)
+                    place_at(spawn)
                     print(f'  pair ground REUSED: {spawn}')
                     # VERIFY BY RESULT. A run printed "pair ground REUSED: 1192 150 -239" and then
                     # started at 93.5,135.0,-32.5 -- nowhere near it. The teleport is fire and
@@ -520,8 +537,7 @@ def main():
                 f"host this run, so its ladder would measure the biome. Delete "
                 f"deploy/runner/gamer_spawn.txt to re-seed the search from a new base.")
     elif spawn:
-        grcon(f"tp {BOT} {spawn}")
-        time.sleep(2)
+        place_at(spawn)
     pos = (py4j("gs").get("self") or {}).get("pos")
     # THE SPIRAL DROPS THE BOT OUT OF THE SKY, AND SOMETIMES IT DOES NOT SURVIVE THE LANDING.
     #
@@ -541,8 +557,7 @@ def main():
             if (_px - _wx) ** 2 + (_pz - _wz) ** 2 <= 400.0:
                 break
             print(f"  start did not land: asked {spawn}, bot is at {pos} -- retrying the teleport")
-            grcon(f"tp {BOT} {spawn}")
-            time.sleep(3)
+            place_at(spawn)
             pos = (py4j("gs").get("self") or {}).get("pos")
         else:
             raise StandDown(
