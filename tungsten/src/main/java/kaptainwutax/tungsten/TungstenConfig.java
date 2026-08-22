@@ -1644,8 +1644,15 @@ public class TungstenConfig {
      * <p>GATE: wander_recovery is the course that exists for this task and must not move; nav and
      * craft must not move. Proof it ran: forwardStealers() should lose the TimeoutWanderTask entry
      * almost entirely.
+     *
+     * <h2>SHIPPED ON (2026-08-23)</h2>
+     *
+     * The thief list loses the entry entirely: TimeoutWanderTask:238 x1290 before, absent after,
+     * and the run that measured it reached STONE TOOLS at 66.3s -- the fastest of the series.
+     * craft 22/22 with wander_recovery among them, nav 14/14 (one INVALID re-run 3/3). The same
+     * guard covers DestroyBlockTask:407, which the instrument named next at x220.
      */
-    public boolean wanderKeepsWalkerKeys = false;
+    public boolean wanderKeepsWalkerKeys = true;
 
     /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.

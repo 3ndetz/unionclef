@@ -401,7 +401,15 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                 mod.getInputControls().release(Input.MOVE_BACK);
                 mod.getInputControls().release(Input.MOVE_FORWARD);
             }
-        } else if (Nav.isPathing()) {
+        } else if (Nav.isPathing()
+                && !(kaptainwutax.tungsten.TungstenConfig.get().wanderKeepsWalkerKeys
+                     && kaptainwutax.tungsten.task.BlockPathWalker.isRunning())) {
+            // SAME SHAPE AS THE WANDER TASK'S, AND THE SAME FIX.
+            // This releases the movement keys whenever the pathfinder is SEARCHING, without asking
+            // whether anything is currently driving the body. With TimeoutWanderTask's 1290 steals
+            // removed, the thief instrument names this line next: DestroyBlockTask:407 x220 in a
+            // ten-minute run, against single digits for every other caller. BlockPathWalker is
+            // holding MOVE_FORWARD toward its waypoint while this takes it away.
             mod.getInputControls().release(Input.SNEAK);
             mod.getInputControls().release(Input.MOVE_BACK);
             mod.getInputControls().release(Input.MOVE_FORWARD);
