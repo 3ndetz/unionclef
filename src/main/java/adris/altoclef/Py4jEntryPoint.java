@@ -2709,6 +2709,7 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkBelow1 = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkBelow2 = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkBelow3 = 0;
+        adris.altoclef.tasks.movement.GetToEntityTask.closeWalkLeaseCleared = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkSneakReleased = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkJumped = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.clearBlockedScenes();
@@ -2967,7 +2968,7 @@ public class Py4jEntryPoint {
                         + " sprint=%d/%d lowHp=%d/%d standOff=%d hurt=%d/%d/%d hurtWin=%d/%d diseng=%d/%d ctl=%d cq=%d/%d/%d los=%d/%d/%d/%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdFleeStuck=%d mdFleeShooter=%d mdFar=%d/%d arrows=%d/%.2f/%.2f draws=%d/%d/%d/%.2f band=%d/%d dodgeYield=%d latch=%d/%d breakFail=%d/%d/%d/%d/%d stranded=%d/%s/%s gp=%d/%d/%d/%d/%d dodgeTask=%d/%.2f dealt=%.1f/%.1f/%d hitSize=%d/%d/%d/%d takeSize=%d/%d/%d/%d slotSync=%d/%d critReset=%d stray=%d/%d heldSwing=%d loseKite=%d holdBow=%d punkKept=%d swingHits=%d dodgeDrive=%d hop=%d/%d/%d/%d/%d/%d/%d mdPillarD=%d dmgTaken=%.1f dw=%d/%.1f/%.2f/%.2f/%d/%d dwNoBlame=%d dmgWhy=%d/%d/%d/%d/%d@%.1f strafe=%d/%d voidEntries=%d voidTicks=%d lastFall=[%s] hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d bowShots=%d bowWild=%d bowNoSol=%d bowRestart=%d bowAimTO=%d bowDrawTO=%d bowBestMiss=%.2f bowFacing=%d bowNoRoom=%d flee=%d/%d/%d/%d/%d/%d qBurn=%d qTp=%d qNoMove=%d stuck=[%s] staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
                         + " | gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d"
-                        + " entityReleased=%d/%d idrop=%d/%d/%d/%d rt=%d/%d/%d entityCloseWalk=%d/%d/%d/%d/%d/%d/%d closeWalkGeom=%d/%d/%d/%d deep=%d/%d/%d cwJump=%d cwSneakRel=%d closeWalkFwd=%d/%d/%d",
+                        + " entityReleased=%d/%d idrop=%d/%d/%d/%d rt=%d/%d/%d entityCloseWalk=%d/%d/%d/%d/%d/%d/%d closeWalkGeom=%d/%d/%d/%d deep=%d/%d/%d cwJump=%d cwSneakRel=%d cwLease=%d closeWalkFwd=%d/%d/%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
                 kaptainwutax.tungsten.path.PathExecutor.placeDeferred,
                 kaptainwutax.tungsten.path.PathExecutor.placeInRange,
@@ -3429,6 +3430,7 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.movement.GetToEntityTask.closeWalkBelow3,
                 adris.altoclef.tasks.movement.GetToEntityTask.closeWalkJumped,
                 adris.altoclef.tasks.movement.GetToEntityTask.closeWalkSneakReleased,
+                adris.altoclef.tasks.movement.GetToEntityTask.closeWalkLeaseCleared,
                 adris.altoclef.tasks.movement.GetToEntityTask.closeWalkFwdKept,
                 adris.altoclef.tasks.movement.GetToEntityTask.closeWalkFwdLost,
                 adris.altoclef.tasks.movement.GetToEntityTask.closeWalkKeysKept);

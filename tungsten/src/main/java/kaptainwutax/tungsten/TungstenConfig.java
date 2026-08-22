@@ -1623,6 +1623,27 @@ public class TungstenConfig {
     public boolean closeWalkReleasesSneak = false;
 
     /**
+     * Let the close walk take down a live WindMouse lease before it snaps the camera at the drop.
+     *
+     * <p>WindMouseRotation holds a target for 600 ms and steers the camera back to it every render
+     * frame. GetToEntityTask's note records that lease as the obvious suspect for the aim not
+     * surviving, and that it MEASURED ZERO. It does not any more:
+     *
+     * <pre>
+     *   entityCloseWalk=604/15/15/428/360/277/3      leased = 360 of 604 ticks
+     * </pre>
+     *
+     * <p>Three fifths of the walk runs against a live lease pulling the camera off the drop between
+     * snaps. LookHelper warns that arming the lease from a snap fights the snap path on the same
+     * camera; this is that fight from the other side, and the user saw it as the crosshair pointing
+     * somewhere other than the block being worked.
+     *
+     * <p>Read closeWalkLeaseCleared for proof it ran, and entityCloseWalk's fifth slot (leased) for
+     * whether the contention actually falls.
+     */
+    public boolean closeWalkClearsCameraLease = false;
+
+    /**
      * Stop TimeoutWanderTask taking MOVE_FORWARD out of BlockPathWalker's hands.
      *
      * <p>That task releases SNEAK, MOVE_BACK and MOVE_FORWARD whenever Nav.isPathing(), guarded by

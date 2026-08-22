@@ -48,6 +48,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     /** Ticks the close walk released a sneak that would have kept it from stepping off a ledge. */
     public static volatile int closeWalkSneakReleased;
 
+    /** Ticks the close walk took down a camera lease that would have pulled the aim off the drop. */
+    public static volatile int closeWalkLeaseCleared;
+
     /**
      * WHAT IS THE BODY AGAINST? Three remedies for this wall were built and measured away --
      * keeping the keys, jumping when stuck, ignoring a search in the progress check -- and the
@@ -624,6 +627,25 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             closeWalkLastEntityId = _entity.getId();
             TungstenHelper.stop();
             Nav.cancel();
+            // ⛔ THE SNAP IS BEING UNDONE BY A LEASE, AND NOW THERE IS A NUMBER FOR IT.
+            //
+            // WindMouseRotation holds a target for 600 ms and steers the camera back to it every
+            // render frame. The note above says that was the obvious suspect for the aim not
+            // surviving and that it MEASURED ZERO -- it does not any more:
+            //
+            //     entityCloseWalk=604/15/15/428/360/277/3
+            //                                     ^ leased = 360 of 604 ticks
+            //
+            // Three fifths of the walk runs against a live lease that pulls the camera off the
+            // drop between our snaps. LookHelper's own comment warns that arming the lease from a
+            // snap would fight the snap path on the same camera; this is that fight, seen from the
+            // other side. Take the lease down before snapping, so there is one owner of the aim
+            // for the tick that matters.
+            if (kaptainwutax.tungsten.TungstenConfig.get().closeWalkClearsCameraLease
+                    && kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.hasTarget()) {
+                kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+                closeWalkLeaseCleared++;
+            }
             adris.altoclef.util.helpers.LookHelper.lookAt(mod, _entity.getPos());
             // ⛔ SNEAK IS WHY IT WALKS AND NEVER ARRIVES.
             //
