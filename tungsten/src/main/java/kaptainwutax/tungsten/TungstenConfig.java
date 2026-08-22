@@ -1523,8 +1523,15 @@ public class TungstenConfig {
      * (84,125,-54) dirt, both full, with the diagonal between them offered as a route.
      *
      * <p>Read gridCornerRefused: zero means no diagonal was ever offered past a corner.
+     *
+     * <h2>SHIPPED ON (2026-08-22)</h2>
+     *
+     * nav 14/14 and craft 22/22, both against baselines of the same score on the same build, so it
+     * costs nothing where it does not help. pvp went 10/12 to 11/12 -- edge_duel, one of the red
+     * courses, now passes. On the restored-notch repro the control arm wedged 2 of 3 and this arm
+     * 0 of 3, with three to ten times the steps.
      */
-    public boolean gridBfsRefusesCornerCut = false;
+    public boolean gridBfsRefusesCornerCut = true;
 
     /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
