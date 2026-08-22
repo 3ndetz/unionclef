@@ -1503,6 +1503,30 @@ public class TungstenConfig {
     public boolean unreachableReplansFromBody = false;
 
     /**
+     * Stop the grid BFS offering a diagonal that squeezes past a solid corner.
+     *
+     * <p>This is the root of the playthrough's worst stall. CombatPathfinder's HORIZONTAL set
+     * includes the four diagonals, and the only test applied to one was whether the DESTINATION is
+     * walkable -- nothing looked at the two cells the body must pass between. So the grid routes a
+     * diagonal through a notch with solid blocks on both sides, a step vanilla cannot make.
+     * FastPlanner has always refused exactly this (expand() calls sideClear on both orthogonals);
+     * this producer never did, and it is the one driving the playthrough ("primDrive gridBFS sz13"
+     * in the log).
+     *
+     * <p>The cost, traced end to end: the queue ACCEPTS the diagonal, MovementDiagonal cannot
+     * execute it and holds forward at v=0.00, and a RUNNING chain makes the mixin return early so
+     * NOTHING else ticks -- walkMode=36/0/0, pdWalking=0 against pdEnter=733 -- while FastNavigator
+     * counts isRunning() as "building" and never replans. mqStarted=64 against mqSteps=9,
+     * dbTargets=12/0, no rungs.
+     *
+     * <p>The blocks at the traced spot, read rather than assumed: (85,125,-55) grass_block and
+     * (84,125,-54) dirt, both full, with the diagonal between them offered as a route.
+     *
+     * <p>Read gridCornerRefused: zero means no diagonal was ever offered past a corner.
+     */
+    public boolean gridBfsRefusesCornerCut = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only

@@ -328,6 +328,9 @@ public class CombatPathfinder {
 
     // ── neighbors + block checks ─────────────────────────────────────────────
 
+    /** Diagonal steps refused because the body would have to squeeze past a solid corner. */
+    public static volatile int gridCornerRefused = 0;
+
     private static final int[][] HORIZONTAL = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
 
     private static List<BlockPos> getWalkableNeighbors(BlockPos pos, WorldView world, boolean allowParkour) {
@@ -362,6 +365,37 @@ public class CombatPathfinder {
         }
 
         for (int[] off : HORIZONTAL) {
+            // ⛔ NO CORNER CUTTING. THIS IS THE ROOT OF THE PLAYTHROUGH'S WORST STALL.
+            //
+            // HORIZONTAL includes the four diagonals, and the only test applied to one was whether
+            // the DESTINATION is walkable. Nothing looked at the two cells the body must pass
+            // BETWEEN, so this grid happily routes a diagonal through a notch with solid blocks on
+            // both sides -- a step vanilla cannot make. FastPlanner has always refused exactly
+            // this (expand() calls sideClear on both orthogonals before offering a diagonal); this
+            // producer never did, and it is the one that drives the playthrough: "primDrive
+            // gridBFS sz13" is the line in the log.
+            //
+            // What that costs, traced end to end. The queue ACCEPTS the diagonal, MovementDiagonal
+            // cannot execute it and holds forward at v=0.00, and because a RUNNING chain makes the
+            // mixin return early, NOTHING else ticks -- not BlockPathWalker, not the build
+            // primitives, not the physics executor (walkMode=36/0/0, pdWalking=0 against
+            // pdEnter=733) -- while FastNavigator counts isRunning() as "building" and never
+            // replans. One impossible edge freezes every engine for the rest of the run:
+            // mqStarted=64 against mqSteps=9, dbTargets=12/0, no rungs.
+            //
+            // The blocks at the traced spot, read rather than assumed:
+            //     cornerA (85,125,-55) grass_block   SOLID
+            //     cornerB (84,125,-54) dirt          SOLID
+            // Both full, and the diagonal between them was offered as a route.
+            if (kaptainwutax.tungsten.TungstenConfig.get().gridBfsRefusesCornerCut
+                    && off[0] != 0 && off[1] != 0) {
+                BlockPos sideA = pos.add(off[0], 0, 0);
+                BlockPos sideB = pos.add(0, 0, off[1]);
+                if (!canPassThrough(sideA, world) || !canPassThrough(sideB, world)) {
+                    gridCornerRefused++;
+                    continue;
+                }
+            }
             BlockPos candidate = pos.add(off[0], 0, off[1]);
             boolean flatWalk = isWalkable(candidate, world);
             if (flatWalk) {
