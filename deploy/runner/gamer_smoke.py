@@ -573,6 +573,14 @@ def main():
     # rejected by a guard that was not running. dmgTaken looked sane only because DamageWatch has
     # its own per-run reset; everything without one was cross-contaminated.
     # Placed after the pins so it also clears anything the pin commands themselves touched.
+    #
+    # ⛔ AND FOR A LONG TIME THIS CALL DID NOTHING AT ALL. The op above mapped to resetValues(),
+    # which rewrites three entries of the server dictionary and zeroes no counter; the method that
+    # clears them is resetRunCounters(), and only run_suite.py ever called it. So the harness
+    # believed it reset per run, the comment above describes a fix that was never in force, and
+    # every playthrough counter -- dbTargets among them -- was a total since the client launched.
+    # That is not a small error: an arrival rate computed from those captures was quoted as a
+    # per-run figure and had to be retracted. The op now calls both.
     try:
         py4j("resetstats")
     except Exception as _e:                       # noqa: BLE001 -- never fail a run over an instrument
