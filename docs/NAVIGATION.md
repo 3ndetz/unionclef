@@ -100,6 +100,35 @@ fails its own no-progress check a second and a half later, forever. The queue no
 first shape it has no class for and hands the tail back; a route whose FIRST edge is a jump is
 refused outright, which sends it to the walker, the thing that can actually clear a gap.
 
+#### What the refused edges ACTUALLY are (counted 2026-08-22, not inferred)
+
+The shapes the queue truncates on were tallied on the navigation repro rather than guessed from
+one edge:
+
+```
+0,0,-6 x208   0,0,-4 x13   0,0,4 x8   -4,0,0 x8   -2,0,0 x5   -3,1,0 x5   4,0,0 x5   2,0,0 x3
+```
+
+Every one is a straight line along a single axis, and the dominant one is **six blocks in one
+hop**. There is no six-block jump in this game, so these edges are not movements at all: the
+planner hands over **coarse waypoints** with the cells between them omitted, and the queue, which
+types one edge at a time and knows only unit steps, has no class for any of them.
+
+Two consequences worth keeping:
+
+- **"The missing class is parkour" was wrong**, and this is why `queueParkour` moved `mqNoClass`
+  by nothing (477 against 479). It added a capability for a shape that was not arriving.
+- **Refusal is the ordinary case, not a race.** Single runs measure `qShort=4397` and
+  `qNoClass=1204` against ten accepted starts, and on some ground `mqStarted` is **zero** for a
+  whole run — the queue never drives at all and `BlockPathWalker` does. The comment in
+  FastNavigator that called a refusal "the plan changed shape under us" was describing an edge
+  case that is in fact the main path.
+
+Putting the missing cells back was tried (`queueExpandsStraightRuns`) and **refuted**: four
+fifths of the cells inside those legs have no floor, because a coarse waypoint run over a gap is
+a BRIDGE. Expanding it hands the queue a corridor of bridges to build with an empty inventory —
+six thousand cells expanded, seven hundred routes started, eighteen steps out.
+
 ### Why this matters more than it sounds
 
 Three of this week's dead ends are the same mistake wearing different clothes — deciding an

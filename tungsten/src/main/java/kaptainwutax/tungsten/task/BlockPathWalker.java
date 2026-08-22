@@ -79,6 +79,12 @@ public class BlockPathWalker {
     // Counters, not log lines: on the bounce course the physics search floods the chat and
     // the client drops messages ("Chat overflow"), so a missing log line proves nothing.
     // These are read over py4j and answer "did this code path run at all".
+    /**
+     * Ticks the BFS walk refused to press forward because the level run ahead crosses a hole.
+     * Zero means the gate never fired, and an A/B quoting it measured nothing.
+     */
+    public static volatile int walkerHoleHeld = 0;
+
     public static volatile int bfsTicks = 0;
     public static volatile int slimeWpSeen = 0;
     private static int dbgN = 0;
@@ -583,6 +589,33 @@ public class BlockPathWalker {
             move = false;
         }
 
+        // DIRECT LOOKS BEFORE IT SPRINTS; BFS NEVER DID. tickDirect asks SafetySystem for
+        // isJumpLandingSafe and hasHolesOnPath before it commits, and this half of the same class
+        // asks nothing at all -- it steers at the waypoint it was handed and presses forward.
+        // That is fine while the cells it is handed have floors. They do not: a build leg refused
+        // by the MovementQueue arrives here, and by construction a bridge's cells are the ones
+        // with nothing underneath -- four fifths of them measured floorless on the expansion
+        // probe. The bot sprints along them and falls, which on the navigation repro reads as
+        // y=127 down to y=118 with health 20 to 5.5, while the target stayed at y=127 throughout.
+        //
+        // NARROW, BECAUSE A DROP IS SOMETIMES THE ROUTE. hasHolesOnPath trips on a fall of three
+        // or more, and nav_descend descends exactly three on purpose -- gating on the predicate
+        // alone would break a passing course. What separates them is the WAYPOINT: a planned
+        // descent aims at a cell BELOW us, a bridge aims at one level with us and hides the gap
+        // in between. Only the second is refused.
+        //
+        // Refusing means STANDING, which is this file's own measured preference rather than a
+        // guess -- the note on sneaking at a lip, below, measures 11.0 standing against 22.5 and
+        // 22.5 for the falls. The navigator's watchdog can replan from a bot still on the ground;
+        // it can do nothing with one at the bottom of a hole.
+        if (kaptainwutax.tungsten.TungstenConfig.get().walkerRefusesHoleOnLevelRun
+                && move && onGround
+                && wp.getY() >= player.getBlockPos().getY()
+                && !kaptainwutax.tungsten.task.SlimeBounceTask.isActive()
+                && SafetySystem.hasHolesOnPath(playerPos, wp, player.getEntityWorld())) {
+            move = false;
+            walkerHoleHeld++;
+        }
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.options.forwardKey.setPressed(move);
         // WHY IS THE BOT STANDING? Measured: on three runs of four it never leaves the pad's

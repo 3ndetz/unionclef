@@ -1335,6 +1335,26 @@ public class TungstenConfig {
     public boolean navBridgeSurvivesQueueRefusal = false;
 
     /**
+     * Give the BFS half of BlockPathWalker the hole check the DIRECT half already has.
+     *
+     * <p>tickDirect consults SafetySystem (isJumpLandingSafe, hasHolesOnPath) before it commits to
+     * a sprint. tickBFS consults nothing: it steers at the waypoint it was handed and presses
+     * forward. That is safe only while those cells have floors, and a build leg refused by the
+     * MovementQueue lands here with cells that by construction do not -- four fifths of them
+     * measured floorless.
+     *
+     * <p>Refused only when the waypoint is LEVEL with the bot or above it, so a planned descent
+     * (nav_descend drops three on purpose, which is exactly what hasHolesOnPath trips on) is
+     * untouched and only an unannounced gap on a flat run is held.
+     *
+     * <p>Held means standing, which this file measures as the better of the two states: 11.0
+     * standing against 22.5 and 22.5 for the runs that fell.
+     *
+     * <p>Check walkerHoleHeld before believing any comparison -- zero means it never fired.
+     */
+    public boolean walkerRefusesHoleOnLevelRun = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only
