@@ -1355,6 +1355,82 @@ public class TungstenConfig {
     public boolean walkerRefusesHoleOnLevelRun = false;
 
     /**
+     * Let an ascending MovementDiagonal report UNREACHABLE once it is walled at the destination's
+     * height, instead of holding forward against it for the rest of the run.
+     *
+     * <p>Traced on a playthrough, one line repeating for five minutes:
+     *
+     * <pre>
+     *   MV (85,124,-54)->(84,125,-55) st=RUNNING feet=(85,125,-54) pos=85.30,125.00,-53.70
+     *   stuck=[on:stone in:air head:air coll:Y v:0.00 fwd:Y jump:n Diagonal/RUNNING/idx0of5]
+     * </pre>
+     *
+     * <p>Three mechanisms hold that open at once. calculateValidPositions lists src.above() for an
+     * ascend and the body is standing on it, so playerInValidPosition stays true and the movement
+     * is never UNREACHABLE. The ascend-jump gate tests the body against SRC, which it has already
+     * climbed off, so it cannot fire again. And corners() vetted the corner columns at the START
+     * height, one below the body it now has, so whatever is in the way was never the block checked.
+     *
+     * <p>The run that produced it: mqStarted=64 against mqSteps=9, dbTargets=12/0, no rungs.
+     *
+     * <p>Deliberately not a nudge, a shove or an extra jump -- which corner is blocked is not known
+     * here, and guessing it is how the last three remedies in this area were built. Giving up hands
+     * the chain back and lets the navigator replan.
+     *
+     * <p>Read diagonalWalled before trusting any comparison: zero means it never fired.
+     */
+    public boolean diagonalGivesUpWhenWalled = false;
+
+    /**
+     * Plan the next leg from the bot's actual block position when it disagrees with the remembered
+     * tail of the previous leg.
+     *
+     * <p>A tail is a prediction; the body's cell is a fact. They diverge by one block and every
+     * leg after that is built from somewhere the bot is not. Traced to the block on a stall that
+     * reproduces on demand:
+     *
+     * <pre>
+     *   src        (85,124,-54)  AIR          the leg started here
+     *   srcAbove   (85,125,-54)  air          the feet are actually here
+     *   cornerA    (85,125,-55)  grass_block  SOLID, at the body's real level
+     *   cornerB    (84,125,-54)  dirt         SOLID, at the body's real level
+     *   cornerAlow (85,124,-55)  air          and this is the corner that got vetted
+     * </pre>
+     *
+     * <p>MovementDiagonal vets its corner columns at the START cell's height. One block low, it
+     * cleared a corner that is air a level down while the body sat boxed between two solid ones,
+     * and pressed forward at zero velocity for the whole run -- mqStarted=64 against mqSteps=9,
+     * dbTargets=12/0, no rungs.
+     *
+     * <p>Treating the symptom does not work and was measured: making the diagonal give up fires
+     * reliably (diagonalWalled=22 a run, control arms 0) and leaves the bot exactly as pinned,
+     * because the planner re-emits the same edge from the same wrong cell.
+     *
+     * <p>Read navPlannedFromStaleTail: zero means the tail and the body never disagreed.
+     */
+    public boolean planFromActualPosition = false;
+
+    /**
+     * Stop a wedged MovementQueue from gagging the navigator's stall watchdog.
+     *
+     * <p>FastNavigator treats {@code MovementQueue.isRunning()} as "building", and building resets
+     * stallTicks every tick. So a leg that is RUNNING and going nowhere switches off the only
+     * mechanism that could rescue it. Traced end to end: a MovementDiagonal built from a cell one
+     * block below the body, boxed between two solid corners, holding forward at v=0.00, with the
+     * navigator beside it for five minutes and pdPlan=0/0 -- it never replanned once.
+     *
+     * <p>Same defect as the one fixed in MovementProgressChecker ("we broke it, so that is
+     * progress"), and the queue's own null-route note warns of it directly: a queue that
+     * perpetually runs a route to nowhere means the checker cannot trip.
+     *
+     * <p>The exemption is not removed, it is put on a clock. Standing still IS legitimate while a
+     * block is being placed; three seconds of no horizontal motion is not.
+     *
+     * <p>Read navWatchdogUngagged: zero means no queue ever held the watchdog shut.
+     */
+    public boolean stallWatchdogNeedsMotion = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only

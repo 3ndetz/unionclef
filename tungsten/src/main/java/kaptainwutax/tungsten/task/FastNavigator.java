@@ -218,6 +218,38 @@ public final class FastNavigator {
                 || (awaitingPhysics
                         && (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
                             || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()));
+        // ⛔ "RUNNING" IS NOT "PROGRESSING", AND THE WATCHDOG WAS TAKING IT AS SUCH.
+        //
+        // A MovementQueue leg that is RUNNING resets stallTicks every tick, so the one mechanism
+        // that could rescue the bot is switched off by the very thing that is stuck. Traced end to
+        // end on a stall that reproduces on demand: a MovementDiagonal built from a cell one block
+        // below the body, boxed between two solid corners, holding forward at v=0.00 -- and the
+        // navigator sat beside it for five minutes without replanning once (pdPlan=0/0).
+        //
+        // This is the same defect that was fixed in MovementProgressChecker ("we broke it, so
+        // that is progress") and the queue's own null-route note warns of it in as many words: a
+        // queue that perpetually runs a route to nowhere means the checker CANNOT trip.
+        //
+        // Standing still IS legitimate while building -- placing a block takes a moment and the
+        // body does not move for it. So do not remove the exemption, put a clock on it: three
+        // seconds of the body not moving horizontally is far past any placement, and nothing that
+        // is genuinely working looks like that.
+        boolean bodyMoved = true;
+        if (kaptainwutax.tungsten.TungstenConfig.get().stallWatchdogNeedsMotion) {
+            double px = player.getEntityPos().x;
+            double pz = player.getEntityPos().z;
+            if (Math.abs(px - lastBodyX) < 0.05 && Math.abs(pz - lastBodyZ) < 0.05) {
+                bodyMoved = ++stillTicks <= STILL_LIMIT;
+            } else {
+                stillTicks = 0;
+                lastBodyX = px;
+                lastBodyZ = pz;
+            }
+            if (building && !bodyMoved) {
+                navWatchdogUngagged++;
+                building = false;
+            }
+        }
         if (building) {
             stallTicks = 0;
         } else if (dist < lastDist - 0.25) {
@@ -503,8 +535,49 @@ public final class FastNavigator {
      */
     public static volatile int navBridgeRescued = 0;
 
+    /**
+     * Legs re-planned from the bot's real cell because the remembered tail disagreed with it.
+     * Zero means the tail was always right and this changed nothing.
+     */
+    public static volatile int navPlannedFromStaleTail = 0;
+
+    /** Where the body was when it last advanced, so "building" can be told from "wedged". */
+    private static double lastBodyX = Double.NaN, lastBodyZ = Double.NaN;
+    private static int stillTicks = 0;
+    /** Sixty ticks is three seconds -- far past a block placement, far short of a run. */
+    private static final int STILL_LIMIT = 60;
+    /** Ticks the stall watchdog was allowed to run despite a queue claiming to be busy. */
+    public static volatile int navWatchdogUngagged = 0;
+
     private static void planAhead(BlockPos from) {
         if (planning || goal == null) return;
+        // ⛔ PLAN FROM WHERE THE BOT IS, NOT FROM WHERE THE LAST LEG SAID IT WOULD END.
+        //
+        // Callers pass legTail -- the tail the PREVIOUS leg claimed -- and when the body ends up
+        // one cell off, every following leg is built from a place the bot is not. Traced to a
+        // block, on a stall this repro reproduces every time:
+        //
+        //     src      (85,124,-54)  AIR      <- the leg started here
+        //     srcAbove (85,125,-54)  air      <- the bot's feet are actually here
+        //     cornerA  (85,125,-55)  grass_block   SOLID, at the body's real level
+        //     cornerB  (84,125,-54)  dirt          SOLID, at the body's real level
+        //     cornerAlow (85,124,-55) air     <- and THIS is the corner that was vetted
+        //
+        // MovementDiagonal checks its two corner columns at the START cell's height, so with the
+        // start one block low it cleared a corner that is air one level down while the body sat
+        // boxed in between two solid ones. The bot pressed forward at v=0.00 for a whole run:
+        // mqStarted=64 against mqSteps=9, dbTargets=12/0, no rungs. Making the movement give up
+        // does not help -- measured, diagonalWalled=22 per run with the bot still pinned -- because
+        // the planner simply re-emits the same edge from the same wrong cell.
+        //
+        // A tail is a PREDICTION. The bot's block position is a fact. When they disagree, the fact
+        // wins; when they agree this changes nothing at all.
+        BlockPos actual = TungstenMod.mc.player != null ? TungstenMod.mc.player.getBlockPos() : null;
+        if (kaptainwutax.tungsten.TungstenConfig.get().planFromActualPosition
+                && actual != null && from != null && !actual.equals(from)) {
+            navPlannedFromStaleTail++;
+            from = actual;
+        }
         planning = true;
         // Read the pocket HERE, on the client thread — the search runs on its own thread and
         // must not touch the inventory, but it does need to know how long a bridge it may

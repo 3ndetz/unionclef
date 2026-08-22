@@ -60,6 +60,15 @@ public class MovementDiagonal extends Movement {
         return ImmutableSet.<BetterBlockPos>of(src, dest, diagA, diagB);
     }
 
+    /** Consecutive ticks this diagonal has been walled at the destination's height. */
+    private int walledTicks = 0;
+    /** Where the body was when it last actually advanced, so a stall is measured against motion. */
+    private double lastX = Double.NaN, lastZ = Double.NaN;
+    /** Forty ticks is two seconds -- past any honest pause at a corner, well under a run. */
+    private static final int WALLED_LIMIT = 40;
+    /** Diagonals given up because the body was walled at the destination's height. */
+    public static volatile int diagonalWalled = 0;
+
     /** MovementDiagonal.java:256-275, copied. */
     @Override
     public MovementState updateState(MovementState state) {
@@ -83,6 +92,52 @@ public class MovementDiagonal extends Movement {
         if (dest.getY() > src.getY() && player.getEntityPos().y < src.getY() + 0.1
                 && player.horizontalCollision) {
             state.setInput(Input.JUMP, true);
+        }
+        // ⛔ AN ASCENDING DIAGONAL THAT HAS ALREADY CLIMBED CAN PUSH INTO A WALL FOREVER.
+        //
+        // Traced on a playthrough, the same line repeating for the whole run:
+        //
+        //   MV (85,124,-54)->(84,125,-55) st=RUNNING feet=(85,125,-54) pos=85.30,125.00,-53.70
+        //   stuck=[on:stone in:air head:air coll:Y v:0.00 fwd:Y jump:n Diagonal/RUNNING/idx0of5]
+        //
+        // Three things hold that state open together, and none of them is wrong by itself:
+        //   - calculateValidPositions() lists src.above() for an ascend, and that is exactly where
+        //     the body is, so playerInValidPosition() is true and the movement is never UNREACHABLE;
+        //   - the jump gate above tests the body against SRC, and the body has already climbed off
+        //     src, so it can never fire again;
+        //   - corners() vetted the two corner columns at start.getY(), one level BELOW the body it
+        //     now has, so the block actually in the way was never the one checked.
+        //
+        // The body is at the destination's height, hard against something, at zero velocity, with
+        // forward held. Nothing in the movement can change that, and it kept the whole chain alive
+        // for a five-minute run: mqStarted=64 against mqSteps=9, dbTargets=12/0, no rungs.
+        //
+        // Say so instead. UNREACHABLE hands the chain back, the navigator replans, and a route that
+        // cannot be walked from here stops being the one being walked. This is deliberately not a
+        // nudge or a shove: inventing a jump here would be guessing at which corner is blocked.
+        // HEIGHT IS THE WRONG INVARIANT HERE, AND THE FIRST VERSION OF THIS LEARNED IT THE HARD
+        // WAY. It asked for the body to be at the destination's height, colliding, at zero speed,
+        // for twenty consecutive ticks -- and it fired ZERO times across six runs of a repro that
+        // pins the bot at the exact stuck spot every time. The positions say why: y reads 125.2,
+        // 124.8, 124.5, 124.0, 125.3. The bot is BOUNCING, so a streak conditioned on height
+        // resets on every hop and never reaches its limit.
+        //
+        // What is actually invariant while this fails is that the body does not ADVANCE. Track the
+        // horizontal position and nothing else; a diagonal that has not moved in x or z for two
+        // seconds is not going to.
+        if (kaptainwutax.tungsten.TungstenConfig.get().diagonalGivesUpWhenWalled) {
+            double px = player.getEntityPos().x;
+            double pz = player.getEntityPos().z;
+            if (Math.abs(px - lastX) < 0.05 && Math.abs(pz - lastZ) < 0.05) {
+                if (++walledTicks > WALLED_LIMIT) {
+                    diagonalWalled++;
+                    return state.setStatus(MovementStatus.UNREACHABLE);
+                }
+            } else {
+                walledTicks = 0;
+                lastX = px;
+                lastZ = pz;
+            }
         }
         if (sprint()) {
             state.setInput(Input.SPRINT, true);
