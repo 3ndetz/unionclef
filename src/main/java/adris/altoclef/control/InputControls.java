@@ -85,8 +85,18 @@ public class InputControls {
     }
 
     public void release(Input input) {
+        // ⛔ THIS ONLY EVER WATCHED ONE OF THE TWO PLACES THE KEY IS STOLEN.
+        // It recorded a thief only while the close walk to an ITEM was driving, and the shuffling
+        // a viewer actually sees happens while MINING: BlockPathWalker holds MOVE_FORWARD toward
+        // its waypoint and something else releases it in the same tick. That case was invisible
+        // here, so a whole session of reading counters never surfaced it and the user found it by
+        // watching a recording instead.
+        // Widened to cover the walker as well; the stack frame it records is the answer to "which
+        // two writers are fighting", which is the question that matters and the one I was about to
+        // guess at.
         if (input == Input.MOVE_FORWARD
-                && adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDrivingNow()) {
+                && (adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDrivingNow()
+                    || kaptainwutax.tungsten.task.BlockPathWalker.isRunning())) {
             try {
                 for (StackTraceElement el : new Throwable().getStackTrace()) {
                     String cn = el.getClassName();

@@ -230,8 +230,23 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
             // still lost 118 times. Instrumenting InputControls to name the caller produced
             // "TimeoutWanderTask:225 x267" against closeWalkFwd=0/240/0 -- this line, this many
             // times, on the run where the press was lost that many times.
-            boolean walkDriving = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKeys
-                    && adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDrivingNow();
+            // ⛔ AND THE OTHER DRIVER, WHICH THIS NEVER ASKED ABOUT.
+            //
+            // The guard above covers the close walk to an ITEM and nothing else. BlockPathWalker
+            // drives almost everything else the bot does, and this line takes MOVE_FORWARD out of
+            // its hands while it is walking. The same instrument that caught this task at :225
+            // caught it again, and the number is not marginal:
+            //
+            //     TimeoutWanderTask:238 x1290   DestroyBlockTask:594 x24   DestroyBlockTask:686 x8
+            //
+            // Twelve hundred and ninety steals in a ten-minute run, against thirty-two from the
+            // miner. That is the shuffling a viewer sees, and it is why a whole session of reading
+            // counters never found it -- the thief instrument only watched the close walk, so the
+            // dominant case was invisible by construction.
+            boolean walkDriving = (kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKeys
+                    && adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDrivingNow())
+                    || (kaptainwutax.tungsten.TungstenConfig.get().wanderKeepsWalkerKeys
+                        && kaptainwutax.tungsten.task.BlockPathWalker.isRunning());
             if (Nav.isPathing() && !walkDriving) {
                 mod.getInputControls().release(Input.SNEAK);
                 mod.getInputControls().release(Input.MOVE_BACK);

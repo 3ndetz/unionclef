@@ -1623,6 +1623,31 @@ public class TungstenConfig {
     public boolean closeWalkReleasesSneak = false;
 
     /**
+     * Stop TimeoutWanderTask taking MOVE_FORWARD out of BlockPathWalker's hands.
+     *
+     * <p>That task releases SNEAK, MOVE_BACK and MOVE_FORWARD whenever Nav.isPathing(), guarded by
+     * a check for the close walk to an ITEM -- and by nothing else. BlockPathWalker drives almost
+     * everything else the bot does, and it was never asked about.
+     *
+     * <p>Named by the instrument rather than guessed, after the user found the defect by watching a
+     * recording:
+     *
+     * <pre>
+     *   TimeoutWanderTask:238 x1290   DestroyBlockTask:594 x24   DestroyBlockTask:686 x8
+     * </pre>
+     *
+     * <p>Twelve hundred and ninety steals in ten minutes against thirty-two from the miner. This is
+     * the shuffling a viewer sees. It stayed invisible through a whole session of counter-reading
+     * because the thief instrument only watched the close walk, so the dominant case could not
+     * appear in it by construction.
+     *
+     * <p>GATE: wander_recovery is the course that exists for this task and must not move; nav and
+     * craft must not move. Proof it ran: forwardStealers() should lose the TimeoutWanderTask entry
+     * almost entirely.
+     */
+    public boolean wanderKeepsWalkerKeys = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only
