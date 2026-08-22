@@ -420,8 +420,28 @@ public class TungstenHelper {
             } catch (Exception ignored) {
                 // an instrument never breaks navigation
             }
-            barrenGeom.addLast(String.format(java.util.Locale.ROOT, "%s:%.1f>%.1f,m%.1f,h%.1f,dy%+.1f|%s",
-                    what, lockStartDist, endDist, moved, horiz, dy, owner));
+            // A GEOMETRY CLASS IS NOT A PLACE, AND FIVE FIXES HAVE NOW BEEN BUILT ON CLASSES.
+            // This records h and dy, which say the drop is "below" or "beside" -- and every remedy
+            // aimed at those classes has been measured away: releasing sneak (604 fires, body moved
+            // 15), clearing the camera lease (120 fires, the lease still live on all 120), claiming
+            // the aim (86% -> 99.5%, body moved 14 of 602), and declining a deep drop, which was
+            // built on one run reading deep=0/0/236 while the next read 209/2/0.
+            // Absolute coordinates are the one thing none of them had. With them the failing spot
+            // can be teleported to and read block by block, the way the navigation stall finally
+            // was.
+            String where = "";
+            try {
+                var self = AltoClef.getInstance().getPlayer();
+                if (self != null) {
+                    where = String.format(java.util.Locale.ROOT, "@bot[%.2f,%.2f,%.2f]",
+                            self.getX(), self.getY(), self.getZ());
+                }
+            } catch (Throwable ignored) {
+                // an instrument must never be the thing that breaks a run
+            }
+            barrenGeom.addLast(String.format(java.util.Locale.ROOT,
+                    "%s:%.1f>%.1f,m%.1f,h%.1f,dy%+.1f%s|%s",
+                    what, lockStartDist, endDist, moved, horiz, dy, where, owner));
             while (barrenGeom.size() > 3) barrenGeom.removeFirst();
         } catch (Exception ignored) {
             // the accounting must never be the thing that breaks navigation
