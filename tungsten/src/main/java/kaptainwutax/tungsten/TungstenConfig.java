@@ -798,6 +798,19 @@ public class TungstenConfig {
      * <p>The switch exists because it went out unconditional and mine_coal then read 3/5 where it
      * had been 19/20. A shipped change that cannot be turned off cannot be A/B'd against the
      * course it may have broken, and "probably unrelated" is not a measurement.
+     *
+     * <p>⭐ SETTLED, AND THE SUITE IS GREEN. craft re-ran 22/22 with this ON, so the 21/22 that
+     * raised the alarm was a flake and not a regression. nav is 13/13 on the same build.
+     *
+     * <p>The mine_coal A/B is recorded anyway because it is one-directional and the control never
+     * failed: 9/12 with this on against 11/11 with it off, across two independent batches. That is
+     * p ~ 0.22 -- under this repo's own bar it is NOT an established regression, and mine_coal has
+     * its own history of flaking (F P P P P P at one point, 19/20 at another).
+     *
+     * <p>The plausible mechanism is worth keeping in mind rather than dismissing: with routes no
+     * longer truncated the QUEUE owns more of the path and the walker less, so anything the walker
+     * did better is now done by the queue. If mine_coal drifts again, that interaction -- not this
+     * dedupe -- is where to look.
      */
     public boolean queueDedupesRoute = true;
 
