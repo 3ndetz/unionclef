@@ -119,6 +119,11 @@ public final class MovementQueue {
     /** Expanded cells that had no floor under them -- each one is a bridge the executor must build. */
     public static volatile int qExpandNoFloor;
 
+    /** Legs whose leading cells were stale and got dropped so the route starts at the body. */
+    public static volatile int qRebased;
+    /** Legs refused because the body was nowhere on the route at all. */
+    public static volatile int qOffRoute;
+
     /** One worked example of a floorless expansion: the edge, and the cell whose floor is missing. */
     public static volatile String qExpandSample = "-";
 
@@ -715,6 +720,58 @@ public final class MovementQueue {
                     run.add(b);
                 }
                 cells = run;
+            }
+        }
+        // ⛔ A ROUTE DESCRIBES A WALK FROM WHERE THE BODY IS. CHECK THAT, AT THE DOOR.
+        //
+        // The playthrough's worst stall is built here and it is an off-by-one. A leg is planned
+        // from legTail -- the tail the PREVIOUS leg predicted -- and when the body ends up one
+        // block above it, the chain's first movement starts from a cell the bot is not in:
+        //
+        //     cells.get(0) (85,124,-54)  AIR      the movement's start
+        //     feet         (85,125,-54)  air      where the body actually is
+        //     cornerA      (85,125,-55)  grass_block  SOLID at the body's level
+        //     cornerB      (84,125,-54)  dirt         SOLID at the body's level
+        //     cornerAlow   (85,124,-55)  air      the corner that got vetted, a level down
+        //
+        // MovementDiagonal vets its corner columns at its START cell's height, so one block low it
+        // clears a corner that is open below while the body sits boxed between two solid ones. It
+        // then holds forward at v=0.00 for the rest of the run, and because a RUNNING chain makes
+        // the mixin return early, NOTHING else ticks either -- walker, build primitives and
+        // physics executor all idle, walkMode=36/0/0, pdWalking=0 against pdEnter=733 -- while
+        // FastNavigator counts isRunning() as "building" and never replans.
+        //
+        // Fixing it at the planner was tried and cannot work from there: during the stall
+        // planAhead is not called at all, so a "plan from the body" rule never runs (staleTail=0
+        // on every arm). The door is the place -- the same single choke point the route dedupe
+        // above lives at, and for the same reason.
+        //
+        // Rebase rather than refuse where possible: if the body's cell appears further along the
+        // route, the leading cells are simply stale and dropping them keeps a good leg. Only when
+        // the body is nowhere on the route is the leg refused, which sends it to the walker.
+        if (cells != null && cells.size() > 1
+                && kaptainwutax.tungsten.TungstenConfig.get().queueRebasesToFeet) {
+            net.minecraft.client.network.ClientPlayerEntity me =
+                    net.minecraft.client.MinecraftClient.getInstance().player;
+            if (me != null) {
+                BlockPos feet = me.getBlockPos();
+                if (!cells.get(0).equals(feet)) {
+                    int at = -1;
+                    for (int i = 1; i < Math.min(cells.size(), 4); i++) {
+                        if (cells.get(i).equals(feet)) {
+                            at = i;
+                            break;
+                        }
+                    }
+                    if (at > 0) {
+                        cells = cells.subList(at, cells.size());
+                        qRebased++;
+                    } else {
+                        qOffRoute++;
+                        qRefused++;
+                        return 0;
+                    }
+                }
             }
         }
         int covered = wholeRoute ? (cells == null ? 0 : cells.size()) : traversePrefix(cells);

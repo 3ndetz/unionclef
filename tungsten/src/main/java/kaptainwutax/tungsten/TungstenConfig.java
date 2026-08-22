@@ -1450,6 +1450,37 @@ public class TungstenConfig {
     public boolean queueStallIsHorizontal = false;
 
     /**
+     * Make the MovementQueue check, at its door, that a leg starts where the body actually is.
+     *
+     * <p>The playthrough's worst stall is an off-by-one built exactly there. A leg is planned from
+     * legTail -- the tail the PREVIOUS leg predicted -- and when the body ends up one block above
+     * it, the chain's first movement starts from a cell the bot is not in:
+     *
+     * <pre>
+     *   cells.get(0) (85,124,-54)  AIR          the movement's start
+     *   feet         (85,125,-54)  air          where the body actually is
+     *   cornerA      (85,125,-55)  grass_block  SOLID at the body's level
+     *   cornerB      (84,125,-54)  dirt         SOLID at the body's level
+     *   cornerAlow   (85,124,-55)  air          the corner that got vetted, a level down
+     * </pre>
+     *
+     * <p>MovementDiagonal vets its corners at its START cell's height, so one block low it clears a
+     * corner open below while the body is boxed between two solid ones, then holds forward at
+     * v=0.00 for the rest of the run. And a RUNNING chain makes the mixin return early, so nothing
+     * else ticks either: walkMode=36/0/0, pdWalking=0 against pdEnter=733, while FastNavigator
+     * counts isRunning() as "building" and never replans.
+     *
+     * <p>Fixing this at the planner cannot work -- during the stall planAhead is not called at all
+     * (staleTail=0 on every arm). The door is the place, the same choke point the route dedupe
+     * uses.
+     *
+     * <p>Rebases where it can (stale leading cells are dropped if the body appears further along)
+     * and refuses only when the body is nowhere on the route, which sends the leg to the walker.
+     * Read qRebased and qOffRoute; both zero means nothing was ever off-route.
+     */
+    public boolean queueRebasesToFeet = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only
