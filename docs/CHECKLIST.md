@@ -626,6 +626,40 @@ The rule:
 3. This is why `--repeat N` results should be reported as `k/N`, never as a bare count: N makes the
    denominator impossible to omit.
 
+## 4k1. ⛔ "IN A WORLD" IS NOT "IN THE RIGHT WORLD" (2026-08-22)
+
+Rule 4k asks whether the bot is in the arena. This is its twin, and it cost four arms of an A/B
+before the coordinates gave it away.
+
+`repro_stall.py` connected to the gamer server only `if not inGame`. After any suite run the
+client IS in a game -- it sits on the flat test arena at y=-60 -- so the connect was skipped. The
+teleport that follows goes over **rcon to the gamer server**, which the bot is not on, so it does
+nothing at all and returns no error. The repro then ran its full fifty seconds on featureless
+flat ground, and every counter was honestly zero:
+
+```
+holeGate=false   end pos 26.4,-60.0,-2.4    walkerHoleHeld=0
+holeGate=true    end pos 26.3,-60.0,-2.3    walkerHoleHeld=0
+```
+
+Four arms read as "the gate never fires". The gate was fine; there were no holes, because there
+was no terrain. `y=-60` is the arena floor, and that is the tell.
+
+**The rule.** A tool that needs a particular world must CONNECT UNCONDITIONALLY, and then verify
+by RESULT rather than by belief: teleport, read the position back, and compare. `gamer_smoke.py`
+already carried this lesson in a comment -- "inGame says the bot is in A world, not that it is in
+the GAMER one" -- and the repro was written later without it.
+
+Two traps inside the verification itself, both hit on the way:
+
+- **Compare HORIZONTALLY.** Two seconds after landing at 74,127,-54 the bot has already fallen
+  seven blocks, because the spot is above ground. A 3D tolerance rejected a teleport that had
+  worked and sent the run into a reconnect loop. X and Z do not lie about which world it is in.
+- **Know the shape of what you are reading.** The `gs` op does `str(dict(...))`, so `self` is
+  ALWAYS text that merely looks like a dict. `.get("pos")` on it raised AttributeError; the
+  isinstance guard that replaced it could never be true and reported "did not land" for every
+  run, which looks exactly like a stand fault.
+
 ## 4k. ⛔ CHECK THE BOT IS IN THE ARENA BEFORE READING ANY NUMBER FROM A RUN (2026-08-12)
 
 The most expensive failure of this project so far, and the user caught it from a VIDEO while the
