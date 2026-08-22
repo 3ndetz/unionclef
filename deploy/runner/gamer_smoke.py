@@ -489,6 +489,32 @@ def main():
         grcon(f"tp {BOT} {spawn}")
         time.sleep(2)
     pos = (py4j("gs").get("self") or {}).get("pos")
+    # THE SPIRAL DROPS THE BOT OUT OF THE SKY, AND SOMETIMES IT DOES NOT SURVIVE THE LANDING.
+    #
+    # Spawn points are teleported to at y=150, which is air, so the bot falls. Usually it lands.
+    # Sometimes it dies, respawns at world spawn, and the run then measures the SPAWN AREA while
+    # reporting the ground it asked for. Three runs of six did exactly that in one sweep -- their
+    # start positions read 90.5,133,-36.5 / 94.5,133,-39.5 / 93.5,135,-32.5, all the same place,
+    # while the log said 592 150 -839, 592 150 -839 and 1192 150 -239.
+    #
+    # This is what made a paired A/B worthless: the two arms are supposed to share ground, and
+    # instead one of them quietly ran somewhere else. Retry the teleport, and stand the run down
+    # rather than let it report a ladder for the wrong biome.
+    if spawn and pos:
+        _wx, _, _wz = (float(v) for v in str(spawn).split())
+        for _try in range(3):
+            _px, _py, _pz = (float(v) for v in str(pos).split(","))
+            if (_px - _wx) ** 2 + (_pz - _wz) ** 2 <= 400.0:
+                break
+            print(f"  start did not land: asked {spawn}, bot is at {pos} -- retrying the teleport")
+            grcon(f"tp {BOT} {spawn}")
+            time.sleep(3)
+            pos = (py4j("gs").get("self") or {}).get("pos")
+        else:
+            raise StandDown(
+                f"the bot would not stay at {spawn} (last seen at {pos}) -- it is falling out of "
+                f"the sky and respawning, so this run would measure the spawn area and report it "
+                f"as the ground it asked for")
     if not spawn and pos:
         got = ",".join(str(round(float(c))) for c in str(pos).split(","))
         SPAWN_FILE.write_text(got.replace(",", " "), encoding="utf-8")
