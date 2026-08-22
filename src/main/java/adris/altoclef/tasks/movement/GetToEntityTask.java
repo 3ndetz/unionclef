@@ -45,6 +45,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     /** Jumps the close walk issued after the body sat still; 0 with the flag off. */
     public static volatile int closeWalkJumped;
 
+    /** Ticks the close walk released a sneak that would have kept it from stepping off a ledge. */
+    public static volatile int closeWalkSneakReleased;
+
     /**
      * WHAT IS THE BODY AGAINST? Three remedies for this wall were built and measured away --
      * keeping the keys, jumping when stuck, ignoring a search in the progress check -- and the
@@ -622,6 +625,28 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             TungstenHelper.stop();
             Nav.cancel();
             adris.altoclef.util.helpers.LookHelper.lookAt(mod, _entity.getPos());
+            // ⛔ SNEAK IS WHY IT WALKS AND NEVER ARRIVES.
+            //
+            // This branch presses forward and never touched sneak, and DestroyBlockTask holds
+            // SNEAK whenever it is within two blocks of the block it is breaking -- which it
+            // always is, having just mined the drop we are now walking to. Sneaking cannot leave
+            // a ledge, by design, and the drop that fails mine_coal sits ONE BLOCK DOWN in the
+            // hole the bot just dug. So the bot paces the rim: aimed correctly, not changing its
+            // mind, and unable to step in.
+            //
+            // Every number of the failing run agrees with that and with nothing else:
+            //     entityCloseWalk=241/125/9/126/0/240/1
+            //       moved on 125 ticks, closer on 9, retargeted once, yaw held 240 of 241
+            //     lock=...coal:1.6>2.0,m0.0,h1.8,dy-1.0
+            //       the gap GREW, 1.8 across and one block down
+            //
+            // The walk owns the body while it runs, so it releases what stops it. This is not a
+            // second writer fighting the miner: the miner's sneak is for standing at a block it is
+            // breaking, and we are no longer doing that -- we are walking to what fell out of it.
+            if (kaptainwutax.tungsten.TungstenConfig.get().closeWalkReleasesSneak) {
+                mod.getInputControls().release(Input.SNEAK);
+                closeWalkSneakReleased++;
+            }
             mod.getInputControls().hold(Input.MOVE_FORWARD);
             // ⛔ A BODY THAT IS AIMED, PRESSING FORWARD AND NOT MOVING IS AGAINST SOMETHING.
             // See TungstenConfig.closeWalkJumpsWhenStuck. Walking cannot clear a lip; a step up

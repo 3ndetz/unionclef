@@ -1599,6 +1599,30 @@ public class TungstenConfig {
     public boolean walkerYieldsToMiner = false;
 
     /**
+     * Let the close-range walk to a dropped item release SNEAK.
+     *
+     * <p>The walk presses forward and never touched sneak, while DestroyBlockTask holds SNEAK
+     * whenever it is within two blocks of the block it is breaking -- which it always is, having
+     * just mined the drop being walked to. Sneaking cannot leave a ledge, by design, and the drop
+     * that fails mine_coal sits ONE BLOCK DOWN in the hole the bot dug. So the bot paces the rim.
+     *
+     * <p>The failing run's numbers agree with this and with nothing else:
+     *
+     * <pre>
+     *   entityCloseWalk=241/125/9/126/0/240/1   moved 125, closer 9, retargeted ONCE, yaw held 240
+     *   lock=...coal:1.6>2.0,m0.0,h1.8,dy-1.0   the gap GREW, 1.8 across and one block down
+     * </pre>
+     *
+     * <p>The leading explanation in the source -- that the bot alternates between the three coal
+     * drops and zigzags -- is refuted by that retarget count of one.
+     *
+     * <p>GATE: mine_coal must go green (it is 0/12 across two interleaved A/Bs), and nav_cliff,
+     * nav_gaps and pickup_ledge must not move -- those are the courses where letting go of sneak
+     * beside a drop could cost a fall. Read closeWalkSneakReleased for proof it ran.
+     */
+    public boolean closeWalkReleasesSneak = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only
