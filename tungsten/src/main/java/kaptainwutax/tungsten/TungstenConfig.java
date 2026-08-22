@@ -1662,6 +1662,30 @@ public class TungstenConfig {
     public boolean closeWalkClaimsAim = false;
 
     /**
+     * Make the close walk decline a drop that is three or more blocks straight down.
+     *
+     * <p>It steers by atan2(x, z) and presses forward. With the drop almost directly underneath
+     * that direction is degenerate, and the press only holds the body against the rim of the hole
+     * it is standing on. The geometry counter shows this is not a corner case:
+     *
+     * <pre>
+     *   closeWalkGeom=236/0/0/368   below on 236 of 604 ticks
+     *   deep=0/0/236                ALL of them three blocks or deeper
+     * </pre>
+     *
+     * <p>Not one tick at one block down, not one at two. Two earlier attempts were aimed at the
+     * other half of this and measured accordingly: releasing sneak moved the body on 15 ticks of
+     * 604, and fixing the camera took the aim from 86% to 99.5% while moving it on 14 of 602.
+     *
+     * <p>Declining hands the tick back to navigation, which CAN descend -- nav_descend and
+     * nav_cliff are green -- instead of overriding it with a press that cannot work.
+     *
+     * <p>GATE: pickup_pit and pickup_ledge are the courses with a drop below and must not move.
+     * Read closeWalkDeepDeclined for proof it ran.
+     */
+    public boolean closeWalkDeclinesDeepDrop = false;
+
+    /**
      * Stop TimeoutWanderTask taking MOVE_FORWARD out of BlockPathWalker's hands.
      *
      * <p>That task releases SNEAK, MOVE_BACK and MOVE_FORWARD whenever Nav.isPathing(), guarded by

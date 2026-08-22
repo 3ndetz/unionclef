@@ -54,6 +54,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     /** Ticks the close walk claimed the aim so the walker would stop steering at its own waypoint. */
     public static volatile int closeWalkAimClaimed;
 
+    /** Ticks the close walk stood aside because the drop was three or more blocks straight down. */
+    public static volatile int closeWalkDeepDeclined;
+
     /**
      * WHAT IS THE BODY AGAINST? Three remedies for this wall were built and measured away --
      * keeping the keys, jumping when stuck, ignoring a search in the progress check -- and the
@@ -525,6 +528,34 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
                 && !_progress.check(mod)
                 && mod.getPlayer().isInRange(_entity, CLOSE_WALK_RANGE)
                 && !mod.getPlayer().isInRange(_entity, _closeEnoughDistance)) {
+            // ⛔ A DROP THREE BLOCKS DOWN IS NOT AN APPROACH PROBLEM, IT IS A DESCENT.
+            //
+            // This walk steers by atan2(x, z) and presses forward. With the drop almost directly
+            // underneath, that direction is degenerate and the press only holds the body against
+            // the rim of the hole it is standing on. The geometry counter says this is not a rare
+            // corner:
+            //
+            //     closeWalkGeom=236/0/0/368   below on 236 of 604 ticks
+            //     deep=0/0/236                ALL 236 of them three blocks or deeper
+            //
+            // Not one tick at one block down, not one at two. The note beside that counter called
+            // it already: "three blocks down needs a way DOWN and no amount of steering will do
+            // it". Releasing sneak was tried against this and moved the body on 15 ticks of 604;
+            // fixing the camera took the aim from 86% to 99.5% and moved it on 14 of 602. Both
+            // were aimed at the wrong half.
+            //
+            // So decline the tick. The walk exists as a fallback for when navigation stalls, and
+            // navigation can descend -- nav_descend and nav_cliff are green. Standing aside lets
+            // it plan the way down instead of being overridden by a press that cannot work.
+            if (kaptainwutax.tungsten.TungstenConfig.get().closeWalkDeclinesDeepDrop) {
+                double ddx = _entity.getX() - mod.getPlayer().getX();
+                double ddz = _entity.getZ() - mod.getPlayer().getZ();
+                double ddy = _entity.getY() - mod.getPlayer().getY();
+                if (Math.sqrt(ddx * ddx + ddz * ddz) < 0.8 && ddy < -2.5) {
+                    closeWalkDeepDeclined++;
+                    return null;
+                }
+            }
             entityCloseWalk++;
             net.minecraft.util.math.Vec3d nowPos = mod.getPlayer().getPos();
             if (closeWalkLastPos != null && closeWalkLastPos.squaredDistanceTo(nowPos) > 0.0025) {
