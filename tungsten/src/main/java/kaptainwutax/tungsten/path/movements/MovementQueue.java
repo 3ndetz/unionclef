@@ -124,6 +124,9 @@ public final class MovementQueue {
     /** Legs refused because the body was nowhere on the route at all. */
     public static volatile int qOffRoute;
 
+    /** Chains that asked the navigator to replan from the body after reporting UNREACHABLE. */
+    public static volatile int qUnreachReplan;
+
     /** One worked example of a floorless expansion: the edge, and the cell whose floor is missing. */
     public static volatile String qExpandSample = "-";
 
@@ -1262,6 +1265,27 @@ public final class MovementQueue {
                 qUnreachable++;
                 qStatusFail++;
                 stop();
+                // ⛔ ITS TWO SIBLINGS REPLAN AND THIS ONE NEVER DID.
+                //
+                // The teleport handler and the body-has-not-moved handler both call
+                // FastNavigator.replanFromHere() after stop(); this branch only stopped. So a
+                // movement that honestly reports it cannot be done ends its chain and asks for
+                // nothing, and the navigator carries on from legTail -- the tail the PREVIOUS leg
+                // predicted -- and plans the identical route again.
+                //
+                // Measured on the stall repro: MovementDiagonal reported UNREACHABLE twenty-two
+                // times in one run (diagonalWalled=22, control arms 0) and the bot did not move a
+                // block, because giving up ended the chain without changing the answer.
+                //
+                // replanFromHere() plans from p.getBlockPos() -- the body -- and that matters
+                // here specifically: the planner already refuses to cut a corner (expand() checks
+                // both orthogonal cells), so from the body's REAL cell, one block up, the diagonal
+                // that wedged is rejected outright and a different route comes back. From the
+                // stale tail a level down, the same corner reads open and the same route returns.
+                if (kaptainwutax.tungsten.TungstenConfig.get().unreachableReplansFromBody) {
+                    qUnreachReplan++;
+                    kaptainwutax.tungsten.task.FastNavigator.replanFromHere();
+                }
                 return;
             }
             if (status == MovementStatus.SUCCESS) {

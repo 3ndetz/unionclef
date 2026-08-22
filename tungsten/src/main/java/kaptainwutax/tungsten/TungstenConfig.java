@@ -1481,6 +1481,28 @@ public class TungstenConfig {
     public boolean queueRebasesToFeet = false;
 
     /**
+     * Ask the navigator to replan from the BODY when a movement reports UNREACHABLE or FAILED.
+     *
+     * <p>Two sibling handlers in the same method already do this -- the teleport check and the
+     * body-has-not-moved check both call FastNavigator.replanFromHere() after stop(). The
+     * status-failure branch only stopped. So a movement that honestly reports it cannot be done
+     * ends its chain and asks for nothing, and the navigator carries on from legTail, the tail the
+     * PREVIOUS leg predicted, and plans the identical route again.
+     *
+     * <p>Measured on the stall repro: MovementDiagonal reported UNREACHABLE twenty-two times in one
+     * run (diagonalWalled=22, control arms 0) and the bot did not move a block. Giving up ended the
+     * chain without changing the answer.
+     *
+     * <p>Why replanning from the BODY specifically is the fix: FastPlanner.expand already refuses
+     * to cut a corner -- both orthogonal cells must be passable -- so from the body's real cell,
+     * one block up, the diagonal that wedged is rejected outright and a different route comes back.
+     * From the stale tail a level below, the same corner reads open and the same route returns.
+     *
+     * <p>Read qUnreachReplan: zero means no movement ever reported a status failure.
+     */
+    public boolean unreachableReplansFromBody = false;
+
+    /**
      * Let DestroyBlockTask give up on a block it is MOVING near but never APPROACHING.
      *
      * <p>The task resets its progress checker when the distance improves -- correct -- but the only
