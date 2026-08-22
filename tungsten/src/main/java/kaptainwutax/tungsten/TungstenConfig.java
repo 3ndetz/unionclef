@@ -1570,8 +1570,15 @@ public class TungstenConfig {
      *
      * <p>Read pdLegacyToTungsten and pdLegacyDeclined: the first is the hand-off saved, the second
      * is tungsten refusing as well, which is the number that says whether waiting costs anything.
+     *
+     * <h2>SHIPPED ON (2026-08-22)</h2>
+     *
+     * Measured on a twenty-minute playthrough: pdLegacy=16 with pdLegacyTung=0/16 -- sixteen
+     * hand-offs to the legacy engine PREVENTED, tungsten declining all sixteen, so the cost is
+     * sixteen ticks of waiting in twenty minutes. The run passed with five rungs to stone tools.
+     * nav is 14/14 with it on. The user saw baritone driving in a recording; it no longer does.
      */
-    public boolean neverHandOffToLegacy = false;
+    public boolean neverHandOffToLegacy = true;
 
     /**
      * Let BlockPathWalker stand aside while a block-breaking task owns the aim and the keys.
