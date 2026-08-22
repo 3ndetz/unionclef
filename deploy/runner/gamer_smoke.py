@@ -645,18 +645,25 @@ def main():
         # why a control arm asking for false could read true while the B arm asking for true
         # always verified: only a value that differs from what is stored can lose this race.
         # Standing down was correct and cost a whole run each time; re-applying costs a second.
+        # BE STUBBORN BEFORE GIVING UP: A LOST PIN COSTS A SIX-MINUTE RUN.
+        # Verified directly on the stand that ";settings" sets this flag both ways within a
+        # second when the client is idle -- so a pin that "does not land" is a TIMING failure,
+        # not a broken command. The chat message goes out while the client is still settling
+        # after a world load and is simply dropped. Three tries at one second apart was not
+        # enough: one run of six stood down on it, which is a whole pair lost from the sweep.
+        # Six tries with a growing wait costs at most a few seconds and saves the run.
         _got = py4j("readflag", n=_k)
-        for _try in range(3):
+        for _try in range(6):
             if str(_got.get("value")).lower() == _v.strip().lower():
                 break
-            time.sleep(1.0)
+            time.sleep(1.0 + 0.5 * _try)
             py4j("chatcmd", c=f";settings {_k} {_v}")
-            time.sleep(0.4)
+            time.sleep(0.6)
             _got = py4j("readflag", n=_k)
             print(f"  PIN RETRY {_try + 1} {_k}={_got.get('value')}")
         print(f"  PIN VERIFIED {_k}={_got.get('value')}")
         if str(_got.get("value")).lower() != _v.strip().lower():
-            raise StandDown(f"pin {_k}={_v} did not land after 3 retries "
+            raise StandDown(f"pin {_k}={_v} did not land after 6 retries "
                             f"(reads {_got.get('value')}) -- both arms would measure the same thing")
     for _spec in (_alt if not _arm_b else []):
         # The control arm must SET the baseline explicitly, not merely omit the pin: settings
@@ -679,17 +686,17 @@ def main():
         time.sleep(0.3)
         print(f"  PIN {_k}={_base}")
         _got = py4j("readflag", n=_k)
-        for _try in range(3):
+        for _try in range(6):
             if str(_got.get("value")).lower() == _base.lower():
                 break
-            time.sleep(1.0)
+            time.sleep(1.0 + 0.5 * _try)
             py4j("chatcmd", c=f";settings {_k} {_base}")
             time.sleep(0.4)
             _got = py4j("readflag", n=_k)
             print(f"  CONTROL PIN RETRY {_try + 1} {_k}={_got.get('value')}")
         print(f"  PIN VERIFIED {_k}={_got.get('value')}")
         if str(_got.get("value")).lower() != _base.lower():
-            raise StandDown(f"control pin {_k}={_base} did not land after 3 retries "
+            raise StandDown(f"control pin {_k}={_base} did not land after 6 retries "
                             f"(reads {_got.get('value')})")
     # ⛔ ZERO THE COUNTERS PER RUN, or an A/B reads the previous arm's numbers.
     # run_suite resets between courses; this harness never did, so across a --repeat sweep the
