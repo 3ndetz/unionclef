@@ -139,6 +139,8 @@ public class EntityTracker extends Tracker {
     public static volatile String idDropPick = "-";
     /** Drops chosen that lay more than eight blocks BELOW the bot. */
     public static volatile int idDeepPicks;
+    /** Of those, the ones taken while OTHER drops were on offer -- i.e. depth actually won. */
+    public static volatile int idDeepBeatOthers;
 
     public Optional<ItemEntity> getClosestItemDrop(Vec3d position, Predicate<ItemEntity> acceptPredicate, ItemTarget... targets) {
         ensureUpdated();
@@ -194,7 +196,14 @@ public class EntityTracker extends Tracker {
                         minCost, dyPick, considered,
                         runnerUp == Float.POSITIVE_INFINITY ? "-"
                                 : String.format(java.util.Locale.ROOT, "%.0f", runnerUp));
-                if (dyPick < -8.0) idDeepPicks++;
+                if (dyPick < -8.0) {
+                    idDeepPicks++;
+                    // ⛔ THE WHOLE QUESTION IN ONE COUNTER. A deep pick with alternatives means
+                    // the heuristic CHOSE the depth and the price is wrong; a deep pick with
+                    // of=1 means it was the only drop known and repricing would change
+                    // nothing. The first sample read of=1, and one sample is not a rate.
+                    if (considered > 1) idDeepBeatOthers++;
+                }
             } catch (Throwable ignored) {
                 // an instrument must never be the thing that breaks a run
             }
