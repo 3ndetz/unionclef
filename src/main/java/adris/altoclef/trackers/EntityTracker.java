@@ -135,6 +135,11 @@ public class EntityTracker extends Tracker {
      */
     public static volatile int idAsked, idNoneTracked, idBlacklisted, idReturned;
 
+    /** The last drop chosen: cost, depth, how many were considered, and the runner-up. */
+    public static volatile String idDropPick = "-";
+    /** Drops chosen that lay more than eight blocks BELOW the bot. */
+    public static volatile int idDeepPicks;
+
     public Optional<ItemEntity> getClosestItemDrop(Vec3d position, Predicate<ItemEntity> acceptPredicate, ItemTarget... targets) {
         ensureUpdated();
         if (targets.length == 0) {
@@ -149,6 +154,8 @@ public class EntityTracker extends Tracker {
 
         ItemEntity closestEntity = null;
         float minCost = Float.POSITIVE_INFINITY;
+        float runnerUp = Float.POSITIVE_INFINITY;
+        int considered = 0;
         for (ItemTarget target : targets) {
             for (Item item : target.getMatches()) {
                 if (!itemDropped(item)) continue;
@@ -158,14 +165,40 @@ public class EntityTracker extends Tracker {
                     if (!acceptPredicate.test(entity)) continue;
 
                     float cost = (float) BaritoneHelper.calculateGenericHeuristic(position, entity.getPos());
+                    considered++;
                     if (cost < minCost) {
+                        runnerUp = minCost;
                         minCost = cost;
                         closestEntity = entity;
+                    } else if (cost < runnerUp) {
+                        runnerUp = cost;
                     }
                 }
             }
         }
-        if (closestEntity != null) idReturned++;
+        if (closestEntity != null) {
+            idReturned++;
+            // IS THE DEEP DROP WINNING, OR IS IT THE ONLY ONE? Those want opposite fixes, and the
+            // heuristic cannot tell them apart: calculateGenericHeuristic prices a DESCENT at about
+            // 4.8 ticks a block against 23 for a climb, because it treats going down as a fall --
+            // and the bot cannot fall through rock, it has to mine or find a way. A twenty-minute
+            // run was already lost to a drop 34 blocks out and 24 DOWN.
+            // Record what was chosen, how deep, how many were considered and what the runner-up
+            // cost, so a price is only changed if the price turns out to be the problem.
+            try {
+                double dyPick = closestEntity.getY() - position.y;
+                idDropPick = String.format(java.util.Locale.ROOT,
+                        "%s cost=%.0f dy=%+.1f of=%d next=%s",
+                        net.minecraft.registry.Registries.ITEM.getId(
+                                closestEntity.getStack().getItem()).getPath(),
+                        minCost, dyPick, considered,
+                        runnerUp == Float.POSITIVE_INFINITY ? "-"
+                                : String.format(java.util.Locale.ROOT, "%.0f", runnerUp));
+                if (dyPick < -8.0) idDeepPicks++;
+            } catch (Throwable ignored) {
+                // an instrument must never be the thing that breaks a run
+            }
+        }
         return Optional.ofNullable(closestEntity);
     }
 
