@@ -349,6 +349,12 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
         // been felled, every downstream symptom follows: no reach, no swing, no movement, the
         // progress checker expires and a block that no longer exists gets blacklisted.
         if (mod.getWorld() != null && mod.getWorld().getBlockState(pos).isAir()) dbTargetAir++;
+        // ⛔ AND THE ANSWER IS: IT IS NOT THE PROBLEM. Measured, and worth writing down because
+        // "the target is the wrong block" was the last untried reading of the self-floor stall:
+        // dbTargetAir reads 16 against dbTick=13508, and 8 against 13508 on the run before -- about
+        // a tenth of one per cent. isFinished() already returns true the moment the block is air,
+        // so those ticks are only the window between the break and the framework noticing.
+        // Whatever keeps the reach ray from landing, a ghost target is not it.
 
         // Check if there is white wool at the specified position
         if (mod.getWorld().getBlockState(pos).getBlock() == Blocks.WHITE_WOOL) {
