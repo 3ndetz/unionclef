@@ -26,6 +26,10 @@ import net.minecraft.screen.slot.SlotActionType;
 import java.util.Optional;
 
 public class PlayerInteractionFixChain extends TaskChain {
+
+    /** Cursor stacks kept instead of being dropped after canThrowAwayStack said no. */
+    public static volatile int fixKeptCursor;
+
     private final TimerGame stackHeldTimeout = new TimerGame(1);
     private final TimerGame generalDuctTapeSwapTimeout = new TimerGame(30);
     private final TimerGame shiftDepressTimeout = new TimerGame(10);
@@ -134,6 +138,26 @@ public class PlayerInteractionFixChain extends TaskChain {
             // Try throwing away cursor slot if it's garbage
             if (garbage.isPresent()) {
                 mod.getSlotHandler().clickSlot(garbage.get(), 0, SlotActionType.PICKUP);
+                return Float.NEGATIVE_INFINITY;
+            }
+            // ⛔ THIS ASKS "MAY I THROW THIS AWAY", IS TOLD NO, AND THROWS IT AWAY.
+            //
+            // The branch above only fires when canThrowAwayStack said YES. Reaching here means it
+            // said NO and there is no garbage slot either -- and this line then drops the stack on
+            // the ground regardless. Slot.UNDEFINED is index -999, which is vanilla's click
+            // outside the window, i.e. a drop.
+            //
+            // Measured: shThrown=70 in a twelve-minute run, and on a twenty-minute one the item
+            // lost this way was the bot's WOODEN PICKAXE. It then spent the rest of that run
+            // chasing it into a cave -- lock=wooden_pickaxe:41.6>41.6, h34.0, dy-24.0 -- and
+            // finished with dirt and a mushroom, no wood, ladder zero, on a run with ZERO deaths
+            // and 39 of 53 targets reached. The movement work landed and this threw the run away.
+            //
+            // Keeping it costs a tick: the cursor still holds the stack and the first branch above
+            // places it as soon as any slot frees. Throwing it costs the item, and sometimes the
+            // run.
+            if (kaptainwutax.tungsten.TungstenConfig.get().neverThrowWhatCannotBeThrown) {
+                fixKeptCursor++;
                 return Float.NEGATIVE_INFINITY;
             }
             mod.getSlotHandler().clickSlot(Slot.UNDEFINED, 0, SlotActionType.PICKUP);

@@ -1744,6 +1744,28 @@ public class TungstenConfig {
     public boolean unresolvedSlotKeepsItem = false;
 
     /**
+     * Stop the interaction-fix chain dropping a stack it has just been told it may not drop.
+     *
+     * <p>PlayerInteractionFixChain unsticks a cursor stack in four steps: put it in the inventory,
+     * throw it away IF canThrowAwayStack allows, use a garbage slot, and then -- unconditionally --
+     * throw it away. Reaching that last line means canThrowAwayStack said NO and there was no
+     * garbage slot, and it drops the stack anyway. Slot.UNDEFINED is index -999, vanilla's click
+     * outside the window.
+     *
+     * <p>Measured: shThrown=70 in a twelve-minute run. On a twenty-minute one the item lost this way
+     * was the bot's WOODEN PICKAXE, and it spent the remainder chasing it into a cave --
+     * lock=wooden_pickaxe:41.6>41.6, h34.0, dy-24.0 -- finishing with dirt and a mushroom, no wood
+     * and no rungs, on a run with ZERO deaths and 39 of 53 targets reached.
+     *
+     * <p>Keeping the stack costs a tick; the first branch places it as soon as a slot frees.
+     * Throwing it costs the item and sometimes the run.
+     *
+     * <p>GATE: craft is where slot handling lives and must not move. Read fixKeptCursor for proof
+     * it ran and shThrown for whether the drops actually stop.
+     */
+    public boolean neverThrowWhatCannotBeThrown = false;
+
+    /**
      * Stop TimeoutWanderTask taking MOVE_FORWARD out of BlockPathWalker's hands.
      *
      * <p>That task releases SNEAK, MOVE_BACK and MOVE_FORWARD whenever Nav.isPathing(), guarded by
