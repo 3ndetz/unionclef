@@ -359,7 +359,27 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             // runs because navigation already failed. So this released the MOVE_FORWARD the walk
             // had just pressed, on half its ticks: closeWalkFwd=241/240, measured at the top of the
             // tick before this method touches the key.
-            boolean walkDrove = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKeys
+                        // ⛔ AND THE SPOT HAS NOW BEEN READ BLOCK BY BLOCK, WHICH CHANGES THE CASE FOR THAT
+            // FLAG. The lock record carries coordinates as of today, so the failing place could be
+            // visited instead of classified:
+            //
+            //     feet  level (y=-60)   air   air   air        the bot at [13.28,-60.00,3.28]
+            //                           air   air   air
+            //                           air   air   air
+            //     floor level (y=-61)   stone stone stone
+            //                           stone stone stone
+            //                           stone stone AIR        one hole, diagonally adjacent
+            //
+            // Nothing is in the way. No wall at body level, no ledge to be held back from, no
+            // corner to squeeze past -- one pit, one block deep, diagonally adjacent, with the
+            // coal in it. The bot can walk onto that cell and fall into the pickup. It records
+            // m0.0: the body does not move at all.
+            //
+            // closeWalkKeepsKeys is off because it measured worse on the PLAYTHROUGH (five pairs,
+            // rungs -0.40, stall +55.6s). That measurement answers "does holding forward help in
+            // general", and this case is a different question: here the press is issued and taken
+            // back on half the ticks with nothing physical to stop the body either way.
+boolean walkDrove = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKeys
                     && droveLastTick;
             if (Nav.isPathing() && !walkDrove) {
                 mod.getInputControls().release(Input.SNEAK);
