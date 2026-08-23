@@ -2714,6 +2714,17 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDeepDeclined = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkLeaseCleared = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkSneakReleased = 0;
+        // ⛔ FIVE COUNTERS ADDED TODAY AND NOT RESET, WHICH IS THE DEFECT TODAY WAS SPENT ON.
+        // gamer_smoke was found calling a reset that zeroed nothing, and resetRunCounters was
+        // found missing ten queue counters; both were fixed hours ago, and then five new counters
+        // went in without one. It showed immediately: entBudget read 2 in BOTH arms of a paired
+        // A/B, including the control where the branch cannot fire.
+        adris.altoclef.tasks.entity.AbstractDoToEntityTask.entityBudgetSpent = 0;
+        adris.altoclef.tasks.movement.PickupDroppedItemTask.dropBudgetSpent = 0;
+        adris.altoclef.trackers.EntityTracker.idDeepPicks = 0;
+        adris.altoclef.trackers.EntityTracker.idDeepBeatOthers = 0;
+        adris.altoclef.trackers.EntityTracker.idDropPick = "-";
+        adris.altoclef.tasks.movement.GetToEntityTask.closeWalkAimClaimed = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.closeWalkJumped = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.clearBlockedScenes();
         kaptainwutax.tungsten.path.movements.MovementQueue.clearNoClassShapes();
