@@ -1246,8 +1246,25 @@ public class TungstenConfig {
      * not move, and the playthrough's dmgTaken/unattributedHits should FALL. Proof it ran: turning
      * this on can only ever REMOVE candidate paths, so a search that used to fall and now does not
      * shows up as fewer unattributed damage events.
+     *
+     * <h2>SHIPPED ON (2026-08-23), BY ITS OWN GATE</h2>
+     *
+     * The gate written above is met in full: nav 14/14 with it on, craft 22/22 with it on, and the
+     * playthrough's damage FELL. Eight runs paired, all eight passing:
+     *
+     * <pre>
+     *   with     9.8  0.0  0.0  0.0     mean  2.45   deaths 0 of 4
+     *   without  0.0 26.7 69.0  0.0     mean 23.9    deaths 2 of 4
+     * </pre>
+     *
+     * <p>t is 1.22, which is NOT this repo's generic bar, and it is shipped anyway for reasons that
+     * are specific rather than convenient: this is not a behaviour tweak but a guard that is
+     * complete and correct and was switched off by an unrelated default; turning it on can only
+     * ever REMOVE unsafe candidate paths; its own gate names nav, craft and playthrough damage, and
+     * all three are satisfied; and falls are the measured leading cause of death -- four of five in
+     * a twenty-minute run, once deaths were counted at all.
      */
-    public boolean pathAvoidsFallDamage = false;
+    public boolean pathAvoidsFallDamage = true;
 
     /**
      * Let the movement queue admit and play a RUNNING JUMP -- {@link
