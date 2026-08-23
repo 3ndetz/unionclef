@@ -1892,6 +1892,22 @@ public class TungstenConfig {
      *
      * <p>GATE: the four mining courses, and all four suites before shipping. Read dbStepOver.
      */
+     * <h2>MEASURED: NO DIFFERENCE (2026-08-23)</h2>
+     *
+     * <pre>
+     *   mine_coal      control 3/3   fix 2/3
+     *   mine_diamond   control 1/3   fix 2/3
+     *   total          4/6           4/6
+     * </pre>
+     *
+     * <p>Neither better nor worse. Together with noRetreatWhenOwnFloorBlocks -- which fires 666
+     * times a run and also changes nothing -- that closes the self-floor line of attack for now:
+     * the geometry is real and common, and neither refusing to retreat nor stepping over it moves
+     * a course.
+     *
+     * <p>What has NOT been tried is the third reading: that the aim is fine and the target is
+     * simply the wrong block. dbTargetAir and dbBestDist are the numbers for that.
+     */
     public boolean stepOverWhenOwnFloorBlocks = false;
 
     /**
