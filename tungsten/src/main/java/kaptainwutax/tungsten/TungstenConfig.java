@@ -1858,6 +1858,22 @@ public class TungstenConfig {
      * <p>GATE: mine_stone, mine_coal, mine_diamond and goto_then_mine are the mining courses and
      * must not move; all four suites run before shipping. Read dbNoRetreat for proof it fires.
      */
+     * <h2>MEASURED, FIRES OFTEN, AND DOES NOT PAY (2026-08-23)</h2>
+     *
+     * <pre>
+     *   dbNoRetreat=666  in a twelve-minute run, with dbBlocked=256/0/2 -- a common path, as hoped
+     *   mine_coal        control 2/3   fix 2/3
+     *   mine_diamond     control 3/3   fix 2/3
+     * </pre>
+     *
+     * <p>So it executes, and it executes constantly, and the courses are no better for it -- if
+     * anything a shade worse, inside the noise at three pairs. That is a cleaner negative than most
+     * of today's: the branch provably ran, which several others never did.
+     *
+     * <p>The diagnosis it rests on is unaffected and still worth someone's time: the reach ray IS
+     * stopped by the bot's own floor six hundred times a run, and retreating from a target below
+     * you cannot help. Not retreating simply is not enough on its own.
+     */
     public boolean noRetreatWhenOwnFloorBlocks = false;
 
     /**
