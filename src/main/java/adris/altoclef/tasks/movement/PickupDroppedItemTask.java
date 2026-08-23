@@ -60,6 +60,13 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
     private AltoClef _mod;
     private boolean _collectingPickaxeForThisResource = false;
     private ItemEntity _currentDrop = null;
+    /** Which drop the current pursuit is about, and when it started -- see the budget above. */
+    private ItemEntity pursuitTarget = null;
+    private long pursuitStartMs = 0L;
+    /** Two minutes: a drop worth a minute of walking is worth having, one that took two is not. */
+    private static final long PURSUIT_BUDGET_MS = 120_000L;
+    /** Drops abandoned because the pursuit ran past its budget. */
+    public static volatile int dropBudgetSpent;
 
     public PickupDroppedItemTask(ItemTarget[] itemTargets, boolean freeInventoryIfFull) {
         this.itemTargets = itemTargets;
@@ -218,6 +225,38 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
             _collectingPickaxeForThisResource = false;
         }
 
+        // ⛔ GIVING UP ON "NO PROGRESS" CANNOT CATCH A PURSUIT THAT IS PROGRESSING.
+        //
+        // Everything below fires when the progress checker trips. A bot walking steadily toward a
+        // drop forty blocks away is making progress the whole time, so it never trips -- and a
+        // twenty-minute run was spent exactly that way, following its own wooden pickaxe into a
+        // cave: lock=wooden_pickaxe:41.6>41.6, h34.0, dy-24.0, ending with dirt and a mushroom and
+        // no rungs at all.
+        //
+        // The instrument settled what this is NOT: deep picks read 15324 on that run and 0 on the
+        // two after it, and every sampled choice had one candidate (of=1, of=1, of=2), taking the
+        // cheaper one when there were two. So the ranking is fine and the descent price is fine --
+        // it is ONE target, chosen once, pursued for fifteen thousand ticks because nothing puts a
+        // ceiling on what a single drop may cost.
+        //
+        // A budget is that ceiling, and it is deliberately generous: a drop worth a minute of
+        // walking is worth having, and one that has taken two is not.
+        if (kaptainwutax.tungsten.TungstenConfig.get().dropPursuitHasBudget
+                && _currentDrop != null && _currentDrop.isAlive()) {
+            if (_currentDrop != pursuitTarget) {
+                pursuitTarget = _currentDrop;
+                pursuitStartMs = System.currentTimeMillis();
+            } else if (System.currentTimeMillis() - pursuitStartMs > PURSUIT_BUDGET_MS) {
+                Debug.logMessage("Drop has cost more than its budget — marking it unreachable.");
+                dropBudgetSpent++;
+                _blacklist.add(_currentDrop);
+                mod.getEntityTracker().requestEntityUnreachable(_currentDrop);
+                _currentDrop = null;
+                pursuitTarget = null;
+                progressChecker.reset();
+                return null;
+            }
+        }
         if (!progressChecker.check(mod)) {
             Nav.cancel();
             // ⛔ WHAT ACTUALLY LOSES mine_diamond, MEASURED — AND IT IS NOT ANY OF THE THREE BUGS

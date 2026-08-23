@@ -1766,6 +1766,28 @@ public class TungstenConfig {
     public boolean neverThrowWhatCannotBeThrown = false;
 
     /**
+     * Put a ceiling on what a single dropped item may cost before it is written off.
+     *
+     * <p>PickupDroppedItemTask gives up on a drop when its PROGRESS CHECKER trips, and a bot walking
+     * steadily toward something forty blocks away is making progress the whole way. So it never
+     * trips: a twenty-minute run was spent following the bot's own wooden pickaxe into a cave --
+     * lock=wooden_pickaxe:41.6>41.6, h34.0, dy-24.0 -- ending with dirt and a mushroom and no rungs.
+     *
+     * <p>The instrument settled what this is NOT. Deep picks read 15324 on that run and 0 on the two
+     * after it, and every sampled choice had a single candidate (of=1, of=1, of=2), taking the
+     * cheaper of the two when there were two. The ranking is sound and the descent price is sound;
+     * it is ONE target, chosen once, pursued for fifteen thousand ticks because nothing bounds it.
+     *
+     * <p>Two minutes, deliberately generous: a drop worth a minute of walking is worth having, and
+     * one that has taken two is not.
+     *
+     * <p>GATE: the pickup courses (pickup_flat, side, ledge, pit, vs_mine, after_goto) all finish
+     * well inside the budget and must not move. Read dropBudgetSpent for proof it fired, and
+     * deepPicks for whether the long pursuits actually stop.
+     */
+    public boolean dropPursuitHasBudget = false;
+
+    /**
      * Stop TimeoutWanderTask taking MOVE_FORWARD out of BlockPathWalker's hands.
      *
      * <p>That task releases SNEAK, MOVE_BACK and MOVE_FORWARD whenever Nav.isPathing(), guarded by
