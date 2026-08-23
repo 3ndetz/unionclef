@@ -1394,6 +1394,41 @@ public class TungstenConfig {
      *
      * <p>Read fallPriced=physics/blockspace to prove it fired. GATE: nav in full -- specifically
      * the three courses the permission version broke -- then the playthrough for the locks.
+     *
+     * <h2>MEASURED: KEEPS NAVIGATION, COSTS THE PLAYTHROUGH -- SHIPS OFF (2026-08-24)</h2>
+     *
+     * <p>It does the job it was built for. The three courses the permission version broke come
+     * back, and the whole suite holds:
+     *
+     * <pre>
+     *   permission version   nav 11/14   slime FAIL   wall2 FAIL   bridge FAIL
+     *   priced version       nav 14/14   all green
+     * </pre>
+     *
+     * <p>And then the playthrough says no, in both pairs, on both numbers:
+     *
+     * <pre>
+     *   pair 1   priced   fallPriced 907/552921   lock 6/0/10   stone@314.5s
+     *            control  fallPriced 0/0          lock 1/0/1    stone@155.7s
+     *   pair 2   priced   fallPriced 0/20433      lock 3/0/0    stone@469.5s
+     *            control  fallPriced 0/0          lock 1/0/1    stone@227.2s
+     * </pre>
+     *
+     * More barren locks and slower stone tools with the price on, twice, with the mechanism firing
+     * hundreds of thousands of times and exactly zero in the controls. Two pairs agreeing in the
+     * same direction is not the lock metric's usual noise.
+     *
+     * <p>THE LIKELY REASON, WORTH TESTING CHEAPLY BEFORE ANYONE REVIVES THIS: a price KEEPS nodes
+     * the veto used to prune. 552921 priced descents are 552921 extra nodes carried in the open
+     * set, so the search gets bigger and slower exactly where the bot needs it fastest. If that is
+     * right, the fix is not a better price but a CHEAPER TEST -- prune the descent as before and
+     * admit it only when the search would otherwise fail, which is what the relaxation retry
+     * already does and what fallRetry=5213 says it can do at scale.
+     *
+     * <p>So the whole line closes negative: the guard's threshold IS arithmetically wrong (vanilla
+     * charges nothing for three blocks), and both ways of correcting it cost more than they return
+     * -- permission breaks navigation, price slows the playthrough. Recorded rather than deleted,
+     * because the next person to notice the off-by-one deserves the two measurements that follow it.
      */
     public boolean fallDepthPriced = false;
 
