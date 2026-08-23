@@ -29,6 +29,11 @@ public class TungstenModDataContainer {
     public static volatile long minerAimUntilMs = 0L;
 
     /** True while a block-breaking task has claimed the aim and the keys this tick. */
+    /** Ask this, never the raw flag: the block-space guard has no config import of its own. */
+    public static boolean fallGuardAllowsHarmless() {
+        return TungstenConfig.get().fallGuardAllowsHarmlessDrop;
+    }
+
     public static boolean minerOwnsAim() {
         return System.currentTimeMillis() < minerAimUntilMs;
     }

@@ -1280,6 +1280,45 @@ public class TungstenConfig {
      * a twenty-minute run, once deaths were counted at all.
      */
     public boolean pathAvoidsFallDamage = true;
+    /**
+     * A guard against fall DAMAGE must not reject a fall that deals no damage.
+     *
+     * <p>⛔ BOTH FALL GUARDS ARE OFF BY ONE BLOCK AGAINST VANILLA, AND IT IS EXACTLY THE DEPTH THE
+     * PLAYTHROUGH KEEPS DYING ON. Vanilla fall damage is {@code floor(distance - 3)}: a three-block
+     * drop costs NOTHING. Both guards reject it anyway --
+     *
+     * <pre>
+     *   Node.java        reject when jumpHeight &lt;= -3      (3 blocks and deeper)
+     *   BlockNode.java   reject when heightDiff  &lt;  -2      (3 blocks and deeper)
+     * </pre>
+     *
+     * <p>The cost of that is measured. Two runs of the current sweep read
+     * {@code fallRetry=3/5076} and {@code fallRetry=3/9378} -- nine thousand moves refused by the
+     * guard against three relaxations, so in practice it is a VETO, not the preference its own note
+     * argues for ("a player does not stand on a hill for five minutes rather than take three
+     * hearts"). The same runs read {@code lock=6/1/4} and {@code lock=11/0/8}: eleven barren
+     * thirty-second locks in one run, none productive.
+     *
+     * <p>And the geometry of those locks names the depth:
+     *
+     * <pre>
+     *   cobblestone:6.5&gt;6.6, m0.2, h5.9, dy-3.0
+     *   cobblestone:3.1&gt;3.7, m0.0, h2.2, dy-3.0
+     *   cobblestone:7.8&gt;8.2, m0.6, h7.2, dy-4.0
+     * </pre>
+     *
+     * The bot mines its cobblestone, the drop falls three blocks, and the search refuses every
+     * route down to a fall that would not have scratched it -- so it stands over its own ore for
+     * thirty seconds at a time. dy-3.0 is FREE and was refused.
+     *
+     * <p>This does not touch damaging falls: four blocks and deeper stay refused, and the
+     * relaxation retry still exists for when nothing safe can be found.
+     *
+     * <p>Read fallHarmless=physics/blockspace to prove it fired. GATE: all four suites -- move
+     * generation is under every course, and nav_cliff and the void duels are where a wrong
+     * threshold would show up first.
+     */
+    public boolean fallGuardAllowsHarmlessDrop = true;
 
     /**
      * Let the movement queue admit and play a RUNNING JUMP -- {@link

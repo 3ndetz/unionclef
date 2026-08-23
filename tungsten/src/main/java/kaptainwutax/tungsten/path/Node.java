@@ -50,6 +50,8 @@ import net.minecraft.world.WorldView;
 public class Node {
 	/** Moves discarded because the completed fall simulation landed harder than the guard allows. */
 	public static volatile int fallMovesRejected;
+	/** Three-block drops handed back by fallGuardAllowsHarmlessDrop. Vanilla-free falls. */
+	public static volatile int fallHarmlessAllowed;
 
 
 	public Node parent;
@@ -421,9 +423,16 @@ public class Node {
         if (newNode.agent.getPos().distanceTo(this.agent.getPos()) < 1.05) return;
 	    // The drop is judged on the COMPLETED simulation, so the number is the real landing depth
 	    // rather than wherever a truncated loop happened to stop.
-	    if (fallGuardActive
-	            && DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY) <= -3
-	            && !newNode.agent.touchingWater) {
+	    //
+	    // Vanilla fall damage is floor(distance - 3), so a THREE-block drop costs nothing. This
+	    // read <= -3 and refused it: a damage guard vetoing a fall that deals no damage. Four
+	    // blocks and deeper stay refused, and the relaxation retry still covers the rest.
+	    final double drop = DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY);
+	    final boolean harmlessOk = TungstenConfig.get().fallGuardAllowsHarmlessDrop;
+	    if (fallGuardActive && harmlessOk && drop == -3 && !newNode.agent.touchingWater) {
+	        fallHarmlessAllowed++;          // proof this fired: a free drop the old threshold refused
+	    }
+	    if (fallGuardActive && drop <= (harmlessOk ? -4 : -3) && !newNode.agent.touchingWater) {
 	        fallMovesRejected++;
 	        return;
 	    }

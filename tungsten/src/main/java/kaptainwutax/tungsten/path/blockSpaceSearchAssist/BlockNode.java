@@ -55,6 +55,8 @@ import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.WorldView;
 
 public class BlockNode {
+	/** Three-block drops the block-space guard now allows. Proof this fired. */
+	public static volatile int blockFallHarmless = 0;
 	
 	private PlayerEntity player;
 
@@ -521,7 +523,11 @@ public class BlockNode {
 		// Search for a path without fall damage
 		if (!TungstenModDataContainer.searchIgnoresFallDamage()) {
 			if (!BlockStateChecker.isAnyWater(childState)) {
-				if (heightDiff < -2) return true;
+				// Same off-by-one as the physics guard: vanilla charges nothing for a three-block
+				// drop, and this refused it. Deeper falls stay refused.
+				double floor = TungstenModDataContainer.fallGuardAllowsHarmless() ? -3 : -2;
+				if (heightDiff < floor) return true;
+				if (heightDiff < -2) blockFallHarmless++;
 			}
 		}
 		if (BlockStateChecker.isAnyWater(childState)) {
