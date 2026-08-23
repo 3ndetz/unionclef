@@ -1784,8 +1784,22 @@ public class TungstenConfig {
      * <p>GATE: the pickup courses (pickup_flat, side, ledge, pit, vs_mine, after_goto) all finish
      * well inside the budget and must not move. Read dropBudgetSpent for proof it fired, and
      * deepPicks for whether the long pursuits actually stop.
+     *
+     * <h2>SHIPPED ON (2026-08-23), AND THE MEASUREMENT SETTLES THE OTHER HALF TOO</h2>
+     *
+     * <pre>
+     *   deepPicks=9485/65   only 65 of 9485 deep picks had ANY alternative
+     *   dropBudget=1        the budget fired
+     *   ladder ... stone tools@228.0s, run PASSED
+     * </pre>
+     *
+     * <p>Ninety-nine point three per cent of deep picks were the only candidate, which retires the
+     * idea that the descent price was choosing them -- there was nothing to choose. The pursuit had
+     * no ceiling, and now it has one.
+     *
+     * <p>Gate met: the six pickup courses read 6/6 with it on.
      */
-    public boolean dropPursuitHasBudget = false;
+    public boolean dropPursuitHasBudget = true;
 
     /**
      * Stop TimeoutWanderTask taking MOVE_FORWARD out of BlockPathWalker's hands.
