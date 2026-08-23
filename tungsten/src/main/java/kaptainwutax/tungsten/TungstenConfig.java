@@ -723,6 +723,21 @@ public class TungstenConfig {
      * <p>Which points the next attempt at the OTHER half of this wall rather than at this one:
      * the drop lies directly BELOW the bot on 39% of close-walk ticks (closeWalkGeom=189/0/0/292),
      * where steering by atan2(x, z) is degenerate and no amount of forward can help.
+     *
+     * <h2>THAT REFUTATION WAS TAKEN IN A WORLD WITH A BIGGER THIEF IN IT (2026-08-23)</h2>
+     *
+     * The five pairs above were measured while TimeoutWanderTask was ALSO releasing MOVE_FORWARD --
+     * 1290 times in a ten-minute run, against the handful this flag is about. That thief was found
+     * and fixed today (wanderKeepsWalkerKeys), and re-measuring flips the sign:
+     *
+     * <pre>
+     *   before   rungs -0.40   stall +55.6s     (five pairs, the numbers above)
+     *   after    rungs +0.50   stall +11.75s    (four pairs, t=0.40)
+     * </pre>
+     *
+     * <p>Still not established and it stays OFF. What IS established is that the earlier refutation
+     * was not measuring this flag on its own -- a dominant defect elsewhere was setting the answer,
+     * and the same caution applies to every other flag measured away before that fix landed.
      */
     public boolean closeWalkKeepsKeys = false;
 
