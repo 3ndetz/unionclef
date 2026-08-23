@@ -1718,6 +1718,32 @@ public class TungstenConfig {
     public boolean closeWalkDeclinesDeepDrop = false;
 
     /**
+     * Keep the item in the cursor when a slot cannot be resolved, instead of dropping it.
+     *
+     * <p>SlotHandler answers an unresolvable slot by clicking PlayerSlot.UNDEFINED, and a click
+     * OUTSIDE the window is vanilla's drop action -- so the cursor's contents end up on the ground.
+     * The counter beside it exists to watch for that and reads shThrown=7 on a twenty-minute
+     * playthrough.
+     *
+     * <p>What it cost on that run: the bot dropped its WOODEN PICKAXE and spent the rest of the
+     * twenty minutes chasing it into a cave --
+     *
+     * <pre>
+     *   lock=wooden_pickaxe:41.6>41.6, m0.0, h34.0, dy-24.0 @bot[605.61,106.00,-245.35]
+     *   end inv: dirt, brown_mushroom     blockedBy=dripstone_block
+     * </pre>
+     *
+     * <p>Forty-one blocks out and twenty-four down, no wood gathered, ladder zero. Doing nothing is
+     * strictly better: the cursor keeps the item and the caller asks again next tick. A slot that
+     * cannot be resolved this tick usually can the next; an item on a cave floor usually cannot be
+     * recovered at all.
+     *
+     * <p>GATE: the craft suite is where slot handling lives and must not move; watch shThrown fall
+     * to zero and shUnresolvedKept take its place.
+     */
+    public boolean unresolvedSlotKeepsItem = false;
+
+    /**
      * Stop TimeoutWanderTask taking MOVE_FORWARD out of BlockPathWalker's hands.
      *
      * <p>That task releases SNEAK, MOVE_BACK and MOVE_FORWARD whenever Nav.isPathing(), guarded by

@@ -32,6 +32,9 @@ public class SlotHandler {
 
     /** Slot clicks that went through, and those the rate gate swallowed; read over py4j. */
     public static volatile int shIssued, shDropped, shBlacklisted, shThrown;
+
+    /** Unresolvable slots that kept the item in the cursor instead of dropping it on the floor. */
+    public static volatile int shUnresolvedKept;
     /** Window slot most recently blacklisted as "server cancelled"; read over py4j. */
     public static volatile int shLastBlacklistedSlot = -1;
 
@@ -83,6 +86,26 @@ public class SlotHandler {
         shIssued++;
 
         if (slot.getWindowSlot() == -1) {
+            // ⛔ "I CANNOT FIND THE SLOT" MUST NOT MEAN "THROW IT ON THE FLOOR".
+            //
+            // PlayerSlot.UNDEFINED clicks OUTSIDE the window, and outside the window is vanilla's
+            // drop action -- so an unresolvable slot ends with whatever is in the cursor lying on
+            // the ground. The counter fifteen lines down was added to watch for exactly this and
+            // it is not zero: shThrown=7 on a twenty-minute playthrough.
+            //
+            // What that costs, from the same run: the bot dropped its WOODEN PICKAXE and then
+            // spent the rest of the run chasing it into a cave --
+            //     lock=wooden_pickaxe:41.6>41.6, m0.0, h34.0, dy-24.0 @bot[605.61,106.00,-245.35]
+            //     end inv: dirt, brown_mushroom
+            // -- 41 blocks out, 24 down, no wood gathered at all, ladder zero.
+            //
+            // Doing nothing is strictly better: the cursor keeps the item and the caller asks
+            // again next tick. A slot that cannot be resolved this tick usually can the next one,
+            // and an item on the floor of a cave usually cannot be recovered at all.
+            if (kaptainwutax.tungsten.TungstenConfig.get().unresolvedSlotKeepsItem) {
+                shUnresolvedKept++;
+                return;
+            }
             clickSlot(PlayerSlot.UNDEFINED, 0, SlotActionType.PICKUP);
             return;
         }
