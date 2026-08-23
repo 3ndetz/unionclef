@@ -1643,6 +1643,8 @@ public class TungstenConfig {
      *
      * <p>Read walkerYieldedToMiner: zero means the two never contended and this changed nothing.
      */
+    public boolean walkerYieldsToMiner = false;
+
     /**
      * While a block-breaking task holds the aim, the path executor must not steer the camera.
      *
@@ -1668,7 +1670,29 @@ public class TungstenConfig {
      *
      * <p>Read execYieldMiner to prove it fired. GATE: playthrough plus nav, craft and pvp -- the
      * executor is on every path in every suite, so this one does not ship on mining courses alone.
+     *
+     * <h2>MEASURED: REFUTED -- THE MECHANISM ESSENTIALLY NEVER FIRES (2026-08-23)</h2>
+     *
+     * <pre>
+     *   execYieldMiner per run   0   0   1   0      (arms B A B A; B is this flag ON)
+     * </pre>
+     *
+     * Zero and one, in the two arms where it was ON. The overlap this guards against -- a miner
+     * aiming WHILE the path executor replays -- does not happen, because the mining branch calls
+     * Nav.clearGoal() in the same block that stamps the claim: it kills the path before it aims.
+     * So the diagnosis "these two fight over the camera" is WRONG, however well it fitted the
+     * operator's description. Whatever swings the camera in the recording, it is not this pair.
+     *
+     * <p>Ships OFF. Kept, with its numbers, because the reasoning was sound and only the pairing
+     * was wrong -- and because the counter is what proved it, in one sweep, rather than three more
+     * passes of argument.
+     *
+     * <p>The ladders that sweep produced (-, crafting, wood tools, stone tools) say nothing about
+     * this flag either way: with the mechanism firing 0-1 times, the spread is the course's own
+     * noise, which this repository has already measured at sevenfold on identical code.
      */
+    public boolean executorYieldsAimToMiner = false;
+
     /**
      * The legacy engine must yield input control to the block-space WALKER too, not only to the
      * path executor.
@@ -1694,10 +1718,6 @@ public class TungstenConfig {
      * path of every task in every course.
      */
     public boolean legacyYieldsToWalker = true;
-
-    public boolean executorYieldsAimToMiner = true;
-
-    public boolean walkerYieldsToMiner = false;
 
     /**
      * Let the close-range walk to a dropped item release SNEAK.
