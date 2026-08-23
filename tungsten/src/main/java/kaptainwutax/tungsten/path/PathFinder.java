@@ -116,6 +116,8 @@ public class PathFinder {
 	public static volatile int staleRootRejections;
 	/** Searches that exhausted with the fall guard on and were retried with it relaxed. */
 	public static volatile int fallGuardRetries;
+	/** Give-ups that retried with the guard relaxed instead of salvaging a scrap. */
+	public static volatile int gaveUpFallRetry;
 
 	/** Times the PHYSICS search exhausted its open set. Read as srch=physOut/blockOut.
 	 *  Which of the two searches is even trying on a course is not obvious from the outside:
@@ -594,6 +596,31 @@ public class PathFinder {
 	        // setCurrentPath is the same delivery the timeout and exhaustion paths use, and
 	        // bestSoFar only yields a route with real forward progress, so a search that truly got
 	        // nowhere still ends cleanly instead of oscillating.
+	        // ⛔ BEFORE SALVAGING A SCRAP, TRY THE ROUTE THIS SEARCH WAS FORBIDDEN TO TAKE.
+	        //
+	        // The fall-guard relaxation below -- search safely, and if that fails take the damaging
+	        // route -- is wired to the EXHAUSTED branch only, and the comment above this one says
+	        // why that is the wrong exit: on open ground the physics openSet never empties. So the
+	        // branch that actually fires on real terrain has been giving up without ever asking.
+	        //
+	        // This changes nothing about what the search explores -- the pruning stays, so no extra
+	        // nodes and no shift in route preference, which is what sank permitting the drop and
+	        // pricing it. It only relaxes the guard for a search that was about to return nothing.
+	        if (TungstenConfig.get().gaveUpRetriesWithFallGuardRelaxed
+	                && failedAttempts < 2
+	                && !TungstenModDataContainer.searchIgnoresFallDamage()) {
+	            gaveUpFallRetry++;
+	            TungstenModDataContainer.fallGuardRelaxed = true;
+	            try {
+	                RenderHelper.clearRenderers();
+	                closed.clear();
+	                PathFinder.blockPath = Optional.empty();
+	                search(world, start, target, player, failedAttempts + 1);
+	            } finally {
+	                TungstenModDataContainer.fallGuardRelaxed = false;
+	            }
+	            return;
+	        }
 	        searchGaveUp++;
 	        if (setCurrentPath(target, start, player)) {
 	            searchGaveUpSalvaged++;

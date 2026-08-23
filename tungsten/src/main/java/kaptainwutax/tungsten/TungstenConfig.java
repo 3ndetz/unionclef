@@ -1431,6 +1431,29 @@ public class TungstenConfig {
      * because the next person to notice the off-by-one deserves the two measurements that follow it.
      */
     public boolean fallDepthPriced = false;
+    /**
+     * When the search GIVES UP, retry it once with the fall guard relaxed before salvaging a
+     * partial route.
+     *
+     * <p>⛔ THE RELAXATION EXISTS AND IT IS WIRED TO THE WRONG EXIT. PathFinder.search ends in one
+     * of three branches: the hard give-up, a stop, or an exhausted open set. The fall-guard
+     * relaxation -- search safely, and if that fails take the damaging route -- sits ONLY on the
+     * exhausted branch. And the comment on the hard give-up says why that branch is the wrong place
+     * to put it: "on open ground the physics openSet never empties". The exit that actually fires
+     * on real terrain never gets the retry.
+     *
+     * <p>That is what the two failed fall-guard attempts point at. Permitting the free drop broke
+     * navigation, because permission carries route preference. Pricing it kept navigation and slowed
+     * the playthrough, because a price KEEPS half a million nodes the veto used to prune. Both tried
+     * to change what the search EXPLORES. This changes only what happens when it has already
+     * failed -- the pruning stays exactly as it is, so there are no extra nodes and no preference
+     * shift, and the guard is relaxed only for a search that was about to return nothing.
+     *
+     * <p>Read gaveUpFallRetry to prove it fired, and fallRetry -- whose first field already reads
+     * 5213 on a playthrough, which is the exhaustion branch doing this at scale and proof the
+     * retry mechanism itself is sound. GATE: nav in full, then the playthrough for the locks.
+     */
+    public boolean gaveUpRetriesWithFallGuardRelaxed = true;
 
     /** Price per block of descent, on the same edge as the walk and mining costs. */
     public double fallCostPerBlock = 30.0;
