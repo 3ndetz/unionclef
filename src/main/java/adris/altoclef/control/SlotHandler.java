@@ -35,6 +35,21 @@ public class SlotHandler {
 
     /** Unresolvable slots that kept the item in the cursor instead of dropping it on the floor. */
     public static volatile int shUnresolvedKept;
+
+    /** Who clicked outside the window, i.e. dropped a stack on the floor. Read as throwers(). */
+    public static final java.util.Map<String, Integer> throwers =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+
+    /** Commonest thrower first, so one run says which caller is losing the bot its tools. */
+    public static String throwers() {
+        synchronized (throwers) {
+            return throwers.entrySet().stream()
+                    .sorted((a, b) -> b.getValue() - a.getValue())
+                    .limit(5)
+                    .map(e -> e.getKey() + "x" + e.getValue())
+                    .reduce((a, b) -> a + " " + b).orElse("(none)");
+        }
+    }
     /** Window slot most recently blacklisted as "server cancelled"; read over py4j. */
     public static volatile int shLastBlacklistedSlot = -1;
 
@@ -130,7 +145,28 @@ public class SlotHandler {
         // run), and still ends with an empty pack while its craft task spends 95% of its time
         // "collecting materials". If this counter runs into the hundreds, it is throwing away what
         // it just made.
-        if (windowSlot < 0) shThrown++;
+        if (windowSlot < 0) {
+            shThrown++;
+            // ⛔ NAME THE THROWER. Two fixes have now been aimed at this by reading the code and
+            // both missed: the getWindowSlot()==-1 path (shKept=0 while shThrown=70) and the fix
+            // chain's last-resort line (fixKept=0). Slot.UNDEFINED is -999, so several callers
+            // reach here and only one of them matters.
+            // The key-thief instrument settled the same kind of question in one run today by
+            // recording the stack frame instead of arguing about it. Same thing here.
+            try {
+                for (StackTraceElement el : new Throwable().getStackTrace()) {
+                    String cn = el.getClassName();
+                    if (cn.endsWith("SlotHandler")) continue;
+                    String key = cn.substring(cn.lastIndexOf('.') + 1) + ":" + el.getLineNumber();
+                    synchronized (throwers) {
+                        throwers.merge(key, 1, Integer::sum);
+                    }
+                    break;
+                }
+            } catch (Exception ignored) {
+                // an instrument must never be the thing that breaks a run
+            }
+        }
         // Bounds check — prevent CrashException from ScreenHandler.onSlotClick
         if (windowSlot >= 0 && windowSlot >= player.currentScreenHandler.slots.size()) {
             return;
