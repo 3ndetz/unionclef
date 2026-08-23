@@ -1643,6 +1643,34 @@ public class TungstenConfig {
      *
      * <p>Read walkerYieldedToMiner: zero means the two never contended and this changed nothing.
      */
+    /**
+     * While a block-breaking task holds the aim, the path executor must not steer the camera.
+     *
+     * <p>⛔ THIS IS THE CAMERA THIEF, AND THE CLAIM WAS ALREADY BEING WRITTEN TO NOBODY.
+     * DestroyBlockTask stamps {@code minerAimUntilMs} every tick it aims at a block. Exactly one
+     * component read that stamp -- BlockPathWalker, under walkerYieldsToMiner -- and the walker is
+     * not what moves the camera. {@link kaptainwutax.tungsten.path.PathExecutor} is: it replays
+     * {@code player.setYaw(node.input.yaw)} on EVERY node of a live path. So the miner aimed at the
+     * block, the executor aimed at the next waypoint, and the last writer of the tick won.
+     *
+     * <p>That is the defect the operator described from a recording, in his words: "it swings the
+     * camera one way while the block breaks somewhere else", plus a bot that "twitches back and
+     * forth". Both are one mechanism -- two owners writing the same two fields every tick.
+     *
+     * <p>THE SAME FILE ALREADY SOLVED THIS FOR THE BOW. The block above the setYaw call explains
+     * that a drawn arrow never converged because movement overwrote the aim each tick, and fixes it
+     * by keeping the camera with the aimer and re-expressing the movement keys into the frame the
+     * bot is actually facing ({@code reframeMovement}), which preserves the WORLD-SPACE direction
+     * of travel. The machinery is proven; it was simply never extended past BowShooter.isActive().
+     *
+     * <p>It also explains why walkerYieldsToMiner measured nothing and was switched off: it yielded
+     * the wrong component. That negative was real, and it was aimed at the wrong target.
+     *
+     * <p>Read execYieldMiner to prove it fired. GATE: playthrough plus nav, craft and pvp -- the
+     * executor is on every path in every suite, so this one does not ship on mining courses alone.
+     */
+    public boolean executorYieldsAimToMiner = true;
+
     public boolean walkerYieldsToMiner = false;
 
     /**

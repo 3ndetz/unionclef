@@ -107,6 +107,8 @@ public class PathExecutor {
     public static volatile int execArrived=0, execRanOut=0;
     /** Ticks the executor replayed, and how many of them requested SPRINT — see the tick loop. */
     public static volatile int execTicks=0, execSprintTicks=0;
+    /** Ticks the executor handed the camera to a block-breaking task. Proof this fired. */
+    public static volatile int execYieldMiner=0;
     private int placingTicks = 0;
 
     public PathExecutor(boolean isClient) {
@@ -449,7 +451,14 @@ public class PathExecutor {
 			    //     last ticks   bowShots 2            avg_dist 5.98
 			    // So the sprint story does not explain the distance, and isAimCritical stays in
 			    // BowShooter unused-by-this-path rather than being wired on a hunch.
-			    boolean aiming = kaptainwutax.tungsten.task.BowShooter.isActive();
+			    // AND THE SAME ARGUMENT APPLIES TO A PICKAXE. The miner stamps minerAimUntilMs while it
+			    // aims at a block; until now nothing on this path read it, so the line below re-pointed the
+			    // camera at the next waypoint in the very tick the miner had aimed at the block. Yield the
+			    // camera and reframe the keys -- travel direction is preserved in world space.
+			    boolean minerAim = TungstenConfig.get().executorYieldsAimToMiner
+			            && kaptainwutax.tungsten.TungstenModDataContainer.minerOwnsAim();
+			    if (minerAim) execYieldMiner++;
+			    boolean aiming = kaptainwutax.tungsten.task.BowShooter.isActive() || minerAim;
 			    boolean fwd = node.input.forward, back = node.input.back;
 			    boolean left = node.input.left, right = node.input.right;
 
