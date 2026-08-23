@@ -1817,6 +1817,31 @@ public class TungstenConfig {
     public boolean dropPursuitHasBudget = true;
 
     /**
+     * The same ceiling as dropPursuitHasBudget, for chasing an ENTITY rather than an item.
+     *
+     * <p>AbstractDoToEntityTask gives up when its progress checker trips, and a bot walking toward a
+     * sheep sixty-seven blocks away is progressing the whole way. After stone tools the playthrough
+     * wants a BED, which wants WOOL, which wants SHEEP:
+     *
+     * <pre>
+     *   lock=13/4/18@sheep:67.6>67.6, m0.0, h67.5 @bot[372.71,96.00,72.50]
+     *                sheep:41.2>41.2, m0.0, h41.2 @bot[422.35,95.00,113.30]
+     *   avoidSrc=...@PlaceBedAndSetSpawnTask.onStart:147
+     * </pre>
+     *
+     * <p>Thirteen barren locks against four productive, the ladder frozen at stone tools for the
+     * last fifteen minutes of a twenty-minute run, and an empty pack at the end.
+     *
+     * <p>Ninety seconds on one entity, then it is written off. Generous for a chase, far short of a
+     * run.
+     *
+     * <p>GATE: mob_melee and the chase courses live on entity approach and must not move, and this
+     * time ALL FOUR suites are run before shipping, whatever the gate names -- the fall guard's
+     * gate omitted pvp and pvp is where it had to be checked. Read entityBudgetSpent for proof.
+     */
+    public boolean entityPursuitHasBudget = false;
+
+    /**
      * Stop TimeoutWanderTask taking MOVE_FORWARD out of BlockPathWalker's hands.
      *
      * <p>That task releases SNEAK, MOVE_BACK and MOVE_FORWARD whenever Nav.isPathing(), guarded by

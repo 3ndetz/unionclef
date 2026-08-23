@@ -26,6 +26,14 @@ import java.util.Optional;
  * The interaction is abstract.
  */
 public abstract class AbstractDoToEntityTask extends Task implements ITaskRequiresGrounded {
+
+    /** Which entity the current pursuit is about, and when it began -- see the budget below. */
+    private Entity pursuitEntity = null;
+    private long pursuitStartMs = 0L;
+    /** Ninety seconds: generous for a chase, far short of a run. */
+    private static final long ENTITY_BUDGET_MS = 90_000L;
+    /** Entities blacklisted because the pursuit ran past its budget. */
+    public static volatile int entityBudgetSpent;
     protected final MovementProgressChecker progress = new MovementProgressChecker();
     /** Why the interact gate refuses, counted per condition. Read over py4j as dte=... */
     public static volatile int dteGate, dteInRange, dteHungry, dteFalling, dteMlg, dteUnsafe;
@@ -174,6 +182,36 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
                 return onEntityInteract(mod, entity);
             } else if (!tooClose) {
                 setDebugState("Approaching target");
+                // ⛔ A STEADY WALK NEVER TRIPS A PROGRESS CHECK, AND THAT IS THE WHOLE BUG.
+                //
+                // The give-up below fires when `progress` says the body has stopped. A bot walking
+                // toward a sheep sixty-seven blocks away is progressing the entire time, so it
+                // never fires -- and after stone tools the playthrough wants a BED, which wants
+                // WOOL, which wants SHEEP. Measured on a twenty-minute run:
+                //
+                //     lock=13/4/18@sheep:67.6>67.6, m0.0, h67.5 @bot[372.71,96.00,72.50]
+                //                  sheep:41.2>41.2, m0.0, h41.2 @bot[422.35,95.00,113.30]
+                //     avoidSrc=...@PlaceBedAndSetSpawnTask.onStart:147
+                //
+                // Thirteen barren locks against four productive, the ladder frozen at stone tools
+                // for the last fifteen minutes, and the run ending with an empty pack.
+                //
+                // This is the same defect the drop pursuit had, and the same medicine: a ceiling on
+                // what ONE target may cost, independent of whether the walk is progressing. The
+                // drop version fired and shipped today (dropBudget=1).
+                if (kaptainwutax.tungsten.TungstenConfig.get().entityPursuitHasBudget) {
+                    if (entity != pursuitEntity) {
+                        pursuitEntity = entity;
+                        pursuitStartMs = System.currentTimeMillis();
+                    } else if (System.currentTimeMillis() - pursuitStartMs > ENTITY_BUDGET_MS) {
+                        Debug.logMessage("Entity has cost more than its budget — blacklisting it.");
+                        entityBudgetSpent++;
+                        pursuitEntity = null;
+                        progress.reset();
+                        mod.getEntityTracker().requestEntityUnreachable(entity);
+                        return null;
+                    }
+                }
                 if (!progress.check(mod)) {
                     progress.reset();
                     Debug.logMessage("Failed to get to target, blacklisting.");
