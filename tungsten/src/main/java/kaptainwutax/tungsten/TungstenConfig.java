@@ -1842,6 +1842,25 @@ public class TungstenConfig {
     public boolean entityPursuitHasBudget = false;
 
     /**
+     * Stop DestroyBlockTask retreating while the block under its own feet is what blocks the aim.
+     *
+     * <p>The self-floor branch counts the case where the reach ray is stopped by the bot's own
+     * floor -- canClear rightly refuses to dig it, since that drops the bot -- and the note beside
+     * it says the answer is to MOVE so the line opens. Nothing moved. Worse, the task then holds
+     * MOVE_BACK whenever the target is within two blocks, and for a target BELOW the bot that is
+     * exactly the wrong direction: retreating keeps the floor between the eyes and the block.
+     *
+     * <p>Not a rare corner. One twenty-minute run reads dbBlocked=617/0/0 -- six hundred and
+     * seventeen self-floor refusals -- alongside noReach=1357. That frequency is the point: the
+     * rare-scenario fixes of the last few passes each needed hours to measure and returned "not
+     * established", because their case appeared in one run out of six to twenty.
+     *
+     * <p>GATE: mine_stone, mine_coal, mine_diamond and goto_then_mine are the mining courses and
+     * must not move; all four suites run before shipping. Read dbNoRetreat for proof it fires.
+     */
+    public boolean noRetreatWhenOwnFloorBlocks = false;
+
+    /**
      * Stop TimeoutWanderTask taking MOVE_FORWARD out of BlockPathWalker's hands.
      *
      * <p>That task releases SNEAK, MOVE_BACK and MOVE_FORWARD whenever Nav.isPathing(), guarded by

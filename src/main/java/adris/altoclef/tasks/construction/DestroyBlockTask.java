@@ -617,6 +617,31 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             } else {
                 isMining = false;
             }
+            // ⛔ BACKING AWAY FROM A TARGET BELOW YOU KEEPS YOUR OWN FLOOR IN THE WAY.
+            //
+            // The self-floor branch above counts the case where the reach ray is stopped by the
+            // block under the bot's own feet -- canClear rightly refuses to dig it, and the note
+            // there says the answer is to MOVE so the line opens. Nothing moved. Worse, this line
+            // then holds MOVE_BACK whenever the target is within two blocks, which for a target
+            // BELOW the bot is exactly the wrong direction: retreating keeps the floor between the
+            // eyes and the block.
+            //
+            // It is not a rare corner. One twenty-minute run reads dbBlocked=617/0/0 -- six hundred
+            // and seventeen self-floor refusals -- alongside noReach=1357.
+            //
+            // So do not retreat while the floor is what is blocking us. Standing still lets the aim
+            // clear as soon as the body shifts for any other reason, and the mining branch above
+            // takes over the moment the ray lands.
+            boolean floorIsInTheWay =
+                    kaptainwutax.tungsten.TungstenConfig.get().noRetreatWhenOwnFloorBlocks
+                    && pos.getY() < mod.getPlayer().getBlockPos().getY()
+                    && kaptainwutax.tungsten.path.movements.RotationHelper.blockedPos != null
+                    && kaptainwutax.tungsten.path.movements.RotationHelper.blockedPos
+                            .equals(mod.getPlayer().getBlockPos().down());
+            if (floorIsInTheWay) {
+                dbNoRetreat++;
+                mod.getInputControls().release(Input.MOVE_BACK);
+            }
             boolean isCloseToMoveBack = pos.isWithinDistance(mod.getPlayer().getPos(), 2);
             if (isCloseToMoveBack) {
                 if (!Nav.isPathing() && !mod.getPlayer().isTouchingWater() &&
@@ -626,7 +651,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                     // the spot -- which is exactly what the recording shows.
                     kaptainwutax.tungsten.TungstenModDataContainer.minerAimUntilMs =
                             System.currentTimeMillis() + 300;
-                    mod.getInputControls().hold(Input.MOVE_BACK);
+                    if (!floorIsInTheWay) mod.getInputControls().hold(Input.MOVE_BACK);
                     mod.getInputControls().hold(Input.SNEAK);
                 } else {
                     mod.getInputControls().release(Input.MOVE_BACK);
@@ -769,6 +794,8 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
      */
     /** Why the line-of-sight clear did not fire. Read as dbBlocked=selfFloor/unclearable/noReach. */
     public static volatile int dbBlockedSelfFloor, dbBlockedUnclearable, dbBlockedNoReach;
+    /** Ticks the task declined to retreat because its own floor was blocking the aim. */
+    public static volatile int dbNoRetreat;
 
     private boolean canClear(AltoClef mod, net.minecraft.util.math.BlockPos blocking) {
         net.minecraft.block.BlockState st = mod.getWorld().getBlockState(blocking);
