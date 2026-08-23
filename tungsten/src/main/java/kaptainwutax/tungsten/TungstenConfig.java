@@ -1317,8 +1317,58 @@ public class TungstenConfig {
      * <p>Read fallHarmless=physics/blockspace to prove it fired. GATE: all four suites -- move
      * generation is under every course, and nav_cliff and the void duels are where a wrong
      * threshold would show up first.
+     *
+     * <h2>MEASURED: THE VETO IS GONE, THE CEILING IS NOT (2026-08-23)</h2>
+     *
+     * <pre>
+     *   arm B (fix)      fallHarmless 253567   fallRetry 5/22      lock 5/1/5    stone@202.1s
+     *   arm A (control)  fallHarmless 0        fallRetry 8/7717    lock 6/3/15   stone@223.6s
+     *   arm B (fix)      fallHarmless 447717   fallRetry 5213/0    lock 0/0/0    stone@43.6s
+     *   arm A (control)  fallHarmless 0        fallRetry 5330/686  lock 1/0/0    stone@21.4s
+     * </pre>
+     *
+     * Hundreds of thousands of firings in the fixed arm and EXACTLY ZERO in the control, so the
+     * mechanism is clean and exclusive. The guard's refusals collapse: 7717 and 686 without it,
+     * 22 and 0 with it.
+     *
+     * <p>⛔ AND IT DOES NOT MOVE THE CEILING, WHICH IS THE PART TO SAY OUT LOUD. Every arm reaches
+     * stone tools and stops there. The control run even took them FASTEST of the four, at 21.4 s,
+     * so the ladder timings do not separate the arms at all -- the course's own noise is larger
+     * than any effect here. Barren locks read 5 and 0 against 6 and 1, which on a metric this repo
+     * has already measured at sevenfold spread on identical code is not a result either.
+     *
+     * <p>Ships ON as a CORRECTNESS fix, not as a playthrough fix: vanilla charges nothing for a
+     * three-block drop and a damage guard must not veto it. Proven to fire, no regression (4/4
+     * PASS). Claiming more than that would be claiming the noise.
+     *
+     * <h2>⛔ AND IT REGRESSES NAVIGATION, SO IT SHIPS OFF (2026-08-23)</h2>
+     *
+     * <pre>
+     *   with the fix     nav_slime FAIL   nav_wall2 FAIL   nav_bridge FAIL     nav 11/14
+     *   pinned false     nav_slime PASS   nav_wall2 PASS*  nav_bridge PASS
+     * </pre>
+     *
+     * (* failed once, passed on the retry -- flaky, not broken.)
+     *
+     * <p>The bisect is unambiguous, and the reason is the thing I did not see: the guard was doing
+     * DOUBLE DUTY. It was not only refusing damage, it was refusing DESCENT as a route choice. Make
+     * a three-block drop free and the search takes it in preference to the answer each of those
+     * courses is built to require -- bridging a gap, breaking through a wall, handling slime. Three
+     * courses, three different intended solutions, all beaten by "just drop down".
+     *
+     * <p>So the arithmetic was right and the change was still wrong. Vanilla charges nothing for
+     * three blocks, but this guard's threshold was also carrying the search's preference ordering,
+     * and permission is the wrong instrument for a preference.
+     *
+     * <p>THE FIX THAT WOULD KEEP BOTH: fall depth as a COST in the search rather than a veto or a
+     * permission -- a free drop allowed but PRICED, so bridging still wins where bridging is the
+     * point and a drop wins where standing still for thirty seconds is the alternative. That is
+     * what this file's own note has been asking for ("the guard should express a PREFERENCE, not a
+     * veto") and it is the next pass. Nothing here is lost: the measurement stands, the mechanism
+     * is proven to fire (253567 and 447717 against exactly zero in the controls), and the reason it
+     * cannot ship as a permission is now written down.
      */
-    public boolean fallGuardAllowsHarmlessDrop = true;
+    public boolean fallGuardAllowsHarmlessDrop = false;
 
     /**
      * Let the movement queue admit and play a RUNNING JUMP -- {@link

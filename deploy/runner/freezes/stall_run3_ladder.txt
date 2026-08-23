@@ -1,19 +1,19 @@
-LADDER STALLED: no new rung for 150s; last rung -
+LADDER STALLED: no new rung for 150s; last rung stone tools
 
 FULL COUNTERS:
-called=0 deferred=0 inRange=0 clicked=0 noSup=0/0/0 | mqStarted=0 mqSteps=0 mqBack=0 mqTimeout=0 mqTicks=0 step=0/0 pdEnter=968 pdNotPrim=0 pdPillar=0 pdBridge=0 pdStuck=2 pdWalking=0 pdNear=966 pdNoGoal=0 pdFinished=0 pdNoVec=0 pdStallWalk=0 pdStallReset=8 pdQueueShort=0 pdNearBusy=173 pdNearFind=79 pdPlan=966/5 pdLegacy=0 pdLegacyTung=0/0 exArrived=75 exRanOut=17 exSprint=17/23 execYieldMiner=0 legacyDrive=1319/6/1332 legacyYieldWalk=0 nearLockDropped=0 unknownGoal=- dbTick=1272 dbUnreachMove=5 dbUnreachWater=0 dbUnreachPillager=0 dbNear=5 dbFar=0 dbDistSum=16 dbNearTick=1263 noReach=1096 air=0 hungry=0 unsafe=0 blockedBy=minecraft:dirt dbTargetAir=0 rayLeaves=0 rayOther=1099 rayMiss=6 leafCleared=144 dbBlocked=952/0/0 dbNoRetreat=0 dbStepOver=0 dbApproachStall=0 dbBestDist=15 dbTargets=6/6 dbReachGoal=0 cgTick=0 cgBig=0 cgInv=0 cgNoScreen=0 cgSent=0 cgOutReady=0 cgLastSent=- cgCraftable=0 cgNotCraftable=0 cgBookOk=0 cgBookNone=0 cgSmall=0 cgScreen=- ciTick=0 ciCollect=0 ciReceive=0 ciGrid=0 mdCalls=3209 mdWon=0 mdFlee=0 mdFight=0 mdRet=0/0/0/0/0/0/0/0/0/0 vgCalls=0 vgEdge=0 vgFall=0/0/0/0 rimBack=0 kbThrow=0/0/0/0 kbImp=0/0/0 shIssued=360 shDropped=0 shBlack=0 shThrown=0 shKept=0 fixKept=0 throwers=[CraftInTableTask:146x3 BeatMinecraftTask:360x3] dropPick=[cobblestone cost=160 dy=-11.0 of=1 next=-] deepPicks=6493/0 dropBudget=0 entBudget=0 gmDisc=0 gmRecSet=0 gmGuard=0 gmConn=0 shLastBlackSlot=-1 slotYeet=0 mqLost=0 mqStatusFail=0 mqRefused=0(short=0 vetoed=0) mqNoClass=0 mqNullEdge=0 mqExpand=0/0/0/0 mqExpandAt=- qRebased=0 qOffRoute=0 qUnreachReplan=0 gridCorner=0 dbFarRetry=0/0 navBridgeRescued=0 walkerHoleHeld=0 diagonalWalled=0 staleTail=0 ungagged=0 walkYield=0 walkYieldMiner=0 walkMode=3226/0/0 mqParkour=0 mqAdmitMismatch=0 qPrep=0/0 blindPrep=0 mqNull=0 gaveUp=0/0 dc=3209/0/0/0/0 mc=0/0/0/0/0 mcFlight=0 mcSwitch=0 toolSwap=0 recipesKnown=917 wander=1332 wanderMoved=1317 wanderChk=1330/2 wanderFail=1 wanderDenied=764/0 dbDenied=0 airProg=42 lavaEsc=0 lavaCond=0/3209 surv=3209/3209 tbl=0/0@0 bs=33/34/157/157@3797ms navUnsafeAir=0 sm=0/0 smWater=0 srch=0/0/0 fallRetry=0/18 drop=4421/1272/0 scan=10031/999/2544/0/0/0 navStop=0/0/0 fleeSpot=0/0 lock=2/0/1@minecraft:wooden_pickaxe:19.3>19.3,m0.0,h17.5,dy-8.0@bot[-306.50,88.00,-838.50]|<Approach_entity_entity.minecraft.item>_Tung;minecraft:wooden_pickaxe:24.9>25.0,m0.2,h22.5,dy-11.0@bot[-310.35,91.00,-841.64]|<Approach_entity_entity.minecraft.item>_Tung cb=0/0/2544/0 avoidSrc=0/0/2/6@pos@DoCraftInTableTask.onTick:312/pos@DoCraftInTableTask.onTick:312 et=35247/35247 sprint=0/0 lowHp=0/0 standOff=0 hurt=0/0/0 hurtWin=0/0 diseng=0/0 ctl=0 cq=0/0/0 los=0/0/0/0 kaTung=0/0/0/0 dte=0/0/0/0/0/0 mdTung=0/0 mdFleeStuck=0 mdFleeShooter=0 mdFar=0/0 arrows=0/0.00/0.00 draws=0/0/0/0.00 band=0/-1 dodgeYield=0 latch=0/0 breakFail=0/0/0/0/0 stranded=0/primary/200@86/primary/200 gp=3209/0/0/0/0 dodgeTask=0/0.00 dealt=0.0/0.0/3226 hitSize=0/0/0/0 takeSize=0/0/0/0 slotSync=0/0 critReset=0 stray=0/0 heldSwing=0 loseKite=0 holdBow=0 punkKept=0 swingHits=0 dodgeDrive=0 hop=0/0/0/0/0/0/0 mdPillarD=0 dmgTaken=0.0 dw=0/0.0/0.00/0.00/0/0 dwNoBlame=0 dmgWhy=0/0/0/0/0@0.0 strafe=0/0 voidEntries=0 voidTicks=0 lastFall=[] hits=0/0/0/0 hitRange=0.00/0.00 mdBow=0 bowShots=0 bowWild=0 bowNoSol=0 bowRestart=0 bowAimTO=0 bowDrawTO=0 bowBestMiss=-1.00 bowFacing=0 bowNoRoom=0 flee=0/0/0/0/0/0 qBurn=0 qTp=0 qNoMove=0 stuck=[-] staleRoot=0 | mvRequested=0 mvCooldown=0 mvNoHit=0 mvClicked=0 mvSteered=0 | gateThrough=7 gateHeld=5 queued=0 queuePlaced=0 entityReleased=2/3 idrop=7691/0/0/7691 rt=7025/1272/5753 entityCloseWalk=0/0/0/0/0/0/0 closeWalkGeom=0/0/0/0 deep=0/0/0 cwJump=0 cwSneakRel=0 cwLease=0 cwDeep=0 closeWalkFwd=0/0/0
+called=440 deferred=0 inRange=438 clicked=0 noSup=0/0/0 | mqStarted=10 mqSteps=27 mqBack=0 mqTimeout=0 mqTicks=145 step=0/0 pdEnter=3170 pdNotPrim=0 pdPillar=0 pdBridge=0 pdStuck=4 pdWalking=48 pdNear=2 pdNoGoal=0 pdFinished=2 pdNoVec=0 pdStallWalk=0 pdStallReset=24 pdQueueShort=0 pdNearBusy=1 pdNearFind=1 pdPlan=2/0 pdLegacy=0 pdLegacyTung=0/0 exArrived=2 exRanOut=5 exSprint=59/65 execYieldMiner=0 legacyDrive=0/0/1 legacyYieldWalk=54 nearLockDropped=0 unknownGoal=- dbTick=3573 dbUnreachMove=15 dbUnreachWater=0 dbUnreachPillager=0 dbNear=2 dbFar=13 dbDistSum=218 dbNearTick=509 noReach=1 air=2 hungry=0 unsafe=0 blockedBy=minecraft:stone dbTargetAir=1 rayLeaves=0 rayOther=3068 rayMiss=91 leafCleared=0 dbBlocked=1/0/0 dbNoRetreat=0 dbStepOver=0 dbApproachStall=0 dbBestDist=4 dbTargets=31/18 dbReachGoal=0 cgTick=0 cgBig=0 cgInv=0 cgNoScreen=0 cgSent=0 cgOutReady=0 cgLastSent=- cgCraftable=0 cgNotCraftable=0 cgBookOk=0 cgBookNone=0 cgSmall=0 cgScreen=- ciTick=3263 ciCollect=3216 ciReceive=13 ciGrid=0 mdCalls=4118 mdWon=0 mdFlee=0 mdFight=0 mdRet=0/0/0/0/0/0/0/0/0/0 vgCalls=0 vgEdge=0 vgFall=0/0/0/0 rimBack=0 kbThrow=0/0/0/0 kbImp=0/0/0 shIssued=494 shDropped=212 shBlack=0 shThrown=14 shKept=0 fixKept=0 throwers=[BeatMinecraftTask:360x85 CraftInTableTask:146x1] dropPick=[cobblestone cost=4 dy=+0.5 of=1 next=-] deepPicks=0/0 dropBudget=0 entBudget=0 gmDisc=0 gmRecSet=0 gmGuard=0 gmConn=0 shLastBlackSlot=-1 slotYeet=0 mqLost=0 mqStatusFail=0 mqRefused=1(short=0 vetoed=0) mqNoClass=2 mqNullEdge=0 mqExpand=0/0/0/0 mqExpandAt=- qRebased=0 qOffRoute=0 qUnreachReplan=0 gridCorner=71420 dbFarRetry=0/0 navBridgeRescued=0 walkerHoleHeld=0 diagonalWalled=0 staleTail=0 ungagged=0 walkYield=0 walkYieldMiner=0 walkMode=3944/54/0 mqParkour=0 mqAdmitMismatch=0 qPrep=0/135 blindPrep=0 mqNull=0 gaveUp=0/0 dc=3936/6/1/0/0 mc=94/0/0/2/0 mcFlight=70 mcSwitch=8 toolSwap=0 recipesKnown=917 wander=1 wanderMoved=0 wanderChk=1/0 wanderFail=0 wanderDenied=0/0 dbDenied=0 airProg=184 lavaEsc=0 lavaCond=0/4118 surv=4118/4118 tbl=227/224@3 bs=50/51/157/157@3044ms navUnsafeAir=0 sm=0/0 smWater=0 srch=2247/0/0 fallRetry=2247/0 fallHarmless=0/118 drop=4244/143/60 scan=40373/29884/4720/0/0/0 navStop=0/0/0 fleeSpot=0/0 lock=0/0/0@- cb=0/0/36032/165 avoidSrc=0/0/2/9@pos@DoCraftInTableTask.onTick:312/pos@DoCraftInTableTask.onTick:312 et=56579/56579 sprint=82/135 lowHp=0/0 standOff=0 hurt=0/0/0 hurtWin=0/0 diseng=0/0 ctl=0 cq=0/0/0 los=0/0/0/0 kaTung=0/0/0/0 dte=0/0/0/0/0/0 mdTung=0/0 mdFleeStuck=0 mdFleeShooter=0 mdFar=0/0 arrows=0/0.00/0.00 draws=0/0/0/0.00 band=0/-1 dodgeYield=0 latch=0/0 breakFail=0/0/0/0/0 stranded=0/primary/200@55/primary/200 gp=4034/0/0/0/84 dodgeTask=0/0.00 dealt=0.0/0.0/4133 hitSize=0/0/0/0 takeSize=0/0/0/0 slotSync=0/0 critReset=0 stray=0/0 heldSwing=0 loseKite=0 holdBow=0 punkKept=0 swingHits=0 dodgeDrive=0 hop=0/0/0/0/0/0/0 mdPillarD=0 dmgTaken=0.0 dw=0/0.0/0.00/0.00/0/0 dwNoBlame=0 dmgWhy=0/0/0/0/0@0.0 strafe=0/0 voidEntries=0 voidTicks=0 lastFall=[] hits=0/0/0/0 hitRange=0.00/0.00 mdBow=0 bowShots=0 bowWild=0 bowNoSol=0 bowRestart=0 bowAimTO=0 bowDrawTO=0 bowBestMiss=-1.00 bowFacing=0 bowNoRoom=0 flee=0/0/0/0/0/0 qBurn=0 qTp=2 qNoMove=0 stuck=[-] staleRoot=0 | mvRequested=0 mvCooldown=0 mvNoHit=0 mvClicked=0 mvSteered=31 | gateThrough=5 gateHeld=758 queued=0 queuePlaced=0 entityReleased=0/0 idrop=424/0/0/424 rt=21271/3650/102 entityCloseWalk=0/0/0/0/0/0/0 closeWalkGeom=0/0/0/0 deep=0/0/0 cwJump=0 cwSneakRel=0 cwLease=0 cwDeep=0 closeWalkFwd=0/0/0
 
 WHAT THE CLOSE WALK WAS UP AGAINST:
 
 
 WHO RELEASED MOVE_FORWARD UNDER THE CLOSE WALK:
-TimeoutWanderTask:253x2300 GetToEntityTask:390x766 PlaceBlockTask:95x607 DestroyBlockTask:421x128 DestroyBlockTask:608x30
+DestroyBlockTask:608x525 TimeoutWanderTask:253x519 InteractWithBlockTask:230x53 CustomBaritoneGoalTask:197x48 DestroyBlockTask:742x12
 
 RUNNER:
 active=true | Chain: UserTaskChain, priority: 50.0 | Game Menu Chain(on=true,p=-Infinity) UserTaskChain(on=true,p=50.0) Mob Defense(on=true,p=0.0) Death Menu Respawn Handling(on=true,p=-Infinity) Hand Stack Fix Chain(on=true,p=-Infinity) MLG Water Bucket Fall Chain(on=true,p=-Infinity) Unstuck Chain
 
 CHAIN:
-Description of current game pipeline that is selected: Current game tasks: Current Baritone executor task list (UserTaskChain task chain) | 1. Main task: <Beating the game (Miran version).> Priority: 400.00, Collecting resource: [[wooden_pickaxe]] | 1.1. Subtasks: <Get catalogued: {[wooden_pickaxe]}: [[wooden_pickaxe]]> Picking up (pickaxe first!) |  -> | 1.1.0. <Pickup Dropped Items: [[wooden_pickaxe]]> Collecting pickaxe first |  -> | 1.1.1. <Satisfy Mining Req: STONE>  |  -> | 1.1.2. <Doing stuff in crafting_table container: [[stone_pickaxe]]> Picking up |  -> | 1.1.3. <Doing stuff in crafting_table container> Walking to container... -272, 71, -485 |  -> | 1.1.4. <Collect Recipe Resources: {Recipe{minecraft:stone_pickaxe}}> Getting cobblestone x 3 |  -> | 1.1.5. <Collect minecraft:cobblestone: [[cobblestone] x 3]> Picking up |  -> | 1.1.6. <Mine And Collect: [[cobblestone]]> Collecting a drop instead of crafting a tool for it |  -> | 1.1.7. <Mining or Collecting>  |  -> | 1.1.8. <Destroy block at -317, 89, -843> Block in range, mining...
+. Subtasks: <Get catalogued: {[stone_axe],[stone_sword],[stone_shovel],[stone_hoe]}: [[stone_axe], [stone_sword], [stone_shovel], [stone_hoe]]>  |  -> | 1.1.0. <Doing stuff in crafting_table container: [[stone_axe], [stone_sword], [stone_shovel], [stone_hoe]]>  |  -> | 1.1.1. <Doing stuff in crafting_table container>  |  -> | 1.1.2. <Collect Recipe Resources: {Recipe{minecraft:stone_axe},Recipe{minecraft:stone_sword},Recipe{minecraft:stone_shovel},Recipe{minecraft:stone_hoe}}> Getting stick x 7 |  -> | 1.1.3. <Crafting 7 sticks: [[stick] x 7]>  |  -> | 1.1.4. <Craft 2x2 Task Recipe{minecraft:stick x 7}: [[stick] x 7]> Collecting materials |  -> | 1.1.5. <Collect Recipe Resources: {Recipe{minecraft:stick x 7}}> Getting planks x 4 |  -> | 1.1.6. <Crafting 4 planks [minecraft:acacia_planks, minecraft:birch_planks, minecraft:crimson_planks, minecraft:dark_oak_planks, minecraft:oak_planks, minecraft:jungle_planks, minecraft:spruce_planks, m... |  -> | 1.1.7. <Mine And Collect: [[acacia_log,birch_log,dark_oak_log,oak_log,jungle_log,spruce_log,acacia_wood,birch_wood,dark_oak_wood,oak_wood,jungle_wood,spruce_wood,stripped_acacia_log,stripped_birch_log,s... |  -> | 1.1.8. <Mining or Collecting> Moving towards closest... |  -> | 1.1.9. <Destroy block at -343, 78, -1448> Getting to block... |  -> | 1.1.10. <Getting to block class_2338{x=-343, y=78, z=-1448}> Tungsten (primary) planning...
 
 SCREEN:
 {'open': False, 'screen': None, 'slots': []}
@@ -29,7 +29,26 @@ THREADS:
     at knot//net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkBuilder$WorkerRunnable.run(ChunkBuilder.java:177)
     at java.base@21.0.11/java.lang.Thread.runWith(Unknown Source)
     at java.base@21.0.11/java.lang.Thread.run(Unknown Source)
-"Chunk Render Task Executor #5" WAITING
+"Render thread" RUNNABLE
+    at knot//org.lwjgl.opengl.GL32C.nglMultiDrawElementsBaseVertex(Native Method)
+    at knot//net.caffeinemc.mods.sodium.client.gl.device.GLRenderDevice$ImmediateDrawCommandList.multiDrawElementsBaseVertex(GLRenderDevice.java:291)
+    at knot//net.caffeinemc.mods.sodium.client.render.chunk.DefaultChunkRenderer.executeDrawBatch(DefaultChunkRenderer.java:358)
+    at knot//net.caffeinemc.mods.sodium.client.render.chunk.DefaultChunkRenderer.render(DefaultChunkRenderer.java:100)
+    at knot//net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionManager.renderLayer(RenderSectionManager.java:320)
+    at knot//net.caffeinemc.mods.sodium.client.render.SodiumWorldRenderer.drawChunkLayer(SodiumWorldRenderer.java:281)
+    at knot//net.minecraft.class_11532.handler$ced000$sodium$renderGroup(class_11532.java:541)
+    at knot//net.minecraft.class_11532.method_72170(class_11532.java)
+    at knot//net.minecraft.class_761.method_62214(class_761.java:736)
+    at knot//net.minecraft.class_761$$Lambda/0x00007819a171dcc8.run(Unknown Source)
+    at knot//net.minecraft.class_9909.method_61910(class_9909.java:67)
+    at knot//net.minecraft.class_761.method_22710(class_761.java:599)
+    at knot//net.minecraft.class_757.method_3188(class_757.java:785)
+    at knot//net.minecraft.class_757.method_3192(class_757.java:497)
+    at knot//net.minecraft.class_310.method_1523(class_310.java:1393)
+    at knot//net.minecraft.class_310.method_1514(class_310.java:966)
+    at knot//net.minecraft.client.main.Main.main(Main.java:250)
+    at java.base@21.0.11/java.lang.invoke.LambdaForm$DMH/0x00007819a0020400.invokeStaticInit(LambdaForm$DMH)
+"Chunk Render Task Executor #0" WAITING
     at java.base@21.0.11/jdk.internal.misc.Unsafe.park(Native Method)
     at java.base@21.0.11/java.util.concurrent.locks.LockSupport.park(Unknown Source)
     at java.base@21.0.11/java.util.concurrent.locks.AbstractQueuedSynchronizer.acquire(Unknown Source)
@@ -39,30 +58,10 @@ THREADS:
     at knot//net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkBuilder$WorkerRunnable.run(ChunkBuilder.java:177)
     at java.base@21.0.11/java.lang.Thread.runWith(Unknown Source)
     at java.base@21.0.11/java.lang.Thread.run(Unknown Source)
-"Render thread" RUNNABLE
-    at knot//net.caffeinemc.mods.sodium.api.math.MatrixHelper.transformNormal(MatrixHelper.java:33)
-    at knot//net.caffeinemc.mods.sodium.api.math.MatrixHelper.transformNormal(MatrixHelper.java:70)
-    at knot//net.caffeinemc.mods.sodium.client.render.immediate.model.BakedModelEncoder.writeQuadVertices(BakedModelEncoder.java:50)
-    at knot//net.minecraft.class_918.renderBakedItemQuads(class_918.java:569)
-    at knot//net.minecraft.class_918.wrapOperation$cfk000$sodium$renderModelFast(class_918.java:551)
-    at knot//net.minecraft.class_918.method_62476(class_918.java:52)
-    at knot//net.minecraft.class_11687.method_73010(class_11687.java:19)
-    at knot//net.minecraft.class_11684.method_73002(class_11684.java:51)
-    at knot//net.minecraft.class_759.method_22976(class_759.java:422)
-    at knot//net.minecraft.class_757.method_3172(class_757.java:444)
-    at knot//net.minecraft.class_757.method_3188(class_757.java:792)
-    at knot//net.minecraft.class_757.method_3192(class_757.java:497)
-    at knot//net.minecraft.class_310.method_1523(class_310.java:1393)
-    at knot//net.minecraft.class_310.method_1514(class_310.java:966)
-    at knot//net.minecraft.client.main.Main.main(Main.java:250)
-    at java.base@21.0.11/java.lang.invoke.LambdaForm$DMH/0x00007741b4020400.invokeStaticInit(LambdaForm$DMH)
-    at java.base@21.0.11/java.lang.invoke.LambdaForm$MH/0x00007741b4230c00.invokeExact_MT(LambdaForm$MH)
-    at app//net.fabricmc.loader.impl.game.minecraft.MinecraftGameProvider.launch(MinecraftGameProvider.java:514)
-"Chunk Render Task Executor #8" WAITING
+"Chunk Render Task Executor #4" WAITING
     at java.base@21.0.11/jdk.internal.misc.Unsafe.park(Native Method)
     at java.base@21.0.11/java.util.concurrent.locks.LockSupport.park(Unknown Source)
     at java.base@21.0.11/java.util.concurrent.locks.AbstractQueuedSynchronizer.acquire(Unknown Source)
     at java.base@21.0.11/java.util.concurrent.locks.AbstractQueuedSynchronizer.acquireSharedInterruptibly(Unknown Source)
     at java.base@21.0.11/java.util.concurrent.Semaphore.acquire(Unknown Source)
-    at knot//net.caffeinemc.mods.sodium.client.render.chunk.compile.executor.ChunkJobQueue.waitForNextJob(ChunkJobQueue.java:44)
-    at knot//net.caffeinemc.mods.s
+    at knot//net.caffeinemc.mods.sodium.client.render.chunk.comp

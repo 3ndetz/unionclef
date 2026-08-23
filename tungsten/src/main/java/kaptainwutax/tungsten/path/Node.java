@@ -429,7 +429,11 @@ public class Node {
 	    // blocks and deeper stay refused, and the relaxation retry still covers the rest.
 	    final double drop = DistanceCalculator.getJumpHeight(agent.posY, newNode.agent.posY);
 	    final boolean harmlessOk = TungstenConfig.get().fallGuardAllowsHarmlessDrop;
-	    if (fallGuardActive && harmlessOk && drop == -3 && !newNode.agent.touchingWater) {
+	    // A TOLERANCE, NOT ==. This read `drop == -3` on a double and matched nothing: the
+	    // counter read 0 in both arms while the block-space one read 253567, which is what
+	    // said the comparison was wrong rather than the site being dead.
+	    if (fallGuardActive && harmlessOk && drop > -4 && drop <= -3
+	            && !newNode.agent.touchingWater) {
 	        fallHarmlessAllowed++;          // proof this fired: a free drop the old threshold refused
 	    }
 	    if (fallGuardActive && drop <= (harmlessOk ? -4 : -3) && !newNode.agent.touchingWater) {
