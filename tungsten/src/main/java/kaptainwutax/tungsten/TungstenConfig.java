@@ -1857,7 +1857,7 @@ public class TungstenConfig {
      *
      * <p>GATE: mine_stone, mine_coal, mine_diamond and goto_then_mine are the mining courses and
      * must not move; all four suites run before shipping. Read dbNoRetreat for proof it fires.
-     */
+     *
      * <h2>MEASURED, FIRES OFTEN, AND DOES NOT PAY (2026-08-23)</h2>
      *
      * <pre>
@@ -1875,6 +1875,24 @@ public class TungstenConfig {
      * you cannot help. Not retreating simply is not enough on its own.
      */
     public boolean noRetreatWhenOwnFloorBlocks = false;
+
+    /**
+     * Step TOWARD a target that is below when the bot's own floor blocks the aim.
+     *
+     * <p>noRetreatWhenOwnFloorBlocks does half the job and measures accordingly: it fires 666 times
+     * in a twelve-minute run and buys nothing (mine_coal 2/3 against 2/3, mine_diamond 2/3 against
+     * 3/3). Standing still leaves the floor where it was.
+     *
+     * <p>The self-floor note in DestroyBlockTask has said the answer since it was written: MOVE so
+     * the line opens. For a target BELOW the bot that means standing OVER it, from where the look
+     * is straight down and the floor is behind. This aims and holds forward for the tick; the
+     * mining branch takes over the instant the ray lands.
+     *
+     * <p>Requires noRetreatWhenOwnFloorBlocks, which is what detects the geometry.
+     *
+     * <p>GATE: the four mining courses, and all four suites before shipping. Read dbStepOver.
+     */
+    public boolean stepOverWhenOwnFloorBlocks = false;
 
     /**
      * Stop TimeoutWanderTask taking MOVE_FORWARD out of BlockPathWalker's hands.

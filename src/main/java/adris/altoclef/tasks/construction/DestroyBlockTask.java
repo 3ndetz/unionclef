@@ -640,6 +640,23 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                             .equals(mod.getPlayer().getBlockPos().down());
             if (floorIsInTheWay) {
                 dbNoRetreat++;
+                // ⛔ AND "DO NOT RETREAT" IS ONLY HALF OF IT -- THE NOTE SAYS *MOVE*.
+                //
+                // Releasing MOVE_BACK fires 666 times in a twelve-minute run and buys nothing
+                // (mine_coal 2/3 against 2/3, mine_diamond 2/3 against 3/3). That is not a mystery:
+                // standing still leaves the floor exactly where it was. The block under the bot is
+                // between its eyes and a target BELOW it, and the way to take it off the sight line
+                // is to stand OVER the target, from where the look is straight down and the floor
+                // is behind.
+                //
+                // So step toward it. Aiming and holding forward for the tick is what the
+                // self-floor note has been asking for since it was written, and the mining branch
+                // above takes over the instant the ray lands.
+                if (kaptainwutax.tungsten.TungstenConfig.get().stepOverWhenOwnFloorBlocks) {
+                    dbStepOver++;
+                    LookHelper.lookAt(mod, net.minecraft.util.math.Vec3d.ofCenter(pos));
+                    mod.getInputControls().hold(Input.MOVE_FORWARD);
+                }
                 mod.getInputControls().release(Input.MOVE_BACK);
             }
             boolean isCloseToMoveBack = pos.isWithinDistance(mod.getPlayer().getPos(), 2);
@@ -796,6 +813,8 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     public static volatile int dbBlockedSelfFloor, dbBlockedUnclearable, dbBlockedNoReach;
     /** Ticks the task declined to retreat because its own floor was blocking the aim. */
     public static volatile int dbNoRetreat;
+    /** Ticks the task stepped TOWARD a below-target so its own floor left the sight line. */
+    public static volatile int dbStepOver;
 
     private boolean canClear(AltoClef mod, net.minecraft.util.math.BlockPos blocking) {
         net.minecraft.block.BlockState st = mod.getWorld().getBlockState(blocking);
