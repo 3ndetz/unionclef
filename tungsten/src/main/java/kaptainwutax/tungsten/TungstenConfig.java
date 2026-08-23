@@ -1369,6 +1369,39 @@ public class TungstenConfig {
      * cannot ship as a permission is now written down.
      */
     public boolean fallGuardAllowsHarmlessDrop = false;
+    /**
+     * Price a descent instead of forbidding it -- the guard as a PREFERENCE, which is what this
+     * file has been asking for since the fall-guard note was written.
+     *
+     * <p>⛔ WHY THE CHEAP VERSION FAILED, AND WHY THIS IS THE SAME IDEA DONE RIGHT.
+     * fallGuardAllowsHarmlessDrop simply permitted the three-block drop vanilla charges nothing
+     * for. It fired hundreds of thousands of times and took the guard's spurious refusals from
+     * 7717 to 22 -- and it cost nav_slime, nav_wall2 and nav_bridge, because the threshold was
+     * carrying the search's ROUTE PREFERENCE as well as its damage rule. Free descent beats
+     * bridging, breaking and every other intended answer.
+     *
+     * <p>A price fixes exactly that asymmetry. Where a bridge exists, a priced drop loses to it and
+     * the course keeps its intended solution. Where the alternative is a thirty-second barren lock
+     * over the bot's own dropped ore, any finite price wins. Permission cannot express that;
+     * a number can.
+     *
+     * <p>Priced in BOTH layers on purpose. Block-space runs first and hands the physics search a
+     * corridor, so pricing only the physics layer would leave the coarse route already committed to
+     * going down -- which is precisely how nav_bridge broke.
+     *
+     * <p>The precedent is next door: {@code breakCostMultiplier} prices mining onto the same edge
+     * ({@code child.actionCost += ticks * 0.15 * ...}), for the same reason.
+     *
+     * <p>Read fallPriced=physics/blockspace to prove it fired. GATE: nav in full -- specifically
+     * the three courses the permission version broke -- then the playthrough for the locks.
+     */
+    public boolean fallDepthPriced = false;
+
+    /** Price per block of descent, on the same edge as the walk and mining costs. */
+    public double fallCostPerBlock = 30.0;
+
+    /** Beyond this many blocks a fall is still refused outright, priced or not. */
+    public int fallDepthHardLimit = 10;
 
     /**
      * Let the movement queue admit and play a RUNNING JUMP -- {@link

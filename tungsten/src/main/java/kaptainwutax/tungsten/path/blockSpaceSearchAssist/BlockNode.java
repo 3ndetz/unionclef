@@ -57,6 +57,8 @@ import net.minecraft.world.WorldView;
 public class BlockNode {
 	/** Three-block drops the block-space guard now allows. Proof this fired. */
 	public static volatile int blockFallHarmless = 0;
+	/** Descents kept and charged for rather than refused. Proof the price fired. */
+	public static volatile int blockFallPriced = 0;
 	
 	private PlayerEntity player;
 
@@ -526,7 +528,18 @@ public class BlockNode {
 				// Same off-by-one as the physics guard: vanilla charges nothing for a three-block
 				// drop, and this refused it. Deeper falls stay refused.
 				double floor = TungstenModDataContainer.fallGuardAllowsHarmless() ? -3 : -2;
-				if (heightDiff < floor) return true;
+				if (heightDiff < floor) {
+					// PRICED, NOT FORBIDDEN. A descent the guard would refuse is kept and charged for,
+					// so a bridge still wins where a bridge is the point and a drop wins where the
+					// alternative is standing still. Same edge the mining price goes on, below.
+					if (TungstenConfig.get().fallDepthPriced
+							&& heightDiff >= -TungstenConfig.get().fallDepthHardLimit) {
+						child.actionCost += (-heightDiff - 2) * TungstenConfig.get().fallCostPerBlock;
+						blockFallPriced++;
+					} else {
+						return true;
+					}
+				}
 				if (heightDiff < -2) blockFallHarmless++;
 			}
 		}

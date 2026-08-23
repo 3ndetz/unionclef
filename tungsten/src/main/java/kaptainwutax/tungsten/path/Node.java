@@ -52,6 +52,8 @@ public class Node {
 	public static volatile int fallMovesRejected;
 	/** Three-block drops handed back by fallGuardAllowsHarmlessDrop. Vanilla-free falls. */
 	public static volatile int fallHarmlessAllowed;
+	/** Descents kept and charged for rather than refused. Proof the price fired. */
+	public static volatile int fallPriced;
 
 
 	public Node parent;
@@ -435,6 +437,16 @@ public class Node {
 	    if (fallGuardActive && harmlessOk && drop > -4 && drop <= -3
 	            && !newNode.agent.touchingWater) {
 	        fallHarmlessAllowed++;          // proof this fired: a free drop the old threshold refused
+	    }
+	    // PRICED, NOT REFUSED: charge the descent onto this node's cost and keep it, so the
+	    // search can still prefer a bridge while a drop stays available when nothing else is.
+	    if (fallGuardActive && drop <= (harmlessOk ? -4 : -3) && !newNode.agent.touchingWater
+	            && TungstenConfig.get().fallDepthPriced
+	            && drop >= -TungstenConfig.get().fallDepthHardLimit) {
+	        newNode.cost += (-drop - 2) * TungstenConfig.get().fallCostPerBlock;
+	        fallPriced++;
+	        nodes.add(newNode);
+	        return;
 	    }
 	    if (fallGuardActive && drop <= (harmlessOk ? -4 : -3) && !newNode.agent.touchingWater) {
 	        fallMovesRejected++;
