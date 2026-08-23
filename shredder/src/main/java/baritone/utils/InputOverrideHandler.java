@@ -110,6 +110,9 @@ public final class InputOverrideHandler extends Behavior implements IInputOverri
         // gotta do it this way, or else it constantly thinks you're beginning a double tap W sprint lol
     }
 
+    /** Ticks this engine stood down because the block-space walker was driving. */
+    public static volatile int legacyYieldWalker = 0;
+
     private boolean inControl() {
         // Yield input control to tungsten while ITS executor is driving. Otherwise
         // baritone installs PlayerMovementInput (whose forced keys are all zero
@@ -118,6 +121,15 @@ public final class InputOverrideHandler extends Behavior implements IInputOverri
         // executor is simulating forward motion (drift blows up). When tungsten is
         // executing, KeyboardInput is used instead, reading tungsten's setPressed.
         if (kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
+            return false;
+        }
+        // AND THE WALKER DRIVES WITHOUT THE EXECUTOR. BlockPathWalker presses the keys itself, so
+        // on its ticks the guard above reads false, this engine takes control back, and installs a
+        // movement input whose forced keys are all zero -- zeroing the walker exactly as the comment
+        // above describes for the executor. Same yield, second driver.
+        if (kaptainwutax.tungsten.TungstenConfig.get().legacyYieldsToWalker
+                && kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
+            legacyYieldWalker++;
             return false;
         }
         for (Input input : new Input[]{Input.MOVE_FORWARD, Input.MOVE_BACK, Input.MOVE_LEFT, Input.MOVE_RIGHT, Input.SNEAK, Input.JUMP}) {

@@ -1669,6 +1669,32 @@ public class TungstenConfig {
      * <p>Read execYieldMiner to prove it fired. GATE: playthrough plus nav, craft and pvp -- the
      * executor is on every path in every suite, so this one does not ship on mining courses alone.
      */
+    /**
+     * The legacy engine must yield input control to the block-space WALKER too, not only to the
+     * path executor.
+     *
+     * <p>⛔ THE ARBITRATION ALREADY EXISTS AND IT IS HALF-WIRED. baritone's InputOverrideHandler
+     * decides each tick whether to install its own PlayerMovementInput, whose forced keys are all
+     * zero while it is not pathing. Installing it over a live tungsten movement ZEROES tungsten's
+     * key presses -- the comment at that site says so in as many words: "nullifies tungsten's key
+     * presses -- the bot freezes under altoclef tasks even though tungsten's executor is simulating
+     * forward motion".
+     *
+     * <p>Its guard asks only {@code isExecutorRunning()}. But BlockPathWalker drives the body
+     * WITHOUT the executor, pressing keys directly, and on those ticks the guard reads false, the
+     * legacy engine takes control back, and the walker's keys are zeroed by an engine that is not
+     * even pathing.
+     *
+     * <p>This is the operator's third video complaint -- "baritone keeps activating and breaking
+     * the route" -- and it is the same defect as the other two: two owners of one field, no
+     * arbitration. Same answer as {@code wanderKeepsWalkerKeys}, which measured well at the
+     * TimeoutWanderTask site: ask whether the walker is driving before taking its keys away.
+     *
+     * <p>Read legacyYieldWalker to prove it fired. GATE: all four suites -- this sits on the input
+     * path of every task in every course.
+     */
+    public boolean legacyYieldsToWalker = true;
+
     public boolean executorYieldsAimToMiner = true;
 
     public boolean walkerYieldsToMiner = false;
