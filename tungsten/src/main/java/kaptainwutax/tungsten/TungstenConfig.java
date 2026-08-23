@@ -1257,6 +1257,21 @@ public class TungstenConfig {
      *   without  0.0 26.7 69.0  0.0     mean 23.9    deaths 2 of 4
      * </pre>
      *
+     * <p>⛔ AND ITS GATE WAS ONE SUITE SHORT. The gate above names nav, craft and playthrough
+     * damage, and those three were run before shipping. pvp was not named and was not run -- and
+     * pvp contains two duels over VOID, which is exactly where a fall guard could bite. Measured
+     * afterwards, interleaved, two pairs each:
+     *
+     * <pre>
+     *   edge_duel           guard ON 2/2     guard OFF 0/2
+     *   narrow_bridge_duel  guard ON 0/2     guard OFF 1/2
+     * </pre>
+     *
+     * <p>edge_duel is BETTER with it, decisively at that size; narrow_bridge_duel leans the other
+     * way by a single run. Across both, 2 of 4 against 1 of 4, so it stays on. The lesson is about
+     * process rather than this flag: a gate written before the measurement did not think of duels
+     * over void, and the next flag gets all four suites regardless of what its gate names.
+     *
      * <p>t is 1.22, which is NOT this repo's generic bar, and it is shipped anyway for reasons that
      * are specific rather than convenient: this is not a behaviour tweak but a guard that is
      * complete and correct and was switched off by an unrelated default; turning it on can only
