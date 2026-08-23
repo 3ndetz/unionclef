@@ -1891,7 +1891,7 @@ public class TungstenConfig {
      * <p>Requires noRetreatWhenOwnFloorBlocks, which is what detects the geometry.
      *
      * <p>GATE: the four mining courses, and all four suites before shipping. Read dbStepOver.
-     */
+     *
      * <h2>MEASURED: NO DIFFERENCE (2026-08-23)</h2>
      *
      * <pre>
