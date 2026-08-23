@@ -301,6 +301,47 @@ public final class Nav {
     }
 
     /**
+     * DOES THE ENGINE WE ARE DELETING STILL DRIVE THE BODY, AND HOW OFTEN AT THE SAME TIME AS
+     * TUNGSTEN? Counted rather than argued, because both readings are currently live in this
+     * repository and they cannot both be right.
+     *
+     * <p>The note at TimeoutWanderTask's explore() call says the legacy engine "stopped driving the
+     * body when tungsten became the default", and it has an A/B behind it. The operator, watching a
+     * recording, says the opposite in plain words: baritone keeps activating and breaking the
+     * route. A counter settles it.
+     *
+     * <p>legacyPathTicks: the legacy PathingBehavior reports it is executing a path.
+     * legacyOverlapTicks: it reports that WHILE the tungsten executor is replaying one -- two
+     * engines pressing the movement keys on the same tick, which is the same defect shape as the
+     * camera one (two writers, last one wins) and would look exactly like the operator's
+     * description.
+     * exploreTicks: the explore process is active at all.
+     */
+    public static volatile int legacyPathTicks = 0, legacyOverlapTicks = 0, exploreTicks = 0;
+
+    /** Called once per client tick from AltoClef.onClientTick. Reads only; presses nothing. */
+    public static void tickEngineOverlap() {
+        baritone.Baritone b = engine();
+        if (b == null) return;
+        boolean legacy;
+        try {
+            legacy = b.getPathingBehavior().getCurrent() != null;
+        } catch (Throwable t) {
+            return;                       // never let an instrument break a tick
+        }
+        if (legacy) {
+            legacyPathTicks++;
+            if (kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
+                legacyOverlapTicks++;
+            }
+        }
+        try {
+            if (b.getExploreProcess().isActive()) exploreTicks++;
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
      * Is the bot wandering off to look for something it cannot see yet?
      *
      * <p>Exploring is the second-largest thing altoclef says to the engine after the four sentences

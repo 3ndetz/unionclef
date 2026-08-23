@@ -629,6 +629,7 @@ public class AltoClef implements ModInitializer {
         adris.altoclef.chains.MobDefenseChain.tickDamageLedger(this);
         kaptainwutax.tungsten.combat.WeaponSelector.reassertSlotAfterRespawn(getPlayer());
         kaptainwutax.tungsten.combat.WeaponSelector.noticeStrayAttacks(getPlayer());
+        adris.altoclef.control.Nav.tickEngineOverlap();
         taskRunner.tick();
 
         if (taskRunner.gameMenuTaskChain != null) {
