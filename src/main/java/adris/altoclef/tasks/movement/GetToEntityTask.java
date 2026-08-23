@@ -224,6 +224,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
      */
     private static final double CLOSE_WALK_RANGE = 8.0;
 
+    /** Locks dropped because the target was already within walking range. */
+    public static int nearLockDropped = 0;
+
     public GetToEntityTask(Entity entity, double closeEnoughDistance) {
         _entity = entity;
         _closeEnoughDistance = closeEnoughDistance;
@@ -488,6 +491,34 @@ boolean walkDrove = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKey
         // nowhere for six seconds is STOPPED, and the next tick may plan afresh. Six seconds is
         // MovementProgressChecker's own default (0.1 blocks in 6 s), so an ordinary search that
         // finishes in time is untouched; only a search that owns the approach and goes nowhere is.
+        // ⛔ A LOCK MUST NOT OUTRANK A TARGET THAT IS ALREADY WITHIN WALKING DISTANCE.
+        //
+        // Every branch of the isActive gate below returns null, so while a lock is held this task
+        // can only do nothing or release -- and the close-range walk further down, the one
+        // primitive that works at this distance, never gets the tick. Four playthroughs scored 13
+        // barren locks against 1 productive; a lock runs 30 s, so that is around 390 s of standing
+        // still per sweep. One of them reads:
+        //
+        //     spruce_log:3.5>3.3, m0.0, h3.1, dy+1.0
+        //
+        // A drop three and a half blocks away and the body moved ZERO. At that range there is no
+        // route to find. The decision "search or walk" is being taken AFTER the lock; it belongs
+        // before it, which is why this sits above the gate rather than inside it -- dropping the
+        // lock in there would still hit the two return-nulls that follow.
+        //
+        // releaseIdleLock, NOT stop(): stop() clears the barren streak and skips the scoring, so
+        // using it here would have improved lock=barren/productive by hiding the barren locks
+        // instead of preventing them. The metric has to keep counting what it counted before.
+        //
+        // Gated on nothing actually driving, so a healthy search in progress is never interrupted.
+        if (kaptainwutax.tungsten.TungstenConfig.get().nearTargetDropsLockForWalk
+                && TungstenHelper.isActive()
+                && mod.getPlayer().isInRange(_entity, CLOSE_WALK_RANGE)
+                && !mod.getPlayer().isInRange(_entity, _closeEnoughDistance)
+                && !Nav.isExecutingRoute()) {
+            nearLockDropped++;
+            TungstenHelper.releaseIdleLock();
+        }
         if (TungstenHelper.isActive()) {
             if (!mustMove) {
                 _progress.reset();

@@ -1644,6 +1644,36 @@ public class TungstenConfig {
      * <p>Read walkerYieldedToMiner: zero means the two never contended and this changed nothing.
      */
     public boolean walkerYieldsToMiner = false;
+    /**
+     * A target within walking distance must not be held by a SEARCH LOCK that drives nothing.
+     *
+     * <p>⛔ THE BIGGEST MEASURED LOSS IN THE PLAYTHROUGH, AND IT IS AN ORDERING MISTAKE.
+     * Four playthroughs scored 13 barren locks against 1 productive. A lock runs 30 s
+     * (LOCK_DURATION_MS), so that is on the order of 390 s of standing still per sweep. The
+     * geometry of one of them:
+     *
+     * <pre>
+     *   spruce_log:3.5&gt;3.3, m0.0, h3.1, dy+1.0
+     * </pre>
+     *
+     * A drop three and a half blocks away, and the body moved ZERO. Nothing about that is a
+     * pathfinding problem -- at that range no route is needed.
+     *
+     * <p>The primitive that handles it already exists twenty lines below: "face it and hold
+     * forward. No search, no route, no lock", written after this same defect was traced to a bot
+     * standing 1.17 blocks from a drop. It is UNREACHABLE while a lock is held, because
+     * {@code if (TungstenHelper.isActive())} returns null on every branch it has -- the task's only
+     * two outcomes under a lock are "do nothing" and "release". So the lock does not merely fail to
+     * drive the body: it shuts out the one thing that would.
+     *
+     * <p>The decision "search or walk" is being taken AFTER the lock. It belongs before it. When
+     * the target is inside close-walk range and nothing is actually driving, drop the lock and let
+     * the walk below have the tick.
+     *
+     * <p>Read nearLockDropped to prove it fired, and lock=barren/productive/refused for whether it
+     * paid. GATE: playthrough plus nav, craft and pvp -- entity approach is on every course.
+     */
+    public boolean nearTargetDropsLockForWalk = true;
 
     /**
      * While a block-breaking task holds the aim, the path executor must not steer the camera.
