@@ -11,7 +11,6 @@ import adris.altoclef.util.goals.AltoGoal;
 import adris.altoclef.util.helpers.TungstenHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.progresscheck.MovementProgressChecker;
-import baritone.api.pathing.goals.Goal;
 import kaptainwutax.tungsten.path.movements.Input;
 import net.minecraft.block.*;
 import net.minecraft.util.math.BlockPos;
@@ -52,7 +51,6 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     private final MovementProgressChecker stuckCheck = new MovementProgressChecker();
     private final boolean wander;
     protected MovementProgressChecker checker = new MovementProgressChecker();
-    protected Goal cachedGoal = null;
     /** The same goal in altoclef's own terms — what the drive and isFinished actually steer by. */
     protected AltoGoal cachedAlto = null;
     // Anti-permanent-stuck (tungsten-primary): if the bot hasn't moved for a while,
@@ -250,16 +248,15 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 }
                 if (!checker.check(mod)) {
                     // Baritone failed — try Tungsten before wandering
-                    if (cachedGoal != null) {
+                    if (cachedAlto != null) {
                         var player = mod.getPlayer();
                         var goalPos = new net.minecraft.util.math.Vec3d(
                                 player.getX(), player.getY(), player.getZ());
-                        // Try to extract goal position from cachedGoal for Tungsten
-                        if (cachedGoal instanceof baritone.api.pathing.goals.GoalBlock gb) {
-                            goalPos = new net.minecraft.util.math.Vec3d(gb.x, gb.y, gb.z);
-                        } else if (cachedGoal instanceof baritone.api.pathing.goals.GoalGetToBlock gg) {
-                            goalPos = new net.minecraft.util.math.Vec3d(gg.x, gg.y, gg.z);
-                        }
+                        // G-0: AltoGoal.target() IS the point, so the instanceof ladder over legacy
+                        // goal classes that used to recover it is gone -- which is the whole reason
+                        // AltoGoal was introduced.
+                        var t = cachedAlto.target();
+                        if (t != null) goalPos = t;
                         if (TungstenHelper.tryPathTo(goalPos)) {
                             Nav.cancel();
                             setDebugState("Baritone stuck, trying Tungsten...");
@@ -310,12 +307,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // do nothing and let the task ask again next tick -- a tick spent waiting for the
             // engine we are keeping beats a tick spent moving on the engine we are deleting.
             if (kaptainwutax.tungsten.TungstenConfig.get().neverHandOffToLegacy) {
-                net.minecraft.util.math.Vec3d legacyPos = null;
-                if (cachedGoal instanceof baritone.api.pathing.goals.GoalBlock gb2) {
-                    legacyPos = new net.minecraft.util.math.Vec3d(gb2.x, gb2.y, gb2.z);
-                } else if (cachedGoal instanceof baritone.api.pathing.goals.GoalGetToBlock gg2) {
-                    legacyPos = new net.minecraft.util.math.Vec3d(gg2.x, gg2.y, gg2.z);
-                }
+                net.minecraft.util.math.Vec3d legacyPos = cachedAlto == null ? null : cachedAlto.target();
                 if (legacyPos != null && TungstenHelper.tryPathTo(legacyPos)) {
                     pdLegacyToTungsten++;
                 } else {
@@ -368,15 +360,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     protected AltoGoal goal(AltoClef mod) {
         if (cachedAlto != null) return cachedAlto;
         cachedAlto = newAltoGoal(mod);
-        if (cachedAlto != null) {
-            // The legacy baritone fallback further down still needs a goal of ITS type. This is the
-            // only translation in that direction in the codebase, and it is deliberately here
-            // rather than in AltoGoal: when the fallback goes, the import goes with it.
-            if (cachedGoal == null) cachedGoal = toBaritone(cachedAlto);
-            return cachedAlto;
-        }
-        if (cachedGoal == null) cachedGoal = newGoal(mod);
-        if (cachedGoal != null) cachedAlto = new BaritoneGoalView(cachedGoal);
+        // G-0: the legacy twin is gone, and with it toBaritone(), BaritoneGoalView and newGoal().
+        // The comment that stood here promised the import would go when the fallback did. It has.
         return cachedAlto;
     }
 
@@ -396,46 +381,15 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
      * HEURISTICS rather than places — flee goals, the lava escape, the direction goal — which carry
      * baritone's cost model inside them and need porting rather than translating.
      */
-    protected Goal newGoal(AltoClef mod) {
-        return null;
-    }
+    // removed with the legacy goal type (G-0)
 
     /** A baritone goal seen through the AltoGoal window, so the drive needs to know one type. */
-    private record BaritoneGoalView(Goal goal) implements AltoGoal {
-        @Override
-        public net.minecraft.util.math.Vec3d target() {
-            return goalToVec(goal, AltoClef.getInstance());
-        }
-
-        @Override
-        public boolean reached(BlockPos pos) {
-            return goal.isInGoal(pos);
-        }
-
-        @Override
-        public String toString() {
-            return String.valueOf(goal);
-        }
-    }
+    // removed with the legacy goal type (G-0)
 
     /** An AltoGoal in baritone's vocabulary, for as long as the legacy fallback is still wired up.
      *  Null when the shape has no baritone equivalent — the fallback then simply does not run,
      *  which is the same thing it does today for any goal it cannot translate. */
-    private static Goal toBaritone(AltoGoal g) {
-        if (g instanceof AltoGoal.Block b) {
-            return new baritone.api.pathing.goals.GoalBlock(b.pos());
-        }
-        if (g instanceof AltoGoal.Near n) {
-            return new baritone.api.pathing.goals.GoalNear(n.pos(), n.range());
-        }
-        if (g instanceof AltoGoal.Xz x) {
-            return new baritone.api.pathing.goals.GoalXZ(x.x(), x.z());
-        }
-        if (g instanceof AltoGoal.YLevel y) {
-            return new baritone.api.pathing.goals.GoalYLevel(y.y());
-        }
-        return null;
-    }
+    // removed with the legacy goal type (G-0)
 
     protected void onWander(AltoClef mod) {
     }
@@ -912,44 +866,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         return true;
     }
 
-    /** Extract a target position from a baritone goal for tungsten (GoalBlock /
-     *  GoalGetToBlock / GoalNear carry x,y,z). Null if the goal has no point. */
-    private static net.minecraft.util.math.Vec3d goalToVec(Goal goal, AltoClef mod) {
-        net.minecraft.util.math.Vec3d raw = null;
-        if (goal instanceof baritone.api.pathing.goals.GoalBlock gb) {
-            raw = new net.minecraft.util.math.Vec3d(gb.x, gb.y, gb.z);
-        } else if (goal instanceof baritone.api.pathing.goals.GoalGetToBlock gg) {
-            raw = new net.minecraft.util.math.Vec3d(gg.x, gg.y, gg.z);
-        } else if (goal instanceof baritone.api.pathing.goals.GoalNear gn) {
-            net.minecraft.util.math.BlockPos p = gn.getGoalPos();
-            raw = new net.minecraft.util.math.Vec3d(p.getX(), p.getY(), p.getZ());
-        } else if (goal instanceof baritone.api.pathing.goals.GoalTwoBlocks gt) {
-            net.minecraft.util.math.BlockPos p = gt.getGoalPos();
-            raw = new net.minecraft.util.math.Vec3d(p.getX(), p.getY(), p.getZ());
-        } else if (goal instanceof baritone.api.pathing.goals.GoalXZ gxz) {
-            // No y in the goal at all — an XZ goal means "get to this column", so aim at our own
-            // height and let the search find the surface.
-            raw = new net.minecraft.util.math.Vec3d(gxz.getX(), mod.getPlayer().getY(), gxz.getZ());
-        // THE FLEE BRANCH IS GONE BECAUSE THE GOAL TYPE IS. All three flee tasks now build an
-        // AltoGoal.FleeLive, which the drive reads directly, so nothing produces a
-        // GoalRunAwayFromEntities for this method to translate. What lived here is worth keeping
-        // in one line: a flee goal carries no position, it used to fall through to null, and that
-        // switched the tungsten driver off for the whole time the bot was running away -- 368 of
-        // 596 navigation entries lost, the bot standing still for four minutes. FleeLive answers
-        // target() with a real point, so the failure cannot come back by omission.
-        } else if (goal instanceof baritone.api.pathing.goals.GoalComposite gc) {
-            // Nearest member wins: a composite is "any of these will do".
-            double best = Double.MAX_VALUE;
-            for (Goal sub : gc.goals()) {
-                net.minecraft.util.math.Vec3d v = goalToVec(sub, mod);
-                if (v == null) continue;
-                double d = v.squaredDistanceTo(mod.getPlayer().getX(),
-                        mod.getPlayer().getY(), mod.getPlayer().getZ());
-                if (d < best) { best = d; raw = v; }
-            }
-        }
-        return raw;
-    }
+    // goalToVec REMOVED (G-0): it was the instanceof ladder over six legacy goal classes
+    // that existed purely to recover a point. AltoGoal.target() is that point.
+
 
     /** A goal cell that isn't standable (inside a solid block, or floating in air
      *  above the ground — e.g. a click on a grass block reports the cell ABOVE the
