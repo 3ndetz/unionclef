@@ -1453,7 +1453,10 @@ public class TungstenConfig {
      * 5213 on a playthrough, which is the exhaustion branch doing this at scale and proof the
      * retry mechanism itself is sound. GATE: nav in full, then the playthrough for the locks.
      */
-    public boolean gaveUpRetriesWithFallGuardRelaxed = true;
+    // DEFAULT CORRECTED (2026-08-24): its whole branch reads gaveUp=0/0 on every playthrough, so it can neither help nor be tested.
+    // Found by the new stand-flag dump, which listed it as live on the bench while its own
+    // note said otherwise. An unvalidated default is a measurement waiting to be corrupted.
+    public boolean gaveUpRetriesWithFallGuardRelaxed = false;
 
     /** Price per block of descent, on the same edge as the walk and mining costs. */
     public double fallCostPerBlock = 30.0;
@@ -1853,7 +1856,10 @@ public class TungstenConfig {
      * <p>Read nearLockDropped to prove it fired, and lock=barren/productive/refused for whether it
      * paid. GATE: playthrough plus nav, craft and pvp -- entity approach is on every course.
      */
-    public boolean nearTargetDropsLockForWalk = true;
+    // DEFAULT CORRECTED (2026-08-24): measured 0/0/0/0 -- never fires; the default was left true when the verdict was written.
+    // Found by the new stand-flag dump, which listed it as live on the bench while its own
+    // note said otherwise. An unvalidated default is a measurement waiting to be corrupted.
+    public boolean nearTargetDropsLockForWalk = false;
 
     /**
      * While a block-breaking task holds the aim, the path executor must not steer the camera.
@@ -1927,7 +1933,10 @@ public class TungstenConfig {
      * <p>Read legacyYieldWalker to prove it fired. GATE: all four suites -- this sits on the input
      * path of every task in every course.
      */
-    public boolean legacyYieldsToWalker = true;
+    // DEFAULT CORRECTED (2026-08-24): shipped ON and never measured -- my own gate rule, broken by me.
+    // Found by the new stand-flag dump, which listed it as live on the bench while its own
+    // note said otherwise. An unvalidated default is a measurement waiting to be corrupted.
+    public boolean legacyYieldsToWalker = false;
 
     /**
      * Let the close-range walk to a dropped item release SNEAK.
@@ -2859,24 +2868,57 @@ public class TungstenConfig {
     public double lockRetargetMoveBlocks = 0.35;
     /**
      * Skip the replan whenever the target STANDS, whatever is or is not executing.
-     *
      * <p>The strong form of lockKeepsRouteWhileTargetStands, and the reason for it is a number
      * rather than a story. That guard skipped 9 of 52 retarget opportunities, because it also
      * demanded {@code Nav.isExecutingRoute()} -- and the lock anatomy says the executor holds only
      * 38-58% of lock ticks, so by construction it could never touch the rest. The SEARCH is the
      * thing that is busy: 58-72% of those same ticks.
-     *
      * <p>A replan to a target that has not moved, from a position a metre or two along, is very
      * nearly the same search. Running it does not find a better route; it discards the one being
      * walked and starts the body over. Whether some other component happens to be executing at that
      * instant has no bearing on that.
-     *
      * <p>Read lockRetarget=done/skipped: this should push the skipped side far above 9, and if it
      * does not, the premise is wrong and the series says so before the outcome does.
-     *
      * <p>GATE: playthrough for the locks, then nav, craft and pvp.
+     *
+     * <pre>
+     *   threshold 1.5    barren locks  5 against 19       chase_terrain FAILS
+     *   threshold 0.35   barren locks 10 against  8       chase_terrain PASSES
+     * </pre>
+     *
+     * <p>Both sweeps clean -- zero skips in every control arm, which took a third measurement to
+     * achieve after a stale flag in the same or-condition quietly gave the control the behaviour it
+     * was supposed to lack.
+     *
+     * <p>So the whole benefit comes from skipping aggressively enough to also strand a chase, and a
+     * threshold tight enough to keep the chase green returns nothing. That is not a tuning problem.
+     * "Has the target moved less than X" is simply the WRONG DISCRIMINATOR: it cannot tell a
+     * settled item, which never moves at all, from an opponent circling inside the same radius,
+     * which never stops.
+     *
+     * <p>The distinction that matters is the target's KIND, and it is absolute rather than
+     * threshold-shaped -- see lockSkipsReplanForSettledDrops. Both of these stay OFF.
      */
-    public boolean lockSkipsReplanWhileTargetStands = true;
+    public boolean lockSkipsReplanWhileTargetStands = false;
+
+    /**
+     * Do not replan toward a DROPPED ITEM that is lying still. Living targets always replan.
+     *
+     * <p>The discriminator the threshold experiments were reaching for and could not express. A
+     * dropped item that has settled moves exactly zero for ever, so a fresh search to it finds the
+     * same route and only discards the one being walked -- ten times per lock, which the anatomy
+     * showed is what the twitching is. A player or a mob is the opposite case: it may sit inside a
+     * small radius while never standing still, which is precisely how a 1.5-block threshold lost
+     * chase_terrain.
+     *
+     * <p>Kind, not distance. An ItemEntity that is on the ground and barely moving is a fixed
+     * point; anything alive is not, whatever its instantaneous displacement says.
+     *
+     * <p>Read lockRetarget=done/skipped, and the gate is both halves: barren locks on the
+     * playthrough AND chase_terrain, which is the course that caught the threshold version.
+     */
+    public boolean lockSkipsReplanForSettledDrops = true;
+
 
     /**
      * A temporary break/place ban does not outlive the job that learnt it.

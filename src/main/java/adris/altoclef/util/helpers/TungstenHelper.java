@@ -170,15 +170,22 @@ public class TungstenHelper {
                             && lastRetargetTarget.squaredDistanceTo(target)
                                < kaptainwutax.tungsten.TungstenConfig.get().lockRetargetMoveBlocks
                                  * kaptainwutax.tungsten.TungstenConfig.get().lockRetargetMoveBlocks;
-                    // The strong form drops the isExecutingRoute requirement: a replan to a target that
-                    // has not moved is nearly the same search whoever happens to be driving, and the
-                    // weak form could only ever reach the 38-58% of lock ticks the executor holds.
-                    boolean skipReplan = targetStands
-                            && (kaptainwutax.tungsten.TungstenConfig.get().lockSkipsReplanWhileTargetStands
-                                || (kaptainwutax.tungsten.TungstenConfig.get().lockKeepsRouteWhileTargetStands
-                                    && adris.altoclef.control.Nav.isExecutingRoute()));
+                    // KIND, NOT DISTANCE. A settled drop is a fixed point for ever, so replanning to it
+                    // discards the route being walked and finds the same one again -- ten times per lock,
+                    // which the lock anatomy showed is the twitching itself. Anything ALIVE may sit inside
+                    // a small radius while never standing still, which is exactly how the 1.5-block
+                    // threshold version stranded chase_terrain while a 0.35 one returned nothing.
+                    boolean settledDrop = lockedEntity instanceof net.minecraft.entity.ItemEntity
+                            && lockedEntity.isOnGround()
+                            && lockedEntity.getVelocity().horizontalLengthSquared() < 0.0025;
+                    boolean skipReplan =
+                            (kaptainwutax.tungsten.TungstenConfig.get().lockSkipsReplanForSettledDrops
+                             && settledDrop)
+                            || (targetStands
+                                && (kaptainwutax.tungsten.TungstenConfig.get().lockSkipsReplanWhileTargetStands
+                                    || (kaptainwutax.tungsten.TungstenConfig.get().lockKeepsRouteWhileTargetStands
+                                        && adris.altoclef.control.Nav.isExecutingRoute())));
                     if (skipReplan) {
-
                         lockRetargetSkipped++;
                         lockRetargetDone--;          // it was counted as done; it was not done
                     } else {
