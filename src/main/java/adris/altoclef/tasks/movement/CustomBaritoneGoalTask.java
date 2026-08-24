@@ -23,6 +23,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     /** Entry and early-exit tallies for the tungsten branch; read over py4j in placeStats(). */
     public static volatile int pdEnter, pdNotPrimary, pdPillar, pdBridge, pdStuckGiveUp,
             pdWalking, pdNear, pdNoGoal, pdFinished, pdNoVec, pdStallWalker, pdStallReset, pdNearBusy, pdNearFind, pdPlanning, pdPlanGiveUp;
+    /** Planning ticks that did NOT reset the stall watchdog. Proof the fix fired. */
+    public static volatile int pdPlanNoReset;
 
     /** Routes handed back to the walker because the queue could only admit a stub; 0 at minSteps=1. */
     public static volatile int pdQueueTooShort;
@@ -806,7 +808,24 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     Debug.logMessage("primDrive asyncKick busy" + busy);
                 if (!busy && pf != null) { if (ex != null) ex.stop = false; pf.find(mod.getWorld(), gp, mod.getPlayer()); }
                 Nav.cancel();
-                checker.reset();
+                // ⛔ DO NOT PET THE WATCHDOG FROM THE BRANCH THAT IS FAILING.
+                //
+                // checker.reset() stood here, and this branch by definition produced no movement --
+                // it only kicked a search. The checker IS the stall detector every recovery in this
+                // task hangs off, so resetting it told them all that a motionless bot was fine.
+                //
+                // pdPlan reads 8171/34: eight thousand planning ticks against thirty-four give-ups,
+                // about seven minutes of a run. With the legacy engine gone there is no second
+                // engine to pick the goal up, and the same spot now reproduces exactly -- ten
+                // minutes at 1219.5,104.1,-843.5 planning a flat fourteen-block route.
+                //
+                // Ordinary planning is unaffected: it costs a second or two and the checker's
+                // window is six.
+                if (!kaptainwutax.tungsten.TungstenConfig.get().planningIsNotProgress) {
+                    checker.reset();
+                } else {
+                    pdPlanNoReset++;
+                }
                 setDebugState("Tungsten (primary) planning...");
                 return true;
             }

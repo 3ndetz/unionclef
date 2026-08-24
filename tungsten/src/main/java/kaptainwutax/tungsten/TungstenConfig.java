@@ -3109,6 +3109,37 @@ public class TungstenConfig {
      * sevenfold spread. What is claimed is that three rungs which had never appeared, appeared --
      * and that the mechanism behind them fired 434 and 9915 times.
      */
+    /**
+     * Planning is not progress, so it must not reset the stall watchdog.
+     *
+     * <p>⛔ THE BRANCH THAT FAILS IS THE BRANCH THAT SILENCES THE ALARM. The tungsten-primary drive
+     * has a branch for "no block path yet -- kick the async search", and it ends with
+     * {@code checker.reset()} on every tick it runs. That checker is the stall detector: it trips
+     * after six seconds without the body covering a tenth of a block, and every recovery in the
+     * task hangs off it. Resetting it there means a branch which by definition produced NO movement
+     * tells the watchdog everything is fine.
+     *
+     * <p>Measured: pdPlan reads 8171/34 and 4305/17 -- eight thousand planning ticks against
+     * thirty-four give-ups, roughly seven minutes of a run spent in a branch that moves nothing.
+     * And with the legacy engine removed there is no longer a second engine to pick the goal up, so
+     * the same spot now reproduces exactly:
+     *
+     * <pre>
+     *   bot     1219.5, 104.1, -843.5   unchanged from t=854s to t=1432s
+     *   target  1205,   104,   -846     14 blocks horizontally, SAME level
+     *   state   "Tungsten (primary) planning..."
+     * </pre>
+     *
+     * <p>Ten minutes planning a flat fourteen-block route, with the alarm being reset every tick of
+     * it. The existing PLAN_GIVE_UP_MS bound does fire, but handing the tick back changes nothing
+     * while the checker says the bot is fine: the next tick re-enters planning with a fresh timer.
+     *
+     * <p>Normal planning is untouched -- it takes a second or two and the checker's window is six.
+     *
+     * <p>Read pdPlanNoReset to prove it fired. GATE: nav and craft, then the 30-minute playthrough
+     * at that coordinate.
+     */
+    public boolean planningIsNotProgress = true;
     public boolean sleepNeedsAnObtainableBed = true;
     /**
      * Wander with TUNGSTEN instead of handing the job to the legacy explore process.
