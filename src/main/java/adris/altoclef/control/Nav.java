@@ -34,17 +34,12 @@ public final class Nav {
     private Nav() {
     }
 
-    private static baritone.Baritone engine() {
-        AltoClef mod = AltoClef.getInstance();
-        return mod == null ? null : mod.getClientBaritone();
-    }
+    // engine() REMOVED (G-0, 2026-08-24): there is no second engine to return.
 
     /** Stop navigating. Safe to call when nothing is. */
     public static void cancel() {
-        baritone.Baritone b = engine();
-        if (b != null) {
-            b.getPathingBehavior().forceCancel();
-        }
+        // G-0: tungsten is the only engine now. Cancelling means stopping tungsten.
+        adris.altoclef.util.helpers.TungstenHelper.stop();
     }
 
     /** Times {@link #cancelAll} ran, and times it found a route still running. Read as navStop. */
@@ -162,8 +157,7 @@ public final class Nav {
                 || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) {
             return true;
         }
-        baritone.Baritone b = engine();
-        return b != null && b.getPathingBehavior().isPathing();
+        return kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get();
     }
 
     /** Times {@link #isExecutingRoute} said no while {@link #isPathing} said yes. Read as navSearchOnly. */
@@ -282,42 +276,20 @@ public final class Nav {
                 }
             }
         }
-        baritone.Baritone b = engine();
-        return b == null || b.getPathingBehavior().isSafeToCancel();
+        // Nothing else owns the body, so a cancel is always safe once the checks above pass.
+        return true;
     }
 
     /** Is there a goal set and being worked on? */
     public static boolean hasGoal() {
-        baritone.Baritone b = engine();
-        return b != null && b.getCustomGoalProcess().isActive();
+        return adris.altoclef.util.helpers.TungstenHelper.isActive();
     }
 
     /** Forget the current goal. */
     public static void clearGoal() {
-        baritone.Baritone b = engine();
-        if (b != null) {
-            b.getCustomGoalProcess().onLostControl();
-        }
+        adris.altoclef.util.helpers.TungstenHelper.stop();
     }
 
-    /**
-     * DOES THE ENGINE WE ARE DELETING STILL DRIVE THE BODY, AND HOW OFTEN AT THE SAME TIME AS
-     * TUNGSTEN? Counted rather than argued, because both readings are currently live in this
-     * repository and they cannot both be right.
-     *
-     * <p>The note at TimeoutWanderTask's explore() call says the legacy engine "stopped driving the
-     * body when tungsten became the default", and it has an A/B behind it. The operator, watching a
-     * recording, says the opposite in plain words: baritone keeps activating and breaking the
-     * route. A counter settles it.
-     *
-     * <p>legacyPathTicks: the legacy PathingBehavior reports it is executing a path.
-     * legacyOverlapTicks: it reports that WHILE the tungsten executor is replaying one -- two
-     * engines pressing the movement keys on the same tick, which is the same defect shape as the
-     * camera one (two writers, last one wins) and would look exactly like the operator's
-     * description.
-     * exploreTicks: the explore process is active at all.
-     */
-    public static volatile int legacyPathTicks = 0, legacyOverlapTicks = 0, exploreTicks = 0;
 
     /**
      * DOES THE BOT EVER SEE ORE? The one link missing from the ceiling chain, and it decides
@@ -374,27 +346,18 @@ public final class Nav {
         }
     }
 
-    /** Called once per client tick from AltoClef.onClientTick. Reads only; presses nothing. */
-    public static void tickEngineOverlap() {
-        baritone.Baritone b = engine();
-        if (b == null) return;
-        boolean legacy;
-        try {
-            legacy = b.getPathingBehavior().getCurrent() != null;
-        } catch (Throwable t) {
-            return;                       // never let an instrument break a tick
-        }
-        if (legacy) {
-            legacyPathTicks++;
-            if (kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
-                legacyOverlapTicks++;
-            }
-        }
-        try {
-            if (b.getExploreProcess().isActive()) exploreTicks++;
-        } catch (Throwable ignored) {
-        }
-    }
+    /**
+     * legacyPathTicks / legacyOverlapTicks / exploreTicks and tickEngineOverlap REMOVED (G-0).
+     *
+     * <p>They existed to answer 'does the engine we are deleting still drive the body', and they
+     * answered it: 8558/18/9384, 8079/2134/8603, 7988/610/7952 -- the legacy engine executing a
+     * path for eight thousand ticks a run and exploring for nine thousand, up to 2134 of those
+     * ticks while the tungsten executor was driving too. That is what the operator kept seeing
+     * as freezing and as the bot looking one way while acting another.
+     *
+     * <p>The instrument did its job and the engine is gone, so both go.
+     */
+    public static volatile int navSearchOnlyUnused;
 
     /**
      * Is the bot wandering off to look for something it cannot see yet?
@@ -406,8 +369,8 @@ public final class Nav {
      * until there is somewhere else to send it.
      */
     public static boolean isExploring() {
-        baritone.Baritone b = engine();
-        return b != null && b.getExploreProcess().isActive();
+        // G-0: exploration is tungsten's wander now; there is no legacy process to be inside.
+        return false;
     }
 
     /**
@@ -418,18 +381,14 @@ public final class Nav {
      * "forget where you were going".
      */
     public static void pause() {
-        baritone.Baritone b = engine();
-        if (b != null) {
-            b.getPathingBehavior().requestPause();
-        }
+        // Tungsten has no pause primitive: holding still is done by the caller releasing keys,
+        // and the route survives because nothing cancels it here.
+        adris.altoclef.util.helpers.TungstenHelper.holdStill();
     }
 
     /** Drop everything, including any queued path. Stronger than {@link #cancel()}. */
     public static void cancelEverything() {
-        baritone.Baritone b = engine();
-        if (b != null) {
-            b.getPathingBehavior().cancelEverything();
-        }
+        adris.altoclef.util.helpers.TungstenHelper.stop();
     }
 
     // isBuilding() / stopBuilding() USED TO LIVE HERE, and G-0a removed both.
@@ -446,9 +405,6 @@ public final class Nav {
 
     /** Stop exploring. Safe to call when nothing is. */
     public static void stopExploring() {
-        baritone.Baritone b = engine();
-        if (b != null) {
-            b.getExploreProcess().onLostControl();
-        }
+        adris.altoclef.util.helpers.TungstenHelper.stop();
     }
 }

@@ -53,6 +53,8 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
             Blocks.SWEET_BERRY_BUSH
     };
     private Vec3d origin;
+    /** Wander destinations chosen for tungsten, and those it accepted. Proof this fired. */
+    public static volatile int wanderTungPicked = 0, wanderTungDriven = 0;
     //private DistanceProgressChecker _distanceProgressChecker = new DistanceProgressChecker(10, 0.1f);
     private boolean _forceExplore;
     private Task _unstuckTask = null;
@@ -317,7 +319,25 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         // dead-engine call and still has to go for G-0, but it has to go as a real port of
         // exploration onto tungsten, not a one-line substitution that trades measured coverage for
         // a tidier dependency graph.
-        if (!Nav.isExploring()) {
+        // ⛔ THE LAST LIVE HAND-OFF TO THE LEGACY ENGINE, AND IT IS NOT A DEAD CALL.
+        //
+        // The note above says this branch issues no movement. The counters say otherwise:
+        // legacyDrive reads 8558/18/9384 and 8079/2134/8603 -- the legacy engine executing a
+        // path for eight thousand ticks a run and exploring for nine thousand, up to 2134 of
+        // them while the tungsten executor is also driving. Two engines, one body.
+        //
+        // A real port, not the one-line swap the note rightly refused: pick a point on the
+        // wander circle, drive it with tungsten, pick another when reached or refused.
+        if (kaptainwutax.tungsten.TungstenConfig.get().wanderUsesTungsten) {
+            if (!Nav.isExecutingRoute() && !adris.altoclef.util.helpers.TungstenHelper.isActive()) {
+                double ang = ((wanderTungPicked * 137) % 360) * Math.PI / 180.0;
+                double r = Math.max(8.0, distanceToWander + _wanderDistanceExtension);
+                net.minecraft.util.math.Vec3d dest = new net.minecraft.util.math.Vec3d(
+                        origin.x + Math.cos(ang) * r, origin.y, origin.z + Math.sin(ang) * r);
+                wanderTungPicked++;
+                if (adris.altoclef.util.helpers.TungstenHelper.tryPathTo(dest)) wanderTungDriven++;
+            }
+        } else if (!Nav.isExploring()) {
             mod.getClientBaritone().getExploreProcess().explore((int) origin.getX(), (int) origin.getZ());
         }
         boolean progressing = progressChecker.check(mod);

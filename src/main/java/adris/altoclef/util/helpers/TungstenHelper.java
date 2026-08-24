@@ -597,6 +597,30 @@ public class TungstenHelper {
         barrenStreak = keepStreak;
     }
 
+    /**
+     * Hold the body still for a moment WITHOUT throwing the route away.
+     *
+     * <p>Replaces the legacy requestPause(), which five callers used before eating, filling a
+     * bucket or opening a screen. Cancelling would make each of them re-plan afterwards, so the
+     * distinction between "wait" and "forget where you were going" has to survive G-0.
+     *
+     * <p>Tungsten has no pause primitive, and it does not need one: releasing the movement keys
+     * stops the body while the executor keeps its path, and the next tick resumes it.
+     */
+    public static void holdStill() {
+        try {
+            var opts = net.minecraft.client.MinecraftClient.getInstance().options;
+            if (opts == null) return;
+            opts.forwardKey.setPressed(false);
+            opts.backKey.setPressed(false);
+            opts.leftKey.setPressed(false);
+            opts.rightKey.setPressed(false);
+            opts.jumpKey.setPressed(false);
+        } catch (Exception ignored) {
+            // never let a hold be the thing that breaks a tick
+        }
+    }
+
     /** Stop Tungsten pathfinding if it's running. Also clears the lock. */
     public static void stop() {
         if (!isTungstenLoaded()) return;

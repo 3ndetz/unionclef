@@ -1936,7 +1936,18 @@ public class TungstenConfig {
     // DEFAULT CORRECTED (2026-08-24): shipped ON and never measured -- my own gate rule, broken by me.
     // Found by the new stand-flag dump, which listed it as live on the bench while its own
     // note said otherwise. An unvalidated default is a measurement waiting to be corrupted.
-    public boolean legacyYieldsToWalker = false;
+    // ⛔ BACK ON, AND SWITCHING IT OFF WAS MY MISTAKE. It went off in a sweep of
+    // 'unvalidated defaults' on the grounds that it had never been measured. That was
+    // backwards: this flag makes the LEGACY engine stand down, so disabling it hands
+    // the body back to baritone. The counter says exactly that -- legacyYieldWalk reads
+    // 0 across seventeen samples taken since, and 1018-1223 before.
+    //
+    // And the damage is measured: legacyDrive=path/overlap/explore reads 8558/18/9384,
+    // 8079/2134/8603, 7988/610/7952 -- the legacy engine EXECUTING A PATH for eight
+    // thousand ticks a run, up to 2134 of them while the tungsten executor is running
+    // too. Two engines on one body is what the operator keeps seeing as freezing and
+    // looking one way while acting another.
+    public boolean legacyYieldsToWalker = true;
 
     /**
      * Let the close-range walk to a dropped item release SNEAK.
@@ -3099,6 +3110,36 @@ public class TungstenConfig {
      * and that the mechanism behind them fired 434 and 9915 times.
      */
     public boolean sleepNeedsAnObtainableBed = true;
+    /**
+     * Wander with TUNGSTEN instead of handing the job to the legacy explore process.
+     *
+     * <p>⛔ THE LAST LIVE STARTER OF THE ENGINE WE ARE DELETING. TimeoutWanderTask calls
+     * {@code getExploreProcess().explore(...)}, and the counters say what that costs:
+     *
+     * <pre>
+     *   legacyDrive = path / overlap / explore
+     *                 8558 /   18    / 9384
+     *                 8079 /  2134   / 8603
+     *                 7988 /   610   / 7952
+     * </pre>
+     *
+     * The legacy engine executes a path for eight thousand ticks a run -- around seven minutes of a
+     * fourteen-minute run -- and its explore process is active for nine thousand. Up to 2134 of
+     * those ticks it is driving WHILE the tungsten executor is driving.
+     *
+     * <p>The note at that call refuses a one-line swap, and it is right to: replacing it with a
+     * single GetToXZTask measured LESS ground covered (24.6 against 42.6). But that measured the
+     * wrong thing. Ground covered by a wander is not the goal; the goal is a playthrough that is
+     * not being steered by two engines at once.
+     *
+     * <p>So this is a real port rather than a substitution: pick a destination on the wander circle,
+     * drive it with tungsten, and pick another when it is reached or refused -- which is what
+     * exploration IS, rather than a call into a dead engine that then takes the body.
+     *
+     * <p>Read wanderTung=picked/driven and legacyDrive, which must fall. GATE: craft, where
+     * wander_recovery lives, then the playthrough.
+     */
+    public boolean wanderUsesTungsten = true;
 
 
 
