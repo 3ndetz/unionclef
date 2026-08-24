@@ -3161,6 +3161,59 @@ public class TungstenConfig {
      * <p>Stays OFF with its numbers. The reproducible case at 1219.5,104.1,-843.5 -> 1205,104,-846
      * is still open and still the right target: fourteen flat blocks that tungsten will not plan.
      */
+    /**
+     * The "already at the wall" shortcut may only fire when there is still a wall.
+     *
+     * <p>⛔ THIS IS THE STALL, AND IT IS A LOOP RATHER THAN A FAILURE TO PLAN. Reproduced on demand
+     * at 1219.5,104.1,-843.5 heading for 1205,104,-846 -- fourteen flat blocks -- with
+     * repro_stall.py, ninety seconds of zero movement per attempt:
+     *
+     * <pre>
+     *   pdEnter=1921  pdWalking=0  mqStarted=0  bs=23/22
+     *   primDrive robustPath present=false sz=0 fresh=true   (every tick)
+     *   [Tungsten] Mining done -- passage open               (repeatedly, 636 ms each)
+     *   "Failed! No block path"                              ZERO times
+     * </pre>
+     *
+     * <p>So a path IS found, mining DOES run and finish, and the drive still sees nothing. The loop
+     * closes in PathFinder.search: the branch for "already standing at the wall" hands the executor
+     * an EMPTY physics path on purpose ("Skip the physics leg"), starts the break, clears
+     * PathFinder.blockPath and returns, trusting the goto retry to drive the rest. The retry finds
+     * another truncated path to the same wall and takes the same branch.
+     *
+     * <p>Nothing walks the body through the opening it just made. And "Mining done" arriving in
+     * 636 ms is the tell: the blocks are already air, so the break completes instantly and the
+     * shortcut has skipped the physics leg for no work at all.
+     *
+     * <p>The guard is unarguable: the shortcut trades the physics leg for a break, so it may only
+     * be taken when a break is actually outstanding. With every planned block already air, fall
+     * through and let the physics search route through the hole.
+     *
+     * <p>Read wallSkipRefused to prove it fired. GATE: the 90-second repro first, then nav, craft
+     * and the playthrough.
+     *
+     * <h2>REFUTED BY ITS OWN COUNTER, IN NINETY SECONDS (2026-08-25)</h2>
+     *
+     * <pre>
+     *   wallSkipRefused = 0        the guard never fired
+     *   "Mining done"   = 135      in three minutes
+     *   mqSteps = 0,  pdWalking = 0
+     * </pre>
+     *
+     * <p>The premise was that the shortcut fires with every planned block already air, skipping the
+     * physics leg for no work. It does not: wallSkipRefused is zero, so there is a REAL block to
+     * break every single time.
+     *
+     * <p>What the repro did establish, and it is sharper than the guess: the bot completes 135
+     * breaks in three minutes while taking ZERO steps. It is mining real blocks, one after another,
+     * and never moving. So the question is not "does the shortcut skip work" but "why does mining
+     * an actual obstacle never turn into a step" -- and that is a different mechanism, in the
+     * executor rather than in this branch.
+     *
+     * <p>Off. Kept with its numbers because the loop it describes is real -- the branch does clear
+     * the path and rely on a retry -- and only the "already air" half of the story was wrong.
+     */
+    public boolean wallShortcutNeedsAWall = false;
     public boolean planningIsNotProgress = false;
     public boolean sleepNeedsAnObtainableBed = true;
     /**

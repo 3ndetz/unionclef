@@ -300,7 +300,23 @@ public class PathFinder {
 	    // physics search starves on ("Ran out of nodes" with nothing emitted).
 	    // Skip the physics leg — hand the executor an empty path with the break
 	    // queue, mining starts immediately and the goto retry drives the rest.
+	    // ⛔ AND ONLY IF THERE IS STILL A WALL. This shortcut trades the physics leg for a
+	    // break, so with every planned block already air it skips the leg for no work at all --
+	    // and nothing walks the body through the hole it made a moment ago. That is the stall:
+	    // mine, clear the path, return, retry, find the same truncated path, mine again. The
+	    // 636 ms "Mining done" is the tell.
+	    boolean wallStillThere = false;
+	    if (pendingBreaks != null) {
+	        for (net.minecraft.util.math.BlockPos bp : pendingBreaks) {
+	            if (!world.getBlockState(bp).isAir()) { wallStillThere = true; break; }
+	        }
+	    }
+	    if (!wallStillThere && pendingBreaks != null && !pendingBreaks.isEmpty()
+	            && TungstenConfig.get().wallShortcutNeedsAWall) {
+	        wallSkipRefused++;
+	    }
 	    if (pendingBreaks != null && !pendingBreaks.isEmpty()
+	            && (wallStillThere || !TungstenConfig.get().wallShortcutNeedsAWall)
 	            && blockPath.get().size() <= 2
 	            && player.getEyePos().distanceTo(net.minecraft.util.math.Vec3d.ofCenter(pendingBreaks.get(0))) < 4.0) {
 	        Debug.logMessage("At the wall — mining without a physics leg");
@@ -1859,4 +1875,6 @@ public class PathFinder {
     	return false;
     }
 	
+    /** Wall shortcuts refused because every planned break was already air. */
+    public static volatile int wallSkipRefused;
 }
