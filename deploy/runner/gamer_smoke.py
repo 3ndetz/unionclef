@@ -656,6 +656,23 @@ def main():
     # --pin-alt alternates the value by RUN INDEX (rule 4r). Blocked arms on a course this
     # variable make "which flag" inseparable from "when in the session": the playthrough's ladder
     # already swings from five rungs to one between neighbouring runs on identical settings.
+    # ⛔ PRINT WHAT IS ACTUALLY ON THE STAND BEFORE PINNING ANYTHING.
+    #
+    # Settings persist in tungsten.json and SURVIVE a client recreate, so a flag left true by an
+    # earlier sweep is still true now even though the code default says false. That has voided
+    # three measurements in one session -- most recently a control arm that skipped 8 replans
+    # because a SECOND flag in the same or-condition was still on from a previous pin, which made
+    # both arms measure the same thing while every PIN VERIFIED line looked correct.
+    #
+    # Verifying the pins is not enough: what corrupts a pair is the flag nobody pinned. So dump
+    # every boolean that is TRUE, once, before the arms diverge. It is a few lines of log and it
+    # turns "I do not know what I measured" into a grep.
+    try:
+        _cfg = sh(["docker", "exec", CLIENT, "cat", "/mc-data/config/tungsten.json"], 30).stdout
+        _on = sorted(k for k, v in json.loads(_cfg).items() if v is True)
+        print("  STAND FLAGS ON:", " ".join(_on) if _on else "(none)")
+    except Exception as _e:
+        print("  STAND FLAGS: could not read tungsten.json --", str(_e)[:120])
     _alt = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--pin-alt"]
     _PIN_BASES = dict(
         _s.split("=", 1) for _s in
