@@ -2813,6 +2813,32 @@ public class TungstenConfig {
      * fires -- the mistake this file has already paid for three times.
      *
      * <p>Read lockRetarget=done/skipped. GATE: playthrough for the locks, then nav, craft and pvp.
+     *
+    public boolean lockKeepsRouteWhileTargetStands = false;
+     *
+     * <pre>
+     *   pair 1   fix       lockRetarget 43/9   lock 15/3/14   4 rungs, stone@110.7s
+     *            control   lockRetarget 23/0   lock  7/1/4    4 rungs, NO stone tools
+     *   pair 2   fix       lockRetarget  1/0   lock  0/0/0    3 rungs   &lt;- never fired
+     *            control   lockRetarget  7/0   lock  4/1/1    3 rungs, stone@199.8s
+     * </pre>
+     *
+     * <p>Clean exclusivity where it fired -- 9 skips against 0 -- and pair 2 is void for this flag
+     * by rule 4a1, its fixed arm having skipped nothing. So one informative pair, and it points
+     * both ways: more barren locks with the guard (15 against 7), but the ladder reached stone
+     * tools while the control did not get there at all.
+     *
+     * <p>Stays OFF. One mixed pair is not a result, and this file has already paid for treating one
+     * as though it were.
+     *
+     * <p>WHAT THE NUMBERS DO SUPPORT, for whoever takes this next: the skip rate is LOW -- 9 of the
+     * 52 retarget opportunities in that run. The guard also requires {@code Nav.isExecutingRoute()},
+     * and the anatomy says the executor holds only 38-58% of lock ticks, so by construction it can
+     * never touch the rest. The search, meanwhile, is active on 58-72% of them. A stronger variant
+     * skips the replan whenever the target STANDS, whatever is or is not executing, on the grounds
+     * that a fresh search to an unchanged target from a slightly different spot is nearly the same
+     * search. That is the next thing to try, and unlike four attempts before it, it has a measured
+     * quantity behind it rather than a story.
      */
     public boolean lockKeepsRouteWhileTargetStands = true;
 
