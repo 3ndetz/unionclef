@@ -319,6 +319,61 @@ public final class Nav {
      */
     public static volatile int legacyPathTicks = 0, legacyOverlapTicks = 0, exploreTicks = 0;
 
+    /**
+     * DOES THE BOT EVER SEE ORE? The one link missing from the ceiling chain, and it decides
+     * between two fixes that have nothing in common.
+     *
+     * <p>Measured: after stone tools the bot spends 97.4% of its samples above Y=60 (862 positions
+     * over 29 runs, median Y 82), and the ore tasks -- priority 1050, twice the stone toolset's 520
+     * -- never take over, because DistanceOrePriorityCalculator scores by distance to a KNOWN ore
+     * and there is none.
+     *
+     * <p>The convenient reading is "it never goes underground". That may be wrong: since 1.18 coal
+     * generates high as well, peaking near Y=95, and iron has a second band up there too. At a
+     * median of Y=82 there could be coal within a few blocks. So:
+     *
+     * <ul>
+     *   <li>ore SEEN and near -> the scanner is fine and something else refuses the task;
+     *   <li>ore seen but FAR -> it is a travel problem, not a descent problem;
+     *   <li>ore never seen at all -> the bot really must go down and find caves.
+     * </ul>
+     *
+     * <p>Three different fixes, one counter. Read oreSeen=coalTicks/ironTicks/samples and
+     * oreNear=coalDist/ironDist (nearest seen this run, -1 for never).
+     *
+     * <p>Sampled once a second; the scanner lookup is not free enough to do every tick.
+     */
+    public static volatile int oreSample, oreCoalSeen, oreIronSeen;
+    public static volatile double oreCoalNearest = -1, oreIronNearest = -1;
+    private static int oreTickCounter;
+
+    /** Called once per client tick from AltoClef.onClientTick. Reads only. */
+    public static void tickOreVisibility() {
+        try {
+            if ((oreTickCounter++ % 20) != 0) return;
+            AltoClef mod = AltoClef.getInstance();
+            if (mod == null || mod.getPlayer() == null || mod.getWorld() == null) return;
+            oreSample++;
+            var self = mod.getPlayer().getPos();
+            var coal = mod.getBlockScanner().getNearestBlock(
+                    net.minecraft.block.Blocks.COAL_ORE, net.minecraft.block.Blocks.DEEPSLATE_COAL_ORE);
+            if (coal.isPresent()) {
+                oreCoalSeen++;
+                double d = self.distanceTo(net.minecraft.util.math.Vec3d.ofCenter(coal.get()));
+                if (oreCoalNearest < 0 || d < oreCoalNearest) oreCoalNearest = d;
+            }
+            var iron = mod.getBlockScanner().getNearestBlock(
+                    net.minecraft.block.Blocks.IRON_ORE, net.minecraft.block.Blocks.DEEPSLATE_IRON_ORE);
+            if (iron.isPresent()) {
+                oreIronSeen++;
+                double d = self.distanceTo(net.minecraft.util.math.Vec3d.ofCenter(iron.get()));
+                if (oreIronNearest < 0 || d < oreIronNearest) oreIronNearest = d;
+            }
+        } catch (Throwable ignored) {
+            // an instrument must never be the thing that breaks a tick
+        }
+    }
+
     /** Called once per client tick from AltoClef.onClientTick. Reads only; presses nothing. */
     public static void tickEngineOverlap() {
         baritone.Baritone b = engine();
