@@ -2,7 +2,7 @@ package adris.altoclef;
 
 import adris.altoclef.trackers.threats.DamageTrackerStrategy;
 import adris.altoclef.util.slots.Slot;
-import baritone.altoclef.AltoClefSettings;
+import adris.altoclef.settings.AltoClefSettings;
 import baritone.api.Settings;
 import baritone.api.utils.RayTraceUtils;
 import kaptainwutax.tungsten.path.movements.Rotation;

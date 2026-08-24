@@ -2107,7 +2107,7 @@ public class Py4jEntryPoint {
         out.put("ok", true);
         out.put("centre", x + "," + y + "," + z);
         out.put("radius", r);
-        out.put("predicatesNow", baritone.altoclef.AltoClefSettings.avoidPredCount);
+        out.put("predicatesNow", adris.altoclef.settings.AltoClefSettings.avoidPredCount);
         return out;
     }
 
@@ -2116,7 +2116,7 @@ public class Py4jEntryPoint {
         _mod.getBehaviour().resetAvoidBlockBreakingExtra();
         Map<String, Object> out = new HashMap<>();
         out.put("ok", true);
-        out.put("predicatesNow", baritone.altoclef.AltoClefSettings.avoidPredCount);
+        out.put("predicatesNow", adris.altoclef.settings.AltoClefSettings.avoidPredCount);
         return out;
     }
 
@@ -2713,8 +2713,8 @@ public class Py4jEntryPoint {
         adris.altoclef.util.helpers.WorldHelper.BreakStats.cbAvoid = 0;
         adris.altoclef.util.helpers.WorldHelper.BreakStats.cbPlausible = 0;
         adris.altoclef.util.helpers.WorldHelper.BreakStats.cbReach = 0;
-        baritone.altoclef.AltoClefSettings.avoidHitSet = 0;
-        baritone.altoclef.AltoClefSettings.avoidHitPred = 0;
+        adris.altoclef.settings.AltoClefSettings.avoidHitSet = 0;
+        adris.altoclef.settings.AltoClefSettings.avoidHitPred = 0;
         adris.altoclef.BotBehaviour.breakAvoidersRegistered = 0;
         adris.altoclef.BotBehaviour.lastBreakAvoiderBy = "-";
         adris.altoclef.tasks.resources.MineAndCollectTask.MineOrCollectTask.dropSeen = 0;
@@ -3272,9 +3272,9 @@ public class Py4jEntryPoint {
                 adris.altoclef.util.helpers.WorldHelper.BreakStats.cbAvoid,
                 adris.altoclef.util.helpers.WorldHelper.BreakStats.cbPlausible,
                 adris.altoclef.util.helpers.WorldHelper.BreakStats.cbReach,
-                baritone.altoclef.AltoClefSettings.avoidHitSet,
-                baritone.altoclef.AltoClefSettings.avoidHitPred,
-                baritone.altoclef.AltoClefSettings.avoidPredCount,
+                adris.altoclef.settings.AltoClefSettings.avoidHitSet,
+                adris.altoclef.settings.AltoClefSettings.avoidHitPred,
+                adris.altoclef.settings.AltoClefSettings.avoidPredCount,
                 adris.altoclef.BotBehaviour.breakAvoidersRegistered,
                 adris.altoclef.BotBehaviour.lastBreakAvoiderBy,
                 adris.altoclef.BotBehaviour.breakAvoiderInstalledBy,

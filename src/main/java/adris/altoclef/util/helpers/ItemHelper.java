@@ -775,7 +775,7 @@ public class ItemHelper {
                 }
             }
         }
-        if (baritone.altoclef.AltoClefSettings.getInstance().shouldForceUseTool(state, item)) {
+        if (adris.altoclef.settings.AltoClefSettings.getInstance().shouldForceUseTool(state, item)) {
             return Double.POSITIVE_INFINITY;
         }
         speed /= hardness;

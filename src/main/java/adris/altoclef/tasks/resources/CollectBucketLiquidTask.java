@@ -98,7 +98,7 @@ public class CollectBucketLiquidTask extends ResourceTask {
             if (standingInside == toCollect && WorldHelper.isSourceBlock(mod.getPlayer().getBlockPos(), false)) {
                 setDebugState("Trying to collect (we are in it)");
                 mod.getInputControls().forceLook(0, 90);
-                //mod.getClientBaritone().getLookBehavior().updateTarget(new Rotation(0, 90), true);
+                // (G-0: the legacy look behaviour that stood here is gone.)
                 //Debug.logMessage("Looking at " + _toCollect + ", picking up right away.");
                 tryImmediatePickupTimer.reset();
                 if (mod.getSlotHandler().forceEquipItem(Items.BUCKET)) {

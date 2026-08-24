@@ -111,7 +111,7 @@ public class KillAura {
                     //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
                     //#endif
-                    && (mod.getClientBaritone() == null || Nav.isSafeToCancel())) {
+                    && (Nav.isSafeToCancel())) {
                 LookHelper.smoothLookAt(mod, entities.get().getEyePos());
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);
                 if (shieldSlot.getItem() != Items.SHIELD) {
@@ -217,8 +217,7 @@ public class KillAura {
 
     public void startShielding(AltoClef mod) {
         shielding = true;
-        if (mod.getClientBaritone() != null)
-            Nav.pause();
+                    Nav.pause();
         mod.getExtraBaritoneSettings().setInteractionPaused(true);
         if (!mod.getPlayer().isBlocking()) {
             ItemStack handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot());

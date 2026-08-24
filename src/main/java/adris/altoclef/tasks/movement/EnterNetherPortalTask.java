@@ -73,16 +73,9 @@ public class EnterNetherPortalTask extends Task {
             setDebugState("Waiting inside portal");
             Nav.stopExploring();
             Nav.clearGoal();
-            mod.getClientBaritone().getMineProcess().onLostControl();
-            mod.getClientBaritone().getFarmProcess().onLostControl();
-            // ⛔ THESE TWO LINES DO NOTHING, AND THEY ARE LEFT THAT WAY DELIBERATELY.
-            // The two above them cancel a process (`getMineProcess().onLostControl()`); these
-            // only FETCH one and drop it. A third line of the same shape asked for the builder
-            // and was removed with G-0a, because nothing starts the builder any more -- but
-            // adding the missing .onLostControl() to these two is a behaviour change to portal
-            // entry, not a cleanup, and it gets its own pass and its own test.
-            mod.getClientBaritone().getGetToBlockProcess();
-            mod.getClientBaritone().getFollowProcess();
+            // G-0: the four legacy process calls that stood here are gone with the engine.
+            // Two cancelled a process and two were no-ops kept deliberately; tungsten is
+            // stopped by Nav.clearGoal() on the line above, which is the whole job now.
             mod.getInputControls().release(Input.SNEAK);
             mod.getInputControls().release(Input.MOVE_BACK);
             mod.getInputControls().release(Input.MOVE_FORWARD);

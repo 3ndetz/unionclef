@@ -277,8 +277,10 @@ public class SkyWarsTask extends Task {
 
     private double getCurrentCalculatedHeuristic(AltoClef mod) {
         if (Nav.isPathing()) {
-            Optional<Double> ticksRemainingOp = mod.getClientBaritone().getPathingBehavior().ticksRemainingInSegment();
-            return ticksRemainingOp.orElse(Double.POSITIVE_INFINITY);
+            // G-0: the legacy engine reported ticks left in its segment. Tungsten does not expose
+            // that, and this heuristic only needs 'a route is running', so a route in progress
+            // scores as unknown-but-busy rather than as an exact tick count.
+            return Double.POSITIVE_INFINITY;
         }
         return Double.NEGATIVE_INFINITY;
     }

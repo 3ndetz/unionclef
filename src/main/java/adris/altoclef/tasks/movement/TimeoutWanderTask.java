@@ -337,8 +337,6 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 wanderTungPicked++;
                 if (adris.altoclef.util.helpers.TungstenHelper.tryPathTo(dest)) wanderTungDriven++;
             }
-        } else if (!Nav.isExploring()) {
-            mod.getClientBaritone().getExploreProcess().explore((int) origin.getX(), (int) origin.getZ());
         }
         boolean progressing = progressChecker.check(mod);
         if (progressing) {

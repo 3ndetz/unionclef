@@ -33,7 +33,7 @@ import adris.altoclef.util.helpers.InputHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
 import baritone.Baritone;
-import baritone.altoclef.AltoClefSettings;
+import adris.altoclef.settings.AltoClefSettings;
 import baritone.api.BaritoneAPI;
 import baritone.api.Settings;
 import net.fabricmc.api.ModInitializer;
@@ -539,7 +539,7 @@ public class AltoClef implements ModInitializer {
         // Tasks
         TaskCatalogue.init();
 
-        if (getClientBaritone() != null) {
+        if (true) {
             getClientBaritone().getGameEventHandler().registerEventListener(new TabCompleter());
         }
 

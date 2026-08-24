@@ -433,8 +433,7 @@ public class MobDefenseChain extends SingleTaskChain {
 
     private static void startShielding(AltoClef mod) {
         shielding = true;
-        if (mod.getClientBaritone() != null)
-            Nav.pause();
+                    Nav.pause();
         mod.getExtraBaritoneSettings().setInteractionPaused(true);
         if (!mod.getPlayer().isBlocking()) {
             ItemStack handItem = StorageHelper.getItemStackInSlot(PlayerSlot.getEquipSlot());
@@ -643,8 +642,7 @@ public class MobDefenseChain extends SingleTaskChain {
             wasPuttingOutFire = true;
         } else {
             // Stop putting stuff out if we no longer need to put out a fire.
-            if (mod.getClientBaritone() != null)
-                mod.getInputControls().release(Input.CLICK_LEFT);
+                            mod.getInputControls().release(Input.CLICK_LEFT);
             wasPuttingOutFire = false;
         }
 
@@ -705,7 +703,7 @@ public class MobDefenseChain extends SingleTaskChain {
                     //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
                     //#endif
-                    && (mod.getClientBaritone() == null || Nav.isSafeToCancel())
+                    && (Nav.isSafeToCancel())
                     && blowingUp.getClientFuseTime(blowingUp.getFuseSpeed()) > 0.5) {
                 LookHelper.lookAt(mod, blowingUp.getEyePos());
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);
@@ -741,7 +739,7 @@ public class MobDefenseChain extends SingleTaskChain {
                     //#else
                     && !mod.getPlayer().getItemCooldownManager().isCoolingDown(offhandItem)
                     //#endif
-                    && (mod.getClientBaritone() == null || Nav.isSafeToCancel())
+                    && (Nav.isSafeToCancel())
                     && !mod.getEntityTracker().entityFound(PotionEntity.class) && projectileIsClose) {
                 ItemStack shieldSlot = StorageHelper.getItemStackInSlot(PlayerSlot.OFFHAND_SLOT);
                 if (shieldSlot.getItem() != Items.SHIELD) {
@@ -1640,9 +1638,8 @@ public class MobDefenseChain extends SingleTaskChain {
                         Optional<Entity> ghastBall = mod.getEntityTracker().getClosestEntity(FireballEntity.class);
                         Optional<Entity> ghast = mod.getEntityTracker().getClosestEntity(GhastEntity.class);
                         if (ghastBall.isPresent() && ghast.isPresent() && runAwayTask == null
-                                && (mod.getClientBaritone() == null || Nav.isSafeToCancel())) {
-                            if (mod.getClientBaritone() != null)
-                                Nav.pause();
+                                && (Nav.isSafeToCancel())) {
+                                                            Nav.pause();
                             LookHelper.lookAt(mod, ghast.get().getEyePos());
                         }
                         return false;
@@ -1775,9 +1772,8 @@ public class MobDefenseChain extends SingleTaskChain {
                                         (int) Math.ceil(shotRange / ARROW_BLOCKS_PER_TICK) + 1))
                                 : DODGE_HOLD_TICKS;
 
-                        if (runAwayTask == null && (mod.getClientBaritone() == null || Nav.isSafeToCancel())) {
-                            if (mod.getClientBaritone() != null)
-                                Nav.pause();
+                        if (runAwayTask == null && (Nav.isSafeToCancel())) {
+                                                            Nav.pause();
                         }
                         return true;
                     }

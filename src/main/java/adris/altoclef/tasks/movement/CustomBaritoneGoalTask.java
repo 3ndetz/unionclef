@@ -322,7 +322,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     pdLegacyDeclined++;
                 }
             } else {
-                mod.getClientBaritone().getCustomGoalProcess().setGoalAndPath(cachedGoal);
+                // G-0: the legacy hand-off is gone. If tungsten declines, wait a tick and ask again --
+                // there is no other engine to fall back to, and that is the point.
             }
         }
         setDebugState("Completing goal.");

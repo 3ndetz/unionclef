@@ -284,7 +284,7 @@ public class WorldSurvivalChain extends SingleTaskChain {
         // Swim
         boolean avoidedDrowning = false;
         if (mod.getModSettings().shouldAvoidDrowning()) {
-            if (mod.getClientBaritone() == null || !Nav.isPathing()) {
+            if (!Nav.isPathing()) {
                 if (mod.getPlayer().isTouchingWater() && mod.getPlayer().getAir() < mod.getPlayer().getMaxAir()) {
                     // Swim up!
                     mod.getInputControls().hold(Input.JUMP);
