@@ -2778,6 +2778,46 @@ public class TungstenConfig {
      * failure this file records.
      */
     public boolean pathStartMustSucceed = false;
+    /**
+     * Do not replan a route that is still being walked, unless the target has actually moved.
+     *
+     * <p>⛔ MEASURED FIRST THIS TIME, AND IT OVERTURNS FOUR EARLIER ATTEMPTS. A per-tick anatomy of
+     * what runs during a lock, over two playthroughs:
+     *
+     * <pre>
+     *   lockAnat = total / search / exec / walk / queue / IDLE / MOVED
+     *   run 1      2882 / 1744 / 1684 / 71 / 69 /   7 / 1185
+     *   run 2      2264 / 1303 / 1311 /  0 /  5 /   5 /  700
+     * </pre>
+     *
+     * IDLE is 7 ticks of 2882 and 5 of 2264 -- two tenths of one per cent. Something is running
+     * essentially always, so "nobody drives the body" is FALSE, and that assumption is what the
+     * camera yield, the lock drop, the walker yield and the give-up retry were all built on.
+     *
+     * <p>And the body MOVES on 41% and 31% of lock ticks. A barren lock is not a freeze. It is
+     * motion that nets to zero -- which is exactly what the operator described from a recording
+     * ("the bot twitches back and forth") and what {@code m0.0} in the barren geometry means: 41%
+     * of ticks spent moving, ending where it started.
+     *
+     * <p>The search is active on 58-60% of those ticks, which is what continuous replanning looks
+     * like. And the lock branch replans every {@code RETARGET_INTERVAL_MS} = 3 s, so a
+     * thirty-second lock throws away and rebuilds its route TEN TIMES. Each new plan starts from
+     * wherever the body has got to and sends it somewhere else; the executor walks a prefix of
+     * each. Ten prefixes of ten different routes is a bot going back and forth.
+     *
+     * <p>Retargeting exists to chase a target that MOVES -- a drop that got kicked, an entity
+     * walking away. When the target has not moved, replanning gains nothing and costs the route in
+     * progress. So: skip it while a route is actually executing and the target is where it was.
+     *
+     * <p>Counted ALWAYS, acted on only when flagged, so the control arm can report how often this
+     * fires -- the mistake this file has already paid for three times.
+     *
+     * <p>Read lockRetarget=done/skipped. GATE: playthrough for the locks, then nav, craft and pvp.
+     */
+    public boolean lockKeepsRouteWhileTargetStands = true;
+
+    /** How far a target must move to justify throwing away the route being walked, in blocks. */
+    public double lockRetargetMoveBlocks = 1.5;
 
     /**
      * A temporary break/place ban does not outlive the job that learnt it.

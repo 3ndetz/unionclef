@@ -155,10 +155,32 @@ public class TungstenHelper {
             // If locked and Tungsten is still working, just retarget periodically
             if (isLocked() && tungstenBusy) {
                 if (now - lastRetargetTime > RETARGET_INTERVAL_MS) {
-                    applyFallbackTuning(pf);
-                    pf.find(world, target, player);
+                    // ⛔ TEN REPLANS PER LOCK IS WHY THE BOT GOES BACK AND FORTH.
+                    //
+                    // The per-tick anatomy of a lock says the body MOVES on 31-41% of its ticks
+                    // while idling on 0.2%, so a barren lock is motion that nets to zero rather
+                    // than a freeze -- and the search is active on 58-60% of them, which is what
+                    // replanning every three seconds looks like from the inside. Each new plan
+                    // starts wherever the body has reached and sends it elsewhere; the executor
+                    // walks a prefix of each one.
+                    //
+                    // Retargeting is for a target that MOVES. If it has not, keep the route.
+                    lockRetargetDone++;
+                    boolean targetStands = lastRetargetTarget != null
+                            && lastRetargetTarget.squaredDistanceTo(target)
+                               < kaptainwutax.tungsten.TungstenConfig.get().lockRetargetMoveBlocks
+                                 * kaptainwutax.tungsten.TungstenConfig.get().lockRetargetMoveBlocks;
+                    if (kaptainwutax.tungsten.TungstenConfig.get().lockKeepsRouteWhileTargetStands
+                            && targetStands && adris.altoclef.control.Nav.isExecutingRoute()) {
+                        lockRetargetSkipped++;
+                        lockRetargetDone--;          // it was counted as done; it was not done
+                    } else {
+                        applyFallbackTuning(pf);
+                        pf.find(world, target, player);
+                        lastRetargetTarget = target;
+                        Debug.logInternal("[TungstenHelper] Retargeted to " + formatVec(target));
+                    }
                     lastRetargetTime = now;
-                    Debug.logInternal("[TungstenHelper] Retargeted to " + formatVec(target));
                 }
                 return true;
             }
@@ -329,6 +351,10 @@ public class TungstenHelper {
      *
      * <p>Read lockAnat=total/search/exec/walk/queue/idle. Sampled from the client tick, reads only.
      */
+    /** Replans inside a lock: actually done, and skipped because the target stood still. */
+    public static volatile int lockRetargetDone, lockRetargetSkipped;
+    private static net.minecraft.util.math.Vec3d lastRetargetTarget;
+
     public static volatile int lockTicks, lockSearching, lockExecuting, lockWalking,
             lockQueue, lockIdle, lockMoved;
 
