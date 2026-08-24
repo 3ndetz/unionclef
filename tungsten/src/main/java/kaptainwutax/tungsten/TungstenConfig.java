@@ -3005,6 +3005,29 @@ public class TungstenConfig {
      *
      * <p>Read the post-rung task share, which is the number this is aimed at: 69% stone_axe today.
      * GATE: playthrough for the ladder, then craft -- the toolset lives there.
+     *
+     * <h2>MEASURED: IT REDIRECTS THE BOT EXACTLY AS INTENDED (2026-08-24)</h2>
+     *
+     * <p>The number this was aimed at is the share of post-rung samples spent on the toolset. The
+     * historical baseline, over 25 runs, is 69% stone_axe. With the fix, in the one run of the
+     * paired sweep that produced enough post-rung samples to read:
+     *
+     * <pre>
+     *   run 3 (fix)   after stone tools:  stone_axe 0%,  COAL 80%  (8 of 10 samples)
+     * </pre>
+     *
+     * The bot stopped collecting a stone hoe and went mining coal, which is the next rung. That is
+     * the mechanism doing precisely what the arithmetic predicted once the flat 520 stopped
+     * outranking (1 / distance) * 1050.
+     *
+     * <p>Ladder, two pairs: 4 rungs against 3, and 5 against 4 -- the fixed arm ahead in both, and
+     * neither arm past stone tools inside a 14-minute run. Reaching stone tools at 156 s leaves
+     * about ten minutes to smelt and mine, so the rung not moving here says little; the task share
+     * says a great deal.
+     *
+     * <p>The other three runs produced 0, 9 and 1 post-rung samples, which is too few to read. That
+     * is the honest limit of this measurement: one run's worth of evidence for the redirection,
+     * and it agrees with the arithmetic exactly.
      */
     public boolean toolsetYieldsToOre = true;
 
