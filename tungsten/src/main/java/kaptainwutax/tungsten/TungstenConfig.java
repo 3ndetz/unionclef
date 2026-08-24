@@ -2749,6 +2749,33 @@ public class TungstenConfig {
      *
      * <p>Off by default. Mechanism gate: {@code lock}'s third field, findRefused, which must be
      * non-zero on a stalling run or the premise is wrong and the series says so before the outcome.
+     *
+     * <h2>MEASURED: ONE LIVE PAIR, MIXED -- NOT DEMONSTRATED (2026-08-24)</h2>
+     *
+     * <pre>
+     *   pair 1   fix       lock 9/1/984    5 rungs, stone@179.0s
+     *            control   lock 11/6/10    4 rungs, stone@154.3s
+     *   pair 2   fix       lock 1/0/0      3 rungs          &lt;- mechanism did NOT fire
+     *            control   lock 4/0/2      4 rungs, stone@177.5s
+     * </pre>
+     *
+     * <p>The admission test this note demanded is satisfied -- findRefused is non-zero on stalling
+     * runs (4, 10, 15, 2 across the day) -- so the premise stands. And in pair 1 the mechanism is
+     * unmistakably live: 984 refusals honoured against 10, because an honest "no" makes the caller
+     * ask again every tick instead of standing under a lock taken for a search that never started.
+     *
+     * <p>But pair 1 is MIXED: fewer barren locks (9 against 11) and fewer PRODUCTIVE ones (1
+     * against 6), with a slower ladder. And pair 2 measured nothing at all -- findRefused reads 0
+     * in its fixed arm, so by rule 4a1 that pair is void for this flag whatever its ladder did.
+     *
+     * <p>One informative pair, pointing both ways, is not a result. Stays OFF. What it needs is
+     * more pairs in which findRefused is non-zero on BOTH arms -- which is a scheduling problem,
+     * not a code one: the refusal window opens after a stop or a completed search, so a run that
+     * never stalls never tests this.
+     *
+     * <p>Worth keeping precisely because the mechanism is real and rare: the trace it was written
+     * from -- parked 1.17 blocks from a drop seen 2393 times -- is still the clearest single
+     * failure this file records.
      */
     public boolean pathStartMustSucceed = false;
 
