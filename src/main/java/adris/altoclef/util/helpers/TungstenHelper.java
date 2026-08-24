@@ -307,6 +307,62 @@ public class TungstenHelper {
     private static final double LOCK_PROGRESS_BLOCKS = 0.5;
 
     /**
+     * WHAT IS THE BOT ACTUALLY DOING DURING A BARREN LOCK? Counted per tick, because five
+     * consecutive fixes were aimed at this stall from reasoning and every one of them turned out to
+     * be pointed at a branch that does not execute here.
+     *
+     * <p>A lock runs thirty seconds and up to eleven of them go barren in a single playthrough, so
+     * this is the largest measured loss the run has. What has never been established is which of
+     * the plausible stories is true, and they cannot all be:
+     *
+     * <ul>
+     *   <li>SEARCHING -- the pathfinder is grinding and never returns a route;
+     *   <li>EXECUTING -- a route exists and the body will not follow it;
+     *   <li>WALKING / QUEUE -- one of the other drivers owns the body and gets nowhere;
+     *   <li>IDLE -- nothing at all is running, and the lock is simply parking the bot.
+     * </ul>
+     *
+     * <p>These are mutually exclusive predictions and one counter separates them. IDLE dominating
+     * means the fix is "give the tick to something", which is what four of my attempts assumed
+     * without checking. SEARCHING dominating means the fix is in the search. EXECUTING dominating
+     * means the route is fine and the body is stuck, which is a different file entirely.
+     *
+     * <p>Read lockAnat=total/search/exec/walk/queue/idle. Sampled from the client tick, reads only.
+     */
+    public static volatile int lockTicks, lockSearching, lockExecuting, lockWalking,
+            lockQueue, lockIdle, lockMoved;
+
+    private static net.minecraft.util.math.Vec3d lockLastPos;
+
+    /** Called once per client tick from AltoClef.onClientTick. Reads only; presses nothing. */
+    public static void tickLockAnatomy() {
+        try {
+            if (!isLocked()) { lockLastPos = null; return; }
+            lockTicks++;
+            boolean searching = TungstenModDataContainer.PATHFINDER.active.get();
+            boolean exec = TungstenModDataContainer.isExecutorRunning();
+            boolean walk = kaptainwutax.tungsten.task.BlockPathWalker.isRunning();
+            boolean queue = kaptainwutax.tungsten.path.movements.MovementQueue.isRunning();
+            if (searching) lockSearching++;
+            if (exec) lockExecuting++;
+            if (walk) lockWalking++;
+            if (queue) lockQueue++;
+            if (!searching && !exec && !walk && !queue) lockIdle++;
+            // Did the BODY move this tick? A driver that runs and achieves nothing reads the same
+            // as no driver at all in every counter above, and they need different fixes.
+            var self = AltoClef.getInstance().getPlayer();
+            if (self != null) {
+                if (lockLastPos != null && self.getPos().squaredDistanceTo(lockLastPos) > 0.0004) {
+                    lockMoved++;
+                }
+                lockLastPos = self.getPos();
+            }
+        } catch (Throwable ignored) {
+            // an instrument must never be the thing that breaks a tick
+        }
+    }
+
+    /**
      * Is Tungsten currently in its exclusive 30s window?
      *
      * <h2>The window renews itself forever, and the guard against that cannot fire</h2>
