@@ -2842,8 +2842,21 @@ public class TungstenConfig {
      */
     public boolean lockKeepsRouteWhileTargetStands = true;
 
-    /** How far a target must move to justify throwing away the route being walked, in blocks. */
-    public double lockRetargetMoveBlocks = 1.5;
+    /**
+     * How far a target must move to justify throwing away the route being walked, in blocks.
+     *
+     * <p>⛔ 1.5 WAS TOO COARSE AND IT COST chase_terrain. The retarget interval is 3 seconds, and a
+     * duel opponent circling or strafing can stay within 1.5 blocks of where it was three seconds
+     * ago while never once standing still. The guard read that as "the target stands", kept a stale
+     * route, and the course failed -- measured directly, control PASS against fix FAIL on a paired
+     * run of that one course.
+     *
+     * <p>The playthrough case needs nothing like that much slack. A dropped item that has settled
+     * moves EXACTLY zero, which is the whole reason replanning to it is pointless. So a threshold
+     * just above sampling jitter keeps every bit of the benefit -- barren locks 5 against 19 across
+     * two pairs -- while any entity that is actually moving replans every interval as before.
+     */
+    public double lockRetargetMoveBlocks = 0.35;
     /**
      * Skip the replan whenever the target STANDS, whatever is or is not executing.
      *
