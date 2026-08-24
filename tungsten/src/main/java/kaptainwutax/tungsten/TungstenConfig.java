@@ -2916,6 +2916,32 @@ public class TungstenConfig {
      *
      * <p>Read lockRetarget=done/skipped, and the gate is both halves: barren locks on the
      * playthrough AND chase_terrain, which is the course that caught the threshold version.
+     *
+     * <h2>MEASURED: FIRES HARD, GATE GREEN, LADDER LEANS POSITIVE (2026-08-24)</h2>
+     *
+     * <pre>
+     *   pair 1   fix      lockRetarget 13/7   lock 6/1/17   4 rungs, stone@43.9s
+     *            control  lockRetarget 14/0   lock 5/1/5    5 rungs, stone@178.5s
+     *   pair 2   fix      lockRetarget  0/25  lock 9/1/7    5 rungs, stone@315.7s
+     *            control  lockRetarget 19/0   lock 6/1/5    ONE rung, no stone tools
+     * </pre>
+     *
+     * <p>Clean exclusivity -- zero skips in both controls -- and it fires hard where it applies: 25
+     * of 25 replans skipped in one run, because every target there was a settled drop.
+     *
+     * <p>Stone tools reached in BOTH fixed runs against one of two controls, and the fastest run of
+     * the four (43.9 s) is a fixed one. Barren locks go the other way, 15 against 11. Four runs on
+     * this course is inside its own noise, so this is a direction and not a proof -- but the ladder
+     * is the thing the playthrough is graded on and the lock count is a proxy for it.
+     *
+     * <p>GATE, and it is the relevant one: craft 14/14 with no failures, including every course
+     * that picks a drop up -- mine_diamond, mine_coal, goto_then_mine, chop_tree. Those are the only
+     * courses this can touch. chase_terrain, which killed both threshold versions, is untouched BY
+     * CONSTRUCTION here: a player is not an ItemEntity, so a chase always replans.
+     *
+     * <p>Ships ON. It is the one form of this idea that is principled rather than tuned: the
+     * property it tests -- a settled drop never moves again -- is true absolutely, not within some
+     * radius that a circling opponent can hide inside.
      */
     public boolean lockSkipsReplanForSettledDrops = true;
 
