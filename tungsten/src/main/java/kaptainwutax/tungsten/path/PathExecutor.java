@@ -107,6 +107,9 @@ public class PathExecutor {
     public static volatile int execArrived=0, execRanOut=0;
     /** Ticks the executor replayed, and how many of them requested SPRINT — see the tick loop. */
     public static volatile int execTicks=0, execSprintTicks=0;
+    /** Post-mining resumes driven by the search's own goal instead of the hand-driven global. */
+    public static volatile int gotoResumedFromSearch = 0;
+
     /** Ticks the executor handed the camera to a block-breaking task. Proof this fired. */
     public static volatile int execYieldMiner=0;
     private int placingTicks = 0;
@@ -875,6 +878,32 @@ public class PathExecutor {
      */
     private void resumeGotoAfterMining(ClientPlayerEntity player) {
         Vec3d goal = TungstenMod.TARGET;
+        // ⛔ RESUME WHAT THE SEARCH WAS ACTUALLY GIVEN. TungstenMod.TARGET is written only by
+        // hand-driven entries (;goto, the keybinding, follow-entity, py4j), so every altoclef-driven
+        // path leaves it stale and the gate below returns on its first line -- which is why 135
+        // completed breaks produced zero steps at 1219.5,104.1,-843.5. A goal the pathfinder is
+        // actively working is real by definition, whoever supplied it.
+        if (kaptainwutax.tungsten.TungstenConfig.get().resumeUsesSearchTarget
+                && kaptainwutax.tungsten.path.PathFinder.lastSearchTarget != null
+                && !TungstenMod.hasRealGotoTarget()) {
+            final Vec3d searchGoal = kaptainwutax.tungsten.path.PathFinder.lastSearchTarget;
+            gotoResumedFromSearch++;
+            if (searchGoal != null && player.getEntityPos().distanceTo(searchGoal) >= 2.0) {
+                new Thread(() -> {
+                    try {
+                        TungstenModDataContainer.PATHFINDER.stop.set(true);
+                        for (int i = 0; i < 20 && TungstenModDataContainer.PATHFINDER.thread != null; i++) {
+                            Thread.sleep(250);
+                        }
+                        TungstenModDataContainer.PATHFINDER.stop.set(false);
+                        TungstenModDataContainer.PATHFINDER.find(
+                                player.getEntityWorld(),
+                                searchGoal, player);
+                    } catch (Throwable ignored) {}
+                }, "tungsten-mine-resume").start();
+            }
+            return;
+        }
         // ⛔ THERE MAY BE NO GOTO TO RESUME, AND THEN THIS AIMS AT A DEBUG CONSTANT.
         //
         // TungstenMod.TARGET is the module-global goto destination, and it is INITIALISED to

@@ -269,7 +269,14 @@ public interface WorldHelper {
         // term once already (canReach, which the unreachable counter had shown returns true).
         // One run with these will name the term instead.
         boolean okHardness = altoClef.getWorld().getBlockState(pos).getHardness(altoClef.getWorld(), pos) >= 0;
-        boolean okAvoid = !altoClef.getExtraBaritoneSettings().shouldAvoidBreaking(pos);
+        // ⛔ AND THE BLOCK-TYPE LIST, WHICH G-0 ORPHANED. avoidBreaking(Block...) is altoclef's
+        // own API -- the nether portal, an iron golem's blocks -- and its list used to be consulted
+        // by the deleted pathfinder. Moving the storage into AltoClef kept the setters working and
+        // left the list with NO READER, so 'do not break this' silently stopped meaning anything.
+        // Craft fell from 22/22 to 15/22 after that change, with mine_coal, mine_diamond,
+        // pickup_flat and wander_recovery among the failures.
+        boolean okAvoid = !altoClef.getExtraBaritoneSettings().shouldAvoidBreaking(pos)
+                && !altoClef.shouldAvoidBreaking(altoClef.getWorld().getBlockState(pos).getBlock());
         boolean okPlausible = okHardness && okAvoid && plausibleToBreak(altoClef.getWorld(), pos);
         boolean okReach = okPlausible && canReach(pos);
         if (!okHardness) {

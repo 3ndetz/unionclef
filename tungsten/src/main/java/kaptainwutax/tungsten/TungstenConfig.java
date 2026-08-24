@@ -3213,6 +3213,39 @@ public class TungstenConfig {
      * <p>Off. Kept with its numbers because the loop it describes is real -- the branch does clear
      * the path and rely on a retry -- and only the "already air" half of the story was wrong.
      */
+    /**
+     * After mining, resume the goal THE PATHFINDER WAS GIVEN -- not a global only hand-driving sets.
+     *
+     * <p>⛔ THIS IS WHY 135 COMPLETED BREAKS PRODUCE ZERO STEPS. When a break finishes, the
+     * executor calls resumeGotoAfterMining, and its first line is:
+     *
+     * <pre>
+     *   if (gotoResumeNeedsRealTarget &amp;&amp; !TungstenMod.hasRealGotoTarget()) return;
+     * </pre>
+     *
+     * <p>{@code TungstenMod.TARGET} is written by exactly five things: the ;goto command, the
+     * create-goal keybinding, FollowEntityTask, a camera mixin, and four py4j endpoints. The
+     * altoclef primary drive -- which is what moves the bot through the ENTIRE playthrough -- is not
+     * one of them. It calls {@code PATHFINDER.find(world, goal, player)} directly and never touches
+     * the global.
+     *
+     * <p>So targetIsReal is false for every altoclef-driven path, the resume returns on its first
+     * line, and nothing walks the body through the hole it just made. The drive then re-plans, finds
+     * the next obstacle, mines it, and repeats. Measured on the repro at 1219.5,104.1,-843.5:
+     *
+     * <pre>
+     *   "Mining done -- passage open"  135 times in three minutes
+     *   mqSteps = 0     pdWalking = 0     zero steps taken
+     * </pre>
+     *
+     * <p>The fix is not to make altoclef write a global owned by another entry point. The
+     * pathfinder already knows what it was asked for; the resume should use THAT. A goal the search
+     * is actively working is real by definition, whoever supplied it.
+     *
+     * <p>Read gotoResumedFromSearch to prove it fired. GATE: the 90-second repro, then nav, craft
+     * and the playthrough.
+     */
+    public boolean resumeUsesSearchTarget = false;
     public boolean wallShortcutNeedsAWall = false;
     public boolean planningIsNotProgress = false;
     public boolean sleepNeedsAnObtainableBed = true;

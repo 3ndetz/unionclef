@@ -136,7 +136,17 @@ public class PathFinder {
 
 	public Vec3d TARGET = new Vec3d(0.5D, 10.0D, 0.5D);
 	
+	/**
+	 * The goal this pathfinder was last asked for, whoever asked.
+	 *
+	 * <p>TungstenMod.TARGET is only written by hand-driven entry points (;goto, the keybinding,
+	 * follow-entity, py4j), so an altoclef-driven path leaves it stale -- and the post-mining
+	 * resume, which gates on it, gives up. This is the goal that is actually being worked.
+	 */
+	public static volatile Vec3d lastSearchTarget = null;
+
 	synchronized public boolean find(WorldView world, Vec3d target, PlayerEntity player) {
+		lastSearchTarget = target;
 		return find(world, target, player, Optional.empty());
 	}
 
@@ -152,6 +162,7 @@ public class PathFinder {
      * (final_dist stayed at the start position while every other run passed in ~8 s).
      */
     synchronized public boolean find(WorldView world, Vec3d target, PlayerEntity player, Optional<List<BlockNode>> blockPath) {
+		lastSearchTarget = target;
 
         if(active.get() || thread != null) return false;
         active.set(true);
