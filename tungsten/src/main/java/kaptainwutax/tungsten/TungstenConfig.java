@@ -2844,6 +2844,26 @@ public class TungstenConfig {
 
     /** How far a target must move to justify throwing away the route being walked, in blocks. */
     public double lockRetargetMoveBlocks = 1.5;
+    /**
+     * Skip the replan whenever the target STANDS, whatever is or is not executing.
+     *
+     * <p>The strong form of lockKeepsRouteWhileTargetStands, and the reason for it is a number
+     * rather than a story. That guard skipped 9 of 52 retarget opportunities, because it also
+     * demanded {@code Nav.isExecutingRoute()} -- and the lock anatomy says the executor holds only
+     * 38-58% of lock ticks, so by construction it could never touch the rest. The SEARCH is the
+     * thing that is busy: 58-72% of those same ticks.
+     *
+     * <p>A replan to a target that has not moved, from a position a metre or two along, is very
+     * nearly the same search. Running it does not find a better route; it discards the one being
+     * walked and starts the body over. Whether some other component happens to be executing at that
+     * instant has no bearing on that.
+     *
+     * <p>Read lockRetarget=done/skipped: this should push the skipped side far above 9, and if it
+     * does not, the premise is wrong and the series says so before the outcome does.
+     *
+     * <p>GATE: playthrough for the locks, then nav, craft and pvp.
+     */
+    public boolean lockSkipsReplanWhileTargetStands = true;
 
     /**
      * A temporary break/place ban does not outlive the job that learnt it.

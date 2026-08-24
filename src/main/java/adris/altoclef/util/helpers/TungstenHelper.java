@@ -170,8 +170,15 @@ public class TungstenHelper {
                             && lastRetargetTarget.squaredDistanceTo(target)
                                < kaptainwutax.tungsten.TungstenConfig.get().lockRetargetMoveBlocks
                                  * kaptainwutax.tungsten.TungstenConfig.get().lockRetargetMoveBlocks;
-                    if (kaptainwutax.tungsten.TungstenConfig.get().lockKeepsRouteWhileTargetStands
-                            && targetStands && adris.altoclef.control.Nav.isExecutingRoute()) {
+                    // The strong form drops the isExecutingRoute requirement: a replan to a target that
+                    // has not moved is nearly the same search whoever happens to be driving, and the
+                    // weak form could only ever reach the 38-58% of lock ticks the executor holds.
+                    boolean skipReplan = targetStands
+                            && (kaptainwutax.tungsten.TungstenConfig.get().lockSkipsReplanWhileTargetStands
+                                || (kaptainwutax.tungsten.TungstenConfig.get().lockKeepsRouteWhileTargetStands
+                                    && adris.altoclef.control.Nav.isExecutingRoute()));
+                    if (skipReplan) {
+
                         lockRetargetSkipped++;
                         lockRetargetDone--;          // it was counted as done; it was not done
                     } else {
