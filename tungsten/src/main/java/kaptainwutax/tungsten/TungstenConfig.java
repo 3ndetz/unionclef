@@ -2943,7 +2943,6 @@ public class TungstenConfig {
      * property it tests -- a settled drop never moves again -- is true absolutely, not within some
      * radius that a circling opponent can hide inside.
      *
-    public boolean lockSkipsReplanForSettledDrops = false;
      *
      * <p>The verdict above shipped this ON after two pairs. A six-run sweep says that was
      * premature:
@@ -2967,7 +2966,51 @@ public class TungstenConfig {
      * was the error, not the idea. The bar is pairs where the mechanism FIRES on both arms, and
      * enough of them to outvote the ground.
      */
-    public boolean lockSkipsReplanForSettledDrops = true;
+    public boolean lockSkipsReplanForSettledDrops = false;
+
+    /**
+     * The stone toolset must not outrank ORE, which is what a flat priority against a
+     * distance-scaled one guarantees today.
+     *
+     * <p>⛔ THE CEILING, AND IT IS ARITHMETIC. Two priorities of different KINDS are compared as if
+     * they were the same number:
+     *
+     * <pre>
+     *   ore        DistanceItemPriorityCalculator:  priority = (1 / distance) * 1050
+     *   toolset    StaticItemPriorityCalculator:    priority = 520, flat
+     * </pre>
+     *
+     * Measured on the bench: coal is visible on 841 of 847 samples and iron on 847 of 847, with the
+     * NEAREST coal 2.5 blocks away and the nearest iron 4.6. Put those in:
+     *
+     * <pre>
+     *   coal at 2.5 blocks   1050 / 2.5  =  420      loses to 520
+     *   coal at 10 blocks    1050 / 10   =  105      loses to 520
+     *   coal at 50 blocks    1050 / 50   =   21      loses to 520
+     * </pre>
+     *
+     * <p>For ore to win it must be closer than 1050/520 = 2.02 blocks. So the "priority 1050" ore
+     * task, twice the toolset's number on paper, essentially never runs -- and the bot spends 69%
+     * of every post-stone-tools run collecting a stone axe, sword, shovel and hoe it does not need,
+     * with iron ore four blocks away.
+     *
+     * <p>That is the whole ceiling. It explains the 69%, it explains ore being visible and ignored,
+     * and it explains why the ladder stops at stone tools in run after run.
+     *
+     * <p>THE FIX IS NOT A BIGGER NUMBER FOR ORE. Scaling ore up keeps the two kinds incomparable
+     * and just moves the crossover. The toolset is a CONVENIENCE and ore is PROGRESSION, so the
+     * convenience yields whenever progression is actually available: the toolset's flat priority
+     * drops to a value ore beats at a working radius. At 150, ore wins out to 7 blocks; at 60, out
+     * to 17.
+     *
+     * <p>Read the post-rung task share, which is the number this is aimed at: 69% stone_axe today.
+     * GATE: playthrough for the ladder, then craft -- the toolset lives there.
+     */
+    public boolean toolsetYieldsToOre = true;
+
+    /** Flat priority for the stone toolset once ore may compete. Ore beats it out to 1050/this blocks. */
+    public int toolsetPriorityWhenOreMatters = 150;
+
 
 
     /**
