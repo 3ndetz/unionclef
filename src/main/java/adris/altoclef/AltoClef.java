@@ -539,9 +539,8 @@ public class AltoClef implements ModInitializer {
         // Tasks
         TaskCatalogue.init();
 
-        if (true) {
-            getClientBaritone().getGameEventHandler().registerEventListener(new TabCompleter());
-        }
+        // G-0: nothing dispatches tab-complete events now; ChatInputSuggestorMixin calls
+        // TabCompleter.complete() directly.
 
         // Tungsten need-fulfiller, stage 1 (docs/features/TUNGSTEN_ALTOCLEF_API.md):
         // when the tungsten executor mines a block, equip the best tool for it.

@@ -2,9 +2,6 @@ package adris.altoclef.mixins;
 
 import adris.altoclef.eventbus.EventBus;
 import adris.altoclef.eventbus.events.ClientTickEvent;
-import baritone.api.BaritoneAPI;
-import baritone.api.event.events.WorldEvent;
-import baritone.api.event.events.type.EventState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 //#if MC < 12111
@@ -40,7 +37,6 @@ public final class ClientTickMixin {
     //#else
     //$$ private void shredderPreLoadWorld(ClientWorld world, CallbackInfo ci) {
     //#endif
-        fireShredderWorldEvent(world, EventState.PRE);
     }
 
     @Inject(method = "joinWorld", at = @At("RETURN"))
@@ -49,16 +45,8 @@ public final class ClientTickMixin {
     //#else
     //$$ private void shredderPostLoadWorld(ClientWorld world, CallbackInfo ci) {
     //#endif
-        fireShredderWorldEvent(world, EventState.POST);
     }
 
-    @Unique
-    private void fireShredderWorldEvent(ClientWorld world, EventState state) {
-        if (this.world == null && world == null) {
-            return;
-        }
-        BaritoneAPI.getProvider().getPrimaryBaritone().getGameEventHandler().onWorldEvent(
-                new WorldEvent(world, state)
-        );
-    }
+    // fireShredderWorldEvent REMOVED (G-0): it existed to tell the legacy engine that a
+    // world had loaded or unloaded. There is no legacy engine to tell.
 }
