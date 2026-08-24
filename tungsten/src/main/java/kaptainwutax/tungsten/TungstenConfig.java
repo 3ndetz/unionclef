@@ -3138,8 +3138,30 @@ public class TungstenConfig {
      *
      * <p>Read pdPlanNoReset to prove it fired. GATE: nav and craft, then the 30-minute playthrough
      * at that coordinate.
+     *
+     * <h2>MEASURED: FIRES HARD, CHANGES NOTHING -- SHIPS OFF (2026-08-25)</h2>
+     *
+     * <pre>
+     *   baseline  3 rungs              pdPlan 5098/28
+     *   baseline  5 rungs, stone@796.6s   pdPlan 4381/27
+     *   fixed     2 rungs              pdPlan 1088/8/36342
+     *   fixed     5 rungs, stone@1260.9s  pdPlan 11726/56/1304
+     * </pre>
+     *
+     * <p>The mechanism is unmistakably live -- 36342 and 1304 planning ticks that declined to reset
+     * the watchdog. And the ladder does not move: 2 and 5 rungs against 3 and 5, with the fixed arm
+     * reaching stone tools LATER (1260.9s against 796.6s). One fixed run even spent MORE ticks
+     * planning than either baseline.
+     *
+     * <p>So the diagnosis was right about the code -- a branch that produces no movement really was
+     * resetting the stall detector -- and letting the alarm ring changes nothing useful. The
+     * recoveries it wakes (wander, replan) are apparently no better at that spot than sitting still
+     * was, which points the next pass at the RECOVERY rather than the detector.
+     *
+     * <p>Stays OFF with its numbers. The reproducible case at 1219.5,104.1,-843.5 -> 1205,104,-846
+     * is still open and still the right target: fourteen flat blocks that tungsten will not plan.
      */
-    public boolean planningIsNotProgress = true;
+    public boolean planningIsNotProgress = false;
     public boolean sleepNeedsAnObtainableBed = true;
     /**
      * Wander with TUNGSTEN instead of handing the job to the legacy explore process.
