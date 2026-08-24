@@ -3033,6 +3033,43 @@ public class TungstenConfig {
 
     /** Flat priority for the stone toolset once ore may compete. Ore beats it out to 1050/this blocks. */
     public int toolsetPriorityWhenOreMatters = 150;
+    /**
+     * Do not sleep through the night when there is no bed and no way to get one cheaply.
+     *
+     * <p>⛔ FOUND BY THE FIRST 30-MINUTE RUN, AND IT IS THE SAME PRIORITY INVERSION AS THE TOOLSET.
+     * Every measurement in this repository ran for 14 minutes, so night never arrived and this
+     * never showed. In a 30-minute run:
+     *
+     * <pre>
+     *   t= 551s  pos -320.7,109.2,-212.3  items=4  ladder EMPTY
+     *   t=1094s  pos -320.1,108.0,-214.5  items=4  ladder EMPTY
+     * </pre>
+     *
+     * Nine minutes, two blocks of movement, no rung. The task chain:
+     *
+     * <pre>
+     *   Beating the game -&gt; Sleeping through night
+     *     -&gt; Placing a bed nearby + resetting spawn point -&gt; Getting a bed first
+     *     -&gt; Crafting bed: [white_bed, ...]
+     * </pre>
+     *
+     * <p>Night falls, the sleep task takes over, it wants a bed, the bed wants three WOOL, and the
+     * wool wants sheep -- which is the barren-lock case this file has been chasing all day, now
+     * blocking the whole run instead of a corner of it.
+     *
+     * <p>The branch below it already asks the right question: getOneBedTask runs only if a bed is
+     * actually VISIBLE and breakable. The sleep branch asks nothing -- it returns the sleep task on
+     * any night, with no bed, no wool and no sheep in sight, and then blocks on crafting one from
+     * scratch.
+     *
+     * <p>Sleeping is an OPTIMISATION: it skips the night. Spending the night failing to build the
+     * thing that would let you skip it is worse than simply working through the dark. So sleep only
+     * when a bed is already held or one is visible to take.
+     *
+     * <p>Read sleepDeclined to prove it fired. GATE: a 30-minute playthrough -- 14 minutes cannot
+     * see this at all, which is the whole reason it survived a day of measurement.
+     */
+    public boolean sleepNeedsAnObtainableBed = true;
 
 
 

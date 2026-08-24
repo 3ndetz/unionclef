@@ -99,6 +99,8 @@ public class BeatMinecraftTask extends Task {
     private final PlaceBedAndSetSpawnTask setBedSpawnTask = new PlaceBedAndSetSpawnTask();
     private final Task getOneBedTask = TaskCatalogue.getItemTask("bed", 1);
     private final Task sleepThroughNightTask = new SleepThroughNightTask();
+    /** Nights worked through because no bed was held or visible. Proof this fired. */
+    public static volatile int sleepDeclined = 0;
     private final Task killDragonBedStratsTask = new KillEnderDragonWithBedsTask();
     // End specific dragon breath avoidance
     private final DragonBreathTracker dragonBreathTracker = new DragonBreathTracker();
@@ -1622,8 +1624,28 @@ public class BeatMinecraftTask extends Task {
                     }
                 }
 
-                setDebugState("Sleeping through night");
-                return sleepThroughNightTask;
+                // ⛔ SLEEPING IS AN OPTIMISATION; BUILDING A BED FROM NOTHING AT NIGHT IS NOT.
+                //
+                // This returned the sleep task on any night, with no bed, no wool and no sheep in
+                // sight -- and the task then blocks on crafting one, which needs three wool, which
+                // needs sheep. Measured on the first 30-minute run ever taken here: nine minutes
+                // motionless inside one block, ladder empty, on exactly that chain. Every earlier
+                // measurement was 14 minutes, so night never came and this never appeared.
+                //
+                // The branch below already asks the right question -- it only chases a bed that is
+                // VISIBLE and breakable. Ask it here too: skipping the night is not worth spending
+                // the night failing to build the thing that would skip it.
+                if (kaptainwutax.tungsten.TungstenConfig.get().sleepNeedsAnObtainableBed
+                        && !itemStorage.hasItem(ItemHelper.BED)
+                        && !mod.getBlockScanner().anyFound(
+                                blockPos -> WorldHelper.canBreak(blockPos),
+                                ItemHelper.itemsToBlocks(ItemHelper.BED))) {
+                    sleepDeclined++;
+                    setDebugState("No bed and none in sight -- working through the night");
+                } else {
+                    setDebugState("Sleeping through night");
+                    return sleepThroughNightTask;
+                }
             }
             if (!itemStorage.hasItem(ItemHelper.BED) && (mod.getBlockScanner().anyFound(blockPos -> WorldHelper.canBreak(blockPos), ItemHelper.itemsToBlocks(ItemHelper.BED)) || isTaskRunning(mod, getOneBedTask))) {
                 setDebugState("Getting one bed to sleep in at night.");
