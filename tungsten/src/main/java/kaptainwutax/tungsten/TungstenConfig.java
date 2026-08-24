@@ -3068,6 +3068,35 @@ public class TungstenConfig {
      *
      * <p>Read sleepDeclined to prove it fired. GATE: a 30-minute playthrough -- 14 minutes cannot
      * see this at all, which is the whole reason it survived a day of measurement.
+     *
+     * <h2>MEASURED: THE CEILING IS BROKEN (2026-08-24)</h2>
+     *
+     * <p>Two 30-minute runs on the shipped defaults, against two on the same window without this:
+     *
+     * <pre>
+     *   baseline  run 1   nothing reached
+     *   baseline  run 2   first craft, crafting, wood tools, wood      -- NO stone tools
+     *
+     *   fixed     run 1   wood, first craft, crafting, stone tools@44.3s, wood tools
+     *                     sleepDeclined 434
+     *   fixed     run 2   first craft@21.6s, crafting@21.6s, wood tools@43.9s,
+     *                     stone tools@111.8s, wood@134.2s,
+     *                     COAL@247.5s, FURNACE@406.7s, FOOD@905.4s
+     *                     sleepDeclined 9915
+     * </pre>
+     *
+     * <p>Coal, furnace and food are rungs this playthrough has NEVER reached. The ceiling that
+     * stood through every measurement of this session -- stone tools, and then the run runs out --
+     * is past.
+     *
+     * <p>It took two fixes together, and neither would have done it alone: toolsetYieldsToOre, so
+     * ore stops losing to a flat 520 by arithmetic, and this one, so the night stops being spent
+     * building the bed that would let the bot skip the night. The first frees the bot to go for
+     * coal; the second lets it keep the time to do so.
+     *
+     * <p>NOT CLAIMED: that the run is finished, or that two runs settle a course measured at
+     * sevenfold spread. What is claimed is that three rungs which had never appeared, appeared --
+     * and that the mechanism behind them fired 434 and 9915 times.
      */
     public boolean sleepNeedsAnObtainableBed = true;
 
