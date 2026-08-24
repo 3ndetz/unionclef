@@ -3,8 +3,6 @@ package adris.altoclef;
 import adris.altoclef.trackers.threats.DamageTrackerStrategy;
 import adris.altoclef.util.slots.Slot;
 import adris.altoclef.settings.AltoClefSettings;
-import baritone.api.Settings;
-import baritone.api.utils.RayTraceUtils;
 import kaptainwutax.tungsten.path.movements.Rotation;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.block.BlockState;
@@ -29,6 +27,16 @@ import java.util.function.Predicate;
  * (for example, "Build this bridge and avoid mining any blocks nearby")
  */
 public class BotBehaviour {
+    /**
+     * Fluid handling for ray traces -- rehomed from the deleted engine (G-0, 2026-08-24).
+     *
+     * <p>It was a static on baritone's RayTraceUtils that this class saved and restored around
+     * actions needing a different fluid rule. The push/pop state still carries the value, so
+     * the field has to survive the module removal; only its home changes, to the one class
+     * that ever touched it.
+     */
+    public static net.minecraft.world.RaycastContext.FluidHandling LIVE_RAY_FLUID_HANDLING =
+            net.minecraft.world.RaycastContext.FluidHandling.NONE;
 
     private final AltoClef mod;
     private Predicate<BlockPos> _extraAvoidBlockPlacing = null;
@@ -486,7 +494,7 @@ public class BotBehaviour {
 
         public State(State toCopy) {
             // Read in current state
-            readState(mod.getClientBaritoneSettings());
+            readState();
 
             readExtraState(mod.getExtraBaritoneSettings());
 
@@ -508,20 +516,19 @@ public class BotBehaviour {
          * Make the current state match our copy
          */
         public void applyState() {
-            applyState(mod.getClientBaritoneSettings(), mod.getExtraBaritoneSettings());
+            applyState(mod.getExtraBaritoneSettings());
         }
 
         /**
          * Read in a copy of the current state
          */
-        private void readState(Settings s) {
-            followOffsetDistance = s.followOffsetDistance.value;
-            mineScanDroppedItems = s.mineScanDroppedItems.value;
-            swimThroughLava = s.assumeWalkOnLava.value;
-            allowDiagonalAscend = s.allowDiagonalAscend.value;
-            blockPlacePenalty = s.blockPlacementPenalty.value;
-            blockBreakAdditionalPenalty = s.blockBreakAdditionalPenalty.value;
-            //preferredStairs = s.allowDownward.value;
+        private void readState() {
+            // G-0: these six were tuning knobs on the LEGACY pathfinder's cost model -- follow
+            // offset, dropped-item scanning, walking on lava, diagonal ascents, and the two
+            // place/break penalties. That pathfinder is gone, so there is nothing left to read them
+            // from and nothing left that consumes them. The fields stay because the push/pop state
+            // is public API inside altoclef and callers still set them; they simply no longer
+            // travel through another module's settings object to do it.
         }
 
         private void readExtraState(AltoClefSettings settings) {
@@ -566,7 +573,7 @@ public class BotBehaviour {
             }
             _allowWalkThroughFlowingWater = settings.isFlowingWaterPassAllowed();
 
-            rayFluidHandling = RayTraceUtils.fluidHandling;
+            rayFluidHandling = LIVE_RAY_FLUID_HANDLING;
         }
 
         private void readMinecraftState() {
@@ -576,12 +583,8 @@ public class BotBehaviour {
         /**
          * Make the current state match our copy
          */
-        private void applyState(Settings s, AltoClefSettings sa) {
-            s.followOffsetDistance.value = followOffsetDistance;
-            s.mineScanDroppedItems.value = mineScanDroppedItems;
-            s.allowDiagonalAscend.value = allowDiagonalAscend;
-            s.blockPlacementPenalty.value = blockPlacePenalty;
-            s.blockBreakAdditionalPenalty.value = blockBreakAdditionalPenalty;
+        private void applyState(AltoClefSettings sa) {
+            // (the five legacy cost-model writes that stood here went with the engine)
 
             // We need an alternrative method to handle this, this method makes navigation much less reliable.
             //s.allowDownward.value = preferredStairs;
@@ -629,7 +632,7 @@ public class BotBehaviour {
             // "let me aim at a fluid" (bucket pickup, MLG water recovery, ClearLiquidTask) would
             // set the baritone flag and then raytrace with the tungsten one still on NONE — water
             // would stay invisible to the aim and the click would never be armed.
-            RayTraceUtils.fluidHandling = rayFluidHandling;
+            LIVE_RAY_FLUID_HANDLING = rayFluidHandling;
             kaptainwutax.tungsten.path.movements.RotationHelper.fluidHandling = rayFluidHandling;
 
             // Minecraft
