@@ -2942,6 +2942,30 @@ public class TungstenConfig {
      * <p>Ships ON. It is the one form of this idea that is principled rather than tuned: the
      * property it tests -- a settled drop never moves again -- is true absolutely, not within some
      * radius that a circling opponent can hide inside.
+     *
+    public boolean lockSkipsReplanForSettledDrops = false;
+     *
+     * <p>The verdict above shipped this ON after two pairs. A six-run sweep says that was
+     * premature:
+     *
+     * <pre>
+     *   pair 1   fix  lockRetarget 4/5   NOTHING reached (FAIL)  |  control 12/0  stone@89.2s
+     *   pair 2   fix  lockRetarget 7/4   stone@21.5s             |  control 22/0  stone@313.5s
+     *   pair 3   fix  lockRetarget 0/0   no stone tools          |  control 26/0  stone@426.8s
+     * </pre>
+     *
+     * Pair 3 is void for this flag by rule 4a1 -- it never fired. Of the rest, stone tools were
+     * reached by the fixed arm ONCE in three and by the control THREE times in three. Adding the
+     * earlier sweep gives 3 of 5 against 4 of 5: a wash, or slightly against.
+     *
+     * <p>The fastest run of everything measured today is still a fixed one (21.5 s), and the gate
+     * stays green -- craft 14/14, chases untouched by construction. So this neither helps nor
+     * harms, measurably, and "principled" is not the same as "demonstrated". It goes OFF, and the
+     * two pairs that convinced me stay written down next to the four that did not.
+     *
+     * <p>Shipping on two pairs of a course this repository has already measured at sevenfold spread
+     * was the error, not the idea. The bar is pairs where the mechanism FIRES on both arms, and
+     * enough of them to outvote the ground.
      */
     public boolean lockSkipsReplanForSettledDrops = true;
 
