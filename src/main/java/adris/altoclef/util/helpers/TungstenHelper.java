@@ -86,6 +86,17 @@ public class TungstenHelper {
     private static long lockUntil = 0;       // Tungsten has exclusive control until this time
     private static long lastRetargetTime = 0;
     private static Entity lockedEntity = null; // entity we're chasing during lock
+    /**
+     * Where the TARGET was when the lock was taken -- the field the barren geometry has
+     * always been missing.
+     *
+     * <p>Body displacement alone cannot tell the two live-target failures apart. A rabbit
+     * that walks off and a rabbit standing three blocks away behind a ledge both read m0.0,
+     * and they need opposite fixes: chase harder, or stop chasing and solve the terrain.
+     * Nine minutes of a 30-minute run went into exactly this case and the trace could not
+     * say which it was.
+     */
+    private static net.minecraft.util.math.Vec3d lockStartTargetPos;
 
     /**
      * Barren-lock streaks kept PER TARGET, because one shared streak is wiped by alternation.
@@ -266,9 +277,12 @@ public class TungstenHelper {
                 lockStartDist = lockedEntity != null && !lockedEntity.isRemoved()
                         ? player.getPos().distanceTo(lockedEntity.getPos()) : -1;
                 lockStartPlayerPos = player.getPos();
+                lockStartTargetPos = lockedEntity != null && !lockedEntity.isRemoved()
+                        ? lockedEntity.getPos() : null;
             } catch (Exception ignored) {
                 lockStartDist = -1;
                 lockStartPlayerPos = null;
+                lockStartTargetPos = null;
             }
             active = true;
 
@@ -482,6 +496,11 @@ public class TungstenHelper {
     private static void recordBarrenGeometry(net.minecraft.entity.player.PlayerEntity player, double endDist) {
         try {
             double moved = lockStartPlayerPos == null ? -1 : player.getPos().distanceTo(lockStartPlayerPos);
+            // DID THE TARGET MOVE? Without this, 'it ran away' and 'we could not reach it'
+            // are the same reading, and they need opposite fixes.
+            double tMoved = (lockStartTargetPos == null || lockedEntity == null
+                    || lockedEntity.isRemoved())
+                    ? -1 : lockedEntity.getPos().distanceTo(lockStartTargetPos);
             String what = lockedEntity instanceof net.minecraft.entity.ItemEntity item
                     ? item.getStack().getItem().toString() : lockedEntity.getType().toString();
             // Trim the namespace so a course line stays readable next to twenty other counters.
@@ -536,8 +555,8 @@ public class TungstenHelper {
                 // an instrument must never be the thing that breaks a run
             }
             barrenGeom.addLast(String.format(java.util.Locale.ROOT,
-                    "%s:%.1f>%.1f,m%.1f,h%.1f,dy%+.1f%s|%s",
-                    what, lockStartDist, endDist, moved, horiz, dy, where, owner));
+                    "%s:%.1f>%.1f,m%.1f,t%.1f,h%.1f,dy%+.1f%s|%s",
+                    what, lockStartDist, endDist, moved, tMoved, horiz, dy, where, owner));
             while (barrenGeom.size() > 3) barrenGeom.removeFirst();
         } catch (Exception ignored) {
             // the accounting must never be the thing that breaks navigation
