@@ -31,7 +31,10 @@ BLESS = "--bless" in sys.argv
 argv = [a for a in sys.argv[1:] if not a.startswith("--")]
 jar = argv[0]
 root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-MODULES = {"shredder": "shredder/build/libs/shredder-0.1.0.jar",
+# G-0 (2026-08-24): shredder is no longer built, nested or shipped, so it is not
+# checked. A missing shredder jar used to mean a stale deploy; now it means the
+# module is gone, and reporting that as a failure would block every deploy.
+MODULES = {
            "tungsten": "tungsten/build/libs/tungsten-BETA-1.0.0.jar"}
 
 def newest_source(d):
@@ -112,7 +115,7 @@ if bad:
     print("STALE NESTED JAR -- refusing to deploy a build that would measure the wrong code:")
     for b in bad:
         print("  " + b)
-    print("Fix: gradlew :shredder:remapJar :tungsten:remapJar :1.21.11:build")
+    print("Fix: gradlew :tungsten:remapJar :1.21.11:build")
     sys.exit(1)
 # RECORD WHAT WAS BLESSED, so a later mtime-only bump can be recognised as harmless.
 for name, rel in MODULES.items():
