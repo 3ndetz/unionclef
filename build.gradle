@@ -115,8 +115,7 @@ dependencies {
     shadow('com.fasterxml.jackson.core:jackson-databind:2.17.2')
 
     // Shredder — new pathfinder (replaces baritone, same package names)
-    implementation project(path: ":shredder", configuration: "namedElements")
-    include project(":shredder")
+    // G-0: the shredder dependency is gone; altoclef imports no baritone type.
 
     // Tungsten — standalone mod (1.21.11 mappings, own mixins + entrypoint)
     implementation project(path: ":tungsten", configuration: "namedElements")
@@ -198,7 +197,7 @@ if (project.name == "1.21.1" || project.name == "1.21.11") {
 
     def releaseAssetFiles = files(
         { remapJar.archiveFile.get().asFile },
-        { new File(rootProject.projectDir, "shredder/build/libs/shredder-0.1.0.jar") },
+        // G-0: shredder is no longer built or shipped.
         { new File(rootProject.projectDir, "tungsten/build/libs/tungsten-BETA-1.0.0.jar") },
     )
 
@@ -219,7 +218,7 @@ if (project.name == "1.21.1" || project.name == "1.21.11") {
     def isPreRelease = project.objects.property(Boolean).convention(false)
 
     tasks.named('githubRelease') {
-        dependsOn 'remapJar', ':shredder:remapJar', ':tungsten:remapJar'
+        dependsOn 'remapJar', ':tungsten:remapJar'
     }
 
     githubRelease {

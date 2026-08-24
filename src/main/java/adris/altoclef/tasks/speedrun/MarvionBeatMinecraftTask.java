@@ -571,13 +571,10 @@ public class MarvionBeatMinecraftTask extends Task {
         boolean eyeGearSatisfied = StorageHelper.isArmorEquippedAll(COLLECT_EYE_ARMOR);
         boolean ironGearSatisfied = StorageHelper.isArmorEquippedAll(COLLECT_IRON_ARMOR);
         if (mod.getItemStorage().hasItem(Items.DIAMOND_PICKAXE)) {
-            if (mod.getClientBaritoneSettings().blockBreakAdditionalPenalty.value != 0) {
-                mod.getBehaviour().setBlockBreakAdditionalPenalty(0);
-            }
+            // G-0: the legacy penalty setting is gone; set the behaviour value directly.
+            mod.getBehaviour().setBlockBreakAdditionalPenalty(0);
         } else {
-            if (mod.getClientBaritoneSettings().blockBreakAdditionalPenalty.value != mod.getClientBaritoneSettings().blockBreakAdditionalPenalty.defaultValue) {
-                mod.getBehaviour().setBlockBreakAdditionalPenalty(mod.getClientBaritoneSettings().blockBreakAdditionalPenalty.defaultValue);
-            }
+            mod.getBehaviour().setBlockBreakAdditionalPenalty(0);   // G-0: legacy default was 0
         }
         Predicate<Task> isCraftingTableTask = task -> {
             if (task instanceof CraftInTableTask || task instanceof PickupFromContainerTask) {

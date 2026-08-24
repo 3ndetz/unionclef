@@ -21,8 +21,10 @@ rootProject.buildFileName = "root.gradle.kts"
 
 // ── Library subprojects ──────────────────────────────────────────────────────
 // include(":baritone")  // kept as source reference, not compiled
-include(":shredder")
-include(":tungsten")   // single build for shredder dependency
+// include(":shredder")  // G-0 (2026-08-24): kept as SOURCE REFERENCE ONLY, not compiled.
+// altoclef no longer imports a single baritone type and nothing calls into this module.
+// The directory stays so the port can be checked against the original.
+include(":tungsten")   // the only pathfinder now
 
 // ── MC version subprojects (altoclef + tungsten source, preprocessed) ────────
 listOf(

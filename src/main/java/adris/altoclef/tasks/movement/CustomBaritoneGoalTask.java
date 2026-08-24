@@ -383,12 +383,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
      */
     // removed with the legacy goal type (G-0)
 
-    /** A baritone goal seen through the AltoGoal window, so the drive needs to know one type. */
     // removed with the legacy goal type (G-0)
 
-    /** An AltoGoal in baritone's vocabulary, for as long as the legacy fallback is still wired up.
-     *  Null when the shape has no baritone equivalent — the fallback then simply does not run,
-     *  which is the same thing it does today for any goal it cannot translate. */
+    // (the two goal adapters documented here were deleted with the legacy type)
     // removed with the legacy goal type (G-0)
 
     protected void onWander(AltoClef mod) {

@@ -32,10 +32,7 @@ import adris.altoclef.ui.MessageSender;
 import adris.altoclef.util.helpers.InputHelper;
 import adris.altoclef.util.helpers.LookHelper;
 import adris.altoclef.util.helpers.StorageHelper;
-import baritone.Baritone;
 import adris.altoclef.settings.AltoClefSettings;
-import baritone.api.BaritoneAPI;
-import baritone.api.Settings;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import adris.altoclef.mixins.MinecraftClientSessionMixin;
@@ -389,10 +386,17 @@ public class AltoClef implements ModInitializer {
         adris.altoclef.Settings.load(newSettings -> {
             settings = newSettings;
             // Baritone's `acceptableThrowawayItems` should match our own.
-            List<Item> baritoneCanPlace = Arrays.stream(settings.getThrowawayItems(true))
+            List<Item> placeableThrowaways = Arrays.stream(settings.getThrowawayItems(true))
                     .filter(item -> item != Items.SOUL_SAND && item != Items.MAGMA_BLOCK && item != Items.SAND && item
                             != Items.GRAVEL).toList();
-            getClientBaritoneSettings().acceptableThrowawayItems.value.addAll(baritoneCanPlace);
+            // G-0: the pathfinder that owned this list is gone, so altoclef owns it outright. The
+            // four defaults below came from that settings object -- dirt, cobblestone, netherrack,
+            // stone -- and the union with our own throwaways is what every reader wanted, so it is
+            // built here once instead of being read back out of a foreign type.
+            throwawayItems.clear();
+            throwawayItems.addAll(List.of(Blocks.DIRT.asItem(), Blocks.COBBLESTONE.asItem(),
+                    Blocks.NETHERRACK.asItem(), Blocks.STONE.asItem()));
+            throwawayItems.addAll(placeableThrowaways);
             // ⛔ AND SNAPSHOT THE RESULT AS ALTOCLEF'S OWN (G-0b).
             // Six places in this mod read the throwaway list back OUT of the pathfinder's settings
             // object, which is how a list altoclef derives from its OWN settings ends up being
@@ -401,8 +405,6 @@ public class AltoClef implements ModInitializer {
             // the one moment both halves are present, rather than reconstructed by each reader.
             // The write above stays: the pathfinder still needs the list to plan placements. What
             // goes away is six READS of a foreign object model for data we produced.
-            throwawayItems.clear();
-            throwawayItems.addAll(getClientBaritoneSettings().acceptableThrowawayItems.value);
             // If we should run an idle command...
             if ((!getUserTaskChain().isActive() || getUserTaskChain().isRunningIdleTask()) && getModSettings().shouldRunIdleCommandWhenNotActive()) {
                 getUserTaskChain().signalNextTaskToBeIdleTask();
@@ -675,50 +677,29 @@ public class AltoClef implements ModInitializer {
     }
 
     private void initializeBaritoneSettings() {
-        if (getClientBaritone() == null) return; // baritone not available on this MC version
+        // G-0: every getClientBaritoneSettings() line that stood here configured the LEGACY
+        // pathfinder's cost model -- parkour, diagonals, blocks to avoid, free look. That
+        // pathfinder is deleted; tungsten has its own config. What survives is the part that
+        // was always altoclef's: what not to break, and what may be placed.
         getExtraBaritoneSettings().canWalkOnEndPortal(false);
-        getClientBaritoneSettings().freeLook.value = false;
-        getClientBaritoneSettings().overshootTraverse.value = false;
-        getClientBaritoneSettings().allowOvershootDiagonalDescend.value = true;
-        getClientBaritoneSettings().allowInventory.value = true;
-        getClientBaritoneSettings().allowParkour.value = true;
-        getClientBaritoneSettings().allowParkourAscend.value = true;
-        getClientBaritoneSettings().allowParkourPlace.value = false;
-        getClientBaritoneSettings().allowDiagonalDescend.value = false;
-        getClientBaritoneSettings().allowDiagonalAscend.value = false;
-        getClientBaritoneSettings().blocksToAvoid.value = new LinkedList<>(List.of(Blocks.FLOWERING_AZALEA, Blocks.AZALEA,
-                Blocks.POWDER_SNOW, Blocks.BIG_DRIPLEAF, Blocks.BIG_DRIPLEAF_STEM, Blocks.CAVE_VINES,
-                Blocks.CAVE_VINES_PLANT, Blocks.TWISTING_VINES, Blocks.TWISTING_VINES_PLANT, Blocks.SWEET_BERRY_BUSH,
-                Blocks.WARPED_ROOTS, Blocks.VINE, Blocks.SHORT_GRASS, Blocks.FERN, Blocks.TALL_GRASS, Blocks.LARGE_FERN,
-                Blocks.SMALL_AMETHYST_BUD, Blocks.MEDIUM_AMETHYST_BUD, Blocks.LARGE_AMETHYST_BUD,
-                Blocks.AMETHYST_CLUSTER, Blocks.SCULK, Blocks.SCULK_VEIN));
 
         // dont try to break nether portal block
         avoidBreaking(Blocks.NETHER_PORTAL);
-        getClientBaritoneSettings().blocksToDisallowBreaking.value.add(Blocks.NETHER_PORTAL);
 
         // Let baritone move items to hotbar to use them
         // Reduces a bit of far rendering to save FPS
-        getClientBaritoneSettings().fadePath.value = true;
         // Don't let baritone scan dropped items, we handle that ourselves.
-        getClientBaritoneSettings().mineScanDroppedItems.value = false;
         // Don't let baritone wait for drops, we handle that ourselves.
-        getClientBaritoneSettings().mineDropLoiterDurationMSThanksLouca.value = 0L;
 
         // Water bucket placement will be handled by us exclusively
         getExtraBaritoneSettings().configurePlaceBucketButDontFall(true);
 
         // For render smoothing
-        getClientBaritoneSettings().randomLooking.value = 0.0;
-        getClientBaritoneSettings().randomLooking113.value = 0.0;
 
         // Give baritone more time to calculate paths. Sometimes they can be really far away.
         // Was: 2000L
-        getClientBaritoneSettings().failureTimeoutMS.reset();
         // Was: 5000L
-        getClientBaritoneSettings().planAheadFailureTimeoutMS.reset();
         // Was 100
-        getClientBaritoneSettings().movementTimeoutTicks.reset();
     }
 
     // List all command sources here.
@@ -857,27 +838,15 @@ public class AltoClef implements ModInitializer {
         return miscBlockTracker;
     }
 
-    /**
-     * Baritone access (could just be static honestly)
-     */
-    public Baritone getClientBaritone() {
-        try {
-            if (getPlayer() == null) {
-                return (Baritone) BaritoneAPI.getProvider().getPrimaryBaritone();
-            }
-            return (Baritone) BaritoneAPI.getProvider().getBaritoneForPlayer(getPlayer());
-        } catch (ClassCastException e) {
-            // Baritone not initialized (incompatible MC version) — proxy can't cast
-            return null;
-        }
-    }
+    // getClientBaritone() REMOVED (G-0, 2026-08-24): there is no second engine to hand
+    // the body to. Tungsten is the only one, and it is reached through TungstenHelper.
 
-    /**
-     * Baritone settings access (could just be static honestly)
-     */
-    public Settings getClientBaritoneSettings() {
-        return Baritone.settings();
-    }
+
+
+    // getClientBaritoneSettings() REMOVED (G-0): it returned the deleted pathfinder's
+    // tuning object. Its only surviving reader was the throwaway list, which altoclef
+    // now owns outright.
+
 
     /**
      * Baritone settings special to AltoClef (could just be static honestly)
@@ -941,28 +910,58 @@ public class AltoClef implements ModInitializer {
      * actually added was never released and the pathfinder refused to break cobblestone slabs for
      * the rest of the session.
      */
+    /**
+     * Blocks the bot must not break, and blocks it must not route through (G-0, 2026-08-24).
+     *
+     * <p>These four setters are altoclef's own API -- avoidBreaking, allowBreaking,
+     * avoidWalkingThrough, allowWalkingThrough -- and they used to write into the deleted
+     * pathfinder's settings object, which is where the lists happened to live. The API stays; the
+     * storage comes home.
+     *
+     * <p>Read them through {@link #shouldAvoidBreaking} and {@link #shouldAvoidWalkingThrough},
+     * which is what WorldHelper.canBreak and tungsten's move generation consult.
+     */
+    private final java.util.Set<Block> blocksToAvoidBreaking = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final java.util.Set<Block> blocksToAvoidWalkingThrough = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private volatile boolean avoidUpdatingFallingBlocks = false;
+
+    /** Is this block one the bot has been told not to break? */
+    public boolean shouldAvoidBreaking(Block b) {
+        return blocksToAvoidBreaking.contains(b);
+    }
+
+    /** Is this block one the bot has been told not to route through? */
+    public boolean shouldAvoidWalkingThrough(Block b) {
+        return blocksToAvoidWalkingThrough.contains(b);
+    }
+
+    /** Should gravel and sand be left alone? Bucket work turns this on. */
+    public boolean shouldAvoidUpdatingFallingBlocks() {
+        return avoidUpdatingFallingBlocks;
+    }
+
     public void avoidBreaking(Block... blocks) {
-        getClientBaritoneSettings().blocksToAvoidBreaking.value.addAll(Arrays.asList(blocks));
+        blocksToAvoidBreaking.addAll(Arrays.asList(blocks));
     }
 
     /** Release blocks protected by {@link #avoidBreaking}. Pass exactly what was passed there. */
     public void allowBreaking(Block... blocks) {
-        getClientBaritoneSettings().blocksToAvoidBreaking.value.removeAll(Arrays.asList(blocks));
+        blocksToAvoidBreaking.removeAll(Arrays.asList(blocks));
     }
 
     /** Keep the pathfinder from routing THROUGH these blocks, and let them go again. */
     public void avoidWalkingThrough(Block... blocks) {
-        getClientBaritoneSettings().blocksToAvoid.value.addAll(Arrays.asList(blocks));
+        blocksToAvoidWalkingThrough.addAll(Arrays.asList(blocks));
     }
 
     /** Undo {@link #avoidWalkingThrough}. */
     public void allowWalkingThrough(Block... blocks) {
-        getClientBaritoneSettings().blocksToAvoid.value.removeAll(Arrays.asList(blocks));
+        blocksToAvoidWalkingThrough.removeAll(Arrays.asList(blocks));
     }
 
     /** Whether the pathfinder should leave gravel and sand alone (bucket work turns this on). */
     public void setAvoidUpdatingFallingBlocks(boolean avoid) {
-        getClientBaritoneSettings().avoidUpdatingFallingBlocks.value = avoid;
+        avoidUpdatingFallingBlocks = avoid;
     }
 
     /** @return items safe to place and abandon — see {@link #throwawayItems}. Never null. */

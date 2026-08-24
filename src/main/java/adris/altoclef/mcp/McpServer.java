@@ -415,7 +415,7 @@ public class McpServer {
                 a -> api.canPlaceBlock(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")));
         tool("markProtectedArea",
                 "Mark a claim/private the mod must NOT build or mine in — a cube of radius r around (x,y,z). "
-                + "The bot then routes and builds around it (baritone claim convention).",
+                + "The bot then routes and builds around it (claim convention).",
                 schema("x:int", "y:int", "z:int", "r:int"),
                 a -> api.markProtectedArea(argInt(a, "x"), argInt(a, "y"), argInt(a, "z"), argInt(a, "r")));
         tool("clearProtectedAreas",

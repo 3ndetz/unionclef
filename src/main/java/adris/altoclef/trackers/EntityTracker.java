@@ -6,7 +6,7 @@ import adris.altoclef.eventbus.events.PlayerCollidedWithEntityEvent;
 import adris.altoclef.mixins.PersistentProjectileEntityAccessor;
 import adris.altoclef.trackers.blacklisting.EntityLocateBlacklist;
 import adris.altoclef.util.ItemTarget;
-import adris.altoclef.util.baritone.CachedProjectile;
+import adris.altoclef.util.projectiles.CachedProjectile;
 import adris.altoclef.util.helpers.BaritoneHelper;
 import adris.altoclef.util.helpers.EntityHelper;
 import adris.altoclef.util.helpers.ProjectileHelper;

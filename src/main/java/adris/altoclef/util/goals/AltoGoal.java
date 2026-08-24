@@ -134,7 +134,7 @@ public interface AltoGoal {
     /**
      * A goal that is a whole CHUNK — anywhere inside it will do.
      *
-     * <p>Ported from {@code adris.altoclef.util.baritone.GoalChunk}, which implemented baritone's
+     * <p>Ported from {@code adris.altoclef.util.projectiles.GoalChunk}, which implemented baritone's
      * Goal purely to answer these two questions: head for the middle, and count any column inside
      * the sixteen-by-sixteen as arrived. Neither needs a pathfinder, so the type does not either.
      */

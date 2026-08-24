@@ -1,4 +1,4 @@
-package adris.altoclef.util.baritone;
+package adris.altoclef.util.projectiles;
 
 import adris.altoclef.util.time.TimerGame;
 import net.minecraft.util.math.Vec3d;

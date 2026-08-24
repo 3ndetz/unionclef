@@ -2459,7 +2459,6 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.speedrun.beatgame.BeatMinecraftTask.sleepDeclined = 0;
         adris.altoclef.control.Nav.oreCoalNearest = -1;
         adris.altoclef.control.Nav.oreIronNearest = -1;
-        baritone.utils.InputOverrideHandler.legacyYieldWalker = 0;
         adris.altoclef.tasks.movement.GetToEntityTask.nearLockDropped = 0;
         adris.altoclef.tasks.construction.DestroyBlockTask.dbTick = 0;
         adris.altoclef.tasks.construction.DestroyBlockTask.dbUnreachMove = 0;
@@ -3002,7 +3001,7 @@ public class Py4jEntryPoint {
         return String.format(
                 "called=%d deferred=%d inRange=%d clicked=%d noSup=%d/%d/%d"
                         + " | mqStarted=%d mqSteps=%d mqBack=%d mqTimeout=%d mqTicks=%d step=%d/%d"
-                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdQueueShort=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d pdLegacy=%d pdLegacyTung=%d/%d exArrived=%d exRanOut=%d exSprint=%d/%d execYieldMiner=%d oreSeen=%d/%d/%d sleepDeclined=%d oreNear=%.1f/%.1f legacyYieldWalk=%d nearLockDropped=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d dbBlocked=%d/%d/%d dbNoRetreat=%d dbStepOver=%d dbApproachStall=%d dbBestDist=%d dbTargets=%d/%d dbReachGoal=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d vgFall=%d/%d/%d/%d rimBack=%d kbThrow=%d/%d/%d/%d kbImp=%d/%d/%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d shKept=%d fixKept=%d throwers=[%s] dropPick=[%s] deepPicks=%d/%d dropBudget=%d entBudget=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
+                        + " pdEnter=%d pdNotPrim=%d pdPillar=%d pdBridge=%d pdStuck=%d pdWalking=%d pdNear=%d pdNoGoal=%d pdFinished=%d pdNoVec=%d pdStallWalk=%d pdStallReset=%d pdQueueShort=%d pdNearBusy=%d pdNearFind=%d pdPlan=%d/%d pdLegacy=%d pdLegacyTung=%d/%d exArrived=%d exRanOut=%d exSprint=%d/%d execYieldMiner=%d oreSeen=%d/%d/%d sleepDeclined=%d oreNear=%.1f/%.1f nearLockDropped=%d unknownGoal=%s dbTick=%d dbUnreachMove=%d dbUnreachWater=%d dbUnreachPillager=%d dbNear=%d dbFar=%d dbDistSum=%d dbNearTick=%d noReach=%d air=%d hungry=%d unsafe=%d blockedBy=%s dbTargetAir=%d rayLeaves=%d rayOther=%d rayMiss=%d leafCleared=%d dbBlocked=%d/%d/%d dbNoRetreat=%d dbStepOver=%d dbApproachStall=%d dbBestDist=%d dbTargets=%d/%d dbReachGoal=%d cgTick=%d cgBig=%d cgInv=%d cgNoScreen=%d cgSent=%d cgOutReady=%d cgLastSent=%s cgCraftable=%d cgNotCraftable=%d cgBookOk=%d cgBookNone=%d cgSmall=%d cgScreen=%s ciTick=%d ciCollect=%d ciReceive=%d ciGrid=%d mdCalls=%d mdWon=%d mdFlee=%d mdFight=%d mdRet=%d/%d/%d/%d/%d/%d/%d/%d/%d/%d vgCalls=%d vgEdge=%d vgFall=%d/%d/%d/%d rimBack=%d kbThrow=%d/%d/%d/%d kbImp=%d/%d/%d shIssued=%d shDropped=%d shBlack=%d shThrown=%d shKept=%d fixKept=%d throwers=[%s] dropPick=[%s] deepPicks=%d/%d dropBudget=%d entBudget=%d gmDisc=%d gmRecSet=%d gmGuard=%d gmConn=%d shLastBlackSlot=%d slotYeet=%d"
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d mqNullEdge=%d mqExpand=%d/%d/%d/%d mqExpandAt=%s qRebased=%d qOffRoute=%d qUnreachReplan=%d gridCorner=%d dbFarRetry=%d/%d navBridgeRescued=%d walkerHoleHeld=%d diagonalWalled=%d staleTail=%d ungagged=%d walkYield=%d walkYieldMiner=%d walkMode=%d/%d/%d mqParkour=%d mqAdmitMismatch=%d qPrep=%d/%d blindPrep=%d mqNull=%d gaveUp=%d/%d dc=%d/%d/%d/%d/%d mc=%d/%d/%d/%d/%d mcFlight=%d mcSwitch=%d toolSwap=%d recipesKnown=%d wander=%d wanderMoved=%d wanderChk=%d/%d wanderFail=%d wanderDenied=%d/%d dbDenied=%d airProg=%d lavaEsc=%d lavaCond=%d/%d surv=%d/%d tbl=%d/%d@%d bs=%d/%d/%d/%d@%dms navUnsafeAir=%d sm=%d/%d smWater=%d srch=%d/%d/%d fallRetry=%d/%d fallHarmless=%d/%d fallPriced=%d/%d gaveUpFallRetry=%d drop=%d/%d/%d scan=%d/%d/%d/%d/%d/%d navStop=%d/%d/%d fleeSpot=%d/%d lock=%d/%d/%d@%s lockAnat=%d/%d/%d/%d/%d/%d/%d lockRetarget=%d/%d cb=%d/%d/%d/%d avoidSrc=%d/%d/%d/%d@%s/%s et=%d/%d"
                         + " sprint=%d/%d lowHp=%d/%d standOff=%d hurt=%d/%d/%d hurtWin=%d/%d diseng=%d/%d ctl=%d cq=%d/%d/%d los=%d/%d/%d/%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdFleeStuck=%d mdFleeShooter=%d mdFar=%d/%d arrows=%d/%.2f/%.2f draws=%d/%d/%d/%.2f band=%d/%d dodgeYield=%d latch=%d/%d breakFail=%d/%d/%d/%d/%d stranded=%d/%s/%s gp=%d/%d/%d/%d/%d dodgeTask=%d/%.2f dealt=%.1f/%.1f/%d hitSize=%d/%d/%d/%d takeSize=%d/%d/%d/%d slotSync=%d/%d critReset=%d stray=%d/%d heldSwing=%d loseKite=%d holdBow=%d punkKept=%d swingHits=%d dodgeDrive=%d hop=%d/%d/%d/%d/%d/%d/%d mdPillarD=%d dmgTaken=%.1f dw=%d/%.1f/%.2f/%.2f/%d/%d dwNoBlame=%d dmgWhy=%d/%d/%d/%d/%d@%.1f strafe=%d/%d voidEntries=%d voidTicks=%d lastFall=[%s] hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d bowShots=%d bowWild=%d bowNoSol=%d bowRestart=%d bowAimTO=%d bowDrawTO=%d bowBestMiss=%.2f bowFacing=%d bowNoRoom=%d flee=%d/%d/%d/%d/%d/%d qBurn=%d qTp=%d qNoMove=%d stuck=[%s] staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
@@ -3056,7 +3055,6 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.speedrun.beatgame.BeatMinecraftTask.sleepDeclined,
                 adris.altoclef.control.Nav.oreCoalNearest,
                 adris.altoclef.control.Nav.oreIronNearest,
-                baritone.utils.InputOverrideHandler.legacyYieldWalker,
                 adris.altoclef.tasks.movement.GetToEntityTask.nearLockDropped,
                 adris.altoclef.tasks.movement.CustomBaritoneGoalTask.pdLastUnknownGoal,
                 adris.altoclef.tasks.construction.DestroyBlockTask.dbTick,
@@ -3828,9 +3826,9 @@ public class Py4jEntryPoint {
     public Map<String, Object> setTungstenPathing(boolean on) {
         Map<String, Object> out = new HashMap<>();
         try {
-            var s = _mod.getClientBaritoneSettings();
-            s.useTungsten.value = on;
-            s.experimentalPathfinding.value = on;
+            // G-0: useTungsten / experimentalPathfinding were switches on the DELETED engine
+            // that told it to delegate segments to tungsten. With nothing left to delegate
+            // FROM, the flag that matters is the one below -- tungsten is simply primary.
             adris.altoclef.util.helpers.TungstenHelper.setPrimary(on); // route altoclef goals straight to tungsten
             // Couple smartMoves: tungsten-primary NEEDS the SmartMoves neighbour generation
             // (parkour/jump-up moves) to climb terrain. Without it, @goto+primary follows a
@@ -3838,11 +3836,8 @@ public class Py4jEntryPoint {
             // -> PASS once smartMoves is on). They belong together for altoclef nav.
             kaptainwutax.tungsten.TungstenConfig.get().smartMoves = on;
             out.put("ok", true);
-            out.put("useTungsten", s.useTungsten.value);
-            out.put("experimentalPathfinding", s.experimentalPathfinding.value);
             out.put("tungstenPrimary", adris.altoclef.util.helpers.TungstenHelper.isPrimary());
             out.put("smartMoves", kaptainwutax.tungsten.TungstenConfig.get().smartMoves);
-            out.put("tungstenMinSegment", s.tungstenMinSegment.value);
         } catch (Exception e) { out.put("ok", false); out.put("reason", e.getMessage()); }
         return out;
     }
@@ -3911,12 +3906,10 @@ public class Py4jEntryPoint {
     public Map<String, Object> pathingMode() {
         Map<String, Object> out = new HashMap<>();
         try {
-            var s = _mod.getClientBaritoneSettings();
+            // G-0: the legacy settings object these read is gone; tungsten is primary
+            // unconditionally, so the only live flags are the tungsten ones below.
             out.put("ok", true);
-            out.put("useTungsten", s.useTungsten.value);
-            out.put("experimentalPathfinding", s.experimentalPathfinding.value);
             out.put("tungstenPrimary", adris.altoclef.util.helpers.TungstenHelper.isPrimary());
-            out.put("tungstenMinSegment", s.tungstenMinSegment.value);
         } catch (Exception e) { out.put("ok", false); out.put("reason", e.getMessage()); }
         return out;
     }
@@ -4579,28 +4572,19 @@ public class Py4jEntryPoint {
                 }
             }
             if (!f.exists()) { o.put("ok", false); o.put("reason", "not found in " + dir.getAbsolutePath()); return o; }
-            String fn = f.getName().toLowerCase();
-            baritone.utils.schematic.format.DefaultSchematicFormats fmt =
-                    fn.endsWith(".litematic") ? baritone.utils.schematic.format.DefaultSchematicFormats.LITEMATICA :
-                    fn.endsWith(".schematic") ? baritone.utils.schematic.format.DefaultSchematicFormats.MCEDIT :
-                    baritone.utils.schematic.format.DefaultSchematicFormats.SPONGE;
-            baritone.api.schematic.IStaticSchematic schem;
-            try (java.io.InputStream in = new java.io.FileInputStream(f)) {
-                schem = fmt.parse(in);
-            } catch (Exception e) { o.put("ok", false); o.put("reason", "parse: " + e.getMessage()); return o; }
-            net.minecraft.util.math.BlockPos a = mc.player.getBlockPos();
-            java.util.List<Object> blocks = new java.util.ArrayList<>();
-            for (int y = 0; y < schem.heightY(); y++)
-                for (int x = 0; x < schem.widthX(); x++)
-                    for (int z = 0; z < schem.lengthZ(); z++) {
-                        net.minecraft.block.BlockState st = schem.getDirect(x, y, z);
-                        if (st == null || st.isAir()) continue;
-                        blocks.add(java.util.List.of(a.getX() + x, a.getY() + y, a.getZ() + z,
-                                net.minecraft.registry.Registries.BLOCK.getId(st.getBlock()).toString()));
-                    }
-            o.put("ok", true); o.put("blocks", blocks); o.put("file", f.getName());
-            o.put("size", schem.widthX() + "x" + schem.heightY() + "x" + schem.lengthZ());
+            // ⛔ SCHEMATIC PARSING IS OUT WITH THE LEGACY MODULE (G-0, 2026-08-24).
+            //
+            // The .litematic / .schematic / .schem readers lived in baritone.utils.schematic,
+            // and this endpoint used them to hand an agent a block list. Porting three NBT
+            // formats is its own job, so the endpoint says so rather than pretending: no
+            // fallback, no silent empty list, and the loss is written down in TODOS.
+            o.put("ok", false);
+            o.put("reason", "schematic parsing removed with the legacy module (G-0); "
+                    + "needs a native .litematic/.schematic/.schem reader");
             return o;
+            // (the legacy parser call that stood here is deleted, not commented out)
+
+            // (the block-walk over the parsed schematic went with the parser)
         }, Map.of("ok", false, "reason", "client thread timeout"));
         if (!Boolean.TRUE.equals(parsed.get("ok"))) return parsed;
         @SuppressWarnings("unchecked")

@@ -1,7 +1,7 @@
 package adris.altoclef.util.helpers;
 
 import adris.altoclef.Debug;
-import adris.altoclef.util.baritone.CachedProjectile;
+import adris.altoclef.util.projectiles.CachedProjectile;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.projectile.ExplosiveProjectileEntity;

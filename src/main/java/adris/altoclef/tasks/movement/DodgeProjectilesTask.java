@@ -2,7 +2,7 @@ package adris.altoclef.tasks.movement;
 
 import adris.altoclef.AltoClef;
 import adris.altoclef.util.goals.AltoGoal;
-import adris.altoclef.util.baritone.CachedProjectile;
+import adris.altoclef.util.projectiles.CachedProjectile;
 import adris.altoclef.util.helpers.ProjectileHelper;
 import net.minecraft.util.math.Vec3d;
 import adris.altoclef.tasksystem.Task;

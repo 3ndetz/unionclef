@@ -21,7 +21,7 @@ import adris.altoclef.tasks.movement.RunAwayFromHostilesTask;
 import adris.altoclef.util.time.TimerGame;
 import adris.altoclef.tasks.speedrun.DragonBreathTracker;
 import adris.altoclef.tasksystem.TaskRunner;
-import adris.altoclef.util.baritone.CachedProjectile;
+import adris.altoclef.util.projectiles.CachedProjectile;
 import adris.altoclef.util.helpers.*;
 import adris.altoclef.util.slots.PlayerSlot;
 import adris.altoclef.util.slots.Slot;

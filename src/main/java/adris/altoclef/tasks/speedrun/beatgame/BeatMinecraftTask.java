@@ -1243,7 +1243,8 @@ public class BeatMinecraftTask extends Task {
             blockPlacementPenalty = 7.5;
         }
 
-        mod.getClientBaritoneSettings().blockPlacementPenalty.value = blockPlacementPenalty;
+        // G-0: the legacy place penalty is gone with its cost model; the behaviour state
+        // below is what altoclef still reads.
 
         // GET THE EYE OUT OF THE HAND. On 1.21.11 this whole block was a TODO comment, so the bot
         // walked the stronghold approach holding an eye of ender with nothing to fight with. Asking
@@ -1284,7 +1285,7 @@ public class BeatMinecraftTask extends Task {
         if (itemStorage.hasItem(Items.DIAMOND_PICKAXE)) {
             mod.getBehaviour().setBlockBreakAdditionalPenalty(1.2);
         } else {
-            mod.getBehaviour().setBlockBreakAdditionalPenalty(mod.getClientBaritoneSettings().blockBreakAdditionalPenalty.defaultValue);
+            mod.getBehaviour().setBlockBreakAdditionalPenalty(0);   // G-0: legacy default was 0
         }
         Predicate<Task> isCraftingTableTask = task -> {
             if (task instanceof DoStuffInContainerTask cont) {

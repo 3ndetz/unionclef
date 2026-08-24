@@ -337,7 +337,9 @@ public interface WorldHelper {
         for (int dy = 1; dy <= toBreak.getY() - altoClef.getWorld().getBottomY(); ++dy) {
             BlockPos check = toBreak.down(dy);
             BlockState s = altoClef.getWorld().getBlockState(check);
-            boolean tooFarToFall = dy > altoClef.getClientBaritoneSettings().maxFallHeightNoWater.value;
+            // G-0: maxFallHeightNoWater was the legacy engine's limit; vanilla takes no damage
+            // below four blocks, which is the number this check always wanted.
+            boolean tooFarToFall = dy > 3;
             // Don't fall in lava
             if (isLavaState(s))
                 return true;
