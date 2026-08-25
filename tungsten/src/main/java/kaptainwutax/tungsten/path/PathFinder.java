@@ -129,6 +129,12 @@ public class PathFinder {
 	/** Searches killed by the shared guide being cleared under them, and those salvaged. */
 	/** Physics searches aborted by the stop flag. The last untraced exit. */
 	/** Path hand-overs: how many, how many nodes in total, and by which door. */
+	/** Best-partial deliveries that bypass executePath, and their node counts. */
+	/** Deliveries from the reset-search branch -- the third door. */
+	public static volatile int resetEmit, resetEmitNodes;
+
+	public static volatile int salvageEmit, salvageEmitNodes;
+
 	public static volatile int emitCount, emitTotalNodes, emitFresh, emitAppended;
 
 	public static volatile int searchAborted;
@@ -1364,6 +1370,12 @@ public class PathFinder {
                 Debug.logMessage(String.format("emit[resetSearch] root=%s size=%d",
                     path.get(0).agent.getPos().toString(), path.size()));
             }
+            // ⛔ THE THIRD DELIVERY DOOR, AND THE ONLY ONE LEFT UNCOUNTED. executePath reads
+            // emit=0/0/0/0 and setCurrentPath reads salvage=0/0, yet the executor reports 44
+            // arrivals -- so the paths it finishes instantly arrive HERE, from the reset-search
+            // branch, which builds a route from the node in hand and hands it over directly.
+            resetEmit++;
+            resetEmitNodes += path.size();
             TungstenModDataContainer.EXECUTOR.setPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
             TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
@@ -1464,6 +1476,17 @@ public class PathFinder {
             Debug.logMessage(String.format("emit[setCurrentPath] root=%s size=%d",
                 result.get().get(0).agent.getPos().toString(), result.get().size()));
         }
+        // THE SECOND DOOR, AND THE ONE THE emit COUNTER COULD NOT SEE. setCurrentPath delivers a
+        // best-partial route straight to the executor, bypassing executePath entirely -- which is
+        // why emit read 0/0/0/0 while the executor was arriving 56 times. Count it here.
+        salvageEmit++;
+        salvageEmitNodes += result.get().size();
+        // ⛔ THE SECOND DOOR, AND THE emit COUNTER NEVER SAW IT. executePath is instrumented and
+        // reads 0/0/0/0, yet the executor reports 56 arrivals -- because setCurrentPath delivers
+        // here, bypassing it entirely. Its callers are the timeout, the exhaustion branch, the
+        // give-up and the vanished-guide salvage, and it hands over the BEST PARTIAL route, which
+        // on a bot that has not moved is a stub the executor finishes instantly.
+        salvageEmit++;
         TungstenModDataContainer.EXECUTOR.addPath(result.get());
         TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
         TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
