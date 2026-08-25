@@ -134,6 +134,9 @@ public class PathFinder {
 	/** Reset prefixes refused because they contained no movement. */
 	/** Re-roots that did not extend the guide, and so were not repeated. */
 	/** Children generated and offered to the frontier. Distinguishes 'no moves' from 'no progress'. */
+	/** Raw moves generated, and how many survived the validity filter. */
+	public static volatile int rawChildren, validAfterFilter;
+
 	public static volatile int expandedChildren;
 
 	public static volatile int resetNoGain;
@@ -1630,6 +1633,10 @@ public class PathFinder {
 			if (blockPath.isEmpty()) return false;
 			int blockIdx = Math.min(NEXT_CLOSEST_BLOCKNODE_IDX.get(), blockPath.get().size() - 1);
 			List<Node> children = parent.getChildren(world, target, blockPath.get().get(blockIdx));
+			// SPLIT THE ZERO. children=0 at the insertion site says the frontier is never fed, but
+			// not whether the move generator produced nothing or the filter rejected everything.
+			// Two counters, one question each.
+			rawChildren += children.size();
 			if (children.isEmpty()) return false;
 
 			long tChildren = timing ? System.nanoTime() : 0;
@@ -1714,6 +1721,7 @@ public class PathFinder {
 				e.printStackTrace();
 			}
 
+			validAfterFilter += validChildren.size();
 			long tFiltered = timing ? System.nanoTime() : 0;
 
 			Object openSetLock = new Object();  // if openSet is not thread-safe
@@ -1761,6 +1769,7 @@ public class PathFinder {
 				        updateNode(world, parent, child, target, TARGET, blockPath.get(), closed);
 	
 				        synchronized (openSetLock) {
+				            expandedChildren++;   // the branch that ACTUALLY runs: <=25 valid children
 				            if (child.isOpen()) {
 				                openSet.update(child);
 				            } else {
