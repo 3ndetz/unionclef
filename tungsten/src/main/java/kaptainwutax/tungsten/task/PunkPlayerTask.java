@@ -467,6 +467,7 @@ public class PunkPlayerTask {
         // about one swing in five went out with a bow -- measured weaponMean 59.21 against the
         // iron_sword's 75.0 on allround, where every respawn puts the bow back in hand.
         kaptainwutax.tungsten.combat.WeaponSelector.forceRecheck();
+        kaptainwutax.tungsten.path.PathFinder.noteStop("PunkPlayerTask@470");
         TungstenModDataContainer.PATHFINDER.stop.set(true);
         if (TungstenModDataContainer.EXECUTOR != null) TungstenModDataContainer.EXECUTOR.stop = true;
         FollowEntityTask.stop();

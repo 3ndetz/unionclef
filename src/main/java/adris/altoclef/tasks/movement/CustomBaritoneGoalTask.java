@@ -518,8 +518,18 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             kaptainwutax.tungsten.task.BlockPathWalker.stop();
             var pfU = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
             var exU = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
-            if (pfU != null) pfU.stop.set(true);
-            if (exU != null) exU.stop = true;
+            // Do not destroy a search that has never handed back a route -- it is unfinished,
+            // not bad, and killing it is what keeps the bot standing still. See
+            // stallResetSparesAVirginSearch (measured here: 21+7 kills, tryEmit=0).
+            if (kaptainwutax.tungsten.TungstenConfig.get().stallResetSparesAVirginSearch
+                    && pfU != null && pfU.active.get()
+                    && !kaptainwutax.tungsten.path.PathFinder.searchHasEmitted) {
+                kaptainwutax.tungsten.path.PathFinder.stallSpared++;
+            } else {
+                kaptainwutax.tungsten.path.PathFinder.noteStop("CustomBaritoneGoalTask@521");
+                if (pfU != null) pfU.stop.set(true);
+                if (exU != null) exU.stop = true;
+            }
             // #46 place-as-a-move: if the goal is directly above us and we have a block,
             // PILLAR up to it instead of abandoning — the real fix for raised place-only
             // goals (tree top / ledge) that walking or jumping can't reach.
@@ -606,8 +616,18 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // local trap instead of freezing forever.
             var pfR = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
             var exR = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
-            if (pfR != null) { pfR.stop.set(true); pfR.overrideStartPos = null; }
-            if (exR != null) exR.stop = true;
+            // Do not destroy a search that has never handed back a route -- it is unfinished,
+            // not bad, and killing it is what keeps the bot standing still. See
+            // stallResetSparesAVirginSearch (measured here: 21+7 kills, tryEmit=0).
+            if (kaptainwutax.tungsten.TungstenConfig.get().stallResetSparesAVirginSearch
+                    && pfR != null && pfR.active.get()
+                    && !kaptainwutax.tungsten.path.PathFinder.searchHasEmitted) {
+                kaptainwutax.tungsten.path.PathFinder.stallSpared++;
+            } else {
+                kaptainwutax.tungsten.path.PathFinder.noteStop("CustomBaritoneGoalTask@609");
+                if (pfR != null) { pfR.stop.set(true); pfR.overrideStartPos = null; }
+                if (exR != null) exR.stop = true;
+            }
             kaptainwutax.tungsten.task.BlockPathWalker.stop();
             pdStallReset++;
             twStuckSinceMs = nowMs;

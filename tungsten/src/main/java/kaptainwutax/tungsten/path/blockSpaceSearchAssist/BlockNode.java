@@ -58,6 +58,12 @@ public class BlockNode {
 	/** Three-block drops the block-space guard now allows. Proof this fired. */
 	public static volatile int blockFallHarmless = 0;
 	/** Descents kept and charged for rather than refused. Proof the price fired. */
+	/** Times the block-space fall guard was consulted, and times it refused. */
+	/** Smart-generator moves that passed / were refused by the shared validity gate. */
+	public static volatile int smartKept, smartDropped;
+
+	public static volatile int fallCheckRun, fallCheckRefused;
+
 	public static volatile int blockFallPriced = 0;
 	
 	private PlayerEntity player;
@@ -328,7 +334,23 @@ public class BlockNode {
 				n.isDoingJump = m.jump;
 				smart.add(n);
 			}
-			return smart;
+			// The smart generator used to hand its moves straight to the search, skipping the
+			// validity gate below that every other generator passes. It grants itself drops of
+			// up to MAX_DESCEND=3, so the guide could contain a hop the physics leg cannot
+			// execute -- measured on the 1219 course as guide dy01=-3.1 with fallChk 0/0, i.e.
+			// the fall guard was never even consulted. Route both generators through one gate.
+			if (!TungstenConfig.smartMovesShareTheGuard) return smart;
+			smartKept = 0; smartDropped = 0;
+			List<BlockNode> smartOk = new java.util.ArrayList<>(smart.size());
+			for (BlockNode n : smart) {
+				boolean bad;
+				try { bad = shouldRemoveNode(world, n); }
+				catch (NullPointerException e) { bad = true; }
+				if (bad) smartDropped++; else { smartKept++; smartOk.add(n); }
+			}
+			// A gate that rejects EVERY move would strand the search with no guide at all,
+			// which is worse than an ambitious guide -- keep the raw set in that case.
+			return smartOk.isEmpty() ? smart : smartOk;
 		}
 
 		List<BlockNode> nodes = getNodesIn3DCircule(8, this, goal, generateDeep);
@@ -528,6 +550,7 @@ public class BlockNode {
 				// Same off-by-one as the physics guard: vanilla charges nothing for a three-block
 				// drop, and this refused it. Deeper falls stay refused.
 				double floor = TungstenModDataContainer.fallGuardAllowsHarmless() ? -3 : -2;
+				fallCheckRun++;   // does this guard run for the failing hop at all?
 				if (heightDiff < floor) {
 					// PRICED, NOT FORBIDDEN. A descent the guard would refuse is kept and charged for,
 					// so a bridge still wins where a bridge is the point and a drop wins where the

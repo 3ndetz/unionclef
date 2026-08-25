@@ -889,8 +889,24 @@ public class PathExecutor {
             final Vec3d searchGoal = kaptainwutax.tungsten.path.PathFinder.lastSearchTarget;
             gotoResumedFromSearch++;
             if (searchGoal != null && player.getEntityPos().distanceTo(searchGoal) >= 2.0) {
+                // A RESUME MUST NOT KILL A SEARCH THAT IS ALREADY SOLVING THIS GOAL.
+                // The dance below is stop -> wait up to five seconds for the thread to die -> search
+                // again from scratch, so every resume discards all progress. When resumes arrive faster
+                // than a search completes, the search NEVER completes. Measured on the 1219 course:
+                // searchAborted=38 with tryEmit=0 -- the physics leg was killed 38 times before it
+                // reached its FIRST attempt to hand back a route. The bot cannot move, the stall
+                // detector fires precisely because it is not moving, and the abort is what keeps it
+                // still. Same defect rerootMustExtendTheGuide fixed on the block-space side.
+                if (kaptainwutax.tungsten.TungstenConfig.get().resumeLetsTheSameSearchFinish
+                        && TungstenModDataContainer.PATHFINDER.active.get()
+                        && kaptainwutax.tungsten.path.PathFinder.lastSearchTarget != null
+                        && kaptainwutax.tungsten.path.PathFinder.lastSearchTarget.squaredDistanceTo(searchGoal) < 4.0) {
+                    kaptainwutax.tungsten.path.PathFinder.resumeLetItFinish++;
+                    return;
+                }
                 new Thread(() -> {
                     try {
+                        kaptainwutax.tungsten.path.PathFinder.noteStop("PathExecutor@909");
                         TungstenModDataContainer.PATHFINDER.stop.set(true);
                         for (int i = 0; i < 20 && TungstenModDataContainer.PATHFINDER.thread != null; i++) {
                             Thread.sleep(250);
@@ -938,8 +954,27 @@ public class PathExecutor {
             kaptainwutax.tungsten.task.FastNavigator.start(goal);
             return;
         }
+        // A RESUME MUST NOT KILL A SEARCH THAT IS ALREADY SOLVING THIS GOAL.
+        // The dance below is stop -> wait up to five seconds for the thread to die -> search
+        // again from scratch, so every resume discards all progress. When resumes arrive faster
+        // than a search completes, the search NEVER completes. Measured on the 1219 course:
+        // searchAborted=38 with tryEmit=0 -- the physics leg was killed 38 times before it
+        // reached its FIRST attempt to hand back a route. The bot cannot move, the stall
+        // detector fires precisely because it is not moving, and the abort is what keeps it
+        // still. Same defect rerootMustExtendTheGuide fixed on the block-space side.
+        // Placed AFTER the navigator branch on purpose: FastNavigator is a DIFFERENT driver that
+        // does not need the physics thread dead, so guarding before it would withhold a
+        // legitimate start instead of preventing a needless kill.
+        if (kaptainwutax.tungsten.TungstenConfig.get().resumeLetsTheSameSearchFinish
+                && TungstenModDataContainer.PATHFINDER.active.get()
+                && kaptainwutax.tungsten.path.PathFinder.lastSearchTarget != null
+                && kaptainwutax.tungsten.path.PathFinder.lastSearchTarget.squaredDistanceTo(goal) < 4.0) {
+            kaptainwutax.tungsten.path.PathFinder.resumeLetItFinish++;
+            return;
+        }
         new Thread(() -> {
             try {
+                kaptainwutax.tungsten.path.PathFinder.noteStop("PathExecutor@976");
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
                 for (int i = 0; i < 20 && TungstenModDataContainer.PATHFINDER.thread != null; i++) {
                     Thread.sleep(250);

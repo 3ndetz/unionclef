@@ -120,6 +120,7 @@ public class GotoCommand extends Command {
 			if (distSq <= ARRIVAL_DIST_SQ) {
 				// Arrived. Stop any lingering search thread so it doesn't keep
 				// re-rooting near the goal and report "busy" long after we got there.
+				kaptainwutax.tungsten.path.PathFinder.noteStop("GotoCommand@123");
 				TungstenModDataContainer.PATHFINDER.stop.set(true);
 				return;
 			}

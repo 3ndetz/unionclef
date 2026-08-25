@@ -625,6 +625,7 @@ public class TungstenHelper {
     public static void stop() {
         if (!isTungstenLoaded()) return;
         try {
+            kaptainwutax.tungsten.path.PathFinder.noteStop("TungstenHelper@600");
             TungstenModDataContainer.PATHFINDER.stop.set(true);
             PathExecutor exec = TungstenModDataContainer.EXECUTOR;
             if (exec != null) exec.stop = true;

@@ -86,6 +86,7 @@ public abstract class MixinClientPlayNetworkHandler extends ClientCommonNetworkH
             // server ignores all subsequent movement packets → player stuck.
             Debug.logMessage("Server teleport received during execution — stopping executor");
             TungstenModDataContainer.EXECUTOR.stop = true;
+            kaptainwutax.tungsten.path.PathFinder.noteStop("MixinClientPlayNetworkHandler@89");
             TungstenModDataContainer.PATHFINDER.stop.set(true);
         }
     }

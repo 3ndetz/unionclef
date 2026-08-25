@@ -4181,4 +4181,54 @@ public class TungstenConfig {
         INSTANCE = new TungstenConfig();
         save();
     }
+
+	/**
+	 * Pass the smart block-space generator's moves through the SAME validity gate
+	 * ({@code shouldRemoveNode}) that the circle generator's moves go through.
+	 *
+	 * <p>Why: {@code getChildren} has two exits, and the smart one returned early --
+	 * before the filter. The smart generator allows itself a drop of up to three blocks
+	 * (MAX_DESCEND), while the shared gate refuses anything past -2. On the 1219 course
+	 * the guide's own node 0 -> 1 hop was measured at dy=-3.1 with the fall guard
+	 * counter reading 0 run / 0 refused: the guard was never consulted, so the guide
+	 * proposed a descent the physics leg then failed to execute (idx stuck at 1 of 16).
+	 *
+	 * <p>Falls back to the unfiltered set if the gate would reject every move, since no
+	 * guide at all is worse than an ambitious one.
+	 */
+	public static boolean smartMovesShareTheGuard = true;
+
+	/**
+	 * Let a resume leave an in-flight search alone when it is already solving the SAME goal,
+	 * instead of killing it and starting over.
+	 *
+	 * <p>The resume path in PathExecutor stops the pathfinder, waits up to five seconds for
+	 * the thread to die, then searches again from scratch. Progress is discarded every time,
+	 * so resumes arriving faster than a search completes starve it forever. Measured on the
+	 * 1219 course: searchAborted=38 while tryEmit=0 -- the physics leg was killed 38 times
+	 * before its first attempt to hand back a route, which is why the bot never started
+	 * moving and why the stall detector kept firing. Self-sustaining.
+	 *
+	 * <p>Same shape as rerootMustExtendTheGuide, which fixed this on the block-space side
+	 * (bs 143 -> 505). Goals within 2 blocks count as the same goal.
+	 */
+	public static boolean resumeLetsTheSameSearchFinish = true;
+
+	/**
+	 * Forbid the altoclef stall detector from resetting a search that has never emitted a
+	 * route.
+	 *
+	 * <p>The detector resets the nav after 5 s without progress and gives up after 14 s. On
+	 * the 1219 course those two fired 21 and 7 times in 100 s -- exactly the searchAborted=28
+	 * counted inside the pathfinder, with tryEmit=0. The physics leg needs longer than the
+	 * detector's window to reach its first hand-over, so it was destroyed before it ever got
+	 * there: the bot cannot move, the detector fires BECAUSE it is not moving, and the reset
+	 * is what keeps it still. The threshold guarantees the stall it is meant to catch.
+	 *
+	 * <p>Raising the timeout would be a hardcoded guess. The invariant instead: a search that
+	 * has produced nothing is not a bad route, it is an unfinished one, and killing it cannot
+	 * help. Termination is still bounded -- the search has its own budget, after which active
+	 * clears and the detector regains control.
+	 */
+	public static boolean stallResetSparesAVirginSearch = true;
 }

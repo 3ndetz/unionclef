@@ -141,6 +141,7 @@ public class FollowEntityTask {
         trail.reset();
         BlockPathWalker.stop();
         releaseKeys();
+        kaptainwutax.tungsten.path.PathFinder.noteStop("FollowEntityTask@144");
         TungstenModDataContainer.PATHFINDER.stop.set(true);
         if (TungstenModDataContainer.EXECUTOR != null) TungstenModDataContainer.EXECUTOR.stop = true;
         Debug.logMessage("Follow stopped.");
@@ -276,6 +277,7 @@ public class FollowEntityTask {
             steerTicks++;
             // keep the drift-prone physics path OFF so it can't seize the executor
             if (TungstenModDataContainer.PATHFINDER.active.get())
+                kaptainwutax.tungsten.path.PathFinder.noteStop("FollowEntityTask@279");
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
             if (TungstenModDataContainer.EXECUTOR != null
                     && TungstenModDataContainer.EXECUTOR.isRunning())
@@ -412,11 +414,13 @@ public class FollowEntityTask {
             // remaining distance — a far target drifting sideways does not
             // invalidate the path start. Stop pathfinder but keep executor
             // running: the bot continues along the current path meanwhile.
+            kaptainwutax.tungsten.path.PathFinder.noteStop("FollowEntityTask@415");
             TungstenModDataContainer.PATHFINDER.stop.set(true);
             stopRequested = true;
             tickCounter   = 0;
         } else if (!executorRunning && !pathfinderActive) {
             if (++stuckTicks >= STUCK_TICKS) {
+                kaptainwutax.tungsten.path.PathFinder.noteStop("FollowEntityTask@420");
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
                 stopRequested = true;
                 stuckTicks    = 0;

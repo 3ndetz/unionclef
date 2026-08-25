@@ -133,6 +133,7 @@ public class TungstenMod implements ClientModInitializer {
 		kaptainwutax.tungsten.task.PillarTask.stop();
 		var pf = TungstenModDataContainer.PATHFINDER;
 		var ex = TungstenModDataContainer.EXECUTOR;
+		kaptainwutax.tungsten.path.PathFinder.noteStop("TungstenMod@136");
 		if (pf != null) pf.stop.set(true);
 		if (ex != null) ex.stop = true;
 	}

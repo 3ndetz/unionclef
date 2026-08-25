@@ -325,6 +325,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 			try {
 
 	        	if((TungstenModDataContainer.PATHFINDER.active.get() || TungstenModDataContainer.isExecutorRunning())) {
+	        		kaptainwutax.tungsten.path.PathFinder.noteStop("MixinClientPlayerEntity@328");
 	        		TungstenModDataContainer.PATHFINDER.stop.set(true);
 	        		if (TungstenModDataContainer.EXECUTOR != null) TungstenModDataContainer.EXECUTOR.stop = true;
 					Debug.logMessage("Stopped!");
@@ -339,6 +340,7 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 		}
 
 		if (TungstenMod.pauseKeyBinding.isPressed()) {
+			kaptainwutax.tungsten.path.PathFinder.noteStop("MixinClientPlayerEntity@342");
 			TungstenModDataContainer.PATHFINDER.stop.set(true);
 		}
 		if (TungstenMod.createGoalKeyBinding.isPressed()) {

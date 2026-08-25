@@ -164,6 +164,39 @@ public class PathFinder {
 
 	public static volatile int emitCount, emitTotalNodes, emitFresh, emitAppended;
 
+	/** Resumes that left an in-flight search on the same goal alone instead of killing it. */
+	public static volatile int resumeLetItFinish = 0;
+
+	/**
+	 * WHO KILLS THE SEARCH. searchAborted=40 with tryEmit=0 says the physics leg is
+	 * destroyed before its first attempt to hand back a route, and three fixes aimed at
+	 kaptainwutax.tungsten.path.PathFinder.noteStop("PathFinder@173");
+	 * guessed call sites never fired. So stop guessing: every stop.set(true) in the module
+	 * tags itself here, and the readout names the site instead of me nominating one.
+	 */
+	public static final java.util.Map<String, Integer> stopBy =
+			java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+	public static void noteStop(String who) { synchronized (stopBy) { stopBy.merge(who, 1, Integer::sum); } }
+	public static String stopByDump() {
+		synchronized (stopBy) {
+			if (stopBy.isEmpty()) return "none";
+			StringBuilder sb = new StringBuilder();
+			stopBy.forEach((k, v) -> sb.append(k).append(':').append(v).append(' '));
+			return sb.toString().trim();
+		}
+	}
+
+	/**
+	 * Has the CURRENT search handed back a route yet? Cleared when a search starts, set the
+	 * first time one is emitted. Read by the altoclef stall detector, which must not reset a
+	 * search that has never produced anything -- killing it cannot help, and measurably
+	 * prevents the very movement whose absence triggered the reset.
+	 */
+	/** Stall resets skipped because the search had not emitted anything yet. */
+	public static volatile int stallSpared = 0;
+
+	public static volatile boolean searchHasEmitted = false;
+
 	public static volatile int searchAborted;
 
 	public static volatile int guideVanished, guideVanishedSalvaged;
@@ -212,6 +245,10 @@ public class PathFinder {
         if(active.get() || thread != null) return false;
         active.set(true);
         stop.set(false);
+        // A FRESH SEARCH HAS EMITTED NOTHING YET. The altoclef stall detector uses this to
+        // tell 'a search that is still working' from 'a route that went bad', so that it
+        // never destroys the former. See stallResetSparesAVirginSearch.
+        searchHasEmitted = false;
         TARGET = target;
         PathFinder.blockPath = blockPath;
         numNodesConsidered.set(0);
@@ -469,12 +506,13 @@ public class PathFinder {
 	        if (blockPath.isPresent() && !blockPath.get().isEmpty()) {
 	            var lastGuide = blockPath.get().get(blockPath.get().size() - 1).getPos(true, world);
 	            // AND NODE 1, because that is the hop the physics cannot take: idx never passes 1.
+	            var n0 = blockPath.get().get(0).getPos(true, world);
 	            var n1 = blockPath.get().size() > 1
 	                    ? blockPath.get().get(1).getPos(true, world) : lastGuide;
 	            guideInfo = String.format(java.util.Locale.ROOT,
-	                    "n%d n1[%.1f,%.1f,%.1f]d%.1f end[%.1f,%.1f,%.1f]toTgt%.1f",
-	                    blockPath.get().size(), n1.x, n1.y, n1.z,
-	                    n1.distanceTo(player.getEntityPos()),
+	                    "n%d n0y%.1f n1[%.1f,%.1f,%.1f]d%.1f dy01%.1f end[%.1f,%.1f,%.1f]toTgt%.1f",
+	                    blockPath.get().size(), n0.y, n1.x, n1.y, n1.z,
+	                    n1.distanceTo(player.getEntityPos()), n1.y - n0.y,
 	                    lastGuide.x, lastGuide.y, lastGuide.z,
 	                    lastGuide.distanceTo(targetIn));
 	        }
@@ -1439,6 +1477,7 @@ public class PathFinder {
         // ZERO ticks, my empty-path guard never fires, and neither deliberate empty-path branch
         // appears in the log. One counter of size-and-door settles which of those readings is wrong.
         emitCount++;
+        searchHasEmitted = true;
         emitTotalNodes += path.size();
         if (TungstenModDataContainer.EXECUTOR.isRunning()) emitAppended++; else emitFresh++;
         if (TungstenModDataContainer.EXECUTOR.isRunning()) {
@@ -1508,6 +1547,7 @@ public class PathFinder {
         	return blockPath;
         }
         Debug.logWarning("Failed!");
+        kaptainwutax.tungsten.path.PathFinder.noteStop("PathFinder@1533");
         stop.set(true);
         return Optional.empty();
     }

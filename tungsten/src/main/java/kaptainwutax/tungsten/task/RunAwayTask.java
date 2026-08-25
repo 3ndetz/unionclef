@@ -86,6 +86,7 @@ public class RunAwayTask {
      * numbers could show it.
      *
      * <p>That is also what {@code RECALC} was buying: the old tick replanned every 10 ticks whether
+     kaptainwutax.tungsten.path.PathFinder.noteStop("RunAwayTask@89");
      * or not a good path was running, tearing it down with {@code stop.set(true)} and starting a
      * 400ms search on a stand that renders at ~9 fps. Flee paths are ~8 blocks, about two seconds
      * of travel, so they exhaust on their own; replanning now waits for that.
@@ -124,6 +125,7 @@ public class RunAwayTask {
 
     public static void stop() {
         if (active) {
+            kaptainwutax.tungsten.path.PathFinder.noteStop("RunAwayTask@127");
             TungstenModDataContainer.PATHFINDER.stop.set(true);
             if (TungstenModDataContainer.EXECUTOR != null) TungstenModDataContainer.EXECUTOR.stop = true;
             releaseKeys();
@@ -387,6 +389,7 @@ public class RunAwayTask {
             // far enough — stop pathing, hold position
             fleeHeld++;
             if (TungstenModDataContainer.PATHFINDER.active.get()) {
+                kaptainwutax.tungsten.path.PathFinder.noteStop("RunAwayTask@390");
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
             }
             return;
@@ -420,6 +423,7 @@ public class RunAwayTask {
             Vec3d flee = safeFleePoint(world, player);
             if (flee != null) {
                 fleePlans++;
+                kaptainwutax.tungsten.path.PathFinder.noteStop("RunAwayTask@423");
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
                 TungstenConfig.get().searchTimeoutMs = 400L;
                 TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 1;
