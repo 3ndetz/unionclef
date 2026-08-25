@@ -125,6 +125,9 @@ public class PathFinder {
 	 *  BlockSpacePathFinder's long form, which is how the water work turned out to be aimed at
 	 *  the wrong engine. Count them apart. */
 	/** Searches that hit the hard give-up cap, and how many still handed back a partial route. Read as gaveUp/salvaged. */
+	/** Empty paths refused rather than handed over as an arrival. */
+	public static volatile int emptyPathRefused;
+
 	public static volatile int searchGaveUp, searchGaveUpSalvaged;
 
 	public static volatile int physicsRanOut;
@@ -1264,6 +1267,20 @@ public class PathFinder {
         if (TungstenConfig.get().verboseDebugLogging && !path.isEmpty()) {
             Debug.logMessage(String.format("emit[executePath] root=%s size=%d",
                 path.get(0).agent.getPos().toString(), path.size()));
+        }
+        // ⛔ AN EMPTY PATH IS A FAILED SEARCH, NOT AN ARRIVAL.
+        //
+        // The executor finishes a path when tick == path.size(), which an empty list satisfies on
+        // the first tick: it reports ARRIVED having replayed nothing, and the drive plans the next
+        // goal believing this one was reached. Measured on flat ground with no obstacles at all --
+        // exArrived=49 against exSprint=0/0, mqStarted=0, the body covering nothing.
+        //
+        // The callers all know how to handle a FAILED search: retry, relax the fall guard, wander.
+        // None of them can handle being told the bot got there.
+        if (TungstenConfig.get().emptyPathIsNotArrival && (path == null || path.isEmpty())) {
+            emptyPathRefused++;
+            Debug.logWarning("Search produced an empty path — refusing to call that an arrival");
+            return;
         }
         if (TungstenModDataContainer.EXECUTOR.isRunning()) {
             TungstenModDataContainer.EXECUTOR.addPath(path);

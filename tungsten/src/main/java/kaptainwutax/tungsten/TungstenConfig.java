@@ -3246,6 +3246,37 @@ public class TungstenConfig {
      * and the playthrough.
      */
     public boolean resumeUsesSearchTarget = false;
+    /**
+     * An EMPTY path is a failed search, not an arrival.
+     *
+     * <p>⛔ THIS IS THE 49 ARRIVALS WITH ZERO STEPS. executePath hands whatever it has to the
+     * executor with no check for emptiness. The executor finishes a path when
+     * {@code tick == path.size()}, which an empty list satisfies on the very first tick, so it
+     * reports ARRIVED without replaying anything -- and the drive, told the goal was reached,
+     * plans the next one and gets the same answer.
+     *
+     * <p>Measured on wander_recovery, a flat 45x45 field with no obstacles and the goal ~30 blocks
+     * out:
+     *
+     * <pre>
+     *   wanderTung  2/2      the goal is chosen and ACCEPTED
+     *   bs          194/194  the coarse search completes every time
+     *   exArrived   49       the executor 'arrives' 49 times
+     *   exSprint    0/0      having replayed ZERO ticks
+     *   mqStarted   0        wanderMoved 0
+     * </pre>
+     *
+     * <p>Neither deliberate empty-path branch is involved: "At the wall" and "At the gap" both pass
+     * an empty list ON PURPOSE, and the log has zero of either on flat ground.
+     *
+     * <p>So refuse the handover. A search that produced nothing has FAILED, and the callers already
+     * know what to do with a failure -- retry, relax the fall guard, wander. What none of them can
+     * handle is being told the bot arrived.
+     *
+     * <p>Read emptyPathRefused to prove it fired. GATE: wander_recovery (two minutes), then nav,
+     * craft and the playthrough stall at 1219.5,104.1,-843.5, which shows the same signature.
+     */
+    public boolean emptyPathIsNotArrival = true;
     public boolean wallShortcutNeedsAWall = false;
     public boolean planningIsNotProgress = false;
     public boolean sleepNeedsAnObtainableBed = true;
