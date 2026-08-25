@@ -128,6 +128,9 @@ public class PathFinder {
 	/** Empty paths refused rather than handed over as an arrival. */
 	/** Searches killed by the shared guide being cleared under them, and those salvaged. */
 	/** Physics searches aborted by the stop flag. The last untraced exit. */
+	/** Path hand-overs: how many, how many nodes in total, and by which door. */
+	public static volatile int emitCount, emitTotalNodes, emitFresh, emitAppended;
+
 	public static volatile int searchAborted;
 
 	public static volatile int guideVanished, guideVanishedSalvaged;
@@ -1317,6 +1320,13 @@ public class PathFinder {
             Debug.logWarning("Search produced an empty path — refusing to call that an arrival");
             return;
         }
+        // COUNT WHAT IS ACTUALLY HANDED OVER, AND BY WHICH DOOR. Static reading has gone in a
+        // circle here: the executor completes 99 paths in "0 minutes, 0 seconds" while replaying
+        // ZERO ticks, my empty-path guard never fires, and neither deliberate empty-path branch
+        // appears in the log. One counter of size-and-door settles which of those readings is wrong.
+        emitCount++;
+        emitTotalNodes += path.size();
+        if (TungstenModDataContainer.EXECUTOR.isRunning()) emitAppended++; else emitFresh++;
         if (TungstenModDataContainer.EXECUTOR.isRunning()) {
             TungstenModDataContainer.EXECUTOR.addPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
