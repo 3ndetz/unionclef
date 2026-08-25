@@ -149,6 +149,9 @@ public class PathFinder {
 	public static volatile int salvageEmit, salvageEmitNodes;
 
 	/** Emit gate: how often it is asked, and how often the agent is stationary there. */
+	/** Goal tests run, and the nearest the frontier ever came, in centimetres. */
+	public static volatile int goalTests, nearestApproachCm;
+
 	public static volatile int tryEmitCalls, tryEmitStationary;
 
 	public static volatile int emitCount, emitTotalNodes, emitFresh, emitAppended;
@@ -1297,7 +1300,15 @@ public class PathFinder {
     		return node.agent.getPos().squaredDistanceTo(target) <= 0.9D;
     	if (world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ())).getBlock() instanceof LadderBlock)
     		return node.agent.getPos().squaredDistanceTo(target) <= 0.9D;
-        return node.agent.getPos().squaredDistanceTo(target) <= 0.2D;
+        // HOW CLOSE DOES THE FRONTIER ACTUALLY GET? The window is 0.2 SQUARED -- 0.45 blocks --
+        // and a simulation step is 0.2-0.3 walking and about 0.4 sprinting, so arrival is a target
+        // smaller than one step. This records the nearest approach so the fix is aimed at a
+        // measured miss distance rather than a guessed tolerance.
+        double d2 = node.agent.getPos().squaredDistanceTo(target);
+        int cm = (int) (Math.sqrt(d2) * 100);
+        if (nearestApproachCm == 0 || cm < nearestApproachCm) nearestApproachCm = cm;
+        goalTests++;
+        return d2 <= 0.2D;
     }
 
     private boolean tryExecutePath(Node node, Vec3d target, double minVelocity) {
