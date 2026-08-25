@@ -466,8 +466,14 @@ public class PathFinder {
 	    try {
 	        if (blockPath.isPresent() && !blockPath.get().isEmpty()) {
 	            var lastGuide = blockPath.get().get(blockPath.get().size() - 1).getPos(true, world);
-	            guideInfo = String.format(java.util.Locale.ROOT, "n%d end[%.1f,%.1f,%.1f]toTgt%.1f",
-	                    blockPath.get().size(), lastGuide.x, lastGuide.y, lastGuide.z,
+	            // AND NODE 1, because that is the hop the physics cannot take: idx never passes 1.
+	            var n1 = blockPath.get().size() > 1
+	                    ? blockPath.get().get(1).getPos(true, world) : lastGuide;
+	            guideInfo = String.format(java.util.Locale.ROOT,
+	                    "n%d n1[%.1f,%.1f,%.1f]d%.1f end[%.1f,%.1f,%.1f]toTgt%.1f",
+	                    blockPath.get().size(), n1.x, n1.y, n1.z,
+	                    n1.distanceTo(player.getEntityPos()),
+	                    lastGuide.x, lastGuide.y, lastGuide.z,
 	                    lastGuide.distanceTo(targetIn));
 	        }
 	    } catch (Throwable ignored) {
