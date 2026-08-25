@@ -4231,4 +4231,25 @@ public class TungstenConfig {
 	 * clears and the detector regains control.
 	 */
 	public static boolean stallResetSparesAVirginSearch = true;
+
+	/**
+	 * Let the drop-pursuit budget survive a rebuild of the pickup task, and treat a re-resolved
+	 * entity for the same physical drop as the same pursuit.
+	 *
+	 * <p>dropPursuitHasBudget has been ON since 2026-08-23 and its two-minute ceiling measurably
+	 * fired then (dropBudget=1). It reads ZERO across the ten-minute run whose opening took
+	 * 299 s -- because the clock and the blacklist were per-INSTANCE fields, and the task is
+	 * rebuilt constantly: the freeze dump shows 'Pickup Dropped Items' at two levels of one
+	 * chain, the bot bouncing pickup -> wander -> pickup, TimeoutWanderTask:255x2032 with
+	 * wanderMoved=0, holding a lock on a wooden_pickaxe 2.3 blocks away and two blocks down.
+	 * Every rebuild restarted the clock, so the ceiling was never reached.
+	 *
+	 * <p>A budget that resets whenever its owner is rebuilt is not a budget. Ownership moves to
+	 * the TARGET; the give-up path already calls requestEntityUnreachable, which is global.
+	 *
+	 * <p>GATE: the six pickup courses (flat, side, ledge, pit, vs_mine, after_goto) finish well
+	 * inside two minutes and must stay green; then the playthrough on time-to-first-rung, which
+	 * is where the spread lives (22 / 22 / 66 / 299 s at n=4).
+	 */
+	public boolean dropBudgetSurvivesTaskRebuild = true;
 }

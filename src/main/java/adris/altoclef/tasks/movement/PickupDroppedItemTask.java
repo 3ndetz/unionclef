@@ -61,8 +61,19 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
     private boolean _collectingPickaxeForThisResource = false;
     private ItemEntity _currentDrop = null;
     /** Which drop the current pursuit is about, and when it started -- see the budget above. */
-    private ItemEntity pursuitTarget = null;
-    private long pursuitStartMs = 0L;
+    // THE PURSUIT CLOCK BELONGS TO THE TARGET, NOT TO THE TASK INSTANCE.
+    // These were per-instance, and this task is REBUILT constantly -- the freeze dump of
+    // the slow opening shows 'Pickup Dropped Items' at two levels of one chain, the bot
+    // bouncing pickup -> wander -> pickup. Every rebuild restarted the clock at zero, so a
+    // pursuit could never spend its two-minute budget: dropBudget=0 across a ten-minute run
+    // whose first rung took 299 s, with TimeoutWanderTask:255x2032 and wanderMoved=0 while
+    // a wooden_pickaxe sat 2.3 blocks away and two blocks down.
+    // Static, so 'this drop has already cost two minutes' survives the rebuild and reaches
+    // requestEntityUnreachable, which is global anyway.
+    private static ItemEntity pursuitTarget = null;
+    private static long pursuitStartMs = 0L;
+    /** Clock restarts (target genuinely changed) and the longest pursuit seen, in seconds. */
+    public static volatile int pursuitRestarts, pursuitMaxSec;
     /** Two minutes: a drop worth a minute of walking is worth having, one that took two is not. */
     private static final long PURSUIT_BUDGET_MS = 120_000L;
     /** Drops abandoned because the pursuit ran past its budget. */
@@ -243,12 +254,17 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
         // walking is worth having, and one that has taken two is not.
         if (kaptainwutax.tungsten.TungstenConfig.get().dropPursuitHasBudget
                 && _currentDrop != null && _currentDrop.isAlive()) {
-            if (_currentDrop != pursuitTarget) {
+            if (kaptainwutax.tungsten.TungstenConfig.get().dropBudgetSurvivesTaskRebuild
+                    ? !sameDrop(_currentDrop, pursuitTarget)
+                    : _currentDrop != pursuitTarget) {
+                pursuitRestarts++;
                 pursuitTarget = _currentDrop;
                 pursuitStartMs = System.currentTimeMillis();
             } else if (System.currentTimeMillis() - pursuitStartMs > PURSUIT_BUDGET_MS) {
                 Debug.logMessage("Drop has cost more than its budget — marking it unreachable.");
                 dropBudgetSpent++;
+                pursuitMaxSec = Math.max(pursuitMaxSec,
+                        (int) ((System.currentTimeMillis() - pursuitStartMs) / 1000L));
                 _blacklist.add(_currentDrop);
                 mod.getEntityTracker().requestEntityUnreachable(_currentDrop);
                 _currentDrop = null;
@@ -466,4 +482,19 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
         return obj.isAlive() && !_blacklist.contains(obj);
     }
 
+
+    /**
+     * Is this the same pursuit as the one the clock is running for?
+     *
+     * <p>Identity alone is not enough: the tracker can hand back a DIFFERENT ItemEntity object
+     * for the same physical drop after a rescan, and under the old reference test that counted
+     * as a new target and reset the budget. Same item type within half a block is the same
+     * pursuit.
+     */
+    private static boolean sameDrop(ItemEntity a, ItemEntity b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+        if (!a.getStack().getItem().equals(b.getStack().getItem())) return false;
+        return a.getPos().squaredDistanceTo(b.getPos()) <= 0.25D;
+    }
 }
