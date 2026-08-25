@@ -4252,4 +4252,64 @@ public class TungstenConfig {
 	 * is where the spread lives (22 / 22 / 66 / 299 s at n=4).
 	 */
 	public boolean dropBudgetSurvivesTaskRebuild = true;
+
+	/**
+	 * Let the planner expand from the cell the bot is STANDING IN even when the world query
+	 * says that cell has no support.
+	 *
+	 * <p>FastPlanner skips a node with {@code continue} when {@code PlayerFit.supportTop}
+	 * returns NaN. For the START node that produces no successors at all, and since A* begins
+	 * with best = startNode the result is a ONE-cell path. FastNavigator refuses that as short
+	 * -- navRes=123/0/0/0/0 on a real run: 123 refusals and NOT ONE accepted route -- and the
+	 * queue receives a collapsed route (mqRefused(short=1229) against tickBfs=1229).
+	 *
+	 * <pre>
+	 *   plan=95/8448/253ms/sz39/zero57(e0=0,e1=57)
+	 *     e0=0    the budget check never fired before work -- not a budget problem
+	 *     e1=57   57 of 95 plans expanded the START node and it was childless
+	 * </pre>
+	 *
+	 * <p>The bot is physically supported where it stands, by definition, so the disagreement is
+	 * the world query's. Take the node's own level, exactly as the branchPlaced rescue beside it
+	 * already does. Applies to the START node only: elsewhere an unstandable cell really is one.
+	 *
+	 * <p>Water and ladders are unstandable ON PURPOSE and own a separate move generator, so the
+	 * rescue sits BEHIND that branch. Placing it in front sent a swimming start through ground
+	 * expansion and cost nav_water (14/14 -> 13/14) -- the gate caught it before it shipped.
+	 *
+	 * <p>GATE: nav and craft in full, then the playthrough on rungs -- this sits on the path
+	 * every approach takes. Read planStartRescued for proof it fires.
+	 *
+	 * <h2>MEASURED WRONG, AND THE PREMISE IS THE THING THAT IS WRONG (2026-08-26)</h2>
+	 *
+	 * <pre>
+	 *   nav 13/14, nav_water FAIL   (rescue ahead of the water branch -- fixed by moving it)
+	 *   nav_gaps INVALID: the bot LEFT THE ARENA, min Y -151.8 against a floor at -60
+	 * </pre>
+	 *
+	 * <p>The premise was 'the bot is physically supported where it stands, so a NaN support is
+	 * the world query being wrong'. It is not. On land a NaN support means the bot is NOT
+	 * standing -- it is airborne, mid-fall, or over a hole. Faking support at its own level
+	 * makes the planner build a GROUND route from mid-air, and the bot walks into the void.
+	 * That is what nav_gaps measured.
+	 *
+	 * <p>The measurement that motivated it still stands and is now better read:
+	 * plan=95/.../zero57(e0=0,e1=57) does not mean the planner wrongly refuses the start -- it
+	 * means SIXTY PER CENT OF PLANS ARE REQUESTED WHILE THE BOT IS UNSUPPORTED, and they fail
+	 * correctly. The fix is not to fake support but to resolve the start to the cell the bot is
+	 * about to LAND on (BlockSpacePathFinder.resolveStart already does exactly that), or to
+	 * withhold the plan until it is grounded.
+	 *
+	 * <p>CONFIRMED TWICE, INDEPENDENTLY. Moving the rescue behind the water/ladder branch did
+	 * NOT save it: nav_water failed again. So the rescue also fires on swimming starts that
+	 * isWater() does not classify as water, which is the same mistake in another guise --
+	 * a NaN support means NOT STANDING, and swimming is one of the ways to not be standing.
+	 *
+	 * <p>Also corrected: the nav_gaps 'left the arena' INVALID was NOT caused by this flag. It
+	 * reproduces with the flag OFF, and the suite itself re-measures it on fresh clients and
+	 * calls it the suite's wear. Baseline with the flag off is nav 14/14 + craft 22/22.
+	 *
+	 * <p>Stays OFF. Kept with its numbers so the next pass starts from the corrected reading.
+	 */
+	public boolean startCellTrustsThePlayer = false;
 }

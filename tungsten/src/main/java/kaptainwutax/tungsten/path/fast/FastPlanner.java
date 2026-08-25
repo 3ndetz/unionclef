@@ -283,7 +283,7 @@ public final class FastPlanner {
      * best = startNode, so a one-cell path means nothing ever improved on the start. These
      * separate 'expanded thousands and found nothing' from 'never expanded'.
      */
-    public static volatile int planCalls, planLastExpanded, planLastMs, planLastSize, planZeroExpand;
+    public static volatile int planCalls, planLastExpanded, planLastMs, planLastSize, planZeroExpand, planExpand0, planExpand1, planStartRescued;
 
     public static volatile int placeBudget = Integer.MAX_VALUE;
 
@@ -413,6 +413,19 @@ public final class FastPlanner {
                     && branchPlaced(current, current.x, current.y - 1, current.z)) {
                 support = current.y;
             }
+            // THE START CELL IS WHERE THE BOT IS STANDING -- DO NOT REFUSE TO PLAN FROM IT.
+            // supportTop is a world query, and when it disagrees with physics the node is
+            // skipped with `continue`, producing NO successors at all. Since best starts as
+            // startNode that yields a ONE-cell path, FastNavigator refuses it as short, and
+            // the queue gets a collapsed route. Measured: plan=95/.../zero57(e0=0,e1=57) --
+            // the budget never fired (e0=0) and 57 of 95 plans died with the START node
+            // expanded and childless. The bot is physically supported there by definition,
+            // so take its own level, exactly as the branchPlaced rescue above does.
+            if (Double.isNaN(support) && current == startNode
+                    && TungstenConfig.get().startCellTrustsThePlayer) {
+                planStartRescued++;
+                support = current.y;
+            }
             if (Double.isNaN(support)) {
                 // NO FLOOR IS NOT THE SAME AS NO MOVE. Water and ladder cells are
                 // supportless BY DEFINITION, and special() is precisely the generator that
@@ -439,9 +452,28 @@ public final class FastPlanner {
                 // that is the honest state of it.
                 if (isWater(world, current.x, current.y, current.z, scratch)
                         || isLadder(world, current.x, current.y, current.z, scratch)) {
+                    // Water and ladders are unstandable ON PURPOSE and own a separate move
+                    // generator. The start rescue below must never reach them: putting it
+                    // ahead of this branch sent a swimming start through ground expansion
+                    // and cost nav_water, 14/14 -> 13/14. The gate caught it.
                     special(world, current, goal, map, open, scratch);
+                    continue;
                 }
-                continue;   // genuinely unstandable
+                // THE START CELL IS WHERE THE BOT IS STANDING -- DO NOT REFUSE TO PLAN FROM IT.
+                // supportTop is a world query, and when it disagrees with physics this
+                // `continue` skips the node with NO successors at all. Since best starts as
+                // startNode that yields a ONE-cell path, FastNavigator refuses it as short
+                // and the queue gets a collapsed route. Measured:
+                // plan=95/8448/253ms/sz39/zero57(e0=0,e1=57) -- the budget never fired
+                // (e0=0) and 57 of 95 plans died with the START node expanded and childless.
+                // On dry land the bot is supported there by definition, so take its own
+                // level, exactly as the branchPlaced rescue above does.
+                if (current == startNode && TungstenConfig.get().startCellTrustsThePlayer) {
+                    planStartRescued++;
+                    support = current.y;
+                } else {
+                    continue;   // genuinely unstandable
+                }
             }
 
             expand(world, current, support, goal, map, open, scratch);
@@ -468,6 +500,13 @@ public final class FastPlanner {
         planLastExpanded = expanded;
         planLastMs = (int) ms;
         planLastSize = path.size();
+        // SPLIT THE TWO WAYS A PLAN CAN DO NOTHING. expanded++ happens AFTER the start node is
+        // taken off the heap, so expanded==1 means 'the start was processed and produced NO
+        // successors', while expanded==0 means the budget check fired before any work at all
+        // ((expanded & 0x3F) == 0 is true on the very first iteration). planZeroExpand lumped
+        // them together and they want different fixes.
+        if (expanded == 0) planExpand0++;
+        else if (expanded == 1) planExpand1++;
         if (expanded <= 1) planZeroExpand++;
         return new Result(path, complete, expanded, ms);
     }
