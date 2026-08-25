@@ -680,6 +680,19 @@ public class TungstenHelper {
         lockUntil = 0;
         lockedEntity = null;
         lastRetargetTime = 0;
+        // ⛔ AND THE BARREN STREAK, WHICH LEAKED ACROSS RUNS AND BLOCKED NAVIGATION OUTRIGHT.
+        //
+        // MAX_BARREN_LOCKS is 2: after two barren locks tryPathTo refuses EVERY request until
+        // something clears the streak. Nothing did, between courses -- so a suite carried the
+        // streak forward and later courses found navigation permanently refused.
+        //
+        // Measured on wander_recovery, same build, same course: 19.9 blocks covered when it runs
+        // ALONE (fresh client, streak 0) and 0.0 inside the full craft suite, where the streak
+        // arrived already spent. That is a state leak between runs, not behaviour within one.
+        //
+        // The guard itself is untouched -- two barren locks still stop a doomed chase inside a run.
+        // What stops is the streak outliving the run it was counted for.
+        barrenStreak = 0;
     }
 
     private static String formatVec(Vec3d v) {

@@ -2378,6 +2378,10 @@ public class Py4jEntryPoint {
      * zeroing them cannot change behaviour.
      */
     public java.util.Map<String, Object> resetRunCounters() {
+        // A run reset must clear the gate that BLOCKS navigation, not just the
+        // counters that describe it: the barren streak refuses every path after two
+        // barren locks and used to survive into the next course.
+        adris.altoclef.util.helpers.TungstenHelper.reset();
         var q = kaptainwutax.tungsten.path.movements.MovementQueue.class;   // for the reader
         kaptainwutax.tungsten.path.movements.MovementQueue.qStarted = 0;
         kaptainwutax.tungsten.path.movements.MovementQueue.qSteps = 0;
