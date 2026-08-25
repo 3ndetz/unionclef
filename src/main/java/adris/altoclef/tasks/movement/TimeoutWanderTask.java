@@ -330,10 +330,21 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         // wander circle, drive it with tungsten, pick another when reached or refused.
         if (kaptainwutax.tungsten.TungstenConfig.get().wanderUsesTungsten) {
             if (!Nav.isExecutingRoute() && !adris.altoclef.util.helpers.TungstenHelper.isActive()) {
+                // ⛔ FROM WHERE THE BOT IS, NOT AROUND WHERE IT STARTED.
+                //
+                // The first version picked points on a circle of fixed radius around `origin`.
+                // Once the body reached that circle every later pick was on it too, so the legs
+                // cancelled out and the ground covered stopped growing: wander_recovery measures
+                // wanderMoved and wants more than 15 blocks, and the circle version delivered 8.25.
+                //
+                // Searching is walking AWAY. Each leg starts from the current position and reaches
+                // a little further than the last, so the distance accumulates instead of orbiting.
+                net.minecraft.util.math.Vec3d from = mod.getPlayer().getPos();
                 double ang = ((wanderTungPicked * 137) % 360) * Math.PI / 180.0;
-                double r = Math.max(8.0, distanceToWander + _wanderDistanceExtension);
+                double r = Math.max(8.0, distanceToWander + _wanderDistanceExtension)
+                        + Math.min(24.0, wanderTungPicked * 2.0);
                 net.minecraft.util.math.Vec3d dest = new net.minecraft.util.math.Vec3d(
-                        origin.x + Math.cos(ang) * r, origin.y, origin.z + Math.sin(ang) * r);
+                        from.x + Math.cos(ang) * r, from.y, from.z + Math.sin(ang) * r);
                 wanderTungPicked++;
                 if (adris.altoclef.util.helpers.TungstenHelper.tryPathTo(dest)) wanderTungDriven++;
             }
