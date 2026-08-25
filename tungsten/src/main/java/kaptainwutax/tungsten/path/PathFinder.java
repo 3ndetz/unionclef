@@ -132,6 +132,10 @@ public class PathFinder {
 	/** Best-partial deliveries that bypass executePath, and their node counts. */
 	/** Deliveries from the reset-search branch -- the third door. */
 	/** Reset prefixes refused because they contained no movement. */
+	/** Re-roots that did not extend the guide, and so were not repeated. */
+	public static volatile int resetNoGain;
+	private boolean rerootExhausted = false;
+
 	public static volatile int resetEmitRefused;
 
 	public static volatile int resetEmit, resetEmitNodes;
@@ -438,6 +442,7 @@ public class PathFinder {
 	    }
 	    final Vec3d target = approach;
 
+	    rerootExhausted = false;
 	    bestHeuristicSoFar = initializeBestHeuristics(this.start);
 	    openSet = new BinaryHeapOpenSet();
 	    openSet.insert(this.start);
@@ -554,7 +559,14 @@ public class PathFinder {
 	            }
 	        }
 	
-	        if (shouldResetSearch(numNodesConsidered.get(), blockPath, next, target)) {
+	        // ⛔ A RE-ROOT THAT BUYS NOTHING RESTARTS THE SEARCH FOR NOTHING. The branch below
+	        // throws away the frontier AND the closed set, so if the guide comes back no longer
+	        // than it went in, the search begins again every eight nodes and never gets deep
+	        // enough to emit. Measured: emit/salvage/resetEmit all zero against bs=143/144.
+	        if (rerootExhausted && TungstenConfig.get().rerootMustExtendTheGuide) {
+	            // fall through: search on with the guide we have
+	        } else if (shouldResetSearch(numNodesConsidered.get(), blockPath, next, target)) {
+	            final int guideBefore = blockPath.isPresent() ? blockPath.get().size() : 0;
 	        	if (TungstenModDataContainer.EXECUTOR.isRunning()) {
 	        		TungstenModDataContainer.EXECUTOR.cb = () -> {
 	        			blockPath = resetSearch(next, world, blockPath, target, player);
@@ -566,6 +578,12 @@ public class PathFinder {
 	        		// drift abort). Emit the prefix and extend the block path now.
 	        		blockPath = resetSearch(next, world, blockPath, target, player);
 	        	}
+	            final int guideAfter = blockPath.isPresent() ? blockPath.get().size() : 0;
+	            if (TungstenConfig.get().rerootMustExtendTheGuide && guideAfter <= guideBefore) {
+	                resetNoGain++;
+	                rerootExhausted = true;   // do not restart the search again for this one
+	                continue;
+	            }
 	            openSet = new BinaryHeapOpenSet();
 	            this.start = initializeStartNode(next, target);
 	            openSet.insert(this.start);

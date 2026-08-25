@@ -3342,6 +3342,40 @@ public class TungstenConfig {
      * <p>Read resetEmitRefused to prove it fired. GATE: wander_recovery (two minutes), then nav,
      * craft and the playthrough.
      */
+    /**
+     * A re-root that does not extend the guide must not be repeated -- it restarts the search.
+     *
+     * <p>⛔ THE PERPETUAL RESTART. shouldResetSearch samples every 8 nodes considered, and when it
+     * fires the loop does this:
+     *
+     * <pre>
+     *   openSet = new BinaryHeapOpenSet();     // the frontier is thrown away
+     *   this.start = initializeStartNode(next, target);
+     *   closed.clear();                        // and so is everything already explored
+     *   continue;
+     * </pre>
+     *
+     * <p>So the physics search begins again from scratch. If the condition is still true eight
+     * nodes later -- and it is, when resetSearch cannot extend the guide -- it restarts again. The
+     * search can never get deeper than eight nodes, and it therefore never reaches an emit.
+     *
+     * <p>Measured after the one-node prefix was refused, which is what made this visible:
+     *
+     * <pre>
+     *   bs        143/144   the coarse phase completes every time
+     *   emit      0/0/0/0   nothing delivered through executePath
+     *   salvage   0/0       nothing through setCurrentPath
+     *   resetEmit 0/0       and nothing through the reset door either
+     *   exArrived 0         no more phantom arrivals to hide it
+     * </pre>
+     *
+     * <p>Re-rooting is right when it BUYS something -- a longer guide to search along. When the
+     * guide comes back no longer than it went in, restarting the search buys nothing and costs
+     * everything explored so far.
+     *
+     * <p>Read resetNoGain to prove it fired. GATE: wander_recovery, then nav, craft, playthrough.
+     */
+    public boolean rerootMustExtendTheGuide = true;
     public boolean resetPrefixNeedsMovement = true;
     public boolean emptyPathIsNotArrival = true;
     public boolean wallShortcutNeedsAWall = false;
