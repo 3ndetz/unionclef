@@ -35,10 +35,21 @@ public class MoveItemToSlotTask extends Task {
 
     }
 
+    /**
+     * WHERE THE DELIVERY GOES. CraftGenericManuallyTask recorded that it asks correctly and
+     * this task does not deliver -- mc=1051/0/0/0/0 then, mc=3226/0/0/1/0 on the run that
+     * stalled at two rungs, every tick in the fill branch with nothing landing in the grid.
+     * The whole body sits under canDoSlotAction(), so 'throttled forever' and 'acting but not
+     * landing' look identical from outside. These separate them.
+     */
+    public static volatile int mvTicks, mvBlocked, mvPickup, mvPlace, mvNoSource;
+
     @Override
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
+        mvTicks++;
+        if (!mod.getSlotHandler().canDoSlotAction()) mvBlocked++;
         if (mod.getSlotHandler().canDoSlotAction()) {
             // Rough plan
             // - If empty slot or wrong item
@@ -83,13 +94,16 @@ public class MoveItemToSlotTask extends Task {
                 }
                 if (toPlace.isEmpty()) {
                     Debug.logWarning("Called MoveItemToSlotTask when item/not enough item is available! valid items: " + StlHelper.toString(validItems, Item::getTranslationKey));
+                    mvNoSource++;
                     this.stop();
                     return null;
                 }
+                mvPickup++;
                 mod.getSlotHandler().clickSlot(toPlace.get(), 0, SlotActionType.PICKUP);
                 return null;
             }
 
+            mvPlace++;
             int currentlyPlaced = Arrays.asList(validItems).contains(atTarget.getItem()) ? atTarget.getCount() : 0;
             if (currentHeld.getCount() + currentlyPlaced <= toMove.getTargetCount()) {
                 // Just place all of 'em

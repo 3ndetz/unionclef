@@ -70,6 +70,9 @@ public class PlaceBlockNearbyTask extends Task {
         });
     }
 
+    /** Placement-attempt anatomy: ticks, nothing under the crosshair, refused, accepted. */
+    public static volatile int pnbTicks, pnbNoLook, pnbRefused, pnbOk;
+
     @Override
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
@@ -109,6 +112,15 @@ public class PlaceBlockNearbyTask extends Task {
 
         // Try placing where we're looking right now.
         BlockPos current = getCurrentlyLookingBlockPlace(mod);
+        // WHY DOES A CRAFTING TABLE NEVER GET PLACED? This task only places where the
+        // crosshair HAPPENS to point, and otherwise turns at random and wanders. Measured on
+        // the run that stalled at two rungs: placeCalled=1, inRange=0, clicked=0 with
+        // TimeoutWanderTask:255x2338. Split the two ways this can fail before changing it --
+        // nothing under the crosshair at all, versus something the predicate refuses.
+        pnbTicks++;
+        if (current == null) pnbNoLook++;
+        else if (!_canPlaceHere.test(current)) pnbRefused++;
+        else pnbOk++;
         if (current != null && _canPlaceHere.test(current)) {
             setDebugState("Placing since we can...");
             if (mod.getSlotHandler().forceEquipItem(ItemHelper.blocksToItems(toPlace))) {
