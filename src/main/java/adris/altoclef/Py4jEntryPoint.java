@@ -2808,6 +2808,19 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.entity.AbstractDoToEntityTask.entityBudgetSpent = 0;
         adris.altoclef.tasks.movement.PickupDroppedItemTask.dropBudgetSpent = 0;
         adris.altoclef.tasks.movement.PickupDroppedItemTask.pursuitRestarts = 0;
+        adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbTicks = 0;
+        adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbNoLook = 0;
+        adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbRefused = 0;
+        adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbOk = 0;
+        adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbWander = 0;
+        adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbProgFail = 0;
+        adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbLocate = 0;
+        adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbNoSpot = 0;
+        adris.altoclef.tasks.slot.MoveItemToSlotTask.mvTicks = 0;
+        adris.altoclef.tasks.slot.MoveItemToSlotTask.mvBlocked = 0;
+        adris.altoclef.tasks.slot.MoveItemToSlotTask.mvPickup = 0;
+        adris.altoclef.tasks.slot.MoveItemToSlotTask.mvPlace = 0;
+        adris.altoclef.tasks.slot.MoveItemToSlotTask.mvNoSource = 0;
         adris.altoclef.tasks.movement.PickupDroppedItemTask.pursuitMaxSec = 0;
         adris.altoclef.trackers.EntityTracker.idDeepPicks = 0;
         adris.altoclef.trackers.EntityTracker.idDeepBeatOthers = 0;
@@ -3069,7 +3082,7 @@ public class Py4jEntryPoint {
                         + " mqLost=%d mqStatusFail=%d mqRefused=%d(short=%d vetoed=%d) mqNoClass=%d mqNullEdge=%d mqExpand=%d/%d/%d/%d mqExpandAt=%s qRebased=%d qOffRoute=%d qUnreachReplan=%d gridCorner=%d dbFarRetry=%d/%d navBridgeRescued=%d walkerHoleHeld=%d diagonalWalled=%d staleTail=%d ungagged=%d walkYield=%d walkYieldMiner=%d walkMode=%d/%d/%d mqParkour=%d mqAdmitMismatch=%d qPrep=%d/%d blindPrep=%d mqNull=%d gaveUp=%d/%d dc=%d/%d/%d/%d/%d mc=%d/%d/%d/%d/%d mcFlight=%d mcSwitch=%d toolSwap=%d recipesKnown=%d wander=%d wanderMoved=%d wanderChk=%d/%d wanderFail=%d wanderDenied=%d/%d wanderTung=%d/%d emptyPathRefused=%d guideVanished=%d/%d searchAborted=%d emit=%d/%d/%d/%d tryEmit=%d/%d goal=%d/%d/%s snap=%d/%d/%d guide=%s/idx%d/relaxDrop%d/fallChk%d-%d/smart%d-%d/resumeKept%d/stopBy[%s]/spared%d/bsEnd[c%d t%d s%d x%d]closest%dcm bsIn[f%d s%d i%d] salvage=%d/%d resetEmit=%d/%d resetRefused=%d resetNoGain=%d children=%d/%d/%d rej=%d/%d/%d/%d gen=%d/%d sweepKept=%d/%d salvageEmit=%d/%d dbDenied=%d airProg=%d lavaEsc=%d lavaCond=%d/%d surv=%d/%d tbl=%d/%d@%d bs=%d/%d/%d/%d@%dms navUnsafeAir=%d sm=%d/%d smWater=%d srch=%d/%d/%d fallRetry=%d/%d fallHarmless=%d/%d fallPriced=%d/%d gaveUpFallRetry=%d wallSkipRefused=%d gotoResumedFromSearch=%d drop=%d/%d/%d scan=%d/%d/%d/%d/%d/%d navStop=%d/%d/%d fleeSpot=%d/%d lock=%d/%d/%d@%s lockAnat=%d/%d/%d/%d/%d/%d/%d lockRetarget=%d/%d cb=%d/%d/%d/%d avoidSrc=%d/%d/%d/%d@%s/%s et=%d/%d"
                         + " sprint=%d/%d lowHp=%d/%d standOff=%d hurt=%d/%d/%d hurtWin=%d/%d diseng=%d/%d ctl=%d cq=%d/%d/%d los=%d/%d/%d/%d kaTung=%d/%d/%d/%d dte=%d/%d/%d/%d/%d/%d mdTung=%d/%d mdFleeStuck=%d mdFleeShooter=%d mdFar=%d/%d arrows=%d/%.2f/%.2f draws=%d/%d/%d/%.2f band=%d/%d dodgeYield=%d latch=%d/%d breakFail=%d/%d/%d/%d/%d stranded=%d/%s/%s gp=%d/%d/%d/%d/%d dodgeTask=%d/%.2f dealt=%.1f/%.1f/%d hitSize=%d/%d/%d/%d takeSize=%d/%d/%d/%d slotSync=%d/%d critReset=%d stray=%d/%d heldSwing=%d loseKite=%d holdBow=%d punkKept=%d swingHits=%d dodgeDrive=%d hop=%d/%d/%d/%d/%d/%d/%d mdPillarD=%d dmgTaken=%.1f dw=%d/%.1f/%.2f/%.2f/%d/%d dwNoBlame=%d dmgWhy=%d/%d/%d/%d/%d@%.1f strafe=%d/%d voidEntries=%d voidTicks=%d lastFall=[%s] hits=%d/%d/%d/%d hitRange=%.2f/%.2f mdBow=%d bowShots=%d bowWild=%d bowNoSol=%d bowRestart=%d bowAimTO=%d bowDrawTO=%d bowBestMiss=%.2f bowFacing=%d bowNoRoom=%d flee=%d/%d/%d/%d/%d/%d qBurn=%d qTp=%d qNoMove=%d stuck=[%s] staleRoot=%d"
                         + " | mvRequested=%d mvCooldown=%d mvNoHit=%d mvClicked=%d mvSteered=%d"
-                        + " | mv=%d/%d/%d/%d/%d pnb=%d/%d/%d/%d gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d"
+                        + " | mv=%d/%d/%d/%d/%d pnb=%d/%d/%d/%d pnbExit=%d/%d/%d/%d gateThrough=%d gateHeld=%d queued=%d queuePlaced=%d"
                         + " entityReleased=%d/%d idrop=%d/%d/%d/%d rt=%d/%d/%d entityCloseWalk=%d/%d/%d/%d/%d/%d/%d closeWalkGeom=%d/%d/%d/%d deep=%d/%d/%d cwJump=%d cwSneakRel=%d cwLease=%d cwDeep=%d closeWalkFwd=%d/%d/%d",
                 kaptainwutax.tungsten.path.PathExecutor.placeCalled,
                 kaptainwutax.tungsten.path.PathExecutor.placeDeferred,
@@ -3603,6 +3616,10 @@ public class Py4jEntryPoint {
                 adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbNoLook,
                 adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbRefused,
                 adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbOk,
+                adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbWander,
+                adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbProgFail,
+                adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbLocate,
+                adris.altoclef.tasks.construction.PlaceBlockNearbyTask.pnbNoSpot,
                 kaptainwutax.tungsten.helpers.BlockPlaceHelper.gatedThrough,
                 kaptainwutax.tungsten.helpers.BlockPlaceHelper.gatedByCooldown,
                 kaptainwutax.tungsten.helpers.BlockPlaceHelper.queued(),

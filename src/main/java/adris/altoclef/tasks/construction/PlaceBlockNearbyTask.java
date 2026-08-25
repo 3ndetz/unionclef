@@ -72,6 +72,15 @@ public class PlaceBlockNearbyTask extends Task {
 
     /** Placement-attempt anatomy: ticks, nothing under the crosshair, refused, accepted. */
     public static volatile int pnbTicks, pnbNoLook, pnbRefused, pnbOk;
+    /**
+     * WHICH EXIT THIS TASK TAKES. pnbNoLook read 4350 of 4353 ticks on a two-rung run, but
+     * that alone is not the defect: the crosshair path is only an opportunistic fast path and
+     * there is a deterministic one below it (locateClosePlacePos -> PlaceBlockTask). Two early
+     * returns sit in between, and the freeze dump shows <Wander for 5.0 blocks> as the live
+     * leaf -- so the question is whether control ever REACHES the deterministic path.
+     * Read as pnbExit=wander/progFail/locate/noSpot.
+     */
+    public static volatile int pnbWander, pnbProgFail, pnbLocate, pnbNoSpot;
 
     @Override
     protected Task onTick() {
@@ -132,12 +141,14 @@ public class PlaceBlockNearbyTask extends Task {
 
         // Wander while we can.
         if (wander.isActive() && !wander.isFinished()) {
+            pnbWander++;
             setDebugState("Wandering, will try to place again later.");
             progressChecker.reset();
             return wander;
         }
         // Fail check
         if (!progressChecker.check(mod)) {
+            pnbProgFail++;
             Debug.logMessage("Failed placing, wandering and trying again.");
             LookHelper.randomOrientation();
             if (tryPlace != null) {
@@ -148,9 +159,11 @@ public class PlaceBlockNearbyTask extends Task {
         }
 
         // Try to place at a particular spot.
+        pnbLocate++;
         if (tryPlace == null || !WorldHelper.canReach(tryPlace)) {
             tryPlace = locateClosePlacePos(mod);
         }
+        if (tryPlace == null) pnbNoSpot++;
         if (tryPlace != null) {
             setDebugState("Trying to place at " + tryPlace);
             justPlaced = tryPlace;
