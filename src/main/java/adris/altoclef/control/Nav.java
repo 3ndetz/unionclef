@@ -39,7 +39,23 @@ public final class Nav {
     /** Stop navigating. Safe to call when nothing is. */
     public static void cancel() {
         // G-0: tungsten is the only engine now. Cancelling means stopping tungsten.
-        adris.altoclef.util.helpers.TungstenHelper.stop();
+        // ⛔ THIS WAS A NO-OP AND MUST STAY ONE. Same trap as Nav.pause(), which cost every
+        // pickup course before it was caught: the line here addressed the LEGACY engine, and that
+        // engine had not been pathing for months, so the call did nothing at all.
+        //
+        // G-0 replaced it with TungstenHelper.stop(), which turns 35 call sites of Nav.cancel()
+        // into 35 places that kill the live pathfinder. The worst of them is inside
+        // driveTungstenPrimary itself:
+        //
+        //     if (!busy && pf != null) { pf.find(...); }   // kick the async search
+        //     Nav.cancel();                                // and immediately stop it
+        //
+        // The search is started and killed on the same tick, every tick. That is the stall the
+        // repro reproduces: pdEnter=1921, pdWalking=0, mqStarted=0, and 135 completed breaks
+        // without a single step.
+        //
+        // Cancelling tungsten deliberately is what TungstenHelper.stop() is FOR, and the places
+        // that mean it call it directly.
     }
 
     /** Times {@link #cancelAll} ran, and times it found a route still running. Read as navStop. */
@@ -287,7 +303,23 @@ public final class Nav {
 
     /** Forget the current goal. */
     public static void clearGoal() {
-        adris.altoclef.util.helpers.TungstenHelper.stop();
+        // ⛔ THIS WAS A NO-OP AND MUST STAY ONE. Same trap as Nav.pause(), which cost every
+        // pickup course before it was caught: the line here addressed the LEGACY engine, and that
+        // engine had not been pathing for months, so the call did nothing at all.
+        //
+        // G-0 replaced it with TungstenHelper.stop(), which turns 35 call sites of Nav.cancel()
+        // into 35 places that kill the live pathfinder. The worst of them is inside
+        // driveTungstenPrimary itself:
+        //
+        //     if (!busy && pf != null) { pf.find(...); }   // kick the async search
+        //     Nav.cancel();                                // and immediately stop it
+        //
+        // The search is started and killed on the same tick, every tick. That is the stall the
+        // repro reproduces: pdEnter=1921, pdWalking=0, mqStarted=0, and 135 completed breaks
+        // without a single step.
+        //
+        // Cancelling tungsten deliberately is what TungstenHelper.stop() is FOR, and the places
+        // that mean it call it directly.
     }
 
 
@@ -399,7 +431,23 @@ public final class Nav {
 
     /** Drop everything, including any queued path. Stronger than {@link #cancel()}. */
     public static void cancelEverything() {
-        adris.altoclef.util.helpers.TungstenHelper.stop();
+        // ⛔ THIS WAS A NO-OP AND MUST STAY ONE. Same trap as Nav.pause(), which cost every
+        // pickup course before it was caught: the line here addressed the LEGACY engine, and that
+        // engine had not been pathing for months, so the call did nothing at all.
+        //
+        // G-0 replaced it with TungstenHelper.stop(), which turns 35 call sites of Nav.cancel()
+        // into 35 places that kill the live pathfinder. The worst of them is inside
+        // driveTungstenPrimary itself:
+        //
+        //     if (!busy && pf != null) { pf.find(...); }   // kick the async search
+        //     Nav.cancel();                                // and immediately stop it
+        //
+        // The search is started and killed on the same tick, every tick. That is the stall the
+        // repro reproduces: pdEnter=1921, pdWalking=0, mqStarted=0, and 135 completed breaks
+        // without a single step.
+        //
+        // Cancelling tungsten deliberately is what TungstenHelper.stop() is FOR, and the places
+        // that mean it call it directly.
     }
 
     // isBuilding() / stopBuilding() USED TO LIVE HERE, and G-0a removed both.
@@ -416,6 +464,22 @@ public final class Nav {
 
     /** Stop exploring. Safe to call when nothing is. */
     public static void stopExploring() {
-        adris.altoclef.util.helpers.TungstenHelper.stop();
+        // ⛔ THIS WAS A NO-OP AND MUST STAY ONE. Same trap as Nav.pause(), which cost every
+        // pickup course before it was caught: the line here addressed the LEGACY engine, and that
+        // engine had not been pathing for months, so the call did nothing at all.
+        //
+        // G-0 replaced it with TungstenHelper.stop(), which turns 35 call sites of Nav.cancel()
+        // into 35 places that kill the live pathfinder. The worst of them is inside
+        // driveTungstenPrimary itself:
+        //
+        //     if (!busy && pf != null) { pf.find(...); }   // kick the async search
+        //     Nav.cancel();                                // and immediately stop it
+        //
+        // The search is started and killed on the same tick, every tick. That is the stall the
+        // repro reproduces: pdEnter=1921, pdWalking=0, mqStarted=0, and 135 completed breaks
+        // without a single step.
+        //
+        // Cancelling tungsten deliberately is what TungstenHelper.stop() is FOR, and the places
+        // that mean it call it directly.
     }
 }
