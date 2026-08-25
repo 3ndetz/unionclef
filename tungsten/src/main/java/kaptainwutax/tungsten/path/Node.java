@@ -122,6 +122,9 @@ public class Node {
 
 	/** Which rejection inside createNode fires: the last unmeasured link. */
 	/** Candidates offered to the simulation, and simulations actually attempted. */
+	/** Expansions kept that the sprint-jump shortcut would have replaced. */
+	public static volatile int sweepKept;
+
 	public static volatile int paramsOffered, createCalls;
 
 	public static volatile int rejJumpSneak, rejAtWaypoint, rejSneakAir, rejSneakJump;
@@ -181,7 +184,17 @@ public class Node {
             if (this.agent.canSprint()) {
                 Node sprintJumpMove = SprintJumpMove.generateMove(this, nextBlockNode);
                 boolean isSprintJumpMoveClose = sprintJumpMove.agent.getPos().distanceTo(nextBlockNode.getPos(true)) < 0.85;
-                if (!sprintJumpMove.agent.onGround || !isSprintJumpMoveClose) {
+                // ⛔ A GOOD SPRINT-JUMP IS A MOVE, NOT THE ONLY MOVE.
+                //
+                // This skipped the entire sweep whenever the sprint-jump landed on ground within
+                // 0.85 of the waypoint -- which on open ground is every time -- leaving the node
+                // with exactly ONE successor. A search with one successor per node is a straight
+                // line: it cannot route around anything, and when the line does not arrive it
+                // exhausts. Measured on an empty flat field: children 170/83/83 over ~130 searches,
+                // gen=0/0 (the sweep never entered), srch=5/0/0, and no route ever emitted.
+                if (!sprintJumpMove.agent.onGround || !isSprintJumpMoveClose
+                        || TungstenConfig.get().sprintJumpDoesNotReplaceTheSweep) {
+                    if (sprintJumpMove.agent.onGround && isSprintJumpMoveClose) sweepKept++;
                     if (agent.onGround || agent.touchingWater || agent.isClimbing(world)) {
                         generateGroundOrWaterNodes(world, target, nextBlockNode, nodes);
                     } else {

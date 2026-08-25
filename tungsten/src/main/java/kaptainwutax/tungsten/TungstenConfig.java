@@ -3375,6 +3375,65 @@ public class TungstenConfig {
      *
      * <p>Read resetNoGain to prove it fired. GATE: wander_recovery, then nav, craft, playthrough.
      */
+    /**
+     * A sprint-jump that happens to land well must not REPLACE the whole expansion.
+     *
+     * <p>⛔ THE ROOT, AND IT IS ONE SUCCESSOR PER NODE. getChildren contains:
+     *
+     * <pre>
+     *   if (agent.canSprint()) {
+     *       Node sprintJumpMove = SprintJumpMove.generateMove(...);
+     *       boolean close = sprintJumpMove.agent.getPos().distanceTo(waypoint) &lt; 0.85;
+     *       if (!sprintJumpMove.agent.onGround || !close) {
+     *           generateGroundOrWaterNodes(...);   // the full sweep, ONLY here
+     *       }
+     *       nodes.add(sprintJumpMove);             // added either way
+     *   }
+     * </pre>
+     *
+     * <p>So whenever a sprint-jump lands ON GROUND within 0.85 of the waypoint -- which on open
+     * ground is every time -- the full sweep is skipped and the node gets exactly ONE successor.
+     * A search with one successor per node is a straight line: it cannot go around anything, and
+     * when that line does not reach, it exhausts.
+     *
+     * <p>Measured on a flat 45x45 field with no obstacles at all:
+     *
+     * <pre>
+     *   children = 170/83/83   about ONE raw move per node over ~130 searches
+     *   gen      = 0/0         the sweep is never entered, so its rejections never fire
+     *   srch     = 5/0/0       the search exhausts
+     *   emit / salvage / resetEmit  all zero -- no route is ever produced
+     * </pre>
+     *
+     * <p>Keeping the sprint-jump is right: it is a good move and often the best one. Letting it
+     * stand in for every other move is not.
+     *
+     * <p>Read sweepKept to prove it fired. GATE: wander_recovery, then nav, craft, playthrough.
+     *
+     * <h2>MEASURED: THE DIAGNOSIS HOLDS BOTH WAYS, THE FIX IS NOT SHIPPABLE YET (2026-08-25)</h2>
+     *
+     * <pre>
+     *   shortcut on (before)   children      170 /     83 /     83     one move per node
+     *   shortcut off (after)   children  1407994 / 138480 / 138480
+     *                          gen       1363808 / 1355672
+     *                          sweepKept    4203
+     * </pre>
+     *
+     * <p>So the sweep really was being skipped -- 4203 times in one course -- and keeping it turns
+     * a single successor per node into a properly branching search. The mechanism is now confirmed
+     * from both directions.
+     *
+     * <p>And it still emits nothing: emit=0/0/0/0, salvage=0/0, wanderMoved=0.0. 1.36 MILLION
+     * candidate simulations is a search that cannot finish inside its budget, so one extreme has
+     * replaced the other -- a straight line that cannot route, or a frontier that cannot be
+     * explored.
+     *
+     * <p>OFF until it is BOUNDED. The shortcut existed to prune and pruned to one; the answer is a
+     * cap on the sweep (a yaw window narrowed toward the waypoint, or a successor limit), not the
+     * unbounded sweep and not the single move. Both numbers are recorded so the bounded version can
+     * be aimed between them rather than guessed.
+     */
+    public boolean sprintJumpDoesNotReplaceTheSweep = false;
     public boolean rerootMustExtendTheGuide = true;
     public boolean resetPrefixNeedsMovement = true;
     public boolean emptyPathIsNotArrival = true;
