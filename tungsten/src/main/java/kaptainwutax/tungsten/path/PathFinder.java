@@ -133,6 +133,9 @@ public class PathFinder {
 	/** Deliveries from the reset-search branch -- the third door. */
 	/** Reset prefixes refused because they contained no movement. */
 	/** Re-roots that did not extend the guide, and so were not repeated. */
+	/** Children generated and offered to the frontier. Distinguishes 'no moves' from 'no progress'. */
+	public static volatile int expandedChildren;
+
 	public static volatile int resetNoGain;
 	private boolean rerootExhausted = false;
 
@@ -1730,6 +1733,7 @@ public class PathFinder {
 					        updateNode(world, parent, child, target, TARGET, blockPath.get(), closed);
 		
 					        synchronized (openSetLock) {
+					            expandedChildren++;
 					            if (child.isOpen()) {
 					                openSet.update(child);
 					            } else {
