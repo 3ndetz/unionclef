@@ -33,6 +33,22 @@ public class BlockSpacePathFinder {
 	public static Thread thread = null;
 	protected static final double[] COEFFICIENTS = {1.5, 2, 2.5, 3, 4, 5, 10};
 	protected static final BlockNode[] bestSoFar = new BlockNode[COEFFICIENTS.length];
+
+	/**
+	 * HOW THE COARSE SEARCH ENDED. The guide was measured ending 6.7 blocks short of the
+	 * target while the physics goal test never passed once (tryEmit=0), and the four exits
+	 * of the loop are indistinguishable from outside. They answer different questions:
+	 * exhausted = the target is not reachable under the move set, timeout = it might be but
+	 * the budget was too small, stopped = something killed the search again.
+	 */
+	public static volatile int bsComplete, bsTimeout, bsStopped, bsExhausted;
+	/** Closest the coarse search actually got to the target, in centimetres. */
+	public static volatile int bsClosestCm;
+	/** Entries into find() and into the search loop -- separates 'never called' from
+	 *  'called but returns before the loop'. All four outcome counters read zero while a
+	 *  16-node guide existed, so the guide is not being recomputed at all. */
+	public static volatile int bsFindCalls, bsSearchCalls, bsLoopIters;
+
 	/** Tungsten's own value for upstream's MIN_IMPROVEMENT (AbstractNodeCostSearch.java:82,
 	 *  where it is 0.01). Left as it was found — it is a positive threshold doing the job the
 	 *  name says, unlike PathFinder's, which was -500. */
@@ -41,6 +57,7 @@ public class BlockSpacePathFinder {
 	
 	
 	public static void find(WorldView world, Vec3d target, PlayerEntity player) {
+		bsFindCalls++;
 		if(active)return;
 		active = true;
 
@@ -246,8 +263,11 @@ public class BlockSpacePathFinder {
 		int insertedChildren = 0;
 
 		openSet.insert(start);
+		bsSearchCalls++;
+		boolean openSetDrained = true;
 		while(!openSet.isEmpty()) {
 			if (TungstenModDataContainer.PATHFINDER.stop.get()) {
+				bsStopped++; openSetDrained = false;
 				RenderHelper.clearRenderers();
 				break;
 			}
@@ -255,6 +275,7 @@ public class BlockSpacePathFinder {
 			if ((numNodes & (timeCheckInterval - 1)) == 0) { // only call this once every 64 nodes (about half a millisecond)
                 long now = System.currentTimeMillis(); // since nanoTime is slow on windows (takes many microseconds)
                 if (now - failureTimeoutTime >= 0 || (!failing && now - primaryTimeoutTime >= 0)) {
+                    bsTimeout++; openSetDrained = false;
                     break;
                 }
             }
@@ -264,7 +285,13 @@ public class BlockSpacePathFinder {
 			if ((numNodes & 0xFF) == 0) {
 				try { Thread.sleep(1); } catch (InterruptedException ignored) {}
 			}
+			bsLoopIters++;
 			BlockNode next = openSet.removeLowest();
+			{
+				double dsq = next.getPos().squaredDistanceTo(target);
+				int cm = (int) Math.min(Math.sqrt(dsq) * 100.0, 2_000_000_000.0);
+				if (bsClosestCm == 0 || cm < bsClosestCm) bsClosestCm = cm;
+			}
 
 			if (closed.contains(next)) continue;
 			
@@ -273,6 +300,7 @@ public class BlockSpacePathFinder {
 				TungstenModRenderContainer.RENDERERS.clear();
 				List<BlockNode> path = generatePath(next, world);
 
+				bsComplete++;
 				Debug.logMessage("Found rought path!");
 				
 				return Optional.of(path);
@@ -341,6 +369,7 @@ public class BlockSpacePathFinder {
 		}
 
 		if (openSet.isEmpty()) {
+			if (openSetDrained) bsExhausted++;
 			if (!generateDeep) {
 				return search(world, start, target, true, player);
 			}
