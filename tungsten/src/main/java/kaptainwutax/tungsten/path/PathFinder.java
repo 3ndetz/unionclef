@@ -151,6 +151,8 @@ public class PathFinder {
 	/** Emit gate: how often it is asked, and how often the agent is stationary there. */
 	/** Goal tests run, and the nearest the frontier ever came, in centimetres. */
 	public static volatile int goalTests, nearestApproachCm;
+	/** The coarse guide: node count, endpoint, and its distance to the real goal. */
+	public static volatile String guideInfo = "-";
 	/** The first agent/target pair a goal test saw, verbatim. */
 	public static volatile String lastGoalPair = "-";
 
@@ -455,6 +457,19 @@ public class PathFinder {
 	        }
 	    }
 	    final Vec3d target = approach;
+	    // WHERE DOES THE GUIDE ACTUALLY LEAD? The physics stops 11.3 blocks from a 14.3 block
+	    // goal, and the one remaining candidate is that the coarse path points somewhere the
+	    // physics cannot step to. Record its endpoint and length next to the goal it is meant to
+	    // serve, so the two can be compared instead of assumed to agree.
+	    try {
+	        if (blockPath.isPresent() && !blockPath.get().isEmpty()) {
+	            var lastGuide = blockPath.get().get(blockPath.get().size() - 1).getPos(true, world);
+	            guideInfo = String.format(java.util.Locale.ROOT, "n%d end[%.1f,%.1f,%.1f]toTgt%.1f",
+	                    blockPath.get().size(), lastGuide.x, lastGuide.y, lastGuide.z,
+	                    lastGuide.distanceTo(targetIn));
+	        }
+	    } catch (Throwable ignored) {
+	    }
 
 	    rerootExhausted = false;
 	    bestHeuristicSoFar = initializeBestHeuristics(this.start);
