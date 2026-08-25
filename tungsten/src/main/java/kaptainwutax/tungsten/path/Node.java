@@ -120,6 +120,12 @@ public class Node {
     }
 
 
+	/** Which rejection inside createNode fires: the last unmeasured link. */
+	/** Candidates offered to the simulation, and simulations actually attempted. */
+	public static volatile int paramsOffered, createCalls;
+
+	public static volatile int rejJumpSneak, rejAtWaypoint, rejSneakAir, rejSneakJump;
+
 	public List<Node> getChildren(WorldView world, Vec3d target, BlockNode nextBlockNode) {
 		if (shouldSkipNodeGeneration(nextBlockNode)) {
 	        return Collections.emptyList();
@@ -281,6 +287,7 @@ public class Node {
 	                            if (( ((right || left) && !forward)) && sprint) continue;
 
 	                            for (boolean jump : new boolean[]{true, false}) {
+	                                paramsOffered++;
 	                                params.add(new ChildGenParams(forward, right, left, false, sprint, jump, yaw));
 	                            }
 	                        }
@@ -300,19 +307,20 @@ public class Node {
 	private Node createNode(WorldView world, BlockNode nextBlockNode,
 	                        boolean forward, boolean right, boolean left, boolean sneak, boolean sprint, boolean jump,
 	                        float yaw, boolean isDoingLongJump, boolean isCloseToBlockNode) {
+		createCalls++;   // how many candidates the simulation is asked to build
 	    try {
 
-            if (jump && sneak) return null;
+            if (jump && sneak) { rejJumpSneak++; return null; }
 	        Node newNode = new Node(this, world, new PathInput(forward, false, right, left, jump, sneak, sprint, agent.pitch, yaw),
 	                new Color(sneak ? 220 : 0, 255, sneak ? 50 : 0), this.cost);
 	        double addNodeCost = calculateNodeCost(forward, sprint, jump, sneak, newNode.agent);
-	        if (newNode.agent.getPos().isWithinRangeOf(nextBlockNode.getPos(true), 0.1, 0.4)) return null;
+	        if (newNode.agent.getPos().isWithinRangeOf(nextBlockNode.getPos(true), 0.1, 0.4)) { rejAtWaypoint++; return null; }
 
 	        boolean isMoving = (forward || right || left);
 	        if (newNode.agent.isClimbing(world)) jump = this.agent.getBlockPos().getY() < nextBlockNode.getBlockPos().getY();
 
-	            if (!newNode.agent.touchingWater && !newNode.agent.onGround && sneak) return null;
-	            if (!newNode.agent.touchingWater && sneak && jump) return null;
+	            if (!newNode.agent.touchingWater && !newNode.agent.onGround && sneak) { rejSneakAir++; return null; }
+	            if (!newNode.agent.touchingWater && sneak && jump) { rejSneakJump++; return null; }
 	            if (!newNode.agent.touchingWater && (sneak && sprint)) return null;
 	            if (!newNode.agent.touchingWater && sneak && (right || left) && forward) return null;
 	            if (!newNode.agent.touchingWater && sneak && Math.abs(newNode.parent.agent.yaw - newNode.agent.yaw) > 80) return null;
