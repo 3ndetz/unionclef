@@ -126,6 +126,12 @@ public class PathFinder {
 	 *  the wrong engine. Count them apart. */
 	/** Searches that hit the hard give-up cap, and how many still handed back a partial route. Read as gaveUp/salvaged. */
 	/** Empty paths refused rather than handed over as an arrival. */
+	/** Searches killed by the shared guide being cleared under them, and those salvaged. */
+	/** Physics searches aborted by the stop flag. The last untraced exit. */
+	public static volatile int searchAborted;
+
+	public static volatile int guideVanished, guideVanishedSalvaged;
+
 	public static volatile int emptyPathRefused;
 
 	public static volatile int searchGaveUp, searchGaveUpSalvaged;
@@ -438,9 +444,38 @@ public class PathFinder {
 	    		try { Thread.sleep(1); } catch (InterruptedException ignored) {}
 	    	}
 		    if (blockPath.isEmpty() || blockPath.get().size() < 1) {
+		    	// ⛔ THE GUIDE VANISHED UNDER A RUNNING SEARCH, AND THIS USED TO RETURN SILENTLY.
+		    	//
+		    	// blockPath is the SHARED STATIC field, and four places assign Optional.empty() to
+		    	// it -- the wall shortcut, the gap shortcut, the restart and the resume. Any of them
+		    	// on any thread kills a search already in flight, and it died without emitting a
+		    	// route, without a counter and without a log line.
+		    	//
+		    	// Measured on flat ground with no obstacles: bs=143/143 (the coarse search finishes
+		    	// every time), emptyPathRefused=0 (nothing is handed over at all), physicsRanOut=1
+		    	// (not exhaustion either) -- and exArrived=51 with exSprint=0/0, the executor
+		    	// re-reporting arrival on a path it finished long ago.
+		    	//
+		    	// The exhaustion branch below already hands back the best partial route rather than
+		    	// nothing. Same mercy here.
+		    	guideVanished++;
+		    	if (TungstenConfig.get().vanishedGuideSalvagesRoute
+		    	        && setCurrentPath(target, start, player)) {
+		    		guideVanishedSalvaged++;
+		    		Debug.logMessage("Guide vanished mid-search — advancing on the best partial route");
+		    	}
 		    	return;
 		    }
 	        if (stop.get()) {
+	        	// COUNT THE ABORT. This is the last exit of the physics loop that left no trace,
+	        	// and the elimination points here: on flat ground the coarse search finishes 139
+	        	// times while emptyPathRefused=0, guideVanished=1 and physicsRanOut=1, so almost
+	        	// every search ends somewhere else -- and this is what is left.
+	        	//
+	        	// The drive sets stop from its own stall detector (14 s without improvement, and
+	        	// the stall reset). A bot that is not moving trips that detector, the detector
+	        	// aborts the search, and the abort is why it cannot start moving. Self-sustaining.
+	        	searchAborted++;
 	        	RenderHelper.clearRenderers();
 	            break;
 	        }

@@ -3276,6 +3276,41 @@ public class TungstenConfig {
      * <p>Read emptyPathRefused to prove it fired. GATE: wander_recovery (two minutes), then nav,
      * craft and the playthrough stall at 1219.5,104.1,-843.5, which shows the same signature.
      */
+    /**
+     * A search whose guide vanishes mid-flight must not return SILENTLY.
+     *
+     * <p>⛔ THE SILENT EXIT, AND IT IS THE ONE THE WHOLE CHAIN POINTED AT. Inside the physics
+     * search loop, checked on every iteration:
+     *
+     * <pre>
+     *   if (blockPath.isEmpty() || blockPath.get().size() &lt; 1) {
+     *       return;                    // no emit, no counter, no log
+     *   }
+     * </pre>
+     *
+     * <p>{@code blockPath} there is the SHARED STATIC field, and at least four places assign
+     * {@code PathFinder.blockPath = Optional.empty()} -- the wall shortcut, the gap shortcut, the
+     * restart path and the resume. Any of them, on any thread, kills a search that is already
+     * running, and it dies without leaving a trace.
+     *
+     * <p>That is exactly what the counters describe on flat ground with no obstacles:
+     *
+     * <pre>
+     *   bs               143/143   the coarse search completes every time
+     *   emptyPathRefused 0         nothing is ever handed over, empty or not
+     *   physicsRanOut    1         so it is not exhaustion either
+     *   exArrived        51        the executor re-reports arrival on an ALREADY FINISHED path
+     *   exSprint         0/0       having replayed nothing
+     * </pre>
+     *
+     * <p>The exhaustion branch in this same method already learned this lesson and hands back the
+     * best partial route rather than nothing ("EXHAUSTION DESERVES THE SAME MERCY AS A TIMEOUT").
+     * This exit never got it.
+     *
+     * <p>Read guideVanished to prove it fired. GATE: wander_recovery (two minutes), then nav, craft
+     * and the playthrough stall, which shows the same signature.
+     */
+    public boolean vanishedGuideSalvagesRoute = true;
     public boolean emptyPathIsNotArrival = true;
     public boolean wallShortcutNeedsAWall = false;
     public boolean planningIsNotProgress = false;
