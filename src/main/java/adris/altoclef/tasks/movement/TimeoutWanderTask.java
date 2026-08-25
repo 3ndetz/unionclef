@@ -341,7 +341,23 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 // a little further than the last, so the distance accumulates instead of orbiting.
                 net.minecraft.util.math.Vec3d from = mod.getPlayer().getPos();
                 double ang = ((wanderTungPicked * 137) % 360) * Math.PI / 180.0;
-                double r = Math.max(8.0, distanceToWander + _wanderDistanceExtension)
+                // ⛔ distanceToWander CAN BE INFINITE, AND THAT POISONED THE WHOLE SEARCH.
+                //
+                // TimeoutWanderTask(Float.POSITIVE_INFINITY) means "wander without a limit" and is
+                // a normal construction -- isFinished() has an explicit isInfinite() branch for it.
+                // This line then produced r = Infinity, and cos/sin of the sampled angle turned that
+                // into a destination of (Infinity, y, NaN): 0 * Infinity is NaN.
+                //
+                // Every distance to a NaN target is NaN, every comparison against it is false, so
+                // isPathComplete could never be true however many nodes were expanded. Confirmed by
+                // raw coordinates: agent[0.5,-60.0,0.5] -> tgt[Infinity,-60.0,NaN] d=NaN, with
+                // goalTests=93 and tryEmit=0/0.
+                //
+                // Mine, introduced porting the wander off the legacy engine. A wander radius is a
+                // distance to walk, and there is no such thing as walking infinitely far in one leg.
+                double base = distanceToWander + _wanderDistanceExtension;
+                if (!Double.isFinite(base)) base = 32.0;
+                double r = Math.max(8.0, Math.min(base, 96.0))
                         + Math.min(24.0, wanderTungPicked * 2.0);
                 net.minecraft.util.math.Vec3d dest = new net.minecraft.util.math.Vec3d(
                         from.x + Math.cos(ang) * r, from.y, from.z + Math.sin(ang) * r);

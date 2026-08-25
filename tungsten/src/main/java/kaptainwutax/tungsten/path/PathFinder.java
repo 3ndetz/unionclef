@@ -151,6 +151,8 @@ public class PathFinder {
 	/** Emit gate: how often it is asked, and how often the agent is stationary there. */
 	/** Goal tests run, and the nearest the frontier ever came, in centimetres. */
 	public static volatile int goalTests, nearestApproachCm;
+	/** The first agent/target pair a goal test saw, verbatim. */
+	public static volatile String lastGoalPair = "-";
 
 	public static volatile int tryEmitCalls, tryEmitStationary;
 
@@ -1305,8 +1307,17 @@ public class PathFinder {
         // smaller than one step. This records the nearest approach so the fix is aimed at a
         // measured miss distance rather than a guessed tolerance.
         double d2 = node.agent.getPos().squaredDistanceTo(target);
-        int cm = (int) (Math.sqrt(d2) * 100);
+        // CLAMPED, because the last reading saturated int and that could have been my arithmetic
+        // rather than the distance. Also record the raw pair once, so 'the target is wrong' is
+        // confirmed by coordinates instead of inferred from an overflow.
+        double dist = Math.sqrt(d2);
+        int cm = (int) Math.min(dist * 100.0, 2_000_000_000.0);
         if (nearestApproachCm == 0 || cm < nearestApproachCm) nearestApproachCm = cm;
+        if (goalTests == 0) {
+            lastGoalPair = String.format(java.util.Locale.ROOT, "agent[%.1f,%.1f,%.1f]->tgt[%.1f,%.1f,%.1f]d%.1f",
+                    node.agent.getPos().x, node.agent.getPos().y, node.agent.getPos().z,
+                    target.x, target.y, target.z, dist);
+        }
         goalTests++;
         return d2 <= 0.2D;
     }
