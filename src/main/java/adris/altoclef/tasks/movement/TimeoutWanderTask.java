@@ -329,7 +329,22 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         // A real port, not the one-line swap the note rightly refused: pick a point on the
         // wander circle, drive it with tungsten, pick another when reached or refused.
         if (kaptainwutax.tungsten.TungstenConfig.get().wanderUsesTungsten) {
-            if (!Nav.isExecutingRoute() && !adris.altoclef.util.helpers.TungstenHelper.isActive()) {
+            // ⛔ A STALE LOCK MUST NOT SILENCE THE WANDER.
+            //
+            // This asked for !TungstenHelper.isActive(), and a lock left over from an earlier task
+            // keeps that true for thirty seconds at a time -- so the wander never picked a
+            // destination at all. Standalone the course reads wanderMoved=19.9 and passes; inside
+            // the full craft suite, with a lock carried in from the previous course, it reads 0.0
+            // and fails. Same build, same code, opposite result, and the difference is a lock the
+            // wander had no business waiting on.
+            //
+            // What actually matters is whether something is DRIVING. If a lock is held but no route
+            // is running, that lock is idle and the wander takes it back -- releaseIdleLock scores
+            // it barren rather than hiding it, so the accounting stays honest.
+            if (!Nav.isExecutingRoute()) {
+                if (adris.altoclef.util.helpers.TungstenHelper.isActive()) {
+                    adris.altoclef.util.helpers.TungstenHelper.releaseIdleLock();
+                }
                 // ⛔ FROM WHERE THE BOT IS, NOT AROUND WHERE IT STARTED.
                 //
                 // The first version picked points on a circle of fixed radius around `origin`.
