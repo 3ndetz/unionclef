@@ -123,6 +123,10 @@ public class Node {
 	/** Which rejection inside createNode fires: the last unmeasured link. */
 	/** Candidates offered to the simulation, and simulations actually attempted. */
 	/** Expansions kept that the sprint-jump shortcut would have replaced. */
+	/** Sweeps run with the narrowed yaw window. */
+	public static volatile int sweepNarrowed;
+	private boolean narrowSweep = false;
+
 	public static volatile int sweepKept;
 
 	public static volatile int paramsOffered, createCalls;
@@ -192,9 +196,10 @@ public class Node {
                 // line: it cannot route around anything, and when the line does not arrive it
                 // exhausts. Measured on an empty flat field: children 170/83/83 over ~130 searches,
                 // gen=0/0 (the sweep never entered), srch=5/0/0, and no route ever emitted.
-                if (!sprintJumpMove.agent.onGround || !isSprintJumpMoveClose
-                        || TungstenConfig.get().sprintJumpDoesNotReplaceTheSweep) {
-                    if (sprintJumpMove.agent.onGround && isSprintJumpMoveClose) sweepKept++;
+                boolean onGoodLine = sprintJumpMove.agent.onGround && isSprintJumpMoveClose;
+                if (!onGoodLine || TungstenConfig.get().sprintJumpDoesNotReplaceTheSweep
+                        || TungstenConfig.get().sweepYawWindowOnGoodLine > 0) {
+                    if (onGoodLine) { sweepKept++; narrowSweep = true; } else narrowSweep = false;
                     if (agent.onGround || agent.touchingWater || agent.isClimbing(world)) {
                         generateGroundOrWaterNodes(world, target, nextBlockNode, nodes);
                     } else {
@@ -206,6 +211,7 @@ public class Node {
 //	    	if (isSprintJumpMoveClose) return nodes;
             } else {
                 if (agent.onGround || agent.touchingWater || agent.isClimbing(world)) {
+                    narrowSweep = false;
                     generateGroundOrWaterNodes(world, target, nextBlockNode, nodes);
                 } else {
                     generateAirborneNodes(world, nextBlockNode, nodes);
@@ -286,7 +292,15 @@ public class Node {
 	    // 1) Collect parameter combinations (cheap — no physics)
 	    List<ChildGenParams> params = new ArrayList<>();
 	    float desiredYaw = (float) DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true));
+	    // NARROWED WHEN THE LINE IS ALREADY GOOD -- see sweepYawWindowOnGoodLine. Twelve
+	    // headings are what the full window is for: a blocked line that must be routed around.
+	    // On a good line a few headings are enough, and the difference is 144 candidates a node
+	    // against 48.
 	    float a = 134.4f;
+	    if (narrowSweep && TungstenConfig.get().sweepYawWindowOnGoodLine > 0) {
+	        a = (float) TungstenConfig.get().sweepYawWindowOnGoodLine;
+	        sweepNarrowed++;
+	    }
 	    float fromYaw = Math.max(desiredYaw - a, -180.0f);
 	    float toYaw = Math.min(desiredYaw + a, 180f);
 	    for (boolean forward : new boolean[]{true, false}) {

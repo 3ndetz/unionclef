@@ -3433,6 +3433,50 @@ public class TungstenConfig {
      * unbounded sweep and not the single move. Both numbers are recorded so the bounded version can
      * be aimed between them rather than guessed.
      */
+    /**
+     * Narrow the sweep when the line is already good, instead of skipping it entirely.
+     *
+     * <p>Aimed BETWEEN two measured endpoints rather than guessed:
+     *
+     * <pre>
+     *   skip the sweep      children      170 /     83 /     83    one successor per node
+     *   full sweep          children  1407994 / 138480 / 138480    ~144 candidates per node
+     * </pre>
+     *
+     * <p>One successor is a straight line that cannot route around anything; 144 is a frontier that
+     * cannot be explored inside the search budget. Neither emits a route.
+     *
+     * <p>The sweep's width is the yaw window: desiredYaw +/- 134.4 degrees in 22.5 degree steps,
+     * twelve headings, times three direction combinations, times sprint, times jump. When the
+     * sprint-jump ALREADY lands on ground near the waypoint, the bot is on a good line and does not
+     * need twelve headings -- it needs a few, in case the line is blocked. When the jump does not
+     * land well, the full window stays: that is the case the width was written for.
+     *
+     * <p>45 degrees gives four headings and roughly 48 candidates a node, a thirtieth of the
+     * unbounded sweep and forty-eight times the shortcut. Read sweepNarrowed and children to see
+     * where it actually lands.
+     *
+     * <h2>MEASURED: A THIRD POINT, AND WIDTH IS NOT THE ANSWER (2026-08-25)</h2>
+     *
+     * <pre>
+     *   shortcut (skip sweep)   children      170   no route
+     *   narrowed to 45 deg      children   959506   no route     sweepNarrowed 5871
+     *   full 134.4 deg sweep    children  1407994   no route
+     * </pre>
+     *
+     * <p>Narrowing works -- 5871 sweeps ran on the narrow window -- and cuts about a third. It
+     * changes nothing that matters: none of the three configurations emits a route.
+     *
+     * <p>That is the useful result. With 1.4 MILLION nodes expanded the search still does not reach
+     * the goal, so the branching factor is not what stops it. Something downstream of expansion --
+     * the heuristic that orders the frontier, or the test that decides the goal is reached -- is
+     * what the next pass has to measure. Three points on the width axis is enough to rule that axis
+     * out.
+     *
+     * <p>Set to 0 (off), restoring shipped behaviour, with all three numbers kept so nobody spends
+     * another pass on width.
+     */
+    public double sweepYawWindowOnGoodLine = 0;
     public boolean sprintJumpDoesNotReplaceTheSweep = false;
     public boolean rerootMustExtendTheGuide = true;
     public boolean resetPrefixNeedsMovement = true;
