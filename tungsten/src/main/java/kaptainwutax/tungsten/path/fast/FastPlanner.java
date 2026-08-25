@@ -276,6 +276,15 @@ public final class FastPlanner {
      * which is a plan that cannot be walked. Set from the client thread before each search —
      * reading the inventory off the planning thread is not safe.
      */
+    /**
+     * WHAT THE LAST PLAN DID. FastNavigator refuses every result it gets -- navRes read
+     * 123/0/0/0/0 on a real run: a path shorter than two cells 123 times and NOT ONE
+     * accepted route, so the primary navigator never commits at all. A* starts with
+     * best = startNode, so a one-cell path means nothing ever improved on the start. These
+     * separate 'expanded thousands and found nothing' from 'never expanded'.
+     */
+    public static volatile int planCalls, planLastExpanded, planLastMs, planLastSize, planZeroExpand;
+
     public static volatile int placeBudget = Integer.MAX_VALUE;
 
     /**
@@ -455,6 +464,11 @@ public final class FastPlanner {
                     expanded, path.size(), complete ? "complete" : "partial", ms,
                     cntBridge, cntPillar, cntSlimeDrop, cntClimb, cntSpecial, cntBreak, cntHazard));
         }
+        planCalls++;
+        planLastExpanded = expanded;
+        planLastMs = (int) ms;
+        planLastSize = path.size();
+        if (expanded <= 1) planZeroExpand++;
         return new Result(path, complete, expanded, ms);
     }
 

@@ -533,6 +533,17 @@ public final class FastNavigator {
      * Bridge legs that reached BridgeTask because the flag was no longer being thrown away when
      * the queue refused them. Zero means the fix never fired and any comparison using it is empty.
      */
+    /**
+     * WHAT THE ROUTE SEARCH ACTUALLY RETURNS. The size<2 branch below returned silently with
+     * no counter -- the same shape that has cost this project several passes. Measured on a
+     * zero-rung run: every BFS tick produced a route that collapsed and was refused as short
+     * (tickBfs=1229, qNullEdge=1229, mqRefused(short=1229)) while the goal sat fourteen
+     * blocks away and the bot never closed inside 12.8. A healthy run hits that on 70% of
+     * ticks and still travels, so the ratio is the discriminator, not the event.
+     * Read as navRes=short/empty/incomplete/ok.
+     */
+    public static volatile int navShortRes, navEmptyRes, navIncomplete, navOkRes, navDeadEnd;
+
     public static volatile int navBridgeRescued = 0;
 
     /**
@@ -604,16 +615,18 @@ public final class FastNavigator {
                 // arrival check owns finishing the navigation, and any genuinely new situation
                 // replans from the bot's real position anyway.
                 if (res.path.size() < 2) {
+                    navShortRes++;
                     if (legTail != null && legTail.equals(start)) {
                         legTail = null;
                     }
                     return;
                 }
-                if (res.isEmpty()) return;
+                if (res.isEmpty()) { navEmptyRes++; return; }
 
                 // Walking cannot solve this route — hand it to the physics engine
                 // (already searching in parallel) and get out of its way.
                 if (!res.complete) {
+                    navIncomplete++;
                     BlockPos tail = res.path.get(res.path.size() - 1).pos;
                     double before = Math.sqrt(start.getSquaredDistance(goalCell));
                     double after = Math.sqrt(tail.getSquaredDistance(goalCell));
@@ -632,6 +645,7 @@ public final class FastNavigator {
                     // block planner its own route to the executor is the real fix, and it is a
                     // bigger job than a condition here.
                     if (before - after < MIN_PARTIAL_PROGRESS) {
+                        navDeadEnd++;
                         // Walking cannot solve this — hand the TAIL to the physics engine
                         // and wait for it. This branch used to print "physics owns this"
                         // and then call stop(), which nulls pendingPhysicsTarget: physics
@@ -656,6 +670,7 @@ public final class FastNavigator {
                         return;
                     }
                 }
+                navOkRes++;
 
                 if (TungstenConfig.get().verboseDebugLogging) {
                     int flagged = 0;
