@@ -131,6 +131,9 @@ public class PathFinder {
 	/** Path hand-overs: how many, how many nodes in total, and by which door. */
 	/** Best-partial deliveries that bypass executePath, and their node counts. */
 	/** Deliveries from the reset-search branch -- the third door. */
+	/** Reset prefixes refused because they contained no movement. */
+	public static volatile int resetEmitRefused;
+
 	public static volatile int resetEmit, resetEmitNodes;
 
 	public static volatile int salvageEmit, salvageEmitNodes;
@@ -1374,11 +1377,25 @@ public class PathFinder {
             // emit=0/0/0/0 and setCurrentPath reads salvage=0/0, yet the executor reports 44
             // arrivals -- so the paths it finishes instantly arrive HERE, from the reset-search
             // branch, which builds a route from the node in hand and hands it over directly.
+            // ⛔ A PREFIX WITH NO MOVEMENT IN IT IS NOT A ROUTE.
+            //
+            // shouldResetSearch opens on (numNodesConsidered & 7) == 0, which is true at ZERO, so
+            // this can fire on the first node considered -- and constructPath then returns the
+            // start node alone. The executor finds tick == path.size() on arrival, replays nothing
+            // (a root carries no input) and reports ARRIVED, and the drive plans the next goal
+            // believing this one was reached.
+            //
+            // Measured: resetEmit=54/54 -- fifty-four hand-overs of fifty-four nodes in total.
+            // Re-rooting the guide is right and stays; handing over an empty walk is not.
+            if (TungstenConfig.get().resetPrefixNeedsMovement && path.size() < 2) {
+                resetEmitRefused++;
+            } else {
             resetEmit++;
             resetEmitNodes += path.size();
             TungstenModDataContainer.EXECUTOR.setPath(path);
             TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
             TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
+            }
             TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
         TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
             NEXT_CLOSEST_BLOCKNODE_IDX.set(1);

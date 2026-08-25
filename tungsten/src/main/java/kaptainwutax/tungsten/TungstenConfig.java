@@ -3311,6 +3311,38 @@ public class TungstenConfig {
      * and the playthrough stall, which shows the same signature.
      */
     public boolean vanishedGuideSalvagesRoute = true;
+    /**
+     * A prefix that contains no movement must not be handed over as a route.
+     *
+     * <p>⛔ THIS IS THE STALL, AND IT IS ONE NODE LONG. The reset-search branch re-roots the
+     * block-space guide mid-search and emits the physics prefix built so far. Its gate opens on
+     * {@code (numNodesConsidered & 7) == 0}, which is TRUE at zero -- so it can fire on the very
+     * first node considered, when the prefix is nothing but the start node.
+     *
+     * <p>{@code constructPath(next)} then returns a ONE-NODE path: the node the bot is already
+     * standing on. The executor takes it, finds tick == path.size() immediately, replays nothing
+     * (a root carries no input) and reports ARRIVED. The drive, told the goal was reached, plans
+     * the next one and gets another single node.
+     *
+     * <p>Measured on flat ground with no obstacles, after instrumenting all three delivery doors:
+     *
+     * <pre>
+     *   resetEmit = 54/54     54 hand-overs, 54 nodes IN TOTAL -- one per path
+     *   emit      = 0/0/0/0   executePath delivers nothing
+     *   salvage   = 0/0       setCurrentPath delivers nothing
+     *   exArrived = 53        exSprint = 0/0
+     * </pre>
+     *
+     * <p>It explains every symptom chased for a week: mqStarted=0, pdWalking=0, the 135 completed
+     * breaks without a step at 1219.5,104.1,-843.5, and wanderMoved=0.0 on an empty field.
+     *
+     * <p>The re-rooting itself is fine and stays. What stops is emitting a prefix with nothing in
+     * it -- a route the bot has already walked to its end by standing still.
+     *
+     * <p>Read resetEmitRefused to prove it fired. GATE: wander_recovery (two minutes), then nav,
+     * craft and the playthrough.
+     */
+    public boolean resetPrefixNeedsMovement = true;
     public boolean emptyPathIsNotArrival = true;
     public boolean wallShortcutNeedsAWall = false;
     public boolean planningIsNotProgress = false;
