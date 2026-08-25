@@ -47,6 +47,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     /** Legacy hand-offs re-routed to tungsten, and ones tungsten would not take either. */
     public static volatile int pdLegacyToTungsten, pdLegacyDeclined;
     /** Simple name of the last goal type goalToVec could not translate; read over py4j. */
+    /** Goal snaps: asked, moved to solid ground, and left unstandable. */
+    public static volatile int snapAsked, snapMoved, snapFailed;
+
     public static volatile String pdLastUnknownGoal = "-";
 
     private final Task wanderTask = new TimeoutWanderTask(5, true);
@@ -469,7 +472,15 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             if (Double.isNaN(gp.y)) {
                 gp = new net.minecraft.util.math.Vec3d(gp.x, mod.getPlayer().getY(), gp.z);
             }
+            // MEASURE THE SNAP. The 1219 stall runs at a goal whose floor is AIR
+            // (tgt[1205.5,104.0,-839.5], floor=air), so this must either move it to solid ground
+            // or admit it cannot. Nine million expanded nodes says nobody found out which.
+            net.minecraft.util.math.Vec3d gpBefore = gp;
             gp = snapGoalToStandable(gp, mod);
+            snapAsked++;
+            if (gp != null && gpBefore != null && !gp.equals(gpBefore)) snapMoved++;
+            else if (gp != null && !standable(mod.getWorld(), (int) Math.floor(gp.x),
+                    (int) Math.floor(gp.y), (int) Math.floor(gp.z))) snapFailed++;
             // Publish WHOSE goal this is, so a climbing route can name its caller (CombatTrace).
             kaptainwutax.tungsten.combat.CombatTrace.hostGoal = String.valueOf(goal);
         }
