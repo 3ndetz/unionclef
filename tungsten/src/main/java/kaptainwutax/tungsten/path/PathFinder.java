@@ -148,6 +148,9 @@ public class PathFinder {
 
 	public static volatile int salvageEmit, salvageEmitNodes;
 
+	/** Emit gate: how often it is asked, and how often the agent is stationary there. */
+	public static volatile int tryEmitCalls, tryEmitStationary;
+
 	public static volatile int emitCount, emitTotalNodes, emitFresh, emitAppended;
 
 	public static volatile int searchAborted;
@@ -1308,6 +1311,12 @@ public class PathFinder {
 //				e.printStackTrace();
 //			}
 //    	}
+        // COUNT THE GATE: a route is emitted only when the simulated agent is STATIONARY at
+        // the final node. A search that reaches the goal while still moving -- which is what
+        // sprinting across open ground does -- is refused, and emit=0 against 1.4M expanded
+        // nodes is exactly how that looks from outside.
+        tryEmitCalls++;
+        if (AgentChecker.isAgentStationary(node.agent, minVelocity)) tryEmitStationary++;
         if (AgentChecker.isAgentStationary(node.agent, minVelocity) || 
         		TungstenModDataContainer.world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ())).getBlock() instanceof LadderBlock) {
             List<Node> path = constructPath(node);
