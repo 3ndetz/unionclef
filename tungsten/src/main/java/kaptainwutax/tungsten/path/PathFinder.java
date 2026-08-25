@@ -155,6 +155,8 @@ public class PathFinder {
 	public static volatile String guideInfo = "-";
 	/** Furthest guide node index the physics search ever reached. */
 	public static volatile int guideIdxReached;
+	/** Guides discarded because the relaxation that built them ended. */
+	public static volatile int relaxedGuideDropped;
 	/** The first agent/target pair a goal test saw, verbatim. */
 	public static volatile String lastGoalPair = "-";
 
@@ -757,6 +759,24 @@ public class PathFinder {
 	                search(world, start, target, player, failedAttempts + 1);
 	            } finally {
 	                TungstenModDataContainer.fallGuardRelaxed = false;
+	                // ⛔ AND THE GUIDE MUST NOT OUTLIVE THE RELAXATION THAT BUILT IT.
+	                //
+	                // This retry builds a NEW block path with the fall guard relaxed and leaves it
+	                // in the static field. The next search finds it non-empty, skips rebuilding,
+	                // and runs the PHYSICS against it unrelaxed -- so the guide contains descents
+	                // the physics is forbidden to take.
+	                //
+	                // Measured at the 1219 stall: guide n16 with node ONE three blocks below the
+	                // bot (n1[1218.5,101.0,-842.5] against bot y=104), and the physics never
+	                // advances past idx1. Sixteen planned nodes, none of them reachable, because
+	                // the opening hop was planned under rules that no longer apply.
+	                //
+	                // Neither layer's rules change here. What changes is that a guide is only used
+	                // under the rules it was built for.
+	                if (TungstenConfig.get().guideDiesWithItsRelaxation) {
+	                    PathFinder.blockPath = Optional.empty();
+	                    relaxedGuideDropped++;
+	                }
 	            }
 	            return;
 	        }

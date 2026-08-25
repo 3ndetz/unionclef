@@ -3478,6 +3478,36 @@ public class TungstenConfig {
      */
     public double sweepYawWindowOnGoodLine = 0;
     public boolean sprintJumpDoesNotReplaceTheSweep = false;
+    /**
+     * A block path built with the fall guard relaxed must not be reused once it is not.
+     *
+     * <p>⛔ THIS IS THE LAYER DISAGREEMENT, AND IT IS A LIFETIME BUG RATHER THAN A RULES ONE.
+     * The give-up retry sets fallGuardRelaxed, clears the guide, searches again and lifts the
+     * relaxation in a finally -- but the guide it just built STAYS in the static field. The next
+     * search finds it non-empty, skips rebuilding, and runs the physics against it unrelaxed.
+     *
+     * <p>Measured at the 1219 stall, end to end:
+     *
+     * <pre>
+     *   bot   [1219.5, 104.0, -842.5]
+     *   n1    [1218.5, 101.0, -842.5]   THREE blocks below, one sideways
+     *   guide n16, physics idx never passes 1, nearest approach 11.3 of 14.3 blocks
+     * </pre>
+     *
+     * <p>Sixteen planned nodes and not one reachable, because the opening hop is a three-block drop
+     * -- which BlockNode refuses at heightDiff &lt; -2 and Node at jumpHeight &lt;= -3 whenever the
+     * guard is active. It was planned under a relaxation that had already ended.
+     *
+     * <p>It also explains why both earlier fall-guard corrections failed their gates: permitting the
+     * drop broke navigation because permission carries route preference, and pricing it slowed the
+     * playthrough because a price keeps nodes the veto pruned. Neither touched the actual fault,
+     * which is that a guide outlived the rules it was built under.
+     *
+     * <p>Neither layer's rules change here. Read relaxedGuideDropped. GATE: the repro, then nav,
+     * craft and the playthrough.
+     */
+    public boolean guideDiesWithItsRelaxation = true;
+
     public boolean rerootMustExtendTheGuide = true;
     public boolean resetPrefixNeedsMovement = true;
     public boolean emptyPathIsNotArrival = true;
