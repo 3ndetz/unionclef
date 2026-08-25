@@ -153,6 +153,8 @@ public class PathFinder {
 	public static volatile int goalTests, nearestApproachCm;
 	/** The coarse guide: node count, endpoint, and its distance to the real goal. */
 	public static volatile String guideInfo = "-";
+	/** Furthest guide node index the physics search ever reached. */
+	public static volatile int guideIdxReached;
 	/** The first agent/target pair a goal test saw, verbatim. */
 	public static volatile String lastGoalPair = "-";
 
@@ -652,6 +654,13 @@ public class PathFinder {
 	        failing = processNodeChildren(world, next, target, start.agent.getPos(), blockPath, openSet, closed);
 
 	        numNodesConsidered.set(numNodesConsidered.get()+1);
+	        // HOW FAR ALONG THE GUIDE DOES THE PHYSICS ACTUALLY GET? The guide has 16 nodes and
+	        // ends on the target; the physics stops 11.3 blocks short. The index it reaches names
+	        // the exact node pair it cannot step between, which is the whole question now.
+	        {
+	            int idxNow = NEXT_CLOSEST_BLOCKNODE_IDX.get();
+	            if (idxNow > guideIdxReached) guideIdxReached = idxNow;
+	        }
 	        if (updateNextClosestBlockNodeIDX(blockPath.get(), next, closed, world)) {
 	        	primaryTimeoutTime = System.currentTimeMillis() + 1120L;
 	        	lastProgressMs = System.currentTimeMillis();   // advanced along the block path = progress
