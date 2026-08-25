@@ -381,9 +381,20 @@ public final class Nav {
      * "forget where you were going".
      */
     public static void pause() {
-        // Tungsten has no pause primitive: holding still is done by the caller releasing keys,
-        // and the route survives because nothing cancels it here.
-        adris.altoclef.util.helpers.TungstenHelper.holdStill();
+        // ⛔ THIS MUST STAY A NO-OP, AND MAKING IT DO SOMETHING BROKE SIX COURSES.
+        //
+        // It used to call the legacy requestPause(). With that engine long since not pathing, the
+        // call did NOTHING -- the note above isSafeToCancel says the same thing about its
+        // neighbour: "baritone never paths now, so it said yes, safe, every single time".
+        //
+        // G-0 replaced it with an active key release, which turned five callers from no-ops into
+        // five things that stop the body mid-approach. craft fell to 14 passes with every pickup
+        // course failing -- pickup_flat, pickup_ledge, pickup_pit -- plus mine_coal and
+        // mine_diamond, which pick their drops up too.
+        //
+        // Tungsten has no pause primitive and does not need one: a caller that wants the body still
+        // for one action releases its own keys. Restoring the no-op restores the behaviour every
+        // one of those callers was actually written against.
     }
 
     /** Drop everything, including any queued path. Stronger than {@link #cancel()}. */
