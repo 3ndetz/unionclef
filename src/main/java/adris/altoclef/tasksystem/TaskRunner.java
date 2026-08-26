@@ -26,6 +26,20 @@ public class TaskRunner {
 
     public String statusReport = " (no chain running) ";
 
+    /** Ticks each chain OWNED the bot, by name. Read over py4j as chains=[...]. */
+    public static final java.util.Map<String, Integer> chainTicks =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+    public static String chainTicksDump() {
+        synchronized (chainTicks) {
+            if (chainTicks.isEmpty()) return "none";
+            return chainTicks.entrySet().stream()
+                    .sorted((x, y) -> y.getValue() - x.getValue())
+                    .limit(6)
+                    .map(e -> e.getKey().replace(" ", "") + ":" + e.getValue())
+                    .reduce((x, y) -> x + " " + y).orElse("none");
+        }
+    }
+
     public TaskRunner(AltoClef mod) {
         this.mod = mod;
         active = false;
@@ -64,6 +78,12 @@ public class TaskRunner {
         cachedCurrentTaskChain = maxChain;
         if (maxChain != null) {
             statusReport = "Chain: " + maxChain.getName() + ", priority: " + maxPriority;
+            // WHERE DOES THE RUN ACTUALLY GO? Dead time sits at a median near 30% and three
+            // passes of testing suspects one at a time each cost a full cycle to return a
+            // single 'no'. Count ownership for EVERY chain instead and let the distribution
+            // name the addends -- the same trick that named the search-killer and the slot
+            // clicker earlier.
+            synchronized (chainTicks) { chainTicks.merge(maxChain.getName(), 1, Integer::sum); }
             maxChain.tick();
         } else {
             statusReport = " (no chain running) ";
