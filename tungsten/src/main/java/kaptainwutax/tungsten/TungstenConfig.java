@@ -4339,4 +4339,35 @@ public class TungstenConfig {
 	 * childless-start plans actually fall.
 	 */
 	public boolean planSnapsStartToSupport = true;
+
+	/**
+	 * Let the WALKING route offer only moves the movement queue can actually execute --
+	 * in practice, drop the four diagonals from the goto grid search.
+	 *
+	 * <p>The producer and the consumer disagree, and the disagreement costs the whole route.
+	 * CombatPathfinder's HORIZONTAL set includes the four diagonals, while
+	 * MovementQueue.isSupportedEdge accepts traverse, pillar and climb but NOT diagonals --
+	 * queueDiagonals is off BY MEASUREMENT (within one batch they read 19/23/11, a spread of
+	 * twelve where every other configuration sat at 1-3), so switching the consumer on is
+	 * already a closed question.
+	 *
+	 * <p>traversePrefix stops at the FIRST unsupported edge, so a single leading diagonal makes
+	 * covered=1 and the queue refuses the entire route as 'short'. Measured live during a stall
+	 * -- the first time this bench captured one in progress rather than from logs afterwards:
+	 *
+	 * <pre>
+	 *   mqRefused=2338(short=2337)   against walkMode BFS ticks 2299 -- one refusal per tick
+	 *   mqSteps=23  mqStarted=14     the body barely moves
+	 *   pdWalking=0  pdNear=0        never walking, never near
+	 *   plan=229/.../sz48            while FastPlanner produced healthy 48-cell routes
+	 * </pre>
+	 *
+	 * <p>Combat keeps its diagonals: only the goto entry (findPath) asks for cardinal-only,
+	 * because only the goto route is handed to the queue.
+	 *
+	 * <p>GATE: nav and craft in full against the baseline (nav 14/14, craft 22/22), then the
+	 * playthrough. Read gridDiagonalDropped for proof it fires and mqRefused(short) for
+	 * whether the refusals fall.
+	 */
+	public boolean gridRouteMatchesQueueMoves = true;
 }

@@ -33,6 +33,8 @@ public class CombatPathfinder {
 
     /** Shape of what bfsPath returns: calls, budget exhaustions, stubs (<2 cells), cells returned. */
     public static volatile int cpCalls, cpExhausted, cpStub, cpCells, cpDistinct;
+    /** Diagonal neighbours withheld from a walking route the queue could not execute. */
+    public static volatile int gridDiagonalDropped;
     // Max horizontal reach of a running parkour jump (goto pathing only). A
     // sprint-jump clears ~4 flat / ~3 with a +1 rise.
     private static final int MAX_PARKOUR = 4;
@@ -211,6 +213,11 @@ public class CombatPathfinder {
     private static volatile long lastNoExpandLogMs = 0L;
 
     private static List<BlockPos> bfsPath(BlockPos start, BlockPos goal, WorldView world, boolean allowParkour) {
+        return bfsPath(start, goal, world, allowParkour, false);
+    }
+
+    private static List<BlockPos> bfsPath(BlockPos start, BlockPos goal, WorldView world,
+                                          boolean allowParkour, boolean cardinalOnly) {
         // WHAT SHAPE DOES THIS ACTUALLY RETURN? Its own javadoc calls it an instant grid BFS
         // for FollowEntityTask to chase a nearby entity while the physics A* computes -- yet
         // the walking drive uses it as its route source (CustomBaritoneGoalTask:715). With
@@ -238,7 +245,7 @@ public class CombatPathfinder {
                 return note(reconstructPath(cameFrom, current), explored);
             }
 
-            for (BlockPos neighbor : getWalkableNeighbors(current, world, allowParkour, swimming)) {
+            for (BlockPos neighbor : getWalkableNeighbors(current, world, allowParkour, swimming, cardinalOnly)) {
                 if (cameFrom.containsKey(neighbor)) continue;
                 if (!start.isWithinDistance(neighbor, MAX_RADIUS)) continue;
                 cameFrom.put(neighbor, current);
@@ -345,7 +352,7 @@ public class CombatPathfinder {
     private static final int[][] HORIZONTAL = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
 
     private static List<BlockPos> getWalkableNeighbors(BlockPos pos, WorldView world, boolean allowParkour) {
-        return getWalkableNeighbors(pos, world, allowParkour, false);
+        return getWalkableNeighbors(pos, world, allowParkour, false, false);
     }
 
     /**
@@ -353,6 +360,15 @@ public class CombatPathfinder {
      */
     private static List<BlockPos> getWalkableNeighbors(BlockPos pos, WorldView world,
                                                        boolean allowParkour, boolean allowSwim) {
+        return getWalkableNeighbors(pos, world, allowParkour, allowSwim, false);
+    }
+
+    /**
+     * @param cardinalOnly drop the four diagonals -- the WALKING queue cannot execute one.
+     */
+    private static List<BlockPos> getWalkableNeighbors(BlockPos pos, WorldView world,
+                                                       boolean allowParkour, boolean allowSwim,
+                                                       boolean cardinalOnly) {
         List<BlockPos> result = new ArrayList<>();
 
         if (allowSwim) {
@@ -398,6 +414,18 @@ public class CombatPathfinder {
             //     cornerA (85,125,-55) grass_block   SOLID
             //     cornerB (84,125,-54) dirt          SOLID
             // Both full, and the diagonal between them was offered as a route.
+            // THE WALKING QUEUE CANNOT EXECUTE A DIAGONAL, SO DO NOT OFFER IT ONE.
+            // MovementQueue.isSupportedEdge accepts traverse/pillar/climb but NOT diagonals
+            // (queueDiagonals is off BY MEASUREMENT: within one batch they read 19/23/11,
+            // a spread of 12 where every other configuration sat at 1-3). traversePrefix
+            // stops at the first unsupported edge, so ONE leading diagonal costs the WHOLE
+            // route: covered=1 < 2 and it is refused as 'short'. Measured live during a
+            // stall: mqRefused(short)=2337 against 2299 BFS ticks -- one refusal per tick.
+            // Combat keeps its diagonals; only the goto route drops them.
+            if (cardinalOnly && off[0] != 0 && off[1] != 0) {
+                gridDiagonalDropped++;
+                continue;
+            }
             if (kaptainwutax.tungsten.TungstenConfig.get().gridBfsRefusesCornerCut
                     && off[0] != 0 && off[1] != 0) {
                 BlockPos sideA = pos.add(off[0], 0, 0);
@@ -522,7 +550,8 @@ public class CombatPathfinder {
      * immediate movement while physics A* computes.
      */
     public static List<BlockPos> findPath(BlockPos start, BlockPos goal, WorldView world) {
-        return bfsPath(start, goal, world, true);   // goto: parkour on (climb gapped/stepped terrain)
+        return bfsPath(start, goal, world, true,
+                kaptainwutax.tungsten.TungstenConfig.get().gridRouteMatchesQueueMoves);
     }
 
     // ── getters ──────────────────────────────────────────────────────────────
