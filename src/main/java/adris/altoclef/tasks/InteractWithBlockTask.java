@@ -205,6 +205,18 @@ public class InteractWithBlockTask extends Task {
         clickTimer.reset();
     }
 
+    /**
+     * WHERE AN INTERACTION GOES. A playthrough stalled at two rungs with the chain reading
+     * <Interact using (empty) at {x=315,y=109,...}> -> <Wander for 5.0 blocks>, wander=1914
+     * against wanderMoved=142, while PLANNING WAS HEALTHY (plan=63/../zero0, atGoal=0) and
+     * navigation never participated (walkMode=3077/0/0). That ceiling is not the
+     * pathfinder's. The three click outcomes want different fixes and nothing counted them:
+     * cantReach means the click is never attempted, waiting means it was and no screen ever
+     * arrived, and wanderFallback is the ten-second give-up that turns it into a loop.
+     * Read as iw=cantReach/waiting/clicked/wanderFallback.
+     */
+    public static volatile int iwCantReach, iwWaiting, iwClicked, iwWanderFallback;
+
     @Override
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
@@ -286,6 +298,7 @@ public class InteractWithBlockTask extends Task {
         cachedClickStatus = rightClick(mod);
         switch (Objects.requireNonNull(cachedClickStatus)) {
             case CANT_REACH -> {
+                iwCantReach++;
                 // THIS SAID "Getting to our goal" AND THEN WENT NOWHERE, WHICH IS THE WHOLE BUG.
                 // The G-0 pass above removed the goal that fed getCustomGoalProcess, on the grounds
                 // that the legacy engine does not drive and "something else does the walking". The
@@ -311,6 +324,7 @@ public class InteractWithBlockTask extends Task {
                 return approachTask;
             }
             case WAIT_FOR_CLICK -> {
+                iwWaiting++;
                 setDebugState("Waiting for click");
                 if (Nav.hasGoal()) {
                     Nav.clearGoal();
@@ -326,11 +340,13 @@ public class InteractWithBlockTask extends Task {
 
                 if (waitingForClickTicks > 10*20) {
                     mod.log("trying to wander");
+                    iwWanderFallback++;
                     waitingForClickTicks = 0;
                     return wanderTask;
                 }
             }
             case CLICK_ATTEMPTED -> {
+                iwClicked++;
                 setDebugState("Clicking.");
                 if (Nav.hasGoal()) {
                     Nav.clearGoal();
