@@ -54,6 +54,8 @@ public class SlotHandler {
     public static volatile int shLastBlacklistedSlot = -1;
 
     /** Sampled attribution of slot clicks: who calls, and how often (1 in 1024). */
+    /** Full-inventory sweeps, and those begun while something was HOLDING an item. */
+    public static volatile int shRefreshes, shRefreshWithCursor;
     public static volatile String shTopCaller = "-";
     public static final java.util.Map<String, Integer> shCallers =
             java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
@@ -120,7 +122,10 @@ public class SlotHandler {
         // up and something else empties the cursor before it can put it down. Sample the
         // caller rather than nominate one; the same trick named the search-killer earlier.
         // Sampled, not every call: a stack trace at this rate would itself distort the run.
-        if ((shIssued & 0x3FF) == 0) {
+        // 1 in 64 rather than 1 in 1024 -- at 1/1024 a HEALTHY run yielded three samples, too
+        // few to rank anything, so attribution only worked on a stall that would not recur.
+        // At 1/64 a normal run gives about fifty and the distribution is readable every time.
+        if ((shIssued & 0x3F) == 0) {
             StackTraceElement[] st = Thread.currentThread().getStackTrace();
             for (StackTraceElement e : st) {
                 String c = e.getClassName();
@@ -456,6 +461,13 @@ public class SlotHandler {
     }
 
     public void refreshInventory() {
+        // COUNT THE SWEEP ITSELF. Each refresh is 36 slots x 2 clicks = 72, issued through
+        // clickSlotForce, which BYPASSES the rate limiter. At one sweep per 30 s that is about
+        // 1440 clicks in ten minutes and matches a healthy run (shIssued=1545). It does NOT
+        // explain the stalled run's 603671, which would need fourteen sweeps a second -- so
+        // either the timer is being reset or something else calls this. Count before guarding.
+        shRefreshes++;
+        if (!StorageHelper.getItemStackInCursorSlot().isEmpty()) shRefreshWithCursor++;
         ClientPlayerEntity player = MinecraftClient.getInstance().player;
         if (player == null) return;
         // Only refresh when player inventory is active — clicking slots in
