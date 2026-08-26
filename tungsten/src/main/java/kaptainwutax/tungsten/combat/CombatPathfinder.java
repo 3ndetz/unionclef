@@ -35,6 +35,8 @@ public class CombatPathfinder {
     public static volatile int cpCalls, cpExhausted, cpStub, cpCells, cpDistinct;
     /** Diagonal neighbours withheld from a walking route the queue could not execute. */
     public static volatile int gridDiagonalDropped;
+    /** Diagonals rewritten as two cardinal steps, and those with no passable corner. */
+    public static volatile int gridDiagonalExpanded, gridDiagonalUnturnable;
     // Max horizontal reach of a running parkour jump (goto pathing only). A
     // sprint-jump clears ~4 flat / ~3 with a +1 rise.
     private static final int MAX_PARKOUR = 4;
@@ -414,7 +416,7 @@ public class CombatPathfinder {
             //     cornerA (85,125,-55) grass_block   SOLID
             //     cornerB (84,125,-54) dirt          SOLID
             // Both full, and the diagonal between them was offered as a route.
-            // THE WALKING QUEUE CANNOT EXECUTE A DIAGONAL, SO DO NOT OFFER IT ONE.
+            // THE WALKING QUEUE CANNOT EXECUTE A DIAGONAL -- but the SEARCH needs them.
             // MovementQueue.isSupportedEdge accepts traverse/pillar/climb but NOT diagonals
             // (queueDiagonals is off BY MEASUREMENT: within one batch they read 19/23/11,
             // a spread of 12 where every other configuration sat at 1-3). traversePrefix
@@ -422,10 +424,6 @@ public class CombatPathfinder {
             // route: covered=1 < 2 and it is refused as 'short'. Measured live during a
             // stall: mqRefused(short)=2337 against 2299 BFS ticks -- one refusal per tick.
             // Combat keeps its diagonals; only the goto route drops them.
-            if (cardinalOnly && off[0] != 0 && off[1] != 0) {
-                gridDiagonalDropped++;
-                continue;
-            }
             if (kaptainwutax.tungsten.TungstenConfig.get().gridBfsRefusesCornerCut
                     && off[0] != 0 && off[1] != 0) {
                 BlockPos sideA = pos.add(off[0], 0, 0);
@@ -550,8 +548,9 @@ public class CombatPathfinder {
      * immediate movement while physics A* computes.
      */
     public static List<BlockPos> findPath(BlockPos start, BlockPos goal, WorldView world) {
-        return bfsPath(start, goal, world, true,
-                kaptainwutax.tungsten.TungstenConfig.get().gridRouteMatchesQueueMoves);
+        List<BlockPos> route = bfsPath(start, goal, world, true, false);
+        return kaptainwutax.tungsten.TungstenConfig.get().gridRouteMatchesQueueMoves
+                ? expandDiagonals(route, world) : route;
     }
 
     // ── getters ──────────────────────────────────────────────────────────────
@@ -572,5 +571,45 @@ public class CombatPathfinder {
         cpCells += path.size();
         cpDistinct += (int) path.stream().distinct().count();
         return path;
+    }
+
+    /**
+     * Turn every diagonal step of a finished route into the two cardinal steps around it.
+     *
+     * <p>The queue cannot execute a diagonal (queueDiagonals is off by measurement) and
+     * traversePrefix stops at the first unsupported edge, so ONE leading diagonal costs the
+     * whole route -- measured live at mqRefused(short)=2337 against 2299 BFS ticks.
+     *
+     * <p>Removing diagonals from the SEARCH was tried first and is much worse: the grid then
+     * cannot reach anything inside its 800-node budget and returns a stub almost every time
+     * (cp went from 107/39/0 to 2077/2052/2027 -- 98% stubs). Diagonals earn their keep in the
+     * search; they only need translating before the queue sees them.
+     *
+     * <p>The corner is taken through whichever orthogonal is passable, so the body never
+     * clips a block the diagonal cut past.
+     */
+    private static List<BlockPos> expandDiagonals(List<BlockPos> path, WorldView world) {
+        if (path == null || path.size() < 2) return path;
+        List<BlockPos> out = new ArrayList<>(path.size() * 2);
+        out.add(path.get(0));
+        for (int i = 1; i < path.size(); i++) {
+            BlockPos a = path.get(i - 1), b = path.get(i);
+            int dx = b.getX() - a.getX(), dz = b.getZ() - a.getZ();
+            if (a.getY() == b.getY() && dx != 0 && dz != 0) {
+                BlockPos viaX = a.add(dx, 0, 0);
+                BlockPos viaZ = a.add(0, 0, dz);
+                BlockPos via = isWalkable(viaX, world) ? viaX
+                        : (isWalkable(viaZ, world) ? viaZ : null);
+                if (via == null) {
+                    gridDiagonalUnturnable++;
+                    out.add(b);
+                    continue;
+                }
+                gridDiagonalExpanded++;
+                out.add(via);
+            }
+            out.add(b);
+        }
+        return out;
     }
 }
