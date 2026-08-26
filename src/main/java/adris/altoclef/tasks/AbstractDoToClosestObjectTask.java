@@ -113,6 +113,40 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
 
         // Get closest object
         Optional<T> checkNewClosest = getClosestTo(mod, getOriginPos(mod));
+        // 2848 ticks against 3 pursuits, and every counted branch at zero: the loop spends
+        // its life on the UNCOUNTED path. Two states share it and they mean opposite things --
+        // nothing found at all, or the closest thing IS the one already being chased. The
+        // second is a bot pursuing one drop for the whole run (dropPick showed a single
+        // cobblestone two blocks down, deepPicks=722). Split them before touching anything.
+        if (checkNewClosest.isEmpty()) dcNone++;
+        else if (checkNewClosest.get().equals(currentlyPursuing)) dcSame++;
+
+        // A PURSUIT THAT NEVER CLOSES MUST END. dcSame=12070 of 12145 ticks: the bot chased
+        // ONE target for a whole ten-minute run -- a single cobblestone two blocks down, the
+        // only candidate -- and this chooser has no give-up at all. The budget that fixed the
+        // opening lives in PickupDroppedItemTask and does not cover this path (dropBudget=0
+        // while the bot stood here). Same principle as there: the clock belongs to the TARGET.
+        if (kaptainwutax.tungsten.TungstenConfig.get().closestPursuitHasBudget
+                && currentlyPursuing != null) {
+            double dSq = getPos(mod, currentlyPursuing).squaredDistanceTo(mod.getPlayer().getPos());
+            long now = System.currentTimeMillis();
+            if (!currentlyPursuing.equals(budgetTarget)) {
+                budgetTarget = currentlyPursuing;
+                budgetStartMs = now;
+                budgetBestSq = dSq;
+            } else if (dSq < budgetBestSq - 0.25) {
+                // real progress toward it -- the clock earns a restart
+                budgetBestSq = dSq;
+                budgetStartMs = now;
+            } else if (now - budgetStartMs > CLOSEST_PURSUIT_BUDGET_MS) {
+                dcGaveUp++;
+                heuristicMap.remove(currentlyPursuing);
+                markUnreachable(mod, currentlyPursuing);
+                currentlyPursuing = null;
+                budgetTarget = null;
+                return null;
+            }
+        }
 
         // Receive closest object and position
         if (checkNewClosest.isPresent() && !checkNewClosest.get().equals(currentlyPursuing)) {
@@ -223,4 +257,19 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
             _tickAttempted = tickAttempted;
         }
     }
+
+    /** The two uncounted states of the loop: nothing found, or the same target again. */
+    public static volatile int dcNone, dcSame;
+
+    /** Target the give-up clock is running for, when it started, and the closest it has been. */
+    private T budgetTarget = null;
+    private long budgetStartMs = 0L;
+    private double budgetBestSq = Double.MAX_VALUE;
+    /** Two minutes without closing on the target -- generous, and still finite. */
+    private static final long CLOSEST_PURSUIT_BUDGET_MS = 120_000L;
+    /** Pursuits abandoned because they never closed. */
+    public static volatile int dcGaveUp;
+
+    /** Tell the trackers this target is not worth chasing; overridden where a tracker exists. */
+    protected void markUnreachable(AltoClef mod, T obj) { }
 }

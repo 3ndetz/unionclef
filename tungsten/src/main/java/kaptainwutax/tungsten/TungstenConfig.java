@@ -4411,4 +4411,25 @@ public class TungstenConfig {
 	 * whether the refusals fall.
 	 */
 	public boolean gridRouteMatchesQueueMoves = true;
+
+    /**
+     * Give the closest-object chooser a give-up clock, so one unreachable target cannot hold
+     * the bot for a whole run.
+     *
+     * <p>Measured: dc=12145/1/0/0/0/none0/same12070 -- of 12145 ticks the chooser found THE
+     * SAME closest object 12070 times and started exactly one new pursuit. The target was a
+     * single cobblestone two blocks down (dropPick cost=93 dy=-2.0 of=1), and the run spent
+     * 60-85% of its time motionless with 11-18 items to show for it.
+     *
+     * <p>PickupDroppedItemTask already has a two-minute budget and it fixed the opening
+     * (median time-to-first-rung 44.2 s -> 21.8 s), but it does not cover this path:
+     * dropBudget read 0 while the bot stood here. The chooser had no give-up of any kind.
+     *
+     * <p>Same principle that worked there: the clock belongs to the TARGET, and real progress
+     * toward it earns a restart, so a pursuit that is actually closing is never cut off.
+     *
+     * <p>GATE: the six pickup courses plus the mining ones, then the playthrough measured by
+     * deploy/runner/deadtime.py. Read dcGaveUp for proof it fires.
+     */
+    public boolean closestPursuitHasBudget = true;
 }
