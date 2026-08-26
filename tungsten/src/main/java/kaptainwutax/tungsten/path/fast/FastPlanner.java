@@ -284,6 +284,8 @@ public final class FastPlanner {
      * separate 'expanded thousands and found nothing' from 'never expanded'.
      */
     public static volatile int planCalls, planLastExpanded, planLastMs, planLastSize, planZeroExpand, planExpand0, planExpand1, planStartRescued, planStartSnapped, planStartNoSupport, planStartSupportedNoKids, planStartIsGoal;
+    /** The altoclef goal in force the last time a plan started ON its own goal. */
+    public static volatile String planAtGoalWho = "-";
 
     public static volatile int placeBudget = Integer.MAX_VALUE;
 
@@ -411,7 +413,13 @@ public final class FastPlanner {
                 // and that refusal is CORRECT. e1=50 with noSup=0 and supNoKids=0 leaves
                 // only this branch, so the plans are being requested for a cell the bot is
                 // already standing in. The defect is upstream: an arrival nobody notices.
-                if (expanded == 1) planStartIsGoal++;
+                if (expanded == 1) {
+                    planStartIsGoal++;
+                    // NAME THE ORDERER. The altoclef drive already traces the goal it hands
+                    // down, so record it here rather than guessing which task asks for a
+                    // route to the cell the bot occupies.
+                    planAtGoalWho = kaptainwutax.tungsten.combat.CombatTrace.hostGoal;
+                }
                 goalNode = current;
                 complete = true;
                 break;
