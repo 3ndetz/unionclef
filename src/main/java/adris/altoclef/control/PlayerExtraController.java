@@ -13,6 +13,9 @@ import net.minecraft.util.math.BlockPos;
 public class PlayerExtraController {
 
     private final AltoClef mod;
+    /** Wall-clock of the last block-breaking progress event; 0 until one arrives. */
+    public static volatile long lastBreakProgressMs = 0L;
+
     private BlockPos blockBreakPos;
     private double blockBreakProgress;
     public static boolean IsPvpRotating;
@@ -26,6 +29,11 @@ public class PlayerExtraController {
     }
 
     private void onBlockBreak(BlockPos pos, double progress) {
+        // WHEN DID A BREAK LAST MAKE PROGRESS? UnstuckChain needs to tell a bot DIGGING
+        // from a bot STRANDED, and both stand still pressing nothing. Arming the rescue on
+        // the key-press test alone fired it 127 times in one course and turned mine_diamond
+        // red, because a bot digging downward looks exactly like a wedged one.
+        lastBreakProgressMs = System.currentTimeMillis();
         blockBreakPos = pos;
         blockBreakProgress = progress;
     }

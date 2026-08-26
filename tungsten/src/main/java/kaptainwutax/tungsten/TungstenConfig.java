@@ -3654,7 +3654,7 @@ public class TungstenConfig {
      * break has landed for N seconds before calling a motionless bot stranded. Not the
      * blunt key-press test.
      */
-    public boolean unstuckWhenGoalButNoPath = false;
+    public boolean unstuckWhenGoalButNoPath = true;
 
     /**
      * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).

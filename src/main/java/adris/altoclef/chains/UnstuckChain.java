@@ -31,6 +31,10 @@ public class UnstuckChain extends SingleTaskChain {
 
     /** Times the chain acted on a bot that had a goal, no path and had not moved. */
     public static volatile int strandedRescues;
+    /** Frozen-with-a-goal states left alone because a block break was still progressing. */
+    public static volatile int strandedSkippedDigging;
+    /** How stale the break clock must be before a motionless bot counts as stranded. */
+    private static final long DIG_GRACE_MS = 6000L;
     /** Which guard last stopped checkGenerallyStuck, and the history size when it did.
      *  Three placement fixes were spent guessing this; naming it is cheaper. */
     public static volatile String lastSkip = "-";
@@ -161,7 +165,18 @@ public class UnstuckChain extends SingleTaskChain {
             AltoClef ac = AltoClef.getInstance();
             boolean hasGoal = ac != null && ac.getUserTaskChain() != null
                     && ac.getUserTaskChain().isActive();
-            strandedWithGoal = frozen && hasGoal;
+            // DIGGING IS NOT STRANDED, AND THE KEY-PRESS TEST CANNOT TELL THEM APART.
+            // A bot mining downward stands still with an active goal and presses nothing,
+            // exactly like a bot walled into a hole. Judged on keys alone this rescue fired
+            // 127 times in ONE course and took mine_diamond red with it. So ask for the one
+            // signal that separates them: has a block break MADE PROGRESS recently. The
+            // digger keeps that clock fresh every tick; the wedged bot -- which is wandering,
+            // not mining (wander=4125 against wanderMoved=0) -- lets it go stale.
+            boolean digging = adris.altoclef.control.PlayerExtraController.lastBreakProgressMs > 0
+                    && System.currentTimeMillis()
+                       - adris.altoclef.control.PlayerExtraController.lastBreakProgressMs < DIG_GRACE_MS;
+            if (frozen && hasGoal && digging) strandedSkippedDigging++;
+            strandedWithGoal = frozen && hasGoal && !digging;
             if (strandedWithGoal) strandedRescues++;
         }
 
