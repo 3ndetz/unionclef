@@ -30,6 +30,9 @@ public class CombatPathfinder {
     // 2000 nodes × deep block scans every 10 ticks on the client thread caused
     // visible hitching; combat paths are short, 800 is plenty
     private static final int MAX_NODES = 800;
+
+    /** Shape of what bfsPath returns: calls, budget exhaustions, stubs (<2 cells), cells returned. */
+    public static volatile int cpCalls, cpExhausted, cpStub, cpCells, cpDistinct;
     // Max horizontal reach of a running parkour jump (goto pathing only). A
     // sprint-jump clears ~4 flat / ~3 with a +1 rise.
     private static final int MAX_PARKOUR = 4;
@@ -208,6 +211,14 @@ public class CombatPathfinder {
     private static volatile long lastNoExpandLogMs = 0L;
 
     private static List<BlockPos> bfsPath(BlockPos start, BlockPos goal, WorldView world, boolean allowParkour) {
+        // WHAT SHAPE DOES THIS ACTUALLY RETURN? Its own javadoc calls it an instant grid BFS
+        // for FollowEntityTask to chase a nearby entity while the physics A* computes -- yet
+        // the walking drive uses it as its route source (CustomBaritoneGoalTask:715). With
+        // MAX_NODES=800 and survival goals fourteen blocks out through real terrain, it may
+        // exhaust the budget every time and hand back a stub. Measured live during a stall:
+        // mqRefused(short)=2337 against 2299 BFS ticks, one refusal per tick, while
+        // FastPlanner produced healthy 48-cell routes that went nowhere (navRes=0).
+        cpCalls++;
         if (start.equals(goal)) return Collections.emptyList();
 
         Queue<BlockPos> queue = new ArrayDeque<>();
@@ -224,7 +235,7 @@ public class CombatPathfinder {
             explored++;
 
             if (current.equals(goal) || current.isWithinDistance(goal, 1.5)) {
-                return reconstructPath(cameFrom, current);
+                return note(reconstructPath(cameFrom, current), explored);
             }
 
             for (BlockPos neighbor : getWalkableNeighbors(current, world, allowParkour, swimming)) {
@@ -271,7 +282,7 @@ public class CombatPathfinder {
             double d = p.getSquaredDistance(goal);
             if (d < closestDist) { closestDist = d; closest = p; }
         }
-        return closest != null ? reconstructPath(cameFrom, closest) : Collections.emptyList();
+        return note(closest != null ? reconstructPath(cameFrom, closest) : Collections.emptyList(), explored);
     }
 
     private static List<BlockPos> findRetreatPath(BlockPos playerPos, BlockPos targetPos, WorldView world) {
@@ -523,5 +534,14 @@ public class CombatPathfinder {
         attackPath = Collections.emptyList();
         retreatPath = Collections.emptyList();
         tickCounter = 0;
+    }
+
+    /** Record the shape of a route this BFS hands back, and whether it spent its budget. */
+    private static List<BlockPos> note(List<BlockPos> path, int explored) {
+        if (explored >= MAX_NODES) cpExhausted++;
+        if (path.size() < 2) cpStub++;
+        cpCells += path.size();
+        cpDistinct += (int) path.stream().distinct().count();
+        return path;
     }
 }
