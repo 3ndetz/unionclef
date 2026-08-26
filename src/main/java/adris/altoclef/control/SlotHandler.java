@@ -53,6 +53,21 @@ public class SlotHandler {
     /** Window slot most recently blacklisted as "server cancelled"; read over py4j. */
     public static volatile int shLastBlacklistedSlot = -1;
 
+    /** Sampled attribution of slot clicks: who calls, and how often (1 in 1024). */
+    public static volatile String shTopCaller = "-";
+    public static final java.util.Map<String, Integer> shCallers =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+    public static String shCallersDump() {
+        synchronized (shCallers) {
+            if (shCallers.isEmpty()) return "none";
+            return shCallers.entrySet().stream()
+                    .sorted((x, y) -> y.getValue() - x.getValue())
+                    .limit(4)
+                    .map(e -> e.getKey() + "x" + e.getValue())
+                    .reduce((x, y) -> x + " " + y).orElse("none");
+        }
+    }
+
     private final AltoClef mod;
 
     private final TimerGame slotActionTimer = new TimerGame(0);
@@ -99,6 +114,22 @@ public class SlotHandler {
         // and until now nothing told them apart.
         if (!canDoSlotAction()) { shDropped++; return; }
         shIssued++;
+        // WHO IS CLICKING SIX HUNDRED THOUSAND TIMES? shIssued=603671 in one ten-minute run
+        // while the item mover accounted for about 2255 of them. A second actor hammering the
+        // cursor would explain the mover's 2255 pickups against 3 places -- it picks an item
+        // up and something else empties the cursor before it can put it down. Sample the
+        // caller rather than nominate one; the same trick named the search-killer earlier.
+        // Sampled, not every call: a stack trace at this rate would itself distort the run.
+        if ((shIssued & 0x3FF) == 0) {
+            StackTraceElement[] st = Thread.currentThread().getStackTrace();
+            for (StackTraceElement e : st) {
+                String c = e.getClassName();
+                if (c.contains("SlotHandler") || c.contains("java.lang.Thread")) continue;
+                shTopCaller = c.substring(c.lastIndexOf('.') + 1) + ":" + e.getLineNumber();
+                synchronized (shCallers) { shCallers.merge(shTopCaller, 1, Integer::sum); }
+                break;
+            }
+        }
 
         if (slot.getWindowSlot() == -1) {
             // ⛔ "I CANNOT FIND THE SLOT" MUST NOT MEAN "THROW IT ON THE FLOOR".
