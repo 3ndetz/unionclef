@@ -283,7 +283,7 @@ public final class FastPlanner {
      * best = startNode, so a one-cell path means nothing ever improved on the start. These
      * separate 'expanded thousands and found nothing' from 'never expanded'.
      */
-    public static volatile int planCalls, planLastExpanded, planLastMs, planLastSize, planZeroExpand, planExpand0, planExpand1, planStartRescued, planStartSnapped;
+    public static volatile int planCalls, planLastExpanded, planLastMs, planLastSize, planZeroExpand, planExpand0, planExpand1, planStartRescued, planStartSnapped, planStartNoSupport, planStartSupportedNoKids, planStartIsGoal;
 
     public static volatile int placeBudget = Integer.MAX_VALUE;
 
@@ -406,6 +406,12 @@ public final class FastPlanner {
 
             if (current.x == goal.getX() && current.z == goal.getZ()
                     && Math.abs(current.y - goal.getY()) <= 1) {
+                // THE START IS ALREADY THE GOAL. Then the search 'completes' on its first
+                // iteration with a ONE-cell path, which FastNavigator refuses as short --
+                // and that refusal is CORRECT. e1=50 with noSup=0 and supNoKids=0 leaves
+                // only this branch, so the plans are being requested for a cell the bot is
+                // already standing in. The defect is upstream: an arrival nobody notices.
+                if (expanded == 1) planStartIsGoal++;
                 goalNode = current;
                 complete = true;
                 break;
@@ -483,6 +489,7 @@ public final class FastPlanner {
                 // (e0=0) and 57 of 95 plans died with the START node expanded and childless.
                 // On dry land the bot is supported there by definition, so take its own
                 // level, exactly as the branchPlaced rescue above does.
+                if (expanded == 1) planStartNoSupport++;
                 if (current == startNode && TungstenConfig.get().startCellTrustsThePlayer) {
                     planStartRescued++;
                     support = current.y;
@@ -491,7 +498,14 @@ public final class FastPlanner {
                 }
             }
 
+            // WHY IS A START CHILDLESS? e1 counts a start node that produced nothing, and
+            // that has TWO causes, not one: no support at all (the case planSnapsStartToSupport
+            // addresses) or support present and expand() still generating no successors.
+            // e1=134 against snap=5 says my fix targets the smaller half; measure the split
+            // before touching it again.
+            int beforeKids = open.count();
             expand(world, current, support, goal, map, open, scratch);
+            if (expanded == 1 && open.count() == beforeKids) planStartSupportedNoKids++;
         }
         } finally {
             kaptainwutax.tungsten.helpers.PlayerFit.endCachedRead();
@@ -1443,6 +1457,7 @@ public final class FastPlanner {
         private int size;
 
         boolean isEmpty() { return size == 0; }
+        int count() { return size; }
 
         void insert(Node value) {
             if (size + 1 >= array.length) {
