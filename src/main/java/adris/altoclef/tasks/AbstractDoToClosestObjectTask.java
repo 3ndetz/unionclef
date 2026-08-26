@@ -130,8 +130,17 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
                 && currentlyPursuing != null) {
             double dSq = getPos(mod, currentlyPursuing).squaredDistanceTo(mod.getPlayer().getPos());
             long now = System.currentTimeMillis();
-            if (!currentlyPursuing.equals(budgetTarget)) {
-                budgetTarget = currentlyPursuing;
+            // SAME PURSUIT, NOT THE SAME OBJECT. Comparing by identity restarts the clock
+            // every time the tracker hands back a fresh object for the same physical drop,
+            // so the budget never accrues: measured same9011/gave0 -- nine thousand ticks on
+            // one target and not a single give-up. The pickup budget had exactly this bug
+            // and was fixed the same way. Judge by WHERE the target is, not which object
+            // it is.
+            net.minecraft.util.math.Vec3d hereNow = getPos(mod, currentlyPursuing);
+            boolean samePursuit = budgetTargetPos != null
+                    && hereNow.squaredDistanceTo(budgetTargetPos) <= 0.25D;
+            if (!samePursuit) {
+                budgetTargetPos = hereNow;
                 budgetStartMs = now;
                 budgetBestSq = dSq;
             } else if (dSq < budgetBestSq - 0.25) {
@@ -143,7 +152,7 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
                 heuristicMap.remove(currentlyPursuing);
                 markUnreachable(mod, currentlyPursuing);
                 currentlyPursuing = null;
-                budgetTarget = null;
+                budgetTargetPos = null;
                 return null;
             }
         }
@@ -262,9 +271,15 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     public static volatile int dcNone, dcSame;
 
     /** Target the give-up clock is running for, when it started, and the closest it has been. */
-    private T budgetTarget = null;
-    private long budgetStartMs = 0L;
-    private double budgetBestSq = Double.MAX_VALUE;
+    // THE CLOCK OUTLIVES THE TASK -- THIS IS THE THIRD TIME THIS TRAP HAS BEEN SPRUNG.
+    // These were instance fields, and this task is rebuilt constantly, so every rebuild
+    // reset the budget and it never accrued: measured same9874/gave0 -- nine thousand
+    // ticks on one target and not one give-up. PickupDroppedItemTask had exactly this bug
+    // (its clock now lives on the target and fixed the opening, 44.2 s -> 21.8 s median),
+    // and so did the pursuit identity below. Static, keyed by WHERE the target is.
+    private static net.minecraft.util.math.Vec3d budgetTargetPos = null;
+    private static long budgetStartMs = 0L;
+    private static double budgetBestSq = Double.MAX_VALUE;
     /** Two minutes without closing on the target -- generous, and still finite. */
     private static final long CLOSEST_PURSUIT_BUDGET_MS = 120_000L;
     /** Pursuits abandoned because they never closed. */
