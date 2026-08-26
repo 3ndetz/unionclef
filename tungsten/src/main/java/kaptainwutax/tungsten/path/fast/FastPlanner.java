@@ -283,7 +283,7 @@ public final class FastPlanner {
      * best = startNode, so a one-cell path means nothing ever improved on the start. These
      * separate 'expanded thousands and found nothing' from 'never expanded'.
      */
-    public static volatile int planCalls, planLastExpanded, planLastMs, planLastSize, planZeroExpand, planExpand0, planExpand1, planStartRescued;
+    public static volatile int planCalls, planLastExpanded, planLastMs, planLastSize, planZeroExpand, planExpand0, planExpand1, planStartRescued, planStartSnapped;
 
     public static volatile int placeBudget = Integer.MAX_VALUE;
 
@@ -361,6 +361,21 @@ public final class FastPlanner {
         // placeDeferred=0 and placeInRange=0, i.e. it never even got as far as the distance check.
         // A move you cannot perform is not a move, so the count is taken here, where the plan is.
         placeBudget = countPlaceable(TungstenMod.mc == null ? null : TungstenMod.mc.player);
+        // PLAN FROM A CELL THAT ACTUALLY HAS A FLOOR.
+        // 57 of 95 plans died with the START node expanded and childless, because
+        // supportTop said NaN there. Faking support was tried and REJECTED (nav_water
+        // 13/14, twice) -- NaN means the bot is not standing, and swimming is one way to
+        // not be standing. So do not invent a floor: move the start onto the cell that
+        // HAS one, which is where the body is about to land anyway. Same idea as
+        // BlockSpacePathFinder.snapToSupport, and it leaves water and ladders alone
+        // because those are unstandable on purpose and own a separate generator.
+        if (TungstenConfig.get().planSnapsStartToSupport) {
+            BlockPos snapped = snapStartToSupport(world, start);
+            if (snapped != null && !snapped.equals(start)) {
+                planStartSnapped++;
+                start = snapped;
+            }
+        }
         NodeMap map = new NodeMap();
         Heap open = new Heap();
 
@@ -1483,5 +1498,45 @@ public final class FastPlanner {
             array[index] = value;
             value.heapPosition = index;
         }
+    }
+
+    /**
+     * Move a start cell with no floor onto the cell that actually supports the body -- the
+     * footprint cells the collision box overlaps first, then straight down to where it is
+     * about to land. Returns the input unchanged when it already has support, when the cell
+     * is water or a ladder (both unstandable on purpose, with their own move generator), or
+     * when nothing better is found.
+     */
+    private static BlockPos snapStartToSupport(WorldView world, BlockPos start) {
+        BlockPos.Mutable m = new BlockPos.Mutable();
+        m.set(start);
+        if (!Double.isNaN(PlayerFit.supportTop(world, m))) return start;
+        if (isWater(world, start.getX(), start.getY(), start.getZ(), m)
+                || isLadder(world, start.getX(), start.getY(), start.getZ(), m)) return start;
+        var player = TungstenMod.mc == null ? null : TungstenMod.mc.player;
+        if (player != null) {
+            net.minecraft.util.math.Box box = player.getBoundingBox();
+            double[][] corners = {
+                {box.minX, box.minZ}, {box.minX, box.maxZ},
+                {box.maxX, box.minZ}, {box.maxX, box.maxZ},
+            };
+            BlockPos best = null;
+            double bestDist = Double.MAX_VALUE;
+            for (double[] c : corners) {
+                BlockPos cand = BlockPos.ofFloored(c[0], start.getY(), c[1]);
+                if (cand.equals(start)) continue;
+                m.set(cand);
+                if (Double.isNaN(PlayerFit.supportTop(world, m))) continue;
+                double d = cand.toCenterPos().squaredDistanceTo(player.getEntityPos());
+                if (d < bestDist) { bestDist = d; best = cand; }
+            }
+            if (best != null) return best;
+        }
+        for (int dy = 1; dy <= 8; dy++) {
+            BlockPos cand = start.down(dy);
+            m.set(cand);
+            if (!Double.isNaN(PlayerFit.supportTop(world, m))) return cand;
+        }
+        return start;
     }
 }

@@ -4312,4 +4312,31 @@ public class TungstenConfig {
 	 * <p>Stays OFF. Kept with its numbers so the next pass starts from the corrected reading.
 	 */
 	public boolean startCellTrustsThePlayer = false;
+
+	/**
+	 * Start a fast plan from the cell that actually has a floor, rather than from a cell the
+	 * body merely occupies while airborne.
+	 *
+	 * <p>Measured: plan=95/8448/253ms/sz39/zero57(e0=0,e1=57) -- the budget never fired once,
+	 * and 57 of 95 plans expanded the START node and found it childless, because supportTop
+	 * read NaN there. A one-cell route follows (A* begins with best = startNode), FastNavigator
+	 * refuses it as short (navRes=123/0/0/0/0: 123 refusals, not one accepted route), and the
+	 * queue receives a collapsed route.
+	 *
+	 * <p>The previous attempt at this root -- startCellTrustsThePlayer, which INVENTED support
+	 * at the node's own level -- was measured and rejected twice (nav 13/14, nav_water). NaN
+	 * support does not mean the world is wrong; it means the bot is not standing, and swimming
+	 * is one of the ways to not be standing.
+	 *
+	 * <p>So this does not invent a floor. It moves the start onto a cell that HAS one -- the
+	 * footprint cells the collision box already overlaps, then straight down to the landing
+	 * cell, which is where the body is going anyway. Water and ladders are left untouched.
+	 * Same shape as BlockSpacePathFinder.snapToSupport, which has done this for the coarse
+	 * search all along.
+	 *
+	 * <p>GATE: nav and craft in full against the flag-off baseline (nav 14/14, craft 22/22),
+	 * then the playthrough. Read planStartSnapped for proof it fires and e1 for whether the
+	 * childless-start plans actually fall.
+	 */
+	public boolean planSnapsStartToSupport = true;
 }
