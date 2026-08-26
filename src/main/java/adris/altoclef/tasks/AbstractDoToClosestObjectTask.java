@@ -138,7 +138,7 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
             // it is.
             net.minecraft.util.math.Vec3d hereNow = getPos(mod, currentlyPursuing);
             boolean samePursuit = budgetTargetPos != null
-                    && hereNow.squaredDistanceTo(budgetTargetPos) <= 0.25D;
+                    && hereNow.squaredDistanceTo(budgetTargetPos) <= SAME_PURSUIT_SQ;
             if (!samePursuit) {
                 // WHY DOES THE CLOCK KEEP RESTARTING? gave reads 3 in one sweep and 0 in
                 // the next while same~10000 in both, so the ceiling is being reset rather
@@ -302,6 +302,16 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     private static final long CLOSEST_PURSUIT_BUDGET_MS = 120_000L;
     /** Total time allowed on one target, progress or not. */
     private static final long CLOSEST_PURSUIT_HARD_MS = 180_000L;
+    /**
+     * How far a target may move and still be the SAME pursuit.
+     *
+     * <p>Half a block was too tight: a dropped item DRIFTS. Measured at a real stall,
+     * rst114@82cm -- the clock was reset 114 times and the last jump that did it was 82 cm,
+     * so neither give-up ever accrued (pursuit=15/0s, dropBudget=0) while the bot chased a
+     * crafting table one block above it. Two blocks still separates 'this drop' from 'a
+     * different drop' -- a grid step to the next block reads 100 cm and rightly resets.
+     */
+    private static final double SAME_PURSUIT_SQ = 4.0D;
     /** Pursuits abandoned because they never closed. */
     public static volatile int dcGaveUp;
     /** Clock restarts, and how far the target appeared to move on the last one. */

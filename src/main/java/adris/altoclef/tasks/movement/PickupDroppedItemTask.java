@@ -495,6 +495,8 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
         if (a == b) return true;
         if (a == null || b == null) return false;
         if (!a.getStack().getItem().equals(b.getStack().getItem())) return false;
-        return a.getPos().squaredDistanceTo(b.getPos()) <= 0.25D;
+        // A drop DRIFTS -- half a block was too tight and the budget never accrued
+        // (pursuit=15/0s with dropBudget=0 at a measured stall, where the target moved 82 cm).
+        return a.getPos().squaredDistanceTo(b.getPos()) <= 4.0D;
     }
 }
