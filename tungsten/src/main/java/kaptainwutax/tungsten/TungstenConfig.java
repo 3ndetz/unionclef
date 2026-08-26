@@ -3613,6 +3613,47 @@ public class TungstenConfig {
      * <p>Off by default. Judged against the measured 8/20 baseline on mine_stone, with
      * strandedRescues as the mechanism gate and the craft ladder watched for regression.
      */
+    /**
+     * SWITCHED ON (2026-08-26) -- the operator saw this from the outside.
+     *
+     * <p>Watching two recordings he described the bot felling a tree and then staring at
+     * one spot, standing still for the last three to five minutes. Measuring RUNGS hid that
+     * entirely, since rungs banked before the death stay on the scoreboard, so
+     * deploy/runner/deadtime.py now measures the share of a run spent motionless. The first
+     * run under it read 95% DEAD with zero items.
+     *
+     * <p>The grid search's own diagnostic names the state exactly:
+     *
+     * <pre>
+     *   BFS stuck at 1188,61,-1428 --
+     *     1,0:feetBlocked=dirt  -1,0:feetBlocked=dirt  0,-1:feetBlocked=dirt
+     *     -1,1:feetBlocked=dirt -1,-1:feetBlocked=dirt  0,1:noFloor  1,-1:noFloor
+     *     1,1:OK?   <- the only passable neighbour is a DIAGONAL, refused by corner-cut
+     * </pre>
+     *
+     * <p>The bot is walled into a hole of its own digging and the pathfinder is RIGHT that
+     * no walking route exists. What is missing is the reaction. The chain watched and never
+     * acted: gpAppended=684 with strandedRescues=0, because this branch was off.
+     *
+     * <h2>SWITCHED BACK OFF THE SAME DAY -- IT BREAKS MINING (2026-08-26)</h2>
+     *
+     * <pre>
+     *   stranded=127        the rescue fires 127 times in ONE course
+     *   mine_diamond FAIL   and the mining rung goes red
+     * </pre>
+     *
+     * <p>The reason is structural, not a tuning matter: a bot digging downward STANDS STILL
+     * WITH AN ACTIVE GOAL and presses no movement keys. That is indistinguishable, by this
+     * test, from a bot walled into a hole -- so the rescue drags it off its own dig, over
+     * and over. The guard the flag was written to relax is load-bearing for mining.
+     *
+     * <p>The diagnosis behind it still stands and is worth someone's time: the bot really
+     * does wall itself in (BFS: every neighbour feetBlocked=dirt, the only opening a
+     * corner-cut diagonal) and really does stand there for 95% of a run. What is needed is
+     * a test that separates DIGGING from STRANDED -- for instance, requiring that no block
+     * break has landed for N seconds before calling a motionless bot stranded. Not the
+     * blunt key-press test.
+     */
     public boolean unstuckWhenGoalButNoPath = false;
 
     /**
