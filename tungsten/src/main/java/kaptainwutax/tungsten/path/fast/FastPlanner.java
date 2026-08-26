@@ -283,7 +283,7 @@ public final class FastPlanner {
      * best = startNode, so a one-cell path means nothing ever improved on the start. These
      * separate 'expanded thousands and found nothing' from 'never expanded'.
      */
-    public static volatile int planCalls, planLastExpanded, planLastMs, planLastSize, planZeroExpand, planExpand0, planExpand1, planStartRescued, planStartSnapped, planStartNoSupport, planStartSupportedNoKids, planStartIsGoal;
+    public static volatile int planCalls, planLastExpanded, planLastMs, planLastSize, planZeroExpand, planExpand0, planExpand1, planStartRescued, planStartSnapped, planStartNoSupport, planStartSupportedNoKids, planStartIsGoal, planAtGoalExact, planAtGoalYTol;
     /** The altoclef goal in force the last time a plan started ON its own goal. */
     public static volatile String planAtGoalWho = "-";
 
@@ -415,6 +415,13 @@ public final class FastPlanner {
                 // already standing in. The defect is upstream: an arrival nobody notices.
                 if (expanded == 1) {
                     planStartIsGoal++;
+                    // EXACT CELL, OR ONLY WITHIN THE +/-1 Y TOLERANCE? The test above accepts
+                    // a one-block height difference, while AltoGoal.block demands the bot
+                    // OCCUPY the cell. If the matches are tolerance-only, the two layers
+                    // disagree about arrival: the planner says 'already there' and hands back
+                    // a one-cell path, the task never sees arrival and asks again -- forever.
+                    // Measure which it is before acting on that story.
+                    if (current.y == goal.getY()) planAtGoalExact++; else planAtGoalYTol++;
                     // NAME THE ORDERER. The altoclef drive already traces the goal it hands
                     // down, so record it here rather than guessing which task asks for a
                     // route to the cell the bot occupies.

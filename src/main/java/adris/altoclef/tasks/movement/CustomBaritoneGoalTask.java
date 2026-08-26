@@ -49,6 +49,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     /** Simple name of the last goal type goalToVec could not translate; read over py4j. */
     /** Goal snaps: asked, moved to solid ground, and left unstandable. */
     public static volatile int snapAsked, snapMoved, snapFailed;
+    /** Snaps that landed on the bot's own cell -- a request to walk nowhere. */
+    public static volatile int snapToSelf;
 
     public static volatile String pdLastUnknownGoal = "-";
 
@@ -478,6 +480,17 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             net.minecraft.util.math.Vec3d gpBefore = gp;
             gp = snapGoalToStandable(gp, mod);
             snapAsked++;
+            // DID THE SNAP LAND ON US? A goal that cannot be stood in gets pulled to the
+            // nearest standable cell, and for an unreachable target the nearest such cell can
+            // be the one the BOT IS STANDING IN. Then the planner is asked to route to where
+            // it already is: measured as atGoal=50(ex50,ytol0) -- every match an EXACT cell,
+            // so the two layers agree and the request itself is the no-op. The real target
+            // stays unreached while the task asks again every tick.
+            if (gp != null) {
+                net.minecraft.util.math.BlockPos me = mod.getPlayer().getBlockPos();
+                if (me.getX() == (int) Math.floor(gp.x) && me.getY() == (int) Math.floor(gp.y)
+                        && me.getZ() == (int) Math.floor(gp.z)) snapToSelf++;
+            }
             if (gp != null && gpBefore != null && !gp.equals(gpBefore)) snapMoved++;
             else if (gp != null && !standable(mod.getWorld(), (int) Math.floor(gp.x),
                     (int) Math.floor(gp.y), (int) Math.floor(gp.z))) snapFailed++;
