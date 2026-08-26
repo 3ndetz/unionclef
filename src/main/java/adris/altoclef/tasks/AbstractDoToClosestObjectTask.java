@@ -120,6 +120,18 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
         // cobblestone two blocks down, deepPicks=722). Split them before touching anything.
         if (checkNewClosest.isEmpty()) dcNone++;
         else if (checkNewClosest.get().equals(currentlyPursuing)) dcSame++;
+        // IS THE CHASE PRODUCTIVE? dc owns 76% of the main chain's ticks and dcSame owns
+        // almost all of dc, so 'pursuing the same target' IS the run. Dead time sits at a
+        // median near a third, and the question is whether those ticks are a bot travelling
+        // toward its target or a bot standing next to it. Split them by the only honest
+        // signal: did the BODY move since the previous tick.
+        {
+            net.minecraft.util.math.Vec3d me = mod.getPlayer().getPos();
+            if (dcLastPos != null) {
+                if (me.squaredDistanceTo(dcLastPos) > 0.0025D) dcMoving++; else dcStill++;
+            }
+            dcLastPos = me;
+        }
 
         // A PURSUIT THAT NEVER CLOSES MUST END. dcSame=12070 of 12145 ticks: the bot chased
         // ONE target for a whole ten-minute run -- a single cobblestone two blocks down, the
@@ -153,6 +165,29 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
                 budgetStartMs = now;
                 budgetHardStartMs = now;
                 budgetBestSq = dSq;
+            // STANDING STILL IS NOT A SLOW CHASE, IT IS A STUCK ONE.
+            // Measured: of 10445 chooser ticks the body moved on 248 and stood on 10196 --
+            // 98% -- while dc owns 76% of the whole run. The three-minute ceiling does fire
+            // (gave=4) but only after three minutes are already spent standing.
+            // Standing IS legitimate while mining the target, so exclude that with the same
+            // break clock that separated digging from stranded for UnstuckChain.
+            boolean bodyMoved = dcLastPos == null
+                    || mod.getPlayer().getPos().squaredDistanceTo(dcLastPos) > 0.0025D;
+            boolean breaking = adris.altoclef.control.PlayerExtraController.lastBreakProgressMs > 0
+                    && now - adris.altoclef.control.PlayerExtraController.lastBreakProgressMs < 2000L;
+            if (bodyMoved || breaking) {
+                budgetIdleSinceMs = now;
+            } else if (CLOSEST_PURSUIT_IDLE_MS > 0
+                    && now - budgetIdleSinceMs > CLOSEST_PURSUIT_IDLE_MS
+                    && budgetIdleSinceMs > 0) {
+                dcGaveUpIdle++;
+                heuristicMap.remove(currentlyPursuing);
+                markUnreachable(mod, currentlyPursuing);
+                currentlyPursuing = null;
+                budgetTargetPos = null;
+                budgetIdleSinceMs = 0L;
+                return null;
+            }
             } else if (dSq < budgetBestSq - 0.25) {
                 // real progress toward it -- the clock earns a restart
                 budgetBestSq = dSq;
@@ -297,11 +332,34 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     private static long budgetStartMs = 0L;
     /** Set only when the TARGET changes -- progress cannot push this one back. */
     private static long budgetHardStartMs = 0L;
+    /** When the body last moved or a break progressed while pursuing. */
+    private static long budgetIdleSinceMs = 0L;
     private static double budgetBestSq = Double.MAX_VALUE;
     /** Two minutes without closing on the target -- generous, and still finite. */
     private static final long CLOSEST_PURSUIT_BUDGET_MS = 120_000L;
     /** Total time allowed on one target, progress or not. */
     private static final long CLOSEST_PURSUIT_HARD_MS = 180_000L;
+    /** Standing still and not breaking anything for this long means the target is unreachable. */
+    /**
+     * OFF (0) -- MEASURED, AND IT COSTS MINING.
+     *
+     * <p>The diagnosis is solid: of 10445 chooser ticks the body moved on 248 and stood on
+     * 10196 (98%), while the chooser owns 76% of a run. Standing still IS where the dead
+     * time lives, and the three-minute ceiling only rescues it after three minutes are
+     * already spent.
+     *
+     * <p>But giving up after twenty idle seconds took craft from 22/22 to 20/22:
+     * mine_stone finished with cobblestone=3 and 7 against the eight it needs. The reason
+     * is the gap this rule cannot see: a bot that has ARRIVED at a block and is aiming at
+     * it stands still and has not started breaking yet, so the break clock is empty and
+     * the rule snatches its target away.
+     *
+     * <p>Set a value again only together with an exclusion for 'the target is within
+     * mining reach' -- approach, aim and swing is a legitimate stationary sequence and
+     * twenty seconds is shorter than it. Kept as a named constant so the next attempt
+     * starts from the measurement rather than the idea.
+     */
+    private static final long CLOSEST_PURSUIT_IDLE_MS = 0L;
     /**
      * How far a target may move and still be the SAME pursuit.
      *
@@ -316,6 +374,11 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     public static volatile int dcGaveUp;
     /** Clock restarts, and how far the target appeared to move on the last one. */
     public static volatile int dcClockReset, dcResetJumpCm;
+    /** Chooser ticks where the body moved, and where it did not. */
+    public static volatile int dcMoving, dcStill;
+    /** Pursuits abandoned because the body stood still and broke nothing. */
+    public static volatile int dcGaveUpIdle;
+    private static net.minecraft.util.math.Vec3d dcLastPos = null;
 
     /** Tell the trackers this target is not worth chasing; overridden where a tracker exists. */
     protected void markUnreachable(AltoClef mod, T obj) { }
