@@ -142,12 +142,19 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
             if (!samePursuit) {
                 budgetTargetPos = hereNow;
                 budgetStartMs = now;
+                budgetHardStartMs = now;
                 budgetBestSq = dSq;
             } else if (dSq < budgetBestSq - 0.25) {
                 // real progress toward it -- the clock earns a restart
                 budgetBestSq = dSq;
                 budgetStartMs = now;
-            } else if (now - budgetStartMs > CLOSEST_PURSUIT_BUDGET_MS) {
+            }
+            // A HARD CEILING THE PROGRESS RULE CANNOT RESET. Letting 'got closer than ever'
+            // restart the clock is too generous: a bot circling a drop keeps setting new
+            // bests, so the budget never accrued -- same9101/gave0 even with the clock made
+            // static. Three minutes on ONE target is enough for any drop worth having.
+            if (now - budgetHardStartMs > CLOSEST_PURSUIT_HARD_MS
+                    || now - budgetStartMs > CLOSEST_PURSUIT_BUDGET_MS) {
                 dcGaveUp++;
                 heuristicMap.remove(currentlyPursuing);
                 markUnreachable(mod, currentlyPursuing);
@@ -279,9 +286,13 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     // and so did the pursuit identity below. Static, keyed by WHERE the target is.
     private static net.minecraft.util.math.Vec3d budgetTargetPos = null;
     private static long budgetStartMs = 0L;
+    /** Set only when the TARGET changes -- progress cannot push this one back. */
+    private static long budgetHardStartMs = 0L;
     private static double budgetBestSq = Double.MAX_VALUE;
     /** Two minutes without closing on the target -- generous, and still finite. */
     private static final long CLOSEST_PURSUIT_BUDGET_MS = 120_000L;
+    /** Total time allowed on one target, progress or not. */
+    private static final long CLOSEST_PURSUIT_HARD_MS = 180_000L;
     /** Pursuits abandoned because they never closed. */
     public static volatile int dcGaveUp;
 
