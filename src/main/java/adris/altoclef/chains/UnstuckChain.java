@@ -33,6 +33,13 @@ public class UnstuckChain extends SingleTaskChain {
     public static volatile int strandedRescues;
     /** Frozen-with-a-goal states left alone because a block break was still progressing. */
     public static volatile int strandedSkippedDigging;
+    /**
+     * Ticks this chain OWNED the bot. A 73%-dead run was captured with Main task:
+     * <Shimmying> and everything else idle (pdWalking=0, dbTick=0, wander=0), which raises
+     * the question of whether the rescue is now paying for itself. Rescues alone do not
+     * answer it -- 12 of them could be a second or a minute. This counts the cost.
+     */
+    public static volatile int unstuckOwnedTicks;
     /** How stale the break clock must be before a motionless bot counts as stranded. */
     private static final long DIG_GRACE_MS = 6000L;
     /** Which guard last stopped checkGenerallyStuck, and the history size when it did.
@@ -360,6 +367,7 @@ public class UnstuckChain extends SingleTaskChain {
     @Override
     public float getPriority() {
         if (mainTask instanceof GetOutOfWaterTask && mainTask.isActive()) {
+            unstuckOwnedTicks++;
             return 55;
         }
 
@@ -391,11 +399,13 @@ public class UnstuckChain extends SingleTaskChain {
 
 
         if (isProbablyStuck) {
+            unstuckOwnedTicks++;
             return 55;
         }
 
         if (startedShimmying && !shimmyTaskTimer.elapsed()) {
             setTask(new SafeRandomShimmyTask());
+            unstuckOwnedTicks++;
             return 55;
         }
         startedShimmying = false;
