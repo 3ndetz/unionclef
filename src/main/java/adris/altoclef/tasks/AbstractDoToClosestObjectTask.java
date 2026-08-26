@@ -140,6 +140,15 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
             boolean samePursuit = budgetTargetPos != null
                     && hereNow.squaredDistanceTo(budgetTargetPos) <= 0.25D;
             if (!samePursuit) {
+                // WHY DOES THE CLOCK KEEP RESTARTING? gave reads 3 in one sweep and 0 in
+                // the next while same~10000 in both, so the ceiling is being reset rather
+                // than reached. Count the resets and how far the target appeared to jump,
+                // because 'the target moved' and 'a different target' want different fixes.
+                if (budgetTargetPos != null) {
+                    dcClockReset++;
+                    dcResetJumpCm = (int) Math.min(Math.sqrt(
+                            hereNow.squaredDistanceTo(budgetTargetPos)) * 100.0, 2_000_000_000.0);
+                }
                 budgetTargetPos = hereNow;
                 budgetStartMs = now;
                 budgetHardStartMs = now;
@@ -295,6 +304,8 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     private static final long CLOSEST_PURSUIT_HARD_MS = 180_000L;
     /** Pursuits abandoned because they never closed. */
     public static volatile int dcGaveUp;
+    /** Clock restarts, and how far the target appeared to move on the last one. */
+    public static volatile int dcClockReset, dcResetJumpCm;
 
     /** Tell the trackers this target is not worth chasing; overridden where a tracker exists. */
     protected void markUnreachable(AltoClef mod, T obj) { }
