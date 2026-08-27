@@ -710,7 +710,11 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             // same distance this file's own near-accounting has always used (distSq <= 16).
             if (kaptainwutax.tungsten.TungstenConfig.get().breakGoalIsReach) {
                 dbReachGoal++;
-                return new adris.altoclef.tasks.movement.GetWithinRangeOfBlockTask(pos, 3);
+                // Arrival is decided by REACH, not by distance: standing three blocks away
+                // behind an obstruction satisfies a range goal and still cannot break
+                // anything, which is what widened the ladder's spread to 0-6 when the plain
+                // range task was tried. See GetWithinReachOfBlockTask.
+                return new adris.altoclef.tasks.movement.GetWithinReachOfBlockTask(pos, 3);
             }
             return new GetToBlockTask(pos, false);
         }

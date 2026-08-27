@@ -2357,7 +2357,7 @@ public class TungstenConfig {
      * one. Off again. What it argues for is fixing the OCCUPANCY GOAL AT ITS SOURCE for
      * targets that must be broken, rather than swapping the goal type underneath the task.
      */
-    public boolean breakGoalIsReach = false;
+    public boolean breakGoalIsReach = true;
 
     /**
      * A movement gives up when the thing in its way can never be aimed at.
