@@ -3732,6 +3732,25 @@ public class TungstenConfig {
      * of this same fix sat in the else branch of the frozen test and read back0/away0 -- dead
      * code, because reaching that branch requires passing the primary exemption, which only a
      * frozen bot passes. The counter caught it before it could be credited with anything.
+     *
+     * <h2>PAIRED A/B ON EQUAL WORLDS -- KEPT, ON THE METRIC IT TARGETS</h2>
+     *
+     * <pre>
+     *   pair   dead        shuttle windows      straightness      items
+     *    1     15 / 48     4/21  ->  0/12       0.44 -> 0.78      0 / 27
+     *    2     58 / 27     7/11  ->  0/18       0.18 -> 0.51     11 / 19
+     *    3      4 / 13     0/21  ->  0/18       0.85 -> 0.92    111 / 65
+     * </pre>
+     *
+     * <p>Shuttling is GONE in all three runs with the flag on -- zero shuttle windows against
+     * four and seven -- and path straightness improves in three pairs of three. That is the
+     * defect this targets and the one the user reported.
+     *
+     * <p>HONEST CAVEAT: dead time does NOT improve, median 27% against 15%, and pair 1 is
+     * clearly worse on it. A longer cooldown means a wedged bot waits longer for its next
+     * rescue, which is the price of not thrashing. Standing still and running in circles are
+     * both failures; this trades some of the second for some of the first, and only the
+     * remaining dead time tells us whether that was the right trade.
      */
     public boolean rescueEscalationSurvivesItsOwnShimmy = true;
 
