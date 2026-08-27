@@ -175,7 +175,12 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
                     || mod.getPlayer().getPos().squaredDistanceTo(dcLastPos) > 0.0025D;
             boolean breaking = adris.altoclef.control.PlayerExtraController.lastBreakProgressMs > 0
                     && now - adris.altoclef.control.PlayerExtraController.lastBreakProgressMs < 2000L;
-            if (bodyMoved || breaking) {
+            // WITHIN REACH IS NOT IDLE. Approach, aim, swing is a legitimate stationary
+            // sequence, and the first attempt at this rule snatched targets away mid-swing:
+            // craft fell 22/22 -> 20/22 with mine_stone ending on 3 and 7 cobblestone of 8.
+            // A bot standing FAR from its target is the stuck case; standing AT it is work.
+            boolean withinReach = dSq <= REACH_SQ;
+            if (bodyMoved || breaking || withinReach) {
                 budgetIdleSinceMs = now;
             } else if (CLOSEST_PURSUIT_IDLE_MS > 0
                     && now - budgetIdleSinceMs > CLOSEST_PURSUIT_IDLE_MS
@@ -359,7 +364,9 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
      * twenty seconds is shorter than it. Kept as a named constant so the next attempt
      * starts from the measurement rather than the idea.
      */
-    private static final long CLOSEST_PURSUIT_IDLE_MS = 0L;
+    private static final long CLOSEST_PURSUIT_IDLE_MS = 30_000L;
+    /** Mining reach, squared -- inside it, standing still is working, not stalling. */
+    private static final double REACH_SQ = 4.5D * 4.5D;
     /**
      * How far a target may move and still be the SAME pursuit.
      *
