@@ -350,7 +350,34 @@ public class BeatMinecraftTask extends Task {
     }
 
     public static void throwAwayItems(AltoClef mod, Item... items) {
+        // WHAT IS ACTUALLY BEING THROWN, AND IS IT COMING BACK? throwers reads
+        // BeatMinecraftTask:362 x546 in one run while the stall dump shows the chain chasing
+        // <Pickup Dropped Items: [[wooden_pickaxe]]> -- the very item this method discards
+        // once a stone pickaxe exists. That is a loop if the collector still wants it, and a
+        // harmless tidy-up if it does not. Count the types instead of assuming which.
+        for (Item it : items) {
+            if (it != null) {
+                synchronized (thrownByType) {
+                    thrownByType.merge(it.getTranslationKey().replace("item.minecraft.", "")
+                            .replace("block.minecraft.", ""), 1, Integer::sum);
+                }
+            }
+        }
         throwAwaySlots(mod, mod.getItemStorage().getSlotsWithItemPlayerInventory(false, items));
+    }
+
+    /** Item types this task has asked to throw away, by name. Read over py4j as thrown=[...]. */
+    public static final java.util.Map<String, Integer> thrownByType =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+    public static String thrownDump() {
+        synchronized (thrownByType) {
+            if (thrownByType.isEmpty()) return "none";
+            return thrownByType.entrySet().stream()
+                    .sorted((x, y) -> y.getValue() - x.getValue())
+                    .limit(5)
+                    .map(e -> e.getKey() + "x" + e.getValue())
+                    .reduce((x, y) -> x + " " + y).orElse("none");
+        }
     }
 
     public static void throwAwaySlots(AltoClef mod, List<Slot> slots) {
