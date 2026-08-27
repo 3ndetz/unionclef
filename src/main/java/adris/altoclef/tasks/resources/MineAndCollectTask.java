@@ -476,6 +476,20 @@ public class MineAndCollectTask extends ResourceTask {
         protected Task getGoalTask(Object obj) {
             if (obj instanceof BlockPos newPos) {
                 if (miningPos == null || !miningPos.equals(newPos)) {
+                    // COUNT THE RE-CHOICE. The operator saw the bot walking between two
+                    // spots forever, and the switch breakdown put 9-11 of 21 switches on
+                    // 'Getting to block X -> Getting to block Y'. Every one of those is a
+                    // new DestroyBlockTask made right here. Also record how far the target
+                    // jumped: a short hop back and forth is an oscillation, a long one is
+                    // honest progress through a vein.
+                    if (miningPos != null) {
+                        mineRetarget++;
+                        mineRetargetCm = (int) Math.min(
+                                Math.sqrt(miningPos.getSquaredDistance(newPos)) * 100.0,
+                                2_000_000_000.0);
+                        if (lastLeft != null && lastLeft.equals(newPos)) mineRetargetBack++;
+                        lastLeft = miningPos;
+                    }
                     progressChecker.reset();
                 }
                 miningPos = newPos;
@@ -538,4 +552,8 @@ public class MineAndCollectTask extends ResourceTask {
         }
     }
 
+
+    /** Target-block re-choices, how far the last one jumped, and how many went straight BACK. */
+    public static volatile int mineRetarget, mineRetargetCm, mineRetargetBack;
+    private static net.minecraft.util.math.BlockPos lastLeft = null;
 }
