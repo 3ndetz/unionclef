@@ -2338,8 +2338,26 @@ public class TungstenConfig {
      * <p>And that block is a spruce_log -- a solid trunk. GetToBlockTask asks to OCCUPY the
      * cell, which cannot happen while the log stands, so the bot spends seven minutes of a
      * ten-minute run on one unreachable goal. The ladder's hard five-rung ceiling is this.
+     *
+     * <h3>RE-TEST RESULT: DEAD TIME BETTER, LADDER WORSE AND WILDER -- STAYS OFF</h3>
+     *
+     * <pre>
+     *              dead time            rungs
+     *   ON    0 27 15 4 14 -> med 14%   6 4 2 0 5 -> med 4
+     *   OFF   8 19 23 23 13 -> med 19%  5 5 5 3 5 -> med 5
+     *   dbReachGoal=7967 -- the branch is thoroughly exercised, not dormant
+     * </pre>
+     *
+     * <p>One run DID break the five-rung ceiling (six rungs, coal at 246.7 s), which no run
+     * on the other build managed. But one of five is an observation, not a result, and the
+     * ladder median fell from 5 to 4 while its spread went from 3-5 to 0-6.
+     *
+     * <p>So the diagnosis holds -- 98.7% of the post-stone-tools window really is spent on
+     * one unreachable occupancy goal -- but this cure trades a steady ladder for an erratic
+     * one. Off again. What it argues for is fixing the OCCUPANCY GOAL AT ITS SOURCE for
+     * targets that must be broken, rather than swapping the goal type underneath the task.
      */
-    public boolean breakGoalIsReach = true;
+    public boolean breakGoalIsReach = false;
 
     /**
      * A movement gives up when the thing in its way can never be aimed at.
