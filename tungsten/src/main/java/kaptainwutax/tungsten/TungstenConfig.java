@@ -3711,7 +3711,29 @@ public class TungstenConfig {
      * <p>The operator has already judged that trade: a shuttle is worse than standing still,
      * because it consumes the run while looking like work. Off.
      */
-    public boolean unstuckWhenGoalButNoPath = false;
+    public boolean unstuckWhenGoalButNoPath = true;
+
+    /**
+     * Whether the shimmy cooldown's escalation survives the shimmy that caused it.
+     *
+     * <p>The cooldown climbs 30 -> 60 -> 120s only while stuck detections stay CONSECUTIVE,
+     * and the counter was cleared on every tick the bot was not frozen -- including the ticks
+     * right after a shimmy, which displaces the bot by design. The escalation was therefore
+     * extinguished by its own rescue and every rescue restarted at 30s, forever: freeze,
+     * shimmy, drift, walk back, freeze. That is the pattern the user called worse than the
+     * freeze itself -- "walks to a block, goes off, comes back, endlessly".
+     *
+     * <p>With this on, the reset asks what separates a rescue that WORKED from one that
+     * merely jiggled: is the bot somewhere else now (8 blocks). Return to the same spot and
+     * the cooldown keeps climbing, so the thrashing decays instead of running out the clock.
+     *
+     * <p>MECHANISM PROVEN before any outcome was claimed: back21/away1 against stranded=22.
+     * Twenty-one rescues in twenty-two put the bot back where it started. An earlier version
+     * of this same fix sat in the else branch of the frozen test and read back0/away0 -- dead
+     * code, because reaching that branch requires passing the primary exemption, which only a
+     * frozen bot passes. The counter caught it before it could be credited with anything.
+     */
+    public boolean rescueEscalationSurvivesItsOwnShimmy = true;
 
     /**
      * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).

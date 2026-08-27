@@ -63,6 +63,20 @@ public class UnstuckChain extends SingleTaskChain {
     // Prevent rapid-fire shimmy loops (issue #13): cooldown grows with consecutive detections.
     // Start elapsed (interval=0) so the first detection fires immediately.
     private TimerGame stuckCooldown = new TimerGame(0);
+    /**
+     * Where the last shimmy rescue fired, and how often a rescue landed near the previous
+     * one. THE ESCALATION USED TO BE DEFEATED BY ITS OWN RESCUE: the cooldown climbs
+     * 30 -> 60 -> 120s only while detections stay CONSECUTIVE, and the counter was cleared
+     * the moment the window showed 1.5 blocks of movement -- movement the shimmy itself had
+     * just produced. So the bot froze, got shimmied, drifted, walked back, froze again, and
+     * was rescued afresh at 30s forever. That is the shuttling the user reported as worse
+     * than the freeze: "walks to a block, goes off, comes back, endlessly".
+     */
+    private Vec3d lastRescuePos = null;
+    public static volatile int rescueNearPrevious;
+    public static volatile int rescueMovedOn;
+    private static final double LEFT_THE_SPOT_SQ = 8.0D * 8.0D;
+
     private int consecutiveStuckDetections = 0;
 
     public UnstuckChain(TaskRunner runner) {
@@ -210,7 +224,31 @@ public class UnstuckChain extends SingleTaskChain {
             lastRealSkip = lastSkip = "primary/" + posHistory.size();
             posHistory.clear();
             startedShimmying = false;
-            consecutiveStuckDetections = 0;
+            // MOVING IS NOT PROGRESS, AND THIS RESET COULD NOT TELL THE DIFFERENCE.
+            // The cooldown climbs 30 -> 60 -> 120s only while detections stay CONSECUTIVE,
+            // and this line runs on EVERY tick the bot is not frozen -- including the ticks
+            // immediately after a shimmy, which displaces the bot by design. So the escalation
+            // was extinguished by its own rescue and every rescue restarted at 30s forever:
+            // freeze, shimmy, drift, walk back, freeze. That is the shuttling reported as
+            // worse than the freeze -- "walks to a block, goes off, comes back, endlessly".
+            // Ask what separates a rescue that WORKED from one that merely jiggled: is the
+            // bot somewhere else now. Come back to the same spot and the cooldown keeps
+            // climbing, so the thrashing decays on its own instead of running out the clock.
+            if (consecutiveStuckDetections > 0
+                    && kaptainwutax.tungsten.TungstenConfig.get().rescueEscalationSurvivesItsOwnShimmy) {
+                net.minecraft.client.MinecraftClient mc0 = MinecraftClient.getInstance();
+                Vec3d here = mc0 != null && mc0.player != null ? mc0.player.getPos() : null;
+                if (lastRescuePos == null || here == null
+                        || here.squaredDistanceTo(lastRescuePos) > LEFT_THE_SPOT_SQ) {
+                    rescueMovedOn++;
+                    consecutiveStuckDetections = 0;
+                    lastRescuePos = null;
+                } else {
+                    rescueNearPrevious++;
+                }
+            } else {
+                consecutiveStuckDetections = 0;
+            }
             return;
         }
 
@@ -317,9 +355,13 @@ public class UnstuckChain extends SingleTaskChain {
             Debug.logMessage("Bot appears generally stuck (no movement for ~10s), triggering shimmy (cooldown=" + cooldownSec + "s, detection #" + consecutiveStuckDetections + ")");
             startedShimmying = true;
             shimmyTaskTimer.reset();
+            lastRescuePos = current;
             posHistory.clear();
         } else {
-            // Bot is moving — reset consecutive counter
+            // UNREACHABLE IN THE TUNGSTEN-PRIMARY PATH, PROVEN BY back0/away0 AGAINST
+            // stranded=45/own404: reaching this line at all requires passing the primary
+            // exemption, which only a FROZEN bot passes -- so the frozen branch above always
+            // wins and this else never runs. The live reset is the one inside that exemption.
             if (consecutiveStuckDetections > 0) {
                 consecutiveStuckDetections = 0;
             }
