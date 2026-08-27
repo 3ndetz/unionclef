@@ -4489,4 +4489,29 @@ public class TungstenConfig {
      * deploy/runner/deadtime.py. Read dcGaveUp for proof it fires.
      */
     public boolean closestPursuitHasBudget = true;
+
+    /**
+     * Judge arrival at a DROPPED ITEM by distance, not by whether it can be hit.
+     *
+     * <p>AbstractDoToEntityTask asks controllerExtras.inRange(), which is canHitEntity():
+     * line of sight plus ATTACK reach. Correct for a mob, wrong for a drop -- an item has a
+     * tiny hitbox, sits just off the floor, and the aim ray misses it, so the approach never
+     * reports arrival and the task wanders off and comes back.
+     *
+     * <pre>
+     *   dte=4720/0/0/0/0/73   4700 gate ticks, NOT ONCE in range, target two steps away
+     *   dropPick=[crafting_table cost=2 dy=+0.4 of=2]
+     *   entityCloseWalk=0/0/0/0/0/0/0   the close-walk never runs either
+     * </pre>
+     *
+     * <p>The operator described this from a recording before any counter found it: the bot
+     * walks to a block, goes off to grab something, returns, forever -- and called it worse
+     * than a plain freeze, since it consumes the run while looking like work. pacing.py put
+     * four of twelve trajectory returns on this Approach-entity <-> Wander pair.
+     *
+     * <p>GATE: the six pickup courses first, then the playthrough on THREE numbers -- dead
+     * time, shuttling (deploy/runner/shuttle.py) and rungs. Read dteItemNearNotHittable for
+     * proof the case is real and how often it occurs.
+     */
+    public boolean itemPickupIsDistanceNotReach = true;
 }

@@ -78,6 +78,11 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
         } // Kinda duct tape but it should be future proof ish
     }
 
+    /** Walking over a drop collects it from about a block away; attack reach is irrelevant. */
+    private static final double PICKUP_RANGE_SQ = 2.0D * 2.0D;
+    /** Ticks a drop was near enough to walk onto but not 'hittable'. */
+    public static volatile int dteItemNearNotHittable;
+
     @Override
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
@@ -130,6 +135,21 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
             // min_hp 14.0).
 
             boolean inRange = mod.getControllerExtras().inRange(entity);
+            // A DROPPED ITEM IS NOT HIT, IT IS WALKED OVER.
+            // inRange() is canHitEntity(): line of sight plus ATTACK reach. That is the right
+            // question for a mob and the wrong one for a drop -- an item has a tiny hitbox,
+            // sits just off the floor (dy=+0.4 in the captured case) and the aim ray misses
+            // it, so the approach never reports arrival. Measured: dte=4720/0 -- four thousand
+            // seven hundred gate ticks and NOT ONCE in range, while the target sat two steps
+            // away. The task then wanders, returns, and tries again: the operator watched this
+            // from the outside and called it worse than a freeze, and pacing.py put four of
+            // twelve trajectory returns on exactly this Approach-entity <-> Wander pair.
+            if (kaptainwutax.tungsten.TungstenConfig.get().itemPickupIsDistanceNotReach
+                    && entity instanceof net.minecraft.entity.ItemEntity) {
+                boolean near = sqDist <= PICKUP_RANGE_SQ;
+                if (near && !inRange) dteItemNearNotHittable++;
+                inRange = near;
+            }
             // ⭐ CLOSE UNTIL THE SWING GATE IS SATISFIED, NOT UNTIL inRange IS. inRange is 4.5 and
             // the swing gate's REACH is 3.0, so the branch below used to stop the walk a block and a
             // half short and leave the bot standing where it cannot hit -- 34.8 ticks a fight,
