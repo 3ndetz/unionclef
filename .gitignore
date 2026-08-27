@@ -49,3 +49,4 @@ deploy/runner/artifacts/
 
 # per-machine: the GPU probe wrote down that a client cannot render here
 deploy/.gpu_unusable
+ab*.log
