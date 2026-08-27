@@ -128,7 +128,21 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
         {
             net.minecraft.util.math.Vec3d me = mod.getPlayer().getPos();
             if (dcLastPos != null) {
-                if (me.squaredDistanceTo(dcLastPos) > 0.0025D) dcMoving++; else dcStill++;
+                if (me.squaredDistanceTo(dcLastPos) > 0.0025D) {
+                    dcMoving++;
+                } else {
+                    // STILL -- BUT AT THE TARGET OR AWAY FROM IT? idle0 with 98.5% still is
+                    // tempting to read as 'always within reach', but 139 moves across a run
+                    // is one every four seconds and that alone resets the idle clock. Split
+                    // the still ticks by distance instead of inferring.
+                    dcStill++;
+                    if (currentlyPursuing != null
+                            && getPos(mod, currentlyPursuing).squaredDistanceTo(me) <= REACH_SQ) {
+                        dcStillNear++;
+                    } else {
+                        dcStillFar++;
+                    }
+                }
             }
             dcLastPos = me;
         }
@@ -164,6 +178,7 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
                 budgetTargetPos = hereNow;
                 budgetStartMs = now;
                 budgetHardStartMs = now;
+                idleBestSq = dSq;
                 budgetBestSq = dSq;
             // STANDING STILL IS NOT A SLOW CHASE, IT IS A STUCK ONE.
             // Measured: of 10445 chooser ticks the body moved on 248 and stood on 10196 --
@@ -171,8 +186,14 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
             // (gave=4) but only after three minutes are already spent standing.
             // Standing IS legitimate while mining the target, so exclude that with the same
             // break clock that separated digging from stranded for UnstuckChain.
-            boolean bodyMoved = dcLastPos == null
-                    || mod.getPlayer().getPos().squaredDistanceTo(dcLastPos) > 0.0025D;
+            // SHUFFLING IS NOT APPROACHING. Any movement used to reset the idle clock, and
+            // 529 moves in a run -- one every four seconds -- kept it at zero: the rule
+            // fired once. Measured split of the still ticks: 41% standing AT the target
+            // (legitimate work) against 59% standing FAR from it (the stuck case). So the
+            // clock must be reset by CLOSING THE DISTANCE, exactly as budgetBestSq already
+            // does for the budget, not by moving at all.
+            boolean gotCloser = dSq < idleBestSq - 0.25D;
+            if (gotCloser) idleBestSq = dSq;
             boolean breaking = adris.altoclef.control.PlayerExtraController.lastBreakProgressMs > 0
                     && now - adris.altoclef.control.PlayerExtraController.lastBreakProgressMs < 2000L;
             // WITHIN REACH IS NOT IDLE. Approach, aim, swing is a legitimate stationary
@@ -180,7 +201,7 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
             // craft fell 22/22 -> 20/22 with mine_stone ending on 3 and 7 cobblestone of 8.
             // A bot standing FAR from its target is the stuck case; standing AT it is work.
             boolean withinReach = dSq <= REACH_SQ;
-            if (bodyMoved || breaking || withinReach) {
+            if (gotCloser || breaking || withinReach) {
                 budgetIdleSinceMs = now;
             } else if (CLOSEST_PURSUIT_IDLE_MS > 0
                     && now - budgetIdleSinceMs > CLOSEST_PURSUIT_IDLE_MS
@@ -191,6 +212,7 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
                 currentlyPursuing = null;
                 budgetTargetPos = null;
                 budgetIdleSinceMs = 0L;
+                idleBestSq = Double.MAX_VALUE;
                 return null;
             }
             } else if (dSq < budgetBestSq - 0.25) {
@@ -339,6 +361,8 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     private static long budgetHardStartMs = 0L;
     /** When the body last moved or a break progressed while pursuing. */
     private static long budgetIdleSinceMs = 0L;
+    /** Closest the body has been to the pursued target since the idle clock started. */
+    private static double idleBestSq = Double.MAX_VALUE;
     private static double budgetBestSq = Double.MAX_VALUE;
     /** Two minutes without closing on the target -- generous, and still finite. */
     private static final long CLOSEST_PURSUIT_BUDGET_MS = 120_000L;
@@ -385,6 +409,8 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     public static volatile int dcMoving, dcStill;
     /** Pursuits abandoned because the body stood still and broke nothing. */
     public static volatile int dcGaveUpIdle;
+    /** Still ticks split by whether the target was inside mining reach. */
+    public static volatile int dcStillNear, dcStillFar;
     private static net.minecraft.util.math.Vec3d dcLastPos = null;
 
     /** Tell the trackers this target is not worth chasing; overridden where a tracker exists. */
