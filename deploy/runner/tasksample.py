@@ -22,13 +22,19 @@ def q(op):
 secs = int(sys.argv[1]) if len(sys.argv) > 1 else 600
 step = int(sys.argv[2]) if len(sys.argv) > 2 else 5
 leaves, deadline = collections.Counter(), time.time() + secs
+chains = {}  # leaf -> the full chain seen with it, so the PARENT is visible too
 while time.time() < deadline:
     t = q("task")
     # the LAST numbered entry is the leaf the bot is actually executing
     parts = re.findall(r"\d+(?:\.\d+)*\. <([^>]{0,60})", t)
-    leaves[parts[-1].strip() if parts else "(none)"] += 1
+    leaf = parts[-1].strip() if parts else "(none)"
+    leaves[leaf] += 1
+    if leaf not in chains and parts:
+        chains[leaf] = " -> ".join(p.strip()[:34] for p in parts[-5:])
     time.sleep(step)
 
 total = sum(leaves.values()) or 1
 for leaf, n in leaves.most_common(12):
     print("%5.1f%%  %4d  %s" % (100.0 * n / total, n, leaf))
+    if leaf in chains:
+        print("           chain: %s" % chains[leaf])
