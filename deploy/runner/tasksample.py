@@ -27,7 +27,11 @@ seq = []      # ordered leaves, so task SWITCHING can be counted
 while time.time() < deadline:
     t = q("task")
     # the LAST numbered entry is the leaf the bot is actually executing
-    parts = re.findall(r"\d+(?:\.\d+)*\. <([^>]{0,60})", t)
+    # The chain prints a single task as "1. Main task: <X>" and nested ones as "1.1. <X>".
+    # Matching only the second form reported "(none)" for 29% of samples -- which were in
+    # fact the Unstuck Chain running <Shimmying>. Fifth instrument error this session;
+    # verify the parser against a raw response before trusting any distribution it prints.
+    parts = re.findall(r"\d+(?:\.\d+)*\.\s*(?:Main task:\s*)?<([^>]{0,60})", t)
     leaf = parts[-1].strip() if parts else "(none)"
     leaves[leaf] += 1
     seq.append(leaf)

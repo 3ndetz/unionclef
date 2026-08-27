@@ -3690,8 +3690,28 @@ public class TungstenConfig {
      * a test that separates DIGGING from STRANDED -- for instance, requiring that no block
      * break has landed for N seconds before calling a motionless bot stranded. Not the
      * blunt key-press test.
+     *
+     * <h2>SWITCHED OFF AGAIN (2026-08-27) -- IT TRADES A FREEZE FOR A SHUTTLE</h2>
+     *
+     * <p>The operator watched a recording and described the bot walking to a block, going
+     * off, coming back, endlessly -- and called it worse than a plain freeze. Counting task
+     * SWITCHES (a leaf histogram cannot see this: both leaves look busy) found the source:
+     *
+     * <pre>
+     *   rescue ON    37/55 switches (69%), 21 of them Shimmying <-> Getting to block,
+     *                Shimmying occupying 25.5% of all samples
+     *   rescue OFF   21/54 switches (40%), 11 of them block -> block, no Shimmying at all
+     * </pre>
+     *
+     * <p>So this rescue IS the shuttle: it seizes the bot, shimmies, releases, the bot walks
+     * back, and it seizes again. The three-number picture is an honest trade rather than an
+     * improvement -- ON gives 8-23% dead time with shuttling; OFF gives 40-64% dead time
+     * with a shuttle ratio of 0.83 and none detected. Rungs sit at 4-5 either way.
+     *
+     * <p>The operator has already judged that trade: a shuttle is worse than standing still,
+     * because it consumes the run while looking like work. Off.
      */
-    public boolean unstuckWhenGoalButNoPath = true;
+    public boolean unstuckWhenGoalButNoPath = false;
 
     /**
      * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).
