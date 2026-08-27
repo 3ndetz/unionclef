@@ -2319,8 +2319,27 @@ public class TungstenConfig {
      *
      * <p>Stays OFF: neutral on the target, one PASS worse on a thin sample, and this project does
      * not ship on principle without a number.
+     *
+     * <h2>RE-TESTED 2026-08-27 -- THE OLD VERDICT USED A METRIC THAT HIDES THIS</h2>
+     *
+     * <p>The n=8 neutral above was scored by RUNGS. The operator then watched a recording
+     * and pointed out what rungs cannot show: rungs banked before a death stay on the
+     * scoreboard, so a run that dies halfway still reads as a success. Dead time
+     * (deploy/runner/deadtime.py) replaced it as the primary measure.
+     *
+     * <p>Under the new measure the case for this flag is far stronger than it was. Polling
+     * the live task chain every five seconds through the post-stone-tools window:
+     *
+     * <pre>
+     *   98.7%  77 samples  Getting to block {x=1449, y=63, z=89}
+     *    1.3%   1 sample   (none)
+     * </pre>
+     *
+     * <p>And that block is a spruce_log -- a solid trunk. GetToBlockTask asks to OCCUPY the
+     * cell, which cannot happen while the log stands, so the bot spends seven minutes of a
+     * ten-minute run on one unreachable goal. The ladder's hard five-rung ceiling is this.
      */
-    public boolean breakGoalIsReach = false;
+    public boolean breakGoalIsReach = true;
 
     /**
      * A movement gives up when the thing in its way can never be aimed at.
