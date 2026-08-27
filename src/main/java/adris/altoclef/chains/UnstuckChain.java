@@ -73,6 +73,7 @@ public class UnstuckChain extends SingleTaskChain {
      * than the freeze: "walks to a block, goes off, comes back, endlessly".
      */
     private Vec3d lastRescuePos = null;
+    private boolean nearCounted = false;
     public static volatile int rescueNearPrevious;
     public static volatile int rescueMovedOn;
     private static final double LEFT_THE_SPOT_SQ = 8.0D * 8.0D;
@@ -241,9 +242,17 @@ public class UnstuckChain extends SingleTaskChain {
                 if (lastRescuePos == null || here == null
                         || here.squaredDistanceTo(lastRescuePos) > LEFT_THE_SPOT_SQ) {
                     rescueMovedOn++;
+                    nearCounted = false;
                     consecutiveStuckDetections = 0;
                     lastRescuePos = null;
-                } else {
+                } else if (!nearCounted) {
+                    // ONCE PER RESCUE, NOT ONCE PER TICK. This branch runs on every tick the
+                    // bot is not frozen, so the raw increment counted TICKS and made back21
+                    // look like twenty-one rescues when it was twenty-one ticks. away++ resets
+                    // the detection immediately, so it was already per-event -- the pair was
+                    // asymmetric and the ratio meant nothing. Ninth bad instrument, and the
+                    // only one whose number I had already quoted before catching it.
+                    nearCounted = true;
                     rescueNearPrevious++;
                 }
             } else {
@@ -356,6 +365,7 @@ public class UnstuckChain extends SingleTaskChain {
             startedShimmying = true;
             shimmyTaskTimer.reset();
             lastRescuePos = current;
+            nearCounted = false;
             posHistory.clear();
         } else {
             // UNREACHABLE IN THE TUNGSTEN-PRIMARY PATH, PROVEN BY back0/away0 AGAINST

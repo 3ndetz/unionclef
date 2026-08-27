@@ -106,6 +106,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
 
     public void resetWander() {
         _wanderDistanceExtension = 0;
+        wanderAnchor = null;
     }
 
     // This happens all the time in mineshafts and swamps/jungles
@@ -339,7 +340,21 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 //
                 // Searching is walking AWAY. Each leg starts from the current position and reaches
                 // a little further than the last, so the distance accumulates instead of orbiting.
-                net.minecraft.util.math.Vec3d from = mod.getPlayer().getPos();
+                // THE SPIRAL WAS ANCHORED TO THE FEET, WHICH IS WHY IT ORBITED.
+                // 137 degrees is the golden angle: it fills a disc evenly around a FIXED
+                // centre. Re-anchoring it to the player every pick turns it into a bounded
+                // walk instead -- leg n points 137 degrees off leg n-1, so consecutive legs
+                // largely cancel and the bot ends up back where it began. Walk out, turn
+                // most of the way round, walk back: that is the shuttling the user reported,
+                // and the comment right below already stated the intent the code was missing.
+                // Anchor the spiral where the wandering STARTED and the radius genuinely
+                // accumulates, which is what an expanding search is.
+                net.minecraft.util.math.Vec3d feet = mod.getPlayer().getPos();
+                if (wanderAnchor == null
+                        || !kaptainwutax.tungsten.TungstenConfig.get().wanderSpiralsFromItsAnchor) {
+                    wanderAnchor = feet;
+                }
+                net.minecraft.util.math.Vec3d from = wanderAnchor;
                 double ang = ((wanderTungPicked * 137) % 360) * Math.PI / 180.0;
                 // ⛔ distanceToWander CAN BE INFINITE, AND THAT POISONED THE WHOLE SEARCH.
                 //
@@ -387,6 +402,9 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
     }
 
     /** Ticks this task spent running. Read as wander. */
+    /** Where the outward spiral is measured from; null until the first pick of a wander. */
+    private net.minecraft.util.math.Vec3d wanderAnchor = null;
+
     public static volatile int wanderTicks;
 
     /** Ticks the body has not moved; the odometer that replaces "Nav says it is pathing". */

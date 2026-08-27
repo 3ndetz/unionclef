@@ -3769,6 +3769,23 @@ public class TungstenConfig {
     public boolean giveUpTargetStaysGivenUp = false;
 
     /**
+     * Whether the wander spiral is measured from where the wandering started, or from the
+     * player's feet at every pick.
+     *
+     * <p>The destination is chosen at 137 degrees per pick -- the golden angle, which fills a
+     * disc evenly around a FIXED centre. Anchoring it to the feet each time makes leg n point
+     * 137 degrees off leg n-1 from wherever the bot now stands, so consecutive legs largely
+     * cancel and the walk stays bounded around one spot: out, turn, back, out, turn, back.
+     * That is the shuttling reported as worse than the freeze, and the comment beside the code
+     * already asked for the opposite -- "so the distance accumulates instead of orbiting".
+     *
+     * <p>WHY THIS LINE AND NOT THE TASK LAYER: the task layer was measured and cleared.
+     * dc=12203/1 says ONE pursuit in a whole run, and gaveUp=0/0 says the give-up path never
+     * runs, so the chooser is not oscillating between targets -- the run is spent wandering.
+     */
+    public boolean wanderSpiralsFromItsAnchor = false;
+
+    /**
      * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).
      *
      * <p>The bot holds a strafe key in about 55% of those ticks, together with forward and sprint,
