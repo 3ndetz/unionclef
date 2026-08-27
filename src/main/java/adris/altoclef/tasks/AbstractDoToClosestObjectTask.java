@@ -113,6 +113,18 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
 
         // Get closest object
         Optional<T> checkNewClosest = getClosestTo(mod, getOriginPos(mod));
+        // THE CHOOSER RE-OFFERS WHAT THE PURSUIT JUST GAVE UP ON. markUnreachable was an empty
+        // hook with no override, so a target that burned a full budget was handed straight back
+        // on the next scan and the bot walked to it again. Count that first -- the fix is only
+        // worth having if the count is high -- and refuse it only behind the flag.
+        if (checkNewClosest.isPresent()
+                && isBanned(getPos(mod, checkNewClosest.get()))) {
+            dcReofferedBanned++;
+            if (kaptainwutax.tungsten.TungstenConfig.get().giveUpTargetStaysGivenUp) {
+                dcRefusedBanned++;
+                checkNewClosest = Optional.empty();
+            }
+        }
         // 2848 ticks against 3 pursuits, and every counted branch at zero: the loop spends
         // its life on the UNCOUNTED path. Two states share it and they mean opposite things --
         // nothing found at all, or the closest thing IS the one already being chased. The
@@ -413,6 +425,37 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     public static volatile int dcStillNear, dcStillFar;
     private static net.minecraft.util.math.Vec3d dcLastPos = null;
 
-    /** Tell the trackers this target is not worth chasing; overridden where a tracker exists. */
-    protected void markUnreachable(AltoClef mod, T obj) { }
+    /**
+     * Remember that this target consumed a whole pursuit budget without being reached.
+     *
+     * <p>THIS HOOK WAS EMPTY AND HAD NO OVERRIDE ANYWHERE, which is the task-side half of the
+     * shuttling. Giving up dropped the cached score and cleared currentlyPursuing, but the very
+     * next scan re-offered the SAME nearest object, so the bot walked back and failed again.
+     * The rescue side measures the same loop from the other end: back19/away1, nineteen rescues
+     * in twenty putting the bot back where it started.
+     */
+    protected void markUnreachable(AltoClef mod, T obj) {
+        if (obj == null) return;
+        net.minecraft.util.math.Vec3d p = getPos(mod, obj);
+        if (p == null) return;
+        bannedUntilMs.entrySet().removeIf(e -> e.getValue() < System.currentTimeMillis());
+        bannedUntilMs.put(p, System.currentTimeMillis() + GIVEN_UP_BAN_MS);
+    }
+
+    /** Positions that already cost a full pursuit budget, and when they may be offered again. */
+    private static final java.util.Map<net.minecraft.util.math.Vec3d, Long> bannedUntilMs =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long GIVEN_UP_BAN_MS = 90_000L;
+    private static final double BAN_RADIUS_SQ = 2.0D * 2.0D;
+    public static volatile int dcReofferedBanned, dcRefusedBanned;
+
+    /** True when this spot was given up on recently. Measured before it was ever acted on. */
+    private static boolean isBanned(net.minecraft.util.math.Vec3d p) {
+        if (p == null || bannedUntilMs.isEmpty()) return false;
+        long now = System.currentTimeMillis();
+        for (java.util.Map.Entry<net.minecraft.util.math.Vec3d, Long> e : bannedUntilMs.entrySet()) {
+            if (e.getValue() >= now && e.getKey().squaredDistanceTo(p) <= BAN_RADIUS_SQ) return true;
+        }
+        return false;
+    }
 }

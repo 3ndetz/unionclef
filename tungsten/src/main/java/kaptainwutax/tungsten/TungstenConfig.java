@@ -3755,6 +3755,20 @@ public class TungstenConfig {
     public boolean rescueEscalationSurvivesItsOwnShimmy = true;
 
     /**
+     * Whether a target that consumed a whole pursuit budget stays given up on.
+     *
+     * <p>markUnreachable() was an empty hook with no override anywhere, so giving up dropped a
+     * cached score and nothing else: the next scan re-offered the same nearest object and the
+     * bot walked back to fail again. That is the task-side engine of the shuttling, and the
+     * rescue side shows the identical loop from the other end (back19/away1).
+     *
+     * <p>OFF BY DEFAULT UNTIL THE COUNT JUSTIFIES IT. dcReofferedBanned counts the re-offers
+     * with the refusal disabled, so the mechanism is measured before it is acted on -- the rule
+     * this session learned the hard way, eight dead instruments in.
+     */
+    public boolean giveUpTargetStaysGivenUp = false;
+
+    /**
      * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).
      *
      * <p>The bot holds a strafe key in about 55% of those ticks, together with forward and sprint,
