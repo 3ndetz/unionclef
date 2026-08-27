@@ -3782,8 +3782,22 @@ public class TungstenConfig {
      * <p>WHY THIS LINE AND NOT THE TASK LAYER: the task layer was measured and cleared.
      * dc=12203/1 says ONE pursuit in a whole run, and gaveUp=0/0 says the give-up path never
      * runs, so the chooser is not oscillating between targets -- the run is spent wandering.
+     *
+     * <h2>PAIRED A/B ON EQUAL WORLDS -- ON</h2>
+     *
+     * <pre>
+     *   pair   dead        shuttle windows     items
+     *    1     12 -> 15    1/21 -> 0/9         0 -> 11
+     *    2     69 -> 19    0/2  -> 0/20       20 -> 53
+     *    3     35 -> 52    1/21 -> 3/13       11 -> 23
+     *   median 35 -> 19                       11 -> 23
+     * </pre>
+     *
+     * <p>Dead time nearly halves by median and collected items double. Pair 3 goes the other
+     * way on dead time, which at three pairs is within the spread -- recorded, not buried.
+     * Shuttling is flat here because this build already carries the escalation fix.
      */
-    public boolean wanderSpiralsFromItsAnchor = false;
+    public boolean wanderSpiralsFromItsAnchor = true;
 
     /**
      * Drop the circle-strafe while a swing is READY and the target is OUT of reach (default off).
