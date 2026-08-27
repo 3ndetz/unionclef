@@ -4512,6 +4512,27 @@ public class TungstenConfig {
      * <p>GATE: the six pickup courses first, then the playthrough on THREE numbers -- dead
      * time, shuttling (deploy/runner/shuttle.py) and rungs. Read dteItemNearNotHittable for
      * proof the case is real and how often it occurs.
+         *
+     * <h2>PAIRED A/B ON EQUAL WORLDS -- REJECTED (2026-08-27)</h2>
+     *
+     * <p>The unpaired sweep looked good (zero shuttling in four runs) but the mechanism
+     * counter read near0, so nothing could be credited to it. gamer_smoke's --pin/--pin-alt
+     * holds the world for the B arm, which is the only way to compare fairly:
+     *
+     * <pre>
+     *   pair 1   OFF 54% dead, 0/3 shuttle   |   ON 62%, no window
+     *   pair 2   OFF 35%,      2/3           |   ON 56%, 1/5
+     *   pair 3   OFF 68%,      3/4           |   ON 60%, 5/7
+     *   median dead time: OFF 54%   ON 60%
+     * </pre>
+     *
+     * <p>On equal ground the flag is no better and slightly worse, and shuttling does not
+     * improve either. Off.
+     *
+     * <p>The DIAGNOSIS still stands on its own: asking canHitEntity() -- line of sight plus
+     * ATTACK reach -- about a dropped item is the wrong question, and dte=4720/0 showed it
+     * failing four thousand times in a row. But a wrong question in the code is not the
+     * same as the thing costing the run, and the paired numbers say it is not.
      */
-    public boolean itemPickupIsDistanceNotReach = true;
+    public boolean itemPickupIsDistanceNotReach = false;
 }
