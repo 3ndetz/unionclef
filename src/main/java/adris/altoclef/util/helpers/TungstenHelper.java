@@ -150,12 +150,41 @@ public class TungstenHelper {
      */
     public static volatile int tpNotLoaded, tpFailCount, tpBarren, tpCooldown, tpAccepted;
 
+    /**
+     * Walk to a coordinate. NOT an entity pursuit -- see the barren gate below.
+     */
     public static boolean tryPathTo(Vec3d target) {
+        return tryPathTo(target, false);
+    }
+
+    /** Ticks the barren gate was skipped because the caller is not chasing an entity. */
+    public static volatile int tpBarrenBypassed;
+
+    private static boolean tryPathTo(Vec3d target, boolean isEntityLock) {
         if (!isTungstenLoaded()) { tpNotLoaded++; return false; }
         if (failCount >= MAX_FAIL_COUNT) { tpFailCount++; return false; }
         // Refuse to take a fresh 30-second window when the last two got nowhere. Without this the
         // window renews for ever and the caller is told "tungsten has it" while nothing moves.
-        if (kaptainwutax.tungsten.TungstenConfig.get().barrenLockCountsAsFailure
+        // THE GATE LATCHED AND THE ONLY KEY WAS BEHIND IT. barrenStreak is incremented ONLY by
+        // scoreExpiredLock, when an ENTITY pursuit expires without closing distance, and it is
+        // cleared only by a productive entity lock or by starting a new one. But it gated every
+        // caller of tryPathTo, the wander included. Two fruitless pursuits pinned it at 2, the
+        // wander was refused from then on, the bot stopped chasing anything because it could no
+        // longer move -- and the one action that clears the streak is the action the streak was
+        // preventing. Measured, not guessed: tp=0/0/1444/0 against wanderTung=1449/24, with the
+        // body moving in 64 of 7047 wander ticks. That is the bot standing still for minutes.
+        //
+        // A statistic about chasing entities has no bearing on walking to a coordinate, so the
+        // gate belongs to the lock path only. The decay is the second half: even for entities a
+        // streak must not outlive the situation that earned it.
+        boolean barrenApplies = !kaptainwutax.tungsten.TungstenConfig.get().barrenGateIsForEntityLocksOnly
+                || isEntityLock;
+        if (kaptainwutax.tungsten.TungstenConfig.get().barrenGateIsForEntityLocksOnly
+                && !isEntityLock && barrenStreak >= MAX_BARREN_LOCKS) {
+            tpBarrenBypassed++;
+        }
+        if (barrenApplies
+                && kaptainwutax.tungsten.TungstenConfig.get().barrenLockCountsAsFailure
                 && barrenStreak >= MAX_BARREN_LOCKS && !isLocked()) {
             tpBarren++;
             return false;
@@ -319,7 +348,7 @@ public class TungstenHelper {
             barrenStreak = 0;
         }
         lockedEntity = entity;
-        return tryPathTo(entity.getPos());
+        return tryPathTo(entity.getPos(), true);
     }
 
     /**

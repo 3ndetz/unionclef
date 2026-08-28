@@ -3788,6 +3788,29 @@ public class TungstenConfig {
     public boolean giveUpTargetStaysGivenUp = true;
 
     /**
+     * Whether the barren-streak gate applies only to entity pursuits, which are the only thing
+     * that feeds it.
+     *
+     * <p>barrenStreak is incremented ONLY when an entity lock expires without closing distance,
+     * and cleared only by a productive lock or by starting a new one -- yet it gated every
+     * caller of tryPathTo, the wander included. Two fruitless pursuits pin it at 2, the wander
+     * is refused from then on, the bot stops chasing anything BECAUSE it can no longer move, and
+     * the one action that clears the streak is the action the streak prevents. A latch whose
+     * only key sits behind it.
+     *
+     * <pre>
+     *   tp          = 0/0/1444/0    notLoaded / failCount / BARREN / cooldown
+     *   wanderTung  = 1449/24       destinations chosen / accepted
+     *   wander      = 7047 ticks    with wanderMoved = 64
+     * </pre>
+     *
+     * <p>The body moves in under one percent of wander ticks, and the wander is a third of the
+     * run. This is the freeze the user reported: "stared at one point and stood still for the
+     * last three to five minutes".
+     */
+    public boolean barrenGateIsForEntityLocksOnly = false;
+
+    /**
      * Whether the wander spiral is measured from where the wandering started, or from the
      * player's feet at every pick.
      *
