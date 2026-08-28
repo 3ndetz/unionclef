@@ -196,6 +196,23 @@ public class PathFinder {
 	 *  this one is read next to it: "the physics never halts" and "it halts holding nothing" look
 	 *  identical from gvpSamples alone. */
 	public static volatile int gvpNoGuide;
+	/**
+	 * WHICH SEARCH BUILT THE GUIDE, AND WHETHER THE GUIDE WENT ANYWHERE.
+	 *
+	 * <p>Read as {@code guideSrc=<fast>/<fastNowhere>/<coarse>/<coarseNowhere>}. Two sweeps of the
+	 * playthrough (12 runs) say the physics leg is handed a route from a cell to ITSELF in 58 of 59
+	 * distinct halts -- two nodes, one block, and the hop it never crossed is [0,0,0]. gvpTinyGuide
+	 * already reported it (68 of 70 halts in one run) and nobody read it. But the coarse search's
+	 * own stub counter reads bsStub=0 in every one of those runs, so whatever produces these
+	 * guides is NOT the exit BlockSpacePathFinder.salvage() instruments -- and there are exactly
+	 * two producers. This says which, and it is the whole of the next fix.
+	 *
+	 * <p>Counted in BLOCKS against MIN_DIST_PATH, never in nodes: stringPull() collapses a healthy
+	 * thirty-block straight walk to two nodes, so a node count cannot tell a stub from a corridor.
+	 * That mistake has already been made once here and is written up at salvage().
+	 */
+	public static volatile int guideFromFast, guideFromFastNowhere;
+	public static volatile int guideFromCoarse, guideFromCoarseNowhere;
 	/** The shape (dx,dy,dz) of the hop the physics never crossed, tallied over samples. */
 	public static final java.util.Map<String, Integer> gvpHopShapes =
 			java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
@@ -1405,17 +1422,51 @@ public class PathFinder {
                 boolean acceptable = fast.complete || arrivesAnyway
                         || kaptainwutax.tungsten.TungstenConfig.get().fastGuidePartial;
                 if (acceptable && fast.path.size() >= 2) {
-                    return truncateAtBreaks(Optional.of(fast.toBlockNodes(goal, player)));
+                    return noteGuideSource(
+                            truncateAtBreaks(Optional.of(fast.toBlockNodes(goal, player))), true, world);
                 }
             } catch (Exception e) {
                 Debug.logWarning("Fast block guide failed, falling back: " + e.getMessage());
             }
         }
-        return truncateAtBreaks(kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(world, target, player));
+        return noteGuideSource(truncateAtBreaks(
+                kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(world, target, player)),
+                false, world);
+    }
+
+    /**
+     * Record which search built this guide and whether walking it takes the bot anywhere.
+     *
+     * <p>Pure bookkeeping: the guide is handed back untouched. See the counters at
+     * {@link #guideFromFast} for what the numbers are for. "Went nowhere" is the same test
+     * salvage() settled on -- the distance from the guide's FIRST cell to its LAST, against
+     * MIN_DIST_PATH -- because that is the question the physics leg actually asks of it.
+     */
+    private static Optional<List<BlockNode>> noteGuideSource(
+            Optional<List<BlockNode>> guide, boolean fromFast, WorldView world) {
+        try {
+            if (guide.isEmpty() || guide.get().isEmpty()) return guide;
+            List<BlockNode> g = guide.get();
+            Vec3d first = g.get(0).getPos(true, world);
+            Vec3d last = g.get(g.size() - 1).getPos(true, world);
+            boolean nowhere = first.squaredDistanceTo(last) <= MIN_DIST_PATH * MIN_DIST_PATH;
+            if (fromFast) {
+                guideFromFast++;
+                if (nowhere) guideFromFastNowhere++;
+            } else {
+                guideFromCoarse++;
+                if (nowhere) guideFromCoarseNowhere++;
+            }
+        } catch (Exception ignored) {
+            // A counter must never be the thing that breaks a search.
+        }
+        return guide;
     }
 
     private Optional<List<BlockNode>> findBlockPath(WorldView world, BlockNode start, Vec3d target, PlayerEntity player) {
-        return truncateAtBreaks(kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(world, start, target, player));
+        return noteGuideSource(truncateAtBreaks(
+                kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(world, start, target, player)),
+                false, world);
     }
 
     /** Planned mining positions for the wall right past the current block path

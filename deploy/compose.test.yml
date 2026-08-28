@@ -16,6 +16,16 @@ networks:
     name: uctest
 
 services:
+  # ⛔ THE BIND SOURCE IS RESOLVED BY THE DAEMON, NOT BY THE SHELL THAT TYPES IT.
+  # `./run/...` is relative to this file, and compose expands it against the CALLER's
+  # filesystem. Run from the Windows checkout that is C:\repos\pet\unionclef\deploy\run and
+  # everything works; run the same command from a Linux container where the repo is bind-mounted
+  # at /work and compose asks the daemon for /work/deploy/run -- a path that exists in the
+  # CONTAINER and not on the host. The daemon then creates an empty directory of that name, and
+  # the client comes up with no world, no mods and no write permission, restarting forever with
+  # "mkdir: cannot create directory '/mc-data/saves': Permission denied". That looks like a
+  # broken image and is a wrong path. Override UCTEST_RUN_DIR with the HOST path when driving
+  # the stand from a container; the default keeps the Windows invocation exactly as it was.
   test-server:
     image: itzg/minecraft-server:latest
     container_name: uctest-server
@@ -123,8 +133,8 @@ services:
       - "${UCTEST_VNC_PORT:-5820}:5800"            # noVNC (debug only)
       - "${UCTEST_MCP_PORT:-25350}:25350"          # in-mod MCP server (LAN control surface)
     volumes:
-      - ./run/data/tester1:/mc-data
-      - ./run/mods:/mc-data/mods:ro
+      - ${UCTEST_RUN_DIR:-./run}/data/tester1:/mc-data
+      - ${UCTEST_RUN_DIR:-./run}/mods:/mc-data/mods:ro
     networks: [uctest]
     depends_on: [test-server]
     restart: unless-stopped
@@ -147,8 +157,8 @@ services:
     ports:
       - "${UCTEST_VNC2_PORT:-5821}:5800"           # noVNC (debug only)
     volumes:
-      - ./run/data/tester2:/mc-data
-      - ./run/mods:/mc-data/mods:ro
+      - ${UCTEST_RUN_DIR:-./run}/data/tester2:/mc-data
+      - ${UCTEST_RUN_DIR:-./run}/mods:/mc-data/mods:ro
     networks: [uctest]
     depends_on: [test-server]
     restart: unless-stopped

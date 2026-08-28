@@ -45,7 +45,11 @@ fi
 # ...AND THE SAME CHECK FOR THE JARS INSIDE IT. A fresh outer jar can still carry a stale
 # shredder/tungsten nested jar, which is how a client-tick freeze fix was measured as failed
 # while the deployed bytecode still had the unbounded join it removed. See check_nested_fresh.py.
-python deploy/check_nested_fresh.py "$JAR" || exit 1
+# WHICH python. The Windows host has `python` on PATH and the Linux container has only
+# `python3`, and this line simply died there with "python: not found" -- after the build,
+# before the copy, so the stand kept serving the OLD jar while the deploy looked done.
+PY=$(command -v python3 || command -v python) || { echo "no python found" >&2; exit 1; }
+"$PY" deploy/check_nested_fresh.py "$JAR" || exit 1
 
 mkdir -p deploy/run/mods
 rm -f deploy/run/mods/unionclef-*.jar
@@ -111,6 +115,10 @@ fi
 # and if it did not, puts the clients back on the CPU by itself. The requirement is that a
 # machine with only a CPU works -- and the same code path covers a machine whose GPU is
 # present but unusable, which is the harder case and the one that actually bit.
+# ⛔ DRIVING THIS FROM A CONTAINER? EXPORT UCTEST_RUN_DIR FIRST. compose resolves the bind
+# source against the CALLER's filesystem, so from a container it hands the daemon a path that
+# exists only there, and the clients come up with no world and no mods. See the note at the
+# top of deploy/compose.test.yml. On the Windows checkout the default is already right.
 recreate_clients() {
   _gpu="$1"
   for c in $CONTAINERS; do
