@@ -3835,6 +3835,22 @@ public class TungstenConfig {
      *
      * <p>Refusing returns empty, which is the honest answer: there is no minable block within
      * reach, so the layer above may explore instead of committing the run to one walk.
+     *
+     * <h2>HYPOTHESIS RETIRED BY ITS OWN COUNTER (2026-08-28)</h2>
+     *
+     * <pre>
+     *   minePick = 0/6586/max69     picks: far / total / farthest, in blocks
+     *   dcFar    = 69               farthest the CHASED object ever got
+     * </pre>
+     *
+     * <p>The live pursuit distance never exceeds the pick distance, and both sit near seventy
+     * blocks. There is no eighteen-hundred-block walk and no seven-hundred-block one.
+     *
+     * <p>THE ERROR WAS MINE, IN READING THE PROBE. "Getting to block (80, 133, -44)" is the
+     * TARGET of a task, not the position of the bot, and I read it as the bot's position and
+     * derived a distance from it. Nothing ever established that the bot stood far from the
+     * block it was walking to. The flag stays off and unused; the counters stay, because they
+     * are what makes the claim checkable.
      */
     public boolean mineRefusesUnreachableTargets = false;
 
