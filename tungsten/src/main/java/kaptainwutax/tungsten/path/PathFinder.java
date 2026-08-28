@@ -174,12 +174,28 @@ public class PathFinder {
 	 * the hop histogram are built from.
 	 */
 	public static volatile int guideIdxThisSearch;
+	/** Nearest this SEARCH's frontier came to its target, in centimetres, and how many goal
+	 *  tests it ran. The lifetime nearestApproachCm above is a minimum over the whole run, so it
+	 *  cannot say whether a particular halt stopped far away or was refused at the door: the emit
+	 *  gate accepts 0.45 blocks, and "never got close" and "got to 0.6 and was refused" want
+	 *  opposite fixes. */
+	private static volatile int guideNearestCm;
+	private static volatile int guideGoalTests;
 	/** Agent position at the moment a search was furthest along its own guide. */
 	private static volatile Vec3d guideFurthestAt;
 	/** Searches that ended with no route while still holding a guide. */
 	public static volatile int gvpSamples;
 	/** Of those: never left the opening hop / did walk the guide to its last node. */
+	/** Halts whose guide was one hop or less. NEXT_CLOSEST_BLOCKNODE_IDX starts at 1, so on a
+	 *  two-node guide "stuck at the start" and "reached the end" are the SAME index and neither
+	 *  word means anything -- these are counted apart so the other two stay readable. */
+	public static volatile int gvpTinyGuide;
+	/** Halts on a guide of three nodes or more: never left the opening hop / walked it to the end. */
 	public static volatile int gvpStuckAtStart, gvpReachedGuideEnd;
+	/** Halts that had NO guide left to compare against. A zero sample count means nothing until
+	 *  this one is read next to it: "the physics never halts" and "it halts holding nothing" look
+	 *  identical from gvpSamples alone. */
+	public static volatile int gvpNoGuide;
 	/** The shape (dx,dy,dz) of the hop the physics never crossed, tallied over samples. */
 	public static final java.util.Map<String, Integer> gvpHopShapes =
 			java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
@@ -199,6 +215,8 @@ public class PathFinder {
 		synchronized (gvpDumps) { gvpDumps.clear(); }
 		guideIdxThisSearch = 0;
 		guideFurthestAt = null;
+		guideNearestCm = 0;
+		guideGoalTests = 0;
 	}
 
 	/** The hop histogram, most frequent first, as "dx,dy,dz xN". */
@@ -581,6 +599,8 @@ public class PathFinder {
 	    // guide it indexes belong to the same search.
 	    guideIdxThisSearch = 0;
 	    guideFurthestAt = null;
+	    guideNearestCm = 0;
+	    guideGoalTests = 0;
 	    bestHeuristicSoFar = initializeBestHeuristics(this.start);
 	    openSet = new BinaryHeapOpenSet();
 	    openSet.insert(this.start);
@@ -1464,37 +1484,72 @@ public class PathFinder {
      */
     private void noteGuideVsPhysics(String why, WorldView world, Vec3d target, PlayerEntity player) {
         try {
-            if (blockPath.isEmpty() || blockPath.get().isEmpty()) return;
+            if (blockPath.isEmpty() || blockPath.get().isEmpty()) { gvpNoGuide++; return; }
             List<BlockNode> g = blockPath.get();
             int n = g.size();
             int idx = Math.max(0, Math.min(guideIdxThisSearch, n - 1));
             gvpSamples++;
-            if (idx <= 1) gvpStuckAtStart++;
-            if (idx >= n - 1) gvpReachedGuideEnd++;
+            if (n <= 2) {
+                gvpTinyGuide++;
+            } else {
+                if (idx <= 1) gvpStuckAtStart++;
+                if (idx >= n - 1) gvpReachedGuideEnd++;
+            }
             StringBuilder sb = new StringBuilder();
             Vec3d me = player.getEntityPos();
             Vec3d guideEnd = g.get(n - 1).getPos(true, world);
             sb.append(String.format(java.util.Locale.ROOT,
-                    "%s n%d idx%d bot(%.1f,%.1f,%.1f) tgt(%.1f,%.1f,%.1f) endToTgt%.1f",
+                    "%s n%d idx%d bot(%.1f,%.1f,%.1f) tgt(%.1f,%.1f,%.1f) endToTgt%.1f near%dcm tests%d",
                     why, n, idx, me.x, me.y, me.z, target.x, target.y, target.z,
-                    guideEnd.distanceTo(target)));
+                    guideEnd.distanceTo(target), guideNearestCm, guideGoalTests));
             BlockNode at = g.get(idx);
             Vec3d fur = guideFurthestAt;
             if (fur != null) {
                 sb.append(String.format(java.util.Locale.ROOT, " phys(%.1f,%.1f,%.1f)dNode%.1f",
                         fur.x, fur.y, fur.z, fur.distanceTo(at.getPos(true, world))));
             }
+            // ⛔ THE SEARCH'S OWN INDEX RUNS AHEAD OF THE BODY, so it is not "where the physics
+            // stopped". updateNextClosestBlockNodeIDX advances on whichever node is being expanded,
+            // and the frontier spreads over the whole map -- measured: idx5 of 11 while the furthest
+            // the agent ever reached was still two blocks BELOW guide node 5, so the hop reported
+            // at idx5 was a climb the search had never got near. The honest anchor is the guide node
+            // NEAREST the furthest agent position, and both are printed so they can disagree in
+            // public.
+            int k = idx;
+            if (fur != null) {
+                double best = Double.MAX_VALUE;
+                for (int i = 0; i < n; i++) {
+                    double d = g.get(i).getPos(true, world).squaredDistanceTo(fur);
+                    if (d < best) { best = d; k = i; }
+                }
+                if (k != idx) sb.append(" physIdx").append(k);
+            }
+            BlockNode kAt = g.get(k);
             String shape;
-            if (idx + 1 < n) {
-                BlockNode to = g.get(idx + 1);
-                shape = (to.x - at.x) + "," + (to.y - at.y) + "," + (to.z - at.z);
-                sb.append(" hop[").append(shape).append("] from").append(cellDump(world, at))
+            if (k + 1 < n) {
+                BlockNode to = g.get(k + 1);
+                shape = (to.x - kAt.x) + "," + (to.y - kAt.y) + "," + (to.z - kAt.z);
+                sb.append(" hop[").append(shape).append("] from").append(cellDump(world, kAt))
                   .append(" to").append(cellDump(world, to));
             } else {
                 // The physics walked the whole guide and still could not finish: the guide is
                 // short of the goal, which is a different defect from an uncrossable hop.
                 shape = "END";
-                sb.append(" hop[END] at").append(cellDump(world, at));
+                sb.append(" hop[END] at").append(cellDump(world, kAt));
+            }
+            // AND THE WHOLE PATH, because a single hop cannot show a route that climbs out of a
+            // hole or doubles back. This is the dump the measurement was asked for: the cells the
+            // coarse search built, next to the point the physics stops at.
+            sb.append(" path:");
+            if (n <= 16) {
+                for (BlockNode bn : g) sb.append(' ').append(bn.x).append(',').append(bn.y)
+                        .append(',').append(bn.z);
+            } else {
+                for (int i = 0; i < 6; i++) sb.append(' ').append(g.get(i).x).append(',')
+                        .append(g.get(i).y).append(',').append(g.get(i).z);
+                sb.append(" ...");
+                for (int i = n - 6; i < n; i++) sb.append(' ').append(g.get(i).x).append(',')
+                        .append(g.get(i).y).append(',').append(g.get(i).z);
             }
             synchronized (gvpHopShapes) { gvpHopShapes.merge(shape, 1, Integer::sum); }
             synchronized (gvpDumps) {
@@ -1545,6 +1600,8 @@ public class PathFinder {
         double dist = Math.sqrt(d2);
         int cm = (int) Math.min(dist * 100.0, 2_000_000_000.0);
         if (nearestApproachCm == 0 || cm < nearestApproachCm) nearestApproachCm = cm;
+        if (guideNearestCm == 0 || cm < guideNearestCm) guideNearestCm = cm;
+        guideGoalTests++;
         if (goalTests == 0) {
             lastGoalPair = String.format(java.util.Locale.ROOT, "agent[%.1f,%.1f,%.1f]->tgt[%.1f,%.1f,%.1f]d%.1f",
                     node.agent.getPos().x, node.agent.getPos().y, node.agent.getPos().z,
