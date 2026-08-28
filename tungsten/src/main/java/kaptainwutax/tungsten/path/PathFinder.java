@@ -160,6 +160,59 @@ public class PathFinder {
 	/** The first agent/target pair a goal test saw, verbatim. */
 	public static volatile String lastGoalPair = "-";
 
+	/**
+	 * DOES THE GUIDE LEAD WHERE THE PHYSICS CANNOT STEP?
+	 *
+	 * The coarse block search hands the physics leg a list of cells and the physics leg works
+	 * along them one at a time (NEXT_CLOSEST_BLOCKNODE_IDX). When a search ends with no route,
+	 * the pair that matters is how LONG the guide was and how far ALONG it the physics got --
+	 * and, at that index, what the next hop looks like in the world.
+	 *
+	 * guideIdxReached above is a LIFETIME maximum over every search, so it cannot be paired with
+	 * any one guide: a long guide from a healthy search leaves a high number standing next to a
+	 * later stall's short one. This is the per-search version, and it is what the halt record and
+	 * the hop histogram are built from.
+	 */
+	public static volatile int guideIdxThisSearch;
+	/** Agent position at the moment a search was furthest along its own guide. */
+	private static volatile Vec3d guideFurthestAt;
+	/** Searches that ended with no route while still holding a guide. */
+	public static volatile int gvpSamples;
+	/** Of those: never left the opening hop / did walk the guide to its last node. */
+	public static volatile int gvpStuckAtStart, gvpReachedGuideEnd;
+	/** The shape (dx,dy,dz) of the hop the physics never crossed, tallied over samples. */
+	public static final java.util.Map<String, Integer> gvpHopShapes =
+			java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+	/** The last few halts in full, for reading rather than counting. */
+	private static final java.util.ArrayDeque<String> gvpDumps = new java.util.ArrayDeque<>();
+
+	/** The halt records, newest last, one per line. */
+	public static String gvpDumpText() {
+		synchronized (gvpDumps) {
+			if (gvpDumps.isEmpty()) return "-";
+			return String.join(System.lineSeparator(), gvpDumps);
+		}
+	}
+
+	/** Cleared with the counters: a stale halt from the previous run reads exactly like a fresh one. */
+	public static void gvpClearDumps() {
+		synchronized (gvpDumps) { gvpDumps.clear(); }
+		guideIdxThisSearch = 0;
+		guideFurthestAt = null;
+	}
+
+	/** The hop histogram, most frequent first, as "dx,dy,dz xN". */
+	public static String gvpHopDump() {
+		synchronized (gvpHopShapes) {
+			if (gvpHopShapes.isEmpty()) return "none";
+			return gvpHopShapes.entrySet().stream()
+					.sorted((a, b) -> b.getValue() - a.getValue())
+					.limit(12)
+					.map(e -> e.getKey() + "x" + e.getValue())
+					.collect(Collectors.joining(" "));
+		}
+	}
+
 	public static volatile int tryEmitCalls, tryEmitStationary;
 	/** Emissions that happened ONLY because the moving-arrival rule is on. */
 	public static volatile int tryEmitMoving;
@@ -524,6 +577,10 @@ public class PathFinder {
 	    }
 
 	    rerootExhausted = false;
+	    // PER-SEARCH, not lifetime: the halt record is only readable when the index and the
+	    // guide it indexes belong to the same search.
+	    guideIdxThisSearch = 0;
+	    guideFurthestAt = null;
 	    bestHeuristicSoFar = initializeBestHeuristics(this.start);
 	    openSet = new BinaryHeapOpenSet();
 	    openSet.insert(this.start);
@@ -710,6 +767,10 @@ public class PathFinder {
 	        {
 	            int idxNow = NEXT_CLOSEST_BLOCKNODE_IDX.get();
 	            if (idxNow > guideIdxReached) guideIdxReached = idxNow;
+	            if (idxNow > guideIdxThisSearch) {
+	                guideIdxThisSearch = idxNow;
+	                guideFurthestAt = next.agent.getPos();
+	            }
 	        }
 	        if (updateNextClosestBlockNodeIDX(blockPath.get(), next, closed, world)) {
 	        	primaryTimeoutTime = System.currentTimeMillis() + 1120L;
@@ -823,12 +884,14 @@ public class PathFinder {
 	            return;
 	        }
 	        searchGaveUp++;
+	        noteGuideVsPhysics("gaveUp", world, target, player);
 	        if (setCurrentPath(target, start, player)) {
 	            searchGaveUpSalvaged++;
 	            Debug.logMessage("Search gave up — advancing on the best partial route");
 	        }
 	    } else if (stop.get()) {
 	        if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) Debug.logMessage("stopped!");
+	        noteGuideVsPhysics("stopped", world, target, player);
 	        stop.set(false);
 	    } else if (openSet.isEmpty()) {
 			if (failedAttempts < 2 && TungstenModDataContainer.EXECUTOR.getPath() != null) {
@@ -866,6 +929,7 @@ public class PathFinder {
 				return;
 			}
 			physicsRanOut++;
+			noteGuideVsPhysics("ranOut", world, target, player);
 			// EXHAUSTION DESERVES THE SAME MERCY AS A TIMEOUT, AND ONLY ONE OF THEM HAD IT.
 			// handleTimeout (this file, ~1129) already hands the executor the best partial route
 			// when the clock runs out; the open set emptying returned nothing at all, so the bot
@@ -1384,6 +1448,82 @@ public class PathFinder {
         return bestHeuristicSoFar;
     }
     
+    /**
+     * WHERE THE GUIDE LEADS, AND WHERE THE PHYSICS ACTUALLY STOPS.
+     *
+     * <p>Called at the three exits where a search ends with no route to hand over. It writes down,
+     * for THIS search: how long the guide was, how far along it the physics got, where the body and
+     * the frontier were, and -- the point of the whole thing -- the hop the physics never crossed,
+     * with the blocks under, at and above both of its ends.
+     *
+     * <p>The reason it is a per-search record and a histogram rather than a log line: a single halt
+     * is a sample, and this repo has paid twice for reading one. The histogram says whether the
+     * un-crossed hop has a SHAPE (a three-block descent, a six-block coarse waypoint, a step into
+     * leaves) or whether the physics stops in a different place every time -- which are different
+     * defects with different fixes.
+     */
+    private void noteGuideVsPhysics(String why, WorldView world, Vec3d target, PlayerEntity player) {
+        try {
+            if (blockPath.isEmpty() || blockPath.get().isEmpty()) return;
+            List<BlockNode> g = blockPath.get();
+            int n = g.size();
+            int idx = Math.max(0, Math.min(guideIdxThisSearch, n - 1));
+            gvpSamples++;
+            if (idx <= 1) gvpStuckAtStart++;
+            if (idx >= n - 1) gvpReachedGuideEnd++;
+            StringBuilder sb = new StringBuilder();
+            Vec3d me = player.getEntityPos();
+            Vec3d guideEnd = g.get(n - 1).getPos(true, world);
+            sb.append(String.format(java.util.Locale.ROOT,
+                    "%s n%d idx%d bot(%.1f,%.1f,%.1f) tgt(%.1f,%.1f,%.1f) endToTgt%.1f",
+                    why, n, idx, me.x, me.y, me.z, target.x, target.y, target.z,
+                    guideEnd.distanceTo(target)));
+            BlockNode at = g.get(idx);
+            Vec3d fur = guideFurthestAt;
+            if (fur != null) {
+                sb.append(String.format(java.util.Locale.ROOT, " phys(%.1f,%.1f,%.1f)dNode%.1f",
+                        fur.x, fur.y, fur.z, fur.distanceTo(at.getPos(true, world))));
+            }
+            String shape;
+            if (idx + 1 < n) {
+                BlockNode to = g.get(idx + 1);
+                shape = (to.x - at.x) + "," + (to.y - at.y) + "," + (to.z - at.z);
+                sb.append(" hop[").append(shape).append("] from").append(cellDump(world, at))
+                  .append(" to").append(cellDump(world, to));
+            } else {
+                // The physics walked the whole guide and still could not finish: the guide is
+                // short of the goal, which is a different defect from an uncrossable hop.
+                shape = "END";
+                sb.append(" hop[END] at").append(cellDump(world, at));
+            }
+            synchronized (gvpHopShapes) { gvpHopShapes.merge(shape, 1, Integer::sum); }
+            synchronized (gvpDumps) {
+                gvpDumps.addLast(sb.toString());
+                while (gvpDumps.size() > 8) gvpDumps.removeFirst();
+            }
+        } catch (Throwable ignored) {
+            // A diagnostic must never be able to break the search it is watching.
+        }
+    }
+
+    /** A guide cell as the world sees it: below|feet|head, so "no floor" and "occupied" are visible. */
+    private static String cellDump(WorldView world, BlockNode n) {
+        BlockPos p = new BlockPos(n.x, n.y, n.z);
+        return String.format(java.util.Locale.ROOT, "(%d,%d,%d)[%s|%s|%s]", n.x, n.y, n.z,
+                blkName(world, p.down()), blkName(world, p), blkName(world, p.up()));
+    }
+
+    private static String blkName(WorldView world, BlockPos p) {
+        try {
+            String t = world.getBlockState(p).getBlock().toString();   // Block{minecraft:stone}
+            int a = t.indexOf('{'), b = t.lastIndexOf('}');
+            if (a >= 0 && b > a) t = t.substring(a + 1, b);
+            return t.replace("minecraft:", "");
+        } catch (Throwable ignored) {
+            return "?";
+        }
+    }
+
     private boolean isPathComplete(Node node, Vec3d target, boolean failing, WorldView world) {
     	// NOTE: an edge-completion attempt (complete at the truncated block-path endpoint when a
     	// break/place is pending) was tried here and REVERTED — break-safe (break_test 4/4) but it

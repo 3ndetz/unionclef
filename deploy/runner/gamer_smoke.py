@@ -49,6 +49,8 @@ elif op=="inv":
     except Exception: pass
     out={"nonEmpty":n,"items":items,"ids":ids}
 elif op=="stats": out={"s": str(mc.placeStats() or "")}
+elif op=="guide": out={"r": str(mc.guideDump() or "")}
+elif op=="guidehop": out={"r": str(mc.guideHopShapes() or "")}
 elif op=="stealers": out={"r": str(mc.forwardStealers() or "")}
 elif op=="blocked": out={"r": str(mc.blockedScenes() or "")}
 elif op=="resetstats": mc.resetValues(); mc.resetRunCounters(); out={"ok":True}  # resetValues() only rewrites three server dict entries -- resetRunCounters() is the one that zeroes the counters, and for a long time this op called only the former
@@ -127,6 +129,14 @@ def write_stall_evidence(reason, tag=""):
                 str((py4j("blocked") or {}).get("r", "?")),
                 "", "WHO RELEASED MOVE_FORWARD UNDER THE CLOSE WALK:",
                 str((py4j("stealers") or {}).get("r", "?")),
+                # ⛔ WHERE THE COARSE GUIDE LED AGAINST WHERE THE PHYSICS STOPPED.
+                # The counters say how often a search ended with no route; they cannot say
+                # whether the guide it was holding pointed somewhere the body cannot step. One
+                # line per halt, with the un-crossed hop and the blocks at both of its ends.
+                "", "GUIDE vs PHYSICS (last halts):",
+                str((py4j("guide") or {}).get("r", "?")),
+                "", "UN-CROSSED HOP SHAPES:",
+                str((py4j("guidehop") or {}).get("r", "?")),
                 "", "RUNNER:", str(py4j("task").get("runner", "")),
                 "", "CHAIN:", str(py4j("task").get("chain", "")),
                 # ⛔ WHAT IS ACTUALLY IN THE GRID. Five arena reproductions failed to carry the
@@ -1013,11 +1023,14 @@ def main():
     # the end discarded a COMPLETED ten-minute run with "RuntimeError: inv:" and no ladder line at
     # all. Report what answers and say plainly what did not.
     for _label, _op, _kw in (("end inv", "inv", {}), ("queue stats", "stats", {}),
+                             ("guide hops", "guidehop", {}), ("guide halts", "guide", {}),
                              ("recent chat", "chat", {"n": 10})):
         try:
             _r = py4j(_op, **_kw)
             if _op == "stats":
                 _r = _r.get("s")
+            elif _op in ("guidehop", "guide"):
+                _r = _r.get("r")
             elif _op == "chat":
                 _r = _r.get("chat")
             print(f"  {_label}:", _r)
