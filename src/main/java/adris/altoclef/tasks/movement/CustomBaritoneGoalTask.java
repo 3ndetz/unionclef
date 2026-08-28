@@ -51,6 +51,11 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     public static volatile int snapAsked, snapMoved, snapFailed;
     /** Snaps that landed on the bot's own cell -- a request to walk nowhere. */
     public static volatile int snapToSelf;
+    /** Tasks that finished because the bot stood where the SNAP put the goal, not where the task
+     *  asked. The mechanism counter for
+     *  {@link kaptainwutax.tungsten.TungstenConfig#arrivalAgreesWithTheSnap}: 0 in a control arm,
+     *  non-zero in a fix arm, or the pair measured nothing (CHECKLIST rule 4a1). */
+    public static volatile int arrivedAtSnap;
     /** ...and WHICH tasks asked, by count. Bounded: a tally that can grow without limit is a
      *  leak, and eight names is already more than a verdict line can carry. */
     private static final java.util.Map<String, Integer> SNAP_TO_SELF_WHO =
@@ -89,6 +94,13 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     protected MovementProgressChecker checker = new MovementProgressChecker();
     /** The same goal in altoclef's own terms — what the drive and isFinished actually steer by. */
     protected AltoGoal cachedAlto = null;
+    /**
+     * The cell the snap moved this task's goal to, or null when the goal stood on its own.
+     *
+     * <p>Set every tick the drive runs, because the snap depends on the world and on where the bot
+     * is standing; caching it across ticks would be a stale answer to a question that moves.
+     */
+    private net.minecraft.util.math.BlockPos snappedGoalCell = null;
     // Anti-permanent-stuck (tungsten-primary): if the bot hasn't moved for a while,
     // the tungsten nav is trapped (unreachable sub-goal / stale-rooted reject loop) —
     // reset its state so it re-plans fresh, then yield to wander if it stays stuck.
@@ -372,6 +384,32 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         }
         net.minecraft.util.math.BlockPos at = AltoClef.getInstance().getPlayer().getBlockPos();
         boolean done = g != null && g.reached(at);
+        // ⛔ THE DRIVE AND THE ARRIVAL TEST MUST NOT STEER BY DIFFERENT CELLS.
+        //
+        // AltoGoal.Block.reached asks whether the bot OCCUPIES the requested cell. The drive
+        // steers at snapGoalToStandable(that cell) -- and the snap only moves a goal that CANNOT
+        // BE STOOD IN. So whenever it moves one, this test is unsatisfiable by construction: the
+        // drive parks the bot beside the log, the task reports "not there", and asks again next
+        // tick, forever. Measured on the playthrough:
+        //
+        //   snap=200/197/3/self134[GetToBlockTaskx134]   goal moved on 197 of 200 asks,
+        //                                                and onto the BOT 134 times
+        //   atGoal=10(ex10,ytol0)@GetToBlockTask@block(-311,125,-257)x10
+        //
+        // -- ten plans in a row asking for a route into the cell the bot already stood in, all
+        // from one task and one block, every match an exact cell. snapToSelf counts only ticks
+        // where this method has ALREADY returned false (its guard sits above the snap), so those
+        // 134 are 134 unsatisfiable arrival tests, not near-misses.
+        //
+        // Accepting the snapped cell can only ADD completions that were otherwise impossible: if
+        // the requested cell is unstandable the bot can never occupy it, so the exact test could
+        // never have passed. A goal that stood on its own keeps exact semantics -- snappedGoalCell
+        // is null then.
+        if (!done && snappedGoalCell != null && snappedGoalCell.equals(at)
+                && kaptainwutax.tungsten.TungstenConfig.get().arrivalAgreesWithTheSnap) {
+            arrivedAtSnap++;
+            done = true;
+        }
         if (done) {
             kaptainwutax.tungsten.Debug.logMessage("[nav] goal task reports FINISHED at "
                     + at.getX() + "," + at.getY() + "," + at.getZ() + " goal=" + g);
@@ -527,9 +565,22 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     noteSnapToSelf(getClass().getSimpleName());
                 }
             }
-            if (gp != null && gpBefore != null && !gp.equals(gpBefore)) snapMoved++;
-            else if (gp != null && !standable(mod.getWorld(), (int) Math.floor(gp.x),
-                    (int) Math.floor(gp.y), (int) Math.floor(gp.z))) snapFailed++;
+            // REMEMBER WHERE THE DRIVE IS ACTUALLY TAKING US. isFinished() asks AltoGoal.Block
+            // whether the bot OCCUPIES the requested cell, while the drive steers at the snapped
+            // one -- and the snap exists precisely because the requested cell CANNOT be stood in.
+            // So for every goal the snap has to move, the arrival test is unsatisfiable by
+            // construction: the drive parks the bot beside the block, the task says "not there",
+            // and asks again every tick. That is what snapToSelf counts, and it counts only ticks
+            // where isFinished() already returned false (the guard sits above this block).
+            if (gp != null && gpBefore != null && !gp.equals(gpBefore)) {
+                snapMoved++;
+                snappedGoalCell = net.minecraft.util.math.BlockPos.ofFloored(gp.x, gp.y, gp.z);
+            } else {
+                // The goal stood on its own, so exact arrival still means exact.
+                snappedGoalCell = null;
+                if (gp != null && !standable(mod.getWorld(), (int) Math.floor(gp.x),
+                        (int) Math.floor(gp.y), (int) Math.floor(gp.z))) snapFailed++;
+            }
             // Publish WHOSE goal this is, so a climbing route can name its caller (CombatTrace).
             kaptainwutax.tungsten.combat.CombatTrace.hostGoal = String.valueOf(goal);
             // ...AND WHICH TASK IS HOLDING IT. The goal string names a cell, not an orderer, and

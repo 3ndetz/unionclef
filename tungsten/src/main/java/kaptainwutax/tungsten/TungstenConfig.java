@@ -4783,4 +4783,41 @@ public class TungstenConfig {
      * bsStubHadCloser / bsStubCloserCm say how much material exists either way.
      */
     public boolean coarseFallsBackToClosestCell = false;
+
+    /**
+     * Let a goal task finish when the bot stands where the SNAP put its goal, not only where the
+     * task literally asked.
+     *
+     * <p>CustomBaritoneGoalTask.driveTungstenPrimary steers at snapGoalToStandable(goal), and that
+     * snap only moves a goal that CANNOT BE STOOD IN. isFinished() meanwhile asks
+     * AltoGoal.Block.reached, which demands the bot OCCUPY the requested cell. So for every goal
+     * the snap has to move, arrival is unsatisfiable by construction -- the drive parks the bot
+     * beside the block, the task says "not there", and asks again every tick. Measured on the
+     * playthrough:
+     *
+     * <pre>
+     *   snap=200/197/3/self134[GetToBlockTaskx134]
+     *   atGoal=10(ex10,ytol0)@GetToBlockTask@block(-311,125,-257)x10
+     *   snap=944/809/135/self747      (earlier run, 79% of asks)
+     *   plan=98/../zero61(atGoal=61(ex61,ytol0))
+     * </pre>
+     *
+     * <p>The goal moved on 197 of 200 asks and landed on the BOT 134 times, and snapToSelf counts
+     * only ticks where isFinished() had already returned false. This is TODOS profile A -- "a route
+     * into the cell the bot already stands in", open since 2026-08-26 with "put a counter on the
+     * goal source" as its next move. The counter now names the source: GetToBlockTask, one block,
+     * over and over.
+     *
+     * <p>Accepting the snapped cell can only ADD completions that were otherwise impossible: an
+     * unstandable cell cannot be occupied, so the exact test could never have passed there. A goal
+     * that stood on its own is untouched.
+     *
+     * <p>THE RISK TO WATCH: a caller that needed occupancy, or one that re-issues the approach the
+     * moment it finds itself out of reach -- that would turn a freeze into a shuttle, which the
+     * playthrough already measures (deploy/runner/shuttle.py). Score dead time AND shuttling.
+     *
+     * <p>GATE: paired gamer_smoke --pin-alt on dead time (rule 4a2). Read arrivedAtSnap for proof
+     * it fired -- 0 in control, non-zero in fix, or the pair measured nothing (rule 4a1).
+     */
+    public boolean arrivalAgreesWithTheSnap = false;
 }
