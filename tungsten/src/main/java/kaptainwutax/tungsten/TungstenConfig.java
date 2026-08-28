@@ -3825,6 +3825,20 @@ public class TungstenConfig {
     public boolean barrenGateIsForEntityLocksOnly = true;
 
     /**
+     * Whether a mining target further than 160 blocks is refused outright.
+     *
+     * <p>Sampled during a sixteen-minute ladder stall: the bot stood at (90.9, 127.0, -66.6)
+     * and spent 35.6% of samples walking toward an acacia log at (1800, 64, 361) -- roughly
+     * eighteen hundred blocks -- while a log thirty blocks away took 13.3%. The scanner's
+     * "nearest" is only nearest among candidates that pass the predicate, and when the close
+     * ones fail it the first passing candidate can be most of a world away.
+     *
+     * <p>Refusing returns empty, which is the honest answer: there is no minable block within
+     * reach, so the layer above may explore instead of committing the run to one walk.
+     */
+    public boolean mineRefusesUnreachableTargets = false;
+
+    /**
      * Whether the wander spiral is measured from where the wandering started, or from the
      * player's feet at every pick.
      *

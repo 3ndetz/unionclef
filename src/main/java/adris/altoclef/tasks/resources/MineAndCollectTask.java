@@ -222,6 +222,20 @@ public class MineAndCollectTask extends ResourceTask {
             throw new UnsupportedOperationException("Shouldn't try to get the position of object " + obj + " of type " + (obj != null ? obj.getClass().toString() : "(null object)"));
         }
 
+        /**
+         * How far the chosen mining target actually is, and how often it is absurd.
+         *
+         * <p>Sampled during a sixteen-minute ladder stall, the bot stood at (90.9, 127.0,
+         * -66.6) and spent 35.6% of the samples walking to an acacia log at (1800, 64, 361)
+         * -- about eighteen hundred blocks away -- while a log at (80, 133, -44), thirty
+         * blocks away, took 13.3%. "Nearest" is returning something unreachable in practice,
+         * and a run spent walking toward it climbs no rungs at all.
+         */
+        public static volatile int minePickFar, minePickTotal, minePickFarthest;
+
+        /** Beyond this the walk costs more than the whole run is worth. */
+        private static final double MINE_PICK_FAR_BLOCKS = 160.0D;
+
         @Override
         protected Optional<Object> getClosestTo(AltoClef mod, Vec3d pos) {
             Pair<Double, Optional<BlockPos>> closestBlock = getClosestBlock(mod,pos,  _blocks);
@@ -238,6 +252,24 @@ public class MineAndCollectTask extends ResourceTask {
             if (dropSq <= blockSq) {
                 return closestDrop.getRight().map(Object.class::cast);
             } else {
+                // A TARGET YOU CANNOT REACH THIS RUN IS NOT A TARGET. Counted before it is
+                // acted on: minePickFar over minePickTotal, with the worst distance kept.
+                if (closestBlock.getRight().isPresent()) {
+                    minePickTotal++;
+                    double d = Math.sqrt(blockSq);
+                    // THE MAXIMUM IS TRACKED ALWAYS, NOT ONLY WHEN IT IS ALREADY ALARMING.
+                    // Kept inside the far branch it read max0 on a clean run, which cannot be
+                    // told apart from a counter that never ran. Unconditional, the same field
+                    // says "the worst pick this run was forty blocks" -- a zero that means
+                    // something. Ninth instrument corrected this session, before it was quoted.
+                    if ((int) d > minePickFarthest) minePickFarthest = (int) d;
+                    if (d > MINE_PICK_FAR_BLOCKS) {
+                        minePickFar++;
+                        if (kaptainwutax.tungsten.TungstenConfig.get().mineRefusesUnreachableTargets) {
+                            return Optional.empty();
+                        }
+                    }
+                }
                 return closestBlock.getRight().map(Object.class::cast);
             }
         }
