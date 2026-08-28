@@ -4748,4 +4748,36 @@ public class TungstenConfig {
      * same as the thing costing the run, and the paired numbers say it is not.
      */
     public boolean itemPickupIsDistanceNotReach = false;
+
+    /**
+     * When the COARSE (block-space) search ends without reaching the goal, hand back the path to
+     * the cell it actually got closest to, instead of a two-node stub.
+     *
+     * <p>BlockSpacePathFinder returns bestSoFar() at its timeout exit. bestSoFar is a monotone
+     * record of heuristic improvement across seven coefficients, and when nothing beats the seed
+     * it stays on the start node -- so the caller gets the start plus at most one hop, which is
+     * not a route. Measured on a live @gamer stall (freezes/stall_run2.txt, 2026-08-28):
+     *
+     * <pre>
+     *   bsEnd[c0 t105 s11 x0]   117 coarse searches, NOT ONE completed
+     *   bsIn[f0 s117 i1481451]  1.48 M nodes expanded between them
+     *   guide=n2 ... end[1513.5,63.0,-284.5]toTgt29.8
+     *   tp=0/0/246/127/byp1664  wander=137  wanderMoved=0
+     * </pre>
+     *
+     * <p>The shallow failure budget is 1920 ms and `failing` stays set while no node gets
+     * MIN_DIST_PATH clear of the start, so those 105 timeouts are over three minutes of a
+     * ten-minute run spent computing a route that moves the bot nowhere. That is the shape of the
+     * operator's complaint -- "stared at one point and stood still".
+     *
+     * <p>The exhausted exit has had this fallback since #67 and it never fired: the local it reads
+     * was declared and never assigned. Connecting it is part of this flag, so a control arm keeps
+     * today's behaviour exactly.
+     *
+     * <p>GATE: paired A/B on the playthrough (gamer_smoke --pin-alt), scored on DEAD TIME rather
+     * than rungs (rule 4a2). Read bsClosestUsed for proof it fired -- it must be 0 in the control
+     * arm and non-zero in the fix arm, or the pair measured nothing (rule 4a1). bsStub /
+     * bsStubHadCloser / bsStubCloserCm say how much material exists either way.
+     */
+    public boolean coarseFallsBackToClosestCell = false;
 }

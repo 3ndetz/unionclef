@@ -49,6 +49,37 @@ public class BlockSpacePathFinder {
 	 *  16-node guide existed, so the guide is not being recomputed at all. */
 	public static volatile int bsFindCalls, bsSearchCalls, bsLoopIters;
 
+	/**
+	 * WHAT A SEARCH THAT DID NOT COMPLETE HANDED BACK. bsEnd says HOW the loop ended; these say
+	 * whether the caller got anything to walk, which is a different question and the one the
+	 * physics leg actually feels.
+	 *
+	 * <p>A STUB is a guide of two nodes or fewer -- the start plus at most one hop. Measured on a
+	 * live @gamer stall (freezes/stall_run2.txt, 2026-08-28):
+	 *
+	 * <pre>
+	 *   bsEnd[c0 t105 s11 x0]  bsIn[f0 s117 i1481451]
+	 *   guide=n2 ... end[1513.5,63.0,-284.5]toTgt29.8
+	 * </pre>
+	 *
+	 * <p>117 coarse searches, NONE completed, 1.48 M nodes expanded between them, and the guide
+	 * handed over is two nodes whose end sits 29.8 blocks from the target. At the shallow failure
+	 * budget of 1920 ms that is over three minutes of a ten-minute run spent computing a route
+	 * that moves the bot nowhere.
+	 *
+	 * <p>bsStubHadCloser counts the stubs where the search HAD expanded a node closer to the goal
+	 * and threw it away; bsStubCloserCm is the furthest such node's distance from the start. The
+	 * pair says how much material a salvage fallback has to work with -- if the closest node the
+	 * search reached is itself one step from the start, the search is walled in and no fallback
+	 * helps, which is a different defect and wants a different fix.
+	 */
+	public static volatile int bsStub, bsStubHadCloser, bsStubCloserCm;
+	/** Times the closest-cell fallback actually supplied the returned guide -- the mechanism
+	 *  counter for {@link kaptainwutax.tungsten.TungstenConfig#coarseFallsBackToClosestCell}.
+	 *  It must read 0 in a control arm and non-zero in a fix arm, or the pair measured nothing
+	 *  (CHECKLIST rule 4a1). */
+	public static volatile int bsClosestUsed;
+
 	/** Tungsten's own value for upstream's MIN_IMPROVEMENT (AbstractNodeCostSearch.java:82,
 	 *  where it is 0.01). Left as it was found — it is a positive threshold doing the job the
 	 *  name says, unlike PathFinder's, which was -500. */
@@ -296,6 +327,16 @@ public class BlockSpacePathFinder {
 			if (closed.contains(next)) continue;
 			
 			closed.add(next);
+			// THE CLOSEST CELL WE ACTUALLY EXPANDED, recorded where it is free. The declaration
+			// below the loop header has existed since #67 and nothing ever assigned it, so the
+			// "last resort" that reads it further down could not fire once -- a disconnected
+			// ACTUATOR, which reports exactly like a refuted hypothesis (CHECKLIST rule one,
+			// mirror image). Note this is per SEARCH: bsClosestCm above is a lifetime minimum
+			// over the whole run and cannot answer a question about one halt.
+			{
+				double dsq = next.getPos().squaredDistanceTo(target);
+				if (dsq < closestDistSq) { closestDistSq = dsq; closestToGoal = next; }
+			}
 			if(isPathComplete(next, target)) {
 				TungstenModRenderContainer.RENDERERS.clear();
 				List<BlockNode> path = generatePath(next, world);
@@ -387,32 +428,60 @@ public class BlockSpacePathFinder {
 						+ partial.get().size() + " nodes toward goal");
 				return partial;
 			}
-			// LAST RESORT: THE CLOSEST CELL WE ACTUALLY REACHED.
-			// bestSoFar is a MONOTONE record of heuristic improvement, so if no child ever beat
-			// the seeded threshold it stays on the start node — whose parent is null — and the
-			// graceful-degradation branch above sees "no progress" even though the search did
-			// explore. Measured on a live @gamer run: "Ran out of nodes" repeatedly while the bot
-			// stood on ONE position for ~500 s with the walker never active.
-			//
-			// A search that expanded thousands of nodes knows perfectly well which of them came
-			// closest to the goal. Handing that one back is not a guess and not a band-aid — it
-			// is the same graceful degradation as above, measured against the GOAL instead of
-			// against a record that can decline to move.
-			if (closestToGoal != null && closestToGoal.previous != null) {
-				List<BlockNode> path = generatePath(closestToGoal, world);
-				if (path.size() > 1) {
-					Debug.logMessage("Exhausted — advancing " + path.size()
-							+ " nodes to the closest cell reached");
-					return Optional.of(path);
-				}
-			}
+			// LAST RESORT: THE CLOSEST CELL WE ACTUALLY REACHED — see salvage() below, which now
+			// serves this exit and the timeout one from the same code. Written for #67 against a
+			// measured 500 s stall, and dead from the day it was written: the local it reads was
+			// never assigned.
+			Optional<List<BlockNode>> salvaged =
+					salvage(Optional.empty(), closestToGoal, start, world, "exhausted");
+			if (salvaged.isPresent()) return salvaged;
 			blockRanOut++;
 			Debug.logWarning("Ran out of nodes (children generated=" + generatedChildren
 					+ " inserted=" + insertedChildren + ")");
 			return Optional.empty();
 		}
+        // TIMED OUT OR STOPPED. The exhausted branch above has had a closest-cell last resort
+        // since #67; this exit -- the one the playthrough actually takes -- had nothing but
+        // bestSoFar, and bestSoFar is a MONOTONE record of heuristic improvement that can
+        // decline to move. That is how 105 searches in a row returned a two-node stub.
         Optional<List<BlockNode>> result = bestSoFar(true, numNodes, start, world);
-		return result;
+		return salvage(result, closestToGoal, start, world, "stalled");
+	}
+
+	/**
+	 * Hand back something walkable when the heuristic record declined to move.
+	 *
+	 * <p>Called at every exit that did NOT reach the goal. If the guide about to be returned is a
+	 * stub (two nodes or fewer -- the start plus at most one hop, which the physics leg cannot make
+	 * progress on), and the search expanded a node genuinely closer to the goal, that node's path is
+	 * the honest answer: it is measured against the GOAL rather than against a record that can
+	 * decline to move, and the bot advances and re-searches from there instead of standing still.
+	 *
+	 * <p>The counters are recorded whether or not the fallback is enabled, so a control arm reports
+	 * how much material the fix WOULD have had. The return itself is gated on
+	 * {@link kaptainwutax.tungsten.TungstenConfig#coarseFallsBackToClosestCell} so a paired A/B
+	 * varies exactly one thing.
+	 */
+	private static Optional<List<BlockNode>> salvage(Optional<List<BlockNode>> handedBack,
+			BlockNode closestToGoal, BlockNode start, WorldView world, String why) {
+		int size = handedBack.map(List::size).orElse(0);
+		if (size > 2) return handedBack;
+		bsStub++;
+		if (closestToGoal == null || closestToGoal.previous == null) return handedBack;
+		List<BlockNode> path = generatePath(closestToGoal, world);
+		if (path.size() <= 2 || path.size() <= size) return handedBack;
+		bsStubHadCloser++;
+		int cm = (int) Math.min(
+				Math.sqrt(getDistFromStartSq(closestToGoal, start.getPos())) * 100.0, 2_000_000_000.0);
+		if (cm > bsStubCloserCm) bsStubCloserCm = cm;
+		if (!kaptainwutax.tungsten.TungstenConfig.get().coarseFallsBackToClosestCell) return handedBack;
+		bsClosestUsed++;
+		// logInternal, NOT logMessage: this fires once per non-completing search -- 117 times in
+		// the measured run -- and logMessage sends to Minecraft CHAT from whatever thread calls it.
+		// Search threads writing chat directly is TODOS C4.4, which already cost a session.
+		Debug.logInternal("Coarse search " + why + " — advancing " + path.size()
+				+ " nodes to the closest cell reached");
+		return Optional.of(path);
 	}
 	
 	protected static Optional<List<BlockNode>> bestSoFar(boolean logInfo, int numNodes, BlockNode startNode, WorldView world) {
