@@ -3807,8 +3807,22 @@ public class TungstenConfig {
      * <p>The body moves in under one percent of wander ticks, and the wander is a third of the
      * run. This is the freeze the user reported: "stared at one point and stood still for the
      * last three to five minutes".
+     *
+     * <h2>PAIRED A/B ON EQUAL WORLDS -- ON</h2>
+     *
+     * <pre>
+     *   pair   dead        mechanism in the control arm
+     *    1     62% -> 38%  3073 barren refusals, wanderMoved = 0
+     *    2     15% ->  0%  bypasses counted in the treated arm: 3441
+     *    3     48% -> 56%  tp = 0/0/0/0 -- the latch never engaged at all
+     * </pre>
+     *
+     * <p>In both pairs where the latch actually engaged, lifting it more than halves the dead
+     * time. In pair 3 there was nothing for it to block, so that pair says nothing about the
+     * flag -- recorded, not averaged in. Same shape as the give-up ban: the mechanism counter
+     * is what separates an informative pair from an empty one.
      */
-    public boolean barrenGateIsForEntityLocksOnly = false;
+    public boolean barrenGateIsForEntityLocksOnly = true;
 
     /**
      * Whether the wander spiral is measured from where the wandering started, or from the
