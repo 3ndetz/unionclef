@@ -284,8 +284,32 @@ public final class FastPlanner {
      * separate 'expanded thousands and found nothing' from 'never expanded'.
      */
     public static volatile int planCalls, planLastExpanded, planLastMs, planLastSize, planZeroExpand, planExpand0, planExpand1, planStartRescued, planStartSnapped, planStartNoSupport, planStartSupportedNoKids, planStartIsGoal, planAtGoalExact, planAtGoalYTol;
-    /** The altoclef goal in force the last time a plan started ON its own goal. */
-    public static volatile String planAtGoalWho = "-";
+    /**
+     * WHO asked for a route into the cell the bot already occupies, BY COUNT.
+     *
+     * <p>This was a last-wins string and it named a cell -- "block(1480,60,30)" -- which cannot
+     * say whether 61 of 98 such plans are one task asking sixty times or sixty tasks asking once.
+     * Those want opposite fixes, and TODOS has carried "put a counter on the goal source" as the
+     * next move since 2026-08-26. A bounded tally of "TaskName@goal" is that counter.
+     */
+    private static final java.util.Map<String, Integer> AT_GOAL_WHO =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+
+    /** The tally, most frequent first, as "who xN who xN". */
+    public static String planAtGoalDump() {
+        synchronized (AT_GOAL_WHO) {
+            return AT_GOAL_WHO.entrySet().stream()
+                    .sorted((a, b) -> b.getValue() - a.getValue())
+                    .limit(5)
+                    .map(e -> e.getKey() + "x" + e.getValue())
+                    .reduce((a, b) -> a + " " + b).orElse("-");
+        }
+    }
+
+    /** Cleared with the other per-run counters. */
+    public static void clearAtGoalWho() {
+        synchronized (AT_GOAL_WHO) { AT_GOAL_WHO.clear(); }
+    }
 
     public static volatile int placeBudget = Integer.MAX_VALUE;
 
@@ -425,7 +449,13 @@ public final class FastPlanner {
                     // NAME THE ORDERER. The altoclef drive already traces the goal it hands
                     // down, so record it here rather than guessing which task asks for a
                     // route to the cell the bot occupies.
-                    planAtGoalWho = kaptainwutax.tungsten.combat.CombatTrace.hostGoal;
+                    String who = kaptainwutax.tungsten.combat.CombatTrace.hostOwner + "@"
+                            + kaptainwutax.tungsten.combat.CombatTrace.hostGoal;
+                    synchronized (AT_GOAL_WHO) {
+                        if (AT_GOAL_WHO.size() < 16 || AT_GOAL_WHO.containsKey(who)) {
+                            AT_GOAL_WHO.merge(who, 1, Integer::sum);
+                        }
+                    }
                 }
                 goalNode = current;
                 complete = true;

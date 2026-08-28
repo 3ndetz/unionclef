@@ -78,6 +78,16 @@ public final class CombatTrace {
      * caller.
      */
     public static volatile String hostGoal = "-";
+    /**
+     * The TASK holding that goal, by simple class name.
+     *
+     * <p>The goal string alone names a cell, not an orderer, and the question left open by
+     * FastPlanner.planStartIsGoal is which task keeps asking for a route into the cell the bot
+     * already occupies -- measured at 61 of 98 plans in one run, every match an EXACT cell, so
+     * the two layers agree and the request itself is the no-op. "block(1480,60,30)" cannot
+     * answer that; "DestroyBlockTask" can.
+     */
+    public static volatile String hostOwner = "-";
     /** The priority the defence chain returned this tick -- 0 means it did not claim the bot. */
     public static volatile float hostPrio;
 

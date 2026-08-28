@@ -51,6 +51,35 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     public static volatile int snapAsked, snapMoved, snapFailed;
     /** Snaps that landed on the bot's own cell -- a request to walk nowhere. */
     public static volatile int snapToSelf;
+    /** ...and WHICH tasks asked, by count. Bounded: a tally that can grow without limit is a
+     *  leak, and eight names is already more than a verdict line can carry. */
+    private static final java.util.Map<String, Integer> SNAP_TO_SELF_WHO =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+
+    /** Record one snap-to-self against the task that asked for it. */
+    public static void noteSnapToSelf(String who) {
+        synchronized (SNAP_TO_SELF_WHO) {
+            if (SNAP_TO_SELF_WHO.size() < 16 || SNAP_TO_SELF_WHO.containsKey(who)) {
+                SNAP_TO_SELF_WHO.merge(who, 1, Integer::sum);
+            }
+        }
+    }
+
+    /** The tally, most frequent first, as "Task xN Task xN". */
+    public static String snapToSelfDump() {
+        synchronized (SNAP_TO_SELF_WHO) {
+            return SNAP_TO_SELF_WHO.entrySet().stream()
+                    .sorted((a, b) -> b.getValue() - a.getValue())
+                    .limit(6)
+                    .map(e -> e.getKey() + "x" + e.getValue())
+                    .reduce((a, b) -> a + " " + b).orElse("-");
+        }
+    }
+
+    /** Cleared with the other per-run counters. */
+    public static void clearSnapToSelfWho() {
+        synchronized (SNAP_TO_SELF_WHO) { SNAP_TO_SELF_WHO.clear(); }
+    }
 
     public static volatile String pdLastUnknownGoal = "-";
 
@@ -489,13 +518,25 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             if (gp != null) {
                 net.minecraft.util.math.BlockPos me = mod.getPlayer().getBlockPos();
                 if (me.getX() == (int) Math.floor(gp.x) && me.getY() == (int) Math.floor(gp.y)
-                        && me.getZ() == (int) Math.floor(gp.z)) snapToSelf++;
+                        && me.getZ() == (int) Math.floor(gp.z)) {
+                    snapToSelf++;
+                    // WHO, BY COUNT. snapToSelf read 747 of 944 in one run and 4260 of 5554 in
+                    // another, and a single number cannot say whether that is one task asking
+                    // four thousand times or every task asking once. A last-wins string cannot
+                    // either -- that is what planAtGoalWho was, and it named a cell.
+                    noteSnapToSelf(getClass().getSimpleName());
+                }
             }
             if (gp != null && gpBefore != null && !gp.equals(gpBefore)) snapMoved++;
             else if (gp != null && !standable(mod.getWorld(), (int) Math.floor(gp.x),
                     (int) Math.floor(gp.y), (int) Math.floor(gp.z))) snapFailed++;
             // Publish WHOSE goal this is, so a climbing route can name its caller (CombatTrace).
             kaptainwutax.tungsten.combat.CombatTrace.hostGoal = String.valueOf(goal);
+            // ...AND WHICH TASK IS HOLDING IT. The goal string names a cell, not an orderer, and
+            // the open question at FastPlanner.planStartIsGoal is which task keeps asking for a
+            // route into the cell the bot already occupies. This class is abstract; the simple
+            // name is the concrete subclass -- DestroyBlockTask, GetToBlockTask, GetToXZTask...
+            kaptainwutax.tungsten.combat.CombatTrace.hostOwner = getClass().getSimpleName();
         }
         if (gp == null) {
             // NAME THE TYPE, DO NOT GUESS IT. Extending the translator from two goal types to six
