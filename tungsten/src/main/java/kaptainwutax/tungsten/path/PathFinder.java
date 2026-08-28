@@ -163,6 +163,8 @@ public class PathFinder {
 	public static volatile int tryEmitCalls, tryEmitStationary;
 	/** Emissions that happened ONLY because the moving-arrival rule is on. */
 	public static volatile int tryEmitMoving;
+	/** Goal tests a search must spend looking for a stopped arrival before a moving one counts. */
+	private static final int MOVING_FALLBACK_AFTER_TESTS = 40;
 
 	public static volatile int emitCount, emitTotalNodes, emitFresh, emitAppended;
 
@@ -1439,11 +1441,20 @@ public class PathFinder {
         // the executor handed an empty path, tick==path.size() true at once, "arrived", replan,
         // and a bot that stands. The comment above this gate has said so since it was counted;
         // what was missing was the change, not the diagnosis.
-        if (kaptainwutax.tungsten.TungstenConfig.get().emitAtGoalEvenWhenMoving && !stationary) {
-            tryEmitMoving++;
-        }
+        // A FALLBACK, NOT A PREFERENCE -- WHICH IS WHAT THE FIRST VERSION GOT WRONG.
+        // Emitting on the FIRST goal-reaching node makes the bot arrive with momentum even
+        // when a stationary arrival was a few nodes further on, and the paired runs show the
+        // cost: dead time improved (median 42 -> 36) while items COLLECTED fell (22 -> 12).
+        // The runs it rescues are the ones where the search finds no stationary arrival at
+        // all -- tryEmit=89/0 without it, against 466/119 in a healthy run. So take the
+        // moving arrival only once this search has tried and failed to find a stopped one.
+        boolean movingFallback =
+                kaptainwutax.tungsten.TungstenConfig.get().emitAtGoalEvenWhenMoving
+                && !stationary
+                && goalTests >= MOVING_FALLBACK_AFTER_TESTS;
+        if (movingFallback) tryEmitMoving++;
         if (stationary
-        		|| kaptainwutax.tungsten.TungstenConfig.get().emitAtGoalEvenWhenMoving || 
+        		|| movingFallback || 
         		TungstenModDataContainer.world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ())).getBlock() instanceof LadderBlock) {
             List<Node> path = constructPath(node);
             executePath(path);
