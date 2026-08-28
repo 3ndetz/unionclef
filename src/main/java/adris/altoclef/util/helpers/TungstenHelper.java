@@ -142,18 +142,27 @@ public class TungstenHelper {
      * Try Tungsten pathfinding to a position. Returns true if Tungsten was started.
      * Acquires a 30-second lock — the primary pathfinder should not interfere meanwhile.
      */
+    /**
+     * Why tryPathTo said no. The wander runs 4104 ticks of a ten-minute run and the body moves
+     * in 674 of them, so five ticks in six are spent standing while a destination is already
+     * chosen -- wanderTung=11/2, nine picks in eleven refused here. Which of these four gates
+     * does the refusing is the last unmeasured link in the residual dead time.
+     */
+    public static volatile int tpNotLoaded, tpFailCount, tpBarren, tpCooldown, tpAccepted;
+
     public static boolean tryPathTo(Vec3d target) {
-        if (!isTungstenLoaded()) return false;
-        if (failCount >= MAX_FAIL_COUNT) return false;
+        if (!isTungstenLoaded()) { tpNotLoaded++; return false; }
+        if (failCount >= MAX_FAIL_COUNT) { tpFailCount++; return false; }
         // Refuse to take a fresh 30-second window when the last two got nowhere. Without this the
         // window renews for ever and the caller is told "tungsten has it" while nothing moves.
         if (kaptainwutax.tungsten.TungstenConfig.get().barrenLockCountsAsFailure
                 && barrenStreak >= MAX_BARREN_LOCKS && !isLocked()) {
+            tpBarren++;
             return false;
         }
 
         long now = System.currentTimeMillis();
-        if (now - lastStartTime < COOLDOWN_MS && !isLocked()) return false;
+        if (now - lastStartTime < COOLDOWN_MS && !isLocked()) { tpCooldown++; return false; }
 
         try {
             var player = AltoClef.getInstance().getPlayer();
