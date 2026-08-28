@@ -167,6 +167,14 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
         if (kaptainwutax.tungsten.TungstenConfig.get().closestPursuitHasBudget
                 && currentlyPursuing != null) {
             double dSq = getPos(mod, currentlyPursuing).squaredDistanceTo(mod.getPlayer().getPos());
+            // HOW FAR THE THING BEING CHASED ACTUALLY IS, not how far it was when chosen.
+            // The picker's own maximum reads 54 blocks on the same run where a sampled task
+            // chain showed the bot walking to a block at (300, 88, 653) from around
+            // (80, 133, -44) -- some seven hundred blocks. Both are true if the block was
+            // picked while close and the bot then drifted away with the pursuit still live.
+            // Only this number can tell the two apart, so it is measured before anything acts
+            // on it. The 120s budget permits a very long walk in the wrong direction.
+            { int d = (int) Math.sqrt(dSq); if (d > dcPursuitFarthest) dcPursuitFarthest = d; }
             long now = System.currentTimeMillis();
             // SAME PURSUIT, NOT THE SAME OBJECT. Comparing by identity restarts the clock
             // every time the tracker hands back a fresh object for the same physical drop,
@@ -423,6 +431,8 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     public static volatile int dcGaveUpIdle;
     /** Still ticks split by whether the target was inside mining reach. */
     public static volatile int dcStillNear, dcStillFar;
+    /** Farthest the pursued object got during its pursuit, in blocks. */
+    public static volatile int dcPursuitFarthest;
     private static net.minecraft.util.math.Vec3d dcLastPos = null;
 
     /**
