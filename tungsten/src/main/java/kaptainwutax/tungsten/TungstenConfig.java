@@ -3765,8 +3765,27 @@ public class TungstenConfig {
      * <p>OFF BY DEFAULT UNTIL THE COUNT JUSTIFIES IT. dcReofferedBanned counts the re-offers
      * with the refusal disabled, so the mechanism is measured before it is acted on -- the rule
      * this session learned the hard way, eight dead instruments in.
+     *
+     * <h2>PAIRED A/B ON EQUAL WORLDS -- ON</h2>
+     *
+     * <pre>
+     *   pair   dead       items      straightness   mechanism (offered/refused)
+     *    1     31 -> 19   27 -> 39   0.24 -> 0.37   1108/0  ->  2587/2587
+     *    2     23 ->  8   25 -> 32   0.36 -> 0.41    345/0  ->  6078/6078
+     *    3     35 -> 58   16 ->  0   1.00 -> 0.58      0/0  ->     0/0
+     * </pre>
+     *
+     * <p>The counter separates the informative pairs from the empty one. In pair 3 the
+     * mechanism never fired in EITHER arm -- nothing was ever re-offered, so the flag had
+     * nothing to refuse and that pair says nothing about it. In the two pairs where it did
+     * fire, refusing wins on all three metrics: less dead time, more items, straighter paths.
+     *
+     * <p>The first attempt at this measurement read banned=0/0 and I nearly wrote the idea
+     * off as vacuous. It was: gaveUp=0/0 in that run, so nothing was ever banned. The give-up
+     * path does fire in other runs, and then the chooser re-offers the abandoned target
+     * thousands of times -- 6078 in one run.
      */
-    public boolean giveUpTargetStaysGivenUp = false;
+    public boolean giveUpTargetStaysGivenUp = true;
 
     /**
      * Whether the wander spiral is measured from where the wandering started, or from the
