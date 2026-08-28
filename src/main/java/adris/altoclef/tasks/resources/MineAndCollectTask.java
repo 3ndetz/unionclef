@@ -232,12 +232,17 @@ public class MineAndCollectTask extends ResourceTask {
          * and a run spent walking toward it climbs no rungs at all.
          */
         public static volatile int minePickFar, minePickTotal, minePickFarthest;
+        /** Every call, and the calls that chose a DROP -- so minePickTotal=0 can be read.
+         *  Kept only in the block branch it could not tell "no block was ever picked" from
+         *  "the task never ran", and a 20-minute run read 0/0 while an earlier one read 6723. */
+        public static volatile int minePickCalls, minePickDrop;
 
         /** Beyond this the walk costs more than the whole run is worth. */
         private static final double MINE_PICK_FAR_BLOCKS = 160.0D;
 
         @Override
         protected Optional<Object> getClosestTo(AltoClef mod, Vec3d pos) {
+            minePickCalls++;
             Pair<Double, Optional<BlockPos>> closestBlock = getClosestBlock(mod,pos,  _blocks);
             Pair<Double, Optional<ItemEntity>> closestDrop = getClosestItemDrop(mod,pos,  _targets);
 
@@ -250,6 +255,7 @@ public class MineAndCollectTask extends ResourceTask {
             }
 
             if (dropSq <= blockSq) {
+                minePickDrop++;
                 return closestDrop.getRight().map(Object.class::cast);
             } else {
                 // A TARGET YOU CANNOT REACH THIS RUN IS NOT A TARGET. Counted before it is
