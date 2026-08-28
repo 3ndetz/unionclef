@@ -54,8 +54,11 @@ public class BlockSpacePathFinder {
 	 * whether the caller got anything to walk, which is a different question and the one the
 	 * physics leg actually feels.
 	 *
-	 * <p>A STUB is a guide of two nodes or fewer -- the start plus at most one hop. Measured on a
-	 * live @gamer stall (freezes/stall_run2.txt, 2026-08-28):
+	 * <p>A STUB is a guide whose LAST CELL is less than MIN_DIST_PATH from the search start: walking
+	 * it takes the bot nowhere. Deliberately measured in blocks and not in nodes -- stringPull()
+	 * collapses a straight run to [start, end], and run3 of the same sweep reads guide=n2 with
+	 * bsEnd[c63 t0 s0 x0], a two-node guide from a search that completed sixty-three times of
+	 * sixty-four. Measured on a live @gamer stall (freezes/stall_run2.txt, 2026-08-28):
 	 *
 	 * <pre>
 	 *   bsEnd[c0 t105 s11 x0]  bsIn[f0 s117 i1481451]
@@ -67,8 +70,9 @@ public class BlockSpacePathFinder {
 	 * budget of 1920 ms that is over three minutes of a ten-minute run spent computing a route
 	 * that moves the bot nowhere.
 	 *
-	 * <p>bsStubHadCloser counts the stubs where the search HAD expanded a node closer to the goal
-	 * and threw it away; bsStubCloserCm is the furthest such node's distance from the start. The
+	 * <p>bsStubHadCloser counts the stubs where the search HAD expanded a node both closer to the
+	 * goal and further from the start, and threw it away; bsStubCloserCm is the furthest such
+	 * node's distance from the start. The
 	 * pair says how much material a salvage fallback has to work with -- if the closest node the
 	 * search reached is itself one step from the start, the search is walled in and no fallback
 	 * helps, which is a different defect and wants a different fix.
@@ -452,10 +456,15 @@ public class BlockSpacePathFinder {
 	 * Hand back something walkable when the heuristic record declined to move.
 	 *
 	 * <p>Called at every exit that did NOT reach the goal. If the guide about to be returned is a
-	 * stub (two nodes or fewer -- the start plus at most one hop, which the physics leg cannot make
-	 * progress on), and the search expanded a node genuinely closer to the goal, that node's path is
-	 * the honest answer: it is measured against the GOAL rather than against a record that can
-	 * decline to move, and the bot advances and re-searches from there instead of standing still.
+	 * stub -- its last cell less than MIN_DIST_PATH from the search start, so walking it takes the
+	 * bot nowhere -- and the search expanded a node that is BOTH closer to the goal and further from
+	 * the start, that node's path is the honest answer: it is measured against the GOAL rather than
+	 * against a record that can decline to move, and the bot advances and re-searches from there
+	 * instead of standing still.
+	 *
+	 * <p>bestSoFar stays the primary answer, deliberately. Preferring the closest-to-goal node in
+	 * general is how a search walks into the near lip of a chasm; upstream's seven COEFFICIENTS
+	 * exist to avoid exactly that, and this only runs where they returned nothing to walk.
 	 *
 	 * <p>The counters are recorded whether or not the fallback is enabled, so a control arm reports
 	 * how much material the fix WOULD have had. The return itself is gated on
@@ -464,15 +473,27 @@ public class BlockSpacePathFinder {
 	 */
 	private static Optional<List<BlockNode>> salvage(Optional<List<BlockNode>> handedBack,
 			BlockNode closestToGoal, BlockNode start, WorldView world, String why) {
-		int size = handedBack.map(List::size).orElse(0);
-		if (size > 2) return handedBack;
+		// ⛔ A STUB IS MEASURED IN BLOCKS, NOT IN NODES. The first version of this asked whether the
+		// guide had two nodes or fewer, which is wrong twice over: stringPull() deletes every
+		// intermediate cell whose corner can be cut, so a healthy thirty-block straight walk collapses
+		// to [start, end] -- and a stall dump proves it, run3 reading guide=n2 with bsEnd[c63 t0 s0 x0],
+		// i.e. a two-node guide from a search that completed sixty-three times out of sixty-four.
+		// Judging that a stub would have salvaged over perfectly good routes and inflated every
+		// counter here. What the failing case actually shows is a guide whose END IS WHERE THE BOT
+		// ALREADY IS, so ask that, against MIN_DIST_PATH -- this file's own word for "went somewhere",
+		// and the gate bestSoFar's non-smartMoves branch already uses.
+		List<BlockNode> given = handedBack.orElse(null);
+		double movedSq = given == null || given.isEmpty() ? 0.0
+				: getDistFromStartSq(given.get(given.size() - 1), start.getPos());
+		if (movedSq > MIN_DIST_PATH * MIN_DIST_PATH) return handedBack;
 		bsStub++;
 		if (closestToGoal == null || closestToGoal.previous == null) return handedBack;
+		double closerSq = getDistFromStartSq(closestToGoal, start.getPos());
+		if (closerSq <= movedSq) return handedBack;
 		List<BlockNode> path = generatePath(closestToGoal, world);
-		if (path.size() <= 2 || path.size() <= size) return handedBack;
+		if (path.size() <= 1) return handedBack;
 		bsStubHadCloser++;
-		int cm = (int) Math.min(
-				Math.sqrt(getDistFromStartSq(closestToGoal, start.getPos())) * 100.0, 2_000_000_000.0);
+		int cm = (int) Math.min(Math.sqrt(closerSq) * 100.0, 2_000_000_000.0);
 		if (cm > bsStubCloserCm) bsStubCloserCm = cm;
 		if (!kaptainwutax.tungsten.TungstenConfig.get().coarseFallsBackToClosestCell) return handedBack;
 		bsClosestUsed++;

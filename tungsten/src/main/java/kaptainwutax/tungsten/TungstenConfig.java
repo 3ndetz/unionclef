@@ -4755,8 +4755,11 @@ public class TungstenConfig {
      *
      * <p>BlockSpacePathFinder returns bestSoFar() at its timeout exit. bestSoFar is a monotone
      * record of heuristic improvement across seven coefficients, and when nothing beats the seed
-     * it stays on the start node -- so the caller gets the start plus at most one hop, which is
-     * not a route. Measured on a live @gamer stall (freezes/stall_run2.txt, 2026-08-28):
+     * it barely leaves the start node -- so the caller gets a guide that ends where the bot
+     * already is, which is not a route. "Ends where the bot already is" is the test, measured in
+     * blocks against MIN_DIST_PATH: node count cannot be the test, because stringPull() collapses
+     * a healthy straight walk to two nodes as well. Measured on a live @gamer stall
+     * (freezes/stall_run2.txt, 2026-08-28):
      *
      * <pre>
      *   bsEnd[c0 t105 s11 x0]   117 coarse searches, NOT ONE completed
