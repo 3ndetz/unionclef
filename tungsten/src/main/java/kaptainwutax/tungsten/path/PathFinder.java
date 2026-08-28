@@ -161,6 +161,8 @@ public class PathFinder {
 	public static volatile String lastGoalPair = "-";
 
 	public static volatile int tryEmitCalls, tryEmitStationary;
+	/** Emissions that happened ONLY because the moving-arrival rule is on. */
+	public static volatile int tryEmitMoving;
 
 	public static volatile int emitCount, emitTotalNodes, emitFresh, emitAppended;
 
@@ -1426,8 +1428,22 @@ public class PathFinder {
         // sprinting across open ground does -- is refused, and emit=0 against 1.4M expanded
         // nodes is exactly how that looks from outside.
         tryEmitCalls++;
-        if (AgentChecker.isAgentStationary(node.agent, minVelocity)) tryEmitStationary++;
-        if (AgentChecker.isAgentStationary(node.agent, minVelocity) || 
+        boolean stationary = AgentChecker.isAgentStationary(node.agent, minVelocity);
+        if (stationary) tryEmitStationary++;
+        // ARRIVING IS NOT THE SAME AS STOPPING, AND ONLY ONE OF THEM WAS ACCEPTED.
+        // This method is reached only from isPathComplete, so the node has ALREADY satisfied
+        // the goal test. Refusing it because the simulated agent still carries velocity throws
+        // away a finished route for the most ordinary case there is: walking across open
+        // ground at speed. Measured on a twenty-minute run: tryEmit=209/45 -- one hundred and
+        // sixty-four completed searches discarded for moving -- with srch=173/0/0 downstream,
+        // the executor handed an empty path, tick==path.size() true at once, "arrived", replan,
+        // and a bot that stands. The comment above this gate has said so since it was counted;
+        // what was missing was the change, not the diagnosis.
+        if (kaptainwutax.tungsten.TungstenConfig.get().emitAtGoalEvenWhenMoving && !stationary) {
+            tryEmitMoving++;
+        }
+        if (stationary
+        		|| kaptainwutax.tungsten.TungstenConfig.get().emitAtGoalEvenWhenMoving || 
         		TungstenModDataContainer.world.getBlockState(new BlockPos((int) target.getX(), (int) target.getY(), (int) target.getZ())).getBlock() instanceof LadderBlock) {
             List<Node> path = constructPath(node);
             executePath(path);

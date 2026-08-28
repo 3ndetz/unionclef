@@ -3855,6 +3855,27 @@ public class TungstenConfig {
     public boolean mineRefusesUnreachableTargets = false;
 
     /**
+     * Whether a finished route is emitted when the simulated agent reaches the goal while
+     * still moving, instead of only when it has come to a stop.
+     *
+     * <p>tryExecutePath is reached only from isPathComplete, so the node has ALREADY passed
+     * the goal test. Refusing it for residual velocity discards a completed search in the most
+     * ordinary case there is -- walking across open ground at speed.
+     *
+     * <pre>
+     *   tryEmit  = 209/45      calls / emitted: 164 completed searches thrown away
+     *   srch     = 173/0/0     the physics leg yields nothing downstream
+     *   children = 3897306/187823/181743   the generator is NOT starved
+     *   wander   = 16015 ticks, body moved in 1398 -- 8.7%
+     * </pre>
+     *
+     * <p>The executor is then handed an empty path, tick == path.size() is true immediately,
+     * it reports arrival, the driver replans, and the bot stands. The gate has carried a
+     * comment saying exactly this since it was first counted; what was missing was the change.
+     */
+    public boolean emitAtGoalEvenWhenMoving = false;
+
+    /**
      * Whether the wander spiral is measured from where the wandering started, or from the
      * player's feet at every pick.
      *
