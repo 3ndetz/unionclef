@@ -3872,8 +3872,28 @@ public class TungstenConfig {
      * <p>The executor is then handed an empty path, tick == path.size() is true immediately,
      * it reports arrival, the driver replans, and the bot stands. The gate has carried a
      * comment saying exactly this since it was first counted; what was missing was the change.
+     *
+     * <h2>PAIRED A/B ON EQUAL WORLDS -- ON, AS A FALLBACK</h2>
+     *
+     * <pre>
+     *   pair   dead        items      mechanism (moving emits)
+     *    1     50 -> 35     2 -> 26   mv1
+     *    2      0 -> 36    14 -> 25   mv10
+     *    3     60 -> 40    46 ->  0   mv9
+     *   median 50 -> 36    14 -> 25
+     * </pre>
+     *
+     * <p>Dead time and items both improve by median, and the spread collapses: the control
+     * arm swings 0-60% dead while the treated arm sits at 35-40%.
+     *
+     * <p>THE FIRST VERSION OF THIS WAS A PREFERENCE AND IT COST PRECISION. Emitting on the
+     * first goal-reaching node halved collected items (median 22 -> 12) while improving dead
+     * time, which is what arriving with momentum looks like when the goal is a block to mine.
+     * As a fallback -- taken only after 40 goal tests fail to find a stopped arrival -- it
+     * rescues the searches that would otherwise emit nothing (tryEmit=89/0) and leaves the
+     * healthy ones alone (tryEmit=466/119).
      */
-    public boolean emitAtGoalEvenWhenMoving = false;
+    public boolean emitAtGoalEvenWhenMoving = true;
 
     /**
      * Whether the wander spiral is measured from where the wandering started, or from the
