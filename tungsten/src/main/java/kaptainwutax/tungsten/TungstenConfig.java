@@ -4321,6 +4321,28 @@ public class TungstenConfig {
     public boolean wanderTargetFollowsTheGround = false;
 
     /**
+     * Advance the wander's spiral only when a leg actually STARTS.
+     *
+     * <p>TimeoutWanderTask derives both the angle and the radius of its next destination from
+     * wanderTungPicked -- {@code ang = picked * 137 degrees}, {@code r = base + min(24, picked*2)}
+     * -- and increments that index BEFORE calling tryPathTo, which refuses. Measured
+     * {@code wanderTung=316/33} and {@code 65/9}: the spiral turned 316 times while nine to
+     * thirty-three legs were attempted, most refusals being the one-second cooldown between path
+     * starts ({@code tp=0/0/453/58} against 65-9=56 wander refusals).
+     *
+     * <p>So the golden angle, whose whole purpose is to space CONSECUTIVE LEGS evenly, is spacing
+     * ATTEMPTS instead, and the legs that do happen land at arbitrary angles to each other. The
+     * radius term saturates at +24 within a dozen refused ticks, so the expanding search stops
+     * expanding as well. Both are the index counting the wrong events.
+     *
+     * <p>The repair is to advance the index where the leg begins. Mechanism counter is
+     * wanderSpiralHeld -- picks refused with the index left alone; 0 in a control arm.
+     *
+     * <p>Default false until a paired A/B on stall time says otherwise.
+     */
+    public boolean wanderSpiralCountsLegsNotTries = false;
+
+    /**
      * Blocks -> ticks for the BLOCK-SPACE search's heuristic (BlockSpacePathFinder).
      *
      * <p>Every edge in that search is priced in TICKS (ActionCosts: a walk step is 4.633),

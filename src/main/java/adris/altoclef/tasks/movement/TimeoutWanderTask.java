@@ -57,6 +57,9 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
     public static volatile int wanderTungPicked = 0, wanderTungDriven = 0;
     /** Of those picks, how many named a cell the bot cannot stand in. Read as wanderTung=p/d/u. */
     public static volatile int wanderTargetUnstandable = 0;
+    /** Picks refused by the drive with the spiral index left where it was. Mechanism counter for
+     *  {@link kaptainwutax.tungsten.TungstenConfig#wanderSpiralCountsLegsNotTries}; 0 in control. */
+    public static volatile int wanderSpiralHeld = 0;
 
     /** How far above and below the anchor's height a wander target may be pulled to find footing.
      *  Wide enough for the hills a 120-block leg crosses, narrow enough that the destination is
@@ -421,7 +424,23 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 if (kaptainwutax.tungsten.TungstenConfig.get().wanderTargetFollowsTheGround) {
                     dest = groundedNear(mod, dest);
                 }
-                wanderTungPicked++;
+                // ⛔ THE SPIRAL INDEX MUST COUNT LEGS, NOT ATTEMPTS. Both the angle and the
+                // radius above are derived from wanderTungPicked, and this increment used to
+                // happen whether or not tryPathTo took the target -- so a run reading
+                // wanderTung=316/33 had turned the golden angle 316 times to walk 33 legs, which
+                // spaces ATTEMPTS evenly and leaves the legs at arbitrary angles to each other.
+                // The radius term saturates at +24 within a dozen refused ticks too. Most of
+                // those refusals are the one-second cooldown between path starts.
+                boolean tookIt = adris.altoclef.util.helpers.TungstenHelper.tryPathTo(dest);
+                if (tookIt) {
+                    wanderTungDriven++;
+                } else if (kaptainwutax.tungsten.TungstenConfig.get().wanderSpiralCountsLegsNotTries) {
+                    wanderSpiralHeld++;
+                }
+                if (tookIt
+                        || !kaptainwutax.tungsten.TungstenConfig.get().wanderSpiralCountsLegsNotTries) {
+                    wanderTungPicked++;
+                }
                 // ⛔ CAN THE BOT EVEN STAND WHERE THIS IS SENDING IT?
                 //
                 // dest takes its Y from the ANCHOR and its XZ from a spiral of up to 120 blocks, so
@@ -441,7 +460,7 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 } catch (Exception ignored) {
                     // a counter must never break the wander it watches
                 }
-                if (adris.altoclef.util.helpers.TungstenHelper.tryPathTo(dest)) wanderTungDriven++;
+
             }
         }
         boolean progressing = progressChecker.check(mod);
