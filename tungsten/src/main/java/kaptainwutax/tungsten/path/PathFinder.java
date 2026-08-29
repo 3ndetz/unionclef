@@ -234,6 +234,25 @@ public class PathFinder {
 	 * leaves exactly one node, which needs no world lookup to call a route to nowhere.
 	 */
 	public static volatile int truncCut, truncCutToOneNode;
+	/** Coarse guides that went nowhere, tallied by the exit the coarse search left by. Read as
+	 *  coarseNowhereBy[complete xN exhaustedPartial xN ...]. Bounded like the other name tallies:
+	 *  an unbounded map is a leak, and there are only a handful of exits. */
+	private static final java.util.Map<String, Integer> COARSE_NOWHERE_BY_EXIT =
+			java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+
+	/** The tally, most frequent first, as "exit xN exit xN". */
+	public static String coarseNowhereDump() {
+		synchronized (COARSE_NOWHERE_BY_EXIT) {
+			return COARSE_NOWHERE_BY_EXIT.entrySet().stream()
+					.sorted((a, b) -> b.getValue() - a.getValue())
+					.map(e -> e.getKey() + "x" + e.getValue())
+					.reduce((a, b) -> a + " " + b).orElse("-");
+		}
+	}
+
+	/** Zeroed with the run counters. */
+	public static void clearCoarseNowhere() { COARSE_NOWHERE_BY_EXIT.clear(); }
+
 	/** The shape (dx,dy,dz) of the hop the physics never crossed, tallied over samples. */
 	public static final java.util.Map<String, Integer> gvpHopShapes =
 			java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
@@ -1481,7 +1500,17 @@ public class PathFinder {
                 if (nowhere) guideFromFastNowhere++;
             } else {
                 guideFromCoarse++;
-                if (nowhere) guideFromCoarseNowhere++;
+                if (nowhere) {
+                    guideFromCoarseNowhere++;
+                    String exit = String.valueOf(
+                            kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.lastExit);
+                    synchronized (COARSE_NOWHERE_BY_EXIT) {
+                        if (COARSE_NOWHERE_BY_EXIT.size() < 12
+                                || COARSE_NOWHERE_BY_EXIT.containsKey(exit)) {
+                            COARSE_NOWHERE_BY_EXIT.merge(exit, 1, Integer::sum);
+                        }
+                    }
+                }
             }
         } catch (Exception ignored) {
             // A counter must never be the thing that breaks a search.

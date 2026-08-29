@@ -78,6 +78,16 @@ public class BlockSpacePathFinder {
 	 * helps, which is a different defect and wants a different fix.
 	 */
 	public static volatile int bsStub, bsStubHadCloser, bsStubCloserCm;
+	/**
+	 * WHICH EXIT THIS SEARCH LEFT BY, for whoever inspects the guide afterwards.
+	 *
+	 * <p>bsStub reads 0 on every playthrough run while nowhere-guides pour out of this class, and
+	 * the reason is structural: bsStub++ lives inside salvage(), and the EXHAUSTED exit hands back
+	 * bestSoFar's partial directly, going around it. A counter reading zero says "my exit is
+	 * quiet", not "the thing does not happen" -- that misreading has now cost two passes. Tagging
+	 * the exit lets the caller attribute a bad guide without another counter per exit.
+	 */
+	public static volatile String lastExit = "-";
 	/** Times the closest-cell fallback actually supplied the returned guide -- the mechanism
 	 *  counter for {@link kaptainwutax.tungsten.TungstenConfig#coarseFallsBackToClosestCell}.
 	 *  It must read 0 in a control arm and non-zero in a fix arm, or the pair measured nothing
@@ -346,6 +356,7 @@ public class BlockSpacePathFinder {
 				List<BlockNode> path = generatePath(next, world);
 
 				bsComplete++;
+				lastExit = "complete";
 				Debug.logMessage("Found rought path!");
 				
 				return Optional.of(path);
@@ -428,6 +439,7 @@ public class BlockSpacePathFinder {
 			// gives up cleanly here — no oscillation in place. (#67, user 2026-07-24)
 			Optional<List<BlockNode>> partial = bestSoFar(true, numNodes, start, world);
 			if (partial.isPresent()) {
+				lastExit = "exhaustedPartial";
 				Debug.logMessage("Partial path (goal unreachable via move-gen) — advancing "
 						+ partial.get().size() + " nodes toward goal");
 				return partial;
@@ -438,7 +450,8 @@ public class BlockSpacePathFinder {
 			// never assigned.
 			Optional<List<BlockNode>> salvaged =
 					salvage(Optional.empty(), closestToGoal, start, world, "exhausted");
-			if (salvaged.isPresent()) return salvaged;
+			if (salvaged.isPresent()) { lastExit = "exhaustedSalvage"; return salvaged; }
+			lastExit = "ranOut";
 			blockRanOut++;
 			Debug.logWarning("Ran out of nodes (children generated=" + generatedChildren
 					+ " inserted=" + insertedChildren + ")");
@@ -449,6 +462,7 @@ public class BlockSpacePathFinder {
         // bestSoFar, and bestSoFar is a MONOTONE record of heuristic improvement that can
         // decline to move. That is how 105 searches in a row returned a two-node stub.
         Optional<List<BlockNode>> result = bestSoFar(true, numNodes, start, world);
+		lastExit = "stalled";
 		return salvage(result, closestToGoal, start, world, "stalled");
 	}
 
