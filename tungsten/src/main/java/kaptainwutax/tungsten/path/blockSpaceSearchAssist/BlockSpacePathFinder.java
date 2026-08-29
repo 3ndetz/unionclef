@@ -630,7 +630,10 @@ public class BlockSpacePathFinder {
         // (course A depends on the garbage-driven partial paths), so the correct
         // form is gated behind smartMoves: the SmartMoves rework uses correct
         // distances, the legacy blind scan keeps the (buggy but working) behaviour.
-        boolean fix = kaptainwutax.tungsten.TungstenConfig.get().smartMoves;
+        // coarseDistanceIsADistance buys the repair WITHOUT smartMoves' other half -- see that
+        // setting for why the two are worth separating and what the bundle measured.
+        boolean fix = kaptainwutax.tungsten.TungstenConfig.get().smartMoves
+                || kaptainwutax.tungsten.TungstenConfig.get().coarseDistanceIsADistance;
         double xDiff = start.x - n.getPos().x;
         double yDiff = (fix ? start.y : start.x) - n.getPos().y;
         double zDiff = (fix ? start.z : start.x) - n.getPos().z;

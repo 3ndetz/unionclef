@@ -4253,6 +4253,30 @@ public class TungstenConfig {
     public boolean smartMoves = false;
 
     /**
+     * Fix ONLY the arithmetic in BlockSpacePathFinder.getDistFromStartSq, without smartMoves'
+     * other half.
+     *
+     * <p>That function computes {@code start.x - node.y} and {@code start.x - node.z} for the Y
+     * and Z terms -- a copy-paste slip kept deliberately behind smartMoves. It is live whenever
+     * smartMoves is off, which is the shipping default, and it breaks two things at once: the
+     * bestSoFar gate that is supposed to require MIN_DIST_PATH of real progress passes on the
+     * bot's X coordinate instead, so guides that go nowhere reach the physics leg; and salvage()
+     * computes its movedSq from the same call, takes its early return every time, and can never
+     * reach bsStub++ -- which is why that counter read 0 through two passes of hunting.
+     *
+     * <p>smartMoves bundles this repair with a different bestSoFar branch, and measured as a
+     * bundle on the playthrough it is not a win: 3 informative pairs, stall -71.7s at t -0.73,
+     * rungs -1.33, and more shuttling in the fix arm than in the control. The bundle is what the
+     * file's own comment warned about ("correcting it alone regresses the blind-scan search").
+     * So separate the halves and measure the arithmetic on its own -- it is the half that is
+     * unambiguously correct.
+     *
+     * <p>Default false: shipping behaviour does not move until a paired A/B says it should.
+     * Mechanism counter is bsStub, which is unreachable unless this (or smartMoves) is on.
+     */
+    public boolean coarseDistanceIsADistance = false;
+
+    /**
      * Blocks -> ticks for the BLOCK-SPACE search's heuristic (BlockSpacePathFinder).
      *
      * <p>Every edge in that search is priced in TICKS (ActionCosts: a walk step is 4.633),
