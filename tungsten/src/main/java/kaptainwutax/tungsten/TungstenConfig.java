@@ -4295,6 +4295,32 @@ public class TungstenConfig {
     public boolean coarseDistanceIsADistance = true;
 
     /**
+     * Let the wander aim at a cell that EXISTS instead of one at the anchor's height.
+     *
+     * <p>TimeoutWanderTask builds its destination as {@code (anchor.x + cos*r, ANCHOR.Y,
+     * anchor.z + sin*r)} with r up to 120 blocks. The XZ walks a spiral over real terrain and the
+     * Y never moves, so the point lands inside rock or hanging in the air almost every time.
+     * Measured, three runs, {@code wanderTung=picked/driven/unstandable}:
+     *
+     * <pre>
+     *   94/13/u85     164/28/u158     9/9/u9        -- 252 of 267 picks, 94%
+     * </pre>
+     *
+     * <p>Why that costs the run rather than merely wasting a pick: the wander may only choose a
+     * new target while {@code !TungstenHelper.isActive()}, and a search for an unreachable point
+     * keeps that true. So the recovery holds the tick by the thousand, covers half a block, and
+     * cannot try anything else -- which is where two thirds of the playthrough's dead time sits.
+     *
+     * <p>The fix scans for a standable cell in a band around the anchor's height at the chosen XZ
+     * and uses the original point when it finds none, so a pick can get worse only by staying
+     * exactly what it was. Mechanism counter is wanderTargetUnstandable: high in a control arm,
+     * low in a fix arm, or the pair measured nothing.
+     *
+     * <p>Default false until a paired A/B on stall time says otherwise.
+     */
+    public boolean wanderTargetFollowsTheGround = false;
+
+    /**
      * Blocks -> ticks for the BLOCK-SPACE search's heuristic (BlockSpacePathFinder).
      *
      * <p>Every edge in that search is priced in TICKS (ActionCosts: a walk step is 4.633),

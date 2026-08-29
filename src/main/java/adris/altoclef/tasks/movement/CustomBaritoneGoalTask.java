@@ -1063,7 +1063,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         return gp;
     }
 
-    private static boolean standable(net.minecraft.world.World w, int x, int y, int z) {
+    /** Shared with TimeoutWanderTask, which needs the same question about its wander target. */
+    public static boolean standable(net.minecraft.world.World w, int x, int y, int z) {
         return isSolidAt(w, x, y - 1, z) && !isSolidAt(w, x, y, z) && !isSolidAt(w, x, y + 1, z);
     }
 
