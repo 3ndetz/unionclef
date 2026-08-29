@@ -4271,10 +4271,28 @@ public class TungstenConfig {
      * So separate the halves and measure the arithmetic on its own -- it is the half that is
      * unambiguously correct.
      *
-     * <p>Default false: shipping behaviour does not move until a paired A/B says it should.
-     * Mechanism counter is bsStub, which is unreachable unless this (or smartMoves) is on.
+     * <p>ON BY DEFAULT SINCE 2026-08-29, AND THE CASE IS CORRECTNESS PLUS NO-REGRESSION, NOT AN
+     * ESTABLISHED STALL WIN -- say so rather than let the flip imply more than was measured.
+     *
+     * <ul>
+     * <li>The arithmetic is simply wrong: start.x cannot belong in the Y and Z terms, and no
+     *     amount of playthrough variance argues either way about that.
+     * <li>Mechanism, three runs an arm: coarse guides that go nowhere fall from 96/89/109 per run
+     *     to 2/0/0, with bsStub reading 0 in every control arm by construction.
+     * <li>The regression this file warned about DOES NOT REPRODUCE for this half of the lever.
+     *     nav, interleaved A/B, three runs an arm: 18/18 with the fix against 16/18 without, and
+     *     nav_staircase -- the historical "course A", the one named as living on the garbage
+     *     partials -- is 3/3 in BOTH arms. Both failures fell to the control.
+     * <li>The playthrough is NOT established: 8 informative pairs, stall -29s per run at t -0.6.
+     *     Rungs cleared the bar in one sweep of three, and that reading is not quotable here --
+     *     rule 4a2 scores a stall fix on stall time, and rule 4a3 names a directional bias
+     *     favouring whichever arm runs first, which is the fix arm.
+     * </ul>
+     *
+     * <p>smartMoves bundles this repair with a different bestSoFar branch and is a different
+     * question: measured as a bundle it lost rungs and shuttled more. It stays off.
      */
-    public boolean coarseDistanceIsADistance = false;
+    public boolean coarseDistanceIsADistance = true;
 
     /**
      * Blocks -> ticks for the BLOCK-SPACE search's heuristic (BlockSpacePathFinder).
