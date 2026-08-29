@@ -234,6 +234,27 @@ public class PathFinder {
 	 * leaves exactly one node, which needs no world lookup to call a route to nowhere.
 	 */
 	public static volatile int truncCut, truncCutToOneNode;
+	/**
+	 * Did the cut that just happened leave a single node? Read by noteGuideSource to attribute a
+	 * nowhere-guide to the truncation rather than to the search that built it.
+	 *
+	 * <p>ThreadLocal, not a static int: truncateAtBreaks(...) is evaluated as the ARGUMENT to
+	 * noteGuideSource(...), so the two run back to back on one thread, while searches themselves
+	 * run on several. A plain static would attribute one thread's cut to another's guide.
+	 */
+	private static final ThreadLocal<Boolean> CUT_TO_ONE = ThreadLocal.withInitial(() -> Boolean.FALSE);
+	/** Nowhere-guides from the fast planner, split by whether the truncation is what flattened them. */
+	public static volatile int fastNowhereTruncated, fastNowhereOther;
+	/**
+	 * Times the mining shortcut was reached with EVERY planned block already air.
+	 *
+	 * <p>The stall written up at that site: the shortcut trades the physics leg for a break, so
+	 * when there is nothing left to break it skips the leg for no work at all, and nothing walks
+	 * the body through the hole it just made -- mine, clear, return, retry, same truncated path,
+	 * mine again. wallShortcutNeedsAWall guards it; this counts how often the guard MATTERS,
+	 * whether or not it is on.
+	 */
+	public static volatile int wallAlreadyAir;
 	/** Coarse guides that went nowhere, tallied by the exit the coarse search left by. Read as
 	 *  coarseNowhereBy[complete xN exhaustedPartial xN ...]. Bounded like the other name tallies:
 	 *  an unbounded map is a leak, and there are only a handful of exits. */
@@ -536,9 +557,15 @@ public class PathFinder {
 	            if (!world.getBlockState(bp).isAir()) { wallStillThere = true; break; }
 	        }
 	    }
-	    if (!wallStillThere && pendingBreaks != null && !pendingBreaks.isEmpty()
-	            && TungstenConfig.get().wallShortcutNeedsAWall) {
-	        wallSkipRefused++;
+	    // ⛔ COUNT THE CASE, NOT THE FLAG. This tally used to sit behind wallShortcutNeedsAWall,
+	    // so with the guard off it read 0 and said nothing -- which reads exactly like "the wall is
+	    // always still there". That is the third counter in this file family blinded the same way
+	    // (bsStub was unreachable behind salvage()'s early return, and read 0 through two passes of
+	    // hunting). A control arm must report how much material the guard WOULD have had, so the
+	    // occurrence is counted unconditionally and the REFUSAL separately.
+	    if (!wallStillThere && pendingBreaks != null && !pendingBreaks.isEmpty()) {
+	        wallAlreadyAir++;
+	        if (TungstenConfig.get().wallShortcutNeedsAWall) wallSkipRefused++;
 	    }
 	    if (pendingBreaks != null && !pendingBreaks.isEmpty()
 	            && (wallStillThere || !TungstenConfig.get().wallShortcutNeedsAWall)
@@ -1497,7 +1524,11 @@ public class PathFinder {
                     && target != null && first.squaredDistanceTo(target) > reach;
             if (fromFast) {
                 guideFromFast++;
-                if (nowhere) guideFromFastNowhere++;
+                if (nowhere) {
+                    guideFromFastNowhere++;
+                    if (Boolean.TRUE.equals(CUT_TO_ONE.get())) fastNowhereTruncated++;
+                    else fastNowhereOther++;
+                }
             } else {
                 guideFromCoarse++;
                 if (nowhere) {
@@ -1536,6 +1567,7 @@ public class PathFinder {
      *  the live world can't be simulated through the missing/extra blocks. Truncates at
      *  whichever comes first and records the break/place plan for that segment. */
     private static Optional<List<BlockNode>> truncateAtBreaks(Optional<List<BlockNode>> path) {
+        CUT_TO_ONE.set(Boolean.FALSE);
         if (path.isEmpty()) {
             return path;
         }
@@ -1546,7 +1578,7 @@ public class PathFinder {
                 pendingPlaces = null;
                 Debug.logMessage("Path needs mining: " + pendingBreaks.size() + " block(s) at segment end");
                 truncCut++;
-                if (i <= 1) truncCutToOneNode++;
+                if (i <= 1) { truncCutToOneNode++; CUT_TO_ONE.set(Boolean.TRUE); }
                 return Optional.of(new ArrayList<>(list.subList(0, Math.max(i, 1))));
             }
             if (list.get(i).hasPlaces()) {
@@ -1554,7 +1586,7 @@ public class PathFinder {
                 pendingBreaks = null;
                 Debug.logMessage("Path needs bridging: " + pendingPlaces.size() + " block(s) at segment end");
                 truncCut++;
-                if (i <= 1) truncCutToOneNode++;
+                if (i <= 1) { truncCutToOneNode++; CUT_TO_ONE.set(Boolean.TRUE); }
                 return Optional.of(new ArrayList<>(list.subList(0, Math.max(i, 1))));
             }
         }
