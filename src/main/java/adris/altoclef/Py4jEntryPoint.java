@@ -2680,6 +2680,7 @@ public class Py4jEntryPoint {
         adris.altoclef.tasks.movement.TimeoutWanderTask.wanderMovedCm = 0;
         adris.altoclef.tasks.movement.TimeoutWanderTask.wanderCheckOk = 0;
         adris.altoclef.tasks.movement.TimeoutWanderTask.wanderCheckTrip = 0;
+        adris.altoclef.control.InputControls.clearForwardStealers();
         adris.altoclef.tasks.movement.TimeoutWanderTask.wanderFailPeak = 0;
         adris.altoclef.tasks.movement.TimeoutWanderTask.wanderResetDenied = 0;
         adris.altoclef.tasks.movement.TimeoutWanderTask.wanderKeysKept = 0;

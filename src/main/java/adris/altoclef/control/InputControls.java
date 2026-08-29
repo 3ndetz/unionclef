@@ -74,6 +74,14 @@ public class InputControls {
             java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
 
     /** Who released MOVE_FORWARD under the close walk, commonest first. */
+    /** Zeroed with the run counters. Without this the tally is a LIFETIME total, and this repo
+     *  has already read one of those as a per-run figure once ("inRange=2222 clicked=0"). */
+    public static void clearForwardStealers() {
+        synchronized (forwardStealers) {
+            forwardStealers.clear();
+        }
+    }
+
     public static String forwardStealers() {
         synchronized (forwardStealers) {
             return forwardStealers.entrySet().stream()
@@ -94,7 +102,14 @@ public class InputControls {
         // Widened to cover the walker as well; the stack frame it records is the answer to "which
         // two writers are fighting", which is the question that matters and the one I was about to
         // guess at.
+        // ⛔ AND IT COUNTED THE CALL, NOT THE THEFT. Releasing a key nobody is holding is a no-op,
+        // and this tally charged it as a steal all the same -- which is how TimeoutWanderTask:256
+        // came to read ten thousand while wanderKeysKept read zero. Ask whether the key was
+        // actually DOWN, so the number means "a press was taken away" rather than "release() was
+        // called". Same lesson as bsStub and wallSkipRefused: a counter must measure the event,
+        // not the code path near it.
         if (input == Input.MOVE_FORWARD
+                && isHeldDown(input)
                 && (adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDrivingNow()
                     || kaptainwutax.tungsten.task.BlockPathWalker.isRunning())) {
             try {
