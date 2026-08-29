@@ -207,12 +207,33 @@ public class PathFinder {
 	 * guides is NOT the exit BlockSpacePathFinder.salvage() instruments -- and there are exactly
 	 * two producers. This says which, and it is the whole of the next fix.
 	 *
-	 * <p>Counted in BLOCKS against MIN_DIST_PATH, never in nodes: stringPull() collapses a healthy
-	 * thirty-block straight walk to two nodes, so a node count cannot tell a stub from a corridor.
-	 * That mistake has already been made once here and is written up at salvage().
+	 * <p>Counted in BLOCKS, never in nodes: stringPull() collapses a healthy thirty-block straight
+	 * walk to two nodes, so a node count cannot tell a stub from a corridor. That mistake has
+	 * already been made once here and is written up at salvage().
+	 *
+	 * <p>⛔ AND A SHORT GUIDE IS ONLY A STUB IF THE GOAL IS FURTHER THAN IT. The first version of
+	 * this counter asked only whether the guide spanned MIN_DIST_PATH, and that is the same
+	 * mistake one level up: a half-block guide to a half-block goal is a CORRECT plan, and the
+	 * stall profile is full of them. Measured before the fix, run3 read 32 of 39 coarse guides
+	 * "nowhere" with truncCut=1/0 and bestSoFar's own gate at five blocks -- neither could have
+	 * produced them, so they were short plans to near goals being miscounted as defects. Both
+	 * halves are needed: the guide goes nowhere AND there was somewhere to go.
 	 */
 	public static volatile int guideFromFast, guideFromFastNowhere;
 	public static volatile int guideFromCoarse, guideFromCoarseNowhere;
+	/**
+	 * THE SHARED STEP BOTH PRODUCERS PASS THROUGH, AND WHAT IT LEAVES BEHIND.
+	 *
+	 * <p>Read as {@code trunc=<cuts>/<cutsToOneNode>}. guideSrc says the nowhere-guides come from
+	 * BOTH searches at once -- coarse 91-99% and fast up to 87% in the stall profile -- and a
+	 * defect in two independent searches at the same time is not two defects, it is one step they
+	 * share. {@link #truncateAtBreaks} is that step: it cuts the route at the first cell needing a
+	 * break or a place and keeps {@code subList(0, max(i, 1))}, so a route whose FIRST hop needs
+	 * mining or bridging -- the normal case for a bot that mines its way forward -- comes back as
+	 * the start cell alone. Counted by INDEX rather than by geometry on purpose: a cut at i &lt;= 1
+	 * leaves exactly one node, which needs no world lookup to call a route to nowhere.
+	 */
+	public static volatile int truncCut, truncCutToOneNode;
 	/** The shape (dx,dy,dz) of the hop the physics never crossed, tallied over samples. */
 	public static final java.util.Map<String, Integer> gvpHopShapes =
 			java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
@@ -1423,7 +1444,7 @@ public class PathFinder {
                         || kaptainwutax.tungsten.TungstenConfig.get().fastGuidePartial;
                 if (acceptable && fast.path.size() >= 2) {
                     return noteGuideSource(
-                            truncateAtBreaks(Optional.of(fast.toBlockNodes(goal, player))), true, world);
+                            truncateAtBreaks(Optional.of(fast.toBlockNodes(goal, player))), true, world, target);
                 }
             } catch (Exception e) {
                 Debug.logWarning("Fast block guide failed, falling back: " + e.getMessage());
@@ -1431,25 +1452,30 @@ public class PathFinder {
         }
         return noteGuideSource(truncateAtBreaks(
                 kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(world, target, player)),
-                false, world);
+                false, world, target);
     }
 
     /**
      * Record which search built this guide and whether walking it takes the bot anywhere.
      *
      * <p>Pure bookkeeping: the guide is handed back untouched. See the counters at
-     * {@link #guideFromFast} for what the numbers are for. "Went nowhere" is the same test
-     * salvage() settled on -- the distance from the guide's FIRST cell to its LAST, against
-     * MIN_DIST_PATH -- because that is the question the physics leg actually asks of it.
+     * {@link #guideFromFast} for what the numbers are for. "Went nowhere" needs BOTH halves: the
+     * guide's first cell to its last is within MIN_DIST_PATH, and the GOAL is further away than
+     * that. Without the second half a correct plan to a neighbouring cell is counted as a defect.
+     *
+     * <p>Note MIN_DIST_PATH here is this class's 1.8, not BlockSpacePathFinder's 5 -- two
+     * constants, one name, two files. Whichever is meant, say which.
      */
     private static Optional<List<BlockNode>> noteGuideSource(
-            Optional<List<BlockNode>> guide, boolean fromFast, WorldView world) {
+            Optional<List<BlockNode>> guide, boolean fromFast, WorldView world, Vec3d target) {
         try {
             if (guide.isEmpty() || guide.get().isEmpty()) return guide;
             List<BlockNode> g = guide.get();
             Vec3d first = g.get(0).getPos(true, world);
             Vec3d last = g.get(g.size() - 1).getPos(true, world);
-            boolean nowhere = first.squaredDistanceTo(last) <= MIN_DIST_PATH * MIN_DIST_PATH;
+            double reach = MIN_DIST_PATH * MIN_DIST_PATH;
+            boolean nowhere = first.squaredDistanceTo(last) <= reach
+                    && target != null && first.squaredDistanceTo(target) > reach;
             if (fromFast) {
                 guideFromFast++;
                 if (nowhere) guideFromFastNowhere++;
@@ -1466,7 +1492,7 @@ public class PathFinder {
     private Optional<List<BlockNode>> findBlockPath(WorldView world, BlockNode start, Vec3d target, PlayerEntity player) {
         return noteGuideSource(truncateAtBreaks(
                 kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(world, start, target, player)),
-                false, world);
+                false, world, target);
     }
 
     /** Planned mining positions for the wall right past the current block path
@@ -1490,12 +1516,16 @@ public class PathFinder {
                 pendingBreaks = new ArrayList<>(list.get(i).toBreak);
                 pendingPlaces = null;
                 Debug.logMessage("Path needs mining: " + pendingBreaks.size() + " block(s) at segment end");
+                truncCut++;
+                if (i <= 1) truncCutToOneNode++;
                 return Optional.of(new ArrayList<>(list.subList(0, Math.max(i, 1))));
             }
             if (list.get(i).hasPlaces()) {
                 pendingPlaces = new ArrayList<>(list.get(i).toPlace);
                 pendingBreaks = null;
                 Debug.logMessage("Path needs bridging: " + pendingPlaces.size() + " block(s) at segment end");
+                truncCut++;
+                if (i <= 1) truncCutToOneNode++;
                 return Optional.of(new ArrayList<>(list.subList(0, Math.max(i, 1))));
             }
         }
