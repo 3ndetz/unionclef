@@ -653,6 +653,28 @@ def main():
     # in single digits is not a slow world, it is a machine that cannot answer.
     # Standing down BEFORE the window also gives back the ten minutes.
     SANE_REF_FPS = 12.0
+    # ⛔ A COLD CLIENT IS NOT A STARVED MACHINE, AND STANDING DOWN ON ONE THROWS AWAY A RUN.
+    #
+    # deploy_jar.sh recreates the clients and waits for py4j, but py4j answering is not the same
+    # as the renderer being warm -- the client is still loading chunks and building meshes for a
+    # minute or two afterwards. Chain build + deploy + sweep in one command, as an autonomous pass
+    # does, and the FIRST run reliably reads 7-11 fps and is refused. That cost four runs in one
+    # session, and every one of them looked like "the machine cannot answer today" when the
+    # machine was fine ninety seconds later: 23 fps on the same client, measured.
+    #
+    # So give it those ninety seconds before believing the number. A machine that really is
+    # starved still fails -- it just fails after a wait instead of discarding the window.
+    if fps_ref is not None and fps_ref < SANE_REF_FPS:
+        print(f"  fps {fps_ref:.0f} below {SANE_REF_FPS} — letting the client warm up")
+        for _ in range(6):
+            time.sleep(15)
+            try:
+                fps_ref = float(py4j("perf")["p"].get("fps") or 0)
+            except Exception:
+                break
+            if fps_ref >= SANE_REF_FPS:
+                print(f"  warmed to {fps_ref:.0f} fps")
+                break
     if fps_ref is not None and fps_ref < SANE_REF_FPS:
         raise StandDown(f"client at {fps_ref:.0f} fps before the run even starts"
                         f" (< {SANE_REF_FPS}) — the machine cannot answer today")
