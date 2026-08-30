@@ -424,12 +424,19 @@ public class TungstenHelper {
     public static volatile int lockTicks, lockSearching, lockExecuting, lockWalking,
             lockQueue, lockIdle, lockMoved;
 
+    /** Locks released because nothing was running behind them. Mechanism counter for
+     *  {@link kaptainwutax.tungsten.TungstenConfig#idleLockIsNotALock}; 0 in a control arm. */
+    public static volatile int lockDroppedIdle;
+
+    /** Consecutive ticks this lock has sat with no search, executor, queue or walker behind it. */
+    private static int idleStreak;
+
     private static net.minecraft.util.math.Vec3d lockLastPos;
 
     /** Called once per client tick from AltoClef.onClientTick. Reads only; presses nothing. */
     public static void tickLockAnatomy() {
         try {
-            if (!isLocked()) { lockLastPos = null; return; }
+            if (!isLocked()) { lockLastPos = null; idleStreak = 0; return; }
             lockTicks++;
             boolean searching = TungstenModDataContainer.PATHFINDER.active.get();
             boolean exec = TungstenModDataContainer.isExecutorRunning();
@@ -439,7 +446,30 @@ public class TungstenHelper {
             if (exec) lockExecuting++;
             if (walk) lockWalking++;
             if (queue) lockQueue++;
-            if (!searching && !exec && !walk && !queue) lockIdle++;
+            boolean idle = !searching && !exec && !walk && !queue;
+            if (idle) lockIdle++;
+            // A LOCK THAT IS COVERING NOTHING IS NOT COVERING A GAP. See
+            // TungstenConfig.idleLockIsNotALock: held here, the lock only makes Nav.isPathing()
+            // answer yes for a body nothing is driving, which both denies the progress checker
+            // its reset and blocks the wander from picking a new destination. Measured at
+            // stallWhy: the lock is held on 100.0% of stalled ticks, 4 runs out of 4.
+            //
+            // COUNT ALWAYS, ACT ONLY WHEN FLAGGED -- the rule isLocked() states a few lines
+            // down and paid for. idleStreak accrues either way so the control arm can be read.
+            if (idle) idleStreak++; else idleStreak = 0;
+            if (idleStreak >= kaptainwutax.tungsten.TungstenConfig.get().idleLockGraceTicks
+                    && kaptainwutax.tungsten.TungstenConfig.get().idleLockIsNotALock) {
+                lockDroppedIdle++;
+                idleStreak = 0;
+                // SCORE IT THE WAY AN EXPIRY WOULD. Dropping early must not buy the lock an
+                // escape from the accounting it would have faced at its 30-second end, or the
+                // barren streak would read lower with the fix on for no reason but bookkeeping.
+                scoreExpiredLock();
+                lockUntil = 0;
+                lockedEntity = null;
+                lockLastPos = null;
+                return;
+            }
             // Did the BODY move this tick? A driver that runs and achieves nothing reads the same
             // as no driver at all in every counter above, and they need different fixes.
             var self = AltoClef.getInstance().getPlayer();

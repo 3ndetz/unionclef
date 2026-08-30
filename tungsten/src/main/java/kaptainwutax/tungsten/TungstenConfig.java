@@ -3825,6 +3825,57 @@ public class TungstenConfig {
     public boolean barrenGateIsForEntityLocksOnly = true;
 
     /**
+     * Whether a lock that is covering NOTHING is dropped instead of held to its 30-second end.
+     *
+     * <p>The lock exists to say "tungsten owns the body between path segments", and between
+     * segments is a gap of a few ticks. It is currently also held while nothing whatsoever is
+     * running -- no search, no executor, no queue, no walker -- and in that state it is not
+     * covering a gap, it is only making {@code Nav.isPathing()} answer yes to a body that
+     * nothing is driving.
+     *
+     * <h2>Why this is the core fix and not a timeout patch</h2>
+     *
+     * Measured with {@code stallWhy}, sampled inside the wander's own denial branch so its
+     * denominator is a stalled tick by construction:
+     *
+     * <pre>
+     *   run   denied   lock   queue  walker    idle/total lock ticks
+     *    1     1182    1182     0      0        1482/2809  (52%)
+     *    2     3321    3321     0      0        2404/4504  (53%)
+     *    3     1435    1435     0      0        1822/3291  (55%)
+     *    4     3517    3517     0      0        3328/7372  (45%)
+     * </pre>
+     *
+     * The lock is held on 100.0% of stalled ticks -- equal to the denominator exactly, in all
+     * four runs -- while the queue and the walker are zero in every one. About half of all
+     * locked time has nothing running at all.
+     *
+     * <p>Two things follow from the lock being held there, and both are the stall: the wander
+     * cannot pick a new destination, because that is gated on {@code !isActive()}; and the
+     * progress checker cannot reset, because that is gated on {@code isPathing()}. The give-up
+     * branch that should break the cycle cannot, because {@code Nav.cancel()} has an empty body
+     * -- {@code wanderTripBlocked} read 17/26/12/41, meaning every trip found the re-pick still
+     * refused.
+     *
+     * <p>Dropping an idle lock restores both. It does not touch what the lock is FOR: a genuine
+     * gap between path segments is a few ticks and never reaches the grace below.
+     *
+     * <p>⛔ NOT A SUBSTITUTE FOR SCORING NON-ENTITY LOCKS. {@code scoreExpiredLock} returns
+     * early unless the lock was taken on an entity, so a lock on a {@code Vec3d} -- which is
+     * what the wander takes -- is never scored barren and {@code MAX_BARREN_LOCKS} is
+     * unreachable for it. That is a separate hole, still open; this flag stops the idle lock
+     * from lying about movement, it does not make the barren limit live.
+     *
+     * <p>Mechanism counter {@code lockDroppedIdle}: locks released for idleness. Zero in a
+     * control arm by construction, because the release is what the flag gates.
+     */
+    public boolean idleLockIsNotALock = false;
+
+    /** Consecutive idle ticks a lock may sit through before it is dropped. A real gap between
+     *  path segments is a few ticks; this is 2 seconds, the same grace the stall check uses. */
+    public int idleLockGraceTicks = 40;
+
+    /**
      * Whether a mining target further than 160 blocks is refused outright.
      *
      * <p>Sampled during a sixteen-minute ladder stall: the bot stood at (90.9, 127.0, -66.6)
