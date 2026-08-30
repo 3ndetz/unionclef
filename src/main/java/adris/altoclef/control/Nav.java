@@ -180,6 +180,60 @@ public final class Nav {
     public static volatile int navSearchOnly;
 
     /**
+     * Which of {@link #isPathing()}'s five primitive sources was true, sampled on a STALLED tick.
+     *
+     * <p>Read as {@code stallWhy=lock/search/exec/queue/walker} against {@code wanderDenied=d/t}.
+     * The counters are independent, not a partition: more than one source can hold at once, so
+     * they are five yes/no tallies over the same denominator, and they can sum past it.
+     *
+     * <h2>The question these exist to answer</h2>
+     *
+     * The wander holds the tick for thousands of ticks, covers half a block, and on 83-94% of
+     * those ticks {@link #isPathing()} says a route is being followed while the body does not
+     * move. That much is measured across six runs. What was never asked is WHICH of the five
+     * things {@code isPathing()} ORs together is the one saying yes, and the five have entirely
+     * different meanings:
+     *
+     * <ul>
+     *   <li>{@code lock} -- {@code TungstenHelper.isLocked()}, which is deliberately true BETWEEN
+     *       path segments, so it reports "pathing" while nothing at all is running;
+     *   <li>{@code search} -- the pathfinder is searching and has not produced a route;
+     *   <li>{@code exec} -- the executor is running a route;
+     *   <li>{@code queue} / {@code walker} -- the two drives that actually press keys.
+     * </ul>
+     *
+     * A stall concentrated in {@code lock} or {@code search} is a stall in which NOTHING is
+     * driving the body and the flag merely says otherwise; one concentrated in {@code queue} or
+     * {@code walker} is a drive that holds the body and fails to move it. Those need opposite
+     * fixes, and no measurement in this repository separates them.
+     *
+     * <p>⛔ SAMPLED AT THE DENIAL, NOT AT THE CALL. Nav's earlier {@link #navSearchOnly} counts
+     * ticks on which somebody happened to CALL {@code isExecutingRoute}, which makes it a tally of
+     * a code path rather than of the state -- the same blinding that made four counters in this
+     * session read zero for conditions that were occurring. This one is incremented from the
+     * wander's own stall branch, so its denominator is a stalled tick by construction.
+     */
+    public static volatile int stallWhyLock, stallWhySearch, stallWhyExec, stallWhyQueue, stallWhyWalker;
+
+    /**
+     * Tally the primitive sources of {@link #isPathing()} for one tick already known to be stalled.
+     *
+     * <p>Call ONLY from a site that has established the body is not moving; the counters mean
+     * nothing over a denominator of ordinary ticks.
+     */
+    public static void noteStallSources() {
+        try {
+            if (adris.altoclef.util.helpers.TungstenHelper.isLocked()) stallWhyLock++;
+            if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()) stallWhySearch++;
+            if (kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) stallWhyExec++;
+            if (kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) stallWhyQueue++;
+            if (kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) stallWhyWalker++;
+        } catch (Throwable ignored) {
+            // An instrument must never be the reason a run dies.
+        }
+    }
+
+    /**
      * Is a route being FOLLOWED right now -- as opposed to merely searched for?
      *
      * <h2>Why the distinction is worth a second method</h2>

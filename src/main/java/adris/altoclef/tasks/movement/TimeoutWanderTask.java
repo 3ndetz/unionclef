@@ -248,6 +248,11 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 progressChecker.reset();
             } else {
                 wanderResetDenied++;
+                // NAME THE SOURCE, DO NOT GUESS IT. This branch IS the stall: nav says it is
+                // pathing and the body has not moved for STALL_MOVE_GRACE ticks. Which of the
+                // five things isPathing() ORs together is saying yes decides what the fix even
+                // looks like -- see Nav.noteStallSources.
+                Nav.noteStallSources();
             }
         }
         if (WorldHelper.isInNetherPortal()) {
@@ -322,6 +327,22 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
                 return _unstuckTask;
             }
             // Not in annoying block — force baritone to recompute
+            // ⛔ AND Nav.cancel() HAS AN EMPTY BODY. Read it: the method is a deliberate,
+            // documented no-op, because the version that stopped tungsten killed the search on
+            // the same tick it was started. So in the ordinary case -- no mob adjacent, not
+            // wedged in a fence -- the ENTIRE give-up branch of the wander is stuckCheck.reset()
+            // and nothing else. It does not re-pick a destination, does not stop the search, and
+            // does not drop the lock.
+            //
+            // Which matters because the re-pick below is gated on
+            // !isExecutingRoute() && !TungstenHelper.isActive(): if the thing holding the bot
+            // still holds it after the trip, the next tick stalls in exactly the same state, and
+            // the 41 trips a run buy nothing. tripBlocked is that question as a number -- was
+            // the re-pick still refused at the moment the give-up fired -- and it is sampled
+            // HERE rather than inferred from the gate, so its denominator is a trip.
+            if (Nav.isExecutingRoute() || adris.altoclef.util.helpers.TungstenHelper.isActive()) {
+                wanderTripBlocked++;
+            }
             Nav.cancel();
             stuckCheck.reset();
         }
@@ -513,6 +534,10 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
      * seconds, it will never get there and no amount of unsealing the exit will matter.
      */
     public static volatile int wanderCheckOk, wanderCheckTrip, wanderFailPeak;
+
+    /** Give-up trips that fired while the re-pick was still blocked. Read as wanderTripBlocked
+     *  against wanderChk's trip half; equal counts mean the give-up branch changes nothing. */
+    public static volatile int wanderTripBlocked;
 
     /**
      * Ground covered, in centimetres, on ticks where THIS task was the one running. Read as
