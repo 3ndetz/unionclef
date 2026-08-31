@@ -3911,6 +3911,47 @@ public class TungstenConfig {
      */
     public boolean mineTheBlockInTheWay = false;
 
+    /**
+     * Whether the fire-extinguish cleanup releases the attack key ONLY when it was putting out a fire.
+     *
+     * <h2>The line</h2>
+     *
+     * <pre>
+     *   if (fireBlock != null) { putOutFire(...); wasPuttingOutFire = true; }
+     *   else {
+     *       // Stop putting stuff out if we no longer need to put out a fire.
+     *       mod.getInputControls().release(Input.CLICK_LEFT);
+     *       wasPuttingOutFire = false;
+     *   }
+     * </pre>
+     *
+     * The comment says "if we no longer NEED to", and {@code wasPuttingOutFire} is maintained two
+     * lines away and never consulted -- so the release fires on every tick the bot is not standing
+     * in fire, which is nearly all of them.
+     *
+     * <h2>What it costs</h2>
+     *
+     * The attack key is how tungsten mines: it aims, presses, and vanilla digs whatever the
+     * crosshair is on. Measured with the key held and the aim on the planned cell:
+     *
+     * <pre>
+     *   playthrough   mine = 135 hits / 4180 ticks = 3.1%
+     *   one run       mine = 0/898 with the aim on target 899 of 903 ticks
+     *   nav_break     mine = 30/11 = 73%   -- same code, nothing else running
+     * </pre>
+     *
+     * and the caller-naming tally answered the question outright:
+     * {@code attackThief=[MobDefenseChain:645 x299]} against {@code mine=32/265} in the same run.
+     *
+     * <p>Same silhouette as the MOVE_FORWARD theft this repo already paid for: a second per-tick
+     * writer quietly undoing the first, invisible to every counter that charged CALLS rather than
+     * THEFTS.
+     *
+     * <p>Mechanism counter {@code fireReleaseSkipped}: releases NOT performed because no fire was
+     * being put out. Zero in a control arm, because skipping is what the flag gates.
+     */
+    public boolean fireReleaseNeedsFire = false;
+
     /** Consecutive idle ticks a lock may sit through before it is dropped. A real gap between
      *  path segments is a few ticks; this is 2 seconds, the same grace the stall check uses. */
     public int idleLockGraceTicks = 40;

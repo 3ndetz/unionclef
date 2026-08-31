@@ -350,6 +350,11 @@ public class MobDefenseChain extends SingleTaskChain {
     private static final double BOW_MIN_RANGE = 5.0;
     private Entity targetEntity;
     private boolean doingFunkyStuff = false;
+
+    /** Releases of CLICK_LEFT skipped because no fire was being put out. Mechanism counter for
+     *  {@link kaptainwutax.tungsten.TungstenConfig#fireReleaseNeedsFire}; 0 in a control arm. */
+    public static volatile int fireReleaseSkipped = 0;
+
     private boolean wasPuttingOutFire = false;
     private CustomBaritoneGoalTask runAwayTask;
     /** Flight needs a plan B. See the flee branch for what happens without one. */
@@ -642,7 +647,23 @@ public class MobDefenseChain extends SingleTaskChain {
             wasPuttingOutFire = true;
         } else {
             // Stop putting stuff out if we no longer need to put out a fire.
-                            mod.getInputControls().release(Input.CLICK_LEFT);
+            // ⛔ AND ONLY IF WE WERE. This released CLICK_LEFT on EVERY tick the bot was not
+            // standing in fire, which is nearly all of them -- the comment says "if we no longer
+            // NEED to" and wasPuttingOutFire is set two lines up and was never read.
+            //
+            // The attack key is how tungsten mines. Measured with the key held and the aim on the
+            // planned cell: 135 hits in 4180 ticks (3.1%) across the playthrough, one run at
+            // 0/898 with the aim on target 899 times out of 903 -- and 73% on nav_break, where
+            // this chain has nothing to do. The caller-naming tally named this line directly,
+            // attackThief=[MobDefenseChain:645 x299] against mine=32/265 in the same run.
+            //
+            // Same shape as the MOVE_FORWARD theft already recorded here: a second per-tick
+            // writer undoing the first, invisible to counters that charge calls, not thefts.
+            if (wasPuttingOutFire || !kaptainwutax.tungsten.TungstenConfig.get().fireReleaseNeedsFire) {
+                mod.getInputControls().release(Input.CLICK_LEFT);
+            } else {
+                fireReleaseSkipped++;
+            }
             wasPuttingOutFire = false;
         }
 
