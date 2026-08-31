@@ -82,6 +82,37 @@ public class InputControls {
         }
     }
 
+    /** Who released CLICK_LEFT while the miner was holding it, commonest first. */
+    public static final java.util.Map<String, Integer> attackStealers =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+
+    /** Is tungsten's miner actually running this tick? Never throws; an instrument must not. */
+    private static boolean minerRunningNow() {
+        try {
+            var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            return ex != null && ex.isMiningNow();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /** Zeroed with the run counters, for the same reason forwardStealers is. */
+    public static void clearAttackStealers() {
+        synchronized (attackStealers) {
+            attackStealers.clear();
+        }
+    }
+
+    public static String attackStealers() {
+        synchronized (attackStealers) {
+            return attackStealers.entrySet().stream()
+                    .sorted((a, b) -> b.getValue() - a.getValue())
+                    .limit(5)
+                    .map(e -> e.getKey() + "x" + e.getValue())
+                    .reduce((a, b) -> a + " " + b).orElse("(none)");
+        }
+    }
+
     public static String forwardStealers() {
         synchronized (forwardStealers) {
             return forwardStealers.entrySet().stream()
@@ -108,6 +139,30 @@ public class InputControls {
         // actually DOWN, so the number means "a press was taken away" rather than "release() was
         // called". Same lesson as bsStub and wallSkipRefused: a counter must measure the event,
         // not the code path near it.
+        // ⛔ AND THE SAME QUESTION FOR THE ATTACK KEY, WHICH IS WHERE MINING DIES.
+        // Measured: with the key pressed and the aim on the planned cell, vanilla breaks on 2-5%
+        // of ticks in the playthrough (mine=14/784, 88/1805) while the miner is genuinely running
+        // (stallMiner=1143/6, 2260/6) -- and the SAME code mines fine in isolation on nav_break
+        // (mine=30/11). Something in the playthrough takes the key that the miner holds, exactly
+        // as something took MOVE_FORWARD from the walker below.
+        //
+        // Same two rules this tally already learned: only count a real theft (isHeldDown), and
+        // only while the miner is actually running, so the denominator is a tick that mattered.
+        if (input == Input.CLICK_LEFT && isHeldDown(input) && minerRunningNow()) {
+            try {
+                for (StackTraceElement el : new Throwable().getStackTrace()) {
+                    String cn = el.getClassName();
+                    if (cn.endsWith("InputControls")) continue;
+                    String key = cn.substring(cn.lastIndexOf('.') + 1) + ":" + el.getLineNumber();
+                    synchronized (attackStealers) {
+                        attackStealers.merge(key, 1, Integer::sum);
+                    }
+                    break;
+                }
+            } catch (Exception ignored) {
+                // naming the caller must never break the control it rides on
+            }
+        }
         if (input == Input.MOVE_FORWARD
                 && isHeldDown(input)
                 && (adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDrivingNow()
