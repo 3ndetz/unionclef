@@ -1301,7 +1301,19 @@ if __name__ == "__main__":
     _signal.signal(_signal.SIGTERM, lambda *_: (_ for _ in ()).throw(SystemExit(143)))
     _peers = quiet_the_box()
     try:
-        sys.exit(0 if (sweep(rep, need) if rep > 1 else main()) else 1)
+        if rep > 1:
+            sys.exit(0 if sweep(rep, need) else 1)
+        # ⛔ A STANDALONE RUN MUST PRINT THE SAME MARKER sweep() DOES, OR ITS LOG IS UNSCORABLE.
+        # paired_ab.py finds run boundaries by splitting on "=== RUN N/M ===" alone -- a marker
+        # sweep()'s own loop prints every iteration, unconditionally, but this path never did.
+        # Discovered by tracing the workflow init_arm_base() exists FOR (one run per short
+        # session, output appended into one log): with no marker at all, re.split finds zero
+        # matches, the whole file becomes a SINGLE unsplit blob, and every run but the last is
+        # silently invisible to the scorer -- not an error, just nothing. The total is not
+        # knowable from inside one standalone call, so it is self-referential (N/N); nothing
+        # downstream reads the denominator, only the run number, which this reports honestly.
+        print(f"=========== RUN {RUN_SEQ[0]}/{RUN_SEQ[0]} ===========")
+        sys.exit(0 if main() else 1)
     except StandDown as e:
         print(f"  GAMER_SMOKE: INVALID — {e}")
         sys.exit(2)
