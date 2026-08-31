@@ -50,3 +50,6 @@ deploy/runner/artifacts/
 # per-machine: the GPU probe wrote down that a client cannot render here
 deploy/.gpu_unusable
 ab*.log
+
+# Agent memory mounted into the workspace -- one original lives outside this repo.
+memory/
