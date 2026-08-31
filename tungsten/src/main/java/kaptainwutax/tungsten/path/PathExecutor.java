@@ -595,11 +595,23 @@ public class PathExecutor {
 
         Vec3d eye = player.getEyePos();
         Vec3d center = Vec3d.ofCenter(target);
-        if (breakingTicks++ > 300 || eye.squaredDistanceTo(center) > 4.5 * 4.5) {
+        // DECIDE WHICH HALF BEFORE THE INCREMENT, NOT AFTER. The guard used to read
+        // `breakingTicks++ > 300 || out of reach`, and re-testing breakingTicks inside the block
+        // is off by one: at exactly 300 the guard falls through to the reach test, the
+        // post-increment leaves 301 behind, and an out-of-reach abort would be filed as a
+        // timeout. Naming both halves up front costs one pure distance call and cannot drift.
+        boolean timedOut = breakingTicks++ > 300;
+        boolean outOfReach = eye.squaredDistanceTo(center) > 4.5 * 4.5;
+        if (timedOut || outOfReach) {
             // SAY WHICH HALF. "timeout or out of reach" is two different failures wearing one
             // message, and telling them apart by eye cost a whole diagnosis pass: one means the
             // watchdog expired, the other means the bot is standing in the wrong place, and they
             // have opposite fixes.
+            // AND COUNT IT, DO NOT ONLY LOG IT. The comment above says to tell the two halves
+            // apart, and the log does -- but only for a human reading a trace. The verdict line
+            // is where a rate becomes visible across runs, and "how often does mining burn its
+            // whole watchdog and give up" is a number no counter in this project carried.
+            if (timedOut) breakAbortTimeout++; else breakAbortReach++;
             Debug.logMessage(String.format(
                     "Mining aborted: ticks=%d dist=%.2f target=%s eye=(%.2f,%.2f,%.2f)",
                     breakingTicks, Math.sqrt(eye.squaredDistanceTo(center)),
@@ -671,7 +683,21 @@ public class PathExecutor {
             if (look instanceof net.minecraft.util.hit.BlockHitResult miss
                     && look.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
                 breakAimedElsewhere++;
-                lastBreakMiss = miss.getBlockPos().toShortString() + "!=" + target.toShortString()
+                // ⛔ SPLIT "AIM STILL TRAVELLING" FROM "AIM ARRIVED AT A WALL". Both look like a
+                // miss and they need opposite fixes. With the residual near zero the crosshair has
+                // CONVERGED and still reports a different cell, which can only mean a nearer block
+                // is on the ray -- the plan is asking to mine something occluded by something else
+                // it has not cleared yet. With a large residual the aim is merely in transit and
+                // the next few ticks will fix it by themselves.
+                //
+                // Named by a sample before it was counted: breakMiss read
+                // -3,79,-827 != -1,79,-827 @dy0/dp0 -- same row, two cells apart, zero aim error.
+                if (Math.abs(dYaw) < 2.0f && Math.abs(dPitch) < 2.0f) breakOccluded++;
+                else breakAimInTransit++;
+                // NO SPACES: the verdict line is space-delimited and BlockPos.toShortString()
+                // returns "x, y, z", which truncated this field to "259," on its first run.
+                lastBreakMiss = miss.getBlockPos().toShortString().replace(", ", ",")
+                        + "!=" + target.toShortString().replace(", ", ",")
                         + "@dy" + String.format("%.0f", Math.abs(dYaw))
                         + "/dp" + String.format("%.0f", Math.abs(dPitch));
             } else {
@@ -696,6 +722,29 @@ public class PathExecutor {
 
     /** Last crosshair-vs-plan disagreement, with the residual aim error. @see #breakOnTarget */
     public static volatile String lastBreakMiss = "-";
+
+    /**
+     * How a mining attempt ended when it ended badly. Read as {@code breakAbort=timeout/reach}.
+     *
+     * <p>{@code timeout} is the 300-tick watchdog: fifteen seconds spent on one cell with nothing
+     * to show, after which the whole break queue is discarded. {@code reach} is the bot standing
+     * further than 4.5 blocks from the cell it planned to mine. The site already logged which half
+     * it was; nothing counted it, so the RATE was invisible in every verdict line this project has
+     * collected.
+     */
+    public static volatile int breakAbortTimeout = 0, breakAbortReach = 0;
+
+    /**
+     * Of the misses that landed on ANOTHER block, which were aim-in-flight and which were a wall.
+     * Read as {@code breakMissWhy=occluded/transit}.
+     *
+     * <p>{@code occluded} is the crosshair converged (residual under 2 degrees in both axes) and
+     * still resolving to a different cell: something nearer is on the ray. Because the attack key
+     * is gated on identity with the planned cell, neither block is mined and the queue cannot
+     * drain. {@code transit} is the ordinary case of an aim still travelling toward its target,
+     * which resolves itself within a few ticks and costs nothing.
+     */
+    public static volatile int breakOccluded = 0, breakAimInTransit = 0;
 
     /**
      * Pave the queued bridge-floor supports — the mirror of tickBreaking. Returns true
