@@ -219,5 +219,25 @@ def main():
     sys.exit(0 if ok else 1)
 
 
+def restore_combat_movements():
+    """Put combatMovementsEnabled back to its shipped default, whatever happened.
+
+    ⛔ SAME BUG AS pvp_test.py's, found in the same audit -- see that file's copy of this
+    function and gamer_smoke.py's restore_pinned_alts() for the full story. main() pins
+    combatMovementsEnabled=true unconditionally and nothing ever restored it, on any exit
+    path, even though it has shipped false for months.
+    """
+    try:
+        py4j(FIGHTER_CONTAINER, "chat", msg=";settings combatMovementsEnabled false")
+    except Exception as e:                        # noqa: BLE001 -- a safety net must not raise
+        print(f"  restore_combat_movements: could not confirm reset -- {str(e)[:120]}")
+
+
 if __name__ == "__main__":
-    main()
+    # ⛔ finally DOES NOT RUN ON A PLAIN SIGTERM -- see pvp_test.py / gamer_smoke.py b69cb74a.
+    import signal as _signal
+    _signal.signal(_signal.SIGTERM, lambda *_: (_ for _ in ()).throw(SystemExit(143)))
+    try:
+        main()
+    finally:
+        restore_combat_movements()

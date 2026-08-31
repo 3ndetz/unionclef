@@ -237,5 +237,38 @@ def main():
     sys.exit(0 if ok else 1)
 
 
+def restore_combat_movements():
+    """Put combatMovementsEnabled back to its shipped default, whatever happened.
+
+    ⛔ THE SAME CLASS OF BUG AS gamer_smoke.py's stranded --pin-alt flags, found while
+    auditing every script that mutates persisted tungsten.json (see gamer_smoke.py's
+    restore_pinned_alts() and its commit history for the full story). main() pins
+    combatMovementsEnabled=true UNCONDITIONALLY at setup -- not behind any CLI flag --
+    and nothing ever set it back, on ANY exit path: success, an assertion-style
+    early exit, or a kill mid-fight. combatMovementsEnabled has shipped false for
+    months per the comment at the pin site, so anything measured after this script
+    runs -- another pvp_test run, a playthrough's own combat, a manual settings
+    check -- would silently inherit true instead of the documented default.
+
+    Best-effort and quiet about failure: a stand that is already gone (the reason
+    for the kill, sometimes) cannot be asked to restore anything, and teardown must
+    not mask whatever the run itself was trying to report.
+    """
+    try:
+        py4j(FIGHTER_CONTAINER, "chat", msg=";settings combatMovementsEnabled false")
+    except Exception as e:                        # noqa: BLE001 -- a safety net must not raise
+        print(f"  restore_combat_movements: could not confirm reset -- {str(e)[:120]}")
+
+
 if __name__ == "__main__":
-    main()
+    # ⛔ finally DOES NOT RUN ON A PLAIN SIGTERM -- verified directly (gamer_smoke.py's
+    # commit b69cb74a): Python's default SIGTERM action terminates the process before any
+    # try/finally unwinds. A session-teardown kill mid-fight is exactly the shape this
+    # script's own FIGHT_WINDOW_S wait loop is exposed to, so without this conversion the
+    # finally below would not fire for the actual failure mode it exists to cover.
+    import signal as _signal
+    _signal.signal(_signal.SIGTERM, lambda *_: (_ for _ in ()).throw(SystemExit(143)))
+    try:
+        main()
+    finally:
+        restore_combat_movements()
