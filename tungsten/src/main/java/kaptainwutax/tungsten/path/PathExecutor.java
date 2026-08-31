@@ -715,9 +715,43 @@ public class PathExecutor {
                 breakAimedAtNothing++;
             }
         }
-        options.attackKey.setPressed(onTarget);
+        // ⛔ AND IF SOMETHING SOLID IS IN THE WAY, DIG IT -- see TungstenConfig.mineTheBlockInTheWay.
+        // 3548 occluded misses across four runs and not one blocker was in the plan. The aim has
+        // ARRIVED (that is what the residual test above establishes), so the blocker sits between
+        // the eye and the target and the planned cell cannot be reached until it falls.
+        //
+        // C5.3 is respected, not reopened: that entry is about digging a block whose POLICY was
+        // never checked -- the old angle gate tested BreakRules against the planned cell while
+        // vanilla destroyed a different one. canBreak is asked about the OCCLUDER here, so a
+        // protected block in the way still refuses and the miner still waits.
+        boolean clearTheWay = false;
+        if (!onTarget && TungstenConfig.get().mineTheBlockInTheWay
+                && Math.abs(dYaw) < 2.0f && Math.abs(dPitch) < 2.0f
+                && look instanceof net.minecraft.util.hit.BlockHitResult blocker
+                && look.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
+            net.minecraft.util.math.BlockPos in = blocker.getBlockPos();
+            if (BreakRules.canBreak(player.getEntityWorld(), in,
+                    player.getEntityWorld().getBlockState(in))) {
+                clearTheWay = true;
+                breakClearedOccluder++;
+            } else {
+                breakOccluderProtected++;
+            }
+        }
+        options.attackKey.setPressed(onTarget || clearTheWay);
         return true;
     }
+
+    /**
+     * Ticks where the key was pressed for a BLOCKER rather than the planned cell, and ticks where
+     * the blocker was refused by policy. Read as {@code breakClearWay=cleared/protected}.
+     *
+     * <p>Mechanism counter for {@link kaptainwutax.tungsten.TungstenConfig#mineTheBlockInTheWay};
+     * {@code cleared} is 0 in a control arm because the press is what the flag gates, while
+     * {@code protected} is 0 there for the same reason and says how often the policy saved a block
+     * the geometry wanted gone.
+     */
+    public static volatile int breakClearedOccluder = 0, breakOccluderProtected = 0;
 
     /**
      * Did the mining aim arrive? Read as {@code breakAim=onTarget/offTarget/elsewhere/nothing}

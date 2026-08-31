@@ -3871,6 +3871,46 @@ public class TungstenConfig {
      */
     public boolean idleLockIsNotALock = false;
 
+    /**
+     * Whether a converged aim that is blocked by a solid block MINES THAT BLOCK instead of waiting.
+     *
+     * <h2>The measurement this exists for</h2>
+     *
+     * Mining presses the attack key only on identity with the planned cell, and vanilla then digs
+     * whatever the crosshair is on. Measured across four runs, with the residual split so a
+     * travelling aim cannot be confused with an arrived one:
+     *
+     * <pre>
+     *   run  onTgt  offTgt  occluded/transit  occluder inPlan/foreign
+     *    1    2052     55        1/54                0/1
+     *    2     479   2890     2587/301               0/2587
+     *    3       0      0        0/0                 0/0      (72 reach aborts, never aimed)
+     *    4    1417   1094      960/134               0/960
+     * </pre>
+     *
+     * 3548 occluded misses and NOT ONE of the blocking cells was in the break plan. Because
+     * "occluded" requires the aim to have converged (under 2 degrees in both axes), the crosshair
+     * ray is pointed at the target's centre and stops early -- so the blocker is provably BETWEEN
+     * the eye and the target, not merely nearby. The plan is asking the executor to mine through
+     * something solid that nobody planned to remove, and the identity gate means neither block is
+     * touched: on stalled mining ticks vanilla broke nothing, 0 of 8016.
+     *
+     * <h2>Why this is not the bug the identity gate was introduced to fix</h2>
+     *
+     * ⛔ Register entry C5.3: the gate USED to be an angle test, "within 12 degrees", and vanilla
+     * then dug whatever the crosshair found -- so a nearer block was destroyed while
+     * {@code BreakRules} had been checked against the PLANNED cell. The rule broken there was not
+     * "never dig an unplanned block", it was "never dig a block whose policy you did not check".
+     *
+     * <p>So this checks {@code BreakRules.canBreak} against the OCCLUDER itself, and acts only on
+     * an aim that has arrived rather than one merely pointing the right way. A protected block in
+     * the way still refuses, and the miner still waits.
+     *
+     * <p>Mechanism counter {@code breakClearedOccluder}: ticks where the key was pressed for a
+     * blocker rather than the target. Zero in a control arm, because the press is what is gated.
+     */
+    public boolean mineTheBlockInTheWay = false;
+
     /** Consecutive idle ticks a lock may sit through before it is dropped. A real gap between
      *  path segments is a few ticks; this is 2 seconds, the same grace the stall check uses. */
     public int idleLockGraceTicks = 40;
