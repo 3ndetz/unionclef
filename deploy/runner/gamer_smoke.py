@@ -190,6 +190,55 @@ def unquiet_the_box(peers):
             print(f"  note: could not restart {p}: {str(e)[:80]}")
     if peers:
         print(f"  restarted after the run: {', '.join(peers)}")
+def restore_pinned_alts():
+    """Best-effort: put every --pin-alt flag back to its baseline before the process exits.
+
+    ⛔ A KILLED SWEEP STRANDS THE PIN ON THE STAND. Settings persist in tungsten.json and
+    survive a client recreate (the per-run pin logic above says so too), so a --pin-alt sweep
+    interrupted mid-run -- Ctrl-C, a session teardown, anything that skips the next run's own
+    control-arm pin -- leaves the flag sitting at whatever the last-executed arm set it to.
+    The next thing to run against this stand, pinned or not, then silently measures the wrong
+    arm while looking clean: this session hit it three times, twice from the SAME session dying
+    mid-sweep, each time needing a live human check to notice the stand was not at its shipped
+    default.
+
+    Reuses the exact base-inversion rule the control arm already applies (boolean flip, or
+    --pin-base for anything else) so this can never compute a different "off" than the sweep
+    itself would have used. Runs from the top-level finally, so it fires on normal exit, an
+    uncaught exception, or a KeyboardInterrupt alike -- but it is a SAFETY NET, not a
+    measurement: one quick attempt per flag, no growing-wait retries, and any failure here
+    (client already gone, docker unreachable) is swallowed and reported, never raised, because
+    teardown must not mask whatever the run itself was trying to say.
+    """
+    _alt = [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--pin-alt"]
+    if not _alt:
+        return
+    _bases = dict(
+        _s.split("=", 1) for _s in
+        [sys.argv[i + 1] for i, a in enumerate(sys.argv) if a == "--pin-base"] if "=" in _s
+    )
+    for _spec in _alt:
+        if "=" not in _spec:
+            continue
+        _k, _v = _spec.split("=", 1)
+        _low = _v.strip().lower()
+        if _low in ("true", "false"):
+            _base = "false" if _low == "true" else "true"
+        elif _k in _bases:
+            _base = _bases[_k]
+        else:
+            print(f"  restore_pinned_alts: {_k} is not boolean and has no --pin-base -- "
+                  f"cannot guess a safe baseline, leaving it as-is")
+            continue
+        try:
+            py4j("chatcmd", c=f";settings {_k} {_base}", t=10)
+            time.sleep(0.3)
+            _got = py4j("readflag", n=_k, t=10)
+            print(f"  restored pin {_k}={_got.get('value')} (wanted {_base})")
+        except Exception as e:                    # noqa: BLE001 -- a safety net must not raise
+            print(f"  restore_pinned_alts: could not confirm {_k}={_base} -- {str(e)[:120]}")
+
+
 def wait_for(desc,fn,ts,iv=4):
     t0=time.time(); last=None
     while time.time()-t0<ts:
@@ -1198,6 +1247,15 @@ if __name__ == "__main__":
     # Quiet the box for the WHOLE invocation, including a --repeat sweep, and put it back
     # whatever happens -- a stand-down, a failure or a KeyboardInterrupt must not leave the
     # bench with a client missing, because run_suite needs both of them.
+    # ⛔ finally DOES NOT RUN ON A PLAIN SIGTERM. Verified directly: Python's default SIGTERM
+    # action terminates the process before any try/finally unwinds, so a background sweep killed
+    # by session teardown -- the actual shape of every stranded-pin incident this session hit --
+    # would skip restore_pinned_alts() entirely without this handler. Converting SIGTERM into a
+    # SystemExit is what makes the finally below reachable at all. This still cannot save a
+    # SIGKILL: nothing can, at the OS level, by any process, ever -- that gap is real and not
+    # closed by anything short of an external supervisor.
+    import signal as _signal
+    _signal.signal(_signal.SIGTERM, lambda *_: (_ for _ in ()).throw(SystemExit(143)))
     _peers = quiet_the_box()
     try:
         sys.exit(0 if (sweep(rep, need) if rep > 1 else main()) else 1)
@@ -1206,3 +1264,4 @@ if __name__ == "__main__":
         sys.exit(2)
     finally:
         unquiet_the_box(_peers)
+        restore_pinned_alts()
