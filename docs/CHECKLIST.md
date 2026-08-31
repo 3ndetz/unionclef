@@ -1030,6 +1030,60 @@ symptom on their side is a course dying for no reason. BUILD is safe during anot
 not. Check the lock (`%TEMP%/uctest_suite.lock`, which names its holder) before deploying, exactly
 as you would before starting a suite.
 
+## 4x. ⛔ A SCRIPT THAT PINS A SETTING AND NEVER RESTORES IT POISONS EVERY RUN AFTER IT (2026-08-31)
+
+Settings live in `tungsten.json` and survive a client recreate -- this is already documented at the
+`--pin`/`--pin-alt` machinery in `gamer_smoke.py` and `run_suite.py`. What was not documented, and
+cost a whole session's worth of manual stand resets before it was named: a script that pins a
+setting AWAY from its shipped default, with no CLI guard and no `finally`, poisons that default for
+every single thing that runs on the stand afterward -- not just its own next invocation.
+
+Found by auditing every runner script that sends a `";settings"` chat command, after the THIRD time
+this session a killed sweep left `fireReleaseNeedsFire=true` stranded on the live stand and had to
+be reset by hand before the next measurement could trust its own control arm:
+
+```
+pvp_test.py / pvp_moving_test.py   combatMovementsEnabled  false (shipped "for months") -> true
+                                    unconditionally, no CLI flag gates it, never restored
+break_test.py                      driftThreshold          0.8 (shipped default) -> 1.5
+                                    unconditionally, never restored
+```
+
+The combat case is scoped to PvP measurements, but `driftThreshold` is not scoped to anything --
+it governs general movement precision, so a stranded 1.5 silently loosens drift tolerance for
+EVERY later nav/physics measurement on the stand, not just a repeat of `break_test.py`. This is the
+same shape of damage rule 4u describes for a blinded counter: the corruption is invisible from
+inside the run that causes it, and only visible as an unexplained shift in something unrelated,
+much later.
+
+**The fix, applied to all three files (`b69cb74a`, `b8793ed7`, `78841272`):** restore the setting
+to its shipped default from a top-level `finally`, AND convert `SIGTERM` into a catchable
+`SystemExit` first --
+
+```python
+import signal
+signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(SystemExit(143)))
+try:
+    main()
+finally:
+    restore_the_setting()
+```
+
+⛔ **`finally` DOES NOT RUN ON A PLAIN `SIGTERM`.** Verified directly, not assumed: Python's
+default `SIGTERM` action terminates the process before any `try/finally` unwinds. A background
+sweep killed by session teardown -- the actual shape every stranded-pin incident this session hit
+took -- is far more likely a `SIGTERM` than a `KeyboardInterrupt`, so a bare `finally` with no
+signal handler would have caught NONE of the failures it exists for. This still cannot save a
+`SIGKILL`: nothing can, for any process, at the OS level, ever -- record that gap rather than
+implying it is closed.
+
+**Before adding a new script that pins ANYTHING via `";settings"`: does it restore the value on
+every exit path, including a kill?** If the answer is "it inherits `run_suite.py`'s
+`reset_config()`" or "it only ever sets what its own CLI explicitly names" (`diag_pit.py`,
+`repro_stall.py`'s pattern), that is a legitimate different mitigation and does not need this fix.
+If the answer is "it hardcodes one value, unconditionally, with no counterpart resetting it back,"
+it is this bug.
+
 ## 5. VIDEO
 
 `--record` on the run, then:
