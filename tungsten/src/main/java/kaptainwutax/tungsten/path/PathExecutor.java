@@ -657,9 +657,45 @@ public class PathExecutor {
         boolean onTarget = look instanceof net.minecraft.util.hit.BlockHitResult bhr
                 && look.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
                 && bhr.getBlockPos().equals(target);
+        // ⛔ DOES THE AIM EVER ARRIVE? The attack key is pressed ONLY on identity with the planned
+        // cell, so a crosshair that never lands there mines nothing while breakQueue stays
+        // non-empty and breakingTicks climbs to its 300-tick abort. Measured from the other side
+        // first: on stalled wander ticks where this queue was non-empty, altoclef's
+        // isBreakingBlock() read FALSE 884 times out of 884 -- vanilla was not breaking at all.
+        //
+        // These two say which half that is: never on target, or on target and not progressing.
+        // Counted here rather than sampled from Nav because onTarget and target already exist at
+        // this line, and a counter belongs where its subject is computed.
+        if (onTarget) breakOnTarget++; else {
+            breakOffTarget++;
+            if (look instanceof net.minecraft.util.hit.BlockHitResult miss
+                    && look.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
+                breakAimedElsewhere++;
+                lastBreakMiss = miss.getBlockPos().toShortString() + "!=" + target.toShortString()
+                        + "@dy" + String.format("%.0f", Math.abs(dYaw))
+                        + "/dp" + String.format("%.0f", Math.abs(dPitch));
+            } else {
+                breakAimedAtNothing++;
+            }
+        }
         options.attackKey.setPressed(onTarget);
         return true;
     }
+
+    /**
+     * Did the mining aim arrive? Read as {@code breakAim=onTarget/offTarget/elsewhere/nothing}
+     * with {@code breakMiss} naming the last disagreement.
+     *
+     * <p>{@code elsewhere} means the crosshair found a DIFFERENT block than the plan -- the ray
+     * hits something nearer -- and {@code nothing} means it found no block at all. The first is a
+     * planning or reach problem, the second an aim that has not converged; they need different
+     * fixes, and the attack key is withheld either way.
+     */
+    public static volatile int breakOnTarget = 0, breakOffTarget = 0,
+            breakAimedElsewhere = 0, breakAimedAtNothing = 0;
+
+    /** Last crosshair-vs-plan disagreement, with the residual aim error. @see #breakOnTarget */
+    public static volatile String lastBreakMiss = "-";
 
     /**
      * Pave the queued bridge-floor supports — the mirror of tickBreaking. Returns true
