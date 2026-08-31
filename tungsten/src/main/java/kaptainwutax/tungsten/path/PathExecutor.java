@@ -611,7 +611,25 @@ public class PathExecutor {
             // apart, and the log does -- but only for a human reading a trace. The verdict line
             // is where a rate becomes visible across runs, and "how often does mining burn its
             // whole watchdog and give up" is a number no counter in this project carried.
-            if (timedOut) breakAbortTimeout++; else breakAbortReach++;
+            if (timedOut) breakAbortTimeout++;
+            else {
+                breakAbortReach++;
+                // HOW FAR IS FAR? "Out of reach" spans a marginal miss and never having travelled
+                // at all, and the two are different bugs. The site has always printed the distance
+                // -- into a LOG, so no verdict line ever carried the distribution. Reach aborts
+                // outnumber timeouts 151 to 1, and one run read breakAim=0/0/0/0 with 72 of them:
+                // it never got as far as aiming even once.
+                //
+                // Near is a bot that walked and stopped a little short; far is a plan handed over
+                // for a cell the bot never approached. Three sites call startBreaking with no
+                // distance guard at all, while a fourth checks < 4.0 first.
+                double d = Math.sqrt(eye.squaredDistanceTo(center));
+                if (d < 6.0) breakReachNear++;
+                else if (d < 12.0) breakReachMid++;
+                else breakReachFar++;
+                lastReachAbort = String.format("%.1f@%s", d,
+                        target.toShortString().replace(", ", ","));
+            }
             Debug.logMessage(String.format(
                     "Mining aborted: ticks=%d dist=%.2f target=%s eye=(%.2f,%.2f,%.2f)",
                     breakingTicks, Math.sqrt(eye.squaredDistanceTo(center)),
@@ -778,6 +796,21 @@ public class PathExecutor {
      * collected.
      */
     public static volatile int breakAbortTimeout = 0, breakAbortReach = 0;
+
+    /**
+     * How far out of reach a mining plan was when it was abandoned.
+     * Read as {@code breakReach=near/mid/far} with {@code reachAt} naming the last one.
+     *
+     * <p>{@code near} (under 6 blocks) is a bot that walked and stopped a little short -- the
+     * guard is 4.5, so this is a marginal miss. {@code far} (12 or more) is a plan handed over for
+     * a cell the bot never approached, which is a different fault entirely: the physics leg did
+     * not deliver it, or the plan was emitted from where it was computed rather than from where
+     * the bot would stand.
+     */
+    public static volatile int breakReachNear = 0, breakReachMid = 0, breakReachFar = 0;
+
+    /** Distance and target of the last reach abort. @see #breakReachNear */
+    public static volatile String lastReachAbort = "-";
 
     /**
      * Of the misses that landed on ANOTHER block, which were aim-in-flight and which were a wall.
