@@ -692,8 +692,19 @@ public class PathExecutor {
                 //
                 // Named by a sample before it was counted: breakMiss read
                 // -3,79,-827 != -1,79,-827 @dy0/dp0 -- same row, two cells apart, zero aim error.
-                if (Math.abs(dYaw) < 2.0f && Math.abs(dPitch) < 2.0f) breakOccluded++;
-                else breakAimInTransit++;
+                if (Math.abs(dYaw) < 2.0f && Math.abs(dPitch) < 2.0f) {
+                    breakOccluded++;
+                    // ⛔ AND IS THE THING IN THE WAY PART OF THE PLAN? This decides WHICH fix.
+                    // In the plan, the queue is simply being drained in the wrong ORDER -- the
+                    // cell nearer along the ray has to fall first, and mining it is already
+                    // sanctioned work. Not in the plan, the PLANNER handed the executor a cell it
+                    // cannot see, which is a different bug in a different file.
+                    if (breakQueue != null && breakQueue.contains(miss.getBlockPos())) {
+                        breakOccluderInPlan++;
+                    } else {
+                        breakOccluderForeign++;
+                    }
+                } else breakAimInTransit++;
                 // NO SPACES: the verdict line is space-delimited and BlockPos.toShortString()
                 // returns "x, y, z", which truncated this field to "259," on its first run.
                 lastBreakMiss = miss.getBlockPos().toShortString().replace(", ", ",")
@@ -745,6 +756,18 @@ public class PathExecutor {
      * which resolves itself within a few ticks and costs nothing.
      */
     public static volatile int breakOccluded = 0, breakAimInTransit = 0;
+
+    /**
+     * When a converged aim was blocked, was the blocker one of our own queued cells?
+     * Read as {@code breakOccluder=inPlan/foreign}.
+     *
+     * <p>{@code inPlan} means the break queue holds both cells and is draining them in an order
+     * the geometry forbids: the nearer one shields the further one, and mining it first is work
+     * the plan already authorises. {@code foreign} means the blocker was never planned, so the
+     * planner produced a target the executor cannot reach along its own sight line -- a fault one
+     * layer up, not an ordering problem here.
+     */
+    public static volatile int breakOccluderInPlan = 0, breakOccluderForeign = 0;
 
     /**
      * Pave the queued bridge-floor supports — the mirror of tickBreaking. Returns true
