@@ -289,6 +289,18 @@ public class PathExecutor {
 	/** True while a path is spliced-and-waiting rather than replaying. @see #isRunning() */
 	public boolean isArmedNow() { return armed; }
 
+	/**
+	 * Has mining actually STARTED, as opposed to a plan merely being queued?
+	 *
+	 * <p>⛔ THE DISTINCTION THAT MAY INVALIDATE A MEASUREMENT I ALREADY PUBLISHED.
+	 * {@code breakQueue != null && !isEmpty()} means a mining plan EXISTS. tickBreaking only runs
+	 * once the replay has reached the end of its segment, so an executor still walking toward the
+	 * wall holds a queue, presses nothing, and looks identical to one that is failing to mine.
+	 * breakingTicks is incremented only inside tickBreaking, so a non-zero value is proof the
+	 * miner is actually running.
+	 */
+	public boolean isMiningNow() { return breakingTicks > 0; }
+
 	public boolean isRunning() {
         // An ARMED path is waiting, not running: while it waits the walker must
         // keep driving (and callers that stand down for "the executor is busy"

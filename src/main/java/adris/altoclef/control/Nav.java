@@ -258,6 +258,17 @@ public final class Nav {
      */
     public static volatile int stallExecWorkSeen, stallExecWorkBlind;
 
+    /**
+     * Of the stalled ticks holding a break queue, how many had the miner actually RUNNING.
+     * Read as {@code stallMiner=running/queuedOnly}.
+     *
+     * <p>{@code queuedOnly} dominating means stallExecWork's 0/11418 is bookkeeping, not a defect:
+     * the executor was walking to the wall with a plan in hand, and of course vanilla was not
+     * breaking. {@code running} dominating means the miner really was executing and still broke
+     * nothing, which is the defect that figure was read as.
+     */
+    public static volatile int stallExecMining, stallExecQueuedOnly;
+
     /** Replay index seen at the previous stalled sample, to tell a stuck index from a moving one. */
     private static int lastStallExecIdx = -1;
 
@@ -267,6 +278,13 @@ public final class Nav {
         if (exec == null) return;
         boolean breaking = exec.isBreakingNow();
         boolean placing = exec.isPlacingNow();
+        // IS THE MINER EVEN RUNNING? A queued plan is not a running miner: tickBreaking only
+        // executes once the replay finished its segment, so an executor still WALKING to the wall
+        // holds a break queue and presses nothing. That state is indistinguishable from a miner
+        // that cannot break, and stallExecWork read 0 seen / 11418 blind across ten runs -- a
+        // figure that is either a defect or this bookkeeping, and nothing so far separates them.
+        if (breaking && exec.isMiningNow()) stallExecMining++;
+        else if (breaking) stallExecQueuedOnly++;
         if (breaking || placing) {
             // CAN THE GIVE-UP MACHINERY SEE THIS WORK? MovementProgressChecker protects mining
             // through mod.getControllerExtras().isBreakingBlock(), which is fed by a mixin on
