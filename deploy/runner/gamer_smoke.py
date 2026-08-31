@@ -14,7 +14,9 @@ import functools, json, os, pathlib, re, subprocess, sys, time
 print = functools.partial(print, flush=True)
 SPAWN_FILE=pathlib.Path(__file__).with_name("gamer_spawn.txt")
 RUN_INDEX_FILE=pathlib.Path(__file__).with_name("gamer_run_index.txt")
+ARM_INDEX_FILE=pathlib.Path(__file__).with_name("gamer_arm_index.txt")
 RUN_SEQ=[0]   # which run of this sweep we are in, so a freeze dump names its own file
+ARM_BASE=[0]  # persisted run-parity base -- see init_arm_base(), set once at process start
 # WRITE THE DUMPS WHERE BOTH SHELLS AGREE. Python on Windows reads a leading /tmp as the tmp
 # directory of the current DRIVE, while the bash side looks in its own; the first two captures
 # were written and then reported missing. An explicit directory next to the runner ends that.
@@ -190,6 +192,42 @@ def unquiet_the_box(peers):
             print(f"  note: could not restart {p}: {str(e)[:80]}")
     if peers:
         print(f"  restarted after the run: {', '.join(peers)}")
+def init_arm_base(n_runs):
+    """Persist arm parity ACROSS PROCESS INVOCATIONS, not just within one --repeat loop.
+
+    ⛔ WITHOUT THIS, A STANDALONE RUN CAN ONLY EVER BE ARM A. RUN_SEQ only counts runs inside
+    THIS process's own sweep() loop -- it starts at its module default (0) for a bare
+    `gamer_smoke.py N --pin-alt X=true` invocation, and nothing else ever sets it before
+    main() reads it for the arm decision. So a standalone run always computes
+    (RUN_SEQ[0] % 2) == 0 -- always arm A, forever, no matter how many times it is run.
+    That is not silently wrong (it prints "ARM A" honestly every time), but it makes pairing
+    impossible outside a single --repeat sweep -- and a full sweep does not fit in one session
+    on this stand, so the only way to build a paired series here is one run per session,
+    which needs exactly the alternation --repeat gives for free within one process.
+
+    Mirrors the existing spawn-spiral index on purpose: read-then-immediately-write,
+    unconditional, before the run happens -- not deferred to a finally, so a run killed
+    partway still consumes its slot the same way a killed run still consumes its spiral step.
+    Unlike the spiral, this counter never needs bounding: only its PARITY is ever read, and
+    that is stable at any magnitude forever.
+
+    Sets ARM_BASE[0] so both call sites -- a bare main() call and sweep()'s own loop --
+    add the same persisted offset on top of their existing run-within-this-process count,
+    which is what main()'s three RUN_SEQ[0] % 2 reads already assume is constant for the
+    whole run. No-op, and the file untouched, when --pin-alt is not in play at all.
+    """
+    if not any(a == "--pin-alt" for a in sys.argv):
+        return
+    base = 0
+    if ARM_INDEX_FILE.exists():
+        try:
+            base = int(ARM_INDEX_FILE.read_text(encoding="utf-8").strip())
+        except ValueError:
+            base = 0
+    ARM_BASE[0] = base
+    ARM_INDEX_FILE.write_text(str(base + max(n_runs, 1)), encoding="utf-8")
+
+
 def restore_pinned_alts():
     """Best-effort: put every --pin-alt flag back to its baseline before the process exits.
 
@@ -1200,7 +1238,7 @@ def sweep(runs, need):
     results = []
     for i in range(runs):
         print("")
-        RUN_SEQ[0] = i + 1
+        RUN_SEQ[0] = ARM_BASE[0] + i + 1   # ARM_BASE is 0 unless init_arm_base() set it
         print(f"=========== RUN {i + 1}/{runs} ===========")
         try:
             results.append(bool(main()))
@@ -1241,6 +1279,11 @@ if __name__ == "__main__":
     need = rep if rep < 3 else rep - 1
     if "--need" in sys.argv:
         need = int(sys.argv[sys.argv.index("--need") + 1])
+    # PERSIST ARM PARITY ACROSS PROCESSES -- see init_arm_base(). Must run before RUN_SEQ[0] is
+    # set below, and before sweep()'s own loop sets it again on iteration 0: both add ARM_BASE[0]
+    # on top of their existing count, so this has to be known first either way.
+    init_arm_base(rep)
+    RUN_SEQ[0] = ARM_BASE[0] + 1
     # EXIT 2 MEANS "ASK AGAIN LATER", NOT "THE BOT IS BROKEN".
     # sweep() already treats a stand-down as invalid; a single run used to let the exception out as
     # a traceback, which reads like a crash in the bench itself.
