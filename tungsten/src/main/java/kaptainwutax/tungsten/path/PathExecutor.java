@@ -264,6 +264,31 @@ public class PathExecutor {
 		}
 	}
 
+	/**
+	 * What is this executor actually DOING? Read-only accessors for the stall instrument.
+	 *
+	 * <p>{@link #isRunning()} answers "does a path exist whose replay has not run off the end",
+	 * which is a STATE, not activity -- an executor that holds a path and never advances its tick
+	 * index reports running for ever. Measured at the wander's stall: the executor is running on
+	 * 49-84% of locked ticks while MovementQueue.isRunning() and BlockPathWalker.isRunning() are
+	 * ZERO across six runs of both arms, so something here holds the body without stepping it.
+	 * These say which of the three shapes it is: mining a wall, placing a bridge, or replaying a
+	 * path whose index does not move.
+	 */
+	public boolean isBreakingNow() { return breakQueue != null && !breakQueue.isEmpty(); }
+
+	/** @see #isBreakingNow() */
+	public boolean isPlacingNow() { return placeQueue != null && !placeQueue.isEmpty(); }
+
+	/** Replay index; paired with {@link #pathSizeNow()} it says whether the replay is advancing. */
+	public int tickIndexNow() { return tick; }
+
+	/** Size of the path being replayed, or -1 when there is none. @see #tickIndexNow() */
+	public int pathSizeNow() { return path == null ? -1 : path.size(); }
+
+	/** True while a path is spliced-and-waiting rather than replaying. @see #isRunning() */
+	public boolean isArmedNow() { return armed; }
+
 	public boolean isRunning() {
         // An ARMED path is waiting, not running: while it waits the walker must
         // keep driving (and callers that stand down for "the executor is busy"

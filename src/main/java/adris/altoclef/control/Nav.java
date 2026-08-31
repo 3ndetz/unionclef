@@ -216,6 +216,84 @@ public final class Nav {
     public static volatile int stallWhyLock, stallWhySearch, stallWhyExec, stallWhyQueue, stallWhyWalker;
 
     /**
+     * WHAT the executor is doing on a stalled tick, when it is the thing reporting "running".
+     *
+     * <p>Read as {@code stallExec=break/place/replay/armed/idxStuck}. Sampled only from
+     * {@link #noteStallSources()}, so the denominator is {@code stallWhyExec} -- a stalled tick on
+     * which the executor claimed to be running.
+     *
+     * <h2>Why this is the question left standing</h2>
+     *
+     * The lock was measured on 100.0% of stalled ticks and dropping the IDLE half of it did not
+     * shorten the stall (idleLockIsNotALock, rejected). What that A/B left behind is sharper: in
+     * its fix arms the stalled lock was executing 49/67/84% of the time while
+     * {@code MovementQueue.isRunning()} and {@code BlockPathWalker.isRunning()} read ZERO in all
+     * six runs of both arms. So a drive holds the body and never steps it.
+     *
+     * <p>{@code PathExecutor.isRunning()} is a STATE -- "a path exists and the replay has not run
+     * off its end" -- and an executor whose tick index never advances satisfies it for ever. These
+     * five separate the shapes that state can hide:
+     *
+     * <ul>
+     *   <li>{@code break} / {@code place} -- mining a wall or bridging a gap, which legitimately
+     *       hold the body still and run with an EMPTY path;
+     *   <li>{@code replay} -- neither, so an actual path replay that is producing no queue steps;
+     *   <li>{@code armed} -- spliced and waiting for the walker to reach its root;
+     *   <li>{@code idxStuck} -- the replay index did not move since the previous stalled sample,
+     *       which distinguishes "advancing but not moving the body" from "not advancing at all".
+     * </ul>
+     *
+     * <p>⛔ These are shapes, not causes. Naming which one holds is the whole point of the pass;
+     * the previous two passes each asserted a cause from a co-occurrence and were refuted.
+     */
+    public static volatile int stallExecBreak, stallExecPlace, stallExecReplay,
+            stallExecArmed, stallExecIdxStuck;
+
+    /**
+     * Of the stalled ticks where the executor was mining or bridging, how many altoclef's progress
+     * checker could SEE as work. Read as {@code stallExecWork=seen/blind}.
+     *
+     * <p>blind dominating means the give-up machinery is scoring legitimate digging as a stall,
+     * and the dead-time attribution built on wanderResetDenied is overstated by that much.
+     */
+    public static volatile int stallExecWorkSeen, stallExecWorkBlind;
+
+    /** Replay index seen at the previous stalled sample, to tell a stuck index from a moving one. */
+    private static int lastStallExecIdx = -1;
+
+    /** @see #stallExecBreak */
+    private static void noteStallExecShape() {
+        var exec = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+        if (exec == null) return;
+        boolean breaking = exec.isBreakingNow();
+        boolean placing = exec.isPlacingNow();
+        if (breaking || placing) {
+            // CAN THE GIVE-UP MACHINERY SEE THIS WORK? MovementProgressChecker protects mining
+            // through mod.getControllerExtras().isBreakingBlock(), which is fed by a mixin on
+            // vanilla's updateBlockBreakingProgress. If tungsten's own break queue drives that
+            // vanilla call the checker sees it and the denial is harmless bookkeeping; if it does
+            // not, altoclef is scoring legitimate digging as a stall. The two readings send the
+            // next pass in opposite directions, so it is a counter and not an argument.
+            try {
+                if (adris.altoclef.AltoClef.getInstance().getControllerExtras().isBreakingBlock()) {
+                    stallExecWorkSeen++;
+                } else {
+                    stallExecWorkBlind++;
+                }
+            } catch (Throwable ignored) {
+                // an instrument must never be the thing that breaks a tick
+            }
+        }
+        if (breaking) stallExecBreak++;
+        if (placing) stallExecPlace++;
+        if (!breaking && !placing) stallExecReplay++;
+        if (exec.isArmedNow()) stallExecArmed++;
+        int idx = exec.tickIndexNow();
+        if (idx == lastStallExecIdx) stallExecIdxStuck++;
+        lastStallExecIdx = idx;
+    }
+
+    /**
      * Tally the primitive sources of {@link #isPathing()} for one tick already known to be stalled.
      *
      * <p>Call ONLY from a site that has established the body is not moving; the counters mean
@@ -225,7 +303,10 @@ public final class Nav {
         try {
             if (adris.altoclef.util.helpers.TungstenHelper.isLocked()) stallWhyLock++;
             if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()) stallWhySearch++;
-            if (kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) stallWhyExec++;
+            if (kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
+                stallWhyExec++;
+                noteStallExecShape();
+            }
             if (kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) stallWhyQueue++;
             if (kaptainwutax.tungsten.task.BlockPathWalker.isRunning()) stallWhyWalker++;
         } catch (Throwable ignored) {
