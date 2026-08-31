@@ -768,9 +768,44 @@ public class PathExecutor {
                 breakOccluderProtected++;
             }
         }
-        options.attackKey.setPressed(onTarget || clearTheWay);
+        // ⛔ THE DECISIVE QUESTION, ASKED WHERE IT HAS A DENOMINATOR THAT ALWAYS OCCURS.
+        //
+        // Every "stalled mining" counter so far hangs off the WANDER's denial branch, so it only
+        // reads when a playthrough happens to stall while mining -- a lottery that produced 534
+        // BRIDGING ticks and no mining at all in one four-run sweep. This asks vanilla directly,
+        // inside the miner: with the key pressed and the aim on the planned cell, IS the game
+        // actually breaking something?
+        //
+        // Sampled only when the key was pressed on the PREVIOUS tick as well, because vanilla
+        // starts breaking in response to the press and a one-tick lag would otherwise read as a
+        // failure. Two consecutive pressed ticks and still nothing breaking is not lag.
+        boolean pressed = onTarget || clearTheWay;
+        if (pressed && prevPressed) {
+            if (mc.interactionManager != null && mc.interactionManager.isBreakingBlock()) mineHits++;
+            else mineNoProgress++;
+        }
+        prevPressed = pressed;
+        options.attackKey.setPressed(pressed);
         return true;
     }
+
+    /** Was the attack key pressed for mining on the previous tick? @see #mineHits */
+    private boolean prevPressed = false;
+
+    /**
+     * With the key held and the aim on the plan, is vanilla ACTUALLY breaking?
+     * Read as {@code mine=hits/noProgress}.
+     *
+     * <p>The denominator is two consecutive ticks of a pressed attack key inside tickBreaking, so
+     * it occurs in every run that mines and needs no stall, no wander and no playthrough luck --
+     * unlike stallExecWork, whose 0 of 11418 turned out to mix a breaking subset with a bridging
+     * subset that could never have read anything else.
+     *
+     * <p>{@code noProgress} dominating is the defect the earlier figure was read as: the miner is
+     * running, aimed and pressing, and the game breaks nothing. {@code hits} dominating means
+     * mining works whenever it actually runs, and the stall lives somewhere else entirely.
+     */
+    public static volatile int mineHits = 0, mineNoProgress = 0;
 
     /**
      * Ticks where the key was pressed for a BLOCKER rather than the planned cell, and ticks where

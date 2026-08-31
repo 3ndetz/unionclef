@@ -269,6 +269,10 @@ public final class Nav {
      */
     public static volatile int stallExecMining, stallExecQueuedOnly;
 
+    /** Stalled ticks that were BRIDGING, not mining. They can never satisfy isBreakingBlock(),
+     *  which is why stallExecWork must not sample them. @see #stallExecWorkSeen */
+    public static volatile int stallExecPlacingOnly;
+
     /** Replay index seen at the previous stalled sample, to tell a stuck index from a moving one. */
     private static int lastStallExecIdx = -1;
 
@@ -285,7 +289,15 @@ public final class Nav {
         // figure that is either a defect or this bookkeeping, and nothing so far separates them.
         if (breaking && exec.isMiningNow()) stallExecMining++;
         else if (breaking) stallExecQueuedOnly++;
-        if (breaking || placing) {
+        // ⛔ ASK THE BREAKING QUESTION ONLY WHERE IT CAN BE ANSWERED. This used to sample on
+        // (breaking || placing) and then test isBreakingBlock(), which is FALSE during bridging by
+        // definition -- so every placing tick counted as "blind" whether or not anything was
+        // wrong. Caught by stallMiner reading 0/0 against stallExecWork 0/534 on a run whose
+        // stallExec was 0/534/4/0/529: not one of those ticks was mining. The earlier 0 of 11418
+        // therefore mixes a meaningful breaking subset with a placing subset that could never
+        // read anything else.
+        if (placing && !breaking) stallExecPlacingOnly++;
+        if (breaking) {
             // CAN THE GIVE-UP MACHINERY SEE THIS WORK? MovementProgressChecker protects mining
             // through mod.getControllerExtras().isBreakingBlock(), which is fed by a mixin on
             // vanilla's updateBlockBreakingProgress. If tungsten's own break queue drives that
