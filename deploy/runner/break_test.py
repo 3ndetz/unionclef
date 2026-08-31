@@ -288,5 +288,32 @@ def main():
     sys.exit(0 if ok else 1)
 
 
+def restore_drift_threshold():
+    """Put driftThreshold back to its shipped default (0.8), whatever happened.
+
+    ⛔ SAME BUG CLASS as gamer_smoke.py's stranded --pin-alt flags and pvp_test.py's
+    stranded combatMovementsEnabled -- found in the same audit across every runner
+    script that mutates persisted tungsten.json. main() relaxes driftThreshold to 1.5
+    unconditionally, with no CLI guard, and nothing ever restored it.
+
+    HIGHER STAKES THAN THE COMBAT CASE: driftThreshold governs general movement
+    precision, not one course's own behaviour, so a stranded 1.5 here would quietly
+    loosen the drift tolerance for EVERY later nav/physics measurement on this stand,
+    not just a repeat of this script -- exactly the kind of silent cross-contamination
+    this session's own paired A/B work has had to catch and correct for other flags
+    more than once.
+    """
+    try:
+        py4j("chat", msg=";settings driftThreshold 0.8")
+    except Exception as e:                        # noqa: BLE001 -- a safety net must not raise
+        print(f"  restore_drift_threshold: could not confirm reset -- {str(e)[:120]}")
+
+
 if __name__ == "__main__":
-    main()
+    # ⛔ finally DOES NOT RUN ON A PLAIN SIGTERM -- see pvp_test.py / gamer_smoke.py b69cb74a.
+    import signal as _signal
+    _signal.signal(_signal.SIGTERM, lambda *_: (_ for _ in ()).throw(SystemExit(143)))
+    try:
+        main()
+    finally:
+        restore_drift_threshold()
