@@ -8037,8 +8037,32 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   first rejected child** — non-deterministically, since it depends on ForkJoin scheduling order.
 - [ ] **C2.5 Closed set is inert.** `PathFinder.java:538-590` quantises to 0.01 blocks and keys on
   inputs/yaw → essentially no state dedup → endless re-expansion of near-identical states.
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01: строки СЪЕХАЛИ (файл рос с 2026-07-27), механизм — НЕТ.
+  Тот же хэш-набор сейчас живёт на `PathFinder.java:1160-1181`: `computeScaledPosition` округляет
+  позицию через `xScale/yScale/zScale = 100` (то есть до 0.01 блока, ровно как заявлено),
+  комбинирует с `hashCode` и кладёт в `closed` (обычный `HashSet`, судя по `.contains`/`.add`).
+  Дедупликация по-прежнему грубая хэш-проверка, не структурное состояние. Открыто, подтверждено
+  заново на актуальных строках.
 - [ ] **C2.6 `FastPlanner`'s result is discarded** unless COMPLETE within 250 ms
   (`PathFinder.java:784`), so on any long route the guide is always the blind scan.
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01 — ОПИСАНИЕ МЕХАНИЗМА УСТАРЕЛО, ВОПРОС ЖИВ И АКТИВНО ИЗМЕРЯЕТСЯ.
+  Сейчас (`PathFinder.findBlockPath`, ~1405-1499) это не таймер на 250 мс, а критерий приёмки:
+  `acceptable = fast.complete || arrivesAnyway || fastGuidePartial`, где `arrivesAnyway` —
+  последняя клетка маршрута ближе `FAST_GUIDE_ARRIVE_DIST` к цели. Датированный комментарий
+  прямо на месте (2026-08-10) документирует ТРИ раунда замера уже ПОСЛЕ этой записи регистра:
+  1) тумблер `fastBlockFirst` — старая цитата «OFF проходит, ON падает» ИНВЕРТИРОВАНА: сейчас
+     OFF проваливает nav_water и nav_slime, ON держит оба (`FastPlanner.special()` научился
+     слизи/лестницам). Из четырёх исходных причин держать строгое правило — слизь, лестница,
+     лоза, плавание — осталась только вода.
+  2) Геометрическое смягчение правила (пропускать неполный маршрут, если остаток без слизи по
+     прямой) ИЗМЕРЕНО И ОТКАЧЕНО: 6/9, ИДЕНТИЧНО полному смягчению — дискриминатор ни разу не
+     сработал на курсе, для которого его писали.
+  3) ТЕКУЩИЙ ВЫВОД НА МЕСТЕ: «строгое правило остаётся: 8/9 против 6/9 у обоих смягчений»,
+     `fastGuidePartial` держится `false` по умолчанию. Комментарий сам называет следующий шаг:
+     спрашивать `FastPlanner`, КАКОГО хода не хватило, а не гадать по геометрии.
+  Регистр не был сверен с этим следом — вопрос НЕ закрыт, но он живой, активно измеряемый, и
+  сильно дальше того единственного предложения, что здесь записано. Помечено НЕ закрытым (сам
+  вопрос открыт), но с полной сверкой к актуальному состоянию.
 
 ### C3 — PERFORMANCE (PERF-1 root causes, now with file:line)
 - [ ] **C3.1** Blind scan does ~1086 `new BlockNode` × ~10 `getBlockState` ≈ **10 000+ world reads per
@@ -8059,6 +8083,15 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
 - [ ] **C4.2 `PathExecutor` state (path/tick/stop/queues) is mutated from the PathFinder worker thread
   while the client thread replays it** — no synchronisation, no `volatile`. `breakQueue` is a
   non-volatile public field written by the search thread.
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01: всё ещё точно так — `breakQueue` (`PathExecutor.java:37`),
+  `tick` (`:25`), `stop` (`:27`) остаются обычными нессинхронизированными полями. Открыто,
+  подтверждено заново. И ЧЕСТНО ПРО СВОЙ ВКЛАД: этой же сессией добавлены `isMiningNow()`/
+  `isBreakingNow()`/`isPlacingNow()` (для диагностики застойного копания, коммиты
+  `da5b068d`/`6790646e`), читающие ЭТИ ЖЕ поля из `Nav` — другого класса, тикающего на клиентском
+  потоке. Новые чтения ДИАГНОСТИЧЕСКИЕ (считают тики, не управляют исполнением), поэтому рваное
+  чтение поля стоит максимум одного неверного отсчёта в счётчике, а не порчей поведения бота —
+  но это ТЕ ЖЕ небезопасные поля, унаследованный, а не новый пробел, и стоило сказать явно, а не
+  промолчать, раз уж этот пункт всё равно перепроверялся.
 - [ ] **C4.3 `pendingBreaks`/`pendingPlaces` are static mutable globals** mutated from background threads.
 - [x] **C4.4** Search threads write to Minecraft chat directly from background threads.
   ЗАКРЫТО 2026-07-30 + прогон на стенде. Это была не косметика: генераторы ходов писали
