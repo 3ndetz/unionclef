@@ -4355,8 +4355,9 @@ public class Py4jEntryPoint {
     }
 
     /** Poll the current navigation: busy (still pathing/task running), current
-     *  pos, distance to the last gotoXYZ goal, and arrived (within 1.5). The
-     *  agent loops gotoXYZ → pathStatus until arrived, then acts. */
+     *  pos, distance to the last gotoXYZ goal, and arrived (within
+     *  FastNavigator.ARRIVE_DIST). The agent loops gotoXYZ → pathStatus until
+     *  arrived, then acts. */
     public Map<String, Object> pathStatus() {
         return onClientThread(() -> {
             Map<String, Object> out = new HashMap<>();
@@ -4370,7 +4371,12 @@ public class Py4jEntryPoint {
                 double dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
                 out.put("goal", _gotoGoal[0] + "," + _gotoGoal[1] + "," + _gotoGoal[2]);
                 out.put("distance", String.format("%.1f", dist));
-                out.put("arrived", dist < 1.5);
+                // MUST match FastNavigator's own arrival threshold, not a separately-guessed
+                // number. This used to hardcode 1.5 while FastNavigator arrives at <= 2.0 --
+                // any goto that finished and stopped between 1.5 and 2.0 blocks out (a real,
+                // reproduced case, not hypothetical) reported arrived=false forever afterward,
+                // because nothing is driving the body any closer once the walker has stopped.
+                out.put("arrived", dist <= kaptainwutax.tungsten.task.FastNavigator.ARRIVE_DIST);
             }
             return out;
         }, Map.of("ok", false, "reason", "client thread timeout"));

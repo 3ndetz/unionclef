@@ -32,8 +32,12 @@ public final class FastNavigator {
 
     /** How far ahead one leg reaches before we re-plan (blocks, approx). */
     private static final int LEG_LENGTH = 32;
-    /** Arrived-at-goal tolerance. */
-    private static final double ARRIVE_DIST = 2.0;
+    /** Arrived-at-goal tolerance. Public: Py4jEntryPoint.pathStatus() reads this directly so its
+     *  own "arrived" field can never drift from the engine's actual arrival threshold again (it
+     *  used to hardcode a stricter 1.5, which left pathStatus reporting arrived=false forever on
+     *  any goto FastNavigator had already completed and stopped between 1.5 and 2.0 blocks out —
+     *  reproduced live 2026-09-01, see TODOS.md). */
+    public static final double ARRIVE_DIST = 2.0;
     /** Bail if the bot stops making progress for this many ticks. */
     private static final int STALL_TICKS = 60;
     /**
