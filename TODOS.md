@@ -8923,6 +8923,20 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
     путь, входящий в лаву, оценивается как обычная ходьба.
   * `CornerJump.java:74,89` инкрементит `limit` дважды за итерацию — бюджет 40 тиков вдвое
     меньше заявленного.
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01 — ВСЕ ЧЕТЫРЕ ФАКТА ВЕРНЫ СЕГОДНЯ, БЕЗ СМЕЩЕНИЯ СТРОК.
+  `BlockStateChecker.fullyPassableBlockState` (`:40`) и `MovementHelper.canWalkOnBlockState`
+  (`:29`) — по нулю вызывающих в tungsten (grep по всему модулю); у первой в `SprintPolicy.java`
+  даже есть СВОЙ приватный дубль с явным комментарием «NOT
+  kaptainwutax.tungsten.helpers.BlockStateChecker.fullyPassableBlockState» — кто-то уже нашёл
+  мёртвый хелпер и обошёл его молча, не удалив. `DivingMove.java` — три живых `Thread.sleep(50)`
+  на месте (`:40,60,75`, сдвиг на 2 строки от изначальной записи, тот же смысл). `CornerJump.java`
+  — `limit++` дважды за итерацию цикла `:72-91` подтверждено построчным чтением (обе инкремента
+  безусловны, без `continue`/`return` между ними) — бюджет РЕАЛЬНО 20 итераций, а не 40.
+  `WalkToNode.java:68-73` — ветки `else if (horizontalCollision) { while(...) newNode =
+  newNode.parent; break; }` действительно НЕТ (сравнение построчное с `RunToNode.java:80-83`,
+  где она есть). `WalkToNode.java:38` и `SprintJumpMove.java:35` действительно пишут
+  `agent.isInLava()` (РОДИТЕЛЬСКИЙ узел, не `newNode.agent`) через `=` (`RunToNode.java:34`
+  корректно: `newNode.agent.isInLava()` через `+=`). Ничего не почищено, пункт остаётся `[ ]`.
 
 - [!] **C5.19 (2026-08-01) ⛔ РЕТРАКЦИЯ: ВСЕ A/B ЭТОЙ СЕССИИ СРАВНИВАЛИ СБОРКУ САМУ С СОБОЙ.**
   Команды `@settings` НЕ СУЩЕСТВУЕТ (есть `@set`), а `@set` ходил только по `Settings`
