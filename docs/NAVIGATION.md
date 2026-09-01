@@ -213,6 +213,34 @@ These are what finally located the roots after a string of wrong guesses. Keep t
 
 ## Course status
 
+⛔ **THIS SECTION IS NOW STALE (flagged 2026-09-01) — read this note before trusting the tally
+below.** Nothing in this file has been touched since 2026-07-31 / the 2026-08-19 tally, but two
+major investigation threads ran after that and are not reflected here at all:
+
+- **The `chase_terrain` story kept moving well past "gap min=30.1, last=85.5" at the bottom of
+  this file.** TODOS.md's C5.15 through C5.20 (search there) found and fixed three more real
+  defects after this file stopped tracking it — an armed path deadlocking itself, an announced-
+  but-never-called walker-stuck guard, and the physics search pre-empting the block walker's
+  owned route (`BlockPathWalker.startBFS(path, ownsMovement)`) — and then honestly concluded the
+  walker still cannot handle generated terrain, with ported-move coverage capped at ~4% of a
+  route by the continuous-prefix rule (C5.18). If you are about to re-derive any of that from
+  scratch, read C5.15-C5.20 first.
+- **A second, larger investigation (2026-08-25 through 2026-08-31) attacked the `@gamer`
+  playthrough's dead time directly** and is NOT summarised here at all — it lives at the very
+  top of TODOS.md (search `2026-08-31`, `2026-08-30`, `2026-08-29`). Headline findings: wander
+  accounts for 67-70% of all dead time across 18 runs on two builds (independent of pathfinder
+  quality); inside wander, `Nav.isPathing()` reports true on 83-94% of ticks while the body does
+  not move at all (root not yet found, as of the last entry); separately, the vanilla mining
+  attack key is gated on exact cell identity with the raycast hit, so a converged aim resolving
+  to a nearer occluding cell breaks nothing and the break queue never drains (46% of "wrong
+  block" misses show this pattern) — three different flags exist for pieces of this
+  (`fireReleaseNeedsFire`, `mineTheBlockInTheWay`) but none has a measured outcome yet, because
+  every attempt to collect a paired A/B has been cut short by the stand dying mid-session.
+
+The tallies below are real numbers from when they were taken, not fabricated — they are just no
+longer the newest ones, and no fresher end-to-end sweep exists to replace them with (the stand has
+not stayed up long enough since to run one). Do not read them as "current state of the bot."
+
 ### CURRENT TALLY — 2026-08-19, on the shipped defaults, all three suites re-run end to end
 
 ```
