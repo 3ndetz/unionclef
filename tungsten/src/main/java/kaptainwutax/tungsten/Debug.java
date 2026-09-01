@@ -16,7 +16,33 @@ public class Debug {
         return "[Tungsten] ";
     }
 
+    /**
+     * Repeats of the SAME line are swallowed for a few seconds and go to the console instead.
+     *
+     * <p>The pathfinder narrates every attempt, so a player standing at their destination gets
+     * "Already at target location!" printed nine times in a row. That chatter lands in three places
+     * that matter: the recorded gameplay (it is burned into every frame of the b-roll our videos are
+     * cut from), the chat the agent reads to understand what is happening around it, and the client
+     * log. Each distinct message still shows up the first time, so nothing an agent needs to see is
+     * lost — only the flood is.
+     */
+    private static final java.util.Map<String, Long> LAST_SHOWN = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long REPEAT_MUTE_MS = 5000;
+
+    private static boolean isRepeat(String message) {
+        long now = System.currentTimeMillis();
+        Long prev = LAST_SHOWN.put(message, now);
+        if (LAST_SHOWN.size() > 256) {
+            LAST_SHOWN.entrySet().removeIf(e -> now - e.getValue() > REPEAT_MUTE_MS);
+        }
+        return prev != null && now - prev < REPEAT_MUTE_MS;
+    }
+
     public static void logMessage(String message, boolean prefix) {
+        if (isRepeat(message)) {
+            logInternal("(repeat muted) " + message);
+            return;
+        }
         if (TungstenModDataContainer.player != null) {
             if (prefix) {
                 message = "\u00A72\u00A7l\u00A7o" + getLogPrefix() + "\u00A7r" + message;
