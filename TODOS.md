@@ -7973,9 +7973,34 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   `EXECUTOR` is `public static PathExecutor EXECUTOR;` (no initialiser) → latent NPE in the same method.
 - [x] **C1.2 `combatExecutorEnabled` gates nothing** ЗАКРЫТО 2026-07-28: настройка и `airStrafeMultiplier` удалены (ноль чтений). — the flag is read NOWHERE, yet `CombatExecutor`
   burns a 30-tick full physics sim per 10 ticks for a debug overlay. `airStrafeMultiplier` likewise.
-- [ ] **C1.3 zero-caller code:** `AttackTiming.canAttack` + `isCritState` (so no crit/w-tap timing at
+- [~] **C1.3 zero-caller code:** `AttackTiming.canAttack` + `isCritState` (so no crit/w-tap timing at
   all), `WeaponSelector.reset`, `FollowEntityTask` jam-detection state, dead decrease-key branches in
   both heaps, `VoxelWorld` (never populated, never read).
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01, каждый из пяти пунктов отдельно, а не доверием чекбоксу:
+  * `AttackTiming.canAttack` — ВСЁ ЕЩЁ ноль вызовов. Открыто, подтверждено заново.
+  * `isCritState` — УСТАРЕЛО: такого имени в `AttackTiming.java` больше нет. Есть `isCrit`,
+    и он ИСПОЛЬЗУЕТСЯ (`TriggerBot.java:517: if (AttackTiming.isCrit(player)) { critHits++;
+    lifetimeCrits++; }`). Похоже на переименование при рефакторинге боевого кода, случившееся
+    без сверки с этим пунктом.
+  * `WeaponSelector.reset` — СНЯТО САМИМ КОДОМ: такого метода в файле больше нет вообще.
+    Класс переписан (`forceRecheck`, `syncSlot`, `reassertSlotAfterRespawn`,
+    `noticeStrayAttacks` — новые методы, ни один не существовал на момент этой записи).
+  * `FollowEntityTask` jam-detection — ВСЁ ЕЩЁ мертво, подтверждено заново: `jamAnchor`/
+    `jamTicks` объявлены с комментарием «see the watchdog in tick()», но нигде в файле не
+    присваиваются и не читаются — обещанного watchdog нет.
+  * decrease-key ветки в кучах — НЕ ПЕРЕПРОВЕРЕНО (требует трассировки самой реализации кучи,
+    не только грепа по имени; несколько файлов ссылаются на decrease-key, не отделил живые
+    ветки от мёртвых).
+  * `VoxelWorld` — ВСЁ ЕЩЁ мертво, подтверждено заново И ТОЧНЕЕ, чем раньше: цикл заполнения
+    в `MixinWorldChunk.loadFromPacket` целиком закомментирован (`/* ... */`) И ссылается на
+    `ExampleMod.WORLD` — имя из шаблона Fabric example mod, так и не переименованное в
+    `TungstenMod`. Единственные внешние обращения к `TungstenMod.WORLD` вне его же файла — это
+    сравнение `.parent` по ссылке в двух миксинах, не вызов `getBlockState`/
+    `setBlockAndFluidState`. Объект создаётся, но его методы кэша не вызывает никто.
+  Итог: 2 из 5 пунктов сняты (переименование/рефакторинг убрал сам вопрос), 2 из 5 живы и
+  подтверждены заново, 1 не перепроверен. Помечено ЧАСТИЧНО, а не закрыто — половина пунктов
+  остаётся тем же классом дефекта (`isDoingAcrobatics`/`wasPuttingOutFire`), что эта сессия уже
+  чинила дважды в другом файле.
 
 ### C2 — BLOCK-SPACE SEARCH IS STRUCTURALLY BROKEN
 - [ ] **C2.1 Move generation is an either/or that has no good branch.** `BlockNode.getChildren:292-301`
@@ -7988,7 +8013,7 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   constructor **discards its `cost` argument** (BlockNode.java:162-168). Every computed cost — mining
   ticks (`:675`), bridge penalty (`:718`), all of `ActionCosts` — is **decorative**. The search is
   greedy best-first on the heuristic alone.
-- [ ] **C2.3 Knowingly-broken distance math on the DEFAULT path.** `getDistFromStartSq:366-377`
+- [x] **C2.3 Knowingly-broken distance math on the DEFAULT path.** `getDistFromStartSq:366-377`
   computes Y and Z diffs from `start.x`; the comment admits the copy-paste bug and gates the correct
   form behind `smartMoves` (off). That function gates every partial emission and the `failing` flag
   that arms the timeout. Downstream `bestSoFar:313-328` `continue`s on the furthest node, so it can
@@ -7999,6 +8024,14 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   неприкосновенным, а функция гейтит и частичную выдачу, и флаг `failing`, взводящий таймаут —
   то есть правка меняет поведение широко и требует полного свипа плюс обоих курсов погони.
   Стенд занят другим заходом. Кандидат №1 на следующую итерацию по физике.
+  ЗАКРЫТО 2026-08-29, `eaf857b4` («the coarse search's distance is a distance now, on by
+  default») — тот же самый баг, найденный заново независимо (см. `DIST-FROM-START-IS-NOT-
+  A-DISTANCE-2026-08-29` выше по файлу) и в итоге переехавший в `PathFinder.getDistFromStartSq`
+  именно так, как этот пункт и предсказывал. Флаг `coarseDistanceIsADistance` теперь `true` по
+  умолчанию; основание — корректность плюс отсутствие регрессии на паре nav 18/18 против 16/18,
+  не установленный выигрыш по простою. Симптом (`gvpTinyGuide`) 251/290 (87%) → 5/189 (3%).
+  Этот пункт регистра НЕ был отмечен, когда фикс landed — расхождение поймано 2026-09-01 при
+  сверке C2.3 с фактическим кодом вместо доверия чекбоксу.
 - [x] **C2.4 Physics A\* drops most of its branching.** ЗАКРЫТО 2026-07-27: обе ветки зовут общий acceptChildIfValid. `PathFinder.java:1111` and `:1118` do
   `return null;` inside a chunk loop (`children.size() > 5` path), **aborting the whole chunk on the
   first rejected child** — non-deterministically, since it depends on ForkJoin scheduling order.
