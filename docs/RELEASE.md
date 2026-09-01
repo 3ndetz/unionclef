@@ -101,14 +101,14 @@ gradlew build githubRelease
 The release JAR includes everything needed to run:
 
 - UnionClef (altoclef) classes
-- Baritone classes (remapped to intermediary)
-- Tungsten classes
+- Tungsten classes — the only pathfinder; baritone/shredder are source-reference-only since the
+  "G-0" migration (2026-08-24, see `TODOS.md`) and are NOT compiled or bundled
 - Nether pathfinder
 - Jackson JSON
 - Py4J
 - MixinExtras
 
-Users just drop the JAR into their `mods/` folder. No separate baritone install needed.
+Users just drop the JAR into their `mods/` folder. Nothing else to install.
 
 ## Version bumping
 
