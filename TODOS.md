@@ -8070,11 +8070,22 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   `tryPlanPlaceThrough`** — is never reached. So: `smartMoves=false` (DEFAULT) = ~1086 children/expansion
   (~15 000 in the deep retry) but break+place work; `smartMoves=true` = ≤8 clean children but **no break,
   no place, no ladders, no water, no vines, no slime, no diagonals**. **Neither mode is complete.**
-- [ ] **C2.2 No g-cost accumulation.** `BlockSpacePathFinder.updateNode:345-364` does
+- [x] **C2.2 No g-cost accumulation.** `BlockSpacePathFinder.updateNode:345-364` does
   `child.cost = child.cost + 1` (the CHILD's own cost, not `current.cost + step`), and the `BlockNode`
   constructor **discards its `cost` argument** (BlockNode.java:162-168). Every computed cost — mining
   ticks (`:675`), bridge penalty (`:718`), all of `ActionCosts` — is **decorative**. The search is
   greedy best-first on the heuristic alone.
+  ЗАКРЫТО 2026-09-01, НАЙДЕНО ПОПУТНО ПРИ ПЕРЕЧТЕНИИ C5.21 (пункт 1 того же дефекта, тот же
+  файл, независимая перепроверка). `updateNode` сейчас: `child.cost = tentativeCost`
+  (`BlockSpacePathFinder.java:622`), где `tentativeCost = next.cost + edgeCost(child, world)`
+  (`:379`) — g родителя плюс цена хода, ровно апстримовая форма, не `child.cost + 1`.
+  Конструктор `BlockNode(x,y,z,goal,parent,cost,player)` (`:185-`) НЕ «отбрасывает» аргумент
+  `cost` — он кладёт его в `this.actionCost`, а не в `this.cost` (который остаётся `COST_INF`
+  до релаксации, комментарий на месте `:191-195` объясняет это явно как сознательное решение,
+  не пробел): `cost` — это g, посчитанный ПОЗЖЕ через relaxation, `actionCost` — цена ребра,
+  и `edgeCost(...)` её читает. Костыльной буквальной формулировки («отбрасывает») это больше не
+  описывает — величина используется, просто в другом поле. `ActionCosts`/цена слома/моста
+  больше НЕ декоративны. Правки не вносилось (уже исправлено кем-то раньше, регистр не сверен).
 - [x] **C2.3 Knowingly-broken distance math on the DEFAULT path.** `getDistFromStartSq:366-377`
   computes Y and Z diffs from `start.x`; the comment admits the copy-paste bug and gates the correct
   form behind `smartMoves` (off). That function gates every partial emission and the `failing` flag
@@ -8995,7 +9006,7 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   ⛔ ВЫВОД: C5.21 берётся ТОЛЬКО ЦЕЛИКОМ, одним заходом, и обязательно вместе с
   инициализацией `cost = 0` у стартового узла. Причина отката записана прямо в коде.
 
-- [ ] **C5.21 ⛔ ШЕСТЬ ДЕФЕКТОВ В ДВУХ A*-ДРАЙВЕРАХ (`PathFinder`, `BlockSpacePathFinder`) —
+- [~] **C5.21 ⛔ ШЕСТЬ ДЕФЕКТОВ В ДВУХ A*-ДРАЙВЕРАХ (`PathFinder`, `BlockSpacePathFinder`) —
   НАЙДЕНЫ 2026-08-02 ВЕЕРНЫМ АУДИТОМ, НЕ ЧИНЕНЫ (это ФИЗ-ДВИЖОК, отдельный заход).**
   Они маскируют друг друга — чинить надо ВМЕСТЕ, иначе поведение изменится, а поиск нет.
   1. `BlockSpacePathFinder.java:345-362` — выброшен ВЕСЬ guard релаксации A*
@@ -9021,6 +9032,47 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
      (там `failing` гейтит ТОЛЬКО таймаут): бот встаёт на цель и не признаёт этого.
   ⛔ Порядок: (1) нельзя чинить без инициализации `cost = 0` у стартового узла, иначе `g`
   каждого пути стартует с `COST_INF`.
+  ⛔⛔ ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01, ПЯТЬ ИЗ ШЕСТИ ПУНКТОВ УЖЕ ПОЧИНЕНЫ ЧУЖОЙ, НЕ СВЯЗАННОЙ
+  РАБОТОЙ, БЕЗ ОБНОВЛЕНИЯ ЭТОЙ ЗАПИСИ — тот же класс расхождения, что уже пойман у C2.3
+  (правка `eaf857b4`, 2026-08-29, landed и не сверена с регистром до сегодняшнего дня).
+  Перепроверено чтением по каждому из шести пунктов отдельно, не доверием заголовку:
+  1. ИСПРАВЛЕНО. `tentativeCost = next.cost + edgeCost(child, world)` (`:379`, комментарий на
+     месте прямо цитирует старый баг В ПРОШЕДШЕМ ВРЕМЕНИ: «It read `child.cost + 1`... g
+     therefore never accumulated»), guard релаксации на месте (`firstRelaxation ||
+     child.cost - tentativeCost > minimumImprovement`, `:401-403`), и `updateNode` реально
+     присваивает `child.cost = tentativeCost` (`:622`). g накапливается по-настоящему.
+  2. ИСПРАВЛЕНО. `failureTimeoutTime` ОБЪЯВЛЕН и используется (`:259,322`):
+     `long failureTimeoutTime = startTime + (generateDeep ? 19200L : 1920L)`, таймаут проверяет
+     обе причины (`failureTimeoutTime` ИЛИ `!failing && primaryTimeoutTime`). Замурованная
+     позиция таймаутит.
+  3. ИСПРАВЛЕНО — ТОТ ЖЕ ФАКТ, ЧТО C2.3, ПРОСТО НЕ БЫЛ СЮДА ПРОСТАВЛЕН. Текущий
+     `getDistFromStartSq` (`BlockSpacePathFinder.java:627-641`) читает `start.y`/`start.z`
+     под флагом `smartMoves || coarseDistanceIsADistance` — дословно то решение, что C2.3
+     описывает как закрытое `eaf857b4`. `PathFinder.java:1338-1343` (второй адрес того же
+     класса бага, физ-движок) — уже БЕЗУСЛОВНО правильный (`start.y`, `start.z`, без флага
+     вообще), без единого упоминания `start.x` на трёх осях.
+  4. НЕ ВОСПРОИЗВЕДЕНО В ТЕКУЩЕМ КОДЕ. `minimumImprovement = 0.21` (`:100`), НЕ `-500`; цикл
+     обновления `bestSoFar[i]` (`:413-422`) — простое `if (bestHeuristicSoFar[i] - heuristic >
+     minimumImprovement)`, БЕЗ конъюнкта `&& bestHeuristicSoFar != heuristic`, которого пункт
+     называет отсутствующим (то есть даже структура условия другая, не только константа).
+     Либо участок кода переписан заново после 2026-08-02, либо оригинальная запись описывала
+     промежуточную, уже замененную версию — в любом случае СЕЙЧАС такого дефекта нет.
+  5. НЕ НАЙДЕНО. Искал лишний `continue` рядом с циклом `bestSoFar`/коэффициентами — в текущем
+     виде файла (`:413-423`) такого `continue` просто нет, и нет других мест, которые бы под
+     описание подходили. Не берусь утверждать «исправлено» (нечего процитировать как замену) —
+     помечаю НЕ ВОСПРОИЗВОДИТСЯ, слабее прочих пяти вердиктов этого пункта.
+  6. ИСПРАВЛЕНО. `isPathComplete` (`:650-652`) — `node.getPos().squaredDistanceTo(target) <
+     1.0D`, без `&& !failing`. Комментарий над функцией (`:643-649`) описывает УДАЛЕНИЕ этого
+     лишнего конъюнкта явно, в прошедшем времени.
+  ИТОГ: из шести названных дефектов пять (1,2,3,4,6) в коде БОЛЬШЕ НЕ ВОСПРОИЗВОДЯТСЯ, один (5)
+  просто не нашёлся ни в каком виде. Помечаю пункт `[~]` вместо `[ ]` — заголовок «шесть
+  дефектов, не чинены» больше не описывает текущее состояние физ-движка, хотя когда была
+  написана, была точна. Не переоткрываю его как «закрыт», потому что «не чинены отдельным
+  заходом с A/B» — не то же самое, что «почему-то сами собой пропали»: не установлено, БЫЛ ли
+  тут единый сознательный проход по этим шести пунктам или они растворились по одному в разных
+  несвязанных правках (сессия явно чинила C2.3 отдельно, но не 1/2/4/6). Стоит поискать, каким
+  коммитом ушёл пункт 1 (g-накопление) — это самый крупный из шести и скорее всего тянет за
+  собой остальные как побочный эффект переписывания того же метода.
 
 - [ ] **C5.22 МЁРТВЫЕ ДУБЛИ И `Thread.sleep` В ПОИСКЕ (тот же аудит, 2026-08-02).**
   * `helpers/BlockStateChecker.java:40-63` и `helpers/MovementHelper.java:29-56` — устаревшие
