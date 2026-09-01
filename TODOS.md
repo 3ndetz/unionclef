@@ -9875,6 +9875,18 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   CPU was NEVER the flapping cause. v0.43.0 gated the per-tick physics sim (400->240% CPU) anyway.
   The client boots to the MAIN MENU; tests must call ConnectToServer (they do). Server persists bot
   position across a CLIENT restart, so verify tp reset before a run.
+  ⛔ ПЕРЕКРЁСТНАЯ ССЫЛКА 2026-09-01: это тот же механизм, что позже вырос в **C5.5-C5.14** этого
+  файла (раздел C5), и сам код это признаёт — `TungstenConfig.java:4598`:
+  `public boolean planPlaceMoves = true;   // shipping placement on — see C5.5`. То есть «DEFAULT
+  OFF» из этой записи устарело: флаг СЕЙЧАС включён по умолчанию, но путь к этому был не прямым
+  (C5.5 сама документирует одну попытку включить и откатить из-за конфликта с водой, затем
+  настоящую причину и чинку). «Bridge across a gap» реализация тоже сильно переехала — C5.8
+  переписала все пять сайтов постановки с честным rtrace вместо подделки, C5.6 добавила защиту
+  узлов плана от `stringPull`. «CORRECT FIX (next focused pass, #1.6.1-adjacent)» из этой записи —
+  ровно то направление, что довели до конца в C5.5/C5.8. Не переношу вывод «полностью готово»
+  сюда целиком: специфика THIS записи (core_bridge конкретно 2/6 флаки, физика симулирует
+  провал через непромощённый разрыв) не была отдельно переизмерена — но лежащий в основе
+  механизм явно куда зрелее, чем «DEFAULT OFF, next focused pass» тут описывает.
 - [x] BUG #28 ('Ran out of nodes' on hard parkour / flaky terrain climb) FIXED v0.44.0. The flaky
   ~40% climbing was NOT the search — it was a walker CONTROL-FEEDBACK SPIN: the walker pressed
   forward every tick regardless of facing, so while the humanized WindMouse yaw was still turning,
