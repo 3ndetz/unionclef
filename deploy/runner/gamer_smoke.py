@@ -215,6 +215,19 @@ def init_arm_base(n_runs):
     add the same persisted offset on top of their existing run-within-this-process count,
     which is what main()'s three RUN_SEQ[0] % 2 reads already assume is constant for the
     whole run. No-op, and the file untouched, when --pin-alt is not in play at all.
+
+    ⛔ KNOWN, UNCLOSED GAP: NO LOCKING. Two invocations starting close enough together could
+    both read the same base before either writes it back, producing the same arm twice
+    instead of alternating -- same pre-existing shape as gamer_run_index.txt's own
+    read-then-write (this file has never taken a lock, unlike run_suite.py's _take_lock()).
+    Deliberately NOT fixed with file locking here: the failure is SELF-LIMITING, not
+    silent corruption -- paired_ab.py's own pairing (`if "A" not in arms or "B" not in
+    arms: continue`) means two same-arm runs on different ground just become two
+    incomplete, skipped pairs, wasting a run each rather than misreading anything. A lock
+    would trade a narrow, safely-failing race for new failure modes of its own (acquire
+    timeouts, release-on-kill -- the exact class of bug this whole file exists to avoid
+    introducing) for a benefit this project has not needed yet: every stranding this
+    session actually hit came from a single killed PROCESS, never from two running at once.
     """
     if not any(a == "--pin-alt" for a in sys.argv):
         return
