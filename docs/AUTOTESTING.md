@@ -5,6 +5,15 @@
 > (`deploy/runner/uctest/`), one entrypoint, consistent PASS/FAIL + artifacts.
 > Design + scenario catalogue: **[features/PVP_SUITE.md](features/PVP_SUITE.md)**.
 > Legacy per-feature `deploy/runner/*_test.py` scripts remain until migrated.
+>
+> **UPDATE 2026-09-01:** everything below this banner is the ORIGINAL Phase-0 design (2026-07-20),
+> largely superseded by the actual `deploy/runner/` pipeline built since (`run_suite.py`,
+> `gamer_smoke.py`, `paired_ab.py` and the rest — see `TODOS.md` and `docs/CHECKLIST.md` for how
+> that pipeline is actually used). One specific line below is now not just superseded but moot:
+> the proposed `shredder_goto.py` scenario (`#goto` + jump bridging) targets a module that no
+> longer compiles at all — the "G-0" migration (2026-08-24) retired shredder alongside baritone,
+> so there is nothing left for a `#`-prefixed scenario to test. Kept for the historical design
+> shape, not as a live plan.
 
 Статус: **фаза 0 реализована и работает** (2026-07-20): `deploy/compose.test.yml`
 (itzg vanilla 1.21.11 + mineswarm-mc клиент), `deploy/runner/slime_test.py`
