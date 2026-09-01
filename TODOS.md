@@ -8098,6 +8098,23 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
 ### C3 — PERFORMANCE (PERF-1 root causes, now with file:line)
 - [ ] **C3.1** Blind scan does ~1086 `new BlockNode` × ~10 `getBlockState` ≈ **10 000+ world reads per
   A\* expansion** (baritone: ~10-15 neighbours).
+  ПОДТВЕРЖДЕНО ЧТЕНИЕМ 2026-09-01 (арифметика пересчитана заново, а не поверено на слово):
+  `BlockNode.getNodesIn3DCircule(8, ...)` (`:356,412-468`) на КАЖДОЕ раскрытие узла строит кольца
+  радиусом `d=8` вокруг узла для каждого уровня высоты `py`. Для обычного (не `generateDeep`,
+  не над слаймом) раскрытия: `py` пробегает `IntStream.range(-4, finalYMax)` с `finalYMax=2`
+  (`:428`, `yMax=2` не-слаймовая ветка `:423`) — 6 значений `py`. На каждом `py` строится 1
+  центральный узел плюс кольцо `id=1..localD` (`localD = d+1 = 9`, `:437`) с `4*id` узлов на
+  кольце (`:446`) — итого на один `py`: `1 + 4*(1+2+...+9) = 1 + 4*45 = 181` узлов. На 6 значений
+  `py`: `6 * 181 = 1086` — ЧИСЛО СОШЛОСЬ ТОЧНО, не оценка, а прямой пересчёт формулы кода.
+  `~10 getBlockState` на узел — тоже не голословно: `shouldRemoveNode` (`:470-`) на каждый
+  кандидат читает МИНИМУМ пять `world.getBlockState(...)` впрямую (`:474-478`: текущий блок,
+  блок под текущим, блок над кандидатом, блок кандидата, блок под кандидатом) плюс два
+  `BlockShapeChecker.getShapeVolume(...)` (`:482-483`, каждый внутри читает состояние блока и
+  его форму коллизии) плюс ветки `tryPlanBreakThrough`/`tryPlanPlaceThrough` (`:494,500`),
+  которые при срабатывании сканируют ещё несколько клеток (проход насквозь/гравитационные блоки
+  сверху) — то есть 7 чтений гарантированно на КАЖДЫЙ кандидат ещё до этих двух веток, а «~10»
+  из формулировки пункта — консервативная, а не завышенная оценка. C3.1 подтверждён числом,
+  не только направлением; правки не вносилось.
 - [ ] **C3.2** The `MIN_PRIORITY` search thread farms real work onto NORM-priority pools including the
   shared `ForkJoinPool.commonPool` — the "never win CPU against the client thread" comment
   (`BlockSpacePathFinder.java:48-51`) is not what the code does.
@@ -8123,11 +8140,27 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   очередь. Открыто, подтверждено заново на актуальных строках.
 - [ ] **C3.4** A synchronous 800-node BFS runs on the **client tick thread** whenever the walker is idle
   in the altoclef primary nav.
-  ПРОВЕРЕНО ЛЕГКО 2026-09-01, БЕЗ ВЫВОДА: "800" как константа нигде не находится ни в
-  `BlockPathWalker`, ни рядом. Либо число вынесено в конфиг/переименовано, либо механизм
-  переписан. НЕ хватило времени для точного вывода за один беглый грep — оставлено как есть,
-  явно помечено НЕПОДТВЕРЖДЁННЫМ (не "снято" и не "заново подтверждено"), чтобы не соврать в
-  любую сторону.
+  ⛔ ПОДТВЕРЖДЕНО ПОВТОРНЫМ ЧТЕНИЕМ 2026-09-01, ИСПРАВЛЕНИЕ К ЗАПИСИ ВЫШЕ: константа НАЙДЕНА,
+  предыдущий грep искал не там (рядом с `BlockPathWalker`), а число живёт в СОСЕДНЕМ классе,
+  который тот вызывает. `CombatPathfinder.java:32`: `private static final int MAX_NODES = 800;`,
+  с собственным комментарием на месте (`:30-31`): «2000 nodes × deep block scans every 10 ticks
+  on the client thread caused visible hitching; combat paths are short, 800 is plenty» — то есть
+  число и площадка (тик клиента) названы автором тем же кодом, а не моей догадкой. Сам поиск —
+  синхронный `while` с `ArrayDeque` (`:242-256`, `:307-344` для второй, ретрит-версии того же
+  BFS), без потока и без чанкования — весь бюджет тратится внутри одного вызова одного тика.
+  Путь до «altoclef primary nav»: `CombatPathfinder.findPath(...)` вызывается из
+  `CustomBaritoneGoalTask.java:807` — это и есть «(1) cheap grid BFS» ветки `primDrive`
+  (`:787-824`, коммент на месте: «cheap grid BFS — instant, good for near/clean terrain»),
+  которая срабатывает именно когда `BlockPathWalker` НЕ идёт (`walking` ложно, `:762-765`
+  выше по той же функции) — то есть ровно «whenever the walker is idle», как и написано в
+  формулировке пункта. `CustomBaritoneGoalTask` — обычный altoclef `Task`, его `onTick`
+  крутится из общего таск-раннера на тике клиента, отдельного потока под него нет.
+  ИТОГ: C3.4 подтверждён дословно, с `file:line`, и остаётся ОТКРЫТЫМ (правки не вносилось —
+  это чтение, не фикс). Дальнейший шаг для того, кто возьмёт эту работу: `MAX_NODES=800` уже
+  один раз проверялась «вниз» (её же комментарий у `expandDiagonals`, `:583-586`: без диагоналей
+  бюджет исчерпывается почти всегда, 98% стабов) — то есть просто урезать число нельзя без
+  повторной проверки той же ценой; сначала стоит измерить, сколько тиков реально стоит вызов на
+  живом стенде (сейчас недоступен, см. C8.1), а не гадать по числу используемых нод.
 
 ### C4 — THREAD SAFETY / CORRECTNESS
 - [ ] **C4.1 All searches read the live `ClientWorld` off-thread**, from two worker pools, with no
