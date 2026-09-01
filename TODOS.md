@@ -9202,9 +9202,23 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   zero and `simulateKnockback` has no terrain collision.
 
 ### C7 — INTEGRATION / OPS
-- [ ] **C7.1 `UnstuckChain` preempts and tears down tungsten follow/punk and throws the aim to a random
+- [~] **C7.1 `UnstuckChain` preempts and tears down tungsten follow/punk and throws the aim to a random
   angle** (URG-2 confirmed). `SafeRandomShimmyTask`'s forced baritone inputs nullify tungsten's key
   presses. `MobDefenseChain` is completely tungsten-unaware and preempts tungsten combat at HP≤10.
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01 — ОБЕ ЧАСТИ ПРО "БАРИТОН ПРОТИВ ТУНГСТЕНА" УСТАРЕЛИ, но не
+  факт, что весь пункт снят.
+  * `SafeRandomShimmyTask` больше не держит baritone-инпуты — импортирует
+    `kaptainwutax.tungsten.path.movements.Input` и жмёт им же (`hold(Input.SNEAK)` и т.д.).
+    Конфликт «две разные системы клавиш» в описанном виде не существует.
+  * `MobDefenseChain` — противоположность «полностью не знает про tungsten»: держит СОБСТВЕННЫЙ
+    `kaptainwutax.tungsten.combat.CombatController` полем (`tungstenCombat`), 56 упоминаний
+    tungsten/`Nav` по файлу, зовёт `Nav.pause()`/`Nav.isSafeToCancel()` напрямую.
+  НЕ ЗАКРЫВАЮ ПОЛНОСТЬЮ: сам вопрос («что-то ПЕРЕХВАТЫВАЕТ клавиши/прицел не вовремя») мог
+  пережить конкретную формулировку — эта же сессия нашла РОДСТВЕННЫЙ, но другой дефект в этом
+  же файле (`MobDefenseChain` отпускала `CLICK_LEFT` у копальщика, коммит `9a44e26d`) —
+  то есть класс проблемы «один писатель клавиш перебивает другого» в этой области ЖИВ, просто
+  не в той форме, что здесь описана. Помечено ЧАСТИЧНО: конкретные факты о baritone-инпутах и
+  «tungsten-unaware» — сняты; общий вопрос про перехват — не закрывать без отдельной проверки.
 - [x] **C7.2 Config persistence poisons defaults permanently.** ЗАКРЫТО 2026-07-28: configVersion + файл не создаётся без явной правки настройки. `TungstenConfig.load():250-262`
   unconditionally re-`save()`s the whole object → once `tungsten.json` exists, **every future shipped
   default is shadowed forever** on that machine. Any stand result from a machine with an old
@@ -9217,17 +9231,32 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
 - [ ] **C7.6** Server-specific data hardcoded in Java source (`ButlerConfig` chat formats).
 
 ### C9 — DOC LANGUAGE DEBT (my own violation, 2026-07-28)
-- [ ] **C9.1 `docs/NAVIGATION.md` is written in Russian** (591 lines). The language rule in
+- [x] **C9.1 `docs/NAVIGATION.md` is written in Russian** (591 lines). The language rule in
   AGENTS.md and at the top of the checklist says ALL instructions/docs/checklists/code
   comments are ENGLISH. I wrote that document — and the stop-hook text — in Russian while
   editing the very rules meant to enforce this. The hook is fixed; the document still needs
   translating.
+  ЗАКРЫТО, ПРОВЕРЕНО 2026-09-01: документ теперь на 2124 строки (было 591) и целиком на
+  английском — `grep -oP '[а-яА-Я]' docs/NAVIGATION.md | wc -l` даёт 0 по всему файлу,
+  проверено выборочно в начале, середине (~1000) и конце (~2000). Либо переведён целиком,
+  либо переписан заново на английском по мере роста.
 
 ### C8 — TEST ENVIRONMENT
-- [ ] **C8.1** The Mac stand (`mactrindetz.local`) is **not reachable from this session**: ssh key is
+- [~] **C8.1** The Mac stand (`mactrindetz.local`) is **not reachable from this session**: ssh key is
   rejected and the creds endpoint is blocked by the permission classifier. Local Windows docker has no
   `mineswarm-mc:amd64` image and the local jars are stale (0.27.0 vs `mod_version=0.61.0`). Standing up
   the stand locally is a prerequisite for every "tested" claim and for the demo videos.
+  СЛОЖНЕЕ, ЧЕМ "ЗАКРЫТО" ИЛИ "ЖИВО" — ПЕРЕПРОВЕРЕНО 2026-09-01. `mactrindetz`/
+  `mineswarm-mc:amd64` — не устаревшая среда, это ТА ЖЕ САМАЯ `deploy/compose.test.yml`,
+  которой эта сессия пользовалась много недель (те же `uctest-mc-tester1`/`uctest-server`
+  описаны прямо в ней, с комментарием "runs on the Mac (mactrindetz) next to the production
+  mineswarm stack"). КОНКРЕТНЫЕ блокеры, названные здесь (отказ ssh-ключа, нет образа,
+  протухшие jar) были сняты когда-то — иначе недели живого тестирования на стенде этой же
+  сессией физически не могли случиться. Но КЛАСС проблемы — "стенд недостижим из этой сессии"
+  — вернулся ПРЯМО СЕЙЧАС, другой конкретной причиной: `docker.sock` в рабочем месте пуст
+  (0 байт, обычный файл, а не сокет) на протяжении ВСЕЙ этой сессии, без доступа к
+  альтернативному пути подключения (проверено — ни в одном deploy-скрипте нет запасного
+  DOCKER_HOST). Помечено ЧАСТИЧНО: конкретные факты сняты, класс проблемы жив в новой форме.
 
 ## 🚀 PRIORITY BLOCK — PERFORMANCE + PIPELINED PATHING + REAL BLOCK-SPACE + FIGHTER (user 2026-07-25)
 
