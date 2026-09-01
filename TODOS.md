@@ -9581,7 +9581,7 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   свои собственные счётчики (`slotSyncSent`, `strayAttackTicks`...). Механизм явно живой и куда
   крупнее, чем «hooked into the COMBAT stage» описывает. Не измерено заново на живом дуэльном
   клипе именно ПО ЭТОМУ симптому (лук в бою). `[~]`.
-- [x] **URG-6 (P0) — chase_terrain bench must run on the REAL WORLD GENERATOR.** User: "РЕЛЬЕФ — это
+- [~] **URG-6 (P0) — chase_terrain bench must run on the REAL WORLD GENERATOR.** User: "РЕЛЬЕФ — это
   РЕАЛЬНЫЙ ГЕНЕРАТОР МИРА, а не сраный плоский мир"; the shape of the bench is: send the baritone bot
   running in a direction, **tungsten must CATCH it, ideally KILL it**. FIX IN PROGRESS: the scenario
   now runs on `gamer-server` (normal terrain, seed 12345), no arena building, victim runs 140 blocks
@@ -9592,10 +9592,17 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   мир, детерминированный seed), стоит в конфиге стенда и не менялось. Итог погони на этом рельефе
   (поймал/убил/не умер) — отдельный, уже открытый вопрос C5.15-C5.20, не переоткрываю здесь: этот
   пункт был именно про СТЕНД, а не про исход, и стенд сделан.
-- [x] **URG-7 (P1) — bow shoots VERY SLOWLY.** Aim used the slow WindMouse mode and only released
+  ГИГИЕНА 2026-09-01: перепометила `[x]` -> `[~]`. `docs/CHECKLIST.md` держит жёсткий запрет
+  «Never call something done without a stand run» — конфиг проверен чтением файла, а не живым
+  прогоном, и, что важнее, самого исхода погони на этом рельефе не измеряла НИКТО за последние
+  недели (см. C5.15-C5.20). «Готово» тут может значить только «стенд настроен правильно», а не
+  «пункт закрыт» — второе без прогона утверждать нельзя.
+- [~] **URG-7 (P1) — bow shoots VERY SLOWLY.** Aim used the slow WindMouse mode and only released
   inside a 3.5° cone, so each shot took seconds. FIX IN PROGRESS: fast nav-mode aim for the bow.
   Still to measure: shots per minute on the stand.
-  ЗАКРЫТО 2026-09-01: `BowShooter.java:441` зовёт `WindMouseRotation.INSTANCE.setTargetFast(...)`
+  НАЙДЕНО 2026-09-01 (перепомечено `[x]` -> `[~]` — `docs/CHECKLIST.md`: «Never call something
+  done without a stand run», и «shots per minute» ниже прямо не измерено): `BowShooter.java:441`
+  зовёт `WindMouseRotation.INSTANCE.setTargetFast(...)`
   с комментарием, дословно цитирующим ЭТУ ЖЕ жалобу юзера — «FAST mode: a real archer flicks onto
   the target and holds; the slow glide made every shot take seconds (user 2026-07-24: "стрелял
   ОЧЕНЬ МЕДЛЕННО")». Механизм есть и назван по имени запроса. «Shots per minute на стенде» не
