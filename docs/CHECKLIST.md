@@ -1232,7 +1232,7 @@ Stop only on: hardware failure, or everything in `TODOS.md` closed and tested.
 | file | what for |
 |---|---|
 | [NAVIGATION.md](NAVIGATION.md) | engine map + log fingerprint table. Read FIRST when touching pathfinding |
-| [../TODOS.md](../TODOS.md) | user's goals + critical register C0-C8 |
+| [../TODOS.md](../TODOS.md) | user's goals + critical register C0-C10 |
 | [ai/nav-baseline-2026-07-27.md](ai/nav-baseline-2026-07-27.md) | course baseline |
 | [ai/audit-2026-07-27-tungsten-full.md](ai/audit-2026-07-27-tungsten-full.md) | full tungsten audit |
 | `deploy/runner/` | stand, suites, video sending |
