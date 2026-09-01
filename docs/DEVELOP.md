@@ -83,7 +83,7 @@ Open `unionclef.code-workspace` — it includes:
 Everything builds from source. No pre-built JARs, no `publishToMavenLocal`, no submodule dance.
 
 ```
-gradlew compileJava     # compiles baritone + tungsten + altoclef
+gradlew compileJava     # compiles tungsten + altoclef (baritone/shredder are NOT compiled — see G-0 in TODOS.md)
 gradlew build           # full build with JAR output
 gradlew runClient       # compile + launch Minecraft
 ```
@@ -107,15 +107,23 @@ gradlew compileJava
 
 ### Syncing upstream baritone
 
-Baritone source has been remapped from mojmap to yarn. If you pull upstream baritone changes:
+⛔ STALE, FLAGGED 2026-09-01: this recipe predates the "G-0" migration (2026-08-24), which
+commented `include(":baritone")` out of `settings.gradle.kts` entirely — there is no `:baritone`
+Gradle project any more, so `gradlew :baritone:migrateMappings` below has nothing to run against.
+`baritone/` is source-reference-only now (see `TODOS.md`'s G-0 section), so pulling upstream
+changes into it is no longer a build-system operation; whoever needs to do this again should
+temporarily re-add the `include(":baritone")` line to run the mapping migration, then comment it
+back out afterward. The steps themselves (remap, migrate, fix imports) are otherwise still the
+right shape and are kept for that reason:
 
 ```bash
 # 1. Temporarily switch baritone/build.gradle mappings to loom.officialMojangMappings()
 # 2. Copy new upstream source into baritone/src/main/java/
-# 3. Run: gradlew :baritone:migrateMappings --mappings "net.fabricmc:yarn:1.21+build.9:v2"
-# 4. Replace source with remappedSrc output
-# 5. Fix ~10-15 stale imports (java.awt.*, mojmap wildcards, mixin annotations)
-# 6. Switch mappings back to yarn
+# 3. Uncomment include(":baritone") in settings.gradle.kts
+# 4. Run: gradlew :baritone:migrateMappings --mappings "net.fabricmc:yarn:1.21+build.9:v2"
+# 5. Replace source with remappedSrc output
+# 6. Fix ~10-15 stale imports (java.awt.*, mojmap wildcards, mixin annotations)
+# 7. Switch mappings back to yarn, then re-comment include(":baritone") in settings.gradle.kts
 ```
 
 ## Releasing
