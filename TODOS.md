@@ -9633,6 +9633,13 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
     1 block from the drop ("оба бота должны бить друг друга и грамотно устоять на 1 блоке от
     падения"). i.e. edge-aware combat + a live sparring partner, not a static dummy.
   - Related existing item: LIVE-B COMBAT FULL REWORK (below) — same theme; fold in.
+  ⛔ ПЕРЕКРЁСТНАЯ ССЫЛКА 2026-09-01 (справочно, НЕ закрываю — этот раздел «RECORD ONLY», и RW-4
+  ниже требует реального сервера, которого у меня нет). Много движения в этом направлении есть
+  под **C6** этой же сессии: здоровье теперь читается и бот кайтит при ранении (C6.4), щит
+  реально поднимается движком между ударами (C6.5, но выключен по умолчанию), crit-тайминг
+  портирован по вертикали ванильного правила (C6.6). «Стоит и долго смотрит» / «почти не
+  двигается вблизи» — эти конкретные live-симптомы отдельно НЕ переизмерялись, и без реального
+  сервера/живого джиттера это и невозможно честно закрыть, как и предупреждает сам RW-4.
 - [ ] **RW-2 — Building: approach + break-order not visible; placement looks instant/cheaty.**
   - Breaking a block IS visible, but the bot's APPROACH to the block it must break is NOT
     ("не видно как он ПОДХОДИТ к нужному блоку"), and it's NOT visible how it CHOOSES which block
@@ -9643,6 +9650,17 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
     tested on a REAL SERVER, not just the stand ("надо тестировать это на реальном сервере").
   - Requirement: building must be SLOW and physical like baritone ("просто строительство медленное
     как в baritone") — walk to each cell, aim, place ONE block at a time, real timing.
+  ⛔ ПЕРЕКРЁСТНАЯ ССЫЛКА 2026-09-01 (справочно, НЕ закрываю — та же оговорка про RW-4/реальный
+  сервер). «6 стекла появились разом» — это именно то, что C5.8 (в этом файле) нашёл и, по
+  собственному описанию, устранил: раньше пять сайтов постановки (`tickPlacing`, `BridgeTask`,
+  `PillarTask`, py4j-`//set`/`//walls`/`//hollow`/`//cyl`/`//sphere`/`//replace`/`buildBlocks`,
+  и отдельно `placeBlockAtRaw`) ставили блоки мгновенно и/или через подделанный `BlockHitResult`;
+  теперь единый `BlockPlaceHelper`-гейт тикается РОВНО раз в клиентский тик и целится по
+  настоящему рейтрейсу. Подход к блоку слома (RW-2's «не видно как подходит») — отдельно
+  закрывается `walkToBuild`/`FastNavigator.startExact` (C5.10/C5.11, эта же сессия): очередь
+  теперь идёт туда, откуда клетка реально ставима/ломаема, а не подделывает попадание с места.
+  Порядок слома конкретно НЕ проверялся заново. Ничего из этого не проверено на РЕАЛЬНОМ сервере
+  на предмет анти-чита — RW-4 остаётся полностью открытым для обоих пунктов.
 - [ ] **RW-3 — Godbridge is cheaty (no-look, no physics).**
   - The bot places blocks under itself "cheatily" without even looking where it puts them ("както
     читерски ставит под себя блоки не видя даже куда он их ставит — это бред"). No physics visible,
@@ -9693,6 +9711,16 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
     BARITONE, bot #2 CHASES on TUNGSTEN, over COMPLEX/HARD terrain. Tungsten MUST CATCH UP
     ("Tungsten ДОЛЖЕН ДОГНАТЬ — вот суть бенча"). Pass = closes distance to melee/contact within a
     bound; fail = never catches. This is a real moving-target chase over terrain, not a flat loop.
+  ⛔ ПЕРЕКРЁСТНАЯ ССЫЛКА 2026-09-01 (справочно, НЕ закрываю). Ровно этот бенч уже построен и
+  закрыт со стороны ИНФРАСТРУКТУРЫ под **URG-6** (выше в этом файле): `gamer-server`, реальный
+  генератор, seed 12345, жертва на baritone бежит 140 блоков, наш бот гонится на tungsten. Сама
+  ГОНКА — многодневная сага **C5.15 → C5.20** (этот же файл, раздел C5): найдены и починены
+  взведённый путь, необъявленный сторож ходока, вытеснение блочного маршрута физикой; остаток
+  назван ЧЕСТНО и НЕ закрыт — ходок (`BlockPathWalker`) не умеет идти по сгенерированному
+  рельефу, и «continuous pursuit vs stop-and-replan», которого просит этот пункт, всё ещё
+  не достигнут (C5.18: покрытие портированных ходов ~4% маршрута). То есть бенч, который просит
+  RW-9, существует и гоняется регулярно — а вот «Tungsten ДОЛЖЕН ДОГНАТЬ» как исход ещё не
+  доказан. Совпадает с PIPE-1 (выше) под тем же именем.
 
 ## 🐞 BUGS (from live user testing — each = its own GitHub issue, fix by priority, per checklist)
 
