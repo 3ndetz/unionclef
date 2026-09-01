@@ -1,16 +1,11 @@
 package kaptainwutax.tungsten.helpers;
 
-import static kaptainwutax.tungsten.path.blockSpaceSearchAssist.Ternary.NO;
-import static kaptainwutax.tungsten.path.blockSpaceSearchAssist.Ternary.YES;
-
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.TungstenModRenderContainer;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
-import kaptainwutax.tungsten.path.blockSpaceSearchAssist.Ternary;
 import kaptainwutax.tungsten.render.Color;
 import kaptainwutax.tungsten.render.Cuboid;
-import net.minecraft.block.AzaleaBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -18,43 +13,12 @@ import net.minecraft.block.FenceBlock;
 import net.minecraft.block.LadderBlock;
 import net.minecraft.block.LeavesBlock;
 import net.minecraft.block.SlabBlock;
-import net.minecraft.block.StainedGlassBlock;
 import net.minecraft.block.StairsBlock;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.WorldView;
 
 public class MovementHelper {
-	
-	 public static Ternary canWalkOnBlockState(BlockState state) {
-	        Block block = state.getBlock();
-	        if (BlockShapeChecker.isBlockNormalCube(state) && block != Blocks.MAGMA_BLOCK && block != Blocks.BUBBLE_COLUMN && block != Blocks.HONEY_BLOCK) {
-	            return YES;
-	        }
-	        if (block instanceof AzaleaBlock) {
-	            return YES;
-	        }
-	        if (block == Blocks.LADDER || block == Blocks.VINE) { // TODO reconsider this
-	            return YES;
-	        }
-	        if (block == Blocks.FARMLAND || block == Blocks.DIRT_PATH) {
-	            return YES;
-	        }
-	        if (block == Blocks.ENDER_CHEST || block == Blocks.CHEST || block == Blocks.TRAPPED_CHEST) {
-	            return YES;
-	        }
-	        if (block == Blocks.GLASS || block instanceof StainedGlassBlock) {
-	            return YES;
-	        }
-	        if (block instanceof StairsBlock) {
-	            return YES;
-	        }
-	        if (block instanceof SlabBlock) {
-	            return YES;
-	        }
-	        return NO;
-	    }
-	 
 
 	    public static boolean wasCleared(WorldView world, BlockPos start, BlockPos end) {
 	    	return wasCleared(world, start, end, null, null);

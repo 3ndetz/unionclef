@@ -1,25 +1,13 @@
 package kaptainwutax.tungsten.helpers;
 
-import static kaptainwutax.tungsten.path.blockSpaceSearchAssist.Ternary.NO;
-import static kaptainwutax.tungsten.path.blockSpaceSearchAssist.Ternary.YES;
-
 import kaptainwutax.tungsten.TungstenConfig;
 import kaptainwutax.tungsten.TungstenMod;
-import kaptainwutax.tungsten.path.blockSpaceSearchAssist.Ternary;
-import net.minecraft.block.AirBlock;
 import net.minecraft.block.AnvilBlock;
-import net.minecraft.block.AzaleaBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.block.DoorBlock;
-import net.minecraft.block.EndPortalBlock;
 import net.minecraft.block.FenceBlock;
-import net.minecraft.block.FenceGateBlock;
-import net.minecraft.block.FireBlock;
 import net.minecraft.block.PaneBlock;
-import net.minecraft.block.ShulkerBoxBlock;
-import net.minecraft.block.SkullBlock;
 import net.minecraft.block.SlabBlock;
 import net.minecraft.block.TrapdoorBlock;
 import net.minecraft.block.WallBlock;
@@ -36,32 +24,7 @@ import net.minecraft.world.WorldView;
  * Helper class to easily check block state.
  */
 public class BlockStateChecker {
-	
-	public static Ternary fullyPassableBlockState(BlockState state) {
-        Block block = state.getBlock();
-        if (block instanceof AirBlock) { // early return for most common case
-            return YES;
-        }
-        // exceptions - blocks that are isPassable true, but we can't actually jump through
-        if (block instanceof FireBlock
-                || block == Blocks.TRIPWIRE
-                || block == Blocks.COBWEB
-                || block == Blocks.VINE
-                || block == Blocks.LADDER
-                || block == Blocks.COCOA
-                || block instanceof AzaleaBlock
-                || block instanceof DoorBlock
-                || block instanceof FenceGateBlock
-                || !state.getFluidState().isEmpty()
-                || block instanceof TrapdoorBlock
-                || block instanceof EndPortalBlock
-                || block instanceof SkullBlock
-                || block instanceof ShulkerBoxBlock) {
-            return NO;
-        }
-        return YES;
-    }
-	
+
 	/**
      * Checks if a block is connected to another of its type.
      * 
