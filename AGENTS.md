@@ -50,15 +50,27 @@ wrong, and this section exists so it never is again.
 
 ## What is this
 
-Unified monorepo: altoclef (bot) + tungsten (A* movement) + shredder (pathfinder v2), plus
-`baritone/` kept as a **source reference only**.
+Unified monorepo: altoclef (bot) + tungsten (A* movement) — **tungsten is now the only compiled
+pathfinder**. `baritone/` and `shredder/` both stay in the repo as **source reference only**.
 
-⛔ **`baritone/` IS NOT COMPILED.** `settings.gradle.kts` has `// include(":baritone")  // kept as
-source reference, not compiled`. The live pathfinder is **`shredder/`**, which occupies the SAME
-`baritone.*` package namespace — so every `import baritone.…` in altoclef resolves to shredder, not
-to the `baritone/` directory. "Replace baritone" therefore means "replace shredder". (Recorded
-2026-07-27; this file previously claimed all four modules were compiled together, which sent several
-sessions looking in the wrong module.)
+⛔⛔ **NEITHER `baritone/` NOR `shredder/` IS COMPILED. THIS IS A CHANGE FROM WHAT THIS FILE SAID
+BEFORE.** `settings.gradle.kts` has both `include(":baritone")` and `include(":shredder")`
+commented out:
+```
+// include(":baritone")  // kept as source reference, not compiled
+// include(":shredder")  // G-0 (2026-08-24): kept as SOURCE REFERENCE ONLY, not compiled.
+include(":tungsten")   // the only pathfinder now
+```
+Found 2026-09-01, reconciling this file against the actual build for the first time since the
+G-0 migration (2026-08-24, see `TODOS.md`, "G-0 COMPLETE: baritone and shredder are out of the
+code and out of the build"). This section previously said "the live pathfinder is `shredder/`,
+which occupies the `baritone.*` package namespace" (recorded 2026-07-27) — that was true THEN,
+but shredder itself was retired three and a half weeks later and this file was never updated to
+say so. Whoever reads this note next: check `settings.gradle.kts` yourself before trusting even
+this correction, the way this correction had to check it instead of trusting the last one.
+"Replace baritone" no longer means anything — there is nothing left of the old engine in the
+build to replace. `import baritone.…` lines that remain in `src/main` are historical debt (see
+`TODOS.md`'s G-0 section for the remaining import count), not a live delegation to shredder.
 
 ## РАБОЧАЯ ВЕТКА — `main` (юзер 2026-07-23)
 
@@ -178,13 +190,11 @@ py4j/MCP), а НЕ готовые скрипты, которые всё дела
 ## Project structure
 
 - `src/main/java/` — altoclef source (bot logic, tasks, commands)
-- `baritone/src/main/java/` — baritone source (pathfinding, remapped to yarn)
-- `tungsten/src/main/java/` — tungsten source (A* movement)
-- `shredder/src/main/java/` — shredder source (pathfinder v2, fork of baritone)
+- `tungsten/src/main/java/` — tungsten source (A* movement) — the only compiled pathfinder
+- `baritone/src/main/java/` — baritone source, **NOT compiled**, source reference only (see G-0)
+- `shredder/src/main/java/` — shredder source, **NOT compiled**, source reference only (see G-0)
 - `root.gradle.kts` — root build config (MC 1.21, yarn mappings)
-- `baritone/build.gradle` — baritone subproject (yarn mappings)
 - `tungsten/build.gradle` — tungsten subproject (yarn mappings)
-- `shredder/build.gradle` — shredder subproject (yarn mappings)
 - `docs/DEVELOP.md` — build & run instructions
 
 ## STRICT Rules
