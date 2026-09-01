@@ -9302,6 +9302,40 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   альтернативному пути подключения (проверено — ни в одном deploy-скрипте нет запасного
   DOCKER_HOST). Помечено ЧАСТИЧНО: конкретные факты сняты, класс проблемы жив в новой форме.
 
+### C10 — FOOD / EXPLORATION FALLBACK (found via cross-session live-stand read, 2026-09-01)
+- [ ] **C10.1 `TimeoutWanderTask` can produce ZERO net movement over an entire episode while the bot
+  is nominally "exploring".** Found in `deploy/runner/freezes/stall_run1_ladder.txt`
+  (`LADDER STALLED: no new rung for 150s; last rung stone tools`), surfaced by another session
+  reading the live stand through its own `docker.sock` (this session's own socket is a 0-byte
+  file — see C8.1) and cross-checked here against the source.
+  ⛔ ПЕРВЫЙ ПРОЧТЁННЫЙ ДИАГНОЗ БЫЛ НЕВЕРЕН, ИСПРАВЛЕНО ПЕРЕД ЗАПИСЬЮ: коллега предположила, что
+  это тот же дефект, что и коммит `9a44e26d` («MobDefenseChain отпускает CLICK_LEFT у копальщика
+  каждый тик без огня»). В ЭТОМ конкретном дампе это НЕ так — проверено по счётчикам того же
+  файла: `fireReleaseSkipped=3487` РОВНО РАВНО `mdCalls=3487` (то есть фикс из `9a44e26d`
+  работает и корректно пропускает сброс кнопки КАЖДЫЙ раз), `attackThief=[(none)]` (никто не
+  крадёт клавишу атаки в этом прогоне), `mdFight=0 mdFlee=0` (mob-defence вообще не активна).
+  Коллега также прочла `called=2424 inRange=2424 clicked=0` как живой симптом — это тоже мимо:
+  это ПОЖИЗНЕННЫЙ счётчик другого, отдельно уже разобранного механизма (клик постановки блока,
+  `PathExecutor.tickPlacing`), задокументированного строкой выше в этом же файле
+  (`"⛔ inRange=2222 clicked=0 WAS A LIFETIME TOTAL, NOT A RUN (2026-08-19)"`, TODOS.md:4364) —
+  не имеет отношения к текущему зависанию.
+  НАСТОЯЩАЯ КАРТИНА ПО ДАМПУ: активная задача на момент замера — `BeatMinecraftTask` → "Collect
+  220.0 units of food" → "Killing entity.minecraft.chicken" → падает на "Doing something to
+  closest entity..." → "Wander for Infinity blocks: Exploring." Курица зафиксирована на
+  `chicken:33.4>33.4` (расстояние НЕ УМЕНЬШАЕТСЯ между тремя подряд идущими замерами в одной
+  строке лога). За это время `wander=1393` (`TimeoutWanderTask.wanderTicks`, тики, где именно
+  эта задача — единственный источник движения тела, см. её же комментарий "AN ODOMETER THAT
+  ONLY RUNS WHILE THIS TASK DOES") дают `wanderMoved=0` (`wanderMovedCm`, СМ, не блоки) —
+  то есть НОЛЬ суммарного горизонтального смещения за ~1393 тика (≈70 секунд), не «мало», а
+  РОВНО ноль.
+  НЕ ЗАКРЫВАЮ КОРНЕВУЮ ПРИЧИНУ: `TimeoutWanderTask.java` бегло прочитан (одометр на строках
+  204-229 — честный, считает реальное перемещение тела, не подставной), но откуда берётся цель
+  блуждания и почему она НИ РАЗУ не сдвинула бота — не прослежено до конца в этом заходе. Это
+  ОТДЕЛЬНАЯ, ранее не зарегистрированная задача: агент, не способный дотянуться до еды в 33
+  блоках, встаёт в блуждание, которое само гарантированно ничего не даёт. Следующий заход:
+  проследить выбор точки блуждания (`TimeoutWanderTask`) и вызывающий `AbstractDoToClosestObjectTask`/
+  `KillEntitiesTask`, понять, почему тело не получает ни одного реального шага.
+
 ## 🚀 PRIORITY BLOCK — PERFORMANCE + PIPELINED PATHING + REAL BLOCK-SPACE + FIGHTER (user 2026-07-25)
 
 > Order is the user's: **PERF-1 is FIRST PRIORITY**, then the pipelined pathing (PIPE-1) with the
