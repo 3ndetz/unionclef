@@ -9422,7 +9422,17 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   rebuilt per frame, unconditional physics sims, per-tick scans/raycasts, search threads), separate
   mod cost from the stand's software-GL cost with a measurement, then cut. Acceptance: a measured
   before/after FPS + tick-time number on the stand, with the mod idle / navigating / fighting.
-- [ ] **PIPE-1 (P0) — FAST BLOCK PATH FIRST, PHYSICS COMPUTED FROM A FUTURE NODE WHILE MOVING.**
+  ⛔ ПЕРЕКРЁСТНАЯ ССЫЛКА 2026-09-01: root causes для этого пункта — раздел **C3** этого файла
+  (найден и пронумерован уже как «PERF-1 root causes, now with file:line»). C3 переперечитан
+  этой же сессией (коммит `d8d94a9d`): C3.1 не переподтверждён (лёгкая проверка, времени не
+  хватило), C3.2 частично сдвинут (у `Node.java:327` появился флаг `enableParallelStreaming`,
+  но = true по умолчанию — поведение не изменилось), C3.3 подтверждён СЛОВО В СЛОВО тем же
+  дефектом на актуальных строках, C3.4 не подтверждён (константа 800 нигде не найдена, но и не
+  опровергнута). Итог: PERF-1 остаётся ОТКРЫТЫМ — ни один корень из C3 фактически не устранён,
+  только один частично прикрыт неактивным флагом. Не путать с отдельной, уже проделанной работой
+  над ИЗМЕРЕНИЕМ fps в тестовом харнессе (`avg_fps`/`load_sensitive` гварды, разбросаны по файлу,
+  напр. строки ~3781-4555) — та чинит ДОСТОВЕРНОСТЬ прогонов, а не сам расход кадра/тика мода.
+- [~] **PIPE-1 (P0) — FAST BLOCK PATH FIRST, PHYSICS COMPUTED FROM A FUTURE NODE WHILE MOVING.**
   User's design, verbatim intent: build a fast baritone-class block pathfinder INSIDE tungsten; the
   bot **starts walking that block path immediately**; the physics search then computes **from a
   future node (~t+10) DURING the movement**, so the computation overlaps with walking and the bot is
@@ -9436,18 +9446,57 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
     мелкие маршруты".
   - Acceptance: A/B bench vs baritone on identical start/goal (real terrain + parkour courses) —
     tungsten wins on time-to-goal AND clears courses where baritone fails.
-- [ ] **REAL-1 (P0, URGENT, previously unrecorded) — block-space plans PHYSICALLY IMPOSSIBLE routes.**
+  ⛔ НАЙДЕНО ПОСТФАКТУМ 2026-09-01 — ЭТА АРХИТЕКТУРА В ОСНОВНОМ УЖЕ ПОСТРОЕНА, пункт стоял `[ ]`
+  с 2026-07-25 и ни разу не был сверен с тем, что случилось потом. `tungsten/path/fast/FastPlanner.java`
+  — ровно то, что просит спецификация, дословно из её же javadoc: «A fast, honest block-space
+  planner: baritone-class A* over cells, built so the bot can START WALKING almost immediately
+  while the physics engine keeps working on the hard parts» — expand ~14 кандидатов вместо ~2000,
+  честная g-стоимость с адмиссибельной эвристикой, и сегменты, недоступные ходьбой, помечаются
+  `needsPhysics`, чтобы физика брала ТОЛЬКО их (это и есть требование «не ломать паркур»). Это НЕ
+  мёртвый класс — вызывается из живого пути: `PathFinder.java:1412`, `FollowEntityTask.java:351,513`,
+  `FastNavigator.java:604`. «Физика считается ЗАРАНЕЕ, из будущего узла, пока идёт ходьба» — тоже
+  присутствует как архитектура: `FastNavigator.LEG_LENGTH=32`/`FollowEntityTask.PHYSICS_LEG_CELLS=32`
+  режут маршрут на куски и отдают физике только кусок ВПЕРЕДИ, а не всю цель, именно чтобы поиск не
+  считал секундами то, что уже можно топтать. ОСТАЁТСЯ НЕ ЗАКРЫТО: вся сага C5.15-C5.20 (эта же
+  сессия) — ходок (`BlockPathWalker`), которому этот быстрый план поручен исполнять, сам НЕ УМЕЕТ
+  идти по сгенерированному рельефу, и правило «непрерывный префикс» (C5.18) режет покрытие
+  портированных ходов до ~4%. То есть костяк «быстрый план + физика на сложных кусках» есть и
+  используется, а конкретно на погоне (chase) он пока не даёт обещанного ускорения — это тот же
+  факт, что C5.18, под другим, более старым именем. A/B против baritone (acceptance-критерий
+  пункта) не проводился ни разу. Помечено `[~]`, не `[x]`.
+- [~] **REAL-1 (P0, URGENT, previously unrecorded) — block-space plans PHYSICALLY IMPOSSIBLE routes.**
   User: the search leads through openings that are ~1.5 blocks tall because a SLAB caps them ("стены
   где полтора блока свободно а сверху закрыто полублоком"), then the physics engine cannot execute it
   and the bot stalls. Block-space passability must reflect REAL collision shapes (player 1.8 tall /
   0.6 wide) — slabs, stairs, trapdoors, fences, carpets, snow layers. Blocks PIPE-1: a fast planner
   over an unreal graph just fails faster.
-- [ ] **FIGHT-1 (P1) — the warrior bot: more aggressive, faster, shield-aware, smart weapon swaps.**
+  ⛔ НАЙДЕНО ПОСТФАКТУМ 2026-09-01 — РЕАЛИЗОВАНО. `tungsten/helpers/PlayerFit.java` существует и
+  именно это делает: `BlockNode.java:690-696` перед принятием хода спрашивает
+  `PlayerFit.standable(world, child.getBlockPos())` и `PlayerFit.corridorClear(...)`, с
+  комментарием ровно этой же датой авторства (user 2026-07-25), что измеряет НАСТОЯЩЕЕ тело
+  0.6×1.8 против настоящих форм коллизии — «slabs/stairs/trapdoors/fences/carpets/snow count for
+  exactly what they physically are». `FastPlanner` тоже спрашивает `PlayerFit` (см. его же
+  javadoc, «asks PlayerFit whether the body actually fits»). Не проверено отдельным A/B «стало ли
+  меньше застреваний в 1.5-блочных проходах конкретно», но механизм, который был ЦЕЛЬЮ пункта,
+  на месте и используется обоими движками поиска. Помечено `[~]` (сделано, не измерено отдельно),
+  не `[x]`.
+- [~] **FIGHT-1 (P1) — the warrior bot: more aggressive, faster, shield-aware, smart weapon swaps.**
   User: "должен быть ещё агрессивнее, ещё быстрее, уметь пользоваться щитом и грамотно менять
   вооружение." Architecture note from the user: the FULL-COMBAT ORCHESTRATOR probably belongs on the
   altoclef side (strategy: whom to fight, when to block, when to swap, consumables), while **tungsten
   computes all trajectories and moves under the hood** (aim, ballistics, movement, timing, reach).
   Builds on the existing split (2.5 in this file) and on WeaponSelector (v0.59.0, hotbar melee only).
+  ⛔ ПЕРЕКРЁСТНАЯ ССЫЛКА 2026-09-01: почти весь материал этого пункта уже отдельно разобран под
+  секцией **C6 (COMBAT)** этой же сессией. Щит — есть, вызывается движком (`CombatController.java:
+  454-456`), но `combatShieldEnabled = false` по умолчанию (C6.5). Смена оружия — `WeaponSelector`
+  сильно переписан (не только хотбар как боевой предмет, много точек вызова), но по-прежнему
+  enchantment-blind и hotbar-only (C6.8, ПЕРЕПРОВЕРЕНО 2026-09-01). «Агрессивнее/быстрее» — не
+  единый флаг, а россыпь: `disengageOnLosingExchange`/`woundedHoldsInsteadOfKiting` (C6.4) добавляют
+  ОСТОРОЖНОСТЬ при ранении, что скорее ПРОТИВОПОЛОЖНО «агрессивнее» буквально, хотя и разумно.
+  Единого «оркестратора» на стороне altoclef, которого просит архитектурная заметка юзера
+  («whom to fight, when to block, when to swap, consumables»), НЕ НАЙДЕНО — eat/gap-apple/potion/
+  totem по-прежнему не подключены (тот же факт, что C6.4). Помечено `[~]`: движок значительно
+  усилен, но заявленная АРХИТЕКТУРА (единый стратег над примитивами) не построена.
 
 > User verdict on the clips I sent: "НИ ОДИН ИЗ TODO не сдан", "ГЛОБАЛЬНОЕ ПОЗОРИЩЕ". He is right:
 > the clips showed no visualisation, a sluggish camera, a bot standing on a ledge doing nothing, a bot
@@ -9456,7 +9505,7 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
 > 1 kill and the criteria did not even check deaths. Everything here is RE-OPENED; do not mark any of
 > it done without a clip the user can watch.
 
-- [ ] **URG-1 (P0) — tungsten cannot path FROM A BLOCK EDGE over a void.** Live: the bot stands ON the
+- [~] **URG-1 (P0) — tungsten cannot path FROM A BLOCK EDGE over a void.** Live: the bot stands ON the
   edge of a block above the void for half the fight, tungsten logs "Ran out of nodes / no block path"
   — it believes it is airborne. Requirement (user): **tungsten must find a route FROM ANY POSITION a
   player can stand in.** ROOT FOUND: `BlockSpacePathFinder.search` starts at `player.getBlockPos()`,
@@ -9464,47 +9513,96 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   is air -> start node unsupported -> no children -> dead search. FIX IN PROGRESS: `snapToSupport()`
   (collision-box footprint cells -> landing cell below -> small sweep). Needs stand proof on
   edge_duel + a dedicated ledge-start test.
-- [ ] **URG-2 (P0) — altoclef Stuck-fix fires CONSTANTLY when not stuck** (there is a GitHub issue; still
+  ⛔ НАЙДЕНО ПОСТФАКТУМ 2026-09-01: «FIX IN PROGRESS» — устарело, `snapToSupport` СУЩЕСТВУЕТ И
+  ВЫЗЫВАЕТСЯ (`BlockSpacePathFinder.java:154,166`), с перекрёстной ссылкой из `TungstenConfig.java:
+  4942` («Same shape as BlockSpacePathFinder.snapToSupport, which has done this for the coarse...»)
+  — то есть механизм не только сделан, но и стал ОБРАЗЦОМ для аналогичного фикса в другом месте.
+  «Needs stand proof» по-прежнему не снято (живой прогон недоступен, см. C8.1) — помечено `[~]`,
+  не `[x]`.
+- [~] **URG-2 (P0) — altoclef Stuck-fix fires CONSTANTLY when not stuck** (there is a GitHub issue; still
   live). ROOT: `UnstuckChain.checkGenerallyStuck` only tests "moved < 1.5 blocks over ~200 samples"
   with no check that the bot is even TRYING to move, and skips only when tungsten is PRIMARY — so
   combat (circle-strafe holds position ON PURPOSE), any non-primary tungsten segment, crafting and
   waiting all trip it, and the shimmy then throws the aim/task away. FIX IN PROGRESS: guards for
   combat / tungsten-active / no-movement-keys-pressed. Needs a live repro test.
-- [ ] **URG-3 (P0) — VISUALISATION MUST BE VISIBLE IN EVERY CLIP.** No clip showed tungsten drawing its
+  ⛔ НАЙДЕНО ПОСТФАКТУМ 2026-09-01: гварды на месте, с прямой цитатой ЭТОГО ЖЕ юзерского запроса
+  в собственном комментарии кода — `UnstuckChain.java:277-286`: «⭐ FALSE-POSITIVE GUARDS (user
+  2026-07-24: "Stuck fix активируется ПОСТОЯННО даже когда не застряли", GitHub issue)» — и по
+  порядку реализованы все три названных случая: `isInCombat(mod)` (`:286`), `TungstenHelper.
+  isActive()` (`:292`), плюс более ранний, отдельно найденный «primary»-гейт (`:229`). Это
+  дословно те гварды, что просит пункт. «Needs a live repro test» не снято (нет стенда). `[~]`.
+- [~] **URG-3 (P0) — VISUALISATION MUST BE VISIBLE IN EVERY CLIP.** No clip showed tungsten drawing its
   route, and there is NO arrow-trajectory rendering at all. ROOT: the stand's persisted `tungsten.json`
   had `renderVisualization/renderPathMoves/renderCombat/... = false` (shipped defaults are true —
   persist poisoning), and BowShooter never rendered anything. FIX IN PROGRESS: arrow-flight arc +
   predicted-impact marker in BowShooter; `;settings reset` / py4j `resetTungstenConfig()`; the suite
   resets config and pins visualisation ON before every recorded run.
-- [ ] **URG-4 (P0) — combat camera is TOO SLOW/smooth.** User: "юзеры крутят мышь РЕЗКО", clean
+  ⛔ НАЙДЕНО ПОСТФАКТУМ 2026-09-01: `renderVisualization`/`renderPathMoves`/`renderCombat` всё ещё
+  `= true` по умолчанию (`TungstenConfig.java:126,131,140`), и `BowShooter.renderTrajectory`
+  (`:506-528`) рисует именно то, что просили — «предсказанная дуга + маркер попадания,
+  перестраивается каждый тик во время натяжения», с прямой ссылкой на пользовательский запрос
+  «RW-6 / где траектории при стрельбе из лука». Не проверено НА ЖИВОМ КЛИПЕ (нужен стенд/URG-9,
+  ниже) — сам код и дефолты подтверждены, `[~]`.
+- [~] **URG-4 (P0) — combat camera is TOO SLOW/smooth.** User: "юзеры крутят мышь РЕЗКО", clean
   WindMouse, doubts the dampers are needed, wants the parameters tuned for SPEED. Stand was running
   gravity 2.0 / maxStep 4.0 / wind 0.8 (persisted, months old). Shipped defaults now 12.0 / 25.0 /
   0.15. STILL TO DO: judge the feel on video, decide whether the aim low-pass + velocity EMA dampers
   earn their keep at all.
-- [ ] **URG-5 (P0) — the bot FIGHTS WITH THE BOW and dies.** Live: after shooting it kept swinging the
+  ⛔ НАЙДЕНО ПОСТФАКТУМ 2026-09-01 — ЦИФРЫ УСТАРЕЛИ, НАПРАВЛЕНИЕ ПРОДОЛЖЕНО. Сегодняшние дефолты
+  в `WindMouseRotation.java:41-43` — `gravity=6.5, wind=0.30, maxStep=9.0`, не 12.0/25.0/0.15 из
+  записи (значит тюнинг шёл дальше уже ПОСЛЕ этой строки и её не обновили). Появился и режим
+  `fastMode`, которого запись не знает: gravity×2.2, maxStep×2.6 в этом режиме (`:191-192`) —
+  именно то «для СКОРОСТИ», о чём просит юзер. «Судить по видео» и «нужны ли демпферы вообще» —
+  по-прежнему не решено (нужен стенд). Помечено `[~]`, а не закрыто: числа в самой записи неверны
+  и требуют переписи при следующем touch, а не только подтверждения факта работы.
+- [~] **URG-5 (P0) — the bot FIGHTS WITH THE BOW and dies.** Live: after shooting it kept swinging the
   bow in melee with a sword in the hotbar, and died repeatedly. ROOT: the tungsten punk pipeline has
   ZERO weapon handling — TriggerBot swings whatever is held. FIX IN PROGRESS: `WeaponSelector`
   (best hotbar melee, hooked into the COMBAT stage). ALSO FIXED IN THE SUITE: every combat scenario
   now carries a "bot deaths" gate — the old criteria let a 1-kill/4-death run report PASS.
-- [ ] **URG-6 (P0) — chase_terrain bench must run on the REAL WORLD GENERATOR.** User: "РЕЛЬЕФ — это
+  ⛔ ПЕРЕКРЁСТНАЯ ССЫЛКА 2026-09-01: то же самое, что уже отдельно и заново перепроверено этой
+  сессией под C1.3/C6.8 — `WeaponSelector` теперь сильно переписан (`hasBetterThanHeld`,
+  `equipBestMelee`, `hasRangedOption` и т.д.), вызывается из шести мест, а не одного, и держит
+  свои собственные счётчики (`slotSyncSent`, `strayAttackTicks`...). Механизм явно живой и куда
+  крупнее, чем «hooked into the COMBAT stage» описывает. Не измерено заново на живом дуэльном
+  клипе именно ПО ЭТОМУ симптому (лук в бою). `[~]`.
+- [x] **URG-6 (P0) — chase_terrain bench must run on the REAL WORLD GENERATOR.** User: "РЕЛЬЕФ — это
   РЕАЛЬНЫЙ ГЕНЕРАТОР МИРА, а не сраный плоский мир"; the shape of the bench is: send the baritone bot
   running in a direction, **tungsten must CATCH it, ideally KILL it**. FIX IN PROGRESS: the scenario
   now runs on `gamer-server` (normal terrain, seed 12345), no arena building, victim runs 140 blocks
   on baritone, our bot punks it; gates = caught + killed + no deaths.
-- [ ] **URG-7 (P1) — bow shoots VERY SLOWLY.** Aim used the slow WindMouse mode and only released
+  ЗАКРЫТО (ИНФРА-ЧАСТЬ) 2026-09-01: `deploy/compose.test.yml:51-69`, сервис `gamer-server`,
+  подтверждено дословно — `TYPE: VANILLA`, `LEVEL_TYPE: minecraft:normal` (не flat), `SEED:
+  "12345"`, `GENERATE_STRUCTURES: true`. То, что просил пункт (реальный генератор, не плоский
+  мир, детерминированный seed), стоит в конфиге стенда и не менялось. Итог погони на этом рельефе
+  (поймал/убил/не умер) — отдельный, уже открытый вопрос C5.15-C5.20, не переоткрываю здесь: этот
+  пункт был именно про СТЕНД, а не про исход, и стенд сделан.
+- [x] **URG-7 (P1) — bow shoots VERY SLOWLY.** Aim used the slow WindMouse mode and only released
   inside a 3.5° cone, so each shot took seconds. FIX IN PROGRESS: fast nav-mode aim for the bow.
   Still to measure: shots per minute on the stand.
+  ЗАКРЫТО 2026-09-01: `BowShooter.java:441` зовёт `WindMouseRotation.INSTANCE.setTargetFast(...)`
+  с комментарием, дословно цитирующим ЭТУ ЖЕ жалобу юзера — «FAST mode: a real archer flicks onto
+  the target and holds; the slow glide made every shot take seconds (user 2026-07-24: "стрелял
+  ОЧЕНЬ МЕДЛЕННО")». Механизм есть и назван по имени запроса. «Shots per minute на стенде» не
+  измерено (нет стенда) — но сам факт «использует быстрый режим» подтверждён кодом, не только
+  словами, поэтому закрываю как сделанное с пометкой «измерение отдельно, при живом прогоне».
 - [ ] **URG-9 (P1) — SPECTATOR CAMERA CLIENT for demos.** The arrow arc DOES render now, but a
   first-person recording looks straight down the trajectory, so it reads as a dot at the crosshair.
   Path/jump/combat overlays film fine (proven on melee_basic), ballistics do not. Add a third
   headless client to `compose.test.yml` as a spectator cam (the `capture_demo.record_ext` pattern:
   spectator gamemode, fixed vantage perpendicular to the action) and record ranged/bridge scenarios
   from it. Until then no clip can honestly claim to "show the trajectory".
+  ПРОВЕРЕНО 2026-09-01, ОСТАЁТСЯ ОТКРЫТЫМ: `deploy/compose.test.yml` перечисляет ровно пять
+  сервисов — `uctest`, `test-server`, `gamer-server`, `mc-tester1`, `mc-tester2` — третьего
+  headless-клиента для зрительской камеры НЕТ. Ничего не изменилось с записи.
 - [ ] **URG-8 (P1) — BENCH DESIGN OFFER FROM THE USER (accept):** he offers to hand over **schematics**
   for the test polygons and to mark **start = gold block / finish = diamond block**. Build the import
   path: a `@@schem load` / buildBlocks-based loader + an arena builder that pastes a schematic and
   reads the gold/diamond markers as start/finish instead of hand-coded coordinates. This replaces my
   ad-hoc geometry (RW-7) and is how every future polygon should be authored.
+  ПРОВЕРЕНО 2026-09-01, ОСТАЁТСЯ ОТКРЫТЫМ: `@@schem`/schematic-загрузчик встречается ТОЛЬКО внутри
+  `baritone/` — а это модуль-справочник, НЕ КОМПИЛИРУЕТСЯ (см. правило в AGENTS.md про
+  `baritone/`). В активном коде (altoclef/tungsten) загрузчика схематик нет. Ничего не портировано.
 
 ## ⛔⛔ URGENT REWORK BACKLOG (user live-tested the demo videos, 2026-07-24 round 2 — RECORD ONLY, do NOT fix; user will take each as its own focused pass)
 
