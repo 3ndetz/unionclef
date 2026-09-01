@@ -9,7 +9,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import net.minecraft.block.BlockState;
 import net.minecraft.fluid.FluidState;
@@ -56,26 +55,6 @@ public abstract class MixinWorldChunk extends Chunk {
 		if(this.getWorld() != TungstenModDataContainer.world) {
 			TungstenModDataContainer.world = this.getWorld();
 		}
-		if(TungstenMod.WORLD == null || this.getWorld() != TungstenMod.WORLD.parent) {
-			return;
-		}
-
-		/*
-		int minX = this.getPos().x << 4;
-		int minY = this.getWorld().getBottomY();
-		int minZ = this.getPos().z << 4;
-		BlockPos.Mutable pos = new BlockPos.Mutable();
-
-		for(int x = minX; x < minX + 16; x++) {
-			for(int z = minX; z < minZ + 16; z++) {
-				for(int y = minY; y < minY + this.getWorld().getHeight(); y++) {
-					pos.set(x, y, z);
-					BlockState block = this.getBlockState(pos);
-					FluidState fluid = this.getFluidState(pos);
-					ExampleMod.WORLD.setBlockAndFluidState(pos, block, fluid);
-				}
-			}
-		}*/
 	}
 
 }

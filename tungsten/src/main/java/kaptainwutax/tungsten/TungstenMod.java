@@ -16,7 +16,6 @@ import kaptainwutax.tungsten.commandsystem.CommandExecutor;
 import kaptainwutax.tungsten.path.PathExecutor;
 import kaptainwutax.tungsten.path.PathFinder;
 import kaptainwutax.tungsten.render.Renderer;
-import kaptainwutax.tungsten.world.VoxelWorld;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -81,7 +80,6 @@ public class TungstenMod implements ClientModInitializer {
 	}
 	public static clickModeEnum clickMode = clickModeEnum.OFF;
 	public static final Logger LOG;
-	public static VoxelWorld WORLD;
 	public static KeyBinding pauseKeyBinding;
 	public static KeyBinding runKeyBinding;
 	public static KeyBinding runBlockSearchKeyBinding;

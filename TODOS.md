@@ -8028,6 +8028,12 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   * `FollowEntityTask` jam-detection — ВСЁ ЕЩЁ мертво, подтверждено заново: `jamAnchor`/
     `jamTicks` объявлены с комментарием «see the watchdog in tick()», но нигде в файле не
     присваиваются и не читаются — обещанного watchdog нет.
+    ⛔ УДАЛЕНО 2026-09-01, В ЭТОЙ ЖЕ СЕССИИ: обещанный watchdog нашёлся — это ЖИВОЙ
+    `walkerAnchor`/`walkerStuckTicks`/`WALKER_STUCK_TICKS` чуть ниже в том же файле (комментарий
+    на месте прямо это подтверждает: «WALKER_STUCK_TICKS, walkerAnchor and walkerStuckTicks were
+    declared for precisely this... and NOTHING READ THEM. Wiring them up is the whole fix» —
+    цитата описывает УЖЕ дописанный и подключённый механизм). `jamAnchor`/`jamTicks` — не
+    недописанная функция, а СУПЕРСЕДЕННЫЙ черновик; функциональность не теряется удалением.
   * decrease-key ветки в кучах — ДОПРОВЕРЕНО 2026-09-01, СВОЯ ЖЕ ЛОВУШКА ПОЙМАНА НА СЕБЕ.
     Первый проход по грепу выглядел как опровержение: `openSet.update(child)` вызывается на
     НЕЗАКОММЕНТИРОВАННЫХ, реально исполняемых строках в ОБЕИХ кучах —
@@ -8065,13 +8071,23 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
     `TungstenMod`. Единственные внешние обращения к `TungstenMod.WORLD` вне его же файла — это
     сравнение `.parent` по ссылке в двух миксинах, не вызов `getBlockState`/
     `setBlockAndFluidState`. Объект создаётся, но его методы кэша не вызывает никто.
-  Итог (ОБНОВЛЁН 2026-09-01, все 5 из 5 пунктов теперь с вердиктом): 2 из 5 сняты
-  (переименование/рефакторинг убрал сам вопрос — `isCritState`, `WeaponSelector.reset`), 3 из 5
-  живы и подтверждены (`AttackTiming.canAttack`, `FollowEntityTask` jam-detection, `VoxelWorld`)
-  — decrease-key в кучах ПЕРЕШЁЛ из «не перепроверено» в «жив как ПОДТВЕРЖДЁННЫЙ мёртвый код»
-  (гвард `child.isOpen()` структурно недостижим, механизм расписан построчно выше). Помечено
-  ЧАСТИЧНО, не закрыто — три живых пункта остаются тем же классом дефекта
-  (`isDoingAcrobatics`/`wasPuttingOutFire`), что эта сессия уже чинила дважды в другом файле.
+    ⛔ УДАЛЕНО ЦЕЛИКОМ 2026-09-01: `VoxelWorld.java`, его единственный потребитель
+    `VoxelChunk.java`, и полностью не подключённый нигде `VoxelChunk2.java` (не тронут с самого
+    первого коммита репозитория, 2026-03-17, — заготовка, которую даже не начали подключать) —
+    все три файла снесены. Заодно снят `TungstenMod.WORLD` (поле) и обе точки, что на него
+    ссылались: конструирование/сброс в `MixinMinecraftClient.tick()` и гвард в
+    `MixinWorldChunk.loadFromPacket`, который вёл только к уже закомментированному циклу —
+    после удаления гварда метод короче ровно до своего единственного живого эффекта
+    (обновление `TungstenModDataContainer.world`). Каждая ссылка была найдена и учтена грепом
+    по всему модулю перед удалением, не предположена.
+  Итог (ОБНОВЛЁН 2026-09-01 ДВАЖДЫ ЗА ОДНУ СЕССИЮ — сначала все 5 получили вердикт, потом два
+  живых удалены): 2 из 5 сняты рефакторингом (`isCritState`, `WeaponSelector.reset`), 2 из 5
+  подтверждены мёртвыми И УДАЛЕНЫ (`FollowEntityTask` jam-detection — заменена уже подключённым
+  `walkerAnchor`-механизмом; `VoxelWorld` — целиком, с `VoxelChunk`/`VoxelChunk2` и полем
+  `TungstenMod.WORLD`), 1 из 5 подтверждена мёртвой, но НЕ удалена — decrease-key в кучах
+  (гвард `child.isOpen()` структурно недостижим) — это ветка внутри живого файла физ-поиска,
+  трогать которую отдельно от остального C2/C5-фронта рискованнее, чем снять отдельно стоящий
+  класс. Помечено ЧАСТИЧНО, не закрыто.
 
 ### C2 — BLOCK-SPACE SEARCH IS STRUCTURALLY BROKEN
 - [ ] **C2.1 Move generation is an either/or that has no good branch.** `BlockNode.getChildren:292-301`
@@ -8222,7 +8238,13 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   ПОДТВЕРЖДЕНО ПОВТОРНО 2026-09-01 — то же самое `VoxelWorld`, что уже проверен для C1.3 в этом
   же перечтении регистра: цикл заполнения в `MixinWorldChunk.loadFromPacket` закомментирован
   целиком и ссылается на `ExampleMod.WORLD` (шаблонное имя, не переименованное). Кэша нет,
-  каждый поиск читает мир напрямую. Открыто, без повторной отдельной проверки — см. C1.3.
+  каждый поиск читает мир напрямую.
+  ⛔ ОБНОВЛЕНО ПОЗЖЕ ТЕМ ЖЕ ДНЁМ: `VoxelWorld` больше не просто «мёртв» — он УДАЛЁН вместе с
+  `VoxelChunk`/`VoxelChunk2` и `TungstenMod.WORLD` (см. C1.3 для полного списка затронутых
+  файлов). Сам вопрос C4.1 (нет кэша, нет chunk-loaded guard, каждый поиск бьёт живой
+  `ClientWorld` напрямую с двух пулов потоков) остаётся ОТКРЫТЫМ — удаление мёртвой заготовки
+  кэша не заменяет собой написание настоящего; если кто-то возьмётся строить реальный
+  `BlockStateInterface`-эквивалент, строить его придётся с нуля, не оживляя `VoxelWorld`.
 - [ ] **C4.2 `PathExecutor` state (path/tick/stop/queues) is mutated from the PathFinder worker thread
   while the client thread replays it** — no synchronisation, no `volatile`. `breakQueue` is a
   non-volatile public field written by the search thread.

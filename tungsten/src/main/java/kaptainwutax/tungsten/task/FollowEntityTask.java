@@ -50,9 +50,6 @@ public class FollowEntityTask {
      *  chase over terrain at all. */
     public static volatile int traversableCells, routeCells, routeSamples;
 
-    /** Engine-independent jam detection (see the watchdog in tick()). */
-    private static Vec3d jamAnchor = null;
-    private static int   jamTicks = 0;
     private static final double MIN_MOVE_DIST      = 3.0;  // absolute floor for the threshold
     private static final int    STUCK_TICKS        = 30;
 
