@@ -14,7 +14,7 @@ Autojoin — автоматический вход в мини-игру на с�
 | SkyPvP autojoin | `src/main/java/adris/altoclef/tasks/multiplayer/minigames/SkyPvpTask.java` |
 | Клик по кастом-итему | `src/main/java/adris/altoclef/util/helpers/ItemHelper.java` — `clickCustomItem()` |
 | Поиск слота по имени | `src/main/java/adris/altoclef/util/helpers/ItemHelper.java` — `getCustomItemSlot()` |
-| Pipeline enum | `src/main/java/adris/altoclef/butler/Pipeline.java` |
+| Pipeline enum | `src/main/java/adris/altoclef/util/agent/Pipeline.java` (moved from `butler/`, fixed 2026-09-01) |
 | Настройка autoJoin | `src/main/java/adris/altoclef/butler/ButlerConfig.java` |
 
 ## Два подхода
