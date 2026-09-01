@@ -8083,16 +8083,41 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
 - [ ] **C3.2** The `MIN_PRIORITY` search thread farms real work onto NORM-priority pools including the
   shared `ForkJoinPool.commonPool` — the "never win CPU against the client thread" comment
   (`BlockSpacePathFinder.java:48-51`) is not what the code does.
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01 — В ОСНОВНОМ ВСЁ ЕЩЁ ТАК, С ОДНОЙ ЧАСТИЧНОЙ ПОДВИЖКОЙ.
+  `BlockNode.java:361` по-прежнему безусловный `nodes.parallelStream()` — implicit
+  `ForkJoinPool.commonPool()`, ровно та дыра, что описана. Но у `Node.java:327` теперь есть
+  флаг: `params.parallelStream() : params.stream()` под `TungstenConfig.enableParallelStreaming`
+  — ТОЛЬКО этот флаг стоит `= true` по умолчанию, то есть отгруженное поведение НЕ изменилось,
+  переключатель просто появился для ОДНОЙ из как минимум двух точек входа. Открыто по существу,
+  с оговоркой, что один из двух путей уже отделим флагом, если возникнет причина его выключить.
 - [ ] **C3.3** `TungstenModRenderContainer.*.clear()` is called from the search loop **bypassing the
   render-config gate and the 20 Hz throttle** in `RenderHelper`: `BlockSpacePathFinder.java:209`,
   `BlockNode.java:315`, and `wasCleared:328` (the last runs per CANDIDATE CHILD). These are
   `Collections.synchronizedCollection` → multiple ForkJoinPool threads convoy on one lock.
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01: ВСЁ ЕЩЁ ТОЧНО ТАК, строки съехали. `TEST` по-прежнему
+  `Collections.synchronizedCollection(new ArrayList<>())` (`TungstenModRenderContainer.java:15`,
+  и все восемь соседних контейнеров того же класса). `wasCleared(...)` (`BlockNode.java:373-`)
+  безусловно чистит `TEST` на КАЖДОМ вызове — гейта на `verboseDebugLogging` или любой другой
+  флаг рядом нет, судьба `shouldRender`/`shouldSlow` решается уже ПОСЛЕ очистки. Вызывающие —
+  минимум пять веток внутри проверок хода к `child` (`:606, :637, :681` и другие) — то есть
+  по-прежнему НА КАЖДОГО КАНДИДАТА, не на поиск. `C4.4` (закрыто 2026-07-30, то же семейство
+  дефекта — писать в рендер-контейнеры из фонового потока) починил ЧАТ, а не эту конкретную
+  очередь. Открыто, подтверждено заново на актуальных строках.
 - [ ] **C3.4** A synchronous 800-node BFS runs on the **client tick thread** whenever the walker is idle
   in the altoclef primary nav.
+  ПРОВЕРЕНО ЛЕГКО 2026-09-01, БЕЗ ВЫВОДА: "800" как константа нигде не находится ни в
+  `BlockPathWalker`, ни рядом. Либо число вынесено в конфиг/переименовано, либо механизм
+  переписан. НЕ хватило времени для точного вывода за один беглый грep — оставлено как есть,
+  явно помечено НЕПОДТВЕРЖДЁННЫМ (не "снято" и не "заново подтверждено"), чтобы не соврать в
+  любую сторону.
 
 ### C4 — THREAD SAFETY / CORRECTNESS
 - [ ] **C4.1 All searches read the live `ClientWorld` off-thread**, from two worker pools, with no
   `BlockStateInterface` equivalent and no chunk-loaded guard. `VoxelWorld` (the would-be cache) is dead.
+  ПОДТВЕРЖДЕНО ПОВТОРНО 2026-09-01 — то же самое `VoxelWorld`, что уже проверен для C1.3 в этом
+  же перечтении регистра: цикл заполнения в `MixinWorldChunk.loadFromPacket` закомментирован
+  целиком и ссылается на `ExampleMod.WORLD` (шаблонное имя, не переименованное). Кэша нет,
+  каждый поиск читает мир напрямую. Открыто, без повторной отдельной проверки — см. C1.3.
 - [ ] **C4.2 `PathExecutor` state (path/tick/stop/queues) is mutated from the PathFinder worker thread
   while the client thread replays it** — no synchronisation, no `volatile`. `breakQueue` is a
   non-volatile public field written by the search thread.
@@ -8106,6 +8131,9 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   но это ТЕ ЖЕ небезопасные поля, унаследованный, а не новый пробел, и стоило сказать явно, а не
   промолчать, раз уж этот пункт всё равно перепроверялся.
 - [ ] **C4.3 `pendingBreaks`/`pendingPlaces` are static mutable globals** mutated from background threads.
+  ПОДТВЕРЖДЕНО ПОВТОРНО 2026-09-01: `public static List<BlockPos> pendingBreaks`/`pendingPlaces`
+  (`PathFinder.java:1562,1564`) — ровно те же поля, что эта же сессия читала при разборе
+  застойной копки (`truncateAtBreaks`). Всё ещё голые статические поля. Открыто.
 - [x] **C4.4** Search threads write to Minecraft chat directly from background threads.
   ЗАКРЫТО 2026-07-30 + прогон на стенде. Это была не косметика: генераторы ходов писали
   строку в чат НА КАЖДЫЙ ход-кандидат — 16568 строк «pillar planned» и 7024 «bridge planned»
