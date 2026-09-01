@@ -1,6 +1,8 @@
 # Multi-versioning Guide
 
-UnionClef supports multiple Minecraft versions via the [ReplayMod preprocessor](https://github.com/ReplayMod/preprocessor). Currently enabled: **1.21**, **1.21.1**.
+UnionClef supports multiple Minecraft versions via the [ReplayMod preprocessor](https://github.com/ReplayMod/preprocessor). Currently enabled (`settings.gradle.kts`): **1.21**, **1.21.1**, **1.21.11**
+— `1.21.11` is the current working version (see `AGENTS.md`), not "not yet" as an older version of
+this doc's matrix below said.
 
 ## How it works
 
@@ -16,8 +18,11 @@ return pos.getSquaredDistance(obj);
 
 The preprocessor strips inactive branches for each target version. Active code compiles normally, inactive code stays as comments (`//$$`).
 
-**Baritone** is compiled once and shared across all MC versions.
-**Tungsten** uses the preprocessor (versioned subprojects: `tungsten-1.21.1`, `tungsten-1.21.11`).
+**Baritone/shredder** are NOT compiled at all since the "G-0" migration (2026-08-24, see
+`TODOS.md`) — source-reference-only, no build output, nothing to version. (This section used to
+say baritone was "compiled once and shared across all MC versions" — that was true before G-0.)
+**Tungsten** is the only compiled pathfinder and uses the preprocessor (versioned subprojects:
+`tungsten-1.21.1`, `tungsten-1.21.11`).
 
 ## Adding a new version (e.g. 1.21.4)
 
@@ -111,16 +116,22 @@ To add a new tungsten version:
 
 ## Version support matrix
 
-| MC Version | altoclef     | baritone     | tungsten     |
-| ---------- | ------------ | ------------ | ------------ |
-| 1.21       | preprocessor | shared build | n/a          |
-| 1.21.1     | preprocessor | shared build | preprocessor |
-| 1.21.11    | not yet      | not yet      | preprocessor |
+⛔ STALE, CORRECTED 2026-09-01: this table said 1.21.11 was "not yet" supported by altoclef and
+baritone. altoclef's 1.21.11 support has existed for a while and is now the primary working
+version (`AGENTS.md`); baritone's column is moot since G-0 (2026-08-24) — it isn't compiled for
+ANY version any more, not just 1.21.11.
 
-## Shredder preprocessor support (TODO)
+| MC Version | altoclef     | baritone/shredder      | tungsten     |
+| ---------- | ------------ | ---------------------- | ------------ |
+| 1.21       | preprocessor | not compiled (source reference only) | n/a          |
+| 1.21.1     | preprocessor | not compiled (source reference only) | preprocessor |
+| 1.21.11    | preprocessor, current working version | not compiled (source reference only) | preprocessor |
 
-Shredder currently compiles once against MC 1.21 and depends on `tungsten-1.21.1`.
-When altoclef adds 1.21.11, shredder will also need versioning (same approach as tungsten).
+## Shredder preprocessor support (retired, was TODO)
+
+⛔ MOOT since the "G-0" migration (2026-08-24, see `TODOS.md`) — shredder is not compiled for any
+MC version and never will need versioning, because tungsten replaced it as the only pathfinder.
+Left here so a future reader doesn't go looking for a still-open task.
 
 ## Quick reference
 

@@ -1,6 +1,8 @@
 # UnionClef Wiki
 
-Unified monorepo: altoclef (bot) + shredder (pathfinding v2) + tungsten (A* movement).
+Unified monorepo: altoclef (bot) + tungsten (A* movement, the only compiled pathfinder).
+`shredder`/`baritone` stay in the tree as source reference only since the "G-0" migration
+(2026-08-24, see `TODOS.md`) — not compiled, not run.
 
 **Minecraft 1.21** / **Fabric** / **Java 21**
 
