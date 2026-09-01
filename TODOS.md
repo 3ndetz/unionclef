@@ -7995,6 +7995,9 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
     и он ИСПОЛЬЗУЕТСЯ (`TriggerBot.java:517: if (AttackTiming.isCrit(player)) { critHits++;
     lifetimeCrits++; }`). Похоже на переименование при рефакторинге боевого кода, случившееся
     без сверки с этим пунктом.
+    ⛔ НАЙДЕНО ДВАЖДЫ, НЕ СВЕРЕНО НИ РАЗУ: тот же самый факт уже записан в C6.6 — "isCritState
+    had already been deleted as dead code in 0.63.0" — с версией, которой здесь не было. Два
+    места регистра знают одно и то же и ни разу не сослались друг на друга.
   * `WeaponSelector.reset` — СНЯТО САМИМ КОДОМ: такого метода в файле больше нет вообще.
     Класс переписан (`forceRecheck`, `syncSlot`, `reassertSlotAfterRespawn`,
     `noticeStrayAttacks` — новые методы, ни один не существовал на момент этой записи).
@@ -9156,10 +9159,26 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   `EXECUTOR` but **NOT** for its `BlockPathWalker`, so it can mute every walker key press.
 - [ ] **C6.4 No health input at all** in the tungsten combat engine → 2 of 6 declared stages are
   unreachable. No retreat, no eat, no gap-apple, no potion, no totem.
-- [ ] **C6.5 Shield is NEVER raised by the combat engine.** `ShieldBlocker` is reachable only from
+- [~] **C6.5 Shield is NEVER raised by the combat engine.** `ShieldBlocker` is reachable only from
   py4j/`CombatPrimitives`, i.e. only if the agent drives it by hand. Directly contradicts FIGHT-1.
   The primitive also presses `useKey` without checking what is in hand.
-- [~] **C6.6 No w-tap / sprint-reset / crit timing.** CRIT HALF DONE 2026-07-29. The entry was
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01 — МЕХАНИЗМ БОЛЬШЕ НЕ ВЕРЕН, ПРАКТИЧЕСКИЙ СИМПТОМ — ДА.
+  `ShieldBlocker` теперь вызывается ИЗНУТРИ боевого движка: `CombatController.java:454-456`
+  поднимает щит, пока откат удара перезаряжается (`cd < 0.55f`), и снимает перед самим ударом —
+  найдено в `85d39f8e` ("feat(combat): raise the shield between swings; record that pvp is
+  1/7 on the APPROACH"). Так что «`ShieldBlocker` достижим только из py4j» — уже НЕ факт,
+  движок его вызывает сам.
+  НО: вся ветка стоит за `cfg.combatShieldEnabled`, а он `= false` по умолчанию
+  (`TungstenConfig.java:4620`). То есть для ПОСТАВЛЯЕМОГО бота симптом остаётся ровно тем же —
+  щит сам не поднимается — просто теперь по причине выключенного флага, а не отсутствующего
+  кода. И судьба этого самого флага уже отдельно зафиксирована рядом, в C6.10 (первом из двух
+  пунктов с этим номером — см. пометку о коллизии ID выше): «щит нельзя протестировать
+  здесь — у набора `KIT_SWORD` нет щита, `raise-between-swings` ни разу не срабатывает» —
+  то есть механизм есть, включён быть не может (флаг off), и даже включённый — не измерен
+  этим набором курсов. Три факта, не один; регистр смешивал их в одну строку.
+- [~] **C6.6 No w-tap / sprint-reset / crit timing.** (⛔ ПЕРЕКРЁСТНАЯ ССЫЛКА 2026-09-01: тот же
+  факт про `isCritState` независимо найден заново в C1.3, без сверки с этой записью — см. там.)
+  CRIT HALF DONE 2026-07-29. The entry was
   also stale: `isCritState` had already been deleted as dead code in 0.63.0, so there was no
   crit notion in the engine at all. Now there is one — `AttackTiming.isCrit` implements
   vanilla's actual rule (falling, off the ground, not in water/on a ladder/riding) — and the
@@ -9175,7 +9194,10 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   (`PunkPlayerTask.java:202`, COMBAT mode only). No offhand, no bow/crossbow-by-range.
 - [ ] **C6.9** `PunkPlayerTask`'s "no hits for 5 s → re-approach" is a self-perpetuating 5-second
   interrupt cycle, not a recovery.
-- [ ] **C6.10** `WindMouse` accumulates pixel deltas while any `Screen` is open (incl. chat) and dumps
+- [ ] **C6.11** (ГИГИЕНА РЕГИСТРА 2026-09-01: было ПОВТОРНО помечено C6.10, тем же номером, что
+  запись выше про две вещи, которые PvP-набор не может решить — перенумеровано в C6.11, чтобы
+  поиск по ID не находил не тот пункт.) `WindMouse` accumulates pixel deltas while any `Screen`
+  is open (incl. chat) and dumps
   the whole pile in one frame when it closes. `KnockbackEstimator`'s enchantment read is a permanent
   zero and `simulateKnockback` has no terrain collision.
 
