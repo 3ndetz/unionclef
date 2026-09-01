@@ -7956,13 +7956,26 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
 > Mark `[x]` ONLY with a fix AND a stand test. Mark `[~]` for partially landed.
 
 ### C0 — reframing facts (not bugs, but everything depends on them)
-- [ ] **`baritone/` IS NOT COMPILED.** `settings.gradle.kts`: `// include(":baritone")`. The live
+- [x] **`baritone/` IS NOT COMPILED.** `settings.gradle.kts`: `// include(":baritone")`. The live
   pathfinder is **`shredder/`**, in the same `baritone.*` package. Every `import baritone.…` in
   altoclef resolves to shredder. AGENTS.md is wrong on this — fix the doc.
-- [ ] **Coupling reality:** 78/561 altoclef files import `baritone.*` (→shredder), 7 import tungsten.
+  ЗАКРЫТО, найдено при полном (не фрагментарном) перечтении `AGENTS.md` 2026-09-01: доку уже
+  исправили. Текущий файл несёт ровно это предупреждение почти дословно — "⛔ baritone/ IS NOT
+  COMPILED... The live pathfinder is shredder/... 'Replace baritone' therefore means 'replace
+  shredder'." — с пометкой "Recorded 2026-07-27". Пункт регистра простоял открытым два месяца
+  после того, как его фактически закрыли, потому что никто не сверил чекбокс с реальным файлом.
+- [x] **Coupling reality:** 78/561 altoclef files import `baritone.*` (→shredder), 7 import tungsten.
   Not just pathing: `Input` (44), `Goal` (23), `Rotation` (16), and `baritone.altoclef.AltoClefSettings`
   — altoclef's own settings class lives INSIDE the shredder module. Baritone is a load-bearing type
   library here, not a pluggable backend.
+  ЗАКРЫТО, ПЕРЕСЧИТАНО ПО КОДУ 2026-09-01: коупл почти полностью развернулся. Сейчас
+  0 из 557 файлов altoclef импортируют `baritone.*` (было 78), 52 импортируют tungsten
+  (было 7). `AltoClefSettings` переехал на СВОЙ путь —
+  `src/main/java/adris/altoclef/settings/AltoClefSettings.java` — и больше не живёт в
+  shredder; `Input`/`Rotation` теперь `kaptainwutax.tungsten.path.movements.*`. Коммит
+  `a194bf19` ("G-0: every remaining legacy call site is gone, and AltoClefSettings comes
+  home") — заголовок написан с прямым осознанием именно этого пункта регистра. Baritone
+  сейчас НЕ несущая тип-библиотека для altoclef — она вообще не импортируется.
 
 ### C1 — DEAD CODE THAT SILENTLY DISABLES WHOLE FEATURES
 - [x] **C1.1 `TungstenHelper` is permanently dead.** ЗАКРЫТО 2026-07-27: рефлексия выкинута, прямые типизированные вызовы. `initReflection()` (TungstenHelper.java:74)
