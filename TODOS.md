@@ -9778,7 +9778,15 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   bunny-hop + circle-strafe kite; (4) blocking-entity handling; (5) LIVE re-test each (stand
   pvp_test is necessary but NOT sufficient — it passed while live failed; add a moving/human-like
   scenario). My earlier [x] on 2.1/2.2/2.3 was WRONG (stand PASS != live).
-- [ ] LIVE-C @gamer STILL runs on BARITONE, not tungsten-primary. User wants tungsten.
+  ⛔ ПЕРЕКРЁСТНАЯ ССЫЛКА 2026-09-01 (справочно, НЕ закрываю — та же оговорка про живой прогон,
+  что и выше). Движение боя получило отдельный класс с тех пор — `combat/CombatMoveIntent.java`,
+  которого на момент этой записи не было (тогда «combatMove» было просто пассивным полем/методом).
+  Здоровье теперь читается и запускает kite/disengage (C6.4), щит поднимается между ударами
+  (C6.5, выключен по умолчанию), crit-тайминг портирован (C6.6) — всё это уже разобрано отдельно
+  под C6 этой же сессии, подробнее там. НЕ НАЙДЕНО: обработка «блокирующей сущности на линии
+  атаки» (grep по `blocking`/`blockedByEntity` в `combat/` — пусто) — пункт (4) требования до сих
+  пор не реализован. Пункт (5) — LIVE-повторный тест — не проводился (нет стенда).
+- [~] LIVE-C @gamer STILL runs on BARITONE, not tungsten-primary. User wants tungsten.
   ✅ PROGRESS v0.53.0 (2026-07-24): setTungstenPathing couples smartMoves ON -> tungsten-primary now
   CLIMBS reachable terrain (terrain_test A staircase/B steep/D PASS; earlier A/B "fail" was smartMoves
   OFF, not a wrapper bug). C (2-block wall) needs blocks = correct. ⛔ DEFAULT FLIP STILL BLOCKED:
@@ -9797,6 +9805,17 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   reworked). Do a validated @gamer-on-tungsten run first (the nightly full-game pass), THEN default
   it on. Interim: the walker (v0.44.0 face-before-move) made terrain nav solid, so tungsten-primary
   is closer to ready than before.
+  ⛔ НАЙДЕНО ПОСТФАКТУМ 2026-09-01 — ИМЕННО ТО, ЧЕГО ЖДАЛ ЭТОТ ПУНКТ, ПРОИЗОШЛО. Дефолт
+  ДЕЙСТВИТЕЛЬНО перевёрнут: `TungstenHelper.primary = true` сегодня (`TungstenHelper.java:47`), а
+  не `false`. Найдено по `git log -S` — коммит `feb70f11`, «G-0: tungsten is the pathfinder the
+  mod SHIPS with, not the one a harness switches on» (это и есть та самая «G-0» миграция, на
+  которую ссылается шапка AGENTS.md, 2026-08-24). «Validated @gamer-on-tungsten run first» — это
+  ровно та работа, что ЗАПОЛНЯЕТ раздел **G-1.x** этого файла (десятки пронумерованных заходов,
+  G-1.6 → G-1.75+, начиная именно с «очередь ходов НЕ ЗАПУСКАЕТСЯ на курсе @gamer» и доходя до
+  крафта/выживания/причин смерти) — то есть предусловие пункта не проигнорировано, оно и есть
+  содержание отдельного, уже идущего многодневного захода. Помечено `[~]`, не `[x]`: сам факт
+  «дефолт стоит на tungsten» подтверждён кодом, а «полностью провалидировано» — открытый,
+  активно ведущийся вопрос в G-1.x, не готовый вывод.
 - [x] LIVE-D SHIFT/sneak STICKS — audit 2026-07-24 code-verified the fix IS implemented (VoidGuard
   sneak release when not near an edge + driving->idle key release, MixinClientPlayerEntity.java:108);
   needs only a live re-confirmation. ORIGINAL NOTE:
