@@ -155,11 +155,25 @@ failures are — see the hand-off notes further down this file.
 |---|---|---|---|
 | `CombatPathfinder` | grid BFS, 800 nodes, radius 25, **no jumps**, runs SYNCHRONOUSLY on the client tick | 2026-03, for combat | `FollowEntityTask` (chase) and altoclef `CustomBaritoneGoalTask`. NOT part of `;goto` |
 | `FastPlanner` | block A*: typed moves, real g accumulation, admissible heuristic, `PlayerFit` body checks | 2026-07-25 (PIPE-1) | `FastNavigator`, and as the first attempt inside `PathFinder.findBlockPath` |
-| `BlockSpacePathFinder` | block A*: blind radius-8 scan (~1086 candidates), **no cost accumulation**, heuristic in different units | initial commit | fallback inside `findBlockPath` |
+| `BlockSpacePathFinder` | block A*: blind radius-8 scan (~1086 candidates); real g accumulation since 2026-08-02, see correction below | initial commit, fixed `00c48c84` | fallback inside `findBlockPath` |
 | `PathFinder` | physics A*: simulates a real player (~192 sims per expansion) | initial commit | pipeline B |
 
 `FastPlanner` and `BlockSpacePathFinder` do **the same job**; the first is correct, the
 second is not, and the second was never removed when the first arrived.
+
+⛔ CORRECTED 2026-09-01: this table's `BlockSpacePathFinder` row used to say "no cost
+accumulation" as a live defect. That was true when this file was written but was fixed a month
+ago and stayed fixed: commit `00c48c84` (2026-08-02, "the block-space search is an A* again —
+nav 12/12 with the costs live") gave `updateNode` a real `child.cost = tentativeCost` where
+`tentativeCost = next.cost + edgeCost(...)` (`BlockSpacePathFinder.java:379,622`, confirmed
+directly against current source, not recalled) — `ActionCosts`/mining/bridge costs are live, not
+decorative. `TODOS.md`'s C2.2 and C5.21 both independently rediscovered this as "already fixed,
+register not updated" on 2026-09-01; this file had the same drift and gets the same fix. The
+"heuristic in different units" half is not a bug the way cost-accumulation was — g is in ticks
+and h is in blocks, and `searchHeuristicScale` (default 3.563, upstream's own value) is the
+deliberate, measured conversion between them, not an oversight. `BlockSpacePathFinder` is still
+the worse of the two block engines (blind radius-8 scan vs `FastPlanner`'s typed moves), just not
+for the reason this table used to give.
 
 ## Log fingerprints — which engine is talking
 
