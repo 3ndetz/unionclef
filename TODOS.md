@@ -9157,8 +9157,21 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   Globally: **14 tungsten classes, 202 `setPressed` sites, no arbitration**, resolved only by
   undocumented call order — plus shredder's `InputOverrideHandler`, which yields for tungsten's
   `EXECUTOR` but **NOT** for its `BlockPathWalker`, so it can mute every walker key press.
-- [ ] **C6.4 No health input at all** in the tungsten combat engine → 2 of 6 declared stages are
+- [~] **C6.4 No health input at all** in the tungsten combat engine → 2 of 6 declared stages are
   unreachable. No retreat, no eat, no gap-apple, no potion, no totem.
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01 — СИЛЬНАЯ ФОРМУЛИРОВКА («вообще нет входа по здоровью») УЖЕ
+  НЕ ВЕРНА, СЛАБАЯ («2 из 6 стадий недостижимы») — ДА. `CombatController.java:745-815` теперь
+  читает здоровье напрямую: `double hp = player.getHealth() + player.getAbsorptionAmount();`,
+  и по нему решает `wounded` (либо через `DamageWatch.losingNow` при
+  `cfg.disengageOnLosingExchange`, либо порог `hp <= LOW_HP`), после чего бот выходит из
+  ближнего боя/кайтит, если нет дальнобойного оружия или включён
+  `cfg.woundedHoldsInsteadOfKiting`. Собственный комментарий в коде это прямо признаёт: «This is
+  the whole of tungsten's health awareness, and until now there was none: getHealth() was read
+  NOWHERE in the module». То есть вход по здоровью ПОЯВИЛСЯ, но узко — только disengage/kite при
+  ранении. Стадия `ESCAPE` в `SafetySystem` по-прежнему объявлена, но недостижима (`TODO:
+  DELICATE_BATTLE — low HP careful play`, `SafetySystem.java:483`), и eat/gap-apple/potion/totem
+  как не читали здоровье, так и не читают. Итог: узкая формулировка пункта верна и сегодня, общая
+  («вообще нет входа») — больше нет.
 - [~] **C6.5 Shield is NEVER raised by the combat engine.** `ShieldBlocker` is reachable only from
   py4j/`CombatPrimitives`, i.e. only if the agent drives it by hand. Directly contradicts FIGHT-1.
   The primitive also presses `useKey` without checking what is in hand.
@@ -9189,11 +9202,42 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
 - [ ] **C6.7 Aim + the whole stage machine run per RENDER FRAME with no delta-time term** → every
   tuning constant is framerate-dependent. **This invalidates the past "combat feel" tuning**, which was
   done on a low-FPS stand.
-- [ ] **C6.8** `WeaponSelector` is hotbar-only, **enchantment-blind** (plain netherite 100 beats
+  ПРОВЕРЕНО ПО КОДУ 2026-09-01, ПОВЕРХНОСТНО (лёгкая проверка, не полный аудит) — ОСТАЁТСЯ
+  ОТКРЫТЫМ. Единственный `System.currentTimeMillis()` во всём `CombatController.java` — строка
+  614, и он принадлежит другому, уже свёрнутому эксперименту (⛔ GROUND-DISTANCE POSITIONING:
+  TRIED, MEASURED AT n=40 AN ARM, REVERTED, с таблицей ON/OFF рядом) — не системной поправке на
+  дельту времени для констант прицела/стейт-машины. Системного delta-time термина не найдено.
+  Проверка узкая (один grep + чтение контекста находки), а не построчный аудит всего файла —
+  честно не закрываю, но и не нашёл ничего, что бы опровергало исходную формулировку.
+- [~] **C6.8** `WeaponSelector` is hotbar-only, **enchantment-blind** (plain netherite 100 beats
   Sharpness V iron 75), rescans once/21 ticks, and is called from exactly ONE place
   (`PunkPlayerTask.java:202`, COMBAT mode only). No offhand, no bow/crossbow-by-range.
-- [ ] **C6.9** `PunkPlayerTask`'s "no hits for 5 s → re-approach" is a self-perpetuating 5-second
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01 (см. также C1.3 — тот же класс уже помечен как СИЛЬНО
+  переписанный: `forceRecheck`/`hasBetterThanHeld`/`syncSlot`/`noticeStrayAttacks`/
+  `reassertSlotAfterRespawn`, которых на момент этой записи не было).
+  ВЕРНО СЕГОДНЯ: hotbar-only — `equipBestMelee` перебирает ровно `slot 0..9`, за пределы хотбара
+  не смотрит; enchantment-blind — `meleeScore` целиком сводится к
+  `MELEE_SCORE.get(stack.getItem())`, статической таблице по типу предмета, ни NBT ни
+  enchantment-компонент нигде в файле не читаются.
+  УСТАРЕЛО: «rescans once/21 ticks» — сейчас `RECHECK_TICKS = 20` (не 21, и это только кулдаун
+  `equipBestMelee`; `TriggerBot`'s `hasBetterThanHeld`/`forceRecheck` путь его обходит намеренно).
+  «called from exactly ONE place» — больше не факт: сегодня `WeaponSelector` дёргается из
+  `TriggerBot.java` (453-455, 514), `PunkPlayerTask.java` (440, 449, 469), `MobDefenseChain.java`
+  (1044), `AltoClef.java` (631-632) и `PlayerVer.java` (78) — шесть мест в четырёх файлах, не одно.
+  No offhand/bow-by-range по-прежнему верно как ограничение (ammo/offhand учтены только в
+  `hasRangedOption`, не в выборе оружия).
+- [~] **C6.9** `PunkPlayerTask`'s "no hits for 5 s → re-approach" is a self-perpetuating 5-second
   interrupt cycle, not a recovery.
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01 — ИМЕННО ЭТОТ ЦИКЛ УЖЕ ЦЕЛЕНАПРАВЛЕННО ПОЧИНЕН, но не факт,
+  что теоретический родственный случай исключён полностью. Условие возврата в APPROACH
+  (`PunkPlayerTask.java:418-424`) сейчас: `dist > APPROACH_RESUME` ИЛИ (`dist > TriggerBot.REACH`
+  И `triggerBot.hasNoProgress(100)` И стадия сейчас не `ESCAPE`) — то есть отход по «нет попаданий»
+  срабатывает, только если бот ДЕЙСТВИТЕЛЬНО не в радиусе удара, а не всегда через 5 секунд без
+  урона. Комментарий на месте прямо документирует регрессию, которую это чинит: на курсе
+  `melee_basic` — шесть переключений режима за один прогон, "Following"/"Follow stopped" по
+  шесть раз, ноль ударов, дистанция уезжает С 5.14 ДО 6.21 — то есть бот сам себя выталкивал из
+  боя вплотную к цели. Не закрываю до конца: сценарий «противник кайтит ровно на границе REACH»
+  теоретически всё ещё может дать похожий цикл, это не проверялось отдельно.
 - [ ] **C6.11** (ГИГИЕНА РЕГИСТРА 2026-09-01: было ПОВТОРНО помечено C6.10, тем же номером, что
   запись выше про две вещи, которые PvP-набор не может решить — перенумеровано в C6.11, чтобы
   поиск по ID не находил не тот пункт.) `WindMouse` accumulates pixel deltas while any `Screen`
