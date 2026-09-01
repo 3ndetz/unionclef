@@ -3972,24 +3972,58 @@ public class TungstenConfig {
      * active danger, which is actively counterproductive: interrupting a dodge to shimmy is a
      * plausible way to get hit by the exact thing being dodged.
      *
-     * <h2>Why this is lower-risk than most flags in this file, and why it is still a flag</h2>
+     * <h2>doingFunkyStuff cannot leak stale-true across ticks -- but that does not make this flag
+     * safe, and an earlier version of this comment overstated it</h2>
      *
      * {@code doingFunkyStuff} is reset to {@code false} UNCONDITIONALLY at the top of
-     * {@code MobDefenseChain}'s own tick, before it is ever conditionally set true again -- so it
-     * cannot leak stale-true across ticks the way a flag cleared only on specific branches could.
-     * The exemption can only ever suppress a stuck-trigger on a tick where mob-defense is
-     * genuinely, currently, evasively active.
+     * {@code MobDefenseChain}'s own tick, before it is ever conditionally set true again, so THE
+     * FLAG ITSELF cannot leak stale-true. That is a real property and it is the only one that
+     * held up: it does not make the exemption low-risk, because the CONDITION that sets it true
+     * can itself stay true for a long time.
      *
-     * <p>⛔ "LOOKS SAFE" IS NOT A RESULT. This session already shipped one change with a fully
-     * correct mechanism and no measured benefit ({@code mineTheBlockInTheWay}) after reasoning
-     * it was obviously right. Low apparent risk earns a flag and a mechanism counter, not an
-     * exemption from measuring the outcome -- exactly the discipline that caught that one.
+     * <h2>⛔ THE DODGE HALF OF THIS TRIGGER SITS NEXT TO AN ALREADY-DOCUMENTED FEEDBACK LOOP</h2>
+     *
+     * Read a few lines above the {@code doingFunkyStuff = true} that fires on
+     * {@code isDodgeProjectiles() && projectileIsClose}: a bad-run signature is ALREADY recorded
+     * there, from an earlier investigation --
+     *
+     * <pre>
+     *   mdFar 1979-2012, dodgeDrive 597-621, 28-42 arrows fired from a mean of ~9.5 blocks
+     *   "600 ticks of dodging and no approach... nothing breaks it until the skeleton loses
+     *    interest" -- runs ending at min_hp 3-5 instead of the ordinary 12-17
+     * </pre>
+     *
+     * {@code projectileIsClose} being true for that whole 600-tick loop means
+     * {@code doingFunkyStuff} is ALSO true for that whole loop -- which is exactly the shape
+     * "the flag itself cannot go stale" does not protect against: a CONDITION that legitimately
+     * holds for thirty-plus seconds is indistinguishable, from the exemption's point of view,
+     * from a legitimate three-tick side-step. And this is precisely the situation where
+     * {@code UnstuckChain}'s rescue might be the thing that BREAKS the loop -- a bot genuinely
+     * wedged while also being shot needs the shimmy, not a reason to suppress it for the
+     * duration of the very failure mode already on record next to this line.
+     *
+     * <p>The creeper-flee half of the trigger does not have this problem as far as anything on
+     * record shows -- fleeing a fusing creeper ends when the fuse ends or the creeper is lost,
+     * not in an open-ended loop. The two halves of ONE boolean have different risk profiles, and
+     * this flag currently cannot tell them apart. Splitting {@code doingFunkyStuff} into two
+     * flags (or reading {@code mdDodgeTaskTicks}'s own recent rate instead of a boolean) is the
+     * honest fix, and it is NOT done here -- untestable without the stand, and not worth
+     * guessing at twice in the same file.
+     *
+     * <p>⛔ "LOOKS SAFE" IS NOT A RESULT, restated because it mattered twice in one commit: the
+     * first pass on this flag called it "lower-risk than most flags in this file" before
+     * re-reading the code it sits next to. Low apparent risk earns a flag and a mechanism
+     * counter, not an exemption from measuring the outcome -- and it does not earn confidence
+     * about WHICH direction the outcome will move, which this correction retracts.
      *
      * <p>Mechanism counter {@code unstuckAcrobaticsSuppressed} in {@code UnstuckChain}: ticks
      * where the stuck-trigger condition was met but suppressed by this flag. Zero in a control
-     * arm, because suppressing is what the flag gates. UNMEASURED: no live stand was available
-     * to run the A/B when this was written; verified only by reading (the dead getter, the
-     * unconditional per-tick reset) and by compiling.
+     * arm, because suppressing is what the flag gates. A future A/B on this flag MUST also read
+     * {@code mdDodgeTaskTicks}/{@code mdDodgeTaskGapMilli} alongside the outcome -- if the fix
+     * arm's suppressions concentrate inside a long dodge-loop rather than short flee/dodge
+     * bursts, that is the failure mode this correction predicts, not a side observation.
+     * UNMEASURED: no live stand was available to run the A/B when this was written; verified
+     * only by reading and by compiling.
      */
     public boolean unstuckSkipsDuringMobDefenseAcrobatics = false;
 
