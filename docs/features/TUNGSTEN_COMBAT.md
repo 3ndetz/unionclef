@@ -119,7 +119,14 @@ N ticks before the LOS window opens (WindMouse needs convergence time).
 - [ ] **Movement zone mapping** — scan terrain for safe zones, jump waypoints
 - [ ] **Jump waypoints** — precompute advantageous positions to jump to (high ground, safe landing)
 - [ ] **WASD passthrough polish** — allow player manual input in safe situations
-- [ ] **Legs system** — sprint-jump, strafe patterns, knockback recovery
+- [~] **Legs system** — sprint-jump, strafe patterns, knockback recovery.
+  ПЕРЕПРОВЕРЕНО 2026-09-01: строка списана целиком под TODO, но strafe-паттерны СУЩЕСТВУЮТ и
+  используются — `CombatController.java:215` держит целый блок «dynamic combat movement state
+  (circle-strafe + range + crit-jumps)» (`strafeDir`, `strafeInterval`, `strafeFarTicks`/
+  `strafeNearTicks`, безопасная проверка стороны `strafeSideSafe`), плюс `crowded`-гейт против
+  толпы (см. `TODOS.md`, раздел G-2, «обход без случайных метаний» — единственная закреплённая
+  находка серии из 16 гипотез). Ни разу не упомянуто и в разделе «Implemented» выше. Sprint-jump
+  часть отдельно НЕ проверялась, поэтому строка не закрыта целиком, только уточнена.
 - [x] **Danger classification** — DangerLevel enum: NONE / HEIGHT_RELIEF / HEIGHT_HIGH / HEIGHT_DEATH
 - [ ] **Environmental hazards in pathfinding** — currently BFS avoids:
   lava, fire, magma, campfire, cactus, wither rose, berry bush, water,
@@ -135,13 +142,19 @@ N ticks before the LOS window opens (WindMouse needs convergence time).
 
 ## Settings (tungsten.json)
 
+⛔ CORRECTED 2026-09-01: the gravity/wind/maxStep/doneThreshold defaults below were the OLD
+values (verified against `TungstenConfig.java`, which is the source of truth, not this table).
+They were retuned in a 2026-07-24 pass after the user complaint "юзеры крутят мышь РЕЗКО" (real
+players flick the mouse sharply, they don't glide) — see the code comments at each field for the
+tuning history (2.0→12, 0.8→0.35→0.15, 4→7→10→25).
+
 | Setting | Default | Description |
 |---------|---------|-------------|
 | combatTriggerBotEnabled | true | Auto-click when crosshair on target |
 | combatRotatesEnabled | true | Auto-rotation toward target |
-| combatWindMouseGravity | 2.0 | Pull toward target (deg/frame) |
-| combatWindMouseWind | 0.8 | Random jitter magnitude |
-| combatWindMouseMaxStep | 4.0 | Max degrees per frame |
+| combatWindMouseGravity | 12.0 | Pull toward target (deg/frame) |
+| combatWindMouseWind | 0.15 | Random jitter magnitude |
+| combatWindMouseMaxStep | 25.0 | Max degrees per frame |
 | combatWindMouseWindDist | 15.0 | Wind decay threshold (degrees) |
-| combatWindMouseDoneThreshold | 0.5 | Snap threshold (degrees) |
+| combatWindMouseDoneThreshold | 0.4 | Snap threshold (degrees) |
 | combatWindMouseFlickScale | 3.0 | Far-angle speed multiplier |
