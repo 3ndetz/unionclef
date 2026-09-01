@@ -9489,11 +9489,51 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   default is shadowed forever** on that machine. Any stand result from a machine with an old
   `tungsten.json` is suspect.
 - [ ] **C7.3 MCP server binds `0.0.0.0` with NO authentication and wildcard CORS, enabled by default.**
+  ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01, все три части: `McpServer.java:60` —
+  `HttpServer.create(new InetSocketAddress("0.0.0.0", port), 0)`; `:75-77` — заголовки
+  `Access-Control-Allow-Origin: *` / `-Headers: *` / `-Methods: POST, GET, OPTIONS` на КАЖДЫЙ
+  ответ, ни одной проверки токена/пароля/заголовка авторизации во всём файле (grep на
+  auth/token/password — пусто); `Settings.java:623` — `private boolean mcpEnabled = true;`,
+  `AltoClef.java:196,211,219` запускает его безусловно при старте с логом «MCP server started
+  on 0.0.0.0:<port>». Любой в той же LAN может слать команды боту без единого секрета. Открыто.
 - [ ] **C7.4** `gotoXYZ`/`gotoFar`/`stopPathing` — the primary agent movement levers — are routed
   through the **human chat anti-spam rate limiter**.
+  ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01. Все три (`Py4jEntryPoint.java:4136,4153,4381`)
+  зовут `ChatMessage(...)`, та кладёт сообщение в `_mod.getMessageSender().enqueueChat(msg,
+  MessagePriority.ASAP)` (`:609`) — `MessageSender.java`, тот же класс и та же очередь, что
+  обслуживает обычные чат-сообщения бота людям. `ASAP` — это только порядок ВНУТРИ очереди
+  (`PriorityQueue` по `importance`), не обход таймера: `tick()` (`:38-46`) шлёт следующее
+  сообщение из очереди только когда `canSendMessage()` (`:74-76`) истинно —
+  `fastSendTimer`(0.3с)/`bigSendTimer`(3.5с после 6 подряд)/`bigBigSendTimer`(10с после 3
+  «медленных» окон). Комментарий класса на месте: «We can't send messages immediately as the
+  server will kick us» — это античит-таймер для ЧЕЛОВЕЧЕСКИХ сообщений, и рычаг движения
+  агента стоит в ТОЙ ЖЕ очереди на общих основаниях. Открыто.
 - [ ] **C7.5** `TungstenBridge` mutates the global persisted `TungstenConfig.searchTimeoutMs` as a side
   effect of delegation and never restores it. Same pattern for the pathfinder accept-thresholds.
+  ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01, С ПОПРАВКОЙ НА ИМЯ КЛАССА: `TungstenBridge` как имя
+  в коде больше не существует (grep по всему модулю — ноль совпадений) — тот же механизм сейчас
+  живёт в `TungstenHelper.applyFallbackTuning` (`util/helpers/TungstenHelper.java:132-139`), и
+  сам код УЖЕ ЗНАЕТ об этом пункте: комментарий на месте (`:133-135`) прямым текстом — «mutates
+  GLOBAL persisted config — tracked as C7.5 in TODOS.md; the proper fix is per-call search
+  parameters» — то есть кто-то читал этот пункт регистра и оставил ссылку на него в коде, не
+  почистив саму запись. `TungstenConfig.get().searchTimeoutMs = FALLBACK_SEARCH_TIMEOUT_MS`
+  (`:136`) — глобальный персистентный конфиг, без пары «восстановить». `pf.minPathSizeForTimeout`/
+  `pf.minDistPath` (`:137-138`) — та же история: `pf` не локальный объект, а
+  `TungstenModDataContainer.PATHFINDER` (`:201`) — общий синглтон, на котором работают ВСЕ
+  остальные поиски мода, так что и это не «локальная», а фактически глобальная утечка настройки.
+  `applyFallbackTuning` вызывается трижды (`:241,253,276`) и нигде в файле нет обратного вызова.
+  Открыто, подтверждено под новым именем класса.
 - [ ] **C7.6** Server-specific data hardcoded in Java source (`ButlerConfig` chat formats).
+  ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01, И ЯРЧЕ, ЧЕМ ФОРМУЛИРОВКА ПРЕДПОЛАГАЕТ:
+  `ButlerConfig.java:107-151` — массив `chatFormats` из 41 строки, шесть РЕАЛЬНЫХ доменов
+  (`mc.vifela.ru`, `mc.musteryworld.net`, `mlegacy.net`, `mc.vimemc.ru`, `funnymc.ru`,
+  `mc.4obabke.ru`) с их конкретными форматами чат-плагинов (ранги, кланы, юникод-глифы вроде
+  `➠`/`➯`/`ᖧᖨ`) буквально вшиты как значения по умолчанию в Java-исходник, не в
+  ресурс/конфиг-шаблон. `ConfigHelper.loadConfig(...)` (`:12`) может переопределить их из
+  `configs/butler.json`, если файл существует — но ДЕФОЛТ, из которого стартует любая свежая
+  установка мода, содержит имена и внутренние детали чужих серверов прямо в коде. То же для
+  `whisperFormats` (`:63-75`) — форматы личных сообщений разных серверов, тоже литералами.
+  Открыто.
 
 ### C9 — DOC LANGUAGE DEBT (my own violation, 2026-07-28)
 - [x] **C9.1 `docs/NAVIGATION.md` is written in Russian** (591 lines). The language rule in
