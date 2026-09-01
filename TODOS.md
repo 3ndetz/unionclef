@@ -9644,6 +9644,19 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   unconditionally re-`save()`s the whole object → once `tungsten.json` exists, **every future shipped
   default is shadowed forever** on that machine. Any stand result from a machine with an old
   `tungsten.json` is suspect.
+  ⭐ ПРОВЕРЕНО ЖИВЬЁМ 2026-09-01 (обходной путь C8.1, `;settings` через MCP на `uctest-mc-tester1`)
+  — на ЭТОЙ конкретной машине риск НЕ РЕАЛИЗОВАЛСЯ. Сверены 16 флагов/констант с исходником
+  один в один: `driftThreshold`(0.8), `followBlockPathFinderEnabled`(true),
+  `gridBfsRefusesCornerCut`(true), `mineTheBlockInTheWay`(false), `fireReleaseNeedsFire`(false),
+  `smartMoves`(false), `coarseDistanceIsADistance`(true), `searchHeuristicScale`(3.563),
+  `planPlaceMoves`(true), `combatShieldEnabled`(false), четыре `combatWindMouse*` константы
+  (12.0/0.15/25.0/0.4), `gridRouteMatchesQueueMoves`/`closestPursuitHasBudget`/
+  `itemPickupIsDistanceNotReach`/`coarseFallsBackToClosestCell`/`arrivalAgreesWithTheSnap` —
+  ВСЕ совпали с `TungstenConfig.java` день в день, ни одного расхождения. Не значит «механизм
+  безопасен навсегда» (один живой `tungsten.json` мог быть удалён/пересоздан с последнего
+  релиза) — значит «на момент этой проверки все допущения этой сессии о „shipped defaults“ в
+  `docs/features/TUNGSTEN_CONFIG.md` и по всему `TODOS.md` подтверждены живым стендом, а не
+  только чтением исходника».
 - [ ] **C7.3 MCP server binds `0.0.0.0` with NO authentication and wildcard CORS, enabled by default.**
   ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01, все три части: `McpServer.java:60` —
   `HttpServer.create(new InetSocketAddress("0.0.0.0", port), 0)`; `:75-77` — заголовки
