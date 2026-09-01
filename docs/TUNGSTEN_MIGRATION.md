@@ -1,5 +1,16 @@
 # Tungsten Migration: upstream server-side branch
 
+⛔ FLAGGED STALE 2026-09-01: last touched 2026-04-04 (`git log`), and nothing in `TODOS.md`'s G-0
+through G-2 sections (which cover everything else that happened to tungsten since, in detail)
+mentions this upstream branch, "Hackerokuz", or a server-side porting effort by name. Not
+confirmed abandoned — a future reader should ask whether this is still wanted before either
+resuming it or retiring the file — but the "New features to port" wishlist below should not be
+read as a live plan without checking first. The "Ported changes" table and the anti-cheat danger
+section below it DO check out against current code where spot-checked (e.g. `BlockNode`'s
+isDoingJump +6.5 cost, row "BlockNode isDoingJump +6.5 cost | DONE", confirmed live at
+`BlockNode.java:459-461` this same session) — this is a real historical record, just not a
+maintained one.
+
 Upstream: `Hackerokuz/Tungsten` branch `server-side`
 Target: MC 1.21.11, yarn 1.21.11+build.3, Fabric API 0.140.0+1.21.11, Loom 1.15-SNAPSHOT
 

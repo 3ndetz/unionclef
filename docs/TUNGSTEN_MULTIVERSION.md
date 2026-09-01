@@ -1,5 +1,17 @@
 # Tungsten Multiversion: 1.21.1 + 1.21.11
 
+⛔ PLAN ABANDONED, CONFIRMED 2026-09-01: this entire document is an implementation plan (build
+infrastructure, source gates, `tungsten/versions/X.Y.Z/` directories) that was never carried out.
+Checked directly: `tungsten/build.gradle` has no preprocessor plugin at all and is hardcoded to
+`minecraft "com.mojang:minecraft:1.21.11"` / `yarn:1.21.11+build.4`; `settings.gradle.kts` has
+exactly one `include(":tungsten")`, no `tungsten-1.21.1`/`tungsten-1.21.11`; there is no
+`tungsten/versions/` directory on disk. The actual resolution was simpler than this plan: tungsten
+stayed single-version (1.21.11 only) and is pulled into every altoclef `versions/X.Y.Z`
+subproject as a compiled jar dependency (`build.gradle:121-122`), not preprocessed source — see
+`docs/MULTIVERSIONING.md`, corrected the same day. Left here as a design record of a path not
+taken, not as a live plan — do not resume Phase 1 below without first deciding whether the
+compiled-jar-dependency approach is meant to be replaced.
+
 ## Goal
 
 Make tungsten compile and work under both MC 1.21.1 (current) and MC 1.21.11 (upstream target).
