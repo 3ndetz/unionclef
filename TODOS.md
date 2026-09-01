@@ -55,6 +55,25 @@ loops: gotoFar → pathStatus (until arrived) → gotoFar») ходит по Т�
 но НЕ ПОДТВЕРЖДЁННАЯ стендом (Hard Ban чеклиста: «Never call something done without a stand
 run» — не называю сделанным, называю починенным-но-непроверенным).
 
+⛔⛔ НАЙДЕНО ПОСТФАКТУМ 2026-09-01, ПРИ ЧТЕНИИ `docs/BARITONE-PORT.md`: этот баг — НЕ отдельная
+находка, это ОДИН ИЗ ШЕСТИ+ уже задокументированных случаев ровно того же класса дефекта.
+Раздел «GOALS AND ARRIVAL» этого файла (produced 2026-07-30, за пять недель до моего живого
+замера) констатирует ДОСЛОВНО: «tungsten... re-invents "arrived" five more times with five
+different radii and dimensionalities across FastNavigator, BlockPathWalker, GotoCommand and
+PathExecutor» (finding #331: «Arrival is defined five times with different radii and
+dimensionality, none of them the planner's own in-goal test»). Мой `Py4jEntryPoint.pathStatus`
+— ШЕСТОЕ определение, тот же аудит его просто не считал (py4j-слой не входил в 8 областей
+разбора). КОРЕНЬ, который этот аудит называет ПРАВИЛЬНЫМ РЕШЕНИЕМ, а не заплаткой на заплатку:
+у baritone ОДИН объект `Goal` (`isInGoal` + `heuristic` вместе, `Goal.java:38,48,68`),
+используемый ВЕЗДЕ — поиском для остановки, классификатором результата, и поведением для
+объявления прибытия. У tungsten вообще нет абстракции цели — голый `BlockPos` и разбросанные,
+независимо угаданные проверки «пришёл ли». Моя правка сделала ОДНУ пару (`pathStatus` +
+`FastNavigator`) согласованной, а не построила `Goal`-абстракцию — то есть почищен ОДИН
+дребезг из как минимум шести, а не корень целиком. Раздел целиком (13 находок, `docs/
+BARITONE-PORT.md` строка ~293) — готовый, уже написанный план на полноценный CORE FIX, если
+кто-то возьмёт эту работу в фокус; отдельно чинить остальные пять не буду — большая, связная
+задача, которая требует общего дизайна `Goal`, а не пяти независимых заплаток по одной.
+
 <!-- CROSS-SESSION-PAIRING-READY-2026-08-31 -->
 ## ⏳ ГОТОВ СПОСОБ СОБРАТЬ ПАРНЫЙ ЗАМЕР ПО ОДНОМУ ПРОГОНУ ЗА СЕССИЮ (2026-08-31)
 
