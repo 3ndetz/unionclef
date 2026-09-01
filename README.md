@@ -9,16 +9,19 @@ An open platform for building AI agents that play Minecraft — pathfinding, com
 
 ![qwenie](https://github.com/user-attachments/assets/64b98492-ceca-410f-b3bc-efbd8ea09dcb)
 
-Built by merging **altoclef**, **shredder**, and **tungsten** into a single codebase. No submodules, no pre-built JARs, no tears.
+Originally merged from **altoclef**, **shredder**, and **tungsten** into a single codebase. As of
+the "G-0" migration (2026-08-24), **tungsten is the only compiled pathfinder** — shredder and
+baritone stay in the tree as source reference only, not built, not run. No submodules, no
+pre-built JARs, no tears.
 
 ## What's inside
 
 | Module | What it does |
 |--------|-------------|
 | **altoclef** (root) | Autonomous bot — speedruns, PvP, SkyWars, Python scripting via Py4J |
-| **shredder/** | Pathfinder v2 — fork of baritone with WindMouse camera, tungsten integration, human-like movement |
-| **tungsten/** | A* pathfinder that doesn't break blocks — complex parkour, follows players, PvP movement |
-| ~~baritone/~~ | Legacy pathfinding code, kept as reference. Replaced by shredder |
+| **tungsten/** | A\* pathfinder — the only pathfinding engine actually compiled and run. Movement, parkour, block break/place, combat |
+| ~~shredder/~~ | Fork of baritone with WindMouse camera + tungsten bridge. **Not compiled** — kept as source reference for the parts not yet ported into tungsten |
+| ~~baritone/~~ | Original pathfinding code. **Not compiled** — kept as reference |
 
 **Minecraft 1.21** / **Fabric** / **Java 21**
 
@@ -115,11 +118,11 @@ Pathfinder that can't build/break blocks and looks like a NASA computing program
 unionclef/
 ├── src/main/java/          altoclef source (bot logic, commands, tasks)
 ├── src/main/resources/     fabric.mod.json, mixins, assets
-├── shredder/               pathfinder v2 (fork of baritone + tungsten bridge)
-│   └── src/main/java/      shredder code (baritone.* packages)
-├── tungsten/               tungsten source (A* movement, player following)
+├── tungsten/               tungsten source (A* movement) — the ONLY compiled pathfinder
 │   └── src/main/java/      tungsten code
-├── baritone/               legacy pathfinding (kept as reference, not used)
+├── shredder/               NOT COMPILED — source reference only (see G-0 in TODOS.md)
+│   └── src/main/java/      shredder code (baritone.* packages)
+├── baritone/               NOT COMPILED — source reference only (see G-0 in TODOS.md)
 │   └── src/main/java/      original baritone code (remapped to yarn)
 ├── scripts/                python scripting via Py4J (uv project)
 ├── root.gradle.kts         root build config
@@ -141,23 +144,29 @@ unionclef/
 4. Fork: **[3ndetz/autoclef](https://github.com/3ndetz/autoclef)** (multiplayer, SkyWars, Python bridge) →
 5. Merged into: **unionclef**
 
-### shredder
+### shredder (retired)
 
-Fork of baritone, rebuilt as the primary pathfinder. Keeps `baritone.*` packages for API compatibility but adds WindMouse camera smoothing, human-like movement entropy, and a tungsten bridge that delegates complex parkour segments (no block breaking/placing) to tungsten's A* executor.
+Fork of baritone, once rebuilt as the primary pathfinder: kept `baritone.*` packages for API
+compatibility and added WindMouse camera smoothing, human-like movement entropy, and a tungsten
+bridge that delegated complex parkour segments to tungsten's A\* executor. Retired from the build
+by the "G-0" migration (2026-08-24) once tungsten covered everything it did — stays in the tree
+as source reference, not compiled.
 
 1. Origin: **[cabaletta/baritone](https://github.com/cabaletta/baritone)** (by leijurv & Brady) →
 2. Patched by altoclef maintainers (GauchoMatrero → MiranCZ → 3ndetz) →
 3. Remapped mojmap → yarn →
 4. Forked as **shredder** with WindMouse + tungsten integration →
-5. Merged into: **unionclef**
+5. Merged into: **unionclef**, later compiled →
+6. Retired 2026-08-24 (G-0) — tungsten is now the only pathfinder
 
 ### baritone (legacy)
 
-Original pathfinding engine. Kept in the repo as reference code — all active pathfinding now goes through shredder.
+Original pathfinding engine. Kept in the repo as reference code — all active pathfinding now goes
+through **tungsten** (not shredder, which is itself retired — see above).
 
 1. Origin: **[cabaletta/baritone](https://github.com/cabaletta/baritone)** (by leijurv & Brady) →
 2. Remapped mojmap → yarn & merged into: **unionclef** →
-3. Superseded by **shredder**
+3. Superseded by **shredder**, which was itself later superseded by **tungsten** (G-0, 2026-08-24)
 
 ### tungsten
 
