@@ -5,8 +5,11 @@ against the current tungsten tree. Companion to [BARITONE-PORT.md](BARITONE-PORT
 that found 58 re-derived / 40 missing behaviours); this file is the *work order* for the
 placement and breaking half of it.
 
-`baritone/` is not compiled — `settings.gradle.kts` keeps it as a source reference and shredder
-occupies the `baritone.*` package (AGENTS.md). Porting therefore means **copying the logic into
+`baritone/` is not compiled — `settings.gradle.kts` keeps it as a source reference. At the time
+this was written shredder occupied the `baritone.*` package and was the live delegation target;
+since the "G-0" migration (2026-08-24) shredder is ALSO not compiled, and tungsten is the only
+pathfinder. This does not change the work below — it was always about copying logic into
+tungsten, never about calling shredder. Porting therefore means **copying the logic into
 tungsten**, never calling it. The `baritone/` tree in this repo is already yarn-migrated, so
 every block quoted below is copy-ready as written.
 

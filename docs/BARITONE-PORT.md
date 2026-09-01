@@ -6,8 +6,12 @@ refuting). The question it answers is the user's: **is tungsten re-walking barit
 mistakes instead of copying logic that already works?**
 
 The answer is yes, almost everywhere. Of 104 findings: **58 re-derived, 40 missing, 4
-divergent on purpose, 2 actually ported.** `baritone/` is not compiled (shredder occupies the
-`baritone.*` package), so porting means copying the LOGIC into tungsten — never calling it.
+divergent on purpose, 2 actually ported.** `baritone/` is not compiled (at the time this was
+written, shredder occupied the `baritone.*` package and was itself the live target for this
+work; since the "G-0" migration, 2026-08-24, shredder is ALSO not compiled — tungsten is the
+only pathfinder, and the audit below is unaffected: it was always about copying LOGIC into
+tungsten, never about calling shredder), so porting means copying the LOGIC into tungsten —
+never calling it.
 
 Read this before building any movement mechanism. See also the rule this produced in
 [CHECKLIST.md](CHECKLIST.md) section 1b.
