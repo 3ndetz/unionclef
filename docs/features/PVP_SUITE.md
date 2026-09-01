@@ -4,6 +4,18 @@ Covers TODOS: **RW-5** (one clear pipeline), **RW-1** (combat test infra: live s
 partner, edge zones), **RW-6** (ranged validation), **RW-7** (clean purpose-built
 polygons), **RW-9** (chase bench). Runs on the `deploy/` stand (the Mac).
 
+⛔⛔ **`chase_flat`/`chase_terrain` MAY NO LONGER TEST WHAT THEIR OWN DESCRIPTION BELOW SAYS.
+FLAGGED 2026-09-01, NOT VERIFIED LIVE.** Both scenarios describe the victim as running "on
+baritone `@goto`" while the chaser runs tungsten `@follow` — true when `TODOS.md`'s C5.15-C5.20
+chase saga measured this (2026-07-30/31), when `TungstenHelper.primary` defaulted to `false`.
+Since the "G-0" migration (2026-08-24), `primary` defaults to `true`, and a grep across the
+whole `deploy/runner/uctest/` library finds no call anywhere that pins the victim to baritone
+(`setTungstenPathing`/`useTungsten`/`primary`) — both containers boot the same jar with the same
+defaults. So today, unless proven otherwise on a live run, **the victim is also on tungsten**,
+and "tungsten must catch baritone" (RW-9's own definition) has quietly become "tungsten must
+catch tungsten." See `TODOS.md`'s note right after C5.20 for the full reasoning and what to check
+before trusting a fresh run of either scenario.
+
 ## How to run (on the docker host)
 
 ```bash
