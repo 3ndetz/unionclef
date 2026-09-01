@@ -8149,6 +8149,27 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
 - [~] **C5.1 Break is cardinal, same-Y, ONE cell.** ЧАСТИЧНО 2026-07-28: слом добавлен в FastPlanner (тот движок, что реально водит бота) и ПРОБИВАЕТ проход ('Mining done — passage open'). Осталось: маршрут после добычи не возобновляется; dig up/down по-прежнему нет. `BlockNode.java:641`:
   `if (dy != 0 || |dx|+|dz| != 1) return false`. **No dig-down, no dig-up**, no break-to-ascend/descend,
   no diagonal. `@gamer` mining strategies are literally not expressible. One cell per full re-search.
+  ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01 — ОБЕ ПОЛОВИНЫ ВСЁ ЕЩЁ ВЕРНЫ, НО ПО РАЗНЫМ ПРИЧИНАМ.
+  «Cardinal, same-Y, one cell, no dig up/down» — БУКВАЛЬНО ТОТ ЖЕ КОД сегодня, просто съехали
+  номера строк: `tryPlanBreakThrough`
+  (`blockSpaceSearchAssist/BlockNode.java:707-710`) начинается с той же строки
+  `if (dy != 0 || Math.abs(dx) + Math.abs(dz) != 1) return false;`, и во всём `tungsten/path/`
+  нет НИ ОДНОГО вертикального break-хода (grep на digUp/digDown/breakVertical — пусто). Слом
+  как ход в поиске остаётся горизонтальным на одну клетку.
+  «Маршрут не возобновляется» — по факту БОЛЬШЕ НЕ ФАКТ, механизм ЕСТЬ, но выключен по
+  умолчанию. `PathExecutor.resumeGotoAfterMining` (`:1126-1169`) теперь умеет возобновлять
+  ИМЕННО ТУ цель, что дали поиску (`PathFinder.lastSearchTarget`), а не глобальный
+  `TungstenMod.TARGET`, который пишут только пять ручных источников (`;goto`, кнопка, погоня,
+  камера-миксин, py4j) и никогда — основной драйв altoclef. Javadoc флага
+  (`TungstenConfig.java:3253-3285`, `resumeUsesSearchTarget`) прямо называет старый симптом:
+  «135 completed breaks produce ZERO steps at 1219.5,104.1,-843.5» — ровно то, что описывал этот
+  пункт реестра. НО: `resumeUsesSearchTarget = false` по умолчанию (`TungstenConfig.java:3285`),
+  и рядом стоит не «ЗАКРЫТО + прогон», как у других починенных пунктов этой сессии, а `GATE:
+  the 90-second repro, then nav, craft and the playthrough` — то есть заявка на проверку,
+  не отчёт о ней. Счётчик `gotoResumedFromSearch` в живом дампе стенда
+  (`deploy/runner/freezes/stall_run1_ladder.txt`, см. C10.1) равен нулю — на поставляемом
+  боте механизм ни разу не сработал. Итог: код для починки написан и назван по имени старого
+  бага, но не включён и не измерен — для пользователя симптом остаётся прежним.
 - [x] **C5.2 Break cost priced with the item CURRENTLY HELD** while the executor swaps to the best tool
   ЗАКРЫТО 2026-07-31 + прогон: живой генератор слома в `FastPlanner` считал цену через
   `st.calcBlockBreakingDelta(player, ...)`, то есть «насколько быстро тем, что сейчас в руке»,
@@ -9328,13 +9349,31 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   ONLY RUNS WHILE THIS TASK DOES") дают `wanderMoved=0` (`wanderMovedCm`, СМ, не блоки) —
   то есть НОЛЬ суммарного горизонтального смещения за ~1393 тика (≈70 секунд), не «мало», а
   РОВНО ноль.
-  НЕ ЗАКРЫВАЮ КОРНЕВУЮ ПРИЧИНУ: `TimeoutWanderTask.java` бегло прочитан (одометр на строках
-  204-229 — честный, считает реальное перемещение тела, не подставной), но откуда берётся цель
-  блуждания и почему она НИ РАЗУ не сдвинула бота — не прослежено до конца в этом заходе. Это
-  ОТДЕЛЬНАЯ, ранее не зарегистрированная задача: агент, не способный дотянуться до еды в 33
-  блоках, встаёт в блуждание, которое само гарантированно ничего не даёт. Следующий заход:
-  проследить выбор точки блуждания (`TimeoutWanderTask`) и вызывающий `AbstractDoToClosestObjectTask`/
-  `KillEntitiesTask`, понять, почему тело не получает ни одного реального шага.
+  ⛔ ДОПОЛНЕНО 2026-09-01, ПОСЛЕ ОБМЕНА С КОЛЛЕГОЙ (pac:lumi): она нашла в исходниках ТРИ
+  независимых прежних упоминания того же почерка «wander растёт, wanderMoved ноль»
+  (`chains/UnstuckChain.java:201`, `tasks/movement/PickupDroppedItemTask.java:69`,
+  `tasks/InteractWithBlockTask.java:211` — все три проверены, цитаты в коде совпадают), и указала,
+  что третий пример особенно ценен: там `plan=63/../zero0, atGoal=0` — планирование ЗДОРОВО, а
+  смещения почти нет, то есть корень не в поиске, а между «цель выбрана» и «тело поехало».
+  ПО ЭТОЙ НАВОДКЕ КОРЕНЬ НАЙДЕН, И ОН УЖЕ ЗАДОКУМЕНТИРОВАН В КОДЕ, ПРОСТО НЕ ВКЛЮЧЁН:
+  `TungstenConfig.java:4504-4528`, флаг `wanderTargetFollowsTheGround` (default `false`).
+  Комментарий на месте: `TimeoutWanderTask` строит точку спирали как
+  `(anchor.x + cos*r, ANCHOR.Y, anchor.z + sin*r)` — Y ВСЕГДА фиксирован на высоте якоря, а XZ
+  идёт по спирали радиусом до 120 блоков поверх РЕАЛЬНОГО рельефа, поэтому точка почти всегда
+  оказывается внутри камня или висит в воздухе. Уже измерено тремя прогонами:
+  `wanderTung=picked/driven/unstandable` = `94/13/u85`, `164/28/u158`, `9/9/u9` — **252 из 267
+  выборов, 94%**. Раз новая цель блуждания выбирается только пока `!TungstenHelper.isActive()`,
+  поиск к недостижимой точке держит это состояние тысячами тиков — бот стоит и не может
+  переключиться ни на что другое. В дампе C10.1 (`stall_run1_ladder.txt`) то же число того же
+  почерка: `wanderTung=51/15/u50` — 50 из 51, тот же порядок 94-98%. Готовый фикс уже написан
+  рядом (сканирует пригодную клетку по высоте вокруг выбранных XZ, при неудаче — прежняя точка,
+  то есть хуже не станет), а счётчик `wanderTargetUnstandable` — уже готовый механизм-счётчик
+  для A/B (высокий в контроле, низкий в фикс-плече). НЕ ЗАКРЫВАЮ: флаг стоит `false` именно
+  потому, что помечен «Default false until a paired A/B on stall time says otherwise» — замер
+  ещё не проводился (или проводился и результат потерян), а без стенда (см. C8.1) включить и
+  переизмерить самой не могу. Следующий заход, когда стенд станет доступен: включить
+  `wanderTargetFollowsTheGround`, прогнать тот же класс сценариев (что и `stall_run1`/food/
+  chicken), сверить `wanderTargetUnstandable` и `wanderMoved` до/после.
 
 ## 🚀 PRIORITY BLOCK — PERFORMANCE + PIPELINED PATHING + REAL BLOCK-SPACE + FIGHTER (user 2026-07-25)
 
