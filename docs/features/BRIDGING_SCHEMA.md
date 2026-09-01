@@ -1,5 +1,19 @@
 # Jump Bridge Schema
 
+⛔⛔ THIS FEATURE DOES NOT EXIST IN THE COMPILED BUILD. FLAGGED 2026-09-01, NOT REWRITTEN.
+`bridgingMode` does not appear anywhere in `src/main/java/` or `tungsten/src/main/java/` (checked
+by grep across both trees) — this whole document describes a `shredder`-era mechanic ("sprint-speed
+telly bridge", see `docs/ai/archive/21-07-2026-foundational-tungsten-features.md`), and shredder
+has not been compiled since the "G-0" migration (2026-08-24, see `TODOS.md`). Tungsten has its
+own, substantially different bridging mechanism now — block-space place-as-a-move
+(`BlockNode.tryPlanPlaceThrough`, `PathExecutor.tickPlacing`) plus the agent-facing `BridgeTask`
+("godbridge") — documented not as a single feature page but across `TODOS.md`'s **C5.5 through
+C5.14** (the real-raycast rewrite, backplace-on-a-ledge geometry, the multi-cell bridge chaining
+fix) and `docs/NAVIGATION.md`'s hand-off notes. This page is kept as a historical design reference
+for the sprint-jump concept, not as documentation of anything currently running.
+
+---
+
 Jump bridge mode (`bridgingMode = "jump"`) — sprint-jump forward, place blocks mid-air.
 
 Legend:
