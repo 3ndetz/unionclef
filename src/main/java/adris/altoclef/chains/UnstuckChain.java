@@ -40,6 +40,11 @@ public class UnstuckChain extends SingleTaskChain {
      * answer it -- 12 of them could be a second or a minute. This counts the cost.
      */
     public static volatile int unstuckOwnedTicks;
+    /** Ticks the stuck-trigger was suppressed because MobDefenseChain was doing evasive
+     *  movement. Mechanism counter for
+     *  {@link kaptainwutax.tungsten.TungstenConfig#unstuckSkipsDuringMobDefenseAcrobatics};
+     *  0 in a control arm because suppressing is what the flag gates. */
+    public static volatile int unstuckAcrobaticsSuppressed;
     /** How stale the break clock must be before a motionless bot counts as stranded. */
     private static final long DIG_GRACE_MS = 6000L;
     /** Which guard last stopped checkGenerallyStuck, and the history size when it did.
@@ -340,6 +345,20 @@ public class UnstuckChain extends SingleTaskChain {
         // Don't trigger when interacting with a container (different from currentScreen in some contexts)
         if (StorageHelper.isChestOpen() || StorageHelper.isBlastFurnaceOpen()
                 || StorageHelper.isSmokerOpen() || StorageHelper.isBigCraftingOpen()) {
+            posHistory.clear();
+            return;
+        }
+
+        // ⛔ EVASIVE MOVEMENT LOOKS LIKE BEING STUCK. See TungstenConfig.
+        // unstuckSkipsDuringMobDefenseAcrobatics: fleeing a fusing creeper or dodging a
+        // projectile can hold the bot inside this check's own radius/window while it is
+        // genuinely, urgently busy -- and mod.getMobDefenseChain().isDoingAcrobatics() exists
+        // precisely to answer "am I doing that right now", with no caller anywhere until this.
+        // Sampled here, not folded into the trigger silently, so the counter's denominator is
+        // exactly the ticks this exemption could have changed the outcome for.
+        if (mod.getMobDefenseChain().isDoingAcrobatics()
+                && kaptainwutax.tungsten.TungstenConfig.get().unstuckSkipsDuringMobDefenseAcrobatics) {
+            unstuckAcrobaticsSuppressed++;
             posHistory.clear();
             return;
         }

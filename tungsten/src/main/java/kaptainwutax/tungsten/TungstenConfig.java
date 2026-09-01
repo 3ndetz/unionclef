@@ -3952,6 +3952,47 @@ public class TungstenConfig {
      */
     public boolean fireReleaseNeedsFire = false;
 
+    /**
+     * Whether the general-stuck detector exempts ticks where MobDefenseChain is doing evasive
+     * movement (fleeing a fusing creeper, dodging a projectile).
+     *
+     * <h2>Found the same way as fireReleaseNeedsFire -- a maintained flag with no consumer</h2>
+     *
+     * {@code MobDefenseChain.doingFunkyStuff} is set true while fleeing a fusing creeper or
+     * dodging a projectile, exposed publicly as {@code isDoingAcrobatics()} -- named and shaped
+     * exactly like something meant to be checked elsewhere. Grepped for every read: the field
+     * itself has none inside {@code MobDefenseChain} beyond the getter, and the getter has ZERO
+     * callers anywhere in the codebase. `UnstuckChain`'s own exemption list already checks
+     * {@code Nav.isPathing()}, an open screen, and an open container (added for issue #13, see
+     * `cbda29fb`) but never this.
+     *
+     * <p>The failure mode this predicts: a sustained dodge or flee that keeps the bot within
+     * `UnstuckChain`'s 1.5-block / ~10s stuck radius -- side-stepping arrows, or backing away
+     * from a creeper in a tight space -- reads as "generally stuck" and triggers a shimmy DURING
+     * active danger, which is actively counterproductive: interrupting a dodge to shimmy is a
+     * plausible way to get hit by the exact thing being dodged.
+     *
+     * <h2>Why this is lower-risk than most flags in this file, and why it is still a flag</h2>
+     *
+     * {@code doingFunkyStuff} is reset to {@code false} UNCONDITIONALLY at the top of
+     * {@code MobDefenseChain}'s own tick, before it is ever conditionally set true again -- so it
+     * cannot leak stale-true across ticks the way a flag cleared only on specific branches could.
+     * The exemption can only ever suppress a stuck-trigger on a tick where mob-defense is
+     * genuinely, currently, evasively active.
+     *
+     * <p>⛔ "LOOKS SAFE" IS NOT A RESULT. This session already shipped one change with a fully
+     * correct mechanism and no measured benefit ({@code mineTheBlockInTheWay}) after reasoning
+     * it was obviously right. Low apparent risk earns a flag and a mechanism counter, not an
+     * exemption from measuring the outcome -- exactly the discipline that caught that one.
+     *
+     * <p>Mechanism counter {@code unstuckAcrobaticsSuppressed} in {@code UnstuckChain}: ticks
+     * where the stuck-trigger condition was met but suppressed by this flag. Zero in a control
+     * arm, because suppressing is what the flag gates. UNMEASURED: no live stand was available
+     * to run the A/B when this was written; verified only by reading (the dead getter, the
+     * unconditional per-tick reset) and by compiling.
+     */
+    public boolean unstuckSkipsDuringMobDefenseAcrobatics = false;
+
     /** Consecutive idle ticks a lock may sit through before it is dropped. A real gap between
      *  path segments is a few ticks; this is 2 seconds, the same grace the stall check uses. */
     public int idleLockGraceTicks = 40;
