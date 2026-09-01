@@ -9663,6 +9663,29 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   (0 байт, обычный файл, а не сокет) на протяжении ВСЕЙ этой сессии, без доступа к
   альтернативному пути подключения (проверено — ни в одном deploy-скрипте нет запасного
   DOCKER_HOST). Помечено ЧАСТИЧНО: конкретные факты сняты, класс проблемы жив в новой форме.
+  ⭐⭐ НАЙДЕН ОБХОДНОЙ СЕТЕВОЙ ПУТЬ 2026-09-01 (после починки лаунчера комнаты, не связанного с
+  этим). `docker.sock` в рабочем месте ПО-ПРЕЖНЕМУ 0 байт — сам монт не чинен. Но:
+  1. Демон Docker отвечает по сети на `tcp://pac-dockerproxy:2375`
+     (`tecnativa/docker-socket-proxy`) — `docker ps`/`docker logs` через него РАБОТАЮТ,
+     подтверждено (полный список контейнеров стенда получен, включая `uctest-mc-tester1`,
+     `uctest-server`, `uctest-gamer-server`, все «Up», tester1 — 30+ часов). `docker exec`
+     ЗАПРЕЩЁН политикой прокси (403 Forbidden) — это НЕ полная замена сокета.
+  2. MCP-порт живого `uctest-mc-tester1` опубликован наружу и достижим по
+     `http://host.docker.internal:25350/mcp` — ПРЯМО ИЗ ЭТОЙ КОМНАТЫ, в обход docker вообще.
+     Сделан настоящий вызов `getGameState` — живой ответ: `inGame=true, hp=20/20,
+     pos=23.7,-60.0,0.7, onGround=true, held=dirt` — бот простаивает на плоской арене
+     (`y=-60`, `STAND_Y`), не в чьём-то активном прогоне (лог `WALKMODE` тикает ровно +200
+     каждые 10с, `bfs=79 direct=0` без изменений — чистый холостой ход, не середина курса).
+  3. `uctest-server`/`uctest-gamer-server` НЕ публикуют НИ ОДНОГО порта наружу (`docker port`
+     — пусто для обоих) — RCON этим путём НЕДОСТИЖИМ. `deploy/runner/*.py` (все дёргают
+     `docker exec ... rcon-cli` для постановки курсов — teleport, give, world reset) этим
+     обходом НЕ запускаются. `mcp_test.py` тоже не годится как есть: хардкодит
+     `MCP="http://127.0.0.1:25350/mcp"` и свою же rcon-обёртку через `docker exec`.
+  ИТОГ: НЕ полное снятие C8.1 — автоматический набор курсов (`run_suite.py`, `gamer_smoke.py`)
+  по-прежнему недостижим без RCON. Но впервые за сессию есть ЖИВОЙ канал: ручные MCP-вызовы
+  (`getGameState`/`gotoXYZ`/`pathStatus`/`tungstenSettings` и т.д.) работают напрямую. Сообщено
+  `pac:lumi` (та же диагностика мёртвого сокета была у неё) на случай, если у неё тот же обход
+  сработает. Помечено ЧАСТИЧНО — RCON-часть блокера жива, MCP-часть больше нет.
 
 ### C10 — FOOD / EXPLORATION FALLBACK (found via cross-session live-stand read, 2026-09-01)
 - [ ] **C10.1 `TimeoutWanderTask` can produce ZERO net movement over an entire episode while the bot
