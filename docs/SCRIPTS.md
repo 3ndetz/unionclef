@@ -20,13 +20,20 @@ UnionClef has a Py4J bridge that lets external programs (Python, agents, CI) con
   result.txt (PASS/FAIL)
 ```
 
-The mod exposes a gateway with methods for executing commands, reading game state, connecting to servers, etc. All four command prefixes work from Python:
+The mod exposes a gateway with methods for executing commands, reading game state, connecting to servers, etc.
+
+⛔ STALE, FLAGGED 2026-09-01: this table used to say "all four command prefixes work" including
+`#`. Since the "G-0" migration (2026-08-24, see `TODOS.md`), `shredder/` is source-reference-only
+and NOT compiled — its `#`-prefixed command registration (`shredder/.../GotoCommand.java` and the
+rest of `baritone.command.defaults`) isn't part of the built JAR at all, so `#` commands do
+nothing. tungsten is the only pathfinder now; use `;` for everything that table's `#` row used to
+cover.
 
 | Prefix | Target | Example |
 |--------|--------|---------|
 | `@` | altoclef | `@goto 0 64 0` |
-| `#` | baritone (shredder) | `#goto 0 64 0` |
-| `;` | tungsten | `;goto 100 64 100` |
+| ~~`#`~~ | ~~baritone (shredder)~~ — **retired, not compiled, does nothing** | — |
+| `;` | tungsten (the only pathfinder) | `;goto 100 64 100` |
 | `/` | server command | `/warp park` |
 | _(none)_ | chat message | `hello` |
 
