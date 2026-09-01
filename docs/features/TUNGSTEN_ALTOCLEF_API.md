@@ -30,7 +30,7 @@ tungsten экспортирует (частично уже есть, довес�
 | `canHit(player, target, angle)` — гейт (reach/COLLIDER LOS/угол) | ЕСТЬ (фасад; TriggerBot использует ту же логику + кулдаун) |
 | `attack(player, target)` — прямая доставка (attackEntity + swing) | ЕСТЬ |
 | `aimAt(Vec3d/Entity)` — WindMouse-прицел | есть (SafetySystem/WindMouseRotation), в фасад не вынесен |
-| `shieldHold(ticks)/shieldRelease/isShieldBlocking` | ЕСТЬ (ShieldBlocker; уступает use-ключ луку). Тест: 0/3 урона от стрел при контроле 2/2 |
+| `shieldHold(ticks)/shieldRelease/isShieldBlocking` | ЕСТЬ (ShieldBlocker; уступает use-ключ луку). Тест: 0/3 урона от стрел при контроле 2/2. ⛔ УТОЧНЕНИЕ 2026-09-01: примитив существует и вызываем (`ShieldBlocker.java`, `CombatController.java:454-456`), но боевой движок поднимает щит САМ только когда `combatShieldEnabled = true`, а это НЕ дефолт (`TungstenConfig`) — см. `TODOS.md` C6.5/C6.11 для актуальной картины (щит измерен нейтральным на `mob_trio`, не измерен на дуэльном наборе, где щита в ките вообще нет). Таблица здесь про наличие ПРИМИТИВА, не про то, включён ли он в бою по умолчанию — не путать одно с другим. |
 | `solveArrow(player, target)` — баллистика с упреждением | ЕСТЬ (TrajectorySolver; 3/5 стоя, 2/5 по бегущей на 18 блоках) |
 | `shootArrow(target)` — выстрел (прицел→заряд→трекинг→relase) | ЕСТЬ (BowShooter) |
 | `throwProjectile` (трезубец/снежок/пёрл), mace-удар с высоты | нет — следующие примитивы |
