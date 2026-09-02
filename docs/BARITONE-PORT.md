@@ -649,12 +649,17 @@ None of this needs calling baritone (which is not compiled); every item is a sel
 >   `MovementHelperB.worldBorderCanPlaceAt` (a port of `BetterWorldBorder.canPlaceAt`) is real
 >   and IS consulted — inside `avoidBreaking` (`MovementHelperB.java:192-194`), which
 >   `getMiningDurationTicks` calls, which `FastPlanner.breakThrough` calls. So a BREAK candidate
->   outside the world border is already refused. Confirmed still missing for the other two move
->   kinds the original finding names: `PlaceRules.canPlace` has no border check at all (read in
->   full; only `allowPlace`, `isReplaceable`, deny zones, the protection hook), and the plain
->   cardinal walk in `step()` consults no border check either. World-HEIGHT bounds
->   remain genuinely `MISSING` everywhere — no `getBottomY`/`getHeight`/dimension-limit check
->   anywhere in `MovementHelperB` or `FastPlanner`, checked directly.
+>   outside the world border is already refused. **FIXED 2026-09-02, same pass** (commit `1cfbe21f`):
+>   placement had the same gap — `PlaceRules.canPlace` had no border check at all — closed by
+>   making `worldBorderCanPlaceAt` public and calling it from `PlaceRules.canPlace` right next to
+>   the existing `isReplaceable` gate, reusing the same ported implementation rather than a new
+>   copy. Strictly conservative (can only reject a placement outside the border, never accept a
+>   new one) and, like the rest of this document's landed fixes, read-and-reasoned rather than
+>   stand-verified. **Still genuinely missing**: the plain cardinal walk in `step()` consults no
+>   border check at all — walking near a border edge is unguarded even now, since neither
+>   `avoidBreaking` nor `PlaceRules` is on that path. World-HEIGHT bounds remain genuinely
+>   `MISSING` everywhere — no `getBottomY`/`getHeight`/dimension-limit check anywhere in
+>   `MovementHelperB` or `FastPlanner`, checked directly.
 > - **STILL OPEN**: `FastPlanner.STATE_CACHE` is still a boxed `HashMap<Long,BlockState>`
 >   (`ThreadLocal.withInitial(java.util.HashMap::new)`) — the audit's "autobox a Long on every
 >   read" finding holds for this specific cache.
