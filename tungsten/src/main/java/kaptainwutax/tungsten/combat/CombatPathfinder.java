@@ -425,7 +425,20 @@ public class CombatPathfinder {
             // stops at the first unsupported edge, so ONE leading diagonal costs the WHOLE
             // route: covered=1 < 2 and it is refused as 'short'. Measured live during a
             // stall: mqRefused(short)=2337 against 2299 BFS ticks -- one refusal per tick.
-            // Combat keeps its diagonals; only the goto route drops them.
+            // ⛔ FIXED, SAME DAY, DOWNSTREAM OF THIS FUNCTION -- READ THIS BEFORE TRUSTING THE
+            // PARAGRAPH ABOVE AS A LIVE PROBLEM (2026-09-02, caught re-reading TODOS.md ProfileD
+            // continuation without checking git log first, then caught the same way). Dropping
+            // diagonals from the search here (a `cardinalOnly` goto search) was tried first, in
+            // the same commit that measured the numbers quoted above, and reverted 70 minutes
+            // later for being far worse (cp exhausted 99% of calls, 98% stubs -- the search needs
+            // its diagonals to reach anything in 800 nodes). The kept fix is expandDiagonals()
+            // below, applied in findPath() (the goto entry point) behind
+            // TungstenConfig.gridRouteMatchesQueueMoves, default true: the search keeps every
+            // diagonal, and the FINISHED route has each one rewritten into two cardinal steps
+            // before the queue ever sees it. Validated on the stand in that same commit (nav
+            // 13/14, craft 22/22, zero gate regressions). So today: combat keeps its diagonals
+            // raw (calls bfsPath directly, no translation needed for the chase use case); goto
+            // also keeps them in the search, but never hands one to the queue.
             if (kaptainwutax.tungsten.TungstenConfig.get().gridBfsRefusesCornerCut
                     && off[0] != 0 && off[1] != 0) {
                 BlockPos sideA = pos.add(off[0], 0, 0);
