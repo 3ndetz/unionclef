@@ -69,8 +69,12 @@ but shredder itself was retired three and a half weeks later and this file was n
 say so. Whoever reads this note next: check `settings.gradle.kts` yourself before trusting even
 this correction, the way this correction had to check it instead of trusting the last one.
 "Replace baritone" no longer means anything — there is nothing left of the old engine in the
-build to replace. `import baritone.…` lines that remain in `src/main` are historical debt (see
-`TODOS.md`'s G-0 section for the remaining import count), not a live delegation to shredder.
+build to replace. ⛔ CORRECTED 2026-09-02: this used to say `import baritone.…` lines "remain" in
+`src/main` as historical debt — checked with a fresh `grep -rl "^import baritone\." src/main/java/
+--include=*.java`, **zero files**, not some leftover count. Commit `05d74f3d` (2026-08-24, "G-0
+COMPLETE") already recorded this ("imports of baritone in altoclef: 0"); `TODOS.md`'s "G-0
+СВЯЗНОСТЬ" item was found still marked open nine days after that commit and closed the same pass.
+There is no baritone import debt left in `src/main` at all.
 
 ## РАБОЧАЯ ВЕТКА — `main` (юзер 2026-07-23)
 
