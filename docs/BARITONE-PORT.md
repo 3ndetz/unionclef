@@ -630,6 +630,47 @@ than asserted:
 
 ## Tungsten's live block planner (FastPlanner) re-derives baritone's special-terrain rules from collision shapes alone, and the derivation lost the parts that matter: a fall is capped by a bare constant (MAX_FALL=3) instead of budgeted, the one damage-aware guard tungsten does own is short-circuited by `ignoreFallDamage = true` by default, the water / water-bucket / ladder-catch exceptions that let baritone drop 20 blocks safely do not exist, and hazards (lava, fire, cobweb, magma, powder snow) are invisible to routing because PlayerFit judges a cell by its collision shape only. Direct answer to the question asked: tungsten DOES price fall DEPTH (a flat 1.0 per block, FastPlanner:801 / SmartMoves:104) but it never prices or checks fall DAMAGE in the planner that drives the bot — the damage code lives in the physics layer and is off by default. MovementHelper/MovementDescend/MovementDownward already solve every one of these, and the copies are small and local.  (15 findings)
 
+> **STATUS, checked 2026-09-02 against current source (this section had NOT been reread since
+> writing, unlike the three sections above it — checked with the same care regardless).** This
+> section is a MIX, same as the move-set audit: some findings are stale because real work
+> landed after the audit was written, most are not. Spot-checked, not exhaustive re-verification
+> of all 15:
+> - **STILL OPEN, exactly as described**: fall-damage budgeting (`MAX_FALL=3` at
+>   `FastPlanner.java:50`, `ignoreFallDamage=true` at `TungstenModDataContainer.java:47` — both
+>   confirmed present, unchanged). Fall-into-water-at-any-depth is also still open: the main
+>   drop scan (`FastPlanner.java:961`, `for (int dy = CLIMB_MAX; dy >= -MAX_FALL; dy--)`) has no
+>   water branch that lifts the `-MAX_FALL` floor, so a deep drop onto water is capped the same
+>   as a deep drop onto land. Flowing water is also still merged with source water everywhere
+>   (`isWater()` at `FastPlanner.java:932` calls `BlockStateChecker.isAnyWater`, which is
+>   `isWater() || isFlowingWater()` — no call site in the planner asks which). Fall cost curve is
+>   still the flat `FALL_ONE_BLOCK_COST = 1.0` (`ActionCosts.java:63`) — the sibling jump-cost
+>   port (`JUMP_ONE_BLOCK_COST` via `distanceToTicks`/`velocity`, same file) already landed, the
+>   fall-cost half of that same porting pass did not.
+> - **CONFIRMED FIXED, and not a small thing to have missed**: water-bucket MLG exists.
+>   `tungsten/.../path/movements/MovementFall.java` (456 lines) carries
+>   `STACK_BUCKET_WATER`/`STACK_BUCKET_EMPTY`, `MAX_FALL_HEIGHT_BUCKET=20`, and the exact
+>   select-water-bucket / aim / click / swap-back execution sequence this finding's own "copy"
+>   column asks for — the audit's literal check ("grep for BUCKET in tungsten/ returns nothing")
+>   no longer holds. `TODOS.md` already documents this move's live behaviour in detail (the MLG
+>   task-starvation finding around line 5542) — this audit section just hadn't been told the move
+>   exists at all, a bigger gap than the usual "already fixed, undocumented here."
+> - **Hazard predicate**: already recorded fixed in the move-set-audit section above
+>   (`hazardAt()` exists, called at the parkour/step-landing checks, `FastPlanner.java:1410`
+>   and `:1422-1423`) — same finding, not rechecked twice.
+> - **STILL OPEN, read carefully rather than assumed**: the ladder branch's bogus climb into
+>   open air. `FastPlanner.java:641-654` still offers a climb step whenever
+>   `isLadder(...) || PlayerFit.bodyFits(...)` — the `bodyFits` fallback with no
+>   still-a-ladder-or-real-floor precondition is exactly the shape this finding names. A
+>   genuinely new piece of code sits right below it (:655-663, "GETTING OFF THE LADDER" — a
+>   cardinal step-off exit that did not exist before) which fixes the *other* half of the
+>   baritone gap this finding also mentions (a ladder used to be a one-way trip) without
+>   touching the bogus-climb half.
+> - **Not rechecked this pass**: the remaining ~8 findings in this section (parkour/step landing
+>   hazard coverage beyond what's cited above, vine-as-ladder conflation, and others not spot-
+>   checked). Do not read the four bullets above as a verdict on the whole 15.
+
+
+
 ### [high] re-derived — Fall-damage budgeting: tungsten's only damage-aware guard is a hard reject at >2.75 blocks that is short-circuited by ignoreFallDamage=true (TungstenModDataContainer:20), so the physics search will route an arbitrarily deep drop; the block planner substitutes the bare constant MAX_FALL=3 (FastPlanner:50).
 
 - baritone: `baritone/src/main/java/baritone/pathing/movement/movements/MovementDescend.java:205`
