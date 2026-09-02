@@ -29,16 +29,31 @@ Read this before building any movement mechanism. See also the rule this produce
 >   `BlockNode.java:812` still calls the raw `state.calcBlockBreakingDelta(this.player, ...)` —
 >   the held-item bug is still live there. Since `FastPlanner` is the primary planner (G-0), this
 >   matters far less than it would have a month ago, but the legacy code path still has it.
-> - **STILL OPEN, exactly as described**: no veto on breaking next to liquid or an unsupported
->   falling block (`BreakRules.canBreak`, `BreakRules.java:29`, only checks
->   `world.getFluidState(pos)` at the block itself — no neighbour probes at all); the
->   block-entity hard deny has no soft-cost tier (`BreakRules.java:31`,
->   `state.hasBlockEntity() → return false`, unconditional); a closed door or fence gate is
->   still `MISSING` handling entirely (`BreakRules.canBreak` has no door/gate branch, so both are
->   still priced and mined as an ordinary wall); and the flat 300-tick mining abort is still
->   exactly as described (`PathExecutor.java`, `breakingTicks`, own doc comment: "past 300 the
->   current block is abandoned").
-> - **Not rechecked this pass**: the remaining 8 findings (angular-tolerance mining aim, the
+> - ⛔ **CORRECTION, 2026-09-02, same pass, caught before shipping a new fix on top of the wrong
+>   read**: the neighbour-liquid/falling-block veto is **FIXED in the primary planner**, not open
+>   — checking only `BreakRules.canBreak` in isolation missed that `FastPlanner.breakThrough`
+>   also calls `MovementHelperB.getMiningDurationTicks` (`FastPlanner.java:1130`), which calls
+>   `avoidBreaking`/`avoidAdjacentBreaking` (`MovementHelperB.java:181-232`, a verbatim port of
+>   `MovementHelper.java:96-144`, five-direction neighbour probe included) and returns
+>   `ActionCosts.COST_INF` (confirmed `1_000_000`, positive — the legacy-planner sign bug the
+>   COST MODELS section names does NOT apply to this constant) on a hazard, which
+>   `FastPlanner.java:1133`'s `if (cellTicks >= 1_000_000) return;` correctly refuses. Same
+>   correction for the door/gate finding: `MovementHelperB.isDoorPassable`/`isGatePassable` are
+>   ported AND wired into `MovementTraverse.updateState` (`MovementTraverse.java:334-357`) —
+>   confirmed by reading the actual click logic, not just a call site: a non-iron door or gate
+>   blocking an ordinary step is right-clicked open, matching baritone's
+>   `MovementTraverse.java:225-238` almost line for line. **Genuinely still open**: whether
+>   `FastPlanner.breakThrough`'s own wall-scan (a bare `getCollisionShape(...).isEmpty()` test,
+>   separate from `MovementHelperB.canWalkThrough`'s door-aware Ternary classification) could
+>   still misidentify a CLOSED door as a cell needing mining rather than a step needing a
+>   right-click — not traced end to end, and not asserted either way. This is exactly the kind
+>   of one-function read this session has repeatedly warned against elsewhere; recorded as an
+>   error caught and fixed, not silently edited away.
+> - **STILL OPEN, exactly as described**: the block-entity hard deny has no soft-cost tier
+>   (`BreakRules.java:31`, `state.hasBlockEntity() → return false`, unconditional); the flat
+>   300-tick mining abort is still exactly as described (`PathExecutor.java`, `breakingTicks`,
+>   own doc comment: "past 300 the current block is abandoned").
+> - **Not rechecked this pass**: the remaining 7 findings (angular-tolerance mining aim, the
 >   walk-while-breaking gate, the falling-block-in-flight pause, the legacy A* cost-unit
 >   mismatch, the per-Block cost cache, and the deliberate divergence on tool selection). Do not
 >   read the bullets above as a verdict on the whole 13.
