@@ -737,10 +737,13 @@ public class ItemHelper {
      * on a path no course covers. Exactly the RULE FOUR failure — a checkable claim about the
      * running system, asserted in a comment, unchecked.
      *
-     * <p>Keeping it costs an AltoClefSettings reference, which lives in shredder's tree. That is a
-     * package altoclef already depends on (AltoClef and BotBehaviour both import it), so this
-     * removes the {@code baritone.utils} dependency without inventing a new one, and the settings
-     * class dies with shredder rather than before it.
+     * <p>Keeping it costs an {@code AltoClefSettings} reference. ⛔ CORRECTED 2026-09-02: this used
+     * to say the class "lives in shredder's tree" and "dies with shredder rather than before it" —
+     * that was true when this comment was written, but {@code AltoClefSettings} has since moved to
+     * {@code adris.altoclef.settings}, its own altoclef package (part of G-0's tail; see
+     * {@code TODOS.md}'s "G-0 СВЯЗНОСТЬ"). It is now a fully native altoclef reference with no
+     * connection to shredder at all — an even cleaner remove of the old {@code baritone.utils}
+     * dependency than originally described, not a debt that dies alongside shredder.
      *
      * @return blocks per tick, or -1 when the block cannot be broken
      */
