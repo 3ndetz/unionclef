@@ -523,12 +523,20 @@ Shape of the result: tungsten's generator set covers baritone's TRAVERSE, ASCEND
 five of the fifteen findings spot-checked directly against current `FastPlanner.java`, not
 sampled to make a point either way:
 
-- **(a), the hazard predicate — FIXED.** `hazardAt()` (`FastPlanner.java:1376-1389`) exists now,
-  explicitly cites this exact gap in its own javadoc ("tungsten even had the pieces already...
-  and this class called neither" — past tense) and calls `BlockStateChecker.isAnyLava` — the
-  same class this session separately found was almost wrongly deleted as dead code (see C5.22)
-  precisely because it was an unfinished landing spot rather than duplicate cruft. This is what
-  it was waiting to be finished for.
+- **(a), the hazard predicate — FIXED, and more thoroughly than first recorded here.**
+  `hazardAt()` (`FastPlanner.java:1395-1408`, line numbers shifted since the earlier note) exists
+  now, explicitly cites this exact gap in its own javadoc ("tungsten even had the pieces
+  already... and this class called neither" — past tense) and calls
+  `BlockStateChecker.isAnyLava` — the same class this session separately found was almost
+  wrongly deleted as dead code (see C5.22) precisely because it was an unfinished landing spot
+  rather than duplicate cruft. **Correction, checked later the same session**: it is consulted
+  via `hazardousDestination()` inside `relax()` — the single function every move generator in
+  the file funnels through (step, diagonal, climb, drop, parkour, bridge, pillar, swim, ladder,
+  slime), per the code's own comment: "ONE GATE FOR EVERY MOVE... refusing a hazardous
+  destination once covers all of them and cannot be forgotten in a new generator." An earlier
+  note in this document (the off-thread-world-access banner) described this as gating only "the
+  parkour/step-landing checks" — that undersold it; it is universal, not a handful of call
+  sites.
 - **Moves.DOWNWARD — STILL MISSING.** No `downward()` generator, no reference to digging down or
   climbing down onto a ladder from above, anywhere in the file.
 - **Parkour take-off gating (vine/ladder/stairs/slab/soul-sand/water refusal,
@@ -836,9 +844,10 @@ than asserted:
 >   no longer holds. `TODOS.md` already documents this move's live behaviour in detail (the MLG
 >   task-starvation finding around line 5542) — this audit section just hadn't been told the move
 >   exists at all, a bigger gap than the usual "already fixed, undocumented here."
-> - **Hazard predicate**: already recorded fixed in the move-set-audit section above
->   (`hazardAt()` exists, called at the parkour/step-landing checks, `FastPlanner.java:1410`
->   and `:1422-1423`) — same finding, not rechecked twice.
+> - **Hazard predicate**: already recorded fixed in the move-set-audit section above, and that
+>   note has since been corrected to say it more precisely — `hazardAt()` is consulted via
+>   `hazardousDestination()` inside `relax()`, the one function every move generator funnels
+>   through, not just a couple of landing-check call sites. Same finding, not rechecked twice.
 > - **FIXED 2026-09-02** (commit `a359fd38`), was open when this banner was first written a few
 >   minutes earlier in the same pass: the ladder branch's bogus climb into open air.
 >   `FastPlanner.java:641-654` used to offer a climb step whenever
