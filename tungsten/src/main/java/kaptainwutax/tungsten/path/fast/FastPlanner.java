@@ -641,8 +641,27 @@ public final class FastPlanner {
         if (isLadder(world, from.x, from.y, from.z, scratch)) {
             for (int dy : new int[]{1, -1}) {
                 int ny = from.y + dy;
-                if (isLadder(world, from.x, ny, from.z, scratch)
-                        || PlayerFit.bodyFits(world, from.x + 0.5, ny, from.z + 0.5)) {
+                boolean stillLadder = isLadder(world, from.x, ny, from.z, scratch);
+                // BARITONE-PORT.md, special-terrain-rules section: "the ladder branch emits
+                // a climb up or down whenever the target cell merely FITS the body", planning
+                // a rung-step into open air above the top rung or below the bottom one —
+                // bodyFits only tests that the space is unobstructed, not that a rung or a
+                // floor is actually there. Continuing along the column needs the next cell to
+                // still be a ladder; landing at the BOTTOM also needs a real floor (getting
+                // OFF at the top is the separate cardinal exit loop below, which already
+                // checks supportTop). No such floor case exists going up: there's nothing to
+                // stand on above the last rung without stepping sideways.
+                boolean realFloorBelow = false;
+                if (!stillLadder && dy < 0) {
+                    // cachedState (inside isLadder above) only touches `scratch` on a cache
+                    // MISS — on a hit it returns early and leaves scratch wherever a previous,
+                    // unrelated call left it. Set it explicitly rather than rely on that side
+                    // effect, or supportTop can silently read the wrong cell.
+                    scratch.set(from.x, ny, from.z);
+                    realFloorBelow = !Double.isNaN(PlayerFit.supportTop(world, scratch));
+                }
+                if ((stillLadder || realFloorBelow)
+                        && PlayerFit.bodyFits(world, from.x + 0.5, ny, from.z + 0.5)) {
                     // NOT flagged for physics. Ladder moves used to be delegated to the
                     // physics engine on the grounds that only a real simulation can hold
                     // itself against a rung — but its climb move is gated behind ALREADY
