@@ -375,6 +375,31 @@ Read this before building any movement mechanism. See also the rule this produce
 
 Shape of the result: tungsten's generator set covers baritone's TRAVERSE, ASCEND, DESCEND, DIAGONAL, PARKOUR and PILLAR (place-only), and adds three moves baritone has no analogue for (swim, ladder, slime-bounce in special()). What is systematically absent is not whole directions but the PRECONDITION layer baritone accumulated: (a) there is no hazard predicate anywhere in FastPlanner — nothing corresponding to MovementHelper.avoidWalkingInto / canWalkThroughBlockState, so lava, fire, cobweb, berry bushes and powder snow are invisible to the planner because PlayerFit only asks collision shapes; (b) every "you cannot take off from / land on this block" rule (bottom slab, stairs, ladder/vine, soul sand, water, lilypad/carpet-on-water, FallingBlock columns) is missing; (c) the two dynamic moves are the weakest — parkour reaches ONE BLOCK FARTHER than vanilla allows and cannot ascend or place, and the drop is a flat 3-block cap with no fall-into-water, no water-bucket MLG and no vine/ladder catch, which is baritone's whole cliff-descent strategy. One move is absent outright: Moves.DOWNWARD (dig down / climb down a ladder you are standing on top of) has no generator at all, so the bot cannot descend a shaft it makes itself.
 
+⛔ PARTIALLY CLOSED, CHECKED 2026-09-02 — this is a mixed section, not uniformly open or fixed;
+five of the fifteen findings spot-checked directly against current `FastPlanner.java`, not
+sampled to make a point either way:
+
+- **(a), the hazard predicate — FIXED.** `hazardAt()` (`FastPlanner.java:1376-1389`) exists now,
+  explicitly cites this exact gap in its own javadoc ("tungsten even had the pieces already...
+  and this class called neither" — past tense) and calls `BlockStateChecker.isAnyLava` — the
+  same class this session separately found was almost wrongly deleted as dead code (see C5.22)
+  precisely because it was an unfinished landing spot rather than duplicate cruft. This is what
+  it was waiting to be finished for.
+- **Moves.DOWNWARD — STILL MISSING.** No `downward()` generator, no reference to digging down or
+  climbing down onto a ladder from above, anywhere in the file.
+- **Parkour take-off gating (vine/ladder/stairs/slab/soul-sand/water refusal,
+  `checkOvershootSafety`) — STILL MISSING.** No matching guard found.
+- **Diagonal cutting-over hazard check / the one-corner-open "edge around" rule — STILL
+  MISSING.** No `cuttingOver`/`optionA`/`optionB` equivalent found.
+- **Vine climbing — STILL NOT WIRED.** `isLadder()` (`:928-930`) is still `instanceof
+  LadderBlock` only; a `Blocks.VINE` reference does exist elsewhere in the file (`:1255`) but for
+  a different check, not this one — vines still are not climbable via the ladder path.
+
+The other ten findings in this section (parkour distance/ascend/place, drop depth modeling,
+pillar mining-through, the bridge 5-direction scan, sprint-speed pricing) were not re-checked
+this pass — treat them as unverified, not as confirmed-still-open just because the five sampled
+here mostly were.
+
 None of this needs calling baritone (which is not compiled); every item is a self-contained predicate or constant to copy into FastPlanner.  (15 findings)
 
 ### [high] re-derived — Parkour reaches one block farther than vanilla: tungsten lands at distance gap+1 with gap up to MAX_JUMP_GAP=4, i.e. a 5-block jump over 4 air cells; baritone's loop puts the DESTINATION at distance i, i<=4, i.e. 3 air cells max.
