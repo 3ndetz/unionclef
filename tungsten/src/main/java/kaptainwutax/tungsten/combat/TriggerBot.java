@@ -390,11 +390,16 @@ public class TriggerBot {
                 // refutation therefore says nothing about the walk-against-walk idea — only that
                 // I pointed it at the wrong side of the threshold.
                 //
-                // OPEN, and the next thing to measure: the bot is far, asking forward, and by the
-                // baseline rule sprinting — yet it does not close on a mob that walks. Either the
-                // sprint is not reaching the keys (a writer downstream strips it, the shape of
-                // pitfall P1) or the distance is not being lost to travel at all. Read what the
-                // keys actually carry on those ticks before proposing anything.
+                // ⛔ ANSWERED THE NEXT DAY, IN A DIFFERENT FILE — this "OPEN" note was stale.
+                // CombatController.java's own comment right above `strafeFarTicks`/`strafeNearTicks`
+                // (2026-08-13) closes this exact question: keys reach the game (checked there too),
+                // and 69% of the orbit — the circle-strafe THIS SAME CONTROLLER runs — happens while
+                // the target is out of reach, at a 45-degree diagonal that costs ~30% of closing
+                // speed. "It is this controller, not the path" is the direct answer to "either the
+                // sprint is not reaching the keys... or the distance is not being lost to travel at
+                // all" above — neither: it IS being spent on travel, just not toward the target.
+                // The fix that follows from it (`combatApproachNoOrbit`) is written and gated behind
+                // its own flag pending outcome validation, not shipped as of this reading.
             } else {
                 gReadyNear++;
             }
