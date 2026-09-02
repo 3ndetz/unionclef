@@ -385,6 +385,29 @@ Read this before building any movement mechanism. See also the rule this produce
 - copy: Change FastPlanner.java:1012 to `if (next.cost - tentative <= 0.01) return;` (baritone's MIN_IMPROVEMENT gate at AStarPathFinder.java:144).
 
 
+> **STATUS, checked 2026-09-02.** `TODOS.md`'s 2026-09-01 entry (top of file, "pathStatus ЛГАЛ
+> про arrived") already covers the "arrived five/six times" half of this section in full detail
+> — the `pathStatus`/`FastNavigator.ARRIVE_DIST` fix landed there is ONE of the six independent
+> arrival definitions this section names made consistent, not the `Goal` abstraction itself; see
+> that entry rather than duplicating it here. New checks this pass, on the rest of the section:
+> - **STILL OPEN, more precisely than "missing"**: a `Goal` class does exist
+>   (`path/blockSpaceSearchAssist/Goal.java`) and `FastPlanner.java:167` does reference it — but
+>   it is a single concrete exact-point value object (`isInGoal` requires `x==this.x &&
+>   y==this.y && z==this.z`, no radius, no polymorphism), used only as an internal parameter
+>   type for one helper (`toBlockNodes`). `FastPlanner.plan`'s actual public entry point
+>   (`FastPlanner.java:378`) still takes a bare `BlockPos goal` — nothing like baritone's
+>   twelve-implementation `Goal` interface family exists, and the in-goal test is still hardcoded
+>   inline. Worth recording as "a same-named class exists and isn't it" rather than a flat
+>   "missing", since a future reader grepping for `Goal` will find one.
+> - **STILL OPEN, cross-referenced**: the inadmissible-descent heuristic and the downhill/slime
+>   edges costing less than the heuristic credits are both the same underlying fact already
+>   confirmed in the COST MODELS section above (`octile()` adds raw `dy` into the term
+>   `HEURISTIC=3.563` scales). The greedy-by-h partial-plan chooser (no `COEFFICIENTS`/
+>   `MIN_DIST_PATH`) is the same finding as COST MODELS' "not rechecked this pass" bullet —
+>   still unconfirmed either way, not re-derived twice.
+> - **Not rechecked this pass**: the remaining findings on radius/adjacency goal types
+>   (get-to-block, near, composite, inverted, run-away) and their absence from tungsten's API.
+
 ## GOALS AND ARRIVAL — tungsten has no goal abstraction at all. Baritone's `Goal` interface pairs `isInGoal` with a matching `heuristic` in one object (`baritone/src/main/java/baritone/api/pathing/goals/Goal.java:38,48,68`) and that single object is used by the search to terminate (`AStarPathFinder.java:97`), by the result classifier (`AbstractNodeCostSearch.java:124`), and by the behaviour to declare arrival (`PathingBehavior.java:156`) — one definition, twelve implementations (block / near / XZ / get-to-block / two-blocks / composite / inverted / run-away). Tungsten instead passes a bare `BlockPos` into `FastPlanner.plan` and hardcodes the in-goal test inline (`FastPlanner.java:338`), hardcodes a *different* heuristic in `octile()` (`FastPlanner.java:1066`), and then re-invents "arrived" five more times with five different radii and dimensionalities across FastNavigator, BlockPathWalker, GotoCommand and PathExecutor. Two consequences are behavioural, not cosmetic: (a) the heuristic charges 3.563 ticks per block of |dy| while the descend/fall/slime edges are priced at 1.0 per block, so h is inadmissible downhill and A* silently returns non-optimal plans that prefer cliffs over stairs; (b) there is no way to say "within N blocks" or "adjacent to this block" to the planner, so entity-follow and get-to-block goals demand the exact target cell and produce the never-completing plan → hand-off loop that RW-1/RW-9 describe. The partial-plan chooser is also greedy-by-h, where baritone's COEFFICIENTS family exists precisely because greedy-by-h picks the end of an expensive detour.  (13 findings)
 
 ### [high] re-derived — No Goal abstraction: the goal is a bare BlockPos and the in-goal test is hardcoded inside the search loop, separate from the heuristic that estimates it
