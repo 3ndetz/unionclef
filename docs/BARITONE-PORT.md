@@ -304,9 +304,20 @@ Read this before building any movement mechanism. See also the rule this produce
 >   adjustment) even though `MovementTraverse` separately prices soul sand for its OWN
 >   walk-vs-backplace decision once an edge is already chosen — the search itself still can't
 >   see that a soul-sand route costs more before picking it.
-> - **Not rechecked this pass**: 7 of 15 (the legacy block-space `COST_INF` sign/g-cost-
->   accumulation bug, the missing backtrack-favouring multiplier, the partial-plan `bestSoFar`
->   coefficient scoring, the ladder up/down cost asymmetry, the `MIN_IMPROVEMENT` relax
+> - ⛔ **CORRECTION, same pass**: the legacy block-space `COST_INF`/g-cost-accumulation finding,
+>   listed below as "not rechecked" in an earlier draft of this banner, turns out to already be
+>   fully fixed — checked directly while investigating a different question and worth recording
+>   rather than leaving the stale "not rechecked" note standing. `ActionCosts.COST_INF = 1000000`
+>   (positive; its own comment explains the sign was wrong and names `BlockNode.java:132,148,168`
+>   as consumers of the fix). `BlockNode`'s constructors initialise `this.cost =
+>   ActionCosts.COST_INF` correctly. `BlockSpacePathFinder`'s relaxation
+>   (`BlockSpacePathFinder.java:379`) computes `tentativeCost = next.cost + edgeCost(...)` —
+>   PARENT cost plus the edge, not the audit's described `child.cost + 1` — gated by a real
+>   improvement test (`:403`, `minimumImprovement = 0.21`, `:100`) before `updateNode` commits it
+>   (`:617-624`). This is baritone's own relaxation shape, not the broken one the audit describes.
+> - **Not rechecked this pass**: 6 of 15 (the missing backtrack-favouring multiplier, the
+>   partial-plan `bestSoFar` coefficient scoring, the ladder up/down cost asymmetry, the
+>   `MIN_IMPROVEMENT` relax
 >   threshold, the deep-fall-into-water model, and the unrestricted diagonal ascend/descend).
 
 ### [high] re-derived — Fall cost is a flat 1.0 tick per block instead of baritone's gravity-integrated FALL_N_BLOCKS_COST table plus the walk-off-edge / centre-after-fall split, so drops are priced ~3x too cheap and the planner prefers plunging over routing.
