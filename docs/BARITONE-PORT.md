@@ -540,6 +540,33 @@ None of this needs calling baritone (which is not compiled); every item is a sel
 
 ## Tungsten's execution layer has one failure detector — a wall-clock "distance to the final goal stopped shrinking" watchdog — where baritone has five independent, cheap, per-movement ones (cost-proportional per-move timeout, graduated off-path distance, live cost re-verification, position resync, chunk-edge pause), each of which converts a specific failure into a re-plan rather than into a stop. The result is that tungsten fails in the two worst ways: it kills navigation on routes that are succeeding but detouring, and it keeps walking on routes that have already gone wrong. On top of that, baritone's failure path is closed-loop (PathingBehavior re-searches on the same tick a segment fails); tungsten's watchdog "hands over" to a caller that does not exist, and does not even release the walker it leaves running. Most of the graduated-tolerance and per-move-budget logic is a direct copy job — the FastPlanner already carries per-node ActionCosts, so a per-waypoint budget needs no new information.  (10 findings)
 
+⛔ CHECKED 2026-09-02, WITH DELIBERATE CAUTION — this file (`FastNavigator.java`) has visibly
+been through many more iterative fixes since this section was written than most others in this
+audit (its own comments narrate several: "BUILDING IS PROGRESS", the physics-hand-off exemption,
+"RUNNING is not PROGRESSING"), so a shallow read risks re-flagging something already handled a
+different way. Two things confirmed with reasonable confidence, one flagged as uncertain rather
+than asserted:
+
+- **The flat global timeout is still exactly as described.** `STALL_TICKS = 60` (`:42`) is a
+  single wall-clock constant gating `tick()`'s distance-to-goal check (`:262`), not a per-move
+  budget derived from `ActionCosts` — the finding's literal claim holds.
+- **`stop()` (`:142-155`) still does not call `BlockPathWalker.stop()`** — it clears the
+  navigator's own state and stops `MovementQueue` (with a comment explaining exactly why THAT
+  needs stopping explicitly: "a queue left running past the navigator would keep pressing keys
+  with nobody steering"), but the equivalent line for the walker is absent from this general
+  `stop()`. `BlockPathWalker.stop()` is only called from the separate "arrived" branch (`:182`).
+  Since the stall watchdog at `:262-266` calls this same general `stop()`, a stall firing while
+  `BlockPathWalker` (not `MovementQueue`) owns movement would, on this reading, leave the walker
+  running with the navigator no longer supervising it — the literal shape of the audit's claim.
+- **NOT asserting this as a live, currently-reproducing bug.** `BlockPathWalker.java` has its own
+  separate stall/bail logic (`LIVE_STUCK_LIMIT`, `NO_PROGRESS_LIMIT`, around `:65-332`) for its
+  OWN direct-vs-BFS mode switching, and I have not traced whether that independently catches the
+  case the navigator's `stop()` misses, or whether the two mechanisms interact in a way a static
+  read of one file cannot show. Given how many prior fixes in this exact function were driven by
+  a live trace catching something a comment-level read would have missed, this is flagged for
+  someone with stand access to check with `NAVSTATE`/`verboseDebugLogging` on a reproduced stall,
+  not asserted as confirmed the way the two points above are.
+
 ### [high] re-derived — Movement timeout is a flat 60-tick global watchdog on distance-to-GOAL, instead of a per-move budget proportional to that move's own cached cost estimate and reset on every move boundary.
 
 - baritone: `baritone/src/main/java/baritone/pathing/path/PathExecutor.java:242`
