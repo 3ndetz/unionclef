@@ -331,7 +331,20 @@ public class UnstuckChain extends SingleTaskChain {
         }
 
         // Don't trigger when baritone is actively pathfinding (calculating a path)
-        if (Nav.isPathing()) {
+        // ⛔ THE THIRD NAMED GUARD, FIXED 2026-09-02 -- three weeks after it was named.
+        // The commit that introduced strandedWithGoal (e7f2850, 2026-08-14) said outright:
+        // "UnstuckChain is what should recover it and never runs, because this guard, the
+        // TungstenHelper one above and Nav.isPathing() below are ALL true in exactly that
+        // state." It bypassed the "no keys" guard above and (later) the TungstenHelper.isActive()
+        // guard above THIS one, both with "&& !strandedWithGoal" -- but never came back to this
+        // one, despite naming it in the same sentence. Nav.isPathing() is a superset of
+        // TungstenHelper.isActive() (it also reads MovementQueue.isRunning(),
+        // BlockPathWalker.isRunning() and PATHFINDER.active directly), so a frozen-with-goal bot
+        // whose search is spinning forever on an unreachable target -- exactly the case
+        // strandedWithGoal exists to catch -- hit this line and returned before ever reaching the
+        // shimmy trigger below. Bypassed the same way as its two siblings.
+        if (Nav.isPathing() && !strandedWithGoal) {
+            lastRealSkip = lastSkip = "pathing/" + posHistory.size();
             posHistory.clear();
             return;
         }
