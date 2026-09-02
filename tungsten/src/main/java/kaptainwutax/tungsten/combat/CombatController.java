@@ -984,9 +984,12 @@ public class CombatController {
         // without lowering theirs, because they are the one advancing.
         //
         // AND THE DEATHS REALLY ARE LOST FIGHTS, from the server log rather than a mod counter:
-        // tester1 slain 25 / fell out of the world 4, tester2 slain 14 / fell 4. The comment on
-        // AllRound.build claiming these deaths are void falls was written from 4-8 fps runs and
-        // no longer holds at 29 fps — worth correcting there before it misdirects another pass.
+        // tester1 slain 25 / fell out of the world 4, tester2 slain 14 / fell 4. ⛔ ALREADY
+        // CORRECTED, checked 2026-09-02: AllRound.build in scenarios_pvp.py now carries this same
+        // finding under "SUPERSEDED — AT PLAYABLE FRAME RATES THESE DEATHS ARE LOST FIGHTS, NOT
+        // VOID FALLS", with the identical 25/4 and 14/4 numbers — this note's own "worth
+        // correcting there" was a trailing TODO that had already been done by the time this was
+        // read again.
         boolean beingHit = player.hurtTime > 0;
         out.back = tooClose && !beingHit && dirSafe(player, world, -1, 0);
         // ⛔ THE SPRINT CUT-OFF LEFT A DEAD BAND THE BOT COULD NOT CROSS.
