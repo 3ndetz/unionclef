@@ -4,6 +4,28 @@ Date: 2026-07-27. Method: 7 parallel source readers + 7 adversarial verifiers (e
 re-checked against source, 88 findings survived), plus independent spot-verification of the
 load-bearing claims. Read-only: no build was run.
 
+> ⛔ **PREMISE SUPERSEDED BY G-0, CHECKED 2026-09-02 — read this before anything below.** This
+> document's central finding (§0, §3) is that shredder drives the bot by default and tungsten is
+> a broken, unreachable fallback. That was true on 2026-07-27 and stopped being true on
+> 2026-08-24: `baritone`/`shredder` are no longer even compiled
+> (`settings.gradle.kts` has both `include()` lines commented out, see `AGENTS.md`), and
+> `TungstenHelper.primary = true` by default since commit `feb70f11` — confirmed still true just
+> now. §0's own specific finding (`isTungstenLoaded()` permanently `false` via a broken
+> reflection lookup) is also fixed, and the fix's own class-level javadoc on
+> `TungstenHelper.java:12-31` narrates this exact defect in the past tense — it isn't merely
+> patched, it's replaced with direct typed calls specifically so the failure mode described here
+> cannot recur silently.
+>
+> §3's ranked capability gaps (no `Goal` abstraction, no world-cache/snapshot, no g-cost
+> accumulation, no process layer) substantially overlap with what
+> [`docs/BARITONE-PORT.md`](../BARITONE-PORT.md) covers in far more depth, with file:line
+> citations against both baritone and tungsten and a full session of 2026-09-02 status banners
+> checking each claim against current source. Where the two disagree, **trust
+> `BARITONE-PORT.md`** — it is newer, more thorough, and was checked this session; this file was
+> not re-verified claim-by-claim past what's noted above. Kept here as the historical record of
+> what the project looked like five weeks before G-0, not as a current statement of tungsten's
+> gaps.
+
 Scope questions from the user:
 1. How is tungsten wired into the mod today, and what are its key problems?
 2. Is block **place** and **break** logic actually plumbed into tungsten?
