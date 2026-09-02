@@ -657,14 +657,18 @@ than asserted:
 > - **Hazard predicate**: already recorded fixed in the move-set-audit section above
 >   (`hazardAt()` exists, called at the parkour/step-landing checks, `FastPlanner.java:1410`
 >   and `:1422-1423`) — same finding, not rechecked twice.
-> - **STILL OPEN, read carefully rather than assumed**: the ladder branch's bogus climb into
->   open air. `FastPlanner.java:641-654` still offers a climb step whenever
->   `isLadder(...) || PlayerFit.bodyFits(...)` — the `bodyFits` fallback with no
->   still-a-ladder-or-real-floor precondition is exactly the shape this finding names. A
->   genuinely new piece of code sits right below it (:655-663, "GETTING OFF THE LADDER" — a
->   cardinal step-off exit that did not exist before) which fixes the *other* half of the
->   baritone gap this finding also mentions (a ladder used to be a one-way trip) without
->   touching the bogus-climb half.
+> - **FIXED 2026-09-02** (commit `a359fd38`), was open when this banner was first written a few
+>   minutes earlier in the same pass: the ladder branch's bogus climb into open air.
+>   `FastPlanner.java:641-654` used to offer a climb step whenever
+>   `isLadder(...) || PlayerFit.bodyFits(...)` — the `bodyFits` fallback had no
+>   still-a-ladder-or-real-floor precondition, exactly the shape this finding names. Now
+>   continuing along the column requires the next cell to still be a ladder; landing at the
+>   bottom (dy=-1) additionally accepts a real floor there. Getting OFF at the top already had
+>   its own fix, a genuinely new piece of code right below (:655-663+, "GETTING OFF THE
+>   LADDER" — a cardinal step-off exit) that closed the *other* half of the baritone gap this
+>   finding also names (a ladder used to be a one-way trip). Like the rest of this document's
+>   fixes marked here, **read-and-reasoned, not stand-verified** — no stand access in this room
+>   right now (C8.1).
 > - **Not rechecked this pass**: the remaining ~8 findings in this section (parkour/step landing
 >   hazard coverage beyond what's cited above, vine-as-ladder conflation, and others not spot-
 >   checked). Do not read the four bullets above as a verdict on the whole 15.
