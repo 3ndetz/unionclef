@@ -54,16 +54,23 @@ velocity/drag application.
 
 ### Soul Sand
 
-**Status:** ❌ No special handling in tungsten.
+**Status:** ⚠️ Partially handled — checked 2026-09-02, this section's "no handling" and open TODO
+questions are both answered now, one yes and one half-yes.
 
-**Problem:** Soul sand has velocity multiplier 0.4 (massive slowdown).
-`Agent.getVelocityMultiplier()` may or may not read this from the block —
-needs verification. If it doesn't, the sim will predict normal speed while
-the real player crawls → huge drift.
-
-**TODO:** Verify `getVelocityMultiplier` applies soul sand slowdown. If not,
-add it. Also check if block-space pathfinder accounts for the slowdown in
-cost calculation (should prefer avoiding soul sand).
+- **Physics slowdown: ✅, and always was.** `Agent.getVelocityMultiplier()`
+  (`Agent.java:1280-1284`) calls `blockState.getBlock().getVelocityMultiplier()` — vanilla's own
+  per-block-type lookup, not a hardcoded list — so soul sand's 0.4 multiplier was never actually
+  a risk here; the sim reads whatever the real block returns generically.
+- **Cost calculation: partial.** `ActionCosts.WALK_ONE_OVER_SOUL_SAND_COST` exists and IS
+  consulted, but only inside `MovementTraverse`'s own execution-time pricing — the approach/
+  departure cost when a traverse step is already known to touch soul sand
+  (`MovementTraverse.java:196-204`) and the backplace-impossibility rejection
+  (`:258`). The SEARCH itself (`FastPlanner.step()`, the function that actually CHOOSES a route)
+  still prices a plain cardinal step at a flat `ActionCosts.WALK_ONE_BLOCK_COST` regardless of
+  what's underfoot — confirmed directly, see `docs/BARITONE-PORT.md`'s COST MODELS section. So
+  the bot will correctly slow down and pay the execution-time cost once routed across soul sand,
+  but the planner does not yet prefer a route that avoids it. `CombatPathfinder.java:526` also
+  lists `Blocks.SOUL_SAND` for its own, separate hazard/slow classification during combat.
 
 ### Honey Blocks
 
