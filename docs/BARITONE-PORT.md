@@ -122,6 +122,50 @@ Read this before building any movement mechanism. See also the rule this produce
 - copy: nothing — the delegation is stated in code and the altoclef side (src/main/java/adris/altoclef/util/helpers/StorageHelper.java:159 getBestToolSlot) already scans the full inventory and honours a save-tool rule, which is broader than baritone's 9-slot hotbar scan. Only the COST side needs fixing (finding 1); leave the equip side on the hook.
 
 
+> **STATUS, checked 2026-09-02 — the biggest "audit predates the fix" case found this session.**
+> This section (written 2026-07-30) reads every finding against `PathExecutor.java`'s old
+> flag-based placement code. Since then, Units 1-3 of `docs/BARITONE-PORT-SPEC.md` landed a
+> SECOND, parallel execution system — `MovementQueue` running typed `Movement` objects
+> (`MovementTraverse`, `MovementPillar`) backed by `MovementHelperB` (an explicitly verbatim
+> port of baritone's `MovementHelper`, own doc comment: "nothing was re-derived, simplified or
+> re-tuned") and `RotationHelper` — and per-AGENTS.md tungsten (via `FastPlanner.placeAcross` /
+> `pillarUp` → `MovementQueue`) is the PRIMARY planner, not the old `PathExecutor` code these
+> findings cite. Checked 14 of 16 findings directly against the new path, not the old one:
+> - **FIXED, in the new path**: full-cube-or-glass `canPlaceAgainst` (`MovementHelperB.java:712`,
+>   includes the Bamboo/PistonExtension exclusions the audit worried had been dropped); the
+>   raytrace-verified `attemptToPlaceABlock` + three-way `PlaceResult`
+>   (READY_TO_PLACE/ATTEMPTING/NO_OPTION), consumed by both `MovementTraverse.java:423` and
+>   `MovementAscend.java:101`; the UP-excluded direction scan order
+>   (`HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP`, `Movement.java:85`, used by
+>   both the helper and `MovementTraverse.java:247`); the sneak-backplace cost premium
+>   (`SNEAK_ONE_BLOCK_COST`, `MovementTraverse.java:268`); all three backplace-impossibility
+>   rejections — soul sand, non-double slab, lily pad/carpet over fluid
+>   (`MovementTraverse.java:258,265`); `MOVE_BACK` (`MovementTraverse.java:419,476`); the
+>   sneaking-eye-position separation (1.27 vs 1.62, `RotationHelper.inferSneakingEyePosition`,
+>   consumed inside `attemptToPlaceABlock` itself); `PlaceRules.canPlace` now consulted by both
+>   `placeAcross` (`FastPlanner.java:1197`) and `pillarUp` (`FastPlanner.java:1237`); and
+>   `MovementPillar`'s full execution gate set — sneak gated on `y > dest.y+0.1`, forward
+>   re-centring at `dist > 0.17`, jump gated on `y < dest.y` — matching the audit's own cited
+>   baritone line numbers almost exactly (`MovementPillar.java:273,304,323,330,341`).
+> - **PARTIALLY ADDRESSED**: the target-cell-must-be-isReplaceable finding. The full ported
+>   `MovementHelperB.isReplaceable` exists (`:388-408`) but `placeAcross`/`pillarUp` still gate
+>   the target cell on raw `getCollisionShape(...).isEmpty()` (`FastPlanner.java:1171,1225`) —
+>   however `PlaceRules.canPlace`, now called first, does check vanilla `state.isReplaceable()`
+>   (`PlaceRules.java:28`), which covers most of the same cases through a narrower, non-ported
+>   check rather than the specific baritone one this finding asks for.
+> - **STILL OPEN, exactly as described**: throwaway-block accounting.
+>   `FastPlanner.countPlaceable` (`:346-360`) still counts every `BlockItem` in the reachable
+>   slots with no acceptable-throwaway allow-list and no protected-item skip.
+> - **Not rechecked this pass**: 1 of 16 (the water-through-traverse rejection half of the
+>   isReplaceable finding).
+> - **The OLD `PathExecutor.tickPlacing` code these findings cite by file:line is still live**
+>   (called from `PathExecutor.java:413`), but only as the execution side of the LEGACY
+>   `BlockNode.tryPlanPlaceThrough` planner — the same "second place planner" `BARITONE-PORT-
+>   SPEC.md`'s Unit 4 already identifies for deletion (`PathFinder.java:1585` still consumes its
+>   `toPlace` list). Once Unit 4 lands (blocked on the `nav_wall2` stand gate, see that file),
+>   every still-unfixed finding in the two bullets above stops mattering because the code they
+>   describe goes away entirely — this section and Unit 4 are the same story from two ends.
+
 ## Block placement: tungsten re-derived most of baritone's placement layer from scratch and the re-derivation is materially weaker on both halves. PLANNING: FastPlanner.placeAcross only ever generates a BACKPLACE (against the cell under its own feet), so baritone's 5-direction side-place scan and the SNEAK_ONE_BLOCK_COST premium that distinguishes the two never happen; none of baritone's backplace-impossibility rejections (soul sand, half slab, not standing on a block, lily pad/carpet over fluid) exist; and placeAcross/pillarUp never consult PlaceRules at all even though the sibling breakThrough does consult BreakRules three lines up and the other planner (BlockNode.tryPlanPlaceThrough) does consult PlaceRules — so the two planners disagree on protection policy. EXECUTION: PathExecutor.tickPlacing picks its against-face by "collision shape is non-empty" over all six Directions (baritone requires a FULL CUBE face and deliberately excludes UP), never raytraces to verify the face is actually hittable, has no PlaceResult tri-state and therefore no "something is in the way, break it" branch, computes the aim from the standing eye while holding SNEAK, and has no MOVE_BACK — the file's own comment at PathExecutor.java:508-511 records that releasing keys does not cancel momentum and the bot fell off the lip twice on nav_slime, which is exactly the failure baritone's MOVE_BACK branches exist to prevent. PillarTask forces sneak OFF and places with no isLookingAt / height gate, relying on an 80-tick stuck timeout instead of baritone's re-centering input. Tungsten already contains a copy of isBlockNormalCube (BlockShapeChecker.java:110) but no placement code path uses it.  (16 findings)
 
 ### [high] re-derived — canPlaceAgainst must require a FULL CUBE face (plus glass); tungsten accepts any non-empty collision shape, so fences, slabs, panes, walls, cactus, bamboo, dripstone all count as place-against faces
