@@ -1119,14 +1119,19 @@ public final class FastPlanner {
             if (world.getBlockState(cell).getCollisionShape(world, cell).isEmpty()) continue;
             net.minecraft.block.BlockState st = world.getBlockState(cell);
             if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, cell, st)) return;
-            // PRICE THE DIG WITH THE TOOL WE WILL ACTUALLY USE, NOT THE ONE IN HAND. This read
-            // `st.calcBlockBreakingDelta(player, ...)`, which asks "how fast with whatever is
-            // held right now" — while the executor swaps to the best tool before digging. So the
-            // search priced stone at fist speed and then mined it with a pickaxe: register entry
-            // C5.2. The ported MovementHelper.getMiningDurationTicks (MovementHelperB:751, from
-            // baritone MovementHelper.java:649-685) prices with the best tool via strVsBlock,
-            // applies the break-rule multiplier, and returns COST_INF for the unbreakable — so
-            // an impossible dig becomes unplannable instead of a surprise at run time.
+            // ⛔ CORRECTED 2026-09-02 — this comment used to claim strVsBlock prices with the
+            // BEST tool. It does not, and C5.2's "fixed" claim below was wrong on that specific
+            // point: strVsBlock (MovementHelperB.java:1061-1066) calls
+            // state.calcBlockBreakingDelta(player, ...), which reads whatever is CURRENTLY
+            // EQUIPPED — there is no lookup table to simulate a hypothetical better tool without
+            // one (tungsten has no ToolSet, by strVsBlock's own doc comment), so this is the
+            // EXACT SAME limitation as the legacy BlockNode.breakTicks it was meant to replace.
+            // What this call DOES still get right, and is real: avoidBreaking's neighbour-hazard
+            // veto and breakCostMultiplierAt's COST_INF-for-protected/unbreakable — both genuine
+            // fixes bundled into the same function, verified separately this session (see
+            // docs/BARITONE-PORT.md, block-breaking section). C5.2's nav_break PASS 3/3 almost
+            // certainly measured one of THOSE, not best-tool pricing — TODOS.md's C5.2 entry has
+            // been corrected to say so.
             double cellTicks = kaptainwutax.tungsten.path.movements.MovementHelperB
                     .getMiningDurationTicks(world, player, cell.getX(), cell.getY(), cell.getZ(),
                                             st, dy == 1);

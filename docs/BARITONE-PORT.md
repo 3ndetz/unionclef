@@ -21,14 +21,23 @@ Read this before building any movement mechanism. See also the rule this produce
 
 > **STATUS, checked 2026-09-02, 5 of 13 findings spot-checked against current source (not
 > exhaustive — see the note at the end):**
-> - **FIXED in the planner that actually drives the bot**: the held-item-vs-best-tool mining
->   cost (finding 1). `FastPlanner.breakThrough` (`FastPlanner.java:1122-1132`) now calls
->   `MovementHelperB.getMiningDurationTicks`, which prices with the best tool the same way
->   `PathExecutor`'s equip hook will actually equip — the fix carries an in-code comment citing
->   the exact defect and `TODOS.md`'s **C5.2** (closed). **Not fixed in the legacy planner**:
->   `BlockNode.java:812` still calls the raw `state.calcBlockBreakingDelta(this.player, ...)` —
->   the held-item bug is still live there. Since `FastPlanner` is the primary planner (G-0), this
->   matters far less than it would have a month ago, but the legacy code path still has it.
+> - ⛔ **CORRECTION, checked again later the same session, this one reverses an earlier "FIXED"
+>   rather than confirming one**: the held-item-vs-best-tool mining cost (finding 1) is **STILL
+>   OPEN in the primary planner too** — the note originally written here (and `TODOS.md`'s
+>   `C5.2`, originally closed) both overclaimed. `MovementHelperB.strVsBlock`
+>   (`MovementHelperB.java:1061-1066`) calls `state.calcBlockBreakingDelta(player, ...)`, which
+>   reads whatever is CURRENTLY EQUIPPED — its own doc comment says so explicitly ("there is no
+>   ToolSet in tungsten... same as `BlockNode.breakTicks`"), the exact same limitation as the
+>   legacy planner this finding names. There is no lookup table to price a hypothetical better
+>   tool without physically equipping it first, and the executor's `equipToolHook` only fires at
+>   execution time, not ahead of the search reading each candidate cell. **What DID land, bundled
+>   into the same `getMiningDurationTicks` call and genuinely fixed** (this is what
+>   `nav_break PASS 3/3` almost certainly measured instead): `avoidBreaking`'s neighbour-hazard
+>   veto (confirmed separately below) and `breakCostMultiplierAt`'s `COST_INF` for
+>   protected/unbreakable cells, so an impossible dig becomes unplannable rather than a run-time
+>   surprise — a real fix, just not the one either note originally credited it as. Corrected the
+>   misleading comment in `FastPlanner.java` itself and reopened `TODOS.md`'s `C5.2` narrative
+>   accordingly, rather than leaving a wrong "fixed" standing in either place.
 > - ⛔ **CORRECTION, 2026-09-02, same pass, caught before shipping a new fix on top of the wrong
 >   read**: the neighbour-liquid/falling-block veto is **FIXED in the primary planner**, not open
 >   — checking only `BreakRules.canBreak` in isolation missed that `FastPlanner.breakThrough`
@@ -287,8 +296,13 @@ Read this before building any movement mechanism. See also the rule this produce
 > re-verified twice):**
 > - **FIXED, cross-referenced**: "placement ignores PlaceRules" — same fact as the block-
 >   placement section's fix above (`PlaceRules.canPlace` now consulted by `placeAcross`/
->   `pillarUp`). "Mining cost from held item" — same fact as the block-breaking section's fix
->   (fixed in `FastPlanner`, the primary planner; still open in the legacy `BlockNode` planner).
+>   `pillarUp`).
+> - ⛔ **STILL OPEN, cross-reference corrected**: "mining cost from held item" — the
+>   block-breaking section above originally recorded this fixed in the primary planner and later
+>   corrected that to still-open (`strVsBlock` reads the currently-equipped item, no lookup table
+>   exists to price a hypothetical better one). Open in BOTH planners now, not just the legacy
+>   one — this note is here so a reader of this section alone doesn't carry the stale "fixed"
+>   version forward.
 > - **STILL OPEN, exactly as described**: flat fall cost (`FALL_ONE_BLOCK_COST = 1.0`, already
 >   confirmed in the special-terrain-rules section above); the inadmissible-downhill heuristic —
 >   `octile()` (`FastPlanner.java:1508-1516`) adds `dy` into the SAME term that gets multiplied
