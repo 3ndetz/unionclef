@@ -63,8 +63,10 @@ public class CombatPathfinder {
 
         // attack path targets predicted position (~20 ticks ahead based on enemy avg speed)
         // ⛔ THE VERTICAL COMPONENT USED TO GO IN HERE TOO, AND IT AIMED THE SEARCH UNDERGROUND.
-        // Same bug as SafetySystem:216 (fixed: the danger look-ahead extrapolated the bot through the
-        // floor and read its own crit hop as a fatal fall) but with a 20-tick horizon instead of 10,
+        // Same bug as SafetySystem.java:249-263 (⛔ line corrected 2026-09-02, was :216 — that file
+        // has grown since this was written; fixed there: the danger look-ahead extrapolated the bot
+        // through the floor and read its own crit hop as a fatal fall) but with a 20-tick horizon
+        // instead of 10,
         // so it is worse in scale: an opponent mid-jump carrying vy about -0.3 put this BFS target
         // roughly SIX BLOCKS UNDERGROUND. The search then tried to reach a cell inside terrain or in
         // void, which is the shape of the "Ran out of nodes" chase failures already noted in this
