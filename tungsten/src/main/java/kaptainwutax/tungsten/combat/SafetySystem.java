@@ -128,11 +128,17 @@ public class SafetySystem {
      */
     public static volatile int rpForcedTimer = 0;
     /**
-     * WHY hasLOS IS FALSE ALL FIGHT. closeQuarters returns on its first line when !hasLOS
-     * (CombatController:363), so everything below it is dead code in a fight — proven by ctlTotal=0
-     * against lowHpTicks=149. The raycast itself (hasCleanLOS) reads correctly, so the cause is
-     * above it: either findBestAimPoint never runs, leaving hasLOS stuck at its clear, or it runs
-     * and every sample is blocked. losCalls separates those in one run; losClosest/losSample say
+     * WHY hasLOS IS FALSE ALL FIGHT. closeQuarters still returns on its first line when !hasLOS
+     * (⛔ line citation corrected 2026-09-02: that's CombatController.java:606 now, not :363 —
+     * the file has grown since this was written), so everything below it is dead code in a fight —
+     * proven by ctlTotal=0 against lowHpTicks=149. The raycast itself (hasCleanLOS) reads correctly,
+     * so the cause is above it: either findBestAimPoint never runs, leaving hasLOS stuck at its
+     * clear, or it runs and every sample is blocked. ⛔ CHECKED 2026-09-02: `computeAimPrediction`
+     * (which calls findBestAimPoint) is called unconditionally from `renderUpdate`, every frame —
+     * confirmed by reading the call site, not assumed — so the "never runs" half of this question is
+     * answered NO. What remains genuinely open: whether hasCleanLOS/every sample point is truly
+     * blocked in the specific fight that measured ctlTotal=0, which still needs the live counters
+     * below, not a static read. losCalls separates those in one run; losClosest/losSample say
      * which path succeeded, and losNone counts the give-up that clears the flag.
      */
     public static volatile int losCalls = 0, losClosest = 0, losSample = 0, losNone = 0;
