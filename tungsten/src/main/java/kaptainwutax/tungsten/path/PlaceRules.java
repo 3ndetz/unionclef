@@ -26,6 +26,15 @@ public final class PlaceRules {
         if (!cfg.allowPlace) return false;
         // must be an empty/replaceable cell to place into
         if (world != null && !world.getBlockState(pos).isReplaceable()) return false;
+        // BARITONE-PORT.md, off-thread-world-access section: baritone checks the world border
+        // on every placement (CalculationContext.java:193); tungsten's break side already gets
+        // this for free through MovementHelperB.avoidBreaking, the place side never checked it
+        // at all. Reuses the same ported BetterWorldBorder.canPlaceAt body, not a new copy.
+        if (world != null
+                && !kaptainwutax.tungsten.path.movements.MovementHelperB
+                        .worldBorderCanPlaceAt(world, pos.getX(), pos.getZ())) {
+            return false;
+        }
 
         for (int[] zone : cfg.placeDenyZones) {
             if (zone != null && zone.length >= 6 && inZone(pos, zone)) return false;

@@ -1071,7 +1071,9 @@ public final class MovementHelperB {
      * one block on all sides, because you cannot place at the very edge against a block outside the
      * border (vanilla refuses the right click).
      */
-    private static boolean worldBorderCanPlaceAt(WorldView world, int x, int z) {
+    // Public: also consulted directly by PlaceRules.canPlace, which cannot reach a place move
+    // through avoidBreaking (that path is break-only) and had no border check of its own.
+    public static boolean worldBorderCanPlaceAt(WorldView world, int x, int z) {
         if (world == null) {
             return true;
         }
