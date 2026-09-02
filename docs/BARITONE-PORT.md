@@ -543,9 +543,20 @@ sampled to make a point either way:
   `checkOvershootSafety`) — STILL MISSING.** No matching guard found.
 - **Diagonal cutting-over hazard check / the one-corner-open "edge around" rule — STILL
   MISSING.** No `cuttingOver`/`optionA`/`optionB` equivalent found.
-- **Vine climbing — STILL NOT WIRED.** `isLadder()` (`:928-930`) is still `instanceof
-  LadderBlock` only; a `Blocks.VINE` reference does exist elsewhere in the file (`:1255`) but for
-  a different check, not this one — vines still are not climbable via the ladder path.
+- **Vine climbing — STILL NOT WIRED, and NOT a quick fix — checked and deliberately not attempted
+  this session.** `isLadder()` (`FastPlanner.java:947-949`) is still `instanceof LadderBlock`
+  only; vine-aware code does exist elsewhere (`MovementPillar`, `MovementFall`,
+  `MovementHelperB`, all treat `LADDER`/`VINE` together for their own execution-time purposes),
+  but none of it reaches the search's own ladder-climbing branch. The tempting one-line fix —
+  widen `isLadder()` to also match `Blocks.VINE` — was checked and rejected: the execution side,
+  `BlockPathWalker.java:508-511`, reads `state.get(LadderBlock.FACING)` to pick which direction
+  to press into the wall, and `VineBlock` has no `FACING` property at all (it uses four
+  boolean `NORTH`/`SOUTH`/`EAST`/`WEST` connection flags instead) — that line would throw or
+  misbehave the first time the search actually offered a vine waypoint. Properly closing this
+  finding needs BOTH sides changed together (the search's `isLadder()` and a real
+  vine-direction-from-connections lookup in the walker), not the search side alone — a bigger
+  unit of work than this session's other narrow, single-side fixes, and one that genuinely needs
+  a stand run before landing rather than being safe to commit blind.
 
 The other ten findings in this section (parkour distance/ascend/place, drop depth modeling,
 pillar mining-through, the bridge 5-direction scan, sprint-speed pricing) were not re-checked
