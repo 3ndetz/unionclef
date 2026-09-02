@@ -51,6 +51,19 @@ directly, not inferred from the plan having looked plausible:
   addressed. The full consolidation this file specifies (delete `tickPlacing`/`placeQueue`/
   `tryPlanPlaceThrough`/`PLACE_ONE_BLOCK_COST`, one Movement per step, one price) remains
   undone and is still the honest state of the "user's headline question" (`TODOS.md` C5).
+- **What DID land is high-fidelity, not a rough approximation** — every specific, hard-won
+  pitfall named below (P1-P5, and the unnumbered rules) was checked directly against
+  `MovementTraverse.java` as it stands today, not assumed from the plan having looked good:
+  `COST_INF` is its own positive `1000000` constant with a comment citing the exact reasoning
+  below (`:137-142`); `wasTheBridgeBlockAlwaysThere` gates the sprint guard exactly as P3
+  describes (`:153,390,410`); the swapped-argument `calcRotationFromVec3d(dest, playerHead,
+  ...)` order appears exactly where P5 says it must, in the `MOVE_BACK` backplace branch
+  (`:474`, with every OTHER call site in the same file correctly using the opposite,
+  "normal" argument order — `:316,342,440,466`); `isInSneakingPose()` gates the click per the
+  sneak-pose rule (`:432`); the backplace-exclusion `continue` in the side-place scan is
+  present verbatim (`:250-251`). So the gap in this project is not "the port was done
+  carelessly" — it is specifically Unit 4 never being started, and the walker-integration cap
+  (C5.18) that arrived after this spec was written.
 
 ## Verdict
 
