@@ -267,6 +267,33 @@ Read this before building any movement mechanism. See also the rule this produce
 
 ## COST MODELS — baritone/pathing/movement (ActionCosts, CalculationContext, the eight Movement* cost functions, AStarPathFinder/AbstractNodeCostSearch scoring) vs tungsten (path/calculators/ActionCosts.java + every cost expression in path/fast/FastPlanner.java, with a side look at the still-live legacy BlockSpacePathFinder/BlockNode costs).  (15 findings)
 
+> **STATUS, checked 2026-09-02, 8 of 15 findings spot-checked (several are the same underlying
+> fact as a finding already checked in an earlier section — cross-referenced rather than
+> re-verified twice):**
+> - **FIXED, cross-referenced**: "placement ignores PlaceRules" — same fact as the block-
+>   placement section's fix above (`PlaceRules.canPlace` now consulted by `placeAcross`/
+>   `pillarUp`). "Mining cost from held item" — same fact as the block-breaking section's fix
+>   (fixed in `FastPlanner`, the primary planner; still open in the legacy `BlockNode` planner).
+> - **STILL OPEN, exactly as described**: flat fall cost (`FALL_ONE_BLOCK_COST = 1.0`, already
+>   confirmed in the special-terrain-rules section above); the inadmissible-downhill heuristic —
+>   `octile()` (`FastPlanner.java:1508-1516`) adds `dy` into the SAME term that gets multiplied
+>   by `HEURISTIC = 3.563` at the combine step (`:1456`), with no split between the horizontal
+>   and vertical terms the way baritone's `GoalYLevel`/`GoalXZ` keep them separate — confirmed
+>   by reading the actual expression, not inferred from the old line numbers; parkour reach
+>   (`MAX_JUMP_GAP = 4` air cells, `FastPlanner.java:59`, unchanged — baritone's hard maximum is
+>   3); `JUMP_PENALTY = 6.5` against upstream's `2` and `PLACE_ONE_BLOCK_COST = WALK * 2.5`
+>   against upstream's flat `20` (both confirmed in `ActionCosts.java` during the special-
+>   terrain-rules check above — still present, unchanged); and the search's own step cost has no
+>   terrain-material modifier at all — the plain cardinal step is priced with a bare
+>   `ActionCosts.WALK_ONE_BLOCK_COST` (`FastPlanner.java:594`, no soul-sand/water-surface
+>   adjustment) even though `MovementTraverse` separately prices soul sand for its OWN
+>   walk-vs-backplace decision once an edge is already chosen — the search itself still can't
+>   see that a soul-sand route costs more before picking it.
+> - **Not rechecked this pass**: 7 of 15 (the legacy block-space `COST_INF` sign/g-cost-
+>   accumulation bug, the missing backtrack-favouring multiplier, the partial-plan `bestSoFar`
+>   coefficient scoring, the ladder up/down cost asymmetry, the `MIN_IMPROVEMENT` relax
+>   threshold, the deep-fall-into-water model, and the unrestricted diagonal ascend/descend).
+
 ### [high] re-derived — Fall cost is a flat 1.0 tick per block instead of baritone's gravity-integrated FALL_N_BLOCKS_COST table plus the walk-off-edge / centre-after-fall split, so drops are priced ~3x too cheap and the planner prefers plunging over routing.
 
 - baritone: `baritone/src/main/java/baritone/api/pathing/movement/ActionCosts.java:48 (FALL_N_BLOCKS_COST = generateFallNBlocksCost), :36-40 (WALK_OFF_BLOCK_COST, CENTER_AFTER_FALL_COST), :83-97 (distanceToTicks); baritone/src/main/java/baritone/pathing/movement/movements/MovementDescend.java:124-129`
