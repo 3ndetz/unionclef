@@ -3,6 +3,25 @@
 Status of pathfinding/physics for non-standard blocks.
 Legend: ✅ works, ⚠️ partial/buggy, ❌ broken, ❓ not checked
 
+⛔ **ARCHITECTURE NOTE, added 2026-09-02 — read before trusting any ✅/❌/⚠️ verdict below except
+the Soul Sand section (already updated for the current system).** Every class this document
+names — `BlockNode`, `BlockSpacePathFinder`, `PathFinder`, `ClimbALadderMove`, `SlimeBounceMove`,
+`Node.shouldSkipNodeGeneration` — belongs to the LEGACY block-space search, from before
+`FastPlanner` existed as a distinct planner and long before G-0 (2026-08-24) made it the primary
+one. `FastPlanner` is never mentioned anywhere in this file outside the Soul Sand section. Some
+findings here are genuinely still true of the primary planner (mining tool selection: confirmed
+independently this session, `TODOS.md` C5.2's corrected entry), some are current-planner-shaped
+questions this document simply never asked (vines, checked this session: `FastPlanner`'s own
+ladder-climb branch only recognizes `LadderBlock`, not the `BlockTags.CLIMBABLE` scan this
+section describes — see `docs/BARITONE-PORT.md`'s move-set-audit section), and the g-cost
+accumulation "limitation" under Block Breaking below was fixed for the primary search path
+(`BlockSpacePathFinder`'s relaxation now properly accumulates from the parent — confirmed
+directly this session, `docs/BARITONE-PORT.md`'s COST MODELS section) though this document still
+describes it as an open long-term problem. **Treat every unmarked verdict below as a claim about
+the OLD system, not the one that ships today** — `docs/BARITONE-PORT.md` and
+`docs/BARITONE-PORT-SPEC.md` are the current, actively-checked sources for the primary planner's
+actual surface-handling gaps.
+
 ---
 
 ## ViaVersion Collision Fixes (avoidStuckFence / avoidStuckAnvil)
