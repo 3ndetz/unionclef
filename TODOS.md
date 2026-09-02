@@ -8195,6 +8195,15 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
     после удаления гварда метод короче ровно до своего единственного живого эффекта
     (обновление `TungstenModDataContainer.world`). Каждая ссылка была найдена и учтена грепом
     по всему модулю перед удалением, не предположена.
+    ⛔ ПЕРЕПРОВЕРЕНО 2026-09-02, ПОСЛЕ ТОГО КАК ТО ЖЕ САМОЕ РАССУЖДЕНИЕ ОКАЗАЛОСЬ НЕВЕРНЫМ ДЛЯ
+    `fullyPassableBlockState`/`canWalkOnBlockState` НИЖЕ (см. C5.22) — на этот раз с ПРОТИВОПОЛОЖНЫМ
+    результатом. `docs/BARITONE-PORT.md` называет `VoxelWorld`/`MixinWorldChunk` ПО ИМЕНИ и
+    ПРЯМО «dead code» («the snapshot shell it once started (VoxelWorld/MixinWorldChunk) is dead
+    code»), а рекомендованная замена — НЕ доделать VoxelWorld, а построить ДРУГОЙ механизм с нуля
+    по образцу baritone (`MixinClientChunkProvider.createThreadSafeCopy()` +
+    `MixinChunkArray.copyFrom()`, честная per-search потокобезопасная копия чанков, а не
+    полупустой класс с `id=0L` вместо индексации). Значит это удаление НЕ повторяет ошибку
+    C5.22 — тот же авторитетный источник называет ЭТОТ код мёртвым, а не недопорченным.
   Итог (ОБНОВЛЁН 2026-09-01 ДВАЖДЫ ЗА ОДНУ СЕССИЮ — сначала все 5 получили вердикт, потом два
   живых удалены): 2 из 5 сняты рефакторингом (`isCritState`, `WeaponSelector.reset`), 2 из 5
   подтверждены мёртвыми И УДАЛЕНЫ (`FollowEntityTask` jam-detection — заменена уже подключённым
