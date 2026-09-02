@@ -19,6 +19,30 @@ Read this before building any movement mechanism. See also the rule this produce
 
 ## Block breaking: does tungsten re-derive baritone's mining model (getMiningDurationTicks / canWalkThrough / avoidBreaking / ToolSet) in its break-through generator, BreakRules, tickBreaking and truncateAtBreaks?  (13 findings)
 
+> **STATUS, checked 2026-09-02, 5 of 13 findings spot-checked against current source (not
+> exhaustive — see the note at the end):**
+> - **FIXED in the planner that actually drives the bot**: the held-item-vs-best-tool mining
+>   cost (finding 1). `FastPlanner.breakThrough` (`FastPlanner.java:1122-1132`) now calls
+>   `MovementHelperB.getMiningDurationTicks`, which prices with the best tool the same way
+>   `PathExecutor`'s equip hook will actually equip — the fix carries an in-code comment citing
+>   the exact defect and `TODOS.md`'s **C5.2** (closed). **Not fixed in the legacy planner**:
+>   `BlockNode.java:812` still calls the raw `state.calcBlockBreakingDelta(this.player, ...)` —
+>   the held-item bug is still live there. Since `FastPlanner` is the primary planner (G-0), this
+>   matters far less than it would have a month ago, but the legacy code path still has it.
+> - **STILL OPEN, exactly as described**: no veto on breaking next to liquid or an unsupported
+>   falling block (`BreakRules.canBreak`, `BreakRules.java:29`, only checks
+>   `world.getFluidState(pos)` at the block itself — no neighbour probes at all); the
+>   block-entity hard deny has no soft-cost tier (`BreakRules.java:31`,
+>   `state.hasBlockEntity() → return false`, unconditional); a closed door or fence gate is
+>   still `MISSING` handling entirely (`BreakRules.canBreak` has no door/gate branch, so both are
+>   still priced and mined as an ordinary wall); and the flat 300-tick mining abort is still
+>   exactly as described (`PathExecutor.java`, `breakingTicks`, own doc comment: "past 300 the
+>   current block is abandoned").
+> - **Not rechecked this pass**: the remaining 8 findings (angular-tolerance mining aim, the
+>   walk-while-breaking gate, the falling-block-in-flight pause, the legacy A* cost-unit
+>   mismatch, the per-Block cost cache, and the deliberate divergence on tool selection). Do not
+>   read the bullets above as a verdict on the whole 13.
+
 ### [high] re-derived — Mining cost is priced with whatever item is CURRENTLY in the main hand, but execution equips the best tool from the whole inventory — so the planner's break cost is systematically wrong (up to ~25x too expensive: hand-mining stone is 150 ticks vs 6 with a diamond pick).
 
 - baritone: `baritone/src/main/java/baritone/utils/ToolSet.java:180 (getBestDestructionTime -> getBestSlot(b,false,true)), consumed at baritone/src/main/java/baritone/pathing/movement/MovementHelper.java:666 (context.toolSet.getStrVsBlock)`
