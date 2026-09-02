@@ -8385,6 +8385,18 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   быстрее. Именно это открыло дорогу мосту: раньше поиск не успевал найти маршрут вообще.
 
 ### C5 — BREAK / PLACE (the user's headline question: both ARE plumbed in, both are crippled)
+⛔⛔ ЧИТАТЬ ПЕРЕД ЛЮБОЙ РАБОТОЙ НАД ЭТИМ РАЗДЕЛОМ, ДОБАВЛЕНО 2026-09-02: `docs/BARITONE-PORT-
+SPEC.md` — четырёхюнитовый план консолидации всей системы постановки/движения в одну
+baritone-style `Movement`-абстракцию — ЧАСТИЧНО ВЫПОЛНЕН, статус только что сверен с кодом
+(банер в самом файле). Юниты 1-3 (`Movement`/`MovementTraverse`/`MovementPillar`) СУЩЕСТВУЮТ
+и ПОДКЛЮЧЕНЫ (коммит `62e11084`, изначально «unwired», но с тех пор реально ведёт живой
+маршрут через `MovementQueue`+`BlockPathWalker` — см. C5.15-C5.20/C5.18 про потолок покрытия
+~4%, это ОТДЕЛЬНЫЙ, уже отслеживаемый блокер). Юнит 4 («один планировщик постановки, одна
+цена») НЕ сделан — `BlockNode.tryPlanPlaceThrough`/`toPlace`/`ActionCosts.PLACE_ONE_BLOCK_COST`
+живы, то есть СТАРЫЙ и НОВЫЙ движки постановки до сих пор сосуществуют, а не один заменил
+другого, как планировал документ. Общий обход этого — не консолидация, а `BlockPlaceHelper`
+(см. C5.8 ниже): единая ставка на скорость постановки для ВСЕХ движков сразу, что убрало
+конкретный симптом «стена появилась мгновенно», но не убрало сами дублирующиеся движки.
 - [~] **C5.1 Break is cardinal, same-Y, ONE cell.** ЧАСТИЧНО 2026-07-28: слом добавлен в FastPlanner (тот движок, что реально водит бота) и ПРОБИВАЕТ проход ('Mining done — passage open'). Осталось: маршрут после добычи не возобновляется; dig up/down по-прежнему нет. `BlockNode.java:641`:
   `if (dy != 0 || |dx|+|dz| != 1) return false`. **No dig-down, no dig-up**, no break-to-ascend/descend,
   no diagonal. `@gamer` mining strategies are literally not expressible. One cell per full re-search.

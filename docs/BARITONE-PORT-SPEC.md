@@ -15,6 +15,43 @@ every block quoted below is copy-ready as written.
 
 ---
 
+⛔⛔ STATUS CHECKED 2026-09-02: Units 1-3 EXIST IN CODE, Unit 4 DOES NOT, and none of the
+"Deletes" columns below were carried out — this doc's Verdict, written as a diagnosis of the
+CURRENT problem, now describes a problem this project half-solved a different way. Checked
+directly, not inferred from the plan having looked plausible:
+
+- **Units 1-3 landed**: `tungsten/path/movements/Movement.java`, `MovementTraverse.java` (590
+  lines), `MovementPillar.java` (468 lines), `MovementState.java`, `MovementStatus.java` all
+  exist, and `MovementTraverse` is referenced from `FastPlanner`, `PathExecutor`, `BlockNode`,
+  `BridgeTask`, `FastNavigator` — not an orphaned port. Commit `62e11084`, "tungsten: port
+  baritone movement substrate + MovementTraverse/MovementPillar (unit 1-3, **unwired**)".
+- **The "unwired" in that commit message did not stay true, but "one engine" never happened
+  either.** `TODOS.md`'s C5.15 through C5.20 sagas (this same repo, dated through 2026-07-31)
+  document the ported moves actually driving the live chase/goto path via `MovementQueue` +
+  `BlockPathWalker` — wired, just capped: the "continuous prefix" rule that `BlockPathWalker`
+  requires limits ported-move coverage to **~4% of a route** (C5.18), which is a real,
+  different, already-tracked blocker from anything in this spec.
+- **Unit 4 ("one place planner, one price") was never done.** `BlockNode.tryPlanPlaceThrough`,
+  `BlockNode.toPlace`, and `ActionCosts.PLACE_ONE_BLOCK_COST` — all three named for deletion in
+  the Unit 4 row below — are still live code (`BlockNode.java:500,762`, `ActionCosts.java:74`,
+  the last still read by `FastPlanner.java:1185`). The "rival planner prices the same move
+  differently" defect this Verdict names is still exactly as described.
+- **The symptom this Verdict opens with (a wall of glass appearing at once) IS fixed, but not
+  by consolidating engines** — `helpers/BlockPlaceHelper.java` (its own javadoc confirms this
+  precisely) found that the rate gate baritone expects on every placement had been ported only
+  into a private `Movement` method, so `PathExecutor.tickPlacing`/`BridgeTask`/`PillarTask`/
+  `Py4jEntryPoint.fillCells` all still placed uncapped. Fix shipped: the gate moved to
+  `BlockPlaceHelper`, a single shared cooldown every placement path now goes through — same
+  fix philosophy as this Verdict argues for (one owner of a shared concern), applied to the
+  RATE only, not to the engine count. Matches `TODOS.md` C5.8 ("cheaty placement... fixed").
+- **Net picture**: multiple placement/movement engines still coexist exactly as the Verdict
+  below describes, in violation of the "never leave duplicate engines" rule elsewhere in this
+  project's own checklist — but the specific complaints this file was written to fix (rate,
+  and to a real but partial degree, movement-substrate quality) have each been separately
+  addressed. The full consolidation this file specifies (delete `tickPlacing`/`placeQueue`/
+  `tryPlanPlaceThrough`/`PLACE_ONE_BLOCK_COST`, one Movement per step, one price) remains
+  undone and is still the honest state of the "user's headline question" (`TODOS.md` C5).
+
 ## Verdict
 
 Tungsten must stop treating a placement as an activity that runs *beside* the step that needs
