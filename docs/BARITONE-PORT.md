@@ -590,6 +590,31 @@ None of this needs calling baritone (which is not compiled); every item is a sel
 
 ## Off-thread world access: baritone builds a client-thread chunk SNAPSHOT (BlockStateInterface + createThreadSafeCopy) and funnels every search read through one accessor (get0) plus a BlockView wrapper for shape math; tungsten's searches read the LIVE ClientWorld from raw background threads (FastNavigator.planAhead, PathFinder's thread/executor) and try to buy back the cost with two per-search value memos (FastPlanner.STATE_CACHE, PlayerFit.ClassifyCache). A memo is not a snapshot: it only makes the SECOND read of a cell consistent, it caches ANSWERS that the client thread can invalidate mid-search, and half the search's reads bypass it entirely. Tungsten's own comment at FastPlanner.java:695 concedes this ("the cheap half of the off-thread snapshot this planner really wants"), and the snapshot shell it once started (VoxelWorld/MixinWorldChunk) is dead code.  (7 findings)
 
+> **STATUS, checked 2026-09-02.** The dead-code half of this intro is done — `VoxelWorld`/
+> `VoxelChunk`/`VoxelChunk2`/`MixinWorldChunk`'s `TungstenMod.WORLD` hookup were deleted this
+> same session (commit `70a50e36`), cross-checked against this exact verdict before removing
+> them. The 7 findings themselves, 4 of 7 spot-checked:
+> - **STILL OPEN, confirmed by zero hits, not inference**: world-border and world-height bounds
+>   — `grep`ing `FastPlanner.java` for `worldBorder`/`isChunkLoaded`/`minY`/`dimension` returns
+>   nothing at all, so both the border check and the unloaded-chunk handling this audit calls
+>   `MISSING` are still exactly that.
+> - **STILL OPEN**: `FastPlanner.STATE_CACHE` is still a boxed `HashMap<Long,BlockState>`
+>   (`ThreadLocal.withInitial(java.util.HashMap::new)`) — the audit's "autobox a Long on every
+>   read" finding holds for this specific cache.
+> - **PARTIALLY ADDRESSED, independently, not via the prescribed fix**: `PlayerFit`'s sibling
+>   cache (`ClassifyCache`) has since been rewritten to an open-addressing `long[]`/`byte[]`
+>   table with no boxing at all — the allocation problem this section's "allocation-free hot
+>   lookup" finding names is solved THERE, just not with baritone's own `PrecomputedData`
+>   design (a table indexed by block-state id, shared across the whole session) — tungsten's
+>   version is still per-search and keyed by POSITION, not by block-state id, so the separate,
+>   more strategic finding ("cached per position, per search" instead of "per block state, for
+>   the session") remains open even though the narrower performance complaint next to it doesn't
+>   any more. Recorded precisely rather than folding the two together.
+> - **Not rechecked this pass**: 3 of 7 (the thread-safe chunk-array snapshot, the single
+>   read-funnel/`BlockView` wrapper, and the reference-memo-vs-value-memo staleness argument —
+>   this last one is closely related to the `STATE_CACHE` finding above but asks a different
+>   question, whether a memoised answer can go stale mid-search, not just whether it boxes).
+
 ### [high] missing — Per-search thread-safe copy of the loaded-chunk reference array, built on the client thread, so the search never touches the live ClientChunkManager.
 
 - baritone: `baritone/src/main/java/baritone/utils/BlockStateInterface.java:67`
