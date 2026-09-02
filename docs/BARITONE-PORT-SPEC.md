@@ -1533,6 +1533,20 @@ result either way and do not tune the course.
 
 ## Unit 4 — one place planner, one price
 
+⛔ PRE-WORK CHECK 2026-09-02 (not the unit itself — no stand access to run its gate, see the
+banner at the top of this file): read `FastPlanner.placeAcross` (`FastPlanner.java:1137-1189`)
+end to end to check the premise this unit depends on — that keeping it and deleting
+`tryPlanPlaceThrough` loses nothing. It does check everything this unit's own text asks for:
+`PlaceRules.canPlace` (the policy gate `tryPlanPlaceThrough` also has to respect), `PlayerFit.
+bodyFits`/`supportTop` for the destination hole, a floor-emptiness check, a self-consistency
+case for a bridge doubling back on its own planked cells, and correct baritone-derived pricing
+(`SNEAK_ONE_BLOCK_COST + PLACE_ONE_BLOCK_COST`, with an inline comment citing the exact
+upstream line this project's own pricing lesson came from). Mature, actively-commented code,
+not a stub — the premise holds up to a read. This does NOT clear Unit 4 to execute: only the
+`nav_wall2` gate below can confirm nothing that still depends on `BlockSpacePathFinder`'s place
+planner as a fallback path breaks when it goes away, and that needs the stand this room does
+not have right now (C8.1).
+
 ### What it is
 
 The sweep. After units 2 and 3 there are two place planners with two cost models
