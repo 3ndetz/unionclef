@@ -63,7 +63,10 @@ This means:
 
 ### BlockSpace vs Agent physics
 
-**BlockSpace** (`BlockSpacePathFinder`, `BlockNode`) does pure block-level A* — it finds which blocks to visit, not how to move between them. It has **no physics at all** — no effects, no velocity, no collisions. It just checks if blocks are walkable/passable.
+**BlockSpace** (`BlockSpacePathFinder`, `BlockNode` — or, since G-0 made it primary, `FastPlanner`,
+architecturally the same role) does pure block-level A* — it finds which blocks to visit, not how
+to move between them. It has **no physics at all** — no effects, no velocity, no collisions. It
+just checks if blocks are walkable/passable.
 
 **Agent** handles all physics: velocity, gravity, collisions, effects. It takes BlockSpace's block path and generates the actual movement inputs (yaw, keys, timing) between block nodes.
 
