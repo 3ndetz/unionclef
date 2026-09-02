@@ -717,6 +717,21 @@ destination, which cannot work.
 Next pass ports that manoeuvre — sneak-into-the-cell, look back, MOVE_BACK separation — not
 another variation on aiming from where the bot already stands.
 
+⛔ THAT NEXT PASS HAPPENED, CONFIRMED 2026-09-02 — this section is otherwise accurate but stops
+one step short of the current state. `MovementTraverse.java` (`tungsten/path/movements/`, not
+`PathExecutor`/`BridgeTask`/`PillarTask` — see `docs/BARITONE-PORT-SPEC.md`'s Units 1-3) carries
+exactly the manoeuvre described above: `wasTheBridgeBlockAlwaysThere` gates the sprint (`:153,
+390,410`), `MOVE_BACK` is set in the backplace branch (`:419,476`), and the swapped-argument
+`calcRotationFromVec3d(dest, playerHead, ...)` — facing back up the bridge, not forward down at
+it — appears exactly where it must (`:474`), confirmed against every other call site in the same
+file correctly using the opposite order. Checked line-by-line this session, not assumed from the
+port having looked planned. `RealPlacement`/`canPlaceAgainst` from earlier in this section are
+also both live and used by all three original forgery sites plus `Py4jEntryPoint`'s build
+surface (`grep` finds zero remaining `new BlockHitResult` at any of the three). See `TODOS.md`
+C5.8, closed 2026-07-31, which already carries this in full detail — this section just hadn't
+been told. Kept as historical record of what the forgery bug was and why the manoeuvre matters,
+not as an open task.
+
 ### Telemetry after porting the manoeuvre — still 0 clicks, and the reason is a vanilla rule
 
 `placeStats` mid-run on nav_bridge: **`called=11041 deferred=1 inRange=11040 clicked=0`**. The
