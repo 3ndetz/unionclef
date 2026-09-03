@@ -1,5 +1,66 @@
 # TODOs
 
+<!-- NETHER-PORTAL-ESCAPE-BLOCKED-BY-MERE-SEARCH-2026-09-04 -->
+## ⭐⭐ SYSTEMATIC SWEEP FOR THE DROWNING-GUARD BUG CLASS FOUND SIX MORE INSTANCES (2026-09-04)
+
+Following up the drowning-guard fix (`WorldSurvivalChain.handleDrowning`, earlier in this file):
+`grep -rn "Nav\.isPathing()"` across all of `src/main/java` returns ~40 call sites. Read every
+one that could plausibly gate a RECOVERY action rather than ordinary camera/movement arbitration
+(the latter — e.g. all five uses in `WaitForDragonAndPearlTask.java`, all gating
+`LookHelper.lookAt` — are correctly broad: deferring the camera while ANY pathing activity,
+including a bare search, runs is the established "one owner of the camera" pattern and has no
+safety consequence).
+
+**Found the identical shape, copy-pasted, in SIX files**, all sharing one root cause:
+
+```java
+if (WorldHelper.isInNetherPortal()) {
+    if (!Nav.isPathing()) {
+        setDebugState("Getting out from nether portal");
+        mod.getInputControls().hold(Input.SNEAK);
+        mod.getInputControls().hold(Input.MOVE_FORWARD);
+        return null;
+    } else {
+        // release SNEAK/MOVE_BACK/MOVE_FORWARD
+    }
+}
+```
+
+`TimeoutWanderTask.java`, `InteractWithBlockTask.java`, `PlaceBlockTask.java`,
+`CustomBaritoneGoalTask.java` (the primary altoclef movement driver), `GetToEntityTask.java`,
+`DestroyBlockTask.java`. Same defect as drowning: `Nav.isPathing()` is true while a background
+search merely computes, driving nothing — so if that search never resolves (the exact stall
+class this session's own live `gotoXYZ` reproduction hit, and the general subject of the
+self-resetting-sawtooth entry elsewhere in this file), this manual walk-out-of-the-portal escape
+could never fire, regardless of how long the bot has genuinely been stuck standing in the
+portal. Not fatal like drowning, but not harmless either: prolonged contact with a nether portal
+teleports the player to the other dimension via plain vanilla mechanics, so a stuck search could
+silently pull the bot into the Nether (or back) mid-task, with nothing in the log saying why.
+
+**Corroborating evidence this is a real, previously-known-about gap, not a new hypothesis:**
+`DestroyBlockTask.java` and `GetToEntityTask.java` BOTH already carry a separate, more careful
+fix for the sibling "release keys while merely searching" branch a few lines below this exact
+one (`GetToEntityTask`'s own comment: "DO NOT TAKE THE KEYS OFF THE THING THAT IS DRIVING";
+`DestroyBlockTask`'s: "SAME SHAPE AS THE WANDER TASK'S, AND THE SAME FIX") — proving this project
+has already paid for and fixed this general class of bug in the same two files, just never
+carried the same reasoning three lines up into the portal-escape branch specifically.
+
+**FIXED, all six, same substitution as drowning:** `!Nav.isPathing()` → `!Nav.isExecutingRoute()`
+guarding the escape's entry condition only — the `else` (key release) branch is untouched, and a
+genuinely executing route through the portal still suppresses the escape exactly as before.
+Judged low-risk enough to ship directly rather than gate behind a flag (unlike the wander
+sawtooth fix a few sections down, which changes give-up TIMING for a mechanism this project's own
+measurements show can be neutral even when a diagnosed defect is real): sneaking and walking
+forward is an inherently careful, conservative motion, and it can only additionally fire in a
+state (no route executing) where nothing else is holding these same keys for navigation, so there
+is no plausible key-contention this introduces.
+
+⛔ CHECKLIST HARD BAN — NOT stand-verified, no build ran. Six files, one substitution repeated
+identically in each — low per-site risk, but six sites widen the surface for something to have
+been missed. Needs: a build, and a live repro of getting stuck in a nether portal during a
+stalled search (or simply crossing a portal normally, to confirm the escape still correctly
+stays quiet while a real route is executing).
+
 <!-- LIVE-VOID-DEATH-ON-A-SHORT-GOTOXYZ-2026-09-03 -->
 ## ⛔ NEW, SEVERE: a plain 4.3-block `gotoXYZ` walked the bot into the void and killed it (2026-09-03)
 

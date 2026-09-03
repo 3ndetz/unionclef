@@ -396,7 +396,15 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
 
         // Check if the player is in a Nether portal
         if (WorldHelper.isInNetherPortal()) {
-            if (!Nav.isPathing()) {
+            // TODOS.md, the same "a search is not progress" substitution already proven for the
+            // drowning guard (WorldSurvivalChain.handleDrowning), and the same shape as the
+            // "thief" fix a few lines below this one (Nav.isPathing() being true during a mere
+            // search, without asking whether anything is actually driving the body): a stalled
+            // search could suppress this manual walk-out-of-the-portal escape indefinitely, and
+            // prolonged portal contact eventually teleports the bot to the other dimension via
+            // plain vanilla mechanics. Nav.isExecutingRoute() asks the narrower, correct
+            // question: a genuinely executing route through the portal is untouched.
+            if (!Nav.isExecutingRoute()) {
                 setDebugState("Getting out from nether portal");
                 // Hold the sneak and move forward inputs to exit the Nether portal
                 mod.getInputControls().hold(Input.SNEAK);

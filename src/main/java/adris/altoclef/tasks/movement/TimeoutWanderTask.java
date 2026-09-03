@@ -256,7 +256,16 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
             }
         }
         if (WorldHelper.isInNetherPortal()) {
-            if (!Nav.isPathing()) {
+            // TODOS.md, the same "a search is not progress" substitution already proven for the
+            // drowning guard (WorldSurvivalChain.handleDrowning): Nav.isPathing() is true while a
+            // background search merely computes, driving nothing. If that search never resolves
+            // (the exact stall class this session's own live reproduction hit), this manual
+            // walk-out-of-the-portal escape could never fire either, and prolonged portal contact
+            // eventually teleports the bot to the other dimension via plain vanilla mechanics --
+            // not what any of these tasks intend. Nav.isExecutingRoute() asks the narrower, correct
+            // question: is a route actually being walked. A genuinely executing route through the
+            // portal is untouched -- this still won't fire in that case, exactly as before.
+            if (!Nav.isExecutingRoute()) {
                 setDebugState("Getting out from nether portal");
                 mod.getInputControls().hold(Input.SNEAK);
                 mod.getInputControls().hold(Input.MOVE_FORWARD);

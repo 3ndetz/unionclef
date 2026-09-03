@@ -226,7 +226,15 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             checker.reset();
         }
         if (WorldHelper.isInNetherPortal()) {
-            if (!Nav.isPathing()) {
+            // TODOS.md, the same "a search is not progress" substitution already proven for the
+            // drowning guard (WorldSurvivalChain.handleDrowning): Nav.isPathing() is true while a
+            // background search merely computes, driving nothing. A stalled search could suppress
+            // this manual walk-out-of-the-portal escape indefinitely, and prolonged portal contact
+            // eventually teleports the bot to the other dimension via plain vanilla mechanics.
+            // Nav.isExecutingRoute() asks the narrower, correct question: a genuinely executing
+            // route through the portal is untouched. Particularly relevant here: this is the
+            // primary altoclef movement driver, so it runs on nearly every task.
+            if (!Nav.isExecutingRoute()) {
                 setDebugState("Getting out from nether portal");
                 controls.hold(Input.SNEAK);
                 controls.hold(Input.MOVE_FORWARD);

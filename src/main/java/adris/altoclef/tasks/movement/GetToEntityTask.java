@@ -346,7 +346,15 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
             _progress.reset();
         }
         if (WorldHelper.isInNetherPortal()) {
-            if (!Nav.isPathing()) {
+            // TODOS.md, the same "a search is not progress" substitution already proven for the
+            // drowning guard (WorldSurvivalChain.handleDrowning) and for entitySearchMustMove a
+            // few lines up in this very file: Nav.isPathing() is true while a background search
+            // merely computes, driving nothing. A stalled search could suppress this manual
+            // walk-out-of-the-portal escape indefinitely, and prolonged portal contact eventually
+            // teleports the bot to the other dimension via plain vanilla mechanics.
+            // Nav.isExecutingRoute() asks the narrower, correct question: a genuinely executing
+            // route through the portal is untouched.
+            if (!Nav.isExecutingRoute()) {
                 setDebugState("Getting out from nether portal");
                 mod.getInputControls().hold(Input.SNEAK);
                 mod.getInputControls().hold(Input.MOVE_FORWARD);
