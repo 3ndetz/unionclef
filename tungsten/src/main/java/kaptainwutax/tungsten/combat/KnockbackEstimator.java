@@ -1,9 +1,12 @@
 package kaptainwutax.tungsten.combat;
 
-import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.component.type.ItemEnchantmentsComponent;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.math.Vec3d;
 
 /**
@@ -44,16 +47,20 @@ public class KnockbackEstimator {
         double horizSpeed = Math.sqrt(enemyVelocity.x * enemyVelocity.x
                 + enemyVelocity.z * enemyVelocity.z);
 
-        // detect KB enchant on enemy's held item
+        // detect KB enchant on enemy's held item. 1.21 moved enchantments to a data component
+        // (ItemEnchantmentsComponent) rather than a plain enum lookup -- pattern verified against
+        // MovementHelperB.frostWalkerLevel(), which already reads an enchantment level this same
+        // way and compiles in this exact codebase.
         int kbLevel = 0;
         if (enemy instanceof PlayerEntity pe) {
             ItemStack held = pe.getMainHandStack();
             if (!held.isEmpty()) {
-                // MC 1.21: EnchantmentHelper doesn't have a simple getKnockback.
-                // We check via the damage enchantment helper or iterate.
-                // For now, use a safe approach: assume up to KB II if sword.
-                // TODO: proper enchantment read when API is clear for 1.21
-                kbLevel = lastKBEnchantLevel; // keep last known
+                ItemEnchantmentsComponent itemEnchantments = held.getEnchantments();
+                for (RegistryEntry<Enchantment> enchant : itemEnchantments.getEnchantments()) {
+                    if (enchant.matchesKey(Enchantments.KNOCKBACK)) {
+                        kbLevel = itemEnchantments.getLevel(enchant);
+                    }
+                }
             }
         }
         lastKBEnchantLevel = kbLevel;

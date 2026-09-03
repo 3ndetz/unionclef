@@ -10836,19 +10836,30 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
      `lastStepMs` is deliberately left unadvanced by the early return, so the resuming frame sees
      one (possibly large) `frameMs` — already handled by the existing `MAX_CATCHUP` clamp, the
      same mechanism that already covers an ordinary hitch.
-  2. **KnockbackEstimator enchantment read confirmed a permanent zero, NOT fixed.**
-     `KnockbackEstimator.java:56`: `kbLevel = lastKBEnchantLevel; // keep last known` — a
-     self-assignment against a field that starts at 0 and is never written from anywhere else,
-     with the file's own `// TODO: proper enchantment read when API is clear for 1.21` sitting
-     right above it. `EnchantmentHelper` is imported (`:3`) and never referenced anywhere in the
-     class body. NOT fixed this pass: 1.21's enchantment API is data-component-based
-     (`RegistryEntry<Enchantment>` resolved through a registry, not a plain enum constant), and I
-     have no compiler or local Minecraft/Yarn jar available in this session to confirm the exact
-     method signature before committing Java that calls it — writing speculative API calls I
-     cannot verify compile is worse than leaving the acknowledged TODO in place. Whoever has a
-     build available: the shape needed is roughly
-     `EnchantmentHelper.getLevel(registryEntryFor(Enchantments.KNOCKBACK), held)` against the
-     stack's actual registry manager, not a cached field.
+  2. **KnockbackEstimator enchantment read confirmed a permanent zero.**
+     `KnockbackEstimator.java:56` (old line numbers): `kbLevel = lastKBEnchantLevel; // keep last
+     known` — a self-assignment against a field that starts at 0 and is never written from
+     anywhere else, with the file's own `// TODO: proper enchantment read when API is clear for
+     1.21` sitting right above it. `EnchantmentHelper` is imported and never referenced anywhere
+     in the class body. Originally left unfixed this session for lack of a compiler to verify
+     1.21's data-component-based enchantment API before committing speculative Java against it.
+     ⭐ FIXED 2026-09-04 — found a genuine, ALREADY-COMPILING example of exactly this read
+     elsewhere in this same codebase: `MovementHelperB.frostWalkerLevel()`
+     (`tungsten/.../path/movements/MovementHelperB.java:590-601`) reads Frost Walker's level off
+     an `ItemStack` the identical way this needed: `ItemStack.getEnchantments()` returns an
+     `ItemEnchantmentsComponent`; iterate its `getEnchantments()` (a
+     `Collection<RegistryEntry<Enchantment>>`), match by `RegistryEntry.matchesKey(Enchantments.
+     <NAME>)`, then `itemEnchantmentsComponent.getLevel(matchedEntry)`. Copied the exact pattern
+     with `Enchantments.KNOCKBACK` in place of `FROST_WALKER`, replacing the dead
+     `lastKBEnchantLevel` self-assignment with a real per-tick read off the enemy's main-hand
+     item. Removed the unused `EnchantmentHelper` import (never called, in this file or the
+     fix). Not writing speculative, unverifiable API calls this time — copying a pattern that
+     already compiles in this exact repo, against the same Minecraft/Yarn version, is a citation,
+     not a guess.
+     ⛔ NOT stand-verified (no build ran) — the pattern is proven to compile (it already does,
+     elsewhere), but the FIX's actual effect on knockback prediction (does a Knockback-enchanted
+     opponent's estimate now correctly read higher, does it change any PvP course's outcome) has
+     not been measured live.
   3. **"simulateKnockback has no terrain collision" is REFUTED — it has real, measured landing
      logic.** `SafetySystem.java:866-876`: a `kbLandsOnSurface`-gated check that snaps the
      simulated body back to its start height once it returns there with solid ground under it
