@@ -9145,7 +9145,7 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   — ТОЛЬКО этот флаг стоит `= true` по умолчанию, то есть отгруженное поведение НЕ изменилось,
   переключатель просто появился для ОДНОЙ из как минимум двух точек входа. Открыто по существу,
   с оговоркой, что один из двух путей уже отделим флагом, если возникнет причина его выключить.
-- [x] **C3.3** `TungstenModRenderContainer.*.clear()` is called from the search loop **bypassing the
+- [~] **C3.3** `TungstenModRenderContainer.*.clear()` is called from the search loop **bypassing the
   render-config gate and the 20 Hz throttle** in `RenderHelper`: `BlockSpacePathFinder.java:209`,
   `BlockNode.java:315`, and `wasCleared:328` (the last runs per CANDIDATE CHILD). These are
   `Collections.synchronizedCollection` → multiple ForkJoinPool threads convoy on one lock.
@@ -9187,6 +9187,13 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   No behavior change to what gets drawn when visualization is on (every gated `.add()` path is
   untouched); the change is purely to how many times a background search thread takes a lock it
   had no reason to take.
+  ⛔ CHECKLIST HARD BAN — "never call something done without a stand run" — correcting my own
+  `[x]` from a few minutes earlier: this is verified by reading (every touched call site quoted
+  above with its file:line, the logic traced against `RenderHelper`'s existing gate pattern),
+  NOT by a build+deploy+course run. `gradlew build` was not run (STRICT rule: not without the
+  user asking), so no jar with this change has ever executed. Left `[~]`, not `[x]`, until a
+  live `nav`/`pvp` run confirms no regression and — if it can be captured — a measurable drop
+  in the render-thread lock contention this was meant to fix.
 - [ ] **C3.4** A synchronous 800-node BFS runs on the **client tick thread** whenever the walker is idle
   in the altoclef primary nav.
   ⛔ ПОДТВЕРЖДЕНО ПОВТОРНЫМ ЧТЕНИЕМ 2026-09-01, ИСПРАВЛЕНИЕ К ЗАПИСИ ВЫШЕ: константа НАЙДЕНА,
@@ -10596,7 +10603,7 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   релиза) — значит «на момент этой проверки все допущения этой сессии о „shipped defaults“ в
   `docs/features/TUNGSTEN_CONFIG.md` и по всему `TODOS.md` подтверждены живым стендом, а не
   только чтением исходника».
-- [x] **C7.3 MCP server binds `0.0.0.0` with NO authentication and wildcard CORS, enabled by default.**
+- [~] **C7.3 MCP server binds `0.0.0.0` with NO authentication and wildcard CORS, enabled by default.**
   ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01, все три части: `McpServer.java:60` —
   `HttpServer.create(new InetSocketAddress("0.0.0.0", port), 0)`; `:75-77` — заголовки
   `Access-Control-Allow-Origin: *` / `-Headers: *` / `-Methods: POST, GET, OPTIONS` на КАЖДЫЙ
@@ -10619,6 +10626,15 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   whether the request is sent, so once a real secret is required it stops being the exploitable
   half of this finding. Documented in `docs/features/AGENT_PY4J_LEVERS.md` (where to find the
   token, what a bad one returns).
+  ⛔ CHECKLIST HARD BAN — correcting my own `[x]` to `[~]`: this is code-reading-verified, not
+  stand-verified. No build happened (STRICT rule: not without the user asking), so the currently
+  running MCP server on the live stand is STILL the old, unauthenticated code — confirmed by
+  this session's own `curl` against it minutes after writing this fix, which needed no token at
+  all. Two things a real run still owes this: (1) that a client actually presenting the token
+  from `altoclef_settings.json` gets in, and (2) that `MessageDigest.isEqual(byte[], byte[])`
+  behaves as intended when the two arrays differ in LENGTH (a Bearer header shorter or longer
+  than the real token) -- read the JDK's own contract before trusting memory: it should return
+  false without throwing, but "should" is exactly the word this checklist bans standing alone.
 - [ ] **C7.4** `gotoXYZ`/`gotoFar`/`stopPathing` — the primary agent movement levers — are routed
   through the **human chat anti-spam rate limiter**.
   ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01. Все три (`Py4jEntryPoint.java:4136,4153,4381`)
@@ -10646,7 +10662,7 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   остальные поиски мода, так что и это не «локальная», а фактически глобальная утечка настройки.
   `applyFallbackTuning` вызывается трижды (`:241,253,276`) и нигде в файле нет обратного вызова.
   Открыто, подтверждено под новым именем класса.
-- [x] **C7.6** Server-specific data hardcoded in Java source (`ButlerConfig` chat formats).
+- [~] **C7.6** Server-specific data hardcoded in Java source (`ButlerConfig` chat formats).
   ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01, И ЯРЧЕ, ЧЕМ ФОРМУЛИРОВКА ПРЕДПОЛАГАЕТ:
   `ButlerConfig.java:107-151` — массив `chatFormats` из 41 строки, шесть РЕАЛЬНЫХ доменов
   (`mc.vifela.ru`, `mc.musteryworld.net`, `mlegacy.net`, `mc.vimemc.ru`, `funnymc.ru`,
@@ -10671,6 +10687,13 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   server domain or plugin name anywhere in it — it does not belong in this finding and was not
   touched. The earlier "confirmed fully" pass overstated the finding's own scope; the `chatFormats`
   half of it was accurate and is now fixed.
+  ⛔ CHECKLIST HARD BAN — correcting my own `[x]` to `[~]`: no build ran, so it is unconfirmed
+  that Gradle actually bundles `src/main/resources/butler_default_chat_formats.json` into the
+  jar the way every other file already in that directory is (a standard Gradle source set,
+  should just work — "should" is not a stand run). If it silently is not on the classpath at
+  runtime, the defensive fallback fires and every fresh install regresses to `universal`-only
+  chat parsing on the six named servers, silently, until someone notices chat stops parsing.
+  Needs one build + one launch that prints whatever `Debug.logError` line fires (or doesn't).
 
 ### C9 — DOC LANGUAGE DEBT (my own violation, 2026-07-28)
 - [x] **C9.1 `docs/NAVIGATION.md` is written in Russian** (591 lines). The language rule in
