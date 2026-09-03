@@ -284,7 +284,29 @@ public class WorldSurvivalChain extends SingleTaskChain {
         // Swim
         boolean avoidedDrowning = false;
         if (mod.getModSettings().shouldAvoidDrowning()) {
-            if (!Nav.isPathing()) {
+            // ⛔ A SEARCH IS NOT A SWIM, AND THIS GUARD WAS BLOCKING THE ONLY THING THAT
+            // BREATHES. Nav.isPathing() is true while PATHFINDER.active alone -- a background
+            // search merely computing, driving nothing -- and this whole branch, the emergency
+            // "hold jump so the head stays above water", was gated behind it being false. So a
+            // bot drowning at the exact moment its own water-escape search is still computing
+            // (which is precisely when a bot IN water asks for a route) got no emergency
+            // response at all: the branch most needed the moment the water pathfinder starts
+            // looking for a way out is the one this condition switches off.
+            //
+            // TODOS.md records an actual, unexplained drowning death (2026-08-24 entry,
+            // "смерть УТОПЛЕНИЕМ... механизм не установлен") with a live water pathfinder in the
+            // build and no measurement of why the bot never surfaced -- this is a fitting,
+            // previously unconsidered mechanism for exactly that gap.
+            //
+            // Nav.isExecutingRoute() asks the narrower, correct question: is a route actually
+            // being FOLLOWED (MovementQueue/BlockPathWalker/executor driving) rather than merely
+            // searched for. Same substitution already proven correct for this exact shape of bug
+            // elsewhere in this codebase (GetToEntityTask.entitySearchMustMove,
+            // MineAndCollectTask.progressCheckIgnoresSearch): "a search is not progress", and
+            // here, a search is not a reason to let the bot drown either. Holding jump while an
+            // executing swim route is genuinely underway is left untouched -- it still won't
+            // fire in that case, exactly as before.
+            if (!Nav.isExecutingRoute()) {
                 if (mod.getPlayer().isTouchingWater() && mod.getPlayer().getAir() < mod.getPlayer().getMaxAir()) {
                     // Swim up!
                     mod.getInputControls().hold(Input.JUMP);
