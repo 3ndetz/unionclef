@@ -492,7 +492,21 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         }
         wanderFailPeak = Math.max(wanderFailPeak, failCounter);
         if (!progressing) {
-            progressChecker.reset();
+            // TODOS.md, the self-resetting sawtooth (2026-09-02/03): resetting the checker here
+            // unconditionally re-anchors it to wherever the bot is stalled RIGHT NOW, so a stall
+            // longer than one ~6s window is never visible as one, even though failCounter still
+            // climbs correctly toward isFinished()'s threshold. Mirrors GetToEntityTask's
+            // entitySearchMustMove fix: when tungsten itself is the thing not moving, actually
+            // release it (TungstenHelper.stop(), not the documented no-op Nav.cancel() a few
+            // lines up) instead of resetting -- "a release is not movement, so the checker
+            // stands" (same reasoning, same file that pattern already lives in).
+            if (kaptainwutax.tungsten.TungstenConfig.get().wanderSearchMustMove
+                    && adris.altoclef.util.helpers.TungstenHelper.isActive()) {
+                wanderSearchReleased++;
+                adris.altoclef.util.helpers.TungstenHelper.stop();
+            } else {
+                progressChecker.reset();
+            }
             // COUNT THE FAILURE EVEN WHEN EXPLORING WAS FORCED, or the escape above can never
             // trigger for the one caller that most needs it. _forceExplore only ever meant "do not
             // shout about it" -- it was silencing the counter as well as the message, which is how
@@ -538,6 +552,13 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
     /** Give-up trips that fired while the re-pick was still blocked. Read as wanderTripBlocked
      *  against wanderChk's trip half; equal counts mean the give-up branch changes nothing. */
     public static volatile int wanderTripBlocked;
+
+    /** Trips that released a stuck tungsten search instead of resetting the checker; mechanism
+     *  counter for {@link kaptainwutax.tungsten.TungstenConfig#wanderSearchMustMove}. Reads 0
+     *  with the flag off, and should track wanderTripBlocked when it is on -- both count the
+     *  same "give-up fired while tungsten still held it" moment, one before the fix and one
+     *  after. */
+    public static volatile int wanderSearchReleased;
 
     /**
      * Ground covered, in centimetres, on ticks where THIS task was the one running. Read as

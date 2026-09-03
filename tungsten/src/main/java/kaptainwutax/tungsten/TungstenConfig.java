@@ -851,6 +851,33 @@ public class TungstenConfig {
     public boolean entitySearchMustMove = true;
 
     /**
+     * Apply {@code entitySearchMustMove}'s own fix (TODOS.md, GetToEntityTask:522-538) to
+     * {@code TimeoutWanderTask}'s give-up cycle: on a tripped progress check, if tungsten is
+     * the thing not moving, actually stop the stuck search ({@code TungstenHelper.stop()})
+     * instead of resetting the progress checker's distance anchor to wherever the bot is
+     * stalled right now.
+     *
+     * <p>TODOS.md's "self-resetting sawtooth" finding (2026-09-02/03): resetting the checker
+     * on every failed check means cumulative stall longer than one ~6s window is never seen,
+     * even though {@code failCounter} keeps climbing correctly toward {@code isFinished()}'s
+     * threshold -- and the give-up branch above it calls only the documented no-op
+     * {@code Nav.cancel()}, so the search that caused the stall is never actually released.
+     * The very next {@code TimeoutWanderTask} instance (or the same one, re-{@code onStart}'d
+     * by a parent job framework) can walk straight back into the identical stall. This mirrors
+     * {@code entitySearchMustMove} exactly, including its own reasoning: "a release is not
+     * movement, so the checker stands".
+     *
+     * <p>⛔ DEFAULT {@code false}, DELIBERATELY, UNLIKE {@code entitySearchMustMove}. This
+     * changes the give-up/restart cycle of a mechanism shared by roughly 40 call sites
+     * (TODOS.md, `grep -c "new TimeoutWanderTask("`), and needs the same paired stand
+     * measurement discipline as {@code smartMoves}/{@code queueDiagonals} above -- before/after
+     * on {@code wander_recovery} and the playthrough's dead-time split -- which no session has
+     * had stand access to run yet. Flip it on for that A/B; do not ship it on by default
+     * without that measurement first.
+     */
+    public boolean wanderSearchMustMove = false;
+
+    /**
      * When navigation REFUSES an entity approach and the body is not moving, wander instead of
      * standing there for the rest of the run.
      *
