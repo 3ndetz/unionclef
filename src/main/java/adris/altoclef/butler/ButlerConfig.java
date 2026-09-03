@@ -1,7 +1,12 @@
 package adris.altoclef.butler;
 
+import adris.altoclef.Debug;
 import adris.altoclef.util.helpers.ConfigHelper;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.io.InputStream;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ButlerConfig {
@@ -103,52 +108,29 @@ public class ButlerConfig {
     /**
      * Server-specific chat format patterns.
      * Each entry: { "server", "format_pattern", "game_mode" }
+     * <p>
+     * TODOS.md C7.6: these used to be a literal array baked into this class -- every fresh
+     * install shipped six named community servers' domains and internal chat-plugin formats
+     * straight in the compiled jar. Now they live in the bundled resource template
+     * {@code butler_default_chat_formats.json} (a config template, same spirit as
+     * {@code configs/butler.json} itself), loaded once below. Behavior for existing and new
+     * installs is unchanged -- same defaults, same {@code configs/butler.json} override path --
+     * only the storage location moved out of source.
      */
-    public String[][] chatFormats = new String[][]{
-            {"universal", "<{from}> {message}", "survival"},
-            {"mc.vifela.ru", "{from}: {message}", "survival"},
-            {"mc.musteryworld.net", "[Чат пати] {from} ➠ {message}", "murdermystery"},
-            {"mc.musteryworld.net", "[Зритель] {from}: {message}", "murdermystery"},
-            {"mc.musteryworld.net", "{from}: {message}", "murdermystery"},
-            {"mc.musteryworld.net", "{from}: {message}", "skywars"},
-            {"mc.musteryworld.net", "[⚑] {from}: {message}", "bedwars"},
-            {"mc.musteryworld.net", "{starterPrefix} [{clan}] | [{rank}] {from} > {message}", "survival"},
-            {"mc.musteryworld.net", "{starterPrefix} | [{rank}] {from} > {message}", "survival"},
-            {"mc.musteryworld.net", "[Всем] {from}: {message}", "bedwars"},
-            {"mlegacy.net", "({clan}) [{rank}] {from} ➠ {message}", "skypvp"},
-            {"mlegacy.net", "[{rank}]  {from} ➠ {message}", "skypvp"},
-            {"mlegacy.net", "[{rank}] {from} ➠ {message}", "skypvp"},
-            {"mlegacy.net", "[{rank}] {from}  » {message}", "skywars"},
-            {"mlegacy.net", "[{rank}] {from} » {message}", "skywars"},
-            {"mlegacy.net", "({rank}) {from} > {message}", "skywars"},
-            {"mlegacy.net", "{global} [{rank}] {from} ➯ {message}", "survival"},
-            {"mc.vimemc.ru", "{starterPrefix} [{global}] [{clan}] | ᖧ{rank}ᖨ {from}  > {message}", "survival"},
-            {"mc.vimemc.ru", "{starterPrefix} [{global}] | ᖧ{rank}ᖨ {from}  > {message}", "survival"},
-            {"mc.vimemc.ru", "{starterPrefix} [{global}] [{clan}] | ᖧ{rank}ᖨ {from} {suffix} > {message}", "survival"},
-            {"mc.vimemc.ru", "{starterPrefix} [{global}] | ᖧ{rank}ᖨ {from} {suffix} > {message}", "survival"},
-            {"mc.vimemc.ru", "[{rank}] [{team}] {from} > {message}", "skywars"},
-            {"mc.vimemc.ru", "[{rank}] ᖧ{donate}ᖨ {from} {suffix} > {message}", "thepit"},
-            {"mc.vimemc.ru", "[{rank}] ᖧ{donate}ᖨ {from}  > {message}", "thepit"},
-            {"mc.vimemc.ru", "[{rank}] {from}  > {message}", "thepit"},
-            {"mc.vimemc.ru", "[{rank}] [{team}] {from} ⇨ {message}", "skywars"},
-            {"mc.vimemc.ru", "ᖧ{donate}ᖨ {from} {suffix} ⇨ {message}", "murdermystery"},
-            {"mc.vimemc.ru", "ᖧ{donate}ᖨ {from} ⇨ {message}", "murdermystery"},
-            {"mc.vimemc.ru", "{from} ⇨ {message}", "murdermystery"},
-            {"mc.vimemc.ru", "[{rank}] {from} > {message}", "skywars"},
-            {"mc.vimemc.ru", "{from}  > {message}", "skywars"},
-            {"funnymc.ru", "{starterPrefix} {global} ({clan}) [{rank}] {from} ➯ {message}", "survival"},
-            {"funnymc.ru", "{starterPrefix} {global} ({clan}) {rank} {from} ➯ {message}", "survival"},
-            {"funnymc.ru", "{starterPrefix} {global} [{rank}] {from} ➯ {message}", "survival"},
-            {"funnymc.ru", "{starterPrefix} {global} {rank} {from} ➯ {message}", "survival"},
-            {"funnymc.ru", "{global} ({clan}) [{rank}] {from} ➯ {message}", "survival"},
-            {"funnymc.ru", "{global} ({clan}) {rank} {from} ➯ {message}", "survival"},
-            {"funnymc.ru", "{global} [{rank}] {from} ➯ {message}", "survival"},
-            {"funnymc.ru", "{global} {rank} {from} ➯ {message}", "survival"},
-            {"funnymc.ru", "[{rank}] {from}  » {message}", "skywars"},
-            {"funnymc.ru", "({rank}) {from} > {message}", "skywars"},
-            {"funnymc.ru", "{from} » {message}", "murdermystery"},
-            {"mc.4obabke.ru", "{from} whispers to you: {message}", "skywars"}
-    };
+    public String[][] chatFormats = loadDefaultChatFormats();
+
+    private static String[][] loadDefaultChatFormats() {
+        try (InputStream in = ButlerConfig.class.getClassLoader().getResourceAsStream("butler_default_chat_formats.json")) {
+            if (in == null) {
+                Debug.logError("butler_default_chat_formats.json missing from resources, falling back to 'universal' only.");
+                return new String[][]{{"universal", "<{from}> {message}", "survival"}};
+            }
+            return new ObjectMapper().readValue(in, String[][].class);
+        } catch (IOException e) {
+            Debug.logError("Failed to load butler_default_chat_formats.json, falling back to 'universal' only: " + e.getMessage());
+            return new String[][]{{"universal", "<{from}> {message}", "survival"}};
+        }
+    }
 
     public static ButlerConfig getInstance() {
         return _instance;

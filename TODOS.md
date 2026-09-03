@@ -10562,7 +10562,7 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   остальные поиски мода, так что и это не «локальная», а фактически глобальная утечка настройки.
   `applyFallbackTuning` вызывается трижды (`:241,253,276`) и нигде в файле нет обратного вызова.
   Открыто, подтверждено под новым именем класса.
-- [ ] **C7.6** Server-specific data hardcoded in Java source (`ButlerConfig` chat formats).
+- [x] **C7.6** Server-specific data hardcoded in Java source (`ButlerConfig` chat formats).
   ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01, И ЯРЧЕ, ЧЕМ ФОРМУЛИРОВКА ПРЕДПОЛАГАЕТ:
   `ButlerConfig.java:107-151` — массив `chatFormats` из 41 строки, шесть РЕАЛЬНЫХ доменов
   (`mc.vifela.ru`, `mc.musteryworld.net`, `mlegacy.net`, `mc.vimemc.ru`, `funnymc.ru`,
@@ -10573,6 +10573,20 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   установка мода, содержит имена и внутренние детали чужих серверов прямо в коде. То же для
   `whisperFormats` (`:63-75`) — форматы личных сообщений разных серверов, тоже литералами.
   Открыто.
+  ЗАКРЫТО 2026-09-03: `chatFormats` moved out of `ButlerConfig.java` into a bundled resource
+  template, `src/main/resources/butler_default_chat_formats.json`, loaded once via
+  `ButlerConfig.loadDefaultChatFormats()` on the classloader path. Same 41 entries, same six
+  domains, same `configs/butler.json` override path (`ConfigHelper.loadConfig` is untouched) —
+  zero behavior change for any existing or fresh install, only the storage moved from compiled
+  source into a config template, which is exactly what this finding asked for
+  ("не в ресурс/конфиг-шаблон"). Defensive fallback to `universal` only, if the resource is ever
+  missing from the jar (should not happen under normal packaging).
+  ⛔ CORRECTION TO THE 2026-09-01 CONFIRMATION: `whisperFormats` (`:63-75`, unchanged, current
+  line numbers ~68-80) is NOT server-specific data. Re-read in full: it is eleven generic
+  multi-language whisper patterns (English/Russian phrasing for "X whispers to you"), with no
+  server domain or plugin name anywhere in it — it does not belong in this finding and was not
+  touched. The earlier "confirmed fully" pass overstated the finding's own scope; the `chatFormats`
+  half of it was accurate and is now fixed.
 
 ### C9 — DOC LANGUAGE DEBT (my own violation, 2026-07-28)
 - [x] **C9.1 `docs/NAVIGATION.md` is written in Russian** (591 lines). The language rule in
