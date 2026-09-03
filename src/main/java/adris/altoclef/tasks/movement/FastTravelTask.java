@@ -43,7 +43,17 @@ public class FastTravelTask extends Task {
      */
     public FastTravelTask(BlockPos overworldTarget, Integer threshold, boolean collectPortalMaterialsIfAbsent) {
         target = overworldTarget;
-        this.threshold = null;
+        // ⛔ WAS `this.threshold = null;`, DISCARDING THE PARAMETER UNCONDITIONALLY, SINCE THE
+        // INITIAL COMMIT. getThreshold() (below) falls back to
+        // Settings.netherFastTravelWalkingRange (default 600) whenever this.threshold is null --
+        // so every caller of this constructor, no matter what it passed, got 600 instead of its
+        // own value. GoToStrongholdPortalTask asks for 300: with the bug, the bot walks the
+        // overworld leg for up to DOUBLE the distance it intended before switching to nether
+        // travel, which on a stronghold several hundred blocks out is a plausible contributor to
+        // "the bot gets stuck near the stronghold" (BeatMinecraftTask.java's own long-standing
+        // TODO on this exact path) -- not stuck, just walking cross-country for far longer than
+        // designed.
+        this.threshold = threshold;
         this.collectPortalMaterialsIfAbsent = collectPortalMaterialsIfAbsent;
     }
 
