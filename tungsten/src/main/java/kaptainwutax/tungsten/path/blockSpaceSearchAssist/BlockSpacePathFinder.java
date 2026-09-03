@@ -316,7 +316,13 @@ public class BlockSpacePathFinder {
 				RenderHelper.clearRenderers();
 				break;
 			}
-			TungstenModRenderContainer.RENDERERS.clear();
+			// TODOS.md C3.3: this ran EVERY loop iteration (one per expanded node -- up to
+			// thousands per search), contending RENDERERS' synchronized-collection lock and
+			// wiping the buffer between the throttled draws two lines below. RenderHelper.
+			// renderPathSoFar() already clears+draws as one gated unit (enabled() + the 20 Hz
+			// searchRenderDue() throttle); this outer clear only defeated that gate by emptying
+			// the buffer on every iteration the throttle was skipping anyway. Removed, not
+			// gated: renderPathSoFar owns clearing its own container now.
 			if ((numNodes & (timeCheckInterval - 1)) == 0) { // only call this once every 64 nodes (about half a millisecond)
                 long now = System.currentTimeMillis(); // since nanoTime is slow on windows (takes many microseconds)
                 if (now - failureTimeoutTime >= 0 || (!failing && now - primaryTimeoutTime >= 0)) {

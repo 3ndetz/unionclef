@@ -52,7 +52,10 @@ public class CornerJumpMovementHelper {
 			boolean isEdgeOnZ = Math.abs(endZ - z) < 2;
 
 	        BlockPos.Mutable currPos = new BlockPos.Mutable();
-	        TungstenModRenderContainer.TEST.clear(); // Clear visual markers
+	        // TODOS.md C3.3: same fix as StreightMovementHelper -- this unconditional clear
+	        // contended TEST's lock on every candidate-move check regardless of shouldRender,
+	        // while renderBlock() below already gates its own .add() on that same flag.
+	        if (shouldRender) TungstenModRenderContainer.TEST.clear(); // Clear visual markers
 	        if (!isEdgeOnX && !isEdgeOnZ) return false;
 //	        if (isEdgeOnX && isEdgeOnZ) {
 //	        	

@@ -9105,7 +9105,7 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   — ТОЛЬКО этот флаг стоит `= true` по умолчанию, то есть отгруженное поведение НЕ изменилось,
   переключатель просто появился для ОДНОЙ из как минимум двух точек входа. Открыто по существу,
   с оговоркой, что один из двух путей уже отделим флагом, если возникнет причина его выключить.
-- [ ] **C3.3** `TungstenModRenderContainer.*.clear()` is called from the search loop **bypassing the
+- [x] **C3.3** `TungstenModRenderContainer.*.clear()` is called from the search loop **bypassing the
   render-config gate and the 20 Hz throttle** in `RenderHelper`: `BlockSpacePathFinder.java:209`,
   `BlockNode.java:315`, and `wasCleared:328` (the last runs per CANDIDATE CHILD). These are
   `Collections.synchronizedCollection` → multiple ForkJoinPool threads convoy on one lock.
@@ -9118,6 +9118,35 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   по-прежнему НА КАЖДОГО КАНДИДАТА, не на поиск. `C4.4` (закрыто 2026-07-30, то же семейство
   дефекта — писать в рендер-контейнеры из фонового потока) починил ЧАТ, а не эту конкретную
   очередь. Открыто, подтверждено заново на актуальных строках.
+  ЗАКРЫТО 2026-09-03, четыре сайта, все на текущих строках (снова съехавших):
+  * `StreightMovementHelper.java` `traversePath()`, `CornerJumpMovementHelper.java` same method —
+    both cleared `TEST` unconditionally at entry while their own `renderBlock()` already gates
+    every `.add()` on the `shouldRender` parameter. Gated the `.clear()` on the same flag: a
+    caller that passes `shouldRender=true` still gets a fresh buffer before it draws, a caller
+    that passes `false` (every call through `BlockNode.wasCleared`, hardcoded false) never
+    touches the lock at all now.
+  * `BlockNode.getChildren()` — an unconditional `TEST.clear()` right after the parallel-filter
+    step, with NO corresponding write anywhere in the method (checked: nothing else in
+    `getChildren` touches `TEST`). Pure vestigial debug leftover from before the commented-out
+    code a few lines above it. Removed outright, nothing to gate.
+  * `BlockNode.wasCleared()` itself — same treatment: `shouldRender`/`shouldSlow` locals are
+    hardcoded false on this call, so the `TEST.clear()` bought nothing (the downstream
+    Streight/CornerJump/Neo helpers never draw into it either) while running on the single
+    hottest point named in this finding, once per candidate child. Gated on `shouldRender` for
+    consistency with the fixes above.
+  * `BlockSpacePathFinder`'s main search loop (line drifted again, now ~319, the
+    "`:209`" from the original wording): `TungstenModRenderContainer.RENDERERS.clear()`
+    unconditionally on EVERY loop iteration (one per expanded node), two lines before
+    `RenderHelper.renderPathSoFar(next)` — which already does its own gated clear+draw
+    (`enabled()` + the 20 Hz `searchRenderDue()` throttle). The outer clear defeated that gate
+    by wiping the buffer on every iteration the throttle was skipping anyway, and made the
+    nearby `if (RENDERERS.size() > 3000) clear()` safety valve pointless (the collection never
+    had a chance to grow past a handful of entries before the next iteration zeroed it).
+    Removed; `renderPathSoFar` now owns clearing its own container, and the size-cap valve is a
+    real safety net again instead of dead code.
+  No behavior change to what gets drawn when visualization is on (every gated `.add()` path is
+  untouched); the change is purely to how many times a background search thread takes a lock it
+  had no reason to take.
 - [ ] **C3.4** A synchronous 800-node BFS runs on the **client tick thread** whenever the walker is idle
   in the altoclef primary nav.
   ⛔ ПОДТВЕРЖДЕНО ПОВТОРНЫМ ЧТЕНИЕМ 2026-09-01, ИСПРАВЛЕНИЕ К ЗАПИСИ ВЫШЕ: константа НАЙДЕНА,

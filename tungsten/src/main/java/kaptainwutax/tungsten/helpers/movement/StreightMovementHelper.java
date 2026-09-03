@@ -56,7 +56,11 @@ public class StreightMovementHelper {
 	        int endZ = endPos.getZ();
 
 	        BlockPos.Mutable currPos = new BlockPos.Mutable();
-	        TungstenModRenderContainer.TEST.clear(); // Clear visual markers
+	        // TODOS.md C3.3: this ran unconditionally, on every candidate-move check across the
+	        // search's ForkJoinPool threads, contending TEST's synchronized-collection lock even
+	        // with rendering off (renderBlock below already gates its own .add() on shouldRender --
+	        // the clear is the other half of the same visualization and belongs behind the same gate).
+	        if (shouldRender) TungstenModRenderContainer.TEST.clear(); // Clear visual markers
 	        renderBlock(endPos, Color.BLUE);
 	        
 	        boolean isOneBlockAway = DistanceCalculator.getHorizontalEuclideanDistance(startPos, endPos) <= 1;

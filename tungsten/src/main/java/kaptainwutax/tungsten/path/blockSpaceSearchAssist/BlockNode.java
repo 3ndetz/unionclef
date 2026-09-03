@@ -365,7 +365,11 @@ public class BlockNode {
 			        })
 			        .collect(Collectors.toList());
 
-		TungstenModRenderContainer.TEST.clear();
+		// TODOS.md C3.3: this cleared the shared TEST render container (synchronized
+		// collection, contended across every ForkJoinPool search thread) on every single
+		// node expansion, with no corresponding write anywhere in this method -- vestigial
+		// debug leftover, not a real render reset. Removed rather than gated: there was
+		// nothing here for a gate to guard.
 
 		return filtered;
 
@@ -378,10 +382,16 @@ public class BlockNode {
 	public static boolean wasCleared(WorldView world, BlockPos start, BlockPos end, BlockNode startNode,
 			BlockNode endNode) {
 
-		TungstenModRenderContainer.TEST.clear();
 		boolean shouldRender = false;
 		boolean shouldSlow = false;
-		
+		// TODOS.md C3.3: shouldRender is hardcoded false on this call -- StreightMovementHelper/
+		// CornerJumpMovementHelper never draw into TEST as a result of this call either way, so
+		// clearing it here (called per CANDIDATE CHILD, i.e. the hottest point in the search)
+		// bought nothing but lock contention on a synchronized collection across every
+		// ForkJoinPool search thread. Gated the same way the draws already are, so a future
+		// caller that does pass shouldRender=true still gets a fresh buffer first.
+		if (shouldRender) TungstenModRenderContainer.TEST.clear();
+
 
 		boolean isStreightPossible = StreightMovementHelper.isPossible(world, start, end, shouldRender, shouldSlow);
 		
