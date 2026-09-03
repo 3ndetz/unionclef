@@ -10769,7 +10769,7 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   behaves as intended when the two arrays differ in LENGTH (a Bearer header shorter or longer
   than the real token) -- read the JDK's own contract before trusting memory: it should return
   false without throwing, but "should" is exactly the word this checklist bans standing alone.
-- [ ] **C7.4** `gotoXYZ`/`gotoFar`/`stopPathing` — the primary agent movement levers — are routed
+- [~] **C7.4** `gotoXYZ`/`gotoFar`/`stopPathing` — the primary agent movement levers — are routed
   through the **human chat anti-spam rate limiter**.
   ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01. Все три (`Py4jEntryPoint.java:4136,4153,4381`)
   зовут `ChatMessage(...)`, та кладёт сообщение в `_mod.getMessageSender().enqueueChat(msg,
@@ -10781,6 +10781,22 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   «медленных» окон). Комментарий класса на месте: «We can't send messages immediately as the
   server will kick us» — это античит-таймер для ЧЕЛОВЕЧЕСКИХ сообщений, и рычаг движения
   агента стоит в ТОЙ ЖЕ очереди на общих основаниях. Открыто.
+  ЗАКРЫТО 2026-09-03: traced WHY `;goto`/`;stop` never risk a server kick in the first place —
+  `MixinClientPlayNetworkHandler.onSendChatMessage` (`@Inject(method = "sendChatMessage", at =
+  @At("HEAD"), cancellable = true)`) intercepts any message starting with
+  `TungstenMod.getCommandPrefix()` (`";"`), dispatches it locally, and calls `ci.cancel()` —
+  the packet NEVER reaches the network. The entire justification this queue exists for ("the
+  server will kick us") cannot apply to a message that never leaves the client. Fixed in
+  `MessageSender.enqueueChat`: a message starting with the tungsten command prefix now calls
+  `sendChatInstant` directly instead of joining `whisperQueue`, so it bypasses
+  `fastSendTimer`/`bigSendTimer`/`bigBigSendTimer` entirely and does not advance them either —
+  ordinary human-facing chat keeps exactly the throttling it had, unaffected. Before this fix,
+  a burst of real chat could leave the agent's own `gotoXYZ`/`stopPathing` calls sitting for up
+  to `bigBigSendTimer`'s 10 seconds with no indication why nothing moved.
+  ⛔ CHECKLIST HARD BAN — not stand-verified, no build ran. Needs: a build, then confirming
+  `;goto`/`;stop` still work at all (the fast path must still hit the SAME mixin injection
+  point the queued path did) and that they now respond immediately even right after a chat
+  burst, e.g. by timing `gotoXYZ` right after several `ChatMessage` calls with real text.
 - [ ] **C7.5** `TungstenBridge` mutates the global persisted `TungstenConfig.searchTimeoutMs` as a side
   effect of delegation and never restores it. Same pattern for the pathfinder accept-thresholds.
   ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01, С ПОПРАВКОЙ НА ИМЯ КЛАССА: `TungstenBridge` как имя

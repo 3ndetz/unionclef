@@ -68,6 +68,19 @@ public class MessageSender {
     }
 
     public void enqueueChat(String message, MessagePriority priority) {
+        // TODOS.md C7.4: gotoXYZ/gotoFar/stopPathing (the primary agent movement levers, via
+        // Py4jEntryPoint.ChatMessage) reach this queue as an ordinary chat message, and this
+        // class exists specifically to throttle chat so "the server will kick us" -- but a
+        // message starting with tungsten's command prefix (";") never reaches the server at
+        // all: MixinClientPlayNetworkHandler.onSendChatMessage cancels the packet at HEAD and
+        // dispatches the command locally. Throttling something that cannot get the bot kicked
+        // by the same timer that guards messages that can meant the agent's own stop/goto
+        // commands could sit for up to bigBigSendTimer's 10 seconds behind a burst of ordinary
+        // chat, with nothing telling the caller why gotoXYZ appeared to do nothing.
+        if (message.startsWith(kaptainwutax.tungsten.TungstenMod.getCommandPrefix())) {
+            sendChatInstant(message);
+            return;
+        }
         whisperQueue.add(new ChatMessage(message, priority, messageCounter++));
     }
 
