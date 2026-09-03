@@ -1,6 +1,67 @@
 # TODOs
 
-<!-- LIVE-STAND-RECONNECT-AND-GOTOXYZ-STALL-2026-09-03 -->
+<!-- LIVE-VOID-DEATH-ON-A-SHORT-GOTOXYZ-2026-09-03 -->
+## ⛔ NEW, SEVERE: a plain 4.3-block `gotoXYZ` walked the bot into the void and killed it (2026-09-03)
+
+Live on `uctest-server` (flat/peaceful nav-benchmark stand, currently-deployed jar — no code of
+mine is in this build). Bot at `(30.3,-60.0,0.9)`, healthy, idle. Issued
+`gotoXYZ(35,-60,0)` — **4.3 blocks away**, about as easy a target as this course offers. Full
+timeline from `pathStatus` polls and `getRecentChat`:
+
+```
+t=0    pos 30.3,-60.0,0.9   distance 4.3   busy=true
+t=4s   pos 31.3,-60.0,1.1   distance 4.4   busy=true    (net ~1 block moved, wrong direction-ish)
+t=8s   pos 31.4,-106.0,1.7  distance 46.2  busy=true    <- fell 46 blocks in ~4s
+t=12s  pos 0.5,-60.0,0.5    distance 35.0  busy=true    <- back at Y=-60 but nowhere near either
+                                                            the start or the fall point: a respawn,
+                                                            not a recovery
+```
+
+Chat log for the same window, in order: ~28x `FastPlanner: 1 nodes, 1 wp, partial, 0-1 ms` (the
+coarse guide could not build a real plan for a 4-block hop — 1 trivial node is not a route), then
+**`WARNING: FastNavigator: no progress, handing over`** (x2), then **`tester1 выпал из мира`**
+("tester1 fell out of the world" — the vanilla void-death message, client locale ru, username
+`tester1` per `deploy/compose.test.yml`'s `uctest-mc-tester1`). HP read back at 20/20 afterward —
+consistent with a death-and-respawn (full heal), not a survived fall.
+
+**Reading it in order: the coarse guide failed to produce a usable route for a trivial 4-block
+target, `FastNavigator` detected zero progress and handed control to "physics", and physics then
+walked (or let the bot walk) off whatever edge is near that spot and straight into the void,
+with nothing catching it before the vanilla void-damage threshold.** No MLG bucket clutch fired,
+no edge/fall guard stopped it — it just went in.
+
+This is the SAME failure family already named in `docs/CHECKLIST.md` Rule 4k ("the bot was
+falling into the void and dying, and every counter kept reporting" — the most expensive class of
+false reading this project has on record) and Rule 4l ("a primitive that presses movement keys
+must guarantee its own release"), and it sits right next to this session's own gotoXYZ-stall
+finding above/below in this file (the `climb=6784`, 20-block-target case that froze instead of
+falling — same `FastNavigator: no progress, handing over` mechanism, different outcome). Whether
+this is the SAME root cause manifesting two ways (physics handoff with no edge awareness — stalls
+on some geometry, walks into a gap on other geometry) or two separate defects sharing a log line
+is not established; both cases hand off from a failed/partial search to "physics" and both were
+reachable from ordinary short-range `gotoXYZ` calls near wherever the bot happened to be standing.
+
+**Not fixed this round.** This needs tracing `FastNavigator`'s handoff-to-physics path and
+whatever governs movement once "physics owns the rest" — specifically whether ANY edge/fall
+check runs on that path at all, since a bot that will not step off a ledge under normal walking
+should not do so here either. That is a real investigation, not a guess from a chat log, and this
+session already burned one investigation window this exact way earlier in the session (the
+retracted ProfileD saga) by reasoning ahead of the evidence — better to hand this off named,
+reproducible, and unfixed than to patch it blind.
+
+**Why this matters beyond the one course:** the room's actual END GOAL (`docs/CHECKLIST.md`
+section 0) is `@gamer` completing a full survival playthrough. A bot that can die to the void on
+a *flat, deterministic, engineered* benchmark course from a *short, easy* target will do this far
+worse on real terrain with real gaps — and a death mid-playthrough is not a stall to shrug off,
+it is lost inventory, lost progress, and (depending on `keepInventory`) a real setback to the
+numeric progress signal this room reports. This is very likely a live contributor to whatever
+"the bot got stuck/died near X" reports already exist elsewhere in this file for the actual
+`@gamer` runs, not just a benchmark-course curiosity.
+
+Reproduction is cheap and does not need a build: `gotoXYZ` any short target near
+`(30,-60,0)` on `uctest-server` and watch `pathStatus`'s `pos` for a Y that drops fast. Left the
+bot stopped (`stopPathing`, confirmed `ok:true`, "Stopped all tasks") and healthy (20/20 hp,
+`0.5,-60.0,0.5`) afterward.
 ## C8.1 status + a fresh live zero-progress reproduction (2026-09-03)
 
 The MCP workaround (`http://host.docker.internal:25350/mcp`, found 2026-09-01) is still live
