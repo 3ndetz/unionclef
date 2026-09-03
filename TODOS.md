@@ -10812,6 +10812,42 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   остальные поиски мода, так что и это не «локальная», а фактически глобальная утечка настройки.
   `applyFallbackTuning` вызывается трижды (`:241,253,276`) и нигде в файле нет обратного вызова.
   Открыто, подтверждено под новым именем класса.
+  ⛔ ДОБАВЛЕНО 2026-09-04, ЧТО ИМЕННО СТОИТ НА ПУТИ ПРОСТОГО ФИКСА (проверено чтением, не
+  предположением) — почему это не десятиминутный «сохранить-восстановить»:
+  * **`minPathSizeForTimeout` — МЁРТВОЕ ПОЛЕ, ПО ВСЕМУ МОДУ.** `grep -rn
+    "minPathSizeForTimeout"` across `tungsten/` and `src/main/java/` — one declaration
+    (`PathFinder.java:101`) and six WRITE sites (`GotoCommand.java:96`,
+    `FollowEntityTask.java:583,587,591,595`, `RunAwayTask.java:429`,
+    `TungstenHelper.java:137`), ZERO reads anywhere. So `applyFallbackTuning`'s
+    `pf.minPathSizeForTimeout = FALLBACK_MIN_PATH_SIZE` is a genuinely harmless dead write —
+    it "leaks" a value into a field nothing ever consults, so it cannot be the mechanism behind
+    any observed navigation defect. Still a real code-hygiene issue (five OTHER files also
+    write to this same dead field, believing it does something), but that is a SEPARATE,
+    mechanically unrelated cleanup and not part of this fix.
+  * **The other two fields ARE live, and BOTH are read from inside `PathFinder.find()`'s
+    spawned search THREAD, not synchronously on the calling thread.** `find()`
+    (`PathFinder.java:395-456`) does `thread = new Thread(() -> { ... search(...) ... });
+    thread.start(); return true;` — the read of `TungstenConfig.get().searchTimeoutMs`
+    (`:414,500`) and of `minDistPath` (`:510` and again at `:1078`, deep inside the search's
+    own node-selection loop) all happen INSIDE that background thread, at some point AFTER
+    `thread.start()` returns control to the caller with no ordering guarantee. So the
+    obvious-looking fix — save the old value, call `pf.find(...)`, restore the old value right
+    after — is a genuine RACE: the search thread might not have reached its own read yet when
+    the restore runs on the calling thread, in which case the search silently gets the ORIGINAL
+    (non-fallback) tuning instead of the one this method exists to apply, defeating the whole
+    point of `applyFallbackTuning` unpredictably, run to run. This is exactly why the comment
+    already sitting in the code calls for "per-call search parameters" rather than a
+    save/restore pair — the values need to be captured into the search's own closure BEFORE
+    the thread starts, not stored in a shared mutable field read on a timeline the caller does
+    not control.
+  * **NOT ATTEMPTED THIS PASS.** The real fix touches `PathFinder.find()`'s signature (or adds
+    an overload) and threads the override values through `search()` down to at least two call
+    sites (`:500`, `:1078`, and possibly more not yet traced past that point) — a genuine,
+    moderate `PathFinder` API change to the mod's core physics search, called from
+    `FastNavigator`, `GotoCommand`, `PathExecutor`, `BlockPlaceHelper` and `TungstenHelper`
+    itself. I have no compiler and no live stand with a build in this session to verify a
+    change to the search engine everything else in the mod depends on, and a wrong change here
+    risks being worse than the leak it fixes. Left for whoever has both.
 - [~] **C7.6** Server-specific data hardcoded in Java source (`ButlerConfig` chat formats).
   ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01, И ЯРЧЕ, ЧЕМ ФОРМУЛИРОВКА ПРЕДПОЛАГАЕТ:
   `ButlerConfig.java:107-151` — массив `chatFormats` из 41 строки, шесть РЕАЛЬНЫХ доменов
