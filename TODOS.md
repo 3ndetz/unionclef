@@ -1,5 +1,45 @@
 # TODOs
 
+<!-- NAIVE-PROGRESS-RESET-ON-ISPATHING-WIDESPREAD-2026-09-04 -->
+## ⭐ THE STALL-DETECTOR-WIPE PATTERN IS WIDESPREAD, NOT JUST WANDER/DESTROYBLOCK (2026-09-04)
+
+Continuing the sweep of all `Nav.isPathing()` call sites (see the entry right below this one).
+Six more files do the SAME naive `if (Nav.isPathing()) { progressChecker.reset(); }` — no grace
+period, no "did the body actually move" check — as the pattern `TimeoutWanderTask` and
+`DestroyBlockTask` already recognized as a real, measured defect and fixed via
+`TungstenConfig.stallCheckNeedsMovement` + their own `_ticksSinceMoved`/`STALL_MOVE_GRACE`
+tracking (that fix's own words, from `TimeoutWanderTask`: *"a stall IS the state where Nav says
+it is pathing and the body does not move, so resetting on that condition wipes the detector
+exactly when it is needed. wanderFail=0 across 4406 ticks that covered 10.6 blocks is what that
+looks like from the outside."*).
+
+**Confirmed present, unfixed, in:** `PlaceObsidianBucketTask.java:112`,
+`CollectBucketLiquidTask.java:92`, `AbstractDoToEntityTask.java:90`,
+`ConstructNetherPortalBucketTask.java:138`, `PlaceBlockNearbyTask.java:89`. Each resets its own
+`progressChecker`/`progress` field unconditionally whenever `Nav.isPathing()` is true — including
+while it is true ONLY because a background search is computing and driving nothing — so on any
+of these tasks, a search that never resolves can keep the stall detector permanently un-tripped,
+identical in shape to the measured wander/DestroyBlock cases.
+
+⛔ CHECKED, NOT FIXED — deliberately, unlike the portal-escape sweep above it. That fix was a
+pure one-line substitution (`!Nav.isPathing()` → `!Nav.isExecutingRoute()`) with zero new state.
+This one is not: `stallCheckNeedsMovement`'s actual implementation lives ENTIRELY at each call
+site (`_ticksSinceMoved`/`_lastMoveTickPos`/`STALL_MOVE_GRACE`, duplicated near-verbatim in
+`TimeoutWanderTask` and `DestroyBlockTask` — itself a small "no duplicates" violation worth
+noting) rather than inside the shared `MovementProgressChecker` class itself (checked its full
+source: the ONE `stallCheckNeedsMovement` reference already there guards a completely different
+thing — whether a "block turned to air" reset is trusted, not whether `Nav.isPathing()` alone
+should trigger a reset). Copying five more near-duplicate tracking blocks by hand, without a
+compiler to catch a mistake in any of them, is worse than leaving the acknowledged gap named.
+
+**The right fix, for whoever has a build:** move the grace-period logic INTO
+`MovementProgressChecker` itself (a method like `checkAllowingPathingGrace(mod)`, or a
+constructor flag that makes `reset()` a no-op while `Nav.isExecutingRoute()` is false and the
+body hasn't moved for the grace window) so five-plus call sites share ONE implementation instead
+of each hand-rolling its own copy. That also retroactively de-duplicates `TimeoutWanderTask` and
+`DestroyBlockTask`'s existing copies, which is exactly the kind of core fix this project's own
+rules prefer over patching every call site separately.
+
 <!-- NETHER-PORTAL-ESCAPE-BLOCKED-BY-MERE-SEARCH-2026-09-04 -->
 ## ⭐⭐ SYSTEMATIC SWEEP FOR THE DROWNING-GUARD BUG CLASS FOUND SIX MORE INSTANCES (2026-09-04)
 
