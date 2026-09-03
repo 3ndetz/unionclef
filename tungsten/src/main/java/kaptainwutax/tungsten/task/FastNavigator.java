@@ -261,6 +261,19 @@ public final class FastNavigator {
             stallTicks = 0;
         } else if (++stallTicks > STALL_TICKS) {
             Debug.logWarning("FastNavigator: no progress, handing over");
+            // TODOS.md, live void-death repro 2026-09-03: this said "handing over" but did not —
+            // stop() (below) does not touch BlockPathWalker, so a BFS leg mid-walk when the stall
+            // fires keeps pressing movement keys with the navigator no longer watching at all.
+            // The ARRIVAL branch above this one (successful exit) already calls
+            // BlockPathWalker.stop() before stop() for exactly this reason; this failure exit is
+            // the same kind of "this route is done" moment and was missing the same line. Live
+            // reproduction: gotoXYZ 4.3 blocks away produced repeated trivial re-plans (no new leg
+            // ever armed), the stall fired, and the bot fell 46 blocks into the void within one
+            // more second and died -- consistent with an already-walking leg continuing unowned
+            // past a descending waypoint, which BlockPathWalker's own hole-refusal gate does not
+            // guard (walkerRefusesHoleOnLevelRun only covers level/ascending runs, by design, so
+            // nav_descend's intentional 3-block drops keep working).
+            BlockPathWalker.stop();
             stop();
             return;
         }

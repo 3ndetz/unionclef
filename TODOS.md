@@ -62,6 +62,37 @@ Reproduction is cheap and does not need a build: `gotoXYZ` any short target near
 `(30,-60,0)` on `uctest-server` and watch `pathStatus`'s `pos` for a Y that drops fast. Left the
 bot stopped (`stopPathing`, confirmed `ok:true`, "Stopped all tasks") and healthy (20/20 hp,
 `0.5,-60.0,0.5`) afterward.
+
+**Traced and fixed a real root cause after re-reading `docs/CHECKLIST.md` in full (Rule 1b: read
+before writing).** `FastNavigator.tick()`'s stall watchdog — the exact branch that printed
+"no progress, handing over" in this incident's log — calls the plain `stop()`, which resets the
+navigator's own fields and stops `MovementQueue`, but never stops `BlockPathWalker`. The SUCCESS
+exit two dozen lines above it (arrival) explicitly calls `BlockPathWalker.stop()` first, for a
+documented reason ("a queue left running past the navigator would keep pressing keys with nobody
+steering" — the same file's own words, applied to `MovementQueue` and, by the arrival branch's
+own code, to `BlockPathWalker` too). The FAILURE exit was missing the identical line. Once the
+navigator abandons a leg the walker is already mid-flight on, `BlockPathWalker`'s own
+descend-into-a-hole gate (`walkerRefusesHoleOnLevelRun`) does not apply — it deliberately only
+covers level/ascending waypoints, by design, so `nav_descend`'s planned 3-block drops keep
+working — so an unsupervised walk toward a descending waypoint has nothing left to stop it from
+walking off an actual ledge. Fixed: `BlockPathWalker.stop()` added to the stall-watchdog branch,
+mirroring the arrival branch exactly. `TungstenMod.stopNavigation()` (the dedicated "stop
+everything that can be steering the body" method, built after three earlier disagreeing teardown
+paths) was checked and deliberately NOT used here — it also stops `BridgeTask`/`PillarTask` and
+is the right tool for an EXTERNAL full-stop request, not for a targeted single-component fix
+inside `FastNavigator`'s own tick.
+⛔ CHECKLIST HARD BAN — NOT stand-verified, by construction: no build ran (can't, without the
+user asking), so this fix has not executed once. It is also NOT proven to be the mechanism
+behind THIS SPECIFIC incident — the chat log is consistent with it (a stall fired, then a fall
+followed within about a second) but I did not capture per-tick internal state during the actual
+8-second window, so this is the best-supported hypothesis from reading the code around the exact
+log line the incident produced, not a confirmed diagnosis. Needs: a build, a repeat of the same
+`gotoXYZ(35,-60,0)` from the same start, and confirmation the bot no longer falls — or, if it
+still falls, that this was not the whole mechanism and something else also needs fixing.
+`BlockPlaceHelper.stopWalking()` has the same asymmetry (comment says "the builder takes the
+body back" but never calls `BlockPathWalker.stop()` either) — NOT touched, no evidence it has
+ever caused a fall, out of scope for this pass.
+
 ## C8.1 status + a fresh live zero-progress reproduction (2026-09-03)
 
 The MCP workaround (`http://host.docker.internal:25350/mcp`, found 2026-09-01) is still live
