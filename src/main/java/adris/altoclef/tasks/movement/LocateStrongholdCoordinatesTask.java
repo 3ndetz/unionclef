@@ -133,14 +133,24 @@ public class LocateStrongholdCoordinatesTask extends Task {
 
 
                 _strongholdEstimatePos = calculateIntersection(throwOrigin, throwDelta, throwOrigin2, throwDelta2); // stronghold estimate
-                Debug.logMessage("Stronghold is at " + (int) _strongholdEstimatePos.getX() + ", " + (int) _strongholdEstimatePos.getZ() + " (" + (int) mod.getPlayer().getPos().distanceTo(Vec3d.of(_strongholdEstimatePos)) + " blocks away)");
+                // Horizontal, not 3D: the estimate's Y is a fake 0 (see calculateIntersection),
+                // so a 3D distance here would report the player's own altitude as if it were
+                // part of "how far away the stronghold is".
+                Debug.logMessage("Stronghold is at " + (int) _strongholdEstimatePos.getX() + ", " + (int) _strongholdEstimatePos.getZ() + " (" + (int) WorldHelper.distanceXZ(mod.getPlayer().getPos(), Vec3d.of(_strongholdEstimatePos)) + " blocks away)");
             }
         }
 
 
         // Re-throw the eyes after reaching the estimation to get a more accurate estimate of where the stronghold is.
         if (_strongholdEstimatePos != null) {
-            if (((mod.getPlayer().getPos().distanceTo(Vec3d.of(_strongholdEstimatePos)) < EYE_RETHROW_DISTANCE) && WorldHelper.getCurrentDimension() == Dimension.OVERWORLD)) {
+            // TODOS.md: calculateIntersection() only ever solves for X/Z (see its own Y=0
+            // placeholder below) -- eye-of-ender triangulation has no vertical component at
+            // all -- so "are we close enough to this estimate to bother refining it" is a
+            // horizontal-only question. A 3D distanceTo() mixed the player's real altitude
+            // against that fake 0 and could keep this from tripping for as long as the bot
+            // stayed anywhere near the surface, regardless of how close it already was
+            // horizontally.
+            if ((WorldHelper.inRangeXZ(mod.getPlayer().getPos(), Vec3d.of(_strongholdEstimatePos), EYE_RETHROW_DISTANCE) && WorldHelper.getCurrentDimension() == Dimension.OVERWORLD)) {
                 _strongholdEstimatePos = null;
                 _cachedEyeDirection = null;
                 _cachedEyeDirection2 = null;

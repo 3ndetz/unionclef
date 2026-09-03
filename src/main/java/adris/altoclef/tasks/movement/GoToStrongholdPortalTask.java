@@ -51,7 +51,17 @@ public class GoToStrongholdPortalTask extends Task {
             }
         }
 
-        if (mod.getPlayer().getPos().distanceTo(WorldHelper.toVec3d(_strongholdCoordinates)) < 10 && !mod.getBlockScanner().anyFound(Blocks.END_PORTAL_FRAME)) {
+        // TODOS.md: _strongholdCoordinates' Y is a fake placeholder (0) --
+        // LocateStrongholdCoordinatesTask.calculateIntersection() only ever solves the XZ
+        // intersection of two eye-of-ender bearings, which is inherently a horizontal-only
+        // question. A full 3D distanceTo() here mixes the player's REAL altitude against that
+        // fake Y, so while the bot is anywhere near the surface (nearly always, until it has
+        // already dug most of the way down) the |realY - 0| term dominates and this "did
+        // triangulation go wrong" check can never trip, however far off the horizontal estimate
+        // actually is -- matching the original TODO's own complaint ("gets stuck near the
+        // stronghold and keeps 'Searching'"). Horizontal-only, matching what the estimate can
+        // actually claim to know.
+        if (WorldHelper.inRangeXZ(mod.getPlayer().getPos(), WorldHelper.toVec3d(_strongholdCoordinates), 10) && !mod.getBlockScanner().anyFound(Blocks.END_PORTAL_FRAME)) {
             mod.log("Something went wrong whilst triangulating the stronghold... either the action got disrupted or the second eye went to a different stronghold");
             mod.log("We will try to triangulate again now...");
             _strongholdCoordinates = null;
