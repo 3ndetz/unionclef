@@ -39,6 +39,7 @@ public class McpServer {
     private static final String PROTOCOL_VERSION = "2024-11-05";
 
     private final Py4jEntryPoint api;
+    private final String authToken;
     private final List<Tool> tools = new ArrayList<>();
     private HttpServer http;
 
@@ -51,8 +52,17 @@ public class McpServer {
         }
     }
 
-    public McpServer(Py4jEntryPoint api) {
+    /**
+     * @param authToken required as "Authorization: Bearer &lt;authToken&gt;" on every request
+     *                  (TODOS.md C7.3 — this server binds 0.0.0.0 with no other access control).
+     *                  Must be non-empty: an empty token would accept every request unchecked.
+     */
+    public McpServer(Py4jEntryPoint api, String authToken) {
+        if (authToken == null || authToken.isEmpty()) {
+            throw new IllegalArgumentException("McpServer requires a non-empty authToken");
+        }
         this.api = api;
+        this.authToken = authToken;
         registerTools();
     }
 
@@ -77,6 +87,7 @@ public class McpServer {
             ex.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
             String method = ex.getRequestMethod();
             if ("OPTIONS".equals(method)) { ex.sendResponseHeaders(204, -1); return; }
+            if (!isAuthorized(ex)) { ex.sendResponseHeaders(401, -1); return; }
             if ("GET".equals(method)) { ex.sendResponseHeaders(405, -1); return; } // no server->client push
             if (!"POST".equals(method)) { ex.sendResponseHeaders(405, -1); return; }
 
@@ -105,6 +116,16 @@ public class McpServer {
         } finally {
             ex.close();
         }
+    }
+
+    private boolean isAuthorized(HttpExchange ex) {
+        String header = ex.getRequestHeaders().getFirst("Authorization");
+        if (header == null || !header.startsWith("Bearer ")) return false;
+        String presented = header.substring("Bearer ".length());
+        // Constant-time compare -- this is a bearer secret over an unencrypted LAN socket,
+        // no reason to leak how many leading characters matched via response timing.
+        return java.security.MessageDigest.isEqual(
+                presented.getBytes(StandardCharsets.UTF_8), authToken.getBytes(StandardCharsets.UTF_8));
     }
 
     // ---- JSON-RPC ----

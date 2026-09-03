@@ -622,6 +622,15 @@ public class Settings implements IFailableConfigFile {
      */
     private boolean mcpEnabled = true;
     private int mcpPort = 25350;
+    /**
+     * TODOS.md C7.3: the MCP server binds 0.0.0.0 with no authentication and wildcard CORS —
+     * anyone on the LAN could send commands. Empty means "not generated yet"; AltoClef
+     * generates a random token on first MCP start and saves it here, then requires it as
+     * "Authorization: Bearer &lt;token&gt;" on every request. Read it from this settings file
+     * (or the startup log) to configure an MCP client. Clearing this field forces a fresh
+     * token to be generated on the next start.
+     */
+    private String mcpAuthToken = "";
 
     public boolean isMcpEnabled() {
         return mcpEnabled;
@@ -633,6 +642,14 @@ public class Settings implements IFailableConfigFile {
 
     public void setMcpPort(int port) {
         this.mcpPort = port;
+    }
+
+    public String getMcpAuthToken() {
+        return mcpAuthToken;
+    }
+
+    public void setMcpAuthToken(String token) {
+        this.mcpAuthToken = token;
     }
 
     /**

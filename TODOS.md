@@ -10527,7 +10527,7 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   релиза) — значит «на момент этой проверки все допущения этой сессии о „shipped defaults“ в
   `docs/features/TUNGSTEN_CONFIG.md` и по всему `TODOS.md` подтверждены живым стендом, а не
   только чтением исходника».
-- [ ] **C7.3 MCP server binds `0.0.0.0` with NO authentication and wildcard CORS, enabled by default.**
+- [x] **C7.3 MCP server binds `0.0.0.0` with NO authentication and wildcard CORS, enabled by default.**
   ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01, все три части: `McpServer.java:60` —
   `HttpServer.create(new InetSocketAddress("0.0.0.0", port), 0)`; `:75-77` — заголовки
   `Access-Control-Allow-Origin: *` / `-Headers: *` / `-Methods: POST, GET, OPTIONS` на КАЖДЫЙ
@@ -10535,6 +10535,21 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   auth/token/password — пусто); `Settings.java:623` — `private boolean mcpEnabled = true;`,
   `AltoClef.java:196,211,219` запускает его безусловно при старте с логом «MCP server started
   on 0.0.0.0:<port>». Любой в той же LAN может слать команды боту без единого секрета. Открыто.
+  ЗАКРЫТО 2026-09-03: added a required bearer token, NOT a bind-address change — 0.0.0.0 stays,
+  because this exact server is the one this session itself reaches via `host.docker.internal`
+  from a separate container (see `persona`/session notes on C8.1), so localhost-only would have
+  broken the one channel actually in use. `Settings.mcpAuthToken` is minted with
+  `UUID.randomUUID()` on first start (empty means "not generated yet") and persisted the same
+  way as the py4j port-conflict rebind a few lines above it in `AltoClef.startMcpServer()`.
+  `McpServer.handle()` now rejects (401, before touching the body) any request without a
+  matching `Authorization: Bearer <token>` header, compared with `MessageDigest.isEqual` to
+  avoid a timing side-channel; the constructor refuses to run with an empty token so the check
+  can never be silently disabled by a blank field. `OPTIONS` preflight is exempt (carries no
+  data, and a browser needs it answered before it will even attempt the real request). Wildcard
+  CORS is left as-is: it governs whether a browser lets JS *read* a cross-origin response, not
+  whether the request is sent, so once a real secret is required it stops being the exploitable
+  half of this finding. Documented in `docs/features/AGENT_PY4J_LEVERS.md` (where to find the
+  token, what a bad one returns).
 - [ ] **C7.4** `gotoXYZ`/`gotoFar`/`stopPathing` — the primary agent movement levers — are routed
   through the **human chat anti-spam rate limiter**.
   ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01. Все три (`Py4jEntryPoint.java:4136,4153,4381`)

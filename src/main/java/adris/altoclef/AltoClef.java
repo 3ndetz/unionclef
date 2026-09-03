@@ -213,10 +213,21 @@ public class AltoClef implements ModInitializer {
     private void startMcpServer() {
         if (!getModSettings().isMcpEnabled() || _mcpServer != null || _py4jEntryPoint == null) return;
         try {
-            _mcpServer = new adris.altoclef.mcp.McpServer(_py4jEntryPoint);
+            String token = getModSettings().getMcpAuthToken();
+            if (token == null || token.isEmpty()) {
+                // TODOS.md C7.3: first start on this machine (or the token was cleared) —
+                // mint one and persist it so it survives restarts, the same pattern used
+                // a few lines up for a re-bound py4j port.
+                token = java.util.UUID.randomUUID().toString();
+                getModSettings().setMcpAuthToken(token);
+                ConfigHelper.saveConfig(adris.altoclef.Settings.SETTINGS_PATH, getModSettings());
+            }
+            _mcpServer = new adris.altoclef.mcp.McpServer(_py4jEntryPoint, token);
             int mport = getModSettings().getMcpPort();
             _mcpServer.start(mport);
-            Debug.logMessage("MCP server started on 0.0.0.0:" + mport + " (http://<lan-ip>:" + mport + "/mcp)");
+            Debug.logMessage("MCP server started on 0.0.0.0:" + mport + " (http://<lan-ip>:" + mport
+                    + "/mcp) — auth token in " + adris.altoclef.Settings.SETTINGS_PATH
+                    + " (mcpAuthToken), required as 'Authorization: Bearer <token>'");
         } catch (Exception e) {
             Debug.logWarning("MCP server failed to start: " + e.getMessage());
             _mcpServer = null;

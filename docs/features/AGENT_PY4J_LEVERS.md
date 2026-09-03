@@ -15,6 +15,12 @@
 Settings.mcpPort). MCP оборачивает ровно эти методы (single source), так что
 Клод рулит по LAN напрямую. Ниже — сами рычаги (имена совпадают с MCP-tools).
 
+**Auth (TODOS.md C7.3, fixed 2026-09-03):** every MCP request needs
+`Authorization: Bearer <token>`. The token is generated once on first start and saved to
+`altoclef_settings.json` under `mcpAuthToken` — read it from there (or the "MCP server
+started..." startup log line) to configure a client. A request with a missing or wrong
+token gets a plain 401, no other response content.
+
 ## Восприятие (что происходит)
 
 | Рычаг | Что даёт | Когда |
