@@ -21,24 +21,32 @@ while it is true ONLY because a background search is computing and driving nothi
 of these tasks, a search that never resolves can keep the stall detector permanently un-tripped,
 identical in shape to the measured wander/DestroyBlock cases.
 
-⛔ CHECKED, NOT FIXED — deliberately, unlike the portal-escape sweep above it. That fix was a
-pure one-line substitution (`!Nav.isPathing()` → `!Nav.isExecutingRoute()`) with zero new state.
-This one is not: `stallCheckNeedsMovement`'s actual implementation lives ENTIRELY at each call
-site (`_ticksSinceMoved`/`_lastMoveTickPos`/`STALL_MOVE_GRACE`, duplicated near-verbatim in
-`TimeoutWanderTask` and `DestroyBlockTask` — itself a small "no duplicates" violation worth
-noting) rather than inside the shared `MovementProgressChecker` class itself (checked its full
-source: the ONE `stallCheckNeedsMovement` reference already there guards a completely different
-thing — whether a "block turned to air" reset is trusted, not whether `Nav.isPathing()` alone
-should trigger a reset). Copying five more near-duplicate tracking blocks by hand, without a
-compiler to catch a mistake in any of them, is worse than leaving the acknowledged gap named.
+⛔ INITIALLY CHECKED, NOT FIXED, in the round this was found — see the superseded reasoning
+above, kept because it correctly named why a blind five-file copy-paste would have been worse
+than nothing. Reconsidered the same round: centralizing was not actually "copy five more
+near-duplicate tracking blocks", it was "write the tracking ONCE, in the shared class, as a pure
+ADDITION that touches no existing method" — meaningfully lower risk than duplicating it five
+times by hand, and it was the identified right answer anyway.
 
-**The right fix, for whoever has a build:** move the grace-period logic INTO
-`MovementProgressChecker` itself (a method like `checkAllowingPathingGrace(mod)`, or a
-constructor flag that makes `reset()` a no-op while `Nav.isExecutingRoute()` is false and the
-body hasn't moved for the grace window) so five-plus call sites share ONE implementation instead
-of each hand-rolling its own copy. That also retroactively de-duplicates `TimeoutWanderTask` and
-`DestroyBlockTask`'s existing copies, which is exactly the kind of core fix this project's own
-rules prefer over patching every call site separately.
+⭐ FIXED 2026-09-04: added `MovementProgressChecker.resetIfPathingWithGrace(AltoClef mod, boolean
+isPathing)` — the exact `_ticksSinceMoved`/`_lastMoveTickPos`/`STALL_MOVE_GRACE` logic from
+`TimeoutWanderTask`/`DestroyBlockTask` (verified byte-for-byte identical constants in both, 40
+ticks / 0.0004 squared-distance, before centralizing), now living inside the shared class as new
+private fields and one new public method — `check()`/`reset()` and every existing caller of them
+are UNTOUCHED, so nothing that already worked can have changed. All five call sites named above
+now call `progressChecker.resetIfPathingWithGrace(mod, Nav.isPathing())` instead of the naive
+`if (Nav.isPathing()) { progressChecker.reset(); }`. Deliberately did NOT touch
+`TimeoutWanderTask`/`DestroyBlockTask` themselves to migrate them onto the new shared method —
+they already work, correctly, and migrating a proven call site for the sake of de-duplication
+alone is exactly the kind of unforced risk to avoid without a stand to catch a mistake. The
+duplication between their own tracking and the new shared copy is now cosmetic debt, not a
+behavior gap — a real cleanup for whenever a build is available, not urgent.
+⛔ CHECKLIST HARD BAN — not stand-verified, no build ran. The new method is additive (no existing
+signature changed) and the five call sites are one-line-for-one-line-block substitutions, which
+keeps the per-site risk low, but five call sites plus one new shared method is more surface than
+any single fix earlier in this file. Needs a build and a live run of at least one of the five
+tasks (obsidian generator, bucket collection, or the entity-pursuit base class) to confirm the
+grace period does not misfire.
 
 <!-- NETHER-PORTAL-ESCAPE-BLOCKED-BY-MERE-SEARCH-2026-09-04 -->
 ## ⭐⭐ SYSTEMATIC SWEEP FOR THE DROWNING-GUARD BUG CLASS FOUND SIX MORE INSTANCES (2026-09-04)

@@ -87,4 +87,49 @@ public class MovementProgressChecker {
         mineChecker.reset();
     }
 
+    /**
+     * How long the body may be still before a "we are pathing" claim stops counting as
+     * progress. Same threshold {@code TimeoutWanderTask}/{@code DestroyBlockTask} already use
+     * for this exact purpose, duplicated verbatim in both before {@link
+     * #resetIfPathingWithGrace} centralized it here.
+     */
+    private static final int STALL_MOVE_GRACE = 40;
+    private int ticksSinceMoved = 0;
+    private Vec3d lastMoveTickPos = null;
+
+    /**
+     * Reset this checker when {@code isPathing} is true -- UNLESS the body has been still for
+     * {@link #STALL_MOVE_GRACE} ticks, in which case a stall this checker exists to catch is
+     * already under way, and resetting now would hide it.
+     *
+     * <p>TODOS.md, the wander/DestroyBlock finding this generalizes: "a stall IS the state
+     * where Nav says it is pathing and the body does not move, so resetting on that condition
+     * wipes the detector exactly when it is needed. wanderFail=0 across 4406 ticks that covered
+     * 10.6 blocks is what that looks like from the outside." A background search alone makes
+     * {@code Nav.isPathing()} true without driving the body at all, so a caller that resets on
+     * that condition unconditionally can never see a stall for as long as the search keeps
+     * running. Gated on {@code TungstenConfig.stallCheckNeedsMovement} so a caller that has not
+     * opted in (or the flag is off) keeps exactly its old, unconditional-reset behaviour.
+     *
+     * @param mod       current AltoClef instance, to read the player's position.
+     * @param isPathing {@code Nav.isPathing()} (or the equivalent) at the call site.
+     */
+    public void resetIfPathingWithGrace(AltoClef mod, boolean isPathing) {
+        var self = mod.getPlayer();
+        if (self != null) {
+            Vec3d pos = self.getPos();
+            if (lastMoveTickPos != null && pos.squaredDistanceTo(lastMoveTickPos) > 0.0004) {
+                ticksSinceMoved = 0;
+            } else {
+                ticksSinceMoved++;
+            }
+            lastMoveTickPos = pos;
+        }
+        if (isPathing
+                && (!kaptainwutax.tungsten.TungstenConfig.get().stallCheckNeedsMovement
+                    || ticksSinceMoved < STALL_MOVE_GRACE)) {
+            reset();
+        }
+    }
+
 }

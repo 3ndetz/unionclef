@@ -89,9 +89,10 @@ public class CollectBucketLiquidTask extends ResourceTask {
 
     @Override
     protected Task onResourceTick(AltoClef mod) {
-        if (Nav.isPathing()) {
-            progressChecker.reset();
-        }
+        // TODOS.md, the stall-detector-wipe pattern already fixed in TimeoutWanderTask/
+        // DestroyBlockTask: a mere search makes Nav.isPathing() true too, so resetting
+        // unconditionally could hide a genuine stall for as long as a search never resolves.
+        progressChecker.resetIfPathingWithGrace(mod, Nav.isPathing());
         // If we're standing inside a liquid, go pick it up.
         if (tryImmediatePickupTimer.elapsed() && !mod.getItemStorage().hasItem(Items.WATER_BUCKET)) {
             Block standingInside = mod.getWorld().getBlockState(mod.getPlayer().getBlockPos()).getBlock();

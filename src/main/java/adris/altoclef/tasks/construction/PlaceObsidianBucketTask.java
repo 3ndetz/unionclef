@@ -108,10 +108,11 @@ public class PlaceObsidianBucketTask extends Task {
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
-        // Reset progress if pathing
-        if (Nav.isPathing()) {
-            _progressChecker.reset();
-        }
+        // Reset progress if pathing -- TODOS.md, the stall-detector-wipe pattern already fixed
+        // in TimeoutWanderTask/DestroyBlockTask: a mere search makes Nav.isPathing() true too,
+        // so resetting unconditionally could hide a genuine stall for as long as a search never
+        // resolves. resetIfPathingWithGrace only resets while the body has moved recently.
+        _progressChecker.resetIfPathingWithGrace(mod, Nav.isPathing());
 
         // Clear leftover water
         if (mod.getBlockScanner().isBlockAtPosition(_pos, Blocks.OBSIDIAN) && mod.getBlockScanner().isBlockAtPosition(_pos.up(), Blocks.WATER)) {

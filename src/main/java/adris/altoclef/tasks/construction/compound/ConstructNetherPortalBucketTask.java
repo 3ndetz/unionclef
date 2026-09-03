@@ -135,9 +135,10 @@ public class ConstructNetherPortalBucketTask extends Task {
                 return null;
             }
         }
-        if (Nav.isPathing()) {
-            progressChecker.reset();
-        }
+        // TODOS.md, the stall-detector-wipe pattern already fixed in TimeoutWanderTask/
+        // DestroyBlockTask: a mere search makes Nav.isPathing() true too, so resetting
+        // unconditionally could hide a genuine stall for as long as a search never resolves.
+        progressChecker.resetIfPathingWithGrace(mod, Nav.isPathing());
         if (wanderTask.isActive() && !wanderTask.isFinished()) {
             setDebugState("Trying again.");
             progressChecker.reset();

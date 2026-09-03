@@ -87,9 +87,10 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
-        if (Nav.isPathing()) {
-            progress.reset();
-        }
+        // TODOS.md, the stall-detector-wipe pattern already fixed in TimeoutWanderTask/
+        // DestroyBlockTask: a mere search makes Nav.isPathing() true too, so resetting
+        // unconditionally could hide a genuine stall for as long as a search never resolves.
+        progress.resetIfPathingWithGrace(mod, Nav.isPathing());
 
         Optional<Entity> checkEntity = getEntityTarget(mod);
 

@@ -86,9 +86,10 @@ public class PlaceBlockNearbyTask extends Task {
     protected Task onTick() {
         AltoClef mod = AltoClef.getInstance();
 
-        if (Nav.isPathing()) {
-            progressChecker.reset();
-        }
+        // TODOS.md, the stall-detector-wipe pattern already fixed in TimeoutWanderTask/
+        // DestroyBlockTask: a mere search makes Nav.isPathing() true too, so resetting
+        // unconditionally could hide a genuine stall for as long as a search never resolves.
+        progressChecker.resetIfPathingWithGrace(mod, Nav.isPathing());
         // Method:
         // - If looking at placable block
         //      Place immediately
