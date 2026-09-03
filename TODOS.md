@@ -10653,12 +10653,54 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   шесть раз, ноль ударов, дистанция уезжает С 5.14 ДО 6.21 — то есть бот сам себя выталкивал из
   боя вплотную к цели. Не закрываю до конца: сценарий «противник кайтит ровно на границе REACH»
   теоретически всё ещё может дать похожий цикл, это не проверялось отдельно.
-- [ ] **C6.11** (ГИГИЕНА РЕГИСТРА 2026-09-01: было ПОВТОРНО помечено C6.10, тем же номером, что
+- [~] **C6.11** (ГИГИЕНА РЕГИСТРА 2026-09-01: было ПОВТОРНО помечено C6.10, тем же номером, что
   запись выше про две вещи, которые PvP-набор не может решить — перенумеровано в C6.11, чтобы
   поиск по ID не находил не тот пункт.) `WindMouse` accumulates pixel deltas while any `Screen`
   is open (incl. chat) and dumps
   the whole pile in one frame when it closes. `KnockbackEstimator`'s enchantment read is a permanent
   zero and `simulateKnockback` has no terrain collision.
+  ПРОВЕРЕНО ПО КОДУ 2026-09-03, все три части читаны заново — один фикс, один подтверждён и
+  оставлен, один опровергнут:
+  1. **WindMouse-накопление подтверждено и ПОЧИНЕНО.** `MixinInGameHud.java:28` calls
+     `applyRenderStep` unconditionally every render frame; `MixinMouse.java:26`
+     (`if (... this.client.currentScreen != null) return;`) refuses to drain the buffer while a
+     screen is open and does NOT reset it either — so `pendingPixelDX/DY` grew without bound for
+     as long as any screen (chat, inventory, pause) stayed open and landed in a single frame the
+     moment it closed, a camera snap. Fixed by mirroring the consumer's own guard onto the
+     producer: `WindMouseRotation.applyRenderStep` now early-returns when
+     `MinecraftClient.getInstance().currentScreen != null`, before any accumulation happens.
+     `lastStepMs` is deliberately left unadvanced by the early return, so the resuming frame sees
+     one (possibly large) `frameMs` — already handled by the existing `MAX_CATCHUP` clamp, the
+     same mechanism that already covers an ordinary hitch.
+  2. **KnockbackEstimator enchantment read confirmed a permanent zero, NOT fixed.**
+     `KnockbackEstimator.java:56`: `kbLevel = lastKBEnchantLevel; // keep last known` — a
+     self-assignment against a field that starts at 0 and is never written from anywhere else,
+     with the file's own `// TODO: proper enchantment read when API is clear for 1.21` sitting
+     right above it. `EnchantmentHelper` is imported (`:3`) and never referenced anywhere in the
+     class body. NOT fixed this pass: 1.21's enchantment API is data-component-based
+     (`RegistryEntry<Enchantment>` resolved through a registry, not a plain enum constant), and I
+     have no compiler or local Minecraft/Yarn jar available in this session to confirm the exact
+     method signature before committing Java that calls it — writing speculative API calls I
+     cannot verify compile is worse than leaving the acknowledged TODO in place. Whoever has a
+     build available: the shape needed is roughly
+     `EnchantmentHelper.getLevel(registryEntryFor(Enchantments.KNOCKBACK), held)` against the
+     stack's actual registry manager, not a cached field.
+  3. **"simulateKnockback has no terrain collision" is REFUTED — it has real, measured landing
+     logic.** `SafetySystem.java:866-876`: a `kbLandsOnSurface`-gated check that snaps the
+     simulated body back to its start height once it returns there with solid ground under it
+     (`VoidDetector.fallHeight(...) <= 1`), plus an unconditional break on any downward tick once
+     the body is within one block of a surface. The surrounding comment names two measured
+     regressions from removing this caution entirely (deaths 16→23 and 15→19) and explains
+     exactly why a naive "stop when near the ground" reading defeats itself at a real ledge
+     (fall height there is the scan maximum by construction, so the loop correctly runs its full
+     budget exactly where it should). This half of the finding no longer describes the code and
+     should not be carried forward as still-open.
+  ⛔ CHECKLIST HARD BAN — item 1's fix is code-verified only, no build ran (STRICT rule: not
+  without the user asking). Left `[~]` rather than `[x]` for exactly that reason: a real run
+  still owes this a check that aim no longer snaps after closing chat mid-fight, and that the
+  `currentScreen` guard does not itself introduce a new stall (e.g. a target held during a brief
+  menu open that then jumps on resume rather than snapping — `MAX_CATCHUP` should prevent this
+  but "should" is not a stand run).
 
 ### C7 — INTEGRATION / OPS
 - [~] **C7.1 `UnstuckChain` preempts and tears down tungsten follow/punk and throws the aim to a random

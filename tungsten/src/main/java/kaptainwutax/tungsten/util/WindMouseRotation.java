@@ -125,6 +125,17 @@ public class WindMouseRotation {
     public void applyRenderStep(ClientPlayerEntity player) {
         if (!hasTarget || player == null) return;
 
+        // TODOS.md C6.11: this accumulated pixel deltas every frame regardless of screen state,
+        // while MixinMouse's own injection point refuses to drain the buffer while ANY Screen is
+        // open (chat, inventory, pause) -- it early-returns WITHOUT calling
+        // consumeRawPixelDeltas(), so nothing resets it either. The backlog built unboundedly for
+        // as long as the screen stayed open and landed in a single frame the instant it closed:
+        // a camera snap. Mirror the consumer's guard here so nothing is queued that cannot be
+        // applied yet. lastStepMs is deliberately left unadvanced by this early return -- the
+        // resuming frame sees one large frameMs, which the existing MAX_CATCHUP clamp below
+        // already handles the same way it handles an ordinary hitch.
+        if (MinecraftClient.getInstance().currentScreen != null) return;
+
         // Auto-release a stale target: an active consumer refreshes setTarget every
         // game tick, so anything older than STALE_MS means the driving task is gone.
         // Releasing here is the #29 root fix — a frozen aim can never persist.
