@@ -1,6 +1,46 @@
 # TODOs
 
-<!-- ISSUE-25-CRAFT-CAROUSEL-MECHANISM-NAMED-2026-09-03 -->
+<!-- LIVE-STAND-RECONNECT-AND-GOTOXYZ-STALL-2026-09-03 -->
+## C8.1 status + a fresh live zero-progress reproduction (2026-09-03)
+
+The MCP workaround (`http://host.docker.internal:25350/mcp`, found 2026-09-01) is still live
+and reachable this round. Two things worth recording:
+
+**`uctest-gamer-server` (the dedicated `@gamer`/beat-the-game world) does not appear to be up.**
+`ConnectToServer("uctest-gamer-server")` returned `ok:true` (command accepted) but `inGame`
+stayed `false` for 15+ seconds, and the chat log only ever showed
+"Starting DISCONNECT CHAIN >> server:uctest-gamer-server" — no evidence the connection ever
+completed. `deploy/compose.test.yml:51-54` gates it behind `profiles: [gamer]`, not started by
+a plain `docker compose up -d`; nobody with docker access has (or can, from in here — C8.1) run
+`--profile gamer up -d` this round. `uctest-server` (the flat/peaceful nav-benchmark world,
+no profile gate) IS up and reachable — reconnected the bot there without issue.
+
+**A genuinely fresh live reproduction of the wander/search-stall pattern**, this time via the
+direct `gotoXYZ` lever rather than `TimeoutWanderTask`: from `(30.3,-60.0,0.9)`, issued
+`gotoXYZ(50,-60,0)` (20.2 blocks away, flat world at Y=-60 — near the void floor, so likely
+inside one of the engineered nav-course structures rather than open terrain; NOT a controlled
+benchmark run, just wherever the bot happened to be sitting). Polled `pathStatus` every 5s for
+30s: `distance` stayed at exactly `20.2` and `pos` never moved from the start point once, while
+`busy` stayed `true` throughout. Chat log for the same window: the block-space search hit
+"Ran out of nodes (children generated=5468 inserted=5468)" then "Failed! No block path", fell
+back to "FastPlanner: 670 nodes, 3 wp, partial" (climb=6784 candidates — heavily
+climbing-shaped terrain), handed off via "FastNavigator: physics owns the jump", and then
+went straight back to "Searchin..." — i.e. search fails, hands to physics, physics makes zero
+net progress, search restarts, on a loop, with `busy=true` claiming activity the whole time.
+`canReach` on the same target returned only `{"busy":"true"}` rather than its normal
+reached/pathSize shape — its own internal search call was blocked by tungsten's 30s lock
+already held by the stuck `gotoXYZ`, consistent with `TungstenHelper.tryPathTo`'s documented
+locking (see this session's earlier reading of that file).
+
+This is not a new mechanism — it is the SAME symptom class already extensively investigated
+this session under C10.1 (`TimeoutWanderTask` producing zero net movement while reporting
+busy, the `Nav.isPathing()` vs `Nav.isExecutingRoute()` distinction) and the WorldSurvivalChain
+drowning-guard fix, just caught live on the direct MCP `gotoXYZ` path instead of the wander
+task. Stopped cleanly with `stopPathing` (`ok:true`), bot confirmed healthy and idle
+afterward (hp 20/20, onGround). Not fixed this round — a proper fix needs to trace WHY the
+physics handoff after a partial/failed search makes no progress at all here, which is a live
+debugging session on its own, not something to guess at from a chat log. Recorded as fresh,
+reproducible evidence for whoever takes that investigation next.
 ## ⭐ ОТКРЫТЫЙ GITHUB ISSUE #25 (2x2-СЕТКА) СВЯЗАН С КОНКРЕТНЫМ, УЖЕ ИЗМЕРЕННЫМ МЕХАНИЗМОМ (2026-09-03)
 
 Issue #25 (открыт, «The bot struggles to craft items using the 2x2 inventory grid... though
