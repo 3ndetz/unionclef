@@ -1,5 +1,35 @@
 # TODOs
 
+<!-- COMBATCONTROLLER-KITE-LEFT-RIGHT-SWAPPED-2026-09-04 -->
+## Fixed: `CombatController.kite()` had left/right swapped — the wounded-bot ledge-safety check (2026-09-04)
+
+Reading `combat/CombatController.java` (1441 lines — extremely mature, measurement-driven file;
+most of it is tuned constants backed by documented A/B tests and correctly not worth touching
+without a stand). `dirSafe(player, world, fwd, strafe)`'s own javadoc: `@param strafe +1 left,
+-1 right ... (MC convention: sideways +1 = LEFT)`. This file already uses that convention
+correctly elsewhere — `out.left = canStrafe && ... && strafeDir > 0;` /
+`out.right = ... && strafeDir < 0;` (the circle-strafe logic, `strafeDir` documented as `+1 =
+left, -1 = right` at its own declaration).
+
+`kite()` — the sidestep fallback when a wounded bot (health-triggered retreat, `LOW_HP`/
+`KITE_DISTANCE`) can't back straight away from its target — had it backwards:
+
+```java
+out.left = dirSafe(player, world, 0, -1);              // tests RIGHT, assigns to LEFT
+out.right = !out.left && dirSafe(player, world, 0, 1);  // tests LEFT, assigns to RIGHT
+```
+
+This is the one branch in the whole file built specifically to keep a low-health bot off a
+ledge when it can't retreat straight back. With the swap, it could verify RIGHT is clear of a
+drop and then press LEFT (never tested), or vice versa — exactly the failure mode this file's
+`VoidGuard`/`dirSafe`/edge-detection machinery exists everywhere else to prevent. FIXED: swapped
+the two `dirSafe` calls to match the documented convention and this file's own correct usage
+elsewhere.
+
+Not stand-verified (C8.1, no build this session) — but this is a clean, provable argument-order
+bug (confirmed by the method's own javadoc and by cross-referencing this same file's own correct
+usage of the identical convention a few dozen lines away), not a tuning judgment call.
+
 <!-- MOVEMENTHELPER-NEOPOSSIBLE-ASYMMETRY-OPEN-2026-09-04 -->
 ## OPEN QUESTION (found, not fixed): `isNeoPossible`'s X-axis and Z-axis branches disagree on missing-floor handling (2026-09-04)
 
