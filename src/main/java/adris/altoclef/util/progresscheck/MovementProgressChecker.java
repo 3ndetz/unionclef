@@ -118,12 +118,22 @@ public class MovementProgressChecker {
         var self = mod.getPlayer();
         if (self != null) {
             Vec3d pos = self.getPos();
-            if (lastMoveTickPos != null && pos.squaredDistanceTo(lastMoveTickPos) > 0.0004) {
+            // ⛔ SELF-CAUGHT ON RE-AUDIT: this used to write `lastMoveTickPos = pos`
+            // unconditionally, every call -- comparing each tick only against the ONE
+            // immediately before it, rather than TimeoutWanderTask/DestroyBlockTask's original
+            // fixed anchor (only replaced once real movement is detected, or on the first call).
+            // Slow-but-genuine drift just under the 0.0004 threshold on any SINGLE tick would
+            // then never accumulate into a detected move, however far the body travels over many
+            // ticks -- the opposite of what the grace period is for. Only replace the anchor when
+            // it actually moves (or is unset), matching the original exactly.
+            if (lastMoveTickPos == null) {
+                lastMoveTickPos = pos;
+            } else if (pos.squaredDistanceTo(lastMoveTickPos) > 0.0004) {
                 ticksSinceMoved = 0;
+                lastMoveTickPos = pos;
             } else {
                 ticksSinceMoved++;
             }
-            lastMoveTickPos = pos;
         }
         if (isPathing
                 && (!kaptainwutax.tungsten.TungstenConfig.get().stallCheckNeedsMovement

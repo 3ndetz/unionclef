@@ -1,5 +1,37 @@
 # TODOs
 
+<!-- SELF-AUDIT-CAUGHT-BUG-IN-OWN-FIX-2026-09-04 -->
+## ⛔ SELF-CAUGHT: my own `resetIfPathingWithGrace` had a real bug, fixed same round (2026-09-04)
+
+With discovery via TODO-scanning and full-file reads showing diminishing returns this round,
+switched to re-reading this session's own highest-surface-area fixes for mistakes rather than
+trusting them unexamined. Found one, in `MovementProgressChecker.resetIfPathingWithGrace`
+(added earlier today, see the stall-detector centralization entry below): it wrote
+`lastMoveTickPos = pos` UNCONDITIONALLY on every call, so each tick was compared only against
+the ONE immediately before it — not `TimeoutWanderTask`/`DestroyBlockTask`'s original fixed
+anchor, which is only replaced once real movement is actually detected (or on the very first
+call). Consequence: slow-but-genuine cumulative drift, just under the 0.0004 squared-distance
+threshold on any SINGLE tick, would NEVER accumulate into a detected move however far the body
+actually travelled over many ticks — exactly backwards from what the grace period exists to do,
+and a real risk of denying a legitimate reset (mis-reading slow real progress as a stall) on
+whichever of the five newly-migrated call sites happens to involve genuinely slow, incremental
+movement.
+
+FIXED in the same file, same round: the anchor now only moves when it is unset or a real jump is
+detected, matching the original exactly (traced line-for-line against both `TimeoutWanderTask`
+and `DestroyBlockTask`'s copies to confirm). One remaining, deliberately-accepted cosmetic
+divergence: on the very first call ever made to a checker instance, the original increments
+`ticksSinceMoved` to 1 before anchoring, mine leaves it at 0 — a one-tick difference inside a
+40-tick grace window, converging immediately, not worth a further edit's risk to chase.
+
+⛔ Recorded plainly rather than quietly amended, per this project's own provenance culture: the
+five call sites migrated onto this method earlier today inherited the bug for as long as it
+stood uncaught (which was: never deployed, since no build has run on any of this session's
+work — so no live consequence, but the SOURCE carried it). Still not stand-verified. This is
+exactly why the checklist's hard ban on calling anything done without a stand run exists — a
+fix that looks obviously correct on the first read is not the same as one that has been checked
+a second time.
+
 <!-- MOBDEFENSECHAIN-FULL-READ-NO-NEW-DEFECT-2026-09-04 -->
 ## NEGATIVE RESULT: full read of `MobDefenseChain.java` (2071 lines), no new defect (2026-09-04)
 
