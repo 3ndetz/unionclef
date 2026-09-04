@@ -1,5 +1,32 @@
 # TODOs
 
+<!-- AGENT-COMPARE-SPRINT-MISMATCH-WRONG-CONDITION-2026-09-04 -->
+## Fixed: `Agent.compare()`'s sprint-mismatch diagnostic tested the wrong condition (2026-09-04)
+
+Same `Agent.java` full read as the `wouldCollideAt` fix above. `compare()` — the drift diagnostic
+that logs where the physics simulation disagrees with the real player, used to catch simulation
+bugs — had, at the "Sprinting mismatch" line:
+
+```java
+if(this.isSubmergedInWater != player.isSubmergedInWater()) {
+    values.add(String.format("Sprinting mismatch %s vs %s", player.isSprinting(), this.sprinting));
+}
+```
+
+The condition tests `isSubmergedInWater`, but the label and printed values are both about
+`sprinting` — and eight lines later the SAME `isSubmergedInWater` condition appears again, this
+time correctly labeled "Submerged in water mismatch". Classic copy-paste: the sprint check was
+built by copying the submerged-water check and never got its condition updated. Effect: a real
+sprint-state drift between the simulation and the actual player was NEVER detected by this
+diagnostic (the condition it needed never fired on it), while a submerged-water drift produced a
+bogus extra "Sprinting mismatch" line alongside the correct, separate submerged-water line.
+FIXED: condition changed to `this.sprinting != player.isSprinting()`.
+
+This is a debug-only diagnostic (gated behind `verboseDebugLogging`), so it doesn't change
+navigation behavior — but it's exactly the class of bug that matters here: a check meant to
+catch physics-simulation bugs that was itself silently blind to the one thing its name promised
+to watch.
+
 <!-- AGENT-WOULDCOLLIDEAT-IGNORED-POS-2026-09-04 -->
 ## Fixed: `Agent.wouldCollideAt()` ignored its own position argument (2026-09-04)
 
