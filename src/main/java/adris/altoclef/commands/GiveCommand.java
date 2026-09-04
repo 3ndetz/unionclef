@@ -18,7 +18,16 @@ public class GiveCommand extends Command {
 
     public GiveCommand() {
         super("give", "Collect an item and give it to you or someone else",
-                new PlayerArg("username"),
+                // TODOS.md: was `new PlayerArg("username")` -- no default, so ArgParser.get()
+                // (ArgParser.java:38-44) THROWS "Command not finished, expected Player" the
+                // instant the reader runs out of tokens, instead of ever returning null. The
+                // `if (username == null)` fallback below (use the current butler user) could
+                // never run: the exception aborts the whole command before call() reaches it.
+                // A default of null (matching the `cordinates` arg's own `showDefault=false`
+                // choice below, to avoid a literal "=null" in the help text) lets ArgParser
+                // return null instead of throwing when no username is typed, which is exactly
+                // what the existing fallback code already expects.
+                new PlayerArg("username", null, false),
                 new ListArg<>(new ItemTargetArg("items"), "items"),
                 new GoToTargetArg("cordinates", null, false)
         );
@@ -29,7 +38,6 @@ public class GiveCommand extends Command {
         mod.logWarning("This command is deprecated!");
         // Parse target username or fall back to current butler user
         String username = parser.get(String.class);
-        // FIXME argument defaults are not setup in a way this can work
         if (username == null) {
             if (mod.getButler().hasCurrentUser()) {
                 username = mod.getButler().getCurrentUser();

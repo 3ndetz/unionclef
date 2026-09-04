@@ -1,6 +1,35 @@
 # TODOs
 
-<!-- WATER-FALL-SAFETY-TODO-CHECKED-NOT-A-LIVE-BUG-2026-09-04 -->
+<!-- GIVECOMMAND-USERNAME-FALLBACK-UNREACHABLE-FIXED-2026-09-04 -->
+## FIXED: `@give`'s "fall back to the current butler user" was structurally unreachable (2026-09-04)
+
+`GiveCommand.java:32`'s own FIXME: `"argument defaults are not setup in a way this can work"`,
+sitting directly above `if (username == null) { ... use mod.getButler().getCurrentUser() ... }`.
+Traced the actual mechanism in `ArgParser.get()` (`:38-44`): when the reader has no more tokens
+for an argument, it returns `arg.defaultValue` if `arg.hasDefault` is true, and otherwise
+**throws** `RuntimeCommandException("Command not finished, expected " + arg.getTypeName())`.
+`GiveCommand`'s `username` argument was declared `new PlayerArg("username")` — the no-default
+constructor, `hasDefault = false` — so invoking `@give` with the username omitted does not reach
+`call()` at all: the parser throws before `username` is ever assigned, and the `if (username ==
+null)` fallback is dead code, unreachable by construction, exactly as the author's own FIXME
+already suspected.
+
+FIXED: `PlayerArg` only exposed a 2-arg constructor beyond the bare one (`name, defaultValue`,
+which forces `showDefault = true`); added the 3-arg `(name, defaultValue, showDefault)` overload
+already established as the convention on this exact command's OTHER optional argument
+(`GoToTargetArg("cordinates", null, false)`, a few lines below). Changed `GiveCommand`'s
+declaration to `new PlayerArg("username", null, false)`: a genuinely-omitted username now
+resolves to `null` instead of throwing, which is precisely what the existing (previously dead)
+fallback code already handles — and `showDefault=false` avoids a literal `"<username=null>"`
+in the command's help text.
+
+No change to normal invocations that DO supply a username (`@give Steve diamond 5` parses
+identically): the only behavior that changes is what happens when the reader has zero tokens
+left while parsing this specific positional argument, which previously could only ever throw.
+⛔ NOT stand-verified (no build ran) — a two-constructor addition plus a one-line call-site
+change, low per-site risk, but genuinely untested: needs a build and an actual `@give` invocation
+with the username omitted (and a butler user active) to confirm the fallback now fires as
+intended rather than merely compiling.
 ## NEGATIVE RESULT: `WorldHelper.dangerousToBreakIfRightAbove`'s water TODO is not a live bug (2026-09-04)
 
 `WorldHelper.java:354`: `// TODO: If there's a 1 meter thick layer of water and then a massive

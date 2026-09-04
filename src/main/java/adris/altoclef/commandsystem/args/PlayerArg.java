@@ -21,6 +21,10 @@ public class PlayerArg extends Arg<String> {
         super(name, defaultValue);
     }
 
+    public PlayerArg(String name, String defaultValue, boolean showDefault) {
+        super(name, defaultValue, showDefault);
+    }
+
     public static Stream<String> listOnlinePlayers() {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.getNetworkHandler() == null) return Stream.empty();
