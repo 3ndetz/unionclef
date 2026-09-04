@@ -1486,10 +1486,21 @@ public class Agent {
 //        return true;
     }
 
+    /**
+     * ⛔ FIXED 2026-09-04: this used to test collision against {@code this.box} -- the agent's
+     * ACTUAL current bounding box, which does not depend on {@code pos} at all. The correctly
+     * computed hypothetical box (vanilla Entity.wouldCollideAt: a 1x1xN column AT the given
+     * block position, spanning the agent's own Y range) was already written out here, just
+     * commented out and never used. Every caller of this method tests SEVERAL different
+     * candidate positions expecting a different answer for each (pushOutOfBlocks's direction
+     * loop tries four offsets to find a clear one) -- with the old body every candidate got the
+     * identical answer (whatever this.box's own collision state happened to be), so the
+     * direction search could never actually distinguish a clear direction from a blocked one.
+     */
     private boolean wouldCollideAt(WorldView world, BlockPos pos) {
     	Box box = this.box;
-//		Box box2 = new Box((double)pos.getX(), box.minY, (double)pos.getZ(), (double)pos.getX() + 1.0, box.maxY, (double)pos.getZ() + 1.0).contract(1.0E-7);
-        return this.canCollide(world, box);
+		Box box2 = new Box((double)pos.getX(), box.minY, (double)pos.getZ(), (double)pos.getX() + 1.0, box.maxY, (double)pos.getZ() + 1.0).contract(1.0E-7);
+        return this.canCollide(world, box2);
     }
 
     public void setSprinting(boolean sprinting) {
