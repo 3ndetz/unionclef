@@ -323,9 +323,16 @@ public class PathFinder {
 	/**
 	 * WHO KILLS THE SEARCH. searchAborted=40 with tryEmit=0 says the physics leg is
 	 * destroyed before its first attempt to hand back a route, and three fixes aimed at
-	 kaptainwutax.tungsten.path.PathFinder.noteStop("PathFinder@173");
 	 * guessed call sites never fired. So stop guessing: every stop.set(true) in the module
 	 * tags itself here, and the readout names the site instead of me nominating one.
+	 *
+	 * <p>⛔ CORRECTED 2026-09-04: a {@code noteStop("PathFinder@173")} fragment was sitting
+	 * INSIDE this comment block (between the {@code /**} and {@code *&#47;}), pasted there by
+	 * accident instead of landing as real code at some call site -- inert text, never executed.
+	 * Checked every current {@code stop.set(true)} site in the codebase (grep for
+	 * {@code noteStop(}): all of them, in every other file, correctly call {@code noteStop}
+	 * right before {@code stop.set(true)}. This stray fragment was the only gap, and it was
+	 * dead documentation, not a missing call -- removed rather than relocated.
 	 */
 	public static final java.util.Map<String, Integer> stopBy =
 			java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
@@ -1280,7 +1287,6 @@ public class PathFinder {
 //        		continue;
 //        	}
             double distance = current.getSquaredDistance(position.getPos(true, world))/* + Math.abs(position.y - current.getY()) * 160*/;
-            double heightDiff = closest.getJumpHeight(currentNode.getPos(true).y, closest.getPos(true).y);
 //            if ( distance < 1 && closestIDX < i-1) continue;
             if (distance < minDistance/* && (heightDiff <= 0 || isCurrentNodeLadder || isClosestNodeLadder)*/) {
                 minDistance = distance;
@@ -1914,7 +1920,6 @@ public class PathFinder {
             TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
             }
             TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
-        TungstenModDataContainer.EXECUTOR.placeQueue = pendingPlaces == null ? null : new ArrayList<>(pendingPlaces);
             NEXT_CLOSEST_BLOCKNODE_IDX.set(1);
         	RenderHelper.renderBlockPath(blockPath.get(), NEXT_CLOSEST_BLOCKNODE_IDX.get());
         	return blockPath;
@@ -2011,17 +2016,19 @@ public class PathFinder {
             Debug.logMessage(String.format("emit[setCurrentPath] root=%s size=%d",
                 result.get().get(0).agent.getPos().toString(), result.get().size()));
         }
-        // THE SECOND DOOR, AND THE ONE THE emit COUNTER COULD NOT SEE. setCurrentPath delivers a
-        // best-partial route straight to the executor, bypassing executePath entirely -- which is
-        // why emit read 0/0/0/0 while the executor was arriving 56 times. Count it here.
-        salvageEmit++;
-        salvageEmitNodes += result.get().size();
         // ⛔ THE SECOND DOOR, AND THE emit COUNTER NEVER SAW IT. executePath is instrumented and
         // reads 0/0/0/0, yet the executor reports 56 arrivals -- because setCurrentPath delivers
         // here, bypassing it entirely. Its callers are the timeout, the exhaustion branch, the
         // give-up and the vanished-guide salvage, and it hands over the BEST PARTIAL route, which
         // on a bot that has not moved is a stub the executor finishes instantly.
+        //
+        // FIXED 2026-09-04: this comment used to appear TWICE, each copy followed by its own
+        // salvageEmit++ -- so every real salvage emission was counted as two, while
+        // salvageEmitNodes (below) was only ever incremented once. Every dump this file prints
+        // reads salvageEmit against another counter (emit=X/Y/Z/W style), so the doubled half
+        // silently threw off every such comparison. One counter, one increment.
         salvageEmit++;
+        salvageEmitNodes += result.get().size();
         TungstenModDataContainer.EXECUTOR.addPath(result.get());
         TungstenModDataContainer.EXECUTOR.blockPath = blockPath.orElseGet(null);
         TungstenModDataContainer.EXECUTOR.startBreaking(pendingBreaks);
