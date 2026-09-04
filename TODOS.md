@@ -1,5 +1,48 @@
 # TODOs
 
+<!-- MCP-MISSING-WORLD-READ-TOOLS-2026-09-04 -->
+## Added three MCP tools that already existed in Java but were unreachable from the agent (2026-09-04)
+
+While trying to diagnose why `canReach` kept returning `found:false` even for cells 2-5 blocks
+from the bot (during a live C5.18 stall chase, see that entry), went looking for a way to just
+READ the actual block at a coordinate instead of guessing terrain from log lines — and found that
+`Py4jEntryPoint.java` already has THREE methods built exactly for this, none of them wired into
+`McpServer.java`'s tool list, so no MCP session (including this one, all session) could ever call
+them:
+
+- `getBlockAt(x,y,z)` (`:1364-1380`) — id/name/is_air/hardness/replaceable at one coordinate.
+- `getBlocksAround(radius)` (`:1387-1407`, radius capped at 5) — every non-air block in a cube
+  around the bot, with hardness. Its own comment: "the agent reasons over it; no hardcoded
+  behavior" (TARGET.md Level 2).
+- `getSurfaceMap(radius)` (`:1417-`, capped at 6) — top-down height+hardness grid per (dx,dz)
+  column. Same design intent, explicitly for the agent to read and act on.
+
+All three are unmodified, already-working, already-bounded (payload-safe) methods — this only
+adds their `tool(...)` registrations in `McpServer.java`, mirroring the exact pattern `canReach`
+already uses. Zero behavior change to anything that already runs; purely additive. Not
+stand-verified (no build/deploy this session, C8.1), but the risk profile is as low as this
+session's other additive changes (the `enableParallelStreaming` gate, the `volatile` fields):
+nothing existing is touched, only new read-only surface is exposed.
+
+⛔ **SEPARATE, MORE IMPORTANT FINDING FROM THE SAME INVESTIGATION, NOT FIXED:** `canReach`
+(`Py4jEntryPoint.java:1308-1362`) answers "can I get there" by calling
+`BlockSpacePathFinder.search(...)` — and per `docs/NAVIGATION.md`'s own engine table, this is
+explicitly the WORSE of the two block-space engines ("`FastPlanner` and `BlockSpacePathFinder` do
+the same job; the first is correct, the second is not, and the second was never removed when the
+first arrived"). `FastPlanner` has its own synchronous entry point,
+`public static Result plan(WorldView world, BlockPos start, BlockPos goal, long budgetMs)`
+(`FastPlanner.java:378`), which `canReach` does NOT use.
+This means **every `canReach` answer this whole session — and by anyone using this MCP tool,
+ever — may be more pessimistic than what the bot's actual live navigation (which uses
+`FastPlanner`) can really do.** It is exactly the class of bug `docs/NAVIGATION.md` was written
+to warn about: querying a different engine than the one that drives the bot. NOT FIXED this
+session: swapping the search call means adapting the rest of `canReach`'s logic (breaks-count,
+pathSize, endDistance) to `FastPlanner.Result`'s shape instead of `BlockNode`'s, which is a real
+adaptation, not a one-line change, and C8.1 leaves no way to verify it. Whoever fixes this should
+also re-read every place in TODOS.md this session leaned on a `canReach: found:false` reading
+(the C5.18 manual-workaround entries) — those readings may have been asking the wrong engine, not
+describing terrain the bot genuinely cannot cross.
+
 <!-- GITHUB-ISSUES-20-21-ARE-BARITONE-SHREDDER-NOT-TUNGSTEN-2026-09-04 -->
 ## GitHub issues #20 and #21 report the retired engine, not tungsten — recommend closing (2026-09-04)
 

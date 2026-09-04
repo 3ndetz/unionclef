@@ -253,6 +253,19 @@ public class McpServer {
                 "Heuristic: can we path to a cell (optionally breaking blocks)? Returns reached/pathSize/breaks/endDistance.",
                 schema("x:int", "y:int", "z:int", "withBreaking:bool"),
                 a -> api.canReach(argInt(a, "x"), argInt(a, "y"), argInt(a, "z"), argBool(a, "withBreaking")));
+        tool("getBlockAt",
+                "Read the actual block at a world coordinate (id, name, is_air) straight from the client's "
+                + "world -- ground truth for diagnosing a stuck route without guessing terrain from log lines.",
+                schema("x:int", "y:int", "z:int"),
+                a -> api.getBlockAt(argInt(a, "x"), argInt(a, "y"), argInt(a, "z")));
+        tool("getBlocksAround",
+                "Every non-air block in a cube of the given radius around the bot (position/block/hardness),"
+                + " radius capped at 5. A local terrain mini-map -- read it before guessing why a route stalled.",
+                schema("radius:int"), a -> api.getBlocksAround(argInt(a, "radius")));
+        tool("getSurfaceMap",
+                "Top-down surface map around the bot: for each (dx,dz) column within radius, the highest"
+                + " non-air block's height and hardness relative to the bot's feet. Radius capped at 6.",
+                schema("radius:int"), a -> api.getSurfaceMap(argInt(a, "radius")));
 
         // movement
         tool("gotoXYZ",
