@@ -1,5 +1,60 @@
 # TODOs
 
+<!-- GETJUMPHEIGHT-DEAD-BRANCHES-2026-09-04 -->
+## Fixed: `getJumpHeight` had unreachable branches in three places (2026-09-04)
+
+Continued the `BlockNode.java` read past the `equals()` fix (below) and found
+`getJumpHeight(double from, double to)` branched on `to > from` and then, inside each
+branch, ternaried again on `diff > 0` (`diff = to - from`):
+
+```java
+double diff = to - from;
+if (to > from) {
+    return diff > 0 ? diff : diff * -1;
+}
+return diff > 0 ? diff * -1 : diff;
+```
+
+`diff > 0` is exactly `to > from` — they're the same comparison restated. So in the
+`to > from` branch `diff` is always positive (the `diff * -1` arm can never run), and in
+the other branch `diff` is always `<= 0` (its `diff * -1` arm can never run either).
+Verified exhaustively, not by inspection alone: checked all three cases (`to > from`,
+`to < from`, `to == from`) and every one reduces to exactly `to - from`.
+
+`grep -rln "double getJumpHeight"` found the identical pattern copy-pasted into
+**two more places**: `DistanceCalculator.getJumpHeight(double,double)` and
+`DistanceCalculator.getJumpHeight(int,int)` (the int overload uses the same dead logic
+on `int` operands). FIXED: all three now `return to - from;`. Zero behavior change —
+this is dead-code removal, not a logic change — but noting for the record that
+`DistanceCalculator` and `BlockNode` carrying their own separate copies of the same
+9-line method is itself the duplication this project's own no-duplicates principle
+warns about; not consolidated here since that's a structural change beyond this fix's
+scope, not a defect in what either copy computes.
+
+Not stand-verified (C8.1, no build this session) — same reasoning as the `equals()`
+fix below: a pure algebraic simplification, checkable by exhaustive case analysis alone,
+independent of live behavior.
+
+<!-- SMARTMOVESSHARETHEGUARD-STATIC-2026-09-04 -->
+## Fixed: `smartMovesShareTheGuard` was `static`, invisible to `;settings` and to config load/save (2026-09-04)
+
+While reading `BlockNode.java`'s read site for this flag, found it declared `static` in
+`TungstenConfig.java` — unlike every other config flag in that file. Two consequences,
+both confirmed by reading the actual mechanisms rather than assumed:
+
+- `SettingsCommand.getConfigFields()` explicitly filters `!Modifier.isStatic(...)`, so a
+  `static` field never appears in `;settings` — it can't be listed, read, or toggled from
+  in-game at all.
+- Gson's default field serialization also skips `static` fields, so `TungstenConfig.load()`
+  and `.save()` silently ignore it — any value written to the config file for this key is
+  never read back, and the in-memory default is the only value that has ever mattered.
+
+FIXED: removed `static`. Matches every other flag in the file; no other code referenced
+the field in a way that required it to be static (checked with a grep of the field name
+across `tungsten/`). Not stand-verified (C8.1) — same low-risk profile as the two fixes
+above: the change makes a previously-invisible flag visible and persistable, it does not
+alter any read of its value.
+
 <!-- BLOCKNODE-EQUALS-MISSING-CONTRACT-GUARDS-2026-09-04 -->
 ## Fixed: `BlockNode.equals()` violated the standard `Object.equals()` contract (2026-09-04)
 
