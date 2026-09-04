@@ -890,9 +890,11 @@ public class TungstenConfig {
      * (`PathFinder.java:608-628`, which fires only once the bot is within 5 blocks of the
      * pending place) to ever engage.
      *
-     * <p>WORKING HYPOTHESIS, NOT CONFIRMED BY EXPERIMENT: {@code BlockPathWalker.yawTo}'s
-     * {@code atan2(dx, dz)} is numerically unstable once the horizontal distance to the waypoint
-     * is near zero — the same class of instability this file's own climbing case already
+     * <p>WORKING HYPOTHESIS, NOT CONFIRMED BY EXPERIMENT: {@code AttackTiming.yawTo}'s
+     * {@code atan2(dx, dz)} (called from {@code BlockPathWalker}, not defined there — corrected
+     * here 2026-09-04 after this comment first misattributed it) is numerically unstable once
+     * the horizontal distance to the waypoint is near zero — the same class of instability this
+     * file's own climbing case already
      * documents ("right at the step the horizontal distance is ~0, so the bearing is numerically
      * unstable, facing flickers") and already works around by bypassing the facing gate while
      * climbing. This flag applies the identical bypass to the general near-zero-distance case,
