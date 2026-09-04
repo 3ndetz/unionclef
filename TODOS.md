@@ -1,5 +1,52 @@
 # TODOs
 
+<!-- GITHUB-ISSUES-20-21-ARE-BARITONE-SHREDDER-NOT-TUNGSTEN-2026-09-04 -->
+## GitHub issues #20 and #21 report the retired engine, not tungsten — recommend closing (2026-09-04)
+
+Checked the repo's open GitHub issues via the public API (`gh` CLI is not installed in this
+session, and no GitHub token is configured here either — I cannot post the closing comment or
+close these myself; recording the diagnosis for whoever has `gh` access, per AGENTS.md rule 10,
+"if fixes already in main / base is stale — close with a respectful comment").
+
+- **Issue #21** ("God bridge fallback logic can get stuck sneaking indefinitely after block
+  placement failure") quotes `MovementTraverse.reset()` setting `wasTheBridgeBlockAlwaysThere`,
+  `godSneakFallbackTicks`, `godVerifyTicks`, `stopGodBridge()`. Grepped the whole repo for those
+  four exact identifiers together: `godSneakFallbackTicks`/`godVerifyTicks`/`stopGodBridge` exist
+  in EXACTLY ONE file, `shredder/src/main/java/baritone/pathing/movement/movements/
+  MovementTraverse.java` — not in `baritone/`'s own copy, and not in tungsten's own
+  `MovementTraverse.java` (`tungsten/src/main/java/kaptainwutax/tungsten/path/movements/
+  MovementTraverse.java`), which shares only the unrelated `wasTheBridgeBlockAlwaysThere` field
+  (present in all three ports, plain baritone lineage) and has no
+  `godSneakFallbackTicks`/`godVerifyTicks`/`stopGodBridge` mechanism at all — different code,
+  differently structured. Filed 2026-05-04, before the G-0 migration (2026-08-24) that took
+  `shredder` out of the build entirely (`settings.gradle.kts`: `// include(":shredder") // G-0
+  ... kept as SOURCE REFERENCE ONLY, not compiled`). This is a report against an engine `@gamer`
+  has not run on for over three weeks.
+  ⛔ HONEST LIMIT: this confirms the SPECIFIC reported mechanism doesn't exist in the current
+  build. It does NOT prove the general symptom (bot ends up sneaking waiting on a block that was
+  never actually placed) cannot occur on tungsten through some other code path — I read tungsten's
+  `MovementTraverse` far enough to confirm the cited fields are absent, not far enough to fully
+  re-derive whether an equivalent failure mode exists there under a different name. Recommend
+  closing with a comment saying so plainly (engine replaced, specific mechanism gone, general
+  symptom not independently re-verified as impossible) rather than a blanket "fixed".
+- **Issue #20** ("PathingBehavior stuck in recalc loop when terrain changes make path
+  impossible") quotes `PathingBehavior.tickPath()`, `pathCalcLock`, `findPathInNewThread`,
+  `queuePathEvent`, `PATH_FINISHED_NEXT_STILL_CALCULATING`. Grepped the whole repo: `class
+  PathingBehavior` exists only in `baritone/` and `shredder/` (both source-reference-only, not
+  compiled); `queuePathEvent`/`PATH_FINISHED_NEXT_STILL_CALCULATING`/`findPathInNewThread` return
+  ZERO matches anywhere under `tungsten/`. Tungsten has no class by this name and none of the
+  cited methods exist in it at all — cleaner than #21, since there is no same-named tungsten
+  class to confuse the search with. Same G-0 timeline applies (filed 2026-05-04, engine retired
+  2026-08-24). Recommend closing outright: the reported code does not exist in any form in the
+  currently-compiled engine.
+
+Both issues predate this session's own tungsten stall-recovery work (`FastNavigator`'s
+watchdog fix, `MovementProgressChecker.resetIfPathingWithGrace`, the `wanderSearchMustMove`/
+`entitySearchMustMove` family) — if the underlying SYMPTOM (stuck indefinitely after a failed
+action) still reproduces on tungsten, it is a new, differently-caused bug and deserves its own
+fresh issue rather than reopening these two, which are specifically about code that no longer
+runs.
+
 <!-- HASACTIVETASK-NULL-TASK-BUSY-FOREVER-2026-09-04 -->
 ## [~] LIVE-REPRODUCED on `uctest-gamer-server`: `pathStatus`'s "busy" stuck true forever on an empty task chain (2026-09-04)
 
