@@ -1,5 +1,39 @@
 # TODOs
 
+<!-- BLOCKNODE-EQUALS-MISSING-CONTRACT-GUARDS-2026-09-04 -->
+## Fixed: `BlockNode.equals()` violated the standard `Object.equals()` contract (2026-09-04)
+
+Full read of `BlockNode.java` (1053 lines, the block-space search's node/move-generation class,
+touched earlier this session only for the C3.2 `parallelStream` gate). `equals(Object obj)` cast
+its argument directly to `BlockNode` with no null check and no type check:
+
+```java
+final BlockNode other = (BlockNode) obj;
+return x == other.x && y == other.y && z == other.z;
+```
+
+`Object.equals()`'s own contract requires `x.equals(null)` to return `false` and
+`x.equals(somethingOfADifferentType)` to return `false`; this threw `NullPointerException` and
+`ClassCastException` respectively instead. `BlockNode` is stored in a `HashSet`
+(`BlockSpacePathFinder`'s `closed` set), so this is exactly the shape of bug that stays invisible
+for as long as every comparison happens to be `BlockNode` vs `BlockNode` inside the search's own
+tight loop, and crashes the moment anything else touches it — `List.contains(null)`,
+`List.indexOf(null)`, a generic `Set`/`Map` utility, a future caller nobody has written yet.
+
+FIXED: standard guard added (`this == obj` fast path, `instanceof BlockNode` for both the null
+and type checks in one line — `instanceof` is `false` for `null`). Zero behavior change for two
+real `BlockNode`s being compared; only the previously-undefined null/wrong-type inputs change
+from a crash to the contractually-correct `false`. The neighboring `hashCode()` (line 218-221,
+`(int) BetterBlockPos.longHash(x, y, z)`) was already fine and consistent with the fixed
+`equals()` — not touched. Its own `TODO: Possibly reimplement hashCode and equals` comment is a
+vague aspiration, not a claim this fix contradicts, so left as-is.
+
+⛔ Not stand-verified (C8.1, no build this session) — but unlike most fixes this session, the
+correctness argument here does not depend on live behavior at all: it is a pure contract
+violation, checkable by inspection alone (does the method handle `null` and wrong-type inputs the
+way `Object.equals()` requires), so the risk profile is as close to zero as any change in this
+codebase gets.
+
 <!-- PATHEXECUTOR-TICK-STOP-BRANCH-LOOKED-LIKE-AN-NPE-2026-09-04 -->
 ## NEGATIVE RESULT (checked, not just assumed): `PathExecutor.tick`'s stop-branch NPE risk is not reachable today (2026-09-04)
 
