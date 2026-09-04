@@ -1,5 +1,42 @@
 # TODOs
 
+<!-- MININGREQUIREMENT-COBWEB-TRACED-NOT-FIXED-2026-09-04 -->
+## TRACED, NOT FIXED: `MiningRequirement`'s cobweb FIXME has plausible real impact (2026-09-04)
+
+`MiningRequirement.java:17`: `// FIXME this doesnt work for cobwebs because they are broken with
+shears...`, above `getMinimumRequirementForBlock()`. Traced both callers to check whether this is
+live or merely theoretical:
+
+- `ResourceTask.java:219`: `satisfiedReqs.removeIf(block -> !StorageHelper.miningRequirementMet
+  (MiningRequirement.getMinimumRequirementForBlock(block)))` — if a cobweb reports a pickaxe tier
+  the bot does not have (plausibly `DIAMOND`, the function's own fallback when NO pickaxe tier is
+  "suitable" for a block — see `:27-28`'s `Debug.logWarning` for exactly that fallback), the
+  cobweb is REMOVED from candidates a resource task is willing to interact with — even though a
+  cobweb can always be broken by hand.
+- `StorageHelper.java:211` (durability-conservation heuristic): the same wrong `DIAMOND` answer
+  happens to still evaluate permissively here (`!requirement.equals(IRON)` is true for `DIAMOND`
+  too), so this specific caller is not actually harmed by the same wrong classification — the two
+  callers do not fail the same way.
+
+**Why not fixed**: the whole failure chain rests on one fact I cannot verify from here —
+whether `Blocks.COBWEB.getDefaultState().isToolRequired()` (the `:19` guard that decides whether
+the pickaxe-tier loop even runs) is `true` or `false` for a cobweb in this Minecraft/Yarn version.
+If it is `false`, the function already correctly returns `HAND` for cobwebs and this FIXME
+describes a non-issue (or an issue with some other block/interaction, not this specific method).
+If it is `true`, the pickaxe-only loop (`:20-26`) has no tier that is ever `isSuitableFor` a
+cobweb — cobwebs are not a pickaxe-tier block at all, shears/sword are — so it falls through to
+the `DIAMOND` fallback, confirmed wrong for a hand-breakable block. Unlike the `KnockbackEstimator`
+fix earlier this session, I found no already-compiling example elsewhere in this codebase that
+settles which branch cobweb actually takes, and guessing at vanilla block-property data without a
+live JVM or a build to check against is exactly the kind of unverifiable claim this project's own
+rules warn against shipping as fact. Needs either a live `getDefaultState().isToolRequired()`
+read on `Blocks.COBWEB`, or a build to test the fix's effect directly.
+
+**If confirmed real, the fix is narrow**: special-case cobweb (and any other
+`isToolRequired()==true`-but-not-actually-pickaxe block, if more exist) to return `HAND` before
+the pickaxe-tier loop runs, rather than falling through to the "nothing fit, assume diamond"
+default meant for genuinely unclassified NEW blocks.
+
 <!-- GIVECOMMAND-USERNAME-FALLBACK-UNREACHABLE-FIXED-2026-09-04 -->
 ## FIXED: `@give`'s "fall back to the current butler user" was structurally unreachable (2026-09-04)
 
