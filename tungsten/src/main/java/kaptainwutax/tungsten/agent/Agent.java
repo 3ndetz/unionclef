@@ -1806,7 +1806,12 @@ public class Agent {
             values.add(String.format("Pose mismatch %s vs %s", player.getPose(), this.pose));
         }
 
-        if(this.isSubmergedInWater != player.isSubmergedInWater()) {
+        // ⛔ FIXED 2026-09-04: this checked isSubmergedInWater (a copy-paste from the check
+        // below) while labeling and printing sprinting values -- so a real sprint-state drift
+        // between the simulation and the actual player was never detected by this diagnostic,
+        // and a submerged-water drift produced a bogus "Sprinting mismatch" line alongside the
+        // correct "Submerged in water mismatch" line a few lines down.
+        if(this.sprinting != player.isSprinting()) {
             values.add(String.format("Sprinting mismatch %s vs %s", player.isSprinting(), this.sprinting));
         }
 
