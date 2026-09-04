@@ -878,6 +878,36 @@ public class TungstenConfig {
     public boolean wanderSearchMustMove = false;
 
     /**
+     * Let {@code BlockPathWalker} press forward at a waypoint it is almost standing on,
+     * even when its computed bearing says otherwise.
+     *
+     * <p>TODOS.md, live-reproduced 2026-09-04 on `uctest-gamer-server`: the walker's own
+     * diagnostic printed {@code WALKSTOP dist=0.1 yawErr=180 facing=false} during a stall that
+     * repeated the identical "Obstacle ahead" approach point for at least two full 14-20s cycles.
+     * {@code facing} requires {@code yawErr < 45}, and {@code move = facing || !onGround ||
+     * climbing} — none of the three held, so the forward key never pressed while the bot sat 0.1
+     * blocks from the waypoint it needed to clear for {@code PathFinder}'s own bridge shortcut
+     * (`PathFinder.java:608-628`, which fires only once the bot is within 5 blocks of the
+     * pending place) to ever engage.
+     *
+     * <p>WORKING HYPOTHESIS, NOT CONFIRMED BY EXPERIMENT: {@code BlockPathWalker.yawTo}'s
+     * {@code atan2(dx, dz)} is numerically unstable once the horizontal distance to the waypoint
+     * is near zero — the same class of instability this file's own climbing case already
+     * documents ("right at the step the horizontal distance is ~0, so the bearing is numerically
+     * unstable, facing flickers") and already works around by bypassing the facing gate while
+     * climbing. This flag applies the identical bypass to the general near-zero-distance case,
+     * not just the climb, on the theory that a bearing computed from a near-zero vector carries
+     * no usable direction information at all, so gating movement on it can only be wrong.
+     *
+     * <p>Default {@code false}, DELIBERATELY: nothing about this has been measured, and the same
+     * area of the file has multiple prior fix attempts on record that measured neutral or worse.
+     * Flip it on for a paired A/B against the exact stall shape above (repeated identical
+     * approach-point stalls); if the stall clears and nav/pvp show no regression, it can default
+     * on.
+     */
+    public boolean walkerFacingBypassNearZeroDist = false;
+
+    /**
      * When navigation REFUSES an entity approach and the body is not moving, wander instead of
      * standing there for the rest of the run.
      *

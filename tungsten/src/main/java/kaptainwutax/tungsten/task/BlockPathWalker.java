@@ -69,6 +69,9 @@ public class BlockPathWalker {
     // and reverted (the bot sprinted while mis-aimed and wandered off-course); the fast
     // nav turn (WindMouseRotation.setTargetFast) is what keeps this gate open instead.
     private static final double LIVE_MOVE_GATE = 45.0;
+    /** Below this horizontal distance (blocks), {@code TungstenConfig.walkerFacingBypassNearZeroDist}
+     *  lets movement proceed regardless of the computed bearing -- see that flag's own doc for why. */
+    private static final double NEAR_ZERO_DIST = 0.3;
 
     // White-box climb instrumentation (off by default; toggled via py4j setWalkerDebug).
     // Logs the walker's per-tick decisions so a FAILING climb can be understood mechanism-
@@ -595,7 +598,15 @@ public class BlockPathWalker {
         // the run (stand-measured at a 1-block ledge). When the waypoint is higher
         // and we are already on top of it horizontally, push forward regardless.
         boolean climbing = wp.getY() > player.getBlockPos().getY() && dist < 1.6;
-        boolean move = facing || !onGround || climbing;
+        // TODOS.md C5.18, TungstenConfig.walkerFacingBypassNearZeroDist: the SAME numerical-
+        // instability class the climbing case above already documents, generalised. A bearing
+        // computed from a near-zero horizontal vector carries no usable direction, so gating
+        // movement on it can only be wrong -- yet that is exactly the state a live stall was
+        // caught in (WALKSTOP dist=0.1 yawErr=180 facing=false). Default false: unmeasured,
+        // and this file's own history has more than one "obviously right" fix here that wasn't.
+        boolean nearZeroDist = TungstenConfig.get().walkerFacingBypassNearZeroDist
+                && dist < NEAR_ZERO_DIST;
+        boolean move = facing || !onGround || climbing || nearZeroDist;
         // Do not keep adding speed once we are directly over the landing, or the arc carries
         // us past it. Known limit: on a bounce CHAIN this also throttles above every
         // intermediate hop and the bot bleeds speed, which is why the far ledge is still out
