@@ -845,7 +845,6 @@ public class MovementHelper {
 		    boolean isSlabBelow = belowBlock instanceof SlabBlock;
 		    
 		    boolean isFullCube = state.isFullCube(world, pos);
-		    boolean isSlab = block instanceof SlabBlock;
 		    boolean isLeaves = block instanceof LeavesBlock;
 		    boolean isStairs = block instanceof StairsBlock;
 		    boolean isLava = block == Blocks.LAVA;
