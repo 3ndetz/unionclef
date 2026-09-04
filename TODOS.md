@@ -1,5 +1,40 @@
 # TODOs
 
+<!-- PATHEXECUTOR-TICK-STOP-BRANCH-LOOKED-LIKE-AN-NPE-2026-09-04 -->
+## NEGATIVE RESULT (checked, not just assumed): `PathExecutor.tick`'s stop-branch NPE risk is not reachable today (2026-09-04)
+
+Full read of `PathExecutor.java` (1357 lines). `tick(ClientPlayerEntity, GameOptions)`'s
+pause/stop branch (`:328-377`) reaches `this.tick = this.path.size();` (`:361`) unconditionally
+once it enters the `else` of `if (!replayInProgress && !explicitStop && (breakQueue != null ||
+placeQueue != null))` — and that `else` is reachable with `this.path == null` on paper: set
+`replayInProgress = false` (path null or empty), `explicitStop = false` (only `stop` true, not
+the pause key), and both `breakQueue`/`placeQueue` null (executor genuinely idle). That combination
+looked like a live `NullPointerException` waiting to fire the next time any of the many places
+that set `EXECUTOR.stop = true` unconditionally (`RunAwayTask.java:130`, `FollowEntityTask.java:
+143,281`, `PunkPlayerTask.java:472`, `MixinClientPlayNetworkHandler.java:88`,
+`MixinClientPlayerEntity.java:128,330`, `TungstenMod.java:136` — none of them check
+`EXECUTOR.hasPath()` first) happened to fire while the executor had no active path or queues.
+
+CHECKED THE ACTUAL CALL SITE BEFORE FILING THIS AS A BUG, per this project's own "prove by
+experiment" rule, rather than reporting a code-reading suspicion as a defect. `PathExecutor.tick
+(ClientPlayerEntity, GameOptions)` has exactly one caller anywhere in the module —
+`MixinClientPlayerEntity.java:122-124` — and it is gated: `if
+(TungstenModDataContainer.isExecutorRunning() && !tungsten$movementOwnsTick) { EXECUTOR.tick(...); }`.
+`isExecutorRunning()` is `EXECUTOR != null && EXECUTOR.isRunning()`
+(`TungstenModDataContainer.java:43-45`), and `PathExecutor.isRunning()` is `this.path != null &&
+!this.armed && this.tick <= this.path.size()` (`PathExecutor.java:316-322`). So `tick()` is never
+entered at all unless `path != null` already holds, and nothing between entry and line 361
+nullifies it within the same call (single-threaded, same tick). The scenario is real on paper and
+unreachable in practice, today, through the one path that actually calls this method.
+
+NOT closing this as fully safe forever — recording the fragility rather than the false alarm:
+the safety depends entirely on this ONE external caller's guard, which `tick()` itself does not
+re-assert. A future second call site to `PathExecutor.tick(...)` that omits the same
+`isExecutorRunning()` check would reintroduce exactly this NPE. Also worth noting: the mixin's
+own call is wrapped in a `try/catch` that stops the executor and logs rather than crashing the
+client (`MixinClientPlayerEntity.java:125-129`), so even a hypothetical future NPE here would
+degrade to a logged stop, not a crash — lower severity than it first appeared, on both counts.
+
 <!-- MCP-MISSING-WORLD-READ-TOOLS-2026-09-04 -->
 ## Added three MCP tools that already existed in Java but were unreachable from the agent (2026-09-04)
 
