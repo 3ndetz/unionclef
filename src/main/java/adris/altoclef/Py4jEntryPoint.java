@@ -152,10 +152,17 @@ public class Py4jEntryPoint {
         if (task instanceof AbstractKillEntityTask || hasBaritoneGoal() || isTungstenActive())
             return true;
 
-        return !(task instanceof IdleTask || task instanceof GestureTask
+        // ⛔ LIVE-REPRODUCED 2026-09-04 on uctest-gamer-server: "no task at all" (an empty user
+        // task chain, StatusCommand's "No tasks currently running.") does not match ANY of the
+        // instanceof checks below -- null is not an IdleTask, a GestureTask, or anything else --
+        // so the old `!(...)` fell through to true, reporting busy forever after a clean @stop
+        // with nothing running and the body not moving. pathStatus's "busy" field (an MCP client's
+        // only way to know whether the bot is free to take a new command) was stuck true
+        // permanently in exactly the state it exists to detect the absence of.
+        return task != null && !(task instanceof IdleTask || task instanceof GestureTask
                 || task instanceof WaitForDragonAndPearlTask
-                || (task != null && (task.toString() != null && !task.toString().isBlank() &&
-                        task.toString().toLowerCase().contains("wait"))));
+                || (task.toString() != null && !task.toString().isBlank() &&
+                        task.toString().toLowerCase().contains("wait")));
     }
 
     public boolean isTungstenActive() {

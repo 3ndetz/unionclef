@@ -1,5 +1,50 @@
 # TODOs
 
+<!-- HASACTIVETASK-NULL-TASK-BUSY-FOREVER-2026-09-04 -->
+## [~] LIVE-REPRODUCED on `uctest-gamer-server`: `pathStatus`'s "busy" stuck true forever on an empty task chain (2026-09-04)
+
+`uctest-gamer-server` (the real `@gamer` beat-the-game world) came up this round after being
+down every prior check this session — first live access all session. Connected via MCP
+`ConnectToServer`, found the bot mid-run at `940.1,76.0,40.5` holding a stone pickaxe with a
+crafting table/planks/dirt/cobblestone in the pack. `pathStatus` (MCP) reported `busy: true`
+with the position frozen bit-for-bit across 60+ seconds of real ticks (`WALKMODE off=...`
+climbing normally the whole time, so the client itself was alive and ticking).
+
+Sent `@stop` via `ExecuteCommand` — chat confirmed `[Alto Clef] Stopped all tasks`, then
+`@status` confirmed `No tasks currently running.` (i.e. `mod.getUserTaskChain().getTasks()` is
+empty, `getCurrentTask()` is `null`). `pathStatus` STILL reported `busy: true` afterward, with
+the body still not moving. Root-caused by reading `Py4jEntryPoint.hasActiveTask()`
+(`Py4jEntryPoint.java:147`, the method `pathStatus` calls at `:4374`):
+
+```java
+return !(task instanceof IdleTask || task instanceof GestureTask
+        || task instanceof WaitForDragonAndPearlTask
+        || (task != null && (...".contains("wait"))));
+```
+
+When `task` is genuinely `null` (an empty chain — exactly the confirmed live state), NONE of
+the `instanceof` checks match (`null instanceof X` is always `false`), and the final guarded
+term short-circuits to `false` too — so the whole disjunction is `false`, and the leading `!`
+flips it to `true`. **A null task — the one state that unambiguously means nothing is
+running — was the one case this method got backwards.** Any MCP client polling `pathStatus`
+to learn whether the bot is free for a new command (the documented fire-and-poll pattern this
+very tool's own description recommends) would see `busy: true` forever the moment the task
+chain ever goes empty, with no way to distinguish it from a genuinely stuck route.
+
+FIXED: added `task != null &&` as the governing condition instead of leaving `null` to fall
+through the negation (`Py4jEntryPoint.java:147-165`). Checked the only other caller of THIS
+method (`pathStatus` itself, `:4374`) — the one other `hasActiveTask()` in the codebase
+(`WorldSurvivalChain.java:267`) is a same-named method on a completely different class
+(`InfoSender`), unrelated, not touched.
+
+⛔ Diagnosis is LIVE-CONFIRMED (reproduced against the real running bot, not inferred from a
+read) — stronger evidence than most of this session's other fixes. The FIX ITSELF is still
+NOT stand-verified: no build ran this session (C8.1, no docker/gradle access), so the corrected
+code has not executed once. Marked `[~]`, not `[x]`, per the checklist's hard ban on calling
+anything done without a stand run. Whoever gets a build first: reconnect to
+`uctest-gamer-server`, drive the bot to idle (`@stop`), and confirm `pathStatus.busy` reads
+`false` — that alone verifies this fix.
+
 <!-- CRAFTINGRECIPETRACKER-FIXMES-VERSION-GATED-DEAD-2026-09-04 -->
 ## NEGATIVE RESULT: both `CraftingRecipeTracker` FIXMEs are version-gated dead code (2026-09-04)
 
