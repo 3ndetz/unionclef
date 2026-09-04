@@ -1,7 +1,6 @@
 package kaptainwutax.tungsten.combat;
 
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
 
 /**
