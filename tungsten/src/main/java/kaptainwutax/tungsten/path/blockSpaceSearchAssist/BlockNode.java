@@ -357,8 +357,18 @@ public class BlockNode {
 //		nodes.removeIf((child) -> {
 //			return shouldRemoveNode(world, child);
 //		});
-		
-		 List<BlockNode> filtered = nodes.parallelStream()
+
+		// ⛔ TODOS.md C3.2: this was an UNCONDITIONAL parallelStream() -- the implicit shared
+		// ForkJoinPool.commonPool(), used at NORM priority even though this whole search runs on
+		// a MIN_PRIORITY thread by design (BlockSpacePathFinder.java:48-51's own comment: "never
+		// win CPU against the client thread"). Node.java:327 already gates its own parallelStream
+		// on kaptainwutax.tungsten.TungstenConfig.enableParallelStreaming (default true, so no
+		// behavior change) -- this is the SAME gate applied here for consistency, so both entry
+		// points can be turned off together for the A/B this register entry calls for, rather
+		// than only one of the two. Not stand-verified this session (C8.1).
+		List<BlockNode> filtered =
+				(kaptainwutax.tungsten.TungstenConfig.get().enableParallelStreaming
+						? nodes.parallelStream() : nodes.stream())
 			        .filter(node -> {
 			            try { return !shouldRemoveNode(world, node); }
 			            catch (NullPointerException e) { return false; }

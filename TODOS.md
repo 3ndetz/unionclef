@@ -9724,7 +9724,7 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   сверху) — то есть 7 чтений гарантированно на КАЖДЫЙ кандидат ещё до этих двух веток, а «~10»
   из формулировки пункта — консервативная, а не завышенная оценка. C3.1 подтверждён числом,
   не только направлением; правки не вносилось.
-- [ ] **C3.2** The `MIN_PRIORITY` search thread farms real work onto NORM-priority pools including the
+- [~] **C3.2** The `MIN_PRIORITY` search thread farms real work onto NORM-priority pools including the
   shared `ForkJoinPool.commonPool` — the "never win CPU against the client thread" comment
   (`BlockSpacePathFinder.java:48-51`) is not what the code does.
   ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01 — В ОСНОВНОМ ВСЁ ЕЩЁ ТАК, С ОДНОЙ ЧАСТИЧНОЙ ПОДВИЖКОЙ.
@@ -9734,6 +9734,12 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   — ТОЛЬКО этот флаг стоит `= true` по умолчанию, то есть отгруженное поведение НЕ изменилось,
   переключатель просто появился для ОДНОЙ из как минимум двух точек входа. Открыто по существу,
   с оговоркой, что один из двух путей уже отделим флагом, если возникнет причина его выключить.
+  ⛔ ЧАСТИЧНО ПОЧИНЕНО 2026-09-04: тот же самый недостающий рычаг добавлен на `BlockNode.java:361`
+  — теперь тоже `enableParallelStreaming ? nodes.parallelStream() : nodes.stream()`, зеркально
+  `Node.java:327`. Флаг по-прежнему `true` по умолчанию, поведение сегодня НЕ изменилось — это
+  только даёт ВТОРОЙ точке входа тот же рычаг, которым уже можно управлять первой, так что
+  A/B (выключить оба сразу) теперь возможен без правки кода. Не оттестировано (C8.1, нет
+  докера/gradle эту сессию). Сам вопрос — стоит ли выключать по умолчанию — остаётся открытым.
 - [~] **C3.3** `TungstenModRenderContainer.*.clear()` is called from the search loop **bypassing the
   render-config gate and the 20 Hz throttle** in `RenderHelper`: `BlockSpacePathFinder.java:209`,
   `BlockNode.java:315`, and `wasCleared:328` (the last runs per CANDIDATE CHILD). These are
