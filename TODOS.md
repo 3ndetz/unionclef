@@ -1,5 +1,96 @@
 # TODOs
 
+<!-- CRAFTINGRECIPETRACKER-FIXMES-VERSION-GATED-DEAD-2026-09-04 -->
+## NEGATIVE RESULT: both `CraftingRecipeTracker` FIXMEs are version-gated dead code (2026-09-04)
+
+`CraftingRecipeTracker.java:170` ("kept from the pre-1.21.11 version: the catalogue is built
+around one item per slot...") and `:247` ("this is so stupid, but TaskCatalogue is kinda setup
+this way..."). Checked the surrounding preprocessor structure before assuming either was live
+for this project's actual target:
+
+- Line 170 sits inside a `//$$`-prefixed block, which in this codebase's Fabric-preprocessor
+  convention is source for a DIFFERENT Minecraft version than the one currently compiled — it
+  stays as inert comments in a 1.21.11 build (confirmed by the matching `//#else` a few lines
+  below, at `:190`, which opens the block that IS live for 1.21.11).
+- Line 247 sits inside `getShapedCraftingRecipe()`, itself wrapped in `//#if MC < 12111` /
+  `//#endif` (`:225-259`) — compiled ONLY for Minecraft versions older than 1.21.11, i.e. not
+  part of this project's current target at all.
+
+Neither FIXME describes a defect reachable in the actual shipped 1.21.11 build this session has
+been working on. Not fixed, nothing to fix here; recorded alongside this session's other
+self-resolved TODO findings so a future pass does not re-open this file expecting a live bug.
+
+<!-- SESSION-SUMMARY-2026-09-04-PRIORITIZED-NEXT-STEPS -->
+## ⭐⭐⭐ SESSION SUMMARY 2026-09-04 — WHAT'S FIXED, WHAT'S NEXT, IN PRIORITY ORDER
+
+Written because the last five TODO-marker checks in a row came back "already resolved" or
+"gated out for this MC version" (see the `CraftingRecipeTracker`/`SmeltInFurnaceTask` entries
+just below) — a clear signal, per the checklist's own Rule One, that static TODO-scanning has
+hit its floor for this pass. Consolidating so the next session with C8.1 cleared (a build, or
+the `@gamer` stand) does not have to re-read this whole file to find where to start.
+
+**No build ran this whole session (C8.1: no docker/gradle access, and the STRICT rule against
+building without being asked). Every fix below is source-only, self-audited by a second reading,
+and NONE of it has executed once.**
+
+### Fixed this session, highest confidence first (small, mechanical, self-audited twice)
+
+1. **A real live bug, reproduced and root-caused**: `FastNavigator`'s stall watchdog could
+   abandon a `BlockPathWalker` leg mid-walk with nobody stopping it, which this session watched
+   cause an actual void death on the live `uctest-server` stand from a trivial 4-block `gotoXYZ`.
+   Fixed (`BlockPathWalker.stop()` added to the stall exit). **Test this one first** if a stand
+   is available at all — it is the only fix with a live reproduction behind it.
+2. Six files (`TimeoutWanderTask`, `InteractWithBlockTask`, `PlaceBlockTask`,
+   `CustomBaritoneGoalTask`, `GetToEntityTask`, `DestroyBlockTask`) could never walk out of a
+   stuck-in-nether-portal state while a search was merely running rather than moving the body —
+   same "search is not progress" defect class as the drowning guard fixed earlier. Fixed
+   identically in all six.
+3. `MovementProgressChecker` gained a shared, reusable grace-period method
+   (`resetIfPathingWithGrace`) so five more files stop wiping their own stall detector the
+   instant `Nav.isPathing()` is true. Caught and fixed a real bug in this method's own anchor
+   logic on self-audit — see the entry above.
+4. Arithmetic-only, no new branches: the end-portal center calculation's systematic +1 shift
+   (`BeatMinecraftTask`), both stronghold-distance checks mixing a real altitude against a fake
+   Y=0 (`GoToStrongholdPortalTask`/`LocateStrongholdCoordinatesTask`), `@give`'s unreachable
+   butler-fallback (`GiveCommand`/`PlayerArg`), `KnockbackEstimator`'s dead enchantment read.
+5. Security/hygiene, not gameplay: the MCP server now requires a bearer token (C7.3);
+   `ButlerConfig`'s per-server chat formats moved out of compiled source into a resource
+   template (C7.6); `MessageSender` no longer throttles tungsten's own commands through the
+   human chat anti-spam queue (C7.4); four render-container clears no longer contend a lock on
+   the search hot path (C3.3); `WindMouseRotation` no longer accumulates aim pixels while a
+   screen is open (C6.11).
+6. **Off by default, needs a stand to turn on**: `TungstenConfig.wanderSearchMustMove` — the
+   `entitySearchMustMove` pattern applied to `TimeoutWanderTask`'s give-up cycle. Zero behavior
+   change until flipped; see its own entry for the exact A/B to run.
+
+### Confirmed real, NOT fixed — needs either a build or live data this session could not get
+
+- **C7.5** (`TungstenHelper.applyFallbackTuning` mutates global pathfinder config): the honest
+  blocker is a data race in `PathFinder.find()`'s spawned search thread, not a missing idea — a
+  save/restore pattern cannot work here. Needs a `PathFinder` API change (per-call parameters),
+  which is a real core change to the mod's central physics search, not a quick patch.
+- **`MiningRequirement`'s cobweb FIXME**: plausible real impact traced through both callers, but
+  whether it actually fires depends on `Blocks.COBWEB.isToolRequired()`'s value in this
+  Minecraft/Yarn version — one fact, unverifiable without a live JVM or a build.
+- **The crafting carousel** (GitHub issue #25): mechanism is real and named
+  (`CraftGenericManuallyTask`'s cursor-fill race), but TWO honest fix attempts have already been
+  tried, measured, and reverted. A third attempt needs real stand time, not another guess.
+- **The stall-detector tracking duplication** (`TimeoutWanderTask`/`DestroyBlockTask` still carry
+  their own copy of the logic now centralized in `MovementProgressChecker`): cosmetic debt, not
+  a behavior gap, deliberately left alone rather than risk touching two already-working call
+  sites for de-duplication's sake alone.
+
+### Standing infrastructure facts, re-confirmed this session
+
+- **`uctest-gamer-server` (the actual `@gamer` world) was down every time this session checked
+  it** (most recently 2026-09-04). `uctest-server` (the flat nav-benchmark world) stayed
+  reachable throughout via the MCP channel at `host.docker.internal:25350/mcp`.
+- C8.1 (no docker/gradle access from this session) held for the entire session. If a future
+  session has it, **the single most valuable first action is building and deploying, then
+  re-running whatever of the above fixes are cheap to spot-check** (item 1 above especially) —
+  everything above stopped being useful the moment it was verified sufficient in an internal
+  code check; the checklist's own hard ban means none of it counts as done until then.
+
 <!-- SMELTINFURNACETASK-MULTITARGET-TODO-UNUSED-2026-09-04 -->
 ## NEGATIVE RESULT: `SmeltInFurnaceTask`'s "do them in order" TODO is dead territory (2026-09-04)
 
