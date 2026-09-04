@@ -1,5 +1,41 @@
 # TODOs
 
+<!-- PATHFINDER-SALVAGEEMIT-DOUBLE-COUNT-2026-09-04 -->
+## Fixed: `PathFinder.setCurrentPath()` was double-counting `salvageEmit` (2026-09-04)
+
+First full start-to-end read of `PathFinder.java` (2517 lines) — previously only touched via
+targeted line lookups. Found `salvageEmit++;` appearing TWICE in `setCurrentPath()`, each copy
+following its own near-identical comment block explaining the same fact ("the second delivery
+door the `emit` counter can't see") — clearly two edits at different times that both added the
+same instrumentation without either one seeing the other already had. `salvageEmitNodes` right
+next to the first copy was only ever incremented once.
+
+This matters because every diagnostic dump this file's own comments describe reads counters
+against each other (`emit=X/Y/Z/W`, `srch=physOut/blockOut` style) to reason about which of
+several delivery paths actually fired. A counter reading exactly 2x its true value while its
+paired node-count counter reads correctly is invisible unless someone divides them — anyone
+trusting `salvageEmit` at face value (including any of this session's own prior measurements
+that cited it) was reading double the real count. FIXED: merged to one comment (kept the more
+complete ⛔-marked version, which names all four real callers) and one increment of each counter.
+
+Two smaller finds in the same read, both fixed:
+- A `noteStop("PathFinder@173")` fragment was sitting INSIDE a javadoc comment block (the "WHO
+  KILLS THE SEARCH" doc on `stopBy`) — pasted there by accident, never executed as code. Checked
+  every real `stop.set(true)` site across the whole codebase (`grep -rn "noteStop("`): all of
+  them, in every other file, correctly call `noteStop` immediately before `stop.set(true)`. This
+  stray fragment was the only gap, and it was dead documentation, not a missing call — removed
+  rather than relocated, since there is no live call site left needing it.
+- `resetSearch()` set `EXECUTOR.placeQueue` from the identical expression twice in a row
+  (adjacent lines, different indentation — an editing leftover). Harmless (idempotent
+  assignment) but redundant; removed one copy.
+- `findClosestPositionIDX()`'s loop computed a `heightDiff` every iteration whose only reference
+  was inside an already-commented-out condition — dead computation with zero effect on the
+  method's return value; removed.
+
+Not stand-verified (C8.1, no build this session). The `salvageEmit` fix changes a diagnostic
+counter's value, not search/execution behavior — zero risk to pathing correctness. The other
+three are dead-code removal with no behavior change at all.
+
 <!-- GETJUMPHEIGHT-DEAD-BRANCHES-2026-09-04 -->
 ## Fixed: `getJumpHeight` had unreachable branches in three places (2026-09-04)
 
