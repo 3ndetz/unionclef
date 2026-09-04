@@ -32,6 +32,18 @@ exactly why the checklist's hard ban on calling anything done without a stand ru
 fix that looks obviously correct on the first read is not the same as one that has been checked
 a second time.
 
+⭐ AUDIT COMPLETED, SAME ROUND: re-read the diff of every other substantial fix from this session
+against its own reasoning — the six-file nether-portal-escape substitution, `FastNavigator`'s
+`BlockPathWalker.stop()` addition, `WindMouseRotation`'s screen guard, `MessageSender`'s chat
+bypass, `GiveCommand`/`PlayerArg`'s new constructor, `KnockbackEstimator`'s enchantment read,
+both stronghold-distance fixes, the end-portal center arithmetic, the wander-sawtooth flag (both
+the `TimeoutWanderTask` call site and the `TungstenConfig` declaration), the MCP bearer-token
+auth, and all four render-lock-contention sites. All confirmed correct against their own stated
+intent on this second read — the `MovementProgressChecker` anchor was the only mistake found in
+the whole set. Still none of it is stand-verified; a careful second read is not a substitute for
+a live run, only for the class of mistake a live run was never going to be available to catch
+first anyway.
+
 <!-- MOBDEFENSECHAIN-FULL-READ-NO-NEW-DEFECT-2026-09-04 -->
 ## NEGATIVE RESULT: full read of `MobDefenseChain.java` (2071 lines), no new defect (2026-09-04)
 
