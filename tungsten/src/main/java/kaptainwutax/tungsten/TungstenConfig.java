@@ -4862,8 +4862,17 @@ public class TungstenConfig {
 	 *
 	 * <p>Falls back to the unfiltered set if the gate would reject every move, since no
 	 * guide at all is worse than an ambitious one.
+	 *
+	 * <p>⛔ WAS {@code public static}, unlike every other flag in this file (fixed 2026-09-04):
+	 * {@code SettingsCommand.getConfigFields()} explicitly excludes static fields
+	 * (`!Modifier.isStatic(...)`), so this one was invisible to {@code ;settings} and to
+	 * {@code TungstenConfig.load()}/{@code save()}'s reflection over the instance — the one flag
+	 * in the file nobody could flip live or persist, with no technical reason for the
+	 * difference. Currently dead under shipped defaults regardless (only read inside the
+	 * {@code smartMoves} branch, and {@code smartMoves} itself defaults `false`), so this had no
+	 * live-behavior impact — but it defeated the exact live A/B this flag's own doc describes.
 	 */
-	public static boolean smartMovesShareTheGuard = true;
+	public boolean smartMovesShareTheGuard = true;
 
 	/**
 	 * Let a resume leave an in-flight search alone when it is already solving the SAME goal,

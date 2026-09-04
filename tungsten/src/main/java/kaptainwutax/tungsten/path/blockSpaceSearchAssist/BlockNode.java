@@ -350,7 +350,7 @@ public class BlockNode {
 			// up to MAX_DESCEND=3, so the guide could contain a hop the physics leg cannot
 			// execute -- measured on the 1219 course as guide dy01=-3.1 with fallChk 0/0, i.e.
 			// the fall guard was never even consulted. Route both generators through one gate.
-			if (!TungstenConfig.smartMovesShareTheGuard) return smart;
+			if (!TungstenConfig.get().smartMovesShareTheGuard) return smart;
 			smartKept = 0; smartDropped = 0;
 			List<BlockNode> smartOk = new java.util.ArrayList<>(smart.size());
 			for (BlockNode n : smart) {
