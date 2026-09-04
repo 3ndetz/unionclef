@@ -1415,9 +1415,16 @@ public class CombatController {
         out.sprint = out.back;
         // Blocked or unsafe behind: run ALONG the obstacle instead of into it. Standing still is
         // the one option that is certainly wrong.
+        //
+        // ⛔ FIXED 2026-09-04: dirSafe's own javadoc (and this file's own correct usage of it at
+        // out.left/out.right a few dozen lines up, gated on strafeDir) says the strafe convention
+        // is +1 = LEFT, -1 = RIGHT. This tested -1 (RIGHT) and assigned it to out.left, then
+        // tested +1 (LEFT) and assigned it to out.right -- backwards. In the one branch of this
+        // whole file that exists specifically to keep a WOUNDED bot off a ledge, it could verify
+        // one side clear and then press the OTHER, untested side.
         if (!out.back && dist < KITE_DISTANCE) {
-            out.left = dirSafe(player, world, 0, -1);
-            out.right = !out.left && dirSafe(player, world, 0, 1);
+            out.left = dirSafe(player, world, 0, 1);
+            out.right = !out.left && dirSafe(player, world, 0, -1);
             out.sprint = out.left || out.right;
         }
     }
