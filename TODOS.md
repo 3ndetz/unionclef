@@ -1,5 +1,29 @@
 # TODOs
 
+<!-- AGENT-WOULDCOLLIDEAT-IGNORED-POS-2026-09-04 -->
+## Fixed: `Agent.wouldCollideAt()` ignored its own position argument (2026-09-04)
+
+Full read in progress of `Agent.java` (2171 lines, the physics simulation core every search node
+depends on — a faithful port of vanilla `LivingEntity`/`PlayerEntity` tick logic). Found
+`wouldCollideAt(WorldView world, BlockPos pos)` (called by `pushOutOfBlocks`, which runs every
+tick on 4 corner offsets — `tickMovementClientPlayer`) building `Box box = this.box` — the
+agent's ACTUAL current bounding box — and testing collision against THAT, completely ignoring
+the `pos` parameter. The correct construction (vanilla `Entity.wouldCollideAt`: a 1x1xN column
+box AT the given block position, spanning the agent's own Y range) was already written out as a
+commented-out `box2` line right above the return — dead code holding the right answer next to
+live code using the wrong one.
+
+Why this matters: `pushOutOfBlocks`'s direction-selection loop calls this once per candidate
+escape direction (`blockPos.offset(direction2)` for west/east/north/south), expecting a
+different collision answer for each so it can pick a clear direction. With the old body every
+direction got the IDENTICAL answer (whatever `this.box`'s own current collision state happened
+to be, independent of which position was actually being asked about) — so the search could
+never distinguish a clear escape direction from a blocked one. FIXED: restored the commented-out
+`box2` as the live check. Verified against vanilla `Entity.wouldCollideAt` semantics and against
+the file's own dead code, which already had the right construction.
+
+Not stand-verified (C8.1, no build this session). Continuing the full read of this file.
+
 <!-- NODE-DEAD-LOCALS-2026-09-04 -->
 ## Cleanup: unused locals removed from `Node.createNode` (2026-09-04)
 
