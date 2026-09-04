@@ -1,5 +1,22 @@
 # TODOs
 
+<!-- SMELTINFURNACETASK-MULTITARGET-TODO-UNUSED-2026-09-04 -->
+## NEGATIVE RESULT: `SmeltInFurnaceTask`'s "do them in order" TODO is dead territory (2026-09-04)
+
+`SmeltInFurnaceTask.java:48` (and the identical shape in `SmeltInBlastFurnaceTask`/
+`SmeltInSmokerTask`): `// TODO: Do them in order.` above `_doTask = new
+DoSmeltInFurnaceTask(targets[0]);` — the constructor accepts a `SmeltTarget[]` but only ever
+processes index 0, and `onResourceStart` explicitly warns *"Tried smelting multiple targets,
+only one target is supported at a time!"* if more than one was passed.
+
+Checked every caller (`grep -rn "new SmeltIn(Furnace|BlastFurnace|Smoker)Task("`, all of
+`TaskCatalogue`, `Playground`, `CollectGoldIngotTask`, `CollectIronIngotTask`,
+`CollectMeatTask`, `CollectFoodTask`, `BeatMinecraftTask`, `BeatMinecraft2Task`,
+`MarvionBeatMinecraftTask`, `TerminatorTask`): every single one passes exactly one
+`SmeltTarget`. The multi-target path the TODO is about has no live caller anywhere in this
+codebase — the warning has presumably never fired. Not a live bug, nothing to fix; recorded so
+it is not mistaken for one.
+
 <!-- SELF-AUDIT-CAUGHT-BUG-IN-OWN-FIX-2026-09-04 -->
 ## ⛔ SELF-CAUGHT: my own `resetIfPathingWithGrace` had a real bug, fixed same round (2026-09-04)
 
