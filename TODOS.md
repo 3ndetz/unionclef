@@ -1,5 +1,15 @@
 # TODOs
 
+<!-- PATHFINDER-DEAD-LOCALS-2026-09-04 -->
+## Cleanup: three unused locals removed from `updateNextClosestBlockNodeIDX` (2026-09-04)
+
+Same `PathFinder.java` full read as the `salvageEmit` fix above. `isNextNodeAbove`,
+`isNextNodeBelow` and `newClosestPos` were computed on every node the physics search advances
+past (this method runs in the hot per-node loop) but never referenced anywhere else in the
+method — checked with a grep across the whole file. Pure dead code, zero behavior change:
+their expressions (`BlockPos`/`onGround` getters, a list access) have no side effects, so
+removing the assignments cannot change anything the method returns or does.
+
 <!-- PATHFINDER-SALVAGEEMIT-DOUBLE-COUNT-2026-09-04 -->
 ## Fixed: `PathFinder.setCurrentPath()` was double-counting `salvageEmit` (2026-09-04)
 
