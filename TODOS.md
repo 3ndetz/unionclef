@@ -9820,7 +9820,7 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   `ClientWorld` напрямую с двух пулов потоков) остаётся ОТКРЫТЫМ — удаление мёртвой заготовки
   кэша не заменяет собой написание настоящего; если кто-то возьмётся строить реальный
   `BlockStateInterface`-эквивалент, строить его придётся с нуля, не оживляя `VoxelWorld`.
-- [ ] **C4.2 `PathExecutor` state (path/tick/stop/queues) is mutated from the PathFinder worker thread
+- [~] **C4.2 `PathExecutor` state (path/tick/stop/queues) is mutated from the PathFinder worker thread
   while the client thread replays it** — no synchronisation, no `volatile`. `breakQueue` is a
   non-volatile public field written by the search thread.
   ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01: всё ещё точно так — `breakQueue` (`PathExecutor.java:37`),
@@ -9832,10 +9832,26 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   чтение поля стоит максимум одного неверного отсчёта в счётчике, а не порчей поведения бота —
   но это ТЕ ЖЕ небезопасные поля, унаследованный, а не новый пробел, и стоило сказать явно, а не
   промолчать, раз уж этот пункт всё равно перепроверялся.
-- [ ] **C4.3 `pendingBreaks`/`pendingPlaces` are static mutable globals** mutated from background threads.
+  ⛔ ЧАСТИЧНО ПОЧИНЕНО 2026-09-04: `path`/`tick`/`stop`/`breakQueue`/`placeQueue` теперь `volatile`
+  (`PathExecutor.java`). Это закрывает ТОЛЬКО половину дефекта — видимость записи одного потока
+  для чтения другим. НЕ закрыто и записано честно рядом в коде: (1) check-then-act на несколько
+  чтений одного поля в одном методе (второй поток может переприсвоить поле между двумя чтениями
+  здесь) — нужен снимок поля в локальную переменную один раз на метод, более крупная правка; (2)
+  `tick` — составная операция (`tick++`, `PathExecutor.java` ныне другая нумерация строк из-за
+  вставленного комментария) на одном потоке против сброса (`tick = 0`/`tick = path.size()`) из
+  `startBreaking()` на другом (её же docstring говорит, что зовётся потоком поиска при передаче
+  задания на слом) — `volatile` делает КАЖДУЮ отдельную запись видимой, но не делает
+  инкремент-против-сброса атомарным между потоками. Не оттестировано на стенде (C8.1, нет
+  докера/gradle эту сессию) — правка мала и по природе безопасна (не меняет однопоточную логику,
+  только гарантию видимости), но per checklist hard ban, `[~]`, не `[x]`.
+- [~] **C4.3 `pendingBreaks`/`pendingPlaces` are static mutable globals** mutated from background threads.
   ПОДТВЕРЖДЕНО ПОВТОРНО 2026-09-01: `public static List<BlockPos> pendingBreaks`/`pendingPlaces`
   (`PathFinder.java:1562,1564`) — ровно те же поля, что эта же сессия читала при разборе
   застойной копки (`truncateAtBreaks`). Всё ещё голые статические поля. Открыто.
+  ⛔ ЧАСТИЧНО ПОЧИНЕНО 2026-09-04, тем же заходом что C4.2: оба поля теперь `public static
+  volatile`. Тот же честный лимит — видимость, не атомарность нескольких чтений подряд
+  (`!= null` → `!isEmpty()` → `.get(0)`, `PathFinder.java:555-647`, могут прочитать три разных
+  состояния поля, если поисковый поток переприсвоит его между ними). Не оттестировано (C8.1).
 - [x] **C4.4** Search threads write to Minecraft chat directly from background threads.
   ЗАКРЫТО 2026-07-30 + прогон на стенде. Это была не косметика: генераторы ходов писали
   строку в чат НА КАЖДЫЙ ход-кандидат — 16568 строк «pillar planned» и 7024 «bridge planned»

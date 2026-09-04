@@ -1558,10 +1558,17 @@ public class PathFinder {
     /** Planned mining positions for the wall right past the current block path
      *  segment (null when the path has no breaks). Copied to the executor on
      *  every emission; the executor mines them once the replay finishes, then
-     *  the goto retry / path-extension machinery re-searches the opened world. */
-    public static List<BlockPos> pendingBreaks = null;
+     *  the goto retry / path-extension machinery re-searches the opened world.
+     *
+     *  <p>⛔ TODOS.md C4.3: reassigned by the search thread, read by the client thread. {@code
+     *  volatile} fixes cross-thread VISIBILITY of the reference -- it does not make a read site
+     *  that checks {@code != null}, then {@code !isEmpty()}, then {@code .get(0)} atomic against
+     *  a concurrent reassignment between those reads; that check-then-act race is a separate,
+     *  larger fix (snapshot into a local once per method) left undone: C8.1, no stand this
+     *  session to verify a change to code this central under real concurrency. */
+    public static volatile List<BlockPos> pendingBreaks = null;
     /** Bridge floor blocks to PLACE at the segment end — the mirror of pendingBreaks. */
-    public static List<BlockPos> pendingPlaces = null;
+    public static volatile List<BlockPos> pendingPlaces = null;
 
     /** Physics guidance must stop at the cell before a wall (break) OR a gap (place) —
      *  the live world can't be simulated through the missing/extra blocks. Truncates at

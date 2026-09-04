@@ -21,10 +21,22 @@ import java.util.List;
 
 public class PathExecutor {
 
-    protected List<Node> path;
-    protected int tick = 0;
+    // ⛔ TODOS.md C4.2: written by the PathFinder worker thread, read by the client thread
+    // replaying the route, with no synchronisation. `volatile` fixes the VISIBILITY half (a
+    // writer's assignment is guaranteed seen by the next read on another thread) -- it does NOT
+    // fix two other shapes of the same defect, both left undone (C8.1, no stand this session to
+    // verify a change this central under real concurrency):
+    //   1. a check-then-act race across several reads of the same field in one method (a second
+    //      thread can still reassign the field between two reads here);
+    //   2. `tick` is a compound read-modify-write (`tick++`, tick.java:557) on one path and a
+    //      plain reset (`tick = 0`/`tick = path.size()`) from `startBreaking()` on another --
+    //      `startBreaking`'s own doc says it is called by the search thread handing over a job,
+    //      so an increment and a reset can interleave and lose an update. `volatile` makes each
+    //      individual write visible; it does not make increment-vs-reset atomic across threads.
+    protected volatile List<Node> path;
+    protected volatile int tick = 0;
     protected boolean allowedFlying = false;
-    public boolean stop = false;
+    public volatile boolean stop = false;
     public Runnable cb = null;
     public long startTime;
     public List<BlockNode> blockPath = null;
@@ -34,7 +46,7 @@ public class PathExecutor {
      *  current path segment (set by PathFinder from the block path's break
      *  plan). The path is held "unfinished" while mining so the search
      *  thread's continuation machinery waits for the opened wall. */
-    public List<net.minecraft.util.math.BlockPos> breakQueue = null;
+    public volatile List<net.minecraft.util.math.BlockPos> breakQueue = null;
     private int breakingTicks = 0;
     private int settleTicks = 0;
 
@@ -91,7 +103,7 @@ public class PathExecutor {
 
     /** Support cells to PLACE (bridge floor) once the replay reaches the segment end
      *  (set by PathFinder from the block path's place plan) — the mirror of breakQueue. */
-    public List<net.minecraft.util.math.BlockPos> placeQueue = null;
+    public volatile List<net.minecraft.util.math.BlockPos> placeQueue = null;
     /**
      * The placer is aiming RIGHT NOW and owns the camera. Baritone has exactly one thing
      * steering at a time — the movement sets a MovementTarget and LookBehavior applies it —
