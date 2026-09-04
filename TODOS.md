@@ -1,5 +1,16 @@
 # TODOs
 
+<!-- NODE-DEAD-LOCALS-2026-09-04 -->
+## Cleanup: unused locals removed from `Node.createNode` (2026-09-04)
+
+Full read of `Node.java` (493 lines). `createNode()` (called for every candidate move — see
+`createCalls` counter, often 100+ per node expanded) computed `isBelowClosedTrapDoor` and
+`shouldAllowWalkingOnLowerBlock` (two `BlockState` lookups plus a distance check) but never
+referenced either in that method. The identically-named pair a few dozen lines down in
+`createAirborneNodes()` IS used (feeds `minY`) — this pair reads like a copy-paste of that logic
+that never got wired up. Removed; zero behavior change, confirmed by grep showing no other
+reference to either name in the file outside `createAirborneNodes`.
+
 <!-- PATHFINDER-DEAD-LOCALS-2026-09-04 -->
 ## Cleanup: three unused locals removed from `updateNextClosestBlockNodeIDX` (2026-09-04)
 
