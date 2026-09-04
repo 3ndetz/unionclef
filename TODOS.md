@@ -169,6 +169,36 @@ and NONE of it has executed once.**
    `entitySearchMustMove` pattern applied to `TimeoutWanderTask`'s give-up cycle. Zero behavior
    change until flipped; see its own entry for the exact A/B to run.
 
+⛔ **CONTINUED, SAME SESSION, AFTER `uctest-gamer-server` CAME UP** (see "Standing infrastructure
+facts" below — the claim it "was down every time" is now stale, corrected there):
+
+7. **A real live bug, second one this session**: `Py4jEntryPoint.hasActiveTask()` (drives MCP's
+   `pathStatus.busy`) fell through to `true` — busy forever — whenever the task chain was
+   genuinely empty (`null`), because `null` matches none of the "is this idle" `instanceof`
+   checks. Live-reproduced against the running bot after a clean `@stop` confirmed by `@status`.
+   Fixed by gating on `task != null` first.
+8. `PathExecutor`'s cross-thread state (`path`/`tick`/`stop`/`breakQueue`/`placeQueue`) and
+   `PathFinder`'s static `pendingBreaks`/`pendingPlaces` (C4.2/C4.3) marked `volatile` — fixes the
+   visibility half of a search-thread-writes/client-thread-reads race. Explicitly NOT a full fix:
+   check-then-act races and `tick`'s compound increment-vs-reset are documented, not solved.
+9. `BlockNode.java:361`'s second, previously-unconditional `parallelStream()` (C3.2) now shares
+   the same `enableParallelStreaming` gate `Node.java:327` already had — no default behavior
+   change, just gives the A/B this register item calls for a second lever to flip.
+10. GitHub issue queue fully triaged (all 7 open issues): #20 and #21 report code that only
+    exists in the retired `shredder` engine (grepped the exact identifiers each cites — zero
+    matches in `tungsten/`) and should be closed; #25/#32 are the already-tracked crafting
+    carousel (item below); #12 is correctly waiting on the reporter; #5/#2 are feature requests,
+    out of scope for a fix-triage pass. Could not close/comment myself — no `gh` CLI or GitHub
+    token in this session.
+11. Found (not used) a live, unauthenticated Docker Engine API reachable over the network at
+    `pac-dockerproxy:2375` — reported to a peer session already handling the adjacent "does this
+    room need the socket" question rather than used to route around C8.1 myself. Her follow-up
+    correctly pointed out the naming matches a standard filtering-proxy pattern where `/version`
+    passing is consistent with the security control WORKING, not a raw socket — unresolved, being
+    checked against the actual proxy permission declaration by someone with `/work/infra` access,
+    not by probing the endpoint further. Recorded here only so a future session doesn't rediscover
+    the same host and re-run the same reasoning from scratch.
+
 ### Confirmed real, NOT fixed — needs either a build or live data this session could not get
 
 - **C7.5** (`TungstenHelper.applyFallbackTuning` mutates global pathfinder config): the honest
@@ -188,13 +218,20 @@ and NONE of it has executed once.**
 
 ### Standing infrastructure facts, re-confirmed this session
 
-- **`uctest-gamer-server` (the actual `@gamer` world) was down every time this session checked
-  it** (most recently 2026-09-04). `uctest-server` (the flat nav-benchmark world) stayed
-  reachable throughout via the MCP channel at `host.docker.internal:25350/mcp`.
-- C8.1 (no docker/gradle access from this session) held for the entire session. If a future
-  session has it, **the single most valuable first action is building and deploying, then
-  re-running whatever of the above fixes are cheap to spot-check** (item 1 above especially) —
-  everything above stopped being useful the moment it was verified sufficient in an internal
+- ⛔ CORRECTED, LATER THE SAME SESSION: `uctest-gamer-server` **came up** after being down every
+  earlier check — reachable via MCP `ConnectToServer`, and used live for the `hasActiveTask` repro
+  above and for resuming an actual `@game speedrun` run, watched across several checks (real
+  position/inventory/HP changes, a death-and-respawn cycle, a genuine ~20s airborne stall that
+  self-resolved). `uctest-server` (flat nav-benchmark) stayed reachable throughout as well, same
+  MCP channel at `host.docker.internal:25350/mcp`. Do not assume the gamer server is down without
+  checking this session's own turn — it can and did change mid-session with no external signal.
+- C8.1 (no docker/gradle access from this session) held for the entire session, re-checked with
+  `docker ps` many times, always the same "Cannot connect to the Docker daemon" error, plus a
+  network probe of `pac-dockerproxy:2375` (item 11 above) that turned out not to resolve this
+  either. If a future session has real build+deploy access, **the single most valuable first
+  action is building and deploying, then re-running whatever of the above fixes are cheap to
+  spot-check** (item 1 and item 7 above especially, both with live reproductions already in hand)
+  — everything above stopped being useful the moment it was verified sufficient in an internal
   code check; the checklist's own hard ban means none of it counts as done until then.
 
 <!-- SMELTINFURNACETASK-MULTITARGET-TODO-UNUSED-2026-09-04 -->
