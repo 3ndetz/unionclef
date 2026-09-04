@@ -1,5 +1,35 @@
 # TODOs
 
+<!-- WATER-FALL-SAFETY-TODO-CHECKED-NOT-A-LIVE-BUG-2026-09-04 -->
+## NEGATIVE RESULT: `WorldHelper.dangerousToBreakIfRightAbove`'s water TODO is not a live bug (2026-09-04)
+
+`WorldHelper.java:354`: `// TODO: If there's a 1 meter thick layer of water and then a massive
+drop below, the bot will think it is safe.` Sounded like a safety-check gap in the same family
+as the drowning/portal fixes above, so read the whole function and its one caller
+(`DestroyBlockTask.java:540`) before touching anything.
+
+`dangerousToBreakIfRightAbove()` scans DOWN from the block about to be broken; the caller reads
+`true` as "dangerous — run away and try again" (its own debug string says so verbatim). Reading
+the water branch (`if (isWaterState(s)) return true;`, right where the TODO sits) against that:
+water returns `true` — DANGEROUS, avoid — for ANY water encountered at ANY depth, unconditionally.
+That is already the maximally conservative answer, not an optimistic one: the code never assumes
+water makes a fall safe regardless of what is beneath it, which is exactly the case the TODO
+warns about. It cannot currently "think it is safe" over a thin water layer, because it never
+reaches a safe verdict for water at all.
+
+Cross-checked against actual vanilla mechanics rather than assumed: entering water resets fall
+damage for the distance ALREADY fallen, but does not stop the fall — a bot passing through a
+one-block water skin into a void beneath it keeps falling and can still take lethal damage from
+the SECOND leg, past the water. So the hazard the TODO names is real, but the current code
+already refuses to certify safety in exactly that situation (it does not even check what is below
+the water) — it is simply more cautious than it needs to be for a genuinely shallow, sit-on-solid-
+ground pond, which is a missed OPTIMIZATION (the bot avoids some harmless breaks), not a missed
+DANGER. Not fixed, and not attempted: correctly distinguishing the two cases needs the depth-check
+logic the TODO itself says does not exist yet, which is a real feature to add, not a boolean to
+flip — and flipping the boolean without that feature would walk straight into the hazard the
+comment names. Left as-is; recorded so this TODO is not mistaken for a live bug and "fixed" into
+an actual regression by a future pass.
+
 <!-- NAIVE-PROGRESS-RESET-ON-ISPATHING-WIDESPREAD-2026-09-04 -->
 ## ⭐ THE STALL-DETECTOR-WIPE PATTERN IS WIDESPREAD, NOT JUST WANDER/DESTROYBLOCK (2026-09-04)
 
