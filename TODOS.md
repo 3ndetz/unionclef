@@ -11311,6 +11311,23 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
     itself. I have no compiler and no live stand with a build in this session to verify a
     change to the search engine everything else in the mod depends on, and a wrong change here
     risks being worse than the leak it fixes. Left for whoever has both.
+  * ⛔ ДОБАВЛЕНО 2026-09-04, ВТОРОЙ ЗАХОД — full call-graph trace of `minDistPath`, not just its
+    two direct readers, to check whether the scope above was actually the whole picture. It is
+    not; the scope is LARGER than "two call sites", confirming (not narrowing) the conclusion
+    above. Traced by grep, not guessed: `minDistPath` field decl `PathFinder.java:105`, read at
+    `:510` (inside `search()`) and `:1078` (inside `bestSoFar(boolean, int, Node, Vec3d)`).
+    `bestSoFar()` itself has exactly two callers: `handleTimeout()` (`:1924`) and
+    `setCurrentPath()` (`:1943`). `handleTimeout()` is a private instance method with exactly
+    ONE caller, `:845`, inside `search()`'s own main loop — so that half of the graph stays
+    inside the one async search thread, as already described above. `setCurrentPath()`,
+    however, is a private STATIC method with AT LEAST EIGHT call sites spread across the file:
+    lines 722, 765, 992, 1049, 1934, 2460, 2467 (commented out), 2493 — not confined to
+    `search()`'s call chain at all. So a save/restore fix around a single `pf.find(...)` call
+    would still race not just against the search thread's own two reads, but against every one
+    of those eight `setCurrentPath()` call sites too, several of which are plainly reachable
+    from outside the search thread (a path being accepted/replaced as it arrives). This does
+    not open a narrower fix; it rules one out. The API-change conclusion above stands, now on
+    firmer evidence — still not attempted, still needs a build to verify.
 - [~] **C7.6** Server-specific data hardcoded in Java source (`ButlerConfig` chat formats).
   ПОДТВЕРЖДЕНО ПОЛНОСТЬЮ ПО КОДУ 2026-09-01, И ЯРЧЕ, ЧЕМ ФОРМУЛИРОВКА ПРЕДПОЛАГАЕТ:
   `ButlerConfig.java:107-151` — массив `chatFormats` из 41 строки, шесть РЕАЛЬНЫХ доменов
