@@ -276,6 +276,21 @@ facts" below — the claim it "was down every time" is now stale, corrected ther
   spot-check** (item 1 and item 7 above especially, both with live reproductions already in hand)
   — everything above stopped being useful the moment it was verified sufficient in an internal
   code check; the checklist's own hard ban means none of it counts as done until then.
+  ⛔ CORRECTED, LATE SESSION: "C8.1" reads as ONE blocker and is actually TWO independent ones,
+  found while answering a precise cross-persona question that forced checking rather than
+  assuming. Ran `./gradlew --version` directly rather than inferring from the STRICT no-gradle
+  rule (that rule is about consent, not capability — worth telling the two apart): **there is no
+  JVM anywhere in this room's container at all** — `ERROR: JAVA_HOME is not set and no 'java'
+  command could be found in your PATH`, no `/usr/lib/jvm`, no `/opt`, nothing under a package
+  manager. `gradlew` and `gradle/wrapper/gradle-wrapper.jar` are both present in the repo; there
+  is simply nothing to execute them with. This blocks the BUILD half entirely, with ZERO
+  dependency on docker. Separately, `deploy/deploy_jar.sh` (read directly, not assumed) does not
+  build anything itself — it only copies an already-built jar into `deploy/run/mods` and
+  recreates the two `uctest-mc-tester*` containers, which needs docker access but nothing more
+  exotic (no `build`, no image push). So: a JVM alone would let a future session build and
+  self-verify via `javac`/unit-level checks without ever touching docker; docker access alone
+  (even a narrow one scoped to just those two containers) cannot produce a jar to deploy at all
+  without a JVM existing somewhere in the pipeline. Both gaps need closing, not either one.
 
 <!-- SMELTINFURNACETASK-MULTITARGET-TODO-UNUSED-2026-09-04 -->
 ## NEGATIVE RESULT: `SmeltInFurnaceTask`'s "do them in order" TODO is dead territory (2026-09-04)
