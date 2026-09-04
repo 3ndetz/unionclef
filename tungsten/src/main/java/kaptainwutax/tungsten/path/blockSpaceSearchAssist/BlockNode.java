@@ -304,8 +304,19 @@ public class BlockNode {
 		return chachedBlockPos;
 	}
 
+	// ⛔ FIXED 2026-09-04: missing null/type guards, both required by Object.equals()'s own
+	// contract ("x.equals(null) must return false", "must return false for an incompatible
+	// type") -- the old body threw NullPointerException on `equals(null)` and
+	// ClassCastException against any non-BlockNode argument instead of answering false. This
+	// class is stored in a HashSet (BlockSpacePathFinder's `closed`), so it is exactly the
+	// shape of bug that surfaces the moment any caller outside the search's own tight loop
+	// (List.contains(null), List.indexOf(null), a generic Set/Map utility) ever compares
+	// against it. Zero behavior change for two real BlockNodes -- only the previously-undefined
+	// null/wrong-type cases change from a crash to `false`.
 	@Override
 	public boolean equals(Object obj) {
+		if (this == obj) return true;
+		if (!(obj instanceof BlockNode)) return false;
 
 		final BlockNode other = (BlockNode) obj;
 
