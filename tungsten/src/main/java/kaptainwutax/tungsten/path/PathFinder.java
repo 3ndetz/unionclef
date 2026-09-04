@@ -2375,13 +2375,8 @@ public class PathFinder {
 
     	Vec3d nodePos = node.agent.getPos();
     	if (!node.agent.onGround && !node.agent.touchingWater && !node.agent.isClimbing(world)) return false;
-    	
-    	boolean isNextNodeAbove = nextNodePos.getBlockPos().getY() > closestPos.getBlockPos().getY() && (nextNodePos.getBlockPos().getY() - closestPos.getBlockPos().getY()) > 1.5 && node.agent.onGround;
-    	boolean isNextNodeBelow = nextNodePos.getBlockPos().getY() < closestPos.getBlockPos().getY();
-    	
     	BlockPos nodeBlockPos = new BlockPos(node.agent.blockX, node.agent.blockY, node.agent.blockZ);
     	int closestPosIDX = findClosestPositionIDX(world, nodeBlockPos, blockPath);
-    	BlockNode newClosestPos = blockPath.get(closestPosIDX);
         BlockState state = world.getBlockState(closestPos.getBlockPos());
         BlockState stateBelow = world.getBlockState(closestPos.getBlockPos().down());
         double closestBlockBelowHeight = BlockShapeChecker.getBlockHeight(closestPos.getBlockPos().down(), world);
