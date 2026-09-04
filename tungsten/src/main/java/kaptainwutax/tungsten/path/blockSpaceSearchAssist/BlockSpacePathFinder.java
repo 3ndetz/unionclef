@@ -700,9 +700,9 @@ public class BlockSpacePathFinder {
 	        // nodes whose corner can be cut — but a node also carries the break/place plan for
 	        // its own step (BlockNode.toBreak / toPlace), and dropping it drops the plan with
 	        // it, silently: the route still looks walkable and the wall that had to be mined is
-	        // simply never mined. Register entry C5.6, open since the audit. The node's own
-	        // predicates already exist for this question (hasBreaks / hasPlaces, BlockNode:110
-	        // and :120) — nothing consulted them.
+	        // simply never mined. TODOS.md C5.6, CLOSED 2026-07-31 (nav_break 3/3) -- this guard
+	        // is the fix. The node's own predicates already existed for this question
+	        // (hasBreaks / hasPlaces, BlockNode:110 and :120); nothing had consulted them before.
 	        boolean carriesWork = p.hasBreaks() || p.hasPlaces();
 	        if (canGetFromLastNToCurrent && !carriesWork
 	                && !p.isDoingJump && !p.previous.isDoingJump && heightDiff == 0) {
