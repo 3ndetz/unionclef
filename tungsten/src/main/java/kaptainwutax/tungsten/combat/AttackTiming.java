@@ -16,18 +16,16 @@ public final class AttackTiming {
     public static double reach() {
         return REACH;
     }
-    private static final float MIN_COOLDOWN = 0.9f;
-
     private AttackTiming() {}
 
-    /** True if player can attack target right now (in reach + cooldown ready). */
-    public static boolean canAttack(ClientPlayerEntity player, Entity target) {
-        if (target == null || !target.isAlive()) return false;
-        double dist = player.squaredDistanceTo(target);
-        if (dist > REACH * REACH) return false;
-        return player.getAttackCooldownProgress(0.5f) >= MIN_COOLDOWN;
-    }
-
+    // canAttack(player, target) REMOVED 2026-09-04 (TODOS.md C1.3): zero callers anywhere in
+    // src/main or tungsten, confirmed by grep, not assumed -- and not a hidden missing feature.
+    // TriggerBot.tick() already gates its own swing on a MORE refined version of the same idea:
+    // a crit-aware threshold (COOLDOWN_CRIT vs COOLDOWN_FULL depending on an airborne+falling
+    // window this method never checked) and vanilla's real closest-point-on-hitbox reach model,
+    // not squaredDistanceTo-to-center. This method was a simpler, superseded predecessor, not an
+    // unwired feature -- wiring it in anywhere now would introduce a second, less accurate attack
+    // gate alongside the one actually driving combat.
 
     /**
      * Compute yaw from player to target entity.

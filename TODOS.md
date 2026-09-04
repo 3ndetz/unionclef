@@ -9643,6 +9643,21 @@ which this very file already carried as **C4.4**. See `docs/CHECKLIST.md` sectio
   both heaps, `VoxelWorld` (never populated, never read).
   ПЕРЕПРОВЕРЕНО ПО КОДУ 2026-09-01, каждый из пяти пунктов отдельно, а не доверием чекбоксу:
   * `AttackTiming.canAttack` — ВСЁ ЕЩЁ ноль вызовов. Открыто, подтверждено заново.
+    ⛔ УДАЛЕНО 2026-09-04, ПОСЛЕ ПРОВЕРКИ, ЧТО ЭТО НЕ НЕДОСТАЮЩАЯ ФУНКЦИЯ: перед сносом проверил,
+    не является ли это готовым, но неподключённым механизмом w-tap/cooldown-таймингa, который
+    C6.6 называет "STILL OPEN". Не является — `TriggerBot.tick()` уже использует БОЛЕЕ точную
+    версию той же идеи: порог cooldown зависит от `critWindow` (`COOLDOWN_CRIT` против
+    `COOLDOWN_FULL`, чего `canAttack` вообще не проверял), и настоящую ванильную модель
+    досягаемости (ближайшая точка хитбокса), а не `squaredDistanceTo` до центра. Значит
+    `canAttack` — не невключённая фича, а более простой ПРЕДШЕСТВЕННИК уже живой, более точной
+    логики; подключать его сейчас означало бы завести ВТОРОЙ, менее точный гейт атаки рядом с
+    рабочим. Метод и мёртвая константа `MIN_COOLDOWN` удалены (`AttackTiming.java`); `REACH`/
+    `reach()`/`isCrit`/`yawTo`/`pitchTo` в том же файле не тронуты — все пятеро живые
+    (`reach()`: `BowShooter.java:311`, `TungstenConfig.java:2430`; `isCrit`: `TriggerBot.java:522`;
+    `yawTo`/`pitchTo`: `SafetySystem.java` многократно, `BlockPathWalker.java`,
+    `ClimbALadderMove.java`) — грепом по всему `src/main`+`tungsten`, не предположено. Не
+    оттестировано на стенде (C8.1) — удаление кода без вызовов не меняет поведение по построению,
+    но per checklist hard ban всё равно не `[x]` без прогона.
   * `isCritState` — УСТАРЕЛО: такого имени в `AttackTiming.java` больше нет. Есть `isCrit`,
     и он ИСПОЛЬЗУЕТСЯ (`TriggerBot.java:517: if (AttackTiming.isCrit(player)) { critHits++;
     lifetimeCrits++; }`). Похоже на переименование при рефакторинге боевого кода, случившееся
