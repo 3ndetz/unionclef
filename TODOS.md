@@ -11533,6 +11533,32 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   menu open that then jumps on resume rather than snapping — `MAX_CATCHUP` should prevent this
   but "should" is not a stand run).
 
+- [ ] **C6.12 A real, fully-diagnosed melee defect with a written, gated fix has NO register
+  entry anywhere** — found 2026-09-04 doing a full read of `TriggerBot.java` (547 lines) for this
+  session's own audit pass, not from the register (a grep for "circle-strafe"/"orbit"/"diagonal"
+  across all of `TODOS.md` found nothing matching). Recorded here so it is not lost or
+  re-discovered from scratch a second time.
+  THE DEFECT, per `TriggerBot.java`'s own embedded multi-day investigation (2026-08-12/13,
+  already fully carried out, not this session's work): a swing matures (cooldown ready) while the
+  target is out of `TriggerBot.REACH` in roughly half of all ready ticks on `allround`
+  (readyFar/readyNear near 50/50 across six runs). Chased through five refuted hypotheses in
+  order — closing speed, `ProjectileDodge` stealing the legs, keys not reaching the game, raw
+  forward-press absence — before landing on the actual cause: `CombatController`'s own
+  circle-strafe holds a diagonal (forward + a strafe key) through 18-78% of the wasted ticks,
+  and a 45-degree diagonal only points ~70% of sprint speed at the target — enough that a
+  5.6 b/s sprinting bot closes at ~3.9 against a target retreating at ~5, i.e. it LOSES ground
+  while honestly holding sprint. Confirmed independently in `CombatController.java` too (its own
+  comment above `strafeFarTicks`/`strafeNearTicks`, dated the next day, closes the same question
+  from that side).
+  THE FIX: `TungstenConfig.combatApproachNoOrbit` (`TungstenConfig.java:4342`, default `false`)
+  already exists and is already wired into `CombatController.java:1194` — written specifically to
+  make the circle-strafe yield while a swing is ready and the target is out of reach, per
+  `TriggerBot.java`'s own closing note ("written and gated behind its own flag pending outcome
+  validation, not shipped as of this reading"). Nothing since suggests it was ever actually run.
+  NOT MEASURED, NOT FIXED THIS SESSION (C8.1) — this entry exists purely so the A/B this defect
+  has been waiting on since 2026-08-13 is visible to whoever next has a stand, instead of sitting
+  only in a source-file comment nobody greps the register for.
+
 ### C7 — INTEGRATION / OPS
 - [~] **C7.1 `UnstuckChain` preempts and tears down tungsten follow/punk and throws the aim to a random
   angle** (URG-2 confirmed). `SafeRandomShimmyTask`'s forced baritone inputs nullify tungsten's key
