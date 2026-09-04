@@ -1,5 +1,30 @@
 # TODOs
 
+<!-- MOBDEFENSECHAIN-FULL-READ-NO-NEW-DEFECT-2026-09-04 -->
+## NEGATIVE RESULT: full read of `MobDefenseChain.java` (2071 lines), no new defect (2026-09-04)
+
+Following this session's own pattern (full-file reads, not targeted greps, found the drowning
+guard, the nether-portal escapes and the stall-detector sawtooth), read `MobDefenseChain.java`
+start to end across two turns: the priority ladder (`getPriority`/`getPriorityInner`, fire/flee/
+creeper/shield/dodge/fight branches), the force field (`doForceField`), the damage ledger
+(`tickDamageLedger`), the draw/arrow watchers (`noticeDraws`/`noticeArrows`/`isProjectileClose`),
+the danger predicates (`isInDanger`/`endangeredByShooter`/`getUniversallyDangerousMob`), the
+player-threat helpers, and the `RunAwayFromPlayersTask` inner class.
+
+Found nothing new. This is the most densely self-documented file read this session — nearly
+every non-trivial branch already carries multi-paragraph measurement history (named counters,
+six-run tables, "ANSWERED 2026-08-12" verdicts) from prior sessions, and every pattern that
+LOOKED like a live bug on first read turned out to already be traced to a conclusion: fixed
+(the fire-key-release theft, the flee-vs-shooter deadlock, the canDealWith armour-damage
+divergence), deliberately parked with a named reason (`fireReleaseNeedsFire`, the point-blank
+press-bias reversion after a controlled A/B), or explicitly recorded as an untriaged edge case
+rather than silently ignored (the steep-arrow `perp` collapse at `:1710-1722`, marked "RECORDED
+NOT PATCHED... needs a course where arrows actually arc before it can be measured" — an honest
+admission, not a gap I found first).
+
+Recorded so a future pass does not spend another full read here expecting an easy find — this
+file has already had that read, this session, start to end.
+
 <!-- MININGREQUIREMENT-COBWEB-TRACED-NOT-FIXED-2026-09-04 -->
 ## TRACED, NOT FIXED: `MiningRequirement`'s cobweb FIXME has plausible real impact (2026-09-04)
 
