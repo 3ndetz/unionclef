@@ -11231,16 +11231,41 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   280-600 ms dice roll, so the swing lands on the way DOWN. Crit and total swings are counted
   and exposed over py4j (`critHits`/`totalHits`) so the ratio can be MEASURED, which is what
   the previous attempt lacked. STILL OPEN: w-tap and sprint-reset.
-- [ ] **C6.7 Aim + the whole stage machine run per RENDER FRAME with no delta-time term** → every
+- [x] **C6.7 Aim + the whole stage machine run per RENDER FRAME with no delta-time term** → every
   tuning constant is framerate-dependent. **This invalidates the past "combat feel" tuning**, which was
   done on a low-FPS stand.
-  ПРОВЕРЕНО ПО КОДУ 2026-09-01, ПОВЕРХНОСТНО (лёгкая проверка, не полный аудит) — ОСТАЁТСЯ
-  ОТКРЫТЫМ. Единственный `System.currentTimeMillis()` во всём `CombatController.java` — строка
-  614, и он принадлежит другому, уже свёрнутому эксперименту (⛔ GROUND-DISTANCE POSITIONING:
-  TRIED, MEASURED AT n=40 AN ARM, REVERTED, с таблицей ON/OFF рядом) — не системной поправке на
-  дельту времени для констант прицела/стейт-машины. Системного delta-time термина не найдено.
-  Проверка узкая (один grep + чтение контекста находки), а не построчный аудит всего файла —
-  честно не закрываю, но и не нашёл ничего, что бы опровергало исходную формулировку.
+  ⛔ REFUTED 2026-09-04 BY AN ACTUAL FULL AUDIT (not another shallow pass) — the 2026-09-01 check
+  above made TWO mistakes at once, and both flipped the conclusion:
+  1. **It grepped only `CombatController.java`.** The aim pipeline's actual per-frame stepping
+     lives in a DIFFERENT file, `util/WindMouseRotation.java` (`CombatController`'s own header
+     comment names it: "MOUSE — render-freq via WindMouse"). That file has a real, deliberate
+     delta-time term: `frameMs = nowMs - lastStepMs` (`:162`), `rate = frameMs / REF_FRAME_MS`
+     clamped to `[1.0, MAX_CATCHUP]` (`:164`), and `gravity`/`maxStep`/the close-range settle
+     fraction are ALL multiplied by `rate` before use (`:185,190,202-203`). The file's own comment
+     names the intent directly: "the step becomes a rate in TIME rather than per frame... this
+     only ever gives back what a starved frame lost" — a documented, working mechanism, not an
+     accident. (The `1.0` floor means it only compensates SLOW frames, never scales a fast client
+     down below the reference rate — a real, named design choice, not the bug the register
+     entry assumed.)
+  2. **It misread the ONE `System.currentTimeMillis()` it did find.** `CombatController.java:614`
+     sits right before the "GROUND-DISTANCE POSITIONING: TRIED... REVERTED" comment block and was
+     read as belonging to that dead experiment. It does not — `now` (the variable that line
+     declares) is the SAME variable read later in the very same method for strafe-switch timing
+     (`now - lastStrafeSwitch > strafeInterval`, `:1101`) and jump timing
+     (`now - lastJump <= interval`, `:1346`), both real wall-clock millisecond comparisons against
+     `strafeInterval`/`jumpInterval` fields that are themselves re-randomised in real milliseconds
+     (`:1104`, `:1360`). Proximity to a comment about reverted code is not the same as being part
+     of it.
+  Checked `SafetySystem.java` too, since that is the "stage machine" half of the original claim:
+  its stage-duration state (`forcedNarrowUntil`, `imminentDecayUntil`) is also
+  `System.currentTimeMillis()`-driven (`:228-229,565,575,578`), not frame-counted.
+  CLOSING: every timing-sensitive mechanism actually found across the three files this claim
+  touches (aim smoothing, strafe/jump cadence, stage duration) already measures real elapsed
+  time, not render-frame count. The original worry — "combat feel tuning was done at a framerate
+  that no longer applies" — does not describe this code as it stands today. Not stand-verified
+  in the sense of measuring actual combat feel across frame rates (that still needs a live A/B if
+  anyone doubts the mechanism itself), but the STRUCTURAL claim ("no delta-time term exists") is
+  false, cited line by line, and that is what this item asked.
 - [~] **C6.8** `WeaponSelector` is hotbar-only, **enchantment-blind** (plain netherite 100 beats
   Sharpness V iron 75), rescans once/21 ticks, and is called from exactly ONE place
   (`PunkPlayerTask.java:202`, COMBAT mode only). No offhand, no bow/crossbow-by-range.
