@@ -51,12 +51,17 @@ import net.minecraft.block.TurtleEggBlock;
 import net.minecraft.block.WitherRoseBlock;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.GameOptions;
+import net.minecraft.component.type.ItemEnchantmentsComponent;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityPose;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.HungerManager;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.fluid.Fluid;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.registry.tag.BlockTags;
@@ -1889,6 +1894,29 @@ public class Agent {
         }
     }
 
+    /**
+     * ⛔ ADDED 2026-09-04: {@code depthStrider} (used at {@link #travelLiving} for swim speed) was
+     * declared, copied node-to-node by {@code copy()} and {@link #of(Agent, boolean, boolean,
+     * boolean, boolean, boolean, boolean, boolean, float, float)}, and read at travelLiving --
+     * but never once INITIALIZED from a real player. Every root agent (built by the two
+     * PlayerEntity-based factories below) started at the field's Java default of 0 regardless of
+     * the boots actually equipped, so the swim-speed boost formula never applied any depth
+     * strider bonus for the whole lifetime of the process. Same pattern as
+     * {@code MovementHelperB.frostWalkerLevel} (this file's sibling enchantment reader) --
+     * copied here rather than duplicated logic invented fresh.
+     */
+    private static int depthStriderLevel(PlayerEntity player) {
+        int level = 0;
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            ItemEnchantmentsComponent itemEnchantments = player.getEquippedStack(slot).getEnchantments();
+            for (RegistryEntry<Enchantment> enchant : itemEnchantments.getEnchantments()) {
+                if (enchant.matchesKey(Enchantments.DEPTH_STRIDER)) {
+                    level = itemEnchantments.getLevel(enchant);
+                }
+            }
+        }
+        return level;
+    }
 
     public static Agent of(PlayerEntity player) {
         Agent agent = new Agent();
@@ -1932,6 +1960,7 @@ public class Agent {
         agent.sleeping = player.isSleeping();
         agent.sneaking = player.isSneaky();
         agent.hunger = player.getHungerManager();
+        agent.depthStrider = depthStriderLevel(player);
         agent.sprinting = player.isSprinting();
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
@@ -2005,6 +2034,7 @@ public class Agent {
         agent.sleeping = player.isSleeping();
         agent.sneaking = player.isSneaky();
         agent.hunger = player.getHungerManager();
+        agent.depthStrider = depthStriderLevel(player);
         agent.sprinting = player.isSprinting();
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
@@ -2078,6 +2108,7 @@ public class Agent {
         agent.sleeping = player.isSleeping();
         agent.sneaking = player.isSneaky();
         agent.hunger = player.getHungerManager();
+        agent.depthStrider = depthStriderLevel(player);
         agent.sprinting = player.isSprinting();
         agent.swimming = player.isSwimming();
         agent.fallFlying = player.getAbilities().flying;
