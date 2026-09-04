@@ -47,6 +47,20 @@ action) still reproduces on tungsten, it is a new, differently-caused bug and de
 fresh issue rather than reopening these two, which are specifically about code that no longer
 runs.
 
+**Rest of the open-issue queue swept the same pass, 2026-09-04 — no further action needed:**
+- **#25 / #32** (inventory 2x2 crafting) are the already-well-tracked "crafting carousel"
+  (`CraftGenericManuallyTask`'s cursor-fill race, see the SESSION SUMMARY above and the dozens of
+  prior investigation entries this file already carries under that class name). Real, not stale,
+  not something to close — but two honest fix attempts are already reverted and a third needs
+  live stand time this session does not have. Nothing new to add; correctly left open.
+- **#12** ("freezes indefinitely... on 1.21.11") was already answered by the repo owner
+  (2026-07-22, one comment): asked the reporter to re-test on the latest release with a
+  coordinate/seed. Zero replies since. Correctly in a wait-on-reporter state; nothing for this
+  session to add without a repro.
+- **#5** ("more MC versions support") and **#2** ("lacks void PvP") are feature requests, not
+  bugs — out of scope for the "close if already fixed" triage this pass was doing, and neither
+  is close to this room's stated end goal (`@gamer` finishing the game on tungsten). Left alone.
+
 <!-- HASACTIVETASK-NULL-TASK-BUSY-FOREVER-2026-09-04 -->
 ## [~] LIVE-REPRODUCED on `uctest-gamer-server`: `pathStatus`'s "busy" stuck true forever on an empty task chain (2026-09-04)
 
