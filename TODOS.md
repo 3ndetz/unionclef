@@ -1,5 +1,35 @@
 # TODOs
 
+<!-- AGENT-DEPTHSTRIDER-NEVER-INITIALIZED-2026-09-04 -->
+## Fixed: `Agent.depthStrider` was never read from the real player — always 0 (2026-09-04)
+
+Completed the full read of `Agent.java` (now 2187 lines). `depthStrider` (an `int` field, read at
+`travelLiving()`'s swim-speed formula: `float h = this.depthStrider; ... swimSpeed += (0.546... -
+swimSpeed) * h / 3.0F;`) is copied node-to-node by `copy()` and by the child-agent
+`of(Agent, boolean...)` overload used when generating search children — but grepping the whole
+codebase for every reference to it (`.depthStrider`) turned up no site that ever sets it from an
+actual player. All three root-agent factories (`of(PlayerEntity)`, `of(PlayerEntity,
+TungstenPlayerInput)`, `of(ClientPlayerEntity, GameOptions)`) simply never touched the field, so
+every root agent started at Java's `int` default of 0 — meaning the Depth Strider swim-speed
+enchantment bonus has never once applied to any search, for any player, for the whole lifetime
+of this engine, regardless of what boots were actually equipped.
+
+FIXED: added `depthStriderLevel(PlayerEntity)`, copied from this codebase's own sibling
+enchantment reader — `MovementHelperB.frostWalkerLevel()` — which uses the identical
+`ItemEnchantmentsComponent`/`RegistryEntry<Enchantment>` pattern already proven to compile
+against this project's yarn 1.21.11 mappings (same imports: `net.minecraft.component.type.
+ItemEnchantmentsComponent`, `net.minecraft.enchantment.{Enchantment,Enchantments}`,
+`net.minecraft.entity.EquipmentSlot`, `net.minecraft.registry.entry.RegistryEntry`). Wired into
+all three root factories right next to their existing `agent.hunger = ...` line.
+
+Not stand-verified (C8.1, no build this session) — this is new code (not dead-code removal like
+the other Agent.java fixes), so it carries more risk than those; the imports and pattern are
+copied verbatim from a method in this same codebase that is known to compile under the current
+mappings, which is the strongest verification available without a JVM. Whoever next has a
+working build: confirm `gradlew compileJava` passes and, ideally, test water pathing with a
+player wearing Depth Strider boots — the visible effect should be faster/more-willing-to-swim
+routes than before this fix.
+
 <!-- AGENT-COMPARE-SPRINT-MISMATCH-WRONG-CONDITION-2026-09-04 -->
 ## Fixed: `Agent.compare()`'s sprint-mismatch diagnostic tested the wrong condition (2026-09-04)
 
