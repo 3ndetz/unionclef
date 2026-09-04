@@ -1,5 +1,29 @@
 # TODOs
 
+<!-- MOVEMENTHELPER-NEOPOSSIBLE-ASYMMETRY-OPEN-2026-09-04 -->
+## OPEN QUESTION (found, not fixed): `isNeoPossible`'s X-axis and Z-axis branches disagree on missing-floor handling (2026-09-04)
+
+Full read of `helpers/MovementHelper.java` (914 lines). `isNeoPossible()` has two mirror-image
+branches for the corner-cut check: `isMovingOnXAxis` (checks a column to the west/east) and
+`isMovingOnZAxis` (checks a column to the south/north). In the X-axis branch, finding no floor
+block under the candidate column (`!world.getBlockState(currPos).isAir()` false, i.e. the floor
+IS air) does `return false;` — an immediate hard rejection of the whole method. In the
+mirror-image Z-axis branch, the identical check does `break;` instead — it only exits the inner
+while loop and falls through to the `isCornerXPossible`/`isCornerZPossible` tail logic, which can
+still return `true` depending on what runs after.
+
+This is either a genuine copy-paste inconsistency (the Z-axis branch should also `return false`)
+or an intentional asymmetry from whatever playtesting produced this heuristic — I could not
+determine which by reading alone, and this is exactly the kind of heuristic-tuning code where an
+unverified change risks a real regression (per this room's own rule: heuristics get copied from
+baritone-style testing, not guessed at). Also cleaned up in the same read: an unused `isSlab`
+local in `isObscured()` (dead code, removed — see commit `00a0a4d8`; `isSlabBelow`/`isAboveSlab`
+were left alone since a commented-out check the file's own TODO discusses still references them
+by name).
+
+Left OPEN pending either a working stand (C8.1) to test both readings against real corner-cut
+courses, or someone who remembers which behavior was intended.
+
 <!-- AGENT-DEPTHSTRIDER-NEVER-INITIALIZED-2026-09-04 -->
 ## Fixed: `Agent.depthStrider` was never read from the real player — always 0 (2026-09-04)
 
