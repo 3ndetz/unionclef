@@ -113,37 +113,31 @@ public class DistanceCalculator {
     
     /**
 	 * Returns jump height.
-	 * 
+	 *
+	 * <p>⛔ SIMPLIFIED 2026-09-04, DEAD BRANCHES REMOVED: same redundant pattern found and
+	 * fixed in {@code BlockNode.getJumpHeight} (see that method's javadoc for the exhaustive
+	 * up/down/equal case analysis) -- {@code diff > 0} is exactly {@code to > from}, so the
+	 * {@code diff * -1} arm in each branch can never execute. Zero behavior change.
+	 *
 	 * @param from
 	 * @param to
 	 * @return positive is going up and negative is going down
 	 */
 	public static double getJumpHeight(double from, double to) {
-		
-		double diff = to - from;
-		
-		// if `to` is higher then `from` return value should be positive
-		if (to > from) {
-			return diff > 0 ? diff : diff * -1;
-		}
-		return diff > 0 ? diff * -1 : diff;
+		return to - from;
 	}
 
     /**
 	 * Returns jump height.
-	 * 
+	 *
+	 * <p>⛔ SIMPLIFIED 2026-09-04, DEAD BRANCHES REMOVED: same fix as the {@code double}
+	 * overload above.
+	 *
 	 * @param from
 	 * @param to
 	 * @return positive is going up and negative is going down
 	 */
 	public static int getJumpHeight(int from, int to) {
-		
-		int diff = to - from;
-		
-		// if `to` is higher then `from` return value should be positive
-		if (to > from) {
-			return diff > 0 ? diff : diff * -1;
-		}
-		return diff > 0 ? diff * -1 : diff;
+		return to - from;
 	}
 }

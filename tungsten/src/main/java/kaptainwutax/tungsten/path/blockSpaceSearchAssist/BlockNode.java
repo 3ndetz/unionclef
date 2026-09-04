@@ -888,19 +888,21 @@ public class BlockNode {
 	/**
 	 * Returns jump height.
 	 *
+	 * <p>⛔ SIMPLIFIED 2026-09-04, DEAD BRANCHES REMOVED: the old body branched on
+	 * {@code to > from} and then ternaried on {@code diff > 0} inside each branch, but
+	 * {@code diff = to - from} makes {@code diff > 0} exactly equivalent to {@code to > from} --
+	 * so in the {@code to > from} branch {@code diff} is always positive (the {@code diff * -1}
+	 * arm can never run), and in the other branch {@code diff} is always {@code <= 0} (the
+	 * {@code diff * -1} arm there can never run either). Verified exhaustively (up/down/equal),
+	 * not by inspection alone: every input produces exactly {@code to - from}. Zero behavior
+	 * change; only the unreachable branches are gone.
+	 *
 	 * @param from
 	 * @param to
 	 * @return positive is going up and negative is going down
 	 */
 	public double getJumpHeight(double from, double to) {
-		
-		double diff = to - from;
-		
-		// if `to` is higher then `from` return value should be positive
-		if (to > from) {
-			return diff > 0 ? diff : diff * -1;
-		}
-		return diff > 0 ? diff * -1 : diff;
+		return to - from;
 	}
 
 	private boolean isJumpImpossible(WorldView world, BlockNode child) {
