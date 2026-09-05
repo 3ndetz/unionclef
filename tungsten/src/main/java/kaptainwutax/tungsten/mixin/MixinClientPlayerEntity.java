@@ -339,10 +339,15 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 			}
 		}
 
-		if (TungstenMod.pauseKeyBinding.isPressed()) {
-			kaptainwutax.tungsten.path.PathFinder.noteStop("MixinClientPlayerEntity@342");
-			TungstenModDataContainer.PATHFINDER.stop.set(true);
-		}
+		// ⛔ REMOVED 2026-09-05: a second `if (TungstenMod.pauseKeyBinding.isPressed())` block used
+		// to sit here, doing nothing the block above doesn't already do -- it re-called
+		// PathFinder.noteStop(...) and PATHFINDER.stop.set(true) unconditionally, a pure duplicate
+		// of the block above (minus its EXECUTOR.stop line and its "Nothing to stop" branch). Every
+		// pause-key press was therefore logging TWO noteStop entries instead of one, silently
+		// doubling exactly the kind of stop-accounting counter this codebase's own diagnostics
+		// depend on (the same "noteStop/stopBy accounting" bug class already found and fixed twice
+		// elsewhere this session, in FollowEntityTask's dangling-if and PathFinder/RunAwayTask's
+		// dead comment fragments).
 		if (TungstenMod.createGoalKeyBinding.isPressed()) {
 			BlockPos cameraBlockPos = TungstenMod.mc.gameRenderer.getCamera().getBlockPos();
 			TungstenMod.TARGET = new Vec3d(cameraBlockPos.getX() + 0.5, cameraBlockPos.getY() - 1, cameraBlockPos.getZ() + 0.5);

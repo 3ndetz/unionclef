@@ -123,7 +123,16 @@ public abstract class MixinChatInputSuggestor {
             if (this.parse == null) {
             	TungstenMod.getCommandExecutor();
                 if (message.contains("|")) {
-                	this.parse = CommandExecutor.DISPATCHER.parse(new StringReader(message.split("|")[message.split("|").length-1]), TungstenMod.mc.getNetworkHandler().getCommandSource());
+                	// ⛔ FIXED 2026-09-05: `message.split("|")` treats "|" as a regex alternation
+                	// between two empty patterns, matching a zero-width string at every position --
+                	// splits between EVERY CHARACTER instead of on the literal pipe divider this
+                	// chained-command feature uses. `[...length-1]` on the broken split just returns
+                	// the message's last single character instead of the text after the last real
+                	// "|", so suggestions/parsing for a chained command like ";stop|;goto 1" were
+                	// built from "1" alone rather than ";goto 1" as intended. Same bug, same fix, as
+                	// the live one already found in MixinClientPlayNetworkHandler.onSendChatMessage.
+                	String[] segments = message.split("\\|");
+                	this.parse = CommandExecutor.DISPATCHER.parse(new StringReader(segments[segments.length-1]), TungstenMod.mc.getNetworkHandler().getCommandSource());
                 } else
                 	this.parse = CommandExecutor.DISPATCHER.parse(reader, TungstenMod.mc.getNetworkHandler().getCommandSource());
             }
@@ -132,7 +141,9 @@ public abstract class MixinChatInputSuggestor {
             if (cursor >= length && (this.window == null || !this.completingSuggestions)) {
             	TungstenMod.getCommandExecutor();
                 if (message.contains("|")) {
-                	this.pendingSuggestions = CommandExecutor.DISPATCHER.getCompletionSuggestions(this.parse, new StringReader(message.split("|")[message.split("|").length-1]).getTotalLength());
+                	// ⛔ FIXED 2026-09-05: same split("|") bug as above.
+                	String[] segments = message.split("\\|");
+                	this.pendingSuggestions = CommandExecutor.DISPATCHER.getCompletionSuggestions(this.parse, new StringReader(segments[segments.length-1]).getTotalLength());
                 } else
                 	this.pendingSuggestions = CommandExecutor.DISPATCHER.getCompletionSuggestions(this.parse, cursor);
                 this.pendingSuggestions.thenRun(() -> {
