@@ -13132,6 +13132,15 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   "Added three MCP tools..."). То есть тот конкретный `found:false` мог отвечать за неверный
   движок, а не описывать настоящий тупик местности — не отзываю запись (она честно помечена как
   неопределённая), но связь стоило назвать явно, раз обе находки из одной и той же сессии.
+  ⛔ FORWARD-POINTER, 2026-09-05, closing the loop this note opened: the engine bug named above is
+  now fixed — see `CANREACH-FASTPLANNER-ENGINE-SWAP-2026-09-05` at the top of this file. `canReach`
+  calls `FastPlanner.plan(...)` now, the same engine that actually drove the bot in this trace, so
+  the specific `found:false, found:false` reading for (207,109,65) here is no longer explainable by
+  "wrong engine" — if the same coordinate is re-checked on a build with this fix and still reads
+  `found:false`, that reading can now be trusted as describing the terrain itself, not the engine
+  that answered. Not re-tested here (C8.1: no stand to actually re-run `canReach` against this
+  coordinate) — recorded so whoever next has build access knows this specific uncertainty is
+  resolvable with one call, not a re-investigation.
   ⛔ СВЯЗЬ МЕЖДУ ДВУМЯ УЛИКАМИ ЭТОЙ ЖЕ ЗАПИСИ, НАЙДЕНА ЧТЕНИЕМ, НЕ ЗАМЕРОМ: `PathFinder.java:
   608-628` — механизм «At the gap — bridging without a physics leg» (пропуск физ-ноги, прямая
   выдача очереди постройки исполнителю) срабатывает ТОЛЬКО когда `blockPath.size() <= 2` И
@@ -14736,6 +14745,14 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
     - [x] визуализация: тумблеры renderVisualization/renderPathMoves/renderBreakPlan/renderCombat (;settings), подсветка клеток бриджа. Регрессия slime/bridge/break PASS — не сломано
     - [ ] ОТЛОЖЕНО (риск ядра A*): глубокая интеграция bridge как block-space move (goto через пропасть авто-мостит). Обоснование: годбридж есть как ;bridge/bridgeTo/py4j-примитив, а по философии block 6 когнитивный АГЕНТ сам решает когда мостить → авто-детект в A* не критичен. Делать отдельной фокус-сессией по образцу baritone MovementTraverse:122-168 (bridge=place at dest.down(), cost=walk+place, side-place/backplace). Диагональный годбридж — туда же
   - [ ] МИНОР: canReach (py4j prediction) флачит — иногда block-space возвращает частичный стаб (found=true/reached=false/breaks=0) вместо полного пути. Захардить ретраем поиска (F_api тест это ловит)
+    - Not checked off (unverified, C8.1): 2026-09-05's `CANREACH-FASTPLANNER-ENGINE-SWAP-2026-09-05`
+      (top of file) replaced this method's engine entirely (BlockSpacePathFinder -> FastPlanner) and
+      removed the retry loop this item asked to harden, relying instead on FastPlanner.Result.complete
+      as an authoritative single-call answer rather than a retried heuristic. The specific
+      found=true/reached=false/breaks=0 stub symptom described here was a BlockSpacePathFinder
+      behavior (documented at length elsewhere in this file under its own partial-stub entries) that
+      no longer applies once the call goes through a different engine — but this needs the F_api test
+      re-run on a build to confirm the flake is actually gone rather than assumed gone.
 - [ ] 11. АНТИ-ЧИТ ГУМАНИЗАЦИЯ ПОВОРОТОВ (важный поинт юзера 2026-07-21):
   - НИКОГДА не setYaw/setPitch напрямую — античиты палят сразу. Все повороты через mouse-pipeline (changeLookDirection пиксельно-квантованно / WindMouse), «сервер видит как физическую мышь». В боевой ауре (WindMouseRotation) уже настроено грамотно — переиспользовать
   - [x] перевёл ВСЕ мои примитивы с setYaw/setPitch на mouse-pipeline (2026-07-21): BridgeTask+BowShooter→WindMouse (тикаются, сходятся человеко-подобно), майнинг-прицел→WindMouse, placeBlockAt→changeLookDirection (одношот, пиксельно-квантованно). Тесты: bridge PASS с гуманизацией (z-разброс 4.49 естественный), break+place регрессия PASS. Path-replay уже был на changeLookDirection (enableNativeRotation)
