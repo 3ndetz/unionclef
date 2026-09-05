@@ -1,5 +1,35 @@
 # TODOs
 
+<!-- INTERACTWITHBLOCKTASK-ISANNOYING-3RDCOPY-2026-09-05 -->
+## Fixed: `InteractWithBlockTask.isAnnoying()` — the 3rd copy of the first-iteration-only bug (2026-09-05)
+
+The `tasks/movement/` audit fork found and fixed the identical bug in `GetToEntityTask.isAnnoying()`
+and `PickupDroppedItemTask.isAnnoying()`, and flagged (but did not fix, out of its own scope) a
+third copy here in `tasks/InteractWithBlockTask.java`:
+
+```java
+private boolean isAnnoying(AltoClef mod, BlockPos pos) {
+    if (annoyingBlocks != null) {
+        for (Block AnnoyingBlocks : annoyingBlocks) {
+            return mod.getWorld().getBlockState(pos).getBlock() == AnnoyingBlocks || ...;
+        }
+    }
+    return false;
+}
+```
+
+`return` sits INSIDE the `for` loop and fires unconditionally on the first iteration, so only
+`annoyingBlocks[0]` was ever actually compared — every other entry in `annoyingBlocks` (14 entries
+in the sibling classes: nether sprouts, cave/twisting/weeping vines, ladder, dripleaf, tall/short
+grass, sweet berry bush, etc.) was silently never checked. `git blame` shows this exact bug was
+already found and fixed once before in `CustomBaritoneGoalTask`/`TimeoutWanderTask`, but the fix
+never propagated to any of the three copies found this session.
+
+FIXED: matched `CustomBaritoneGoalTask.isAnnoying()`'s correct shape — loop through all entries,
+return `true` on the first match, `false` only once the loop is exhausted. Not stand-verified
+(C8.1) — real behavior change (this predicate drives `InteractWithBlockTask`'s own stuck-in-block
+recovery), flagging for a playtest on mineshaft/swamp/jungle terrain per the class's own comment.
+
 <!-- HEROTASK-ARBITRARY-HOSTILE-2026-09-05 -->
 ## Fixed: `HeroTask` picked an arbitrary hostile type instead of the closest one (2026-09-05)
 
