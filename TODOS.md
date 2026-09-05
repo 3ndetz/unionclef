@@ -1,5 +1,38 @@
 # TODOs
 
+<!-- UCTEST-SCENARIO-CRITSWINGS-STALE-2026-09-05 -->
+## Fixed: `uctest/scenario.py` `crit_swings()` had the same undercount `landed_swings()` was already fixed for (2026-09-05)
+
+Auditing `deploy/runner/uctest/` (the shared scenario base class + course files, `run_suite.py`'s
+core scoring dependency). `scenario.py`'s own `landed_swings()` carries a detailed docstring
+explaining a real, measured bug: computing swing count as `vals[-1] - vals[0]` off the sampling
+list undercounts, because sampling stops at `early_stop` (first kill) while the mod's own swing
+counter keeps incrementing after the last sample was taken — documented as hiding a real +55%
+improvement (4.7 -> 7.3 mean swings) on a chase-fix regression test. The fix there was to read the
+counter LIVE at judge time (`totalHits`) and only fall back to the stale delta when the live call
+fails.
+
+`crit_swings()`, right below it in the same class, was never given the same fix — it still computed
+`vals[-1] - vals[0]` off the sample list, the exact defect class `landed_swings()`'s docstring
+documents as wrong. Confirmed both are called together, only in a non-gating detail string
+(`scenarios_pvp.py:153` and `:1456`, `f"swings={ctx.landed_swings()} crits={ctx.crit_swings()}"` —
+never in a `Criterion` gate condition), so this never flipped a pass/fail verdict, only under-reported
+the crit count on any pvp course that ends early via `early_stop`.
+
+FIXED: `crit_swings()` now reads the mod's own `critHits` counter live at judge time first,
+falling back to the old delta only when that call fails — mirrors `landed_swings()` exactly.
+Commit `77dc5d66`. Not stand-verified (C8.1) — the live-counter code path is unexercised without a
+running mod instance, same caveat `landed_swings()`'s own fix carries.
+
+No other bug found in `scenario.py` on a full read: `exchange_criterion`'s `kills >= deaths` and
+`survival_criterion`'s `deaths <= limit` gates are both correctly oriented (and the former's
+`load_sensitive=True` choice is backed by a real measured A/B, not a guess); `Scenario.no_early_stop`
+being read via the base class rather than `self` in `run()` matches how `run_suite.py:734` sets it
+(`Scenario.no_early_stop = args.no_early_stop`, also on the base class) and no scenario subclass ever
+overrides the attribute on itself, so the two reads agree — a slightly unusual but not incorrect
+pattern, left as-is. Continuing through `scenarios_craft.py`, `scenarios_pvp.py`, `scenarios_mob.py`,
+`scenarios_nav.py`, `scenarios_end.py`, `__init__.py`.
+
 <!-- AB-ARROWS-SYNTAXERROR-2026-09-05 -->
 ## Fixed: `deploy/runner/ab_arrows.py` could not even be imported — 793 lines of prose sitting outside any comment (2026-09-05)
 
