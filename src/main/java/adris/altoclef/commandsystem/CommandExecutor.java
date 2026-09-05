@@ -69,17 +69,26 @@ public class CommandExecutor {
         // Run commands separated by ;
         String[] parts = line.split(";");
         Command[] commands = new Command[parts.length];
-        try {
-            for (int i = 0; i < parts.length; ++i) {
-                String part = parts[i].strip();
-                if (part.startsWith(getCommandPrefix())) {
-                    part = part.substring(getCommandPrefix().length());
-                }
-
-                commands[i] = getCommand(part);
+        // ⛔ FIXED 2026-09-05: the try/catch used to wrap the WHOLE loop, so one bad command
+        // anywhere in a ";"-chained list (e.g. ";cmd1;badcmd;cmd3") threw out of the loop entirely
+        // on the first failure -- every part after the failing one was left as a never-checked
+        // null in `commands[]`. executeRecursive() then reports EACH of those nulls as "Invalid
+        // command: <part>" even though they were never looked up (cmd3 might have been perfectly
+        // valid), on top of a duplicate error for the part that actually failed. Moved the
+        // try/catch inside the loop so each part is resolved independently: one bad command
+        // reports its own error and leaves only ITS OWN slot null, every other part (valid or
+        // invalid on its own merits) still gets checked and, if valid, still runs.
+        for (int i = 0; i < parts.length; ++i) {
+            String part = parts[i].strip();
+            if (part.startsWith(getCommandPrefix())) {
+                part = part.substring(getCommandPrefix().length());
             }
-        } catch (CommandException e) {
-            getException.accept(e);
+
+            try {
+                commands[i] = getCommand(part);
+            } catch (CommandException e) {
+                getException.accept(e);
+            }
         }
         executeRecursive(commands, parts, 0, onFinish, getException);
     }
