@@ -20,9 +20,15 @@ import net.minecraft.world.WorldView;
  * A "feet" position is the block the player's feet occupy; the player stands on
  * feet.down() with feet and feet.up() clear (head room).
  *
- * Standalone by design (this step): nothing calls it yet. It is wired into the
- * block-space search in a later, separately-tested step, so course A (the
- * staircase canary) cannot regress from adding this class.
+ * ⛔ CORRECTED 2026-09-05: this used to say "nothing calls it yet... wired in later,
+ * separately-tested step" -- stale. {@code generate} IS called, live, from
+ * {@code BlockNode.getChildren} (behind {@code TungstenConfig.smartMoves}, default
+ * {@code false}). See that flag's javadoc in TungstenConfig.java for the measured A/B
+ * history: smartMoves ON currently fails nav_water (final_dist=25.5, 9 freezes) even
+ * with the water moves below present and firing (smWater counter measured non-zero) --
+ * an open, tracked investigation, not a reason to distrust this file's own logic in
+ * isolation. Read that flag's comment before changing anything here; it has the
+ * current state of the actual measurements.
  */
 public final class SmartMoves {
 
