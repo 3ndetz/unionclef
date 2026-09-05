@@ -1,5 +1,63 @@
 # TODOs
 
+<!-- MCP-STAND-ENDPOINT-REACHABLE-NO-TOKEN-2026-09-05 -->
+## ⛔ ENVIRONMENT FINDING, NOT A CODE FIX: the live test stand IS reachable over the network from this session — via the mod's own MCP bridge, not RCON/docker-exec — but this session has no auth token for it (2026-09-05)
+
+Earlier the same day this session recorded "the test stand is genuinely unreachable" after `getent
+hosts uctest-server`/`uctest-gamer-server` failed to resolve and direct TCP to their :25565 (raw
+Minecraft protocol) failed too. That conclusion was **too broad** — it only ruled out ONE access
+path. A much older entry in this very file (search "uctest-gamer-server came up") already recorded
+a DIFFERENT, working path from a past session: `host.docker.internal:25350/mcp`, the mod's own
+in-process `McpServer` (`src/main/java/adris/altoclef/mcp/McpServer.java`, read and fixed earlier
+this session for an unrelated bug). Checked it fresh:
+
+```
+getent hosts host.docker.internal          -> 192.168.65.254 (resolves)
+timeout 3 bash -c "cat < /dev/null > /dev/tcp/host.docker.internal/25350"   -> REACHABLE
+curl -s -i -X OPTIONS http://host.docker.internal:25350/mcp --max-time 5
+  -> HTTP/1.1 204 No Content, with EXACTLY the CORS headers McpServer.handle() sets
+     (Access-Control-Allow-Origin: *, -Methods: POST, GET, OPTIONS, -Headers: *)
+```
+
+This is a genuinely live, running `McpServer` instance — network-reachable from this sandbox right
+now — almost certainly the project's own real test stand (`uctest-gamer-server`, given the matching
+port and the historical entry). The `OPTIONS` probe is the one request `McpServer.handle()` answers
+before its auth check (`if ("OPTIONS".equals(method)) { ...204...; return; }`), so this was a
+read-only, zero-side-effect check — no tool was called, nothing on the bot was touched.
+
+**Could not go further: every real call (`tools/list`, `tools/call`, even `initialize`) requires
+`Authorization: Bearer <token>`, and this session does not have that token.** Traced where it
+comes from before giving up, not just assuming: `AltoClef.startMcpServer()`
+(`AltoClef.java:213-235`) mints a fresh `UUID.randomUUID()` on first start and persists it to
+`Settings.SETTINGS_PATH` (`"altoclef_settings.json"`, a bare relative filename — each running
+client reads/writes its OWN copy in its own working directory). Checked every
+`altoclef_settings.json` actually present in this sandbox's filesystem, including the two that
+match the test-stand bot identities named throughout this file's own history
+(`deploy/run/data/tester1/altoclef/altoclef_settings.json`,
+`.../tester2/altoclef/altoclef_settings.json` — both gitignored via `deploy/.gitignore`'s `run/`
+entry, confirming they are real local runtime data, not checked-in templates, and both show
+`mcpEnabled: true`, `mcpPort: 25350` matching the live server exactly): **neither has an
+`mcpAuthToken` field at all.** Either the token this live server is actually running with was
+minted after these particular file snapshots were last written, or these local copies are not
+perfectly in sync with whatever the live remote client's real-time working directory holds — either
+way, the token is not present anywhere this session can read.
+
+⛔ **Deliberately did not attempt to guess, brute-force, or otherwise work around the missing
+token.** That would be exactly the kind of "reaching for a justification" this session's own
+discipline (and general good judgment about live, shared infrastructure) warns against — a UUID is
+not guessable, and attempting to would just be noise against a real, possibly-in-use service.
+
+**Why this matters more than it might look**: if the actual token IS available to whoever reads
+this (the founder, a session with filesystem access to the real running client, or anyone who
+already has it from a prior interaction), THIS SPECIFIC BLOCKER — not the deeper "no docker/RCON at
+all" C8.1 half — is the ONLY thing standing between this session and making REAL, LIVE calls
+against the actual bot: `canReach`, `getGameState`, `gotoXYZ`, and every other tool in
+`McpServer.registerTools()` would become genuinely usable, for the first time turning
+"not stand-verified" fixes (there are ~90 of them this session alone) into fixes with real evidence
+behind them. This is a narrower, more specific, more actionable gap than the general "C8.1: no
+JVM/docker" framing this whole file has carried for a long time — see
+`C8.1-JAVA-HOME-DISCOVERY-2026-09-05` below for the parallel finding about the JVM half.
+
 <!-- CANREACH-FASTPLANNER-ENGINE-SWAP-2026-09-05 -->
 ## Fixed: `canReach` was asking the retired, worse pathfinding engine — a 2026-09-04 finding, deferred as "a real adaptation, not a one-line change" (2026-09-05)
 
