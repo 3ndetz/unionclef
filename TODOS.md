@@ -1,5 +1,43 @@
 # TODOs
 
+<!-- AB-ARROWS-SYNTAXERROR-2026-09-05 -->
+## Fixed: `deploy/runner/ab_arrows.py` could not even be imported — 793 lines of prose sitting outside any comment (2026-09-05)
+
+New area this session: `deploy/` (85 Python files, ~18.7k lines — the actual TEST infrastructure
+`docs/CHECKLIST.md`/`AGENTS.md` name as the whole project's scoring mechanism, e.g.
+`run_suite.py nav`/`pvp`). Python is available in this sandbox (`python3 -m py_compile` is a bare
+syntax check — not Gradle, not a build, no STRICT-rule concern), so ran it across the whole
+directory as a first pass. One failure out of 85 files:
+
+```
+File "./runner/ab_arrows.py", line 974
+    29.0s  cobble=8  "No tasks. Time to add new!"        the eight are IN THE PACK
+       ^
+SyntaxError: invalid decimal literal
+```
+
+Everything from line 969 (right after the script's own `if __name__ == "__main__":
+sys.exit(main())`) to the file's end at line 1761 was raw analysis prose — several
+"PRE-REGISTRATION" experiment write-ups and findings, clearly meant as documentation — appended
+directly at module level with no `#` and no string-literal quoting. A `SyntaxError` is caught at
+PARSE TIME, before any import, any network call, any stand access — this script has been unable to
+run AT ALL, independent of C8.1 or stand availability, for as long as this content sat there
+unwrapped (the pre-registration text itself is dated 2026-08-14, suggesting several weeks).
+
+FIXED: wrapped the entire stray block in a triple-quoted string literal (a dangling expression
+statement — evaluated and discarded at runtime, functionally a large comment). Checked first that
+the block contains zero `"""` sequences of its own, so the wrap is unambiguous and nothing inside
+it is truncated. All the content is preserved verbatim; none of it is deleted.
+
+Verified: `python3 -m py_compile deploy/runner/ab_arrows.py` now passes, and a fresh sweep of all
+85 `.py` files under `deploy/` finds zero remaining syntax errors. Not stand-verified beyond
+that (C8.1) — this restores the ability to import/parse the script; whether its actual test logic
+still behaves correctly against a live stand is unverified, but it could not even get that far
+before this fix. Commit `6558e480`.
+
+Continuing to audit the rest of `deploy/` for logic bugs (not just syntax), starting with
+`run_suite.py` — the central orchestrator every other course runs through.
+
 <!-- MCP-STAND-ENDPOINT-REACHABLE-NO-TOKEN-2026-09-05 -->
 ## ⛔ ENVIRONMENT FINDING, NOT A CODE FIX: the live test stand IS reachable over the network from this session — via the mod's own MCP bridge, not RCON/docker-exec — but this session has no auth token for it (2026-09-05)
 
