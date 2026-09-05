@@ -225,7 +225,22 @@ public class MacePunchTask extends Task {
 
     @Override
     protected boolean isEqual(Task other) {
-        return other instanceof MacePunchTask;
+        // ⛔ FIXED 2026-09-05: ignored `_target` entirely, so a MacePunchTask aimed at one entity
+        // compared equal to one aimed at ANY other entity of ANY other target -- the same isEqual()
+        // bug class found and fixed twice already this session (AbstractDoToEntityTask.doubleCheck(),
+        // ProjectileProtectionWallTask.isEqual()'s bare `return true;`). Currently masked at both
+        // construction sites (Playground.java's one-shot runUserTask call, and
+        // KillPlayerTask.onTick()'s cached `specialKillTask` field, which returns the SAME object
+        // reference across ticks rather than constructing a fresh one to re-compare) -- but the
+        // task framework's equality contract is general-purpose, and a future caller that DOES
+        // construct a fresh MacePunchTask per tick for a changing target would have this task stick
+        // to its original target instead of switching. Fixed to compare by target, matching how
+        // sibling tasks in this same package (ReplaceBlocksTask, TerminatorTask's inner
+        // ScanChunksInRadius) already compare their own distinguishing fields.
+        if (other instanceof MacePunchTask t) {
+            return java.util.Objects.equals(t._target, _target);
+        }
+        return false;
     }
 
     @Override
