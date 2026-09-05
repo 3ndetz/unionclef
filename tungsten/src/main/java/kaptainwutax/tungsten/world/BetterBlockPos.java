@@ -100,6 +100,15 @@ public final class BetterBlockPos extends net.minecraft.util.math.BlockPos {
         }
         // during path execution, like "if (whereShouldIBe.equals(whereAmI)) {"
         // sometimes we compare a BlockPos to a BetterBlockPos
+        // ⛔ FIXED 2026-09-05: this used to cast `o` straight to BlockPos with no instanceof
+        // guard -- the same Object.equals() contract violation already found and fixed once
+        // this session in BlockNode.equals() (x.equals(incompatibleType) must return false, not
+        // throw). BetterBlockPos is used pervasively as a Set/Map key throughout the movement
+        // substrate, so any comparison against an unrelated type threw ClassCastException
+        // instead of the contractually-required false.
+        if (!(o instanceof BlockPos)) {
+            return false;
+        }
         BlockPos oth = (BlockPos) o;
         return oth.getX() == x && oth.getY() == y && oth.getZ() == z;
     }
