@@ -561,17 +561,28 @@ public class BeatMinecraft2Task extends Task {
         if (endPortalFound(mod, endPortalCenter)) {
             return END_PORTAL_FRAME_COUNT;
         }
-        if (endPortalFound(mod, endPortalCenter)) {
-            List<BlockPos> frameBlocks = getFrameBlocks(endPortalCenter);
-            // If EVERY portal frame is loaded, consider updating our cached filled portal count.
-            if (frameBlocks.stream().allMatch(blockPos -> mod.getChunkTracker().isChunkLoaded(blockPos))) {
-                _cachedFilledPortalFrames = frameBlocks.stream().reduce(0, (count, blockPos) ->
-                                count + (isEndPortalFrameFilled(mod, blockPos) ? 1 : 0),
-                        Integer::sum);
-            }
-            return _cachedFilledPortalFrames;
+        // ⛔ FIXED 2026-09-05: this used to re-check `endPortalFound(mod, endPortalCenter)` again
+        // here -- but the `if` above already returned when that was true, and nothing between the
+        // two calls changes state, so the second check was PROVABLY ALWAYS FALSE. The whole cache-
+        // update body (scanning the 12 frame blocks and counting how many hold an eye) was dead
+        // code: this method could only ever return END_PORTAL_FRAME_COUNT (12) or 0, never any
+        // count in between. That fed straight into eyesNeeded/eyesNeededMin in onTick(), so the
+        // bot's "how many more eyes do I need" math never credited PARTIALLY filled portal frames
+        // -- it read 0 filled right up until every frame was discovered as complete, then jumped to
+        // 12. `endPortalCenter` can be null here (endPortalFound's own null check is why the outer
+        // `if` can be false with a null center), so this needs its own guard now that the body
+        // actually runs.
+        if (endPortalCenter == null) {
+            return 0;
         }
-        return 0;
+        List<BlockPos> frameBlocks = getFrameBlocks(endPortalCenter);
+        // If EVERY portal frame is loaded, consider updating our cached filled portal count.
+        if (frameBlocks.stream().allMatch(blockPos -> mod.getChunkTracker().isChunkLoaded(blockPos))) {
+            _cachedFilledPortalFrames = frameBlocks.stream().reduce(0, (count, blockPos) ->
+                            count + (isEndPortalFrameFilled(mod, blockPos) ? 1 : 0),
+                    Integer::sum);
+        }
+        return _cachedFilledPortalFrames;
     }
 
     private boolean canBeLootablePortalChest(AltoClef mod, BlockPos blockPos) {
