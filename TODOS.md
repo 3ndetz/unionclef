@@ -1,5 +1,41 @@
 # TODOs
 
+<!-- STRENGTHENED-CAVEAT-NEVER-COMPILED-2026-09-05 -->
+## ⛔ STRENGTHENING A CAVEAT, NOT REPORTING A NEW FINDING: today's Java commits were never compiled, not merely not stand-verified (2026-09-05)
+
+Prompted by Lumi (Duty Officer) asking directly whether the JVM half of C8.1 was ever actually
+solved. Re-tested both halves fresh, right now: bare `./gradlew --version` still fails
+(`JAVA_HOME is not set and no 'java' command could be found`); `.gradle/jdk21/bin/{java,javac}`
+still exist and would work if `JAVA_HOME` were pointed at them; docker is still fully unreachable
+(no daemon, no socket file). **The JVM half is blocked by POLICY, not by absence** — AGENTS.md's
+STRICT rule bans running `gradlew` at all without the user's explicit authorization, which has not
+been given, so it has never been run: not `compileJava`, not even a bare `--version` smoke test,
+the entire session.
+
+Every one of today's Java commits — the armor-slot fix (`7aea6ea4`), sign-typing
+(`d85bb58e`), the wall-interact port (same commit), the unstuck-recovery click port
+(`c5e92754`), the `StorageHelper` tool-comparison reimplementation (`bd0d5226`), and the
+`CraftInTableTask` recipe-book wiring (`c74a4022`) — says **"not stand-verified (C8.1)"** in its
+own commit message. That phrasing is TRUE but WEAKER than the actual situation, and reads as "not
+tested in live gameplay" (a claim about runtime BEHAVIOR) rather than what it should say: **these
+have never been compiled at all** (a claim about basic SYNTACTIC AND TYPE correctness, a strictly
+lower bar that "not stand-verified" does not clearly cover). Confirmed correct by reading the real
+disassembled 1.21.11 API via `javap` on the cached Yarn jar, and by cross-referencing already-
+proven working patterns elsewhere in the same files — never by a compiler. This is the exact
+failure shape Lumi named from a different tree today: *"a fix confirmed only by READING is the
+weakest class of evidence there is, and it looks exactly like the strongest... a caveat sat inside
+a document while its title said verified, and the title is what everybody took."* This entry exists
+so nobody reading "not stand-verified" on any of today's commits mistakes it for "compiles fine,
+just untested in-game" — it does not mean that. It means "read carefully, never built."
+
+Not something I can close myself — running `gradlew` requires the user's own explicit
+authorization per STRICT rule, which is outside what any ticket, ruling, or peer session can grant.
+Flagged directly to the user/operator; see this room's own push-notification history for the
+standing ask. If that authorization ever arrives, `gradlew :1.21.11:compileJava` (with `JAVA_HOME`
+pointed at `.gradle/jdk21`) is the first, cheapest thing to run — it would independently verify or
+refute every preprocessor `//$$` block written today in one pass, since those are literally inert
+comments to any tool that isn't the actual Loom preprocessor running the `:1.21.11:` subproject.
+
 <!-- CRAFTINTABLE-RECIPEBOOK-INDEPENDENT-CONFIRMATION-2026-09-05 -->
 ## Independent, pre-existing confirmation for the CraftInTableTask fix's exact reasoning (2026-09-05)
 
