@@ -155,8 +155,18 @@ public class MoveItemToSlotTask extends Task {
                 }
                 int countBest = StorageHelper.getItemStackInSlot(bestMatch).getCount();
                 int countCheck = StorageHelper.getItemStackInSlot(slot).getCount();
+                // ⛔ FIXED 2026-09-05: the second disjunct compared `countCheck > countBest`, i.e.
+                // it kept switching to the LARGER of two over-target stacks -- the opposite of the
+                // comment right below it ("go for smallest over the limit"). Traced by hand: target
+                // 5, candidates 10 then 6 in discovery order picks 10 (never replaced, since 6 is
+                // not > 10); candidates 6 then 10 picks 10 too (10 > 6 replaces the smaller,
+                // correct one). Either order ends up preferring the larger excess stack, which
+                // wastes more of it than necessary. `getBestSlotToPickUp` has no live callers
+                // anywhere in the tree right now (MoveItemToSlotTask's only construction sites are
+                // commented out in the three SmeltIn*Task files), so this has no current runtime
+                // effect -- fixed anyway so the class is correct if it's ever wired back up.
                 if ((countBest < toMove.getTargetCount() && countCheck > countBest)
-                        || (countBest >= toMove.getTargetCount() && countCheck >= toMove.getTargetCount() && countCheck > countBest)) {
+                        || (countBest >= toMove.getTargetCount() && countCheck >= toMove.getTargetCount() && countCheck < countBest)) {
                     // If we don't have enough, go for largest
                     // If we have too much, go for smallest over the limit.
                     bestMatch = slot;
