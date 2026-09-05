@@ -72,12 +72,27 @@ public class TrailTracker {
 
         trail.add(new TrailPoint(groundPos));
 
+        // ⛔ FIXED 2026-09-05: removing from the FRONT of the list shifts every remaining
+        // element's index down by one, but waypointIndex (which points into this same list
+        // while trailing) was never adjusted for it. Once the trail is at MAX_WAYPOINTS,
+        // recordPosition() trims one point almost every call while trailing is active, so
+        // waypointIndex silently drifted forward through the trail on its own, one step per
+        // trim -- completely bypassing the WAYPOINT_REACH_DIST distance check in getWaypoint()
+        // that is supposed to be the only thing advancing it. Decrementing here keeps the index
+        // pointing at the same conceptual trail point after a front removal.
+
         // trim oldest
-        while (trail.size() > MAX_WAYPOINTS) trail.remove(0);
+        while (trail.size() > MAX_WAYPOINTS) {
+            trail.remove(0);
+            if (waypointIndex > 0) waypointIndex--;
+        }
 
         // remove stale entries
         long now = System.currentTimeMillis();
-        while (!trail.isEmpty() && now - trail.get(0).timestamp > MAX_AGE_MS) trail.remove(0);
+        while (!trail.isEmpty() && now - trail.get(0).timestamp > MAX_AGE_MS) {
+            trail.remove(0);
+            if (waypointIndex > 0) waypointIndex--;
+        }
     }
 
     /**
