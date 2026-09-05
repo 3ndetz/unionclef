@@ -2960,8 +2960,17 @@ public class TungstenConfig {
      * that a fresh search to an unchanged target from a slightly different spot is nearly the same
      * search. That is the next thing to try, and unlike four attempts before it, it has a measured
      * quantity behind it rather than a story.
+     *
+     * <p>⛔ FIXED 2026-09-05 (RE-APPLIED after a concurrent-rebase clobber reverted it once):
+     * the real compiled declaration read {@code = true} here, directly contradicting this
+     * comment's own conclusion three paragraphs up ("Stays OFF. One mixed pair is not a result...").
+     * The inline illustration mid-comment above (an unwrapped
+     * {@code public boolean lockKeepsRouteWhileTargetStands = false;} line, harmless prose since
+     * it sits inside the still-open javadoc, not real code) shows the value the pair-1/pair-2
+     * experiment actually ran with -- {@code false} -- which is also what the conclusion says to
+     * keep. Only the REAL declaration below had drifted from that conclusion.
      */
-    public boolean lockKeepsRouteWhileTargetStands = true;
+    public boolean lockKeepsRouteWhileTargetStands = false;
 
     /**
      * How far a target must move to justify throwing away the route being walked, in blocks.
