@@ -1,5 +1,37 @@
 # TODOs
 
+<!-- ABSTRACTDOTOENTITYTASK-DOUBLECHECK-ALWAYSTRUE-2026-09-05 -->
+## Fixed: `AbstractDoToEntityTask.doubleCheck()` returned `true` for any two finite values (2026-09-05)
+
+Auditing `tasks/entity/` found `isEqual()`'s numeric-closeness helper broken:
+
+```java
+private boolean doubleCheck(double a, double b) {
+    if (Double.isInfinite(a) == Double.isInfinite(b)) return true;
+    return Math.abs(a - b) < 0.1;
+}
+```
+
+`Double.isInfinite(a) == Double.isInfinite(b)` is `true` for EVERY pair of finite doubles
+(`false == false`), not just the intended "both infinite" shortcut — so `doubleCheck(2.0, 50.0)`
+returned `true` (equal). The `abs()`-closeness line below was dead code: it's only reachable when
+exactly one side is infinite, where `abs(a - b)` is itself infinite and always fails `< 0.1`
+regardless of the other value.
+
+Net effect: `isEqual()` (which calls this 3 times, gating `maintainDistance`,
+`combatGuardLowerFieldRadius`, `combatGuardLowerRange`) never actually distinguished two
+`AbstractDoToEntityTask` instances by those fields — any two finite values, however different,
+counted as equal. Only each subclass's `isSubEqual()` mattered in practice for telling two
+entity-interaction tasks apart.
+
+FIXED: gated the infinite-shortcut on EITHER side being infinite, not on their infinite-ness
+matching: `if (Double.isInfinite(a) || Double.isInfinite(b)) return Double.isInfinite(a) ==
+Double.isInfinite(b);`. Confirmed `doubleCheck()` has no other callers. Not stand-verified (C8.1)
+— this changes real task-equality behavior (whether the scheduler treats two same-typed entity
+tasks with different `maintainDistance` as the same task or not), flagging for a playtest that
+switches between such tasks (e.g. a combat task vs. a shearing task with different approach
+distances).
+
 <!-- INPUTCONTROLS-RELEASEALL-DOUBLECOUNT-2026-09-05 -->
 ## Fixed: `InputControls.releaseAll()` double-counted (and over-counted) its own steal-detector (2026-09-05)
 
