@@ -1263,6 +1263,11 @@ def sweep(runs, need):
             print(f"  stand down ({str(e)[:120]}) — restarting the client and retrying")
             sh(["docker", "restart", CLIENT], t=120)
             time.sleep(90)
+            # The aborted attempt never reached phase_report() (only a SUCCESSFUL main() pass
+            # resets PHASE_T), so its partial spans would otherwise bleed into the retry's own
+            # PHASES total -- reset before trying again, not after, so the retry starts clean.
+            PHASE_T["last"] = None
+            PHASE_T["spans"] = []
             try:
                 results.append(bool(main()))
             except StandDown as e2:
