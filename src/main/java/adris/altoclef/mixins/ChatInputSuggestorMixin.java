@@ -203,6 +203,15 @@ public abstract class ChatInputSuggestorMixin {
             int index = 0;
             for (int i = 0; i < split.length; i++) {
                 String command = split[i];
+                // ⛔ FIXED 2026-09-05: `index` summed only the segment lengths, never the ";"
+                // separators consumed between them, so it under-counted by `i` characters once
+                // more than one command was chained (";stop ;goto ..."). It is passed straight
+                // into buildErrorMessage(msg, full, index) below with `full` (the WHOLE original
+                // string, semicolons included) -- so the reported caret position drifted left by
+                // one character per prior command in the chain. Same shape as tungsten's
+                // split("|") bugs this session: a splitter's pieces silently disagree with the
+                // original string's real offsets.
+                if (i > 0) index += 1; // the ";" that separated this segment from the last
                 index += command.length();
 
                 if (command.endsWith(" ") && (i+1) < split.length) {
