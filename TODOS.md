@@ -1,5 +1,37 @@
 # TODOs
 
+<!-- CONSTRUCTNETHERPORTALOBSIDIANTASK-UNBOUNDED-BFS-2026-09-05 -->
+## Fixed: unbounded/possibly-infinite BFS in `ConstructNetherPortalObsidianTask` (2026-09-05)
+
+Auditing `tasks/construction/compound/` (previously untouched this session). The "find a block to
+place obsidian against" search:
+
+```java
+LinkedList<BlockPos> queue = new LinkedList<>();
+queue.add(placeTarget);
+while (surroundedByAir(world, placeTarget)) {
+    BlockPos pos = queue.removeFirst();
+    if (surroundedByAir(world, pos)) {
+        queue.add(pos.up()); queue.add(pos.down()); ... // 6 neighbors
+    } else {
+        return new PlaceStructureBlockTask(pos);
+    }
+}
+```
+
+Two real hang risks, not just diagnostics: (1) the `while` condition tests `placeTarget` — the
+fixed BFS origin, never updated inside the loop — instead of the current node `pos`; since the
+outer `if` already established that condition true and nothing changes it, the while-condition is
+always true and the loop relies entirely on the inner `return` to exit, with no bound tied to
+actual search progress. (2) nothing tracks visited positions, so the BFS can cycle forever (a
+node's `.up()` neighbor's later `.down()` re-enqueues the original node), growing the queue without
+limit whenever no non-air neighbor exists within reach.
+
+FIXED: added a visited set (also fixes redundant re-enqueuing of the same cell) and a hard
+4096-node cap as a safety bound, matching this session's established caution about unbounded
+searches. Not stand-verified (C8.1) — flagging for a playtest in a fully-air area (e.g. high in the
+sky) where the old code could have hung the client tick thread.
+
 <!-- BEATMINECRAFT2TASK-DEADPORTALFRAMECOUNT-2026-09-05 -->
 ## Fixed: `BeatMinecraft2Task.getFilledPortalFrames()` — dead second branch, same shape found repeatedly this session (2026-09-05)
 
