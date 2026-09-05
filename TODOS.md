@@ -1,5 +1,29 @@
 # TODOs
 
+<!-- CRAFTINTABLE-RECIPEBOOK-INDEPENDENT-CONFIRMATION-2026-09-05 -->
+## Independent, pre-existing confirmation for the CraftInTableTask fix's exact reasoning (2026-09-05)
+
+Found while checking whether `shouldUseCraftingBookToCraft()` (the setting gating the fix in the
+entry immediately below) had any other callers. `CraftInInventoryTask.java:156-160`'s own comment,
+written well before today: *"MANUAL PLACEMENT IS THE ONE THAT WORKS EVERYWHERE. The recipe book is
+off by default... this is the exact path a stall capture caught looping — the book answering 'no
+such recipe' 655 times for a 3x3 item while the 2x2 player grid was open."*
+
+That is, independently and pre-existing, the SAME failure mode reasoned through from the API
+(not measured) in `CraftInTableTask.java`'s fix: sending a 3x3-only recipe's `clickRecipe` while
+only a 2x2 grid is open gets silently refused by the server, over and over. It is why
+`CraftGenericWithRecipeBooksTask` cannot simply be called for a big recipe without first getting a
+real crafting-table screen open — confirmed twice now, once from reading the real API shapes, once
+from an actual recorded stall.
+
+**This does NOT mean `shouldUseCraftingBookToCraft()`'s off-by-default should change** — that is a
+separate, bigger decision (the setting is also explicitly justified because "plenty of servers
+disable [the recipe book] feature" server-side, unrelated to this particular bug) and not something
+to flip casually without a stand to verify against. But it is worth knowing that today's fix directly
+targets a failure mode this codebase had already independently discovered and is not a speculative
+concern — whoever eventually re-evaluates whether the recipe-book path should default ON now that
+`CraftInTableTask` sends the click to the correct screen, this is the exact history to read first.
+
 <!-- CRAFTINTABLE-RECIPEBOOK-GAP-IMPLEMENTED-2026-09-05 -->
 ## Implemented, not just scoped: CraftInTableTask now uses the recipe-book fast path on 1.21.11 (2026-09-05)
 
