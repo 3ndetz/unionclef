@@ -1,5 +1,24 @@
 # TODOs
 
+<!-- COMBATPATHFINDER-GRIDDIAGONALDROPPED-DEAD-2026-09-05 -->
+## Documented (not code): `CombatPathfinder.gridDiagonalDropped` is a dead counter, TungstenConfig pointed at it (2026-09-05)
+
+Full read of `CombatPathfinder.java` (630 lines, clean otherwise) turned up `gridDiagonalDropped`
+— declared, reset every run, and read live over py4j in the same diagnostic tuple as
+`gridDiagonalExpanded`/`gridDiagonalUnturnable` — with no writer anywhere in the codebase
+(grep confirmed). It measured an earlier `cardinalOnly` drop-from-search approach that this
+file's own history says was tried and reverted the same day for being far worse (98% stubs);
+`expandDiagonals()` replaced it, but the counter was never rewired to the new mechanism or
+removed. Worse: `TungstenConfig.gridRouteMatchesQueueMoves`'s own doc still said "read
+gridDiagonalDropped for proof it fires" — actively pointing a future reader at a permanently-zero
+counter as if it were live evidence.
+
+Fixed the documentation, not the field: added a `⛔ DEAD` note at the declaration and corrected
+the stale pointer in `TungstenConfig.java` to name the two counters that actually are live. Did
+NOT remove the field itself — it sits inside a `String.format`-style py4j tuple in
+`Py4jEntryPoint.java` whose shape this session cannot recompile to verify a safe removal from
+(C8.1). Whoever next touches that tuple should drop it then.
+
 <!-- RUNAWAYTASK-LEFT-RIGHT-SWAPPED-2026-09-05 -->
 ## Fixed: `RunAwayTask.driveAwayRaw()` had left/right swapped (2026-09-05)
 
