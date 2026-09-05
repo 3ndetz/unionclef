@@ -127,8 +127,18 @@ public class BlockTarget implements ArgumentType<BlockTarget> {
 		try {
 		    dimension = (Dimension) Arg.parseEnum(part, Dimension.class);
 		} catch (CommandException e1) {
-		    // TODO Auto-generated catch block
-		    e1.printStackTrace();
+		    // ⛔ FIXED 2026-09-05: this swallowed a bad dimension token (e.g. ";goto 5 ENDX")
+		    // with only a printStackTrace() -- the command then silently proceeded with
+		    // dimension=null instead of telling the user their argument didn't parse. This
+		    // method IS live (registered as the ArgumentType brigadier uses for the
+		    // "gotoTarget" argument, per GotoTargetArgumentType.java), so a real typo here
+		    // was invisible to the player. Its sibling parseRemainder() above gets this right
+		    // by simply declaring `throws CommandException` and letting it propagate; this
+		    // override can't do that (fixed ArgumentType#parse signature), so it must convert
+		    // to the checked exception brigadier actually expects instead of eating it.
+		    throw new CommandSyntaxException(
+		        new com.mojang.brigadier.exceptions.SimpleCommandExceptionType(Text.literal(e1.getMessage())),
+		        Text.literal(e1.getMessage()));
 		}
 		break;
 	    }
