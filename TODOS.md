@@ -1,5 +1,29 @@
 # TODOs
 
+<!-- TRAILTRACKER-WAYPOINTINDEX-DESYNC-2026-09-05 -->
+## Fixed: `TrailTracker.waypointIndex` desynced whenever the trail was trimmed (2026-09-05)
+
+Full read of `task/TrailTracker.java` (200 lines — a simpler, less battle-tested class than most
+of this session's other finds, with none of the usual "MEASURED/TRIED/REVERTED" history, which in
+this codebase has repeatedly correlated with where bugs turn out to live). `recordPosition()`
+prunes the breadcrumb trail from the FRONT (`trail.remove(0)`) both when it exceeds
+`MAX_WAYPOINTS` and when entries go stale — but `waypointIndex`, a separate field indexing into
+this same list while `trailing` is active, was never adjusted for it. Removing element 0 shifts
+every remaining element down by one index, so each trim silently moved what `waypointIndex`
+actually pointed at one step forward through the trail — completely bypassing the
+`WAYPOINT_REACH_DIST` distance check in `getWaypoint()` that is supposed to be the only thing
+advancing it.
+
+`recordPosition()` runs every tick regardless of trailing state, and once the trail reaches
+`MAX_WAYPOINTS` (50) essentially every subsequent recording also trims one point — i.e. this
+fired on nearly every tick during the exact long-chase scenario TRAILING mode exists for (target
+escaped past `ESCAPE_DIST`, height diff, or a stalled approach). FIXED: decrement `waypointIndex`
+alongside each front removal so it keeps pointing at the same conceptual trail point.
+`getWaypoint()`'s existing out-of-range clamp (`findNearestIndex`) stays as the safety net for
+any case this doesn't cover.
+
+Not stand-verified (C8.1, no build this session).
+
 <!-- COMBATPATHFINDER-GRIDDIAGONALDROPPED-DEAD-2026-09-05 -->
 ## Documented (not code): `CombatPathfinder.gridDiagonalDropped` is a dead counter, TungstenConfig pointed at it (2026-09-05)
 
