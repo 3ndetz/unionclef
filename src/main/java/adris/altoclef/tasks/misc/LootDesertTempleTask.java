@@ -62,7 +62,14 @@ public class LootDesertTempleTask extends Task {
 
     @Override
     protected boolean isEqual(Task other) {
-        return other instanceof LootDesertTempleTask && ((LootDesertTempleTask) other).getTemplePos() == temple;
+        // ⛔ FIXED 2026-09-05: was `== temple` (reference equality) on a BlockPos, a value type with
+        // its own equals(). Currently masked because every construction site
+        // (RavageDesertTemplesTask, BeatMinecraft2Task, MarvionBeatMinecraftTask) caches the
+        // constructed instance in a field and returns that SAME reference on every later tick
+        // rather than building a fresh one, so identity happened to coincide with equality. Still a
+        // latent bug: two different BlockPos objects for the same coordinates would wrongly compare
+        // unequal, which is exactly the contract equals() exists to get right.
+        return other instanceof LootDesertTempleTask && ((LootDesertTempleTask) other).getTemplePos().equals(temple);
     }
 
     @Override

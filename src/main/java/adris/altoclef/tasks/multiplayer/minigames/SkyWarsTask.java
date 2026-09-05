@@ -416,13 +416,10 @@ public class SkyWarsTask extends Task {
         return task != null && task.isActive() && !task.isFinished();
     }
 
-    private static void sleepSec(double seconds) {
-        try {
-            Thread.sleep((int) (1000 * seconds));
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
+    // ⛔ REMOVED 2026-09-05: sleepSec(double) had zero callers anywhere in the codebase (grepped) --
+    // dead code, and a dangerous one to leave lying around: a blocking Thread.sleep would freeze
+    // the client tick if anyone ever wired it into onTick() (the exact live stall bug found this
+    // session in tungsten's DivingMove.java, just not yet triggered here since nothing calls it).
 
     private class ScanChunksInRadius extends SearchChunksExploreTask {
 
