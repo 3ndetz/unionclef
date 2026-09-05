@@ -19,15 +19,38 @@ LIMIT = 3800          # 4096 minus room for the "(part n/m)" header
 REPORT = r"C:/repos/pet/mineswarm/game/cristalix/tg_report.py"
 
 
+def _split_long(para):
+    """A paragraph with no blank line inside it that still exceeds LIMIT on its own (a wide
+    table, a single unbroken log dump) -- split on line boundaries, hard-cutting any line
+    that alone exceeds LIMIT. Without this, chunks() below never breaks such a paragraph and
+    hands Telegram a single message over the 4096-char cap -- the exact HTTP 400 this tool
+    exists to route around, just one level down."""
+    pieces, cur = [], ""
+    for line in para.splitlines(keepends=True) or [para]:
+        while len(line) > LIMIT:
+            pieces.append(line[:LIMIT])
+            line = line[LIMIT:]
+        candidate = cur + line
+        if len(candidate) > LIMIT and cur:
+            pieces.append(cur)
+            cur = line
+        else:
+            cur = candidate
+    if cur:
+        pieces.append(cur)
+    return pieces
+
+
 def chunks(text):
     out, cur = [], ""
     for para in text.split("\n\n"):
-        candidate = (cur + "\n\n" + para) if cur else para
-        if len(candidate) > LIMIT and cur:
-            out.append(cur)
-            cur = para
-        else:
-            cur = candidate
+        for piece in ([para] if len(para) <= LIMIT else _split_long(para)):
+            candidate = (cur + "\n\n" + piece) if cur else piece
+            if len(candidate) > LIMIT and cur:
+                out.append(cur)
+                cur = piece
+            else:
+                cur = candidate
     if cur:
         out.append(cur)
     return out
