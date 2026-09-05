@@ -1,5 +1,59 @@
 # TODOs
 
+<!-- DIVINGMOVE-LIVE-SLEEP-RUNTONODE-DEADBRANCH-2026-09-05 -->
+## Fixed: live `Thread.sleep` in `DivingMove` (real search-thread stall), same dead branch as `WalkToNode` found in `RunToNode` (2026-09-05)
+
+`DivingMove.generateMove()` had an **uncommented** `Thread.sleep(50)` + `RenderHelper.renderNode()`
+pair in three separate while loops. Every sibling move generator in `specialMoves/`
+(`ExitWaterMove`, `ClimbALadderMove`, `SprintJumpMove`, `WalkToNode`, `LongJump`, `CornerJump`)
+carries the identical debug-visualization idiom but **commented out** — `DivingMove` was the only
+one where it was left live. `DivingMove` IS called from the real search (`Node.java:180`, whenever
+`agent.touchingWater` and the target has a solid ceiling), so this could block a search thread for
+up to `20*50=1000ms` in the first loop and up to `80*50=4000ms` each in the other two, per node
+explored. Removed all three (matching every sibling's already-commented convention), dropped the
+now-fully-unused `Stream`/`Streams`/`Debug`/`TungstenMod`/`AgentChecker`/`RenderHelper` imports.
+
+`RunToNode.generateMove()` had the identical dead inner branch already found and fixed in
+`WalkToNode.generateMove()` earlier this session (see the `WALKTONODE`-era fix above/below): `if
+(newNode.agent.horizontalCollision && ...) { jump = true; if (newNode.parent.agent.onGround &&
+!newNode.agent.horizontalCollision) newNode = newNode.parent; }` — the outer `if` already
+established `newNode.agent.horizontalCollision == true`, so the inner check was provably always
+false. Fixed the same way: check `newNode.parent.agent.horizontalCollision`. Confirmed live via
+`Node.java:242`.
+
+Not stand-verified (C8.1) — the `RunToNode` change alters real search behavior (a
+collision-recovery path); the `DivingMove` change removes a stall that was never supposed to be
+live, so it can only help.
+
+<!-- CORNERJUMP-LONGJUMP-STALE-AGENT-2026-09-05 -->
+## Fixed: same stale-`agent` bug found twice more in `CornerJump`/`LongJump` (2026-09-05)
+
+Continuing the sweep below into the remaining live `specialMoves` classes. Same bug class, 6th
+through 8th confirmed instance this session (after `JumpToLadderMove`-deleted, `SprintJumpMove`,
+`WalkToNode`): a per-tick simulation loop closing over `agent` (= `parent.agent`, the position
+*before* this move started) instead of `newNode.agent` (the current simulated tick).
+
+**`CornerJump.generateMove()`'s second while loop** — this one has a *confirmed, concrete*
+behavioral effect, not just a theoretical staleness: `Agent.getBlockCollisions()` builds an
+`AgentShapeContext` from the agent's own `box.minY` (read by `isAbove()`) and sneak state. Read
+`AgentShapeContext.java`: `isAbove(shape, pos, default)` returns `this.minY > pos.getY() +
+shape.getMax(Y) - epsilon` — i.e. it compares the STALE starting Y against blocks near the
+CURRENT candidate position, for every iteration after the first, throughout a jump that is
+specifically about changing Y. The loop's first sibling (a few lines above, same file) already
+gets this right via `newNode.agent.getBlockCollisions(...)`.
+
+**`LongJump.generateMove()`** — two loops recomputed `desiredYaw` every iteration from stale
+`agent.getPos()`. Since `agent.getPos()` and `nextBlockNode.getPos(true)` are both loop-invariant,
+this recompute was a **provable no-op as written** — it produces the identical value every
+iteration, which only makes sense if the code meant to track the moving `newNode.agent.getPos()`
+like every sibling class that recomputes yaw mid-loop (`ExitWaterMove`, `CornerJump`'s own
+loops). Also fixed the same stale-agent `getBlockCollisions` call in `LongJump`'s "back away from
+the edge" loop.
+
+Both confirmed live: `CornerJump` from `Node.java:224-225`, `LongJump` from `Node.java:164,245`.
+Not stand-verified (C8.1) — these change real collision/steering decisions mid-move, not just
+diagnostics.
+
 <!-- SPECIALMOVES-STALE-AGENT-SWEEP-2026-09-05 -->
 ## Fixed: two `specialMoves` classes checked the pre-move `agent` instead of the current tick, plus a dead branch; two superseded classes deleted (2026-09-05)
 
