@@ -288,8 +288,38 @@ public class GameMenuTaskChain extends SingleTaskChain {
                 double y = worldScreen.height - 52;
 
                 //#if MC >= 12111
-                //$$ // TODO: mouseClicked/mouseReleased signature changed to Click object in 1.21.11
-                //$$ // Auto-join world click needs rewrite for new input API
+                //$$ if (_mouseClickTimer.elapsed()) {
+                //$$     net.minecraft.client.gui.Click worldClick = new net.minecraft.client.gui.Click(x, y, new net.minecraft.client.input.MouseInput(0, 0));
+                //$$     worldScreen.mouseClicked(worldClick, false);
+                //$$     worldScreen.mouseReleased(worldClick);
+                //$$
+                //$$     if (worldScreen.hoveredElement(x, y).isPresent()) {
+                //$$         Element hoveredElement = worldScreen.hoveredElement(x, y).get();
+                //$$         net.minecraft.client.gui.Click elementClick = new net.minecraft.client.gui.Click(0, 0, new net.minecraft.client.input.MouseInput(0, 0));
+                //$$         hoveredElement.mouseClicked(elementClick, false);
+                //$$         hoveredElement.mouseReleased(elementClick);
+                //$$         mod.cancelUserTask();
+                //$$         ServerInfo finalSrv = srv;
+                //$$         Runnable doOnStuckFixFinish = new Thread(() -> {
+                //$$             MinecraftClient clientt = MinecraftClient.getInstance();
+                //$$             clientt.setScreen(new GameMenuScreen(true));
+                //$$             Debug.logMessage("[STUCKFIX] DISCONNECT STAGE 2");
+                //$$             disconnect(clientt);
+                //$$             mod.cancelUserTask();
+                //$$             mod.runUserTask(new GetToXZTask(0, 0));
+                //$$             Debug.logMessage("[STUCKFIX] SET MP SCREEN");
+                //$$             MinecraftClient.getInstance().setScreen(new MultiplayerScreen(new TitleScreen()));
+                //$$             Debug.logMessage("[STUCKFIX] RECONNECT TO SERVER");
+                //$$             if (_prevServerEntry == null) {
+                //$$                 _prevServerEntry = finalSrv;
+                //$$             }
+                //$$             gmReconnectSet++; _reconnecting = true;
+                //$$             _reconnectTimer.reset();
+                //$$         });
+                //$$         mod.runUserTask(new StuckFixingTask(), doOnStuckFixFinish);
+                //$$     }
+                //$$     _mouseClickTimer.reset();
+                //$$ }
                 //#else
                 if (_mouseClickTimer.elapsed()) {
                     worldScreen.mouseClicked(x, y, 0);
