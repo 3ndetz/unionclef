@@ -447,9 +447,7 @@ public final class FastNavigator {
             legTail = leg.get(leg.size() - 1);
             // if this leg ends at a jump, arm the hand-off for when the walk finishes
             pendingPhysicsTarget = nextPhysicsTarget;
-            pendingIsBridge = nextPhysicsIsBridge;
             nextPhysicsTarget = null;
-            nextPhysicsIsBridge = false;
             // ONE OWNER FOR A BUILD LEG. A leg whose route places blocks goes to the ported
             // MovementQueue: a chain of baritone MovementTraverse objects, each of which owns its own
             // one-block step — the walk, the aim, the sneak and the click — and none of which shares
@@ -523,9 +521,12 @@ public final class FastNavigator {
      * exclusive with {@link #nextLegBridge}: one owner per leg.
      */
     private static volatile boolean nextLegMovement = false;
-    /** The cut-out run is a BRIDGE (its waypoints place blocks), so BridgeTask owns it. */
-    private static volatile boolean nextPhysicsIsBridge = false;
-    private static volatile boolean pendingIsBridge = false;
+    // ⛔ REMOVED 2026-09-05: this used to also carry `nextPhysicsIsBridge`/`pendingIsBridge`, a
+    // write-only pair -- `pendingIsBridge` was assigned from `nextPhysicsIsBridge` in exactly one
+    // place and never read anywhere in the codebase, and `nextPhysicsIsBridge` itself was only
+    // ever set to `false` (its declaration and two reset sites), never `true`. Superseded by
+    // `nextLegBridge`/`nextLegMovement` above, which the actual bridge-vs-physics routing logic
+    // reads. Confirmed dead via a codebase-wide grep before removing.
 
     /**
      * Re-plan from the bot's ACTUAL position, for a component that has just given up its leg.
@@ -743,7 +744,6 @@ public final class FastNavigator {
                     // step and the placement together as PillarTask owns a tower. Cut one cell
                     // EARLIER for a build so the owner takes over BEFORE the lip: handing over
                     // AT the lip inherits a body already carried past it by the walker.
-                    nextPhysicsIsBridge = false;
                     int runEnd = res.physicsRunEnd(physics);
                     // A PLACE RUN IS NOT PHYSICS, AND IT IS NOT A SEPARATE LEG EITHER. placeAcross
                     // emits its planks flagged viaJump (FastPlanner.java:958), which routed them to
