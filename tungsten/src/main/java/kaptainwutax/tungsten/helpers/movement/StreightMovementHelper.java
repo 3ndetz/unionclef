@@ -108,7 +108,19 @@ public class StreightMovementHelper {
 	            }
 	            
 	            y = moveCoordinate(y, endY);
-	            
+
+	        }
+	        // ⛔ FIXED 2026-09-05: every coordinate update inside the loop above is followed by a
+	        // processStep() check EXCEPT this one's y-move -- z gets one at line ~98, x at ~106, but
+	        // y's result was only ever picked up at the TOP of the NEXT iteration. Whenever y is the
+	        // last coordinate to reach its target (any climb, descend or pillar-shaped move with no
+	        // further horizontal step left to take), the loop exits on that same y-move and the
+	        // FINAL landing cell was never checked at all -- confirmed by comparing against
+	        // CornerJumpMovementHelper's sibling traversePath(), which checks immediately after
+	        // every move including y and does not have this gap. Explicit final check restores that.
+	        currPos.set(endX, endY, endZ);
+	        if (!processStep(currPos)) {
+	            return false; // Path obstructed
 	        }
 	        renderBlock(endPos, Color.BLUE);
 	        slowDownIfNeeded();
