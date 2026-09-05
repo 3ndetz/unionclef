@@ -116,8 +116,16 @@ public class ProjectileProtectionWallTask extends Task implements ITaskRequiresG
 
 	@Override
 	protected boolean isEqual(Task other) {
-		// TODO Auto-generated method stub
-		return true;
+		// ⛔ FIXED 2026-09-05: this was `return true;` unconditionally -- an unfinished
+		// "// TODO Auto-generated method stub" left as-is. Task.equals(Object) calls isEqual()
+		// directly with no type check of its own (Task.java:150-155), so this task considered
+		// itself equal to EVERY other task in the game, of any type. Anything that compares a
+		// running task against a newly-requested one (deduplication, "is this the same task
+		// already active") would wrongly treat a totally unrelated task as identical to this
+		// one. No per-instance state to compare (the only field is the shared `mod`), matching
+		// the pattern every other stateless single-instance task in this codebase uses (e.g.
+		// HeroTask, SelfCareTask).
+		return other instanceof ProjectileProtectionWallTask;
 	}
 
 	@Override
