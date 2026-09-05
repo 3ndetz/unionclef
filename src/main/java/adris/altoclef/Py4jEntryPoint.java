@@ -1308,7 +1308,7 @@ public class Py4jEntryPoint {
     /** Reachability prediction: can the block-space pathfinder find a route to
      *  (x,y,z) — optionally with wall-breaking allowed? Returns found flag,
      *  rough path size and how many blocks the plan would mine. Runs a real
-     *  block-space search (up to ~5s); returns busy=true if the pathfinder is
+     *  block-space search (up to ~3s); returns busy=true if the pathfinder is
      *  already searching. */
     public Map<String, String> canReach(int x, int y, int z, boolean withBreaking) {
         Map<String, String> m = new HashMap<>();
@@ -1324,38 +1324,41 @@ public class Py4jEntryPoint {
             kaptainwutax.tungsten.TungstenConfig cfg = kaptainwutax.tungsten.TungstenConfig.get();
             boolean saved = cfg.allowBreak;
             cfg.allowBreak = withBreaking;
-            // a stale stop flag from a previous ;stop instantly kills the
-            // search loop and returns a 2-node stub — clear it for the probe
-            kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.stop.set(false);
             try {
-                net.minecraft.util.math.Vec3d goal = new net.minecraft.util.math.Vec3d(x + 0.5, y, z + 0.5);
-                // The block-space search occasionally returns a partial best-so-far
-                // stub instead of a full route — retry a few times and keep the
-                // best (a route that actually reaches the goal wins). Makes the
-                // prediction reliable for the cognitive agent.
-                java.util.Optional<java.util.List<kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode>> best = java.util.Optional.empty();
-                double bestEnd = Double.MAX_VALUE;
-                for (int attempt = 0; attempt < 4; attempt++) {
-                    kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.stop.set(false);
-                    var path = kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockSpacePathFinder.search(
-                            _mod.getWorld(), goal, _mod.getPlayer());
-                    if (path.isPresent() && !path.get().isEmpty()) {
-                        var lastN = path.get().get(path.get().size() - 1);
-                        double ed = lastN.getPos(_mod.getWorld()).distanceTo(goal);
-                        if (ed < bestEnd) { bestEnd = ed; best = path; }
-                        if (ed < 2.5) break; // reached — good enough
-                    }
-                }
-                m.put("found", String.valueOf(best.isPresent()));
-                if (best.isPresent()) {
-                    m.put("pathSize", String.valueOf(best.get().size()));
+                // ⛔ FIXED 2026-09-05 (TODOS.md MCP-MISSING-WORLD-READ-TOOLS-2026-09-04's own
+                // "SEPARATE, MORE IMPORTANT FINDING"): this used to call
+                // BlockSpacePathFinder.search(...), the WORSE of tungsten's two block-space
+                // engines per docs/NAVIGATION.md's own engine table ("FastPlanner and
+                // BlockSpacePathFinder do the same job; the first is correct, the second is not,
+                // and the second was never removed when the first arrived"). Every canReach
+                // answer this project has ever produced was therefore asking a different, more
+                // pessimistic engine than the one that actually drives live navigation
+                // (PathFinder.findBlockPath calls FastPlanner.plan(...) directly, confirmed by
+                // reading that call site). Swapped to the same call, with the same
+                // player.getBlockPos() start FastPlanner's own primary caller uses (no extra
+                // "support snap" pre-processing needed -- that was specifically working around
+                // BlockSpacePathFinder's own weaker start handling, not a general FastPlanner
+                // requirement).
+                net.minecraft.util.math.BlockPos start = _mod.getPlayer().getBlockPos();
+                net.minecraft.util.math.BlockPos goal = new net.minecraft.util.math.BlockPos(x, y, z);
+                var res = kaptainwutax.tungsten.path.fast.FastPlanner.plan(
+                        _mod.getWorld(), start, goal, 3000L);
+                boolean found = !res.isEmpty();
+                m.put("found", String.valueOf(found));
+                if (found) {
+                    m.put("pathSize", String.valueOf(res.path.size()));
                     int breaks = 0;
-                    for (kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode n : best.get()) {
-                        if (n.hasBreaks()) breaks += n.toBreak.size();
+                    for (var w : res.path) {
+                        if (w.toBreak != null) breaks += w.toBreak.size();
                     }
                     m.put("breaks", String.valueOf(breaks));
-                    m.put("endDistance", String.format("%.1f", bestEnd));
-                    m.put("reached", String.valueOf(bestEnd < 2.5));
+                    net.minecraft.util.math.BlockPos lastPos = res.path.get(res.path.size() - 1).pos;
+                    double endDistance = Math.sqrt(lastPos.getSquaredDistance(goal));
+                    m.put("endDistance", String.format("%.1f", endDistance));
+                    // res.complete is FastPlanner's own "the plan actually reaches the goal
+                    // cell" signal -- authoritative, unlike the old endDistance-threshold guess
+                    // BlockSpacePathFinder's partial-stub behavior forced canReach to make up.
+                    m.put("reached", String.valueOf(res.complete));
                 }
             } finally {
                 cfg.allowBreak = saved;
