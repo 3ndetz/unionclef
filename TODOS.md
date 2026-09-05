@@ -1,5 +1,46 @@
 # TODOs
 
+<!-- PAIREDAB-CRIT-TABLE-DF1-MISSING-2026-09-05 -->
+## Fixed: `deploy/runner/paired_ab.py` significance bar was 6x too lenient at the smallest pair count (2026-09-05)
+
+Auditing the rest of `deploy/` not covered by the other two forks (`uctest/` core framework;
+`run_suite.py` + the named course test scripts) — top-level `deploy/*.py`/`*.sh` and the
+remaining `deploy/runner/*.py` diagnostics/tooling files (`gamer_smoke.py`, `capture_demo.py`,
+`repro_stall.py`, `paired_ab.py`, `diag_*.py`, etc). `python3 -m py_compile` on all 61 in-scope
+files found zero further syntax errors (the `ab_arrows.py` class of bug, already fixed
+separately). `gamer_smoke.py` (the `@gamer` full-playthrough bench) read in full: extensively
+self-documented with real measured failure modes already fixed inline, no further logic bug
+found on this pass — one minor, non-scoring cosmetic note left open below.
+
+`paired_ab.py` scores a paired A/B series from a `gamer_smoke` log and prints, per metric, whether
+the observed `t` statistic "CLEARS the two-sided 95% bar" for the actual sample size — the file's
+own stated purpose is specifically to correct the common mistake of quoting the flat `|t| >= 2`
+rule on small series (its own comment: "Quoting the flat bar on three pairs would have called a
+result ESTABLISHED at t=2.54 that the right critical value rejects"). The lookup table backing
+this had keys for df=2 through df=12 (n=3 through n=13 pairs) but was missing **df=1 (n=2 pairs,
+the smallest series `stats()` will even compute)** — that case fell through to the generic
+large-sample default of `2.05`. The true two-sided 95% critical value at df=1 is `12.71`, so a
+`t` of roughly 2.1 on just two pairs — a result with essentially no statistical power — would
+have printed "CLEARS the two-sided 95% bar", the exact false-positive this table exists to
+prevent, at exactly the sample size where the guard matters most.
+
+FIXED: added `1: 12.71` to the critical-value table. Commit `0a99f3c3`. Not stand-verified
+(C8.1 — no live gamer-server log to run this against), but this is a pure arithmetic/lookup
+correctness fix independent of any runtime: the wrong number was reachable by construction
+(`len(deltas) - 1 == 1` whenever exactly 2 pairs both pass the span-exclusion check above it) and
+verifiable by hand against a standard t-table.
+
+OPEN, not fixed (cosmetic, does not affect any PASS/FAIL verdict): `gamer_smoke.py`'s module-level
+`PHASE_T` dict accumulates phase spans across the whole process lifetime and is only reset by
+`phase_report()`, called once near the end of a *successful* `main()` pass. When `sweep()` catches
+a `StandDown` and retries with a second `main()` call (`gamer_smoke.py` around the `except
+StandDown` branch), the retry's `phase("rcon")` call appends onto whatever spans the failed
+attempt already recorded, rather than starting clean — so the `PHASES total=...` diagnostic line
+printed after a stand-down-and-retry can include time from the aborted attempt. This is a
+print-only diagnostic (does not feed `ok`/`PASS`/`FAIL`), so left as a documented note rather than
+a change, per this fork's mandate to document plausible-but-low-value findings as OPEN rather
+than spend a commit on cosmetic output.
+
 <!-- UCTEST-SCENARIO-CRITSWINGS-STALE-2026-09-05 -->
 ## Fixed: `uctest/scenario.py` `crit_swings()` had the same undercount `landed_swings()` was already fixed for (2026-09-05)
 
