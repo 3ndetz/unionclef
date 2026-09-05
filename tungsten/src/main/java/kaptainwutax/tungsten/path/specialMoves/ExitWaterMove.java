@@ -1,15 +1,9 @@
 package kaptainwutax.tungsten.path.specialMoves;
 
-import java.util.stream.Stream;
-
-import com.google.common.collect.Streams;
-
-import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.agent.Agent;
 import kaptainwutax.tungsten.helpers.DirectionHelper;
 import kaptainwutax.tungsten.helpers.DistanceCalculator;
-import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.path.Node;
 import kaptainwutax.tungsten.path.PathInput;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
@@ -31,23 +25,29 @@ public class ExitWaterMove {
 	    				new Color(0, 255, 150), parent.cost + 0.0001);
 		int limit = 0;
         // Run forward to the node
-		while (distance > 0.2 && limit < 40) {
-//        	RenderHelper.renderNode(newNode);
-//        	try {
-//				Thread.sleep(5);
-//			} catch (InterruptedException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
+        // ⛔ FIXED 2026-09-05: `closestDistance` was declared and initialized but never read or
+        // updated -- a vestigial no-op left over from the sibling SwimmingMove.generateMove(),
+        // which uses the same variable name for a real anti-stall break ("if distance stopped
+        // improving, stop generating ticks"). Without it, and without SwimmingMove's
+        // `!horizontalCollision` loop guard, this loop had no way to bail early: an agent that
+        // got stuck on a bank lip while exiting water would still burn the full 40-tick budget
+        // pressing forward into the obstruction instead of stopping like SwimmingMove does.
+		while (distance > 0.2 && limit < 40 && !newNode.agent.horizontalCollision) {
         	limit++;
-    		distance = DistanceCalculator.getHorizontalEuclideanDistance(newNode.agent.getPos(), nextBlockNode.getPos(true));
     		desiredYaw = (float) DirectionHelper.calcYawFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
     		desiredPitch = (float) DirectionHelper.calcPitchFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
             newNode = new Node(newNode, world, new PathInput(true, false, false, true, true, false, true, desiredPitch, desiredYaw + 45),
             		new Color(0, 255, 150), newNode.cost + cost);
-            
+            // distance recomputed AFTER the move, matching SwimmingMove's anti-stall check exactly
+            distance = DistanceCalculator.getHorizontalEuclideanDistance(newNode.agent.getPos(), nextBlockNode.getPos(true));
+
+            if (closestDistance > distance) {
+                closestDistance = distance;
+            } else {
+                break;
+            }
         }
-            
+
         return newNode;
 	}
 

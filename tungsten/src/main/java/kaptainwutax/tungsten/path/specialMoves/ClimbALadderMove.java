@@ -1,22 +1,11 @@
 package kaptainwutax.tungsten.path.specialMoves;
 
-import java.util.stream.Stream;
-
-import com.google.common.collect.Streams;
-
-import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.agent.Agent;
-import kaptainwutax.tungsten.helpers.DirectionHelper;
-import kaptainwutax.tungsten.helpers.DistanceCalculator;
-import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.path.Node;
 import kaptainwutax.tungsten.path.PathInput;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
 import kaptainwutax.tungsten.render.Color;
-import net.minecraft.block.LadderBlock;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.WorldView;
 
 public class ClimbALadderMove {
