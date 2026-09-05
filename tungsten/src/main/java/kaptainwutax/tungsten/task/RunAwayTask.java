@@ -637,7 +637,15 @@ public class RunAwayTask {
 
         double yaw = Math.toRadians(player.getYaw());
         Vec3d facing = new Vec3d(-Math.sin(yaw), 0, Math.cos(yaw));
-        Vec3d right  = new Vec3d(Math.cos(yaw), 0, Math.sin(yaw));
+        // ⛔ FIXED 2026-09-05: this was (cos(yaw), sin(yaw)), which is the LEFT world direction,
+        // not right -- it is bit-for-bit the same formula CombatMoveIntent.heading() uses for its
+        // LEFT vector (strafe=+1, forward=0), and the negation of ProjectileDodge's own confirmed
+        // right vector (rx=-cos(yaw), rz=-sin(yaw)) at every yaw. Two independently-agreeing files
+        // said "right" was this vector's negation, and this one had the sign flipped -- the same
+        // left/right swap class already found and fixed once in CombatController.kite(). Whatever
+        // way "away" pointed, this fallback pressed the wrong strafe key -- on the narrow bridges
+        // this exact fallback exists to cross without falling.
+        Vec3d right  = new Vec3d(-Math.cos(yaw), 0, -Math.sin(yaw));
         double fwd = away.dotProduct(facing);
         double str = away.dotProduct(right);
 
