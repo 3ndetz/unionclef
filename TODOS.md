@@ -1,5 +1,41 @@
 # TODOs
 
+<!-- MIXIN-AUDIT-2026-09-05 -->
+## Audited `mixin/` — 2 more live split("|") instances, plus a duplicate pauseKeyBinding block (2026-09-05)
+
+Continuing the `commands/`/`commandsystem/`/`mixin/`/`render/` sweep into the rest of `mixin/`
+(16 files). Most are small, focused, well-scoped `@Accessor`/`@Inject`/`@Redirect` mixins with
+clear provenance comments — clean. Two more real findings, both extending the split("|") bug
+already found live in `MixinClientPlayNetworkHandler.onSendChatMessage` this same pass:
+
+**`MixinChatInputSuggestor.inject()`** (the chat-suggestion-refresh `@Inject`, live on every
+keystroke while typing a command) had the SAME `message.split("|")` bug in two places: building
+`this.parse` and `this.pendingSuggestions` for a chained command. Because the broken split returns
+one array element per character, `segments[segments.length-1]` was grabbing the message's last
+single CHARACTER instead of the text after the last real `|` — typing `;stop|;goto 1` fed the
+parser/suggester `"1"` alone instead of `";goto 1"`. Escaped both to `message.split("\\|")`. This
+makes **4 confirmed live occurrences** of this exact bug across the codebase this pass (plus the 1
+dead one in `CommandExecutor.execute()`), all from the same evidently-copy-pasted mistake.
+
+**`MixinClientPlayerEntity.tick()`** had `if (TungstenMod.pauseKeyBinding.isPressed())` twice
+back-to-back with near-identical bodies. The second block did nothing the first doesn't already do
+(minus the first's `EXECUTOR.stop` line and "Nothing to stop" log branch) — so every pause-key
+press logged a SECOND `PathFinder.noteStop(...)` call and redundantly re-set
+`PATHFINDER.stop.set(true)`. Same **"noteStop/stopBy accounting" bug class** already found twice
+this session (`FollowEntityTask`'s dangling-if, dead comment fragments in `PathFinder.java`/
+`RunAwayTask.java`) — a duplicate call silently doubles exactly the counter this codebase's own
+diagnostics depend on to tell "did X actually stop twice" from "did the accounting lie". Removed
+the redundant second block; gameplay is unaffected (`stop.set(true)` was already `true` either
+way), only the counter's honesty changes.
+
+No findings in the remaining mixins (`AccessorChatInputSuggestor`, `AccessorEntity`,
+`AccessorLivingEntity`, `MixinChatHud`, `MixinClientCommandSource`, `MixinDebugRenderer`,
+`MixinEntityMotionYaw`, `MixinFillCommand`, `MixinInGameHud`, `MixinMinecraftClient`, `MixinMouse`,
+`MixinShapeContext`, `MixinSuggestionWindow`, `MixinWorldChunk`) or in `render/` (`Color`, `Cube`,
+`Cuboid`, `Line`, `Renderer`) — all clean. Not stand-verified (C8.1) — the
+`MixinChatInputSuggestor` fix changes real in-game behavior (chat auto-suggestions while typing a
+chained command); the `MixinClientPlayerEntity` fix only affects diagnostic counter accuracy.
+
 <!-- COMMANDEXECUTOR-PIPE-LIVE-CORRECTION-2026-09-05 -->
 ## Found a LIVE instance of the same split("|") bug, and corrected the mixin audit's dead-code claim (2026-09-05)
 
