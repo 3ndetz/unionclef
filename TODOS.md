@@ -1,5 +1,52 @@
 # TODOs
 
+<!-- LOOTDESERTTEMPLETASK-REFEQUALITY-SKYWARSTASK-DEADSLEEP-2026-09-05 -->
+## Fixed: `LootDesertTempleTask.isEqual()` compared `BlockPos` by reference; removed dead `SkyWarsTask.sleepSec()` (2026-09-05)
+
+Sweeping the last unaudited `tasks/` corners (`misc/`, `speedrun/`, top-level `tasks/*.java`,
+`construction/compound/`, `stupid/`, `multiplayer/`, `squashed/`, `examples/`, `fix/`) after the
+prior four `tasks/` forks and the direct `Nav.java`/`SlotHandler.java` read closed out the rest.
+
+`LootDesertTempleTask.isEqual()` read `((LootDesertTempleTask) other).getTemplePos() == temple` —
+`BlockPos` is a value type with its own `equals()`, so `==` only works by accident. Checked all
+three construction sites (`RavageDesertTemplesTask`, `BeatMinecraft2Task`,
+`MarvionBeatMinecraftTask`): each caches the constructed instance in a field and returns that SAME
+reference on every later tick rather than building a fresh one for the same temple, which is why
+this never manifested as a live bug — but it is still a latent one, since two different `BlockPos`
+objects for the same coordinates would wrongly compare unequal. Fixed to `.equals()`.
+
+`SkyWarsTask.sleepSec(double)` had zero callers anywhere in the codebase (grepped) — dead code, and
+a live-stall risk to leave lying around: an unconditional blocking `Thread.sleep` on whatever
+thread calls it, the exact bug class found LIVE this session in tungsten's `DivingMove.java`
+(there, called from the search thread; here it was never wired into anything, so removed rather
+than left as a future landmine).
+
+**Also investigated and ruled out** (checked, not fixed): `OneCycleTask`/`MurderMysteryTask`/
+`StuckFixingTask`'s `isEqual()` all unconditionally return `false` — the OPPOSITE-direction version
+of the `ProjectileProtectionWallTask` bug just above. Confirmed all three are only ever constructed
+once via `mod.runUserTask(...)` at a top-level command entry point, never reconstructed and
+compared against a running instance the way `Task.tick()`'s internal sub-task substitution does —
+so "always not-equal" is inert here, unlike a genuinely re-compared child task. Left alone.
+`EquipArmorTask.java`'s `//#if MC < 12111` / `//#else` preprocessor block initially looked
+inverted relative to `tungsten/TungstenMod.java`'s polarity, but a sample of 5+ other files across
+`altoclef/` (`EquipCommand`, `ClientTickMixin`, `SlotHandler`, etc.) confirms the ENTIRE `altoclef`
+module is self-consistently checked in with `MC < 12111` as the active branch — comparing across
+the `tungsten`/`altoclef` module boundary was not a valid signal; not a bug.
+
+Not stand-verified (C8.1). The `LootDesertTempleTask` fix is diagnostic-only under current usage;
+the `SkyWarsTask` removal is pure dead-code cleanup.
+
+**Not reached this pass** (budget): `tasks/construction/compound/`, most of `tasks/speedrun/`
+(including the two largest files in the whole `tasks/` tree, `MarvionBeatMinecraftTask.java` at
+91KB and `BeatMinecraft2Task.java` at 38KB — only mechanically grepped for known bug shapes, not
+read), `tasks/multiplayer/minigames/` (only `SkyWarsTask.java` read, for the dead-sleep finding),
+and the remaining top-level `tasks/*.java` files (`CraftGenericManuallyTask`,
+`CraftGenericWithRecipeBooksTask`, `CraftInInventoryTask`, `AbstractDoToClosestObjectTask`,
+`DoToClosestBlockTask`, `GetRidOfExtraWaterBucketTask`, `SafeNetherPortalTask`). A mechanical grep
+sweep across ALL of these for the three sharpest bug shapes found this session
+(`return`-inside-a-loop, `nextInt(length-1)`, and the `isInfinite(a)==isInfinite(b)` comparison
+bug) came back clean, but that is not a substitute for a real read.
+
 <!-- PROJECTILEPROTECTIONWALLTASK-ISEQUAL-ALWAYSTRUE-2026-09-05 -->
 ## Fixed: `ProjectileProtectionWallTask.isEqual()` unconditionally returned `true` for any task (2026-09-05)
 
