@@ -1,7 +1,56 @@
 # TODOs
 
+<!-- COMMANDEXECUTOR-PIPE-LIVE-CORRECTION-2026-09-05 -->
+## Found a LIVE instance of the same split("|") bug, and corrected the mixin audit's dead-code claim (2026-09-05)
+
+Continuing straight from the `COMMANDS-AUDIT` entry below (same pass): while reading `mixin/`
+files, `MixinSuggestionWindow.java:39` turned out to call `TungstenMod.getCommandExecutor().
+allCommands()` — directly contradicting that entry's "nothing calls `TungstenMod.
+getCommandExecutor()` anywhere" claim. Re-grepped properly this time
+(`grep -rn "getCommandExecutor()\." tungsten/src/main/java`) and found the getter genuinely IS
+live: `TungstenCommands.java` calls `registerNewCommand()`, and **`MixinClientPlayNetworkHandler.
+onSendChatMessage`** — a real `@Inject` on the chat-send handler, triggered on every chat message
+starting with the command prefix — calls `executeRecursive()` directly whenever the message
+contains `"|"`, bypassing the `execute()` wrapper entirely. So `execute(String,Runnable,Consumer)`
+specifically still has zero callers (that part of the earlier claim survives), but the getter and
+`executeRecursive`/`allCommands` do not.
+
+**And that live call site had the identical bug, for real this time**: `message.split("|")` in
+`MixinClientPlayNetworkHandler.java:58` — same zero-width-alternation mistake, splitting a chat
+message like `";stop|;goto 1 2 3"` into individual characters instead of the two intended command
+strings. This is genuinely live, unlike `CommandExecutor.execute()`. Fixed to
+`message.split("\\|")`.
+
+**This also means the earlier fix's separator choice was wrong.** `CommandExecutor.execute()`'s own
+comment says "separated by `;`", and the earlier pass trusted that comment and "fixed" the regex to
+`.split(";")`. But the only LIVE implementation of chained commands anywhere in the codebase —
+this mixin, `MixinSuggestionWindow`'s divider-completion logic, and
+`StringProcessorHelper.findClosestCharIndex` (called with the literal `'|'` argument) — unanimously
+uses `"|"` as the divider. The comment in `CommandExecutor.java` was itself the stale part, not the
+code's original intent. Reverted `CommandExecutor.execute()`'s separator to the properly-escaped
+`"\\|"` to match the convention actually in use, corrected its explanatory comment, and fixed the
+`GotoCommand`-style claim about zero callers to the narrower, accurate one above.
+
+**The lesson, worth keeping**: when a comment and the surrounding SIBLING code disagree about
+what a convention is, trust what the LIVE code actually does, not the comment nearest the bug —
+a comment can be stale in exactly the same way code can, and this session already has one entry
+(`COMBATPATHFINDER-GRIDDIAGONALDROPPED-DEAD`) about a comment pointing at the wrong thing. This is
+the same disease once more: fixed a bug according to its own claim about itself, without cross-
+checking that claim against the rest of the feature it was part of.
+
+Not stand-verified (C8.1) — the `MixinClientPlayNetworkHandler` fix is a real behavior change
+(chained chat commands like `;stop|;goto x y z` were silently broken before this), flagging for a
+manual chat-command test once a build exists.
+
 <!-- COMMANDS-AUDIT-2026-09-05 -->
 ## Audited `commands/`, `commandsystem/`, `commands/arguments/` — 2 confirmed bugs, 1 dead-but-fixed, unused imports (2026-09-05)
+
+⛔ **CORRECTED below, same day — see `COMMANDEXECUTOR-PIPE-LIVE-CORRECTION-2026-09-05`.** The
+`CommandExecutor` paragraph right below got two things wrong: it isn't true that nothing calls
+`TungstenMod.getCommandExecutor()` (the getter itself is live), and `";"` was the wrong separator
+to "fix" it to — the real convention is `"|"`. Read on for the corrected version; kept the original
+text as-written rather than editing it away, since the correction entry explains exactly what was
+wrong and why.
 
 Read every file in `commands/` (8 command classes), `commandsystem/` (`Arg`, `ArgBase`, `Command`,
 `CommandException`, `CommandExecutor`, `suggestionsapi/Filtering`), and `commands/arguments/`
