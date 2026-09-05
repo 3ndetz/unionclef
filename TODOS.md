@@ -1,5 +1,60 @@
 # TODOs
 
+<!-- CRAFTINTABLE-RECIPEBOOK-GAP-SHARPENED-2026-09-05 -->
+## Sharpened, not fixed: CraftInTableTask never uses the ALREADY-WORKING recipe-book fast path on 1.21.11 (2026-09-05)
+
+Corrects an earlier characterization from today's own empty-`//$$`-block scan
+(`EMPTY-DOLLAR-BLOCK-EXHAUSTIVE-SCAN-2026-09-05`, above), which filed `CraftInTableTask.java:420`'s
+stub under "same already-tracked recipe-API-not-ported family, needs a real port, not a one-off
+patch" and left it there. That was too pessimistic and too vague. Read `CraftGenericWithRecipeBooksTask
+.java` in full while re-checking whether the recipe family genuinely needed new porting work, and it
+does not need NEW work — **a complete, already-debugged 1.21.11 recipe-book-crafting
+implementation already exists in this codebase**, just not reachable from this one call site.
+
+`CraftInTableTask.containerSubTask` (~line 398-428) decides, per target recipe, whether to hand off
+to the fast `CraftGenericWithRecipeBooksTask` (clicks a recipe-book entry, one packet) or fall back
+to the slow `CraftGenericManuallyTask` (drag-and-drop, proven correct — "gives the ladder 11/11").
+On `MC < 12111` the gate is `shouldUseCraftingBookToCraft() && recipeToSend.isPresent() &&
+player.getRecipeBook().contains(recipeToSend.get().id())`. On `MC >= 12111` that whole gate is the
+bare `// TODO [1.21.11] RecipeBook.contains() takes RegistryKey now — recipe book crafting
+disabled` stub, so control falls straight through to the manual path, ALWAYS, on the shipped build
+— not because the fast path is broken, but because nothing ever asks for it here.
+
+**`CraftGenericWithRecipeBooksTask` itself is fully ported and live on 1.21.11 already** — its own
+`//$$` block (confirmed by reading it end to end) is a complete, iteratively-debugged
+`NetworkRecipeId`/`RecipeDisplayEntry`/`RecipeFinder`-based implementation, with its own comment
+trail recording and fixing three real bugs along the way (a stuck-open inventory screen holding a
+whole run at 9295/9295 ticks; a book that never recomputed because this bot doesn't move items the
+way vanilla assumes; a per-tick recompute that starved the CPU and cost the WOOD rung). It is
+already called from `CraftInInventoryTask` (the 2x2/small-grid sibling of `CraftInTableTask`) and
+works there.
+
+**Why simply un-disabling the gate in `CraftInTableTask` would not be safe**: the ported
+`CraftGenericWithRecipeBooksTask` opens `InventoryScreen` (the 2x2 player-inventory grid) before
+searching the recipe book. `CraftInTableTask` exists specifically for BIG (3x3) recipes —
+`CraftWithMatchingMaterialsTask` picks it precisely when `recipe.isBig()`. A 3x3-only recipe does
+not appear as craftable through the 2x2 `InventoryScreen`'s own recipe book at all (vanilla keeps
+separate recipe-book categories per grid size), so wiring `CraftInTableTask` straight into the
+existing task as-is would silently find no match and fall through to `return null` — a silent
+stall, worse than the current (working) manual-craft fallback it would replace.
+
+**What a real fix needs, scoped precisely rather than left vague**: either (a) extend
+`CraftGenericWithRecipeBooksTask` to open the appropriate crafting-TABLE screen instead of
+`InventoryScreen` when handed a big recipe (reusing this file's own already-proven
+`RecipeFinder`/`clickRecipe` logic unchanged), or (b) give `CraftInTableTask` its own small
+table-screen-aware variant of the same pattern. Either way the ALGORITHM is already written and
+tested for the small case — this is a scoped screen-handling extension, not new recipe-API
+research.
+
+Not attempted here: this is a live behavioral change to the bot's primary crafting path
+(`CraftItemPriorityTask`, part of `BeatMinecraftTask` = `@gamer`), and getting the table/screen
+handling wrong risks silently regressing a path that currently works via the manual fallback —
+exactly the kind of change this project's own rule 6 says deserves a real core pass with thorough
+testing, not a blind edit with no stand to verify against (C8.1). Worth a real, focused session
+once stand access exists: the payoff is real (recipe-book crafting is a single packet vs. manual
+drag-and-drop's many slot clicks, and this sits directly on the `@gamer` playthrough's own crafting
+path), and the algorithm to reuse is already sitting in the same file, proven.
+
 <!-- GAMERSMOKE-PHASET-RESET-2026-09-05 -->
 ## Fixed: gamer_smoke.py's PHASE_T cosmetic leak on a stand-down retry (2026-09-05)
 
