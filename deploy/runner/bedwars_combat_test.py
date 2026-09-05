@@ -133,5 +133,6 @@ def main():
     print(f"  bot below-island samples (y<-63): {botFell}, min botY: {minBotY:.1f}")
     ok = bk>=1 and botFell==0
     print(f"  SUCCESS (>=1 bot kill + 0 falls): {ok}")
+    import sys; sys.exit(0 if ok else 1)
 
 if __name__=="__main__": main()
