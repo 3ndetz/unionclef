@@ -1,5 +1,44 @@
 # TODOs
 
+<!-- COMMANDS-AUDIT-2026-09-05 -->
+## Audited `commands/`, `commandsystem/`, `commands/arguments/` — 2 confirmed bugs, 1 dead-but-fixed, unused imports (2026-09-05)
+
+Read every file in `commands/` (8 command classes), `commandsystem/` (`Arg`, `ArgBase`, `Command`,
+`CommandException`, `CommandExecutor`, `suggestionsapi/Filtering`), and `commands/arguments/`
+(`EnumArgumentType`, `GotoTargetArgumentType`). Lower expected bug density than the movement/
+physics core (UI/command-registration glue), and most of it was clean brigadier boilerplate — two
+real findings surfaced anyway:
+
+**`CommandExecutor.execute(String, Runnable, Consumer)`** — `line.split("|")` treats `"|"` as a
+regex alternation between two empty patterns, which matches a zero-width string at every position:
+splits between EVERY CHARACTER instead of on `";"` as the method's own comment says
+(`"a;b".split("|")` → `{"a", ";", "b"}`, not `{"a", "b"}`). **Confirmed this whole path is dead**
+first, though: grepped the whole tree for `TungstenMod.getCommandExecutor()` — zero callers
+anywhere. The real command path is entirely the static `DISPATCHER`/`dispatch()` a few lines below,
+used from the mixins. Left the method in place rather than deleting it (this looks like an
+unfinished multi-command-chaining feature, not a superseded duplicate of something live — no
+sibling already does this job the way `CornerJump`/`ClimbALadderMove` did for the deleted
+`TurnACornerMove`/`JumpToLadderMove`), but fixed the regex to `.split(";")` and added a dead-code
+note so whoever eventually wires this up doesn't get bitten by the same bug silently.
+
+**`GotoTargetArgumentType.parse()`** — returned `null` on a bad token (not a number, not a
+`Dimension` name) instead of throwing. `ArgumentType.parse()`'s contract is return-a-value-or-throw,
+and `GotoCommand` dereferences the result unconditionally right after
+`GotoTargetArgumentType.get(context)` (`target.getVec3d()`, no null check). A malformed `;goto`
+argument therefore threw a `NullPointerException` from inside `GotoCommand`'s own `try/catch`
+(swallowed there as a raw stack trace) instead of surfacing brigadier's normal "invalid argument"
+syntax error. Fixed to throw `CommandSyntaxException.BUILT_IN_EXCEPTIONS.literalIncorrect()`,
+matching the pattern `EnumArgumentType.java` already uses for the identical situation.
+
+Also dropped unused `Debug` imports from `ClickCommand.java`, `FollowPlayerCommand.java`, and
+`GotoTargetArgumentType.java` (the last only after the fix above removed its one use). Not
+stand-verified (C8.1) — the `GotoTargetArgumentType` fix changes real behavior (a bad `;goto`
+argument now gets a clean syntax error instead of a silent NPE); the `CommandExecutor` fix changes
+nothing observable since the path it's in never runs.
+
+No findings in `Arg.java`/`ArgBase.java`/`Command.java`/`CommandException.java`/
+`Filtering.java`/`EnumArgumentType.java` — all clean.
+
 <!-- TASK-DIR-AUDIT-2026-09-05 -->
 ## `task/` directory audit: ProjectileDodge, BlockPathWalker, BridgeTask, BowShooter, PunkPlayerTask clean; one dead field pair removed in FastNavigator (2026-09-05)
 
