@@ -715,11 +715,17 @@ public interface WorldHelper {
             yaw += 360.0F;
         }
 
-        if ((yaw >= 45 && yaw < 135) || (yaw >= -315 && yaw < -225)) {
+        // ⛔ SIMPLIFIED 2026-09-05, DEAD BRANCHES REMOVED: same pattern already fixed in
+        // tungsten's DirectionHelper.getHorizontalDirectionFromYaw this session -- yaw is
+        // normalized to [0,360) directly above, so the `(yaw >= -315 && yaw < -225)`-style
+        // negative-range clauses each `||` used to guard against were provably unreachable (yaw
+        // can never be negative past this point). The positive-range checks alone already cover
+        // all of [0,360) correctly. Zero behavior change.
+        if (yaw >= 45 && yaw < 135) {
             return Direction.WEST;
-        } else if ((yaw >= 135 && yaw < 225) || (yaw >= -225 && yaw < -135)) {
+        } else if (yaw >= 135 && yaw < 225) {
             return Direction.NORTH;
-        } else if ((yaw >= 225 && yaw < 315) || (yaw >= -135 && yaw < -45)) {
+        } else if (yaw >= 225 && yaw < 315) {
             return Direction.EAST;
         } else {
             return Direction.SOUTH;
