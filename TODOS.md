@@ -1,5 +1,49 @@
 # TODOs
 
+<!-- CANREACH-FASTPLANNER-ENGINE-SWAP-2026-09-05 -->
+## Fixed: `canReach` was asking the retired, worse pathfinding engine — a 2026-09-04 finding, deferred as "a real adaptation, not a one-line change" (2026-09-05)
+
+Picked up `MCP-MISSING-WORLD-READ-TOOLS-2026-09-04`'s own "SEPARATE, MORE IMPORTANT FINDING, NOT
+FIXED" (below): `canReach` answered "can I reach (x,y,z)" via `BlockSpacePathFinder.search(...)`,
+which `docs/NAVIGATION.md`'s own engine table names as the worse of tungsten's two block-space
+engines — "the second was never removed when the first arrived." Every `canReach` answer this
+project has ever produced, in any session, was asking a different, more pessimistic engine than
+the one that actually drives the bot's live navigation.
+
+Confirmed the live engine by reading `PathFinder.findBlockPath` (the real, load-bearing entry
+point every actual `;goto`/task navigation goes through): it calls
+`FastPlanner.plan(world, player.getBlockPos(), goal, budgetMs)` directly, with no extra
+start-position pre-processing. `canReach` now makes the identical call with the identical
+start-position convention — checked every other `FastPlanner.plan` call site in the codebase
+first, and confirmed the more elaborate "support snap"/"nearest air start" logic
+`BlockSpacePathFinder.search`'s 3-arg overload did internally was working around THAT engine's own
+weaker start handling, not something every `FastPlanner` caller needs to reimplement.
+
+Field mapping (verified against `FastPlanner.Result`/`Waypoint`'s actual public shape by reading
+the class body directly, not guessed): `found` = `!result.isEmpty()`; `pathSize` =
+`result.path.size()`; `breaks` = sum of each waypoint's `toBreak.size()` (null-guarded —
+`Waypoint`'s own constructors allow a null `toBreak`); `endDistance` = distance from the last
+waypoint's cell to the goal; `reached` = `result.complete` — `FastPlanner`'s own authoritative "did
+the plan actually reach the goal" flag, replacing the old `endDistance < 2.5` heuristic threshold
+that `BlockSpacePathFinder`'s partial-stub behavior had forced `canReach` to guess at. Also dropped
+the old 4-attempt retry loop and the `PATHFINDER.stop.set(false)` resets — grepped `FastPlanner.java`
+and confirmed it never reads `TungstenModDataContainer.PATHFINDER.stop` at all, so those only ever
+mattered for the retired engine.
+
+Verified via `javap` on the real 1.21.11 jar (this session's now-established technique — see
+`PERSISTENTPROJECTILEACCESSOR-INGROUND-RESOLVED-2026-09-05`) that `BlockPos.getSquaredDistance
+(BlockPos)` resolves unambiguously (inherited from `Vec3i`, and Java's overload resolution picks
+the more specific `Vec3i` overload over a competing `Position` one without ambiguity). Commit
+`364e22dd`.
+
+Per the original entry's own instruction: whoever re-reads this session's `canReach: found:false`
+readings for the possibility they asked the wrong engine — that re-read is still a separate,
+not-yet-done pass; this commit is only the engine swap itself.
+
+Not stand-verified (C8.1: no docker/RCON, cannot actually invoke this MCP tool against a live bot)
+— flagging for a live call against one known-reachable and one known-unreachable coordinate once a
+build exists.
+
 <!-- MULTIVERSION-JAVAP-VERIFICATION-SWEEP-2026-09-05 -->
 ## Verification sweep of `multiversion/`'s version-gated methods against the real 1.21.11 jar (2026-09-05)
 
@@ -2030,8 +2074,9 @@ stand-verified (no build/deploy this session, C8.1), but the risk profile is as 
 session's other additive changes (the `enableParallelStreaming` gate, the `volatile` fields):
 nothing existing is touched, only new read-only surface is exposed.
 
-⛔ **SEPARATE, MORE IMPORTANT FINDING FROM THE SAME INVESTIGATION, NOT FIXED:** `canReach`
-(`Py4jEntryPoint.java:1308-1362`) answers "can I get there" by calling
+⛔ **SEPARATE, MORE IMPORTANT FINDING FROM THE SAME INVESTIGATION — ⛔ FIXED 2026-09-05, see
+`CANREACH-FASTPLANNER-ENGINE-SWAP-2026-09-05` above.** Originally recorded here as NOT FIXED:
+`canReach` (`Py4jEntryPoint.java:1308-1362`) answered "can I get there" by calling
 `BlockSpacePathFinder.search(...)` — and per `docs/NAVIGATION.md`'s own engine table, this is
 explicitly the WORSE of the two block-space engines ("`FastPlanner` and `BlockSpacePathFinder` do
 the same job; the first is correct, the second is not, and the second was never removed when the
