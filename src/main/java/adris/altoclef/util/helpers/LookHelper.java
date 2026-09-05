@@ -813,7 +813,6 @@ public interface LookHelper {
         public static double windX = 0, windY = 0, veloX = 0, veloY = 0;
         public static double currentX = 0, currentY = 0;
         public static Rotation targetRotation = null;
-        public static Rotation startRotation = null;
         public static Entity targetEntity = null;
         public static float speed = 1.0f;
         public static long lastUpdateTime = System.currentTimeMillis();
@@ -845,7 +844,6 @@ public interface LookHelper {
         if (shouldReset || (WindMouseState.targetRotation != null && !isCloseRotations(targetRot, WindMouseState.targetRotation))) {
             WindMouseState.isRotating = true;
             WindMouseState.targetEntity = targetEntity;
-            WindMouseState.startRotation = getLookRotation(mod.getPlayer());
             WindMouseState.flickInjected = false;
         }
         WindMouseState.targetEntity = targetEntity;
