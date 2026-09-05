@@ -26,13 +26,11 @@ import kaptainwutax.tungsten.path.specialMoves.CornerJump;
 import kaptainwutax.tungsten.path.specialMoves.DivingMove;
 import kaptainwutax.tungsten.path.specialMoves.EnterWaterAndSwimMove;
 import kaptainwutax.tungsten.path.specialMoves.ExitWaterMove;
-import kaptainwutax.tungsten.path.specialMoves.JumpToLadderMove;
 import kaptainwutax.tungsten.path.specialMoves.LongJump;
 import kaptainwutax.tungsten.path.specialMoves.RunToNode;
 import kaptainwutax.tungsten.path.specialMoves.SlimeBounceMove;
 import kaptainwutax.tungsten.path.specialMoves.SprintJumpMove;
 import kaptainwutax.tungsten.path.specialMoves.SwimmingMove;
-import kaptainwutax.tungsten.path.specialMoves.TurnACornerMove;
 import kaptainwutax.tungsten.path.specialMoves.WalkToNode;
 import kaptainwutax.tungsten.path.specialMoves.neo.NeoJump;
 import kaptainwutax.tungsten.render.Color;
@@ -356,7 +354,19 @@ public class Node {
 		            for (int j = 0; j < ((!jump) && !newNode.agent.isClimbing(world) ? 1 : 10); j++) {
 		                if (!isMoving) break;
 		                Box adjustedBox = newNode.agent.box.offset(0, -0.5, 0).expand(-0.001, 0, -0.001);
-		                Stream<VoxelShape> blockCollisions = Streams.stream(agent.getBlockCollisions(world, adjustedBox));
+		                // ⛔ FIXED 2026-09-05: queried collisions via the STALE `agent` (= this.agent,
+		                // the PARENT node's pre-move state, unqualified field access) instead of
+		                // `newNode.agent` (the current simulated tick) -- the same bug class found and
+		                // fixed repeatedly this session in the specialMoves classes this method feeds
+		                // (SprintJumpMove, WalkToNode, RunToNode, CornerJump, NeoJump, LongJump). Here
+		                // it is the highest-volume instance: createNode() is the candidate generator
+		                // for essentially every ground-based move, called from a parallelStream over
+		                // up to hundreds of parameter combinations per node, each looping up to 10
+		                // times. Agent.getBlockCollisions() builds an AgentShapeContext from the
+		                // agent's OWN box.minY (read by isAbove()), so every iteration after the first
+		                // tested candidate shapes against the move's STARTING Y instead of the current
+		                // one -- confirmed concrete effect, same as CornerJump/NeoJump.
+		                Stream<VoxelShape> blockCollisions = Streams.stream(newNode.agent.getBlockCollisions(world, adjustedBox));
 			            if (blockCollisions.findAny().isEmpty() && isDoingLongJump) jump = true;
 		                newNode = new Node(newNode, world, new PathInput(forward, false, right, left, jump, sneak, sprint, agent.pitch, yaw),
 		                        jump ? new Color(150, 55, 85) : new Color(sneak ? 220 : 0, 255, sneak ? 50 : 0), this.cost + addNodeCost + 2.4);
