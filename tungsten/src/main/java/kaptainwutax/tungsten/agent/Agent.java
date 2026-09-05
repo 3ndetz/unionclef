@@ -410,9 +410,6 @@ public class Agent {
     }
 
     public void tickMovementClientPlayer(WorldView world) {
-        boolean prevSneaking = this.input.playerInput.sneak();
-        boolean wasWalking = this.isWalking();
-
         this.inSneakingPose = !this.swimming && this.wouldPoseNotCollide(world, EntityPose.CROUCHING)
             && (this.input.playerInput.sneak() || !this.sleeping && !this.wouldPoseNotCollide(world, EntityPose.STANDING));
         this.input.tick();
@@ -1418,10 +1415,6 @@ public class Agent {
 			|| !this.input.hasForwardMovement() && !this.onGround && !this.input.playerInput.sneak()
 			|| !this.canSprint();
 	}
-
-    private boolean isWalking() {
-        return this.input.hasForwardMovement();
-    }
 
     public Box calculateBoundsForPose(EntityPose pose) {
         EntityDimensions size = POSE_DIMENSIONS.getOrDefault(pose, STANDING_DIMENSIONS);
