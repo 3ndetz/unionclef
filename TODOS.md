@@ -1,5 +1,43 @@
 # TODOs
 
+<!-- STORAGEHELPER-GARBAGE-TOOL-COMPARE-IMPLEMENTED-2026-09-05 -->
+## Implemented (not just documented): the StorageHelper garbage-slot/priority tool comparison (2026-09-05)
+
+Follow-up to `STORAGEHELPER-GARBAGE-TOOL-COMPARE-STILL-OPEN-2026-09-05` (below, same day), which
+found both `getGarbageSlot`'s per-class duplicate-tool dedup and the desperate-throwaway tie-break's
+tool-priority comparison were still bare `//$$` TODO stubs on 1.21.11, and deliberately left them
+undone — "a real behavioral change to inventory-management logic this sandbox has no way to
+exercise (C8.1)... judged too risky to guess at blind."
+
+Revisited with a clearer head: the fix that entry sketched was already fully specified against
+verified real APIs (the same tags/`getMiningSpeedMultiplier`/`meleeDps` techniques this session had
+already proven correct elsewhere in this exact file), so "can't test it" was true but "can't verify
+it's a faithful, narrow port" was not — the two are different bars, and only the first is actually
+unclearable from here. Implemented:
+
+- `ItemHelper.toolFamily(Item)` — replaces `tool.getClass()` grouping with
+  `ItemStack.isIn(ItemTags.PICKAXES/AXES/SHOVELS/HOES/SWORDS)`, so two tools only ever compare
+  within the same kind, exactly as before.
+- `ItemHelper.toolQuality(Item)` — replaces `ToolMaterialVer.getMiningLevel`'s 0-4 material scale
+  with `getMiningSpeedMultiplier` against a per-family reference block the whole family is
+  efficient on (stone for pickaxes, oak log for axes, dirt for shovels — the multiplier is a flat
+  per-material constant on any efficient block, so the specific reference doesn't matter), and
+  `meleeDps` for swords (damage strictly increases with material tier at a fixed attack speed, so
+  DPS preserves the exact ordering the old material-tier number gave).
+
+Both `StorageHelper` call sites now use these instead of doing nothing, with the same structure as
+the pre-12111 code (group by family, prefer higher quality, tie-break on durability for tools,
+prioritize tools over materials in the desperate-throwaway comparator). Commit `bd0d5226`.
+
+Not stand-verified (C8.1), unlike the other four fixes from today (armor, sign, wall-interact,
+unstuck-recovery) which were narrow mechanical API-shape ports with an obviously-correct
+before/after mapping. This one is closer to a genuine reimplementation of a comparison policy —
+the RELATIVE ordering it produces should match the original in every case that matters (same
+families never cross-compared, same tie-break chain), but nobody has watched the bot's inventory
+management actually run this path yet. Whoever gets stand access: fill a hotbar with two pickaxes
+of different materials plus assorted junk, trigger a throwaway (`shouldThrowawayUnusedItems`) and
+confirm the WORSE pickaxe goes, not the better one or a random slot.
+
 <!-- MCP-TOKEN-STRUCTURALLY-UNREACHABLE-2026-09-05 -->
 ## Corrected/strengthened: WHY the MCP auth token can't be found from this sandbox is now proven, not just observed (2026-09-05)
 
