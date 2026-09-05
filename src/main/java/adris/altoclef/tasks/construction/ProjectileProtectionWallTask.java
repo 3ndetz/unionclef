@@ -199,7 +199,10 @@ public class ProjectileProtectionWallTask extends Task implements ITaskRequiresG
         boolean wasSneaking = mod.getPlayer().input.sneaking;
         mod.getPlayer().input.sneaking = false;
         //#else
-        //$$ boolean wasSneaking = false; // TODO [1.21.11] input.sneaking field renamed
+        //$$ net.minecraft.client.input.Input clientInput = mod.getPlayer().input;
+        //$$ net.minecraft.util.PlayerInput priorInput = clientInput.playerInput;
+        //$$ boolean wasSneaking = priorInput.sneak();
+        //$$ clientInput.playerInput = new net.minecraft.util.PlayerInput(priorInput.forward(), priorInput.backward(), priorInput.left(), priorInput.right(), priorInput.jump(), false, priorInput.sprint());
         //#endif
 
         ActionResult result = mod.getController().interactBlock(mod.getPlayer(),hand, blockHitResult);
@@ -209,13 +212,16 @@ public class ProjectileProtectionWallTask extends Task implements ITaskRequiresG
             mod.getPlayer().swingHand(hand);
         }
         //#else
-        //$$ // TODO [1.21.11] ActionResult.shouldSwingHand() removed
+        //$$ if (result instanceof ActionResult.Success success && success.swingSource() == ActionResult.SwingSource.CLIENT) {
+        //$$     mod.getPlayer().swingHand(hand);
+        //$$ }
         //#endif
 
         //#if MC < 12111
         mod.getPlayer().input.sneaking = wasSneaking;
         //#else
-        //$$ // TODO [1.21.11] input.sneaking field renamed
+        //$$ net.minecraft.util.PlayerInput postInput = clientInput.playerInput;
+        //$$ clientInput.playerInput = new net.minecraft.util.PlayerInput(postInput.forward(), postInput.backward(), postInput.left(), postInput.right(), postInput.jump(), wasSneaking, postInput.sprint());
         //#endif
     }
 

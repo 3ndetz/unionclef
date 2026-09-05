@@ -123,13 +123,13 @@ public class PlaceSignTask extends Task {
 
                 // Add newline
                 //#if MC >= 12111
-                //$$ // TODO [1.21.11] keyPressed/charTyped signature changed to KeyInput/CharInput
+                //$$ screen.keyPressed(new net.minecraft.client.input.KeyInput(257, 36, 0));
                 //#else
                 screen.keyPressed(257, 36, 0);
                 //#endif
             }
             //#if MC >= 12111
-            //$$ // TODO [1.21.11] charTyped signature changed
+            //$$ screen.charTyped(new net.minecraft.client.input.CharInput((int) c, -1));
             //#else
             screen.charTyped(c, -1);
             //#endif
