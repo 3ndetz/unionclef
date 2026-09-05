@@ -141,15 +141,11 @@ public class Node {
 	    List<Node> nodes = new ArrayList<>();
 
 	    
-//	    if (!agent.isClimbing(world) && nextBlockNode.getBlockState(world).getBlock() instanceof LadderBlock) {
-//	    	Node sprintJumpMove = JumpToLadderMove.generateMove(this, nextBlockNode);
-//	    	boolean isSprintJumpMoveClose = sprintJumpMove.agent.getPos().distanceTo(nextBlockNode.getPos(true)) < 0.55;
-//	    	if (isSprintJumpMoveClose) {
-//		    	nodes.add(sprintJumpMove);
-//	    		return nodes;
-//	    	}
-//	    }
-	    
+	    // ⛔ REMOVED 2026-09-05: JumpToLadderMove.java deleted -- this call was already commented
+	    // out, superseded by ClimbALadderMove.generateMove() right below (which IS live). The
+	    // deleted file had its own bug (a per-iteration forward decision computed from the stale
+	    // pre-move `agent` position instead of the current `newNode.agent`, so it never adapted to
+	    // progress across the loop) that never mattered because this call never ran.
 	    if (DistanceCalculator.getHorizontalManhattanDistance(agent.getPos(), nextBlockNode.getPos(true)) <= 0.5 && nextBlockNode.getBlockState(world).getBlock() instanceof LadderBlock) {
 	    	Node climbALadderMove = ClimbALadderMove.generateMove(this, nextBlockNode);
 	    	boolean isClimbALadderMoveClose = Math.abs(climbALadderMove.agent.getPos().y - nextBlockNode.getPos(true).y) < 0.4;
@@ -220,8 +216,11 @@ public class Node {
 	    
 	    if (agent.onGround) {
 	    	if (!world.getBlockState(agent.getBlockPos().up(2)).isAir() && nextBlockNode.getPos(true).distanceTo(agent.getPos()) < 3) {
-	//    		nodes.add(TurnACornerMove.generateMove(this, nextBlockNode, false));
-	//    		nodes.add(TurnACornerMove.generateMove(this, nextBlockNode, true)); 		
+	    		// ⛔ REMOVED 2026-09-05: TurnACornerMove.java deleted -- this call was already
+	    		// commented out, superseded by CornerJump.generateMove() below (live). The deleted
+	    		// file also had an unconditional Thread.sleep(200) x up to 16 and an ungated
+	    		// RenderHelper.renderNode() call per invocation, which would have been a serious
+	    		// stall if this dead call had ever been re-enabled without noticing.
 	    		Node cj1 = CornerJump.generateMove(this, nextBlockNode, false);
 	    		Node cj2 = CornerJump.generateMove(this, nextBlockNode, true);
 	    		if (cj1 != null) nodes.add(cj1);
