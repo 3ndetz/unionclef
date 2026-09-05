@@ -1,5 +1,29 @@
 # TODOs
 
+<!-- LOCKKEEPSROUTE-GITRACE-RECOVERY-2026-09-05 -->
+## Process note: a real fix was lost once to concurrent git contention, then recovered (2026-09-05)
+
+Not a code bug — a note on this session's own process, for whoever reads the git history later and
+wonders why `lockKeepsRouteWhileTargetStands` shows up fixed twice. With many parallel background
+sessions writing to the same working tree at once, one `git pull --rebase --autostash` swept up
+ANOTHER session's uncommitted fix to this field (`= true` → `= false`, matching the field's own
+documented conclusion — see the `TUNGSTENCONFIG-*` entry elsewhere in this file for the substance),
+and a subsequent concurrent commit changed the surrounding comment block enough that the autostash
+pop couldn't cleanly reapply it — the fix silently reverted to `= true` with no error surfaced.
+
+Caught by re-reading the field after committing something else nearby and finding it back at its
+buggy default. Recovered via `git fsck --no-reflog | grep commit` to find the dangling autostash
+commit, `git stash show -p` to confirm its contents were the missing fix and nothing else, then
+re-applied and committed it (`c9c82ef5`) rather than re-deriving the fix from scratch (the original
+reasoning was already correct, just lost in transit).
+
+**Lesson for future concurrent sessions in this repo**: `--autostash` is necessary here (this repo
+is actively written to by parallel sessions, per the project's own STRICT git rules) but is not a
+free safety net — a stash-pop CAN fail to reapply cleanly and silently drop real work with no
+visible error beyond "Dropped refs/stash". After any `--autostash` pull, it is worth a quick
+`git diff HEAD~1 -- <file>` sanity check on files you know a sibling session was actively editing,
+not just trusting that "no conflict markers appeared" means nothing was lost.
+
 <!-- BOTBEHAVIOUR-SETPREFERREDSTAIRS-NOOP-COST-2026-09-05 -->
 ## Fixed: `BotBehaviour.setPreferredStairs()` paid `applyState()`'s full cost for a documented no-op (2026-09-05)
 
