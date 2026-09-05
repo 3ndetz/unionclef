@@ -159,16 +159,24 @@ public class InteractWithBlockTask extends Task {
     }
 
     private boolean isAnnoying(AltoClef mod, BlockPos pos) {
+        // ⛔ FIXED 2026-09-05: `return` sat inside the `for` loop and fired unconditionally on the
+        // first iteration, so only `annoyingBlocks[0]` was ever actually compared against -- every
+        // other entry in `annoyingBlocks` was silently never checked. Same copy-paste bug just
+        // found and fixed in the sibling GetToEntityTask.isAnnoying()/PickupDroppedItemTask.
+        // isAnnoying() this session (git blame shows it was already found and fixed once before in
+        // CustomBaritoneGoalTask/TimeoutWanderTask, but the fix never propagated to these copies).
+        // Fixed to match CustomBaritoneGoalTask.isAnnoying()'s correct shape: loop through all
+        // entries, return true on the first match, false only once the loop is exhausted.
+        Block block = mod.getWorld().getBlockState(pos).getBlock();
         if (annoyingBlocks != null) {
             for (Block AnnoyingBlocks : annoyingBlocks) {
-                return mod.getWorld().getBlockState(pos).getBlock() == AnnoyingBlocks ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof DoorBlock ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof FenceBlock ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof FenceGateBlock ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof FlowerBlock;
+                if (block == AnnoyingBlocks) return true;
             }
         }
-        return false;
+        return block instanceof DoorBlock
+                || block instanceof FenceBlock
+                || block instanceof FenceGateBlock
+                || block instanceof FlowerBlock;
     }
 
     // This happens all the time in mineshafts and swamps/jungles
