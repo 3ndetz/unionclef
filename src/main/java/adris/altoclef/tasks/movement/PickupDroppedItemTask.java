@@ -114,16 +114,23 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
     }
 
     private boolean isAnnoying(AltoClef mod, BlockPos pos) {
+        // ⛔ FIXED 2026-09-05: same copy-paste bug found and fixed in the sibling
+        // GetToEntityTask.isAnnoying() in this same package -- the loop returned
+        // unconditionally on its FIRST iteration regardless of match, so only
+        // annoyingBlocks[0] was ever actually compared and the other entries (nether
+        // sprouts, cave/twisting/weeping vines, ladder, dripleaf, tall/short grass, sweet
+        // berry bush) were silently never checked. CustomBaritoneGoalTask.isAnnoying() in
+        // this same package has the correct loop shape this was ported from.
+        Block block = mod.getWorld().getBlockState(pos).getBlock();
         if (annoyingBlocks != null) {
-            for (Block AnnoyingBlocks : annoyingBlocks) {
-                return mod.getWorld().getBlockState(pos).getBlock() == AnnoyingBlocks ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof DoorBlock ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof FenceBlock ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof FenceGateBlock ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof FlowerBlock;
+            for (Block annoyingBlock : annoyingBlocks) {
+                if (block == annoyingBlock) return true;
             }
         }
-        return false;
+        return block instanceof DoorBlock ||
+                block instanceof FenceBlock ||
+                block instanceof FenceGateBlock ||
+                block instanceof FlowerBlock;
     }
 
     private BlockPos stuckInBlock(AltoClef mod) {

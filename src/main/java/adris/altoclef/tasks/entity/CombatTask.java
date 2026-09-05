@@ -147,6 +147,14 @@ public class CombatTask extends Task {
                 // Check conditions for building a grave
                 boolean graveChanceDice = Math.random() < 0.3;
                 if (graveChanceDice && ConstructGraveTask.hasGraveMaterials(mod) && _shouldBuildGraves) {
+                    // ⛔ OPEN, RECORDED NOT PATCHED, 2026-09-05: `noPlayersNearby` is hardcoded
+                    // `true` -- never computed from an actual nearby-player scan. As written it
+                    // can never gate this branch (equivalent to deleting it), so grave-building
+                    // proceeds even with other players watching, which the variable's own name
+                    // says should not happen. Left as a documented stub rather than guessed at:
+                    // no existing helper in this codebase answers "are there other players within
+                    // some radius" (checked util/ and tasks/construction/), and inventing a scan
+                    // radius/entity filter here would be a behavior decision, not a bug fix.
                     boolean noPlayersNearby = true;
 
                     if (noPlayersNearby && _lastGroundPos != null && _lastGroundPos.distanceTo(mod.getPlayer().getPos()) < 20) {

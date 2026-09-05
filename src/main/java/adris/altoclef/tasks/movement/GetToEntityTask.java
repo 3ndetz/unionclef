@@ -250,16 +250,26 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     }
 
     private boolean isAnnoying(AltoClef mod, BlockPos pos) {
+        // ⛔ FIXED 2026-09-05: this returned unconditionally on the LOOP'S FIRST ITERATION,
+        // regardless of whether the block matched -- so only annoyingBlocks[0] (VINE) was ever
+        // actually compared, and the other 13 entries (nether sprouts, cave/twisting/weeping
+        // vines, ladder, dripleaf, tall/short grass, sweet berry bush) were silently never
+        // checked. Confirmed via the sibling CustomBaritoneGoalTask.isAnnoying() in this same
+        // package, which uses the identical annoyingBlocks array and gets the loop right (return
+        // true on a match, fall through to the instanceof checks only after the whole array is
+        // exhausted). This method's own class comment says stuck-in-block recovery is needed
+        // "all the time in mineshafts and swamps/jungles" -- exactly the terrain full of the
+        // block types this bug silently excluded.
+        Block block = mod.getWorld().getBlockState(pos).getBlock();
         if (annoyingBlocks != null) {
-            for (Block AnnoyingBlocks : annoyingBlocks) {
-                return mod.getWorld().getBlockState(pos).getBlock() == AnnoyingBlocks ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof DoorBlock ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof FenceBlock ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof FenceGateBlock ||
-                        mod.getWorld().getBlockState(pos).getBlock() instanceof FlowerBlock;
+            for (Block annoyingBlock : annoyingBlocks) {
+                if (block == annoyingBlock) return true;
             }
         }
-        return false;
+        return block instanceof DoorBlock ||
+                block instanceof FenceBlock ||
+                block instanceof FenceGateBlock ||
+                block instanceof FlowerBlock;
     }
 
     // This happens all the time in mineshafts and swamps/jungles
