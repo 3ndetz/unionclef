@@ -1,5 +1,41 @@
 # TODOs
 
+<!-- RUNSUITE-FLAKE-RETRY-STALE-CLIENTS-2026-09-05 -->
+## Fixed: `run_suite.py`'s flake retry used stale `rcons`/`bot`/`victim`, not the refreshed `state[...]` (2026-09-05)
+
+Resuming a fork that died mid-fix to a transient rate-limit, auditing `run_suite.py` (the central
+test-suite orchestrator, `run_suite.py nav`/`pvp`) and the 12 named course test scripts
+(`pvp_test.py`, `break_test.py`, `slime_test.py`, `pvp_moving_test.py`, `mob_fight_test.py`,
+`bow_altoclef_test.py`, `follow_altoclef_test.py`, `follow_test.py`, `bow_test.py`,
+`shield_test.py`, `bedwars_combat_test.py`, `terrain_test.py`). `python3 -m py_compile` on all 13
+files: clean.
+
+`rcons`, `bot`, `victim` are bound once at suite start (lines 774/788/789) from the ORIGINAL
+containers. `refresh_clients()` (called on an invalid-fps retry and on a starvation/drift rebuild)
+only ever updates `state["rcons"]`/`state["bot"]`/`state["victim"]` — a `state` dict introduced
+specifically so a closure could see the current clients (line 804's own comment names this).
+Every call site in the main run loop was already migrated to read `state[...]` — EXCEPT the
+flake-retry call (`if not res["passed"] and res.get("flake_suspect") and args.repeat == 1`, around
+line 951), which still passed the three original, never-updated local names. A flake retry firing
+after an earlier invalid-retry or starve/drift rebuild on the SAME series would run against
+Rcon/Bot objects pointing at containers that had just been `docker restart`-ed out from under
+their own connections — measuring a broken connection, not the course, on exactly the runs where
+a flake retry is meant to give the benefit of the doubt.
+
+FIXED: the flake-retry call now reads `state["rcons"]`, `state["bot"]`, `state["victim"]`, matching
+every other call site in the loop. Commit `9d7bdabd`. Not stand-verified (C8.1) — this is a static
+data-flow fix (a stale local vs. a live dict, the same bug shape found 10 times on the tungsten
+side this session); no live suite run was available to reproduce the specific interleaving
+(flake-suspect gate failure landing right after a refresh) that would exercise it.
+
+No other instance of the stale-local-vs-refreshed-state pattern found elsewhere in `run_suite.py`
+or the 12 course scripts — grepped every remaining `bot`/`victim`/`rcons`/`refresh_clients`
+reference in scope; all others already read through `state[...]` or `bot_a`/`vic_a` (themselves
+freshly re-read from `state[...]` at the top of each repeat, line 875). No inverted or
+suspicious pass/fail gate found in `run_suite.py`'s own scoring logic (the starvation/drift/flake
+guards above all *mark or retry* a result, never flip a verdict silently) or in the 12 course
+scripts' own `Criterion` definitions on this pass.
+
 <!-- PAIREDAB-CRIT-TABLE-DF1-MISSING-2026-09-05 -->
 ## Fixed: `deploy/runner/paired_ab.py` significance bar was 6x too lenient at the smallest pair count (2026-09-05)
 
