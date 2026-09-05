@@ -109,7 +109,17 @@ public class BlockShapeChecker {
 	 
    public static boolean isBlockNormalCube(BlockState state) {
 	        Block block = state.getBlock();
-	        if (block instanceof ScaffoldingBlock
+	        // ⛔ FIXED 2026-09-05: this is an independent duplicate of the already-audited
+	        // MovementHelperB.isBlockNormalCube (both port baritone's MovementHelper.java:788-804,
+	        // per that method's own citation comment) -- a NO-DUPLICATES drift, since this copy was
+	        // missing two of that port's blacklist entries: BambooBlock and PistonExtensionBlock.
+	        // Matched to the more complete, citation-verified version rather than picking one
+	        // arbitrarily; the (null, null) below is confirmed intentional there too ("this overload
+	        // must not consult the world, because it is called from the search for states that may
+	        // not be at any position").
+	        if (block instanceof net.minecraft.block.BambooBlock
+	                || block instanceof net.minecraft.block.PistonExtensionBlock
+	                || block instanceof ScaffoldingBlock
 	                || block instanceof ShulkerBoxBlock
 	                || block instanceof PointedDripstoneBlock
 	                || block instanceof AmethystClusterBlock) {
