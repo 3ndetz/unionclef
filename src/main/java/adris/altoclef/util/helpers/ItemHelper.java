@@ -804,6 +804,23 @@ public class ItemHelper {
         return item != null && item.getComponents().contains(net.minecraft.component.DataComponentTypes.TOOL);
     }
 
+    /**
+     * Which {@link net.minecraft.entity.EquipmentSlot} this item wears in, or {@code null} if it
+     * is not equippable at all.
+     *
+     * <p>Replaces {@code ((ArmorItem) item).getSlotType()}, which 1.21.11 deleted along with the
+     * whole {@code ArmorItem} class. The EQUIPPABLE component is what the game itself now uses to
+     * decide which slot an item goes in on right-click/dispenser-equip, so this matches the same
+     * slot vanilla would pick.
+     */
+    public static net.minecraft.entity.EquipmentSlot getArmorSlot(net.minecraft.item.Item item) {
+        if (item == null) {
+            return null;
+        }
+        var equippable = item.getComponents().get(net.minecraft.component.DataComponentTypes.EQUIPPABLE);
+        return equippable == null ? null : equippable.slot();
+    }
+
     private static float attributeSum(net.minecraft.item.Item item, String path) {
         if (item == null) {
             return 0;

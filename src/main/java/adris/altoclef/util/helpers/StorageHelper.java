@@ -455,7 +455,12 @@ public class StorageHelper {
                     return true;
             }
             //#else
-            //$$ // TODO [1.21.11] armor-class deleted — check equipped armor via EquipmentSlot component
+            //$$ net.minecraft.entity.EquipmentSlot armorSlot = adris.altoclef.util.helpers.ItemHelper.getArmorSlot(item);
+            //$$ if (armorSlot != null) {
+            //$$     ItemStack equippedStack = player.getEquippedStack(armorSlot);
+            //$$     if (equippedStack.getItem().equals(item))
+            //$$         return true;
+            //$$ }
             //#endif
             if (item instanceof ShieldItem shield) {
                 ItemStack equippedStack = player.getInventory().getStack(OFF_HAND_SLOT);

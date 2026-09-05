@@ -154,8 +154,15 @@ public class EquipArmorTask extends Task {
                 //$$                 StorageHelper.closeScreen();
                 //$$             }
                 //$$         }
-                //$$         // TODO [1.21.11] armor-class.getSlotType() removed — derive slot from item type
-                //$$         Slot toMove = PlayerSlot.getEquipSlot(EquipmentSlot.CHEST); // placeholder
+                //$$         net.minecraft.entity.EquipmentSlot itemSlot = ItemHelper.getArmorSlot(item);
+                //$$         if (itemSlot == null) {
+                //$$             Debug.logWarning("Invalid armor equip slot for item " + item.getTranslationKey());
+                //$$             return null;
+                //$$         }
+                //$$         Slot toMove = PlayerSlot.getEquipSlot(itemSlot);
+                //$$         if (toMove == null) {
+                //$$             Debug.logWarning("Invalid armor equip slot for item " + item.getTranslationKey() + ": " + itemSlot);
+                //$$         }
                 //$$         return new MoveItemToSlotFromInventoryTask(targetArmor, toMove);
                 //$$     }
                 //$$ }
