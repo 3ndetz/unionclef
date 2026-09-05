@@ -267,7 +267,18 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
 
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean doubleCheck(double a, double b) {
-        if (Double.isInfinite(a) == Double.isInfinite(b)) return true;
+        // ⛔ FIXED 2026-09-05: `Double.isInfinite(a) == Double.isInfinite(b)` is true for EVERY
+        // pair of finite values (false == false), not just for the intended "both infinite"
+        // shortcut -- so this returned true (equal) for any two finite doubles whatsoever,
+        // e.g. doubleCheck(2.0, 50.0) == true, and the abs()-closeness line below was dead code
+        // (only reachable when exactly one side is infinite, where abs(a-b) is itself infinite
+        // and so always fails the < 0.1 test anyway). Net effect: isEqual() above never actually
+        // distinguished two AbstractDoToEntityTask instances by maintainDistance,
+        // combatGuardLowerFieldRadius or combatGuardLowerRange -- only isSubEqual() mattered.
+        // Intent was clearly "treat infinite as its own equality class, otherwise compare
+        // numerically" -- gate the shortcut on EITHER side being infinite, not on their
+        // infinite-ness matching.
+        if (Double.isInfinite(a) || Double.isInfinite(b)) return Double.isInfinite(a) == Double.isInfinite(b);
         return Math.abs(a - b) < 0.1;
     }
 
