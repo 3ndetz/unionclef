@@ -1,5 +1,48 @@
 # TODOs
 
+<!-- PROJECTILEPROTECTIONWALLTASK-ISEQUAL-ALWAYSTRUE-2026-09-05 -->
+## Fixed: `ProjectileProtectionWallTask.isEqual()` unconditionally returned `true` for any task (2026-09-05)
+
+Auditing `tasks/construction/`. Left as an unfinished `// TODO Auto-generated method stub` —
+`isEqual(Task other) { return true; }`, with no type check at all. `Task.equals(Object)`
+(`Task.java:150-155`) calls `isEqual()` directly with no type-narrowing of its own:
+
+```java
+public boolean equals(Object obj) {
+    if (obj instanceof Task task) {
+        return isEqual(task);
+    }
+    return false;
+}
+```
+
+So this task considered itself equal to EVERY other `Task` in the game, of any type — comparing a
+running `ProjectileProtectionWallTask` against a freshly-requested, completely unrelated task (a
+`DestroyBlockTask`, a `HeroTask`, anything) would wrongly report them as the same task. Confirmed
+via a codebase-wide grep for the same shape (`isEqual` immediately returning a bare `true`) — this
+was the only live instance; `SmithingSquasher.isEqualResource()`'s `return true; // item targets
+are the only difference` is a different, deliberately-documented method, and
+`ChooseStrategyTask.isEqual()`'s similar-looking `return true;` is commented-out dead debug code
+sitting above a properly-implemented live check.
+
+FIXED: `return other instanceof ProjectileProtectionWallTask;`, matching every other stateless
+single-instance task in this codebase (`HeroTask`, `SelfCareTask`) — there's no per-instance state
+worth comparing here beyond the shared `mod` field. Confirmed zero current callers (grepped) — dead
+code today, fixed so it doesn't bite whoever wires it up, per this session's established practice.
+Not stand-verified (C8.1).
+
+<!-- SHIFTENTITYTASK-RANDOM-OFFBYONE-2026-09-05 -->
+## Fixed: `ShiftEntityTask`'s random-type constructors could never pick `Any` (2026-09-05)
+
+Auditing `tasks/entity/`. `new Random().nextInt(ShiftType.values().length - 1)` with 3 `ShiftType`
+values (`Back`, `Forward`, `Any`) only ever produces 0 or 1 — `Random.nextInt(bound)` already
+returns `[0, bound)`, so the `-1` silently excluded the last enum constant from ever being chosen
+by either random-type convenience constructor (`ShiftEntityTask(String)` /
+`ShiftEntityTask(Entity)`). Confirmed no current caller uses these two constructors (grepped: all
+three call sites in the tree pass an explicit `ShiftType`), so no live behavior change today — but
+the public API's own "pick a random type" contract was broken for any future or scripted caller.
+FIXED: dropped the `- 1`. Not stand-verified (C8.1).
+
 <!-- INTERACTWITHBLOCKTASK-ISANNOYING-3RDCOPY-2026-09-05 -->
 ## Fixed: `InteractWithBlockTask.isAnnoying()` — the 3rd copy of the first-iteration-only bug (2026-09-05)
 
