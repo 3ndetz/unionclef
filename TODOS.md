@@ -1,5 +1,50 @@
 # TODOs
 
+<!-- STREIGHTMOVEMENTHELPER-FINAL-CELL-UNCHECKED-2026-09-05 -->
+## Fixed (⛔ real behavior change, not stand-verified): `StreightMovementHelper` never validated the final landing cell (2026-09-05)
+
+Following up the `MovementHelper.java` dead-code removal above, read the ACTUALLY-live path
+validators `helpers/movement/StreightMovementHelper.java` and `CornerJumpMovementHelper.java` —
+the two classes `BlockNode.wasCleared()` really delegates to (see the entry above for how that
+was discovered). `StreightMovementHelper.traversePath()`'s loop body is:
+
+```java
+check(x,y,z)              // current position
+z = move(z); check(x,y,z) // after the z-move
+x = move(x); check(x,y,z) // after the x-move
+y = move(y);               // <- NO check after the y-move
+```
+
+Three `processStep()` calls per iteration, and the y-move's result is only ever picked up by the
+NEXT iteration's opening check. Whenever `y` is the last coordinate to reach its target — any
+climb, descend, or pillar-shaped move with no further horizontal step left to take — the loop
+exits on that same y-move, and the destination cell is never passed to `isObscured()` at all.
+Traced by hand: a pure-vertical 3-block climb checks `(0,0,0)` (three times, redundantly) and
+`(0,1,0)`, `(0,2,0)`, but never `(0,3,0)` — the cell actually being climbed into.
+
+Confirmed this is a real inconsistency, not shared intent, by comparing against the sibling
+`CornerJumpMovementHelper.traversePath()`, which checks immediately after EVERY coordinate move
+including `y` and has no such gap — the two classes solve the same category of problem
+(validate every cell a path touches) and only one of them skips the destination.
+
+**Before treating this as settled**, checked whether the destination's safety is covered
+elsewhere: every real call site in `BlockNode.java` (lines 610, 637, 668, 712) runs `canStandOn`
+(a footing check), a block-type exception list, and `isJumpImpossible()` on the candidate child
+BEFORE calling `wasCleared()` — so destination *standability* is genuinely covered elsewhere. But
+`isObscured()`'s specific checks (connected fences/walls/panes, leaves, a full cube in the body's
+own space, lava, stairs) are not obviously duplicated by any of those three, so the gap looks
+real rather than merely redundant with existing coverage.
+
+FIXED: added one explicit `processStep()` call on `(endX, endY, endZ)` after the loop, before
+returning `true`.
+
+⛔ **Unlike most fixes this session, this one can change live behavior, not just diagnostics.** A
+vertical or near-vertical move whose landing cell is actually obscured was previously accepted by
+this check regardless of what `isObscured` would have said about it. This fix can now correctly
+refuse such moves where they were silently let through before. Not stand-verified (C8.1) —
+flagging explicitly for real playtesting once a build exists, specifically on climb/pillar/descend
+courses, since this is exactly the shape of move most likely to be affected.
+
 <!-- MOVEMENTHELPER-DEAD-CODE-REMOVED-2026-09-05 -->
 ## Removed: ~800 lines of dead code in `helpers/MovementHelper.java` — a whole superseded duplicate implementation (2026-09-05)
 
