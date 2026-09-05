@@ -1,5 +1,108 @@
 # TODOs
 
+<!-- STORAGEHELPER-GARBAGE-TOOL-COMPARE-STILL-OPEN-2026-09-05 -->
+## Open, corrected record: the garbage-slot / throwaway-priority tool comparison is STILL a stub on 1.21.11 (2026-09-05)
+
+Re-reading `StorageHelper.java` after fixing `isArmorEquipped` above, to check for more of the same
+shape. G-1.38's own entry (further down this file, 2026-08-07/08) says the `ToolMaterialVer
+.getMiningLevel` exception left "ДВА места в StorageHelper — «какой инструмент выбросить» (:265) и
+порядок приоритета при выбрасывании (:322-337)" broken, then later in the SAME entry says
+"✅ ПРАВКА СДЕЛАНА (последний коммит): версионная вилка убрана целиком". **That fix note is about a
+THIRD, different call site** — the "pick the best tool for a block I'm about to mine" function
+(now ~line 150-196, the one with a `BlockState state` parameter) — which IS correctly fixed today:
+its `MC >= 12111` branch already calls `isSuitableFor(state)` directly, no material-level compare
+needed. The other two named call sites were never actually touched, and G-1.38's own text says so a
+few lines earlier ("не трогал, чтобы не расширять непроверенный заход") — the later "ПРАВКА
+СДЕЛАНА" line just reads, out of context, as if it covered everything in the family. It does not.
+Read directly against current code, both are still bare TODO stubs:
+
+`getGarbageSlot`, ~line 263-285 — groups held tools by `tool.getClass()` and tracks the best
+mining LEVEL per class, returning a same-class tool that is strictly worse as a throwaway
+candidate (e.g. a spare wooden pickaxe when a stone one is already held). On `MC >= 12111` the
+entire loop body is `//$$ // TODO [1.21.11] tool-class deleted — determine tool class and mining
+level via components` — no candidate is ever found this way, so a duplicate/inferior tool never
+gets freed up through this path (the function's other throwaway logic below it still runs).
+
+The "desperate throwaway" tie-break comparator, ~line 320-340 — on `MC < 12111` it prioritizes
+tools over plain materials, and among tools prefers higher material tier then lower durability
+damage; on `MC >= 12111` this whole block is `//$$ // TODO [1.21.11] tool-class deleted —
+prioritize tools via components`, so in the truly-desperate throwaway path a tool and a material
+are treated as equal, falling straight to the food-priority tie-break below. A bot low enough on
+space to reach this path could throw away a tool before a plain material.
+
+NOT FIXED HERE — left as a precise, evidence-based debt rather than a guess, per this file's own
+RULE FOUR ("a removal/gap may declare a debt, it may not assert an unchecked fact"). A real fix
+exists and is bounded, reusing patterns already live in this exact file:
+
+- **Tool-family grouping** (replaces `tool.getClass()`): `ItemStack.isIn(ItemTags.PICKAXES /
+  AXES / SHOVELS / HOES / SWORDS)` — these are data-driven vanilla tags, stable across versions,
+  already available (confirmed via `javap` on `net.minecraft.registry.tag.ItemTags`).
+- **Tier ranking** (replaces `ToolMaterialVer.getMiningLevel`): `ItemHelper.miningSpeedVsBlock` /
+  the raw `ItemStack.getMiningSpeedMultiplier(state)` it wraps (already used a few lines above the
+  first of these two sites, and already the exact technique the weapon-family fix and the "best
+  tool for a block" fix both used for the identical class-deleted problem) — the multiplier is a
+  flat per-material constant on any block the tool is efficient against, so the reference block
+  only needs to be one the whole family is efficient on (stone for pickaxes, a log for axes, dirt
+  for shovels), not the specific block being mined. For swords, `ItemHelper.meleeDps` (added for
+  the weapon-family fix) is the equivalent "how good is this one" measure.
+
+Not implemented in this pass because it is a real behavioral change to inventory-management logic
+this sandbox has no way to exercise (C8.1) and no existing test covers directly — worth a focused
+pass with either stand access or a dedicated craft/inventory course, not a blind guess folded into
+an unrelated fix. Also noted, lower priority: the FIRST function (`~line 172-186`, already
+correctly fixed) has a harmless cosmetic redundancy on `MC >= 12111` — the `//$$` branch's own
+condition already calls `isSuitableFor(state)`, and the unconditional line right after it calls
+the exact same check again before doing any work. Correct, just calls it twice; not worth touching
+on its own.
+
+<!-- SIGN-WALL-1.21.11-INPUT-STUBS-2026-09-05 -->
+## Fixed: two more 1.21.11 port stubs that silently did nothing (2026-09-05)
+
+Continuing the same sweep as the armor-equip fix above (commit `7aea6ea4`) through the rest of the
+22 remaining `TODO [1.21.11]` markers.
+
+`PlaceSignTask.editSign()` — both `screen.keyPressed(...)` (inserting a newline when a line gets
+too wide) and `screen.charTyped(...)` (typing each character of the message) were bare `// TODO`
+comments in the `MC >= 12111` branch. The loop still ran to completion, `screen.close()` still
+fired and `_finished = true` still got set — so on 1.21.11 this task successfully places a
+COMPLETELY BLANK sign, having typed nothing, and reports success. Fixed using the real API:
+`Element.keyPressed(KeyInput)`/`charTyped(CharInput)` replaced the old `(int,int,int)`/`(char,int)`
+overloads (confirmed via `javap` on the cached Yarn jar — `KeyInput(int key, int scancode, int
+modifiers)`, `CharInput(int codepoint, int modifiers)`).
+
+`ProjectileProtectionWallTask.interact()` had two more of the same shape:
+- `player.input.sneaking` was a plain boolean field before 1.21.11; it is now
+  `Input.playerInput.sneak()` on an immutable `PlayerInput` record. Both the "force un-sneak before
+  interacting" line and its own restore afterward were TODO comments — so on 1.21.11 neither ran,
+  and a bot that happened to be sneaking while placing a protection wall interacted with the block
+  while still sneaking, which changes what several of `isClickable`'s block types do on
+  right-click (chests/furnaces skip their GUI while sneaking, for one). Fixed by reading and
+  rebuilding the `PlayerInput` record with just the `sneak` field flipped, confirmed against its
+  real 7-field shape via `javap`.
+- `ActionResult.shouldSwingHand()` was removed along with the old `ActionResult` enum/class. On
+  1.21.11 the swing decision moved onto `ActionResult.Success.swingSource()`
+  (`ActionResult.SwingSource.CLIENT` means the client is responsible for the animation). Fixed to
+  check that instead of the old method.
+
+Not stand-verified (C8.1) for either — both are direct API-shape ports with no version-dependent
+tuning, verified against the disassembled real jar (same `javap`-on-cached-jar technique as the
+armor fix and the earlier `PersistentProjectileEntityAccessor` fix this session) rather than
+guessed. Commit `d85bb58e`.
+
+Checked and left alone, not defects: `AltoClef.changePlayerName`'s `Session.getAccountType()`
+marker is a real, already-correct 5-arg `Session` constructor call behind the TODO comment, not a
+stub — the comment is a note, not a missing implementation. `InputHelper.isKeyPressed`'s marker is
+the same shape (the ported call is already correct). `ui/AltoClefTickChart.java` and
+`ui/CommandStatusOverlay.java`'s markers are cosmetic debug-overlay text-scaling skips with real
+fallback rendering code behind them, not gameplay-affecting. `EquipCommand`'s marker was already
+triaged in G-1.38 as chat-command validation cosmetics, not a bot defect. The `CraftingRecipeVer`/
+`RecipeManagerWrapper`/`WrappedRecipeEntry`/`CraftInTableTask`/`ToolMaterialVer` family was already
+fixed earlier in G-1.38 (see above in this file). ⚠️ CORRECTED minutes later: this line originally
+claimed the sweep was complete. It was not — `StorageHelper.java` carries three more `TODO
+[1.21.11]` markers of its own (one cosmetic-but-correct, two genuinely open), missed because this
+entry's own file list was built before a second, closer read of that specific file. See the
+`STORAGEHELPER-GARBAGE-TOOL-COMPARE-STILL-OPEN-2026-09-05` entry above for what those actually are.
+
 <!-- EQUIPARMORTASK-STORAGEHELPER-ARMOR-BROKEN-2026-09-05 -->
 ## Fixed: armor equipping AND armor-equipped detection were both completely broken on 1.21.11 (2026-09-05)
 
