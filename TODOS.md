@@ -1,5 +1,58 @@
 # TODOs
 
+<!-- EQUIPARMORTASK-STORAGEHELPER-ARMOR-BROKEN-2026-09-05 -->
+## Fixed: armor equipping AND armor-equipped detection were both completely broken on 1.21.11 (2026-09-05)
+
+Sweeping the remaining `TODO [1.21.11]` port-stub markers left in the tree (22 of the original 29
+from G-1.38, after the weapon/fuel/recipe families already closed there) for the "silently answers
+NO" class of bug that family is named for. Two of the remaining markers turned out to be exactly
+that, and worse than G-1.38's own note on the armor family suggested ("боевые/бронные — когда юзер
+поднимет приоритет" reads as deprioritized, not actively wrong):
+
+`StorageHelper.isArmorEquipped(Item...)`'s `MC >= 12111` branch was:
+
+```java
+//#else
+//$$ // TODO [1.21.11] armor-class deleted — check equipped armor via EquipmentSlot component
+//#endif
+```
+
+A bare comment, no body at all. On the 1.21.11 build this method returns `false` for every armor
+item, unconditionally — only the separate shield check below it still worked. This feeds directly
+into `EquipArmorTask.onTick()`'s "is armor already met" gate and `armorEquipped()` (the task's own
+`isFinished()`), so the bot can never even OBSERVE that it is wearing armor, on the version this
+project actually ships.
+
+`EquipArmorTask`'s own `MC >= 12111` branch, for when it does try to equip something:
+
+```java
+//$$         // TODO [1.21.11] armor-class.getSlotType() removed — derive slot from item type
+//$$         Slot toMove = PlayerSlot.getEquipSlot(EquipmentSlot.CHEST); // placeholder
+```
+
+Every armor piece — helmet, leggings, boots, not just chestplates — got moved to the CHEST slot
+regardless of its real slot, on the version this project actually ships.
+
+Both were left behind when 1.21.11 deleted `ArmorItem` and its `getSlotType()` method, the same
+shape as the weapon-family stubs G-1.38 already fixed for `KillAura`/`getWeaponThreat`/etc: a real
+API removal, ported everywhere else, missed on these two specific call sites.
+
+FIXED: added `ItemHelper.getArmorSlot(Item)`, using the exact same pattern the weapon fix already
+established for this class of problem — `DataComponentTypes.EQUIPPABLE` is the component the game
+itself uses to decide which slot an item equips into (mirrors `isTool()`'s use of
+`DataComponentTypes.TOOL`), read via `item.getComponents().get(...)`, confirmed against the real
+class shape with `javap` on the cached Yarn jar (`EquippableComponent.slot(): EquipmentSlot`,
+`DataComponentTypes.EQUIPPABLE: ComponentType<EquippableComponent>`) rather than assumed. Both call
+sites now read the item's real slot through this helper instead of the dead stub / hardcoded CHEST.
+Commit `7aea6ea4`.
+
+Not stand-verified (C8.1) — this is a direct API-removal fix with no version-dependent tuning
+involved, verified against the disassembled real jar rather than the running game, following the
+same `javap`-on-cached-jar technique used earlier this session for `PersistentProjectileEntityAccessor`.
+Whoever gets stand access: `@equip diamond_helmet`/`@equip diamond_boots` on a 1.21.11 client, then
+check the item lands in the correct slot (not chest) and that a second `EquipArmorTask` for the
+same item reports already-equipped instead of re-issuing the move.
+
 <!-- BARITONE-TUNGSTEN-MOVEMENT-GAP-SURVEY-2026-09-05 -->
 ## Survey: baritone's 8 movement types against `FastPlanner`'s actual move set (2026-09-05)
 
