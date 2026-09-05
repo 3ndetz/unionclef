@@ -4,12 +4,10 @@ import java.util.stream.Stream;
 
 import com.google.common.collect.Streams;
 
-import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.agent.Agent;
 import kaptainwutax.tungsten.helpers.DirectionHelper;
 import kaptainwutax.tungsten.helpers.DistanceCalculator;
-import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.path.Node;
 import kaptainwutax.tungsten.path.PathInput;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
@@ -48,7 +46,12 @@ public class NeoJump {
         while (limit < 40 && jump == false && newNode.agent.getPos().y > nextBlockNode.getBlockPos().getY()-1) {
             Box adjustedBox = newNode.agent.box.offset(0, -0.5, 0).expand(-0.04, 0, -0.04);
         	limit++;
-        	Stream<VoxelShape> blockCollisions = Streams.stream(agent.getBlockCollisions(TungstenModDataContainer.world, adjustedBox));
+        	// ⛔ FIXED 2026-09-05: same stale-`agent` bug found repeatedly this session (confirmed
+        	// concrete effect in CornerJump.java: Agent.getBlockCollisions() builds an
+        	// AgentShapeContext from the agent's own box.minY, read by isAbove(), so using the
+        	// pre-move `agent` here tested every iteration's shape against the STARTING Y instead
+        	// of the current one, throughout a jump that is specifically about changing Y).
+        	Stream<VoxelShape> blockCollisions = Streams.stream(newNode.agent.getBlockCollisions(TungstenModDataContainer.world, adjustedBox));
 //        	RenderHelper.renderNode(newNode);
             if (blockCollisions.findAny().isEmpty()) {
         		desiredYaw = nudgeRotation(jumpTowardsRotation, 5);
