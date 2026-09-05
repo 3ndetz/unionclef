@@ -1,5 +1,26 @@
 # TODOs
 
+<!-- MACEPUNCHTASK-ISEQUAL-IGNORES-TARGET-2026-09-05 -->
+## Fixed: `MacePunchTask.isEqual()` ignored its own `_target` field (2026-09-05)
+
+Same `isEqual()` bug class already found and fixed twice this session (`AbstractDoToEntityTask.
+doubleCheck()`'s always-true-for-finite-pairs infinity check; `ProjectileProtectionWallTask`'s bare
+`return true;`): `isEqual(Task other) { return other instanceof MacePunchTask; }` — ignores
+`_target` (an `Entity`), so a `MacePunchTask` aimed at one entity compared equal to one aimed at
+any other.
+
+**Currently masked, not confirmed live**: both construction sites checked — `Playground.java`'s
+one-shot `runUserTask` call, and `KillPlayerTask.onTick()`'s cached `specialKillTask` field (which
+returns the SAME object reference across ticks once created, rather than constructing a fresh
+`MacePunchTask` per tick to re-compare against). Neither currently exercises the bug. But the task
+framework's `isEqual()` contract is general-purpose, and a future caller constructing a fresh
+`MacePunchTask` per tick for a changing target (a reasonable thing to want, and the more natural
+way to write this) would have the task stick to its original target instead of switching.
+
+FIXED anyway (cheap, safe, unambiguous): compares by `_target` now, matching sibling tasks in the
+same package (`ReplaceBlocksTask`, `TerminatorTask`'s inner `ScanChunksInRadius`) that already
+compare their own distinguishing fields. Not stand-verified (C8.1).
+
 <!-- CONSTRUCTNETHERPORTALOBSIDIANTASK-UNBOUNDED-BFS-2026-09-05 -->
 ## Fixed: unbounded/possibly-infinite BFS in `ConstructNetherPortalObsidianTask` (2026-09-05)
 
