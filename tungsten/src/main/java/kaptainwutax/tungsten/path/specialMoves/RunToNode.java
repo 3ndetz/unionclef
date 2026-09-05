@@ -74,7 +74,12 @@ public class RunToNode {
 			
 			if (newNode.agent.horizontalCollision && nextBlockNode.getBlockPos().getY() - newNode.agent.blockY >= 1) {
 				jump = true;
-				if (newNode.parent != null && newNode.parent.agent.onGround && !newNode.agent.horizontalCollision) {
+				// ⛔ FIXED 2026-09-05: same dead-branch bug as WalkToNode.generateMove() (fixed
+				// earlier this session) -- checked `!newNode.agent.horizontalCollision`, but the
+				// outer `if` already established `newNode.agent.horizontalCollision == true` with
+				// no reassignment of `newNode` in between, so the inner condition was provably
+				// always false. Evident intent is to check the PARENT's collision state.
+				if (newNode.parent != null && newNode.parent.agent.onGround && !newNode.parent.agent.horizontalCollision) {
 					newNode = newNode.parent;
 				}
 			} else if (newNode.agent.horizontalCollision) {

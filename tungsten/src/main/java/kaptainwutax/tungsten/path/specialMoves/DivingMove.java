@@ -1,18 +1,10 @@
 package kaptainwutax.tungsten.path.specialMoves;
 
 
-import java.util.stream.Stream;
-
-import com.google.common.collect.Streams;
-
-import kaptainwutax.tungsten.Debug;
-import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenModDataContainer;
 import kaptainwutax.tungsten.agent.Agent;
-import kaptainwutax.tungsten.helpers.AgentChecker;
 import kaptainwutax.tungsten.helpers.DirectionHelper;
 import kaptainwutax.tungsten.helpers.DistanceCalculator;
-import kaptainwutax.tungsten.helpers.render.RenderHelper;
 import kaptainwutax.tungsten.path.Node;
 import kaptainwutax.tungsten.path.PathInput;
 import kaptainwutax.tungsten.path.blockSpaceSearchAssist.BlockNode;
@@ -35,13 +27,13 @@ public class DivingMove {
 		if (distance < 2.8 && distance > 0.8) {
             limit = 0;
 			while (heightDiff > 0.8 && limit < 20 && newNode.agent.touchingWater) {
-	        	RenderHelper.renderNode(newNode);
-	        	try {
-					Thread.sleep(50);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+	        	// ⛔ FIXED 2026-09-05: this Thread.sleep(50)+RenderHelper.renderNode() pair was LIVE
+	        	// (uncommented), unlike the identical debug-visualization idiom in every sibling move
+	        	// generator (ExitWaterMove, ClimbALadderMove, SprintJumpMove, WalkToNode, LongJump,
+	        	// CornerJump), where it's commented out. DivingMove IS called from the real search
+	        	// (Node.java:180, whenever agent.touchingWater and the target has a solid ceiling), so
+	        	// this could block a search thread for up to 20*50=1000ms per node explored here --
+	        	// three such loops in this file, up to 80*50=4000ms each in the other two below.
 				heightDiff = DistanceCalculator.getJumpHeight(newNode.agent.getPos().y, nextBlockNode.getPos(true).y);
 	    		desiredYaw = (float) DirectionHelper.calcYawFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
 				desiredPitch = (float) DirectionHelper.calcPitchFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
@@ -55,13 +47,6 @@ public class DivingMove {
 			if (heightDiff > 0) {
 	            limit = 0;
 				while (heightDiff > 0.8 && limit < 80 && newNode.agent.touchingWater && !newNode.agent.verticalCollision) {
-		        	RenderHelper.renderNode(newNode);
-		        	try {
-						Thread.sleep(50);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
 					heightDiff = DistanceCalculator.getJumpHeight(newNode.agent.getPos().y, nextBlockNode.getPos(true).y);
 		            newNode = new Node(newNode, world, new PathInput(false, false, false, false, true, false, false, desiredPitch, desiredYaw),
 		            		new Color(0, 0, 150), newNode.cost + cost);
@@ -70,13 +55,6 @@ public class DivingMove {
 			} else if (heightDiff < 0) {
 	            limit = 0;
 				while (heightDiff < 0 && limit < 80 && newNode.agent.touchingWater && !newNode.agent.verticalCollision) {
-		        	RenderHelper.renderNode(newNode);
-		        	try {
-						Thread.sleep(50);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
 					heightDiff = DistanceCalculator.getJumpHeight(newNode.agent.getPos().y, nextBlockNode.getPos(true).y);
 		            newNode = new Node(newNode, world, new PathInput(false, false, false, false, false, true, false, desiredPitch, desiredYaw),
 		            		new Color(0, 0, 150), newNode.cost + cost);
