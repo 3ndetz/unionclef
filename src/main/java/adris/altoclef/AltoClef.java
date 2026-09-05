@@ -1064,6 +1064,12 @@ public class AltoClef implements ModInitializer {
      */
     public void log(String message, MessagePriority priority) {
         Debug.logMessage(message);
+        // ⛔ FIXED 2026-09-05: this method's own doc promises butler forwarding, but never called
+        // it -- Butler.onLog(String, MessagePriority) exists, is correctly implemented (forwards
+        // to sendWhisper only when a butler user is active, respecting priority), and had ZERO
+        // callers anywhere in the codebase (grepped the whole tree). A fully-built, correctly
+        // wired feature was simply never connected to the one method whose doc says it does this.
+        if (getButler() != null) getButler().onLog(message, priority);
     }
 
     public void logWarning(String message) {
@@ -1075,6 +1081,9 @@ public class AltoClef implements ModInitializer {
      */
     public void logWarning(String message, MessagePriority priority) {
         Debug.logWarning(message);
+        // ⛔ FIXED 2026-09-05: same missing-wiring bug as log() above -- Butler.onLogWarning()
+        // exists and is correctly implemented, but nothing called it.
+        if (getButler() != null) getButler().onLogWarning(message, priority);
     }
 
     private void runEnqueuedPostInits() {
