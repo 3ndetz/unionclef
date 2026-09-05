@@ -1,5 +1,40 @@
 # TODOs
 
+<!-- NOTESTOP-ACCOUNTING-SWEEP-2026-09-05 -->
+## Fixed: two more instances of the `noteStop` accounting bug class (2026-09-05)
+
+Continuing the systematic file-by-file audit (`Movement.java`, `MovementQueue.java`,
+`BlockPathWalker.java` all read clean this round; `FollowEntityTask.java` did not). Having
+already found and fixed one `noteStop(...)` fragment trapped dead inside a javadoc comment in
+`PathFinder.java`, checked every OTHER `noteStop(` call site across the whole codebase for the
+same two failure shapes, and found two more real defects:
+
+- **`FollowEntityTask.tick()` — missing braces, a genuine dangling-`if`.**
+  ```java
+  if (TungstenModDataContainer.PATHFINDER.active.get())
+      kaptainwutax.tungsten.path.PathFinder.noteStop("FollowEntityTask@279");
+      TungstenModDataContainer.PATHFINDER.stop.set(true);
+  ```
+  Java binds an unbraced `if` to exactly the next statement, so only the `noteStop` call was
+  conditional — `stop.set(true)` ran UNCONDITIONALLY every time this branch fired (every
+  qualifying steer tick), breaking the noteStop/stop.set(true) pairing every other call site in
+  the codebase keeps. No behavior change (`PathFinder.find()` resets `stop` to `false` on its
+  next search regardless of this), but `stopByDump()` undercounted this site whenever the
+  pathfinder happened to be idle when it fired. Fixed by adding braces — matches the adjacent
+  `EXECUTOR.stop` line two below it, which already gates on `isRunning()`.
+- **`RunAwayTask.java` — a second dead-comment fragment, same shape as the `PathFinder.java` one.**
+  A `noteStop("RunAwayTask@89")` line sat inside a `/** */` javadoc block (a bare line with no
+  leading `*`) describing REMOVED historical behavior (the old every-10-ticks replan). Checked:
+  this file's three real `stop.set(true)` sites each already have their own correctly-placed
+  `noteStop` call, so this fragment matched nothing current — removed rather than relocated.
+
+Both are the same underlying lesson: the `stopBy` diagnostic this file's own comment calls "the
+readout names the site instead of me nominating one" is only as trustworthy as every call site's
+punctuation, and small syntax accidents (a missing brace, a comment that swallowed a statement)
+are invisible until someone reads past the call itself. Not stand-verified (C8.1) — the
+FollowEntityTask fix changes accounting only, not search/movement behavior; the RunAwayTask fix
+is dead-code removal with zero behavior change.
+
 <!-- COMBATCONTROLLER-KITE-LEFT-RIGHT-SWAPPED-2026-09-04 -->
 ## Fixed: `CombatController.kite()` had left/right swapped — the wounded-bot ledge-safety check (2026-09-04)
 
