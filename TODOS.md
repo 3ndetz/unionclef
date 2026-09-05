@@ -1,5 +1,32 @@
 # TODOs
 
+<!-- BETTERBLOCKPOS-EQUALS-CONTRACT-2026-09-05 -->
+## Fixed: `BetterBlockPos.equals()` threw instead of returning `false` on an incompatible type (2026-09-05)
+
+Same bug class as `BlockNode.equals()` (fixed earlier this session): the non-`BetterBlockPos`
+branch of `equals(Object o)` cast `o` straight to `BlockPos` with no `instanceof` guard —
+
+```java
+BlockPos oth = (BlockPos) o;
+return oth.getX() == x && oth.getY() == y && oth.getZ() == z;
+```
+
+`Object.equals()`'s contract requires `x.equals(y)` to return `false` for an incompatible type,
+never throw. `BetterBlockPos` is used pervasively as a `Set`/`Map` key throughout the movement
+substrate (path execution compares `whereShouldIBe.equals(whereAmI)`, both potentially either
+type), so any comparison against an unrelated `Object` threw `ClassCastException` instead of the
+contractually-required `false`.
+
+FIXED: added `if (!(o instanceof BlockPos)) return false;` before the cast, matching the guard
+already present on the `BetterBlockPos` branch above it.
+
+Prompted a full-codebase sweep of every other `equals(Object)` override (10 more, all in
+`adris/altoclef/...`: `PositionWrapper`, `Task`, `PlayerThreat`, `BlockRange`, `CraftingRecipe`,
+`ItemTarget`, `SmeltTarget`, `RecipeTarget`, `Pair`, `Slot`) — all correctly guarded, no further
+fix needed. Not stand-verified (C8.1) — this is a diagnostic/correctness fix (a comparison that
+used to crash now returns the right boolean instead); it does not change any already-successful
+comparison's result.
+
 <!-- STREIGHTMOVEMENTHELPER-FINAL-CELL-UNCHECKED-2026-09-05 -->
 ## Fixed (⛔ real behavior change, not stand-verified): `StreightMovementHelper` never validated the final landing cell (2026-09-05)
 
