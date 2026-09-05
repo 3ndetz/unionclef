@@ -335,7 +335,15 @@ class Ctx:
         return None
 
     def crit_swings(self):
+        """Crit swings landed, from the mod's own counter. Same undercount as
+        landed_swings() otherwise: read live at judge time, not off the last
+        sample, since early_stop ends the run before the last few crits land."""
         vals = [s.get("bot_crits") for s in self.samples if s.get("bot_crits") is not None]
+        if not vals:
+            return 0
+        ok, now = self.bot.py.try_call("critHits")
+        if ok and isinstance(now, int):
+            return max(0, now - vals[0])
         return 0 if len(vals) < 2 else max(0, vals[-1] - vals[0])
 
     def victim_damage(self):
