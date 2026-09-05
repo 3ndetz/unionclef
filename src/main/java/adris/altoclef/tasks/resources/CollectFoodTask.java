@@ -15,6 +15,7 @@ import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.CraftingRecipe;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.RecipeTarget;
+import adris.altoclef.util.SmeltTarget;
 import adris.altoclef.util.helpers.StorageHelper;
 import adris.altoclef.util.helpers.WorldHelper;
 import adris.altoclef.util.slots.Slot;
@@ -66,7 +67,11 @@ public class CollectFoodTask extends Task {
 
     private final double unitsNeeded;
     private final TimerGame checkNewOptionsTimer = new TimerGame(10);
-    private final SmeltInSmokerTask smeltTask = null;
+    // ⛔ FIXED 2026-09-05: was `private final ... = null`, which can never be reassigned, so the
+    // "keep on smelting" branch below and isFinished()'s smeltTask check were both permanently
+    // dead. Confirmed by comparing against the sibling CollectMeatTask.java, which implements the
+    // identical pattern correctly with a mutable field. See the smelting-loop restoration below.
+    private SmeltInSmokerTask smeltTask = null;
     private Task currentResourceTask = null;
 
     public CollectFoodTask(double unitsNeeded) {
@@ -157,6 +162,8 @@ public class CollectFoodTask extends Task {
             // TODO: If we don't have cooking materials, cancel.
             setDebugState("Cooking...");
             return smeltTask;
+        } else {
+            smeltTask = null;
         }
 
         if (checkNewOptionsTimer.elapsed()) {
@@ -193,8 +200,18 @@ public class CollectFoodTask extends Task {
                 return currentResourceTask;
             }
             // Convert raw foods -> cooked foods
-
-            /*for (CookableFoodTarget cookable : COOKABLE_FOODS) {
+            // ⛔ RESTORED 2026-09-05: this loop was commented out, which combined with the
+            // `smeltTask` field being `final = null` (also fixed) meant raw meat could never
+            // actually be cooked. calculateFoodPotential()/getFoodPotential() above credit raw
+            // meat with its COOKED hunger value on the assumption it will be smelted -- so once
+            // enough raw meat accumulated to satisfy `unitsNeeded` on paper, this task stopped
+            // gathering (potentialFood >= unitsNeeded) but isFinished() checks the REAL current
+            // score via StorageHelper.calculateInventoryFoodScore(), which does not credit raw
+            // meat at cooked value. With no live path to actually cook it, the task could neither
+            // progress (this branch had nothing to return past the two bread checks, falling
+            // through to `return new TimeoutWanderTask()`) nor finish. Restored to match the
+            // sibling CollectMeatTask.java's working implementation of the identical pattern.
+            for (CookableFoodTarget cookable : COOKABLE_FOODS) {
                 int rawCount = mod.getItemStorage().getItemCount(cookable.getRaw());
                 if (rawCount > 0) {
                     //Debug.logMessage("STARTING COOK OF " + cookable.getRaw().getTranslationKey());
@@ -203,7 +220,7 @@ public class CollectFoodTask extends Task {
                     smeltTask.ignoreMaterials();
                     return smeltTask;
                 }
-            }*/
+            }
         } else {
             // Pick up food items from ground
             for (Item item : ITEMS_TO_PICK_UP) {
@@ -327,7 +344,11 @@ public class CollectFoodTask extends Task {
 
     @Override
     public boolean isFinished() {
-        return StorageHelper.calculateInventoryFoodScore() >= unitsNeeded;
+        // ⛔ FIXED 2026-09-05: missing `&& smeltTask == null`, matching CollectMeatTask.isFinished().
+        // Without it, this could return true while a smelt was still in progress -- the potential
+        // score (which counts raw meat as its cooked value) can already satisfy unitsNeeded before
+        // the smoker has actually finished converting it.
+        return StorageHelper.calculateInventoryFoodScore() >= unitsNeeded && smeltTask == null;
     }
 
     @Override
