@@ -1,5 +1,76 @@
 # TODOs
 
+<!-- SPECIALMOVES-STALE-AGENT-SWEEP-2026-09-05 -->
+## Fixed: two `specialMoves` classes checked the pre-move `agent` instead of the current tick, plus a dead branch; two superseded classes deleted (2026-09-05)
+
+Auditing `path/specialMoves/` (per-tick move generators for water, ladders, sprint-jumps, corner
+turns), checked each class's actual callers via grep before trusting the read — the same
+discipline that found `MovementHelper.java`'s dead code earlier this session.
+
+**Deleted, superseded, zero live callers**: `TurnACornerMove.java` and `JumpToLadderMove.java`
+were each only referenced from an already-commented-out call site in `Node.java`, right next to
+the live replacement that superseded them (`CornerJump.generateMove()` and
+`ClimbALadderMove.generateMove()` respectively). `TurnACornerMove` additionally had an
+unconditional `Thread.sleep(200)` (up to 16 times per call) and an ungated
+`RenderHelper.renderNode()` — a serious stall risk had the dead call ever been re-enabled without
+noticing. `JumpToLadderMove` had its own bug (below) that never mattered because it never ran.
+Cleaned the dead call sites and comments in `Node.java` to explain the removal instead of leaving
+unexplained dead comments.
+
+**Fixed, live code — stale `agent` instead of `newNode.agent`**: `SprintJumpMove.generateMove()`
+and `WalkToNode.generateMove()` both checked `agent.isInLava()` inside their per-tick simulation
+loop, where `agent` is `parent.agent` captured once *before* the loop — a constant across every
+iteration. This can only detect the move *starting* in lava, never the simulated agent flying or
+walking *into* lava mid-move, which is exactly the case the `cost = 2e6` penalty exists to punish.
+Changed both to `newNode.agent.isInLava()`. The deleted `JumpToLadderMove` had the identical
+pattern (a forward-press decision computed from stale `agent.getPos()` instead of
+`newNode.agent.getPos()`, never adapting to progress across the loop) — three independent
+instances of the same "closed-over stale snapshot re-checked every loop iteration" bug class.
+
+**Fixed, live code — dead inner branch**: `WalkToNode`'s collision-recovery step —
+```java
+if (newNode.agent.horizontalCollision && ...) {
+    jump = true;
+    if (newNode.parent.agent.onGround && !newNode.agent.horizontalCollision) newNode = newNode.parent;
+}
+```
+— the outer `if` already established `newNode.agent.horizontalCollision == true`, and nothing
+reassigns `newNode` before the inner check, so `!newNode.agent.horizontalCollision` was provably
+always `false`: `newNode = newNode.parent` could never execute. Evident intent was to check the
+PARENT's collision state (snap back to the pre-collision node when *that* state was clear and
+grounded), not the already-known-colliding current node's. Changed to
+`!newNode.parent.agent.horizontalCollision`.
+
+Both fixed classes are live: `SprintJumpMove` from `Node.java:189` and
+`EnterWaterAndSwimMove.java:13`; `WalkToNode` from `Node.java:239` and
+`EnterWaterAndSwimMove.java:19`. Not stand-verified (C8.1) — unlike most fixes this session these
+change real search behavior (a cost penalty and a collision-recovery path), not just diagnostics;
+flagging for playtest specifically on courses with lava pockets and tight corridor collisions.
+
+<!-- SPRINTJUMPMOVE-DEADZONE-OPEN-2026-09-05 -->
+## OPEN, not fixed — possible dead zone in `SprintJumpMove`'s loop-continuation condition (2026-09-05)
+
+```java
+while (distance > 0.95 && limit < 500 && !newNode.agent.horizontalCollision && !newNode.agent.isInLava()
+        || (distance <= 0.3 && !newNode.agent.onGround) && limit < 500) {
+```
+
+Java's `&&` binds tighter than `||`, so this is `(distance > 0.95 && ...) || ((distance <= 0.3 &&
+!onGround) && limit < 500)`. For `distance` strictly between `0.3` and `0.95`, NEITHER clause is
+satisfied — the loop stops regardless of whether the agent is still airborne. Read literally, a
+sprint-jump whose target distance lands in that 0.65-block gap exits the simulation mid-flight,
+before landing.
+
+**Not fixed, deliberately** — this could equally be intentional hysteresis (run normally until
+close, stop steering once inside 0.95 and let the jump arc fly ballistically, only resume
+micro-correction in the final 0.3 before landing) rather than a bug. This is exactly the kind of
+physics-tuned threshold this session's discipline says not to touch on a read-only hunch: no
+sibling method shares this exact two-threshold shape to structurally compare against (unlike the
+`StreightMovementHelper`/`CornerJumpMovementHelper` case, which had a clean structural twin), and
+C8.1 blocks any stand run that could measure the actual effect of narrowing the gap. Left as an
+open question rather than a guessed fix; flagging in case a future measured A/B (comparing
+`distance > 0.3` vs the current `0.95` in the first clause) is worth running once a stand exists.
+
 <!-- EXITWATERMOVE-DEAD-ANTISTALL-2026-09-05 -->
 ## Fixed: `ExitWaterMove` had a dead anti-stall variable, no way to bail out when stuck (2026-09-05)
 
