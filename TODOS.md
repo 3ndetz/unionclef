@@ -1,5 +1,33 @@
 # TODOs
 
+<!-- CRAFTINTABLE-RECIPEBOOK-GAP-IMPLEMENTED-2026-09-05 -->
+## Implemented, not just scoped: CraftInTableTask now uses the recipe-book fast path on 1.21.11 (2026-09-05)
+
+Follow-up to the two entries immediately below (`SHARPENED`, `REFINED`). Reconsidered "not attempted
+here" once the scope was precise enough to check its actual risk rather than assume it: the change
+is a reuse of an algorithm already proven correct in this exact codebase
+(`CraftGenericWithRecipeBooksTask`), adapted for one concrete, well-evidenced difference (the
+crafting-table screen is already open here, so nothing needs opening, and `clickRecipe` targets the
+screen that's already there) rather than a speculative reimplementation from scratch. That is closer
+in kind to today's four narrow API-shape ports than to a genuinely uncertain redesign, so implemented
+it rather than leaving it purely as a scoped debt.
+
+`CraftInTableTask.containerSubTask`'s `MC >= 12111` branch now runs the same `RecipeFinder` /
+`player.getRecipeBook().getOrderedResults()` / `entry.getStacks(ctx)` / `col.isCraftable(...)` /
+`mod.getController().clickRecipe(...)` sequence `CraftGenericWithRecipeBooksTask` already uses, gated
+behind the same `shouldUseCraftingBookToCraft()` setting the pre-12111 code checked, sending the click
+against `player.currentScreenHandler.syncId` (the crafting-table screen `DoStuffInContainerTask`
+already opened before this method could even run) instead of opening a new screen. On no match it
+falls through to `CraftGenericManuallyTask` exactly as before — the working manual path is untouched
+as a fallback, not replaced. Commit `c74a4022`.
+
+Not stand-verified (C8.1) — flagged in the commit message itself as closer to a real behavioral
+change than the day's narrower fixes, precisely so nobody reads it with the same confidence as the
+armor/sign/wall/unstuck-recovery ports. Whoever gets stand access: craft something at a table with
+the setting on, confirm it goes through the fast one-packet path (watch for
+`mod.getController().clickRecipe` firing, or simply that it's faster than the manual drag sequence),
+and confirm the table screen stays open and consistent rather than flickering.
+
 <!-- CRAFTINTABLE-RECIPEBOOK-GAP-REFINED-2026-09-05 -->
 ## Refinement to the entry below: the table screen is ALREADY open, so "open it" is the wrong framing (2026-09-05)
 
