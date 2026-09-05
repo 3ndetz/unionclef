@@ -51,7 +51,6 @@ public class FollowEntityTask {
     public static volatile int traversableCells, routeCells, routeSamples;
 
     private static final double MIN_MOVE_DIST      = 3.0;  // absolute floor for the threshold
-    private static final int    STUCK_TICKS        = 30;
 
     // ── state ───────────────────────────────────────────────────────────────────
     private static Entity  targetEntity    = null;
@@ -69,7 +68,6 @@ public class FollowEntityTask {
     // ── pathfinder state ────────────────────────────────────────────────────────
     private static Vec3d   lastTargetPos  = null;
     private static int     tickCounter    = 0;
-    private static int     stuckTicks     = 0;
     private static boolean stopRequested  = false;
 
     // ── live direct-steer cooldown ────────────────────────────────────────────────
@@ -113,7 +111,6 @@ public class FollowEntityTask {
         lastKnownPos       = null;
         lastTargetPos      = null;
         tickCounter        = 0;
-        stuckTicks         = 0;
         walkerAnchor       = null;
         walkerStuckTicks   = 0;
         stopRequested      = false;
@@ -132,7 +129,6 @@ public class FollowEntityTask {
         lastKnownPos       = null;
         leapActive         = false;
         stopRequested      = false;
-        stuckTicks         = 0;
         walkerAnchor       = null;
         walkerStuckTicks   = 0;
         trail.reset();
@@ -290,7 +286,6 @@ public class FollowEntityTask {
             steerRequestedLastTick = true;
             lastTargetPos = effectiveTarget;
             tickCounter = 0;
-            stuckTicks = 0;
             return;
         }
 
@@ -401,14 +396,11 @@ public class FollowEntityTask {
                 walkerAnchor = null;
             }
             // walker active — don't touch pathfinder, just let it compute
-            stuckTicks = 0;
         } else if (!pathfinderActive && !executorRunning && !stopRequested) {
-            stuckTicks = 0;
             physicsFallbacks++;
             startFind(world, player, effectiveTarget, effectiveDist);
         } else if (stopRequested && !pathfinderActive) {
             stopRequested = false;
-            stuckTicks    = 0;
             startFind(world, player, effectiveTarget, effectiveDist);
         } else if (!stopRequested && tickCounter >= RECALC_TICKS
                 && lastTargetPos != null
@@ -422,16 +414,22 @@ public class FollowEntityTask {
             TungstenModDataContainer.PATHFINDER.stop.set(true);
             stopRequested = true;
             tickCounter   = 0;
-        } else if (!executorRunning && !pathfinderActive) {
-            if (++stuckTicks >= STUCK_TICKS) {
-                kaptainwutax.tungsten.path.PathFinder.noteStop("FollowEntityTask@420");
-                TungstenModDataContainer.PATHFINDER.stop.set(true);
-                stopRequested = true;
-                stuckTicks    = 0;
-            }
-        } else {
-            stuckTicks = 0;
         }
+        // ⛔ REMOVED 2026-09-05: the `else if (!executorRunning && !pathfinderActive) { if
+        // (++stuckTicks >= STUCK_TICKS) {...} }` watchdog branch that used to sit here, plus the
+        // `stuckTicks`/`STUCK_TICKS` field and constant, and every `stuckTicks = 0` reset in this
+        // method -- all now-dead writes to a variable nothing read any more. Proof the branch was
+        // unreachable, by exhaustive case split over (pathfinderActive, executorRunning,
+        // stopRequested), independent of targetStrayed/tickCounter/lastTargetPos: the branch's own
+        // guard requires pathfinderActive=false && executorRunning=false. Given that, the FIRST
+        // branch above (`!pathfinderActive && !executorRunning && !stopRequested`) is false only if
+        // stopRequested=true; but then the SECOND branch (`stopRequested && !pathfinderActive`) is
+        // true and fires first, since pathfinderActive=false is already given. So whenever
+        // pathfinderActive=false && executorRunning=false, branch 1 or branch 2 always catches it
+        // first -- the STUCK_TICKS branch could never be reached, at any tick, under any state.
+        // Same disease this file's own comments already diagnosed and fixed once for
+        // WALKER_STUCK_TICKS above ("declared... and NOTHING READ THEM") -- this was the same
+        // thing for the physics-idle case, just never noticed because it never printed anything.
 
     }
 
