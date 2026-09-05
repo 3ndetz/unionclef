@@ -308,6 +308,17 @@ public class TungstenMod implements ClientModInitializer {
 
 
 		        		if (clickMode == clickModeEnum.GOTO && !TungstenModDataContainer.PATHFINDER.active.get()) {
+		        			// ⛔ FIXED 2026-09-05: this write path set TARGET without calling
+		        			// markGotoTarget() -- every other of the 8 TARGET write sites in the codebase
+		        			// (GotoCommand, MixinClientPlayerEntity, FollowEntityTask, Py4jEntryPoint x4)
+		        			// calls it, matching this class's own doc on markGotoTarget(): "Called
+		        			// wherever TARGET is written." Without it, a real click-to-goto request left
+		        			// targetIsReal false, so hasRealGotoTarget() (checked by PathExecutor's
+		        			// resumeGotoAfterMining logic) would wrongly treat a genuine in-progress goto
+		        			// as "nothing to resume" the moment the bot walked off to mine mid-route.
+		        			// Scoped to the GOTO branch specifically, not PLACE_GOAL above it -- placing a
+		        			// goal marker without starting navigation is not "asking for a goto".
+		        			TungstenMod.markGotoTarget();
 		        			TungstenModDataContainer.PATHFINDER.find(TungstenMod.mc.world, TARGET, TungstenMod.mc.player);
 		        		}
 	        		}
