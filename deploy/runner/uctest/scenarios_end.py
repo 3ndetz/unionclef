@@ -313,10 +313,20 @@ class EndDragon(EndCourse):
         # needing the vanilla EnderDragonFight the bed strategy leans on.
         ctx.bot.cmd("@test dragon-old")
 
+    HP_PROBE_EVERY = 5.0
+
     def drive_tick(self, ctx, elapsed):
         # FPS sampling moved to Scenario._sample_fps (one site for all five suites).
-        if int(elapsed) % 5 != 0:
+        # ⛔ A MODULO ON A REAL-VALUED CLOCK IS A LOTTERY, NOT A SCHEDULE (same defect as
+        # ChaseTerrain's old `int(t) % 20`, scenarios_pvp.py). ctx.sample() costs several
+        # blocking rcon round trips per drive_tick, so elapsed advances in irregular
+        # multi-second jumps rather than by one -- `int(elapsed) % 5` can miss every
+        # multiple of 5 for a whole run, which would silently stop the dragon-health probe
+        # (and therefore hp_min/dragon_gone) from ever updating past the initial reading.
+        # Gate on elapsed time since the last probe instead.
+        if elapsed - ctx.geo.get("last_hp_probe", 0.0) < self.HP_PROBE_EVERY:
             return
+        ctx.geo["last_hp_probe"] = elapsed
         hp = self._dragon_health(ctx)
         if hp is None:
             ctx.geo["dragon_gone"] = True
