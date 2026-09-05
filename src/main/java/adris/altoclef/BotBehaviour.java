@@ -375,8 +375,14 @@ public class BotBehaviour {
     }
 
     public void setPreferredStairs(boolean allow) {
-        //current().preferredStairs = allow;
-        current().applyState();
+        // ⛔ FIXED 2026-09-05: this setter's field write was already commented out (G-0: the
+        // legacy pathfinder setting it controlled is gone), but it still called applyState() --
+        // exactly the "expensive no-op" this class's own avoidBlockBreaking(BlockPos) comment
+        // block above measured and fixed (three nested mutexes, eight collections cleared and
+        // refilled wholesale, contending the SAME breakMutex the pathfinder's hottest path takes
+        // ~a million times a run). Two live callers (GetToBlockTask, KillEnderDragonTask) were
+        // paying that cost for zero effect on every call. Nothing changes here, so there is
+        // nothing to apply.
     }
 
     public void setAllowDiagonalAscend(boolean allow) {
