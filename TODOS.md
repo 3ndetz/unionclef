@@ -1,5 +1,40 @@
 # TODOs
 
+<!-- BEATMINECRAFT2TASK-DEADPORTALFRAMECOUNT-2026-09-05 -->
+## Fixed: `BeatMinecraft2Task.getFilledPortalFrames()` — dead second branch, same shape found repeatedly this session (2026-09-05)
+
+Auditing the two largest, most central speedrun task files (`MarvionBeatMinecraftTask.java`,
+`BeatMinecraft2Task.java` — the top-level "beat the whole game" orchestrators, deliberately
+deferred by a prior fork due to size). Found the same "redundant condition makes a whole branch
+dead" shape already seen elsewhere this session:
+
+```java
+private int getFilledPortalFrames(AltoClef mod, BlockPos endPortalCenter) {
+    if (endPortalFound(mod, endPortalCenter)) {
+        return END_PORTAL_FRAME_COUNT;
+    }
+    if (endPortalFound(mod, endPortalCenter)) {   // <-- provably always false here
+        ... scan the 12 frame blocks, count how many hold an eye, cache it ...
+        return _cachedFilledPortalFrames;
+    }
+    return 0;
+}
+```
+
+The first `if` already returns when `endPortalFound(...)` is true, and nothing between the two
+calls changes state, so the second check was provably always false — its entire body (the actual
+eye-counting scan) never ran. The method could only ever return `END_PORTAL_FRAME_COUNT` (12,
+portal structure fully discovered) or `0` — never any count in between. This feeds straight into
+`onTick()`'s `eyesNeeded`/`eyesNeededMin` computation, so the bot's "how many more ender eyes do I
+need" math never credited partially-filled portal frames while stronghold-searching: it read 0
+filled right up until the whole structure was confirmed, then jumped straight to 12.
+
+FIXED: dropped the redundant re-check (the code is only reached once `endPortalFound` is already
+known false) and added the null guard that branch never needed while dead — `endPortalCenter` can
+be null here, since `endPortalFound`'s own null check is exactly why the outer `if` can be false
+with a null center. Not stand-verified (C8.1) — real behavior change in the eye-collection math;
+flagging for a playthrough that reaches the stronghold-search phase.
+
 <!-- LOOTDESERTTEMPLETASK-REFEQUALITY-SKYWARSTASK-DEADSLEEP-2026-09-05 -->
 ## Fixed: `LootDesertTempleTask.isEqual()` compared `BlockPos` by reference; removed dead `SkyWarsTask.sleepSec()` (2026-09-05)
 
