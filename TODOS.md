@@ -1,5 +1,69 @@
 # TODOs
 
+<!-- TUNGSTENCONFIG-DEFAULT-CONTRADICTS-VERDICT-2026-09-05 -->
+## Fixed: two `TungstenConfig` defaults contradicted their own documented measurement conclusions (2026-09-05)
+
+`TungstenConfig.java` (5196 lines, the last unaudited file in the whole `tungsten` module) is
+almost entirely field declarations, each with an extensive comment documenting a past measured A/B
+experiment and a stated verdict on whether the flag should ship on or off. Systematically checked
+all 191 fields' declared defaults against their own comment's concluding sentence (grep for
+measurement-conclusion language, then read each shortlisted field's full comment against its actual
+value). ~10 candidates were investigated and ruled out as false positives from either bleeding into
+a neighboring field's comment or a negated clause ("do NOT ship it on by default") read as positive.
+Two were genuine, confirmed contradictions — both live, confirmed via
+`adris.altoclef.util.helpers.TungstenHelper`, which reads both flags to gate real behavior:
+
+- **`lockKeepsRouteWhileTargetStands`** read `= true`, but the comment's own conclusion three
+  paragraphs up says *"Stays OFF. One mixed pair is not a result, and this file has already paid
+  for treating one as though it were."* The comment even contains an inline illustration mid-block
+  — an unwrapped `public boolean lockKeepsRouteWhileTargetStands = false;` line sitting inside the
+  still-open javadoc (harmless prose, not real code, easy to mistake for the real declaration at a
+  glance) — showing the value the pair-1/pair-2 experiment actually ran with, which matches the
+  stated conclusion. Only the real declaration at the very end of the comment had drifted from it.
+- **`barrenLockCountsAsFailure`** read `= true`, but the comment concludes *"Off by default and
+  UNMEASURED: the box is at ~600-750% from another project and the last confirming window came back
+  INVALID at 8 fps, so rule ZERO says it does not ship today."*
+
+Both flipped to `false`, matching their own documented verdict. Not stand-verified (C8.1) — both
+gate real live logic in `TungstenHelper`, flagging for playtest per each comment's own described
+mechanism gate (`lock=barren/productive` counters, `lockRetarget done/skipped`).
+
+This closes out the full `tungsten` module audit: every file in `tungsten/src/main/java` has now
+been read at least once this session.
+
+<!-- ALTOCLEF-LOG-BUTLER-UNWIRED-2026-09-05 -->
+## Fixed: `AltoClef.log()`/`logWarning()` never actually forwarded to a butler user (2026-09-05)
+
+Extending the audit from `tungsten/` (now complete) into `altoclef`'s core orchestration layer.
+`AltoClef.log(String, MessagePriority)`'s own javadoc: *"Logs to the console and also messages any
+player using the bot as a butler."* The implementation was just:
+
+```java
+public void log(String message, MessagePriority priority) {
+    Debug.logMessage(message);
+}
+```
+
+`Debug.logMessage()` only writes to the LOCAL client's own chat window — it has no path to a
+remote butler user at all. Grepped `Butler.onLog(String, MessagePriority)` and
+`onLogWarning(String, MessagePriority)` across the whole tree: both exist, both are fully and
+correctly implemented (`if (_currentUser != null) sendWhisper(message, priority);`), and **neither
+had a single caller anywhere in the codebase.** A fully-built, correctly wired feature was simply
+never connected to the one method whose doc says it does this — the same "declared and never
+wired up" shape as several bugs already found this session in `tungsten` (`WALKER_STUCK_TICKS`
+before it was fixed, `Butler`'s counterpart here left permanently unfixed until now).
+
+Confirmed `MessagePriority` is a real, consumed distinction elsewhere before treating the
+parameter as meaningful to preserve: `MessagePriority.OPTIONAL` is passed by
+`ListCommand`/`HelpCommand`/`InventoryCommand`, and `MessageSender`'s outbound chat queue sorts on
+`priority.getImportance()` — this method was the one place accepting a priority and silently
+discarding it.
+
+FIXED: both `log(String, MessagePriority)` and `logWarning(String, MessagePriority)` now also call
+`getButler().onLog(...)`/`onLogWarning(...)`, guarded by the same `getButler() != null` null-check
+already used elsewhere in this file. Not stand-verified (C8.1) — real behavior change: any code
+calling these priority-aware overloads will now actually reach a connected butler user.
+
 <!-- BLOCKTARGET-SWALLOWED-DIMENSION-2026-09-05 -->
 ## Fixed: `BlockTarget.parse()` swallowed a bad dimension argument instead of surfacing a syntax error (2026-09-05)
 

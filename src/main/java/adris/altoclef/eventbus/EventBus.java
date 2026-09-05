@@ -50,8 +50,20 @@ public class EventBus {
                     e.printStackTrace();
                 }
             }
-            // Delete all subscriptions
             lock = false;
+            // ⛔ FIXED 2026-09-05: "Delete all subscriptions" was the comment, but toDelete was
+            // built and then never used -- unsubscribe() only sets a flag (Subscription.delete()),
+            // and nothing here ever removed a flagged entry from `subscribers`. Confirmed live: 9
+            // real call sites across tasks/ (PlaceBlockNearbyTask, ContainerStoredTracker,
+            // CombatTask, PlaceBedAndSetSpawnTask x2, ChunkSearchTask, SearchChunksExploreTask,
+            // BedWarsTask, ReplaceBlocksTask) each subscribe when a task starts and unsubscribe
+            // when it stops -- and every one of those, over a long playthrough, left a permanently
+            // dead entry in this list. It was never freed and every future publish() to the same
+            // event type had to skip over it forever, an unbounded per-publish cost that only grows
+            // across a session, which is exactly the failure mode a "complete the whole game in one
+            // sitting" run would feel. Safe to remove after the loop (not during it, per the
+            // comment above): `subscribers` was only appended to via toDelete, never mutated mid-loop.
+            subscribers.removeAll(toDelete);
         }
     }
 
