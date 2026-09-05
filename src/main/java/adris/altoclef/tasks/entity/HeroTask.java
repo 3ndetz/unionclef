@@ -8,7 +8,6 @@ import adris.altoclef.tasks.resources.KillAndLootTask;
 import adris.altoclef.tasksystem.Task;
 import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.ItemHelper;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ExperienceOrbEntity;
 import net.minecraft.entity.mob.HostileEntity;
@@ -35,18 +34,17 @@ public class HeroTask extends Task {
             setDebugState("Getting experience.");
             return new GetToEntityTask(experienceOrb.get());
         }
-        assert MinecraftClient.getInstance().world != null;
-        Iterable<Entity> hostiles = MinecraftClient.getInstance().world.getEntities();
-        if (hostiles != null) {
-            for (Entity hostile : hostiles) {
-                if (hostile instanceof HostileEntity || hostile instanceof SlimeEntity) {
-                    Optional<Entity> closestHostile = mod.getEntityTracker().getClosestEntity(hostile.getClass());
-                    if (closestHostile.isPresent()) {
-                        setDebugState("Killing hostiles or picking hostile drops.");
-                        return new KillAndLootTask(hostile.getClass(), new ItemTarget(ItemHelper.HOSTILE_MOB_DROPS));
-                    }
-                }
-            }
+        // ⛔ FIXED 2026-09-05: this used to loop world.getEntities() (NOT distance-sorted) and act
+        // on whichever hostile/slime happened to appear FIRST in that arbitrary iteration order,
+        // then ask the tracker for the closest entity of ONLY that one type -- so with, say, a
+        // zombie and a much closer skeleton both present, it could chase the zombie and never
+        // consider the skeleton at all, because the loop already returned on the zombie. The
+        // tracker's own getClosestEntity(Class...) takes multiple types together and returns the
+        // genuinely closest match across all of them -- the API this should have called directly.
+        Optional<Entity> closestHostile = mod.getEntityTracker().getClosestEntity(HostileEntity.class, SlimeEntity.class);
+        if (closestHostile.isPresent()) {
+            setDebugState("Killing hostiles or picking hostile drops.");
+            return new KillAndLootTask(closestHostile.get().getClass(), new ItemTarget(ItemHelper.HOSTILE_MOB_DROPS));
         }
         if (mod.getEntityTracker().itemDropped(ItemHelper.HOSTILE_MOB_DROPS)) {
             setDebugState("Picking hostile drops.");
