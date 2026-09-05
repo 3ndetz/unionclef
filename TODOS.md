@@ -1,5 +1,27 @@
 # TODOs
 
+<!-- BLOCKTARGET-SWALLOWED-DIMENSION-2026-09-05 -->
+## Fixed: `BlockTarget.parse()` swallowed a bad dimension argument instead of surfacing a syntax error (2026-09-05)
+
+Closing out the remaining unaudited corners of `path/` after the parallel forks finished: read
+`path/targets/BlockTarget.java` (not covered by any of them). It has two near-duplicate coordinate
+parsers — `parseRemainder(String)` (declares `throws CommandException`, used by
+`Arg.java:147`) and the brigadier `ArgumentType#parse(StringReader)` override (confirmed live:
+`BlockTarget` is the registered type for the `"gotoTarget"` argument, per
+`GotoTargetArgumentType.java`'s `context.getArgument("gotoTarget", BlockTarget.class)`).
+
+`parse()`'s version of the "last token isn't a number, try it as a dimension" branch caught
+`Arg.parseEnum()`'s `CommandException` and did only `e1.printStackTrace()` — the command then
+silently continued with `dimension = null` instead of telling the player their dimension argument
+didn't parse (e.g. `;goto 5 ENDX`). `parseRemainder()`'s equivalent branch gets this right by
+simply declaring `throws CommandException` and letting the caller handle it; `parse()` can't do
+that (it overrides a fixed `ArgumentType#parse` signature, `throws CommandSyntaxException` only),
+so the fix wraps the message into a `CommandSyntaxException` instead of eating it.
+
+Not stand-verified (C8.1) — flagging the `CommandSyntaxException(CommandExceptionType, Message)`
+two-arg constructor call for a build check in addition to a manual test (`;goto 5 badword`),
+since this session has no way to compile-check it against the exact brigadier version in use.
+
 <!-- MIXIN-AUDIT-2026-09-05 -->
 ## Audited `mixin/` — 2 more live split("|") instances, plus a duplicate pauseKeyBinding block (2026-09-05)
 
