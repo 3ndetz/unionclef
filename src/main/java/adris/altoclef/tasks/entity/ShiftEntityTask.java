@@ -49,11 +49,15 @@ public class ShiftEntityTask extends AbstractDoToEntityTask {
     }
 
     public ShiftEntityTask(String target) {
-        this(target, ShiftType.values()[new Random().nextInt(ShiftType.values().length - 1)]);
+        // ⛔ FIXED 2026-09-05: nextInt(length - 1) excludes the LAST enum constant entirely --
+        // with 3 ShiftType values this only ever picked Back(0) or Forward(1), never Any(2).
+        // Random.nextInt(bound) already returns [0, bound), so the "random type" constructors
+        // never needed the -1 and it silently made a third of the values unreachable.
+        this(target, ShiftType.values()[new Random().nextInt(ShiftType.values().length)]);
     }
 
     public ShiftEntityTask(Entity target) {
-        this(target, ShiftType.values()[new Random().nextInt(ShiftType.values().length - 1)]);
+        this(target, ShiftType.values()[new Random().nextInt(ShiftType.values().length)]);
     }
 
     @Override
