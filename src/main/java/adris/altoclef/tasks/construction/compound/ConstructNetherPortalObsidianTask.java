@@ -171,18 +171,30 @@ public class ConstructNetherPortalObsidianTask extends Task {
             World world = mod.getWorld();
 
             if (surroundedByAir(world,placeTarget)) {
+                // ⛔ FIXED 2026-09-05: the while condition tested `placeTarget` (the fixed BFS
+                // origin, never updated inside the loop) instead of the current node `pos`, so it
+                // was always true given the outer `if` already established it -- the loop relied
+                // entirely on the inner `return` to exit, with no bound tied to actual BFS
+                // progress. Worse, nothing tracked visited positions, so the search could cycle
+                // forever (e.g. `pos.up()` then later that node's `pos.down()` re-enqueues `pos`
+                // itself), growing the queue without limit. Both are real hang/OOM risks on this
+                // task's own tick thread. Added a visited set (also fixes re-enqueuing/re-checking
+                // the same cell) and a hard node cap as a safety bound, matching this session's
+                // established caution about unbounded searches.
+                java.util.Set<BlockPos> visited = new java.util.HashSet<>();
                 LinkedList<BlockPos> queue = new LinkedList<>();
                 queue.add(placeTarget);
-                while (surroundedByAir(world, placeTarget)) {
+                visited.add(placeTarget);
+                int scanned = 0;
+                while (!queue.isEmpty() && scanned++ < 4096) {
                     BlockPos pos = queue.removeFirst();
 
-                    if (surroundedByAir(world,pos)) {
-                        queue.add(pos.up());
-                        queue.add(pos.down());
-                        queue.add(pos.east());
-                        queue.add(pos.west());
-                        queue.add(pos.north());
-                        queue.add(pos.south());
+                    if (surroundedByAir(world, pos)) {
+                        for (BlockPos next : new BlockPos[]{pos.up(), pos.down(), pos.east(), pos.west(), pos.north(), pos.south()}) {
+                            if (visited.add(next)) {
+                                queue.add(next);
+                            }
+                        }
                     } else {
                         return new PlaceStructureBlockTask(pos);
                     }
