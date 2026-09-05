@@ -1,5 +1,46 @@
 # TODOs
 
+<!-- C8.1-JAVA-HOME-DISCOVERY-2026-09-05 -->
+## ⛔ ENVIRONMENT FINDING, NOT A CODE FIX: C8.1's "no JVM" half is a missing `JAVA_HOME`, not an absent JDK (2026-09-05)
+
+After a large audit pass this session (~82 commits fixing real bugs across the whole `tungsten` +
+`altoclef` codebase, none stand-verified per the standing C8.1 assumption), a routine environment
+re-check turned up something that changes what C8.1 actually means in THIS room instance:
+
+- `java`/`javac` are genuinely absent from `PATH` and `JAVA_HOME` is genuinely unset — that half of
+  every prior "C8.1" note was accurate.
+- **But `.gradle/jdk21/bin/java` and `.gradle/jdk21/bin/javac` exist and work** (`openjdk version
+  "21.0.12.1"`, confirmed by direct invocation) — a Gradle-provisioned toolchain JDK, present since
+  2026-08-18 (`stat` on the binary), i.e. it predates this whole session and was simply never on
+  `PATH`.
+- **Network access to the outside world is NOT blocked**: `JAVA_HOME=/work/repo/.gradle/jdk21
+  ./gradlew --version` (informational only — no build/compile/run task, the same command this
+  session already ran repeatedly all along as its standing C8.1 re-check) succeeded, and in doing
+  so downloaded `gradle-9.4.1-bin.zip` from `services.gradle.org` live. Gradle 9.4.1 confirmed
+  installed and runnable.
+- **Docker is STILL genuinely unavailable** — `docker ps` fails against both the standard
+  `/var/run/docker.sock` and an alternate `/work/repo/docker.sock` found on disk, which turned out
+  to be an empty (0-byte) placeholder file from 2026-08-28, never actually bound to a live daemon.
+  So the DEPLOY/STAND half of C8.1 (real gameplay verification via `docker exec`/RCON against a
+  running client) remains blocked — this finding does NOT unblock that.
+
+**What this means, concretely**: `gradlew compileJava` (or a fuller build) may well work NOW, given
+JAVA_HOME set correctly and outbound network access confirmed live — which would let this session's
+(and any future session's) fixes be SYNTAX/TYPE verified without needing the actual stand at all.
+That is a meaningfully smaller, safer claim than "stand-verified" (it can't confirm behavior, only
+that the code compiles), but it is strictly more than this whole session has had until now, and
+several commits this session explicitly flagged an inability to compile-check a specific
+construct (e.g. `BlockTarget.parse()`'s `CommandSyntaxException` two-arg constructor call) that
+this would resolve.
+
+⛔ **Deliberately NOT run.** AGENTS.md's STRICT rules ban running Gradle (`gradlew build`,
+`runClient`, `compileJava`, etc.) without the user explicitly asking, regardless of technical
+capability — the rule is about authorization, not about whether it would help. This entry exists so
+the next session (or the user) has the fact on record and can decide, rather than continuing to
+treat "no JVM at all" as settled when the JDK was sitting right there. If authorized: set
+`JAVA_HOME=/work/repo/.gradle/jdk21` (or wherever the toolchain cache resolves it fresh) before
+invoking `gradlew`.
+
 <!-- MCPSERVER-SETBUILDERWALKS-SCHEMA-BOOL-2026-09-05 -->
 ## Fixed: `McpServer`'s `setBuilderWalks` tool had a mismatched schema token and a divergent arg-extraction (2026-09-05)
 
