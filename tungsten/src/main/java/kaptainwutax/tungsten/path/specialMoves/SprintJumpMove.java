@@ -32,7 +32,12 @@ public class SprintJumpMove {
 		desiredYaw = (float) DirectionHelper.calcYawFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
 		if (distance < 0.8) return newNode;
 		while (distance > 0.95 && limit < 500 && !newNode.agent.horizontalCollision && !newNode.agent.isInLava() || (distance <= 0.3 && !newNode.agent.onGround) && limit < 500) {
-			if (agent.isInLava()) newNode.cost = 2e6;
+			// ⛔ FIXED 2026-09-05: checked the STALE `agent` (= parent.agent, captured once before
+			// this loop) instead of `newNode.agent` (the current simulated tick), so this only ever
+			// tested whether the move STARTED in lava -- a constant, evaluated identically every
+			// iteration -- and could never catch the agent flying INTO lava mid-jump, which is
+			// exactly the case this 2e6 cost penalty exists to punish.
+			if (newNode.agent.isInLava()) newNode.cost = 2e6;
 			if (newNode.agent.touchingWater) {
 				newNode.cost += 0.2;
 				break;

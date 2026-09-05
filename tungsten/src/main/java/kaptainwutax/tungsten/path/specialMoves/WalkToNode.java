@@ -35,7 +35,10 @@ public class WalkToNode {
 				newNode.cost += 0.2;
 				break;
 			}
-			if (agent.isInLava()) newNode.cost = 2e6;
+			// ⛔ FIXED 2026-09-05: same staleness bug as SprintJumpMove -- checked `agent`
+			// (= parent.agent, fixed before this loop) instead of `newNode.agent`, so this could
+			// only catch the move STARTING in lava, never walking INTO it mid-simulation.
+			if (newNode.agent.isInLava()) newNode.cost = 2e6;
         	limit++;
 
         	if (lastHigheastNodeSinceGround != null && lastHigheastNodeSinceGround.agent.blockY - newNode.agent.blockY > 30) {
@@ -67,7 +70,14 @@ public class WalkToNode {
 			
 			if (newNode.agent.horizontalCollision && nextBlockNode.getBlockPos().getY() - newNode.agent.blockY >= 1) {
 				jump = true;
-				if (newNode.parent.agent.onGround && !newNode.agent.horizontalCollision) newNode = newNode.parent;
+				// ⛔ FIXED 2026-09-05: this checked `!newNode.agent.horizontalCollision`, but the
+				// outer `if` just established `newNode.agent.horizontalCollision == true` and
+				// nothing between there and here reassigns `newNode` -- so the inner condition was
+				// provably always false, and `newNode = newNode.parent;` was dead code that could
+				// never run. The evident intent is to snap back to the pre-collision parent when
+				// THAT state was clear and grounded, i.e. check the PARENT's collision flag, not
+				// the (already known colliding) current node's.
+				if (newNode.parent.agent.onGround && !newNode.parent.agent.horizontalCollision) newNode = newNode.parent;
 			} else {
 				jump = false;
 			}
