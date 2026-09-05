@@ -1,5 +1,36 @@
 # TODOs
 
+<!-- RUNAWAYTASK-LEFT-RIGHT-SWAPPED-2026-09-05 -->
+## Fixed: `RunAwayTask.driveAwayRaw()` had left/right swapped (2026-09-05)
+
+Full read of `RunAwayTask.java` (693 lines). Its `driveAwayRaw()` — the key-driven flee fallback,
+explicitly documented as existing for exactly the case where the primary pathfinder/executor
+cannot be trusted (narrow bridges, 1-wide walkways over the void) — computed:
+
+```java
+Vec3d right = new Vec3d(Math.cos(yaw), 0, Math.sin(yaw));
+```
+
+This is bit-for-bit the same formula `CombatMoveIntent.heading()` uses for its own LEFT vector
+(`strafe=+1, forward=0` gives exactly `(cos(yaw), sin(yaw))`), and verified numerically to be the
+exact negation, at every yaw, of `ProjectileDodge`'s own right vector (`rx=-cos(yaw),
+rz=-sin(yaw)`) — a formula already cross-checked against this codebase's "sideways +1 = LEFT"
+convention when auditing that file. So `right` here was actually the LEFT world direction,
+mathematically identical to the LEFT vector two other files independently agree on.
+
+Same bug class already found once this session in `CombatController.kite()` (also a left/right
+swap in a void-safety fallback). Effect: whichever way `away` (the flee direction) pointed, the
+strafe key `driveAwayRaw` pressed to correct for it was the wrong one — on the narrow-bridge
+courses this fallback specifically exists to cross safely. FIXED: negated the vector to
+`(-cos(yaw), -sin(yaw))`, matching `ProjectileDodge`'s confirmed formula. `facing` (forward/back)
+was independently checked against `CombatMoveIntent`'s forward formula and found correct —
+only the strafe axis was swapped.
+
+Not stand-verified (C8.1, no build this session). Given two independent instances of this exact
+bug class have now turned up in two different files, worth a note for whoever next touches
+movement-key code: any new key-frame vector should be checked against `ProjectileDodge`'s
+already-verified `(fx,fz)/(rx,rz)` formula rather than re-derived from scratch.
+
 <!-- NOTESTOP-ACCOUNTING-SWEEP-2026-09-05 -->
 ## Fixed: two more instances of the `noteStop` accounting bug class (2026-09-05)
 
