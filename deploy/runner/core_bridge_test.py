@@ -40,15 +40,17 @@ def pos():
         return [round(float(v.strip().rstrip("d")),1) for v in p]
     except Exception: return None
 
-def run(planplace, secs):
+def run(planplace, secs, far_x=9, near_x_max=1):
     # Force-load the sky-island chunks: without this the block-space search can hit
     # not-yet-loaded chunks intermittently and plan an erratic path (bot walks backward
     # off the island / stalls) — a test artifact, not a bridge bug. Mirrors terrain_test.
     rcon("forceload add -8 -8 24 8")
-    # 7-wide gap (x=2..8): beyond a sprint-jump, so the ONLY way across is a bridge.
+    # Gap is x=near_x_max+1 .. far_x-1 (width far_x-near_x_max-1). The default (far_x=9,
+    # near_x_max=1) is the original 7-wide gap: beyond a sprint-jump, so the ONLY way
+    # across is a bridge. A narrower gap is used for the OFF-regression case below.
     rcon("fill -6 96 -6 20 104 6 air")
-    rcon("fill -4 100 -4 1 100 4 stone")
-    rcon("fill 9 100 -4 16 100 4 stone")
+    rcon(f"fill -4 100 -4 {near_x_max} 100 4 stone")
+    rcon(f"fill {far_x} 100 -4 16 100 4 stone")
     py4j("stop"); time.sleep(1)
     rcon(f"tp {BOT} 0 101 0 90 0"); time.sleep(1.5)
     rcon(f"clear {BOT}")
@@ -64,10 +66,10 @@ def run(planplace, secs):
             last=p
             if p[0]>maxx: maxx=p[0]
             if p[1]<60: fell=True; break
-            if p[0]>=9 and p[1]>=99: break
+            if p[0]>=far_x and p[1]>=99: break
     py4j("stop"); py4j("place", on=False)   # reset the flag so a following test is clean
     placed=[]
-    for gx in range(2,9):
+    for gx in range(near_x_max+1, far_x):
         for gz in range(-4,5):
             if "passed" in rcon(f"execute if block {gx} 100 {gz} cobblestone").lower():
                 placed.append(f"{gx},{gz}"); break
@@ -82,12 +84,27 @@ def main():
         except Exception: pass
         time.sleep(6)
     print("=== CORE bridge: planPlaceMoves ON + block in hand, async ;goto across a sky gap ===")
-    on = run(True, 90)
+    on = run(True, 90, far_x=9, near_x_max=1)
     print(f"  {on}")
     crossed = on["finalPos"] is not None and on["maxX"] >= 9 and not on["fell"]
     ok = crossed and len(on["placed"]) >= 1
     print(f"  crossed by search-planned bridge: {ok}")
     print("  CORE-BRIDGE:", "PASS" if ok else "FAIL")
-    import sys; sys.exit(0 if ok else 1)
+
+    # OFF-regression: the module docstring promised this and it was never implemented (TODOS.md,
+    # 2026-09-05). MovementParkour.MAX_DIST = 4 (tungsten path/movements/MovementParkour.java) is
+    # the engine's own hard cap on a level running jump, so a 3-wide gap (far_x=5, near_x_max=1)
+    # sits inside it with a full block of margin -- a healthy parkour/move-gen path should clear
+    # it with planPlaceMoves OFF, placing nothing. If this fails, the regression is in ordinary
+    # move-gen, not in bridging.
+    print("=== CORE bridge OFF-regression: planPlaceMoves OFF, gap within normal jump range ===")
+    off = run(False, 60, far_x=5, near_x_max=1)
+    print(f"  {off}")
+    crossed_off = off["finalPos"] is not None and off["maxX"] >= 5 and not off["fell"]
+    ok_off = crossed_off and len(off["placed"]) == 0
+    print(f"  crossed by normal move-gen (no bridge): {ok_off}")
+    print("  CORE-BRIDGE-OFF:", "PASS" if ok_off else "FAIL")
+
+    import sys; sys.exit(0 if (ok and ok_off) else 1)
 
 if __name__=="__main__": main()
