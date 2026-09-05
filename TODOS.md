@@ -1,5 +1,51 @@
 # TODOs
 
+<!-- MULTIVERSION-JAVAP-VERIFICATION-SWEEP-2026-09-05 -->
+## Verification sweep of `multiversion/`'s version-gated methods against the real 1.21.11 jar (2026-09-05)
+
+Following the same `javap`-on-cached-jar technique used to resolve the `inGround` and cobweb
+findings above, checked every `multiversion/*.java` file whose `//#if MC` branch structure looked
+asymmetric (an `if`/`elseif` count not matching its `else` count — a cheap heuristic for "might have
+a version branch silently missing real handling"). Extracted and disassembled the relevant real
+Minecraft classes from `.gradle/loom-cache/minecraftMaven/.../minecraft-merged-...-1.21.11-...jar`
+with `jar xf` + `javap -p` for each (read-only, no compile). Results:
+
+- **`RenderLayerVer.getGuiOverlay()`** — active branch returns `null` with comment "removed in
+  1.21.11". Confirmed accurate: no `getGuiOverlay` (or any `*overlay*`/`*gui*`-named method) exists
+  anywhere on the real 1.21.11 `RenderLayer.class`. Correct as written.
+- **`CraftingRecipeVer.getOutput()`** — active branch returns `ItemStack.EMPTY` with comment
+  "Recipe.getResult() API changed". Confirmed the change is real and substantial, not a simple
+  rename: neither `Recipe.class` nor `CraftingRecipe.class` has any `result`/`output`-named method
+  on 1.21.11 at all (the replacement is the much larger recipe-display API chain
+  `CraftGenericWithRecipeBooksTask`'s own commented-out 1.21.11 block already documents:
+  `RecipeDisplayEntry`, `ClientRecipeBook.getOrderedResults()`, `SlotDisplayContexts`). Confirmed
+  ZERO live callers of `CraftingRecipeVer.getOutput()` anywhere in `src/main/java` (only a comment
+  in `CraftingHelper.java` mentions it, describing the same known gap). Not touched — restoring
+  this is a real feature-port project of the scope `CraftGenericWithRecipeBooksTask` already
+  attempted and found nontrivial, not a bug fix, and out of this audit's scope.
+- **`ToolMaterialVer.getMiningLevel(ToolMaterial)`** — active branch unconditionally `throw new
+  UnsupportedOperationException(...)`, with comment "ToolMaterials enum deleted — constants moved
+  to ToolMaterial class". Looked alarming at first (a live throw, not a silent wrong value) — but
+  all 3 real call sites (`StorageHelper.java:268,333,334`) are independently wrapped in the
+  identical `//#if MC < 12111` guard around the CALL itself, not just the accessor, so the throw is
+  provably unreachable on the active build. A deliberate fail-fast stub for a genuinely substantial
+  API change (tool material moved off a `ToolItem`/`ToolMaterials` enum onto a component-based
+  system), not a live crash bug.
+- **`MethodWrapper.getRenderedEntity`/`getDamageLeft`, `ConnectScreenVer.connect`,
+  `MessageTypeVer.getMessageType`** — all call REAL methods on their active `MC >= X` branch (not
+  stubs). Verified every signature byte-for-byte against the real 1.21.11 classes via `javap`:
+  `MobSpawnerLogic.getRenderedEntity(World, BlockPos)`, `DamageUtil.getDamageLeft(LivingEntity,
+  float, DamageSource, float, float)`, `ConnectScreen.connect(Screen, MinecraftClient,
+  ServerAddress, ServerInfo, boolean, CookieStorage)`, `MessageType.Parameters.type()` returning a
+  `RegistryEntry<MessageType>` (which does have `.value()`) — all match exactly. No bugs.
+
+**Net result**: one real, confirmed, fixed defect this pass (`PersistentProjectileEntityAccessor`,
+above); one confirmed-but-currently-unreachable defect documented (`MiningRequirement` cobweb,
+above); everything else checked in this sweep was already correct. This closes out the
+"version-gate correctness" angle of this session's audit — the remaining `//#if MC` branches in
+`multiversion/` that weren't flagged by the asymmetry heuristic are lower-risk by construction
+(symmetric if/else pairs are far less likely to hide a missing branch than an asymmetric one was).
+
 <!-- MININGREQUIREMENT-COBWEB-RESOLVED-2026-09-05 -->
 ## Resolved: `MININGREQUIREMENT-COBWEB-TRACED-NOT-FIXED-2026-09-04`'s missing fact, via the same `javap` technique (2026-09-05)
 
