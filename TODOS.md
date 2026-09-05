@@ -1,5 +1,29 @@
 # TODOs
 
+<!-- TUNGSTENMOD-CLICKGOTO-MISSING-MARKGOTOTARGET-2026-09-05 -->
+## Fixed: click-to-goto never called `markGotoTarget()` (2026-09-05)
+
+`TungstenMod.java`'s own doc on `markGotoTarget()` says: *"Called wherever TARGET is written."*
+Grepped every write site of `TungstenMod.TARGET` across the whole codebase (8 total): `GotoCommand`,
+`MixinClientPlayerEntity`, `FollowEntityTask`, and 4 sites in `Py4jEntryPoint` all call it right
+after writing `TARGET`. The in-game click-to-goto handler — `TungstenMod`'s own
+`ClientTickEvents.START_CLIENT_TICK` registration, the raycast-under-crosshair-while-`useKey`-held
+flow — was the only one that didn't.
+
+Consequence: `targetIsReal` stayed `false` after a real click-to-goto request. `hasRealGotoTarget()`
+is checked by `PathExecutor`'s `resumeGotoAfterMining` logic (per `TungstenMod`'s own doc on that
+flag) specifically to tell a real in-progress goto apart from the `(0.5, 10.0, 0.5)` debug default
+TARGET starts as. Without the mark, the bot could walk off to mine mid-route on a goto that was
+started by a click, and the resume logic would see `hasRealGotoTarget() == false` and treat it as
+nothing to resume — aiming back at the debug default instead of continuing toward where the player
+actually clicked.
+
+FIXED: added `TungstenMod.markGotoTarget();` inside the `clickMode == GOTO` branch specifically —
+not the `PLACE_GOAL` branch just above it, which sets `TARGET` too but does not start navigation
+and so is not "asking for a goto" in the sense this flag tracks. Not stand-verified (C8.1) —
+real behavior change (affects the mid-mining-resume path specifically), flagging for a playtest
+that exercises click-to-goto followed by an interrupting mine.
+
 <!-- FOLLOWENTITYTASK-DEAD-STUCKTICKS-2026-09-05 -->
 ## Removed: `FollowEntityTask`'s `STUCK_TICKS` watchdog was provably unreachable (2026-09-05)
 
