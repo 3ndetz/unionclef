@@ -1,5 +1,34 @@
 # TODOs
 
+<!-- CHATINPUTSUGGESTORMIXIN-INDEX-DRIFT-2026-09-05 -->
+## Fixed: chat-highlight error caret drifted for chained commands (2026-09-05)
+
+Auditing `altoclef/mixins/` (a separate but analogous package to tungsten's own `mixin/`, which had
+three live `split("|")` regex bugs this session). `ChatInputSuggestorMixin.highlightText()` splits
+the typed line on `;` (a literal separator here, not a regex metacharacter — no `split("|")`-class
+bug in this file) but then tracks a running `index` by summing only each segment's own length:
+
+```java
+String[] split = full.split(";", -1);
+int index = 0;
+for (int i = 0; i < split.length; i++) {
+    String command = split[i];
+    index += command.length();
+    ...
+}
+```
+
+`index` is passed straight into `buildErrorMessage("Unexpected argument", full, index)`, with
+`full` being the WHOLE original string (semicolons included) — but `index` never accounts for the
+`;` characters consumed between segments, so it under-counts by `i` once more than one command is
+chained (e.g. `;stop ;goto ...`). The reported error caret drifted one character left per prior
+command in the chain. Same shape as this session's tungsten `split("|")` bugs: a splitter's pieces
+silently disagreeing with the original string's real offsets.
+
+FIXED: added 1 to `index` for each separator crossed (`if (i > 0) index += 1;`). Not
+stand-verified (C8.1) — cosmetic only (an error message's caret position while typing a malformed
+chained command), not a functional break.
+
 <!-- MACEPUNCHTASK-ISEQUAL-IGNORES-TARGET-2026-09-05 -->
 ## Fixed: `MacePunchTask.isEqual()` ignored its own `_target` field (2026-09-05)
 
