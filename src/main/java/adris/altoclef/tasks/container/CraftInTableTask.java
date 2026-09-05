@@ -417,7 +417,37 @@ class DoCraftInTableTask extends DoStuffInContainerTask {
                 }
             }
             //#else
-            //$$ // TODO [1.21.11] RecipeBook.contains() takes RegistryKey now — recipe book crafting disabled
+            //$$ // Same algorithm CraftGenericWithRecipeBooksTask already proved correct for the
+            //$$ // 2x2 inventory-grid case, adapted for the fact that -- unlike that task, called
+            //$$ // standalone with no screen open -- this method only ever runs once
+            //$$ // DoStuffInContainerTask has already opened the crafting TABLE
+            //$$ // (isContainerOpen() gates every call here). Opening InventoryScreen the way that
+            //$$ // task does would replace the already-open CraftingScreenHandler with the small
+            //$$ // 2x2 grid and desync isContainerOpen() on the very next tick -- so this sends
+            //$$ // clickRecipe against the screen that is ALREADY open instead of opening one.
+            //$$ if (mod.getModSettings().shouldUseCraftingBookToCraft() && player != null
+            //$$         && mod.getWorld() != null && mod.getSlotHandler().canDoSlotAction()) {
+            //$$     net.minecraft.util.context.ContextParameterMap ctx =
+            //$$             net.minecraft.recipe.display.SlotDisplayContexts.createParameters(mod.getWorld());
+            //$$     net.minecraft.recipe.RecipeFinder finder = new net.minecraft.recipe.RecipeFinder();
+            //$$     for (int i = 0; i < player.getInventory().size(); i++) {
+            //$$         finder.addInputIfUsable(player.getInventory().getStack(i));
+            //$$     }
+            //$$     for (net.minecraft.client.gui.screen.recipebook.RecipeResultCollection col
+            //$$             : player.getRecipeBook().getOrderedResults()) {
+            //$$         col.populateRecipes(finder, e -> true);
+            //$$         for (net.minecraft.recipe.RecipeDisplayEntry entry : col.getAllRecipes()) {
+            //$$             for (ItemStack shown : entry.getStacks(ctx)) {
+            //$$                 if (shown.getItem() == target.getOutputItem() && col.isCraftable(entry.id())) {
+            //$$                     mod.getController().clickRecipe(
+            //$$                             player.currentScreenHandler.syncId, entry.id(), true);
+            //$$                     mod.getSlotHandler().registerSlotAction();
+            //$$                     return null;
+            //$$                 }
+            //$$             }
+            //$$         }
+            //$$     }
+            //$$ }
             //#endif
 
             // Return a CraftGenericManuallyTask by default
