@@ -1,5 +1,35 @@
 # TODOs
 
+<!-- BOTBEHAVIOUR-SETPREFERREDSTAIRS-NOOP-COST-2026-09-05 -->
+## Fixed: `BotBehaviour.setPreferredStairs()` paid `applyState()`'s full cost for a documented no-op (2026-09-05)
+
+Continuing the `altoclef` core-orchestration audit (`AltoClef.java`/`BotBehaviour.java`/
+`TaskCatalogue.java`/`Settings.java`/`tasksystem/`/`control/`). `BotBehaviour.java` already
+diagnoses and fixes this exact cost class for `avoidBlockBreaking(BlockPos)`, in detail, a few
+lines above `setPreferredStairs()`: `applyState()` takes `breakMutex`/`placeMutex`/
+`propertiesMutex`/`globalHeuristicMutex` and clears+refills eight collections wholesale, and
+`breakMutex` is the SAME lock `AltoClefSettings.shouldAvoidBreaking` takes on the pathfinder's
+hottest path (measured at ~a million calls a run). That fix guards the call with `if
+(!current().blocksToAvoidBreaking.add(pos)) return;` — skip `applyState()` when nothing changed.
+
+`setPreferredStairs(boolean allow)` sat a little further down, un-guarded:
+
+```java
+public void setPreferredStairs(boolean allow) {
+    //current().preferredStairs = allow;
+    current().applyState();
+}
+```
+
+The field write is already commented out (G-0: the legacy pathfinder setting it controlled is
+gone) — this setter changes NOTHING — but it still called `applyState()` unconditionally, paying
+the full measured cost for zero effect. Confirmed live: `GetToBlockTask.java:73` and
+`KillEnderDragonTask.java:77` both call `setPreferredStairs(true)`.
+
+FIXED: removed the `applyState()` call — nothing changes here, so there is nothing to apply. Not
+stand-verified (C8.1), though this can only remove wasted synchronization work; the field write
+was already dead, so no behavior changes.
+
 <!-- ALTOCLEF-EVENTBUS-DEAD-DELETE-2026-09-05 -->
 ## Fixed: `EventBus.publish()` never actually removed unsubscribed listeners (2026-09-05)
 
