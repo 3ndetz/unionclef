@@ -1,5 +1,31 @@
 # TODOs
 
+<!-- CORE-BRIDGE-TEST-OFF-REGRESSION-IMPLEMENTED-2026-09-05 -->
+## Implemented: core_bridge_test.py's missing OFF-regression case (2026-09-05)
+
+Follow-up to `CORE-BRIDGE-TEST-MISSING-OFF-REGRESSION-2026-09-05` (further down), which found the
+module's own docstring promises a second check main() never runs, and left it undone because
+"picking that gap width correctly requires real game jump-distance knowledge this sandbox has no
+way to verify."
+
+That knowledge turned out to already be a hard constant in this exact repo, not something needing a
+live client: `MovementParkour.MAX_DIST = 4`
+(`tungsten/src/main/java/kaptainwutax/tungsten/path/movements/MovementParkour.java:47`), gated by
+`MovementQueue.isParkourShape` (`dy` in `{0,1}`, `d = |dx|+|dz| <= MAX_DIST`) before
+`isParkourEdge` will ever offer the move. This is the engine's own committed cap on a level
+running jump — the same number `docs/NAVIGATION.md` already cites an example of ("four blocks
+across and one up") without naming the constant behind it.
+
+FIXED: parameterized `run()`'s gap geometry (`far_x`/`near_x_max`, previously hardcoded to the
+original 7-wide bridge-only gap) and added a second run — 3-wide gap (a full block of margin under
+`MAX_DIST`), `planPlaceMoves` OFF — gating on `crossed and len(placed) == 0`, exactly as the
+earlier entry specified. The original bridge-ON call is untouched (same hardcoded 7-wide values
+passed explicitly). `python3 -m py_compile` confirms it parses. Commit `e21bab3b`.
+
+Not stand-verified (C8.1) — it's a test script, but still can't be RUN from this sandbox, only
+read for correctness. Whoever has stand access: run it and confirm both halves report PASS; if the
+OFF half fails, that's a real regression in ordinary move-gen, not a test gap.
+
 <!-- STORAGEHELPER-GARBAGE-TOOL-COMPARE-IMPLEMENTED-2026-09-05 -->
 ## Implemented (not just documented): the StorageHelper garbage-slot/priority tool comparison (2026-09-05)
 
