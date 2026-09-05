@@ -1,5 +1,34 @@
 # TODOs
 
+<!-- HEROTASK-ARBITRARY-HOSTILE-2026-09-05 -->
+## Fixed: `HeroTask` picked an arbitrary hostile type instead of the closest one (2026-09-05)
+
+Auditing `tasks/entity/`. `HeroTask.onTick()` looped `MinecraftClient.getInstance().world.getEntities()`
+(not distance-sorted) and acted on whichever hostile/slime happened to appear FIRST in that
+arbitrary iteration order, then asked the tracker for the closest entity of ONLY that one type — so
+with, say, a zombie and a much closer skeleton both present, it could chase the zombie and never
+even consider the skeleton, because the loop already returned on the zombie before any distance
+comparison across types happened.
+
+`EntityTracker.getClosestEntity(Class... entityTypes)` already takes multiple types together and
+returns the genuinely closest match across all of them — confirmed by reading its implementation (a
+single min-cost scan over every listed type from one position). Replaced the loop with a direct
+call: `getClosestEntity(HostileEntity.class, SlimeEntity.class)`. Dropped the now-unused
+`MinecraftClient` import. Not stand-verified (C8.1) — real targeting-priority behavior change.
+
+<!-- DOTOCLOSESTPOSITIONTASK-DEAD-BROKEN-2026-09-05 -->
+## Removed: `DoToClosestPositionTask.java` — dead (zero callers) and internally broken (2026-09-05)
+
+Auditing `tasks/entity/`. `getClosestTo()` — the method that gives this class its name — always
+returned `Optional.empty()` regardless of what it found: it looked up the closest matching entity
+only to build a debug-state string from it, discarded `getOriginPos(mod)`'s return value, and never
+touched the `_positionMap` field its own dedicated constructor exists to populate. Grepped the whole
+tree (`src/main/java`, `tungsten/src/main/java`) for any reference to the class outside its own
+file — none. Deleted rather than fixed, matching this session's established precedent for
+confirmed-dead, superseded/broken code (`TurnACornerMove.java`/`JumpToLadderMove.java` in tungsten).
+The shared parent `AbstractDoToClosestObjectTask` and its live sibling `DoToClosestEntityTask` are
+unaffected.
+
 <!-- GETTOENTITYTASK-PICKUPDROPPEDITEM-ISANNOYING-FIRSTITER-2026-09-05 -->
 ## Fixed: `isAnnoying()` returned on the loop's FIRST iteration in `GetToEntityTask`/`PickupDroppedItemTask` (2026-09-05)
 
