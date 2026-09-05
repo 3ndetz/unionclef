@@ -1,5 +1,51 @@
 # TODOs
 
+<!-- PY4JENTRYPOINT-NEARSETPLAYERTHREATS-UNDERDELIVER-2026-09-05 -->
+## Fixed: `Py4jEntryPoint.nearsetPlayerThreats()` spent its limit on misses, not hits (2026-09-05)
+
+Full read of `Py4jEntryPoint.java` (5373 lines — the py4j API surface, the last unaudited
+top-level `adris.altoclef` file this session). Confirmed one real bug:
+
+```java
+for (AbstractClientPlayerEntity player : playerList) {
+    if (player != null && player.getName() != null) {
+        PlayerThreat playerThreat = ...getPlayerThreat(player.getName().getString());
+        if (limit > 0) {
+            if (playerThreat != null) nearsetPlayerThreats.add(playerThreat);
+            limit--;                          // ran even when nothing was added
+        } else break;
+    }
+}
+```
+
+`limit--` fired on every iterated player regardless of whether a `PlayerThreat` was actually
+found for them. A caller asking for the nearest 5 threats could get fewer than 5 back (or even
+zero) whenever early entries in the list — not yet distance-sorted at this point, since the sort
+by distance-to-self runs AFTER this loop — had no threat record yet, even though later entries
+did. Worse: because the distance sort only reorders whatever subset this loop already admitted,
+the bug could also bias WHICH players make it into the "nearest" result, not just how many.
+
+FIXED: `limit--` moved inside the `playerThreat != null` branch, so the budget is only spent on
+actual hits. Feeds `nearestPlayersInfo()` and `getPlayersInfo()`, both exposed over py4j to the
+Python control layer. Not stand-verified (C8.1) — real behavior change to a live API, flagging
+for a manual check with multiple nearby players where some lack a threat record yet.
+
+**Two candidate findings investigated and ruled out** (both false positives, confirmed by careful
+verification rather than reported speculatively):
+- A mechanical cross-check of every `public static volatile` counter in `PathFinder`/
+  `MovementQueue`/`CombatController`/`TriggerBot`/`SafetySystem`/`VoidGuard` against
+  `resetRunCounters()`'s reset list surfaced several apparent omissions. All turned out to be
+  either reset via a delegated call this session's grep initially missed
+  (`CombatController.resetAimCounters()`, which itself zeroes `fightTicks`/`hopWind`/`hopDodge`/
+  `hopFar`/`aimBrake`) or genuinely live/derived state that doesn't need resetting (`lastDist`,
+  `lastForwardPressed`, `guideIdxThisSearch` — self-resetting per search, not a lifetime counter).
+- `placeStats()`'s ~720-line `String.format()` call (648 format specifiers across hundreds of
+  counters) was checked for an argument-count mismatch — the exact bug shape this file's own
+  comment already describes happening once ("ORDER MATTERS AND I GOT IT WRONG ONCE"). A first pass
+  found a 26-argument surplus, which turned out to be an artifact of the checking script not
+  stripping `//` line comments interspersed in the argument list before splitting on commas; with
+  comments stripped, specifiers and arguments match exactly (648 = 648).
+
 <!-- CHATINPUTSUGGESTORMIXIN-INDEX-DRIFT-2026-09-05 -->
 ## Fixed: chat-highlight error caret drifted for chained commands (2026-09-05)
 
