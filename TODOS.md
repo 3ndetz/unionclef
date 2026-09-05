@@ -1,5 +1,43 @@
 # TODOs
 
+<!-- MCP-TOKEN-STRUCTURALLY-UNREACHABLE-2026-09-05 -->
+## Corrected/strengthened: WHY the MCP auth token can't be found from this sandbox is now proven, not just observed (2026-09-05)
+
+Follow-up to `MCP-STAND-ENDPOINT-REACHABLE-NO-TOKEN-2026-09-05` (below, same day) — that entry
+reported the empirical fact (checked every `altoclef_settings.json` present in this sandbox,
+`mcpAuthToken` empty in all of them) but not the mechanism. Read the actual code this pass:
+
+`AltoClef.startMcpServer()` (`AltoClef.java:213-235`) mints the token with
+`UUID.randomUUID().toString()` **only if `getMcpAuthToken()` is empty**, and — critically —
+`ConfigHelper.saveConfig(...)` writes it to disk **immediately, in the same call, before
+`_mcpServer.start(mport)` ever runs**. So there is no window where the server is up and listening
+but the token hasn't been persisted yet: if a real `McpServer` is answering requests, its token was
+written to `<its own run directory>/altoclef/altoclef_settings.json`
+(`ConfigHelper.ALTO_FOLDER = "altoclef"`, `Settings.SETTINGS_PATH = "altoclef_settings.json"` —
+confirmed this pass; the file paths already checked, `deploy/run/data/tester{1,2}/altoclef/
+altoclef_settings.json`, were the CORRECT resolved locations, not a path mistake).
+
+**The reachable endpoint is `host.docker.internal:25350/mcp`.** `host.docker.internal` is Docker's
+own standard DNS name for the machine running the Docker daemon — i.e. the actual host computer
+this sandbox's containers run on top of, not a container this sandbox can see the filesystem of.
+A Minecraft client bound to `0.0.0.0:25350` and reachable at that hostname is almost certainly
+running DIRECTLY on the host machine (the founder's own development machine — likely a manually-
+launched client, not one of the `tester1`/`tester2`/`gamer-server` containers, none of which are
+`host.docker.internal` from this sandbox's point of view), with a working directory and therefore
+an `altoclef/altoclef_settings.json` that lives entirely outside any filesystem this sandbox can
+read.
+
+**This upgrades the finding from "haven't found it" to "cannot be found from here, and here is the
+exact reason why."** No further searching of this sandbox's filesystem for the token is worth
+attempting — it is not a matter of looking in the right subdirectory, it is a different machine
+entirely. The only paths forward are unchanged from the original entry: someone with access to
+that host machine's own `altoclef/altoclef_settings.json` reads off the `mcpAuthToken` field and
+relays it, or the mod is changed to also print the token to its own log at MCP-server-start (a
+`Debug.logMessage` already exists at `AltoClef.java:228-230` announcing the server start and
+NAMING the settings file/field — it deliberately does not print the token's VALUE, which is the
+right call for a bearer secret in a log file, so this is not a bug to fix, just a boundary to
+respect).
+
 <!-- EMPTY-DOLLAR-BLOCK-EXHAUSTIVE-SCAN-2026-09-05 -->
 ## Fixed one more, and this closes the "empty //$$ stub" bug class for the whole tree (2026-09-05)
 
