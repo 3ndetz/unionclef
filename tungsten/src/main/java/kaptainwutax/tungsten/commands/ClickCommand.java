@@ -3,7 +3,6 @@ package kaptainwutax.tungsten.commands;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
-import kaptainwutax.tungsten.Debug;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.TungstenMod.clickModeEnum;
 import kaptainwutax.tungsten.commands.arguments.EnumArgumentType;

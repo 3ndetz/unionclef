@@ -16,7 +16,6 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 
-import kaptainwutax.tungsten.Debug;
 import kaptainwutax.tungsten.TungstenMod;
 import kaptainwutax.tungsten.commandsystem.Arg;
 import kaptainwutax.tungsten.commandsystem.CommandException;
@@ -64,10 +63,14 @@ public class GotoTargetArgumentType implements ArgumentType<BlockTarget> {
 		try {
 		    dimension = (Dimension) Arg.parseEnum(part, Dimension.class);
 		} catch (CommandException e1) {
-		    // TODO Auto-generated catch block
-		    e1.printStackTrace();
-		    Debug.logWarning(e1.getMessage());
-		    return null;
+		    // ⛔ FIXED 2026-09-05: this used to `return null` on a bad token (not a number, not
+		    // a Dimension name). ArgumentType.parse() must return a value or throw -- brigadier
+		    // callers, and GotoCommand right after GotoTargetArgumentType.get(), dereference the
+		    // result unconditionally (target.getVec3d()). Returning null pushed a
+		    // NullPointerException into GotoCommand's try/catch instead of the clean
+		    // "invalid argument" syntax error brigadier already has a mechanism for.
+		    throw CommandSyntaxException.BUILT_IN_EXCEPTIONS.literalIncorrect()
+		        .createWithContext(reader, part);
 		}
 		break;
 	    }
