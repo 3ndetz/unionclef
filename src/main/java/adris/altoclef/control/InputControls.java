@@ -195,25 +195,19 @@ public class InputControls {
      * which is also how two systems end up disagreeing about whether a key is down.
      */
     public void releaseAll() {
-        // ⛔ THE HOLE IN THE FIRST VERSION OF THIS INSTRUMENT. release(MOVE_FORWARD) was named
-        // and releaseAll() was not, so every caller that drops all keys at once -- and there are
-        // many -- would have shown up as "(none)" and been read as "nobody takes the key".
-        if (adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDrivingNow()) {
-            try {
-                for (StackTraceElement el : new Throwable().getStackTrace()) {
-                    String cn = el.getClassName();
-                    if (cn.endsWith("InputControls")) continue;
-                    String key = "ALL:" + cn.substring(cn.lastIndexOf('.') + 1)
-                            + ":" + el.getLineNumber();
-                    synchronized (forwardStealers) {
-                        forwardStealers.merge(key, 1, Integer::sum);
-                    }
-                    break;
-                }
-            } catch (Exception ignored) {
-                // naming the caller must never break the control it rides on
-            }
-        }
+        // ⛔ FIXED 2026-09-05: this used to carry its own dedicated "ALL:..." steal-detection
+        // block here, on the theory that release(MOVE_FORWARD)'s own instrumentation would never
+        // see a releaseAll()-driven release and so would misreport "(none)" for it. That premise
+        // was wrong: the loop below calls release(input) for EVERY Input, MOVE_FORWARD included,
+        // and release()'s own stack walk already skips InputControls frames to find the real
+        // external caller -- exactly the same caller this block was independently recomputing.
+        // So a single releaseAll() steal was being recorded TWICE, once here under an "ALL:"-
+        // prefixed key and once more inside release(MOVE_FORWARD)'s own check under the bare
+        // caller key -- and this block's own check didn't even gate on isHeldDown(MOVE_FORWARD)
+        // first, unlike release()'s, so it also over-counted releases of a key that was never
+        // actually down. Both are exactly the disease this file's own comments call out
+        // elsewhere: "a counter must measure the event, not the code path near it." Removed;
+        // the loop's own release() calls already count this correctly.
         for (Input input : Input.values()) {
             release(input);
         }
