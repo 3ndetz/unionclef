@@ -1,5 +1,12 @@
 # TODOs
 
+<!-- TASK-DIR-AUDIT-2026-09-05 -->
+## `task/` directory audit: ProjectileDodge, BlockPathWalker, BridgeTask, BowShooter, PunkPlayerTask clean; one dead field pair removed in FastNavigator (2026-09-05)
+
+Audited the remaining unread files in `tungsten/.../task/` (already-fixed this session: `FollowEntityTask`, `PillarTask`, `SlimeBounceTask`, `TrailTracker`, `ShieldBlocker`, `FollowPlayerTask`). Unlike `path/specialMoves/`, which had never been touched before this session and turned out to hold 9+ real bugs, every file here carries EXTENSIVE prior debugging history (5+ commits each for `BowShooter`/`BridgeTask`/`FastNavigator`) — full reads of `ProjectileDodge.java`, `BlockPathWalker.java` (735 lines), `BridgeTask.java`, `BowShooter.java` (543 lines), and `PunkPlayerTask.java` found no new confirmed bugs; every non-trivial branch in all five already carries a dated, measured justification from a real stand run. `ProjectileDodge.java` has one already-documented open defect (a final-word key-clear race) that a predecessor deliberately left unfixed pending measurement — left alone, not re-litigated.
+
+**One confirmed fix, in `FastNavigator.java`** (830 lines): a write-only field pair. `pendingIsBridge` was assigned from `nextPhysicsIsBridge` in exactly one place and never read anywhere in the codebase (confirmed via a codebase-wide grep); `nextPhysicsIsBridge` itself was only ever set to `false` — its declaration and two reset sites — never `true`, anywhere. Superseded by `nextLegBridge`/`nextLegMovement`, which the actual bridge-vs-physics routing logic in `planAhead()`/`tick()` reads and branches on. Same "declared, never actually wired" shape as `FollowEntityTask`'s `STUCK_TICKS` above and `MovementHelper.java`'s dead code earlier this session. Removed both fields and their three write sites. No behavior change — a write with no reader can never affect anything — so nothing to flag for playtest.
+
 <!-- TUNGSTENMOD-CLICKGOTO-MISSING-MARKGOTOTARGET-2026-09-05 -->
 ## Fixed: click-to-goto never called `markGotoTarget()` (2026-09-05)
 
