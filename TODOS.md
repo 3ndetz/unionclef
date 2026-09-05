@@ -1,5 +1,36 @@
 # TODOs
 
+<!-- MCPSERVER-SETBUILDERWALKS-SCHEMA-BOOL-2026-09-05 -->
+## Fixed: `McpServer`'s `setBuilderWalks` tool had a mismatched schema token and a divergent arg-extraction (2026-09-05)
+
+Reading `mcp/McpServer.java` (540 lines — the last substantial unaudited altoclef file after two
+concurrent forks closed out `Py4jEntryPoint.java` and `mixins/`/`butler/`/`multiversion/`/`ui/`).
+One line, two bugs, both found by comparing against the file's own convention (5 other boolean
+tool parameters, all consistent with each other):
+
+```java
+tool("setBuilderWalks", ..., schema("on:boolean"),
+        a -> api.setBuilderWalks(Boolean.parseBoolean(String.valueOf(a.get("on")))));
+```
+
+1. **Schema token typo**: `schema()`'s helper switches on `"int"`/`"bool"`/`"strarray"`, defaulting
+   to `"string"` for anything else. `"on:boolean"` doesn't match `"bool"`, so it silently fell into
+   the string default — the JSON schema this server publishes via `tools/list` told every MCP
+   client (including the Claude agent this server exists specifically to serve, per its own header
+   comment) that `on` is a `string`, when the handler actually treats it as a boolean.
+2. **Divergent arg extraction**: every other boolean parameter uses the `argBool(a, k)` helper
+   (`a.get(k).getAsBoolean()`), which throws on a missing/malformed argument — surfacing as a
+   proper MCP tool-call error, this file's own established convention (`toolsCallResult`'s
+   try/catch turns any handler exception into `isError: true`). This one instead did
+   `Boolean.parseBoolean(String.valueOf(a.get("on")))`: for a genuine JSON boolean this happens to
+   work, but for a MISSING `on` argument, `a.get("on")` returns `null`, `String.valueOf(null)`
+   yields the literal string `"null"`, and `Boolean.parseBoolean("null")` silently returns
+   `false` — turning a malformed call into "quietly disable builder-walking" instead of an error.
+
+FIXED: `schema("on:bool")` and `argBool(a, "on")`, matching every sibling boolean parameter. Not
+stand-verified (C8.1) — this changes what a real Claude/MCP client sees in the tool's schema and
+how a malformed call behaves, so flagging for a manual MCP `tools/list` + `tools/call` check.
+
 <!-- PY4JENTRYPOINT-NEARSETPLAYERTHREATS-UNDERDELIVER-2026-09-05 -->
 ## Fixed: `Py4jEntryPoint.nearsetPlayerThreats()` spent its limit on misses, not hits (2026-09-05)
 
