@@ -273,9 +273,16 @@ public class FollowEntityTask {
                 && hasLineOfSight(player, effectiveTarget.add(0, 1.0, 0))) {  // body-centre, not feet (terrain lips)
             steerTicks++;
             // keep the drift-prone physics path OFF so it can't seize the executor
-            if (TungstenModDataContainer.PATHFINDER.active.get())
+            // ⛔ FIXED 2026-09-05: missing braces made stop.set(true) run UNCONDITIONALLY every
+            // time this branch fired, while noteStop() only ran when active.get() was true --
+            // silently breaking the noteStop/stop.set(true) pairing every other stop site in the
+            // codebase keeps (verified by grep across the whole tree). No behavior change here
+            // (find() resets stop to false on its next search regardless), but stopByDump() was
+            // undercounting this site whenever the pathfinder happened to be idle when it fired.
+            if (TungstenModDataContainer.PATHFINDER.active.get()) {
                 kaptainwutax.tungsten.path.PathFinder.noteStop("FollowEntityTask@279");
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
+            }
             if (TungstenModDataContainer.EXECUTOR != null
                     && TungstenModDataContainer.EXECUTOR.isRunning())
                 TungstenModDataContainer.EXECUTOR.stop = true;
