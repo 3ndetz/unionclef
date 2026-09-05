@@ -1,5 +1,37 @@
 # TODOs
 
+<!-- CRAFTINTABLE-RECIPEBOOK-GAP-REFINED-2026-09-05 -->
+## Refinement to the entry below: the table screen is ALREADY open, so "open it" is the wrong framing (2026-09-05)
+
+Checked one more thing about `CRAFTINTABLE-RECIPEBOOK-GAP-SHARPENED-2026-09-05` (immediately below)
+before considering it settled: read `DoStuffInContainerTask.onTick` (the base class
+`DoCraftInTableTask` extends). `containerSubTask(mod)` — the method holding the disabled gate — is
+only ever called when `isContainerOpen(mod)` is already true (`DoStuffInContainerTask.java:76-78`).
+**The crafting-table `CraftingScreenHandler` is already open by the time this code runs.**
+
+That changes what a fix would actually need, and makes the earlier framing ("extend
+`CraftGenericWithRecipeBooksTask` to open the crafting-table screen instead of `InventoryScreen`")
+wrong in a specific way, not just imprecise: `CraftGenericWithRecipeBooksTask`'s `//$$` block opens
+`InventoryScreen` whenever `!StorageHelper.isPlayerInventoryScreenOpen()` — which would be true
+here, since a `CraftingScreenHandler` is open, not the player's own inventory screen. Calling that
+task from `CraftInTableTask` as-is would FORCE-CLOSE the already-open table and replace it with the
+small 2x2 screen, on every tick this ran — not merely "find nothing and stall" as the previous
+entry said, but actively fight the container-open state `DoStuffInContainerTask` depends on
+(`isContainerOpen` would then read false next tick, likely causing a re-navigate/re-open loop).
+
+**Sharper scope for a real fix**: no screen needs to be OPENED at all here — one is already open
+and correct. What's needed is a variant of `CraftGenericWithRecipeBooksTask`'s already-proven
+`RecipeFinder`/`getOrderedResults()`/`clickRecipe` body that (a) skips the
+`isPlayerInventoryScreenOpen()`/`setScreen(InventoryScreen)` step entirely when a
+`CraftingScreenHandler` is already open, and (b) sends `clickRecipe` against THAT screen's
+`syncId` instead. The recipe-finding and click-sending logic itself needs no change — only the
+screen-management wrapper around it differs between the 2x2 (`CraftInInventoryTask`, screen not
+pre-opened) and 3x3 (`CraftInTableTask`, screen pre-opened by the caller) cases.
+
+Still not attempted — same reasons as the entry below (live path, regression risk, no stand) — but
+now precise enough that whoever picks it up does not have to re-derive this interaction from
+scratch.
+
 <!-- CRAFTINTABLE-RECIPEBOOK-GAP-SHARPENED-2026-09-05 -->
 ## Sharpened, not fixed: CraftInTableTask never uses the ALREADY-WORKING recipe-book fast path on 1.21.11 (2026-09-05)
 
