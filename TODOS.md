@@ -1,5 +1,58 @@
 # TODOs
 
+<!-- MININGREQUIREMENT-COBWEB-RESOLVED-2026-09-05 -->
+## Resolved: `MININGREQUIREMENT-COBWEB-TRACED-NOT-FIXED-2026-09-04`'s missing fact, via the same `javap` technique (2026-09-05)
+
+That 2026-09-04 entry (below, left as the historical record) named exactly one blocking fact it
+had no way to check: whether `Blocks.COBWEB.getDefaultState().isToolRequired()` is `true` or
+`false` on this Minecraft/Yarn version. Same technique as
+`PERSISTENTPROJECTILEACCESSOR-INGROUND-RESOLVED-2026-09-05` above: extracted the real 1.21.11
+`Blocks.class` from the local Loom cache and disassembled it with `javap -c -p -constants`
+(read-only, not a compile). Located the `COBWEB` field's assignment in the static initializer and
+read its full `AbstractBlock.Settings` builder chain directly from the bytecode:
+
+```
+ldc_w         #4002    // String cobweb
+...
+invokestatic  #1300    // AbstractBlock$Settings.create()
+getstatic     #3122    // MapColor.WHITE_GRAY
+invokevirtual #1434    // AbstractBlock$Settings.mapColor(...)
+getstatic     #4009    // BlockSoundGroup.COBWEB
+invokevirtual #1319    // AbstractBlock$Settings.sounds(...)
+invokevirtual #1445    // AbstractBlock$Settings.solid()
+invokevirtual #1464    // AbstractBlock$Settings.noCollision()
+invokevirtual #2694    // AbstractBlock$Settings.requiresTool()   <-- the answer
+ldc_w         #1899    // float 4.0f
+invokevirtual #1324    // AbstractBlock$Settings.strength(4.0F)
+...
+invokestatic  #1344    // register("cobweb", ..., settings)
+putstatic     #4011    // Blocks.COBWEB
+```
+
+`.requiresTool()` IS called in cobweb's own settings chain — **confirmed `true`, not guessed.**
+So the 2026-09-04 entry's "if true" branch is the live one: `getMinimumRequirementForBlock()`'s
+pickaxe-tier loop does run for cobweb, finds no suitable pickaxe tier (correctly — cobwebs need
+shears, not a pickaxe), and falls through to the `DIAMOND` fallback, exactly as traced.
+
+**But traced further, and the defect turns out to be currently unreachable, not merely
+untested.** Checked every `shear(...)` entry in `TaskCatalogue.java` (10 total — cobweb, leaves,
+vine, grass, lily_pad, tall_grass, fern, large_fern, dead_bush, glow_lichen): **every single one**
+calls `.dontMineIfPresent()`, a uniform pattern across the whole shear-collectible resource set,
+not something special-cased for cobweb. That flag keeps every shear-only resource, cobweb
+included, out of `ResourceTask.java:219`'s `mineIfPresent` array — the one call site the
+2026-09-04 entry found that would actually act on the wrong `DIAMOND` answer by removing cobweb
+from candidates. The other call site (`StorageHelper.java:211`, the durability heuristic) was
+already shown harmless in the original entry regardless of which value is correct.
+
+**Not fixed, deliberately, and this is not a contradiction with resolving it**: the function
+itself still has a real, confirmed logic defect (its result for any shear-only block is simply
+wrong), but changing its fallback behavior for a path that is currently never exercised, on the
+strength of two callers I've now checked but with no guarantee a third doesn't exist somewhere I
+haven't traced, risks becoming a purely theoretical improvement with unreviewed side effects for
+no measurable benefit. Recorded so a future pass — especially one adding a NEW caller of
+`getMinimumRequirementForBlock()` — knows this specific gap exists and is confirmed, not merely
+suspected.
+
 <!-- PERSISTENTPROJECTILEACCESSOR-INGROUND-RESOLVED-2026-09-05 -->
 ## Resolved (not fixed by guessing): `PersistentProjectileEntityAccessor`'s dead `inGround` — via `javap` on the real 1.21.11 jar, no compile needed (2026-09-05)
 
