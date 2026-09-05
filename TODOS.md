@@ -1,5 +1,25 @@
 # TODOs
 
+<!-- EXITWATERMOVE-DEAD-ANTISTALL-2026-09-05 -->
+## Fixed: `ExitWaterMove` had a dead anti-stall variable, no way to bail out when stuck (2026-09-05)
+
+`ExitWaterMove.generateMove()` declared `closestDistance = Double.MAX_VALUE` and never read or
+wrote it again — a vestigial no-op. The sibling `SwimmingMove.generateMove()` uses the identical
+variable name for a real check (`if (closestDistance > distance) closestDistance = distance; else
+break;`): stop generating ticks once distance-to-target stops improving. `ExitWaterMove` also
+lacked `SwimmingMove`'s `!newNode.agent.horizontalCollision` loop guard. Net effect: an agent
+stuck on a bank lip while climbing out of water had no early exit and would burn the full 40-tick
+budget pressing forward into the obstruction, instead of bailing like `SwimmingMove` does.
+
+FIXED: added the same anti-stall break and collision guard, restructured to recompute `distance`
+AFTER the move (matching `SwimmingMove` exactly) rather than before it, so the comparison reflects
+the current iteration's actual progress. Also dropped unused imports (`Stream`, `Streams`,
+`TungstenMod`, `RenderHelper` — the last only appeared in a dead commented-out line) from this
+file and `ClimbALadderMove.java` (which additionally had unused `DirectionHelper`,
+`DistanceCalculator`, `LadderBlock`, `Box`, `VoxelShape`). Not stand-verified (C8.1) — this changes
+behavior only in the stuck/stall case; the common case (reaches the node within distance 0.2) is
+unaffected.
+
 <!-- BETTERBLOCKPOS-EQUALS-CONTRACT-2026-09-05 -->
 ## Fixed: `BetterBlockPos.equals()` threw instead of returning `false` on an incompatible type (2026-09-05)
 
