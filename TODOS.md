@@ -1,5 +1,96 @@
 # TODOs
 
+<!-- HELPERS-DIR-AUDIT-2026-09-05 -->
+## Audited `helpers/` (DirectionHelper, DistanceCalculator, BlockShapeChecker, ArrayChunkSplitter, StringProcessorHelper, MathHelper, AgentChecker, DimensionVer, render/RenderHelper) — 1 confirmed threshold bug, 1 duplicate-drift gap, 2 dead-code/inefficiency cleanups (2026-09-05)
+
+`DistanceCalculator`/`DirectionHelper` are called from nearly every `specialMoves` class already
+audited this session (`calcYawFromVec3d`, `calcPitchFromVec3d`, `getHorizontalEuclideanDistance`,
+etc.), so a sign/off-by-one error here could explain multiple downstream symptoms at once. Hand-
+verified `calcYawFromVec3d` and `calcPitchFromVec3d` against all four cardinal directions and the
+established "negative pitch aims up" convention — both correct, no bug.
+
+**Fixed, confirmed threshold bug**: `DistanceCalculator.getHorizontalManhattanDistance(Vec3d,
+Vec3d)` computed `dx + dz` instead of `|dx| + |dz|`. Both live callers use it as a `<=`/`<`
+threshold gate (`Node.java:149`'s `ClimbALadderMove` trigger at `<=0.5`,
+`BlockSpacePathFinder.java:590`'s heuristic `dy` weighting at `<32`). Whenever `dx` and `dz` share
+a sign (target both west+north, or both east+south, of the origin) the buggy sum can go strongly
+NEGATIVE — e.g. `dx=-6,dz=-4` gives a true distance of 10 but a buggy result of -10, and `-10 <=
+0.5` is always true regardless of actual distance. Fixed with `Math.abs()` on both terms.
+
+**Fixed, NO-DUPLICATES drift**: `BlockShapeChecker.isBlockNormalCube()` is an independent
+duplicate of the already-audited `MovementHelperB.isBlockNormalCube` (both port baritone's
+`MovementHelper.java:788-804`, per that method's own citation comment) that had drifted apart —
+missing `BambooBlock` and `PistonExtensionBlock` from its blacklist, which the more complete,
+citation-verified `MovementHelperB` version has. Matched the two. Confirmed live via
+`BlockNode.java:550`.
+
+**Fixed, dead code / inefficiency**: `DirectionHelper.getHorizontalDirectionFromYaw()`'s negative-
+yaw `||` clauses (`yaw >= -315 && yaw < -225`, etc.) were provably unreachable — `yaw` is
+normalized to `[0,360)` two lines above the if-chain — and the positive-range checks alone already
+cover the full range correctly (verified by hand against all four cardinal yaws). Zero behavior
+change. `ArrayChunkSplitter.splitArrayIntoChunksOfX()` allocated every row at the full `chunkSize`
+via a 2D `Array.newInstance(...)`, then immediately discarded each row via `Arrays.copyOfRange`
+(the only way to get a correctly-short last chunk) and redundantly re-copied the same range via
+`System.arraycopy` — not a correctness bug, but live in `PathFinder.java`'s per-node parallel-
+chunking (called on every search node expansion), so the wasted allocation/copy ran hot. Fixed to
+allocate only the outer array and let `copyOfRange` size each row once.
+
+**Clean, no changes**: `StringProcessorHelper`, `MathHelper`, `AgentChecker`, `DimensionVer`,
+`render/RenderHelper.java` (already carries the producer-side render gate and search-render
+throttle from an earlier round). `helpers/movement/` has no unaudited files — `StreightMovement-
+Helper`, `CornerJumpMovementHelper`, `NeoMovementHelper` were already fully covered.
+
+Not stand-verified (C8.1) — the Manhattan-distance and duplicate-drift fixes change real gating
+behavior; the dead-code/inefficiency fixes are zero-behavior-change.
+
+<!-- AGENT-JAVA-AUDIT-2026-09-05 -->
+## Audited `agent/Agent.java` (2218 lines) — the central per-tick physics sim every move generator wraps; 1 dead-code cleanup fixed, 1 architectural question left OPEN (2026-09-05)
+
+Every `Node` in the move generators audited this session (`specialMoves/*`, `Node.createNode()`)
+wraps an `Agent` snapshot advanced ONE tick via `Agent.of(parent.agent, input).tick(world)`
+(`Node.java`'s two-arg constructor) — so a bug in `Agent.java` itself would explain symptoms
+across every move type at once. Read the full tick/movement/velocity/collision/fall pipeline
+(`tickPlayer`→`tickLiving`→`tickMovementClientPlayer`→`tickMovementPlayer`→`travelLiving`→`move`→
+`fall`) plus `updateVelocity`, `applyMovementInput`, `adjustMovementForSneaking`,
+`computeFallDamage`. It reads as an extremely faithful, line-faithful vanilla
+`LivingEntity`/`ClientPlayerEntity`/`Entity` port — matching every real vanilla constant checked
+(0.91F ground drag, 0.98F gravity multiplier, 0.08D base fall accel, sprint swim 0.9F/0.8F, the
+`fallDistance - 3 - jumpBoost` fall-damage formula matching the "3 blocks safe" constant used
+pervasively in the move generators' own fall-damage guards). No `equals()`/`hashCode()` override
+exists on `Agent` (so the missing-`instanceof`-guard contract bug found in `BlockNode`/
+`BetterBlockPos` doesn't apply here), no `Thread.sleep`, and the one `RenderHelper.renderNode`
+call is in the drift-diagnostics method (compares sim vs. real player state once per REAL tick,
+gated behind a measured-drift threshold) — not the hot search path.
+
+**Fixed — dead code**: `tickMovementClientPlayer()` declared `prevSneaking` and `wasWalking` and
+never read either afterward (leftover capture variables from the vanilla port — vanilla uses
+these for sound/particle edge-triggers this simulation doesn't need). `isWalking()` had exactly
+one caller (the removed `wasWalking` line), so it went too. Confirmed via grep that the method it
+delegated to (`hasForwardMovement()`) is still live elsewhere (`Agent.java:1415`, cited in
+`BowShooter.java`/`RunAwayTask.java` comments) — only the dead wrapper and its two dead locals
+were removed. No behavior change.
+
+**OPEN, not fixed — possible one-tick staleness in `inSneakingPose`, specific to this port's
+fresh-`Agent`-per-move-tick architecture**: `tickMovementClientPlayer()` reads
+`this.input.playerInput.sneak()` at line ~413 to help decide `inSneakingPose`, and only calls
+`this.input.tick()` (which refreshes `playerInput` from the just-set `this.keySneak` etc.)
+*after* that read. In real vanilla this is fine — `playerInput` from the end of the PREVIOUS real
+tick is a meaningful value to compare against. But here, every single simulated move-tick
+constructs a **brand-new** `Agent` via `Agent.of(parent.agent, ...)`, and `Agent.of()` never sets
+`agent.input.playerInput` before `tick()` runs — so on every simulated tick, this pre-`tick()`
+read of `playerInput.sneak()` sees the hardcoded `TungstenPlayerInput.DEFAULT` (always `false`),
+never the real previous tick's actual sneak key, because that state lives on a *different* `Agent`
+object (`parent.agent`) that `Agent.of()` never wires into `input.playerInput` before this read.
+Net effect (if it matters at all): `inSneakingPose` may under-report on a move's first tick,
+though it's OR'd with a second condition (`!sleeping && !wouldPoseNotCollide(STANDING)`) that
+independently forces it true in any space too tight to stand, so the exposure is narrowed to open
+areas where a move explicitly requests sneaking. **Not fixed** because: (a) it's unclear whether
+this is a real divergence from intended behavior or an accepted simplification of the "no true
+continuous tick history" architecture, (b) a wrong fix to this foundational per-tick construction
+path risks being worse than the narrow issue itself, and (c) C8.1 blocks any stand run that could
+actually measure the effect. Flagging per the `SPRINTJUMPMOVE-DEADZONE-OPEN` precedent — a
+question for whoever next touches `Agent.of()`/`AgentInput`, not a guessed fix.
+
 <!-- NODE-CREATENODE-STALE-AGENT-DANGLING-IMPORTS-2026-09-05 -->
 ## Fixed: highest-volume stale-`agent` bug, in `Node.createNode()` itself; removed dangling imports of deleted classes (2026-09-05)
 
