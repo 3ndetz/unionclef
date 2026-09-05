@@ -1,5 +1,57 @@
 # TODOs
 
+<!-- GETTOENTITYTASK-PICKUPDROPPEDITEM-ISANNOYING-FIRSTITER-2026-09-05 -->
+## Fixed: `isAnnoying()` returned on the loop's FIRST iteration in `GetToEntityTask`/`PickupDroppedItemTask` (2026-09-05)
+
+Auditing `tasks/movement/` (the task layer that calls `Nav.java`/tungsten primitives, itself
+already read directly and found extremely mature). Both classes' `isAnnoying()` had the identical
+copy-paste bug:
+
+```java
+private boolean isAnnoying(AltoClef mod, BlockPos pos) {
+    if (annoyingBlocks != null) {
+        for (Block AnnoyingBlocks : annoyingBlocks) {
+            return mod.getWorld().getBlockState(pos).getBlock() == AnnoyingBlocks ||
+                    ... instanceof DoorBlock || ... instanceof FenceBlock ||
+                    ... instanceof FenceGateBlock || ... instanceof FlowerBlock;
+        }
+    }
+    return false;
+}
+```
+
+The `return` sits INSIDE the loop body but fires unconditionally on the first iteration — so only
+`annoyingBlocks[0]` (`VINE`) was ever actually compared against. The other 13 entries in the shared
+array (`NETHER_SPROUTS`, `CAVE_VINES`, `CAVE_VINES_PLANT`, `TWISTING_VINES`,
+`TWISTING_VINES_PLANT`, `WEEPING_VINES_PLANT`, `LADDER`, `BIG_DRIPLEAF`, `BIG_DRIPLEAF_STEM`,
+`SMALL_DRIPLEAF`, `TALL_GRASS`, `SHORT_GRASS`, `SWEET_BERRY_BUSH`) were silently never checked —
+the `instanceof` checks for doors/fences/flowers still worked since they're part of the same
+expression regardless of loop position.
+
+Confirmed via direct comparison against the sibling `CustomBaritoneGoalTask.isAnnoying()` in the
+same package, which uses the identical `annoyingBlocks` array and gets the loop right (`return
+true` on a match inside the loop, fall through to the `instanceof` checks only after the array is
+exhausted without one).
+
+**Impact**: `stuckInBlock()` (which both classes use to trigger the shimmy-unstuck recovery) could
+never detect the bot as stuck against 13 of the 14 listed block types — exactly the terrain
+`GetToEntityTask`'s own class comment calls out ("This happens all the time in mineshafts and
+swamps/jungles").
+
+FIXED: rewrote both to hoist the block lookup once, loop correctly (`if (block == annoyingBlock)
+return true;`), and fall through to the `instanceof` checks afterward — matching
+`CustomBaritoneGoalTask`'s already-correct shape exactly.
+
+**Same bug already found and partly fixed once before, elsewhere**: `git blame`/history shows this
+identical defect was found and fixed in `CustomBaritoneGoalTask`/`TimeoutWanderTask` back in an
+earlier round (commit message: *"isAnnoying() loop returned on first iteration, only checked
+VINE"*) — but the fix never propagated to these two sibling copies, or to a third
+(`InteractWithBlockTask.java`, in `tasks/`, not `tasks/movement/` — **still has the bug**, out of
+this pass's scope, flagged for whoever audits that directory next).
+
+Not stand-verified (C8.1) — real behavior fix, restores stuck-detection for most of the
+annoying-block list in these two classes.
+
 <!-- COLLECTFOODTASK-DEAD-SMELTING-2026-09-05 -->
 ## Fixed: `CollectFoodTask`'s smelting path was dead — could gather raw meat forever without ever cooking it (2026-09-05)
 
