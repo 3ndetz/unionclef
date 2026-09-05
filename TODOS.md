@@ -1,5 +1,32 @@
 # TODOs
 
+<!-- ALTOCLEF-COMMANDEXECUTOR-CHAIN-TRYCATCH-2026-09-05 -->
+## Fixed: altoclef's `CommandExecutor.execute()` aborted a whole ";"-chain on its first bad command (2026-09-05)
+
+Extending the audit from `tungsten` into altoclef's OWN command layer (a separate implementation
+from tungsten's `commandsystem`/`commands`, which had 3 confirmed live `split("|")` regex bugs
+fixed earlier this session). Checked every `.split(...)` call in `commandsystem`/`commands` first
+— none use a regex metacharacter as a literal (the separators here are `;`, `,`, space, none of
+which are special), so that specific bug class does not reproduce on this side.
+
+Found a different bug in the same spirit: `CommandExecutor.execute(String, Runnable,
+Consumer<CommandException>)` split a chat line on `";"` into `parts`, then wrapped the ENTIRE
+per-part resolution loop in one `try { ... } catch (CommandException e) { getException.accept(e); }`.
+Since `getCommand()` throws on the FIRST unrecognized command name, that exception unwound out of
+the loop entirely — every part after the failing one was left as a never-assigned `null` in
+`commands[]`, not because it was actually invalid, but because it was simply never reached.
+`executeRecursive()` then reports EACH of those `null` slots as its own `"Invalid command: <part>"`,
+so a chain like `;cmd1;badcmd;cmd3` produced: the correct error for `badcmd`, PLUS a spurious
+duplicate for `badcmd` from the null-handling path, PLUS a spurious `"Invalid command: cmd3"` for a
+command that may have been perfectly valid and was never even checked. Confirmed live: `execute()`
+is the real chat-command dispatch path (`AltoClef.java:500`, several `Butler.java` call sites).
+
+FIXED: moved the `try/catch` inside the loop so each `;`-separated part is resolved independently —
+one bad command reports its own error and leaves only its own slot `null`; every other part still
+gets checked and, if valid, still runs. Commit `608433f1`. Not stand-verified (C8.1) — real
+behavior change, flagging for a manual test with a chained command that has one bad segment in the
+middle (e.g. `;stop;nonsense;goto 0 0 0`).
+
 <!-- TUNGSTENCONFIG-DEFAULT-CONTRADICTS-VERDICT-2026-09-05 -->
 ## Fixed: two `TungstenConfig` defaults contradicted their own documented measurement conclusions (2026-09-05)
 
