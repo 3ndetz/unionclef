@@ -1,5 +1,76 @@
 # TODOs
 
+<!-- BARITONE-TUNGSTEN-MOVEMENT-GAP-SURVEY-2026-09-05 -->
+## Survey: baritone's 8 movement types against `FastPlanner`'s actual move set (2026-09-05)
+
+Both the tungsten+altoclef Java bug audit and the `deploy/` Python bug audit have now read every
+file in scope and hit real diminishing returns (the last ~90 files checked in `deploy/` turned up
+2 bugs against 5 in the first ~20). `docs/CHECKLIST.md` section 1b ("READ UPSTREAM FIRST") and
+this project's own END GOAL point at a different kind of next pass: not more bugs in what exists,
+but which of baritone's movement CAPABILITIES `FastPlanner` — the live production planner
+(`FastPlanner.plan`/`expand`, called from `PathFinder.findBlockPath`, confirmed live by the
+2026-09-05 `canReach` fix earlier today) — is still missing. `docs/NAVIGATION.md`'s own "WHICH
+ENGINE CAN DO WHAT" table (line 47 on) already tracks the physics-vs-block-engine split in general
+terms (swim/dive/ladder/slime vs break/place) — this entry is narrower and newer: it checks
+`FastPlanner.expand()` itself, move by move, against baritone's actual 8
+`baritone/.../pathing/movement/movements/Movement*.java` classes (source reference only, never
+compiled), since that table predates `FastPlanner` and does not enumerate at this granularity.
+
+Read `FastPlanner.java` in full (1627 lines) and each of baritone's 8 movement classes. Result,
+by baritone type:
+
+| baritone type | tungsten status | where |
+|---|---|---|
+| `MovementTraverse` (same-level cardinal step) | **COVERED** | `step()`, FastPlanner.java:961, `dy` loop starting at 0 |
+| `MovementDiagonal` | **COVERED** | `expand()`, FastPlanner.java:596-602, `DIAGONALS` loop with the two-orthogonal-cells-clear guard baritone itself requires |
+| `MovementAscend` (step up, incl. jump) | **COVERED** | `step()`, FastPlanner.java:980-1069, `dy` up to `CLIMB_MAX` (3), gated on `PlayerFit.passableAt`/`JUMP_HEIGHT` exactly as baritone's own cost function gates it |
+| `MovementDescend` (step down, plain drop) | **COVERED, for a drop with no mining** | same `step()` loop, `dy` down to `-MAX_FALL` (3) |
+| `MovementFall` (longer uncontrolled drop) | **COVERED** | same loop plus the slime-drop generator (FastPlanner.java:791-865) for drops beyond `MAX_FALL` when a slime pad is available; an ordinary fall beyond `MAX_FALL` onto solid ground with no pad is capped out (by design — see `MAX_FALL`'s own comment: "fall damage stays survivable") |
+| `MovementParkour` (running jump over a gap) | **COVERED** | `parkour()`, FastPlanner.java:1339 on, straight jumps up to `MAX_JUMP_GAP` (4), landing same level or one down |
+| `MovementPillar` (jump + place-under-self, repeatable) | **COVERED** | `pillarUp()`, FastPlanner.java:1223-1249, explicitly ported clause-for-clause from `MovementPillar.cost` (see `pillarImpossible`, FastPlanner.java:1251 on, citing `MovementPillar.java:146-195` by line) |
+| `MovementDownward` (mine straight down, one block at a time, no lateral move at all) | **ABSENT** — see below | — |
+
+**One genuine, currently-open gap found, already self-documented and DISABLED in the file itself**
+(not new — cross-referencing per `docs/CHECKLIST.md`'s own rule to check before filing a finding
+as new): `step()`'s comment block at FastPlanner.java:1006-1023 states outright that a
+"break-and-descend" variant of `breakThrough()` does not exist — `breakThrough()` (FastPlanner.java
+1086 on) only mines through a WALL on a cardinal step at the SAME level, never through the ceiling
+above a lower landing on a descend. The commented-out guard right below it
+(FastPlanner.java:1025-1028) was tried, measured (`nav_gaps` regressed 12/12 -> 10/12), and
+reverted specifically because turning the guard on with no break-and-descend generator to back it
+up makes previously-plannable descends UNREACHABLE rather than correctly mined. This is real,
+already known to whoever wrote that comment, and left open on purpose ("until that exists this
+stays off") — not a rediscovery, just confirming it is still true as of today's `HEAD` and that no
+later commit closed it.
+
+**One capability with LOW confidence, genuinely not found anywhere in `FastPlanner.expand()`**:
+baritone's `MovementDownward` — mining straight down through solid ground at a fixed `x,z`, one
+block per step, with no horizontal component at all — has no equivalent. `expand()` only ever
+calls `step()`/`parkour()` over `CARDINALS`/`DIAGONALS` (FastPlanner.java:593-602), both of which
+always change `x` or `z`; there is no `dx=0,dz=0` successor anywhere in the file, so a goal
+directly below the start through solid rock cannot be reached by this planner via any move it
+generates — `git grep -n "downward\|Downward" tungsten/` and `git grep -n "MineDown\|mineShaft\|digDown"
+tungsten/ src/main/java/adris/altoclef/` both came back with nothing relevant (only prose comments
+using the word "downward"/"straight down" in an unrelated sense). **Confidence is LOW that this
+actually matters in practice**, for a reason worth stating plainly rather than filing this as an
+urgent gap: altoclef's own mining tasks (`MineOreTask` etc.) do not obviously route a straight
+vertical shaft THROUGH `FastPlanner`/`;goto` at all — they are more likely a direct dig-toward-target
+loop, the same way `CombatPathfinder` bypasses `FastPlanner` for combat (per `docs/NAVIGATION.md`'s
+"third generator" section). Whether any real course or playthrough goal ever asks the general-
+purpose navigator for a goal at `(x, y-N, z)` through solid ground — as opposed to a task that mines
+directly — is UNVERIFIED here; grepping the callers of `PathFinder.findBlockPath`/`FastPlanner.plan`
+for anything resembling "go straight down" would settle it, and is a natural first step for whoever
+picks this up, before writing a new move generator for a gap that may never actually fire.
+
+**Not attempted here on purpose**: implementing either gap. `AGENTS.md` rule 6 is explicit that a
+core move-generation addition is exactly the kind of change that must be planned and tested
+properly, not improvised in one pass — and both TEST and VIDEO/ASSESS in `docs/CHECKLIST.md`'s loop
+are blocked regardless by C8.1 (no docker/RCON from this sandbox), so a speculative implementation
+here could not even be run once, let alone the 5-6 times the checklist's own RULE ONE/4b require
+before trusting a number. This entry is the PLAN step only.
+
+Not stand-verified (C8.1) — this is a pure static-reading survey; no code changed.
+
 <!-- CORE-BRIDGE-TEST-MISSING-OFF-REGRESSION-2026-09-05 -->
 ## Open: `core_bridge_test.py`'s own docstring promises a second verification the script never runs (2026-09-05)
 
