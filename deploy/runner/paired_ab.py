@@ -155,7 +155,13 @@ def main():
         # Quoting the flat bar on three pairs would have called a result ESTABLISHED at t=2.54
         # that the right critical value rejects. The bar is kept -- it is what this repo uses --
         # but the critical value for the actual n is printed beside it.
-        crit = {2: 4.30, 3: 3.18, 4: 2.78, 5: 2.57, 6: 2.45, 7: 2.36, 8: 2.31,
+        # ⛔ df=1 (n=2 pairs) WAS MISSING FROM THIS TABLE. The lookup fell through to the generic
+        # 2.05 default meant for large samples, so the smallest possible series -- exactly where
+        # this guard matters most -- was scored against a bar 6x too lenient (true two-sided 95%
+        # critical value at df=1 is 12.71, not 2.05). A t of 2.1 on two pairs would have printed
+        # "CLEARS the two-sided 95% bar", which is the false-positive this whole check exists to
+        # catch.
+        crit = {1: 12.71, 2: 4.30, 3: 3.18, 4: 2.78, 5: 2.57, 6: 2.45, 7: 2.36, 8: 2.31,
                 9: 2.26, 10: 2.23, 11: 2.20, 12: 2.18}.get(len(deltas) - 1, 2.05)
         if abs(t) >= crit:
             print(f"            CLEARS the two-sided 95% bar for n={len(deltas)} (|t| > {crit})")
