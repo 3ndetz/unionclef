@@ -821,6 +821,62 @@ public class ItemHelper {
         return equippable == null ? null : equippable.slot();
     }
 
+    /**
+     * Which "kind" of tool this is, for grouping items that should be compared against each other
+     * (two pickaxes, never a pickaxe against an axe) — {@code null} for anything that is not a
+     * recognized tool.
+     *
+     * <p>Replaces {@code tool.getClass()} (a {@code PickaxeItem}/{@code AxeItem}/... subclass),
+     * which 1.21.11 deleted along with the whole tool class hierarchy. These vanilla item tags are
+     * data-driven and stable across versions — the same grouping the game itself uses to decide,
+     * for instance, which items a lodestone compass or a piglin trade will accept.
+     */
+    public static net.minecraft.registry.tag.TagKey<net.minecraft.item.Item> toolFamily(net.minecraft.item.Item item) {
+        if (item == null) {
+            return null;
+        }
+        net.minecraft.item.ItemStack stack = new net.minecraft.item.ItemStack(item);
+        if (stack.isIn(net.minecraft.registry.tag.ItemTags.PICKAXES)) return net.minecraft.registry.tag.ItemTags.PICKAXES;
+        if (stack.isIn(net.minecraft.registry.tag.ItemTags.AXES)) return net.minecraft.registry.tag.ItemTags.AXES;
+        if (stack.isIn(net.minecraft.registry.tag.ItemTags.SHOVELS)) return net.minecraft.registry.tag.ItemTags.SHOVELS;
+        if (stack.isIn(net.minecraft.registry.tag.ItemTags.HOES)) return net.minecraft.registry.tag.ItemTags.HOES;
+        if (stack.isIn(net.minecraft.registry.tag.ItemTags.SWORDS)) return net.minecraft.registry.tag.ItemTags.SWORDS;
+        return null;
+    }
+
+    /**
+     * A material-agnostic replacement for the deleted {@code ToolMaterial} "mining level"
+     * (0 = wood/gold ... 4 = netherite) — meaningful only to compare two tools of the SAME
+     * {@link #toolFamily}, never across families.
+     *
+     * <p>A mining-speed multiplier is a flat per-material constant on any block a tool is
+     * efficient against (2.0/4.0/6.0/8.0/9.0 for wood/stone/iron/diamond/netherite pickaxes, for
+     * instance — see {@link #miningSpeedVsBlock}), so the reference block only needs to be one the
+     * whole family is efficient on, not the specific block actually being mined. For swords,
+     * {@link #meleeDps} plays the same role: sword damage strictly increases with material tier at
+     * a fixed attack speed, so DPS preserves the same ordering material tier used to give directly.
+     */
+    public static double toolQuality(net.minecraft.item.Item item) {
+        net.minecraft.item.ItemStack stack = new net.minecraft.item.ItemStack(item);
+        if (stack.isIn(net.minecraft.registry.tag.ItemTags.SWORDS)) {
+            return meleeDps(item);
+        }
+        net.minecraft.block.BlockState reference;
+        if (stack.isIn(net.minecraft.registry.tag.ItemTags.PICKAXES)) {
+            reference = net.minecraft.block.Blocks.STONE.getDefaultState();
+        } else if (stack.isIn(net.minecraft.registry.tag.ItemTags.AXES)) {
+            reference = net.minecraft.block.Blocks.OAK_LOG.getDefaultState();
+        } else if (stack.isIn(net.minecraft.registry.tag.ItemTags.SHOVELS)) {
+            reference = net.minecraft.block.Blocks.DIRT.getDefaultState();
+        } else {
+            // Hoes (and anything else with no natural "how fast does it mine" reference): fall
+            // back to the pickaxe-vs-stone reading. Only ever compared within its own family, so
+            // this only needs to preserve ORDER between two hoes, not match a real-world speed.
+            reference = net.minecraft.block.Blocks.STONE.getDefaultState();
+        }
+        return stack.getMiningSpeedMultiplier(reference);
+    }
+
     private static float attributeSum(net.minecraft.item.Item item, String path) {
         if (item == null) {
             return 0;

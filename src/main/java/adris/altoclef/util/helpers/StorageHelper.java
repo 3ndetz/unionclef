@@ -250,8 +250,13 @@ public class StorageHelper {
         }
 
         // Try throwing away lower tier tools
+        //#if MC < 12111
         final HashMap<Class, Integer> bestMaterials = new HashMap<>();
         final HashMap<Class, Slot> bestToolSlot = new HashMap<>();
+        //#else
+        //$$ final HashMap<net.minecraft.registry.tag.TagKey<Item>, Double> bestMaterials = new HashMap<>();
+        //$$ final HashMap<net.minecraft.registry.tag.TagKey<Item>, Slot> bestToolSlot = new HashMap<>();
+        //#endif
 
         for (Slot slot : PlayerSlot.getCurrentScreenSlots()) {
             ItemStack stack = StorageHelper.getItemStackInSlot(slot);
@@ -281,7 +286,24 @@ public class StorageHelper {
                 return Optional.of(slot);
             }
             //#else
-            //$$ // TODO [1.21.11] tool-class deleted — determine tool class and mining level via components
+            //$$ net.minecraft.registry.tag.TagKey<Item> family = ItemHelper.toolFamily(item);
+            //$$ if (family == null) continue;
+            //$$
+            //$$ double level = ItemHelper.toolQuality(item);
+            //$$ double prevBest = bestMaterials.getOrDefault(family, 0.0);
+            //$$
+            //$$ if (level > prevBest) {
+            //$$     // We had a WORSE tool before.
+            //$$     if (bestMaterials.containsKey(family)) {
+            //$$         return Optional.of(bestToolSlot.get(family));
+            //$$     }
+            //$$
+            //$$     bestMaterials.put(family, level);
+            //$$     bestToolSlot.put(family, slot);
+            //$$ } else if (level < prevBest) {
+            //$$     // We found something WORSE!
+            //$$     return Optional.of(slot);
+            //$$ }
             //#endif
         }
 
@@ -336,7 +358,24 @@ public class StorageHelper {
                         return left.getDamage() - right.getDamage();
                     }
                     //#else
-                    //$$ // TODO [1.21.11] tool-class deleted — prioritize tools via components
+                    //$$ boolean leftIsTool = ItemHelper.isTool(left.getItem());
+                    //$$ boolean rightIsTool = ItemHelper.isTool(right.getItem());
+                    //$$ // Prioritize tools over materials.
+                    //$$ if (rightIsTool && !leftIsTool) {
+                    //$$     return -1;
+                    //$$ } else if (leftIsTool && !rightIsTool) {
+                    //$$     return 1;
+                    //$$ }
+                    //$$ if (rightIsTool) {
+                    //$$     // Prioritize material type (via mining-speed/DPS proxy), then durability.
+                    //$$     double leftQuality = ItemHelper.toolQuality(left.getItem());
+                    //$$     double rightQuality = ItemHelper.toolQuality(right.getItem());
+                    //$$     if (leftQuality != rightQuality) {
+                    //$$         return Double.compare(leftQuality, rightQuality);
+                    //$$     }
+                    //$$     // We want less damage.
+                    //$$     return left.getDamage() - right.getDamage();
+                    //$$ }
                     //#endif
 
                     // Prioritize food over other things if we lack food.
