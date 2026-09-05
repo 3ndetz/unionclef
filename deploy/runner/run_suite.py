@@ -949,7 +949,14 @@ def _main():
                 first = [c["name"] for c in res["criteria"] if not c["ok"] and c["gate"]]
                 print(f"  gate failure ({', '.join(first)}) — running it once more before believing it")
                 time.sleep(10)
-                again = run_scenario(cls, rcons, bot, victim, art_root, args.record)
+                # USE state[...], NOT THE OUTER rcons/bot/victim -- those are bound once at suite
+                # start and never updated. If refresh_clients() already fired (invalid retry above,
+                # or a starve refresh on an earlier course), state[...] points at the fresh
+                # containers while these local names still point at ones that may have just been
+                # docker-restarted out from under their own Rcon/Bot connections. A flake retry
+                # run against the stale objects measures a broken connection, not the course.
+                again = run_scenario(cls, state["rcons"], state["bot"], state["victim"],
+                                     art_root, args.record)
                 again["retried"] = True
                 again["first_attempt_failed"] = first
                 if again["passed"]:
