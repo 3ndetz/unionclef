@@ -1,5 +1,23 @@
 # TODOs
 
+<!-- NEOJUMP-STALE-AGENT-2026-09-05 -->
+## Fixed: same stale-`agent` collision bug in `NeoJump` — 9th and last instance, `specialMoves/` audit complete (2026-09-05)
+
+`NeoJump.generateMove()` (the `neo` sub-package) had the identical bug just fixed in
+`CornerJump.java`: `Stream<VoxelShape> blockCollisions = Streams.stream(agent.getBlockCollisions(...))`
+used the stale pre-move `agent` instead of `newNode.agent`. Same confirmed concrete effect as
+`CornerJump` (see that entry): `AgentShapeContext.isAbove()` reads the agent's own `box.minY`, so
+this tested every iteration's shape against the move's STARTING Y rather than the current one,
+throughout a jump whose entire point is changing Y. Confirmed live via `Node.java:161`. Also
+dropped now-unused `TungstenMod`/`RenderHelper` imports.
+
+This closes out the full `path/specialMoves/` directory audit (11 files + the `neo/` subfolder):
+2 files deleted as superseded dead code, 6 files fixed for the "stale `agent` inside a per-tick
+loop" bug class (9 confirmed instances total), 2 dead/contradictory-branch bugs fixed, 1 live
+unconditional-`Thread.sleep` performance bug fixed, 1 vestigial-variable anti-stall bug fixed, and
+1 threshold-gap question left open (see `SPRINTJUMPMOVE-DEADZONE-OPEN` above). None of this is
+stand-verified (C8.1).
+
 <!-- DIVINGMOVE-LIVE-SLEEP-RUNTONODE-DEADBRANCH-2026-09-05 -->
 ## Fixed: live `Thread.sleep` in `DivingMove` (real search-thread stall), same dead branch as `WalkToNode` found in `RunToNode` (2026-09-05)
 
