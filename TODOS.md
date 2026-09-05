@@ -1,5 +1,34 @@
 # TODOs
 
+<!-- ALTOCLEF-UTIL-HELPERS-SWEEP-1-2026-09-05 -->
+## Fixed: dead-branch and dead-write bugs in `altoclef/util/helpers/` (2026-09-05)
+
+First pass extending the audit from `tungsten` into `src/main/java/adris/altoclef/util/` (analogous
+to tungsten's `helpers/`, which had multiple confirmed bugs this session).
+
+- **`WorldHelper.getHorizontalDirectionFromYaw()`** — the exact same dead-branch pattern already
+  fixed in tungsten's `DirectionHelper.getHorizontalDirectionFromYaw` this session: `yaw` is
+  normalized to `[0,360)` two lines above the if-chain, so the `(yaw >= -315 && yaw < -225)`-style
+  negative-range `||` clauses were provably unreachable. Simplified, zero behavior change.
+
+- **`LookHelper.WindMouseState.startRotation`** — declared, assigned inside
+  `smoothLookInternal`'s reset branch, never read anywhere in the codebase (grepped the whole
+  compiled tree). Same write-only-field bug class already found repeatedly in tungsten
+  (`FastNavigator`'s `nextPhysicsIsBridge`/`pendingIsBridge`, `Agent.java`'s
+  `prevSneaking`/`wasWalking`). Removed the field and its assignment.
+
+**Investigated and deliberately left alone**: `LookHelper.isCloseRotations()` — its own comment
+already says *"tolerance=1000 means this essentially never returns true... kept for API
+compatibility with autoclef"*, an acknowledged, deliberate porting-fidelity quirk, not a silent
+bug. `WorldHelper.isDangerZone()` — already carries an extensive self-critical comment naming two
+real weaknesses and explicitly declines to fix either without a course to measure against; left as
+documented, not re-litigated.
+
+**Confirmed clean, full read**: `MathsHelper.java`, `EntityHelper.java`.
+
+Not stand-verified (C8.1). Neither fix carries a behavior-change risk worth flagging for playtest
+(one is provably-equivalent dead-branch removal, the other removes a write nothing ever read).
+
 <!-- LOCKKEEPSROUTE-GITRACE-RECOVERY-2026-09-05 -->
 ## Process note: a real fix was lost once to concurrent git contention, then recovered (2026-09-05)
 
