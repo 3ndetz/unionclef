@@ -1,5 +1,19 @@
 # TODOs
 
+<!-- GAMERSMOKE-PHASET-RESET-2026-09-05 -->
+## Fixed: gamer_smoke.py's PHASE_T cosmetic leak on a stand-down retry (2026-09-05)
+
+Small one, closed out while revisiting today's leftover deferred items. Flagged OPEN and
+explicitly not fixed earlier today (`PAIREDAB-CRIT-TABLE-DF1-MISSING-2026-09-05` entry, further
+down): `phase_report()` — the only place that resets `PHASE_T`'s module-level `last`/`spans` — only
+runs at the end of a SUCCESSFUL `main()` pass. `sweep()`'s `StandDown` handler restarts the client
+and retries `main()` without resetting first, so a failed attempt's partial spans bled into the
+retry's own `PHASES total=...` diagnostic line. Never affected any PASS/FAIL verdict — diagnostic
+timing only — which is why it stayed a documented, low-priority gap rather than an urgent fix.
+
+FIXED: reset `PHASE_T["last"]`/`PHASE_T["spans"]` right before the retry call, not only after a
+clean run. `python3 -m py_compile` confirms it parses. Commit `9f7c1e9f`.
+
 <!-- CORE-BRIDGE-TEST-OFF-REGRESSION-IMPLEMENTED-2026-09-05 -->
 ## Implemented: core_bridge_test.py's missing OFF-regression case (2026-09-05)
 
