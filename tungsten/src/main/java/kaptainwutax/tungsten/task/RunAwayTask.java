@@ -86,10 +86,17 @@ public class RunAwayTask {
      * numbers could show it.
      *
      * <p>That is also what {@code RECALC} was buying: the old tick replanned every 10 ticks whether
-     kaptainwutax.tungsten.path.PathFinder.noteStop("RunAwayTask@89");
      * or not a good path was running, tearing it down with {@code stop.set(true)} and starting a
      * 400ms search on a stand that renders at ~9 fps. Flee paths are ~8 blocks, about two seconds
      * of travel, so they exhaust on their own; replanning now waits for that.
+     *
+     * <p>⛔ CORRECTED 2026-09-05: a {@code noteStop("RunAwayTask@89")} fragment was sitting INSIDE
+     * this comment block (a bare line with no leading {@code *}), the same accident already found
+     * and fixed once in {@code PathFinder.java}'s "WHO KILLS THE SEARCH" doc -- inert text, never
+     * executed. Checked: this file's three real {@code stop.set(true)} sites (RunAwayTask.java, the
+     * stop() method and two flee-replan branches) each already have their own correctly-placed
+     * {@code noteStop} call; this fragment described REMOVED historical behavior (the old
+     * every-10-ticks replan) and matched no current call site. Removed rather than relocated.
      */
     public static volatile int fleeHeld, fleeRan, fleePlans;
     /** Ticks spent with a SEARCH in flight — standing still, not fleeing. Split out of fleeRan,
