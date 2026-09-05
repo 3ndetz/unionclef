@@ -1,5 +1,46 @@
 # TODOs
 
+<!-- UCTEST-ENDDRAGON-MODULO-CLOCK-2026-09-05 -->
+## Fixed: `uctest/scenarios_end.py`'s `EndDragon.drive_tick` used a modulo on a real-valued clock (2026-09-05)
+
+Continuing the `deploy/runner/uctest/` audit (shared scenario base + all five course files:
+craft, pvp, mob, nav, end — `scenario.py`'s `crit_swings()` fix already landed, commit `77dc5d66`).
+`scenarios_craft.py`, `scenarios_pvp.py`, `scenarios_mob.py` and `scenarios_nav.py` all read clean
+on a full pass — every `Criterion` comparison is correctly oriented, and this codebase is unusually
+well self-audited already (many classes carry their own documented false-positive/false-negative
+retraction history from prior passes).
+
+`scenarios_end.py`'s `EndDragon.drive_tick` (the End-dimension dragon-fight course, `tier="info"`,
+not currently a suite gate) had:
+
+```python
+if int(elapsed) % 5 != 0:
+    return
+hp = self._dragon_health(ctx)
+```
+
+This is the exact "a modulo on a real-valued clock is a lottery, not a schedule" defect that
+`scenarios_pvp.py`'s `ChaseTerrain` class already documents fixing in its own file (`int(t) % 20`
+firing on 0.9% of drive ticks across 122 recorded runs, because one sample iteration costs several
+seconds of blocking rcon round trips rather than exactly one). `drive_tick` here is called once per
+iteration of `Scenario.run()`'s loop, and `ctx.sample()` — called every iteration before
+`drive_tick` — does several sequential blocking rcon round trips per the same cost shape documented
+elsewhere in this package. So `elapsed` advances in irregular multi-second jumps, and
+`int(elapsed) % 5 == 0` can go an entire run without ever being true, silently disabling the dragon
+health probe: `ctx.geo["hp_min"]` and `ctx.geo["dragon_gone"]` would then never update past the
+single reading taken once in `drive_start`, and the course's own "the dragon LOST HEALTH" gate
+would read `hpm == hp0` (never `< hp0`) even on a run where the dragon actually took damage.
+
+FIXED: replaced the modulo with an elapsed-time-since-last-probe check
+(`elapsed - ctx.geo.get("last_hp_probe", 0.0) < self.HP_PROBE_EVERY`), matching the exact pattern
+`ChaseTerrain` already uses for its own `RE_GOAL_EVERY`/`PROBE_EVERY` checks. Commit `c254207a`.
+Not stand-verified (C8.1) — this course needs a live End-dimension stand connection to exercise at
+all, and this class is already marked `tier="info"` (not a gate) pending a real generated End world
+(documented in the class's own docstring as a separate, unsolved arena-shape problem: a summoned
+dragon has no `EnderDragonFight` instance and never perches).
+
+Continuing to `__init__.py` (4 lines) to close out the `uctest/` package.
+
 <!-- RUNSUITE-FLAKE-RETRY-STALE-CLIENTS-2026-09-05 -->
 ## Fixed: `run_suite.py`'s flake retry used stale `rcons`/`bot`/`victim`, not the refreshed `state[...]` (2026-09-05)
 
