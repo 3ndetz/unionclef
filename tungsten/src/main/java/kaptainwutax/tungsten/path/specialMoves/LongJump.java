@@ -34,9 +34,18 @@ public class LongJump {
 	        for (int j = 0; j < 6; j++) {
 	        	if (newNode.agent.horizontalCollision) break;
 	            Box adjustedBox = newNode.agent.box.offset(0, -0.5, 0).expand(-0.45, 0, -0.45);
-	        	Stream<VoxelShape> blockCollisions = Streams.stream(agent.getBlockCollisions(TungstenModDataContainer.world, adjustedBox));
+	        	// ⛔ FIXED 2026-09-05: both this collision query and the desiredYaw recompute below
+	        	// used the STALE `agent` (= parent.agent, fixed before this loop/method) instead of
+	        	// `newNode.agent` -- same bug class found elsewhere this session (SprintJumpMove,
+	        	// WalkToNode, RunToNode, CornerJump), confirmed here by the recompute being a
+	        	// provable no-op as written: with constant inputs (`agent.getPos()` never changes,
+	        	// `nextBlockNode.getPos(true)` never changes) recalculating every loop iteration
+	        	// produces the exact same yaw every time, which only makes sense if the intent was
+	        	// to track the CURRENT (moving) position, matching every sibling that recomputes
+	        	// mid-loop via newNode.agent.
+	        	Stream<VoxelShape> blockCollisions = Streams.stream(newNode.agent.getBlockCollisions(TungstenModDataContainer.world, adjustedBox));
 	        	if (j > 1 && blockCollisions.findAny().isEmpty()) break;
-	        	desiredYaw = (float) DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true));
+	        	desiredYaw = (float) DirectionHelper.calcYawFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
 	            newNode = new Node(newNode, world, new PathInput(false, true, false, false, false, false, false, agent.pitch, desiredYaw),
 	            		new Color(0, 255, 150), newNode.cost + cost + 5);
 	        }
@@ -59,8 +68,9 @@ public class LongJump {
 	        		if (DistanceCalculator.getDistanceToEdge(newNode.agent) < 0.6) jump = true;
 	        	}
 	            if (!newNode.agent.onGround) break;
-	
-	    		desiredYaw = (float) DirectionHelper.calcYawFromVec3d(agent.getPos(), nextBlockNode.getPos(true));
+
+	    		// ⛔ FIXED 2026-09-05: same stale-`agent` recompute bug as the loop above.
+	    		desiredYaw = (float) DirectionHelper.calcYawFromVec3d(newNode.agent.getPos(), nextBlockNode.getPos(true));
 	            newNode = new Node(newNode, world, new PathInput(true, false, false, false, jump, false, true, agent.pitch, desiredYaw),
 	            		new Color(0, 255, 150), newNode.cost + cost);
 	        }

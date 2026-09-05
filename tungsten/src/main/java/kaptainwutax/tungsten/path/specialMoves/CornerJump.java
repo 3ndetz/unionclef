@@ -72,7 +72,17 @@ public class CornerJump {
         while (limit < 40 && newNode.agent.getPos().y > nextBlockNode.getBlockPos().getY()-1) {
             Box adjustedBox = newNode.agent.box.offset(offsetVec).expand(-0.001, 0, -0.001);
         	limit++;
-        	Stream<VoxelShape> blockCollisions = Streams.stream(agent.getBlockCollisions(TungstenModDataContainer.world, adjustedBox));
+        	// ⛔ FIXED 2026-09-05: queried collisions via the STALE `agent` (= parent.agent, fixed
+        	// before this loop) instead of `newNode.agent` (the current simulated tick), matching
+        	// the bug class already found in SprintJumpMove/WalkToNode/RunToNode this session --
+        	// except here it has a concrete confirmed effect: Agent.getBlockCollisions() builds an
+        	// AgentShapeContext from the agent's OWN box.minY (used by isAbove()) and sneak state,
+        	// so every iteration after the first kept testing "is this shape above me" against the
+        	// move's STARTING Y, not the current one, even as the agent actually moved. The
+        	// adjustedBox itself was already correctly built from newNode.agent -- only the
+        	// collision query's context object was stale. The first while loop above (line ~49)
+        	// already does this correctly via newNode.agent.getBlockCollisions(...).
+        	Stream<VoxelShape> blockCollisions = Streams.stream(newNode.agent.getBlockCollisions(TungstenModDataContainer.world, adjustedBox));
 //        	RenderHelper.renderNode(newNode, TungstenMod.TEST);
             if (blockCollisions.findAny().isEmpty()) {
 //                try {
