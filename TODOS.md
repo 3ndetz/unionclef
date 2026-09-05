@@ -1,5 +1,48 @@
 # TODOs
 
+<!-- EMPTY-DOLLAR-BLOCK-EXHAUSTIVE-SCAN-2026-09-05 -->
+## Fixed one more, and this closes the "empty //$$ stub" bug class for the whole tree (2026-09-05)
+
+The four fixes earlier today (armor equip/detection, sign placement, wall-interact helpers, and
+the follow-up fork's negative result) were all found by grepping for the literal string
+`TODO [1.21.11]`. That string is a convention, not a guarantee — a stub could exist without it. So
+this pass wrote a small script (not a rule, a FACT-check: "is every non-blank line in this
+`//$$` branch itself a comment" is mechanical, no judgement involved) walking every `//#if`/
+`//#else`/`//#endif` block in `src/main/java` and `tungsten/src/main/java`, and flagged any branch
+whose entire body is comment-only lines — the precise, general shape of "this branch compiles to
+nothing" regardless of wording.
+
+**Result: exactly 5 such blocks exist in the whole tree, and all 5 are now accounted for**:
+- `StorageHelper.java:284`, `StorageHelper.java:339` — the garbage-slot/priority tool comparator
+  gaps, already documented above (`STORAGEHELPER-GARBAGE-TOOL-COMPARE-STILL-OPEN-2026-09-05`).
+- `CraftInTableTask.java:420` — already triaged in G-1.38 as a disabled OPTIMIZATION (recipe-book
+  crafting), not a defect; manual crafting covers the same ground.
+- `JankCraftingRecipeMapping.java:26-28,58-59` (two blocks, one file) — **new to this specific
+  scan, but not a new DEFECT**: this is the same recipe-API-not-ported-on-1.21.11 family as
+  `CraftingRecipeVer`/`RecipeManagerWrapper`/`WrappedRecipeEntry`/`CraftInTableTask` above. The
+  whole class is inert on 1.21.11 (`reloadRecipeMapping()` does nothing, `getMinecraftMappedRecipe`
+  always returns empty) and, like its siblings, needs the recipe API actually ported (a real,
+  bigger effort — `RecipeManager`/`Recipe.getIngredients()` were restructured, not merely renamed)
+  rather than a one-off patch. Filed under the same debt, not a separate item.
+- `GameMenuTaskChain.java:290-293` — **genuinely new and FIXED**: the `_needUnStuckFix` recovery
+  path (part of the bot's own "I am critically stuck, disconnect and rejoin the world" mechanism)
+  simulates clicking the current world in the world-select screen via `mouseClicked`/
+  `mouseReleased`. On 1.21.11 this was two TODO comments — the click never fired, so a bot that
+  reached this recovery path would open the world-select screen and then sit there, never clicking
+  anything, never reaching the `StuckFixingTask`/reconnect chain that follows. Ported using the
+  real 1.21.11 signature (`Element.mouseClicked(Click, boolean)`/`mouseReleased(Click)`,
+  `Click(x, y, MouseInput(button, modifiers))`, confirmed via `javap` on the cached Yarn jar), with
+  the whole downstream block duplicated into the `//$$` branch unchanged (including the
+  pre-existing `(0,0)` coordinates on the hovered-element click — ported as-is, not "fixed",
+  since that quirk already existed pre-12111 and this pass is not the place to second-guess it).
+  Commit `c5e92754`.
+
+Not stand-verified (C8.1) for the new fix, same as the other three from this same day. **The
+mechanical scan itself is the useful artifact here**: it is a completeness proof, not another
+sample — there is no sixth "empty `//$$` block" anywhere in this codebase left to find by this
+method. Anyone re-opening this hunt later should look for a DIFFERENT shape (a branch with real
+code that's wrong rather than one that's empty), not re-run this same check.
+
 <!-- DEFERRED-STUB-SWEEP-EXTENDED-NEGATIVE-2026-09-05 -->
 ## Extended the "deferred stub actually still broken" sweep — no further candidates found (2026-09-05)
 
