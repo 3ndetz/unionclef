@@ -61,22 +61,28 @@ public class CommandExecutor {
         }
     }
 
-    // ⛔ DEAD CODE, CONFIRMED 2026-09-05: nothing calls TungstenMod.getCommandExecutor() anywhere
-    // in the tree (grepped), so this method, executeRecursive(), getCommand() and
-    // isClientCommand() below never run. The real command path is entirely the static
-    // DISPATCHER/dispatch() further down, invoked from the mixins. Left in place rather than
-    // deleted (unlike this session's other dead-code removals) because this looks like an
-    // unfinished multi-command-chaining feature, not a superseded duplicate of something live --
-    // but the split("|") bug just below was fixed anyway so it doesn't bite whoever wires this up.
+    // ⛔ DEAD CODE (this one method only), CONFIRMED 2026-09-05: this specific overload has no
+    // callers -- grepped the tree; TungstenMod.getCommandExecutor() itself IS live
+    // (allCommands()/registerNewCommand() are used from TungstenCommands.java and several
+    // mixins), but the actual chained-command chat handler
+    // (MixinClientPlayNetworkHandler.onSendChatMessage) calls executeRecursive() directly, never
+    // this wrapper. CORRECTION to an earlier pass of this same fix: the comment below ("separated
+    // by ;") is itself stale/wrong -- confirmed by reading the LIVE chained-command path, which
+    // unambiguously uses "|" as the divider (MixinClientPlayNetworkHandler checks
+    // `message.contains("|")`; MixinSuggestionWindow and StringProcessorHelper.findClosestCharIndex
+    // both key off the literal '|' character). Matched this dead method's separator to that
+    // convention rather than to its own comment, so it doesn't diverge from the rest of the
+    // feature if it's ever wired up.
     public void execute(String line, Runnable onFinish, Consumer<CommandException> getException) {
         if (!isClientCommand(line)) return;
         line = line.substring(getCommandPrefix().length());
-        // Run commands separated by ;
+        // Run commands separated by |
         // ⛔ FIXED 2026-09-05: was `line.split("|")` -- "|" is a regex alternation between two
         // empty patterns, which matches a zero-width string at every position, so this split
-        // between EVERY CHARACTER instead of on ";" as the comment above says. `"a;b".split("|")`
-        // returns {"a", ";", "b"} (three single-character strings), not {"a", "b"}.
-        String[] parts = line.split(";");
+        // between EVERY CHARACTER instead of on the literal pipe. `"a|b".split("|")` returns
+        // {"a", "|", "b"} (three single-character strings), not {"a", "b"}; the escaped form does
+        // the right thing.
+        String[] parts = line.split("\\|");
         Command[] commands = new Command[parts.length];
         try {
             for (int i = 0; i < parts.length; ++i) {

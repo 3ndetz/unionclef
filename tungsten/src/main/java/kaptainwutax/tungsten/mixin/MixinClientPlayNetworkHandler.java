@@ -55,7 +55,15 @@ public abstract class MixinClientPlayNetworkHandler extends ClientCommonNetworkH
 //            		CommandExecutor.dispatch(message.split(";")[0].substring(prefix.length()));
                 	Collection<Command> commands = new ArrayList<>(TungstenMod.getCommandExecutor().allCommands());
                 	commands.removeIf((command) -> !message.contains(command.getName()));
-                	TungstenMod.getCommandExecutor().executeRecursive(commands.toArray(new Command[commands.size()]), message.split("|"), 0, () -> {
+                	// ⛔ FIXED 2026-09-05: `message.split("|")` treats "|" as a regex alternation
+                	// between two empty patterns, which matches a zero-width string at every
+                	// position -- splits between EVERY CHARACTER instead of on the literal pipe
+                	// this chained-command feature is built around (see the `if
+                	// (message.contains("|"))` check just above, and MixinSuggestionWindow /
+                	// StringProcessorHelper.findClosestCharIndex(..., '|', ...), which both treat
+                	// "|" as the real divider). A chat message like ";stop|;goto 1 2 3" was being
+                	// split into single characters instead of the two intended command strings.
+                	TungstenMod.getCommandExecutor().executeRecursive(commands.toArray(new Command[commands.size()]), message.split("\\|"), 0, () -> {
                     }, ex -> Debug.logWarning(ex.getMessage()));
             	} else CommandExecutor.dispatch(message.substring(prefix.length()));
             } catch (CommandSyntaxException e) {
