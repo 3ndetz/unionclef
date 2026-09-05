@@ -1,5 +1,45 @@
 # TODOs
 
+<!-- FOLLOWENTITYTASK-DEAD-STUCKTICKS-2026-09-05 -->
+## Removed: `FollowEntityTask`'s `STUCK_TICKS` watchdog was provably unreachable (2026-09-05)
+
+Full read of `FollowEntityTask.java` (728 lines, the core chase engine) turned up one finding after
+the parallel forks auditing `Node.java`/`helpers/`/`agent/Agent.java` all came back clean or fixed
+elsewhere. Its tick-state machine ends in an if-else-if chain (reached only once `!walkerRunning`):
+
+```java
+} else if (!pathfinderActive && !executorRunning && !stopRequested) {   // [B1] startFind
+    ...
+} else if (stopRequested && !pathfinderActive) {                        // [B2] startFind
+    ...
+} else if (!stopRequested && ... targetStrayed ...) {                   // [B3] request stop
+    ...
+} else if (!executorRunning && !pathfinderActive) {                     // [B4] STUCK_TICKS watchdog
+    if (++stuckTicks >= STUCK_TICKS) { ...forces a stop/restart... }
+}
+```
+
+**Proof B4 never fires, by exhaustive case split**, independent of `targetStrayed`/`tickCounter`/
+`lastTargetPos`: B4's own guard requires `pathfinderActive=false && executorRunning=false`. Given
+that, B1's guard (`!pathfinderActive && !executorRunning && !stopRequested`) reduces to just
+`!stopRequested` — so for B1 to be false (letting us reach B2), `stopRequested` must be `true`. But
+then B2's guard (`stopRequested && !pathfinderActive`) is immediately satisfied too (its
+`!pathfinderActive` half is already given), so B2 fires and returns before B3 or B4 are ever
+reached. Whenever `pathfinderActive=false && executorRunning=false` — the only state B4 cares
+about — B1 or B2 always catches it first. B4 was dead at every tick, under every state.
+
+This is the **same disease the file's own comments already diagnosed and fixed once**, for a
+different field: `WALKER_STUCK_TICKS`'s header comment (still in the file, a few lines above)
+reads *"declared for precisely this... and NOTHING READ THEM"* — that one got wired up correctly
+this session's predecessor and works. This was the same shape of bug for the physics-idle case
+instead of the walker-stuck case, just never noticed, because an unreachable branch that would
+have logged nothing distinctive never left a trace to go looking for.
+
+FIXED: removed the dead branch, the now-fully-dead `stuckTicks`/`STUCK_TICKS` field and constant,
+and every `stuckTicks = 0` reset that fed a variable nothing read any more (in `resetState()`,
+`stop()`, and the direct-steer branch). No behavior change — the branch never executed — so
+nothing to flag for playtest, unlike most of this session's other fixes.
+
 <!-- HELPERS-DIR-AUDIT-2026-09-05 -->
 ## Audited `helpers/` (DirectionHelper, DistanceCalculator, BlockShapeChecker, ArrayChunkSplitter, StringProcessorHelper, MathHelper, AgentChecker, DimensionVer, render/RenderHelper) — 1 confirmed threshold bug, 1 duplicate-drift gap, 2 dead-code/inefficiency cleanups (2026-09-05)
 
