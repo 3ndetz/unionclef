@@ -1,5 +1,42 @@
 # TODOs
 
+<!-- MOVEMENTHELPER-DEAD-CODE-REMOVED-2026-09-05 -->
+## Removed: ~800 lines of dead code in `helpers/MovementHelper.java` — a whole superseded duplicate implementation (2026-09-05)
+
+While auditing `BlockNode.java`'s move-generation code, found it calls its OWN static
+`wasCleared()` method (`BlockNode.java:399-441`) — a same-named but entirely separate method from
+`helpers/MovementHelper.wasCleared()`, which I had fully read and analyzed earlier this session
+(including fixing an `isSlab` dead-local in its sibling `isObscured()`, and flagging an X/Z-axis
+asymmetry in `isNeoPossible()` as an open question). Unqualified calls inside `BlockNode.java`
+resolve to `BlockNode`'s own method, not `MovementHelper`'s — and `BlockNode.wasCleared()`
+delegates to `StreightMovementHelper`, `NeoMovementHelper` and `CornerJumpMovementHelper` instead.
+
+Grepped every call site of `MovementHelper.wasCleared`, `.isNeoPossible` and
+`.canWalkOnBlockState` across the whole codebase (`src/main` and `tungsten/src/main`): **zero
+external callers for any of the three.** `wasCleared` only called its own overload and
+`isNeoPossible`; `isNeoPossible` was only called from `wasCleared`; `canWalkOnBlockState` had no
+caller at all (the identically-named method in `MovementHelperB` is unrelated — a different
+method in a different class). Together these three methods made up roughly 800 of the file's 914
+lines — a whole superseded implementation of the same corner-cut/neo-jump logic that
+`BlockNode`/`StreightMovementHelper`/`NeoMovementHelper`/`CornerJumpMovementHelper` actually
+run, sitting in the tree with nothing marking it as unused.
+
+This is exactly the "no duplicates" risk this project's charter names explicitly: two
+implementations of one idea that can silently drift, and it already cost real effort before the
+duplication was found — a genuine bug was fixed in `isObscured()` while it looked like ordinary
+live code (it is; kept), and an open question was raised about a defect inside code that turns
+out to never execute (see the superseded entry above). **Removed** `canWalkOnBlockState`,
+`wasCleared` (both overloads) and `isNeoPossible` (both overloads); **kept** `isObscured`,
+`getSlimeBounceHeight` and `isSlimeColumnBelow` — confirmed live, called from
+`StreightMovementHelper`, `CornerJumpMovementHelper`, `NeoMovementHelper`, `PathFinder` and
+`BlockNode`. File drops from 914 to 113 lines; imports trimmed to match.
+
+Worth a general lesson for this room: a full-file read finds bugs, but it does not by itself
+prove the file is live — check `grep -rn "ClassName\.methodName"` for a method's callers before
+investing further analysis in it, especially in a codebase with more than one class exposing a
+same-named method. Not stand-verified (C8.1) — pure removal of code confirmed unreachable, zero
+behavior change for anything that actually runs.
+
 <!-- TRAILTRACKER-WAYPOINTINDEX-DESYNC-2026-09-05 -->
 ## Fixed: `TrailTracker.waypointIndex` desynced whenever the trail was trimmed (2026-09-05)
 
@@ -140,28 +177,16 @@ bug (confirmed by the method's own javadoc and by cross-referencing this same fi
 usage of the identical convention a few dozen lines away), not a tuning judgment call.
 
 <!-- MOVEMENTHELPER-NEOPOSSIBLE-ASYMMETRY-OPEN-2026-09-04 -->
-## OPEN QUESTION (found, not fixed): `isNeoPossible`'s X-axis and Z-axis branches disagree on missing-floor handling (2026-09-04)
+## SUPERSEDED 2026-09-05 — the code this was about turned out to be dead
 
-Full read of `helpers/MovementHelper.java` (914 lines). `isNeoPossible()` has two mirror-image
-branches for the corner-cut check: `isMovingOnXAxis` (checks a column to the west/east) and
-`isMovingOnZAxis` (checks a column to the south/north). In the X-axis branch, finding no floor
-block under the candidate column (`!world.getBlockState(currPos).isAir()` false, i.e. the floor
-IS air) does `return false;` — an immediate hard rejection of the whole method. In the
-mirror-image Z-axis branch, the identical check does `break;` instead — it only exits the inner
-while loop and falls through to the `isCornerXPossible`/`isCornerZPossible` tail logic, which can
-still return `true` depending on what runs after.
-
-This is either a genuine copy-paste inconsistency (the Z-axis branch should also `return false`)
-or an intentional asymmetry from whatever playtesting produced this heuristic — I could not
-determine which by reading alone, and this is exactly the kind of heuristic-tuning code where an
-unverified change risks a real regression (per this room's own rule: heuristics get copied from
-baritone-style testing, not guessed at). Also cleaned up in the same read: an unused `isSlab`
-local in `isObscured()` (dead code, removed — see commit `00a0a4d8`; `isSlabBelow`/`isAboveSlab`
-were left alone since a commented-out check the file's own TODO discusses still references them
-by name).
-
-Left OPEN pending either a working stand (C8.1) to test both readings against real corner-cut
-courses, or someone who remembers which behavior was intended.
+Originally filed 2026-09-04 as an open question about an X/Z-axis asymmetry in
+`MovementHelper.isNeoPossible()`. On 2026-09-05, a full-codebase grep for every caller of
+`wasCleared`/`isNeoPossible`/`canWalkOnBlockState` found NONE — the method this question was
+about never ran at all. See the `MOVEMENTHELPER-DEAD-CODE-REMOVED-2026-09-05` entry below: the
+whole ~800-line block containing `isNeoPossible` was removed. The asymmetry is moot, not
+resolved — nobody should spend a stand session testing it. The `isSlab` dead-local fix mentioned
+in the original note (commit `00a0a4d8`) stands: it was inside `isObscured()`, which IS live and
+was kept.
 
 <!-- AGENT-DEPTHSTRIDER-NEVER-INITIALIZED-2026-09-04 -->
 ## Fixed: `Agent.depthStrider` was never read from the real player — always 0 (2026-09-04)
