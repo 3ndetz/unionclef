@@ -1,5 +1,39 @@
 # TODOs
 
+<!-- CORE-BRIDGE-TEST-MISSING-OFF-REGRESSION-2026-09-05 -->
+## Open: `core_bridge_test.py`'s own docstring promises a second verification the script never runs (2026-09-05)
+
+Auditing `deploy/runner/`'s first batch of individual `*_test.py` scripts for logic bugs
+(`agent_loop_test.py` through `multitarget_test.py`, alphabetically). `core_bridge_test.py`'s
+module docstring states two things this script checks:
+
+> Also verifies parkour is UNAFFECTED without blocks: same async `;goto` over a small gap with
+> `planPlaceMoves` OFF should still be handled by normal move-gen (no regression).
+
+But `main()` only ever calls `run(True, 90)` — the `planPlaceMoves=True` (bridge-search-ON) case.
+There is no second `run(False, ...)` call anywhere in the file, and `run()`'s own arena is always
+built at a fixed 7-wide gap explicitly documented as "beyond a sprint-jump, so the ONLY way across
+is a bridge" — meaning even a naive `run(False, ...)` call against the SAME arena would always fail
+regardless of the parkour move-gen's health, since the gap is unbridgeable without placing blocks.
+A genuine OFF/regression case needs its own, narrower arena that's within normal jump range without
+placing anything, and picking that gap width correctly requires real game jump-distance knowledge
+this sandbox has no way to verify (C8.1 — no stand). Left undocumented-as-fixed rather than guessing
+an arena width that might itself be wrong and give a false PASS/FAIL on the wrong scenario. Whoever
+has stand access: add a `run(False, secs)` call against a gap sized within tungsten's normal
+sprint-jump reach (check `TungstenConfig`/the jump-move code for the real max distance) and gate on
+`crossed and len(placed) == 0` for that case. Not stand-verified (C8.1) — no code change made here.
+
+<!-- BEDWARS-COMBAT-TEST-NO-EXIT-CODE-2026-09-05 -->
+## Fixed: `bedwars_combat_test.py` always exited 0 regardless of pass/fail (2026-09-05)
+
+Same batch. `main()` computed `ok = bk>=1 and botFell==0`, printed the verdict, and returned —
+never calling `sys.exit()` on it. Every sibling `*_test.py` script in this directory calls
+`sys.exit(0 if ok else 1)` at the end of `main()`; this one fell off the end of the function, so
+the process always exited 0 (Python's default) whether the bot got a kill and stayed out of the
+void or not. A caller reading the exit code — a wrapper script, a future `run_suite.py`-style
+integration — would score every run a PASS. Fixed: added `sys.exit(0 if ok else 1)` to match the
+convention. Commit `6400c365`. Not stand-verified (C8.1).
+
 <!-- UCTEST-ENDDRAGON-MODULO-CLOCK-2026-09-05 -->
 ## Fixed: `uctest/scenarios_end.py`'s `EndDragon.drive_tick` used a modulo on a real-valued clock (2026-09-05)
 
