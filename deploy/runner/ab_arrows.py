@@ -966,6 +966,16 @@ def main():
 if __name__ == "__main__":
     sys.exit(main())
 
+# ⛔ FIXED 2026-09-05: everything from here to the end of the file used to be raw analysis
+# prose appended directly at module level, with no comment marker and no docstring quotes --
+# a SyntaxError ("invalid decimal literal" on a line reading "29.0s ...") that made this
+# entire script fail to import, let alone run, regardless of stand availability (a syntax
+# error is caught at parse time, before any network/game access is even attempted). Found by
+# a plain `python3 -m py_compile` sweep across deploy/, not by trying to run the script.
+# Wrapped the whole block in a triple-quoted string literal (a dangling expression statement,
+# discarded at runtime, functioning as a large comment) rather than deleting any of it --
+# this is real historical pre-registration/analysis content, not disposable scratch.
+"""
 PRE-REGISTRATION #10 -- navStopOnTaskEnd (2026-08-14). Written BEFORE the run.
 
 THE FINDING THIS COMES FROM, because it inverts everything filed about mine_stone above.
@@ -1759,3 +1769,4 @@ whatever the last block test happened to leave behind.
 So clearBansOnTaskEnd stays OFF and stays unmeasured. Its reasoning is sound and its evidence
 (predCount>0 with registered=0 is an inherited predicate) still stands; what is missing is a bench
 that can see the difference, and this one demonstrably cannot.
+"""
