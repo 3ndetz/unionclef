@@ -1,5 +1,47 @@
 # TODOs
 
+<!-- PERSISTENTPROJECTILEACCESSOR-INGROUND-RESOLVED-2026-09-05 -->
+## Resolved (not fixed by guessing): `PersistentProjectileEntityAccessor`'s dead `inGround` — via `javap` on the real 1.21.11 jar, no compile needed (2026-09-05)
+
+Follow-up to `ALTOCLEF-MOBDEFENSE-CHAINS-TRACKERS-OPEN-2026-09-05` (below), which correctly left
+this open rather than guess a Yarn method name it had no way to verify. New technique this pass:
+**you don't need to compile the project to read what a Minecraft class actually looks like on this
+version — the Yarn-remapped jar is already sitting in the Loom cache, and `javap` (a plain JDK
+tool, not a build step) can disassemble it directly.**
+
+```
+find /work/repo -ipath "*loom-cache/minecraftMaven*1.21.11*.jar" ...
+jar xf <that jar> net/minecraft/entity/projectile/PersistentProjectileEntity.class
+javap -p PersistentProjectileEntity.class
+```
+
+This showed `protected boolean isInGround(); protected void setInGround(boolean);` still exist,
+unchanged in name, on 1.21.11 — the state just moved off a plain field onto a `DataTracker` slot
+(`TrackedData<Boolean> IN_GROUND`), which is exactly why the OLD `@Accessor("inGround")` (a
+Mixin annotation that targets a FIELD) compiled to nothing: there's no bare field left to target.
+`@Invoker` targets a METHOD, which is what's needed now.
+
+FIXED, in `mixins/PersistentProjectileEntityAccessor.java`: added an `//#else @Invoker("isInGround")
+boolean isInGround();` branch (kept the interface method's own name unchanged from the old
+`@Accessor` branch, so no call site needs new syntax). Also had to strip a SEPARATE, redundant
+`//#if MC < 12111` wrapped around both actual call sites in `EntityTracker.java` — the accessor
+alone wasn't the whole story; the calls themselves were also gated off on the current build.
+Commit `72474d79`.
+
+⛔ **This is a real capability discovery, not just a one-off fix.** Any future `//#if MC < X`
+branch whose replacement is "find the right modern method/field name" no longer needs to stay an
+OPEN finding for lack of a compiler — the actual answer is sitting in
+`.gradle/loom-cache/minecraftMaven/.../minecraft-merged-...-<version>-...-v2.jar` (or the
+equivalent for whichever MC version is active) and `javap -p <ClassName>.class` reads it directly.
+This is NOT the same as running Gradle/compileJava (still off-limits without explicit
+authorization, see `C8.1-JAVA-HOME-DISCOVERY-2026-09-05` below) — it's read-only inspection of an
+artifact Gradle already downloaded and cached on a prior, already-authorized run, using a bare JDK
+tool, touching nothing in the project's own build state.
+
+Not stand-verified (C8.1: docker/RCON still unreachable) — the Mixin annotation choice is verified
+against the real target signature via `javap`, not guessed, but whether it actually fixes
+`MobDefenseChain`'s dodge behavior in game needs a playtest once a build exists.
+
 <!-- C8.1-JAVA-HOME-DISCOVERY-2026-09-05 -->
 ## ⛔ ENVIRONMENT FINDING, NOT A CODE FIX: C8.1's "no JVM" half is a missing `JAVA_HOME`, not an absent JDK (2026-09-05)
 
@@ -715,10 +757,15 @@ FIXED: `subscribers.removeAll(toDelete)` after the loop (not during it — `subs
 (C8.1).
 
 <!-- ALTOCLEF-MOBDEFENSE-CHAINS-TRACKERS-OPEN-2026-09-05 -->
-## Two OPEN findings from the same pass, not fixed — flagging rather than guessing (2026-09-05)
+## One of two findings from this pass now RESOLVED (see below); the second stays open (2026-09-05)
 
-- **`EntityTracker.updateState()`/`addProjectile()`: `inGround` is a no-op on the active build.**
-  Both read `((PersistentProjectileEntityAccessor) entity).isInGround()`, but that accessor method
+- **`EntityTracker.updateState()`/`addProjectile()`'s `inGround` no-op — ⛔ RESOLVED 2026-09-05, see
+  the `PERSISTENTPROJECTILEACCESSOR-INGROUND-RESOLVED-2026-09-05` entry above.** This session found
+  a way to read the local Loom cache's real Yarn-mapped 1.21.11 Minecraft classes with `javap`
+  (read-only bytecode inspection, not a compile/build) and got the exact answer this entry said it
+  was missing. Left the original text below for the record of what was known at the time.
+
+  ~~Both read `((PersistentProjectileEntityAccessor) entity).isInGround()`, but that accessor method
   itself is declared inside `//#if MC < 12111 ... //#endif` in `PersistentProjectileEntityAccessor.java`
   — on the active `MC >= 12111` build (confirmed active per `TungstenMod.java`'s own startup log
   line) the accessor interface has NO `isInGround()` method at all, and the call site is guarded by
@@ -728,7 +775,7 @@ FIXED: `subscribers.removeAll(toDelete)` after the loop (not during it — `subs
   `MobDefenseChain`'s dodge logic stale/irrelevant projectiles. Not fixed: this needs the correct
   Yarn field/accessor name for `PersistentProjectileEntity`'s ground-state on 1.21.11, which this
   session has no way to verify without a compiler (C8.1) — grepped for an existing multiversion
-  helper (`multiversion/*Projectile*`) and found none, so there is no already-solved answer to copy.
+  helper (`multiversion/*Projectile*`) and found none, so there is no already-solved answer to copy.~~
 - **`DeathMenuChain.getPriority()`'s `while (MinecraftClient.getInstance().player.isAlive()) ;` —
   deliberately NOT touched, even though it looks alarming.** Read literally, this loops while
   ALIVE, i.e. waits for NOT-alive — but it is reached only inside `if (screen instanceof DeathScreen)`,
