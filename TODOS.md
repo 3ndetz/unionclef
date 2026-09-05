@@ -14028,6 +14028,17 @@ baritone toward a far point»). Но САМА сага (C5.15-C5.20) датир�
   522-538` (`TungstenHelper.stop()` НАСТОЯЩИЙ, не молчаливый `Nav.cancel()`, плюс НЕ сбрасывать
   чекер на самом релизе). Не почищено этой сессией (C8.1, стенд недоступен), см. полную запись
   выше по файлу для всех уточнений/самокоррекций по пути.
+  ⛔ FORWARD-POINTER, 2026-09-05, closing a stale loop: this exact fix WAS written, in a later pass
+  than this entry — confirmed by reading the current `TimeoutWanderTask.java` directly, not by
+  trusting this note. `onTick()` now branches on `TungstenConfig.get().wanderSearchMustMove`: when
+  true and `TungstenHelper.isActive()`, it calls the real `TungstenHelper.stop()` instead of
+  resetting `progressChecker`, exactly the `GetToEntityTask` pattern named above. The flag itself
+  (`TungstenConfig.java`, search `wanderSearchMustMove`) is deliberately `false` by default —
+  correctly, per its own extensive doc comment — pending the same paired stand measurement this
+  session's summary near the top of this file already tracks
+  ("6. Off by default, needs a stand to turn on: TungstenConfig.wanderSearchMustMove"). Nothing
+  left to fix here; what remains is exactly what that summary line says — an A/B on
+  `wander_recovery`, not more code.
 
 ## 🚀 PRIORITY BLOCK — PERFORMANCE + PIPELINED PATHING + REAL BLOCK-SPACE + FIGHTER (user 2026-07-25)
 
