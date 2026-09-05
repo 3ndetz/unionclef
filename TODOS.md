@@ -1,5 +1,58 @@
 # TODOs
 
+<!-- ALTOCLEF-EVENTBUS-DEAD-DELETE-2026-09-05 -->
+## Fixed: `EventBus.publish()` never actually removed unsubscribed listeners (2026-09-05)
+
+Auditing `eventbus/`+`chains/`+`trackers/` (the reactive/event/tracking layer of altoclef, per this
+session's extension of the tungsten audit methodology into the bot-logic side of the monorepo).
+`EventBus.publish()`'s own comment says *"Delete all subscriptions"*, but the code only ever
+**collected** flagged subscriptions into a `toDelete` list — it never removed them from the live
+`subscribers` list. `unsubscribe()` (`Subscription.delete()`) only sets a boolean flag; `publish()`
+was the one place meant to act on it, and didn't.
+
+Confirmed live: 9 real call sites across `tasks/` (`PlaceBlockNearbyTask`, `ContainerStoredTracker`,
+`CombatTask`, `PlaceBedAndSetSpawnTask` x2, `ChunkSearchTask`, `SearchChunksExploreTask`,
+`BedWarsTask`, `ReplaceBlocksTask`) each subscribe when a task starts and unsubscribe when it stops.
+Every one of those, over a long playthrough, left a permanently dead entry in the topic's
+subscriber list — never freed, and every future `publish()` to that event type had to iterate over
+it forever. An unbounded per-publish cost that only grows across a session, which is exactly the
+failure mode a "complete the whole game in one sitting" run would feel.
+
+FIXED: `subscribers.removeAll(toDelete)` after the loop (not during it — `subscribers` is only
+*read* during iteration, never mutated mid-loop, so this is safe against the
+`ConcurrentModificationException` the existing comment already guards for). Not stand-verified
+(C8.1).
+
+<!-- ALTOCLEF-MOBDEFENSE-CHAINS-TRACKERS-OPEN-2026-09-05 -->
+## Two OPEN findings from the same pass, not fixed — flagging rather than guessing (2026-09-05)
+
+- **`EntityTracker.updateState()`/`addProjectile()`: `inGround` is a no-op on the active build.**
+  Both read `((PersistentProjectileEntityAccessor) entity).isInGround()`, but that accessor method
+  itself is declared inside `//#if MC < 12111 ... //#endif` in `PersistentProjectileEntityAccessor.java`
+  — on the active `MC >= 12111` build (confirmed active per `TungstenMod.java`'s own startup log
+  line) the accessor interface has NO `isInGround()` method at all, and the call site is guarded by
+  the identical preprocessor condition, so it compiles to `boolean inGround = false;` unconditionally.
+  Every already-landed, stuck-in-the-ground arrow is therefore indistinguishable from an in-flight
+  one in both the per-tick projectile scan and the event-driven `addProjectile()` path, feeding
+  `MobDefenseChain`'s dodge logic stale/irrelevant projectiles. Not fixed: this needs the correct
+  Yarn field/accessor name for `PersistentProjectileEntity`'s ground-state on 1.21.11, which this
+  session has no way to verify without a compiler (C8.1) — grepped for an existing multiversion
+  helper (`multiversion/*Projectile*`) and found none, so there is no already-solved answer to copy.
+- **`DeathMenuChain.getPriority()`'s `while (MinecraftClient.getInstance().player.isAlive()) ;` —
+  deliberately NOT touched, even though it looks alarming.** Read literally, this loops while
+  ALIVE, i.e. waits for NOT-alive — but it is reached only inside `if (screen instanceof DeathScreen)`,
+  where the player should already be dead, so under the normal invariant this is a zero-iteration
+  no-op, not a busy-wait. The surrounding code's evident intent ("wait for respawn before sending
+  death-commands") would actually be `while (!isAlive())` — but that is the WORSE bug: a real
+  busy-wait spinning on a condition (`isAlive()` flipping true) that likely depends on network
+  packet processing which happens on the very thread doing the spinning, i.e. a plausible client
+  freeze on every real-server death. This line has been unchanged since the initial commit
+  (`efe70c8b`) with no reported freeze-on-death symptom in this codebase's history, which is
+  evidence (not proof) the current no-op reading is the operative one in practice. Given "fixing"
+  the apparent intent risks introducing a strictly worse bug than the current harmless dead code,
+  and given no stand exists to test either reading, this is left exactly as it is — documented so
+  a future pass with build access can resolve it by measurement instead of by guessing.
+
 <!-- ALTOCLEF-COMMANDEXECUTOR-CHAIN-TRYCATCH-2026-09-05 -->
 ## Fixed: altoclef's `CommandExecutor.execute()` aborted a whole ";"-chain on its first bad command (2026-09-05)
 
