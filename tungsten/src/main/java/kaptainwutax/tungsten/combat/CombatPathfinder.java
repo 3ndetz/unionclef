@@ -33,7 +33,17 @@ public class CombatPathfinder {
 
     /** Shape of what bfsPath returns: calls, budget exhaustions, stubs (<2 cells), cells returned. */
     public static volatile int cpCalls, cpExhausted, cpStub, cpCells, cpDistinct;
-    /** Diagonal neighbours withheld from a walking route the queue could not execute. */
+    /**
+     * ⛔ DEAD, FOUND 2026-09-05: never incremented anywhere in this codebase, yet it is reset
+     * every run and read live over py4j (Py4jEntryPoint's grid diagnostic tuple) alongside
+     * {@link #gridDiagonalExpanded} and {@link #gridDiagonalUnturnable}, which ARE wired up. It
+     * measured the {@code cardinalOnly} drop-from-search approach this file's own history
+     * describes as "tried first... and reverted 70 minutes later for being far worse" — the
+     * mechanism it counted no longer exists; {@link #expandDiagonals} replaced it. A permanent
+     * zero here proves nothing about the current code. Left as a field (not removed) because it
+     * sits in a live py4j tuple shape this session cannot recompile to verify a safe removal
+     * from; whoever next touches that tuple should drop it then.
+     */
     public static volatile int gridDiagonalDropped;
     /** Diagonals rewritten as two cardinal steps, and those with no passable corner. */
     public static volatile int gridDiagonalExpanded, gridDiagonalUnturnable;

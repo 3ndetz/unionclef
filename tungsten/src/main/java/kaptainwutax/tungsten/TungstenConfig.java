@@ -5041,9 +5041,17 @@ public class TungstenConfig {
 	 * <p>Combat keeps its diagonals: only the goto entry (findPath) asks for cardinal-only,
 	 * because only the goto route is handed to the queue.
 	 *
+	 * <p>⛔ CORRECTED 2026-09-05: this used to say "read gridDiagonalDropped for proof it fires".
+	 * That counter measured an EARLIER approach (dropping diagonals from the search itself,
+	 * {@code cardinalOnly}) that was tried and reverted the same day for being far worse (98%
+	 * stubs) — the counter was never rewired to the mechanism that replaced it and has read 0
+	 * unconditionally ever since (checked: no writer anywhere in the codebase). The flag this
+	 * doc describes now controls {@link CombatPathfinder#expandDiagonals}, whose own counters
+	 * are the live ones.
+	 *
 	 * <p>GATE: nav and craft in full against the baseline (nav 14/14, craft 22/22), then the
-	 * playthrough. Read gridDiagonalDropped for proof it fires and mqRefused(short) for
-	 * whether the refusals fall.
+	 * playthrough. Read {@code gridDiagonalExpanded}/{@code gridDiagonalUnturnable} for proof
+	 * this fires and mqRefused(short) for whether the refusals fall.
 	 */
 	public boolean gridRouteMatchesQueueMoves = true;
 
