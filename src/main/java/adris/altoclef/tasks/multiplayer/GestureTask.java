@@ -110,7 +110,10 @@ public class GestureTask extends Task {
     }
 
     public GestureTask(Entity target) {
-        this(target, Gesture.values()[new Random().nextInt(Gesture.values().length - 1)]); // random
+        // ⛔ FIXED 2026-09-05: nextInt(length - 1) excludes the LAST Gesture constant (Disagree)
+        // entirely -- Random.nextInt(bound) already returns [0, bound), same off-by-one already
+        // found and fixed in ShiftEntityTask's identical random-type constructors this session.
+        this(target, Gesture.values()[new Random().nextInt(Gesture.values().length)]); // random
     }
 
     protected Vec3d getTargetPos(AltoClef mod) {
