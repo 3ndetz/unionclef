@@ -979,13 +979,18 @@ public class Py4jEntryPoint {
                 for (AbstractClientPlayerEntity player : playerList) {
                     if (player != null && player.getName() != null) {
                         PlayerThreat playerThreat = _mod.getDamageTracker().getThreatTable().getPlayerThreat(player.getName().getString());
-                        if (limit > 0) {
-                            if (playerThreat != null) {
-                                nearsetPlayerThreats.add(playerThreat);
-                            }
-                            limit--;
-                        } else {
+                        if (limit <= 0) {
                             break;
+                        }
+                        // ⛔ FIXED 2026-09-05: `limit--` used to run on every iterated player,
+                        // whether or not playerThreat was null -- so a caller asking for the
+                        // nearest 5 threats could get fewer than 5 back (or even zero) whenever
+                        // early entries in the (not-yet-distance-sorted) playerList had no threat
+                        // record yet, even though later entries did. The limit should only be
+                        // spent on entries actually added to the result.
+                        if (playerThreat != null) {
+                            nearsetPlayerThreats.add(playerThreat);
+                            limit--;
                         }
                     }
                 }
