@@ -1,5 +1,37 @@
 # TODOs
 
+<!-- DEFERRED-STUB-SWEEP-EXTENDED-NEGATIVE-2026-09-05 -->
+## Extended the "deferred stub actually still broken" sweep — no further candidates found (2026-09-05)
+
+Following the method that found the armor-equip/sign/wall-interact bugs just above (re-check a
+`TODOS.md` "found it, deliberately did not fix it" claim directly against current code, since the
+register's own prose is not reliable evidence either way): re-grepped `src/main/java` and
+`tungsten/src/main/java` for every remaining `TODO [1.21.11]` marker (15 left, all already
+individually triaged in the entries above this one — nothing new), and grepped `TODOS.md` itself
+for ~55 occurrences of deferred-work phrasing ("не трогал", "ОСТАЛОСЬ", "deferred", "not yet
+fixed", etc.).
+
+The overwhelming majority of those 55 are either (a) live-stand measurement narratives that need
+an actual test run to re-check, not a code read (mob_trio armor-kit design questions, wander
+dead-time investigations, mining-throughput gates) or (b) known, already-decomposed refactor
+backlog (G-0's remaining `Goal`-type migration, 23 files; `util/baritone/` adapter classes) that
+is scoped as deliberate multi-session core work, not a silently-broken stub.
+
+Two candidates outside that shape, checked directly against current code and confirmed NOT
+defects: `CheckBlockCommand` (`;check_block` chat command) throws a loud, honest
+`RuntimeCommandException("...not implemented yet")` — visible, not silent, and no autonomous task
+calls it; and `ContainerType.java`'s `BREWING` case throws `NotImplementedException` for slot
+enumeration, but grepping `tasks/` for any brewing-stand usage found none — no live caller ever
+reaches that throw, so it is the same class of honest, currently-unreachable debt as the
+already-closed cobweb/`MiningRequirement` finding earlier this session, not a hidden "answers no"
+bug.
+
+No new fixable defect of the armor/sign/wall shape found in this extended pass. The lead is not
+exhausted in principle (a 19,000-line register can hide more), but a broad keyword sweep has
+reached the point of diminishing returns; a future pass would do better starting from a specific
+subsystem (e.g. actually attempting a live `@gamer` run once C8.1 clears) than another blind grep
+of this file.
+
 <!-- STORAGEHELPER-GARBAGE-TOOL-COMPARE-STILL-OPEN-2026-09-05 -->
 ## Open, corrected record: the garbage-slot / throwaway-priority tool comparison is STILL a stub on 1.21.11 (2026-09-05)
 
