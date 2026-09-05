@@ -2800,8 +2800,13 @@ public class TungstenConfig {
      * confirming window came back INVALID at 8 fps, so rule ZERO says it does not ship today.
      * Mechanism gate when it can be run: lock=barren/productive, which must show barren>0 on a
      * stalling course.
+     *
+     * <p>⛔ FIXED 2026-09-05: the field read {@code = true}, directly contradicting this comment's
+     * own conclusion ("Off by default and UNMEASURED... rule ZERO says it does not ship today").
+     * Same bug class as {@code lockKeepsRouteWhileTargetStands} above -- a default that drifted
+     * from its own documented verdict.
      */
-    public boolean barrenLockCountsAsFailure = true;
+    public boolean barrenLockCountsAsFailure = false;
 
     /**
      * Keep walking at a dropped item until it is TOUCHED, instead of stopping a block short.
