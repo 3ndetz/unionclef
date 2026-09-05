@@ -1,5 +1,42 @@
 # TODOs
 
+<!-- INPUTCONTROLS-RELEASEALL-DOUBLECOUNT-2026-09-05 -->
+## Fixed: `InputControls.releaseAll()` double-counted (and over-counted) its own steal-detector (2026-09-05)
+
+Continuing the `altoclef` core-orchestration audit, into `control/`. `InputControls.java` is
+already heavily self-instrumented around exactly one recurring lesson, stated almost verbatim
+three times in its own comments: *"a counter must measure the event, not the code path near it."*
+`releaseAll()` violated its own file's rule:
+
+```java
+public void releaseAll() {
+    if (adris.altoclef.tasks.movement.GetToEntityTask.closeWalkDrivingNow()) {
+        // ... stack-walk, record "ALL:<caller>:<line>" into forwardStealers ...
+    }
+    for (Input input : Input.values()) {
+        release(input);   // <- ALSO records into forwardStealers for MOVE_FORWARD, when isHeldDown
+    }
+    toUnpress.clear();
+}
+```
+
+The dedicated `"ALL:..."` block was added on the theory that `release(MOVE_FORWARD)`'s own
+instrumentation would never see a `releaseAll()`-driven release, so `releaseAll()` callers would
+misreport as `"(none)"`. That premise is wrong: the loop right below calls `release(input)` for
+every `Input` including `MOVE_FORWARD`, and `release()`'s own stack walk already skips
+`InputControls` frames to find the real external caller — the exact same caller this block was
+independently recomputing. So a genuine `releaseAll()`-driven steal was recorded **twice**: once
+under an `"ALL:"`-prefixed key here, once more under the bare caller key inside
+`release(MOVE_FORWARD)`'s own check. Worse, this block never checked `isHeldDown(MOVE_FORWARD)`
+first — unlike `release()`'s, which the file's own comments say was fixed for exactly this reason
+(*"AND IT COUNTED THE CALL, NOT THE THEFT"*) — so it also recorded a "steal" even when
+`MOVE_FORWARD` was never actually pressed.
+
+FIXED: removed the redundant `"ALL:..."` block; the loop's own `release()` calls already count
+`releaseAll()`-driven `MOVE_FORWARD` steals correctly (and correctly gated). Diagnostic-only —
+`forwardStealers` is a debug/telemetry map, not control flow — so this changes no bot behavior.
+Not stand-verified (C8.1).
+
 <!-- ALTOCLEF-UTIL-HELPERS-SWEEP-1-2026-09-05 -->
 ## Fixed: dead-branch and dead-write bugs in `altoclef/util/helpers/` (2026-09-05)
 
