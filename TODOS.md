@@ -1,5 +1,43 @@
 # TODOs
 
+<!-- COLLECTFOODTASK-DEAD-SMELTING-2026-09-05 -->
+## Fixed: `CollectFoodTask`'s smelting path was dead — could gather raw meat forever without ever cooking it (2026-09-05)
+
+Auditing `tasks/resources/` (50 files). `CollectFoodTask.smeltTask` was declared `private final
+SmeltInSmokerTask smeltTask = null;` — never reassignable — and the loop that would have assigned
+it ("Convert raw foods -> cooked foods") was commented out. Combined effect: raw meat could never
+actually be cooked by this task.
+
+`calculateFoodPotential()`/`getFoodPotential()` credit raw meat with its COOKED hunger value on the
+assumption it will be smelted (`return count * ItemVer.getFoodComponent(cookable.getCooked()).getHunger();`
+for a RAW stack). So once enough raw meat accumulated to satisfy `unitsNeeded` on paper, `onTick()`
+stopped gathering more (`potentialFood >= unitsNeeded`) — but with the smelting loop dead, that
+branch had nothing to return past the two bread-crafting checks and fell through to `return new
+TimeoutWanderTask()`. `isFinished()` checks the REAL current score via
+`StorageHelper.calculateInventoryFoodScore()`, which does NOT credit raw meat at cooked value, so
+it stayed false. Net result: with food gathered this way, the task could neither progress nor
+finish — wandering forever while sitting on food it believed was enough but had no path to realize.
+
+Confirmed by direct sibling comparison: `CollectMeatTask.java`, in the same package, implements the
+identical pattern correctly — mutable `smeltTask`, a live (uncommented) smelting loop, and
+`isFinished()` requiring `&& smeltTask == null`. Restored `CollectFoodTask` to match: made the
+field mutable, added the `else { smeltTask = null; }` reset (also copied from `CollectMeatTask` —
+without it a finished/inactive `smeltTask` reference would linger and permanently block
+`isFinished()`), uncommented the smelting loop verbatim, and added the missing
+`&& smeltTask == null` to `isFinished()`. Added the missing `import adris.altoclef.util.SmeltTarget;`
+the commented-out code never had (harmless while dead, a compile error once live) — verified
+`SmeltInSmokerTask`'s constructor and `ignoreMaterials()` still match this call shape before
+uncommenting.
+
+This also affects `tasks/speedrun/beatgame/BeatMinecraftTask` and `CollectFoodPriorityCalculator`,
+both of which call `CollectFoodTask.calculateFoodPotential()` directly to decide whether food
+gathering is still needed — they were trusting a potential score with no live path to realize it
+for raw meat.
+
+Not stand-verified (C8.1) — this restores previously-commented-out logic to a live code path;
+flagging for a playtest with a raw-meat-heavy food run (e.g. killing cows/pigs without wheat/hay on
+hand).
+
 <!-- MOVEITEMTOSLOTTASK-INVERTED-COMPARISON-2026-09-05 -->
 ## Fixed: `MoveItemToSlotTask.getBestSlotToPickUp()` picked the LARGER of two over-target stacks (2026-09-05)
 
