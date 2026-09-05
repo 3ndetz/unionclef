@@ -1,5 +1,70 @@
 # TODOs
 
+<!-- MOVEITEMTOSLOTTASK-INVERTED-COMPARISON-2026-09-05 -->
+## Fixed: `MoveItemToSlotTask.getBestSlotToPickUp()` picked the LARGER of two over-target stacks (2026-09-05)
+
+Auditing `tasks/container/` and `tasks/slot/` (the task layer that calls `SlotHandler`, itself
+already read directly and found extremely mature). `getBestSlotToPickUp()`'s tie-break:
+
+```java
+if ((countBest < toMove.getTargetCount() && countCheck > countBest)
+        || (countBest >= toMove.getTargetCount() && countCheck >= toMove.getTargetCount() && countCheck > countBest)) {
+    // If we don't have enough, go for largest
+    // If we have too much, go for smallest over the limit.
+    bestMatch = slot;
+}
+```
+
+The second disjunct's comparison (`countCheck > countBest`) does the opposite of the comment right
+below it. Traced by hand with `target=5`: candidates 10 then 6 in discovery order keeps 10 (6 is
+not `>` 10, so it never replaces); candidates 6 then 10 also lands on 10 (`10 > 6` replaces the
+smaller, correct pick). Either discovery order ends up preferring the larger excess stack, wasting
+more of it than the task needed to.
+
+FIXED: changed to `countCheck < countBest`, matching "go for smallest over the limit" exactly.
+
+**Confirmed currently dead**: `getBestSlotToPickUp()` (and the whole `MoveItemToSlotTask` class)
+has no live callers anywhere in the tree — grepped for `new MoveItemToSlotTask`, and the only three
+hits (in `SmeltInFurnaceTask`/`SmeltInBlastFurnaceTask`/`SmeltInSmokerTask`) are commented-out
+alternatives to a simpler direct `clickSlot()` call. Fixed anyway so the class is correct if it's
+ever wired back up. Not stand-verified (C8.1).
+
+<!-- CRAFTINTABLETASK-DEADCOUNTER-ISFINISHED-OPEN-2026-09-05 -->
+## OPEN, not fixed — `DoCraftInTableTask._craftCount` is never incremented, `isFinished()` may always be false (2026-09-05)
+
+```java
+private int _craftCount;              // field
+_craftCount = 0;                      // onStart() — the only other reference besides the read below
+return _craftCount >= _targets.length; // isFinished() — the ONLY place it's read
+```
+
+Grepped the whole file: `_craftCount` is declared, reset to 0, and read — **never incremented**
+anywhere. With `_targets.length >= 1` (the normal case), `DoCraftInTableTask.isFinished()` can
+never return `true`.
+
+**Why this might matter**: all three sibling container tasks — `SmeltInFurnaceTask`,
+`SmeltInBlastFurnaceTask`, `SmeltInSmokerTask` — override their OUTER wrapper's `isFinished()` as
+`super.isFinished() || _doTask.isFinished()`, explicitly ORing in their inner do-task's completion
+signal alongside the generic `ResourceTask.isFinished()` (real inventory-count) check. The outer
+`CraftInTableTask` (crafting's equivalent wrapper) has **no such override at all** — it only
+inherits `ResourceTask.isFinished()`, so `DoCraftInTableTask.isFinished()` (the dead counter above)
+is never even consulted by its own parent right now.
+
+**Why this might NOT matter**: `CraftInTableTask`'s `itemTargets` (fed to `ResourceTask.isFinished()`)
+are built from the exact same `(outputItem, targetCount)` pairs as `_targets`, so
+`super.isFinished()` alone may already be functionally equivalent to what a correctly-wired
+`_craftCount` would compute — unlike smelting, where the inner do-task plausibly tracks a
+DIFFERENT, more specific completion stage (e.g. output sitting in the furnace slot vs. already
+picked up into inventory) that a raw inventory check could miss or lag behind.
+
+**Not fixed, deliberately**: this is a Task-completion condition, not a diagnostic counter — a
+wrong guess here could either strand the crafting task running forever (if I "fix" the counter but
+don't wire the OR-clause into the outer class, achieving nothing) or terminate it prematurely (if I
+guess wrong about when a target should count as satisfied, e.g. missing an edge case the three
+smelt siblings' inner do-tasks specifically exist to catch). C8.1 blocks any way to observe the
+actual effect. Documented per the `SPRINTJUMPMOVE-DEADZONE-OPEN`/`AGENT-INSNEAKINGPOSE-OPEN`
+precedent: flagged rather than guessed at.
+
 <!-- ABSTRACTDOTOENTITYTASK-DOUBLECHECK-ALWAYSTRUE-2026-09-05 -->
 ## Fixed: `AbstractDoToEntityTask.doubleCheck()` returned `true` for any two finite values (2026-09-05)
 
