@@ -80,7 +80,6 @@ public class TungstenHelper {
 
     /** Search tuning used for the short, frequently-retargeted fallback legs. */
     private static final long FALLBACK_SEARCH_TIMEOUT_MS = 2000L;
-    private static final int FALLBACK_MIN_PATH_SIZE = 2;
     private static final double FALLBACK_MIN_DIST_PATH = 0.3;
 
     private static long lockUntil = 0;       // Tungsten has exclusive control until this time
@@ -134,7 +133,10 @@ public class TungstenHelper {
         // here mutates GLOBAL persisted config — tracked as C7.5 in TODOS.md; the proper
         // fix is per-call search parameters, which is a PathFinder API change.
         TungstenConfig.get().searchTimeoutMs = FALLBACK_SEARCH_TIMEOUT_MS;
-        pf.minPathSizeForTimeout = FALLBACK_MIN_PATH_SIZE;
+        // ⛔ REMOVED 2026-09-05: `pf.minPathSizeForTimeout = FALLBACK_MIN_PATH_SIZE;` used to sit
+        // here. TODOS.md C7.5's own follow-up confirmed minPathSizeForTimeout is dead across the
+        // WHOLE mod (grep: one declaration, seven write sites including this one, zero reads
+        // anywhere) — removed the field itself in PathFinder.java, see that file's comment.
         pf.minDistPath = FALLBACK_MIN_DIST_PATH;
     }
 

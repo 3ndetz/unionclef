@@ -585,19 +585,15 @@ public class FollowEntityTask {
 
         if (dist < 6 && hasLineOfSight(player, target)) {
             TungstenConfig.get().searchTimeoutMs      = 120L;
-            TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 1;
             TungstenModDataContainer.PATHFINDER.minDistPath           = 0.1;
         } else if (dist < 12) {
             TungstenConfig.get().searchTimeoutMs      = 500L;
-            TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 2;
             TungstenModDataContainer.PATHFINDER.minDistPath           = 0.3;
         } else if (dist < 25) {
             TungstenConfig.get().searchTimeoutMs      = 1500L;
-            TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 3;
             TungstenModDataContainer.PATHFINDER.minDistPath           = 0.5;
         } else {
             TungstenConfig.get().searchTimeoutMs      = 3000L;
-            TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 5;
             TungstenModDataContainer.PATHFINDER.minDistPath           = 0.8;
         }
         // HAND PHYSICS A LEG, NOT THE WHOLE CHASE. The physics search was being given the FULL

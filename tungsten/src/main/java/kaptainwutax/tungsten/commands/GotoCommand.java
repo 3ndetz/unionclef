@@ -93,7 +93,6 @@ public class GotoCommand extends Command {
 
 		// Reset pathfinder params to defaults (may have been overridden by followPlayer)
 		TungstenConfig.get().searchTimeoutMs       = 15000L;
-		TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 15;
 		TungstenModDataContainer.PATHFINDER.minDistPath           = 1.8;
 
 		// ONE OWNER OF THE ROUTE while the navigator is driving. There is a SINGLE physics

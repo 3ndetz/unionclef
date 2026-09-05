@@ -96,9 +96,16 @@ public class PathFinder {
 	protected static AtomicInteger numNodesConsidered = new AtomicInteger(0);
 	
 	// searchTimeoutMs is now in TungstenConfig (tungsten.json)
-	/** Minimum path length (nodes) required before a timeout partial-path can be emitted.
-	 *  Default: 46 (~2.3s). Set lower (e.g. 5) for follow-entity close-range. */
-	public int minPathSizeForTimeout = 15;
+	// ⛔ REMOVED 2026-09-05 (TODOS.md C7.5's own follow-up, "what stands in the way of a simple
+	// fix"): `minPathSizeForTimeout` used to live here -- a genuinely dead field across the WHOLE
+	// mod. Confirmed by grep: one declaration (here) and seven write sites (GotoCommand.java,
+	// RunAwayTask.java, FollowEntityTask.java x4, TungstenHelper.java's applyFallbackTuning), ZERO
+	// reads anywhere -- every single occurrence in the codebase was the left side of an
+	// assignment. Its own doc comment described real intent ("minimum path length required before
+	// a timeout partial-path can be emitted") that was never actually wired into the timeout logic
+	// this class's own bestSoFar()/search() methods use. A write to a field nothing reads can
+	// never affect behavior, so removing it (and all seven write sites) is a no-op for anything
+	// that currently runs.
 
 	/** Minimum path progress distance before bestSoFar can be accepted.
 	 *  Default: MIN_DIST_PATH (1.8). Set near 0 for snap/dash mode (accept any path immediately). */

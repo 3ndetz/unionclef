@@ -433,7 +433,6 @@ public class RunAwayTask {
                 kaptainwutax.tungsten.path.PathFinder.noteStop("RunAwayTask@423");
                 TungstenModDataContainer.PATHFINDER.stop.set(true);
                 TungstenConfig.get().searchTimeoutMs = 400L;
-                TungstenModDataContainer.PATHFINDER.minPathSizeForTimeout = 1;
                 TungstenModDataContainer.PATHFINDER.minDistPath = 0.3;
                 TungstenModDataContainer.PATHFINDER.find(world, flee, player);
             }
