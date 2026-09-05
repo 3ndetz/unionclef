@@ -1,5 +1,37 @@
 # TODOs
 
+<!-- NODE-CREATENODE-STALE-AGENT-DANGLING-IMPORTS-2026-09-05 -->
+## Fixed: highest-volume stale-`agent` bug, in `Node.createNode()` itself; removed dangling imports of deleted classes (2026-09-05)
+
+Followed the `specialMoves/` audit (see the entries below) upstream into `Node.java`, the central
+per-tick move-dispatch orchestrator that calls every one of those classes. Full read of the file
+(490 lines, previously only seen in fragments).
+
+**Same bug, highest-volume instance yet**: `createNode()`'s per-tick simulation loop queried
+collisions via `agent.getBlockCollisions(world, adjustedBox)` — `agent` here is the unqualified
+field, i.e. `this.agent`, the PARENT node's pre-move state — instead of `newNode.agent` (the
+current simulated tick). Same bug class found and fixed repeatedly this session in the
+`specialMoves` classes this method feeds (`SprintJumpMove`, `WalkToNode`, `RunToNode`,
+`CornerJump`, `NeoJump`, `LongJump`). `createNode()` is the candidate generator for essentially
+every ground-based move — called from a `parallelStream()` over up to hundreds of parameter
+combinations per node expansion, each looping up to 10 times — making this the highest call-volume
+site of the bug. `Agent.getBlockCollisions()` builds an `AgentShapeContext` from the agent's own
+`box.minY` (read by `isAbove()`), so every iteration after the first tested candidate shapes
+against the move's STARTING Y instead of the current one — same confirmed concrete effect as
+`CornerJump`/`NeoJump`.
+
+**Separately, a real (if latent) build breakage**: `Node.java` still carried
+`import kaptainwutax.tungsten.path.specialMoves.JumpToLadderMove;` and
+`...TurnACornerMove;` — both classes were deleted earlier this session (superseded dead code, see
+the entry below) but these two imports were missed. An import of a class that no longer exists
+does not compile. Grepped the whole tree for any other reference to either deleted class: none
+found. C8.1 (no JVM) means this would not have been caught by any build in this session, so it's
+lucky this surfaced during a full-file read rather than staying latent until someone tried to
+build.
+
+Not stand-verified (C8.1) — the collision-query fix changes real candidate generation for ground
+movement; the import fix is a correctness fix for what was, until this fix, a broken build.
+
 <!-- NEOJUMP-STALE-AGENT-2026-09-05 -->
 ## Fixed: same stale-`agent` collision bug in `NeoJump` — 9th and last instance, `specialMoves/` audit complete (2026-09-05)
 
