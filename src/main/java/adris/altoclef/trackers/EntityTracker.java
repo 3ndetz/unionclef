@@ -492,10 +492,15 @@ public class EntityTracker extends Tracker {
 
                         boolean inGround = false;
                         // Get projectile "inGround" variable
+                        // ⛔ FIXED 2026-09-05: this call was ALSO wrapped in `//#if MC < 12111`, on
+                        // top of the accessor itself being version-gated (see
+                        // PersistentProjectileEntityAccessor.java) -- so even after fixing the
+                        // accessor to work on MC >= 12111 too, this call would have stayed dead code
+                        // here, unconditionally leaving `inGround` at its `false` default. The fixed
+                        // accessor exposes `isInGround()` under the same name on both branches, so
+                        // this call needs no version split of its own any more.
                         if (entity instanceof PersistentProjectileEntity) {
-                            //#if MC < 12111
                             inGround = ((PersistentProjectileEntityAccessor) entity).isInGround();
-                            //#endif
                         }
 
                         // Ignore some of the harlmess projectiles
@@ -528,10 +533,10 @@ public class EntityTracker extends Tracker {
         CachedProjectile proj = new CachedProjectile();
 
         boolean inGround = false;
+        // ⛔ FIXED 2026-09-05: same version-gate removal as the poll-path call above; see the note
+        // there and in PersistentProjectileEntityAccessor.java.
         if (projEntity instanceof PersistentProjectileEntity) {
-            //#if MC < 12111
             inGround = ((PersistentProjectileEntityAccessor) projEntity).isInGround();
-            //#endif
         }
 
         // Ignore harmless projectiles
