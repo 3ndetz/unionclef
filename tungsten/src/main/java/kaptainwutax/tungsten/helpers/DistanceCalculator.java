@@ -66,7 +66,15 @@ public class DistanceCalculator {
 	public static double getHorizontalManhattanDistance(Vec3d startPos, Vec3d endPos) {
 		double dx = endPos.getX() - startPos.getX();
     	double dz = endPos.getZ() - startPos.getZ();
-    	return dx + dz;
+    	// ⛔ FIXED 2026-09-05: Manhattan distance is |dx| + |dz|, not dx + dz. As written this
+    	// could go NEGATIVE whenever dx and dz share a sign (endPos both west AND north of
+    	// startPos, or both east AND south) -- both live callers use this as a `<=`/`<` threshold
+    	// gate (Node.java:149's ClimbALadderMove trigger at <=0.5, BlockSpacePathFinder.java:590's
+    	// heuristic dy weighting at <32), so a negative result made the threshold check ALWAYS
+    	// pass regardless of true distance in that quadrant, and a same-sign-but-positive result
+    	// (impossible here since dx,dz share sign only when at least one is negative) was never
+    	// the concern -- the real gap was the sign-cancellation/negative case.
+    	return Math.abs(dx) + Math.abs(dz);
 	}
 	
 	/**
