@@ -1,5 +1,36 @@
 # TODOs
 
+<!-- ARMOR-FIX-BLAST-RADIUS-2026-09-06 -->
+## The armor-equip/detection fix (7aea6ea4) is bigger than it looked — it gates the Nether AND End gear-up (2026-09-06)
+
+Follow-up, not a new bug. Checked every caller of `StorageHelper.isArmorEquipped`/`isArmorEquippedAll`
+to understand the fix's actual reach, since yesterday's commit message only said "armor equipping and
+detection were both completely broken" without spelling out where that bites on the real playthrough.
+It bites in more places than the commit named:
+
+`BeatMinecraftTask.java` (the `@gamer` end-goal task itself) and `BeatMinecraft2Task.java` both gate
+substantial gear-up decisions on it, not just cosmetic armor-wearing:
+- Golden boots (fire-immunity-adjacent piglin/nether gear) checked and equipped at multiple points
+  before nether-hunting logic runs.
+- `COLLECT_EYE_ARMOR`/eye-protection gear for the ender-pearl/eye-of-ender hunt — the exact rung this
+  session already found a SEPARATE dead-branch bug in earlier (`BeatMinecraft2Task`'s End Portal
+  eye-counting) — is gated on `isArmorEquippedAll` at three separate call sites.
+- The main diamond-armor gear-up ladder (helmet/chestplate/leggings/boots/shield) at line ~1420-1450
+  of `BeatMinecraftTask.java`.
+- `KillEnderDragonTask.java` — the literal final boss — checks armor before engaging.
+
+Before yesterday's fix, `isArmorEquipped` returned `false` unconditionally on 1.21.11 for every
+armor item, so every one of these gates always read "not equipped," and `EquipArmorTask` (also
+broken, forcing every item into the CHEST slot) would then try to re-equip already-worn or
+wrong-slot armor on every check — a compounding failure, not just a missing capability. This is
+consistent with, and could plausibly EXPLAIN, otherwise-mysterious stalls this project's own history
+records around nether/end gear-up phases (worth checking this file's earlier entries about those
+phases against this once a stand exists, rather than assuming they were all separately-caused).
+
+Not a new fix, no code change here — this is scope documentation so whoever eventually gets stand
+access knows this fix's real significance and specifically watches nether/end gear-up behavior,
+not just "does the bot wear a helmet."
+
 <!-- STRENGTHENED-CAVEAT-NEVER-COMPILED-2026-09-05 -->
 ## ⛔ STRENGTHENING A CAVEAT, NOT REPORTING A NEW FINDING: today's Java commits were never compiled, not merely not stand-verified (2026-09-05)
 
