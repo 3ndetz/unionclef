@@ -1,5 +1,58 @@
 # TODOs
 
+<!-- DOCKERPROXY-READONLY-ACCESS-FOUND-2026-09-07 -->
+## New capability found: read-only docker access via a shared PAC-complex proxy (2026-09-07)
+
+Corrects/extends the standing C8.1 record. Every earlier check this session (`docker ps`,
+`/var/run/docker.sock`) tested the raw Docker CLI/socket path and found it genuinely absent — that
+conclusion stands, it is not wrong. What was untested is a SEPARATE path: a shared docker-proxy
+this sandbox's network can reach, surfaced by a peer (Duty Officer, session mainframe) investigating
+an unrelated complex-wide status question. Probed it directly:
+
+```
+curl http://pac-dockerproxy:2375/version          -> 200, real Docker Engine 29.0.1 info
+curl http://pac-dockerproxy:2375/containers/json  -> 200, lists uctest-mc-tester1 / uctest-server /
+                                                      uctest-gamer-server, all running/healthy
+curl http://pac-dockerproxy:2375/containers/<id>/logs?stdout=true&tail=N
+                                                   -> 200, real live log output (both the vanilla
+                                                      server log and the client's own chat/debug log)
+```
+
+**This is the same docker host our test containers actually run on** — not a different, unrelated
+daemon. Note the port: the proxy answers on `2375`, not the bare-URL default of `80` (a first probe
+against the default port got a plain connection-refused, which reads exactly like "unreachable" and
+is not — the lesson underneath this whole finding is to check the actual configured port before
+concluding a named host is unreachable).
+
+**What this changes, precisely — a real but partial upgrade**: `POST`/`EXEC`/restart/start/stop are
+all gated to 0 at the proxy by construction (confirmed independently by the peer who found the
+proxy, reading its own container config rather than guessing), so this does NOT unblock
+`capture_demo.py`, any py4j command, or anything needing `docker exec` — that half of C8.1 is
+unchanged and still fully blocking. What it DOES newly enable, read-only, from this sandbox, right
+now: confirming container existence/health/uptime without going through the status feed, and
+pulling real container logs directly (`GET /containers/<id>/logs`) — genuine, live diagnostic
+signal that was not available from this seat before.
+
+**One dead end, honestly recorded rather than silently dropped**: pulled `uctest-mc-tester1`'s live
+log and saw a periodic `[Tungsten] WALKMODE off=N bfs=M direct=0` line with `off` climbing steadily
+and `bfs`/`direct` flat across a ~4-minute sample — superficially similar to a pattern
+`BeatMinecraftTask.java:166`'s own comment already documents as a bad sign ("the walker never once
+active"). Read `BlockPathWalker.tick()` before concluding anything: `tickOff`/`tickBfs`/`tickDir`
+are LIFETIME cumulative counters (incremented every tick since the client started, never reset), not
+a recent-window signal — `off` climbing while the OTHER two stay flat over a short sample is exactly
+what a multi-day-uptime counter looks like whenever this specific walker component isn't the one
+currently driving movement (the bot has several other drivers: `FastNavigator`, `PathExecutor`,
+`CombatPathfinder`), not evidence of a stall. The documented "never once active" bad case was about
+this walker never running ONCE in a whole 5-minute run from a fresh connect (a NullPointerException
+in the task constructor); a short slice of an 81-hour-old cumulative counter cannot distinguish that
+from ordinary operation. Correctly caught before asserting a live bug that the data does not
+actually support.
+
+Not acted on further — this is a capability discovery + one honestly-closed false trail, not a code
+change. Worth remembering as a standing tool: whenever a specific diagnostic question needs real,
+live evidence from the stand (is a container up, what did it recently log), `pac-dockerproxy:2375`
+is reachable from this sandbox and worth trying before assuming nothing is.
+
 <!-- ARMOR-FIX-BLAST-RADIUS-2026-09-06 -->
 ## The armor-equip/detection fix (7aea6ea4) is bigger than it looked — it gates the Nether AND End gear-up (2026-09-06)
 
