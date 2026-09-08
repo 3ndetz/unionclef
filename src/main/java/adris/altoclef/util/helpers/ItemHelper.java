@@ -817,8 +817,14 @@ public class ItemHelper {
         if (item == null) {
             return null;
         }
-        var equippable = item.getComponents().get(net.minecraft.component.DataComponentTypes.EQUIPPABLE);
-        return equippable == null ? null : equippable.slot();
+        //#if MC >= 12111
+        //$$ var equippable = item.getComponents().get(net.minecraft.component.DataComponentTypes.EQUIPPABLE);
+        //$$ return equippable == null ? null : equippable.slot();
+        //#else
+        // Before 1.21.11 the EQUIPPABLE component does not exist and ArmorItem still does,
+        // so the slot comes off the item class exactly as it always did.
+        return item instanceof net.minecraft.item.ArmorItem armor ? armor.getSlotType() : null;
+        //#endif
     }
 
     /**

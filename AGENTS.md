@@ -212,6 +212,22 @@ py4j/MCP), а НЕ готовые скрипты, которые всё дела
   make rule 8 impossible to obey.
 - After editing code, compile it. Describing a change is not verifying it.
 
+- **HOW to compile, proven 2026-09-07.** The wrapper needs three things pointed at it and then it
+  works. The JDK ships in the repo and is a LINUX binary, so this runs in a container:
+
+      docker run --rm -v <repo>:/w -v <gradle-home>:/gh -w /w         -e JAVA_HOME=/w/.gradle/jdk21 -e GRADLE_USER_HOME=/gh         debian:bookworm-slim         sh -c 'cd /w && ./gradlew :1.21.1:compileJava --no-daemon --offline                  -Dorg.gradle.java.home=/w/.gradle/jdk21'
+
+  Three traps, each of which looks like "the build is impossible":
+  1. `JAVA_HOME` unset gives *no java command could be found*. The JDK is at `.gradle/jdk21`.
+  2. The shared gradle home carries `org.gradle.java.home` pointing at a WINDOWS IntelliJ JDK,
+     which is invalid inside a Linux container. Override it on the command line; do not edit
+     the user's file.
+  3. Without a warm `GRADLE_USER_HOME` the `com.replaymod.preprocess` plugin cannot resolve
+     from jitpack. With one, `--offline` works.
+
+  ⛔ And capture the exit code. Piping gradle into `tail` throws it away, and a FAILED build
+  then reports success to whatever is reading. That happened on the first attempt here.
+
   > ⛔ WHY THIS WAS REWRITTEN, 2026-09-07. The line used to read *NEVER run Gradle without
   > the user explicitly asking*, and the session read it exactly as written, which was
   > correct reading and a wrong outcome. Six Java commits shipped on 2026-09-05 having never
