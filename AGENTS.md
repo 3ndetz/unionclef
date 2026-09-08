@@ -203,8 +203,28 @@ py4j/MCP), а НЕ готовые скрипты, которые всё дела
 
 ## STRICT Rules
 
-- **NEVER run Gradle** (`gradlew build`, `runClient`, `compileJava`, etc.) without the user explicitly asking. Running build recompiles JARs and breaks active hot swap / debug sessions, costing ~10 min to restart.
-- After editing code, just describe changes. Do NOT "verify" by building.
+- **NEVER run Gradle WHILE A HOT SWAP / DEBUG SESSION IS LIVE** (`gradlew build`, `runClient`,
+  `compileJava`, etc.). Building recompiles the JARs under a running client and costs the
+  person at the keyboard ~10 minutes to restart. That is the whole reason for this rule and
+  it is the whole scope of it.
+- **When nobody is debugging, COMPILING IS REQUIRED, not permitted.** Rule 8 says the user is
+  not needed for tests and expects a tested product; a rule that stops you compiling would
+  make rule 8 impossible to obey.
+- After editing code, compile it. Describing a change is not verifying it.
+
+  > ⛔ WHY THIS WAS REWRITTEN, 2026-09-07. The line used to read *NEVER run Gradle without
+  > the user explicitly asking*, and the session read it exactly as written, which was
+  > correct reading and a wrong outcome. Six Java commits shipped on 2026-09-05 having never
+  > been compiled at all, not even a `--version` smoke test, and the session spent the next
+  > day writing careful documentation about being blocked instead of building. It collided
+  > head-on with rule 8, CLOSED-LOOP AUTONOMY, which forbids gating work on the user and
+  > demands a tested product. Two rules, opposite instructions, and the stricter-sounding one
+  > won. The ban's own stated reason was never about correctness; it was about not yanking
+  > the JARs out from under somebody's live debug session. It now says that and only that.
+  >
+  > Measured the same day: the JDK was present at `.gradle/jdk21` the entire time and the
+  > wrapper runs fine once `JAVA_HOME` points at it. The block was a rule and one unset
+  > environment variable, not a missing toolchain.
 - Auto-commit and PUSH!! your changes (if not explained otherwise).
   - **Do NOT add `Co-Authored-By` lines to commit messages.** Ever.
   - **All commits MUST use author name and email, not ai's.** Never use Anthropic/Claude credentials. Use owner's creds if git config differs.
