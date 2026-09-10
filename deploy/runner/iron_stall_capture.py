@@ -50,14 +50,19 @@ log = open(LOG, "w", encoding="utf-8")
 def out(s):
     print(s); log.write(s + "\n"); log.flush()
 
-# --- bootstrap (mirror gamer_smoke) ---
+# --- bootstrap: FORCE the gamer-server (the bot may be on the flat test-server from a prior run) ---
+def on_gamer():
+    try: return "tester1" in grcon("list")   # grcon targets uctest-gamer-server
+    except Exception: return False
 t0 = time.time()
-if not py4j("state")["inGame"]:
+if not on_gamer():
+    out("not on gamer-server -> connecting")
     py4j("connect", ip="gamer-server")
-while time.time() - t0 < 200 and not py4j("state")["inGame"]:
-    time.sleep(5)
-if not py4j("state")["inGame"]:
-    out("FAIL: not in game after 200s"); sys.exit(2)
+    while time.time() - t0 < 200 and not on_gamer():
+        time.sleep(5)
+if not on_gamer():
+    out("FAIL: not on gamer-server after 200s"); sys.exit(2)
+out("on gamer-server")
 py4j("cmd", c="@stop"); time.sleep(1)
 grcon("kill tester1"); time.sleep(2); py4j("respawn"); time.sleep(2)
 grcon("gamemode survival tester1"); grcon("time set day"); grcon("effect give tester1 minecraft:instant_health 1 5")
