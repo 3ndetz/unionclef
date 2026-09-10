@@ -71,6 +71,14 @@ lands with a deterministic test + nav 14/14 before it's checked off.
       wasting time on one when alternatives exist. Proper fix: target a hittable standable cell
       adjacent to the entity, or break the occluder. Lower priority now that the time-waste is
       gone; revisit if a scenario has a single unreachable-but-required animal.
+- [ ] **G22 (follow-up) log-spam hygiene during manual crafting.** Noticed while reviewing a
+      mining clip: `CraftGenericManuallyTask` spams `CURSORBACK manualTail holding=...` (its own
+      comments already record "90x oak_log, 30x stick") and the tool path spammed
+      `Found better tool in inventory, equipping.` before the G21-adjacent fix (commit 92f1a315).
+      The tool spam is now fixed (defer to tungsten placing); the CURSORBACK crafting-grid spam
+      remains and looks bad on video. Cosmetic, low priority: gate these logs behind
+      verboseDebugLogging or a per-message cooldown, and check the crafting-grid cursor churn they
+      point at is not also wasting slot actions.
       Original diagnosis for reference: the food task
       (`Collect 220 food`) chases a pig, `TungstenHelper.tryPathToEntity` hands `entity.getPos()`
       to `tryPathTo`, and when the pig sits ~1 block away in a cell the standable-snap treats as
