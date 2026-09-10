@@ -12,46 +12,73 @@ import adris.altoclef.util.ItemTarget;
 import adris.altoclef.util.helpers.ItemHelper;
 //#if MC < 12111
 import net.minecraft.item.Equipment;
-//#else
-//$$ import net.minecraft.item.equipment.EquipmentType;
 //#endif
 import net.minecraft.item.Item;
-
+import net.minecraft.item.Items;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
+
 
 public class EquipCommand extends Command {
 
     public EquipCommand() {
         super("equip", "Equips items",
                 new ListArg<>(new EquipmentItemArg("equipment"), "[equippable_items]")
-                        .addAlias("leather", Arrays.stream(ItemHelper.LEATHER_ARMORS).map(Item::toString).toList())
-                        .addAlias("iron",Arrays.stream(ItemHelper.GOLDEN_ARMORS).map(Item::toString).toList())
-                        .addAlias("gold", Arrays.stream(ItemHelper.IRON_ARMORS).map(Item::toString).toList())
-                        .addAlias("diamond", Arrays.stream(ItemHelper.DIAMOND_ARMORS).map(Item::toString).toList())
-                        .addAlias("netherite", Arrays.stream(ItemHelper.NETHERITE_ARMORS).map(Item::toString).toList())
+                        .addAlias("leather", catalogueNames(ItemHelper.LEATHER_ARMORS))
+                        .addAlias("iron", catalogueNames(ItemHelper.IRON_ARMORS))
+                        .addAlias("gold", catalogueNames(ItemHelper.GOLDEN_ARMORS))
+                        .addAlias("golden", catalogueNames(ItemHelper.GOLDEN_ARMORS))
+                        .addAlias("diamond", catalogueNames(ItemHelper.DIAMOND_ARMORS))
+                        .addAlias("netherite", catalogueNames(ItemHelper.NETHERITE_ARMORS))
         );
+    }
+
+    /**
+     * Alias values must be CATALOGUE names ("iron_helmet"): that is what the argument parser
+     * yields and what {@link ItemTarget#ItemTarget(String)} resolves. The aliases used to be built
+     * from {@code Item::toString}, which is the namespaced registry id ("minecraft:iron_helmet")
+     * and unknown to the catalogue, so no alias could ever resolve. "iron" also pointed at the
+     * golden set and "gold" at the iron one.
+     */
+    private static List<String> catalogueNames(Item[] items) {
+        return Arrays.stream(items).map(ItemHelper::stripItemName).toList();
     }
 
     @Override
     protected void call(AltoClef mod, ArgParser parser) throws CommandException {
-        List<ItemTarget> items = parser.get(List.class);
+        // The list argument is built from EquipmentItemArg, an Arg<String>: the parser hands back
+        // catalogue NAMES, not ItemTargets. Reading it as List<ItemTarget> compiled (erasure) and
+        // threw ClassCastException on the first element at runtime, so `@equip` had never run once
+        // since the monorepo was created. Found on the stand 2026-09-10 while trying to exercise
+        // the armor-equip fix through it.
+        List<String> names = parser.get(List.class);
+        ItemTarget[] items = names.stream().map(ItemTarget::new).toArray(ItemTarget[]::new);
 
         for (ItemTarget target : items) {
             for (Item item : target.getMatches()) {
-                //#if MC < 12111
-                if (!(item instanceof Equipment)) {
-                //#else
-                //$$ // TODO [1.21.11] Equipment deleted — use EquipmentType check
-                //$$ if (false) {
-                //#endif
-                    throw new RuntimeCommandException("'"+item.toString().toUpperCase() + "' cannot be equipped!");
+                if (!canBeEquipped(item)) {
+                    throw new RuntimeCommandException("'" + ItemHelper.stripItemName(item).toUpperCase() + "' cannot be equipped!");
                 }
             }
         }
 
-        mod.runUserTask(new EquipArmorTask(items.toArray(new ItemTarget[0])), this::finish);
+        mod.runUserTask(new EquipArmorTask(items), this::finish);
+    }
+
+    /**
+     * Whether {@link EquipArmorTask} knows how to put this item on: armor (anything the game
+     * itself would equip to a body slot) or a shield in the off hand.
+     */
+    private static boolean canBeEquipped(Item item) {
+        //#if MC < 12111
+        return item instanceof Equipment;
+        //#else
+        //$$ // The Equipment interface is gone in 1.21.11; the EQUIPPABLE component now says which
+        //$$ // slot an item goes to, and ItemHelper.getArmorSlot reads it. Shields carry no such
+        //$$ // component (they are held, not worn) and stay a special case, as in EquipArmorTask.
+        //$$ return item == Items.SHIELD || ItemHelper.getArmorSlot(item) != null;
+        //#endif
     }
 
 
@@ -93,11 +120,7 @@ public class EquipCommand extends Command {
         }
 
         private static boolean isEquipment(String cataloguedItem) {
-            //#if MC < 12111
-            return Arrays.stream(new ItemTarget(cataloguedItem).getMatches()).anyMatch(i -> i instanceof Equipment);
-            //#else
-            //$$ return true; // TODO [1.21.11] Equipment deleted — use EquipmentType check
-            //#endif
+            return Arrays.stream(new ItemTarget(cataloguedItem).getMatches()).anyMatch(EquipCommand::canBeEquipped);
         }
     }
 
