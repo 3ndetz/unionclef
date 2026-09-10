@@ -79,6 +79,21 @@ lands with a deterministic test + nav 14/14 before it's checked off.
       remains and looks bad on video. Cosmetic, low priority: gate these logs behind
       verboseDebugLogging or a per-message cooldown, and check the crafting-grid cursor churn they
       point at is not also wasting slot actions.
+      DONE 2026-09-10 (commit 2ffb94c3): both CURSORBACK logs gated behind verboseDebugLogging;
+      verified clean on a recorded run. Cursor-churn slot-action audit not done (separate).
+- [ ] **G23 dropped-item pickup on hilly / snowy / ice terrain — the bot circles a drop it cannot
+      reach.** Found on a recorded @gamer run on a snowy-taiga + frozen-lake spawn (first craft
+      241 s vs 43-65 s on flat spawns). PickupDroppedItemTask -> "Approach entity item -> Tungsten
+      locked -> Waiting for calculations (wandering)" loops on a dropped wooden_pickaxe, then again
+      on cobblestone. Guide dumps show long incomplete paths across the hills (endToTgt 28,
+      tests20948, ranOut), "Mining aborted dist=19.00 target=...", "Path needs mining 1 block at
+      segment end" ON ICE, and repeated "Wander for 5 blocks". The bot also took fall damage on the
+      hills (hp 19->13). Same entity-approach family as G21 but for ITEM drops plus long-distance
+      nav on broken terrain; the dead-zone budget (G21) is for combat targets (maintainDistance<0),
+      so it does not cover item pickup. Likely levers: item pickup already uses distance-not-reach
+      (itemPickupIsDistanceNotReach) -- check it is on and the pit/hill descent to a drop works;
+      and give item pursuit the same abandon-and-retry budget when a drop is unreachable across
+      terrain. Bench: drop an item down a 2-3 block ledge / on ice, bot above, measure time-to-pickup.
       Original diagnosis for reference: the food task
       (`Collect 220 food`) chases a pig, `TungstenHelper.tryPathToEntity` hands `entity.getPos()`
       to `tryPathTo`, and when the pig sits ~1 block away in a cell the standable-snap treats as
