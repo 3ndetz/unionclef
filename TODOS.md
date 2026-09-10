@@ -1,5 +1,119 @@
 # TODOs
 
+<!-- STAND-IS-ON-THIS-MACHINE-FIRST-LIVE-RUN-OF-SEPTEMBER-FIXES-2026-09-10 -->
+## The stand and the build both live on the Windows host: first live run of the 2026-09-05 fixes, armor fix confirmed, `@equip` found dead and fixed (2026-09-10)
+
+**Read this before trusting any "C8.1" sentence written between 2026-09-01 and 2026-09-08.** Every
+one of those was written from a cloud sandbox. On the Windows checkout (`C:\repos\pet\unionclef`,
+the machine that owns the `pac-dockerproxy` the sandbox was reaching) there is no C8.1 at all:
+
+- `docker ps` lists `uctest-server`, `uctest-gamer-server`, `uctest-mc-tester1` (all up), the MCP
+  port `25350` and noVNC `5820` are published on the host, `docker exec` works, so every
+  `deploy/runner/*.py` script runs as written. The jar on the stand was `0.93.0` from 2026-08-31,
+  i.e. NOTHING committed in September had executed once before today.
+- `JAVA_HOME` points at JBR 21, `java`/`javac` are on `PATH`, docker is 29.0.1. No JDK trick
+  needed.
+
+**Build on this host: use the project-local gradle home, not `~/.gradle`.** The bare wrapper fails
+at configuration time, on every version subproject, before any Java is touched:
+
+```
+> Could not load compiled classes for build file 'C:\Repos\pet\unionclef\build.gradle' from cache.
+Caused by: java.lang.ClassNotFoundException: build_9ey1utl565ancxii86t7utlgi
+```
+
+Tried and ruled out, each on its own: clearing `~/.gradle/caches/9.4.1/groovy-dsl` (regenerates
+with `_BuildScript_` only, same failure), `gradlew --stop` and a fresh daemon, `--no-build-cache`,
+the lowercase `C:\repos` path. Root cause not found; the global cache was put back exactly as it was.
+What works, and is the same home the 2026-09-08 docker build used:
+
+```
+GRADLE_USER_HOME=C:/repos/pet/unionclef/.gradle/home ./gradlew.bat :1.21.11:build -x check
+```
+
+(`.gradle/home/gradle.properties` routes through `host.docker.internal:2080`; that proxy is listening
+on this host, so online resolution works; `--offline` works for 1.21.11/1.21.1 whose caches are warm,
+and the `:1.21` compile needed one online pass for `com.mojang:brigadier`.) ⛔ Read the exit code
+from a plain shell, not a PowerShell pipeline: `gradlew ... | Tee-Object | Select-Object` reported
+`$LASTEXITCODE = 0` for a build whose log said `BUILD FAILED`. AGENTS.md's tail-trap, again, in a
+different shell.
+
+**All three versions compile, 0 errors, 0 javac warnings.** `:1.21.11` and `:1.21.1` were
+already up-to-date from 2026-09-08 06:19 (the compiled `ItemHelper.class` for 1.21.11 carries the
+`EQUIPPABLE` branch, so the 12111 side of the September ports had in fact been through javac that
+morning, which `6185bee0`'s message did not claim); `:1.21` compiled fresh today for the first time
+since 2026-08-08.
+
+**Deployed and run.** `deploy_jar.sh` recreated `uctest-mc-tester1` on a jar built from `6185bee0`:
+
+```
+nav_flat        PASS  29.3 fps
+nav_staircase   PASS  29.0 fps
+nav_descend     PASS  29.7 fps
+```
+
+Then the armor fix (`7aea6ea4`, the one the 2026-09-06 entry above says gates Nether/End gear-up)
+through the only chat lever that reaches `EquipArmorTask`, and it could not be reached at all:
+
+```
+java.lang.ClassCastException: class java.lang.String cannot be cast to class adris.altoclef.util.ItemTarget
+    at adris.altoclef.commands.EquipCommand.call(EquipCommand.java:41)
+```
+
+`@equip` had never worked since the monorepo was created (`efe70c8b`): its `ListArg` is built from an
+`Arg<String>` and `call()` read it as `List<ItemTarget>`. Same constructor: the aliases were built
+from `Item::toString` (namespaced ids the catalogue does not know) and `iron`/`gold` were swapped.
+Fixed in commit `5bb14d4e` (names mapped to `ItemTarget` in `call()`, aliases from
+`ItemHelper.stripItemName`, one `canBeEquipped` predicate with a real 1.21.11 branch instead of
+`if (false)`). Not on the `@gamer` path itself (`BeatMinecraftTask` constructs `EquipArmorTask`
+directly), but it is the operator's and the bench's only way to exercise that task in isolation.
+
+With the command alive, `@equip iron` from a fresh iron set in the hotbar and nothing worn:
+
+```
+equipment after 2.1 s: {head: iron_helmet, chest: iron_chestplate, legs: iron_leggings, feet: iron_boots}
+hasActiveTask() afterwards: false
+```
+
+That is the first execution of `7aea6ea4`: the helmet goes to HEAD (pre-fix, every piece went to
+CHEST), and `isArmorEquipped` sees the worn pieces, so the task finishes instead of re-equipping
+forever. It also live-confirms the 2026-09-04 `hasActiveTask` fix (false after `@stop` and after a
+finished task). Kept as `deploy/runner/equip_armor_test.py`, a STEP test in the rule-six sense:
+the gate is "started with nothing worn, ended with all four in their own slots".
+
+One thing seen and not chased: while equipping, the chat log shows pairs of
+`CLICK win=41..44 type=PICKUP cursor=empty target=empty`, i.e. clicks on empty slots that move
+nothing. Harmless here, but a click that does nothing is a tick spent, and the same loop runs on
+the playthrough. Worth a look when someone is in `EquipArmorTask`/`MoveItemToSlotFromInventoryTask`
+next, not now.
+
+**Regression check for the whole September build, on the jar that carries `5bb14d4e`** (the
+crafting rungs are where `c74a4022`, `bd0d5226` and the recipe-book/`StorageHelper` ports live,
+and `mine_coal` is the rung the playthrough historically died on):
+
+```
+craft_table          PASS  30.0 fps
+craft_wood_pickaxe   PASS  29.7 fps
+craft_stone_pickaxe  PASS  30.0 fps
+mine_stone           PASS  29.5 fps
+mine_coal            PASS  29.0 fps
+smelt_iron           PASS  29.8 fps
+```
+
+6/6, no gate failure, no starved run. One sweep, not a rate: this says "nothing broke", not
+"anything got faster"; the checklist's 5-6-run rule applies before any of these numbers is quoted
+as a result. The recipe-book fast path in `CraftInTableTask` did NOT run here: the setting behind
+it is off by default and the bench measures shipped defaults, so that branch is still unexecuted.
+
+**Housekeeping found on the way, none of it done in this pass:**
+- `origin/1.21.11` is 792 commits behind `main` (everything since v0.93.0). `build.gradle` still
+  tags releases on `targetCommitish = "1.21.11"`, so the next `githubRelease` would tag 29-August
+  source under a September jar. Fast-forward it before releasing (RELEASE.md already warns).
+- `docs/releases/base.md`, prepended to every release, still advertises Shredder `#goto`/`#stop`.
+- `TODOS.md` stops at 2026-09-07; `6185bee0` (2026-09-08) exists only as a commit message.
+- Issues #20 and #21 cite retired shredder code and can be closed (already established 2026-09-04,
+  still open because that session had no `gh`; this host has it).
+
 <!-- DOCKERPROXY-DELIBERATE-RESTRAINT-2026-09-07 -->
 ## Precision and a deliberate stop on the docker proxy finding above (2026-09-07)
 
