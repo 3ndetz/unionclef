@@ -94,6 +94,16 @@ lands with a deterministic test + nav 14/14 before it's checked off.
       (itemPickupIsDistanceNotReach) -- check it is on and the pit/hill descent to a drop works;
       and give item pursuit the same abandon-and-retry budget when a drop is unreachable across
       terrain. Bench: drop an item down a 2-3 block ledge / on ice, bot above, measure time-to-pickup.
+      PARTIAL 2026-09-10 (commit 6823c268): drop pursuit now abandons a drop whose distance stops
+      improving for 25s (dropAbandonWhenNotClosing), instead of only the flat 120s budget. Verified
+      NON-REGRESSING (nearby drop still collected in ~3s) but NOT observed fixing the real wander:
+      benches (drop on an unclimbable pillar) hit a DIFFERENT recovery first --
+      "Failed to pick up drop, will try to collect a stone pickaxe first and try again" -- which
+      fetches tools to reach an unreachable drop and is itself a wander source; and hilly-terrain
+      nav is slow on its own. STILL OPEN, needs a dedicated pass: (a) that tool-fetch recovery
+      should not send the bot across the map for a re-craftable drop; (b) chase-vs-recraft strategy
+      in the beat-game resource logic; (c) hill/ice nav quality. Reproduce by reading the real
+      lock line: lock=...wooden_pickaxe:19.7>22.2 dy-13.1 (drop 84 away, 29 below, distance growing).
       Original diagnosis for reference: the food task
       (`Collect 220 food`) chases a pig, `TungstenHelper.tryPathToEntity` hands `entity.getPos()`
       to `tryPathTo`, and when the pig sits ~1 block away in a cell the standable-snap treats as
