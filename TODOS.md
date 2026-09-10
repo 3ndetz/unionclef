@@ -52,6 +52,28 @@ test + full nav-suite regression before it counts done.
 correctness set (G10/G11/G12 remove "the bot did something weird" faults), then LOW polish. Each
 lands with a deterministic test + nav 14/14 before it's checked off.
 
+### TOP PRIORITY — found by running @gamer twice on real survival terrain (2026-09-10)
+- [ ] **G21 entity-approach goal snaps onto the bot's own cell → the bot dances instead of
+      killing.** THE dominant early-game waste, seen TWICE in one 12-min @gamer run: the food task
+      (`Collect 220 food`) chases a pig, `TungstenHelper.tryPathToEntity` hands `entity.getPos()`
+      to `tryPathTo`, and when the pig sits ~1 block away in a cell the standable-snap treats as
+      unstandable (a step/ledge, or the pig's own cell blocked from above), the goal snaps onto the
+      **bot's current cell**. The guide is then zero-length — `hop[0,0,0]`, `path: -5,66,-520
+      -5,66,-520`, `endToTgt~1.0`, pig within reach — so the bot idles/wanders. The barren-lock
+      guard (2×30s) never fires because a jittering pig keeps resetting `barrenStreak`. Measured:
+      ~250 s lost on the first pig, more on the second; together most of the run's first ~10 min.
+      Evidence: `deploy/runner/freezes/stall_run1.txt` (both runs), `hop[0,0,0]` dominates
+      UN-CROSSED HOP SHAPES.
+      ⛔ This exact code path (GetToEntityTask / TungstenHelper lock / AbstractDoToEntityTask) is a
+      documented graveyard of reasoning-based fixes that pointed at branches that don't execute.
+      FIX ONLY BEHIND A DETERMINISTIC BENCH (spawn a pig on a ledge / in a 1-deep pit, bot adjacent
+      with a sword, measure time-to-kill and read `lockAnat`), never from reasoning. Candidate
+      directions to test, not assume: (a) when the entity is within reach and the guide degenerates
+      to the bot's own cell, hand off to the combat layer / attack instead of re-driving nav;
+      (b) target a hittable standable cell adjacent to the entity, not the entity's raw cell;
+      (c) count an in-reach-but-not-closing lock as barren immediately so an unreachable animal is
+      abandoned in seconds and another is chosen.
+
 <!-- PIT-PILLAR-ESCAPE-SURVIVAL-PATH-2026-09-10 -->
 ## Core fix: the survival navigator now pillars OUT of a pit toward an up-and-offset goal (2026-09-10, commit 2b134a37)
 
