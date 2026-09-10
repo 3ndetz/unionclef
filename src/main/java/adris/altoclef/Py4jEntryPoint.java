@@ -5231,6 +5231,23 @@ public class Py4jEntryPoint {
                 if (st.getItem() instanceof net.minecraft.item.BlockItem) blocks += st.getCount();
             }
             self.put("blocks", blocks);
+            // Rotation + motion + look-target: reading a stall means knowing whether the bot is
+            // spinning, standing still, or staring at a block it cannot reach. Added 2026-09-10
+            // so a stall capture can name the cause from position AND facing, not position alone.
+            self.put("yaw", Math.round(me.getYaw() * 10.0f) / 10.0);
+            self.put("pitch", Math.round(me.getPitch() * 10.0f) / 10.0);
+            net.minecraft.util.math.Vec3d vel = me.getVelocity();
+            self.put("vel", String.format("%.2f,%.2f,%.2f", vel.x, vel.y, vel.z));
+            var ct = client.crosshairTarget;
+            if (ct instanceof net.minecraft.util.hit.BlockHitResult bhr
+                    && ct.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
+                net.minecraft.util.math.BlockPos lookPos = bhr.getBlockPos();
+                self.put("lookingAt", net.minecraft.registry.Registries.BLOCK.getId(
+                        client.world.getBlockState(lookPos).getBlock()).getPath()
+                        + "@" + lookPos.getX() + "," + lookPos.getY() + "," + lookPos.getZ());
+            } else {
+                self.put("lookingAt", ct == null ? "none" : ct.getType().toString());
+            }
             out.put("self", self);
 
             List<Map<String, Object>> players = new ArrayList<>();
