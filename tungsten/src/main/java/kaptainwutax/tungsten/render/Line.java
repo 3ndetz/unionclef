@@ -33,7 +33,14 @@ public class Line extends Renderer {
         //$$ this.putVertex(builder, camPos, this.start);
         //$$ this.putVertex(builder, camPos, this.end);
         //#else
-        net.minecraft.world.debug.gizmo.GizmoDrawing.line(this.start, this.end, this.color.toARGB(255)).ignoreOcclusion();
+        // Two passes so the cue reads against real terrain (user 2026-09-10): a SOLID,
+        // depth-tested line where it is actually visible, plus the same line at 50% alpha drawn
+        // THROUGH walls where it is occluded. A single ignoreOcclusion pass (what this was) made
+        // every route/break/place overlay a flat full-alpha smear that ignored the world; a single
+        // depth-tested pass would vanish behind terrain. Every box (Cuboid = 12 Lines) and the
+        // route line inherit this, so break outlines (red) and place outlines (green) get it too.
+        net.minecraft.world.debug.gizmo.GizmoDrawing.line(this.start, this.end, this.color.toARGB(255));
+        net.minecraft.world.debug.gizmo.GizmoDrawing.line(this.start, this.end, this.color.toARGB(128)).ignoreOcclusion();
         //#endif
     }
 
