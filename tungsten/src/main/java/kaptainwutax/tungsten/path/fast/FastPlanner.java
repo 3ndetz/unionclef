@@ -606,6 +606,11 @@ public final class FastPlanner {
         }
         // Dig straight down (G1) — the descent move that reaches ore. Gated internally on allowBreak.
         breakDown(world, from, goal, map, open, scratch);
+        // Dug staircase up/down (G2) — cut a route through a hill/overhang, not only flat tunnels.
+        for (int[] d : CARDINALS) {
+            breakStair(world, from, d[0], d[1], 1, goal, map, open, scratch);
+            breakStair(world, from, d[0], d[1], -1, goal, map, open, scratch);
+        }
         special(world, from, goal, map, open, scratch);
     }
 
@@ -1187,6 +1192,53 @@ public final class FastPlanner {
         cntBreak++;
         // needsPhysics: the walker cannot mine; the physics side carries toBreak into the executor.
         relax(map, open, from, fx, fy - 1, fz, cost, goal, true, plan);
+    }
+
+    /**
+     * DUG STAIRCASE, one cardinal step UP or DOWN, breaking the blocks in the way (baritone's
+     * MovementAscend/MovementDescend break variants — docs/BARITONE-GAPS.md G2). step()'s ascend
+     * needs the destination body-space already clear; this cuts UP through a hill (break the cell
+     * above your head + the destination feet/head) or DOWN through an overhang, so the search can
+     * carve a route rather than only tunnel flat. dyStep = +1 (up) or -1 (down).
+     */
+    private static void breakStair(WorldView world, Node from, int dx, int dz, int dyStep,
+                                   BlockPos goal, NodeMap map, Heap open, BlockPos.Mutable scratch) {
+        if (dx != 0 && dz != 0) return;                       // cardinal only
+        if (!TungstenConfig.get().allowBreak) return;
+        net.minecraft.entity.player.PlayerEntity player = TungstenMod.mc.player;
+        if (player == null) return;
+        int nx = from.x + dx, nz = from.z + dz, ny = from.y + dyStep;
+        // Destination feet = (nx, ny, nz); must have a solid floor to stand on below it.
+        scratch.set(nx, ny, nz);
+        if (Double.isNaN(PlayerFit.supportTop(world, scratch))) return;
+
+        // Cells whose stone blocks the manoeuvre and must be mined:
+        //  - going UP: the ceiling above the origin head (from.y+2) to rise, plus the dest feet
+        //    (ny) and dest head (ny+1);
+        //  - going DOWN: the dest head (ny+1 == from.y) and dest feet (ny) to walk into and drop.
+        java.util.List<BlockPos> cells = new java.util.ArrayList<>(3);
+        if (dyStep > 0) cells.add(new BlockPos(from.x, from.y + 2, from.z));  // mine the ceiling to jump up
+        cells.add(new BlockPos(nx, ny + 1, nz));   // destination head
+        cells.add(new BlockPos(nx, ny, nz));       // destination feet
+        List<BlockPos> plan = new ArrayList<>();
+        double ticks = 0;
+        for (BlockPos cell : cells) {
+            if (isLadder(world, cell.getX(), cell.getY(), cell.getZ(), scratch)) return;
+            if (world.getBlockState(cell).getCollisionShape(world, cell).isEmpty()) continue;
+            net.minecraft.block.BlockState st = world.getBlockState(cell);
+            if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, cell, st)) return;
+            double t = kaptainwutax.tungsten.path.movements.MovementHelperB
+                    .getMiningDurationTicks(world, player, cell.getX(), cell.getY(), cell.getZ(),
+                                            st, cell.getY() > ny);
+            if (t >= 1_000_000) return;
+            ticks += t; plan.add(cell);
+        }
+        if (plan.isEmpty()) return;   // nothing to cut -> it is a plain ascend/descend, step() owns it
+        double cost = ActionCosts.WALK_ONE_BLOCK_COST
+                + (dyStep > 0 ? ActionCosts.JUMP_PENALTY : ActionCosts.FALL_ONE_BLOCK_COST)
+                + ticks * TungstenConfig.get().breakCostMultiplier;
+        cntBreak++;
+        relax(map, open, from, nx, ny, nz, cost, goal, true, plan);
     }
 
     /**

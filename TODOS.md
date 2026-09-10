@@ -18,8 +18,9 @@ test + full nav-suite regression before it counts done.
 
 ### HIGH — strand the playthrough
 - [x] **G1 dig straight down** (FastPlanner.breakDown) — dig_down_test PASS (11 blocks down), nav 14/14.
-- [ ] **G2 dug staircase up/down** (ascend-with-break + descend-with-break generators). Bench: a
-      hillside/wall that must be cut through, up and down.
+- [x] **G2 dug staircase up/down** (FastPlanner.breakStair, ascend/descend with break). Added and
+      nav 14/14. Note: for going UP the search rightly prefers pillaring (cheaper); breakStair is
+      chosen when cutting through/down is cheaper than a detour.
 - [ ] **G3 deep descent >3 + MLG water-bucket** (raise MAX_FALL with a fall/water landing model;
       wake the ported bucket path). Bench: drop into a ravine / water below.
 - [ ] **G4 open-water crossing** (grid BFS swim-from-bank entry; a water route that can build).
