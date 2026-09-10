@@ -4,17 +4,16 @@
 2. Drop the release JAR into your `.minecraft/mods/` folder
 3. Launch Minecraft
 
-No separate mods install needed — everything is bundled into the main UnionClef JARfile. But if you see another JARs like `tungsten-**.jar` or `shredder-**.jar`, you can use it separetely if you want to, but NOT with UnionClef because it combines them all!
+No separate mods install needed — everything is bundled into the main UnionClef JAR. If you see a separate `tungsten-**.jar`, do not install it next to UnionClef: UnionClef already contains it.
 
 ## Modules
 
-UnionClef bundles three systems, each with its own command prefix:
+UnionClef bundles two systems, each with its own command prefix:
 
 | Module | Prefix | What it does |
 | --- | --- | --- |
-| **Tungsten** | `;` | A* movement — precise physics-simulated pathfinding |
-| **Shredder** | `#` | Block-level pathfinding (baritone fork, bridging, mining) |
-| **AltoCef** | `@` | High-level bot tasks (get items, kill mobs, survive) |
+| **Tungsten** | `;` | Movement — physics-simulated pathfinding, block-space search, bridging, mining |
+| **AltoClef** | `@` | High-level bot tasks (get items, kill mobs, survive) |
 
 ## Quick start commands
 
@@ -23,9 +22,6 @@ UnionClef bundles three systems, each with its own command prefix:
 ;followPlayer <nick>        — tungsten: follow a player
 ;stop                       — tungsten: stop current action
 ;settings debugTime true    — tungsten: enable profiling output
-
-#goto <x> <y> <z>          — shredder: pathfind to coordinates
-#stop                       — shredder: stop
 
 @goto <x> <y> <z>          — altoclef: smart goto (avoids mobs, eats, etc.)
 ```
