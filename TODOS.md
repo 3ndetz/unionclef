@@ -1,5 +1,56 @@
 # TODOs
 
+<!-- BARITONE-GAP-PLAN-2026-09-10 -->
+## PLAN: close every tungsten-vs-baritone gap from the audit (docs/BARITONE-GAPS.md)
+
+Full ranked analysis + per-gap failure prediction: **docs/BARITONE-GAPS.md** (committed 2026-09-10).
+This is the tracked plan — EVERY audited item, worked top-down by severity. `[x]` done+tested on
+the stand, `[~]` partial, `[ ]` open. Each fix: core implementation, then a deterministic stand
+test + full nav-suite regression before it counts done.
+
+### Foundations already landed this session (verified)
+- [x] Placement/breaking wired into the @gamer path (escalate to FastNavigator when the walker
+      can't reach). nav 14/14, pit_escape + cliff_climb PASS.
+- [x] Shimmy over-fire fixed (UnstuckChain no longer fires while tungsten is pathing/building).
+- [x] Visuals: route + red-break + green-place, see-through 50%, and the WHOLE place plan renders
+      (FastNavigator publishes res.path). Verified by screenshot.
+- [x] No-place/no-break zones: already inherited via PlaceRules/BreakRules + canPlaceHook/canBreakHook.
+
+### HIGH — strand the playthrough
+- [x] **G1 dig straight down** (FastPlanner.breakDown) — dig_down_test PASS (11 blocks down), nav 14/14.
+- [ ] **G2 dug staircase up/down** (ascend-with-break + descend-with-break generators). Bench: a
+      hillside/wall that must be cut through, up and down.
+- [ ] **G3 deep descent >3 + MLG water-bucket** (raise MAX_FALL with a fall/water landing model;
+      wake the ported bucket path). Bench: drop into a ravine / water below.
+- [ ] **G4 open-water crossing** (grid BFS swim-from-bank entry; a water route that can build).
+      Bench: a pond/lake the bot must cross.
+- [x] **G5 build engine reached on any stall** (progress-based escalation after 4s no net progress),
+      not just a <2-cell route. nav 14/14.
+
+### MED — bite specific situations
+- [ ] **G6 mine a ceiling to pillar through it** (pillarUp must mine an occupied y+2, not refuse).
+- [ ] **G7 ascend-with-place-step + parkour-place** (build up to an offset ledge; place mid-jump).
+- [ ] **G8 best-tool mining cost** (port ToolSet: price/refuse by the best OWNED tool, not the held
+      item — stop refusing reachable obsidian/ore with a pick in the pack).
+- [ ] **G9 break-and-descend** (price the ceiling over a step-down; caves/overhangs).
+- [ ] **G10 adjacent-liquid break veto** (don't open a wall with lava/water behind it — flood guard).
+- [ ] **G11 no-collision blockers visible** (cobweb/fire/tripwire/berry counted as walls to break).
+- [ ] **G12 doors/gates passable to grid BFS** (open them instead of refusing/shimmying).
+- [ ] **G13 per-cell break budget** (replace the flat 300-tick abort so hard blocks can finish).
+- [ ] **G14 soft break-cost tier for block entities** (one chest in a wall shouldn't abort the tunnel).
+- [ ] **G15 throwaway budget whitelist** (don't count shulkers/beds -> no over-promised bridge abort).
+
+### LOW — polish
+- [ ] **G16 execute diagonals in the queue** (queueDiagonals) — faster nav.
+- [ ] **G17 slime-bounce shortcut** (slimeCrossing default) — evaluate on-by-default.
+- [ ] **G18 price soul-sand/honey; let cobweb be a break candidate.**
+- [ ] **G19 elytra / boat / nether-portal travel** — only if the playthrough needs them.
+- [ ] **G20 cost-model retune** (JUMP_PENALTY/PLACE/FALL constants; split XZ/Y in octile heuristic).
+
+**Working order (fastest path to a finished playthrough):** G2 → G3 → G4 → G8, then the MED
+correctness set (G10/G11/G12 remove "the bot did something weird" faults), then LOW polish. Each
+lands with a deterministic test + nav 14/14 before it's checked off.
+
 <!-- PIT-PILLAR-ESCAPE-SURVIVAL-PATH-2026-09-10 -->
 ## Core fix: the survival navigator now pillars OUT of a pit toward an up-and-offset goal (2026-09-10, commit 2b134a37)
 
