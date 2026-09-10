@@ -67,7 +67,19 @@ public class PlayerInteractionFixChain extends TaskChain {
         if (mod.getUserTaskChain().isActive() && betterToolTimer.elapsed()) {
             // Equip the right tool for the job if we're not using one.
             betterToolTimer.reset();
-            if (mod.getControllerExtras().isBreakingBlock()) {
+            // ⛔ DO NOT FIGHT TUNGSTEN'S DELIBERATE BRIDGE/PILLAR PLACEMENT FOR THE HAND.
+            // While the executor is placing a planned block (isPlacingNow), altoclef's own
+            // equipBlockHook has ALREADY put a build block in the hand on purpose. Ripping it back
+            // out for a mining tool every tick is a two-authority fight: the operator caught it on a
+            // cobblestone-mining clip as "Found better tool in inventory, equipping." spamming while
+            // the bot mined bare-handed -- the bot mines AND pillars in its own excavation, so this
+            // chain and the place hook alternate the hand at the break/place boundary. Placing wins
+            // the hand while it is active; the tool re-equips the moment placing ends and breaking
+            // resumes. (Found 2026-09-10 from a live @gamer run the operator was watching.)
+            kaptainwutax.tungsten.path.PathExecutor _exec =
+                    kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            boolean tungstenPlacing = _exec != null && _exec.isPlacingNow();
+            if (mod.getControllerExtras().isBreakingBlock() && !tungstenPlacing) {
                 BlockState state = mod.getWorld().getBlockState(mod.getControllerExtras().getBreakingBlockPos());
                 Optional<Slot> bestToolSlot = StorageHelper.getBestToolSlot(mod, state);
                 Slot currentEquipped = PlayerSlot.getEquipSlot();
