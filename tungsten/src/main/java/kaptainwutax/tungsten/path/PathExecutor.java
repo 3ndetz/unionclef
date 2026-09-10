@@ -1083,10 +1083,12 @@ public class PathExecutor {
             releaseMovementKeys(options);
         }
         kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
-        // Visualize the WHOLE place plan (green), not just the current cell — the mirror of the
-        // break-plan loop above. A single-cell overlay only ever showed one block of a multi-block
-        // bridge/pillar (user 2026-09-10: "only the first placed block rendered"). The cell being
-        // paved right now is drawn slightly larger/brighter.
+        // Visualize the current place segment (green). While FastNavigator drives it owns the
+        // overlay and publishes the WHOLE route's plan (see FastNavigator), so stand down then —
+        // otherwise this single-segment write overwrote the full plan every tick and only one
+        // block showed (user 2026-09-10). When there is no navigator (a direct BridgeTask etc.)
+        // this still renders the executor's own queue.
+        if (!kaptainwutax.tungsten.task.FastNavigator.isActive()) {
         TungstenModRenderContainer.PLACE_PLAN.clear();
         java.util.List<net.minecraft.util.math.BlockPos> pq = placeQueue;
         if (pq != null) {
@@ -1103,6 +1105,7 @@ public class PathExecutor {
                     new Vec3d(target.getX() + 0.1, target.getY() + 0.1, target.getZ() + 0.1),
                     new Vec3d(0.8, 0.8, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 120)));
         }
+        }   // end !FastNavigator.isActive() overlay guard
         float dYaw = net.minecraft.util.math.MathHelper.wrapDegrees(wantYaw - player.getYaw());
         float dPitch = net.minecraft.util.math.MathHelper.wrapDegrees(wantPitch - player.getPitch());
         // PLACE THROUGH THE GAME'S OWN RAY TRACE. What stood here forged a BlockHitResult

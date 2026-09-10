@@ -26,6 +26,8 @@ public class PillarTask {
 
     private static boolean active = false;
     private static int targetY;
+    private static int climbGoalY;   // the FINAL height this climb is heading to (for the visual);
+                                     // the tower is built in chunks, but the whole column is drawn.
     private static int placed;
     private static int stuckTicks;
     private static double lastY;
@@ -34,6 +36,7 @@ public class PillarTask {
         ClientPlayerEntity p = MinecraftClient.getInstance().player;
         if (p == null) return false;
         targetY = ty;
+        climbGoalY = ty;
         placed = 0;
         stuckTicks = 0;
         lastY = p.getY();
@@ -41,6 +44,10 @@ public class PillarTask {
         Debug.logMessage("Pillaring up to y=" + ty);
         return true;
     }
+
+    /** Tell the visual how high the WHOLE climb is going (the final goal), so the green plan shows
+     *  the entire tower even though it is built to intermediate waypoints one chunk at a time. */
+    public static void setClimbGoal(int y) { if (y > climbGoalY) climbGoalY = y; }
 
     public static boolean isActive() { return active; }
     public static int getPlaced() { return placed; }
@@ -85,12 +92,14 @@ public class PillarTask {
         // places one cell per hop, so the executor's single-cell overlay only ever showed the first
         // block of a tall pillar (user 2026-09-10). Draw every cell of this column from the bot's
         // current level up to the target, so the full plan is visible at once.
-        if (kaptainwutax.tungsten.TungstenConfig.get().renderPlacePlan) {
+        if (kaptainwutax.tungsten.TungstenConfig.get().renderPlacePlan
+                && !kaptainwutax.tungsten.task.FastNavigator.isActive()) {  // FastNavigator owns the overlay while it drives
             int cx = net.minecraft.util.math.MathHelper.floor(player.getX());
             int cz = net.minecraft.util.math.MathHelper.floor(player.getZ());
             int fy = net.minecraft.util.math.MathHelper.floor(player.getY());
+            int top = Math.min(Math.max(targetY, climbGoalY), fy + 30);   // cap so a freak goal cannot draw an endless tower
             kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.clear();
-            for (int y = fy - 1; y < targetY; y++) {
+            for (int y = fy - 1; y < top; y++) {
                 kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.add(
                         new kaptainwutax.tungsten.render.Cuboid(
                                 new Vec3d(cx + 0.1, y + 0.1, cz + 0.1),

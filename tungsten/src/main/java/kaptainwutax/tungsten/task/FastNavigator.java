@@ -152,6 +152,9 @@ public final class FastNavigator {
         nextLegMovement = false;
         // A queue left running past the navigator would keep pressing keys with nobody steering.
         kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+        // Drop the plan overlay we published while navigating.
+        kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.clear();
+        kaptainwutax.tungsten.TungstenModRenderContainer.BREAK_PLAN.clear();
     }
 
     /** Ticked from the client mixin alongside the other tungsten tasks. */
@@ -406,6 +409,10 @@ public final class FastNavigator {
                         && !kaptainwutax.tungsten.task.PillarTask.isActive()) {
                     Debug.logMessage("Wall too high to jump — pillaring to y=" + jump.getY());
                     kaptainwutax.tungsten.task.PillarTask.startTo(jump.getY());
+                    // The climb is built in chunks to leg waypoints, but the tower really goes up to
+                    // the goal — tell the visual so the WHOLE green column shows, not one chunk.
+                    if (goal != null) kaptainwutax.tungsten.task.PillarTask.setClimbGoal(
+                            (int) Math.ceil(goal.y));
                     awaitingPhysics = false;
                     legTail = null;
                     return;
@@ -640,6 +647,31 @@ public final class FastNavigator {
                     return;
                 }
                 if (res.isEmpty()) { navEmptyRes++; return; }
+
+                // PUBLISH THE WHOLE PLAN FOR THE VISUAL. res.path carries every waypoint's
+                // toPlace/toBreak, so this shows the ENTIRE column/bridge/tunnel the route will
+                // build at once (user 2026-09-10: "only the first placed block rendered"). The
+                // per-tick single-cell writers (PathExecutor/PillarTask) stand down while this
+                // navigator is active, so this is the authority. Persists until the next plan.
+                if (kaptainwutax.tungsten.TungstenConfig.get().renderPlacePlan
+                        || kaptainwutax.tungsten.TungstenConfig.get().renderBreakPlan) {
+                    kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.clear();
+                    kaptainwutax.tungsten.TungstenModRenderContainer.BREAK_PLAN.clear();
+                    for (FastPlanner.Waypoint w : res.path) {
+                        if (w.toPlace != null) for (BlockPos p : w.toPlace)
+                            kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.add(
+                                    new kaptainwutax.tungsten.render.Cuboid(
+                                            new Vec3d(p.getX() + 0.1, p.getY() + 0.1, p.getZ() + 0.1),
+                                            new Vec3d(0.8, 0.8, 0.8),
+                                            new kaptainwutax.tungsten.render.Color(60, 220, 120)));
+                        if (w.toBreak != null) for (BlockPos p : w.toBreak)
+                            kaptainwutax.tungsten.TungstenModRenderContainer.BREAK_PLAN.add(
+                                    new kaptainwutax.tungsten.render.Cuboid(
+                                            new Vec3d(p.getX() + 0.05, p.getY() + 0.05, p.getZ() + 0.05),
+                                            new Vec3d(0.9, 0.9, 0.9),
+                                            new kaptainwutax.tungsten.render.Color(255, 170, 40)));
+                    }
+                }
 
                 // Walking cannot solve this route — hand it to the physics engine
                 // (already searching in parallel) and get out of its way.
