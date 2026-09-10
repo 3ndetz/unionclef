@@ -134,6 +134,13 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     // near an unreachable goal makes no NET progress even though it "moves". #27.
     private double twBestDistToGoal = -1;
     private long twBestImproveMs = 0L;
+    // Build-engine escalation: when the grid BFS cannot reach the goal (up a cliff, across a
+    // gap, walled in) we hand the leg to FastNavigator — the ;goto engine that plans
+    // pillar/bridge/break/staircase via FastPlanner and executes through the physics executor.
+    private long twNoRouteSinceMs = 0L;      // ms since grid BFS first returned no usable route (0 = has one)
+    private long twFnCooldownUntilMs = 0L;   // don't (re)start the build engine before this ms
+    private net.minecraft.util.math.BlockPos twFnGoal = null;  // the goal cell FastNavigator was handed
+    public static int pdFnBuild = 0;         // times the drive escalated to FastNavigator to build
     Block[] annoyingBlocks = new Block[]{
             Blocks.VINE,
             Blocks.NETHER_SPROUTS,
@@ -644,17 +651,41 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             pdNoVec++;
             return false;
         }
-        // NOTE: @goto keeps planPlaceMoves at its default (off) — the proactive @goto bridge
-        // needs a walker↔executor hand-off that isn't wired yet (the walker takes a gap stub
-        // and the executor's bridge never runs). @goto still bridges REACTIVELY (v0.41 give-up).
-        // The core place-as-a-move bridge is exposed as an agent primitive via ;goto +
-        // setTungstenPlanPlaceMoves (agent decides when to bridge). hasBuildBlock() stays for
-        // when that hand-off lands.
+        // WIRED 2026-09-10: the walker/queue still cannot build — but when they cannot REACH the
+        // goal (grid BFS returns no route: a cliff, a gap, a wall, a pit) the escalation below
+        // hands the leg to FastNavigator, which plans pillar/bridge/break/staircase via
+        // FastPlanner and executes through the physics executor. planPlaceMoves/allowBreak default
+        // ON (TungstenConfig), so that engine builds by default. The old note here said the
+        // hand-off "isn't wired yet" and @goto only bridged reactively after a 14s give-up; that
+        // is what this change fixes. hasBuildBlock() now gates the escalation's place case.
 
         // ── Anti-permanent-stuck safety net ──────────────────────────────
         long nowMs = System.currentTimeMillis();
         net.minecraft.util.math.Vec3d plNow = new net.minecraft.util.math.Vec3d(
                 mod.getPlayer().getX(), mod.getPlayer().getY(), mod.getPlayer().getZ());
+
+        // ── Build-engine in charge: let FastNavigator drive ──────────────
+        // FastNavigator (the ;goto engine) is the ONLY route driver that can pillar up a cliff,
+        // bridge a gap, or dig a staircase — it plans with FastPlanner and executes through the
+        // physics executor + PillarTask/BridgeTask. When the escalation below has handed it a leg,
+        // it self-ticks from the client tick; the walker/queue must NOT run alongside it or they
+        // fight for the movement keys. So while it is active, this task just yields the tick to it
+        // and keeps the progress checker fed (the shimmy is already suppressed because
+        // Nav.isPathing()/Pillar/Bridge are true — see UnstuckChain).
+        if (kaptainwutax.tungsten.task.FastNavigator.isActive() && twFnGoal != null) {
+            net.minecraft.util.math.BlockPos gpCell = net.minecraft.util.math.BlockPos.ofFloored(gp);
+            // Goal moved far from what it is building toward -> stop and let the normal drive
+            // (or a fresh escalation) re-plan on the new goal next tick.
+            if (twFnGoal.getSquaredDistance(gpCell) > 16.0) {
+                kaptainwutax.tungsten.task.FastNavigator.stop();
+                twFnGoal = null;
+                twFnCooldownUntilMs = nowMs + 1500;
+            } else {
+                checker.reset();
+                setDebugState("Tungsten building route (pillar/bridge/break) via FastPlanner...");
+                return true;
+            }
+        }
 
         // ── Unreachable-goal give-up (net progress toward the goal) ────────
         // If the closest we've gotten to the goal hasn't improved for a while, the goal
@@ -893,6 +924,39 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                             "primDrive NO ROUTE: at %d,%d,%d -> goal %d,%d,%d (d%.1f) goalTask=%s",
                             me.getX(), me.getY(), me.getZ(), goalB.getX(), goalB.getY(), goalB.getZ(),
                             distToGoal, goal));
+                }
+                // ── ESCALATE TO THE BUILD ENGINE WHEN THE WALKER CANNOT REACH ──
+                // A grid BFS that returns <2 waypoints (or a degenerate far stub) is the walker
+                // saying "nothing I can reach is any closer" — a cliff, a gap, a wall, a pit. The
+                // walker/queue have no vertical build move, so no amount of retrying gets up. Hand
+                // the leg to FastNavigator, which plans pillar/bridge/break/staircase via
+                // FastPlanner and executes them through the physics executor (the proven ;goto
+                // path that clears nav_wall2 and nav_bridge). This is the fix for the playthrough
+                // stalling at any terrain that needs building (user 2026-09-10). It only fires
+                // when normal walking has already failed, so reachable terrain is untouched.
+                boolean noWalkRoute = bfs.size() < 2 || degenerateStub;
+                if (noWalkRoute) {
+                    if (twNoRouteSinceMs == 0L) twNoRouteSinceMs = nowMs;
+                    boolean canBuild = kaptainwutax.tungsten.TungstenConfig.get().allowBreak
+                            || (kaptainwutax.tungsten.TungstenConfig.get().planPlaceMoves && hasBuildBlock(mod));
+                    if (canBuild && nowMs - twNoRouteSinceMs > 2500 && nowMs >= twFnCooldownUntilMs
+                            && !kaptainwutax.tungsten.task.FastNavigator.isActive()) {
+                        // Clear the walker/queue so FastNavigator owns the keys; let the executor run.
+                        kaptainwutax.tungsten.task.BlockPathWalker.stop();
+                        kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+                        if (ex != null) ex.stop = false;
+                        kaptainwutax.tungsten.task.FastNavigator.start(gp);
+                        twFnGoal = net.minecraft.util.math.BlockPos.ofFloored(gp);
+                        twFnCooldownUntilMs = nowMs + 12000;   // give it room to build before re-deciding
+                        twNoRouteSinceMs = 0L;
+                        pdFnBuild++;
+                        Nav.cancel();
+                        checker.reset();
+                        setDebugState("Tungsten: no walk route — building via FastPlanner (pillar/bridge/break)...");
+                        return true;
+                    }
+                } else {
+                    twNoRouteSinceMs = 0L;
                 }
                 if (bfs.size() >= 2 && !degenerateStub) {
                     // STOP THE DRIVER, NOT THE SEARCH.

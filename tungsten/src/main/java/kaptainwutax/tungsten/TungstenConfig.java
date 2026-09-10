@@ -4664,10 +4664,12 @@ public class TungstenConfig {
     /** Allow the mod to place blocks at all (bridge/build/fill/schematic). */
     public boolean allowPlace = true;
 
-    /** Let the block-space pathfinder plan BRIDGING as a first-class move (place a floor
-     *  across a gap as part of the route — the mirror of allowBreak's break-through).
-     *  Default OFF: opt-in, and altoclef enables it only when the bot has a placeable
-     *  block, so parkour/walk routing without blocks is completely unaffected. */
+    /** Let the block-space pathfinder plan BRIDGING and PILLARING as first-class moves (place a
+     *  floor across a gap, or a block below yourself to climb — the mirror of allowBreak's
+     *  break-through). Default ON (was OFF pre-C5.5). FastPlanner still only emits a place move
+     *  when the bot actually has a placeable block (placeBudget), so blockless parkour/walk
+     *  routing is unaffected. The @gamer drive escalates to FastNavigator (which honours this)
+     *  when the walker cannot reach a goal — see CustomBaritoneGoalTask (wired 2026-09-10). */
     public boolean planPlaceMoves = true;   // shipping placement on — see C5.5
 
     /** Hand a slime pad to {@link kaptainwutax.tungsten.task.SlimeBounceTask} — one manoeuvre
