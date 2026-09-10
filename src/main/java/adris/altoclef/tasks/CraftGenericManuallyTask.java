@@ -327,7 +327,11 @@ public class CraftGenericManuallyTask extends Task implements adris.altoclef.tas
                 return null;
             }
             // The twin of the tag in CraftInInventoryTask.onResourceStop -- see the note there.
-            if (!cursor.isEmpty()) {
+            // Diagnostic dump for the crafting-cursor churn: gate it behind verboseDebugLogging
+            // (default off) like the rest of the debug logs. It fires every tick the cursor holds
+            // an ingredient, so ungated it floods the chat overlay -- the operator saw it as
+            // "CURSORBACK manualTail holding=..." spam on a playthrough clip (G22, 2026-09-10).
+            if (!cursor.isEmpty() && kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging) {
                 adris.altoclef.Debug.logMessage("CURSORBACK manualTail holding=" + cursor.getItem());
             }
             Optional<Slot> toFit = mod.getItemStorage().getSlotThatCanFitInPlayerInventory(cursor, false).or(() -> StorageHelper.getGarbageSlot(mod));

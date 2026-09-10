@@ -170,8 +170,12 @@ public class CraftInInventoryTask extends ResourceTask {
             // WHO PUTS THE LOG BACK? The craft loop is a pick-up followed by a put-back, and the
             // mover is innocent (its mismatch line never printed). These are the two places that
             // return a held stack to the pack; tag both and let one run identify itself.
-            Debug.logMessage("CURSORBACK onResourceStop holding=" + cursorStack.getItem()
-                    + " interrupt=" + (interruptTask == null ? "none" : interruptTask.getClass().getSimpleName()));
+            // Diagnostic tag, gated behind verboseDebugLogging (default off) so it does not
+            // clutter the chat overlay on a normal run/video -- see G22 and the twin in
+            // CraftGenericManuallyTask.
+            if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging)
+                Debug.logMessage("CURSORBACK onResourceStop holding=" + cursorStack.getItem()
+                        + " interrupt=" + (interruptTask == null ? "none" : interruptTask.getClass().getSimpleName()));
             List<Slot> moveTo = mod.getItemStorage().getSlotsThatCanFitInPlayerInventory(cursorStack, false);
             if (!moveTo.isEmpty()) {
                 for (Slot MoveTo : moveTo) {
