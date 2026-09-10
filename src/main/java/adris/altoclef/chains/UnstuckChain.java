@@ -203,7 +203,22 @@ public class UnstuckChain extends SingleTaskChain {
                     && System.currentTimeMillis()
                        - adris.altoclef.control.PlayerExtraController.lastBreakProgressMs < DIG_GRACE_MS;
             if (frozen && hasGoal && digging) strandedSkippedDigging++;
-            strandedWithGoal = frozen && hasGoal && !digging;
+            // NAVIGATING OR BUILDING IS NOT STRANDED. The stranded-rescue was written to drill
+            // through the tungsten/no-keys/pathing guards so a WEDGED bot gets shimmied -- but it
+            // drilled through them ALWAYS, so a bot that is legitimately searching a path, walking
+            // a route, or (the case this breaks) PILLARING/BRIDGING out of terrain -- all of which
+            // stand nearly still with a live goal and no dig -- got shimmied every 10 s, throwing
+            // the aim and the task away (user 2026-09-10: "shimmy activates constantly for no
+            // reason"). A pillar/bridge in particular moves almost nothing horizontally, so the
+            // frozen test always trips. So stranded is now ONLY when tungsten is doing NOTHING:
+            // no search, no queue/walker, no executor (Nav.isPathing covers those), and no
+            // build primitive running. When it IS doing one of those, strandedWithGoal is false
+            // and the normal guards below correctly suppress the shimmy -- the bot is busy, give
+            // it time. The genuinely-wedged, tungsten-idle case still rescues.
+            boolean tungstenWorking = Nav.isPathing()
+                    || kaptainwutax.tungsten.task.PillarTask.isActive()
+                    || kaptainwutax.tungsten.task.BridgeTask.isActive();
+            strandedWithGoal = frozen && hasGoal && !digging && !tungstenWorking;
             if (strandedWithGoal) strandedRescues++;
         }
 
