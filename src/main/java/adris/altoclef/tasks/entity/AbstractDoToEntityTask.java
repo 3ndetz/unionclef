@@ -34,6 +34,13 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
     private static final long ENTITY_BUDGET_MS = 90_000L;
     /** Entities blacklisted because the pursuit ran past its budget. */
     public static volatile int entityBudgetSpent;
+    /** G21 dead zone: within maintainDistance but unable to hit (no line of sight). */
+    private Entity closeCantHitEntity = null;
+    private long closeCantHitSinceMs = 0L;
+    /** How long the bot tolerates "close but cannot hit" before abandoning THIS target. */
+    private static final long CLOSE_CANT_HIT_MS = 6_000L;
+    /** Targets abandoned by the dead-zone budget; read over py4j as part of the dte block. */
+    public static volatile int closeCantHitBlacklisted;
     protected final MovementProgressChecker progress = new MovementProgressChecker();
     /** Why the interact gate refuses, counted per condition. Read over py4j as dte=... */
     public static volatile int dteGate, dteInRange, dteHungry, dteFalling, dteMlg, dteUnsafe;
@@ -200,8 +207,10 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
                     !mod.getMLGBucketChain().isChorusFruiting() &&
                     Nav.isSafeToCancel()) {
                 progress.reset();
+                closeCantHitEntity = null;   // we can hit it — the dead-zone budget must not count
                 return onEntityInteract(mod, entity);
             } else if (!tooClose) {
+                closeCantHitEntity = null;   // approaching, not stuck-close — reset the dead-zone budget
                 setDebugState("Approaching target");
                 // ⛔ A STEADY WALK NEVER TRIPS A PROGRESS CHECK, AND THAT IS THE WHOLE BUG.
                 //
@@ -241,6 +250,36 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
                 // Approach tightly — 1 block for close range, maintainDistance for far
                 double approachDist = (sqDist < playerReach * playerReach * 2.0) ? 1.0 : maintainDistance;
                 return new GetToEntityTask(entity, approachDist);
+            } else if (kaptainwutax.tungsten.TungstenConfig.get().abandonWhenCloseButCantHit
+                    && this.maintainDistance < 0 && !inRange) {
+                // COMBAT targets only (maintainDistance < 0): killing is where reach == attack
+                // reach and this dead zone bites. Shearing/milking use interaction reach and keep
+                // the old behaviour, so a sheep briefly out of attack-LOS is never abandoned here.
+                // G21: within maintainDistance but cannot hit (no line of sight -- mob under a
+                // canopy / behind a log / in a one-headroom nook). The interact branch needs
+                // inRange and the approach branch needs !tooClose, so this state satisfies
+                // neither; the pursuit budget lives inside the approach branch, so it never even
+                // counts here and the bot idled the full 90 s+ until the mob wandered. Two live
+                // @gamer runs spent most of their first ~6 minutes exactly here (first craft at
+                // 373 s). Give the state its own short budget: keep trying to reach a hittable
+                // angle, then abandon THIS target so a herd's next animal is chosen instead of
+                // standing on one that cannot be hit from here. Reproduced by
+                // deploy/runner/pig_ledge_test.py (a pig penned under a low ceiling).
+                if (entity != closeCantHitEntity) {
+                    closeCantHitEntity = entity;
+                    closeCantHitSinceMs = System.currentTimeMillis();
+                } else if (System.currentTimeMillis() - closeCantHitSinceMs > CLOSE_CANT_HIT_MS) {
+                    Debug.logMessage("Close but no line of sight — abandoning this target.");
+                    closeCantHitBlacklisted++;
+                    closeCantHitEntity = null;
+                    progress.reset();
+                    mod.getEntityTracker().requestEntityUnreachable(entity);
+                    return null;
+                }
+                // Meanwhile keep closing/repositioning -- GetToEntityTask's close-range walk may
+                // open an angle the pathfinder's snapped-to-self goal never will.
+                setDebugState("Close but blocked — repositioning to get a hit");
+                return new GetToEntityTask(entity, 1.0);
             }
         }
         if (BeatMinecraftTask.isTaskRunning(mod,wanderTask)) {

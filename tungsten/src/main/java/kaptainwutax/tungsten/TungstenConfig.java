@@ -4353,6 +4353,26 @@ public class TungstenConfig {
      */
     public boolean combatCloseToReach = false;
 
+    /**
+     * G21: break the "within 2 blocks but cannot hit" DEAD ZONE in the entity approach.
+     *
+     * <p>AbstractDoToEntityTask attacks only when {@code inRange} (reach + line of sight) and
+     * approaches only when {@code !tooClose} (further than maintainDistance, ~2 blocks). A mob
+     * standing ~1 block away that the bot cannot SEE -- under a tree canopy, behind a log, in a
+     * one-headroom nook -- satisfies neither: it is too close to approach and unhittable to
+     * attack, so the task returns nothing and the bot idles. The pursuit budget lives inside the
+     * approach branch, so it never even counts here. Measured live: two @gamer runs spent most of
+     * their first ~6 minutes on exactly this, chasing forest pigs and standing next to ones they
+     * could not hit (first craft at 373 s).
+     *
+     * <p>With this on, that state gets its own short budget: keep trying to reach a hittable angle
+     * for {@code CLOSE_CANT_HIT_MS}, then blacklist THIS target so a herd's next animal is chosen
+     * instead of standing on one that cannot be hit from here. Reproduced deterministically by
+     * {@code deploy/runner/pig_ledge_test.py} (a pig penned under a low ceiling). Default ON: the
+     * dead zone is a plain bug, and the budget only ever ADDS an exit that idling never had.
+     */
+    public boolean abandonWhenCloseButCantHit = true;
+
     public boolean combatApproachNoOrbit = false;
 
     /**
