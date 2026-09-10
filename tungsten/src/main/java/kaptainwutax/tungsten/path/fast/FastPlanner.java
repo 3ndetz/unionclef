@@ -604,6 +604,8 @@ public final class FastPlanner {
             for (int[] d : CARDINALS) placeAcross(world, from, d[0], d[1], support, goal, map, open, scratch);
             pillarUp(world, from, goal, map, open, scratch);
         }
+        // Dig straight down (G1) — the descent move that reaches ore. Gated internally on allowBreak.
+        breakDown(world, from, goal, map, open, scratch);
         special(world, from, goal, map, open, scratch);
     }
 
@@ -1148,6 +1150,43 @@ public final class FastPlanner {
         // guide carries toBreak into PathFinder.truncateAtBreaks -> PathExecutor.tickBreaking.
         cntBreak++;
         relax(map, open, from, nx, from.y, nz, cost, goal, true, plan);
+    }
+
+    /**
+     * DIG STRAIGHT DOWN one block (baritone's MovementDownward). Mine the floor the bot stands on
+     * and drop into the hole, landing one lower. This is the move that lets the search descend into
+     * the ground to reach ore — without it the playthrough dies the moment it must go below the
+     * surface for iron/diamond (docs/BARITONE-GAPS.md G1). Chaining it digs a straight shaft;
+     * combined with breakThrough it tunnels down-and-along.
+     */
+    private static void breakDown(WorldView world, Node from, BlockPos goal,
+                                  NodeMap map, Heap open, BlockPos.Mutable scratch) {
+        if (!TungstenConfig.get().allowBreak) return;
+        net.minecraft.entity.player.PlayerEntity player = TungstenMod.mc.player;
+        if (player == null) return;
+        int fx = from.x, fz = from.z, fy = from.y;
+        // The block the bot stands on is (fx, fy-1, fz). Mine it, fall one, land on (fx, fy-2, fz).
+        BlockPos floorCell = new BlockPos(fx, fy - 1, fz);
+        // A LADDER IS A ROUTE, NOT A FLOOR — never mine it out from under yourself.
+        if (isLadder(world, fx, fy - 1, fz, scratch)) return;
+        net.minecraft.block.BlockState st = world.getBlockState(floorCell);
+        if (st.getCollisionShape(world, floorCell).isEmpty()) return;   // already open, nothing to dig
+        if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, floorCell, st)) return;
+        // After dropping, feet sit at fy-1 standing on (fy-2). That landing must be a real,
+        // non-hazard floor — supportTop(cell) inspects cell.down(), so ask about (fx, fy-1, fz).
+        scratch.set(fx, fy - 1, fz);
+        if (Double.isNaN(PlayerFit.supportTop(world, scratch))) return; // no safe floor below -> would keep falling / void
+        if (hazardAt(world, fx, fy - 2, fz, scratch)) return;          // lava/magma/etc under the block we'd break
+        double ticks = kaptainwutax.tungsten.path.movements.MovementHelperB
+                .getMiningDurationTicks(world, player, fx, fy - 1, fz, st, false);
+        if (ticks >= 1_000_000) return;                                 // unbreakable (bedrock, etc.)
+        double cost = ActionCosts.FALL_ONE_BLOCK_COST
+                + ticks * TungstenConfig.get().breakCostMultiplier;
+        List<BlockPos> plan = new ArrayList<>();
+        plan.add(floorCell);
+        cntBreak++;
+        // needsPhysics: the walker cannot mine; the physics side carries toBreak into the executor.
+        relax(map, open, from, fx, fy - 1, fz, cost, goal, true, plan);
     }
 
     /**

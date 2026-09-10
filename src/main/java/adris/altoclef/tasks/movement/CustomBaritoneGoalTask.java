@@ -696,6 +696,31 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (twBestDistToGoal < 0 || distToGoalNow < twBestDistToGoal - 0.5) {
             twBestDistToGoal = distToGoalNow;
             twBestImproveMs = nowMs;
+        } else if (twBestImproveMs > 0 && nowMs - twBestImproveMs > 4000 && distToGoalNow > 2.0
+                && nowMs >= twFnCooldownUntilMs
+                && !kaptainwutax.tungsten.task.FastNavigator.isActive()
+                && (kaptainwutax.tungsten.TungstenConfig.get().allowBreak
+                    || (kaptainwutax.tungsten.TungstenConfig.get().planPlaceMoves && hasBuildBlock(mod)))) {
+            // ── G5: PROGRESS-BASED ESCALATION TO THE BUILD ENGINE ──
+            // The grid BFS returns a route (>=2 cells) that walks toward the goal but never reaches
+            // it — a wandering partial, or a 2-cell stub toward a goal that is up a cliff / down
+            // through stone / across water. bfs.size() is not <2, so the no-route escalation below
+            // never fires, and the bot walks the partial and stalls into the 14s give-up (this was
+            // the "dug 9 blocks down then stopped 3 short" case, 2026-09-10). So: after 4s of no
+            // NET progress toward the goal, hand the leg to FastNavigator, which plans
+            // pillar/bridge/break/dig-down and executes it. Cheaper than waiting the full 14s.
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+            var exG = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (exG != null) exG.stop = false;
+            kaptainwutax.tungsten.task.FastNavigator.start(gp);
+            twFnGoal = net.minecraft.util.math.BlockPos.ofFloored(gp);
+            twFnCooldownUntilMs = nowMs + 12000;
+            twBestDistToGoal = -1; twBestImproveMs = 0L;
+            pdFnBuild++;
+            checker.reset();
+            setDebugState("Tungsten: no progress — building a route (dig/pillar/bridge) via FastPlanner...");
+            return true;
         } else if (twBestImproveMs > 0 && nowMs - twBestImproveMs > 14000 && distToGoalNow > 2.0) {
             kaptainwutax.tungsten.task.BlockPathWalker.stop();
             var pfU = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER;
