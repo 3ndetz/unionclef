@@ -4672,6 +4672,19 @@ public class TungstenConfig {
      *  when the walker cannot reach a goal — see CustomBaritoneGoalTask (wired 2026-09-10). */
     public boolean planPlaceMoves = true;   // shipping placement on — see C5.5
 
+    // ── Per-move toggles (in-game bisect switches) ────────────────────────────────────────────
+    // Each gates ONE move generator in FastPlanner so a move can be turned off live with
+    // `;settings moveXxx false` to see whether a stall or a regression is caused by that move —
+    // "port everything from baritone, then disable in stages if something breaks and it isn't
+    // clear why" (user 2026-09-10). All default ON; turning one off only removes that option from
+    // the search, never changes anything else. (allowBreak/allowPlace/planPlaceMoves still gate
+    // the whole break/place families above these.)
+    public boolean moveBreakThrough = true;   // mine a flat cardinal wall in the way
+    public boolean moveDigDown       = true;   // G1: mine the floor and drop one (reach ore)
+    public boolean moveStaircase     = true;   // G2: cut a step up/down through blocks
+    public boolean movePillar        = true;   // place a block under yourself and rise
+    public boolean movePlaceBridge   = true;   // place a floor across a gap and step on
+
     /** Hand a slime pad to {@link kaptainwutax.tungsten.task.SlimeBounceTask} — one manoeuvre
      *  that holds heading and sprint across the whole bounce chain, instead of the walker
      *  re-deciding at every waypoint.

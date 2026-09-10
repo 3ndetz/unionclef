@@ -601,15 +601,20 @@ public final class FastPlanner {
                     ActionCosts.WALK_ONE_BLOCK_COST * SQRT2);
         }
         if (TungstenConfig.get().planPlaceMoves) {
-            for (int[] d : CARDINALS) placeAcross(world, from, d[0], d[1], support, goal, map, open, scratch);
-            pillarUp(world, from, goal, map, open, scratch);
+            if (TungstenConfig.get().movePlaceBridge)
+                for (int[] d : CARDINALS) placeAcross(world, from, d[0], d[1], support, goal, map, open, scratch);
+            if (TungstenConfig.get().movePillar)
+                pillarUp(world, from, goal, map, open, scratch);
         }
         // Dig straight down (G1) — the descent move that reaches ore. Gated internally on allowBreak.
-        breakDown(world, from, goal, map, open, scratch);
+        if (TungstenConfig.get().moveDigDown)
+            breakDown(world, from, goal, map, open, scratch);
         // Dug staircase up/down (G2) — cut a route through a hill/overhang, not only flat tunnels.
-        for (int[] d : CARDINALS) {
-            breakStair(world, from, d[0], d[1], 1, goal, map, open, scratch);
-            breakStair(world, from, d[0], d[1], -1, goal, map, open, scratch);
+        if (TungstenConfig.get().moveStaircase) {
+            for (int[] d : CARDINALS) {
+                breakStair(world, from, d[0], d[1], 1, goal, map, open, scratch);
+                breakStair(world, from, d[0], d[1], -1, goal, map, open, scratch);
+            }
         }
         special(world, from, goal, map, open, scratch);
     }
@@ -977,7 +982,8 @@ public final class FastPlanner {
         // instrumentation: the "break-through planned" line never appeared once).
         // Emitting both lets A* choose on cost, and mining two dirt blocks is far cheaper
         // than a 2-block climb.
-        breakThrough(world, from, dx, dz, goal, map, open, scratch);
+        if (TungstenConfig.get().moveBreakThrough)
+            breakThrough(world, from, dx, dz, goal, map, open, scratch);
 
         // same level / climb / drop down to MAX_FALL. CLIMB_MAX covers ledges a
         // plain jump cannot reach: the route is still emitted, flagged so the
