@@ -63,3 +63,6 @@ deploy/runner/gamer_pair_spawn.txt
 deploy/runner/gamer_pair_spawn.txt.logs
 docs/traces/
 docker.sock
+
+# iron-stall capture log (regenerated)
+deploy/runner/iron_stall_log.txt
