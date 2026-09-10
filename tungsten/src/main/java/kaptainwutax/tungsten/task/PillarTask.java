@@ -56,6 +56,7 @@ public class PillarTask {
             mc.options.sneakKey.setPressed(false);
         }
         WindMouseRotation.INSTANCE.clearTarget();
+        kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.clear();
     }
 
     /** Called every game tick from MixinClientPlayerEntity. */
@@ -78,6 +79,24 @@ public class PillarTask {
             Debug.logMessage("Pillar: out of blocks — nothing placeable in the hotbar");
             stop();
             return;
+        }
+
+        // Visualize the WHOLE tower still to be built (green), not just the next block. PillarTask
+        // places one cell per hop, so the executor's single-cell overlay only ever showed the first
+        // block of a tall pillar (user 2026-09-10). Draw every cell of this column from the bot's
+        // current level up to the target, so the full plan is visible at once.
+        if (kaptainwutax.tungsten.TungstenConfig.get().renderPlacePlan) {
+            int cx = net.minecraft.util.math.MathHelper.floor(player.getX());
+            int cz = net.minecraft.util.math.MathHelper.floor(player.getZ());
+            int fy = net.minecraft.util.math.MathHelper.floor(player.getY());
+            kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.clear();
+            for (int y = fy - 1; y < targetY; y++) {
+                kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.add(
+                        new kaptainwutax.tungsten.render.Cuboid(
+                                new Vec3d(cx + 0.1, y + 0.1, cz + 0.1),
+                                new Vec3d(0.8, 0.8, 0.8),
+                                new kaptainwutax.tungsten.render.Color(60, 220, 120)));
+            }
         }
 
         // Stay centred over the column (no horizontal drift) and aim straight down.

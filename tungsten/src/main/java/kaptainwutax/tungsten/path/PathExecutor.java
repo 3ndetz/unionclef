@@ -1083,11 +1083,26 @@ public class PathExecutor {
             releaseMovementKeys(options);
         }
         kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(wantYaw, wantPitch);
-        // visualize the cell being paved (green)
+        // Visualize the WHOLE place plan (green), not just the current cell — the mirror of the
+        // break-plan loop above. A single-cell overlay only ever showed one block of a multi-block
+        // bridge/pillar (user 2026-09-10: "only the first placed block rendered"). The cell being
+        // paved right now is drawn slightly larger/brighter.
         TungstenModRenderContainer.PLACE_PLAN.clear();
-        TungstenModRenderContainer.PLACE_PLAN.add(new kaptainwutax.tungsten.render.Cuboid(
-                new Vec3d(target.getX() + 0.1, target.getY() + 0.1, target.getZ() + 0.1),
-                new Vec3d(0.8, 0.8, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 120)));
+        java.util.List<net.minecraft.util.math.BlockPos> pq = placeQueue;
+        if (pq != null) {
+            for (net.minecraft.util.math.BlockPos pos : pq) {
+                boolean current = pos.equals(target);
+                TungstenModRenderContainer.PLACE_PLAN.add(new kaptainwutax.tungsten.render.Cuboid(
+                        new Vec3d(pos.getX(), pos.getY(), pos.getZ()).add(current ? -0.02 : 0.1, current ? -0.02 : 0.1, current ? -0.02 : 0.1),
+                        current ? new Vec3d(1.04, 1.04, 1.04) : new Vec3d(0.8, 0.8, 0.8),
+                        current ? new kaptainwutax.tungsten.render.Color(60, 255, 120)
+                                : new kaptainwutax.tungsten.render.Color(60, 200, 110)));
+            }
+        } else {
+            TungstenModRenderContainer.PLACE_PLAN.add(new kaptainwutax.tungsten.render.Cuboid(
+                    new Vec3d(target.getX() + 0.1, target.getY() + 0.1, target.getZ() + 0.1),
+                    new Vec3d(0.8, 0.8, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 120)));
+        }
         float dYaw = net.minecraft.util.math.MathHelper.wrapDegrees(wantYaw - player.getYaw());
         float dPitch = net.minecraft.util.math.MathHelper.wrapDegrees(wantPitch - player.getPitch());
         // PLACE THROUGH THE GAME'S OWN RAY TRACE. What stood here forged a BlockHitResult

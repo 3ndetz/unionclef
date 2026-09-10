@@ -244,12 +244,21 @@ public class BridgeTask {
             toPlace = targetCell.offset(dir); against = targetCell; // extend one more ahead
         }
 
-        // visualize the next cell we're about to place (green) — the PLACE_PLAN
-        // container, gated by renderPlacePlan in MixinDebugRenderer
+        // Visualize the WHOLE remaining bridge (green), not just the next cell — a single-cell
+        // overlay only showed one block of the span (user 2026-09-10). Draw every cell still to be
+        // paved, from the next one along dir for the blocks left to place; the current one thicker.
         kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.clear();
-        kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.add(new kaptainwutax.tungsten.render.Cuboid(
-                new Vec3d(targetCell.getX() + 0.1, targetCell.getY() + 0.1, targetCell.getZ() + 0.1),
-                new Vec3d(0.8, 0.3, 0.8), new kaptainwutax.tungsten.render.Color(60, 220, 120)));
+        int remaining = Math.max(1, Math.min(48, blocksRequested - placed));
+        BlockPos cell = targetCell;
+        for (int i = 0; i < remaining; i++) {
+            boolean current = i == 0;
+            kaptainwutax.tungsten.TungstenModRenderContainer.PLACE_PLAN.add(new kaptainwutax.tungsten.render.Cuboid(
+                    new Vec3d(cell.getX() + 0.1, cell.getY() + (current ? 0.1 : 0.4), cell.getZ() + 0.1),
+                    new Vec3d(0.8, current ? 0.3 : 0.2, 0.8),
+                    current ? new kaptainwutax.tungsten.render.Color(60, 255, 120)
+                            : new kaptainwutax.tungsten.render.Color(60, 200, 110)));
+            cell = cell.offset(dir);
+        }
 
         aimingToPlace = false;
         // honour protected areas / claims (same policy as the pathfinder)
