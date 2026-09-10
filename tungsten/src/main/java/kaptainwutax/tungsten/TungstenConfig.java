@@ -2180,6 +2180,24 @@ public class TungstenConfig {
     public boolean dropPursuitHasBudget = true;
 
     /**
+     * G23: abandon a dropped-item pursuit that is NOT CLOSING, well before the 2-minute budget.
+     *
+     * <p>The flat {@code PURSUIT_BUDGET_MS} (120 s) is a ceiling on a pursuit that is at least
+     * making progress; it does nothing for one that has stalled. On a snowy-taiga + frozen-lake
+     * spawn a recorded @gamer run chased a wooden_pickaxe that had fallen 84 blocks away and ~29
+     * down a hillside: the drop distance GREW ({@code 19.7>22.2}) while the walker ground out 7 s
+     * block-space searches and 13 000 fall-retry checks, and it burned the full 122 s before the
+     * budget cut it -- on a trivially re-craftable item. This gives the pursuit a much shorter
+     * fuse keyed to actual approach: it tracks the BEST (smallest) distance seen this pursuit, and
+     * if that has not improved by half a block within {@code NOT_CLOSING_MS} (~25 s), it abandons
+     * the drop so the task re-plans (re-craft locally / pick a closer source) instead of walking
+     * the whole map. Best-distance is monotonic, so ordinary wander/oscillation never trips it --
+     * only a pursuit that is genuinely not getting there. Default ON; it can only ADD an early
+     * exit to a pursuit already doomed to spend its budget.
+     */
+    public boolean dropAbandonWhenNotClosing = true;
+
+    /**
      * The same ceiling as dropPursuitHasBudget, for chasing an ENTITY rather than an item.
      *
      * <p>AbstractDoToEntityTask gives up when its progress checker trips, and a bot walking toward a

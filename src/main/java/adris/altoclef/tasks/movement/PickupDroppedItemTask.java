@@ -72,6 +72,14 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
     // requestEntityUnreachable, which is global anyway.
     private static ItemEntity pursuitTarget = null;
     private static long pursuitStartMs = 0L;
+    /** G23: best (smallest) distance^2 to the drop this pursuit, and when it last improved. A
+     *  pursuit that stops closing (distance not shrinking) is abandoned well before the flat
+     *  budget -- see TungstenConfig.dropAbandonWhenNotClosing. */
+    private static double pursuitBestDistSq = Double.MAX_VALUE;
+    private static long pursuitBestMs = 0L;
+    private static final long NOT_CLOSING_MS = 25_000L;
+    /** Drops abandoned early because the bot was not getting any closer to them. */
+    public static volatile int dropNotClosingAbandoned;
     /** Clock restarts (target genuinely changed) and the longest pursuit seen, in seconds. */
     public static volatile int pursuitRestarts, pursuitMaxSec;
     /** Two minutes: a drop worth a minute of walking is worth having, one that took two is not. */
@@ -267,6 +275,8 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
                 pursuitRestarts++;
                 pursuitTarget = _currentDrop;
                 pursuitStartMs = System.currentTimeMillis();
+                pursuitBestDistSq = Double.MAX_VALUE;          // G23: new pursuit, reset the closing tracker
+                pursuitBestMs = System.currentTimeMillis();
             } else if (System.currentTimeMillis() - pursuitStartMs > PURSUIT_BUDGET_MS) {
                 Debug.logMessage("Drop has cost more than its budget — marking it unreachable.");
                 dropBudgetSpent++;
@@ -278,6 +288,28 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
                 pursuitTarget = null;
                 progressChecker.reset();
                 return null;
+            }
+            // G23: abandon a pursuit that is NOT CLOSING, long before the 2-minute budget. Track
+            // the smallest distance seen; if it has not improved by half a block in NOT_CLOSING_MS,
+            // the drop is unreachable-from-here (fell down a hill / across a lake), so blacklist it
+            // and let the task re-plan (re-craft, closer source) instead of walking the map. Best-
+            // distance is monotonic, so ordinary wander/oscillation never trips this.
+            if (kaptainwutax.tungsten.TungstenConfig.get().dropAbandonWhenNotClosing) {
+                double dsq = _currentDrop.squaredDistanceTo(mod.getPlayer());
+                if (dsq < pursuitBestDistSq - 0.25) {
+                    pursuitBestDistSq = dsq;
+                    pursuitBestMs = System.currentTimeMillis();
+                } else if (System.currentTimeMillis() - pursuitBestMs > NOT_CLOSING_MS) {
+                    Debug.logMessage("Drop not getting closer for " + (NOT_CLOSING_MS / 1000)
+                            + "s — marking it unreachable.");
+                    dropNotClosingAbandoned++;
+                    _blacklist.add(_currentDrop);
+                    mod.getEntityTracker().requestEntityUnreachable(_currentDrop);
+                    _currentDrop = null;
+                    pursuitTarget = null;
+                    progressChecker.reset();
+                    return null;
+                }
             }
         }
         if (!progressChecker.check(mod)) {
