@@ -521,6 +521,44 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         return aheadClear && noFloor1 && noFloor2;
     }
 
+    /** The bot is trapped in a pit/shaft below a goal that is UP-AND-OFFSET: a wall in the
+     *  goal's horizontal direction is ≥2 blocks tall (can neither step nor jump over it), and
+     *  there is headroom to start a pillar. Returns the Y to pillar to — the top of that wall,
+     *  where the horizontal route reopens, capped at the goal's own Y and a sane maximum so a
+     *  freak goal far overhead can never build an endless tower. Returns -1 when NOT trapped
+     *  (open ground, a plain cliff face the goal is not behind, or a ceiling overhead), so the
+     *  normal give-up path runs instead of pillaring pointlessly. */
+    private int pillarEscapeY(AltoClef mod, net.minecraft.util.math.Vec3d gp) {
+        var p = mod.getPlayer();
+        var world = mod.getWorld();
+        net.minecraft.util.math.BlockPos feet = p.getBlockPos();
+        // Need clear space above the head, or a pillar cannot even start.
+        net.minecraft.util.math.BlockPos over = feet.up(2);
+        if (!world.getBlockState(over).getCollisionShape(world, over).isEmpty()) return -1;
+        double dx = gp.x - p.getX(), dz = gp.z - p.getZ();
+        net.minecraft.util.math.Direction dir = Math.abs(dx) >= Math.abs(dz)
+                ? (dx >= 0 ? net.minecraft.util.math.Direction.EAST : net.minecraft.util.math.Direction.WEST)
+                : (dz >= 0 ? net.minecraft.util.math.Direction.SOUTH : net.minecraft.util.math.Direction.NORTH);
+        net.minecraft.util.math.BlockPos ahead = feet.offset(dir);
+        // A wall the bot cannot step (feet-level solid) OR jump (head-level solid too) over.
+        boolean solidFeet = !world.getBlockState(ahead).getCollisionShape(world, ahead).isEmpty();
+        boolean solidHead = !world.getBlockState(ahead.up()).getCollisionShape(world, ahead.up()).isEmpty();
+        if (!(solidFeet && solidHead)) return -1;   // not walled in toward the goal -> not our case
+        int goalY = (int) Math.ceil(gp.y);
+        int cap = Math.min(goalY, feet.getY() + 24);
+        // Climb only to where the wall in the goal's direction first opens up (a 2-tall gap we
+        // could step through), so we escape the pit without towering past it.
+        for (int y = feet.getY() + 1; y <= cap; y++) {
+            net.minecraft.util.math.BlockPos a = new net.minecraft.util.math.BlockPos(ahead.getX(), y, ahead.getZ());
+            net.minecraft.util.math.BlockPos a2 = a.up();
+            if (world.getBlockState(a).getCollisionShape(world, a).isEmpty()
+                    && world.getBlockState(a2).getCollisionShape(world, a2).isEmpty()) {
+                return y;
+            }
+        }
+        return cap;   // walled the whole way up: pillar to the goal's level
+    }
+
 
     /** Drop-in swap (TODO 13): when tungsten is PRIMARY, drive movement via
      *  tungsten directly (the same call ;goto uses — baritone movement doesn't
@@ -649,12 +687,27 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // Only a CLEAR vertical reach (goal well above + nearly overhead) — not a
             // transient stall near the top of a staircase where the goal is ~1 up.
             double horizToGoal = Math.hypot(plNow.x - gp.x, plNow.z - gp.z);
-            if (gp.y > mod.getPlayer().getY() + 2.0 && horizToGoal < 1.5 && equipBuildBlock(mod)) {
-                kaptainwutax.tungsten.task.PillarTask.startTo((int) Math.ceil(gp.y));
-                twBestDistToGoal = -1; twBestImproveMs = 0L;
-                checker.reset();
-                setDebugState("Tungsten pillaring up to goal (#46)...");
-                return true;
+            // Two pillar cases, both only when the goal is well ABOVE us and we have a block:
+            //   overhead — goal nearly straight up (tree top / ledge right above): pillar to it.
+            //   trapped  — goal is up AND offset, and a wall in the goal's direction boxes us in
+            //              (a pit/shaft the bot dug or fell into while mining). Walking can't get
+            //              out; pillar up to the top of the trapping wall so the horizontal route
+            //              reopens. This is the survival-path gap that left the bot standing in a
+            //              hole holding dirt it could have climbed with (found live 2026-09-10).
+            if (gp.y > mod.getPlayer().getY() + 2.0) {
+                int pillarTargetY = -1;
+                if (horizToGoal < 1.5) {
+                    pillarTargetY = (int) Math.ceil(gp.y);
+                } else {
+                    pillarTargetY = pillarEscapeY(mod, gp);
+                }
+                if (pillarTargetY > mod.getPlayer().getY() && equipBuildBlock(mod)) {
+                    kaptainwutax.tungsten.task.PillarTask.startTo(pillarTargetY);
+                    twBestDistToGoal = -1; twBestImproveMs = 0L;
+                    checker.reset();
+                    setDebugState("Tungsten pillaring up to goal (#46)...");
+                    return true;
+                }
             }
             // #46 bridge-as-a-move: stuck at the edge of a GAP with the goal across it
             // (roughly level, not overhead) — pave a bridge toward the goal instead of
