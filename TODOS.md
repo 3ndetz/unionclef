@@ -53,8 +53,25 @@ correctness set (G10/G11/G12 remove "the bot did something weird" faults), then 
 lands with a deterministic test + nav 14/14 before it's checked off.
 
 ### TOP PRIORITY — found by running @gamer twice on real survival terrain (2026-09-10)
-- [ ] **G21 entity-approach goal snaps onto the bot's own cell → the bot dances instead of
-      killing.** THE dominant early-game waste, seen TWICE in one 12-min @gamer run: the food task
+- [x] **G21 entity-approach "close but cannot hit" dead zone → the bot idled instead of
+      killing.** FIXED (commit 87b26023). Root cause turned out to be a DEAD ZONE, not only the
+      snap: AbstractDoToEntityTask attacks only when inRange (reach + line of sight) and approaches
+      only when !tooClose (>~2 blocks), so a mob ~1 block away that the bot cannot SEE (canopy /
+      log / one-headroom nook) hit neither branch and the pursuit budget (inside the approach
+      branch) never counted -- lockAnat idle=4519. Fix: that state now gets its own 6 s budget
+      (TungstenConfig.abandonWhenCloseButCantHit, default on, combat targets only) that repositions
+      then blacklists the target so a herd's next animal is chosen. Validated: mob suite
+      melee/skeleton/weapon_swap PASS, trio damage unchanged from the pre-fix baseline; a @gamer
+      forest run hit wood tools 21 s / first craft + stone tools 65 s (baseline 373 s / 417 s).
+      Bench: deploy/runner/pig_ledge_test.py.
+- [ ] **G21b (follow-up) target-cell snap for entities.** The deeper snap (tryPathToEntity hands
+      entity.getPos() to tryPathTo, which snaps an unstandable cell onto the bot's own cell,
+      producing the zero-length hop[0,0,0] guide) is only PAPERED OVER by the dead-zone budget --
+      the bot still cannot navigate INTO an awkward nook to kill an isolated animal, it just stops
+      wasting time on one when alternatives exist. Proper fix: target a hittable standable cell
+      adjacent to the entity, or break the occluder. Lower priority now that the time-waste is
+      gone; revisit if a scenario has a single unreachable-but-required animal.
+      Original diagnosis for reference: the food task
       (`Collect 220 food`) chases a pig, `TungstenHelper.tryPathToEntity` hands `entity.getPos()`
       to `tryPathTo`, and when the pig sits ~1 block away in a cell the standable-snap treats as
       unstandable (a step/ledge, or the pig's own cell blocked from above), the goal snaps onto the
