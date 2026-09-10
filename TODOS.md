@@ -1,5 +1,59 @@
 # TODOs
 
+<!-- PIT-PILLAR-ESCAPE-SURVIVAL-PATH-2026-09-10 -->
+## Core fix: the survival navigator now pillars OUT of a pit toward an up-and-offset goal (2026-09-10, commit 2b134a37)
+
+The single most valuable thing found by actually running `@gamer` on the stand today (the stand
+and build both work on this host — see the entry above). Run 1 stalled 3 minutes at 944,60,75 and
+never recovered: the bot had dug/fallen into a shaft while collecting wood, its goal was a spruce
+log on the surface ~10 up and ~10 sideways, and it stood in the hole holding 17 dirt.
+
+**Mechanism, read end-to-end (a sub-agent mapped the whole move set, not guessed):**
+- The task-driven path is `CustomBaritoneGoalTask.driveTungstenPrimary`, whose guide comes from
+  `CombatPathfinder.findPath` — max +1 ascent, **no place move**. `FastPlanner.pillarUp` (the one
+  real tower move) only feeds the `;goto` pipeline via `FastNavigator`, which the survival path
+  never touches. So on the survival path the ONLY thing that can start a tower is the reactive
+  `#46` pillar recovery inside the 14s-stuck block.
+- That recovery fired only when the goal was nearly straight overhead (`horizToGoal < 1.5`,
+  `CustomBaritoneGoalTask.java:652`). A log up-AND-across failed it, and the bridge branch beside it
+  needs `abs(dy) <= 2`, so a raised offset goal fell through both to "goal unreachable, yielding".
+  `pdPillar=0` throughout. This is the survival-path half of C5.7 (closed for `;goto` in July, still
+  open here).
+- Reproduced three ways live: `;goto` from 2 below reported `FastNavigator: arrived` and stopped 2
+  short (arrival is horizontal + height, you cannot walk up); `@goto` from the floor jittered and
+  `[nav] goal unreachable — no progress in 14s`; `;goto` from the floor timed out on
+  `Bridge place aborted` aimed at its own feet cell (the `pendingPlaces` → `PathExecutor.tickPlacing`
+  bridge placer cannot jump).
+
+**Fix (commit 2b134a37):** a second pillar case in the same recovery block. When the goal is above
+(+2) and offset, `pillarEscapeY()` checks the bot is boxed in — a wall ≥2 tall in the goal's
+horizontal direction (can't step or jump it) with headroom above to pillar — and returns the top of
+that wall (capped at the goal Y and feet+24), so the bot climbs just out of the shaft and the
+horizontal route reopens rather than towering to an arbitrary height. Returns −1 on open ground / a
+plain cliff / under a ceiling, so nothing changes off the pit case; the straight-overhead case is
+byte-for-byte unchanged.
+
+**Tested on the stand (jar from this tree):**
+- `deploy/runner/pit_escape_test.py` (new, kept): a 7-deep 1-wide stone shaft, goal 4 blocks to the
+  side on the surface. Bot dropped at y=−59 → `Pillaring up to y=-52` (the wall top, not
+  overshooting) → walked to the goal at x=204. **PASS.** Before the fix: 3 min stuck then yield.
+- Regression, one invocation: `nav_wall2` (the existing pillar course) PASS, `nav_bridge` PASS,
+  `nav_flat`/`nav_staircase`/`nav_descend` PASS — **5/5, no gate failures, ~30 fps.** The pillar and
+  bridge mechanisms and the baselines are unregressed.
+
+**Effect on the playthrough — signal, not a result.** Three 5-min `@gamer` smokes today, shipped
+defaults, pinned start: pre-fix reached `first craft` and `wood tools`; the post-fix run reached
+`stone tools` (crafting table + stone sword + stone pickaxe in the pack, no death). That is ONE run
+past a variable-stall bench and is NOT evidence the fix raised the rung count — the stall points
+differ run to run and pit-entrapment is only one of several causes. Scoring the fix needs a paired
+A/B (`paired_ab.py`) over 5-6 runs an arm, deliberately not claimed here. What IS established: the
+fix removes one confirmed permanent-stuck death, by a deterministic repro, with no regression.
+
+**Next stall to chase (from these three runs):** all three eventually stalled reaching the NEXT
+rung after their last (wooden-pickaxe wood collection; iron after stone tools) — i.e. the bench
+still dies somewhere past stone tools. Worth a `paired_ab.py --flag`-style measurement of this pit
+fix first, then reading the next stall's capture the same way this one was read.
+
 <!-- STAND-IS-ON-THIS-MACHINE-FIRST-LIVE-RUN-OF-SEPTEMBER-FIXES-2026-09-10 -->
 ## The stand and the build both live on the Windows host: first live run of the 2026-09-05 fixes, armor fix confirmed, `@equip` found dead and fixed (2026-09-10)
 
