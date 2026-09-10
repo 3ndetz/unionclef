@@ -82,8 +82,13 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
     public static volatile int dropNotClosingAbandoned;
     /** Clock restarts (target genuinely changed) and the longest pursuit seen, in seconds. */
     public static volatile int pursuitRestarts, pursuitMaxSec;
-    /** Two minutes: a drop worth a minute of walking is worth having, one that took two is not. */
-    private static final long PURSUIT_BUDGET_MS = 120_000L;
+    /** Ceiling on chasing ONE drop. Was 120s, cut to 40s (G23): a run chased a wooden_pickaxe that
+     *  fell 84 blocks away and ~29 down a hillside for the full two minutes -- pointless for a
+     *  re-craftable item, and two minutes of a bot walking back and forth reads as broken. 40s is
+     *  still generous for a genuinely reachable drop (the pickup courses finish in seconds) but
+     *  caps the worst-case wander at a third of what it was. Works with dropAbandonWhenNotClosing,
+     *  which cuts a NON-closing pursuit even sooner (25s). */
+    private static final long PURSUIT_BUDGET_MS = 40_000L;
     /** Drops abandoned because the pursuit ran past its budget. */
     public static volatile int dropBudgetSpent;
 
