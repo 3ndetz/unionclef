@@ -4923,6 +4923,23 @@ public class TungstenConfig {
 	public static boolean stallResetSparesAVirginSearch = true;
 
 	/**
+	 * When the task-driven navigator is stuck below a goal that is UP and OFFSET (a pit or shaft
+	 * the bot dug or fell into while mining, with the goal on the surface to one side), pillar out
+	 * of it instead of giving up. The pre-existing #46 pillar recovery only fired for goals nearly
+	 * straight overhead; a log up-and-across left the bot standing in the hole holding blocks it
+	 * could have climbed with (found live 2026-09-10). See CustomBaritoneGoalTask.pillarEscapeY.
+	 *
+	 * <p>ON by default — it is the correct behaviour and gated only so the effect on the
+	 * playthrough can be measured as a paired A/B (--pin-alt pillarEscapePit=true) and so it can
+	 * be flipped off if a regression ever surfaces. Off, the navigator yields exactly as before.
+	 *
+	 * <p>Instance, not static: SettingsCommand only registers non-static fields, so a static flag
+	 * (like stallResetSparesAVirginSearch above) cannot be toggled via `;settings` and the A/B
+	 * arm switch would silently no-op — which is exactly what happened on the first attempt here.
+	 */
+	public boolean pillarEscapePit = true;
+
+	/**
 	 * Let the drop-pursuit budget survive a rebuild of the pickup task, and treat a re-resolved
 	 * entity for the same physical drop as the same pursuit.
 	 *

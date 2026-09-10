@@ -698,8 +698,12 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 int pillarTargetY = -1;
                 if (horizToGoal < 1.5) {
                     pillarTargetY = (int) Math.ceil(gp.y);
-                } else {
+                } else if (kaptainwutax.tungsten.TungstenConfig.get().pillarEscapePit) {
                     pillarTargetY = pillarEscapeY(mod, gp);
+                    if (pillarTargetY > mod.getPlayer().getY()) {
+                        kaptainwutax.tungsten.Debug.logMessage(
+                                "[nav] trapped below an offset goal — pit-escape pillar to y=" + pillarTargetY);
+                    }
                 }
                 if (pillarTargetY > mod.getPlayer().getY() && equipBuildBlock(mod)) {
                     kaptainwutax.tungsten.task.PillarTask.startTo(pillarTargetY);
