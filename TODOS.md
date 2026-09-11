@@ -104,6 +104,19 @@ lands with a deterministic test + nav 14/14 before it's checked off.
       should not send the bot across the map for a re-craftable drop; (b) chase-vs-recraft strategy
       in the beat-game resource logic; (c) hill/ice nav quality. Reproduce by reading the real
       lock line: lock=...wooden_pickaxe:19.7>22.2 dy-13.1 (drop 84 away, 29 below, distance growing).
+- [~] **G24 water: crossing works, in-water swim aim FIXED, climbing OUT onto a raised bank is a
+      deep gap.** Un-deferred by the user 2026-09-11 ('можешь решать проблему раз она встречается
+      снова'). Findings on lake benches: (1) same-level lake crossing works (fast, ~3s). (2) The
+      real-run 'MovementSwim ... body has not left' was an in-water swim aimed with the LAND pitch
+      (looking down -> forward pushes down); FIXED (commit 07734f88, swimAimsAtDestPitch): swim now
+      aims the full rotation at the dest, non-regressing. (3) STILL OPEN: climbing out of water onto
+      a bank raised +1 -- the bot swims to the edge and bobs there indefinitely. Root cause:
+      FastNavigator:407 treats the bank as 'Wall too high to jump' and starts PillarTask, which
+      needs solid footing and just bobs in water (fails WITH blocks too). Skipping the pillar branch
+      in water does NOT help -- the physics does not swim up onto the ledge either (tried, reverted).
+      Proper fix: route the water->land+1 transition through a swim-up-out move (MovementSwim can
+      drive it: base update presses JUMP in liquid, the aim fix points at the ledge) instead of the
+      FastNavigator pillar/physics path. Bench: deploy/runner water lane with a far bank raised +1.
       Original diagnosis for reference: the food task
       (`Collect 220 food`) chases a pig, `TungstenHelper.tryPathToEntity` hands `entity.getPos()`
       to `tryPathTo`, and when the pig sits ~1 block away in a cell the standable-snap treats as
