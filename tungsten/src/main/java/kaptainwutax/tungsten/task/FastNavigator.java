@@ -406,13 +406,21 @@ public final class FastNavigator {
                 // docs/BARITONE-PORT-SPEC.md.
                 if (rise > PlayerFitJumpHeight() && horiz < 2.5
                         && TungstenConfig.get().planPlaceMoves
-                        && !kaptainwutax.tungsten.task.PillarTask.isActive()) {
-                    Debug.logMessage("Wall too high to jump — pillaring to y=" + jump.getY());
-                    kaptainwutax.tungsten.task.PillarTask.startTo(jump.getY());
-                    // The climb is built in chunks to leg waypoints, but the tower really goes up to
-                    // the goal — tell the visual so the WHOLE green column shows, not one chunk.
-                    if (goal != null) kaptainwutax.tungsten.task.PillarTask.setClimbGoal(
-                            (int) Math.ceil(goal.y));
+                        && !kaptainwutax.tungsten.task.PillarTask.isActive()
+                        && !kaptainwutax.tungsten.task.SwimOutTask.isActive()) {
+                    if (TungstenConfig.get().swimOutOfWaterNotPillar && player.isTouchingWater()) {
+                        // FROM WATER YOU RISE BY SWIMMING, NOT PLACING. Pillaring needs footing and
+                        // only bobs in water; climb out with the swim-out primitive instead (G24).
+                        Debug.logMessage("At a bank in water — swimming out to y=" + jump.getY());
+                        kaptainwutax.tungsten.task.SwimOutTask.startTo(jump);
+                    } else {
+                        Debug.logMessage("Wall too high to jump — pillaring to y=" + jump.getY());
+                        kaptainwutax.tungsten.task.PillarTask.startTo(jump.getY());
+                        // The climb is built in chunks to leg waypoints, but the tower really goes up
+                        // to the goal — tell the visual so the WHOLE green column shows, not one chunk.
+                        if (goal != null) kaptainwutax.tungsten.task.PillarTask.setClimbGoal(
+                                (int) Math.ceil(goal.y));
+                    }
                     awaitingPhysics = false;
                     legTail = null;
                     return;

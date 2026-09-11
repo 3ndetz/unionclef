@@ -109,6 +109,10 @@ public abstract class MixinClientPlayerEntity extends AbstractClientPlayerEntity
 			// pillar-up primitive (place under self + jump to reach a raised goal — #46)
 			kaptainwutax.tungsten.task.PillarTask.tick((ClientPlayerEntity)(Object)this);
 
+			// swim-out primitive (climb out of water onto a raised bank — the water counterpart to
+			// pillaring, which cannot work without footing) — G24
+			kaptainwutax.tungsten.task.SwimOutTask.tick((ClientPlayerEntity)(Object)this);
+
 			// slime crossing primitive (hold heading + sprint across a whole bounce chain)
 			kaptainwutax.tungsten.task.SlimeBounceTask.tick((ClientPlayerEntity)(Object)this);
 		}

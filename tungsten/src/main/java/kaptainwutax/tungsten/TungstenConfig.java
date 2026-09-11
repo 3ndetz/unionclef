@@ -4731,6 +4731,14 @@ public class TungstenConfig {
      *  actively when the dest is below). Default ON. (G-water, 2026-09-11) */
     public boolean swimAimsAtDestPitch = true;
 
+    /** Climb OUT of water with the swim-out primitive, not by pillaring. FastNavigator treats a bank
+     *  above the bot as a "wall too high to jump" and starts PillarTask (place a block, jump, place).
+     *  That needs solid footing; in water the bot only bobs and never places (measured: 40s+ stuck at
+     *  a +1 bank). With this on, when the feet are in water FastNavigator starts {@link
+     *  kaptainwutax.tungsten.task.SwimOutTask} instead — hold JUMP (rise) + FORWARD aimed at the
+     *  ledge until standing on it. Default ON. (G24, 2026-09-11) */
+    public boolean swimOutOfWaterNotPillar = true;
+
     /** Hand a slime pad to {@link kaptainwutax.tungsten.task.SlimeBounceTask} — one manoeuvre
      *  that holds heading and sprint across the whole bounce chain, instead of the walker
      *  re-deciding at every waypoint.
