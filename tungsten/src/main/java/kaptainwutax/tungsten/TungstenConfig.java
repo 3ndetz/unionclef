@@ -1966,7 +1966,12 @@ public class TungstenConfig {
      * this flag either way: with the mechanism firing 0-1 times, the spread is the course's own
      * noise, which this repository has already measured at sevenfold on identical code.
      */
-    public boolean executorYieldsAimToMiner = false;
+    /**
+     * DEFAULT ON since 2026-09-11: the operator saw exactly the thief described above on the 6x
+     * playthrough video -- "the camera jerks madly UP while blocks break BELOW" -- while mining
+     * coal with a route live. Two writers of yaw/pitch per tick is not a tuning question.
+     */
+    public boolean executorYieldsAimToMiner = true;
 
     /**
      * The legacy engine must yield input control to the block-space WALKER too, not only to the
@@ -2477,6 +2482,18 @@ public class TungstenConfig {
      * the build engine, not a spiral of surface points the walker cannot reach. Read wanderEscapes.
      */
     public boolean wanderEscapesWhenEnclosed = true;
+
+    /**
+     * G34 (2026-09-11): a planned BREAK run (breakDown / breakThrough / breakStair) is executed by
+     * FastNavigator itself -- walk to the cell before the first break waypoint, start the
+     * executor's mining on that waypoint's cells, wait for "Mining done", re-plan from where the
+     * dig left the body -- instead of being handed to the physics engine with the goal as its
+     * target and hoping its guide truncates at the wall. Measured on the recorded @gamer run:
+     * iron nine blocks under the feet, "Mining aborted: ticks=1 dist=5.19" then "walking
+     * dead-ends -> physics owns the rest" for two minutes, the ore blacklisted five times over.
+     * Read navBreak=started/tooFar/resumed and navResumeSkipped.
+     */
+    public boolean navOwnsBreakRuns = true;
 
     /**
      * A movement gives up when the thing in its way can never be aimed at.
@@ -4042,7 +4059,12 @@ public class TungstenConfig {
      * <p>Mechanism counter {@code breakClearedOccluder}: ticks where the key was pressed for a
      * blocker rather than the target. Zero in a control arm, because the press is what is gated.
      */
-    public boolean mineTheBlockInTheWay = false;
+    /**
+     * DEFAULT ON since 2026-09-11 (G31): a block in the way of a planned dig is mined first, the
+     * way a player clears it -- and the executor now also aims at a VISIBLE face of the planned
+     * cell before deciding anything is in the way (PathExecutor.visibleAimPoint).
+     */
+    public boolean mineTheBlockInTheWay = true;
 
     /**
      * Whether the fire-extinguish cleanup releases the attack key ONLY when it was putting out a fire.

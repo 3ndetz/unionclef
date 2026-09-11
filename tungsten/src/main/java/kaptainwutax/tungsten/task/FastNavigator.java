@@ -118,6 +118,78 @@ public final class FastNavigator {
      */
     private static volatile BlockPos reachBlock = null;
 
+    /**
+     * A BREAK RUN IS THE NAVIGATOR'S OWN JOB (2026-09-11). FastPlanner's dig moves (breakDown /
+     * breakThrough / breakStair) come out flagged, and a flagged run used to be handed to the
+     * physics engine with the GOAL as its target, on the theory that its guide would truncate at
+     * the first break and the "At the wall" shortcut would mine it. That holds when the bot is
+     * already at the wall (the dig bench) and fails on real terrain: the physics leg does not
+     * deliver the body ("walking dead-ends", "Mining aborted: ticks=1 dist=5.19"), the miner's
+     * far give-up condemns the ore every six seconds, and iron nine blocks under the feet is
+     * never dug (recorded @gamer run, t=239-352 s). So: walk the leg to the cell BEFORE the
+     * first break waypoint, then start the executor's mining on that waypoint's cells ourselves,
+     * wait for "Mining done", and re-plan from wherever the dig left the body. No physics
+     * search in the loop at all.
+     */
+    private static volatile List<BlockPos> nextBreakCells = null;
+    private static volatile List<BlockPos> pendingBreakCells = null;
+    private static volatile boolean awaitingBreak = false;
+    /**
+     * THE CELL THE BODY MUST BE IN WHEN THE DIG STARTS. A breakDown mines the floor of the node
+     * it was planned from, and the walker declares a leg done from up to a block away -- so on
+     * the terrace bench the bot stood at z=299.7, the plan expected it in z=300, and it mined a
+     * neat shaft in the NEIGHBOURING column three blocks deep without ever dropping (then the next
+     * cell was 4.7 away and "out of reach"). Baritone's MovementDownward centres the body on
+     * src before it mines; this is that step.
+     */
+    private static volatile BlockPos nextBreakStand = null;
+    private static volatile BlockPos pendingBreakStand = null;
+    private static int centerTicks = 0;
+    private static final int CENTER_TICKS_MAX = 80;
+    public static volatile int navBreakCentered, navBreakCenterTimeout;
+    /** Break runs owned here: started, refused because the walker stopped short, and resumed
+     *  after "Mining done". Read as navBreak=started/tooFar/resumed. */
+    public static volatile int navBreakStarted, navBreakTooFar, navBreakResumed;
+
+    /** The cell a stalled route was last re-planned from; a second stall in the same cell is the
+     *  honest "unreachable from here" verdict. Read navStall=replans/gaveUp. */
+    private static volatile BlockPos stallReplanCell = null;
+    public static volatile int navStallReplans, navStallGaveUp;
+
+    /** True while this navigator is mining a planned break run (PathExecutor asks, so that its
+     *  post-mining resume does not start a physics search underneath us). */
+    public static boolean ownsBreakRun() { return active && awaitingBreak; }
+
+    /** Feet in the cell and within 0.3 of its centre horizontally. */
+    private static boolean centeredOn(ClientPlayerEntity player, BlockPos cell) {
+        BlockPos feet = kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player);
+        if (!feet.equals(cell)) return false;
+        double dx = cell.getX() + 0.5 - player.getX(), dz = cell.getZ() + 0.5 - player.getZ();
+        return dx * dx + dz * dz < 0.3 * 0.3;
+    }
+
+    /** Face the cell's centre (mouse pipeline, no gaze teleport) and walk to it, sneaking for
+     *  the last block so the body cannot overshoot an edge. */
+    private static void steerTo(ClientPlayerEntity player, BlockPos cell) {
+        double dx = cell.getX() + 0.5 - player.getX(), dz = cell.getZ() + 0.5 - player.getZ();
+        float yaw = (float) Math.toDegrees(-Math.atan2(dx, dz));
+        kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.setTarget(yaw, player.getPitch());
+        var o = TungstenMod.mc.options;
+        if (o == null) return;
+        // only push once the body faces roughly the right way, or a wide yaw error walks it off
+        float err = Math.abs(net.minecraft.util.math.MathHelper.wrapDegrees(yaw - player.getYaw()));
+        o.forwardKey.setPressed(err < 25f);
+        o.sneakKey.setPressed(dx * dx + dz * dz < 1.0);
+        o.sprintKey.setPressed(false);
+    }
+
+    private static void releaseSteer() {
+        var o = TungstenMod.mc == null ? null : TungstenMod.mc.options;
+        if (o == null) return;
+        o.forwardKey.setPressed(false);
+        o.sneakKey.setPressed(false);
+    }
+
     /** The block a running reach route serves, or null. Lets the drive tell "armed for this
      *  block" from "armed for something else" without stopping a route that is doing its job. */
     public static BlockPos reachBlock() { return reachBlock; }
@@ -171,6 +243,14 @@ public final class FastNavigator {
         goal = null;
         exactCell = null;
         reachBlock = null;
+        nextBreakCells = null;
+        pendingBreakCells = null;
+        awaitingBreak = false;
+        nextBreakStand = null;
+        pendingBreakStand = null;
+        if (centerTicks > 0) releaseSteer();
+        centerTicks = 0;
+        stallReplanCell = null;
         nextLeg = null;
         legTail = null;
         nextPhysicsTarget = null;
@@ -295,7 +375,34 @@ public final class FastNavigator {
             lastDist = dist;
             stallTicks = 0;
         } else if (++stallTicks > STALL_TICKS) {
-            Debug.logWarning("FastNavigator: no progress, handing over");
+            // "HANDING OVER" TO NOBODY IS NOT A RECOVERY (operator, 2026-09-11: "the navigator must
+            // NEVER get stuck; a fallback is not a fix"). No progress means the route being walked
+            // is wrong for the world as it is now -- so plan again from the cell the body is
+            // actually in, with everything the planner has (dig, pillar, bridge). Only when a
+            // fresh plan from this same cell ALSO goes nowhere is the goal unreachable from here,
+            // and that is said out loud so the caller can blacklist with a reason.
+            BlockPos here = player.getBlockPos();
+            if (stallReplanCell == null || !stallReplanCell.equals(here)) {
+                stallReplanCell = here;
+                stallTicks = 0;
+                navStallReplans++;
+                Debug.logMessage("FastNavigator: no progress at " + here.toShortString()
+                        + " — re-planning from here");
+                BlockPathWalker.stop();
+                kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+                nextLeg = null; legTail = null;
+                nextPhysicsTarget = null; pendingPhysicsTarget = null;
+                nextBreakCells = null; pendingBreakCells = null;
+                nextBreakStand = null; pendingBreakStand = null;
+                if (centerTicks > 0) releaseSteer();
+                centerTicks = 0;
+                awaitingPhysics = false; awaitingBreak = false;
+                planAhead(here);
+                return;
+            }
+            navStallGaveUp++;
+            Debug.logWarning("FastNavigator: no progress at " + here.toShortString()
+                    + " after a re-plan — goal unreachable from here, giving the route up");
             // TODOS.md, live void-death repro 2026-09-03: this said "handing over" but did not —
             // stop() (below) does not touch BlockPathWalker, so a BFS leg mid-walk when the stall
             // fires keeps pressing movement keys with the navigator no longer watching at all.
@@ -357,6 +464,52 @@ public final class FastNavigator {
         // a row: the placer froze the body 5.5 blocks short, and with that fixed the leg was cut
         // and handed to physics on every leg (12 legs, 12 HANDOFFs, WALKSTOP=0, nobody walking).
         if (kaptainwutax.tungsten.task.BridgeTask.isActive()) return;
+
+        // ── A break run this navigator owns (see nextBreakCells) ──────────────
+        var exB = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+        if (awaitingBreak) {
+            if (exB != null && exB.breakQueue != null) return;   // still mining, hands off
+            awaitingBreak = false;
+            legTail = null;
+            navBreakResumed++;
+            planAhead(player.getBlockPos());   // the dig moved the body; plan from where it is
+            return;
+        }
+        if (pendingBreakCells != null && !BlockPathWalker.isRunning()
+                && !kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
+            // STAND WHERE THE PLAN STANDS BEFORE DIGGING (see nextBreakStand).
+            BlockPos stand = pendingBreakStand;
+            if (stand != null && !centeredOn(player, stand)) {
+                if (++centerTicks <= CENTER_TICKS_MAX) {
+                    steerTo(player, stand);
+                    return;
+                }
+                navBreakCenterTimeout++;   // could not get there; dig from here rather than never
+            } else if (stand != null) {
+                navBreakCentered++;
+            }
+            releaseSteer();
+            centerTicks = 0;
+            pendingBreakStand = null;
+            List<BlockPos> cells = pendingBreakCells;
+            pendingBreakCells = null;
+            double dig = player.getEyePos().distanceTo(Vec3d.ofCenter(cells.get(0)));
+            if (exB != null && dig < 4.5) {
+                navBreakStarted++;
+                Debug.logMessage("FastNavigator: at the dig — mining " + cells.size()
+                        + " block(s) at " + cells.get(0).toShortString());
+                BlockPathWalker.stop();
+                nextLeg = null;
+                exB.stop = false;
+                exB.startBreaking(cells);
+                awaitingBreak = true;
+                return;
+            }
+            // The walker stopped short of the dig: fall back to the physics hand-off, which is
+            // what every break run went through before.
+            navBreakTooFar++;
+            pendingPhysicsTarget = BlockPos.ofFloored(goal);
+        }
 
         if (awaitingPhysics) {
             if (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
@@ -501,6 +654,11 @@ public final class FastNavigator {
             // if this leg ends at a jump, arm the hand-off for when the walk finishes
             pendingPhysicsTarget = nextPhysicsTarget;
             nextPhysicsTarget = null;
+            // ...and if it ends at a dig, arm the break run for the same moment
+            pendingBreakCells = nextBreakCells;
+            pendingBreakStand = nextBreakStand;
+            nextBreakCells = null;
+            nextBreakStand = null;
             // ONE OWNER FOR A BUILD LEG. A leg whose route places blocks goes to the ported
             // MovementQueue: a chain of baritone MovementTraverse objects, each of which owns its own
             // one-block step — the walk, the aim, the sneak and the click — and none of which shares
@@ -846,6 +1004,12 @@ public final class FastNavigator {
                         nextPhysicsTarget = null;
                         movementLeg = true;
                         cells = cells.subList(0, covered);
+                    } else if (breakCell && TungstenConfig.get().navOwnsBreakRuns) {
+                        // A DIG IS OURS: walk to the cell before it, then mine (see nextBreakCells).
+                        nextPhysicsTarget = null;
+                        nextBreakCells = new java.util.ArrayList<>(flaggedWp.toBreak);
+                        nextBreakStand = cells.get(physics - 1);   // the node the dig was planned from
+                        cells = cells.subList(0, physics);
                     } else {
                         nextPhysicsTarget = breakCell ? goalCell : cells.get(runEnd);
                         cells = cells.subList(0, physics);
@@ -895,6 +1059,12 @@ public final class FastNavigator {
                     // "standing at the lip of the gap" state).
                     pendingPhysicsTarget = nextPhysicsTarget;
                     nextPhysicsTarget = null;
+                } else if (nextBreakCells != null) {
+                    // The dig is the very FIRST move from here: nothing to walk, mine now.
+                    pendingBreakCells = nextBreakCells;
+                    pendingBreakStand = nextBreakStand;
+                    nextBreakCells = null;
+                    nextBreakStand = null;
                 }
             } catch (Exception e) {
                 Debug.logWarning("FastNavigator plan failed: " + e.getMessage());

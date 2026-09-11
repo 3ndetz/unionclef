@@ -247,6 +247,52 @@ stand's saved `tungsten.json` can carry the old value. Cascade it caused, also f
 approach clock and MineAndCollectTask's progress checker now HOLD while the executor has a
 break/place queue or a pillar is up (a dig is progress) — that is the G32 fix, `dbBuildHeld`.
 
+**G34. A planned BREAK run was handed to the physics engine, which does not deliver the body on
+real terrain.** Found on the first recorded run of the fixed build (12:03): iron ore nine blocks
+under the feet on a slope. The plan had the digs; the executor mined ONE block; the next break cell
+was handed over from five blocks away (`Mining aborted: ticks=1 dist=5.19`), then `walking
+dead-ends -> physics owns the rest` x4 while the miner's far give-up condemned the ore 5/4 four
+times over — two minutes. The dig bench passed only because its first break was right under the
+feet, where the "At the wall" shortcut fires. Previous sessions named this seam and deferred it
+("the place plan only reaches the executor THROUGH the physics path ... giving the block planner
+its own route to the executor is the real fix, and it is a bigger job"). Principle: **the engine
+that planned the dig executes the dig.** Fix: `FastNavigator` owns break runs (`navOwnsBreakRuns`):
+walk to the cell before the first break waypoint, start the executor's mining on that waypoint's
+cells, wait for "Mining done", re-plan from wherever the dig left the body; `PathExecutor`'s
+post-mining resume stands down while the navigator owns the run.
+*And the body must be IN the plan's cell before the dig starts.* The terrace bench showed the
+second half: a breakDown mines the floor of the node it was planned from, the walker declares a
+leg done from up to a block away, so the bot at z=299.7 (plan: z=300) mined a neat three-deep
+shaft in the neighbouring column without ever dropping, and the next cell was "out of reach".
+Baritone's MovementDownward centres on `src` first; FastNavigator now steers the body to the
+plan's stand cell (mouse pipeline, forward, sneak for the last block) before starting the mining
+(`navBreakCentered/CenterTimeout`).
+
+**G35. Every ore within reach is blacklisted as "dangerous" the moment a hostile is near.** Same
+run, 09:09:32: fifty `Blacklisting dangerous Block{coal_ore / iron_ore}` lines in one second.
+`BeatMinecraftTask.blackListDangerousBlock` condemns the nearest ore permanently
+(`requestBlockUnreachable(pos, 0)`) for every hostile within 12 blocks of the bot and 30 of the ore,
+every tick, per ore type — and the iron phase is abandoned for wood. Open: a combat decision (fight
+or wait), not a navigation one.
+
+**G36. "FastNavigator: no progress, handing over" handed the body to nobody.** The stall watchdog
+stopped the navigator and nothing took over ("a fallback is not a fix; the navigator must never get
+stuck"). Now: no progress → re-plan from the cell the body is in, with the full move set; a second
+stall from the same cell → the honest verdict "unreachable from here", said out loud
+(`navStall=replans/gaveUp`), for the caller to blacklist with a reason.
+
+**G37. Camera thief while mining with a route live** (6x video: "the camera jerks madly UP while
+blocks break BELOW"). Diagnosed long ago in `TungstenConfig.executorYieldsAimToMiner` — the
+executor re-aims at its waypoint in the same tick the miner aims at the block — and left off until
+an A/B. Default on; the run script pins it because the stand's `tungsten.json` carries false.
+
+**G38. The miner runs back and forth between targets.** The log target changed every ~20 s in the
+first phase of the 12:03 run (`-299,118,-230` → `-296,116,-227` → `-298,113,-254`, 25 blocks away
+→ `-296,115,-221`), `AbstractDoToClosestObjectTask` cycling "Retrying old heuristic!" / "Trying out
+NEW pursuit" / "Moving towards closest...", and "Waiting for calculations I think (wandering)"
+whenever the scanner momentarily had no candidate. Principle: a target you are closing on is kept
+until reached or proven unreachable; a scanner hiccup is a tick to wait, not a wander. Open.
+
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`
 once at t≈30 s (an exception in `getTaskChainString`, cosmetic).

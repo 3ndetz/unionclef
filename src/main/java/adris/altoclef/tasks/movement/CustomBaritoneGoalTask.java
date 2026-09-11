@@ -598,6 +598,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             // escape target is the thing it was trying to reach.
             lastGoalVec = gp;
             lastGoalAtMs = System.currentTimeMillis();
+            lastGoalReachBlock = goal instanceof adris.altoclef.util.goals.AltoGoal.Adjacent a0 ? a0.pos() : null;
             // ── A BLOCK TO BE BROKEN IS APPROACHED, NEVER STOOD IN (G25, 2026-09-11) ──
             // Everything below this line steers at a CELL: it snaps an unstandable goal onto
             // standable ground, walks the grid BFS there, and escalates to the build engine only
@@ -1242,6 +1243,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     /** The goal the drive last steered at, and when -- read by PlannedEscape. */
     public static volatile net.minecraft.util.math.Vec3d lastGoalVec = null;
     public static volatile long lastGoalAtMs = 0L;
+    /** The block a REACH goal was for (null for a position goal), so an escape re-armed at the
+     *  live goal keeps the reach semantics instead of asking to stand inside the ore. */
+    public static volatile net.minecraft.util.math.BlockPos lastGoalReachBlock = null;
 
     /**
      * Drive a REACH goal: get the FEET next to a block (baritone's GoalGetToBlock), digging if

@@ -34,6 +34,7 @@ public final class PlannedEscape {
 
     private static long lastArmMs = 0L;
     private static Vec3d armedFrom = null;
+    private static boolean lastPickWasLiveGoal = false;
 
     /** Where the body was when the current escape started (null when none is running). */
     public static Vec3d armedFrom() {
@@ -58,7 +59,9 @@ public final class PlannedEscape {
         kaptainwutax.tungsten.path.movements.MovementQueue.stop();
         var ex = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
         if (ex != null) ex.stop = false;
-        kaptainwutax.tungsten.task.FastNavigator.start(goal);
+        BlockPos reach = lastPickWasLiveGoal ? CustomBaritoneGoalTask.lastGoalReachBlock : null;
+        if (reach != null) kaptainwutax.tungsten.task.FastNavigator.start(goal, reach);
+        else kaptainwutax.tungsten.task.FastNavigator.start(goal);
         armedFrom = mod.getPlayer().getPos();
         lastArmMs = now;
         escapeArmed++;
@@ -70,11 +73,13 @@ public final class PlannedEscape {
     private static Vec3d pickGoal(AltoClef mod) {
         Vec3d me = mod.getPlayer().getPos();
         net.minecraft.world.World w = mod.getWorld();
+        lastPickWasLiveGoal = false;
         // 1. the live goal
         Vec3d live = CustomBaritoneGoalTask.lastGoalVec;
         if (live != null && System.currentTimeMillis() - CustomBaritoneGoalTask.lastGoalAtMs < 2000
                 && live.squaredDistanceTo(me) > 4.0) {
             escapeToGoal++;
+            lastPickWasLiveGoal = true;
             return live;
         }
         // 2. the surface above

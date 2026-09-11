@@ -692,12 +692,57 @@ public class PathExecutor {
                         .accept(target, player.getEntityWorld().getBlockState(target));
             } catch (Throwable ignored) {}
         }
+        // AIM AT A FACE YOU CAN SEE, NOT AT THE CENTRE (G31, 2026-09-11). The centre of a block
+        // beside, below or behind another block is routinely hidden -- the crosshair lands on the
+        // neighbour, onTarget never becomes true, and the bot stands looking at the wrong block
+        // until the 300-tick watchdog gives up: breakAim=365/989/981 (on/off/elsewhere) and 141
+        // reach aborts on one recorded run, and the operator's screenshot of a red-boxed block the
+        // bot "looks at and does nothing". A player looks at the part of the block they can see.
+        // Try the centre, then the six face centres, then the corners; the first point whose ray
+        // reaches the target is the aim. With none visible the block is genuinely occluded: mine
+        // the occluder first when policy allows (it becomes the head of the queue), else give this
+        // cell up NOW rather than in fifteen seconds -- the navigator re-plans from a better cell.
+        Vec3d aim = visibleAimPoint(player, world, target, eye, center);
+        if (aim == null) {
+            net.minecraft.util.hit.BlockHitResult blk = world.raycast(new net.minecraft.world.RaycastContext(
+                    eye, center, net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
+                    net.minecraft.world.RaycastContext.FluidHandling.NONE, player));
+            net.minecraft.util.math.BlockPos occ = blk != null
+                    && blk.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
+                    ? blk.getBlockPos() : null;
+            net.minecraft.util.math.BlockPos floor = player.getBlockPos().down();
+            if (occ != null && !occ.equals(target) && !occ.equals(floor)
+                    && BreakRules.canBreak(world, occ, world.getBlockState(occ))) {
+                if (!occ.equals(breakQueue.get(0))) {
+                    breakQueue.remove(occ);
+                    breakQueue.add(0, occ);
+                    breakOccluderQueued++;
+                    Debug.logMessage("Mining: " + target.toShortString() + " is hidden behind "
+                            + occ.toShortString() + " — clearing that first");
+                }
+                target = occ;
+                center = Vec3d.ofCenter(target);
+                aim = visibleAimPoint(player, world, target, eye, center);
+            }
+            if (aim == null) {
+                breakOccludedUnclearable++;
+                Debug.logMessage("Mining aborted: no visible face of " + target.toShortString()
+                        + (occ != null ? " (behind " + occ.toShortString() + ")" : "")
+                        + " — re-planning from a better cell");
+                options.attackKey.setPressed(false);
+                mc.interactionManager.cancelBlockBreaking();
+                TungstenModRenderContainer.BREAK_PLAN.clear();
+                breakQueue = null; breakingTicks = 0; settleTicks = 0;
+                kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+                return false;
+            }
+        }
         // Turn toward the block smoothly (no gaze teleport) and HOLD the attack
         // key only once the crosshair is actually on it — vanilla
         // handleBlockBreaking then drives the mining against crosshairTarget.
         // (Direct updateBlockBreakingProgress does not work: with the key up,
         // vanilla cancels the breaking progress every tick.)
-        Vec3d d = center.subtract(eye);
+        Vec3d d = aim.subtract(eye);
         float wantYaw = (float) Math.toDegrees(-Math.atan2(d.x, d.z));
         float wantPitch = (float) Math.toDegrees(-Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)));
         // Humanized aim via WindMouse (mouse pipeline) — no setYaw/setPitch that
@@ -811,6 +856,44 @@ public class PathExecutor {
     /** Was the attack key pressed for mining on the previous tick? @see #mineHits */
     private boolean prevPressed = false;
 
+    /** Occluders pulled to the head of the break queue, and cells given up because no face of
+     *  them was visible and the blocker could not be cleared. Read as breakOcc=queued/unclearable. */
+    public static volatile int breakOccluderQueued = 0, breakOccludedUnclearable = 0;
+
+    /** Face-centre and corner offsets tried after the centre, in order. */
+    private static final double[][] AIM_OFFSETS = {
+            {0, 0.45, 0}, {0, -0.45, 0}, {0.45, 0, 0}, {-0.45, 0, 0}, {0, 0, 0.45}, {0, 0, -0.45},
+            {0.4, 0.4, 0.4}, {-0.4, 0.4, 0.4}, {0.4, 0.4, -0.4}, {-0.4, 0.4, -0.4},
+            {0.4, -0.4, 0.4}, {-0.4, -0.4, 0.4}, {0.4, -0.4, -0.4}, {-0.4, -0.4, -0.4}};
+
+    /**
+     * A point on {@code target} the eye can actually see, or null when every candidate ray is
+     * stopped by another block. The centre first (the common case), then the six faces, then the
+     * corners -- a sliver of a block seen past an edge is still a valid thing to hit.
+     */
+    private static Vec3d visibleAimPoint(ClientPlayerEntity player, net.minecraft.world.World world,
+                                         net.minecraft.util.math.BlockPos target, Vec3d eye, Vec3d center) {
+        if (rayReaches(player, world, target, eye, center)) return center;
+        for (double[] o : AIM_OFFSETS) {
+            Vec3d p = center.add(o[0], o[1], o[2]);
+            if (rayReaches(player, world, target, eye, p)) return p;
+        }
+        return null;
+    }
+
+    private static boolean rayReaches(ClientPlayerEntity player, net.minecraft.world.World world,
+                                      net.minecraft.util.math.BlockPos target, Vec3d from, Vec3d to) {
+        try {
+            net.minecraft.util.hit.BlockHitResult hit = world.raycast(new net.minecraft.world.RaycastContext(
+                    from, to, net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
+                    net.minecraft.world.RaycastContext.FluidHandling.NONE, player));
+            return hit != null && hit.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
+                    && hit.getBlockPos().equals(target);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     /**
      * With the key held and the aim on the plan, is vanilla ACTUALLY breaking?
      * Read as {@code mine=hits/noProgress}.
@@ -908,6 +991,8 @@ public class PathExecutor {
      * bridge target really was a neighbouring hole.
      */
     public static volatile int ownCellPlaceAsPillar = 0;
+    /** Post-mining resumes left to FastNavigator because the break run was its own. */
+    public static volatile int navResumeSkipped = 0;
 
     /**
      * Does the player's bounding box overlap this cell? A block placed here would be placed INTO
@@ -1200,6 +1285,13 @@ public class PathExecutor {
      * (which sleeps and polls; the visible "task died after mining" gap).
      */
     private void resumeGotoAfterMining(ClientPlayerEntity player) {
+        // A break run FastNavigator owns is resumed by FastNavigator (it re-plans from the cell
+        // the dig left the body in). Starting a physics search here would put a second driver
+        // under its walker -- the two-owners seam this file has paid for before.
+        if (kaptainwutax.tungsten.task.FastNavigator.ownsBreakRun()) {
+            navResumeSkipped++;
+            return;
+        }
         Vec3d goal = TungstenMod.TARGET;
         // ⛔ RESUME WHAT THE SEARCH WAS ACTUALLY GIVEN. TungstenMod.TARGET is written only by
         // hand-driven entries (;goto, the keybinding, follow-entity, py4j), so every altoclef-driven

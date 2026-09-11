@@ -71,14 +71,16 @@ def build_shaft():
 
 
 def main():
-    st = py4j("state")
-    if not st["inGame"]:
+    # "IN GAME" IS NOT "ON THIS SERVER". After a @gamer run the client is in game on the survival
+    # server, so the old test skipped connecting, the rcon teleport addressed a player the flat
+    # server did not have, and the bench failed in setup (2026-09-11 regression: rise 0.0).
+    if BOT not in rcon("list"):
         print("connecting to test-server")
         py4j("connect", ip="test-server")
         t0 = time.time()
-        while time.time() - t0 < 120 and not py4j("state")["inGame"]:
+        while time.time() - t0 < 120 and BOT not in rcon("list"):
             time.sleep(5)
-        if not py4j("state")["inGame"]:
+        if BOT not in rcon("list"):
             print("FAIL: never joined"); return 2
     py4j("cmd", c="@stop"); py4j("cmd", c=";stop"); time.sleep(2)
     rcon(f"gamemode survival {BOT}")

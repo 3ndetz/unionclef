@@ -97,10 +97,31 @@ recovery, every recovery is a plan**.
 - [ ] **G30 `Time taken to execute` logged on every path completion.** Gate: ≥2 nodes or ≥1 s or
       verbose.
 - [ ] **G31 the executor mines cells it cannot see** (`Mining aborted … dist=1.06` on a diagonal
-      neighbour, `dist=1.50` on an occluded above-adjacent cell; `breakMissWhy=1/244`). The "At the
-      wall" shortcut fires on eye distance regardless of LOS; the flat 300-tick abort (G13) then
-      loops it. Fix: visible face required; in-plan occluder mined first; foreign occluder → no
-      shortcut, physics delivers a cell with LOS.
+      neighbour, `dist=1.50` on an occluded above-adjacent cell; `breakMissWhy=1/244`; on the
+      12:03 run `breakAim=365/989/981` and the operator's screenshot of a red-boxed block the bot
+      "looks at and does nothing"). Fix (2026-09-11): `PathExecutor.visibleAimPoint` aims at the
+      centre, then a face centre, then a corner -- the first point whose ray reaches the block;
+      with none visible the occluder is pulled to the head of the break queue when policy allows
+      it (`breakOccluderQueued`), else the cell is given up at once (`breakOccludedUnclearable`)
+      for the navigator to re-plan from a better cell. `mineTheBlockInTheWay` default on.
+- [ ] **G36 "FastNavigator: no progress, handing over" handed the body to NOBODY.** The stall
+      watchdog stopped the navigator and nothing took over (operator: "a fallback is not a fix;
+      the navigator must never get stuck"). Fix: on no progress the navigator re-plans from the
+      cell the body is in, with the full move set; a second stall from the SAME cell is the
+      honest verdict "unreachable from here" (`navStall=replans/gaveUp`), said out loud.
+- [ ] **G37 camera thief while mining with a route live** (operator, 6x video: "the camera jerks
+      madly UP while blocks break BELOW"). Already diagnosed in TungstenConfig
+      (`executorYieldsAimToMiner`: the executor re-aims at its waypoint in the same tick the miner
+      aims at the block) and left OFF "until a paired A/B". Default on since 2026-09-11; the run
+      script pins it because the stand's tungsten.json carries false.
+- [ ] **G38 the miner runs back and forth between targets** (operator, 6x video: "runs there and
+      back for no reason"). On the 12:03 run the log target changed every ~20 s in the first
+      phase -- `-299,118,-230` -> `-296,116,-227` -> `-298,113,-254` (25 blocks away) ->
+      `-296,115,-221` -- with `AbstractDoToClosestObjectTask` cycling "Retrying old heuristic!" /
+      "Trying out NEW pursuit" / "Moving towards closest...", and "Waiting for calculations I
+      think (wandering)" whenever the scanner momentarily had no candidate. Principle: a target
+      you are closing on is kept until it is reached or proven unreachable; a scanner hiccup is
+      a tick to wait, not a wander. Open.
 - [ ] **G32 "unreachable" declared by a timer, not by a search** (`Try 2/4` on every G25 no-op
       approach). A block is unreachable only when the dig-capable planner returns incomplete.
       Fix: DestroyBlockTask's approach clock and MineAndCollectTask's progress checker HOLD while
@@ -111,6 +132,24 @@ recovery, every recovery is a plan**.
       behind `fireReleaseNeedsFire` (default false, waiting for an A/B); the bench IS that A/B.
       Default flipped to true; the benches pin it because the stand's saved tungsten.json can hold
       the old value. Principle: a per-tick writer undoing another owner's key is a theft.
+- [ ] **G34 a planned BREAK run was handed to the physics engine, which does not deliver the body
+      on real terrain.** Recorded @gamer run on the fixed build (2026-09-11 12:03): iron ore 9
+      blocks under the feet on a slope; the plan had the digs, the executor mined ONE block,
+      then "Mining aborted: ticks=1 dist=5.19" (the next break cell handed over 5 blocks away),
+      "walking dead-ends -> physics owns the rest" x4, the ore blacklisted 5/4 four times over,
+      two minutes lost (t=239-352). The dig bench only passed because the first break was right
+      under the feet ("At the wall" fires inside 4 blocks). Fix: FastNavigator OWNS break runs
+      (`navOwnsBreakRuns`): walk to the cell before the first break waypoint, start the
+      executor's mining on that waypoint's cells, wait for "Mining done", re-plan from where the
+      dig left the body; PathExecutor's post-mining resume stands down while the navigator owns
+      the run. Read navBreak=started/tooFar/resumed. Bench: a dig target 9 below on a slope.
+- [ ] **G35 every ore is blacklisted as "dangerous" the moment a hostile is within ~12 blocks.**
+      Same run, 09:09:32: fifty `Blacklisting dangerous Block{coal_ore/iron_ore}` lines in one
+      second -- `BeatMinecraftTask.blackListDangerousBlock` condemns the nearest ore
+      (`requestBlockUnreachable(pos, 0)`) for every hostile within 150 sq (12 blocks) of the bot
+      and 30 of the ore, every tick, per ore type. After that the iron phase is abandoned for
+      wood. A bot with a stone sword should fight or wait out the mob, not lose the ore forever.
+      Not fixed yet: needs a combat decision, not a nav one.
 
 ### TOP PRIORITY — found by running @gamer twice on real survival terrain (2026-09-10)
 - [x] **G21 entity-approach "close but cannot hit" dead zone → the bot idled instead of
