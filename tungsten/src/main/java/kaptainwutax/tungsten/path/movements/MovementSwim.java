@@ -111,7 +111,22 @@ public class MovementSwim extends Movement {
             return state.setStatus(MovementStatus.FAILED);
         }
 
-        MovementHelperB.moveTowards(player, state, dest);
+        // AIM WHERE YOU ARE SWIMMING — PITCH INCLUDED. In water the body moves in the LOOK
+        // direction, so moveTowards keeping the land pitch (level/down) pins a bot at the water's
+        // edge when it must climb OUT onto a bank: measured on a lake bench it swam across fine then
+        // bobbed at the far edge for 30s+ with pitch ~63 (looking down), JUMP+forward pushing it
+        // down into the wall. Aiming the FULL rotation at the destination centre makes swim-forward
+        // carry it up and out (and dive actively when the dest is below). (2026-09-11)
+        if (kaptainwutax.tungsten.TungstenConfig.get().swimAimsAtDestPitch) {
+            Rotation cur = RotationHelper.playerRotations(player);
+            Rotation aim = RotationHelper.calcRotationFromVec3d(
+                    RotationHelper.playerHead(player),
+                    RotationHelper.getBlockPosCenter(dest), cur);
+            state.setTarget(new MovementState.MovementTarget(aim, false))
+                 .setInput(Input.MOVE_FORWARD, true);
+        } else {
+            MovementHelperB.moveTowards(player, state, dest);
+        }
         // Rising is holding JUMP; the base update() already does that while the feet are in liquid
         // and the body is under dest.y + 0.6. Diving is simply NOT pressing it — vanilla sinks a
         // player who stops swimming up — so there is deliberately no input here for dest below us.

@@ -4723,6 +4723,14 @@ public class TungstenConfig {
     public boolean movePillar        = true;   // place a block under yourself and rise
     public boolean movePlaceBridge   = true;   // place a floor across a gap and step on
 
+    /** Swim aiming the FULL rotation (pitch included) at the destination, not the land pitch.
+     *  In water the body moves in the LOOK direction, so keeping a level/down land pitch pins a bot
+     *  at the water's edge when it needs to climb OUT onto a bank: measured on a lake bench, the bot
+     *  swam across fine then bobbed at the far edge for 30s+ (pitch ~63, looking down) unable to get
+     *  up the +1 bank. Aiming at the dest centre makes swim-forward carry it up and out (and dive
+     *  actively when the dest is below). Default ON. (G-water, 2026-09-11) */
+    public boolean swimAimsAtDestPitch = true;
+
     /** Hand a slime pad to {@link kaptainwutax.tungsten.task.SlimeBounceTask} — one manoeuvre
      *  that holds heading and sprint across the whole bounce chain, instead of the walker
      *  re-deciding at every waypoint.
