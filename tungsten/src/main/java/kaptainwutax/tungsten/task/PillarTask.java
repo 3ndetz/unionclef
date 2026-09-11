@@ -40,6 +40,7 @@ public class PillarTask {
     /** Per-tower anatomy for the "stuck" verdict: airborne-and-rising ticks, ticks with a cell to
      *  place into, ticks the live ray was not on the support's top face, clicks refused, placed. */
     private static int dAir, dPlaceAt, dReadyNull, dTryFalse, dPlaced, dInsideCell;
+    private static double dApex = -1e9;
     private static BlockPos dLastPlaceAt;
     /** How far above the cell's top the feet must be before a click is attempted (baritone: 0.1). */
     private static final double PLACE_CLEARANCE = 0.05;
@@ -53,6 +54,7 @@ public class PillarTask {
         stuckTicks = 0;
         centerTicks = 0;
         dAir = dPlaceAt = dReadyNull = dTryFalse = dPlaced = dInsideCell = 0;
+        dApex = -1e9;
         dLastPlaceAt = null;
         lastY = p.getY();
         active = true;
@@ -183,6 +185,7 @@ public class PillarTask {
                 if (isAir(world, c) && !isAir(world, b)) { placeAt = c; against = b; break; }
             }
             dAir++;
+            if (player.getY() > dApex) dApex = player.getY();
             // ⛔ THE BODY MUST HAVE LEFT THE CELL BEFORE THE CELL IS FILLED (G42, 2026-09-11).
             // "Airborne and rising" starts at the first tick off the ground, feet at +0.42, still
             // inside the cell the block is going into -- vanilla refuses a cube that intersects
@@ -255,11 +258,13 @@ public class PillarTask {
                 }
                 Debug.logMessage(String.format(
                         "Pillar stuck at y=%.1f  air=%d insideCell=%d placeAt=%d readyNull=%d tryFalse=%d placed=%d"
-                        + " pitch=%.0f onGround=%b hit=%s lastPlaceAt=%s hand=%s",
+                        + " pitch=%.0f onGround=%b hit=%s lastPlaceAt=%s hand=%s center=%d/%d at=(%.2f,%.2f)"
+                        + " apex=%.2f",
                         player.getY(), dAir, dInsideCell, dPlaceAt, dReadyNull, dTryFalse, dPlaced,
                         player.getPitch(), player.isOnGround(), hitS,
                         dLastPlaceAt == null ? "-" : dLastPlaceAt.toShortString(),
-                        player.getMainHandStack().getItem().toString()));
+                        player.getMainHandStack().getItem().toString(),
+                        centerTicks, CENTER_TICKS_MAX, player.getX(), player.getZ(), dApex));
                 stop();
             }
         }

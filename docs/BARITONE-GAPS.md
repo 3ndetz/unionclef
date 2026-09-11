@@ -462,6 +462,21 @@ it motionless for forty — "Approaching target", the same m0.0 — so the last 
 drive's too. Flag `entityLongHaulViaDrive`; counter `entLongHaul`; bench `far_mob_test.py`
 (chicken 40 blocks away on a two-block ledge).
 
+**G49. A five-block partial thrown away as "no progress", and the clock blacklisting logs while a
+route was being walked.** Round-8 playthrough (16:26): five minutes on `walking dead-ends (9.1 ->
+8.1) -> physics owns the rest` / `physics owns the jump -> -315,71,-1409` with the goal nine blocks
+BELOW — the coefficient partial (G44) was a real leg, `FastNavigator` judged it by "did the
+straight-line distance shrink by four", refused it, and handed the goal to the one engine that
+cannot dig. Baritone walks that partial and re-plans from its tail; that is the whole point of the
+coefficient rule. Same recording, 13:31:52–13:32:04: `Failed to mine block. Suggesting it may be
+unreachable` ×5 while the navigator was walking legs and arriving at them — `MineAndCollectTask`'s
+progress clock reads a body standing at a leg's end as stuck (G32 again, one driver further).
+Principles: **a partial at least five blocks long is a leg, walked and re-planned, whatever the
+straight-line gain; a goal below with no such partial is given up out loud, never handed to
+physics; the unreachable clock waits while any driver owns the route.** Counters
+`navPartial=walked/noneBelow`; `MineAndCollectTask` holds its clock while FastNavigator, the walker
+or the queue is running.
+
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`
 once at t≈30 s (an exception in `getTaskChainString`, cosmetic).

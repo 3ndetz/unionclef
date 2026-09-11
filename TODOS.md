@@ -174,7 +174,9 @@ recovery, every recovery is a plan**.
       blocks that sees the bot is fled to 20 (past the creeper's 16-block follow range; at 15 it
       trailed the bot back and blew it up, round 7). Bench `creeper_avoid_test.py`. Still open:
       hit-and-back-off with a sword instead of avoiding for ever (the duelling controller's
-      hold-at-striking-distance is the wrong shape for a creeper).
+      hold-at-striking-distance is the wrong shape for a creeper). creeper_avoid still red on
+      round 9: survives (no death) but takes 9 hp -- the flee is on foot and a creeper walks as
+      fast; the sword is the answer, not the legs.
 - [ ] **G44 a goal 94 blocks below is handed to the physics engine** (14:00 run, 11:07: "physics
       owns the jump -> -343,6,-203", "walking dead-ends (94.2 -> 94.0)", "Ran out of nodes").
       Baritone descends by a staircase dig; the budgeted plan comes back incomplete with no
@@ -202,12 +204,20 @@ recovery, every recovery is a plan**.
       turned the only (worn) iron pickaxe into "no tool". Fix: the miner equips its own tool
       (`equipBestToolFor`, counter dbToolEquipped); the chain takes any slot; getBestToolSlot
       falls back to a saved tool over bare hands.
-- [ ] **G48 a mob 45 blocks away is chased with a physics lock that moves the body zero** (15:38
+- [x] **G48 a mob 45 blocks away is chased with a physics lock that moves the body zero** (15:38
       playthrough: five minutes on "Killing chicken -> Approach entity -> Failed to get to
       target, wandering", lock=chicken:45.1>45.1,m0.0, wanderDenied=4014, pdEnter+0). Fix
       `entityLongHaulViaDrive`: beyond the 8-block close range GetToEntityTask returns
       GetNearEntityTask (live near-goal through the drive: walk / movements / FastNavigator),
-      hands back inside 5. Bench `far_mob_test.py`.
+      hands back inside 3.5 (was 8: the last four blocks stalled on the physics chase the same
+      way, far_mob round 8). Bench `far_mob_test.py`: PASS x2 on round 9 (17:00) -- forty
+      blocks, a two-block ledge, the kill and the pickup, entLongHaul=2.
+- [ ] **G49 a five-block partial thrown away as "no progress"; the clock blacklists logs while
+      a route is walked** (16:26 playthrough: five minutes on "walking dead-ends (9.1 -> 8.1)
+      -> physics owns the rest" with the goal nine blocks BELOW; "Failed to mine block" x5 in
+      12 s while legs were walked). Fix: a partial >= 5 blocks is walked and re-planned; a goal
+      below with no such partial is given up out loud (navPartial=walked/noneBelow);
+      MineAndCollectTask holds its clock while FastNavigator / walker / queue run.
 - [ ] **G32 "unreachable" declared by a timer, not by a search** (`Try 2/4` on every G25 no-op
       approach). A block is unreachable only when the dig-capable planner returns incomplete.
       Fix: DestroyBlockTask's approach clock and MineAndCollectTask's progress checker HOLD while

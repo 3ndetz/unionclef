@@ -72,6 +72,12 @@ public final class FastNavigator {
     private static volatile BlockPos pendingPhysicsTarget = null;
     /** True while the physics engine is performing a jump we handed it. */
     private static volatile boolean awaitingPhysics = false;
+    /** G49: the planning thread asked the navigator to give the route up (a goal below with no
+     *  walkable partial); the tick honours it on the client thread. */
+    private static volatile boolean pendingGiveUp = false;
+    /** G49: partials walked because they were long enough, and routes given up because a goal
+     *  below had no partial at all. Read navPartial=walked/noneBelow. */
+    public static volatile int navPartialWalked, navNoPartialBelow;
     /**
      * Far side of a slime pad the route crosses. The walker only ever gets a LEG, and the
      * leg is cut at LEG_LENGTH, so on a pad wider than that its last waypoint sits ON the
@@ -252,6 +258,7 @@ public final class FastNavigator {
         active = false;
         goal = null;
         exactCell = null;
+        pendingGiveUp = false;
         reachBlock = null;
         nextBreakCells = null;
         pendingBreakCells = null;
@@ -278,6 +285,13 @@ public final class FastNavigator {
     /** Ticked from the client mixin alongside the other tungsten tasks. */
     public static void tick(ClientPlayerEntity player) {
         if (!active || player == null || goal == null) return;
+        if (pendingGiveUp) {
+            pendingGiveUp = false;
+            navStallGaveUp++;
+            BlockPathWalker.stop();
+            stop();
+            return;
+        }
 
         double dist = player.getEntityPos().distanceTo(goal);
         // ARRIVAL IS NOT A 3D QUESTION WHEN THE GOAL IS ABOVE YOU. This test was a plain sphere
@@ -935,7 +949,33 @@ public final class FastNavigator {
                     // PathFinder.truncateAtBreaks. No hand-off, no bridging at all. Giving the
                     // block planner its own route to the executor is the real fix, and it is a
                     // bigger job than a condition here.
-                    if (before - after < MIN_PARTIAL_PROGRESS) {
+                    // ⛔ A PARTIAL WORTH FIVE BLOCKS IS WALKED, PROGRESS OR NOT (G49, 2026-09-11).
+                    // The coefficient rule (FastPlanner, G44) hands back the node baritone would
+                    // walk to; baritone walks it and re-plans from there -- that is how it gets
+                    // past a corner the budget could not see round. Judging it here by "did the
+                    // straight-line distance shrink by four" threw those legs away: the 16:26
+                    // recording sat five minutes on "walking dead-ends (9.1 -> 8.1) -> physics owns
+                    // the rest" with the goal nine blocks BELOW, and physics cannot dig. So: a
+                    // partial at least MIN_DIST_PATH from the start is a leg; and a goal below
+                    // that yields no such partial is given up out loud, never handed to an engine
+                    // without a shovel.
+                    double partialLen = Math.sqrt(tail.getSquaredDistance(start));
+                    boolean walkThePartial = TungstenConfig.get().planPartialLikeBaritone
+                            && res.path.size() >= 2 && partialLen >= 5.0;
+                    if (walkThePartial) {
+                        navPartialWalked++;
+                    } else if (before - after < MIN_PARTIAL_PROGRESS
+                            && TungstenConfig.get().planPartialLikeBaritone
+                            && goalCell.getY() < start.getY() - 2) {
+                        navDeadEnd++;
+                        navNoPartialBelow++;
+                        Debug.logWarning(String.format(
+                                "FastNavigator: no leg from here toward a goal %d below (%.1f -> %.1f) — giving the route up",
+                                start.getY() - goalCell.getY(), before, after));
+                        pendingGiveUp = true;
+                        return;
+                    }
+                    if (!walkThePartial && before - after < MIN_PARTIAL_PROGRESS) {
                         navDeadEnd++;
                         // Walking cannot solve this — hand the TAIL to the physics engine
                         // and wait for it. This branch used to print "physics owns this"

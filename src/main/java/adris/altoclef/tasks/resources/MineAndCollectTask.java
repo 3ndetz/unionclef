@@ -504,8 +504,18 @@ public class MineAndCollectTask extends ResourceTask {
             // "failed to mine, unreachable" verdict below must not be reached from that state --
             // it was, on the dig bench, and condemned reachable stone six blocks under the feet.
             var exM = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            // ...AND SO IS A ROUTE BEING WALKED (G49, 2026-09-11). The 16:26 recording blacklisted
+            // five logs in twelve seconds ("Failed to mine block. Suggesting it may be
+            // unreachable" x5) while the navigator was walking legs and arriving at them: the
+            // checker asks whether the BODY moved 0.1 blocks in six seconds, and a bot standing
+            // at a leg's end while the next one is planned reads as stuck. A verdict of
+            // "unreachable" belongs to the dig-capable planner, not to a clock; while any driver
+            // owns the route the clock waits.
             if ((exM != null && (exM.breakQueue != null || exM.placeQueue != null))
-                    || kaptainwutax.tungsten.task.PillarTask.isActive()) {
+                    || kaptainwutax.tungsten.task.PillarTask.isActive()
+                    || kaptainwutax.tungsten.task.FastNavigator.isActive()
+                    || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()
+                    || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()) {
                 progressChecker.reset();
             }
             if (miningPos != null && !progressChecker.check(mod)) {
