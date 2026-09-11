@@ -83,6 +83,9 @@ def main():
         if BOT not in rcon("list"):
             print("FAIL: never joined"); return 2
     py4j("cmd", c="@stop"); py4j("cmd", c=";stop"); time.sleep(2)
+    # the planner's own lines (PLAN n=.., HANDOFF, ceiling) print only in verbose; the client log
+    # keeps them even when the chat overflows, and nav_lines() reads the log on failure
+    py4j("cmd", c=";settings verboseDebugLogging true"); time.sleep(0.5)
     rcon(f"gamemode survival {BOT}")
     build_shaft()
     time.sleep(1)
@@ -108,13 +111,26 @@ def main():
         best_y = max(best_y, y)
         chat = [c for c in py4j("chat", n=6)["chat"] if c not in seen]
         seen.update(chat)
-        pill = [c for c in chat if "illar" in c]
+        pill = [c for c in chat if any(w in c for w in ("illar", "ceiling", "at the dig", "Mining done",
+                                                          "no progress", "giving", "HANDOFF", "Wall too"))]
         print(f"  t={time.time()-t0:.0f}s pos={pos} bestY={best_y:.0f} busy={s['busy']}"
               + (" | " + " || ".join(x[-70:] for x in pill) if pill else ""))
         if y >= y0 + DEPTH - 1.5:      # climbed essentially out of the shaft
             escaped = True
             break
     py4j("cmd", c="@stop"); py4j("cmd", c=";stop")
+    py4j("cmd", c=";settings verboseDebugLogging false")
+    if not escaped:
+        print("  navigator log:")
+        r = sh(["docker", "exec", C1, "sh", "-c",
+                "tail -n 12000 /mc-data/logs/latest.log | grep -E "
+                "'FastNavigator|Path needs|Pillar|MovementQueue: [0-9]+ movement|no progress|giving the route|"
+                "Ran out of nodes|HANDOFF|Walker: BFS|primDrive NO|PLAN n=|FastPlanner: [0-9]+ nodes|at the dig|"
+                "Mining done|Mining aborted|ceiling|WALKSTOP|BFS stuck|childless' "
+                "| grep -v 'repeat muted' | tail -n 45"])
+        for l in r.stdout.splitlines():
+            print("    " + l[11:210].replace("[Render thread/INFO]: [CHAT] ", "")
+                  .replace("[PathFinder/INFO]: [CHAT] ", "").replace("[FastNavigator-plan/INFO]: [CHAT] ", ""))
     print(f"start Y={y0:.0f}, best Y={best_y:.0f}, shaft depth={DEPTH}")
     if escaped:
         print("PASS: bot pillared out of the shaft")

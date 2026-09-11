@@ -269,8 +269,10 @@ recovery, every recovery is a plan**.
       (19:08 run: 2 min, 11 stone targets, none broken, dbToolEquipped=0, no pickaxe in the
       pack). Fix: with the requirement unmet the chooser is drops-only; no choosable drop ->
       SatisfyMiningRequirementTask (`dropsOnlyNoDrop`).
-- [ ] **G38 target flip-flop, measured again** (19:08 run: RTGATE stick -> wooden_pickaxe ->
-      cobblestone -> stick every 3-5 s; each flip rebuilt the drives). Open.
+- [ ] **G38 target flip-flop** -- NOT re-measured by the 19:08 run after all: the RTGATE lines
+      that read stick -> wooden_pickaxe -> cobblestone every 3-5 s are the per-task rate-limited
+      print (every 400th gate tick of EACH resource task in the nest, ~13 tasks a tick), not a
+      target switch. Judge a flip-flop by the chain string / dcNewPursuit, never by RTGATE. Open.
 - [ ] **G32 "unreachable" declared by a timer, not by a search** (`Try 2/4` on every G25 no-op
       approach). A block is unreachable only when the dig-capable planner returns incomplete.
       Fix: DestroyBlockTask's approach clock and MineAndCollectTask's progress checker HOLD while
