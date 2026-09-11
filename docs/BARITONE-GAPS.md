@@ -520,7 +520,17 @@ long haul hands over at 3.5 blocks, the entity task starts its close walk in the
 the drive's `onStop` ran after it and killed the LIVE walk the chase had just started; the body
 stood at four blocks until the chicken was blacklisted four times. The drive stops only what it
 owns — the navigator it armed (`twFnGoal`) with the towers/bridges/swim-outs it handed off to,
-the grid queue, and the non-live waypoint walker.
+the grid queue, and the non-live waypoint walker. *Round 14, A/B with the flag:* still red with
+that cut — off took the chicken in 13 s, on stood at four blocks for two minutes
+(`pdRouteStopped=2`, `dc=…/none1337`). The task tree above a drive blinks for a tick now and
+then (the chooser reads nothing for one tick, the unstuck chain cuts in, a parent returns null)
+and the same drive is back on the next, so any stop in `onStop` restarts the route from scratch
+every time the tree blinks. Final shape: **a route nobody has driven for a third of a second is
+an orphan, and the leaf that holds the body stops it** — the drive stamps `lastDriveTickMs`
+every tick it drives; `DestroyBlockTask` in reach, `InteractWithBlockTask` clicking and
+`AbstractDoToEntityTask` striking call `stopOrphanRoute()`, which stops the navigator (with the
+tower/bridge/swim-out it handed off to), the grid queue and the non-live walker only when the
+stamp is stale.
 
 **G53. A drop inside the tree the bot stands on, five below, is never reached.** Same recording,
 14:23–14:27: the bot on the crown of the spruce it had just felled, a stick and a plank five
@@ -550,7 +560,14 @@ not there nor fall in place, and the leg it hands to physics dies. Second princi
 body's cell is the cell that holds it up** — planning starts from the nearest hitbox-overlapped
 cell with a solid block under it (`FastNavigator.supportedFeet`, the test PillarTask already
 uses), so the route begins on the block the body actually rests on and the dig down is its
-first move. Flag `planFromSupportedCell`; counter `navStartSupport`.
+first move. Flag `planFromSupportedCell`; counter `navStartSupport`. *Round 14, with that in:*
+the start moved (`navStartSupport=1109`, `NO ROUTE: at 802,-53`) and the search still died
+childless, `noSup=653` of 657 plans, `resc=0` — the start's support read as none and the rescue
+(`startCellTrustsThePlayer`) is deliberately off because it also trusted swimming starts. Third
+piece: **on dry ground the body's own level is its support** — a start with the body on the
+ground, not in water and not on a ladder, is expanded from the body's level whatever
+`supportTop` makes of the cell under it (`startOnGroundTrustsThePlayer`), and a childless start
+now names its cell and the block under it in chat.
 
 **G54. A new pursuit is given up on its first tick and banned for ninety seconds.** Round 11,
 canopy_drop on a freshly recreated client, right after five other benches: `@get raw_iron 1` →

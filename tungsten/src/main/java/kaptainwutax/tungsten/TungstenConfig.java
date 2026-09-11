@@ -2605,11 +2605,14 @@ public class TungstenConfig {
     public boolean pillarInPlannedColumn = true;
 
     /**
-     * G52 (2026-09-11): when the altoclef drive that started a route stops and no other drive
-     * takes over, the whole route stops with it -- navigator, walker, queue, tower, bridge,
-     * swim-out. Before, only the physics search was stopped; the rest ran on under the next task
-     * (a click leaf aiming up at a crafting table while an orphaned tower aimed down: pitch 25,
-     * "Pillar stuck air=0", the stone beside the bot "failed to break" three times). Read
+     * G52 (2026-09-11): a route nobody has driven for a third of a second is an orphan, and the
+     * leaves that hold the body without driving it (a mine in reach, a click, a strike) stop it
+     * -- navigator, tower / bridge / swim-out, grid queue, non-live walker. Before, an orphaned
+     * route ran on under the next task (a click leaf aiming up at a crafting table while an
+     * orphaned tower aimed down: pitch 25, "Pillar stuck air=0", the stone beside the bot
+     * "failed to break" three times). Stopping it in the drive's onStop instead was tried twice
+     * and broke far_mob both times (the task tree blinks for a tick and the same drive is back):
+     * A/B on round 14, off = chicken in 13 s, on = two minutes at four blocks. Read
      * pdRouteStopped.
      */
     public boolean routeDiesWithItsDrive = true;
@@ -2651,6 +2654,16 @@ public class TungstenConfig {
      * navStartSupport.
      */
     public boolean planFromSupportedCell = true;
+
+    /**
+     * G53 (2026-09-11), third piece: a search that starts with the body ON THE GROUND (not in
+     * water, not on a ladder) takes the body's own level as the start's support when supportTop
+     * finds none under the cell. startCellTrustsThePlayer stays off because it also trusted
+     * swimming starts (nav_water); this is the dry-land half of it. tree_drop, round 14: the
+     * start moved to the supporting cell and the search still died childless (noSup=653/657).
+     * Read plan=...resc; the chat names the refused cell ("FastPlanner: childless start ...").
+     */
+    public boolean startOnGroundTrustsThePlayer = true;
 
     /**
      * A movement gives up when the thing in its way can never be aimed at.

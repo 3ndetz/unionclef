@@ -236,7 +236,9 @@ recovery, every recovery is a plan**.
       (`pdRouteStopped`); PillarTask's stuck line reports `jumpStolen`. Refined after far_mob
       went red on round 12: the drive stops only what it owns (its navigator + the manoeuvres it
       handed off to, the grid queue, the non-live walker) -- never the chase's live walk or the
-      physics flags.
+      physics flags. Round 14 A/B: still red in onStop (the task tree blinks for a tick and the
+      same drive returns). Final: the drive stamps `lastDriveTickMs`; the leaves that hold the
+      body (mine in reach, click, strike) call `stopOrphanRoute()` when the stamp is >300 ms old.
 - [ ] **G53 a drop five below inside the tree the bot stands on is never reached** (17:22 run,
       14:23-14:27: navigator "no progress at its own cell" -> re-plan -> "giving the route up",
       pickup blacklisted after 3 tries x2). Reproduced by `tree_drop_test.py` (round 12): the

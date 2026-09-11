@@ -467,35 +467,52 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         // caught an orphan when the NEXT drive started; a leaf that does not drive never did.
         // A drive that is replaced by another drive leaves the route for adoption (G40); an armed
         // escape and a builder's exact cell belong to someone else and are left alone.
-        // ⛔ ...AND ONLY THE ROUTE THAT WAS ITS OWN. The first cut called TungstenMod.stopNavigation()
-        // -- every engine, plus the physics stop flags and the goto marker -- and far_mob, green
-        // four times before it, went red: the long haul hands over at 3.5 blocks, the entity
-        // task starts its close walk in the same tick, and the drive's onStop ran AFTER it and
-        // killed the walk it had just started (a LIVE walk the chase owns), so the body stood at
-        // four blocks until the chicken was blacklisted. What this drive owns: the navigator it
-        // armed (twFnGoal), the towers / bridges / swim-outs that navigator handed off to, and
-        // the grid queue and the (non-live) waypoint walker. The physics search is
-        // TungstenHelper.stop()'s business above, exactly as before.
-        if (kaptainwutax.tungsten.TungstenConfig.get().routeDiesWithItsDrive
-                && !(interruptTask instanceof CustomBaritoneGoalTask)
-                && PlannedEscape.armedFrom() == null
-                && !kaptainwutax.tungsten.task.FastNavigator.hasExactCell()) {
-            boolean navMine = twFnGoal != null && kaptainwutax.tungsten.task.FastNavigator.isActive();
-            boolean queue = kaptainwutax.tungsten.path.movements.MovementQueue.isRunning();
-            boolean walker = kaptainwutax.tungsten.task.BlockPathWalker.isRunning()
-                    && !kaptainwutax.tungsten.task.BlockPathWalker.isLive();
-            if (navMine || queue || walker) {
-                pdRouteStopped++;
-                if (navMine) {
-                    kaptainwutax.tungsten.task.FastNavigator.stop();
-                    kaptainwutax.tungsten.task.PillarTask.stop();
-                    kaptainwutax.tungsten.task.BridgeTask.stop();
-                    kaptainwutax.tungsten.task.SwimOutTask.stop();
-                }
-                if (queue) kaptainwutax.tungsten.path.movements.MovementQueue.stop();
-                if (walker) kaptainwutax.tungsten.task.BlockPathWalker.stop();
-            }
+        // ⛔ ...AND NOT AT THE MOMENT THE DRIVE STOPS, BUT WHEN SOMETHING ELSE TAKES THE BODY.
+        // Two cuts of "stop it in onStop" both broke far_mob (A/B on round 14: the flag off
+        // took the chicken in 13 s, the flag on stood at four blocks for two minutes with
+        // pdRouteStopped=2). The task tree above a drive is rebuilt for a tick now and then --
+        // the chooser reads "nothing" for one tick, the unstuck chain cuts in, a parent returns
+        // null -- and the same drive is back on the next tick, so a route stopped here is a
+        // route restarted from scratch every time the tree blinks. The orphan G52 is about is
+        // different: a route still running while a LEAF that holds the body (a mine in reach,
+        // a click, a strike) has the tick. So the drive only stamps the time it last drove, and
+        // those leaves ask stopOrphanRoute(): a route nobody has driven for a third of a second
+        // is nobody's and is stopped there. The physics search stays TungstenHelper.stop()'s
+        // business above, exactly as before G52.
+    }
+
+    /** G52: when the drive last had the tick. A route is an orphan once this is stale. */
+    public static volatile long lastDriveTickMs = 0L;
+    private static final long ORPHAN_ROUTE_MS = 300L;
+
+    /**
+     * Called by the leaves that hold the body without driving it (DestroyBlockTask in reach,
+     * InteractWithBlockTask clicking, AbstractDoToEntityTask striking): a route still running
+     * with no drive behind it for {@link #ORPHAN_ROUTE_MS} is stopped -- the navigator with the
+     * tower / bridge / swim-out it handed off to, the grid queue, the non-live walker. An armed
+     * escape and the builder's exact cell belong to someone else and are left alone.
+     */
+    public static void stopOrphanRoute() {
+        if (!kaptainwutax.tungsten.TungstenConfig.get().routeDiesWithItsDrive) return;
+        if (System.currentTimeMillis() - lastDriveTickMs < ORPHAN_ROUTE_MS) return;
+        if (PlannedEscape.armedFrom() != null || kaptainwutax.tungsten.task.FastNavigator.hasExactCell()) return;
+        boolean nav = kaptainwutax.tungsten.task.FastNavigator.isActive();
+        boolean queue = kaptainwutax.tungsten.path.movements.MovementQueue.isRunning();
+        boolean walker = kaptainwutax.tungsten.task.BlockPathWalker.isRunning()
+                && !kaptainwutax.tungsten.task.BlockPathWalker.isLive();
+        boolean build = kaptainwutax.tungsten.task.PillarTask.isActive()
+                || kaptainwutax.tungsten.task.BridgeTask.isActive()
+                || kaptainwutax.tungsten.task.SwimOutTask.isActive();
+        if (!(nav || queue || walker || build)) return;
+        pdRouteStopped++;
+        if (nav) kaptainwutax.tungsten.task.FastNavigator.stop();
+        if (build) {
+            kaptainwutax.tungsten.task.PillarTask.stop();
+            kaptainwutax.tungsten.task.BridgeTask.stop();
+            kaptainwutax.tungsten.task.SwimOutTask.stop();
         }
+        if (queue) kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+        if (walker) kaptainwutax.tungsten.task.BlockPathWalker.stop();
     }
 
     /**
@@ -639,6 +656,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         // stands still and all three were refuted; every place a counter already existed, the
         // answer came on the first run. So count the entry and each early exit.
         pdEnter++;
+        lastDriveTickMs = System.currentTimeMillis();   // G52: a route driven this tick is nobody's orphan
         if (!TungstenHelper.isPrimary()) { pdNotPrimary++; return false; }
         AltoGoal goal = goal(mod);
         if (goal == null) { pdNoGoal++; return false; }

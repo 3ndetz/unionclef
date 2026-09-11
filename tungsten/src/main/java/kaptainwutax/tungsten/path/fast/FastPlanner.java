@@ -548,6 +548,14 @@ public final class FastPlanner {
         } else if (TungstenConfig.get().planSnapsStartToSupport) {
             planStartSnapRefusedOnGround++;
         }
+        // G53: ON DRY GROUND THE BODY'S OWN LEVEL IS ITS SUPPORT. startCellTrustsThePlayer stays
+        // off because it also trusted swimming starts; a body that is on the ground, not in
+        // water and not on a ladder, is standing on something whatever supportTop makes of the
+        // cell under its centre (tree_drop, round 14: the start moved to the supporting cell
+        // and the search still died childless, noSup=653 of 657 plans).
+        boolean onGroundStart = TungstenConfig.get().startOnGroundTrustsThePlayer
+                && startPlayer != null && startPlayer.isOnGround()
+                && !startPlayer.isTouchingWater() && !startPlayer.isClimbing();
         NodeMap map = new NodeMap();
         Heap open = new Heap();
 
@@ -641,7 +649,7 @@ public final class FastPlanner {
             // expanded and childless. The bot is physically supported there by definition,
             // so take its own level, exactly as the branchPlaced rescue above does.
             if (Double.isNaN(support) && current == startNode
-                    && TungstenConfig.get().startCellTrustsThePlayer) {
+                    && (TungstenConfig.get().startCellTrustsThePlayer || onGroundStart)) {
                 planStartRescued++;
                 support = current.y;
             }
@@ -688,10 +696,11 @@ public final class FastPlanner {
                 // On dry land the bot is supported there by definition, so take its own
                 // level, exactly as the branchPlaced rescue above does.
                 if (expanded == 1) planStartNoSupport++;
-                if (current == startNode && TungstenConfig.get().startCellTrustsThePlayer) {
+                if (current == startNode && (TungstenConfig.get().startCellTrustsThePlayer || onGroundStart)) {
                     planStartRescued++;
                     support = current.y;
                 } else {
+                    if (current == startNode) noteChildlessStart(world, start, startPlayer, scratch);
                     continue;   // genuinely unstandable
                 }
             }
@@ -745,6 +754,30 @@ public final class FastPlanner {
         else if (expanded == 1) planExpand1++;
         if (expanded <= 1) planZeroExpand++;
         return new Result(path, complete, expanded, ms);
+    }
+
+    /** Last time a childless start was named in chat -- one line per two seconds, not per plan. */
+    private static volatile long lastChildlessNoteMs = 0L;
+
+    /** SAY WHICH CELL THE SEARCH REFUSED TO LEAVE, AND WHY. A start with no support produced a
+     *  one-node plan 653 times in ninety seconds on tree_drop, and every counter around it said
+     *  "no support" without naming the cell or the block under it. */
+    private static void noteChildlessStart(WorldView world, BlockPos start,
+                                           net.minecraft.entity.player.PlayerEntity player,
+                                           BlockPos.Mutable scratch) {
+        long now = System.currentTimeMillis();
+        if (now - lastChildlessNoteMs < 2000L) return;
+        lastChildlessNoteMs = now;
+        BlockPos below = start.down();
+        String under = String.valueOf(world.getBlockState(below).getBlock());
+        scratch.set(start.getX(), start.getY(), start.getZ());
+        double sup = PlayerFit.supportTop(world, scratch);
+        Debug.logMessage(String.format(
+                "FastPlanner: childless start %s support=%s under=%s onGround=%b water=%b at=(%.2f,%.2f,%.2f)",
+                start.toShortString(), Double.isNaN(sup) ? "none" : String.format("%.2f", sup), under,
+                player != null && player.isOnGround(), player != null && player.isTouchingWater(),
+                player == null ? 0.0 : player.getX(), player == null ? 0.0 : player.getY(),
+                player == null ? 0.0 : player.getZ()));
     }
 
     // ── move generation ──────────────────────────────────────────────────────

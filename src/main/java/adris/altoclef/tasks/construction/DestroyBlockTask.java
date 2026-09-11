@@ -650,6 +650,8 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             setDebugState("Block in range, mining...");
             stuckCheck.reset();
             isMining = true;
+            // G52: a route still running under a miner that holds the body is nobody's.
+            adris.altoclef.tasks.movement.CustomBaritoneGoalTask.stopOrphanRoute();
             // CLAIM THE AIM AND THE KEYS FOR THIS TICK, the way the placer already does.
             // Without this the walker steers the camera at its own waypoint in the same tick that
             // this task aims at the block, and a viewer sees the crosshair pointing one way while

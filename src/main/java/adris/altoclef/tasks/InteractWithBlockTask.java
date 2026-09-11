@@ -449,6 +449,9 @@ public class InteractWithBlockTask extends Task {
 
         Optional<Rotation> reachable = getCurrentReach();
         if (reachable.isPresent()) {
+            // G52: a route still running under a click that holds the body is nobody's (the
+            // 17:22 recording: an orphaned tower aimed down while this aimed up at the table).
+            adris.altoclef.tasks.movement.CustomBaritoneGoalTask.stopOrphanRoute();
             // Check if an entity (hologram, armor stand, etc.) is blocking our click
             if (MinecraftClient.getInstance().targetedEntity != null) {
                 // Entity in the way — need to get closer or find another angle
