@@ -64,6 +64,10 @@ public final class FastNavigator {
      * asked again, and was instantly "arrived" from the same spot, over and over.
      */
     private static BlockPos exactCell = null;
+    /** G55: the exact cell was armed by the altoclef DRIVE (a solid block goal to be dug into),
+     *  not by the builder -- the drive's own bookkeeping (adoption, "the route dies with its
+     *  drive") applies to it, the builder's yield does not. */
+    private static boolean exactFromDrive = false;
     /** The leg computed ahead of time, ready to hand to the walker. */
     private static volatile List<BlockPos> nextLeg = null;
     /** The next leg ends at a jump the walker cannot do; this is where it lands. */
@@ -107,6 +111,17 @@ public final class FastNavigator {
         start(new Vec3d(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5));
         exactCell = cell;
     }
+
+    /** G55: the drive's version of {@link #startExact} -- a block goal whose cell is solid is
+     *  DUG INTO (baritone's GoalBlock), so the planner completes only on the exact cell and the
+     *  arrival test is the exact cell too. */
+    public static void startExactForDrive(BlockPos cell) {
+        startExact(cell);
+        exactFromDrive = true;
+    }
+
+    /** The exact cell the DRIVE armed this run for, or null (builder cells are not reported). */
+    public static BlockPos driveExactCell() { return active && exactFromDrive ? exactCell : null; }
 
     /** Whose altoclef goal this navigator run was armed for. Diagnostic only. */
     private static String startedFor = "-";
@@ -158,6 +173,10 @@ public final class FastNavigator {
     public static volatile int navBreakStarted, navBreakTooFar, navBreakResumed;
     /** G42: planned pillar runs cut out of a queue leg and handed to PillarTask. */
     public static volatile int navPillarRuns;
+    /** G51: towers whose hand-off first walked the body onto the plan's column, and the ticks
+     *  spent doing so for the current hand-off. */
+    public static volatile int navPillarSteered;
+    private static int pillarSteerTicks = 0;
 
     /** The cell a stalled route was last re-planned from; a second stall in the same cell is the
      *  honest "unreachable from here" verdict. Read navStall=replans/gaveUp. */
@@ -252,13 +271,16 @@ public final class FastNavigator {
     public static Vec3d currentGoal() { return active ? goal : null; }
 
     /** True while a caller asked to stand IN one exact cell (the builder positioning itself). */
-    public static boolean hasExactCell() { return active && exactCell != null; }
+    public static boolean hasExactCell() { return active && exactCell != null && !exactFromDrive; }
 
     public static void stop() {
         active = false;
         goal = null;
         exactCell = null;
+        exactFromDrive = false;
         pendingGiveUp = false;
+        if (pillarSteerTicks > 0) releaseSteer();
+        pillarSteerTicks = 0;
         reachBlock = null;
         nextBreakCells = null;
         pendingBreakCells = null;
@@ -603,6 +625,35 @@ public final class FastNavigator {
                     || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()) {
                 return;   // physics busy — KEEP the target and retry next tick
             }
+            // ⛔ A TOWER IS BUILT IN THE PLAN'S COLUMN, NOT WHEREVER THE BODY STOPPED (G51,
+            // 2026-09-11). The planner chose the column with open sky; the walk left the body
+            // one cell over, under the edge of a canopy, and the hand-off below started the
+            // tower THERE -- the jump capped by the leaf two above the feet, "insideCell=80
+            // placed=0" sixteen times on canopy_drop. Walk to the column first (the same steer a
+            // dig gets in G34), then pillar; the target is kept until the body is on it.
+            {
+                Vec3d hereP = player.getEntityPos();
+                double riseP = (jump.getY() + 0.5) - hereP.y;
+                double horizP = Math.hypot(jump.getX() + 0.5 - hereP.x, jump.getZ() + 0.5 - hereP.z);
+                if (riseP > PlayerFitJumpHeight() && horizP < 2.5 && TungstenConfig.get().planPlaceMoves
+                        && TungstenConfig.get().pillarInPlannedColumn
+                        && !kaptainwutax.tungsten.task.PillarTask.isActive()
+                        && !player.isTouchingWater()
+                        && FastPlanner.countPlaceable(player) > 0) {
+                    BlockPos column = new BlockPos(jump.getX(), player.getBlockPos().getY(), jump.getZ());
+                    if (!centeredOn(player, column)) {
+                        if (++pillarSteerTicks <= 80) {
+                            steerTo(player, column);
+                            return;   // keep the target; try the tower once the body is on its column
+                        }
+                        // could not get onto the column: build from here rather than never
+                    } else if (pillarSteerTicks > 0) {
+                        navPillarSteered++;
+                    }
+                    releaseSteer();
+                    pillarSteerTicks = 0;
+                }
+            }
             pendingPhysicsTarget = null;
             var world = TungstenMod.mc.world;
             if (world != null) {
@@ -876,13 +927,16 @@ public final class FastNavigator {
         final BlockPos start = from;
         final Vec3d target = goal;
         final BlockPos reach = reachBlock;
+        // G55: an exact-cell route completes IN the cell, never one above it (the planner's
+        // one-block height tolerance is for "go over there" goals only).
+        final boolean exact = exactCell != null;
         Thread t = new Thread(() -> {
             try {
                 var world = TungstenMod.mc.world;
                 if (world == null) return;
                 BlockPos goalCell = BlockPos.ofFloored(target);
                 FastPlanner.Result res = FastPlanner.plan(world, start, goalCell,
-                        TungstenConfig.get().fastPlanBudgetMs, reach);
+                        TungstenConfig.get().fastPlanBudgetMs, reach, exact);
                 if (!active) return;
                 // A ONE-WAYPOINT PLAN IS AN ANSWER: THERE IS NOTHING TO WALK FROM HERE.
                 // FastPlanner returns exactly that when the start already satisfies the goal --

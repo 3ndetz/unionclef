@@ -47,6 +47,8 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     /** G47: tool swaps this task made itself before swinging (a pickaxe in the hotbar was never
      *  selected by the fix chain while navigation was live). Read dbToolEquipped. */
     public static volatile int dbToolEquipped;
+    /** G50: ticks the swing was withheld because the live ray was not on the block yet. */
+    public static volatile int dbAimWait;
 
     /** Put the best tool for {@code block} in hand before swinging at it; a no-op when it is
      *  already there or the pack holds nothing suitable. */
@@ -634,7 +636,12 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                     _moveChecker.reset();   // clearing a path IS progress
                     LookHelper.lookAt(clearReach.get());
                     equipBestToolFor(mod, blocking);
-                    mod.getInputControls().hold(Input.CLICK_LEFT);
+                    if (LookHelper.isLookingAt(mod, blocking)) {
+                        mod.getInputControls().hold(Input.CLICK_LEFT);
+                    } else {
+                        dbAimWait++;
+                        mod.getInputControls().release(Input.CLICK_LEFT);
+                    }
                     return null;
                 }
             }
@@ -666,7 +673,19 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             // the operator saw it on the 14:00 recording. The executor's own break queue already
             // asks altoclef for the best tool every tick (equipToolHook); this is the same ask.
             equipBestToolFor(mod, pos);
-            mod.getInputControls().hold(Input.CLICK_LEFT);
+            // ⛔ NO SWING UNTIL THE LIVE RAY IS ON THE BLOCK (G50, 2026-09-11). This held
+            // CLICK_LEFT in the same tick it asked the camera to turn, and the camera travels
+            // through the mouse pipeline: with the target diagonally below, the crosshair sat on
+            // the bot's OWN FLOOR while it turned, the swing landed there, the floor broke, the
+            // bot dropped one, the target was re-chosen -- seven minutes for six cobblestone on
+            // the 17:00 recording (dbBlockedSelfFloor=130, y falling one block a minute). The
+            // executor learned this in G31; the miner swings only when the ray says it will hit.
+            if (LookHelper.isLookingAt(mod, pos)) {
+                mod.getInputControls().hold(Input.CLICK_LEFT);
+            } else {
+                dbAimWait++;
+                mod.getInputControls().release(Input.CLICK_LEFT);
+            }
         } else {
             setDebugState("Getting to block...");
             if (isMining && mod.getPlayer().isTouchingWater()) {

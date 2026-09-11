@@ -436,6 +436,32 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     protected void onStop(Task interruptTask) {
         Nav.cancel();
         TungstenHelper.stop();
+        // ⛔ THE ROUTE DIES WITH ITS DRIVE (G52, 2026-09-11). TungstenHelper.stop() ends the
+        // PHYSICS search and its executor -- the navigator, the walker, the queue and the building
+        // manoeuvres kept running under whatever task came next. On the 17:22 recording the
+        // cobblestone approach escalated to the navigator ("Path needs mining: 1 block(s)"), the
+        // task tree switched to the crafting table three blocks overhead, the click leaf aimed UP
+        // at the table while the orphaned navigator handed off to a tower that aimed DOWN:
+        // pitch 25, no jump in eighty ticks, "Pillar stuck air=0", and the stone beside the bot
+        // "failed to break" three times as the crosshair swung between the two owners. G40 only
+        // caught an orphan when the NEXT drive started; a leaf that does not drive never did.
+        // A drive that is replaced by another drive leaves the route for adoption (G40); an armed
+        // escape and a builder's exact cell belong to someone else and are left alone.
+        if (kaptainwutax.tungsten.TungstenConfig.get().routeDiesWithItsDrive
+                && !(interruptTask instanceof CustomBaritoneGoalTask)
+                && PlannedEscape.armedFrom() == null
+                && !kaptainwutax.tungsten.task.FastNavigator.hasExactCell()) {
+            boolean live = kaptainwutax.tungsten.task.FastNavigator.isActive()
+                    || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()
+                    || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()
+                    || kaptainwutax.tungsten.task.PillarTask.isActive()
+                    || kaptainwutax.tungsten.task.BridgeTask.isActive()
+                    || kaptainwutax.tungsten.task.SwimOutTask.isActive();
+            if (live) {
+                pdRouteStopped++;
+                kaptainwutax.tungsten.TungstenMod.stopNavigation();
+            }
+        }
     }
 
     /**
@@ -609,6 +635,21 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             if (goal instanceof adris.altoclef.util.goals.AltoGoal.Adjacent adj
                     && kaptainwutax.tungsten.TungstenConfig.get().mineGoalIsAdjacent) {
                 return driveReach(mod, adj, gp);
+            }
+            // ⛔ A SOLID BLOCK GOAL IS DUG INTO, NOT STOOD ON (G55, 2026-09-11). Baritone's
+            // GoalBlock is the cell itself; when the cell is rock, the route ends with the rock
+            // mined and the feet where it was. Here the snap below moved such a goal beside or on
+            // top of the block, the planner's height tolerance called "on top" arrived, and
+            // AltoGoal.Block.reached -- exact, as it should be -- never agreed. On the 17:56
+            // recording: the loot action asked for the sand cell above a buried chest while the
+            // bot stood on that sand: snapSelfRefused=1830, atGoal=52(ytol52), "arrived (1.0)"
+            // every twelve seconds, "Failed! No block path" every two, nine minutes on one spot.
+            // A breakable solid cell goes to the one engine that digs, as an EXACT cell; what
+            // cannot be broken (bedrock, a container, a protected block) keeps the snap.
+            if (goal instanceof adris.altoclef.util.goals.AltoGoal.Block bg
+                    && kaptainwutax.tungsten.TungstenConfig.get().blockGoalDigsIntoSolid
+                    && diggableGoalCell(mod, bg.pos())) {
+                return driveDig(mod, bg.pos());
             }
             // MEASURE THE SNAP. The 1219 stall runs at a goal whose floor is AIR
             // (tgt[1205.5,104.0,-839.5], floor=air), so this must either move it to solid ground
@@ -1334,6 +1375,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     /** G40: navigator routes armed by an earlier task instance that this one adopted (same goal)
      *  or stopped (stale goal). Read as pdFnOrphan=adopted/stale. */
     public static volatile int pdFnAdopted, pdFnStale;
+    /** G52: routes (navigator / walker / queue / tower / bridge / swim-out) still running when the
+     *  drive that owned them stopped and no other drive took over -- stopped with it. */
+    public static volatile int pdRouteStopped;
     private net.minecraft.util.math.Vec3d twNearStillPos = null;
     private long twNearStillSinceMs = 0L;
 
@@ -1388,6 +1432,64 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         checker.reset();
         setDebugState("Tungsten: reaching " + block.toShortString()
                 + " via FastPlanner (dig allowed)...");
+        return true;
+    }
+
+    /** G55: block goals whose solid cell was handed to the navigator as an exact cell to dig into,
+     *  and ticks the re-arm was held after the navigator gave such a route up. */
+    public static volatile int pdDigArmed, pdDigHeld;
+
+    /** G55: a block goal that must be DUG INTO -- solid, breakable, not a container or another
+     *  block entity (those are interacted with, never mined on the way to them). */
+    private static boolean diggableGoalCell(AltoClef mod, net.minecraft.util.math.BlockPos cell) {
+        try {
+            net.minecraft.world.World w = mod.getWorld();
+            net.minecraft.block.BlockState st = w.getBlockState(cell);
+            if (st.getCollisionShape(w, cell).isEmpty()) return false;     // standable or air: walk
+            if (st.hasBlockEntity()) return false;                          // chest, table, furnace
+            if (st.getHardness(w, cell) < 0) return false;                  // bedrock and kin
+            return kaptainwutax.tungsten.path.BreakRules.canBreak(w, cell, st);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /**
+     * Drive a BLOCK goal whose cell is solid: get the FEET into that cell by digging (baritone's
+     * GoalBlock on rock). Same shape as {@link #driveReach}: straight to FastNavigator as an exact
+     * cell -- no snap, no grid BFS -- and arrival is the exact cell, the same test isFinished uses.
+     */
+    private boolean driveDig(AltoClef mod, net.minecraft.util.math.BlockPos cell) {
+        net.minecraft.util.math.BlockPos feet =
+                kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(mod.getPlayer());
+        boolean armedForThis = kaptainwutax.tungsten.task.FastNavigator.isActive()
+                && cell.equals(kaptainwutax.tungsten.task.FastNavigator.driveExactCell());
+        if (feet.equals(cell)) {
+            if (armedForThis) kaptainwutax.tungsten.task.FastNavigator.stop();
+            pdFinished++;
+            return false;
+        }
+        long nowMs = System.currentTimeMillis();
+        if (!armedForThis) {
+            if (nowMs < twReachRearmAtMs) {
+                pdDigHeld++;
+                checker.reset();
+                setDebugState("Tungsten: dig route gave up — re-planning shortly");
+                return true;
+            }
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+            var exR = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (exR != null) exR.stop = false;
+            kaptainwutax.tungsten.task.FastNavigator.startExactForDrive(cell);
+            twFnGoal = cell;
+            twReachRearmAtMs = nowMs + 2500;
+            pdDigArmed++;
+            pdFnBuild++;
+        }
+        checker.reset();
+        setDebugState("Tungsten: digging into " + cell.toShortString()
+                + " (a solid block goal) via FastPlanner...");
         return true;
     }
 

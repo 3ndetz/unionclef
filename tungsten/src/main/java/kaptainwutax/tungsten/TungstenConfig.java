@@ -2596,6 +2596,43 @@ public class TungstenConfig {
     public boolean entityLongHaulViaDrive = true;
 
     /**
+     * G51 (2026-09-11): the wall hand-off walks the body onto the plan's column before it starts
+     * PillarTask, and PillarTask refuses a column with a block within the jump's reach overhead.
+     * On canopy_drop the walk left the body one cell over, under the canopy's edge leaf, the tower
+     * was started there and the jump was capped by the leaf: "insideCell=80 placed=0", sixteen
+     * restarts. Read navPillarSteered / pillarNoHeadroom.
+     */
+    public boolean pillarInPlannedColumn = true;
+
+    /**
+     * G52 (2026-09-11): when the altoclef drive that started a route stops and no other drive
+     * takes over, the whole route stops with it -- navigator, walker, queue, tower, bridge,
+     * swim-out. Before, only the physics search was stopped; the rest ran on under the next task
+     * (a click leaf aiming up at a crafting table while an orphaned tower aimed down: pitch 25,
+     * "Pillar stuck air=0", the stone beside the bot "failed to break" three times). Read
+     * pdRouteStopped.
+     */
+    public boolean routeDiesWithItsDrive = true;
+
+    /**
+     * G54 (2026-09-11): the closest-object chooser's idle give-up clock restarts when the target
+     * changes, like every other clock in it. It was a static that survived the target switch, so
+     * a new pursuit begun thirty seconds after the previous one last closed on anything was given
+     * up on its first tick and banned for ninety seconds -- canopy_drop on a fresh client went
+     * straight to wandering with the drop six blocks away. Read dcIdleRearm and dc's idle field.
+     */
+    public boolean pursuitIdleClockPerTarget = true;
+
+    /**
+     * G55 (2026-09-11): a block goal whose cell is solid and breakable is DUG INTO by the
+     * navigator as an exact cell (baritone's GoalBlock), instead of being snapped beside / on top
+     * of the block and then never "reached". The planner's one-block height tolerance is off for
+     * exact cells. Seen on the 17:56 recording: nine minutes on the sand above a buried chest,
+     * "arrived (1.0)" and "Failed! No block path" in a loop. Read pdDig=armed/held.
+     */
+    public boolean blockGoalDigsIntoSolid = true;
+
+    /**
      * A movement gives up when the thing in its way can never be aimed at.
      *
      * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on

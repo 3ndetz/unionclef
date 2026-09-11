@@ -37,9 +37,15 @@ public class PillarTask {
     private static final int CENTER_TICKS_MAX = 60;
     /** Towers that had to start off-centre because the walk to the middle timed out. */
     public static volatile int pillarCenterTimeout;
+    /** G51: towers refused at once because a block sat within the jump's reach overhead. */
+    public static volatile int pillarNoHeadroom;
     /** Per-tower anatomy for the "stuck" verdict: airborne-and-rising ticks, ticks with a cell to
      *  place into, ticks the live ray was not on the support's top face, clicks refused, placed. */
     private static int dAir, dPlaceAt, dReadyNull, dTryFalse, dPlaced, dInsideCell;
+    /** Ticks on which the jump this task pressed was found released again before the game
+     *  sampled it -- another owner of the keys under the tower (G52 diagnostic). */
+    private static int dJumpStolen;
+    private static boolean jumpAsked;
     private static double dApex = -1e9;
     private static BlockPos dLastPlaceAt;
     /** How far above the cell's top the feet must be before a click is attempted (baritone: 0.1). */
@@ -53,7 +59,8 @@ public class PillarTask {
         placed = 0;
         stuckTicks = 0;
         centerTicks = 0;
-        dAir = dPlaceAt = dReadyNull = dTryFalse = dPlaced = dInsideCell = 0;
+        dAir = dPlaceAt = dReadyNull = dTryFalse = dPlaced = dInsideCell = dJumpStolen = 0;
+        jumpAsked = false;
         dApex = -1e9;
         dLastPlaceAt = null;
         lastY = p.getY();
@@ -89,6 +96,29 @@ public class PillarTask {
         MinecraftClient mc = MinecraftClient.getInstance();
         WorldView world = player.getEntityWorld();
         var opts = mc.options;
+        // The jump asked for last tick: still down, or taken away by another owner of the keys?
+        if (jumpAsked && !opts.jumpKey.isPressed()) dJumpStolen++;
+        jumpAsked = false;
+
+        // ⛔ A TOWER NEEDS HEADROOM (G51, 2026-09-11). The wall hand-off started this task where
+        // the body happened to stand -- under the edge leaf of a canopy, in the column NEXT to
+        // the one the planner had chosen -- and the jump was capped by the leaf two above the
+        // feet: "air=80 insideCell=80 placed=0" twice in a row, four seconds each, sixteen
+        // restarts. A ceiling within the jump's reach makes this column impossible; say so at
+        // once and let the navigator re-plan, instead of jumping into it for the stuck window.
+        {
+            int fy = net.minecraft.util.math.MathHelper.floor(player.getY());
+            BlockPos col = supportedColumnUnder(player, world);
+            if (col == null) col = BlockPos.ofFloored(player.getX(), fy, player.getZ());
+            BlockPos over = new BlockPos(col.getX(), fy + 2, col.getZ());
+            if (!isAir(world, over) && fy + 1 < targetY) {
+                Debug.logMessage("Pillar stopped: no headroom, " + world.getBlockState(over).getBlock()
+                        + " at " + over.toShortString());
+                pillarNoHeadroom++;
+                stop();
+                return;
+            }
+        }
 
         // reached target height (standing on / at the target level)
         if (player.getY() >= targetY - 0.05 && player.isOnGround()) {
@@ -172,6 +202,7 @@ public class PillarTask {
 
         // Jump off the ground; release jump while airborne (single hop per block).
         opts.jumpKey.setPressed(player.isOnGround());
+        jumpAsked = player.isOnGround();
 
         // Find the air cell directly under the player that has a solid block below it
         // (within 2 down) — that's where the pillar block goes. Only place while
@@ -259,12 +290,13 @@ public class PillarTask {
                 Debug.logMessage(String.format(
                         "Pillar stuck at y=%.1f  air=%d insideCell=%d placeAt=%d readyNull=%d tryFalse=%d placed=%d"
                         + " pitch=%.0f onGround=%b hit=%s lastPlaceAt=%s hand=%s center=%d/%d at=(%.2f,%.2f)"
-                        + " apex=%.2f",
+                        + " apex=%.2f jumpStolen=%d",
                         player.getY(), dAir, dInsideCell, dPlaceAt, dReadyNull, dTryFalse, dPlaced,
                         player.getPitch(), player.isOnGround(), hitS,
                         dLastPlaceAt == null ? "-" : dLastPlaceAt.toShortString(),
                         player.getMainHandStack().getItem().toString(),
-                        centerTicks, CENTER_TICKS_MAX, player.getX(), player.getZ(), dApex));
+                        centerTicks, CENTER_TICKS_MAX, player.getX(), player.getZ(), dApex,
+                        dJumpStolen));
                 stop();
             }
         }

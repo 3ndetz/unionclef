@@ -496,6 +496,19 @@ public final class FastPlanner {
      */
     public static Result plan(WorldView world, BlockPos start, BlockPos goal, long budgetMs,
                               BlockPos reachBlock) {
+        return plan(world, start, goal, budgetMs, reachBlock, false);
+    }
+
+    /**
+     * @param exactGoal G55: complete only IN {@code goal} (baritone's GoalBlock). Without it the
+     *                  search also completes one block above or below the goal's height -- right
+     *                  for "go over there", wrong for a solid cell that has to be dug into: on the
+     *                  17:56 recording the bot stood on the sand above a buried chest, the loot
+     *                  action asked to stand IN that sand cell, and the tolerance answered "already
+     *                  there" with a one-cell plan for the rest of the run.
+     */
+    public static Result plan(WorldView world, BlockPos start, BlockPos goal, long budgetMs,
+                              BlockPos reachBlock, boolean exactGoal) {
         long t0 = System.currentTimeMillis();
         // ASK HOW MANY BLOCKS WE HAVE, EVERY PLAN. DO NOT TRUST A STATIC SOMEONE ELSE SET.
         // placeBudget starts at MAX_VALUE and had exactly ONE writer, FastNavigator:443. Any plan
@@ -569,7 +582,8 @@ public final class FastPlanner {
             boolean atGoal = reachBlock != null
                     ? reachGoalSatisfied(world, current.x, current.y, current.z, reachBlock)
                     : (current.x == goal.getX() && current.z == goal.getZ()
-                        && Math.abs(current.y - goal.getY()) <= 1);
+                        && (current.y == goal.getY()
+                            || (!exactGoal && Math.abs(current.y - goal.getY()) <= 1)));
             if (atGoal) {
                 // THE START IS ALREADY THE GOAL. Then the search 'completes' on its first
                 // iteration with a ONE-cell path, which FastNavigator refuses as short --

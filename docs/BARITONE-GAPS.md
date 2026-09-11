@@ -477,6 +477,84 @@ physics; the unreachable clock waits while any driver owns the route.** Counters
 `navPartial=walked/noneBelow`; `MineAndCollectTask` holds its clock while FastNavigator, the walker
 or the queue is running.
 
+**G50. Seven minutes for six cobblestone: the miner swings before the crosshair is on the block.**
+Round-9 playthrough (17:00): from wood tools at 153 s to the end the bot stood at (16.7, y, −1385.7)
+on `Collect cobblestone x3 → Destroy block at 17,88,−1387 → Block in range, mining...`, its y
+dropping one block every ~66 s (91 → 85), `dbBlockedSelfFloor=130`, `blockedBy=stone`,
+`breakAim=93/17/13/4`. The target stone lies diagonally below; `DestroyBlockTask` turns toward the
+reach rotation and holds CLICK_LEFT in the same tick — while the camera is still travelling the
+crosshair sits on the bot's OWN FLOOR, the swing lands there, the floor breaks, the bot drops one,
+the target is re-chosen, and so on down. The executor already learned this (G31: aim at a visible
+face, click only on target); the altoclef miner never did. Principle: **no swing until the live
+ray is on the block** — `CLICK_LEFT` is held only while `LookHelper.isLookingAt(mod, pos)` (a live
+ray trace, not the stale crosshair) says so; counter `dbAimWait`.
+
+**G51. The tower is started where the body stopped, not in the column the plan chose.** Round 10,
+canopy_drop ×2 (the same bench passed ×2 on round 9): the planner picked the open-sky column
+beside the canopy, the walk left the body one cell over at x=763.5 — under the canopy's edge leaf
+— the wall hand-off started `PillarTask` right there, and the jump was capped by the leaf two
+above the feet: `Pillar stuck … insideCell=80 placed=0 … center=0/60 at=(763.55,300.49)`,
+sixteen restarts, "not getting closer", the drop abandoned. Principles: **a tower is built in the
+plan's column** (the hand-off steers the body onto the jump's x,z first, the way a dig is centred
+in G34) and **a column without headroom is refused at once** (PillarTask stops with "no headroom"
+when a block sits two above the feet, so the navigator re-plans instead of jumping into it for the
+stuck window). Flag `pillarInPlannedColumn`; counters `navPillarSteered`, `pillarNoHeadroom`.
+
+**G52. A route outlives the drive that owned it.** `CustomBaritoneGoalTask.onStop` stopped only
+the physics search (`TungstenHelper.stop`); the navigator, the walker, the queue and the building
+primitives ran on under whatever task came next. The 17:22 recording, in a pit under the bot's
+own crafting table (the canopy it stood on decayed and dropped it six blocks): the cobblestone
+approach escalated to the navigator ("Path needs mining: 1 block(s)"), the task tree switched to
+the table three blocks overhead, the click leaf aimed UP at it while the orphaned navigator handed
+off to a tower ("Pillaring up to y=59") that aimed DOWN — `pitch=25`, no jump in eighty ticks,
+`Pillar stuck … air=0`, and the stone beside the bot "failed to break" three times as the
+crosshair swung between the two owners. G40 caught an orphan only when the NEXT drive started; a
+leaf that does not drive (a click, a mine in reach) never did. Principle: **the route dies with its
+drive** — a drive's `onStop` stops every route engine (`TungstenMod.stopNavigation`) unless the
+interrupting task is another drive (adoption, G40), an escape is armed, or the builder holds an
+exact cell. Flag `routeDiesWithItsDrive`; counter `pdRouteStopped`. PillarTask now also reports
+`jumpStolen` in its stuck line: the jump it pressed found released before the game sampled it.
+
+**G53. A drop inside the tree the bot stands on, five below, is never reached.** Same recording,
+14:23–14:27: the bot on the crown of the spruce it had just felled, a stick and a plank five
+blocks below on the lower layers; grid BFS found no walking route, the navigator planned, made no
+progress at its own cell, re-planned, gave the route up — "MovementQueue: 1 movement(s)
+1234,65,-1406 -> 1235,65,-1406" over and over — and the pickup blacklisted both drops after three
+tries each. Root not yet isolated (the run's verbose log was off); bench `tree_drop_test.py`
+rebuilds the tree (7x7 skirt, 5x5 body, 3x3 crown, the stick on the skirt five below and two
+aside) and prints the navigator's own lines on failure. Open.
+
+**G54. A new pursuit is given up on its first tick and banned for ninety seconds.** Round 11,
+canopy_drop on a freshly recreated client, right after five other benches: `@get raw_iron 1` →
+"Waiting for calculations I think (wandering) → Wander for Infinity blocks / Exploring" from the
+first sample, `RTGATE targets=[[raw_iron]] dropped=true` on every line, the raw iron lying six
+blocks away on the canopy and never approached; the same bench had passed twice on round 9 in a
+different order. The closest-object chooser's idle give-up clock (`budgetIdleSinceMs`, 30 s of
+not closing on the target) is a static, and unlike every other clock in that block it was NOT
+restarted when the target changed — so the new target inherited the moment the previous pursuit
+last closed on anything. Thirty seconds after that (a walk, a fight, the gap between two benches)
+the first tick of the next pursuit read "idle", gave the target up, and `giveUpTargetStaysGivenUp`
+refused it for ninety seconds: the chooser had nothing left and wandered. On the recording this
+is a "Failed exploring" every time the bot picks a new thing to go for after half a minute of not
+closing on the old one. Principle: **a clock belongs to the pursuit it measures** — the idle clock
+is re-armed when the target changes. Flag `pursuitIdleClockPerTarget`; counter `dcIdleRearm`.
+
+**G55. A solid block goal is "reached" by standing on it — by one layer, and never by the other.**
+The 17:56 recording (G50+G51 build): nine of ten minutes on one spot, `(1465.7, 61, -1414.7)`,
+chain `Performing an action: Getting to block (1465,60,-1415)` — BeatMinecraft's loot action asks
+to stand in `chest.up()`, and here the chest is buried: the cell is sand, the bot stands on it.
+Counters: `snap=2230/147/1830` (the snap wanted the bot's own cell and G40 refused it 1830 times),
+`plan=… zero52 … atGoal=52(ex0,ytol52)@GetToBlockTask@block(1465,60,-1415)`, `pdNearBuild=8`,
+`FastNavigator: arrived (1.0)` every twelve seconds, `Failed! No block path` every two. The planner
+completes on a cell within one block of the goal's height and the navigator arrives within 2.0,
+so both said "there"; `AltoGoal.Block.reached` is exact and said "not there"; the task asked again
+every tick. Upstream altoclef leaned on baritone's `GoalBlock`, which would have MINED the sand and
+stood on the chest. Principle: **a solid block goal is dug into, not stood on** — a breakable
+solid goal cell (not bedrock, not a block entity) goes straight to the navigator as an EXACT cell
+(`FastNavigator.startExactForDrive`), the planner completes only in that cell (`exactGoal`: no
+height tolerance), and arrival is the exact cell, the same test `isFinished` uses. Flag
+`blockGoalDigsIntoSolid`; counters `pdDig=armed/held`.
+
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`
 once at t≈30 s (an exception in `getTaskChainString`, cosmetic).

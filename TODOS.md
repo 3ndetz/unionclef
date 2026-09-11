@@ -218,6 +218,35 @@ recovery, every recovery is a plan**.
       12 s while legs were walked). Fix: a partial >= 5 blocks is walked and re-planned; a goal
       below with no such partial is given up out loud (navPartial=walked/noneBelow);
       MineAndCollectTask holds its clock while FastNavigator / walker / queue run.
+- [ ] **G50 seven minutes for six cobblestone: the miner swings before the crosshair is on the
+      block** (17:00 playthrough: target stone diagonally below, CLICK_LEFT held while the camera
+      still travels, the swing lands on the bot's own floor, y drops one block a minute,
+      dbBlockedSelfFloor=130). Fix: DestroyBlockTask holds CLICK_LEFT only while the live ray
+      (LookHelper.isLookingAt(mod, pos)) is on the block (`dbAimWait`).
+- [ ] **G51 the tower is started where the body stopped, not in the plan's column** (round 10
+      canopy_drop x2: body one cell over under the canopy's edge leaf, jump capped, "insideCell=80
+      placed=0", 16 restarts). Fix `pillarInPlannedColumn`: the hand-off steers the body onto the
+      jump's column first; PillarTask refuses a column with a block two above the feet
+      ("no headroom") so the navigator re-plans at once.
+- [ ] **G52 a route outlives the drive that owned it** (17:22 run: the cobblestone approach's
+      navigator ran on under the crafting-table click leaf, handed off to a tower that aimed down
+      while the leaf aimed up -- pitch 25, "Pillar stuck air=0", stone "failed to break" x3). Fix
+      `routeDiesWithItsDrive`: a drive's onStop stops every route engine unless another drive
+      interrupts (adoption), an escape is armed or the builder holds an exact cell
+      (`pdRouteStopped`); PillarTask's stuck line reports `jumpStolen`.
+- [ ] **G53 a drop five below inside the tree the bot stands on is never reached** (17:22 run,
+      14:23-14:27: navigator "no progress at its own cell" -> re-plan -> "giving the route up",
+      pickup blacklisted after 3 tries x2). Root open; bench `tree_drop_test.py`.
+- [ ] **G54 a new pursuit is given up on its first tick and banned for 90 s** (round 11
+      canopy_drop on a fresh client: "wandering / Exploring" from the first sample with the drop
+      six blocks away, dropped=true every RTGATE). The chooser's idle clock was a static that
+      survived the target switch. Fix `pursuitIdleClockPerTarget`: re-arm the idle clock when the
+      target changes (`dcIdleRearm`).
+- [ ] **G55 a solid block goal is "reached" by standing on it, by one layer only** (17:56 run:
+      nine minutes on the sand above a buried chest, `Getting to block chest.up()`, atGoal ytol52,
+      "arrived (1.0)" / "Failed! No block path" in a loop). Fix `blockGoalDigsIntoSolid`: a
+      breakable solid goal cell goes to FastNavigator as an EXACT cell and is dug into; the
+      planner's height tolerance is off for exact cells (`pdDig=armed/held`).
 - [ ] **G32 "unreachable" declared by a timer, not by a search** (`Try 2/4` on every G25 no-op
       approach). A block is unreachable only when the dig-capable planner returns incomplete.
       Fix: DestroyBlockTask's approach clock and MineAndCollectTask's progress checker HOLD while

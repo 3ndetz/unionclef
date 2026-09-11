@@ -200,6 +200,20 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
                 budgetHardStartMs = now;
                 idleBestSq = dSq;
                 budgetBestSq = dSq;
+                // ⛔ THE IDLE CLOCK BELONGS TO THE PURSUIT, NOT TO THE PROCESS (G54, 2026-09-11).
+                // Every other clock here restarts when the target changes; this one did not, so a
+                // new target inherited the moment the PREVIOUS pursuit last closed on anything.
+                // Thirty seconds after that -- a walk, a fight, the gap between two benches -- the
+                // first tick of the next pursuit read "idle for 30 s", gave the target up before a
+                // single step, and the ban below refused it for ninety seconds: canopy_drop on a
+                // fresh client went straight to "Waiting for calculations I think (wandering)"
+                // with the raw iron six blocks away and dropped=true on every RTGATE line; on the
+                // recording that is a "Failed exploring" every time the bot picks a new thing to
+                // go for after half a minute of not closing on the old one.
+                if (kaptainwutax.tungsten.TungstenConfig.get().pursuitIdleClockPerTarget) {
+                    budgetIdleSinceMs = now;
+                    dcIdleRearmed++;
+                }
             // STANDING STILL IS NOT A SLOW CHASE, IT IS A STUCK ONE.
             // Measured: of 10445 chooser ticks the body moved on 248 and stood on 10196 --
             // 98% -- while dc owns 76% of the whole run. The three-minute ceiling does fire
@@ -429,6 +443,8 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     public static volatile int dcMoving, dcStill;
     /** Pursuits abandoned because the body stood still and broke nothing. */
     public static volatile int dcGaveUpIdle;
+    /** G54: new pursuits whose idle clock was re-armed at the moment the target changed. */
+    public static volatile int dcIdleRearmed;
     /** Still ticks split by whether the target was inside mining reach. */
     public static volatile int dcStillNear, dcStillFar;
     /** Farthest the pursued object got during its pursuit, in blocks. */
