@@ -27,7 +27,19 @@ public class CommandStatusOverlay {
     public void render(AltoClef mod, DrawContextWrapper context) {
         List<Task> tasks = Collections.emptyList();
         if (mod.getTaskRunner().getCurrentTaskChain() != null) {
-            tasks = mod.getTaskRunner().getCurrentTaskChain().getTasks();
+            // ⛔ THE RENDER THREAD MUST NOT WALK A LIST THE TICK THREAD IS REWRITING (G46,
+            // 2026-09-11). getTasks() hands back the chain's live ArrayList, and this overlay
+            // iterated it while the task runner replaced the chain underneath -- a
+            // ConcurrentModificationException in drawTaskChain that took the WHOLE CLIENT down
+            // ("Unreported exception thrown!", crash-2026-09-11_12.10.24-client.txt, and two
+            // older reports with the same trace). A crash of the client is the worst stall there
+            // is: every bench after it read "cannot connect to the Java server". Draw a snapshot;
+            // if the copy itself races, draw nothing this frame.
+            try {
+                tasks = new java.util.ArrayList<>(mod.getTaskRunner().getCurrentTaskChain().getTasks());
+            } catch (RuntimeException raced) {
+                tasks = Collections.emptyList();
+            }
         }
         if (paused && !mod.isPaused()) {
             runningSince = Instant.now().minusMillis(pausedTime).toEpochMilli();

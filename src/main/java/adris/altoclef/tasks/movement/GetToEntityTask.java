@@ -227,6 +227,18 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     /** Locks dropped because the target was already within walking range. */
     public static int nearLockDropped = 0;
 
+    /** G48: the drive owns the approach down to THIS distance; only the last strides are left to
+     *  the close-range logic. Was 5 with the hand-over at CLOSE_WALK_RANGE (8): far_mob then
+     *  showed the drive delivering the body to four blocks in eight seconds and the physics
+     *  chase holding it motionless there for forty ("Approaching target", m0.0) -- the last four
+     *  blocks are the same disease as the first forty. Three is inside every interaction reach. */
+    private static final int LONG_HAUL_ARRIVE = 3;
+    private static final double LONG_HAUL_HANDOVER = 3.5;
+    /** Times the approach was handed to the drive because the target was beyond walking range. */
+    public static volatile int entityLongHaul;
+    private GetNearEntityTask longHaul = null;
+    private boolean longHaulActive = false;
+
     public GetToEntityTask(Entity entity, double closeEnoughDistance) {
         _entity = entity;
         _closeEnoughDistance = closeEnoughDistance;
@@ -428,6 +440,33 @@ boolean walkDrove = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKey
         }
         boolean parkourMode = AltoClef.getInstance().getModSettings().isSuperParkourMode()
                 && TungstenHelper.isTungstenLoaded();
+
+        // ⛔ THE LONG HAUL IS THE DRIVE'S, NOT THE PHYSICS SEARCH'S (G48, 2026-09-11). Everything
+        // below this line -- the 30-second lock, the close walk, the wander -- is short-range
+        // machinery, and a target forty-five blocks away over terrain defeats all of it: measured
+        // on the 15:38 recording as lock=chicken:45.1>45.1,m0.0, "Failed to get to target,
+        // wandering", wanderDenied=4014, the body motionless for the last five minutes of the run.
+        // Beyond CLOSE_WALK_RANGE the approach goes through the same drive every block goal uses
+        // (grid BFS, the ported movements, FastNavigator when walking cannot reach); inside it the
+        // physics chase and the straight walk take over as before. See GetNearEntityTask.
+        if (kaptainwutax.tungsten.TungstenConfig.get().entityLongHaulViaDrive
+                && !_entity.isRemoved()
+                && !mod.getPlayer().isInRange(_entity, LONG_HAUL_HANDOVER)) {
+            if (!longHaulActive) {
+                // one owner of the keys: the physics lock stands down for the drive
+                if (TungstenHelper.isLocked() || TungstenHelper.isActive()) TungstenHelper.stop();
+                longHaulActive = true;
+                entityLongHaul++;
+            }
+            if (longHaul == null || !longHaul.isFor(_entity)) {
+                longHaul = new GetNearEntityTask(_entity, LONG_HAUL_ARRIVE);
+            }
+            _progress.reset();
+            stuckCheck.reset();
+            setDebugState("Long haul to entity via the drive (walk / dig / build)");
+            return longHaul;
+        }
+        longHaulActive = false;
 
         // ── superParkourMode: Tungsten is PRIMARY, start immediately ──
         if (parkourMode && !TungstenHelper.isLocked() && !TungstenHelper.isActive()) {

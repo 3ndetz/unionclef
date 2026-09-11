@@ -601,6 +601,36 @@ public interface AltoGoal {
         return new Near(pos, range);
     }
 
+    /**
+     * A goal that is a MOVING cell, satisfied from anywhere within {@code range} of wherever it is
+     * right now (G48, 2026-09-11). The drive reads target() every tick, so a supplier is enough to
+     * follow an entity; baritone's GoalFollowEntity is the same idea. A null from the supplier
+     * (the entity is gone) reads as "no route this tick", exactly like the nearest-cell search.
+     */
+    record NearLive(java.util.function.Supplier<BlockPos> pos, int range) implements AltoGoal {
+        @Override
+        public Vec3d target() {
+            BlockPos p = pos.get();
+            return p == null ? null : new Vec3d(p.getX() + 0.5, p.getY(), p.getZ() + 0.5);
+        }
+
+        @Override
+        public boolean reached(BlockPos at) {
+            BlockPos p = pos.get();
+            return p != null && at.getSquaredDistance(p) <= (double) range * range;
+        }
+
+        @Override
+        public String toString() {
+            BlockPos p = pos.get();
+            return "nearLive(" + (p == null ? "gone" : p.toShortString()) + ", r=" + range + ")";
+        }
+    }
+
+    static AltoGoal nearLive(java.util.function.Supplier<BlockPos> pos, int range) {
+        return new NearLive(pos, range);
+    }
+
     /** Reach a block from a neighbouring cell (GoalGetToBlock); the miner's approach. */
     static AltoGoal adjacent(BlockPos pos) {
         return new Adjacent(pos);

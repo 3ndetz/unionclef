@@ -351,6 +351,117 @@ course. Principle: **arrival is a state, not a moment** — the position test al
 on the ground (or in water / on a ladder) and not sprinting, and stops a still-running replay when
 it fires. Flag `arrivalNeedsSettledBody`.
 
+**G42. A tower built one MovementPillar step at a time does not go up.** The 14:00 run (build
+58d51b55): a log lay on a spruce canopy four blocks up; the pickup's block goal escalated to
+FastNavigator, whose leg went to the MovementQueue as `9 movement(s) -302,110,-213 -> -302,115,-214
+CLIMB+5`, and the ported `MovementPillar` reported `step 2 has taken too long (126 ticks, expected
+25) MovementPillar (-302,111,-211)->(-302,112,-211)` eleven times in four minutes — under OPEN SKY
+(the column at z=−211 is air from 112 up, rcon-checked) — two blocks placed in all, the chain
+dropped and the identical plan re-issued every 14 s. `PillarTask` (jump, place while airborne,
+stay centred) is the tower primitive that clears pit_escape, nav_wall2 and drop_ledge; the per-step
+port with its sneak-pose click window through the mouse pipeline is not. Principle: **a tower is one
+manoeuvre with one owner** — a planned pillar run is cut out of the queue leg at the tower's foot
+and the top of the vertical run goes through the wall hand-off to PillarTask; the navigator keeps
+its hands off while the tower (or a swim-out) is going up, and counts it as building for the stall
+watchdog. Flag `pillarRunsGoToPillarTask`; counter `navPillarRuns`; bench `canopy_drop_test.py`.
+The bench then exposed the tower primitive's own hole: `PillarTask` "stays centred" by releasing
+the keys and never moves the body to the centre, so a hand-off with the body left at x=764.0 —
+exactly on a cell boundary by the previous manoeuvre — read `Pillar stuck at y=-59.0` every 12 s
+(`navPillarRuns=16`, the crosshair straight down lands on the neighbouring column and
+`RealPlacement` predicts the wrong cell). Baritone's pillar centres before it jumps (the 0.17
+test); so does the navigator before a dig (G34). PillarTask now walks to the cell centre, sneaking,
+before its first jump (`pillarCenterTimeout` counts the towers that had to start off-centre).
+With the tower's "stuck" verdict made to name its reason, the real hole showed on pit_escape:
+`air=81 placeAt=81 readyNull=0 tryFalse=81 placed=0` — airborne, a cell to fill, the ray on the
+support's top face every time, every click refused. The click was attempted from the first tick off
+the ground, feet at +0.42, still inside the cell the block goes into; vanilla refuses a cube that
+intersects an entity, and `BlockPlaceHelper`'s rate gate is armed by the attempt regardless, so the
+next click came after the apex. Baritone's `MovementPillar` clicks only at `player.y > dest.y + 0.1`;
+PillarTask now clicks only once the feet are above the cell's top (`insideCell` in the verdict).
+
+**G43. Killed by a creeper it was pursuing.** Same run, 11:08:45 UTC: `COMBAT: → DANGER_BATTLE`
+→ `NARROW_BATTLE` → `PURSUE` → `DANGER_BATTLE` → `tester1 был взорван Крипер`, hp 20 → 4.5 in
+40 s, respawn with an empty inventory. Root: `MobDefenseChain` put the creeper in its fight list
+like any hostile, `canDealWith >= dangerousness` held with an iron sword, and `KillEntitiesTask` +
+the duelling controller closed to striking distance — which is the fuse distance; the existing
+creeper branch only fires once the hiss has started. Principle: **a creeper is never engaged at
+melee range** — one within 10 blocks that sees the bot is fled (`RunAwayFromCreepersTask`, run
+out to 15, priority 66 above the fight's 65), a farther one is ignored. Six blocks was measured
+too late on the bench (a creeper walking at the bot closes 0.45 blocks a tick; the turn-around
+alone let it fuse, hp 20 → 11.8). Round 7 then showed the other edge: fleeing to 15 "finished"
+with the creeper still targeting (its follow range is 16), the task walked straight back into it
+and the bot was blown up three seconds after the flee ended — so the flee runs past the follow
+range (20) and starts at 12. Still open underneath: a bot with a sword should kill a creeper the
+way a player does, hit-and-back-off (the duelling controller's hold-at-striking-distance is the
+wrong shape for a mob whose weapon is proximity); avoidance is the safe half. Flag
+`neverMeleeCreepers`; counter `mdCreeperAvoid`; bench `creeper_avoid_test.py`.
+
+**G44. A goal 94 blocks below is handed to the physics engine.** Same run, 11:07: with iron tools
+the next target was deep (`physics owns the jump -> -343,6,-203`); FastPlanner's budgeted plan
+was incomplete with no progress (`walking dead-ends (94.2 -> 94.0) -> physics owns the rest`), the
+physics search `Ran out of nodes` / `Failed!`. Baritone mines a staircase toward such a goal.
+Root: when the 250 ms budget runs out, FastPlanner handed back the path to the lowest-heuristic
+node it had POPPED. Every dig costs ~23 ticks against a walk's 4.6, so A* opens a widening disc of
+surface cells first, and the dug cells — generated, never popped — were invisible to the choice:
+the partial ends on a surface neighbour, "no progress", dead end. Baritone does not have this
+problem because it judges every GENERATED node against seven coefficients that discount the cost
+travelled (`h + cost / coef`, `AStarPathFinder.COEFFICIENTS`) and walks the first candidate, from
+the least greedy up, at least 5 blocks from the start — the greedier coefficients are exactly what
+make a dug cell win — then re-plans from there, which is how it reaches diamond level in legs.
+Principle: **a partial plan is chosen by progress per cost, over generated nodes, and walked in
+legs**. Ported as `PartialTracker` (flag `planPartialLikeBaritone`, counter `planPartialCoef`);
+bench `deep_goal_test.py` (25 down, 6 aside, through solid stone).
+
+**G45. The start snap walked the start down the hole onto the drop.** Round-4 playthrough (14:50,
+build with G42/G43): the bot stood on the rim of a 1×1 hole three deep with cobblestone at the
+bottom, hitbox half over the edge, for the whole run. `GetToDropTask@block(-322,71,-542)`,
+`atGoal=434 (ex434)`, `navRes=434 short`, `navStall=16/15`, `pdNearBuild=13`: every plan was
+one cell. `FastPlanner.snapStartToSupport` — meant for a body in the air about to land — found no
+support under the feet cell's centre and walked the start down the column to the first floor: the
+bottom of the hole, i.e. the goal. Principle: **a body on the ground plans from its feet cell**;
+the snap runs only while airborne (`startSnapOnlyAirborne`, counter `planStartSnapRefusedOnGround`).
+From the rim the plan is then a one-step fall into the hole, which the walker performs. Bench
+`hole_drop_test.py` (PASS 6 s, `startSnapRefused=1`).
+
+**G46. The client crashed from its own status overlay.** Round-5 benches, 12:10:24 UTC:
+`java.util.ConcurrentModificationException` at `CommandStatusOverlay.drawTaskChain:111` →
+"Unreported exception thrown!" → the client JVM died, the container restarted, and every bench
+after it read "cannot connect to the Java server". Two older crash reports (08-23, 08-27) carry
+the same trace. Root: the overlay iterates the task chain's live `ArrayList` on the render thread
+while the task runner rewrites it on the tick thread. Principle: **a renderer draws a snapshot**.
+`render()` now copies the list (and draws nothing for a frame if the copy itself races).
+
+**G47. Stone punched by hand with a pickaxe in the hotbar** (operator, on the 14:00 recording).
+`DestroyBlockTask` never equips a tool — its own comment reads "Tool equip is handled in
+PlayerInteractionFixChain. Oof." — and that chain refuses a tool INSIDE THE HOTBAR while
+`Nav.isPathing()` is true ("Baritone will take care of tools inside the hotbar"), a clause that
+outlived the engine it trusted: navigation is live on nearly every mining tick of the tungsten
+drive, and tungsten's own tool hook serves only its executor's break queue. The chain's "Found
+better tool in inventory, equipping." lines in the log are it catching up late (only when
+navigation happened to be idle). A second hole underneath: `shouldSaveStack` keeps a worn iron
+pickaxe for diamond-grade blocks even when it is the only pickaxe, so the "best tool" was NOTHING and
+stone was punched (7.5 s, no drop). Principle: **the miner equips its own tool before it swings; a
+tool being saved still beats bare hands.** `DestroyBlockTask.equipBestToolFor` (counter
+`dbToolEquipped`), the fix chain takes any slot, `getBestToolSlot` falls back to the saved tool.
+
+**G48. A mob 45 blocks away is chased with a 30-second physics lock that moves the body zero.**
+Round-6 playthrough (15:38, the first on G42–G46): stone tools at 305 s, then five minutes
+motionless at (−288.7,75,−771.6) on `Collect 220 units of food → Killing chicken → Approach entity
+→ Failed to get to target, wandering for a bit → Wander for 5 blocks`; `lock=chicken:45.1>45.1,
+m0.0` (twice), `wanderDenied=4014`, `pdEnter+0` for the whole stall — the drive was never entered.
+`GetToEntityTask` has one engine, the physics search behind `tryPathToEntity`, and it is
+short-range: 45 blocks of terrain defeat it, and every recovery below it (close walk, wander) is
+short-range too. Same disease as the drops (G39) and the ores (G25), one entity type further.
+Principle: **the long haul belongs to the drive; the physics chase is for the last blocks** —
+beyond `CLOSE_WALK_RANGE` (8) the approach is a `GetNearEntityTask` (a live near-goal on the
+entity's current cell through `driveTungstenPrimary`, so walking, the ported movements and
+FastNavigator's dig/pillar all apply), handed back to the entity task inside 3.5 blocks. The first
+cut handed over at 8: on the bench the drive delivered the body to four blocks in eight seconds
+(three MovementQueue legs and a two-block pillar onto the ledge) and the physics chase then held
+it motionless for forty — "Approaching target", the same m0.0 — so the last strides are the
+drive's too. Flag `entityLongHaulViaDrive`; counter `entLongHaul`; bench `far_mob_test.py`
+(chicken 40 blocks away on a two-block ledge).
+
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`
 once at t≈30 s (an exception in `getTaskChainString`, cosmetic).

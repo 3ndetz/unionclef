@@ -292,6 +292,18 @@ public class MobDefenseChain extends SingleTaskChain {
             java.util.Collections.synchronizedSet(new java.util.HashSet<>());
     private static final double DANGER_KEEP_DISTANCE = 30;
     private static final double CREEPER_KEEP_DISTANCE = 10;
+    /** G43: a creeper this close that sees us is avoided instead of fought (its fuse starts at
+     *  ~3 blocks; the duelling controller's striking distance is inside that). Six was measured
+     *  too late on creeper_avoid: a creeper walking at the bot closes 0.45 blocks a tick, and
+     *  from six blocks the turn-around alone let it fuse -- hp 20 -> 11.8. Ten is the distance
+     *  the fusing branch already keeps; the flee runs out to CREEPER_FLEE_DISTANCE. */
+    private static final double CREEPER_AVOID_RANGE = 12;
+    /** Past a creeper's 16-block follow range, so it loses the bot instead of trailing it: at 15
+     *  the flee "finished" with the creeper still targeting, the task walked straight back into
+     *  it and the bot was blown up three seconds later (creeper_avoid, round 7). */
+    private static final double CREEPER_FLEE_DISTANCE = 20;
+    /** G43: ticks the chain fled a close creeper instead of engaging it. Read mdCreeperAvoid. */
+    public static volatile int mdCreeperAvoid;
     private static final double ARROW_KEEP_DISTANCE_HORIZONTAL = 2;
     private static final double ARROW_KEEP_DISTANCE_VERTICAL = 10;
     // Wider detection radius for arrow approach (from autoclef: horizontalDistanceSq < 1000)
@@ -900,9 +912,30 @@ public class MobDefenseChain extends SingleTaskChain {
             List<LivingEntity> hostiles = mod.getEntityTracker().getHostiles();
 
             List<LivingEntity> toDealWithList = new ArrayList<>();
+            CreeperEntity closeCreeper = null;
 
             synchronized (BaritoneHelper.MINECRAFT_LOCK) {
                 for (LivingEntity hostile : hostiles) {
+                    // ⛔ A CREEPER IS NEVER FOUGHT AT MELEE RANGE (G43, 2026-09-11). It went into
+                    // this list like any hostile, the fight branch judged it "beatable" with an iron
+                    // sword, KillEntitiesTask + the duelling controller PURSUED it to striking
+                    // distance -- and striking distance is its fuse distance. Recorded 14:00 run,
+                    // 11:08:45 UTC: DANGER_BATTLE -> NARROW_BATTLE -> PURSUE -> "tester1 был
+                    // взорван Крипер", hp 20 -> 4.5 in 40 s, respawn with an empty pack. The fusing
+                    // branch above only fires once the hiss has started, which is already too late
+                    // for a bot that is walking INTO it. A creeper that is close and can see us is
+                    // avoided, not engaged; one further away is left alone.
+                    if (kaptainwutax.tungsten.TungstenConfig.get().neverMeleeCreepers
+                            && hostile instanceof CreeperEntity creeperNear) {
+                        if (creeperNear.isInRange(mod.getPlayer(), CREEPER_AVOID_RANGE)
+                                && LookHelper.seesPlayer(creeperNear, mod.getPlayer(), CREEPER_AVOID_RANGE)
+                                && (closeCreeper == null
+                                    || creeperNear.squaredDistanceTo(mod.getPlayer())
+                                       < closeCreeper.squaredDistanceTo(mod.getPlayer()))) {
+                            closeCreeper = creeperNear;
+                        }
+                        continue;
+                    }
                     boolean isRangedOrPoisonous = (hostile instanceof SkeletonEntity
                             || hostile instanceof WitchEntity || hostile instanceof PillagerEntity
                             || hostile instanceof PiglinEntity || hostile instanceof StrayEntity
@@ -940,6 +973,16 @@ public class MobDefenseChain extends SingleTaskChain {
                         }
                     }
                 }
+            }
+
+            // G43: a creeper within CREEPER_AVOID_RANGE that sees us outranks any fight -- the
+            // fight would walk us into its fuse. Same flee task the fusing branch uses.
+            if (closeCreeper != null) {
+                mdCreeperAvoid++;
+                doingFunkyStuff = true;
+                runAwayTask = new RunAwayFromCreepersTask(CREEPER_FLEE_DISTANCE);
+                setTask(runAwayTask);
+                return 66;
             }
 
             // attack entities closest to the player first

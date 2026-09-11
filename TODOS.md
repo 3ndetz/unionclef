@@ -153,6 +153,61 @@ recovery, every recovery is a plan**.
       nav=false for the rest of the course. Fix `arrivalNeedsSettledBody`: on ground (or water /
       ladder), not sprinting, and the replay is stopped on arrival. nav_bridge PASS x2 (10.1 s,
       8.7 s, final_dist 0.9) on build 13:51.
+- [x] **G42 a tower built one MovementPillar step at a time does not go up.** 14:00 run (build
+      58d51b55): a log on a spruce canopy four up; the leg went to the MovementQueue as "CLIMB+5"
+      and MovementPillar timed out ("step 2 has taken too long (126 ticks)") eleven times in four
+      minutes under OPEN sky, two blocks placed. Fix `pillarRunsGoToPillarTask`: a planned pillar
+      run is cut out of the queue leg and the top of the run goes through the wall hand-off to
+      PillarTask; the navigator yields while a tower / swim-out is up. The bench then caught
+      PillarTask itself: started with the body on a cell boundary (x=764.0) it read "Pillar stuck
+      at y=-59.0" every 12 s (navPillarRuns=16) -- it released the keys but never MOVED to the
+      centre. Now it walks to the cell centre, sneaking, before the first jump
+      (`pillarCenterTimeout`). And the real hole under both: the click was attempted from the
+      first airborne tick with the feet still INSIDE the cell being filled (vanilla refuses,
+      the rate gate is armed anyway) -- "air=81 placeAt=81 readyNull=0 tryFalse=81 placed=0";
+      PillarTask now clicks only once the feet are above the cell's top, as MovementPillar
+      does. canopy_drop PASS, pit_escape PASS, drop_ledge 2/2 on round 7 (15:52).
+- [ ] **G43 killed by a creeper it was pursuing** (14:00 run, 11:08:45 UTC: DANGER_BATTLE ->
+      NARROW_BATTLE -> PURSUE -> "tester1 был взорван Крипер", hp 20 -> 4.5 in 40 s, respawn
+      with an empty pack). Principle: a creeper is never pursued to melee range. Fix
+      `neverMeleeCreepers`: MobDefenseChain keeps creepers out of the fight list; one within 12
+      blocks that sees the bot is fled to 20 (past the creeper's 16-block follow range; at 15 it
+      trailed the bot back and blew it up, round 7). Bench `creeper_avoid_test.py`. Still open:
+      hit-and-back-off with a sword instead of avoiding for ever (the duelling controller's
+      hold-at-striking-distance is the wrong shape for a creeper).
+- [ ] **G44 a goal 94 blocks below is handed to the physics engine** (14:00 run, 11:07: "physics
+      owns the jump -> -343,6,-203", "walking dead-ends (94.2 -> 94.0)", "Ran out of nodes").
+      Baritone descends by a staircase dig; the budgeted plan comes back incomplete with no
+      progress and the hand-off goes to an engine that cannot dig. Root: the partial was the
+      lowest-heuristic POPPED node, and the dug cells (23 ticks each vs 4.6 for a walk) are
+      generated but never popped within 250 ms. Fix `planPartialLikeBaritone`: baritone's
+      bestSoFar port -- every generated node scored `h + cost/coef` for coefs 1.5..10, the first
+      candidate >= 5 blocks from the start is walked, then re-planned from there. Bench
+      `deep_goal_test.py`.
+- [ ] **G45 the start snap walked the start down the hole onto the drop.** Round-4 playthrough
+      (14:50): on the rim of a 1x1 hole three deep, cobblestone at the bottom, the whole run --
+      `atGoal=434 (ex434)`, `navRes=434 short`, `navStall=16/15`. FastPlanner.snapStartToSupport
+      (for a body in the AIR) moved the start down the column to the first floor = the goal. Fix
+      `startSnapOnlyAirborne`: on the ground the feet cell is the start. Bench `hole_drop_test.py`
+      PASS 6 s (startSnapRefused=1).
+- [x] **G46 the client crashed from its own status overlay** (round-5 benches, 12:10:24 UTC:
+      ConcurrentModificationException in CommandStatusOverlay.drawTaskChain, "Unreported
+      exception thrown!", container restarted, every later bench "cannot connect"; two older
+      crash reports with the same trace). The overlay walked the chain's live ArrayList on the
+      render thread. Fix: render() draws a snapshot copy.
+- [ ] **G47 stone punched by hand with a pickaxe in the hotbar** (operator, 14:00 recording).
+      DestroyBlockTask never equipped a tool ("handled in PlayerInteractionFixChain. Oof."),
+      and that chain skips hotbar tools while Nav.isPathing() ("Baritone will take care") -- an
+      engine that is gone; tungsten's hook serves only its own break queue. Plus shouldSaveStack
+      turned the only (worn) iron pickaxe into "no tool". Fix: the miner equips its own tool
+      (`equipBestToolFor`, counter dbToolEquipped); the chain takes any slot; getBestToolSlot
+      falls back to a saved tool over bare hands.
+- [ ] **G48 a mob 45 blocks away is chased with a physics lock that moves the body zero** (15:38
+      playthrough: five minutes on "Killing chicken -> Approach entity -> Failed to get to
+      target, wandering", lock=chicken:45.1>45.1,m0.0, wanderDenied=4014, pdEnter+0). Fix
+      `entityLongHaulViaDrive`: beyond the 8-block close range GetToEntityTask returns
+      GetNearEntityTask (live near-goal through the drive: walk / movements / FastNavigator),
+      hands back inside 5. Bench `far_mob_test.py`.
 - [ ] **G32 "unreachable" declared by a timer, not by a search** (`Try 2/4` on every G25 no-op
       approach). A block is unreachable only when the dig-capable planner returns incomplete.
       Fix: DestroyBlockTask's approach clock and MineAndCollectTask's progress checker HOLD while

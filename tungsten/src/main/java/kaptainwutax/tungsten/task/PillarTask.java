@@ -31,6 +31,18 @@ public class PillarTask {
     private static int placed;
     private static int stuckTicks;
     private static double lastY;
+    /** Ticks spent walking the body to the middle of its cell before the first jump (G42). */
+    private static int centerTicks;
+    private static final double CENTER_TOL = 0.2;
+    private static final int CENTER_TICKS_MAX = 60;
+    /** Towers that had to start off-centre because the walk to the middle timed out. */
+    public static volatile int pillarCenterTimeout;
+    /** Per-tower anatomy for the "stuck" verdict: airborne-and-rising ticks, ticks with a cell to
+     *  place into, ticks the live ray was not on the support's top face, clicks refused, placed. */
+    private static int dAir, dPlaceAt, dReadyNull, dTryFalse, dPlaced, dInsideCell;
+    private static BlockPos dLastPlaceAt;
+    /** How far above the cell's top the feet must be before a click is attempted (baritone: 0.1). */
+    private static final double PLACE_CLEARANCE = 0.05;
 
     public static synchronized boolean startTo(int ty) {
         ClientPlayerEntity p = MinecraftClient.getInstance().player;
@@ -39,6 +51,9 @@ public class PillarTask {
         climbGoalY = ty;
         placed = 0;
         stuckTicks = 0;
+        centerTicks = 0;
+        dAir = dPlaceAt = dReadyNull = dTryFalse = dPlaced = dInsideCell = 0;
+        dLastPlaceAt = null;
         lastY = p.getY();
         active = true;
         Debug.logMessage("Pillaring up to y=" + ty);
@@ -108,6 +123,45 @@ public class PillarTask {
             }
         }
 
+        // ⛔ A TOWER IS BUILT FROM THE MIDDLE OF ITS CELL (G42, 2026-09-11). "Stay centred" below
+        // only released the keys; it never MOVED the body to the centre. On canopy_drop the wall
+        // hand-off started this task with the body at x=764.0 -- exactly on the boundary between
+        // two cells, where the previous manoeuvre had left it -- and the placement never fired:
+        // the crosshair straight down lands on the neighbouring column, RealPlacement predicts a
+        // different cell, no click, "Pillar stuck at y=-59.0" every twelve seconds for the whole
+        // window. Baritone's MovementPillar centres before it jumps (the 0.17 test); so does the
+        // navigator before a dig (G34). Walk to the centre first, sneaking so the body cannot
+        // overshoot; jump only from there.
+        {
+            // ⛔ CENTRE ON THE CELL THAT HOLDS YOU UP, NOT ON floor(x). A body straddling the lip
+            // of a gap has floor(x) in the AIR cell; walking to that cell's centre is walking off
+            // the edge -- nav_bridge in round 7 read "the bot LEFT THE ARENA: min Y -120.4" for
+            // exactly that, one deploy after this centring was added. Among the cells the hitbox
+            // overlaps, take the nearest one with a solid block under it; with none, do not
+            // centre at all.
+            BlockPos column = supportedColumnUnder(player, world);
+            double ccx = column == null ? player.getX() : column.getX() + 0.5;
+            double ccz = column == null ? player.getZ() : column.getZ() + 0.5;
+            double ox = ccx - player.getX(), oz = ccz - player.getZ();
+            if (column != null && player.isOnGround() && ox * ox + oz * oz > CENTER_TOL * CENTER_TOL
+                    && centerTicks < CENTER_TICKS_MAX) {
+                centerTicks++;
+                float yaw = (float) Math.toDegrees(-Math.atan2(ox, oz));
+                WindMouseRotation.INSTANCE.setTarget(yaw, 15f);
+                float err = Math.abs(net.minecraft.util.math.MathHelper.wrapDegrees(yaw - player.getYaw()));
+                opts.forwardKey.setPressed(err < 25f);
+                opts.sneakKey.setPressed(true);
+                opts.sprintKey.setPressed(false);
+                opts.jumpKey.setPressed(false);
+                lastY = player.getY();   // centring is not a stuck tower
+                return;
+            }
+            if (centerTicks >= CENTER_TICKS_MAX && centerTicks < CENTER_TICKS_MAX + 1) {
+                centerTicks++;
+                pillarCenterTimeout++;   // could not centre in the time; build from here rather than never
+            }
+        }
+
         // Stay centred over the column (no horizontal drift) and aim straight down.
         opts.forwardKey.setPressed(false);
         opts.sprintKey.setPressed(false);
@@ -128,7 +182,22 @@ public class PillarTask {
                 BlockPos b = c.down();
                 if (isAir(world, c) && !isAir(world, b)) { placeAt = c; against = b; break; }
             }
+            dAir++;
+            // ⛔ THE BODY MUST HAVE LEFT THE CELL BEFORE THE CELL IS FILLED (G42, 2026-09-11).
+            // "Airborne and rising" starts at the first tick off the ground, feet at +0.42, still
+            // inside the cell the block is going into -- vanilla refuses a cube that intersects
+            // an entity, so that click fails, and BlockPlaceHelper's rate gate is armed by the
+            // attempt regardless: the next click is allowed four ticks later, after the apex, and
+            // the tower never rises. Diagnosed on pit_escape: "air=81 placeAt=81 readyNull=0
+            // tryFalse=81 placed=0" -- the ray on the right face every time, every click refused.
+            // Baritone's MovementPillar clicks only at player.y > dest.y + 0.1 (feet above the
+            // cell's top); this is that test, so the first click is the one inside the window.
+            if (placeAt != null && player.getY() < placeAt.getY() + 1.0 + PLACE_CLEARANCE) {
+                dInsideCell++;
+                placeAt = null;
+            }
             if (placeAt != null) {
+                dPlaceAt++;
                 if (!PlaceRules.canPlace(world, placeAt)) {
                     Debug.logMessage("Pillar stopped: protected/denied at " + placeAt.toShortString());
                     stop();
@@ -149,10 +218,16 @@ public class PillarTask {
                 BlockHitResult hit =
                         kaptainwutax.tungsten.helpers.RealPlacement.readyToPlace(mc, placeAt);
                 // Same shared rate gate as every other placement (helpers/BlockPlaceHelper).
-                if (hit != null && kaptainwutax.tungsten.helpers.BlockPlaceHelper.tryPlace(hit)) {
+                if (hit == null) {
+                    dReadyNull++;
+                } else if (kaptainwutax.tungsten.helpers.BlockPlaceHelper.tryPlace(hit)) {
                     // remember this pillar block as scaffolding so a cleanup can mine it back out
                     kaptainwutax.tungsten.util.ScaffoldRegistry.record(placeAt);
+                    dPlaced++;
+                } else {
+                    dTryFalse++;
                 }
+                dLastPlaceAt = placeAt;
             }
         }
 
@@ -163,7 +238,28 @@ public class PillarTask {
             stuckTicks = 0;
         } else if (Math.abs(player.getY() - lastY) < 0.02) {
             if (++stuckTicks > 80) { // ~4s no vertical progress
-                Debug.logMessage("Pillar stuck at y=" + String.format("%.1f", player.getY()));
+                // SAY WHY, NOT JUST THAT. A tower that places nothing has one of four reasons --
+                // never airborne, no cell to place into, the crosshair not on the support's top
+                // face, or the click refused -- and "stuck" alone named none of them (canopy_drop
+                // and pit_escape, 2026-09-11: 0 placed, 16 restarts, no idea which).
+                String hitS = "-";
+                try {
+                    var lh = kaptainwutax.tungsten.path.movements.RotationHelper.liveHit(player);
+                    if (lh instanceof BlockHitResult bh) {
+                        hitS = bh.getBlockPos().toShortString() + "/" + String.valueOf(bh.getSide());
+                    } else if (lh != null) {
+                        hitS = lh.getType().name();
+                    }
+                } catch (Throwable ignored) {
+                    // a diagnostic never breaks the tick it rides on
+                }
+                Debug.logMessage(String.format(
+                        "Pillar stuck at y=%.1f  air=%d insideCell=%d placeAt=%d readyNull=%d tryFalse=%d placed=%d"
+                        + " pitch=%.0f onGround=%b hit=%s lastPlaceAt=%s hand=%s",
+                        player.getY(), dAir, dInsideCell, dPlaceAt, dReadyNull, dTryFalse, dPlaced,
+                        player.getPitch(), player.isOnGround(), hitS,
+                        dLastPlaceAt == null ? "-" : dLastPlaceAt.toShortString(),
+                        player.getMainHandStack().getItem().toString()));
                 stop();
             }
         }
@@ -171,5 +267,28 @@ public class PillarTask {
 
     private static boolean isAir(WorldView w, BlockPos p) {
         return w.getBlockState(p).getCollisionShape(w, p).isEmpty();
+    }
+
+    /** The feet-level cell, among those the hitbox overlaps, that has a solid block under it and
+     *  lies nearest the body -- the column a tower can be built in. Null when the body hangs over
+     *  nothing (mid-bridge over a void), so the caller does not walk it anywhere. */
+    private static BlockPos supportedColumnUnder(ClientPlayerEntity player, WorldView world) {
+        net.minecraft.util.math.Box box = player.getBoundingBox();
+        int fy = net.minecraft.util.math.MathHelper.floor(player.getY());
+        double[][] corners = {
+            {player.getX(), player.getZ()},
+            {box.minX + 0.01, box.minZ + 0.01}, {box.minX + 0.01, box.maxZ - 0.01},
+            {box.maxX - 0.01, box.minZ + 0.01}, {box.maxX - 0.01, box.maxZ - 0.01},
+        };
+        BlockPos best = null;
+        double bestD = Double.MAX_VALUE;
+        for (double[] c : corners) {
+            BlockPos cell = BlockPos.ofFloored(c[0], fy, c[1]);
+            if (isAir(world, cell.down())) continue;
+            double dx = cell.getX() + 0.5 - player.getX(), dz = cell.getZ() + 0.5 - player.getZ();
+            double d = dx * dx + dz * dz;
+            if (d < bestD) { bestD = d; best = cell; }
+        }
+        return best;
     }
 }

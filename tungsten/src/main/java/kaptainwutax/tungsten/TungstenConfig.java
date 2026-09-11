@@ -2543,6 +2543,59 @@ public class TungstenConfig {
     public boolean arrivalNeedsSettledBody = true;
 
     /**
+     * G42 (2026-09-11): a planned pillar run (place moves straight up) is cut out of the
+     * MovementQueue leg and handed to PillarTask through the wall hand-off, instead of being
+     * executed as a chain of ported MovementPillar steps. Measured on the 14:00 recorded run under
+     * open sky: "step 2 has taken too long (126 ticks) MovementPillar" eleven times in four
+     * minutes, two blocks placed, while a log lay on the canopy four blocks up; PillarTask is the
+     * primitive that clears pit_escape, nav_wall2 and drop_ledge. Read navPillarRuns; bench:
+     * deploy/runner/canopy_drop_test.py.
+     */
+    public boolean pillarRunsGoToPillarTask = true;
+
+    /**
+     * G43 (2026-09-11): a creeper is never engaged at melee range. MobDefenseChain let creepers into
+     * its fight list like any hostile, judged one "beatable" with an iron sword and PURSUED it to
+     * striking distance -- which is its fuse distance: "tester1 был взорван Крипер" on the 14:00
+     * recorded run, hp 20 -> 4.5 in 40 s, respawn with an empty pack. A creeper within 6 blocks
+     * that sees the bot is fled (the same RunAwayFromCreepersTask the fusing branch uses); a
+     * farther one is left alone. Read mdCreeperAvoid; bench: deploy/runner/creeper_avoid_test.py.
+     */
+    public boolean neverMeleeCreepers = true;
+
+    /**
+     * G44 (2026-09-11): when the plan budget runs out, the partial to walk is chosen the way
+     * baritone chooses it (AStarPathFinder COEFFICIENTS / bestSoFar): every GENERATED node is
+     * scored {@code h + cost / coef} for coefficients 1.5..10 and the first candidate, from the
+     * least greedy coefficient up, at least 5 blocks from the start is walked. The old rule (the
+     * lowest-heuristic node POPPED) could not see the dug cells a ninety-block descent needs --
+     * they cost 23 ticks each against a walk's 4.6, so the search opened a disc of surface cells
+     * and reported "walking dead-ends (94.2 -> 94.0)". Read planPartialCoef; bench:
+     * deploy/runner/deep_goal_test.py.
+     */
+    public boolean planPartialLikeBaritone = true;
+
+    /**
+     * G45 (2026-09-11): FastPlanner's start snap (planSnapsStartToSupport) runs only while the
+     * body is AIRBORNE. On the ground the feet cell is the start, whatever the column under its
+     * centre holds: standing on the rim of a three-deep hole, the snap walked the start down the
+     * hole onto the drop the route was for and the planner said "start is goal" 434 times while
+     * the bot stood on the edge (round-4 playthrough). Read planStartSnapRefusedOnGround; bench:
+     * deploy/runner/hole_drop_test.py.
+     */
+    public boolean startSnapOnlyAirborne = true;
+
+    /**
+     * G48 (2026-09-11): an entity beyond GetToEntityTask's close-walk range (8 blocks) is approached
+     * through the altoclef drive (GetNearEntityTask: grid BFS, the ported movements, FastNavigator
+     * when walking cannot reach) and handed back to the physics chase inside it. The physics search
+     * alone lost a 45-block approach to a chicken on the 15:38 recording: a 30-second lock that
+     * moved the body zero, then a wander refused 4014 times, five minutes motionless. Read
+     * entLongHaul; bench: deploy/runner/far_mob_test.py.
+     */
+    public boolean entityLongHaulViaDrive = true;
+
+    /**
      * A movement gives up when the thing in its way can never be aimed at.
      *
      * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on

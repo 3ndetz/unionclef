@@ -44,6 +44,57 @@ public final class FastPlanner {
     /** Heuristic weight: baritone's 3.563, a hair under SPRINT_ONE_BLOCK_COST
      *  (3.564) so the estimate stays an underestimate and A* stays optimal. */
     private static final double HEURISTIC = 3.563;
+
+    /**
+     * WHICH PARTIAL TO WALK WHEN THE BUDGET RUNS OUT -- baritone's answer, ported (G44,
+     * 2026-09-11; AStarPathFinder.java COEFFICIENTS / bestSoFar).
+     *
+     * <p>This planner used to hand back the path to the lowest-heuristic node it had POPPED. For a
+     * goal ninety blocks straight down that node is a neighbour on the surface: every dig costs
+     * ~23 ticks against a walk's 4.6, so A* opens a widening disc of surface cells and the dug
+     * cells -- generated, never popped -- were invisible to the choice. Measured on the 14:00
+     * recorded run at the diamond phase: "walking dead-ends (94.2 -> 94.0) -> physics owns the
+     * rest", then "Ran out of nodes". Baritone judges every GENERATED node against seven
+     * coefficients that discount the cost travelled ({@code h + cost / coef}) and walks the first
+     * candidate, from the least greedy coefficient up, that lies at least {@link #MIN_DIST_PATH}
+     * blocks from the start; the greedier coefficients are exactly what make a dug cell win. Then
+     * it re-plans from there -- which is how it descends to diamond level in legs.
+     */
+    private static final double[] PARTIAL_COEFS = {1.5, 2, 2.5, 3, 4, 5, 10};
+    private static final double MIN_DIST_PATH = 5;
+
+    /** Per-search tracker of the best generated node for each coefficient (see above). */
+    private static final class PartialTracker {
+        final Node[] best = new Node[PARTIAL_COEFS.length];
+        final double[] score = new double[PARTIAL_COEFS.length];
+        void reset(Node start) {
+            for (int i = 0; i < PARTIAL_COEFS.length; i++) {
+                best[i] = start;
+                score[i] = start.heuristic * HEURISTIC;
+            }
+        }
+        void offer(Node n, double cost) {
+            double h = n.heuristic * HEURISTIC;
+            for (int i = 0; i < PARTIAL_COEFS.length; i++) {
+                double s = h + cost / PARTIAL_COEFS[i];
+                if (s < score[i]) { score[i] = s; best[i] = n; }
+            }
+        }
+        Node pick(Node start) {
+            for (int i = 0; i < PARTIAL_COEFS.length; i++) {
+                Node n = best[i];
+                if (n == null || n == start) continue;
+                double dx = n.x - start.x, dy = n.y - start.y, dz = n.z - start.z;
+                if (dx * dx + dy * dy + dz * dz >= MIN_DIST_PATH * MIN_DIST_PATH) return n;
+            }
+            return null;
+        }
+    }
+    private static final ThreadLocal<PartialTracker> PARTIAL = ThreadLocal.withInitial(PartialTracker::new);
+    /** Partials chosen by the coefficient rule instead of the lowest popped heuristic. */
+    public static volatile int planPartialByCoef;
+    /** Start snaps refused because the body was on the ground (G45). */
+    public static volatile int planStartSnapRefusedOnGround;
     private static final double SQRT2 = Math.sqrt(2);
 
     /** Max drop we plan without physics help (fall damage stays survivable). */
@@ -464,12 +515,25 @@ public final class FastPlanner {
         // HAS one, which is where the body is about to land anyway. Same idea as
         // BlockSpacePathFinder.snapToSupport, and it leaves water and ladders alone
         // because those are unstandable on purpose and own a separate generator.
-        if (TungstenConfig.get().planSnapsStartToSupport) {
+        // ⛔ A BODY ON THE GROUND IS SUPPORTED WHERE IT STANDS (G45, 2026-09-11). The snap exists
+        // for a body in the AIR, about to land; applied to a body standing on the rim of a hole it
+        // walked the start three cells DOWN the hole -- onto the very drop the route was for --
+        // and the planner answered "start is goal" 434 times in three minutes while the bot stood
+        // on the edge above it (round-4 playthrough, GetToDropTask@block(-322,71,-542),
+        // navRes=434 short). On the ground the feet cell is the start; the expansion already
+        // trusts the player's own level there (startCellTrustsThePlayer) and steps off the edge
+        // as a planned fall.
+        var startPlayer = TungstenMod.mc == null ? null : TungstenMod.mc.player;
+        boolean airborne = startPlayer == null || !startPlayer.isOnGround();
+        if (TungstenConfig.get().planSnapsStartToSupport
+                && (airborne || !TungstenConfig.get().startSnapOnlyAirborne)) {
             BlockPos snapped = snapStartToSupport(world, start);
             if (snapped != null && !snapped.equals(start)) {
                 planStartSnapped++;
                 start = snapped;
             }
+        } else if (TungstenConfig.get().planSnapsStartToSupport) {
+            planStartSnapRefusedOnGround++;
         }
         NodeMap map = new NodeMap();
         Heap open = new Heap();
@@ -484,6 +548,8 @@ public final class FastPlanner {
         int expanded = 0;
         boolean complete = false;
         Node goalNode = null;
+        PartialTracker partial = PARTIAL.get();
+        partial.reset(startNode);
 
         cntBridge = cntPillar = cntSlimeDrop = cntClimb = cntSpecial = cntBreak = cntHazard = 0;
         SEARCH_WORLD.set(world);
@@ -630,7 +696,16 @@ public final class FastPlanner {
             SEARCH_WORLD.remove();
         }
 
-        Node tail = complete && goalNode != null ? goalNode : best;
+        Node tail;
+        if (complete && goalNode != null) {
+            tail = goalNode;
+        } else if (TungstenConfig.get().planPartialLikeBaritone) {
+            Node byCoef = partial.pick(startNode);
+            if (byCoef != null && byCoef != best) planPartialByCoef++;
+            tail = byCoef != null ? byCoef : best;
+        } else {
+            tail = best;
+        }
         List<Waypoint> path = new ArrayList<>();
         for (Node n = tail; n != null; n = n.parent) {
             path.add(new Waypoint(new BlockPos(n.x, n.y, n.z), n.viaJump, n.toBreak, n.toPlace));
@@ -1634,6 +1709,9 @@ public final class FastPlanner {
         next.toBreak = toBreak;
         next.toPlace = toPlace;
         next.placedDepth = from.placedDepth + (toPlace == null ? 0 : toPlace.size());
+        // Judged at GENERATION, as baritone does: a dug cell that is never popped within the
+        // budget still counts as the best partial for a greedy coefficient (see PARTIAL_COEFS).
+        PARTIAL.get().offer(next, tentative);
         if (next.isOpen()) open.update(next); else open.insert(next);
     }
 

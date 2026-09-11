@@ -165,6 +165,12 @@ public class StorageHelper {
 
         Slot bestToolSlot = null;
         double highestSpeed = Double.NEGATIVE_INFINITY;
+        // A TOOL BEING SAVED STILL BEATS BARE HANDS (G47, 2026-09-11). shouldSaveStack keeps a
+        // worn iron pickaxe for diamond-grade blocks -- right when a stone pickaxe is there to
+        // take the rest, and absurd when it is the only pickaxe: stone punched by hand takes 7.5 s
+        // and drops NOTHING. Remember the best saved tool and fall back to it.
+        Slot savedToolSlot = null;
+        double savedSpeed = Double.NEGATIVE_INFINITY;
         for (Slot slot : Slot.getCurrentScreenSlots()) {
             if (!slot.isSlotInPlayerInventory())
                 continue;
@@ -175,9 +181,11 @@ public class StorageHelper {
             //$$ if (stack.getItem().getDefaultStack().isSuitableFor(state)) { // TODO [1.21.11] tool-class deleted — use isSuitableFor directly
             //#endif
                 if (stack.getItem().getDefaultStack().isSuitableFor(state)) {
-                    if (shouldSaveStack(mod,  state.getBlock(), stack)) continue;
-
                     double speed = ItemHelper.miningSpeedVsBlock(stack, state);
+                    if (shouldSaveStack(mod,  state.getBlock(), stack)) {
+                        if (speed > savedSpeed) { savedSpeed = speed; savedToolSlot = slot; }
+                        continue;
+                    }
                     if (speed > highestSpeed) {
                         highestSpeed = speed;
                         bestToolSlot = slot;
@@ -192,6 +200,7 @@ public class StorageHelper {
                 }
             }
         }
+        if (bestToolSlot == null && savedToolSlot != null) bestToolSlot = savedToolSlot;
         return Optional.ofNullable(bestToolSlot);
     }
 

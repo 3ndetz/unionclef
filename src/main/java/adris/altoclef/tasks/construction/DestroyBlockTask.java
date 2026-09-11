@@ -44,6 +44,27 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
     /** Ticks the approach clock was held because the executor was digging/placing toward the
      *  block or a pillar was going up (G32: a dig is progress, not a stall). */
     public static volatile int dbBuildHeld;
+    /** G47: tool swaps this task made itself before swinging (a pickaxe in the hotbar was never
+     *  selected by the fix chain while navigation was live). Read dbToolEquipped. */
+    public static volatile int dbToolEquipped;
+
+    /** Put the best tool for {@code block} in hand before swinging at it; a no-op when it is
+     *  already there or the pack holds nothing suitable. */
+    private static void equipBestToolFor(AltoClef mod, BlockPos block) {
+        try {
+            if (mod.getFoodChain().isTryingToEat()) return;
+            var exec = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (exec != null && exec.isPlacingNow()) return;   // the placer owns the hand right now
+            BlockState state = mod.getWorld().getBlockState(block);
+            Optional<Slot> best = StorageHelper.getBestToolSlot(mod, state);
+            if (best.isEmpty()) return;
+            net.minecraft.item.Item bestItem = StorageHelper.getItemStackInSlot(best.get()).getItem();
+            if (StorageHelper.getItemStackInSlot(adris.altoclef.util.slots.PlayerSlot.getEquipSlot()).getItem() == bestItem) return;
+            if (mod.getSlotHandler().forceEquipItem(bestItem)) dbToolEquipped++;
+        } catch (Throwable ignored) {
+            // an equip failure must never stop the swing
+        }
+    }
 
     public static volatile int dbTick, dbUnreachMove, dbUnreachWater, dbUnreachPillager,
             dbUnreachNear, dbUnreachFar, dbUnreachDistSum,
@@ -612,6 +633,7 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                     dbLeafCleared++;
                     _moveChecker.reset();   // clearing a path IS progress
                     LookHelper.lookAt(clearReach.get());
+                    equipBestToolFor(mod, blocking);
                     mod.getInputControls().hold(Input.CLICK_LEFT);
                     return null;
                 }
@@ -635,7 +657,15 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             if (!LookHelper.isLookingAt(mod, reach.get())) {
                 LookHelper.lookAt(reach.get());
             }
-            // Tool equip is handled in `PlayerInteractionFixChain`. Oof.
+            // ⛔ THE MINER EQUIPS ITS OWN TOOL (G47, 2026-09-11). This line used to read "Tool
+            // equip is handled in PlayerInteractionFixChain. Oof." -- and that chain refuses to
+            // touch a tool INSIDE THE HOTBAR while navigation is live ("Baritone will take care of
+            // tools inside the hotbar"), an engine that no longer exists. Navigation is live on
+            // nearly every mining tick of the drive, so a pickaxe sitting in the hotbar was never
+            // selected and the bot punched stone bare-handed with the pick one slot over --
+            // the operator saw it on the 14:00 recording. The executor's own break queue already
+            // asks altoclef for the best tool every tick (equipToolHook); this is the same ask.
+            equipBestToolFor(mod, pos);
             mod.getInputControls().hold(Input.CLICK_LEFT);
         } else {
             setDebugState("Getting to block...");

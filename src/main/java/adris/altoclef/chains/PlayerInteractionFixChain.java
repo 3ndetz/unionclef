@@ -84,13 +84,18 @@ public class PlayerInteractionFixChain extends TaskChain {
                 Optional<Slot> bestToolSlot = StorageHelper.getBestToolSlot(mod, state);
                 Slot currentEquipped = PlayerSlot.getEquipSlot();
 
-                // if baritone is running, only accept tools OUTSIDE OF HOTBAR!
-                // Baritone will take care of tools inside the hotbar.
+                // ⛔ "IF BARITONE IS RUNNING, ONLY ACCEPT TOOLS OUTSIDE OF THE HOTBAR -- BARITONE
+                // WILL TAKE CARE OF TOOLS INSIDE THE HOTBAR." That clause outlived the engine it
+                // trusted (G47, 2026-09-11): Nav.isPathing() is true on nearly every mining tick
+                // of the tungsten drive, tungsten equips only for its own break queue, so a
+                // pickaxe in the hotbar was never selected for DestroyBlockTask's mining and the
+                // bot punched stone bare-handed with the pick one slot over (operator, 14:00
+                // recording). The miner now equips for itself; this chain is the safety net and
+                // takes any slot.
                 if (bestToolSlot.isPresent() && !bestToolSlot.get().equals(currentEquipped)) {
                     // ONLY equip if the item class is STRICTLY different (otherwise we swap around a lot)
                     if (StorageHelper.getItemStackInSlot(currentEquipped).getItem() != StorageHelper.getItemStackInSlot(bestToolSlot.get()).getItem()) {
-                        boolean isAllowedToManage = (!Nav.isPathing() ||
-                                bestToolSlot.get().getInventorySlot() >= 9) && !mod.getFoodChain().isTryingToEat();
+                        boolean isAllowedToManage = !mod.getFoodChain().isTryingToEat();
                         if (isAllowedToManage) {
                             Debug.logMessage("Found better tool in inventory, equipping.");
                             ItemStack bestToolItemStack = StorageHelper.getItemStackInSlot(bestToolSlot.get());

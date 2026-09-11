@@ -150,6 +150,8 @@ public final class FastNavigator {
     /** Break runs owned here: started, refused because the walker stopped short, and resumed
      *  after "Mining done". Read as navBreak=started/tooFar/resumed. */
     public static volatile int navBreakStarted, navBreakTooFar, navBreakResumed;
+    /** G42: planned pillar runs cut out of a queue leg and handed to PillarTask. */
+    public static volatile int navPillarRuns;
 
     /** The cell a stalled route was last re-planned from; a second stall in the same cell is the
      *  honest "unreachable from here" verdict. Read navStall=replans/gaveUp. */
@@ -359,6 +361,8 @@ public final class FastNavigator {
         // was simply left out of the list.
         boolean building = (exec != null && (exec.placeQueue != null || exec.breakQueue != null))
                 || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()
+                || kaptainwutax.tungsten.task.PillarTask.isActive()
+                || kaptainwutax.tungsten.task.SwimOutTask.isActive()
                 || (awaitingPhysics
                         && (kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.active.get()
                             || kaptainwutax.tungsten.TungstenModDataContainer.isExecutorRunning()));
@@ -489,6 +493,13 @@ public final class FastNavigator {
         // a row: the placer froze the body 5.5 blocks short, and with that fixed the leg was cut
         // and handed to physics on every leg (12 legs, 12 HANDOFFs, WALKSTOP=0, nobody walking).
         if (kaptainwutax.tungsten.task.BridgeTask.isActive()) return;
+        // A TOWER IS ONE MANOEUVRE TOO (G42, 2026-09-11). While PillarTask (or the swim-out) owns
+        // the body, starting a walker leg here presses movement keys under a jump-and-place --
+        // the same two-owners seam as the bridge above, and the reason the tower must be handed
+        // over as a whole (see the pillar-run cut in planAhead) rather than one MovementPillar
+        // step at a time.
+        if (kaptainwutax.tungsten.task.PillarTask.isActive()
+                || kaptainwutax.tungsten.task.SwimOutTask.isActive()) return;
 
         // ── A break run this navigator owns (see nextBreakCells) ──────────────
         var exB = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
@@ -1018,14 +1029,46 @@ public final class FastNavigator {
                     // (wasTheBridgeBlockAlwaysThere), and the next one sneaks and places. There is no
                     // hand-off left to fumble.
                     boolean placeRun = flaggedWp.toPlace != null && !flaggedWp.toPlace.isEmpty();
-                    int covered = placeRun
+                    // ⛔ A TOWER GOES TO PillarTask, NOT TO A CHAIN OF MovementPillar STEPS (G42,
+                    // 2026-09-11). A place run that starts straight UP is a pillar, and the queue's
+                    // traverse prefix happily covers it -- "MovementQueue: 9 movement(s) -302,110,-213
+                    // -> -302,115,-214 CLIMB+5". Measured on the 14:00 recorded run, under open sky:
+                    // "step 2 has taken too long (126 ticks, expected 25) MovementPillar
+                    // (-302,111,-211)->(-302,112,-211)" eleven times in four minutes, two blocks
+                    // placed in all, the chain dropped and re-planned identically each time while a
+                    // log lay on the canopy four blocks up. PillarTask is the tower primitive that
+                    // clears pit_escape, nav_wall2 and drop_ledge (jump, place while airborne, stay
+                    // centred); the ported per-step pillar with its sneak-pose click window through
+                    // the mouse pipeline is not. So the leg is cut at the tower's foot and the top
+                    // of the vertical run goes through the same hand-off a wall does.
+                    int pillarTop = -1;
+                    if (placeRun && TungstenConfig.get().pillarRunsGoToPillarTask) {
+                        BlockPos foot = cells.get(physics - 1);
+                        BlockPos first = flaggedWp.pos;
+                        if (first.getX() == foot.getX() && first.getZ() == foot.getZ()
+                                && first.getY() == foot.getY() + 1) {
+                            int i = physics;
+                            while (i + 1 < cells.size()
+                                    && cells.get(i + 1).getX() == first.getX()
+                                    && cells.get(i + 1).getZ() == first.getZ()
+                                    && cells.get(i + 1).getY() == cells.get(i).getY() + 1) i++;
+                            pillarTop = i;
+                            navPillarRuns++;
+                        }
+                    }
+                    int covered = placeRun && pillarTop < 0
                             ? kaptainwutax.tungsten.path.movements.MovementQueue.traversePrefix(
                                     cells.subList(0, Math.min(cells.size(), runEnd + 1)))
                             : 0;
                     // The chain must actually REACH the first cell that needs a block placed,
                     // otherwise routing it here achieves nothing and the queue would finish short of
                     // the gap, replan the identical plan and loop. Below that bar, keep the old path.
-                    if (covered >= physics + 1) {
+                    if (pillarTop >= 0) {
+                        // Walk to the foot; the hand-off below sees "rise above jump height,
+                        // nearly overhead" and starts PillarTask to the top of the run.
+                        nextPhysicsTarget = cells.get(pillarTop);
+                        cells = cells.subList(0, physics);
+                    } else if (covered >= physics + 1) {
                         nextPhysicsTarget = null;
                         movementLeg = true;
                         cells = cells.subList(0, covered);
