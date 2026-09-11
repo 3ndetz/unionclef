@@ -1038,8 +1038,10 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 // playerFeet is baritone's own answer (IPlayerContext.java:62-81, the +0.1251 and
                 // the slab correction) and it is what every ported Movement tests itself against,
                 // so the search and the executor now agree on where the bot is standing.
+                // G53: start from the cell that supports the body (a lip-hanging body's centre
+                // column may have no floor at all).
                 net.minecraft.util.math.BlockPos startB =
-                        kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(mod.getPlayer());
+                        kaptainwutax.tungsten.task.FastNavigator.supportedFeet(mod.getPlayer());
                 net.minecraft.util.math.BlockPos goalB = net.minecraft.util.math.BlockPos.ofFloored(gp);
                 java.util.List<net.minecraft.util.math.BlockPos> bfs =
                         kaptainwutax.tungsten.combat.CombatPathfinder.findPath(startB, goalB, mod.getWorld());

@@ -2643,6 +2643,16 @@ public class TungstenConfig {
     public boolean walkerDescentNeedsDescent = true;
 
     /**
+     * G53 (2026-09-11), second half: a route begins from the cell that SUPPORTS the body, not
+     * from the cell under its centre. A body resting on a block's edge has its centre over the
+     * next column, which may have no floor; every planner starting there failed (grid BFS "no
+     * route", the fast planner unable to dig a floor that is not there, physics "ran out of
+     * nodes") -- tree_drop, round 13, sixty seconds on a lip four blocks above the stick. Read
+     * navStartSupport.
+     */
+    public boolean planFromSupportedCell = true;
+
+    /**
      * A movement gives up when the thing in its way can never be aimed at.
      *
      * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on

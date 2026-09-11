@@ -539,7 +539,18 @@ it, so every leg ended without a step and every re-plan produced the same leg. P
 waypoint below the feet is reached by going down, not by standing over it** — while the body is
 on the ground and the waypoint is clearly lower, the walker keeps walking to its centre until the
 hitbox leaves the lip and the body drops; the airborne rule then holds the waypoint until landing.
-Flag `walkerDescentNeedsDescent`; counter `walkerHeldAbove`.
+Flag `walkerDescentNeedsDescent`; counter `walkerHeldAbove`. *Round 13, with that fix in:* still
+red, one layer up — the body at `(803.1, -53)` on the lip of the body layer, the stick four below
+in the very column its centre hangs over, `primDrive NO ROUTE (d4.0)` and the physics search
+`Ran out of nodes` for sixty seconds. A four-block fall is beyond every engine's limit (rightly),
+and the dig down through the leaves next to it was never planned, because **every planner
+started from the centre cell, which has no floor**: the grid BFS finds nothing standable, the
+fast planner rescues the start at the player's level and then can neither dig a floor that is
+not there nor fall in place, and the leg it hands to physics dies. Second principle: **the
+body's cell is the cell that holds it up** — planning starts from the nearest hitbox-overlapped
+cell with a solid block under it (`FastNavigator.supportedFeet`, the test PillarTask already
+uses), so the route begins on the block the body actually rests on and the dig down is its
+first move. Flag `planFromSupportedCell`; counter `navStartSupport`.
 
 **G54. A new pursuit is given up on its first tick and banned for ninety seconds.** Round 11,
 canopy_drop on a freshly recreated client, right after five other benches: `@get raw_iron 1` →

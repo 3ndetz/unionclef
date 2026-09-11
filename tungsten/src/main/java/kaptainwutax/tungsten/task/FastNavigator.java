@@ -123,6 +123,49 @@ public final class FastNavigator {
     /** The exact cell the DRIVE armed this run for, or null (builder cells are not reported). */
     public static BlockPos driveExactCell() { return active && exactFromDrive ? exactCell : null; }
 
+    /** G53: plans that started from the cell SUPPORTING the body instead of the one under its
+     *  centre, because the centre column had nothing under it. */
+    public static volatile int navStartFromSupport;
+
+    /**
+     * THE BODY'S CELL IS THE CELL THAT HOLDS IT UP (G53, 2026-09-11). A body resting on the
+     * edge of a block has its centre over the next column; that column may be a drop, and every
+     * planner that starts there finds a cell with no floor: the grid BFS says "no route", the
+     * fast planner rescues the start with the player's own level and then cannot dig the floor
+     * (there is none) nor fall in place (falls are moves to a neighbour), and the physics search
+     * "runs out of nodes". tree_drop, round 13: the bot at (803.1,-53) with (803,-54) air, the
+     * stick four below in that very column, sixty seconds of "NO ROUTE" and "Ran out of nodes".
+     * Among the cells the hitbox overlaps, take the nearest one with a solid block under it --
+     * the same test PillarTask uses before it builds -- and let the route begin from a floor.
+     */
+    public static BlockPos supportedFeet(ClientPlayerEntity player) {
+        BlockPos centre = kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player);
+        if (!TungstenConfig.get().planFromSupportedCell || !player.isOnGround()) return centre;
+        var world = player.getEntityWorld();
+        BlockPos under = centre.down();
+        if (!world.getBlockState(under).getCollisionShape(world, under).isEmpty()) return centre;
+        net.minecraft.util.math.Box box = player.getBoundingBox();
+        double[][] corners = {
+            {box.minX + 0.01, box.minZ + 0.01}, {box.minX + 0.01, box.maxZ - 0.01},
+            {box.maxX - 0.01, box.minZ + 0.01}, {box.maxX - 0.01, box.maxZ - 0.01},
+        };
+        BlockPos best = null;
+        double bestD = Double.MAX_VALUE;
+        for (double[] c : corners) {
+            BlockPos cell = new BlockPos(net.minecraft.util.math.MathHelper.floor(c[0]), centre.getY(),
+                    net.minecraft.util.math.MathHelper.floor(c[1]));
+            if (cell.equals(centre)) continue;
+            BlockPos b = cell.down();
+            if (world.getBlockState(b).getCollisionShape(world, b).isEmpty()) continue;
+            double dx = cell.getX() + 0.5 - player.getX(), dz = cell.getZ() + 0.5 - player.getZ();
+            double d = dx * dx + dz * dz;
+            if (d < bestD) { bestD = d; best = cell; }
+        }
+        if (best == null) return centre;
+        navStartFromSupport++;
+        return best;
+    }
+
     /** Whose altoclef goal this navigator run was armed for. Diagnostic only. */
     private static String startedFor = "-";
 
@@ -913,7 +956,8 @@ public final class FastNavigator {
         //
         // A tail is a PREDICTION. The bot's block position is a fact. When they disagree, the fact
         // wins; when they agree this changes nothing at all.
-        BlockPos actual = TungstenMod.mc.player != null ? TungstenMod.mc.player.getBlockPos() : null;
+        // G53: "actual" is the cell that supports the body, not the one under its centre.
+        BlockPos actual = TungstenMod.mc.player != null ? supportedFeet(TungstenMod.mc.player) : null;
         if (kaptainwutax.tungsten.TungstenConfig.get().planFromActualPosition
                 && actual != null && from != null && !actual.equals(from)) {
             navPlannedFromStaleTail++;

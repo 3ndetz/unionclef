@@ -243,7 +243,10 @@ recovery, every recovery is a plan**.
       body hangs on a lip with its centre over the drop column and the walker's horizontal
       arrival calls the waypoint three below "reached". Fix `walkerDescentNeedsDescent`: a
       waypoint below the feet is not reached while the body stands above it; walk to its centre
-      until the body drops (`walkerHeldAbove`).
+      until the body drops (`walkerHeldAbove`). Round 13, still red one layer up: every planner
+      started from the centre cell with no floor under it (NO ROUTE / Ran out of nodes). Second
+      fix `planFromSupportedCell`: a route starts from the cell that holds the body up
+      (`FastNavigator.supportedFeet`, `navStartSupport`).
 - [ ] **G54 a new pursuit is given up on its first tick and banned for 90 s** (round 11
       canopy_drop on a fresh client: "wandering / Exploring" from the first sample with the drop
       six blocks away, dropped=true every RTGATE). The chooser's idle clock was a static that

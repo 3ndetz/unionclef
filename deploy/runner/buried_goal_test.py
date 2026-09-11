@@ -14,7 +14,7 @@ Flat server: a chest one below the surface, sand on top of it, the bot standing 
 (phase 1) and then five blocks away (phase 2); `@goto X Y Z` at the sand cell. PASS = the feet
 end up IN the sand cell (on the chest) in both phases, no "arrived" without arrival.
 """
-import functools, json, subprocess, sys, time
+import functools, json, math, subprocess, sys, time
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 840, 300
@@ -55,8 +55,9 @@ def rcon(c):
 
 
 def feet(gs):
-    p = gs["pos"]
-    return (int(p[0] // 1), int(p[1] // 1), int(p[2] // 1))
+    # getGameState()["self"]["pos"] is the string "x,y,z"
+    p = [float(v) for v in str(gs["pos"]).split(",")]
+    return (int(math.floor(p[0])), int(math.floor(p[1])), int(math.floor(p[2])))
 
 
 def build_scene():

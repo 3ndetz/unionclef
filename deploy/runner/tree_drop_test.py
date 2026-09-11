@@ -73,9 +73,11 @@ def rcon(c):
 def nav_lines(n=40):
     """The navigator's own account of the course, from the client log."""
     r = sh(["docker", "exec", C1, "sh", "-c",
-            "tail -n 6000 /mc-data/logs/latest.log | grep -E "
+            "tail -n 12000 /mc-data/logs/latest.log | grep -E "
             "'FastNavigator|Path needs|Pillaring|MovementQueue: [0-9]+ movement|no progress|giving the route|"
-            "Ran out of nodes|partial|Partial|dead end|Drop not|HANDOFF|Walker: BFS|planned|primDrive' "
+            "Ran out of nodes|partial|Partial|dead end|Drop not|HANDOFF|Walker: BFS|planned|primDrive NO|"
+            "PLAN n=|FastPlanner: [0-9]+ nodes|at the dig|Mining done|WALKSTOP|wlk i' "
+            "| grep -v 'repeat muted' "
             f"| tail -n {n}"])
     return [l[11:200].replace("[Render thread/INFO]: [CHAT] ", "").replace("[PathFinder/INFO]: [CHAT] ", "")
             for l in r.stdout.splitlines()]
@@ -92,6 +94,9 @@ def main():
             print("FAIL: never joined test-server"); return 2
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop"); time.sleep(1)
     py4j("chatcmd", c=";settings fireReleaseNeedsFire true"); time.sleep(0.5)
+    # the planner's own lines (PLAN n=.., FastPlanner: N nodes) only print in verbose; the chat
+    # overflows but the client log keeps them, and nav_lines() reads the log
+    py4j("chatcmd", c=";settings verboseDebugLogging true"); time.sleep(0.5)
     rcon(f"gamemode survival {BOT}")
     rcon("difficulty peaceful")
     rcon(f"forceload add {X-10} {Z-10} {X+10} {Z+10}"); time.sleep(1)
@@ -142,11 +147,13 @@ def main():
         if got:
             break
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop")
+    py4j("chatcmd", c=";settings verboseDebugLogging false")
     try:
         st = py4j("stats")["s"]
         tok = [t for t in st.split() if t.startswith(("dropBlock=", "pdFnBuild=", "pdNearBuild=",
                                                           "pdFnOrphan=", "pdRouteStopped=", "navStall=",
-                                                          "navBreak=", "navPartial=", "navPillarRuns="))]
+                                                          "navBreak=", "navPartial=", "navPillarRuns=",
+                                                          "walkerHeldAbove=", "navStartSupport=", "plan="))]
         print(f"  counters: {' '.join(tok)}")
     except Exception:
         pass
