@@ -269,6 +269,17 @@ recovery, every recovery is a plan**.
       (19:08 run: 2 min, 11 stone targets, none broken, dbToolEquipped=0, no pickaxe in the
       pack). Fix: with the requirement unmet the chooser is drops-only; no choosable drop ->
       SatisfyMiningRequirementTask (`dropsOnlyNoDrop`).
+- [ ] **Flaky after round 16 (10/12 green):** buried_goal phase two -- the body circles the sand
+      cell (861 / 859 / 299) and the dig stand is never centred on ("no progress" x6), 1 of 3
+      runs; pit_escape -- when the planner chooses the tunnel east instead of the tower, the dig
+      of the wall block from inside the shaft aborts once ("Mining aborted: ticks=302 dist=1.50")
+      and the escape stalls, 1 of 3 runs. Both want the verbose lines of a failing run.
+- [ ] **G60 a runaway tower toward a reach goal below** (19:57 run, 5:20: coal at (631,67,724)
+      two below the feet; the approach's reach plan handed off "pillaring to y=66", "no
+      progress", "mining the ceiling first (3)", "pillaring to y=72", "pillaring to y=82" --
+      placed 14 blocks in 25 s up a spruce, then fell 14 (hp 20->12). Each re-plan from the
+      tower's top hands the next pillar run to PillarTask although the goal is below. Open;
+      the G56 ceiling dig fed it. Needs the verbose PLAN lines of such a run.
 - [ ] **G58 a search that spent its whole budget is read as unreachable** (19:34 run: 90 s on a
       cliff, "no leg toward a goal 5 below" every 2 s, 7232 nodes in 251 ms of 250). Fix
       `planBudgetBoostBeforeGiveUp`: one more search at 4x the budget before the honest give-up
