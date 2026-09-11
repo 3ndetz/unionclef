@@ -117,6 +117,11 @@ lands with a deterministic test + nav 14/14 before it's checked off.
       Proper fix: route the water->land+1 transition through a swim-up-out move (MovementSwim can
       drive it: base update presses JUMP in liquid, the aim fix points at the ledge) instead of the
       FastNavigator pillar/physics path. Bench: deploy/runner water lane with a far bank raised +1.
+      NEXT-STEP (found 2026-09-11): FastNavigator delegates to BlockPathWalker + the physics
+      engine and does not press keys itself; the pillar climb uses a dedicated PillarTask (per-tick
+      key driver via the client mixin). So the clean fix is a NEW SwimOutTask mirroring PillarTask:
+      when feet in water at a low ledge, hold JUMP (rise) + MOVE_FORWARD aimed at the ledge until
+      standing on it, and FastNavigator starts it instead of PillarTask when player.isTouchingWater().
       Original diagnosis for reference: the food task
       (`Collect 220 food`) chases a pig, `TungstenHelper.tryPathToEntity` hands `entity.getPos()`
       to `tryPathTo`, and when the pig sits ~1 block away in a cell the standable-snap treats as
