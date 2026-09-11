@@ -269,6 +269,13 @@ recovery, every recovery is a plan**.
       (19:08 run: 2 min, 11 stone targets, none broken, dbToolEquipped=0, no pickaxe in the
       pack). Fix: with the requirement unmet the chooser is drops-only; no choosable drop ->
       SatisfyMiningRequirementTask (`dropsOnlyNoDrop`).
+- [ ] **G58 a search that spent its whole budget is read as unreachable** (19:34 run: 90 s on a
+      cliff, "no leg toward a goal 5 below" every 2 s, 7232 nodes in 251 ms of 250). Fix
+      `planBudgetBoostBeforeGiveUp`: one more search at 4x the budget before the honest give-up
+      (`navBudgetBoost`).
+- [ ] **G59 a target under a one-block cover** (19:34 run: 95 s at (81,124,-44), the reach ray
+      through the bot's own floor, 17 timer verdicts, 46 targets). The approach must dig the
+      cover and stand in it, as baritone's GoalGetToBlock does from above. Open.
 - [ ] **G38 target flip-flop** -- NOT re-measured by the 19:08 run after all: the RTGATE lines
       that read stick -> wooden_pickaxe -> cobblestone every 3-5 s are the per-task rate-limited
       print (every 400th gate tick of EACH resource task in the nest, ~13 tasks a tick), not a

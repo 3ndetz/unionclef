@@ -630,6 +630,23 @@ unmet, the drop and only the drop** — the chooser's blocks are off the table (
 when no drop can be chosen either (banned, blacklisted) the tool is the job after all
 (`SatisfyMiningRequirementTask`). Counter `dropsOnlyNoDrop`.
 
+**G58. A search that spent its whole budget is read as "unreachable".** The 19:34 recording
+(the first broadly green build: far_mob 2/2, tree_drop 2/2, buried_goal, canopy, hole_drop,
+dig_reach, pit_table, nav 3/3) stood ninety seconds on a cliff above a drop at `(60, 98, -123)`:
+`FastNavigator: no leg from here toward a goal 5 below (5.7 -> 3.0) — giving the route up` every
+two seconds, `plan=540/7232/251ms` — each search 7000 nodes in 251 ms of a 250 ms budget, the
+best partial inside five blocks because the dig moves round a cliff are dear and the frontier
+never got past them, so G49's honest give-up fired where digging down was the answer. Baritone
+plans for half a second and two on failure. Principle: **a budget that ran out is not a verdict**
+— before the give-up, a search that hit its budget runs once more at four times the budget
+(`planBudgetBoostBeforeGiveUp`; `navBudgetBoost`).
+
+**G59 (open). A target under a one-block cover.** Same recording, 1:05–2:40 at `(81, 124, -44)`:
+the miner in reach of stone under grass beside its feet, the reach ray through its own floor
+(`dbBlocked=69/0/0` self-floor, `dbUnreachMove=17`, `dbTargets=46/16`). The approach's adjacency
+accepts a cell from which the block cannot be struck; the plan should dig the cover and stand in
+it (the block then under the feet), as baritone's GoalGetToBlock does from above.
+
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`
 once at t≈30 s (an exception in `getTaskChainString`, cosmetic).

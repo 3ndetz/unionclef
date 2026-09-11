@@ -129,6 +129,11 @@ public final class FastNavigator {
     /** G56: wall hand-offs that mined the ceiling above the body before the tower, and routes
      *  given up because that ceiling could not be broken. */
     public static volatile int navCeilingMined, navCeilingRefused;
+    /** G58: searches re-run once with four times the budget before a goal below is given up,
+     *  because the first search had spent its whole budget. */
+    public static volatile int navBudgetBoosted;
+    private static volatile boolean budgetBoostNext = false;
+    private static volatile boolean budgetBoostedThisRoute = false;
 
     /**
      * THE BODY'S CELL IS THE CELL THAT HOLDS IT UP (G53, 2026-09-11). A body resting on the
@@ -325,6 +330,8 @@ public final class FastNavigator {
         exactCell = null;
         exactFromDrive = false;
         pendingGiveUp = false;
+        budgetBoostNext = false;
+        budgetBoostedThisRoute = false;
         if (pillarSteerTicks > 0) releaseSteer();
         pillarSteerTicks = 0;
         reachBlock = null;
@@ -1018,13 +1025,16 @@ public final class FastNavigator {
         // G55: an exact-cell route completes IN the cell, never one above it (the planner's
         // one-block height tolerance is for "go over there" goals only).
         final boolean exact = exactCell != null;
+        // G58: one search per route may run with four times the budget (see the dead-end branch).
+        final boolean boost = budgetBoostNext;
+        if (boost) { budgetBoostNext = false; budgetBoostedThisRoute = true; }
+        final long budgetMs = TungstenConfig.get().fastPlanBudgetMs * (boost ? 4 : 1);
         Thread t = new Thread(() -> {
             try {
                 var world = TungstenMod.mc.world;
                 if (world == null) return;
                 BlockPos goalCell = BlockPos.ofFloored(target);
-                FastPlanner.Result res = FastPlanner.plan(world, start, goalCell,
-                        TungstenConfig.get().fastPlanBudgetMs, reach, exact);
+                FastPlanner.Result res = FastPlanner.plan(world, start, goalCell, budgetMs, reach, exact);
                 if (!active) return;
                 // A ONE-WAYPOINT PLAN IS AN ANSWER: THERE IS NOTHING TO WALK FROM HERE.
                 // FastPlanner returns exactly that when the start already satisfies the goal --
@@ -1109,6 +1119,23 @@ public final class FastNavigator {
                     } else if (before - after < MIN_PARTIAL_PROGRESS
                             && TungstenConfig.get().planPartialLikeBaritone
                             && goalCell.getY() < start.getY() - 2) {
+                        // ⛔ A SEARCH THAT SPENT ITS WHOLE BUDGET HAS NOT SAID "UNREACHABLE" (G58,
+                        // 2026-09-11). The 19:34 recording stood ninety seconds on a cliff above a
+                        // drop: "no leg from here toward a goal 5 below (5.7 -> 3.0)" every two
+                        // seconds, each search 7000 nodes in 251 ms of a 250 ms budget, the best
+                        // partial inside five blocks because the dig moves round a cliff are dear
+                        // and the frontier never got past them. Baritone plans for half a second
+                        // and two on failure; give this search one more go at four times the
+                        // budget before the honest give-up, and count how often that was enough.
+                        if (TungstenConfig.get().planBudgetBoostBeforeGiveUp && !budgetBoostedThisRoute
+                                && res.millis >= budgetMs - 10) {
+                            navBudgetBoosted++;
+                            budgetBoostNext = true;
+                            Debug.logMessage(String.format(
+                                    "FastNavigator: the search toward a goal %d below spent its budget (%d nodes, %d ms) — one more try with 4x",
+                                    start.getY() - goalCell.getY(), res.expanded, res.millis));
+                            return;   // the tick loop asks again; the next search runs boosted
+                        }
                         navDeadEnd++;
                         navNoPartialBelow++;
                         Debug.logWarning(String.format(

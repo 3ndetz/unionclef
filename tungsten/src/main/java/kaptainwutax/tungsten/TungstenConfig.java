@@ -2675,6 +2675,15 @@ public class TungstenConfig {
     public boolean towerMinesItsCeiling = true;
 
     /**
+     * G58 (2026-09-11): before a goal below is given up for want of a partial (G49), a search that
+     * spent its whole time budget is run once more with four times the budget. The 19:34
+     * recording stood ninety seconds on a cliff above a drop: 7000 nodes in 251 ms of 250 every
+     * two seconds, the best partial inside five blocks, "giving the route up" each time. Read
+     * navBudgetBoosted.
+     */
+    public boolean planBudgetBoostBeforeGiveUp = true;
+
+    /**
      * A movement gives up when the thing in its way can never be aimed at.
      *
      * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on
