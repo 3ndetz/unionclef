@@ -499,6 +499,15 @@ public class MineAndCollectTask extends ResourceTask {
                     ? Nav.isExecutingRoute() : Nav.isPathing()) {
                 progressChecker.reset();
             }
+            // A DIG IS PROGRESS TOO (G32, 2026-09-11): while the executor is mining or placing its
+            // way to the block, or a pillar is going up, the body stands still on purpose. The
+            // "failed to mine, unreachable" verdict below must not be reached from that state --
+            // it was, on the dig bench, and condemned reachable stone six blocks under the feet.
+            var exM = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if ((exM != null && (exM.breakQueue != null || exM.placeQueue != null))
+                    || kaptainwutax.tungsten.task.PillarTask.isActive()) {
+                progressChecker.reset();
+            }
             if (miningPos != null && !progressChecker.check(mod)) {
                 Nav.cancel();
                 Debug.logMessage("Failed to mine block. Suggesting it may be unreachable.");

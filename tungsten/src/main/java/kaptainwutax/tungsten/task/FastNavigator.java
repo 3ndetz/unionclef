@@ -110,6 +110,33 @@ public final class FastNavigator {
         return startedFor;
     }
 
+    /**
+     * The block a REACH route is heading for, or null for an ordinary position goal. While set the
+     * planner completes on any cell adjacent to it ({@code FastPlanner.adjacentToBlock}) and may dig
+     * its way there; arrival is that same adjacency, not a distance sphere -- a mining target is
+     * solid, so no sphere around it is ever entered (docs/BARITONE-GAPS.md G25).
+     */
+    private static volatile BlockPos reachBlock = null;
+
+    /** The block a running reach route serves, or null. Lets the drive tell "armed for this
+     *  block" from "armed for something else" without stopping a route that is doing its job. */
+    public static BlockPos reachBlock() { return reachBlock; }
+
+    /** The reach route has arrived: the same test the planner completed on, evaluated for the
+     *  body's real feet cell against the live world. */
+    private static boolean reachArrived(ClientPlayerEntity player, BlockPos block) {
+        BlockPos feet = kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player);
+        return FastPlanner.reachGoalSatisfied(player.getEntityWorld(), feet.getX(), feet.getY(),
+                feet.getZ(), block);
+    }
+
+    /** Route to a NEIGHBOUR of {@code block} (baritone's GoalGetToBlock), digging if needed.
+     *  {@code target} is the block's centre, which the heuristic and the stall watchdog steer by. */
+    public static void start(Vec3d target, BlockPos block) {
+        start(target);
+        reachBlock = block;
+    }
+
     public static void start(Vec3d target) {
         stop();
         // WHOSE goal is this route serving? The drive publishes the altoclef goal every tick, but
@@ -143,6 +170,7 @@ public final class FastNavigator {
         active = false;
         goal = null;
         exactCell = null;
+        reachBlock = null;
         nextLeg = null;
         legTail = null;
         nextPhysicsTarget = null;
@@ -177,9 +205,13 @@ public final class FastNavigator {
         // Only the upward case changes: a goal level with the player or below it still arrives
         // exactly as before, which is every goal the nav courses use.
         double goalRise = goal.y - player.getY();
+        // A REACH ROUTE ARRIVES BESIDE THE BLOCK, on the same predicate the planner completed on.
+        BlockPos reach = reachBlock;
         boolean arrived = exactCell != null
                 ? player.getBlockPos().equals(exactCell)
-                : (dist <= ARRIVE_DIST && goalRise < 1.0);
+                : reach != null
+                    ? reachArrived(player, reach)
+                    : (dist <= ARRIVE_DIST && goalRise < 1.0);
         if (arrived) {
             Debug.logMessage("FastNavigator: arrived (" + String.format("%.1f", dist) + ")");
             BlockPathWalker.stop();
@@ -404,8 +436,14 @@ public final class FastNavigator {
                 // its failure condition and its valid positions), not from wiring tungsten's
                 // existing tasks into a plan that was never shaped for them. See
                 // docs/BARITONE-PORT-SPEC.md.
+                // A PILLAR NEEDS BLOCKS. This hand-off fired with an empty inventory on the first
+                // @gamer run of the reach goal (2026-09-11): "Pillaring up to y=118" -> "Pillar:
+                // out of blocks" -> stop -> replan -> the same hand-off, for 150 s under a tree.
+                // Swimming out needs none; a tower does, so ask the pocket first.
+                boolean canPillar = player.isTouchingWater()
+                        || FastPlanner.countPlaceable(player) > 0;
                 if (rise > PlayerFitJumpHeight() && horiz < 2.5
-                        && TungstenConfig.get().planPlaceMoves
+                        && TungstenConfig.get().planPlaceMoves && canPillar
                         && !kaptainwutax.tungsten.task.PillarTask.isActive()
                         && !kaptainwutax.tungsten.task.SwimOutTask.isActive()) {
                     if (TungstenConfig.get().swimOutOfWaterNotPillar && player.isTouchingWater()) {
@@ -629,13 +667,14 @@ public final class FastNavigator {
         FastPlanner.placeBudget = FastPlanner.countPlaceable(TungstenMod.mc.player);
         final BlockPos start = from;
         final Vec3d target = goal;
+        final BlockPos reach = reachBlock;
         Thread t = new Thread(() -> {
             try {
                 var world = TungstenMod.mc.world;
                 if (world == null) return;
                 BlockPos goalCell = BlockPos.ofFloored(target);
                 FastPlanner.Result res = FastPlanner.plan(world, start, goalCell,
-                        TungstenConfig.get().fastPlanBudgetMs);
+                        TungstenConfig.get().fastPlanBudgetMs, reach);
                 if (!active) return;
                 // A ONE-WAYPOINT PLAN IS AN ANSWER: THERE IS NOTHING TO WALK FROM HERE.
                 // FastPlanner returns exactly that when the start already satisfies the goal --

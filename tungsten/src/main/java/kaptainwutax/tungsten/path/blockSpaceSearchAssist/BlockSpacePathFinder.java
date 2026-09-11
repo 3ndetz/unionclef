@@ -188,11 +188,18 @@ public class BlockSpacePathFinder {
 			if (isStandable(world, cand)) return cand;
 		}
 
-		// 3) last resort: nearest standable cell in a small sweep (+-2 xz, +-2 y)
+		// 3) last resort: nearest standable cell in a small sweep (+-2 xz, 0..-2 y)
+		// NEVER ABOVE THE BODY. This sweep used to try dy=+1 first, and a start one cell above the
+		// player's feet is a route whose first support is the cell the player is STANDING IN --
+		// the search then plans a bridge floor into the bot's own hitbox, and the executor spends
+		// 200 ticks trying to click-place into itself ("Bridge place aborted (TIMEOUT) ...
+		// target=<own feet cell>" every 30 s in the 2026-09-11 pit stall, docs/BARITONE-GAPS.md
+		// G28). Placing under yourself is a PILLAR move, which the planner emits on its own when
+		// it is the answer; it is never a start cell.
 		for (int r = 1; r <= 2; r++) {
 			for (int dx = -r; dx <= r; dx++) {
 				for (int dz = -r; dz <= r; dz++) {
-					for (int dy = 1; dy >= -2; dy--) {
+					for (int dy = 0; dy >= -2; dy--) {
 						BlockPos cand = startPos.add(dx, dy, dz);
 						if (isStandable(world, cand)) return cand;
 					}

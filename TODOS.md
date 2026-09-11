@@ -52,6 +52,66 @@ test + full nav-suite regression before it counts done.
 correctness set (G10/G11/G12 remove "the bot did something weird" faults), then LOW polish. Each
 lands with a deterministic test + nav 14/14 before it's checked off.
 
+### MICRO-STALL ANATOMY — one recorded @gamer run, every fault root-caused (2026-09-11)
+Full write-up with log lines and file:line for each: **docs/BARITONE-GAPS.md**, section
+"2026-09-11 — anatomy of ONE recorded playthrough". Operator's rule (2026-09-11): fix the MICRO
+faults too, not only the freezes — "as the cards fall": a random shimmy either digs the right way
+by luck or the bot spins in place; **stalls must not exist at all; a random walk is never a
+recovery, every recovery is a plan**.
+- [x] **G25 mining target approached as a cell to STAND IN → zero-length plans every tick, block
+      blacklisted as unreachable, no dig ever planned.** DONE 2026-09-11: dig_reach_test PASS —
+      stone 6 blocks under the feet mined in 12 s, 0 shimmies, 0 blacklists (needed G33 too);
+      tree_reach_test PASS — a log up a 6-high trunk taken from the ground with an empty pocket
+      in 12 s, 0 pillar attempts (the goal test is adjacency OR within 4.0 with line of sight,
+      `FastPlanner.reachGoalSatisfied`; the first @gamer run on pure adjacency stood under a
+      spruce for 150 s).
+      Root: `DestroyBlockTask → GetToBlockTask →
+      AltoGoal.block` + `snapGoalToStandable` column search → surface cell → `planStartIsGoal` loop
+      ("Time taken to execute" every 0.6 s, `snap=…/self1833`, `atGoal=182`). Principle: a block to
+      break is a REACH goal (baritone GoalGetToBlock) planned by FastPlanner with a reach-goal test
+      and dig allowed. Fix: `AltoGoal.Adjacent`, `GetAdjacentToBlockTask`,
+      `FastPlanner.plan(…, reachBlock)`, `FastNavigator.start(target, reachBlock)`,
+      `CustomBaritoneGoalTask.driveReach`, flag `mineGoalIsAdjacent`. Bench: dig_reach_test.py
+      (stone 6 below the feet under dirt; `@get cobblestone` must dig, zero shimmies).
+- [ ] **G26 the unstuck is a RANDOM DIG.** `SafeRandomShimmyTask` holds CLICK_LEFT. Six shimmies
+      carried the bot to the stone by luck. Fix (a): no attack key in the shimmy. Fix (b): a
+      planned escape (FastNavigator, break+place, to the live goal or the surface) before any
+      shimmy — shared with G29.
+- [x] **G27 PlaceBlockNearbyTask picks the bot's OWN feet cell** DONE 2026-09-11: pit_table_test
+      PASS (stone sword crafted from a 1x1 pit in 6 s; a legal cell above the head was found, the
+      niche carve stays as the fallback). (`isInsidePlayer` is a 2-block
+      radius scored +3, `canPlace` never tests air; in a 1x1 pit the feet win). Then
+      `placementPlausible` refuses, wander, 6 minutes. Fix: candidates must be replaceable, have a
+      clickable face, and not intersect any entity box (`WorldHelper.wouldIntersectAnEntity`);
+      with no such cell the task CARVES A NICHE (break a wall cell at foot level, then place),
+      flag `placeNearbyCarvesNiche`. Bench: pit_table_test.py (`@get stone_sword` from a 1x1 pit
+      with a crafting table in the pack).
+- [ ] **G28 a PILLAR waypoint executed as a BRIDGE**: `At the gap — bridging without a physics
+      leg` → `Bridge place aborted (TIMEOUT) … target=<own feet cell>` every 30 s. Fix: a place
+      cell that holds the body is a pillar → PillarTask (guard in the PathFinder shortcut and in
+      PathExecutor.tickPlacing, flag `ownCellPlaceIsPillar`); `BlockSpacePathFinder.snapToSupport`
+      never moves a start ABOVE the player.
+- [ ] **G29 wander in a confined space is a no-op** (`Failed exploring` x40, `wanderDenied=6351`,
+      8 neighbours feetBlocked). A wander that cannot route is an escape, planned with the build
+      engine. Fix with G26(b).
+- [ ] **G30 `Time taken to execute` logged on every path completion.** Gate: ≥2 nodes or ≥1 s or
+      verbose.
+- [ ] **G31 the executor mines cells it cannot see** (`Mining aborted … dist=1.06` on a diagonal
+      neighbour, `dist=1.50` on an occluded above-adjacent cell; `breakMissWhy=1/244`). The "At the
+      wall" shortcut fires on eye distance regardless of LOS; the flat 300-tick abort (G13) then
+      loops it. Fix: visible face required; in-plan occluder mined first; foreign occluder → no
+      shortcut, physics delivers a cell with LOS.
+- [ ] **G32 "unreachable" declared by a timer, not by a search** (`Try 2/4` on every G25 no-op
+      approach). A block is unreachable only when the dig-capable planner returns incomplete.
+      Fix: DestroyBlockTask's approach clock and MineAndCollectTask's progress checker HOLD while
+      the executor has a break/place queue or a pillar is up (a dig is progress, `dbBuildHeld`).
+- [x] **G33 the attack key is released EVERY TICK by MobDefenseChain ("stop putting out fire"),
+      so no planned dig ever breaks a block.** Found by the dig bench: aim on the planned cell 2990
+      ticks, `mine=6/2978`, `attackThief=[MobDefenseChain:663 x2982]`. The fix already existed
+      behind `fireReleaseNeedsFire` (default false, waiting for an A/B); the bench IS that A/B.
+      Default flipped to true; the benches pin it because the stand's saved tungsten.json can hold
+      the old value. Principle: a per-tick writer undoing another owner's key is a theft.
+
 ### TOP PRIORITY — found by running @gamer twice on real survival terrain (2026-09-10)
 - [x] **G21 entity-approach "close but cannot hit" dead zone → the bot idled instead of
       killing.** FIXED (commit 87b26023). Root cause turned out to be a DEAD ZONE, not only the

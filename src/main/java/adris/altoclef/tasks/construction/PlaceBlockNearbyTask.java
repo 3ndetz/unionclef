@@ -81,6 +81,8 @@ public class PlaceBlockNearbyTask extends Task {
      * Read as pnbExit=wander/progFail/locate/noSpot.
      */
     public static volatile int pnbWander, pnbProgFail, pnbLocate, pnbNoSpot;
+    /** Times no placeable cell existed and a wall cell was carved to make one (G27). */
+    public static volatile int pnbCarve;
 
     @Override
     protected Task onTick() {
@@ -170,6 +172,19 @@ public class PlaceBlockNearbyTask extends Task {
             justPlaced = tryPlace;
             return new PlaceBlockTask(tryPlace, toPlace);
         }
+        // NO FREE CELL? MAKE ONE. In a 1x1 pit every neighbour is stone and the only air cells are
+        // the two the body occupies -- which is how the 2026-09-11 playthrough spent six minutes
+        // trying to put a crafting table under its own feet (docs/BARITONE-GAPS.md G27). Baritone's
+        // answer to "nowhere to build" is to break something: carve a niche in a wall at foot
+        // level (a cell with a solid block under it, so the table has support), then place there.
+        if (kaptainwutax.tungsten.TungstenConfig.get().placeNearbyCarvesNiche) {
+            BlockPos niche = locateNicheToCarve(mod);
+            if (niche != null) {
+                pnbCarve++;
+                setDebugState("No free cell to place in — carving a niche at " + niche.toShortString());
+                return new DestroyBlockTask(niche);
+            }
+        }
 
         // Look in random places to maybe get a random hit
         if (_randomlookTimer.elapsed()) {
@@ -216,8 +231,9 @@ public class PlaceBlockNearbyTask extends Task {
             //Debug.logMessage("TEMP: A: " + bpos);
             if (WorldHelper.canPlaceAgainst(bpos)) {
                 BlockPos placePos = bhit.getBlockPos().add(bhit.getSide().getVector());
-                // Don't place inside the player.
-                if (WorldHelper.isInsidePlayer(placePos)) {
+                // Don't place inside the player -- or any other entity. isInsidePlayer is a
+                // two-block RADIUS, not a hitbox test; this asks whether the block would fit.
+                if (WorldHelper.wouldIntersectAnEntity(placePos, toPlace.length > 0 ? toPlace[0] : null)) {
                     return null;
                 }
                 //Debug.logMessage("TEMP: B (actual): " + placePos);
@@ -277,11 +293,21 @@ public class PlaceBlockNearbyTask extends Task {
         double smallestScore = Double.POSITIVE_INFINITY;
         BlockPos start = mod.getPlayer().getBlockPos().add(-range,-range,-range);
         BlockPos end = mod.getPlayer().getBlockPos().add(range,range,range);
+        net.minecraft.world.World world = mod.getWorld();
+        Block wanted = toPlace.length > 0 ? toPlace[0] : null;
         for (BlockPos blockPos : WorldHelper.scanRegion(start, end)) {
-            boolean solid = WorldHelper.isSolidBlock(blockPos);
-            boolean inside = WorldHelper.isInsidePlayer(blockPos);
-            // We can't break this block.
-            if (solid && !WorldHelper.canBreak(blockPos)) {
+            // A CANDIDATE IS A CELL THE BLOCK CAN GO INTO, FULL STOP (G27, 2026-09-11).
+            // This used to SCORE "solid" (+4) and "inside the player" (+3) and pick the lowest
+            // score, with distance as the main term -- so in a 1x1 pit, where every neighbour
+            // is stone, the bot's own feet cell (distance 0.6, air, floor under it) won by a
+            // mile and the placer was asked to put a crafting table INTO the body, forever.
+            // Three things make a cell placeable and none of them is a matter of degree:
+            //   1. it is replaceable (air, grass, snow layer...), never a solid block -- a solid
+            //      cell is CARVED first (locateNicheToCarve), it is not "placed into";
+            //   2. the block that would appear there fits -- it overlaps no entity's box, the
+            //      player's first of all;
+            //   3. there is a face to click: some neighbour a block can be placed against.
+            if (!world.getBlockState(blockPos).isReplaceable()) {
                 continue;
             }
             // We can't place here as defined by user.
@@ -292,10 +318,16 @@ public class PlaceBlockNearbyTask extends Task {
             if (!WorldHelper.canReach(blockPos) || !WorldHelper.canPlace(blockPos)) {
                 continue;
             }
+            if (WorldHelper.wouldIntersectAnEntity(blockPos, wanted)) {
+                continue;
+            }
+            if (!hasFaceToPlaceAgainst(blockPos)) {
+                continue;
+            }
             boolean hasBelow = WorldHelper.isSolidBlock(blockPos.down());
             double distSq = BlockPosVer.getSquaredDistance(blockPos,mod.getPlayer().getPos());
 
-            double score = distSq + (solid ? 4 : 0) + (hasBelow ? 0 : 10) + (inside ? 3 : 0);
+            double score = distSq + (hasBelow ? 0 : 10);
 
             if (score < smallestScore) {
                 best = blockPos;
@@ -304,5 +336,35 @@ public class PlaceBlockNearbyTask extends Task {
         }
 
         return best;
+    }
+
+    /** Vanilla needs a face to click: at least one neighbour a block can be placed against. */
+    private static boolean hasFaceToPlaceAgainst(BlockPos pos) {
+        for (net.minecraft.util.math.Direction d : net.minecraft.util.math.Direction.values()) {
+            if (WorldHelper.canPlaceAgainst(pos.offset(d))) return true;
+        }
+        return false;
+    }
+
+    /**
+     * The wall cell to break so that a placeable cell exists: a cardinal neighbour of the feet
+     * (foot level first, then head level) that is solid, breakable, allowed by the caller's
+     * predicate, and has a solid block under it -- once opened it is exactly what
+     * {@link #locateClosePlacePos} looks for. Null when the bot is not walled in, or nothing
+     * around it may be broken.
+     */
+    private BlockPos locateNicheToCarve(AltoClef mod) {
+        BlockPos feet = mod.getPlayer().getBlockPos();
+        for (int dy = 0; dy <= 1; dy++) {
+            for (net.minecraft.util.math.Direction d : net.minecraft.util.math.Direction.Type.HORIZONTAL) {
+                BlockPos wall = feet.offset(d).up(dy);
+                if (!WorldHelper.isSolidBlock(wall)) continue;
+                if (!WorldHelper.canBreak(wall)) continue;
+                if (!_canPlaceHere.test(wall)) continue;
+                if (!WorldHelper.isSolidBlock(wall.down())) continue;
+                return wall;
+            }
+        }
+        return null;
     }
 }

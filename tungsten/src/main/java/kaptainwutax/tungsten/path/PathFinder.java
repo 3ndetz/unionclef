@@ -633,6 +633,21 @@ public class PathFinder {
 	    if (pendingPlaces != null && !pendingPlaces.isEmpty()
 	            && blockPath.get().size() <= 2
 	            && player.getEyePos().distanceTo(net.minecraft.util.math.Vec3d.ofCenter(pendingPlaces.get(0))) < 5.0) {
+	        // THE PLANK UNDER MY OWN FEET IS A PILLAR, NOT A BRIDGE (docs/BARITONE-GAPS.md G28).
+	        // A pending place in the cell the body occupies cannot be click-placed from any side;
+	        // handing it to the bridge placer produced "Bridge place aborted (TIMEOUT) ...
+	        // target=<own feet cell>" every 30 s for six minutes on the 2026-09-11 pit stall. The
+	        // move it describes is a pillar step, and PillarTask performs that one.
+	        if (TungstenConfig.get().ownCellPlaceIsPillar
+	                && PathExecutor.cellHoldsTheBody(player, pendingPlaces.get(0))) {
+	            PathExecutor.ownCellPlaceAsPillar++;
+	            Debug.logMessage("At the gap — the plank is under my own feet: pillaring instead");
+	            if (!kaptainwutax.tungsten.task.PillarTask.isActive()) {
+	                kaptainwutax.tungsten.task.PillarTask.startTo(pendingPlaces.get(0).getY() + 1);
+	            }
+	            PathFinder.blockPath = Optional.empty();
+	            return;
+	        }
 	        Debug.logMessage("At the gap — bridging without a physics leg");
 	        TungstenModDataContainer.EXECUTOR.setPath(new ArrayList<>());
 	        TungstenModDataContainer.EXECUTOR.blockPath = blockPath.get();

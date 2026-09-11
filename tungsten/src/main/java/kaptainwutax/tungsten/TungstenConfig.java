@@ -2437,6 +2437,48 @@ public class TungstenConfig {
     public boolean breakGoalIsReach = false;
 
     /**
+     * G25 (2026-09-11, docs/BARITONE-GAPS.md): a block that must be BROKEN is approached as a REACH
+     * goal -- baritone's GoalGetToBlock -- planned by FastNavigator/FastPlanner with the adjacency
+     * goal test and dig moves allowed, instead of as a cell to be stood in that the drive snaps to
+     * the surface above the block. This is the fix the breakGoalIsReach note above asked for:
+     * "fixing the OCCUPANCY GOAL AT ITS SOURCE for targets that must be broken". Measured on the
+     * recorded playthrough it replaces: two minutes of one-cell plans, seven reachable stone blocks
+     * blacklisted as unreachable, six random-dig shimmies. Read pdReach=armed/held for proof it
+     * fires; bench: deploy/runner/dig_reach_test.py.
+     */
+    public boolean mineGoalIsAdjacent = true;
+
+    /**
+     * G27: when PlaceBlockNearbyTask finds no cell a block can go into (a 1x1 pit: every neighbour
+     * solid, the only air is the body's own two cells), CARVE ONE -- break a wall cell at foot
+     * level that has a solid block under it, then place there. Read pnbCarve. Bench:
+     * deploy/runner/pit_table_test.py.
+     */
+    public boolean placeNearbyCarvesNiche = true;
+
+    /**
+     * G28: a queued PLACE whose cell the body occupies is a PILLAR step (jump, place under, land
+     * one higher) and goes to PillarTask; it is never click-placed as a bridge plank, which vanilla
+     * refuses and which timed out every 30 s for six minutes on the recorded pit stall. Guarded in
+     * PathFinder's "At the gap" shortcut and in PathExecutor.tickPlacing. Read ownCellPlaceAsPillar.
+     */
+    public boolean ownCellPlaceIsPillar = true;
+
+    /**
+     * G26: UnstuckChain's recovery is a PLANNED escape (PlannedEscapeTask -> FastNavigator with
+     * dig/build allowed, to the live goal / the surface / the nearest open cell) and falls back
+     * to a shimmy -- which no longer holds the attack key -- only when no plan can be made.
+     * Read escape=armed/goal/surface/nearby/none and escapeMoved/escapeFellBack.
+     */
+    public boolean unstuckPlansEscape = true;
+
+    /**
+     * G29: a wander from a cell whose four cardinal neighbours are solid is an escape, planned by
+     * the build engine, not a spiral of surface points the walker cannot reach. Read wanderEscapes.
+     */
+    public boolean wanderEscapesWhenEnclosed = true;
+
+    /**
      * A movement gives up when the thing in its way can never be aimed at.
      *
      * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on
@@ -4040,8 +4082,15 @@ public class TungstenConfig {
      *
      * <p>Mechanism counter {@code fireReleaseSkipped}: releases NOT performed because no fire was
      * being put out. Zero in a control arm, because skipping is what the flag gates.
+     *
+     * <p>DEFAULT ON since 2026-09-11. The dig bench (deploy/runner/dig_reach_test.py) was the
+     * paired measurement this flag waited for: with it OFF the executor aimed at the planned cell
+     * for 2990 ticks, attackThief=[MobDefenseChain:663 x2982], mine=6/2978 -- six hits in two and
+     * a half thousand ticks -- and the bot never dug the first block of a six-block descent. Every
+     * planned dig (G1/G2/G25) is dead while this release fires, so it cannot stay off. NOTE the
+     * stand's saved tungsten.json can still carry the old false; the benches pin it on.
      */
-    public boolean fireReleaseNeedsFire = false;
+    public boolean fireReleaseNeedsFire = true;
 
     /**
      * Whether the general-stuck detector exempts ticks where MobDefenseChain is doing evasive

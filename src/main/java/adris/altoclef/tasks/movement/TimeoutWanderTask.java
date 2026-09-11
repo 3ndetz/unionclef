@@ -57,6 +57,8 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
     public static volatile int wanderTungPicked = 0, wanderTungDriven = 0;
     /** Of those picks, how many named a cell the bot cannot stand in. Read as wanderTung=p/d/u. */
     public static volatile int wanderTargetUnstandable = 0;
+    /** Wanders that found the body walled in and became a planned escape instead (G29). */
+    public static volatile int wanderEscapes = 0;
     /** Picks refused by the drive with the spiral index left where it was. Mechanism counter for
      *  {@link kaptainwutax.tungsten.TungstenConfig#wanderSpiralCountsLegsNotTries}; 0 in control. */
     public static volatile int wanderSpiralHeld = 0;
@@ -400,6 +402,22 @@ public class TimeoutWanderTask extends Task implements ITaskRequiresGrounded {
         // A real port, not the one-line swap the note rightly refused: pick a point on the
         // wander circle, drive it with tungsten, pick another when reached or refused.
         if (kaptainwutax.tungsten.TungstenConfig.get().wanderUsesTungsten) {
+            // WALLED IN? THEN THIS IS NOT A WANDER, IT IS AN ESCAPE (G29, 2026-09-11). A spiral of
+            // surface points cannot be walked to from the bottom of a 1x1 pit: measured as
+            // "Failed exploring" x40, wanderDenied=6351, 8 neighbours feetBlocked, six minutes.
+            // The build engine can dig or pillar out; hand it the body and keep the tick.
+            if (kaptainwutax.tungsten.TungstenConfig.get().wanderEscapesWhenEnclosed) {
+                if (kaptainwutax.tungsten.task.FastNavigator.isActive()
+                        && PlannedEscape.armedFrom() != null) {
+                    setDebugState("Enclosed — escaping via FastPlanner (dig/build allowed)");
+                    return null;
+                }
+                if (PlannedEscape.enclosed(mod) && PlannedEscape.tryStart(mod, "wander enclosed")) {
+                    wanderEscapes++;
+                    setDebugState("Enclosed — escaping via FastPlanner (dig/build allowed)");
+                    return null;
+                }
+            }
             if (!Nav.isExecutingRoute() && !adris.altoclef.util.helpers.TungstenHelper.isActive()) {
                 // ⛔ FROM WHERE THE BOT IS, NOT AROUND WHERE IT STARTED.
                 //

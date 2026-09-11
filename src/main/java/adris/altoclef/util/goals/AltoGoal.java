@@ -93,6 +93,40 @@ public interface AltoGoal {
         }
     }
 
+    /**
+     * A block that must be REACHED, not stood in — baritone's {@code GoalGetToBlock}.
+     *
+     * <p>A mining target is solid, so {@link Block}'s "occupy the cell" arrival is unsatisfiable
+     * by construction while the block stands. Measured on the recorded 2026-09-11 playthrough
+     * (docs/BARITONE-GAPS.md G25): the drive snapped such a goal to the SURFACE above the block,
+     * walked there, then asked for a route into the cell it already occupied every tick -- 182
+     * one-cell plans, "Time taken to execute" every 0.6 s, six random-dig shimmies, and the block
+     * blacklisted as unreachable while it sat five blocks under the bot's feet.
+     *
+     * <p>Reached means the FEET cell is next to the block: on top of it, beside it at foot, head
+     * or floor level, or directly under it. Every one of those puts the block inside arm's reach,
+     * and every one is a cell the planner can DIG to -- which is the point: the goal has to be
+     * something a search can complete on a neighbour, or no dig move ever helps. The predicate
+     * itself lives in tungsten ({@code FastPlanner.adjacentToBlock}) so the planner's goal test and
+     * this arrival test cannot drift apart.
+     */
+    record Adjacent(BlockPos pos) implements AltoGoal {
+        @Override
+        public Vec3d target() {
+            return new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+        }
+
+        @Override
+        public boolean reached(BlockPos at) {
+            return kaptainwutax.tungsten.path.fast.FastPlanner.adjacentToBlock(at, pos);
+        }
+
+        @Override
+        public String toString() {
+            return "adjacent(" + pos.getX() + "," + pos.getY() + "," + pos.getZ() + ")";
+        }
+    }
+
     /** A goal on the horizontal plane only — any Y will do. */
     record Xz(int x, int z) implements AltoGoal {
         @Override
@@ -565,6 +599,11 @@ public interface AltoGoal {
 
     static AltoGoal near(BlockPos pos, int range) {
         return new Near(pos, range);
+    }
+
+    /** Reach a block from a neighbouring cell (GoalGetToBlock); the miner's approach. */
+    static AltoGoal adjacent(BlockPos pos) {
+        return new Adjacent(pos);
     }
 
     static AltoGoal xz(int x, int z) {

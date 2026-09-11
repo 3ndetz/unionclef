@@ -41,6 +41,9 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
 
     /** Resets REFUSED because the body had not moved; reads 0 with the flag off. */
     public static volatile int dbResetDenied;
+    /** Ticks the approach clock was held because the executor was digging/placing toward the
+     *  block or a pillar was going up (G32: a dig is progress, not a stall). */
+    public static volatile int dbBuildHeld;
 
     public static volatile int dbTick, dbUnreachMove, dbUnreachWater, dbUnreachPillager,
             dbUnreachNear, dbUnreachFar, dbUnreachDistSum,
@@ -385,7 +388,21 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                 if (_lastMoveTickPos == null) _lastMoveTickPos = mod.getPlayer().getPos();
             }
         }
-        if (Nav.isPathing()) {
+        // BUILDING IS PROGRESS (G32, 2026-09-11). A bot digging its way DOWN to this block stands
+        // still by design: the executor mines a cell, the body drops, the next cell is mined. The
+        // movement grace below rightly refuses to call a motionless search "progress" -- but it
+        // also refused a motionless DIG, so the approach stalled its own timer, the far give-up
+        // condemned the block, the scanner picked the next stone and the dig never finished
+        // (dig bench: dbTargets=9/0, dbFar=6). The same rule FastNavigator's watchdog uses: while
+        // the executor holds a break/place queue or a pillar is being built, the clock is held.
+        var exD = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+        boolean buildingTowardIt = (exD != null && (exD.breakQueue != null || exD.placeQueue != null))
+                || kaptainwutax.tungsten.task.PillarTask.isActive();
+        if (buildingTowardIt) {
+            dbBuildHeld++;
+            _moveChecker.reset();
+            _lastApproachMs = System.currentTimeMillis();
+        } else if (Nav.isPathing()) {
             if (!kaptainwutax.tungsten.TungstenConfig.get().stallCheckNeedsMovement
                     || _ticksSinceMoved < STALL_MOVE_GRACE) {
                 _moveChecker.reset();
@@ -716,6 +733,18 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
             // Breaking a block needs REACH, not occupancy, and the task for that already exists.
             // Range 3 keeps the bot inside the 4.5 reach with room for the body, and it is the
             // same distance this file's own near-accounting has always used (distSq <= 16).
+            // THE BLOCK IS A REACH GOAL, PLANNED BY THE ENGINE THAT CAN DIG (G25, 2026-09-11).
+            // GetToBlockTask asks to occupy a solid cell; the drive snaps that to the surface
+            // above it and asks for the same one-cell route for the rest of the run. Measured on
+            // the recorded playthrough: seven stone targets 5 blocks under the feet, every one
+            // "unreachable" after a minute of "Time taken to execute" spam, and the descent that
+            // finally happened was six random shimmy digs. GetAdjacentToBlockTask hands the BLOCK
+            // to FastNavigator with baritone's GoalGetToBlock test, so the planner completes on a
+            // neighbouring cell and breaks its way there when the block is underground.
+            if (kaptainwutax.tungsten.TungstenConfig.get().mineGoalIsAdjacent) {
+                dbReachGoal++;
+                return new adris.altoclef.tasks.movement.GetAdjacentToBlockTask(pos);
+            }
             if (kaptainwutax.tungsten.TungstenConfig.get().breakGoalIsReach) {
                 dbReachGoal++;
                 // Arrival is decided by REACH, not by distance: standing three blocks away

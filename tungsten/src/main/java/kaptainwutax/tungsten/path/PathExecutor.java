@@ -444,8 +444,15 @@ public class PathExecutor {
     		long minutes = (elapsedTime / 1000) / 60;
             long seconds = (elapsedTime / 1000) % 60;
             long milliseconds = elapsedTime % 1000;
-            
-            Debug.logMessage("Time taken to execute: " + minutes + " minutes, " + seconds + " seconds, " + milliseconds + " milliseconds");
+
+            // NOT FOR A ONE-CELL PATH. This line printed on every completion, and a goal that
+            // snaps onto the bot's own cell completes a one-cell path every 0.6 s -- 110 of these
+            // in two minutes on the 2026-09-11 recording (docs/BARITONE-GAPS.md G30). A route worth
+            // reporting has more than one node or took a real amount of time; verbose still sees all.
+            if (kaptainwutax.tungsten.TungstenConfig.get().verboseDebugLogging
+                    || this.path.size() > 1 || elapsedTime >= 1000) {
+                Debug.logMessage("Time taken to execute: " + minutes + " minutes, " + seconds + " seconds, " + milliseconds + " milliseconds");
+            }
     		
 		    options.forwardKey.setPressed(false);
 		    options.backKey.setPressed(false);
@@ -896,6 +903,25 @@ public class PathExecutor {
     public static volatile int breakOccluderInPlan = 0, breakOccluderForeign = 0;
 
     /**
+     * Times a queued PLACE turned out to be the cell the body occupies and was handed to
+     * PillarTask instead of being click-placed (docs/BARITONE-GAPS.md G28). Zero means every
+     * bridge target really was a neighbouring hole.
+     */
+    public static volatile int ownCellPlaceAsPillar = 0;
+
+    /**
+     * Does the player's bounding box overlap this cell? A block placed here would be placed INTO
+     * the body, which vanilla refuses -- so a plan that asks for it is asking for a PILLAR (jump,
+     * then place under yourself), never for a bridge click. Measured on the 2026-09-11 pit stall:
+     * "Bridge place aborted (TIMEOUT) dist=1.16 ticks=202 target=1217, 59, 368" every 30 s with the
+     * bot standing at 1217.7,59.0,368.7 (G28).
+     */
+    public static boolean cellHoldsTheBody(net.minecraft.entity.player.PlayerEntity player,
+                                           net.minecraft.util.math.BlockPos cell) {
+        return player.getBoundingBox().intersects(new net.minecraft.util.math.Box(cell));
+    }
+
+    /**
      * Pave the queued bridge-floor supports — the mirror of tickBreaking. Returns true
      * while placing is in progress (segment must not finish). Places the first still-air
      * support against an adjacent solid face; once all are solid it resumes the goto so
@@ -935,6 +961,26 @@ public class PathExecutor {
             placingNow = false;
             placeQueue = null; placingTicks = 0;
             kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            return false;
+        }
+        // A PLACE INTO MY OWN CELL IS A PILLAR, NOT A BRIDGE (G28). No side face of a cell the
+        // body occupies can be clicked into, so aiming at it burns the 200-tick timeout and the
+        // continuation search finds the identical plan. PillarTask is the primitive for exactly
+        // this (jump, place under, land one higher); hand it the cell and drop the queue.
+        if (kaptainwutax.tungsten.TungstenConfig.get().ownCellPlaceIsPillar
+                && cellHoldsTheBody(player, target)) {
+            ownCellPlaceAsPillar++;
+            Debug.logMessage("Bridge place target is my own cell " + target.toShortString()
+                    + " — pillaring instead");
+            options.useKey.setPressed(false);
+            options.sneakKey.setPressed(false);
+            placingNow = false;
+            TungstenModRenderContainer.PLACE_PLAN.clear();
+            placeQueue = null; placingTicks = 0;
+            kaptainwutax.tungsten.util.WindMouseRotation.INSTANCE.clearTarget();
+            if (!kaptainwutax.tungsten.task.PillarTask.isActive()) {
+                kaptainwutax.tungsten.task.PillarTask.startTo(target.getY() + 1);
+            }
             return false;
         }
         Vec3d eye = player.getEyePos();

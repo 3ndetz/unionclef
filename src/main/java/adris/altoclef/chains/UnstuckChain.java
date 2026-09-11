@@ -502,8 +502,21 @@ public class UnstuckChain extends SingleTaskChain {
             return 55;
         }
 
-        if (startedShimmying && !shimmyTaskTimer.elapsed()) {
-            setTask(new SafeRandomShimmyTask());
+        // A RECOVERY IS A PLAN, NOT A RANDOM WALK (docs/BARITONE-GAPS.md G26, 2026-09-11). The
+        // rescue task plans an escape with the build engine first (dig / pillar / bridge to the
+        // live goal, the surface, or the nearest open cell) and only shimmies -- without the
+        // attack key -- when no plan can be made. It may need longer than the 5 s shimmy window
+        // to climb out of a pit, so the chain keeps the body while the escape is still running.
+        boolean escaping = mainTask instanceof adris.altoclef.tasks.movement.PlannedEscapeTask
+                && mainTask.isActive() && !mainTask.isFinished();
+        if (startedShimmying && (!shimmyTaskTimer.elapsed() || escaping)) {
+            if (kaptainwutax.tungsten.TungstenConfig.get().unstuckPlansEscape) {
+                if (!(mainTask instanceof adris.altoclef.tasks.movement.PlannedEscapeTask)) {
+                    setTask(new adris.altoclef.tasks.movement.PlannedEscapeTask());
+                }
+            } else {
+                setTask(new SafeRandomShimmyTask());
+            }
             unstuckOwnedTicks++;
             return 55;
         }

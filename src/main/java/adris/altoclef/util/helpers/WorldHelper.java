@@ -532,6 +532,27 @@ public interface WorldHelper {
         return pos.isWithinDistance(AltoClef.getInstance().getPlayer().getPos(), 2);
     }
 
+    /**
+     * Would placing {@code block} at {@code pos} overlap an entity's bounding box -- the player's
+     * first of all? Port of baritone's {@code BuilderProcess.placementPlausible}, the same test the
+     * tungsten placer already applies ({@code BlockPlaceHelper.placementPlausible}).
+     *
+     * <p>{@link #isInsidePlayer} is NOT this question: it is a two-block RADIUS, which is why
+     * {@code PlaceBlockNearbyTask} could score the bot's own feet cell as merely "a bit worse" and
+     * pick it in a pit (docs/BARITONE-GAPS.md G27, 2026-09-11). A cell the body occupies cannot be
+     * built into at all; vanilla refuses the placement. {@code block == null} measures a full cube,
+     * the conservative shape.
+     */
+    static boolean wouldIntersectAnEntity(BlockPos pos, net.minecraft.block.Block block) {
+        net.minecraft.world.World world = AltoClef.getInstance().getWorld();
+        if (world == null) return false;
+        net.minecraft.block.BlockState state = block != null
+                ? block.getDefaultState() : net.minecraft.block.Blocks.STONE.getDefaultState();
+        net.minecraft.util.shape.VoxelShape shape = state.getCollisionShape(world, pos);
+        if (shape.isEmpty()) return false;   // a torch, a sapling: fits anywhere, as in vanilla
+        return !world.doesNotIntersectEntities(null, shape.offset(pos.getX(), pos.getY(), pos.getZ()));
+    }
+
     static Iterable<BlockPos> getBlocksTouchingPlayer() {
         return getBlocksTouchingBox(AltoClef.getInstance().getPlayer().getBoundingBox());
     }

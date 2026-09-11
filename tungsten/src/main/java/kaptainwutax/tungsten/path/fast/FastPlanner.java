@@ -375,7 +375,76 @@ public final class FastPlanner {
      * Always returns a Result; when the goal is not reached the path is the
      * chain to the node that got closest (so movement can still begin).
      */
+    /**
+     * Baritone's {@code GoalGetToBlock} predicate: is a body whose FEET are in {@code (fx,fy,fz)}
+     * next to {@code block} -- on top of it, beside it at foot/head/floor level, or right under it?
+     * Every one of those cells puts the block inside arm's reach.
+     *
+     * <p>This is the goal test a MINING approach needs (docs/BARITONE-GAPS.md G25): the block is
+     * solid, so no route can end IN it, and a search that can only complete on the exact cell
+     * never completes -- which is how the 2026-09-11 playthrough spent two minutes asking for a
+     * route into the surface cell the bot already stood on, five blocks above the stone it wanted.
+     * With this test the search completes on a neighbour, and breakDown / breakThrough /
+     * breakStair can DIG to that neighbour. Shared with altoclef's {@code AltoGoal.Adjacent} so
+     * arrival and completion cannot drift apart.
+     */
+    public static boolean adjacentToBlock(int fx, int fy, int fz, BlockPos block) {
+        int dx = fx - block.getX(), dy = fy - block.getY(), dz = fz - block.getZ();
+        if (dx == 0 && dz == 0) return dy == 1 || dy == -2;     // standing on it / it is right above the head
+        return Math.abs(dx) + Math.abs(dz) == 1 && dy >= -1 && dy <= 1;   // beside it: foot, head or floor level
+    }
+
+    public static boolean adjacentToBlock(BlockPos feet, BlockPos block) {
+        return adjacentToBlock(feet.getX(), feet.getY(), feet.getZ(), block);
+    }
+
+    /** Eye-to-centre distance a reach goal accepts. Under the 4.5 block reach, with room for the
+     *  body to be anywhere in its cell -- and enough that a log five up a trunk (centre +5.5,
+     *  eye +1.62: 3.9) is taken from the ground, the way a player takes it. */
+    private static final double REACH_GOAL_DIST = 4.0;
+
+    /**
+     * The REACH goal test: the block can be STRUCK from a body whose feet are in this cell --
+     * either the cell is adjacent to the block ({@link #adjacentToBlock}), or the eye is within
+     * {@link #REACH_GOAL_DIST} of the block's centre with an unobstructed line to it.
+     *
+     * <p>Adjacency alone is too strict for anything TALL: a log four blocks up a trunk is mined
+     * from the ground in vanilla, and the first @gamer run on this goal test stood under a
+     * spruce for 150 s because the planner had no way to become "adjacent" to a log at +5 with
+     * no blocks to pillar (2026-09-11). The miner's own arrival test (LookHelper.getReach) is
+     * reach + line of sight, so the planner completes on the same thing.
+     */
+    public static boolean reachGoalSatisfied(WorldView world, int fx, int fy, int fz, BlockPos block) {
+        if (adjacentToBlock(fx, fy, fz, block)) return true;
+        double ex = fx + 0.5, ey = fy + 1.62, ez = fz + 0.5;
+        double cx = block.getX() + 0.5, cy = block.getY() + 0.5, cz = block.getZ() + 0.5;
+        double dx = cx - ex, dy = cy - ey, dz = cz - ez;
+        if (dx * dx + dy * dy + dz * dz > REACH_GOAL_DIST * REACH_GOAL_DIST) return false;
+        net.minecraft.entity.player.PlayerEntity p = TungstenMod.mc == null ? null : TungstenMod.mc.player;
+        if (p == null) return false;
+        try {
+            net.minecraft.util.hit.BlockHitResult hit = world.raycast(new net.minecraft.world.RaycastContext(
+                    new net.minecraft.util.math.Vec3d(ex, ey, ez), new net.minecraft.util.math.Vec3d(cx, cy, cz),
+                    net.minecraft.world.RaycastContext.ShapeType.COLLIDER,
+                    net.minecraft.world.RaycastContext.FluidHandling.NONE, p));
+            return hit != null && hit.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK
+                    && hit.getBlockPos().equals(block);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     public static Result plan(WorldView world, BlockPos start, BlockPos goal, long budgetMs) {
+        return plan(world, start, goal, budgetMs, null);
+    }
+
+    /**
+     * @param reachBlock when non-null the search completes on any cell ADJACENT to this block
+     *                   ({@link #adjacentToBlock}) instead of on {@code goal} itself -- pass the
+     *                   block as {@code goal} too, so the heuristic pulls toward it.
+     */
+    public static Result plan(WorldView world, BlockPos start, BlockPos goal, long budgetMs,
+                              BlockPos reachBlock) {
         long t0 = System.currentTimeMillis();
         // ASK HOW MANY BLOCKS WE HAVE, EVERY PLAN. DO NOT TRUST A STATIC SOMEONE ELSE SET.
         // placeBudget starts at MAX_VALUE and had exactly ONE writer, FastNavigator:443. Any plan
@@ -430,8 +499,12 @@ public final class FastPlanner {
             Node current = open.removeLowest();
             expanded++;
 
-            if (current.x == goal.getX() && current.z == goal.getZ()
-                    && Math.abs(current.y - goal.getY()) <= 1) {
+            // A REACH GOAL COMPLETES ON A NEIGHBOUR OF THE BLOCK, never on the block (G25).
+            boolean atGoal = reachBlock != null
+                    ? reachGoalSatisfied(world, current.x, current.y, current.z, reachBlock)
+                    : (current.x == goal.getX() && current.z == goal.getZ()
+                        && Math.abs(current.y - goal.getY()) <= 1);
+            if (atGoal) {
                 // THE START IS ALREADY THE GOAL. Then the search 'completes' on its first
                 // iteration with a ONE-cell path, which FastNavigator refuses as short --
                 // and that refusal is CORRECT. e1=50 with noSup=0 and supNoKids=0 leaves

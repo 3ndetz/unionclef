@@ -594,6 +594,21 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             if (Double.isNaN(gp.y)) {
                 gp = new net.minecraft.util.math.Vec3d(gp.x, mod.getPlayer().getY(), gp.z);
             }
+            // Publish the live goal for the planned escape (PlannedEscape): a stuck bot's best
+            // escape target is the thing it was trying to reach.
+            lastGoalVec = gp;
+            lastGoalAtMs = System.currentTimeMillis();
+            // ── A BLOCK TO BE BROKEN IS APPROACHED, NEVER STOOD IN (G25, 2026-09-11) ──
+            // Everything below this line steers at a CELL: it snaps an unstandable goal onto
+            // standable ground, walks the grid BFS there, and escalates to the build engine only
+            // when walking fails. For a mining target that is the wrong question from the first
+            // line -- the snap turned "the stone 5 blocks under my feet" into "the surface I am
+            // standing on", and no engine was ever asked to dig. A reach goal skips all of it and
+            // goes straight to FastNavigator with the block itself.
+            if (goal instanceof adris.altoclef.util.goals.AltoGoal.Adjacent adj
+                    && kaptainwutax.tungsten.TungstenConfig.get().mineGoalIsAdjacent) {
+                return driveReach(mod, adj, gp);
+            }
             // MEASURE THE SNAP. The 1219 stall runs at a goal whose floor is AIR
             // (tgt[1205.5,104.0,-839.5], floor=air), so this must either move it to solid ground
             // or admit it cannot. Nine million expanded nodes says nobody found out which.
@@ -1215,6 +1230,64 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 if (standable(w, gx, y, gz)) return new net.minecraft.util.math.Vec3d(gx + 0.5, y, gz + 0.5);
         } catch (Throwable ignored) { }
         return gp;
+    }
+
+    /**
+     * Reach-route anatomy: ticks the drive armed FastNavigator for a block, and ticks it held off
+     * re-arming because the navigator had just given the route up. Read as pdReach=armed/held.
+     */
+    public static volatile int pdReachArmed, pdReachHeld;
+    private long twReachRearmAtMs = 0L;
+
+    /** The goal the drive last steered at, and when -- read by PlannedEscape. */
+    public static volatile net.minecraft.util.math.Vec3d lastGoalVec = null;
+    public static volatile long lastGoalAtMs = 0L;
+
+    /**
+     * Drive a REACH goal: get the FEET next to a block (baritone's GoalGetToBlock), digging if
+     * that is what it takes. The one engine that can dig is FastNavigator's planner, so the block
+     * goes straight there -- no snap, no grid BFS, no escalation ladder. Arrival is the goal's own
+     * adjacency test, or the miner's: the block can be struck from here.
+     *
+     * <p>Returns true while the navigator owns the tick, false when there is nothing left to walk.
+     */
+    private boolean driveReach(AltoClef mod, adris.altoclef.util.goals.AltoGoal.Adjacent adj,
+                               net.minecraft.util.math.Vec3d gp) {
+        net.minecraft.util.math.BlockPos block = adj.pos();
+        net.minecraft.util.math.BlockPos feet =
+                kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(mod.getPlayer());
+        boolean armedForThis = kaptainwutax.tungsten.task.FastNavigator.isActive()
+                && block.equals(kaptainwutax.tungsten.task.FastNavigator.reachBlock());
+        if (adj.reached(feet) || adris.altoclef.util.helpers.LookHelper.getReach(block).isPresent()) {
+            if (armedForThis) kaptainwutax.tungsten.task.FastNavigator.stop();
+            pdFinished++;
+            return false;
+        }
+        long nowMs = System.currentTimeMillis();
+        if (!armedForThis) {
+            // The navigator gives a route up on its own watchdog ("no progress, handing over");
+            // re-arming on the very next tick would spin that watchdog at 20 Hz. A short hold
+            // lets the world settle (a block just mined, a fall just landed) before the next plan.
+            if (nowMs < twReachRearmAtMs) {
+                pdReachHeld++;
+                checker.reset();
+                setDebugState("Tungsten: reach route gave up — re-planning shortly");
+                return true;
+            }
+            kaptainwutax.tungsten.task.BlockPathWalker.stop();
+            kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+            var exR = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if (exR != null) exR.stop = false;
+            kaptainwutax.tungsten.task.FastNavigator.start(gp, block);
+            twFnGoal = net.minecraft.util.math.BlockPos.ofFloored(gp);
+            twReachRearmAtMs = nowMs + 2500;
+            pdReachArmed++;
+            pdFnBuild++;
+        }
+        checker.reset();
+        setDebugState("Tungsten: reaching " + block.toShortString()
+                + " via FastPlanner (dig allowed)...");
+        return true;
     }
 
     /** Shared with TimeoutWanderTask, which needs the same question about its wander target. */
