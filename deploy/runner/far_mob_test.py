@@ -12,10 +12,14 @@ Flat server: a chicken (NoAI, so it stays put) forty blocks east across open gro
 two-block ledge halfway, the bot with a stone sword, `@get chicken 1`. PASS = raw chicken in the
 inventory within the window and zero "Failed to get to target" lines.
 """
-import functools, json, subprocess, sys, time
+import functools, json, os, subprocess, sys, time
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 820, 360
+# UC_PINS="flag=value,flag=value" applies `;settings flag value` before the course (an A/B knob;
+# the setting PERSISTS in the client's tungsten.json, so a run that flips a flag off must be
+# followed by one that flips it back).
+PINS = [kv.split("=", 1) for kv in os.environ.get("UC_PINS", "").split(",") if "=" in kv]
 GROUND = -61
 DIST = 40
 WINDOW_S = 120
@@ -73,6 +77,9 @@ def main():
         if BOT not in rcon("list"):
             print("FAIL: never joined test-server"); return 2
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop"); time.sleep(1)
+    for k, v in PINS:
+        py4j("chatcmd", c=f";settings {k} {v}"); time.sleep(0.3)
+        print(f"pinned {k}={v}")
     rcon(f"gamemode survival {BOT}")
     rcon("difficulty peaceful")
     rcon(f"forceload add {X-4} {Z-6} {X+DIST+6} {Z+6}"); time.sleep(1)
@@ -116,7 +123,9 @@ def main():
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop")
     try:
         st = py4j("stats")["s"]
-        tok = [t for t in st.split() if t.startswith(("entLongHaul=", "pdFnBuild=", "pdNearBuild=", "navStall=", "lock="))]
+        tok = [t for t in st.split() if t.startswith(("entLongHaul=", "pdFnBuild=", "pdNearBuild=", "navStall=", "lock=",
+                                                          "pdRouteStopped=", "navStop=", "dte=", "mqStarted=", "mqSteps=",
+                                                          "mqTimeout=", "mqLost=", "walkerHeldAbove=", "dc="))]
         print(f"  counters: {' '.join(tok)}")
     except Exception:
         pass

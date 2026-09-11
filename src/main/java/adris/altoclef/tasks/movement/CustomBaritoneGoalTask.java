@@ -397,8 +397,28 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (AltoClef.getInstance() == null || AltoClef.getInstance().getPlayer() == null) {
             return false;
         }
-        net.minecraft.util.math.BlockPos at = AltoClef.getInstance().getPlayer().getBlockPos();
+        // G55: the feet cell with baritone's +0.1251 (a chest top is 7/8 high: the naive block
+        // position reads the cell below the one the body stands in).
+        net.minecraft.util.math.BlockPos at =
+                kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(AltoClef.getInstance().getPlayer());
         boolean done = g != null && g.reached(at);
+        // ⛔ A SOLID GOAL THAT MAY NOT BE DUG IS REACHED BY STANDING ON IT (G55, 2026-09-11).
+        // buried_goal phase two: the sand had just been re-placed by the bench where the bot had
+        // broken it a moment before, the break-failure detector read that as a claim ("failed to
+        // break! Maybe private area") and protected it, the dig branch was rightly refused -- and
+        // the snap wanted the bot's own cell, which G40 refuses, so the task asked for the cell
+        // under its feet forever: "arrived (1.0)" every twelve seconds again. When the cell can
+        // neither be entered nor dug, on top of it is as far as any engine can go; say so.
+        if (!done && g instanceof adris.altoclef.util.goals.AltoGoal.Block bg
+                && kaptainwutax.tungsten.TungstenConfig.get().blockGoalDigsIntoSolid
+                && at.equals(bg.pos().up())) {
+            net.minecraft.world.World w = AltoClef.getInstance().getWorld();
+            if (w != null && isSolidAt(w, bg.pos().getX(), bg.pos().getY(), bg.pos().getZ())
+                    && !diggableGoalCell(AltoClef.getInstance(), bg.pos())) {
+                pdDigOnTop++;
+                done = true;
+            }
+        }
         // ⛔ THE DRIVE AND THE ARRIVAL TEST MUST NOT STEER BY DIFFERENT CELLS.
         //
         // AltoGoal.Block.reached asks whether the bot OCCUPIES the requested cell. The drive
@@ -1454,6 +1474,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     /** G55: block goals whose solid cell was handed to the navigator as an exact cell to dig into,
      *  and ticks the re-arm was held after the navigator gave such a route up. */
     public static volatile int pdDigArmed, pdDigHeld;
+    /** G55: solid block goals that may not be dug (protected, bedrock, a container), finished by
+     *  standing on top of them. */
+    public static volatile int pdDigOnTop;
 
     /** G55: a block goal that must be DUG INTO -- solid, breakable, not a container or another
      *  block entity (those are interacted with, never mined on the way to them). */

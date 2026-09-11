@@ -387,8 +387,11 @@ public final class FastNavigator {
         boolean settledBody = !TungstenConfig.get().arrivalNeedsSettledBody
                 || ((player.isOnGround() || player.isTouchingWater() || player.isClimbing())
                     && player.getVelocity().horizontalLengthSquared() < 0.05);
+        // G55: the feet cell with baritone's +0.1251 -- on a chest or a slab the naive block
+        // position reads the cell BELOW the one the body stands in, and an exact arrival on the
+        // chest under a buried goal was missed for it (buried_goal, round 13).
         boolean arrived = exactCell != null
-                ? player.getBlockPos().equals(exactCell)
+                ? kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player).equals(exactCell)
                 : reach != null
                     ? reachArrived(player, reach)
                     : (dist <= ARRIVE_DIST && goalRise < 1.0 && settledBody);

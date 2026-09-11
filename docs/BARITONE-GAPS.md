@@ -581,7 +581,15 @@ stood on the chest. Principle: **a solid block goal is dug into, not stood on** 
 solid goal cell (not bedrock, not a block entity) goes straight to the navigator as an EXACT cell
 (`FastNavigator.startExactForDrive`), the planner completes only in that cell (`exactGoal`: no
 height tolerance), and arrival is the exact cell, the same test `isFinished` uses. Flag
-`blockGoalDigsIntoSolid`; counters `pdDig=armed/held`.
+`blockGoalDigsIntoSolid`; counters `pdDig=armed/held/onTop`. *Round 13, bench `buried_goal`:*
+phase one dug the sand and finished on the chest — and read as red only because both the bench
+and the arrival tests floored the body's y on a 7/8-high chest top (the cell below); the feet
+cell is now baritone's `playerFeet` (+0.1251) in `FastNavigator`'s exact arrival and in
+`isFinished`. Phase two re-placed the sand where the bot had just broken it, the break-failure
+detector read that as a claim and protected the cell, the dig branch was rightly refused, and the
+old loop came back. **A solid goal that may not be dug is reached by standing on it** — when the
+cell can neither be entered nor dug, on top of it is as far as any engine goes, and `isFinished`
+says so (`pdDigOnTop`). The bench gives each phase its own column.
 
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`

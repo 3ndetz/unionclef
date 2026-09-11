@@ -256,7 +256,9 @@ recovery, every recovery is a plan**.
       nine minutes on the sand above a buried chest, `Getting to block chest.up()`, atGoal ytol52,
       "arrived (1.0)" / "Failed! No block path" in a loop). Fix `blockGoalDigsIntoSolid`: a
       breakable solid goal cell goes to FastNavigator as an EXACT cell and is dug into; the
-      planner's height tolerance is off for exact cells (`pdDig=armed/held`).
+      planner's height tolerance is off for exact cells (`pdDig=armed/held/onTop`). Round 13
+      bench: exact arrival and isFinished now use baritone's feet cell (+0.1251, a chest top is
+      7/8 high); a solid goal that may NOT be dug (protected) is finished by standing on it.
 - [ ] **G32 "unreachable" declared by a timer, not by a search** (`Try 2/4` on every G25 no-op
       approach). A block is unreachable only when the dig-capable planner returns incomplete.
       Fix: DestroyBlockTask's approach clock and MineAndCollectTask's progress checker HOLD while

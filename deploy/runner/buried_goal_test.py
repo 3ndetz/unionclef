@@ -55,32 +55,35 @@ def rcon(c):
 
 
 def feet(gs):
-    # getGameState()["self"]["pos"] is the string "x,y,z"
+    # getGameState()["self"]["pos"] is the string "x,y,z"; +0.1251 on y is baritone's feet rule
+    # (a chest top is 7/8 high: floor(y) alone reads the cell below the one the body stands in)
     p = [float(v) for v in str(gs["pos"]).split(",")]
-    return (int(math.floor(p[0])), int(math.floor(p[1])), int(math.floor(p[2])))
+    return (int(math.floor(p[0])), int(math.floor(p[1] + 0.1251)), int(math.floor(p[2])))
 
 
-def build_scene():
-    rcon(f"fill {X-8} {GROUND-1} {Z-8} {X+8} {GROUND+6} {Z+8} minecraft:air")
-    rcon(f"fill {X-8} {GROUND-2} {Z-8} {X+8} {GROUND-2} {Z+8} minecraft:stone")
-    rcon(f"fill {X-8} {GROUND-1} {Z-8} {X+8} {GROUND} {Z+8} minecraft:dirt")
-    rcon(f"setblock {X} {GROUND-1} {Z} minecraft:chest")
-    rcon(f"setblock {X} {GROUND} {Z} minecraft:sand")
+def build_scene(x):
+    rcon(f"fill {x-8} {GROUND-1} {Z-8} {x+8} {GROUND+6} {Z+8} minecraft:air")
+    rcon(f"fill {x-8} {GROUND-2} {Z-8} {x+8} {GROUND-2} {Z+8} minecraft:stone")
+    rcon(f"fill {x-8} {GROUND-1} {Z-8} {x+8} {GROUND} {Z+8} minecraft:dirt")
+    rcon(f"setblock {x} {GROUND-1} {Z} minecraft:chest")
+    rcon(f"setblock {x} {GROUND} {Z} minecraft:sand")
     time.sleep(1)
-    ok = rcon(f"execute if block {X} {GROUND} {Z} minecraft:sand")
-    ok2 = rcon(f"execute if block {X} {GROUND-1} {Z} minecraft:chest")
+    ok = rcon(f"execute if block {x} {GROUND} {Z} minecraft:sand")
+    ok2 = rcon(f"execute if block {x} {GROUND-1} {Z} minecraft:chest")
     return "passed" in ok and "passed" in ok2
 
 
-def phase(name, tp):
-    if not build_scene():
+def phase(name, x, tp):
+    # each phase gets its own column: re-placing the sand where the bot just broke it reads to
+    # the break-failure detector as "failed to break! Maybe private area" and protects the cell
+    if not build_scene(x):
         print(f"FAIL: the scene was not built (chunk not loaded?)"); return False
     rcon(f"tp {BOT} {tp}")
     time.sleep(1.5)
     gs = py4j("gs")
-    print(f"[{name}] bot at {gs['pos']} feet={feet(gs)}; goal = the sand cell ({X},{GROUND},{Z}) on a chest. "
-          f"@goto {X} {GROUND} {Z}")
-    py4j("cmd", c=f"@goto {X} {GROUND} {Z}")
+    print(f"[{name}] bot at {gs['pos']} feet={feet(gs)}; goal = the sand cell ({x},{GROUND},{Z}) on a chest. "
+          f"@goto {x} {GROUND} {Z}")
+    py4j("cmd", c=f"@goto {x} {GROUND} {Z}")
     t0 = time.time(); seen = set(); ok = False
     bad = {"Failed! No block path": 0, "giving the route up": 0, "not getting closer": 0}
     arrived_lines = 0
@@ -99,7 +102,7 @@ def phase(name, tp):
             chain = "?"
         print(f"  t={time.time()-t0:.0f}s feet={f} | {chain}"
               + (" | " + " || ".join(x[-70:] for x in note[-2:]) if note else ""))
-        if f == (X, GROUND, Z):
+        if f == (x, GROUND, Z):
             ok = True
             break
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop")
@@ -121,11 +124,12 @@ def main():
     py4j("chatcmd", c=";settings fireReleaseNeedsFire true"); time.sleep(0.5)
     rcon(f"gamemode survival {BOT}")
     rcon("difficulty peaceful")
-    rcon(f"forceload add {X-10} {Z-10} {X+10} {Z+10}"); time.sleep(1)
+    X2 = X + 20
+    rcon(f"forceload add {X-10} {Z-10} {X2+10} {Z+10}"); time.sleep(1)
     rcon(f"clear {BOT}")
     rcon(f"give {BOT} minecraft:stone_shovel 1")
-    a = phase("on top", f"{X+0.5} {GROUND+1} {Z+0.5} 0 60")
-    b = phase("five away", f"{X+5.5} {GROUND+1} {Z+0.5} 90 30")
+    a = phase("on top", X, f"{X+0.5} {GROUND+1} {Z+0.5} 0 60")
+    b = phase("five away", X2, f"{X2+5.5} {GROUND+1} {Z+0.5} 90 30")
     try:
         st = py4j("stats")["s"]
         tok = [t for t in st.split() if t.startswith(("pdDig=", "snapSelfRefused=", "pdNearBuild=",
@@ -133,7 +137,7 @@ def main():
         print(f"  counters: {' '.join(tok)}")
     except Exception:
         pass
-    rcon(f"forceload remove {X-10} {Z-10} {X+10} {Z+10}")
+    rcon(f"forceload remove {X-10} {Z-10} {X2+10} {Z+10}")
     if a and b:
         print("PASS: dug into the solid goal cell from on top and from five blocks away"); return 0
     print("FAIL"); return 1
