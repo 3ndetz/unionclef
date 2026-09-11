@@ -203,6 +203,12 @@ public class BlockPathWalker {
         return active;
     }
 
+    /** G52: a LIVE walk (the entity chase steering the body itself) belongs to the chase, not to
+     *  any altoclef drive -- a drive ending must leave it alone. */
+    public static boolean isLive() {
+        return active && liveMode;
+    }
+
     /** True if the last DIRECT stop was a bail (no LOS / stall / danger), not a success. */
     public static boolean wasStoppedByBail() {
         return stoppedByBail;

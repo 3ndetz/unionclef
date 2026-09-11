@@ -514,6 +514,13 @@ drive** — a drive's `onStop` stops every route engine (`TungstenMod.stopNaviga
 interrupting task is another drive (adoption, G40), an escape is armed, or the builder holds an
 exact cell. Flag `routeDiesWithItsDrive`; counter `pdRouteStopped`. PillarTask now also reports
 `jumpStolen` in its stuck line: the jump it pressed found released before the game sampled it.
+*Refined on round 12:* the first cut called `TungstenMod.stopNavigation()` — every engine, the
+physics stop flags, the goto marker — and far_mob, green four times before it, went red: the
+long haul hands over at 3.5 blocks, the entity task starts its close walk in the same tick, and
+the drive's `onStop` ran after it and killed the LIVE walk the chase had just started; the body
+stood at four blocks until the chicken was blacklisted four times. The drive stops only what it
+owns — the navigator it armed (`twFnGoal`) with the towers/bridges/swim-outs it handed off to,
+the grid queue, and the non-live waypoint walker.
 
 **G53. A drop inside the tree the bot stands on, five below, is never reached.** Same recording,
 14:23–14:27: the bot on the crown of the spruce it had just felled, a stick and a plank five

@@ -233,7 +233,10 @@ recovery, every recovery is a plan**.
       while the leaf aimed up -- pitch 25, "Pillar stuck air=0", stone "failed to break" x3). Fix
       `routeDiesWithItsDrive`: a drive's onStop stops every route engine unless another drive
       interrupts (adoption), an escape is armed or the builder holds an exact cell
-      (`pdRouteStopped`); PillarTask's stuck line reports `jumpStolen`.
+      (`pdRouteStopped`); PillarTask's stuck line reports `jumpStolen`. Refined after far_mob
+      went red on round 12: the drive stops only what it owns (its navigator + the manoeuvres it
+      handed off to, the grid queue, the non-live walker) -- never the chase's live walk or the
+      physics flags.
 - [ ] **G53 a drop five below inside the tree the bot stands on is never reached** (17:22 run,
       14:23-14:27: navigator "no progress at its own cell" -> re-plan -> "giving the route up",
       pickup blacklisted after 3 tries x2). Reproduced by `tree_drop_test.py` (round 12): the

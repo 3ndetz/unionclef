@@ -447,19 +447,33 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         // caught an orphan when the NEXT drive started; a leaf that does not drive never did.
         // A drive that is replaced by another drive leaves the route for adoption (G40); an armed
         // escape and a builder's exact cell belong to someone else and are left alone.
+        // ⛔ ...AND ONLY THE ROUTE THAT WAS ITS OWN. The first cut called TungstenMod.stopNavigation()
+        // -- every engine, plus the physics stop flags and the goto marker -- and far_mob, green
+        // four times before it, went red: the long haul hands over at 3.5 blocks, the entity
+        // task starts its close walk in the same tick, and the drive's onStop ran AFTER it and
+        // killed the walk it had just started (a LIVE walk the chase owns), so the body stood at
+        // four blocks until the chicken was blacklisted. What this drive owns: the navigator it
+        // armed (twFnGoal), the towers / bridges / swim-outs that navigator handed off to, and
+        // the grid queue and the (non-live) waypoint walker. The physics search is
+        // TungstenHelper.stop()'s business above, exactly as before.
         if (kaptainwutax.tungsten.TungstenConfig.get().routeDiesWithItsDrive
                 && !(interruptTask instanceof CustomBaritoneGoalTask)
                 && PlannedEscape.armedFrom() == null
                 && !kaptainwutax.tungsten.task.FastNavigator.hasExactCell()) {
-            boolean live = kaptainwutax.tungsten.task.FastNavigator.isActive()
-                    || kaptainwutax.tungsten.task.BlockPathWalker.isRunning()
-                    || kaptainwutax.tungsten.path.movements.MovementQueue.isRunning()
-                    || kaptainwutax.tungsten.task.PillarTask.isActive()
-                    || kaptainwutax.tungsten.task.BridgeTask.isActive()
-                    || kaptainwutax.tungsten.task.SwimOutTask.isActive();
-            if (live) {
+            boolean navMine = twFnGoal != null && kaptainwutax.tungsten.task.FastNavigator.isActive();
+            boolean queue = kaptainwutax.tungsten.path.movements.MovementQueue.isRunning();
+            boolean walker = kaptainwutax.tungsten.task.BlockPathWalker.isRunning()
+                    && !kaptainwutax.tungsten.task.BlockPathWalker.isLive();
+            if (navMine || queue || walker) {
                 pdRouteStopped++;
-                kaptainwutax.tungsten.TungstenMod.stopNavigation();
+                if (navMine) {
+                    kaptainwutax.tungsten.task.FastNavigator.stop();
+                    kaptainwutax.tungsten.task.PillarTask.stop();
+                    kaptainwutax.tungsten.task.BridgeTask.stop();
+                    kaptainwutax.tungsten.task.SwimOutTask.stop();
+                }
+                if (queue) kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+                if (walker) kaptainwutax.tungsten.task.BlockPathWalker.stop();
             }
         }
     }
