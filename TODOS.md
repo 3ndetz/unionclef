@@ -261,6 +261,16 @@ recovery, every recovery is a plan**.
       planner's height tolerance is off for exact cells (`pdDig=armed/held/onTop`). Round 13
       bench: exact arrival and isFinished now use baritone's feet cell (+0.1251, a chest top is
       7/8 high); a solid goal that may NOT be dug (protected) is finished by standing on it.
+- [ ] **G56 a tower is started under a ceiling the plan meant to mine** (pit_escape round 14:
+      "Pillar stopped: no headroom" -> re-plan -> the same hand-off, 60 s). Fix
+      `towerMinesItsCeiling`: the hand-off mines the cells above the body first via the
+      navigator's own dig; an unbreakable ceiling gives the route up (`navCeiling=mined/refused`).
+- [ ] **G57 the tool gate is skipped for a drop and the chooser mines a block bare-handed**
+      (19:08 run: 2 min, 11 stone targets, none broken, dbToolEquipped=0, no pickaxe in the
+      pack). Fix: with the requirement unmet the chooser is drops-only; no choosable drop ->
+      SatisfyMiningRequirementTask (`dropsOnlyNoDrop`).
+- [ ] **G38 target flip-flop, measured again** (19:08 run: RTGATE stick -> wooden_pickaxe ->
+      cobblestone -> stick every 3-5 s; each flip rebuilt the drives). Open.
 - [ ] **G32 "unreachable" declared by a timer, not by a search** (`Try 2/4` on every G25 no-op
       approach). A block is unreachable only when the dig-capable planner returns incomplete.
       Fix: DestroyBlockTask's approach clock and MineAndCollectTask's progress checker HOLD while

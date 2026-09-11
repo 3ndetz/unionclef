@@ -89,6 +89,8 @@ public class MineAndCollectTask extends ResourceTask {
 
     /** Times the tool gate was skipped because the target was already lying on the floor. */
     public static volatile int toolGateSkipped;
+    /** G57: ticks the drops-only chooser had no drop to choose and the tool became the job. */
+    public static volatile int dropsOnlyNoDrop;
 
     @Override
     protected Task onResourceTick(AltoClef mod) {
@@ -116,12 +118,26 @@ public class MineAndCollectTask extends ResourceTask {
         if (!StorageHelper.miningRequirementMet(_requirement)) {
             if (kaptainwutax.tungsten.TungstenConfig.get().collectDropsBeforeTools
                     && mod.getEntityTracker().itemDropped(itemTargets)) {
+                // ⛔ THE DROP, AND ONLY THE DROP (G57, 2026-09-11). Skipping the tool gate let
+                // the chooser below pick a BLOCK when the block scored closer than the drop, and
+                // the bot punched stone bare-handed with no pickaxe in the pack: 7.5 s a block
+                // against a give-up clock of five -- eleven stone blocks tried, none broken, the
+                // 19:08 recording standing two minutes at (1820,62,683) with dbToolEquipped=0.
+                // With the requirement unmet the blocks are off the table; when no drop can be
+                // chosen either (banned, blacklisted), the tool is the job after all.
+                _subtask.setDropsOnly(true);
+                if (_subtask.wasWandering()) {
+                    dropsOnlyNoDrop++;
+                    return new SatisfyMiningRequirementTask(_requirement);
+                }
                 toolGateSkipped++;
                 setDebugState("Collecting a drop instead of crafting a tool for it");
                 return _subtask;
             }
+            _subtask.setDropsOnly(false);
             return new SatisfyMiningRequirementTask(_requirement);
         }
+        _subtask.setDropsOnly(false);
 
         if (_subtask.isMining()) {
             makeSureToolIsEquipped(mod);
@@ -240,10 +256,17 @@ public class MineAndCollectTask extends ResourceTask {
         /** Beyond this the walk costs more than the whole run is worth. */
         private static final double MINE_PICK_FAR_BLOCKS = 160.0D;
 
+        /** G57: with the mining requirement unmet only DROPS may be chosen (see onResourceTick). */
+        private boolean dropsOnly = false;
+
+        public void setDropsOnly(boolean v) { dropsOnly = v; }
+
         @Override
         protected Optional<Object> getClosestTo(AltoClef mod, Vec3d pos) {
             minePickCalls++;
-            Pair<Double, Optional<BlockPos>> closestBlock = getClosestBlock(mod,pos,  _blocks);
+            Pair<Double, Optional<BlockPos>> closestBlock = dropsOnly
+                    ? new Pair<>(Double.POSITIVE_INFINITY, Optional.empty())
+                    : getClosestBlock(mod,pos,  _blocks);
             Pair<Double, Optional<ItemEntity>> closestDrop = getClosestItemDrop(mod,pos,  _targets);
 
             double blockSq = closestBlock.getLeft();

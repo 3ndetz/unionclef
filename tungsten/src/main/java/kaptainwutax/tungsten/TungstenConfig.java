@@ -2666,6 +2666,15 @@ public class TungstenConfig {
     public boolean startOnGroundTrustsThePlayer = true;
 
     /**
+     * G56 (2026-09-11): the wall hand-off mines the solid cells above the body (from two above
+     * the feet up to the jump target) through the navigator's own dig BEFORE it starts the
+     * tower; a ceiling that cannot be broken gives the route up. pit_escape on round 14: the
+     * goal was the surface pad itself, PillarTask was started under it and refused for headroom
+     * (G51), re-plan, the same hand-off, sixty seconds at y=-55. Read navCeiling=mined/refused.
+     */
+    public boolean towerMinesItsCeiling = true;
+
+    /**
      * A movement gives up when the thing in its way can never be aimed at.
      *
      * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on

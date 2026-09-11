@@ -126,6 +126,9 @@ public final class FastNavigator {
     /** G53: plans that started from the cell SUPPORTING the body instead of the one under its
      *  centre, because the centre column had nothing under it. */
     public static volatile int navStartFromSupport;
+    /** G56: wall hand-offs that mined the ceiling above the body before the tower, and routes
+     *  given up because that ceiling could not be broken. */
+    public static volatile int navCeilingMined, navCeilingRefused;
 
     /**
      * THE BODY'S CELL IS THE CELL THAT HOLDS IT UP (G53, 2026-09-11). A body resting on the
@@ -742,6 +745,44 @@ public final class FastNavigator {
                 // Swimming out needs none; a tower does, so ask the pocket first.
                 boolean canPillar = player.isTouchingWater()
                         || FastPlanner.countPlaceable(player) > 0;
+                // ⛔ A TOWER THROUGH ROCK IS A DIG FIRST (G56, 2026-09-11). pit_escape on round
+                // 14: the goal cell was the surface pad itself, the plan climbed into it with a
+                // break above the head, and this hand-off started PillarTask under that pad --
+                // "Pillar stopped: no headroom, stone at 204,-53,200" (G51), re-plan, the same
+                // hand-off, sixty seconds at y=-55. The ceiling the plan promised to mine is
+                // mined here BEFORE the tower, through the navigator's own dig (the executor's
+                // break run, "at the dig"), and only a ceiling that cannot be broken refuses
+                // the route.
+                if (rise > PlayerFitJumpHeight() && horiz < 2.5 && TungstenConfig.get().planPlaceMoves
+                        && canPillar && !player.isTouchingWater()
+                        && TungstenConfig.get().towerMinesItsCeiling
+                        && !kaptainwutax.tungsten.task.PillarTask.isActive()) {
+                    BlockPos feetC = kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player);
+                    java.util.List<BlockPos> ceiling = new java.util.ArrayList<>();
+                    boolean unbreakable = false;
+                    for (int y = feetC.getY() + 2; y <= jump.getY() + 1; y++) {
+                        BlockPos c = new BlockPos(feetC.getX(), y, feetC.getZ());
+                        var st = world.getBlockState(c);
+                        if (st.getCollisionShape(world, c).isEmpty()) continue;
+                        if (!kaptainwutax.tungsten.path.BreakRules.canBreak(world, c, st)) { unbreakable = true; break; }
+                        ceiling.add(c);
+                    }
+                    if (unbreakable) {
+                        Debug.logWarning("Wall too high to jump and the ceiling above cannot be mined — giving the route up");
+                        navCeilingRefused++;
+                        pendingGiveUp = true;
+                        return;
+                    }
+                    if (!ceiling.isEmpty()) {
+                        Debug.logMessage("Wall too high to jump — mining the ceiling first (" + ceiling.size()
+                                + " block(s) from " + ceiling.get(0).toShortString() + ")");
+                        navCeilingMined++;
+                        pendingBreakCells = ceiling;
+                        pendingBreakStand = feetC;
+                        awaitingPhysics = false;
+                        return;   // the dig runs next tick; the re-plan after it brings the tower back
+                    }
+                }
                 if (rise > PlayerFitJumpHeight() && horiz < 2.5
                         && TungstenConfig.get().planPlaceMoves && canPillar
                         && !kaptainwutax.tungsten.task.PillarTask.isActive()

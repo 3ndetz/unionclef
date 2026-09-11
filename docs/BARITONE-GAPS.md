@@ -608,6 +608,28 @@ old loop came back. **A solid goal that may not be dug is reached by standing on
 cell can neither be entered nor dug, on top of it is as far as any engine goes, and `isFinished`
 says so (`pdDigOnTop`). The bench gives each phase its own column.
 
+**G56. A tower is started under a ceiling the plan meant to mine.** pit_escape on round 14 (the
+first red since round 10): the bench's goal is the surface pad block itself, so with G55 the
+route climbs INTO it — the plan carries a break above the head — and the wall hand-off started
+`PillarTask` under that pad: `Pillar stopped: no headroom, stone at 204,-53,200` (G51),
+re-plan, the same hand-off, sixty seconds at y=-55. The hand-off dropped the plan's breaks.
+Principle: **a tower through rock is a dig first** — the hand-off mines the solid cells above
+the body (from two above the feet to the jump target) through the navigator's own dig ("at the
+dig", the executor's break run) before it starts the tower; a ceiling that cannot be broken
+gives the route up. Flag `towerMinesItsCeiling`; counters `navCeiling=mined/refused`.
+
+**G57. The tool gate is skipped for a drop and the chooser mines a block bare-handed.** The
+19:08 recording: two minutes at `(1820, 62, 683)`, chain `Collecting resource: wooden_pickaxe →
+… → Collect cobblestone → Destroy block`, `dbToolEquipped=0`, eleven stone targets tried and
+none broken (`dbTargets=11/11`, `dbUnreachMove=9` all near). The pack had no pickaxe (the
+stone one lay six blocks below, blacklisted), a cobblestone DROP existed somewhere, so the
+mining-requirement gate was skipped ("a drop on the floor needs no pickaxe") — and the chooser
+then picked the nearest STONE because it scored closer than the drop: 7.5 s of bare-hand mining
+against a five-second give-up, blacklist, next stone, repeat. Principle: **with the requirement
+unmet, the drop and only the drop** — the chooser's blocks are off the table (`dropsOnly`), and
+when no drop can be chosen either (banned, blacklisted) the tool is the job after all
+(`SatisfyMiningRequirementTask`). Counter `dropsOnlyNoDrop`.
+
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`
 once at t≈30 s (an exception in `getTaskChainString`, cosmetic).
