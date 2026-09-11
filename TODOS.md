@@ -236,7 +236,11 @@ recovery, every recovery is a plan**.
       (`pdRouteStopped`); PillarTask's stuck line reports `jumpStolen`.
 - [ ] **G53 a drop five below inside the tree the bot stands on is never reached** (17:22 run,
       14:23-14:27: navigator "no progress at its own cell" -> re-plan -> "giving the route up",
-      pickup blacklisted after 3 tries x2). Root open; bench `tree_drop_test.py`.
+      pickup blacklisted after 3 tries x2). Reproduced by `tree_drop_test.py` (round 12): the
+      body hangs on a lip with its centre over the drop column and the walker's horizontal
+      arrival calls the waypoint three below "reached". Fix `walkerDescentNeedsDescent`: a
+      waypoint below the feet is not reached while the body stands above it; walk to its centre
+      until the body drops (`walkerHeldAbove`).
 - [ ] **G54 a new pursuit is given up on its first tick and banned for 90 s** (round 11
       canopy_drop on a fresh client: "wandering / Exploring" from the first sample with the drop
       six blocks away, dropped=true every RTGATE). The chooser's idle clock was a static that

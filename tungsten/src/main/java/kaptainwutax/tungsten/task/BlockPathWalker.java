@@ -87,6 +87,9 @@ public class BlockPathWalker {
      * Zero means the gate never fired, and an A/B quoting it measured nothing.
      */
     public static volatile int walkerHoleHeld = 0;
+    /** G53: ticks the walker refused to call a waypoint BELOW the feet reached while the body
+     *  still stood on the ground above it, and kept walking to its centre instead. */
+    public static volatile int walkerHeldAboveWp = 0;
 
     /** Ticks the walker shut itself down because the physics executor claimed the body. */
     public static volatile int walkerYieldedToExecutor = 0;
@@ -482,8 +485,22 @@ public class BlockPathWalker {
         // 22.5 against 11.6 standing. Both halves have to land together, inside one movement,
         // which is unit 2 of docs/BARITONE-PORT-SPEC.md. Kept out until then; falling is worse
         // than standing.
+        // ⛔ A WAYPOINT BELOW THE FEET IS REACHED BY GOING DOWN, NOT BY STANDING OVER IT (G53,
+        // 2026-09-11). Arrival here is horizontal, so a body hanging on a lip -- its centre
+        // already over the column it must drop into, its hitbox still resting on the block
+        // behind -- "reached" a waypoint three blocks below it without moving, the leg ended,
+        // and the navigator read "no progress", re-planned to the same leg, and gave the route
+        // up. tree_drop: the stick five blocks below on the skirt, the bot at (803.1,-54) on
+        // the edge of the body layer, "Failed! No block path" fifty times, the drop
+        // blacklisted; the same shape as the 14:23 recording on a felled spruce. While the body
+        // is ON THE GROUND and the waypoint is clearly lower, keep walking to the waypoint's
+        // centre: the hitbox leaves the lip, the body falls, and the airborne rule below takes
+        // over until it lands. A ladder keeps its own vertical rule.
+        boolean standingAbove = TungstenConfig.get().walkerDescentNeedsDescent
+                && player.isOnGround() && !onLadderNow && (playerPos.y - wpPos.y) > 0.6;
+        if (standingAbove) walkerHeldAboveWp++;
         if (dist < 1.5 && (!onLadderNow || Math.abs(playerPos.y - wpPos.y) < 0.4)
-                && !fallingToward) {
+                && !fallingToward && !standingAbove) {
             waypointIdx++;
             if (waypointIdx >= path.size()) {
                 stop();

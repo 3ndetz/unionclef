@@ -520,9 +520,19 @@ exact cell. Flag `routeDiesWithItsDrive`; counter `pdRouteStopped`. PillarTask n
 blocks below on the lower layers; grid BFS found no walking route, the navigator planned, made no
 progress at its own cell, re-planned, gave the route up — "MovementQueue: 1 movement(s)
 1234,65,-1406 -> 1235,65,-1406" over and over — and the pickup blacklisted both drops after three
-tries each. Root not yet isolated (the run's verbose log was off); bench `tree_drop_test.py`
-rebuilds the tree (7x7 skirt, 5x5 body, 3x3 crown, the stick on the skirt five below and two
-aside) and prints the navigator's own lines on failure. Open.
+tries each. Bench `tree_drop_test.py` rebuilds the tree (7x7 skirt, 5x5 body, 3x3 crown, the
+stick on the skirt five below and two aside) and reproduced it on round 12: the navigator stepped
+the bot onto the body layer, dug one leaf, and the body came to rest at `(803.1, -54)` — its
+centre already over the air column above the stick, its hitbox still on the edge of the body
+block behind it. From there: `Failed! No block path` fifty times, `no progress at 803,-54 —
+re-planning` → `after a re-plan — goal unreachable from here, giving the route up`, the drop
+blacklisted after three tries. Root: **the walker's arrival is horizontal only** — a waypoint
+three blocks below, 0.4 blocks aside, counted as reached while the body stood on the lip above
+it, so every leg ended without a step and every re-plan produced the same leg. Principle: **a
+waypoint below the feet is reached by going down, not by standing over it** — while the body is
+on the ground and the waypoint is clearly lower, the walker keeps walking to its centre until the
+hitbox leaves the lip and the body drops; the airborne rule then holds the waypoint until landing.
+Flag `walkerDescentNeedsDescent`; counter `walkerHeldAbove`.
 
 **G54. A new pursuit is given up on its first tick and banned for ninety seconds.** Round 11,
 canopy_drop on a freshly recreated client, right after five other benches: `@get raw_iron 1` →

@@ -2633,6 +2633,16 @@ public class TungstenConfig {
     public boolean blockGoalDigsIntoSolid = true;
 
     /**
+     * G53 (2026-09-11): the walker does not call a waypoint BELOW the feet reached while the body
+     * still stands on the ground above it; it keeps walking to the waypoint's centre until the
+     * body drops. Arrival was horizontal only, so a body hanging on a lip with its centre over
+     * the drop column "reached" a waypoint three blocks down without moving -- tree_drop, and
+     * the 14:23 recording on a felled spruce (stick five below, "no progress", route given up,
+     * drop blacklisted). Read walkerHeldAbove.
+     */
+    public boolean walkerDescentNeedsDescent = true;
+
+    /**
      * A movement gives up when the thing in its way can never be aimed at.
      *
      * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on
