@@ -238,6 +238,14 @@ public final class FastNavigator {
         return g == null ? "-" : String.format("(%.1f,%.1f,%.1f)", g.x, g.y, g.z);
     }
 
+    /** The goal being served right now, or null when idle. The altoclef drive asks, so a route
+     *  armed by an earlier task instance can be ADOPTED when it serves the same goal and STOPPED
+     *  when it does not, instead of running underneath a second driver (G40). */
+    public static Vec3d currentGoal() { return active ? goal : null; }
+
+    /** True while a caller asked to stand IN one exact cell (the builder positioning itself). */
+    public static boolean hasExactCell() { return active && exactCell != null; }
+
     public static void stop() {
         active = false;
         goal = null;
@@ -287,14 +295,31 @@ public final class FastNavigator {
         double goalRise = goal.y - player.getY();
         // A REACH ROUTE ARRIVES BESIDE THE BLOCK, on the same predicate the planner completed on.
         BlockPos reach = reachBlock;
+        // ⛔ ARRIVAL IS A STATE, NOT A MOMENT (G41, 2026-09-11). nav_bridge in the regression: the
+        // physics engine sprint-jumped the gap, the body passed within 2.0 of the goal in the air,
+        // this test said "arrived", the navigator stopped -- and the executor's replay, still
+        // running, walked the body back to x=18.84, 4.2 blocks short, where it stood for the rest
+        // of the course with nobody left to plan ("nav=false path=-1"). Twice in a row, identical
+        // coordinates. A body that is airborne or still sprinting has not arrived anywhere; ask
+        // again when it is on the ground and slow, and then also stop the replay so nothing can
+        // carry it off again.
+        boolean settledBody = !TungstenConfig.get().arrivalNeedsSettledBody
+                || ((player.isOnGround() || player.isTouchingWater() || player.isClimbing())
+                    && player.getVelocity().horizontalLengthSquared() < 0.05);
         boolean arrived = exactCell != null
                 ? player.getBlockPos().equals(exactCell)
                 : reach != null
                     ? reachArrived(player, reach)
-                    : (dist <= ARRIVE_DIST && goalRise < 1.0);
+                    : (dist <= ARRIVE_DIST && goalRise < 1.0 && settledBody);
         if (arrived) {
             Debug.logMessage("FastNavigator: arrived (" + String.format("%.1f", dist) + ")");
             BlockPathWalker.stop();
+            if (TungstenConfig.get().arrivalNeedsSettledBody) {
+                var exA = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+                if (exA != null && exA.isRunning() && exA.breakQueue == null && exA.placeQueue == null) {
+                    exA.stop = true;   // a replay past the goal is the thing that un-arrives us
+                }
+            }
             // ⛔ A FINISHED GOTO IS NOT A GOTO TO RESUME, ANY MORE THAN A STOPPED ONE IS.
             //
             // stopNavigation() clears the "a real goto was requested" flag and says exactly that

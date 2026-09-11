@@ -91,6 +91,10 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
     private static final long PURSUIT_BUDGET_MS = 40_000L;
     /** Drops abandoned because the pursuit ran past its budget. */
     public static volatile int dropBudgetSpent;
+    /** G39: settled drops approached as a BLOCK goal (the build engine's road), ticks the
+     *  give-up clock was held because the navigator was digging / placing / pillaring toward the
+     *  drop, and failures that re-targeted instead of wandering. Read dropBlock=goal/held/retarget. */
+    public static volatile int dropBlockGoal, dropBuildHeld, dropFailRetargeted;
 
     public PickupDroppedItemTask(ItemTarget[] itemTargets, boolean freeInventoryIfFull) {
         this.itemTargets = itemTargets;
@@ -317,6 +321,19 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
                 }
             }
         }
+        // A DIG IS PROGRESS TOO (G32/G39, 2026-09-11): while the navigator is mining, placing or
+        // pillaring its way to the drop the body stands still on purpose. The same hold
+        // MineAndCollectTask and DestroyBlockTask already have; without it the verdict below
+        // condemned a drop two blocks up a ledge while the pillar under it was going up.
+        if (kaptainwutax.tungsten.TungstenConfig.get().settledDropIsABlockGoal
+                && kaptainwutax.tungsten.task.FastNavigator.isActive()) {
+            var exP = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
+            if ((exP != null && (exP.breakQueue != null || exP.placeQueue != null))
+                    || kaptainwutax.tungsten.task.PillarTask.isActive()) {
+                dropBuildHeld++;
+                progressChecker.reset();
+            }
+        }
         if (!progressChecker.check(mod)) {
             Nav.cancel();
             // ⛔ WHAT ACTUALLY LOSES mine_diamond, MEASURED — AND IT IS NOT ANY OF THE THREE BUGS
@@ -400,6 +417,17 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
                 // target can exceed six hundred times over is not a limit; it is a target that was
                 // never re-selected.
                 _currentDrop = null;
+                // A FAILED PICKUP RE-TARGETS; IT DOES NOT WANDER (G39, 2026-09-11). The drop is
+                // blacklisted on the line above, so the next tick the selector offers the next
+                // drop, or the parent mines the ore instead -- a plan, where the wander was a
+                // random walk that printed "Failed exploring" twelve times on the recorded run
+                // and moved the body nowhere. The parent keeps its own wander for the case where
+                // there is genuinely nothing left to go for.
+                if (kaptainwutax.tungsten.TungstenConfig.get().pickupFailureRetargets) {
+                    dropFailRetargeted++;
+                    progressChecker.reset();
+                    return null;
+                }
                 return wanderTask;
             }
         }
@@ -516,6 +544,19 @@ public class PickupDroppedItemTask extends AbstractDoToClosestObjectTask<ItemEnt
         // Behind a flag because it changes every pickup approach in the mod. Gate: mine_coal, which
         // is red 1 run in 3 today, and mine_diamond, whose recorded failure is this same shape
         // ("closest approach 1.35, 2.45 and 3.57 blocks, never collected, three ores of three").
+        // ⛔ A DROP THAT HAS COME TO REST IS A PLACE, AND A PLACE IS REACHED BY THE BUILD ENGINE
+        // (G39, 2026-09-11). GetToEntityTask asks the physics engine (tryPathToEntity), which can
+        // neither place nor break; when the drop lies two blocks up a ledge that engine refuses,
+        // the task holds forward against the ledge, wanders, and the drop is abandoned at its
+        // budget -- 200 s on the recorded run, with FastPlanner never asked once. A settled drop
+        // takes the same road the blocks take: a block goal on its cell through the drive, whose
+        // escalation hands an unwalkable goal to FastNavigator (pillar / stair / dig). A drop that
+        // is still moving keeps the entity chase, which is what that chase is for.
+        if (kaptainwutax.tungsten.TungstenConfig.get().settledDropIsABlockGoal
+                && GetToDropTask.settled(itemEntity)) {
+            dropBlockGoal++;
+            return new GetToDropTask(itemEntity);
+        }
         return kaptainwutax.tungsten.TungstenConfig.get().pickupClosesToContact
                 ? new GetToEntityTask(itemEntity, 0.1)
                 : new GetToEntityTask(itemEntity);

@@ -616,6 +616,26 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             net.minecraft.util.math.Vec3d gpBefore = gp;
             gp = snapGoalToStandable(gp, mod);
             snapAsked++;
+            // ⛔ A SNAP THAT LANDS ON THE BOT'S OWN FEET IS NOT A GOAL, IT IS A DEAD END (G40,
+            // 2026-09-11). The snap walks the goal's column up to five cells looking for somewhere
+            // to stand, and once the bot has dug to within five blocks of a goal inside rock the
+            // first standable cell in that column IS the bottom of its own shaft. Measured on the
+            // dig_down regression: six blocks mined by FastNavigator, then at y=-57 (goal -62) the
+            // snapped goal became the bot's cell, the "goal moved" guard below killed the navigator
+            // silently (25 > 16), and the physics final approach searched a route to its own feet
+            // every 600 ms for 140 s -- "Time taken to find path: 2 ms" / "Finished!" -- looking
+            // at the block it should have been mining. A goal that cannot be stood in is reached by
+            // the engine that digs; the snap exists for walkers. Keep the real goal: the grid BFS
+            // finds no route into rock and the escalation hands it to FastNavigator, which does.
+            if (kaptainwutax.tungsten.TungstenConfig.get().snapNeverLandsOnSelf
+                    && gp != null && gpBefore != null && !gp.equals(gpBefore)) {
+                net.minecraft.util.math.BlockPos meS = mod.getPlayer().getBlockPos();
+                if (meS.getX() == (int) Math.floor(gp.x) && meS.getY() == (int) Math.floor(gp.y)
+                        && meS.getZ() == (int) Math.floor(gp.z)) {
+                    snapRefusedSelf++;
+                    gp = gpBefore;
+                }
+            }
             // DID THE SNAP LAND ON US? A goal that cannot be stood in gets pulled to the
             // nearest standable cell, and for an unreachable target the nearest such cell can
             // be the one the BOT IS STANDING IN. Then the planner is asked to route to where
@@ -679,6 +699,32 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         long nowMs = System.currentTimeMillis();
         net.minecraft.util.math.Vec3d plNow = new net.minecraft.util.math.Vec3d(
                 mod.getPlayer().getX(), mod.getPlayer().getY(), mod.getPlayer().getZ());
+
+        // ⛔ A NAVIGATOR NOBODY IN THIS TASK ARMED IS EITHER OURS OR IN THE WAY (G40, 2026-09-11).
+        // twFnGoal lives in the task INSTANCE, and the pickup rebuilds its approach task on every
+        // target flip -- so a route the previous instance armed was still running while this
+        // instance, seeing twFnGoal == null, walked the whole ladder underneath it: the yield
+        // below never fired, the near-goal escalation was refused ("navigator active"), and the
+        // physics approach spun. TungstenHelper.stop() does not touch the navigator, so nothing
+        // ever ended the orphan. A running route that serves OUR goal is adopted; one that serves
+        // a stale goal is stopped; an escape or a builder's exact positioning is left alone.
+        if (kaptainwutax.tungsten.task.FastNavigator.isActive() && twFnGoal == null
+                && kaptainwutax.tungsten.TungstenConfig.get().nearGoalEscalatesToBuild) {
+            if (PlannedEscape.armedFrom() != null
+                    || kaptainwutax.tungsten.task.FastNavigator.hasExactCell()) {
+                checker.reset();
+                setDebugState("Tungsten: yielding to a running navigator leg (escape / builder)...");
+                return true;
+            }
+            net.minecraft.util.math.Vec3d ng = kaptainwutax.tungsten.task.FastNavigator.currentGoal();
+            if (ng != null && ng.squaredDistanceTo(gp) <= 4.0) {
+                twFnGoal = net.minecraft.util.math.BlockPos.ofFloored(gp);
+                pdFnAdopted++;
+            } else {
+                kaptainwutax.tungsten.task.FastNavigator.stop();
+                pdFnStale++;
+            }
+        }
 
         // ── Build-engine in charge: let FastNavigator drive ──────────────
         // FastNavigator (the ;goto engine) is the ONLY route driver that can pillar up a cliff,
@@ -1135,6 +1181,47 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 setDebugState("Tungsten (primary) planning...");
                 return true;
             }
+            // ⛔ THE LAST FOUR BLOCKS ARE NOT ALWAYS A WALK (G40, 2026-09-11). Inside this radius
+            // the physics executor is the only driver, and it can neither dig nor climb: a goal
+            // five blocks straight down through stone, or a drop 2.4 blocks away across a ledge
+            // top the body is hanging off the edge of, both measured as a search every 600 ms,
+            // a "Finished!" every 600 ms and a body that never moves -- for the whole window.
+            // The build engine plans the same short legs the walker does AND the dig / pillar
+            // when the leg needs one, so it is the engine for a near goal the physics approach
+            // is not closing: at once when the goal cell cannot be stood in (it must be dug to),
+            // and after 2.5 s of the body not moving otherwise.
+            if (kaptainwutax.tungsten.TungstenConfig.get().nearGoalEscalatesToBuild
+                    && distToGoal <= 4.0
+                    && !kaptainwutax.tungsten.task.FastNavigator.isActive()
+                    && nowMs >= twFnCooldownUntilMs
+                    && kaptainwutax.tungsten.TungstenConfig.get().allowBreak) {
+                net.minecraft.util.math.BlockPos gCell = net.minecraft.util.math.BlockPos.ofFloored(gp);
+                boolean goalUnwalkable = !standable(mod.getWorld(), gCell.getX(), gCell.getY(), gCell.getZ());
+                if (twNearStillPos == null || plNow.distanceTo(twNearStillPos) > 0.3) {
+                    twNearStillPos = plNow;
+                    twNearStillSinceMs = nowMs;
+                }
+                boolean stillTooLong = nowMs - twNearStillSinceMs > 2500;
+                if (goalUnwalkable || stillTooLong) {
+                    kaptainwutax.tungsten.task.BlockPathWalker.stop();
+                    kaptainwutax.tungsten.path.movements.MovementQueue.stop();
+                    if (ex != null) ex.stop = false;
+                    kaptainwutax.tungsten.task.FastNavigator.start(gp);
+                    twFnGoal = gCell;
+                    twFnCooldownUntilMs = nowMs + 12000;
+                    twNearStillPos = null;
+                    pdNearBuild++;
+                    pdFnBuild++;
+                    Nav.cancel();
+                    checker.reset();
+                    setDebugState(goalUnwalkable
+                            ? "Tungsten: goal cell is not standable — digging/building to it via FastPlanner..."
+                            : "Tungsten: near goal not closing — FastPlanner takes the last steps...");
+                    return true;
+                }
+            } else {
+                twNearStillPos = null;
+            }
             // Final approach (<=4 blocks) or water → physics executor.
             // THIS IS WHERE THE BOT SPENDS ITS LIFE, so it gets counted like everything else:
             // pdNear is ~5000 of ~5100 entries, i.e. the goal is within 4 blocks about 98% of the
@@ -1239,6 +1326,16 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
      */
     public static volatile int pdReachArmed, pdReachHeld;
     private long twReachRearmAtMs = 0L;
+
+    /** G40: snaps refused because they landed on the bot's own cell, and near-goal ticks handed
+     *  to the build engine because the physics approach was not closing. Read as
+     *  snapSelfRefused / pdNearBuild. */
+    public static volatile int snapRefusedSelf, pdNearBuild;
+    /** G40: navigator routes armed by an earlier task instance that this one adopted (same goal)
+     *  or stopped (stale goal). Read as pdFnOrphan=adopted/stale. */
+    public static volatile int pdFnAdopted, pdFnStale;
+    private net.minecraft.util.math.Vec3d twNearStillPos = null;
+    private long twNearStillSinceMs = 0L;
 
     /** The goal the drive last steered at, and when -- read by PlannedEscape. */
     public static volatile net.minecraft.util.math.Vec3d lastGoalVec = null;

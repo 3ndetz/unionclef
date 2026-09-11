@@ -293,6 +293,64 @@ NEW pursuit" / "Moving towards closest...", and "Waiting for calculations I thin
 whenever the scanner momentarily had no candidate. Principle: a target you are closing on is kept
 until reached or proven unreachable; a scanner hiccup is a tick to wait, not a wander. Open.
 
+**G39. A drop on a ledge is chased through the physics engine for 200 s.** The 13:00 run (build
+d488e65b, the first to reach iron tools) lost t=87–290 s to one raw iron lying two blocks up a
+ledge. Chain: `Pickup Dropped Items [[raw_iron]] → Approach entity entity.minecraft.item → Walking
+straight at it (navigation would not)`; log: "Failed to pick up drop, suggesting it's unreachable"
+at 15 s, "Failed exploring" ×12, a random dig, a pillar under the ledge ("Pillar stuck at
+y=100.8"), "Drop has cost more than its budget" at 200 s. Root: `GetToEntityTask` has exactly one
+engine, `TungstenHelper.tryPathToEntity` → the physics `PathFinder` (E4), which walks and jumps
+and can neither place nor break; when it refuses, the task holds MOVE_FORWARD into the ledge face
+(`entityCloseRangeWalk`) and then wanders. FastPlanner — the engine with `pillarUp` and
+`breakStair` — is reached only through `CustomBaritoneGoalTask.driveTungstenPrimary`, and no
+entity approach goes through the drive. So the user's question "does FastPlanner die on a two-block
+ledge?" has the answer: it was never asked. Same disease the ores had in G25, one layer up.
+Principle: **a drop that has come to rest is a place, and a place is reached by the build
+engine.** `PickupDroppedItemTask` now returns `GetToDropTask` (a block goal on the drop's cell
+through the drive, escalation to FastNavigator included) for a settled drop — on the ground, out
+of water, not moving — and keeps the entity chase for a moving one; the give-up clock is held while
+the navigator digs / places / pillars toward it (G32 applied here too); a failed pickup blacklists
+and re-targets instead of wandering. Flags `settledDropIsABlockGoal`, `pickupFailureRetargets`;
+counters `dropBlock=goal/held/retarget`; bench `deploy/runner/drop_ledge_test.py` (stair phase
+with a pickaxe and no blocks, pillar phase with cobblestone and no pickaxe).
+Found while benching it: a resting item's client-side velocity is NOT zero — `ItemEntity.tick` adds
+gravity every tick and only calls `move()` (which zeroes it) every fourth tick while the item lies
+still, so `y` cycles −0.04, −0.08, −0.12, 0. A "settled" test on the whole vector flipped the pickup
+between the block goal and the entity chase on three ticks of four (chain alternating every few
+seconds, body never moving, 2.4 blocks from the drop). The test uses the horizontal component only.
+
+**G40. The last four blocks belong to an engine that cannot dig, and the snap can point at the bot's
+own feet.** Two benches, one disease. `dig_down` in the 13:10 regression: FastNavigator mined six
+blocks (`at the dig — mining … -52 … -57`), then at y=−57 with the goal at −62 the client log turns
+into `Found rought path!` / `Time taken to find path: 2 ms` / `Finished!` every 0.5 s for 140 s while
+the bot looks at the floor block. `drop_ledge` phase B: the bot on the ledge top, the drop 2.4
+blocks away on the same flat top, `Tungsten (primary) pathfinding...` for 70 s, `Drop not getting
+closer for 25s`. Roots, in `CustomBaritoneGoalTask.driveTungstenPrimary`: (a) `snapGoalToStandable`
+walks a solid goal's column up to five cells for somewhere to stand, and from the bottom of the
+bot's own shaft that cell IS the bot's feet — the snapped goal became "here", the `goal moved`
+guard (25 > 16) stopped the navigator without a word, and the drive fell into (b); (b) inside the
+4-block radius the physics executor is the only driver ("final precise approach") and it can neither
+dig nor climb, so a goal five blocks down through stone or a body hanging off a ledge edge is
+searched every 600 ms and never moved; (c) `twFnGoal` is per task instance, the pickup rebuilds its
+task on every target flip, and `TungstenHelper.stop()` never touches FastNavigator — so a route the
+previous instance armed kept running underneath the new instance, which refused to escalate
+("navigator active") and spun physics. Principles: **a goal that cannot be stood in is reached by
+the engine that digs — the snap may never land on the bot's own cell**; **within reach is not within
+walking — a near goal the physics approach is not closing goes to the build engine** (at once when
+the goal cell is unstandable, after 2.5 s still otherwise); **one navigator, one owner — a running
+route that serves our goal is adopted, a stale one is stopped, an escape or a builder's exact
+positioning is left alone**. Flags `snapNeverLandsOnSelf`, `nearGoalEscalatesToBuild`; counters
+`snapSelfRefused`, `pdNearBuild`, `pdFnOrphan=adopted/stale`; benches `dig_down_test.py` (33 s,
+12 blocks) and `drop_ledge_test.py`.
+
+**G41. Arrival declared mid-air.** `nav_bridge` in the same regression, twice at identical
+coordinates: the physics engine sprint-jumped the gap, the body passed within 2.0 of the goal in the
+air, `FastNavigator: arrived (2.0)`, the navigator stopped — and the executor's replay, still
+running, walked the body back to x=18.84, 4.2 blocks short, `nav=false path=-1` for the rest of the
+course. Principle: **arrival is a state, not a moment** — the position test also requires the body
+on the ground (or in water / on a ladder) and not sprinting, and stops a still-running replay when
+it fires. Flag `arrivalNeedsSettledBody`.
+
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`
 once at t≈30 s (an exception in `getTaskChainString`, cosmetic).

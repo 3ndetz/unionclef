@@ -2496,6 +2496,53 @@ public class TungstenConfig {
     public boolean navOwnsBreakRuns = true;
 
     /**
+     * G39 (2026-09-11): a dropped item that has SETTLED (on the ground, out of water, not moving)
+     * is approached as a block goal on its cell through the altoclef drive -- the road every block
+     * travels, with the escalation to FastNavigator (pillar / stair / dig) at its end -- instead of
+     * through GetToEntityTask's physics chase, which can neither place nor break. Measured on the
+     * recorded @gamer run: raw iron two blocks up a ledge, "Walking straight at it (navigation
+     * would not)", "Failed exploring" x12, abandoned after 200 s, FastPlanner never asked. A drop
+     * still moving keeps the entity chase. Read dropBlock=goal/held/retarget; bench:
+     * deploy/runner/drop_ledge_test.py.
+     */
+    public boolean settledDropIsABlockGoal = true;
+
+    /**
+     * G39: a pickup that fails on a drop blacklists it and RE-TARGETS on the next tick (the next
+     * drop, or the ore itself) instead of returning a TimeoutWanderTask. The wander was a random
+     * walk that printed "Failed exploring" and moved nothing; the parent task keeps its own wander
+     * for the case where nothing is left to go for.
+     */
+    public boolean pickupFailureRetargets = true;
+
+    /**
+     * G40 (2026-09-11): the drive's goal snap may never land the goal on the bot's own cell. The
+     * snap walks a solid goal's column up to five cells for somewhere to stand, and from the bottom
+     * of its own shaft that cell is the bot's feet -- measured on the dig_down regression: six
+     * blocks dug, then at five blocks from the goal the snapped goal became "here", the navigator
+     * was stopped as "goal moved" and the physics approach searched a route to its own feet every
+     * 600 ms for 140 s. A goal inside rock is reached by digging; keep it. Read snapSelfRefused.
+     */
+    public boolean snapNeverLandsOnSelf = true;
+
+    /**
+     * G40: inside the 4-block "final approach" radius the physics executor was the only driver,
+     * and it can neither dig nor climb. When the goal cell cannot be stood in (it must be dug to),
+     * or the body has not moved for 2.5 s of that approach, the leg goes to FastNavigator, which
+     * plans the same short steps and the dig / pillar when one is needed. Read pdNearBuild; bench:
+     * deploy/runner/dig_down_test.py and drop_ledge_test.py phase B.
+     */
+    public boolean nearGoalEscalatesToBuild = true;
+
+    /**
+     * G41: FastNavigator's position arrival requires a SETTLED body -- on the ground (or in water /
+     * on a ladder) and not sprinting -- and stops a still-running physics replay when it fires.
+     * Measured on nav_bridge in the 13:10 regression: "arrived (2.0)" mid-jump, then the replay
+     * walked the body back to 4.2 blocks short, "nav=false path=-1" for the rest of the course.
+     */
+    public boolean arrivalNeedsSettledBody = true;
+
+    /**
      * A movement gives up when the thing in its way can never be aimed at.
      *
      * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on

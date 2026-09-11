@@ -39,11 +39,17 @@ if "tester1" not in rcon("list"):
     while time.time()-t0<120 and "tester1" not in rcon("list"): time.sleep(5)
 py4j("cmd",c="@stop"); py4j("cmd",c=";stop"); time.sleep(1)
 rcon(f"gamemode survival {BOT}")
+# The bot may be far away (another bench's arena) and the chunk unloaded: then every fill fails
+# silently and the bot drops into the shaft it dug last time. Load the area first.
+rcon(f"forceload add {X-3} {Z-3} {X+3} {Z+3}"); time.sleep(1)
 # solid stone block, a clear pocket at the bottom, air above so the bot stands on top
 rcon(f"fill {X-3} {TOP+1} {Z-3} {X+3} {TOP+6} {Z+3} minecraft:air")   # sky above
-rcon(f"fill {X-3} {FLOORY+1} {Z-3} {X+3} {TOP} {Z+3} minecraft:stone")  # solid block to dig through
+r=rcon(f"fill {X-3} {FLOORY+1} {Z-3} {X+3} {TOP} {Z+3} minecraft:stone")  # solid block to dig through
 rcon(f"fill {X-3} {FLOORY} {Z-3} {X+3} {FLOORY} {Z+3} minecraft:stone")  # solid floor at the bottom
 time.sleep(1)
+ok=rcon(f"execute if block {X} {TOP-3} {Z} minecraft:stone")
+print(f"scene: stone fill -> {r[:40]!r}; solid -> {ok[:30]!r}")
+if "passed" not in ok: print("FAIL: the stone block was not built (chunk not loaded?)"); sys.exit(2)
 sx,sy,sz=START
 rcon(f"tp {BOT} {sx+0.5} {sy} {sz+0.5}"); rcon(f"clear {BOT}"); rcon(f"give {BOT} minecraft:iron_pickaxe")
 time.sleep(2)
@@ -60,6 +66,7 @@ while time.time()-t0<150:
     print(f"  t={time.time()-t0:.0f}s pos={pos} lowestY={best_low:.0f} look={s.get('lookingAt')}"+(" | "+" || ".join(x[-60:] for x in note[-2:]) if note else ""))
     if y <= POCKET_Y + 0.5: reached=True; break
 py4j("cmd",c="@stop"); py4j("cmd",c=";stop")
+rcon(f"forceload remove {X-3} {Z-3} {X+3} {Z+3}")
 print(f"start y={y0:.0f}, lowest y={best_low:.0f}, pocket y={POCKET_Y}")
 print("PASS: dug down to the buried goal" if reached else "FAIL: never dug down")
 sys.exit(0 if reached else 1)

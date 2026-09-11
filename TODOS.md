@@ -122,6 +122,37 @@ recovery, every recovery is a plan**.
       think (wandering)" whenever the scanner momentarily had no candidate. Principle: a target
       you are closing on is kept until it is reached or proven unreachable; a scanner hiccup is
       a tick to wait, not a wander. Open.
+- [x] **G39 a dropped item on a ledge is chased through the physics engine for 200 s.** Run
+      13:00 (build d488e65b, the first to reach IRON TOOLS at 560 s): raw iron dropped 2 blocks
+      up a ledge; `PickupDroppedItemTask` -> `GetToEntityTask` -> `tryPathToEntity` (physics)
+      cannot climb it; "Failed to pick up drop" at 15 s, then wander ("Failed exploring" x12), a
+      random dig, a pillar attempt under the ledge ("Pillar stuck"), and only "Drop has cost more
+      than its budget" at 200 s. Same disease the blocks had: the approach never reaches the
+      build engine. Fix: a SETTLED drop (on ground, not moving) is approached like a block --
+      GetToBlockTask on its cell through the drive, so grid BFS no-route / no-progress escalates
+      to FastNavigator (pillar / dig); the physics entity lock stays for MOVING targets.
+      DONE: `GetToDropTask` (block goal on the drop's cell, arrival = the pickup itself),
+      `settledDropIsABlockGoal`, `pickupFailureRetargets`; "settled" tests the HORIZONTAL velocity
+      only (a resting item's client y-velocity cycles -0.04..-0.12, 0 -- see BARITONE-GAPS G39).
+      Bench `drop_ledge_test.py`: phase A (pickaxe, no blocks) carves a stair and takes the iron in
+      6 s (navBreak=9/0/8, pdFnBuild=3); phase B (cobblestone, no pickaxe) pillars and takes it in
+      13 s ("Pillar done at y=-59.0 (placed 1)"). Both PASS on build 13:51 with G40 in.
+- [x] **G40 the last four blocks belong to an engine that cannot dig; the snap lands on the bot's
+      own feet.** dig_down regression: six blocks dug, then at y=-57 (goal -62) the snapped goal
+      became the bot's cell, the "goal moved" guard stopped the navigator silently and the physics
+      final approach searched a route to its own feet every 600 ms for 140 s ("Time taken to find
+      path: 2 ms" / "Finished!"). drop_ledge phase B: 2.4 blocks from the drop on a flat ledge
+      top, "Tungsten (primary) pathfinding..." for 70 s. Fixes: `snapNeverLandsOnSelf` (a goal
+      inside rock stays the goal -> no route -> FastNavigator digs); `nearGoalEscalatesToBuild`
+      (unstandable goal cell -> build engine at once; body still 2.5 s in the near approach ->
+      build engine); a navigator armed by an earlier task instance is adopted when it serves our
+      goal and stopped when stale (`pdFnOrphan=adopted/stale`). dig_down PASS 33 s and 34 s after;
+      drop_ledge phase B PASS 13 s once the orphan route was adopted/stopped.
+- [x] **G41 arrival declared mid-air.** nav_bridge x2 in the 13:10 regression: "arrived (2.0)"
+      during the sprint-jump, then the executor's replay walked the body back 4.2 blocks short,
+      nav=false for the rest of the course. Fix `arrivalNeedsSettledBody`: on ground (or water /
+      ladder), not sprinting, and the replay is stopped on arrival. nav_bridge PASS x2 (10.1 s,
+      8.7 s, final_dist 0.9) on build 13:51.
 - [ ] **G32 "unreachable" declared by a timer, not by a search** (`Try 2/4` on every G25 no-op
       approach). A block is unreachable only when the dig-capable planner returns incomplete.
       Fix: DestroyBlockTask's approach clock and MineAndCollectTask's progress checker HOLD while
