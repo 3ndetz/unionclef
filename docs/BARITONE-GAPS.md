@@ -647,6 +647,24 @@ the miner in reach of stone under grass beside its feet, the reach ray through i
 accepts a cell from which the block cannot be struck; the plan should dig the cover and stand in
 it (the block then under the feet), as baritone's GoalGetToBlock does from above.
 
+**G61. The bot faces an animal, aimed at it, and neither walks nor strikes.** The 19:57
+recording, and the user's loudest complaint of the day. Two dead bands, one on each side of the
+approach/strike seam in `AbstractDoToEntityTask` / `AbstractKillEntityTask`: (1) the entity
+approach's long haul handed over at a fixed 3.5 blocks, and inside that the only movers were a
+straight walk gated behind six seconds of "the body has stalled" and a thirty-second physics lock
+that on a slope moved it zero — so a kill task asking for 0.5 or 1.0 blocks (a target above, an
+edge nearby) got a body that stood; (2) `canHitEntity` says yes from 4.5 blocks with a line of
+sight, the strike branch hands the fight to the combat controller, and the controller drives
+nothing until its own close quarters at ~3.4 — between 4.5 and 3.4 nobody moves the body and the
+sword (3.0) reaches nothing; the earlier attempt to pull the strike branch back to 3.0
+(`combatCloseToReach`) measured worse because it took the controller out of the zone it does
+close in. Principles: **the haul ends where the caller's distance begins** (the drive runs until
+the target is inside the caller's own distance, never tighter than one block, and inside that the
+straight walk runs at once — `entityHaulToCallerDistance`, `entityCloseWalkImmediate`), and
+**inside "can hit" but beyond the sword, the strike branch itself sprints in** until the
+controller's range (`combatClosesInsideCanHit`, `kaClose`). Bench `pig_stare_test.py`: a pig four
+blocks away on open ground, then the same pig with an eight-deep pit two blocks behind it.
+
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`
 once at t≈30 s (an exception in `getTaskChainString`, cosmetic).

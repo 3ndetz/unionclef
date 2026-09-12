@@ -389,6 +389,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
 
         // Edge-aware combat: don't sprint-jump into the void
         boolean nearEdge = isNearDangerousDrop(mod, player);
+        boolean targetElevatedForBand = yDelta > 1.0;
 
         // PRIORITY 1: If we can hit, attack immediately — edge caution is for MOVEMENT only
         if (canHit) {
@@ -446,6 +447,24 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             if (equipWeapon(mod, preferAxe)) {
                 kaEquipTicks++;
             } else {
+                // ⛔ "CAN HIT" IS 4.5 BLOCKS AND THE SWORD IS 3.0 -- SOMEBODY HAS TO WALK THE
+                // DIFFERENCE (G61, 2026-09-12). canHitEntity says yes from 4.5 with a line of
+                // sight, this branch then hands the fight to the controller, and the controller
+                // drives nothing until it is inside its own close-quarters range (~3.4): between
+                // 4.5 and 3.4 the bot stands aimed at a pig, swinging at nothing, and the note on
+                // combatCloseToReach records that pulling this branch back to 3.0 was worse. So
+                // the closing is done HERE, in the branch that owns the body at this distance:
+                // sprint straight at the target until the controller's range, then let it fight.
+                // Not when the target is above or at an edge -- those go to the approach below.
+                if (kaptainwutax.tungsten.TungstenConfig.get().combatClosesInsideCanHit
+                        && dist > BAND_CLOSE_UNTIL && !targetElevatedForBand && !nearEdge) {
+                    KillAuraHelper.GoJump(mod, false, false);
+                    kaClosedInBand++;
+                    setDebugState("Closing to sword reach (" + String.format("%.1f", dist) + ")");
+                } else if (kaptainwutax.tungsten.TungstenConfig.get().combatClosesInsideCanHit
+                        && KillAuraHelper.isCombatMovementActive() && dist <= BAND_CLOSE_UNTIL) {
+                    KillAuraHelper.stopCombatMovement(mod);   // the controller owns the keys from here
+                }
                 _combat.tick(mod.getPlayer(), player, mod.getWorld());
                 kaTungstenTicks++;
 
@@ -511,6 +530,13 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         }
         return null;
     }
+
+    /** G61: where this task stops closing and the combat controller's close quarters take over --
+     *  the controller enters them at about 3.4 blocks (CombatController), just above the sword's
+     *  3.0; the band between 4.5 (canHit) and here used to be walked by nobody. */
+    private static final double BAND_CLOSE_UNTIL = 3.4;
+    /** G61: ticks this task sprinted at a hittable target that was still beyond the sword. */
+    public static volatile int kaClosedInBand;
 
     // ── Edge / void detection ────────────────────────────────────────────────
 

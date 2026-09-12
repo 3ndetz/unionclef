@@ -236,6 +236,9 @@ public class GetToEntityTask extends Task implements ITaskRequiresGrounded {
     private static final double LONG_HAUL_HANDOVER = 3.5;
     /** Times the approach was handed to the drive because the target was beyond walking range. */
     public static volatile int entityLongHaul;
+    /** G61: ticks the straight walk ran at once inside the hand-over distance, without waiting
+     *  for the progress checker to call the body stalled. */
+    public static volatile int entityCloseWalkImmediate;
     private GetNearEntityTask longHaul = null;
     private boolean longHaulActive = false;
 
@@ -449,17 +452,29 @@ boolean walkDrove = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKey
         // Beyond CLOSE_WALK_RANGE the approach goes through the same drive every block goal uses
         // (grid BFS, the ported movements, FastNavigator when walking cannot reach); inside it the
         // physics chase and the straight walk take over as before. See GetNearEntityTask.
+        // ⛔ THE HAUL ENDS WHERE THE CALLER'S DISTANCE BEGINS (G61, 2026-09-12). Handing over at
+        // 3.5 left a band -- 3.5 down to the sword's 3.0, or to the 0.5 / 1.0 the kill task asks
+        // for at an edge or under a ledge -- in which nothing below this line moves the body for
+        // its first six seconds: the close walk is a last resort behind the progress checker, and
+        // the physics lock, when taken, held it thirty. That is the bot facing a pig, aimed at it,
+        // motionless, on the 19:57 recording. The haul now runs until the target is inside the
+        // caller's own distance (never tighter than one block: the body cannot share a cell with
+        // a pig), and inside that the straight walk runs at once.
+        double haulRange = Math.max(1.0, Math.min(2.0, Math.ceil(_closeEnoughDistance)));
+        boolean haulByCaller = kaptainwutax.tungsten.TungstenConfig.get().entityHaulToCallerDistance;
+        double handover = haulByCaller ? haulRange + 0.5 : LONG_HAUL_HANDOVER;
         if (kaptainwutax.tungsten.TungstenConfig.get().entityLongHaulViaDrive
                 && !_entity.isRemoved()
-                && !mod.getPlayer().isInRange(_entity, LONG_HAUL_HANDOVER)) {
+                && !mod.getPlayer().isInRange(_entity, handover)) {
             if (!longHaulActive) {
                 // one owner of the keys: the physics lock stands down for the drive
                 if (TungstenHelper.isLocked() || TungstenHelper.isActive()) TungstenHelper.stop();
                 longHaulActive = true;
                 entityLongHaul++;
             }
-            if (longHaul == null || !longHaul.isFor(_entity)) {
-                longHaul = new GetNearEntityTask(_entity, LONG_HAUL_ARRIVE);
+            int arrive = haulByCaller ? (int) haulRange : LONG_HAUL_ARRIVE;
+            if (longHaul == null || !longHaul.isFor(_entity) || longHaul.range() != arrive) {
+                longHaul = new GetNearEntityTask(_entity, arrive);
             }
             _progress.reset();
             stuckCheck.reset();
@@ -632,8 +647,15 @@ boolean walkDrove = kaptainwutax.tungsten.TungstenConfig.get().closeWalkKeepsKey
         //
         // Deliberately last-resort: it runs only once the progress checker says the body is not
         // moving, so a healthy approach is untouched.
+        // G61: inside the haul's hand-over distance the straight walk is not a last resort, it is
+        // the mover -- the drive has delivered the body to a block or two and there is nothing
+        // left to plan. The progress checker is still consulted first so its clock keeps running.
+        boolean closeWalkStalled = !_progress.check(mod);
+        boolean closeWalkNow = kaptainwutax.tungsten.TungstenConfig.get().entityHaulToCallerDistance
+                && mod.getPlayer().isInRange(_entity, handover + 0.5);
+        if (closeWalkNow && !closeWalkStalled) entityCloseWalkImmediate++;
         if (kaptainwutax.tungsten.TungstenConfig.get().entityCloseRangeWalk
-                && !_progress.check(mod)
+                && (closeWalkStalled || closeWalkNow)
                 && mod.getPlayer().isInRange(_entity, CLOSE_WALK_RANGE)
                 && !mod.getPlayer().isInRange(_entity, _closeEnoughDistance)) {
             // ⛔ A DROP THREE BLOCKS DOWN IS NOT AN APPROACH PROBLEM, IT IS A DESCENT.

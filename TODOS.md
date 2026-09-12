@@ -274,6 +274,13 @@ recovery, every recovery is a plan**.
       runs; pit_escape -- when the planner chooses the tunnel east instead of the tower, the dig
       of the wall block from inside the shaft aborts once ("Mining aborted: ticks=302 dist=1.50")
       and the escape stalls, 1 of 3 runs. Both want the verbose lines of a failing run.
+- [ ] **G61 the bot faces an animal, aimed, and neither walks nor strikes** (19:57 run; the
+      user's loudest complaint). Two dead bands: the entity haul handed over at a fixed 3.5 with
+      only a six-second-delayed walk / a thirty-second physics lock inside; and canHit (4.5)
+      handing the fight to a controller that drives nothing until ~3.4. Fix
+      `entityHaulToCallerDistance` (haul until inside the caller's distance, straight walk at
+      once) + `combatClosesInsideCanHit` (the strike branch sprints in to 3.4). Bench
+      `pig_stare_test.py` (open ground + a pit behind the pig).
 - [ ] **G60 a runaway tower toward a reach goal below** (19:57 run, 5:20: coal at (631,67,724)
       two below the feet; the approach's reach plan handed off "pillaring to y=66", "no
       progress", "mining the ceiling first (3)", "pillaring to y=72", "pillaring to y=82" --

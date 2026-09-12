@@ -2684,6 +2684,25 @@ public class TungstenConfig {
     public boolean planBudgetBoostBeforeGiveUp = true;
 
     /**
+     * G61 (2026-09-12): the entity approach's long haul (the drive) runs until the target is
+     * inside the CALLER's own distance (a block for a kill, never tighter), not to a fixed 3.5,
+     * and inside that the straight walk runs at once instead of waiting six seconds for the
+     * progress checker. The band between the old hand-over and the sword's reach was the bot
+     * facing a pig, aimed at it, motionless (19:57 recording; bench pig_stare_test.py). Read
+     * entityCloseWalkImmediate and entLongHaul.
+     */
+    public boolean entityHaulToCallerDistance = true;
+
+    /**
+     * G61 (2026-09-12), the other half: inside canHit (4.5 with a line of sight) but beyond the
+     * combat controller's close quarters (~3.4) the kill task sprints straight at the target
+     * instead of handing a body nobody moves to a controller that drives nothing there. The note
+     * on combatCloseToReach measured that pulling the strike branch back to 3.0 tripled the time
+     * in that band; this closes it from the strike branch's own side. Read kaClose.
+     */
+    public boolean combatClosesInsideCanHit = true;
+
+    /**
      * A movement gives up when the thing in its way can never be aimed at.
      *
      * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on

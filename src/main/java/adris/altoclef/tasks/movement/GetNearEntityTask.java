@@ -38,6 +38,10 @@ public class GetNearEntityTask extends CustomBaritoneGoalTask implements ITaskRe
         return entity.equals(e);
     }
 
+    public int range() {
+        return range;
+    }
+
     @Override
     protected Task onTick() {
         if (driveTungstenPrimary(AltoClef.getInstance())) return null;
@@ -53,7 +57,9 @@ public class GetNearEntityTask extends CustomBaritoneGoalTask implements ITaskRe
     public boolean isFinished() {
         AltoClef mod = AltoClef.getInstance();
         if (entity.isRemoved()) return true;
-        if (mod != null && mod.getPlayer() != null && mod.getPlayer().isInRange(entity, range)) return true;
+        // G61: half a block of slack -- a body beside a pig's cell is 1.2 from its centre, and a
+        // range of 1 would never be met while the goal cell itself is reached.
+        if (mod != null && mod.getPlayer() != null && mod.getPlayer().isInRange(entity, range + 0.5)) return true;
         return super.isFinished();
     }
 
