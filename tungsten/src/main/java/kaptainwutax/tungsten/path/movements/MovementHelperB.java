@@ -1013,16 +1013,22 @@ public final class MovementHelperB {
         }
         PlayerInventory inventory = player.getInventory();
         int selected = inventory.getSelectedSlot();
-        if (inventory.getStack(selected).getItem() instanceof BlockItem) {
+        // G62: "placeable" is one predicate everywhere -- a full solid cube, not any BlockItem.
+        if (kaptainwutax.tungsten.helpers.BlockPlaceHelper.isScaffold(inventory.getStack(selected))) {
             return true; // already holding something placeable, nothing to switch
         }
+        int best = -1, bestRank = Integer.MAX_VALUE;
         for (int slot = 0; slot < PlayerInventory.getHotbarSize(); slot++) {
             ItemStack stack = inventory.getStack(slot);
-            if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem)) {
+            if (!kaptainwutax.tungsten.helpers.BlockPlaceHelper.isScaffold(stack)) {
                 continue;
             }
+            int r = kaptainwutax.tungsten.helpers.BlockPlaceHelper.scaffoldRank(stack);
+            if (r < bestRank) { bestRank = r; best = slot; }
+        }
+        if (best >= 0) {
             if (select) {
-                inventory.setSelectedSlot(slot);
+                inventory.setSelectedSlot(best);
             }
             return true;
         }
@@ -1034,7 +1040,7 @@ public final class MovementHelperB {
                 } catch (Throwable ignored) {
                     // the brain failing to equip is a "no blocks" answer, not a crash
                 }
-                return player.getMainHandStack().getItem() instanceof BlockItem;
+                return kaptainwutax.tungsten.helpers.BlockPlaceHelper.isScaffold(player.getMainHandStack());
             }
         }
         return false;

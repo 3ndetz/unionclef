@@ -107,7 +107,8 @@ plan instead of being merely expensive. Fix: soft cost tier (baritone's `avoidBr
 
 **G15. Throwaway budget counts shulkers/beds.** `countPlaceable` counts every `BlockItem` the equip
 hook will never place → over-promised bridge → executor aborts "no block in hand" after walking to
-the gap. Fix: whitelist to the equip-hook set.
+the gap. Fix: whitelist to the equip-hook set. **Done as part of G62** — one `isScaffold` predicate
+now answers for the count, the selector and the restock, so the three cannot disagree.
 
 ### LOW — cosmetic or rare
 
@@ -676,7 +677,28 @@ every eight seconds). Principle, the same one, now in the branch an animal reach
 branch owns the legs inside "can hit"** — face the target, sprint until the eye-to-hitbox
 distance is half a block inside the sword, then swing; a target above, at a drop, or behind a
 straight line that stopped shrinking the gap goes to the entity approach (`kaMob`, the bench also
-fails on any `Blacklist:` line).
+fails on any `Blacklist:` line). Shipped and green: porkchop in six seconds against a sixty-second
+window, both phases, twice. A hostile target is excluded — closing on three zombies measured 18.0
+and 15.0 damage taken against a median of 4.5, and that fight already has an owner.
+
+**G62. A tower built out of azalea, and "out of blocks" with planks in the pack.** The 16:30
+recording (2026-09-12) stood two minutes at `(277,110,-205)`, two more at `(276,97,-189)` on
+`Pillar: out of blocks — nothing placeable in the hotbar`, and then seven and a half minutes at
+`(259.5,68,-539.5)` reading `Pillar stuck ... air=488 insideCell=245 tryFalse=238 placed=0
+hand=minecraft:azalea` — 245 jumps in its own cell, not one block laid, ten towers started and
+abandoned, a wander shuffling between them. Three separate answers to "what is placeable":
+the plan counted every `BlockItem` anywhere in the pack, the hotbar selector took the first
+`BlockItem` in the HOTBAR, and the brain's restock knew eight vanilla blocks by name
+(cobblestone, dirt, stone, netherrack, cobbled deepslate, OAK planks, deepslate, andesite). A
+spruce forest gives none of those, and azalea satisfies all three tests while placing as a floor
+for nobody. Principles: **one predicate for "this can be a floor"** — a full solid cube, no
+container, no workstation, no falling block — shared by the plan's count, the hotbar selector and
+the restock, with a cheapest-first order (rubble, planks, logs, the rest) so a player's choice is
+the bot's (`BlockPlaceHelper.isScaffold` / `scaffoldRank`, `scaffold=restocked/refused`); and
+**a refusal outlives the task that made it** — a column that failed to take a tower is not asked
+for one again, the navigator routes around or gives the route up honestly
+(`PillarTask.refusedRecently`, `pillarColRefused`). Bench `pillar_stock_test.py`: a shaft with the
+planks deep in the pack and three hotbars — junk, containers, azalea.
 
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`

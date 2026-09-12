@@ -429,7 +429,7 @@ public class MovementPillar extends Movement {
         // so a pillar with a pickaxe in hand (i.e. straight after mining, the common case) went
         // UNREACHABLE on its first tick while a bridging traverse paved happily, because
         // attemptToPlaceABlock calls this same selector for free.
-        if (!(player.getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem)) {
+        if (!kaptainwutax.tungsten.helpers.BlockPlaceHelper.isScaffold(player.getMainHandStack())) {
             MovementHelperB.selectThrowaway(player, true);
         }
         return hasThrowaway(player);
@@ -443,7 +443,8 @@ public class MovementPillar extends Movement {
      * pillar upstream would have planned, and cannot plan one it could not execute.
      */
     private static boolean hasThrowaway(PlayerEntity player) {
-        return TungstenConfig.get().allowPlace && player.getMainHandStack().getItem() instanceof BlockItem;
+        return TungstenConfig.get().allowPlace
+                && kaptainwutax.tungsten.helpers.BlockPlaceHelper.isScaffold(player.getMainHandStack());
     }
 
     /**

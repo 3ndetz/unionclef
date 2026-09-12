@@ -405,7 +405,10 @@ public final class FastPlanner {
             // slots past the hotbar are the brain's to hand over; tungsten cannot select them
             if (i >= hotbar && !brainRestocks) continue;
             var st = inv.getStack(i);
-            if (st.getItem() instanceof net.minecraft.item.BlockItem) n += st.getCount();
+            // G62: the count is of what the selector and the restock will actually place -- a full
+            // solid cube, not a torch, a sapling, a bed or a chest (the overcount the note above
+            // left knowingly is closed by sharing the predicate rather than exposing a list).
+            if (kaptainwutax.tungsten.helpers.BlockPlaceHelper.isScaffold(st)) n += st.getCount();
         }
         return n;
     }

@@ -771,15 +771,92 @@ public final class BlockPlaceHelper {
      * @return true if a block item is in hand when this returns.
      */
     public static boolean equipThrowaway(ClientPlayerEntity player) {
-        if (player.getMainHandStack().getItem() instanceof BlockItem) return true;
+        if (isScaffold(player.getMainHandStack())) return true;
+        // The cheapest scaffold in the hotbar, not the first block: a player pillars with the
+        // cobblestone, not the crafting table that happens to sit in slot 3.
+        int best = -1, bestRank = Integer.MAX_VALUE;
         for (int i = 0; i < 9; i++) {
-            if (player.getInventory().getStack(i).getItem() instanceof BlockItem) {
-                player.getInventory().setSelectedSlot(i);
+            ItemStack st = player.getInventory().getStack(i);
+            if (!isScaffold(st)) continue;
+            int r = scaffoldRank(st);
+            if (r < bestRank) { bestRank = r; best = i; }
+        }
+        if (best >= 0) {
+            player.getInventory().setSelectedSlot(best);
+            equipped = null;
+            return true;
+        }
+        // ⛔ "OUT OF BLOCKS" WITH A STACK OF PLANKS IN THE PACK (G62, 2026-09-12). This scanned the
+        // hotbar and stopped; the planner had counted the whole pack (countPlaceable, because the
+        // brain's restock hook is registered) and promised the pillar. The 16:30 recording stood
+        // two minutes at (277,110,-205) and two more at (276,97,-189) on "Pillar: out of blocks --
+        // nothing placeable in the hotbar", spruce planks a few slots deeper, and a zombie villager
+        // finished the second stand. MovementPillar already asks the brain to restock before it
+        // gives up; this is the same ask, so the tower and the bridge stop refusing what the plan
+        // was priced on.
+        Runnable hook = kaptainwutax.tungsten.TungstenModDataContainer.equipBlockHook;
+        if (hook != null) {
+            try {
+                hook.run();
+            } catch (Throwable ignored) {
+                // the brain failing to equip is a "no blocks" answer, not a crash
+            }
+            if (isScaffold(player.getMainHandStack())) {
+                throwawayRestocked++;
                 equipped = null;
                 return true;
             }
         }
+        throwawayRefused++;
         return false;
+    }
+
+    /** G62: hotbar-empty restocks that the brain answered with a block in hand / that it could not. */
+    public static volatile int throwawayRestocked, throwawayRefused;
+
+    /**
+     * Is this stack something a player would pillar or bridge with? A block that places as a full
+     * solid cube, is not a container or a workstation, and does not fall. The old test was "any
+     * BlockItem", which counted torches, saplings, beds and chests as scaffolding (G15) and then
+     * could not place them; the brain's restock used a whitelist of eight vanilla blocks, which
+     * left spruce planks, oak logs and granite in the pack while the tower said it had nothing.
+     * One predicate, shared by the plan's count, the hotbar selector and the brain's restock.
+     */
+    public static boolean isScaffold(ItemStack st) {
+        if (st == null || st.isEmpty() || !(st.getItem() instanceof BlockItem bi)) return false;
+        net.minecraft.block.Block b = bi.getBlock();
+        if (b instanceof net.minecraft.block.BlockEntityProvider
+                || b instanceof net.minecraft.block.FallingBlock
+                || b instanceof net.minecraft.block.CraftingTableBlock
+                || b instanceof net.minecraft.block.TntBlock
+                || b instanceof net.minecraft.block.LeavesBlock) {
+            return false;
+        }
+        try {
+            return net.minecraft.block.Block.isShapeFullCube(b.getDefaultState().getCollisionShape(null, null));
+        } catch (Exception e) {
+            return false;   // a shape that needs the world is not a plain cube
+        }
+    }
+
+    /**
+     * Which scaffold to spend first, lower first: rubble (cobblestone, dirt, netherrack, stone and
+     * its kin) before planks, planks before logs, anything else afterwards, and ores or mineral
+     * blocks only when nothing else is left. The order a player would choose without thinking.
+     */
+    public static int scaffoldRank(ItemStack st) {
+        String id = Registries.ITEM.getId(st.getItem()).getPath();
+        switch (id) {
+            case "cobblestone", "cobbled_deepslate", "netherrack", "dirt", "coarse_dirt", "rooted_dirt",
+                 "stone", "andesite", "diorite", "granite", "tuff", "deepslate", "end_stone",
+                 "blackstone", "basalt", "mossy_cobblestone", "calcite", "dripstone_block", "mud",
+                 "packed_mud", "moss_block", "podzol", "grass_block", "mycelium" -> { return 0; }
+            default -> { }
+        }
+        if (id.endsWith("_planks")) return 1;
+        if (id.endsWith("_log") || id.endsWith("_wood") || id.endsWith("_stem") || id.endsWith("_hyphae")) return 2;
+        if (id.contains("ore") || id.endsWith("_block") || id.equals("obsidian") || id.equals("crying_obsidian")) return 5;
+        return 3;
     }
 
     /** Hold {@code blockName}. Returns false when it is not in the hotbar at all — the caller

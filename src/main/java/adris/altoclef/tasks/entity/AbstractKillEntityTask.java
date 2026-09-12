@@ -296,7 +296,17 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
         // ONE OWNER OF THE LEGS. Against a hostile mob MobDefenseChain has committed to, its
         // controller is already driving inside 4.5 (mdTung) and this task is the one it set; two
         // writers on the movement keys was measured there as a bot that never arrives.
-        boolean controllerDrives = mod.getMobDefenseChain().tungstenDrives(entity);
+        //
+        // ⛔ AND A HOSTILE MOB IS NOT AN ANIMAL: IT HITS BACK, SO THE APPROACH IS NOT MINE.
+        // Measured on mob_trio the first time this branch closed on everything: damage taken 18.0
+        // and 15.0 against a median of 4.5 for the shipped build -- a sprint into a knot of three
+        // zombies is a sprint into three arms, and the whole reason MOB_STRIKE_DISTANCE is 2.9 is
+        // to stay outside one. That fight already has an owner (MobDefenseChain's committed branch
+        // plus the combat controller's close quarters, which do drive inside 4.5), and the
+        // complaint this whole change answers was about a PIG. So the closing is for targets that
+        // do not strike back; a hostile one keeps exactly the behaviour it had.
+        boolean hostile = entity instanceof net.minecraft.entity.mob.HostileEntity;
+        boolean controllerDrives = hostile || mod.getMobDefenseChain().tungstenDrives(entity);
         if (controllerDrives) {
             kaMobYielded++;
         }
@@ -628,7 +638,7 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
     private long mobCloseSinceMs, mobClosePathUntilMs;
     /** G61 (mobs): ticks in the mob branch / ticks it ran at the target / clicks that landed on
      *  the crosshair target / ticks it handed the target to the entity approach / ticks it left
-     *  the legs to MobDefenseChain's controller. */
+     *  the legs to someone else (a hostile target, or MobDefenseChain's committed fight). */
     public static volatile int kaMobTicks, kaMobClosing, kaMobSwings, kaMobHandoff, kaMobYielded;
 
     // ── Edge / void detection ────────────────────────────────────────────────

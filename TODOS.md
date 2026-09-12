@@ -39,7 +39,16 @@ test + full nav-suite regression before it counts done.
 - [ ] **G12 doors/gates passable to grid BFS** (open them instead of refusing/shimmying).
 - [ ] **G13 per-cell break budget** (replace the flat 300-tick abort so hard blocks can finish).
 - [ ] **G14 soft break-cost tier for block entities** (one chest in a wall shouldn't abort the tunnel).
-- [ ] **G15 throwaway budget whitelist** (don't count shulkers/beds -> no over-promised bridge abort).
+- [x] **G15 throwaway budget whitelist** — done inside G62: `BlockPlaceHelper.isScaffold` (a full
+      solid cube, no container/workstation/falling block) is the one predicate the plan's count,
+      the hotbar selector and the brain's restock all use, plus `scaffoldRank` for cheapest-first.
+- [ ] **G62 a tower out of azalea, "out of blocks" with planks in the pack** (16:30 run: two
+      2-minute stands on "Pillar: out of blocks" with spruce planks carried, then 7.5 minutes at
+      (259.5,68,-539.5) with `tryFalse=238 placed=0 hand=minecraft:azalea`, ten towers started).
+      Fixed: one `isScaffold` predicate everywhere, restock takes the cheapest scaffold from the
+      WHOLE pack (the old one knew eight block names), and a column that refused a tower is not
+      asked again (`PillarTask.refusedRecently`, `pillarColRefused`). Bench
+      `pillar_stock_test.py` (planks deep in the pack; hotbars: junk / containers / azalea).
 
 ### LOW — polish
 - [ ] **G16 execute diagonals in the queue** (queueDiagonals) — faster nav.
@@ -287,6 +296,10 @@ recovery, every recovery is a plan**.
       half: sprint to half a block inside the sword (jump only on a collision), hand above/edge/
       stalled-line to the approach, stay out while MobDefenseChain's controller drives the same
       target (`kaMob=ticks/closing/swings/handoff`; the bench now also fails on `Blacklist:`).
+      **Round 19: PASS x2, both phases, porkchop in 6 s of a 60 s window** (kaMob=81/24/8/0/0),
+      far_mob / mob_melee / mob_weapon_swap unchanged. Hostile targets excluded after mob_trio
+      measured 18.0 and 15.0 damage taken (median 4.5): a sprint into three zombies is a sprint
+      into three arms, and that fight belongs to MobDefenseChain. Shipped in 923bdb1b.
 - [ ] **G60 a runaway tower toward a reach goal below** (19:57 run, 5:20: coal at (631,67,724)
       two below the feet; the approach's reach plan handed off "pillaring to y=66", "no
       progress", "mining the ceiling first (3)", "pillaring to y=72", "pillaring to y=82" --

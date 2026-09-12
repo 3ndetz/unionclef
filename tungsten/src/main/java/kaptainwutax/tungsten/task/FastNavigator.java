@@ -752,6 +752,21 @@ public final class FastNavigator {
                 // Swimming out needs none; a tower does, so ask the pocket first.
                 boolean canPillar = player.isTouchingWater()
                         || FastPlanner.countPlaceable(player) > 0;
+                // ⛔ AND A COLUMN THAT HAS ALREADY REFUSED A TOWER DOES NOT GET ASKED AGAIN (G62,
+                // 2026-09-12). PillarTask gives up after four seconds without vertical progress,
+                // this hand-off re-plans, sees the same wall and starts the same tower: the 16:30
+                // recording spent seven and a half minutes at (259.5, 68, -539.5) in that loop,
+                // ten towers, nothing placed, azalea in the hand. A refusal that does not outlive
+                // the task that made it is not a refusal.
+                if (canPillar && !player.isTouchingWater()
+                        && kaptainwutax.tungsten.task.PillarTask.refusedRecently(
+                                kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player))) {
+                    Debug.logWarning("Wall too high to jump and this column has already refused a tower"
+                            + " — giving the route up");
+                    kaptainwutax.tungsten.task.PillarTask.pillarColumnRefused++;
+                    pendingGiveUp = true;
+                    return;
+                }
                 // ⛔ A TOWER THROUGH ROCK IS A DIG FIRST (G56, 2026-09-11). pit_escape on round
                 // 14: the goal cell was the surface pad itself, the plan climbed into it with a
                 // break above the head, and this hand-off started PillarTask under that pad --

@@ -1039,7 +1039,7 @@ public class PathExecutor {
         if (kaptainwutax.tungsten.TungstenModDataContainer.equipBlockHook != null) {
             try { kaptainwutax.tungsten.TungstenModDataContainer.equipBlockHook.run(); } catch (Throwable ignored) {}
         }
-        if (!(player.getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem)) {
+        if (!kaptainwutax.tungsten.helpers.BlockPlaceHelper.isScaffold(player.getMainHandStack())) {
             Debug.logMessage("Bridge place aborted (no block in hand)");
             options.useKey.setPressed(false);
             options.sneakKey.setPressed(false);

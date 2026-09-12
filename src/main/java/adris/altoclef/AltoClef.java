@@ -580,16 +580,23 @@ public class AltoClef implements ModInitializer {
         kaptainwutax.tungsten.TungstenModDataContainer.equipBlockHook = () -> {
             try {
                 if (getPlayer() == null) return;
-                if (getPlayer().getMainHandStack().getItem() instanceof net.minecraft.item.BlockItem) return;
-                net.minecraft.item.Item[] blocks = {
-                    net.minecraft.item.Items.COBBLESTONE, net.minecraft.item.Items.DIRT,
-                    net.minecraft.item.Items.STONE, net.minecraft.item.Items.NETHERRACK,
-                    net.minecraft.item.Items.COBBLED_DEEPSLATE, net.minecraft.item.Items.OAK_PLANKS,
-                    net.minecraft.item.Items.DEEPSLATE, net.minecraft.item.Items.ANDESITE
-                };
-                for (net.minecraft.item.Item b : blocks) {
-                    if (getItemStorage().hasItemInventoryOnly(b)) { getSlotHandler().forceEquipItem(b); return; }
+                if (kaptainwutax.tungsten.helpers.BlockPlaceHelper.isScaffold(getPlayer().getMainHandStack())) return;
+                // ⛔ EIGHT NAMED BLOCKS WERE THE WHOLE RESTOCK (G62, 2026-09-12). Cobblestone, dirt,
+                // stone, netherrack, cobbled deepslate, OAK planks, deepslate, andesite -- so a bot in
+                // a spruce forest with a stack of spruce planks and logs in the pack was told "out
+                // of blocks" by every tower and bridge, while the planner had counted that same
+                // pack and priced the route on it. Two two-minute stands and a death in the 16:30
+                // recording. The restock now takes the cheapest scaffold anywhere in the pack by
+                // the same predicate and rank the tungsten side uses (BlockPlaceHelper.isScaffold /
+                // scaffoldRank): rubble first, then planks, then logs, then the rest.
+                net.minecraft.item.Item best = null;
+                int bestRank = Integer.MAX_VALUE;
+                for (net.minecraft.item.ItemStack st : getItemStorage().getItemStacksPlayerInventory(false)) {
+                    if (!kaptainwutax.tungsten.helpers.BlockPlaceHelper.isScaffold(st)) continue;
+                    int r = kaptainwutax.tungsten.helpers.BlockPlaceHelper.scaffoldRank(st);
+                    if (r < bestRank) { bestRank = r; best = st.getItem(); }
                 }
+                if (best != null) getSlotHandler().forceEquipItem(best);
             } catch (Throwable t) {
                 // the hook must never break placing
             }

@@ -51,6 +51,54 @@ public class PillarTask {
     /** How far above the cell's top the feet must be before a click is attempted (baritone: 0.1). */
     private static final double PLACE_CLEARANCE = 0.05;
 
+    // ── G62: a column that will not take a tower is remembered, so it is not asked twice ──
+    //
+    // ⛔ STOPPING IS NOT THE SAME AS NOT BEING ASKED AGAIN. This task already gives up after four
+    // seconds without vertical progress, and the 16:30 recording still spent SEVEN AND A HALF
+    // MINUTES on one spot: stop, "FastNavigator: no progress -- re-planning", the same plan, "Wall
+    // too high to jump -- pillaring to y=68", stop, ten times over, with a wander shuffling
+    // between them ("Random Orientation" x65). The refusal has to survive the task that made it,
+    // or the navigator keeps re-asking a question that has already been answered.
+    private static BlockPos refusedColumn;
+    private static int refusedStreak;
+    private static long refusedAtMs;
+    /** How long a refusal counts, and how many in a row before the navigator must route around. */
+    private static final long REFUSAL_MS = 60_000L;
+    private static final int REFUSALS_BEFORE_ROUTE_AROUND = 2;
+    /** Towers refused because this very column had already failed to take one. */
+    public static volatile int pillarColumnRefused;
+
+    /** This tower built nothing here -- remember the column. */
+    private static void noteRefusal(BlockPos column) {
+        long now = System.currentTimeMillis();
+        if (column == null) return;
+        if (refusedColumn != null && refusedColumn.getX() == column.getX()
+                && refusedColumn.getZ() == column.getZ() && now - refusedAtMs < REFUSAL_MS) {
+            refusedStreak++;
+        } else {
+            refusedColumn = column;
+            refusedStreak = 1;
+        }
+        refusedAtMs = now;
+    }
+
+    /** A tower went up here, so whatever the trouble was, it is over. */
+    private static void clearRefusal() {
+        refusedColumn = null;
+        refusedStreak = 0;
+    }
+
+    /**
+     * Has this column already refused a tower, recently and more than once? The navigator asks
+     * before handing a wall over, and routes around instead of starting the same tower again.
+     */
+    public static boolean refusedRecently(BlockPos column) {
+        if (column == null || refusedColumn == null) return false;
+        if (refusedStreak < REFUSALS_BEFORE_ROUTE_AROUND) return false;
+        if (System.currentTimeMillis() - refusedAtMs > REFUSAL_MS) return false;
+        return refusedColumn.getX() == column.getX() && refusedColumn.getZ() == column.getZ();
+    }
+
     public static synchronized boolean startTo(int ty) {
         ClientPlayerEntity p = MinecraftClient.getInstance().player;
         if (p == null) return false;
@@ -115,6 +163,7 @@ public class PillarTask {
                 Debug.logMessage("Pillar stopped: no headroom, " + world.getBlockState(over).getBlock()
                         + " at " + over.toShortString());
                 pillarNoHeadroom++;
+                noteRefusal(col);
                 stop();
                 return;
             }
@@ -123,6 +172,7 @@ public class PillarTask {
         // reached target height (standing on / at the target level)
         if (player.getY() >= targetY - 0.05 && player.isOnGround()) {
             Debug.logMessage("Pillar done at y=" + String.format("%.1f", player.getY()) + " (placed " + placed + ")");
+            clearRefusal();
             stop();
             return;
         }
@@ -297,6 +347,9 @@ public class PillarTask {
                         player.getMainHandStack().getItem().toString(),
                         centerTicks, CENTER_TICKS_MAX, player.getX(), player.getZ(), dApex,
                         dJumpStolen));
+                if (dPlaced == 0) {
+                    noteRefusal(supportedColumnUnder(player, world));
+                }
                 stop();
             }
         }
