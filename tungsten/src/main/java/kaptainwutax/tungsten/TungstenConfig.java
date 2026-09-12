@@ -2699,6 +2699,15 @@ public class TungstenConfig {
      * instead of handing a body nobody moves to a controller that drives nothing there. The note
      * on combatCloseToReach measured that pulling the strike branch back to 3.0 tripled the time
      * in that band; this closes it from the strike branch's own side. Read kaClose.
+     *
+     * <p>Second reading, same day: the first change went into the PLAYER branch of the kill
+     * task, and an animal never reaches it -- the mob branch was one instant aim and one click,
+     * with no legs at all, and a pig four blocks away was clicked at from where the click cannot
+     * land until the no-damage blacklist took it (round 18: dte=621/621, kaTung=0/0/0/0, body
+     * motionless). The same flag now also runs the mob branch's closing: face the target and
+     * sprint until the eye-to-hitbox distance is half a block inside the sword, hand a target
+     * above, at a drop, or behind a straight line that stopped shrinking the gap to the entity
+     * approach. Read kaMob=ticks/closing/swings/handoff.
      */
     public boolean combatClosesInsideCanHit = true;
 

@@ -84,7 +84,8 @@ def phase(name, x, pit):
           f"({r[:30]!r}). @get porkchop 1")
     py4j("cmd", c="@get porkchop 1")
     t0 = time.time(); seen = set(); got = False; still = 0; last = None
-    bad = {"Failed to get to target": 0, "lock moved nothing": 0, "Close but no line of sight": 0}
+    bad = {"Failed to get to target": 0, "lock moved nothing": 0, "Close but no line of sight": 0,
+           "Blacklist:": 0}   # round 18: fifteen clicks on nothing blacklisted the pig every eight seconds
     while time.time() - t0 < WINDOW_S:
         time.sleep(4)
         gs = py4j("gs"); pos = gs["pos"]
@@ -104,9 +105,16 @@ def phase(name, x, pit):
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop")
     try:
         st = py4j("stats")["s"]
-        tok = [t for t in st.split() if t.startswith(("entLongHaul=", "lock=", "dte=", "kaTung=", "entityCloseWalk=",
+        tok = [t for t in st.split() if t.startswith(("entLongHaul=", "lock=", "dte=", "kaTung=", "kaMob=", "entityCloseWalk=",
                                                           "nearLockDropped=", "entityReleased=", "pdRouteStopped="))]
         print(f"  counters: {' '.join(tok)}")
+        # the mechanism, not just the outcome: the mob branch must have RUN at the pig
+        # (kaMob=ticks/closing/swings/handoff), otherwise the porkchop came from somewhere else
+        mob = [t for t in tok if t.startswith("kaMob=")]
+        if mob:
+            closing = int(mob[0].split("=", 1)[1].split("/")[1])
+            if closing == 0:
+                bad["mob branch never ran at the pig"] = 1
     except Exception:
         pass
     flaws = {k: v for k, v in bad.items() if v}

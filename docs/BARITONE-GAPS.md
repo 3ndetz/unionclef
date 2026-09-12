@@ -665,6 +665,19 @@ straight walk runs at once — `entityHaulToCallerDistance`, `entityCloseWalkImm
 controller's range (`combatClosesInsideCanHit`, `kaClose`). Bench `pig_stare_test.py`: a pig four
 blocks away on open ground, then the same pig with an eight-deep pit two blocks behind it.
 
+Second reading, round 18: the bench still failed with the body motionless, `dte=621/621` (in range
+every gate tick) and `kaTung=0/0/0/0` (the closing above never ran). The kill task's strike branch
+is split by target type, and everything that moves the body lived in the PLAYER half; the mob half
+was one instant aim and one click. The click lands only when the crosshair is on the hitbox inside
+the sword's 3.0, the gate says "in range" from 4.5 — so a pig four blocks away was clicked at from
+where no click can land, fifteen counted clicks blacklisted it as "no damage", the blacklist ran
+out and it was aimed at again (`Blacklist ... Try 1 / 3` eight seconds after the task started, then
+every eight seconds). Principle, the same one, now in the branch an animal reaches: **the strike
+branch owns the legs inside "can hit"** — face the target, sprint until the eye-to-hitbox
+distance is half a block inside the sword, then swing; a target above, at a drop, or behind a
+straight line that stopped shrinking the gap goes to the entity approach (`kaMob`, the bench also
+fails on any `Blacklist:` line).
+
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`
 once at t≈30 s (an exception in `getTaskChainString`, cosmetic).

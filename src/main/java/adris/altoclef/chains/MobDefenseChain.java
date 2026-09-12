@@ -346,6 +346,14 @@ public class MobDefenseChain extends SingleTaskChain {
             new kaptainwutax.tungsten.combat.CombatController();
     /** When the controller last drove, so the aura can stand off that target for a moment. */
     private long tungstenDrivingMs = 0L;
+
+    /** G61: is the committed fight's controller driving the legs at THIS target right now? The
+     *  kill task's mob branch asks before it sprints at a target of its own: one owner of the
+     *  legs at a time, and inside 4.5 of a mob this chain has decided to fight, that is tungsten. */
+    public boolean tungstenDrives(net.minecraft.entity.Entity target) {
+        return target != null && target == lockedOnEntity && tungstenDrivingMs > 0
+                && System.currentTimeMillis() - tungstenDrivingMs < 500;
+    }
     /** Ticks the committed fight ran on tungsten. Read over py4j as mdTung. */
     public static volatile int mdTungstenTicks;
     /** Ticks the force field's nearest target was struck by tungsten's trigger bot. */

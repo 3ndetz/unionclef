@@ -280,7 +280,13 @@ recovery, every recovery is a plan**.
       handing the fight to a controller that drives nothing until ~3.4. Fix
       `entityHaulToCallerDistance` (haul until inside the caller's distance, straight walk at
       once) + `combatClosesInsideCanHit` (the strike branch sprints in to 3.4). Bench
-      `pig_stare_test.py` (open ground + a pit behind the pig).
+      `pig_stare_test.py` (open ground + a pit behind the pig). Round 18: still FAIL, body
+      motionless, `dte=621/621 kaTung=0/0/0/0` -- the sprint went into the PLAYER half of the
+      strike branch; the mob half had no legs at all (aim + click from 4.5 where the click cannot
+      land, then the no-damage blacklist every 8 s: `Blacklist ... Try 1 / 3`). Fixed in the mob
+      half: sprint to half a block inside the sword (jump only on a collision), hand above/edge/
+      stalled-line to the approach, stay out while MobDefenseChain's controller drives the same
+      target (`kaMob=ticks/closing/swings/handoff`; the bench now also fails on `Blacklist:`).
 - [ ] **G60 a runaway tower toward a reach goal below** (19:57 run, 5:20: coal at (631,67,724)
       two below the feet; the approach's reach plan handed off "pillaring to y=66", "no
       progress", "mining the ceiling first (3)", "pillaring to y=72", "pillaring to y=82" --

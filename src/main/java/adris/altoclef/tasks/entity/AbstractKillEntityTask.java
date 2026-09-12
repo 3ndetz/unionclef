@@ -265,14 +265,89 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
             // Player PvP: smooth look only, no instant rotation
             return onPlayerInteract(mod, playerEntity);
         }
-        // Non-player mobs: existing behavior unchanged (instant lookAt is fine for speedrun)
-        if (!equipWeapon(mod)) {
+        // Non-player mobs: instant aim (fine for speedrun), the swing on cooldown -- and LEGS.
+        //
+        // ⛔ THIS BRANCH HAD NO LEGS AT ALL (G61, second reading, 2026-09-12). Everything that
+        // moves the body -- the sprint inside canHit, the rush below five blocks, the approach for
+        // a target above or at an edge -- lived in onPlayerInteract, and this branch was one
+        // instant aim and one click. The gate that calls it says "in range" from 4.5 blocks with a
+        // line of sight; the click lands only when the crosshair is on the hitbox inside the
+        // sword's 3.0. So a pig four blocks away was aimed at and clicked at, fifteen counted
+        // clicks on nothing blacklisted it as "no damage", the blacklist ran out, and it was aimed
+        // at again: the recording's motionless bot, and "Blacklist ... Try 1 / 3" exactly eight
+        // seconds after the task started (pig_stare_test.py, round 18: dte=621/621, kaTung=0/0/0/0,
+        // the body at 900.5 for the whole window). The first G61 change put the closing into the
+        // PLAYER branch, which a pig never reaches.
+        //
+        // A real player runs at the animal and hits it when the sword reaches. So: while the
+        // eye-to-hitbox distance (the metric the attack actually lands by) is beyond the press
+        // distance, face it and sprint at it. A target above or at a drop, or a straight line that
+        // stops shrinking the gap (a fence, a trunk), goes to the entity approach instead, as the
+        // player branch does. The swing runs only in reach, so a counted swing that dealt nothing
+        // now means what the blacklist takes it to mean.
+        kaTaskTicks++;
+        kaMobTicks++;
+        boolean equipping = equipWeapon(mod);
+        if (equipping) {
+            kaEquipTicks++;
+        }
+        double eyeReach = kaptainwutax.tungsten.combat.TriggerBot.eyeToHitbox(mod.getPlayer(), entity);
+        long nowMs = System.currentTimeMillis();
+        // ONE OWNER OF THE LEGS. Against a hostile mob MobDefenseChain has committed to, its
+        // controller is already driving inside 4.5 (mdTung) and this task is the one it set; two
+        // writers on the movement keys was measured there as a bot that never arrives.
+        boolean controllerDrives = mod.getMobDefenseChain().tungstenDrives(entity);
+        if (controllerDrives) {
+            kaMobYielded++;
+        }
+        if (kaptainwutax.tungsten.TungstenConfig.get().combatClosesInsideCanHit
+                && !controllerDrives && eyeReach > MOB_PRESS_UNTIL) {
+            if (mobCloseEntityId != entity.getId()) {
+                mobCloseEntityId = entity.getId();
+                mobCloseBestReach = eyeReach;
+                mobCloseSinceMs = nowMs;
+                mobClosePathUntilMs = 0L;
+            } else if (eyeReach < mobCloseBestReach - MOB_CLOSE_GAIN) {
+                mobCloseBestReach = eyeReach;
+                mobCloseSinceMs = nowMs;
+            }
+            boolean elevated = entity.getY() - mod.getPlayer().getY() > 1.0;
+            boolean straightLineStalled = nowMs - mobCloseSinceMs > MOB_CLOSE_STALL_MS;
+            if (straightLineStalled) {
+                mobClosePathUntilMs = nowMs + MOB_CLOSE_PATH_MS;
+                mobCloseSinceMs = nowMs;
+                mobCloseBestReach = eyeReach;
+            }
+            if (elevated || isNearDangerousDrop(mod, entity) || nowMs < mobClosePathUntilMs) {
+                KillAuraHelper.stopCombatMovement(mod);
+                kaMobHandoff++;
+                setDebugState(elevated ? "Mob above -- pathfinding underneath"
+                        : nowMs < mobClosePathUntilMs ? "Straight line stalled -- pathfinding to the mob"
+                        : "Mob at an edge -- pathfinding to it");
+                return new GetToEntityTask(entity, 1.0);
+            }
+            LookHelper.lookAt(mod, entity.getEyePos());
+            // Jump only when the body has met something -- a step up onto the next block, the way
+            // a player takes a slope at a run. A free jump every tick would be the crit hop, which
+            // is the controller's business, not the approach's.
+            KillAuraHelper.GoJump(mod, false, mod.getPlayer().horizontalCollision);
+            kaMobClosing++;
+            setDebugState("Running at the mob (" + String.format("%.1f", eyeReach) + ")");
+            return null;
+        }
+        mobCloseEntityId = -1;
+        if (!controllerDrives && KillAuraHelper.isCombatMovementActive()) {
+            KillAuraHelper.stopCombatMovement(mod);   // in reach: the swing owns the body now
+        }
+        if (!equipping) {
             float hitProg = mod.getPlayer().getAttackCooldownProgress(0);
             if (hitProg >= 1 && (mod.getPlayer().isOnGround()
                     || mod.getPlayer().getVelocity().getY() < 0
                     || mod.getPlayer().isTouchingWater())) {
                 LookHelper.lookAt(mod, entity.getEyePos());
-                mod.getControllerExtras().attack(entity);
+                if (mod.getControllerExtras().attack(entity)) {
+                    kaMobSwings++;
+                }
 
                 // No-damage tracking for mobs too
                 if (entity instanceof LivingEntity living) {
@@ -537,6 +612,24 @@ public abstract class AbstractKillEntityTask extends AbstractDoToEntityTask {
     private static final double BAND_CLOSE_UNTIL = 3.4;
     /** G61: ticks this task sprinted at a hittable target that was still beyond the sword. */
     public static volatile int kaClosedInBand;
+
+    /** G61 (mobs): press until the eye-to-hitbox distance is this -- half a block inside the
+     *  sword's 3.0, so sprint momentum and one knockback do not put the target back out. The
+     *  controller's own mob band sits at 2.9 / 2.65 for a zombie's arm; an animal has no arm. */
+    private static final double MOB_PRESS_UNTIL = kaptainwutax.tungsten.combat.TriggerBot.REACH - 0.5;
+    /** G61 (mobs): a straight line that has not shrunk the gap by this much in MOB_CLOSE_STALL_MS
+     *  is not closing -- a fence, a trunk, a slope -- and the pathfinder takes the target for
+     *  MOB_CLOSE_PATH_MS before the straight line is tried again. */
+    private static final double MOB_CLOSE_GAIN = 0.25;
+    private static final long MOB_CLOSE_STALL_MS = 2_500L;
+    private static final long MOB_CLOSE_PATH_MS = 4_000L;
+    private int mobCloseEntityId = -1;
+    private double mobCloseBestReach;
+    private long mobCloseSinceMs, mobClosePathUntilMs;
+    /** G61 (mobs): ticks in the mob branch / ticks it ran at the target / clicks that landed on
+     *  the crosshair target / ticks it handed the target to the entity approach / ticks it left
+     *  the legs to MobDefenseChain's controller. */
+    public static volatile int kaMobTicks, kaMobClosing, kaMobSwings, kaMobHandoff, kaMobYielded;
 
     // ── Edge / void detection ────────────────────────────────────────────────
 
