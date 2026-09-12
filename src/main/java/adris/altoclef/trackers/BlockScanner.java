@@ -92,9 +92,16 @@ public class BlockScanner {
 
             locations.addAll(trackedBlocks.get(block));
         }
-        locations.removeIf(this::isUnreachable);
+        // G63: the cool-off picks BETWEEN candidates; it does not delete the last one. An empty
+        // list here is read by the callers as "this block does not exist in the world".
+        List<BlockPos> rested = new LinkedList<>(locations);
+        rested.removeIf(this::isUnreachable);
+        if (rested.isEmpty() && !locations.isEmpty()) {
+            scanCoolOffLifted++;
+            return locations;
+        }
 
-        return locations;
+        return rested;
     }
 
     /**
@@ -172,6 +179,14 @@ public class BlockScanner {
     }
 
     public Optional<BlockPos> getNearestBlock(Block block, Predicate<BlockPos> isValidTest, Vec3d fromPos) {
+        return getNearestBlock(block, isValidTest, fromPos, true);
+    }
+
+    /**
+     * @param honourCoolOff false on the second pass — see the bottom of this method (G63).
+     */
+    private Optional<BlockPos> getNearestBlock(Block block, Predicate<BlockPos> isValidTest, Vec3d fromPos,
+                                               boolean honourCoolOff) {
         BlockPos pos = null;
         double nearest = Double.POSITIVE_INFINITY;
 
@@ -207,18 +222,21 @@ public class BlockScanner {
             // some of them. Delete the flag once that number exists.
             if (!cheapFirst) {
                 if (!mod.getWorld().getBlockState(p).getBlock().equals(block)) continue;
-                if (!isValidTest.test(p) || isUnreachable(p)) continue;
+                if (!isValidTest.test(p) || (honourCoolOff && isUnreachable(p))) continue;
                 double old = BaritoneHelper.calculateGenericHeuristic(fromPos, WorldHelper.toVec3d(p));
                 if (old < nearest) { nearest = old; pos = p; }
                 continue;
             }
 
-            double dist = BaritoneHelper.calculateGenericHeuristic(fromPos, WorldHelper.toVec3d(p));
+            // G63: on the rested pass every candidate has failed, so rank them by what they cost
+            // -- the one that failed once beats the one that failed five times.
+            double dist = BaritoneHelper.calculateGenericHeuristic(fromPos, WorldHelper.toVec3d(p))
+                    + (honourCoolOff ? 0 : blacklist.penaltyBlocks(p));
             if (dist >= nearest) continue;
 
             //ensure the block is there (can change upon rescan)
             if (!mod.getWorld().getBlockState(p).getBlock().equals(block)) continue;
-            if (!isValidTest.test(p) || isUnreachable(p)) continue;
+            if (!isValidTest.test(p) || (honourCoolOff && isUnreachable(p))) continue;
 
             nearest = dist;
             pos = p;
@@ -261,8 +279,27 @@ public class BlockScanner {
             }
         }
 
+        // ⛔ A COOL-OFF CANNOT OUTLIVE THE ABSENCE OF ALTERNATIVES (G63, 2026-09-12).
+        //
+        // Every caller of this scanner FILTERS by the cool-off, so a patch of forest whose logs had
+        // each failed once answered "there are no logs" — and "no candidates" comes out downstream
+        // as the wander and the "Failed exploring" the operator keeps seeing, with the logs in
+        // plain sight. Stepping aside only means anything while there is something to step aside
+        // FOR. With nothing else on offer, the best of the rested targets is the answer, and the
+        // bot goes back to work instead of walking in circles.
+        if (pos == null && honourCoolOff) {
+            Optional<BlockPos> spared = getNearestBlock(block, isValidTest, fromPos, false);
+            if (spared.isPresent()) {
+                scanCoolOffLifted++;
+                return spared;
+            }
+        }
+
         return pos != null ? Optional.of(pos) : Optional.empty();
     }
+
+    /** G63: scans that found nothing until the cool-off was ignored. Read as banLifted. */
+    public static volatile int scanCoolOffLifted;
 
     /** Equivalence audit for the scan reorder. Read as scanEquiv=checked/mismatched. */
     public static volatile int scanEquivChecked, scanEquivMismatch;

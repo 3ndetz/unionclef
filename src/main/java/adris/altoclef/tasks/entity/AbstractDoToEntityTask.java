@@ -246,7 +246,9 @@ public abstract class AbstractDoToEntityTask extends Task implements ITaskRequir
                 }
                 if (!progress.check(mod)) {
                     progress.reset();
-                    Debug.logMessage("Failed to get to target, blacklisting.");
+                    // G63: a target that the body has not closed on steps aside for a cool-off; it
+                    // is not condemned, and it comes back if nothing better turns up.
+                    Debug.logMessage("Not closing on this target — letting another one have a turn.");
                     mod.getEntityTracker().requestEntityUnreachable(entity);
                 }
                 // Approach tightly — 1 block for close range, maintainDistance for far

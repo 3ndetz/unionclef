@@ -120,9 +120,19 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
         if (checkNewClosest.isPresent()
                 && isBanned(getPos(mod, checkNewClosest.get()))) {
             dcReofferedBanned++;
-            if (kaptainwutax.tungsten.TungstenConfig.get().giveUpTargetStaysGivenUp) {
+            // ⛔ ...BUT A BAN CANNOT OUTLIVE THE ABSENCE OF ALTERNATIVES (G63, 2026-09-12).
+            // Refusing the only thing on offer does not send the bot to a better target, it sends
+            // it to the wander — which is the "Failed exploring" on every recording, with the very
+            // thing it wants standing in front of it. The trackers now hand back a rested target
+            // when nothing else exists, and this is the other half: with nothing already being
+            // chased, the spot's ban has served whatever purpose it had and ends here.
+            if (kaptainwutax.tungsten.TungstenConfig.get().giveUpTargetStaysGivenUp
+                    && currentlyPursuing != null) {
                 dcRefusedBanned++;
                 checkNewClosest = Optional.empty();
+            } else {
+                liftBan(getPos(mod, checkNewClosest.get()));
+                dcBanLifted++;
             }
         }
         // 2848 ticks against 3 pursuits, and every counted branch at zero: the loop spends
@@ -474,6 +484,14 @@ public abstract class AbstractDoToClosestObjectTask<T> extends Task {
     private static final long GIVEN_UP_BAN_MS = 90_000L;
     private static final double BAN_RADIUS_SQ = 2.0D * 2.0D;
     public static volatile int dcReofferedBanned, dcRefusedBanned;
+    /** G63: bans ended because they were about to leave the bot with nothing to do. */
+    public static volatile int dcBanLifted;
+
+    /** Forget this spot's ban — see the note at the call site (G63). */
+    private static void liftBan(net.minecraft.util.math.Vec3d p) {
+        if (p == null) return;
+        bannedUntilMs.entrySet().removeIf(e -> e.getKey().squaredDistanceTo(p) <= BAN_RADIUS_SQ);
+    }
 
     /** True when this spot was given up on recently. Measured before it was ever acted on. */
     private static boolean isBanned(net.minecraft.util.math.Vec3d p) {

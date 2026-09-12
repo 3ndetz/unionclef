@@ -158,15 +158,27 @@ public class EntityTracker extends Tracker {
         float minCost = Float.POSITIVE_INFINITY;
         float runnerUp = Float.POSITIVE_INFINITY;
         int considered = 0;
+        // G63: same rule as getClosestEntity -- the best rested drop is the answer when there is
+        // no other, rather than "no drops" and a wander over the pile.
+        ItemEntity restedFallback = null;
+        float restedCost = Float.POSITIVE_INFINITY;
         for (ItemTarget target : targets) {
             for (Item item : target.getMatches()) {
                 if (!itemDropped(item)) continue;
                 for (ItemEntity entity : itemDropLocations.get(item)) {
-                    if (entityBlacklist.unreachable(entity)) { idBlacklisted++; continue; }
                     if (!entity.getStack().getItem().equals(item)) continue;
                     if (!acceptPredicate.test(entity)) continue;
+                    if (entityBlacklist.unreachable(entity)) {
+                        idBlacklisted++;
+                        float c = (float) BaritoneHelper.calculateGenericHeuristic(position, entity.getPos());
+                        if (c < restedCost) { restedCost = c; restedFallback = entity; }
+                        continue;
+                    }
 
-                    float cost = (float) BaritoneHelper.calculateGenericHeuristic(position, entity.getPos());
+                    // G63: the cost of a drop includes what it has already cost (penaltyBlocks is
+                    // in blocks and this heuristic is in ticks-ish units of the same scale).
+                    float cost = (float) (BaritoneHelper.calculateGenericHeuristic(position, entity.getPos())
+                            + entityBlacklist.penaltyBlocks(entity));
                     considered++;
                     if (cost < minCost) {
                         runnerUp = minCost;
@@ -208,6 +220,10 @@ public class EntityTracker extends Tracker {
                 // an instrument must never be the thing that breaks a run
             }
         }
+        if (closestEntity == null && restedFallback != null) {
+            entityCoolOffLifted++;
+            return Optional.of(restedFallback);
+        }
         return Optional.ofNullable(closestEntity);
     }
 
@@ -226,31 +242,62 @@ public class EntityTracker extends Tracker {
     public Optional<Entity> getClosestEntity(Vec3d position, Predicate<Entity> acceptPredicate, Class... entityTypes) {
         Entity closestEntity = null;
         double minCost = Float.POSITIVE_INFINITY;
+        // ⛔ A COOL-OFF PICKS BETWEEN TARGETS; IT DOES NOT DELETE THE LAST ONE (G63, 2026-09-12).
+        // With every nearby animal rested, this used to answer "there are no animals" — and the
+        // caller reads that as nothing to do and wanders, which on the recordings is the bot
+        // standing in a field of pigs. Keep the best rested one aside and answer with it when
+        // nothing else is on offer.
+        Entity restedFallback = null;
+        double restedCost = Float.POSITIVE_INFINITY;
         for (Class toFind : entityTypes) {
             synchronized (BaritoneHelper.MINECRAFT_LOCK) {
                 if (entityMap.containsKey(toFind)) {
                     for (Entity entity : entityMap.get(toFind)) {
                         // Don't accept entities that no longer exist
-                        if (entityBlacklist.unreachable(entity)) continue;
                         if (!entity.isAlive()) continue;
                         if (!acceptPredicate.test(entity)) continue;
                         double cost = entity.squaredDistanceTo(position);
-                        if (cost < minCost) {
-                            minCost = cost;
+                        if (entityBlacklist.unreachable(entity)) {
+                            if (cost < restedCost) { restedCost = cost; restedFallback = entity; }
+                            continue;
+                        }
+                        // G63, the other half: a target that has been fighting the body is not
+                        // refused, it is PRICED. Squared distance here, so the penalty is squared
+                        // with it; a target that failed twice is worth passing over for one a few
+                        // blocks further off, and still worth walking to when it is alone.
+                        double pen = entityBlacklist.penaltyBlocks(entity);
+                        double ranked = pen <= 0 ? cost : (Math.sqrt(cost) + pen) * (Math.sqrt(cost) + pen);
+                        if (ranked < minCost) {
+                            minCost = ranked;
                             closestEntity = entity;
                         }
                     }
                 }
             }
         }
+        if (closestEntity == null && restedFallback != null) {
+            entityCoolOffLifted++;
+            return Optional.of(restedFallback);
+        }
         return Optional.ofNullable(closestEntity);
     }
+
+    /** G63: answers that only existed because the cool-off was ignored. Read as banLifted. */
+    public static volatile int entityCoolOffLifted;
 
     public boolean itemDropped(Item... items) {
         ensureUpdated();
         for (Item item : items) {
             if (itemDropLocations.containsKey(item)) {
-                // Find a non-blacklisted item
+                // Find a drop that is not resting.
+                //
+                // ⛔ THIS ONE KEEPS THE COOL-OFF, DELIBERATELY, AND IT IS THE EXCEPTION TO G63.
+                // The question here is not "does this exist" but "should I go for a drop instead
+                // of MINING one", and ResourceTask asks it exactly that way (ResourceTask:165).
+                // Answering yes for a resting drop pins the bot to it: the chooser below would
+                // hand back that same drop as its last resort, and the bot would never fall
+                // through to the block it could simply dig. Resting here means "the pickaxe is
+                // the job for now", which is the behaviour that branch was written for.
                 for (ItemEntity entity : itemDropLocations.get(item)) {
                     if (!entityBlacklist.unreachable(entity)) return true;
                 }

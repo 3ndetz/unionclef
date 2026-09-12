@@ -46,22 +46,71 @@ public abstract class AbstractObjectBlacklist<T> {
             if (betterTool) entry.bestTool = newTool;
             if (newDistance < entry.bestDistanceSq) entry.bestDistanceSq = newDistance;
             entry.numberOfFailures = 0;
-            Debug.logMessage("Blacklist RESET: " + item.toString());
+            Debug.logMessage("Circumstances changed, attempts restored: " + item.toString());
         }
         entry.numberOfFailures++;
+        entry.totalFailures++;
         entry.numberOfFailuresAllowed = numberOfFailuresAllowed;
-        Debug.logMessage("Blacklist: " + item.toString() + ": Try " + entry.numberOfFailures + " / " + entry.numberOfFailuresAllowed);
+        entry.lastFailureMs = System.currentTimeMillis();
+        Debug.logMessage("Costing " + item.toString() + ": attempt " + entry.numberOfFailures
+                + " / " + entry.numberOfFailuresAllowed + " — stepping aside for "
+                + (COOL_OFF_MS / 1000) + "s");
     }
 
     protected abstract Vec3d getPos(T item);
 
+    /**
+     * ⛔ A TARGET IS NEVER CONDEMNED FOR GOOD (G63, 2026-09-12).
+     *
+     * <p>This used to answer "unreachable" from the failure count alone, with no clock at all: once
+     * a pig, a log or a chest had failed three times it was gone until something called
+     * {@link #clear()}. The operator's standing complaint — "failed to get target, blacklisting.
+     * There must be NO such cases at all" — is this method. Worse, the callers FILTER by it, so a
+     * world whose nearby candidates had all failed once produced an empty candidate list, which
+     * reads downstream as "nothing to do" and comes out as the wander and the "Failed exploring"
+     * on the recordings: the bot standing in a forest that it had decided did not exist.
+     *
+     * <p>A failure is evidence about NOW — a mob behind a fence, a log across a ravine, a body that
+     * has not found its way yet — and it goes stale. So the verdict lasts {@link #COOL_OFF_MS} from
+     * the last failure and then the target is offered again; a target that is genuinely hopeless
+     * fails again at once and steps aside again, which costs one attempt rather than the rest of
+     * the run. The count still rises, and {@link #penaltyBlocks} exposes it so a chooser can prefer
+     * the target that has NOT been fighting it, which is what "blacklisting" was reaching for.
+     */
     public boolean unreachable(T item) {
-        if (entries.containsKey(item)) {
-            BlacklistEntry entry = entries.get(item);
-            return entry.numberOfFailures > entry.numberOfFailuresAllowed;
+        BlacklistEntry entry = entries.get(item);
+        if (entry == null) return false;
+        if (entry.numberOfFailures <= entry.numberOfFailuresAllowed) return false;
+        if (System.currentTimeMillis() - entry.lastFailureMs > COOL_OFF_MS) {
+            // the cool-off is over: it gets its attempts back, and the history stays as a price
+            entry.numberOfFailures = 0;
+            blacklistExpired++;
+            return false;
         }
-        return false;
+        return true;
     }
+
+    /**
+     * What this target has cost so far, in blocks, for a chooser that ranks by distance. Not a
+     * veto: a target that has failed twice is worth passing over for one three blocks further
+     * away, and worth walking to when it is the only thing in the world.
+     */
+    public double penaltyBlocks(T item) {
+        BlacklistEntry entry = entries.get(item);
+        if (entry == null) return 0;
+        long idle = System.currentTimeMillis() - entry.lastFailureMs;
+        if (idle > COOL_OFF_MS * 4) return 0;               // long forgotten
+        double fade = idle > COOL_OFF_MS ? 0.25 : 1.0;      // stale evidence is worth less
+        // totalFailures, not numberOfFailures: the cool-off hands the ATTEMPTS back, and a price
+        // that reset with them would let a hopeless target look as cheap as a fresh one for ever.
+        return entry.totalFailures * PENALTY_PER_FAILURE * fade;
+    }
+
+    /** How long a run of failures keeps a target out of the running, and what each one prices. */
+    private static final long COOL_OFF_MS = 45_000L;
+    private static final double PENALTY_PER_FAILURE = 16.0;
+    /** Verdicts that timed out and handed the target its attempts back. Read as banExpired. */
+    public static volatile int blacklistExpired;
 
     public void clear() {
         entries.clear();
@@ -89,5 +138,9 @@ public abstract class AbstractObjectBlacklist<T> {
         public int numberOfFailures;
         public double bestDistanceSq;
         public MiningRequirement bestTool;
+        /** When the last failure happened — the verdict is dated, not permanent (G63). */
+        public long lastFailureMs;
+        /** Every failure ever, kept across cool-offs so the PRICE remembers what the verdict forgets. */
+        public int totalFailures;
     }
 }

@@ -49,6 +49,21 @@ test + full nav-suite regression before it counts done.
       WHOLE pack (the old one knew eight block names), and a column that refused a tower is not
       asked again (`PillarTask.refusedRecently`, `pillarColRefused`). Bench
       `pillar_stock_test.py` (planks deep in the pack; hotbars: junk / containers / azalea).
+      **Round 20: PASS all three phases, pit_escape PASS with it.** Shipped in 63c00303.
+- [ ] **G63 no target is condemned for good** (the operator's standing demand: "failed to get
+      target / blacklisting must not exist AT ALL"). The verdict was a failure count with no
+      clock, and every chooser filtered by it, so a world of once-failed candidates answered
+      "nothing here" -> wander -> "Failed exploring". Now: the verdict expires after a 45 s
+      cool-off and hands the attempts back (`banExpired`), and when the filter would leave the
+      chooser with nothing the best rested candidate is returned instead
+      (`banLifted=scan/entity/chooser`). Bench `target_returns_test.py`. Second half: the price
+      (`penaltyBlocks`, kept across cool-offs as `totalFailures`) ranks candidates in
+      `EntityTracker.getClosestEntity` / `getClosestItemDrop` and on the rested pass of
+      `BlockScanner.getNearestBlock`, so a target that has been fighting the body loses to one
+      that has not — without ever being removed from the world.
+- [ ] **G58 repro exists now**: `cliff_drop_test.py` — a plateau, a sheer face, and an iron ingot
+      eighteen blocks below, four out from the foot, with a wooden pickaxe. This is the 20:29
+      stand at (902,104,-243) in a shape a bench can hold still.
 
 ### LOW — polish
 - [ ] **G16 execute diagonals in the queue** (queueDiagonals) — faster nav.

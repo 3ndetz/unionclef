@@ -698,7 +698,26 @@ the bot's (`BlockPlaceHelper.isScaffold` / `scaffoldRank`, `scaffold=restocked/r
 **a refusal outlives the task that made it** — a column that failed to take a tower is not asked
 for one again, the navigator routes around or gives the route up honestly
 (`PillarTask.refusedRecently`, `pillarColRefused`). Bench `pillar_stock_test.py`: a shaft with the
-planks deep in the pack and three hotbars — junk, containers, azalea.
+planks deep in the pack and three hotbars — junk, containers, azalea. Shipped green: all three
+phases out of the shaft, `pit_escape` passing with it.
+
+**G63. "Failed to get target, blacklisting" and the empty world behind it.** The operator's
+standing demand is that there be no such cases at all, and the machinery under that message is
+`AbstractObjectBlacklist`: a failure COUNT with no clock, so a pig, a log or a drop that failed
+three times was gone until something called `clear()`. Worse, every chooser FILTERS by the verdict
+— `BlockScanner.getKnownLocations` / `getNearestBlock`, `EntityTracker.getClosestEntity` /
+`getClosestItemDrop` / `itemDropped` — so a patch of world whose candidates had each failed once
+answered "there is nothing here", and "no candidates" reads downstream as nothing to do: the
+wander, and the `Failed exploring` on every recording with the wanted thing in plain sight.
+Principles: **a verdict is dated, not permanent** — a run of failures steps a target aside for a
+cool-off (45 s) and then hands its attempts back, with the history left as a price
+(`penaltyBlocks`, `banExpired`); and **a ban cannot outlive the absence of alternatives** — when
+the filter would leave the chooser with nothing, the best rested candidate is the answer
+(`banLifted=scan/entity/chooser`). The same rule ends the pursuit ban in
+`AbstractDoToClosestObjectTask` when nothing else is being chased. Bench
+`target_returns_test.py`: a pig sealed in bedrock that becomes reachable after 45 s (it must
+still be a candidate), and an unreachable drop beside a reachable one (the reachable one must
+win).
 
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`
