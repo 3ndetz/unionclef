@@ -230,6 +230,9 @@ public final class FastNavigator {
     private static int pillarSteerTicks = 0;
     /** G60: hand-offs refused because the goal was below and the tower wanted to go up. */
     public static volatile int navTowerRefusedBelow;
+    /** G64b: legs started afloat that went to the queue instead of the walker / that the queue
+     *  refused (and were re-planned rather than walked). */
+    public static volatile int navWetLegQueued, navWetLegRefused;
 
     /** The cell a stalled route was last re-planned from; a second stall in the same cell is the
      *  honest "unreachable from here" verdict. Read navStall=replans/gaveUp. */
@@ -929,6 +932,29 @@ public final class FastNavigator {
                 }
                 if (!queued) {
                     Debug.logWarning("FastNavigator: MovementQueue refused the leg, walking it");
+                }
+            }
+            // ⛔ A LEG STARTED AFLOAT BELONGS TO THE QUEUE, NEVER TO THE WALKER (G64b, 2026-09-12).
+            // BlockPathWalker cannot swim: it steers at a cell and presses forward, and in water
+            // that is a body bobbing against the surface. The 20:14 run: once the queue's swim had
+            // failed, this dispatch handed the walker "BFS 18 wp" / "BFS 6 wp" from the middle of a
+            // lake every six seconds for five minutes -- "no progress at 1199,62,-253", navStall
+            // 65/64, items=0 -- because a plain water leg never sets nextLegMovement and so never
+            // reached the queue at all. The queue types liquid edges as MovementSwim and is the
+            // one component here that can cross a pond; ask it first whenever the body is in
+            // water, and if it refuses, re-plan rather than sprint at the water.
+            if (!queued && TungstenConfig.get().wetLegGoesToTheQueue && player.isTouchingWater()
+                    && !nextLegBridge) {
+                boolean tookIt = kaptainwutax.tungsten.path.movements.MovementQueue.start(leg) > 0;
+                if (tookIt) {
+                    queued = true;
+                    navWetLegQueued++;
+                } else {
+                    navWetLegRefused++;
+                    Debug.logWarning("FastNavigator: afloat and the queue refused the leg — re-planning, not walking");
+                    legTail = null;
+                    replanFromHere();
+                    return;
                 }
             }
             if (!queued) {

@@ -90,6 +90,8 @@ public class BlockPathWalker {
     /** G53: ticks the walker refused to call a waypoint BELOW the feet reached while the body
      *  still stood on the ground above it, and kept walking to its centre instead. */
     public static volatile int walkerHeldAboveWp = 0;
+    /** G65: ticks the walk toward a cell below was made precise (no sprint, tight bearing, no hop). */
+    public static volatile int walkerIntoHole = 0;
 
     /** Ticks the walker shut itself down because the physics executor claimed the body. */
     public static volatile int walkerYieldedToExecutor = 0;
@@ -613,6 +615,22 @@ public class BlockPathWalker {
         double yawErr = Math.abs(WindMouseRotation.wrapDelta(yaw - player.getYaw()));
         boolean onGround = player.isOnGround();
         boolean facing = placerOwnsAim || yawErr < 45.0;
+        // ⛔ A CELL BELOW IS ENTERED BY A PRECISE WALK, NOT A SPRINT (G65, 2026-09-12). A one-wide
+        // hole takes a body only when its whole hitbox is over the air: 0.6 wide in a 1.0 cell is a
+        // window of 0.4 in BOTH axes. At sprint speed (0.28 a tick) with a 45-degree facing
+        // tolerance the body crosses that window in a tick and lands on the far rim -- buried_goal
+        // phase two: the sand over the chest dug open, the body shuffling 859 <-> 861 on either
+        // rim for forty seconds, "no progress" every three; and on the 19:00 recording a bot
+        // standing over a one-wide shaft with a cobblestone at its bottom, "arrived (1.3)",
+        // six and a half minutes. Baritone's MovementDescend walks to the destination's CENTRE
+        // at walking pace with its full aim on it, and falls in because it arrives there. Same
+        // here: while the waypoint is below the feet and close, no sprint, a tight bearing, no
+        // hop, and the waypoint is held (standingAbove, G53) until the body drops.
+        boolean intoHole = standingAbove && dist < 1.6;
+        if (intoHole) {
+            facing = placerOwnsAim || yawErr < 8.0;
+            walkerIntoHole++;
+        }
         // CLIMBING A STEP. A vanilla step-up is jump + FORWARD PRESSURE: jumping
         // without it just bounces on the spot. Right at the step the horizontal
         // distance is ~0, so the bearing is numerically unstable, `facing` flickers
@@ -694,7 +712,7 @@ public class BlockPathWalker {
         // same tick and the last writer wins — the placer clears it on its exit paths. That is
         // the "exactly one per-tick writer of keys" point from docs/BARITONE-PORT-SPEC.md,
         // measured rather than argued: the fix is unit 2, one movement owning the manoeuvre.
-        mc.options.sprintKey.setPressed(move && !climbing);   // sprint-jump overshoots a ledge
+        mc.options.sprintKey.setPressed(move && !climbing && !intoHole);   // sprint-jump overshoots a ledge, and a hole
         mc.options.backKey.setPressed(false);
         mc.options.leftKey.setPressed(false);
         mc.options.rightKey.setPressed(false);
@@ -720,7 +738,7 @@ public class BlockPathWalker {
         // jumped, so the line is drawn at two blocks, not at any descent at all.
         boolean droppingTo = wp.getY() < player.getBlockPos().getY() - 2;
         boolean canJump = (facing || climbing) && TungstenConfig.get().followJumpingEnabled
-                && onGround && !droppingTo
+                && onGround && !droppingTo && !intoHole
                 && (needJumpUp || SafetySystem.isJumpLandingSafe(
                         playerPos, player.getVelocity(), player.getEntityWorld()));
         mc.options.jumpKey.setPressed(canJump);

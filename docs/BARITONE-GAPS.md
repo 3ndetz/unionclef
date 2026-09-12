@@ -653,6 +653,19 @@ miner takes the lid off and looks from above (`digTheLidOffTheTarget`, `dbLid=du
 Bench `lid_dig_test.py`: one stone block a layer down and three to the side under a grass lid,
 with dirt everywhere else so nothing else is a candidate.
 
+**G64. Afloat for ten minutes: the level swim stroke looks down.** The 20:14 run: the bot in
+water at `(1200,61,-253)`, a wooden pickaxe on the lake bed seven blocks below, and the queue's
+first movement — `MovementSwim (1200,61,-253) -> (1201,61,-253)`, one cell sideways — `FAILED at
+step 0` every twelve seconds, forty ticks without approach each time, the identical plan re-issued,
+`items=0` for the whole run. `swimAimsAtDestPitch` aims the full rotation at the destination CELL
+centre; for a level stroke that point is a block and a half below the head, a look of forty to sixty
+degrees down, and in water the body goes where the eyes look: "forward" pushed it down, the base
+class's JUMP pushed it up, and it bobbed in place. Principle: **a stroke looks where the head will
+be** — level or rising strokes aim at head height over the destination column and let JUMP do the
+rising; only a dive keeps the cell centre, because looking down IS the dive (`swimAim`). Bench
+`pool_drop_test.py`: a three-deep pool, the bot dropped in afloat, an ingot on the bed six blocks
+off — swim level, then dive.
+
 **G61. The bot faces an animal, aimed at it, and neither walks nor strikes.** The 19:57
 recording, and the user's loudest complaint of the day. Two dead bands, one on each side of the
 approach/strike seam in `AbstractDoToEntityTask` / `AbstractKillEntityTask`: (1) the entity
@@ -732,6 +745,58 @@ price (`excludedDeliberately`).
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`
 once at t≈30 s (an exception in `getTaskChainString`, cosmetic).
+
+**G65. A cell below is entered by a precise walk, not a sprint.** The 19:00 recording: the bot
+over a one-wide shaft with a cobblestone at its bottom, `arrived (1.3)`, six and a half minutes;
+`buried_goal` phase two: the sand over the chest dug open and the body shuffling `859 <-> 861` on
+either rim for forty seconds. A one-wide hole takes a body only when its whole hitbox is over the
+air — 0.6 wide in a 1.0 cell is a window of 0.4 in both axes — and the walker came at sprint speed
+with a 45-degree bearing tolerance, so it landed on the far rim every time. Baritone's
+`MovementDescend` walks to the destination's centre at walking pace with its full aim on it, and
+falls in because it arrives there. Principle: **a waypoint below is reached by arriving over its
+centre** — no sprint, an eight-degree bearing, no hop, the waypoint held (G53) until the body
+drops (`intoHole`). Bench `narrow_shaft_test.py`.
+
+**G66. A vine in the tower's column turns the jump into a climb.** Seen live by the operator: the
+bot needing to place a block under itself beside a vine in a narrow space, hopping and turning for
+ever. Vanilla treats a body inside a vine as climbing: JUMP becomes "go up the vine", the feet
+never leave the cell in a free arc, and the tower's place window (airborne, rising, feet above the
+cell's top) never opens. Baritone's `MovementPillar` has its own branch for a ladder or vine at the
+source and never places there. Principle: **the column is cleared before the tower is built** — a
+vine in the feet, head or the two cells above is struck out first, a few ticks by hand
+(`pillarVine=ticks/met`). Bench `vine_pillar_test.py`.
+
+### Baritone's stuck cases, and where each one stands here
+
+The operator's question, put straight: why does every failure point baritone already handles have
+to be found again one at a time? Because the port was made move by move, not failure by failure.
+This is the failure-by-failure list — baritone's mechanism, the file it lives in, and whether ours
+has it. "Open" rows are the next stalls waiting to happen.
+
+| Baritone's mechanism | Where | Ours | Status |
+|---|---|---|---|
+| Pillar clicks only with feet above the cell's top (`player.y > dest.y + 0.1`) | MovementPillar.updateState | `PLACE_CLEARANCE` (G42) | done |
+| Pillar centres before it jumps (0.17 tolerance) | MovementPillar | `centerTicks` on the supported column (G42) | done |
+| Pillar on a ladder / vine takes the ladder branch, never places | MovementPillar (ladder/vine) | vine struck out of the column first (G66) | done |
+| Pillar aborts under a ceiling within reach | MovementPillar.cost (`canWalkThrough` above) | `pillarNoHeadroom` (G51), ceiling mined first (G56) | done |
+| Descend walks to the destination centre at walking pace | MovementDescend / PathExecutor `moveTowards` | `intoHole` (G65), `standingAbove` (G53) | done |
+| Downward digs the block under the feet | MovementDownward | `breakDown` (G1), `driveDig` (G55) | done |
+| Traverse opens doors and fence gates on the way | MovementTraverse | — | open (G12) |
+| Ascend places the step block when missing | MovementAscend | — | open (G7) |
+| Parkour places a block at the far end | MovementParkour | — | open (G7) |
+| Falls over three blocks refused unless a water bucket is held | MovementFall / `maxFallHeightNoWater` | `MAX_FALL = 3`, no bucket branch | partial (G3) |
+| A movement that runs past `cost + 100` ticks is cancelled and the path re-planned | PathExecutor.onTick | queue timeout `cost + 100`; `FAILED`/`UNREACHABLE` re-plan from the body | done |
+| A body that has not moved is detected and the path is dropped | PathExecutor (`ticksOnCurrent`, `pathPosition` skip) | drive stall watchdog, navigator "no progress", wander | done, three writers (G-0 family) |
+| Sprint is dropped on the movement before a lip, a ladder, a descend | PathExecutor.sprintNextMovement | `sprintKey = move && !climbing && !intoHole` | done |
+| A search that ran out re-runs with a longer timeout (500 ms, then 2000 ms on failure) | PathingBehavior / AStarPathFinder | `planBudgetBoostBeforeGiveUp` (4x, one branch only) | partial (G58: measured, not the root of the cliff flake) |
+| A partial path is walked when it is far enough from the start (`MIN_DIST_PATH`), by coefficient | AStarPathFinder.bestSoFar | `PARTIAL_COEFS` (G44), `walkThePartial` | done |
+| Water: a submerged body holds jump; a route through water is priced, not refused | MovementHelper.isWater, PathExecutor | `MovementSwim` (level stroke looks level, G64), wet legs to the queue (G64b) | done |
+| Throwaway blocks: a whitelist, restocked into the hotbar from the pack | InventoryBehavior | `isScaffold` / `scaffoldRank` / restock (G62) | done |
+| Blocks it may not break or place are refused at cost time (`avoidBreaking`, protected) | CalculationContext | `BreakRules` / `PlaceRules` hooks | done |
+| An unreachable goal is reported as "no path", not silently retried | AStarPathFinder → PathingBehavior | one-cell results, callers infer (G32) | partial |
+| A goal below with no dig-capable plan is given up out loud | — | "no leg from here toward a goal below — giving the route up" | done (ours is stricter) |
+| Entering a one-wide hole needs the body centred; baritone's executor keeps `moveTowards` on the exact centre | PathExecutor | G65 | done |
+| Mob / drop targets that failed are re-offered when circumstances change, never banned for good | (altoclef, not baritone) | dated verdicts, no ban without alternatives, price (G63/G63b) | done |
 
 ### Is baritone's move set fully ported into FastPlanner? No.
 

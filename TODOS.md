@@ -67,6 +67,37 @@ test + full nav-suite regression before it counts done.
       the last resort — seven minutes at a smoker, `banLifted=8918`, "Blacklisting extra furnace"
       x80. Zero attempts allowed is now a DECISION: no cool-off, no fallback, no price
       (`excludedDeliberately`).
+- [ ] **G65 a cell below is entered by a precise walk** (the 19:00 recording: over a one-wide
+      shaft with a cobblestone at its bottom, "arrived (1.3)", 6.5 minutes; buried_goal phase two:
+      sand dug, the body shuffling 859 <-> 861 on either rim). A one-wide hole takes a body only
+      when its whole hitbox is over the air -- a 0.4 window in both axes -- and the walker came at
+      sprint speed with a 45-degree bearing tolerance. Baritone's MovementDescend walks to the
+      destination's centre at walking pace with its aim on it. Now: waypoint below and close ->
+      no sprint, an 8-degree bearing, no hop, waypoint held until the body drops (`intoHole`).
+      Bench `narrow_shaft_test.py` (two deep, three deep); buried_goal phase two is the same shape.
+- [ ] **G66 a vine in the tower's column turns the jump into a climb** (operator, live: the bot
+      hopping and turning for ever beside a vine in a narrow space). Vanilla treats a body inside
+      a vine as climbing; the tower's place window never opens. Baritone's MovementPillar has a
+      ladder/vine branch. Ours: break the vine out of the column first (`pillarVine=ticks/met`).
+      Bench `vine_pillar_test.py`.
+- [x] **G58 budget measured**: cliff_drop at 250 / 1000 / 3000 ms, twice each -- 6 of 6 PASS.
+      The budget is not the root of the one failure in three; it is a rare flake of the same
+      bench, still to be caught with the terrain snapshot.
+- [ ] **G64 afloat for ten minutes: the level swim stroke looks DOWN** (20:14 run: the bot in
+      water at (1200,61,-253), a wooden pickaxe on the lake bed seven below; the queue's first
+      movement `MovementSwim (1200,61,-253)->(1201,61,-253)` "FAILED at step 0" every twelve
+      seconds -- forty ticks without approach -- and the identical plan re-issued, items=0 the
+      whole run). The swimmer aimed its full rotation at the destination CELL centre, a block and
+      a half below the head, so "forward" pushed the body down while JUMP pushed it up. Fixed: a
+      level or rising stroke aims at head height over the destination column; a dive keeps the
+      cell centre (`swimAim`). Bench `pool_drop_test.py` (a 3-deep pool, the bot afloat, an ingot
+      on the bed six blocks off). **G64b, seen in the same run's second half:** once the queue's
+      swim had failed, the navigator kept handing BlockPathWalker legs from the water ("Walker:
+      BFS 18 wp / BFS 6 wp", "no progress at 1199,62,-253" every six seconds for five minutes,
+      `navStall=65/64`) -- and the walker cannot swim. Fixed: while afloat a leg is offered to
+      the queue first (a plain water leg never set nextLegMovement, so it never reached the queue
+      at all), and a refusal re-plans instead of walking (`wetLegGoesToTheQueue`,
+      `navWet=queued/refused`). pool_drop reads both counters.
 - [ ] **G59 a target under a one-block lid** (19:57 run, 1:05-2:40 at (81,124,-44): the reach ray
       stopped by the cell under the bot's own feet, `dbBlocked=69/0/0`, stone in reach beside it).
       Fixed: the miner digs the LID on the target rather than waiting for a line that cannot open
@@ -76,8 +107,17 @@ test + full nav-suite regression before it counts done.
       the leg), the bot walked down and took it. So a plain eighteen-block descent is NOT the
       defect; the 20:29 stand at (902,104,-243) had something else in it (its first bench shape,
       with the floor BELOW the world's own surface, also failed -- that geometry asked the planner
-      to dig under bedrock level). Next time the stand happens, capture the terrain, not just the
-      counters.
+      to dig under bedrock level). **Round 25: FAIL on the same bench** -- so the descent is
+      flaky, not solved. Both searches spent the whole budget (251 and 254 ms, 3456 and 4800
+      nodes, partial, climb=123006 brk=55146 generated), and `navBudgetBoost=0`: the 4x retry
+      lives only in the "no leg toward a goal below" branch, and here every partial was longer
+      than five blocks, so it was walked instead. Measurement queued (round 26): the same bench
+      at 250 / 1000 / 3000 ms, twice each. Budget or move-gen -- the numbers decide before any
+      code does. How the PASS looks in the log (round 25, second run): the plan lands on the
+      plateau's edge column (1200,·,300) and the navigator digs STRAIGHT DOWN it, one "at the
+      dig" per block from -43 to -53 -- a shaft, not a staircase. So the descent the planner can
+      find is the vertical dig; the failing runs never got a plan whose partial reached that
+      column.
 
 ### LOW — polish
 - [ ] **G16 execute diagonals in the queue** (queueDiagonals) — faster nav.

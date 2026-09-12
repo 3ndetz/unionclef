@@ -33,6 +33,9 @@ elif op=="cmd": mc.ExecuteCommand(req["c"]); out={"ok":True}
 elif op=="chatcmd": mc.ChatMessage(req["c"]); out={"ok":True}
 elif op=="gs": out=dict(mc.getGameState().get("self") or {})
 elif op=="chat": out={"chat":[str(c) for c in mc.getRecentChat(req.get("n",8))]}
+elif op=="wdbg":
+    try: mc.setWalkerDebug(bool(req.get("on", True))); out={"ok":True}
+    except Exception as e: out={"ok":False,"err":str(e)[-80:]}
 elif op=="task": out={"chain": str(mc.getTaskChainString() or "").replace(chr(10)," | ")[-300:]}
 elif op=="stats": out={"s": str(mc.placeStats())}
 print(json.dumps(out,default=str)); gw.close()
@@ -83,6 +86,11 @@ def phase(name, x, tp):
     gs = py4j("gs")
     print(f"[{name}] bot at {gs['pos']} feet={feet(gs)}; goal = the sand cell ({x},{GROUND},{Z}) on a chest. "
           f"@goto {x} {GROUND} {Z}")
+    # Phase 2 flakes with the sand already dug and the body shuffling 859 <-> 861 on the rim for
+    # forty seconds (round 25): the walker pressed forward and nothing moved, and the round log
+    # cannot say who held the body. So the walker's own per-tick trace is on for the phase, and
+    # a failure dumps it.
+    py4j("wdbg", on=True)
     py4j("cmd", c=f"@goto {x} {GROUND} {Z}")
     t0 = time.time(); seen = set(); ok = False
     bad = {"Failed! No block path": 0, "giving the route up": 0, "not getting closer": 0}
@@ -106,8 +114,19 @@ def phase(name, x, tp):
             ok = True
             break
     py4j("cmd", c="@stop"); py4j("chatcmd", c=";stop")
+    py4j("wdbg", on=False)
     flaws = {k: v for k, v in bad.items() if v}
     print(f"[{name}] result: inCell={ok} feet={f} flaws={flaws or 'none'} arrivedLines={arrived_lines}")
+    if not ok:
+        r = sh(["docker", "exec", C1, "sh", "-c",
+                "tail -n 12000 /mc-data/logs/latest.log | grep -a -E "
+                "'WALK|walker|Walker|WALKSTOP|sneak|Sneak|RELEASED|FastNavigator|no progress|at the dig|"
+                "Mining done|PLAN n=|HANDOFF|standingAbove|heldAbove|MovementQueue' "
+                "| grep -a -v 'repeat muted' | tail -n 45"])
+        print("  walker / navigator trace:")
+        for l in r.stdout.splitlines():
+            print("    " + l[11:220].replace("[Render thread/INFO]: [CHAT] ", "")
+                  .replace("[PathFinder/INFO]: [CHAT] ", "").replace("[FastNavigator-plan/INFO]: [CHAT] ", ""))
     return ok and not flaws
 
 

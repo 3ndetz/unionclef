@@ -128,6 +128,10 @@ public class PillarTask {
         active = false;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.options != null) {
+            if (attackHeldForVine) {
+                mc.options.attackKey.setPressed(false);
+                attackHeldForVine = false;
+            }
             mc.options.jumpKey.setPressed(false);
             mc.options.useKey.setPressed(false);
             mc.options.forwardKey.setPressed(false);
@@ -244,6 +248,17 @@ public class PillarTask {
             }
         }
 
+        // ⛔ A VINE IN THE COLUMN TURNS THE JUMP INTO A CLIMB (G66, 2026-09-12). Vanilla treats a
+        // body inside a vine as climbing: JUMP becomes "go up the vine", the feet never leave the
+        // cell in a free arc, the place window ("airborne and rising, feet above the cell's top")
+        // never opens, and the tower stands there hopping and turning -- the operator watched it
+        // spin in a narrow shaft with a vine on the wall. Baritone's MovementPillar has its own
+        // branch for a ladder or vine at the source and never tries to place there. The cheapest
+        // honest answer for a tower is to take the vine out of the column first: a vine breaks in
+        // a few ticks by hand, and the jump is a jump again.
+        if (clearVineInColumn(player, world, opts)) {
+            return;
+        }
         // Stay centred over the column (no horizontal drift) and aim straight down.
         opts.forwardKey.setPressed(false);
         opts.sprintKey.setPressed(false);
@@ -357,6 +372,54 @@ public class PillarTask {
 
     private static boolean isAir(WorldView w, BlockPos p) {
         return w.getBlockState(p).getCollisionShape(w, p).isEmpty();
+    }
+
+    /** G66: ticks spent breaking a vine out of the tower's column, and towers that met one. */
+    public static volatile int pillarVineTicks, pillarVineMet;
+    private static boolean attackHeldForVine = false;
+    private static BlockPos lastVineCell = null;
+
+    /**
+     * A vine in the feet cell, the head cell or the two above them (where the jump goes) is aimed
+     * at and struck until it is gone. Returns true while that is what this tick did.
+     */
+    private static boolean clearVineInColumn(ClientPlayerEntity player, WorldView world,
+                                             net.minecraft.client.option.GameOptions opts) {
+        BlockPos feet = BlockPos.ofFloored(player.getX(), player.getY(), player.getZ());
+        BlockPos vine = null;
+        for (int dy = 0; dy <= 3; dy++) {
+            BlockPos c = feet.up(dy);
+            if (world.getBlockState(c).getBlock() instanceof net.minecraft.block.VineBlock) {
+                vine = c;
+                break;
+            }
+        }
+        if (vine == null) {
+            if (attackHeldForVine) {
+                opts.attackKey.setPressed(false);
+                attackHeldForVine = false;
+            }
+            lastVineCell = null;
+            return false;
+        }
+        if (!vine.equals(lastVineCell)) {
+            pillarVineMet++;
+            lastVineCell = vine;
+        }
+        Vec3d dv = Vec3d.ofCenter(vine).subtract(player.getEyePos());
+        float yaw = (float) Math.toDegrees(-Math.atan2(dv.x, dv.z));
+        float pitch = (float) Math.toDegrees(-Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z)));
+        WindMouseRotation.INSTANCE.setTarget(yaw, pitch);
+        opts.jumpKey.setPressed(false);
+        opts.forwardKey.setPressed(false);
+        opts.sprintKey.setPressed(false);
+        opts.sneakKey.setPressed(false);
+        opts.attackKey.setPressed(true);
+        attackHeldForVine = true;
+        jumpAsked = false;
+        lastY = player.getY();   // clearing the column is not a stuck tower
+        pillarVineTicks++;
+        return true;
     }
 
     /** The feet-level cell, among those the hitbox overlaps, that has a solid block under it and

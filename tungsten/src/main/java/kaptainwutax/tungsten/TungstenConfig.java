@@ -2734,6 +2734,15 @@ public class TungstenConfig {
     public boolean noTowerWhenGoalIsBelow = true;
 
     /**
+     * G64b (2026-09-12): a route leg that starts with the body in water goes to the MovementQueue
+     * (which types liquid edges as MovementSwim) and never to BlockPathWalker, which cannot swim.
+     * The 20:14 run handed the walker "BFS 18 wp" from the middle of a lake every six seconds for
+     * five minutes (navStall=65/64, items=0). If the queue refuses the leg the navigator re-plans
+     * instead of sprinting at the water. Read navWet=queued/refused.
+     */
+    public boolean wetLegGoesToTheQueue = true;
+
+    /**
      * A movement gives up when the thing in its way can never be aimed at.
      *
      * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on

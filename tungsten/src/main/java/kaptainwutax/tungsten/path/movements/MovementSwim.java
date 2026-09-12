@@ -43,6 +43,8 @@ public class MovementSwim extends Movement {
 
     private double bestDistSq = Double.MAX_VALUE;
     private int stuckTicks = 0;
+    /** G64: ticks a level or rising stroke aimed at head height instead of the cell centre. */
+    public static volatile int swimLevelAimTicks;
 
     public MovementSwim(BetterBlockPos src, BetterBlockPos dest) {
         // Nothing is broken to swim, and nothing is placed. The destination column is declared so
@@ -119,9 +121,26 @@ public class MovementSwim extends Movement {
         // carry it up and out (and dive actively when the dest is below). (2026-09-11)
         if (kaptainwutax.tungsten.TungstenConfig.get().swimAimsAtDestPitch) {
             Rotation cur = RotationHelper.playerRotations(player);
-            Rotation aim = RotationHelper.calcRotationFromVec3d(
-                    RotationHelper.playerHead(player),
-                    RotationHelper.getBlockPosCenter(dest), cur);
+            net.minecraft.util.math.Vec3d head = RotationHelper.playerHead(player);
+            net.minecraft.util.math.Vec3d centre = RotationHelper.getBlockPosCenter(dest);
+            // ⛔ A LEVEL STROKE LOOKS LEVEL (G64, 2026-09-12). The centre of the destination CELL
+            // is at the feet's height; from the head, a block and a half up, that is a look of
+            // forty to sixty degrees DOWN for a stroke to the cell beside us -- and in water the
+            // body goes where the eyes look. "Forward" pushed the bot down, the base class's JUMP
+            // pushed it up, and it bobbed in place: the 20:14 recording spent its whole ten
+            // minutes afloat at (1200,61,-253), MovementSwim (1200,61,-253)->(1201,61,-253)
+            // "FAILED at step 0" every twelve seconds, forty ticks without approach each time,
+            // the identical plan re-issued, a wooden pickaxe on the lake bed seven below.
+            //
+            // So the aim point is where the HEAD will be, not where the feet will be, for any
+            // stroke that is not a dive: level or rising, look level at the destination column and
+            // let JUMP do the rising. A dive keeps the cell centre -- looking down is the dive.
+            double eyeLift = head.y - player.getEntityPos().y;
+            net.minecraft.util.math.Vec3d aimAt = dest.getY() < src.getY()
+                    ? centre
+                    : new net.minecraft.util.math.Vec3d(centre.x, dest.getY() + eyeLift, centre.z);
+            if (dest.getY() >= src.getY()) swimLevelAimTicks++;
+            Rotation aim = RotationHelper.calcRotationFromVec3d(head, aimAt, cur);
             state.setTarget(new MovementState.MovementTarget(aim, false))
                  .setInput(Input.MOVE_FORWARD, true);
         } else {
