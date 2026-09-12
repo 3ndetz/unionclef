@@ -72,6 +72,11 @@ def main():
     rcon(f"tp {BOT} {X+0.5} {GROUND+1} {Z+0.5} 90 0")   # facing west, toward the creeper
     rcon(f"clear {BOT}"); rcon(f"give {BOT} minecraft:stone_sword")
     rcon(f"effect give {BOT} minecraft:instant_health 1 10 true")
+    # ⛔ A STARVING BOT LOSES A HEART EVERY FOUR SECONDS, AND THAT READS AS A BLAST (round 38: two
+    # "FAIL min_hp=8.0" with the creeper never closer than five blocks -- hp 19, 18, 17 ... one per
+    # sample, the pack empty after a ten-minute playthrough). Health is healed above; hunger was
+    # not. Saturation fills it.
+    rcon(f"effect give {BOT} minecraft:saturation 5 5 true")
     time.sleep(1)
     # The chain only weighs hostiles while a task runs, so give it a long walk WEST -- straight
     # through the creeper -- instead of an eight-block hop that ended before the creeper arrived.

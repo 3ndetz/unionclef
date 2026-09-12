@@ -92,6 +92,7 @@ def main():
     rcon(f"tp {BOT} {X+0.5} {GROUND+1} {Z+0.5} 90 0")   # facing west, up the stairs
     rcon(f"clear {BOT}"); rcon(f"give {BOT} minecraft:stone_sword")
     rcon(f"effect give {BOT} minecraft:instant_health 1 10 true")
+    rcon(f"effect give {BOT} minecraft:saturation 5 5 true")   # a starving bot loses a heart every four seconds
     time.sleep(1)
     py4j("cmd", c=f"@goto {X-STEPS-2} {GROUND+STEPS+1} {Z}")
     time.sleep(1)

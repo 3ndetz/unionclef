@@ -93,9 +93,25 @@ public class BaritoneHelper {
      * slightly and the bot prefers a flatter route to a further block, which is the right
      * preference anyway. Descending is unchanged: falling is as cheap as upstream says it is.
      */
+    /** G72b: how far the body drops for free before every further block down is a dig, and what
+     *  a dug block costs (stone with a stone pickaxe, plus the drop: FastPlanner's own figure). */
+    private static final int FREE_FALL_BLOCKS = 3;
+    private static final double DIG_ONE_BLOCK_TICKS = 23.0;
+
     private static double climbCost(int yDiff) {
         if (yDiff > 0) {
-            return ActionCosts.distanceToTicks(2) / 2 * yDiff;
+            // ⛔ A TARGET MORE THAN A FALL BELOW IS REACHED BY DIGGING, AND A DIG IS PRICED LIKE A
+            // DIG (G72b, 2026-09-13). Descent was half a two-block fall per block, all the way
+            // down -- an underestimate, which this comparison must not be (see the climb note
+            // above). The 00:01 run: a crafting table left at y=17 by an earlier life, the bot at
+            // y=98, "Picking up the crafting table while we are at it", and the target chooser
+            // read eighty blocks down as cheaper than four planks; the bot dug from 98 to 52 with
+            // an empty pack for the whole run. The same chooser priced an iron pickaxe drop at
+            // y=-19 the same way. Three blocks fall for free; below that every block is a dig.
+            int free = Math.min(yDiff, FREE_FALL_BLOCKS);
+            double cost = ActionCosts.distanceToTicks(2) / 2 * free;
+            if (yDiff > FREE_FALL_BLOCKS) cost += (yDiff - FREE_FALL_BLOCKS) * DIG_ONE_BLOCK_TICKS;
+            return cost;
         }
         if (yDiff < 0) {
             return -yDiff * (ActionCosts.JUMP_ONE_BLOCK_COST + ActionCosts.PLACE_ONE_BLOCK_COST);

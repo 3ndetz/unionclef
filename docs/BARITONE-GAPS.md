@@ -840,7 +840,11 @@ body drops three blocks for free and digs every one below that at about five wal
 ticks (23 against 4.6), so that leg is stretched five-fold before it is squared; a drop eleven
 down reads as forty-three away and any stone inside that wins, which is what a player does
 (`dropDeep`). Bench `deep_drop_test.py`. (The planner's own budget for a genuine dig-down —
-5.9k nodes in 251 ms — stays open in TODOS.)
+5.9k nodes in 251 ms — stays open in TODOS.) **G72b** (2026-09-13): the same price at the root —
+`BaritoneHelper.calculateGenericHeuristic`, the comparison every scanner and tracker ranks by,
+priced descent as half a two-block fall per block all the way down; the 00:01 run dug from y=98
+to 52 toward a crafting table left at y=17 by an earlier life. Three blocks fall free, every block
+below is a dig, for blocks, entities and drops alike.
 
 **G73. A goal far below is priced as the dig it is.** The 23:13 run: the bot standing on top of
 an iron ore seven blocks down, "the search toward a goal 7 below spent its budget (6784 nodes,
@@ -883,6 +887,31 @@ exploring" seventeen times. `InteractWithBlockTask`'s approach was `GetWithinRan
 Principle: **the interaction approach is adjacency, dug to if need be** — `GetAdjacentToBlockTask`,
 whose arrival is "the block is within reach", the same task the miner uses. Bench
 `container_below_test.py`.
+
+**G78. "Dangerous" is a cave, not a height.** The 00:01 run spawned in a valley at y=52 and
+stayed at zero items for ten minutes: "Blacklisting dangerous log" two hundred times — the rule
+was `log.getY() < 62`, sea level standing in for "underground", so every tree in sight was a cave
+tree. (altoclef's own rule, not baritone's; kept here because it is the same family: a heuristic
+standing in for the question it means to ask.) Principle: **a cave is a place the sky does not
+reach** — the sky light at the cell above, under four; a tree in a valley is a tree, a cave stays
+a cave until iron gear. The ores' "dangerous" the same night (six hundred lines) is another rule,
+a hostile within thirty blocks of the ore, and belongs to the night track (G77, open).
+
+**G80. A crafting table is worth four planks, not a climb or a dig.** "Picking up the crafting
+table while we are at it" was the reason for three of the last four playthrough stands: a table
+left at y=17 by an earlier life dug toward from y=98 (00:01), a table seven blocks down dug to and
+a smoker then impossible to place in the shaft (00:20), a table two blocks up a bank reached for
+through forty-six shimmies (00:38). A player picks the table up when it is a step away and
+otherwise makes another. Principle: **only a utility block on the way is worth the detour** —
+twelve blocks across at most and within two of the feet in height. **G81.** The 00:38 stand had
+NOTHING in the log for eight minutes but the unstuck chain's "generally stuck" line, forty-six
+times, the drive's state a mystery; that line now names the drive's last branch
+(`CustomBaritoneGoalTask.lastDriveNote`), the navigator's state and the chain's leaf, so a silent
+stand has its driver in the same line.
+
+Bench note (round 38): two creeper_avoid "FAIL min_hp=8" were starvation — a bot fed nothing for
+ten minutes loses a heart every four seconds on the flat server, one per sample, the creeper never
+closer than five blocks. The creeper benches now give saturation with the healing.
 
 ### Baritone's stuck cases, and where each one stands here
 

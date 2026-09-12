@@ -1461,6 +1461,9 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     private net.minecraft.util.math.BlockPos twRouteArmedBlock = null;
     /** G74: blocks handed to the chooser's memory after three route give-ups in a row. */
     public static volatile int pdRouteRefused;
+    /** G81: the drive's last branch, one line, for the unstuck chain to print beside its own
+     *  verdict -- so a body that stopped has its driver named in the same log line. */
+    public static volatile String lastDriveNote = "-";
 
     /** Count a give-up for {@code block}; true when it is the third in the window. */
     private static boolean noteRouteGiveUp(net.minecraft.util.math.BlockPos block) {
@@ -1541,9 +1544,11 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             if (nowMs < twReachRearmAtMs) {
                 pdReachHeld++;
                 checker.reset();
+                lastDriveNote = "reach:held " + block.toShortString();
                 setDebugState("Tungsten: reach route gave up — re-planning shortly");
                 return true;
             }
+            lastDriveNote = "reach:armed " + block.toShortString();
             kaptainwutax.tungsten.task.BlockPathWalker.stop();
             kaptainwutax.tungsten.path.movements.MovementQueue.stop();
             var exR = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
@@ -1616,9 +1621,11 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             if (nowMs < twReachRearmAtMs) {
                 pdDigHeld++;
                 checker.reset();
+                lastDriveNote = "dig:held " + cell.toShortString();
                 setDebugState("Tungsten: dig route gave up — re-planning shortly");
                 return true;
             }
+            lastDriveNote = "dig:armed " + cell.toShortString();
             kaptainwutax.tungsten.task.BlockPathWalker.stop();
             kaptainwutax.tungsten.path.movements.MovementQueue.stop();
             var exR = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;

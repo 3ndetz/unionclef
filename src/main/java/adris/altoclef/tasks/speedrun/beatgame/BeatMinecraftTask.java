@@ -1240,6 +1240,29 @@ public class BeatMinecraftTask extends Task {
         });
     }
 
+    /** G80: a utility block worth a detour -- twelve blocks across at most and within two of the
+     *  feet in height; anything further is cheaper to make again. */
+    private static boolean onTheWay(AltoClef mod, BlockPos pos) {
+        try {
+            var p = mod.getPlayer().getBlockPos();
+            int dx = pos.getX() - p.getX(), dz = pos.getZ() - p.getZ();
+            return dx * dx + dz * dz <= 12 * 12 && Math.abs(pos.getY() - p.getY()) <= 2;
+        } catch (Throwable t) {
+            return true;
+        }
+    }
+
+    /** G78: a cell the sky does not reach -- a cave, by the only test that survives a valley at
+     *  y=52. Sky light at the cell above the block, under four; a tree under its own canopy still
+     *  reads eleven or more. */
+    private static boolean underground(AltoClef mod, BlockPos pos) {
+        try {
+            return mod.getWorld().getLightLevel(net.minecraft.world.LightType.SKY, pos.up()) < 4;
+        } catch (Throwable t) {
+            return pos.getY() < 62;   // the old rule, only if the light cannot be read
+        }
+    }
+
     private void blackListDangerousBlock(AltoClef mod, Block block) {
         Optional<BlockPos> nearestTracking = mod.getBlockScanner().getNearestBlock(block);
 
@@ -1371,7 +1394,12 @@ public class BeatMinecraftTask extends Task {
                     mod.getBlockScanner().requestBlockUnreachable(log, 0);
                 }
             }
-            if (log.getY() < 62 && !mod.getBlockScanner().isUnreachable(log) && !ironGearSatisfied && !eyeGearSatisfied) {
+            // ⛔ "DANGEROUS" IS A CAVE, NOT A HEIGHT (G78, 2026-09-13). This read `log.getY() < 62`
+            // -- sea level as a stand-in for "underground" -- and the 00:01 run spawned in a
+            // valley at y=52: every tree in sight was "dangerous", "Blacklisting dangerous log"
+            // two hundred times, and the pack stayed empty for ten minutes. A cave is a place the
+            // sky does not reach; ask the sky light, not the altitude.
+            if (underground(mod, log) && !mod.getBlockScanner().isUnreachable(log) && !ironGearSatisfied && !eyeGearSatisfied) {
                 Debug.logMessage("Blacklisting dangerous log.");
                 mod.getBlockScanner().requestBlockUnreachable(log, 0);
             }
@@ -1616,7 +1644,14 @@ public class BeatMinecraftTask extends Task {
 
         // Portable crafting table.
         // If we're NOT using our crafting table right now and there's one nearby, grab it.
-        if (!endPortalOpened && WorldHelper.getCurrentDimension() != Dimension.END && config.rePickupCraftingTable && !itemStorage.hasItem(Items.CRAFTING_TABLE) && !thisOrChildSatisfies(isCraftingTableTask) && (mod.getBlockScanner().anyFound(blockPos -> WorldHelper.canBreak(blockPos) && WorldHelper.canReach(blockPos), Blocks.CRAFTING_TABLE) || mod.getEntityTracker().itemDropped(Items.CRAFTING_TABLE)) && pickupCrafting) {
+        // ⛔ A CRAFTING TABLE IS WORTH FOUR PLANKS, NOT A CLIMB OR A DIG (G80, 2026-09-13). "While
+        // we are at it" was the reason for three of the last four playthrough stands: a table
+        // left at y=17 by an earlier life dug toward from y=98 (00:01), a table seven blocks down
+        // dug to and a smoker then impossible to place in the shaft (00:20), a table two blocks up
+        // a bank reached for through forty-six shimmies (00:38). A player picks the table up when
+        // it is a step away and otherwise makes another. So: only a table on the way -- twelve
+        // blocks across at most and within two of the feet in height -- is picked up.
+        if (!endPortalOpened && WorldHelper.getCurrentDimension() != Dimension.END && config.rePickupCraftingTable && !itemStorage.hasItem(Items.CRAFTING_TABLE) && !thisOrChildSatisfies(isCraftingTableTask) && (mod.getBlockScanner().anyFound(blockPos -> WorldHelper.canBreak(blockPos) && WorldHelper.canReach(blockPos) && onTheWay(mod, blockPos), Blocks.CRAFTING_TABLE) || mod.getEntityTracker().itemDropped(Items.CRAFTING_TABLE)) && pickupCrafting) {
             setDebugState("Picking up the crafting table while we are at it.");
             return new MineAndCollectTask(Items.CRAFTING_TABLE, 1, new Block[]{Blocks.CRAFTING_TABLE}, MiningRequirement.HAND);
         }

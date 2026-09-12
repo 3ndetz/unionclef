@@ -408,7 +408,21 @@ public class UnstuckChain extends SingleTaskChain {
             // Exponential backoff: 30s → 60s → 120s max 120s
             int cooldownSec = Math.min(30 << (consecutiveStuckDetections - 1), 120);
             stuckCooldown = new TimerGame(cooldownSec);
-            Debug.logMessage("Bot appears generally stuck (no movement for ~10s), triggering shimmy (cooldown=" + cooldownSec + "s, detection #" + consecutiveStuckDetections + ")");
+            // G81: name what the drive was doing when the body stopped -- the 00:38 run stood eight
+            // minutes with this line forty-six times and NOTHING else in the log, the drive's own
+            // state a mystery. The drive keeps a one-line note of its last branch; print it here,
+            // with the navigator's state and the chain's leaf task.
+            String leaf = "-";
+            try {
+                var tasks = adris.altoclef.AltoClef.getInstance().getUserTaskChain().getTasks();
+                if (tasks != null && !tasks.isEmpty()) leaf = String.valueOf(tasks.get(tasks.size() - 1));
+            } catch (Throwable ignored) {
+                // a diagnostic never breaks the rescue
+            }
+            Debug.logMessage("Bot appears generally stuck (no movement for ~10s), triggering shimmy (cooldown=" + cooldownSec + "s, detection #" + consecutiveStuckDetections + ")"
+                    + " drive=" + adris.altoclef.tasks.movement.CustomBaritoneGoalTask.lastDriveNote
+                    + " nav=" + kaptainwutax.tungsten.task.FastNavigator.isActive()
+                    + " leaf=" + leaf);
             startedShimmying = true;
             shimmyTaskTimer.reset();
             lastRescuePos = current;

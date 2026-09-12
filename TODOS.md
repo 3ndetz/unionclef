@@ -246,6 +246,34 @@ test + full nav-suite regression before it counts done.
       by break rules" after a "failed to break! Maybe private area" avoidance, the pursuit
       given up at 25 s three times. Open: the free-fall boundary (two?) and why the avoidance
       fired on a block the bot had just been mining.
+- [ ] **G72b the 00:01 run: zero items in ten minutes, the bot digging from y=98 to 52 toward a
+      crafting table left at y=17 by an earlier life** ("Picking up the crafting table while we
+      are at it"), an iron pickaxe drop at y=-19 chased the same way. The block chooser's
+      comparison (BaritoneHelper.calculateGenericHeuristic, every scanner and tracker) priced
+      descent as half a two-block fall per block all the way down. Round 38: three blocks fall
+      free, every block below is a dig (23 ticks), for blocks, entities and drops alike. No bench
+      of its own yet: deep_drop covers the drop half; a "table eighty blocks down vs four planks"
+      scene is the next.
+- [ ] **G78 the 00:01 run's empty pack had a second cause: "Blacklisting dangerous log" x202**
+      -- the rule was `log.getY() < 62`, sea level standing in for "underground", and the run
+      spawned in a valley at y=52 where every tree in sight was "dangerous". Round 38: a log is
+      dangerous when the sky does not reach it (sky light under 4 at the cell above). The ores'
+      "dangerous" (x600 the same run) is a different rule -- a hostile within 30 blocks of the
+      ore -- and belongs to the night track below.
+- [ ] **G80 "Picking up the crafting table while we are at it" was the reason for three of
+      the last four playthrough stands** (a table at y=17 dug toward from y=98; a table seven
+      down dug to, then a smoker impossible to place in the shaft; a table two blocks up a bank
+      reached for through forty-six shimmies, 00:38, eight minutes with NOTHING in the log but the
+      shimmy). Round 40: only a table on the way is picked up -- twelve blocks across at most and
+      within two of the feet in height; otherwise four planks are cheaper. **G81**: the unstuck
+      chain's "generally stuck" line now names the drive's last branch (`lastDriveNote`), the
+      navigator's state and the chain's leaf, so a silent stand has its driver in the same line.
+- [ ] **the night (G77, open track)**: the same run spawned at night by a cave, "Blacklisting
+      dangerous log / coal_ore / iron_ore" x800 (everything near a hostile is excluded), the
+      flee "NIGERUNDAYOO" on a loop, hp 20 -> 9.5, nothing done for ten minutes. "No bed and none
+      in sight -- working through the night" is not a plan a player follows: a player digs in
+      (two blocks into a hill, sealed) and waits for dawn, or fights with a sword. Neither
+      exists here. The next track after G76.
 - [ ] **shield craft carousel**, benched: `shield_craft_test.py` (a crafting table, two spruce
       logs, one iron ingot, `@get shield 1`) -- the playthrough shape where the planks come from a
       log crafted in the same table and the two crafts clear each other's grid (GRIDCLEAR x9,
