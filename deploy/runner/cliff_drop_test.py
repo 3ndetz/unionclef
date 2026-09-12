@@ -21,7 +21,12 @@ import functools, json, os, subprocess, sys, time
 print = functools.partial(print, flush=True)
 SERVER = "uctest-server"; C1 = "uctest-mc-tester1"; BOT = "tester1"
 X, Z = 1200, 300
-TOP, DEPTH = -50, 18          # plateau surface, and how far down the floor is
+# The flat world's own surface block is at -61 (feet at -60). The plateau is built UP from it, so
+# the ground below the cliff is the world's own floor and the only question the bench asks is the
+# DESCENT -- eighteen blocks of sheer face with a drop at its foot.
+GROUND = -61
+DEPTH = 18
+TOP = GROUND + DEPTH          # the plateau's surface block; the bot stands at TOP+1
 WINDOW_S = 120
 PINS = [kv.split("=", 1) for kv in os.environ.get("UC_PINS", "").split(",") if "=" in kv]
 
@@ -68,14 +73,12 @@ def rcon(c):
 
 
 def build():
-    bottom = TOP - DEPTH
-    rcon(f"kill @e[type=item,x={X},y={TOP},z={Z},distance=..60]")
-    # clear the whole box, then: plateau from the west up to X, open air east of it, floor below
-    rcon(f"fill {X-12} {bottom-2} {Z-10} {X+16} {TOP+6} {Z+10} minecraft:air")
-    rcon(f"fill {X-12} {bottom-2} {Z-10} {X+16} {bottom-1} {Z+10} minecraft:stone")   # the floor below
-    rcon(f"fill {X-12} {bottom} {Z-10} {X} {TOP} {Z+10} minecraft:stone")             # the plateau body
-    rcon(f"fill {X-12} {TOP} {Z-10} {X} {TOP} {Z+10} minecraft:grass_block")          # its surface
-    rcon(f"fill {X+1} {bottom-1} {Z-10} {X+16} {bottom-1} {Z+10} minecraft:grass_block")
+    rcon(f"kill @e[type=item,x={X},y={GROUND},z={Z},distance=..60]")
+    # air above everything, the world's own floor kept, then a plateau raised west of X
+    rcon(f"fill {X-14} {GROUND+1} {Z-12} {X+16} {TOP+6} {Z+12} minecraft:air")
+    rcon(f"fill {X-14} {GROUND} {Z-12} {X+16} {GROUND} {Z+12} minecraft:grass_block")  # the ground below
+    rcon(f"fill {X-14} {GROUND+1} {Z-12} {X} {TOP-1} {Z+12} minecraft:stone")          # the plateau body
+    rcon(f"fill {X-14} {TOP} {Z-12} {X} {TOP} {Z+12} minecraft:grass_block")           # its surface
 
 
 def main():
@@ -92,19 +95,18 @@ def main():
     py4j("chatcmd", c=";settings verboseDebugLogging true"); time.sleep(0.5)
     rcon(f"gamemode survival {BOT}")
     rcon("difficulty peaceful")
-    rcon(f"forceload add {X-16} {Z-16} {X+24} {Z+16}"); time.sleep(1)
+    rcon(f"forceload add {X-20} {Z-20} {X+24} {Z+20}"); time.sleep(1)
     build()
     time.sleep(1)
-    bottom = TOP - DEPTH
     # ⛔ SPAWN ON THE ARENA. The flat server's own spawn had NO FLOOR (2026-09-12) and a bot that
     # died there fell out of the world, respawned and fell again for the whole window.
     rcon(f"spawnpoint {BOT} {X-2} {TOP+1} {Z}")
     rcon(f"tp {BOT} {X-1.5} {TOP+1} {Z+0.5} 270 0")     # on the rim, facing the drop (+x)
     rcon(f"effect give {BOT} minecraft:instant_health 1 10")
     rcon(f"clear {BOT}")
-    rcon(f"give {BOT} minecraft:wooden_pickaxe")
+    rcon(f"give {BOT} minecraft:stone_pickaxe")
     time.sleep(1)
-    rcon(f"summon minecraft:item {X+4.5} {bottom+0.5} {Z+0.5} "
+    rcon(f"summon minecraft:item {X+4.5} {GROUND+1.5} {Z+0.5} "
          f"{{Item:{{id:\"minecraft:iron_ingot\",count:1}},PickupDelay:0}}")
     time.sleep(1.5)
     gs = py4j("gs")
@@ -146,7 +148,7 @@ def main():
         for l in r.stdout.splitlines():
             print("    " + l[11:200].replace("[Render thread/INFO]: [CHAT] ", "")
                   .replace("[FastNavigator-plan/INFO]: [CHAT] ", ""))
-    rcon(f"forceload remove {X-16} {Z-16} {X+24} {Z+16}")
+    rcon(f"forceload remove {X-20} {Z-20} {X+24} {Z+20}")
     flaws = {k: v for k, v in bad.items() if v}
     print(f"result: iron={got} stillSamples={still} flaws={flaws or 'none'}")
     if got:

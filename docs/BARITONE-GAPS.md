@@ -642,11 +642,16 @@ plans for half a second and two on failure. Principle: **a budget that ran out i
 — before the give-up, a search that hit its budget runs once more at four times the budget
 (`planBudgetBoostBeforeGiveUp`; `navBudgetBoost`).
 
-**G59 (open). A target under a one-block cover.** Same recording, 1:05–2:40 at `(81, 124, -44)`:
+**G59. A target under a one-block cover.** Same recording, 1:05–2:40 at `(81, 124, -44)`:
 the miner in reach of stone under grass beside its feet, the reach ray through its own floor
 (`dbBlocked=69/0/0` self-floor, `dbUnreachMove=17`, `dbTargets=46/16`). The approach's adjacency
 accepts a cell from which the block cannot be struck; the plan should dig the cover and stand in
-it (the block then under the feet), as baritone's GoalGetToBlock does from above.
+it (the block then under the feet), as baritone's GoalGetToBlock does from above. Principle:
+**the block in the way of the job is the lid on the target, not the floor under the feet** —
+`canClear` rightly refuses the floor, and stepping back only keeps it on the sight line, so the
+miner takes the lid off and looks from above (`digTheLidOffTheTarget`, `dbLid=dug/noReach`).
+Bench `lid_dig_test.py`: one stone block a layer down and three to the side under a grass lid,
+with dirt everywhere else so nothing else is a candidate.
 
 **G61. The bot faces an animal, aimed at it, and neither walks nor strikes.** The 19:57
 recording, and the user's loudest complaint of the day. Two dead bands, one on each side of the

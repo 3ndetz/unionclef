@@ -2712,6 +2712,28 @@ public class TungstenConfig {
     public boolean combatClosesInsideCanHit = true;
 
     /**
+     * G59 (2026-09-12): with a mining target one down and to the side, the reach ray grazes the
+     * cell under the bot's own feet and stops there -- canClear refuses to dig the floor it stands
+     * on, so the line never opens and the miner waits (19:57 recording, 1:05-2:40 at (81,124,-44),
+     * dbBlocked=69/0/0 with stone in reach). The block actually in the way of the JOB is the one
+     * sitting ON the target: take that off and the look comes from above, with the floor behind
+     * the eyes. Read dbLid=dug/noReach.
+     */
+    public boolean digTheLidOffTheTarget = true;
+
+    /**
+     * G60 (2026-09-12): the wall hand-off refuses to start a tower that climbs when the GOAL is
+     * below the bot. The 19:57 recording, 5:20: coal two blocks under the feet, and the reach plan
+     * answered "pillaring to y=66", "no progress", "mining the ceiling first", "pillaring to y=72",
+     * "pillaring to y=82" -- fourteen blocks up a spruce in twenty-five seconds, then a fourteen
+     * block fall (hp 20 -> 12) with the coal still below where it began. Each re-plan from the top
+     * of the tower hands the next run to PillarTask, so the tower feeds itself. A climb on the way
+     * down is a real move, so only the runaway shape is refused: goal below, tower more than two
+     * blocks up. Read navTowerRefusedBelow.
+     */
+    public boolean noTowerWhenGoalIsBelow = true;
+
+    /**
      * A movement gives up when the thing in its way can never be aimed at.
      *
      * <p>⛔ Movement.prepared() sets {@code somethingInTheWay = true} and then returns false on

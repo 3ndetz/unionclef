@@ -626,6 +626,41 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
                     dbBlockedUnclearable++;
                 }
             }
+            // ⛔ A TARGET UNDER A LID IS A LID TO TAKE OFF FIRST (G59, 2026-09-12).
+            //
+            // With the target one down and to the side, the ray leaves the eyes, grazes the cell
+            // under our own feet and stops there: canClear rightly refuses to dig our floor, the
+            // clear branch below never fires, and the 19:57 recording spent 1:05-2:40 at
+            // (81,124,-44) reading dbBlocked=69/0/0 with stone in reach beside its feet.
+            //
+            // The block that is genuinely in the way of the JOB is not our floor -- it is the one
+            // sitting ON the target, because with that gone the look is from above and the floor
+            // is behind the eyes. Baritone's GoalGetToBlock says the same thing from the planner's
+            // side: the cell you want to stand in is the one over the block. So take the lid off,
+            // when there is one and it can be taken.
+            if (blocking != null && blocking.equals(mod.getPlayer().getBlockPos().down())
+                    && kaptainwutax.tungsten.TungstenConfig.get().digTheLidOffTheTarget) {
+                net.minecraft.util.math.BlockPos lid = pos.up();
+                if (!lid.equals(mod.getPlayer().getBlockPos()) && WorldHelper.isSolidBlock(lid)
+                        && canClear(mod, lid)) {
+                    Optional<Rotation> lidReach = LookHelper.getReach(lid);
+                    if (lidReach.isPresent()) {
+                        dbLidDug++;
+                        _moveChecker.reset();          // taking the lid off IS progress
+                        LookHelper.lookAt(lidReach.get());
+                        equipBestToolFor(mod, lid);
+                        if (LookHelper.isLookingAt(mod, lid)) {
+                            mod.getInputControls().hold(Input.CLICK_LEFT);
+                        } else {
+                            dbAimWait++;
+                            mod.getInputControls().release(Input.CLICK_LEFT);
+                        }
+                        setDebugState("Taking the lid off the target");
+                        return null;
+                    }
+                    dbLidNoReach++;
+                }
+            }
             if (blocking != null && !blocking.equals(pos) && canClear(mod, blocking)) {
                 Optional<Rotation> clearReach = LookHelper.getReach(blocking);
                 if (!clearReach.isPresent()) {
@@ -909,6 +944,9 @@ public class DestroyBlockTask extends Task implements ITaskRequiresGrounded {
      */
     /** Why the line-of-sight clear did not fire. Read as dbBlocked=selfFloor/unclearable/noReach. */
     public static volatile int dbBlockedSelfFloor, dbBlockedUnclearable, dbBlockedNoReach;
+    /** G59: ticks spent digging the lid off a target the own floor was hiding, and ticks the lid
+     *  itself could not be looked at. Read as dbLid=dug/noReach. */
+    public static volatile int dbLidDug, dbLidNoReach;
     /** Ticks the task declined to retreat because its own floor was blocking the aim. */
     public static volatile int dbNoRetreat;
     /** Ticks the task stepped TOWARD a below-target so its own floor left the sight line. */

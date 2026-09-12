@@ -61,9 +61,17 @@ test + full nav-suite regression before it counts done.
       `EntityTracker.getClosestEntity` / `getClosestItemDrop` and on the rested pass of
       `BlockScanner.getNearestBlock`, so a target that has been fighting the body loses to one
       that has not — without ever being removed from the world.
-- [ ] **G58 repro exists now**: `cliff_drop_test.py` — a plateau, a sheer face, and an iron ingot
-      eighteen blocks below, four out from the foot, with a wooden pickaxe. This is the 20:29
-      stand at (902,104,-243) in a shape a bench can hold still.
+- [ ] **G59 a target under a one-block lid** (19:57 run, 1:05-2:40 at (81,124,-44): the reach ray
+      stopped by the cell under the bot's own feet, `dbBlocked=69/0/0`, stone in reach beside it).
+      Fixed: the miner digs the LID on the target rather than waiting for a line that cannot open
+      from where it stands (`digTheLidOffTheTarget`, `dbLid=dug/noReach`). Bench `lid_dig_test.py`.
+- [ ] **G58 repro built, and it PASSES**: `cliff_drop_test.py` — a plateau, a sheer face, an iron
+      ingot eighteen blocks below. Round 23: PASS, `planPartialCoef=2` (the coefficient rule chose
+      the leg), the bot walked down and took it. So a plain eighteen-block descent is NOT the
+      defect; the 20:29 stand at (902,104,-243) had something else in it (its first bench shape,
+      with the floor BELOW the world's own surface, also failed -- that geometry asked the planner
+      to dig under bedrock level). Next time the stand happens, capture the terrain, not just the
+      counters.
 
 ### LOW — polish
 - [ ] **G16 execute diagonals in the queue** (queueDiagonals) — faster nav.

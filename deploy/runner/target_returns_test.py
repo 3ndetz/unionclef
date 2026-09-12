@@ -122,11 +122,13 @@ def phase_a():
     time.sleep(1)
     print(f"[A] pig sealed in bedrock 6 east of the bot. @get porkchop 1")
     py4j("cmd", c="@get porkchop 1")
+    # The wall opens early and the window is long: the point of this phase is whether the pig is
+    # still a CANDIDATE, not how fast a wander brings the body back from wherever it drifted.
     t0 = time.time(); opened = False; got = False
-    while time.time() - t0 < 150:
+    while time.time() - t0 < 210:
         time.sleep(5)
         el = time.time() - t0
-        if el > 45 and not opened:
+        if el > 30 and not opened:
             seal(x + 6, Z, False)
             opened = True
             print(f"  t={el:.0f}s WALL OPENED — the pig is now reachable")

@@ -228,6 +228,8 @@ public final class FastNavigator {
      *  spent doing so for the current hand-off. */
     public static volatile int navPillarSteered;
     private static int pillarSteerTicks = 0;
+    /** G60: hand-offs refused because the goal was below and the tower wanted to go up. */
+    public static volatile int navTowerRefusedBelow;
 
     /** The cell a stalled route was last re-planned from; a second stall in the same cell is the
      *  honest "unreachable from here" verdict. Read navStall=replans/gaveUp. */
@@ -752,6 +754,27 @@ public final class FastNavigator {
                 // Swimming out needs none; a tower does, so ask the pocket first.
                 boolean canPillar = player.isTouchingWater()
                         || FastPlanner.countPlaceable(player) > 0;
+                // ⛔ A TOWER TOWARD A GOAL THAT IS BELOW YOU IS THE PLAN GOING THE WRONG WAY (G60,
+                // 2026-09-12). The 19:57 recording, 5:20: coal at (631,67,724), two blocks UNDER
+                // the feet. The reach plan handed off "pillaring to y=66", then "no progress",
+                // "mining the ceiling first (3)", "pillaring to y=72", "pillaring to y=82" -- 14
+                // blocks placed up a spruce in 25 seconds, then a 14-block fall, hp 20 -> 12, and
+                // the coal still two below where it started. Each re-plan from the tower's top
+                // hands the next run to PillarTask, so the tower feeds itself.
+                //
+                // A climb on the way DOWN is a real move (over a lip, round a wall), so this
+                // refuses only the runaway shape: the goal below, and a tower that wants to go
+                // more than two blocks UP from where the body stands.
+                if (TungstenConfig.get().noTowerWhenGoalIsBelow && goal != null
+                        && goal.y < player.getY() - 2.0
+                        && jump.getY() > player.getBlockPos().getY() + 2) {
+                    Debug.logWarning(String.format(
+                            "Wall too high to jump, but the goal is %.0f below — not towering up",
+                            player.getY() - goal.y));
+                    navTowerRefusedBelow++;
+                    pendingGiveUp = true;
+                    return;
+                }
                 // ⛔ AND A COLUMN THAT HAS ALREADY REFUSED A TOWER DOES NOT GET ASKED AGAIN (G62,
                 // 2026-09-12). PillarTask gives up after four seconds without vertical progress,
                 // this hand-off re-plans, sees the same wall and starts the same tower: the 16:30
