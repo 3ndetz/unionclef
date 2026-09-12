@@ -260,6 +260,14 @@ test + full nav-suite regression before it counts done.
       dangerous when the sky does not reach it (sky light under 4 at the cell above). The ores'
       "dangerous" (x600 the same run) is a different rule -- a hostile within 30 blocks of the
       ore -- and belongs to the night track below.
+      **Round 40 showed the first cut wrong for trunks**: "the cell above" a trunk log is the
+      next log, opaque, sky light zero -- "Blacklisting dangerous log" x34 on dark oaks at y=97
+      in the open, and the bot walked for a log a hundred blocks off (the stuck line, G81, named
+      it: "drive=reach:armed 138,86,76 leaf=<Getting within reach of 138,86,76>"). Round 41: the
+      brightest sky light among the six neighbours decides.
+- [ ] **the 01:12 run: slain by a zombie at t=65 (hp 20 -> 3.8 -> dead), respawn with an empty
+      pack, the rest of the run at zero items** -- the night track (G77) again; after the death
+      the hunt for a first log stood eight minutes on the trunk rule above.
 - [ ] **G80 "Picking up the crafting table while we are at it" was the reason for three of
       the last four playthrough stands** (a table at y=17 dug toward from y=98; a table seven
       down dug to, then a smoker impossible to place in the shaft; a table two blocks up a bank
@@ -268,6 +276,20 @@ test + full nav-suite regression before it counts done.
       within two of the feet in height; otherwise four planks are cheaper. **G81**: the unstuck
       chain's "generally stuck" line now names the drive's last branch (`lastDriveNote`), the
       navigator's state and the chain's leaf, so a silent stand has its driver in the same line.
+- [ ] **the 00:55 run's 2.5-minute stand in a 1x1 hole at (1221,62,328)**: dug down for coal,
+      then "Doing stuff in [smoker] container" with no smoker and no materials ("DSIC near=false
+      walk=INF" x3600), "Failed, blacklisting and wandering", "Planned escape (wander enclosed)
+      -> via FastPlanner", "Pillaring up to y=63" once, and hopping in place for the rest (y
+      62.0 <-> 63.3 every sample). Open: what held the tower after one block, and why a
+      container task with nothing to build from keeps the body in the hole. G81's stuck line
+      names the driver next time.
+- [ ] **rounds 40 and 41 both died to a zombie at t=65 at the same spawn (-331,105,-204)**, and
+      round 41 fell to its death at t=210 after that ("fell from a high place"): hp 20 -> 3.8 in
+      forty seconds with no sword and no flee. The survival stand's spawn is a zombie nest at
+      night; the runner's reset ("kill -> respawn -> empty -> heal -> day") does not clear it.
+      Two things: the runner should kill hostiles within forty blocks of the spawn before the
+      run (a stand trap), and the bot should not stand and take seven hits from one zombie at
+      full health (the night track below).
 - [ ] **the night (G77, open track)**: the same run spawned at night by a cave, "Blacklisting
       dangerous log / coal_ore / iron_ore" x800 (everything near a hostile is excluded), the
       flee "NIGERUNDAYOO" on a loop, hp 20 -> 9.5, nothing done for ten minutes. "No bed and none

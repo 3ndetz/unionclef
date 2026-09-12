@@ -1253,11 +1253,20 @@ public class BeatMinecraftTask extends Task {
     }
 
     /** G78: a cell the sky does not reach -- a cave, by the only test that survives a valley at
-     *  y=52. Sky light at the cell above the block, under four; a tree under its own canopy still
-     *  reads eleven or more. */
+     *  y=52. The brightest sky light among the block's six neighbours, under four: an opaque
+     *  neighbour (the next log of a trunk) reads zero and must not decide, which is what the
+     *  first cut of this test got wrong -- "the cell above" a trunk log is the next log, and the
+     *  01:12 run called every dark oak trunk in sight dangerous and walked a hundred blocks for
+     *  one whose top happened to be free. The air beside a trunk under its own canopy reads
+     *  eleven or more; the air in a cave reads nothing. */
     private static boolean underground(AltoClef mod, BlockPos pos) {
         try {
-            return mod.getWorld().getLightLevel(net.minecraft.world.LightType.SKY, pos.up()) < 4;
+            int best = 0;
+            for (net.minecraft.util.math.Direction d : net.minecraft.util.math.Direction.values()) {
+                int l = mod.getWorld().getLightLevel(net.minecraft.world.LightType.SKY, pos.offset(d));
+                if (l > best) best = l;
+            }
+            return best < 4;
         } catch (Throwable t) {
             return pos.getY() < 62;   // the old rule, only if the light cannot be read
         }
