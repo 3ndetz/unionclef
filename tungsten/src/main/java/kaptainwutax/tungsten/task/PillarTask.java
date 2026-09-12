@@ -406,7 +406,21 @@ public class PillarTask {
             pillarVineMet++;
             lastVineCell = vine;
         }
-        Vec3d dv = Vec3d.ofCenter(vine).subtract(player.getEyePos());
+        // ⛔ AIM AT THE VINE, NOT AT THE MIDDLE OF ITS CELL. A vine is a sixteenth of a block thick
+        // on the face it hangs from; the centre of its cell is empty air, and a look straight
+        // down through it lands the crosshair on the FLOOR. Vanilla's own key handler then
+        // starts breaking the floor every tick, which resets the break the direct call below had
+        // started on the vine -- round 29 with the attack key pinned: pillarVine=1906/1, the vine
+        // untouched for ninety-five seconds. Aim at the vine's own outline, so the crosshair and
+        // the direct call agree on one block.
+        Vec3d aimAt = Vec3d.ofCenter(vine);
+        try {
+            net.minecraft.util.math.Box bb = world.getBlockState(vine).getOutlineShape(world, vine).getBoundingBox();
+            aimAt = Vec3d.of(vine).add(bb.getCenter());
+        } catch (Exception ignored) {
+            // an empty outline keeps the cell centre; nothing else to aim at
+        }
+        Vec3d dv = aimAt.subtract(player.getEyePos());
         float yaw = (float) Math.toDegrees(-Math.atan2(dv.x, dv.z));
         float pitch = (float) Math.toDegrees(-Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z)));
         WindMouseRotation.INSTANCE.setTarget(yaw, pitch);
@@ -416,6 +430,14 @@ public class PillarTask {
         opts.sneakKey.setPressed(false);
         opts.attackKey.setPressed(true);
         attackHeldForVine = true;
+        // ⛔ ONE WRITER OF BREAK PROGRESS, AND IT IS VANILLA'S KEY HANDLER. A direct
+        // updateBlockBreakingProgress call was tried here beside the held key (round 29/30): with
+        // the aim on the vine, BOTH advanced the client's progress every tick, the client declared
+        // the block broken at half the real time and sent STOP_DESTROY early, the server -- which
+        // keeps its own clock -- refused it and put the vine back: pillarVine=966/160, the same
+        // vine "met" a hundred and sixty times in forty-eight seconds. Held key plus the crosshair
+        // on the vine's outline is the whole mechanism; the attack-key thief (G33) is answered by
+        // the playthrough's fireReleaseNeedsFire pin, not by a second writer.
         jumpAsked = false;
         lastY = player.getY();   // clearing the column is not a stuck tower
         pillarVineTicks++;

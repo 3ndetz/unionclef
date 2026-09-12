@@ -67,6 +67,60 @@ test + full nav-suite regression before it counts done.
       the last resort — seven minutes at a smoker, `banLifted=8918`, "Blacklisting extra furnace"
       x80. Zero attempts allowed is now a DECISION: no cool-off, no fallback, no price
       (`excludedDeliberately`).
+- [ ] **target_returns phase A flakes 2 in 5, and the log says why it is the BENCH's shape:** at
+      the phase start `@get porkchop 1` is set and reports "ЗАВЕРШЕНА за 1.6 сек" twice before
+      the third start runs; that third one then reads "Failed to pick up drop, will try to
+      collect a stone pickaxe first and try again!" and spends the window crafting sticks
+      (CRAFTDEC x20) -- the food task chose the pickaxe ladder over a pig it could not reach,
+      which is a legitimate decision, not a lost target. Phase B (the reachable drop wins) is
+      stable 5 of 5. Rework phase A so the only thing on offer is the pig: no drops in range, no
+      recipe path (an empty pack, no wood nearby), or judge it by "the pig is still a candidate"
+      (dc counters) rather than by the porkchop.
+- [ ] **G67 a bridge placement that times out is planned again, identically, for ever** (the
+      21:27 run: after a death and respawn at (92,100,-14), "physics owns the jump -> 91,100,-18",
+      "Path needs bridging: 1 block at segment end", "At the gap -- bridging without a physics
+      leg", "Bridge place aborted (TIMEOUT)" every ten seconds for eight minutes, items=1). The
+      executor's placing loop ran its 200 ticks, gave up, the navigator re-planned from the same
+      body and got the same bridge. Baritone cancels the movement at cost+100 AND re-plans with
+      the failing edge priced out; PillarTask now remembers a refused column (G62) -- the bridge
+      needs the same memory: a target that timed out twice is not offered to the executor again
+      for a minute, and the planner routes round it. Also: what was the ONE item, and was it a
+      block at all -- the placer should say "no scaffold" rather than time out. **Shipped the
+      memory half:** `PlaceRules.refuseForAWhile(target)` on the executor's TIMEOUT, and
+      `canPlace()` -- which FastPlanner's placeAcross / pillarUp, MovementPillar and PillarTask
+      already ask -- answers no for that cell for sixty seconds (`placeRefused`). Open: the
+      PHYSICS planner's own "Path needs bridging" does not price through PlaceRules, so a loop
+      that stays on the physics side needs the same veto there; and no bench yet -- the shape
+      (a gap whose far face cannot be clicked from where the body can stand) is still to be
+      built.
+- [ ] **the same run's death at ~1:50**: not navigation -- `fleeLive(13-15 danger(s), d=20.0)`
+      at night with no bed, the queue running flee legs across the terrain, "At the gap -- the
+      plank is under my own feet: pillaring instead", and the mobs caught up (twelve items to
+      zero). The combat/flee track (G43 and the "no bed -- working through the night" policy),
+      not the drive. Also noticed in the same window: BeatMinecraft's dangerous-ore exclusion
+      walks one ore per tick ("Blacklisting dangerous coal_ore" x80, iron x59 in fifty seconds)
+      and each re-issue now logs "Circumstances changed" + "Excluded on purpose" -- 140 pairs of
+      chat lines. Harmless, but the deliberate exclusion should be silent after the first time.
+- [x] **pit_escape's five FAILs in a row were the BENCH, not the bot** (read from round 29's
+      planner window): the phase starts at 18:20:17 and the very first line three seconds later
+      is "no progress at 202,-59,200" -- the body is already OUTSIDE the wall box at ground level,
+      no dig, no plan. The bench ran straight after cliff_drop at x=1200, its chunk at (200,200)
+      was unloaded, every `fill` failed silently, and the teleport into the old stone pushed the
+      body out to (202.7,-59,200.7). Same trap as dig_down/drop_ledge. The bench now force-loads,
+      proves the shaft with `execute if block`, sets its spawn point and refuses to judge a body
+      that is not in the shaft. The "tunnel variant" note below is that same unbuilt scene read
+      as behaviour.
+- [ ] **pit_escape tunnel variant, read from round 28's dump (third FAIL of the day):** the
+      planner digs EAST out of the shaft floor instead of towering ("mining 2 block(s) at
+      201,-58,200", "Mining aborted: ticks=302 dist=1.50", then 201,-59 mined), the body ends at
+      (202,-59,200) inside the rock, "walking dead-ends (3.0 -> 1.0) -> physics owns the rest",
+      the physics search "Ran out of nodes", then "no progress at 202,-59,200" every six seconds
+      to the end with "goal unreachable from here, giving the route up". From that dead end the
+      goal is six UP and two east; the tower-through-ceiling hand-off (G56) never fired, because
+      the dead-end branch hands the route to the physics search and the tower check lives on the
+      other side of it. Wants: when a partial ends inside rock with the goal above, treat it as a
+      wall hand-off (ceiling dig + tower), not as a physics jump. Needs the verbose PLAN lines --
+      the bench's dump shows none even with verboseDebugLogging on.
 - [ ] **G65 a cell below is entered by a precise walk** (the 19:00 recording: over a one-wide
       shaft with a cobblestone at its bottom, "arrived (1.3)", 6.5 minutes; buried_goal phase two:
       sand dug, the body shuffling 859 <-> 861 on either rim). A one-wide hole takes a body only
@@ -79,7 +133,36 @@ test + full nav-suite regression before it counts done.
       hopping and turning for ever beside a vine in a narrow space). Vanilla treats a body inside
       a vine as climbing; the tower's place window never opens. Baritone's MovementPillar has a
       ladder/vine branch. Ours: break the vine out of the column first (`pillarVine=ticks/met`).
-      Bench `vine_pillar_test.py`.
+      Bench `vine_pillar_test.py`. Round 28: FAIL x2 with `pillarVine=1914/1` and `3824/2` --
+      ninety-five seconds a run of a held attack key and the vine untouched: the stand's saved
+      `fireReleaseNeedsFire=false` releases CLICK_LEFT every tick (G33). Two answers shipped
+      together: the bench pins the setting the playthrough already pins, and the strike now
+      drives `interactionManager.updateBlockBreakingProgress` directly, so it no longer depends
+      on the key surviving the tick. Round 29, pinned + direct: STILL `pillarVine=1906/1` -- and
+      the reason is the aim: a vine is a sixteenth of a block on the face it hangs from, the
+      cell's centre is air, and a look straight down through it puts the crosshair on the FLOOR;
+      vanilla's key handler then starts breaking the floor every tick and resets the vine's
+      progress. Now the aim point is the vine's own outline centre (round 30). Round 30:
+      `pillarVine=966/160`, rise 1.3 -- the vine BREAKS now and comes back: the direct
+      updateBlockBreakingProgress beside the held key doubled the client's progress, the client
+      sent STOP_DESTROY at half the real time, the server refused and restored the block, a
+      hundred and sixty times. One writer of break progress: the key. Direct call removed.
+      Round 31, key only + aim on the outline: STILL `pillarVine=981/158` -- so the double
+      writer was not it either; the server restores the vine after the client's break. Not
+      understood yet. Two ways forward, the second cheaper: (a) read the SERVER's view of the
+      break (a probe bench that strikes one vine and asks rcon `execute if block` before and
+      after); (b) do not break at all -- a vine is REPLACEABLE, the tower can place its
+      scaffold INTO the vine cell, and a body in a vine RISES on JUMP (climb speed), so "hold
+      jump, keep the pitch down, place under the feet" is baritone's ladder branch in effect.
+- [ ] **the 21:01 run's 4.7-minute stand at (1179.5,65,-254.3) is G65's trench shape:** the
+      cobblestone drop one down and two along in a cell the bot had dug, the body parked on the
+      rim (its hitbox touching the trench edge), "Walker: BFS 3 wp" x27 and "no progress" x21,
+      the physics search 22k tests on the hop [0,-1,1] "un-crossed". Key releases were few
+      (CustomBaritoneGoalTask:258 x4, DestroyBlockTask onStop x3), so no thief; whether intoHole
+      even ran is the open question -- narrow_shaft's new "one deep" phase is that trench.
+      **Round 29: PASS at one, two and three deep with `intoHole=17`** -- the precise walk ran
+      and took the body into the trench. The run's stand predates this build's walker path being
+      exercised; watch the next playthrough for the same shape.
 - [x] **G58 budget measured**: cliff_drop at 250 / 1000 / 3000 ms, twice each -- 6 of 6 PASS.
       The budget is not the root of the one failure in three; it is a rare flake of the same
       bench, still to be caught with the terrain snapshot.

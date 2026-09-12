@@ -1088,8 +1088,10 @@ public class PathExecutor {
         placeInRange++;
         if (placingTicks++ > 200) {
             Debug.logMessage(String.format(
-                    "Bridge place aborted (TIMEOUT) dist=%.2f ticks=%d target=%s",
+                    "Bridge place aborted (TIMEOUT) dist=%.2f ticks=%d target=%s — that cell is off the table for a minute",
                     placeDist, placingTicks, target.toShortString()));
+            // G67: the plan must not hand this cell back; see PlaceRules.refuseForAWhile
+            kaptainwutax.tungsten.path.PlaceRules.refuseForAWhile(target);
             options.useKey.setPressed(false);
             options.sneakKey.setPressed(false);
             placingNow = false;

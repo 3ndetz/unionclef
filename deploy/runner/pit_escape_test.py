@@ -87,14 +87,31 @@ def main():
     # keeps them even when the chat overflows, and nav_lines() reads the log on failure
     py4j("cmd", c=";settings verboseDebugLogging true"); time.sleep(0.5)
     rcon(f"gamemode survival {BOT}")
+    # ⛔ THE SHAFT WAS NOT THERE (rounds 28-29, five FAILs in a row): this bench ran straight after
+    # cliff_drop at x=1200, its own chunk at (200,200) was unloaded, every `fill` failed silently,
+    # and the teleport into stone pushed the body OUT of the old wall box to (202.7,-59,200.7) --
+    # outside, at ground level, "no progress" from the first tick, and a verdict about nothing.
+    # Same trap as dig_down/drop_ledge: force-load, then prove the scene exists before trusting it.
+    rcon(f"forceload add {BX-12} {BZ-12} {BX+12} {BZ+12}"); time.sleep(1)
     build_shaft()
     time.sleep(1)
+    # `execute if block ...` with no `run` answers rcon "Test passed" / "Test failed"; a `run say`
+    # goes to the players and rcon sees nothing (round 30: probe='' on a shaft that WAS built)
+    probe = rcon(f"execute if block {BX} {BY+1} {BZ} minecraft:air")
+    wall = rcon(f"execute if block {BX+1} {BY+3} {BZ} minecraft:stone")
+    if "passed" not in probe.lower() or "passed" not in wall.lower():
+        print(f"FAIL: the shaft was not built (probe={probe!r}, wall={wall!r})"); return 2
+    rcon(f"spawnpoint {BOT} {BX} {BY+1} {BZ}")
     rcon(f"tp {BOT} {BX + 0.5} {BY + 1} {BZ + 0.5}")
+    rcon(f"effect give {BOT} minecraft:instant_health 1 10")
     rcon(f"clear {BOT}")
     rcon(f"give {BOT} minecraft:dirt 64")
     time.sleep(2)
     start = py4j("state")
     print("dropped in shaft:", start["pos"])
+    sx, sy, sz = (float(v) for v in start["pos"].split(","))
+    if abs(sx - (BX + 0.5)) > 0.6 or abs(sz - (BZ + 0.5)) > 0.6:
+        print(f"FAIL: the bot is not in the shaft (pos={start['pos']}); the scene is wrong, not the bot"); return 2
     y0 = float(start["pos"].split(",")[1])
     gx, gy, gz = GOAL
     py4j("cmd", c=f"@goto {gx} {gy} {gz}")
@@ -120,6 +137,7 @@ def main():
             break
     py4j("cmd", c="@stop"); py4j("cmd", c=";stop")
     py4j("cmd", c=";settings verboseDebugLogging false")
+    rcon(f"forceload remove {BX-12} {BZ-12} {BX+12} {BZ+12}")
     if not escaped:
         print("  navigator log:")
         r = sh(["docker", "exec", C1, "sh", "-c",

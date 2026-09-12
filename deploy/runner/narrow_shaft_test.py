@@ -125,12 +125,15 @@ def main():
         py4j("chatcmd", c=f";settings {k} {v}"); time.sleep(0.3); print(f"pinned {k}={v}")
     rcon(f"gamemode survival {BOT}")
     rcon("difficulty peaceful")
-    rcon(f"forceload add {X-12} {Z-12} {X+40} {Z+12}"); time.sleep(1)
-    a = phase("two deep", X, 2)
-    b = phase("three deep", X + 20, 3)
+    rcon(f"forceload add {X-12} {Z-12} {X+60} {Z+12}"); time.sleep(1)
+    # one deep is the 21:01 recording's trench: a cobblestone in the cell the bot had just dug,
+    # one down and two along, and the body parked on the rim for 4.7 minutes
+    a = phase("one deep", X + 40, 1)
+    b = phase("two deep", X, 2)
+    c = phase("three deep", X + 20, 3)
     rcon(f"forceload remove {X-12} {Z-12} {X+40} {Z+12}")
-    if a and b:
-        print("PASS: walked into the one-wide shaft and took the drop, both depths"); return 0
+    if a and b and c:
+        print("PASS: walked into the one-wide shaft and took the drop, all three depths"); return 0
     print("FAIL"); return 1
 
 

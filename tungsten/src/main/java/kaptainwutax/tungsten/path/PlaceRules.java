@@ -24,6 +24,7 @@ public final class PlaceRules {
     public static boolean canPlace(WorldView world, BlockPos pos) {
         TungstenConfig cfg = TungstenConfig.get();
         if (!cfg.allowPlace) return false;
+        if (refusedRecently(pos)) return false;
         // must be an empty/replaceable cell to place into
         if (world != null && !world.getBlockState(pos).isReplaceable()) return false;
         // BARITONE-PORT.md, off-thread-world-access section: baritone checks the world border
@@ -63,6 +64,41 @@ public final class PlaceRules {
         if (hook != null) {
             try { if (!hook.test(pos)) return false; } catch (Throwable ignored) {}
         }
+        return true;
+    }
+
+    // ── G67: a placement that timed out is not offered again for a while ──────────────────────
+    //
+    // ⛔ THE EXECUTOR GAVE UP ON A BRIDGE CELL AND THE PLANNER HANDED IT THE SAME CELL AGAIN. The
+    // 21:27 run, after a respawn at (92,100,-14): "Path needs bridging: 1 block(s) at segment end",
+    // "At the gap -- bridging without a physics leg", "Bridge place aborted (TIMEOUT) ... target=
+    // 91,100,-18" every ten seconds for eight minutes. Two hundred ticks in range without a click
+    // that lands is a fact about that cell from where the body can stand; the plan never learned
+    // it. Baritone's PathExecutor cancels at cost+100 and re-plans with the failed edge priced
+    // out; PillarTask remembers a refused column (G62). This is the same memory for any placed
+    // cell: the executor records the refusal, and every place move the planner prices through
+    // canPlace() sees COST_INF there for a minute.
+    private static final java.util.Map<BlockPos, Long> refusedUntilMs = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long REFUSAL_MS = 60_000L;
+    /** Placements refused because that cell had just timed out. Read as placeRefused. */
+    public static volatile int placeRefusedRecently;
+
+    public static void refuseForAWhile(BlockPos pos) {
+        if (pos == null) return;
+        long now = System.currentTimeMillis();
+        refusedUntilMs.entrySet().removeIf(e -> e.getValue() < now);
+        refusedUntilMs.put(pos.toImmutable(), now + REFUSAL_MS);
+    }
+
+    public static boolean refusedRecently(BlockPos pos) {
+        if (refusedUntilMs.isEmpty()) return false;
+        Long until = refusedUntilMs.get(pos);
+        if (until == null) return false;
+        if (until < System.currentTimeMillis()) {
+            refusedUntilMs.remove(pos);
+            return false;
+        }
+        placeRefusedRecently++;
         return true;
     }
 
