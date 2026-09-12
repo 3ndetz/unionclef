@@ -401,6 +401,25 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         // position reads the cell below the one the body stands in).
         net.minecraft.util.math.BlockPos at =
                 kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(AltoClef.getInstance().getPlayer());
+        boolean done = reachedAt(AltoClef.getInstance(), g, at, true);
+        if (done) {
+            kaptainwutax.tungsten.Debug.logMessage("[nav] goal task reports FINISHED at "
+                    + at.getX() + "," + at.getY() + "," + at.getZ() + " goal=" + g);
+        }
+        return done;
+    }
+
+    /**
+     * The one verdict on "is the body at {@code at} done with this goal" -- what {@link #isFinished}
+     * reports, and (G69, 2026-09-12) what FastNavigator is handed as its arrival test, so the two
+     * can never disagree again. Baritone's PathingBehavior has no radius of its own: a path is done
+     * when Goal.isInGoal(feet) says so, and the navigator's own two-block sphere said "arrived
+     * (1.7)" on a drop one block down in a hole while this method said "not reached", every
+     * fifteen seconds for a hundred seconds (the 22:10 run).
+     *
+     * @param count true from isFinished only, so the diagnostic counters see one ask a tick
+     */
+    protected boolean reachedAt(AltoClef mod, AltoGoal g, net.minecraft.util.math.BlockPos at, boolean count) {
         boolean done = g != null && g.reached(at);
         // ⛔ A SOLID GOAL THAT MAY NOT BE DUG IS REACHED BY STANDING ON IT (G55, 2026-09-11).
         // buried_goal phase two: the sand had just been re-placed by the bench where the bot had
@@ -412,10 +431,10 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         if (!done && g instanceof adris.altoclef.util.goals.AltoGoal.Block bg
                 && kaptainwutax.tungsten.TungstenConfig.get().blockGoalDigsIntoSolid
                 && at.equals(bg.pos().up())) {
-            net.minecraft.world.World w = AltoClef.getInstance().getWorld();
+            net.minecraft.world.World w = mod == null ? null : mod.getWorld();
             if (w != null && isSolidAt(w, bg.pos().getX(), bg.pos().getY(), bg.pos().getZ())
-                    && !diggableGoalCell(AltoClef.getInstance(), bg.pos())) {
-                pdDigOnTop++;
+                    && !diggableGoalCell(mod, bg.pos())) {
+                if (count) pdDigOnTop++;
                 done = true;
             }
         }
@@ -442,12 +461,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
         // is null then.
         if (!done && snappedGoalCell != null && snappedGoalCell.equals(at)
                 && kaptainwutax.tungsten.TungstenConfig.get().arrivalAgreesWithTheSnap) {
-            arrivedAtSnap++;
+            if (count) arrivedAtSnap++;
             done = true;
-        }
-        if (done) {
-            kaptainwutax.tungsten.Debug.logMessage("[nav] goal task reports FINISHED at "
-                    + at.getX() + "," + at.getY() + "," + at.getZ() + " goal=" + g);
         }
         return done;
     }
@@ -868,7 +883,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             kaptainwutax.tungsten.path.movements.MovementQueue.stop();
             var exG = kaptainwutax.tungsten.TungstenModDataContainer.EXECUTOR;
             if (exG != null) exG.stop = false;
-            kaptainwutax.tungsten.task.FastNavigator.start(gp);
+            // G69: the goal decides arrival -- the navigator gets this task's own verdict
+            kaptainwutax.tungsten.task.FastNavigator.start(gp, at -> reachedAt(mod, goal, at, false));
             twFnGoal = net.minecraft.util.math.BlockPos.ofFloored(gp);
             twFnCooldownUntilMs = nowMs + 12000;
             twBestDistToGoal = -1; twBestImproveMs = 0L;
@@ -1127,7 +1143,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                         kaptainwutax.tungsten.task.BlockPathWalker.stop();
                         kaptainwutax.tungsten.path.movements.MovementQueue.stop();
                         if (ex != null) ex.stop = false;
-                        kaptainwutax.tungsten.task.FastNavigator.start(gp);
+                        // G69: the goal decides arrival -- the navigator gets this task's own verdict
+            kaptainwutax.tungsten.task.FastNavigator.start(gp, at -> reachedAt(mod, goal, at, false));
                         twFnGoal = net.minecraft.util.math.BlockPos.ofFloored(gp);
                         twFnCooldownUntilMs = nowMs + 12000;   // give it room to build before re-deciding
                         twNoRouteSinceMs = 0L;
@@ -1301,7 +1318,8 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                     kaptainwutax.tungsten.task.BlockPathWalker.stop();
                     kaptainwutax.tungsten.path.movements.MovementQueue.stop();
                     if (ex != null) ex.stop = false;
-                    kaptainwutax.tungsten.task.FastNavigator.start(gp);
+                    // G69: the goal decides arrival -- the navigator gets this task's own verdict
+            kaptainwutax.tungsten.task.FastNavigator.start(gp, at -> reachedAt(mod, goal, at, false));
                     twFnGoal = gCell;
                     twFnCooldownUntilMs = nowMs + 12000;
                     twNearStillPos = null;
@@ -1422,6 +1440,45 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
     public static volatile int pdReachArmed, pdReachHeld;
     private long twReachRearmAtMs = 0L;
 
+    // ── G74 (2026-09-12): a route given up three times in a row makes its block unreachable ──
+    //
+    // ⛔ A GIVE-UP THAT NOBODY HEARS IS A RETRY. The 23:13 recording: an iron ore seven blocks
+    // straight under the feet, the reach route armed, the navigator's search "spent its budget
+    // (6784 nodes, 252 ms) -- one more try with 4x", the boosted search too, the route given up,
+    // the drive's hold of 2.5 s, the route armed again -- a hundred times in seven minutes, the
+    // unstuck chain's shimmy forty-eight times, and the ore never priced as anything but the
+    // nearest. Baritone's process drops a goal when the path calculator says "unable to find
+    // path"; altoclef's chooser does the same through requestBlockUnreachable, which the G63
+    // pricing turns into "attempt N/4 -- stepping aside for 45 s". Nothing connected the two.
+    // Now the drive counts the give-ups per block (static: the drive task is rebuilt constantly)
+    // and the third in ninety seconds hands the block to the chooser's memory.
+    private static net.minecraft.util.math.BlockPos routeGiveUpBlock = null;
+    private static int routeGiveUps = 0;
+    private static long routeGiveUpMs = 0L;
+    private static final int ROUTE_GIVEUPS_MAX = 3;
+    private static final long ROUTE_GIVEUP_WINDOW_MS = 90_000L;
+    /** The block the reach / dig route was last armed for, cleared once its give-up is counted. */
+    private net.minecraft.util.math.BlockPos twRouteArmedBlock = null;
+    /** G74: blocks handed to the chooser's memory after three route give-ups in a row. */
+    public static volatile int pdRouteRefused;
+
+    /** Count a give-up for {@code block}; true when it is the third in the window. */
+    private static boolean noteRouteGiveUp(net.minecraft.util.math.BlockPos block) {
+        long now = System.currentTimeMillis();
+        if (block.equals(routeGiveUpBlock) && now - routeGiveUpMs < ROUTE_GIVEUP_WINDOW_MS) {
+            routeGiveUps++;
+        } else {
+            routeGiveUpBlock = block;
+            routeGiveUps = 1;
+        }
+        routeGiveUpMs = now;
+        if (routeGiveUps >= ROUTE_GIVEUPS_MAX) {
+            routeGiveUps = 0;
+            return true;
+        }
+        return false;
+    }
+
     /** G40: snaps refused because they landed on the bot's own cell, and near-goal ticks handed
      *  to the build engine because the physics approach was not closing. Read as
      *  snapSelfRefused / pdNearBuild. */
@@ -1459,11 +1516,25 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 && block.equals(kaptainwutax.tungsten.task.FastNavigator.reachBlock());
         if (adj.reached(feet) || adris.altoclef.util.helpers.LookHelper.getReach(block).isPresent()) {
             if (armedForThis) kaptainwutax.tungsten.task.FastNavigator.stop();
+            twRouteArmedBlock = null;
             pdFinished++;
             return false;
         }
         long nowMs = System.currentTimeMillis();
         if (!armedForThis) {
+            // G74: armed for this block before and not running it now -- the navigator gave the
+            // route up. The third such in ninety seconds makes the block unreachable for the
+            // chooser, so the drive stops re-arming the same question.
+            if (block.equals(twRouteArmedBlock)) {
+                twRouteArmedBlock = null;
+                if (noteRouteGiveUp(block)) {
+                    kaptainwutax.tungsten.Debug.logWarning("Tungsten: the reach route to " + block.toShortString()
+                            + " was given up " + ROUTE_GIVEUPS_MAX + " times in a row — marking it unreachable");
+                    mod.getBlockScanner().requestBlockUnreachable(block);
+                    pdRouteRefused++;
+                    return false;
+                }
+            }
             // The navigator gives a route up on its own watchdog ("no progress, handing over");
             // re-arming on the very next tick would spin that watchdog at 20 Hz. A short hold
             // lets the world settle (a block just mined, a fall just landed) before the next plan.
@@ -1479,6 +1550,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             if (exR != null) exR.stop = false;
             kaptainwutax.tungsten.task.FastNavigator.start(gp, block);
             twFnGoal = net.minecraft.util.math.BlockPos.ofFloored(gp);
+            twRouteArmedBlock = block;
             twReachRearmAtMs = nowMs + 2500;
             pdReachArmed++;
             pdFnBuild++;
@@ -1523,11 +1595,24 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
                 && cell.equals(kaptainwutax.tungsten.task.FastNavigator.driveExactCell());
         if (feet.equals(cell)) {
             if (armedForThis) kaptainwutax.tungsten.task.FastNavigator.stop();
+            twRouteArmedBlock = null;
             pdFinished++;
             return false;
         }
         long nowMs = System.currentTimeMillis();
         if (!armedForThis) {
+            // G74: the same accounting as the reach route -- three give-ups and the cell is
+            // handed to the chooser's memory.
+            if (cell.equals(twRouteArmedBlock)) {
+                twRouteArmedBlock = null;
+                if (noteRouteGiveUp(cell)) {
+                    kaptainwutax.tungsten.Debug.logWarning("Tungsten: the dig route into " + cell.toShortString()
+                            + " was given up " + ROUTE_GIVEUPS_MAX + " times in a row — marking it unreachable");
+                    mod.getBlockScanner().requestBlockUnreachable(cell);
+                    pdRouteRefused++;
+                    return false;
+                }
+            }
             if (nowMs < twReachRearmAtMs) {
                 pdDigHeld++;
                 checker.reset();
@@ -1540,6 +1625,7 @@ public abstract class CustomBaritoneGoalTask extends Task implements ITaskRequir
             if (exR != null) exR.stop = false;
             kaptainwutax.tungsten.task.FastNavigator.startExactForDrive(cell);
             twFnGoal = cell;
+            twRouteArmedBlock = cell;
             twReachRearmAtMs = nowMs + 2500;
             pdDigArmed++;
             pdFnBuild++;

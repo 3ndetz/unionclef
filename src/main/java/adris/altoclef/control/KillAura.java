@@ -53,6 +53,10 @@ public class KillAura {
      * asking its class what it is. Nothing is equipped unless it beats what is already held, so a
      * bot holding the best weapon it owns is left alone rather than re-equipping every tick.
      */
+    /** G71: aura swings refused because the target was beyond melee reach (the hand left alone),
+     *  and weapon equips the aura did make for a target in reach. Read kaAura=outOfReach/equip. */
+    public static volatile int kaAuraOutOfReach, kaAuraEquip;
+
     public static void equipWeapon(AltoClef mod) {
         List<ItemStack> invStacks = mod.getItemStorage().getItemStacksPlayerInventory(true);
         if (invStacks.isEmpty()) {
@@ -199,6 +203,21 @@ public class KillAura {
             }
             boolean canAttack;
             if (equipSword) {
+                // ⛔ THE HAND IS TAKEN FOR A HIT THAT CAN LAND, NOT FOR A MOB IN VIEW (G71,
+                // 2026-09-12). The 22:50 run stood three minutes on a coal ore, "Found better tool
+                // in inventory, equipping." 4532 times, nothing broken: this branch put the sword
+                // in the hand on every cooldown for a hostile the force field had in view but
+                // out of reach, the miner and the fix chain put the pickaxe back, and a hand that
+                // changes item resets vanilla's break progress. The server lands a melee hit
+                // within three blocks and nowhere else, so a weapon is equipped -- and the dig
+                // interrupted -- only for a target inside that reach; a mob further out is left
+                // to the chain's own fight-or-flee verdict, and the pickaxe stays where it is.
+                double reach = kaptainwutax.tungsten.combat.TriggerBot.REACH + 1.0;
+                if (entity.squaredDistanceTo(mod.getPlayer()) > reach * reach) {
+                    kaAuraOutOfReach++;
+                    return;
+                }
+                kaAuraEquip++;
                 equipWeapon(mod);
                 canAttack = true;
             } else {

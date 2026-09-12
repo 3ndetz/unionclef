@@ -1807,7 +1807,28 @@ public final class FastPlanner {
         }
     }
 
-    /** Octile distance: the admissible estimate for 8-way movement. */
+    /** G73: how far the body drops for free before every further block toward a goal below is a
+     *  dig, and what a dug block costs in walked blocks (23 ticks against 4.6). */
+    private static final int FREE_FALL_BLOCKS = 3;
+    private static final double DIG_DOWN_WALKS_PER_BLOCK = 5.0;
+
+    /**
+     * Octile distance: the estimate for 8-way movement, in walked blocks.
+     *
+     * <p>⛔ A GOAL FAR BELOW IS PRICED AS THE DIG IT IS (G73, 2026-09-12). The vertical term used to
+     * be one walked block per block of height, which is admissible and useless for a goal under
+     * rock: an iron ore seven blocks straight down costs seven digs (about 160 ticks) and the
+     * estimate promised twenty-five, so A* opened a disc of surface cells forty blocks wide before
+     * the dug column could ever be popped -- the 23:13 recording: "the search toward a goal 7
+     * below spent its budget (6784 nodes, 252 ms)" a hundred times in seven minutes, the bot
+     * standing on top of the ore. Baritone's GoalBlock prices descent as a fall too, and gets
+     * away with it because its search is fast enough to pay for the disc; this one is not. So
+     * below a free fall the vertical term is a dig's worth of walks per block: the estimate is no
+     * longer an underestimate where a cheaper way down happens to exist (a nearby stair), and
+     * the search may dig where it could have walked, which is what a player does at an ore under
+     * the feet anyway. Climbing keeps the plain term; the planner's climbs are priced by their
+     * own moves.
+     */
     private static double octile(int x, int y, int z, BlockPos goal) {
         int dx = Math.abs(x - goal.getX());
         int dz = Math.abs(z - goal.getZ());
@@ -1815,7 +1836,12 @@ public final class FastPlanner {
         int straight, diagonal;
         if (dx < dz) { straight = dz - dx; diagonal = dx; }
         else { straight = dx - dz; diagonal = dz; }
-        return diagonal * SQRT2 + straight + dy;
+        double vertical = dy;
+        int below = y - goal.getY();
+        if (below > FREE_FALL_BLOCKS) {
+            vertical = FREE_FALL_BLOCKS + (below - FREE_FALL_BLOCKS) * DIG_DOWN_WALKS_PER_BLOCK;
+        }
+        return diagonal * SQRT2 + straight + vertical;
     }
 
     /** Array binary heap with decrease-key via the node's stored position. */

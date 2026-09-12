@@ -310,6 +310,14 @@ public class MineAndCollectTask extends ResourceTask {
 
         /** Squared distance inside which a drop is "already here" and needs no anti-ping-pong tax. */
         private static final double NEAR_DROP_SQ = 9.0;
+        /** G72: how far the body drops for free before every further block down is a dig. */
+        private static final double SAFE_FALL_BLOCKS = 3.0;
+        /** G72: a dug block costs about five walked blocks (23 ticks against 4.6, FastPlanner's own
+         *  numbers), so a drop's vertical leg below the safe fall is stretched by this before the
+         *  squared-distance comparison with the nearest block. */
+        private static final double DIG_WALKS_PER_BLOCK = 5.0;
+        /** G72: drops whose descent was priced as a dig in the drop-versus-block comparison. */
+        public static volatile int dropDeepRepriced;
         /** The historical handicap, kept for drops far enough away that walking to them costs time. */
         private static final double DROP_MINING_PENALTY = 10.0;
 
@@ -355,6 +363,25 @@ public class MineAndCollectTask extends ResourceTask {
             return new Pair<>(
                     closestDrop.map(itemEntity -> {
                         double trueSq = itemEntity.squaredDistanceTo(pos);
+                        // ⛔ A DROP MORE THAN A FALL BELOW IS REACHED BY DIGGING, AND A DIG IS PRICED
+                        // LIKE A DIG (G72, 2026-09-12). This comparison is in squared blocks, where
+                        // eleven blocks straight down costs the same as eleven blocks across. The
+                        // 22:34 run: a cobblestone that had fallen ELEVEN blocks into a cave beat
+                        // every stone on the hillside, "primDrive NO ROUTE" x47, the block search
+                        // "toward a goal 11 below spent its budget" x8, ninety-four seconds and two
+                        // watchdog give-ups for a block the bot could have mined beside its feet.
+                        // The body falls three blocks for free and digs every one below that at
+                        // about five walks' worth of ticks (23 against 4.6), so the vertical leg
+                        // below the safe fall is stretched by that factor before it is squared: a
+                        // drop eleven down now reads as forty-three away, and any stone inside that
+                        // wins, which is what a player does.
+                        double below = pos.y - itemEntity.getY();
+                        if (below > SAFE_FALL_BLOCKS) {
+                            double dx = itemEntity.getX() - pos.x, dz = itemEntity.getZ() - pos.z;
+                            double dyPriced = SAFE_FALL_BLOCKS + (below - SAFE_FALL_BLOCKS) * DIG_WALKS_PER_BLOCK;
+                            trueSq = dx * dx + dz * dz + dyPriced * dyPriced;
+                            dropDeepRepriced++;
+                        }
                         if (trueSq > NEAR_DROP_SQ) return trueSq + DROP_MINING_PENALTY;
                         // COUNT ALWAYS, ACT ONLY WHEN FLAGGED -- otherwise the control arm reads
                         // zero by construction and the counter cannot say the arms differed.

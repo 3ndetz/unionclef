@@ -135,6 +135,38 @@ public final class FastNavigator {
     private static volatile boolean budgetBoostNext = false;
     private static volatile boolean budgetBoostedThisRoute = false;
 
+    // ── G68 (2026-09-12): the physics engine gets baritone's budget, and two failures end the route ──
+    //
+    // ⛔ "STANDS THERE COMPUTING FOR EVER" (operator, on the recording): the bot at the mouth of a
+    // one-block slot it could not fit through, the physics search drawn out toward it, nothing
+    // moving. The mechanism: walking dead-ends, the goal is handed to the physics engine, the
+    // engine searches for its config budget (fifteen seconds) and then to its no-progress cap
+    // (twenty), returns nothing, the navigator re-plans from the same feet, the plan dead-ends at
+    // the same cell, the same hand-off, the same twenty seconds. Baritone's PathingBehavior plans
+    // for primaryTimeoutMS (500 ms), re-plans once with failureTimeoutMS (2000 ms), and on the
+    // second failure says "Unable to find path" and lets the process drop the goal. This is that:
+    // a hand-off's search gets 500 ms; one that moved the body nowhere is asked again with 2000;
+    // a second failure gives the route up out loud and remembers the cell for a minute, so a
+    // re-plan from the same feet does not hand it over a third time.
+    private static final long PHYSICS_PRIMARY_MS = 500L;
+    private static final long PHYSICS_FAILURE_MS = 2000L;
+    private static final long PHYSICS_REFUSAL_MS = 60_000L;
+    /** The hand-off in flight: where the body stood when it was sent, and to what. */
+    private static Vec3d physicsHandoffFrom = null;
+    private static BlockPos physicsHandoffTarget = null;
+    /** Hand-offs to the same cell, in a row, that moved the body nowhere. */
+    private static int physicsFailStreak = 0;
+    /** The cell the engine failed twice on, and when. Outlives the route on purpose. */
+    private static BlockPos physicsRefusedTarget = null;
+    private static long physicsRefusedAtMs = 0;
+    /** Hand-offs that moved the body nowhere, and routes given up after the second such. */
+    public static volatile int navPhysicsFailed, navPhysicsGaveUp;
+
+    private static boolean physicsRefusedRecently(BlockPos cell) {
+        return cell != null && physicsRefusedTarget != null && physicsRefusedTarget.equals(cell)
+                && System.currentTimeMillis() - physicsRefusedAtMs < PHYSICS_REFUSAL_MS;
+    }
+
     /**
      * THE BODY'S CELL IS THE CELL THAT HOLDS IT UP (G53, 2026-09-11). A body resting on the
      * edge of a block has its centre over the next column; that column may be a drop, and every
@@ -292,6 +324,32 @@ public final class FastNavigator {
         reachBlock = block;
     }
 
+    /**
+     * ⛔ THE GOAL DECIDES ARRIVAL, NOT THE NAVIGATOR (G69, 2026-09-12). Baritone's PathingBehavior
+     * has no radius of its own: a path is done when {@code Goal.isInGoal(feet)} says so. This
+     * navigator arrived on a two-block sphere of its own, and the 22:10 run shows what the gap
+     * costs: a cobblestone drop in the one-deep hole the bot had just dug, the goal nearLive(r=1)
+     * on the drop's cell (353,145,1), the body on the rim at (353.5,146,0.1) -- 1.72 from the
+     * target, "FastNavigator: arrived (1.7)", stop; the drive's own test (block distance <= 1)
+     * says NOT reached, restarts the route, "arrived (1.7)" again, every fifteen seconds; the
+     * pursuit's not-closing watchdog gives the drop up after twenty-five, the blacklist restores
+     * it, four attempts, a hundred seconds, the drop never touched. The route must go INTO the
+     * hole, and only the goal knows that.
+     *
+     * @param reached the caller's own arrival test on the feet cell; the two-block sphere stays
+     *                the default for callers without one (the goto command, chases).
+     */
+    public static void start(Vec3d target, java.util.function.Predicate<BlockPos> reached) {
+        start(target);
+        arrivalTest = reached;
+    }
+
+    /** G69: the caller's arrival test on the feet cell (baritone's Goal.isInGoal); null = the
+     *  two-block sphere. Cleared by {@link #stop()}. */
+    private static volatile java.util.function.Predicate<BlockPos> arrivalTest = null;
+    /** G69: arrivals the sphere would have declared that the goal's own test refused. */
+    public static volatile int navArrivalRefusedByGoal;
+
     public static void start(Vec3d target) {
         stop();
         // WHOSE goal is this route serving? The drive publishes the altoclef goal every tick, but
@@ -334,6 +392,7 @@ public final class FastNavigator {
         goal = null;
         exactCell = null;
         exactFromDrive = false;
+        arrivalTest = null;
         pendingGiveUp = false;
         budgetBoostNext = false;
         budgetBoostedThisRoute = false;
@@ -354,6 +413,9 @@ public final class FastNavigator {
         pendingPhysicsTarget = null;
         pendingCrossing = null;
         awaitingPhysics = false;
+        physicsHandoffFrom = null;
+        physicsHandoffTarget = null;
+        physicsFailStreak = 0;   // the refusal memory stays: it is about the cell, not the route
         nextLegMovement = false;
         // A queue left running past the navigator would keep pressing keys with nobody steering.
         kaptainwutax.tungsten.path.movements.MovementQueue.stop();
@@ -405,11 +467,18 @@ public final class FastNavigator {
         // G55: the feet cell with baritone's +0.1251 -- on a chest or a slab the naive block
         // position reads the cell BELOW the one the body stands in, and an exact arrival on the
         // chest under a buried goal was missed for it (buried_goal, round 13).
+        boolean sphereArrived = dist <= ARRIVE_DIST && goalRise < 1.0 && settledBody;
+        java.util.function.Predicate<BlockPos> goalTest = arrivalTest;
         boolean arrived = exactCell != null
                 ? kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player).equals(exactCell)
                 : reach != null
                     ? reachArrived(player, reach)
-                    : (dist <= ARRIVE_DIST && goalRise < 1.0 && settledBody);
+                    : goalTest != null
+                        // G69: the goal's own test on the feet cell, the body settled as before
+                        ? (settledBody && goalTest.test(
+                                kaptainwutax.tungsten.path.movements.RotationHelper.playerFeet(player)))
+                        : sphereArrived;
+        if (!arrived && goalTest != null && sphereArrived) navArrivalRefusedByGoal++;
         if (arrived) {
             Debug.logMessage("FastNavigator: arrived (" + String.format("%.1f", dist) + ")");
             BlockPathWalker.stop();
@@ -651,6 +720,38 @@ public final class FastNavigator {
             }
             awaitingPhysics = false;
             legTail = null;
+            // ⛔ A HAND-OFF THAT MOVED THE BODY NOWHERE IS A FAILURE, AND IT IS COUNTED (G68). The
+            // engine's own "no route" never reached this task: it re-planned from the same feet as
+            // if nothing had been tried. Baritone: the first failure re-plans with the longer
+            // failure timeout, the second gives the route up.
+            if (physicsHandoffTarget != null && physicsHandoffFrom != null) {
+                Vec3d now = player.getEntityPos();
+                Vec3d tc = Vec3d.ofBottomCenter(physicsHandoffTarget);
+                boolean progressed = now.distanceTo(physicsHandoffFrom) >= 1.0
+                        || now.distanceTo(tc) < physicsHandoffFrom.distanceTo(tc) - 0.5;
+                if (progressed) {
+                    physicsFailStreak = 0;
+                } else {
+                    navPhysicsFailed++;
+                    physicsFailStreak++;
+                    if (physicsFailStreak >= 2) {
+                        navPhysicsGaveUp++;
+                        physicsRefusedTarget = physicsHandoffTarget;
+                        physicsRefusedAtMs = System.currentTimeMillis();
+                        Debug.logWarning(String.format(
+                                "FastNavigator: physics found no way to %s from (%.1f,%.1f,%.1f) in %d ms and again in %d ms — giving the route up",
+                                physicsHandoffTarget.toShortString(), physicsHandoffFrom.x, physicsHandoffFrom.y,
+                                physicsHandoffFrom.z, PHYSICS_PRIMARY_MS, PHYSICS_FAILURE_MS));
+                        physicsFailStreak = 0;
+                        physicsHandoffTarget = null;
+                        pendingGiveUp = true;
+                        return;
+                    }
+                    Debug.logMessage(String.format(
+                            "FastNavigator: physics found no way to %s in %d ms — once more with %d ms",
+                            physicsHandoffTarget.toShortString(), PHYSICS_PRIMARY_MS, PHYSICS_FAILURE_MS));
+                }
+            }
             planAhead(player.getBlockPos());   // continue from wherever we actually landed
             return;
         }
@@ -853,8 +954,18 @@ public final class FastNavigator {
                     return;
                 }
 
+                // G68: a cell the engine has already failed twice on is not handed over again.
+                if (physicsRefusedRecently(jump)) {
+                    Debug.logWarning("FastNavigator: physics already found no way to " + jump.toShortString()
+                            + " twice — giving the route up");
+                    navPhysicsGaveUp++;
+                    pendingGiveUp = true;
+                    return;
+                }
+                long budget = (physicsFailStreak > 0 && jump.equals(physicsHandoffTarget))
+                        ? PHYSICS_FAILURE_MS : PHYSICS_PRIMARY_MS;
                 Debug.logMessage("FastNavigator: physics owns the jump -> "
-                        + jump.getX() + "," + jump.getY() + "," + jump.getZ());
+                        + jump.getX() + "," + jump.getY() + "," + jump.getZ() + " (" + budget + " ms)");
                 BlockPathWalker.stop();      // the walker must not fight the jump
                 nextLeg = null;              // drop any leg prepared for after the gap
                 // Only commit to waiting if the search ACCEPTED the request. find() refuses
@@ -862,9 +973,12 @@ public final class FastNavigator {
                 // silently — so we would sit in awaitingPhysics for a jump nobody was
                 // computing, and the run stalled at the lip of the gap.
                 boolean accepted = kaptainwutax.tungsten.TungstenModDataContainer.PATHFINDER.find(
-                        world, Vec3d.ofBottomCenter(jump), player);
+                        world, Vec3d.ofBottomCenter(jump), player, budget);
                 if (accepted) {
                     awaitingPhysics = true;
+                    physicsHandoffFrom = player.getEntityPos();
+                    if (!jump.equals(physicsHandoffTarget)) physicsFailStreak = 0;
+                    physicsHandoffTarget = jump;
                 } else {
                     pendingPhysicsTarget = jump;   // keep it; retry on a later tick
                 }

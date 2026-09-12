@@ -3,16 +3,20 @@
 
 The operator watched it live: the bot needed to jump and place a block under itself, a vine hung
 beside it, and it hopped and turned in place for ever -- vanilla treats a body inside a vine as
-CLIMBING, so JUMP becomes "go up the vine", the feet never leave the cell in a free arc, and the
-tower's place window (airborne, rising, feet above the cell's top) never opens. Baritone's
-MovementPillar has its own branch for a ladder or vine at the source. Ours takes the vine out of
-the column first -- a vine breaks in a few ticks by hand -- and then the jump is a jump again.
+CLIMBING: with JUMP down the vertical speed is SET to 0.2 each tick, the jump's 0.42 is overwritten
+on its first tick, and a tower that releases JUMP once airborne rises 0.57 and falls back -- the
+place window (feet above the cell's top) never opens. Rounds 28-31 struck the vine out of the
+column first; the client broke it 158 times in one window and the server's ack put it back each
+time. Baritone's MovementPillar never breaks a vine ("we're going to use it"): its ladder branch
+holds the key and lets vanilla climb. Ours does the same -- JUMP held while the feet are in a
+climbable cell, the body climbs at 0.2 a tick, the placement fires from the same window as on a
+free jump, and the tower goes up the vine at climb speed.
 
     python3 deploy/runner/vine_pillar_test.py          # exit 0 = PASS
 
 Flat server: a one-wide stone shaft five deep, vines on its north wall from the floor up, the bot
 at the bottom with a stack of cobblestone, `@goto` a point on the surface four blocks away. PASS =
-the bot's Y rises out of the shaft within the window, and pillarVine reports the vine was met.
+the bot's Y rises out of the shaft within the window; pillarVine=ticks/met reports the climb.
 """
 import functools, json, os, subprocess, sys, time
 print = functools.partial(print, flush=True)

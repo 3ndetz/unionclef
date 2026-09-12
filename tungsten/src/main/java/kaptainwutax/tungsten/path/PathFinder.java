@@ -85,6 +85,16 @@ public class PathFinder {
 	 *  progressing search bumps lastProgressMs and never hits this; a stalled one gives
 	 *  up cleanly (#user-bug: air / tall-grass goal spun forever). */
 	private static final long HARD_SEARCH_CAP_MS = 20000L;
+	/** G68 (2026-09-12): a budget the CALLER sets for one search -- baritone's primaryTimeoutMS
+	 *  (500 ms) and failureTimeoutMS (2000 ms) for a segment the navigator hands over. The engine's
+	 *  own budget is the config's fifteen seconds and its no-progress cap twenty; a hand-off toward
+	 *  a cell no body can reach (a one-block slot) ran both in full, and the navigator re-planned
+	 *  from the same feet and handed the same cell over again -- the operator's "stands there
+	 *  computing for ever". 0 = the config's searchTimeoutMs. Consumed by the search thread and
+	 *  cleared when it ends, so a plain @goto search is not shortened by a hand-off's leftovers. */
+	public volatile long requestBudgetMs = 0;
+	/** G68: searches ended by their caller's budget, and how many of those still salvaged a partial. */
+	public static volatile int physicsBudgetOut, physicsBudgetOutSalvaged;
 	private static Optional<List<BlockNode>> blockPath = Optional.empty();
 	/** The robust elevation-aware block path from the last/current async search
 	 *  (BlockSpacePathFinder). Available while a search runs; the drift-immune
@@ -395,6 +405,16 @@ public class PathFinder {
 		return find(world, target, player, Optional.empty());
 	}
 
+	/** G68: a search with the caller's own budget (baritone's primary / failure timeouts for a
+	 *  handed-over segment). Refused like {@link #find(WorldView, Vec3d, PlayerEntity)} while a
+	 *  previous search is still tearing down; the budget is dropped with the refusal. */
+	synchronized public boolean find(WorldView world, Vec3d target, PlayerEntity player, long budgetMs) {
+		requestBudgetMs = Math.max(0L, budgetMs);
+		boolean accepted = find(world, target, player);
+		if (!accepted) requestBudgetMs = 0;
+		return accepted;
+	}
+
     /**
      * Start a search. Returns FALSE when the request was refused because a search is
      * already running.
@@ -457,6 +477,7 @@ public class PathFinder {
             PathFinder.blockPath = Optional.empty();
             NEXT_CLOSEST_BLOCKNODE_IDX.set(1);
             overrideStartPos = null;
+            requestBudgetMs = 0;   // G68: the caller's budget was for this search only
 
         });
         thread.setName("PathFinder");
@@ -511,7 +532,13 @@ public class PathFinder {
 	    TungstenModRenderContainer.RENDERERS.clear();
 
 	    long startTime = System.currentTimeMillis();
-	    long primaryTimeoutTime = startTime + TungstenConfig.get().searchTimeoutMs;
+	    // G68: a caller's budget (a hand-off's 500 / 2000 ms) stands in for the config's, and is a
+	    // HARD cap as well -- the no-progress cap below is twenty seconds, and a hand-off must not
+	    // wait for it. A quarter second of grace lets the primary timeout's own partial go out first.
+	    final long budgetMs = requestBudgetMs > 0 ? requestBudgetMs : TungstenConfig.get().searchTimeoutMs;
+	    final long hardCapTime = requestBudgetMs > 0 ? startTime + budgetMs + 250L : Long.MAX_VALUE;
+	    boolean budgetOut = false;
+	    long primaryTimeoutTime = startTime + budgetMs;
 	    // Time of the last REAL progress (emitted a runnable partial, or advanced along
 	    // the block path). NOT bumped by re-roots — a re-root re-plans the same
 	    // unreachable partial and would otherwise mask a stall. If no real progress for
@@ -876,6 +903,15 @@ public class PathFinder {
 	            	lastProgressMs = System.currentTimeMillis();   // emitted a runnable partial = progress
 	                continue;
 	            }
+	            // G68: the caller's budget is up -- whatever partial exists goes out below, nothing
+	            // else is waited for. The navigator decides whether to ask again (with baritone's
+	            // longer failure timeout) or to give the route up.
+	            if (System.currentTimeMillis() > hardCapTime) {
+	                Debug.logWarning("Search gave up: no route within its " + budgetMs + " ms budget");
+	                gaveUpHard = true;
+	                budgetOut = true;
+	                break;
+	            }
 	            // Hard give-up: no real progress (no emit, no block-path advance) for the
 	            // cap. On open ground the physics openSet never empties, so without this
 	            // the search expands forever and the bot "computes" without moving. Stop.
@@ -1017,9 +1053,11 @@ public class PathFinder {
 	            return;
 	        }
 	        searchGaveUp++;
+	        if (budgetOut) physicsBudgetOut++;
 	        noteGuideVsPhysics("gaveUp", world, target, player);
 	        if (setCurrentPath(target, start, player)) {
 	            searchGaveUpSalvaged++;
+	            if (budgetOut) physicsBudgetOutSalvaged++;
 	            Debug.logMessage("Search gave up — advancing on the best partial route");
 	        }
 	    } else if (stop.get()) {

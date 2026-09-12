@@ -759,12 +759,108 @@ drops (`intoHole`). Bench `narrow_shaft_test.py`.
 
 **G66. A vine in the tower's column turns the jump into a climb.** Seen live by the operator: the
 bot needing to place a block under itself beside a vine in a narrow space, hopping and turning for
-ever. Vanilla treats a body inside a vine as climbing: JUMP becomes "go up the vine", the feet
-never leave the cell in a free arc, and the tower's place window (airborne, rising, feet above the
-cell's top) never opens. Baritone's `MovementPillar` has its own branch for a ladder or vine at the
-source and never places there. Principle: **the column is cleared before the tower is built** — a
-vine in the feet, head or the two cells above is struck out first, a few ticks by hand
-(`pillarVine=ticks/met`). Bench `vine_pillar_test.py`.
+ever. The physics (`LivingEntity.travel`, and tungsten's own `Agent.applyMovementInput`): on a tick
+where the body is in a climbable cell and JUMP is down, the vertical speed is *set* to 0.2, so the
+jump's 0.42 is overwritten on its first tick, the body rises 0.57 in all and falls back at the
+clamped 0.15 — the tower's place window (feet above the cell's top) never opens, because the tower
+released JUMP the moment it was airborne. Four rounds tried to strike the vine out of the column
+first (a vine breaks in six ticks by hand); the client did break it, 158 times in one window, and
+the block was back within the same six ticks every time: the server's clock had not caught up and
+its ack reverted the client's prediction. Baritone never breaks it — `MovementPillar.cost`: "we
+won't actually need to break the ladder / vine because we're going to use it" — and its ladder
+branch holds the key and lets vanilla climb. Principle: **a climbable cell is climbed** — JUMP is
+held through the whole rise while the feet are in one, the body climbs at 0.2 a tick, the
+placement fires from the same window as on a free jump, the vine cell takes the block (a vine is
+replaceable) and the tower goes up the vine at climb speed (`pillarVine=ticks/met`). Bench
+`vine_pillar_test.py`.
+
+**G68. The physics engine computes for ever toward a cell no body can reach.** Seen live by the
+operator: the bot at the mouth of a one-block slot it cannot fit through, the physics search drawn
+out toward it, nothing moving, "stands there computing for ever". The mechanism, read off the
+22:10 run's tail: walking dead-ends, the goal is handed to the physics engine, the engine searches
+for its config budget (`searchTimeoutMs`, fifteen seconds) and on to its no-progress cap (twenty),
+returns nothing, the navigator re-plans from the same feet, the plan dead-ends at the same cell,
+the same hand-off, the same twenty seconds — "Search gave up — advancing on the best partial
+route" every twenty-five seconds for the rest of the run. Baritone's `PathingBehavior` plans for
+`primaryTimeoutMS` (500 ms), re-plans once with `failureTimeoutMS` (2000 ms), and on the second
+failure says "Unable to find path" and lets the process drop the goal. Principle: **a hand-off has
+baritone's budget, and two failures end the route** — the navigator's search request carries its
+own budget (`PathFinder.requestBudgetMs`, a hard cap as well as the primary timeout), a hand-off
+that moved the body nowhere is counted and re-asked once with the longer budget, the second such
+gives the route up out loud and remembers the cell for a minute, so a re-plan from the same feet
+does not hand it over a third time (`navPhysics=failed/gaveUp`, `physicsBudgetOut=out/salvaged`).
+Bench `slot_hole_test.py`.
+
+**G69. The navigator arrives on a sphere of its own, and the goal says it has not.** The 22:10
+run: the bot mined a cobblestone at its feet's neighbour, the drop settled in the one-deep hole,
+the pickup's goal was nearLive(r=1) on the drop's cell, the body on the rim 1.72 from the target —
+"FastNavigator: arrived (1.7)", stop; the drive's own test (block distance ≤ 1) said not reached,
+restarted the route, "arrived (1.7)" again every fifteen seconds; the pursuit's not-closing
+watchdog gave the drop up at twenty-five seconds, the blacklist restored it, four attempts, a
+hundred seconds, the drop one block down never touched. Baritone's `PathingBehavior` has no radius
+of its own: a path is done when `Goal.isInGoal(feet)` says so. Principle: **the goal decides
+arrival** — the drive hands the navigator the goal's own test (`FastNavigator.start(target,
+reached)`), the two-block sphere stays only for callers without one (`navArrivalRefused` counts the
+sphere arrivals the goal refused). Bench `rim_drop_test.py`.
+
+**G70. A creeper that is already close is avoided whether or not it sees the body.** The 22:34
+run, 19:44:35 UTC on the server's clock: "tester1 was blown up by Creeper" at hp 19, mid-climb on a
+hillside (MovementQueue CLIMB+9, CLIMB+5), and not one line from the mob-defense chain before it.
+G43's avoid branch was gated on the creeper's line of sight to the body; on a slope the creeper
+walks up behind the body with the hill between their eyes until it is at fuse distance, and the
+fusing branch then has thirty ticks and a body that is still climbing. Principle: **inside seven
+blocks a creeper is a threat on any terrain** — avoided seen or not, the sight test kept for the
+far half of the range (`mdCreeperUnseen`), and the chain now says once a second what it sees of a
+creeper in range ("creeper at 5.2 sees=false fuse=0.00 -> avoid"), so the next death has a trace.
+Bench `creeper_behind_test.py` (a creeper summoned behind a bot climbing a staircase), beside
+`creeper_avoid_test.py`.
+
+**G71. The hand is taken for a hit that can land, not for a mob in view.** The 22:50 run stood
+three minutes on a coal ore with "Found better tool in inventory, equipping." 4532 times (more
+than once a tick), the miner's dbTick every tick, and nothing broken — the rung "stone tools" never
+came. A hand that changes item resets vanilla's break progress (`isCurrentlyBreaking` compares the
+held stack), so a tool re-equipped every tick never finishes a block. The writers of the hand
+during a dig: `DestroyBlockTask.equipBestToolFor` (G47), the fix chain (same verdict, same tool),
+and `KillAura.attack(equipSword=true)` — the force field equips the sword on every attack cooldown
+for any hostile it has in view within ~6 blocks, in reach or not, and the miner puts the pickaxe
+back. Principle: **a weapon is drawn only for a target inside melee reach** (the server lands a
+hit within three blocks and nowhere else; `TriggerBot.REACH + 1`), a mob further out is left to the
+chain's own fight-or-flee verdict and the pickaxe stays; the fix chain says once a second what the
+hand held and what it swapped to (`fixToolSwaps`, `kaAura=outOfReach/equip`), so the next fight
+names its writer. Baritone's own answer is the same shape: `MovementHelper.switchToBestToolFor`
+is called by the movement that is breaking, and nothing else touches the hotbar while it does.
+
+**G72. A drop more than a fall below is reached by digging, and a dig is priced like a dig.** The
+22:34 run: a cobblestone that had fallen eleven blocks into a cave beat every stone on the
+hillside in `MineAndCollectTask`'s drop-versus-block comparison — squared blocks, where eleven
+down costs the same as eleven across — "primDrive NO ROUTE" ×47, the block search "toward a goal
+11 below spent its budget" ×8, ninety-four seconds and two watchdog give-ups for a block the bot
+could have mined beside its feet. Principle: **the vertical leg below a safe fall is a dig** — the
+body drops three blocks for free and digs every one below that at about five walks' worth of
+ticks (23 against 4.6), so that leg is stretched five-fold before it is squared; a drop eleven
+down reads as forty-three away and any stone inside that wins, which is what a player does
+(`dropDeep`). Bench `deep_drop_test.py`. (The planner's own budget for a genuine dig-down —
+5.9k nodes in 251 ms — stays open in TODOS.)
+
+**G73. A goal far below is priced as the dig it is.** The 23:13 run: the bot standing on top of
+an iron ore seven blocks down, "the search toward a goal 7 below spent its budget (6784 nodes,
+252 ms) — one more try with 4x" a hundred times in seven minutes. FastPlanner's octile estimate
+priced the descent at one walked block per block of height — admissible, and useless under rock:
+seven digs cost about 160 ticks, the estimate promised twenty-five, so A* opened a disc of surface
+cells forty blocks wide before the dug column could be popped. Baritone prices descent as a fall
+too and gets away with it because its search pays for the disc in milliseconds; this one runs at
+a fortieth of that rate. Principle: **below a free fall the vertical term is a dig's worth of
+walks per block** (five) — no longer an underestimate where a stair happens to be near, and the
+search digs where a player would dig anyway. Bench `iron_below_test.py`.
+
+**G74. A route given up three times in a row makes its block unreachable.** Same recording: the
+reach route armed, the search given up, the drive's 2.5 s hold, the route armed again — the
+unstuck shimmy forty-eight times and the ore never priced as anything but the nearest. Baritone's
+process drops a goal when the calculator says "unable to find path"; altoclef's chooser does the
+same through `requestBlockUnreachable`, which the G63 pricing turns into "attempt N/4 — stepping
+aside for 45 s"; nothing connected the two. Principle: **the navigator's give-up reaches the
+chooser** — the drive counts give-ups per block and the third in ninety seconds hands the block
+to the chooser's memory (`pdRouteRefused`). Bench `iron_below_test.py`.
 
 ### Baritone's stuck cases, and where each one stands here
 
@@ -777,7 +873,7 @@ has it. "Open" rows are the next stalls waiting to happen.
 |---|---|---|---|
 | Pillar clicks only with feet above the cell's top (`player.y > dest.y + 0.1`) | MovementPillar.updateState | `PLACE_CLEARANCE` (G42) | done |
 | Pillar centres before it jumps (0.17 tolerance) | MovementPillar | `centerTicks` on the supported column (G42) | done |
-| Pillar on a ladder / vine takes the ladder branch, never places | MovementPillar (ladder/vine) | vine struck out of the column first (G66) | done |
+| Pillar on a ladder / vine takes the ladder branch, never breaks it ("we're going to use it") | MovementPillar (ladder/vine) | JUMP held while the feet are in a climbable cell: the tower climbs the vine and places under itself on the way (G66) | done |
 | Pillar aborts under a ceiling within reach | MovementPillar.cost (`canWalkThrough` above) | `pillarNoHeadroom` (G51), ceiling mined first (G56) | done |
 | Descend walks to the destination centre at walking pace | MovementDescend / PathExecutor `moveTowards` | `intoHole` (G65), `standingAbove` (G53) | done |
 | Downward digs the block under the feet | MovementDownward | `breakDown` (G1), `driveDig` (G55) | done |
@@ -788,7 +884,7 @@ has it. "Open" rows are the next stalls waiting to happen.
 | A movement that runs past `cost + 100` ticks is cancelled and the path re-planned | PathExecutor.onTick | queue timeout `cost + 100`; `FAILED`/`UNREACHABLE` re-plan from the body | done |
 | A body that has not moved is detected and the path is dropped | PathExecutor (`ticksOnCurrent`, `pathPosition` skip) | drive stall watchdog, navigator "no progress", wander | done, three writers (G-0 family) |
 | Sprint is dropped on the movement before a lip, a ladder, a descend | PathExecutor.sprintNextMovement | `sprintKey = move && !climbing && !intoHole` | done |
-| A search that ran out re-runs with a longer timeout (500 ms, then 2000 ms on failure) | PathingBehavior / AStarPathFinder | `planBudgetBoostBeforeGiveUp` (4x, one branch only) | partial (G58: measured, not the root of the cliff flake) |
+| A search that ran out re-runs with a longer timeout (500 ms, then 2000 ms on failure), and the second failure is "Unable to find path" | PathingBehavior / AStarPathFinder | block planner: `planBudgetBoostBeforeGiveUp` (4x, goal-below branch, G58); physics hand-off: 500 ms, then 2000 ms, then the route is given up and the cell refused for a minute (G68) | done |
 | A partial path is walked when it is far enough from the start (`MIN_DIST_PATH`), by coefficient | AStarPathFinder.bestSoFar | `PARTIAL_COEFS` (G44), `walkThePartial` | done |
 | Water: a submerged body holds jump; a route through water is priced, not refused | MovementHelper.isWater, PathExecutor | `MovementSwim` (level stroke looks level, G64), wet legs to the queue (G64b) | done |
 | Throwaway blocks: a whitelist, restocked into the hotbar from the pack | InventoryBehavior | `isScaffold` / `scaffoldRank` / restock (G62) | done |
@@ -796,6 +892,7 @@ has it. "Open" rows are the next stalls waiting to happen.
 | An unreachable goal is reported as "no path", not silently retried | AStarPathFinder → PathingBehavior | one-cell results, callers infer (G32) | partial |
 | A goal below with no dig-capable plan is given up out loud | — | "no leg from here toward a goal below — giving the route up" | done (ours is stricter) |
 | Entering a one-wide hole needs the body centred; baritone's executor keeps `moveTowards` on the exact centre | PathExecutor | G65 | done |
+| A path is done when the GOAL says so (`Goal.isInGoal(feet)`); the executor has no radius of its own | PathingBehavior / PathExecutor | the drive hands FastNavigator the goal's `reached` test (G69); the two-block sphere only for callers without a goal | done |
 | Mob / drop targets that failed are re-offered when circumstances change, never banned for good | (altoclef, not baritone) | dated verdicts, no ban without alternatives, price (G63/G63b) | done |
 
 ### Is baritone's move set fully ported into FastPlanner? No.

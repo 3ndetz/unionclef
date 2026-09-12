@@ -34,6 +34,10 @@ public class PlayerInteractionFixChain extends TaskChain {
     private final TimerGame generalDuctTapeSwapTimeout = new TimerGame(30);
     private final TimerGame shiftDepressTimeout = new TimerGame(10);
     private final TimerGame betterToolTimer = new TimerGame(0);
+    /** G71: tool swaps this chain made for a block being broken; a run that reads thousands here
+     *  has a second writer of the hand fighting it. Read fixToolSwaps. */
+    public static volatile int fixToolSwaps;
+    private static long toolSwapLogMs = 0L;
     private final TimerGame mouseMovingButScreenOpenTimeout = new TimerGame(1);
     private ItemStack lastHandStack = null;
 
@@ -97,9 +101,27 @@ public class PlayerInteractionFixChain extends TaskChain {
                     if (StorageHelper.getItemStackInSlot(currentEquipped).getItem() != StorageHelper.getItemStackInSlot(bestToolSlot.get()).getItem()) {
                         boolean isAllowedToManage = !mod.getFoodChain().isTryingToEat();
                         if (isAllowedToManage) {
-                            Debug.logMessage("Found better tool in inventory, equipping.");
                             ItemStack bestToolItemStack = StorageHelper.getItemStackInSlot(bestToolSlot.get());
                             Item bestToolItem = bestToolItemStack.getItem();
+                            // ⛔ SAY WHAT THE HAND HELD AND WHO ELSE WAS WRITING IT (G71, 2026-09-12).
+                            // The 22:50 run stood three minutes on a coal ore with "Found better
+                            // tool in inventory, equipping." 4532 times -- more than once a tick --
+                            // and nothing broke: a hand that changes item resets vanilla's break
+                            // progress, so a tool that is re-equipped every tick never finishes a
+                            // block. One line a second with the hand, the pick, the slot and the
+                            // screen names the other writer; the count says how often it happens.
+                            fixToolSwaps++;
+                            long nowT = System.currentTimeMillis();
+                            if (nowT - toolSwapLogMs > 1000L) {
+                                toolSwapLogMs = nowT;
+                                Debug.logMessage(String.format(
+                                        "Found better tool in inventory, equipping: hand=%s -> %s (slot %s, hand slot %s, screen=%s, swaps=%d)",
+                                        StorageHelper.getItemStackInSlot(currentEquipped).getItem(), bestToolItem,
+                                        bestToolSlot.get(), currentEquipped,
+                                        mod.getPlayer().currentScreenHandler == null ? "-"
+                                                : mod.getPlayer().currentScreenHandler.getClass().getSimpleName(),
+                                        fixToolSwaps));
+                            }
                             mod.getSlotHandler().forceEquipItem(bestToolItem);
                         }
                     }

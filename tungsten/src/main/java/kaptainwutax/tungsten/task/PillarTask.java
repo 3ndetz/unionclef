@@ -111,6 +111,7 @@ public class PillarTask {
         jumpAsked = false;
         dApex = -1e9;
         dLastPlaceAt = null;
+        climbingLastTick = false;
         lastY = p.getY();
         active = true;
         Debug.logMessage("Pillaring up to y=" + ty);
@@ -128,10 +129,6 @@ public class PillarTask {
         active = false;
         MinecraftClient mc = MinecraftClient.getInstance();
         if (mc.options != null) {
-            if (attackHeldForVine) {
-                mc.options.attackKey.setPressed(false);
-                attackHeldForVine = false;
-            }
             mc.options.jumpKey.setPressed(false);
             mc.options.useKey.setPressed(false);
             mc.options.forwardKey.setPressed(false);
@@ -248,26 +245,40 @@ public class PillarTask {
             }
         }
 
-        // ⛔ A VINE IN THE COLUMN TURNS THE JUMP INTO A CLIMB (G66, 2026-09-12). Vanilla treats a
-        // body inside a vine as climbing: JUMP becomes "go up the vine", the feet never leave the
-        // cell in a free arc, the place window ("airborne and rising, feet above the cell's top")
-        // never opens, and the tower stands there hopping and turning -- the operator watched it
-        // spin in a narrow shaft with a vine on the wall. Baritone's MovementPillar has its own
-        // branch for a ladder or vine at the source and never tries to place there. The cheapest
-        // honest answer for a tower is to take the vine out of the column first: a vine breaks in
-        // a few ticks by hand, and the jump is a jump again.
-        if (clearVineInColumn(player, world, opts)) {
-            return;
-        }
+        // ⛔ A VINE IN THE COLUMN IS CLIMBED, NOT JUMPED FROM, NOT BROKEN (G66, 2026-09-12). The
+        // operator watched the bot hop and turn for ever in a narrow shaft with a vine on the wall.
+        // Vanilla's LivingEntity.travel, and tungsten's Agent.applyMovementInput with it: on any
+        // tick where the body is in a climbable cell and JUMP is down (or it presses into a wall),
+        // the vertical speed is SET to 0.2 -- the jump's 0.42 is overwritten on its first tick and
+        // the arc never happens. This task released JUMP the moment the body was airborne (one hop
+        // per block), so the body rose 0.42, then 0.116, then 0.035 -- 0.57 in all -- and fell back
+        // into the vine at the clamped 0.15: the place window (feet above the cell's top) never
+        // opened. Rounds 28-31 tried to break the vine out of the column first: a vine breaks in six
+        // ticks by hand and the CLIENT did break it, 981 ticks over 158 breaks, but the block was
+        // back within the same six ticks every time -- the server's own clock had not caught up
+        // and its ack reverted the prediction. Baritone never breaks it: MovementPillar.cost says
+        // "we won't actually need to break the ladder / vine because we're going to use it", and
+        // its ladder branch holds the movement key and lets vanilla climb. This is that branch. A
+        // climbable feet cell keeps JUMP DOWN through the whole rise; the body climbs at 0.2 a
+        // tick, the placement below it fires from the same window as on a free jump (feet above
+        // the cell's top), the vine cell takes the block -- a vine is replaceable -- and the tower
+        // goes up the vine at climb speed. A vine only ABOVE the feet gets the same treatment the
+        // tick the rising body enters it. pillarVine=ticks/met.
+        boolean climbing = player.isClimbing();
+        if (climbing && !climbingLastTick) pillarVineMet++;
+        if (climbing) pillarVineTicks++;
+        climbingLastTick = climbing;
         // Stay centred over the column (no horizontal drift) and aim straight down.
         opts.forwardKey.setPressed(false);
         opts.sprintKey.setPressed(false);
         opts.sneakKey.setPressed(false);
         WindMouseRotation.INSTANCE.setTarget(player.getYaw(), 89f); // pitch +89 = down
 
-        // Jump off the ground; release jump while airborne (single hop per block).
-        opts.jumpKey.setPressed(player.isOnGround());
-        jumpAsked = player.isOnGround();
+        // Jump off the ground; release jump while airborne (single hop per block) -- unless the
+        // body is climbing, where JUMP held is the climb itself.
+        boolean jump = player.isOnGround() || climbing;
+        opts.jumpKey.setPressed(jump);
+        jumpAsked = jump;
 
         // Find the air cell directly under the player that has a solid block below it
         // (within 2 down) — that's where the pillar block goes. Only place while
@@ -374,75 +385,10 @@ public class PillarTask {
         return w.getBlockState(p).getCollisionShape(w, p).isEmpty();
     }
 
-    /** G66: ticks spent breaking a vine out of the tower's column, and towers that met one. */
+    /** G66: ticks the tower spent with its feet in a climbable cell (a vine, a ladder) with JUMP
+     *  held as the climb, and the number of times a tower entered one. */
     public static volatile int pillarVineTicks, pillarVineMet;
-    private static boolean attackHeldForVine = false;
-    private static BlockPos lastVineCell = null;
-
-    /**
-     * A vine in the feet cell, the head cell or the two above them (where the jump goes) is aimed
-     * at and struck until it is gone. Returns true while that is what this tick did.
-     */
-    private static boolean clearVineInColumn(ClientPlayerEntity player, WorldView world,
-                                             net.minecraft.client.option.GameOptions opts) {
-        BlockPos feet = BlockPos.ofFloored(player.getX(), player.getY(), player.getZ());
-        BlockPos vine = null;
-        for (int dy = 0; dy <= 3; dy++) {
-            BlockPos c = feet.up(dy);
-            if (world.getBlockState(c).getBlock() instanceof net.minecraft.block.VineBlock) {
-                vine = c;
-                break;
-            }
-        }
-        if (vine == null) {
-            if (attackHeldForVine) {
-                opts.attackKey.setPressed(false);
-                attackHeldForVine = false;
-            }
-            lastVineCell = null;
-            return false;
-        }
-        if (!vine.equals(lastVineCell)) {
-            pillarVineMet++;
-            lastVineCell = vine;
-        }
-        // ⛔ AIM AT THE VINE, NOT AT THE MIDDLE OF ITS CELL. A vine is a sixteenth of a block thick
-        // on the face it hangs from; the centre of its cell is empty air, and a look straight
-        // down through it lands the crosshair on the FLOOR. Vanilla's own key handler then
-        // starts breaking the floor every tick, which resets the break the direct call below had
-        // started on the vine -- round 29 with the attack key pinned: pillarVine=1906/1, the vine
-        // untouched for ninety-five seconds. Aim at the vine's own outline, so the crosshair and
-        // the direct call agree on one block.
-        Vec3d aimAt = Vec3d.ofCenter(vine);
-        try {
-            net.minecraft.util.math.Box bb = world.getBlockState(vine).getOutlineShape(world, vine).getBoundingBox();
-            aimAt = Vec3d.of(vine).add(bb.getCenter());
-        } catch (Exception ignored) {
-            // an empty outline keeps the cell centre; nothing else to aim at
-        }
-        Vec3d dv = aimAt.subtract(player.getEyePos());
-        float yaw = (float) Math.toDegrees(-Math.atan2(dv.x, dv.z));
-        float pitch = (float) Math.toDegrees(-Math.atan2(dv.y, Math.sqrt(dv.x * dv.x + dv.z * dv.z)));
-        WindMouseRotation.INSTANCE.setTarget(yaw, pitch);
-        opts.jumpKey.setPressed(false);
-        opts.forwardKey.setPressed(false);
-        opts.sprintKey.setPressed(false);
-        opts.sneakKey.setPressed(false);
-        opts.attackKey.setPressed(true);
-        attackHeldForVine = true;
-        // ⛔ ONE WRITER OF BREAK PROGRESS, AND IT IS VANILLA'S KEY HANDLER. A direct
-        // updateBlockBreakingProgress call was tried here beside the held key (round 29/30): with
-        // the aim on the vine, BOTH advanced the client's progress every tick, the client declared
-        // the block broken at half the real time and sent STOP_DESTROY early, the server -- which
-        // keeps its own clock -- refused it and put the vine back: pillarVine=966/160, the same
-        // vine "met" a hundred and sixty times in forty-eight seconds. Held key plus the crosshair
-        // on the vine's outline is the whole mechanism; the attack-key thief (G33) is answered by
-        // the playthrough's fireReleaseNeedsFire pin, not by a second writer.
-        jumpAsked = false;
-        lastY = player.getY();   // clearing the column is not a stuck tower
-        pillarVineTicks++;
-        return true;
-    }
+    private static boolean climbingLastTick = false;
 
     /** The feet-level cell, among those the hitbox overlaps, that has a solid block under it and
      *  lies nearest the body -- the column a tower can be built in. Null when the body hangs over

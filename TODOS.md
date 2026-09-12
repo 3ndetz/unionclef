@@ -148,12 +148,89 @@ test + full nav-suite regression before it counts done.
       sent STOP_DESTROY at half the real time, the server refused and restored the block, a
       hundred and sixty times. One writer of break progress: the key. Direct call removed.
       Round 31, key only + aim on the outline: STILL `pillarVine=981/158` -- so the double
-      writer was not it either; the server restores the vine after the client's break. Not
-      understood yet. Two ways forward, the second cheaper: (a) read the SERVER's view of the
-      break (a probe bench that strikes one vine and asks rcon `execute if block` before and
-      after); (b) do not break at all -- a vine is REPLACEABLE, the tower can place its
-      scaffold INTO the vine cell, and a body in a vine RISES on JUMP (climb speed), so "hold
-      jump, keep the pitch down, place under the feet" is baritone's ladder branch in effect.
+      writer was not it either; the server's ack reverts the client's prediction every time.
+      Breaking was the wrong mechanism from the start: baritone's MovementPillar.cost says "we
+      won't actually need to break the ladder / vine because we're going to use it", and the
+      physics (LivingEntity.travel, tungsten's Agent.applyMovementInput line 721) SETS the
+      vertical speed to 0.2 on every tick the body is in a climbable cell with JUMP down -- the
+      hop failed only because the tower released JUMP once airborne. Round 32: JUMP held while
+      `player.isClimbing()`, the strike code deleted; the tower climbs the vine at 0.2 a tick
+      and places under itself from the same window. `pillarVine` now counts climb ticks/entries.
+      **Round 32: PASS x2** -- out of the vined shaft in six seconds, `pillarVine=44/2`, eight
+      blocks placed on the way up; pit_escape PASS beside it.
+- [ ] **G68 the physics engine computes for ever toward a cell no body can reach** (operator,
+      live: the bot at the mouth of a one-block slot, the physics search drawn toward it, nothing
+      moving). The 22:10 run's tail: "Search gave up — advancing on the best partial route" every
+      twenty-five seconds for the rest of the run -- the hand-off's search ran the config's
+      fifteen-second budget and the twenty-second no-progress cap, the navigator re-planned from
+      the same feet, the same hand-off. Baritone's PathingBehavior: 500 ms, once more with 2000 ms,
+      then "Unable to find path". Ours (round 33): `PathFinder.requestBudgetMs` per search (a hard
+      cap too), the navigator counts a hand-off that moved the body nowhere, re-asks once with
+      2000 ms, gives the route up on the second failure and refuses the cell for a minute
+      (`navPhysics=failed/gaveUp`, `physicsBudgetOut=out/salvaged`). Bench `slot_hole_test.py`.
+- [ ] **the 22:10 run's last four minutes at a crafting table: a shield that would not craft**
+      (MOVEMISMATCH: "holding=iron_ingot want=[stick]", "holding=spruce_planks want=[iron_ingot]",
+      GRIDCLEAR by CraftInTableTask for [[shield]] x9, items 41 -> 28 as the grid took and gave
+      back). The mover is a step out of phase with the recipe's slot order -- MoveItemToSlotTask
+      holds the item for slot A while the craft now asks for slot B. Beside it a cobblestone drop
+      in a one-deep hole one block below the rim: "goal task reports FINISHED" x50 with the body
+      on the rim and the drop never reached ("Drop not getting closer for 25s" x3). Two open
+      items, altoclef side: the craft's slot order under a foreign cursor item, and the pickup
+      goal for a drop below the rim (the same intoHole shape as G65, but the goal cell must be
+      the drop's own cell).
+- [ ] **G69 the navigator arrives on its own two-block sphere where the goal says "not
+      reached"** -- the rim drop above, read to the end: the goal WAS the drop's cell
+      (nearLive r=1 on (353,145,1)), the body 1.72 from it, "FastNavigator: arrived (1.7)" on
+      ARRIVE_DIST=2.0, the drive's own reached() false, restart, arrive, every fifteen seconds.
+      Baritone has no navigator radius: Goal.isInGoal decides. Round 33: the drive hands
+      FastNavigator the goal's reached test (`start(target, reached)`); `navArrivalRefused`
+      counts the sphere arrivals the goal refused. Bench `rim_drop_test.py`.
+- [ ] **the 22:34 run's 94-second stand at (18.5,70,-506.7)**: a cobblestone drop ELEVEN blocks
+      below (16.75,59,-509.88), "primDrive NO ROUTE" x47, the block search "toward a goal 11
+      below spent its budget (5888 nodes, 251 ms) -- one more try with 4x" x8, "goal unreachable
+      -- no progress in 14s, yielding" x4, "Drop not getting closer" x2. The planner cannot find
+      the dig-down within its budget (5.9k nodes in 251 ms; the dig costs ~23 ticks a block
+      against a walk's 4.6, so A* opens a disc of surface cells first -- baritone would need the
+      same ~70k expansions and gets them in one primary timeout), and a cobblestone is not worth
+      ninety seconds either way. Two roads: the planner's node rate (open, profile it), and the
+      pickup's ranking -- **G72, round 36**: the drop-versus-block comparison in
+      MineAndCollectTask is in squared blocks, where eleven down costs the same as eleven across;
+      the vertical leg below a three-block safe fall is now stretched five-fold (a dig's 23 ticks
+      against a walk's 4.6) before it is squared, so a drop eleven down reads as forty-three away
+      and any stone inside that wins (`dropDeep`). Bench `deep_drop_test.py` (a cobblestone
+      sealed eleven blocks under a stone slab, PASS = a cobblestone mined at the surface, the
+      body never more than two blocks down).
+- [ ] **G70 the 22:34 run's death: "tester1 was blown up by Creeper" (server log, 19:44:35 UTC)**
+      at hp 19, mid-climb on a hillside, and not one line from MobDefenseChain before it. G43's
+      avoid branch is gated on `LookHelper.seesPlayer(creeper, player)`; on a slope the creeper
+      climbs up behind with the hill between their eyes until fuse distance. Round 34: a creeper
+      inside CREEPER_NEAR_RANGE=7 is avoided seen or not (`mdCreeperUnseen`), plus a once-a-second
+      "creeper at d sees= fuse= -> avoid/leave" line so the next one leaves a trace. Bench
+      `creeper_behind_test.py` (staircase, creeper summoned ten blocks behind).
+- [ ] **G71 the 22:50 run: three minutes on a coal ore, "Found better tool in inventory,
+      equipping." x4532** (more than once a tick), dbTick every tick, nothing broken, "stone
+      tools" the rung that never came. A hand that changes item resets vanilla's break progress.
+      The writers of the hand during a dig: DestroyBlockTask.equipBestToolFor (G47), the fix
+      chain (same verdict, same tool), and KillAura.attack(equipSword=true) -- the force field
+      equips the sword on every cooldown for any hostile it has in view within ~6 blocks, reach or
+      not, and the miner puts the pickaxe back. Round 35: the aura takes the hand only for a
+      target inside melee reach (TriggerBot.REACH + 1), `kaAura=outOfReach/equip`; the fix chain
+      says once a second what the hand held and what it swapped to (`fixToolSwaps`), so the next
+      fight names its writer. No bench yet: needs a mob that sees the bot from out of reach
+      while it digs (a zombie behind a fence, the bot at an ore).
+- [ ] **G73/G74 the 23:13 run: 7.7 minutes on top of an iron ore seven blocks straight down**
+      -- "the search toward a goal 7 below spent its budget (6784 nodes, 252 ms) -- one more try
+      with 4x" x100, shimmy x48, nothing mined, the ore never blacklisted. G73 (FastPlanner
+      octile): the vertical term toward a goal below a free fall is a dig's worth of walks per
+      block (five), so the dug column is popped before a forty-block disc of surface cells.
+      G74 (the drive): three reach / dig route give-ups in ninety seconds for one block ->
+      `requestBlockUnreachable` (`pdRouteRefused`), so the chooser's memory (G63) gets the
+      verdict instead of the drive re-arming for ever. Bench `iron_below_test.py`. Round 36.
+- [ ] **shield craft carousel**, benched: `shield_craft_test.py` (a crafting table, two spruce
+      logs, one iron ingot, `@get shield 1`) -- the playthrough shape where the planks come from a
+      log crafted in the same table and the two crafts clear each other's grid (GRIDCLEAR x9,
+      MOVEMISMATCH x3, four minutes). Verdict from round 34 decides whether the craft loop or the
+      grid-clear is the writer to fix.
 - [ ] **the 21:01 run's 4.7-minute stand at (1179.5,65,-254.3) is G65's trench shape:** the
       cobblestone drop one down and two along in a cell the bot had dug, the body parked on the
       rim (its hitbox touching the trench edge), "Walker: BFS 3 wp" x27 and "no progress" x21,

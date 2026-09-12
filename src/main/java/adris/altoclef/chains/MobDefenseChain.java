@@ -304,6 +304,12 @@ public class MobDefenseChain extends SingleTaskChain {
     private static final double CREEPER_FLEE_DISTANCE = 20;
     /** G43: ticks the chain fled a close creeper instead of engaging it. Read mdCreeperAvoid. */
     public static volatile int mdCreeperAvoid;
+    /** G70: inside this, a creeper is avoided whether or not it has a line of sight to the body --
+     *  its fuse starts at three blocks, and on a slope its eyes clear the hill only then. */
+    private static final double CREEPER_NEAR_RANGE = 7;
+    /** G70: ticks the avoid branch took on a near creeper the sight test would have left alone. */
+    public static volatile int mdCreeperUnseenNear;
+    private static long creeperLogMs = 0L;
     private static final double ARROW_KEEP_DISTANCE_HORIZONTAL = 2;
     private static final double ARROW_KEEP_DISTANCE_VERTICAL = 10;
     // Wider detection radius for arrow approach (from autoclef: horizontalDistanceSq < 1000)
@@ -935,12 +941,38 @@ public class MobDefenseChain extends SingleTaskChain {
                     // avoided, not engaged; one further away is left alone.
                     if (kaptainwutax.tungsten.TungstenConfig.get().neverMeleeCreepers
                             && hostile instanceof CreeperEntity creeperNear) {
-                        if (creeperNear.isInRange(mod.getPlayer(), CREEPER_AVOID_RANGE)
-                                && LookHelper.seesPlayer(creeperNear, mod.getPlayer(), CREEPER_AVOID_RANGE)
+                        // ⛔ A CREEPER THAT IS ALREADY CLOSE IS AVOIDED WHETHER OR NOT IT "SEES" US
+                        // (G70, 2026-09-12). The 22:34 run, 19:44:35 UTC: "tester1 was blown up by
+                        // Creeper" at hp 19, mid-climb on a hillside (MovementQueue CLIMB+9, +5),
+                        // not one line from this chain before it -- the avoid branch is gated on the
+                        // creeper's line of sight to the body, and on a slope the creeper walks up
+                        // behind the body with the hill between their eyes until it is at fuse
+                        // distance; the fusing branch above then has thirty ticks and a body that
+                        // is still climbing. A creeper inside CREEPER_NEAR_RANGE is a threat on any
+                        // terrain, seen or not; the sight test stays for the far half of the range.
+                        boolean nearRegardless = creeperNear.isInRange(mod.getPlayer(), CREEPER_NEAR_RANGE);
+                        if ((nearRegardless
+                                || (creeperNear.isInRange(mod.getPlayer(), CREEPER_AVOID_RANGE)
+                                    && LookHelper.seesPlayer(creeperNear, mod.getPlayer(), CREEPER_AVOID_RANGE)))
                                 && (closeCreeper == null
                                     || creeperNear.squaredDistanceTo(mod.getPlayer())
                                        < closeCreeper.squaredDistanceTo(mod.getPlayer()))) {
                             closeCreeper = creeperNear;
+                            if (nearRegardless && !LookHelper.seesPlayer(creeperNear, mod.getPlayer(), CREEPER_AVOID_RANGE)) {
+                                mdCreeperUnseenNear++;
+                            }
+                        }
+                        // SAY WHAT THE CHAIN SEES, ONCE A SECOND, WHILE A CREEPER IS IN RANGE: the
+                        // death above left no trace at all, and a verdict on a death needs one.
+                        long nowC = System.currentTimeMillis();
+                        if (nowC - creeperLogMs > 1000L && creeperNear.isInRange(mod.getPlayer(), CREEPER_AVOID_RANGE)) {
+                            creeperLogMs = nowC;
+                            Debug.logMessage(String.format(
+                                    "creeper at %.1f sees=%b fuse=%.2f -> %s",
+                                    creeperNear.distanceTo(mod.getPlayer()),
+                                    LookHelper.seesPlayer(creeperNear, mod.getPlayer(), CREEPER_AVOID_RANGE),
+                                    creeperNear.getClientFuseTime(1),
+                                    closeCreeper == creeperNear ? "avoid" : "leave"));
                         }
                         continue;
                     }

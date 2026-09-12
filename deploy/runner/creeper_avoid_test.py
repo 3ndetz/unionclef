@@ -80,9 +80,16 @@ def main():
     # Twelve blocks: a creeper walking at a bot walking at it closes 0.45 blocks a tick, so seven
     # blocks was 0.8 s to contact -- no policy survives that; twelve leaves the avoid range (10)
     # a real chance, which is what the course measures.
-    r = rcon(f"summon minecraft:creeper {X-12.5} {GROUND+1} {Z+0.5}")
+    # ⛔ TWELVE BLOCKS FROM WHERE THE BOT IS NOW, not from where it was put down. The bot sprints
+    # from the goto's first tick, and by the time the summon ran it had covered eight of the
+    # twelve (round 34: "bot at 772.4", the creeper at 767.5 -- five blocks, one diagnostic line
+    # "creeper at 6.3 sees=true -> avoid", the blast a second later, hp 13.8). A five-block ambush
+    # is not the case this bench is for.
+    gs0 = py4j("gs")
+    bx = float(gs0["pos"].split(",")[0])
+    r = rcon(f"summon minecraft:creeper {bx-12.5} {GROUND+1} {Z+0.5}")
     gs = py4j("gs")
-    print(f"bot at {gs['pos']} hp={gs.get('hp')}; creeper summoned 12 blocks west on the bot's path ({r[:30]!r}). 45 s")
+    print(f"bot at {gs['pos']} hp={gs.get('hp')}; creeper summoned 12 blocks west of it, on the bot's path ({r[:30]!r}). 45 s")
     t0 = time.time(); seen = set(); min_hp = 20.0; died = False
     while time.time() - t0 < WINDOW_S:
         time.sleep(3)
