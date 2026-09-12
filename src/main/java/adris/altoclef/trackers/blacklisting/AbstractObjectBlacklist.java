@@ -52,9 +52,29 @@ public abstract class AbstractObjectBlacklist<T> {
         entry.totalFailures++;
         entry.numberOfFailuresAllowed = numberOfFailuresAllowed;
         entry.lastFailureMs = System.currentTimeMillis();
-        Debug.logMessage("Costing " + item.toString() + ": attempt " + entry.numberOfFailures
-                + " / " + entry.numberOfFailuresAllowed + " — stepping aside for "
-                + (COOL_OFF_MS / 1000) + "s");
+        // ⛔ ZERO ATTEMPTS ALLOWED IS NOT A FAILURE, IT IS A DECISION (G63b, 2026-09-12). The
+        // speedrun brain marks blocks it does not WANT with allowedFailures=0 -- "extra furnace"
+        // when it carries its own, "dangerous log" near a pillager, a witch's crafting table,
+        // ancient-city wool. The first G63 build gave those a cool-off and then, with nothing else
+        // in the scan, HANDED THEM BACK: the 19:38 run stood seven minutes at a smoker with
+        // banLifted=8918, "Blacklisting extra furnace" x80 re-issued every 45 s, and the container
+        // task alternating "walk=INF" against a furnace eleven hundred blocks away. A decision does
+        // not go stale and is not a price; it stands until the brain clears it.
+        entry.deliberate = numberOfFailuresAllowed == 0;
+        if (entry.deliberate) {
+            Debug.logMessage("Excluded on purpose: " + item.toString());
+        } else {
+            Debug.logMessage("Costing " + item.toString() + ": attempt " + entry.numberOfFailures
+                    + " / " + entry.numberOfFailuresAllowed + " — stepping aside for "
+                    + (COOL_OFF_MS / 1000) + "s");
+        }
+    }
+
+    /** True for an exclusion the brain made on purpose (allowedFailures == 0): never rested,
+     *  never handed back as a last resort, never priced -- see the note in blackListItem. */
+    public boolean excludedDeliberately(T item) {
+        BlacklistEntry entry = entries.get(item);
+        return entry != null && entry.deliberate;
     }
 
     protected abstract Vec3d getPos(T item);
@@ -80,6 +100,7 @@ public abstract class AbstractObjectBlacklist<T> {
     public boolean unreachable(T item) {
         BlacklistEntry entry = entries.get(item);
         if (entry == null) return false;
+        if (entry.deliberate) return true;            // a decision, not evidence: no cool-off
         if (entry.numberOfFailures <= entry.numberOfFailuresAllowed) return false;
         if (System.currentTimeMillis() - entry.lastFailureMs > COOL_OFF_MS) {
             // the cool-off is over: it gets its attempts back, and the history stays as a price
@@ -142,5 +163,7 @@ public abstract class AbstractObjectBlacklist<T> {
         public long lastFailureMs;
         /** Every failure ever, kept across cool-offs so the PRICE remembers what the verdict forgets. */
         public int totalFailures;
+        /** Marked with zero attempts allowed: the brain's own exclusion, not a failed approach (G63b). */
+        public boolean deliberate;
     }
 }

@@ -171,7 +171,9 @@ public class EntityTracker extends Tracker {
                     if (entityBlacklist.unreachable(entity)) {
                         idBlacklisted++;
                         float c = (float) BaritoneHelper.calculateGenericHeuristic(position, entity.getPos());
-                        if (c < restedCost) { restedCost = c; restedFallback = entity; }
+                        if (!entityBlacklist.excludedDeliberately(entity) && c < restedCost) {
+                            restedCost = c; restedFallback = entity;
+                        }
                         continue;
                     }
 
@@ -258,7 +260,9 @@ public class EntityTracker extends Tracker {
                         if (!acceptPredicate.test(entity)) continue;
                         double cost = entity.squaredDistanceTo(position);
                         if (entityBlacklist.unreachable(entity)) {
-                            if (cost < restedCost) { restedCost = cost; restedFallback = entity; }
+                            if (!entityBlacklist.excludedDeliberately(entity) && cost < restedCost) {
+                                restedCost = cost; restedFallback = entity;
+                            }
                             continue;
                         }
                         // G63, the other half: a target that has been fighting the body is not

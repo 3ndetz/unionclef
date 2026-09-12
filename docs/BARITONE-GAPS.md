@@ -722,7 +722,12 @@ the filter would leave the chooser with nothing, the best rested candidate is th
 `AbstractDoToClosestObjectTask` when nothing else is being chased. Bench
 `target_returns_test.py`: a pig sealed in bedrock that becomes reachable after 45 s (it must
 still be a candidate), and an unreachable drop beside a reachable one (the reachable one must
-win).
+win). Shipped; and the first playthrough on it found the boundary of the principle: the speedrun
+brain marks blocks it does not WANT with zero attempts allowed (an "extra furnace" when it carries
+its own, a log near pillagers, a witch's table), and a cool-off plus a last-resort hand-back turned
+those decisions into candidates — seven minutes at a smoker, `banLifted=8918`. **A decision is not
+evidence**: zero attempts allowed stands until the brain clears it — no cool-off, no fallback, no
+price (`excludedDeliberately`).
 
 Also seen, already tracked: `Pillar: out of blocks — nothing placeable in the hotbar` at 07:52:11 with
 planks in the pack (G15, the throwaway whitelist); `Error when getting tasks! Something is broken!`

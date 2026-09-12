@@ -60,7 +60,13 @@ test + full nav-suite regression before it counts done.
       (`penaltyBlocks`, kept across cool-offs as `totalFailures`) ranks candidates in
       `EntityTracker.getClosestEntity` / `getClosestItemDrop` and on the rested pass of
       `BlockScanner.getNearestBlock`, so a target that has been fighting the body loses to one
-      that has not — without ever being removed from the world.
+      that has not — without ever being removed from the world. **Round 22: target_returns PASS
+      x2; shipped in 5d977674. Round 23 found the regression (G63b):** the speedrun brain marks
+      blocks it does not WANT with allowedFailures=0 (extra furnace, dangerous log, witch table,
+      ancient-city wool); the first G63 build gave those a cool-off and then handed them back as
+      the last resort — seven minutes at a smoker, `banLifted=8918`, "Blacklisting extra furnace"
+      x80. Zero attempts allowed is now a DECISION: no cool-off, no fallback, no price
+      (`excludedDeliberately`).
 - [ ] **G59 a target under a one-block lid** (19:57 run, 1:05-2:40 at (81,124,-44): the reach ray
       stopped by the cell under the bot's own feet, `dbBlocked=69/0/0`, stone in reach beside it).
       Fixed: the miner digs the LID on the target rather than waiting for a line that cannot open

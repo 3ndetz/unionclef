@@ -97,8 +97,13 @@ public class BlockScanner {
         List<BlockPos> rested = new LinkedList<>(locations);
         rested.removeIf(this::isUnreachable);
         if (rested.isEmpty() && !locations.isEmpty()) {
-            scanCoolOffLifted++;
-            return locations;
+            // G63b: hand back the cooling-off ones, never the deliberately excluded ones
+            List<BlockPos> notExcluded = new LinkedList<>(locations);
+            notExcluded.removeIf(blacklist::excludedDeliberately);
+            if (!notExcluded.isEmpty()) {
+                scanCoolOffLifted++;
+                return notExcluded;
+            }
         }
 
         return rested;
@@ -222,7 +227,7 @@ public class BlockScanner {
             // some of them. Delete the flag once that number exists.
             if (!cheapFirst) {
                 if (!mod.getWorld().getBlockState(p).getBlock().equals(block)) continue;
-                if (!isValidTest.test(p) || (honourCoolOff && isUnreachable(p))) continue;
+                if (!isValidTest.test(p) || (honourCoolOff ? isUnreachable(p) : blacklist.excludedDeliberately(p))) continue;
                 double old = BaritoneHelper.calculateGenericHeuristic(fromPos, WorldHelper.toVec3d(p));
                 if (old < nearest) { nearest = old; pos = p; }
                 continue;
@@ -236,7 +241,10 @@ public class BlockScanner {
 
             //ensure the block is there (can change upon rescan)
             if (!mod.getWorld().getBlockState(p).getBlock().equals(block)) continue;
-            if (!isValidTest.test(p) || (honourCoolOff && isUnreachable(p))) continue;
+            // G63b: the rested pass skips what the brain excluded ON PURPOSE (zero attempts
+            // allowed) -- an "extra furnace" handed back as a last resort is how the 19:38 run
+            // stood seven minutes at a smoker.
+            if (!isValidTest.test(p) || (honourCoolOff ? isUnreachable(p) : blacklist.excludedDeliberately(p))) continue;
 
             nearest = dist;
             pos = p;
