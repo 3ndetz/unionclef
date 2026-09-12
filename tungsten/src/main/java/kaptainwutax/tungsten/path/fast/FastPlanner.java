@@ -1678,6 +1678,44 @@ public final class FastPlanner {
         relax(map, open, from, x, y, z, edgeCost, goal, viaJump, toBreak, null);
     }
 
+    // ── G75 (2026-09-12): routes keep clear of creepers -- baritone's Avoidance, creeper grade ──
+    //
+    // ⛔ A FLEE THAT ENDS IS A WALK BACK INTO THE CREEPER. creeper_avoid, round 35: the chain fled
+    // to twenty blocks ("FINISHED at 795 goal=fleeLive d=20"), the goto resumed and walked the
+    // bot straight back at a creeper that was still following, the avoid branch re-fired at
+    // twelve with the two closing at ten blocks a second, the second flee started at 3.9, and
+    // the blast left 0.99 hp. Baritone prices cells near hostiles (Avoidance.java:
+    // mobAvoidanceRadius 8, coefficient 1.5) so a path bends round them; this planner had no
+    // notion of a mob at all. The chain publishes the creepers' positions once a tick (the
+    // planner runs off the client thread and must not read entities itself); a cell inside a
+    // creeper's fuse reach is refused outright, a cell inside its notice costs extra, so the
+    // goto's route -- and the flee's -- bends round the creeper instead of through it.
+    private static volatile double[] creeperXyz = new double[0];
+    private static final double CREEPER_REFUSE_SQ = 5.0 * 5.0;
+    private static final double CREEPER_PRICE_SQ = 12.0 * 12.0;
+    private static final double CREEPER_PRICE_TICKS = 12.0;   // ~three walked cells, per cell inside the ring
+    /** Cells refused for a creeper's fuse reach, and cells priced for its notice. */
+    public static volatile int planCreeperRefused, planCreeperPriced;
+
+    /** Client thread: the creepers the tracker knows, as x,y,z triples. */
+    public static void publishCreepers(double[] xyz) {
+        creeperXyz = xyz == null ? new double[0] : xyz;
+    }
+
+    /** Negative = refused; otherwise the extra cost of standing in {@code (x,y,z)}. */
+    private static double creeperProximityPenalty(int x, int y, int z) {
+        double[] cs = creeperXyz;
+        if (cs.length == 0) return 0;
+        double px = x + 0.5, py = y, pz = z + 0.5, worst = 0;
+        for (int i = 0; i + 2 < cs.length; i += 3) {
+            double dx = px - cs[i], dy = py - cs[i + 1], dz = pz - cs[i + 2];
+            double d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 < CREEPER_REFUSE_SQ) return -1;
+            if (d2 < CREEPER_PRICE_SQ) worst = Math.max(worst, CREEPER_PRICE_TICKS);
+        }
+        return worst;
+    }
+
     /**
      * Ported VERBATIM from baritone's {@code MovementHelper.avoidWalkingInto}
      * (baritone/src/main/java/baritone/pathing/movement/MovementHelper.java:420-431), minus the
@@ -1749,8 +1787,12 @@ public final class FastPlanner {
         // bridge, pillar, swim, ladder, slime — arrives here, so refusing a hazardous
         // destination once covers all of them and cannot be forgotten in a new generator.
         if (hazardousDestination(x, y, z)) { cntHazard++; return; }
+        // G75: a cell within a creeper's fuse reach is not a cell; one within its notice is dear.
+        double creeper = creeperProximityPenalty(x, y, z);
+        if (creeper < 0) { planCreeperRefused++; return; }
+        if (creeper > 0) planCreeperPriced++;
         Node next = map.get(x, y, z, goal);
-        double tentative = from.cost + edgeCost + hazardProximityPenalty(x, y, z);
+        double tentative = from.cost + edgeCost + hazardProximityPenalty(x, y, z) + creeper;
         if (tentative >= next.cost) return;
         next.cost = tentative;
         next.combined = tentative + next.heuristic * HEURISTIC;

@@ -1310,6 +1310,21 @@ public class MobDefenseChain extends SingleTaskChain {
 
     private void doForceField(AltoClef mod) {
         killAura.tickStart();
+        // G75: the block planner keeps routes clear of creepers (baritone's Avoidance, creeper
+        // grade); it plans off the client thread, so the positions are handed over here, once a
+        // tick, from the tracker's list.
+        try {
+            List<CreeperEntity> cs = mod.getEntityTracker().getTrackedEntities(CreeperEntity.class);
+            double[] xyz = new double[cs.size() * 3];
+            int k = 0;
+            for (CreeperEntity c : cs) {
+                if (c == null || !c.isAlive()) continue;
+                xyz[k++] = c.getX(); xyz[k++] = c.getY(); xyz[k++] = c.getZ();
+            }
+            kaptainwutax.tungsten.path.fast.FastPlanner.publishCreepers(k == xyz.length ? xyz : java.util.Arrays.copyOf(xyz, k));
+        } catch (Throwable ignored) {
+            // a publication must never break the chain's tick
+        }
 
         // Hit all hostiles close to us.
         List<Entity> entities = mod.getEntityTracker().getCloseEntities();

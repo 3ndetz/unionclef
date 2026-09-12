@@ -226,6 +226,26 @@ test + full nav-suite regression before it counts done.
       G74 (the drive): three reach / dig route give-ups in ninety seconds for one block ->
       `requestBlockUnreachable` (`pdRouteRefused`), so the chooser's memory (G63) gets the
       verdict instead of the drive re-arming for ever. Bench `iron_below_test.py`. Round 36.
+- [ ] **G75 creeper_avoid, round 35, one run of two: the flee ended at twenty blocks, the goto
+      walked straight back at a creeper still following, the avoid re-fired at twelve with the
+      two closing at ten blocks a second, the blast left 0.99 hp.** Baritone prices cells near
+      hostiles (Avoidance: radius 8, coefficient 1.5); FastPlanner had no notion of a mob. Round
+      36: MobDefenseChain publishes the creepers' positions once a tick, the planner refuses a
+      cell within five blocks of one and prices a cell within twelve (`planCreeper=refused/priced`),
+      so the goto's route and the flee's bend round it. creeper_avoid x3 in round 36 is the gate.
+- [ ] **G76 the 23:41 run: two and a half minutes over its own smoker three blocks straight
+      down** -- InteractWithBlockTask's approach was near(r=3) (block distance), "reached" from
+      the surface, the click impossible through two blocks of ground, "Waiting..." and "Failed
+      exploring" x17. Baritone's GoalGetToBlock for anything to be clicked: round 37 the approach
+      is GetAdjacentToBlockTask (a neighbouring cell, dug to if need be, arrival = within reach).
+      Bench `container_below_test.py` (the only furnace three blocks under the feet, beef and
+      coal in the pack, `@get cooked_beef 1`).
+- [ ] **the 23:41 run's 75 s at a crafting-table DROP three blocks below on a slope**: the block
+      search "toward a goal 3 below spent its budget (7616 nodes)" (G73's reprice starts past a
+      three-block free fall, so a drop exactly three down still pays the disc), the dig "denied
+      by break rules" after a "failed to break! Maybe private area" avoidance, the pursuit
+      given up at 25 s three times. Open: the free-fall boundary (two?) and why the avoidance
+      fired on a block the bot had just been mining.
 - [ ] **shield craft carousel**, benched: `shield_craft_test.py` (a crafting table, two spruce
       logs, one iron ingot, `@get shield 1`) -- the playthrough shape where the planks come from a
       log crafted in the same table and the two crafts clear each other's grid (GRIDCLEAR x9,

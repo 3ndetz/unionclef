@@ -862,6 +862,28 @@ aside for 45 s"; nothing connected the two. Principle: **the navigator's give-up
 chooser** — the drive counts give-ups per block and the third in ninety seconds hands the block
 to the chooser's memory (`pdRouteRefused`). Bench `iron_below_test.py`.
 
+**G75. Routes keep clear of creepers.** creeper_avoid, round 35, one run of two: the chain fled
+to twenty blocks ("FINISHED at 795 goal=fleeLive d=20"), the goto resumed and walked the bot
+straight back at a creeper that was still following, the avoid branch re-fired at twelve with the
+two closing at ten blocks a second, the second flee started at 3.9, the blast left 0.99 hp.
+Baritone prices cells near hostiles (`Avoidance.java`: mobAvoidanceRadius 8, coefficient 1.5) so
+a path bends round them; FastPlanner had no notion of a mob at all. Principle: **a cell inside a
+creeper's fuse reach is not a cell, one inside its notice is dear** — the chain publishes the
+creepers' positions once a tick (the planner runs off the client thread), the planner refuses a
+cell within five blocks of one and adds twelve ticks to a cell within twelve, so the goto's route
+and the flee's bend round the creeper instead of through it (`planCreeper=refused/priced`). Bench
+`creeper_avoid_test.py`, three runs.
+
+**G76. A container is reached from a cell beside it, not from a radius.** The 23:41 run stood two
+and a half minutes over its own smoker: the smoker at (48,86,-831), the feet at (48,89,-831), three
+straight up, "goal task reports FINISHED … goal=near(48,86,-831 r=3)" 1743 times, the click
+impossible through two blocks of ground, the container task "Waiting…" and the wander "Failed
+exploring" seventeen times. `InteractWithBlockTask`'s approach was `GetWithinRangeOfBlockTask(3)`
+— block distance. Baritone's `GoalGetToBlock` is the approach for anything to be clicked.
+Principle: **the interaction approach is adjacency, dug to if need be** — `GetAdjacentToBlockTask`,
+whose arrival is "the block is within reach", the same task the miner uses. Bench
+`container_below_test.py`.
+
 ### Baritone's stuck cases, and where each one stands here
 
 The operator's question, put straight: why does every failure point baritone already handles have
@@ -894,6 +916,9 @@ has it. "Open" rows are the next stalls waiting to happen.
 | Entering a one-wide hole needs the body centred; baritone's executor keeps `moveTowards` on the exact centre | PathExecutor | G65 | done |
 | A path is done when the GOAL says so (`Goal.isInGoal(feet)`); the executor has no radius of its own | PathingBehavior / PathExecutor | the drive hands FastNavigator the goal's `reached` test (G69); the two-block sphere only for callers without a goal | done |
 | Mob / drop targets that failed are re-offered when circumstances change, never banned for good | (altoclef, not baritone) | dated verdicts, no ban without alternatives, price (G63/G63b) | done |
+| Cells near hostile mobs are priced so a path bends round them (`mobAvoidanceRadius`, coefficient) | Avoidance | creepers refused within five blocks, priced within twelve (G75); other hostiles not yet | partial |
+| A goal the calculator cannot path to is dropped by the process ("Unable to find path") | PathingBehavior → the process | three route give-ups in a row → `requestBlockUnreachable` (G74); the physics hand-off's own two-failure give-up (G68) | done |
+| The heuristic's descent price (a fall) is affordable because the search is fast | GoalBlock / AStarPathFinder | below a free fall the vertical term is a dig's worth of walks (G73), because this search runs at a fortieth of baritone's rate | done (differently) |
 
 ### Is baritone's move set fully ported into FastPlanner? No.
 

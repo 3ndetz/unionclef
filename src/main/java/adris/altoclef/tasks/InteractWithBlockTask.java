@@ -63,9 +63,18 @@ public class InteractWithBlockTask extends Task {
             Blocks.SWEET_BERRY_BUSH
     };
     private Task unstuckTask = null;
-    /** Walks us into reach when the target is too far to click. See the CANT_REACH branch. */
-    private static final int INTERACT_APPROACH_RANGE = 3;
-    private GetWithinRangeOfBlockTask approachTask = null;
+    /** Walks us into reach when the target is too far to click. See the CANT_REACH branch.
+     *
+     *  ⛔ A CONTAINER IS REACHED FROM A CELL BESIDE IT, NOT FROM A RADIUS (G76, 2026-09-12). This
+     *  was GetWithinRangeOfBlockTask(target, 3) -- AltoGoal.near(r=3), block distance -- and the
+     *  23:41 run stood two and a half minutes over its own smoker: the smoker at (48,86,-831),
+     *  the feet at (48,89,-831), three straight up, "goal task reports FINISHED ... goal=near(48,
+     *  86,-831 r=3)" 1743 times, the click impossible through two blocks of ground, the
+     *  container task "Waiting..." and the wander "Failed exploring" seventeen times. Baritone's
+     *  GoalGetToBlock is the approach for anything to be clicked: a neighbouring cell, dug to if
+     *  need be, and arrival is "the block is within reach" -- which GetAdjacentToBlockTask
+     *  already is for the miner. */
+    private adris.altoclef.tasks.movement.GetAdjacentToBlockTask approachTask = null;
     private ClickResponse cachedClickStatus = ClickResponse.CANT_REACH;
     private int waitingForClickTicks = 0;
     private int entityBlockingTicks = 0;
@@ -334,7 +343,7 @@ public class InteractWithBlockTask extends Task {
                 setDebugState("Getting to our goal");
                 clickTimer.reset();
                 if (approachTask == null) {
-                    approachTask = new GetWithinRangeOfBlockTask(target, INTERACT_APPROACH_RANGE);
+                    approachTask = new adris.altoclef.tasks.movement.GetAdjacentToBlockTask(target);
                 }
                 return approachTask;
             }
